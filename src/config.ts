@@ -16,7 +16,7 @@ import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { ILogger, logger } from './utils/logger';
 
 import type { CuesInterface } from './utils/cues';
-import type { MediaKeyFunc } from './utils/mediakeys-helper';
+import type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
 import type {
   FragmentLoaderContext,
   Loader,
@@ -59,11 +59,29 @@ export type DRMSystemOptions = {
   videoRobustness?: string;
 };
 
+export type DRMSystemConfiguration = {
+  licenseUrl: string;
+  serverCertificateUrl?: string;
+};
+
+export type DRMSystemsConfiguration = Partial<
+  Record<KeySystems, DRMSystemConfiguration>
+>;
+
 export type EMEControllerConfig = {
-  licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
-  licenseResponseCallback?: (xhr: XMLHttpRequest, url: string) => ArrayBuffer;
+  licenseXhrSetup?: (
+    xhr: XMLHttpRequest,
+    url: string,
+    keySystem: KeySystems
+  ) => void | Promise<void>;
+  licenseResponseCallback?: (
+    xhr: XMLHttpRequest,
+    url: string,
+    keySystem: KeySystems
+  ) => ArrayBuffer;
   emeEnabled: boolean;
   widevineLicenseUrl?: string;
+  drmSystems: DRMSystemsConfiguration;
   drmSystemOptions: DRMSystemOptions;
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
@@ -283,6 +301,7 @@ export const hlsDefaultConfig: HlsConfig = {
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: undefined, // used by eme-controller
+  drmSystems: {}, // used by eme-controller
   drmSystemOptions: {}, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,

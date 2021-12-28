@@ -97,6 +97,7 @@
   - [`widevineLicenseUrl`](#widevineLicenseUrl)
   - [`licenseXhrSetup`](#licenseXhrSetup)
   - [`licenseResponseCallback`](#licenseResponseCallback)
+  - [`drmSystems`](#drmSystems)
   - [`drmSystemOptions`](#drmSystemOptions)
   - [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc)
   - [`cmcd`](#cmcd)
@@ -400,6 +401,7 @@ var config = {
   emeEnabled: false,
   widevineLicenseUrl: undefined,
   licenseXhrSetup: undefined,
+  drmSystems: {},
   drmSystemOptions: {},
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess,
   cmcd: undefined,
@@ -1221,6 +1223,21 @@ var config = {
 (default: `undefined`, type `(xhr: XMLHttpRequest, url: string) => data: ArrayBuffer`)
 
 A post-processor function for modifying the license response before passing it to the key-session (`MediaKeySession.update`).
+
+### `drmSystems`
+
+(default: `{}`)
+
+Set `licenseUrl` and `serverCertificateUrl` for a given keySystem to your own DRM provider. `serverCertificateUrl` is not mandatory. Ex:
+
+```js
+{
+  'com.widevine.alpha': {
+    licenseUrl: 'https://proxy.uat.widevine.com/proxy',
+    serverCertificateUrl: 'https://storage.googleapis.com/wvmedia/cert/cert_license_widevine_com_uat.bin'
+  }
+}
+```
 
 ### `drmSystemOptions`
 
