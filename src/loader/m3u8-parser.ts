@@ -377,8 +377,10 @@ export default class M3U8Parser {
             const decryptkeyformat =
               keyAttrs.enumeratedString('KEYFORMAT') ?? 'identity';
 
+            // TBD we might need to check if we try to MSE playback mp2t content
+            // with com.apple.streamingkeydelivery keyformat (not supported)
+
             const unsupportedKnownKeyformatsInManifest = [
-              'com.apple.streamingkeydelivery',
               'com.microsoft.playready',
               'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed', // widevine (v2)
               'com.widevine', // earlier widevine (v1)

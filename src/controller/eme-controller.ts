@@ -6,13 +6,19 @@
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
-import { logger } from '../utils/logger';
-import type { DRMSystemOptions, EMEControllerConfig } from '../config';
+import { logger, enableLogs } from '../utils/logger';
+import type {
+  DRMSystemOptions,
+  DRMSystemsConfiguration,
+  EMEControllerConfig,
+} from '../config';
 import type { MediaKeyFunc } from '../utils/mediakeys-helper';
 import { KeySystems } from '../utils/mediakeys-helper';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 import type { MediaAttachedData, ManifestParsedData } from '../types/events';
+
+enableLogs(true);
 
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 
@@ -24,18 +30,19 @@ const MAX_LICENSE_REQUEST_FAILURES = 3;
  * @returns {Array<MediaSystemConfiguration>} An array of supported configurations
  */
 
-const createWidevineMediaKeySystemConfigurations = function (
+const createMediaKeySystemConfigurations = function (
+  initDataType: string,
   audioCodecs: string[],
   videoCodecs: string[],
   drmSystemOptions: DRMSystemOptions
 ): MediaKeySystemConfiguration[] {
   /* jshint ignore:line */
   const baseConfig: MediaKeySystemConfiguration = {
-    // initDataTypes: ['keyids', 'mp4'],
+    initDataTypes: [initDataType],
     // label: "",
-    // persistentState: "not-allowed", // or "required" ?
-    // distinctiveIdentifier: "not-allowed", // or "required" ?
-    // sessionTypes: ['temporary'],
+    persistentState: 'not-allowed', // or "required" ?
+    distinctiveIdentifier: 'not-allowed', // or "required" ?
+    sessionTypes: ['temporary'],
     audioCapabilities: [], // { contentType: 'audio/mp4; codecs="mp4a.40.2"' }
     videoCapabilities: [], // { contentType: 'video/mp4; codecs="avc1.42E01E"' }
   };
@@ -76,7 +83,15 @@ const getSupportedMediaKeySystemConfigurations = function (
 ): MediaKeySystemConfiguration[] {
   switch (keySystem) {
     case KeySystems.WIDEVINE:
-      return createWidevineMediaKeySystemConfigurations(
+      return createMediaKeySystemConfigurations(
+        'cenc',
+        audioCodecs,
+        videoCodecs,
+        drmSystemOptions
+      );
+    case KeySystems.FAIRPLAY:
+      return createMediaKeySystemConfigurations(
+        'sinf',
         audioCodecs,
         videoCodecs,
         drmSystemOptions
@@ -104,10 +119,16 @@ interface MediaKeysListItem {
 class EMEController implements ComponentAPI {
   private hls: Hls;
   private _widevineLicenseUrl?: string;
-  private _licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
+  private _drmSystems: DRMSystemsConfiguration;
+  private _licenseXhrSetup?: (
+    xhr: XMLHttpRequest,
+    url: string,
+    keySystem: KeySystems
+  ) => void | Promise<void>;
   private _licenseResponseCallback?: (
     xhr: XMLHttpRequest,
-    url: string
+    url: string,
+    keySystem: KeySystems
   ) => ArrayBuffer;
   private _emeEnabled: boolean;
   private _requestMediaKeySystemAccess: MediaKeyFunc | null;
@@ -131,6 +152,7 @@ class EMEController implements ComponentAPI {
     this._config = hls.config;
 
     this._widevineLicenseUrl = this._config.widevineLicenseUrl;
+    this._drmSystems = this._config.drmSystems;
     this._licenseXhrSetup = this._config.licenseXhrSetup;
     this._licenseResponseCallback = this._config.licenseResponseCallback;
     this._emeEnabled = this._config.emeEnabled;
@@ -166,17 +188,30 @@ class EMEController implements ComponentAPI {
    * @throws if a unsupported keysystem is passed
    */
   getLicenseServerUrl(keySystem: KeySystems): string {
-    switch (keySystem) {
-      case KeySystems.WIDEVINE:
-        if (!this._widevineLicenseUrl) {
-          break;
-        }
-        return this._widevineLicenseUrl;
+    const keySystemConfiguration = this._drmSystems[keySystem];
+
+    if (keySystemConfiguration) {
+      return keySystemConfiguration.licenseUrl;
+    }
+
+    // For backward compatibility
+    if (keySystem === KeySystems.WIDEVINE && this._widevineLicenseUrl) {
+      return this._widevineLicenseUrl;
     }
 
     throw new Error(
       `no license server URL configured for key-system "${keySystem}"`
     );
+  }
+
+  getServerCertificateUrl(keySystem: KeySystems): string | undefined {
+    const keySystemConfiguration = this._drmSystems[keySystem];
+
+    if (keySystemConfiguration) {
+      return keySystemConfiguration.serverCertificateUrl;
+    }
+
+    return undefined;
   }
 
   /**
@@ -253,9 +288,13 @@ class EMEController implements ComponentAPI {
 
         logger.log(`Media-keys created for key-system "${keySystem}"`);
 
-        this._onMediaKeysCreated();
+        return this._fetchAndSetServerCertificate(mediaKeysListItem).then(
+          () => {
+            this._onMediaKeysCreated();
 
-        return mediaKeys;
+            return mediaKeys;
+          }
+        );
       });
 
     mediaKeysPromise.catch((err) => {
@@ -316,8 +355,16 @@ class EMEController implements ComponentAPI {
           data ? data.byteLength : data
         }), updating key-session`
       );
-      keySession.update(data).catch((err) => {
-        logger.warn(`Updating key-session failed: ${err}`);
+
+      keySession.update(data).catch((error) => {
+        logger.error('Fatal: KeySession rejected data update', error);
+
+        this.hls.trigger(Events.ERROR, {
+          type: ErrorTypes.KEY_SYSTEM_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_SESSION_UPDATE_FAILED,
+          fatal: true,
+          error,
+        });
       });
     });
   }
@@ -456,6 +503,117 @@ class EMEController implements ComponentAPI {
         });
       });
   }
+  /**
+   * @private
+   * @param {MediaKeysListItem} mediaKeysListItem
+   * @returns Promise
+   */
+  private _fetchAndSetServerCertificate(
+    mediaKeysListItem: MediaKeysListItem
+  ): Promise<void> {
+    const url = this.getServerCertificateUrl(
+      mediaKeysListItem.mediaKeySystemDomain
+    );
+
+    if (!url) {
+      return Promise.resolve();
+    }
+
+    logger.log(
+      `Fetching serverCertificate for ${mediaKeysListItem.mediaKeySystemDomain} keySystem`
+    );
+
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+
+      xhr.open('GET', url, true);
+      xhr.responseType = 'arraybuffer';
+
+      xhr.onreadystatechange = () => {
+        switch (xhr.readyState) {
+          case XMLHttpRequest.DONE:
+            if (xhr.status === 200) {
+              mediaKeysListItem.mediaKeys
+                ?.setServerCertificate(xhr.response)
+                .then(() => {
+                  logger.log('serverCertificate successfully fetched and set');
+
+                  resolve();
+                })
+                .catch((error) => {
+                  this.hls.trigger(Events.ERROR, {
+                    type: ErrorTypes.KEY_SYSTEM_ERROR,
+                    details:
+                      ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_UPDATE_FAILED,
+                    fatal: true,
+                    error,
+                  });
+
+                  reject(error);
+                });
+            } else {
+              logger.error(
+                `HTTP error ${xhr.status} happened while fetching server certificate`
+              );
+
+              this.hls.trigger(Events.ERROR, {
+                type: ErrorTypes.KEY_SYSTEM_ERROR,
+                details:
+                  ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED,
+                fatal: true,
+              });
+
+              reject(new Error(xhr.response));
+            }
+            break;
+        }
+      };
+
+      xhr.send();
+    });
+  }
+
+  /**
+   * @private
+   * @param {XMLHttpRequest} xhr
+   * @param {string} url
+   * @returns Promise
+   */
+  private _setupLicenseXHR = (
+    xhr: XMLHttpRequest,
+    url: string,
+    keysListItem: MediaKeysListItem
+  ): Promise<void> => {
+    const licenseXhrSetup = this._licenseXhrSetup;
+
+    if (!licenseXhrSetup) {
+      xhr.open('POST', url, true);
+
+      return Promise.resolve();
+    }
+
+    return Promise.resolve(
+      licenseXhrSetup(xhr, url, keysListItem.mediaKeySystemDomain)
+    )
+      .catch(() => {
+        // let's try to open before running setup
+        xhr.open('POST', url, true);
+
+        return licenseXhrSetup(xhr, url, keysListItem.mediaKeySystemDomain);
+      })
+      .then(() => {
+        // if licenseXhrSetup did not yet call open, let's do it now
+        if (!xhr.readyState) {
+          xhr.open('POST', url, true);
+        }
+      })
+      .catch((e) => {
+        // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+        return Promise.reject(
+          new Error(`issue setting up KeySystem license XHR ${e}`)
+        );
+      });
+  };
 
   /**
    * @private
@@ -466,43 +624,26 @@ class EMEController implements ComponentAPI {
    * @throws if XMLHttpRequest construction failed
    */
   private _createLicenseXhr(
-    url: string,
+    keysListItem: MediaKeysListItem,
     keyMessage: ArrayBuffer,
     callback: (data: ArrayBuffer) => void
-  ): XMLHttpRequest {
+  ): Promise<XMLHttpRequest> {
+    const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
+
+    logger.log(`Sending license request to URL: ${url}`);
+
     const xhr = new XMLHttpRequest();
     xhr.responseType = 'arraybuffer';
     xhr.onreadystatechange = this._onLicenseRequestReadyStageChange.bind(
       this,
       xhr,
       url,
+      keysListItem,
       keyMessage,
       callback
     );
 
-    let licenseXhrSetup = this._licenseXhrSetup;
-    if (licenseXhrSetup) {
-      try {
-        licenseXhrSetup.call(this.hls, xhr, url);
-        licenseXhrSetup = undefined;
-      } catch (e) {
-        logger.error(e);
-      }
-    }
-    try {
-      // if licenseXhrSetup did not yet call open, let's do it now
-      if (!xhr.readyState) {
-        xhr.open('POST', url, true);
-      }
-      if (licenseXhrSetup) {
-        licenseXhrSetup.call(this.hls, xhr, url);
-      }
-    } catch (e) {
-      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
-      throw new Error(`issue setting up KeySystem license XHR ${e}`);
-    }
-
-    return xhr;
+    return this._setupLicenseXHR(xhr, url, keysListItem).then(() => xhr);
   }
 
   /**
@@ -515,6 +656,7 @@ class EMEController implements ComponentAPI {
   private _onLicenseRequestReadyStageChange(
     xhr: XMLHttpRequest,
     url: string,
+    keysListItem: MediaKeysListItem,
     keyMessage: ArrayBuffer,
     callback: (data: ArrayBuffer) => void
   ) {
@@ -527,7 +669,12 @@ class EMEController implements ComponentAPI {
           const licenseResponseCallback = this._licenseResponseCallback;
           if (licenseResponseCallback) {
             try {
-              data = licenseResponseCallback.call(this.hls, xhr, url);
+              data = licenseResponseCallback.call(
+                this.hls,
+                xhr,
+                url,
+                keysListItem.mediaKeySystemDomain
+              );
             } catch (e) {
               logger.error(e);
             }
@@ -592,14 +739,25 @@ class EMEController implements ComponentAPI {
       }
       break;
     */
+      // For Widevine and Fairplay CDMs, the challenge is the keyMessage.
+      case KeySystems.FAIRPLAY:
       case KeySystems.WIDEVINE:
-        // For Widevine CDMs, the challenge is the keyMessage.
         return keyMessage;
     }
 
     throw new Error(
       `unsupported key-system: ${keysListItem.mediaKeySystemDomain}`
     );
+  }
+
+  private _onLicenseRequestError(error) {
+    logger.error(`Failure requesting DRM license: ${error}`);
+
+    this.hls.trigger(Events.ERROR, {
+      type: ErrorTypes.KEY_SYSTEM_ERROR,
+      details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+      fatal: true,
+    });
   }
 
   /**
@@ -627,21 +785,19 @@ class EMEController implements ComponentAPI {
     }
 
     try {
-      const url = this.getLicenseServerUrl(keysListItem.mediaKeySystemDomain);
-      const xhr = this._createLicenseXhr(url, keyMessage, callback);
-      logger.log(`Sending license request to URL: ${url}`);
-      const challenge = this._generateLicenseRequestChallenge(
-        keysListItem,
-        keyMessage
-      );
-      xhr.send(challenge);
+      this._createLicenseXhr(keysListItem, keyMessage, callback)
+        .then((xhr) => {
+          const challenge = this._generateLicenseRequestChallenge(
+            keysListItem,
+            keyMessage
+          );
+          xhr.send(challenge);
+        })
+        .catch((error) => {
+          this._onLicenseRequestError(error);
+        });
     } catch (e) {
-      logger.error(`Failure requesting DRM license: ${e}`);
-      this.hls.trigger(Events.ERROR, {
-        type: ErrorTypes.KEY_SYSTEM_ERROR,
-        details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
-        fatal: true,
-      });
+      this._onLicenseRequestError(e);
     }
   }
 
@@ -702,7 +858,8 @@ class EMEController implements ComponentAPI {
         (videoCodec: string | undefined): videoCodec is string => !!videoCodec
       );
 
-    this._attemptKeySystemAccess(KeySystems.WIDEVINE, audioCodecs, videoCodecs);
+    // TBD We should try a keySystem based on manifest information
+    this._attemptKeySystemAccess(KeySystems.FAIRPLAY, audioCodecs, videoCodecs);
   }
 }
 
