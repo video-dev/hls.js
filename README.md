@@ -113,7 +113,6 @@ The following tags are added to their respective fragment's attribute list but a
 
 For a complete list of issues, see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependent on the runtime environment (for example, not all browsers on the same OS support HEVC).
 
-- FairPlay and PlayReady DRM ( See [#3779](https://github.com/video-dev/hls.js/issues/2360) and [issues labeled DRM](https://github.com/video-dev/hls.js/issues?q=is%3Aissue+is%3Aopen+label%3ADRM))
 - Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
 - HLS Content Steering
 - HLS Interstitials
@@ -121,6 +120,10 @@ For a complete list of issues, see ["Top priorities" in the Release Planning and
 - `#EXT-X-GAP` filling [#2940](https://github.com/video-dev/hls.js/issues/2940)
 - `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
 - `SAMPLE-AES` with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
+- FairPlay DRM with MPEG-2 TS content
+- PlayReady (See [#3779](https://github.com/video-dev/hls.js/issues/3779) and [issues labeled DRM](https://github.com/video-dev/hls.js/issues?q=is%3Aissue+is%3Aopen+label%3ADRM))
+- Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
+- MP3 elementary stream audio in IE and Edge (<=18) on Windows 10 (See [#1641](https://github.com/video-dev/hls.js/issues/1641) and [Microsoft answers forum](https://answers.microsoft.com/en-us/ie/forum/all/ie11-on-windows-10-cannot-play-hls-with-mp3/2da994b5-8dec-4ae9-9201-7d138ede49d9))
 
 ### Server-side-rendering (SSR) and `require` from a Node.js runtime
 
