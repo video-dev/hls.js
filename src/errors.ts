@@ -20,7 +20,10 @@ export enum ErrorDetails {
   KEY_SYSTEM_NO_ACCESS = 'keySystemNoAccess',
   KEY_SYSTEM_NO_SESSION = 'keySystemNoSession',
   KEY_SYSTEM_LICENSE_REQUEST_FAILED = 'keySystemLicenseRequestFailed',
+  KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED = 'keySystemServerCertificateRequestFailed',
+  KEY_SYSTEM_SERVER_CERTIFICATE_UPDATE_FAILED = 'keySystemServerCertificateUpdateFailed',
   KEY_SYSTEM_NO_INIT_DATA = 'keySystemNoInitData',
+  KEY_SYSTEM_SESSION_UPDATE_FAILED = 'keySystemSessionUpdateFailed',
   // Identifier for a manifest load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   MANIFEST_LOAD_ERROR = 'manifestLoadError',
   // Identifier for a manifest load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
