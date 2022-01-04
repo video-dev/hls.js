@@ -26,7 +26,7 @@
     "build:debug": "webpack --progress --env debug --env demo",
     "build:watch": "webpack --progress --env debug --env demo --watch",
     "build:types": "tsc --build tsconfig-lib.json && api-extractor run --local",
-    "dev": "webpack serve --progress --env debug --env demo --port 8000",
+    "dev": "webpack serve --progress --env debug --env demo --port 8000 --static .",
     "docs": "esdoc",
     "lint": "eslint src/ tests/ --ext .js --ext .ts",
     "lint:fix": "npm run lint -- --fix",
