@@ -145,6 +145,11 @@ export default class GapController {
       this._reportStall(bufferInfo.len);
     }
 
+    // Handle case where destroy() has been called & it set media to null
+    if (!media) {
+      return;
+    }
+
     const bufferedWithHoles = BufferHelper.bufferInfo(
       media,
       currentTime,
@@ -164,9 +169,6 @@ export default class GapController {
     stalledDurationMs: number
   ) {
     const { config, fragmentTracker, media } = this;
-    if (!media) {
-      return;
-    }
     const currentTime = media.currentTime;
 
     const partial = fragmentTracker.getPartialFragment(currentTime);
