@@ -41,5 +41,6 @@ export default class OutputFilter {
 
   reset() {
     this.cueRanges = [];
+    this.startTime = null;
   }
 }
