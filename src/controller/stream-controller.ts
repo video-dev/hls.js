@@ -206,6 +206,8 @@ export default class StreamController
     this._errorEventsToTrigger = [];
 
     // these events must be triggered at the end of the call stack
+    // to make sure if a handler calls something like `detachMedia`
+    // we don't get in a weird state
     errorEventsToTrigger.forEach((errorEvent) =>
       this.hls.trigger(Events.ERROR, errorEvent)
     );
