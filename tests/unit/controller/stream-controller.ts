@@ -351,7 +351,7 @@ describe('StreamController', function () {
     beforeEach(function () {
       // @ts-ignore
       streamController.gapController = {
-        poll: function () {},
+        poll: () => [],
       };
       streamController['media'] = {
         buffered: {

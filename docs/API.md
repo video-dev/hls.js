@@ -523,7 +523,7 @@ media.currentTime += (nb nudge retry -1)\*nudgeOffset
 
 (default 3)
 
-Max nb of nudge retries before hls.js raise a fatal BUFFER_STALLED_ERROR
+Max nb - 1 (due to a bug) of nudge retries before hls.js raise a fatal BUFFER_STALLED_ERROR. I.e. a value of 3 means a max of 2 nudges will occur
 
 ### `maxFragLookUpTolerance`
 

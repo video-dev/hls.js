@@ -1,12 +1,12 @@
 import type { BufferInfo } from '../utils/buffer-helper';
 import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { Events } from '../events';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { HlsConfig } from '../config';
 import type { FragmentTracker } from './fragment-tracker';
 import { Fragment } from '../loader/fragment';
+import { ErrorData } from '../hls';
 
 export const STALL_MINIMUM_DURATION_MS = 250;
 export const MAX_START_GAP_JUMP = 2.0;
@@ -41,8 +41,11 @@ export default class GapController {
    * A gap is an unbuffered range between two buffered ranges (or the start and the first buffered range).
    *
    * @param {number} lastCurrentTime Previously read playhead position
+   *
+   * @returns an array of error data that should be triggered
    */
-  public poll(lastCurrentTime: number) {
+  public poll(lastCurrentTime: number): ErrorData[] {
+    const errorEventsToTrigger: ErrorData[] = [];
     const { config, media, stalled } = this;
     const { currentTime, seeking } = media;
     const seeked = this.seeking && !seeking;
@@ -67,7 +70,7 @@ export default class GapController {
         this.stalled = null;
         this.nudgeRetry = 0;
       }
-      return;
+      return errorEventsToTrigger;
     }
 
     // Clear stalled state when beginning or finishing seeking so that we don't report stalls coming out of a seek
@@ -82,7 +85,7 @@ export default class GapController {
       media.playbackRate === 0 ||
       !BufferHelper.getBuffered(media).length
     ) {
-      return;
+      return errorEventsToTrigger;
     }
 
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
@@ -91,7 +94,7 @@ export default class GapController {
 
     // There is no playable buffer (seeked, waiting for buffer)
     if (!isBuffered && !nextStart) {
-      return;
+      return errorEventsToTrigger;
     }
 
     if (seeking) {
@@ -103,7 +106,7 @@ export default class GapController {
         (nextStart - currentTime > MAX_START_GAP_JUMP &&
           !this.fragmentTracker.getPartialFragment(currentTime));
       if (hasEnoughBuffer || noBufferGap) {
-        return;
+        return errorEventsToTrigger;
       }
       // Reset moved state when seeking to a point in or before a gap
       this.moved = false;
@@ -127,8 +130,10 @@ export default class GapController {
         ? level!.details!.targetduration * 2
         : MAX_START_GAP_JUMP;
       if (startJump > 0 && startJump <= maxStartGapJump) {
-        this._trySkipBufferHole(null);
-        return;
+        errorEventsToTrigger.push(
+          ...this._trySkipBufferHole(null).errorEventsToTrigger
+        );
+        return errorEventsToTrigger;
       }
     }
 
@@ -136,18 +141,13 @@ export default class GapController {
     const tnow = self.performance.now();
     if (stalled === null) {
       this.stalled = tnow;
-      return;
+      return errorEventsToTrigger;
     }
 
     const stalledDuration = tnow - stalled;
     if (!seeking && stalledDuration >= STALL_MINIMUM_DURATION_MS) {
       // Report stalling after trying to fix
-      this._reportStall(bufferInfo.len);
-    }
-
-    // Handle case where destroy() has been called & it set media to null
-    if (!media) {
-      return;
+      errorEventsToTrigger.push(...this._reportStall(bufferInfo.len));
     }
 
     const bufferedWithHoles = BufferHelper.bufferInfo(
@@ -155,7 +155,10 @@ export default class GapController {
       currentTime,
       config.maxBufferHole
     );
-    this._tryFixBufferStall(bufferedWithHoles, stalledDuration);
+    errorEventsToTrigger.push(
+      ...this._tryFixBufferStall(bufferedWithHoles, stalledDuration)
+    );
+    return errorEventsToTrigger;
   }
 
   /**
@@ -167,7 +170,8 @@ export default class GapController {
   private _tryFixBufferStall(
     bufferInfo: BufferInfo,
     stalledDurationMs: number
-  ) {
+  ): ErrorData[] {
+    const errorEventsToTrigger: ErrorData[] = [];
     const { config, fragmentTracker, media } = this;
     const currentTime = media.currentTime;
 
@@ -175,11 +179,11 @@ export default class GapController {
     if (partial) {
       // Try to skip over the buffer hole caused by a partial fragment
       // This method isn't limited by the size of the gap between buffered ranges
-      const targetTime = this._trySkipBufferHole(partial);
+      const { targetTime } = this._trySkipBufferHole(partial);
       // we return here in this case, meaning
       // the branch below only executes when we don't handle a partial fragment
       if (targetTime) {
-        return;
+        return errorEventsToTrigger;
       }
     }
 
@@ -196,30 +200,34 @@ export default class GapController {
       // We only try to jump the hole if it's under the configured size
       // Reset stalled so to rearm watchdog timer
       this.stalled = null;
-      this._tryNudgeBuffer();
+      errorEventsToTrigger.push(...this._tryNudgeBuffer());
     }
+    return errorEventsToTrigger;
   }
 
   /**
-   * Triggers a BUFFER_STALLED_ERROR event, but only once per stall period.
+   * Registers a stall, but only once per stall period.
    * @param bufferLen - The playhead distance from the end of the current buffer segment.
    * @private
    */
-  private _reportStall(bufferLen) {
-    const { hls, media, stallReported } = this;
+  private _reportStall(bufferLen): ErrorData[] {
+    const { media, stallReported } = this;
     if (!stallReported) {
       // Report stalled error once
       this.stallReported = true;
       logger.warn(
         `Playback stalling at @${media.currentTime} due to low buffer (buffer=${bufferLen})`
       );
-      hls.trigger(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.BUFFER_STALLED_ERROR,
-        fatal: false,
-        buffer: bufferLen,
-      });
+      return [
+        {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.BUFFER_STALLED_ERROR,
+          fatal: false,
+          buffer: bufferLen,
+        },
+      ];
     }
+    return [];
   }
 
   /**
@@ -227,8 +235,12 @@ export default class GapController {
    * @param partial - The partial fragment found at the current time (where playback is stalling).
    * @private
    */
-  private _trySkipBufferHole(partial: Fragment | null): number {
-    const { config, hls, media } = this;
+  private _trySkipBufferHole(partial: Fragment | null): {
+    targetTime: number;
+    errorEventsToTrigger: ErrorData[];
+  } {
+    const errorEventsToTrigger: ErrorData[] = [];
+    const { config, media } = this;
     const currentTime = media.currentTime;
     let lastEndTime = 0;
     // Check if currentTime is between unbuffered regions of partial fragments
@@ -250,7 +262,7 @@ export default class GapController {
         this.stalled = null;
         media.currentTime = targetTime;
         if (partial) {
-          hls.trigger(Events.ERROR, {
+          errorEventsToTrigger.push({
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
             fatal: false,
@@ -258,19 +270,20 @@ export default class GapController {
             frag: partial,
           });
         }
-        return targetTime;
+        return { targetTime, errorEventsToTrigger };
       }
       lastEndTime = buffered.end(i);
     }
-    return 0;
+    return { targetTime: 0, errorEventsToTrigger };
   }
 
   /**
    * Attempts to fix buffer stalls by advancing the mediaElement's current time by a small amount.
    * @private
    */
-  private _tryNudgeBuffer() {
-    const { config, hls, media } = this;
+  private _tryNudgeBuffer(): ErrorData[] {
+    const errorEventsToTrigger: ErrorData[] = [];
+    const { config, media } = this;
     const currentTime = media.currentTime;
     const nudgeRetry = (this.nudgeRetry || 0) + 1;
     this.nudgeRetry = nudgeRetry;
@@ -280,7 +293,7 @@ export default class GapController {
       // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
       logger.warn(`Nudging 'currentTime' from ${currentTime} to ${targetTime}`);
       media.currentTime = targetTime;
-      hls.trigger(Events.ERROR, {
+      errorEventsToTrigger.push({
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
         fatal: false,
@@ -289,11 +302,12 @@ export default class GapController {
       logger.error(
         `Playhead still not moving while enough data buffered @${currentTime} after ${config.nudgeMaxRetry} nudges`
       );
-      hls.trigger(Events.ERROR, {
+      errorEventsToTrigger.push({
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: true,
       });
     }
+    return errorEventsToTrigger;
   }
 }

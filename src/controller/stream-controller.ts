@@ -56,6 +56,7 @@ export default class StreamController
   private couldBacktrack: boolean = false;
   private audioCodecSwitch: boolean = false;
   private videoBuffer: any | null = null;
+  private _errorEventsToTrigger: ErrorData[] = [];
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[stream-controller]');
@@ -200,6 +201,14 @@ export default class StreamController
     super.onTickEnd();
     this.checkBuffer();
     this.checkFragmentChanged();
+
+    const errorEventsToTrigger = this._errorEventsToTrigger;
+    this._errorEventsToTrigger = [];
+
+    // these events must be triggered at the end of the call stack
+    errorEventsToTrigger.forEach((errorEvent) =>
+      this.hls.trigger(Events.ERROR, errorEvent)
+    );
   }
 
   private doTickIdle() {
@@ -916,7 +925,9 @@ export default class StreamController
       this.seekToStartPos();
     } else {
       // Resolve gaps using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
-      gapController.poll(this.lastCurrentTime);
+      this._errorEventsToTrigger.push(
+        ...gapController.poll(this.lastCurrentTime)
+      );
     }
 
     this.lastCurrentTime = media.currentTime;
