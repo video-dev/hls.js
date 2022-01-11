@@ -122,6 +122,9 @@ class EMEController implements ComponentAPI {
   private mediaKeysPromise: Promise<MediaKeys> | null = null;
   private _onMediaEncrypted = this.onMediaEncrypted.bind(this);
 
+  // try to call setMediaKeys again after media attached if needed
+  private _attemptSetMediaKeysAgain: boolean = false;
+
   /**
    * @constructs
    * @param {Hls} hls Our Hls.js instance
@@ -359,9 +362,11 @@ class EMEController implements ComponentAPI {
    */
   private _attemptSetMediaKeys(mediaKeys?: MediaKeys) {
     if (!this._media) {
-      throw new Error(
+      logger.warn(
         'Attempted to set mediaKeys without first attaching a media element'
       );
+      this._attemptSetMediaKeysAgain = true;
+      return;
     }
 
     if (!this._hasSetMediaKeys) {
@@ -653,6 +658,11 @@ class EMEController implements ComponentAPI {
 
     // keep reference of media
     this._media = media;
+
+    if (this._attemptSetMediaKeysAgain) {
+      // mediaKeys not set, attempt again
+      this._attemptSetMediaKeys();
+    }
 
     media.addEventListener('encrypted', this._onMediaEncrypted);
   }
