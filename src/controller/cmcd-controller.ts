@@ -218,7 +218,7 @@ export default class CMCDController implements ComponentAPI {
         ot == CMCDObjectType.MUXED
       ) {
         data.br = level.bitrate / 1000;
-        data.tb = this.getTopBandwidth(ot);
+        data.tb = this.getTopBandwidth(ot) / 1000;
         data.bl = this.getBufferLength(ot);
       }
 
@@ -261,12 +261,15 @@ export default class CMCDController implements ComponentAPI {
    * Get the highest bitrate.
    */
   private getTopBandwidth(type: CMCDObjectType) {
+    const hls = this.hls;
+    const levels = type === CMCDObjectType.AUDIO ? hls.audioTracks : hls.levels;
+    const max = hls.maxAutoLevel;
+    const len = max > -1 ? max + 1 : hls.levels.length;
+
     let bitrate: number = 0;
 
-    const levels =
-      type === CMCDObjectType.AUDIO ? this.hls.audioTracks : this.hls.levels;
-
-    for (const level of levels) {
+    for (let i = 0; i < len; i++) {
+      const level = levels[i];
       if (level.bitrate > bitrate) {
         bitrate = level.bitrate;
       }
