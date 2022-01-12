@@ -348,7 +348,7 @@ export default class M3U8Parser {
             break;
           }
           case 'TARGETDURATION':
-            level.targetduration = parseFloat(value1);
+            level.targetduration = Math.max(parseInt(value1), 1);
             break;
           case 'VERSION':
             level.version = parseInt(value1);
