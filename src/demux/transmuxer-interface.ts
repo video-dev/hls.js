@@ -172,20 +172,25 @@ export default class TransmuxerInterface {
     if (part && (partDiff || !contiguous)) {
       part.stats.parsing.start = now;
     }
+    const initSegmentChange = !(
+      lastFrag && frag.initSegment?.url === lastFrag.initSegment?.url
+    );
     const state = new TransmuxState(
       discontinuity,
       contiguous,
       accurateTimeOffset,
       trackSwitch,
-      timeOffset
+      timeOffset,
+      initSegmentChange
     );
-    if (!contiguous || discontinuity) {
+    if (!contiguous || discontinuity || initSegmentChange) {
       logger.log(`[transmuxer-interface, ${frag.type}]: Starting new transmux session for sn: ${chunkMeta.sn} p: ${chunkMeta.part} level: ${chunkMeta.level} id: ${chunkMeta.id}
         discontinuity: ${discontinuity}
         trackSwitch: ${trackSwitch}
         contiguous: ${contiguous}
         accurateTimeOffset: ${accurateTimeOffset}
-        timeOffset: ${timeOffset}`);
+        timeOffset: ${timeOffset}
+        initSegmentChange: ${initSegmentChange}`);
       const config = new TransmuxConfig(
         audioCodec,
         videoCodec,
