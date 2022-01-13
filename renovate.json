@@ -6,7 +6,9 @@
   "prConcurrentLimit": 0,
   "prCreation": "not-pending",
   "stabilityDays": 7,
-  "vulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "labels": ["security"]
+  },
   "packageRules": [
     {
       "matchPackagePatterns": ["*"],
