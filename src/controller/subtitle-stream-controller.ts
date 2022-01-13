@@ -1,7 +1,7 @@
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { BufferHelper } from '../utils/buffer-helper';
-import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
+import { findFragmentByPTS } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { addSliding } from './level-helper';
 import { FragmentState } from './fragment-tracker';
@@ -222,9 +222,11 @@ export class SubtitleStreamController
     const currentTrack = this.levels[this.currentTrackId];
     if (currentTrack?.details) {
       this.mediaBuffer = this.mediaBufferTimeRanges;
-      this.setInterval(TICK_INTERVAL);
     } else {
       this.mediaBuffer = null;
+    }
+    if (currentTrack) {
+      this.setInterval(TICK_INTERVAL);
     }
   }
 
@@ -374,27 +376,18 @@ export class SubtitleStreamController
       const fragPrevious = this.fragPrevious;
       if (targetBufferTime < end) {
         const { maxFragLookUpTolerance } = config;
-        if (fragPrevious && trackDetails.hasProgramDateTime) {
-          foundFrag = findFragmentByPDT(
-            fragments,
-            fragPrevious.endProgramDateTime,
-            maxFragLookUpTolerance
-          );
-        }
-        if (!foundFrag) {
-          foundFrag = findFragmentByPTS(
-            fragPrevious,
-            fragments,
-            targetBufferTime,
-            maxFragLookUpTolerance
-          );
-          if (
-            !foundFrag &&
-            fragPrevious &&
-            fragPrevious.start < fragments[0].start
-          ) {
-            foundFrag = fragments[0];
-          }
+        foundFrag = findFragmentByPTS(
+          fragPrevious,
+          fragments,
+          targetBufferTime,
+          maxFragLookUpTolerance
+        );
+        if (
+          !foundFrag &&
+          fragPrevious &&
+          fragPrevious.start < fragments[0].start
+        ) {
+          foundFrag = fragments[0];
         }
       } else {
         foundFrag = fragments[fragLen - 1];

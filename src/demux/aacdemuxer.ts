@@ -24,7 +24,7 @@ class AACDemuxer extends BaseAudioDemuxer {
     this._audioTrack = {
       container: 'audio/adts',
       type: 'audio',
-      id: 0,
+      id: 2,
       pid: -1,
       sequenceNumber: 0,
       isAAC: true,

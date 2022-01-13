@@ -272,6 +272,7 @@ class TSDemuxer implements Demuxer {
     }
 
     // loop through TS packets
+    let tsPacketErrors = 0;
     for (let start = syncOffset; start < len; start += 188) {
       if (data[start] === 0x47) {
         const stt = !!(data[start + 1] & 0x40);
@@ -391,13 +392,17 @@ class TSDemuxer implements Demuxer {
             break;
         }
       } else {
-        this.observer.emit(Events.ERROR, Events.ERROR, {
-          type: ErrorTypes.MEDIA_ERROR,
-          details: ErrorDetails.FRAG_PARSING_ERROR,
-          fatal: false,
-          reason: 'TS packet did not start with 0x47',
-        });
+        tsPacketErrors++;
       }
+    }
+
+    if (tsPacketErrors > 0) {
+      this.observer.emit(Events.ERROR, Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.FRAG_PARSING_ERROR,
+        fatal: false,
+        reason: `Found ${tsPacketErrors} TS packet/s that do not start with 0x47`,
+      });
     }
 
     avcTrack.pesData = avcData;
@@ -892,6 +897,7 @@ class TSDemuxer implements Demuxer {
               tmp.set(lastUnit.data, 0);
               tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
               lastUnit.data = tmp;
+              lastUnit.state = 0;
             }
           }
         }
