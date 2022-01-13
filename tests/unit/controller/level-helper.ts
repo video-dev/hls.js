@@ -225,6 +225,43 @@ expect: ${JSON.stringify(merged.fragments[i])}`
         ).to.deep.equal(merged.fragments[i]);
       });
     });
+
+    it('merges initSegments', function () {
+      const oldPlaylist = generatePlaylist([1, 2, 3]);
+      const oldInitSegment = new Fragment(PlaylistLevelType.MAIN, '');
+      oldInitSegment.sn = 'initSegment';
+      oldInitSegment.relurl = 'init.mp4';
+      oldPlaylist.fragments.forEach((frag) => {
+        frag.initSegment = oldInitSegment;
+      });
+      oldPlaylist.fragmentHint = new Fragment(PlaylistLevelType.MAIN, '');
+      oldPlaylist.fragmentHint.sn = 4;
+      oldPlaylist.fragmentHint.initSegment = oldInitSegment;
+
+      const newPlaylist = generatePlaylist([2, 3, 4]);
+      const newInitSegment = new Fragment(PlaylistLevelType.MAIN, '');
+      newInitSegment.sn = 'initSegment';
+      newInitSegment.relurl = 'init.mp4';
+      newPlaylist.fragments.forEach((frag) => {
+        frag.initSegment = newInitSegment;
+      });
+      newPlaylist.fragmentHint = new Fragment(PlaylistLevelType.MAIN, '');
+      newPlaylist.fragmentHint.sn = 5;
+      newPlaylist.fragmentHint.initSegment = newInitSegment;
+
+      mergeDetails(oldPlaylist, newPlaylist);
+
+      newPlaylist.fragments.forEach((frag, i) => {
+        expect(
+          frag.initSegment,
+          `Fragment sn: ${frag.sn} does not have correct initSegment`
+        ).to.equal(oldInitSegment);
+      });
+      expect(
+        newPlaylist.fragmentHint.initSegment,
+        'fragmentHint does not have correct initSegment'
+      ).to.equal(oldInitSegment);
+    });
   });
 
   describe('computeReloadInterval', function () {

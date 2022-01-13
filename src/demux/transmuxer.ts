@@ -137,6 +137,7 @@ export default class Transmuxer {
       trackSwitch,
       accurateTimeOffset,
       timeOffset,
+      initSegmentChange,
     } = state || currentTransmuxState;
     const {
       audioCodec,
@@ -147,11 +148,11 @@ export default class Transmuxer {
     } = transmuxConfig;
 
     // Reset muxers before probing to ensure that their state is clean, even if flushing occurs before a successful probe
-    if (discontinuity || trackSwitch) {
+    if (discontinuity || trackSwitch || initSegmentChange) {
       this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
     }
 
-    if (discontinuity) {
+    if (discontinuity || initSegmentChange) {
       this.resetInitialTimestamp(defaultInitPts);
     }
 
@@ -511,18 +512,21 @@ export class TransmuxState {
   public accurateTimeOffset: boolean;
   public trackSwitch: boolean;
   public timeOffset: number;
+  public initSegmentChange: boolean;
 
   constructor(
     discontinuity: boolean,
     contiguous: boolean,
     accurateTimeOffset: boolean,
     trackSwitch: boolean,
-    timeOffset: number
+    timeOffset: number,
+    initSegmentChange: boolean
   ) {
     this.discontinuity = discontinuity;
     this.contiguous = contiguous;
     this.accurateTimeOffset = accurateTimeOffset;
     this.trackSwitch = trackSwitch;
     this.timeOffset = timeOffset;
+    this.initSegmentChange = initSegmentChange;
   }
 }
