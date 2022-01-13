@@ -9,6 +9,9 @@
   "vulnerabilityAlerts": {
     "labels": ["security"]
   },
+  "major": {
+    "labels": ["semver-major"]
+  },
   "packageRules": [
     {
       "matchPackagePatterns": ["*"],
