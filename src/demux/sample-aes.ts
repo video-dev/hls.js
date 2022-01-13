@@ -98,7 +98,7 @@ class SampleAesDecrypter {
     let outputPos = 0;
     for (
       let inputPos = 32;
-      inputPos <= decodedData.length - 16;
+      inputPos < decodedData.length - 16;
       inputPos += 160, outputPos += 16
     ) {
       encryptedData.set(
@@ -118,7 +118,7 @@ class SampleAesDecrypter {
     let inputPos = 0;
     for (
       let outputPos = 32;
-      outputPos <= decodedData.length - 16;
+      outputPos < decodedData.length - 16;
       outputPos += 160, inputPos += 16
     ) {
       decodedData.set(
