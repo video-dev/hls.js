@@ -584,3 +584,99 @@ export function appendUint8Array(
 
   return temp;
 }
+
+export interface IEmsgParsingData {
+  schemeIdUri: string;
+  value: string;
+  timeScale: number;
+  presentationTimeDelta?: number;
+  presentationTime?: number;
+  eventDuration: number;
+  id: number;
+  payload: Uint8Array;
+}
+
+export function parseEmsg(data: Uint8Array): IEmsgParsingData {
+  const version = data[0];
+  let schemeIdUri: string = '';
+  let value: string = '';
+  let timeScale: number = 0;
+  let presentationTimeDelta: number = 0;
+  let presentationTime: number = 0;
+  let eventDuration: number = 0;
+  let id: number = 0;
+  let offset: number = 0;
+
+  if (version === 0) {
+    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
+      schemeIdUri += bin2str(data.subarray(offset, offset + 1));
+      offset += 1;
+    }
+
+    schemeIdUri += bin2str(data.subarray(offset, offset + 1));
+    offset += 1;
+
+    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
+      value += bin2str(data.subarray(offset, offset + 1));
+      offset += 1;
+    }
+
+    value += bin2str(data.subarray(offset, offset + 1));
+    offset += 1;
+
+    timeScale = readUint32(data, 12);
+    presentationTimeDelta = readUint32(data, 16);
+    eventDuration = readUint32(data, 20);
+    id = readUint32(data, 24);
+    offset = 28;
+  } else if (version === 1) {
+    offset += 4;
+    timeScale = readUint32(data, offset);
+    offset += 4;
+    const leftPresentationTime = readUint32(data, offset);
+    offset += 4;
+    const rightPresentationTime = readUint32(data, offset);
+    offset += 4;
+    presentationTime = 2 ** 32 * leftPresentationTime + rightPresentationTime;
+    if (!Number.isSafeInteger(presentationTime)) {
+      presentationTime = Number.MAX_SAFE_INTEGER;
+      // eslint-disable-next-line no-console
+      console.warn(
+        'Presentation time exceeds safe integer limit and wrapped to max safe integer in parsing emsg box'
+      );
+    }
+
+    eventDuration = readUint32(data, offset);
+    offset += 4;
+    id = readUint32(data, offset);
+    offset += 4;
+
+    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
+      schemeIdUri += bin2str(data.subarray(offset, offset + 1));
+      offset += 1;
+    }
+
+    schemeIdUri += bin2str(data.subarray(offset, offset + 1));
+    offset += 1;
+
+    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
+      value += bin2str(data.subarray(offset, offset + 1));
+      offset += 1;
+    }
+
+    value += bin2str(data.subarray(offset, offset + 1));
+    offset += 1;
+  }
+  const payload = data.subarray(offset, data.byteLength);
+
+  return {
+    schemeIdUri,
+    value,
+    timeScale,
+    presentationTime,
+    presentationTimeDelta,
+    eventDuration,
+    id,
+    payload,
+  };
+}
