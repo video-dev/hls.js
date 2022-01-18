@@ -265,13 +265,12 @@ export default class GapController {
    * @private
    */
   private _tryNudgeBuffer() {
-    const { config, hls, media } = this;
+    const { config, hls, media, nudgeRetry } = this;
     const currentTime = media.currentTime;
-    const nudgeRetry = (this.nudgeRetry || 0) + 1;
-    this.nudgeRetry = nudgeRetry;
+    this.nudgeRetry++;
 
     if (nudgeRetry < config.nudgeMaxRetry) {
-      const targetTime = currentTime + nudgeRetry * config.nudgeOffset;
+      const targetTime = currentTime + (nudgeRetry + 1) * config.nudgeOffset;
       // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
       logger.warn(`Nudging 'currentTime' from ${currentTime} to ${targetTime}`);
       media.currentTime = targetTime;
