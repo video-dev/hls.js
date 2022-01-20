@@ -151,7 +151,7 @@ export default class BaseStreamController
     ) {
       const partList = (levelDetails as LevelDetails).partList;
       // Since the last part isn't guaranteed to correspond to fragCurrent for ll-hls, check instead if the last part is buffered.
-      if (partList && partList.length) {
+      if (partList?.length) {
         const lastPart = partList[partList.length - 1];
 
         // Checking the midpoint of the part for potential margin of error and related issues.
