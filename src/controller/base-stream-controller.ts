@@ -134,7 +134,7 @@ export default class BaseStreamController
     this.state = State.STOPPED;
   }
 
-  protected _streamEnded(bufferInfo, levelDetails) {
+  protected _streamEnded(bufferInfo, levelDetails: LevelDetails) {
     const { fragCurrent, fragmentTracker } = this;
     // we just got done loading the final fragment and there is no other buffered range after ...
     // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
@@ -142,9 +142,28 @@ export default class BaseStreamController
     if (
       !levelDetails.live &&
       fragCurrent &&
-      fragCurrent.sn === levelDetails.endSN &&
+      // NOTE: Because of the way parts are currently parsed/represented in the playlist, we can end up
+      // in situations where the current fragment is actually greater than levelDetails.endSN. While
+      // this feels like the "wrong place" to account for that, this is a narrower/safer change than
+      // updating e.g. M3U8Parser::parseLevelPlaylist().
+      fragCurrent.sn >= levelDetails.endSN &&
       !bufferInfo.nextStart
     ) {
+      const partList = levelDetails.partList;
+      // Since the last part isn't guaranteed to correspond to fragCurrent for ll-hls, check instead if the last part is buffered.
+      if (partList?.length) {
+        const lastPart = partList[partList.length - 1];
+
+        // Checking the midpoint of the part for potential margin of error and related issues.
+        // NOTE: Technically I believe parts could yield content that is < the computed duration (including potential a duration of 0)
+        // and still be spec-compliant, so there may still be edge cases here. Likewise, there could be issues in end of stream
+        // part mismatches for independent audio and video playlists/segments.
+        const lastPartBuffered = BufferHelper.isBuffered(
+          this.media,
+          lastPart.start + lastPart.duration / 2
+        );
+        return lastPartBuffered;
+      }
       const fragState = fragmentTracker.getState(fragCurrent);
       return (
         fragState === FragmentState.PARTIAL || fragState === FragmentState.OK
