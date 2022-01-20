@@ -134,7 +134,7 @@ export default class BaseStreamController
     this.state = State.STOPPED;
   }
 
-  protected _streamEnded(bufferInfo, levelDetails) {
+  protected _streamEnded(bufferInfo, levelDetails: LevelDetails) {
     const { fragCurrent, fragmentTracker } = this;
     // we just got done loading the final fragment and there is no other buffered range after ...
     // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
@@ -149,7 +149,7 @@ export default class BaseStreamController
       fragCurrent.sn >= levelDetails.endSN &&
       !bufferInfo.nextStart
     ) {
-      const partList = (levelDetails as LevelDetails).partList;
+      const partList = levelDetails.partList;
       // Since the last part isn't guaranteed to correspond to fragCurrent for ll-hls, check instead if the last part is buffered.
       if (partList?.length) {
         const lastPart = partList[partList.length - 1];
