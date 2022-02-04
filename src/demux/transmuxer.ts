@@ -4,19 +4,19 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from '../demux/aacdemuxer';
 import MP4Demuxer from '../demux/mp4demuxer';
-import TSDemuxer from '../demux/tsdemuxer';
+import TSDemuxer, { TypeSupported } from '../demux/tsdemuxer';
 import MP3Demuxer from '../demux/mp3demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
+import ChunkCache from './chunk-cache';
+import { appendUint8Array } from '../utils/mp4-tools';
+import { logger } from '../utils/logger';
 import type { Demuxer, KeyData } from '../types/demuxer';
 import type { Remuxer } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
-import ChunkCache from './chunk-cache';
-import { appendUint8Array } from '../utils/mp4-tools';
-
-import { logger } from '../utils/logger';
 import type { HlsConfig } from '../config';
-import { LevelKey } from '../loader/level-key';
+import type { LevelKey } from '../loader/level-key';
+import type { PlaylistLevelType } from '../types/loader';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -47,9 +47,10 @@ muxConfig.forEach(({ demux }) => {
 
 export default class Transmuxer {
   private observer: HlsEventEmitter;
-  private typeSupported: any;
+  private typeSupported: TypeSupported;
   private config: HlsConfig;
-  private vendor: any;
+  private vendor: string;
+  private id: PlaylistLevelType;
   private demuxer?: Demuxer;
   private remuxer?: Remuxer;
   private decrypter?: Decrypter;
@@ -61,14 +62,16 @@ export default class Transmuxer {
 
   constructor(
     observer: HlsEventEmitter,
-    typeSupported,
+    typeSupported: TypeSupported,
     config: HlsConfig,
-    vendor
+    vendor: string,
+    id: PlaylistLevelType
   ) {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
     this.vendor = vendor;
+    this.id = id;
   }
 
   configure(transmuxConfig: TransmuxConfig) {
@@ -113,19 +116,17 @@ export default class Transmuxer {
       } else {
         this.decryptionPromise = decrypter
           .webCryptoDecrypt(uintData, keyData.key.buffer, keyData.iv.buffer)
-          .then(
-            (decryptedData): TransmuxerResult => {
-              // Calling push here is important; if flush() is called while this is still resolving, this ensures that
-              // the decrypted data has been transmuxed
-              const result = this.push(
-                decryptedData,
-                null,
-                chunkMeta
-              ) as TransmuxerResult;
-              this.decryptionPromise = null;
-              return result;
-            }
-          );
+          .then((decryptedData): TransmuxerResult => {
+            // Calling push here is important; if flush() is called while this is still resolving, this ensures that
+            // the decrypted data has been transmuxed
+            const result = this.push(
+              decryptedData,
+              null,
+              chunkMeta
+            ) as TransmuxerResult;
+            this.decryptionPromise = null;
+            return result;
+          });
         return this.decryptionPromise!;
       }
     }
@@ -136,6 +137,7 @@ export default class Transmuxer {
       trackSwitch,
       accurateTimeOffset,
       timeOffset,
+      initSegmentChange,
     } = state || currentTransmuxState;
     const {
       audioCodec,
@@ -146,11 +148,11 @@ export default class Transmuxer {
     } = transmuxConfig;
 
     // Reset muxers before probing to ensure that their state is clean, even if flushing occurs before a successful probe
-    if (discontinuity || trackSwitch) {
+    if (discontinuity || trackSwitch || initSegmentChange) {
       this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
     }
 
-    if (discontinuity) {
+    if (discontinuity || initSegmentChange) {
       this.resetInitialTimestamp(defaultInitPts);
     }
 
@@ -260,7 +262,8 @@ export default class Transmuxer {
       textTrack,
       timeOffset,
       accurateTimeOffset,
-      true
+      true,
+      this.id
     );
     transmuxResults.push({
       remuxResult,
@@ -346,8 +349,9 @@ export default class Transmuxer {
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata
   ): TransmuxerResult {
-    const { audioTrack, avcTrack, id3Track, textTrack } = (this
-      .demuxer as Demuxer).demux(data, timeOffset, false);
+    const { audioTrack, avcTrack, id3Track, textTrack } = (
+      this.demuxer as Demuxer
+    ).demux(data, timeOffset, false, !this.config.progressive);
     const remuxResult = this.remuxer!.remux(
       audioTrack,
       avcTrack,
@@ -355,7 +359,8 @@ export default class Transmuxer {
       textTrack,
       timeOffset,
       accurateTimeOffset,
-      false
+      false,
+      this.id
     );
     return {
       remuxResult,
@@ -380,7 +385,8 @@ export default class Transmuxer {
           demuxResult.textTrack,
           timeOffset,
           accurateTimeOffset,
-          false
+          false,
+          this.id
         );
         return {
           remuxResult,
@@ -506,18 +512,21 @@ export class TransmuxState {
   public accurateTimeOffset: boolean;
   public trackSwitch: boolean;
   public timeOffset: number;
+  public initSegmentChange: boolean;
 
   constructor(
     discontinuity: boolean,
     contiguous: boolean,
     accurateTimeOffset: boolean,
     trackSwitch: boolean,
-    timeOffset: number
+    timeOffset: number,
+    initSegmentChange: boolean
   ) {
     this.discontinuity = discontinuity;
     this.contiguous = contiguous;
     this.accurateTimeOffset = accurateTimeOffset;
     this.trackSwitch = trackSwitch;
     this.timeOffset = timeOffset;
+    this.initSegmentChange = initSegmentChange;
   }
 }

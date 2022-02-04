@@ -162,11 +162,11 @@ design idea is pretty simple :
   - tracks which parts of the buffer is not loaded correctly
   - tracks which parts of the buffer was unloaded by the coded frame eviction algorithm
 - [src/loader/fragment-loader.ts][]
-  - in charge of loading fragments, use xhr-loader if not overrided by user config
+  - in charge of loading fragments, use xhr-loader if not overridden by user config
 - [src/loader/key-loader.ts][]
   - in charge of loading decryption key
 - [src/loader/playlist-loader.ts][]
-  - in charge of loading manifest, and level playlists, use xhr-loader if not overrided by user config.
+  - in charge of loading manifest, and level playlists, use xhr-loader if not overridden by user config.
 - [src/remux/aac-helper.ts][]
   - helper class to create silent AAC frames (useful to handle streams with audio holes)
 - [src/remux/mp4-generator.ts][]
@@ -204,7 +204,7 @@ design idea is pretty simple :
   - logging utils, useful for debug
 - [src/utils/xhr-loader.ts][]
   - XmlHttpRequest wrapper. it handles standard HTTP GET but also retries and timeout.
-  - retries : if xhr fails, HTTP GET will be retried after a predetermined delay. this delay is increasing following an exponential backoff. after a predetemined max number of retries, an error callback will be triggered.
+  - retries : if xhr fails, HTTP GET will be retried after a predetermined delay. this delay is increasing following an exponential backoff. after a predetermined max number of retries, an error callback will be triggered.
   - timeout: if load exceeds max allowed duration, a timeout callback will be triggered. it is up to the callback to decides whether the connection should be cancelled or not.
 
 [src/config.ts]: ../src/config.ts
@@ -274,10 +274,7 @@ design idea is pretty simple :
 - `FRAG_LOAD_TIMEOUT` is raised by [src/loader/fragment-loader.ts][] upon xhr timeout detected by [src/utils/xhr-loader.ts][].
   - if auto level switch is enabled and loaded frag level is greater than 0, this error is not fatal: in that case [src/controller/level-controller.ts][] will trigger an emergency switch down to level 0.
   - if frag level is 0 or auto level switch is disabled, this error is marked as fatal and a call to `hls.startLoad()` could help recover it.
-  <!--
-   Deprecated in v1.0.0. Error will be raised as FRAG_PARSING_ERROR
-- `FRAG_DECRYPT_ERROR` is raised by [src/demux/tranmuxer.ts][] upon fragment decrypting error. this error is fatal.
-  -->
+- ~~`FRAG_DECRYPT_ERROR` is raised by [src/demux/tranmuxer.ts][] upon fragment decrypting error. this error is fatal.~~ _Deprecated in v1.0.0. Error will be raised as FRAG_PARSING_ERROR._
 - `FRAG_PARSING_ERROR` is raised by [src/demux/tsdemuxer.ts][] or [src/demux/adts.ts][] upon fragment parsing error. this error is not fatal.
 - `REMUX_ALLOC_ERROR` is raised by [src/remux/mp4-remuxer.ts][] upon memory allocation error while remuxing. this error is not fatal if in auto-mode and loaded frag level is greater than 0. in that case a level switch down will occur.
 - `KEY_LOAD_ERROR` is raised by [src/loader/key-loader.ts][] upon xhr failure detected by [src/utils/xhr-loader.ts][].

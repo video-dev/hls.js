@@ -210,9 +210,8 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onBufferReset() {
-    const sourceBuffer = this.sourceBuffer;
     this.getSourceBufferTypes().forEach((type) => {
-      const sb = sourceBuffer[type];
+      const sb = this.sourceBuffer[type];
       try {
         if (sb) {
           this.removeBufferListeners(type);
@@ -221,7 +220,7 @@ export default class BufferController implements ComponentAPI {
           }
           // Synchronously remove the SB from the map before the next call in order to prevent an async function from
           // accessing it
-          sourceBuffer[type] = undefined;
+          this.sourceBuffer[type] = undefined;
         }
       } catch (err) {
         logger.warn(
@@ -237,14 +236,15 @@ export default class BufferController implements ComponentAPI {
     event: Events.BUFFER_CODECS,
     data: BufferCodecsData
   ) {
-    const sourceBufferCount = Object.keys(this.sourceBuffer).length;
+    const sourceBufferCount = this.getSourceBufferTypes().length;
 
     Object.keys(data).forEach((trackName) => {
       if (sourceBufferCount) {
         // check if SourceBuffer codec needs to change
         const track = this.tracks[trackName];
         if (track && typeof track.buffer.changeType === 'function') {
-          const { codec, levelCodec, container } = data[trackName];
+          const { id, codec, levelCodec, container, metadata } =
+            data[trackName];
           const currentCodec = (track.levelCodec || track.codec).replace(
             VIDEO_CODEC_PROFILE_REPACE,
             '$1'
@@ -256,6 +256,17 @@ export default class BufferController implements ComponentAPI {
           if (currentCodec !== nextCodec) {
             const mimeType = `${container};codecs=${levelCodec || codec}`;
             this.appendChangeType(trackName, mimeType);
+            logger.log(
+              `[buffer-controller]: switching codec ${currentCodec} to ${nextCodec}`
+            );
+            this.tracks[trackName] = {
+              buffer: track.buffer,
+              codec,
+              container,
+              levelCodec,
+              metadata,
+              id,
+            };
           }
         }
       } else {
@@ -422,7 +433,7 @@ export default class BufferController implements ComponentAPI {
     data: BufferFlushingData
   ) {
     const { operationQueue } = this;
-    const flushOperation = (type): BufferOperation => ({
+    const flushOperation = (type: SourceBufferName): BufferOperation => ({
       execute: this.removeExecutor.bind(
         this,
         type,
@@ -447,8 +458,9 @@ export default class BufferController implements ComponentAPI {
     if (data.type) {
       operationQueue.append(flushOperation(data.type), data.type);
     } else {
-      operationQueue.append(flushOperation('audio'), 'audio');
-      operationQueue.append(flushOperation('video'), 'video');
+      this.getSourceBufferTypes().forEach((type: SourceBufferName) => {
+        operationQueue.append(flushOperation(type), type);
+      });
     }
   }
 
@@ -668,7 +680,7 @@ export default class BufferController implements ComponentAPI {
       this.createSourceBuffers(pendingTracks);
       this.pendingTracks = {};
       // append any pending segments now !
-      const buffers = Object.keys(this.sourceBuffer);
+      const buffers = this.getSourceBufferTypes();
       if (buffers.length === 0) {
         this.hls.trigger(Events.ERROR, {
           type: ErrorTypes.MEDIA_ERROR,
@@ -703,9 +715,8 @@ export default class BufferController implements ComponentAPI {
         const mimeType = `${track.container};codecs=${codec}`;
         logger.log(`[buffer-controller]: creating sourceBuffer(${mimeType})`);
         try {
-          const sb = (sourceBuffer[trackName] = mediaSource.addSourceBuffer(
-            mimeType
-          ));
+          const sb = (sourceBuffer[trackName] =
+            mediaSource.addSourceBuffer(mimeType));
           const sbName = trackName as SourceBufferName;
           this.addBufferListener(sbName, 'updatestart', this._onSBUpdateStart);
           this.addBufferListener(sbName, 'updateend', this._onSBUpdateEnd);
@@ -715,6 +726,7 @@ export default class BufferController implements ComponentAPI {
             codec: codec,
             container: track.container,
             levelCodec: track.levelCodec,
+            metadata: track.metadata,
             id: track.id,
           };
           tracksCreated++;

@@ -15,11 +15,13 @@ $('#windowEnd').val(windowEnd);
 function showMetrics() {
   metricsDisplayed = true;
   var width = window.innerWidth - 30;
-  $('#bufferWindow_c')[0].width = $('#bitrateTimerange_c')[0].width = $(
-    '#bufferTimerange_c'
-  )[0].width = $('#videoEvent_c')[0].width = $('#metricsButton')[0].width = $(
-    '#loadEvent_c'
-  )[0].width = width;
+  $('#bufferWindow_c')[0].width =
+    $('#bitrateTimerange_c')[0].width =
+    $('#bufferTimerange_c')[0].width =
+    $('#videoEvent_c')[0].width =
+    $('#metricsButton')[0].width =
+    $('#loadEvent_c')[0].width =
+      width;
   $('#bufferWindow_c').show();
   $('#bitrateTimerange_c').show();
   $('#bufferTimerange_c').show();

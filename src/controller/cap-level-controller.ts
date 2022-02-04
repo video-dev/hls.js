@@ -9,7 +9,6 @@ import type {
   BufferCodecsData,
   MediaAttachingData,
   FPSDropLevelCappingData,
-  LevelsUpdatedData,
 } from '../types/events';
 import StreamController from './stream-controller';
 import type { ComponentAPI } from '../types/component-api';

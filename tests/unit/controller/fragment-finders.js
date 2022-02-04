@@ -106,6 +106,52 @@ describe('Fragment finders', function () {
       findFragmentByPTS(fragments[0], fragments, bufferEnd, tolerance);
       expect(binarySearchSpy).to.have.been.calledOnce;
     });
+
+    it('returns null when there is a gap in sn and start-end time', function () {
+      const bufferEnd = 49;
+      const fragments = [
+        {
+          deltaPTS: 0,
+          cc: 0,
+          duration: 5,
+          start: 54,
+          sn: 5,
+          level: 0,
+        },
+        {
+          deltaPTS: 0,
+          cc: 0,
+          duration: 5,
+          start: 59,
+          sn: 5,
+          level: 0,
+        },
+        {
+          deltaPTS: 0,
+          cc: 0,
+          duration: 5,
+          start: 64,
+          sn: 5,
+          level: 0,
+        },
+      ];
+      // sn is not contiguous, and there is a gap between start and end
+      const fragPrevious = {
+        deltaPTS: 0,
+        cc: 0,
+        duration: 5,
+        start: 44,
+        sn: 1,
+        level: 0,
+      };
+      const actual = findFragmentByPTS(
+        fragPrevious,
+        fragments,
+        bufferEnd,
+        tolerance
+      );
+      expect(actual).to.equal(null);
+    });
   });
 
   describe('fragmentWithinToleranceTest', function () {

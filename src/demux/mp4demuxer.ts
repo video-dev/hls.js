@@ -14,10 +14,13 @@ import {
   findBox,
   segmentValidRange,
   appendUint8Array,
+  parseEmsg,
 } from '../utils/mp4-tools';
 import { dummyTrack } from './dummy-demuxed-track';
 import type { HlsEventEmitter } from '../events';
 import type { HlsConfig } from '../config';
+
+const emsgSchemePattern = /\/emsg[-/]ID3/i;
 
 class MP4Demuxer implements Demuxer {
   static readonly minProbeByteLength = 1024;
@@ -43,7 +46,7 @@ class MP4Demuxer implements Demuxer {
     );
   }
 
-  demux(data): DemuxerResult {
+  demux(data: Uint8Array, timeOffset: number): DemuxerResult {
     // Load all data into the avc track. The CMAF remuxer will look for the data in the samples object; the rest of the fields do not matter
     let avcSamples = data;
     const avcTrack = dummyTrack() as PassthroughVideoTrack;
@@ -61,10 +64,31 @@ class MP4Demuxer implements Demuxer {
       avcTrack.samples = avcSamples;
     }
 
+    const id3Track = dummyTrack() as DemuxedMetadataTrack;
+    const emsgs = findBox(avcTrack.samples, ['emsg']);
+    if (emsgs) {
+      id3Track.inputTimeScale = 1;
+      emsgs.forEach(({ data, start, end }) => {
+        const emsgInfo = parseEmsg(data.subarray(start, end));
+        if (emsgSchemePattern.test(emsgInfo.schemeIdUri)) {
+          const pts = Number.isFinite(emsgInfo.presentationTime)
+            ? emsgInfo.presentationTime! / emsgInfo.timeScale
+            : timeOffset + emsgInfo.presentationTimeDelta! / emsgInfo.timeScale;
+          const payload = emsgInfo.payload;
+          id3Track.samples.push({
+            data: payload,
+            len: payload.byteLength,
+            dts: pts,
+            pts: pts,
+          });
+        }
+      });
+    }
+
     return {
       audioTrack: dummyTrack() as DemuxedAudioTrack,
       avcTrack,
-      id3Track: dummyTrack() as DemuxedMetadataTrack,
+      id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
   }

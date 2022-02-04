@@ -67,6 +67,7 @@ export default class BufferOperationQueue {
         // Only shift the current operation off, otherwise the updateend handler will do this for us
         if (!sb || !sb.updating) {
           queue.shift();
+          this.executeNext(type);
         }
       }
     }

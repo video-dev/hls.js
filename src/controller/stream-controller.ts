@@ -7,11 +7,11 @@ import type { FragmentTracker } from './fragment-tracker';
 import { FragmentState } from './fragment-tracker';
 import type { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
-import { Fragment, ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes, Fragment } from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import type { TransmuxerResult } from '../types/transmuxer';
 import { ChunkMetadata } from '../types/transmuxer';
-import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
+import GapController from './gap-controller';
 import { ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
@@ -19,28 +19,29 @@ import type { LevelDetails } from '../loader/level-details';
 import type { TrackSet } from '../types/track';
 import type { SourceBufferName } from '../types/buffer';
 import type {
-  MediaAttachedData,
-  BufferCreatedData,
-  ManifestParsedData,
-  LevelLoadingData,
-  LevelLoadedData,
-  LevelsUpdatedData,
-  AudioTrackSwitchingData,
   AudioTrackSwitchedData,
+  AudioTrackSwitchingData,
+  BufferCreatedData,
+  BufferEOSData,
+  BufferFlushedData,
+  ErrorData,
+  FragBufferedData,
   FragLoadedData,
   FragParsingMetadataData,
   FragParsingUserdataData,
-  FragBufferedData,
-  BufferFlushedData,
-  ErrorData,
-  BufferEOSData,
+  LevelLoadedData,
+  LevelLoadingData,
+  LevelsUpdatedData,
+  ManifestParsedData,
+  MediaAttachedData,
 } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
 export default class StreamController
   extends BaseStreamController
-  implements NetworkComponentAPI {
+  implements NetworkComponentAPI
+{
   private audioCodecSwap: boolean = false;
   private gapController: GapController | null = null;
   private level: number = -1;
@@ -52,6 +53,7 @@ export default class StreamController
   private onvseeked: EventListener | null = null;
   private fragLastKbps: number = 0;
   private stalled: boolean = false;
+  private couldBacktrack: boolean = false;
   private audioCodecSwitch: boolean = false;
   private videoBuffer: any | null = null;
 
@@ -142,7 +144,10 @@ export default class StreamController
         startPosition = lastCurrentTime;
       }
       this.state = State.IDLE;
-      this.nextLoadPosition = this.startPosition = this.lastCurrentTime = startPosition;
+      this.nextLoadPosition =
+        this.startPosition =
+        this.lastCurrentTime =
+          startPosition;
       this.tick();
     } else {
       this._forceStartLoad = true;
@@ -239,85 +244,77 @@ export default class StreamController
       return;
     }
 
-    const pos = this.getLoadPosition();
-    if (!Number.isFinite(pos)) {
+    const bufferInfo = this.getFwdBufferInfo(
+      this.mediaBuffer ? this.mediaBuffer : media,
+      PlaylistLevelType.MAIN
+    );
+    if (bufferInfo === null) {
+      return;
+    }
+    const bufferLen = bufferInfo.len;
+
+    // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
+    const maxBufLen = this.getMaxBufferLength(levelInfo.maxBitrate);
+
+    // Stay idle if we are still with buffer margins
+    if (bufferLen >= maxBufLen) {
       return;
     }
 
-    let frag = levelDetails.initSegment;
-    let targetBufferTime = 0;
-    if (!frag || frag.data || this.bitrateTest) {
-      // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
-      const levelBitrate = levelInfo.maxBitrate;
-      let maxBufLen;
-      if (levelBitrate) {
-        maxBufLen = Math.max(
-          (8 * config.maxBufferSize) / levelBitrate,
-          config.maxBufferLength
-        );
-      } else {
-        maxBufLen = config.maxBufferLength;
-      }
-      maxBufLen = Math.min(maxBufLen, config.maxMaxBufferLength);
-
-      // determine next candidate fragment to be loaded, based on current position and end of buffer position
-      // ensure up to `config.maxMaxBufferLength` of buffer upfront
-      const maxBufferHole =
-        pos < config.maxBufferHole
-          ? Math.max(MAX_START_GAP_JUMP, config.maxBufferHole)
-          : config.maxBufferHole;
-      const bufferInfo = BufferHelper.bufferInfo(
-        this.mediaBuffer ? this.mediaBuffer : media,
-        pos,
-        maxBufferHole
-      );
-      const bufferLen = bufferInfo.len;
-      // Stay idle if we are still with buffer margins
-      if (bufferLen >= maxBufLen) {
-        return;
+    if (this._streamEnded(bufferInfo, levelDetails)) {
+      const data: BufferEOSData = {};
+      if (this.altAudio) {
+        data.type = 'video';
       }
 
-      if (this._streamEnded(bufferInfo, levelDetails)) {
-        const data: BufferEOSData = {};
-        if (this.altAudio) {
-          data.type = 'video';
-        }
+      this.hls.trigger(Events.BUFFER_EOS, data);
+      this.state = State.ENDED;
+      return;
+    }
 
-        this.hls.trigger(Events.BUFFER_EOS, data);
-        this.state = State.ENDED;
-        return;
+    const targetBufferTime = bufferInfo.end;
+    let frag = this.getNextFragment(targetBufferTime, levelDetails);
+    // Avoid backtracking after seeking or switching by loading an earlier segment in streams that could backtrack
+    if (
+      this.couldBacktrack &&
+      !this.fragPrevious &&
+      frag &&
+      frag.sn !== 'initSegment'
+    ) {
+      const fragIdx = frag.sn - levelDetails.startSN;
+      if (fragIdx > 1) {
+        frag = levelDetails.fragments[fragIdx - 1];
+        this.fragmentTracker.removeFragment(frag);
       }
-
-      targetBufferTime = bufferInfo.end;
-      frag = this.getNextFragment(targetBufferTime, levelDetails);
-      // Avoid loop loading by using nextLoadPosition set for backtracking
-      if (
-        frag &&
-        this.fragmentTracker.getState(frag) === FragmentState.OK &&
-        this.nextLoadPosition > targetBufferTime
-      ) {
-        frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
-      }
-      if (!frag) {
-        return;
-      }
+    }
+    // Avoid loop loading by using nextLoadPosition set for backtracking
+    if (
+      frag &&
+      this.fragmentTracker.getState(frag) === FragmentState.OK &&
+      this.nextLoadPosition > targetBufferTime
+    ) {
+      // Cleanup the fragment tracker before trying to find the next unbuffered fragment
+      const type =
+        this.audioOnly && !this.altAudio
+          ? ElementaryStreamTypes.AUDIO
+          : ElementaryStreamTypes.VIDEO;
+      this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
+      frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
+    }
+    if (!frag) {
+      return;
+    }
+    if (frag.initSegment && !frag.initSegment.data && !this.bitrateTest) {
+      frag = frag.initSegment;
     }
 
     // We want to load the key if we're dealing with an identity key, because we will decrypt
     // this content using the key we fetch. Other keys will be handled by the DRM CDM via EME.
     if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
-      this.log(
-        `Loading key for ${frag.sn} of [${levelDetails.startSN}-${levelDetails.endSN}], level ${level}`
-      );
-      this.loadKey(frag);
+      this.loadKey(frag, levelDetails);
     } else {
       this.loadFragment(frag, levelDetails, targetBufferTime);
     }
-  }
-
-  private loadKey(frag: Fragment) {
-    this.state = State.KEY_LOADING;
-    this.hls.trigger(Events.KEY_LOADING, { frag });
   }
 
   protected loadFragment(
@@ -473,6 +470,9 @@ export default class StreamController
     if (fragCurrent?.loader) {
       fragCurrent.loader.abort();
     }
+    if (this.state === State.KEY_LOADING) {
+      this.state = State.IDLE;
+    }
     this.nextLoadPosition = this.getLoadPosition();
   }
 
@@ -539,7 +539,7 @@ export default class StreamController
     this.log('Trigger BUFFER_RESET');
     this.hls.trigger(Events.BUFFER_RESET, undefined);
     this.fragmentTracker.removeAllFragments();
-    this.stalled = false;
+    this.couldBacktrack = this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
     this.fragPlaying = null;
   }
@@ -676,7 +676,7 @@ export default class StreamController
 
     // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
     const accurateTimeOffset = details.PTSKnown || !details.live;
-    const initSegmentData = details.initSegment?.data;
+    const initSegmentData = frag.initSegment?.data;
     const audioCodec = this._getAudioCodec(currentLevel);
 
     // transmux the MPEG-TS data to ISO-BMFF segments
@@ -738,12 +738,10 @@ export default class StreamController
           this.log('Switching to main audio track, cancel main fragment load');
           fragCurrent.loader.abort();
         }
-        this.fragCurrent = null;
-        this.fragPrevious = null;
         // destroy transmuxer to force init segment generation (following audio switch)
         this.resetTransmuxer();
         // switch to IDLE state to load new fragment
-        this.state = State.IDLE;
+        this.resetLoadingState();
       } else if (this.audioOnly) {
         // Reset audio transmuxer so when switching back to main audio we're not still appending where we left off
         this.resetTransmuxer();
@@ -874,25 +872,27 @@ export default class StreamController
           data.parent === 'main' &&
           (this.state === State.PARSING || this.state === State.PARSED)
         ) {
+          let flushBuffer = true;
+          const bufferedInfo = this.getFwdBufferInfo(
+            this.media,
+            PlaylistLevelType.MAIN
+          );
           // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-          const mediaBuffered =
-            !!this.media &&
-            BufferHelper.isBuffered(this.media, this.media.currentTime) &&
-            BufferHelper.isBuffered(this.media, this.media.currentTime + 0.5);
           // reduce max buf len if current position is buffered
-          if (mediaBuffered) {
-            this.reduceMaxBufferLength();
-            this.state = State.IDLE;
-          } else {
+          if (bufferedInfo && bufferedInfo.len > 0.5) {
+            flushBuffer = !this.reduceMaxBufferLength(bufferedInfo.len);
+          }
+          if (flushBuffer) {
             // current position is not buffered, but browser is still complaining about buffer full error
             // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
             // in that case flush the whole buffer to recover
             this.warn(
-              'buffer full error also media.currentTime is not buffered, flush everything'
+              'buffer full error also media.currentTime is not buffered, flush main'
             );
-            // flush everything
+            // flush main buffer
             this.immediateLevelSwitch();
           }
+          this.resetLoadingState();
         }
         break;
       default:
@@ -930,19 +930,22 @@ export default class StreamController
       this.startFragRequested = false;
       this.nextLoadPosition = this.startPosition;
     }
-    this.tick();
+    this.tickImmediate();
   }
 
   private onBufferFlushed(
     event: Events.BUFFER_FLUSHED,
     { type }: BufferFlushedData
   ) {
-    if (type !== ElementaryStreamTypes.AUDIO) {
+    if (
+      type !== ElementaryStreamTypes.AUDIO ||
+      (this.audioOnly && !this.altAudio)
+    ) {
       const media =
         (type === ElementaryStreamTypes.VIDEO
           ? this.videoBuffer
           : this.mediaBuffer) || this.media;
-      this.afterBufferFlushed(media, type);
+      this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
     }
   }
 
@@ -977,7 +980,11 @@ export default class StreamController
       const buffered = BufferHelper.getBuffered(media);
       const bufferStart = buffered.length ? buffered.start(0) : 0;
       const delta = bufferStart - startPosition;
-      if (delta > 0 && delta < this.config.maxBufferHole) {
+      if (
+        delta > 0 &&
+        (delta < this.config.maxBufferHole ||
+          delta < this.config.maxFragLookUpTolerance)
+      ) {
         logger.log(
           `adjusting start position by ${delta} to match buffer start`
         );
@@ -1017,7 +1024,11 @@ export default class StreamController
       this.bitrateTest = false;
       const stats = frag.stats;
       // Bitrate tests fragments are neither parsed nor buffered
-      stats.parsing.start = stats.parsing.end = stats.buffering.start = stats.buffering.end = self.performance.now();
+      stats.parsing.start =
+        stats.parsing.end =
+        stats.buffering.start =
+        stats.buffering.end =
+          self.performance.now();
       hls.trigger(Events.FRAG_LOADED, data as FragLoadedData);
     });
   }
@@ -1078,22 +1089,27 @@ export default class StreamController
             startDTS,
             endDTS,
           };
-        } else if (video.dropped && video.independent) {
-          // Backtrack if dropped frames create a gap after currentTime
-          const pos = this.getLoadPosition() + this.config.maxBufferHole;
-          if (pos < startPTS) {
-            this.backtrack(frag);
-            return;
+        } else {
+          if (video.firstKeyFrame && video.independent) {
+            this.couldBacktrack = true;
           }
-          // Set video stream start to fragment start so that truncated samples do not distort the timeline, and mark it partial
-          frag.setElementaryStreamInfo(
-            video.type as ElementaryStreamTypes,
-            frag.start,
-            endPTS,
-            frag.start,
-            endDTS,
-            true
-          );
+          if (video.dropped && video.independent) {
+            // Backtrack if dropped frames create a gap after currentTime
+            const pos = this.getLoadPosition() + this.config.maxBufferHole;
+            if (pos < startPTS) {
+              this.backtrack(frag);
+              return;
+            }
+            // Set video stream start to fragment start so that truncated samples do not distort the timeline, and mark it partial
+            frag.setElementaryStreamInfo(
+              video.type as ElementaryStreamTypes,
+              frag.start,
+              endPTS,
+              frag.start,
+              endDTS,
+              true
+            );
+          }
         }
         frag.setElementaryStreamInfo(
           video.type as ElementaryStreamTypes,
@@ -1245,6 +1261,7 @@ export default class StreamController
   }
 
   private backtrack(frag: Fragment) {
+    this.couldBacktrack = true;
     // Causes findFragments to backtrack through fragments to find the keyframe
     this.resetTransmuxer();
     this.flushBufferGap(frag);

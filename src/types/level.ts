@@ -68,18 +68,15 @@ export class HlsUrlParameters {
 
   addDirectives(uri: string): string | never {
     const url: URL = new self.URL(uri);
-    const searchParams: URLSearchParams = url.searchParams;
     if (this.msn !== undefined) {
-      searchParams.set('_HLS_msn', this.msn.toString());
+      url.searchParams.set('_HLS_msn', this.msn.toString());
     }
     if (this.part !== undefined) {
-      searchParams.set('_HLS_part', this.part.toString());
+      url.searchParams.set('_HLS_part', this.part.toString());
     }
     if (this.skip) {
-      searchParams.set('_HLS_skip', this.skip);
+      url.searchParams.set('_HLS_skip', this.skip);
     }
-    searchParams.sort();
-    url.search = searchParams.toString();
     return url.toString();
   }
 }

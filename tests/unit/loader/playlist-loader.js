@@ -355,10 +355,13 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
     const result = M3U8Parser.parseLevelPlaylist(
       level,
       'http://example.invalid/playlist.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
       0
     );
-    expect(result.initSegment).to.be.ok;
-    expect(result.initSegment.relurl).to.equal('/something.mp4?abc');
+    const initSegment = result.fragments[0].initSegment;
+    expect(initSegment).to.be.ok;
+    expect(initSegment.relurl).to.equal('/something.mp4?abc');
   });
 
   it('parse level with single char fragment URI', function () {
@@ -950,12 +953,43 @@ main.mp4`;
       'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',
       0
     );
-    expect(result.initSegment.url).to.equal(
+    const initSegment = result.fragments[0].initSegment;
+    expect(initSegment.url).to.equal(
       'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/main.mp4'
     );
-    expect(result.initSegment.byteRangeStartOffset).to.equal(0);
-    expect(result.initSegment.byteRangeEndOffset).to.equal(718);
-    expect(result.initSegment.sn).to.equal('initSegment');
+    expect(initSegment.byteRangeStartOffset).to.equal(0);
+    expect(initSegment.byteRangeEndOffset).to.equal(718);
+    expect(initSegment.sn).to.equal('initSegment');
+  });
+
+  it('parses multiple #EXT-X-MAP URI', function () {
+    const level = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-MAP:URI="main.mp4"
+#EXTINF:6.00600,
+frag1.mp4
+#EXT-X-DISCONTINUITY
+#EXT-X-MAP:URI="alt.mp4"
+#EXTINF:4.0
+frag2.mp4
+`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://video.example.com/disc.m3u8',
+      0
+    );
+    expect(result.fragments[0].initSegment.url).to.equal(
+      'http://video.example.com/main.mp4'
+    );
+    expect(result.fragments[0].initSegment.sn).to.equal('initSegment');
+    expect(result.fragments[1].initSegment.url).to.equal(
+      'http://video.example.com/alt.mp4'
+    );
+    expect(result.fragments[1].initSegment.sn).to.equal('initSegment');
   });
 
   describe('PDT calculations', function () {
@@ -1534,6 +1568,81 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
     expect(result.fragments[1].url).to.equal(
       'http://dummy.url.com/180724_Allison VLOG v3_00002.ts'
     );
+  });
+
+  it('parse fmp4 level with discontinuities and program date time', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:1638262
+#EXT-X-DISCONTINUITY-SEQUENCE:28141
+
+#EXT-X-KEY:METHOD=NONE
+#EXTINF:5.005,
+#EXT-X-MAP:URI="init.mp4"
+#EXT-X-PROGRAM-DATE-TIME:2021-11-10T03:25:49.015Z
+3.mp4
+#EXTINF:5.005,
+4.mp4
+#EXTINF:1.961,
+5.mp4
+#EXT-X-DISCONTINUITY
+#EXTINF:5.005,
+0.mp4
+#EXTINF:5.005,
+1.mp4
+#EXTINF:5.005,
+2.mp4
+#EXTINF:5.005,
+3.mp4
+#EXTINF:5.005,
+4.mp4
+#EXTINF:1.961,
+5.mp4
+#EXT-X-DISCONTINUITY
+#EXTINF:5.005,
+0.mp4
+#EXTINF:5.005,
+1.mp4
+#EXTINF:5.005,
+2.mp4
+#EXTINF:5.005,
+3.mp4
+#EXTINF:5.005,
+4.mp4
+#EXTINF:1.961,
+5.mp4
+#EXT-X-DISCONTINUITY
+#EXTINF:5.005,
+0.mp4
+#EXTINF:4.037,
+1.mp4
+#EXT-X-PROGRAM-DATE-TIME:2021-11-10T03:27:04Z
+#EXT-X-CUE-IN
+#EXT-X-MAP:URI="init_960719739.mp4"
+#EXT-X-DISCONTINUITY
+#EXTINF:6.0,
+media_1638274.m4s
+#EXTINF:6.0,
+media_1638275.m4s
+#EXTINF:6.0,
+media_1638276.m4s
+#EXTINF:6.0,
+media_1638277.m4s
+#EXTINF:6.0,
+media_1638278.m4s`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://foo.com/adaptive/test.m3u8',
+      0
+    );
+    expect(result.fragments.length).to.equal(22);
+    let pdt = 1636514824000;
+    for (let i = 17; i < result.fragments.length; i++) {
+      const frag = result.fragments[i];
+      expect(frag.programDateTime).to.equal(pdt);
+      pdt += frag.duration * 1000;
+    }
   });
 });
 

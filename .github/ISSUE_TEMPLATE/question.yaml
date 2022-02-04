@@ -1,0 +1,16 @@
+name: Question
+description: Need some help?
+labels: [Question, Needs Triage]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: What do you want to do with Hls.js?
+    validations:
+      required: true
+  - type: textarea
+    id: what_tried_so_far
+    attributes:
+      label: What have you tried so far?
+    validations:
+      required: false

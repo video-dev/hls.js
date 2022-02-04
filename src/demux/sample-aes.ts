@@ -45,6 +45,11 @@ class SampleAesDecrypter {
     sync: boolean
   ) {
     const curUnit = samples[sampleIndex].unit;
+    if (curUnit.length <= 16) {
+      // No encrypted portion in this sample (first 16 bytes is not
+      // encrypted, see https://developer.apple.com/library/archive/documentation/AudioVideo/Conceptual/HLS_Sample_Encryption/Encryption/Encryption.html),
+      return;
+    }
     const encryptedData = curUnit.subarray(
       16,
       curUnit.length - (curUnit.length % 16)
@@ -98,7 +103,7 @@ class SampleAesDecrypter {
     let outputPos = 0;
     for (
       let inputPos = 32;
-      inputPos <= decodedData.length - 16;
+      inputPos < decodedData.length - 16;
       inputPos += 160, outputPos += 16
     ) {
       encryptedData.set(
@@ -118,7 +123,7 @@ class SampleAesDecrypter {
     let inputPos = 0;
     for (
       let outputPos = 32;
-      outputPos <= decodedData.length - 16;
+      outputPos < decodedData.length - 16;
       outputPos += 160, inputPos += 16
     ) {
       decodedData.set(

@@ -19,7 +19,8 @@ import type { LevelAttributes, LevelParsed } from '../types/level';
 type M3U8ParserFragments = Array<Fragment | null>;
 
 // https://regex101.com is your friend
-const MASTER_PLAYLIST_REGEX = /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-SESSION-DATA:([^\r\n]*)[\r\n]+/g;
+const MASTER_PLAYLIST_REGEX =
+  /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-SESSION-DATA:([^\r\n]*)[\r\n]+/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
@@ -198,6 +199,8 @@ export default class M3U8Parser {
   ): LevelDetails {
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
+    // The most recent init segment seen (applies to all subsequent segments)
+    let currentInitSegment: Fragment | null = null;
     let currentSN = 0;
     let currentPart = 0;
     let totalduration = 0;
@@ -208,11 +211,27 @@ export default class M3U8Parser {
     let i: number;
     let levelkey: LevelKey | undefined;
     let firstPdtIndex = -1;
+    let createNextFrag = false;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
     level.m3u8 = string;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
+      if (createNextFrag) {
+        createNextFrag = false;
+        frag = new Fragment(type, baseurl);
+        // setup the next fragment for part loading
+        frag.start = totalduration;
+        frag.sn = currentSN;
+        frag.cc = discontinuityCounter;
+        frag.level = id;
+        if (currentInitSegment) {
+          frag.initSegment = currentInitSegment;
+          frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+          currentInitSegment.rawProgramDateTime = null;
+        }
+      }
+
       const duration = result[1];
       if (duration) {
         // INF
@@ -240,13 +259,7 @@ export default class M3U8Parser {
           totalduration += frag.duration;
           currentSN++;
           currentPart = 0;
-
-          frag = new Fragment(type, baseurl);
-          // setup the next fragment for part loading
-          frag.start = totalduration;
-          frag.sn = currentSN;
-          frag.cc = discontinuityCounter;
-          frag.level = id;
+          createNextFrag = true;
         }
       } else if (result[4]) {
         // X-BYTERANGE
@@ -290,9 +303,8 @@ export default class M3U8Parser {
             break;
           case 'SKIP': {
             const skipAttrs = new AttrList(value1);
-            const skippedSegments = skipAttrs.decimalInteger(
-              'SKIPPED-SEGMENTS'
-            );
+            const skippedSegments =
+              skipAttrs.decimalInteger('SKIPPED-SEGMENTS');
             if (Number.isFinite(skippedSegments)) {
               level.skippedSegments = skippedSegments;
               // This will result in fragments[] containing undefined values, which we will fill in with `mergeDetails`
@@ -305,9 +317,8 @@ export default class M3U8Parser {
               'RECENTLY-REMOVED-DATERANGES'
             );
             if (recentlyRemovedDateranges) {
-              level.recentlyRemovedDateranges = recentlyRemovedDateranges.split(
-                '\t'
-              );
+              level.recentlyRemovedDateranges =
+                recentlyRemovedDateranges.split('\t');
             }
             break;
           }
@@ -345,9 +356,8 @@ export default class M3U8Parser {
             const decryptmethod = keyAttrs.enumeratedString('METHOD');
             const decrypturi = keyAttrs.URI;
             const decryptiv = keyAttrs.hexadecimalInteger('IV');
-            const decryptkeyformatversions = keyAttrs.enumeratedString(
-              'KEYFORMATVERSIONS'
-            );
+            const decryptkeyformatversions =
+              keyAttrs.enumeratedString('KEYFORMATVERSIONS');
             const decryptkeyid = keyAttrs.enumeratedString('KEYID');
             // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
             const decryptkeyformat =
@@ -406,9 +416,8 @@ export default class M3U8Parser {
           }
           case 'START': {
             const startAttrs = new AttrList(value1);
-            const startTimeOffset = startAttrs.decimalFloatingPoint(
-              'TIME-OFFSET'
-            );
+            const startTimeOffset =
+              startAttrs.decimalFloatingPoint('TIME-OFFSET');
             // TIME-OFFSET can be 0
             if (Number.isFinite(startTimeOffset)) {
               level.startTimeOffset = startTimeOffset;
@@ -426,9 +435,9 @@ export default class M3U8Parser {
             if (levelkey) {
               frag.levelkey = levelkey;
             }
-            level.initSegment = frag;
-            frag = new Fragment(type, baseurl);
-            frag.rawProgramDateTime = level.initSegment.rawProgramDateTime;
+            frag.initSegment = null;
+            currentInitSegment = frag;
+            createNextFrag = true;
             break;
           }
           case 'SERVER-CONTROL': {
@@ -510,7 +519,7 @@ export default class M3U8Parser {
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
       if (firstFragment) {
         level.startCC = firstFragment.cc;
-        if (!level.initSegment) {
+        if (!firstFragment.initSegment) {
           // this is a bit lurky but HLS really has no other way to tell us
           // if the fragments are TS or MP4, except if we download them :/
           // but this is to be able to handle SIDX.
@@ -526,7 +535,7 @@ export default class M3U8Parser {
             frag.relurl = lastFragment.relurl;
             frag.level = id;
             frag.sn = 'initSegment';
-            level.initSegment = frag;
+            firstFragment.initSegment = frag;
             level.needSidxRanges = true;
           }
         }

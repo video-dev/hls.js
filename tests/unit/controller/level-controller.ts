@@ -3,6 +3,48 @@ import HlsMock from '../../mocks/hls.mock';
 import { Events } from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Level } from '../../../src/types/level';
+import { AttrList } from '../../../src/utils/attr-list';
+
+import type {
+  ManifestLoadedData,
+  ManifestParsedData,
+} from '../../../src/types/events';
+import type { LevelParsed } from '../../../src/types/level';
+import type {
+  MediaPlaylist,
+  MediaPlaylistType,
+} from '../../../src/types/media-playlist';
+
+import * as sinon from 'sinon';
+import * as chai from 'chai';
+import * as sinonChai from 'sinon-chai';
+
+chai.use(sinonChai);
+const expect = chai.expect;
+
+function parsedLevel(
+  options: Partial<LevelParsed> & { bitrate: number }
+): LevelParsed {
+  const level: LevelParsed = {
+    attrs: new AttrList(''),
+    bitrate: options.bitrate,
+    name: '',
+    url: '',
+  };
+  return Object.assign(level, options);
+}
+
+function mediaPlaylist(options: Partial<MediaPlaylist>): MediaPlaylist {
+  const level: LevelParsed = parsedLevel({ bitrate: 50000 });
+  const track: MediaPlaylist = Object.assign(level, {
+    autoselect: false,
+    default: false,
+    forced: false,
+    id: 0,
+    type: 'AUDIO' as MediaPlaylistType,
+  });
+  return Object.assign(track, options);
+}
 
 describe('LevelController', function () {
   const sandbox = sinon.createSandbox();
@@ -24,47 +66,43 @@ describe('LevelController', function () {
   });
 
   it('should trigger level switch when level is manually set', function () {
-    const data = {
+    const data: ManifestLoadedData = {
       audioTracks: [],
       levels: [
-        {
+        parsedLevel({
           id: 1,
           bitrate: 105000,
           name: '144',
-          details: { totalduration: 10, fragments: [{}] },
-        },
-        {
+        }),
+        parsedLevel({
           id: 2,
           bitrate: 246440,
           name: '240',
-          details: { totalduration: 10, fragments: [{}] },
-        },
-        {
+        }),
+        parsedLevel({
           id: 3,
           bitrate: 460560,
           name: '380',
-          details: { totalduration: 10, fragments: [{}] },
-        },
-        {
+        }),
+        parsedLevel({
           id: 4,
           bitrate: 836280,
           name: '480',
-          details: { totalduration: 10, fragments: [{}] },
-        },
-        {
+        }),
+        parsedLevel({
           id: 5,
           bitrate: 2149280,
           name: '720',
-          details: { totalduration: 10, fragments: [{}] },
-        },
-        {
+        }),
+        parsedLevel({
           id: 6,
           bitrate: 6221600,
           name: '1080',
-          details: { totalduration: 10, fragments: [{}] },
-        },
+        }),
       ],
       networkDetails: '',
+      sessionData: {},
+      stats: {} as any,
       subtitles: [],
       url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     };
@@ -76,12 +114,12 @@ describe('LevelController', function () {
     levelController.level = nextLevel;
     // Then triggers "levelSwitching"
     expect(triggerSpy).to.have.been.calledWith(Events.LEVEL_SWITCHING, {
-      attrs: undefined,
+      attrs: data.levels[1].attrs,
       audioCodec: undefined,
       audioGroupIds: undefined,
       bitrate: 246440,
       codecSet: '',
-      details: data.levels[1].details,
+      details: undefined,
       fragmentError: 0,
       height: 0,
       id: 2,
@@ -94,7 +132,7 @@ describe('LevelController', function () {
       textGroupIds: undefined,
       unknownCodecs: undefined,
       uri: '',
-      url: [undefined],
+      url: [''],
       urlId: 0,
       videoCodec: undefined,
       width: 0,
@@ -121,43 +159,38 @@ describe('LevelController', function () {
     });
 
     it('should trigger hlsManifestParsed when levels are found in the manifest', function () {
-      const data = {
+      const data: ManifestLoadedData = {
         audioTracks: [],
         levels: [
-          {
+          parsedLevel({
             bitrate: 105000,
             name: '144',
-            details: { totalduration: 10, fragments: [{}] },
-          },
-          {
+          }),
+          parsedLevel({
             bitrate: 246440,
             name: '240',
-            details: { totalduration: 10, fragments: [{}] },
-          },
-          {
+          }),
+          parsedLevel({
             bitrate: 460560,
             name: '380',
-            details: { totalduration: 10, fragments: [{}] },
-          },
-          {
+          }),
+          parsedLevel({
             bitrate: 836280,
             name: '480',
-            details: { totalduration: 10, fragments: [{}] },
-          },
-          {
+          }),
+          parsedLevel({
             bitrate: 2149280,
             name: '720',
-            details: { totalduration: 10, fragments: [{}] },
-          },
-          {
+          }),
+          parsedLevel({
             bitrate: 6221600,
             name: '1080',
-            details: { totalduration: 10, fragments: [{}] },
-          },
+          }),
         ],
         networkDetails: '',
         subtitles: [],
-        stats: {},
+        sessionData: {},
+        stats: {} as any,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
@@ -176,49 +209,61 @@ describe('LevelController', function () {
     });
 
     it('should signal altAudio if present in the manifest without codec attributes', function () {
-      const data = {
-        audioTracks: [{ audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }],
+      const data: ManifestLoadedData = {
+        audioTracks: [
+          mediaPlaylist({
+            audioCodec: 'mp4a.40.5',
+            url: 'audio-track.m3u8',
+          }),
+        ],
         levels: [
-          {
+          parsedLevel({
             bitrate: 105000,
             name: '144',
-            details: { totalduration: 10, fragments: [{}] },
-          },
+          }),
         ],
         networkDetails: '',
         subtitles: [],
-        stats: {},
+        sessionData: {},
+        stats: {} as any,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
-      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
-      expect(triggerSpy).to.have.been.calledWith(Events.MANIFEST_PARSED, {
+      const parsedData: ManifestParsedData = {
         levels: data.levels.map((levelParsed) => new Level(levelParsed)),
         audioTracks: data.audioTracks,
         subtitleTracks: [],
         firstLevel: 0,
-        stats: {},
+        stats: {} as any,
         audio: false,
         video: false,
         altAudio: true,
-      });
+      };
+
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
+      expect(triggerSpy).to.have.been.calledWith(
+        Events.MANIFEST_PARSED,
+        parsedData
+      );
     });
 
     it('should signal altAudio if present in the manifest with codec attributes', function () {
-      const data = {
-        audioTracks: [{ audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }],
+      const data: ManifestLoadedData = {
+        audioTracks: [
+          mediaPlaylist({ audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }),
+        ],
         levels: [
-          {
+          parsedLevel({
             bitrate: 105000,
             name: '144',
             videoCodec: 'avc1.42001e',
             audioCodec: 'mp4a.40.2',
-            details: { totalduration: 10, fragments: [{}] },
-          },
+          }),
         ],
         networkDetails: '',
         subtitles: [],
-        stats: {},
+        sessionData: {},
+        stats: {} as any,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
@@ -236,22 +281,22 @@ describe('LevelController', function () {
     });
 
     it('should not signal altAudio in audio-only streams', function () {
-      const data = {
+      const data: ManifestLoadedData = {
         audioTracks: [
-          { audioCodec: 'mp4a.40.5', name: 'main' },
-          { audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' },
+          mediaPlaylist({ audioCodec: 'mp4a.40.5', name: 'main' }),
+          mediaPlaylist({ audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }),
         ],
         levels: [
-          {
+          parsedLevel({
             bitrate: 105000,
             name: 'audio-only',
             audioCodec: 'mp4a.40.2',
-            details: { totalduration: 10, fragments: [{}] },
-          },
+          }),
         ],
         networkDetails: '',
         subtitles: [],
-        stats: {},
+        sessionData: {},
+        stats: {} as any,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
@@ -270,19 +315,20 @@ describe('LevelController', function () {
   });
 
   describe('manifest parsing', function () {
-    let data;
+    let data: ManifestLoadedData;
     beforeEach(function () {
       data = {
         audioTracks: [],
         levels: [
-          {
+          parsedLevel({
             bitrate: 105000,
             name: '144',
-            details: { totalduration: 10, fragments: [{}] },
-          },
+          }),
         ],
         networkDetails: '',
         subtitles: [],
+        sessionData: {},
+        stats: {} as any,
         url: 'foo',
       };
     });
@@ -312,18 +358,17 @@ describe('LevelController', function () {
     it('signals altAudio if there are audioTracks containing URIs', function () {
       data.levels[0].videoCodec = 'avc1.42e01e';
       data.audioTracks = [
-        {
+        mediaPlaylist({
           groupId: 'audio',
           name: 'Audio',
           type: 'AUDIO',
           default: true,
           autoselect: true,
           forced: false,
-          url:
-            'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/05845f51-c319-41ca-8e84-b84299925a0c/playlist.m3u8',
+          url: 'https://d35u71x3nb8v2y.cloudfront.net/4b711b97-513c-4d36-ad29-298ab23a2e5e/05845f51-c319-41ca-8e84-b84299925a0c/playlist.m3u8',
           id: 0,
-        },
-        {
+        }),
+        mediaPlaylist({
           groupId: 'audio',
           name: 'Audio',
           type: 'AUDIO',
@@ -331,7 +376,7 @@ describe('LevelController', function () {
           autoselect: true,
           forced: false,
           id: 0,
-        },
+        }),
       ];
 
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
@@ -346,7 +391,7 @@ describe('LevelController', function () {
     it('does not signal altAudio if the audioTracks do no not contain any URIs', function () {
       data.levels[0].videoCodec = 'avc1.42e01e';
       data.audioTracks = [
-        {
+        mediaPlaylist({
           groupId: 'audio',
           name: 'Audio',
           type: 'AUDIO',
@@ -354,8 +399,8 @@ describe('LevelController', function () {
           autoselect: true,
           forced: false,
           id: 0,
-        },
-        {
+        }),
+        mediaPlaylist({
           groupId: 'audio',
           name: 'Audio',
           type: 'AUDIO',
@@ -363,7 +408,7 @@ describe('LevelController', function () {
           autoselect: true,
           forced: false,
           id: 0,
-        },
+        }),
       ];
 
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);

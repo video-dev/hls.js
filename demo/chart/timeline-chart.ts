@@ -1,5 +1,4 @@
 import Chart from 'chart.js';
-import 'chartjs-plugin-zoom';
 import { applyChartInstanceOverrides, hhmmss } from './chartjs-horizontal-bar';
 import { Fragment } from '../../src/loader/fragment';
 import type { Level } from '../../src/types/level';
@@ -23,6 +22,7 @@ declare global {
 const X_AXIS_SECONDS = 'x-axis-seconds';
 
 interface ChartScale {
+  width: number;
   height: number;
   min: number;
   max: number;
@@ -47,6 +47,7 @@ export class TimelineChart {
   private tracksChangeHandler?: (e) => void;
   private cuesChangeHandler?: (e) => void;
   private hidden: boolean = true;
+  private zoom100: number = 60;
 
   constructor(canvas: HTMLCanvasElement, chartJsOptions?: any) {
     const ctx = canvas.getContext('2d');
@@ -55,41 +56,27 @@ export class TimelineChart {
         `Could not get CanvasRenderingContext2D from canvas: ${canvas}`
       );
     }
-    const chart = (this.chart = self.chart = new Chart(ctx, {
-      type: 'horizontalBar',
-      data: {
-        labels: [],
-        datasets: [],
-      },
-      options: Object.assign(getChartOptions(), chartJsOptions),
-      plugins: [
-        {
-          afterRender: (chart) => {
-            this.imageDataBuffer = null;
-            this.drawCurrentTime();
+    const chart =
+      (this.chart =
+      self.chart =
+        new Chart(ctx, {
+          type: 'horizontalBar',
+          data: {
+            labels: [],
+            datasets: [],
           },
-        },
-      ],
-    }));
+          options: Object.assign(getChartOptions(), chartJsOptions),
+          plugins: [
+            {
+              afterRender: (chart) => {
+                this.imageDataBuffer = null;
+                this.drawCurrentTime();
+              },
+            },
+          ],
+        }));
 
     applyChartInstanceOverrides(chart);
-
-    // Log object on click and seek to position
-    canvas.onclick = (event: MouseEvent) => {
-      const chart = this.chart;
-      const element = chart.getElementAtEvent(event);
-      if (element.length && chart.data.datasets) {
-        const dataset = chart.data.datasets[(element[0] as any)._datasetIndex];
-        const obj = dataset.data![(element[0] as any)._index];
-        // eslint-disable-next-line no-console
-        console.log(obj);
-        if (self.hls?.media) {
-          const scale = this.chartScales[X_AXIS_SECONDS];
-          const pos = Chart.helpers.getRelativePosition(event, chart);
-          self.hls.media.currentTime = scale.getValueForPixel(pos.x);
-        }
-      }
-    };
 
     canvas.ondblclick = (event: MouseEvent) => {
       const chart = this.chart;
@@ -97,25 +84,148 @@ export class TimelineChart {
       const element = chart.getElementAtEvent(event);
       const pos = Chart.helpers.getRelativePosition(event, chart);
       const scale = this.chartScales[X_AXIS_SECONDS];
-      const range = scale.max - scale.min;
-      const newDiff = range * (event.getModifierState('Shift') ? -1.0 : 0.5);
-      const minPercent = (scale.getValueForPixel(pos.x) - scale.min) / range;
-      const maxPercent = 1 - minPercent;
-      const minDelta = newDiff * minPercent;
-      const maxDelta = newDiff * maxPercent;
       // zoom in when double clicking near elements in chart area
       if (element.length || pos.x > chartArea.left) {
-        scale.options.ticks.min = Math.max(this.minZoom, scale.min + minDelta);
-        scale.options.ticks.max = Math.min(this.maxZoom, scale.max - maxDelta);
+        const amount = event.getModifierState('Shift') ? -1.0 : 0.5;
+        this.zoom(scale, pos, amount);
       } else {
-        // chart.resetZoom();
-        scale.options.ticks.min = this.minZoom;
-        scale.options.ticks.max = this.maxZoom;
+        scale.options.ticks.min = 0;
+        scale.options.ticks.max = this.zoom100;
       }
       this.update();
     };
 
-    // TODO: Prevent zoom over y axis labels
+    canvas.onwheel = (event: WheelEvent) => {
+      if (event.deltaMode) {
+        // exit if wheel is in page or line scrolling mode
+        return;
+      }
+      const chart = this.chart;
+      const chartArea: { left; top; right; bottom } = chart.chartArea;
+      const pos = Chart.helpers.getRelativePosition(event, chart);
+      // zoom when scrolling over chart elements
+      if (pos.x > chartArea.left - 11) {
+        const scale = this.chartScales[X_AXIS_SECONDS];
+        if (event.deltaY) {
+          const direction = -event.deltaY / Math.abs(event.deltaY);
+          const normal = Math.min(333, Math.abs(event.deltaY)) / 1000;
+          const ease = 1 - (1 - normal) * (1 - normal);
+          this.zoom(scale, pos, ease * direction);
+        } else if (event.deltaX) {
+          this.pan(scale, event.deltaX / 10, scale.min, scale.max);
+        }
+        event.preventDefault();
+      }
+    };
+
+    let moved = false;
+    let gestureScale = 1;
+    canvas.onpointerdown = (downEvent: PointerEvent) => {
+      if (!downEvent.isPrimary || gestureScale !== 1) {
+        return;
+      }
+      const chart = this.chart;
+      const chartArea: { left; top; right; bottom } = chart.chartArea;
+      const pos = Chart.helpers.getRelativePosition(downEvent, chart);
+      // pan when dragging over chart elements
+      if (pos.x > chartArea.left) {
+        const scale = this.chartScales[X_AXIS_SECONDS];
+        const startX = downEvent.clientX;
+        const { min, max } = scale;
+        const xToVal = (max - min) / scale.width;
+        moved = false;
+        canvas.setPointerCapture(downEvent.pointerId);
+        canvas.onpointermove = (moveEvent: PointerEvent) => {
+          if (!downEvent.isPrimary || gestureScale !== 1) {
+            return;
+          }
+          const movedX = startX - moveEvent.clientX;
+          const movedValue = movedX * xToVal;
+          moved = moved || Math.abs(movedX) > 8;
+          this.pan(scale, movedValue, min, max);
+        };
+      }
+    };
+
+    canvas.onpointerup = canvas.onpointercancel = (upEvent: PointerEvent) => {
+      if (canvas.onpointermove) {
+        canvas.onpointermove = null;
+        canvas.releasePointerCapture(upEvent.pointerId);
+      }
+      if (!moved && upEvent.isPrimary) {
+        this.click(upEvent);
+      }
+    };
+
+    // Gesture events are for iOS and easier to implement than pinch-zoom with multiple pointers for all browsers
+    // @ts-ignore
+    canvas.ongesturestart = (event) => {
+      gestureScale = 1;
+      event.preventDefault();
+    };
+
+    // @ts-ignore
+    canvas.ongestureend = (event) => {
+      gestureScale = 1;
+    };
+
+    // @ts-ignore
+    canvas.ongesturechange = (event) => {
+      const chart = this.chart;
+      const chartArea: { left; top; right; bottom } = chart.chartArea;
+      const pos = Chart.helpers.getRelativePosition(event, chart);
+      // zoom when scrolling over chart elements
+      if (pos.x > chartArea.left) {
+        const scale = this.chartScales[X_AXIS_SECONDS];
+        const amount = event.scale - gestureScale;
+        this.zoom(scale, pos, amount);
+        gestureScale = event.scale;
+      }
+    };
+  }
+
+  private click(event: MouseEvent) {
+    // Log object on click and seek to position
+    const chart = this.chart;
+    const element = chart.getElementAtEvent(event);
+    if (element.length && chart.data.datasets) {
+      const dataset = chart.data.datasets[(element[0] as any)._datasetIndex];
+      const obj = dataset.data![(element[0] as any)._index];
+      // eslint-disable-next-line no-console
+      console.log(obj);
+      if (self.hls?.media) {
+        const scale = this.chartScales[X_AXIS_SECONDS];
+        const pos = Chart.helpers.getRelativePosition(event, chart);
+        self.hls.media.currentTime = scale.getValueForPixel(pos.x);
+      }
+    }
+  }
+
+  private pan(scale: ChartScale, amount: number, min: number, max: number) {
+    if (amount === 0) {
+      return;
+    }
+    let pan = amount;
+    if (amount > 0) {
+      pan = Math.min(this.zoom100 + 10 - max, amount);
+    } else {
+      pan = Math.max(-10 - min, amount);
+    }
+    scale.options.ticks.min = min + pan;
+    scale.options.ticks.max = max + pan;
+    this.updateOnRepaint();
+  }
+
+  private zoom(scale: ChartScale, pos: any, amount: number) {
+    const range = scale.max - scale.min;
+    const diff = range * amount;
+    const minPercent = (scale.getValueForPixel(pos.x) - scale.min) / range;
+    const maxPercent = 1 - minPercent;
+    const minDelta = diff * minPercent;
+    const maxDelta = diff * maxPercent;
+    scale.options.ticks.min = Math.max(-10, scale.min + minDelta);
+    scale.options.ticks.max = Math.min(this.zoom100 + 10, scale.max - maxDelta);
+    this.updateOnRepaint();
   }
 
   get chartScales(): { 'x-axis-seconds': ChartScale } {
@@ -126,10 +236,6 @@ export class TimelineChart {
     const scale = this.chartScales[X_AXIS_SECONDS];
     scale.options.ticks.min = 0;
     scale.options.ticks.max = 60;
-    const config = this.chart.config;
-    if (config?.options) {
-      (config.options.plugins as any).zoom.zoom.rangeMax.x = 60;
-    }
     const { labels, datasets } = this.chart.data;
     if (labels && datasets) {
       labels.length = 0;
@@ -142,10 +248,19 @@ export class TimelineChart {
     if (this.hidden || !this.chart.ctx?.canvas.width) {
       return;
     }
+    self.cancelAnimationFrame(this.rafDebounceRequestId);
     this.chart.update({
       duration: 0,
       lazy: true,
     });
+  }
+
+  updateOnRepaint() {
+    if (this.hidden) {
+      return;
+    }
+    self.cancelAnimationFrame(this.rafDebounceRequestId);
+    this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
   }
 
   resize(datasets?) {
@@ -342,45 +457,38 @@ export class TimelineChart {
       }
     }
     const start = getPlaylistStart(details);
-    this.maxZoom = Math.max(
+    this.maxZoom = this.zoom100 = Math.max(
       start + totalduration + targetduration * 3,
-      this.maxZoom
+      this.zoom100
     );
-    if (this.hidden) {
-      return;
-    }
-    self.cancelAnimationFrame(this.rafDebounceRequestId);
-    this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
+    this.updateOnRepaint();
   }
 
   // @ts-ignore
   get minZoom(): number {
-    if (this.chart.config?.options?.plugins) {
-      return this.chart.config.options.plugins.zoom.zoom.rangeMin.x;
+    const scale = this.chartScales[X_AXIS_SECONDS];
+    if (scale) {
+      return scale.options.ticks.min;
     }
-    return 60;
+    return 1;
   }
 
   // @ts-ignore
   get maxZoom(): number {
-    if (this.chart.config?.options?.plugins) {
-      return this.chart.config.options.plugins.zoom.zoom.rangeMax.x;
+    const scale = this.chartScales[X_AXIS_SECONDS];
+    if (scale) {
+      return scale.options.ticks.max;
     }
-    return 60;
+    return this.zoom100;
   }
 
   // @ts-ignore
   set maxZoom(x: number) {
-    const { chart } = this;
-    const { config } = chart;
-    if (config?.options?.plugins) {
-      const currentZoom = config.options.plugins.zoom.zoom.rangeMax.x;
-      const newZoom = Math.max(x, currentZoom);
-      if (currentZoom === 60 && newZoom !== currentZoom) {
-        const scale = this.chartScales[X_AXIS_SECONDS];
-        scale.options.ticks.max = newZoom;
-      }
-      config.options.plugins.zoom.zoom.rangeMax.x = newZoom;
+    const currentZoom = this.maxZoom;
+    const newZoom = Math.max(x, currentZoom);
+    if (currentZoom === 60 && newZoom !== currentZoom) {
+      const scale = this.chartScales[X_AXIS_SECONDS];
+      scale.options.ticks.max = newZoom;
     }
   }
 
@@ -408,11 +516,7 @@ export class TimelineChart {
     if (fragData && fragData !== frag) {
       Object.assign(fragData, frag);
     }
-    if (this.hidden) {
-      return;
-    }
-    self.cancelAnimationFrame(this.rafDebounceRequestId);
-    this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
+    this.updateOnRepaint();
   }
 
   updateSourceBuffers(tracks: TrackSet, media: HTMLMediaElement) {
@@ -605,19 +709,11 @@ export class TimelineChart {
         dataType: 'cue',
       });
     }
-    if (this.hidden) {
-      return;
-    }
-    self.cancelAnimationFrame(this.rafDebounceRequestId);
-    this.rafDebounceRequestId = self.requestAnimationFrame(() => this.update());
+    this.updateOnRepaint();
   }
 
   drawCurrentTime() {
     const chart = this.chart;
-    // @ts-ignore
-    if (chart?.panning) {
-      return;
-    }
     if (self.hls?.media && chart.data.datasets!.length) {
       const currentTime = self.hls.media.currentTime;
       const scale = this.chartScales[X_AXIS_SECONDS];
@@ -831,42 +927,6 @@ function getChartOptions() {
     },
     tooltips: {
       enabled: false,
-    },
-    plugins: {
-      zoom: {
-        pan: {
-          enabled: true,
-          mode: 'x',
-          rangeMin: {
-            x: -10,
-            y: null,
-          },
-          rangeMax: {
-            x: null,
-            y: null,
-          },
-          threshold: 100,
-          onPan: function ({ chart }) {
-            chart.panning = true;
-          },
-          onPanComplete: function ({ chart }) {
-            chart.panning = false;
-          },
-        },
-        zoom: {
-          enabled: true,
-          speed: 0.1,
-          mode: 'x',
-          rangeMin: {
-            x: 0,
-            y: null,
-          },
-          rangeMax: {
-            x: 60,
-            y: null,
-          },
-        },
-      },
     },
   };
 }

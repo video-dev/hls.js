@@ -58,7 +58,7 @@ class FPSController implements ComponentAPI {
       }
 
       self.clearInterval(this.timer);
-      this.timer = self.setTimeout(
+      this.timer = self.setInterval(
         this.checkFPSInterval.bind(this),
         config.fpsDroppedMonitoringPeriod
       );

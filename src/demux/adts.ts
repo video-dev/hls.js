@@ -6,7 +6,11 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import type { HlsEventEmitter } from '../events';
 import { Events } from '../events';
-import type { DemuxedAudioTrack, AppendedAudioFrame } from '../types/demuxer';
+import type {
+  DemuxedAudioTrack,
+  AudioFrame,
+  AudioSample,
+} from '../types/demuxer';
 
 type AudioConfig = {
   config: number[];
@@ -35,19 +39,8 @@ export function getAudioConfig(
   const userAgent = navigator.userAgent.toLowerCase();
   const manifestCodec = audioCodec;
   const adtsSampleingRates = [
-    96000,
-    88200,
-    64000,
-    48000,
-    44100,
-    32000,
-    24000,
-    22050,
-    16000,
-    12000,
-    11025,
-    8000,
-    7350,
+    96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025,
+    8000, 7350,
   ];
   // byte 2
   adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
@@ -267,15 +260,13 @@ export function parseFrameHeader(
   frameIndex: number,
   frameDuration: number
 ): FrameHeader | void {
-  const length = data.length;
-
   // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
   const headerLength = getHeaderLength(data, offset);
   // retrieve frame size
   let frameLength = getFullFrameLength(data, offset);
   frameLength -= headerLength;
 
-  if (frameLength > 0 && offset + headerLength + frameLength <= length) {
+  if (frameLength > 0) {
     const stamp = pts + frameIndex * frameDuration;
     // logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
     return { headerLength, frameLength, stamp };
@@ -288,25 +279,30 @@ export function appendFrame(
   offset: number,
   pts: number,
   frameIndex: number
-): AppendedAudioFrame | void {
+): AudioFrame | void {
   const frameDuration = getFrameDuration(track.samplerate as number);
   const header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
   if (header) {
-    const stamp = header.stamp;
-    const headerLength = header.headerLength;
-    const frameLength = header.frameLength;
+    const { frameLength, headerLength, stamp } = header;
+    const length = headerLength + frameLength;
+    const missing = Math.max(0, offset + length - data.length);
+    // logger.log(`AAC frame ${frameIndex}, pts:${stamp} length@offset/total: ${frameLength}@${offset+headerLength}/${data.byteLength} missing: ${missing}`);
+    let unit: Uint8Array;
+    if (missing) {
+      unit = new Uint8Array(length - headerLength);
+      unit.set(data.subarray(offset + headerLength, data.length), 0);
+    } else {
+      unit = data.subarray(offset + headerLength, offset + length);
+    }
 
-    // logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-    const aacSample = {
-      unit: data.subarray(
-        offset + headerLength,
-        offset + headerLength + frameLength
-      ),
+    const sample: AudioSample = {
+      unit,
       pts: stamp,
-      dts: stamp,
     };
+    if (!missing) {
+      track.samples.push(sample as AudioSample);
+    }
 
-    track.samples.push(aacSample);
-    return { sample: aacSample, length: frameLength + headerLength };
+    return { sample, length, missing };
   }
 }

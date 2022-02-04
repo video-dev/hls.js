@@ -173,3 +173,56 @@ export function alignPDT(details: LevelDetails, lastDetails: LevelDetails) {
     adjustSlidingStart(sliding, details);
   }
 }
+
+export function alignFragmentByPDTDelta(frag: Fragment, delta: number) {
+  const { programDateTime } = frag;
+  if (!programDateTime) return;
+  const start = (programDateTime - delta) / 1000;
+  frag.start = frag.startPTS = start;
+  frag.endPTS = start + frag.duration;
+}
+
+/**
+ * Ensures appropriate time-alignment between renditions based on PDT. Unlike `alignPDT`, which adjusts
+ * the timeline based on the delta between PDTs of the 0th fragment of two playlists/`LevelDetails`,
+ * this function assumes the timelines represented in `refDetails` are accurate, including the PDTs,
+ * and uses the "wallclock"/PDT timeline as a cross-reference to `details`, adjusting the presentation
+ * times/timelines of `details` accordingly.
+ * Given the asynchronous nature of fetches and initial loads of live `main` and audio/subtitle tracks,
+ * the primary purpose of this function is to ensure the "local timelines" of audio/subtitle tracks
+ * are aligned to the main/video timeline, using PDT as the cross-reference/"anchor" that should
+ * be consistent across playlists, per the HLS spec.
+ * @param details - The details of the rendition you'd like to time-align (e.g. an audio rendition).
+ * @param refDetails - The details of the reference rendition with start and PDT times for alignment.
+ */
+export function alignMediaPlaylistByPDT(
+  details: LevelDetails,
+  refDetails: LevelDetails
+) {
+  // This check protects the unsafe "!" usage below for null program date time access.
+  if (
+    !refDetails.fragments.length ||
+    !details.hasProgramDateTime ||
+    !refDetails.hasProgramDateTime
+  ) {
+    return;
+  }
+  const refPDT = refDetails.fragments[0].programDateTime!; // hasProgramDateTime check above makes this safe.
+  const refStart = refDetails.fragments[0].start;
+  // Use the delta between the reference details' presentation timeline's start time and its PDT
+  // to align the other rendtion's timeline.
+  const delta = refPDT - refStart * 1000;
+  // Per spec: "If any Media Playlist in a Master Playlist contains an EXT-X-PROGRAM-DATE-TIME tag, then all
+  // Media Playlists in that Master Playlist MUST contain EXT-X-PROGRAM-DATE-TIME tags with consistent mappings
+  // of date and time to media timestamps."
+  // So we should be able to use each rendition's PDT as a reference time and use the delta to compute our relevant
+  // start and end times.
+  // NOTE: This code assumes each level/details timelines have already been made "internally consistent"
+  details.fragments.forEach((frag) => {
+    alignFragmentByPDTDelta(frag, delta);
+  });
+  if (details.fragmentHint) {
+    alignFragmentByPDTDelta(details.fragmentHint, delta);
+  }
+  details.alignedSliding = true;
+}

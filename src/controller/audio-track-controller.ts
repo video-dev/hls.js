@@ -171,11 +171,6 @@ class AudioTrackController extends BasePlaylistController {
 
   private setAudioTrack(newId: number): void {
     const tracks = this.tracksInGroup;
-    const track = tracks[newId];
-    // noop on audio track already set
-    if (track?.details) {
-      return;
-    }
 
     // check if level idx is valid
     if (newId < 0 || newId >= tracks.length) {
@@ -188,6 +183,7 @@ class AudioTrackController extends BasePlaylistController {
 
     const lastTrack = tracks[this.trackId];
     this.log(`Now switching to audio-track index ${newId}`);
+    const track = tracks[newId];
     const { id, groupId = '', name, type, url } = track;
     this.trackId = newId;
     this.trackName = name;
@@ -199,6 +195,10 @@ class AudioTrackController extends BasePlaylistController {
       type,
       url,
     });
+    // Do not reload track unless live
+    if (track.details && !track.details.live) {
+      return;
+    }
     const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
     this.loadPlaylist(hlsUrlParameters);
   }

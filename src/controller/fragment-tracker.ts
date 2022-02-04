@@ -26,9 +26,8 @@ export enum FragmentState {
 export class FragmentTracker implements ComponentAPI {
   private activeFragment: Fragment | null = null;
   private activeParts: Part[] | null = null;
-  private fragments: Partial<Record<string, FragmentEntity>> = Object.create(
-    null
-  );
+  private fragments: Partial<Record<string, FragmentEntity>> =
+    Object.create(null);
   private timeRanges:
     | {
         [key in SourceBufferName]: TimeRanges;
@@ -136,12 +135,19 @@ export class FragmentTracker implements ComponentAPI {
    */
   public detectEvictedFragments(
     elementaryStream: SourceBufferName,
-    timeRange: TimeRanges
+    timeRange: TimeRanges,
+    playlistType?: PlaylistLevelType
   ) {
     // Check if any flagged fragments have been unloaded
     Object.keys(this.fragments).forEach((key) => {
       const fragmentEntity = this.fragments[key];
-      if (!fragmentEntity || !fragmentEntity.buffered) {
+      if (!fragmentEntity) {
+        return;
+      }
+      if (!fragmentEntity.buffered) {
+        if (fragmentEntity.body.type === playlistType) {
+          this.removeFragment(fragmentEntity.body);
+        }
         return;
       }
       const esData = fragmentEntity.range[elementaryStream];
@@ -199,6 +205,15 @@ export class FragmentTracker implements ComponentAPI {
     } else {
       // remove fragment if nothing was appended
       this.removeFragment(fragmentEntity.body);
+    }
+  }
+
+  public fragBuffered(frag: Fragment) {
+    const fragKey = getFragmentKey(frag);
+    const fragmentEntity = this.fragments[fragKey];
+    if (fragmentEntity) {
+      fragmentEntity.backtrack = fragmentEntity.loaded = null;
+      fragmentEntity.buffered = true;
     }
   }
 
@@ -404,6 +419,29 @@ export class FragmentTracker implements ComponentAPI {
   private hasFragment(fragment: Fragment): boolean {
     const fragKey = getFragmentKey(fragment);
     return !!this.fragments[fragKey];
+  }
+
+  public removeFragmentsInRange(
+    start: number,
+    end: number,
+    playlistType: PlaylistLevelType
+  ) {
+    Object.keys(this.fragments).forEach((key) => {
+      const fragmentEntity = this.fragments[key];
+      if (!fragmentEntity) {
+        return;
+      }
+      if (fragmentEntity.buffered) {
+        const frag = fragmentEntity.body;
+        if (
+          frag.type === playlistType &&
+          frag.start < end &&
+          frag.end > start
+        ) {
+          this.removeFragment(frag);
+        }
+      }
+    });
   }
 
   public removeFragment(fragment: Fragment) {

@@ -140,9 +140,9 @@ function getElementCollection(
   return [];
 }
 
-function collectionToDictionary(
-  elementsWithId: Array<HTMLElement>
-): { [id: string]: HTMLElement } {
+function collectionToDictionary(elementsWithId: Array<HTMLElement>): {
+  [id: string]: HTMLElement;
+} {
   return elementsWithId.reduce((dict, element: HTMLElement) => {
     const id = element.getAttribute('xml:id');
     if (id) {
