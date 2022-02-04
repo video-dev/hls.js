@@ -24,7 +24,7 @@ class AACDemuxer extends BaseAudioDemuxer {
     this._audioTrack = {
       container: 'audio/adts',
       type: 'audio',
-      id: 0,
+      id: 2,
       pid: -1,
       sequenceNumber: 0,
       isAAC: true,
@@ -70,13 +70,16 @@ class AACDemuxer extends BaseAudioDemuxer {
       offset,
       track.manifestCodec
     );
-    return ADTS.appendFrame(
+    const frame = ADTS.appendFrame(
       track,
       data,
       offset,
       this.initPTS as number,
       this.frameIndex
     );
+    if (frame && frame.missing === 0) {
+      return frame;
+    }
   }
 }
 

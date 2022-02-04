@@ -13,7 +13,6 @@ export class LevelDetails {
   public fragments: Fragment[];
   public fragmentHint?: Fragment;
   public partList: Part[] | null = null;
-  public initSegment: Fragment | null = null;
   public live: boolean = true;
   public ageHeader: number = 0;
   public advancedDateTime?: number;

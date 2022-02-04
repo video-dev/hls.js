@@ -8,6 +8,8 @@ import type {
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
 
+const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/m;
+
 class XhrLoader implements Loader<LoaderContext> {
   private xhrSetup: Function | null;
   private requestTimeout?: number;
@@ -95,6 +97,13 @@ class XhrLoader implements Loader<LoaderContext> {
       }
       if (!xhr.readyState) {
         xhr.open('GET', context.url, true);
+      }
+
+      const headers = this.context.headers;
+      if (headers) {
+        for (const header in headers) {
+          xhr.setRequestHeader(header, headers[header]);
+        }
       }
     } catch (e) {
       // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
@@ -253,7 +262,7 @@ class XhrLoader implements Loader<LoaderContext> {
     let result: number | null = null;
     if (
       this.loader &&
-      this.loader.getAllResponseHeaders().indexOf('age') >= 0
+      AGE_HEADER_LINE_REGEX.test(this.loader.getAllResponseHeaders())
     ) {
       const ageHeader = this.loader.getResponseHeader('age');
       result = ageHeader ? parseFloat(ageHeader) : null;

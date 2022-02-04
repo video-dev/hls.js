@@ -3,6 +3,7 @@ import {
   findDiscontinuousReferenceFrag,
   adjustSlidingStart,
   alignPDT,
+  alignMediaPlaylistByPDT,
 } from '../../../src/utils/discontinuities';
 
 const mockReferenceFrag = {
@@ -71,6 +72,106 @@ describe('level-helper', function () {
     adjustSlidingStart(mockReferenceFrag.start, details);
     expect(expected).to.deep.equal(details.fragments);
     expect(details.alignedSliding).to.be.true;
+  });
+
+  it('aligns level fragments times based on PDT and start time of reference level details', function () {
+    const lastLevel = {
+      details: {
+        PTSKnown: false,
+        alignedSliding: false,
+        hasProgramDateTime: true,
+        fragments: [
+          {
+            start: 18,
+            startPTS: undefined,
+            endPTS: undefined,
+            duration: 2,
+            programDateTime: 1629821766107,
+          },
+          {
+            start: 20,
+            startPTS: undefined,
+            endPTS: 22,
+            duration: 2,
+            programDateTime: 1629821768107,
+          },
+          {
+            start: 22,
+            startPTS: 22,
+            endPTS: 30,
+            duration: 8,
+            programDateTime: 1629821770107,
+          },
+        ],
+        fragmentHint: {
+          start: 30,
+          startPTS: 30,
+          endPTS: 32,
+          duration: 2,
+          programDateTime: 1629821778107,
+        },
+      },
+    };
+
+    const refDetails = {
+      fragments: [
+        {
+          start: 18,
+          startPTS: undefined,
+          endPTS: undefined,
+          duration: 2,
+          programDateTime: 1629821768107,
+        },
+      ],
+      PTSKnown: false,
+      alignedSliding: false,
+      hasProgramDateTime: true,
+    };
+
+    const detailsExpected = {
+      fragments: [
+        {
+          start: 16,
+          startPTS: 16,
+          endPTS: 18,
+          duration: 2,
+          programDateTime: 1629821766107,
+        },
+        {
+          start: 18,
+          startPTS: 18,
+          endPTS: 20,
+          duration: 2,
+          programDateTime: 1629821768107,
+        },
+        {
+          start: 20,
+          startPTS: 20,
+          endPTS: 28,
+          duration: 8,
+          programDateTime: 1629821770107,
+        },
+      ],
+      fragmentHint: {
+        start: 28,
+        startPTS: 28,
+        endPTS: 30,
+        duration: 2,
+        programDateTime: 1629821778107,
+      },
+      PTSKnown: false,
+      alignedSliding: true,
+      hasProgramDateTime: true,
+    };
+    alignMediaPlaylistByPDT(lastLevel.details, refDetails);
+    expect(
+      lastLevel.details,
+      `actual:\n\n${JSON.stringify(
+        lastLevel.details,
+        null,
+        2
+      )}\n\nexpected\n\n${JSON.stringify(detailsExpected, null, 2)}`
+    ).to.deep.equal(detailsExpected);
   });
 
   it('adjusts level fragments without overlapping CC range but with programDateTime info', function () {

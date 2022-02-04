@@ -2,7 +2,8 @@ export interface Demuxer {
   demux(
     data: Uint8Array,
     timeOffset: number,
-    isSampleAes?: boolean
+    isSampleAes?: boolean,
+    flush?: boolean
   ): DemuxerResult;
   demuxSampleAes(
     data: Uint8Array,
@@ -113,12 +114,12 @@ export interface AvcSampleUnit {
 export type AudioSample = {
   unit: Uint8Array;
   pts: number;
-  dts: number;
 };
 
-export type AppendedAudioFrame = {
+export type AudioFrame = {
   sample: AudioSample;
   length: number;
+  missing: number;
 };
 
 export interface ElementaryStreamData {

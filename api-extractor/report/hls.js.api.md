@@ -123,7 +123,7 @@ export class BaseSegment {
     // (undocumented)
     get url(): string;
     set url(value: string);
-    }
+}
 
 // Warning: (ae-missing-release-tag) "BufferAppendedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -212,6 +212,8 @@ export interface BufferFlushingData {
     // (undocumented)
     endOffset: number;
     // (undocumented)
+    endOffsetSubtitles?: number;
+    // (undocumented)
     startOffset: number;
     // (undocumented)
     type: SourceBufferName | null;
@@ -248,6 +250,15 @@ export class ChunkMetadata {
     // (undocumented)
     readonly transmuxing: HlsChunkPerformanceTiming;
 }
+
+// Warning: (ae-missing-release-tag) "CMCDControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type CMCDControllerConfig = {
+    sessionId?: string;
+    contentId?: string;
+    useHeaders?: boolean;
+};
 
 // Warning: (ae-missing-release-tag) "CuesInterface" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -715,6 +726,8 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     endPTS?: number;
     // (undocumented)
+    initSegment: Fragment | null;
+    // (undocumented)
     level: number;
     // (undocumented)
     levelkey?: LevelKey;
@@ -755,14 +768,20 @@ export class Fragment extends BaseSegment {
 //
 // @public (undocumented)
 export type FragmentLoaderConfig = {
-    fLoader?: {
-        new (confg: HlsConfig): Loader<FragmentLoaderContext>;
-    };
+    fLoader?: FragmentLoaderConstructor;
     fragLoadingTimeOut: number;
     fragLoadingMaxRetry: number;
     fragLoadingRetryDelay: number;
     fragLoadingMaxRetryTimeout: number;
 };
+
+// Warning: (ae-missing-release-tag) "FragmentLoaderConstructor" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface FragmentLoaderConstructor {
+    // (undocumented)
+    new (confg: HlsConfig): Loader<FragmentLoaderContext>;
+}
 
 // Warning: (ae-missing-release-tag) "FragmentLoaderContext" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -921,7 +940,6 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     static get version(): string;
 }
-
 export default Hls;
 
 // Warning: (ae-missing-release-tag) "HlsChunkPerformanceTiming" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -938,7 +956,7 @@ export interface HlsChunkPerformanceTiming extends HlsPerformanceTiming {
 //
 // @public (undocumented)
 export type HlsConfig = {
-    debug: boolean;
+    debug: boolean | ILogger;
     enableWorker: boolean;
     enableSoftwareAES: boolean;
     minAutoBitrate: number;
@@ -946,6 +964,7 @@ export type HlsConfig = {
     loader: {
         new (confg: HlsConfig): Loader<LoaderContext>;
     };
+    fetchSetup?: (context: LoaderContext, initParams: any) => Request;
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
     audioStreamController?: typeof AudioStreamController;
     audioTrackController?: typeof AudioTrackController;
@@ -953,6 +972,8 @@ export type HlsConfig = {
     subtitleTrackController?: typeof SubtitleTrackController;
     timelineController?: typeof TimelineController;
     emeController?: typeof EMEController;
+    cmcd?: CMCDControllerConfig;
+    cmcdController?: typeof CMCDController;
     abrController: typeof AbrController;
     bufferController: typeof BufferController;
     capLevelController: typeof CapLevelController;
@@ -1345,8 +1366,6 @@ export class LevelDetails {
     // (undocumented)
     holdBack: number;
     // (undocumented)
-    initSegment: Fragment | null;
-    // (undocumented)
     get lastPartIndex(): number;
     // (undocumented)
     get lastPartSn(): number;
@@ -1424,7 +1443,7 @@ export class LevelKey {
     method: string | null;
     // (undocumented)
     get uri(): string | null;
-    }
+}
 
 // Warning: (ae-missing-release-tag) "LevelLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1603,6 +1622,8 @@ export interface LoaderConfiguration {
 //
 // @public (undocumented)
 export interface LoaderContext {
+    // (undocumented)
+    headers?: Record<string, string>;
     // (undocumented)
     progressData?: boolean;
     // (undocumented)
@@ -1915,9 +1936,7 @@ export enum PlaylistLevelType {
 //
 // @public (undocumented)
 export type PlaylistLoaderConfig = {
-    pLoader?: {
-        new (confg: HlsConfig): Loader<PlaylistLoaderContext>;
-    };
+    pLoader?: PlaylistLoaderConstructor;
     manifestLoadingTimeOut: number;
     manifestLoadingMaxRetry: number;
     manifestLoadingRetryDelay: number;
@@ -1927,6 +1946,14 @@ export type PlaylistLoaderConfig = {
     levelLoadingRetryDelay: number;
     levelLoadingMaxRetryTimeout: number;
 };
+
+// Warning: (ae-missing-release-tag) "PlaylistLoaderConstructor" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface PlaylistLoaderConstructor {
+    // (undocumented)
+    new (confg: HlsConfig): Loader<PlaylistLoaderContext>;
+}
 
 // Warning: (ae-missing-release-tag) "PlaylistLoaderContext" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2121,7 +2148,6 @@ export interface UserdataSample {
     // (undocumented)
     pts: number;
 }
-
 
 // Warnings were encountered during analysis:
 //

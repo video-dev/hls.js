@@ -51,8 +51,11 @@ class FetchLoader implements Loader<LoaderContext> {
   }
 
   abortInternal(): void {
-    this.stats.aborted = true;
-    this.controller.abort();
+    const response = this.response;
+    if (!response || !response.ok) {
+      this.stats.aborted = true;
+      this.controller.abort();
+    }
   }
 
   abort(): void {
@@ -91,40 +94,38 @@ class FetchLoader implements Loader<LoaderContext> {
 
     self
       .fetch(this.request)
-      .then(
-        (response: Response): Promise<string | ArrayBuffer> => {
-          this.response = this.loader = response;
+      .then((response: Response): Promise<string | ArrayBuffer> => {
+        this.response = this.loader = response;
 
-          if (!response.ok) {
-            const { status, statusText } = response;
-            throw new FetchError(
-              statusText || 'fetch, bad network response',
-              status,
-              response
-            );
-          }
-          stats.loading.first = Math.max(
-            self.performance.now(),
-            stats.loading.start
+        if (!response.ok) {
+          const { status, statusText } = response;
+          throw new FetchError(
+            statusText || 'fetch, bad network response',
+            status,
+            response
           );
-          stats.total = parseInt(response.headers.get('Content-Length') || '0');
-
-          if (onProgress && Number.isFinite(config.highWaterMark)) {
-            this.loadProgressively(
-              response,
-              stats,
-              context,
-              config.highWaterMark,
-              onProgress
-            );
-          }
-
-          if (isArrayBuffer) {
-            return response.arrayBuffer();
-          }
-          return response.text();
         }
-      )
+        stats.loading.first = Math.max(
+          self.performance.now(),
+          stats.loading.start
+        );
+        stats.total = parseInt(response.headers.get('Content-Length') || '0');
+
+        if (onProgress && Number.isFinite(config.highWaterMark)) {
+          return this.loadProgressively(
+            response,
+            stats,
+            context,
+            config.highWaterMark,
+            onProgress
+          );
+        }
+
+        if (isArrayBuffer) {
+          return response.arrayBuffer();
+        }
+        return response.text();
+      })
       .then((responseData: string | ArrayBuffer) => {
         const { response } = this;
         self.clearTimeout(this.requestTimeout);
@@ -175,19 +176,20 @@ class FetchLoader implements Loader<LoaderContext> {
     context: LoaderContext,
     highWaterMark: number = 0,
     onProgress: LoaderOnProgress<LoaderContext>
-  ) {
+  ): Promise<ArrayBuffer> {
     const chunkCache = new ChunkCache();
-    const reader = (response.clone().body as ReadableStream).getReader();
+    const reader = (response.body as ReadableStream).getReader();
 
-    const pump = () => {
-      reader
+    const pump = (): Promise<ArrayBuffer> => {
+      return reader
         .read()
         .then((data) => {
           if (data.done) {
             if (chunkCache.dataLength) {
               onProgress(stats, context, chunkCache.flush(), response);
             }
-            return;
+
+            return Promise.resolve(new ArrayBuffer(0));
           }
           const chunk: Uint8Array = data.value;
           const len = chunk.length;
@@ -205,14 +207,15 @@ class FetchLoader implements Loader<LoaderContext> {
             // just emit the progress event
             onProgress(stats, context, chunk, response);
           }
-          pump();
+          return pump();
         })
         .catch(() => {
           /* aborted */
+          return Promise.reject();
         });
     };
 
-    pump();
+    return pump();
   }
 }
 
@@ -222,12 +225,14 @@ function getRequestParameters(context: LoaderContext, signal): any {
     mode: 'cors',
     credentials: 'same-origin',
     signal,
+    headers: new self.Headers(Object.assign({}, context.headers)),
   };
 
   if (context.rangeEnd) {
-    initParams.headers = new self.Headers({
-      Range: 'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1),
-    });
+    initParams.headers.set(
+      'Range',
+      'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1)
+    );
   }
 
   return initParams;

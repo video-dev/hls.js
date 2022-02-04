@@ -8,6 +8,7 @@ import {
   UserdataSample,
 } from './demuxer';
 import type { SourceBufferName } from './buffer';
+import type { PlaylistLevelType } from './loader';
 
 export interface Remuxer {
   remux(
@@ -17,7 +18,8 @@ export interface Remuxer {
     textTrack: DemuxedUserdataTrack,
     timeOffset: number,
     accurateTimeOffset: boolean,
-    flush: boolean
+    flush: boolean,
+    playlistType: PlaylistLevelType
   ): RemuxerResult;
   resetInitSegment(
     initSegment: Uint8Array | undefined,
@@ -40,6 +42,7 @@ export interface RemuxedTrack {
   hasAudio: boolean;
   hasVideo: boolean;
   independent?: boolean;
+  firstKeyFrame?: number;
   nb: number;
   transferredData1?: ArrayBuffer;
   transferredData2?: ArrayBuffer;

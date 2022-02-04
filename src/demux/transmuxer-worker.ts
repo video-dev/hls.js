@@ -24,7 +24,8 @@ export default function TransmuxerWorker(self) {
           observer,
           data.typeSupported,
           config,
-          data.vendor
+          data.vendor,
+          data.id
         );
         enableLogs(config.debug);
         forwardMessage('init', null);
@@ -35,14 +36,13 @@ export default function TransmuxerWorker(self) {
         break;
       }
       case 'demux': {
-        const transmuxResult:
-          | TransmuxerResult
-          | Promise<TransmuxerResult> = self.transmuxer.push(
-          data.data,
-          data.decryptdata,
-          data.chunkMeta,
-          data.state
-        );
+        const transmuxResult: TransmuxerResult | Promise<TransmuxerResult> =
+          self.transmuxer.push(
+            data.data,
+            data.decryptdata,
+            data.chunkMeta,
+            data.state
+          );
         if (isPromise(transmuxResult)) {
           transmuxResult.then((data) => {
             emitTransmuxComplete(self, data);

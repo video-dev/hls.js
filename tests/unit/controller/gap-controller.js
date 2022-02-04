@@ -34,13 +34,24 @@ describe('GapController', function () {
 
   describe('_tryNudgeBuffer', function () {
     it('should increment the currentTime by a multiple of nudgeRetry and the configured nudge amount', function () {
-      for (let i = 1; i < config.nudgeMaxRetry; i++) {
-        const expected = media.currentTime + i * config.nudgeOffset;
+      for (let i = 0; i < config.nudgeMaxRetry; i++) {
+        triggerSpy.resetHistory();
+
+        const expected = media.currentTime + (i + 1) * config.nudgeOffset;
         gapController._tryNudgeBuffer();
         expect(media.currentTime).to.equal(expected);
+
+        expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
+          fatal: false,
+        });
       }
 
-      expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
+      triggerSpy.resetHistory();
+      gapController._tryNudgeBuffer();
+
+      expect(triggerSpy).not.to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
         fatal: false,
