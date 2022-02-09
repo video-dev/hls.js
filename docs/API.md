@@ -19,6 +19,7 @@
   - [`Hls.DefaultConfig get/set`](#hlsdefaultconfig-getset)
   - [`capLevelToPlayerSize`](#capleveltoplayersize)
   - [`capLevelOnFPSDrop`](#caplevelonfpsdrop)
+  - ['ignoreDevicePixelRatio'](#ignoreDevicePixelRatio)
   - [`debug`](#debug)
   - [`autoStartLoad`](#autostartload)
   - [`startPosition`](#startposition)
@@ -418,6 +419,13 @@ This configuration will be applied by default to all instances.
 - when set to true, if the number of dropped frames over the period `config.fpsDroppedMonitoringPeriod` exceeds the ratio set by `config.fpsDroppedMonitoringThreshold`,
   then the quality level is dropped and capped at this lower level.
 - when set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
+
+### `ignoreDevicePixelRatio`
+
+(default: `false`)
+
+- when set to true, calculations related to player size will ignore browser `devicePixelRatio`.
+- when set to false, calculations related to player size will respect browser `devicePixelRatio`.
 
 ### `debug`
 
