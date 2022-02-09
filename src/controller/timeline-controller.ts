@@ -664,23 +664,25 @@ export class TimelineController implements ComponentAPI {
   }
 
   private extractCea608Data(byteArray: Uint8Array): number[][] {
-    const count = byteArray[0] & 31;
-    let position = 2;
     const actualCCBytes: number[][] = [[], []];
+    const count = byteArray[0] & 0x1f;
+    let position = 2;
 
     for (let j = 0; j < count; j++) {
       const tmpByte = byteArray[position++];
       const ccbyte1 = 0x7f & byteArray[position++];
       const ccbyte2 = 0x7f & byteArray[position++];
-      const ccValid = (4 & tmpByte) !== 0;
-      const ccType = 3 & tmpByte;
-
       if (ccbyte1 === 0 && ccbyte2 === 0) {
         continue;
       }
-
+      const ccValid = (0x04 & tmpByte) !== 0; // Support all four channels
       if (ccValid) {
-        if (ccType === 0 || ccType === 1) {
+        const ccType = 0x03 & tmpByte;
+        if (
+          0x00 /* CEA608 field1*/ === ccType ||
+          0x01 /* CEA608 field2*/ === ccType
+        ) {
+          // Exclude CEA708 CC data.
           actualCCBytes[ccType].push(ccbyte1);
           actualCCBytes[ccType].push(ccbyte2);
         }
