@@ -581,12 +581,15 @@ export class TimelineController implements ComponentAPI {
       // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
       // and trying to access getCueById method of cues will throw an exception
       // Because we check if the mode is disabled, we can force check `cues` below. They can't be null.
-      if (textTrack.mode === 'disabled') {
+      if (!textTrack || textTrack.mode === 'disabled') {
         return;
       }
       cues.forEach((cue) => addCueToTrack(textTrack, cue));
     } else {
       const currentTrack = this.tracks[fragLevel];
+      if (!currentTrack) {
+        return;
+      }
       const track = currentTrack.default ? 'default' : 'subtitles' + fragLevel;
       hls.trigger(Events.CUES_PARSED, { type: 'subtitles', cues, track });
     }
