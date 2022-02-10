@@ -187,7 +187,7 @@ function getTtmlStyles(
     // 'writingMode'
   ];
 
-  const regionStyleName = region.hasAttribute('style')
+  const regionStyleName = region && region.hasAttribute('style')
     ? region.getAttribute('style')
     : null;
 
