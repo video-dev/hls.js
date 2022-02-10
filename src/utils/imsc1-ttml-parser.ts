@@ -34,9 +34,7 @@ export function parseIMSC1(
     return;
   }
 
-  const ttmlList = results.map((mdat) =>
-    utf8ArrayToStr(new Uint8Array(payload, mdat.start, mdat.end - mdat.start))
-  );
+  const ttmlList = results.map((mdat) => utf8ArrayToStr(mdat));
 
   const syncTime = toTimescaleFromScale(initPTS, 1, timescale);
 
@@ -189,7 +187,7 @@ function getTtmlStyles(
     // 'writingMode'
   ];
 
-  const regionStyleName = region && region.hasAttribute('style')
+  const regionStyleName = region?.hasAttribute('style')
     ? region.getAttribute('style')
     : null;
 
