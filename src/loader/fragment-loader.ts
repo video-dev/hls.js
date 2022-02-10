@@ -75,7 +75,7 @@ export default class FragmentLoader {
         maxRetry: 0,
         retryDelay: 0,
         maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-        highWaterMark: MIN_CHUNK_SIZE,
+        highWaterMark: frag.sn === 'initSegment' ? Infinity : MIN_CHUNK_SIZE,
       };
       // Assign frag stats to the loader's stats reference
       frag.stats = loader.stats;
@@ -279,6 +279,7 @@ function createLoaderContext(
     part,
     responseType: 'arraybuffer',
     url: segment.url,
+    headers: {},
     rangeStart: 0,
     rangeEnd: 0,
   };
