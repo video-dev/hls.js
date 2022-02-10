@@ -443,7 +443,10 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
-  private onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
+  private onFragLoaded(
+    event: Events.FRAG_LOADED,
+    data: FragDecryptedData | FragLoadedData
+  ) {
     const { frag, payload } = data;
     const { initPTS, unparsedVttFrags } = this;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
@@ -464,11 +467,14 @@ export class TimelineController implements ComponentAPI {
         }
 
         const decryptData = frag.decryptdata;
+        // fragment after decryption has a stats object
+        const decrypted = 'stats' in data;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
         if (
           decryptData == null ||
           decryptData.key == null ||
-          decryptData.method !== 'AES-128'
+          decryptData.method !== 'AES-128' ||
+          decrypted
         ) {
           const trackPlaylistMedia = this.tracks[frag.level];
           const vttCCs = this.vttCCs;
