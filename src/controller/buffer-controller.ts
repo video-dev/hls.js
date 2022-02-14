@@ -243,7 +243,8 @@ export default class BufferController implements ComponentAPI {
         // check if SourceBuffer codec needs to change
         const track = this.tracks[trackName];
         if (track && typeof track.buffer.changeType === 'function') {
-          const { codec, levelCodec, container } = data[trackName];
+          const { id, codec, levelCodec, container, metadata } =
+            data[trackName];
           const currentCodec = (track.levelCodec || track.codec).replace(
             VIDEO_CODEC_PROFILE_REPACE,
             '$1'
@@ -255,6 +256,17 @@ export default class BufferController implements ComponentAPI {
           if (currentCodec !== nextCodec) {
             const mimeType = `${container};codecs=${levelCodec || codec}`;
             this.appendChangeType(trackName, mimeType);
+            logger.log(
+              `[buffer-controller]: switching codec ${currentCodec} to ${nextCodec}`
+            );
+            this.tracks[trackName] = {
+              buffer: track.buffer,
+              codec,
+              container,
+              levelCodec,
+              metadata,
+              id,
+            };
           }
         }
       } else {
@@ -714,6 +726,7 @@ export default class BufferController implements ComponentAPI {
             codec: codec,
             container: track.container,
             levelCodec: track.levelCodec,
+            metadata: track.metadata,
             id: track.id,
           };
           tracksCreated++;
