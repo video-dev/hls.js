@@ -96,7 +96,7 @@ export default class M3U8Parser {
   }
 
   static parseMasterPlaylist(string: string, baseurl: string) {
-    const levels: Array<LevelParsed> = [];
+    let levels: Array<LevelParsed> = [];
     const sessionData: Record<string, AttrList> = {};
     let hasSessionData = false;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
@@ -138,6 +138,16 @@ export default class M3U8Parser {
           hasSessionData = true;
           sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
         }
+      }
+    }
+    const ec3Support = isCodecSupportedInMp4('ec-3', 'audio');
+    if (ec3Support) {
+      const allLevels: Array<LevelParsed> = [];
+      levels = levels.filter((level) => {
+        if (level.attrs.CODECS?.includes('ec-3')) return level;
+      });
+      if (levels.length === 0) {
+        levels = allLevels;
       }
     }
     return {
