@@ -316,7 +316,9 @@ class EMEController implements ComponentAPI {
           data ? data.byteLength : data
         }), updating key-session`
       );
-      keySession.update(data);
+      keySession.update(data).catch((err) => {
+        logger.warn(`Updating key-session failed: ${err}`);
+      });
     });
   }
 
