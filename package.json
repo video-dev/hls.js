@@ -75,7 +75,7 @@
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.3.6",
     "chart.js": "2.9.4",
-    "chromedriver": "97.0.4",
+    "chromedriver": "98.0.1",
     "eslint": "8.9.0",
     "eslint-config-prettier": "8.4.0",
     "eslint-plugin-import": "2.25.4",
