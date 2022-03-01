@@ -41,7 +41,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
@@ -118,7 +118,7 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: cache node_modules
         uses: actions/cache@v2
@@ -159,7 +159,7 @@ jobs:
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: cache node_modules
         uses: actions/cache@v2
@@ -228,7 +228,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: use Node.js
         uses: actions/setup-node@v3
@@ -259,7 +259,7 @@ jobs:
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: cache node_modules
         uses: actions/cache@v2
@@ -313,7 +313,7 @@ jobs:
             os: Windows 10
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: cache node_modules
         uses: actions/cache@v2
@@ -404,7 +404,7 @@ jobs:
             uaVersion: '69.0'
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: cache node_modules
         uses: actions/cache@v2
