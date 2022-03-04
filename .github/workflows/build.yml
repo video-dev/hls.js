@@ -138,7 +138,7 @@ jobs:
           node-version: '15'
 
       - name: download build
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: build
 
@@ -179,7 +179,7 @@ jobs:
           node-version: '15'
 
       - name: download build
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: build
 
@@ -236,7 +236,7 @@ jobs:
           node-version: '15'
 
       - name: download build
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: build
 
@@ -279,7 +279,7 @@ jobs:
           node-version: '15'
 
       - name: download build
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: build
 
@@ -333,7 +333,7 @@ jobs:
           node-version: '15'
 
       - name: download build
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: build
 
@@ -424,7 +424,7 @@ jobs:
           node-version: '15'
 
       - name: download build
-        uses: actions/download-artifact@v2
+        uses: actions/download-artifact@v3
         with:
           name: build
 
