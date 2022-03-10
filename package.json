@@ -77,7 +77,7 @@
     "chart.js": "2.9.4",
     "chromedriver": "98.0.1",
     "eslint": "8.10.0",
-    "eslint-config-prettier": "8.4.0",
+    "eslint-config-prettier": "8.5.0",
     "eslint-plugin-import": "2.25.4",
     "eslint-plugin-mocha": "10.0.3",
     "eslint-plugin-node": "11.1.0",
