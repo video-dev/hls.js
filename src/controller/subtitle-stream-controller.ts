@@ -1,8 +1,8 @@
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { BufferHelper } from '../utils/buffer-helper';
-import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
-import { alignPDT } from '../utils/discontinuities';
+import { findFragmentByPTS } from './fragment-finders';
+import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { addSliding } from './level-helper';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
@@ -222,9 +222,11 @@ export class SubtitleStreamController
     const currentTrack = this.levels[this.currentTrackId];
     if (currentTrack?.details) {
       this.mediaBuffer = this.mediaBufferTimeRanges;
-      this.setInterval(TICK_INTERVAL);
     } else {
       this.mediaBuffer = null;
+    }
+    if (currentTrack) {
+      this.setInterval(TICK_INTERVAL);
     }
   }
 
@@ -251,7 +253,7 @@ export class SubtitleStreamController
       const mainSlidingStartFragment = mainDetails.fragments[0];
       if (!track.details) {
         if (newDetails.hasProgramDateTime && mainDetails.hasProgramDateTime) {
-          alignPDT(newDetails, mainDetails);
+          alignMediaPlaylistByPDT(newDetails, mainDetails);
         } else if (mainSlidingStartFragment) {
           // line up live playlist with main so that fragments in range are loaded
           addSliding(newDetails, mainSlidingStartFragment.start);
@@ -374,36 +376,25 @@ export class SubtitleStreamController
       const fragPrevious = this.fragPrevious;
       if (targetBufferTime < end) {
         const { maxFragLookUpTolerance } = config;
-        if (fragPrevious && trackDetails.hasProgramDateTime) {
-          foundFrag = findFragmentByPDT(
-            fragments,
-            fragPrevious.endProgramDateTime,
-            maxFragLookUpTolerance
-          );
-        }
-        if (!foundFrag) {
-          foundFrag = findFragmentByPTS(
-            fragPrevious,
-            fragments,
-            targetBufferTime,
-            maxFragLookUpTolerance
-          );
-          if (
-            !foundFrag &&
-            fragPrevious &&
-            fragPrevious.start < fragments[0].start
-          ) {
-            foundFrag = fragments[0];
-          }
+        foundFrag = findFragmentByPTS(
+          fragPrevious,
+          fragments,
+          targetBufferTime,
+          maxFragLookUpTolerance
+        );
+        if (
+          !foundFrag &&
+          fragPrevious &&
+          fragPrevious.start < fragments[0].start
+        ) {
+          foundFrag = fragments[0];
         }
       } else {
         foundFrag = fragments[fragLen - 1];
       }
 
       if (foundFrag?.encrypted) {
-        logger.log(`Loading key for ${foundFrag.sn}`);
-        this.state = State.KEY_LOADING;
-        this.hls.trigger(Events.KEY_LOADING, { frag: foundFrag });
+        this.loadKey(foundFrag, trackDetails);
       } else if (
         foundFrag &&
         this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED

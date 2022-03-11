@@ -233,16 +233,22 @@ module.exports = {
     description:
       'Advanced stream (HEVC/H.264, AC-3/AAC,  WebVTT, fMP4 segments)',
   },
-  AppleLowLatencyHls: {
-    url: 'https://ll-hls-test.apple.com/master.m3u8',
-    description: 'Apple Low-Latency HLS sample (TS segments)',
+  MuxLowLatencyHls: {
+    url: 'https://stream.mux.com/v69RSHhFelSm4701snP22dYz2jICy4E4FUyk02rW4gxRM.m3u8',
+    description:
+      'Low-Latency HLS sample of Big Buck Bunny loop and a timer. Restarts every 12 hours. (fMP4 segments)',
     live: true,
   },
-  AppleLowLatencyCmafHls: {
-    url: 'https://ll-hls-test.apple.com/cmaf/master.m3u8',
-    description: 'Apple Low-Latency HLS sample (fMP4 segments)',
-    live: true,
-  },
+  //   AppleLowLatencyHls: {
+  //     url: 'https://ll-hls-test.apple.com/master.m3u8',
+  //     description: 'Apple Low-Latency HLS sample (TS segments)',
+  //     live: true,
+  //   },
+  //   AppleLowLatencyCmafHls: {
+  //     url: 'https://ll-hls-test.apple.com/cmaf/master.m3u8',
+  //     description: 'Apple Low-Latency HLS sample (fMP4 segments)',
+  //     live: true,
+  //   },
   groupIds: {
     url: 'https://mtoczko.github.io/hls-test-streams/test-group/playlist.m3u8',
     description: 'Group-id: subtitle and audio',
@@ -254,5 +260,12 @@ module.exports = {
     description: 'Redundant levels with subtitle and audio track groups',
     abr: true,
     skipFunctionalTests: true,
+  },
+  startDelimiterOverlappingBetweenPESPackets: {
+    url: 'https://hlsjs-test-streams-wistia.s3.amazonaws.com/start-delimiter.m3u8',
+    description: `A stream with the start delimiter overlapping between PES packets.
+       Related to https://github.com/video-dev/hls.js/issues/3834, where Apple Silicon chips throw decoding errors if
+       NAL units are not starting right at the beginning of the PES packet when using hardware accelerated decoding.`,
+    abr: false,
   },
 };

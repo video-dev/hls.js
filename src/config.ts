@@ -8,11 +8,12 @@ import { TimelineController } from './controller/timeline-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
 import EMEController from './controller/eme-controller';
+import CMCDController from './controller/cmcd-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import Cues from './utils/cues';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
-import { logger } from './utils/logger';
+import { ILogger, logger } from './utils/logger';
 
 import type { CuesInterface } from './utils/cues';
 import type { MediaKeyFunc } from './utils/mediakeys-helper';
@@ -47,6 +48,12 @@ export type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean;
 };
 
+export type CMCDControllerConfig = {
+  sessionId?: string;
+  contentId?: string;
+  useHeaders?: boolean;
+};
+
 export type DRMSystemOptions = {
   audioRobustness?: string;
   videoRobustness?: string;
@@ -61,8 +68,12 @@ export type EMEControllerConfig = {
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
 
+export interface FragmentLoaderConstructor {
+  new (confg: HlsConfig): Loader<FragmentLoaderContext>;
+}
+
 export type FragmentLoaderConfig = {
-  fLoader?: { new (confg: HlsConfig): Loader<FragmentLoaderContext> };
+  fLoader?: FragmentLoaderConstructor;
 
   fragLoadingTimeOut: number;
   fragLoadingMaxRetry: number;
@@ -85,8 +96,12 @@ export type MP4RemuxerConfig = {
   maxAudioFramesDrift: number;
 };
 
+export interface PlaylistLoaderConstructor {
+  new (confg: HlsConfig): Loader<PlaylistLoaderContext>;
+}
+
 export type PlaylistLoaderConfig = {
-  pLoader?: { new (confg: HlsConfig): Loader<PlaylistLoaderContext> };
+  pLoader?: PlaylistLoaderConstructor;
 
   manifestLoadingTimeOut: number;
   manifestLoadingMaxRetry: number;
@@ -145,11 +160,13 @@ export type TSDemuxerConfig = {
 };
 
 export type HlsConfig = {
-  debug: boolean;
+  debug: boolean | ILogger;
   enableWorker: boolean;
   enableSoftwareAES: boolean;
   minAutoBitrate: number;
+  ignoreDevicePixelRatio: boolean;
   loader: { new (confg: HlsConfig): Loader<LoaderContext> };
+  fetchSetup?: (context: LoaderContext, initParams: any) => Request;
   xhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
 
   // Alt Audio
@@ -161,6 +178,9 @@ export type HlsConfig = {
   timelineController?: typeof TimelineController;
   // EME
   emeController?: typeof EMEController;
+  // CMCD
+  cmcd?: CMCDControllerConfig;
+  cmcdController?: typeof CMCDController;
 
   abrController: typeof AbrController;
   bufferController: typeof BufferController;
@@ -192,6 +212,7 @@ export const hlsDefaultConfig: HlsConfig = {
   debug: false, // used by logger
   capLevelOnFPSDrop: false, // used by fps-controller
   capLevelToPlayerSize: false, // used by cap-level-controller
+  ignoreDevicePixelRatio: false, // used by cap-level-controller
   initialLiveManifestSize: 1, // used by stream-controller
   maxBufferLength: 30, // used by stream-controller
   backBufferLength: Infinity, // used by buffer-controller
@@ -260,6 +281,7 @@ export const hlsDefaultConfig: HlsConfig = {
   testBandwidth: true,
   progressive: false,
   lowLatencyMode: true,
+  cmcd: undefined,
 
   // Dynamic Modules
   ...timelineConfig(),
@@ -273,6 +295,7 @@ export const hlsDefaultConfig: HlsConfig = {
   audioStreamController: __USE_ALT_AUDIO__ ? AudioStreamController : undefined,
   audioTrackController: __USE_ALT_AUDIO__ ? AudioTrackController : undefined,
   emeController: __USE_EME_DRM__ ? EMEController : undefined,
+  cmcdController: __USE_CMCD__ ? CMCDController : undefined,
 };
 
 function timelineConfig(): TimelineControllerConfig {
