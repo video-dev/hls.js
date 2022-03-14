@@ -55,6 +55,8 @@ class AudioStreamController
   private waitingData: WaitingForPTSData | null = null;
   private mainDetails: LevelDetails | null = null;
   private bufferFlushed: boolean = false;
+  private retryCount: number = 0;
+  private timer: number = 0;
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[audio-stream-controller]');
@@ -416,6 +418,7 @@ class AudioStreamController
   }
 
   onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData) {
+    const { config } = this.hls;
     const { levels } = this;
     const { details: newDetails, id: trackId } = data;
     if (!levels) {
@@ -430,12 +433,32 @@ class AudioStreamController
     let sliding = 0;
     if (newDetails.live || track.details?.live) {
       const mainDetails = this.mainDetails;
+      const retry = this.retryCount < config.levelLoadingMaxRetry;
       if (!newDetails.fragments[0]) {
         newDetails.deltaUpdateFailed = true;
       }
-      if (newDetails.deltaUpdateFailed || !mainDetails) {
+      if (newDetails.deltaUpdateFailed || (!mainDetails && !retry)) {
         return;
       }
+      if (!mainDetails) {
+        // If this event occurred just before onLevelLoaded, don't wait around for
+        // the full segment length.
+        const delay = Math.min(
+          Math.pow(2, this.retryCount) * config.levelLoadingRetryDelay,
+          config.levelLoadingMaxRetryTimeout
+        );
+        // Schedule level/track reload
+        this.timer = self.setTimeout(
+          () => this.hls.trigger(Events.AUDIO_TRACK_LOADED, data),
+          delay
+        );
+        this.warn(
+          `retry audiotrack loading #${this.retryCount} in ${delay} ms`
+        );
+        this.retryCount++;
+        return;
+      }
+      this.retryCount = 0;
       if (
         !track.details &&
         newDetails.hasProgramDateTime &&
