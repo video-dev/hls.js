@@ -1088,6 +1088,7 @@ class Mp4SampleFlags {
   public isLeading: 0 = 0;
   public isDependedOn: 0 = 0;
   public hasRedundancy: 0 = 0;
+  public paddingValue: 0 = 0;
   public degradPrio: 0 = 0;
   public dependsOn: 1 | 2 = 1;
   public isNonSync: 0 | 1 = 1;
