@@ -19,7 +19,7 @@
   - [`Hls.DefaultConfig get/set`](#hlsdefaultconfig-getset)
   - [`capLevelToPlayerSize`](#capleveltoplayersize)
   - [`capLevelOnFPSDrop`](#caplevelonfpsdrop)
-  - ['ignoreDevicePixelRatio'](#ignoreDevicePixelRatio)
+  - [`ignoreDevicePixelRatio`](#ignoreDevicePixelRatio)
   - [`debug`](#debug)
   - [`autoStartLoad`](#autostartload)
   - [`startPosition`](#startposition)
