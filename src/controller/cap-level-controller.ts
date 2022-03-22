@@ -252,7 +252,7 @@ class CapLevelController implements ComponentAPI {
 
     // Levels can have the same dimensions but differing bandwidths - since levels are ordered, we can look to the next
     // to determine whether we've chosen the greatest bandwidth for the media's dimensions
-    const atGreatestBandiwdth = (curLevel, nextLevel) => {
+    const atGreatestBandwidth = (curLevel, nextLevel) => {
       if (!nextLevel) {
         return true;
       }
@@ -271,7 +271,7 @@ class CapLevelController implements ComponentAPI {
       const level = levels[i];
       if (
         (level.width >= width || level.height >= height) &&
-        atGreatestBandiwdth(level, levels[i + 1])
+        atGreatestBandwidth(level, levels[i + 1])
       ) {
         maxLevelIndex = i;
         break;
