@@ -95,7 +95,7 @@
     "karma-sinon-chai": "2.0.2",
     "karma-sourcemap-loader": "0.3.8",
     "karma-webpack": "4.0.2",
-    "lint-staged": "11.2.6",
+    "lint-staged": "12.3.5",
     "micromatch": "4.0.4",
     "mocha": "9.2.1",
     "netlify-cli": "6.15.0",
