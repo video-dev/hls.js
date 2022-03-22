@@ -210,7 +210,7 @@ export function alignMediaPlaylistByPDT(
   const refPDT = refDetails.fragments[0].programDateTime!; // hasProgramDateTime check above makes this safe.
   const refStart = refDetails.fragments[0].start;
   // Use the delta between the reference details' presentation timeline's start time and its PDT
-  // to align the other rendtion's timeline.
+  // to align the other rendition's timeline.
   const delta = refPDT - refStart * 1000;
   // Per spec: "If any Media Playlist in a Master Playlist contains an EXT-X-PROGRAM-DATE-TIME tag, then all
   // Media Playlists in that Master Playlist MUST contain EXT-X-PROGRAM-DATE-TIME tags with consistent mappings
