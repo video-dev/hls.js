@@ -1274,14 +1274,14 @@ self.copyMetricsToClipBoard = function () {
 
 self.goToMetrics = function () {
   let url = document.URL;
-  url = url.substr(0, url.lastIndexOf('/') + 1) + 'metrics.html';
+  url = url.slice(0, url.lastIndexOf('/') + 1) + 'metrics.html';
   self.open(url, '_blank');
 };
 
 function goToMetricsPermaLink() {
   let url = document.URL;
   const b64 = getMetrics();
-  url = url.substr(0, url.lastIndexOf('/') + 1) + 'metrics.html#data=' + b64;
+  url = url.slice(0, url.lastIndexOf('/') + 1) + 'metrics.html#data=' + b64;
   self.open(url, '_blank');
 }
 
