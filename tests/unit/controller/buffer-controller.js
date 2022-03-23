@@ -285,6 +285,7 @@ describe('BufferController tests', function () {
       const getSourceBufferTypes = sandbox
         .stub(bufferController, 'getSourceBufferTypes')
         .returns(['audio', 'video']);
+      /* eslint-disable-next-line no-unused-vars */
       const appendChangeType = sandbox.stub(
         bufferController,
         'appendChangeType'
