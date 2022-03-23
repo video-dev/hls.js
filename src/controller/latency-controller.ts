@@ -114,9 +114,11 @@ export default class LatencyController implements ComponentAPI {
       return 0;
     }
     const bufferedRanges = media.buffered.length;
-    return bufferedRanges
-      ? media.buffered.end(bufferedRanges - 1)
-      : levelDetails.edge - this.currentTime;
+    return (
+      (bufferedRanges
+        ? media.buffered.end(bufferedRanges - 1)
+        : levelDetails.edge) - this.currentTime
+    );
   }
 
   public destroy(): void {
