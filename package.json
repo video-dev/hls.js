@@ -97,7 +97,7 @@
     "karma-webpack": "4.0.2",
     "lint-staged": "12.3.5",
     "micromatch": "4.0.4",
-    "mocha": "9.2.1",
+    "mocha": "9.2.2",
     "netlify-cli": "6.15.0",
     "prettier": "2.6.0",
     "promise-polyfill": "8.2.3",
