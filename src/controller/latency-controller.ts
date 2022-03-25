@@ -222,7 +222,8 @@ export default class LatencyController implements ComponentAPI {
       levelDetails.live &&
       inLiveRange &&
       distanceFromTarget > 0.05 &&
-      this.forwardBufferLength > 1
+      this.forwardBufferLength > 1 &&
+      this.canPlaybackRateChange()
     ) {
       const max = Math.min(2, Math.max(1.0, maxLiveSyncPlaybackRate));
       const rate =
@@ -250,5 +251,21 @@ export default class LatencyController implements ComponentAPI {
       return null;
     }
     return liveEdge - this.currentTime;
+  }
+
+  private canPlaybackRateChange(): boolean {
+    const ua =
+      typeof navigator !== 'undefined' ? navigator.userAgent.toLowerCase() : '';
+    // According to https://bugs.webkit.org/show_bug.cgi?id=208142
+    // changing playbackRate on Safari can cause video playback disruption.
+    const isSafari = /safari/.test(ua) && !/chrome/.test(ua);
+    // Changing playbackRate on some devices also cause video playback disruption.
+    const unsupportedDeviceList = ['xbox', 'web0s', 'tizen'];
+    return !unsupportedDeviceList.reduce(
+      (result: boolean, deviceUA: string) => {
+        return result || ua.indexOf(deviceUA) !== -1;
+      },
+      isSafari
+    );
   }
 }
