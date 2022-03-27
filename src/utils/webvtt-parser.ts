@@ -12,7 +12,9 @@ const startsWith = function (
   searchString: string,
   position: number = 0
 ) {
-  return inputString.slice(position, position + searchString.length) === searchString;
+  return (
+    inputString.slice(position, position + searchString.length) === searchString
+  );
 };
 
 const cueString2millis = function (timeString: string) {
