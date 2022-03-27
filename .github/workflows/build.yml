@@ -61,7 +61,7 @@ jobs:
             }
 
       - name: cache node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-node-modules
         with:
@@ -121,7 +121,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: cache node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-node-modules
         with:
@@ -162,7 +162,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: cache node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-node-modules
         with:
@@ -262,7 +262,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: cache node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-node-modules
         with:
@@ -316,7 +316,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: cache node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-node-modules
         with:
@@ -407,7 +407,7 @@ jobs:
       - uses: actions/checkout@v3
 
       - name: cache node_modules
-        uses: actions/cache@v2
+        uses: actions/cache@v3
         env:
           cache-name: cache-node-modules
         with:
