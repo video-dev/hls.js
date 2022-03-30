@@ -109,7 +109,6 @@ export function parseWebVTT(
   let timestampMapLOCAL = 0;
   let parsingError: Error;
   let inHeader = true;
-  let timestampMap = false;
 
   parser.oncue = function (cue: VTTCue) {
     // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
@@ -134,16 +133,14 @@ export function parseWebVTT(
       cueOffset = webVttMpegTsMapOffset - vttCCs.presentationOffset;
     }
 
-    if (timestampMap) {
-      const duration = cue.endTime - cue.startTime;
-      const startTime =
-        normalizePts(
-          (cue.startTime + cueOffset - timestampMapLOCAL) * 90000,
-          timeOffset * 90000
-        ) / 90000;
-      cue.startTime = startTime;
-      cue.endTime = startTime + duration;
-    }
+    const duration = cue.endTime - cue.startTime;
+    const startTime =
+      normalizePts(
+        (cue.startTime + cueOffset - timestampMapLOCAL) * 90000,
+        timeOffset * 90000
+      ) / 90000;
+    cue.startTime = startTime;
+    cue.endTime = startTime + duration;
 
     //trim trailing webvtt block whitespaces
     const text = cue.text.trim();
@@ -180,7 +177,6 @@ export function parseWebVTT(
       if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
         // Once found, no more are allowed anyway, so stop searching.
         inHeader = false;
-        timestampMap = true;
         // Extract LOCAL and MPEGTS.
         line
           .substr(16)
@@ -196,7 +192,6 @@ export function parseWebVTT(
           // Convert cue time to seconds
           timestampMapLOCAL = cueString2millis(cueTime) / 1000;
         } catch (error) {
-          timestampMap = false;
           parsingError = error;
         }
         // Return without parsing X-TIMESTAMP-MAP line.

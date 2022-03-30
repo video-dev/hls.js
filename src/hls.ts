@@ -663,7 +663,7 @@ export default class Hls implements HlsEventEmitter {
    * this setter is used to force next auto level.
    * this is useful to force a switch down in auto mode:
    * in case of load error on level N, hls.js can set nextAutoLevel to N-1 for example)
-   * forced value is valid for one fragment. upon succesful frag loading at forced level,
+   * forced value is valid for one fragment. upon successful frag loading at forced level,
    * this value will be resetted to -1 by ABR controller.
    * @type {number}
    */
