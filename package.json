@@ -96,7 +96,7 @@
     "karma-sourcemap-loader": "0.3.8",
     "karma-webpack": "4.0.2",
     "lint-staged": "12.3.7",
-    "micromatch": "4.0.4",
+    "micromatch": "4.0.5",
     "mocha": "9.2.2",
     "netlify-cli": "6.15.0",
     "prettier": "2.6.0",
