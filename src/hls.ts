@@ -622,7 +622,7 @@ export default class Hls implements HlsEventEmitter {
 
     const len = levels.length;
     for (let i = 0; i < len; i++) {
-      if (levels[i].maxBitrate > minAutoBitrate) {
+      if (levels[i].maxBitrate >= minAutoBitrate) {
         return i;
       }
     }
