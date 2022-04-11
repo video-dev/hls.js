@@ -55,6 +55,7 @@ class AudioStreamController
   private waitingData: WaitingForPTSData | null = null;
   private mainDetails: LevelDetails | null = null;
   private bufferFlushed: boolean = false;
+  private cachedTrackLoadedData: TrackLoadedData | null = null;
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[audio-stream-controller]');
@@ -413,9 +414,17 @@ class AudioStreamController
 
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     this.mainDetails = data.details;
+    if(this.cachedTrackLoadedData !== null){
+      this.hls.trigger(Events.AUDIO_TRACK_LOADED, this.cachedTrackLoadedData);
+      this.cachedTrackLoadedData = null
+    }
   }
 
   onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData) {
+    if( this.mainDetails == null ){
+      this.cachedTrackLoadedData = data;
+      return;
+    }
     const { levels } = this;
     const { details: newDetails, id: trackId } = data;
     if (!levels) {
