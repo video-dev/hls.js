@@ -987,9 +987,19 @@ function createAVCSample(
 }
 
 function parsePAT(data, offset) {
-  // skip the PSI header and parse the first PMT entry
-  return ((data[offset + 10] & 0x1f) << 8) | data[offset + 11];
-  // logger.log('PMT PID:'  + this._pmtId);
+  const sectionLength = ((data[offset + 1] & 0x0f) << 8) | data[offset + 2];
+  const tableEnd = offset + 3 + sectionLength - 4;
+  let program, pid;
+  // advance the offset to the first entry in the table
+  offset += 8;
+  while (offset < tableEnd) {
+    program = (data[offset] << 8) | data[offset + 1];
+    pid = ((data[offset + 2] & 0x1f) << 8) | data[offset + 3];
+    if (program != 0)
+      return pid; /* do not select Network Information Table (program == 0) */
+    offset += 4;
+  }
+  return -1;
 }
 
 function parsePMT(data, offset, mpegSupported, isSampleAes) {
