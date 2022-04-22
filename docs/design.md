@@ -224,6 +224,7 @@ design idea is pretty simple :
 [src/controller/subtitle-stream-controller.ts]: ../src/controller/subtitle-stream-controller.ts
 [src/controller/subtitle-track-controller.ts]: ../src/controller/subtitle-track-controller.ts
 [src/controller/timeline-controller.ts]: ../src/controller/timeline-controller.ts
+[src/controller/gap-controller.ts]: ../src/controller/gap-controller.ts
 [src/crypt/aes.ts]: ../src/crypt/aes.ts
 [src/crypt/aes128-decrypter.ts]: ../src/crypt/aes128-decrypter.ts
 [src/crypt/aes-decrypter.ts]: ..src/crypt/aes-decrypter.ts

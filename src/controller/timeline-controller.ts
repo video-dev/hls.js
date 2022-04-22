@@ -443,7 +443,10 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
-  private onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
+  private onFragLoaded(
+    event: Events.FRAG_LOADED,
+    data: FragDecryptedData | FragLoadedData
+  ) {
     const { frag, payload } = data;
     const { initPTS, unparsedVttFrags } = this;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
@@ -464,11 +467,14 @@ export class TimelineController implements ComponentAPI {
         }
 
         const decryptData = frag.decryptdata;
+        // fragment after decryption has a stats object
+        const decrypted = 'stats' in data;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
         if (
           decryptData == null ||
           decryptData.key == null ||
-          decryptData.method !== 'AES-128'
+          decryptData.method !== 'AES-128' ||
+          decrypted
         ) {
           const trackPlaylistMedia = this.tracks[frag.level];
           const vttCCs = this.vttCCs;
@@ -664,23 +670,25 @@ export class TimelineController implements ComponentAPI {
   }
 
   private extractCea608Data(byteArray: Uint8Array): number[][] {
-    const count = byteArray[0] & 31;
-    let position = 2;
     const actualCCBytes: number[][] = [[], []];
+    const count = byteArray[0] & 0x1f;
+    let position = 2;
 
     for (let j = 0; j < count; j++) {
       const tmpByte = byteArray[position++];
       const ccbyte1 = 0x7f & byteArray[position++];
       const ccbyte2 = 0x7f & byteArray[position++];
-      const ccValid = (4 & tmpByte) !== 0;
-      const ccType = 3 & tmpByte;
-
       if (ccbyte1 === 0 && ccbyte2 === 0) {
         continue;
       }
-
+      const ccValid = (0x04 & tmpByte) !== 0; // Support all four channels
       if (ccValid) {
-        if (ccType === 0 || ccType === 1) {
+        const ccType = 0x03 & tmpByte;
+        if (
+          0x00 /* CEA608 field1*/ === ccType ||
+          0x01 /* CEA608 field2*/ === ccType
+        ) {
+          // Exclude CEA708 CC data.
           actualCCBytes[ccType].push(ccbyte1);
           actualCCBytes[ccType].push(ccbyte2);
         }

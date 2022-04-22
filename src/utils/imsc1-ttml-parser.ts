@@ -33,14 +33,13 @@ export function parseIMSC1(
     errorCallBack(new Error('Could not parse IMSC1 mdat'));
     return;
   }
-  const mdat = results[0];
-  const ttml = utf8ArrayToStr(
-    new Uint8Array(payload, mdat.start, mdat.end - mdat.start)
-  );
+
+  const ttmlList = results.map((mdat) => utf8ArrayToStr(mdat));
+
   const syncTime = toTimescaleFromScale(initPTS, 1, timescale);
 
   try {
-    callBack(parseTTML(ttml, syncTime));
+    ttmlList.forEach((ttml) => callBack(parseTTML(ttml, syncTime)));
   } catch (error) {
     errorCallBack(error);
   }
@@ -111,7 +110,7 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
       cue.size = 80;
 
       // Apply styles to cue
-      const styles = getTtmlStyles(region, style);
+      const styles = getTtmlStyles(region, style, styleElements);
       const { textAlign } = styles;
       if (textAlign) {
         // cue.positionAlign not settable in FF~2016
@@ -166,8 +165,13 @@ function getTextContent(element, trim): string {
   }, '');
 }
 
-function getTtmlStyles(region, style): { [style: string]: string } {
+function getTtmlStyles(
+  region,
+  style,
+  styleElements
+): { [style: string]: string } {
   const ttsNs = 'http://www.w3.org/ns/ttml#styling';
+  let regionStyle = null;
   const styleAttributes = [
     'displayAlign',
     'textAlign',
@@ -182,9 +186,20 @@ function getTtmlStyles(region, style): { [style: string]: string } {
     // 'direction',
     // 'writingMode'
   ];
+
+  const regionStyleName = region?.hasAttribute('style')
+    ? region.getAttribute('style')
+    : null;
+
+  if (regionStyleName && styleElements.hasOwnProperty(regionStyleName)) {
+    regionStyle = styleElements[regionStyleName];
+  }
+
   return styleAttributes.reduce((styles, name) => {
     const value =
-      getAttributeNS(style, ttsNs, name) || getAttributeNS(region, ttsNs, name);
+      getAttributeNS(style, ttsNs, name) ||
+      getAttributeNS(region, ttsNs, name) ||
+      getAttributeNS(regionStyle, ttsNs, name);
     if (value) {
       styles[name] = value;
     }
@@ -193,6 +208,9 @@ function getTtmlStyles(region, style): { [style: string]: string } {
 }
 
 function getAttributeNS(element, ns, name): string | null {
+  if (!element) {
+    return null;
+  }
   return element.hasAttributeNS(ns, name)
     ? element.getAttributeNS(ns, name)
     : null;
