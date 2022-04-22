@@ -1,6 +1,7 @@
 import BaseStreamController from '../../../src/controller/stream-controller';
 import Hls from '../../../src/hls';
 import { FragmentState } from '../../../src/controller/fragment-tracker';
+import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 
 describe('BaseStreamController', function () {
   let baseStreamController;
@@ -74,6 +75,26 @@ describe('BaseStreamController', function () {
         baseStreamController._streamEnded(bufferInfo, levelDetails),
         `fragState is ${fragmentTracker.getState()}, expecting OK`
       ).to.be.true;
+    });
+
+    it('returns true if parts are buffered for low latency content', function () {
+      media.buffered = new TimeRangesMock([0, 1]);
+      baseStreamController.fragCurrent = { sn: 10 };
+      levelDetails.endSN = 10;
+      levelDetails.partList = [{ start: 0, duration: 1 }];
+
+      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
+        .true;
+    });
+
+    it('returns true even if fragCurrent is after the last fragment due to low latency content modeling', function () {
+      media.buffered = new TimeRangesMock([0, 1]);
+      baseStreamController.fragCurrent = { sn: 11 };
+      levelDetails.endSN = 10;
+      levelDetails.partList = [{ start: 0, duration: 1 }];
+
+      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
+        .true;
     });
   });
 });
