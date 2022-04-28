@@ -77,7 +77,7 @@ export default class GapController {
 
     // The playhead should not be moving
     if (
-      media.paused ||
+      (media.paused && !seeking) ||
       media.ended ||
       media.playbackRate === 0 ||
       !BufferHelper.getBuffered(media).length
