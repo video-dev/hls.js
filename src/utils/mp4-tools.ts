@@ -501,8 +501,11 @@ export function offsetStartDTS(
       findBox(traf, ['tfdt']).forEach((tfdt) => {
         const version = tfdt[0];
         let baseMediaDecodeTime = readUint32(tfdt, 4);
+
         if (version === 0) {
-          writeUint32(tfdt, 4, baseMediaDecodeTime - timeOffset * timescale);
+          baseMediaDecodeTime -= timeOffset * timescale;
+          baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
+          writeUint32(tfdt, 4, baseMediaDecodeTime);
         } else {
           baseMediaDecodeTime *= Math.pow(2, 32);
           baseMediaDecodeTime += readUint32(tfdt, 8);
