@@ -13,9 +13,10 @@ export interface Demuxer {
   flush(timeOffset?: number): DemuxerResult | Promise<DemuxerResult>;
   destroy(): void;
   resetInitSegment(
+    initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    duration: number
+    trackDuration: number
   );
   resetTimeStamp(defaultInitPTS?: number | null): void;
   resetContiguity(): void;
@@ -23,7 +24,7 @@ export interface Demuxer {
 
 export interface DemuxerResult {
   audioTrack: DemuxedAudioTrack;
-  avcTrack: DemuxedVideoTrack;
+  videoTrack: DemuxedVideoTrack;
   id3Track: DemuxedMetadataTrack;
   textTrack: DemuxedUserdataTrack;
 }
@@ -48,6 +49,13 @@ export interface DemuxedTrack {
   codec?: string;
 }
 
+export interface PassthroughTrack extends DemuxedTrack {
+  sampleDuration: number;
+  samples: Uint8Array;
+  timescale: number;
+  duration: number;
+  codec: string;
+}
 export interface DemuxedAudioTrack extends DemuxedTrack {
   config?: number[];
   samplerate?: number;
@@ -72,10 +80,6 @@ export interface DemuxedAvcTrack extends DemuxedVideoTrack {
   samples: AvcSample[];
 }
 
-export interface PassthroughVideoTrack extends DemuxedVideoTrack {
-  samples: Uint8Array;
-}
-
 export interface DemuxedMetadataTrack extends DemuxedTrack {
   samples: MetadataSample[];
 }
@@ -93,7 +97,12 @@ export interface MetadataSample {
 
 export interface UserdataSample {
   pts: number;
-  bytes: Uint8Array;
+  bytes?: Uint8Array;
+  type?: number;
+  payloadType?: number;
+  uuid?: string;
+  userData?: string;
+  userDataBytes?: Uint8Array;
 }
 
 export interface AvcSample {

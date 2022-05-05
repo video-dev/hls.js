@@ -223,14 +223,23 @@ export function mergeDetails(
       if (oldFrag.initSegment) {
         newFrag.initSegment = oldFrag.initSegment;
         currentInitSegment = oldFrag.initSegment;
-      } else if (
-        !newFrag.initSegment ||
-        newFrag.initSegment.relurl == currentInitSegment?.relurl
-      ) {
-        newFrag.initSegment = currentInitSegment;
       }
     }
   );
+
+  if (currentInitSegment) {
+    const fragmentsToCheck = newDetails.fragmentHint
+      ? newDetails.fragments.concat(newDetails.fragmentHint)
+      : newDetails.fragments;
+    fragmentsToCheck.forEach((frag) => {
+      if (
+        !frag.initSegment ||
+        frag.initSegment.relurl === currentInitSegment?.relurl
+      ) {
+        frag.initSegment = currentInitSegment;
+      }
+    });
+  }
 
   if (newDetails.skippedSegments) {
     newDetails.deltaUpdateFailed = newDetails.fragments.some((frag) => !frag);
