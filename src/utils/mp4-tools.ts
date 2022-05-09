@@ -108,7 +108,7 @@ export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
   const references: any[] = [];
   const sidx = sidxBox[0];
 
-  const version = sidx.data[sidx.start];
+  const version = sidx[0];
 
   // set initial offset, we skip the reference ID (not needed)
   let index = 8;
