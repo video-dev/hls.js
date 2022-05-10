@@ -39,6 +39,7 @@ export class SubtitleStreamController
   private currentTrackId: number = -1;
   private tracksBuffered: Array<TimeRange[]> = [];
   private mainDetails: LevelDetails | null = null;
+  private fragments: Fragment[] = [];
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[subtitle-stream-controller]');
@@ -48,6 +49,7 @@ export class SubtitleStreamController
   protected onHandlerDestroying() {
     this._unregisterListeners();
     this.mainDetails = null;
+    this.fragments = [];
   }
 
   private _registerListeners() {
@@ -246,6 +248,15 @@ export class SubtitleStreamController
     this.mediaBuffer = this.mediaBufferTimeRanges;
     if (newDetails.live || track.details?.live) {
       const mainDetails = this.mainDetails;
+
+      const fragments = this.fragments.filter(
+        (fragment) => fragment.end >= this.media.currentTime
+      );
+      const newFrag = (frag) =>
+        !fragments.some((fragment) => fragment.sn === frag.sn);
+      const newFragments = newDetails.fragments.filter(newFrag);
+      this.fragments = fragments.concat(newFragments);
+
       if (newDetails.deltaUpdateFailed || !mainDetails) {
         return;
       }
@@ -280,7 +291,7 @@ export class SubtitleStreamController
     ) {
       const foundFrag = findFragmentByPTS(
         null,
-        newDetails.fragments,
+        this.fragments,
         this.media.currentTime,
         0
       );
@@ -367,42 +378,33 @@ export class SubtitleStreamController
         trackDetails,
         'Subtitle track details are defined on idle subtitle stream controller tick'
       );
-      const fragments = trackDetails.fragments;
-      const fragLen = fragments.length;
+      const fragments = this.fragments;
       const end = trackDetails.edge;
-
-      let foundFrag;
       const fragPrevious = this.fragPrevious;
-      if (targetBufferTime < end) {
-        const { maxFragLookUpTolerance } = config;
-        foundFrag = findFragmentByPTS(
-          fragPrevious,
-          fragments,
-          targetBufferTime,
-          maxFragLookUpTolerance
-        );
-        if (
-          !foundFrag &&
-          fragPrevious &&
-          fragPrevious.start < fragments[0].start
-        ) {
-          foundFrag = fragments[0];
-        }
-      } else {
-        foundFrag = fragments[fragLen - 1];
+      let foundFrag = findFragmentByPTS(
+        fragPrevious,
+        fragments,
+        targetBufferTime,
+        config.maxFragLookUpTolerance
+      );
+
+      if (
+        targetBufferTime < end &&
+        !foundFrag &&
+        fragPrevious &&
+        fragPrevious.start < fragments[0].start
+      ) {
+        foundFrag = fragments[0];
       }
 
       if (foundFrag?.encrypted) {
         this.loadKey(foundFrag, trackDetails);
-      } else if (foundFrag) {
-        if (
-          this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
-        ) {
-          // only load if fragment is not loaded
-          this.loadFragment(foundFrag, trackDetails, targetBufferTime);
-        } else {
-          this.fragPrevious = foundFrag;
-        }
+      } else if (
+        foundFrag &&
+        this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
+      ) {
+        // only load if fragment is not loaded
+        this.loadFragment(foundFrag, trackDetails, targetBufferTime);
       }
     }
   }
