@@ -249,13 +249,7 @@ export class SubtitleStreamController
     if (newDetails.live || track.details?.live) {
       const mainDetails = this.mainDetails;
 
-      const fragments = this.fragments.filter(
-        (fragment) => fragment.end >= this.media.currentTime
-      );
-      const newFrag = (frag) =>
-        !fragments.some((fragment) => fragment.sn === frag.sn);
-      const newFragments = newDetails.fragments.filter(newFrag);
-      this.fragments = fragments.concat(newFragments);
+      this.updateFragments(newDetails.fragments);
 
       if (newDetails.deltaUpdateFailed || !mainDetails) {
         return;
@@ -407,6 +401,21 @@ export class SubtitleStreamController
         this.loadFragment(foundFrag, trackDetails, targetBufferTime);
       }
     }
+  }
+
+  protected updateFragments(newFragments: Fragment[]) {
+    const { currentTime } = this.media;
+    this.fragments = this.fragments
+      .reduce((acc, fragment) => {
+        if (
+          fragment.end >= currentTime &&
+          !acc.some((frag) => fragment.sn === frag.sn)
+        ) {
+          acc.push(fragment);
+        }
+        return acc;
+      }, newFragments.slice())
+      .sort((a, b) => (a.sn as number) - (b.sn as number));
   }
 
   protected loadFragment(
