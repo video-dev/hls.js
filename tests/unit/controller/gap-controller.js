@@ -271,12 +271,11 @@ describe('GapController', function () {
 
     it('should trigger reportStall when stalling for 250ms or longer', function () {
       setStalling();
-      const clock = sandbox.useFakeTimers(0);
-      clock.tick(250);
+      wallClock.tick(250);
       gapController.stalled = 1;
       gapController.poll(lastCurrentTime);
       expect(reportStallSpy).to.not.have.been.called;
-      clock.tick(251);
+      wallClock.tick(251);
       gapController.poll(lastCurrentTime);
       expect(reportStallSpy).to.have.been.calledOnce;
     });
