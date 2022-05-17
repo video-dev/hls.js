@@ -1,27 +1,27 @@
 import { Events } from '../events';
-import type Hls from '../hls';
-import type { Fragment } from '../loader/fragment';
-import type { LevelDetails } from '../loader/level-details';
+import { BufferHelper } from '../utils/buffer-helper';
+import { findFragmentByPTS } from './fragment-finders';
+import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
+import { addSliding } from './level-helper';
+import { FragmentState } from './fragment-tracker';
+import BaseStreamController, { State } from './base-stream-controller';
+import { PlaylistLevelType } from '../types/loader';
+import { Level } from '../types/level';
+import type { FragmentTracker } from './fragment-tracker';
 import type { NetworkComponentAPI } from '../types/component-api';
+import type Hls from '../hls';
+import type { LevelDetails } from '../loader/level-details';
+import type { Fragment } from '../loader/fragment';
 import type {
-  BufferFlushingData,
   ErrorData,
   FragLoadedData,
-  LevelLoadedData,
   SubtitleFragProcessed,
   SubtitleTracksUpdatedData,
   TrackLoadedData,
   TrackSwitchedData,
+  BufferFlushingData,
+  LevelLoadedData,
 } from '../types/events';
-import { Level } from '../types/level';
-import { PlaylistLevelType } from '../types/loader';
-import { BufferHelper } from '../utils/buffer-helper';
-import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
-import BaseStreamController, { State } from './base-stream-controller';
-import { findFragmentByPTS } from './fragment-finders';
-import type { FragmentTracker } from './fragment-tracker';
-import { FragmentState } from './fragment-tracker';
-import { addSliding } from './level-helper';
 
 const TICK_INTERVAL = 500; // how often to tick in ms
 
