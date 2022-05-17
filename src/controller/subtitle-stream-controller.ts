@@ -246,10 +246,11 @@ export class SubtitleStreamController
       return;
     }
     this.mediaBuffer = this.mediaBufferTimeRanges;
+
+    this.updateFragments(newDetails.fragments);
+
     if (newDetails.live || track.details?.live) {
       const mainDetails = this.mainDetails;
-
-      this.updateFragments(newDetails.fragments);
 
       if (newDetails.deltaUpdateFailed || !mainDetails) {
         return;
@@ -342,11 +343,12 @@ export class SubtitleStreamController
     }
 
     if (this.state === State.IDLE) {
-      const { currentTrackId, levels } = this;
+      const { currentTrackId, levels, fragments } = this;
       if (
         !levels.length ||
         !levels[currentTrackId] ||
-        !levels[currentTrackId].details
+        !levels[currentTrackId].details ||
+        !fragments.length
       ) {
         return;
       }
@@ -372,7 +374,6 @@ export class SubtitleStreamController
         trackDetails,
         'Subtitle track details are defined on idle subtitle stream controller tick'
       );
-      const fragments = this.fragments;
       const end = trackDetails.edge;
       const fragPrevious = this.fragPrevious;
       let foundFrag = findFragmentByPTS(
