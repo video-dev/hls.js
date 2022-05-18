@@ -1048,6 +1048,7 @@ export default class StreamController
     }
     const { frag, part, level } = context;
     const { video, text, id3, initSegment } = remuxResult;
+    const { details } = level;
     // The audio-stream-controller handles audio buffering if Hls.js is playing an alternate audio track
     const audio = this.altAudio ? undefined : remuxResult.audio;
 
@@ -1080,7 +1081,7 @@ export default class StreamController
 
     // Avoid buffering if backtracking this fragment
     if (video && remuxResult.independent !== false) {
-      if (level.details) {
+      if (details) {
         const { startPTS, endPTS, startDTS, endDTS } = video;
         if (part) {
           part.elementaryStreams[video.type] = {
@@ -1145,18 +1146,20 @@ export default class StreamController
       this.bufferFragmentData(audio, frag, part, chunkMeta);
     }
 
-    if (id3?.samples?.length) {
+    if (details && id3?.samples?.length) {
       const emittedID3: FragParsingMetadataData = {
-        frag,
         id,
+        frag,
+        details,
         samples: id3.samples,
       };
       hls.trigger(Events.FRAG_PARSING_METADATA, emittedID3);
     }
-    if (text) {
+    if (details && text) {
       const emittedText: FragParsingUserdataData = {
-        frag,
         id,
+        frag,
+        details,
         samples: text.samples,
       };
       hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);

@@ -680,12 +680,16 @@ class AudioStreamController
       this.resetLiveStartWhenNotLoaded(chunkMeta.level);
       return;
     }
-    const { frag, part } = context;
+    const {
+      frag,
+      part,
+      level: { details },
+    } = context;
     const { audio, text, id3, initSegment } = remuxResult;
 
     // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
     // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
-    if (this.fragContextChanged(frag)) {
+    if (this.fragContextChanged(frag) || !details) {
       return;
     }
 
@@ -726,8 +730,9 @@ class AudioStreamController
     if (id3?.samples?.length) {
       const emittedID3: FragParsingMetadataData = Object.assign(
         {
-          frag,
           id,
+          frag,
+          details,
         },
         id3
       );
@@ -736,8 +741,9 @@ class AudioStreamController
     if (text) {
       const emittedText: FragParsingUserdataData = Object.assign(
         {
-          frag,
           id,
+          frag,
+          details,
         },
         text
       );
