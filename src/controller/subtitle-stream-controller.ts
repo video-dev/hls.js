@@ -404,6 +404,10 @@ export class SubtitleStreamController
   }
 
   protected updateFragments(newFragments: Fragment[]) {
+    if (!newFragments?.length) {
+      return;
+    }
+
     const { currentTime } = this.media;
     this.fragments = this.fragments
       .reduce((acc, fragment) => {
