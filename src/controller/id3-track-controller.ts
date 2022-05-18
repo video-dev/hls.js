@@ -92,8 +92,7 @@ class ID3TrackController implements ComponentAPI {
     if (!this.media) {
       return;
     }
-    const fragment = data.frag;
-    const samples = data.samples;
+    const { frag: fragment, samples, details } = data;
 
     // create track dynamically
     if (!this.id3Track) {
@@ -101,17 +100,21 @@ class ID3TrackController implements ComponentAPI {
       this.id3Track.mode = 'hidden';
     }
 
+    // VTTCue end time must be finite, so use playlist edge or fragment end until next fragment with same frame type is found
+    const maxCueTime = details.edge || fragment.end;
+
     // Attempt to recreate Safari functionality by creating
     // WebKitDataCue objects when available and store the decoded
     // ID3 data in the value property of the cue
     const Cue = (self.WebKitDataCue || self.VTTCue || self.TextTrackCue) as any;
+    let updateCueRanges = false;
+    const frameTypesAdded: Record<string, number | null> = {};
 
     for (let i = 0; i < samples.length; i++) {
       const frames = ID3.getID3Frames(samples[i].data);
       if (frames) {
         const startTime = samples[i].pts;
-        let endTime: number =
-          i < samples.length - 1 ? samples[i + 1].pts : fragment.end;
+        let endTime: number = maxCueTime;
 
         const timeDiff = endTime - startTime;
         if (timeDiff <= 0) {
@@ -125,7 +128,30 @@ class ID3TrackController implements ComponentAPI {
             const cue = new Cue(startTime, endTime, '');
             cue.value = frame;
             this.id3Track.addCue(cue);
+            frameTypesAdded[frame.key] = null;
+            updateCueRanges = true;
           }
+        }
+      }
+    }
+    if (updateCueRanges) {
+      this.updateId3CueEnds(frameTypesAdded);
+    }
+  }
+
+  updateId3CueEnds(frameTypesAdded: Record<string, number | null>) {
+    // Update endTime of previous cue with same IDR frame.type (Ex: TXXX cue spans to next TXXX)
+    const cues = this.id3Track?.cues;
+    if (cues) {
+      for (let i = cues.length; i--; ) {
+        const cue = cues[i] as any;
+        const frameType = cue.value?.key;
+        if (frameType && frameType in frameTypesAdded) {
+          const startTime = frameTypesAdded[frameType];
+          if (startTime && cue.endTime !== startTime) {
+            cue.endTime = startTime;
+          }
+          frameTypesAdded[frameType] = cue.startTime;
         }
       }
     }

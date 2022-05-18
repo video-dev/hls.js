@@ -814,6 +814,8 @@ export interface FragParsingInitSegmentData {
 // @public (undocumented)
 export interface FragParsingMetadataData {
     // (undocumented)
+    details: LevelDetails;
+    // (undocumented)
     frag: Fragment;
     // (undocumented)
     id: string;
@@ -825,6 +827,8 @@ export interface FragParsingMetadataData {
 //
 // @public (undocumented)
 export interface FragParsingUserdataData {
+    // (undocumented)
+    details: LevelDetails;
     // (undocumented)
     frag: Fragment;
     // (undocumented)

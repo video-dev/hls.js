@@ -1483,9 +1483,9 @@ Full list of Events is available below:
 - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
   - data: { id: demuxer id, frag : fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment }
 - `Hls.Events.FRAG_PARSING_USERDATA` - fired when parsing sei text is completed
-  - data: { id : demuxer id, frag: fragment object, samples : [ sei samples pes ] }
+  - data: { id : demuxer id, frag: fragment object, samples : [ sei samples pes ], details: `levelDetails` object (please see [below](#leveldetails) for more information) }
 - `Hls.Events.FRAG_PARSING_METADATA` - fired when parsing id3 is completed
-  - data: { id: demuxer id, frag : fragment object, samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds] }
+  - data: { id: demuxer id, frag : fragment object, samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds], details: `levelDetails` object (please see [below](#leveldetails) for more information) }
 - `Hls.Events.FRAG_PARSING_DATA` - [deprecated]
 - `Hls.Events.FRAG_PARSED` - fired when fragment parsing is completed
   - data: { frag : fragment object, partIndex }
