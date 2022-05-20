@@ -39,7 +39,6 @@ export class SubtitleStreamController
   private currentTrackId: number = -1;
   private tracksBuffered: Array<TimeRange[]> = [];
   private mainDetails: LevelDetails | null = null;
-  private fragments: Fragment[] = [];
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[subtitle-stream-controller]');
@@ -49,7 +48,6 @@ export class SubtitleStreamController
   protected onHandlerDestroying() {
     this._unregisterListeners();
     this.mainDetails = null;
-    this.fragments = [];
   }
 
   private _registerListeners() {
@@ -246,9 +244,6 @@ export class SubtitleStreamController
       return;
     }
     this.mediaBuffer = this.mediaBufferTimeRanges;
-
-    this.updateFragments(newDetails.fragments);
-
     if (newDetails.live || track.details?.live) {
       const mainDetails = this.mainDetails;
       if (newDetails.deltaUpdateFailed || !mainDetails) {
@@ -285,7 +280,7 @@ export class SubtitleStreamController
     ) {
       const foundFrag = findFragmentByPTS(
         null,
-        this.fragments,
+        newDetails.fragments,
         this.media.currentTime,
         0
       );
@@ -342,12 +337,11 @@ export class SubtitleStreamController
     }
 
     if (this.state === State.IDLE) {
-      const { currentTrackId, levels, fragments } = this;
+      const { currentTrackId, levels } = this;
       if (
         !levels.length ||
         !levels[currentTrackId] ||
-        !levels[currentTrackId].details ||
-        !fragments.length
+        !levels[currentTrackId].details
       ) {
         return;
       }
@@ -373,22 +367,32 @@ export class SubtitleStreamController
         trackDetails,
         'Subtitle track details are defined on idle subtitle stream controller tick'
       );
+      const fragments = trackDetails.fragments;
+      const fragLen = fragments.length;
       const end = trackDetails.edge;
-      const fragPrevious = this.fragPrevious;
-      let foundFrag = findFragmentByPTS(
-        fragPrevious,
-        fragments,
-        targetBufferTime,
-        config.maxFragLookUpTolerance
-      );
 
-      if (
-        targetBufferTime < end &&
-        !foundFrag &&
-        fragPrevious &&
-        fragPrevious.start < fragments[0].start
-      ) {
-        foundFrag = fragments[0];
+      let foundFrag;
+      const fragPrevious = this.fragPrevious;
+      if (targetBufferTime < end) {
+        const { maxFragLookUpTolerance } = config;
+        foundFrag = findFragmentByPTS(
+          fragPrevious,
+          fragments,
+          Math.max(
+            trackDetails.fragments[0].start,
+            Math.min(targetBufferTime, trackDetails.edge)
+          ),
+          maxFragLookUpTolerance
+        );
+        if (
+          !foundFrag &&
+          fragPrevious &&
+          fragPrevious.start < fragments[0].start
+        ) {
+          foundFrag = fragments[0];
+        }
+      } else {
+        foundFrag = fragments[fragLen - 1];
       }
 
       if (foundFrag?.encrypted) {
@@ -401,25 +405,6 @@ export class SubtitleStreamController
         this.loadFragment(foundFrag, trackDetails, targetBufferTime);
       }
     }
-  }
-
-  protected updateFragments(newFragments: Fragment[]) {
-    if (!newFragments?.length) {
-      return;
-    }
-
-    const { currentTime } = this.media;
-    this.fragments = this.fragments
-      .reduce((acc, fragment) => {
-        if (
-          fragment.end >= currentTime &&
-          !acc.some((frag) => fragment.sn === frag.sn)
-        ) {
-          acc.push(fragment);
-        }
-        return acc;
-      }, newFragments.slice())
-      .sort((a, b) => (a.sn as number) - (b.sn as number));
   }
 
   protected loadFragment(
