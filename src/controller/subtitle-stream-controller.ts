@@ -379,7 +379,7 @@ export class SubtitleStreamController
           fragPrevious,
           fragments,
           Math.max(
-            trackDetails.fragments[0].start,
+            fragments[0].start,
             Math.min(targetBufferTime, trackDetails.edge)
           ),
           maxFragLookUpTolerance
