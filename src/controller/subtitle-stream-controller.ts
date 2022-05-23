@@ -378,7 +378,10 @@ export class SubtitleStreamController
         foundFrag = findFragmentByPTS(
           fragPrevious,
           fragments,
-          targetBufferTime,
+          Math.max(
+            fragments[0].start,
+            targetBufferTime
+          ),
           maxFragLookUpTolerance
         );
         if (
