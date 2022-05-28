@@ -396,7 +396,7 @@ export default class CMCDController implements ComponentAPI {
     const url = URL.createObjectURL(new Blob());
     const uuid = url.toString();
     URL.revokeObjectURL(url);
-    return uuid.substr(uuid.lastIndexOf('/') + 1);
+    return uuid.slice(uuid.lastIndexOf('/') + 1);
   }
 
   /**
