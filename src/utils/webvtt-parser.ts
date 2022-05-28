@@ -12,16 +12,18 @@ const startsWith = function (
   searchString: string,
   position: number = 0
 ) {
-  return inputString.substr(position, searchString.length) === searchString;
+  return (
+    inputString.slice(position, position + searchString.length) === searchString
+  );
 };
 
 const cueString2millis = function (timeString: string) {
-  let ts = parseInt(timeString.substr(-3));
-  const secs = parseInt(timeString.substr(-6, 2));
-  const mins = parseInt(timeString.substr(-9, 2));
+  let ts = parseInt(timeString.slice(-3));
+  const secs = parseInt(timeString.slice(-6, -4));
+  const mins = parseInt(timeString.slice(-9, -7));
   const hours =
     timeString.length > 9
-      ? parseInt(timeString.substr(0, timeString.indexOf(':')))
+      ? parseInt(timeString.substring(0, timeString.indexOf(':')))
       : 0;
 
   if (
@@ -179,13 +181,13 @@ export function parseWebVTT(
         inHeader = false;
         // Extract LOCAL and MPEGTS.
         line
-          .substr(16)
+          .slice(16)
           .split(',')
           .forEach((timestamp) => {
             if (startsWith(timestamp, 'LOCAL:')) {
-              cueTime = timestamp.substr(6);
+              cueTime = timestamp.slice(6);
             } else if (startsWith(timestamp, 'MPEGTS:')) {
-              timestampMapMPEGTS = parseInt(timestamp.substr(7));
+              timestampMapMPEGTS = parseInt(timestamp.slice(7));
             }
           });
         try {
