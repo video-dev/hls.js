@@ -22,7 +22,7 @@ class MP3Demuxer extends BaseAudioDemuxer {
       id: 2,
       pid: -1,
       sequenceNumber: 0,
-      isAAC: false,
+      segmentCodec: 'mp3',
       samples: [],
       manifestCodec: audioCodec,
       duration: trackDuration,

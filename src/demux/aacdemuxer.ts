@@ -32,7 +32,7 @@ class AACDemuxer extends BaseAudioDemuxer {
       id: 2,
       pid: -1,
       sequenceNumber: 0,
-      isAAC: true,
+      segmentCodec: 'aac',
       samples: [],
       manifestCodec: audioCodec,
       duration: trackDuration,
