@@ -328,9 +328,9 @@ Directly include dist/hls.js or dist/hls.min.js in a script tag on the page. Thi
 native browser support for HLS playback in HTMLMediaElements:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<!-- Or if you want a more recent alpha version -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@alpha"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<!-- Or if you want the latest version from the main branch -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
 <video id="video"></video>
 <script>
   var video = document.getElementById('video');
@@ -364,9 +364,9 @@ native browser support for HLS playback in HTMLMediaElements:
 To check for native browser support first and then fallback to HLS.js, swap these conditionals. See [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-670021358) to understand some of the tradeoffs.
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<!-- Or if you want a more recent alpha version -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@alpha"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<!-- Or if you want the latest version from the main branch -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
 <video id="video"></video>
 <script>
   var video = document.getElementById('video');
