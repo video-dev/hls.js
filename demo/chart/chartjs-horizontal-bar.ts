@@ -189,7 +189,7 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
             Math.ceil(bounds.w / (lineHeight / 3))
           );
           ctx.fillText(
-            ('' + obj.content).substr(0, strLength),
+            ('' + obj.content).slice(0, strLength),
             bounds.x + 2,
             bounds.y + bounds.h - 3,
             bounds.w - 5

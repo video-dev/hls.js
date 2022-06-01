@@ -63,7 +63,9 @@ export function findFragmentByPTS(
   let fragNext: Fragment | null = null;
   if (fragPrevious) {
     fragNext =
-      fragments[(fragPrevious.sn as number) - (fragments[0].sn as number) + 1];
+      fragments[
+        (fragPrevious.sn as number) - (fragments[0].sn as number) + 1
+      ] || null;
   } else if (bufferEnd === 0 && fragments[0].start === 0) {
     fragNext = fragments[0];
   }

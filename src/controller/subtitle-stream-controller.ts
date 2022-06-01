@@ -1,12 +1,13 @@
 import { Events } from '../events';
-import { logger } from '../utils/logger';
 import { BufferHelper } from '../utils/buffer-helper';
-import { findFragmentByPDT, findFragmentByPTS } from './fragment-finders';
-import type { FragmentTracker } from './fragment-tracker';
+import { findFragmentByPTS } from './fragment-finders';
+import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
+import { addSliding } from './level-helper';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import { PlaylistLevelType } from '../types/loader';
 import { Level } from '../types/level';
+import type { FragmentTracker } from './fragment-tracker';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
@@ -18,6 +19,8 @@ import type {
   SubtitleTracksUpdatedData,
   TrackLoadedData,
   TrackSwitchedData,
+  BufferFlushingData,
+  LevelLoadedData,
 } from '../types/events';
 
 const TICK_INTERVAL = 500; // how often to tick in ms
@@ -35,49 +38,61 @@ export class SubtitleStreamController
 
   private currentTrackId: number = -1;
   private tracksBuffered: Array<TimeRange[]> = [];
+  private mainDetails: LevelDetails | null = null;
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[subtitle-stream-controller]');
     this._registerListeners();
   }
 
+  protected onHandlerDestroying() {
+    this._unregisterListeners();
+    this.mainDetails = null;
+  }
+
   private _registerListeners() {
     const { hls } = this;
     hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
     hls.on(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
     hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
     hls.on(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
+    hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
   }
 
   private _unregisterListeners() {
     const { hls } = this;
     hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
     hls.off(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
     hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
     hls.off(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
+    hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
   }
 
   startLoad() {
     this.stopLoad();
     this.state = State.IDLE;
 
-    // Check if we already have a track with necessary details to load fragments
-    const currentTrack = this.levels[this.currentTrackId];
-    if (currentTrack?.details) {
-      this.setInterval(TICK_INTERVAL);
-      this.tick();
-    }
+    this.setInterval(TICK_INTERVAL);
+    this.tick();
   }
 
-  onHandlerDestroyed() {
-    this._unregisterListeners();
-    super.onHandlerDestroyed();
+  onManifestLoading() {
+    this.mainDetails = null;
+    this.fragmentTracker.removeAllFragments();
+  }
+
+  onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+    this.mainDetails = data.details;
   }
 
   onSubtitleFragProcessed(
@@ -97,7 +112,7 @@ export class SubtitleStreamController
     }
 
     // Create/update a buffered array matching the interface used by BufferHelper.bufferedInfo
-    // so we can re-use the logic used to detect how much have been buffered
+    // so we can re-use the logic used to detect how much has been buffered
     let timeRange: TimeRange | undefined;
     const fragStart = frag.start;
     for (let i = 0; i < buffered.length; i++) {
@@ -116,6 +131,46 @@ export class SubtitleStreamController
         end: fragEnd,
       };
       buffered.push(timeRange);
+    }
+    this.fragmentTracker.fragBuffered(frag);
+  }
+
+  onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData) {
+    const { startOffset, endOffset } = data;
+    if (startOffset === 0 && endOffset !== Number.POSITIVE_INFINITY) {
+      const { currentTrackId, levels } = this;
+      if (
+        !levels.length ||
+        !levels[currentTrackId] ||
+        !levels[currentTrackId].details
+      ) {
+        return;
+      }
+      const trackDetails = levels[currentTrackId].details as LevelDetails;
+      const targetDuration = trackDetails.targetduration;
+      const endOffsetSubtitles = endOffset - targetDuration;
+      if (endOffsetSubtitles <= 0) {
+        return;
+      }
+      data.endOffsetSubtitles = Math.max(0, endOffsetSubtitles);
+      this.tracksBuffered.forEach((buffered) => {
+        for (let i = 0; i < buffered.length; ) {
+          if (buffered[i].end <= endOffsetSubtitles) {
+            buffered.shift();
+            continue;
+          } else if (buffered[i].start < endOffsetSubtitles) {
+            buffered[i].start = endOffsetSubtitles;
+          } else {
+            break;
+          }
+          i++;
+        }
+      });
+      this.fragmentTracker.removeFragmentsInRange(
+        startOffset,
+        endOffsetSubtitles,
+        PlaylistLevelType.SUBTITLE
+      );
     }
   }
 
@@ -166,9 +221,11 @@ export class SubtitleStreamController
     const currentTrack = this.levels[this.currentTrackId];
     if (currentTrack?.details) {
       this.mediaBuffer = this.mediaBufferTimeRanges;
-      this.setInterval(TICK_INTERVAL);
     } else {
       this.mediaBuffer = null;
+    }
+    if (currentTrack) {
+      this.setInterval(TICK_INTERVAL);
     }
   }
 
@@ -177,27 +234,61 @@ export class SubtitleStreamController
     event: Events.SUBTITLE_TRACK_LOADED,
     data: TrackLoadedData
   ) {
-    const { id, details } = data;
+    const { details: newDetails, id: trackId } = data;
     const { currentTrackId, levels } = this;
-    if (!levels.length || !details) {
+    if (!levels.length) {
       return;
     }
-    const currentTrack: Level = levels[currentTrackId];
-    if (id >= levels.length || id !== currentTrackId || !currentTrack) {
+    const track: Level = levels[currentTrackId];
+    if (trackId >= levels.length || trackId !== currentTrackId || !track) {
       return;
     }
     this.mediaBuffer = this.mediaBufferTimeRanges;
-    if (details.live || currentTrack.details?.live) {
-      if (details.deltaUpdateFailed) {
+    if (newDetails.live || track.details?.live) {
+      const mainDetails = this.mainDetails;
+      if (newDetails.deltaUpdateFailed || !mainDetails) {
         return;
       }
-      // TODO: Subtitle Fragments should be assigned startPTS and endPTS once VTT/TTML is parsed
-      //  otherwise this depends on DISCONTINUITY or PROGRAM-DATE-TIME tags to align playlists
-      this.alignPlaylists(details, currentTrack.details);
+      const mainSlidingStartFragment = mainDetails.fragments[0];
+      if (!track.details) {
+        if (newDetails.hasProgramDateTime && mainDetails.hasProgramDateTime) {
+          alignMediaPlaylistByPDT(newDetails, mainDetails);
+        } else if (mainSlidingStartFragment) {
+          // line up live playlist with main so that fragments in range are loaded
+          addSliding(newDetails, mainSlidingStartFragment.start);
+        }
+      } else {
+        const sliding = this.alignPlaylists(newDetails, track.details);
+        if (sliding === 0 && mainSlidingStartFragment) {
+          // realign with main when there is no overlap with last refresh
+          addSliding(newDetails, mainSlidingStartFragment.start);
+        }
+      }
     }
-    currentTrack.details = details;
-    this.levelLastLoaded = id;
-    this.setInterval(TICK_INTERVAL);
+    track.details = newDetails;
+    this.levelLastLoaded = trackId;
+
+    // trigger handler right now
+    this.tick();
+
+    // If playlist is misaligned because of bad PDT or drift, delete details to resync with main on reload
+    if (
+      newDetails.live &&
+      !this.fragCurrent &&
+      this.media &&
+      this.state === State.IDLE
+    ) {
+      const foundFrag = findFragmentByPTS(
+        null,
+        newDetails.fragments,
+        this.media.currentTime,
+        0
+      );
+      if (!foundFrag) {
+        this.warn('Subtitle playlist not aligned with playback');
+        track.details = undefined;
+      }
+    }
   }
 
   _handleFragmentLoadComplete(fragLoadedData: FragLoadedData) {
@@ -246,7 +337,7 @@ export class SubtitleStreamController
     }
 
     if (this.state === State.IDLE) {
-      const { config, currentTrackId, fragmentTracker, media, levels } = this;
+      const { currentTrackId, levels } = this;
       if (
         !levels.length ||
         !levels[currentTrackId] ||
@@ -255,61 +346,57 @@ export class SubtitleStreamController
         return;
       }
 
-      const { maxBufferHole, maxFragLookUpTolerance } = config;
-      const maxConfigBuffer = Math.min(
-        config.maxBufferLength,
-        config.maxMaxBufferLength
-      );
+      // Expand range of subs loaded by one target-duration in either direction to make up for misaligned playlists
+      const trackDetails = levels[currentTrackId].details as LevelDetails;
+      const targetDuration = trackDetails.targetduration;
+      const { config, media } = this;
       const bufferedInfo = BufferHelper.bufferedInfo(
         this.mediaBufferTimeRanges,
-        media.currentTime,
-        maxBufferHole
+        media.currentTime - targetDuration,
+        config.maxBufferHole
       );
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
 
-      if (bufferLen > maxConfigBuffer) {
+      const maxBufLen = this.getMaxBufferLength() + targetDuration;
+
+      if (bufferLen > maxBufLen) {
         return;
       }
 
-      const trackDetails = levels[currentTrackId].details as LevelDetails;
       console.assert(
         trackDetails,
         'Subtitle track details are defined on idle subtitle stream controller tick'
       );
       const fragments = trackDetails.fragments;
       const fragLen = fragments.length;
-      const end =
-        fragments[fragLen - 1].start + fragments[fragLen - 1].duration;
+      const end = trackDetails.edge;
 
       let foundFrag;
       const fragPrevious = this.fragPrevious;
       if (targetBufferTime < end) {
-        if (fragPrevious && trackDetails.hasProgramDateTime) {
-          foundFrag = findFragmentByPDT(
-            fragments,
-            fragPrevious.endProgramDateTime,
-            maxFragLookUpTolerance
-          );
-        }
-        if (!foundFrag) {
-          foundFrag = findFragmentByPTS(
-            fragPrevious,
-            fragments,
-            targetBufferTime,
-            maxFragLookUpTolerance
-          );
+        const { maxFragLookUpTolerance } = config;
+        foundFrag = findFragmentByPTS(
+          fragPrevious,
+          fragments,
+          Math.max(fragments[0].start, targetBufferTime),
+          maxFragLookUpTolerance
+        );
+        if (
+          !foundFrag &&
+          fragPrevious &&
+          fragPrevious.start < fragments[0].start
+        ) {
+          foundFrag = fragments[0];
         }
       } else {
         foundFrag = fragments[fragLen - 1];
       }
 
       if (foundFrag?.encrypted) {
-        logger.log(`Loading key for ${foundFrag.sn}`);
-        this.state = State.KEY_LOADING;
-        this.hls.trigger(Events.KEY_LOADING, { frag: foundFrag });
+        this.loadKey(foundFrag, trackDetails);
       } else if (
         foundFrag &&
-        fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
+        this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
       ) {
         // only load if fragment is not loaded
         this.loadFragment(foundFrag, trackDetails, targetBufferTime);
@@ -326,7 +413,7 @@ export class SubtitleStreamController
     super.loadFragment(frag, levelDetails, targetBufferTime);
   }
 
-  get mediaBufferTimeRanges() {
+  get mediaBufferTimeRanges(): TimeRange[] {
     return this.tracksBuffered[this.currentTrackId] || [];
   }
 }

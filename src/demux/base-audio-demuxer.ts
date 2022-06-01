@@ -3,9 +3,9 @@ import type {
   DemuxerResult,
   Demuxer,
   DemuxedAudioTrack,
-  AppendedAudioFrame,
+  AudioFrame,
   DemuxedMetadataTrack,
-  DemuxedAvcTrack,
+  DemuxedVideoTrack,
   DemuxedUserdataTrack,
   KeyData,
 } from '../types/demuxer';
@@ -20,10 +20,15 @@ class BaseAudioDemuxer implements Demuxer {
   protected cachedData: Uint8Array | null = null;
   protected initPTS: number | null = null;
 
-  resetInitSegment(audioCodec: string, videoCodec: string, duration: number) {
+  resetInitSegment(
+    initSegment: Uint8Array | undefined,
+    audioCodec: string | undefined,
+    videoCodec: string | undefined,
+    trackDuration: number
+  ) {
     this._id3Track = {
       type: 'id3',
-      id: 0,
+      id: 3,
       pid: -1,
       inputTimeScale: 90000,
       sequenceNumber: 0,
@@ -44,7 +49,7 @@ class BaseAudioDemuxer implements Demuxer {
     track: DemuxedAudioTrack,
     data: Uint8Array,
     offset: number
-  ): AppendedAudioFrame | void {}
+  ): AudioFrame | void {}
 
   // feed incoming data to the front of the parsing pipeline
   demux(data: Uint8Array, timeOffset: number): DemuxerResult {
@@ -109,7 +114,7 @@ class BaseAudioDemuxer implements Demuxer {
 
     return {
       audioTrack: track,
-      avcTrack: dummyTrack() as DemuxedAvcTrack,
+      videoTrack: dummyTrack() as DemuxedVideoTrack,
       id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
@@ -137,7 +142,7 @@ class BaseAudioDemuxer implements Demuxer {
 
     return {
       audioTrack: this._audioTrack,
-      avcTrack: dummyTrack() as DemuxedAvcTrack,
+      videoTrack: dummyTrack() as DemuxedVideoTrack,
       id3Track: this._id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
     };

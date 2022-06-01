@@ -85,7 +85,7 @@ export default class M3U8Parser {
     if (avcdata.length > 2) {
       let result = avcdata.shift() + '.';
       result += parseInt(avcdata.shift()).toString(16);
-      result += ('000' + parseInt(avcdata.shift()).toString(16)).substr(-4);
+      result += ('000' + parseInt(avcdata.shift()).toString(16)).slice(-4);
       return result;
     }
     return codec;
@@ -228,6 +228,7 @@ export default class M3U8Parser {
         if (currentInitSegment) {
           frag.initSegment = currentInitSegment;
           frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+          currentInitSegment.rawProgramDateTime = null;
         }
       }
 

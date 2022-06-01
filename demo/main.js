@@ -204,7 +204,7 @@ $(document).ready(function () {
       .attr('rel', 'noopener noreferrer')
       .attr('href', getVersionLink(version))
       .text('v' + version);
-    $('.title').append($a);
+    $('.title').append(' ').append($a);
   }
 
   $('#streamURL').val(sourceURL);
@@ -235,6 +235,9 @@ $(document).ready(function () {
       toggleTab($('.demo-tab-btn')[parseInt(indexString) || 0], true);
     });
   }
+  $(window).on('popstate', function () {
+    window.location.reload();
+  });
 });
 
 function setupGlobals() {
@@ -334,7 +337,7 @@ function loadSelectedStream() {
     updateConfigEditorValue(hlsConfig);
   }
 
-  onDemoConfigChanged();
+  onDemoConfigChanged(true);
   console.log('Using Hls.js config:', hlsConfig);
 
   self.hls = hls = new Hls(hlsConfig);
@@ -1271,14 +1274,14 @@ self.copyMetricsToClipBoard = function () {
 
 self.goToMetrics = function () {
   let url = document.URL;
-  url = url.substr(0, url.lastIndexOf('/') + 1) + 'metrics.html';
+  url = url.slice(0, url.lastIndexOf('/') + 1) + 'metrics.html';
   self.open(url, '_blank');
 };
 
 function goToMetricsPermaLink() {
   let url = document.URL;
   const b64 = getMetrics();
-  url = url.substr(0, url.lastIndexOf('/') + 1) + 'metrics.html#data=' + b64;
+  url = url.slice(0, url.lastIndexOf('/') + 1) + 'metrics.html#data=' + b64;
   self.open(url, '_blank');
 }
 
@@ -1459,7 +1462,7 @@ function getURLParam(sParam, defaultValue) {
   return defaultValue;
 }
 
-function onDemoConfigChanged() {
+function onDemoConfigChanged(firstLoad) {
   demoConfig = {
     enableStreaming,
     autoRecoverError,
@@ -1481,6 +1484,9 @@ function onDemoConfigChanged() {
   )}&demoConfig=${serializedDemoConfig}`;
 
   $('#StreamPermalink').html(`<a href="${permalinkURL}">${permalinkURL}</a>`);
+  if (!firstLoad && window.location.href !== permalinkURL) {
+    window.history.pushState(null, null, permalinkURL);
+  }
 }
 
 function onConfigPersistenceChanged(event) {

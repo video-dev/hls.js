@@ -23,6 +23,7 @@ class SubtitleTrackController extends BasePlaylistController {
   private selectDefaultTrack: boolean = true;
   private queuedDefaultTrack: number = -1;
   private trackChangeListener: () => void = () => this.onTextTracksChanged();
+  private asyncPollTrackChange: () => void = () => this.pollTrackChange(0);
   private useTextTrackPolling: boolean = false;
   private subtitlePollingInterval: number = -1;
 
@@ -37,8 +38,7 @@ class SubtitleTrackController extends BasePlaylistController {
     this.unregisterListeners();
     this.tracks.length = 0;
     this.tracksInGroup.length = 0;
-    // @ts-ignore
-    this.trackChangeListener = null;
+    this.trackChangeListener = this.asyncPollTrackChange = null as any;
     super.destroy();
   }
 
@@ -85,16 +85,21 @@ class SubtitleTrackController extends BasePlaylistController {
       this.media.textTracks && 'onchange' in this.media.textTracks
     );
     if (this.useTextTrackPolling) {
-      self.clearInterval(this.subtitlePollingInterval);
-      this.subtitlePollingInterval = self.setInterval(() => {
-        this.trackChangeListener();
-      }, 500);
+      this.pollTrackChange(500);
     } else {
       this.media.textTracks.addEventListener(
         'change',
-        this.trackChangeListener
+        this.asyncPollTrackChange
       );
     }
+  }
+
+  private pollTrackChange(timeout: number) {
+    self.clearInterval(this.subtitlePollingInterval);
+    this.subtitlePollingInterval = self.setInterval(
+      this.trackChangeListener,
+      timeout
+    );
   }
 
   protected onMediaDetaching(): void {
@@ -102,12 +107,11 @@ class SubtitleTrackController extends BasePlaylistController {
       return;
     }
 
-    if (this.useTextTrackPolling) {
-      self.clearInterval(this.subtitlePollingInterval);
-    } else {
+    self.clearInterval(this.subtitlePollingInterval);
+    if (!this.useTextTrackPolling) {
       this.media.textTracks.removeEventListener(
         'change',
-        this.trackChangeListener
+        this.asyncPollTrackChange
       );
     }
 
@@ -373,6 +377,9 @@ class SubtitleTrackController extends BasePlaylistController {
   }
 
   private onTextTracksChanged(): void {
+    if (!this.useTextTrackPolling) {
+      self.clearInterval(this.subtitlePollingInterval);
+    }
     // Media is undefined when switching streams via loadSource()
     if (!this.media || !this.hls.config.renderTextTracksNatively) {
       return;
@@ -391,7 +398,9 @@ class SubtitleTrackController extends BasePlaylistController {
     }
 
     // Setting current subtitleTrack will invoke code.
-    this.subtitleTrack = trackId;
+    if (this.subtitleTrack !== trackId) {
+      this.subtitleTrack = trackId;
+    }
   }
 }
 

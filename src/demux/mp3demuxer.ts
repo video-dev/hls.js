@@ -9,18 +9,23 @@ import * as MpegAudio from './mpegaudio';
 class MP3Demuxer extends BaseAudioDemuxer {
   static readonly minProbeByteLength: number = 4;
 
-  resetInitSegment(audioCodec, videoCodec, duration) {
-    super.resetInitSegment(audioCodec, videoCodec, duration);
+  resetInitSegment(
+    initSegment: Uint8Array | undefined,
+    audioCodec: string | undefined,
+    videoCodec: string | undefined,
+    trackDuration: number
+  ) {
+    super.resetInitSegment(initSegment, audioCodec, videoCodec, trackDuration);
     this._audioTrack = {
       container: 'audio/mpeg',
       type: 'audio',
-      id: 0,
+      id: 2,
       pid: -1,
       sequenceNumber: 0,
       segmentCodec: 'mp3',
       samples: [],
       manifestCodec: audioCodec,
-      duration: duration,
+      duration: trackDuration,
       inputTimeScale: 90000,
       dropped: 0,
     };

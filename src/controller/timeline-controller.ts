@@ -61,6 +61,7 @@ export class TimelineController implements ComponentAPI {
   private cea608Parser1!: Cea608Parser;
   private cea608Parser2!: Cea608Parser;
   private lastSn: number = -1;
+  private lastPartIndex: number = -1;
   private prevCC: number = -1;
   private vttCCs: VTTCCs = newVTTCCs();
   private captionsProperties: {
@@ -294,6 +295,7 @@ export class TimelineController implements ComponentAPI {
 
   private onManifestLoading() {
     this.lastSn = -1; // Detect discontinuity in fragment parsing
+    this.lastPartIndex = -1;
     this.prevCC = -1;
     this.vttCCs = newVTTCCs(); // Detect discontinuity in subtitle manifests
     this._cleanTracks();
@@ -419,22 +421,32 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
-    const { cea608Parser1, cea608Parser2, lastSn } = this;
+    const { cea608Parser1, cea608Parser2, lastSn, lastPartIndex } = this;
     if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
       return;
     }
     // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
     if (data.frag.type === PlaylistLevelType.MAIN) {
       const sn = data.frag.sn;
-      if (sn !== lastSn + 1) {
+      const partIndex = data?.part?.index ?? -1;
+      if (
+        !(
+          sn === lastSn + 1 ||
+          (sn === lastSn && partIndex === lastPartIndex + 1)
+        )
+      ) {
         cea608Parser1.reset();
         cea608Parser2.reset();
       }
       this.lastSn = sn as number;
+      this.lastPartIndex = partIndex;
     }
   }
 
-  private onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
+  private onFragLoaded(
+    event: Events.FRAG_LOADED,
+    data: FragDecryptedData | FragLoadedData
+  ) {
     const { frag, payload } = data;
     const { initPTS, unparsedVttFrags } = this;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
@@ -455,11 +467,14 @@ export class TimelineController implements ComponentAPI {
         }
 
         const decryptData = frag.decryptdata;
+        // fragment after decryption has a stats object
+        const decrypted = 'stats' in data;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
         if (
           decryptData == null ||
           decryptData.key == null ||
-          decryptData.method !== 'AES-128'
+          decryptData.method !== 'AES-128' ||
+          decrypted
         ) {
           const trackPlaylistMedia = this.tracks[frag.level];
           const vttCCs = this.vttCCs;
@@ -625,40 +640,55 @@ export class TimelineController implements ComponentAPI {
 
   onBufferFlushing(
     event: Events.BUFFER_FLUSHING,
-    { startOffset, endOffset, type }: BufferFlushingData
+    { startOffset, endOffset, endOffsetSubtitles, type }: BufferFlushingData
   ) {
-    // Clear 608 CC cues from the back buffer
+    const { media } = this;
+    if (!media || media.currentTime < endOffset) {
+      return;
+    }
+    // Clear 608 caption cues from the captions TextTracks when the video back buffer is flushed
     // Forward cues are never removed because we can loose streamed 608 content from recent fragments
     if (!type || type === 'video') {
-      const { media } = this;
-      if (!media || media.currentTime < endOffset) {
-        return;
-      }
       const { captionsTracks } = this;
       Object.keys(captionsTracks).forEach((trackName) =>
         removeCuesInRange(captionsTracks[trackName], startOffset, endOffset)
       );
     }
+    if (this.config.renderTextTracksNatively) {
+      // Clear VTT/IMSC1 subtitle cues from the subtitle TextTracks when the back buffer is flushed
+      if (startOffset === 0 && endOffsetSubtitles !== undefined) {
+        const { textTracks } = this;
+        Object.keys(textTracks).forEach((trackName) =>
+          removeCuesInRange(
+            textTracks[trackName],
+            startOffset,
+            endOffsetSubtitles
+          )
+        );
+      }
+    }
   }
 
   private extractCea608Data(byteArray: Uint8Array): number[][] {
-    const count = byteArray[0] & 31;
-    let position = 2;
     const actualCCBytes: number[][] = [[], []];
+    const count = byteArray[0] & 0x1f;
+    let position = 2;
 
     for (let j = 0; j < count; j++) {
       const tmpByte = byteArray[position++];
       const ccbyte1 = 0x7f & byteArray[position++];
       const ccbyte2 = 0x7f & byteArray[position++];
-      const ccValid = (4 & tmpByte) !== 0;
-      const ccType = 3 & tmpByte;
-
       if (ccbyte1 === 0 && ccbyte2 === 0) {
         continue;
       }
-
+      const ccValid = (0x04 & tmpByte) !== 0; // Support all four channels
       if (ccValid) {
-        if (ccType === 0 || ccType === 1) {
+        const ccType = 0x03 & tmpByte;
+        if (
+          0x00 /* CEA608 field1*/ === ccType ||
+          0x01 /* CEA608 field2*/ === ccType
+        ) {
+          // Exclude CEA708 CC data.
           actualCCBytes[ccType].push(ccbyte1);
           actualCCBytes[ccType].push(ccbyte2);
         }

@@ -223,14 +223,23 @@ export function mergeDetails(
       if (oldFrag.initSegment) {
         newFrag.initSegment = oldFrag.initSegment;
         currentInitSegment = oldFrag.initSegment;
-      } else if (
-        !newFrag.initSegment ||
-        newFrag.initSegment.relurl == currentInitSegment?.relurl
-      ) {
-        newFrag.initSegment = currentInitSegment;
       }
     }
   );
+
+  if (currentInitSegment) {
+    const fragmentsToCheck = newDetails.fragmentHint
+      ? newDetails.fragments.concat(newDetails.fragmentHint)
+      : newDetails.fragments;
+    fragmentsToCheck.forEach((frag) => {
+      if (
+        !frag.initSegment ||
+        frag.initSegment.relurl === currentInitSegment?.relurl
+      ) {
+        frag.initSegment = currentInitSegment;
+      }
+    });
+  }
 
   if (newDetails.skippedSegments) {
     newDetails.deltaUpdateFailed = newDetails.fragments.some((frag) => !frag);
@@ -372,17 +381,20 @@ export function adjustSliding(
   const delta =
     newDetails.startSN + newDetails.skippedSegments - oldDetails.startSN;
   const oldFragments = oldDetails.fragments;
-  const newFragments = newDetails.fragments;
   if (delta < 0 || delta >= oldFragments.length) {
     return;
   }
-  const playlistStartOffset = oldFragments[delta].start;
-  if (playlistStartOffset) {
-    for (let i = newDetails.skippedSegments; i < newFragments.length; i++) {
-      newFragments[i].start += playlistStartOffset;
+  addSliding(newDetails, oldFragments[delta].start);
+}
+
+export function addSliding(details: LevelDetails, start: number) {
+  if (start) {
+    const fragments = details.fragments;
+    for (let i = details.skippedSegments; i < fragments.length; i++) {
+      fragments[i].start += start;
     }
-    if (newDetails.fragmentHint) {
-      newDetails.fragmentHint.start += playlistStartOffset;
+    if (details.fragmentHint) {
+      details.fragmentHint.start += start;
     }
   }
 }
@@ -446,7 +458,11 @@ export function computeReloadInterval(
   return Math.round(estimatedTimeUntilUpdate);
 }
 
-export function getFragmentWithSN(level: Level, sn: number): Fragment | null {
+export function getFragmentWithSN(
+  level: Level,
+  sn: number,
+  fragCurrent: Fragment | null
+): Fragment | null {
   if (!level || !level.details) {
     return null;
   }
@@ -459,6 +475,9 @@ export function getFragmentWithSN(level: Level, sn: number): Fragment | null {
   fragment = levelDetails.fragmentHint;
   if (fragment && fragment.sn === sn) {
     return fragment;
+  }
+  if (sn < levelDetails.startSN && fragCurrent && fragCurrent.sn === sn) {
+    return fragCurrent;
   }
   return null;
 }

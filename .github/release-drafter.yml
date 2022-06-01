@@ -1,0 +1,21 @@
+template: |
+  # Summary
+  HLS.js v$INPUT_VERSION includes bug fixes and improvements over the last release.
+
+  ## Changes Since The Last Release
+  https://github.com/video-dev/hls.js/compare/$PREVIOUS_TAG...v$INPUT_VERSION
+
+  $CHANGES
+
+  ## Demo Page
+  > Get demo url from https://github.com/video-dev/hls.js/tree/deployments
+
+  ## API and Breaking Changes
+  If you are upgrading from version v0.14.17 or lower, see the [MIGRATING](https://github.com/video-dev/hls.js/blob/v1.0.0/MIGRATING.md) guide for API changes between v0.14.x and v1.0.0.
+
+  ## Feedback
+  Please provide feedback via [Issues in GitHub](https://github.com/video-dev/hls.js/issues/new/choose). For more details on how to contribute to HLS.js, see our [CONTRIBUTING guide](https://github.com/video-dev/hls.js/blob/master/CONTRIBUTING.md).
+
+version-template: $COMPLETE
+exclude-labels:
+  - 'skip-change-log'

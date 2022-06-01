@@ -4,7 +4,6 @@ import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import { Events } from '../events';
 import { ErrorDetails } from '../errors';
-import * as LevelHelper from './level-helper';
 import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { alignStream } from '../utils/discontinuities';
@@ -13,6 +12,11 @@ import {
   findFragmentByPTS,
   findFragWithCC,
 } from './fragment-finders';
+import {
+  getFragmentWithSN,
+  getPartWith,
+  updateFragPTSDTS,
+} from './level-helper';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { Fragment, Part } from '../loader/fragment';
 import FragmentLoader, {
@@ -130,7 +134,7 @@ export default class BaseStreamController
     this.state = State.STOPPED;
   }
 
-  protected _streamEnded(bufferInfo, levelDetails) {
+  protected _streamEnded(bufferInfo, levelDetails: LevelDetails) {
     const { fragCurrent, fragmentTracker } = this;
     // we just got done loading the final fragment and there is no other buffered range after ...
     // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
@@ -138,9 +142,28 @@ export default class BaseStreamController
     if (
       !levelDetails.live &&
       fragCurrent &&
-      fragCurrent.sn === levelDetails.endSN &&
+      // NOTE: Because of the way parts are currently parsed/represented in the playlist, we can end up
+      // in situations where the current fragment is actually greater than levelDetails.endSN. While
+      // this feels like the "wrong place" to account for that, this is a narrower/safer change than
+      // updating e.g. M3U8Parser::parseLevelPlaylist().
+      fragCurrent.sn >= levelDetails.endSN &&
       !bufferInfo.nextStart
     ) {
+      const partList = levelDetails.partList;
+      // Since the last part isn't guaranteed to correspond to fragCurrent for ll-hls, check instead if the last part is buffered.
+      if (partList?.length) {
+        const lastPart = partList[partList.length - 1];
+
+        // Checking the midpoint of the part for potential margin of error and related issues.
+        // NOTE: Technically I believe parts could yield content that is < the computed duration (including potential a duration of 0)
+        // and still be spec-compliant, so there may still be edge cases here. Likewise, there could be issues in end of stream
+        // part mismatches for independent audio and video playlists/segments.
+        const lastPartBuffered = BufferHelper.isBuffered(
+          this.media,
+          lastPart.start + lastPart.duration / 2
+        );
+        return lastPartBuffered;
+      }
       const fragState = fragmentTracker.getState(fragCurrent);
       return (
         fragState === FragmentState.PARTIAL || fragState === FragmentState.OK
@@ -354,6 +377,9 @@ export default class BaseStreamController
         this._handleFragmentLoadComplete(data);
       })
       .catch((reason) => {
+        if (this.state === State.STOPPED) {
+          return;
+        }
         this.warn(reason);
         this.resetFragmentLoading(frag);
       });
@@ -654,11 +680,10 @@ export default class BaseStreamController
       return null;
     }
     const level = levels[levelIndex];
-    const part =
-      partIndex > -1 ? LevelHelper.getPartWith(level, sn, partIndex) : null;
+    const part = partIndex > -1 ? getPartWith(level, sn, partIndex) : null;
     const frag = part
       ? part.fragment
-      : LevelHelper.getFragmentWithSN(level, sn);
+      : getFragmentWithSN(level, sn, this.fragCurrent);
     if (!frag) {
       return null;
     }
@@ -727,6 +752,53 @@ export default class BaseStreamController
     if (frag.start - start > segmentFraction) {
       this.flushMainBuffer(start, frag.start);
     }
+  }
+
+  protected getFwdBufferInfo(
+    bufferable: Bufferable,
+    type: PlaylistLevelType
+  ): {
+    len: number;
+    start: number;
+    end: number;
+    nextStart?: number;
+  } | null {
+    const { config } = this;
+    const pos = this.getLoadPosition();
+    if (!Number.isFinite(pos)) {
+      return null;
+    }
+    const bufferInfo = BufferHelper.bufferInfo(
+      bufferable,
+      pos,
+      config.maxBufferHole
+    );
+    // Workaround flaw in getting forward buffer when maxBufferHole is smaller than gap at current pos
+    if (bufferInfo.len === 0 && bufferInfo.nextStart !== undefined) {
+      const bufferedFragAtPos = this.fragmentTracker.getBufferedFrag(pos, type);
+      if (bufferedFragAtPos && bufferInfo.nextStart < bufferedFragAtPos.end) {
+        return BufferHelper.bufferInfo(
+          bufferable,
+          pos,
+          Math.max(bufferInfo.nextStart, config.maxBufferHole)
+        );
+      }
+    }
+    return bufferInfo;
+  }
+
+  protected getMaxBufferLength(levelBitrate?: number): number {
+    const { config } = this;
+    let maxBufLen;
+    if (levelBitrate) {
+      maxBufLen = Math.max(
+        (8 * config.maxBufferSize) / levelBitrate,
+        config.maxBufferLength
+      );
+    } else {
+      maxBufLen = config.maxBufferLength;
+    }
+    return Math.min(maxBufLen, config.maxMaxBufferLength);
   }
 
   protected reduceMaxBufferLength(threshold?: number) {
@@ -1036,29 +1108,33 @@ export default class BaseStreamController
     details: LevelDetails,
     previousDetails?: LevelDetails
   ): number {
-    const { levels, levelLastLoaded } = this;
+    const { levels, levelLastLoaded, fragPrevious } = this;
     const lastLevel: Level | null =
       levelLastLoaded !== null ? levels![levelLastLoaded] : null;
 
     // FIXME: If not for `shouldAlignOnDiscontinuities` requiring fragPrevious.cc,
-    //  this could all go in LevelHelper.mergeDetails
-    let sliding = 0;
-    if (previousDetails && details.fragments.length > 0) {
-      sliding = details.fragments[0].start;
-      if (details.alignedSliding && Number.isFinite(sliding)) {
-        this.log(`Live playlist sliding:${sliding.toFixed(3)}`);
-      } else if (!sliding) {
-        this.warn(
-          `[${this.constructor.name}] Live playlist - outdated PTS, unknown sliding`
-        );
-        alignStream(this.fragPrevious, lastLevel, details);
-      }
-    } else {
-      this.log('Live playlist - first load, unknown sliding');
-      alignStream(this.fragPrevious, lastLevel, details);
+    //  this could all go in level-helper mergeDetails()
+    const length = details.fragments.length;
+    if (!length) {
+      this.warn(`No fragments in live playlist`);
+      return 0;
     }
-
-    return sliding;
+    const slidingStart = details.fragments[0].start;
+    const firstLevelLoad = !previousDetails;
+    const aligned = details.alignedSliding && Number.isFinite(slidingStart);
+    if (firstLevelLoad || (!aligned && !slidingStart)) {
+      alignStream(fragPrevious, lastLevel, details);
+      const alignedSlidingStart = details.fragments[0].start;
+      this.log(
+        `Live playlist sliding: ${alignedSlidingStart.toFixed(2)} start-sn: ${
+          previousDetails ? previousDetails.startSN : 'na'
+        }->${details.startSN} prev-sn: ${
+          fragPrevious ? fragPrevious.sn : 'na'
+        } fragments: ${length}`
+      );
+      return alignedSlidingStart;
+    }
+    return slidingStart;
   }
 
   protected waitForCdnTuneIn(details: LevelDetails) {
@@ -1075,20 +1151,25 @@ export default class BaseStreamController
   protected setStartPosition(details: LevelDetails, sliding: number) {
     // compute start position if set to -1. use it straight away if value is defined
     let startPosition = this.startPosition;
-    if (this.startPosition === -1 || this.lastCurrentTime === -1) {
+    if (startPosition < sliding) {
+      startPosition = -1;
+    }
+    if (startPosition === -1 || this.lastCurrentTime === -1) {
       // first, check if start time offset has been set in playlist, if yes, use this value
-      let startTimeOffset = details.startTimeOffset!;
+      const startTimeOffset = details.startTimeOffset!;
       if (Number.isFinite(startTimeOffset)) {
+        startPosition = sliding + startTimeOffset;
         if (startTimeOffset < 0) {
-          this.log(
-            `Negative start time offset ${startTimeOffset}, count from end of last fragment`
-          );
-          startTimeOffset = sliding + details.totalduration + startTimeOffset;
+          startPosition += details.totalduration;
         }
-        this.log(
-          `Start time offset found in playlist, adjust startPosition to ${startTimeOffset}`
+        startPosition = Math.min(
+          Math.max(sliding, startPosition),
+          sliding + details.totalduration
         );
-        this.startPosition = startPosition = startTimeOffset;
+        this.log(
+          `Start time offset ${startTimeOffset} found in playlist, adjust startPosition to ${startPosition}`
+        );
+        this.startPosition = startPosition;
       } else if (details.live) {
         // Leave this.startPosition at -1, so that we can use `getInitialLiveFragment` logic when startPosition has
         // not been specified via the config or an as an argument to startLoad (#3736).
@@ -1105,7 +1186,7 @@ export default class BaseStreamController
     const { media } = this;
     // if we have not yet loaded any fragment, start loading from start position
     let pos = 0;
-    if (this.loadedmetadata) {
+    if (this.loadedmetadata && media) {
       pos = media.currentTime;
     } else if (this.nextLoadPosition) {
       pos = this.nextLoadPosition;
@@ -1258,7 +1339,7 @@ export default class BaseStreamController
           }
           const drift = partial
             ? 0
-            : LevelHelper.updateFragPTSDTS(
+            : updateFragPTSDTS(
                 details,
                 frag,
                 info.startPTS,
