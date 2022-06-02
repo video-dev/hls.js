@@ -9,6 +9,7 @@ import { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
 import type { LoaderStats } from '../types/loader';
 import type { MediaPlaylist } from '../types/media-playlist';
+import { DateRange } from '../loader/date-range';
 
 type FragmentIntersection = (oldFrag: Fragment, newFrag: Fragment) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;
@@ -252,6 +253,12 @@ export function mergeDetails(
       }
       newDetails.startSN = newDetails.fragments[0].sn as number;
       newDetails.startCC = newDetails.fragments[0].cc;
+    } else if (newDetails.canSkipDateRanges) {
+      newDetails.dateRanges = mergeDateRanges(
+        oldDetails.dateRanges,
+        newDetails.dateRanges,
+        newDetails.recentlyRemovedDateranges
+      );
     }
   }
 
@@ -313,6 +320,32 @@ export function mergeDetails(
     newDetails.driftEnd = oldDetails.driftEnd;
     newDetails.advancedDateTime = oldDetails.advancedDateTime;
   }
+}
+
+function mergeDateRanges(
+  oldDateRanges: Record<string, DateRange>,
+  deltaDateRanges: Record<string, DateRange>,
+  recentlyRemovedDateranges: string[] | undefined
+): Record<string, DateRange> {
+  const dateRanges = Object.assign({}, oldDateRanges);
+  if (recentlyRemovedDateranges) {
+    recentlyRemovedDateranges.forEach((id) => {
+      delete dateRanges[id];
+    });
+  }
+  Object.keys(deltaDateRanges).forEach((id) => {
+    const dateRange = new DateRange(deltaDateRanges[id].attr, dateRanges[id]);
+    if (dateRange.isValid) {
+      dateRanges[id] = dateRange;
+    } else {
+      logger.warn(
+        `Ignoring invalid Playlist Delta Update DATERANGE tag: "${JSON.stringify(
+          deltaDateRanges[id].attr
+        )}"`
+      );
+    }
+  });
+  return dateRanges;
 }
 
 export function mapPartIntersection(

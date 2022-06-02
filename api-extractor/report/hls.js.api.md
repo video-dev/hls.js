@@ -282,6 +282,31 @@ export interface CuesParsedData {
     type: 'captions' | 'subtitles';
 }
 
+// Warning: (ae-missing-release-tag) "DateRange" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class DateRange {
+    constructor(dateRangeAttr: AttrList, dateRangeWithSameId?: DateRange);
+    // (undocumented)
+    attr: AttrList;
+    // (undocumented)
+    get class(): string;
+    // (undocumented)
+    get duration(): number | null;
+    // (undocumented)
+    get endDate(): Date | null;
+    // (undocumented)
+    get endOnNext(): boolean;
+    // (undocumented)
+    get id(): string;
+    // (undocumented)
+    get isValid(): boolean;
+    // (undocumented)
+    get plannedDuration(): number | null;
+    // (undocumented)
+    get startDate(): Date;
+}
+
 // Warning: (ae-missing-release-tag) "DRMSystemOptions" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -918,6 +943,7 @@ class Hls implements HlsEventEmitter {
     on<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context): void;
     // (undocumented)
     once<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context): void;
+    get playingDate(): Date | null;
     recoverMediaError(): void;
     // (undocumented)
     removeAllListeners<E extends keyof HlsListeners>(event?: E | undefined): void;
@@ -1341,6 +1367,8 @@ export class LevelDetails {
     canSkipDateRanges: boolean;
     // (undocumented)
     canSkipUntil: number;
+    // (undocumented)
+    dateRanges: Record<string, DateRange>;
     // (undocumented)
     deltaUpdateFailed?: boolean;
     // (undocumented)
@@ -1845,6 +1873,20 @@ export interface MetadataSample {
     len?: number;
     // (undocumented)
     pts: number;
+    // (undocumented)
+    type: MetadataSchema;
+}
+
+// Warning: (ae-missing-release-tag) "MetadataSchema" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export enum MetadataSchema {
+    // (undocumented)
+    audioId3 = "org.id3",
+    // (undocumented)
+    dateRange = "com.apple.quicktime.HLS",
+    // (undocumented)
+    emsg = "https://aomedia.org/emsg/ID3"
 }
 
 // Warning: (ae-missing-release-tag) "MP4RemuxerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)

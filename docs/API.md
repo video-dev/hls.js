@@ -130,6 +130,8 @@
   - [`hls.latency`](#hlslatency)
   - [`hls.maxLatency`](#hlsmaxlatency)
   - [`hls.targetLatency`](#hlstargetlatency)
+  - [`hls.drift`](#hlsdrift)
+  - [`hls.playingDate`](#hlsplayingdate)
 - [Runtime Events](#runtime-events)
 - [Loader Composition](#loader-composition)
 - [Errors](#errors)
@@ -1385,6 +1387,10 @@ get : target distance from the edge as calculated by the latency controller
 ### `hls.drift`
 
 get : the rate at which the edge of the current live playlist is advancing or 1 if there is none
+
+### `hls.playingDate`
+
+get: the datetime value relative to media.currentTime for the active level Program Date Time if present
 
 ## Runtime Events
 
