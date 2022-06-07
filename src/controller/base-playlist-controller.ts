@@ -65,7 +65,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       for (let i = 0; i < renditionReports.length; i++) {
         const attr = renditionReports[i];
         const uri = '' + attr.URI;
-        if (uri === playlistUri.substr(-uri.length)) {
+        if (uri === playlistUri.slice(-uri.length)) {
           const msn = parseInt(attr['LAST-MSN']);
           let part = parseInt(attr['LAST-PART']);
           if (previous && this.hls.config.lowLatencyMode) {

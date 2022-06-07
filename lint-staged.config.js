@@ -8,11 +8,12 @@ const prettierSupportedExtensions = prettier
 const addQuotes = (a) => `"${a}"`;
 
 module.exports = (allStagedFiles) => {
-  const eslintFiles = micromatch(allStagedFiles, '{src,tests}/**/*.{js,ts}');
+  const eslintFiles = micromatch(allStagedFiles, '**/*.{js,ts}');
   const prettierFiles = micromatch(
     allStagedFiles,
     prettierSupportedExtensions.map((extension) => `**/*${extension}`)
   );
+
   return [
     eslintFiles.length &&
       `eslint --cache --fix ${eslintFiles.map(addQuotes).join(' ')}`,

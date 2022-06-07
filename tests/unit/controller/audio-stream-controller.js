@@ -61,6 +61,7 @@ describe('AudioStreamController', function () {
       };
 
       audioStreamController.levels = tracks;
+      audioStreamController.mainDetails = details;
       audioStreamController.tick = () => {};
 
       audioStreamController.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, {

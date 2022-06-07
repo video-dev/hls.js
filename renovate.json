@@ -7,10 +7,10 @@
   "prCreation": "not-pending",
   "stabilityDays": 7,
   "vulnerabilityAlerts": {
-    "labels": ["security"]
+    "addLabels": ["security"]
   },
   "major": {
-    "labels": ["semver-major"]
+    "addLabels": ["semver-major"]
   },
   "packageRules": [
     {

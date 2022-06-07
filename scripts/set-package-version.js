@@ -45,12 +45,12 @@ try {
       process.env.NETLIFY && process.env.CONTEXT === 'deploy-preview'
         ? `pr.${
             process.env.REVIEW_ID /* set by netlify */
-          }.${getCommitHash().substr(0, 8)}`
+          }.${getCommitHash().slice(0, 8)}`
         : process.env.NETLIFY && process.env.CONTEXT === 'branch-deploy'
         ? `branch.${process.env.BRANCH /* set by netlify */.replace(
             /[^a-zA-Z0-9]/g,
             '-'
-          )}.${getCommitHash().substr(0, 8)}`
+          )}.${getCommitHash().slice(0, 8)}`
         : `0.canary.${getCommitNum()}`;
 
     newVersion = `${intermediateVersion}${isStable ? '-' : '.'}${suffix}`;
