@@ -19,7 +19,7 @@
   - [`Hls.DefaultConfig get/set`](#hlsdefaultconfig-getset)
   - [`capLevelToPlayerSize`](#capleveltoplayersize)
   - [`capLevelOnFPSDrop`](#caplevelonfpsdrop)
-  - ['ignoreDevicePixelRatio'](#ignoreDevicePixelRatio)
+  - [`ignoreDevicePixelRatio`](#ignoreDevicePixelRatio)
   - [`debug`](#debug)
   - [`autoStartLoad`](#autostartload)
   - [`startPosition`](#startposition)
@@ -685,7 +685,7 @@ Start prefetching start fragment although media not attached yet.
 
 (default: `true`)
 
-Load the first fragment of the lowest level to establish a bandwidth estimate before selecting the first auto-level.
+You must also set `startLevel = -1` for this to have any impact. Otherwise, hls.js will load the first level in the manifest and start playback from there. If you do set `startLevel = -1`, a fragment of the lowest level will be downloaded to establish a bandwidth estimate before selecting the first auto-level.
 Disable this test if you'd like to provide your own estimate or use the default `abrEwmaDefaultEstimate`.
 
 ### `progressive`

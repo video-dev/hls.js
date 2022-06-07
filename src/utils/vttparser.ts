@@ -235,13 +235,13 @@ function parseCue(input: string, cue: VTTCue, regionList: Region[]) {
   skipWhitespace();
   cue.startTime = consumeTimeStamp(); // (1) collect cue start time
   skipWhitespace();
-  if (input.substr(0, 3) !== '-->') {
+  if (input.slice(0, 3) !== '-->') {
     // (3) next characters must match '-->'
     throw new Error(
       "Malformed time stamp (time stamps must be separated by '-->'): " + oInput
     );
   }
-  input = input.substr(3);
+  input = input.slice(3);
   skipWhitespace();
   cue.endTime = consumeTimeStamp(); // (5) collect cue end time
 
@@ -302,7 +302,7 @@ export class VTTParser {
         ++pos;
       }
 
-      const line: string = buffer.substr(0, pos);
+      const line: string = buffer.slice(0, pos);
       // Advance the buffer early in case we fail below.
       if (buffer[pos] === '\r') {
         ++pos;
@@ -312,7 +312,7 @@ export class VTTParser {
         ++pos;
       }
 
-      _this.buffer = buffer.substr(pos);
+      _this.buffer = buffer.slice(pos);
       return line;
     }
 

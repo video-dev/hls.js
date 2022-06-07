@@ -1,5 +1,4 @@
 import { Events } from '../events';
-import { logger } from '../utils/logger';
 import { BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPTS } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
@@ -379,7 +378,7 @@ export class SubtitleStreamController
         foundFrag = findFragmentByPTS(
           fragPrevious,
           fragments,
-          targetBufferTime,
+          Math.max(fragments[0].start, targetBufferTime),
           maxFragLookUpTolerance
         );
         if (

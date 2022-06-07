@@ -59,7 +59,7 @@ export interface PassthroughTrack extends DemuxedTrack {
 export interface DemuxedAudioTrack extends DemuxedTrack {
   config?: number[];
   samplerate?: number;
-  isAAC?: boolean;
+  segmentCodec?: string;
   channelCount?: number;
   manifestCodec?: string;
   samples: AudioSample[];
