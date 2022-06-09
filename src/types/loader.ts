@@ -36,6 +36,8 @@ export interface LoaderConfiguration {
   maxRetryDelay: number;
   // When streaming progressively, this is the minimum chunk size required to emit a PROGRESS event
   highWaterMark: number;
+  // When retrying, multiply the retry by a factor of 2 each time
+  exponentialBackoff: boolean;
 }
 
 export interface LoaderResponse {

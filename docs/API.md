@@ -675,6 +675,12 @@ Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to `fragL
 
 Prefetch start fragment although media not attached.
 
+### `fragExponentialBackoff`
+
+(default: `true`)
+
+Disable exponential backoff for fragment loading. Delay between retries will stay the same (`fragLoadingRetryDelay`)
+
 ### `startFragPrefetch`
 
 (default: `false`)

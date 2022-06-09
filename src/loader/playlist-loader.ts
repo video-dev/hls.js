@@ -289,6 +289,7 @@ class PlaylistLoader {
       maxRetry,
       retryDelay,
       maxRetryDelay,
+      exponentialBackoff: true,
       highWaterMark: 0,
     };
 

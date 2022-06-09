@@ -1238,11 +1238,15 @@ export default class BaseStreamController
       if (this.resetLiveStartWhenNotLoaded(frag.level)) {
         return;
       }
-      // exponential backoff capped to config.fragLoadingMaxRetryTimeout
-      const delay = Math.min(
-        Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,
-        config.fragLoadingMaxRetryTimeout
-      );
+      let delay = config.fragLoadingRetryDelay;
+
+      if (config.fragExponantialBackoff) {
+        // exponential backoff capped to config.fragLoadingMaxRetryTimeout
+        delay = Math.min(
+          Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,
+          config.fragLoadingMaxRetryTimeout
+        );
+      }
       this.warn(
         `Fragment ${frag.sn} of ${filterType} ${frag.level} failed to load, retrying in ${delay}ms`
       );
