@@ -75,7 +75,7 @@ export default class FragmentLoader {
         maxRetry: 0,
         retryDelay: 0,
         maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-        exponentialBackoff: config.fragExponantialBackoff,
+        exponentialBackoff: config.fragExponentialBackoff,
         highWaterMark: frag.sn === 'initSegment' ? Infinity : MIN_CHUNK_SIZE,
       };
       // Assign frag stats to the loader's stats reference
@@ -168,7 +168,7 @@ export default class FragmentLoader {
         maxRetry: 0,
         retryDelay: 0,
         maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-        exponentialBackoff: config.fragExponantialBackoff,
+        exponentialBackoff: config.fragExponentialBackoff,
         highWaterMark: MIN_CHUNK_SIZE,
       };
       // Assign part stats to the loader's stats reference

@@ -773,7 +773,7 @@ export type FragmentLoaderConfig = {
     fragLoadingMaxRetry: number;
     fragLoadingRetryDelay: number;
     fragLoadingMaxRetryTimeout: number;
-    fragExponantialBackoff: boolean;
+    fragExponentialBackoff: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "FragmentLoaderConstructor" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)

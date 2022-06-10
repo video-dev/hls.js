@@ -1240,7 +1240,7 @@ export default class BaseStreamController
       }
       let delay = config.fragLoadingRetryDelay;
 
-      if (config.fragExponantialBackoff) {
+      if (config.fragExponentialBackoff) {
         // exponential backoff capped to config.fragLoadingMaxRetryTimeout
         delay = Math.min(
           Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,

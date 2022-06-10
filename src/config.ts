@@ -79,7 +79,7 @@ export type FragmentLoaderConfig = {
   fragLoadingMaxRetry: number;
   fragLoadingRetryDelay: number;
   fragLoadingMaxRetryTimeout: number;
-  fragExponantialBackoff: boolean;
+  fragExponentialBackoff: boolean;
 };
 
 export type FPSControllerConfig = {
@@ -246,7 +246,7 @@ export const hlsDefaultConfig: HlsConfig = {
   fragLoadingMaxRetry: 6, // used by fragment-loader
   fragLoadingRetryDelay: 1000, // used by fragment-loader
   fragLoadingMaxRetryTimeout: 64000, // used by fragment-loader
-  fragExponantialBackoff: true, // used by fragment-loader
+  fragExponentialBackoff: true, // used by fragment-loader
   startFragPrefetch: false, // used by stream-controller
   fpsDroppedMonitoringPeriod: 5000, // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2, // used by fps-controller
