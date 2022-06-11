@@ -23,7 +23,6 @@ type AudioConfig = {
 type FrameHeader = {
   headerLength: number;
   frameLength: number;
-  stamp: number;
 };
 
 export function getAudioConfig(
@@ -255,21 +254,17 @@ export function getFrameDuration(samplerate: number): number {
 
 export function parseFrameHeader(
   data: Uint8Array,
-  offset: number,
-  pts: number,
-  frameIndex: number,
-  frameDuration: number
+  offset: number
 ): FrameHeader | void {
   // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
   const headerLength = getHeaderLength(data, offset);
-  // retrieve frame size
-  let frameLength = getFullFrameLength(data, offset);
-  frameLength -= headerLength;
-
-  if (frameLength > 0) {
-    const stamp = pts + frameIndex * frameDuration;
-    // logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}/${(stamp/90).toFixed(0)}`);
-    return { headerLength, frameLength, stamp };
+  if (offset + headerLength <= data.length) {
+    // retrieve frame size
+    const frameLength = getFullFrameLength(data, offset) - headerLength;
+    if (frameLength > 0) {
+      // logger.log(`AAC frame, offset/length/total/pts:${offset+headerLength}/${frameLength}/${data.byteLength}`);
+      return { headerLength, frameLength };
+    }
   }
 }
 
@@ -279,15 +274,16 @@ export function appendFrame(
   offset: number,
   pts: number,
   frameIndex: number
-): AudioFrame | void {
+): AudioFrame {
   const frameDuration = getFrameDuration(track.samplerate as number);
-  const header = parseFrameHeader(data, offset, pts, frameIndex, frameDuration);
+  const stamp = pts + frameIndex * frameDuration;
+  const header = parseFrameHeader(data, offset);
+  let unit: Uint8Array;
   if (header) {
-    const { frameLength, headerLength, stamp } = header;
+    const { frameLength, headerLength } = header;
     const length = headerLength + frameLength;
     const missing = Math.max(0, offset + length - data.length);
     // logger.log(`AAC frame ${frameIndex}, pts:${stamp} length@offset/total: ${frameLength}@${offset+headerLength}/${data.byteLength} missing: ${missing}`);
-    let unit: Uint8Array;
     if (missing) {
       unit = new Uint8Array(length - headerLength);
       unit.set(data.subarray(offset + headerLength, data.length), 0);
@@ -305,4 +301,13 @@ export function appendFrame(
 
     return { sample, length, missing };
   }
+  // overflow incomplete header
+  const length = data.length - offset;
+  unit = new Uint8Array(length);
+  unit.set(data.subarray(offset, data.length), 0);
+  const sample: AudioSample = {
+    unit,
+    pts: stamp,
+  };
+  return { sample, length, missing: -1 };
 }
