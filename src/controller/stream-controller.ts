@@ -470,8 +470,15 @@ export default class StreamController
     if (fragCurrent?.loader) {
       fragCurrent.loader.abort();
     }
-    if (this.state === State.KEY_LOADING) {
-      this.state = State.IDLE;
+    switch (this.state) {
+      case State.KEY_LOADING:
+      case State.FRAG_LOADING:
+      case State.FRAG_LOADING_WAITING_RETRY:
+      case State.PARSING:
+      case State.PARSED:
+      case State.BACKTRACKING:
+        this.state = State.IDLE;
+        break;
     }
     this.nextLoadPosition = this.getLoadPosition();
   }
