@@ -240,7 +240,7 @@ function getParsedTrackCodec(
   // Since mp4-tools cannot parse full codec string (see 'TODO: Parse codec details'... in mp4-tools)
   // Provide defaults based on codec type
   // This allows for some playback of some fmp4 playlists without CODECS defined in manifest
-  if (parsedCodec === 'hvc1') {
+  if (parsedCodec === 'hvc1' || parsedCodec === 'hev1') {
     return 'hvc1.1.c.L120.90';
   }
   if (parsedCodec === 'av01') {
