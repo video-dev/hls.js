@@ -1,0 +1,5 @@
+)]}'
+{
+  "name": "chromium/tools/depot_tools",
+  "clone_url": "https://chromium.googlesource.com/chromium/tools/depot_tools"
+}

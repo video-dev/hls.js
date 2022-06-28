@@ -1,0 +1,39 @@
+)]}'
+{
+  "commit": "407333d42436270d60043ca49241cedc0ebc6eb1",
+  "tree": "ae05e6aaa4a9afd245eb29416ae3248122fff7da",
+  "parents": [
+    "b6030901cf9d3caf29ba534ae1d96426e0e90a22"
+  ],
+  "author": {
+    "name": "recipe-roller",
+    "email": "recipe-mega-autoroller@chops-service-accounts.iam.gserviceaccount.com",
+    "time": "Tue Jun 14 04:18:47 2022"
+  },
+  "committer": {
+    "name": "LUCI CQ",
+    "email": "infra-scoped@luci-project-accounts.iam.gserviceaccount.com",
+    "time": "Tue Jun 14 04:18:47 2022"
+  },
+  "message": "Roll recipe dependencies (trivial).\n\nThis is an automated CL created by the recipe roller. This CL rolls\nrecipe changes from upstream projects (recipe_engine) into this repository.\n\nThe build that created this CL was\nhttps://ci.chromium.org/b/8811411832944140097\n\nrecipe_engine:\nhttps://chromium.googlesource.com/infra/luci/recipes-py.git/+/57e0012cfe9b6fdc0af51b0ebcb269323bc3b071\n  57e0012 (olivernewman@google.com)\n      [cas] Add log_level arg to archive()\n\nMore info is at https://goo.gl/zkKdpD. Use https://goo.gl/noib3a to file a bug.\n\nR\u003diannucci@chromium.org\n\nRecipe-Tryjob-Bypass-Reason: Autoroller\nIgnore-Freeze: Autoroller\nBugdroid-Send-Email: False\nChange-Id: If9036779b5db21f13d0245f85456061afc96e4f0\nReviewed-on: https://chromium-review.googlesource.com/c/chromium/tools/depot_tools/+/3704761\nCommit-Queue: Recipe Roller \u003crecipe-mega-autoroller@chops-service-accounts.iam.gserviceaccount.com\u003e\nBot-Commit: Recipe Roller \u003crecipe-mega-autoroller@chops-service-accounts.iam.gserviceaccount.com\u003e\n",
+  "tree_diff": [
+    {
+      "type": "modify",
+      "old_id": "1235321a9c8e47ba375d958e30e3bfed0e262866",
+      "old_mode": 33188,
+      "old_path": "infra/config/recipes.cfg",
+      "new_id": "b6d713e2a0dbd5ec8bca4c28bbb6404a57fa45c0",
+      "new_mode": 33188,
+      "new_path": "infra/config/recipes.cfg"
+    },
+    {
+      "type": "modify",
+      "old_id": "db6e8f8a5129b7a1b225e2cb8b0a38fadd8e6b58",
+      "old_mode": 33188,
+      "old_path": "recipes/README.recipes.md",
+      "new_id": "7b1297c8d5ecc7cd42a3054e19e4dca61dd3cbd6",
+      "new_mode": 33188,
+      "new_path": "recipes/README.recipes.md"
+    }
+  ]
+}
