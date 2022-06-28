@@ -1,0 +1,25 @@
+// syntaxVersion = 4.00.10
+// engineVersion = 9.1.4(Build:99)
+instance ServiceConfig = ServiceConfigProf<add_required_xml_elements,add_required_xml_attributes>
+{
+instance_to_execute = "Date_Convert_Excel_SerialNumber_To_Date";
+script_files =
+[
+LocalDocument(FilePath("DPInternal_Variables.tgp")),LocalDocument(FilePath("INFA_Internal_H2R_R2H_transformer.tgp")),LocalDocument(FilePath("DATE.tgp")),LocalDocument(FilePath("NUMBER.tgp")),LocalDocument(FilePath("STRING.tgp")),LocalDocument(FilePath("EDI.tgp"))
+];
+alias_table = NamespaceAliasTable
+{
+alias_table = 
+[
+NamespaceAlias("xsi", "http://www.w3.org/2001/XMLSchema-instance"), 
+NamespaceAlias("xml", "http://www.w3.org/XML/1998/namespace"), 
+NamespaceAlias("var", "www.Local-Project.com/Variables")
+];
+};
+encode_settings = ProjectEncodingSettings<use_working_encoding_for_input, use_working_encoding_for_output, use_input_encoding_for_output=false>
+{
+input_encoding = InputEncodingSettings(Encoding(), LittleEndian);
+output_encoding = OutputEncodingSettings<process_instruction="UseOutputCodePage">(Encoding(), "", "UseOutputCodePage", LittleEndian, false);
+working_encoding = WorkingEncodingSettings(Encoding());
+};
+}

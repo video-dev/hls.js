@@ -1,0 +1,51 @@
+// syntaxVersion = 4.00.10
+instance String_main = Parser
+{
+	example_source = Text("Hello World");
+	contains = 
+	[
+		Group
+		{
+			contains = 
+			[
+				SetValue("wor", XPath("$var_STRING_Contains")), 
+				Alternatives
+				{
+					options = 
+					[
+						Content(null_searcher, null_searcher, null_searcher, XPath("$var_STRING_Input_String"), [TransformByParser(String_Contains)]), 
+						SetValue("No", XPath("$var_STRING_Input_String"))
+					];
+				}, 
+				WriteValue(XPath("$var_STRING_Input_String"))
+			];
+			name = "String_Contains";
+			remark = "Simple parser to check if input string contains chosen string. To use: Set var_STRING_Contains to desired string and choose main example source string value. The result is Yes/No";
+		}
+	];
+	remark = "Main parser to run and test examples. To use: choose the transformer to run and enable it's group, make sure other groups disabled and choose input for example source, current default is text input";
+}
+instance String_Contains = Parser
+{
+	contains = 
+	[
+		Marker<marking="none">
+		{
+			search = TextSearch(DynamicString(XPath("$var_STRING_Contains")));
+			remark = "Dynamic text search using var";
+		}, 
+		FindReplaceAnchor
+		{
+			replace_with = StaticString("Yes");
+			contains = 
+			[
+				Content()
+			];
+		}
+	];
+}
+instance var_STRING_Input_String = Variable()
+instance var_STRING_String_1 = Variable()
+instance var_STRING_String_2 = Variable()
+instance var_STRING_Space = Variable(XSDTypeRef("xs:string"), InitialValue(" "))
+instance var_STRING_Contains = Variable()
