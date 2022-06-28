@@ -1,0 +1,5 @@
+18:40:22.037 devtools://devtools/bundled/devtools_app.html?remoteBase=https://chrome-devtools-frontend.appspot.com/serve_file/@a1711811edd74ff1cf2150f36ffa3b0dae40b17f/#:~:text=jquery%2D1.6.1.-,min,-.js%3A1
+min
+18:40:22.072 ​ Uncaught ReferenceError: min is not defined
+    at <anonymous>:2:1
+(anonymous) @ unknown
