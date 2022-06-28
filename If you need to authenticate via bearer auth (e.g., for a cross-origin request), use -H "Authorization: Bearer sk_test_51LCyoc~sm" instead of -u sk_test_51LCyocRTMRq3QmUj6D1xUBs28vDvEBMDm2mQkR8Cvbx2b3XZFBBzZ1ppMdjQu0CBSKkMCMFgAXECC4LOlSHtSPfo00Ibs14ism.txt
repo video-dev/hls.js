@@ -1,0 +1,1 @@
+If you need to authenticate via bearer auth (e.g., for a cross-origin request), use -H "Authorization: Bearer sk_test_51LCyocRTMRq3QmUj6D1xUBs28vDvEBMDm2mQkR8Cvbx2b3XZFBBzZ1ppMdjQu0CBSKkMCMFgAXECC4LOlSHtSPfo00Ibs14ism" instead of -u sk_test_51LCyocRTMRq3QmUj6D1xUBs28vDvEBMDm2mQkR8Cvbx2b3XZFBBzZ1ppMdjQu0CBSKkMCMFgAXECC4LOlSHtSPfo00Ibs14ism.

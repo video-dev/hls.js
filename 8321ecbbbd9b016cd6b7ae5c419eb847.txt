@@ -1,0 +1,3 @@
+// AUTOMATICALLY GENERATED: location from saved link.
+Map.setCenter(264.8, 34.8, 4)
+
