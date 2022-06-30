@@ -139,11 +139,17 @@ export type LatencyControllerConfig = {
   maxLiveSyncPlaybackRate: number;
 };
 
+export type MetadataControllerConfig = {
+  enableDateRangeMetadataCues: boolean;
+  enableEmsgMetadataCues: boolean;
+  enableID3MetadataCues: boolean;
+};
+
 export type TimelineControllerConfig = {
   cueHandler: CuesInterface;
-  enableCEA708Captions: boolean;
   enableWebVTT: boolean;
   enableIMSC1: boolean;
+  enableCEA708Captions: boolean;
   captionsTextTrack1Label: string;
   captionsTextTrack1LanguageCode: string;
   captionsTextTrack2Label: string;
@@ -199,6 +205,7 @@ export type HlsConfig = {
   PlaylistLoaderConfig &
   StreamControllerConfig &
   LatencyControllerConfig &
+  MetadataControllerConfig &
   TimelineControllerConfig &
   TSDemuxerConfig;
 
@@ -282,6 +289,9 @@ export const hlsDefaultConfig: HlsConfig = {
   progressive: false,
   lowLatencyMode: true,
   cmcd: undefined,
+  enableDateRangeMetadataCues: true,
+  enableEmsgMetadataCues: true,
+  enableID3MetadataCues: true,
 
   // Dynamic Modules
   ...timelineConfig(),
@@ -301,9 +311,9 @@ export const hlsDefaultConfig: HlsConfig = {
 function timelineConfig(): TimelineControllerConfig {
   return {
     cueHandler: Cues, // used by timeline-controller
-    enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
     enableWebVTT: __USE_SUBTITLES__, // used by timeline-controller
     enableIMSC1: __USE_SUBTITLES__, // used by timeline-controller
+    enableCEA708Captions: __USE_SUBTITLES__, // used by timeline-controller
     captionsTextTrack1Label: 'English', // used by timeline-controller
     captionsTextTrack1LanguageCode: 'en', // used by timeline-controller
     captionsTextTrack2Label: 'Spanish', // used by timeline-controller
