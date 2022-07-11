@@ -9,6 +9,7 @@ import {
   DemuxedUserdataTrack,
   DemuxedMetadataTrack,
   KeyData,
+  MetadataSchema,
 } from '../types/demuxer';
 import {
   findBox,
@@ -161,6 +162,7 @@ class MP4Demuxer implements Demuxer {
               len: payload.byteLength,
               dts: pts,
               pts: pts,
+              type: MetadataSchema.emsg,
             });
           }
         });

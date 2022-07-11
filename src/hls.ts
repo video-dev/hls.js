@@ -672,6 +672,14 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
+   * get the datetime value relative to media.currentTime for the active level Program Date Time if present
+   * @type {Date}
+   */
+  public get playingDate(): Date | null {
+    return this.streamController.currentProgramDateTime;
+  }
+
+  /**
    * @type {AudioTrack[]}
    */
   get audioTracks(): Array<MediaPlaylist> {
@@ -856,11 +864,16 @@ export type {
 } from './config';
 export type { CuesInterface } from './utils/cues';
 export type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
+export type { DateRange } from './loader/date-range';
 export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
 export type { LevelDetails } from './loader/level-details';
 export type { SourceBufferName } from './types/buffer';
-export type { MetadataSample, UserdataSample } from './types/demuxer';
+export type {
+  MetadataSample,
+  MetadataSchema,
+  UserdataSample,
+} from './types/demuxer';
 export type {
   LevelParsed,
   LevelAttributes,
