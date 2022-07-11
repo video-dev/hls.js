@@ -62,6 +62,11 @@ class ID3TrackController implements ComponentAPI {
 
   destroy() {
     this._unregisterListeners();
+    this.id3Track = null;
+    this.media = null;
+    this.dateRangeCuesAppended = {};
+    // @ts-ignore
+    this.hls = null;
   }
 
   private _registerListeners() {
@@ -136,6 +141,16 @@ class ID3TrackController implements ComponentAPI {
     if (!this.media) {
       return;
     }
+
+    const {
+      hls: {
+        config: { enableEmsgMetadataCues, enableID3MetadataCues },
+      },
+    } = this;
+    if (!enableEmsgMetadataCues && !enableID3MetadataCues) {
+      return;
+    }
+
     const { frag: fragment, samples, details } = data;
 
     // create track dynamically
@@ -150,6 +165,14 @@ class ID3TrackController implements ComponentAPI {
     const frameTypesAdded: Record<string, number | null> = {};
 
     for (let i = 0; i < samples.length; i++) {
+      const type = samples[i].type;
+      if (
+        (type === MetadataSchema.emsg && !enableEmsgMetadataCues) ||
+        !enableID3MetadataCues
+      ) {
+        continue;
+      }
+
       const frames = ID3.getID3Frames(samples[i].data);
       if (frames) {
         const startTime = samples[i].pts;
@@ -166,7 +189,6 @@ class ID3TrackController implements ComponentAPI {
           if (!ID3.isTimeStampFrame(frame)) {
             const cue = new Cue(startTime, endTime, '');
             cue.value = frame;
-            const type = samples[i].type;
             if (type) {
               cue.type = type;
             }
@@ -204,24 +226,40 @@ class ID3TrackController implements ComponentAPI {
     event: Events.BUFFER_FLUSHING,
     { startOffset, endOffset, type }: BufferFlushingData
   ) {
-    const { id3Track } = this;
-    if (id3Track) {
+    const { id3Track, hls } = this;
+    if (!hls) {
+      return;
+    }
+
+    const {
+      config: { enableEmsgMetadataCues, enableID3MetadataCues },
+    } = hls;
+    if (id3Track && (enableEmsgMetadataCues || enableID3MetadataCues)) {
       let predicate;
+
       if (type === 'audio') {
-        predicate = (cue) => (cue as any).type === MetadataSchema.audioId3;
+        predicate = (cue) =>
+          (cue as any).type === MetadataSchema.audioId3 &&
+          enableID3MetadataCues;
       } else if (type === 'video') {
-        predicate = (cue) => (cue as any).type === MetadataSchema.emsg;
+        predicate = (cue) =>
+          (cue as any).type === MetadataSchema.emsg && enableEmsgMetadataCues;
       } else {
         predicate = (cue) =>
-          (cue as any).type === MetadataSchema.audioId3 ||
-          (cue as any).type === MetadataSchema.emsg;
+          ((cue as any).type === MetadataSchema.audioId3 &&
+            enableID3MetadataCues) ||
+          ((cue as any).type === MetadataSchema.emsg && enableEmsgMetadataCues);
       }
       removeCuesInRange(id3Track, startOffset, endOffset, predicate);
     }
   }
 
   onLevelUpdated(event: Events.LEVEL_UPDATED, { details }: LevelUpdatedData) {
-    if (!this.media || !details.hasProgramDateTime) {
+    if (
+      !this.media ||
+      !details.hasProgramDateTime ||
+      !this.hls.config.enableDateRangeMetadataCues
+    ) {
       return;
     }
     const { dateRangeCuesAppended, id3Track } = this;
