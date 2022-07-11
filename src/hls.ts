@@ -859,6 +859,7 @@ export type {
   PlaylistLoaderConstructor,
   StreamControllerConfig,
   LatencyControllerConfig,
+  MetadataControllerConfig,
   TimelineControllerConfig,
   TSDemuxerConfig,
 } from './config';
