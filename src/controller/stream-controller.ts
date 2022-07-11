@@ -1329,35 +1329,54 @@ export default class StreamController
     }
   }
 
-  get nextLevel() {
+  get nextLevel(): number {
     const frag = this.nextBufferedFrag;
     if (frag) {
       return frag.level;
-    } else {
-      return -1;
     }
+    return -1;
   }
 
-  get currentLevel() {
+  get currentFrag(): Fragment | null {
     const media = this.media;
     if (media) {
-      const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
-      if (fragPlayingCurrent) {
-        return fragPlayingCurrent.level;
+      return this.fragPlaying || this.getAppendedFrag(media.currentTime);
+    }
+    return null;
+  }
+
+  get currentProgramDateTime(): Date | null {
+    const media = this.media;
+    if (media) {
+      const currentTime = media.currentTime;
+      const frag = this.currentFrag;
+      if (
+        frag &&
+        Number.isFinite(currentTime) &&
+        Number.isFinite(frag.programDateTime)
+      ) {
+        const epocMs =
+          (frag.programDateTime as number) + (currentTime - frag.start) * 1000;
+        return new Date(epocMs);
       }
+    }
+    return null;
+  }
+
+  get currentLevel(): number {
+    const frag = this.currentFrag;
+    if (frag) {
+      return frag.level;
     }
     return -1;
   }
 
   get nextBufferedFrag() {
-    const media = this.media;
-    if (media) {
-      // first get end range of current fragment
-      const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
-      return this.followingBufferedFrag(fragPlayingCurrent);
-    } else {
-      return null;
+    const frag = this.currentFrag;
+    if (frag) {
+      return this.followingBufferedFrag(frag);
     }
+    return null;
   }
 
   get forceStartLoad() {

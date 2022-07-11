@@ -1,5 +1,5 @@
 import * as ID3 from '../demux/id3';
-import type {
+import {
   DemuxerResult,
   Demuxer,
   DemuxedAudioTrack,
@@ -8,6 +8,7 @@ import type {
   DemuxedVideoTrack,
   DemuxedUserdataTrack,
   KeyData,
+  MetadataSchema,
 } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
@@ -77,6 +78,7 @@ class BaseAudioDemuxer implements Demuxer {
         pts: this.initPTS,
         dts: this.initPTS,
         data: id3Data,
+        type: MetadataSchema.audioId3,
       });
     }
 
@@ -96,7 +98,12 @@ class BaseAudioDemuxer implements Demuxer {
       } else if (ID3.canParse(data, offset)) {
         // after a ID3.canParse, a call to ID3.getID3Data *should* always returns some data
         id3Data = ID3.getID3Data(data, offset)!;
-        id3Track.samples.push({ pts: pts, dts: pts, data: id3Data });
+        id3Track.samples.push({
+          pts: pts,
+          dts: pts,
+          data: id3Data,
+          type: MetadataSchema.audioId3,
+        });
         offset += id3Data.length;
         lastDataIndex = offset;
       } else {

@@ -23,7 +23,7 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
-import type {
+import {
   DemuxedAvcTrack,
   DemuxedAudioTrack,
   DemuxedTrack,
@@ -34,6 +34,7 @@ import type {
   DemuxedUserdataTrack,
   ElementaryStreamData,
   KeyData,
+  MetadataSchema,
 } from '../types/demuxer';
 import { AudioFrame } from '../types/demuxer';
 
@@ -969,7 +970,10 @@ class TSDemuxer implements Demuxer {
       logger.warn('[tsdemuxer]: ID3 PES unknown PTS');
       return;
     }
-    id3Track.samples.push(pes as Required<PES>);
+    const id3Sample = Object.assign({}, pes as Required<PES>, {
+      type: this._avcTrack ? MetadataSchema.emsg : MetadataSchema.audioId3,
+    });
+    id3Track.samples.push(id3Sample);
   }
 }
 
