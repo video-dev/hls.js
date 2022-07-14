@@ -1,8 +1,8 @@
+import { VTTParser } from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
+import { toMpegTsClockFromTimescale } from './timescale-conversion';
 import { normalizePts } from '../remux/mp4-remuxer';
 import type { VTTCCs } from '../types/vtt';
-import { toMpegTsClockFromTimescale } from './timescale-conversion';
-import { VTTParser } from './vttparser';
 
 const LINEBREAKS = /\r\n|\n\r|\n|\r/g;
 
