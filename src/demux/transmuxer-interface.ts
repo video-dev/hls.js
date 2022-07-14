@@ -125,6 +125,7 @@ export default class TransmuxerInterface {
       w.removeEventListener('message', this.onwmsg);
       w.terminate();
       this.worker = null;
+      this.onwmsg = undefined;
     } else {
       const transmuxer = this.transmuxer;
       if (transmuxer) {
@@ -136,8 +137,11 @@ export default class TransmuxerInterface {
     if (observer) {
       observer.removeAllListeners();
     }
+    this.frag = null;
     // @ts-ignore
     this.observer = null;
+    // @ts-ignore
+    this.hls = null;
   }
 
   push(
