@@ -67,9 +67,10 @@ export default class MP4Remuxer implements Remuxer {
       const result = navigator.userAgent.match(/Safari\/(\d+)/i);
       safariWebkitVersion = result ? parseInt(result[1]) : 0;
     }
-    requiresPositiveDts =
-      (!!chromeVersion && chromeVersion < 75) ||
-      (!!safariWebkitVersion && safariWebkitVersion < 600);
+    requiresPositiveDts = !(
+      (!!chromeVersion && chromeVersion >= 75) ||
+      (!!safariWebkitVersion && safariWebkitVersion >= 600)
+    );
   }
 
   destroy() {}
