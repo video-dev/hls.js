@@ -66,7 +66,11 @@
   - [`capLevelController`](#capLevelController)
   - [`fpsController`](#fpsController)
   - [`timelineController`](#timelinecontroller)
+  - [`enableDateRangeMetadataCues`](#enabledaterangemetadatacues)
+  - [`enableEmsgMetadataCues`](#enableemsgmetadatacues)
+  - [`enableID3MetadataCues`](#enableid3metadatacues)
   - [`enableWebVTT`](#enablewebvtt)
+  - [`enableIMSC1`](#enableimsc1)
   - [`enableCEA708Captions`](#enablecea708captions)
   - [`captionsTextTrack1Label`](#captionstexttrack1label)
   - [`captionsTextTrack1LanguageCode`](#captionstexttrack1languagecode)
@@ -130,6 +134,8 @@
   - [`hls.latency`](#hlslatency)
   - [`hls.maxLatency`](#hlsmaxlatency)
   - [`hls.targetLatency`](#hlstargetlatency)
+  - [`hls.drift`](#hlsdrift)
+  - [`hls.playingDate`](#hlsplayingdate)
 - [Runtime Events](#runtime-events)
 - [Loader Composition](#loader-composition)
 - [Errors](#errors)
@@ -371,6 +377,9 @@ var config = {
   capLevelController: CapLevelController,
   fpsController: FPSController,
   timelineController: TimelineController,
+  enableDateRangeMetadataCues: true,
+  enableEmsgMetadataCues: true,
+  enableID3MetadataCues: true,
   enableWebVTT: true,
   enableIMSC1: true,
   enableCEA708Captions: true,
@@ -941,11 +950,43 @@ Parameter should be a class with a `destroy()` method:
 
 - `destroy()` : should clean-up all used resources
 
+### `enableDateRangeMetadataCues`
+
+(default: `true`)
+
+whether or not to add, update, and remove cues from the metadata TextTrack for EXT-X-DATERANGE playlist tags
+
+parameter should be a boolean
+
+### `enableEmsgMetadataCues`
+
+(default: `true`)
+
+whether or not to add, update, and remove cues from the metadata TextTrack for ID3 Timed Metadata found in CMAF Event Message (emsg) boxes
+
+parameter should be a boolean
+
+### `enableID3MetadataCues`
+
+(default: `true`)
+
+whether or not to add, update, and remove cues from the metadata TextTrack for ID3 Timed Metadata found in audio and MPEG-TS containers
+
+parameter should be a boolean
+
 ### `enableWebVTT`
 
 (default: `true`)
 
 whether or not to enable WebVTT captions on HLS
+
+parameter should be a boolean
+
+### `enableIMSC1`
+
+(default: `true`)
+
+whether or not to enable IMSC1 captions on HLS
 
 parameter should be a boolean
 
@@ -1386,6 +1427,10 @@ get : target distance from the edge as calculated by the latency controller
 
 get : the rate at which the edge of the current live playlist is advancing or 1 if there is none
 
+### `hls.playingDate`
+
+get: the datetime value relative to media.currentTime for the active level Program Date Time if present
+
 ## Runtime Events
 
 hls.js fires a bunch of events, that could be registered and unregistered as below:
@@ -1483,9 +1528,9 @@ Full list of Events is available below:
 - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
   - data: { id: demuxer id, frag : fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment }
 - `Hls.Events.FRAG_PARSING_USERDATA` - fired when parsing sei text is completed
-  - data: { id : demuxer id, frag: fragment object, samples : [ sei samples pes ] }
-- `Hls.Events.FRAG_PARSING_METADATA` - fired when parsing id3 is completed
-  - data: { id: demuxer id, frag : fragment object, samples : [ id3 pes - pts and dts timestamp are relative, values are in seconds] }
+  - data: { id : demuxer id, frag: fragment object, samples : [ sei samples pes ], details: `levelDetails` object (please see [below](#leveldetails) for more information) }
+- `Hls.Events.FRAG_PARSING_METADATA` - fired when parsing ID3 is completed
+  - data: { id: demuxer id, frag : fragment object, samples : [ ID3 pes - pts and dts timestamp are relative, values are in seconds], details: `levelDetails` object (please see [below](#leveldetails) for more information) }
 - `Hls.Events.FRAG_PARSING_DATA` - [deprecated]
 - `Hls.Events.FRAG_PARSED` - fired when fragment parsing is completed
   - data: { frag : fragment object, partIndex }
