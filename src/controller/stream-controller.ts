@@ -1055,6 +1055,7 @@ export default class StreamController
     }
     const { frag, part, level } = context;
     const { video, text, id3, initSegment } = remuxResult;
+    const { details } = level;
     // The audio-stream-controller handles audio buffering if Hls.js is playing an alternate audio track
     const audio = this.altAudio ? undefined : remuxResult.audio;
 
@@ -1087,7 +1088,7 @@ export default class StreamController
 
     // Avoid buffering if backtracking this fragment
     if (video && remuxResult.independent !== false) {
-      if (level.details) {
+      if (details) {
         const { startPTS, endPTS, startDTS, endDTS } = video;
         if (part) {
           part.elementaryStreams[video.type] = {
@@ -1152,18 +1153,20 @@ export default class StreamController
       this.bufferFragmentData(audio, frag, part, chunkMeta);
     }
 
-    if (id3?.samples?.length) {
+    if (details && id3?.samples?.length) {
       const emittedID3: FragParsingMetadataData = {
-        frag,
         id,
+        frag,
+        details,
         samples: id3.samples,
       };
       hls.trigger(Events.FRAG_PARSING_METADATA, emittedID3);
     }
-    if (text) {
+    if (details && text) {
       const emittedText: FragParsingUserdataData = {
-        frag,
         id,
+        frag,
+        details,
         samples: text.samples,
       };
       hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);
@@ -1326,35 +1329,54 @@ export default class StreamController
     }
   }
 
-  get nextLevel() {
+  get nextLevel(): number {
     const frag = this.nextBufferedFrag;
     if (frag) {
       return frag.level;
-    } else {
-      return -1;
     }
+    return -1;
   }
 
-  get currentLevel() {
+  get currentFrag(): Fragment | null {
     const media = this.media;
     if (media) {
-      const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
-      if (fragPlayingCurrent) {
-        return fragPlayingCurrent.level;
+      return this.fragPlaying || this.getAppendedFrag(media.currentTime);
+    }
+    return null;
+  }
+
+  get currentProgramDateTime(): Date | null {
+    const media = this.media;
+    if (media) {
+      const currentTime = media.currentTime;
+      const frag = this.currentFrag;
+      if (
+        frag &&
+        Number.isFinite(currentTime) &&
+        Number.isFinite(frag.programDateTime)
+      ) {
+        const epocMs =
+          (frag.programDateTime as number) + (currentTime - frag.start) * 1000;
+        return new Date(epocMs);
       }
+    }
+    return null;
+  }
+
+  get currentLevel(): number {
+    const frag = this.currentFrag;
+    if (frag) {
+      return frag.level;
     }
     return -1;
   }
 
   get nextBufferedFrag() {
-    const media = this.media;
-    if (media) {
-      // first get end range of current fragment
-      const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
-      return this.followingBufferedFrag(fragPlayingCurrent);
-    } else {
-      return null;
+    const frag = this.currentFrag;
+    if (frag) {
+      return this.followingBufferedFrag(frag);
     }
+    return null;
   }
 
   get forceStartLoad() {

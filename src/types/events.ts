@@ -305,12 +305,14 @@ export interface FragParsingInitSegmentData {}
 export interface FragParsingUserdataData {
   id: string;
   frag: Fragment;
+  details: LevelDetails;
   samples: UserdataSample[];
 }
 
 export interface FragParsingMetadataData {
   id: string;
   frag: Fragment;
+  details: LevelDetails;
   samples: MetadataSample[];
 }
 

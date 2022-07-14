@@ -282,6 +282,31 @@ export interface CuesParsedData {
     type: 'captions' | 'subtitles';
 }
 
+// Warning: (ae-missing-release-tag) "DateRange" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class DateRange {
+    constructor(dateRangeAttr: AttrList, dateRangeWithSameId?: DateRange);
+    // (undocumented)
+    attr: AttrList;
+    // (undocumented)
+    get class(): string;
+    // (undocumented)
+    get duration(): number | null;
+    // (undocumented)
+    get endDate(): Date | null;
+    // (undocumented)
+    get endOnNext(): boolean;
+    // (undocumented)
+    get id(): string;
+    // (undocumented)
+    get isValid(): boolean;
+    // (undocumented)
+    get plannedDuration(): number | null;
+    // (undocumented)
+    get startDate(): Date;
+}
+
 // Warning: (ae-missing-release-tag) "DRMSystemOptions" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -814,6 +839,8 @@ export interface FragParsingInitSegmentData {
 // @public (undocumented)
 export interface FragParsingMetadataData {
     // (undocumented)
+    details: LevelDetails;
+    // (undocumented)
     frag: Fragment;
     // (undocumented)
     id: string;
@@ -825,6 +852,8 @@ export interface FragParsingMetadataData {
 //
 // @public (undocumented)
 export interface FragParsingUserdataData {
+    // (undocumented)
+    details: LevelDetails;
     // (undocumented)
     frag: Fragment;
     // (undocumented)
@@ -914,6 +943,7 @@ class Hls implements HlsEventEmitter {
     on<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context): void;
     // (undocumented)
     once<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context): void;
+    get playingDate(): Date | null;
     recoverMediaError(): void;
     // (undocumented)
     removeAllListeners<E extends keyof HlsListeners>(event?: E | undefined): void;
@@ -980,7 +1010,7 @@ export type HlsConfig = {
     fpsController: typeof FPSController;
     progressive: boolean;
     lowLatencyMode: boolean;
-} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & FragmentLoaderConfig & LevelControllerConfig & MP4RemuxerConfig & PlaylistLoaderConfig & StreamControllerConfig & LatencyControllerConfig & TimelineControllerConfig & TSDemuxerConfig;
+} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & FragmentLoaderConfig & LevelControllerConfig & MP4RemuxerConfig & PlaylistLoaderConfig & StreamControllerConfig & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1337,6 +1367,8 @@ export class LevelDetails {
     canSkipDateRanges: boolean;
     // (undocumented)
     canSkipUntil: number;
+    // (undocumented)
+    dateRanges: Record<string, DateRange>;
     // (undocumented)
     deltaUpdateFailed?: boolean;
     // (undocumented)
@@ -1829,6 +1861,15 @@ export interface MediaPlaylist extends LevelParsed {
 // @public (undocumented)
 export type MediaPlaylistType = MainPlaylistType | SubtitlePlaylistType;
 
+// Warning: (ae-missing-release-tag) "MetadataControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type MetadataControllerConfig = {
+    enableDateRangeMetadataCues: boolean;
+    enableEmsgMetadataCues: boolean;
+    enableID3MetadataCues: boolean;
+};
+
 // Warning: (ae-missing-release-tag) "MetadataSample" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1841,6 +1882,20 @@ export interface MetadataSample {
     len?: number;
     // (undocumented)
     pts: number;
+    // (undocumented)
+    type: MetadataSchema;
+}
+
+// Warning: (ae-missing-release-tag) "MetadataSchema" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export enum MetadataSchema {
+    // (undocumented)
+    audioId3 = "org.id3",
+    // (undocumented)
+    dateRange = "com.apple.quicktime.HLS",
+    // (undocumented)
+    emsg = "https://aomedia.org/emsg/ID3"
 }
 
 // Warning: (ae-missing-release-tag) "MP4RemuxerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2054,9 +2109,9 @@ export interface SubtitleTrackSwitchData {
 // @public (undocumented)
 export type TimelineControllerConfig = {
     cueHandler: CuesInterface;
-    enableCEA708Captions: boolean;
     enableWebVTT: boolean;
     enableIMSC1: boolean;
+    enableCEA708Captions: boolean;
     captionsTextTrack1Label: string;
     captionsTextTrack1LanguageCode: string;
     captionsTextTrack2Label: string;
@@ -2161,18 +2216,18 @@ export interface UserdataSample {
 
 // Warnings were encountered during analysis:
 //
-// src/config.ts:163:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
-// src/config.ts:173:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:174:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:176:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:177:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:178:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:180:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:183:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:185:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:186:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:187:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:188:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:169:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
+// src/config.ts:179:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:180:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:182:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:183:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:184:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:186:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:189:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:191:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:192:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:193:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:194:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -1,6 +1,7 @@
 import { Part } from './fragment';
 import type { Fragment } from './fragment';
 import type { AttrList } from '../utils/attr-list';
+import type { DateRange } from './date-range';
 
 const DEFAULT_TARGET_DURATION = 10;
 
@@ -13,6 +14,7 @@ export class LevelDetails {
   public fragments: Fragment[];
   public fragmentHint?: Fragment;
   public partList: Part[] | null = null;
+  public dateRanges: Record<string, DateRange>;
   public live: boolean = true;
   public ageHeader: number = 0;
   public advancedDateTime?: number;
@@ -49,6 +51,7 @@ export class LevelDetails {
 
   constructor(baseUrl) {
     this.fragments = [];
+    this.dateRanges = {};
     this.url = baseUrl;
   }
 
