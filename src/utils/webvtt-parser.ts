@@ -1,8 +1,8 @@
-import { VTTParser } from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
-import { toMpegTsClockFromTimescale } from './timescale-conversion';
 import { normalizePts } from '../remux/mp4-remuxer';
 import type { VTTCCs } from '../types/vtt';
+import { toMpegTsClockFromTimescale } from './timescale-conversion';
+import { VTTParser } from './vttparser';
 
 const LINEBREAKS = /\r\n|\n\r|\n|\r/g;
 
@@ -141,8 +141,8 @@ export function parseWebVTT(
         (cue.startTime + cueOffset - timestampMapLOCAL) * 90000,
         timeOffset * 90000
       ) / 90000;
-    cue.startTime = startTime;
-    cue.endTime = startTime + duration;
+    cue.startTime = Math.max(startTime, 0);
+    cue.endTime = Math.max(startTime + duration, 0);
 
     //trim trailing webvtt block whitespaces
     const text = cue.text.trim();
@@ -154,10 +154,6 @@ export function parseWebVTT(
     if (!cue.id) {
       cue.id = generateCueId(cue.startTime, cue.endTime, text);
     }
-
-    // Ensure valid start and end times
-    cue.startTime = Math.max(startTime, 0);
-    cue.endTime = Math.max(startTime + duration, 0);
 
     cues.push(cue);
   };
