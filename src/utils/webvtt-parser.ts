@@ -141,8 +141,8 @@ export function parseWebVTT(
         (cue.startTime + cueOffset - timestampMapLOCAL) * 90000,
         timeOffset * 90000
       ) / 90000;
-    cue.startTime = startTime;
-    cue.endTime = startTime + duration;
+    cue.startTime = Math.max(startTime, 0);
+    cue.endTime = Math.max(startTime + duration, 0);
 
     //trim trailing webvtt block whitespaces
     const text = cue.text.trim();
