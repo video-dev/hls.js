@@ -155,9 +155,11 @@ export function parseWebVTT(
       cue.id = generateCueId(cue.startTime, cue.endTime, text);
     }
 
-    if (cue.startTime >= 0 && cue.endTime > 0) {
-      cues.push(cue);
-    }
+    // Ensure valid start and end times
+    cue.startTime = Math.max(startTime, 0);
+    cue.endTime = Math.max(startTime + duration, 0);
+
+    cues.push(cue);
   };
 
   parser.onparsingerror = function (error: Error) {
