@@ -674,7 +674,7 @@ class TSDemuxer implements Demuxer {
           break;
         // Filler Data
         case 12:
-          push = false;
+          push = true;
           break;
         default:
           push = false;
