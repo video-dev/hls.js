@@ -72,7 +72,7 @@ describe('GapController', function () {
 
   describe('_reportStall', function () {
     it('should report a stall with the current buffer length if it has not already been reported', function () {
-      gapController._reportStall(42);
+      gapController._reportStall({ len: 42 });
       expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
@@ -83,7 +83,7 @@ describe('GapController', function () {
 
     it('should not report a stall if it was already reported', function () {
       gapController.stallReported = true;
-      gapController._reportStall(42);
+      gapController._reportStall({ len: 42 });
       expect(triggerSpy).to.not.have.been.called;
     });
   });
