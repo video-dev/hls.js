@@ -68,7 +68,7 @@ HttpServer.createServer({
   root: './',
 }).listen(8000, hostname);
 
-const wait = (ms) => new Promise((resolve) => self.setTimeout(resolve, ms));
+const wait = (ms) => new Promise((resolve) => global.setTimeout(resolve, ms));
 const stringifyResult = (result) =>
   JSON.stringify(
     result,
