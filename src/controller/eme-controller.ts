@@ -540,9 +540,30 @@ class EMEController implements ComponentAPI {
 
                   resolve();
                 })
-                .catch(reject);
+                .catch((error) => {
+                  this.hls.trigger(Events.ERROR, {
+                    type: ErrorTypes.KEY_SYSTEM_ERROR,
+                    details:
+                      ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_UPDATE_FAILED,
+                    fatal: true,
+                    error,
+                  });
+
+                  reject(error);
+                });
             } else {
-              reject(new Error(xhr.responseText));
+              logger.error(
+                `HTTP error ${xhr.status} happened while fetching server certificate`
+              );
+
+              this.hls.trigger(Events.ERROR, {
+                type: ErrorTypes.KEY_SYSTEM_ERROR,
+                details:
+                  ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED,
+                fatal: true,
+              });
+
+              reject(new Error(xhr.response));
             }
             break;
         }
