@@ -6,7 +6,7 @@
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 
-import { logger } from '../utils/logger';
+import { logger, enableLogs } from '../utils/logger';
 import type {
   DRMSystemOptions,
   DRMSystemsConfiguration,
@@ -17,6 +17,8 @@ import { KeySystems } from '../utils/mediakeys-helper';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 import type { MediaAttachedData, ManifestParsedData } from '../types/events';
+
+enableLogs(true);
 
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 
@@ -531,11 +533,14 @@ class EMEController implements ComponentAPI {
         switch (xhr.readyState) {
           case XMLHttpRequest.DONE:
             if (xhr.status === 200) {
-              mediaKeysListItem.mediaKeys?.setServerCertificate(xhr.response);
+              mediaKeysListItem.mediaKeys
+                ?.setServerCertificate(xhr.response)
+                .then(() => {
+                  logger.log('serverCertificate successfully fetched and set');
 
-              logger.log('serverCertificate successfully fetched and set');
-
-              resolve();
+                  resolve();
+                })
+                .catch(reject);
             } else {
               reject(new Error(xhr.responseText));
             }
