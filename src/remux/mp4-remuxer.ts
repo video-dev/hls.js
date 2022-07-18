@@ -44,6 +44,7 @@ export default class MP4Remuxer implements Remuxer {
   private _initDTS!: number;
   private nextAvcDts: number | null = null;
   private nextAudioPts: number | null = null;
+  private videoSampleDuration: number | null = null;
   private isAudioContiguous: boolean = false;
   private isVideoContiguous: boolean = false;
 
@@ -139,7 +140,7 @@ export default class MP4Remuxer implements Remuxer {
     const hasVideo = videoTrack.pid > -1;
     const length = videoTrack.samples.length;
     const enoughAudioSamples = audioTrack.samples.length > 0;
-    const enoughVideoSamples = length > 1;
+    const enoughVideoSamples = (flush && length > 0) || length > 1;
     const canRemuxAvc =
       ((!hasAudio || enoughAudioSamples) &&
         (!hasVideo || enoughVideoSamples)) ||
@@ -383,7 +384,7 @@ export default class MP4Remuxer implements Remuxer {
     const initPTS: number = this._initPTS;
     let nextAvcDts = this.nextAvcDts;
     let offset = 8;
-    let mp4SampleDuration!: number;
+    let mp4SampleDuration = this.videoSampleDuration;
     let firstDTS;
     let lastDTS;
     let minPTS: number = Number.POSITIVE_INFINITY;
@@ -435,9 +436,10 @@ export default class MP4Remuxer implements Remuxer {
     // on Safari let's signal the same sample duration for all samples
     // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
     // set this constant duration as being the avg delta between consecutive DTS.
-    const averageSampleDuration = Math.round(
-      (lastDTS - firstDTS) / (nbSamples - 1)
-    );
+    const inputDuration = lastDTS - firstDTS;
+    const averageSampleDuration = inputDuration
+      ? Math.round(inputDuration / (nbSamples - 1))
+      : mp4SampleDuration || track.inputTimeScale / 30;
 
     // handle broken streams with PTS < DTS, tolerance up 0.2 seconds
     if (ptsDtsShift < 0) {
@@ -561,6 +563,7 @@ export default class MP4Remuxer implements Remuxer {
     view.setUint32(0, mdatSize);
     mdat.set(MP4.types.mdat, 4);
 
+    let stretchedLastFrame = false;
     for (let i = 0; i < nbSamples; i++) {
       const avcSample = inputSamples[i];
       const avcSampleUnits = avcSample.units;
@@ -583,7 +586,9 @@ export default class MP4Remuxer implements Remuxer {
       } else {
         const config = this.config;
         const lastFrameDuration =
-          avcSample.dts - inputSamples[i > 0 ? i - 1 : i].dts;
+          i > 0
+            ? avcSample.dts - inputSamples[i - 1].dts
+            : averageSampleDuration;
         if (config.stretchShortVideoTrack && this.nextAudioPts !== null) {
           // In some cases, a segment's audio track duration may exceed the video track duration.
           // Since we've already remuxed audio, and we know how long the audio track is, we look to
@@ -601,6 +606,8 @@ export default class MP4Remuxer implements Remuxer {
             mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
             if (mp4SampleDuration < 0) {
               mp4SampleDuration = lastFrameDuration;
+            } else {
+              stretchedLastFrame = true;
             }
             logger.log(
               `[mp4-remuxer]: It is approximately ${
@@ -637,11 +644,16 @@ export default class MP4Remuxer implements Remuxer {
     }
 
     console.assert(
-      mp4SampleDuration !== undefined,
+      mp4SampleDuration !== null,
       'mp4SampleDuration must be computed'
     );
     // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
+    mp4SampleDuration =
+      stretchedLastFrame || !mp4SampleDuration
+        ? averageSampleDuration
+        : mp4SampleDuration;
     this.nextAvcDts = nextAvcDts = lastDTS + mp4SampleDuration;
+    this.videoSampleDuration = mp4SampleDuration;
     this.isVideoContiguous = true;
     const moof = MP4.moof(
       track.sequenceNumber++,
