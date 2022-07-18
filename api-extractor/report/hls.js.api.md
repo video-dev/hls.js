@@ -458,6 +458,10 @@ export enum ErrorDetails {
     // (undocumented)
     KEY_SYSTEM_NO_SESSION = "keySystemNoSession",
     // (undocumented)
+    KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED = "keySystemServerCertificateRequestFailed",
+    // (undocumented)
+    KEY_SYSTEM_SERVER_CERTIFICATE_UPDATE_FAILED = "keySystemServerCertificateUpdateFailed",
+    // (undocumented)
     KEY_SYSTEM_SESSION_UPDATE_FAILED = "keySystemSessionUpdateFailed",
     // (undocumented)
     LEVEL_EMPTY_ERROR = "levelEmptyError",
