@@ -221,6 +221,62 @@ describe('EMEController', function () {
     });
   });
 
+  it('should fetch the server certificate and trigger update failed error', function (done) {
+    const xhr = setupXHRMock();
+
+    const mediaKeysSetServerCertificateSpy = sinon.spy(() =>
+      Promise.reject(new Error('Failed'))
+    );
+
+    const reqMediaKsAccessSpy = sinon.spy(function () {
+      return Promise.resolve({
+        // Media-keys mock
+        createMediaKeys: sinon.spy(() =>
+          Promise.resolve({
+            setServerCertificate: mediaKeysSetServerCertificateSpy,
+            createSession: () => ({
+              addEventListener: () => {},
+            }),
+          })
+        ),
+      });
+    });
+
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      drmSystems: {
+        'com.apple.fps': {
+          serverCertificateUrl: 'https://example.com/certificate.cer',
+        },
+      },
+    });
+
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, { media });
+    emeController.onManifestParsed(Events.MANIFEST_PARSED, { levels: [] });
+
+    self.setTimeout(() => {
+      xhr.status = 200;
+      xhr.readyState = XMLHttpRequest.DONE;
+      xhr.response = new Uint8Array();
+      xhr.onreadystatechange();
+    }, 0);
+
+    emeController.mediaKeysPromise.finally(() => {
+      expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
+      expect(mediaKeysSetServerCertificateSpy.args[0][0]).to.equal(
+        xhr.response
+      );
+
+      expect(emeController.hls.trigger).to.have.been.calledOnce;
+      expect(emeController.hls.trigger.args[0][1].details).to.equal(
+        ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_UPDATE_FAILED
+      );
+
+      done();
+    });
+  });
+
   it('should fetch the server certificate and trigger request failed error', function (done) {
     const xhr = setupXHRMock();
 
