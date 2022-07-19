@@ -115,7 +115,7 @@ describe('TransmuxerInterface tests', function () {
     const videoCodec = '';
     const duration = 0;
     const accurateTimeOffset = true;
-    let chunkMeta = new ChunkMetadata(currentFrag.level, currentFrag.sn, 0);
+    let chunkMeta = new ChunkMetadata(currentFrag.level, currentFrag.sn + 1, 0);
     let state = new TransmuxState(false, true, true, false, 0, false);
     transmuxerInterface.push(
       data,

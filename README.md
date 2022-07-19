@@ -41,7 +41,7 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
   - Packetized metadata (ID3v2.3.0) Elementary Stream
 - AAC container (audio only streams)
 - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
-- Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS and FMP4 Emsg)
+- Timed Metadata for HTTP Live Streaming (ID3 format carried in MPEG-2 TS, Emsg in CMAF/Fragmented MP4, and DATERANGE playlist tags)
 - AES-128 decryption
 - SAMPLE-AES decryption (only supported if using MPEG-2 TS container)
 - Encrypted media extensions (EME) support for DRM (digital rights management)
@@ -102,10 +102,10 @@ The following properties are added to their respective variants' attribute list 
 - `#EXT-X-PRELOAD-HINT:<attribute-list>`
 - `#EXT-X-SKIP:<attribute-list>`
 - `#EXT-X-RENDITION-REPORT:<attribute-list>`
+- `#EXT-X-DATERANGE:<attribute-list>`
 
 The following tags are added to their respective fragment's attribute list but are not implemented in streaming and playback.
 
-- `#EXT-X-DATERANGE:<attribute-list>` (Not added to metadata TextTracks. See [#2218](https://github.com/video-dev/hls.js/issues/2218))
 - `#EXT-X-BITRATE` (Not used in ABR controller)
 - `#EXT-X-GAP` (Not implemented. See [#2940](https://github.com/video-dev/hls.js/issues/2940))
 
@@ -113,7 +113,6 @@ The following tags are added to their respective fragment's attribute list but a
 
 For a complete list of issues, see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependent on the runtime environment (for example, not all browsers on the same OS support HEVC).
 
-- `#EXT-X-DATERANGE` in "metadata" TextTracks [#2218](https://github.com/video-dev/hls.js/issues/2218)
 - `#EXT-X-GAP` filling [#2940](https://github.com/video-dev/hls.js/issues/2940)
 - `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
 - `SAMPLE-AES` with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
@@ -328,9 +327,9 @@ Directly include dist/hls.js or dist/hls.min.js in a script tag on the page. Thi
 native browser support for HLS playback in HTMLMediaElements:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<!-- Or if you want a more recent alpha version -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@alpha"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<!-- Or if you want the latest version from the main branch -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
 <video id="video"></video>
 <script>
   var video = document.getElementById('video');
@@ -364,9 +363,9 @@ native browser support for HLS playback in HTMLMediaElements:
 To check for native browser support first and then fallback to HLS.js, swap these conditionals. See [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-670021358) to understand some of the tradeoffs.
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<!-- Or if you want a more recent alpha version -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@alpha"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<!-- Or if you want the latest version from the main branch -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
 <video id="video"></video>
 <script>
   var video = document.getElementById('video');

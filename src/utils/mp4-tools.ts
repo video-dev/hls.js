@@ -111,7 +111,7 @@ export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
   const version = sidx[0];
 
   // set initial offset, we skip the reference ID (not needed)
-  let index = version === 0 ? 8 : 16;
+  let index = 8;
 
   const timescale = readUint32(sidx, index);
   index += 4;
@@ -501,8 +501,11 @@ export function offsetStartDTS(
       findBox(traf, ['tfdt']).forEach((tfdt) => {
         const version = tfdt[0];
         let baseMediaDecodeTime = readUint32(tfdt, 4);
+
         if (version === 0) {
-          writeUint32(tfdt, 4, baseMediaDecodeTime - timeOffset * timescale);
+          baseMediaDecodeTime -= timeOffset * timescale;
+          baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
+          writeUint32(tfdt, 4, baseMediaDecodeTime);
         } else {
           baseMediaDecodeTime *= Math.pow(2, 32);
           baseMediaDecodeTime += readUint32(tfdt, 8);

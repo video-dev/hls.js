@@ -125,6 +125,7 @@ export default class TransmuxerInterface {
       w.removeEventListener('message', this.onwmsg);
       w.terminate();
       this.worker = null;
+      this.onwmsg = undefined;
     } else {
       const transmuxer = this.transmuxer;
       if (transmuxer) {
@@ -136,8 +137,11 @@ export default class TransmuxerInterface {
     if (observer) {
       observer.removeAllListeners();
     }
+    this.frag = null;
     // @ts-ignore
     this.observer = null;
+    // @ts-ignore
+    this.hls = null;
   }
 
   push(
@@ -161,7 +165,7 @@ export default class TransmuxerInterface {
     const discontinuity = !(lastFrag && frag.cc === lastFrag.cc);
     const trackSwitch = !(lastFrag && chunkMeta.level === lastFrag.level);
     const snDiff = lastFrag ? chunkMeta.sn - (lastFrag.sn as number) : -1;
-    const partDiff = this.part ? chunkMeta.part - this.part.index : 1;
+    const partDiff = this.part ? chunkMeta.part - this.part.index : -1;
     const contiguous =
       !trackSwitch && (snDiff === 1 || (snDiff === 0 && partDiff === 1));
     const now = self.performance.now();

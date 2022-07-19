@@ -23,7 +23,7 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
-import type {
+import {
   DemuxedAvcTrack,
   DemuxedAudioTrack,
   DemuxedTrack,
@@ -34,6 +34,7 @@ import type {
   DemuxedUserdataTrack,
   ElementaryStreamData,
   KeyData,
+  MetadataSchema,
 } from '../types/demuxer';
 import { AudioFrame } from '../types/demuxer';
 
@@ -166,7 +167,7 @@ class TSDemuxer implements Demuxer {
     ) as DemuxedAudioTrack;
     this._id3Track = TSDemuxer.createTrack('id3') as DemuxedMetadataTrack;
     this._txtTrack = TSDemuxer.createTrack('text') as DemuxedUserdataTrack;
-    this._audioTrack.isAAC = true;
+    this._audioTrack.segmentCodec = 'aac';
 
     // flush any partial content
     this.aacOverFlow = null;
@@ -284,10 +285,13 @@ class TSDemuxer implements Demuxer {
           case audioId:
             if (stt) {
               if (audioData && (pes = parsePES(audioData))) {
-                if (audioTrack.isAAC) {
-                  this.parseAACPES(audioTrack, pes);
-                } else {
-                  this.parseMPEGPES(audioTrack, pes);
+                switch (audioTrack.segmentCodec) {
+                  case 'aac':
+                    this.parseAACPES(audioTrack, pes);
+                    break;
+                  case 'mp3':
+                    this.parseMPEGPES(audioTrack, pes);
+                    break;
                 }
               }
               audioData = { data: [], size: 0 };
@@ -325,8 +329,7 @@ class TSDemuxer implements Demuxer {
             const parsedPIDs = parsePMT(
               data,
               offset,
-              this.typeSupported.mpeg === true ||
-                this.typeSupported.mp3 === true,
+              this.typeSupported,
               isSampleAes
             );
 
@@ -344,7 +347,7 @@ class TSDemuxer implements Demuxer {
             audioId = parsedPIDs.audio;
             if (audioId > 0) {
               audioTrack.pid = audioId;
-              audioTrack.isAAC = parsedPIDs.isAAC;
+              audioTrack.segmentCodec = parsedPIDs.segmentCodec;
             }
             id3Id = parsedPIDs.id3;
             if (id3Id > 0) {
@@ -441,12 +444,14 @@ class TSDemuxer implements Demuxer {
     }
 
     if (audioData && (pes = parsePES(audioData))) {
-      if (audioTrack.isAAC) {
-        this.parseAACPES(audioTrack, pes);
-      } else {
-        this.parseMPEGPES(audioTrack, pes);
+      switch (audioTrack.segmentCodec) {
+        case 'aac':
+          this.parseAACPES(audioTrack, pes);
+          break;
+        case 'mp3':
+          this.parseMPEGPES(audioTrack, pes);
+          break;
       }
-
       audioTrack.pesData = null;
     } else {
       if (audioData?.size) {
@@ -493,7 +498,7 @@ class TSDemuxer implements Demuxer {
   ): Promise<DemuxerResult> {
     return new Promise((resolve) => {
       const { audioTrack, videoTrack } = demuxResult;
-      if (audioTrack.samples && audioTrack.isAAC) {
+      if (audioTrack.samples && audioTrack.segmentCodec === 'aac') {
         sampleAes.decryptAacSamples(audioTrack.samples, 0, () => {
           if (videoTrack.samples) {
             sampleAes.decryptAvcSamples(videoTrack.samples, 0, 0, () => {
@@ -833,20 +838,26 @@ class TSDemuxer implements Demuxer {
   private parseAACPES(track: DemuxedAudioTrack, pes: PES) {
     let startOffset = 0;
     const aacOverFlow = this.aacOverFlow;
-    const data = pes.data;
+    let data = pes.data;
     if (aacOverFlow) {
       this.aacOverFlow = null;
+      const frameMissingBytes = aacOverFlow.missing;
       const sampleLength = aacOverFlow.sample.unit.byteLength;
-      const frameMissingBytes = Math.min(aacOverFlow.missing, sampleLength);
-      const frameOverflowBytes = sampleLength - frameMissingBytes;
-      aacOverFlow.sample.unit.set(
-        data.subarray(0, frameMissingBytes),
-        frameOverflowBytes
-      );
-      track.samples.push(aacOverFlow.sample);
-
-      // logger.log(`AAC: append overflowing ${frameOverflowBytes} bytes to beginning of new PES`);
-      startOffset = aacOverFlow.missing;
+      // logger.log(`AAC: append overflowing ${sampleLength} bytes to beginning of new PES`);
+      if (frameMissingBytes === -1) {
+        const tmp = new Uint8Array(sampleLength + data.byteLength);
+        tmp.set(aacOverFlow.sample.unit, 0);
+        tmp.set(data, sampleLength);
+        data = tmp;
+      } else {
+        const frameOverflowBytes = sampleLength - frameMissingBytes;
+        aacOverFlow.sample.unit.set(
+          data.subarray(0, frameMissingBytes),
+          frameOverflowBytes
+        );
+        track.samples.push(aacOverFlow.sample);
+        startOffset = aacOverFlow.missing;
+      }
     }
     // look for ADTS header (0xFFFx)
     let offset: number;
@@ -902,26 +913,20 @@ class TSDemuxer implements Demuxer {
 
     // scan for aac samples
     let frameIndex = 0;
+    let frame;
     while (offset < len) {
-      if (ADTS.isHeader(data, offset)) {
-        if (offset + 5 < len) {
-          const frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
-          if (frame) {
-            if (frame.missing) {
-              this.aacOverFlow = frame;
-            } else {
-              offset += frame.length;
-              frameIndex++;
-              continue;
-            }
+      frame = ADTS.appendFrame(track, data, offset, pts, frameIndex);
+      offset += frame.length;
+      if (!frame.missing) {
+        frameIndex++;
+        for (; offset < len - 1; offset++) {
+          if (ADTS.isHeader(data, offset)) {
+            break;
           }
         }
-        // We are at an ADTS header, but do not have enough data for a frame
-        // Remaining data will be added to aacOverFlow
-        break;
       } else {
-        // nothing found, keep looking
-        offset++;
+        this.aacOverFlow = frame;
+        break;
       }
     }
   }
@@ -965,7 +970,10 @@ class TSDemuxer implements Demuxer {
       logger.warn('[tsdemuxer]: ID3 PES unknown PTS');
       return;
     }
-    id3Track.samples.push(pes as Required<PES>);
+    const id3Sample = Object.assign({}, pes as Required<PES>, {
+      type: this._avcTrack ? MetadataSchema.emsg : MetadataSchema.audioId3,
+    });
+    id3Track.samples.push(id3Sample);
   }
 }
 
@@ -992,8 +1000,8 @@ function parsePAT(data, offset) {
   // logger.log('PMT PID:'  + this._pmtId);
 }
 
-function parsePMT(data, offset, mpegSupported, isSampleAes) {
-  const result = { audio: -1, avc: -1, id3: -1, isAAC: true };
+function parsePMT(data, offset, typeSupported, isSampleAes) {
+  const result = { audio: -1, avc: -1, id3: -1, segmentCodec: 'aac' };
   const sectionLength = ((data[offset + 1] & 0x0f) << 8) | data[offset + 2];
   const tableEnd = offset + 3 + sectionLength - 4;
   // to determine where the table is, we have to figure out how
@@ -1051,11 +1059,11 @@ function parsePMT(data, offset, mpegSupported, isSampleAes) {
       case 0x03:
       case 0x04:
         // logger.log('MPEG PID:'  + pid);
-        if (!mpegSupported) {
+        if (typeSupported.mpeg !== true && typeSupported.mp3 !== true) {
           logger.log('MPEG audio found, not supported in this browser');
         } else if (result.audio === -1) {
           result.audio = pid;
-          result.isAAC = false;
+          result.segmentCodec = 'mp3';
         }
         break;
 
