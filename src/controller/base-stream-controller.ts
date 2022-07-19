@@ -1143,6 +1143,7 @@ export default class BaseStreamController
     return (
       details.live &&
       details.canBlockReload &&
+      details.partTarget &&
       details.tuneInGoal >
         Math.max(details.partHoldBack, details.partTarget * advancePartLimit)
     );
