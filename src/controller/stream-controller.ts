@@ -244,10 +244,7 @@ export default class StreamController
       return;
     }
 
-    const bufferInfo = this.getFwdBufferInfo(
-      this.mediaBuffer ? this.mediaBuffer : media,
-      PlaylistLevelType.MAIN
-    );
+    const bufferInfo = this.getMainFwdBufferInfo();
     if (bufferInfo === null) {
       return;
     }
@@ -274,17 +271,19 @@ export default class StreamController
 
     const targetBufferTime = bufferInfo.end;
     let frag = this.getNextFragment(targetBufferTime, levelDetails);
-    // Avoid backtracking after seeking or switching by loading an earlier segment in streams that could backtrack
+    // Avoid backtracking by loading an earlier segment in streams with segments that do not start with a key frame (flagged by `couldBacktrack`)
     if (
       this.couldBacktrack &&
       !this.fragPrevious &&
       frag &&
-      frag.sn !== 'initSegment'
+      frag.sn !== 'initSegment' &&
+      this.fragmentTracker.getState(frag) !== FragmentState.OK
     ) {
       const fragIdx = frag.sn - levelDetails.startSN;
-      if (fragIdx > 1) {
-        frag = levelDetails.fragments[fragIdx - 1];
-        this.fragmentTracker.removeFragment(frag);
+      const backtrackFrag = levelDetails.fragments[fragIdx - 1];
+      if (backtrackFrag && frag.cc === backtrackFrag.cc) {
+        frag = backtrackFrag;
+        this.fragmentTracker.removeFragment(backtrackFrag);
       }
     }
     // Avoid loop loading by using nextLoadPosition set for backtracking
@@ -1103,8 +1102,12 @@ export default class StreamController
           }
           if (video.dropped && video.independent) {
             // Backtrack if dropped frames create a gap after currentTime
-            const pos = this.getLoadPosition() + this.config.maxBufferHole;
-            if (pos < startPTS) {
+
+            const bufferInfo = this.getMainFwdBufferInfo();
+            const targetBufferTime =
+              (bufferInfo ? bufferInfo.end : this.getLoadPosition()) +
+              this.config.maxBufferHole;
+            if (targetBufferTime < startPTS) {
               this.backtrack(frag);
               return;
             }
@@ -1268,6 +1271,13 @@ export default class StreamController
     });
     // trigger handler right now
     this.tick();
+  }
+
+  private getMainFwdBufferInfo() {
+    return this.getFwdBufferInfo(
+      this.mediaBuffer ? this.mediaBuffer : this.media,
+      PlaylistLevelType.MAIN
+    );
   }
 
   private backtrack(frag: Fragment) {
