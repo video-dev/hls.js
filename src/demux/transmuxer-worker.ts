@@ -74,9 +74,12 @@ export default function TransmuxerWorker(self) {
   });
 }
 
-function emitTransmuxComplete(self: any, transmuxResult: TransmuxerResult) {
+function emitTransmuxComplete(
+  self: any,
+  transmuxResult: TransmuxerResult
+): boolean {
   if (isEmptyResult(transmuxResult.remuxResult)) {
-    return;
+    return false;
   }
   const transferable: Array<ArrayBuffer> = [];
   const { audio, video } = transmuxResult.remuxResult;
@@ -90,6 +93,7 @@ function emitTransmuxComplete(self: any, transmuxResult: TransmuxerResult) {
     { event: 'transmuxComplete', data: transmuxResult },
     transferable
   );
+  return true;
 }
 
 // Converts data to a transferable object https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast)
@@ -111,9 +115,14 @@ function handleFlushResult(
   results: Array<TransmuxerResult>,
   chunkMeta: ChunkMetadata
 ) {
-  results.forEach((result) => {
-    emitTransmuxComplete(self, result);
-  });
+  const parsed = results.reduce(
+    (parsed, result) => emitTransmuxComplete(self, result) || parsed,
+    false
+  );
+  if (!parsed) {
+    // Emit at least one "transmuxComplete" message even if media is not found to update stream-controller state to PARSING
+    self.postMessage({ event: 'transmuxComplete', data: results[0] });
+  }
   self.postMessage({ event: 'flush', data: chunkMeta });
 }
 
