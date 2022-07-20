@@ -28,14 +28,14 @@ design idea is pretty simple :
 - [src/controller/audio-stream-controller.ts][]
   - audio stream controller is in charge of filling audio buffer in case alternate audio tracks are used
   - if buffer is not filled up appropriately (i.e. as per defined maximum buffer size, it will trigger the following actions:
-    - retrieve "not buffered" media position greater then current playback position. this is performed by comparing audio sourcebuffer.buffered and media.currentTime.
+    - retrieve "not buffered" media position greater than current playback position. This is performed by comparing audio `sourcebuffer.buffered` and `media.currentTime`.
     - retrieve URL of fragment matching with this media position, and appropriate audio track
     - trigger KEY_LOADING event (only if fragment is encrypted)
     - trigger FRAG_LOADING event
     - **trigger fragment demuxing** on FRAG_LOADED
     - trigger BUFFER_CODECS on FRAG_PARSING_INIT_SEGMENT
     - trigger BUFFER_APPENDING on FRAG_PARSING_DATA
-    - once FRAG_PARSED is received an all segments have been appended (BUFFER_APPENDED) then audio stream controller will recheck whether it needs to buffer more data.
+    - once FRAG_PARSED is received and all segments have been appended (BUFFER_APPENDED) then audio stream controller will recheck whether it needs to buffer more data.
 - [src/controller/audio-track-controller.ts][]
   - audio track controller is handling alternate audio track set/get ((re)loading tracks/switching)
 - [src/controller/buffer-controller.ts][]
