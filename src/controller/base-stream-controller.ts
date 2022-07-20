@@ -1333,9 +1333,8 @@ export default class BaseStreamController
             // The new transmuxer will be configured with a time offset matching the next fragment start,
             // preventing the timeline from shifting.
             this.warn(
-              `Could not parse fragment ${frag.sn} ${type} duration reliably (${parsedDuration}) resetting transmuxer to fallback to playlist timing`
+              `Could not parse fragment ${frag.sn} ${type} duration reliably (${parsedDuration})`
             );
-            this.resetTransmuxer();
             return result || false;
           }
           const drift = partial
@@ -1363,12 +1362,14 @@ export default class BaseStreamController
       },
       false
     );
-    if (parsed) {
-      this.state = State.PARSED;
-      this.hls.trigger(Events.FRAG_PARSED, { frag, part });
-    } else {
-      this.resetLoadingState();
+    if (!parsed) {
+      this.warn(
+        `Found no media in fragment ${frag.sn} of level ${level.id} resetting transmuxer to fallback to playlist timing`
+      );
+      this.resetTransmuxer();
     }
+    this.state = State.PARSED;
+    this.hls.trigger(Events.FRAG_PARSED, { frag, part });
   }
 
   protected resetTransmuxer() {
