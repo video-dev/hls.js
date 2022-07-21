@@ -706,6 +706,7 @@ export default class MP4Remuxer implements Remuxer {
     const rawMPEG: boolean =
       track.segmentCodec === 'mp3' && this.typeSupported.mpeg;
     const outputSamples: Array<Mp4Sample> = [];
+    const alignedWithVideo = videoTimeOffset !== undefined;
 
     let inputSamples: Array<AudioSample> = track.samples;
     let offset: number = rawMPEG ? 0 : 8;
@@ -753,7 +754,7 @@ export default class MP4Remuxer implements Remuxer {
       if (videoTimeOffset === 0) {
         // Set the start to 0 to match video so that start gaps larger than inputSampleDuration are filled with silence
         nextAudioPts = 0;
-      } else if (accurateTimeOffset) {
+      } else if (accurateTimeOffset && !alignedWithVideo) {
         // When not seeking, not live, and LevelDetails.PTSKnown, use fragment start as predicted next audio PTS
         nextAudioPts = Math.max(0, timeOffsetMpegTS);
       } else {
@@ -769,7 +770,6 @@ export default class MP4Remuxer implements Remuxer {
     // frame.
 
     if (track.segmentCodec === 'aac') {
-      const alignedWithVideo = videoTimeOffset !== undefined;
       const maxAudioFramesDrift = this.config.maxAudioFramesDrift;
       for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; i++) {
         // First, let's see how far off this frame is from where we expect it to be
