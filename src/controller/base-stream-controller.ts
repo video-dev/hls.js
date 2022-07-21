@@ -57,7 +57,6 @@ export const State = {
   WAITING_TRACK: 'WAITING_TRACK',
   PARSING: 'PARSING',
   PARSED: 'PARSED',
-  BACKTRACKING: 'BACKTRACKING',
   ENDED: 'ENDED',
   ERROR: 'ERROR',
   WAITING_INIT_PTS: 'WAITING_INIT_PTS',
@@ -351,7 +350,6 @@ export default class BaseStreamController
         if (this.fragContextChanged(frag)) {
           if (
             state === State.FRAG_LOADING ||
-            state === State.BACKTRACKING ||
             (!this.fragCurrent && state === State.PARSING)
           ) {
             this.fragmentTracker.removeFragment(frag);
@@ -363,14 +361,6 @@ export default class BaseStreamController
         if ('payload' in data) {
           this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
           this.hls.trigger(Events.FRAG_LOADED, data);
-
-          // Tracker backtrack must be called after onFragLoaded to update the fragment entity state to BACKTRACKED
-          // This happens after handleTransmuxComplete when the worker or progressive is disabled
-          if (this.state === State.BACKTRACKING) {
-            this.fragmentTracker.backtrack(frag, data);
-            this.resetFragmentLoading(frag);
-            return;
-          }
         }
 
         // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
@@ -1018,27 +1008,7 @@ export default class BaseStreamController
       const curSNIdx = frag.sn - levelDetails.startSN;
       const sameLevel = fragPrevious && frag.level === fragPrevious.level;
       const nextFrag = fragments[curSNIdx + 1];
-      const fragState = this.fragmentTracker.getState(frag);
-      if (fragState === FragmentState.BACKTRACKED) {
-        frag = null;
-        let i = curSNIdx;
-        while (
-          fragments[i] &&
-          this.fragmentTracker.getState(fragments[i]) ===
-            FragmentState.BACKTRACKED
-        ) {
-          // When fragPrevious is null, backtrack to first the first fragment is not BACKTRACKED for loading
-          // When fragPrevious is set, we want the first BACKTRACKED fragment for parsing and buffering
-          if (!fragPrevious) {
-            frag = fragments[--i];
-          } else {
-            frag = fragments[i--];
-          }
-        }
-        if (!frag) {
-          frag = nextFrag;
-        }
-      } else if (fragPrevious && frag.sn === fragPrevious.sn && !loadingParts) {
+      if (fragPrevious && frag.sn === fragPrevious.sn && !loadingParts) {
         // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
         // non-uniform fragment durations
         if (sameLevel) {
