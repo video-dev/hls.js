@@ -5,7 +5,6 @@ import type { FragLoadedData } from './events';
 export interface FragmentEntity {
   body: Fragment;
   loaded: FragLoadedData | null;
-  backtrack: FragLoadedData | null;
   buffered: boolean;
   range: { [key in SourceBufferName]: FragmentBufferedRange };
 }
