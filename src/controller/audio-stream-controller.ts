@@ -300,8 +300,12 @@ class AudioStreamController
     if (bufferInfo === null) {
       return;
     }
+    const mainBufferInfo = this.getFwdBufferInfo(
+      this.videoBuffer ? this.videoBuffer : this.media,
+      PlaylistLevelType.MAIN
+    );
     const bufferLen = bufferInfo.len;
-    const maxBufLen = this.getMaxBufferLength();
+    const maxBufLen = this.getMaxBufferLength(mainBufferInfo?.len);
     const audioSwitch = this.audioSwitch;
 
     // if buffer length is less than maxBufLen try to load a new fragment
@@ -334,6 +338,18 @@ class AudioStreamController
       }
     }
 
+    // buffer audio up to one target duration ahead of main buffer
+    if (
+      mainBufferInfo &&
+      targetBufferTime > mainBufferInfo.end + trackDetails.targetduration
+    ) {
+      return;
+    }
+    // wait for main buffer after buffing some audio
+    if ((!mainBufferInfo || !mainBufferInfo.len) && bufferInfo.len) {
+      return;
+    }
+
     const frag = this.getNextFragment(targetBufferTime, trackDetails);
     if (!frag) {
       this.bufferFlushed = true;
@@ -347,16 +363,12 @@ class AudioStreamController
     }
   }
 
-  protected getMaxBufferLength(): number {
+  protected getMaxBufferLength(mainBufferLength?: number): number {
     const maxConfigBuffer = super.getMaxBufferLength();
-    const mainBufferInfo = this.getFwdBufferInfo(
-      this.videoBuffer ? this.videoBuffer : this.media,
-      PlaylistLevelType.MAIN
-    );
-    if (mainBufferInfo === null) {
+    if (!mainBufferLength) {
       return maxConfigBuffer;
     }
-    return Math.max(maxConfigBuffer, mainBufferInfo.len);
+    return Math.max(maxConfigBuffer, mainBufferLength);
   }
 
   onMediaDetaching() {
