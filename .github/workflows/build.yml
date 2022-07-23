@@ -391,13 +391,6 @@ jobs:
             ua: chrome
             os: OS X 10.11
             uaVersion: '79.0'
-          - config: internet_explorer-win_10
-            ua: internet explorer
-            os: Windows 10
-          - config: internet_explorer-win_8.1-11.0
-            ua: internet explorer
-            os: Windows 8.1
-            uaVersion: '11.0'
           - config: chrome-win_7-69.0
             ua: chrome
             os: Windows 7

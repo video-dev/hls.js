@@ -61,7 +61,6 @@ module.exports = {
     url: 'https://test-streams.mux.dev/x36xhzz/url_6/193039199_mp4_h264_aac_hq_7.m3u8',
     description: 'Big Buck Bunny - 480p only',
     abr: false,
-    skip_ua: ['internet explorer'],
   },
   arte: {
     url: 'https://test-streams.mux.dev/test_001/stream.m3u8',
@@ -72,14 +71,12 @@ module.exports = {
     url: 'https://test-streams.mux.dev/dai-discontinuity-deltatre/manifest.m3u8',
     description: 'Ad-insertion in event stream',
     abr: false,
-    skip_ua: ['internet explorer'],
   },
   issue666: {
     url: 'https://playertest.longtailvideo.com/adaptive/issue666/playlists/cisq0gim60007xzvi505emlxx.m3u8',
     description:
       'Surveillance footage - https://github.com/video-dev/hls.js/issues/666',
     abr: false,
-    skip_ua: ['internet explorer'],
   },
   closedCaptions: {
     url: 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
@@ -110,26 +107,23 @@ module.exports = {
     url: 'https://pl.streamingvideoprovider.com/mp3-playlist/playlist.m3u8',
     description: 'MPEG Audio Only demo',
     abr: false,
-    skip_ua: ['internet explorer', 'MicrosoftEdge', 'firefox'],
+    skip_ua: ['MicrosoftEdge', 'firefox'],
   },
   fmp4: {
     url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-hls/hls.m3u8',
     description: 'HLS fMP4 Angel-One multiple audio-tracks',
     abr: true,
-    skip_ua: ['internet explorer'],
   },
   fmp4Bitmovin: {
     url: 'https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s-fmp4/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8',
     description: 'HLS fMP4 by Bitmovin',
     abr: true,
-    skip_ua: ['internet explorer'],
   },
   fmp4BitmovinHevc: {
     url: 'https://bitmovin-a.akamaihd.net/content/dataset/multi-codec/hevc/stream_fmp4.m3u8',
     description:
       'HLS HEVC fMP4 by Bitmovin (Safari and Edge? only as of 2020-08)',
     abr: true,
-    skip_ua: ['internet explorer'],
     skipFunctionalTests: true,
   },
   offset_pts: {
@@ -143,12 +137,7 @@ module.exports = {
       description:
         'Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo',
       abr: true,
-      skip_ua: [
-        'firefox',
-        'safari',
-        'internet explorer',
-        { name: 'chrome', version: '69.0' },
-      ],
+      skip_ua: ['firefox', 'safari', { name: 'chrome', version: '69.0' }],
     },
     {
       widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
