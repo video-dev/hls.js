@@ -154,6 +154,7 @@ export default class MP4Remuxer implements Remuxer {
 
       const isVideoContiguous = this.isVideoContiguous;
       let firstKeyFrameIndex = -1;
+      let firstKeyFramePTS;
 
       if (enoughVideoSamples) {
         firstKeyFrameIndex = findKeyframeIndex(videoTrack.samples);
@@ -168,7 +169,8 @@ export default class MP4Remuxer implements Remuxer {
             videoTrack.dropped += firstKeyFrameIndex;
             videoTimeOffset +=
               (videoTrack.samples[0].pts - startPTS) /
-              (videoTrack.timescale || 90000);
+              videoTrack.inputTimeScale;
+            firstKeyFramePTS = videoTimeOffset;
           } else if (firstKeyFrameIndex === -1) {
             logger.warn(
               `[mp4-remuxer]: No keyframe found out of ${length} video samples`
@@ -239,6 +241,7 @@ export default class MP4Remuxer implements Remuxer {
         if (video) {
           video.firstKeyFrame = firstKeyFrameIndex;
           video.independent = firstKeyFrameIndex !== -1;
+          video.firstKeyFramePTS = firstKeyFramePTS;
         }
       }
     }

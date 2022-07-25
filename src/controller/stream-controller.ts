@@ -54,6 +54,7 @@ export default class StreamController
   private fragLastKbps: number = 0;
   private stalled: boolean = false;
   private couldBacktrack: boolean = false;
+  private backtrackFragment: Fragment | null = null;
   private audioCodecSwitch: boolean = false;
   private videoBuffer: any | null = null;
 
@@ -269,7 +270,15 @@ export default class StreamController
       return;
     }
 
-    const targetBufferTime = bufferInfo.end;
+    if (
+      this.backtrackFragment &&
+      this.backtrackFragment.start > bufferInfo.end
+    ) {
+      this.backtrackFragment = null;
+    }
+    const targetBufferTime = this.backtrackFragment
+      ? this.backtrackFragment.start
+      : bufferInfo.end;
     let frag = this.getNextFragment(targetBufferTime, levelDetails);
     // Avoid backtracking by loading an earlier segment in streams with segments that do not start with a key frame (flagged by `couldBacktrack`)
     if (
@@ -279,12 +288,15 @@ export default class StreamController
       frag.sn !== 'initSegment' &&
       this.fragmentTracker.getState(frag) !== FragmentState.OK
     ) {
-      const fragIdx = frag.sn - levelDetails.startSN;
+      const backtrackSn = (this.backtrackFragment ?? frag).sn as number;
+      const fragIdx = backtrackSn - levelDetails.startSN;
       const backtrackFrag = levelDetails.fragments[fragIdx - 1];
       if (backtrackFrag && frag.cc === backtrackFrag.cc) {
         frag = backtrackFrag;
         this.fragmentTracker.removeFragment(backtrackFrag);
       }
+    } else if (this.backtrackFragment && bufferInfo.len) {
+      this.backtrackFragment = null;
     }
     // Avoid loop loading by using nextLoadPosition set for backtracking
     if (
@@ -322,19 +334,8 @@ export default class StreamController
     targetBufferTime: number
   ) {
     // Check if fragment is not loaded
-    let fragState = this.fragmentTracker.getState(frag);
+    const fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
-    // Use data from loaded backtracked fragment if available
-    if (fragState === FragmentState.BACKTRACKED) {
-      const data = this.fragmentTracker.getBacktrackData(frag);
-      if (data) {
-        this._handleFragmentLoadProgress(data);
-        this._handleFragmentLoadComplete(data);
-        return;
-      } else {
-        fragState = FragmentState.NOT_LOADED;
-      }
-    }
     if (
       fragState === FragmentState.NOT_LOADED ||
       fragState === FragmentState.PARTIAL
@@ -466,6 +467,7 @@ export default class StreamController
   private abortCurrentFrag() {
     const fragCurrent = this.fragCurrent;
     this.fragCurrent = null;
+    this.backtrackFragment = null;
     if (fragCurrent?.loader) {
       fragCurrent.loader.abort();
     }
@@ -475,7 +477,6 @@ export default class StreamController
       case State.FRAG_LOADING_WAITING_RETRY:
       case State.PARSING:
       case State.PARSED:
-      case State.BACKTRACKING:
         this.state = State.IDLE;
         break;
     }
@@ -548,6 +549,7 @@ export default class StreamController
     this.couldBacktrack = this.stalled = false;
     this.startPosition = this.lastCurrentTime = 0;
     this.fragPlaying = null;
+    this.backtrackFragment = null;
   }
 
   private onManifestParsed(
@@ -618,6 +620,7 @@ export default class StreamController
     ) {
       if (fragCurrent.level !== data.level && fragCurrent.loader) {
         this.state = State.IDLE;
+        this.backtrackFragment = null;
         fragCurrent.loader.abort();
       }
     }
@@ -1107,7 +1110,10 @@ export default class StreamController
             const targetBufferTime =
               (bufferInfo ? bufferInfo.end : this.getLoadPosition()) +
               this.config.maxBufferHole;
-            if (targetBufferTime < startPTS) {
+            const startTime = video.firstKeyFramePTS
+              ? video.firstKeyFramePTS
+              : startPTS;
+            if (targetBufferTime < startTime - this.config.maxBufferHole) {
               this.backtrack(frag);
               return;
             }
@@ -1129,6 +1135,9 @@ export default class StreamController
           startDTS,
           endDTS
         );
+        if (this.backtrackFragment) {
+          this.backtrackFragment = frag;
+        }
         this.bufferFragmentData(video, frag, part, chunkMeta);
       }
     } else if (remuxResult.independent === false) {
@@ -1283,17 +1292,13 @@ export default class StreamController
   private backtrack(frag: Fragment) {
     this.couldBacktrack = true;
     // Causes findFragments to backtrack through fragments to find the keyframe
+    this.backtrackFragment = frag;
     this.resetTransmuxer();
     this.flushBufferGap(frag);
-    const data = this.fragmentTracker.backtrack(frag);
+    this.fragmentTracker.removeFragment(frag);
     this.fragPrevious = null;
     this.nextLoadPosition = frag.start;
-    if (data) {
-      this.resetFragmentLoading(frag);
-    } else {
-      // Change state to BACKTRACKING so that fragmentEntity.backtrack data can be added after _doFragLoad
-      this.state = State.BACKTRACKING;
-    }
+    this.state = State.IDLE;
   }
 
   private checkFragmentChanged() {
@@ -1319,6 +1324,7 @@ export default class StreamController
         fragPlayingCurrent = this.getAppendedFrag(currentTime + 0.1);
       }
       if (fragPlayingCurrent) {
+        this.backtrackFragment = null;
         const fragPlaying = this.fragPlaying;
         const fragCurrentLevel = fragPlayingCurrent.level;
         if (
