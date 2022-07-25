@@ -17,7 +17,6 @@ import type Hls from '../hls';
 
 export enum FragmentState {
   NOT_LOADED = 'NOT_LOADED',
-  BACKTRACKED = 'BACKTRACKED',
   APPENDING = 'APPENDING',
   PARTIAL = 'PARTIAL',
   OK = 'OK',
@@ -199,7 +198,7 @@ export class FragmentTracker implements ComponentAPI {
         timeRange
       );
     });
-    fragmentEntity.backtrack = fragmentEntity.loaded = null;
+    fragmentEntity.loaded = null;
     if (Object.keys(fragmentEntity.range).length) {
       fragmentEntity.buffered = true;
     } else {
@@ -212,7 +211,7 @@ export class FragmentTracker implements ComponentAPI {
     const fragKey = getFragmentKey(frag);
     const fragmentEntity = this.fragments[fragKey];
     if (fragmentEntity) {
-      fragmentEntity.backtrack = fragmentEntity.loaded = null;
+      fragmentEntity.loaded = null;
       fragmentEntity.buffered = true;
     }
   }
@@ -295,9 +294,6 @@ export class FragmentTracker implements ComponentAPI {
 
     if (fragmentEntity) {
       if (!fragmentEntity.buffered) {
-        if (fragmentEntity.backtrack) {
-          return FragmentState.BACKTRACKED;
-        }
         return FragmentState.APPENDING;
       } else if (isPartial(fragmentEntity)) {
         return FragmentState.PARTIAL;
@@ -307,37 +303,6 @@ export class FragmentTracker implements ComponentAPI {
     }
 
     return FragmentState.NOT_LOADED;
-  }
-
-  public backtrack(
-    frag: Fragment,
-    data?: FragLoadedData
-  ): FragLoadedData | null {
-    const fragKey = getFragmentKey(frag);
-    const fragmentEntity = this.fragments[fragKey];
-    if (!fragmentEntity || fragmentEntity.backtrack) {
-      return null;
-    }
-    const backtrack = (fragmentEntity.backtrack = data
-      ? data
-      : fragmentEntity.loaded);
-    fragmentEntity.loaded = null;
-    return backtrack;
-  }
-
-  public getBacktrackData(fragment: Fragment): FragLoadedData | null {
-    const fragKey = getFragmentKey(fragment);
-    const fragmentEntity = this.fragments[fragKey];
-    if (fragmentEntity) {
-      const { backtrack } = fragmentEntity;
-      // If data was already sent to Worker it is detached no longer available
-      if (backtrack?.payload?.byteLength) {
-        return backtrack;
-      } else {
-        this.removeFragment(fragment);
-      }
-    }
-    return null;
   }
 
   private isTimeBuffered(
@@ -376,7 +341,6 @@ export class FragmentTracker implements ComponentAPI {
     this.fragments[fragKey] = {
       body: frag,
       loaded: data,
-      backtrack: null,
       buffered: false,
       range: Object.create(null),
     };
