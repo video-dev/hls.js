@@ -376,8 +376,6 @@ jobs:
           - safari-osx_10.15
           - firefox-win_10
           - chrome-osx_10.11-79.0
-          - internet_explorer-win_10
-          - internet_explorer-win_8.1-11.0
           - chrome-win_7-69.0
 
         include:
