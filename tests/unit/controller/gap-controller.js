@@ -269,6 +269,30 @@ describe('GapController', function () {
       wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
     });
 
+    it('should not detect stalls when loading an earlier fragment while seeking', function () {
+      wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
+      mockMedia.currentTime += 0.1;
+      gapController.poll(0);
+      expect(gapController.stalled).to.equal(null, 'buffered start');
+
+      wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
+      mockMedia.currentTime += 5;
+      mockMedia.seeking = true;
+      mockTimeRangesData.length = 1;
+      mockTimeRangesData[0] = [5.5, 10];
+      gapController.poll(mockMedia.currentTime - 5);
+      expect(gapController.stalled).to.equal(null, 'new seek position');
+
+      wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
+      gapController.poll(mockMedia.currentTime, {
+        start: 5,
+      });
+      expect(gapController.stalled).to.equal(
+        null,
+        'seeking while loading fragment'
+      );
+    });
+
     it('should trigger reportStall when stalling for 250ms or longer', function () {
       setStalling();
       wallClock.tick(250);

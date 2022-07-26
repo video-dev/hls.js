@@ -925,7 +925,8 @@ export default class StreamController
       this.seekToStartPos();
     } else {
       // Resolve gaps using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
-      gapController.poll(this.lastCurrentTime);
+      const activeFrag = this.state !== State.IDLE ? this.fragCurrent : null;
+      gapController.poll(this.lastCurrentTime, activeFrag);
     }
 
     this.lastCurrentTime = media.currentTime;
