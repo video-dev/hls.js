@@ -137,7 +137,12 @@ module.exports = {
       description:
         'Shaka-packager Widevine DRM (EME) HLS-fMP4 - Angel One Demo',
       abr: true,
-      skip_ua: ['firefox', 'safari', { name: 'chrome', version: '69.0' }],
+      skip_ua: [
+        'firefox',
+        'safari',
+        { name: 'chrome', version: '69.0' },
+        { name: 'chrome', version: '79.0' },
+      ],
     },
     {
       widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
