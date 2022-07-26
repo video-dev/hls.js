@@ -5,8 +5,8 @@ import { Events } from '../events';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { HlsConfig } from '../config';
+import type { Fragment } from '../loader/fragment';
 import type { FragmentTracker } from './fragment-tracker';
-import { Fragment } from '../loader/fragment';
 
 export const STALL_MINIMUM_DURATION_MS = 250;
 export const MAX_START_GAP_JUMP = 2.0;
@@ -43,7 +43,7 @@ export default class GapController {
    *
    * @param {number} lastCurrentTime Previously read playhead position
    */
-  public poll(lastCurrentTime: number) {
+  public poll(lastCurrentTime: number, activeFrag: Fragment | null) {
     const { config, media, stalled } = this;
     if (media === null) {
       return;
@@ -104,6 +104,7 @@ export default class GapController {
       // Next buffered range is too far ahead to jump to while still seeking
       const noBufferGap =
         !nextStart ||
+        (activeFrag && activeFrag.start <= currentTime) ||
         (nextStart - currentTime > MAX_START_GAP_JUMP &&
           !this.fragmentTracker.getPartialFragment(currentTime));
       if (hasEnoughBuffer || noBufferGap) {
