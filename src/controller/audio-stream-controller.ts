@@ -136,6 +136,7 @@ class AudioStreamController
           3
         )}`
       );
+      startPosition = lastCurrentTime;
       this.state = State.IDLE;
     } else {
       this.loadedmetadata = false;
