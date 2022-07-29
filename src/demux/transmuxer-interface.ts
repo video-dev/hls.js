@@ -291,6 +291,13 @@ export default class TransmuxerInterface {
         break;
       }
 
+      // pass logs from the worker thread to the main logger
+      case 'workerLog':
+        if (logger[data.data.logType]) {
+          logger[data.data.logType](data.data.message);
+        }
+        break;
+
       /* falls through */
       default: {
         data.data = data.data || {};
