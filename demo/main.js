@@ -1212,6 +1212,7 @@ function checkBuffer() {
           log += `Dropped frames: ${video.webkitDroppedFrameCount}\n`;
         }
       }
+      log += `TTFB Estimate: ${hls.ttfbEstimate.toFixed(3)}\n`;
       log += `Bandwidth Estimate: ${hls.bandwidthEstimate.toFixed(3)}\n`;
       if (events.isLive) {
         log +=
