@@ -320,12 +320,12 @@ export default class StreamController
       frag = frag.initSegment;
     }
 
-    this.loadFragment(frag, levelDetails, targetBufferTime);
+    this.loadFragment(frag, levelInfo, targetBufferTime);
   }
 
   protected loadFragment(
     frag: Fragment,
-    levelDetails: LevelDetails,
+    level: Level,
     targetBufferTime: number
   ) {
     // Check if fragment is not loaded
@@ -333,15 +333,15 @@ export default class StreamController
     this.fragCurrent = frag;
     if (fragState === FragmentState.NOT_LOADED) {
       if (frag.sn === 'initSegment') {
-        this._loadInitSegment(frag, levelDetails);
+        this._loadInitSegment(frag, level);
       } else if (this.bitrateTest) {
         this.log(
           `Fragment ${frag.sn} of level ${frag.level} is being downloaded to test bitrate and will not be buffered`
         );
-        this._loadBitrateTestFrag(frag, levelDetails);
+        this._loadBitrateTestFrag(frag, level);
       } else {
         this.startFragRequested = true;
-        super.loadFragment(frag, levelDetails, targetBufferTime);
+        super.loadFragment(frag, level, targetBufferTime);
       }
     } else if (fragState === FragmentState.APPENDING) {
       // Lower the buffer size and try again
@@ -1007,9 +1007,9 @@ export default class StreamController
     return audioCodec;
   }
 
-  private _loadBitrateTestFrag(frag: Fragment, levelDetails: LevelDetails) {
+  private _loadBitrateTestFrag(frag: Fragment, level: Level) {
     frag.bitrateTest = true;
-    this._doFragLoad(frag, levelDetails).then((data) => {
+    this._doFragLoad(frag, level).then((data) => {
       const { hls } = this;
       if (!data || hls.nextLoadLevel || this.fragContextChanged(frag)) {
         return;
