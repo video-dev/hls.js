@@ -156,13 +156,17 @@ class AbrController implements ComponentAPI {
     const expectedLen =
       stats.total ||
       Math.max(stats.loaded, Math.round((duration * level.maxBitrate) / 8));
+    let timeStreaming = timeLoading - ttfb;
+    if (timeStreaming < 1 && loadedFirstByte) {
+      timeStreaming = Math.min(timeLoading, (stats.loaded * 8) / bwEstimate);
+    }
     const loadRate = loadedFirstByte
-      ? (stats.loaded * 1000) / (timeLoading - ttfb)
+      ? (stats.loaded * 1000) / timeStreaming
       : 0;
     // fragLoadDelay is an estimate of the time (in seconds) it will take to buffer the remainder of the fragment
     const fragLoadedDelay = loadRate
       ? (expectedLen - stats.loaded) / loadRate
-      : expectedLen / bwEstimate + ttfbEstimate;
+      : (expectedLen * 8) / bwEstimate + ttfbEstimate;
     // Only downswitch if the time to finish loading the current fragment is greater than the amount of buffer left
     if (fragLoadedDelay <= bufferStarvationDelay) {
       return;
@@ -182,7 +186,7 @@ class AbrController implements ComponentAPI {
       const levelNextBitrate = levels[nextLoadLevel].maxBitrate;
       fragLevelNextLoadedDelay = loadRate
         ? (duration * levelNextBitrate) / (8 * 0.8 * loadRate)
-        : duration / bwEstimate + ttfbEstimate;
+        : (duration * levelNextBitrate) / bwEstimate + ttfbEstimate;
 
       if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
         break;
