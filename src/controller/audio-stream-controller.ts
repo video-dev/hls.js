@@ -362,7 +362,7 @@ class AudioStreamController
       return;
     }
 
-    this.loadFragment(frag, trackDetails, targetBufferTime);
+    this.loadFragment(frag, levelInfo, targetBufferTime);
   }
 
   protected getMaxBufferLength(mainBufferLength?: number): number {
@@ -821,7 +821,7 @@ class AudioStreamController
 
   protected loadFragment(
     frag: Fragment,
-    trackDetails: LevelDetails,
+    track: Level,
     targetBufferTime: number
   ) {
     // only load if fragment is not loaded or if in audio switch
@@ -835,15 +835,18 @@ class AudioStreamController
       fragState === FragmentState.PARTIAL
     ) {
       if (frag.sn === 'initSegment') {
-        this._loadInitSegment(frag, trackDetails);
-      } else if (trackDetails.live && !Number.isFinite(this.initPTS[frag.cc])) {
+        this._loadInitSegment(frag, track);
+      } else if (
+        track.details?.live &&
+        !Number.isFinite(this.initPTS[frag.cc])
+      ) {
         this.log(
           `Waiting for video PTS in continuity counter ${frag.cc} of live stream before loading audio fragment ${frag.sn} of level ${this.trackId}`
         );
         this.state = State.WAITING_INIT_PTS;
       } else {
         this.startFragRequested = true;
-        super.loadFragment(frag, trackDetails, targetBufferTime);
+        super.loadFragment(frag, track, targetBufferTime);
       }
     }
   }
