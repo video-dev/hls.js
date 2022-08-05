@@ -242,11 +242,13 @@ class AbrController implements ComponentAPI {
     event: Events.FRAG_LOADED,
     { frag, part }: FragLoadedData
   ) {
+    const stats = part ? part.stats : frag.stats;
+    if (frag.type === PlaylistLevelType.MAIN) {
+      this.bwEstimator.sampleTTFB(stats.loading.first - stats.loading.start);
+    }
     if (this.ignoreFragment(frag)) {
       return;
     }
-    const stats = part ? part.stats : frag.stats;
-    const duration = part ? part.duration : frag.duration;
     // stop monitoring bw once frag loaded
     this.clearTimer();
     // store level id after successful fragment load
@@ -254,10 +256,9 @@ class AbrController implements ComponentAPI {
     // reset forced auto level value so that next level will be selected
     this._nextAutoLevel = -1;
 
-    this.bwEstimator.sampleTTFB(stats.loading.first - stats.loading.start);
-
     // compute level average bitrate
     if (this.hls.config.abrMaxWithRealBitrate) {
+      const duration = part ? part.duration : frag.duration;
       const level = this.hls.levels[frag.level];
       const loadedBytes =
         (level.loaded ? level.loaded.bytes : 0) + stats.loaded;
