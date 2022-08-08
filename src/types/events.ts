@@ -21,6 +21,7 @@ import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
 import type { AttrList } from '../utils/attr-list';
 import type { HlsListeners } from '../events';
+import type { NetworkDetails } from './network-details';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
@@ -80,7 +81,7 @@ export interface ManifestLoadedData {
   audioTracks: MediaPlaylist[];
   captions?: MediaPlaylist[];
   levels: LevelParsed[];
-  networkDetails: any;
+  networkDetails: NetworkDetails;
   sessionData: Record<string, AttrList> | null;
   stats: LoaderStats;
   subtitles?: MediaPlaylist[];
@@ -124,7 +125,7 @@ export interface TrackLoadedData {
   details: LevelDetails;
   id: number;
   groupId: string;
-  networkDetails: any;
+  networkDetails: NetworkDetails;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
 }
@@ -133,7 +134,7 @@ export interface LevelLoadedData {
   details: LevelDetails;
   id: number;
   level: number;
-  networkDetails: any;
+  networkDetails: NetworkDetails;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
 }
@@ -222,7 +223,7 @@ export interface ErrorData {
   level?: number | undefined;
   levelRetry?: boolean;
   loader?: Loader<LoaderContext>;
-  networkDetails?: any;
+  networkDetails?: NetworkDetails;
   mimeType?: string;
   reason?: string;
   response?: LoaderResponse;
