@@ -478,7 +478,6 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
         };
       } else {
         capabilities['sauce:options'] = {
-          build: 'HLSJS-' + process.env.SAUCE_TUNNEL_ID,
           ['tunnel-identifier']: `local-${Date.now()}`,
         };
       }
