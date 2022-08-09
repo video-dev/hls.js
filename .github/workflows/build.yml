@@ -376,7 +376,7 @@ jobs:
           - safari-macOS_10.15
           - firefox-win_10
           - chrome-osx_10.11-79.0
-          - chrome-win_7-69.0
+          - chrome-win_7-75.0
 
         include:
           - config: safari-macOS_10.15
@@ -389,10 +389,10 @@ jobs:
             ua: chrome
             os: OS X 10.11
             uaVersion: '79.0'
-          - config: chrome-win_7-69.0
+          - config: chrome-win_7-75.0
             ua: chrome
             os: Windows 7
-            uaVersion: '69.0'
+            uaVersion: '75.0'
 
     steps:
       - uses: actions/checkout@v3
