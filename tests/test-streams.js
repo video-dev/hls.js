@@ -140,7 +140,7 @@ module.exports = {
       skip_ua: [
         'firefox',
         'safari',
-        { name: 'chrome', version: '69.0' },
+        { name: 'chrome', version: '75.0' },
         { name: 'chrome', version: '79.0' },
       ],
     },
