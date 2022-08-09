@@ -7,7 +7,9 @@ import BufferController from './controller/buffer-controller';
 import { TimelineController } from './controller/timeline-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
-import EMEController from './controller/eme-controller';
+import EMEController, {
+  MediaKeySessionContext,
+} from './controller/eme-controller';
 import CMCDController from './controller/cmcd-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
@@ -15,6 +17,7 @@ import Cues from './utils/cues';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { ILogger, logger } from './utils/logger';
 
+import type Hls from './hls';
 import type { CuesInterface } from './utils/cues';
 import type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
 import type {
@@ -57,6 +60,10 @@ export type CMCDControllerConfig = {
 export type DRMSystemOptions = {
   audioRobustness?: string;
   videoRobustness?: string;
+  persistentState?: MediaKeysRequirement;
+  distinctiveIdentifier?: MediaKeysRequirement;
+  sessionTypes?: string[];
+  sessionType?: string;
 };
 
 export type DRMSystemConfiguration = {
@@ -70,16 +77,20 @@ export type DRMSystemsConfiguration = Partial<
 
 export type EMEControllerConfig = {
   licenseXhrSetup?: (
+    this: Hls,
     xhr: XMLHttpRequest,
     url: string,
-    keySystem: KeySystems
-  ) => void | Promise<void>;
+    keyContext: MediaKeySessionContext,
+    licenseChallenge: Uint8Array
+  ) => void | Promise<Uint8Array | void>;
   licenseResponseCallback?: (
+    this: Hls,
     xhr: XMLHttpRequest,
     url: string,
-    keySystem: KeySystems
+    keyContext: MediaKeySessionContext
   ) => ArrayBuffer;
   emeEnabled: boolean;
+  useEmeEncryptedEvent: boolean;
   widevineLicenseUrl?: string;
   drmSystems: DRMSystemsConfiguration;
   drmSystemOptions: DRMSystemOptions;
@@ -300,6 +311,7 @@ export const hlsDefaultConfig: HlsConfig = {
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
+  useEmeEncryptedEvent: false, // used by eme-controller
   widevineLicenseUrl: undefined, // used by eme-controller
   drmSystems: {}, // used by eme-controller
   drmSystemOptions: {}, // used by eme-controller

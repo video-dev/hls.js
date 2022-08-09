@@ -1,14 +1,14 @@
 import { buildAbsoluteURL } from 'url-toolkit';
-import { logger } from '../utils/logger';
 import { LevelKey } from './level-key';
 import { LoadStats } from './load-stats';
 import { AttrList } from '../utils/attr-list';
 import type {
-  KeyLoaderContext,
   FragmentLoaderContext,
+  KeyLoaderContext,
   Loader,
   PlaylistLevelType,
 } from '../types/loader';
+import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
 export enum ElementaryStreamTypes {
   AUDIO = 'audio',
@@ -102,10 +102,10 @@ export class Fragment extends BaseSegment {
   public duration: number = 0;
   // sn notates the sequence number for a segment, and if set to a string can be 'initSegment'
   public sn: number | 'initSegment' = 0;
-  // levelkey is the EXT-X-KEY that applies to this segment for decryption
+  // levelkeys are the EXT-X-KEY tags that apply to this segment for decryption
   // core difference from the private field _decryptdata is the lack of the initialized IV
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
-  public levelkey?: LevelKey;
+  public levelkeys?: { [key: string]: LevelKey };
   // A string representing the fragment type
   public readonly type: PlaylistLevelType;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
@@ -151,36 +151,25 @@ export class Fragment extends BaseSegment {
   }
 
   get decryptdata(): LevelKey | null {
-    if (!this.levelkey && !this._decryptdata) {
+    const { levelkeys } = this;
+    if (!levelkeys && !this._decryptdata) {
       return null;
     }
 
-    if (!this._decryptdata && this.levelkey) {
-      let sn = this.sn;
-      if (typeof sn !== 'number') {
-        // We are fetching decryption data for a initialization segment
-        // If the segment was encrypted with AES-128
-        // It must have an IV defined. We cannot substitute the Segment Number in.
-        if (
-          this.levelkey &&
-          this.levelkey.method === 'AES-128' &&
-          !this.levelkey.iv
-        ) {
-          logger.warn(
-            `missing IV for initialization segment with method="${this.levelkey.method}" - compliance issue`
-          );
+    if (!this._decryptdata && this.levelkeys && !this.levelkeys.NONE) {
+      const key = this.levelkeys.identity;
+      if (key) {
+        this._decryptdata = key.getDecryptData(this.sn);
+      } else {
+        const keyFormats = Object.keys(this.levelkeys);
+        if (keyFormats.length === 1) {
+          return (this._decryptdata = this.levelkeys[
+            keyFormats[0]
+          ].getDecryptData(this.sn));
+        } else {
+          // Multiple keys. key-loader to call Fragment.setKeyFormat based on selected key-system.
         }
-
-        /*
-        Be converted to a Number.
-        'initSegment' will become NaN.
-        NaN, which when converted through ToInt32() -> +0.
-        ---
-        Explicitly set sn to resulting value from implicit conversions 'initSegment' values for IV generation.
-        */
-        sn = 0;
       }
-      this._decryptdata = this.setDecryptDataFromLevelKey(this.levelkey, sn);
     }
 
     return this._decryptdata;
@@ -208,53 +197,31 @@ export class Fragment extends BaseSegment {
     // At the m3u8-parser level we need to add support for manifest signalled keyformats
     // when we want the fragment to start reporting that it is encrypted.
     // Currently, keyFormat will only be set for identity keys
-    if (this.decryptdata?.keyFormat && this.decryptdata.uri) {
+    if (this._decryptdata?.encrypted) {
       return true;
+    } else if (this.levelkeys) {
+      const keyFormats = Object.keys(this.levelkeys);
+      const len = keyFormats.length;
+      if (len > 1 || (len === 1 && this.levelkeys[keyFormats[0]].encrypted)) {
+        return true;
+      }
     }
 
     return false;
   }
 
+  setKeyFormat(keyFormat: KeySystemFormats) {
+    if (this.levelkeys) {
+      const key = this.levelkeys[keyFormat];
+      if (key) {
+        this._decryptdata = key.getDecryptData(this.sn);
+      }
+    }
+  }
+
   abortRequests(): void {
     this.loader?.abort();
     this.keyLoader?.abort();
-  }
-
-  /**
-   * Utility method for parseLevelPlaylist to create an initialization vector for a given segment
-   * @param {number} segmentNumber - segment number to generate IV with
-   * @returns {Uint8Array}
-   */
-  createInitializationVector(segmentNumber: number): Uint8Array {
-    const uint8View = new Uint8Array(16);
-
-    for (let i = 12; i < 16; i++) {
-      uint8View[i] = (segmentNumber >> (8 * (15 - i))) & 0xff;
-    }
-
-    return uint8View;
-  }
-
-  /**
-   * Utility method for parseLevelPlaylist to get a fragment's decryption data from the currently parsed encryption key data
-   * @param levelkey - a playlist's encryption info
-   * @param segmentNumber - the fragment's segment number
-   * @returns {LevelKey} - an object to be applied as a fragment's decryptdata
-   */
-  setDecryptDataFromLevelKey(
-    levelkey: LevelKey,
-    segmentNumber: number
-  ): LevelKey {
-    let decryptdata = levelkey;
-
-    if (levelkey?.method === 'AES-128' && levelkey.uri && !levelkey.iv) {
-      decryptdata = LevelKey.fromURI(levelkey.uri);
-      decryptdata.method = levelkey.method;
-      decryptdata.iv = this.createInitializationVector(segmentNumber);
-      decryptdata.keyFormat = 'identity';
-    }
-
-    return decryptdata;
   }
 
   setElementaryStreamInfo(

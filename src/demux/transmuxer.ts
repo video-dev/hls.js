@@ -13,7 +13,7 @@ import type { Demuxer, DemuxerResult, KeyData } from '../types/demuxer';
 import type { Remuxer } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import type { HlsConfig } from '../config';
-import type { LevelKey } from '../loader/level-key';
+import type { DecryptData } from '../loader/level-key';
 import type { PlaylistLevelType } from '../types/loader';
 
 let now;
@@ -75,7 +75,7 @@ export default class Transmuxer {
 
   push(
     data: ArrayBuffer,
-    decryptdata: LevelKey | null,
+    decryptdata: DecryptData | null,
     chunkMeta: ChunkMetadata,
     state?: TransmuxState
   ): TransmuxerResult | Promise<TransmuxerResult> {
@@ -103,19 +103,6 @@ export default class Transmuxer {
       duration,
       initSegmentData,
     } = transmuxConfig;
-
-    // Reset muxers before probing to ensure that their state is clean, even if flushing occurs before a successful probe
-    if (discontinuity || trackSwitch || initSegmentChange) {
-      this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
-    }
-
-    if (discontinuity || initSegmentChange) {
-      this.resetInitialTimestamp(defaultInitPts);
-    }
-
-    if (!contiguous) {
-      this.resetContiguity();
-    }
 
     const keyData = getEncryptionType(uintData, decryptdata);
     if (keyData && keyData.method === 'AES-128') {
@@ -152,8 +139,27 @@ export default class Transmuxer {
       }
     }
 
-    if (this.needsProbing(uintData, discontinuity, trackSwitch)) {
-      this.configureTransmuxer(uintData, transmuxConfig);
+    const resetMuxers = this.needsProbing(discontinuity, trackSwitch);
+    if (resetMuxers) {
+      this.configureTransmuxer(uintData);
+    }
+
+    if (discontinuity || trackSwitch || initSegmentChange || resetMuxers) {
+      this.resetInitSegment(
+        initSegmentData,
+        audioCodec,
+        videoCodec,
+        duration,
+        decryptdata
+      );
+    }
+
+    if (discontinuity || initSegmentChange || resetMuxers) {
+      this.resetInitialTimestamp(defaultInitPts);
+    }
+
+    if (!contiguous) {
+      this.resetContiguity();
     }
 
     const result = this.transmux(
@@ -283,7 +289,8 @@ export default class Transmuxer {
     initSegmentData: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    trackDuration: number
+    trackDuration: number,
+    decryptdata: DecryptData | null
   ) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
@@ -295,7 +302,12 @@ export default class Transmuxer {
       videoCodec,
       trackDuration
     );
-    remuxer.resetInitSegment(initSegmentData, audioCodec, videoCodec);
+    remuxer.resetInitSegment(
+      initSegmentData,
+      audioCodec,
+      videoCodec,
+      decryptdata
+    );
   }
 
   destroy(): void {
@@ -388,18 +400,8 @@ export default class Transmuxer {
       });
   }
 
-  private configureTransmuxer(
-    data: Uint8Array,
-    transmuxConfig: TransmuxConfig
-  ) {
+  private configureTransmuxer(data: Uint8Array) {
     const { config, observer, typeSupported, vendor } = this;
-    const {
-      audioCodec,
-      defaultInitPts,
-      duration,
-      initSegmentData,
-      videoCodec,
-    } = transmuxConfig;
     // probe for content type
     let mux;
     for (let i = 0, len = muxConfig.length; i < len; i++) {
@@ -427,16 +429,9 @@ export default class Transmuxer {
       this.demuxer = new Demuxer(observer, config, typeSupported);
       this.probe = Demuxer.probe;
     }
-    // Ensure that muxers are always initialized with an initSegment
-    this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
-    this.resetInitialTimestamp(defaultInitPts);
   }
 
-  private needsProbing(
-    data: Uint8Array,
-    discontinuity: boolean,
-    trackSwitch: boolean
-  ): boolean {
+  private needsProbing(discontinuity: boolean, trackSwitch: boolean): boolean {
     // in case of continuity change, or track switch
     // we might switch from content type (AAC container to TS container, or TS to fmp4 for example)
     return !this.demuxer || !this.remuxer || discontinuity || trackSwitch;
@@ -453,7 +448,7 @@ export default class Transmuxer {
 
 function getEncryptionType(
   data: Uint8Array,
-  decryptData: LevelKey | null
+  decryptData: DecryptData | null
 ): KeyData | null {
   let encryptionType: KeyData | null = null;
   if (

@@ -362,6 +362,14 @@ export default class LevelController extends BasePlaylistController {
           }
         }
         break;
+      case ErrorDetails.KEY_SYSTEM_NO_SESSION:
+      case ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED:
+        levelIndex =
+          data.frag?.type === PlaylistLevelType.MAIN
+            ? data.frag.level
+            : this.currentLevelIndex;
+        levelError = true;
+        break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
         // Do not perform level switch if an error occurred using delivery directives

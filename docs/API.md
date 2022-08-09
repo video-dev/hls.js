@@ -94,6 +94,7 @@
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
   - [`minAutoBitrate`](#minautobitrate)
   - [`emeEnabled`](#emeEnabled)
+  - [`useEmeEncryptedEvent`](#useEmeEncryptedEvent)
   - [`widevineLicenseUrl`](#widevineLicenseUrl)
   - [`licenseXhrSetup`](#licenseXhrSetup)
   - [`licenseResponseCallback`](#licenseResponseCallback)
@@ -399,6 +400,7 @@ var config = {
   maxLoadingDelay: 4,
   minAutoBitrate: 0,
   emeEnabled: false,
+  useEmeEncryptedEvent: false,
   widevineLicenseUrl: undefined,
   licenseXhrSetup: undefined,
   drmSystems: {},
@@ -1192,6 +1194,12 @@ Useful when browser or tab of the browser is not in the focus and bandwidth drop
 
 Set to `true` to enable DRM key system access and license retrieval.
 
+### `useEmeEncryptedEvent`
+
+(default: `false`)
+
+Set to `true` to use media "encrypted" event initData and ignore manifest DRM keys.
+
 ### `widevineLicenseUrl`
 
 (default: `undefined`)
@@ -1200,44 +1208,81 @@ The Widevine license server URL.
 
 ### `licenseXhrSetup`
 
-(default: `undefined`, type `(xhr: XMLHttpRequest, url: string) => void`)
+(default: `undefined`, type `(xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext, licenseChallenge: Uint8Array) => void`)
 
-A pre-processor function for modifying the `XMLHttpRequest` and request url (using `xhr.open`) prior to sending the license request.
+A pre-processor function for modifying license requests. The license request URL, request headers, and payload can all be modified prior to sending the license request, based on operating conditions, the current key-session, and key-system.
 
 ```js
 var config = {
-  licenseXhrSetup: function (xhr, url) {
-    xhr.withCredentials = true; // do send cookies
-    if (!xhr.readyState) {
-      // Call open to change the method (default is POST) or modify the url
-      xhr.open('GET', url, true);
-      // Append headers after opening
+  licenseXhrSetup: function (xhr, url, keyContext, licenseChallenge) {
+    let payload = licenseChallenge;
+
+    // Send cookies with request
+    xhr.withCredentials = true;
+
+    // Call open to change the method (default is POST), modify the url, or set request headers
+    xhr.open('POST', url, true);
+
+    // call xhr.setRequestHeader after xhr.open otherwise licenseXhrSetup will throw and be called a second time after HLS.js call xhr.open
+    if (keyContext.keySystem === 'com.apple.fps') {
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      payload = JSON.stringify({
+        keyData: base64Encode(keyContext.decryptdata?.keyId),
+        licenseChallenge: base64Encode(licenseChallenge),
+      });
+    } else {
       xhr.setRequestHeader('Content-Type', 'application/octet-stream');
     }
+
+    // Return the desired payload or a Promise<Uint8Array|void>
+    // return Promise.resolve(payload);
+    return payload;
   },
 };
 ```
 
 ### `licenseResponseCallback`
 
-(default: `undefined`, type `(xhr: XMLHttpRequest, url: string) => data: ArrayBuffer`)
+(default: `undefined`, type `(xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext) => data: ArrayBuffer`)
 
 A post-processor function for modifying the license response before passing it to the key-session (`MediaKeySession.update`).
+
+```js
+var config = {
+  licenseResponseCallback: function (xhr, url, keyContext) {
+      const keySystem = keyContext.keySystem;
+      const response = xhr.response;
+      if (keyContext.keySystem === 'com.apple.fps') {
+        try {
+          const responseObject = JSON.parse(
+            new TextDecoder().decode(response).trim();
+          );
+          const keyResponse = responseObject['fairplay-streaming-response']['streaming-keys'][0];
+          return base64Decode(keyResponse.ckc);
+        } catch (error) {
+          console.error(error);
+        }
+      }
+      return response;
+  }
+```
 
 ### `drmSystems`
 
 (default: `{}`)
 
-Set `licenseUrl` and `serverCertificateUrl` for a given keySystem to your own DRM provider. `serverCertificateUrl` is not mandatory. Ex:
+Set `licenseUrl` and `serverCertificateUrl` for a given key-system to your own DRM provider. `serverCertificateUrl` is not mandatory. Ex:
 
 ```js
-{
+drmSystems: {
   'com.widevine.alpha': {
-    licenseUrl: 'https://proxy.uat.widevine.com/proxy',
-    serverCertificateUrl: 'https://storage.googleapis.com/wvmedia/cert/cert_license_widevine_com_uat.bin'
+    licenseUrl: 'https://your-widevine-license-server/path',
+    serverCertificateUrl: 'https://optional-server-certificate/path/cert.bin'
   }
 }
 ```
+
+Supported key-systems include 'com.apple.fps', 'com.microsoft.playready', 'com.widevine.alpha', and 'org.w3.clearkey'. Mapping to other values in key-system access requests can be done by customizing [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc).
 
 ### `drmSystemOptions`
 
@@ -1258,7 +1303,18 @@ With the default argument, `''` will be specified for each option (_i.e. no spec
 
 (default: A function that returns the result of `window.navigator.requestMediaKeySystemAccess.bind(window.navigator)` or `null`)
 
-Allows for the customization of `window.navigator.requestMediaKeySystemAccess`.
+Allows for the customization of `window.navigator.requestMediaKeySystemAccess`. This can be used to map key-system access request to from a supported value to a custom one:
+
+```js
+var hls new Hls({
+  requestMediaKeySystemAccessFunc: (keySystem, supportedConfigurations) => {
+    if (keySystem === 'com.microsoft.playready') {
+      keySystem = 'com.microsoft.playready.recommendation';
+    }
+    return navigator.requestMediaKeySystemAccess(keySystem, supportedConfigurations);
+  }
+});
+```
 
 ### `cmcd`
 

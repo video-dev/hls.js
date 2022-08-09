@@ -1,20 +1,21 @@
 import BaseStreamController, { State } from './base-stream-controller';
 import { changeTypeSupported } from '../is-supported';
-import type { NetworkComponentAPI } from '../types/component-api';
 import { Events } from '../events';
 import { BufferHelper, BufferInfo } from '../utils/buffer-helper';
-import type { FragmentTracker } from './fragment-tracker';
 import { FragmentState } from './fragment-tracker';
-import type { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import { ElementaryStreamTypes, Fragment } from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
-import type { TransmuxerResult } from '../types/transmuxer';
 import { ChunkMetadata } from '../types/transmuxer';
 import GapController from './gap-controller';
 import { ErrorDetails } from '../errors';
+import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
+import type { Level } from '../types/level';
 import type { LevelDetails } from '../loader/level-details';
+import type { FragmentTracker } from './fragment-tracker';
+import type KeyLoader from '../loader/key-loader';
+import type { TransmuxerResult } from '../types/transmuxer';
 import type { TrackSet } from '../types/track';
 import type { SourceBufferName } from '../types/buffer';
 import type {
@@ -56,8 +57,12 @@ export default class StreamController
   private audioCodecSwitch: boolean = false;
   private videoBuffer: any | null = null;
 
-  constructor(hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls, fragmentTracker, '[stream-controller]');
+  constructor(
+    hls: Hls,
+    fragmentTracker: FragmentTracker,
+    keyLoader: KeyLoader
+  ) {
+    super(hls, fragmentTracker, keyLoader, '[stream-controller]');
     this._registerListeners();
   }
 
@@ -849,6 +854,8 @@ export default class StreamController
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
+      case ErrorDetails.KEY_SYSTEM_NO_SESSION:
+      case ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED:
         this.onFragmentOrKeyLoadError(PlaylistLevelType.MAIN, data);
         break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
