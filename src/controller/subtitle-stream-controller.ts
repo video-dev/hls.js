@@ -7,9 +7,10 @@ import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import { PlaylistLevelType } from '../types/loader';
 import { Level } from '../types/level';
-import type { FragmentTracker } from './fragment-tracker';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
+import type { FragmentTracker } from './fragment-tracker';
+import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
 import type { Fragment } from '../loader/fragment';
 import type {
@@ -40,8 +41,12 @@ export class SubtitleStreamController
   private tracksBuffered: Array<TimeRange[]> = [];
   private mainDetails: LevelDetails | null = null;
 
-  constructor(hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls, fragmentTracker, '[subtitle-stream-controller]');
+  constructor(
+    hls: Hls,
+    fragmentTracker: FragmentTracker,
+    keyLoader: KeyLoader
+  ) {
+    super(hls, fragmentTracker, keyLoader, '[subtitle-stream-controller]');
     this._registerListeners();
   }
 
@@ -375,7 +380,7 @@ export class SubtitleStreamController
       const fragLen = fragments.length;
       const end = trackDetails.edge;
 
-      let foundFrag: Fragment | null;
+      let foundFrag: Fragment | null = null;
       const fragPrevious = this.fragPrevious;
       if (targetBufferTime < end) {
         const { maxFragLookUpTolerance } = config;
@@ -395,12 +400,11 @@ export class SubtitleStreamController
       } else {
         foundFrag = fragments[fragLen - 1];
       }
-
-      foundFrag = this.mapToInitFragWhenRequired(foundFrag);
       if (!foundFrag) {
         return;
       }
 
+      foundFrag = this.mapToInitFragWhenRequired(foundFrag) as Fragment;
       if (
         this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
       ) {

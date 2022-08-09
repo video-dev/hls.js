@@ -1,7 +1,10 @@
-import { sliceUint8 } from './typed-array';
 import { ElementaryStreamTypes } from '../loader/fragment';
-import { PassthroughTrack, UserdataSample } from '../types/demuxer';
+import { sliceUint8 } from './typed-array';
 import { utf8ArrayToStr } from '../demux/id3';
+import { logger } from '../utils/logger';
+import Hex from './hex';
+import type { PassthroughTrack, UserdataSample } from '../types/demuxer';
+import type { DecryptData } from '../loader/level-key';
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
 const push = [].push;
@@ -270,6 +273,59 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
   });
 
   return result;
+}
+
+export function patchEncyptionData(
+  initSegment: Uint8Array | undefined,
+  decryptdata: DecryptData | null
+): Uint8Array | undefined {
+  if (!initSegment || !decryptdata) {
+    return initSegment;
+  }
+  const keyId = decryptdata.keyId;
+  if (keyId && decryptdata.isCommonEncryption) {
+    const traks = findBox(initSegment, ['moov', 'trak']);
+    traks.forEach((trak) => {
+      const stsd = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd'])[0];
+
+      // skip the sample entry count
+      const sampleEntries = stsd.subarray(8);
+      let encBoxes = findBox(sampleEntries, ['enca']);
+      const isAudio = encBoxes.length > 0;
+      if (!isAudio) {
+        encBoxes = findBox(sampleEntries, ['encv']);
+      }
+      encBoxes.forEach((enc) => {
+        const encBoxChildren = isAudio ? enc.subarray(28) : enc.subarray(78);
+        const sinfBoxes = findBox(encBoxChildren, ['sinf']);
+        sinfBoxes.forEach((sinf) => {
+          const schm = findBox(sinf, ['schm'])[0];
+          if (!schm) {
+            logger.error(`[eme] missing 'schm' box`);
+            return;
+          }
+          const scheme = bin2str(schm.subarray(4, 8));
+          if (scheme === 'cbcs' || scheme === 'cenc') {
+            const tenc = findBox(sinf, ['schi', 'tenc'])[0];
+            if (tenc) {
+              // Look for default key id (keyID offset is always 8 within the tenc box):
+              const tencKeyId = tenc.subarray(8, 24);
+              if (!tencKeyId.some((b) => b !== 0)) {
+                logger.log(
+                  `[eme] found 'tenc' patching map with keyId default: ${Hex.hexDump(
+                    tencKeyId
+                  )} -> ${Hex.hexDump(keyId)}`
+                );
+                tenc.set(keyId, 8);
+              }
+            }
+          }
+        });
+      });
+    });
+  }
+
+  return initSegment;
 }
 
 /**
@@ -968,4 +1024,78 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
     id,
     payload,
   };
+}
+
+export function mp4Box(type: ArrayLike<number>, ...params: Uint8Array[]) {
+  const payload = Array.prototype.slice.call(arguments, 1);
+  const len = payload.length;
+  let size = 8;
+  let i = len;
+  while (i--) {
+    size += payload[i].byteLength;
+  }
+  const result = new Uint8Array(size);
+  result[0] = (size >> 24) & 0xff;
+  result[1] = (size >> 16) & 0xff;
+  result[2] = (size >> 8) & 0xff;
+  result[3] = size & 0xff;
+  result.set(type, 4);
+  for (i = 0, size = 8; i < len; i++) {
+    result.set(payload[i], size);
+    size += payload[i].byteLength;
+  }
+  return result;
+}
+
+export function mp4pssh(
+  systemId: Uint8Array,
+  keyids: Array<Uint8Array> | null,
+  data: Uint8Array
+) {
+  if (systemId.byteLength !== 16) {
+    throw new RangeError('Invalid system id');
+  }
+  let version;
+  let kids;
+  if (keyids) {
+    version = 1;
+    kids = new Uint8Array(keyids.length * 16);
+    for (let ix = 0; ix < keyids.length; ix++) {
+      const k = keyids[ix]; // uint8array
+      if (k.byteLength !== 16) {
+        throw new RangeError('Invalid key');
+      }
+      kids.set(k, ix * 16);
+    }
+  } else {
+    version = 0;
+    kids = new Uint8Array();
+  }
+  let kidCount;
+  if (version > 0) {
+    kidCount = new Uint8Array(4);
+    if (keyids!.length > 0) {
+      new DataView(kidCount.buffer).setUint32(0, keyids!.length, false);
+    }
+  } else {
+    kidCount = new Uint8Array();
+  }
+  const dataSize = new Uint8Array(4);
+  if (data && data.byteLength > 0) {
+    new DataView(dataSize.buffer).setUint32(0, data.byteLength, false);
+  }
+  return mp4Box(
+    [112, 115, 115, 104],
+    new Uint8Array([
+      version,
+      0x00,
+      0x00,
+      0x00, // Flags
+    ]),
+    systemId, // 16 bytes
+    kidCount,
+    kids,
+    dataSize,
+    data || new Uint8Array()
+  );
 }

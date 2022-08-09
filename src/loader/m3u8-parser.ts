@@ -4,6 +4,7 @@ import { DateRange } from './date-range';
 import { Fragment, Part } from './fragment';
 import { LevelDetails } from './level-details';
 import { LevelKey } from './level-key';
+import { KeySystemFormats } from '../utils/mediakeys-helper';
 
 import { AttrList } from '../utils/attr-list';
 import { logger } from '../utils/logger';
@@ -207,7 +208,7 @@ export default class M3U8Parser {
     let frag: Fragment = new Fragment(type, baseurl);
     let result: RegExpExecArray | RegExpMatchArray | null;
     let i: number;
-    let levelkey: LevelKey | undefined;
+    let levelkeys: { [key: string]: LevelKey } | undefined;
     let firstPdtIndex = -1;
     let createNextFrag = false;
 
@@ -242,8 +243,8 @@ export default class M3U8Parser {
         // url
         if (Number.isFinite(frag.duration)) {
           frag.start = totalduration;
-          if (levelkey) {
-            frag.levelkey = levelkey;
+          if (levelkeys) {
+            frag.levelkeys = levelkeys;
           }
           frag.sn = currentSN;
           frag.level = id;
@@ -372,60 +373,52 @@ export default class M3U8Parser {
             const decryptiv = keyAttrs.hexadecimalInteger('IV');
             const decryptkeyformatversions =
               keyAttrs.enumeratedString('KEYFORMATVERSIONS');
-            const decryptkeyid = keyAttrs.enumeratedString('KEYID');
             // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
             const decryptkeyformat =
               keyAttrs.enumeratedString('KEYFORMAT') ?? 'identity';
 
-            // TBD we might need to check if we try to MSE playback mp2t content
-            // with com.apple.streamingkeydelivery keyformat (not supported)
-
-            const unsupportedKnownKeyformatsInManifest = [
-              'com.microsoft.playready',
-              'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed', // widevine (v2)
-              'com.widevine', // earlier widevine (v1)
-            ];
-
             if (
-              unsupportedKnownKeyformatsInManifest.indexOf(decryptkeyformat) >
-              -1
+              !decryptmethod ||
+              [
+                'NONE',
+                'AES-128',
+                'ISO-23001-7',
+                'SAMPLE-AES',
+                'SAMPLE-AES-CENC',
+                'SAMPLE-AES-CTR',
+              ].indexOf(decryptmethod) === -1
             ) {
-              logger.warn(
-                `Keyformat ${decryptkeyformat} is not supported from the manifest`
-              );
-              continue;
-            } else if (decryptkeyformat !== 'identity') {
-              // We are supposed to skip keys we don't understand.
-              // As we currently only officially support identity keys
-              // from the manifest we shouldn't save any other key.
-              continue;
-            }
+              logger.warn(`[Keys] Ignoring invalid EXT-X-KEY tag: "${value1}"`);
+            } else {
+              if (decrypturi && keyAttrs.IV && !decryptiv) {
+                logger.error(`Invalid IV: ${keyAttrs.IV}`);
+              }
+              // If decrypturi is a URI with a scheme, then baseurl will be ignored
+              // No uri is allowed when METHOD is NONE
+              const resolvedUri = decrypturi
+                ? M3U8Parser.resolve(decrypturi, baseurl)
+                : '';
+              const keyFormatVersions = (
+                decryptkeyformatversions ? decryptkeyformatversions : '1'
+              )
+                .split('/')
+                .map(Number)
+                .filter(Number.isFinite);
 
-            // TODO: multiple keys can be defined on a fragment, and we need to support this
-            // for clients that support both playready and widevine
-            if (decryptmethod) {
-              // TODO: need to determine if the level key is actually a relative URL
-              // if it isn't, then we should instead construct the LevelKey using fromURI.
-              levelkey = LevelKey.fromURL(baseurl, decrypturi);
-              if (
-                decrypturi &&
-                ['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(
-                  decryptmethod
-                ) >= 0
-              ) {
-                levelkey.method = decryptmethod;
-                levelkey.keyFormat = decryptkeyformat;
-
-                if (decryptkeyid) {
-                  levelkey.keyID = decryptkeyid;
+              if (isKeyTagSupported(decryptkeyformat, decryptmethod)) {
+                if (decryptmethod === 'NONE' || !levelkeys) {
+                  levelkeys = {};
                 }
-
-                if (decryptkeyformatversions) {
-                  levelkey.keyFormatVersions = decryptkeyformatversions;
+                if (levelkeys[decryptkeyformat]) {
+                  levelkeys = Object.assign({}, levelkeys);
                 }
-
-                // Initialization Vector (IV)
-                levelkey.iv = decryptiv;
+                levelkeys[decryptkeyformat] = new LevelKey(
+                  decryptmethod,
+                  resolvedUri,
+                  decryptkeyformat,
+                  keyFormatVersions,
+                  decryptiv
+                );
               }
             }
             break;
@@ -447,7 +440,7 @@ export default class M3U8Parser {
               //   #EXTINF: 6.0
               //   #EXT-X-MAP:URI="init.mp4
               const init = new Fragment(type, baseurl);
-              setInitSegment(init, mapAttrs, id, levelkey);
+              setInitSegment(init, mapAttrs, id, levelkeys);
               currentInitSegment = init;
               frag.initSegment = currentInitSegment;
               if (
@@ -458,7 +451,7 @@ export default class M3U8Parser {
               }
             } else {
               // Initial segment tag is before segment duration tag
-              setInitSegment(frag, mapAttrs, id, levelkey);
+              setInitSegment(frag, mapAttrs, id, levelkeys);
               currentInitSegment = frag;
               createNextFrag = true;
             }
@@ -591,6 +584,27 @@ export default class M3U8Parser {
   }
 }
 
+function isKeyTagSupported(
+  decryptformat: string,
+  decryptmethod: string
+): boolean {
+  // If it's Segment encryption or No encryption, just select that key system
+  if ('AES-128' === decryptmethod || 'NONE' === decryptmethod) {
+    return true;
+  }
+  switch (decryptformat) {
+    case 'identity':
+      // maintain support for clear SAMPLE-AES with MPEG-3 TS
+      return true;
+    case KeySystemFormats.FAIRPLAY:
+    case KeySystemFormats.WIDEVINE:
+    case KeySystemFormats.PLAYREADY:
+    case KeySystemFormats.CLEARKEY:
+      return true;
+  }
+  return false;
+}
+
 function setCodecs(codecs: Array<string>, level: LevelParsed) {
   ['video', 'audio', 'text'].forEach((type: CodecType) => {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
@@ -652,7 +666,7 @@ function setInitSegment(
   frag: Fragment,
   mapAttrs: AttrList,
   id: number,
-  levelkey: LevelKey | undefined
+  levelkeys: { [key: string]: LevelKey } | undefined
 ) {
   frag.relurl = mapAttrs.URI;
   if (mapAttrs.BYTERANGE) {
@@ -660,8 +674,8 @@ function setInitSegment(
   }
   frag.level = id;
   frag.sn = 'initSegment';
-  if (levelkey) {
-    frag.levelkey = levelkey;
+  if (levelkeys) {
+    frag.levelkeys = levelkeys;
   }
   frag.initSegment = null;
 }

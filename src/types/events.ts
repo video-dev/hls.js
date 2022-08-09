@@ -21,6 +21,7 @@ import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
 import type { AttrList } from '../utils/attr-list';
 import type { HlsListeners } from '../events';
+import { KeyLoaderInfo } from '../loader/key-loader';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
@@ -338,6 +339,7 @@ export interface KeyLoadingData {
 
 export interface KeyLoadedData {
   frag: Fragment;
+  keyInfo: KeyLoaderInfo;
 }
 
 export interface BackBufferData {

@@ -565,7 +565,10 @@ class PlaylistLoader implements NetworkComponentAPI {
     sidxReferences.forEach((segmentRef, index) => {
       const segRefInfo = segmentRef.info;
       const frag = levelDetails.fragments[index];
-
+      if (!frag) {
+        logger.error(`no fragment for sidx index ${index}`);
+        return;
+      }
       if (frag.byteRange.length === 0) {
         frag.setByteRange(
           String(1 + segRefInfo.end - segRefInfo.start) +

@@ -45,7 +45,7 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
 - AES-128 decryption
 - SAMPLE-AES decryption (only supported if using MPEG-2 TS container)
 - Encrypted media extensions (EME) support for DRM (digital rights management)
-  - Widevine CDM (only tested with [shaka-packager](https://github.com/google/shaka-packager) test-stream on [the demo page](https://hls-js.netlify.app/demo/?src=https%3A%2F%2Fstorage.googleapis.com%2Fshaka-demo-assets%2Fangel-one-widevine-hls%2Fhls.m3u8&demoConfig=eyJlbmFibGVTdHJlYW1pbmciOnRydWUsImF1dG9SZWNvdmVyRXJyb3IiOnRydWUsInN0b3BPblN0YWxsIjpmYWxzZSwiZHVtcGZNUDQiOmZhbHNlLCJsZXZlbENhcHBpbmciOi0xLCJsaW1pdE1ldHJpY3MiOi0xfQ==))
+  - FairPlay, PlayReady, Widevine CDMs with fmp4 segments
 - CEA-608/708 captions
 - WebVTT subtitles
 - Alternate Audio Track Rendition (Master Playlist with Alternative Audio) for VoD and Live playlists
@@ -120,8 +120,7 @@ For a complete list of issues, see ["Top priorities" in the Release Planning and
 - `#EXT-X-GAP` filling [#2940](https://github.com/video-dev/hls.js/issues/2940)
 - `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
 - `SAMPLE-AES` with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
-- FairPlay DRM with MPEG-2 TS content
-- PlayReady (See [#3779](https://github.com/video-dev/hls.js/issues/3779) and [issues labeled DRM](https://github.com/video-dev/hls.js/issues?q=is%3Aissue+is%3Aopen+label%3ADRM))
+- FairPlay, PlayReady, Widevine DRM with MPEG-2 TS segments
 - Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
 - MP3 elementary stream audio in IE and Edge (<=18) on Windows 10 (See [#1641](https://github.com/video-dev/hls.js/issues/1641) and [Microsoft answers forum](https://answers.microsoft.com/en-us/ie/forum/all/ie11-on-windows-10-cannot-play-hls-with-mp3/2da994b5-8dec-4ae9-9201-7d138ede49d9))
 
