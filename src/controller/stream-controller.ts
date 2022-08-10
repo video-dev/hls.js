@@ -994,9 +994,7 @@ export default class StreamController
         (delta < this.config.maxBufferHole ||
           delta < this.config.maxFragLookUpTolerance)
       ) {
-        this.log(
-          `adjusting start position by ${delta} to match buffer start`
-        );
+        this.log(`adjusting start position by ${delta} to match buffer start`);
         startPosition += delta;
         this.startPosition = startPosition;
       }
