@@ -1,6 +1,6 @@
 import Transmuxer, { isPromise } from '../demux/transmuxer';
 import { Events } from '../events';
-import { enableLogs } from '../utils/logger';
+import { ILogFunction, enableLogs, logger } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
 import type { RemuxedTrack, RemuxerResult } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
@@ -15,6 +15,20 @@ export default function TransmuxerWorker(self) {
   observer.on(Events.FRAG_DECRYPTED, forwardMessage);
   observer.on(Events.ERROR, forwardMessage);
 
+  // forward logger events to main thread
+  const forwardWorkerLogs = () => {
+    for (const logFn in logger) {
+      const func: ILogFunction = (message?) => {
+        forwardMessage('workerLog', {
+          logType: logFn,
+          message,
+        });
+      };
+
+      logger[logFn] = func;
+    }
+  };
+
   self.addEventListener('message', (ev) => {
     const data = ev.data;
     switch (data.cmd) {
@@ -28,6 +42,7 @@ export default function TransmuxerWorker(self) {
           data.id
         );
         enableLogs(config.debug);
+        forwardWorkerLogs();
         forwardMessage('init', null);
         break;
       }
