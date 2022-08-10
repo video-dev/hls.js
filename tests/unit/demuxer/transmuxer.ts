@@ -12,8 +12,11 @@ import { logger } from '../../../src/utils/logger';
 
 chai.use(sinonChai);
 const expect = chai.expect;
-
 describe('TransmuxerInterface tests', function () {
+  afterEach(function () {
+    sinon.restore();
+  });
+
   const onTransmuxComplete = (res: TransmuxerResult) => {};
   const onFlush = (meta: ChunkMetadata) => {};
 
