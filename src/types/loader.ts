@@ -16,6 +16,8 @@ export interface LoaderContext {
   rangeEnd?: number;
   // true if onProgress should report partial chunk of loaded content
   progressData?: boolean;
+  // request credentials
+  credentials?: RequestCredentials;
 }
 
 export interface FragmentLoaderContext extends LoaderContext {
@@ -166,3 +168,11 @@ export interface PlaylistLoaderContext extends LoaderContext {
   // Blocking playlist request delivery directives (or null id none were added to playlist url
   deliveryDirectives: HlsUrlParameters | null;
 }
+
+export type Request = {
+  url: string;
+  headers: Record<string, string>;
+  credentials: RequestCredentials;
+};
+
+export type RequestSetup = (request: Request) => void | Promise<void>;

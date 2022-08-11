@@ -5,13 +5,16 @@ import type {
   LoaderStats,
   Loader,
   LoaderConfiguration,
+  RequestSetup,
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
+import { requestSetup } from './request-setup';
 
 const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/m;
 
 class XhrLoader implements Loader<LoaderContext> {
   private xhrSetup: Function | null;
+  private requestSetup: RequestSetup;
   private requestTimeout?: number;
   private retryTimeout?: number;
   private retryDelay: number;
@@ -24,6 +27,7 @@ class XhrLoader implements Loader<LoaderContext> {
 
   constructor(config /* HlsConfig */) {
     this.xhrSetup = config ? config.xhrSetup : null;
+    this.requestSetup = config?.requestSetup;
     this.stats = new LoadStats();
     this.retryDelay = 0;
   }
@@ -77,61 +81,65 @@ class XhrLoader implements Loader<LoaderContext> {
     if (!config) {
       return;
     }
-    const xhr = (this.loader = new self.XMLHttpRequest());
 
-    const stats = this.stats;
-    stats.loading.first = 0;
-    stats.loaded = 0;
-    const xhrSetup = this.xhrSetup;
+    requestSetup(this.requestSetup, context).then(() => {
+      const xhr = (this.loader = new self.XMLHttpRequest());
 
-    try {
-      if (xhrSetup) {
-        try {
-          xhrSetup(xhr, context.url);
-        } catch (e) {
-          // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
-          // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+      const stats = this.stats;
+      stats.loading.first = 0;
+      stats.loaded = 0;
+      const xhrSetup = this.xhrSetup;
+
+      try {
+        if (xhrSetup) {
+          try {
+            xhrSetup(xhr, context.url);
+          } catch (e) {
+            // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
+            // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+            xhr.open('GET', context.url, true);
+            xhrSetup(xhr, context.url);
+          }
+        }
+        if (!xhr.readyState) {
           xhr.open('GET', context.url, true);
-          xhrSetup(xhr, context.url);
         }
-      }
-      if (!xhr.readyState) {
-        xhr.open('GET', context.url, true);
-      }
 
-      const headers = this.context.headers;
-      if (headers) {
-        for (const header in headers) {
-          xhr.setRequestHeader(header, headers[header]);
+        const headers = this.context.headers;
+        if (headers) {
+          for (const header in headers) {
+            xhr.setRequestHeader(header, headers[header]);
+          }
         }
+      } catch (e) {
+        // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+        this.callbacks!.onError(
+          { code: xhr.status, text: e.message },
+          context,
+          xhr
+        );
+        return;
       }
-    } catch (e) {
-      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
-      this.callbacks!.onError(
-        { code: xhr.status, text: e.message },
-        context,
-        xhr
-      );
-      return;
-    }
 
-    if (context.rangeEnd) {
-      xhr.setRequestHeader(
-        'Range',
-        'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1)
-      );
-    }
+      if (context.rangeEnd) {
+        xhr.setRequestHeader(
+          'Range',
+          'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1)
+        );
+      }
 
-    xhr.onreadystatechange = this.readystatechange.bind(this);
-    xhr.onprogress = this.loadprogress.bind(this);
-    xhr.responseType = context.responseType as XMLHttpRequestResponseType;
-    // setup timeout before we perform request
-    self.clearTimeout(this.requestTimeout);
-    this.requestTimeout = self.setTimeout(
-      this.loadtimeout.bind(this),
-      config.timeout
-    );
-    xhr.send();
+      xhr.onreadystatechange = this.readystatechange.bind(this);
+      xhr.onprogress = this.loadprogress.bind(this);
+      xhr.responseType = context.responseType as XMLHttpRequestResponseType;
+      // setup timeout before we perform request
+      self.clearTimeout(this.requestTimeout);
+      this.requestTimeout = self.setTimeout(
+        this.loadtimeout.bind(this),
+        config.timeout
+      );
+      xhr.withCredentials = context.credentials === 'include';
+      xhr.send();
+    });
   }
 
   readystatechange(): void {

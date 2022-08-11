@@ -5,9 +5,11 @@ import {
   LoaderStats,
   LoaderConfiguration,
   LoaderOnProgress,
+  RequestSetup,
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
+import { requestSetup } from './request-setup';
 
 export function fetchSupported() {
   if (
@@ -29,6 +31,7 @@ export function fetchSupported() {
 
 class FetchLoader implements Loader<LoaderContext> {
   private fetchSetup: Function;
+  private requestSetup: RequestSetup;
   private requestTimeout?: number;
   private request!: Request;
   private response!: Response;
@@ -41,6 +44,7 @@ class FetchLoader implements Loader<LoaderContext> {
 
   constructor(config /* HlsConfig */) {
     this.fetchSetup = config.fetchSetup || getRequest;
+    this.requestSetup = config?.requestSetup;
     this.controller = new self.AbortController();
     this.stats = new LoadStats();
   }
@@ -70,97 +74,99 @@ class FetchLoader implements Loader<LoaderContext> {
     config: LoaderConfiguration,
     callbacks: LoaderCallbacks<LoaderContext>
   ): void {
-    const stats = this.stats;
-    if (stats.loading.start) {
-      throw new Error('Loader can only be used once.');
-    }
-    stats.loading.start = self.performance.now();
+    requestSetup(this.requestSetup, context).then(() => {
+      const stats = this.stats;
+      if (stats.loading.start) {
+        throw new Error('Loader can only be used once.');
+      }
+      stats.loading.start = self.performance.now();
 
-    const initParams = getRequestParameters(context, this.controller.signal);
-    const onProgress: LoaderOnProgress<LoaderContext> | undefined =
-      callbacks.onProgress;
-    const isArrayBuffer = context.responseType === 'arraybuffer';
-    const LENGTH = isArrayBuffer ? 'byteLength' : 'length';
+      const initParams = getRequestParameters(context, this.controller.signal);
+      const onProgress: LoaderOnProgress<LoaderContext> | undefined =
+        callbacks.onProgress;
+      const isArrayBuffer = context.responseType === 'arraybuffer';
+      const LENGTH = isArrayBuffer ? 'byteLength' : 'length';
 
-    this.context = context;
-    this.config = config;
-    this.callbacks = callbacks;
-    this.request = this.fetchSetup(context, initParams);
-    self.clearTimeout(this.requestTimeout);
-    this.requestTimeout = self.setTimeout(() => {
-      this.abortInternal();
-      callbacks.onTimeout(stats, context, this.response);
-    }, config.timeout);
+      this.context = context;
+      this.config = config;
+      this.callbacks = callbacks;
+      this.request = this.fetchSetup(context, initParams);
+      self.clearTimeout(this.requestTimeout);
+      this.requestTimeout = self.setTimeout(() => {
+        this.abortInternal();
+        callbacks.onTimeout(stats, context, this.response);
+      }, config.timeout);
 
-    self
-      .fetch(this.request)
-      .then((response: Response): Promise<string | ArrayBuffer> => {
-        this.response = this.loader = response;
+      return self
+        .fetch(this.request)
+        .then((response: Response): Promise<string | ArrayBuffer> => {
+          this.response = this.loader = response;
 
-        if (!response.ok) {
-          const { status, statusText } = response;
-          throw new FetchError(
-            statusText || 'fetch, bad network response',
-            status,
-            response
+          if (!response.ok) {
+            const { status, statusText } = response;
+            throw new FetchError(
+              statusText || 'fetch, bad network response',
+              status,
+              response
+            );
+          }
+          stats.loading.first = Math.max(
+            self.performance.now(),
+            stats.loading.start
           );
-        }
-        stats.loading.first = Math.max(
-          self.performance.now(),
-          stats.loading.start
-        );
-        stats.total = parseInt(response.headers.get('Content-Length') || '0');
+          stats.total = parseInt(response.headers.get('Content-Length') || '0');
 
-        if (onProgress && Number.isFinite(config.highWaterMark)) {
-          return this.loadProgressively(
-            response,
-            stats,
+          if (onProgress && Number.isFinite(config.highWaterMark)) {
+            return this.loadProgressively(
+              response,
+              stats,
+              context,
+              config.highWaterMark,
+              onProgress
+            );
+          }
+
+          if (isArrayBuffer) {
+            return response.arrayBuffer();
+          }
+          return response.text();
+        })
+        .then((responseData: string | ArrayBuffer) => {
+          const { response } = this;
+          self.clearTimeout(this.requestTimeout);
+          stats.loading.end = Math.max(
+            self.performance.now(),
+            stats.loading.first
+          );
+          stats.loaded = stats.total = responseData[LENGTH];
+
+          const loaderResponse = {
+            url: response.url,
+            data: responseData,
+          };
+
+          if (onProgress && !Number.isFinite(config.highWaterMark)) {
+            onProgress(stats, context, responseData, response);
+          }
+
+          callbacks.onSuccess(loaderResponse, stats, context, response);
+        })
+        .catch((error) => {
+          self.clearTimeout(this.requestTimeout);
+          if (stats.aborted) {
+            return;
+          }
+          // CORS errors result in an undefined code. Set it to 0 here to align with XHR's behavior
+          // when destroying, 'error' itself can be undefined
+          const code: number = !error ? 0 : error.code || 0;
+          const text: string = !error ? null : error.message;
+          callbacks.onError(
+            { code, text },
             context,
-            config.highWaterMark,
-            onProgress
+            error ? error.details : null
           );
-        }
-
-        if (isArrayBuffer) {
-          return response.arrayBuffer();
-        }
-        return response.text();
-      })
-      .then((responseData: string | ArrayBuffer) => {
-        const { response } = this;
-        self.clearTimeout(this.requestTimeout);
-        stats.loading.end = Math.max(
-          self.performance.now(),
-          stats.loading.first
-        );
-        stats.loaded = stats.total = responseData[LENGTH];
-
-        const loaderResponse = {
-          url: response.url,
-          data: responseData,
-        };
-
-        if (onProgress && !Number.isFinite(config.highWaterMark)) {
-          onProgress(stats, context, responseData, response);
-        }
-
-        callbacks.onSuccess(loaderResponse, stats, context, response);
-      })
-      .catch((error) => {
-        self.clearTimeout(this.requestTimeout);
-        if (stats.aborted) {
-          return;
-        }
-        // CORS errors result in an undefined code. Set it to 0 here to align with XHR's behavior
-        // when destroying, 'error' itself can be undefined
-        const code: number = !error ? 0 : error.code || 0;
-        const text: string = !error ? null : error.message;
-        callbacks.onError(
-          { code, text },
-          context,
-          error ? error.details : null
-        );
-      });
+        });
+    });
   }
 
   getCacheAge(): number | null {
@@ -225,7 +231,7 @@ function getRequestParameters(context: LoaderContext, signal): any {
   const initParams: any = {
     method: 'GET',
     mode: 'cors',
-    credentials: 'same-origin',
+    credentials: context.credentials || 'same-origin',
     signal,
     headers: new self.Headers(Object.assign({}, context.headers)),
   };

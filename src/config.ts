@@ -22,6 +22,7 @@ import type {
   Loader,
   LoaderContext,
   PlaylistLoaderContext,
+  RequestSetup,
 } from './types/loader';
 
 export type ABRControllerConfig = {
@@ -174,6 +175,7 @@ export type HlsConfig = {
   loader: { new (confg: HlsConfig): Loader<LoaderContext> };
   fetchSetup?: (context: LoaderContext, initParams: any) => Request;
   xhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
+  requestSetup?: RequestSetup;
 
   // Alt Audio
   audioStreamController?: typeof AudioStreamController;
@@ -261,6 +263,8 @@ export const hlsDefaultConfig: HlsConfig = {
   fLoader: undefined, // used by fragment-loader
   pLoader: undefined, // used by playlist-loader
   xhrSetup: undefined, // used by xhr-loader
+  fetchSetup: undefined, // used by fetch-loader
+  requestSetup: undefined, // used by xhr-loader and fetch-loader
   licenseXhrSetup: undefined, // used by eme-controller
   licenseResponseCallback: undefined, // used by eme-controller
   abrController: AbrController,
