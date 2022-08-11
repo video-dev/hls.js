@@ -854,9 +854,13 @@ export default class BaseStreamController
       frag = this.getFragmentAtPosition(pos, end, levelDetails);
     }
 
+    return this.mapToInitFragWhenRequired(frag);
+  }
+
+  mapToInitFragWhenRequired(frag: Fragment | null): typeof frag {
     // If an initSegment is present, it must be buffered first
     if (frag?.initSegment && !frag?.initSegment.data && !this.bitrateTest) {
-      frag = frag.initSegment;
+      return frag.initSegment;
     }
 
     return frag;
