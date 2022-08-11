@@ -907,10 +907,10 @@ var config = {
 
 Customized Adaptive Bitrate Streaming Controller.
 
-Parameter should be a class providing 2 getters, 2 setters and a `destroy()` method:
+Parameter should be a class providing a getter/setter, a `clearTimer` method, and a `destroy()` method:
 
 - get/set `nextAutoLevel`: return next auto-quality level/force next auto-quality level that should be returned (currently used for emergency switch down)
-- get/set `autoLevelCapping`: capping/max level value that could be used by ABR Controller
+- `clearTimer()` - Stops the abandon rules check polling until another fragment is loaded
 - `destroy()`: should clean-up all used resources
 
 For `hls.bandwidthEstimate()` to return an estimate from your custom controller, it will also need to satisfy `abrController.bwEstimator.getEstimate()`.
