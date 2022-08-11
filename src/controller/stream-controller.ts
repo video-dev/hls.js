@@ -13,7 +13,6 @@ import type { TransmuxerResult } from '../types/transmuxer';
 import { ChunkMetadata } from '../types/transmuxer';
 import GapController from './gap-controller';
 import { ErrorDetails } from '../errors';
-import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
 import type { TrackSet } from '../types/track';
@@ -982,7 +981,7 @@ export default class StreamController
     // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
     if (startPosition >= 0 && currentTime < startPosition) {
       if (media.seeking) {
-        logger.log(
+        this.log(
           `could not seek to ${startPosition}, already seeking at ${currentTime}`
         );
         return;
@@ -995,9 +994,7 @@ export default class StreamController
         (delta < this.config.maxBufferHole ||
           delta < this.config.maxFragLookUpTolerance)
       ) {
-        logger.log(
-          `adjusting start position by ${delta} to match buffer start`
-        );
+        this.log(`adjusting start position by ${delta} to match buffer start`);
         startPosition += delta;
         this.startPosition = startPosition;
       }
