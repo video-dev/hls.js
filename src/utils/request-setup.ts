@@ -11,7 +11,7 @@ export function requestSetup(
   const request = {
     url: context.url,
     headers: context.headers || {},
-    credentials: context.credentials || 'same-origin',
+    credentials: context.credentials,
   };
 
   return Promise.resolve(requestSetup(request)).then(() =>

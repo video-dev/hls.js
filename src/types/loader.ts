@@ -172,7 +172,7 @@ export interface PlaylistLoaderContext extends LoaderContext {
 export type Request = {
   url: string;
   headers: Record<string, string>;
-  credentials: RequestCredentials;
+  credentials?: RequestCredentials;
 };
 
 export type RequestSetup = (request: Request) => void | Promise<void>;

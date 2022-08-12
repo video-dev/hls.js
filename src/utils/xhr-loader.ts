@@ -20,6 +20,7 @@ class XhrLoader implements Loader<LoaderContext> {
   private retryDelay: number;
   private config: LoaderConfiguration | null = null;
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
+  private aborted: boolean = false;
   public context!: LoaderContext;
 
   private loader: XMLHttpRequest | null = null;
@@ -40,6 +41,8 @@ class XhrLoader implements Loader<LoaderContext> {
   }
 
   abortInternal(): void {
+    this.aborted = true;
+
     const loader = this.loader;
     self.clearTimeout(this.requestTimeout);
     self.clearTimeout(this.retryTimeout);
@@ -70,6 +73,10 @@ class XhrLoader implements Loader<LoaderContext> {
     }
 
     requestSetup(this.requestSetup, context).then(() => {
+      if (this.aborted) {
+        return;
+      }
+
       this.stats.loading.start = self.performance.now();
       this.context = context;
       this.config = config;
@@ -139,7 +146,9 @@ class XhrLoader implements Loader<LoaderContext> {
       this.loadtimeout.bind(this),
       config.timeout
     );
-    xhr.withCredentials = context.credentials === 'include';
+    if (context.credentials) {
+      xhr.withCredentials = context.credentials === 'include';
+    }
     xhr.send();
   }
 

@@ -41,6 +41,7 @@ class FetchLoader implements Loader<LoaderContext> {
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
   public stats: LoaderStats;
   private loader: Response | null = null;
+  private aborted: boolean = false;
 
   constructor(config /* HlsConfig */) {
     this.fetchSetup = config.fetchSetup || getRequest;
@@ -55,6 +56,8 @@ class FetchLoader implements Loader<LoaderContext> {
   }
 
   abortInternal(): void {
+    this.aborted = true;
+
     const response = this.response;
     if (!response || !response.ok) {
       this.stats.aborted = true;
@@ -75,6 +78,10 @@ class FetchLoader implements Loader<LoaderContext> {
     callbacks: LoaderCallbacks<LoaderContext>
   ): void {
     requestSetup(this.requestSetup, context).then(() => {
+      if (this.aborted) {
+        return;
+      }
+
       const stats = this.stats;
       if (stats.loading.start) {
         throw new Error('Loader can only be used once.');
