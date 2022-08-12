@@ -1556,9 +1556,9 @@ Full list of Events is available below:
 - `Hls.Events.CUES_PARSED` - When `renderTextTracksNatively` is `false`, this event will fire when new captions or subtitle cues are parsed.
   - data: { type, cues, track } }
 
-## Loader Composition
+## Creating a Custom Loader
 
-You can export internal loader definition for your own implementation via static getter `Hls.DefaultConfig.loader`.
+You can extend the internal loader definition for your own implementation via the static getter `Hls.DefaultConfig.loader`.
 
 Example:
 
@@ -1570,9 +1570,7 @@ let myHls = new Hls({
     load(context, config, callbacks) {
       let { type, url } = context;
 
-      if (type === 'manifest') {
-        console.log(`Manifest ${url} will be loaded.`);
-      }
+      // Custom behavior
 
       super.load(context, config, callbacks);
     }
