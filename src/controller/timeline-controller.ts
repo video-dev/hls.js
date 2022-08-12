@@ -9,6 +9,7 @@ import {
   removeCuesInRange,
 } from '../utils/texttrack-utils';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
+import { appendUint8Array } from '../utils/mp4-tools';
 import { PlaylistLevelType } from '../types/loader';
 import { Fragment } from '../loader/fragment';
 import {
@@ -533,8 +534,11 @@ export class TimelineController implements ComponentAPI {
   private _parseVTTs(frag: Fragment, payload: ArrayBuffer, vttCCs: any) {
     const hls = this.hls;
     // Parse the WebVTT file contents.
+    const payloadWebVTT = frag.initSegment?.data
+      ? appendUint8Array(frag.initSegment.data, new Uint8Array(payload))
+      : payload;
     parseWebVTT(
-      payload,
+      payloadWebVTT,
       this.initPTS[frag.cc],
       this.timescale[frag.cc],
       vttCCs,
