@@ -11,7 +11,6 @@ import { ChunkMetadata } from '../types/transmuxer';
 import { fragmentWithinToleranceTest } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { ErrorDetails } from '../errors';
-import { logger } from '../utils/logger';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { FragmentTracker } from './fragment-tracker';
 import type { TransmuxerResult } from '../types/transmuxer';
@@ -136,6 +135,7 @@ class AudioStreamController
           3
         )}`
       );
+      startPosition = lastCurrentTime;
       this.state = State.IDLE;
     } else {
       this.loadedmetadata = false;
@@ -197,7 +197,7 @@ class AudioStreamController
             }
           } else if (this.videoTrackCC !== this.waitingVideoCC) {
             // Drop waiting fragment if videoTrackCC has changed since waitingFragment was set and initPTS was not found
-            logger.log(
+            this.log(
               `Waiting fragment cc (${frag.cc}) cancelled because video is at cc ${this.videoTrackCC}`
             );
             this.clearWaitingFragment();
@@ -215,7 +215,7 @@ class AudioStreamController
               frag
             );
             if (waitingFragmentAtPosition < 0) {
-              logger.log(
+              this.log(
                 `Waiting fragment cc (${frag.cc}) @ ${frag.start} cancelled because another fragment at ${bufferInfo.end} is needed`
               );
               this.clearWaitingFragment();
@@ -550,7 +550,7 @@ class AudioStreamController
         initPTS
       );
     } else {
-      logger.log(
+      this.log(
         `Unknown video PTS for cc ${frag.cc}, waiting for video PTS before demuxing audio frag ${frag.sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`
       );
       const { cache } = (this.waitingData = this.waitingData || {

@@ -371,7 +371,7 @@ export class SubtitleStreamController
       const fragLen = fragments.length;
       const end = trackDetails.edge;
 
-      let foundFrag;
+      let foundFrag: Fragment | null;
       const fragPrevious = this.fragPrevious;
       if (targetBufferTime < end) {
         const { maxFragLookUpTolerance } = config;
@@ -392,10 +392,14 @@ export class SubtitleStreamController
         foundFrag = fragments[fragLen - 1];
       }
 
-      if (foundFrag?.encrypted) {
+      foundFrag = this.mapToInitFragWhenRequired(foundFrag);
+      if (!foundFrag) {
+        return;
+      }
+
+      if (foundFrag.encrypted) {
         this.loadKey(foundFrag, trackDetails);
       } else if (
-        foundFrag &&
         this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
       ) {
         // only load if fragment is not loaded
@@ -410,7 +414,11 @@ export class SubtitleStreamController
     targetBufferTime: number
   ) {
     this.fragCurrent = frag;
-    super.loadFragment(frag, levelDetails, targetBufferTime);
+    if (frag.sn === 'initSegment') {
+      this._loadInitSegment(frag);
+    } else {
+      super.loadFragment(frag, levelDetails, targetBufferTime);
+    }
   }
 
   get mediaBufferTimeRanges(): TimeRange[] {

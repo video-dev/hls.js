@@ -75,7 +75,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '15'
+          node-version: '16'
 
       - name: install
         run: |
@@ -135,7 +135,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '15'
+          node-version: '16'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -176,7 +176,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '15'
+          node-version: '16'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -233,7 +233,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '15'
+          node-version: '16'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -276,7 +276,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '15'
+          node-version: '16'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -330,7 +330,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '15'
+          node-version: '16'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -373,15 +373,15 @@ jobs:
       max-parallel: 8
       matrix:
         config:
-          - safari-osx_10.15
+          - safari-macOS_10.15
           - firefox-win_10
           - chrome-osx_10.11-79.0
-          - chrome-win_7-69.0
+          - chrome-win_7-75.0
 
         include:
-          - config: safari-osx_10.15
+          - config: safari-macOS_10.15
             ua: safari
-            os: OS X 10.15
+            os: macOS 10.15
           - config: firefox-win_10
             ua: firefox
             os: Windows 10
@@ -389,10 +389,10 @@ jobs:
             ua: chrome
             os: OS X 10.11
             uaVersion: '79.0'
-          - config: chrome-win_7-69.0
+          - config: chrome-win_7-75.0
             ua: chrome
             os: Windows 7
-            uaVersion: '69.0'
+            uaVersion: '75.0'
 
     steps:
       - uses: actions/checkout@v3
@@ -412,7 +412,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '15'
+          node-version: '16'
 
       - name: download build
         uses: actions/download-artifact@v3
