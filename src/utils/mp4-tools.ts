@@ -91,22 +91,10 @@ type SidxInfo = {
   version: number;
   referencesCount: number;
   references: any[];
-  moovEndOffset: number | null;
 };
 
-export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
-  const moovBox = findBox(initSegment, ['moov']);
-  const moov = moovBox[0];
-  const moovEndOffset = moov ? moov.length : null; // we need this in case we need to chop of garbage of the end of current data
-
-  const sidxBox = findBox(initSegment, ['sidx']);
-
-  if (!sidxBox || !sidxBox[0]) {
-    return null;
-  }
-
+export function parseSegmentIndex(sidx: Uint8Array): SidxInfo | null {
   const references: any[] = [];
-  const sidx = sidxBox[0];
 
   const version = sidx[0];
 
@@ -179,7 +167,6 @@ export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
     version,
     referencesCount,
     references,
-    moovEndOffset,
   };
 }
 

@@ -12,7 +12,7 @@
 import { Events } from '../events';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { logger } from '../utils/logger';
-import { parseSegmentIndex } from '../utils/mp4-tools';
+import { parseSegmentIndex, findBox } from '../utils/mp4-tools';
 import M3U8Parser from './m3u8-parser';
 import type { LevelParsed } from '../types/level';
 import type {
@@ -543,9 +543,14 @@ class PlaylistLoader {
     response: LoaderResponse,
     context: PlaylistLoaderContext
   ): void {
-    const sidxInfo = parseSegmentIndex(
-      new Uint8Array(response.data as ArrayBuffer)
-    );
+    const data = new Uint8Array(response.data as ArrayBuffer);
+    const moovBox = findBox(data, ['moov'])[0];
+    const moovEndOffset = moovBox ? moovBox.length : null; // we need this in case we need to chop of garbage of the end of current data
+    const sidxBox = findBox(data, ['sidx'])[0];
+    if (!sidxBox) {
+      return;
+    }
+    const sidxInfo = parseSegmentIndex(sidxBox);
     // if provided fragment does not contain sidx, early return
     if (!sidxInfo) {
       return;
@@ -564,7 +569,7 @@ class PlaylistLoader {
         );
       }
       if (frag.initSegment) {
-        frag.initSegment.setByteRange(String(sidxInfo.moovEndOffset) + '@0');
+        frag.initSegment.setByteRange(String(moovEndOffset) + '@0');
       }
     });
   }
