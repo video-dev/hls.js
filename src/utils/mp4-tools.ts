@@ -409,13 +409,19 @@ export function getDuration(data: Uint8Array, initData: InitData) {
   }
   if (videoDuration === 0 && audioDuration === 0) {
     // If duration samples are not available in the traf use sidx subsegment_duration
-    const sidx = parseSegmentIndex(data);
-    if (sidx?.references) {
-      return sidx.references.reduce(
-        (dur, ref) => dur + ref.info.duration || 0,
-        0
-      );
+    let sidxDuration = 0;
+    const sidxs = findBox(data, ['sidx']);
+    for (let i = 0; i < sidxs.length; i++) {
+      const sidx = parseSegmentIndex(sidxs[i]);
+      if (sidx?.references) {
+        sidxDuration += sidx.references.reduce(
+          (dur, ref) => dur + ref.info.duration || 0,
+          0
+        );
+      }
     }
+
+    return sidxDuration;
   }
   if (videoDuration) {
     return videoDuration;
