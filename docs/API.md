@@ -1558,9 +1558,40 @@ Full list of Events is available below:
 
 ## Creating a Custom Loader
 
-You can extend the internal loader definition for your own implementation via the static getter `Hls.DefaultConfig.loader`.
+You can use the internal loader definition for your own implementation via the static getter `Hls.DefaultConfig.loader`.
 
 Example:
+
+```js
+let myHls = new Hls({
+  pLoader: function (config) {
+    let loader = new Hls.DefaultConfig.loader(config);
+
+    Object.defineProperties(this, {
+      stats: {
+        get: () => loader.stats,
+      },
+      context: {
+        get: () => loader.context,
+      },
+    });
+
+    this.abort = () => loader.abort();
+    this.destroy = () => loader.destroy();
+    this.load = (context, config, callbacks) => {
+      let { type, url } = context;
+
+      if (type === 'manifest') {
+        console.log(`Manifest ${url} will be loaded.`);
+      }
+
+      loader.load(context, config, callbacks);
+    };
+  },
+});
+```
+
+Alternatively, environments that support ES6 classes can extends the loader directly:
 
 ```js
 import Hls from 'hls.js';
