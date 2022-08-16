@@ -1556,18 +1556,25 @@ Full list of Events is available below:
 - `Hls.Events.CUES_PARSED` - When `renderTextTracksNatively` is `false`, this event will fire when new captions or subtitle cues are parsed.
   - data: { type, cues, track } }
 
-## Loader Composition
+## Creating a Custom Loader
 
-You can export internal loader definition for your own implementation via static getter `Hls.DefaultConfig.loader`.
+You can use the internal loader definition for your own implementation via the static getter `Hls.DefaultConfig.loader`.
 
 Example:
 
 ```js
-import Hls from 'hls.js';
-
 let myHls = new Hls({
   pLoader: function (config) {
     let loader = new Hls.DefaultConfig.loader(config);
+
+    Object.defineProperties(this, {
+      stats: {
+        get: () => loader.stats,
+      },
+      context: {
+        get: () => loader.context,
+      },
+    });
 
     this.abort = () => loader.abort();
     this.destroy = () => loader.destroy();
@@ -1580,6 +1587,24 @@ let myHls = new Hls({
 
       loader.load(context, config, callbacks);
     };
+  },
+});
+```
+
+Alternatively, environments that support ES6 classes can extends the loader directly:
+
+```js
+import Hls from 'hls.js';
+
+let myHls = new Hls({
+  pLoader: class CustomLoader extends Hls.DefaultConfig.loader {
+    load(context, config, callbacks) {
+      let { type, url } = context;
+
+      // Custom behavior
+
+      super.load(context, config, callbacks);
+    }
   },
 });
 ```
