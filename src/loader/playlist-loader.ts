@@ -545,11 +545,11 @@ class PlaylistLoader {
   ): void {
     const data = new Uint8Array(response.data as ArrayBuffer);
     const sidxBox = findBox(data, ['sidx'])[0];
+    // if provided fragment does not contain sidx, early return
     if (!sidxBox) {
       return;
     }
     const sidxInfo = parseSegmentIndex(sidxBox);
-    // if provided fragment does not contain sidx, early return
     if (!sidxInfo) {
       return;
     }
