@@ -544,8 +544,6 @@ class PlaylistLoader {
     context: PlaylistLoaderContext
   ): void {
     const data = new Uint8Array(response.data as ArrayBuffer);
-    const moovBox = findBox(data, ['moov'])[0];
-    const moovEndOffset = moovBox ? moovBox.length : null; // we need this in case we need to chop of garbage of the end of current data
     const sidxBox = findBox(data, ['sidx'])[0];
     if (!sidxBox) {
       return;
@@ -569,6 +567,8 @@ class PlaylistLoader {
         );
       }
       if (frag.initSegment) {
+        const moovBox = findBox(data, ['moov'])[0];
+        const moovEndOffset = moovBox ? moovBox.length : null;
         frag.initSegment.setByteRange(String(moovEndOffset) + '@0');
       }
     });
