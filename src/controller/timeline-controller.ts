@@ -362,8 +362,10 @@ export class TimelineController implements ComponentAPI {
           if (textTrack) {
             clearCurrentCues(textTrack);
           } else {
+            const textTrackKind =
+              this._captionsOrSubtitlesFromCharacteristics(track);
             textTrack = this.createTextTrack(
-              'subtitles',
+              textTrackKind,
               track.name,
               track.lang
             );
@@ -391,6 +393,25 @@ export class TimelineController implements ComponentAPI {
         });
       }
     }
+  }
+
+  private _captionsOrSubtitlesFromCharacteristics(
+    track: MediaPlaylist
+  ): TextTrackKind {
+    if (track.attrs?.CHARACTERISTICS) {
+      const transcribesSpokenDialog = /transcribes-spoken-dialog/gi.test(
+        track.attrs.CHARACTERISTICS
+      );
+      const describesMusicAndSound = /describes-music-and-sound/gi.test(
+        track.attrs.CHARACTERISTICS
+      );
+
+      if (transcribesSpokenDialog && describesMusicAndSound) {
+        return 'captions';
+      }
+    }
+
+    return 'subtitles';
   }
 
   private onManifestLoaded(

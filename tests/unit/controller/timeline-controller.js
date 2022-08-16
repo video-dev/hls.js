@@ -93,4 +93,67 @@ describe('TimelineController', function () {
       expect(timelineController.media.textTracks.length).to.equal(2);
     });
   });
+
+  describe('text track kind', function () {
+    it('should be kind captions when there is both transcribes-spoken-dialog and describes-music-and-sound', function () {
+      hls.subtitleTrackController = { subtitleDisplay: false };
+
+      timelineController.onSubtitleTracksUpdated(Events.MANIFEST_LOADED, {
+        subtitleTracks: [
+          {
+            id: 0,
+            name: 'en',
+            attrs: {
+              CHARACTERISTICS:
+                'public.accessibility.transcribes-spoken-dialog,public.accessibility.describes-music-and-sound',
+            },
+          },
+        ],
+      });
+
+      // text tracks model contain only newly added manifest tracks, in same order as in manifest
+      expect(timelineController.textTracks[0].kind).to.equal('captions');
+      // text tracks of the media contain the newly added text tracks
+      expect(timelineController.media.textTracks[0].kind).to.equal('captions');
+    });
+
+    it('should be kind subtitles when there is no describes-music-and-sound', function () {
+      hls.subtitleTrackController = { subtitleDisplay: false };
+
+      timelineController.onSubtitleTracksUpdated(Events.MANIFEST_LOADED, {
+        subtitleTracks: [
+          {
+            id: 0,
+            name: 'en',
+            attrs: {
+              CHARACTERISTICS: 'public.accessibility.transcribes-spoken-dialog',
+            },
+          },
+        ],
+      });
+
+      // text tracks model contain only newly added manifest tracks, in same order as in manifest
+      expect(timelineController.textTracks[0].kind).to.equal('subtitles');
+      // text tracks of the media contain the newly added text tracks
+      expect(timelineController.media.textTracks[0].kind).to.equal('subtitles');
+    });
+
+    it('should be kind subtitles when there is no CHARACTERISTICS', function () {
+      hls.subtitleTrackController = { subtitleDisplay: false };
+
+      timelineController.onSubtitleTracksUpdated(Events.MANIFEST_LOADED, {
+        subtitleTracks: [
+          {
+            id: 0,
+            name: 'en',
+          },
+        ],
+      });
+
+      // text tracks model contain only newly added manifest tracks, in same order as in manifest
+      expect(timelineController.textTracks[0].kind).to.equal('subtitles');
+      // text tracks of the media contain the newly added text tracks
+      expect(timelineController.media.textTracks[0].kind).to.equal('subtitles');
+    });
+  });
 });
