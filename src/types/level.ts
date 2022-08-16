@@ -24,6 +24,7 @@ export interface LevelAttributes extends AttrList {
   BANDWIDTH?: string;
   BYTERANGE?: string;
   'CLOSED-CAPTIONS'?: string;
+  CHARACTERISTICS?: string;
   CODECS?: string;
   DEFAULT?: string;
   FORCED?: string;
