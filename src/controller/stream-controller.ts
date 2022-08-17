@@ -51,7 +51,6 @@ export default class StreamController
   private onvplaying: EventListener | null = null;
   private onvseeked: EventListener | null = null;
   private fragLastKbps: number = 0;
-  private stalled: boolean = false;
   private couldBacktrack: boolean = false;
   private backtrackFragment: Fragment | null = null;
   private audioCodecSwitch: boolean = false;
@@ -545,7 +544,7 @@ export default class StreamController
     this.log('Trigger BUFFER_RESET');
     this.hls.trigger(Events.BUFFER_RESET, undefined);
     this.fragmentTracker.removeAllFragments();
-    this.couldBacktrack = this.stalled = false;
+    this.couldBacktrack = false;
     this.startPosition = this.lastCurrentTime = 0;
     this.fragPlaying = null;
     this.backtrackFragment = null;
