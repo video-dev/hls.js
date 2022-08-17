@@ -240,6 +240,11 @@ class AudioStreamController
     }
   }
 
+  protected resetLoadingState() {
+    this.clearWaitingFragment();
+    super.resetLoadingState();
+  }
+
   protected onTickEnd() {
     const { media } = this;
     if (!media || !media.readyState) {
