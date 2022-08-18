@@ -19,18 +19,23 @@ class AACDemuxer extends BaseAudioDemuxer {
     this.config = config;
   }
 
-  resetInitSegment(audioCodec, videoCodec, duration) {
-    super.resetInitSegment(audioCodec, videoCodec, duration);
+  resetInitSegment(
+    initSegment: Uint8Array | undefined,
+    audioCodec: string | undefined,
+    videoCodec: string | undefined,
+    trackDuration: number
+  ) {
+    super.resetInitSegment(initSegment, audioCodec, videoCodec, trackDuration);
     this._audioTrack = {
       container: 'audio/adts',
       type: 'audio',
-      id: 0,
+      id: 2,
       pid: -1,
       sequenceNumber: 0,
-      isAAC: true,
+      segmentCodec: 'aac',
       samples: [],
       manifestCodec: audioCodec,
-      duration: duration,
+      duration: trackDuration,
       inputTimeScale: 90000,
       dropped: 0,
     };
@@ -74,7 +79,7 @@ class AACDemuxer extends BaseAudioDemuxer {
       track,
       data,
       offset,
-      this.initPTS as number,
+      this.basePTS as number,
       this.frameIndex
     );
     if (frame && frame.missing === 0) {

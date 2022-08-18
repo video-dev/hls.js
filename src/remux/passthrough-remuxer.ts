@@ -1,3 +1,7 @@
+import {
+  flushTextTrackMetadataCueSamples,
+  flushTextTrackUserdataCueSamples,
+} from './mp4-remuxer';
 import type { InitData, InitDataTrack } from '../utils/mp4-tools';
 import {
   getDuration,
@@ -18,7 +22,7 @@ import type {
   DemuxedAudioTrack,
   DemuxedMetadataTrack,
   DemuxedUserdataTrack,
-  PassthroughVideoTrack,
+  PassthroughTrack,
 } from '../types/demuxer';
 
 class PassThroughRemuxer implements Remuxer {
@@ -30,18 +34,18 @@ class PassThroughRemuxer implements Remuxer {
   private initTracks?: TrackSet;
   private lastEndDTS: number | null = null;
 
-  destroy() {}
+  public destroy() {}
 
-  resetTimeStamp(defaultInitPTS) {
+  public resetTimeStamp(defaultInitPTS) {
     this.initPTS = defaultInitPTS;
     this.lastEndDTS = null;
   }
 
-  resetNextTimestamp() {
+  public resetNextTimestamp() {
     this.lastEndDTS = null;
   }
 
-  resetInitSegment(
+  public resetInitSegment(
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined
@@ -52,7 +56,7 @@ class PassThroughRemuxer implements Remuxer {
     this.emitInitSegment = true;
   }
 
-  generateInitSegment(initSegment: Uint8Array | undefined): void {
+  private generateInitSegment(initSegment: Uint8Array | undefined): void {
     let { audioCodec, videoCodec } = this;
     if (!initSegment || !initSegment.byteLength) {
       this.initTracks = undefined;
@@ -106,9 +110,9 @@ class PassThroughRemuxer implements Remuxer {
     this.initTracks = tracks;
   }
 
-  remux(
+  public remux(
     audioTrack: DemuxedAudioTrack,
-    videoTrack: PassthroughVideoTrack,
+    videoTrack: PassthroughTrack,
     id3Track: DemuxedMetadataTrack,
     textTrack: DemuxedUserdataTrack,
     timeOffset: number
@@ -201,9 +205,22 @@ class PassThroughRemuxer implements Remuxer {
 
     result.audio = track.type === 'audio' ? track : undefined;
     result.video = track.type !== 'audio' ? track : undefined;
-    result.text = textTrack;
-    result.id3 = id3Track;
     result.initSegment = initSegment;
+    const initPtsNum = this.initPTS ?? 0;
+    result.id3 = flushTextTrackMetadataCueSamples(
+      id3Track,
+      timeOffset,
+      initPtsNum,
+      initPtsNum
+    );
+
+    if (textTrack.samples.length) {
+      result.text = flushTextTrackUserdataCueSamples(
+        textTrack,
+        timeOffset,
+        initPtsNum
+      );
+    }
 
     return result;
   }
@@ -223,7 +240,7 @@ function getParsedTrackCodec(
   // Since mp4-tools cannot parse full codec string (see 'TODO: Parse codec details'... in mp4-tools)
   // Provide defaults based on codec type
   // This allows for some playback of some fmp4 playlists without CODECS defined in manifest
-  if (parsedCodec === 'hvc1') {
+  if (parsedCodec === 'hvc1' || parsedCodec === 'hev1') {
     return 'hvc1.1.c.L120.90';
   }
   if (parsedCodec === 'av01') {

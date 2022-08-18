@@ -98,6 +98,13 @@ class XhrLoader implements Loader<LoaderContext> {
       if (!xhr.readyState) {
         xhr.open('GET', context.url, true);
       }
+
+      const headers = this.context.headers;
+      if (headers) {
+        for (const header in headers) {
+          xhr.setRequestHeader(header, headers[header]);
+        }
+      }
     } catch (e) {
       // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
       this.callbacks!.onError(

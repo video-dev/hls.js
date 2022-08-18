@@ -34,13 +34,24 @@ describe('GapController', function () {
 
   describe('_tryNudgeBuffer', function () {
     it('should increment the currentTime by a multiple of nudgeRetry and the configured nudge amount', function () {
-      for (let i = 1; i < config.nudgeMaxRetry; i++) {
-        const expected = media.currentTime + i * config.nudgeOffset;
+      for (let i = 0; i < config.nudgeMaxRetry; i++) {
+        triggerSpy.resetHistory();
+
+        const expected = media.currentTime + (i + 1) * config.nudgeOffset;
         gapController._tryNudgeBuffer();
         expect(media.currentTime).to.equal(expected);
+
+        expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
+          fatal: false,
+        });
       }
 
-      expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
+      triggerSpy.resetHistory();
+      gapController._tryNudgeBuffer();
+
+      expect(triggerSpy).not.to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
         fatal: false,
@@ -61,7 +72,7 @@ describe('GapController', function () {
 
   describe('_reportStall', function () {
     it('should report a stall with the current buffer length if it has not already been reported', function () {
-      gapController._reportStall(42);
+      gapController._reportStall({ len: 42 });
       expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
@@ -72,7 +83,7 @@ describe('GapController', function () {
 
     it('should not report a stall if it was already reported', function () {
       gapController.stallReported = true;
-      gapController._reportStall(42);
+      gapController._reportStall({ len: 42 });
       expect(triggerSpy).to.not.have.been.called;
     });
   });
@@ -258,14 +269,37 @@ describe('GapController', function () {
       wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
     });
 
+    it('should not detect stalls when loading an earlier fragment while seeking', function () {
+      wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
+      mockMedia.currentTime += 0.1;
+      gapController.poll(0);
+      expect(gapController.stalled).to.equal(null, 'buffered start');
+
+      wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
+      mockMedia.currentTime += 5;
+      mockMedia.seeking = true;
+      mockTimeRangesData.length = 1;
+      mockTimeRangesData[0] = [5.5, 10];
+      gapController.poll(mockMedia.currentTime - 5);
+      expect(gapController.stalled).to.equal(null, 'new seek position');
+
+      wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
+      gapController.poll(mockMedia.currentTime, {
+        start: 5,
+      });
+      expect(gapController.stalled).to.equal(
+        null,
+        'seeking while loading fragment'
+      );
+    });
+
     it('should trigger reportStall when stalling for 250ms or longer', function () {
       setStalling();
-      const clock = sandbox.useFakeTimers(0);
-      clock.tick(250);
+      wallClock.tick(250);
       gapController.stalled = 1;
       gapController.poll(lastCurrentTime);
       expect(reportStallSpy).to.not.have.been.called;
-      clock.tick(251);
+      wallClock.tick(251);
       gapController.poll(lastCurrentTime);
       expect(reportStallSpy).to.have.been.calledOnce;
     });

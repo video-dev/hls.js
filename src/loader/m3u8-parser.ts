@@ -1,5 +1,6 @@
 import * as URLToolkit from 'url-toolkit';
 
+import { DateRange } from './date-range';
 import { Fragment, Part } from './fragment';
 import { LevelDetails } from './level-details';
 import { LevelKey } from './level-key';
@@ -37,24 +38,11 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
 const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
   [
     /#(EXTM3U)/.source,
-    /#EXT-X-(PLAYLIST-TYPE):(.+)/.source,
-    /#EXT-X-(MEDIA-SEQUENCE): *(\d+)/.source,
-    /#EXT-X-(SKIP):(.+)/.source,
-    /#EXT-X-(TARGETDURATION): *(\d+)/.source,
-    /#EXT-X-(KEY):(.+)/.source,
-    /#EXT-X-(START):(.+)/.source,
-    /#EXT-X-(ENDLIST)/.source,
-    /#EXT-X-(DISCONTINUITY-SEQ)UENCE: *(\d+)/.source,
-    /#EXT-X-(DIS)CONTINUITY/.source,
-    /#EXT-X-(VERSION):(\d+)/.source,
-    /#EXT-X-(MAP):(.+)/.source,
-    /#EXT-X-(SERVER-CONTROL):(.+)/.source,
-    /#EXT-X-(PART-INF):(.+)/.source,
-    /#EXT-X-(GAP)/.source,
-    /#EXT-X-(BITRATE):\s*(\d+)/.source,
-    /#EXT-X-(PART):(.+)/.source,
-    /#EXT-X-(PRELOAD-HINT):(.+)/.source,
-    /#EXT-X-(RENDITION-REPORT):(.+)/.source,
+    /#EXT-X-(DATERANGE|KEY|MAP|PART|PART-INF|PLAYLIST-TYPE|PRELOAD-HINT|RENDITION-REPORT|SERVER-CONTROL|SKIP|START):(.+)/
+      .source,
+    /#EXT-X-(BITRATE|DISCONTINUITY-SEQUENCE|MEDIA-SEQUENCE|TARGETDURATION|VERSION): *(\d+)/
+      .source,
+    /#EXT-X-(DISCONTINUITY|ENDLIST|GAP)/.source,
     /(#)([^:]*):(.*)/.source,
     /(#)(.*)(?:.*)\r?\n?/.source,
   ].join('|')
@@ -85,7 +73,7 @@ export default class M3U8Parser {
     if (avcdata.length > 2) {
       let result = avcdata.shift() + '.';
       result += parseInt(avcdata.shift()).toString(16);
-      result += ('000' + parseInt(avcdata.shift()).toString(16)).substr(-4);
+      result += ('000' + parseInt(avcdata.shift()).toString(16)).slice(-4);
       return result;
     }
     return codec;
@@ -228,6 +216,7 @@ export default class M3U8Parser {
         if (currentInitSegment) {
           frag.initSegment = currentInitSegment;
           frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+          currentInitSegment.rawProgramDateTime = null;
         }
       }
 
@@ -337,16 +326,32 @@ export default class M3U8Parser {
               frag.tagList.push(value2 ? [value1, value2] : [value1]);
             }
             break;
-          case 'DIS':
+          case 'DISCONTINUITY':
             discontinuityCounter++;
-          /* falls through */
+            frag.tagList.push(['DIS']);
+            break;
           case 'GAP':
             frag.tagList.push([tag]);
             break;
           case 'BITRATE':
             frag.tagList.push([tag, value1]);
             break;
-          case 'DISCONTINUITY-SEQ':
+          case 'DATERANGE': {
+            const dateRangeAttr = new AttrList(value1);
+            const dateRange = new DateRange(
+              dateRangeAttr,
+              level.dateRanges[dateRangeAttr.ID]
+            );
+            if (dateRange.isValid || level.skippedSegments) {
+              level.dateRanges[dateRange.id] = dateRange;
+            } else {
+              logger.warn(`Ignoring invalid DATERANGE tag: "${value1}"`);
+            }
+            // Add to fragment tag list for backwards compatibility (< v1.2.0)
+            frag.tagList.push(['EXT-X-DATERANGE', value1]);
+            break;
+          }
+          case 'DISCONTINUITY-SEQUENCE':
             discontinuityCounter = parseInt(value1);
             break;
           case 'KEY': {
@@ -425,18 +430,26 @@ export default class M3U8Parser {
           }
           case 'MAP': {
             const mapAttrs = new AttrList(value1);
-            frag.relurl = mapAttrs.URI;
-            if (mapAttrs.BYTERANGE) {
-              frag.setByteRange(mapAttrs.BYTERANGE);
+            if (frag.duration) {
+              // Initial segment tag is after segment duration tag.
+              //   #EXTINF: 6.0
+              //   #EXT-X-MAP:URI="init.mp4
+              const init = new Fragment(type, baseurl);
+              setInitSegment(init, mapAttrs, id, levelkey);
+              currentInitSegment = init;
+              frag.initSegment = currentInitSegment;
+              if (
+                currentInitSegment.rawProgramDateTime &&
+                !frag.rawProgramDateTime
+              ) {
+                frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+              }
+            } else {
+              // Initial segment tag is before segment duration tag
+              setInitSegment(frag, mapAttrs, id, levelkey);
+              currentInitSegment = frag;
+              createNextFrag = true;
             }
-            frag.level = id;
-            frag.sn = 'initSegment';
-            if (levelkey) {
-              frag.levelkey = levelkey;
-            }
-            frag.initSegment = null;
-            currentInitSegment = frag;
-            createNextFrag = true;
             break;
           }
           case 'SERVER-CONTROL': {
@@ -621,4 +634,22 @@ function assignProgramDateTime(frag, prevFrag) {
     frag.programDateTime = null;
     frag.rawProgramDateTime = null;
   }
+}
+
+function setInitSegment(
+  frag: Fragment,
+  mapAttrs: AttrList,
+  id: number,
+  levelkey: LevelKey | undefined
+) {
+  frag.relurl = mapAttrs.URI;
+  if (mapAttrs.BYTERANGE) {
+    frag.setByteRange(mapAttrs.BYTERANGE);
+  }
+  frag.level = id;
+  frag.sn = 'initSegment';
+  if (levelkey) {
+    frag.levelkey = levelkey;
+  }
+  frag.initSegment = null;
 }

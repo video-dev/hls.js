@@ -91,6 +91,7 @@ export class BufferHelper {
     end: number;
     nextStart?: number;
   } {
+    pos = Math.max(0, pos);
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
     buffered.sort(function (a, b) {
       const diff = a.start - b.start;

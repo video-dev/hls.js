@@ -97,7 +97,7 @@ export class Fragment extends BaseSegment {
   public programDateTime: number | null = null;
   public tagList: Array<string[]> = [];
 
-  // EXTINF has to be present for a m38 to be considered valid
+  // EXTINF has to be present for a m3u8 to be considered valid
   public duration: number = 0;
   // sn notates the sequence number for a segment, and if set to a string can be 'initSegment'
   public sn: number | 'initSegment' = 0;

@@ -17,6 +17,7 @@ import type AudioTrackController from './controller/audio-track-controller';
 import type AbrController from './controller/abr-controller';
 import type BufferController from './controller/buffer-controller';
 import type CapLevelController from './controller/cap-level-controller';
+import type CMCDController from './controller/cmcd-controller';
 import type EMEController from './controller/eme-controller';
 import type SubtitleTrackController from './controller/subtitle-track-controller';
 import type { ComponentAPI, NetworkComponentAPI } from './types/component-api';
@@ -50,6 +51,7 @@ export default class Hls implements HlsEventEmitter {
   private audioTrackController: AudioTrackController;
   private subtitleTrackController: SubtitleTrackController;
   private emeController: EMEController;
+  private cmcdController: CMCDController;
 
   private _media: HTMLMediaElement | null = null;
   private url: string | null = null;
@@ -118,6 +120,7 @@ export default class Hls implements HlsEventEmitter {
       new ConfigBufferController(this));
     const capLevelController = (this.capLevelController =
       new ConfigCapLevelController(this));
+
     const fpsController = new ConfigFpsController(this);
     const playListLoader = new PlaylistLoader(this);
     const keyLoader = new KeyLoader(this);
@@ -175,6 +178,11 @@ export default class Hls implements HlsEventEmitter {
     this.createController(config.timelineController, null, coreComponents);
     this.emeController = this.createController(
       config.emeController,
+      null,
+      coreComponents
+    );
+    this.cmcdController = this.createController(
+      config.cmcdController,
       null,
       coreComponents
     );
@@ -614,7 +622,7 @@ export default class Hls implements HlsEventEmitter {
 
     const len = levels.length;
     for (let i = 0; i < len; i++) {
-      if (levels[i].maxBitrate > minAutoBitrate) {
+      if (levels[i].maxBitrate >= minAutoBitrate) {
         return i;
       }
     }
@@ -655,12 +663,20 @@ export default class Hls implements HlsEventEmitter {
    * this setter is used to force next auto level.
    * this is useful to force a switch down in auto mode:
    * in case of load error on level N, hls.js can set nextAutoLevel to N-1 for example)
-   * forced value is valid for one fragment. upon succesful frag loading at forced level,
+   * forced value is valid for one fragment. upon successful frag loading at forced level,
    * this value will be resetted to -1 by ABR controller.
    * @type {number}
    */
   set nextAutoLevel(nextLevel: number) {
     this.abrController.nextAutoLevel = Math.max(this.minAutoLevel, nextLevel);
+  }
+
+  /**
+   * get the datetime value relative to media.currentTime for the active level Program Date Time if present
+   * @type {Date}
+   */
+  public get playingDate(): Date | null {
+    return this.streamController.currentProgramDateTime;
   }
 
   /**
@@ -831,25 +847,34 @@ export type {
   ABRControllerConfig,
   BufferControllerConfig,
   CapLevelControllerConfig,
+  CMCDControllerConfig,
   EMEControllerConfig,
   DRMSystemOptions,
   FPSControllerConfig,
   FragmentLoaderConfig,
+  FragmentLoaderConstructor,
   LevelControllerConfig,
   MP4RemuxerConfig,
   PlaylistLoaderConfig,
+  PlaylistLoaderConstructor,
   StreamControllerConfig,
   LatencyControllerConfig,
+  MetadataControllerConfig,
   TimelineControllerConfig,
   TSDemuxerConfig,
 } from './config';
 export type { CuesInterface } from './utils/cues';
 export type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
+export type { DateRange } from './loader/date-range';
 export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
 export type { LevelDetails } from './loader/level-details';
 export type { SourceBufferName } from './types/buffer';
-export type { MetadataSample, UserdataSample } from './types/demuxer';
+export type {
+  MetadataSample,
+  MetadataSchema,
+  UserdataSample,
+} from './types/demuxer';
 export type {
   LevelParsed,
   LevelAttributes,

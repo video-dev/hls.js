@@ -243,7 +243,8 @@ export default class BufferController implements ComponentAPI {
         // check if SourceBuffer codec needs to change
         const track = this.tracks[trackName];
         if (track && typeof track.buffer.changeType === 'function') {
-          const { codec, levelCodec, container } = data[trackName];
+          const { id, codec, levelCodec, container, metadata } =
+            data[trackName];
           const currentCodec = (track.levelCodec || track.codec).replace(
             VIDEO_CODEC_PROFILE_REPACE,
             '$1'
@@ -255,6 +256,17 @@ export default class BufferController implements ComponentAPI {
           if (currentCodec !== nextCodec) {
             const mimeType = `${container};codecs=${levelCodec || codec}`;
             this.appendChangeType(trackName, mimeType);
+            logger.log(
+              `[buffer-controller]: switching codec ${currentCodec} to ${nextCodec}`
+            );
+            this.tracks[trackName] = {
+              buffer: track.buffer,
+              codec,
+              container,
+              levelCodec,
+              metadata,
+              id,
+            };
           }
         }
       } else {
@@ -714,6 +726,7 @@ export default class BufferController implements ComponentAPI {
             codec: codec,
             container: track.container,
             levelCodec: track.levelCodec,
+            metadata: track.metadata,
             id: track.id,
           };
           tracksCreated++;
@@ -845,14 +858,14 @@ export default class BufferController implements ComponentAPI {
   // resolve, the onUnblocked function is executed. Functions calling this method do not need to unblock the queue
   // upon completion, since we already do it here
   private blockBuffers(
-    onUnblocked: Function,
+    onUnblocked: () => void,
     buffers: Array<SourceBufferName> = this.getSourceBufferTypes()
   ) {
     if (!buffers.length) {
       logger.log(
         '[buffer-controller]: Blocking operation requested, but no SourceBuffers exist'
       );
-      Promise.resolve(onUnblocked);
+      Promise.resolve().then(onUnblocked);
       return;
     }
     const { operationQueue } = this;

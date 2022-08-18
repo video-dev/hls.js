@@ -5,7 +5,7 @@
 
 [comment]: <> ([![Sauce Test Status]&#40;https://saucelabs.com/browser-matrix/robwalch.svg&#41;]&#40;https://saucelabs.com/u/robwalch&#41;)
 
-# ![HLS.js](https://cloud.githubusercontent.com/assets/616833/19739063/e10be95a-9bb9-11e6-8100-2896f8500138.png)
+# ![HLS.js](./docs/logo.svg)
 
 HLS.js is a JavaScript library that implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
@@ -41,7 +41,7 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
   - Packetized metadata (ID3v2.3.0) Elementary Stream
 - AAC container (audio only streams)
 - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
-- Timed Metadata for HTTP Live Streaming (in ID3 format, carried in MPEG-2 TS)
+- Timed Metadata for HTTP Live Streaming (ID3 format carried in MPEG-2 TS, Emsg in CMAF/Fragmented MP4, and DATERANGE playlist tags)
 - AES-128 decryption
 - SAMPLE-AES decryption (only supported if using MPEG-2 TS container)
 - Encrypted media extensions (EME) support for DRM (digital rights management)
@@ -102,10 +102,10 @@ The following properties are added to their respective variants' attribute list 
 - `#EXT-X-PRELOAD-HINT:<attribute-list>`
 - `#EXT-X-SKIP:<attribute-list>`
 - `#EXT-X-RENDITION-REPORT:<attribute-list>`
+- `#EXT-X-DATERANGE:<attribute-list>`
 
 The following tags are added to their respective fragment's attribute list but are not implemented in streaming and playback.
 
-- `#EXT-X-DATERANGE:<attribute-list>` (Not added to metadata TextTracks. See [#2218](https://github.com/video-dev/hls.js/issues/2218))
 - `#EXT-X-BITRATE` (Not used in ABR controller)
 - `#EXT-X-GAP` (Not implemented. See [#2940](https://github.com/video-dev/hls.js/issues/2940))
 
@@ -113,15 +113,14 @@ The following tags are added to their respective fragment's attribute list but a
 
 For a complete list of issues, see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependent on the runtime environment (for example, not all browsers on the same OS support HEVC).
 
-- CMAF CC support [#2623](https://github.com/video-dev/hls.js/issues/2623)
-- `Emsg` Inband Timed Metadata for FMP4 (ID3 within Emsgv1) in "metadata" TextTracks [#2360](https://github.com/video-dev/hls.js/issues/2360)
-- `#EXT-X-DATERANGE` in "metadata" TextTracks [#2218](https://github.com/video-dev/hls.js/issues/2218)
+- FairPlay and PlayReady DRM ( See [#3779](https://github.com/video-dev/hls.js/issues/2360) and [issues labeled DRM](https://github.com/video-dev/hls.js/issues?q=is%3Aissue+is%3Aopen+label%3ADRM))
+- Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
+- HLS Content Steering
+- HLS Interstitials
+- `#EXT-X-DEFINE` variable substitution
 - `#EXT-X-GAP` filling [#2940](https://github.com/video-dev/hls.js/issues/2940)
 - `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
 - `SAMPLE-AES` with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
-- PlayReady and FairPlay DRM ( See [#3779](https://github.com/video-dev/hls.js/issues/2360) and [issues labeled DRM](https://github.com/video-dev/hls.js/issues?q=is%3Aissue+is%3Aopen+label%3ADRM))
-- Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
-- MP3 elementary stream audio in IE and Edge (<=18) on Windows 10 (See [#1641](https://github.com/video-dev/hls.js/issues/1641) and [Microsoft answers forum](https://answers.microsoft.com/en-us/ie/forum/all/ie11-on-windows-10-cannot-play-hls-with-mp3/2da994b5-8dec-4ae9-9201-7d138ede49d9))
 
 ### Server-side-rendering (SSR) and `require` from a Node.js runtime
 
@@ -176,7 +175,7 @@ npm run build -- --env dist # replace "dist" by other configuration name, see ab
 
 Note: The "demo" config is always built.
 
-**NOTE:** `hls.light.*.js` dist files do not include EME, subtitles, or alternate-audio support. In addition,
+**NOTE:** `hls.light.*.js` dist files do not include EME, subtitles, CMCD, or alternate-audio support. In addition,
 the following types are not available in the light build:
 
 - `AudioStreamController`
@@ -186,6 +185,7 @@ the following types are not available in the light build:
 - `SubtitleStreamController`
 - `SubtitleTrackController`
 - `TimelineController`
+- `CmcdController`
 
 ### Linter (ESlint)
 
@@ -289,7 +289,6 @@ HLS.js is supported on:
 - Chrome 39+ for Desktop
 - Firefox 41+ for Android
 - Firefox 42+ for Desktop
-- IE11 for Windows 8.1+
 - Edge for Windows 10+
 - Safari 8+ for MacOS 10.10+
 - Safari for ipadOS 13+
@@ -329,9 +328,9 @@ Directly include dist/hls.js or dist/hls.min.js in a script tag on the page. Thi
 native browser support for HLS playback in HTMLMediaElements:
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<!-- Or if you want a more recent alpha version -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@alpha"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<!-- Or if you want the latest version from the main branch -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
 <video id="video"></video>
 <script>
   var video = document.getElementById('video');
@@ -365,9 +364,9 @@ native browser support for HLS playback in HTMLMediaElements:
 To check for native browser support first and then fallback to HLS.js, swap these conditionals. See [this comment](https://github.com/video-dev/hls.js/pull/2954#issuecomment-670021358) to understand some of the tradeoffs.
 
 ```html
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<!-- Or if you want a more recent alpha version -->
-<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@alpha"></script> -->
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<!-- Or if you want the latest version from the main branch -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@canary"></script> -->
 <video id="video"></video>
 <script>
   var video = document.getElementById('video');
@@ -404,6 +403,7 @@ The following players integrate HLS.js for HLS playback:
 
 - [JW Player](https://www.jwplayer.com)
 - [Akamai Adaptive Media Player (AMP)](https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
+- [BridTV Player](https://www.brid.tv)
 - [Clappr](https://github.com/clappr/clappr)
 - [Flowplayer](https://www.flowplayer.org) through [flowplayer-hlsjs](https://github.com/flowplayer/flowplayer-hlsjs)
 - [MediaElement.js](https://www.mediaelementjs.com)
@@ -427,7 +427,7 @@ The following players integrate HLS.js for HLS playback:
 |                        [<img src="https://player.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120">](https://www.viacom.com/)                        |             [<img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120">](https://vk.com/)              |                         [<img src="https://avatars0.githubusercontent.com/u/5090060?s=200&v=4" width="120">](https://www.jwplayer.com)                         |                                                   [<img src="https://staticftv-a.akamaihd.net/arches/francetv/default/img/og-image.jpg?20161007" width="120">](https://www.france.tv)                                                   |
 |                          [<img src="https://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)                          | [<img src="https://static3.1tv.ru/assets/web/logo-ac67852f1625b338f9d1fb96be089d03557d50bfc5790d5f48dc56799f59dec6.svg" width="120" height="120">](https://www.1tv.ru/) |       [<img src="https://user-images.githubusercontent.com/1480052/40482633-c013ebce-5f55-11e8-96d5-b776415de0ce.png" width="120">](https://www.zdf.de)        |                                              [<img src="https://github.com/cdnbye/hlsjs-p2p-engine/blob/master/figs/cdnbye.png" width="120">](https://github.com/cdnbye/hlsjs-p2p-engine)                                               |
 |                                                            [cdn77](https://streaming.cdn77.com/)                                                             |                                  [<img src="https://avatars0.githubusercontent.com/u/7442371?s=200&v=4" width="120">](https://r7.com/)                                  | [<img src="https://raw.githubusercontent.com/Novage/p2p-media-loader/gh-pages/images/p2pml-logo.png" width="120">](https://github.com/Novage/p2p-media-loader) |                                                              [<img src="https://avatars3.githubusercontent.com/u/45617200?s=400" width="120">](https://kayosports.com.au)                                                               |
-|    [<img src="https://avatars1.githubusercontent.com/u/5279615?s=400&u=9771a216836c613f1edf4afe71cfc69d4c5657ed&v=4" width="120">](https://flosports.tv)     |                  [<img src="https://www.logolynx.com/images/logolynx/c6/c67a2cb3ad33a82b5518f8ad8f124703.png" width="120">](https://global.axon.com/)                   |                                                                                                                                                                |                                                                                                                                                                                                                                         |
+|    [<img src="https://avatars1.githubusercontent.com/u/5279615?s=400&u=9771a216836c613f1edf4afe71cfc69d4c5657ed&v=4" width="120">](https://flosports.tv)     |                  [<img src="https://www.logolynx.com/images/logolynx/c6/c67a2cb3ad33a82b5518f8ad8f124703.png" width="120">](https://global.axon.com/)                   |                              [<img src="https://cms-static.brid.tv/img/brid-logo-120x120.jpg" width="120">](https://www.brid.tv/)                              |                                                                                                                                                                                                                                         |
 
 ## Chrome/Firefox integration
 

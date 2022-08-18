@@ -374,10 +374,9 @@ describe('parseFrameHeader', function () {
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x02; // frame_length is 16
-    expect(parseFrameHeader(data, 0, 0, 0, 0)).to.deep.equal({
+    expect(parseFrameHeader(data, 0)).to.deep.equal({
       headerLength: 9,
       frameLength: 7,
-      stamp: 0,
     });
   });
 
@@ -386,12 +385,12 @@ describe('parseFrameHeader', function () {
     data[0] = 0xff;
     data[1] = 0xf0; // protection_absent = 0
     data[4] = 0x00; // frame_length is 0
-    expect(parseFrameHeader(data, 0, 0, 0, 0)).to.be.undefined;
+    expect(parseFrameHeader(data, 0)).to.be.undefined;
   });
 });
 
 describe('appendFrame', function () {
-  it('should append the found sample to track and return some useful information', function () {
+  it('should append the found sample to track and return frame information', function () {
     const track = {
       samplerate: 64000,
       samples: [],
@@ -414,7 +413,7 @@ describe('appendFrame', function () {
     expect(track.samples.length).to.equal(1);
   });
 
-  it('should not append sample when incomplete (aac overflow or progressive streaming)', function () {
+  it('should return an incomplete frame without appending when data is incomplete (aac overflow or progressive streaming)', function () {
     const track = {
       samplerate: 64000,
       samples: [],
@@ -436,6 +435,31 @@ describe('appendFrame', function () {
       },
       length: 24,
       missing: 4,
+    });
+    expect(track.samples.length).to.equal(0);
+  });
+
+  it('should return an incomplete frame without appending when header is incomplete (aac overflow or progressive streaming)', function () {
+    const track = {
+      samplerate: 64000,
+      samples: [],
+      len: 0,
+    };
+    const data = new Uint8Array(new ArrayBuffer(2));
+    data[0] = 0xff;
+    data[1] = 0xf0; // protection_absent = 0
+
+    const frame = appendFrame(track, data, 0, 0, 0);
+    const unit = new Uint8Array(2);
+    unit.set(data.subarray(0, 2), 0);
+
+    expect(frame, JSON.stringify(frame)).to.deep.equal({
+      sample: {
+        unit,
+        pts: 0,
+      },
+      length: 2,
+      missing: -1,
     });
     expect(track.samples.length).to.equal(0);
   });

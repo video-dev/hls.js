@@ -12,16 +12,18 @@ const startsWith = function (
   searchString: string,
   position: number = 0
 ) {
-  return inputString.substr(position, searchString.length) === searchString;
+  return (
+    inputString.slice(position, position + searchString.length) === searchString
+  );
 };
 
 const cueString2millis = function (timeString: string) {
-  let ts = parseInt(timeString.substr(-3));
-  const secs = parseInt(timeString.substr(-6, 2));
-  const mins = parseInt(timeString.substr(-9, 2));
+  let ts = parseInt(timeString.slice(-3));
+  const secs = parseInt(timeString.slice(-6, -4));
+  const mins = parseInt(timeString.slice(-9, -7));
   const hours =
     timeString.length > 9
-      ? parseInt(timeString.substr(0, timeString.indexOf(':')))
+      ? parseInt(timeString.substring(0, timeString.indexOf(':')))
       : 0;
 
   if (
@@ -109,7 +111,6 @@ export function parseWebVTT(
   let timestampMapLOCAL = 0;
   let parsingError: Error;
   let inHeader = true;
-  let timestampMap = false;
 
   parser.oncue = function (cue: VTTCue) {
     // Adjust cue timing; clamp cues to start no earlier than - and drop cues that don't end after - 0 on timeline.
@@ -134,16 +135,14 @@ export function parseWebVTT(
       cueOffset = webVttMpegTsMapOffset - vttCCs.presentationOffset;
     }
 
-    if (timestampMap) {
-      const duration = cue.endTime - cue.startTime;
-      const startTime =
-        normalizePts(
-          (cue.startTime + cueOffset - timestampMapLOCAL) * 90000,
-          timeOffset * 90000
-        ) / 90000;
-      cue.startTime = startTime;
-      cue.endTime = startTime + duration;
-    }
+    const duration = cue.endTime - cue.startTime;
+    const startTime =
+      normalizePts(
+        (cue.startTime + cueOffset - timestampMapLOCAL) * 90000,
+        timeOffset * 90000
+      ) / 90000;
+    cue.startTime = Math.max(startTime, 0);
+    cue.endTime = Math.max(startTime + duration, 0);
 
     //trim trailing webvtt block whitespaces
     const text = cue.text.trim();
@@ -180,23 +179,21 @@ export function parseWebVTT(
       if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
         // Once found, no more are allowed anyway, so stop searching.
         inHeader = false;
-        timestampMap = true;
         // Extract LOCAL and MPEGTS.
         line
-          .substr(16)
+          .slice(16)
           .split(',')
           .forEach((timestamp) => {
             if (startsWith(timestamp, 'LOCAL:')) {
-              cueTime = timestamp.substr(6);
+              cueTime = timestamp.slice(6);
             } else if (startsWith(timestamp, 'MPEGTS:')) {
-              timestampMapMPEGTS = parseInt(timestamp.substr(7));
+              timestampMapMPEGTS = parseInt(timestamp.slice(7));
             }
           });
         try {
           // Convert cue time to seconds
           timestampMapLOCAL = cueString2millis(cueTime) / 1000;
         } catch (error) {
-          timestampMap = false;
           parsingError = error;
         }
         // Return without parsing X-TIMESTAMP-MAP line.
