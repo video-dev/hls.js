@@ -123,7 +123,7 @@ export class BaseSegment {
     // (undocumented)
     get url(): string;
     set url(value: string);
-    }
+}
 
 // Warning: (ae-missing-release-tag) "BufferAppendedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -251,6 +251,15 @@ export class ChunkMetadata {
     readonly transmuxing: HlsChunkPerformanceTiming;
 }
 
+// Warning: (ae-missing-release-tag) "CMCDControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type CMCDControllerConfig = {
+    sessionId?: string;
+    contentId?: string;
+    useHeaders?: boolean;
+};
+
 // Warning: (ae-missing-release-tag) "CuesInterface" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -271,6 +280,31 @@ export interface CuesParsedData {
     track: string;
     // (undocumented)
     type: 'captions' | 'subtitles';
+}
+
+// Warning: (ae-missing-release-tag) "DateRange" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class DateRange {
+    constructor(dateRangeAttr: AttrList, dateRangeWithSameId?: DateRange);
+    // (undocumented)
+    attr: AttrList;
+    // (undocumented)
+    get class(): string;
+    // (undocumented)
+    get duration(): number | null;
+    // (undocumented)
+    get endDate(): Date | null;
+    // (undocumented)
+    get endOnNext(): boolean;
+    // (undocumented)
+    get id(): string;
+    // (undocumented)
+    get isValid(): boolean;
+    // (undocumented)
+    get plannedDuration(): number | null;
+    // (undocumented)
+    get startDate(): Date;
 }
 
 // Warning: (ae-missing-release-tag) "DRMSystemOptions" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -759,14 +793,20 @@ export class Fragment extends BaseSegment {
 //
 // @public (undocumented)
 export type FragmentLoaderConfig = {
-    fLoader?: {
-        new (confg: HlsConfig): Loader<FragmentLoaderContext>;
-    };
+    fLoader?: FragmentLoaderConstructor;
     fragLoadingTimeOut: number;
     fragLoadingMaxRetry: number;
     fragLoadingRetryDelay: number;
     fragLoadingMaxRetryTimeout: number;
 };
+
+// Warning: (ae-missing-release-tag) "FragmentLoaderConstructor" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface FragmentLoaderConstructor {
+    // (undocumented)
+    new (confg: HlsConfig): Loader<FragmentLoaderContext>;
+}
 
 // Warning: (ae-missing-release-tag) "FragmentLoaderContext" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -799,6 +839,8 @@ export interface FragParsingInitSegmentData {
 // @public (undocumented)
 export interface FragParsingMetadataData {
     // (undocumented)
+    details: LevelDetails;
+    // (undocumented)
     frag: Fragment;
     // (undocumented)
     id: string;
@@ -810,6 +852,8 @@ export interface FragParsingMetadataData {
 //
 // @public (undocumented)
 export interface FragParsingUserdataData {
+    // (undocumented)
+    details: LevelDetails;
     // (undocumented)
     frag: Fragment;
     // (undocumented)
@@ -899,6 +943,7 @@ class Hls implements HlsEventEmitter {
     on<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context): void;
     // (undocumented)
     once<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context): void;
+    get playingDate(): Date | null;
     recoverMediaError(): void;
     // (undocumented)
     removeAllListeners<E extends keyof HlsListeners>(event?: E | undefined): void;
@@ -925,7 +970,6 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     static get version(): string;
 }
-
 export default Hls;
 
 // Warning: (ae-missing-release-tag) "HlsChunkPerformanceTiming" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -942,13 +986,15 @@ export interface HlsChunkPerformanceTiming extends HlsPerformanceTiming {
 //
 // @public (undocumented)
 export type HlsConfig = {
-    debug: boolean;
+    debug: boolean | ILogger;
     enableWorker: boolean;
     enableSoftwareAES: boolean;
     minAutoBitrate: number;
+    ignoreDevicePixelRatio: boolean;
     loader: {
         new (confg: HlsConfig): Loader<LoaderContext>;
     };
+    fetchSetup?: (context: LoaderContext, initParams: any) => Request;
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
     audioStreamController?: typeof AudioStreamController;
     audioTrackController?: typeof AudioTrackController;
@@ -956,13 +1002,15 @@ export type HlsConfig = {
     subtitleTrackController?: typeof SubtitleTrackController;
     timelineController?: typeof TimelineController;
     emeController?: typeof EMEController;
+    cmcd?: CMCDControllerConfig;
+    cmcdController?: typeof CMCDController;
     abrController: typeof AbrController;
     bufferController: typeof BufferController;
     capLevelController: typeof CapLevelController;
     fpsController: typeof FPSController;
     progressive: boolean;
     lowLatencyMode: boolean;
-} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & FragmentLoaderConfig & LevelControllerConfig & MP4RemuxerConfig & PlaylistLoaderConfig & StreamControllerConfig & LatencyControllerConfig & TimelineControllerConfig & TSDemuxerConfig;
+} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & FragmentLoaderConfig & LevelControllerConfig & MP4RemuxerConfig & PlaylistLoaderConfig & StreamControllerConfig & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1268,6 +1316,8 @@ export interface LevelAttributes extends AttrList {
     // (undocumented)
     BYTERANGE?: string;
     // (undocumented)
+    CHARACTERISTICS?: string;
+    // (undocumented)
     CODECS?: string;
     // (undocumented)
     DEFAULT?: string;
@@ -1319,6 +1369,8 @@ export class LevelDetails {
     canSkipDateRanges: boolean;
     // (undocumented)
     canSkipUntil: number;
+    // (undocumented)
+    dateRanges: Record<string, DateRange>;
     // (undocumented)
     deltaUpdateFailed?: boolean;
     // (undocumented)
@@ -1425,7 +1477,7 @@ export class LevelKey {
     method: string | null;
     // (undocumented)
     get uri(): string | null;
-    }
+}
 
 // Warning: (ae-missing-release-tag) "LevelLoadedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1604,6 +1656,8 @@ export interface LoaderConfiguration {
 //
 // @public (undocumented)
 export interface LoaderContext {
+    // (undocumented)
+    headers?: Record<string, string>;
     // (undocumented)
     progressData?: boolean;
     // (undocumented)
@@ -1809,6 +1863,15 @@ export interface MediaPlaylist extends LevelParsed {
 // @public (undocumented)
 export type MediaPlaylistType = MainPlaylistType | SubtitlePlaylistType;
 
+// Warning: (ae-missing-release-tag) "MetadataControllerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type MetadataControllerConfig = {
+    enableDateRangeMetadataCues: boolean;
+    enableEmsgMetadataCues: boolean;
+    enableID3MetadataCues: boolean;
+};
+
 // Warning: (ae-missing-release-tag) "MetadataSample" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1821,6 +1884,20 @@ export interface MetadataSample {
     len?: number;
     // (undocumented)
     pts: number;
+    // (undocumented)
+    type: MetadataSchema;
+}
+
+// Warning: (ae-missing-release-tag) "MetadataSchema" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export enum MetadataSchema {
+    // (undocumented)
+    audioId3 = "org.id3",
+    // (undocumented)
+    dateRange = "com.apple.quicktime.HLS",
+    // (undocumented)
+    emsg = "https://aomedia.org/emsg/ID3"
 }
 
 // Warning: (ae-missing-release-tag) "MP4RemuxerConfig" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1916,9 +1993,7 @@ export enum PlaylistLevelType {
 //
 // @public (undocumented)
 export type PlaylistLoaderConfig = {
-    pLoader?: {
-        new (confg: HlsConfig): Loader<PlaylistLoaderContext>;
-    };
+    pLoader?: PlaylistLoaderConstructor;
     manifestLoadingTimeOut: number;
     manifestLoadingMaxRetry: number;
     manifestLoadingRetryDelay: number;
@@ -1928,6 +2003,14 @@ export type PlaylistLoaderConfig = {
     levelLoadingRetryDelay: number;
     levelLoadingMaxRetryTimeout: number;
 };
+
+// Warning: (ae-missing-release-tag) "PlaylistLoaderConstructor" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface PlaylistLoaderConstructor {
+    // (undocumented)
+    new (confg: HlsConfig): Loader<PlaylistLoaderContext>;
+}
 
 // Warning: (ae-missing-release-tag) "PlaylistLoaderContext" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2028,9 +2111,9 @@ export interface SubtitleTrackSwitchData {
 // @public (undocumented)
 export type TimelineControllerConfig = {
     cueHandler: CuesInterface;
-    enableCEA708Captions: boolean;
     enableWebVTT: boolean;
     enableIMSC1: boolean;
+    enableCEA708Captions: boolean;
     captionsTextTrack1Label: string;
     captionsTextTrack1LanguageCode: string;
     captionsTextTrack2Label: string;
@@ -2118,24 +2201,35 @@ export type TSDemuxerConfig = {
 // @public (undocumented)
 export interface UserdataSample {
     // (undocumented)
-    bytes: Uint8Array;
+    bytes?: Uint8Array;
+    // (undocumented)
+    payloadType?: number;
     // (undocumented)
     pts: number;
+    // (undocumented)
+    type?: number;
+    // (undocumented)
+    userData?: string;
+    // (undocumented)
+    userDataBytes?: Uint8Array;
+    // (undocumented)
+    uuid?: string;
 }
-
 
 // Warnings were encountered during analysis:
 //
-// src/config.ts:156:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:157:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:159:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:160:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:161:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:163:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:165:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:166:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:167:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:168:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:169:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
+// src/config.ts:179:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:180:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:182:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:183:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:184:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:186:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:189:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:191:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:192:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:193:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:194:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -1,13 +1,14 @@
 import * as ID3 from '../demux/id3';
-import type {
+import {
   DemuxerResult,
   Demuxer,
   DemuxedAudioTrack,
   AudioFrame,
   DemuxedMetadataTrack,
-  DemuxedAvcTrack,
+  DemuxedVideoTrack,
   DemuxedUserdataTrack,
   KeyData,
+  MetadataSchema,
 } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
@@ -18,12 +19,18 @@ class BaseAudioDemuxer implements Demuxer {
   protected _id3Track!: DemuxedMetadataTrack;
   protected frameIndex: number = 0;
   protected cachedData: Uint8Array | null = null;
+  protected basePTS: number | null = null;
   protected initPTS: number | null = null;
 
-  resetInitSegment(audioCodec: string, videoCodec: string, duration: number) {
+  resetInitSegment(
+    initSegment: Uint8Array | undefined,
+    audioCodec: string | undefined,
+    videoCodec: string | undefined,
+    trackDuration: number
+  ) {
     this._id3Track = {
       type: 'id3',
-      id: 0,
+      id: 3,
       pid: -1,
       inputTimeScale: 90000,
       sequenceNumber: 0,
@@ -32,9 +39,15 @@ class BaseAudioDemuxer implements Demuxer {
     };
   }
 
-  resetTimeStamp() {}
+  resetTimeStamp(deaultTimestamp) {
+    this.initPTS = deaultTimestamp;
+    this.resetContiguity();
+  }
 
-  resetContiguity(): void {}
+  resetContiguity(): void {
+    this.basePTS = null;
+    this.frameIndex = 0;
+  }
 
   canParse(data: Uint8Array, offset: number): boolean {
     return false;
@@ -62,20 +75,24 @@ class BaseAudioDemuxer implements Demuxer {
     const timestamp = id3Data ? ID3.getTimeStamp(id3Data) : undefined;
     const length = data.length;
 
-    if (this.frameIndex === 0 || this.initPTS === null) {
-      this.initPTS = initPTSFn(timestamp, timeOffset);
+    if (
+      this.basePTS === null ||
+      (this.frameIndex === 0 && Number.isFinite(timestamp))
+    ) {
+      this.basePTS = initPTSFn(timestamp, timeOffset, this.initPTS);
     }
 
     // more expressive than alternative: id3Data?.length
     if (id3Data && id3Data.length > 0) {
       id3Track.samples.push({
-        pts: this.initPTS,
-        dts: this.initPTS,
+        pts: this.basePTS,
+        dts: this.basePTS,
         data: id3Data,
+        type: MetadataSchema.audioId3,
       });
     }
 
-    pts = this.initPTS;
+    pts = this.basePTS;
 
     while (offset < length) {
       if (this.canParse(data, offset)) {
@@ -91,7 +108,12 @@ class BaseAudioDemuxer implements Demuxer {
       } else if (ID3.canParse(data, offset)) {
         // after a ID3.canParse, a call to ID3.getID3Data *should* always returns some data
         id3Data = ID3.getID3Data(data, offset)!;
-        id3Track.samples.push({ pts: pts, dts: pts, data: id3Data });
+        id3Track.samples.push({
+          pts: pts,
+          dts: pts,
+          data: id3Data,
+          type: MetadataSchema.audioId3,
+        });
         offset += id3Data.length;
         lastDataIndex = offset;
       } else {
@@ -109,7 +131,7 @@ class BaseAudioDemuxer implements Demuxer {
 
     return {
       audioTrack: track,
-      avcTrack: dummyTrack() as DemuxedAvcTrack,
+      videoTrack: dummyTrack() as DemuxedVideoTrack,
       id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
@@ -133,11 +155,9 @@ class BaseAudioDemuxer implements Demuxer {
       this.demux(cachedData, 0);
     }
 
-    this.frameIndex = 0;
-
     return {
       audioTrack: this._audioTrack,
-      avcTrack: dummyTrack() as DemuxedAvcTrack,
+      videoTrack: dummyTrack() as DemuxedVideoTrack,
       id3Track: this._id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
@@ -154,10 +174,12 @@ class BaseAudioDemuxer implements Demuxer {
  */
 export const initPTSFn = (
   timestamp: number | undefined,
-  timeOffset: number
+  timeOffset: number,
+  initPTS: number | null
 ): number => {
-  return Number.isFinite(timestamp as number)
-    ? timestamp! * 90
-    : timeOffset * 90000;
+  if (Number.isFinite(timestamp as number)) {
+    return timestamp! * 90;
+  }
+  return timeOffset * 90000 + (initPTS || 0);
 };
 export default BaseAudioDemuxer;

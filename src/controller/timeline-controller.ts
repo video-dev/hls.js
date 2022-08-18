@@ -9,6 +9,7 @@ import {
   removeCuesInRange,
 } from '../utils/texttrack-utils';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
+import { appendUint8Array } from '../utils/mp4-tools';
 import { PlaylistLevelType } from '../types/loader';
 import { Fragment } from '../loader/fragment';
 import {
@@ -61,6 +62,7 @@ export class TimelineController implements ComponentAPI {
   private cea608Parser1!: Cea608Parser;
   private cea608Parser2!: Cea608Parser;
   private lastSn: number = -1;
+  private lastPartIndex: number = -1;
   private prevCC: number = -1;
   private vttCCs: VTTCCs = newVTTCCs();
   private captionsProperties: {
@@ -294,6 +296,7 @@ export class TimelineController implements ComponentAPI {
 
   private onManifestLoading() {
     this.lastSn = -1; // Detect discontinuity in fragment parsing
+    this.lastPartIndex = -1;
     this.prevCC = -1;
     this.vttCCs = newVTTCCs(); // Detect discontinuity in subtitle manifests
     this._cleanTracks();
@@ -359,8 +362,10 @@ export class TimelineController implements ComponentAPI {
           if (textTrack) {
             clearCurrentCues(textTrack);
           } else {
+            const textTrackKind =
+              this._captionsOrSubtitlesFromCharacteristics(track);
             textTrack = this.createTextTrack(
-              'subtitles',
+              textTrackKind,
               track.name,
               track.lang
             );
@@ -388,6 +393,25 @@ export class TimelineController implements ComponentAPI {
         });
       }
     }
+  }
+
+  private _captionsOrSubtitlesFromCharacteristics(
+    track: MediaPlaylist
+  ): TextTrackKind {
+    if (track.attrs?.CHARACTERISTICS) {
+      const transcribesSpokenDialog = /transcribes-spoken-dialog/gi.test(
+        track.attrs.CHARACTERISTICS
+      );
+      const describesMusicAndSound = /describes-music-and-sound/gi.test(
+        track.attrs.CHARACTERISTICS
+      );
+
+      if (transcribesSpokenDialog && describesMusicAndSound) {
+        return 'captions';
+      }
+    }
+
+    return 'subtitles';
   }
 
   private onManifestLoaded(
@@ -419,22 +443,32 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
-    const { cea608Parser1, cea608Parser2, lastSn } = this;
+    const { cea608Parser1, cea608Parser2, lastSn, lastPartIndex } = this;
     if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
       return;
     }
     // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
     if (data.frag.type === PlaylistLevelType.MAIN) {
       const sn = data.frag.sn;
-      if (sn !== lastSn + 1) {
+      const partIndex = data?.part?.index ?? -1;
+      if (
+        !(
+          sn === lastSn + 1 ||
+          (sn === lastSn && partIndex === lastPartIndex + 1)
+        )
+      ) {
         cea608Parser1.reset();
         cea608Parser2.reset();
       }
       this.lastSn = sn as number;
+      this.lastPartIndex = partIndex;
     }
   }
 
-  private onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
+  private onFragLoaded(
+    event: Events.FRAG_LOADED,
+    data: FragDecryptedData | FragLoadedData
+  ) {
     const { frag, payload } = data;
     const { initPTS, unparsedVttFrags } = this;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
@@ -455,11 +489,14 @@ export class TimelineController implements ComponentAPI {
         }
 
         const decryptData = frag.decryptdata;
+        // fragment after decryption has a stats object
+        const decrypted = 'stats' in data;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
         if (
           decryptData == null ||
           decryptData.key == null ||
-          decryptData.method !== 'AES-128'
+          decryptData.method !== 'AES-128' ||
+          decrypted
         ) {
           const trackPlaylistMedia = this.tracks[frag.level];
           const vttCCs = this.vttCCs;
@@ -518,8 +555,11 @@ export class TimelineController implements ComponentAPI {
   private _parseVTTs(frag: Fragment, payload: ArrayBuffer, vttCCs: any) {
     const hls = this.hls;
     // Parse the WebVTT file contents.
+    const payloadWebVTT = frag.initSegment?.data
+      ? appendUint8Array(frag.initSegment.data, new Uint8Array(payload))
+      : payload;
     parseWebVTT(
-      payload,
+      payloadWebVTT,
       this.initPTS[frag.cc],
       this.timescale[frag.cc],
       vttCCs,
@@ -572,12 +612,15 @@ export class TimelineController implements ComponentAPI {
       // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
       // and trying to access getCueById method of cues will throw an exception
       // Because we check if the mode is disabled, we can force check `cues` below. They can't be null.
-      if (textTrack.mode === 'disabled') {
+      if (!textTrack || textTrack.mode === 'disabled') {
         return;
       }
       cues.forEach((cue) => addCueToTrack(textTrack, cue));
     } else {
       const currentTrack = this.tracks[fragLevel];
+      if (!currentTrack) {
+        return;
+      }
       const track = currentTrack.default ? 'default' : 'subtitles' + fragLevel;
       hls.trigger(Events.CUES_PARSED, { type: 'subtitles', cues, track });
     }
@@ -655,23 +698,25 @@ export class TimelineController implements ComponentAPI {
   }
 
   private extractCea608Data(byteArray: Uint8Array): number[][] {
-    const count = byteArray[0] & 31;
-    let position = 2;
     const actualCCBytes: number[][] = [[], []];
+    const count = byteArray[0] & 0x1f;
+    let position = 2;
 
     for (let j = 0; j < count; j++) {
       const tmpByte = byteArray[position++];
       const ccbyte1 = 0x7f & byteArray[position++];
       const ccbyte2 = 0x7f & byteArray[position++];
-      const ccValid = (4 & tmpByte) !== 0;
-      const ccType = 3 & tmpByte;
-
       if (ccbyte1 === 0 && ccbyte2 === 0) {
         continue;
       }
-
+      const ccValid = (0x04 & tmpByte) !== 0; // Support all four channels
       if (ccValid) {
-        if (ccType === 0 || ccType === 1) {
+        const ccType = 0x03 & tmpByte;
+        if (
+          0x00 /* CEA608 field1*/ === ccType ||
+          0x01 /* CEA608 field2*/ === ccType
+        ) {
+          // Exclude CEA708 CC data.
           actualCCBytes[ccType].push(ccbyte1);
           actualCCBytes[ccType].push(ccbyte2);
         }

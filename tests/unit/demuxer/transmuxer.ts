@@ -8,11 +8,15 @@ import Hls from '../../../src/hls';
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
+import { logger } from '../../../src/utils/logger';
 
 chai.use(sinonChai);
 const expect = chai.expect;
-
 describe('TransmuxerInterface tests', function () {
+  afterEach(function () {
+    sinon.restore();
+  });
+
   const onTransmuxComplete = (res: TransmuxerResult) => {};
   const onFlush = (meta: ChunkMetadata) => {};
 
@@ -115,8 +119,8 @@ describe('TransmuxerInterface tests', function () {
     const videoCodec = '';
     const duration = 0;
     const accurateTimeOffset = true;
-    let chunkMeta = new ChunkMetadata(currentFrag.level, currentFrag.sn, 0);
-    let state = new TransmuxState(false, true, true, false, 0);
+    let chunkMeta = new ChunkMetadata(currentFrag.level, currentFrag.sn + 1, 0);
+    let state = new TransmuxState(false, true, true, false, 0, false);
     transmuxerInterface.push(
       data,
       initSegmentData,
@@ -149,7 +153,7 @@ describe('TransmuxerInterface tests', function () {
     newFrag.start = 1000;
     newFrag.startPTS = 1000;
     chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
-    state = new TransmuxState(false, true, true, false, 1000);
+    state = new TransmuxState(false, true, true, false, 1000, false);
     transmuxerInterface.push(
       data,
       initSegmentData,
@@ -230,7 +234,7 @@ describe('TransmuxerInterface tests', function () {
     );
 
     const tConfig = new TransmuxConfig('', '', initSegmentData, 0);
-    const state = new TransmuxState(true, false, true, true, 1000);
+    const state = new TransmuxState(true, false, true, true, 1000, false);
     expect(configureStub).to.have.been.calledOnce;
     expect(configureStub).to.have.been.calledWith(tConfig);
 
@@ -295,5 +299,31 @@ describe('TransmuxerInterface tests', function () {
     const spy = sinon.spy(self.URL, 'revokeObjectURL');
     transmuxerInterfacePrivates.onWorkerMessage(evt);
     expect(spy).to.have.been.calledOnce;
+  });
+
+  it('Handles logger events from the worker', function () {
+    const config = { enableWorker: true }; // Option debug : true crashes mocha
+    const hls = new Hls(config);
+    sinon.stub(hls, 'trigger');
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      PlaylistLevelType.MAIN,
+      onTransmuxComplete,
+      onFlush
+    );
+    const transmuxerInterfacePrivates = transmuxerInterface as any;
+    const evt = {
+      data: {
+        event: 'workerLog',
+        data: {
+          logType: 'log',
+          message: 'testing logger',
+        },
+      },
+    };
+
+    const spy = sinon.spy(logger, 'log');
+    transmuxerInterfacePrivates.onWorkerMessage(evt);
+    expect(spy).to.have.been.calledWith(evt.data.data.message);
   });
 });

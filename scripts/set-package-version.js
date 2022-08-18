@@ -45,12 +45,12 @@ try {
       process.env.NETLIFY && process.env.CONTEXT === 'deploy-preview'
         ? `pr.${
             process.env.REVIEW_ID /* set by netlify */
-          }.${getCommitHash().substr(0, 8)}`
+          }.${getCommitHash().slice(0, 8)}`
         : process.env.NETLIFY && process.env.CONTEXT === 'branch-deploy'
         ? `branch.${process.env.BRANCH /* set by netlify */.replace(
             /[^a-zA-Z0-9]/g,
             '-'
-          )}.${getCommitHash().substr(0, 8)}`
+          )}.${getCommitHash().slice(0, 8)}`
         : `0.canary.${getCommitNum()}`;
 
     newVersion = `${intermediateVersion}${isStable ? '-' : '.'}${suffix}`;
@@ -83,7 +83,7 @@ function getCommitHash() {
 function getLatestVersionTag() {
   let commitish = '';
   while (true) {
-    const tag = exec('git describe --abbrev=0 --match="v*" ' + commitish);
+    const tag = exec('git describe --tag --abbrev=0 --match="v*" ' + commitish);
     if (!tag) {
       throw new Error('Could not find tag.');
     }

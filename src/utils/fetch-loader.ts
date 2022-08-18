@@ -152,11 +152,13 @@ class FetchLoader implements Loader<LoaderContext> {
           return;
         }
         // CORS errors result in an undefined code. Set it to 0 here to align with XHR's behavior
-        const code = error.code || 0;
+        // when destroying, 'error' itself can be undefined
+        const code: number = !error ? 0 : error.code || 0;
+        const text: string = !error ? null : error.message;
         callbacks.onError(
-          { code, text: error.message },
+          { code, text },
           context,
-          error.details
+          error ? error.details : null
         );
       });
   }
@@ -225,12 +227,14 @@ function getRequestParameters(context: LoaderContext, signal): any {
     mode: 'cors',
     credentials: 'same-origin',
     signal,
+    headers: new self.Headers(Object.assign({}, context.headers)),
   };
 
   if (context.rangeEnd) {
-    initParams.headers = new self.Headers({
-      Range: 'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1),
-    });
+    initParams.headers.set(
+      'Range',
+      'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1)
+    );
   }
 
   return initParams;

@@ -26,8 +26,7 @@ class SubtitleTrackController extends BasePlaylistController {
   private asyncPollTrackChange: () => void = () => this.pollTrackChange(0);
   private useTextTrackPolling: boolean = false;
   private subtitlePollingInterval: number = -1;
-
-  public subtitleDisplay: boolean = true; // Enable/disable subtitle display rendering
+  private _subtitleDisplay: boolean = true;
 
   constructor(hls: Hls) {
     super(hls, '[subtitle-track-controller]');
@@ -40,6 +39,17 @@ class SubtitleTrackController extends BasePlaylistController {
     this.tracksInGroup.length = 0;
     this.trackChangeListener = this.asyncPollTrackChange = null as any;
     super.destroy();
+  }
+
+  public get subtitleDisplay(): boolean {
+    return this._subtitleDisplay;
+  }
+
+  public set subtitleDisplay(value: boolean) {
+    this._subtitleDisplay = value;
+    if (this.trackId > -1) {
+      this.toggleTrackModes(this.trackId);
+    }
   }
 
   private registerListeners() {
@@ -295,7 +305,7 @@ class SubtitleTrackController extends BasePlaylistController {
    * A value of -1 will disable all subtitle tracks.
    */
   private toggleTrackModes(newId: number): void {
-    const { media, subtitleDisplay, trackId } = this;
+    const { media, trackId } = this;
     if (!media) {
       return;
     }
@@ -317,7 +327,7 @@ class SubtitleTrackController extends BasePlaylistController {
 
     const nextTrack = groupTracks[newId];
     if (nextTrack) {
-      nextTrack.mode = subtitleDisplay ? 'showing' : 'hidden';
+      nextTrack.mode = this.subtitleDisplay ? 'showing' : 'hidden';
     }
   }
 
