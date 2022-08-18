@@ -64,10 +64,6 @@ try {
     );
   }
 
-  if (hasTag(`v${newVersion}`)) {
-    throw new Error(`Tag for "${newVersion}" already exists.`);
-  }
-
   const foundPreviousVersion = versionParser
     .getPotentialPreviousStableVersions(`v${newVersion}`)
     .every((potentialPreviousVersion) =>
