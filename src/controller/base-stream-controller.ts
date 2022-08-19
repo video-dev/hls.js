@@ -24,7 +24,10 @@ import FragmentLoader, {
   LoadError,
 } from '../loader/fragment-loader';
 import { LevelDetails } from '../loader/level-details';
-import {
+import Decrypter from '../crypt/decrypter';
+import TimeRanges from '../utils/time-ranges';
+import { PlaylistLevelType } from '../types/loader';
+import type {
   BufferAppendingData,
   ErrorData,
   FragLoadedData,
@@ -32,10 +35,8 @@ import {
   KeyLoadedData,
   MediaAttachingData,
   BufferFlushingData,
+  LevelSwitchingData,
 } from '../types/events';
-import Decrypter from '../crypt/decrypter';
-import TimeRanges from '../utils/time-ranges';
-import { PlaylistLevelType } from '../types/loader';
 import type { FragmentTracker } from './fragment-tracker';
 import type { Level } from '../types/level';
 import type { RemuxedTrack } from '../types/remuxer';
@@ -108,6 +109,7 @@ export default class BaseStreamController
     this.config = hls.config;
     this.decrypter = new Decrypter(hls as HlsEventEmitter, hls.config);
     hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
+    hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
   }
 
   protected doTick() {
@@ -275,6 +277,13 @@ export default class BaseStreamController
     }
   }
 
+  protected onLevelSwitching(
+    event: Events.LEVEL_SWITCHING,
+    data: LevelSwitchingData
+  ): void {
+    this.fragLoadError = 0;
+  }
+
   protected onHandlerDestroying() {
     this.stopLoad();
     super.onHandlerDestroying();
@@ -283,6 +292,7 @@ export default class BaseStreamController
   protected onHandlerDestroyed() {
     this.state = State.STOPPED;
     this.hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
+    this.hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
     if (this.fragmentLoader) {
       this.fragmentLoader.destroy();
     }
