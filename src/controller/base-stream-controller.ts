@@ -368,7 +368,7 @@ export default class BaseStreamController
         this._handleFragmentLoadComplete(data);
       })
       .catch((reason) => {
-        if (this.state === State.STOPPED) {
+        if (this.state === State.STOPPED || this.state === State.ERROR) {
           return;
         }
         this.warn(reason);
@@ -472,6 +472,9 @@ export default class BaseStreamController
         this.tick();
       })
       .catch((reason) => {
+        if (this.state === State.STOPPED || this.state === State.ERROR) {
+          return;
+        }
         this.warn(reason);
         this.resetFragmentLoading(frag);
       });
@@ -1197,7 +1200,11 @@ export default class BaseStreamController
   }
 
   protected resetFragmentLoading(frag: Fragment) {
-    if (!this.fragCurrent || !this.fragContextChanged(frag)) {
+    if (
+      !this.fragCurrent ||
+      (!this.fragContextChanged(frag) &&
+        this.state !== State.FRAG_LOADING_WAITING_RETRY)
+    ) {
       this.state = State.IDLE;
     }
   }
@@ -1225,8 +1232,9 @@ export default class BaseStreamController
     const config = this.config;
     // keep retrying until the limit will be reached
     if (this.fragLoadError + 1 <= config.fragLoadingMaxRetry) {
-      if (this.resetLiveStartWhenNotLoaded(frag.level)) {
-        return;
+      if (!this.loadedmetadata) {
+        this.startFragRequested = false;
+        this.nextLoadPosition = this.startPosition;
       }
       // exponential backoff capped to config.fragLoadingMaxRetryTimeout
       const delay = Math.min(
@@ -1286,22 +1294,21 @@ export default class BaseStreamController
     this.state = State.IDLE;
   }
 
-  protected resetLiveStartWhenNotLoaded(level: number): boolean {
-    // if loadedmetadata is not set, it means that we are emergency switch down on first frag
+  protected resetStartWhenNotLoaded(level: number): void {
+    // if loadedmetadata is not set, it means that first frag request failed
     // in that case, reset startFragRequested flag
     if (!this.loadedmetadata) {
       this.startFragRequested = false;
       const details = this.levels ? this.levels[level].details : null;
       if (details?.live) {
-        // We can't afford to retry after a delay in a live scenario. Update the start position and return to IDLE.
+        // Update the start position and return to IDLE to recover live start
         this.startPosition = -1;
         this.setStartPosition(details, 0);
         this.resetLoadingState();
-        return true;
+      } else {
+        this.nextLoadPosition = this.startPosition;
       }
-      this.nextLoadPosition = this.startPosition;
     }
-    return false;
   }
 
   private updateLevelTiming(

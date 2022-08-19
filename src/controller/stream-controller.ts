@@ -183,6 +183,7 @@ export default class StreamController
           // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
           if (!retryDate || now >= retryDate || this.media?.seeking) {
             this.log('retryDate reached, switch back to IDLE state');
+            this.resetStartWhenNotLoaded(this.level);
             this.state = State.IDLE;
           }
         }
@@ -1055,7 +1056,7 @@ export default class StreamController
       this.warn(
         `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
       );
-      this.resetLiveStartWhenNotLoaded(chunkMeta.level);
+      this.resetStartWhenNotLoaded(chunkMeta.level);
       return;
     }
     const { frag, part, level } = context;
