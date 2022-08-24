@@ -1,6 +1,5 @@
 import * as URLToolkit from 'url-toolkit';
 import PlaylistLoader from './loader/playlist-loader';
-import KeyLoader from './loader/key-loader';
 import ID3TrackController from './controller/id3-track-controller';
 import LatencyController from './controller/latency-controller';
 import LevelController from './controller/level-controller';
@@ -123,7 +122,6 @@ export default class Hls implements HlsEventEmitter {
 
     const fpsController = new ConfigFpsController(this);
     const playListLoader = new PlaylistLoader(this);
-    const keyLoader = new KeyLoader(this);
     const id3TrackController = new ID3TrackController(this);
 
     // network controllers
@@ -142,7 +140,6 @@ export default class Hls implements HlsEventEmitter {
 
     const networkControllers = [
       playListLoader,
-      keyLoader,
       levelController,
       streamController,
     ];
@@ -891,6 +888,7 @@ export type {
   PlaylistContextType,
   PlaylistLoaderContext,
   FragmentLoaderContext,
+  KeyLoaderContext,
   Loader,
   LoaderStats,
   LoaderContext,

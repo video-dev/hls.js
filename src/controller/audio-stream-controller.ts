@@ -363,11 +363,7 @@ class AudioStreamController
       return;
     }
 
-    if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
-      this.loadKey(frag, trackDetails);
-    } else {
-      this.loadFragment(frag, trackDetails, targetBufferTime);
-    }
+    this.loadFragment(frag, trackDetails, targetBufferTime);
   }
 
   protected getMaxBufferLength(mainBufferLength?: number): number {
@@ -400,8 +396,8 @@ class AudioStreamController
     this.trackId = data.id;
     const { fragCurrent } = this;
 
-    if (fragCurrent?.loader) {
-      fragCurrent.loader.abort();
+    if (fragCurrent) {
+      fragCurrent.abortRequests();
     }
     this.fragCurrent = null;
     this.clearWaitingFragment();
@@ -827,7 +823,7 @@ class AudioStreamController
       fragState === FragmentState.PARTIAL
     ) {
       if (frag.sn === 'initSegment') {
-        this._loadInitSegment(frag);
+        this._loadInitSegment(frag, trackDetails);
       } else if (trackDetails.live && !Number.isFinite(this.initPTS[frag.cc])) {
         this.log(
           `Waiting for video PTS in continuity counter ${frag.cc} of live stream before loading audio fragment ${frag.sn} of level ${this.trackId}`

@@ -23,6 +23,7 @@ import FragmentLoader, {
   FragmentLoadProgressCallback,
   LoadError,
 } from '../loader/fragment-loader';
+import KeyLoader from '../loader/key-loader';
 import { LevelDetails } from '../loader/level-details';
 import Decrypter from '../crypt/decrypter';
 import TimeRanges from '../utils/time-ranges';
@@ -86,7 +87,8 @@ export default class BaseStreamController
   protected fragLoadError: number = 0;
   protected retryDate: number = 0;
   protected levels: Array<Level> | null = null;
-  protected fragmentLoader!: FragmentLoader;
+  protected fragmentLoader: FragmentLoader;
+  protected keyLoader: KeyLoader;
   protected levelLastLoaded: number | null = null;
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
@@ -105,10 +107,10 @@ export default class BaseStreamController
     this.warn = logger.warn.bind(logger, `${logPrefix}:`);
     this.hls = hls;
     this.fragmentLoader = new FragmentLoader(hls.config);
+    this.keyLoader = new KeyLoader(hls.config);
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls as HlsEventEmitter, hls.config);
-    hls.on(Events.KEY_LOADED, this.onKeyLoaded, this);
     hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
   }
 
@@ -123,8 +125,10 @@ export default class BaseStreamController
 
   public stopLoad() {
     this.fragmentLoader.abort();
+    this.keyLoader.abort();
     const frag = this.fragCurrent;
     if (frag) {
+      frag.abortRequests();
       this.fragmentTracker.removeFragment(frag);
     }
     this.resetTransmuxer();
@@ -238,7 +242,7 @@ export default class BaseStreamController
           this.log(
             'seeking outside of buffer while fragment load in progress, cancel fragment load'
           );
-          fragCurrent.loader.abort();
+          fragCurrent.abortRequests();
         }
         this.resetLoadingState();
       }
@@ -262,21 +266,6 @@ export default class BaseStreamController
     this.startPosition = this.lastCurrentTime = 0;
   }
 
-  onKeyLoaded(event: Events.KEY_LOADED, data: KeyLoadedData) {
-    if (
-      this.state !== State.KEY_LOADING ||
-      data.frag !== this.fragCurrent ||
-      !this.levels
-    ) {
-      return;
-    }
-    this.state = State.IDLE;
-    const levelDetails = this.levels[data.frag.level].details;
-    if (levelDetails) {
-      this.loadFragment(data.frag, levelDetails, data.frag.start);
-    }
-  }
-
   protected onLevelSwitching(
     event: Events.LEVEL_SWITCHING,
     data: LevelSwitchingData
@@ -291,10 +280,12 @@ export default class BaseStreamController
 
   protected onHandlerDestroyed() {
     this.state = State.STOPPED;
-    this.hls.off(Events.KEY_LOADED, this.onKeyLoaded, this);
     this.hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
     if (this.fragmentLoader) {
       this.fragmentLoader.destroy();
+    }
+    if (this.keyLoader) {
+      this.keyLoader.destroy();
     }
     if (this.decrypter) {
       this.decrypter.destroy();
@@ -304,21 +295,11 @@ export default class BaseStreamController
       this.log =
       this.warn =
       this.decrypter =
+      this.keyLoader =
       this.fragmentLoader =
       this.fragmentTracker =
         null as any;
     super.onHandlerDestroyed();
-  }
-
-  protected loadKey(frag: Fragment, details: LevelDetails) {
-    this.log(
-      `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${
-        this.logPrefix === '[stream-controller]' ? 'level' : 'track'
-      } ${frag.level}`
-    );
-    this.state = State.KEY_LOADING;
-    this.fragCurrent = frag;
-    this.hls.trigger(Events.KEY_LOADING, { frag });
   }
 
   protected loadFragment(
@@ -402,8 +383,8 @@ export default class BaseStreamController
     this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
   }
 
-  protected _loadInitSegment(frag: Fragment) {
-    this._doFragLoad(frag)
+  protected _loadInitSegment(frag: Fragment, details: LevelDetails) {
+    this._doFragLoad(frag, details)
       .then((data) => {
         if (!data || this.fragContextChanged(frag) || !this.levels) {
           throw new Error('init load aborted');
@@ -551,17 +532,39 @@ export default class BaseStreamController
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  protected _handleFragmentLoadProgress(frag: FragLoadedData) {}
+  protected _handleFragmentLoadProgress(
+    frag: PartsLoadedData | FragLoadedData
+  ) {}
 
   protected _doFragLoad(
     frag: Fragment,
-    details?: LevelDetails,
+    details: LevelDetails,
     targetBufferTime: number | null = null,
     progressCallback?: FragmentLoadProgressCallback
   ): Promise<PartsLoadedData | FragLoadedData | null> {
     if (!this.levels) {
       throw new Error('frag load aborted, missing levels');
     }
+
+    let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
+    if (frag.encrypted && !frag.decryptdata?.key) {
+      this.log(
+        `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${
+          this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+        } ${frag.level}`
+      );
+      this.state = State.KEY_LOADING;
+      this.fragCurrent = frag;
+      keyLoadingPromise = this.keyLoader.load(frag).then((keyLoadedData) => {
+        if (keyLoadedData && !this.fragContextChanged(keyLoadedData.frag)) {
+          this.hls.trigger(Events.KEY_LOADED, keyLoadedData);
+          return keyLoadedData;
+        }
+      });
+      this.hls.trigger(Events.KEY_LOADING, { frag });
+      this.throwIfFragContextChanged('KEY_LOADING');
+    }
+
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
     if (this.config.lowLatencyMode && details) {
       const partList = details.partList;
@@ -590,6 +593,26 @@ export default class BaseStreamController
             part: partList[partIndex],
             targetBufferTime,
           });
+          this.throwIfFragContextChanged('FRAG_LOADING parts');
+          if (keyLoadingPromise) {
+            return keyLoadingPromise
+              .then((keyLoadedData) => {
+                if (
+                  !keyLoadedData ||
+                  this.fragContextChanged(keyLoadedData?.frag)
+                ) {
+                  return null;
+                }
+                return this.doFragPartsLoad(
+                  frag,
+                  partList,
+                  partIndex,
+                  progressCallback
+                );
+              })
+              .catch((error) => this.handleFragLoadError(error));
+          }
+
           return this.doFragPartsLoad(
             frag,
             partList,
@@ -619,10 +642,44 @@ export default class BaseStreamController
     }
     this.state = State.FRAG_LOADING;
     this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
+    this.throwIfFragContextChanged('FRAG_LOADING');
 
-    return this.fragmentLoader
-      .load(frag, progressCallback)
-      .catch((error: LoadError) => this.handleFragLoadError(error));
+    // Load key before streaming fragment data
+    const dataOnProgress = this.config.progressive;
+    if (dataOnProgress && keyLoadingPromise) {
+      return keyLoadingPromise
+        .then((keyLoadedData) => {
+          if (!keyLoadedData || this.fragContextChanged(keyLoadedData?.frag)) {
+            return null;
+          }
+          return this.fragmentLoader.load(frag, progressCallback);
+        })
+        .catch((error) => this.handleFragLoadError(error));
+    }
+
+    // load unencrypted fragment data with progress event,
+    // or handle fragment result after key and fragment are finished loading
+    return Promise.all([
+      this.fragmentLoader.load(
+        frag,
+        dataOnProgress ? progressCallback : undefined
+      ),
+      keyLoadingPromise,
+    ])
+      .then(([fragLoadedData]) => {
+        if (!dataOnProgress && fragLoadedData && progressCallback) {
+          progressCallback(fragLoadedData);
+        }
+        return fragLoadedData;
+      })
+      .catch((error) => this.handleFragLoadError(error));
+  }
+
+  private throwIfFragContextChanged(context: string): void | never {
+    // exit if context changed during event loop
+    if (this.fragCurrent === null) {
+      throw new Error(`frag load aborted, context changed in ${context}`);
+    }
   }
 
   private doFragPartsLoad(
