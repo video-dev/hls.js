@@ -42,12 +42,11 @@ class MP4Demuxer implements Demuxer {
   public resetTimeStamp() {}
 
   public resetInitSegment(
-    initSegment: Uint8Array,
+    initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
     trackDuration: number
   ) {
-    const initData = parseInitSegment(initSegment);
     const videoTrack = (this.videoTrack = dummyTrack(
       'video',
       1
@@ -63,6 +62,11 @@ class MP4Demuxer implements Demuxer {
 
     this.id3Track = dummyTrack('id3', 1) as DemuxedMetadataTrack;
     this.timeOffset = 0;
+
+    if (!initSegment || !initSegment.byteLength) {
+      return;
+    }
+    const initData = parseInitSegment(initSegment);
 
     if (initData.video) {
       const { id, timescale, codec } = initData.video;
