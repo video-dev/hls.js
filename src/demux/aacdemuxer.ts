@@ -11,7 +11,6 @@ import type { HlsConfig } from '../config';
 class AACDemuxer extends BaseAudioDemuxer {
   private readonly observer: HlsEventEmitter;
   private readonly config: HlsConfig;
-  static readonly minProbeByteLength: number = 9;
 
   constructor(observer, config) {
     super();
