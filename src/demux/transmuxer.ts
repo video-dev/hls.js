@@ -8,8 +8,6 @@ import TSDemuxer, { TypeSupported } from '../demux/tsdemuxer';
 import MP3Demuxer from '../demux/mp3demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
-import ChunkCache from './chunk-cache';
-import { appendUint8Array } from '../utils/mp4-tools';
 import { logger } from '../utils/logger';
 import type { Demuxer, DemuxerResult, KeyData } from '../types/demuxer';
 import type { Remuxer } from '../types/remuxer';
@@ -40,11 +38,6 @@ const muxConfig: MuxConfig[] = [
   { demux: MP3Demuxer, remux: MP4Remuxer },
 ];
 
-let minProbeByteLength = 1024;
-muxConfig.forEach(({ demux }) => {
-  minProbeByteLength = Math.max(minProbeByteLength, demux.minProbeByteLength);
-});
-
 export default class Transmuxer {
   private observer: HlsEventEmitter;
   private typeSupported: TypeSupported;
@@ -58,7 +51,6 @@ export default class Transmuxer {
   private decryptionPromise: Promise<TransmuxerResult> | null = null;
   private transmuxConfig!: TransmuxConfig;
   private currentTransmuxState!: TransmuxState;
-  private cache: ChunkCache = new ChunkCache();
 
   constructor(
     observer: HlsEventEmitter,
@@ -91,9 +83,38 @@ export default class Transmuxer {
     stats.executeStart = now();
 
     let uintData: Uint8Array = new Uint8Array(data);
-    const { cache, config, currentTransmuxState, transmuxConfig } = this;
+    const { config, currentTransmuxState, transmuxConfig } = this;
     if (state) {
       this.currentTransmuxState = state;
+    }
+
+    const {
+      contiguous,
+      discontinuity,
+      trackSwitch,
+      accurateTimeOffset,
+      timeOffset,
+      initSegmentChange,
+    } = state || currentTransmuxState;
+    const {
+      audioCodec,
+      videoCodec,
+      defaultInitPts,
+      duration,
+      initSegmentData,
+    } = transmuxConfig;
+
+    // Reset muxers before probing to ensure that their state is clean, even if flushing occurs before a successful probe
+    if (discontinuity || trackSwitch || initSegmentChange) {
+      this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
+    }
+
+    if (discontinuity || initSegmentChange) {
+      this.resetInitialTimestamp(defaultInitPts);
+    }
+
+    if (!contiguous) {
+      this.resetContiguity();
     }
 
     const keyData = getEncryptionType(uintData, decryptdata);
@@ -131,40 +152,7 @@ export default class Transmuxer {
       }
     }
 
-    const {
-      contiguous,
-      discontinuity,
-      trackSwitch,
-      accurateTimeOffset,
-      timeOffset,
-      initSegmentChange,
-    } = state || currentTransmuxState;
-    const {
-      audioCodec,
-      videoCodec,
-      defaultInitPts,
-      duration,
-      initSegmentData,
-    } = transmuxConfig;
-
-    // Reset muxers before probing to ensure that their state is clean, even if flushing occurs before a successful probe
-    if (discontinuity || trackSwitch || initSegmentChange) {
-      this.resetInitSegment(initSegmentData, audioCodec, videoCodec, duration);
-    }
-
-    if (discontinuity || initSegmentChange) {
-      this.resetInitialTimestamp(defaultInitPts);
-    }
-
-    if (!contiguous) {
-      this.resetContiguity();
-    }
-
     if (this.needsProbing(uintData, discontinuity, trackSwitch)) {
-      if (cache.dataLength) {
-        const cachedData = cache.flush();
-        uintData = appendUint8Array(cachedData, uintData);
-      }
       this.configureTransmuxer(uintData, transmuxConfig);
     }
 
@@ -192,7 +180,7 @@ export default class Transmuxer {
     const stats = chunkMeta.transmuxing;
     stats.executeStart = now();
 
-    const { decrypter, cache, currentTransmuxState, decryptionPromise } = this;
+    const { decrypter, currentTransmuxState, decryptionPromise } = this;
 
     if (decryptionPromise) {
       // Upon resolution, the decryption promise calls push() and returns its TransmuxerResult up the stack. Therefore
@@ -217,19 +205,15 @@ export default class Transmuxer {
       }
     }
 
-    const bytesSeen = cache.dataLength;
-    cache.reset();
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
-      // If probing failed, and each demuxer saw enough bytes to be able to probe, then Hls.js has been given content its not able to handle
-      if (bytesSeen >= minProbeByteLength) {
-        this.observer.emit(Events.ERROR, Events.ERROR, {
-          type: ErrorTypes.MEDIA_ERROR,
-          details: ErrorDetails.FRAG_PARSING_ERROR,
-          fatal: true,
-          reason: 'no demux matching with content found',
-        });
-      }
+      // If probing failed, then Hls.js has been given content its not able to handle
+      this.observer.emit(Events.ERROR, Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.FRAG_PARSING_ERROR,
+        fatal: true,
+        reason: 'no demux matching with content found',
+      });
       stats.executeEnd = now();
       return [emptyResult(chunkMeta)];
     }
