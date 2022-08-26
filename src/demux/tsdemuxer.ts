@@ -57,8 +57,6 @@ export interface TypeSupported {
 }
 
 class TSDemuxer implements Demuxer {
-  static readonly minProbeByteLength = 188;
-
   private readonly observer: HlsEventEmitter;
   private readonly config: HlsConfig;
   private typeSupported: TypeSupported;
@@ -89,37 +87,8 @@ class TSDemuxer implements Demuxer {
   }
 
   static probe(data: Uint8Array) {
-    const syncOffset = TSDemuxer.syncOffset(data);
-    if (syncOffset < 0) {
-      return false;
-    } else {
-      if (syncOffset) {
-        logger.warn(
-          `MPEG2-TS detected but first sync word found @ offset ${syncOffset}, junk ahead ?`
-        );
-      }
-
-      return true;
-    }
-  }
-
-  static syncOffset(data: Uint8Array) {
-    // scan 1000 first bytes
-    const scanwindow = Math.min(1000, data.length - 3 * 188);
-    let i = 0;
-    while (i < scanwindow) {
-      // a TS fragment should contain at least 3 TS packets, a PAT, a PMT, and one PID, each starting with 0x47
-      if (
-        data[i] === 0x47 &&
-        data[i + 188] === 0x47 &&
-        data[i + 2 * 188] === 0x47
-      ) {
-        return i;
-      } else {
-        i++;
-      }
-    }
-    return -1;
+    // a TS init segment should contain at least 2 TS packets: PAT and PMT, each starting with 0x47
+    return data[0] === 0x47 && data[188] === 0x47;
   }
 
   /**
@@ -172,6 +141,7 @@ class TSDemuxer implements Demuxer {
     // flush any partial content
     this.aacOverFlow = null;
     this.avcSample = null;
+    this.remainderData = null;
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this._duration = trackDuration;
@@ -216,7 +186,7 @@ class TSDemuxer implements Demuxer {
     let id3Id = id3Track.pid;
     let audioData = audioTrack.pesData;
     let id3Data = id3Track.pesData;
-    let unknownPIDs = false;
+    let unknownPID: number | null = null;
     let pmtParsed = this.pmtParsed;
     let pmtId = this._pmtId;
 
@@ -237,9 +207,7 @@ class TSDemuxer implements Demuxer {
       };
     }
 
-    const syncOffset = Math.max(0, TSDemuxer.syncOffset(data));
-
-    len -= (len + syncOffset) % 188;
+    len -= len % 188;
     if (len < data.byteLength && !flush) {
       this.remainderData = new Uint8Array(
         data.buffer,
@@ -250,7 +218,7 @@ class TSDemuxer implements Demuxer {
 
     // loop through TS packets
     let tsPacketErrors = 0;
-    for (let start = syncOffset; start < len; start += 188) {
+    for (let start = 0; start < len; start += 188) {
       if (data[start] === 0x47) {
         const stt = !!(data[start + 1] & 0x40);
         // pid is a 13-bit field starting at the last bit of TS[1]
@@ -354,11 +322,9 @@ class TSDemuxer implements Demuxer {
               id3Track.pid = id3Id;
             }
 
-            if (unknownPIDs && !pmtParsed) {
-              logger.log('reparse from beginning');
-              unknownPIDs = false;
-              // we set it to -188, the += 188 in the for loop will reset start to 0
-              start = syncOffset - 188;
+            if (unknownPID !== null && !pmtParsed) {
+              logger.log(`unknown PID '${unknownPID}' in TS found`);
+              unknownPID = null;
             }
             pmtParsed = this.pmtParsed = true;
             break;
@@ -367,7 +333,7 @@ class TSDemuxer implements Demuxer {
           case 0x1fff:
             break;
           default:
-            unknownPIDs = true;
+            unknownPID = pid;
             break;
         }
       } else {
