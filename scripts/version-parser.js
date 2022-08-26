@@ -2,7 +2,8 @@
 
 const semver = require('semver');
 
-const VALID_VERSION_REGEX = /^v\d+\.\d+\.\d+(?:-([a-zA-Z][0-9a-zA-Z-]*))?/;
+const VALID_VERSION_REGEX =
+  /^v(\d+)\.(\d+)\.(\d+)(?:-([a-zA-Z][0-9a-zA-Z-]*))?/;
 const STABLE_VERSION_REGEX = /^v\d+\.\d+\.\d+$/;
 
 module.exports = {
@@ -57,6 +58,22 @@ module.exports = {
     if (!match) {
       throw new Error('Invalid version.');
     }
-    return match[1] || 'latest';
+    return match[4] || 'latest';
+  },
+  getPotentialPreviousStableVersions: (version) => {
+    const match = VALID_VERSION_REGEX.exec(version);
+    if (!match) {
+      throw new Error('Invalid version.');
+    }
+
+    const major = parseInt(match[1]);
+    const minor = parseInt(match[2]);
+    const patch = parseInt(match[3]);
+
+    const versions = [];
+    if (major > 0) versions.push(`${major - 1}.0.${major === 1 ? '1' : '0'}`);
+    if (minor > 0) versions.push(`${major}.${minor - 1}.0`);
+    if (patch > 0) versions.push(`${major}.${minor}.${patch - 1}`);
+    return versions;
   },
 };
