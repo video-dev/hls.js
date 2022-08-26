@@ -1,3 +1,5 @@
+/* eslint-disable no-console */
+/* eslint-env node */
 'use strict';
 
 const fs = require('fs');
@@ -61,6 +63,18 @@ try {
       `New version "${newVersion}" is not >= latest version "${latestVersion}" on this branch.`
     );
   }
+
+  const foundPreviousVersion = versionParser
+    .getPotentialPreviousStableVersions(`v${newVersion}`)
+    .every((potentialPreviousVersion) =>
+      hasTag(`v${potentialPreviousVersion}`)
+    );
+  if (!foundPreviousVersion) {
+    throw new Error(
+      'Could not find a previous version. The tag must follow a previous stable version number.'
+    );
+  }
+
   packageJson.version = newVersion;
   fs.writeFileSync('./package.json', JSON.stringify(packageJson), {
     encoding: 'utf8',
@@ -82,6 +96,7 @@ function getCommitHash() {
 
 function getLatestVersionTag() {
   let commitish = '';
+  // eslint-disable-next-line no-constant-condition
   while (true) {
     const tag = exec('git describe --tag --abbrev=0 --match="v*" ' + commitish);
     if (!tag) {
@@ -95,6 +110,18 @@ function getLatestVersionTag() {
   }
 }
 
+function hasTag(tag) {
+  try {
+    exec(`git rev-parse "refs/tags/${tag}"`);
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
 function exec(cmd) {
-  return require('child_process').execSync(cmd).toString().trim();
+  return require('child_process')
+    .execSync(cmd, { stdio: 'pipe' })
+    .toString()
+    .trim();
 }
