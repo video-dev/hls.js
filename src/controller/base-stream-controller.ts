@@ -74,8 +74,8 @@ export default class BaseStreamController
   protected fragmentTracker: FragmentTracker;
   protected transmuxer: TransmuxerInterface | null = null;
   protected _state: string = State.STOPPED;
-  protected media?: any;
-  protected mediaBuffer?: any;
+  protected media: HTMLMediaElement | null = null;
+  protected mediaBuffer: Bufferable | null = null;
   protected config: HlsConfig;
   protected bitrateTest: boolean = false;
   protected lastCurrentTime: number = 0;
@@ -133,7 +133,7 @@ export default class BaseStreamController
     this.state = State.STOPPED;
   }
 
-  protected _streamEnded(bufferInfo, levelDetails: LevelDetails) {
+  protected _streamEnded(bufferInfo, levelDetails: LevelDetails): boolean {
     const { fragCurrent, fragmentTracker } = this;
     // we just got done loading the final fragment and there is no other buffered range after ...
     // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
@@ -141,6 +141,7 @@ export default class BaseStreamController
     if (
       !levelDetails.live &&
       fragCurrent &&
+      this.media &&
       // NOTE: Because of the way parts are currently parsed/represented in the playlist, we can end up
       // in situations where the current fragment is actually greater than levelDetails.endSN. While
       // this feels like the "wrong place" to account for that, this is a narrower/safer change than
@@ -176,10 +177,10 @@ export default class BaseStreamController
     data: MediaAttachingData
   ) {
     const media = (this.media = this.mediaBuffer = data.media);
-    this.onvseeking = this.onMediaSeeking.bind(this);
-    this.onvended = this.onMediaEnded.bind(this);
-    media.addEventListener('seeking', this.onvseeking as EventListener);
-    media.addEventListener('ended', this.onvended as EventListener);
+    this.onvseeking = this.onMediaSeeking.bind(this) as EventListener;
+    this.onvended = this.onMediaEnded.bind(this) as EventListener;
+    media.addEventListener('seeking', this.onvseeking);
+    media.addEventListener('ended', this.onvended);
     const config = this.config;
     if (this.levels && config.autoStartLoad && this.state === State.STOPPED) {
       this.startLoad(config.startPosition);
@@ -194,7 +195,7 @@ export default class BaseStreamController
     }
 
     // remove video listeners
-    if (media) {
+    if (media && this.onvseeking && this.onvended) {
       media.removeEventListener('seeking', this.onvseeking);
       media.removeEventListener('ended', this.onvended);
       this.onvseeking = this.onvended = null;
@@ -209,7 +210,7 @@ export default class BaseStreamController
     const { config, fragCurrent, media, mediaBuffer, state } = this;
     const currentTime: number = media ? media.currentTime : 0;
     const bufferInfo = BufferHelper.bufferInfo(
-      mediaBuffer || media,
+      mediaBuffer ? mediaBuffer : media,
       currentTime,
       config.maxBufferHole
     );
@@ -494,7 +495,11 @@ export default class BaseStreamController
         part ? ' part: ' + part.index : ''
       } of ${this.logPrefix === '[stream-controller]' ? 'level' : 'track'} ${
         frag.level
-      } ${TimeRanges.toString(BufferHelper.getBuffered(media))}`
+      } ${
+        media
+          ? TimeRanges.toString(BufferHelper.getBuffered(media))
+          : '(detached)'
+      }`
     );
     this.state = State.IDLE;
     this.tick();
@@ -745,7 +750,7 @@ export default class BaseStreamController
   }
 
   protected getFwdBufferInfo(
-    bufferable: Bufferable,
+    bufferable: Bufferable | null,
     type: PlaylistLevelType
   ): {
     len: number;

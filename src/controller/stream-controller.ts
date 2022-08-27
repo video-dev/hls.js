@@ -307,7 +307,9 @@ export default class StreamController
         this.audioOnly && !this.altAudio
           ? ElementaryStreamTypes.AUDIO
           : ElementaryStreamTypes.VIDEO;
-      this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
+      if (media) {
+        this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
+      }
       frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
     }
     if (!frag) {
@@ -509,7 +511,7 @@ export default class StreamController
 
   protected onMediaDetaching() {
     const { media } = this;
-    if (media) {
+    if (media && this.onvplaying && this.onvseeked) {
       media.removeEventListener('playing', this.onvplaying);
       media.removeEventListener('seeked', this.onvseeked);
       this.onvplaying = this.onvseeked = null;
@@ -532,7 +534,7 @@ export default class StreamController
     const media = this.media;
     const currentTime = media ? media.currentTime : null;
     if (Number.isFinite(currentTime)) {
-      this.log(`Media seeked to ${currentTime.toFixed(3)}`);
+      this.log(`Media seeked to ${(currentTime as number).toFixed(3)}`);
     }
 
     // tick to speed up FRAG_CHANGED triggering
@@ -974,6 +976,9 @@ export default class StreamController
    */
   private seekToStartPos() {
     const { media } = this;
+    if (!media) {
+      return;
+    }
     const currentTime = media.currentTime;
     let startPosition = this.startPosition;
     // only adjust currentTime if different from startPosition or if startPosition not buffered

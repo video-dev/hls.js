@@ -358,11 +358,14 @@ describe('StreamController', function () {
           start() {
             return bufStart;
           },
+          end() {
+            return bufStart;
+          },
           length: 1,
         },
         currentTime: 0,
         readyState: 4,
-      };
+      } as any as HTMLMediaElement;
       streamController['mediaBuffer'] = null;
     });
     afterEach(function () {
@@ -395,7 +398,7 @@ describe('StreamController', function () {
     it('should not seek to start pos when nothing has been buffered', function () {
       // @ts-ignore
       const seekStub = sandbox.stub(streamController, 'seekToStartPos');
-      streamController['media'].buffered.length = 0;
+      (streamController['media']!.buffered as any).length = 0;
       streamController['checkBuffer']();
       expect(seekStub).to.have.not.been.called;
       expect(streamController['loadedmetadata']).to.be.false;
@@ -405,14 +408,14 @@ describe('StreamController', function () {
       it('should seek to startPosition when startPosition is not buffered & the media is not seeking', function () {
         streamController['startPosition'] = 5;
         streamController['seekToStartPos']();
-        expect(streamController['media'].currentTime).to.equal(5);
+        expect(streamController['media']!.currentTime).to.equal(5);
       });
 
       it('should not seek to startPosition when it is buffered', function () {
         streamController['startPosition'] = 5;
-        streamController['media'].currentTime = 5;
+        streamController['media']!.currentTime = 5;
         streamController['seekToStartPos']();
-        expect(streamController['media'].currentTime).to.equal(5);
+        expect(streamController['media']!.currentTime).to.equal(5);
       });
     });
 
