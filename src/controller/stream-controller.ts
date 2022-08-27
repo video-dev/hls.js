@@ -343,7 +343,6 @@ export default class StreamController
       if (frag.sn === 'initSegment') {
         this._loadInitSegment(frag);
       } else if (this.bitrateTest) {
-        frag.bitrateTest = true;
         this.log(
           `Fragment ${frag.sn} of level ${frag.level} is being downloaded to test bitrate and will not be buffered`
         );
@@ -1024,6 +1023,7 @@ export default class StreamController
   }
 
   private _loadBitrateTestFrag(frag: Fragment) {
+    frag.bitrateTest = true;
     this._doFragLoad(frag).then((data) => {
       const { hls } = this;
       if (!data || hls.nextLoadLevel || this.fragContextChanged(frag)) {
@@ -1041,6 +1041,7 @@ export default class StreamController
         stats.buffering.end =
           self.performance.now();
       hls.trigger(Events.FRAG_LOADED, data as FragLoadedData);
+      frag.bitrateTest = false;
     });
   }
 
