@@ -502,6 +502,16 @@ export default class BaseStreamController
       }`
     );
     this.state = State.IDLE;
+    if (!media) {
+      return;
+    }
+    if (
+      !this.loadedmetadata &&
+      media.buffered.length &&
+      this.fragCurrent === this.fragPrevious
+    ) {
+      this.loadedmetadata = true;
+    }
     this.tick();
   }
 
@@ -1015,12 +1025,12 @@ export default class BaseStreamController
 
     if (frag) {
       const curSNIdx = frag.sn - levelDetails.startSN;
-      const sameLevel = fragPrevious && frag.level === fragPrevious.level;
-      const nextFrag = fragments[curSNIdx + 1];
       if (fragPrevious && frag.sn === fragPrevious.sn && !loadingParts) {
         // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
         // non-uniform fragment durations
+        const sameLevel = fragPrevious && frag.level === fragPrevious.level;
         if (sameLevel) {
+          const nextFrag = fragments[curSNIdx + 1];
           if (
             frag.sn < endSN &&
             this.fragmentTracker.getState(nextFrag) !== FragmentState.OK

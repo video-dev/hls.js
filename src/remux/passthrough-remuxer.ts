@@ -32,17 +32,17 @@ class PassThroughRemuxer implements Remuxer {
   private initData?: InitData;
   private initPTS?: number;
   private initTracks?: TrackSet;
-  private lastEndDTS: number | null = null;
+  private lastEndTime: number | null = null;
 
   public destroy() {}
 
   public resetTimeStamp(defaultInitPTS) {
     this.initPTS = defaultInitPTS;
-    this.lastEndDTS = null;
+    this.lastEndTime = null;
   }
 
   public resetNextTimestamp() {
-    this.lastEndDTS = null;
+    this.lastEndTime = null;
   }
 
   public resetInitSegment(
@@ -117,7 +117,7 @@ class PassThroughRemuxer implements Remuxer {
     textTrack: DemuxedUserdataTrack,
     timeOffset: number
   ): RemuxerResult {
-    let { initPTS, lastEndDTS } = this;
+    let { initPTS, lastEndTime } = this;
     const result: RemuxerResult = {
       audio: undefined,
       video: undefined,
@@ -129,8 +129,8 @@ class PassThroughRemuxer implements Remuxer {
     // If we haven't yet set a lastEndDTS, or it was reset, set it to the provided timeOffset. We want to use the
     // lastEndDTS over timeOffset whenever possible; during progressive playback, the media source will not update
     // the media duration (which is what timeOffset is provided as) before we need to process the next chunk.
-    if (!Number.isFinite(lastEndDTS!)) {
-      lastEndDTS = this.lastEndDTS = timeOffset || 0;
+    if (!Number.isFinite(lastEndTime!)) {
+      lastEndTime = this.lastEndTime = timeOffset || 0;
     }
 
     // The binary segment data is added to the videoTrack in the mp4demuxer. We don't check to see if the data is only
@@ -159,20 +159,20 @@ class PassThroughRemuxer implements Remuxer {
       this.emitInitSegment = false;
     }
 
+    const startDTS = getStartDTS(initData, data);
     if (!Number.isFinite(initPTS!)) {
-      this.initPTS =
-        initSegment.initPTS =
-        initPTS =
-          computeInitPTS(initData, data, lastEndDTS);
+      this.initPTS = initSegment.initPTS = initPTS = startDTS - timeOffset;
     }
 
     const duration = getDuration(data, initData);
-    const startDTS = lastEndDTS as number;
-    const endDTS = duration + startDTS;
+    const startTime = audioTrack
+      ? startDTS - (initPTS as number)
+      : (lastEndTime as number);
+    const endTime = startTime + duration;
     offsetStartDTS(initData, data, initPTS as number);
 
     if (duration > 0) {
-      this.lastEndDTS = endDTS;
+      this.lastEndTime = endTime;
     } else {
       logger.warn('Duration parsed from mp4 should be greater than zero');
       this.resetNextTimestamp();
@@ -192,10 +192,10 @@ class PassThroughRemuxer implements Remuxer {
 
     const track: RemuxedTrack = {
       data1: data,
-      startPTS: startDTS,
-      startDTS,
-      endPTS: endDTS,
-      endDTS,
+      startPTS: startTime,
+      startDTS: startTime,
+      endPTS: endTime,
+      endDTS: endTime,
       type,
       hasAudio,
       hasVideo,
@@ -225,9 +225,6 @@ class PassThroughRemuxer implements Remuxer {
     return result;
   }
 }
-
-const computeInitPTS = (initData, data, timeOffset) =>
-  getStartDTS(initData, data) - timeOffset;
 
 function getParsedTrackCodec(
   track: InitDataTrack | undefined,
