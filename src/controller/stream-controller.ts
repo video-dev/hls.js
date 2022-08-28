@@ -120,7 +120,7 @@ export default class StreamController
         // determine load level
         let startLevel = hls.startLevel;
         if (startLevel === -1) {
-          if (hls.config.testBandwidth) {
+          if (hls.config.testBandwidth && this.levels.length > 1) {
             // -1 : guess start Level by doing a bitrate test by loading first fragment of lowest quality level
             startLevel = 0;
             this.bitrateTest = true;
