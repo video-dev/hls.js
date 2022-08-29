@@ -171,6 +171,7 @@ class AudioStreamController
         // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
         if (!retryDate || now >= retryDate || this.media?.seeking) {
           this.log('RetryDate reached, switch back to IDLE state');
+          this.resetStartWhenNotLoaded(this.trackId);
           this.state = State.IDLE;
         }
         break;
@@ -695,7 +696,7 @@ class AudioStreamController
       this.warn(
         `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
       );
-      this.resetLiveStartWhenNotLoaded(chunkMeta.level);
+      this.resetStartWhenNotLoaded(chunkMeta.level);
       return;
     }
     const {

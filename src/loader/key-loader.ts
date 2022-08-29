@@ -15,14 +15,14 @@ import {
   Loader,
   FragmentLoaderContext,
 } from '../types/loader';
-import type { ComponentAPI } from '../types/component-api';
+import type { NetworkComponentAPI } from '../types/component-api';
 import type { KeyLoadingData } from '../types/events';
 
 interface KeyLoaderContext extends LoaderContext {
   frag: Fragment;
 }
 
-export default class KeyLoader implements ComponentAPI {
+export default class KeyLoader implements NetworkComponentAPI {
   private hls: Hls;
   public loaders = {};
   public decryptkey: Uint8Array | null = null;
@@ -31,19 +31,24 @@ export default class KeyLoader implements ComponentAPI {
   constructor(hls: Hls) {
     this.hls = hls;
 
-    this._registerListeners();
+    this.registerListeners();
   }
 
-  private _registerListeners() {
+  public startLoad(startPosition: number): void {}
+
+  public stopLoad(): void {
+    this.destroyInternalLoaders();
+  }
+
+  private registerListeners() {
     this.hls.on(Events.KEY_LOADING, this.onKeyLoading, this);
   }
 
-  private _unregisterListeners() {
+  private unregisterListeners() {
     this.hls.off(Events.KEY_LOADING, this.onKeyLoading);
   }
 
-  destroy(): void {
-    this._unregisterListeners();
+  private destroyInternalLoaders(): void {
     for (const loaderName in this.loaders) {
       const loader = this.loaders[loaderName];
       if (loader) {
@@ -51,6 +56,11 @@ export default class KeyLoader implements ComponentAPI {
       }
     }
     this.loaders = {};
+  }
+
+  destroy(): void {
+    this.unregisterListeners();
+    this.destroyInternalLoaders();
   }
 
   onKeyLoading(event: Events.KEY_LOADING, data: KeyLoadingData) {

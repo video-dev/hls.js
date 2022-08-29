@@ -344,15 +344,21 @@ export default class LevelController extends BasePlaylistController {
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         if (data.frag) {
-          const level = this._levels[data.frag.level];
+          // Share fragment error count accross media options (main, audio, subs)
+          // This allows for level based rendition switching when media option assets fail
+          const variantLevelIndex =
+            data.frag.type === PlaylistLevelType.MAIN
+              ? data.frag.level
+              : this.currentLevelIndex;
+          const level = this._levels[variantLevelIndex];
           // Set levelIndex when we're out of fragment retries
           if (level) {
             level.fragmentError++;
             if (level.fragmentError > this.hls.config.fragLoadingMaxRetry) {
-              levelIndex = data.frag.level;
+              levelIndex = variantLevelIndex;
             }
           } else {
-            levelIndex = data.frag.level;
+            levelIndex = variantLevelIndex;
           }
         }
         break;
@@ -369,7 +375,7 @@ export default class LevelController extends BasePlaylistController {
         levelError = true;
         break;
       case ErrorDetails.REMUX_ALLOC_ERROR:
-        levelIndex = data.level;
+        levelIndex = data.level ?? this.currentLevelIndex;
         levelError = true;
         break;
     }
@@ -412,13 +418,20 @@ export default class LevelController extends BasePlaylistController {
         errorEvent.levelRetry = true;
         this.redundantFailover(levelIndex);
       } else if (this.manualLevelIndex === -1) {
-        // Search for available level in auto level selection mode, cycling from highest to lowest bitrate
-        const nextLevel =
-          levelIndex === 0 ? this._levels.length - 1 : levelIndex - 1;
-        if (
-          this.currentLevelIndex !== nextLevel &&
-          this._levels[nextLevel].loadError === 0
-        ) {
+        // Search for next level to retry
+        let nextLevel = -1;
+        const levels = this._levels;
+        for (let i = levels.length; i--; ) {
+          const candidate = (i + this.currentLevelIndex) % levels.length;
+          if (
+            candidate !== this.currentLevelIndex &&
+            levels[candidate].loadError === 0
+          ) {
+            nextLevel = candidate;
+            break;
+          }
+        }
+        if (nextLevel > -1 && this.currentLevelIndex !== nextLevel) {
           this.warn(`${errorDetails}: switch to ${nextLevel}`);
           errorEvent.levelRetry = true;
           this.hls.nextAutoLevel = nextLevel;

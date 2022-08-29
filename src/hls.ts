@@ -140,12 +140,15 @@ export default class Hls implements HlsEventEmitter {
     // fpsController uses streamController to switch when frames are being dropped
     fpsController.setStreamController(streamController);
 
-    const networkControllers = [levelController, streamController];
+    const networkControllers = [
+      playListLoader,
+      keyLoader,
+      levelController,
+      streamController,
+    ];
 
     this.networkControllers = networkControllers;
     const coreComponents = [
-      playListLoader,
-      keyLoader,
       abrController,
       bufferController,
       capLevelController,
