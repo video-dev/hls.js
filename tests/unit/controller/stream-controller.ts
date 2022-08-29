@@ -26,6 +26,7 @@ describe('StreamController', function () {
   let hls: Hls;
   let fragmentTracker: FragmentTracker;
   let streamController: StreamController;
+  const attrs: LevelAttributes = new AttrList({});
 
   beforeEach(function () {
     hls = new Hls({});
@@ -289,7 +290,6 @@ describe('StreamController', function () {
     let frag;
     let levelDetails;
     beforeEach(function () {
-      const attrs: LevelAttributes = new AttrList({});
       streamController['levels'] = [
         new Level({
           name: '',
@@ -421,7 +421,20 @@ describe('StreamController', function () {
 
     describe('startLoad', function () {
       beforeEach(function () {
-        streamController['levels'] = [];
+        streamController['levels'] = [
+          new Level({
+            name: '',
+            url: '',
+            attrs,
+            bitrate: 500000,
+          }),
+          new Level({
+            name: '',
+            url: '',
+            attrs,
+            bitrate: 250000,
+          }),
+        ];
         streamController['media'] = null;
       });
       it('should not start when controller does not have level data', function () {
@@ -477,6 +490,23 @@ describe('StreamController', function () {
         hls.startLevel = -1;
         hls.nextAutoLevel = 3;
         hls.config.testBandwidth = false;
+
+        streamController.startLoad(-1);
+        expect(streamController['level']).to.equal(hls.nextAutoLevel);
+        expect(streamController['bitrateTest']).to.be.false;
+      });
+
+      it('should not signal a bandwidth test with only one level', function () {
+        streamController['startFragRequested'] = false;
+        streamController['levels'] = [
+          new Level({
+            name: '',
+            url: '',
+            attrs,
+            bitrate: 250000,
+          }),
+        ];
+        hls.startLevel = -1;
 
         streamController.startLoad(-1);
         expect(streamController['level']).to.equal(hls.nextAutoLevel);

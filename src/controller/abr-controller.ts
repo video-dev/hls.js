@@ -240,7 +240,6 @@ class AbrController implements ComponentAPI {
           id: frag.type,
         };
         this.onFragBuffered(Events.FRAG_BUFFERED, fragBufferedData);
-        frag.bitrateTest = false;
       }
     }
   }
