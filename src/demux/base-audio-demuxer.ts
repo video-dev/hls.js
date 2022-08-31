@@ -19,6 +19,7 @@ class BaseAudioDemuxer implements Demuxer {
   protected _id3Track!: DemuxedMetadataTrack;
   protected frameIndex: number = 0;
   protected cachedData: Uint8Array | null = null;
+  protected basePTS: number | null = null;
   protected initPTS: number | null = null;
 
   resetInitSegment(
@@ -38,9 +39,15 @@ class BaseAudioDemuxer implements Demuxer {
     };
   }
 
-  resetTimeStamp() {}
+  resetTimeStamp(deaultTimestamp) {
+    this.initPTS = deaultTimestamp;
+    this.resetContiguity();
+  }
 
-  resetContiguity(): void {}
+  resetContiguity(): void {
+    this.basePTS = null;
+    this.frameIndex = 0;
+  }
 
   canParse(data: Uint8Array, offset: number): boolean {
     return false;
@@ -68,21 +75,24 @@ class BaseAudioDemuxer implements Demuxer {
     const timestamp = id3Data ? ID3.getTimeStamp(id3Data) : undefined;
     const length = data.length;
 
-    if (this.frameIndex === 0 || this.initPTS === null) {
-      this.initPTS = initPTSFn(timestamp, timeOffset);
+    if (
+      this.basePTS === null ||
+      (this.frameIndex === 0 && Number.isFinite(timestamp))
+    ) {
+      this.basePTS = initPTSFn(timestamp, timeOffset, this.initPTS);
     }
 
     // more expressive than alternative: id3Data?.length
     if (id3Data && id3Data.length > 0) {
       id3Track.samples.push({
-        pts: this.initPTS,
-        dts: this.initPTS,
+        pts: this.basePTS,
+        dts: this.basePTS,
         data: id3Data,
         type: MetadataSchema.audioId3,
       });
     }
 
-    pts = this.initPTS;
+    pts = this.basePTS;
 
     while (offset < length) {
       if (this.canParse(data, offset)) {
@@ -145,8 +155,6 @@ class BaseAudioDemuxer implements Demuxer {
       this.demux(cachedData, 0);
     }
 
-    this.frameIndex = 0;
-
     return {
       audioTrack: this._audioTrack,
       videoTrack: dummyTrack() as DemuxedVideoTrack,
@@ -166,10 +174,12 @@ class BaseAudioDemuxer implements Demuxer {
  */
 export const initPTSFn = (
   timestamp: number | undefined,
-  timeOffset: number
+  timeOffset: number,
+  initPTS: number | null
 ): number => {
-  return Number.isFinite(timestamp as number)
-    ? timestamp! * 90
-    : timeOffset * 90000;
+  if (Number.isFinite(timestamp as number)) {
+    return timestamp! * 90;
+  }
+  return timeOffset * 90000 + (initPTS || 0);
 };
 export default BaseAudioDemuxer;

@@ -455,8 +455,8 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     const capabilities = {
       name: `hls.js@${labelBranch} on "${browserDescription}"`,
       browserName: browserConfig.name,
-      platform: browserConfig.platform,
-      version: browserConfig.version,
+      platformName: browserConfig.platform,
+      browserVersion: browserConfig.version,
       commandTimeout: 90,
     };
 
@@ -472,21 +472,23 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     browser = new webdriver.Builder();
     if (useSauce) {
       if (process.env.SAUCE_TUNNEL_ID) {
-        capabilities['tunnel-identifier'] = process.env.SAUCE_TUNNEL_ID;
-        capabilities.build = 'HLSJS-' + process.env.SAUCE_TUNNEL_ID;
+        capabilities['sauce:options'] = {
+          build: 'HLSJS-' + process.env.SAUCE_TUNNEL_ID,
+          ['tunnel-identifier']: process.env.SAUCE_TUNNEL_ID,
+        };
       } else {
-        capabilities['tunnel-identifier'] = `local-${Date.now()}`;
+        capabilities['sauce:options'] = {
+          ['tunnel-identifier']: `local-${Date.now()}`,
+        };
       }
       if (!process.env.SAUCE_TUNNEL_ID) {
         sauceConnectProcess = await sauceConnect(
           capabilities['tunnel-identifier']
         );
       }
-      capabilities.username = process.env.SAUCE_USERNAME;
-      capabilities.accessKey = process.env.SAUCE_ACCESS_KEY;
-      capabilities.public = 'public restricted';
-      capabilities.avoidProxy = true;
-      capabilities['record-screenshots'] = 'false';
+      capabilities['sauce:options'].public = 'public restricted';
+      capabilities['sauce:options'].avoidProxy = true;
+      capabilities['sauce:options']['record-screenshots'] = false;
       browser = browser.usingServer(
         `https://${process.env.SAUCE_USERNAME}:${process.env.SAUCE_ACCESS_KEY}@ondemand.us-west-1.saucelabs.com:443/wd/hub`
       );

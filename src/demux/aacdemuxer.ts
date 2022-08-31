@@ -11,7 +11,6 @@ import type { HlsConfig } from '../config';
 class AACDemuxer extends BaseAudioDemuxer {
   private readonly observer: HlsEventEmitter;
   private readonly config: HlsConfig;
-  static readonly minProbeByteLength: number = 9;
 
   constructor(observer, config) {
     super();
@@ -79,7 +78,7 @@ class AACDemuxer extends BaseAudioDemuxer {
       track,
       data,
       offset,
-      this.initPTS as number,
+      this.basePTS as number,
       this.frameIndex
     );
     if (frame && frame.missing === 0) {

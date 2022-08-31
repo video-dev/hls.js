@@ -166,8 +166,14 @@ export default class TransmuxerInterface {
     const trackSwitch = !(lastFrag && chunkMeta.level === lastFrag.level);
     const snDiff = lastFrag ? chunkMeta.sn - (lastFrag.sn as number) : -1;
     const partDiff = this.part ? chunkMeta.part - this.part.index : -1;
+    const progressive =
+      snDiff === 0 &&
+      chunkMeta.id > 1 &&
+      chunkMeta.id === lastFrag?.stats.chunkCount;
     const contiguous =
-      !trackSwitch && (snDiff === 1 || (snDiff === 0 && partDiff === 1));
+      !trackSwitch &&
+      (snDiff === 1 ||
+        (snDiff === 0 && (partDiff === 1 || (progressive && partDiff <= 0))));
     const now = self.performance.now();
 
     if (trackSwitch || snDiff || frag.stats.parsing.start === 0) {
@@ -290,6 +296,13 @@ export default class TransmuxerInterface {
         this.onFlush(data.data);
         break;
       }
+
+      // pass logs from the worker thread to the main logger
+      case 'workerLog':
+        if (logger[data.data.logType]) {
+          logger[data.data.logType](data.data.message);
+        }
+        break;
 
       /* falls through */
       default: {

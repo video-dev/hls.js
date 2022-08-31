@@ -240,7 +240,6 @@ class AbrController implements ComponentAPI {
           id: frag.type,
         };
         this.onFragBuffered(Events.FRAG_BUFFERED, fragBufferedData);
-        frag.bitrateTest = false;
       }
     }
   }
@@ -294,15 +293,16 @@ class AbrController implements ComponentAPI {
     const forcedAutoLevel = this._nextAutoLevel;
     const bwEstimator = this.bwEstimator;
     // in case next auto level has been forced, and bw not available or not reliable, return forced value
-    if (
-      forcedAutoLevel !== -1 &&
-      (!bwEstimator || !bwEstimator.canEstimate())
-    ) {
+    if (forcedAutoLevel !== -1 && !bwEstimator.canEstimate()) {
       return forcedAutoLevel;
     }
 
     // compute next level using ABR logic
     let nextABRAutoLevel = this.getNextABRAutoLevel();
+    // use forced auto level when ABR selected level has errored
+    if (forcedAutoLevel !== -1 && this.hls.levels[nextABRAutoLevel].loadError) {
+      return forcedAutoLevel;
+    }
     // if forced auto level has been defined, use it to cap ABR computed quality level
     if (forcedAutoLevel !== -1) {
       nextABRAutoLevel = Math.min(forcedAutoLevel, nextABRAutoLevel);

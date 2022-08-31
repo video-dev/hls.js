@@ -858,14 +858,14 @@ export default class BufferController implements ComponentAPI {
   // resolve, the onUnblocked function is executed. Functions calling this method do not need to unblock the queue
   // upon completion, since we already do it here
   private blockBuffers(
-    onUnblocked: Function,
+    onUnblocked: () => void,
     buffers: Array<SourceBufferName> = this.getSourceBufferTypes()
   ) {
     if (!buffers.length) {
       logger.log(
         '[buffer-controller]: Blocking operation requested, but no SourceBuffers exist'
       );
-      Promise.resolve(onUnblocked);
+      Promise.resolve().then(onUnblocked);
       return;
     }
     const { operationQueue } = this;

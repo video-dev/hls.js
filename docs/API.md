@@ -1504,11 +1504,11 @@ Full list of Events is available below:
 - `Hls.Events.LEVEL_LOADING` - fired when a level playlist loading starts
   - data: { url : level URL, level : id of level being loaded, deliveryDirectives: LL-HLS delivery directives or `null` when blocking reload is not supported }
 - `Hls.Events.LEVEL_LOADED` - fired when a level playlist loading finishes
-  - data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of loaded level, stats : [LoadStats] }
+  - data: { details : [LevelDetails](#leveldetails), level : id of loaded level, stats : [LoadStats] }
 - `Hls.Events.LEVEL_UPDATED` - fired when a level's details have been updated based on previous details, after it has been loaded
-  - data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level }
+  - data: { details : [LevelDetails](#leveldetails), level : id of updated level }
 - `Hls.Events.LEVEL_PTS_UPDATED` - fired when a level's PTS information has been updated after parsing a fragment
-  - data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), level : id of updated level, drift: PTS drift observed when parsing last fragment, type, start, end }
+  - data: { details : [LevelDetails](#leveldetails), level : id of updated level, drift: PTS drift observed when parsing last fragment, type, start, end }
 - `Hls.Events.LEVELS_UPDATED` - fired when a level is removed after calling `removeLevel()`
   - data: { levels : [ available quality levels ] }
 - `Hls.Events.AUDIO_TRACKS_UPDATED` - fired to notify that audio track lists has been updated
@@ -1520,7 +1520,7 @@ Full list of Events is available below:
 - `Hls.Events.AUDIO_TRACK_LOADING` - fired when an audio track loading starts
   - data: { url : audio track URL, id : audio track id }
 - `Hls.Events.AUDIO_TRACK_LOADED` - fired when an audio track loading finishes
-  - data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), id : audio track id, stats : [LoadStats] }
+  - data: { details : [LevelDetails](#leveldetails), id : audio track id, stats : [LoadStats] }
 - `Hls.Events.SUBTITLE_TRACKS_UPDATED` - fired to notify that subtitle track lists has been updated
   - data: { subtitleTracks : subtitleTracks }
 - `Hls.Events.SUBTITLE_TRACK_SWITCH` - fired when a subtitle track switch occurs
@@ -1528,7 +1528,7 @@ Full list of Events is available below:
 - `Hls.Events.SUBTITLE_TRACK_LOADING` - fired when a subtitle track loading starts
   - data: { url : audio track URL, id : audio track id }
 - `Hls.Events.SUBTITLE_TRACK_LOADED` - fired when a subtitle track loading finishes
-  - data: { details : `levelDetails` object (please see [below](#leveldetails) for more information), id : subtitle track id, stats : [LoadStats] }
+  - data: { details : [LevelDetails](#leveldetails), id : subtitle track id, stats : [LoadStats] }
 - `Hls.Events.SUBTITLE_FRAG_PROCESSED` - fired when a subtitle fragment has been processed
   - data: { success : boolean, frag : [the processed fragment object], error?: [error parsing subtitles if any] }
 - `Hls.Events.INIT_PTS_FOUND` - fired when the first timestamp is found
@@ -1545,9 +1545,9 @@ Full list of Events is available below:
 - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
   - data: { id: demuxer id, frag : fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment }
 - `Hls.Events.FRAG_PARSING_USERDATA` - fired when parsing sei text is completed
-  - data: { id : demuxer id, frag: fragment object, samples : [ sei samples pes ], details: `levelDetails` object (please see [below](#leveldetails) for more information) }
+  - data: { id : demuxer id, frag: fragment object, samples : [ sei samples pes ], details: [LevelDetails](#leveldetails) }
 - `Hls.Events.FRAG_PARSING_METADATA` - fired when parsing ID3 is completed
-  - data: { id: demuxer id, frag : fragment object, samples : [ ID3 pes - pts and dts timestamp are relative, values are in seconds], details: `levelDetails` object (please see [below](#leveldetails) for more information) }
+  - data: { id: demuxer id, frag : fragment object, samples : [ ID3 pes - pts and dts timestamp are relative, values are in seconds], details: [LevelDetails](#leveldetails) }
 - `Hls.Events.FRAG_PARSING_DATA` - [deprecated]
 - `Hls.Events.FRAG_PARSED` - fired when fragment parsing is completed
   - data: { frag : fragment object, partIndex }
@@ -1573,18 +1573,25 @@ Full list of Events is available below:
 - `Hls.Events.CUES_PARSED` - When `renderTextTracksNatively` is `false`, this event will fire when new captions or subtitle cues are parsed.
   - data: { type, cues, track } }
 
-## Loader Composition
+## Creating a Custom Loader
 
-You can export internal loader definition for your own implementation via static getter `Hls.DefaultConfig.loader`.
+You can use the internal loader definition for your own implementation via the static getter `Hls.DefaultConfig.loader`.
 
 Example:
 
 ```js
-import Hls from 'hls.js';
-
 let myHls = new Hls({
   pLoader: function (config) {
     let loader = new Hls.DefaultConfig.loader(config);
+
+    Object.defineProperties(this, {
+      stats: {
+        get: () => loader.stats,
+      },
+      context: {
+        get: () => loader.context,
+      },
+    });
 
     this.abort = () => loader.abort();
     this.destroy = () => loader.destroy();
@@ -1597,6 +1604,24 @@ let myHls = new Hls({
 
       loader.load(context, config, callbacks);
     };
+  },
+});
+```
+
+Alternatively, environments that support ES6 classes can extends the loader directly:
+
+```js
+import Hls from 'hls.js';
+
+let myHls = new Hls({
+  pLoader: class CustomLoader extends Hls.DefaultConfig.loader {
+    load(context, config, callbacks) {
+      let { type, url } = context;
+
+      // Custom behavior
+
+      super.load(context, config, callbacks);
+    }
   },
 });
 ```

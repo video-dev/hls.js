@@ -9,6 +9,7 @@ import {
   removeCuesInRange,
 } from '../utils/texttrack-utils';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
+import { appendUint8Array } from '../utils/mp4-tools';
 import { PlaylistLevelType } from '../types/loader';
 import { Fragment } from '../loader/fragment';
 import {
@@ -361,8 +362,10 @@ export class TimelineController implements ComponentAPI {
           if (textTrack) {
             clearCurrentCues(textTrack);
           } else {
+            const textTrackKind =
+              this._captionsOrSubtitlesFromCharacteristics(track);
             textTrack = this.createTextTrack(
-              'subtitles',
+              textTrackKind,
               track.name,
               track.lang
             );
@@ -390,6 +393,25 @@ export class TimelineController implements ComponentAPI {
         });
       }
     }
+  }
+
+  private _captionsOrSubtitlesFromCharacteristics(
+    track: MediaPlaylist
+  ): TextTrackKind {
+    if (track.attrs?.CHARACTERISTICS) {
+      const transcribesSpokenDialog = /transcribes-spoken-dialog/gi.test(
+        track.attrs.CHARACTERISTICS
+      );
+      const describesMusicAndSound = /describes-music-and-sound/gi.test(
+        track.attrs.CHARACTERISTICS
+      );
+
+      if (transcribesSpokenDialog && describesMusicAndSound) {
+        return 'captions';
+      }
+    }
+
+    return 'subtitles';
   }
 
   private onManifestLoaded(
@@ -533,8 +555,11 @@ export class TimelineController implements ComponentAPI {
   private _parseVTTs(frag: Fragment, payload: ArrayBuffer, vttCCs: any) {
     const hls = this.hls;
     // Parse the WebVTT file contents.
+    const payloadWebVTT = frag.initSegment?.data
+      ? appendUint8Array(frag.initSegment.data, new Uint8Array(payload))
+      : payload;
     parseWebVTT(
-      payload,
+      payloadWebVTT,
       this.initPTS[frag.cc],
       this.timescale[frag.cc],
       vttCCs,

@@ -1325,6 +1325,8 @@ export interface LevelAttributes extends AttrList {
     // (undocumented)
     BYTERANGE?: string;
     // (undocumented)
+    CHARACTERISTICS?: string;
+    // (undocumented)
     CODECS?: string;
     // (undocumented)
     DEFAULT?: string;
