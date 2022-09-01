@@ -37,14 +37,14 @@ export function getAudioConfig(
   let config: number[];
   const userAgent = navigator.userAgent.toLowerCase();
   const manifestCodec = audioCodec;
-  const adtsSampleingRates = [
+  const adtsSamplingRates = [
     96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025,
     8000, 7350,
   ];
   // byte 2
   adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
   const adtsSamplingIndex = (data[offset + 2] & 0x3c) >>> 2;
-  if (adtsSamplingIndex > adtsSampleingRates.length - 1) {
+  if (adtsSamplingIndex > adtsSamplingRates.length - 1) {
     observer.trigger(Events.ERROR, {
       type: ErrorTypes.MEDIA_ERROR,
       details: ErrorDetails.FRAG_PARSING_ERROR,
@@ -152,7 +152,7 @@ export function getAudioConfig(
   // channelConfiguration
   config[1] |= adtsChanelConfig << 3;
   if (adtsObjectType === 5) {
-    // adtsExtensionSampleingIndex
+    // adtsExtensionSamplingIndex
     config[1] |= (adtsExtensionSamplingIndex & 0x0e) >> 1;
     config[2] = (adtsExtensionSamplingIndex & 0x01) << 7;
     // adtsObjectType (force to 2, chrome is checking that object type is less than 5 ???
@@ -162,7 +162,7 @@ export function getAudioConfig(
   }
   return {
     config,
-    samplerate: adtsSampleingRates[adtsSamplingIndex],
+    samplerate: adtsSamplingRates[adtsSamplingIndex],
     channelCount: adtsChanelConfig,
     codec: 'mp4a.40.' + adtsObjectType,
     manifestCodec,
