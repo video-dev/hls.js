@@ -80,7 +80,7 @@
     "eslint-plugin-import": "2.26.0",
     "eslint-plugin-mocha": "10.1.0",
     "eslint-plugin-node": "11.1.0",
-    "eslint-plugin-promise": "6.0.0",
+    "eslint-plugin-promise": "6.0.1",
     "eventemitter3": "4.0.7",
     "http-server": "14.1.1",
     "husky": "8.0.1",
