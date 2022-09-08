@@ -392,7 +392,6 @@ export default class MP4Remuxer implements Remuxer {
     let lastDTS;
     let minPTS: number = Number.POSITIVE_INFINITY;
     let maxPTS: number = Number.NEGATIVE_INFINITY;
-    let ptsDtsShift = 0;
     let sortSamples = false;
 
     // if parsed fragment is contiguous with last one, let's use last DTS value as reference
@@ -411,13 +410,6 @@ export default class MP4Remuxer implements Remuxer {
       const sample = inputSamples[i];
       sample.pts = normalizePts(sample.pts - initPTS, nextAvcDts);
       sample.dts = normalizePts(sample.dts - initPTS, nextAvcDts);
-      if (sample.dts > sample.pts) {
-        const PTS_DTS_SHIFT_TOLERANCE_90KHZ = 90000 * 0.2;
-        ptsDtsShift = Math.max(
-          Math.min(ptsDtsShift, sample.pts - sample.dts),
-          -1 * PTS_DTS_SHIFT_TOLERANCE_90KHZ
-        );
-      }
       if (sample.dts < inputSamples[i > 0 ? i - 1 : i].dts) {
         sortSamples = true;
       }
@@ -443,41 +435,6 @@ export default class MP4Remuxer implements Remuxer {
     const averageSampleDuration = inputDuration
       ? Math.round(inputDuration / (nbSamples - 1))
       : mp4SampleDuration || track.inputTimeScale / 30;
-
-    // handle broken streams with PTS < DTS, tolerance up 0.2 seconds
-    if (ptsDtsShift < 0) {
-      if (ptsDtsShift < averageSampleDuration * -2) {
-        // Fix for "CNN special report, with CC" in test-streams (including Safari browser)
-        // With large PTS < DTS errors such as this, we want to correct CTS while maintaining increasing DTS values
-        logger.warn(
-          `PTS < DTS detected in video samples, offsetting DTS from PTS by ${toMsFromMpegTsClock(
-            -averageSampleDuration,
-            true
-          )} ms`
-        );
-        let lastDts = ptsDtsShift;
-        for (let i = 0; i < nbSamples; i++) {
-          inputSamples[i].dts = lastDts = Math.max(
-            lastDts,
-            inputSamples[i].pts - averageSampleDuration
-          );
-          inputSamples[i].pts = Math.max(lastDts, inputSamples[i].pts);
-        }
-      } else {
-        // Fix for "Custom IV with bad PTS DTS" in test-streams
-        // With smaller PTS < DTS errors we can simply move all DTS back. This increases CTS without causing buffer gaps or decode errors in Safari
-        logger.warn(
-          `PTS < DTS detected in video samples, shifting DTS by ${toMsFromMpegTsClock(
-            ptsDtsShift,
-            true
-          )} ms to overcome this issue`
-        );
-        for (let i = 0; i < nbSamples; i++) {
-          inputSamples[i].dts = inputSamples[i].dts + ptsDtsShift;
-        }
-      }
-      firstDTS = inputSamples[0].dts;
-    }
 
     // if fragment are contiguous, detect hole/overlapping between fragments
     if (contiguous) {
@@ -536,11 +493,9 @@ export default class MP4Remuxer implements Remuxer {
       nbNalu += nbUnits;
       sample.length = sampleLen;
 
-      // normalize PTS/DTS
       // ensure sample monotonic DTS
       sample.dts = Math.max(sample.dts, firstDTS);
-      // ensure that computed value is greater or equal than sample DTS
-      sample.pts = Math.max(sample.pts, sample.dts, 0);
+
       minPTS = Math.min(sample.pts, minPTS);
       maxPTS = Math.max(sample.pts, maxPTS);
     }
@@ -1096,7 +1051,12 @@ class Mp4Sample {
   public cts: number;
   public flags: Mp4SampleFlags;
 
-  constructor(isKeyframe: boolean, duration, size, cts) {
+  constructor(
+    isKeyframe: boolean,
+    duration: number,
+    size: number,
+    cts: number
+  ) {
     this.duration = duration;
     this.size = size;
     this.cts = cts;

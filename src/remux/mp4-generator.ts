@@ -1084,7 +1084,7 @@ class MP4 {
     offset += 8 + arraylen;
     array.set(
       [
-        0x00, // version 0
+        0x01, // version 1 to signal signed ctts
         0x00,
         0x0f,
         0x01, // flags
