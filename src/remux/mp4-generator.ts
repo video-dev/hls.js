@@ -1084,7 +1084,7 @@ class MP4 {
     offset += 8 + arraylen;
     array.set(
       [
-        0x01, // version 1 to signal signed ctts
+        0x00, // version 0
         0x00,
         0x0f,
         0x01, // flags
@@ -1099,12 +1099,16 @@ class MP4 {
       ],
       0
     );
+    let hasNegativeCompositionTimestamps = false;
     for (i = 0; i < len; i++) {
       sample = samples[i];
       duration = sample.duration;
       size = sample.size;
       flags = sample.flags;
       cts = sample.cts;
+      if (cts < 0) {
+        hasNegativeCompositionTimestamps = true;
+      }
       array.set(
         [
           (duration >>> 24) & 0xff,
@@ -1129,6 +1133,9 @@ class MP4 {
         ],
         12 + 16 * i
       );
+    }
+    if (hasNegativeCompositionTimestamps) {
+      array[0] = 0x01; // version 1
     }
     return MP4.box(MP4.types.trun, array);
   }
