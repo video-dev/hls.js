@@ -377,11 +377,19 @@ describe('StreamController', function () {
       streamController['checkBuffer']();
     });
 
-    it('should seek to start pos when metadata has not yet been loaded', function () {
+    it('should seek to start pos when data is first loaded', function () {
+      const firstFrag = new Fragment(PlaylistLevelType.MAIN, '');
+      firstFrag.duration = 5.0;
+      firstFrag.level = 1;
+      firstFrag.start = 0;
+      firstFrag.sn = 1;
+      firstFrag.cc = 0;
       // @ts-ignore
       const seekStub = sandbox.stub(streamController, 'seekToStartPos');
       streamController['loadedmetadata'] = false;
-      streamController['checkBuffer']();
+      streamController['fragCurrent'] = streamController['fragPrevious'] =
+        firstFrag;
+      streamController['fragBufferedComplete'](firstFrag, null);
       expect(seekStub).to.have.been.calledOnce;
       expect(streamController['loadedmetadata']).to.be.true;
     });

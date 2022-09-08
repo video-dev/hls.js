@@ -917,13 +917,7 @@ export default class StreamController
       return;
     }
 
-    // Check combined buffer
-    const buffered = BufferHelper.getBuffered(media);
-
-    if (!this.loadedmetadata && buffered.length) {
-      this.loadedmetadata = true;
-      this.seekToStartPos();
-    } else {
+    if (this.loadedmetadata || !BufferHelper.getBuffered(media).length) {
       // Resolve gaps using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
       const activeFrag = this.state !== State.IDLE ? this.fragCurrent : null;
       gapController.poll(this.lastCurrentTime, activeFrag);
@@ -972,9 +966,8 @@ export default class StreamController
 
   /**
    * Seeks to the set startPosition if not equal to the mediaElement's current time.
-   * @private
    */
-  private seekToStartPos() {
+  protected seekToStartPos() {
     const { media } = this;
     if (!media) {
       return;

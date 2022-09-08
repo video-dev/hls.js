@@ -524,9 +524,12 @@ export default class BaseStreamController
       this.fragCurrent === this.fragPrevious
     ) {
       this.loadedmetadata = true;
+      this.seekToStartPos();
     }
     this.tick();
   }
+
+  protected seekToStartPos() {}
 
   protected _handleFragmentLoadComplete(fragLoadedEndData: PartsLoadedData) {
     const { transmuxer } = this;
