@@ -428,8 +428,7 @@ export default class MP4Remuxer implements Remuxer {
     firstDTS = inputSamples[0].dts;
     lastDTS = inputSamples[inputSamples.length - 1].dts;
 
-    // on Safari let's signal the same sample duration for all samples
-    // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
+    // Sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
     // set this constant duration as being the avg delta between consecutive DTS.
     const inputDuration = lastDTS - firstDTS;
     const averageSampleDuration = inputDuration
@@ -522,6 +521,10 @@ export default class MP4Remuxer implements Remuxer {
     mdat.set(MP4.types.mdat, 4);
 
     let stretchedLastFrame = false;
+    let minDtsDelta = Number.POSITIVE_INFINITY;
+    let minPtsDelta = Number.POSITIVE_INFINITY;
+    let maxDtsDelta = Number.NEGATIVE_INFINITY;
+    let maxPtsDelta = Number.NEGATIVE_INFINITY;
     for (let i = 0; i < nbSamples; i++) {
       const avcSample = inputSamples[i];
       const avcSampleUnits = avcSample.units;
@@ -539,13 +542,19 @@ export default class MP4Remuxer implements Remuxer {
       }
 
       // expected sample duration is the Decoding Timestamp diff of consecutive samples
+      let ptsDelta;
       if (i < nbSamples - 1) {
         mp4SampleDuration = inputSamples[i + 1].dts - avcSample.dts;
+        ptsDelta = inputSamples[i + 1].pts - avcSample.pts;
       } else {
         const config = this.config;
         const lastFrameDuration =
           i > 0
             ? avcSample.dts - inputSamples[i - 1].dts
+            : averageSampleDuration;
+        ptsDelta =
+          i > 0
+            ? avcSample.pts - inputSamples[i - 1].pts
             : averageSampleDuration;
         if (config.stretchShortVideoTrack && this.nextAudioPts !== null) {
           // In some cases, a segment's audio track duration may exceed the video track duration.
@@ -582,6 +591,10 @@ export default class MP4Remuxer implements Remuxer {
         }
       }
       const compositionTimeOffset = Math.round(avcSample.pts - avcSample.dts);
+      minDtsDelta = Math.min(minDtsDelta, mp4SampleDuration);
+      maxDtsDelta = Math.max(maxDtsDelta, mp4SampleDuration);
+      minPtsDelta = Math.min(minPtsDelta, ptsDelta);
+      maxPtsDelta = Math.max(maxPtsDelta, ptsDelta);
 
       outputSamples.push(
         new Mp4Sample(
@@ -593,12 +606,43 @@ export default class MP4Remuxer implements Remuxer {
       );
     }
 
-    if (outputSamples.length && chromeVersion && chromeVersion < 70) {
-      // Chrome workaround, mark first sample as being a Random Access Point (keyframe) to avoid sourcebuffer append issue
-      // https://code.google.com/p/chromium/issues/detail?id=229412
-      const flags = outputSamples[0].flags;
-      flags.dependsOn = 2;
-      flags.isNonSync = 0;
+    if (outputSamples.length) {
+      if (chromeVersion) {
+        if (chromeVersion < 70) {
+          // Chrome workaround, mark first sample as being a Random Access Point (keyframe) to avoid sourcebuffer append issue
+          // https://code.google.com/p/chromium/issues/detail?id=229412
+          const flags = outputSamples[0].flags;
+          flags.dependsOn = 2;
+          flags.isNonSync = 0;
+        }
+      } else if (safariWebkitVersion) {
+        // Fix for "CNN special report, with CC" in test-streams (Safari browser only)
+        // Ignore DTS when frame durations are irregular. Safari MSE does not handle this leading to gaps.
+        if (
+          maxPtsDelta - minPtsDelta < maxDtsDelta - minDtsDelta &&
+          averageSampleDuration / maxDtsDelta < 0.025 &&
+          outputSamples[0].cts === 0
+        ) {
+          logger.warn(
+            'Found irregular gaps in sample duration. Using PTS instead of DTS to determine MP4 sample duration.'
+          );
+          let dts = firstDTS;
+          for (let i = 0, len = outputSamples.length; i < len; i++) {
+            const nextDts = dts + outputSamples[i].duration;
+            const pts = dts + outputSamples[i].cts;
+            if (i < len - 1) {
+              const nextPts = nextDts + outputSamples[i + 1].cts;
+              outputSamples[i].duration = nextPts - pts;
+            } else {
+              outputSamples[i].duration = i
+                ? outputSamples[i - 1].duration
+                : averageSampleDuration;
+            }
+            outputSamples[i].cts = 0;
+            dts = nextDts;
+          }
+        }
+      }
     }
 
     console.assert(
