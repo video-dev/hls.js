@@ -1084,7 +1084,7 @@ class MP4 {
     offset += 8 + arraylen;
     array.set(
       [
-        0x00, // version 0
+        track.type === 'video' ? 0x01 : 0x00, // version 1 for video with signed-int sample_composition_time_offset
         0x00,
         0x0f,
         0x01, // flags

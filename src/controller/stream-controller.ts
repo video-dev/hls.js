@@ -337,10 +337,7 @@ export default class StreamController
     // Check if fragment is not loaded
     const fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
-    if (
-      fragState === FragmentState.NOT_LOADED ||
-      fragState === FragmentState.PARTIAL
-    ) {
+    if (fragState === FragmentState.NOT_LOADED) {
       if (frag.sn === 'initSegment') {
         this._loadInitSegment(frag);
       } else if (this.bitrateTest) {
