@@ -18,7 +18,7 @@ function versionPublished() {
   // npm view returns empty string if package doesn't exist
   return !!require('child_process')
     .execSync(
-      'npm view ' + packageJson.name + '@' + packageJson.version + ' --json'
+      'npm view ' + packageJson.name + '@' + packageJson.version
     )
     .toString()
     .trim();
