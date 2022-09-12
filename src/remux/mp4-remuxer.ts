@@ -33,7 +33,6 @@ const MPEG_AUDIO_SAMPLE_PER_FRAME = 1152;
 
 let chromeVersion: number | null = null;
 let safariWebkitVersion: number | null = null;
-let requiresPositiveDts: boolean = false;
 
 export default class MP4Remuxer implements Remuxer {
   private observer: HlsEventEmitter;
@@ -68,10 +67,6 @@ export default class MP4Remuxer implements Remuxer {
       const result = navigator.userAgent.match(/Safari\/(\d+)/i);
       safariWebkitVersion = result ? parseInt(result[1]) : 0;
     }
-    requiresPositiveDts = !(
-      (!!chromeVersion && chromeVersion >= 75) ||
-      (!!safariWebkitVersion && safariWebkitVersion >= 600)
-    );
   }
 
   destroy() {}
@@ -473,9 +468,8 @@ export default class MP4Remuxer implements Remuxer {
       }
     }
 
-    if (requiresPositiveDts) {
-      firstDTS = Math.max(0, firstDTS);
-    }
+    firstDTS = Math.max(0, firstDTS);
+
     let nbNalu = 0;
     let naluLen = 0;
     for (let i = 0; i < nbSamples; i++) {
