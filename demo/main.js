@@ -539,6 +539,19 @@ function loadSelectedStream() {
   });
 
   hls.on(Hls.Events.FRAG_BUFFERED, function (eventName, data) {
+    const stats = data.part.stats.loaded ? data.part.stats : data.frag.stats;
+    if (data.stats.aborted) {
+      return;
+    }
+
+    if (data.frag.type !== 'main' || data.frag.sn === 'initSegment') {
+      return;
+    }
+    const processingMs = stats.parsing.end - stats.loading.start - Math.min(
+      stats.loading.first - stats.loading.start,
+      hls.ttfbEstimate
+    );
+
     const event = {
       type: data.frag.type + (data.part ? ' part' : ' fragment'),
       id: data.frag.level,
@@ -550,10 +563,7 @@ function loadSelectedStream() {
       parsing: data.stats.parsing.end - data.stats.loading.end,
       buffer: data.stats.buffering.end - data.stats.parsing.end,
       duration: data.stats.buffering.end - data.stats.loading.first,
-      bw: Math.round(
-        (8 * data.stats.total) /
-          (data.stats.buffering.end - data.stats.loading.start)
-      ),
+      bw: Math.round((8 * stats.loaded) / (Math.max(processingMs, 50))), // 50 = this.minDelayMs_ in class EwmaBandWidthEstimator
       size: data.stats.total,
     };
     events.load.push(event);
