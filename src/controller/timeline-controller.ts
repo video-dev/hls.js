@@ -473,7 +473,7 @@ export class TimelineController implements ComponentAPI {
     const { initPTS, unparsedVttFrags } = this;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
       // If fragment is subtitle type, parse as WebVTT.
-      if (payload.byteLength) {
+      if (payload?.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
         if (!Number.isFinite(initPTS[frag.cc])) {
           unparsedVttFrags.push(data);
