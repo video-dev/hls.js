@@ -397,6 +397,13 @@ export class SubtitleStreamController
         return;
       }
 
+      // only load if fragment is not loaded
+      if (
+        this.fragmentTracker.getState(foundFrag) !== FragmentState.NOT_LOADED
+      ) {
+        return;
+      }
+
       if (foundFrag.encrypted) {
         this.loadKey(foundFrag, trackDetails);
       } else {
@@ -410,11 +417,6 @@ export class SubtitleStreamController
     levelDetails: LevelDetails,
     targetBufferTime: number
   ) {
-    // only load if fragment is not loaded
-    if (this.fragmentTracker.getState(frag) !== FragmentState.NOT_LOADED) {
-      return;
-    }
-
     this.fragCurrent = frag;
     if (frag.sn === 'initSegment') {
       this._loadInitSegment(frag);
