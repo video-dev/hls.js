@@ -235,8 +235,8 @@ $(document).ready(function () {
       toggleTab($('.demo-tab-btn')[parseInt(indexString) || 0], true);
     });
   }
-  $(window).on('popstate', function () {
-    window.location.reload();
+  $(self).on('popstate', function () {
+    self.location.reload();
   });
 });
 
@@ -547,10 +547,10 @@ function loadSelectedStream() {
     if (data.frag.type !== 'main' || data.frag.sn === 'initSegment') {
       return;
     }
-    const processingMs = stats.parsing.end - stats.loading.start - Math.min(
-      stats.loading.first - stats.loading.start,
-      hls.ttfbEstimate
-    );
+    const processingMs =
+      stats.parsing.end -
+      stats.loading.start -
+      Math.min(stats.loading.first - stats.loading.start, hls.ttfbEstimate);
 
     const event = {
       type: data.frag.type + (data.part ? ' part' : ' fragment'),
@@ -563,7 +563,7 @@ function loadSelectedStream() {
       parsing: data.stats.parsing.end - data.stats.loading.end,
       buffer: data.stats.buffering.end - data.stats.parsing.end,
       duration: data.stats.buffering.end - data.stats.loading.first,
-      bw: Math.round((8 * stats.loaded) / (Math.max(processingMs, 50))), // 50 = this.minDelayMs_ in class EwmaBandWidthEstimator
+      bw: Math.round((8 * stats.loaded) / Math.max(processingMs, 50)), // 50 = this.minDelayMs_ in class EwmaBandWidthEstimator
       size: data.stats.total,
     };
     events.load.push(event);
@@ -1049,7 +1049,7 @@ function handleVolumeEvent() {
 }
 
 function handleLevelError(data) {
-  var levelObj = data.context || data;
+  const levelObj = data.context || data;
   hls.removeLevel(levelObj.level, levelObj.urlId || 0);
   if (!hls.levels.length) {
     logError('All levels have been removed');
@@ -1495,8 +1495,8 @@ function onDemoConfigChanged(firstLoad) {
   )}&demoConfig=${serializedDemoConfig}`;
 
   $('#StreamPermalink').html(`<a href="${permalinkURL}">${permalinkURL}</a>`);
-  if (!firstLoad && window.location.href !== permalinkURL) {
-    window.history.pushState(null, null, permalinkURL);
+  if (!firstLoad && self.location.href !== permalinkURL) {
+    self.history.pushState(null, null, permalinkURL);
   }
 }
 
