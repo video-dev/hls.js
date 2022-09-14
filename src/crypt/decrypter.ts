@@ -167,7 +167,7 @@ export default class Decrypter {
           '[decrypter.ts]: WebCrypto Error, disable WebCrypto API:',
           err
         );
-        return this.onWebCryptoError(data, key, iv) as ArrayBuffer;
+        return this.onWebCryptoError(data, key, iv);
       });
   }
 
