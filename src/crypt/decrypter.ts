@@ -163,15 +163,22 @@ export default class Decrypter {
         return crypto.decrypt(data.buffer, aesKey);
       })
       .catch((err) => {
-        return this.onWebCryptoError(err, data, key, iv) as ArrayBuffer;
+        logger.warn(
+          '[decrypter.ts]: WebCrypto Error, disable WebCrypto API:',
+          err
+        );
+        return this.onWebCryptoError(data, key, iv) as ArrayBuffer;
       });
   }
 
-  private onWebCryptoError(err, data, key, iv): ArrayBuffer | null {
-    logger.warn('[decrypter.ts]: WebCrypto Error, disable WebCrypto API:', err);
+  private onWebCryptoError(data, key, iv): ArrayBuffer {
     this.config.enableSoftwareAES = true;
     this.logEnabled = true;
-    return this.softwareDecrypt(data, key, iv);
+    const result = this.softwareDecrypt(data, key, iv);
+    if (result === null) {
+      throw new Error("softwareDecrypt: result is 'null'");
+    }
+    return result;
   }
 
   private getValidChunk(data: Uint8Array): Uint8Array {
