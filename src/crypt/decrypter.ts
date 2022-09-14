@@ -176,6 +176,7 @@ export default class Decrypter {
     this.logEnabled = true;
     const result = this.softwareDecrypt(data, key, iv);
     if (result === null) {
+      this.reset();
       throw new Error("softwareDecrypt: result is 'null'");
     }
     return result;
