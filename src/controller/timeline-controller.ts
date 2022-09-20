@@ -442,6 +442,11 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
+  private closedCaptionsForLevel(frag: Fragment): string | undefined {
+    const level = this.hls.levels[frag.level];
+    return level?.attrs['CLOSED-CAPTIONS'];
+  }
+
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
     const { cea608Parser1, cea608Parser2, lastSn, lastPartIndex } = this;
     if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
@@ -654,14 +659,21 @@ export class TimelineController implements ComponentAPI {
       return;
     }
 
+    const { frag, samples } = data;
+    if (
+      frag.type === PlaylistLevelType.MAIN &&
+      this.closedCaptionsForLevel(frag) === 'NONE'
+    ) {
+      return;
+    }
     // If the event contains captions (found in the bytes property), push all bytes into the parser immediately
     // It will create the proper timestamps based on the PTS value
-    for (let i = 0; i < data.samples.length; i++) {
-      const ccBytes = data.samples[i].bytes;
+    for (let i = 0; i < samples.length; i++) {
+      const ccBytes = samples[i].bytes;
       if (ccBytes) {
         const ccdatas = this.extractCea608Data(ccBytes);
-        cea608Parser1.addData(data.samples[i].pts, ccdatas[0]);
-        cea608Parser2.addData(data.samples[i].pts, ccdatas[1]);
+        cea608Parser1.addData(samples[i].pts, ccdatas[0]);
+        cea608Parser2.addData(samples[i].pts, ccdatas[1]);
       }
     }
   }
