@@ -86,7 +86,7 @@
     "husky": "8.0.1",
     "istanbul-instrumenter-loader": "3.0.1",
     "jsonpack": "1.1.5",
-    "karma": "6.4.0",
+    "karma": "6.4.1",
     "karma-chrome-launcher": "3.1.1",
     "karma-coverage-istanbul-reporter": "3.0.3",
     "karma-mocha": "2.0.1",
