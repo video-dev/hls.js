@@ -137,7 +137,7 @@
   - [`hls.drift`](#hlsdrift)
   - [`hls.playingDate`](#hlsplayingdate)
 - [Runtime Events](#runtime-events)
-- [Loader Composition](#loader-composition)
+- [Creating a Custom Loader](#creating-a-custom-loader)
 - [Errors](#errors)
   - [Network Errors](#network-errors)
   - [Media Errors](#media-errors)
