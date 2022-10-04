@@ -329,8 +329,6 @@ export class SubtitleStreamController
         })
         .catch((e) => {
           this.warn(e.message);
-          // remove the fragment without payload and try downloading again
-          this.fragmentTracker.removeFragment(frag);
           this.state = State.IDLE;
         });
     }
