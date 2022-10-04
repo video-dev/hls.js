@@ -2,7 +2,7 @@ import BaseStreamController, { State } from './base-stream-controller';
 import { changeTypeSupported } from '../is-supported';
 import type { NetworkComponentAPI } from '../types/component-api';
 import { Events } from '../events';
-import { BufferHelper } from '../utils/buffer-helper';
+import { BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import type { FragmentTracker } from './fragment-tracker';
 import { FragmentState } from './fragment-tracker';
 import type { Level } from '../types/level';
@@ -1276,7 +1276,7 @@ export default class StreamController
     this.tick();
   }
 
-  private getMainFwdBufferInfo() {
+  public getMainFwdBufferInfo(): BufferInfo | null {
     return this.getFwdBufferInfo(
       this.mediaBuffer ? this.mediaBuffer : this.media,
       PlaylistLevelType.MAIN

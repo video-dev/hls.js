@@ -1,6 +1,6 @@
 import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
-import { Bufferable, BufferHelper } from '../utils/buffer-helper';
+import { Bufferable, BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import { Events } from '../events';
 import { ErrorDetails } from '../errors';
@@ -778,12 +778,7 @@ export default class BaseStreamController
   protected getFwdBufferInfo(
     bufferable: Bufferable | null,
     type: PlaylistLevelType
-  ): {
-    len: number;
-    start: number;
-    end: number;
-    nextStart?: number;
-  } | null {
+  ): BufferInfo | null {
     const { config } = this;
     const pos = this.getLoadPosition();
     if (!Number.isFinite(pos)) {

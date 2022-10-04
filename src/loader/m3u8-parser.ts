@@ -85,6 +85,7 @@ export default class M3U8Parser {
 
   static parseMasterPlaylist(string: string, baseurl: string) {
     const levels: Array<LevelParsed> = [];
+    const levelsWithKnownCodecs: Array<LevelParsed> = [];
     const sessionData: Record<string, AttrList> = {};
     let hasSessionData = false;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
@@ -118,6 +119,10 @@ export default class M3U8Parser {
           level.videoCodec = M3U8Parser.convertAVC1ToAVCOTI(level.videoCodec);
         }
 
+        if (!level.unknownCodecs?.length) {
+          levelsWithKnownCodecs.push(level);
+        }
+
         levels.push(level);
       } else if (result[3]) {
         // '#EXT-X-SESSION-DATA' is found, parse session data in group 3
@@ -128,8 +133,13 @@ export default class M3U8Parser {
         }
       }
     }
+    // Filter out levels with unknown codecs if it does not remove all levels
+    const stripUnknownCodecLevels =
+      levelsWithKnownCodecs.length > 0 &&
+      levelsWithKnownCodecs.length < levels.length;
+
     return {
-      levels,
+      levels: stripUnknownCodecLevels ? levelsWithKnownCodecs : levels,
       sessionData: hasSessionData ? sessionData : null,
     };
   }

@@ -922,6 +922,10 @@ class Hls implements HlsEventEmitter {
     get lowLatencyMode(): boolean;
     // Warning: (ae-setter-with-docs) The doc comment for the property "lowLatencyMode" must appear on the getter, not the setter.
     set lowLatencyMode(mode: boolean);
+    // Warning: (ae-forgotten-export) The symbol "BufferInfo" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    get mainForwardBufferInfo(): BufferInfo | null;
     get manualLevel(): number;
     get maxAutoLevel(): number;
     get maxLatency(): number;
