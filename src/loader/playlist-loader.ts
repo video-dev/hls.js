@@ -33,6 +33,7 @@ import type {
   ManifestLoadingData,
   TrackLoadingData,
 } from '../types/events';
+import { NetworkComponentAPI } from '../types/component-api';
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext
@@ -63,7 +64,7 @@ function getResponseUrl(
   return url;
 }
 
-class PlaylistLoader {
+class PlaylistLoader implements NetworkComponentAPI {
   private readonly hls: Hls;
   private readonly loaders: {
     [key: string]: Loader<LoaderContext>;
@@ -72,6 +73,12 @@ class PlaylistLoader {
   constructor(hls: Hls) {
     this.hls = hls;
     this.registerListeners();
+  }
+
+  public startLoad(startPosition: number): void {}
+
+  public stopLoad(): void {
+    this.destroyInternalLoaders();
   }
 
   private registerListeners() {

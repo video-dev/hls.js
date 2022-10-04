@@ -1,5 +1,5 @@
 import { Events } from '../events';
-import { BufferHelper } from '../utils/buffer-helper';
+import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPTS } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { addSliding } from './level-helper';
@@ -351,7 +351,7 @@ export class SubtitleStreamController
       const targetDuration = trackDetails.targetduration;
       const { config, media } = this;
       const bufferedInfo = BufferHelper.bufferedInfo(
-        this.mediaBufferTimeRanges,
+        this.tracksBuffered[this.currentTrackId] || [],
         media.currentTime - targetDuration,
         config.maxBufferHole
       );
@@ -397,12 +397,16 @@ export class SubtitleStreamController
         return;
       }
 
+      // only load if fragment is not loaded
+      if (
+        this.fragmentTracker.getState(foundFrag) !== FragmentState.NOT_LOADED
+      ) {
+        return;
+      }
+
       if (foundFrag.encrypted) {
         this.loadKey(foundFrag, trackDetails);
-      } else if (
-        this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
-      ) {
-        // only load if fragment is not loaded
+      } else {
         this.loadFragment(foundFrag, trackDetails, targetBufferTime);
       }
     }
@@ -421,7 +425,40 @@ export class SubtitleStreamController
     }
   }
 
-  get mediaBufferTimeRanges(): TimeRange[] {
-    return this.tracksBuffered[this.currentTrackId] || [];
+  get mediaBufferTimeRanges(): Bufferable {
+    return new BufferableInstance(
+      this.tracksBuffered[this.currentTrackId] || []
+    );
+  }
+}
+
+class BufferableInstance implements Bufferable {
+  public readonly buffered: TimeRanges;
+
+  constructor(timeranges: TimeRange[]) {
+    const getRange = (
+      name: 'start' | 'end',
+      index: number,
+      length: number
+    ): number => {
+      index = index >>> 0;
+      if (index > length - 1) {
+        throw new DOMException(
+          `Failed to execute '${name}' on 'TimeRanges': The index provided (${index}) is greater than the maximum bound (${length})`
+        );
+      }
+      return timeranges[index][name];
+    };
+    this.buffered = {
+      get length() {
+        return timeranges.length;
+      },
+      end(index: number): number {
+        return getRange('end', index, timeranges.length);
+      },
+      start(index: number): number {
+        return getRange('start', index, timeranges.length);
+      },
+    };
   }
 }

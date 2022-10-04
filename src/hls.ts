@@ -25,6 +25,7 @@ import type { MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
 import type { Level } from './types/level';
 import type { Fragment } from './loader/fragment';
+import { BufferInfo } from './utils/buffer-helper';
 
 /**
  * @module Hls
@@ -140,12 +141,15 @@ export default class Hls implements HlsEventEmitter {
     // fpsController uses streamController to switch when frames are being dropped
     fpsController.setStreamController(streamController);
 
-    const networkControllers = [levelController, streamController];
+    const networkControllers = [
+      playListLoader,
+      keyLoader,
+      levelController,
+      streamController,
+    ];
 
     this.networkControllers = networkControllers;
     const coreComponents = [
-      playListLoader,
-      keyLoader,
       abrController,
       bufferController,
       capLevelController,
@@ -677,6 +681,10 @@ export default class Hls implements HlsEventEmitter {
    */
   public get playingDate(): Date | null {
     return this.streamController.currentProgramDateTime;
+  }
+
+  public get mainForwardBufferInfo(): BufferInfo | null {
+    return this.streamController.getMainFwdBufferInfo();
   }
 
   /**
