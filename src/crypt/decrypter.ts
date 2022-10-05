@@ -163,10 +163,8 @@ export default class Decrypter {
         return crypto.decrypt(data.buffer, aesKey);
       })
       .catch((err) => {
-        const errorMessage = err.message || err.name;
         logger.warn(
-          '[decrypter.ts]: WebCrypto Error, disable WebCrypto API:',
-          errorMessage
+          `[decrypter.ts]: WebCrypto Error, disable WebCrypto API, ${err.name}: ${err.message}`
         );
 
         return this.onWebCryptoError(data, key, iv);

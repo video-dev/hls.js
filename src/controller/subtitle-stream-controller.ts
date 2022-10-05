@@ -327,8 +327,8 @@ export class SubtitleStreamController
             },
           });
         })
-        .catch((e) => {
-          this.warn(e.message);
+        .catch((err) => {
+          this.warn(`${err.name}: ${err.message}`);
           this.state = State.IDLE;
         });
     }
