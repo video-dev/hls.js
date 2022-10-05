@@ -96,7 +96,8 @@ export default class Decrypter {
       this.webCryptoDecrypt(new Uint8Array(data), key, iv).then(callback);
     }
   }
-
+  // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
+  // data is handled in the flush() call
   public softwareDecrypt(
     data: Uint8Array,
     key: ArrayBuffer,
@@ -163,15 +164,23 @@ export default class Decrypter {
         return crypto.decrypt(data.buffer, aesKey);
       })
       .catch((err) => {
-        return this.onWebCryptoError(err, data, key, iv) as ArrayBuffer;
+        logger.warn(
+          `[decrypter.ts]: WebCrypto Error, disable WebCrypto API, ${err.name}: ${err.message}`
+        );
+
+        return this.onWebCryptoError(data, key, iv);
       });
   }
 
-  private onWebCryptoError(err, data, key, iv): ArrayBuffer | null {
-    logger.warn('[decrypter.ts]: WebCrypto Error, disable WebCrypto API:', err);
+  private onWebCryptoError(data, key, iv): ArrayBuffer | never {
     this.config.enableSoftwareAES = true;
     this.logEnabled = true;
-    return this.softwareDecrypt(data, key, iv);
+    this.softwareDecrypt(data, key, iv);
+    const decryptResult = this.flush();
+    if (decryptResult) {
+      return decryptResult.buffer;
+    }
+    throw new Error('WebCrypto and softwareDecrypt: failed to decrypt data');
   }
 
   private getValidChunk(data: Uint8Array): Uint8Array {

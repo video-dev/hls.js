@@ -326,6 +326,10 @@ export class SubtitleStreamController
               tdecrypt: endTime,
             },
           });
+        })
+        .catch((err) => {
+          this.warn(`${err.name}: ${err.message}`);
+          this.state = State.IDLE;
         });
     }
   }
