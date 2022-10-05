@@ -7,7 +7,7 @@ import {
 } from '../types/loader';
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
-import type { FragLoadedData } from '../types/events';
+import type { FragLoadedData, PartsLoadedData } from '../types/events';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
@@ -315,4 +315,6 @@ export interface FragLoadFailResult {
   networkDetails: any;
 }
 
-export type FragmentLoadProgressCallback = (result: FragLoadedData) => void;
+export type FragmentLoadProgressCallback = (
+  result: FragLoadedData | PartsLoadedData
+) => void;
