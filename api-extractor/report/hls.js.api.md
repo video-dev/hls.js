@@ -820,6 +820,8 @@ export interface FragmentLoaderContext extends LoaderContext {
     frag: Fragment;
     // (undocumented)
     part: Part | null;
+    // (undocumented)
+    resetIV?: boolean;
 }
 
 // Warning: (ae-missing-release-tag) "FragParsedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
