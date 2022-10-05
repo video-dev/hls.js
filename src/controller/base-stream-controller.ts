@@ -43,7 +43,6 @@ import type { Level } from '../types/level';
 import type { RemuxedTrack } from '../types/remuxer';
 import type Hls from '../hls';
 import type { HlsConfig } from '../config';
-import type { HlsEventEmitter } from '../events';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { SourceBufferName } from '../types/buffer';
 
@@ -110,7 +109,7 @@ export default class BaseStreamController
     this.keyLoader = new KeyLoader(hls.config);
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
-    this.decrypter = new Decrypter(hls as HlsEventEmitter, hls.config);
+    this.decrypter = new Decrypter(hls.config);
     hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
   }
 
@@ -409,7 +408,7 @@ export default class BaseStreamController
           const startTime = self.performance.now();
           // decrypt the subtitles
           return this.decrypter
-            .webCryptoDecrypt(
+            .decrypt(
               new Uint8Array(payload),
               decryptData.key.buffer,
               decryptData.iv.buffer

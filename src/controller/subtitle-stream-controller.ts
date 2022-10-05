@@ -311,7 +311,7 @@ export class SubtitleStreamController
       const startTime = performance.now();
       // decrypt the subtitles
       this.decrypter
-        .webCryptoDecrypt(
+        .decrypt(
           new Uint8Array(payload),
           decryptData.key.buffer,
           decryptData.iv.buffer
