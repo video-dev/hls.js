@@ -202,9 +202,9 @@ class AbrController implements ComponentAPI {
       this.bwEstimator.sample(requestDelay, stats.loaded);
     }
     this.clearTimer();
-    if (frag.loader) {
+    if (frag.loader || frag.keyLoader) {
       this.fragCurrent = this.partCurrent = null;
-      frag.loader.abort();
+      frag.abortRequests();
     }
     hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, part, stats });
   }
