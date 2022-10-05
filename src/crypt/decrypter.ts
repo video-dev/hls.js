@@ -158,8 +158,8 @@ export default class Decrypter {
         if (!subtle) {
           return Promise.reject(new Error('web crypto not initialized'));
         }
-
-        const crypto = new AESCrypto(subtle, iv);
+        this.logOnce('WebCrypto AES decrypt');
+        const crypto = new AESCrypto(subtle, new Uint8Array(iv));
         return crypto.decrypt(data.buffer, aesKey);
       })
       .catch((err) => {
