@@ -23,6 +23,8 @@ export interface FragmentLoaderContext extends LoaderContext {
   part: Part | null;
 }
 
+export interface KeyLoaderContext extends FragmentLoaderContext {}
+
 export interface LoaderConfiguration {
   // Max number of load retries
   maxRetry: number;

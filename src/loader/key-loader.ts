@@ -1,178 +1,184 @@
 /*
  * Decrypt key Loader
  */
-import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import type Hls from '../hls';
-import { Fragment } from './fragment';
 import {
   LoaderStats,
   LoaderResponse,
-  LoaderContext,
   LoaderConfiguration,
   LoaderCallbacks,
   Loader,
-  FragmentLoaderContext,
+  KeyLoaderContext,
 } from '../types/loader';
-import type { NetworkComponentAPI } from '../types/component-api';
-import type { KeyLoadingData } from '../types/events';
+import { LoadError } from './fragment-loader';
+import type { HlsConfig } from '../hls';
+import type { Fragment } from '../loader/fragment';
+import type { ComponentAPI } from '../types/component-api';
+import type { KeyLoadedData } from '../types/events';
 
-interface KeyLoaderContext extends LoaderContext {
-  frag: Fragment;
-}
-
-export default class KeyLoader implements NetworkComponentAPI {
-  private hls: Hls;
-  public loaders = {};
+export default class KeyLoader implements ComponentAPI {
+  private readonly config: HlsConfig;
+  public loader: Loader<KeyLoaderContext> | null = null;
   public decryptkey: Uint8Array | null = null;
   public decrypturl: string | null = null;
 
-  constructor(hls: Hls) {
-    this.hls = hls;
-
-    this.registerListeners();
+  constructor(config: HlsConfig) {
+    this.config = config;
   }
 
-  public startLoad(startPosition: number): void {}
-
-  public stopLoad(): void {
-    this.destroyInternalLoaders();
-  }
-
-  private registerListeners() {
-    this.hls.on(Events.KEY_LOADING, this.onKeyLoading, this);
-  }
-
-  private unregisterListeners() {
-    this.hls.off(Events.KEY_LOADING, this.onKeyLoading);
-  }
-
-  private destroyInternalLoaders(): void {
-    for (const loaderName in this.loaders) {
-      const loader = this.loaders[loaderName];
-      if (loader) {
-        loader.destroy();
-      }
-    }
-    this.loaders = {};
+  abort(): void {
+    this.loader?.abort();
   }
 
   destroy(): void {
-    this.unregisterListeners();
-    this.destroyInternalLoaders();
+    if (this.loader) {
+      this.loader.destroy();
+      this.loader = null;
+    }
   }
 
-  onKeyLoading(event: Events.KEY_LOADING, data: KeyLoadingData) {
-    const { frag } = data;
+  load(frag: Fragment): Promise<KeyLoadedData | void> | never {
     const type = frag.type;
-    const loader = this.loaders[type];
+    const loader = this.loader;
     if (!frag.decryptdata) {
-      logger.warn('Missing decryption data on fragment in onKeyLoading');
-      return;
+      throw new Error('Missing decryption data on fragment in onKeyLoading');
     }
 
     // Load the key if the uri is different from previous one, or if the decrypt key has not yet been retrieved
     const uri = frag.decryptdata.uri;
     if (uri !== this.decrypturl || this.decryptkey === null) {
-      const config = this.hls.config;
+      const config = this.config;
       if (loader) {
         logger.warn(`abort previous key loader for type:${type}`);
         loader.abort();
       }
       if (!uri) {
-        logger.warn('key uri is falsy');
-        return;
+        throw new Error('key uri is falsy');
       }
       const Loader = config.loader;
-      const fragLoader =
-        (frag.loader =
-        this.loaders[type] =
-          new Loader(config) as Loader<FragmentLoaderContext>);
+      const keyLoader =
+        (frag.keyLoader =
+        this.loader =
+          new Loader(config) as Loader<KeyLoaderContext>);
       this.decrypturl = uri;
       this.decryptkey = null;
 
-      const loaderContext: KeyLoaderContext = {
-        url: uri,
-        frag: frag,
-        responseType: 'arraybuffer',
-      };
+      return new Promise((resolve, reject) => {
+        const loaderContext: KeyLoaderContext = {
+          url: uri,
+          frag: frag,
+          part: null,
+          responseType: 'arraybuffer',
+        };
 
-      // maxRetry is 0 so that instead of retrying the same key on the same variant multiple times,
-      // key-loader will trigger an error and rely on stream-controller to handle retry logic.
-      // this will also align retry logic with fragment-loader
-      const loaderConfig: LoaderConfiguration = {
-        timeout: config.fragLoadingTimeOut,
-        maxRetry: 0,
-        retryDelay: config.fragLoadingRetryDelay,
-        maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-        highWaterMark: 0,
-      };
+        // maxRetry is 0 so that instead of retrying the same key on the same variant multiple times,
+        // key-loader will trigger an error and rely on stream-controller to handle retry logic.
+        // this will also align retry logic with fragment-loader
+        const loaderConfig: LoaderConfiguration = {
+          timeout: config.fragLoadingTimeOut,
+          maxRetry: 0,
+          retryDelay: config.fragLoadingRetryDelay,
+          maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+          highWaterMark: 0,
+        };
 
-      const loaderCallbacks: LoaderCallbacks<KeyLoaderContext> = {
-        onSuccess: this.loadsuccess.bind(this),
-        onError: this.loaderror.bind(this),
-        onTimeout: this.loadtimeout.bind(this),
-      };
+        const loaderCallbacks: LoaderCallbacks<KeyLoaderContext> = {
+          onSuccess: (
+            response: LoaderResponse,
+            stats: LoaderStats,
+            context: KeyLoaderContext,
+            networkDetails: any
+          ) => {
+            const frag = context.frag;
+            if (!frag.decryptdata) {
+              logger.error('after key load, decryptdata unset');
+              return reject(
+                new LoadError({
+                  type: ErrorTypes.NETWORK_ERROR,
+                  details: ErrorDetails.KEY_LOAD_ERROR,
+                  fatal: false,
+                  frag,
+                  networkDetails,
+                })
+              );
+            }
+            this.decryptkey = frag.decryptdata.key = new Uint8Array(
+              response.data as ArrayBuffer
+            );
 
-      fragLoader.load(loaderContext, loaderConfig, loaderCallbacks);
+            // detach fragment key loader on load success
+            frag.keyLoader = null;
+            this.loader = null;
+            resolve({ frag });
+          },
+
+          onError: (
+            error: { code: number; text: string },
+            context: KeyLoaderContext,
+            networkDetails: any
+          ) => {
+            this.resetLoader(context.frag, keyLoader);
+            reject(
+              new LoadError({
+                type: ErrorTypes.NETWORK_ERROR,
+                details: ErrorDetails.KEY_LOAD_ERROR,
+                fatal: false,
+                frag,
+                networkDetails,
+              })
+            );
+          },
+
+          onTimeout: (
+            stats: LoaderStats,
+            context: KeyLoaderContext,
+            networkDetails: any
+          ) => {
+            this.resetLoader(context.frag, keyLoader);
+            reject(
+              new LoadError({
+                type: ErrorTypes.NETWORK_ERROR,
+                details: ErrorDetails.KEY_LOAD_TIMEOUT,
+                fatal: false,
+                frag,
+                networkDetails,
+              })
+            );
+          },
+
+          onAbort: (
+            stats: LoaderStats,
+            context: KeyLoaderContext,
+            networkDetails: any
+          ) => {
+            this.resetLoader(context.frag, keyLoader);
+            reject(
+              new LoadError({
+                type: ErrorTypes.NETWORK_ERROR,
+                details: ErrorDetails.INTERNAL_ABORTED,
+                fatal: false,
+                frag,
+                networkDetails,
+              })
+            );
+          },
+        };
+
+        keyLoader.load(loaderContext, loaderConfig, loaderCallbacks);
+      });
     } else if (this.decryptkey) {
       // Return the key if it's already been loaded
       frag.decryptdata.key = this.decryptkey;
-      this.hls.trigger(Events.KEY_LOADED, { frag: frag });
+      return Promise.resolve({ frag });
     }
+    return Promise.resolve();
   }
 
-  loadsuccess(
-    response: LoaderResponse,
-    stats: LoaderStats,
-    context: KeyLoaderContext
-  ) {
-    const frag = context.frag;
-    if (!frag.decryptdata) {
-      logger.error('after key load, decryptdata unset');
-      return;
+  private resetLoader(frag: Fragment, loader: Loader<KeyLoaderContext>) {
+    if (this.loader === loader) {
+      this.loader = null;
     }
-    this.decryptkey = frag.decryptdata.key = new Uint8Array(
-      response.data as ArrayBuffer
-    );
-
-    // detach fragment loader on load success
-    frag.loader = null;
-    delete this.loaders[frag.type];
-    this.hls.trigger(Events.KEY_LOADED, { frag: frag });
-  }
-
-  loaderror(response: LoaderResponse, context: KeyLoaderContext) {
-    const frag = context.frag;
-    const loader = frag.loader;
-    if (loader) {
-      loader.abort();
-    }
-
-    delete this.loaders[frag.type];
-    this.hls.trigger(Events.ERROR, {
-      type: ErrorTypes.NETWORK_ERROR,
-      details: ErrorDetails.KEY_LOAD_ERROR,
-      fatal: false,
-      frag,
-      response,
-    });
-  }
-
-  loadtimeout(stats: LoaderStats, context: KeyLoaderContext) {
-    const frag = context.frag;
-    const loader = frag.loader;
-    if (loader) {
-      loader.abort();
-    }
-
-    delete this.loaders[frag.type];
-    this.hls.trigger(Events.ERROR, {
-      type: ErrorTypes.NETWORK_ERROR,
-      details: ErrorDetails.KEY_LOAD_TIMEOUT,
-      fatal: false,
-      frag,
-    });
+    loader.destroy();
   }
 }

@@ -320,13 +320,7 @@ export default class StreamController
       frag = frag.initSegment;
     }
 
-    // We want to load the key if we're dealing with an identity key, because we will decrypt
-    // this content using the key we fetch. Other keys will be handled by the DRM CDM via EME.
-    if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
-      this.loadKey(frag, levelDetails);
-    } else {
-      this.loadFragment(frag, levelDetails, targetBufferTime);
-    }
+    this.loadFragment(frag, levelDetails, targetBufferTime);
   }
 
   protected loadFragment(
@@ -339,12 +333,12 @@ export default class StreamController
     this.fragCurrent = frag;
     if (fragState === FragmentState.NOT_LOADED) {
       if (frag.sn === 'initSegment') {
-        this._loadInitSegment(frag);
+        this._loadInitSegment(frag, levelDetails);
       } else if (this.bitrateTest) {
         this.log(
           `Fragment ${frag.sn} of level ${frag.level} is being downloaded to test bitrate and will not be buffered`
         );
-        this._loadBitrateTestFrag(frag);
+        this._loadBitrateTestFrag(frag, levelDetails);
       } else {
         this.startFragRequested = true;
         super.loadFragment(frag, levelDetails, targetBufferTime);
@@ -465,8 +459,8 @@ export default class StreamController
     const fragCurrent = this.fragCurrent;
     this.fragCurrent = null;
     this.backtrackFragment = null;
-    if (fragCurrent?.loader) {
-      fragCurrent.loader.abort();
+    if (fragCurrent) {
+      fragCurrent.abortRequests();
     }
     switch (this.state) {
       case State.KEY_LOADING:
@@ -618,7 +612,7 @@ export default class StreamController
       if (fragCurrent.level !== data.level && fragCurrent.loader) {
         this.state = State.IDLE;
         this.backtrackFragment = null;
-        fragCurrent.loader.abort();
+        fragCurrent.abortRequests();
       }
     }
 
@@ -740,9 +734,9 @@ export default class StreamController
         this.mediaBuffer = this.media;
         const fragCurrent = this.fragCurrent;
         // we need to refill audio buffer from main: cancel any frag loading to speed up audio switch
-        if (fragCurrent?.loader) {
+        if (fragCurrent) {
           this.log('Switching to main audio track, cancel main fragment load');
-          fragCurrent.loader.abort();
+          fragCurrent.abortRequests();
         }
         // destroy transmuxer to force init segment generation (following audio switch)
         this.resetTransmuxer();
@@ -1013,9 +1007,9 @@ export default class StreamController
     return audioCodec;
   }
 
-  private _loadBitrateTestFrag(frag: Fragment) {
+  private _loadBitrateTestFrag(frag: Fragment, levelDetails: LevelDetails) {
     frag.bitrateTest = true;
-    this._doFragLoad(frag).then((data) => {
+    this._doFragLoad(frag, levelDetails).then((data) => {
       const { hls } = this;
       if (!data || hls.nextLoadLevel || this.fragContextChanged(frag)) {
         return;
