@@ -221,9 +221,10 @@ class CaptionsLogger {
   public time: number | null = null;
   public verboseLevel: VerboseLevel = VerboseLevel.ERROR;
 
-  log(severity: VerboseLevel, msg: string): void {
+  log(severity: VerboseLevel, msg: string | (() => string)): void {
     if (this.verboseLevel >= severity) {
-      logger.log(`${this.time} [${severity}] ${msg}`);
+      const m: string = typeof msg === 'function' ? msg() : msg;
+      logger.log(`${this.time} [${severity}] ${m}`);
     }
   }
 }
@@ -491,7 +492,8 @@ export class Row {
     if (this.pos >= NR_COLS) {
       this.logger.log(
         VerboseLevel.ERROR,
-        'Cannot insert ' +
+        () =>
+          'Cannot insert ' +
           byte.toString(16) +
           ' (' +
           char +
@@ -642,7 +644,10 @@ export class CaptionScreen {
   }
 
   setPAC(pacData: PACData) {
-    this.logger.log(VerboseLevel.INFO, 'pacData = ' + JSON.stringify(pacData));
+    this.logger.log(
+      VerboseLevel.INFO,
+      () => 'pacData = ' + JSON.stringify(pacData)
+    );
     let newRow = pacData.row - 1;
     if (this.nrRollUpRows && newRow < this.nrRollUpRows - 1) {
       newRow = this.nrRollUpRows - 1;
@@ -696,7 +701,10 @@ export class CaptionScreen {
    * Set background/extra foreground, but first do back_space, and then insert space (backwards compatibility).
    */
   setBkgData(bkgData: Partial<PenStyles>) {
-    this.logger.log(VerboseLevel.INFO, 'bkgData = ' + JSON.stringify(bkgData));
+    this.logger.log(
+      VerboseLevel.INFO,
+      () => 'bkgData = ' + JSON.stringify(bkgData)
+    );
     this.backSpace();
     this.setPen(bkgData);
     this.insertChar(0x20); // Space
@@ -714,7 +722,7 @@ export class CaptionScreen {
       );
       return; // Not properly setup
     }
-    this.logger.log(VerboseLevel.TEXT, this.getDisplayText());
+    this.logger.log(VerboseLevel.TEXT, () => this.getDisplayText());
     const topRowIndex = this.currRow + 1 - this.nrRollUpRows;
     const topRow = this.rows.splice(topRowIndex, 1)[0];
     topRow.clear();
@@ -832,7 +840,7 @@ class Cea608Channel {
     }
 
     this.mode = newMode;
-    this.logger.log(VerboseLevel.INFO, 'MODE=' + newMode);
+    this.logger.log(VerboseLevel.INFO, () => 'MODE=' + newMode);
     if (this.mode === 'MODE_POP-ON') {
       this.writeScreen = this.nonDisplayedMemory;
     } else {
@@ -855,12 +863,12 @@ class Cea608Channel {
       this.writeScreen === this.displayedMemory ? 'DISP' : 'NON_DISP';
     this.logger.log(
       VerboseLevel.INFO,
-      screen + ': ' + this.writeScreen.getDisplayText(true)
+      () => screen + ': ' + this.writeScreen.getDisplayText(true)
     );
     if (this.mode === 'MODE_PAINT-ON' || this.mode === 'MODE_ROLL-UP') {
       this.logger.log(
         VerboseLevel.TEXT,
-        'DISPLAYED: ' + this.displayedMemory.getDisplayText(true)
+        () => 'DISPLAYED: ' + this.displayedMemory.getDisplayText(true)
       );
       this.outputDataUpdate();
     }
@@ -962,7 +970,7 @@ class Cea608Channel {
       this.writeScreen = this.nonDisplayedMemory;
       this.logger.log(
         VerboseLevel.TEXT,
-        'DISP: ' + this.displayedMemory.getDisplayText()
+        () => 'DISP: ' + this.displayedMemory.getDisplayText()
       );
     }
     this.outputDataUpdate(true);
