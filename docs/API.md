@@ -1234,9 +1234,12 @@ var config = {
       xhr.setRequestHeader('Content-Type', 'application/octet-stream');
     }
 
-    // Return the desired payload or a Promise<Uint8Array|void>
-    // return Promise.resolve(payload);
-    return payload;
+    // Return the desired payload or a Promise<Uint8Array>.
+    // Not returning a value, or returning `undefined` or` Promise<void>` will result in the `licenseChallenge` being used.
+    return fetchDRMToken(this.authData).then((result) => {
+      xhr.setRequestHeader('token', token);
+      return payload;
+    });
   },
 };
 ```
