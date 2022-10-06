@@ -104,11 +104,6 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
       const region = regionElements[cueElement.getAttribute('region')];
       const style = styleElements[cueElement.getAttribute('style')];
 
-      // TODO: Add regions to track and cue (origin and extend)
-      // These values are hard-coded (for now) to simulate region settings in the demo
-      cue.position = 10;
-      cue.size = 80;
-
       // Apply styles to cue
       const styles = getTtmlStyles(region, style, styleElements);
       const { textAlign } = styles;
