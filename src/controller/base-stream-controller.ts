@@ -502,7 +502,7 @@ export default class BaseStreamController
     if (
       !this.loadedmetadata &&
       media.buffered.length &&
-      this.fragCurrent === this.fragPrevious
+      this.fragCurrent?.sn === this.fragPrevious?.sn
     ) {
       this.loadedmetadata = true;
       this.seekToStartPos();
