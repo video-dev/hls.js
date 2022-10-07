@@ -724,6 +724,8 @@ export interface FragLoadingData {
 export class Fragment extends BaseSegment {
     constructor(type: PlaylistLevelType, baseurl: string);
     // (undocumented)
+    abortRequests(): void;
+    // (undocumented)
     appendedPTS?: number;
     // (undocumented)
     bitrateTest: boolean;
@@ -752,6 +754,8 @@ export class Fragment extends BaseSegment {
     endPTS?: number;
     // (undocumented)
     initSegment: Fragment | null;
+    // (undocumented)
+    keyLoader: Loader<KeyLoaderContext> | null;
     // (undocumented)
     level: number;
     // (undocumented)
@@ -816,6 +820,8 @@ export interface FragmentLoaderContext extends LoaderContext {
     frag: Fragment;
     // (undocumented)
     part: Part | null;
+    // (undocumented)
+    resetIV?: boolean;
 }
 
 // Warning: (ae-missing-release-tag) "FragParsedData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1215,6 +1221,12 @@ export interface InitPTSFoundData {
 export interface KeyLoadedData {
     // (undocumented)
     frag: Fragment;
+}
+
+// Warning: (ae-missing-release-tag) "KeyLoaderContext" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface KeyLoaderContext extends FragmentLoaderContext {
 }
 
 // Warning: (ae-missing-release-tag) "KeyLoadingData" is exported by the package, but it is missing a release tag (@alpha, @beta, @public, or @internal)

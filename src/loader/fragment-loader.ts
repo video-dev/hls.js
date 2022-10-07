@@ -7,7 +7,7 @@ import {
 } from '../types/loader';
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
-import type { FragLoadedData } from '../types/events';
+import type { FragLoadedData, PartsLoadedData } from '../types/events';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
@@ -82,10 +82,15 @@ export default class FragmentLoader {
       loader.load(loaderContext, loaderConfig, {
         onSuccess: (response, stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
+          let payload = response.data as ArrayBuffer;
+          if (context.resetIV && frag.decryptdata) {
+            frag.decryptdata.iv = new Uint8Array(payload.slice(0, 16));
+            payload = payload.slice(16);
+          }
           resolve({
             frag,
             part: null,
-            payload: response.data as ArrayBuffer,
+            payload,
             networkDetails,
           });
         },
@@ -286,8 +291,23 @@ function createLoaderContext(
   const start = segment.byteRangeStartOffset;
   const end = segment.byteRangeEndOffset;
   if (Number.isFinite(start) && Number.isFinite(end)) {
-    loaderContext.rangeStart = start;
-    loaderContext.rangeEnd = end;
+    let byteRangeStart = start;
+    let byteRangeEnd = end;
+    if (frag.sn === 'initSegment' && frag.decryptdata?.method === 'AES-128') {
+      // MAP segment encrypted with method 'AES-128', when served with HTTP Range,
+      // has the unencrypted size specified in the range.
+      // Ref: https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-08#section-6.3.6
+      const fragmentLen = end - start;
+      if (fragmentLen % 16) {
+        byteRangeEnd = end + (16 - (fragmentLen % 16));
+      }
+      if (start !== 0) {
+        loaderContext.resetIV = true;
+        byteRangeStart = start - 16;
+      }
+    }
+    loaderContext.rangeStart = byteRangeStart;
+    loaderContext.rangeEnd = byteRangeEnd;
   }
   return loaderContext;
 }
@@ -315,4 +335,6 @@ export interface FragLoadFailResult {
   networkDetails: any;
 }
 
-export type FragmentLoadProgressCallback = (result: FragLoadedData) => void;
+export type FragmentLoadProgressCallback = (
+  result: FragLoadedData | PartsLoadedData
+) => void;

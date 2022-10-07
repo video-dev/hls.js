@@ -182,8 +182,8 @@ export class SubtitleStreamController
       return;
     }
 
-    if (this.fragCurrent?.loader) {
-      this.fragCurrent.loader.abort();
+    if (this.fragCurrent) {
+      this.fragCurrent.abortRequests();
     }
 
     this.state = State.IDLE;
@@ -326,6 +326,10 @@ export class SubtitleStreamController
               tdecrypt: endTime,
             },
           });
+        })
+        .catch((err) => {
+          this.warn(`${err.name}: ${err.message}`);
+          this.state = State.IDLE;
         });
     }
   }
@@ -397,16 +401,10 @@ export class SubtitleStreamController
         return;
       }
 
-      // only load if fragment is not loaded
       if (
-        this.fragmentTracker.getState(foundFrag) !== FragmentState.NOT_LOADED
+        this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
       ) {
-        return;
-      }
-
-      if (foundFrag.encrypted) {
-        this.loadKey(foundFrag, trackDetails);
-      } else {
+        // only load if fragment is not loaded
         this.loadFragment(foundFrag, trackDetails, targetBufferTime);
       }
     }
@@ -419,7 +417,7 @@ export class SubtitleStreamController
   ) {
     this.fragCurrent = frag;
     if (frag.sn === 'initSegment') {
-      this._loadInitSegment(frag);
+      this._loadInitSegment(frag, levelDetails);
     } else {
       super.loadFragment(frag, levelDetails, targetBufferTime);
     }
