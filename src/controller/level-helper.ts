@@ -436,7 +436,7 @@ export function computeReloadInterval(
   newDetails: LevelDetails,
   stats: LoaderStats
 ): number {
-  const reloadInterval = 1000 * newDetails.levelTargetDuration;
+  const reloadInterval = 1000 * newDetails.targetduration;
   const roundTrip = stats.loading.end - stats.loading.start;
 
   let estimatedTimeUntilUpdate;

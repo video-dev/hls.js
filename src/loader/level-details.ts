@@ -87,7 +87,11 @@ export class LevelDetails {
   }
 
   get levelTargetDuration(): number {
-    return this.targetduration || DEFAULT_TARGET_DURATION;
+    return (
+      this.averagetargetduration ||
+      this.targetduration ||
+      DEFAULT_TARGET_DURATION
+    );
   }
 
   get drift(): number {
