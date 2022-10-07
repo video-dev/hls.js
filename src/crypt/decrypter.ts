@@ -55,11 +55,18 @@ export default class Decrypter {
     return this.useSoftware;
   }
 
-  public flush(): Uint8Array | void {
-    const { currentResult } = this;
-    if (!currentResult) {
+  public flush(): Uint8Array | null {
+    const { currentResult, remainderData } = this;
+    if (!currentResult || remainderData) {
+      logger.error(
+        `[softwareDecrypt] ${
+          remainderData
+            ? 'overflow bytes: ' + remainderData.byteLength
+            : 'no result'
+        }`
+      );
       this.reset();
-      return;
+      return null;
     }
     const data = new Uint8Array(currentResult);
     this.reset();
@@ -166,7 +173,7 @@ export default class Decrypter {
       })
       .catch((err) => {
         logger.warn(
-          `[decrypter.ts]: WebCrypto Error, disable WebCrypto API, ${err.name}: ${err.message}`
+          `[decrypter]: WebCrypto Error, disable WebCrypto API, ${err.name}: ${err.message}`
         );
 
         return this.onWebCryptoError(data, key, iv);
@@ -198,7 +205,7 @@ export default class Decrypter {
     if (!this.logEnabled) {
       return;
     }
-    logger.log(`[decrypter.ts]: ${msg}`);
+    logger.log(`[decrypter]: ${msg}`);
     this.logEnabled = false;
   }
 }
