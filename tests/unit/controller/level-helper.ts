@@ -265,38 +265,25 @@ expect: ${JSON.stringify(merged.fragments[i])}`
   });
 
   describe('computeReloadInterval', function () {
-    it('returns the averagetargetduration of the new level if available', function () {
+    it('returns the targetduration of the new level if available', function () {
       const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = 5;
+      newPlaylist.targetduration = 5;
       newPlaylist.updated = true;
       const actual = computeReloadInterval(newPlaylist, new LoadStats());
       expect(actual).to.equal(5000);
     });
 
-    it('returns the targetduration of the new level if averagetargetduration is falsy', function () {
-      const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = undefined;
-      newPlaylist.targetduration = 4;
-      newPlaylist.updated = true;
-      let actual = computeReloadInterval(newPlaylist, new LoadStats());
-      expect(actual).to.equal(4000);
-
-      newPlaylist.averagetargetduration = undefined;
-      actual = computeReloadInterval(newPlaylist, new LoadStats());
-      expect(actual).to.equal(4000);
-    });
-
     it('halves the reload interval if the playlist contains the same segments', function () {
       const newPlaylist = generatePlaylist([1, 2]);
       newPlaylist.updated = false;
-      newPlaylist.averagetargetduration = 5;
+      newPlaylist.targetduration = 5;
       const actual = computeReloadInterval(newPlaylist, new LoadStats());
       expect(actual).to.equal(2500);
     });
 
     it('rounds the reload interval', function () {
       const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = 5.9999;
+      newPlaylist.targetduration = 5.9999;
       newPlaylist.updated = true;
       const actual = computeReloadInterval(newPlaylist, new LoadStats());
       expect(actual).to.equal(6000);
@@ -304,7 +291,7 @@ expect: ${JSON.stringify(merged.fragments[i])}`
 
     it('subtracts the request time of the last level load from the reload interval', function () {
       const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = 5;
+      newPlaylist.targetduration = 5;
       newPlaylist.updated = true;
       const stats = new LoadStats();
       stats.loading.start = 0;
@@ -315,7 +302,7 @@ expect: ${JSON.stringify(merged.fragments[i])}`
 
     it('returns a minimum of half the target duration', function () {
       const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = 5;
+      newPlaylist.targetduration = 5;
       newPlaylist.updated = false;
       const stats = new LoadStats();
       stats.loading.start = 0;
