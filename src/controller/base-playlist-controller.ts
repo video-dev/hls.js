@@ -204,7 +204,13 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           part
         );
       }
-      let reloadInterval = computeReloadInterval(details, stats);
+      const position = this.hls.mainForwardBufferInfo?.start || 0;
+      const distanceToLiveEdgeMs = (details.edge - position) * 1000;
+      let reloadInterval = computeReloadInterval(
+        details,
+        stats,
+        distanceToLiveEdgeMs
+      );
       if (msn !== undefined && details.canBlockReload) {
         reloadInterval -= details.partTarget || 1;
       }

@@ -434,10 +434,20 @@ export function addSliding(details: LevelDetails, start: number) {
 
 export function computeReloadInterval(
   newDetails: LevelDetails,
-  stats: LoaderStats
+  stats: LoaderStats,
+  distanceToLiveEdgeMs: number = Infinity
 ): number {
-  const reloadInterval = 1000 * newDetails.targetduration;
-  const roundTrip = stats.loading.end - stats.loading.start;
+  let reloadInterval = 1000 * newDetails.targetduration;
+
+  // Use last segment duration when shorter than target duration and near live edge
+  const fragments = newDetails.fragments;
+  if (fragments.length && reloadInterval * 2 > distanceToLiveEdgeMs) {
+    const lastSegmentDuration = fragments[fragments.length - 1].duration * 1000;
+    if (lastSegmentDuration < reloadInterval) {
+      const now = performance.now();
+      reloadInterval = stats.loading.start + lastSegmentDuration - now;
+    }
+  }
 
   let estimatedTimeUntilUpdate;
   if (!newDetails.updated) {
@@ -447,7 +457,14 @@ export function computeReloadInterval(
     // duration before retrying.
     estimatedTimeUntilUpdate = reloadInterval / 2;
   } else {
-    estimatedTimeUntilUpdate = reloadInterval - roundTrip;
+    const roundTrip = stats.loading.end - stats.loading.start;
+    const now = performance.now();
+    const estimatedRefreshFromLastRequest =
+      stats.loading.start + reloadInterval - now;
+    estimatedTimeUntilUpdate = Math.min(
+      reloadInterval - roundTrip,
+      estimatedRefreshFromLastRequest
+    );
   }
 
   // console.log(`[computeReloadInterval] live reload ${newDetails.updated ? 'REFRESHED' : 'MISSED'}`,
