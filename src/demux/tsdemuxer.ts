@@ -575,6 +575,7 @@ class TSDemuxer implements Demuxer {
           }
           parseSEIMessageFromNALu(
             discardEPB(unit.data),
+            1,
             pes.pts as number,
             textTrack.samples
           );
