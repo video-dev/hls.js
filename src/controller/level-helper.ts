@@ -434,46 +434,29 @@ export function addSliding(details: LevelDetails, start: number) {
 
 export function computeReloadInterval(
   newDetails: LevelDetails,
-  stats: LoaderStats,
   distanceToLiveEdgeMs: number = Infinity
 ): number {
   let reloadInterval = 1000 * newDetails.targetduration;
 
-  // Use last segment duration when shorter than target duration and near live edge
-  const fragments = newDetails.fragments;
-  if (fragments.length && reloadInterval * 2 > distanceToLiveEdgeMs) {
-    const lastSegmentDuration = fragments[fragments.length - 1].duration * 1000;
-    if (lastSegmentDuration < reloadInterval) {
-      const now = performance.now();
-      reloadInterval = stats.loading.start + lastSegmentDuration - now;
+  if (newDetails.updated) {
+    // Use last segment duration when shorter than target duration and near live edge
+    const fragments = newDetails.fragments;
+    if (fragments.length && reloadInterval * 3 > distanceToLiveEdgeMs) {
+      const lastSegmentDuration =
+        fragments[fragments.length - 1].duration * 1000;
+      if (lastSegmentDuration < reloadInterval) {
+        reloadInterval = lastSegmentDuration;
+      }
     }
-  }
-
-  let estimatedTimeUntilUpdate;
-  if (!newDetails.updated) {
+  } else {
     // estimate = 'miss half average';
     // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
     // changed then it MUST wait for a period of one-half the target
     // duration before retrying.
-    estimatedTimeUntilUpdate = reloadInterval / 2;
-  } else {
-    const roundTrip = stats.loading.end - stats.loading.start;
-    const now = performance.now();
-    const estimatedRefreshFromLastRequest =
-      stats.loading.start + reloadInterval - now;
-    estimatedTimeUntilUpdate = Math.min(
-      reloadInterval - roundTrip,
-      estimatedRefreshFromLastRequest
-    );
+    reloadInterval /= 2;
   }
 
-  // console.log(`[computeReloadInterval] live reload ${newDetails.updated ? 'REFRESHED' : 'MISSED'}`,
-  //   '\n  method', estimate,
-  //   '\n  estimated time until update =>', estimatedTimeUntilUpdate,
-  //   '\n  average target duration', reloadInterval,
-  //   '\n  time round trip', roundTrip);
-
-  return Math.round(estimatedTimeUntilUpdate);
+  return Math.round(reloadInterval);
 }
 
 export function getFragmentWithSN(
