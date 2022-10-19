@@ -83,7 +83,7 @@ export default class Transmuxer {
     stats.executeStart = now();
 
     let uintData: Uint8Array = new Uint8Array(data);
-    const { config, currentTransmuxState, transmuxConfig } = this;
+    const { currentTransmuxState, transmuxConfig } = this;
     if (state) {
       this.currentTransmuxState = state;
     }
@@ -121,7 +121,7 @@ export default class Transmuxer {
     if (keyData && keyData.method === 'AES-128') {
       const decrypter = this.getDecrypter();
       // Software decryption is synchronous; webCrypto is not
-      if (config.enableSoftwareAES) {
+      if (decrypter.isSync()) {
         // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
         // data is handled in the flush() call
         const decryptedData = decrypter.softwareDecrypt(
@@ -445,7 +445,7 @@ export default class Transmuxer {
   private getDecrypter(): Decrypter {
     let decrypter = this.decrypter;
     if (!decrypter) {
-      decrypter = this.decrypter = new Decrypter(this.observer, this.config);
+      decrypter = this.decrypter = new Decrypter(this.config);
     }
     return decrypter;
   }

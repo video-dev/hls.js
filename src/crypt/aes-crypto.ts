@@ -1,8 +1,8 @@
 export default class AESCrypto {
   private subtle: SubtleCrypto;
-  private aesIV: ArrayBuffer;
+  private aesIV: Uint8Array;
 
-  constructor(subtle: SubtleCrypto, iv: ArrayBuffer) {
+  constructor(subtle: SubtleCrypto, iv: Uint8Array) {
     this.subtle = subtle;
     this.aesIV = iv;
   }
