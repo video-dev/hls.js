@@ -5,14 +5,11 @@ import { logger } from '../utils/logger';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { sliceUint8 } from '../utils/typed-array';
 import type { HlsConfig } from '../config';
-import type { HlsEventEmitter } from '../events';
 
 const CHUNK_SIZE = 16; // 16 bytes, 128 bits
 
 export default class Decrypter {
   private logEnabled: boolean = true;
-  private observer: HlsEventEmitter;
-  private config: HlsConfig;
   private removePKCS7Padding: boolean;
   private subtle: SubtleCrypto | null = null;
   private softwareDecrypter: AESDecryptor | null = null;
@@ -21,14 +18,10 @@ export default class Decrypter {
   private remainderData: Uint8Array | null = null;
   private currentIV: ArrayBuffer | null = null;
   private currentResult: ArrayBuffer | null = null;
+  private useSoftware: boolean;
 
-  constructor(
-    observer: HlsEventEmitter,
-    config: HlsConfig,
-    { removePKCS7Padding = true } = {}
-  ) {
-    this.observer = observer;
-    this.config = config;
+  constructor(config: HlsConfig, { removePKCS7Padding = true } = {}) {
+    this.useSoftware = config.enableSoftwareAES;
     this.removePKCS7Padding = removePKCS7Padding;
     // built in decryptor expects PKCS7 padding
     if (removePKCS7Padding) {
@@ -44,24 +37,36 @@ export default class Decrypter {
       }
     }
     if (this.subtle === null) {
-      this.config.enableSoftwareAES = true;
+      this.useSoftware = true;
     }
   }
 
   destroy() {
-    // @ts-ignore
-    this.observer = null;
+    this.subtle = null;
+    this.softwareDecrypter = null;
+    this.key = null;
+    this.fastAesKey = null;
+    this.remainderData = null;
+    this.currentIV = null;
+    this.currentResult = null;
   }
 
   public isSync() {
-    return this.config.enableSoftwareAES;
+    return this.useSoftware;
   }
 
-  public flush(): Uint8Array | void {
-    const { currentResult } = this;
-    if (!currentResult) {
+  public flush(): Uint8Array | null {
+    const { currentResult, remainderData } = this;
+    if (!currentResult || remainderData) {
+      logger.error(
+        `[softwareDecrypt] ${
+          remainderData
+            ? 'overflow bytes: ' + remainderData.byteLength
+            : 'no result'
+        }`
+      );
       this.reset();
-      return;
+      return null;
     }
     const data = new Uint8Array(currentResult);
     this.reset();
@@ -83,20 +88,24 @@ export default class Decrypter {
   public decrypt(
     data: Uint8Array | ArrayBuffer,
     key: ArrayBuffer,
-    iv: ArrayBuffer,
-    callback: (decryptedData: ArrayBuffer) => void
-  ) {
-    if (this.config.enableSoftwareAES) {
-      this.softwareDecrypt(new Uint8Array(data), key, iv);
-      const decryptResult = this.flush();
-      if (decryptResult) {
-        callback(decryptResult.buffer);
-      }
-    } else {
-      this.webCryptoDecrypt(new Uint8Array(data), key, iv).then(callback);
+    iv: ArrayBuffer
+  ): Promise<ArrayBuffer> {
+    if (this.useSoftware) {
+      return new Promise((resolve, reject) => {
+        this.softwareDecrypt(new Uint8Array(data), key, iv);
+        const decryptResult = this.flush();
+        if (decryptResult) {
+          resolve(decryptResult.buffer);
+        } else {
+          reject(new Error('[softwareDecrypt] Failed to decrypt data'));
+        }
+      });
     }
+    return this.webCryptoDecrypt(new Uint8Array(data), key, iv);
   }
 
+  // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
+  // data is handled in the flush() call
   public softwareDecrypt(
     data: Uint8Array,
     key: ArrayBuffer,
@@ -158,20 +167,28 @@ export default class Decrypter {
         if (!subtle) {
           return Promise.reject(new Error('web crypto not initialized'));
         }
-
-        const crypto = new AESCrypto(subtle, iv);
+        this.logOnce('WebCrypto AES decrypt');
+        const crypto = new AESCrypto(subtle, new Uint8Array(iv));
         return crypto.decrypt(data.buffer, aesKey);
       })
       .catch((err) => {
-        return this.onWebCryptoError(err, data, key, iv) as ArrayBuffer;
+        logger.warn(
+          `[decrypter]: WebCrypto Error, disable WebCrypto API, ${err.name}: ${err.message}`
+        );
+
+        return this.onWebCryptoError(data, key, iv);
       });
   }
 
-  private onWebCryptoError(err, data, key, iv): ArrayBuffer | null {
-    logger.warn('[decrypter.ts]: WebCrypto Error, disable WebCrypto API:', err);
-    this.config.enableSoftwareAES = true;
+  private onWebCryptoError(data, key, iv): ArrayBuffer | never {
+    this.useSoftware = true;
     this.logEnabled = true;
-    return this.softwareDecrypt(data, key, iv);
+    this.softwareDecrypt(data, key, iv);
+    const decryptResult = this.flush();
+    if (decryptResult) {
+      return decryptResult.buffer;
+    }
+    throw new Error('WebCrypto and softwareDecrypt: failed to decrypt data');
   }
 
   private getValidChunk(data: Uint8Array): Uint8Array {
@@ -188,7 +205,7 @@ export default class Decrypter {
     if (!this.logEnabled) {
       return;
     }
-    logger.log(`[decrypter.ts]: ${msg}`);
+    logger.log(`[decrypter]: ${msg}`);
     this.logEnabled = false;
   }
 }

@@ -7,8 +7,6 @@ import { logger } from '../utils/logger';
 import * as MpegAudio from './mpegaudio';
 
 class MP3Demuxer extends BaseAudioDemuxer {
-  static readonly minProbeByteLength: number = 4;
-
   resetInitSegment(
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,

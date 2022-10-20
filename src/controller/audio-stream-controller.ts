@@ -1,6 +1,6 @@
 import BaseStreamController, { State } from './base-stream-controller';
 import { Events } from '../events';
-import { BufferHelper } from '../utils/buffer-helper';
+import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
@@ -46,7 +46,7 @@ class AudioStreamController
   extends BaseStreamController
   implements NetworkComponentAPI
 {
-  private videoBuffer: any | null = null;
+  private videoBuffer: Bufferable | null = null;
   private videoTrackCC: number = -1;
   private waitingVideoCC: number = -1;
   private audioSwitch: boolean = false;
@@ -171,6 +171,7 @@ class AudioStreamController
         // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
         if (!retryDate || now >= retryDate || this.media?.seeking) {
           this.log('RetryDate reached, switch back to IDLE state');
+          this.resetStartWhenNotLoaded(this.trackId);
           this.state = State.IDLE;
         }
         break;
@@ -289,17 +290,18 @@ class AudioStreamController
       return;
     }
 
-    if (this.bufferFlushed) {
+    const bufferable = this.mediaBuffer ? this.mediaBuffer : this.media;
+    if (this.bufferFlushed && bufferable) {
       this.bufferFlushed = false;
       this.afterBufferFlushed(
-        this.mediaBuffer ? this.mediaBuffer : this.media,
+        bufferable,
         ElementaryStreamTypes.AUDIO,
         PlaylistLevelType.AUDIO
       );
     }
 
     const bufferInfo = this.getFwdBufferInfo(
-      this.mediaBuffer ? this.mediaBuffer : this.media,
+      bufferable,
       PlaylistLevelType.AUDIO
     );
     if (bufferInfo === null) {
@@ -328,7 +330,7 @@ class AudioStreamController
     const start = fragments[0].start;
     let targetBufferTime = bufferInfo.end;
 
-    if (audioSwitch) {
+    if (audioSwitch && media) {
       const pos = this.getLoadPosition();
       targetBufferTime = pos;
       // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
@@ -361,11 +363,7 @@ class AudioStreamController
       return;
     }
 
-    if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
-      this.loadKey(frag, trackDetails);
-    } else {
-      this.loadFragment(frag, trackDetails, targetBufferTime);
-    }
+    this.loadFragment(frag, trackDetails, targetBufferTime);
   }
 
   protected getMaxBufferLength(mainBufferLength?: number): number {
@@ -398,8 +396,8 @@ class AudioStreamController
     this.trackId = data.id;
     const { fragCurrent } = this;
 
-    if (fragCurrent?.loader) {
-      fragCurrent.loader.abort();
+    if (fragCurrent) {
+      fragCurrent.abortRequests();
     }
     this.fragCurrent = null;
     this.clearWaitingFragment();
@@ -587,10 +585,10 @@ class AudioStreamController
   onBufferCreated(event: Events.BUFFER_CREATED, data: BufferCreatedData) {
     const audioTrack = data.tracks.audio;
     if (audioTrack) {
-      this.mediaBuffer = audioTrack.buffer;
+      this.mediaBuffer = audioTrack.buffer || null;
     }
     if (data.tracks.video) {
-      this.videoBuffer = data.tracks.video.buffer;
+      this.videoBuffer = data.tracks.video.buffer || null;
     }
   }
 
@@ -694,7 +692,7 @@ class AudioStreamController
       this.warn(
         `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
       );
-      this.resetLiveStartWhenNotLoaded(chunkMeta.level);
+      this.resetStartWhenNotLoaded(chunkMeta.level);
       return;
     }
     const {
@@ -825,7 +823,7 @@ class AudioStreamController
       fragState === FragmentState.PARTIAL
     ) {
       if (frag.sn === 'initSegment') {
-        this._loadInitSegment(frag);
+        this._loadInitSegment(frag, trackDetails);
       } else if (trackDetails.live && !Number.isFinite(this.initPTS[frag.cc])) {
         this.log(
           `Waiting for video PTS in continuity counter ${frag.cc} of live stream before loading audio fragment ${frag.sn} of level ${this.trackId}`

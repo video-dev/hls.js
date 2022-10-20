@@ -26,6 +26,7 @@ describe('StreamController', function () {
   let hls: Hls;
   let fragmentTracker: FragmentTracker;
   let streamController: StreamController;
+  const attrs: LevelAttributes = new AttrList({});
 
   beforeEach(function () {
     hls = new Hls({});
@@ -289,7 +290,6 @@ describe('StreamController', function () {
     let frag;
     let levelDetails;
     beforeEach(function () {
-      const attrs: LevelAttributes = new AttrList({});
       streamController['levels'] = [
         new Level({
           name: '',
@@ -325,10 +325,10 @@ describe('StreamController', function () {
       assertLoadingState(frag);
     });
 
-    it('should load a partial fragment', function () {
+    it('should not load a partial fragment', function () {
       fragStateStub(FragmentState.PARTIAL);
       streamController['loadFragment'](frag, levelDetails, 0);
-      assertLoadingState(frag);
+      assertNotLoadingState();
     });
 
     it('should not load a fragment which has completely & successfully loaded', function () {
@@ -358,11 +358,14 @@ describe('StreamController', function () {
           start() {
             return bufStart;
           },
+          end() {
+            return bufStart;
+          },
           length: 1,
         },
         currentTime: 0,
         readyState: 4,
-      };
+      } as any as HTMLMediaElement;
       streamController['mediaBuffer'] = null;
     });
     afterEach(function () {
@@ -374,11 +377,19 @@ describe('StreamController', function () {
       streamController['checkBuffer']();
     });
 
-    it('should seek to start pos when metadata has not yet been loaded', function () {
+    it('should seek to start pos when data is first loaded', function () {
+      const firstFrag = new Fragment(PlaylistLevelType.MAIN, '');
+      firstFrag.duration = 5.0;
+      firstFrag.level = 1;
+      firstFrag.start = 0;
+      firstFrag.sn = 1;
+      firstFrag.cc = 0;
       // @ts-ignore
       const seekStub = sandbox.stub(streamController, 'seekToStartPos');
       streamController['loadedmetadata'] = false;
-      streamController['checkBuffer']();
+      streamController['fragCurrent'] = streamController['fragPrevious'] =
+        firstFrag;
+      streamController['fragBufferedComplete'](firstFrag, null);
       expect(seekStub).to.have.been.calledOnce;
       expect(streamController['loadedmetadata']).to.be.true;
     });
@@ -395,7 +406,7 @@ describe('StreamController', function () {
     it('should not seek to start pos when nothing has been buffered', function () {
       // @ts-ignore
       const seekStub = sandbox.stub(streamController, 'seekToStartPos');
-      streamController['media'].buffered.length = 0;
+      (streamController['media']!.buffered as any).length = 0;
       streamController['checkBuffer']();
       expect(seekStub).to.have.not.been.called;
       expect(streamController['loadedmetadata']).to.be.false;
@@ -405,20 +416,33 @@ describe('StreamController', function () {
       it('should seek to startPosition when startPosition is not buffered & the media is not seeking', function () {
         streamController['startPosition'] = 5;
         streamController['seekToStartPos']();
-        expect(streamController['media'].currentTime).to.equal(5);
+        expect(streamController['media']!.currentTime).to.equal(5);
       });
 
       it('should not seek to startPosition when it is buffered', function () {
         streamController['startPosition'] = 5;
-        streamController['media'].currentTime = 5;
+        streamController['media']!.currentTime = 5;
         streamController['seekToStartPos']();
-        expect(streamController['media'].currentTime).to.equal(5);
+        expect(streamController['media']!.currentTime).to.equal(5);
       });
     });
 
     describe('startLoad', function () {
       beforeEach(function () {
-        streamController['levels'] = [];
+        streamController['levels'] = [
+          new Level({
+            name: '',
+            url: '',
+            attrs,
+            bitrate: 500000,
+          }),
+          new Level({
+            name: '',
+            url: '',
+            attrs,
+            bitrate: 250000,
+          }),
+        ];
         streamController['media'] = null;
       });
       it('should not start when controller does not have level data', function () {
@@ -474,6 +498,23 @@ describe('StreamController', function () {
         hls.startLevel = -1;
         hls.nextAutoLevel = 3;
         hls.config.testBandwidth = false;
+
+        streamController.startLoad(-1);
+        expect(streamController['level']).to.equal(hls.nextAutoLevel);
+        expect(streamController['bitrateTest']).to.be.false;
+      });
+
+      it('should not signal a bandwidth test with only one level', function () {
+        streamController['startFragRequested'] = false;
+        streamController['levels'] = [
+          new Level({
+            name: '',
+            url: '',
+            attrs,
+            bitrate: 250000,
+          }),
+        ];
+        hls.startLevel = -1;
 
         streamController.startLoad(-1);
         expect(streamController['level']).to.equal(hls.nextAutoLevel);

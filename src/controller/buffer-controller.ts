@@ -420,6 +420,7 @@ export default class BufferController implements ComponentAPI {
               `[buffer-controller]: Failed ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`
             );
             event.fatal = true;
+            hls.stopLoad();
           }
         }
         hls.trigger(Events.ERROR, event);

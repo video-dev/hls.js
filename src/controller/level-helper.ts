@@ -436,46 +436,16 @@ export function computeReloadInterval(
   newDetails: LevelDetails,
   stats: LoaderStats
 ): number {
-  const reloadInterval = 1000 * newDetails.levelTargetDuration;
-  const reloadIntervalAfterMiss = reloadInterval / 2;
-  const timeSinceLastModified = newDetails.age;
-  const useLastModified =
-    timeSinceLastModified > 0 && timeSinceLastModified < reloadInterval * 3;
+  const reloadInterval = 1000 * newDetails.targetduration;
   const roundTrip = stats.loading.end - stats.loading.start;
 
   let estimatedTimeUntilUpdate;
-  let availabilityDelay = newDetails.availabilityDelay;
-  // let estimate = 'average';
-
-  if (newDetails.updated === false) {
-    if (useLastModified) {
-      // estimate = 'miss round trip';
-      // We should have had a hit so try again in the time it takes to get a response,
-      // but no less than 1/3 second.
-      const minRetry = 333 * newDetails.misses;
-      estimatedTimeUntilUpdate = Math.max(
-        Math.min(reloadIntervalAfterMiss, roundTrip * 2),
-        minRetry
-      );
-      newDetails.availabilityDelay =
-        (newDetails.availabilityDelay || 0) + estimatedTimeUntilUpdate;
-    } else {
-      // estimate = 'miss half average';
-      // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
-      // changed then it MUST wait for a period of one-half the target
-      // duration before retrying.
-      estimatedTimeUntilUpdate = reloadIntervalAfterMiss;
-    }
-  } else if (useLastModified) {
-    // estimate = 'next modified date';
-    // Get the closest we've been to timeSinceLastModified on update
-    availabilityDelay = Math.min(
-      availabilityDelay || reloadInterval / 2,
-      timeSinceLastModified
-    );
-    newDetails.availabilityDelay = availabilityDelay;
-    estimatedTimeUntilUpdate =
-      availabilityDelay + reloadInterval - timeSinceLastModified;
+  if (!newDetails.updated) {
+    // estimate = 'miss half average';
+    // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
+    // changed then it MUST wait for a period of one-half the target
+    // duration before retrying.
+    estimatedTimeUntilUpdate = reloadInterval / 2;
   } else {
     estimatedTimeUntilUpdate = reloadInterval - roundTrip;
   }
@@ -484,9 +454,7 @@ export function computeReloadInterval(
   //   '\n  method', estimate,
   //   '\n  estimated time until update =>', estimatedTimeUntilUpdate,
   //   '\n  average target duration', reloadInterval,
-  //   '\n  time since modified', timeSinceLastModified,
-  //   '\n  time round trip', roundTrip,
-  //   '\n  availability delay', availabilityDelay);
+  //   '\n  time round trip', roundTrip);
 
   return Math.round(estimatedTimeUntilUpdate);
 }

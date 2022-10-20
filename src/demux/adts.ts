@@ -33,18 +33,18 @@ export function getAudioConfig(
 ): AudioConfig | void {
   let adtsObjectType: number;
   let adtsExtensionSamplingIndex: number;
-  let adtsChanelConfig: number;
+  let adtsChannelConfig: number;
   let config: number[];
   const userAgent = navigator.userAgent.toLowerCase();
   const manifestCodec = audioCodec;
-  const adtsSampleingRates = [
+  const adtsSamplingRates = [
     96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025,
     8000, 7350,
   ];
   // byte 2
   adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
   const adtsSamplingIndex = (data[offset + 2] & 0x3c) >>> 2;
-  if (adtsSamplingIndex > adtsSampleingRates.length - 1) {
+  if (adtsSamplingIndex > adtsSamplingRates.length - 1) {
     observer.trigger(Events.ERROR, {
       type: ErrorTypes.MEDIA_ERROR,
       details: ErrorDetails.FRAG_PARSING_ERROR,
@@ -53,9 +53,9 @@ export function getAudioConfig(
     });
     return;
   }
-  adtsChanelConfig = (data[offset + 2] & 0x01) << 2;
+  adtsChannelConfig = (data[offset + 2] & 0x01) << 2;
   // byte 3
-  adtsChanelConfig |= (data[offset + 3] & 0xc0) >>> 6;
+  adtsChannelConfig |= (data[offset + 3] & 0xc0) >>> 6;
   logger.log(
     `manifest codec:${audioCodec}, ADTS type:${adtsObjectType}, samplingIndex:${adtsSamplingIndex}`
   );
@@ -101,9 +101,9 @@ export function getAudioConfig(
       if (
         (audioCodec &&
           audioCodec.indexOf('mp4a.40.2') !== -1 &&
-          ((adtsSamplingIndex >= 6 && adtsChanelConfig === 1) ||
+          ((adtsSamplingIndex >= 6 && adtsChannelConfig === 1) ||
             /vivaldi/i.test(userAgent))) ||
-        (!audioCodec && adtsChanelConfig === 1)
+        (!audioCodec && adtsChannelConfig === 1)
       ) {
         adtsObjectType = 2;
         config = new Array(2);
@@ -150,9 +150,9 @@ export function getAudioConfig(
   config[0] |= (adtsSamplingIndex & 0x0e) >> 1;
   config[1] |= (adtsSamplingIndex & 0x01) << 7;
   // channelConfiguration
-  config[1] |= adtsChanelConfig << 3;
+  config[1] |= adtsChannelConfig << 3;
   if (adtsObjectType === 5) {
-    // adtsExtensionSampleingIndex
+    // adtsExtensionSamplingIndex
     config[1] |= (adtsExtensionSamplingIndex & 0x0e) >> 1;
     config[2] = (adtsExtensionSamplingIndex & 0x01) << 7;
     // adtsObjectType (force to 2, chrome is checking that object type is less than 5 ???
@@ -162,8 +162,8 @@ export function getAudioConfig(
   }
   return {
     config,
-    samplerate: adtsSampleingRates[adtsSamplingIndex],
-    channelCount: adtsChanelConfig,
+    samplerate: adtsSamplingRates[adtsSamplingIndex],
+    channelCount: adtsChannelConfig,
     codec: 'mp4a.40.' + adtsObjectType,
     manifestCodec,
   };
