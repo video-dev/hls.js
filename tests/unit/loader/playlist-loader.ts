@@ -1722,6 +1722,94 @@ media_1638278.m4s`;
       pdt += frag.duration * 1000;
     }
   });
+
+  it('parse clear->enc->clear->enc playlist', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:6
+
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:5.5,
+1.mp4
+#EXTINF:5.0,
+2.mp4
+
+#EXT-X-DISCONTINUITY
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://a",KEYFORMAT="com.apple.streamingkeydelivery",KEYFORMATVERSIONS="1"
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,YQo=",KEYFORMAT="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed",KEYFORMATVERSIONS="1"
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:5.5,
+3.mp4
+#EXTINF:5.0,
+4.mp4
+
+#EXT-X-DISCONTINUITY
+#EXT-X-KEY:METHOD=NONE
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:5.5,
+5.mp4
+#EXTINF:5.0,
+6.mp4
+
+#EXT-X-DISCONTINUITY
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://b",KEYFORMAT="com.apple.streamingkeydelivery",KEYFORMATVERSIONS="1"
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,Yg==",KEYFORMAT="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed",KEYFORMATVERSIONS="1"
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:5.0,
+7.mp4
+#EXTINF:4.0,
+8.mp4
+#EXT-X-ENDLIST`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://foo.com/adaptive/test.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0
+    );
+    expect(result.fragments.length).to.equal(8);
+    expect(result.fragments[0].levelkeys, 'first segment has no keys').to.equal(
+      undefined
+    );
+    expect(
+      result.fragments[1].levelkeys,
+      'second segment has no keys'
+    ).to.equal(undefined);
+    expect(result.fragments[2].levelkeys, 'third segment has two keys')
+      .to.be.an('object')
+      .with.keys([
+        'com.apple.streamingkeydelivery',
+        'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+      ]);
+    expect(result.fragments[3].levelkeys, 'forth segment has two keys')
+      .to.be.an('object')
+      .with.keys([
+        'com.apple.streamingkeydelivery',
+        'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+      ]);
+    expect(result.fragments[4].levelkeys, 'fifth segment has no keys').to.equal(
+      undefined
+    );
+    expect(result.fragments[5].levelkeys, 'sixth segment has no keys').to.equal(
+      undefined
+    );
+    expect(result.fragments[6].levelkeys, 'seventh segment has two keys')
+      .to.be.an('object')
+      .with.keys([
+        'com.apple.streamingkeydelivery',
+        'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+      ]);
+    expect(result.fragments[7].levelkeys, 'eighth segment has two keys')
+      .to.be.an('object')
+      .with.keys([
+        'com.apple.streamingkeydelivery',
+        'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+      ]);
+    expect(result)
+      .to.have.property('encryptedFragments')
+      .which.is.an('array')
+      .which.has.members([result.fragments[2], result.fragments[6]]);
+  });
 });
 
 function expectWithJSONMessage(value: any, msg?: string) {

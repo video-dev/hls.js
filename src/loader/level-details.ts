@@ -48,9 +48,11 @@ export class LevelDetails {
   public driftEndTime: number = 0;
   public driftStart: number = 0;
   public driftEnd: number = 0;
+  public encryptedFragments: Fragment[];
 
   constructor(baseUrl) {
     this.fragments = [];
+    this.encryptedFragments = [];
     this.dateRanges = {};
     this.url = baseUrl;
   }

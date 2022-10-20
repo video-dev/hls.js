@@ -1438,6 +1438,8 @@ export class LevelDetails {
     // (undocumented)
     get edge(): number;
     // (undocumented)
+    encryptedFragments: Fragment[];
+    // (undocumented)
     endCC: number;
     // (undocumented)
     endSN: number;

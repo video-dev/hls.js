@@ -80,6 +80,24 @@ export default class KeyLoader implements ComponentAPI {
     });
   }
 
+  loadClear(loadingFrag: Fragment, encryptedFragments: Fragment[]): void | Promise<void> {
+    if (this.emeController && this.config.emeEnabled) { 
+      // access key-system with nearest key on start (loaidng frag is unencrypted)
+      const { sn, cc } = loadingFrag;
+      for (let i = 0; i < encryptedFragments.length; i++) {
+        const frag = encryptedFragments[i];
+        if (cc <= frag.cc && (sn === 'initSegment' || sn < frag.sn)) {
+          this.emeController
+            .selectKeySystemFormat(frag)
+            .then((keySystemFormat) => {
+              frag.setKeyFormat(keySystemFormat);
+            });
+          break;
+        }
+      }
+    }
+  }
+
   load(frag: Fragment): Promise<KeyLoadedData> {
     if (!frag.decryptdata && frag.encrypted && this.emeController) {
       // Multiple keys, but none selected, resolve in eme-controller

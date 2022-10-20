@@ -213,7 +213,7 @@ export class Fragment extends BaseSegment {
   setKeyFormat(keyFormat: KeySystemFormats) {
     if (this.levelkeys) {
       const key = this.levelkeys[keyFormat];
-      if (key) {
+      if (key && !this._decryptdata) {
         this._decryptdata = key.getDecryptData(this.sn);
       }
     }
