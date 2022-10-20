@@ -245,6 +245,18 @@ export default class M3U8Parser {
           frag.start = totalduration;
           if (levelkeys) {
             frag.levelkeys = levelkeys;
+            const { encryptedFragments } = level;
+            if (
+              frag.levelkeys &&
+              Object.keys(frag.levelkeys).some(
+                (format) => frag.levelkeys![format].isCommonEncryption
+              ) &&
+              (!encryptedFragments.length ||
+                encryptedFragments[encryptedFragments.length - 1].levelkeys !==
+                  levelkeys)
+            ) {
+              encryptedFragments.push(frag);
+            }
           }
           frag.sn = currentSN;
           frag.level = id;
@@ -406,7 +418,11 @@ export default class M3U8Parser {
                 .filter(Number.isFinite);
 
               if (isKeyTagSupported(decryptkeyformat, decryptmethod)) {
-                if (decryptmethod === 'NONE' || !levelkeys) {
+                if (decryptmethod === 'NONE') {
+                  levelkeys = undefined;
+                  break;
+                }
+                if (!levelkeys) {
                   levelkeys = {};
                 }
                 if (levelkeys[decryptkeyformat]) {

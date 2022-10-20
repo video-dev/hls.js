@@ -724,7 +724,7 @@ class EMEController implements ComponentAPI {
           `key status change "${status}" for keyStatuses keyId: ${Hex.hexDump(
             keyId
           )} session keyId: ${Hex.hexDump(
-            mediaKeySessionContext.decryptdata.keyId
+            mediaKeySessionContext.decryptdata.keyId || []
           )} uri: ${mediaKeySessionContext.decryptdata.uri}`
         );
         mediaKeySessionContext.keyStatus = status;

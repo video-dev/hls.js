@@ -573,6 +573,8 @@ export default class BaseStreamController
       });
       this.hls.trigger(Events.KEY_LOADING, { frag });
       this.throwIfFragContextChanged('KEY_LOADING');
+    } else if (!frag.encrypted && details.encryptedFragments.length) {
+      this.keyLoader.loadClear(frag, details.encryptedFragments);
     }
 
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
