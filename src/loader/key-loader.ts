@@ -80,8 +80,11 @@ export default class KeyLoader implements ComponentAPI {
     });
   }
 
-  loadClear(loadingFrag: Fragment, encryptedFragments: Fragment[]): void | Promise<void> {
-    if (this.emeController && this.config.emeEnabled) { 
+  loadClear(
+    loadingFrag: Fragment,
+    encryptedFragments: Fragment[]
+  ): void | Promise<void> {
+    if (this.emeController && this.config.emeEnabled) {
       // access key-system with nearest key on start (loaidng frag is unencrypted)
       const { sn, cc } = loadingFrag;
       for (let i = 0; i < encryptedFragments.length; i++) {
