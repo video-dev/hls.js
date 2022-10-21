@@ -318,12 +318,16 @@ class EMEController implements ComponentAPI {
 
   private renewKeySession(mediaKeySessionContext: MediaKeySessionContext) {
     const decryptdata = mediaKeySessionContext.decryptdata;
+    const keySessionContext = this.createMediaKeySessionContext(
+      mediaKeySessionContext
+    );
     this.keyUriToKeySessionPromise[decryptdata.uri] =
       this.generateRequestWithPreferredKeySession(
-        mediaKeySessionContext,
+        keySessionContext,
         'cenc',
         decryptdata.pssh
       );
+    this.removeSession(mediaKeySessionContext);
   }
 
   private handleParsedKeyResponse(
@@ -1043,6 +1047,7 @@ class EMEController implements ComponentAPI {
     LevelKey.clearKeyUriToKeyIdMap();
 
     // Close all sessions and remove media keys from the video element.
+    const keySessionCount = mediaKeysList.length;
     EMEController.CDMCleanupPromise = Promise.all(
       mediaKeysList
         .map((mediaKeySessionContext) =>
@@ -1057,7 +1062,7 @@ class EMEController implements ComponentAPI {
         )
     )
       .then(() => {
-        if (mediaKeysList.length) {
+        if (keySessionCount) {
           this.log('finished closing key sessions and clearing media keys');
           mediaKeysList.length = 0;
         }
@@ -1086,6 +1091,10 @@ class EMEController implements ComponentAPI {
         mediaKeySessionContext.decryptdata =
         mediaKeySessionContext.licenseXhr =
           undefined!;
+      const index = this.mediaKeySessions.indexOf(mediaKeySessionContext);
+      if (index > -1) {
+        this.mediaKeySessions.splice(index, 1);
+      }
       return mediaKeysSession
         .remove()
         .catch((error) => {
