@@ -939,6 +939,7 @@ class TSDemuxer implements Demuxer {
     }
     const id3Sample = Object.assign({}, pes as Required<PES>, {
       type: this._avcTrack ? MetadataSchema.emsg : MetadataSchema.audioId3,
+      duration: Number.POSITIVE_INFINITY,
     });
     id3Track.samples.push(id3Sample);
   }
