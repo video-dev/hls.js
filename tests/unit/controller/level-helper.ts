@@ -307,11 +307,11 @@ expect: ${JSON.stringify(merged.fragments[i])}`
       expect(actual).to.equal(2500);
     });
 
-    it('returns the last fragment duration when distance to live edge is less than three target durations', function () {
+    it('returns the last fragment duration when distance to live edge is less than or equal to four target durations', function () {
       const newPlaylist = generatePlaylist([3, 4], 0, 2);
       newPlaylist.targetduration = 5;
       newPlaylist.updated = true;
-      const actual = computeReloadInterval(newPlaylist, 15000);
+      const actual = computeReloadInterval(newPlaylist, 20000);
       expect(actual).to.equal(5000);
       const actualLow = computeReloadInterval(newPlaylist, 14000);
       expect(actualLow).to.equal(2000);

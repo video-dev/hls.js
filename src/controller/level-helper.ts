@@ -7,7 +7,6 @@ import { logger } from '../utils/logger';
 import { Fragment, Part } from '../loader/fragment';
 import { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
-import type { LoaderStats } from '../types/loader';
 import type { MediaPlaylist } from '../types/media-playlist';
 import { DateRange } from '../loader/date-range';
 
@@ -441,7 +440,11 @@ export function computeReloadInterval(
   if (newDetails.updated) {
     // Use last segment duration when shorter than target duration and near live edge
     const fragments = newDetails.fragments;
-    if (fragments.length && reloadInterval * 3 > distanceToLiveEdgeMs) {
+    const liveEdgeMaxTargetDurations = 4;
+    if (
+      fragments.length &&
+      reloadInterval * liveEdgeMaxTargetDurations > distanceToLiveEdgeMs
+    ) {
       const lastSegmentDuration =
         fragments[fragments.length - 1].duration * 1000;
       if (lastSegmentDuration < reloadInterval) {
