@@ -574,7 +574,7 @@ class TSDemuxer implements Demuxer {
             avcSample.debug += 'SEI ';
           }
           parseSEIMessageFromNALu(
-            discardEPB(unit.data),
+            unit.data,
             pes.pts as number,
             textTrack.samples
           );
@@ -1171,47 +1171,6 @@ function pushAccessUnit(avcSample: ParsedAvcSample, avcTrack: DemuxedAvcTrack) {
   if (avcSample.debug.length) {
     logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug);
   }
-}
-
-/**
- * remove Emulation Prevention bytes from a RBSP
- */
-export function discardEPB(data: Uint8Array): Uint8Array {
-  const length = data.byteLength;
-  const EPBPositions = [] as Array<number>;
-  let i = 1;
-
-  // Find all `Emulation Prevention Bytes`
-  while (i < length - 2) {
-    if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0x03) {
-      EPBPositions.push(i + 2);
-      i += 2;
-    } else {
-      i++;
-    }
-  }
-
-  // If no Emulation Prevention Bytes were found just return the original
-  // array
-  if (EPBPositions.length === 0) {
-    return data;
-  }
-
-  // Create a new array to hold the NAL unit data
-  const newLength = length - EPBPositions.length;
-  const newData = new Uint8Array(newLength);
-  let sourceIndex = 0;
-
-  for (i = 0; i < newLength; sourceIndex++, i++) {
-    if (sourceIndex === EPBPositions[0]) {
-      // Skip this byte
-      sourceIndex++;
-      // Remove this position index
-      EPBPositions.shift();
-    }
-    newData[i] = data[sourceIndex];
-  }
-  return newData;
 }
 
 export default TSDemuxer;
