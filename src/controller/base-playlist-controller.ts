@@ -17,6 +17,7 @@ import { ErrorTypes } from '../errors';
 export default class BasePlaylistController implements NetworkComponentAPI {
   protected hls: Hls;
   protected timer: number = -1;
+  protected requestScheduled: number = -1;
   protected canLoad: boolean = false;
   protected retryCount: number = 0;
   protected log: (msg: any) => void;
@@ -48,6 +49,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   public startLoad(): void {
     this.canLoad = true;
     this.retryCount = 0;
+    this.requestScheduled = -1;
     this.loadPlaylist();
   }
 
@@ -89,7 +91,11 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     }
   }
 
-  protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {}
+  protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
+    if (this.requestScheduled === -1) {
+      this.requestScheduled = self.performance.now();
+    }
+  }
 
   protected shouldLoadTrack(track: MediaPlaylist): boolean {
     return (
@@ -108,8 +114,9 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     const { details, stats } = data;
 
     // Set last updated date-time
-    const elapsed = stats.loading.end
-      ? Math.max(0, self.performance.now() - stats.loading.end)
+    const now = self.performance.now();
+    const elapsed = stats.loading.first
+      ? Math.max(0, now - stats.loading.first)
       : 0;
     details.advancedDateTime = Date.now() - elapsed;
 
@@ -204,16 +211,53 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           part
         );
       }
-      let reloadInterval = computeReloadInterval(details, stats);
-      if (msn !== undefined && details.canBlockReload) {
-        reloadInterval -= details.partTarget || 1;
-      }
-      this.log(
-        `reload live playlist ${index} in ${Math.round(reloadInterval)} ms`
+      const bufferInfo = this.hls.mainForwardBufferInfo;
+      const position = bufferInfo ? bufferInfo.end - bufferInfo.len : 0;
+      const distanceToLiveEdgeMs = (details.edge - position) * 1000;
+      const reloadInterval = computeReloadInterval(
+        details,
+        distanceToLiveEdgeMs
       );
+      if (!details.updated) {
+        this.requestScheduled = -1;
+      } else if (now > this.requestScheduled + reloadInterval) {
+        this.requestScheduled = stats.loading.start;
+      }
+
+      if (msn !== undefined && details.canBlockReload) {
+        this.requestScheduled =
+          stats.loading.first +
+          reloadInterval -
+          (details.partTarget * 1000 || 1000);
+      } else {
+        this.requestScheduled =
+          (this.requestScheduled === -1 ? now : this.requestScheduled) +
+          reloadInterval;
+      }
+      let estimatedTimeUntilUpdate = this.requestScheduled - now;
+      estimatedTimeUntilUpdate = Math.max(0, estimatedTimeUntilUpdate);
+      this.log(
+        `reload live playlist ${index} in ${Math.round(
+          estimatedTimeUntilUpdate
+        )} ms`
+      );
+      //     this.log(
+      //       `live reload ${details.updated ? 'REFRESHED' : 'MISSED'}
+      // reload in ${estimatedTimeUntilUpdate / 1000}
+      // round trip ${(stats.loading.end - stats.loading.start) / 1000}
+      // diff ${
+      //   (reloadInterval -
+      //     (estimatedTimeUntilUpdate + stats.loading.end - stats.loading.start)) /
+      //   1000
+      // }
+      // reload interval ${reloadInterval / 1000}
+      // target duration ${details.targetduration}
+      // distance to edge ${distanceToLiveEdgeMs / 1000}`
+      //     );
+
       this.timer = self.setTimeout(
         () => this.loadPlaylist(deliveryDirectives),
-        reloadInterval
+        estimatedTimeUntilUpdate
       );
     } else {
       this.clearTimer();
@@ -239,6 +283,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     const { config } = this.hls;
     const retry = this.retryCount < config.levelLoadingMaxRetry;
     if (retry) {
+      this.requestScheduled = -1;
       this.retryCount++;
       if (
         errorEvent.details.indexOf('LoadTimeOut') > -1 &&
