@@ -847,7 +847,7 @@ export function parseSEIMessageFromNALu(
 /**
  * remove Emulation Prevention bytes from a RBSP
  */
-function discardEPB(data: Uint8Array): Uint8Array {
+export function discardEPB(data: Uint8Array): Uint8Array {
   const length = data.byteLength;
   const EPBPositions = [] as Array<number>;
   let i = 1;
