@@ -681,14 +681,14 @@ export function parseSamples(
                 while (naluTotalSize < sampleSize) {
                   const naluSize = readUint32(videoData, sampleOffset);
                   sampleOffset += 4;
-                  const naluType = videoData[sampleOffset] & 0x1f;
-                  if (isSEIMessage(isHEVCFlavor, naluType)) {
+                  if (isSEIMessage(isHEVCFlavor, videoData[sampleOffset])) {
                     const data = videoData.subarray(
                       sampleOffset,
                       sampleOffset + naluSize
                     );
                     parseSEIMessageFromNALu(
                       data,
+                      isHEVCFlavor ? 2 : 1,
                       timeOffset + compositionOffset / timescale,
                       seiSamples
                     );
@@ -723,19 +723,26 @@ function isHEVC(codec: string) {
   );
 }
 
-function isSEIMessage(isHEVCFlavor: boolean, naluType: number) {
-  return isHEVCFlavor ? naluType === 39 || naluType === 40 : naluType === 6;
+function isSEIMessage(isHEVCFlavor: boolean, naluHeader: number) {
+  if (isHEVCFlavor) {
+    const naluType = (naluHeader >> 1) & 0x3f;
+    return naluType === 39 || naluType === 40;
+  } else {
+    const naluType = naluHeader & 0x1f;
+    return naluType === 6;
+  }
 }
 
 export function parseSEIMessageFromNALu(
   unescapedData: Uint8Array,
+  headerSize: number,
   pts: number,
   samples: UserdataSample[]
 ) {
   const data = discardEPB(unescapedData);
   let seiPtr = 0;
-  // skip frameType
-  seiPtr++;
+  // skip nal header
+  seiPtr += headerSize;
   let payloadType = 0;
   let payloadSize = 0;
   let endOfCaptions = false;
