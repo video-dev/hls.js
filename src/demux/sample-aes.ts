@@ -12,7 +12,7 @@ import type {
   DemuxedVideoTrack,
   KeyData,
 } from '../types/demuxer';
-import { discardEPB } from './tsdemuxer';
+import { discardEPB } from '../utils/mp4-tools';
 
 class SampleAesDecrypter {
   private keyData: KeyData;
