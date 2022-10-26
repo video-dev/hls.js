@@ -452,19 +452,21 @@ export default class MP4Remuxer implements Remuxer {
             )} ms (${delta}dts) overlapping between fragments detected`
           );
         }
-        firstDTS = nextAvcDts;
-        const firstPTS = inputSamples[0].pts - delta;
-        inputSamples[0].dts = firstDTS;
-        inputSamples[0].pts = firstPTS;
-        logger.log(
-          `Video: First PTS/DTS adjusted: ${toMsFromMpegTsClock(
-            firstPTS,
-            true
-          )}/${toMsFromMpegTsClock(
-            firstDTS,
-            true
-          )}, delta: ${toMsFromMpegTsClock(delta, true)} ms`
-        );
+        if (!foundOverlap || nextAvcDts > inputSamples[0].pts) {
+          firstDTS = nextAvcDts;
+          const firstPTS = inputSamples[0].pts - delta;
+          inputSamples[0].dts = firstDTS;
+          inputSamples[0].pts = firstPTS;
+          logger.log(
+            `Video: First PTS/DTS adjusted: ${toMsFromMpegTsClock(
+              firstPTS,
+              true
+            )}/${toMsFromMpegTsClock(
+              firstDTS,
+              true
+            )}, delta: ${toMsFromMpegTsClock(delta, true)} ms`
+          );
+        }
       }
     }
 
