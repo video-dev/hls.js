@@ -20,8 +20,7 @@ import {
 import { strToUtf8array } from '../utils/keysystem-util';
 import { utf8ArrayToStr } from '../demux/id3';
 import { base64Decode, base64Encode } from '../utils/numeric-encoding-utils';
-import { LevelKey } from '../loader/level-key';
-
+import { DecryptData, LevelKey } from '../loader/level-key';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 import type {
@@ -70,8 +69,8 @@ class EMEController implements ComponentAPI {
   } = {};
   private _requestLicenseFailureCount: number = 0;
   private mediaKeySessions: MediaKeySessionContext[] = [];
-  private keyUriToKeySessionPromise: {
-    [keyuri: string]: Promise<MediaKeySessionContext>;
+  private keyIdToKeySessionPromise: {
+    [keyId: string]: Promise<MediaKeySessionContext>;
   } = {};
   private setMediaKeysQueue: Promise<void>[] = EMEController.CDMCleanupPromise
     ? [EMEController.CDMCleanupPromise]
@@ -83,10 +82,6 @@ class EMEController implements ComponentAPI {
   private warn: (msg: any) => void = logger.warn.bind(logger, LOGGER_PREFIX);
   private error: (msg: any) => void = logger.error.bind(logger, LOGGER_PREFIX);
 
-  /**
-   * @constructs
-   * @param {Hls} hls Our Hls.js instance
-   */
   constructor(hls: Hls) {
     this.hls = hls;
     this.config = hls.config;
@@ -100,7 +95,7 @@ class EMEController implements ComponentAPI {
     this.hls =
       this.onMediaEncrypted =
       this.onWaitingForKey =
-      this.keyUriToKeySessionPromise =
+      this.keyIdToKeySessionPromise =
         null as any;
   }
 
@@ -298,7 +293,9 @@ class EMEController implements ComponentAPI {
     console.assert(!!mediaKeys, 'mediaKeys is defined');
 
     this.log(
-      `Creating key-system session "${keySystem}" uri: ${decryptdata.uri}`
+      `Creating key-system session "${keySystem}" keyId: ${Hex.hexDump(
+        decryptdata.keyId! || []
+      )}`
     );
 
     const mediaKeysSession = mediaKeys.createSession();
@@ -321,13 +318,24 @@ class EMEController implements ComponentAPI {
     const keySessionContext = this.createMediaKeySessionContext(
       mediaKeySessionContext
     );
-    this.keyUriToKeySessionPromise[decryptdata.uri] =
+    const keyId = this.getKeyIdString(decryptdata);
+    this.keyIdToKeySessionPromise[keyId] =
       this.generateRequestWithPreferredKeySession(
         keySessionContext,
         'cenc',
         decryptdata.pssh
       );
     this.removeSession(mediaKeySessionContext);
+  }
+
+  private getKeyIdString(decryptdata: DecryptData | undefined): string | never {
+    if (!decryptdata) {
+      throw new Error('Could not read keyId of undefined decryptdata');
+    }
+    if (decryptdata.keyId === null) {
+      throw new Error('keyId is null');
+    }
+    return Hex.hexDump(decryptdata.keyId);
   }
 
   private handleParsedKeyResponse(
@@ -357,8 +365,9 @@ class EMEController implements ComponentAPI {
   ): Promise<void> {
     const keySession = mediaKeySessionContext.mediaKeysSession;
     this.log(
-      `Updating key-session "${keySession.sessionId}" for ${
-        mediaKeySessionContext.decryptdata?.uri
+      `Updating key-session "${keySession.sessionId}" for keyID ${Hex.hexDump(
+        mediaKeySessionContext.decryptdata?.keyId! || []
+      )}
       } (data length: ${data ? data.byteLength : data})`
     );
     return keySession.update(data);
@@ -396,45 +405,44 @@ class EMEController implements ComponentAPI {
   public loadKey(data: KeyLoadedData): Promise<MediaKeySessionContext> {
     const decryptdata = data.keyInfo.decryptdata;
 
-    this.log(
-      `Starting session for key ${decryptdata.keyFormat} ${decryptdata.uri}`
-    );
+    const keyId = this.getKeyIdString(decryptdata);
+    const keyDetails = `(keyId: ${keyId} format: "${decryptdata.keyFormat}" method: ${decryptdata.method} uri: ${decryptdata.uri})`;
+
+    this.log(`Starting session for key ${keyDetails}`);
 
     if (this.media && !this.config.useEmeEncryptedEvent) {
       this.media.removeEventListener('encrypted', this.onMediaEncrypted);
     }
 
-    let keySessionContextPromise =
-      this.keyUriToKeySessionPromise[decryptdata.uri];
+    let keySessionContextPromise = this.keyIdToKeySessionPromise[keyId];
     if (!keySessionContextPromise) {
-      keySessionContextPromise = this.keyUriToKeySessionPromise[
-        decryptdata.uri
-      ] = this.getKeySystemForKeyPromise(decryptdata).then(
-        ({ keySystem, mediaKeys }) => {
-          this.throwIfDestroyed();
-          this.log(
-            `Handle encrypted media sn: ${data.frag.sn} ${data.frag.type}: ${data.frag.level} using key (method: ${decryptdata.method} format: "${decryptdata.keyFormat}" uri: ${decryptdata.uri})`
-          );
-
-          return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
+      keySessionContextPromise = this.keyIdToKeySessionPromise[keyId] =
+        this.getKeySystemForKeyPromise(decryptdata).then(
+          ({ keySystem, mediaKeys }) => {
             this.throwIfDestroyed();
-            const keySessionContext = this.createMediaKeySessionContext({
-              keySystem,
-              mediaKeys,
-              decryptdata,
-            });
-            if (this.config.useEmeEncryptedEvent) {
-              // Use 'encrypted' event initData and type rather than 'cenc' pssh from level-key
-              return keySessionContext;
-            }
-            return this.generateRequestWithPreferredKeySession(
-              keySessionContext,
-              'cenc',
-              decryptdata.pssh
+            this.log(
+              `Handle encrypted media sn: ${data.frag.sn} ${data.frag.type}: ${data.frag.level} using key ${keyDetails}`
             );
-          });
-        }
-      );
+
+            return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
+              this.throwIfDestroyed();
+              const keySessionContext = this.createMediaKeySessionContext({
+                keySystem,
+                mediaKeys,
+                decryptdata,
+              });
+              if (this.config.useEmeEncryptedEvent) {
+                // Use 'encrypted' event initData and type rather than 'cenc' pssh from level-key
+                return keySessionContext;
+              }
+              return this.generateRequestWithPreferredKeySession(
+                keySessionContext,
+                'cenc',
+                decryptdata.pssh
+              );
+            });
+          }
+        );
 
       keySessionContextPromise.catch((error) => this.handleError(error));
     }
@@ -468,8 +476,8 @@ class EMEController implements ComponentAPI {
   private getKeySystemForKeyPromise(
     decryptdata: LevelKey
   ): Promise<{ keySystem: KeySystems; mediaKeys: MediaKeys }> {
-    const mediaKeySessionContext =
-      this.keyUriToKeySessionPromise[decryptdata.uri];
+    const keyId = this.getKeyIdString(decryptdata);
+    const mediaKeySessionContext = this.keyIdToKeySessionPromise[keyId];
     if (!mediaKeySessionContext) {
       const keySystem = keySystemFormatToKeySystemDomain(
         decryptdata.keyFormat as KeySystemFormats
@@ -498,9 +506,9 @@ class EMEController implements ComponentAPI {
       return;
     }
 
-    let keySessionContextPromise = this.keyUriToKeySessionPromise.encrypted;
+    let keySessionContextPromise = this.keyIdToKeySessionPromise.encrypted;
     if (!keySessionContextPromise) {
-      keySessionContextPromise = this.keyUriToKeySessionPromise.encrypted =
+      keySessionContextPromise = this.keyIdToKeySessionPromise.encrypted =
         this.getKeySystemSelectionPromise().then(({ keySystem, mediaKeys }) => {
           this.throwIfDestroyed();
           const sessionParameters = {
@@ -512,6 +520,7 @@ class EMEController implements ComponentAPI {
             keySystem,
             mediaKeys,
           };
+          sessionParameters.decryptdata.keyId = new Uint8Array(16);
           return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
             this.throwIfDestroyed();
             const keySessionContext =
@@ -574,10 +583,9 @@ class EMEController implements ComponentAPI {
       );
     }
 
+    const keyId = this.getKeyIdString(context.decryptdata);
     this.log(
-      `Generating key-session request for ${
-        context.decryptdata?.uri
-      } (init data type: ${initDataType} length: ${
+      `Generating key-session request for ${keyId} (init data type: ${initDataType} length: ${
         initData ? initData.byteLength : null
       })`
     );
@@ -649,7 +657,7 @@ class EMEController implements ComponentAPI {
       .generateRequest(initDataType, initData)
       .then(() => {
         this.log(
-          `Key-session generation succeeded for "${context.mediaKeysSession?.sessionId}" ${context.decryptdata?.uri}`
+          `Request generated for key-session "${context.mediaKeysSession?.sessionId}" keyId: ${keyId}`
         );
         return context;
       })
@@ -711,7 +719,7 @@ class EMEController implements ComponentAPI {
             const keyStatus = mediaKeySessionContext.keyStatus;
             if (keyStatus === 'expired') {
               this.warn(
-                `${mediaKeySessionContext.keySystem} expired for key ${mediaKeySessionContext.decryptdata.uri}`
+                `${mediaKeySessionContext.keySystem} expired for key ${keyId}`
               );
               this.renewKeySession(mediaKeySessionContext);
             }
@@ -726,9 +734,11 @@ class EMEController implements ComponentAPI {
       (status: MediaKeyStatus, keyId: BufferSource) => {
         this.log(
           `key status change "${status}" for keyStatuses keyId: ${Hex.hexDump(
-            keyId
+            'buffer' in keyId
+              ? new Uint8Array(keyId.buffer, keyId.byteOffset, keyId.byteLength)
+              : new Uint8Array(keyId)
           )} session keyId: ${Hex.hexDump(
-            mediaKeySessionContext.decryptdata.keyId || []
+            new Uint8Array(mediaKeySessionContext.decryptdata.keyId || [])
           )} uri: ${mediaKeySessionContext.decryptdata.uri}`
         );
         mediaKeySessionContext.keyStatus = status;
@@ -1043,7 +1053,7 @@ class EMEController implements ComponentAPI {
     this._requestLicenseFailureCount = 0;
     this.setMediaKeysQueue = [];
     this.mediaKeySessions = [];
-    this.keyUriToKeySessionPromise = {};
+    this.keyIdToKeySessionPromise = {};
     LevelKey.clearKeyUriToKeyIdMap();
 
     // Close all sessions and remove media keys from the video element.

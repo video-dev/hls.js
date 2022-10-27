@@ -16,11 +16,11 @@ const expect = chai.expect;
 
 type EMEControllerTestable = Omit<
   EMEController,
-  'hls' | 'keyUriToKeySessionPromise' | 'mediaKeySessions'
+  'hls' | 'keyIdToKeySessionPromise' | 'mediaKeySessions'
 > & {
   hls: HlsMock;
-  keyUriToKeySessionPromise: {
-    [keyuri: string]: Promise<MediaKeySessionContext>;
+  keyIdToKeySessionPromise: {
+    [keyId: string]: Promise<MediaKeySessionContext>;
   };
   mediaKeySessions: MediaKeySessionContext[];
   onMediaAttached: (
@@ -286,13 +286,11 @@ describe('EMEController', function () {
 
     media.emit('encrypted', badData);
 
-    expect(emeController.keyUriToKeySessionPromise.encrypted).to.be.a(
-      'Promise'
-    );
-    if (!emeController.keyUriToKeySessionPromise.encrypted) {
+    expect(emeController.keyIdToKeySessionPromise.encrypted).to.be.a('Promise');
+    if (!emeController.keyIdToKeySessionPromise.encrypted) {
       return;
     }
-    return emeController.keyUriToKeySessionPromise.encrypted
+    return emeController.keyIdToKeySessionPromise.encrypted
       .catch(() => {})
       .finally(() => {
         expect(emeController.hls.trigger).callCount(1);
@@ -373,20 +371,24 @@ describe('EMEController', function () {
       },
     } as any);
 
-    expect(emeController.keyUriToKeySessionPromise['data://key-uri']).to.be.a(
-      'Promise'
-    );
-    if (!emeController.keyUriToKeySessionPromise['data://key-uri']) {
+    expect(
+      emeController.keyIdToKeySessionPromise['00000000000000000000000000000000']
+    ).to.be.a('Promise');
+    if (
+      !emeController.keyIdToKeySessionPromise[
+        '00000000000000000000000000000000'
+      ]
+    ) {
       return;
     }
-    return emeController.keyUriToKeySessionPromise['data://key-uri'].finally(
-      () => {
-        expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
-        expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
-          xhrInstance.response
-        );
-      }
-    );
+    return emeController.keyIdToKeySessionPromise[
+      '00000000000000000000000000000000'
+    ].finally(() => {
+      expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
+      expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
+        xhrInstance.response
+      );
+    });
   });
 
   it('should fetch the server certificate and trigger update failed error', function () {
@@ -444,17 +446,24 @@ describe('EMEController', function () {
           encrypted: true,
           method: 'SAMPLE-AES',
           uri: 'data://key-uri',
+          keyId: new Uint8Array(16),
         },
       },
     } as any);
 
     expect(
-      emeController.keyUriToKeySessionPromise['data://key-uri']
-    ).to.not.equal(null);
-    if (!emeController.keyUriToKeySessionPromise['data://key-uri']) {
+      emeController.keyIdToKeySessionPromise['00000000000000000000000000000000']
+    ).to.be.a('Promise');
+    if (
+      !emeController.keyIdToKeySessionPromise[
+        '00000000000000000000000000000000'
+      ]
+    ) {
       return;
     }
-    return emeController.keyUriToKeySessionPromise['data://key-uri']
+    return emeController.keyIdToKeySessionPromise[
+      '00000000000000000000000000000000'
+    ]
       .catch(() => {})
       .finally(() => {
         expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
@@ -517,17 +526,24 @@ describe('EMEController', function () {
           encrypted: true,
           method: 'SAMPLE-AES',
           uri: 'data://key-uri',
+          keyId: new Uint8Array(16),
         },
       },
     } as any);
 
     expect(
-      emeController.keyUriToKeySessionPromise['data://key-uri']
-    ).to.not.equal(null);
-    if (!emeController.keyUriToKeySessionPromise['data://key-uri']) {
+      emeController.keyIdToKeySessionPromise['00000000000000000000000000000000']
+    ).to.be.a('Promise');
+    if (
+      !emeController.keyIdToKeySessionPromise[
+        '00000000000000000000000000000000'
+      ]
+    ) {
       return;
     }
-    return emeController.keyUriToKeySessionPromise['data://key-uri']
+    return emeController.keyIdToKeySessionPromise[
+      '00000000000000000000000000000000'
+    ]
       .catch(() => {})
       .finally(() => {
         expect(emeController.hls.trigger).to.have.been.calledOnce;
