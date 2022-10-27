@@ -1099,3 +1099,42 @@ export function mp4pssh(
     data || new Uint8Array()
   );
 }
+
+export function parsePssh(initData: ArrayBuffer) {
+  if (!(initData instanceof ArrayBuffer) || initData.byteLength < 32) {
+    return null;
+  }
+  const result = {
+    version: 0,
+    systemId: '',
+    kids: null as null | Uint8Array[],
+    data: null as null | Uint8Array,
+  };
+  const view = new DataView(initData);
+  const boxSize = view.getUint32(0);
+  if (initData.byteLength !== boxSize && boxSize > 44) {
+    return null;
+  }
+  const type = view.getUint32(4);
+  if (type !== 0x70737368) {
+    return null;
+  }
+  result.version = view.getUint32(8) >>> 24;
+  if (result.version > 1) {
+    return null;
+  }
+  result.systemId = Hex.hexDump(new Uint8Array(initData, 12, 16));
+  const dataSizeOrKidCount = view.getUint32(28);
+  if (result.version === 0) {
+    if (boxSize - 32 < dataSizeOrKidCount) {
+      return null;
+    }
+    result.data = new Uint8Array(initData, 32, dataSizeOrKidCount);
+  } else if (result.version === 1) {
+    result.kids = [];
+    for (let i = 0; i < dataSizeOrKidCount; i++) {
+      result.kids.push(new Uint8Array(initData, 32 + i * 16, 16));
+    }
+  }
+  return result;
+}

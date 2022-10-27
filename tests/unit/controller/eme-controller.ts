@@ -111,7 +111,6 @@ describe('EMEController', function () {
         },
       },
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
-      // useEmeEncryptedEvent: true, // skip generate request, license exchange, and key status "usable"
     });
 
     sinonFakeXMLHttpRequestStatic.onCreate = (
@@ -249,7 +248,7 @@ describe('EMEController', function () {
     });
   });
 
-  it('should trigger key system error(s) when bad encrypted data is received', function () {
+  it('should ignore "encrypted" events with bad data', function () {
     const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
@@ -271,13 +270,26 @@ describe('EMEController', function () {
 
     setupEach({
       emeEnabled: true,
-      useEmeEncryptedEvent: true,
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
     });
 
     const badData = {
       initDataType: 'cenc',
-      initData: 'bad data',
+      initData: new Uint8Array([
+        // box size
+        0, 0, 0, 44,
+        // "PSSH"
+        112, 115, 115, 104,
+        // version
+        0, 0, 0, 0,
+        // Widevine system id
+        237, 239, 139, 169, 121, 214, 74, 206, 163, 200, 39, 220, 213, 29, 33,
+        237,
+        // data size
+        0, 0, 0, 12,
+        // data (incomplete key)
+        0, 0, 0, 0, 0, 0, 0, 0, 240, 0, 186, 0,
+      ]).buffer,
     };
 
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
@@ -286,11 +298,11 @@ describe('EMEController', function () {
 
     media.emit('encrypted', badData);
 
-    expect(emeController.keyIdToKeySessionPromise.encrypted).to.be.a('Promise');
-    if (!emeController.keyIdToKeySessionPromise.encrypted) {
+    expect(emeController.keyIdToKeySessionPromise.f000ba00).to.be.a('Promise');
+    if (!emeController.keyIdToKeySessionPromise.f000ba00) {
       return;
     }
-    return emeController.keyIdToKeySessionPromise.encrypted
+    return emeController.keyIdToKeySessionPromise.f000ba00
       .catch(() => {})
       .finally(() => {
         expect(emeController.hls.trigger).callCount(1);
