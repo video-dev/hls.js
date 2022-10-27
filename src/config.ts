@@ -90,7 +90,6 @@ export type EMEControllerConfig = {
     keyContext: MediaKeySessionContext
   ) => ArrayBuffer;
   emeEnabled: boolean;
-  useEmeEncryptedEvent: boolean;
   widevineLicenseUrl?: string;
   drmSystems: DRMSystemsConfiguration;
   drmSystemOptions: DRMSystemOptions;
@@ -311,7 +310,6 @@ export const hlsDefaultConfig: HlsConfig = {
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
-  useEmeEncryptedEvent: false, // used by eme-controller
   widevineLicenseUrl: undefined, // used by eme-controller
   drmSystems: {}, // used by eme-controller
   drmSystemOptions: {}, // used by eme-controller

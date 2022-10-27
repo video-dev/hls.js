@@ -12,6 +12,8 @@ import {
   keySystemDomainToKeySystemFormat as keySystemToKeySystemFormat,
   KeySystemFormats,
   keySystemFormatToKeySystemDomain,
+  KeySystemIds,
+  keySystemIdToKeySystemDomain,
 } from '../utils/mediakeys-helper';
 import {
   KeySystems,
@@ -31,6 +33,7 @@ import type {
 import type { EMEControllerConfig } from '../config';
 import type { Fragment } from '../loader/fragment';
 import Hex from '../utils/hex';
+import { parsePssh } from '../utils/mp4-tools';
 
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 const LOGGER_PREFIX = '[eme]';
@@ -410,10 +413,6 @@ class EMEController implements ComponentAPI {
 
     this.log(`Starting session for key ${keyDetails}`);
 
-    if (this.media && !this.config.useEmeEncryptedEvent) {
-      this.media.removeEventListener('encrypted', this.onMediaEncrypted);
-    }
-
     let keySessionContextPromise = this.keyIdToKeySessionPromise[keyId];
     if (!keySessionContextPromise) {
       keySessionContextPromise = this.keyIdToKeySessionPromise[keyId] =
@@ -431,10 +430,6 @@ class EMEController implements ComponentAPI {
                 mediaKeys,
                 decryptdata,
               });
-              if (this.config.useEmeEncryptedEvent) {
-                // Use 'encrypted' event initData and type rather than 'cenc' pssh from level-key
-                return keySessionContext;
-              }
               return this.generateRequestWithPreferredKeySession(
                 keySessionContext,
                 'cenc',
@@ -500,38 +495,63 @@ class EMEController implements ComponentAPI {
   }
 
   private _onMediaEncrypted(event: MediaEncryptedEvent) {
-    this.log(`"${event.type}" event: init data type: "${event.initDataType}"`);
+    const { initDataType, initData } = event;
+    this.log(`"${event.type}" event: init data type: "${initDataType}"`);
 
-    if (!this.config.useEmeEncryptedEvent) {
+    // Ignore event when initData is null
+    if (initData === null) {
       return;
     }
 
-    let keySessionContextPromise = this.keyIdToKeySessionPromise.encrypted;
+    // Support clear-lead key-session creation (otherwise depend on playlist keys)
+    const psshInfo = parsePssh(initData);
+    if (psshInfo === null) {
+      return;
+    }
+    let keyId: Uint8Array | null = null;
+    if (
+      psshInfo.version === 0 &&
+      psshInfo.systemId === KeySystemIds.WIDEVINE &&
+      psshInfo.data
+    ) {
+      keyId = psshInfo.data.subarray(8, 24);
+    }
+    const keySystemDomain = keySystemIdToKeySystemDomain(
+      psshInfo.systemId as KeySystemIds
+    );
+    if (!keySystemDomain || !keyId) {
+      return;
+    }
+
+    const keyIdHex = Hex.hexDump(keyId);
+    let keySessionContextPromise = this.keyIdToKeySessionPromise[keyIdHex];
     if (!keySessionContextPromise) {
-      keySessionContextPromise = this.keyIdToKeySessionPromise.encrypted =
-        this.getKeySystemSelectionPromise().then(({ keySystem, mediaKeys }) => {
-          this.throwIfDestroyed();
-          const sessionParameters = {
-            decryptdata: new LevelKey(
-              'UNKNOWN',
-              'encrypted',
-              keySystemToKeySystemFormat(keySystem) ?? ''
-            ),
-            keySystem,
-            mediaKeys,
-          };
-          sessionParameters.decryptdata.keyId = new Uint8Array(16);
-          return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
+      keySessionContextPromise = this.keyIdToKeySessionPromise[keyIdHex] =
+        this.getKeySystemSelectionPromise([keySystemDomain]).then(
+          ({ keySystem, mediaKeys }) => {
             this.throwIfDestroyed();
-            const keySessionContext =
-              this.createMediaKeySessionContext(sessionParameters);
-            return this.generateRequestWithPreferredKeySession(
-              keySessionContext,
-              event.initDataType,
-              event.initData
+            const decryptdata = new LevelKey(
+              'ISO-23001-7',
+              keyIdHex,
+              keySystemToKeySystemFormat(keySystem) ?? ''
             );
-          });
-        });
+            decryptdata.pssh = new Uint8Array(initData);
+            decryptdata.keyId = keyId;
+            return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
+              this.throwIfDestroyed();
+              const keySessionContext = this.createMediaKeySessionContext({
+                decryptdata,
+                keySystem,
+                mediaKeys,
+              });
+              return this.generateRequestWithPreferredKeySession(
+                keySessionContext,
+                initDataType,
+                initData
+              );
+            });
+          }
+        );
     }
     keySessionContextPromise.catch((error) => this.handleError(error));
   }
@@ -1035,9 +1055,7 @@ class EMEController implements ComponentAPI {
     // keep reference of media
     this.media = media;
 
-    if (this.config.useEmeEncryptedEvent) {
-      media.addEventListener('encrypted', this.onMediaEncrypted);
-    }
+    media.addEventListener('encrypted', this.onMediaEncrypted);
     media.addEventListener('waitingforkey', this.onWaitingForKey);
   }
 
