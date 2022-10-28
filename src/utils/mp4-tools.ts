@@ -242,12 +242,101 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
             let codec;
             if (stsd) {
               codec = bin2str(stsd.subarray(12, 16));
-              // TODO: Parse codec details to be able to build MIME type.
-              // stsd.start += 8;
-              // const codecBox = findBox(stsd, [codec])[0];
-              // if (codecBox) {
-              //   TODO: Codec parsing support for avc1, mp4a, hevc, av01...
-              // }
+              const toHex = (x: number): string => {
+                return ('0' + x.toString(16).toUpperCase()).slice(-2);
+              };
+
+              // Handle H264
+              if (
+                codec.slice(0, 3) === 'avc' &&
+                codec[3] >= '1' &&
+                codec[3] <= '4' &&
+                stsd.length > 102 &&
+                bin2str(stsd.subarray(98, 102)) === 'avcC'
+              ) {
+                // profile + compatibility + level
+                codec +=
+                  '.' + toHex(stsd[111]) + toHex(stsd[112]) + toHex(stsd[113]);
+              }
+
+              // Handle H265
+              else if (
+                (codec === 'hev1' || codec === 'hvc1') &&
+                stsd.length > 102 &&
+                bin2str(stsd.subarray(98, 102)) === 'hvcC'
+              ) {
+                // Profile Space
+                const profileByte = stsd[103];
+                const profileSpace = { 0: '', 1: 'A', 2: 'B', 3: 'C' }[
+                  profileByte >> 6
+                ];
+                const generalProfileIdc = profileByte & 31;
+                codec += '.' + profileSpace + generalProfileIdc;
+
+                // Compatibility
+                let reversed = 0;
+                for (let i = 0; i < 4; ++i) {
+                  // byte number
+                  for (let j = 0; j < 8; ++j) {
+                    // bit number
+                    reversed |=
+                      ((stsd[i + 104] >> (7 - j)) & 1) << (31 - 8 * i - j);
+                  }
+                }
+                codec += '.' + toHex(reversed >>> 0);
+
+                // Tier Flag
+                codec += (profileByte & 32 ? '.H' : '.L') + stsd[114];
+
+                // Constraint String
+                let hasByte = false;
+                let constraintString = '';
+                for (let i = 113; i > 107; --i) {
+                  if (stsd[i] || hasByte) {
+                    constraintString = '.' + toHex(stsd[i]) + constraintString;
+                    hasByte = true;
+                  }
+                }
+                codec += constraintString;
+              }
+
+              // Handle Audio
+              else if (codec === 'mp4a') {
+                // Parse ES Descriptors
+                let i: number;
+                // oti
+                for (i = 0; i < stsd.length - 5; ++i) {
+                  if (
+                    stsd[i] == 4 &&
+                    stsd[i + 1] == 128 &&
+                    stsd[i + 2] == 128 &&
+                    stsd[i + 3] == 128
+                  ) {
+                    codec += '.' + toHex(stsd[i + 5]);
+                    break;
+                  }
+                }
+
+                // dsi
+                for (i = 0; i < stsd.length - 6; ++i) {
+                  if (
+                    stsd[i] == 5 &&
+                    stsd[i + 1] == 128 &&
+                    stsd[i + 2] == 128 &&
+                    stsd[i + 3] == 128
+                  ) {
+                    let dsi = (stsd[i + 5] & 248) >> 3;
+                    if (dsi == 31 && stsd[i + 4] >= 2) {
+                      dsi =
+                        32 +
+                        ((stsd[i + 5] & 7) << 3) +
+                        ((stsd[i + 6] & 224) >> 5);
+                    }
+                    codec += '.' + dsi;
+                    break;
+                  }
+                }
+              }
             }
             result[trackId] = { timescale, type };
             result[type] = { timescale, id: trackId, codec };
