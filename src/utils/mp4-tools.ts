@@ -242,6 +242,8 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
             let codec;
             if (stsd) {
               codec = bin2str(stsd.subarray(12, 16));
+              // Parse codec details to be able to build MIME type
+              // TODO: Codec parsing support for AV1
               const toHex = (x: number): string => {
                 return ('0' + x.toString(16).toUpperCase()).slice(-2);
               };
