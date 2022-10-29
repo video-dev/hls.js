@@ -238,7 +238,7 @@ function getParsedTrackCodec(
   // Provide defaults based on codec type
   // This allows for some playback of some fmp4 playlists without CODECS defined in manifest
   if (parsedCodec === 'hvc1' || parsedCodec === 'hev1') {
-    return 'hvc1.1.c.L120.90';
+    return 'hvc1.1.6.L120.90';
   }
   if (parsedCodec === 'av01') {
     return 'av01.0.04M.08';
