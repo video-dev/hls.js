@@ -171,7 +171,6 @@ class ID3TrackController implements ComponentAPI {
     }
 
     const Cue = getCueClass();
-    let updateCueRanges = true;
 
     for (let i = 0; i < samples.length; i++) {
       const type = samples[i].type;
@@ -200,11 +199,9 @@ class ID3TrackController implements ComponentAPI {
           const frame = frames[j];
           // Safari doesn't put the timestamp frame in the TextTrack
           if (!ID3.isTimeStampFrame(frame)) {
-            // Only update cue ranges once, before adding new cues
-            if (updateCueRanges) {
-              updateCueRanges = false;
-              this.updateId3CueEnds(startTime);
-            }
+            // add a bounds to any unbounded cues
+            this.updateId3CueEnds(startTime);
+
             const cue = new Cue(startTime, endTime, '');
             cue.value = frame;
             if (type) {
@@ -222,7 +219,7 @@ class ID3TrackController implements ComponentAPI {
     if (cues) {
       for (let i = cues.length; i--; ) {
         const cue = cues[i] as any;
-        if (cue.endTime === MAX_CUE_ENDTIME) {
+        if (cue.startTime < startTime && cue.endTime === MAX_CUE_ENDTIME) {
           cue.endTime = startTime;
         }
       }
