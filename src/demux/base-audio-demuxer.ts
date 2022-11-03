@@ -89,6 +89,7 @@ class BaseAudioDemuxer implements Demuxer {
         dts: this.basePTS,
         data: id3Data,
         type: MetadataSchema.audioId3,
+        duration: Number.POSITIVE_INFINITY,
       });
     }
 
@@ -113,6 +114,7 @@ class BaseAudioDemuxer implements Demuxer {
           dts: pts,
           data: id3Data,
           type: MetadataSchema.audioId3,
+          duration: Number.POSITIVE_INFINITY,
         });
         offset += id3Data.length;
         lastDataIndex = offset;
