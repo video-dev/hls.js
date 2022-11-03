@@ -1,4 +1,5 @@
 const { merge } = require('webpack-merge');
+const webpack = require('webpack');
 const webpackConfig = require('./webpack.config')({ debug: true })[0];
 delete webpackConfig.entry;
 delete webpackConfig.output;
@@ -12,7 +13,7 @@ const karmaWebpack = {
         enforce: 'post',
         use: [
           {
-            loader: 'istanbul-instrumenter-loader',
+            loader: 'coverage-istanbul-loader',
             options: {
               esModules: true,
             },
@@ -21,8 +22,10 @@ const karmaWebpack = {
       },
     ],
   },
-  node: {
-    global: true,
+  resolve: {
+    fallback: {
+      util: false,
+    },
   },
 };
 

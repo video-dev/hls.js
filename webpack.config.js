@@ -38,6 +38,7 @@ const baseConfig = {
   entry: './src/hls',
   optimization: {
     splitChunks: false,
+    usedExports: false, // Must be disabled for webworkify-webpack to work in hls.min.js
   },
   resolve: {
     // Add `.ts` as a resolvable extension.
@@ -108,14 +109,6 @@ const baseConfig = {
         },
       },
     ],
-  },
-  node: {
-    global: false,
-    process: false,
-    __filename: false,
-    __dirname: false,
-    Buffer: false,
-    setImmediate: false,
   },
 };
 

@@ -1,4 +1,4 @@
-import * as work from 'webworkify-webpack';
+import work from './webworkify-webpack';
 import { Events } from '../events';
 import Transmuxer, {
   TransmuxConfig,
@@ -304,7 +304,6 @@ export default class TransmuxerInterface {
         }
         break;
 
-      /* falls through */
       default: {
         data.data = data.data || {};
         data.data.frag = this.frag;
