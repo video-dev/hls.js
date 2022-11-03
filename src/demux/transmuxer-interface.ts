@@ -304,7 +304,6 @@ export default class TransmuxerInterface {
         }
         break;
 
-      /* falls through */
       default: {
         data.data = data.data || {};
         data.data.frag = this.frag;
