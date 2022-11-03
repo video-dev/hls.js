@@ -56,6 +56,8 @@ export interface TypeSupported {
   mp4: boolean;
 }
 
+const PACKET_LENGTH = 188;
+
 class TSDemuxer implements Demuxer {
   private readonly observer: HlsEventEmitter;
   private readonly config: HlsConfig;
@@ -87,8 +89,27 @@ class TSDemuxer implements Demuxer {
   }
 
   static probe(data: Uint8Array) {
-    // a TS init segment should contain at least 2 TS packets: PAT and PMT, each starting with 0x47
-    return data[0] === 0x47 && data[188] === 0x47;
+    const syncOffset = TSDemuxer.syncOffset(data);
+    if (syncOffset > 0) {
+      logger.warn(
+        `MPEG2-TS detected but first sync word found @ offset ${syncOffset}`
+      );
+    }
+    return syncOffset !== -1;
+  }
+
+  static syncOffset(data: Uint8Array) {
+    const scanwindow =
+      Math.min(PACKET_LENGTH * 5, data.length - PACKET_LENGTH * 2) + 1;
+    let i = 0;
+    while (i < scanwindow) {
+      // a TS init segment should contain at least 2 TS packets: PAT and PMT, each starting with 0x47
+      if (data[i] === 0x47 && data[i + PACKET_LENGTH] === 0x47) {
+        return i;
+      }
+      i++;
+    }
+    return -1;
   }
 
   /**
@@ -161,6 +182,8 @@ class TSDemuxer implements Demuxer {
       _id3Track.pesData = null;
     }
     this.aacOverFlow = null;
+    this.avcSample = null;
+    this.remainderData = null;
   }
 
   public demux(
@@ -197,7 +220,7 @@ class TSDemuxer implements Demuxer {
       this.remainderData = null;
     }
 
-    if (len < 188 && !flush) {
+    if (len < PACKET_LENGTH && !flush) {
       this.remainderData = data;
       return {
         audioTrack,
@@ -207,7 +230,8 @@ class TSDemuxer implements Demuxer {
       };
     }
 
-    len -= len % 188;
+    const syncOffset = Math.max(0, TSDemuxer.syncOffset(data));
+    len -= (len - syncOffset) % PACKET_LENGTH;
     if (len < data.byteLength && !flush) {
       this.remainderData = new Uint8Array(
         data.buffer,
@@ -218,7 +242,7 @@ class TSDemuxer implements Demuxer {
 
     // loop through TS packets
     let tsPacketErrors = 0;
-    for (let start = 0; start < len; start += 188) {
+    for (let start = syncOffset; start < len; start += PACKET_LENGTH) {
       if (data[start] === 0x47) {
         const stt = !!(data[start + 1] & 0x40);
         // pid is a 13-bit field starting at the last bit of TS[1]
@@ -230,7 +254,7 @@ class TSDemuxer implements Demuxer {
         if (atf > 1) {
           offset = start + 5 + data[start + 4];
           // continue if there is only adaptation field
-          if (offset === start + 188) {
+          if (offset === start + PACKET_LENGTH) {
             continue;
           }
         } else {
@@ -246,8 +270,8 @@ class TSDemuxer implements Demuxer {
               avcData = { data: [], size: 0 };
             }
             if (avcData) {
-              avcData.data.push(data.subarray(offset, start + 188));
-              avcData.size += start + 188 - offset;
+              avcData.data.push(data.subarray(offset, start + PACKET_LENGTH));
+              avcData.size += start + PACKET_LENGTH - offset;
             }
             break;
           case audioId:
@@ -265,8 +289,8 @@ class TSDemuxer implements Demuxer {
               audioData = { data: [], size: 0 };
             }
             if (audioData) {
-              audioData.data.push(data.subarray(offset, start + 188));
-              audioData.size += start + 188 - offset;
+              audioData.data.push(data.subarray(offset, start + PACKET_LENGTH));
+              audioData.size += start + PACKET_LENGTH - offset;
             }
             break;
           case id3Id:
@@ -278,8 +302,8 @@ class TSDemuxer implements Demuxer {
               id3Data = { data: [], size: 0 };
             }
             if (id3Data) {
-              id3Data.data.push(data.subarray(offset, start + 188));
-              id3Data.size += start + 188 - offset;
+              id3Data.data.push(data.subarray(offset, start + PACKET_LENGTH));
+              id3Data.size += start + PACKET_LENGTH - offset;
             }
             break;
           case 0:
@@ -325,6 +349,8 @@ class TSDemuxer implements Demuxer {
             if (unknownPID !== null && !pmtParsed) {
               logger.log(`unknown PID '${unknownPID}' in TS found`);
               unknownPID = null;
+              // we set it to -188, the += 188 in the for loop will reset start to 0
+              start = syncOffset - 188;
             }
             pmtParsed = this.pmtParsed = true;
             break;
