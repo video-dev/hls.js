@@ -101,7 +101,7 @@ export default class Hls implements HlsEventEmitter {
   constructor(userConfig: Partial<HlsConfig> = {}) {
     const config = (this.config = mergeConfig(Hls.DefaultConfig, userConfig));
     this.userConfig = userConfig;
-    enableLogs(config.debug);
+    enableLogs(config.debug, 'Hls instance');
 
     this._autoLevelCapping = -1;
 
