@@ -155,6 +155,14 @@ class MP4Demuxer implements Demuxer {
               ? emsgInfo.presentationTime! / emsgInfo.timeScale
               : timeOffset +
                 emsgInfo.presentationTimeDelta! / emsgInfo.timeScale;
+            let duration =
+              emsgInfo.eventDuration === 0xffffffff
+                ? Number.POSITIVE_INFINITY
+                : emsgInfo.eventDuration / emsgInfo.timeScale;
+            // Safari takes anything <= 0.001 seconds and maps it to Infinity
+            if (duration <= 0.001) {
+              duration = Number.POSITIVE_INFINITY;
+            }
             const payload = emsgInfo.payload;
             id3Track.samples.push({
               data: payload,
@@ -162,6 +170,7 @@ class MP4Demuxer implements Demuxer {
               dts: pts,
               pts: pts,
               type: MetadataSchema.emsg,
+              duration: duration,
             });
           }
         });

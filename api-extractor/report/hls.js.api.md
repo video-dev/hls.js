@@ -1891,6 +1891,8 @@ export interface MetadataSample {
     // (undocumented)
     dts: number;
     // (undocumented)
+    duration: number;
+    // (undocumented)
     len?: number;
     // (undocumented)
     pts: number;
