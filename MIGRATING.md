@@ -57,6 +57,9 @@ Event order and content have changed in some places. See **Breaking Changes** be
   - `BUFFER_INCOMPATIBLE_CODECS_ERROR` will fire instead of `BUFFER_CREATED` with an empty `tracks` list. This media error
     is fatal and not recoverable. If you encounter this error make sure you include the correct CODECS string in
     your manifest, as this is most likely to occur when attempting to play a fragmented mp4 playlist with unknown codecs.
+- `FRAG_LOAD_PROGRESS` has been **deprecated**
+- `FRAG_PARSING_DATA` has been **deprecated**
+- `STREAM_STATE_TRANSITION` has been **deprecated**
 
 ### Fragment Stats
 
