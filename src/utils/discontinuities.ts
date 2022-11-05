@@ -175,9 +175,7 @@ export function alignPDT(details: LevelDetails, lastDetails: LevelDetails) {
 }
 
 export function alignFragmentByPDTDelta(frag: Fragment, delta: number) {
-  const { programDateTime } = frag;
-  if (!programDateTime) return;
-  const start = (programDateTime - delta) / 1000;
+  const start = frag.start + delta;
   frag.start = frag.startPTS = start;
   frag.endPTS = start + frag.duration;
 }
@@ -201,6 +199,7 @@ export function alignMediaPlaylistByPDT(
 ) {
   // This check protects the unsafe "!" usage below for null program date time access.
   if (
+    !details.fragments.length ||
     !refDetails.fragments.length ||
     !details.hasProgramDateTime ||
     !refDetails.hasProgramDateTime
@@ -209,9 +208,14 @@ export function alignMediaPlaylistByPDT(
   }
   const refPDT = refDetails.fragments[0].programDateTime!; // hasProgramDateTime check above makes this safe.
   const refStart = refDetails.fragments[0].start;
-  // Use the delta between the reference details' presentation timeline's start time and its PDT
-  // to align the other rendition's timeline.
-  const delta = refPDT - refStart * 1000;
+
+  const firstPDT = details.fragments[0].programDateTime!; // hasProgramDateTime check above makes this safe.
+  const start = details.fragments[0].start;
+
+  // Calculate a delta to apply to all fragments according to the delta in PDT times and start times
+  // of the first fragment in the reference details, and the first fragment in the other details.
+  const delta = (firstPDT - refPDT) / 1000 - (start - refStart);
+
   // Per spec: "If any Media Playlist in a Master Playlist contains an EXT-X-PROGRAM-DATE-TIME tag, then all
   // Media Playlists in that Master Playlist MUST contain EXT-X-PROGRAM-DATE-TIME tags with consistent mappings
   // of date and time to media timestamps."
