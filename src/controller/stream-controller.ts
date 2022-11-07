@@ -351,6 +351,12 @@ export default class StreamController
     } else if (this.media?.buffered.length === 0) {
       // Stop gap for bad tracker / buffer flush behavior
       this.fragmentTracker.removeAllFragments();
+    } else if (fragState === FragmentState.OK) {
+      // Move fragPrevious forward to support forcing the next fragment to load
+      // when the buffer catches up to a previously buffered range.
+      if (frag.sn !== 'initSegment') {
+        this.fragPrevious = frag;
+      }
     }
   }
 
