@@ -362,6 +362,7 @@ export default class LevelController extends BasePlaylistController {
           }
         }
         break;
+      case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.KEY_SYSTEM_NO_SESSION:
       case ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED:
         levelIndex =

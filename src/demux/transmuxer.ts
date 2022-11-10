@@ -39,6 +39,7 @@ const muxConfig: MuxConfig[] = [
 ];
 
 export default class Transmuxer {
+  public async: boolean = false;
   private observer: HlsEventEmitter;
   private typeSupported: TypeSupported;
   private config: HlsConfig;
