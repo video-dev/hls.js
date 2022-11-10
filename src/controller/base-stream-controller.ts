@@ -1058,7 +1058,8 @@ export default class BaseStreamController
     end: number,
     levelDetails: LevelDetails
   ): Fragment | null {
-    const { config, fragPrevious } = this;
+    const { config } = this;
+    let { fragPrevious } = this;
     let { fragments, endSN } = levelDetails;
     const { fragmentHint } = levelDetails;
     const tolerance = config.maxFragLookUpTolerance;
@@ -1092,6 +1093,11 @@ export default class BaseStreamController
 
     if (frag) {
       const curSNIdx = frag.sn - levelDetails.startSN;
+      // Move fragPrevious forward to support forcing the next fragment to load
+      // when the buffer catches up to a previously buffered range.
+      if (this.fragmentTracker.getState(frag) === FragmentState.OK) {
+        fragPrevious = frag;
+      }
       if (fragPrevious && frag.sn === fragPrevious.sn && !loadingParts) {
         // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
         // non-uniform fragment durations
