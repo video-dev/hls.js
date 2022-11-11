@@ -241,11 +241,15 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
             let codec;
             if (stsd) {
               codec = bin2str(stsd.subarray(12, 16));
+              // TODO: Parse codec details to be able to build MIME type.
+              // stsd.start += 8;
+              // const codecBox = findBox(stsd, [codec])[0];
+              // if (codecBox) {
+              //   TODO: Codec parsing support for avc1, mp4a, av01...
+              // }
               if (isHEVC(codec)) {
                 const codecBox = findBox(stsd.subarray(8), [codec])[0];
                 if (codecBox) {
-                  //   TODO: Codec parsing support for avc1, mp4a, av01...
-
                   const { end } = parseVisualSampleEntry(codecBox);
                   const hvcC = findBox(codecBox.subarray(end), ['hvcC'])[0];
                   if (hvcC) {
