@@ -64,7 +64,6 @@ export function findBox(data: Uint8Array, path: string[]): Uint8Array[] {
     const size = readUint32(data, i);
     const type = bin2str(data.subarray(i + 4, i + 8));
     const endbox = size > 1 ? i + size : end;
-
     if (type === path[0]) {
       if (path.length === 1) {
         // this is the end of the path and we've found the box we were
@@ -242,12 +241,21 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
             let codec;
             if (stsd) {
               codec = bin2str(stsd.subarray(12, 16));
-              // TODO: Parse codec details to be able to build MIME type.
-              // stsd.start += 8;
-              // const codecBox = findBox(stsd, [codec])[0];
-              // if (codecBox) {
-              //   TODO: Codec parsing support for avc1, mp4a, hevc, av01...
-              // }
+              if (isHEVC(codec)) {
+                const codecBox = findBox(stsd.subarray(8), [codec])[0];
+                if (codecBox) {
+                  //   TODO: Codec parsing support for avc1, mp4a, av01...
+
+                  const { end } = parseVisualSampleEntry(codecBox);
+                  const hvcC = findBox(codecBox.subarray(end), ['hvcC'])[0];
+                  if (hvcC) {
+                    codec = mimeTypeBuilderHEVC(
+                      codec,
+                      parseHvcConfigurationRecord(hvcC)
+                    );
+                  }
+                }
+              }
             }
             result[trackId] = { timescale, type };
             result[type] = { timescale, id: trackId, codec };
@@ -967,5 +975,134 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
     eventDuration,
     id,
     payload,
+  };
+}
+
+export function mimeTypeBuilderHEVC(
+  codecName: string,
+  codecDetails: hvcConfigurationRecord
+): string {
+  const generalProfileSpaceMap = ['', 'A', 'B', 'C'];
+  let codecMimeType = codecName;
+  if (codecDetails) {
+    codecMimeType += '.';
+    codecMimeType += generalProfileSpaceMap[codecDetails.generalProfileSpace];
+    codecMimeType += codecDetails.generalProfileIdc;
+
+    codecMimeType += '.';
+    codecMimeType += codecDetails.generalProfileCompatibility.toString(16)[0];
+
+    codecMimeType += '.';
+    codecMimeType += codecDetails.generalTierFlag === 0 ? 'L' : 'H';
+    codecMimeType += codecDetails.generalLevelIdc;
+
+    let constraintString = '';
+    const lastByteIndex = (
+      codecDetails.generalConstraintIndicator as any
+    ).findLastIndex((x: Number) => x !== 0);
+    if (lastByteIndex !== -1) {
+      constraintString =
+        '.' +
+        (
+          codecDetails.generalConstraintIndicator.slice(
+            0,
+            lastByteIndex + 1
+          ) as any
+        )
+          .map((x: Number) => x.toString(16))
+          .join('.');
+    }
+
+    codecMimeType += constraintString;
+  }
+  return codecMimeType;
+}
+
+export function parseDataReferenceIndex(data: Uint8Array) {
+  // UInt8[6] reserved
+  return readUint16(data, 6);
+}
+
+interface visualSampleEntry {
+  dataReferenceIndex: number;
+  width: number;
+  height: number;
+  horizResolution: number;
+  vertResolution: number;
+  frameCount: number;
+  compressorName: string;
+  depth: number;
+  end: number;
+}
+
+export function parseVisualSampleEntry(data: Uint8Array): visualSampleEntry {
+  return {
+    dataReferenceIndex: parseDataReferenceIndex(data),
+
+    // UInt16 preDefined
+    // UInt16 reserved
+    // UInt32[3] preDefined
+
+    width: readUint16(data, 24),
+    height: readUint16(data, 26),
+
+    horizResolution: readUint32(data, 28), // 0x00480000 - 72 dpi
+    vertResolution: readUint32(data, 32), // 0x00480000 - 72 dpi
+
+    // UInt32 reserved
+
+    frameCount: readUint16(data, 40),
+    compressorName: bin2str(data.subarray(43, Math.min(data[42], 31))),
+    depth: readUint16(data, 74),
+
+    // UInt16 preDefined
+
+    end: 78,
+  };
+}
+
+interface hvcConfigurationRecord {
+  configurationVersion: number;
+  generalProfileSpace: number;
+  generalTierFlag: number;
+  generalProfileIdc: number;
+  generalProfileCompatibility: number;
+  generalConstraintIndicator: Uint8Array;
+  generalLevelIdc: number;
+  minSpatialSegmentationIdc: number;
+  parallelismType: number;
+  chromaFormatIdc: number;
+  bitDepthLumaMinus8: number;
+  bitDepthChromaMinus8: number;
+  avgFrameRate: number;
+  constantFrameRate: number;
+  numTemporalLayers: number;
+  temporalIdNested: number;
+  lengthSizeMinusOne: number;
+  naluArrays: Array<object>;
+}
+
+export function parseHvcConfigurationRecord(
+  data: Uint8Array
+): hvcConfigurationRecord {
+  return {
+    configurationVersion: data[0],
+    generalProfileSpace: data[1] >> 6,
+    generalTierFlag: (data[1] & 0x20) >> 5,
+    generalProfileIdc: data[1] & 0x1f,
+    generalProfileCompatibility: readUint32(data, 2),
+    generalConstraintIndicator: data.subarray(6, 12),
+    generalLevelIdc: data[12],
+    minSpatialSegmentationIdc: readUint16(data, 13) & 0xfff,
+    parallelismType: data[15] & 0x3,
+    chromaFormatIdc: data[16] & 0x3,
+    bitDepthLumaMinus8: data[17] & 0x7,
+    bitDepthChromaMinus8: data[18] & 0x7,
+    avgFrameRate: readUint16(data, 19),
+    constantFrameRate: data[21] >> 6,
+    numTemporalLayers: (data[21] & 0xd) >> 3,
+    temporalIdNested: (data[21] & 0x4) >> 2,
+    lengthSizeMinusOne: data[21] & 0x3,
+    naluArrays: [],
   };
 }
