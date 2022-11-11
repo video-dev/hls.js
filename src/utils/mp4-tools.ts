@@ -67,7 +67,6 @@ export function findBox(data: Uint8Array, path: string[]): Uint8Array[] {
     const size = readUint32(data, i);
     const type = bin2str(data.subarray(i + 4, i + 8));
     const endbox = size > 1 ? i + size : end;
-
     if (type === path[0]) {
       if (path.length === 1) {
         // this is the end of the path and we've found the box we were
@@ -264,44 +263,61 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
               }
 
               // Handle H265
-              else if (
-                (codec === 'hev1' || codec === 'hvc1') &&
-                stsd.length > 102 &&
-                bin2str(stsd.subarray(98, 102)) === 'hvcC'
-              ) {
-                // Profile Space
-                const profileByte = stsd[103];
-                const profileSpace = { 0: '', 1: 'A', 2: 'B', 3: 'C' }[
-                  profileByte >> 6
-                ];
-                const generalProfileIdc = profileByte & 31;
-                codec += '.' + profileSpace + generalProfileIdc;
-
-                // Compatibility
-                let reversed = 0;
-                for (let i = 0; i < 4; ++i) {
-                  // byte number
-                  for (let j = 0; j < 8; ++j) {
-                    // bit number
-                    reversed |=
-                      ((stsd[i + 104] >> (7 - j)) & 1) << (31 - 8 * i - j);
+              else if (isHEVC(codec)) {
+                // @fogarasyroland's method https://github.com/video-dev/hls.js/pull/5024
+                let hvcC;
+                const codecBox = findBox(stsd.subarray(8), [codec])[0];
+                if (codecBox) {
+                  const { end } = parseVisualSampleEntry(codecBox);
+                  hvcC = findBox(codecBox.subarray(end), ['hvcC'])[0];
+                  if (hvcC) {
+                    codec = mimeTypeBuilderHEVC(
+                      codec,
+                      parseHvcConfigurationRecord(hvcC)
+                    );
                   }
                 }
-                codec += '.' + toHex(reversed >>> 0);
+                // @uvjustin's method https://github.com/video-dev/hls.js/pull/4996
+                if (
+                  !hvcC &&
+                  stsd.length > 102 &&
+                  bin2str(stsd.subarray(98, 102)) === 'hvcC'
+                ) {
+                  // Profile Space
+                  const profileByte = stsd[103];
+                  const profileSpace = { 0: '', 1: 'A', 2: 'B', 3: 'C' }[
+                    profileByte >> 6
+                  ];
+                  const generalProfileIdc = profileByte & 31;
+                  codec += '.' + profileSpace + generalProfileIdc;
 
-                // Tier Flag
-                codec += (profileByte & 32 ? '.H' : '.L') + stsd[114];
-
-                // Constraint String
-                let hasByte = false;
-                let constraintString = '';
-                for (let i = 113; i > 107; --i) {
-                  if (stsd[i] || hasByte) {
-                    constraintString = '.' + toHex(stsd[i]) + constraintString;
-                    hasByte = true;
+                  // Compatibility
+                  let reversed = 0;
+                  for (let i = 0; i < 4; ++i) {
+                    // byte number
+                    for (let j = 0; j < 8; ++j) {
+                      // bit number
+                      reversed |=
+                        ((stsd[i + 104] >> (7 - j)) & 1) << (31 - 8 * i - j);
+                    }
                   }
+                  codec += '.' + toHex(reversed >>> 0);
+
+                  // Tier Flag
+                  codec += (profileByte & 32 ? '.H' : '.L') + stsd[114];
+
+                  // Constraint String
+                  let hasByte = false;
+                  let constraintString = '';
+                  for (let i = 113; i > 107; --i) {
+                    if (stsd[i] || hasByte) {
+                      constraintString =
+                        '.' + toHex(stsd[i]) + constraintString;
+                      hasByte = true;
+                    }
+                  }
+                  codec += constraintString;
                 }
-                codec += constraintString;
               }
 
               // Handle Audio
@@ -1244,4 +1260,131 @@ export function parsePssh(initData: ArrayBuffer) {
     }
   }
   return result;
+}
+
+function mimeTypeBuilderHEVC(
+  codecName: string,
+  codecDetails: hvcConfigurationRecord
+): string {
+  const generalProfileSpaceMap = ['', 'A', 'B', 'C'];
+  let codecMimeType = codecName;
+  if (codecDetails) {
+    codecMimeType += '.';
+    codecMimeType += generalProfileSpaceMap[codecDetails.generalProfileSpace];
+    codecMimeType += codecDetails.generalProfileIdc;
+
+    codecMimeType += '.';
+    codecMimeType += codecDetails.generalProfileCompatibility.toString(16)[0];
+
+    codecMimeType += '.';
+    codecMimeType += codecDetails.generalTierFlag === 0 ? 'L' : 'H';
+    codecMimeType += codecDetails.generalLevelIdc;
+
+    let constraintString = '';
+    const lastByteIndex = (
+      codecDetails.generalConstraintIndicator as any
+    ).findLastIndex((x: Number) => x !== 0);
+    if (lastByteIndex !== -1) {
+      constraintString =
+        '.' +
+        (
+          codecDetails.generalConstraintIndicator.slice(
+            0,
+            lastByteIndex + 1
+          ) as any
+        )
+          .map((x: Number) => x.toString(16))
+          .join('.');
+    }
+
+    codecMimeType += constraintString;
+  }
+  return codecMimeType;
+}
+
+function parseDataReferenceIndex(data: Uint8Array) {
+  // UInt8[6] reserved
+  return readUint16(data, 6);
+}
+
+interface visualSampleEntry {
+  dataReferenceIndex: number;
+  width: number;
+  height: number;
+  horizResolution: number;
+  vertResolution: number;
+  frameCount: number;
+  compressorName: string;
+  depth: number;
+  end: number;
+}
+
+function parseVisualSampleEntry(data: Uint8Array): visualSampleEntry {
+  return {
+    dataReferenceIndex: parseDataReferenceIndex(data),
+
+    // UInt16 preDefined
+    // UInt16 reserved
+    // UInt32[3] preDefined
+
+    width: readUint16(data, 24),
+    height: readUint16(data, 26),
+
+    horizResolution: readUint32(data, 28), // 0x00480000 - 72 dpi
+    vertResolution: readUint32(data, 32), // 0x00480000 - 72 dpi
+
+    // UInt32 reserved
+
+    frameCount: readUint16(data, 40),
+    compressorName: bin2str(data.subarray(43, Math.min(data[42], 31))),
+    depth: readUint16(data, 74),
+
+    // UInt16 preDefined
+
+    end: 78,
+  };
+}
+
+interface hvcConfigurationRecord {
+  configurationVersion: number;
+  generalProfileSpace: number;
+  generalTierFlag: number;
+  generalProfileIdc: number;
+  generalProfileCompatibility: number;
+  generalConstraintIndicator: Uint8Array;
+  generalLevelIdc: number;
+  minSpatialSegmentationIdc: number;
+  parallelismType: number;
+  chromaFormatIdc: number;
+  bitDepthLumaMinus8: number;
+  bitDepthChromaMinus8: number;
+  avgFrameRate: number;
+  constantFrameRate: number;
+  numTemporalLayers: number;
+  temporalIdNested: number;
+  lengthSizeMinusOne: number;
+  naluArrays: Array<object>;
+}
+
+function parseHvcConfigurationRecord(data: Uint8Array): hvcConfigurationRecord {
+  return {
+    configurationVersion: data[0],
+    generalProfileSpace: data[1] >> 6,
+    generalTierFlag: (data[1] & 0x20) >> 5,
+    generalProfileIdc: data[1] & 0x1f,
+    generalProfileCompatibility: readUint32(data, 2),
+    generalConstraintIndicator: data.subarray(6, 12),
+    generalLevelIdc: data[12],
+    minSpatialSegmentationIdc: readUint16(data, 13) & 0xfff,
+    parallelismType: data[15] & 0x3,
+    chromaFormatIdc: data[16] & 0x3,
+    bitDepthLumaMinus8: data[17] & 0x7,
+    bitDepthChromaMinus8: data[18] & 0x7,
+    avgFrameRate: readUint16(data, 19),
+    constantFrameRate: data[21] >> 6,
+    numTemporalLayers: (data[21] & 0xd) >> 3,
+    temporalIdNested: (data[21] & 0x4) >> 2,
+    lengthSizeMinusOne: data[21] & 0x3,
+    naluArrays: [],
+  };
 }
