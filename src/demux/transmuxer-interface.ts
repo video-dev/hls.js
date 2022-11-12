@@ -24,6 +24,7 @@ export default class TransmuxerInterface {
   private observer: HlsEventEmitter;
   private frag: Fragment | null = null;
   private part: Part | null = null;
+  private useWorker: boolean;
   private worker: any;
   private onwmsg?: Function;
   private transmuxer: Transmuxer | null = null;
@@ -36,18 +37,18 @@ export default class TransmuxerInterface {
     onTransmuxComplete: (transmuxResult: TransmuxerResult) => void,
     onFlush: (chunkMeta: ChunkMetadata) => void
   ) {
+    const config = hls.config;
     this.hls = hls;
     this.id = id;
+    this.useWorker = !!config.enableWorker;
     this.onTransmuxComplete = onTransmuxComplete;
     this.onFlush = onFlush;
-
-    const config = hls.config;
 
     const forwardMessage = (ev, data) => {
       data = data || {};
       data.frag = this.frag;
       data.id = this.id;
-      hls.trigger(ev, data);
+      this.hls.trigger(ev, data);
     };
 
     // forward events to main thread
@@ -63,7 +64,7 @@ export default class TransmuxerInterface {
     // navigator.vendor is not always available in Web Worker
     // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
     const vendor = navigator.vendor;
-    if (config.enableWorker && typeof Worker !== 'undefined') {
+    if (this.useWorker && typeof Worker !== 'undefined') {
       logger.log('demuxing in webworker');
       let worker;
       try {
@@ -73,10 +74,12 @@ export default class TransmuxerInterface {
         this.onwmsg = this.onWorkerMessage.bind(this);
         worker.addEventListener('message', this.onwmsg);
         worker.onerror = (event) => {
-          hls.trigger(Events.ERROR, {
+          this.useWorker = false;
+          logger.warn('Exception in webworker, fallback to inline');
+          this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.INTERNAL_EXCEPTION,
-            fatal: true,
+            fatal: false,
             event: 'demuxerWorker',
             error: new Error(
               `${event.message}  (${event.filename}:${event.lineno})`
