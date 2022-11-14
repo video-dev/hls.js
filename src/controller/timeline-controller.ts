@@ -9,6 +9,7 @@ import {
   removeCuesInRange,
 } from '../utils/texttrack-utils';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
+import { appendUint8Array } from '../utils/mp4-tools';
 import { PlaylistLevelType } from '../types/loader';
 import { Fragment } from '../loader/fragment';
 import {
@@ -361,8 +362,10 @@ export class TimelineController implements ComponentAPI {
           if (textTrack) {
             clearCurrentCues(textTrack);
           } else {
+            const textTrackKind =
+              this._captionsOrSubtitlesFromCharacteristics(track);
             textTrack = this.createTextTrack(
-              'subtitles',
+              textTrackKind,
               track.name,
               track.lang
             );
@@ -392,6 +395,25 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
+  private _captionsOrSubtitlesFromCharacteristics(
+    track: MediaPlaylist
+  ): TextTrackKind {
+    if (track.attrs?.CHARACTERISTICS) {
+      const transcribesSpokenDialog = /transcribes-spoken-dialog/gi.test(
+        track.attrs.CHARACTERISTICS
+      );
+      const describesMusicAndSound = /describes-music-and-sound/gi.test(
+        track.attrs.CHARACTERISTICS
+      );
+
+      if (transcribesSpokenDialog && describesMusicAndSound) {
+        return 'captions';
+      }
+    }
+
+    return 'subtitles';
+  }
+
   private onManifestLoaded(
     event: Events.MANIFEST_LOADED,
     data: ManifestLoadedData
@@ -418,6 +440,11 @@ export class TimelineController implements ComponentAPI {
         trackProperties.media = captionsTrack;
       });
     }
+  }
+
+  private closedCaptionsForLevel(frag: Fragment): string | undefined {
+    const level = this.hls.levels[frag.level];
+    return level?.attrs['CLOSED-CAPTIONS'];
   }
 
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
@@ -533,8 +560,11 @@ export class TimelineController implements ComponentAPI {
   private _parseVTTs(frag: Fragment, payload: ArrayBuffer, vttCCs: any) {
     const hls = this.hls;
     // Parse the WebVTT file contents.
+    const payloadWebVTT = frag.initSegment?.data
+      ? appendUint8Array(frag.initSegment.data, new Uint8Array(payload))
+      : payload;
     parseWebVTT(
-      payload,
+      payloadWebVTT,
       this.initPTS[frag.cc],
       this.timescale[frag.cc],
       vttCCs,
@@ -587,12 +617,15 @@ export class TimelineController implements ComponentAPI {
       // before parsing is done then don't try to access currentTrack.cues.getCueById as cues will be null
       // and trying to access getCueById method of cues will throw an exception
       // Because we check if the mode is disabled, we can force check `cues` below. They can't be null.
-      if (textTrack.mode === 'disabled') {
+      if (!textTrack || textTrack.mode === 'disabled') {
         return;
       }
       cues.forEach((cue) => addCueToTrack(textTrack, cue));
     } else {
       const currentTrack = this.tracks[fragLevel];
+      if (!currentTrack) {
+        return;
+      }
       const track = currentTrack.default ? 'default' : 'subtitles' + fragLevel;
       hls.trigger(Events.CUES_PARSED, { type: 'subtitles', cues, track });
     }
@@ -626,14 +659,21 @@ export class TimelineController implements ComponentAPI {
       return;
     }
 
+    const { frag, samples } = data;
+    if (
+      frag.type === PlaylistLevelType.MAIN &&
+      this.closedCaptionsForLevel(frag) === 'NONE'
+    ) {
+      return;
+    }
     // If the event contains captions (found in the bytes property), push all bytes into the parser immediately
     // It will create the proper timestamps based on the PTS value
-    for (let i = 0; i < data.samples.length; i++) {
-      const ccBytes = data.samples[i].bytes;
+    for (let i = 0; i < samples.length; i++) {
+      const ccBytes = samples[i].bytes;
       if (ccBytes) {
         const ccdatas = this.extractCea608Data(ccBytes);
-        cea608Parser1.addData(data.samples[i].pts, ccdatas[0]);
-        cea608Parser2.addData(data.samples[i].pts, ccdatas[1]);
+        cea608Parser1.addData(samples[i].pts, ccdatas[0]);
+        cea608Parser2.addData(samples[i].pts, ccdatas[1]);
       }
     }
   }
@@ -717,7 +757,7 @@ function newVTTCCs(): VTTCCs {
     0: {
       start: 0,
       prevCC: -1,
-      new: false,
+      new: true,
     },
   };
 }

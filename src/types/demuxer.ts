@@ -59,7 +59,7 @@ export interface PassthroughTrack extends DemuxedTrack {
 export interface DemuxedAudioTrack extends DemuxedTrack {
   config?: number[];
   samplerate?: number;
-  isAAC?: boolean;
+  segmentCodec?: string;
   channelCount?: number;
   manifestCodec?: string;
   samples: AudioSample[];
@@ -88,11 +88,18 @@ export interface DemuxedUserdataTrack extends DemuxedTrack {
   samples: UserdataSample[];
 }
 
+export enum MetadataSchema {
+  audioId3 = 'org.id3',
+  dateRange = 'com.apple.quicktime.HLS',
+  emsg = 'https://aomedia.org/emsg/ID3',
+}
 export interface MetadataSample {
   pts: number;
   dts: number;
+  duration: number;
   len?: number;
   data: Uint8Array;
+  type: MetadataSchema;
 }
 
 export interface UserdataSample {

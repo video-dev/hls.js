@@ -7,8 +7,6 @@ import { logger } from '../utils/logger';
 import * as MpegAudio from './mpegaudio';
 
 class MP3Demuxer extends BaseAudioDemuxer {
-  static readonly minProbeByteLength: number = 4;
-
   resetInitSegment(
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
@@ -22,7 +20,7 @@ class MP3Demuxer extends BaseAudioDemuxer {
       id: 2,
       pid: -1,
       sequenceNumber: 0,
-      isAAC: false,
+      segmentCodec: 'mp3',
       samples: [],
       manifestCodec: audioCodec,
       duration: trackDuration,
@@ -57,14 +55,14 @@ class MP3Demuxer extends BaseAudioDemuxer {
   }
 
   appendFrame(track, data, offset) {
-    if (this.initPTS === null) {
+    if (this.basePTS === null) {
       return;
     }
     return MpegAudio.appendFrame(
       track,
       data,
       offset,
-      this.initPTS,
+      this.basePTS,
       this.frameIndex
     );
   }

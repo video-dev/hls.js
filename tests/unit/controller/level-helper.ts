@@ -17,7 +17,7 @@ import { AttrList } from '../../../src/utils/attr-list';
 chai.use(sinonChai);
 const expect = chai.expect;
 
-const generatePlaylist = (sequenceNumbers, offset = 0) => {
+const generatePlaylist = (sequenceNumbers, offset = 0, duration = 5) => {
   const playlist = new LevelDetails('');
   playlist.startSN = sequenceNumbers[0];
   playlist.endSN = sequenceNumbers[sequenceNumbers.length - 1];
@@ -25,7 +25,7 @@ const generatePlaylist = (sequenceNumbers, offset = 0) => {
     const frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.sn = n;
     frag.start = i * 5 + offset;
-    frag.duration = 5;
+    frag.duration = duration;
     return frag;
   });
   return playlist;
@@ -265,63 +265,56 @@ expect: ${JSON.stringify(merged.fragments[i])}`
   });
 
   describe('computeReloadInterval', function () {
-    it('returns the averagetargetduration of the new level if available', function () {
-      const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = 5;
-      newPlaylist.updated = true;
-      const actual = computeReloadInterval(newPlaylist, new LoadStats());
-      expect(actual).to.equal(5000);
+    let sandbox;
+    beforeEach(function () {
+      sandbox = sinon.createSandbox();
+      sandbox.stub(performance, 'now').returns(0);
     });
 
-    it('returns the targetduration of the new level if averagetargetduration is falsy', function () {
-      const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = undefined;
-      newPlaylist.targetduration = 4;
-      newPlaylist.updated = true;
-      let actual = computeReloadInterval(newPlaylist, new LoadStats());
-      expect(actual).to.equal(4000);
+    afterEach(function () {
+      sandbox.restore();
+    });
 
-      newPlaylist.averagetargetduration = undefined;
-      actual = computeReloadInterval(newPlaylist, new LoadStats());
-      expect(actual).to.equal(4000);
+    it('returns the targetduration of the new level if available', function () {
+      const newPlaylist = generatePlaylist([3, 4], 0, 6);
+      newPlaylist.targetduration = 5;
+      newPlaylist.updated = true;
+      const actual = computeReloadInterval(newPlaylist);
+      expect(actual).to.equal(5000);
     });
 
     it('halves the reload interval if the playlist contains the same segments', function () {
       const newPlaylist = generatePlaylist([1, 2]);
       newPlaylist.updated = false;
-      newPlaylist.averagetargetduration = 5;
-      const actual = computeReloadInterval(newPlaylist, new LoadStats());
+      newPlaylist.targetduration = 5;
+      const actual = computeReloadInterval(newPlaylist);
       expect(actual).to.equal(2500);
     });
 
     it('rounds the reload interval', function () {
-      const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = 5.9999;
+      const newPlaylist = generatePlaylist([3, 4], 0, 10);
+      newPlaylist.targetduration = 5.9999;
       newPlaylist.updated = true;
-      const actual = computeReloadInterval(newPlaylist, new LoadStats());
+      const actual = computeReloadInterval(newPlaylist);
       expect(actual).to.equal(6000);
-    });
-
-    it('subtracts the request time of the last level load from the reload interval', function () {
-      const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = 5;
-      newPlaylist.updated = true;
-      const stats = new LoadStats();
-      stats.loading.start = 0;
-      stats.loading.end = 1000;
-      const actual = computeReloadInterval(newPlaylist, stats);
-      expect(actual).to.equal(4000);
     });
 
     it('returns a minimum of half the target duration', function () {
       const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.averagetargetduration = 5;
+      newPlaylist.targetduration = 5;
       newPlaylist.updated = false;
-      const stats = new LoadStats();
-      stats.loading.start = 0;
-      stats.loading.end = 1000;
-      const actual = computeReloadInterval(newPlaylist, stats);
+      const actual = computeReloadInterval(newPlaylist);
       expect(actual).to.equal(2500);
+    });
+
+    it('returns the last fragment duration when distance to live edge is less than or equal to four target durations', function () {
+      const newPlaylist = generatePlaylist([3, 4], 0, 2);
+      newPlaylist.targetduration = 5;
+      newPlaylist.updated = true;
+      const actual = computeReloadInterval(newPlaylist, 20000);
+      expect(actual).to.equal(5000);
+      const actualLow = computeReloadInterval(newPlaylist, 14000);
+      expect(actualLow).to.equal(2000);
     });
   });
 });

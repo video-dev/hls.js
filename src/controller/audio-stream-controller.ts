@@ -1,6 +1,6 @@
 import BaseStreamController, { State } from './base-stream-controller';
 import { Events } from '../events';
-import { BufferHelper } from '../utils/buffer-helper';
+import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
@@ -11,7 +11,6 @@ import { ChunkMetadata } from '../types/transmuxer';
 import { fragmentWithinToleranceTest } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { ErrorDetails } from '../errors';
-import { logger } from '../utils/logger';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { FragmentTracker } from './fragment-tracker';
 import type { TransmuxerResult } from '../types/transmuxer';
@@ -47,7 +46,7 @@ class AudioStreamController
   extends BaseStreamController
   implements NetworkComponentAPI
 {
-  private videoBuffer: any | null = null;
+  private videoBuffer: Bufferable | null = null;
   private videoTrackCC: number = -1;
   private waitingVideoCC: number = -1;
   private audioSwitch: boolean = false;
@@ -55,6 +54,7 @@ class AudioStreamController
   private waitingData: WaitingForPTSData | null = null;
   private mainDetails: LevelDetails | null = null;
   private bufferFlushed: boolean = false;
+  private cachedTrackLoadedData: TrackLoadedData | null = null;
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super(hls, fragmentTracker, '[audio-stream-controller]');
@@ -135,6 +135,7 @@ class AudioStreamController
           3
         )}`
       );
+      startPosition = lastCurrentTime;
       this.state = State.IDLE;
     } else {
       this.loadedmetadata = false;
@@ -170,6 +171,7 @@ class AudioStreamController
         // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
         if (!retryDate || now >= retryDate || this.media?.seeking) {
           this.log('RetryDate reached, switch back to IDLE state');
+          this.resetStartWhenNotLoaded(this.trackId);
           this.state = State.IDLE;
         }
         break;
@@ -196,7 +198,7 @@ class AudioStreamController
             }
           } else if (this.videoTrackCC !== this.waitingVideoCC) {
             // Drop waiting fragment if videoTrackCC has changed since waitingFragment was set and initPTS was not found
-            logger.log(
+            this.log(
               `Waiting fragment cc (${frag.cc}) cancelled because video is at cc ${this.videoTrackCC}`
             );
             this.clearWaitingFragment();
@@ -214,7 +216,7 @@ class AudioStreamController
               frag
             );
             if (waitingFragmentAtPosition < 0) {
-              logger.log(
+              this.log(
                 `Waiting fragment cc (${frag.cc}) @ ${frag.start} cancelled because another fragment at ${bufferInfo.end} is needed`
               );
               this.clearWaitingFragment();
@@ -237,6 +239,11 @@ class AudioStreamController
       this.waitingVideoCC = -1;
       this.state = State.IDLE;
     }
+  }
+
+  protected resetLoadingState() {
+    this.clearWaitingFragment();
+    super.resetLoadingState();
   }
 
   protected onTickEnd() {
@@ -283,24 +290,29 @@ class AudioStreamController
       return;
     }
 
-    if (this.bufferFlushed) {
+    const bufferable = this.mediaBuffer ? this.mediaBuffer : this.media;
+    if (this.bufferFlushed && bufferable) {
       this.bufferFlushed = false;
       this.afterBufferFlushed(
-        this.mediaBuffer ? this.mediaBuffer : this.media,
+        bufferable,
         ElementaryStreamTypes.AUDIO,
         PlaylistLevelType.AUDIO
       );
     }
 
     const bufferInfo = this.getFwdBufferInfo(
-      this.mediaBuffer ? this.mediaBuffer : this.media,
+      bufferable,
       PlaylistLevelType.AUDIO
     );
     if (bufferInfo === null) {
       return;
     }
+    const mainBufferInfo = this.getFwdBufferInfo(
+      this.videoBuffer ? this.videoBuffer : this.media,
+      PlaylistLevelType.MAIN
+    );
     const bufferLen = bufferInfo.len;
-    const maxBufLen = this.getMaxBufferLength();
+    const maxBufLen = this.getMaxBufferLength(mainBufferInfo?.len);
     const audioSwitch = this.audioSwitch;
 
     // if buffer length is less than maxBufLen try to load a new fragment
@@ -318,7 +330,7 @@ class AudioStreamController
     const start = fragments[0].start;
     let targetBufferTime = bufferInfo.end;
 
-    if (audioSwitch) {
+    if (audioSwitch && media) {
       const pos = this.getLoadPosition();
       targetBufferTime = pos;
       // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
@@ -333,29 +345,33 @@ class AudioStreamController
       }
     }
 
+    // buffer audio up to one target duration ahead of main buffer
+    if (
+      mainBufferInfo &&
+      targetBufferTime > mainBufferInfo.end + trackDetails.targetduration
+    ) {
+      return;
+    }
+    // wait for main buffer after buffing some audio
+    if ((!mainBufferInfo || !mainBufferInfo.len) && bufferInfo.len) {
+      return;
+    }
+
     const frag = this.getNextFragment(targetBufferTime, trackDetails);
     if (!frag) {
       this.bufferFlushed = true;
       return;
     }
 
-    if (frag.decryptdata?.keyFormat === 'identity' && !frag.decryptdata?.key) {
-      this.loadKey(frag, trackDetails);
-    } else {
-      this.loadFragment(frag, trackDetails, targetBufferTime);
-    }
+    this.loadFragment(frag, trackDetails, targetBufferTime);
   }
 
-  protected getMaxBufferLength(): number {
+  protected getMaxBufferLength(mainBufferLength?: number): number {
     const maxConfigBuffer = super.getMaxBufferLength();
-    const mainBufferInfo = this.getFwdBufferInfo(
-      this.videoBuffer ? this.videoBuffer : this.media,
-      PlaylistLevelType.MAIN
-    );
-    if (mainBufferInfo === null) {
+    if (!mainBufferLength) {
       return maxConfigBuffer;
     }
-    return Math.max(maxConfigBuffer, mainBufferInfo.len);
+    return Math.max(maxConfigBuffer, mainBufferLength);
   }
 
   onMediaDetaching() {
@@ -380,8 +396,8 @@ class AudioStreamController
     this.trackId = data.id;
     const { fragCurrent } = this;
 
-    if (fragCurrent?.loader) {
-      fragCurrent.loader.abort();
+    if (fragCurrent) {
+      fragCurrent.abortRequests();
     }
     this.fragCurrent = null;
     this.clearWaitingFragment();
@@ -413,9 +429,17 @@ class AudioStreamController
 
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     this.mainDetails = data.details;
+    if (this.cachedTrackLoadedData !== null) {
+      this.hls.trigger(Events.AUDIO_TRACK_LOADED, this.cachedTrackLoadedData);
+      this.cachedTrackLoadedData = null;
+    }
   }
 
   onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData) {
+    if (this.mainDetails == null) {
+      this.cachedTrackLoadedData = data;
+      return;
+    }
     const { levels } = this;
     const { details: newDetails, id: trackId } = data;
     if (!levels) {
@@ -529,7 +553,7 @@ class AudioStreamController
         initPTS
       );
     } else {
-      logger.log(
+      this.log(
         `Unknown video PTS for cc ${frag.cc}, waiting for video PTS before demuxing audio frag ${frag.sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`
       );
       const { cache } = (this.waitingData = this.waitingData || {
@@ -561,10 +585,10 @@ class AudioStreamController
   onBufferCreated(event: Events.BUFFER_CREATED, data: BufferCreatedData) {
     const audioTrack = data.tracks.audio;
     if (audioTrack) {
-      this.mediaBuffer = audioTrack.buffer;
+      this.mediaBuffer = audioTrack.buffer || null;
     }
     if (data.tracks.video) {
-      this.videoBuffer = data.tracks.video.buffer;
+      this.videoBuffer = data.tracks.video.buffer || null;
     }
   }
 
@@ -668,15 +692,19 @@ class AudioStreamController
       this.warn(
         `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
       );
-      this.resetLiveStartWhenNotLoaded(chunkMeta.level);
+      this.resetStartWhenNotLoaded(chunkMeta.level);
       return;
     }
-    const { frag, part } = context;
+    const {
+      frag,
+      part,
+      level: { details },
+    } = context;
     const { audio, text, id3, initSegment } = remuxResult;
 
     // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
     // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
-    if (this.fragContextChanged(frag)) {
+    if (this.fragContextChanged(frag) || !details) {
       return;
     }
 
@@ -717,8 +745,9 @@ class AudioStreamController
     if (id3?.samples?.length) {
       const emittedID3: FragParsingMetadataData = Object.assign(
         {
-          frag,
           id,
+          frag,
+          details,
         },
         id3
       );
@@ -727,8 +756,9 @@ class AudioStreamController
     if (text) {
       const emittedText: FragParsingUserdataData = Object.assign(
         {
-          frag,
           id,
+          frag,
+          details,
         },
         text
       );
@@ -793,7 +823,7 @@ class AudioStreamController
       fragState === FragmentState.PARTIAL
     ) {
       if (frag.sn === 'initSegment') {
-        this._loadInitSegment(frag);
+        this._loadInitSegment(frag, trackDetails);
       } else if (trackDetails.live && !Number.isFinite(this.initPTS[frag.cc])) {
         this.log(
           `Waiting for video PTS in continuity counter ${frag.cc} of live stream before loading audio fragment ${frag.sn} of level ${this.trackId}`

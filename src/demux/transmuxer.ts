@@ -8,8 +8,6 @@ import TSDemuxer, { TypeSupported } from '../demux/tsdemuxer';
 import MP3Demuxer from '../demux/mp3demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
-import ChunkCache from './chunk-cache';
-import { appendUint8Array } from '../utils/mp4-tools';
 import { logger } from '../utils/logger';
 import type { Demuxer, DemuxerResult, KeyData } from '../types/demuxer';
 import type { Remuxer } from '../types/remuxer';
@@ -40,11 +38,6 @@ const muxConfig: MuxConfig[] = [
   { demux: MP3Demuxer, remux: MP4Remuxer },
 ];
 
-let minProbeByteLength = 1024;
-muxConfig.forEach(({ demux }) => {
-  minProbeByteLength = Math.max(minProbeByteLength, demux.minProbeByteLength);
-});
-
 export default class Transmuxer {
   private observer: HlsEventEmitter;
   private typeSupported: TypeSupported;
@@ -58,7 +51,6 @@ export default class Transmuxer {
   private decryptionPromise: Promise<TransmuxerResult> | null = null;
   private transmuxConfig!: TransmuxConfig;
   private currentTransmuxState!: TransmuxState;
-  private cache: ChunkCache = new ChunkCache();
 
   constructor(
     observer: HlsEventEmitter,
@@ -91,44 +83,9 @@ export default class Transmuxer {
     stats.executeStart = now();
 
     let uintData: Uint8Array = new Uint8Array(data);
-    const { cache, config, currentTransmuxState, transmuxConfig } = this;
+    const { currentTransmuxState, transmuxConfig } = this;
     if (state) {
       this.currentTransmuxState = state;
-    }
-
-    const keyData = getEncryptionType(uintData, decryptdata);
-    if (keyData && keyData.method === 'AES-128') {
-      const decrypter = this.getDecrypter();
-      // Software decryption is synchronous; webCrypto is not
-      if (config.enableSoftwareAES) {
-        // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
-        // data is handled in the flush() call
-        const decryptedData = decrypter.softwareDecrypt(
-          uintData,
-          keyData.key.buffer,
-          keyData.iv.buffer
-        );
-        if (!decryptedData) {
-          stats.executeEnd = now();
-          return emptyResult(chunkMeta);
-        }
-        uintData = new Uint8Array(decryptedData);
-      } else {
-        this.decryptionPromise = decrypter
-          .webCryptoDecrypt(uintData, keyData.key.buffer, keyData.iv.buffer)
-          .then((decryptedData): TransmuxerResult => {
-            // Calling push here is important; if flush() is called while this is still resolving, this ensures that
-            // the decrypted data has been transmuxed
-            const result = this.push(
-              decryptedData,
-              null,
-              chunkMeta
-            ) as TransmuxerResult;
-            this.decryptionPromise = null;
-            return result;
-          });
-        return this.decryptionPromise!;
-      }
     }
 
     const {
@@ -160,11 +117,42 @@ export default class Transmuxer {
       this.resetContiguity();
     }
 
-    if (this.needsProbing(uintData, discontinuity, trackSwitch)) {
-      if (cache.dataLength) {
-        const cachedData = cache.flush();
-        uintData = appendUint8Array(cachedData, uintData);
+    const keyData = getEncryptionType(uintData, decryptdata);
+    if (keyData && keyData.method === 'AES-128') {
+      const decrypter = this.getDecrypter();
+      // Software decryption is synchronous; webCrypto is not
+      if (decrypter.isSync()) {
+        // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
+        // data is handled in the flush() call
+        const decryptedData = decrypter.softwareDecrypt(
+          uintData,
+          keyData.key.buffer,
+          keyData.iv.buffer
+        );
+        if (!decryptedData) {
+          stats.executeEnd = now();
+          return emptyResult(chunkMeta);
+        }
+        uintData = new Uint8Array(decryptedData);
+      } else {
+        this.decryptionPromise = decrypter
+          .webCryptoDecrypt(uintData, keyData.key.buffer, keyData.iv.buffer)
+          .then((decryptedData): TransmuxerResult => {
+            // Calling push here is important; if flush() is called while this is still resolving, this ensures that
+            // the decrypted data has been transmuxed
+            const result = this.push(
+              decryptedData,
+              null,
+              chunkMeta
+            ) as TransmuxerResult;
+            this.decryptionPromise = null;
+            return result;
+          });
+        return this.decryptionPromise!;
       }
+    }
+
+    if (this.needsProbing(uintData, discontinuity, trackSwitch)) {
       this.configureTransmuxer(uintData, transmuxConfig);
     }
 
@@ -192,7 +180,7 @@ export default class Transmuxer {
     const stats = chunkMeta.transmuxing;
     stats.executeStart = now();
 
-    const { decrypter, cache, currentTransmuxState, decryptionPromise } = this;
+    const { decrypter, currentTransmuxState, decryptionPromise } = this;
 
     if (decryptionPromise) {
       // Upon resolution, the decryption promise calls push() and returns its TransmuxerResult up the stack. Therefore
@@ -217,19 +205,15 @@ export default class Transmuxer {
       }
     }
 
-    const bytesSeen = cache.dataLength;
-    cache.reset();
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
-      // If probing failed, and each demuxer saw enough bytes to be able to probe, then Hls.js has been given content its not able to handle
-      if (bytesSeen >= minProbeByteLength) {
-        this.observer.emit(Events.ERROR, Events.ERROR, {
-          type: ErrorTypes.MEDIA_ERROR,
-          details: ErrorDetails.FRAG_PARSING_ERROR,
-          fatal: true,
-          reason: 'no demux matching with content found',
-        });
-      }
+      // If probing failed, then Hls.js has been given content its not able to handle
+      this.observer.emit(Events.ERROR, Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.FRAG_PARSING_ERROR,
+        fatal: true,
+        reason: 'no demux matching with content found',
+      });
       stats.executeEnd = now();
       return [emptyResult(chunkMeta)];
     }
@@ -461,7 +445,7 @@ export default class Transmuxer {
   private getDecrypter(): Decrypter {
     let decrypter = this.decrypter;
     if (!decrypter) {
-      decrypter = this.decrypter = new Decrypter(this.observer, this.config);
+      decrypter = this.decrypter = new Decrypter(this.config);
     }
     return decrypter;
   }

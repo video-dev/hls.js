@@ -1,6 +1,5 @@
 import * as URLToolkit from 'url-toolkit';
 import PlaylistLoader from './loader/playlist-loader';
-import KeyLoader from './loader/key-loader';
 import ID3TrackController from './controller/id3-track-controller';
 import LatencyController from './controller/latency-controller';
 import LevelController from './controller/level-controller';
@@ -25,6 +24,7 @@ import type { MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
 import type { Level } from './types/level';
 import type { Fragment } from './loader/fragment';
+import { BufferInfo } from './utils/buffer-helper';
 
 /**
  * @module Hls
@@ -100,7 +100,7 @@ export default class Hls implements HlsEventEmitter {
   constructor(userConfig: Partial<HlsConfig> = {}) {
     const config = (this.config = mergeConfig(Hls.DefaultConfig, userConfig));
     this.userConfig = userConfig;
-    enableLogs(config.debug);
+    enableLogs(config.debug, 'Hls instance');
 
     this._autoLevelCapping = -1;
 
@@ -123,7 +123,6 @@ export default class Hls implements HlsEventEmitter {
 
     const fpsController = new ConfigFpsController(this);
     const playListLoader = new PlaylistLoader(this);
-    const keyLoader = new KeyLoader(this);
     const id3TrackController = new ID3TrackController(this);
 
     // network controllers
@@ -140,12 +139,14 @@ export default class Hls implements HlsEventEmitter {
     // fpsController uses streamController to switch when frames are being dropped
     fpsController.setStreamController(streamController);
 
-    const networkControllers = [levelController, streamController];
+    const networkControllers = [
+      playListLoader,
+      levelController,
+      streamController,
+    ];
 
     this.networkControllers = networkControllers;
     const coreComponents = [
-      playListLoader,
-      keyLoader,
       abrController,
       bufferController,
       capLevelController,
@@ -622,7 +623,7 @@ export default class Hls implements HlsEventEmitter {
 
     const len = levels.length;
     for (let i = 0; i < len; i++) {
-      if (levels[i].maxBitrate > minAutoBitrate) {
+      if (levels[i].maxBitrate >= minAutoBitrate) {
         return i;
       }
     }
@@ -669,6 +670,18 @@ export default class Hls implements HlsEventEmitter {
    */
   set nextAutoLevel(nextLevel: number) {
     this.abrController.nextAutoLevel = Math.max(this.minAutoLevel, nextLevel);
+  }
+
+  /**
+   * get the datetime value relative to media.currentTime for the active level Program Date Time if present
+   * @type {Date}
+   */
+  public get playingDate(): Date | null {
+    return this.streamController.currentProgramDateTime;
+  }
+
+  public get mainForwardBufferInfo(): BufferInfo | null {
+    return this.streamController.getMainFwdBufferInfo();
   }
 
   /**
@@ -851,16 +864,22 @@ export type {
   PlaylistLoaderConstructor,
   StreamControllerConfig,
   LatencyControllerConfig,
+  MetadataControllerConfig,
   TimelineControllerConfig,
   TSDemuxerConfig,
 } from './config';
 export type { CuesInterface } from './utils/cues';
 export type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
+export type { DateRange } from './loader/date-range';
 export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
 export type { LevelDetails } from './loader/level-details';
 export type { SourceBufferName } from './types/buffer';
-export type { MetadataSample, UserdataSample } from './types/demuxer';
+export type {
+  MetadataSample,
+  MetadataSchema,
+  UserdataSample,
+} from './types/demuxer';
 export type {
   LevelParsed,
   LevelAttributes,
@@ -874,6 +893,7 @@ export type {
   PlaylistContextType,
   PlaylistLoaderContext,
   FragmentLoaderContext,
+  KeyLoaderContext,
   Loader,
   LoaderStats,
   LoaderContext,

@@ -163,14 +163,19 @@ class XhrLoader implements Loader<LoaderContext> {
         xhr.onprogress = null;
         const status = xhr.status;
         // http status between 200 to 299 are all successful
-        if (status >= 200 && status < 300) {
+        const isArrayBuffer = xhr.responseType === 'arraybuffer';
+        if (
+          status >= 200 &&
+          status < 300 &&
+          ((isArrayBuffer && xhr.response) || xhr.responseText !== null)
+        ) {
           stats.loading.end = Math.max(
             self.performance.now(),
             stats.loading.first
           );
           let data;
           let len: number;
-          if (context.responseType === 'arraybuffer') {
+          if (isArrayBuffer) {
             data = xhr.response;
             len = data.byteLength;
           } else {

@@ -1,5 +1,5 @@
 import * as ID3 from '../demux/id3';
-import type {
+import {
   DemuxerResult,
   Demuxer,
   DemuxedAudioTrack,
@@ -8,6 +8,7 @@ import type {
   DemuxedVideoTrack,
   DemuxedUserdataTrack,
   KeyData,
+  MetadataSchema,
 } from '../types/demuxer';
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
@@ -18,7 +19,9 @@ class BaseAudioDemuxer implements Demuxer {
   protected _id3Track!: DemuxedMetadataTrack;
   protected frameIndex: number = 0;
   protected cachedData: Uint8Array | null = null;
+  protected basePTS: number | null = null;
   protected initPTS: number | null = null;
+  protected lastPTS: number | null = null;
 
   resetInitSegment(
     initSegment: Uint8Array | undefined,
@@ -37,9 +40,16 @@ class BaseAudioDemuxer implements Demuxer {
     };
   }
 
-  resetTimeStamp() {}
+  resetTimeStamp(deaultTimestamp) {
+    this.initPTS = deaultTimestamp;
+    this.resetContiguity();
+  }
 
-  resetContiguity(): void {}
+  resetContiguity(): void {
+    this.basePTS = null;
+    this.lastPTS = null;
+    this.frameIndex = 0;
+  }
 
   canParse(data: Uint8Array, offset: number): boolean {
     return false;
@@ -61,33 +71,40 @@ class BaseAudioDemuxer implements Demuxer {
     let id3Data: Uint8Array | undefined = ID3.getID3Data(data, 0);
     let offset = id3Data ? id3Data.length : 0;
     let lastDataIndex;
-    let pts;
     const track = this._audioTrack;
     const id3Track = this._id3Track;
     const timestamp = id3Data ? ID3.getTimeStamp(id3Data) : undefined;
     const length = data.length;
 
-    if (this.frameIndex === 0 || this.initPTS === null) {
-      this.initPTS = initPTSFn(timestamp, timeOffset);
+    if (
+      this.basePTS === null ||
+      (this.frameIndex === 0 && Number.isFinite(timestamp))
+    ) {
+      this.basePTS = initPTSFn(timestamp, timeOffset, this.initPTS);
+      this.lastPTS = this.basePTS;
+    }
+
+    if (this.lastPTS === null) {
+      this.lastPTS = this.basePTS;
     }
 
     // more expressive than alternative: id3Data?.length
     if (id3Data && id3Data.length > 0) {
       id3Track.samples.push({
-        pts: this.initPTS,
-        dts: this.initPTS,
+        pts: this.lastPTS,
+        dts: this.lastPTS,
         data: id3Data,
+        type: MetadataSchema.audioId3,
+        duration: Number.POSITIVE_INFINITY,
       });
     }
-
-    pts = this.initPTS;
 
     while (offset < length) {
       if (this.canParse(data, offset)) {
         const frame = this.appendFrame(track, data, offset);
         if (frame) {
           this.frameIndex++;
-          pts = frame.sample.pts;
+          this.lastPTS = frame.sample.pts;
           offset += frame.length;
           lastDataIndex = offset;
         } else {
@@ -96,7 +113,13 @@ class BaseAudioDemuxer implements Demuxer {
       } else if (ID3.canParse(data, offset)) {
         // after a ID3.canParse, a call to ID3.getID3Data *should* always returns some data
         id3Data = ID3.getID3Data(data, offset)!;
-        id3Track.samples.push({ pts: pts, dts: pts, data: id3Data });
+        id3Track.samples.push({
+          pts: this.lastPTS,
+          dts: this.lastPTS,
+          data: id3Data,
+          type: MetadataSchema.audioId3,
+          duration: Number.POSITIVE_INFINITY,
+        });
         offset += id3Data.length;
         lastDataIndex = offset;
       } else {
@@ -138,8 +161,6 @@ class BaseAudioDemuxer implements Demuxer {
       this.demux(cachedData, 0);
     }
 
-    this.frameIndex = 0;
-
     return {
       audioTrack: this._audioTrack,
       videoTrack: dummyTrack() as DemuxedVideoTrack,
@@ -159,10 +180,12 @@ class BaseAudioDemuxer implements Demuxer {
  */
 export const initPTSFn = (
   timestamp: number | undefined,
-  timeOffset: number
+  timeOffset: number,
+  initPTS: number | null
 ): number => {
-  return Number.isFinite(timestamp as number)
-    ? timestamp! * 90
-    : timeOffset * 90000;
+  if (Number.isFinite(timestamp as number)) {
+    return timestamp! * 90;
+  }
+  return timeOffset * 90000 + (initPTS || 0);
 };
 export default BaseAudioDemuxer;

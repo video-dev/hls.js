@@ -852,7 +852,7 @@ class MP4 {
 
   static stsd(track) {
     if (track.type === 'audio') {
-      if (!track.isAAC && track.codec === 'mp3') {
+      if (track.segmentCodec === 'mp3' && track.codec === 'mp3') {
         return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp3(track));
       }
 
@@ -1084,7 +1084,7 @@ class MP4 {
     offset += 8 + arraylen;
     array.set(
       [
-        0x00, // version 0
+        track.type === 'video' ? 0x01 : 0x00, // version 1 for video with signed-int sample_composition_time_offset
         0x00,
         0x0f,
         0x01, // flags

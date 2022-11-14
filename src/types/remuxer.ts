@@ -43,6 +43,7 @@ export interface RemuxedTrack {
   hasVideo: boolean;
   independent?: boolean;
   firstKeyFrame?: number;
+  firstKeyFramePTS?: number;
   nb: number;
   transferredData1?: ArrayBuffer;
   transferredData2?: ArrayBuffer;

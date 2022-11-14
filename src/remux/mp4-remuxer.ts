@@ -33,7 +33,6 @@ const MPEG_AUDIO_SAMPLE_PER_FRAME = 1152;
 
 let chromeVersion: number | null = null;
 let safariWebkitVersion: number | null = null;
-let requiresPositiveDts: boolean = false;
 
 export default class MP4Remuxer implements Remuxer {
   private observer: HlsEventEmitter;
@@ -44,6 +43,7 @@ export default class MP4Remuxer implements Remuxer {
   private _initDTS!: number;
   private nextAvcDts: number | null = null;
   private nextAudioPts: number | null = null;
+  private videoSampleDuration: number | null = null;
   private isAudioContiguous: boolean = false;
   private isVideoContiguous: boolean = false;
 
@@ -67,9 +67,6 @@ export default class MP4Remuxer implements Remuxer {
       const result = navigator.userAgent.match(/Safari\/(\d+)/i);
       safariWebkitVersion = result ? parseInt(result[1]) : 0;
     }
-    requiresPositiveDts =
-      (!!chromeVersion && chromeVersion < 75) ||
-      (!!safariWebkitVersion && safariWebkitVersion < 600);
   }
 
   destroy() {}
@@ -138,7 +135,7 @@ export default class MP4Remuxer implements Remuxer {
     const hasVideo = videoTrack.pid > -1;
     const length = videoTrack.samples.length;
     const enoughAudioSamples = audioTrack.samples.length > 0;
-    const enoughVideoSamples = length > 1;
+    const enoughVideoSamples = (flush && length > 0) || length > 1;
     const canRemuxAvc =
       ((!hasAudio || enoughAudioSamples) &&
         (!hasVideo || enoughVideoSamples)) ||
@@ -152,6 +149,7 @@ export default class MP4Remuxer implements Remuxer {
 
       const isVideoContiguous = this.isVideoContiguous;
       let firstKeyFrameIndex = -1;
+      let firstKeyFramePTS;
 
       if (enoughVideoSamples) {
         firstKeyFrameIndex = findKeyframeIndex(videoTrack.samples);
@@ -166,7 +164,8 @@ export default class MP4Remuxer implements Remuxer {
             videoTrack.dropped += firstKeyFrameIndex;
             videoTimeOffset +=
               (videoTrack.samples[0].pts - startPTS) /
-              (videoTrack.timescale || 90000);
+              videoTrack.inputTimeScale;
+            firstKeyFramePTS = videoTimeOffset;
           } else if (firstKeyFrameIndex === -1) {
             logger.warn(
               `[mp4-remuxer]: No keyframe found out of ${length} video samples`
@@ -237,6 +236,7 @@ export default class MP4Remuxer implements Remuxer {
         if (video) {
           video.firstKeyFrame = firstKeyFrameIndex;
           video.independent = firstKeyFrameIndex !== -1;
+          video.firstKeyFramePTS = firstKeyFramePTS;
         }
       }
     }
@@ -296,22 +296,24 @@ export default class MP4Remuxer implements Remuxer {
       // using audio sampling rate here helps having an integer MP4 frame duration
       // this avoids potential rounding issue and AV sync issue
       audioTrack.timescale = audioTrack.samplerate;
-      if (!audioTrack.isAAC) {
-        if (typeSupported.mpeg) {
-          // Chrome and Safari
-          container = 'audio/mpeg';
-          audioTrack.codec = '';
-        } else if (typeSupported.mp3) {
-          // Firefox
-          audioTrack.codec = 'mp3';
-        }
+      switch (audioTrack.segmentCodec) {
+        case 'mp3':
+          if (typeSupported.mpeg) {
+            // Chrome and Safari
+            container = 'audio/mpeg';
+            audioTrack.codec = '';
+          } else if (typeSupported.mp3) {
+            // Firefox
+            audioTrack.codec = 'mp3';
+          }
+          break;
       }
       tracks.audio = {
         id: 'audio',
         container: container,
         codec: audioTrack.codec,
         initSegment:
-          !audioTrack.isAAC && typeSupported.mpeg
+          audioTrack.segmentCodec === 'mp3' && typeSupported.mpeg
             ? new Uint8Array(0)
             : MP4.initSegment([audioTrack]),
         metadata: {
@@ -380,12 +382,11 @@ export default class MP4Remuxer implements Remuxer {
     const initPTS: number = this._initPTS;
     let nextAvcDts = this.nextAvcDts;
     let offset = 8;
-    let mp4SampleDuration!: number;
+    let mp4SampleDuration = this.videoSampleDuration;
     let firstDTS;
     let lastDTS;
     let minPTS: number = Number.POSITIVE_INFINITY;
     let maxPTS: number = Number.NEGATIVE_INFINITY;
-    let ptsDtsShift = 0;
     let sortSamples = false;
 
     // if parsed fragment is contiguous with last one, let's use last DTS value as reference
@@ -404,13 +405,6 @@ export default class MP4Remuxer implements Remuxer {
       const sample = inputSamples[i];
       sample.pts = normalizePts(sample.pts - initPTS, nextAvcDts);
       sample.dts = normalizePts(sample.dts - initPTS, nextAvcDts);
-      if (sample.dts > sample.pts) {
-        const PTS_DTS_SHIFT_TOLERANCE_90KHZ = 90000 * 0.2;
-        ptsDtsShift = Math.max(
-          Math.min(ptsDtsShift, sample.pts - sample.dts),
-          -1 * PTS_DTS_SHIFT_TOLERANCE_90KHZ
-        );
-      }
       if (sample.dts < inputSamples[i > 0 ? i - 1 : i].dts) {
         sortSamples = true;
       }
@@ -429,47 +423,12 @@ export default class MP4Remuxer implements Remuxer {
     firstDTS = inputSamples[0].dts;
     lastDTS = inputSamples[inputSamples.length - 1].dts;
 
-    // on Safari let's signal the same sample duration for all samples
-    // sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
+    // Sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
     // set this constant duration as being the avg delta between consecutive DTS.
-    const averageSampleDuration = Math.round(
-      (lastDTS - firstDTS) / (nbSamples - 1)
-    );
-
-    // handle broken streams with PTS < DTS, tolerance up 0.2 seconds
-    if (ptsDtsShift < 0) {
-      if (ptsDtsShift < averageSampleDuration * -2) {
-        // Fix for "CNN special report, with CC" in test-streams (including Safari browser)
-        // With large PTS < DTS errors such as this, we want to correct CTS while maintaining increasing DTS values
-        logger.warn(
-          `PTS < DTS detected in video samples, offsetting DTS from PTS by ${toMsFromMpegTsClock(
-            -averageSampleDuration,
-            true
-          )} ms`
-        );
-        let lastDts = ptsDtsShift;
-        for (let i = 0; i < nbSamples; i++) {
-          inputSamples[i].dts = lastDts = Math.max(
-            lastDts,
-            inputSamples[i].pts - averageSampleDuration
-          );
-          inputSamples[i].pts = Math.max(lastDts, inputSamples[i].pts);
-        }
-      } else {
-        // Fix for "Custom IV with bad PTS DTS" in test-streams
-        // With smaller PTS < DTS errors we can simply move all DTS back. This increases CTS without causing buffer gaps or decode errors in Safari
-        logger.warn(
-          `PTS < DTS detected in video samples, shifting DTS by ${toMsFromMpegTsClock(
-            ptsDtsShift,
-            true
-          )} ms to overcome this issue`
-        );
-        for (let i = 0; i < nbSamples; i++) {
-          inputSamples[i].dts = inputSamples[i].dts + ptsDtsShift;
-        }
-      }
-      firstDTS = inputSamples[0].dts;
-    }
+    const inputDuration = lastDTS - firstDTS;
+    const averageSampleDuration = inputDuration
+      ? Math.round(inputDuration / (nbSamples - 1))
+      : mp4SampleDuration || track.inputTimeScale / 30;
 
     // if fragment are contiguous, detect hole/overlapping between fragments
     if (contiguous) {
@@ -493,25 +452,26 @@ export default class MP4Remuxer implements Remuxer {
             )} ms (${delta}dts) overlapping between fragments detected`
           );
         }
-        firstDTS = nextAvcDts;
-        const firstPTS = inputSamples[0].pts - delta;
-        inputSamples[0].dts = firstDTS;
-        inputSamples[0].pts = firstPTS;
-        logger.log(
-          `Video: First PTS/DTS adjusted: ${toMsFromMpegTsClock(
-            firstPTS,
-            true
-          )}/${toMsFromMpegTsClock(
-            firstDTS,
-            true
-          )}, delta: ${toMsFromMpegTsClock(delta, true)} ms`
-        );
+        if (!foundOverlap || nextAvcDts > inputSamples[0].pts) {
+          firstDTS = nextAvcDts;
+          const firstPTS = inputSamples[0].pts - delta;
+          inputSamples[0].dts = firstDTS;
+          inputSamples[0].pts = firstPTS;
+          logger.log(
+            `Video: First PTS/DTS adjusted: ${toMsFromMpegTsClock(
+              firstPTS,
+              true
+            )}/${toMsFromMpegTsClock(
+              firstDTS,
+              true
+            )}, delta: ${toMsFromMpegTsClock(delta, true)} ms`
+          );
+        }
       }
     }
 
-    if (requiresPositiveDts) {
-      firstDTS = Math.max(0, firstDTS);
-    }
+    firstDTS = Math.max(0, firstDTS);
+
     let nbNalu = 0;
     let naluLen = 0;
     for (let i = 0; i < nbSamples; i++) {
@@ -528,11 +488,9 @@ export default class MP4Remuxer implements Remuxer {
       nbNalu += nbUnits;
       sample.length = sampleLen;
 
-      // normalize PTS/DTS
       // ensure sample monotonic DTS
       sample.dts = Math.max(sample.dts, firstDTS);
-      // ensure that computed value is greater or equal than sample DTS
-      sample.pts = Math.max(sample.pts, sample.dts, 0);
+
       minPTS = Math.min(sample.pts, minPTS);
       maxPTS = Math.max(sample.pts, maxPTS);
     }
@@ -558,6 +516,11 @@ export default class MP4Remuxer implements Remuxer {
     view.setUint32(0, mdatSize);
     mdat.set(MP4.types.mdat, 4);
 
+    let stretchedLastFrame = false;
+    let minDtsDelta = Number.POSITIVE_INFINITY;
+    let minPtsDelta = Number.POSITIVE_INFINITY;
+    let maxDtsDelta = Number.NEGATIVE_INFINITY;
+    let maxPtsDelta = Number.NEGATIVE_INFINITY;
     for (let i = 0; i < nbSamples; i++) {
       const avcSample = inputSamples[i];
       const avcSampleUnits = avcSample.units;
@@ -575,12 +538,20 @@ export default class MP4Remuxer implements Remuxer {
       }
 
       // expected sample duration is the Decoding Timestamp diff of consecutive samples
+      let ptsDelta;
       if (i < nbSamples - 1) {
         mp4SampleDuration = inputSamples[i + 1].dts - avcSample.dts;
+        ptsDelta = inputSamples[i + 1].pts - avcSample.pts;
       } else {
         const config = this.config;
         const lastFrameDuration =
-          avcSample.dts - inputSamples[i > 0 ? i - 1 : i].dts;
+          i > 0
+            ? avcSample.dts - inputSamples[i - 1].dts
+            : averageSampleDuration;
+        ptsDelta =
+          i > 0
+            ? avcSample.pts - inputSamples[i - 1].pts
+            : averageSampleDuration;
         if (config.stretchShortVideoTrack && this.nextAudioPts !== null) {
           // In some cases, a segment's audio track duration may exceed the video track duration.
           // Since we've already remuxed audio, and we know how long the audio track is, we look to
@@ -598,6 +569,8 @@ export default class MP4Remuxer implements Remuxer {
             mp4SampleDuration = deltaToFrameEnd - lastFrameDuration;
             if (mp4SampleDuration < 0) {
               mp4SampleDuration = lastFrameDuration;
+            } else {
+              stretchedLastFrame = true;
             }
             logger.log(
               `[mp4-remuxer]: It is approximately ${
@@ -614,6 +587,10 @@ export default class MP4Remuxer implements Remuxer {
         }
       }
       const compositionTimeOffset = Math.round(avcSample.pts - avcSample.dts);
+      minDtsDelta = Math.min(minDtsDelta, mp4SampleDuration);
+      maxDtsDelta = Math.max(maxDtsDelta, mp4SampleDuration);
+      minPtsDelta = Math.min(minPtsDelta, ptsDelta);
+      maxPtsDelta = Math.max(maxPtsDelta, ptsDelta);
 
       outputSamples.push(
         new Mp4Sample(
@@ -625,20 +602,56 @@ export default class MP4Remuxer implements Remuxer {
       );
     }
 
-    if (outputSamples.length && chromeVersion && chromeVersion < 70) {
-      // Chrome workaround, mark first sample as being a Random Access Point (keyframe) to avoid sourcebuffer append issue
-      // https://code.google.com/p/chromium/issues/detail?id=229412
-      const flags = outputSamples[0].flags;
-      flags.dependsOn = 2;
-      flags.isNonSync = 0;
+    if (outputSamples.length) {
+      if (chromeVersion) {
+        if (chromeVersion < 70) {
+          // Chrome workaround, mark first sample as being a Random Access Point (keyframe) to avoid sourcebuffer append issue
+          // https://code.google.com/p/chromium/issues/detail?id=229412
+          const flags = outputSamples[0].flags;
+          flags.dependsOn = 2;
+          flags.isNonSync = 0;
+        }
+      } else if (safariWebkitVersion) {
+        // Fix for "CNN special report, with CC" in test-streams (Safari browser only)
+        // Ignore DTS when frame durations are irregular. Safari MSE does not handle this leading to gaps.
+        if (
+          maxPtsDelta - minPtsDelta < maxDtsDelta - minDtsDelta &&
+          averageSampleDuration / maxDtsDelta < 0.025 &&
+          outputSamples[0].cts === 0
+        ) {
+          logger.warn(
+            'Found irregular gaps in sample duration. Using PTS instead of DTS to determine MP4 sample duration.'
+          );
+          let dts = firstDTS;
+          for (let i = 0, len = outputSamples.length; i < len; i++) {
+            const nextDts = dts + outputSamples[i].duration;
+            const pts = dts + outputSamples[i].cts;
+            if (i < len - 1) {
+              const nextPts = nextDts + outputSamples[i + 1].cts;
+              outputSamples[i].duration = nextPts - pts;
+            } else {
+              outputSamples[i].duration = i
+                ? outputSamples[i - 1].duration
+                : averageSampleDuration;
+            }
+            outputSamples[i].cts = 0;
+            dts = nextDts;
+          }
+        }
+      }
     }
 
     console.assert(
-      mp4SampleDuration !== undefined,
+      mp4SampleDuration !== null,
       'mp4SampleDuration must be computed'
     );
     // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
+    mp4SampleDuration =
+      stretchedLastFrame || !mp4SampleDuration
+        ? averageSampleDuration
+        : mp4SampleDuration;
     this.nextAvcDts = nextAvcDts = lastDTS + mp4SampleDuration;
+    this.videoSampleDuration = mp4SampleDuration;
     this.isVideoContiguous = true;
     const moof = MP4.moof(
       track.sequenceNumber++,
@@ -682,13 +695,16 @@ export default class MP4Remuxer implements Remuxer {
       ? track.samplerate
       : inputTimeScale;
     const scaleFactor: number = inputTimeScale / mp4timeScale;
-    const mp4SampleDuration: number = track.isAAC
-      ? AAC_SAMPLES_PER_FRAME
-      : MPEG_AUDIO_SAMPLE_PER_FRAME;
+    const mp4SampleDuration: number =
+      track.segmentCodec === 'aac'
+        ? AAC_SAMPLES_PER_FRAME
+        : MPEG_AUDIO_SAMPLE_PER_FRAME;
     const inputSampleDuration: number = mp4SampleDuration * scaleFactor;
     const initPTS: number = this._initPTS;
-    const rawMPEG: boolean = !track.isAAC && this.typeSupported.mpeg;
+    const rawMPEG: boolean =
+      track.segmentCodec === 'mp3' && this.typeSupported.mpeg;
     const outputSamples: Array<Mp4Sample> = [];
+    const alignedWithVideo = videoTimeOffset !== undefined;
 
     let inputSamples: Array<AudioSample> = track.samples;
     let offset: number = rawMPEG ? 0 : 8;
@@ -736,7 +752,7 @@ export default class MP4Remuxer implements Remuxer {
       if (videoTimeOffset === 0) {
         // Set the start to 0 to match video so that start gaps larger than inputSampleDuration are filled with silence
         nextAudioPts = 0;
-      } else if (accurateTimeOffset) {
+      } else if (accurateTimeOffset && !alignedWithVideo) {
         // When not seeking, not live, and LevelDetails.PTSKnown, use fragment start as predicted next audio PTS
         nextAudioPts = Math.max(0, timeOffsetMpegTS);
       } else {
@@ -751,8 +767,7 @@ export default class MP4Remuxer implements Remuxer {
     // When possible, we inject a silent frame; when that's not possible, we duplicate the last
     // frame.
 
-    if (track.isAAC) {
-      const alignedWithVideo = videoTimeOffset !== undefined;
+    if (track.segmentCodec === 'aac') {
       const maxAudioFramesDrift = this.config.maxAudioFramesDrift;
       for (let i = 0, nextPts = nextAudioPts; i < inputSamples.length; i++) {
         // First, let's see how far off this frame is from where we expect it to be
@@ -848,7 +863,7 @@ export default class MP4Remuxer implements Remuxer {
         const prevSample = outputSamples[j - 1];
         prevSample.duration = Math.round((pts - lastPTS) / scaleFactor);
       } else {
-        if (contiguous && track.isAAC) {
+        if (contiguous && track.segmentCodec === 'aac') {
           // set PTS/DTS to expected PTS/DTS
           pts = nextAudioPts;
         }
@@ -1076,7 +1091,12 @@ class Mp4Sample {
   public cts: number;
   public flags: Mp4SampleFlags;
 
-  constructor(isKeyframe: boolean, duration, size, cts) {
+  constructor(
+    isKeyframe: boolean,
+    duration: number,
+    size: number,
+    cts: number
+  ) {
     this.duration = duration;
     this.size = size;
     this.cts = cts;

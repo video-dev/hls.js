@@ -1,6 +1,6 @@
 import Transmuxer, { isPromise } from '../demux/transmuxer';
 import { Events } from '../events';
-import { enableLogs } from '../utils/logger';
+import { ILogFunction, enableLogs, logger } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
 import type { RemuxedTrack, RemuxerResult } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
@@ -15,6 +15,20 @@ export default function TransmuxerWorker(self) {
   observer.on(Events.FRAG_DECRYPTED, forwardMessage);
   observer.on(Events.ERROR, forwardMessage);
 
+  // forward logger events to main thread
+  const forwardWorkerLogs = () => {
+    for (const logFn in logger) {
+      const func: ILogFunction = (message?) => {
+        forwardMessage('workerLog', {
+          logType: logFn,
+          message,
+        });
+      };
+
+      logger[logFn] = func;
+    }
+  };
+
   self.addEventListener('message', (ev) => {
     const data = ev.data;
     switch (data.cmd) {
@@ -27,7 +41,8 @@ export default function TransmuxerWorker(self) {
           data.vendor,
           data.id
         );
-        enableLogs(config.debug);
+        enableLogs(config.debug, data.id);
+        forwardWorkerLogs();
         forwardMessage('init', null);
         break;
       }
@@ -74,9 +89,12 @@ export default function TransmuxerWorker(self) {
   });
 }
 
-function emitTransmuxComplete(self: any, transmuxResult: TransmuxerResult) {
+function emitTransmuxComplete(
+  self: any,
+  transmuxResult: TransmuxerResult
+): boolean {
   if (isEmptyResult(transmuxResult.remuxResult)) {
-    return;
+    return false;
   }
   const transferable: Array<ArrayBuffer> = [];
   const { audio, video } = transmuxResult.remuxResult;
@@ -90,6 +108,7 @@ function emitTransmuxComplete(self: any, transmuxResult: TransmuxerResult) {
     { event: 'transmuxComplete', data: transmuxResult },
     transferable
   );
+  return true;
 }
 
 // Converts data to a transferable object https://developers.google.com/web/updates/2011/12/Transferable-Objects-Lightning-Fast)
@@ -111,9 +130,14 @@ function handleFlushResult(
   results: Array<TransmuxerResult>,
   chunkMeta: ChunkMetadata
 ) {
-  results.forEach((result) => {
-    emitTransmuxComplete(self, result);
-  });
+  const parsed = results.reduce(
+    (parsed, result) => emitTransmuxComplete(self, result) || parsed,
+    false
+  );
+  if (!parsed) {
+    // Emit at least one "transmuxComplete" message even if media is not found to update stream-controller state to PARSING
+    self.postMessage({ event: 'transmuxComplete', data: results[0] });
+  }
   self.postMessage({ event: 'flush', data: chunkMeta });
 }
 

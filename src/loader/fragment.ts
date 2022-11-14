@@ -4,6 +4,7 @@ import { LevelKey } from './level-key';
 import { LoadStats } from './load-stats';
 import { AttrList } from '../utils/attr-list';
 import type {
+  KeyLoaderContext,
   FragmentLoaderContext,
   Loader,
   PlaylistLevelType,
@@ -97,7 +98,7 @@ export class Fragment extends BaseSegment {
   public programDateTime: number | null = null;
   public tagList: Array<string[]> = [];
 
-  // EXTINF has to be present for a m38 to be considered valid
+  // EXTINF has to be present for a m3u8 to be considered valid
   public duration: number = 0;
   // sn notates the sequence number for a segment, and if set to a string can be 'initSegment'
   public sn: number | 'initSegment' = 0;
@@ -109,6 +110,8 @@ export class Fragment extends BaseSegment {
   public readonly type: PlaylistLevelType;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
   public loader: Loader<FragmentLoaderContext> | null = null;
+  // A reference to the key loader. Set while the key is loading, and removed afterwards. Used to abort key loading
+  public keyLoader: Loader<KeyLoaderContext> | null = null;
   // The level/track index to which the fragment belongs
   public level: number = -1;
   // The continuity counter of the fragment
@@ -210,6 +213,11 @@ export class Fragment extends BaseSegment {
     }
 
     return false;
+  }
+
+  abortRequests(): void {
+    this.loader?.abort();
+    this.keyLoader?.abort();
   }
 
   /**

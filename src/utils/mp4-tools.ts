@@ -91,27 +91,15 @@ type SidxInfo = {
   version: number;
   referencesCount: number;
   references: any[];
-  moovEndOffset: number | null;
 };
 
-export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
-  const moovBox = findBox(initSegment, ['moov']);
-  const moov = moovBox[0];
-  const moovEndOffset = moov ? moov.length : null; // we need this in case we need to chop of garbage of the end of current data
-
-  const sidxBox = findBox(initSegment, ['sidx']);
-
-  if (!sidxBox || !sidxBox[0]) {
-    return null;
-  }
-
+export function parseSegmentIndex(sidx: Uint8Array): SidxInfo | null {
   const references: any[] = [];
-  const sidx = sidxBox[0];
 
   const version = sidx[0];
 
   // set initial offset, we skip the reference ID (not needed)
-  let index = version === 0 ? 8 : 16;
+  let index = 8;
 
   const timescale = readUint32(sidx, index);
   index += 4;
@@ -179,7 +167,6 @@ export function parseSegmentIndex(initSegment: Uint8Array): SidxInfo | null {
     version,
     referencesCount,
     references,
-    moovEndOffset,
   };
 }
 
@@ -409,13 +396,19 @@ export function getDuration(data: Uint8Array, initData: InitData) {
   }
   if (videoDuration === 0 && audioDuration === 0) {
     // If duration samples are not available in the traf use sidx subsegment_duration
-    const sidx = parseSegmentIndex(data);
-    if (sidx?.references) {
-      return sidx.references.reduce(
-        (dur, ref) => dur + ref.info.duration || 0,
-        0
-      );
+    let sidxDuration = 0;
+    const sidxs = findBox(data, ['sidx']);
+    for (let i = 0; i < sidxs.length; i++) {
+      const sidx = parseSegmentIndex(sidxs[i]);
+      if (sidx?.references) {
+        sidxDuration += sidx.references.reduce(
+          (dur, ref) => dur + ref.info.duration || 0,
+          0
+        );
+      }
     }
+
+    return sidxDuration;
   }
   if (videoDuration) {
     return videoDuration;
@@ -501,8 +494,11 @@ export function offsetStartDTS(
       findBox(traf, ['tfdt']).forEach((tfdt) => {
         const version = tfdt[0];
         let baseMediaDecodeTime = readUint32(tfdt, 4);
+
         if (version === 0) {
-          writeUint32(tfdt, 4, baseMediaDecodeTime - timeOffset * timescale);
+          baseMediaDecodeTime -= timeOffset * timescale;
+          baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
+          writeUint32(tfdt, 4, baseMediaDecodeTime);
         } else {
           baseMediaDecodeTime *= Math.pow(2, 32);
           baseMediaDecodeTime += readUint32(tfdt, 8);
@@ -685,14 +681,14 @@ export function parseSamples(
                 while (naluTotalSize < sampleSize) {
                   const naluSize = readUint32(videoData, sampleOffset);
                   sampleOffset += 4;
-                  const naluType = videoData[sampleOffset] & 0x1f;
-                  if (isSEIMessage(isHEVCFlavor, naluType)) {
+                  if (isSEIMessage(isHEVCFlavor, videoData[sampleOffset])) {
                     const data = videoData.subarray(
                       sampleOffset,
                       sampleOffset + naluSize
                     );
                     parseSEIMessageFromNALu(
                       data,
+                      isHEVCFlavor ? 2 : 1,
                       timeOffset + compositionOffset / timescale,
                       seiSamples
                     );
@@ -727,19 +723,26 @@ function isHEVC(codec: string) {
   );
 }
 
-function isSEIMessage(isHEVCFlavor: boolean, naluType: number) {
-  return isHEVCFlavor ? naluType === 39 || naluType === 40 : naluType === 6;
+function isSEIMessage(isHEVCFlavor: boolean, naluHeader: number) {
+  if (isHEVCFlavor) {
+    const naluType = (naluHeader >> 1) & 0x3f;
+    return naluType === 39 || naluType === 40;
+  } else {
+    const naluType = naluHeader & 0x1f;
+    return naluType === 6;
+  }
 }
 
 export function parseSEIMessageFromNALu(
   unescapedData: Uint8Array,
+  headerSize: number,
   pts: number,
   samples: UserdataSample[]
 ) {
   const data = discardEPB(unescapedData);
   let seiPtr = 0;
-  // skip frameType
-  seiPtr++;
+  // skip nal header
+  seiPtr += headerSize;
   let payloadType = 0;
   let payloadSize = 0;
   let endOfCaptions = false;
@@ -844,7 +847,7 @@ export function parseSEIMessageFromNALu(
 /**
  * remove Emulation Prevention bytes from a RBSP
  */
-function discardEPB(data: Uint8Array): Uint8Array {
+export function discardEPB(data: Uint8Array): Uint8Array {
   const length = data.byteLength;
   const EPBPositions = [] as Array<number>;
   let i = 1;

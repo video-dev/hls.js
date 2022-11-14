@@ -1,6 +1,5 @@
 import { Events } from '../events';
-import { logger } from '../utils/logger';
-import { BufferHelper } from '../utils/buffer-helper';
+import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPTS } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { addSliding } from './level-helper';
@@ -183,8 +182,8 @@ export class SubtitleStreamController
       return;
     }
 
-    if (this.fragCurrent?.loader) {
-      this.fragCurrent.loader.abort();
+    if (this.fragCurrent) {
+      this.fragCurrent.abortRequests();
     }
 
     this.state = State.IDLE;
@@ -312,7 +311,7 @@ export class SubtitleStreamController
       const startTime = performance.now();
       // decrypt the subtitles
       this.decrypter
-        .webCryptoDecrypt(
+        .decrypt(
           new Uint8Array(payload),
           decryptData.key.buffer,
           decryptData.iv.buffer
@@ -327,6 +326,10 @@ export class SubtitleStreamController
               tdecrypt: endTime,
             },
           });
+        })
+        .catch((err) => {
+          this.warn(`${err.name}: ${err.message}`);
+          this.state = State.IDLE;
         });
     }
   }
@@ -352,7 +355,7 @@ export class SubtitleStreamController
       const targetDuration = trackDetails.targetduration;
       const { config, media } = this;
       const bufferedInfo = BufferHelper.bufferedInfo(
-        this.mediaBufferTimeRanges,
+        this.tracksBuffered[this.currentTrackId] || [],
         media.currentTime - targetDuration,
         config.maxBufferHole
       );
@@ -372,14 +375,14 @@ export class SubtitleStreamController
       const fragLen = fragments.length;
       const end = trackDetails.edge;
 
-      let foundFrag;
+      let foundFrag: Fragment | null;
       const fragPrevious = this.fragPrevious;
       if (targetBufferTime < end) {
         const { maxFragLookUpTolerance } = config;
         foundFrag = findFragmentByPTS(
           fragPrevious,
           fragments,
-          targetBufferTime,
+          Math.max(fragments[0].start, targetBufferTime),
           maxFragLookUpTolerance
         );
         if (
@@ -393,10 +396,12 @@ export class SubtitleStreamController
         foundFrag = fragments[fragLen - 1];
       }
 
-      if (foundFrag?.encrypted) {
-        this.loadKey(foundFrag, trackDetails);
-      } else if (
-        foundFrag &&
+      foundFrag = this.mapToInitFragWhenRequired(foundFrag);
+      if (!foundFrag) {
+        return;
+      }
+
+      if (
         this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
       ) {
         // only load if fragment is not loaded
@@ -411,10 +416,47 @@ export class SubtitleStreamController
     targetBufferTime: number
   ) {
     this.fragCurrent = frag;
-    super.loadFragment(frag, levelDetails, targetBufferTime);
+    if (frag.sn === 'initSegment') {
+      this._loadInitSegment(frag, levelDetails);
+    } else {
+      super.loadFragment(frag, levelDetails, targetBufferTime);
+    }
   }
 
-  get mediaBufferTimeRanges(): TimeRange[] {
-    return this.tracksBuffered[this.currentTrackId] || [];
+  get mediaBufferTimeRanges(): Bufferable {
+    return new BufferableInstance(
+      this.tracksBuffered[this.currentTrackId] || []
+    );
+  }
+}
+
+class BufferableInstance implements Bufferable {
+  public readonly buffered: TimeRanges;
+
+  constructor(timeranges: TimeRange[]) {
+    const getRange = (
+      name: 'start' | 'end',
+      index: number,
+      length: number
+    ): number => {
+      index = index >>> 0;
+      if (index > length - 1) {
+        throw new DOMException(
+          `Failed to execute '${name}' on 'TimeRanges': The index provided (${index}) is greater than the maximum bound (${length})`
+        );
+      }
+      return timeranges[index][name];
+    };
+    this.buffered = {
+      get length() {
+        return timeranges.length;
+      },
+      end(index: number): number {
+        return getRange('end', index, timeranges.length);
+      },
+      start(index: number): number {
+        return getRange('start', index, timeranges.length);
+      },
+    };
   }
 }

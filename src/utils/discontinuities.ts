@@ -1,10 +1,10 @@
 import { logger } from './logger';
+import { adjustSliding } from '../controller/level-helper';
 
 import type { Fragment } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
 import type { RequiredProperties } from '../types/general';
-import { adjustSliding } from '../controller/level-helper';
 
 export function findFirstFragWithCC(fragments: Fragment[], cc: number) {
   let firstFrag: Fragment | null = null;
@@ -39,7 +39,8 @@ export function shouldAlignOnDiscontinuities(
 // Find the first frag in the previous level which matches the CC of the first frag of the new level
 export function findDiscontinuousReferenceFrag(
   prevDetails: LevelDetails,
-  curDetails: LevelDetails
+  curDetails: LevelDetails,
+  referenceIndex: number = 0
 ) {
   const prevFrags = prevDetails.fragments;
   const curFrags = curDetails.fragments;
@@ -174,14 +175,6 @@ export function alignPDT(details: LevelDetails, lastDetails: LevelDetails) {
   }
 }
 
-export function alignFragmentByPDTDelta(frag: Fragment, delta: number) {
-  const { programDateTime } = frag;
-  if (!programDateTime) return;
-  const start = (programDateTime - delta) / 1000;
-  frag.start = frag.startPTS = start;
-  frag.endPTS = start + frag.duration;
-}
-
 /**
  * Ensures appropriate time-alignment between renditions based on PDT. Unlike `alignPDT`, which adjusts
  * the timeline based on the delta between PDTs of the 0th fragment of two playlists/`LevelDetails`,
@@ -199,30 +192,31 @@ export function alignMediaPlaylistByPDT(
   details: LevelDetails,
   refDetails: LevelDetails
 ) {
-  // This check protects the unsafe "!" usage below for null program date time access.
-  if (
-    !refDetails.fragments.length ||
-    !details.hasProgramDateTime ||
-    !refDetails.hasProgramDateTime
-  ) {
+  if (!details.hasProgramDateTime || !refDetails.hasProgramDateTime) {
     return;
   }
-  const refPDT = refDetails.fragments[0].programDateTime!; // hasProgramDateTime check above makes this safe.
-  const refStart = refDetails.fragments[0].start;
-  // Use the delta between the reference details' presentation timeline's start time and its PDT
-  // to align the other rendtion's timeline.
-  const delta = refPDT - refStart * 1000;
-  // Per spec: "If any Media Playlist in a Master Playlist contains an EXT-X-PROGRAM-DATE-TIME tag, then all
-  // Media Playlists in that Master Playlist MUST contain EXT-X-PROGRAM-DATE-TIME tags with consistent mappings
-  // of date and time to media timestamps."
-  // So we should be able to use each rendition's PDT as a reference time and use the delta to compute our relevant
-  // start and end times.
-  // NOTE: This code assumes each level/details timelines have already been made "internally consistent"
-  details.fragments.forEach((frag) => {
-    alignFragmentByPDTDelta(frag, delta);
-  });
-  if (details.fragmentHint) {
-    alignFragmentByPDTDelta(details.fragmentHint, delta);
+
+  const fragments = details.fragments;
+  const refFragments = refDetails.fragments;
+  if (!fragments.length || !refFragments.length) {
+    return;
   }
-  details.alignedSliding = true;
+
+  // Calculate a delta to apply to all fragments according to the delta in PDT times and start times
+  // of a fragment in the reference details, and a fragment in the target details of the same discontinuity.
+  // If a fragment of the same discontinuity was not found use the middle fragment of both.
+  const middleFrag = Math.round(refFragments.length / 2) - 1;
+  const refFrag = refFragments[middleFrag];
+  const frag =
+    findFirstFragWithCC(fragments, refFrag.cc) ||
+    fragments[Math.round(fragments.length / 2) - 1];
+
+  const refPDT = refFrag.programDateTime;
+  const targetPDT = frag.programDateTime;
+  if (refPDT === null || targetPDT === null) {
+    return;
+  }
+
+  const delta = (targetPDT - refPDT) / 1000 - (frag.start - refFrag.start);
+  adjustSlidingStart(delta, details);
 }
