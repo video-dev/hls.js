@@ -16,7 +16,7 @@ import {
 import { HdcpLevel, HdcpLevels, Level } from '../types/level';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { isCodecSupportedInMp4 } from '../utils/codecs';
+import { isCodecSupportedInMp4, getCodecCompatibleName } from '../utils/codecs';
 import BasePlaylistController from './base-playlist-controller';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import type Hls from '../hls';
@@ -25,6 +25,8 @@ import type { MediaPlaylist } from '../types/media-playlist';
 import ContentSteeringController from './content-steering-controller';
 
 let chromeOrFirefox: boolean;
+
+const AUDIO_CODEC_REGEXP = /flac|opus/gi;
 
 export default class LevelController extends BasePlaylistController {
   private _levels: Level[] = [];
@@ -120,6 +122,13 @@ export default class LevelController extends BasePlaylistController {
         if (chromeOrFirefox) {
           levelParsed.audioCodec = undefined;
         }
+      }
+
+      if (levelParsed.audioCodec) {
+        levelParsed.audioCodec = levelParsed.audioCodec.replace(
+          AUDIO_CODEC_REGEXP,
+          getCodecCompatibleName
+        );
       }
 
       const {

@@ -2,6 +2,7 @@ import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { BufferHelper } from '../utils/buffer-helper';
+import { getCodecCompatibleName } from '../utils/codecs';
 import { getMediaSource } from '../utils/mediasource-helper';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import type { TrackSet } from '../types/track';
@@ -30,6 +31,7 @@ import type { LevelDetails } from '../loader/level-details';
 
 const MediaSource = getMediaSource();
 const VIDEO_CODEC_PROFILE_REPACE = /([ha]vc.)(?:\.[^.,]+)+/;
+const AUDIO_CODEC_REGEXP = /flac|opus/gi;
 
 export default class BufferController implements ComponentAPI {
   // The level details used to determine duration, target-duration and live
@@ -262,7 +264,14 @@ export default class BufferController implements ComponentAPI {
             '$1'
           );
           if (currentCodec !== nextCodec) {
-            const mimeType = `${container};codecs=${levelCodec || codec}`;
+            let trackCodec = levelCodec || codec;
+            if (trackName.indexOf('audio') !== -1) {
+              trackCodec = trackCodec.replace(
+                AUDIO_CODEC_REGEXP,
+                getCodecCompatibleName
+              );
+            }
+            const mimeType = `${container};codecs=${trackCodec}`;
             this.appendChangeType(trackName, mimeType);
             logger.log(
               `[buffer-controller]: switching codec ${currentCodec} to ${nextCodec}`
@@ -747,7 +756,12 @@ export default class BufferController implements ComponentAPI {
           );
         }
         // use levelCodec as first priority
-        const codec = track.levelCodec || track.codec;
+        let codec = track.levelCodec || track.codec;
+        if (codec) {
+          if (trackName.indexOf('audio') !== -1) {
+            codec = codec.replace(AUDIO_CODEC_REGEXP, getCodecCompatibleName);
+          }
+        }
         const mimeType = `${track.container};codecs=${codec}`;
         logger.log(`[buffer-controller]: creating sourceBuffer(${mimeType})`);
         try {
