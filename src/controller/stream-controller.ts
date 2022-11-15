@@ -1227,7 +1227,12 @@ export default class StreamController
         }
       }
       // HE-AAC is broken on Android, always signal audio codec as AAC even if variant manifest states otherwise
-      if (ua.indexOf('android') !== -1 && audio.container !== 'audio/mpeg') {
+      if (
+        audioCodec &&
+        audioCodec.indexOf('mp4a.40.5') !== -1 &&
+        ua.indexOf('android') !== -1 &&
+        audio.container !== 'audio/mpeg'
+      ) {
         // Exclude mpeg audio
         audioCodec = 'mp4a.40.2';
         this.log(`Android: force audio codec to ${audioCodec}`);
