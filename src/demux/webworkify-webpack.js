@@ -10,7 +10,7 @@ const webpackBootstrapFunc = function () {// webpackBootstrap
   /******/  var __webpack_module_cache__ = {};
   /******/  
   /******/  // The require function
-  /******/  function __webpack_require__(moduleId) {
+  /******/  var __webpack_require__ = function __webpack_require__(moduleId) {
   /******/    // Check if module is in cache
   /******/    var cachedModule = __webpack_module_cache__[moduleId];
   /******/    if (cachedModule !== undefined) {
@@ -82,9 +82,11 @@ const webpackBootstrapFunc = function () {// webpackBootstrap
   /******/ 	var result = __webpack_require__(ENTRY_MODULE)
   /******/  return result.default || result
 }
-webpackBootstrapFunc.toString();
+
+var webpackBootstrapFuncArr = webpackBootstrapFunc.toString().split('ENTRY_MODULE');
 var moduleNameReqExp = '[\\.|\\-|\\+|\\w|\/|@]+';
 var dependencyRegExp = '\\(\\s*(\/\\*.*?\\*\/)?\\s*.*?(' + moduleNameReqExp + ').*?\\)';
+
 function quoteRegExp(str) {
   return (str + '').replace(/[.?*+^$[\]\\(){}|-]/g, '\\$&');
 }
@@ -92,10 +94,11 @@ function quoteRegExp(str) {
 function isNumeric(n) {
   return !isNaN(1 * n);
 }
+
 function getModuleDependencies(sources, module, queueName) {
   var retval = {};
   retval[queueName] = [];
-  var fnString = module.toString();
+  var fnString = module.toString().replace(/^"[^"]+"/,'function');;
   var wrapperSignature = fnString.match(/^function\s?\w*\(\w+,\s*\w+,\s*(\w+)\)/) || fnString.match(/^\(\w+,\s*\w+,\s*(\w+)\)\s?\=\s?\>/);
   if (!wrapperSignature) return retval;
   var webpackRequireName = wrapperSignature[1];
@@ -129,6 +132,7 @@ function hasValuesInQueues(queues) {
   var keys = Object.keys(queues);
   return keys.reduce((hasValues, key) => hasValues || queues[key].length > 0, false);
 }
+
 function getRequiredModules(sources, moduleId) {
   var modulesQueue = {
     main: [moduleId]
@@ -160,11 +164,12 @@ function getRequiredModules(sources, moduleId) {
   }
   return requiredModules;
 }
+
 function getWebpackString(requiredModules, sources, entryModule, key) {
-  const moduleString = requiredModules[key].map((id) => `"${id}": ${sources[key][id].toString()}`).join(",");
-  const webpackBootstrapFuncArr = webpackBootstrapFunc.toString().split("ENTRY_MODULE");
+  const moduleString = requiredModules[key].map((id) => `"${id}": ${sources[key][id].toString().replace(/^"[^"]+"/,'function')}`).join(",");
   return `${webpackBootstrapFuncArr[0]}{${moduleString}}${webpackBootstrapFuncArr[1]}"${entryModule}"${webpackBootstrapFuncArr[2]}`;
 }
+
 export default function (moduleId, options) {
   options = options || {};
   var sources = {
@@ -181,7 +186,7 @@ export default function (moduleId, options) {
     sources[module][entryModule] = '(function(module, exports, __webpack_require__) { module.exports = __webpack_require__; })';
     src = src + `var ${module} = (${getWebpackString(requiredModules, sources, entryModule, modules)})();\n`;
   });
-  src = src + `((${getWebpackString(requiredModules, sources, moduleId, "main")})())(self);`;
+  src = src + `new ((${getWebpackString(requiredModules, sources, moduleId, 'main')})())(self);`;
   var blob = new window.Blob([src], {
     type: 'text/javascript'
   });
