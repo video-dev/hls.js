@@ -26,8 +26,6 @@ import ContentSteeringController from './content-steering-controller';
 
 let chromeOrFirefox: boolean;
 
-const AUDIO_CODEC_REGEXP = /flac|opus/gi;
-
 export default class LevelController extends BasePlaylistController {
   private _levels: Level[] = [];
   private _firstLevel: number = -1;
@@ -125,10 +123,7 @@ export default class LevelController extends BasePlaylistController {
       }
 
       if (levelParsed.audioCodec) {
-        levelParsed.audioCodec = levelParsed.audioCodec.replace(
-          AUDIO_CODEC_REGEXP,
-          getCodecCompatibleName
-        );
+        levelParsed.audioCodec = getCodecCompatibleName(levelParsed.audioCodec);
       }
 
       const {

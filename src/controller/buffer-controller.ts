@@ -31,7 +31,6 @@ import type { LevelDetails } from '../loader/level-details';
 
 const MediaSource = getMediaSource();
 const VIDEO_CODEC_PROFILE_REPACE = /([ha]vc.)(?:\.[^.,]+)+/;
-const AUDIO_CODEC_REGEXP = /flac|opus/gi;
 
 export default class BufferController implements ComponentAPI {
   // The level details used to determine duration, target-duration and live
@@ -265,11 +264,8 @@ export default class BufferController implements ComponentAPI {
           );
           if (currentCodec !== nextCodec) {
             let trackCodec = levelCodec || codec;
-            if (trackName.indexOf('audio') !== -1) {
-              trackCodec = trackCodec.replace(
-                AUDIO_CODEC_REGEXP,
-                getCodecCompatibleName
-              );
+            if (trackName.slice(0, 5) === 'audio') {
+              trackCodec = getCodecCompatibleName(trackCodec);
             }
             const mimeType = `${container};codecs=${trackCodec}`;
             this.appendChangeType(trackName, mimeType);
@@ -758,8 +754,8 @@ export default class BufferController implements ComponentAPI {
         // use levelCodec as first priority
         let codec = track.levelCodec || track.codec;
         if (codec) {
-          if (trackName.indexOf('audio') !== -1) {
-            codec = codec.replace(AUDIO_CODEC_REGEXP, getCodecCompatibleName);
+          if (trackName.slice(0, 5) === 'audio') {
+            codec = getCodecCompatibleName(codec);
           }
         }
         const mimeType = `${track.container};codecs=${codec}`;
