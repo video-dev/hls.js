@@ -70,7 +70,7 @@
     "@types/sinon-chai": "3.2.9",
     "@typescript-eslint/eslint-plugin": "5.42.1",
     "@typescript-eslint/parser": "5.42.1",
-    "babel-loader": "8.3.0",
+    "babel-loader": "9.1.0",
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.3.7",
     "chart.js": "2.9.4",
