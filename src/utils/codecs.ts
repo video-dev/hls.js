@@ -118,6 +118,9 @@ function getCodecCompatibleNameLower(
   return lowerCaseCodec;
 }
 
+const AUDIO_CODEC_REGEXP = /flac|opus/i;
 export function getCodecCompatibleName(codec: string): string {
-  return getCodecCompatibleNameLower(codec.toLowerCase() as LowerCaseCodecType);
+  return codec.replace(AUDIO_CODEC_REGEXP, (m) =>
+    getCodecCompatibleNameLower(m.toLowerCase() as LowerCaseCodecType)
+  );
 }
