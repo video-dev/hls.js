@@ -216,6 +216,7 @@ export interface ErrorData {
   fatal: boolean;
   buffer?: number;
   bytes?: number;
+  chunkMeta?: ChunkMetadata;
   context?: PlaylistLoaderContext;
   error?: Error;
   event?: keyof HlsListeners | 'demuxerWorker';

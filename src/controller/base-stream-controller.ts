@@ -759,7 +759,11 @@ export default class BaseStreamController
   protected _handleTransmuxerFlush(chunkMeta: ChunkMetadata) {
     const context = this.getCurrentContext(chunkMeta);
     if (!context || this.state !== State.PARSING) {
-      if (!this.fragCurrent) {
+      if (
+        !this.fragCurrent &&
+        this.state !== State.STOPPED &&
+        this.state !== State.ERROR
+      ) {
         this.state = State.IDLE;
       }
       return;
@@ -1312,7 +1316,19 @@ export default class BaseStreamController
     data: ErrorData
   ) {
     if (data.fatal) {
+      this.stopLoad();
+      this.state = State.ERROR;
       return;
+    }
+    const config = this.config;
+    if (data.chunkMeta) {
+      // Parsing Error: no retries
+      const context = this.getCurrentContext(data.chunkMeta);
+      if (context) {
+        data.frag = context.frag;
+        data.levelRetry = true;
+        this.fragLoadError = config.fragLoadingMaxRetry;
+      }
     }
     const frag = data.frag;
     // Handle frag error related to caller's filterType
@@ -1327,7 +1343,6 @@ export default class BaseStreamController
         frag.urlId === fragCurrent.urlId,
       'Frag load error must match current frag to retry'
     );
-    const config = this.config;
     // keep retrying until the limit will be reached
     if (this.fragLoadError + 1 <= config.fragLoadingMaxRetry) {
       if (!this.loadedmetadata) {

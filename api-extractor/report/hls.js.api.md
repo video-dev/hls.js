@@ -374,6 +374,8 @@ export interface ErrorData {
     // (undocumented)
     bytes?: number;
     // (undocumented)
+    chunkMeta?: ChunkMetadata;
+    // (undocumented)
     context?: PlaylistLoaderContext;
     // (undocumented)
     details: ErrorDetails;

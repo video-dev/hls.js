@@ -362,13 +362,15 @@ export default class LevelController extends BasePlaylistController {
           }
         }
         break;
+      case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.KEY_SYSTEM_NO_SESSION:
       case ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED:
         levelIndex =
           data.frag?.type === PlaylistLevelType.MAIN
             ? data.frag.level
             : this.currentLevelIndex;
-        levelError = true;
+        // Do not retry level. Escalate to fatal if switching levels fails.
+        data.levelRetry = false;
         break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
@@ -443,6 +445,9 @@ export default class LevelController extends BasePlaylistController {
           this.warn(`${errorDetails}: switch to ${nextLevel}`);
           errorEvent.levelRetry = true;
           this.hls.nextAutoLevel = nextLevel;
+        } else if (errorEvent.levelRetry === false) {
+          // No levels to switch to and no more retries
+          errorEvent.fatal = true;
         }
       }
     }
