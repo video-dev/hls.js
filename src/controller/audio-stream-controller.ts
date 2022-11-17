@@ -624,14 +624,16 @@ class AudioStreamController
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
+    if (data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
+      this.onFragmentOrKeyLoadError(PlaylistLevelType.AUDIO, data);
+      return;
+    }
     switch (data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
-      case ErrorDetails.KEY_SYSTEM_NO_SESSION:
-      case ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED:
         // TODO: Skip fragments that do not belong to this.fragCurrent audio-group id
         this.onFragmentOrKeyLoadError(PlaylistLevelType.AUDIO, data);
         break;
