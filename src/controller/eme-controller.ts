@@ -1143,6 +1143,7 @@ class EMEKeyError extends Error {
   constructor(data: ErrorData, message: string) {
     super(message);
     this.data = data;
+    data.err = data.error;
   }
 }
 
