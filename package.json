@@ -73,7 +73,7 @@
     "babel-loader": "9.1.0",
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.3.7",
-    "chart.js": "2.9.4",
+    "chart.js": "4.0.1",
     "chromedriver": "107.0.3",
     "coverage-istanbul-loader": "3.0.5",
     "eslint": "8.27.0",
