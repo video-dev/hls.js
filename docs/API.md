@@ -94,8 +94,7 @@
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
   - [`minAutoBitrate`](#minautobitrate)
   - [`emeEnabled`](#emeEnabled)
-  - [`useEmeEncryptedEvent`](#useEmeEncryptedEvent)
-  - [`widevineLicenseUrl`](#widevineLicenseUrl)
+  - [`widevineLicenseUrl`](#widevineLicenseUrl) (deprecated)
   - [`licenseXhrSetup`](#licenseXhrSetup)
   - [`licenseResponseCallback`](#licenseResponseCallback)
   - [`drmSystems`](#drmSystems)
@@ -400,8 +399,6 @@ var config = {
   maxLoadingDelay: 4,
   minAutoBitrate: 0,
   emeEnabled: false,
-  useEmeEncryptedEvent: false,
-  widevineLicenseUrl: undefined,
   licenseXhrSetup: undefined,
   drmSystems: {},
   drmSystemOptions: {},
@@ -1194,17 +1191,11 @@ Useful when browser or tab of the browser is not in the focus and bandwidth drop
 
 Set to `true` to enable DRM key system access and license retrieval.
 
-### `useEmeEncryptedEvent`
-
-(default: `false`)
-
-Set to `true` to use media "encrypted" event initData and ignore manifest DRM keys.
-
-### `widevineLicenseUrl`
+### `widevineLicenseUrl` (deprecated)
 
 (default: `undefined`)
 
-The Widevine license server URL.
+`widevineLicenseUrl` has been deprecated. Use `drmSystems['com.widevine.alpha'].licenseUrl` instead.
 
 ### `licenseXhrSetup`
 
