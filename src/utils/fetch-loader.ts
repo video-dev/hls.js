@@ -133,7 +133,10 @@ class FetchLoader implements Loader<LoaderContext> {
           self.performance.now(),
           stats.loading.first
         );
-        stats.loaded = stats.total = responseData[LENGTH];
+        const total = responseData[LENGTH];
+        if (total) {
+          stats.loaded = stats.total = total;
+        }
 
         const loaderResponse = {
           url: response.url,
