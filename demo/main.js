@@ -541,6 +541,7 @@ function loadSelectedStream() {
   hls.on(Hls.Events.FRAG_BUFFERED, function (eventName, data) {
     const stats = data.part.stats.loaded ? data.part.stats : data.frag.stats;
     if (data.stats.aborted) {
+      console.assert('Aborted request being buffered.', data);
       return;
     }
 
