@@ -181,13 +181,11 @@ class AbrController implements ComponentAPI {
       nextLoadLevel--
     ) {
       // compute time to load next fragment at lower level
-      // 0.8 : consider only 80% of current bw to be conservative
       // 8 = bits per byte (bps/Bps)
       const levelNextBitrate = levels[nextLoadLevel].maxBitrate;
-      fragLevelNextLoadedDelay = loadRate
-        ? (duration * levelNextBitrate) / (8 * 0.8 * loadRate)
-        : (duration * levelNextBitrate) / bwEstimate + ttfbEstimate / 1000;
-
+      const bwe = loadRate ? loadRate * 8 : bwEstimate;
+      fragLevelNextLoadedDelay =
+        (duration * levelNextBitrate) / bwe + ttfbEstimate / 1000;
       if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
         break;
       }
