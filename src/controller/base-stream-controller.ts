@@ -558,12 +558,14 @@ export default class BaseStreamController
     targetBufferTime: number | null = null,
     progressCallback?: FragmentLoadProgressCallback
   ): Promise<PartsLoadedData | FragLoadedData | null> {
-    if (!this.levels) {
-      throw new Error('frag load aborted, missing levels');
-    }
     const details = level?.details;
+    if (!this.levels || !details) {
+      throw new Error(
+        `frag load aborted, missing level${details ? '' : ' detail'}s`
+      );
+    }
     let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
-    if (frag.encrypted && !frag.decryptdata?.key && details) {
+    if (frag.encrypted && !frag.decryptdata?.key) {
       this.log(
         `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${
           this.logPrefix === '[stream-controller]' ? 'level' : 'track'
@@ -584,7 +586,7 @@ export default class BaseStreamController
     }
 
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
-    if (this.config.lowLatencyMode && details) {
+    if (this.config.lowLatencyMode) {
       const partList = details.partList;
       if (partList && progressCallback) {
         if (targetBufferTime > frag.end && details.fragmentHint) {
