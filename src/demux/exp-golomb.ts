@@ -41,13 +41,14 @@ class ExpGolomb {
   // (count:int):void
   skipBits(count: number): void {
     let skipBytes; // :int
+    count = Math.min(count, this.bytesAvailable * 8 + this.bitsAvailable);
     if (this.bitsAvailable > count) {
       this.word <<= count;
       this.bitsAvailable -= count;
     } else {
       count -= this.bitsAvailable;
       skipBytes = count >> 3;
-      count -= skipBytes >> 3;
+      count -= skipBytes << 3;
       this.bytesAvailable -= skipBytes;
       this.loadWord();
       this.word <<= count;
@@ -68,6 +69,8 @@ class ExpGolomb {
       this.word <<= bits;
     } else if (this.bytesAvailable > 0) {
       this.loadWord();
+    } else {
+      throw new Error('no bits available');
     }
 
     bits = size - bits;
