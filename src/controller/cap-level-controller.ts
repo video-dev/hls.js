@@ -90,6 +90,7 @@ class CapLevelController implements ComponentAPI {
     data: MediaAttachingData
   ) {
     this.media = data.media instanceof HTMLVideoElement ? data.media : null;
+    this.clientRect = null;
   }
 
   protected onManifestParsed(

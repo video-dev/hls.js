@@ -132,6 +132,34 @@ describe('CapLevelController', function () {
       expect(capLevelController.mediaWidth).to.equal(1280 * pixelRatio);
       expect(capLevelController.mediaHeight).to.equal(720 * pixelRatio);
     });
+
+    it('gets valid width and height when the media element is attached after onManifestParsed', function () {
+      hls = new Hls({ capLevelToPlayerSize: true });
+      capLevelController = new CapLevelController(hls);
+      capLevelController.onManifestParsed(Events.MANIFEST_PARSED, {
+        levels,
+      });
+
+      let bounds = capLevelController.getDimensions();
+      expect(bounds.width).to.equal(0);
+      expect(bounds.height).to.equal(0);
+      expect(capLevelController.mediaWidth).to.equal(0);
+      expect(capLevelController.mediaHeight).to.equal(0);
+
+      media.style.width = '1280px';
+      media.style.height = '720px';
+      document.querySelector('#test-fixture').appendChild(media);
+      capLevelController.onMediaAttaching(Events.MEDIA_ATTACHING, {
+        media,
+      });
+
+      const pixelRatio = capLevelController.contentScaleFactor;
+      bounds = capLevelController.getDimensions();
+      expect(bounds.width).to.equal(1280);
+      expect(bounds.height).to.equal(720);
+      expect(capLevelController.mediaWidth).to.equal(1280 * pixelRatio);
+      expect(capLevelController.mediaHeight).to.equal(720 * pixelRatio);
+    });
   });
 
   describe('initialization', function () {
