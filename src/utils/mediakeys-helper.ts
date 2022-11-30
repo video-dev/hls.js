@@ -154,22 +154,17 @@ function createMediaKeySystemConfigurations(
     sessionTypes: drmSystemOptions.sessionTypes || [
       drmSystemOptions.sessionType || 'temporary',
     ],
-    audioCapabilities: [],
-    videoCapabilities: [],
-  };
-
-  audioCodecs.forEach((codec) => {
-    baseConfig.audioCapabilities!.push({
+    audioCapabilities: audioCodecs.map((codec) => ({
       contentType: `audio/mp4; codecs="${codec}"`,
       robustness: drmSystemOptions.audioRobustness || '',
-    });
-  });
-  videoCodecs.forEach((codec) => {
-    baseConfig.videoCapabilities!.push({
+      encryptionScheme: drmSystemOptions.audioEncryptionScheme || null,
+    })),
+    videoCapabilities: videoCodecs.map((codec) => ({
       contentType: `video/mp4; codecs="${codec}"`,
       robustness: drmSystemOptions.videoRobustness || '',
-    });
-  });
+      encryptionScheme: drmSystemOptions.videoEncryptionScheme || null,
+    })),
+  };
 
   return [baseConfig];
 }

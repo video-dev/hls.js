@@ -55,6 +55,33 @@ export class LevelKey implements DecryptData {
     this.isCommonEncryption = this.encrypted && method !== 'AES-128';
   }
 
+  public isSupported(): boolean {
+    // If it's Segment encryption or No encryption, just select that key system
+    if (this.method) {
+      if (this.method === 'AES-128' || this.method === 'NONE') {
+        return true;
+      }
+      switch (this.keyFormat) {
+        case 'identity':
+          // Maintain support for clear SAMPLE-AES with MPEG-3 TS
+          return this.method === 'SAMPLE-AES';
+        case KeySystemFormats.FAIRPLAY:
+        case KeySystemFormats.WIDEVINE:
+        case KeySystemFormats.PLAYREADY:
+        case KeySystemFormats.CLEARKEY:
+          return (
+            [
+              'ISO-23001-7',
+              'SAMPLE-AES',
+              'SAMPLE-AES-CENC',
+              'SAMPLE-AES-CTR',
+            ].indexOf(this.method) !== -1
+          );
+      }
+    }
+    return false;
+  }
+
   public getDecryptData(sn: number | 'initSegment'): LevelKey | null {
     if (!this.encrypted || !this.uri) {
       return null;

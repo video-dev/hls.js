@@ -60,6 +60,8 @@ export type CMCDControllerConfig = {
 export type DRMSystemOptions = {
   audioRobustness?: string;
   videoRobustness?: string;
+  audioEncryptionScheme?: string | null;
+  videoEncryptionScheme?: string | null;
   persistentState?: MediaKeysRequirement;
   distinctiveIdentifier?: MediaKeysRequirement;
   sessionTypes?: string[];

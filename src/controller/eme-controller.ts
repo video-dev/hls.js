@@ -29,6 +29,7 @@ import type {
   MediaAttachedData,
   KeyLoadedData,
   ErrorData,
+  ManifestLoadedData,
 } from '../types/events';
 import type { EMEControllerConfig } from '../config';
 import type { Fragment } from '../loader/fragment';
@@ -105,11 +106,13 @@ class EMEController implements ComponentAPI {
   private registerListeners() {
     this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     this.hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    this.hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
   }
 
   private unregisterListeners() {
     this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     this.hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
   }
 
   private getLicenseServerUrl(keySystem: KeySystems): string | never {
@@ -384,25 +387,29 @@ class EMEController implements ComponentAPI {
           frag.level
         }) key formats ${keyFormats.join(', ')}`
       );
-      this.keyFormatPromise = new Promise((resolve, reject) => {
-        const keySystemsToAttempt = keyFormats
-          .map(keySystemFormatToKeySystemDomain)
-          .filter((value) => !!value) as any as KeySystems[];
-        return this.getKeySystemSelectionPromise(keySystemsToAttempt).then(
-          ({ keySystem }) => {
-            const keySystemFormat = keySystemToKeySystemFormat(keySystem);
-            if (keySystemFormat) {
-              resolve(keySystemFormat);
-            } else {
-              reject(
-                new Error(`Unable to find format for key-system "${keySystem}"`)
-              );
-            }
-          }
-        );
-      });
+      this.keyFormatPromise = this.getKeyFormatPromise(keyFormats);
     }
     return this.keyFormatPromise;
+  }
+
+  private getKeyFormatPromise(keyFormats: string[]): Promise<KeySystemFormats> {
+    return new Promise((resolve, reject) => {
+      const keySystemsToAttempt = keyFormats
+        .map(keySystemFormatToKeySystemDomain)
+        .filter((value) => !!value) as any as KeySystems[];
+      return this.getKeySystemSelectionPromise(keySystemsToAttempt).then(
+        ({ keySystem }) => {
+          const keySystemFormat = keySystemToKeySystemFormat(keySystem);
+          if (keySystemFormat) {
+            resolve(keySystemFormat);
+          } else {
+            reject(
+              new Error(`Unable to find format for key-system "${keySystem}"`)
+            );
+          }
+        }
+      );
+    });
   }
 
   public loadKey(data: KeyLoadedData): Promise<MediaKeySessionContext> {
@@ -890,7 +897,11 @@ class EMEController implements ComponentAPI {
           licenseChallenge
         );
       })
-      .catch(() => {
+      .catch((error: Error) => {
+        if (!keysListItem.decryptdata) {
+          // Key session removed. Cancel license request.
+          throw error;
+        }
         // let's try to open before running setup
         xhr.open('POST', url, true);
 
@@ -1102,7 +1113,31 @@ class EMEController implements ComponentAPI {
       });
   }
 
-  removeSession(
+  private onManifestLoaded(
+    event: Events.MANIFEST_LOADED,
+    { sessionKeys }: ManifestLoadedData
+  ) {
+    if (!sessionKeys || !this.config.emeEnabled) {
+      return;
+    }
+    if (!this.keyFormatPromise) {
+      const keyFormats = sessionKeys.reduce(
+        (formats: string[], sessionKey: LevelKey) => {
+          if (formats.indexOf(sessionKey.keyFormat) === -1) {
+            formats.push(sessionKey.keyFormat);
+          }
+          return formats;
+        },
+        []
+      );
+      this.log(
+        `Selecting key-system from session-keys ${keyFormats.join(', ')}`
+      );
+      this.keyFormatPromise = this.getKeyFormatPromise(keyFormats);
+    }
+  }
+
+  private removeSession(
     mediaKeySessionContext: MediaKeySessionContext
   ): Promise<void> | void {
     const { mediaKeysSession, licenseXhr } = mediaKeySessionContext;

@@ -313,6 +313,8 @@ export class DateRange {
 export type DRMSystemOptions = {
     audioRobustness?: string;
     videoRobustness?: string;
+    audioEncryptionScheme?: string | null;
+    videoEncryptionScheme?: string | null;
     persistentState?: MediaKeysRequirement;
     distinctiveIdentifier?: MediaKeysRequirement;
     sessionTypes?: string[];
@@ -1525,6 +1527,8 @@ export class LevelKey implements DecryptData {
     // (undocumented)
     readonly isCommonEncryption: boolean;
     // (undocumented)
+    isSupported(): boolean;
+    // (undocumented)
     iv: Uint8Array | null;
     // (undocumented)
     key: Uint8Array | null;
@@ -1839,6 +1843,8 @@ export interface ManifestLoadedData {
     // (undocumented)
     sessionData: Record<string, AttrList> | null;
     // (undocumented)
+    sessionKeys: LevelKey[] | null;
+    // (undocumented)
     stats: LoaderStats;
     // (undocumented)
     subtitles?: MediaPlaylist[];
@@ -1868,6 +1874,10 @@ export interface ManifestParsedData {
     firstLevel: number;
     // (undocumented)
     levels: Level[];
+    // (undocumented)
+    sessionData: Record<string, AttrList> | null;
+    // (undocumented)
+    sessionKeys: LevelKey[] | null;
     // (undocumented)
     stats: LoaderStats;
     // (undocumented)
@@ -2283,20 +2293,20 @@ export interface UserdataSample {
 
 // Warnings were encountered during analysis:
 //
-// src/config.ts:79:3 - (ae-forgotten-export) The symbol "MediaKeySessionContext" needs to be exported by the entry point hls.d.ts
-// src/config.ts:94:3 - (ae-forgotten-export) The symbol "DRMSystemsConfiguration" needs to be exported by the entry point hls.d.ts
-// src/config.ts:197:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
-// src/config.ts:207:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:208:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:210:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:211:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:212:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:214:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:217:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:219:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:220:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:221:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:222:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:81:3 - (ae-forgotten-export) The symbol "MediaKeySessionContext" needs to be exported by the entry point hls.d.ts
+// src/config.ts:96:3 - (ae-forgotten-export) The symbol "DRMSystemsConfiguration" needs to be exported by the entry point hls.d.ts
+// src/config.ts:199:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
+// src/config.ts:209:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:210:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:212:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:213:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:214:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:216:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:219:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:221:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:222:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:223:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:224:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 

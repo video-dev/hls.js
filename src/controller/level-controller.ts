@@ -183,6 +183,8 @@ export default class LevelController extends BasePlaylistController {
         levels,
         audioTracks,
         subtitleTracks,
+        sessionData: data.sessionData,
+        sessionKeys: data.sessionKeys,
         firstLevel: this._firstLevel,
         stats: data.stats,
         audio: audioCodecFound,

@@ -22,6 +22,7 @@ import type { MetadataSample, UserdataSample } from './demuxer';
 import type { AttrList } from '../utils/attr-list';
 import type { HlsListeners } from '../events';
 import { KeyLoaderInfo } from '../loader/key-loader';
+import { LevelKey } from '../loader/level-key';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
@@ -83,6 +84,7 @@ export interface ManifestLoadedData {
   levels: LevelParsed[];
   networkDetails: any;
   sessionData: Record<string, AttrList> | null;
+  sessionKeys: LevelKey[] | null;
   stats: LoaderStats;
   subtitles?: MediaPlaylist[];
   url: string;
@@ -92,6 +94,8 @@ export interface ManifestParsedData {
   levels: Level[];
   audioTracks: MediaPlaylist[];
   subtitleTracks: MediaPlaylist[];
+  sessionData: Record<string, AttrList> | null;
+  sessionKeys: LevelKey[] | null;
   firstLevel: number;
   stats: LoaderStats;
   audio: boolean;

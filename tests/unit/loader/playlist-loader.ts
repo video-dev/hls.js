@@ -1810,6 +1810,57 @@ media_1638278.m4s`;
       .which.is.an('array')
       .which.has.members([result.fragments[2], result.fragments[6]]);
   });
+
+  it('parses manifest with EXT-X-SESSION-KEYs', function () {
+    const manifest = `#EXTM3U
+#EXT-X-SESSION-DATA:DATA-ID="key",VALUE="value"
+
+#EXT-X-SESSION-KEY:METHOD=SAMPLE-AES,URI="skd://a",KEYFORMAT="com.apple.streamingkeydelivery",KEYFORMATVERSIONS="1"
+
+#EXT-X-SESSION-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,YQo=",KEYFORMAT="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed",KEYFORMATVERSIONS="1"
+
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core
+
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+http://proxy-21.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+
+    const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
+    expect(result.sessionData).to.deep.equal({
+      key: new AttrList({
+        'DATA-ID': 'key',
+        VALUE: 'value',
+      }),
+    });
+    expect(result.sessionKeys)
+      .to.be.an('array')
+      .with.property('length')
+      .which.equals(2);
+    // enforce type
+    if (result.sessionKeys === null) {
+      expect(result.sessionKeys).to.not.be.null;
+      return;
+    }
+    expect(result.sessionKeys[0])
+      .to.have.property('uri')
+      .which.equals('skd://a');
+    expect(result.sessionKeys[0])
+      .to.have.property('method')
+      .which.equals('SAMPLE-AES');
+    expect(result.sessionKeys[0])
+      .to.have.property('keyFormat')
+      .which.equals('com.apple.streamingkeydelivery');
+    expect(result.sessionKeys[1])
+      .to.have.property('uri')
+      .which.equals('data:text/plain;base64,YQo=');
+    expect(result.sessionKeys[1])
+      .to.have.property('method')
+      .which.equals('SAMPLE-AES');
+    expect(result.sessionKeys[1])
+      .to.have.property('keyFormat')
+      .which.equals('urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed');
+    expect(result.levels.length).to.equal(2);
+  });
 });
 
 function expectWithJSONMessage(value: any, msg?: string) {

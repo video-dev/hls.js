@@ -376,7 +376,10 @@ class PlaylistLoader implements NetworkComponentAPI {
 
     const url = getResponseUrl(response, context);
 
-    const { levels, sessionData } = M3U8Parser.parseMasterPlaylist(string, url);
+    const { levels, sessionData, sessionKeys } = M3U8Parser.parseMasterPlaylist(
+      string,
+      url
+    );
     if (!levels.length) {
       this.handleManifestParsingError(
         response,
@@ -457,6 +460,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       stats,
       networkDetails,
       sessionData,
+      sessionKeys,
     });
   }
 
@@ -513,6 +517,7 @@ class PlaylistLoader implements NetworkComponentAPI {
         stats,
         networkDetails,
         sessionData: null,
+        sessionKeys: null,
       });
     }
 
