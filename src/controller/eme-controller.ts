@@ -889,6 +889,9 @@ class EMEController implements ComponentAPI {
 
     return Promise.resolve()
       .then(() => {
+        if (!keysListItem.decryptdata) {
+          throw new Error('Key removed');
+        }
         return licenseXhrSetup.call(
           this.hls,
           xhr,
