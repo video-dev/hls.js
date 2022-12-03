@@ -1321,13 +1321,13 @@ export default class StreamController
           fragPlaying.level !== fragCurrentLevel ||
           fragPlayingCurrent.urlId !== fragPlaying.urlId
         ) {
+          this.fragPlaying = fragPlayingCurrent;
           this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });
           if (!fragPlaying || fragPlaying.level !== fragCurrentLevel) {
             this.hls.trigger(Events.LEVEL_SWITCHED, {
               level: fragCurrentLevel,
             });
           }
-          this.fragPlaying = fragPlayingCurrent;
         }
       }
     }

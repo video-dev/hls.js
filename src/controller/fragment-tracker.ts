@@ -370,7 +370,10 @@ export class FragmentTracker implements ComponentAPI {
       this.detectEvictedFragments(elementaryStream, timeRange);
       if (!part) {
         for (let i = 0; i < timeRange.length; i++) {
-          frag.appendedPTS = Math.max(timeRange.end(i), frag.appendedPTS || 0);
+          const rangeEnd = timeRange.end(i);
+          if (rangeEnd < frag.end) {
+            frag.appendedPTS = Math.max(rangeEnd, frag.appendedPTS || 0);
+          }
         }
       }
     });
