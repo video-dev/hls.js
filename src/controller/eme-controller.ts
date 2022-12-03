@@ -635,10 +635,6 @@ class EMEController implements ComponentAPI {
         messageType === 'license-renewal'
       ) {
         this.renewLicense(context, message).catch((error) => {
-          if ('data' in error) {
-            // We can fail to retrieve a new license and still continue, future key requests may succeed.
-            error.data.fatal = false;
-          }
           this.handleError(error);
           licenseStatus.emit('error', error);
         });
