@@ -360,10 +360,10 @@ describe('EMEController', function () {
       xhr: sinon.SinonFakeXMLHttpRequest
     ) => {
       xhrInstance = xhr;
-      self.setTimeout(() => {
+      Promise.resolve().then(() => {
         (xhr as any).response = new Uint8Array();
         xhr.respond(200, {}, '');
-      }, 0);
+      });
     };
 
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, {

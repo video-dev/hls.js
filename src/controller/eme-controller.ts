@@ -23,6 +23,9 @@ import { strToUtf8array } from '../utils/keysystem-util';
 import { utf8ArrayToStr } from '../demux/id3';
 import { base64Decode, base64Encode } from '../utils/numeric-encoding-utils';
 import { DecryptData, LevelKey } from '../loader/level-key';
+import Hex from '../utils/hex';
+import { parsePssh } from '../utils/mp4-tools';
+import EventEmitter from 'eventemitter3';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 import type {
@@ -33,8 +36,6 @@ import type {
 } from '../types/events';
 import type { EMEControllerConfig } from '../config';
 import type { Fragment } from '../loader/fragment';
-import Hex from '../utils/hex';
-import { parsePssh } from '../utils/mp4-tools';
 
 const MAX_LICENSE_REQUEST_FAILURES = 3;
 const LOGGER_PREFIX = '[eme]';
@@ -617,38 +618,64 @@ class EMEController implements ComponentAPI {
       })`
     );
 
-    const licensedPromise = new Promise((resolve, reject) => {
-      context.mediaKeysSession.onmessage = (event: MediaKeyMessageEvent) => {
-        if (!context.mediaKeysSession) {
-          return reject(new Error('invalid state'));
+    const licenseStatus = new EventEmitter();
+
+    context.mediaKeysSession.onmessage = (event: MediaKeyMessageEvent) => {
+      const keySession = context.mediaKeysSession;
+      if (!keySession) {
+        licenseStatus.emit('error', new Error('invalid state'));
+        return;
+      }
+      const { messageType, message } = event;
+      this.log(
+        `"${messageType}" message event for session "${keySession.sessionId}" message size: ${message.byteLength}`
+      );
+      if (
+        messageType === 'license-request' ||
+        messageType === 'license-renewal'
+      ) {
+        this.renewLicense(context, message).catch((error) => {
+          if ('data' in error) {
+            // We can fail to retrieve a new license and still continue, future key requests may succeed.
+            error.data.fatal = false;
+          }
+          this.handleError(error);
+          licenseStatus.emit('error', error);
+        });
+      } else if (messageType === 'license-release') {
+        if (context.keySystem === KeySystems.FAIRPLAY) {
+          this.updateKeySession(context, strToUtf8array('acknowledged'));
+          this.removeSession(context);
         }
-        const { messageType, message } = event;
-        this.log(
-          `"${messageType}" message event for session "${context.mediaKeysSession.sessionId}" message size: ${message.byteLength}`
-        );
-        if (
-          messageType === 'license-request' ||
-          messageType === 'license-renewal'
-        ) {
-          this.renewLicense(context, message).then(resolve).catch(reject);
-        } else {
-          this.warn(`unhandled media key message type "${messageType}"`);
-        }
-      };
-    });
+      } else {
+        this.warn(`unhandled media key message type "${messageType}"`);
+      }
+    };
+
+    context.mediaKeysSession.onkeystatuseschange = (
+      event: MediaKeyMessageEvent
+    ) => {
+      const keySession = context.mediaKeysSession;
+      if (!keySession) {
+        licenseStatus.emit('error', new Error('invalid state'));
+        return;
+      }
+      this.onKeyStatusChange(context);
+      const keyStatus = context.keyStatus;
+      licenseStatus.emit('keyStatus', keyStatus);
+      if (keyStatus === 'expired') {
+        this.warn(`${context.keySystem} expired for key ${keyId}`);
+        this.renewKeySession(context);
+      }
+    };
 
     const keyUsablePromise = new Promise(
-      (resolve: (value: MediaKeySessionContext) => void, reject) => {
-        context.mediaKeysSession.onkeystatuseschange = (
-          event: MediaKeyMessageEvent
-        ) => {
-          if (!context.mediaKeysSession) {
-            return reject(new Error('invalid state'));
-          }
-          this.onKeyStatusChange(context);
-          const keyStatus = context.keyStatus;
+      (resolve: (value?: void) => void, reject) => {
+        licenseStatus.on('error', reject);
+
+        licenseStatus.on('keyStatus', (keyStatus) => {
           if (keyStatus.startsWith('usable')) {
-            resolve(context);
+            resolve();
           } else if (keyStatus === 'output-restricted') {
             reject(
               new EMEKeyError(
@@ -676,7 +703,7 @@ class EMEController implements ComponentAPI {
           } else {
             this.warn(`unhandled key status change "${keyStatus}"`);
           }
-        };
+        });
       }
     );
 
@@ -686,7 +713,6 @@ class EMEController implements ComponentAPI {
         this.log(
           `Request generated for key-session "${context.mediaKeysSession?.sessionId}" keyId: ${keyId}`
         );
-        return context;
       })
       .catch((error) => {
         throw new EMEKeyError(
@@ -699,60 +725,15 @@ class EMEController implements ComponentAPI {
           `Error generating key-session request: ${error}`
         );
       })
-      .then(() => licensedPromise)
       .then(() => keyUsablePromise)
       .catch((error) => {
+        licenseStatus.removeAllListeners();
         this.removeSession(context);
         throw error;
       })
-      .then((mediaKeySessionContext) => {
-        context.mediaKeysSession.onmessage = (event: MediaKeyMessageEvent) => {
-          const keySession = mediaKeySessionContext.mediaKeysSession;
-          if (keySession) {
-            const { messageType, message } = event;
-            this.log(
-              `"${messageType}" message event for session "${mediaKeySessionContext.mediaKeysSession.sessionId}" message size: ${message.byteLength}`
-            );
-            if (
-              messageType === 'license-request' ||
-              messageType === 'license-renewal'
-            ) {
-              this.renewLicense(context, message).catch((error) => {
-                if ('data' in error) {
-                  // We can fail to retrieve a new license and still continue, future key requests may succeed.
-                  error.data.fatal = false;
-                }
-                this.handleError(error);
-              });
-            } else if (messageType === 'license-release') {
-              if (mediaKeySessionContext.keySystem === KeySystems.FAIRPLAY) {
-                this.updateKeySession(
-                  mediaKeySessionContext,
-                  strToUtf8array('acknowledged')
-                );
-                this.removeSession(mediaKeySessionContext);
-              }
-            } else {
-              this.warn(`unhandled media key message type "${messageType}"`);
-            }
-          }
-        };
-        mediaKeySessionContext.mediaKeysSession.onkeystatuseschange = (
-          event: MediaKeyMessageEvent
-        ) => {
-          const keySession = mediaKeySessionContext.mediaKeysSession;
-          if (keySession) {
-            this.onKeyStatusChange(mediaKeySessionContext);
-            const keyStatus = mediaKeySessionContext.keyStatus;
-            if (keyStatus === 'expired') {
-              this.warn(
-                `${mediaKeySessionContext.keySystem} expired for key ${keyId}`
-              );
-              this.renewKeySession(mediaKeySessionContext);
-            }
-          }
-        };
-        return mediaKeySessionContext;
+      .then(() => {
+        licenseStatus.removeAllListeners();
+        return context;
       });
   }
 
@@ -970,7 +951,8 @@ class EMEController implements ComponentAPI {
             );
             this._requestLicenseFailureCount++;
             if (
-              this._requestLicenseFailureCount > MAX_LICENSE_REQUEST_FAILURES
+              this._requestLicenseFailureCount > MAX_LICENSE_REQUEST_FAILURES ||
+              (xhr.status >= 400 && xhr.status < 500)
             ) {
               reject(
                 new EMEKeyError(
