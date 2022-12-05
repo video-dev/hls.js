@@ -1088,7 +1088,7 @@ export default class StreamController
             endDTS,
           };
         } else {
-          if (video.firstKeyFrame && video.independent) {
+          if (video.firstKeyFrame && video.independent && chunkMeta.id === 1) {
             this.couldBacktrack = true;
           }
           if (video.dropped && video.independent) {
