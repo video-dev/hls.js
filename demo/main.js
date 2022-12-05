@@ -539,19 +539,14 @@ function loadSelectedStream() {
   });
 
   hls.on(Hls.Events.FRAG_BUFFERED, function (eventName, data) {
-    const stats = data.part.stats.loaded ? data.part.stats : data.frag.stats;
+    const stats =
+      data.part && data.part.stats && data.part.stats.loaded
+        ? data.part.stats
+        : data.frag.stats;
     if (data.stats.aborted) {
       console.assert('Aborted request being buffered.', data);
       return;
     }
-
-    if (data.frag.type !== 'main' || data.frag.sn === 'initSegment') {
-      return;
-    }
-    const processingMs =
-      stats.parsing.end -
-      stats.loading.start -
-      Math.min(stats.loading.first - stats.loading.start, hls.ttfbEstimate);
 
     const event = {
       type: data.frag.type + (data.part ? ' part' : ' fragment'),
@@ -564,13 +559,18 @@ function loadSelectedStream() {
       parsing: data.stats.parsing.end - data.stats.loading.end,
       buffer: data.stats.buffering.end - data.stats.parsing.end,
       duration: data.stats.buffering.end - data.stats.loading.first,
-      bw: Math.round((8 * stats.loaded) / Math.max(processingMs, 50)), // 50 = this.minDelayMs_ in class EwmaBandWidthEstimator
+      bw: Math.round(
+        (8 * data.stats.total) /
+          (data.stats.buffering.end - data.stats.loading.start)
+      ), // bandwidth of this fragment
+      ewma: Math.round(hls.bandwidthEstimate / 1000), // estimated bandwidth
       size: data.stats.total,
     };
     events.load.push(event);
     events.bitrate.push({
       time: self.performance.now() - events.t0,
       bitrate: event.bw,
+      ewma: event.ewma,
       duration: data.frag.duration,
       level: event.id,
     });
