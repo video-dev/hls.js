@@ -82,7 +82,7 @@ export function findFragmentByPTS(
     fragments,
     fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance)
   );
-  if (foundFragment) {
+  if (foundFragment && (foundFragment !== fragPrevious || !fragNext)) {
     return foundFragment;
   }
   // If no match was found return the next fragment after fragPrevious, or null

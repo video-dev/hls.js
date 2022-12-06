@@ -77,7 +77,7 @@ describe('Fragment finders', function () {
         {
           deltaPTS: 0,
           cc: 2,
-          duration: 5,
+          duration: 0.033,
           start: 60.234398412698226,
           sn: 12,
           level: 0,
