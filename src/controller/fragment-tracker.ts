@@ -352,7 +352,10 @@ export class FragmentTracker implements ComponentAPI {
   ) {
     const { frag, part, timeRanges } = data;
     if (frag.type === PlaylistLevelType.MAIN) {
-      this.activeFragment = frag;
+      if (this.activeFragment !== frag) {
+        this.activeFragment = frag;
+        frag.appendedPTS = undefined;
+      }
       if (part) {
         let activeParts = this.activeParts;
         if (!activeParts) {
@@ -368,9 +371,18 @@ export class FragmentTracker implements ComponentAPI {
     Object.keys(timeRanges).forEach((elementaryStream: SourceBufferName) => {
       const timeRange = timeRanges[elementaryStream] as TimeRanges;
       this.detectEvictedFragments(elementaryStream, timeRange);
-      if (!part) {
+      if (!part && frag.type === PlaylistLevelType.MAIN) {
+        const streamInfo = frag.elementaryStreams[elementaryStream];
+        if (!streamInfo) {
+          return;
+        }
         for (let i = 0; i < timeRange.length; i++) {
-          frag.appendedPTS = Math.max(timeRange.end(i), frag.appendedPTS || 0);
+          const rangeEnd = timeRange.end(i);
+          if (rangeEnd <= streamInfo.endPTS && rangeEnd > streamInfo.startPTS) {
+            frag.appendedPTS = Math.max(rangeEnd, frag.appendedPTS || 0);
+          } else {
+            frag.appendedPTS = streamInfo.endPTS;
+          }
         }
       }
     });
@@ -412,6 +424,7 @@ export class FragmentTracker implements ComponentAPI {
     const fragKey = getFragmentKey(fragment);
     fragment.stats.loaded = 0;
     fragment.clearElementaryStreamInfo();
+    fragment.appendedPTS = undefined;
     delete this.fragments[fragKey];
   }
 

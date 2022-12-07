@@ -1088,7 +1088,7 @@ export default class StreamController
             endDTS,
           };
         } else {
-          if (video.firstKeyFrame && video.independent) {
+          if (video.firstKeyFrame && video.independent && chunkMeta.id === 1) {
             this.couldBacktrack = true;
           }
           if (video.dropped && video.independent) {
@@ -1321,13 +1321,13 @@ export default class StreamController
           fragPlaying.level !== fragCurrentLevel ||
           fragPlayingCurrent.urlId !== fragPlaying.urlId
         ) {
+          this.fragPlaying = fragPlayingCurrent;
           this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });
           if (!fragPlaying || fragPlaying.level !== fragCurrentLevel) {
             this.hls.trigger(Events.LEVEL_SWITCHED, {
               level: fragCurrentLevel,
             });
           }
-          this.fragPlaying = fragPlayingCurrent;
         }
       }
     }
