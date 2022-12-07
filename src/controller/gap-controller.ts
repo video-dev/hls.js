@@ -55,7 +55,7 @@ export default class GapController {
     this.seeking = seeking;
 
     // The playhead is moving, no-op
-    if (currentTime !== lastCurrentTime) {
+    if (currentTime !== lastCurrentTime || (media?.paused && seeking)) {
       this.moved = true;
       if (stalled !== null) {
         // The playhead is now moving, but was previously stalled
