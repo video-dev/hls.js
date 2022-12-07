@@ -122,7 +122,6 @@ export function updateFragPTSDTS(
   frag.duration = endPTS - startPTS;
 
   const drift = startPTS - frag.start;
-  frag.appendedPTS = endPTS;
   frag.start = frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
   frag.startDTS = startDTS;
