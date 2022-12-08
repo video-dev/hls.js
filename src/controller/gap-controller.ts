@@ -110,8 +110,10 @@ export default class GapController {
       if (hasEnoughBuffer || noBufferGap) {
         return;
       }
-      // Reset moved state when seeking to a point in or before a gap
-      this.moved = false;
+      if (!media.paused) {
+        // Reset moved state when seeking to a point in or before a gap
+        this.moved = false;
+      }
     }
 
     // Skip start gaps if we haven't played, but the last poll detected the start of a stall

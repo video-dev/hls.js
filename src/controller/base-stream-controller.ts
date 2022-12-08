@@ -226,9 +226,7 @@ export default class BaseStreamController
       }, state: ${state}`
     );
 
-    if (state === State.ENDED) {
-      this.resetLoadingState();
-    } else if (fragCurrent) {
+    if (fragCurrent) {
       // Seeking while frag load is in progress
       const tolerance = config.maxFragLookUpTolerance;
       const fragStartOffset = fragCurrent.start - tolerance;
@@ -241,8 +239,14 @@ export default class BaseStreamController
         fragStartOffset > bufferInfo.end
       ) {
         const pastFragment = currentTime > fragEndOffset;
+        const beforeBufferStart =
+          fragCurrent.maxStartPTS && currentTime < fragCurrent.maxStartPTS;
         // if the seek position is outside the current fragment range
-        if (currentTime < fragStartOffset || pastFragment) {
+        if (
+          currentTime < fragStartOffset ||
+          pastFragment ||
+          beforeBufferStart
+        ) {
           if (pastFragment && fragCurrent.loader) {
             this.log(
               'seeking outside of buffer while fragment load in progress, cancel fragment load'
@@ -252,6 +256,8 @@ export default class BaseStreamController
           this.resetLoadingState();
         }
       }
+    } else if (state === State.ENDED) {
+      this.resetLoadingState();
     }
 
     if (media) {
