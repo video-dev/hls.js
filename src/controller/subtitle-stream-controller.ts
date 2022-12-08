@@ -21,6 +21,7 @@ import type {
   TrackSwitchedData,
   BufferFlushingData,
   LevelLoadedData,
+  FragBufferedData,
 } from '../types/events';
 
 const TICK_INTERVAL = 500; // how often to tick in ms
@@ -62,6 +63,7 @@ export class SubtitleStreamController
     hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
     hls.on(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
     hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
+    hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
   private _unregisterListeners() {
@@ -76,13 +78,20 @@ export class SubtitleStreamController
     hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
     hls.off(Events.SUBTITLE_FRAG_PROCESSED, this.onSubtitleFragProcessed, this);
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
+    hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
-  startLoad() {
+  startLoad(startPosition: number) {
     this.stopLoad();
     this.state = State.IDLE;
 
     this.setInterval(TICK_INTERVAL);
+
+    this.nextLoadPosition =
+      this.startPosition =
+      this.lastCurrentTime =
+        startPosition;
+
     this.tick();
   }
 
@@ -174,6 +183,14 @@ export class SubtitleStreamController
     }
   }
 
+  onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+    if (!this.loadedmetadata && data.frag.type === PlaylistLevelType.MAIN) {
+      if (this.media?.buffered.length) {
+        this.loadedmetadata = true;
+      }
+    }
+  }
+
   // If something goes wrong, proceed to next frag, if we were processing one.
   onError(event: Events.ERROR, data: ErrorData) {
     const frag = data.frag;
@@ -244,6 +261,7 @@ export class SubtitleStreamController
       return;
     }
     this.mediaBuffer = this.mediaBufferTimeRanges;
+    let sliding = 0;
     if (newDetails.live || track.details?.live) {
       const mainDetails = this.mainDetails;
       if (newDetails.deltaUpdateFailed || !mainDetails) {
@@ -253,20 +271,27 @@ export class SubtitleStreamController
       if (!track.details) {
         if (newDetails.hasProgramDateTime && mainDetails.hasProgramDateTime) {
           alignMediaPlaylistByPDT(newDetails, mainDetails);
+          sliding = newDetails.fragments[0].start;
         } else if (mainSlidingStartFragment) {
           // line up live playlist with main so that fragments in range are loaded
-          addSliding(newDetails, mainSlidingStartFragment.start);
+          sliding = mainSlidingStartFragment.start;
+          addSliding(newDetails, sliding);
         }
       } else {
-        const sliding = this.alignPlaylists(newDetails, track.details);
+        sliding = this.alignPlaylists(newDetails, track.details);
         if (sliding === 0 && mainSlidingStartFragment) {
           // realign with main when there is no overlap with last refresh
-          addSliding(newDetails, mainSlidingStartFragment.start);
+          sliding = mainSlidingStartFragment.start;
+          addSliding(newDetails, sliding);
         }
       }
     }
     track.details = newDetails;
     this.levelLastLoaded = trackId;
+
+    if (!this.startFragRequested && (this.mainDetails || !newDetails.live)) {
+      this.setStartPosition(track.details, sliding);
+    }
 
     // trigger handler right now
     this.tick();
@@ -349,15 +374,21 @@ export class SubtitleStreamController
       // Expand range of subs loaded by one target-duration in either direction to make up for misaligned playlists
       const trackDetails = levels[currentTrackId].details as LevelDetails;
       const targetDuration = trackDetails.targetduration;
-      const { config, media } = this;
+      const { config } = this;
+      const currentTime = this.getLoadPosition();
       const bufferedInfo = BufferHelper.bufferedInfo(
         this.tracksBuffered[this.currentTrackId] || [],
-        media.currentTime - targetDuration,
+        currentTime - targetDuration,
         config.maxBufferHole
       );
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
 
-      const maxBufLen = this.getMaxBufferLength() + targetDuration;
+      const mainBufferInfo = this.getFwdBufferInfo(
+        this.media,
+        PlaylistLevelType.MAIN
+      );
+      const maxBufLen =
+        this.getMaxBufferLength(mainBufferInfo?.len) + targetDuration;
 
       if (bufferLen > maxBufLen) {
         return;
@@ -412,6 +443,14 @@ export class SubtitleStreamController
     }
   }
 
+  protected getMaxBufferLength(mainBufferLength?: number): number {
+    const maxConfigBuffer = super.getMaxBufferLength();
+    if (!mainBufferLength) {
+      return maxConfigBuffer;
+    }
+    return Math.max(maxConfigBuffer, mainBufferLength);
+  }
+
   protected loadFragment(
     frag: Fragment,
     levelDetails: LevelDetails,
@@ -421,6 +460,7 @@ export class SubtitleStreamController
     if (frag.sn === 'initSegment') {
       this._loadInitSegment(frag);
     } else {
+      this.startFragRequested = true;
       super.loadFragment(frag, levelDetails, targetBufferTime);
     }
   }

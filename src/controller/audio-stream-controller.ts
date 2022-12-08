@@ -252,12 +252,6 @@ class AudioStreamController
       // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
       return;
     }
-    const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : media;
-    const buffered = mediaBuffer.buffered;
-
-    if (!this.loadedmetadata && buffered.length) {
-      this.loadedmetadata = true;
-    }
 
     this.lastCurrentTime = media.currentTime;
   }
@@ -599,6 +593,11 @@ class AudioStreamController
   onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     const { frag, part } = data;
     if (frag.type !== PlaylistLevelType.AUDIO) {
+      if (!this.loadedmetadata && frag.type === PlaylistLevelType.MAIN) {
+        if ((this.videoBuffer || this.media)?.buffered.length) {
+          this.loadedmetadata = true;
+        }
+      }
       return;
     }
     if (this.fragContextChanged(frag)) {
