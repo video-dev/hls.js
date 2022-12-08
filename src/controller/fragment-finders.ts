@@ -82,7 +82,7 @@ export function findFragmentByPTS(
     fragments,
     fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance)
   );
-  if (foundFragment) {
+  if (foundFragment && (foundFragment !== fragPrevious || !fragNext)) {
     return foundFragment;
   }
   // If no match was found return the next fragment after fragPrevious, or null
@@ -101,6 +101,13 @@ export function fragmentWithinToleranceTest(
   maxFragLookUpTolerance = 0,
   candidate: Fragment
 ) {
+  // eagerly accept an accurate match (no tolerance)
+  if (
+    candidate.start <= bufferEnd &&
+    candidate.start + candidate.duration > bufferEnd
+  ) {
+    return 0;
+  }
   // offset should be within fragment boundary - config.maxFragLookUpTolerance
   // this is to cope with situations like
   // bufferEnd = 9.991
