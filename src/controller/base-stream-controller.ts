@@ -228,22 +228,29 @@ export default class BaseStreamController
 
     if (state === State.ENDED) {
       this.resetLoadingState();
-    } else if (fragCurrent && !bufferInfo.len) {
-      // check if we are seeking to a unbuffered area AND if frag loading is in progress
+    } else if (fragCurrent) {
+      // Seeking while frag load is in progress
       const tolerance = config.maxFragLookUpTolerance;
       const fragStartOffset = fragCurrent.start - tolerance;
       const fragEndOffset =
         fragCurrent.start + fragCurrent.duration + tolerance;
-      const pastFragment = currentTime > fragEndOffset;
-      // check if the seek position is past current fragment, and if so abort loading
-      if (currentTime < fragStartOffset || pastFragment) {
-        if (pastFragment && fragCurrent.loader) {
-          this.log(
-            'seeking outside of buffer while fragment load in progress, cancel fragment load'
-          );
-          fragCurrent.abortRequests();
+      // if seeking out of buffered range or into new one
+      if (
+        !bufferInfo.len ||
+        fragEndOffset < bufferInfo.start ||
+        fragStartOffset > bufferInfo.end
+      ) {
+        const pastFragment = currentTime > fragEndOffset;
+        // if the seek position is outside the current fragment range
+        if (currentTime < fragStartOffset || pastFragment) {
+          if (pastFragment && fragCurrent.loader) {
+            this.log(
+              'seeking outside of buffer while fragment load in progress, cancel fragment load'
+            );
+            fragCurrent.abortRequests();
+          }
+          this.resetLoadingState();
         }
-        this.resetLoadingState();
       }
     }
 
@@ -500,6 +507,7 @@ export default class BaseStreamController
     }
     if (
       !this.loadedmetadata &&
+      frag.type == PlaylistLevelType.MAIN &&
       media.buffered.length &&
       this.fragCurrent?.sn === this.fragPrevious?.sn
     ) {
