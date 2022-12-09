@@ -863,11 +863,17 @@ export default class BaseStreamController
     if (bufferInfo.len === 0 && bufferInfo.nextStart !== undefined) {
       const bufferedFragAtPos = this.fragmentTracker.getBufferedFrag(pos, type);
       if (bufferedFragAtPos && bufferInfo.nextStart < bufferedFragAtPos.end) {
-        return BufferHelper.bufferInfo(
-          bufferable,
-          pos,
-          Math.max(bufferInfo.nextStart, config.maxBufferHole)
-        );
+        // Treat as not buffered if end of previous segment is a better match for configured tolerance
+        if (
+          bufferedFragAtPos.maxStartPTS &&
+          pos - bufferedFragAtPos.maxStartPTS > config.maxBufferHole
+        ) {
+          return BufferHelper.bufferInfo(
+            bufferable,
+            pos,
+            Math.max(bufferInfo.nextStart, config.maxBufferHole)
+          );
+        }
       }
     }
     return bufferInfo;
@@ -1117,9 +1123,15 @@ export default class BaseStreamController
         // non-uniform fragment durations
         const sameLevel = fragPrevious && frag.level === fragPrevious.level;
         if (sameLevel) {
-          const nextFrag = fragments[curSNIdx + 1];
+          let nextFrag;
+          if (frag.maxStartPTS && bufferEnd + tolerance < frag.maxStartPTS) {
+            // select previous segment on jagged start
+            nextFrag = fragments[curSNIdx - 1];
+          } else {
+            nextFrag = fragments[curSNIdx + 1];
+          }
           if (
-            frag.sn < endSN &&
+            nextFrag &&
             this.fragmentTracker.getState(nextFrag) !== FragmentState.OK
           ) {
             this.log(
