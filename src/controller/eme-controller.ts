@@ -169,32 +169,31 @@ class EMEController implements ComponentAPI {
         }) => void,
         reject: (Error) => void
       ) => {
-        let attempts = 0;
-        const catchAll = (error) => {
-          attempts++;
-          if (attempts === keySystemsToAttempt.length) {
-            if (error instanceof EMEKeyError) {
-              reject(error);
-            } else {
-              reject(
-                new EMEKeyError(
-                  {
-                    type: ErrorTypes.KEY_SYSTEM_ERROR,
-                    details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
-                    error,
-                    fatal: true,
-                  },
-                  error.message
-                )
-              );
-            }
-          }
-        };
-        keySystemsToAttempt.forEach((keySystem) => {
+        const attempt = (keySystems) => {
+          const keySystem = keySystems.shift();
           this.getMediaKeysPromise(keySystem, audioCodecs, videoCodecs)
             .then((mediaKeys) => resolve({ keySystem, mediaKeys }))
-            .catch(catchAll);
-        });
+            .catch((error) => {
+              if (keySystems.length) {
+                attempt(keySystems);
+              } else if (error instanceof EMEKeyError) {
+                reject(error);
+              } else {
+                reject(
+                  new EMEKeyError(
+                    {
+                      type: ErrorTypes.KEY_SYSTEM_ERROR,
+                      details: ErrorDetails.KEY_SYSTEM_NO_ACCESS,
+                      error,
+                      fatal: true,
+                    },
+                    error.message
+                  )
+                );
+              }
+            });
+        };
+        attempt(keySystemsToAttempt);
       }
     );
   }
@@ -395,11 +394,14 @@ class EMEController implements ComponentAPI {
 
   private getKeyFormatPromise(keyFormats: string[]): Promise<KeySystemFormats> {
     return new Promise((resolve, reject) => {
+      const keySystemsInConfig = getKeySystemsForConfig(this.config);
       const keySystemsToAttempt = keyFormats
         .map(keySystemFormatToKeySystemDomain)
-        .filter((value) => !!value) as any as KeySystems[];
-      return this.getKeySystemSelectionPromise(keySystemsToAttempt).then(
-        ({ keySystem }) => {
+        .filter(
+          (value) => !!value && keySystemsInConfig.indexOf(value) !== -1
+        ) as any as KeySystems[];
+      return this.getKeySystemSelectionPromise(keySystemsToAttempt)
+        .then(({ keySystem }) => {
           const keySystemFormat = keySystemToKeySystemFormat(keySystem);
           if (keySystemFormat) {
             resolve(keySystemFormat);
@@ -408,8 +410,8 @@ class EMEController implements ComponentAPI {
               new Error(`Unable to find format for key-system "${keySystem}"`)
             );
           }
-        }
-      );
+        })
+        .catch(reject);
     });
   }
 
