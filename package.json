@@ -97,7 +97,7 @@
     "lint-staged": "13.1.0",
     "micromatch": "4.0.5",
     "mocha": "10.1.0",
-    "netlify-cli": "12.2.8",
+    "netlify-cli": "12.2.9",
     "node-fetch": "3.3.0",
     "prettier": "2.8.0",
     "promise-polyfill": "8.2.3",
