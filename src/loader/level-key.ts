@@ -175,6 +175,16 @@ export class LevelKey implements DecryptData {
           }
           break;
         }
+        default: {
+          let keydata = keyBytes.subarray(0, 16);
+          if (keydata.length !== 16) {
+            const padded = new Uint8Array(16);
+            padded.set(keydata, 16 - keydata.length);
+            keydata = padded;
+          }
+          this.keyId = keydata;
+          break;
+        }
       }
     }
 
@@ -257,15 +267,14 @@ function getFairPlayV3Pssh(
     const fpsk = mp4Box.apply(null, args as [ArrayLike<number>, Uint8Array]);
     return fpsk;
   };
-  const args = [
-    FpsBoxTypes.fpsd,
-    makeFpsKeySystemInfoBox(scheme),
-    makeFpsKeyRequestBox(keyId, keyFormatVersions),
-  ];
-  const data = mp4Box.apply(null, args as [ArrayLike<number>, Uint8Array]);
   const kFairPlayStreamingKeySystemUUID = new Uint8Array([
     0x94, 0xce, 0x86, 0xfb, 0x07, 0xff, 0x4f, 0x43, 0xad, 0xb8, 0x93, 0xd2,
     0xfa, 0x96, 0x8c, 0xa2,
   ]);
+  const data = mp4Box(
+    FpsBoxTypes.fpsd,
+    makeFpsKeySystemInfoBox(scheme),
+    makeFpsKeyRequestBox(keyId, keyFormatVersions)
+  );
   return mp4pssh(kFairPlayStreamingKeySystemUUID, null, data);
 }

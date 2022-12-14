@@ -179,7 +179,7 @@ export default class KeyLoader implements ComponentAPI {
       case 'SAMPLE-AES-CENC':
       case 'SAMPLE-AES-CTR':
         if (decryptdata.keyFormat === 'identity') {
-          // loadKeyHTTP handles data URLs
+          // loadKeyHTTP handles http(s) and data URLs
           return this.loadKeyHTTP(keyInfo, frag);
         }
         return this.loadKeyEME(keyInfo, frag);

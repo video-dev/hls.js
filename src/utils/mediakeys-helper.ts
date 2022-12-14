@@ -21,14 +21,15 @@ export enum KeySystemFormats {
 export function keySystemFormatToKeySystemDomain(
   format: KeySystemFormats
 ): KeySystems | undefined {
-  if (format === KeySystemFormats.FAIRPLAY) {
-    return KeySystems.FAIRPLAY;
-  } else if (format === KeySystemFormats.PLAYREADY) {
-    return KeySystems.PLAYREADY;
-  } else if (format === KeySystemFormats.WIDEVINE) {
-    return KeySystems.WIDEVINE;
-  } else if (format === KeySystemFormats.CLEARKEY) {
-    return KeySystems.CLEARKEY;
+  switch (format) {
+    case KeySystemFormats.FAIRPLAY:
+      return KeySystems.FAIRPLAY;
+    case KeySystemFormats.PLAYREADY:
+      return KeySystems.PLAYREADY;
+    case KeySystemFormats.WIDEVINE:
+      return KeySystems.WIDEVINE;
+    case KeySystemFormats.CLEARKEY:
+      return KeySystems.CLEARKEY;
   }
 }
 
@@ -56,14 +57,15 @@ export function keySystemIdToKeySystemDomain(
 export function keySystemDomainToKeySystemFormat(
   keySystem: KeySystems
 ): KeySystemFormats | undefined {
-  if (keySystem === KeySystems.FAIRPLAY) {
-    return KeySystemFormats.FAIRPLAY;
-  } else if (keySystem === KeySystems.PLAYREADY) {
-    return KeySystemFormats.PLAYREADY;
-  } else if (keySystem === KeySystems.WIDEVINE) {
-    return KeySystemFormats.WIDEVINE;
-  } else if (keySystem === KeySystems.CLEARKEY) {
-    return KeySystemFormats.CLEARKEY;
+  switch (keySystem) {
+    case KeySystems.FAIRPLAY:
+      return KeySystemFormats.FAIRPLAY;
+    case KeySystems.PLAYREADY:
+      return KeySystemFormats.PLAYREADY;
+    case KeySystems.WIDEVINE:
+      return KeySystemFormats.WIDEVINE;
+    case KeySystems.CLEARKEY:
+      return KeySystemFormats.CLEARKEY;
   }
 }
 
@@ -71,22 +73,16 @@ export function getKeySystemsForConfig(
   config: EMEControllerConfig
 ): KeySystems[] {
   const { drmSystems, widevineLicenseUrl } = config;
-  const keySystemsToAttempt: KeySystems[] = [];
-  [KeySystems.FAIRPLAY, KeySystems.PLAYREADY, KeySystems.CLEARKEY].forEach(
-    (keySystem) => {
-      if (drmSystems?.[keySystem]) {
-        keySystemsToAttempt.push(keySystem);
-      }
-    }
-  );
-  if (widevineLicenseUrl || drmSystems?.[KeySystems.WIDEVINE]) {
+  const keySystemsToAttempt: KeySystems[] = drmSystems
+    ? [
+        KeySystems.FAIRPLAY,
+        KeySystems.WIDEVINE,
+        KeySystems.PLAYREADY,
+        KeySystems.CLEARKEY,
+      ].filter((keySystem) => !!drmSystems[keySystem])
+    : [];
+  if (!keySystemsToAttempt[KeySystems.WIDEVINE] && widevineLicenseUrl) {
     keySystemsToAttempt.push(KeySystems.WIDEVINE);
-  } else if (keySystemsToAttempt.length === 0) {
-    keySystemsToAttempt.push(
-      KeySystems.WIDEVINE,
-      KeySystems.FAIRPLAY,
-      KeySystems.PLAYREADY
-    );
   }
   return keySystemsToAttempt;
 }

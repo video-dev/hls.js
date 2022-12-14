@@ -325,10 +325,11 @@ class EMEController implements ComponentAPI {
       mediaKeySessionContext
     );
     const keyId = this.getKeyIdString(decryptdata);
+    const scheme = 'cenc';
     this.keyIdToKeySessionPromise[keyId] =
       this.generateRequestWithPreferredKeySession(
         keySessionContext,
-        'cenc',
+        scheme,
         decryptdata.pssh
       );
     this.removeSession(mediaKeySessionContext);
@@ -380,7 +381,7 @@ class EMEController implements ComponentAPI {
   }
 
   public selectKeySystemFormat(frag: Fragment): Promise<KeySystemFormats> {
-    const keyFormats = Object.keys(frag.levelkeys || {});
+    const keyFormats = Object.keys(frag.levelkeys || {}) as KeySystemFormats[];
     if (!this.keyFormatPromise) {
       this.log(
         `Selecting key-system from fragment (sn: ${frag.sn} ${frag.type}: ${
@@ -392,7 +393,9 @@ class EMEController implements ComponentAPI {
     return this.keyFormatPromise;
   }
 
-  private getKeyFormatPromise(keyFormats: string[]): Promise<KeySystemFormats> {
+  private getKeyFormatPromise(
+    keyFormats: KeySystemFormats[]
+  ): Promise<KeySystemFormats> {
     return new Promise((resolve, reject) => {
       const keySystemsInConfig = getKeySystemsForConfig(this.config);
       const keySystemsToAttempt = keyFormats
@@ -440,9 +443,10 @@ class EMEController implements ComponentAPI {
                 mediaKeys,
                 decryptdata,
               });
+              const scheme = 'cenc';
               return this.generateRequestWithPreferredKeySession(
                 keySessionContext,
-                'cenc',
+                scheme,
                 decryptdata.pssh
               );
             });
@@ -1104,10 +1108,12 @@ class EMEController implements ComponentAPI {
       return;
     }
     if (!this.keyFormatPromise) {
-      const keyFormats = sessionKeys.reduce(
-        (formats: string[], sessionKey: LevelKey) => {
-          if (formats.indexOf(sessionKey.keyFormat) === -1) {
-            formats.push(sessionKey.keyFormat);
+      const keyFormats: KeySystemFormats[] = sessionKeys.reduce(
+        (formats: KeySystemFormats[], sessionKey: LevelKey) => {
+          if (
+            formats.indexOf(sessionKey.keyFormat as KeySystemFormats) === -1
+          ) {
+            formats.push(sessionKey.keyFormat as KeySystemFormats);
           }
           return formats;
         },
