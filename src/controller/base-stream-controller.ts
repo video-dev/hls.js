@@ -3,7 +3,7 @@ import { FragmentState } from './fragment-tracker';
 import { Bufferable, BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import { Events } from '../events';
-import { ErrorDetails } from '../errors';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { alignStream } from '../utils/discontinuities';
@@ -99,14 +99,19 @@ export default class BaseStreamController
   protected log: (msg: any) => void;
   protected warn: (msg: any) => void;
 
-  constructor(hls: Hls, fragmentTracker: FragmentTracker, logPrefix: string) {
+  constructor(
+    hls: Hls,
+    fragmentTracker: FragmentTracker,
+    keyLoader: KeyLoader,
+    logPrefix: string
+  ) {
     super();
     this.logPrefix = logPrefix;
     this.log = logger.log.bind(logger, `${logPrefix}:`);
     this.warn = logger.warn.bind(logger, `${logPrefix}:`);
     this.hls = hls;
     this.fragmentLoader = new FragmentLoader(hls.config);
-    this.keyLoader = new KeyLoader(hls.config);
+    this.keyLoader = keyLoader;
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls.config);
@@ -204,6 +209,9 @@ export default class BaseStreamController
       media.removeEventListener('seeking', this.onvseeking);
       media.removeEventListener('ended', this.onvended);
       this.onvseeking = this.onvended = null;
+    }
+    if (this.keyLoader) {
+      this.keyLoader.detach();
     }
     this.media = this.mediaBuffer = null;
     this.loadedmetadata = false;
@@ -566,13 +574,15 @@ export default class BaseStreamController
       this.state = State.KEY_LOADING;
       this.fragCurrent = frag;
       keyLoadingPromise = this.keyLoader.load(frag).then((keyLoadedData) => {
-        if (keyLoadedData && !this.fragContextChanged(keyLoadedData.frag)) {
+        if (!this.fragContextChanged(keyLoadedData.frag)) {
           this.hls.trigger(Events.KEY_LOADED, keyLoadedData);
           return keyLoadedData;
         }
       });
       this.hls.trigger(Events.KEY_LOADING, { frag });
       this.throwIfFragContextChanged('KEY_LOADING');
+    } else if (!frag.encrypted && details.encryptedFragments.length) {
+      this.keyLoader.loadClear(frag, details.encryptedFragments);
     }
 
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
@@ -609,7 +619,7 @@ export default class BaseStreamController
               .then((keyLoadedData) => {
                 if (
                   !keyLoadedData ||
-                  this.fragContextChanged(keyLoadedData?.frag)
+                  this.fragContextChanged(keyLoadedData.frag)
                 ) {
                   return null;
                 }
@@ -727,11 +737,21 @@ export default class BaseStreamController
     );
   }
 
-  private handleFragLoadError({ data }: LoadError) {
-    if (data && data.details === ErrorDetails.INTERNAL_ABORTED) {
-      this.handleFragLoadAborted(data.frag, data.part);
+  private handleFragLoadError(error: LoadError | Error) {
+    if ('data' in error) {
+      const data = error.data;
+      if (error.data && data.details === ErrorDetails.INTERNAL_ABORTED) {
+        this.handleFragLoadAborted(data.frag, data.part);
+      } else {
+        this.hls.trigger(Events.ERROR, data as ErrorData);
+      }
     } else {
-      this.hls.trigger(Events.ERROR, data as ErrorData);
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.OTHER_ERROR,
+        details: ErrorDetails.INTERNAL_EXCEPTION,
+        err: error,
+        fatal: true,
+      });
     }
     return null;
   }
@@ -739,7 +759,11 @@ export default class BaseStreamController
   protected _handleTransmuxerFlush(chunkMeta: ChunkMetadata) {
     const context = this.getCurrentContext(chunkMeta);
     if (!context || this.state !== State.PARSING) {
-      if (!this.fragCurrent) {
+      if (
+        !this.fragCurrent &&
+        this.state !== State.STOPPED &&
+        this.state !== State.ERROR
+      ) {
         this.state = State.IDLE;
       }
       return;
@@ -1292,7 +1316,19 @@ export default class BaseStreamController
     data: ErrorData
   ) {
     if (data.fatal) {
+      this.stopLoad();
+      this.state = State.ERROR;
       return;
+    }
+    const config = this.config;
+    if (data.chunkMeta) {
+      // Parsing Error: no retries
+      const context = this.getCurrentContext(data.chunkMeta);
+      if (context) {
+        data.frag = context.frag;
+        data.levelRetry = true;
+        this.fragLoadError = config.fragLoadingMaxRetry;
+      }
     }
     const frag = data.frag;
     // Handle frag error related to caller's filterType
@@ -1307,7 +1343,6 @@ export default class BaseStreamController
         frag.urlId === fragCurrent.urlId,
       'Frag load error must match current frag to retry'
     );
-    const config = this.config;
     // keep retrying until the limit will be reached
     if (this.fragLoadError + 1 <= config.fragLoadingMaxRetry) {
       if (!this.loadedmetadata) {

@@ -2,7 +2,11 @@ import {
   flushTextTrackMetadataCueSamples,
   flushTextTrackUserdataCueSamples,
 } from './mp4-remuxer';
-import type { InitData, InitDataTrack } from '../utils/mp4-tools';
+import {
+  InitData,
+  InitDataTrack,
+  patchEncyptionData,
+} from '../utils/mp4-tools';
 import {
   getDuration,
   getStartDTS,
@@ -24,6 +28,7 @@ import type {
   DemuxedUserdataTrack,
   PassthroughTrack,
 } from '../types/demuxer';
+import type { DecryptData } from '../loader/level-key';
 
 class PassThroughRemuxer implements Remuxer {
   private emitInitSegment: boolean = false;
@@ -48,11 +53,12 @@ class PassThroughRemuxer implements Remuxer {
   public resetInitSegment(
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
-    videoCodec: string | undefined
+    videoCodec: string | undefined,
+    decryptdata: DecryptData | null
   ) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
-    this.generateInitSegment(initSegment);
+    this.generateInitSegment(patchEncyptionData(initSegment, decryptdata));
     this.emitInitSegment = true;
   }
 

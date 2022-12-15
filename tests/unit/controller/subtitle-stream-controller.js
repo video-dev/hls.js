@@ -3,6 +3,7 @@ import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
+import KeyLoader from '../../../src/loader/key-loader';
 import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
 
 const mediaMock = {
@@ -16,15 +17,19 @@ const tracksMock = [{ id: 0, details: { url: '' } }, { id: 1 }];
 describe('SubtitleStreamController', function () {
   let hls;
   let fragmentTracker;
+  let keyLoader;
   let subtitleStreamController;
 
   beforeEach(function () {
     hls = new Hls({});
     mediaMock.currentTime = 0;
     fragmentTracker = new FragmentTracker(hls);
+    keyLoader = new KeyLoader({});
+
     subtitleStreamController = new SubtitleStreamController(
       hls,
-      fragmentTracker
+      fragmentTracker,
+      keyLoader
     );
 
     subtitleStreamController.onMediaAttached(Events.MEDIA_ATTACHED, {

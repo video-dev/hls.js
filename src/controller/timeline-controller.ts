@@ -497,12 +497,7 @@ export class TimelineController implements ComponentAPI {
         // fragment after decryption has a stats object
         const decrypted = 'stats' in data;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
-        if (
-          decryptData == null ||
-          decryptData.key == null ||
-          decryptData.method !== 'AES-128' ||
-          decrypted
-        ) {
+        if (decryptData == null || !decryptData.encrypted || decrypted) {
           const trackPlaylistMedia = this.tracks[frag.level];
           const vttCCs = this.vttCCs;
           if (!vttCCs[frag.cc]) {

@@ -3,7 +3,7 @@
  */
 
 const Hex = {
-  hexDump: function (array) {
+  hexDump: function (array: Uint8Array) {
     let str = '';
     for (let i = 0; i < array.length; i++) {
       let h = array[i].toString(16);

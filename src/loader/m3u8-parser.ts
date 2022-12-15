@@ -4,7 +4,6 @@ import { DateRange } from './date-range';
 import { Fragment, Part } from './fragment';
 import { LevelDetails } from './level-details';
 import { LevelKey } from './level-key';
-
 import { AttrList } from '../utils/attr-list';
 import { logger } from '../utils/logger';
 import type { CodecType } from '../utils/codecs';
@@ -19,9 +18,15 @@ import type { LevelAttributes, LevelParsed } from '../types/level';
 
 type M3U8ParserFragments = Array<Fragment | null>;
 
+type ParsedMultiVariantPlaylist = {
+  levels: LevelParsed[];
+  sessionData: Record<string, AttrList> | null;
+  sessionKeys: LevelKey[] | null;
+};
+
 // https://regex101.com is your friend
 const MASTER_PLAYLIST_REGEX =
-  /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-SESSION-DATA:([^\r\n]*)[\r\n]+/g;
+  /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-SESSION-DATA:([^\r\n]*)[\r\n]+|#EXT-X-SESSION-KEY:([^\n\r]*)[\r\n]+/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
@@ -83,10 +88,15 @@ export default class M3U8Parser {
     return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
-  static parseMasterPlaylist(string: string, baseurl: string) {
-    const levels: Array<LevelParsed> = [];
-    const levelsWithKnownCodecs: Array<LevelParsed> = [];
+  static parseMasterPlaylist(
+    string: string,
+    baseurl: string
+  ): ParsedMultiVariantPlaylist {
+    const levels: LevelParsed[] = [];
+    const levelsWithKnownCodecs: LevelParsed[] = [];
     const sessionData: Record<string, AttrList> = {};
+    const sessionKeys: LevelKey[] = [];
+
     let hasSessionData = false;
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
@@ -131,6 +141,17 @@ export default class M3U8Parser {
           hasSessionData = true;
           sessionData[sessionAttrs['DATA-ID']] = sessionAttrs;
         }
+      } else if (result[4]) {
+        // '#EXT-X-SESSION-KEY' is found
+        const keyTag = result[4];
+        const sessionKey = parseKey(keyTag, baseurl);
+        if (sessionKey.encrypted && sessionKey.isSupported()) {
+          sessionKeys.push(sessionKey);
+        } else {
+          logger.warn(
+            `[Keys] Ignoring invalid EXT-X-SESSION-KEY tag: "${keyTag}"`
+          );
+        }
       }
     }
     // Filter out levels with unknown codecs if it does not remove all levels
@@ -141,6 +162,7 @@ export default class M3U8Parser {
     return {
       levels: stripUnknownCodecLevels ? levelsWithKnownCodecs : levels,
       sessionData: hasSessionData ? sessionData : null,
+      sessionKeys: sessionKeys.length ? sessionKeys : null,
     };
   }
 
@@ -207,7 +229,7 @@ export default class M3U8Parser {
     let frag: Fragment = new Fragment(type, baseurl);
     let result: RegExpExecArray | RegExpMatchArray | null;
     let i: number;
-    let levelkey: LevelKey | undefined;
+    let levelkeys: { [key: string]: LevelKey } | undefined;
     let firstPdtIndex = -1;
     let createNextFrag = false;
 
@@ -242,8 +264,20 @@ export default class M3U8Parser {
         // url
         if (Number.isFinite(frag.duration)) {
           frag.start = totalduration;
-          if (levelkey) {
-            frag.levelkey = levelkey;
+          if (levelkeys) {
+            frag.levelkeys = levelkeys;
+            const { encryptedFragments } = level;
+            if (
+              frag.levelkeys &&
+              Object.keys(frag.levelkeys).some(
+                (format) => frag.levelkeys![format].isCommonEncryption
+              ) &&
+              (!encryptedFragments.length ||
+                encryptedFragments[encryptedFragments.length - 1].levelkeys !==
+                  levelkeys)
+            ) {
+              encryptedFragments.push(frag);
+            }
           }
           frag.sn = currentSN;
           frag.level = id;
@@ -365,66 +399,21 @@ export default class M3U8Parser {
             discontinuityCounter = parseInt(value1);
             break;
           case 'KEY': {
-            // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
-            const keyAttrs = new AttrList(value1);
-            const decryptmethod = keyAttrs.enumeratedString('METHOD');
-            const decrypturi = keyAttrs.URI;
-            const decryptiv = keyAttrs.hexadecimalInteger('IV');
-            const decryptkeyformatversions =
-              keyAttrs.enumeratedString('KEYFORMATVERSIONS');
-            const decryptkeyid = keyAttrs.enumeratedString('KEYID');
-            // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
-            const decryptkeyformat =
-              keyAttrs.enumeratedString('KEYFORMAT') ?? 'identity';
-
-            const unsupportedKnownKeyformatsInManifest = [
-              'com.apple.streamingkeydelivery',
-              'com.microsoft.playready',
-              'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed', // widevine (v2)
-              'com.widevine', // earlier widevine (v1)
-            ];
-
-            if (
-              unsupportedKnownKeyformatsInManifest.indexOf(decryptkeyformat) >
-              -1
-            ) {
-              logger.warn(
-                `Keyformat ${decryptkeyformat} is not supported from the manifest`
-              );
-              continue;
-            } else if (decryptkeyformat !== 'identity') {
-              // We are supposed to skip keys we don't understand.
-              // As we currently only officially support identity keys
-              // from the manifest we shouldn't save any other key.
-              continue;
-            }
-
-            // TODO: multiple keys can be defined on a fragment, and we need to support this
-            // for clients that support both playready and widevine
-            if (decryptmethod) {
-              // TODO: need to determine if the level key is actually a relative URL
-              // if it isn't, then we should instead construct the LevelKey using fromURI.
-              levelkey = LevelKey.fromURL(baseurl, decrypturi);
-              if (
-                decrypturi &&
-                ['AES-128', 'SAMPLE-AES', 'SAMPLE-AES-CENC'].indexOf(
-                  decryptmethod
-                ) >= 0
-              ) {
-                levelkey.method = decryptmethod;
-                levelkey.keyFormat = decryptkeyformat;
-
-                if (decryptkeyid) {
-                  levelkey.keyID = decryptkeyid;
-                }
-
-                if (decryptkeyformatversions) {
-                  levelkey.keyFormatVersions = decryptkeyformatversions;
-                }
-
-                // Initialization Vector (IV)
-                levelkey.iv = decryptiv;
+            const levelKey = parseKey(value1, baseurl);
+            if (levelKey.isSupported()) {
+              if (levelKey.method === 'NONE') {
+                levelkeys = undefined;
+                break;
               }
+              if (!levelkeys) {
+                levelkeys = {};
+              }
+              if (levelkeys[levelKey.keyFormat]) {
+                levelkeys = Object.assign({}, levelkeys);
+              }
+              levelkeys[levelKey.keyFormat] = levelKey;
+            } else {
+              logger.warn(`[Keys] Ignoring invalid EXT-X-KEY tag: "${value1}"`);
             }
             break;
           }
@@ -445,7 +434,7 @@ export default class M3U8Parser {
               //   #EXTINF: 6.0
               //   #EXT-X-MAP:URI="init.mp4
               const init = new Fragment(type, baseurl);
-              setInitSegment(init, mapAttrs, id, levelkey);
+              setInitSegment(init, mapAttrs, id, levelkeys);
               currentInitSegment = init;
               frag.initSegment = currentInitSegment;
               if (
@@ -456,7 +445,7 @@ export default class M3U8Parser {
               }
             } else {
               // Initial segment tag is before segment duration tag
-              setInitSegment(frag, mapAttrs, id, levelkey);
+              setInitSegment(frag, mapAttrs, id, levelkeys);
               currentInitSegment = frag;
               createNextFrag = true;
             }
@@ -589,6 +578,39 @@ export default class M3U8Parser {
   }
 }
 
+function parseKey(keyTag: string, baseurl: string): LevelKey {
+  // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
+  const keyAttrs = new AttrList(keyTag);
+  const decryptmethod = keyAttrs.enumeratedString('METHOD') ?? '';
+  const decrypturi = keyAttrs.URI;
+  const decryptiv = keyAttrs.hexadecimalInteger('IV');
+  const decryptkeyformatversions =
+    keyAttrs.enumeratedString('KEYFORMATVERSIONS');
+  // From RFC: This attribute is OPTIONAL; its absence indicates an implicit value of "identity".
+  const decryptkeyformat = keyAttrs.enumeratedString('KEYFORMAT') ?? 'identity';
+
+  if (decrypturi && keyAttrs.IV && !decryptiv) {
+    logger.error(`Invalid IV: ${keyAttrs.IV}`);
+  }
+  // If decrypturi is a URI with a scheme, then baseurl will be ignored
+  // No uri is allowed when METHOD is NONE
+  const resolvedUri = decrypturi ? M3U8Parser.resolve(decrypturi, baseurl) : '';
+  const keyFormatVersions = (
+    decryptkeyformatversions ? decryptkeyformatversions : '1'
+  )
+    .split('/')
+    .map(Number)
+    .filter(Number.isFinite);
+
+  return new LevelKey(
+    decryptmethod,
+    resolvedUri,
+    decryptkeyformat,
+    keyFormatVersions,
+    decryptiv
+  );
+}
+
 function setCodecs(codecs: Array<string>, level: LevelParsed) {
   ['video', 'audio', 'text'].forEach((type: CodecType) => {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
@@ -650,7 +672,7 @@ function setInitSegment(
   frag: Fragment,
   mapAttrs: AttrList,
   id: number,
-  levelkey: LevelKey | undefined
+  levelkeys: { [key: string]: LevelKey } | undefined
 ) {
   frag.relurl = mapAttrs.URI;
   if (mapAttrs.BYTERANGE) {
@@ -658,8 +680,8 @@ function setInitSegment(
   }
   frag.level = id;
   frag.sn = 'initSegment';
-  if (levelkey) {
-    frag.levelkey = levelkey;
+  if (levelkeys) {
+    frag.levelkeys = levelkeys;
   }
   frag.initSegment = null;
 }

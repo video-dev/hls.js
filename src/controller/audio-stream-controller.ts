@@ -10,11 +10,12 @@ import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
 import { fragmentWithinToleranceTest } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
-import { ErrorDetails } from '../errors';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import type { NetworkComponentAPI } from '../types/component-api';
-import type { FragmentTracker } from './fragment-tracker';
-import type { TransmuxerResult } from '../types/transmuxer';
 import type Hls from '../hls';
+import type { FragmentTracker } from './fragment-tracker';
+import type KeyLoader from '../loader/key-loader';
+import type { TransmuxerResult } from '../types/transmuxer';
 import type { LevelDetails } from '../loader/level-details';
 import type { TrackSet } from '../types/track';
 import type {
@@ -56,8 +57,12 @@ class AudioStreamController
   private bufferFlushed: boolean = false;
   private cachedTrackLoadedData: TrackLoadedData | null = null;
 
-  constructor(hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls, fragmentTracker, '[audio-stream-controller]');
+  constructor(
+    hls: Hls,
+    fragmentTracker: FragmentTracker,
+    keyLoader: KeyLoader
+  ) {
+    super(hls, fragmentTracker, keyLoader, '[audio-stream-controller]');
     this._registerListeners();
   }
 
@@ -619,9 +624,14 @@ class AudioStreamController
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
+    if (data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
+      this.onFragmentOrKeyLoadError(PlaylistLevelType.AUDIO, data);
+      return;
+    }
     switch (data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
+      case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         // TODO: Skip fragments that do not belong to this.fragCurrent audio-group id

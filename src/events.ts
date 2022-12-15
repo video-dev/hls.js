@@ -160,7 +160,7 @@ export enum Events {
   DESTROYING = 'hlsDestroying',
   // fired when a decrypt key loading starts - data: { frag : fragment object }
   KEY_LOADING = 'hlsKeyLoading',
-  // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : LoaderStats }
+  // fired when a decrypt key loading is completed - data: { frag : fragment object, keyInfo : KeyLoaderInfo }
   KEY_LOADED = 'hlsKeyLoaded',
   // deprecated; please use BACK_BUFFER_REACHED - data : { bufferEnd: number }
   LIVE_BACK_BUFFER_REACHED = 'hlsLiveBackBufferReached',

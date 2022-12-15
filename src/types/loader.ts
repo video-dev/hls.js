@@ -1,5 +1,6 @@
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
+import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
 import type { HlsUrlParameters } from './level';
 
@@ -24,7 +25,10 @@ export interface FragmentLoaderContext extends LoaderContext {
   resetIV?: boolean;
 }
 
-export interface KeyLoaderContext extends FragmentLoaderContext {}
+export interface KeyLoaderContext extends LoaderContext {
+  keyInfo: KeyLoaderInfo;
+  frag: Fragment;
+}
 
 export interface LoaderConfiguration {
   // Max number of load retries
