@@ -68,24 +68,22 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         const attr = renditionReports[i];
         const uri = '' + attr.URI;
         if (uri === playlistUri.slice(-uri.length)) {
-          const msn = parseInt(attr['LAST-MSN']);
-          let part = parseInt(attr['LAST-PART']);
+          const msn = parseInt(attr['LAST-MSN']) || previous?.lastPartSn;
+          let part = parseInt(attr['LAST-PART']) || previous?.lastPartIndex;
           if (previous && this.hls.config.lowLatencyMode) {
             const currentGoal = Math.min(
               previous.age - previous.partTarget,
               previous.targetduration
             );
-            if (part !== undefined && currentGoal > previous.partTarget) {
+            if (part >= 0 && currentGoal > previous.partTarget) {
               part += 1;
             }
           }
-          if (Number.isFinite(msn)) {
-            return new HlsUrlParameters(
-              msn,
-              Number.isFinite(part) ? part : undefined,
-              HlsSkip.No
-            );
-          }
+          return new HlsUrlParameters(
+            msn,
+            part >= 0 ? part : undefined,
+            HlsSkip.No
+          );
         }
       }
     }
