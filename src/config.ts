@@ -71,6 +71,12 @@ export type DRMSystemOptions = {
 export type DRMSystemConfiguration = {
   licenseUrl: string;
   serverCertificateUrl?: string;
+  generateRequest?: (
+    this: Hls,
+    initDataType: string,
+    initData: ArrayBuffer,
+    keyContext: MediaKeySessionContext
+  ) => { initDataType: string; initData: ArrayBuffer };
 };
 
 export type DRMSystemsConfiguration = Partial<

@@ -606,6 +606,23 @@ class EMEController implements ComponentAPI {
     initDataType: string,
     initData: ArrayBuffer | null
   ): Promise<MediaKeySessionContext> | never {
+    const generateRequestFilter =
+      this.config.drmSystems?.[context.keySystem]?.generateRequest;
+    if (generateRequestFilter) {
+      try {
+        const mappedInitData = generateRequestFilter.call(
+          this.hls,
+          initDataType,
+          initData,
+          context
+        );
+        initDataType = mappedInitData.initDataType;
+        initData = mappedInitData.initData;
+      } catch (error) {
+        this.error(error);
+      }
+    }
+
     if (!initData) {
       throw new EMEKeyError(
         {
@@ -1024,7 +1041,9 @@ class EMEController implements ComponentAPI {
               }
             }
           } catch (error) {
-            this.warn('got unexpected license-request format');
+            this.warn(
+              `Failed to extract spc from FairPlay license-request message. Fallback to message data for key uri: "${keySessionContext.decryptdata.uri}"`
+            );
           }
         }
         return message;
