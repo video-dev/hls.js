@@ -1,6 +1,8 @@
 import AudioStreamController from '../../../src/controller/audio-stream-controller';
 import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
+import { FragmentTracker } from '../../../src/controller/fragment-tracker';
+import KeyLoader from '../../../src/loader/key-loader';
 
 describe('AudioStreamController', function () {
   const tracks = [
@@ -41,11 +43,19 @@ describe('AudioStreamController', function () {
   ];
 
   let hls;
+  let fragmentTracker;
+  let keyLoader;
   let audioStreamController;
 
   beforeEach(function () {
     hls = new Hls();
-    audioStreamController = new AudioStreamController(hls);
+    fragmentTracker = new FragmentTracker(hls);
+    keyLoader = new KeyLoader({});
+    audioStreamController = new AudioStreamController(
+      hls,
+      fragmentTracker,
+      keyLoader
+    );
   });
 
   afterEach(function () {

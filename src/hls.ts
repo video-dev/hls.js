@@ -4,6 +4,7 @@ import ID3TrackController from './controller/id3-track-controller';
 import LatencyController from './controller/latency-controller';
 import LevelController from './controller/level-controller';
 import { FragmentTracker } from './controller/fragment-tracker';
+import KeyLoader from './loader/key-loader';
 import StreamController from './controller/stream-controller';
 import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
@@ -129,9 +130,11 @@ export default class Hls implements HlsEventEmitter {
     const levelController = (this.levelController = new LevelController(this));
     // FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
+    const keyLoader = new KeyLoader(this.config);
     const streamController = (this.streamController = new StreamController(
       this,
-      fragmentTracker
+      fragmentTracker,
+      keyLoader
     ));
 
     // Cap level controller uses streamController to flush the buffer
@@ -139,14 +142,14 @@ export default class Hls implements HlsEventEmitter {
     // fpsController uses streamController to switch when frames are being dropped
     fpsController.setStreamController(streamController);
 
-    const networkControllers = [
+    const networkControllers: NetworkComponentAPI[] = [
       playListLoader,
       levelController,
       streamController,
     ];
 
     this.networkControllers = networkControllers;
-    const coreComponents = [
+    const coreComponents: ComponentAPI[] = [
       abrController,
       bufferController,
       capLevelController,
@@ -157,50 +160,45 @@ export default class Hls implements HlsEventEmitter {
 
     this.audioTrackController = this.createController(
       config.audioTrackController,
-      null,
       networkControllers
     );
-    this.createController(
-      config.audioStreamController,
-      fragmentTracker,
-      networkControllers
-    );
-    // subtitleTrackController must be defined before  because the order of event handling is important
+    const AudioStreamControllerClass = config.audioStreamController;
+    if (AudioStreamControllerClass) {
+      networkControllers.push(
+        new AudioStreamControllerClass(this, fragmentTracker, keyLoader)
+      );
+    }
+    // subtitleTrackController must be defined before subtitleStreamController because the order of event handling is important
     this.subtitleTrackController = this.createController(
       config.subtitleTrackController,
-      null,
       networkControllers
     );
-    this.createController(
-      config.subtitleStreamController,
-      fragmentTracker,
-      networkControllers
-    );
-    this.createController(config.timelineController, null, coreComponents);
-    this.emeController = this.createController(
+    const SubtitleStreamControllerClass = config.subtitleStreamController;
+    if (SubtitleStreamControllerClass) {
+      networkControllers.push(
+        new SubtitleStreamControllerClass(this, fragmentTracker, keyLoader)
+      );
+    }
+    this.createController(config.timelineController, coreComponents);
+    keyLoader.emeController = this.emeController = this.createController(
       config.emeController,
-      null,
       coreComponents
     );
     this.cmcdController = this.createController(
       config.cmcdController,
-      null,
       coreComponents
     );
     this.latencyController = this.createController(
       LatencyController,
-      null,
       coreComponents
     );
 
     this.coreComponents = coreComponents;
   }
 
-  createController(ControllerClass, fragmentTracker, components) {
+  createController(ControllerClass, components) {
     if (ControllerClass) {
-      const controllerInstance = fragmentTracker
-        ? new ControllerClass(this, fragmentTracker)
-        : new ControllerClass(this);
+      const controllerInstance = new ControllerClass(this);
       if (components) {
         components.push(controllerInstance);
       }
@@ -869,7 +867,11 @@ export type {
   TSDemuxerConfig,
 } from './config';
 export type { CuesInterface } from './utils/cues';
-export type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
+export type {
+  MediaKeyFunc,
+  KeySystems,
+  KeySystemFormats,
+} from './utils/mediakeys-helper';
 export type { DateRange } from './loader/date-range';
 export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
@@ -893,7 +895,6 @@ export type {
   PlaylistContextType,
   PlaylistLoaderContext,
   FragmentLoaderContext,
-  KeyLoaderContext,
   Loader,
   LoaderStats,
   LoaderContext,
