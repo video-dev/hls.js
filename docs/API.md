@@ -1199,7 +1199,7 @@ Set to `true` to enable DRM key system access and license retrieval.
 
 ### `licenseXhrSetup`
 
-(default: `undefined`, type `(xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext, licenseChallenge: Uint8Array) => void`)
+(default: `undefined`, type `(xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext, licenseChallenge: Uint8Array) => void | Uint8Array | Promise<Uint8Array | void>`)
 
 A pre-processor function for modifying license requests. The license request URL, request headers, and payload can all be modified prior to sending the license request, based on operating conditions, the current key-session, and key-system.
 
@@ -1282,12 +1282,18 @@ Supported key-systems include 'com.apple.fps', 'com.microsoft.playready', 'com.w
 
 (default: `{}`)
 
-Allows for the customization of `audioRobustness` and `videoRobustness` in EMEController. Ex:
+Define optional [`MediaKeySystemConfiguration`](https://developer.mozilla.org/en-US/docs/Web/API/MediaKeySystemConfiguration) arguments to be passed to `requestMediaKeySystemAccess`. Ex:
 
 ```js
 {
   audioRobustness: 'SW_SECURE_CRYPTO',
-  videoRobustness: 'SW_SECURE_CRYPTO'
+  videoRobustness: 'SW_SECURE_CRYPTO',
+  audioEncryptionScheme: null,
+  videoEncryptionScheme: null,
+  persistentState: 'not-allowed';
+  distinctiveIdentifier: 'not-allowed';
+  sessionTypes: ['temporary'];
+  sessionType: 'temporary';
 }
 ```
 
