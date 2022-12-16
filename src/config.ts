@@ -90,7 +90,7 @@ export type EMEControllerConfig = {
     url: string,
     keyContext: MediaKeySessionContext,
     licenseChallenge: Uint8Array
-  ) => void | Promise<Uint8Array | void>;
+  ) => void | Uint8Array | Promise<Uint8Array | void>;
   licenseResponseCallback?: (
     this: Hls,
     xhr: XMLHttpRequest,
