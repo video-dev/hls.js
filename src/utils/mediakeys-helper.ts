@@ -116,14 +116,14 @@ export function getSupportedMediaKeySystemConfigurations(
   let initDataTypes: string[];
   switch (keySystem) {
     case KeySystems.FAIRPLAY:
-      initDataTypes = ['cenc', 'sinf', 'skd'];
+      initDataTypes = ['cenc', 'sinf'];
       break;
     case KeySystems.WIDEVINE:
-    case KeySystems.CLEARKEY:
-      initDataTypes = ['cenc', 'keyids'];
-      break;
     case KeySystems.PLAYREADY:
       initDataTypes = ['cenc'];
+      break;
+    case KeySystems.CLEARKEY:
+      initDataTypes = ['cenc', 'keyids'];
       break;
     default:
       throw new Error(`Unknown key-system: ${keySystem}`);

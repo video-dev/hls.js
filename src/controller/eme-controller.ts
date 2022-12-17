@@ -20,11 +20,10 @@ import {
   requestMediaKeySystemAccess,
 } from '../utils/mediakeys-helper';
 import { strToUtf8array } from '../utils/keysystem-util';
-import { utf8ArrayToStr } from '../demux/id3';
-import { base64Decode, base64Encode } from '../utils/numeric-encoding-utils';
+import { base64Decode } from '../utils/numeric-encoding-utils';
 import { DecryptData, LevelKey } from '../loader/level-key';
 import Hex from '../utils/hex';
-import { parsePssh } from '../utils/mp4-tools';
+import { bin2str, parsePssh, parseSinf } from '../utils/mp4-tools';
 import EventEmitter from 'eventemitter3';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
@@ -321,17 +320,21 @@ class EMEController implements ComponentAPI {
 
   private renewKeySession(mediaKeySessionContext: MediaKeySessionContext) {
     const decryptdata = mediaKeySessionContext.decryptdata;
-    const keySessionContext = this.createMediaKeySessionContext(
-      mediaKeySessionContext
-    );
-    const keyId = this.getKeyIdString(decryptdata);
-    const scheme = 'cenc';
-    this.keyIdToKeySessionPromise[keyId] =
-      this.generateRequestWithPreferredKeySession(
-        keySessionContext,
-        scheme,
-        decryptdata.pssh
+    if (decryptdata.pssh) {
+      const keySessionContext = this.createMediaKeySessionContext(
+        mediaKeySessionContext
       );
+      const keyId = this.getKeyIdString(decryptdata);
+      const scheme = 'cenc';
+      this.keyIdToKeySessionPromise[keyId] =
+        this.generateRequestWithPreferredKeySession(
+          keySessionContext,
+          scheme,
+          decryptdata.pssh
+        );
+    } else {
+      this.warn(`Could not renew expired session. Missing pssh initData.`);
+    }
     this.removeSession(mediaKeySessionContext);
   }
 
@@ -343,27 +346,6 @@ class EMEController implements ComponentAPI {
       throw new Error('keyId is null');
     }
     return Hex.hexDump(decryptdata.keyId);
-  }
-
-  private handleParsedKeyResponse(
-    mediaKeySessionContext: MediaKeySessionContext,
-    licenseResponse: ArrayBuffer
-  ): Uint8Array {
-    switch (mediaKeySessionContext.keySystem) {
-      case KeySystems.FAIRPLAY: {
-        const responseStr = JSON.stringify([
-          {
-            keyID: base64Encode(
-              mediaKeySessionContext.decryptdata?.keyId as Uint8Array
-            ),
-            payload: base64Encode(new Uint8Array(licenseResponse)),
-          },
-        ]);
-        this.log(`processLicense msg=${responseStr}`);
-        return strToUtf8array(responseStr);
-      }
-    }
-    return new Uint8Array(licenseResponse);
   }
 
   private updateKeySession(
@@ -500,10 +482,22 @@ class EMEController implements ComponentAPI {
   }
 
   private getKeySystemSelectionPromise(
-    keySystemsToAttempt?: KeySystems[]
-  ): Promise<{ keySystem: KeySystems; mediaKeys: MediaKeys }> {
-    if (!keySystemsToAttempt || !keySystemsToAttempt.length) {
+    keySystemsToAttempt: KeySystems[]
+  ): Promise<{ keySystem: KeySystems; mediaKeys: MediaKeys }> | never {
+    if (!keySystemsToAttempt.length) {
       keySystemsToAttempt = getKeySystemsForConfig(this.config);
+    }
+    if (keySystemsToAttempt.length === 0) {
+      throw new EMEKeyError(
+        {
+          type: ErrorTypes.KEY_SYSTEM_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_NO_CONFIGURED_LICENSE,
+          fatal: true,
+        },
+        `Missing key-system license configuration options ${JSON.stringify({
+          drmSystems: this.config.drmSystems,
+        })}`
+      );
     }
     return this.attemptKeySystemAccess(keySystemsToAttempt);
   }
@@ -517,30 +511,84 @@ class EMEController implements ComponentAPI {
       return;
     }
 
-    // Support clear-lead key-session creation (otherwise depend on playlist keys)
-    const psshInfo = parsePssh(initData);
-    if (psshInfo === null) {
-      return;
-    }
-    let keyId: Uint8Array | null = null;
+    let keyId: Uint8Array | undefined;
+    let keySystemDomain: KeySystems | undefined;
+
     if (
-      psshInfo.version === 0 &&
-      psshInfo.systemId === KeySystemIds.WIDEVINE &&
-      psshInfo.data
+      initDataType === 'sinf' &&
+      this.config.drmSystems[KeySystems.FAIRPLAY]
     ) {
-      keyId = psshInfo.data.subarray(8, 24);
+      // Match sinf keyId to playlist skd://keyId=
+      const json = bin2str(new Uint8Array(initData));
+      try {
+        const sinf = base64Decode(JSON.parse(json).sinf);
+        const tenc = parseSinf(new Uint8Array(sinf));
+        if (!tenc) {
+          return;
+        }
+        keyId = tenc.subarray(8, 24);
+        keySystemDomain = KeySystems.FAIRPLAY;
+      } catch (error) {
+        this.warn('Failed to parse sinf "encrypted" event message initData');
+        return;
+      }
+    } else {
+      // Support clear-lead key-session creation (otherwise depend on playlist keys)
+      const psshInfo = parsePssh(initData);
+      if (psshInfo === null) {
+        return;
+      }
+      if (
+        psshInfo.version === 0 &&
+        psshInfo.systemId === KeySystemIds.WIDEVINE &&
+        psshInfo.data
+      ) {
+        keyId = psshInfo.data.subarray(8, 24);
+      }
+      keySystemDomain = keySystemIdToKeySystemDomain(
+        psshInfo.systemId as KeySystemIds
+      );
     }
-    const keySystemDomain = keySystemIdToKeySystemDomain(
-      psshInfo.systemId as KeySystemIds
-    );
+
     if (!keySystemDomain || !keyId) {
       return;
     }
 
     const keyIdHex = Hex.hexDump(keyId);
-    let keySessionContextPromise = this.keyIdToKeySessionPromise[keyIdHex];
+    const { keyIdToKeySessionPromise, mediaKeySessions } = this;
+
+    let keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex];
+    for (let i = 0; i < mediaKeySessions.length; i++) {
+      // Match playlist key
+      const keyContext = mediaKeySessions[i];
+      const decryptdata = keyContext.decryptdata;
+      if (decryptdata.pssh || !decryptdata.keyId) {
+        continue;
+      }
+      const oldKeyIdHex = Hex.hexDump(decryptdata.keyId);
+      if (
+        keyIdHex === oldKeyIdHex ||
+        decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1
+      ) {
+        keySessionContextPromise = keyIdToKeySessionPromise[oldKeyIdHex];
+        delete keyIdToKeySessionPromise[oldKeyIdHex];
+        decryptdata.pssh = new Uint8Array(initData);
+        decryptdata.keyId = keyId;
+        keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
+          keySessionContextPromise.then(() => {
+            return this.generateRequestWithPreferredKeySession(
+              keyContext,
+              initDataType,
+              initData
+            );
+          });
+        break;
+      }
+    }
+
     if (!keySessionContextPromise) {
-      keySessionContextPromise = this.keyIdToKeySessionPromise[keyIdHex] =
+      // Clear-lead key (not encountered in playlist)
+      keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
         this.getKeySystemSelectionPromise([keySystemDomain]).then(
           ({ keySystem, mediaKeys }) => {
             this.throwIfDestroyed();
@@ -550,7 +598,7 @@ class EMEController implements ComponentAPI {
               keySystemToKeySystemFormat(keySystem) ?? ''
             );
             decryptdata.pssh = new Uint8Array(initData);
-            decryptdata.keyId = keyId;
+            decryptdata.keyId = keyId as Uint8Array;
             return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
               this.throwIfDestroyed();
               const keySessionContext = this.createMediaKeySessionContext({
@@ -616,22 +664,23 @@ class EMEController implements ComponentAPI {
           initData,
           context
         );
+        if (!mappedInitData) {
+          throw new Error(
+            'Invalid response from configured generateRequest filter'
+          );
+        }
         initDataType = mappedInitData.initDataType;
-        initData = mappedInitData.initData;
+        initData = context.decryptdata.pssh = new Uint8Array(
+          mappedInitData.initData
+        );
       } catch (error) {
         this.error(error);
       }
     }
 
-    if (!initData) {
-      throw new EMEKeyError(
-        {
-          type: ErrorTypes.KEY_SYSTEM_ERROR,
-          details: ErrorDetails.KEY_SYSTEM_NO_INIT_DATA,
-          fatal: true,
-        },
-        'Fatal: initData required for generating a key session is null'
-      );
+    if (initData === null) {
+      // wait for media "encrypted" event to generate request
+      return Promise.resolve(context);
     }
 
     const keyId = this.getKeyIdString(context.decryptdata);
@@ -799,7 +848,7 @@ class EMEController implements ComponentAPI {
                   fatal: true,
                   networkDetails: xhr,
                 },
-                `HTTP error ${xhr.status} happened while fetching server certificate`
+                `"${keySystem}" certificate request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`
               )
             );
           }
@@ -846,17 +895,9 @@ class EMEController implements ComponentAPI {
     context: MediaKeySessionContext,
     keyMessage: ArrayBuffer
   ): Promise<void> {
-    const licenseChallenge = this.generateLicenseRequestChallenge(
-      context,
-      keyMessage
-    );
-    return this.requestLicense(context, licenseChallenge).then(
+    return this.requestLicense(context, new Uint8Array(keyMessage)).then(
       (data: ArrayBuffer) => {
-        const licenseResponse: Uint8Array = this.handleParsedKeyResponse(
-          context,
-          data
-        );
-        return this.updateKeySession(context, licenseResponse).catch(
+        return this.updateKeySession(context, new Uint8Array(data)).catch(
           (error) => {
             throw new EMEKeyError(
               {
@@ -965,9 +1006,6 @@ class EMEController implements ComponentAPI {
             }
             resolve(data);
           } else {
-            const error = new Error(
-              `License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`
-            );
             this._requestLicenseFailureCount++;
             if (
               this._requestLicenseFailureCount > MAX_LICENSE_REQUEST_FAILURES ||
@@ -978,11 +1016,10 @@ class EMEController implements ComponentAPI {
                   {
                     type: ErrorTypes.KEY_SYSTEM_ERROR,
                     details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
-                    error,
                     fatal: true,
                     networkDetails: xhr,
                   },
-                  error.message
+                  `License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`
                 )
               );
             } else {
@@ -1015,48 +1052,6 @@ class EMEController implements ComponentAPI {
         }
       );
     });
-  }
-
-  private generateLicenseRequestChallenge(
-    keySessionContext: MediaKeySessionContext,
-    keyMessage: ArrayBuffer
-  ): Uint8Array | never {
-    const message = new Uint8Array(keyMessage);
-    switch (keySessionContext.keySystem) {
-      case KeySystems.FAIRPLAY: {
-        if (keySessionContext.decryptdata?.keyId) {
-          const messageJson = utf8ArrayToStr(message);
-          try {
-            const spcArray = JSON.parse(messageJson);
-            const keyID = base64Encode(keySessionContext.decryptdata.keyId);
-            // this.log(`License challenge message with key IDs: ${spcArray.map(p => p.keyID).join(', ')}`);
-            for (let i = 0; i < spcArray.length; i++) {
-              const payload = spcArray[i];
-              if (payload.keyID === keyID) {
-                this.log(
-                  `Generateing license challenge with ID ${payload.keyID}`
-                );
-                const spc = base64Decode(payload.payload);
-                return spc;
-              }
-            }
-          } catch (error) {
-            this.warn(
-              `Failed to extract spc from FairPlay license-request message. Fallback to message data for key uri: "${keySessionContext.decryptdata.uri}"`
-            );
-          }
-        }
-        return message;
-      }
-      case KeySystems.WIDEVINE:
-      case KeySystems.PLAYREADY:
-      case KeySystems.CLEARKEY:
-        return message;
-      default:
-        throw new Error(
-          `unsupported key-system: ${keySessionContext.keySystem}`
-        );
-    }
   }
 
   private onMediaAttached(

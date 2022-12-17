@@ -1,10 +1,9 @@
 import {
   changeEndianness,
   convertDataUriToArrayBytes,
-  strToUtf8array,
 } from '../utils/keysystem-util';
 import { KeySystemFormats } from '../utils/mediakeys-helper';
-import { mp4Box, mp4pssh, writeUint32 } from '../utils/mp4-tools';
+import { mp4pssh } from '../utils/mp4-tools';
 import { logger } from '../utils/logger';
 import { base64Decode } from '../utils/numeric-encoding-utils';
 
@@ -125,16 +124,6 @@ export class LevelKey implements DecryptData {
             );
           }
           break;
-        case KeySystemFormats.FAIRPLAY: {
-          let keydata = keyBytes.subarray(0, 16);
-          if (keydata.length !== 16) {
-            const padded = new Uint8Array(16);
-            padded.set(keydata, 16 - keydata.length);
-            keydata = padded;
-          }
-          this.keyId = keydata;
-          break;
-        }
         case KeySystemFormats.PLAYREADY: {
           const PlayReadyKeySystemUUID = new Uint8Array([
             0x9a, 0x04, 0xf0, 0x79, 0x98, 0x40, 0x42, 0x86, 0xab, 0x92, 0xe6,
@@ -202,14 +191,6 @@ export class LevelKey implements DecryptData {
       this.keyId = keyId;
     }
 
-    if (this.keyFormat === KeySystemFormats.FAIRPLAY) {
-      this.pssh = getFairPlayV3Pssh(
-        this.keyId,
-        this.method,
-        this.keyFormatVersions
-      );
-    }
-
     return this;
   }
 }
@@ -220,61 +201,4 @@ function createInitializationVector(segmentNumber: number): Uint8Array {
     uint8View[i] = (segmentNumber >> (8 * (15 - i))) & 0xff;
   }
   return uint8View;
-}
-
-function getFairPlayV3Pssh(
-  keyId: Uint8Array,
-  method: string,
-  keyFormatVersions: number[]
-): Uint8Array {
-  enum SchemeFourCC {
-    CENC = 0x63656e63,
-    CBCS = 0x63626373,
-  }
-  const scheme =
-    method === 'ISO-23001-7' ? SchemeFourCC.CENC : SchemeFourCC.CBCS;
-  const FpsBoxTypes = {
-    fpsd: strToUtf8array('fpsd'), // Parent box containing all info
-    fpsi: strToUtf8array('fpsi'), // Common info
-    fpsk: strToUtf8array('fpsk'), // key request
-    fkri: strToUtf8array('fkri'), // key request info
-    fkvl: strToUtf8array('fkvl'), // version list
-  };
-  const makeFpsKeySystemInfoBox = (scheme: SchemeFourCC): Uint8Array => {
-    const schemeArray = new Uint8Array(4);
-    writeUint32(schemeArray, 0, scheme);
-    return mp4Box(FpsBoxTypes.fpsi, new Uint8Array([0, 0, 0, 0]), schemeArray);
-  };
-  const makeFpsKeyRequestBox = (
-    keyId: Uint8Array,
-    versionList: Array<number>
-  ): Uint8Array => {
-    const args = [
-      FpsBoxTypes.fpsk,
-      mp4Box(FpsBoxTypes.fkri, new Uint8Array([0x00, 0x00, 0x00, 0x00]), keyId),
-    ];
-    if (versionList.length) {
-      // List of integers
-      const versionListBuffer = new Uint8Array(4 * versionList.length);
-      let pos = 0;
-      for (const version of versionList) {
-        writeUint32(versionListBuffer, pos, version);
-        pos += 4;
-      }
-      args.push(mp4Box(FpsBoxTypes.fkvl, versionListBuffer));
-    }
-
-    const fpsk = mp4Box.apply(null, args as [ArrayLike<number>, Uint8Array]);
-    return fpsk;
-  };
-  const kFairPlayStreamingKeySystemUUID = new Uint8Array([
-    0x94, 0xce, 0x86, 0xfb, 0x07, 0xff, 0x4f, 0x43, 0xad, 0xb8, 0x93, 0xd2,
-    0xfa, 0x96, 0x8c, 0xa2,
-  ]);
-  const data = mp4Box(
-    FpsBoxTypes.fpsd,
-    makeFpsKeySystemInfoBox(scheme),
-    makeFpsKeyRequestBox(keyId, keyFormatVersions)
-  );
-  return mp4pssh(kFairPlayStreamingKeySystemUUID, null, data);
 }

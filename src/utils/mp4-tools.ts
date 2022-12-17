@@ -299,25 +299,19 @@ export function patchEncyptionData(
         const encBoxChildren = isAudio ? enc.subarray(28) : enc.subarray(78);
         const sinfBoxes = findBox(encBoxChildren, ['sinf']);
         sinfBoxes.forEach((sinf) => {
-          const schm = findBox(sinf, ['schm'])[0];
-          if (!schm) {
-            logger.error(`[eme] missing 'schm' box`);
-            return;
-          }
-          const scheme = bin2str(schm.subarray(4, 8));
-          if (scheme === 'cbcs' || scheme === 'cenc') {
-            const tenc = findBox(sinf, ['schi', 'tenc'])[0];
-            if (tenc) {
-              // Look for default key id (keyID offset is always 8 within the tenc box):
-              const tencKeyId = tenc.subarray(8, 24);
-              if (!tencKeyId.some((b) => b !== 0)) {
-                logger.log(
-                  `[eme] found 'tenc' patching map with keyId default: ${Hex.hexDump(
-                    tencKeyId
-                  )} -> ${Hex.hexDump(keyId)}`
-                );
-                tenc.set(keyId, 8);
-              }
+          const tenc = parseSinf(sinf);
+          if (tenc) {
+            // Look for default key id (keyID offset is always 8 within the tenc box):
+            const tencKeyId = tenc.subarray(8, 24);
+            if (!tencKeyId.some((b) => b !== 0)) {
+              logger.log(
+                `[eme] Patching keyId in 'enc${
+                  isAudio ? 'a' : 'v'
+                }>sinf>>tenc' box: ${Hex.hexDump(tencKeyId)} -> ${Hex.hexDump(
+                  keyId
+                )}`
+              );
+              tenc.set(keyId, 8);
             }
           }
         });
@@ -326,6 +320,18 @@ export function patchEncyptionData(
   }
 
   return initSegment;
+}
+
+export function parseSinf(sinf: Uint8Array): Uint8Array | null {
+  const schm = findBox(sinf, ['schm'])[0];
+  if (schm) {
+    const scheme = bin2str(schm.subarray(4, 8));
+    if (scheme === 'cbcs' || scheme === 'cenc') {
+      return findBox(sinf, ['schi', 'tenc'])[0];
+    }
+  }
+  logger.error(`[eme] missing 'schm' box`);
+  return null;
 }
 
 /**
