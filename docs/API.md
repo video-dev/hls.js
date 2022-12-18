@@ -1265,18 +1265,32 @@ var config = {
 
 (default: `{}`)
 
-Set `licenseUrl` and `serverCertificateUrl` for a given key-system to your own DRM provider. `serverCertificateUrl` is not mandatory. Ex:
+Define license settings for given key-systems according to your own DRM provider. Ex:
 
 ```js
 drmSystems: {
+  'com.apple.fps': {
+    licenseUrl: 'https://your-fps-license-server/path',
+    serverCertificateUrl: 'https://your-fps-license-server/certificate/path',
+  },
   'com.widevine.alpha': {
-    licenseUrl: 'https://your-widevine-license-server/path',
-    serverCertificateUrl: 'https://optional-server-certificate/path/cert.bin'
+    licenseUrl: 'https://your-widevine-license-server/path'
   }
 }
 ```
 
 Supported key-systems include 'com.apple.fps', 'com.microsoft.playready', 'com.widevine.alpha', and 'org.w3.clearkey'. Mapping to other values in key-system access requests can be done by customizing [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc).
+
+When loading content with DRM Keys, the player will only request access
+to key-systems for the Session Keys or Playlist Keys for which there are
+also key-systems defined in `drmSystems`.
+
+### `drmSystems[KEY-SYSTEM].generateRequest
+
+(default: `undefined`, type `(initDataType: string, initData: ArrayBuffer | null, keyContext: MediaKeySessionContext) => { initDataType: string; initData: ArrayBuffer | null } | undefined`)
+
+Used to map initData or generate initData for playlist keys before
+MediaKeySession `generateRequest` is called.
 
 ### `drmSystemOptions`
 
@@ -1552,7 +1566,7 @@ Full list of Events is available below:
 - `Hls.Events.MANIFEST_LOADING` - fired to signal that a manifest loading starts
   - data: { url : manifestURL }
 - `Hls.Events.MANIFEST_LOADED` - fired after manifest has been loaded
-  - data: { levels : [available quality levels], audioTracks : [available audio tracks], captions? [available closed-captions media], subtitles?: [available subtitle tracks], url : manifestURL, stats : [LoaderStats], sessionData: [parsed #EXT-X-SESSION-DATA], networkDetails: [Loader specific object for debugging (XHR or fetch Response)]}
+  - data: { levels : [available quality levels], audioTracks : [available audio tracks], captions? [available closed-captions media], subtitles?: [available subtitle tracks], url : manifestURL, stats : [LoaderStats], sessionData: [parsed #EXT-X-SESSION-DATA], networkDetails: [Loader specific object for debugging (XMLHttpRequest or fetch Response)]}
 - `Hls.Events.MANIFEST_PARSED` - fired after manifest has been parsed
   - data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest, audioTracks, subtitleTracks, stats, audio: boolean, video: boolean, altAudio: boolean }
 - `Hls.Events.LEVEL_SWITCHING` - fired when a level switch is requested
@@ -1702,10 +1716,14 @@ Full list of errors is described below:
   - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_ERROR`, fatal : `true`, url : level URL, response : { code: error code, text: error text }, loader : URL loader }
 - `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT` - raised when level loading fails because of a timeout
   - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.LEVEL_LOAD_TIMEOUT`, fatal : `false`, url : level URL, loader : URL loader }
-- `Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR` - raised when audio track loading fails because of a network error
+- `Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR` - raised when audio playlist loading fails because of a network error
   - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR`, fatal : `false`, url : audio URL, response : { code: error code, text: error text }, loader : URL loader }
-- `Hls.ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT` - raised when audio track loading fails because of a timeout
+- `Hls.ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT` - raised when audio playlist loading fails because of a timeout
   - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT`, fatal : `false`, url : audio URL, loader : URL loader }
+- `Hls.ErrorDetails.SUBTITLE_LOAD_ERROR` - raised when subtitle playlist loading fails because of a network error
+  - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.SUBTITLE_LOAD_ERROR`, fatal : `false`, url, response : { code: error code, text: error text }, loader : URL loader }
+- `Hls.ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT` - raised when subtitle playlist loading fails because of a timeout
+  - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT`, fatal : `false`, url, loader : URL loader }
 - `Hls.ErrorDetails.FRAG_LOAD_ERROR` - raised when fragment loading fails because of a network error
   - data: { type : `NETWORK_ERROR`, details : `Hls.ErrorDetails.FRAG_LOAD_ERROR`, fatal : `true` or `false`, frag : fragment object, response : { code: error code, text: error text } }
 - `Hls.ErrorDetails.FRAG_LOAD_TIMEOUT` - raised when fragment loading fails because of a timeout
@@ -1746,12 +1764,36 @@ Full list of errors is described below:
 - `Hls.ErrorDetails.REMUX_ALLOC_ERROR` - raised when memory allocation fails during remuxing
   - data: { type : `MUX_ERROR`, details : `Hls.ErrorDetails.REMUX_ALLOC_ERROR`, fatal : `false`, bytes : mdat size, reason : failure reason }
 
+### EME Key System Errors
+
+- `Hls.ErrorDetails.KEY_SYSTEM_NO_KEYS` - EME catch-all error
+  - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_KEYS`, fatal : `true`, error: Error }
+- `Hls.ErrorDetails.KEY_SYSTEM_NO_ACCESS` - EME MediaKeyFunc `requestMediaKeySystemAccess(keySystem, supportedConfigurations)` failed to access key-system
+  - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_ACCESS`, fatal : `true`, error: Error }
+- `Hls.ErrorDetails.KEY_SYSTEM_NO_SESSION` - MediaKeySession `generateRequest(initDataType, initData)` failed
+  - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_SESSION`, fatal : `false`, error: Error }
+- `Hls.ErrorDetails.KEY_SYSTEM_NO_CONFIGURED_LICENSE` - Player configuration is missing `drmSystems` key-system license options
+  - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_NO_CONFIGURED_LICENSE`, fatal : `false` }
+- `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED` - Key-system license request failed (fails on first status 4xx, or after 3 tries (EMEController MAX_LICENSE_REQUEST_FAILURES))
+  - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED`, fatal : `true`, networkDetails: XMLHttpRequest }
+- `Hls.ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED` - Key-system certificate request failed
+  - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED`, fatal : `true`, networkDetails: XMLHttpRequest }
+- `Hls.ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_UPDATE_FAILED` - `MediaKeys.setServerCertificate(certificateData)` failed
+  - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_UPDATE_FAILED`, fatal : `true`, error: Error }
+- `Hls.ErrorDetails.KEY_SYSTEM_SESSION_UPDATE_FAILED` - MediaKeySession `update(licenseResponse|acknowledged)` failed
+  - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_SESSION_UPDATE_FAILED`, fatal : `true`, error: Error }
+- `Hls.ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED` - HDCP level output restricted for key-session
+  - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED`, fatal : `false` }
+- `Hls.ErrorDetails.KEY_SYSTEM_STATUS_INTERNAL_ERROR` - key-session status changed to "internal-error"
+  - data: { type : `KEY_SYSTEM_ERROR`, details : `Hls.ErrorDetails.KEY_SYSTEM_STATUS_INTERNAL_ERROR`, fatal : `true` }
+
 ### Other Errors
 
 - `Hls.ErrorDetails.LEVEL_SWITCH_ERROR` - raised when level switching fails
   - data: { type : `OTHER_ERROR`, details : `Hls.ErrorDetails.LEVEL_SWITCH_ERROR`, fatal : `false`, level : failed level index, reason : failure reason }
 - `Hls.ErrorDetails.INTERNAL_EXCEPTION` - raised when an exception occurs in an internal hls.js event handler
   - data: { type : `OTHER_ERROR`, details : `Hls.ErrorDetails.INTERNAL_EXCEPTION`, fatal : `true` or `false`, event : event object or string, err : { message : error message } }
+- `Hls.ErrorDetails.UNKNOWN` - Uncategorized error
 
 ## Objects
 
