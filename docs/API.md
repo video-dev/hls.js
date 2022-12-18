@@ -1265,18 +1265,32 @@ var config = {
 
 (default: `{}`)
 
-Set `licenseUrl` and `serverCertificateUrl` for a given key-system to your own DRM provider. `serverCertificateUrl` is not mandatory. Ex:
+Define license settings for given key-systems according to your own DRM provider. Ex:
 
 ```js
 drmSystems: {
+  'com.apple.fps': {
+    licenseUrl: 'https://your-fps-license-server/path',
+    serverCertificateUrl: 'https://your-fps-license-server/certificate/path',
+  },
   'com.widevine.alpha': {
-    licenseUrl: 'https://your-widevine-license-server/path',
-    serverCertificateUrl: 'https://optional-server-certificate/path/cert.bin'
+    licenseUrl: 'https://your-widevine-license-server/path'
   }
 }
 ```
 
 Supported key-systems include 'com.apple.fps', 'com.microsoft.playready', 'com.widevine.alpha', and 'org.w3.clearkey'. Mapping to other values in key-system access requests can be done by customizing [`requestMediaKeySystemAccessFunc`](#requestMediaKeySystemAccessFunc).
+
+When loading content with DRM Keys, the player will only request access
+to key-systems for the Session Keys or Playlist Keys for which there are
+also key-systems defined in `drmSystems`.
+
+### `drmSystems[KEY-SYSTEM].generateRequest
+
+(default: `undefined`, type `(initDataType: string, initData: ArrayBuffer | null, keyContext: MediaKeySessionContext) => { initDataType: string; initData: ArrayBuffer | null } | undefined`)
+
+Used to map initData or generate initData for playlist keys before
+MediaKeySession `generateRequest` is called.
 
 ### `drmSystemOptions`
 

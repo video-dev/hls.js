@@ -82,6 +82,7 @@ class EMEController implements ComponentAPI {
   private onMediaEncrypted = this._onMediaEncrypted.bind(this);
   private onWaitingForKey = this._onWaitingForKey.bind(this);
 
+  private debug: (msg: any) => void = logger.debug.bind(logger, LOGGER_PREFIX);
   private log: (msg: any) => void = logger.log.bind(logger, LOGGER_PREFIX);
   private warn: (msg: any) => void = logger.warn.bind(logger, LOGGER_PREFIX);
   private error: (msg: any) => void = logger.error.bind(logger, LOGGER_PREFIX);
@@ -330,7 +331,8 @@ class EMEController implements ComponentAPI {
         this.generateRequestWithPreferredKeySession(
           keySessionContext,
           scheme,
-          decryptdata.pssh
+          decryptdata.pssh,
+          'expired'
         );
     } else {
       this.warn(`Could not renew expired session. Missing pssh initData.`);
@@ -429,7 +431,8 @@ class EMEController implements ComponentAPI {
               return this.generateRequestWithPreferredKeySession(
                 keySessionContext,
                 scheme,
-                decryptdata.pssh
+                decryptdata.pssh,
+                'playlist-key'
               );
             });
           }
@@ -504,7 +507,7 @@ class EMEController implements ComponentAPI {
 
   private _onMediaEncrypted(event: MediaEncryptedEvent) {
     const { initDataType, initData } = event;
-    this.log(`"${event.type}" event: init data type: "${initDataType}"`);
+    this.debug(`"${event.type}" event: init data type: "${initDataType}"`);
 
     // Ignore event when initData is null
     if (initData === null) {
@@ -579,7 +582,8 @@ class EMEController implements ComponentAPI {
             return this.generateRequestWithPreferredKeySession(
               keyContext,
               initDataType,
-              initData
+              initData,
+              'encrypted-event-key-match'
             );
           });
         break;
@@ -609,7 +613,8 @@ class EMEController implements ComponentAPI {
               return this.generateRequestWithPreferredKeySession(
                 keySessionContext,
                 initDataType,
-                initData
+                initData,
+                'encrypted-event-no-match'
               );
             });
           }
@@ -652,40 +657,44 @@ class EMEController implements ComponentAPI {
   private generateRequestWithPreferredKeySession(
     context: MediaKeySessionContext,
     initDataType: string,
-    initData: ArrayBuffer | null
+    initData: ArrayBuffer | null,
+    reason:
+      | 'playlist-key'
+      | 'encrypted-event-key-match'
+      | 'encrypted-event-no-match'
+      | 'expired'
   ): Promise<MediaKeySessionContext> | never {
     const generateRequestFilter =
       this.config.drmSystems?.[context.keySystem]?.generateRequest;
     if (generateRequestFilter) {
       try {
-        const mappedInitData = generateRequestFilter.call(
-          this.hls,
-          initDataType,
-          initData,
-          context
-        );
+        const mappedInitData: ReturnType<typeof generateRequestFilter> =
+          generateRequestFilter.call(this.hls, initDataType, initData, context);
         if (!mappedInitData) {
           throw new Error(
             'Invalid response from configured generateRequest filter'
           );
         }
         initDataType = mappedInitData.initDataType;
-        initData = context.decryptdata.pssh = new Uint8Array(
-          mappedInitData.initData
-        );
+        initData = context.decryptdata.pssh = mappedInitData.initData
+          ? new Uint8Array(mappedInitData.initData)
+          : null;
       } catch (error) {
-        this.error(error);
+        this.warn(error.message);
+        if (this.hls?.config.debug) {
+          throw error;
+        }
       }
     }
 
     if (initData === null) {
-      // wait for media "encrypted" event to generate request
+      this.log(`Skipping key-session request for "${reason}" (no initData)`);
       return Promise.resolve(context);
     }
 
     const keyId = this.getKeyIdString(context.decryptdata);
     this.log(
-      `Generating key-session request for ${keyId} (init data type: ${initDataType} length: ${
+      `Generating key-session request for "${reason}": ${keyId} (init data type: ${initDataType} length: ${
         initData ? initData.byteLength : null
       })`
     );

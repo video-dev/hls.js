@@ -1032,8 +1032,7 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
   };
 }
 
-export function mp4Box(type: ArrayLike<number>, ...params: Uint8Array[]) {
-  const payload = Array.prototype.slice.call(arguments, 1);
+export function mp4Box(type: ArrayLike<number>, ...payload: Uint8Array[]) {
   const len = payload.length;
   let size = 8;
   let i = len;
