@@ -45,8 +45,7 @@
     "test:func:light": "BABEL_ENV=development HLSJS_LIGHT=1 mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "test:func:sauce": "SAUCE=1 UA=safari OS='OS X 10.15' BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "type-check": "tsc --noEmit",
-    "type-check:watch": "npm run type-check -- --watch",
-    "prepare": "husky install"
+    "type-check:watch": "npm run type-check -- --watch"
   },
   "devDependencies": {
     "netlify-cli": "12.4.0"
