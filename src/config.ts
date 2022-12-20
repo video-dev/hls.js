@@ -74,9 +74,12 @@ export type DRMSystemConfiguration = {
   generateRequest?: (
     this: Hls,
     initDataType: string,
-    initData: ArrayBuffer,
+    initData: ArrayBuffer | null,
     keyContext: MediaKeySessionContext
-  ) => { initDataType: string; initData: ArrayBuffer };
+  ) =>
+    | { initDataType: string; initData: ArrayBuffer | null }
+    | undefined
+    | never;
 };
 
 export type DRMSystemsConfiguration = Partial<
