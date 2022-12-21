@@ -18,6 +18,13 @@ describe('BaseStreamController', function () {
     levelDetails = {
       endSN: 0,
       live: false,
+      fragments() {
+        const frags = [];
+        for (let i = 0; i < this.endSN; i++) {
+          frags.push({ sn: i });
+        }
+        return frags;
+      },
     };
     media = {
       duration: 0,

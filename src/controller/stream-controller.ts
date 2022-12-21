@@ -314,8 +314,12 @@ export default class StreamController
         this.audioOnly && !this.altAudio
           ? ElementaryStreamTypes.AUDIO
           : ElementaryStreamTypes.VIDEO;
-      if (media) {
-        this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
+      const mediaBuffer =
+        (type === ElementaryStreamTypes.VIDEO
+          ? this.videoBuffer
+          : this.mediaBuffer) || this.media;
+      if (mediaBuffer) {
+        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
       }
       frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
     }
@@ -947,11 +951,11 @@ export default class StreamController
       type !== ElementaryStreamTypes.AUDIO ||
       (this.audioOnly && !this.altAudio)
     ) {
-      const media =
+      const mediaBuffer =
         (type === ElementaryStreamTypes.VIDEO
           ? this.videoBuffer
           : this.mediaBuffer) || this.media;
-      this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
+      this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
     }
   }
 

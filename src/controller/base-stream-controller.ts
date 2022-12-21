@@ -143,11 +143,18 @@ export default class BaseStreamController
     this.state = State.STOPPED;
   }
 
-  protected _streamEnded(bufferInfo, levelDetails: LevelDetails): boolean {
-    const { fragCurrent, fragmentTracker } = this;
+  protected _streamEnded(
+    bufferInfo: BufferInfo,
+    levelDetails: LevelDetails
+  ): boolean {
+    const fragmentTracker = this.fragmentTracker;
     // we just got done loading the final fragment and there is no other buffered range after ...
     // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
     // so we should not switch to ENDED in that case, to be able to buffer them
+    let fragCurrent = this.fragCurrent;
+    if (!fragCurrent || fragCurrent.sn < levelDetails.endSN) {
+      fragCurrent = levelDetails.fragments[levelDetails.fragments.length - 1];
+    }
     if (
       !levelDetails.live &&
       fragCurrent &&
