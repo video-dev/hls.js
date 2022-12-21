@@ -78,7 +78,7 @@ export class HlsUrlParameters {
     if (this.skip) {
       url.searchParams.set('_HLS_skip', this.skip);
     }
-    return url.toString();
+    return url.href;
   }
 }
 
