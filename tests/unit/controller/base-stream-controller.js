@@ -13,7 +13,7 @@ describe('BaseStreamController', function () {
     baseStreamController = new BaseStreamController(new Hls({}));
     bufferInfo = {
       nextStart: 0,
-      end: 0,
+      end: 1,
     };
     levelDetails = {
       endSN: 0,
@@ -48,13 +48,6 @@ describe('BaseStreamController', function () {
 
     it('returns false if fragCurrent does not exist', function () {
       baseStreamController.fragCurrent = null;
-      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
-        .false;
-    });
-
-    it('returns false if fragCurrent is not the last fragment', function () {
-      baseStreamController.fragCurrent = { sn: 9 };
-      levelDetails.endSN = 10;
       expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
         .false;
     });

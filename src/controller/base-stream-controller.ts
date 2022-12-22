@@ -147,44 +147,39 @@ export default class BaseStreamController
     bufferInfo: BufferInfo,
     levelDetails: LevelDetails
   ): boolean {
-    const fragmentTracker = this.fragmentTracker;
-    // we just got done loading the final fragment and there is no other buffered range after ...
-    // rationale is that in case there are any buffered ranges after, it means that there are unbuffered portion in between
-    // so we should not switch to ENDED in that case, to be able to buffer them
-    let fragCurrent = this.fragCurrent;
-    if (!fragCurrent || fragCurrent.sn < levelDetails.endSN) {
-      fragCurrent = levelDetails.fragments[levelDetails.fragments.length - 1];
-    }
+    // If playlist is live, there is another buffered range after the current range, nothing buffered, media is detached,
+    // of nothing loading/loaded return false
     if (
-      !levelDetails.live &&
-      fragCurrent &&
-      this.media &&
-      // NOTE: Because of the way parts are currently parsed/represented in the playlist, we can end up
-      // in situations where the current fragment is actually greater than levelDetails.endSN. While
-      // this feels like the "wrong place" to account for that, this is a narrower/safer change than
-      // updating e.g. M3U8Parser::parseLevelPlaylist().
-      fragCurrent.sn >= levelDetails.endSN &&
-      !bufferInfo.nextStart
+      levelDetails.live ||
+      bufferInfo.nextStart ||
+      !bufferInfo.end ||
+      !this.media ||
+      !this.fragCurrent
     ) {
-      const partList = levelDetails.partList;
-      // Since the last part isn't guaranteed to correspond to fragCurrent for ll-hls, check instead if the last part is buffered.
-      if (partList?.length) {
-        const lastPart = partList[partList.length - 1];
+      return false;
+    }
+    const partList = levelDetails.partList;
+    // Since the last part isn't guaranteed to correspond to the last playlist segment for Low-Latency HLS,
+    // check instead if the last part is buffered.
+    if (partList?.length) {
+      const lastPart = partList[partList.length - 1];
 
-        // Checking the midpoint of the part for potential margin of error and related issues.
-        // NOTE: Technically I believe parts could yield content that is < the computed duration (including potential a duration of 0)
-        // and still be spec-compliant, so there may still be edge cases here. Likewise, there could be issues in end of stream
-        // part mismatches for independent audio and video playlists/segments.
-        const lastPartBuffered = BufferHelper.isBuffered(
-          this.media,
-          lastPart.start + lastPart.duration / 2
-        );
-        return lastPartBuffered;
-      }
-      const fragState = fragmentTracker.getState(fragCurrent);
-      return (
-        fragState === FragmentState.PARTIAL || fragState === FragmentState.OK
+      // Checking the midpoint of the part for potential margin of error and related issues.
+      // NOTE: Technically I believe parts could yield content that is < the computed duration (including potential a duration of 0)
+      // and still be spec-compliant, so there may still be edge cases here. Likewise, there could be issues in end of stream
+      // part mismatches for independent audio and video playlists/segments.
+      const lastPartBuffered = BufferHelper.isBuffered(
+        this.media,
+        lastPart.start + lastPart.duration / 2
       );
+      return lastPartBuffered;
+    }
+
+    const lastFragment =
+      levelDetails.fragments[levelDetails.fragments.length - 1];
+    const fragState = this.fragmentTracker.getState(lastFragment);
+    if (fragState === FragmentState.PARTIAL || fragState === FragmentState.OK) {
+      return true;
     }
     return false;
   }
