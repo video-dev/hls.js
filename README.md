@@ -408,7 +408,6 @@ The following players integrate HLS.js for HLS playback:
 - [Akamai Adaptive Media Player (AMP)](https://www.akamai.com/us/en/solutions/products/media-delivery/adaptive-media-player.jsp)
 - [BridTV Player](https://www.brid.tv)
 - [Clappr](https://github.com/clappr/clappr)
-- [M3U IPTV](http://m3u-ip.tv/browser/)
 - [Flowplayer](https://www.flowplayer.org) through [flowplayer-hlsjs](https://github.com/flowplayer/flowplayer-hlsjs)
 - [MediaElement.js](https://www.mediaelementjs.com)
 - [Videojs](https://videojs.com) through [Videojs-hlsjs](https://github.com/benjipott/videojs-hlsjs)
@@ -417,6 +416,7 @@ The following players integrate HLS.js for HLS playback:
 - [Fluid Player](https://www.fluidplayer.com)
 - [OpenPlayerJS](https://www.openplayerjs.com), as part of the [OpenPlayer project](https://github.com/openplayerjs)
 - [CDNBye](https://github.com/cdnbye/hlsjs-p2p-engine), a p2p engine for hls.js powered by WebRTC Datachannel.
+- [M3U IPTV](http://m3u-ip.tv/browser/)
 
 ### They use HLS.js in production!
 
