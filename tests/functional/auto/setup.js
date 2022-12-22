@@ -230,6 +230,16 @@ async function testSeekOnVOD(url, config) {
     function (url, config) {
       const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
+
+      let tracks;
+      self.hls.on(self.Hls.Events.BUFFER_CREATED, function (eventName, data) {
+        tracks = data.tracks;
+      });
+      const endOfStreamEvents = [];
+      self.hls.on(self.Hls.Events.BUFFER_EOS, function (eventName, data) {
+        endOfStreamEvents.push(data.type || 'main');
+      });
+
       const video = self.video;
       video.ondurationchange = function () {
         console.log(
@@ -277,11 +287,29 @@ async function testSeekOnVOD(url, config) {
           video.currentTime = seekToTime;
           self.setTimeout(function () {
             const currentTime = video.currentTime;
+            const duration = video.duration;
             const paused = video.paused;
+
+            const buffers = Object.keys(tracks).map(function (type) {
+              const sourceBuffer = tracks[type].buffer;
+              const timeRangeTuples = [];
+              const buffered = sourceBuffer.buffered;
+              for (let i = 0; i < buffered.length; i++) {
+                timeRangeTuples.push(
+                  `${buffered.start(i).toFixed(2)}-${buffered
+                    .end(i)
+                    .toFixed(2)}`
+                );
+              }
+              return `${type}: [${timeRangeTuples.join(', ')}]`;
+            });
+
             callback({
               code: 'timeout-waiting-for-ended-event',
               currentTime: currentTime,
               duration: duration,
+              buffers: buffers,
+              endOfStreamEvents: endOfStreamEvents,
               paused: paused,
               logs: self.logString,
             });

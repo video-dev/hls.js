@@ -306,18 +306,7 @@ class AudioStreamController
     if (bufferInfo === null) {
       return;
     }
-    const mainBufferInfo = this.getFwdBufferInfo(
-      this.videoBuffer ? this.videoBuffer : this.media,
-      PlaylistLevelType.MAIN
-    );
-    const bufferLen = bufferInfo.len;
-    const maxBufLen = this.getMaxBufferLength(mainBufferInfo?.len);
     const audioSwitch = this.audioSwitch;
-
-    // if buffer length is less than maxBufLen try to load a new fragment
-    if (bufferLen >= maxBufLen && !audioSwitch) {
-      return;
-    }
 
     if (!audioSwitch && this._streamEnded(bufferInfo, trackDetails)) {
       hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
@@ -325,6 +314,17 @@ class AudioStreamController
       return;
     }
 
+    const mainBufferInfo = this.getFwdBufferInfo(
+      this.videoBuffer ? this.videoBuffer : this.media,
+      PlaylistLevelType.MAIN
+    );
+    const bufferLen = bufferInfo.len;
+    const maxBufLen = this.getMaxBufferLength(mainBufferInfo?.len);
+
+    // if buffer length is less than maxBufLen try to load a new fragment
+    if (bufferLen >= maxBufLen && !audioSwitch) {
+      return;
+    }
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
     let targetBufferTime = bufferInfo.end;

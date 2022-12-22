@@ -528,8 +528,14 @@ export default class BufferController implements ComponentAPI {
       this.blockBuffers(() => {
         const { mediaSource } = this;
         if (!mediaSource || mediaSource.readyState !== 'open') {
+          if (mediaSource) {
+            logger.warn(
+              `[buffer-controller]: Could not call mediaSource.endOfStream(). mediaSource.readyState: ${mediaSource.readyState}`
+            );
+          }
           return;
         }
+        logger.log(`[buffer-controller]: Calling mediaSource.endOfStream()`);
         // Allow this to throw and be caught by the enqueueing function
         mediaSource.endOfStream();
       });

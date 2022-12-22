@@ -1403,6 +1403,7 @@ export default class BaseStreamController
   }
 
   protected resetLoadingState() {
+    this.log('Reset loading state');
     this.fragCurrent = null;
     this.fragPrevious = null;
     this.state = State.IDLE;
