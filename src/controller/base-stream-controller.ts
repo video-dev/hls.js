@@ -995,8 +995,9 @@ export default class BaseStreamController
         break;
       }
       const loaded = part.loaded;
-      if (
-        !loaded &&
+      if (loaded) {
+        nextPart = -1;
+      } else if (
         (contiguous || part.independent || independentAttrOmitted) &&
         part.fragment === frag
       ) {
@@ -1402,6 +1403,7 @@ export default class BaseStreamController
   }
 
   protected resetLoadingState() {
+    this.log('Reset loading state');
     this.fragCurrent = null;
     this.fragPrevious = null;
     this.state = State.IDLE;
