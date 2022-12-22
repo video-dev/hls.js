@@ -253,15 +253,6 @@ export default class StreamController
     if (bufferInfo === null) {
       return;
     }
-    const bufferLen = bufferInfo.len;
-
-    // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
-    const maxBufLen = this.getMaxBufferLength(levelInfo.maxBitrate);
-
-    // Stay idle if we are still with buffer margins
-    if (bufferLen >= maxBufLen) {
-      return;
-    }
 
     if (this._streamEnded(bufferInfo, levelDetails)) {
       const data: BufferEOSData = {};
@@ -271,6 +262,16 @@ export default class StreamController
 
       this.hls.trigger(Events.BUFFER_EOS, data);
       this.state = State.ENDED;
+      return;
+    }
+
+    const bufferLen = bufferInfo.len;
+
+    // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
+    const maxBufLen = this.getMaxBufferLength(levelInfo.maxBitrate);
+
+    // Stay idle if we are still with buffer margins
+    if (bufferLen >= maxBufLen) {
       return;
     }
 
