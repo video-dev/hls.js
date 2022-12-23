@@ -153,8 +153,7 @@ export default class BaseStreamController
       levelDetails.live ||
       bufferInfo.nextStart ||
       !bufferInfo.end ||
-      !this.media ||
-      !this.fragCurrent
+      !this.media
     ) {
       return false;
     }
@@ -182,6 +181,30 @@ export default class BaseStreamController
       return true;
     }
     return false;
+  }
+
+  private endedNeedsReset() {
+    if (this.state !== State.ENDED || !this.media) {
+      return false;
+    }
+    const pos = this.getLoadPosition();
+    const details = this.getLevelDetails();
+    if (!details || details.edge - pos > details.targetduration * 3) {
+      return true;
+    }
+
+    const bufferInfo = BufferHelper.bufferInfo(
+      this.mediaBuffer || this.media,
+      pos,
+      0
+    );
+    return !this._streamEnded(bufferInfo, details);
+  }
+
+  private getLevelDetails(): LevelDetails | undefined {
+    if (this.levels && this.levelLastLoaded !== null) {
+      return this.levels[this.levelLastLoaded]?.details;
+    }
   }
 
   protected onMediaAttached(
@@ -236,7 +259,7 @@ export default class BaseStreamController
       }, state: ${state}`
     );
 
-    if (state === State.ENDED) {
+    if (this.endedNeedsReset()) {
       this.resetLoadingState();
     } else if (fragCurrent) {
       // Seeking while frag load is in progress
@@ -1399,7 +1422,7 @@ export default class BaseStreamController
       bufferedTimeRanges,
       playlistType
     );
-    if (this.state === State.ENDED) {
+    if (this.endedNeedsReset()) {
       this.resetLoadingState();
     }
   }
