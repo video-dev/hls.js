@@ -174,31 +174,9 @@ export default class BaseStreamController
       return lastPartBuffered;
     }
 
-    const lastFragment =
-      levelDetails.fragments[levelDetails.fragments.length - 1];
-    const fragState = this.fragmentTracker.getState(lastFragment);
-    if (fragState === FragmentState.PARTIAL || fragState === FragmentState.OK) {
-      return true;
-    }
-    return false;
-  }
-
-  private endedNeedsReset() {
-    if (this.state !== State.ENDED || !this.media) {
-      return false;
-    }
-    const pos = this.getLoadPosition();
-    const details = this.getLevelDetails();
-    if (!details || details.edge - pos > details.targetduration * 3) {
-      return true;
-    }
-
-    const bufferInfo = BufferHelper.bufferInfo(
-      this.mediaBuffer || this.media,
-      pos,
-      0
-    );
-    return !this._streamEnded(bufferInfo, details);
+    const playlistType =
+      levelDetails.fragments[levelDetails.fragments.length - 1].type;
+    return this.fragmentTracker.isEndListAppended(playlistType);
   }
 
   protected getLevelDetails(): LevelDetails | undefined {
@@ -259,7 +237,7 @@ export default class BaseStreamController
       }, state: ${state}`
     );
 
-    if (this.endedNeedsReset()) {
+    if (this.state === State.ENDED) {
       this.resetLoadingState();
     } else if (fragCurrent) {
       // Seeking while frag load is in progress
@@ -1422,7 +1400,7 @@ export default class BaseStreamController
       bufferedTimeRanges,
       playlistType
     );
-    if (this.endedNeedsReset()) {
+    if (this.state === State.ENDED) {
       this.resetLoadingState();
     }
   }

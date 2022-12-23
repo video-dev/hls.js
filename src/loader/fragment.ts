@@ -144,6 +144,8 @@ export class Fragment extends BaseSegment {
   public title: string | null = null;
   // The Media Initialization Section for this segment
   public initSegment: Fragment | null = null;
+  // Fragment is the last fragment in the media playlist
+  public endList?: boolean;
 
   constructor(type: PlaylistLevelType, baseurl: string) {
     super(baseurl);
