@@ -201,7 +201,7 @@ export default class BaseStreamController
     return !this._streamEnded(bufferInfo, details);
   }
 
-  private getLevelDetails(): LevelDetails | undefined {
+  protected getLevelDetails(): LevelDetails | undefined {
     if (this.levels && this.levelLastLoaded !== null) {
       return this.levels[this.levelLastLoaded]?.details;
     }

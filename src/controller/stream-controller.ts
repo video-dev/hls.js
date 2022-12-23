@@ -233,6 +233,24 @@ export default class StreamController
     const levelInfo = levels[level];
 
     // if buffer length is less than maxBufLen try to load a new fragment
+
+    const bufferInfo = this.getMainFwdBufferInfo();
+    if (bufferInfo === null) {
+      return;
+    }
+
+    const lastDetails = this.getLevelDetails();
+    if (lastDetails && this._streamEnded(bufferInfo, lastDetails)) {
+      const data: BufferEOSData = {};
+      if (this.altAudio) {
+        data.type = 'video';
+      }
+
+      this.hls.trigger(Events.BUFFER_EOS, data);
+      this.state = State.ENDED;
+      return;
+    }
+
     // set next load level : this will trigger a playlist load if needed
     this.level = hls.nextLoadLevel = level;
 
@@ -245,23 +263,8 @@ export default class StreamController
       this.state === State.WAITING_LEVEL ||
       (levelDetails.live && this.levelLastLoaded !== level)
     ) {
+      this.level = level;
       this.state = State.WAITING_LEVEL;
-      return;
-    }
-
-    const bufferInfo = this.getMainFwdBufferInfo();
-    if (bufferInfo === null) {
-      return;
-    }
-
-    if (this._streamEnded(bufferInfo, levelDetails)) {
-      const data: BufferEOSData = {};
-      if (this.altAudio) {
-        data.type = 'video';
-      }
-
-      this.hls.trigger(Events.BUFFER_EOS, data);
-      this.state = State.ENDED;
       return;
     }
 
