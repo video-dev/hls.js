@@ -410,7 +410,7 @@ The following players integrate HLS.js for HLS playback:
 - [Clappr](https://github.com/clappr/clappr)
 - [Flowplayer](https://www.flowplayer.org) through [flowplayer-hlsjs](https://github.com/flowplayer/flowplayer-hlsjs)
 - [MediaElement.js](https://www.mediaelementjs.com)
-- [KalturaPlayer](https://developer.kaltura.com) through  [kaltura-player-js](https://github.com/kaltura/kaltura-player-js#readme)
+- [KalturaPlayer](https://developer.kaltura.com) through [kaltura-player-js](https://github.com/kaltura/kaltura-player-js#readme)
 - [Videojs](https://videojs.com) through [Videojs-hlsjs](https://github.com/benjipott/videojs-hlsjs)
 - [Videojs](https://videojs.com) through [videojs-hls.js](https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
 - [Videojs](https://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
