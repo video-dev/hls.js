@@ -163,7 +163,7 @@ class ID3TrackController implements ComponentAPI {
       return;
     }
 
-    const { frag: fragment, samples, details } = data;
+    const { samples } = data;
 
     // create track dynamically
     if (!this.id3Track) {
