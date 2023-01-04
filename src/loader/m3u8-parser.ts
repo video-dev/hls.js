@@ -1,5 +1,4 @@
-import * as URLToolkit from 'url-toolkit';
-
+import { buildAbsoluteURL } from 'url-toolkit';
 import { DateRange } from './date-range';
 import { Fragment, Part } from './fragment';
 import { LevelDetails } from './level-details';
@@ -53,12 +52,6 @@ const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
   ].join('|')
 );
 
-const MP4_REGEX_SUFFIX = /\.(mp4|m4s|m4v|m4a)$/i;
-
-function isMP4Url(url: string): boolean {
-  return MP4_REGEX_SUFFIX.test(URLToolkit.parseURL(url)?.path ?? '');
-}
-
 export default class M3U8Parser {
   static findGroup(
     groups: Array<AudioGroup>,
@@ -85,7 +78,7 @@ export default class M3U8Parser {
   }
 
   static resolve(url, baseUrl) {
-    return URLToolkit.buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
+    return buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
   }
 
   static parseMasterPlaylist(
@@ -530,26 +523,6 @@ export default class M3U8Parser {
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
       if (firstFragment) {
         level.startCC = firstFragment.cc;
-        if (!firstFragment.initSegment) {
-          // this is a bit lurky but HLS really has no other way to tell us
-          // if the fragments are TS or MP4, except if we download them :/
-          // but this is to be able to handle SIDX.
-          if (
-            level.fragments.every(
-              (frag) => frag.relurl && isMP4Url(frag.relurl)
-            )
-          ) {
-            logger.warn(
-              'MP4 fragments found but no init segment (probably no MAP, incomplete M3U8), trying to fetch SIDX'
-            );
-            frag = new Fragment(type, baseurl);
-            frag.relurl = lastFragment.relurl;
-            frag.level = id;
-            frag.sn = 'initSegment';
-            firstFragment.initSegment = frag;
-            level.needSidxRanges = true;
-          }
-        }
       }
     } else {
       level.endSN = 0;
