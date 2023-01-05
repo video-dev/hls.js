@@ -24,8 +24,9 @@ import type {
   FragChangedData,
 } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
+import type { ChunkMetadata } from '../types/transmuxer';
 import type Hls from '../hls';
-import { LevelDetails } from '../loader/level-details';
+import type { LevelDetails } from '../loader/level-details';
 
 const MediaSource = getMediaSource();
 const VIDEO_CODEC_PROFILE_REPACE = /([ha]vc.)(?:\.[^.,]+)+/;
@@ -54,6 +55,9 @@ export default class BufferController implements ComponentAPI {
   // A reference to the active media source
   public mediaSource: MediaSource | null = null;
 
+  // Last MP3 audio chunk appended
+  private lastMpegAudioChunk: ChunkMetadata | null = null;
+
   // counters
   public appendError: number = 0;
 
@@ -77,6 +81,7 @@ export default class BufferController implements ComponentAPI {
   public destroy() {
     this.unregisterListeners();
     this.details = null;
+    this.lastMpegAudioChunk = null;
   }
 
   protected registerListeners() {
@@ -117,6 +122,7 @@ export default class BufferController implements ComponentAPI {
       video: [],
       audiovideo: [],
     };
+    this.lastMpegAudioChunk = null;
   }
 
   protected onManifestParsed(
@@ -340,23 +346,28 @@ export default class BufferController implements ComponentAPI {
     // is greater than 100ms (this is enough to handle seek for VOD or level change for LIVE videos).
     // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
     const audioTrack = tracks.audio;
-    const checkTimestampOffset =
-      type === 'audio' &&
-      chunkMeta.id === 1 &&
-      audioTrack?.container === 'audio/mpeg';
+    let checkTimestampOffset = false;
+    if (type === 'audio' && audioTrack?.container === 'audio/mpeg') {
+      checkTimestampOffset =
+        !this.lastMpegAudioChunk ||
+        chunkMeta.id === 1 ||
+        this.lastMpegAudioChunk.sn !== chunkMeta.sn;
+      this.lastMpegAudioChunk = chunkMeta;
+    }
 
+    const fragStart = frag.start;
     const operation: BufferOperation = {
       execute: () => {
         chunkStats.executeStart = self.performance.now();
         if (checkTimestampOffset) {
           const sb = this.sourceBuffer[type];
           if (sb) {
-            const delta = frag.start - sb.timestampOffset;
+            const delta = fragStart - sb.timestampOffset;
             if (Math.abs(delta) >= 0.1) {
               logger.log(
-                `[buffer-controller]: Updating audio SourceBuffer timestampOffset to ${frag.start} (delta: ${delta}) sn: ${frag.sn})`
+                `[buffer-controller]: Updating audio SourceBuffer timestampOffset to ${fragStart} (delta: ${delta}) sn: ${frag.sn})`
               );
-              sb.timestampOffset = frag.start;
+              sb.timestampOffset = fragStart;
             }
           }
         }
