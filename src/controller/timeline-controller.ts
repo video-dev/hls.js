@@ -343,12 +343,14 @@ export class TimelineController implements ComponentAPI {
         const inUseTracks = this.media ? this.media.textTracks : [];
 
         this.tracks.forEach((track, index) => {
+          const textTrackKind =
+            this._captionsOrSubtitlesFromCharacteristics(track);
           let textTrack: TextTrack | undefined;
           if (index < inUseTracks.length) {
             let inUseTrack: TextTrack | null = null;
 
             for (let i = 0; i < inUseTracks.length; i++) {
-              if (canReuseVttTextTrack(inUseTracks[i], track)) {
+              if (canReuseVttTextTrack(inUseTracks[i], track, textTrackKind)) {
                 inUseTrack = inUseTracks[i];
                 break;
               }
@@ -362,8 +364,6 @@ export class TimelineController implements ComponentAPI {
           if (textTrack) {
             clearCurrentCues(textTrack);
           } else {
-            const textTrackKind =
-              this._captionsOrSubtitlesFromCharacteristics(track);
             textTrack = this.createTextTrack(
               textTrackKind,
               track.name,
@@ -733,9 +733,14 @@ export class TimelineController implements ComponentAPI {
   }
 }
 
-function canReuseVttTextTrack(inUseTrack, manifestTrack): boolean {
+function canReuseVttTextTrack(
+  inUseTrack: any,
+  manifestTrack: MediaPlaylist,
+  textTrackKind: TextTrackKind
+): boolean {
   return (
     inUseTrack &&
+    inUseTrack.kind === textTrackKind &&
     inUseTrack.label === manifestTrack.name &&
     !(inUseTrack.textTrack1 || inUseTrack.textTrack2)
   );
