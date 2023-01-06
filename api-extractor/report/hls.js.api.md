@@ -767,6 +767,8 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     endDTS: number;
     // (undocumented)
+    endList?: boolean;
+    // (undocumented)
     get endProgramDateTime(): number | null;
     // (undocumented)
     endPTS?: number;

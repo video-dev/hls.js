@@ -688,6 +688,9 @@ class AudioStreamController
   ) {
     if (type === ElementaryStreamTypes.AUDIO) {
       this.bufferFlushed = true;
+      if (this.state === State.ENDED) {
+        this.state = State.IDLE;
+      }
     }
   }
 

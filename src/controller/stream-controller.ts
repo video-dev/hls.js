@@ -233,6 +233,24 @@ export default class StreamController
     const levelInfo = levels[level];
 
     // if buffer length is less than maxBufLen try to load a new fragment
+
+    const bufferInfo = this.getMainFwdBufferInfo();
+    if (bufferInfo === null) {
+      return;
+    }
+
+    const lastDetails = this.getLevelDetails();
+    if (lastDetails && this._streamEnded(bufferInfo, lastDetails)) {
+      const data: BufferEOSData = {};
+      if (this.altAudio) {
+        data.type = 'video';
+      }
+
+      this.hls.trigger(Events.BUFFER_EOS, data);
+      this.state = State.ENDED;
+      return;
+    }
+
     // set next load level : this will trigger a playlist load if needed
     this.level = hls.nextLoadLevel = level;
 
@@ -245,23 +263,8 @@ export default class StreamController
       this.state === State.WAITING_LEVEL ||
       (levelDetails.live && this.levelLastLoaded !== level)
     ) {
+      this.level = level;
       this.state = State.WAITING_LEVEL;
-      return;
-    }
-
-    const bufferInfo = this.getMainFwdBufferInfo();
-    if (bufferInfo === null) {
-      return;
-    }
-
-    if (this._streamEnded(bufferInfo, levelDetails)) {
-      const data: BufferEOSData = {};
-      if (this.altAudio) {
-        data.type = 'video';
-      }
-
-      this.hls.trigger(Events.BUFFER_EOS, data);
-      this.state = State.ENDED;
       return;
     }
 
@@ -314,8 +317,12 @@ export default class StreamController
         this.audioOnly && !this.altAudio
           ? ElementaryStreamTypes.AUDIO
           : ElementaryStreamTypes.VIDEO;
-      if (media) {
-        this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
+      const mediaBuffer =
+        (type === ElementaryStreamTypes.VIDEO
+          ? this.videoBuffer
+          : this.mediaBuffer) || this.media;
+      if (mediaBuffer) {
+        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
       }
       frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
     }
@@ -947,11 +954,11 @@ export default class StreamController
       type !== ElementaryStreamTypes.AUDIO ||
       (this.audioOnly && !this.altAudio)
     ) {
-      const media =
+      const mediaBuffer =
         (type === ElementaryStreamTypes.VIDEO
           ? this.videoBuffer
           : this.mediaBuffer) || this.media;
-      this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
+      this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
     }
   }
 
