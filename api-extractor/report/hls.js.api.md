@@ -1471,8 +1471,6 @@ export class LevelDetails {
     // (undocumented)
     misses: number;
     // (undocumented)
-    needSidxRanges: boolean;
-    // (undocumented)
     get partEnd(): number;
     // (undocumented)
     partHoldBack: number;
@@ -2099,8 +2097,6 @@ export interface PlaylistLoaderContext extends LoaderContext {
     groupId: string | null;
     // (undocumented)
     id: number | null;
-    // (undocumented)
-    isSidxRequest?: boolean;
     // (undocumented)
     level: number | null;
     // (undocumented)
