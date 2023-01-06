@@ -166,8 +166,6 @@ export interface PlaylistLoaderContext extends LoaderContext {
   id: number | null;
   // track group id
   groupId: string | null;
-  // defines if the loader is handling a sidx request for the playlist
-  isSidxRequest?: boolean;
   // internal representation of a parsed m3u8 level playlist
   levelDetails?: LevelDetails;
   // Blocking playlist request delivery directives (or null id none were added to playlist url
