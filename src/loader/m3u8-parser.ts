@@ -528,6 +528,9 @@ export default class M3U8Parser {
       level.averagetargetduration = totalduration / fragmentLength;
       const lastSn = lastFragment.sn;
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
+      if (!level.live) {
+        lastFragment.endList = true;
+      }
       if (firstFragment) {
         level.startCC = firstFragment.cc;
         if (!firstFragment.initSegment) {

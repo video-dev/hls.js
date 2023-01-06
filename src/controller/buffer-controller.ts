@@ -526,8 +526,9 @@ export default class BufferController implements ComponentAPI {
   protected onBufferEos(event: Events.BUFFER_EOS, data: BufferEOSData) {
     const ended = this.getSourceBufferTypes().reduce((acc, type) => {
       const sb = this.sourceBuffer[type];
-      if (!data.type || data.type === type) {
-        if (sb && !sb.ended) {
+      if (sb && (!data.type || data.type === type)) {
+        sb.ending = true;
+        if (!sb.ended) {
           sb.ended = true;
           logger.log(`[buffer-controller]: ${type} sourceBuffer now EOS`);
         }
@@ -536,11 +537,18 @@ export default class BufferController implements ComponentAPI {
     }, true);
 
     if (ended) {
+      logger.log(`[buffer-controller]: Queueing mediaSource.endOfStream()`);
       this.blockBuffers(() => {
+        this.getSourceBufferTypes().forEach((type) => {
+          const sb = this.sourceBuffer[type];
+          if (sb) {
+            sb.ending = false;
+          }
+        });
         const { mediaSource } = this;
         if (!mediaSource || mediaSource.readyState !== 'open') {
           if (mediaSource) {
-            logger.warn(
+            logger.info(
               `[buffer-controller]: Could not call mediaSource.endOfStream(). mediaSource.readyState: ${mediaSource.readyState}`
             );
           }
@@ -614,6 +622,14 @@ export default class BufferController implements ComponentAPI {
             hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, {
               bufferEnd: targetBackBufferPosition,
             });
+          } else if (
+            sb.ended &&
+            buffered.end(buffered.length - 1) - currentTime < targetDuration * 2
+          ) {
+            logger.info(
+              `[buffer-controller]: Cannot flush ${type} back buffer while SourceBuffer is in ended state`
+            );
+            return;
           }
 
           hls.trigger(Events.BUFFER_FLUSHING, {
@@ -843,7 +859,8 @@ export default class BufferController implements ComponentAPI {
       : Infinity;
     const removeStart = Math.max(0, startOffset);
     const removeEnd = Math.min(endOffset, mediaDuration, msDuration);
-    if (removeEnd > removeStart) {
+    if (removeEnd > removeStart && !sb.ending) {
+      sb.ended = false;
       logger.log(
         `[buffer-controller]: Removing [${removeStart},${removeEnd}] from the ${type} SourceBuffer`
       );
