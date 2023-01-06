@@ -1573,7 +1573,7 @@ Full list of Events is available below:
   - data: { `level` and Level object properties (please see [below](#level) for more information) }
 - `Hls.Events.LEVEL_SWITCHED` - fired when a level switch is effective
   - data: { level : id of new level }
-- `Hls.Events.LEVEL_LOADING` - fired when a level playlist loading starts
+- `Hls.Events.LEVEL_LOADING` - fired when a level playlist is requested (unless it is the only media playlist loaded via `hls.loadSource()`)
   - data: { url : level URL, level : id of level being loaded, deliveryDirectives: LL-HLS delivery directives or `null` when blocking reload is not supported }
 - `Hls.Events.LEVEL_LOADED` - fired when a level playlist loading finishes
   - data: { details : [LevelDetails](#leveldetails), level : id of loaded level, stats : [LoadStats] }
