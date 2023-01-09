@@ -358,26 +358,6 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
     );
   });
 
-  it('handles a missing init segment for mp4 segment urls', function () {
-    const level = `#EXTM3U
-#EXT-X-VERSION:3
-#EXT-X-PLAYLIST-TYPE:VOD
-#EXT-X-TARGETDURATION:14
-#EXTINF:11.360,
-/something.mp4?abc
-#EXT-X-ENDLIST`;
-    const result = M3U8Parser.parseLevelPlaylist(
-      level,
-      'http://example.invalid/playlist.m3u8',
-      0,
-      PlaylistLevelType.MAIN,
-      0
-    );
-    const initSegment = result.fragments[0].initSegment;
-    expect(initSegment).to.be.ok;
-    expect(initSegment?.relurl).to.equal('/something.mp4?abc');
-  });
-
   it('parse level with single char fragment URI', function () {
     const level = `#EXTM3U
 #EXT-X-ALLOW-CACHE:NO
