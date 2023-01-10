@@ -893,6 +893,16 @@ export interface FragParsingUserdataData {
     samples: UserdataSample[];
 }
 
+// Warning: (ae-missing-release-tag) "HdcpLevel" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type HdcpLevel = typeof HdcpLevels[number];
+
+// Warning: (ae-missing-release-tag) "HdcpLevels" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export const HdcpLevels: readonly ["NONE", "TYPE-0", "TYPE-1", "TYPE-2", null];
+
 // Warning: (ae-missing-release-tag) "Hls" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public
@@ -959,6 +969,9 @@ class Hls implements HlsEventEmitter {
     get mainForwardBufferInfo(): BufferInfo | null;
     get manualLevel(): number;
     get maxAutoLevel(): number;
+    // (undocumented)
+    get maxHdcpLevel(): HdcpLevel;
+    set maxHdcpLevel(value: HdcpLevel);
     get maxLatency(): number;
     // (undocumented)
     get media(): HTMLMediaElement | null;
@@ -1357,13 +1370,21 @@ export class Level {
 // @public (undocumented)
 export interface LevelAttributes extends AttrList {
     // (undocumented)
+    'ALLOWED-CPC'?: string;
+    // (undocumented)
     'AVERAGE-BANDWIDTH'?: string;
     // (undocumented)
     'CLOSED-CAPTIONS'?: string;
     // (undocumented)
     'FRAME-RATE'?: string;
     // (undocumented)
+    'HDCP-LEVEL'?: string;
+    // (undocumented)
+    'PATHWAY-ID'?: string;
+    // (undocumented)
     'PROGRAM-ID'?: string;
+    // (undocumented)
+    'VIDEO-RANGE'?: string;
     // (undocumented)
     AUDIO?: string;
     // (undocumented)
@@ -1386,6 +1407,8 @@ export interface LevelAttributes extends AttrList {
     NAME?: string;
     // (undocumented)
     RESOLUTION?: string;
+    // (undocumented)
+    SCORE?: string;
     // (undocumented)
     SUBTITLES?: string;
     // (undocumented)

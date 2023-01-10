@@ -115,6 +115,7 @@
   - [`hls.startLevel`](#hlsstartlevel)
   - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
+  - [`hls.maxHdcpLevel`](#hlsmaxhdcplevel)
   - [`hls.capLevelToPlayerSize`](#hlscapleveltoplayersize)
   - [`hls.bandwidthEstimate`](#hlsbandwidthestimate)
   - [`hls.removeLevel(levelIndex, urlId)`](#hlsremoveLevel)
@@ -1419,6 +1420,12 @@ Default value is `hls.firstLevel`.
 
 Default value is `-1` (no level capping).
 
+### `hls.maxHdcpLevel`
+
+- get/set: The maximum HDCP-LEVEL allowed to be selected by auto level selection. Must be a valid HDCP-LEVEL value ('NONE', 'TYPE-0', 'TYPE-1', 'TYPE-2'), or null (default). `hls.maxHdcpLevel` is automatically set to the next lowest value when a `KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED` error occurs. To prevent manual selection of levels with specific HDCP-LEVEL attribute values, use `hls.removeLevel()` on `MANIFEST_LOADED` or on error.
+
+Default value is null (no level capping based on HDCP-LEVEL)
+
 ### `hls.capLevelToPlayerSize`
 
 - get: Enables or disables level capping. If disabled after previously enabled, `nextLevelSwitch` will be immediately called.
@@ -1432,7 +1439,7 @@ get: Returns the current bandwidth estimate in bits/s, if available. Otherwise, 
 
 ### `hls.removeLevel(levelIndex, urlId)`
 
-Remove a loaded level from the list of levels, or a level url in from a list of redundant level urls.
+Remove a loaded level from the list of levels, or a url from a level's list of redundant urls.
 This can be used to remove a rendition or playlist url that errors frequently from the list of levels that a user
 or hls.js can choose from.
 
