@@ -23,7 +23,7 @@ import type SubtitleTrackController from './controller/subtitle-track-controller
 import type { ComponentAPI, NetworkComponentAPI } from './types/component-api';
 import type { MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
-import type { Level } from './types/level';
+import { HdcpLevel, HdcpLevels, Level } from './types/level';
 import type { Fragment } from './loader/fragment';
 import { BufferInfo } from './utils/buffer-helper';
 
@@ -43,6 +43,7 @@ export default class Hls implements HlsEventEmitter {
 
   private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number;
+  private _maxHdcpLevel: HdcpLevel = null;
   private abrController: AbrController;
   private bufferController: BufferController;
   private capLevelController: CapLevelController;
@@ -592,6 +593,16 @@ export default class Hls implements HlsEventEmitter {
     }
   }
 
+  get maxHdcpLevel(): HdcpLevel {
+    return this._maxHdcpLevel;
+  }
+
+  set maxHdcpLevel(value: HdcpLevel) {
+    if (HdcpLevels.indexOf(value) > -1) {
+      this._maxHdcpLevel = value;
+    }
+  }
+
   /**
    * True when automatic level selection enabled
    * @type {boolean}
@@ -634,13 +645,22 @@ export default class Hls implements HlsEventEmitter {
    * @type {number}
    */
   get maxAutoLevel(): number {
-    const { levels, autoLevelCapping } = this;
+    const { levels, autoLevelCapping, maxHdcpLevel } = this;
 
     let maxAutoLevel;
     if (autoLevelCapping === -1 && levels && levels.length) {
       maxAutoLevel = levels.length - 1;
     } else {
       maxAutoLevel = autoLevelCapping;
+    }
+
+    if (maxHdcpLevel) {
+      for (let i = maxAutoLevel; i--; ) {
+        const hdcpLevel = levels[i].attrs['HDCP-LEVEL'];
+        if (hdcpLevel && hdcpLevel <= maxHdcpLevel) {
+          return i;
+        }
+      }
     }
 
     return maxAutoLevel;
@@ -883,10 +903,12 @@ export type {
   UserdataSample,
 } from './types/demuxer';
 export type {
-  LevelParsed,
-  LevelAttributes,
-  HlsUrlParameters,
+  HdcpLevel,
+  HdcpLevels,
   HlsSkip,
+  HlsUrlParameters,
+  LevelAttributes,
+  LevelParsed,
 } from './types/level';
 export type {
   PlaylistLevelType,
