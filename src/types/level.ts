@@ -46,6 +46,8 @@ export interface LevelAttributes extends AttrList {
 export const HdcpLevels = ['NONE', 'TYPE-0', 'TYPE-1', 'TYPE-2', null] as const;
 export type HdcpLevel = typeof HdcpLevels[number];
 
+export type VariableMap = Record<string, string>;
+
 export enum HlsSkip {
   No = '',
   Yes = 'YES',

@@ -2,6 +2,7 @@ import { Part } from './fragment';
 import type { Fragment } from './fragment';
 import type { AttrList } from '../utils/attr-list';
 import type { DateRange } from './date-range';
+import type { VariableMap } from '../types/level';
 
 const DEFAULT_TARGET_DURATION = 10;
 
@@ -48,6 +49,8 @@ export class LevelDetails {
   public driftStart: number = 0;
   public driftEnd: number = 0;
   public encryptedFragments: Fragment[];
+  public playlistParsingError: Error | null = null;
+  public variableList: VariableMap | null = null;
 
   constructor(baseUrl) {
     this.fragments = [];
