@@ -118,6 +118,7 @@ function getAliasesForLightDist() {
   if (!addEMESupport) {
     aliases = Object.assign({}, aliases, {
       './controller/eme-controller': './empty.js',
+      './utils/mediakeys-helper': './empty.js',
     });
   }
 
@@ -238,14 +239,12 @@ const multiConfig = [
       ...mainPlugins,
       new webpack.DefinePlugin({
         __NETLIFY__: JSON.stringify(
-          process.env.NETLIFY === 'true'
+          env.NETLIFY === 'true'
             ? {
-                branch: process.env.BRANCH,
-                commitRef: process.env.COMMIT_REF,
+                branch: env.BRANCH,
+                commitRef: env.COMMIT_REF,
                 reviewID:
-                  process.env.PULL_REQUEST === 'true'
-                    ? parseInt(process.env.REVIEW_ID)
-                    : null,
+                  env.PULL_REQUEST === 'true' ? parseInt(env.REVIEW_ID) : null,
               }
             : {}
         ),
