@@ -37,6 +37,7 @@ import type {
   MediaAttachingData,
   BufferFlushingData,
   LevelSwitchingData,
+  ManifestLoadedData,
 } from '../types/events';
 import type { FragmentTracker } from './fragment-tracker';
 import type { Level } from '../types/level';
@@ -82,6 +83,7 @@ export default class BaseStreamController
   protected lastCurrentTime: number = 0;
   protected nextLoadPosition: number = 0;
   protected startPosition: number = 0;
+  protected startTimeOffset: number | null = null;
   protected loadedmetadata: boolean = false;
   protected fragLoadError: number = 0;
   protected retryDate: number = 0;
@@ -115,6 +117,7 @@ export default class BaseStreamController
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls.config);
+    hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
   }
 
@@ -281,6 +284,13 @@ export default class BaseStreamController
   protected onMediaEnded() {
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.startPosition = this.lastCurrentTime = 0;
+  }
+
+  protected onManifestLoaded(
+    event: Events.MANIFEST_LOADED,
+    data: ManifestLoadedData
+  ): void {
+    this.startTimeOffset = data.startTimeOffset;
   }
 
   protected onLevelSwitching(
@@ -1254,9 +1264,13 @@ export default class BaseStreamController
       startPosition = -1;
     }
     if (startPosition === -1 || this.lastCurrentTime === -1) {
-      // first, check if start time offset has been set in playlist, if yes, use this value
-      const startTimeOffset = details.startTimeOffset!;
-      if (Number.isFinite(startTimeOffset)) {
+      // Use Playlist EXT-X-START:TIME-OFFSET when set
+      // Prioritize Multi-Variant Playlist offset so that main, audio, and subtitle stream-controller start times match
+      const offsetInMultiVariantPlaylist = this.startTimeOffset !== null;
+      const startTimeOffset = offsetInMultiVariantPlaylist
+        ? this.startTimeOffset
+        : details.startTimeOffset;
+      if (startTimeOffset !== null && Number.isFinite(startTimeOffset)) {
         startPosition = sliding + startTimeOffset;
         if (startTimeOffset < 0) {
           startPosition += details.totalduration;
@@ -1266,7 +1280,9 @@ export default class BaseStreamController
           sliding + details.totalduration
         );
         this.log(
-          `Start time offset ${startTimeOffset} found in playlist, adjust startPosition to ${startPosition}`
+          `Start time offset ${startTimeOffset} found in ${
+            offsetInMultiVariantPlaylist ? 'multi-variant' : 'media'
+          } playlist, adjust startPosition to ${startPosition}`
         );
         this.startPosition = startPosition;
       } else if (details.live) {

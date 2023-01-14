@@ -482,6 +482,8 @@ export enum ErrorDetails {
     // (undocumented)
     LEVEL_LOAD_TIMEOUT = "levelLoadTimeOut",
     // (undocumented)
+    LEVEL_PARSING_ERROR = "levelParsingError",
+    // (undocumented)
     LEVEL_SWITCH_ERROR = "levelSwitchError",
     // (undocumented)
     MANIFEST_INCOMPATIBLE_CODECS_ERROR = "manifestIncompatibleCodecsError",
@@ -1502,6 +1504,8 @@ export class LevelDetails {
     // (undocumented)
     partTarget: number;
     // (undocumented)
+    playlistParsingError: Error | null;
+    // (undocumented)
     preloadHint?: AttrList;
     // (undocumented)
     PTSKnown: boolean;
@@ -1531,6 +1535,8 @@ export class LevelDetails {
     updated: boolean;
     // (undocumented)
     url: string;
+    // (undocumented)
+    variableList: VariableMap | null;
     // (undocumented)
     version: number | null;
 }
@@ -1860,6 +1866,8 @@ export interface ManifestLoadedData {
     // (undocumented)
     captions?: MediaPlaylist[];
     // (undocumented)
+    contentSteering: Object | null;
+    // (undocumented)
     levels: LevelParsed[];
     // (undocumented)
     networkDetails: any;
@@ -1868,11 +1876,15 @@ export interface ManifestLoadedData {
     // (undocumented)
     sessionKeys: LevelKey[] | null;
     // (undocumented)
+    startTimeOffset: number | null;
+    // (undocumented)
     stats: LoaderStats;
     // (undocumented)
     subtitles?: MediaPlaylist[];
     // (undocumented)
     url: string;
+    // (undocumented)
+    variableList: VariableMap | null;
 }
 
 // Warning: (ae-missing-release-tag) "ManifestLoadingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2311,6 +2323,11 @@ export interface UserdataSample {
     // (undocumented)
     uuid?: string;
 }
+
+// Warning: (ae-missing-release-tag) "VariableMap" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type VariableMap = Record<string, string>;
 
 // Warnings were encountered during analysis:
 //

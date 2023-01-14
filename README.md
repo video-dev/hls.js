@@ -65,23 +65,26 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
   - Retry mechanism embedded in the library
   - Recovery actions can be triggered fix fatal media or network errors
 - [Redundant/Failover Playlists](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/UsingHTTPLiveStreaming/UsingHTTPLiveStreaming.html#//apple_ref/doc/uid/TP40008332-CH102-SW22)
+- HLS Variable Substitution
 
-### Supported M3U8 tags
+### Supported HLS tags
 
-For details on the HLS format and these tags' meanings, see https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-08
+For details on the HLS format and these tags' meanings, see https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis
 
-#### Manifest tags
+#### Multi-Variant Playlist tags
 
 - `#EXT-X-STREAM-INF:<attribute-list>`
   `<URI>`
 - `#EXT-X-MEDIA:<attribute-list>`
 - `#EXT-X-SESSION-DATA:<attribute-list>`
+- `#EXT-X-START:TIME-OFFSET=<n>`
+- `#EXT-X-DEFINE` Variable Substitution
 
 The following properties are added to their respective variants' attribute list but are not implemented in their selection and playback.
 
 - `VIDEO-RANGE` and `HDCP-LEVEL` (See [#2489](https://github.com/video-dev/hls.js/issues/2489))
 
-#### Playlist tags
+#### Media Playlist tags
 
 - `#EXTM3U`
 - `#EXT-X-VERSION=<n>`
@@ -99,15 +102,22 @@ The following properties are added to their respective variants' attribute list 
 - `#EXT-X-SERVER-CONTROL:<attribute-list>`
 - `#EXT-X-PART-INF:PART-TARGET=<n>`
 - `#EXT-X-PART:<attribute-list>`
-- `#EXT-X-PRELOAD-HINT:<attribute-list>`
-- `#EXT-X-SKIP:<attribute-list>`
+- `#EXT-X-SKIP:<attribute-list>` Delta Playlists
 - `#EXT-X-RENDITION-REPORT:<attribute-list>`
-- `#EXT-X-DATERANGE:<attribute-list>`
+- `#EXT-X-DATERANGE:<attribute-list>` Metadata
+- `#EXT-X-DEFINE` Variable Substitution
 
 The following tags are added to their respective fragment's attribute list but are not implemented in streaming and playback.
 
 - `#EXT-X-BITRATE` (Not used in ABR controller)
 - `#EXT-X-GAP` (Not implemented. See [#2940](https://github.com/video-dev/hls.js/issues/2940))
+
+Parsed but missing feature support
+
+- `#EXT-X-CONTENT-STEERING:<attribute-list>` (See [#3988](https://github.com/video-dev/hls.js/issues/3988))
+  - #3988
+- `#EXT-X-PRELOAD-HINT:<attribute-list>` (See [#5074](https://github.com/video-dev/hls.js/issues/3988))
+  - #5074
 
 ### Not Supported
 
@@ -116,7 +126,6 @@ For a complete list of issues, see ["Top priorities" in the Release Planning and
 - Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
 - HLS Content Steering
 - HLS Interstitials
-- `#EXT-X-DEFINE` variable substitution
 - `#EXT-X-GAP` filling [#2940](https://github.com/video-dev/hls.js/issues/2940)
 - `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
 - `SAMPLE-AES` with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)

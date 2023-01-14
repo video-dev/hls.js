@@ -407,6 +407,7 @@ export default class LevelController extends BasePlaylistController {
         break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
+      case ErrorDetails.LEVEL_PARSING_ERROR:
         // Do not perform level switch if an error occurred using delivery directives
         // Attempt to reload level without directives first
         if (context) {

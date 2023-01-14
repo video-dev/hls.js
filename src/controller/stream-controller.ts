@@ -871,6 +871,7 @@ export default class StreamController
         break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
+      case ErrorDetails.LEVEL_PARSING_ERROR:
         if (this.state !== State.ERROR) {
           if (data.fatal) {
             // if fatal error, stop processing

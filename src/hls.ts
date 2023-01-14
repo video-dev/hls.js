@@ -23,7 +23,7 @@ import type SubtitleTrackController from './controller/subtitle-track-controller
 import type { ComponentAPI, NetworkComponentAPI } from './types/component-api';
 import type { MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
-import { HdcpLevel, HdcpLevels, Level } from './types/level';
+import { HdcpLevel, HdcpLevels, Level, VariableMap } from './types/level';
 import type { Fragment } from './loader/fragment';
 import { BufferInfo } from './utils/buffer-helper';
 
@@ -909,6 +909,7 @@ export type {
   HlsUrlParameters,
   LevelAttributes,
   LevelParsed,
+  VariableMap,
 } from './types/level';
 export type {
   PlaylistLevelType,

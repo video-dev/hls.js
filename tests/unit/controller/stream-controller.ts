@@ -11,9 +11,11 @@ import { mockFragments } from '../../mocks/data';
 import { Fragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
+import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import { Level, LevelAttributes } from '../../../src/types/level';
+import type { ParsedMultiVariantPlaylist } from '../../../src/loader/m3u8-parser';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
@@ -23,16 +25,22 @@ chai.use(sinonChai);
 const expect = chai.expect;
 
 describe('StreamController', function () {
+  let fake;
   let hls: Hls;
   let fragmentTracker: FragmentTracker;
   let streamController: StreamController;
   const attrs: LevelAttributes = new AttrList({});
 
   beforeEach(function () {
+    fake = sinon.useFakeXMLHttpRequest();
     hls = new Hls({});
     streamController = hls['streamController'];
     fragmentTracker = streamController['fragmentTracker'];
     streamController['startFragRequested'] = true;
+  });
+
+  this.afterEach(function () {
+    fake.restore();
   });
 
   /**
@@ -59,6 +67,34 @@ describe('StreamController', function () {
     );
   };
 
+  const loadManifest = (manifest: string): ParsedMultiVariantPlaylist => {
+    const result = M3U8Parser.parseMasterPlaylist(
+      manifest,
+      'http://www.example.com'
+    );
+    const {
+      contentSteering,
+      levels,
+      sessionData,
+      sessionKeys,
+      startTimeOffset,
+      variableList,
+    } = result;
+    hls.trigger(Events.MANIFEST_LOADED, {
+      levels,
+      audioTracks: [],
+      contentSteering,
+      url: 'http://www.example.com',
+      stats: new LoadStats(),
+      networkDetails: {},
+      sessionData,
+      sessionKeys,
+      startTimeOffset,
+      variableList,
+    });
+    return result;
+  };
+
   describe('StreamController', function () {
     it('should be STOPPED when it is initialized', function () {
       assertStreamControllerStopped(streamController);
@@ -69,31 +105,82 @@ describe('StreamController', function () {
       assertStreamControllerStopped(streamController);
     });
 
-    it('should start without levels data', function () {
-      const manifest = `#EXTM3U
-  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
-  http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
-      const { levels: levelsParsed } = M3U8Parser.parseMasterPlaylist(
-        manifest,
-        'http://www.dailymotion.com'
-      );
-      // load levels data
-      const levels = levelsParsed.map((levelParsed) => new Level(levelParsed));
-      streamController['onManifestParsed'](Events.MANIFEST_PARSED, {
-        altAudio: false,
-        audio: false,
-        audioTracks: [],
-        firstLevel: 0,
-        // @ts-ignore
-        stats: undefined,
-        subtitleTracks: [],
-        video: false,
-        levels,
-      });
-      streamController.startLoad(1);
+    it('should start without level details', function () {
+      loadManifest(`#EXTM3U
+      #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
+      http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`);
       assertStreamControllerStarted(streamController);
       streamController.stopLoad();
       assertStreamControllerStopped(streamController);
+    });
+
+    it('should use EXT-X-START from Multi-Variant Playlist when not overridden by startPosition', function () {
+      loadManifest(`#EXTM3U
+  #EXT-X-START:TIME-OFFSET=130.5
+  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
+  http://www.example.com/media.m3u8`);
+      assertStreamControllerStarted(streamController);
+      // Trigger Level Loaded
+      const details = new LevelDetails('');
+      details.live = false;
+      details.totalduration = 200;
+      details.fragments.push({} as any);
+      hls.trigger(Events.LEVEL_LOADED, {
+        details,
+        id: 0,
+        level: 0,
+        networkDetails: {},
+        stats: new LoadStats(),
+        deliveryDirectives: null,
+      });
+      expect(streamController['startPosition']).to.equal(130.5);
+      expect(streamController['nextLoadPosition']).to.equal(130.5);
+      expect(streamController['lastCurrentTime']).to.equal(130.5);
+    });
+
+    it('should use EXT-X-START from Multi-Variant Playlist when not overridden by startPosition with live playlists', function () {
+      const result = loadManifest(`#EXTM3U
+  #EXT-X-START:TIME-OFFSET=-12.0
+  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
+  http://www.example.com/media.m3u8`);
+      const {
+        contentSteering,
+        levels,
+        sessionData,
+        sessionKeys,
+        startTimeOffset,
+        variableList,
+      } = result;
+      hls.trigger(Events.MANIFEST_LOADED, {
+        levels,
+        audioTracks: [],
+        contentSteering,
+        url: 'http://www.example.com',
+        stats: new LoadStats(),
+        networkDetails: {},
+        sessionData,
+        sessionKeys,
+        startTimeOffset,
+        variableList,
+      });
+      assertStreamControllerStarted(streamController);
+
+      // Trigger Level Loaded
+      const details = new LevelDetails('');
+      details.live = true;
+      details.totalduration = 30;
+      details.fragments.push({ start: 0 } as any);
+      hls.trigger(Events.LEVEL_LOADED, {
+        details,
+        id: 0,
+        level: 0,
+        networkDetails: {},
+        stats: new LoadStats(),
+        deliveryDirectives: null,
+      });
+      expect(streamController['startPosition']).to.equal(18);
+      expect(streamController['nextLoadPosition']).to.equal(18);
+      expect(streamController['lastCurrentTime']).to.equal(18);
     });
   });
 
