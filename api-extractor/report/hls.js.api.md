@@ -1482,6 +1482,8 @@ export class LevelDetails {
     // (undocumented)
     get hasProgramDateTime(): boolean;
     // (undocumented)
+    hasVariableRefs: boolean;
+    // (undocumented)
     holdBack: number;
     // (undocumented)
     get lastPartIndex(): number;

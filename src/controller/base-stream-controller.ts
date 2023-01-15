@@ -1265,9 +1265,9 @@ export default class BaseStreamController
     }
     if (startPosition === -1 || this.lastCurrentTime === -1) {
       // Use Playlist EXT-X-START:TIME-OFFSET when set
-      // Prioritize Multi-Variant Playlist offset so that main, audio, and subtitle stream-controller start times match
-      const offsetInMultiVariantPlaylist = this.startTimeOffset !== null;
-      const startTimeOffset = offsetInMultiVariantPlaylist
+      // Prioritize Multivariant Playlist offset so that main, audio, and subtitle stream-controller start times match
+      const offsetInMultivariantPlaylist = this.startTimeOffset !== null;
+      const startTimeOffset = offsetInMultivariantPlaylist
         ? this.startTimeOffset
         : details.startTimeOffset;
       if (startTimeOffset !== null && Number.isFinite(startTimeOffset)) {
@@ -1281,7 +1281,7 @@ export default class BaseStreamController
         );
         this.log(
           `Start time offset ${startTimeOffset} found in ${
-            offsetInMultiVariantPlaylist ? 'multi-variant' : 'media'
+            offsetInMultivariantPlaylist ? 'multivariant' : 'media'
           } playlist, adjust startPosition to ${startPosition}`
         );
         this.startPosition = startPosition;

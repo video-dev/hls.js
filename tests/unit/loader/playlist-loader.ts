@@ -801,8 +801,16 @@ lo007ts`;
     const { AUDIO: result = [] } = M3U8Parser.parseMasterPlaylistMedia(
       manifest,
       'https://hls.ted.com/',
-      [],
-      null
+      {
+        contentSteering: null,
+        levels: [],
+        playlistParsingError: null,
+        sessionData: null,
+        sessionKeys: null,
+        startTimeOffset: null,
+        variableList: null,
+        hasVariableRefs: false,
+      }
     );
     expect(result.length).to.equal(1);
     expect(result[0].autoselect).to.be.true;
@@ -1944,7 +1952,7 @@ http://proxy-21.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282
 });
 
 describe('#EXT-X-START', function () {
-  it('parses EXT-X-START in Multi-Variant Playlists', function () {
+  it('parses EXT-X-START in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
   #EXT-X-START:TIME-OFFSET=300.0,PRECISE=YES
   
@@ -1955,7 +1963,7 @@ describe('#EXT-X-START', function () {
     expect(result.startTimeOffset).to.equal(300);
   });
 
-  it('parses negative EXT-X-START values in Multi-Variant Playlists', function () {
+  it('parses negative EXT-X-START values in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
   #EXT-X-START:TIME-OFFSET=-30.0
   
@@ -1978,7 +1986,7 @@ describe('#EXT-X-START', function () {
 });
 
 describe('#EXT-X-DEFINE', function () {
-  it('parses EXT-X-DEFINE Variables in Multi-Variant Playlists', function () {
+  it('parses EXT-X-DEFINE Variables in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
   #EXT-X-DEFINE:NAME="x",VALUE="1"
   #EXT-X-DEFINE:NAME="y",VALUE="2"
@@ -1997,7 +2005,7 @@ describe('#EXT-X-DEFINE', function () {
     expect(result.variableList['hello-var']).to.equal('Hello there!');
   });
 
-  it('returns an error when duplicate Variables are found in Multi-Variant Playlists', function () {
+  it('returns an error when duplicate Variables are found in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
   #EXT-X-DEFINE:NAME="foo",VALUE="ok"
   #EXT-X-DEFINE:NAME="bar",VALUE="ok"
@@ -2015,11 +2023,15 @@ describe('#EXT-X-DEFINE', function () {
     expect(result.variableList.bar).to.equal('ok');
     expect(result)
       .to.have.property('playlistParsingError')
+      .which.is.an('Error')
       .with.property('message')
-      .which.equals('EXT-X-DEFINE duplicate Variable Name declarations: "foo"');
+      .which.equals(
+        'EXT-X-DEFINE duplicate Variable Name declarations: "foo"',
+        result.playlistParsingError?.message
+      );
   });
 
-  it('substitutes variable references in quoted strings, URI lines, and hexidecimal attributes, following EXT-X-DEFINE tags in Multi-Variant Playlists', function () {
+  it('substitutes variable references in quoted strings, URI lines, and hexidecimal attributes, following EXT-X-DEFINE tags in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
   #EXT-X-DEFINE:NAME="host",VALUE="example.com"
   #EXT-X-DEFINE:NAME="foo",VALUE="ok"
@@ -2028,7 +2040,6 @@ describe('#EXT-X-DEFINE', function () {
 
   #EXT-X-CONTENT-STEERING:SERVER-URI="https://{$host}/steering-manifest.json",PATHWAY-ID="{$foo}-CDN"
 
-  #EXT-X-SESSION-DATA:DATA-ID="not-applied",VALUE="{$session-var}"
   #EXT-X-DEFINE:NAME="session-var",VALUE="hmm"
   #EXT-X-SESSION-DATA:DATA-ID="var-applied",VALUE="{$session-var}"
 
@@ -2061,7 +2072,6 @@ describe('#EXT-X-DEFINE', function () {
       expect(result.sessionData, 'sessionData').to.not.equal(null);
       return;
     }
-    expect(result.sessionData['not-applied'].VALUE).to.equal('{$session-var}');
     expect(result.sessionData['var-applied'].VALUE).to.equal('hmm');
 
     if (result.sessionKeys === null) {
@@ -2102,8 +2112,7 @@ describe('#EXT-X-DEFINE', function () {
     const { AUDIO: audioTracks = [] } = M3U8Parser.parseMasterPlaylistMedia(
       manifest,
       'https://www.x.com',
-      result.levels,
-      result.variableList
+      result
     );
 
     expect(audioTracks[0]).to.deep.include(
@@ -2265,12 +2274,78 @@ a{$mvpVar}.mp4
       null
     );
     expect(details.variableList).to.equal(null);
-    expect(details.playlistParsingError)
-      .to.have.property('message')
+    expect(details)
+      .to.have.property('playlistParsingError')
+      .which.is.an('Error')
+      .which.has.property('message')
       .which.equals(
-        'EXT-X-DEFINE IMPORT attribute not found in Multivariant Playlist: "mvpVar"'
+        'EXT-X-DEFINE IMPORT attribute not found in Multivariant Playlist: "mvpVar"',
+        details.playlistParsingError?.message
       );
     expect(details.fragments[0].relurl).to.equal('a{$mvpVar}.mp4');
+  });
+
+  it('fails to parse Media Playlist when variable reference has no definition', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:1
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-TARGETDURATION:5
+#EXTINF:4
+a{$bar}.mp4
+#EXTINF:4
+2.mp4
+#EXTINF:4
+3.mp4`;
+    const details = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://example.com/hls/index.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null
+    );
+    expect(details.variableList, 'variableList').to.equal(null);
+    expect(details)
+      .to.have.property('playlistParsingError')
+      .which.is.an('Error')
+      .which.has.property('message')
+      .which.equals(
+        'Missing preceding EXT-X-DEFINE tag for Variable Reference: "bar"',
+        details.playlistParsingError?.message
+      );
+    expect(details.fragments?.[0].relurl).to.equal('a{$bar}.mp4');
+  });
+
+  it('fails to parse Media Playlist when variable reference precedes definition', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:1
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-TARGETDURATION:5
+#EXTINF:4
+a{$bar}.mp4
+#EXT-X-DEFINE:NAME="bar",VALUE="1"
+#EXTINF:4
+2.mp4
+#EXTINF:4
+3.mp4`;
+    const details = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://example.com/hls/index.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null
+    );
+    expect(details.variableList, 'variableList').to.deep.equal({ bar: '1' });
+    expect(details)
+      .to.have.property('playlistParsingError')
+      .which.is.an('Error')
+      .which.has.property('message')
+      .which.equals(
+        'Missing preceding EXT-X-DEFINE tag for Variable Reference: "bar"',
+        details.playlistParsingError?.message
+      );
+    expect(details.fragments[0].relurl).to.equal('a{$bar}.mp4');
   });
 });
 

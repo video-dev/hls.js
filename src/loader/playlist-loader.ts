@@ -399,7 +399,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       AUDIO: audioTracks = [],
       SUBTITLES: subtitles,
       'CLOSED-CAPTIONS': captions,
-    } = M3U8Parser.parseMasterPlaylistMedia(string, url, levels, variableList);
+    } = M3U8Parser.parseMasterPlaylistMedia(string, url, parsedResult);
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
