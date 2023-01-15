@@ -6,6 +6,9 @@ import { LevelKey } from './level-key';
 import { AttrList } from '../utils/attr-list';
 import { logger } from '../utils/logger';
 import {
+  addVariableDefinition,
+  hasVariableReferences,
+  importVariableDefinition,
   substituteVariables,
   substituteVariablesInAttributes,
 } from '../utils/variable-substitution';
@@ -26,7 +29,7 @@ type ContentSteering = {
   pathwayId: string;
 };
 
-export type ParsedMultiVariantPlaylist = {
+export type ParsedMultivariantPlaylist = {
   contentSteering: ContentSteering | null;
   levels: LevelParsed[];
   playlistParsingError: Error | null;
@@ -34,9 +37,10 @@ export type ParsedMultiVariantPlaylist = {
   sessionKeys: LevelKey[] | null;
   startTimeOffset: number | null;
   variableList: VariableMap | null;
+  hasVariableRefs: boolean;
 };
 
-type ParsedMultiVariantMediaOptions = {
+type ParsedMultivariantMediaOptions = {
   AUDIO?: MediaPlaylist[];
   SUBTITLES?: MediaPlaylist[];
   'CLOSED-CAPTIONS'?: MediaPlaylist[];
@@ -102,17 +106,21 @@ export default class M3U8Parser {
   static parseMasterPlaylist(
     string: string,
     baseurl: string
-  ): ParsedMultiVariantPlaylist {
-    const levels: LevelParsed[] = [];
+  ): ParsedMultivariantPlaylist {
+    const hasVariableRefs = __USE_VARIABLE_SUBSTITUTION__
+      ? hasVariableReferences(string)
+      : false;
+    const parsed: ParsedMultivariantPlaylist = {
+      contentSteering: null,
+      levels: [],
+      playlistParsingError: null,
+      sessionData: null,
+      sessionKeys: null,
+      startTimeOffset: null,
+      variableList: null,
+      hasVariableRefs,
+    };
     const levelsWithKnownCodecs: LevelParsed[] = [];
-    const sessionData: Record<string, AttrList> = {};
-    const sessionKeys: LevelKey[] = [];
-
-    let hasSessionData = false;
-    let startTimeOffset: number | null = null;
-    let contentSteering: ContentSteering | undefined;
-    let variableList: VariableMap | undefined;
-    let playlistParsingError: Error | null = null;
 
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
 
@@ -122,7 +130,7 @@ export default class M3U8Parser {
         // '#EXT-X-STREAM-INF' is found, parse level tag  in group 1
         const attrs = new AttrList(result[1]);
         if (__USE_VARIABLE_SUBSTITUTION__) {
-          substituteVariablesInAttributes(variableList, attrs, [
+          substituteVariablesInAttributes(parsed, attrs, [
             'CODECS',
             'SUPPLEMENTAL-CODECS',
             'ALLOWED-CPC',
@@ -136,7 +144,7 @@ export default class M3U8Parser {
           ]);
         }
         const uri = __USE_VARIABLE_SUBSTITUTION__
-          ? substituteVariables(variableList, result[2])
+          ? substituteVariables(parsed, result[2])
           : result[2];
         const level: LevelParsed = {
           attrs,
@@ -166,7 +174,7 @@ export default class M3U8Parser {
           levelsWithKnownCodecs.push(level);
         }
 
-        levels.push(level);
+        parsed.levels.push(level);
       } else if (result[3]) {
         const tag = result[3];
         const attributes = result[4];
@@ -175,7 +183,7 @@ export default class M3U8Parser {
             // #EXT-X-SESSION-DATA
             const sessionAttrs = new AttrList(attributes);
             if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(variableList, sessionAttrs, [
+              substituteVariablesInAttributes(parsed, sessionAttrs, [
                 'DATA-ID',
                 'LANGUAGE',
                 'VALUE',
@@ -184,16 +192,21 @@ export default class M3U8Parser {
             }
             const dataId = sessionAttrs['DATA-ID'];
             if (dataId) {
-              hasSessionData = true;
-              sessionData[dataId] = sessionAttrs;
+              if (parsed.sessionData === null) {
+                parsed.sessionData = {};
+              }
+              parsed.sessionData[dataId] = sessionAttrs;
             }
             break;
           }
           case 'SESSION-KEY': {
             // #EXT-X-SESSION-KEY
-            const sessionKey = parseKey(attributes, baseurl, variableList);
+            const sessionKey = parseKey(attributes, baseurl, parsed);
             if (sessionKey.encrypted && sessionKey.isSupported()) {
-              sessionKeys.push(sessionKey);
+              if (parsed.sessionKeys === null) {
+                parsed.sessionKeys = [];
+              }
+              parsed.sessionKeys.push(sessionKey);
             } else {
               logger.warn(
                 `[Keys] Ignoring invalid EXT-X-SESSION-KEY tag: "${attributes}"`
@@ -205,22 +218,11 @@ export default class M3U8Parser {
             // #EXT-X-DEFINE
             if (__USE_VARIABLE_SUBSTITUTION__) {
               const variableAttributes = new AttrList(attributes);
-              substituteVariablesInAttributes(
-                variableList,
-                variableAttributes,
-                ['NAME', 'VALUE']
-              );
-              const NAME = variableAttributes.NAME;
-              if (!variableList) {
-                variableList = {};
-              }
-              if (NAME in variableList) {
-                playlistParsingError = new Error(
-                  `EXT-X-DEFINE duplicate Variable Name declarations: "${NAME}"`
-                );
-              } else {
-                variableList[NAME] = variableAttributes.VALUE || '';
-              }
+              substituteVariablesInAttributes(parsed, variableAttributes, [
+                'NAME',
+                'VALUE',
+              ]);
+              addVariableDefinition(parsed, variableAttributes);
             }
             break;
           }
@@ -229,12 +231,12 @@ export default class M3U8Parser {
             const contentSteeringAttributes = new AttrList(attributes);
             if (__USE_VARIABLE_SUBSTITUTION__) {
               substituteVariablesInAttributes(
-                variableList,
+                parsed,
                 contentSteeringAttributes,
                 ['SERVER-URI', 'PATHWAY-ID']
               );
             }
-            contentSteering = {
+            parsed.contentSteering = {
               uri: contentSteeringAttributes['SERVER-URI'],
               pathwayId: contentSteeringAttributes['PATHWAY-ID'] || '.',
             };
@@ -242,7 +244,7 @@ export default class M3U8Parser {
           }
           case 'START': {
             // #EXT-X-START
-            startTimeOffset = parseStartTimeOffset(attributes);
+            parsed.startTimeOffset = parseStartTimeOffset(attributes);
             break;
           }
           default:
@@ -253,38 +255,30 @@ export default class M3U8Parser {
     // Filter out levels with unknown codecs if it does not remove all levels
     const stripUnknownCodecLevels =
       levelsWithKnownCodecs.length > 0 &&
-      levelsWithKnownCodecs.length < levels.length;
+      levelsWithKnownCodecs.length < parsed.levels.length;
 
-    const usableLevels = stripUnknownCodecLevels
+    parsed.levels = stripUnknownCodecLevels
       ? levelsWithKnownCodecs
-      : levels;
-    if (usableLevels.length === 0) {
-      playlistParsingError = new Error(
+      : parsed.levels;
+    if (parsed.levels.length === 0) {
+      parsed.playlistParsingError = new Error(
         `no level found in manifest: ${
           stripUnknownCodecLevels ? 'unknown codecs' : 'empty'
         }`
       );
     }
 
-    return {
-      contentSteering: contentSteering || null,
-      levels: usableLevels,
-      playlistParsingError,
-      sessionData: hasSessionData ? sessionData : null,
-      sessionKeys: sessionKeys.length ? sessionKeys : null,
-      startTimeOffset,
-      variableList: variableList || null,
-    };
+    return parsed;
   }
 
   static parseMasterPlaylistMedia(
     string: string,
     baseurl: string,
-    levels: LevelParsed[],
-    variableList: VariableMap | null
-  ): ParsedMultiVariantMediaOptions {
+    parsed: ParsedMultivariantPlaylist
+  ): ParsedMultivariantMediaOptions {
     let result: RegExpExecArray | null;
-    const results: ParsedMultiVariantMediaOptions = {};
+    const results: ParsedMultivariantMediaOptions = {};
+    const levels = parsed.levels;
     const groupsByType = {
       AUDIO: levels.map((level: LevelParsed) => ({
         id: level.attrs.AUDIO,
@@ -308,7 +302,7 @@ export default class M3U8Parser {
         const medias: MediaPlaylist[] = results[type] || [];
         results[type] = medias;
         if (__USE_VARIABLE_SUBSTITUTION__) {
-          substituteVariablesInAttributes(variableList, attrs, [
+          substituteVariablesInAttributes(parsed, attrs, [
             'URI',
             'GROUP-ID',
             'LANGUAGE',
@@ -377,6 +371,9 @@ export default class M3U8Parser {
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
     level.m3u8 = string;
+    level.hasVariableRefs = __USE_VARIABLE_SUBSTITUTION__
+      ? hasVariableReferences(string)
+      : false;
 
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       if (createNextFrag) {
@@ -429,7 +426,7 @@ export default class M3U8Parser {
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           const uri = (' ' + result[3]).slice(1);
           frag.relurl = __USE_VARIABLE_SUBSTITUTION__
-            ? substituteVariables(level.variableList, uri)
+            ? substituteVariables(level, uri)
             : uri;
           assignProgramDateTime(frag, prevFrag);
           prevFrag = frag;
@@ -481,7 +478,7 @@ export default class M3U8Parser {
           case 'SKIP': {
             const skipAttrs = new AttrList(value1);
             if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(level.variableList, skipAttrs, [
+              substituteVariablesInAttributes(level, skipAttrs, [
                 'RECENTLY-REMOVED-DATERANGES',
               ]);
             }
@@ -533,21 +530,17 @@ export default class M3U8Parser {
           case 'DATERANGE': {
             const dateRangeAttr = new AttrList(value1);
             if (__USE_VARIABLE_SUBSTITUTION__) {
+              substituteVariablesInAttributes(level, dateRangeAttr, [
+                'ID',
+                'CLASS',
+                'START-DATE',
+                'END-DATE',
+                'SCTE35-CMD',
+                'SCTE35-OUT',
+                'SCTE35-IN',
+              ]);
               substituteVariablesInAttributes(
-                level.variableList,
-                dateRangeAttr,
-                [
-                  'ID',
-                  'CLASS',
-                  'START-DATE',
-                  'END-DATE',
-                  'SCTE35-CMD',
-                  'SCTE35-OUT',
-                  'SCTE35-IN',
-                ]
-              );
-              substituteVariablesInAttributes(
-                level.variableList,
+                level,
                 dateRangeAttr,
                 dateRangeAttr.clientAttrs
               );
@@ -568,40 +561,19 @@ export default class M3U8Parser {
           case 'DEFINE': {
             if (__USE_VARIABLE_SUBSTITUTION__) {
               const variableAttributes = new AttrList(value1);
-              let variableList = level.variableList;
-              substituteVariablesInAttributes(
-                variableList,
-                variableAttributes,
-                ['NAME', 'VALUE', 'IMPORT']
-              );
+              substituteVariablesInAttributes(level, variableAttributes, [
+                'NAME',
+                'VALUE',
+                'IMPORT',
+              ]);
               if ('IMPORT' in variableAttributes) {
-                const IMPORT = variableAttributes.IMPORT;
-                if (
-                  multiVariantVariableList &&
-                  IMPORT in multiVariantVariableList
-                ) {
-                  if (!variableList) {
-                    variableList = level.variableList = {};
-                  }
-                  variableList[IMPORT] = multiVariantVariableList[IMPORT];
-                } else {
-                  level.playlistParsingError = new Error(
-                    `EXT-X-DEFINE IMPORT attribute not found in Multivariant Playlist: "${IMPORT}"`
-                  );
-                }
+                importVariableDefinition(
+                  level,
+                  variableAttributes,
+                  multiVariantVariableList
+                );
               } else {
-                const NAME = variableAttributes.NAME;
-                if (!variableList) {
-                  variableList = level.variableList = {};
-                }
-                if (NAME in variableList) {
-                  level.playlistParsingError = new Error(
-                    `EXT-X-DEFINE duplicate Variable Name declarations: "${NAME}"`
-                  );
-                  return level;
-                } else {
-                  variableList[NAME] = variableAttributes.VALUE || '';
-                }
+                addVariableDefinition(level, variableAttributes);
               }
             }
             break;
@@ -611,7 +583,7 @@ export default class M3U8Parser {
             discontinuityCounter = parseInt(value1);
             break;
           case 'KEY': {
-            const levelKey = parseKey(value1, baseurl, level.variableList);
+            const levelKey = parseKey(value1, baseurl, level);
             if (levelKey.isSupported()) {
               if (levelKey.method === 'NONE') {
                 levelkeys = undefined;
@@ -635,7 +607,7 @@ export default class M3U8Parser {
           case 'MAP': {
             const mapAttrs = new AttrList(value1);
             if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(level.variableList, mapAttrs, [
+              substituteVariablesInAttributes(level, mapAttrs, [
                 'BYTERANGE',
                 'URI',
               ]);
@@ -694,7 +666,7 @@ export default class M3U8Parser {
             const index = currentPart++;
             const partAttrs = new AttrList(value1);
             if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(level.variableList, partAttrs, [
+              substituteVariablesInAttributes(level, partAttrs, [
                 'BYTERANGE',
                 'URI',
               ]);
@@ -713,11 +685,7 @@ export default class M3U8Parser {
           case 'PRELOAD-HINT': {
             const preloadHintAttrs = new AttrList(value1);
             if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(
-                level.variableList,
-                preloadHintAttrs,
-                ['URI']
-              );
+              substituteVariablesInAttributes(level, preloadHintAttrs, ['URI']);
             }
             level.preloadHint = preloadHintAttrs;
             break;
@@ -725,11 +693,9 @@ export default class M3U8Parser {
           case 'RENDITION-REPORT': {
             const renditionReportAttrs = new AttrList(value1);
             if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(
-                level.variableList,
-                renditionReportAttrs,
-                ['URI']
-              );
+              substituteVariablesInAttributes(level, renditionReportAttrs, [
+                'URI',
+              ]);
             }
             level.renditionReports = level.renditionReports || [];
             level.renditionReports.push(renditionReportAttrs);
@@ -796,12 +762,12 @@ export default class M3U8Parser {
 function parseKey(
   keyTagAttributes: string,
   baseurl: string,
-  variableList: VariableMap | null | undefined
+  parsed: ParsedMultivariantPlaylist | LevelDetails
 ): LevelKey {
   // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
   const keyAttrs = new AttrList(keyTagAttributes);
   if (__USE_VARIABLE_SUBSTITUTION__) {
-    substituteVariablesInAttributes(variableList, keyAttrs, [
+    substituteVariablesInAttributes(parsed, keyAttrs, [
       'KEYFORMAT',
       'KEYFORMATVERSIONS',
       'URI',

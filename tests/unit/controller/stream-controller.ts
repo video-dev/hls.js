@@ -15,7 +15,7 @@ import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import { Level, LevelAttributes } from '../../../src/types/level';
-import type { ParsedMultiVariantPlaylist } from '../../../src/loader/m3u8-parser';
+import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
@@ -67,7 +67,7 @@ describe('StreamController', function () {
     );
   };
 
-  const loadManifest = (manifest: string): ParsedMultiVariantPlaylist => {
+  const loadManifest = (manifest: string): ParsedMultivariantPlaylist => {
     const result = M3U8Parser.parseMasterPlaylist(
       manifest,
       'http://www.example.com'
@@ -114,7 +114,7 @@ describe('StreamController', function () {
       assertStreamControllerStopped(streamController);
     });
 
-    it('should use EXT-X-START from Multi-Variant Playlist when not overridden by startPosition', function () {
+    it('should use EXT-X-START from Multivariant Playlist when not overridden by startPosition', function () {
       loadManifest(`#EXTM3U
   #EXT-X-START:TIME-OFFSET=130.5
   #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
@@ -138,7 +138,7 @@ describe('StreamController', function () {
       expect(streamController['lastCurrentTime']).to.equal(130.5);
     });
 
-    it('should use EXT-X-START from Multi-Variant Playlist when not overridden by startPosition with live playlists', function () {
+    it('should use EXT-X-START from Multivariant Playlist when not overridden by startPosition with live playlists', function () {
       const result = loadManifest(`#EXTM3U
   #EXT-X-START:TIME-OFFSET=-12.0
   #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"

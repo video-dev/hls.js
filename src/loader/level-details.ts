@@ -51,6 +51,7 @@ export class LevelDetails {
   public encryptedFragments: Fragment[];
   public playlistParsingError: Error | null = null;
   public variableList: VariableMap | null = null;
+  public hasVariableRefs = false;
 
   constructor(baseUrl) {
     this.fragments = [];
