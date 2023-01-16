@@ -8,6 +8,10 @@ on:
 
 permissions: {}
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   config:
     runs-on: ubuntu-latest
@@ -99,6 +103,8 @@ jobs:
         run: |
           npm run build:ci
           npm run docs
+          ./scripts/check-docs-built.sh
+
           # check that hls.js doesn't error if requiring in node
           # see https://github.com/video-dev/hls.js/pull/1642
           node -e 'require("./" + require("./package.json").main)'
