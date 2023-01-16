@@ -5,7 +5,7 @@ export interface ComponentAPI {
 }
 
 export interface AbrComponentAPI extends ComponentAPI {
-  nextAutoLevel: Number;
+  nextAutoLevel: number;
   readonly bwEstimator?: EwmaBandWidthEstimator;
 }
 
