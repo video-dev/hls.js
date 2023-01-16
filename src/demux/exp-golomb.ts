@@ -173,8 +173,7 @@ class ExpGolomb {
    * Read a sequence parameter set and return some interesting video
    * properties. A sequence parameter set is the H264 metadata that
    * describes the properties of upcoming video frames.
-   * @param data {Uint8Array} the bytes of a sequence parameter set
-   * @return {object} an object with configuration parsed from the
+   * @returns an object with configuration parsed from the
    * sequence parameter set, including the dimensions of the
    * associated video frames.
    */
