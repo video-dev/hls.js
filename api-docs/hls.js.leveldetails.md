@@ -4,6 +4,8 @@
 
 ## LevelDetails class
 
+Object representing parsed data from an HLS Media Playlist. Found in [Level.details](./hls.js.level.details.md)<!-- -->.
+
 <b>Signature:</b>
 
 ```typescript

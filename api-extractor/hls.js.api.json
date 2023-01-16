@@ -7231,7 +7231,7 @@
         {
           "kind": "Class",
           "canonicalReference": "hls.js!Fragment:class",
-          "docComment": "",
+          "docComment": "/**\n * Object representing parsed data from an HLS Segment. Found in {@link hls.js#LevelDetails.fragments}.\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -9150,7 +9150,7 @@
         {
           "kind": "Class",
           "canonicalReference": "hls.js!Hls:class",
-          "docComment": "",
+          "docComment": "/**\n * The `Hls` class is the core of the HLS.js library used to instantiate player instances.\n *\n * @public\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -9456,7 +9456,7 @@
             {
               "kind": "Property",
               "canonicalReference": "hls.js!Hls#config:member",
-              "docComment": "",
+              "docComment": "/**\n * The runtime configuration used by the player. At instantiation this is combination of `hls.userConfig` merged over `Hls.DefaultConfig`.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -11645,7 +11645,7 @@
             {
               "kind": "Property",
               "canonicalReference": "hls.js!Hls#userConfig:member",
-              "docComment": "",
+              "docComment": "/**\n * The configuration object provided on player instantiation.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -11688,7 +11688,7 @@
             {
               "kind": "Property",
               "canonicalReference": "hls.js!Hls.version:member",
-              "docComment": "/**\n * Get the video-dev/hls.js npm package version.\n */\n",
+              "docComment": "/**\n * Get the video-dev/hls.js package version.\n */\n",
               "excerptTokens": [
                 {
                   "kind": "Content",
@@ -12880,7 +12880,7 @@
         {
           "kind": "Interface",
           "canonicalReference": "hls.js!HlsListeners:interface",
-          "docComment": "",
+          "docComment": "/**\n * Defines each Event type and payload by Event name. Used in {@link hls.js#HlsEventEmitter} to strongly type the event listener API.\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -18014,7 +18014,7 @@
         {
           "kind": "Class",
           "canonicalReference": "hls.js!LevelDetails:class",
-          "docComment": "",
+          "docComment": "/**\n * Object representing parsed data from an HLS Media Playlist. Found in {@link hls.js#Level.details}.\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",
@@ -25009,7 +25009,7 @@
         {
           "kind": "Class",
           "canonicalReference": "hls.js!Part:class",
-          "docComment": "",
+          "docComment": "/**\n * Object representing parsed data from an HLS Partial Segment. Found in {@link hls.js#LevelDetails.partList}.\n */\n",
           "excerptTokens": [
             {
               "kind": "Content",

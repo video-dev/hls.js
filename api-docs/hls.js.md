@@ -12,14 +12,14 @@
 |  [BaseSegment](./hls.js.basesegment.md) |  |
 |  [ChunkMetadata](./hls.js.chunkmetadata.md) |  |
 |  [DateRange](./hls.js.daterange.md) |  |
-|  [Fragment](./hls.js.fragment.md) |  |
-|  [Hls](./hls.js.hls.md) |  |
+|  [Fragment](./hls.js.fragment.md) | Object representing parsed data from an HLS Segment. Found in [LevelDetails.fragments](./hls.js.leveldetails.fragments.md)<!-- -->. |
+|  [Hls](./hls.js.hls.md) | The <code>Hls</code> class is the core of the HLS.js library used to instantiate player instances. |
 |  [HlsUrlParameters](./hls.js.hlsurlparameters.md) |  |
 |  [Level](./hls.js.level.md) |  |
-|  [LevelDetails](./hls.js.leveldetails.md) |  |
+|  [LevelDetails](./hls.js.leveldetails.md) | Object representing parsed data from an HLS Media Playlist. Found in [Level.details](./hls.js.level.details.md)<!-- -->. |
 |  [LevelKey](./hls.js.levelkey.md) |  |
 |  [LoadStats](./hls.js.loadstats.md) |  |
-|  [Part](./hls.js.part.md) |  |
+|  [Part](./hls.js.part.md) | Object representing parsed data from an HLS Partial Segment. Found in [LevelDetails.partList](./hls.js.leveldetails.partlist.md)<!-- -->. |
 
 ## Enumerations
 
@@ -72,7 +72,7 @@
 |  [FragParsingUserdataData](./hls.js.fragparsinguserdatadata.md) |  |
 |  [HlsChunkPerformanceTiming](./hls.js.hlschunkperformancetiming.md) |  |
 |  [HlsEventEmitter](./hls.js.hlseventemitter.md) |  |
-|  [HlsListeners](./hls.js.hlslisteners.md) |  |
+|  [HlsListeners](./hls.js.hlslisteners.md) | Defines each Event type and payload by Event name. Used in [HlsEventEmitter](./hls.js.hlseventemitter.md) to strongly type the event listener API. |
 |  [HlsPerformanceTiming](./hls.js.hlsperformancetiming.md) |  |
 |  [HlsProgressivePerformanceTiming](./hls.js.hlsprogressiveperformancetiming.md) |  |
 |  [InitPTSFoundData](./hls.js.initptsfounddata.md) |  |

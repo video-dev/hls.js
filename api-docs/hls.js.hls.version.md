@@ -4,7 +4,7 @@
 
 ## Hls.version property
 
-Get the video-dev/hls.js npm package version.
+Get the video-dev/hls.js package version.
 
 <b>Signature:</b>
 

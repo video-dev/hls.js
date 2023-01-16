@@ -741,7 +741,7 @@ export interface FragLoadingData {
 
 // Warning: (ae-missing-release-tag) "Fragment" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public (undocumented)
+// @public
 export class Fragment extends BaseSegment {
     constructor(type: PlaylistLevelType, baseurl: string);
     // (undocumented)
@@ -905,9 +905,7 @@ export type HdcpLevel = typeof HdcpLevels[number];
 // @public (undocumented)
 export const HdcpLevels: readonly ["NONE", "TYPE-0", "TYPE-1", "TYPE-2", null];
 
-// Warning: (ae-missing-release-tag) "Hls" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
-//
-// @public (undocumented)
+// @public
 class Hls implements HlsEventEmitter {
     constructor(userConfig?: Partial<HlsConfig>);
     attachMedia(media: HTMLMediaElement): void;
@@ -923,7 +921,6 @@ class Hls implements HlsEventEmitter {
     get capLevelToPlayerSize(): boolean;
     // Warning: (ae-setter-with-docs) The doc comment for the property "capLevelToPlayerSize" must appear on the getter, not the setter.
     set capLevelToPlayerSize(shouldStartCapping: boolean);
-    // (undocumented)
     readonly config: HlsConfig;
     // (undocumented)
     createController(ControllerClass: any, components: any): any;
@@ -1014,7 +1011,6 @@ class Hls implements HlsEventEmitter {
     get targetLatency(): number | null;
     // (undocumented)
     trigger<E extends keyof HlsListeners>(event: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean;
-    // (undocumented)
     readonly userConfig: Partial<HlsConfig>;
     static get version(): string;
 }
@@ -1082,7 +1078,7 @@ export interface HlsEventEmitter {
 
 // Warning: (ae-missing-release-tag) "HlsListeners" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public (undocumented)
+// @public
 export interface HlsListeners {
     // (undocumented)
     [Events.AUDIO_TRACK_LOADED]: (event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData) => void;
@@ -1426,7 +1422,7 @@ export type LevelControllerConfig = {
 
 // Warning: (ae-missing-release-tag) "LevelDetails" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public (undocumented)
+// @public
 export class LevelDetails {
     constructor(baseUrl: any);
     // (undocumented)
@@ -2046,7 +2042,7 @@ export interface NonNativeTextTracksData {
 
 // Warning: (ae-missing-release-tag) "Part" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public (undocumented)
+// @public
 export class Part extends BaseSegment {
     constructor(partAttrs: AttrList, frag: Fragment, baseurl: string, index: number, previous?: Part);
     // (undocumented)

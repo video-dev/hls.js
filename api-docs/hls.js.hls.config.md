@@ -4,6 +4,8 @@
 
 ## Hls.config property
 
+The runtime configuration used by the player. At instantiation this is combination of `hls.userConfig` merged over `Hls.DefaultConfig`<!-- -->.
+
 <b>Signature:</b>
 
 ```typescript

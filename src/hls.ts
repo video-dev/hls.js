@@ -27,15 +27,25 @@ import { HdcpLevel, HdcpLevels, Level } from './types/level';
 import type { Fragment } from './loader/fragment';
 import { BufferInfo } from './utils/buffer-helper';
 
+/**
+ * The `Hls` class is the core of the HLS.js library used to instantiate player instances.
+ * @public
+ */
 export default class Hls implements HlsEventEmitter {
   private static defaultConfig: HlsConfig | undefined;
 
+  /**
+   * The runtime configuration used by the player. At instantiation this is combination of `hls.userConfig` merged over `Hls.DefaultConfig`.
+   */
   public readonly config: HlsConfig;
+
+  /**
+   * The configuration object provided on player instantiation.
+   */
   public readonly userConfig: Partial<HlsConfig>;
 
   private coreComponents: ComponentAPI[];
   private networkControllers: NetworkComponentAPI[];
-
   private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number;
   private _maxHdcpLevel: HdcpLevel = null;
@@ -49,12 +59,11 @@ export default class Hls implements HlsEventEmitter {
   private subtitleTrackController: SubtitleTrackController;
   private emeController: EMEController;
   private cmcdController: CMCDController;
-
   private _media: HTMLMediaElement | null = null;
   private url: string | null = null;
 
   /**
-   * Get the video-dev/hls.js npm package version.
+   * Get the video-dev/hls.js package version.
    */
   static get version(): string {
     return __VERSION__;

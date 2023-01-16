@@ -4,6 +4,8 @@
 
 ## Hls class
 
+The `Hls` class is the core of the HLS.js library used to instantiate player instances.
+
 <b>Signature:</b>
 
 ```typescript
@@ -27,7 +29,7 @@ export default class Hls implements HlsEventEmitter
 |  [autoLevelEnabled](./hls.js.hls.autolevelenabled.md) | <code>readonly</code> | boolean | True when automatic level selection enabled |
 |  [bandwidthEstimate](./hls.js.hls.bandwidthestimate.md) | <code>readonly</code> | number | get bandwidth estimate |
 |  [capLevelToPlayerSize](./hls.js.hls.capleveltoplayersize.md) |  | boolean | Whether level capping is enabled. Default value is set via <code>config.capLevelToPlayerSize</code>. |
-|  [config](./hls.js.hls.config.md) | <code>readonly</code> | [HlsConfig](./hls.js.hlsconfig.md) |  |
+|  [config](./hls.js.hls.config.md) | <code>readonly</code> | [HlsConfig](./hls.js.hlsconfig.md) | The runtime configuration used by the player. At instantiation this is combination of <code>hls.userConfig</code> merged over <code>Hls.DefaultConfig</code>. |
 |  [currentLevel](./hls.js.hls.currentlevel.md) |  | number | Index of quality level (variant) currently played |
 |  [DefaultConfig](./hls.js.hls.defaultconfig.md) | <code>static</code> | [HlsConfig](./hls.js.hlsconfig.md) | Get the default configuration applied to new instances. |
 |  [drift](./hls.js.hls.drift.md) | <code>readonly</code> | number \| null | the rate at which the edge of the current live playlist is advancing or 1 if there is none |
@@ -57,8 +59,8 @@ export default class Hls implements HlsEventEmitter
 |  [subtitleTrack](./hls.js.hls.subtitletrack.md) |  | number | index of the selected subtitle track (index in subtitle track lists) |
 |  [subtitleTracks](./hls.js.hls.subtitletracks.md) | <code>readonly</code> | Array&lt;[MediaPlaylist](./hls.js.mediaplaylist.md)<!-- -->&gt; | get alternate subtitle tracks list from playlist |
 |  [targetLatency](./hls.js.hls.targetlatency.md) | <code>readonly</code> | number \| null | target distance from the edge as calculated by the latency controller |
-|  [userConfig](./hls.js.hls.userconfig.md) | <code>readonly</code> | Partial&lt;[HlsConfig](./hls.js.hlsconfig.md)<!-- -->&gt; |  |
-|  [version](./hls.js.hls.version.md) | <p><code>readonly</code></p><p><code>static</code></p> | string | Get the video-dev/hls.js npm package version. |
+|  [userConfig](./hls.js.hls.userconfig.md) | <code>readonly</code> | Partial&lt;[HlsConfig](./hls.js.hlsconfig.md)<!-- -->&gt; | The configuration object provided on player instantiation. |
+|  [version](./hls.js.hls.version.md) | <p><code>readonly</code></p><p><code>static</code></p> | string | Get the video-dev/hls.js package version. |
 
 ## Methods
 

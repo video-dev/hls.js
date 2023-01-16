@@ -4,6 +4,8 @@
 
 ## Fragment class
 
+Object representing parsed data from an HLS Segment. Found in [LevelDetails.fragments](./hls.js.leveldetails.fragments.md)<!-- -->.
+
 <b>Signature:</b>
 
 ```typescript

@@ -4,6 +4,8 @@
 
 ## Hls.userConfig property
 
+The configuration object provided on player instantiation.
+
 <b>Signature:</b>
 
 ```typescript

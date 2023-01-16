@@ -4,6 +4,8 @@
 
 ## Part class
 
+Object representing parsed data from an HLS Partial Segment. Found in [LevelDetails.partList](./hls.js.leveldetails.partlist.md)<!-- -->.
+
 <b>Signature:</b>
 
 ```typescript

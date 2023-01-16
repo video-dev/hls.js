@@ -4,6 +4,8 @@
 
 ## HlsListeners interface
 
+Defines each Event type and payload by Event name. Used in [HlsEventEmitter](./hls.js.hlseventemitter.md) to strongly type the event listener API.
+
 <b>Signature:</b>
 
 ```typescript
