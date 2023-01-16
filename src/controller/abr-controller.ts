@@ -14,9 +14,9 @@ import type {
   ErrorData,
   LevelLoadedData,
 } from '../types/events';
-import type { AbrComponentAPI } from '../types/component-api';
+import type { ComponentAPI } from '../types/component-api';
 
-class AbrController implements AbrComponentAPI {
+class AbrController implements ComponentAPI {
   protected hls: Hls;
   private lastLoadedFragLevel: number = 0;
   private _nextAutoLevel: number = -1;
