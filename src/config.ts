@@ -7,7 +7,9 @@ import BufferController from './controller/buffer-controller';
 import { TimelineController } from './controller/timeline-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
-import EMEController from './controller/eme-controller';
+import EMEController, {
+  MediaKeySessionContext,
+} from './controller/eme-controller';
 import CMCDController from './controller/cmcd-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
@@ -15,8 +17,9 @@ import Cues from './utils/cues';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { ILogger, logger } from './utils/logger';
 
+import type Hls from './hls';
 import type { CuesInterface } from './utils/cues';
-import type { MediaKeyFunc } from './utils/mediakeys-helper';
+import type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
 import type {
   FragmentLoaderContext,
   Loader,
@@ -57,13 +60,49 @@ export type CMCDControllerConfig = {
 export type DRMSystemOptions = {
   audioRobustness?: string;
   videoRobustness?: string;
+  audioEncryptionScheme?: string | null;
+  videoEncryptionScheme?: string | null;
+  persistentState?: MediaKeysRequirement;
+  distinctiveIdentifier?: MediaKeysRequirement;
+  sessionTypes?: string[];
+  sessionType?: string;
 };
 
+export type DRMSystemConfiguration = {
+  licenseUrl: string;
+  serverCertificateUrl?: string;
+  generateRequest?: (
+    this: Hls,
+    initDataType: string,
+    initData: ArrayBuffer | null,
+    keyContext: MediaKeySessionContext
+  ) =>
+    | { initDataType: string; initData: ArrayBuffer | null }
+    | undefined
+    | never;
+};
+
+export type DRMSystemsConfiguration = Partial<
+  Record<KeySystems, DRMSystemConfiguration>
+>;
+
 export type EMEControllerConfig = {
-  licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
-  licenseResponseCallback?: (xhr: XMLHttpRequest, url: string) => ArrayBuffer;
+  licenseXhrSetup?: (
+    this: Hls,
+    xhr: XMLHttpRequest,
+    url: string,
+    keyContext: MediaKeySessionContext,
+    licenseChallenge: Uint8Array
+  ) => void | Uint8Array | Promise<Uint8Array | void>;
+  licenseResponseCallback?: (
+    this: Hls,
+    xhr: XMLHttpRequest,
+    url: string,
+    keyContext: MediaKeySessionContext
+  ) => ArrayBuffer;
   emeEnabled: boolean;
   widevineLicenseUrl?: string;
+  drmSystems: DRMSystemsConfiguration;
   drmSystemOptions: DRMSystemOptions;
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
@@ -283,6 +322,7 @@ export const hlsDefaultConfig: HlsConfig = {
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: undefined, // used by eme-controller
+  drmSystems: {}, // used by eme-controller
   drmSystemOptions: {}, // used by eme-controller
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
   testBandwidth: true,

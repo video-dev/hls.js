@@ -4,6 +4,7 @@ import { ILogFunction, enableLogs, logger } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
 import type { RemuxedTrack, RemuxerResult } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
+import { ErrorDetails, ErrorTypes } from '../errors';
 
 export default function TransmuxerWorker(self) {
   const observer = new EventEmitter();
@@ -41,7 +42,7 @@ export default function TransmuxerWorker(self) {
           data.vendor,
           data.id
         );
-        enableLogs(config.debug);
+        enableLogs(config.debug, data.id);
         forwardWorkerLogs();
         forwardMessage('init', null);
         break;
@@ -59,21 +60,51 @@ export default function TransmuxerWorker(self) {
             data.state
           );
         if (isPromise(transmuxResult)) {
-          transmuxResult.then((data) => {
-            emitTransmuxComplete(self, data);
-          });
+          self.transmuxer.async = true;
+          transmuxResult
+            .then((data) => {
+              emitTransmuxComplete(self, data);
+            })
+            .catch((error) => {
+              forwardMessage(Events.ERROR, {
+                type: ErrorTypes.MEDIA_ERROR,
+                details: ErrorDetails.FRAG_PARSING_ERROR,
+                chunkMeta: data.chunkMeta,
+                fatal: false,
+                error,
+                err: error,
+                reason: `transmuxer-worker push error`,
+              });
+            });
         } else {
+          self.transmuxer.async = false;
           emitTransmuxComplete(self, transmuxResult);
         }
         break;
       }
       case 'flush': {
         const id = data.chunkMeta;
-        const transmuxResult = self.transmuxer.flush(id);
-        if (isPromise(transmuxResult)) {
-          transmuxResult.then((results: Array<TransmuxerResult>) => {
-            handleFlushResult(self, results as Array<TransmuxerResult>, id);
-          });
+        let transmuxResult = self.transmuxer.flush(id);
+        const asyncFlush = isPromise(transmuxResult);
+        if (asyncFlush || self.transmuxer.async) {
+          if (!isPromise(transmuxResult)) {
+            transmuxResult = Promise.resolve(transmuxResult);
+          }
+          transmuxResult
+            .then((results: Array<TransmuxerResult>) => {
+              handleFlushResult(self, results as Array<TransmuxerResult>, id);
+            })
+            .catch((error) => {
+              forwardMessage(Events.ERROR, {
+                type: ErrorTypes.MEDIA_ERROR,
+                details: ErrorDetails.FRAG_PARSING_ERROR,
+                chunkMeta: data.chunkMeta,
+                fatal: false,
+                error,
+                err: error,
+                reason: `transmuxer-worker flush error`,
+              });
+            });
         } else {
           handleFlushResult(
             self,

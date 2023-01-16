@@ -96,6 +96,7 @@ export enum MetadataSchema {
 export interface MetadataSample {
   pts: number;
   dts: number;
+  duration: number;
   len?: number;
   data: Uint8Array;
   type: MetadataSchema;

@@ -1,4 +1,4 @@
-import * as work from 'webworkify-webpack';
+import work from './webworkify-webpack';
 import { Events } from '../events';
 import Transmuxer, {
   TransmuxConfig,
@@ -24,6 +24,7 @@ export default class TransmuxerInterface {
   private observer: HlsEventEmitter;
   private frag: Fragment | null = null;
   private part: Part | null = null;
+  private useWorker: boolean;
   private worker: any;
   private onwmsg?: Function;
   private transmuxer: Transmuxer | null = null;
@@ -36,18 +37,18 @@ export default class TransmuxerInterface {
     onTransmuxComplete: (transmuxResult: TransmuxerResult) => void,
     onFlush: (chunkMeta: ChunkMetadata) => void
   ) {
+    const config = hls.config;
     this.hls = hls;
     this.id = id;
+    this.useWorker = !!config.enableWorker;
     this.onTransmuxComplete = onTransmuxComplete;
     this.onFlush = onFlush;
-
-    const config = hls.config;
 
     const forwardMessage = (ev, data) => {
       data = data || {};
       data.frag = this.frag;
       data.id = this.id;
-      hls.trigger(ev, data);
+      this.hls.trigger(ev, data);
     };
 
     // forward events to main thread
@@ -63,7 +64,7 @@ export default class TransmuxerInterface {
     // navigator.vendor is not always available in Web Worker
     // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
     const vendor = navigator.vendor;
-    if (config.enableWorker && typeof Worker !== 'undefined') {
+    if (this.useWorker && typeof Worker !== 'undefined') {
       logger.log('demuxing in webworker');
       let worker;
       try {
@@ -73,10 +74,12 @@ export default class TransmuxerInterface {
         this.onwmsg = this.onWorkerMessage.bind(this);
         worker.addEventListener('message', this.onwmsg);
         worker.onerror = (event) => {
-          hls.trigger(Events.ERROR, {
+          this.useWorker = false;
+          logger.warn('Exception in webworker, fallback to inline');
+          this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.INTERNAL_EXCEPTION,
-            fatal: true,
+            fatal: false,
             event: 'demuxerWorker',
             error: new Error(
               `${event.message}  (${event.filename}:${event.lineno})`
@@ -159,6 +162,7 @@ export default class TransmuxerInterface {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;
     const timeOffset = part ? part.start : frag.start;
+    // TODO: push "clear-lead" decrypt data for unencrypted fragments in streams with encrypted ones
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
 
@@ -235,10 +239,20 @@ export default class TransmuxerInterface {
         state
       );
       if (isPromise(transmuxResult)) {
-        transmuxResult.then((data) => {
-          this.handleTransmuxComplete(data);
-        });
+        transmuxer.async = true;
+        transmuxResult
+          .then((data) => {
+            this.handleTransmuxComplete(data);
+          })
+          .catch((error) => {
+            this.transmuxerError(
+              error,
+              chunkMeta,
+              'transmuxer-interface push error'
+            );
+          });
       } else {
+        transmuxer.async = false;
         this.handleTransmuxComplete(transmuxResult as TransmuxerResult);
       }
     }
@@ -248,16 +262,29 @@ export default class TransmuxerInterface {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;
     if (worker) {
+      1;
       worker.postMessage({
         cmd: 'flush',
         chunkMeta,
       });
     } else if (transmuxer) {
-      const transmuxResult = transmuxer.flush(chunkMeta);
-      if (isPromise(transmuxResult)) {
-        transmuxResult.then((data) => {
-          this.handleFlushResult(data, chunkMeta);
-        });
+      let transmuxResult = transmuxer.flush(chunkMeta);
+      const asyncFlush = isPromise(transmuxResult);
+      if (asyncFlush || transmuxer.async) {
+        if (!isPromise(transmuxResult)) {
+          transmuxResult = Promise.resolve(transmuxResult);
+        }
+        transmuxResult
+          .then((data) => {
+            this.handleFlushResult(data, chunkMeta);
+          })
+          .catch((error) => {
+            this.transmuxerError(
+              error,
+              chunkMeta,
+              'transmuxer-interface flush error'
+            );
+          });
       } else {
         this.handleFlushResult(
           transmuxResult as Array<TransmuxerResult>,
@@ -265,6 +292,25 @@ export default class TransmuxerInterface {
         );
       }
     }
+  }
+
+  private transmuxerError(
+    error: Error,
+    chunkMeta: ChunkMetadata,
+    reason: string
+  ) {
+    if (!this.hls) {
+      return;
+    }
+    this.hls.trigger(Events.ERROR, {
+      type: ErrorTypes.MEDIA_ERROR,
+      details: ErrorDetails.FRAG_PARSING_ERROR,
+      chunkMeta,
+      fatal: false,
+      error,
+      err: error,
+      reason,
+    });
   }
 
   private handleFlushResult(
@@ -304,7 +350,6 @@ export default class TransmuxerInterface {
         }
         break;
 
-      /* falls through */
       default: {
         data.data = data.data || {};
         data.data.frag = this.frag;

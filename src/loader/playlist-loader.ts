@@ -12,7 +12,6 @@
 import { Events } from '../events';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { logger } from '../utils/logger';
-import { parseSegmentIndex, findBox } from '../utils/mp4-tools';
 import M3U8Parser from './m3u8-parser';
 import type { LevelParsed } from '../types/level';
 import type {
@@ -316,12 +315,6 @@ class PlaylistLoader implements NetworkComponentAPI {
     context: PlaylistLoaderContext,
     networkDetails: any = null
   ): void {
-    if (context.isSidxRequest) {
-      this.handleSidxRequest(response, context);
-      this.handlePlaylistLoaded(response, stats, context, networkDetails);
-      return;
-    }
-
     this.resetInternalLoader(context.type);
 
     const string = response.data as string;
@@ -376,7 +369,10 @@ class PlaylistLoader implements NetworkComponentAPI {
 
     const url = getResponseUrl(response, context);
 
-    const { levels, sessionData } = M3U8Parser.parseMasterPlaylist(string, url);
+    const { levels, sessionData, sessionKeys } = M3U8Parser.parseMasterPlaylist(
+      string,
+      url
+    );
     if (!levels.length) {
       this.handleManifestParsingError(
         response,
@@ -457,6 +453,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       stats,
       networkDetails,
       sessionData,
+      sessionKeys,
     });
   }
 
@@ -513,72 +510,17 @@ class PlaylistLoader implements NetworkComponentAPI {
         stats,
         networkDetails,
         sessionData: null,
+        sessionKeys: null,
       });
     }
 
     // save parsing time
     stats.parsing.end = performance.now();
 
-    // in case we need SIDX ranges
-    // return early after calling load for
-    // the SIDX box.
-    if (levelDetails.needSidxRanges) {
-      const sidxUrl = levelDetails.fragments[0].initSegment?.url as string;
-      this.load({
-        url: sidxUrl,
-        isSidxRequest: true,
-        type,
-        level,
-        levelDetails,
-        id,
-        groupId: null,
-        rangeStart: 0,
-        rangeEnd: 2048,
-        responseType: 'arraybuffer',
-        deliveryDirectives: null,
-      });
-      return;
-    }
-
     // extend the context with the new levelDetails property
     context.levelDetails = levelDetails;
 
     this.handlePlaylistLoaded(response, stats, context, networkDetails);
-  }
-
-  private handleSidxRequest(
-    response: LoaderResponse,
-    context: PlaylistLoaderContext
-  ): void {
-    const data = new Uint8Array(response.data as ArrayBuffer);
-    const sidxBox = findBox(data, ['sidx'])[0];
-    // if provided fragment does not contain sidx, early return
-    if (!sidxBox) {
-      return;
-    }
-    const sidxInfo = parseSegmentIndex(sidxBox);
-    if (!sidxInfo) {
-      return;
-    }
-    const sidxReferences = sidxInfo.references;
-    const levelDetails = context.levelDetails as LevelDetails;
-    sidxReferences.forEach((segmentRef, index) => {
-      const segRefInfo = segmentRef.info;
-      const frag = levelDetails.fragments[index];
-
-      if (frag.byteRange.length === 0) {
-        frag.setByteRange(
-          String(1 + segRefInfo.end - segRefInfo.start) +
-            '@' +
-            String(segRefInfo.start)
-        );
-      }
-      if (frag.initSegment) {
-        const moovBox = findBox(data, ['moov'])[0];
-        const moovEndOffset = moovBox ? moovBox.length : null;
-        frag.initSegment.setByteRange(String(moovEndOffset) + '@0');
-      }
-    });
   }
 
   private handleManifestParsingError(

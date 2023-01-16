@@ -40,6 +40,8 @@ with only a single GoP or less.
 
 - Setting `hls.currentLevel` no longer pauses the media element while clearing the buffer and loading the new level. This can result in a stall error if playback doesn't start within a quarter of a second. Applications implementing manual quality switching with `hls.currentLevel` that do not want a stall reported should either pause or set `video.playbackRate` to `0` until the level switch is complete.
 
+- The maximum gap that will be jumped is now driven via the GapController `MAX_START_GAP_JUMP`. By default this value is set to two seconds, to match with the value that browsers will automatically skip when the `autoplay` attribute on the `<video>` element is set to true.
+
 ## Event Changes
 
 Event order and content have changed in some places. See **Breaking Changes** below, and please report any issues with breaking changes that impact your integrations
@@ -57,6 +59,9 @@ Event order and content have changed in some places. See **Breaking Changes** be
   - `BUFFER_INCOMPATIBLE_CODECS_ERROR` will fire instead of `BUFFER_CREATED` with an empty `tracks` list. This media error
     is fatal and not recoverable. If you encounter this error make sure you include the correct CODECS string in
     your manifest, as this is most likely to occur when attempting to play a fragmented mp4 playlist with unknown codecs.
+- `FRAG_LOAD_PROGRESS` has been **deprecated**
+- `FRAG_PARSING_DATA` has been **deprecated**
+- `STREAM_STATE_TRANSITION` has been **deprecated**
 
 ### Fragment Stats
 

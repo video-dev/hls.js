@@ -25,6 +25,7 @@ const sampleEntryCodesISO = {
     mp4a: true,
     'raw ': true,
     Opus: true,
+    opus: true, // browsers expect this to be lowercase despite MP4RA says 'Opus'
     samr: true,
     sawb: true,
     sawp: true,

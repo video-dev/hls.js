@@ -1,10 +1,8 @@
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import { Events } from '../events';
-import { BufferHelper } from '../utils/buffer-helper';
-import { ErrorDetails } from '../errors';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { PlaylistLevelType } from '../types/loader';
 import { logger } from '../utils/logger';
-import type { Bufferable } from '../utils/buffer-helper';
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { LoaderStats } from '../types/loader';
@@ -16,9 +14,9 @@ import type {
   ErrorData,
   LevelLoadedData,
 } from '../types/events';
-import type { ComponentAPI } from '../types/component-api';
+import type { AbrComponentAPI } from '../types/component-api';
 
-class AbrController implements ComponentAPI {
+class AbrController implements AbrComponentAPI {
   protected hls: Hls;
   private lastLoadedFragLevel: number = 0;
   private _nextAutoLevel: number = -1;
@@ -95,7 +93,7 @@ class AbrController implements ComponentAPI {
     */
   private _abandonRulesCheck() {
     const { fragCurrent: frag, partCurrent: part, hls } = this;
-    const { autoLevelEnabled, config, media } = hls;
+    const { autoLevelEnabled, media } = hls;
     if (!frag || !media) {
       return;
     }
@@ -277,13 +275,21 @@ class AbrController implements ComponentAPI {
 
   protected onError(event: Events.ERROR, data: ErrorData) {
     // stop timer in case of frag loading error
-    switch (data.details) {
-      case ErrorDetails.FRAG_LOAD_ERROR:
-      case ErrorDetails.FRAG_LOAD_TIMEOUT:
+    if (data.frag?.type === PlaylistLevelType.MAIN) {
+      if (data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
         this.clearTimer();
-        break;
-      default:
-        break;
+        return;
+      }
+      switch (data.details) {
+        case ErrorDetails.FRAG_LOAD_ERROR:
+        case ErrorDetails.FRAG_LOAD_TIMEOUT:
+        case ErrorDetails.KEY_LOAD_ERROR:
+        case ErrorDetails.KEY_LOAD_TIMEOUT:
+          this.clearTimer();
+          break;
+        default:
+          break;
+      }
     }
   }
 
@@ -323,7 +329,6 @@ class AbrController implements ComponentAPI {
       : fragCurrent
       ? fragCurrent.duration
       : 0;
-    const pos = media ? media.currentTime : 0;
 
     // playbackRate is the absolute value of the playback rate; if media.playbackRate is 0, we use 1 to load as
     // if we're playing back at the normal rate.

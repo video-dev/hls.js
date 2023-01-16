@@ -1,20 +1,21 @@
 import BaseStreamController, { State } from './base-stream-controller';
 import { changeTypeSupported } from '../is-supported';
-import type { NetworkComponentAPI } from '../types/component-api';
 import { Events } from '../events';
 import { BufferHelper, BufferInfo } from '../utils/buffer-helper';
-import type { FragmentTracker } from './fragment-tracker';
 import { FragmentState } from './fragment-tracker';
-import type { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import { ElementaryStreamTypes, Fragment } from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
-import type { TransmuxerResult } from '../types/transmuxer';
 import { ChunkMetadata } from '../types/transmuxer';
 import GapController from './gap-controller';
-import { ErrorDetails } from '../errors';
+import { ErrorDetails, ErrorTypes } from '../errors';
+import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
+import type { Level } from '../types/level';
 import type { LevelDetails } from '../loader/level-details';
+import type { FragmentTracker } from './fragment-tracker';
+import type KeyLoader from '../loader/key-loader';
+import type { TransmuxerResult } from '../types/transmuxer';
 import type { TrackSet } from '../types/track';
 import type { SourceBufferName } from '../types/buffer';
 import type {
@@ -56,8 +57,12 @@ export default class StreamController
   private audioCodecSwitch: boolean = false;
   private videoBuffer: any | null = null;
 
-  constructor(hls: Hls, fragmentTracker: FragmentTracker) {
-    super(hls, fragmentTracker, '[stream-controller]');
+  constructor(
+    hls: Hls,
+    fragmentTracker: FragmentTracker,
+    keyLoader: KeyLoader
+  ) {
+    super(hls, fragmentTracker, keyLoader, '[stream-controller]');
     this._registerListeners();
   }
 
@@ -228,6 +233,24 @@ export default class StreamController
     const levelInfo = levels[level];
 
     // if buffer length is less than maxBufLen try to load a new fragment
+
+    const bufferInfo = this.getMainFwdBufferInfo();
+    if (bufferInfo === null) {
+      return;
+    }
+
+    const lastDetails = this.getLevelDetails();
+    if (lastDetails && this._streamEnded(bufferInfo, lastDetails)) {
+      const data: BufferEOSData = {};
+      if (this.altAudio) {
+        data.type = 'video';
+      }
+
+      this.hls.trigger(Events.BUFFER_EOS, data);
+      this.state = State.ENDED;
+      return;
+    }
+
     // set next load level : this will trigger a playlist load if needed
     this.level = hls.nextLoadLevel = level;
 
@@ -240,14 +263,11 @@ export default class StreamController
       this.state === State.WAITING_LEVEL ||
       (levelDetails.live && this.levelLastLoaded !== level)
     ) {
+      this.level = level;
       this.state = State.WAITING_LEVEL;
       return;
     }
 
-    const bufferInfo = this.getMainFwdBufferInfo();
-    if (bufferInfo === null) {
-      return;
-    }
     const bufferLen = bufferInfo.len;
 
     // compute max Buffer Length that we could get from this load level, based on level bitrate. don't buffer more than 60 MB and more than 30s
@@ -255,17 +275,6 @@ export default class StreamController
 
     // Stay idle if we are still with buffer margins
     if (bufferLen >= maxBufLen) {
-      return;
-    }
-
-    if (this._streamEnded(bufferInfo, levelDetails)) {
-      const data: BufferEOSData = {};
-      if (this.altAudio) {
-        data.type = 'video';
-      }
-
-      this.hls.trigger(Events.BUFFER_EOS, data);
-      this.state = State.ENDED;
       return;
     }
 
@@ -308,8 +317,12 @@ export default class StreamController
         this.audioOnly && !this.altAudio
           ? ElementaryStreamTypes.AUDIO
           : ElementaryStreamTypes.VIDEO;
-      if (media) {
-        this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
+      const mediaBuffer =
+        (type === ElementaryStreamTypes.VIDEO
+          ? this.videoBuffer
+          : this.mediaBuffer) || this.media;
+      if (mediaBuffer) {
+        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
       }
       frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
     }
@@ -844,9 +857,14 @@ export default class StreamController
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
+    if (data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
+      this.onFragmentOrKeyLoadError(PlaylistLevelType.MAIN, data);
+      return;
+    }
     switch (data.details) {
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
+      case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         this.onFragmentOrKeyLoadError(PlaylistLevelType.MAIN, data);
@@ -936,11 +954,11 @@ export default class StreamController
       type !== ElementaryStreamTypes.AUDIO ||
       (this.audioOnly && !this.altAudio)
     ) {
-      const media =
+      const mediaBuffer =
         (type === ElementaryStreamTypes.VIDEO
           ? this.videoBuffer
           : this.mediaBuffer) || this.media;
-      this.afterBufferFlushed(media, type, PlaylistLevelType.MAIN);
+      this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
     }
   }
 
@@ -1088,7 +1106,7 @@ export default class StreamController
             endDTS,
           };
         } else {
-          if (video.firstKeyFrame && video.independent) {
+          if (video.firstKeyFrame && video.independent && chunkMeta.id === 1) {
             this.couldBacktrack = true;
           }
           if (video.dropped && video.independent) {
@@ -1321,13 +1339,13 @@ export default class StreamController
           fragPlaying.level !== fragCurrentLevel ||
           fragPlayingCurrent.urlId !== fragPlaying.urlId
         ) {
+          this.fragPlaying = fragPlayingCurrent;
           this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });
           if (!fragPlaying || fragPlaying.level !== fragCurrentLevel) {
             this.hls.trigger(Events.LEVEL_SWITCHED, {
               level: fragCurrentLevel,
             });
           }
-          this.fragPlaying = fragPlayingCurrent;
         }
       }
     }

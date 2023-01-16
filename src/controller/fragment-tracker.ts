@@ -25,11 +25,13 @@ export enum FragmentState {
 export class FragmentTracker implements ComponentAPI {
   private activeFragment: Fragment | null = null;
   private activeParts: Part[] | null = null;
+  private endListFragments: { [key in PlaylistLevelType]?: FragmentEntity } =
+    Object.create(null);
   private fragments: Partial<Record<string, FragmentEntity>> =
     Object.create(null);
   private timeRanges:
     | {
-        [key in SourceBufferName]: TimeRanges;
+        [key in SourceBufferName]?: TimeRanges;
       }
     | null = Object.create(null);
 
@@ -59,7 +61,13 @@ export class FragmentTracker implements ComponentAPI {
   public destroy() {
     this._unregisterListeners();
     // @ts-ignore
-    this.fragments = this.timeRanges = null;
+    this.fragments =
+      // @ts-ignore
+      this.endListFragments =
+      this.timeRanges =
+      this.activeFragment =
+      this.activeParts =
+        null;
   }
 
   /**
@@ -137,13 +145,16 @@ export class FragmentTracker implements ComponentAPI {
     timeRange: TimeRanges,
     playlistType?: PlaylistLevelType
   ) {
+    if (this.timeRanges) {
+      this.timeRanges[elementaryStream] = timeRange;
+    }
     // Check if any flagged fragments have been unloaded
     Object.keys(this.fragments).forEach((key) => {
       const fragmentEntity = this.fragments[key];
       if (!fragmentEntity) {
         return;
       }
-      if (!fragmentEntity.buffered) {
+      if (!fragmentEntity.buffered && !fragmentEntity.loaded) {
         if (fragmentEntity.body.type === playlistType) {
           this.removeFragment(fragmentEntity.body);
         }
@@ -201,6 +212,9 @@ export class FragmentTracker implements ComponentAPI {
     fragmentEntity.loaded = null;
     if (Object.keys(fragmentEntity.range).length) {
       fragmentEntity.buffered = true;
+      if (fragmentEntity.body.endList) {
+        this.endListFragments[fragmentEntity.body.type] = fragmentEntity;
+      }
     } else {
       // remove fragment if nothing was appended
       this.removeFragment(fragmentEntity.body);
@@ -288,6 +302,14 @@ export class FragmentTracker implements ComponentAPI {
     return bestFragment;
   }
 
+  public isEndListAppended(type: PlaylistLevelType): boolean {
+    const lastFragmentEntity = this.endListFragments[type];
+    return (
+      lastFragmentEntity !== undefined &&
+      (lastFragmentEntity.buffered || isPartial(lastFragmentEntity))
+    );
+  }
+
   public getState(fragment: Fragment): FragmentState {
     const fragKey = getFragmentKey(fragment);
     const fragmentEntity = this.fragments[fragKey];
@@ -352,7 +374,10 @@ export class FragmentTracker implements ComponentAPI {
   ) {
     const { frag, part, timeRanges } = data;
     if (frag.type === PlaylistLevelType.MAIN) {
-      this.activeFragment = frag;
+      if (this.activeFragment !== frag) {
+        this.activeFragment = frag;
+        frag.appendedPTS = undefined;
+      }
       if (part) {
         let activeParts = this.activeParts;
         if (!activeParts) {
@@ -364,13 +389,22 @@ export class FragmentTracker implements ComponentAPI {
       }
     }
     // Store the latest timeRanges loaded in the buffer
-    this.timeRanges = timeRanges as { [key in SourceBufferName]: TimeRanges };
+    this.timeRanges = timeRanges;
     Object.keys(timeRanges).forEach((elementaryStream: SourceBufferName) => {
       const timeRange = timeRanges[elementaryStream] as TimeRanges;
       this.detectEvictedFragments(elementaryStream, timeRange);
-      if (!part) {
+      if (!part && frag.type === PlaylistLevelType.MAIN) {
+        const streamInfo = frag.elementaryStreams[elementaryStream];
+        if (!streamInfo) {
+          return;
+        }
         for (let i = 0; i < timeRange.length; i++) {
-          frag.appendedPTS = Math.max(timeRange.end(i), frag.appendedPTS || 0);
+          const rangeEnd = timeRange.end(i);
+          if (rangeEnd <= streamInfo.endPTS && rangeEnd > streamInfo.startPTS) {
+            frag.appendedPTS = Math.max(rangeEnd, frag.appendedPTS || 0);
+          } else {
+            frag.appendedPTS = streamInfo.endPTS;
+          }
         }
       }
     });
@@ -412,11 +446,16 @@ export class FragmentTracker implements ComponentAPI {
     const fragKey = getFragmentKey(fragment);
     fragment.stats.loaded = 0;
     fragment.clearElementaryStreamInfo();
+    fragment.appendedPTS = undefined;
     delete this.fragments[fragKey];
+    if (fragment.endList) {
+      delete this.endListFragments[fragment.type];
+    }
   }
 
   public removeAllFragments() {
     this.fragments = Object.create(null);
+    this.endListFragments = Object.create(null);
     this.activeFragment = null;
     this.activeParts = null;
   }

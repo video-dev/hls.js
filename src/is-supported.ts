@@ -1,5 +1,5 @@
 import { getMediaSource } from './utils/mediasource-helper';
-import { ExtendedSourceBuffer } from './types/buffer';
+import type { ExtendedSourceBuffer } from './types/buffer';
 
 function getSourceBuffer(): typeof self.SourceBuffer {
   return self.SourceBuffer || (self as any).WebKitSourceBuffer;

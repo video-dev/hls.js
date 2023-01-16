@@ -22,7 +22,6 @@ export class LevelDetails {
   public advanced: boolean = true;
   public availabilityDelay?: number; // Manifest reload synchronization
   public misses: number = 0;
-  public needSidxRanges: boolean = false;
   public startCC: number = 0;
   public startSN: number = 0;
   public startTimeOffset: number | null = null;
@@ -48,9 +47,11 @@ export class LevelDetails {
   public driftEndTime: number = 0;
   public driftStart: number = 0;
   public driftEnd: number = 0;
+  public encryptedFragments: Fragment[];
 
   constructor(baseUrl) {
     this.fragments = [];
+    this.encryptedFragments = [];
     this.dateRanges = {};
     this.url = baseUrl;
   }

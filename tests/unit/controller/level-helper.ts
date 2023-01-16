@@ -7,7 +7,6 @@ import {
 } from '../../../src/controller/level-helper';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { Fragment, Part } from '../../../src/loader/fragment';
-import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import * as sinon from 'sinon';
 import * as chai from 'chai';
@@ -17,7 +16,7 @@ import { AttrList } from '../../../src/utils/attr-list';
 chai.use(sinonChai);
 const expect = chai.expect;
 
-const generatePlaylist = (sequenceNumbers, offset = 0) => {
+const generatePlaylist = (sequenceNumbers, offset = 0, duration = 5) => {
   const playlist = new LevelDetails('');
   playlist.startSN = sequenceNumbers[0];
   playlist.endSN = sequenceNumbers[sequenceNumbers.length - 1];
@@ -25,7 +24,7 @@ const generatePlaylist = (sequenceNumbers, offset = 0) => {
     const frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.sn = n;
     frag.start = i * 5 + offset;
-    frag.duration = 5;
+    frag.duration = duration;
     return frag;
   });
   return playlist;
@@ -265,11 +264,21 @@ expect: ${JSON.stringify(merged.fragments[i])}`
   });
 
   describe('computeReloadInterval', function () {
+    let sandbox;
+    beforeEach(function () {
+      sandbox = sinon.createSandbox();
+      sandbox.stub(performance, 'now').returns(0);
+    });
+
+    afterEach(function () {
+      sandbox.restore();
+    });
+
     it('returns the targetduration of the new level if available', function () {
-      const newPlaylist = generatePlaylist([3, 4]);
+      const newPlaylist = generatePlaylist([3, 4], 0, 6);
       newPlaylist.targetduration = 5;
       newPlaylist.updated = true;
-      const actual = computeReloadInterval(newPlaylist, new LoadStats());
+      const actual = computeReloadInterval(newPlaylist);
       expect(actual).to.equal(5000);
     });
 
@@ -277,38 +286,34 @@ expect: ${JSON.stringify(merged.fragments[i])}`
       const newPlaylist = generatePlaylist([1, 2]);
       newPlaylist.updated = false;
       newPlaylist.targetduration = 5;
-      const actual = computeReloadInterval(newPlaylist, new LoadStats());
+      const actual = computeReloadInterval(newPlaylist);
       expect(actual).to.equal(2500);
     });
 
     it('rounds the reload interval', function () {
-      const newPlaylist = generatePlaylist([3, 4]);
+      const newPlaylist = generatePlaylist([3, 4], 0, 10);
       newPlaylist.targetduration = 5.9999;
       newPlaylist.updated = true;
-      const actual = computeReloadInterval(newPlaylist, new LoadStats());
+      const actual = computeReloadInterval(newPlaylist);
       expect(actual).to.equal(6000);
-    });
-
-    it('subtracts the request time of the last level load from the reload interval', function () {
-      const newPlaylist = generatePlaylist([3, 4]);
-      newPlaylist.targetduration = 5;
-      newPlaylist.updated = true;
-      const stats = new LoadStats();
-      stats.loading.start = 0;
-      stats.loading.end = 1000;
-      const actual = computeReloadInterval(newPlaylist, stats);
-      expect(actual).to.equal(4000);
     });
 
     it('returns a minimum of half the target duration', function () {
       const newPlaylist = generatePlaylist([3, 4]);
       newPlaylist.targetduration = 5;
       newPlaylist.updated = false;
-      const stats = new LoadStats();
-      stats.loading.start = 0;
-      stats.loading.end = 1000;
-      const actual = computeReloadInterval(newPlaylist, stats);
+      const actual = computeReloadInterval(newPlaylist);
       expect(actual).to.equal(2500);
+    });
+
+    it('returns the last fragment duration when distance to live edge is less than or equal to four target durations', function () {
+      const newPlaylist = generatePlaylist([3, 4], 0, 2);
+      newPlaylist.targetduration = 5;
+      newPlaylist.updated = true;
+      const actual = computeReloadInterval(newPlaylist, 20000);
+      expect(actual).to.equal(5000);
+      const actualLow = computeReloadInterval(newPlaylist, 14000);
+      expect(actualLow).to.equal(2000);
     });
   });
 });
