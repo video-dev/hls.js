@@ -389,9 +389,6 @@ class MP4 {
     );
   }
 
-  /**
-   * @param tracks... (optional) {array} the tracks associated with this movie
-   */
   static moov(tracks) {
     let i = tracks.length;
     const boxes: Uint8Array[] = [];
