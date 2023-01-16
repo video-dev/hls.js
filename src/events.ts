@@ -50,8 +50,7 @@ import {
 } from './types/events';
 
 /**
- * @readonly
- * @enum {string}
+ * @typedef {string} Events
  */
 export enum Events {
   // Fired before MediaSource is attaching to media element

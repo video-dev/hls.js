@@ -23,7 +23,7 @@ import type SubtitleTrackController from './controller/subtitle-track-controller
 import type { ComponentAPI, NetworkComponentAPI } from './types/component-api';
 import type { MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
-import { HdcpLevel, HdcpLevels, Level, VariableMap } from './types/level';
+import { HdcpLevel, HdcpLevels, Level } from './types/level';
 import type { Fragment } from './loader/fragment';
 import { BufferInfo } from './utils/buffer-helper';
 
@@ -33,7 +33,7 @@ import { BufferInfo } from './utils/buffer-helper';
  * @constructor
  */
 export default class Hls implements HlsEventEmitter {
-  private static defaultConfig?: HlsConfig;
+  private static defaultConfig: HlsConfig | undefined;
 
   public readonly config: HlsConfig;
   public readonly userConfig: Partial<HlsConfig>;
@@ -58,26 +58,44 @@ export default class Hls implements HlsEventEmitter {
   private _media: HTMLMediaElement | null = null;
   private url: string | null = null;
 
+  /**
+   * Get the video-dev/hls.js npm package version.
+   */
   static get version(): string {
     return __VERSION__;
   }
 
+  /**
+   * Check if the required MediaSource Extensions are available.
+   */
   static isSupported(): boolean {
     return isSupported();
   }
 
-  static get Events() {
+  /**
+   * @return {Events} Returns event name enums.
+   */
+  static get Events(): typeof Events {
     return Events;
   }
 
-  static get ErrorTypes() {
+  /**
+   * @return {ErrorTypes} Returns error type enums.
+   */
+  static get ErrorTypes(): typeof ErrorTypes {
     return ErrorTypes;
   }
 
-  static get ErrorDetails() {
+  /**
+   * @return {ErrorDetails} Returns error details enums.
+   */
+  static get ErrorDetails(): typeof ErrorDetails {
     return ErrorDetails;
   }
 
+  /**
+   * Get the default configuration applied to new instances.
+   */
   static get DefaultConfig(): HlsConfig {
     if (!Hls.defaultConfig) {
       return hlsDefaultConfig;
@@ -87,7 +105,7 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * @type {HlsConfig}
+   * Replace the default configuration applied to new instances.
    */
   static set DefaultConfig(defaultConfig: HlsConfig) {
     Hls.defaultConfig = defaultConfig;
@@ -95,9 +113,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Creates an instance of an HLS client that can attach to exactly one `HTMLMediaElement`.
-   *
-   * @constructs Hls
-   * @param {HlsConfig} config
    */
   constructor(userConfig: Partial<HlsConfig> = {}) {
     const config = (this.config = mergeConfig(Hls.DefaultConfig, userConfig));
@@ -402,26 +417,22 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * @type {Level[]}
+   * Returns an array of levels (variants) sorted by HDCP-LEVEL, BANDWIDTH, SCORE, and RESOLUTION (height)
    */
-  get levels(): Array<Level> {
+  get levels(): Level[] {
     const levels = this.levelController.levels;
     return levels ? levels : [];
   }
 
   /**
-   * Index of quality level currently played
-   * @type {number}
+   * Index of quality level (variant) currently played
    */
   get currentLevel(): number {
     return this.streamController.currentLevel;
   }
 
   /**
-   * Set quality level index immediately .
-   * This will flush the current buffer to replace the quality asap.
-   * That means playback will interrupt at least shortly to re-buffer and re-sync eventually.
-   * @type {number} -1 for automatic level selection
+   * Set quality level index immediately. This will flush the current buffer to replace the quality asap. That means playback will interrupt at least shortly to re-buffer and re-sync eventually. Set to -1 for automatic level selection.
    */
   set currentLevel(newLevel: number) {
     logger.log(`set currentLevel:${newLevel}`);
@@ -432,7 +443,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Index of next quality level loaded as scheduled by stream controller.
-   * @type {number}
    */
   get nextLevel(): number {
     return this.streamController.nextLevel;
@@ -442,7 +452,7 @@ export default class Hls implements HlsEventEmitter {
    * Set quality level index for next loaded data.
    * This will switch the video quality asap, without interrupting playback.
    * May abort current loading of data, and flush parts of buffer (outside currently played fragment region).
-   * @type {number} -1 for automatic level selection
+   * @param {number} -1 for automatic level selection
    */
   set nextLevel(newLevel: number) {
     logger.log(`set nextLevel:${newLevel}`);
@@ -777,7 +787,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Enable/disable subtitle display rendering
-   * @type {boolean}
    */
   set subtitleDisplay(value: boolean) {
     const subtitleTrackController = this.subtitleTrackController;
@@ -788,15 +797,13 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * get mode for Low-Latency HLS loading
-   * @type {boolean}
    */
-  get lowLatencyMode() {
+  get lowLatencyMode(): boolean {
     return this.config.lowLatencyMode;
   }
 
   /**
    * Enable/disable Low-Latency HLS part playlist and segment loading, and start live streams at playlist PART-HOLD-BACK rather than HOLD-BACK.
-   * @type {boolean}
    */
   set lowLatencyMode(mode: boolean) {
     this.config.lowLatencyMode = mode;
@@ -804,7 +811,7 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * position (in seconds) of live sync point (ie edge of live position minus safety delay defined by ```hls.config.liveSyncDuration```)
-   * @type {number}
+   * @return {(number|null)} Returns null prior to loading live Playlist
    */
   get liveSyncPosition(): number | null {
     return this.latencyController.liveSyncPosition;
@@ -812,18 +819,16 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * estimated position (in seconds) of live edge (ie edge of live playlist plus time sync playlist advanced)
-   * returns 0 before first playlist is loaded
-   * @type {number}
+   * @return {number}  Returns 0 before first playlist is loaded
    */
-  get latency() {
+  get latency(): number {
     return this.latencyController.latency;
   }
 
   /**
    * maximum distance from the edge before the player seeks forward to ```hls.liveSyncPosition```
    * configured using ```liveMaxLatencyDurationCount``` (multiple of target duration) or ```liveMaxLatencyDuration```
-   * returns 0 before first playlist is loaded
-   * @type {number}
+   * @return {number} Returns 0 before first playlist is loaded
    */
   get maxLatency(): number {
     return this.latencyController.maxLatency;
@@ -831,7 +836,7 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * target distance from the edge as calculated by the latency controller
-   * @type {number}
+   * @return {number|null}
    */
   get targetLatency(): number | null {
     return this.latencyController.targetLatency;
@@ -839,7 +844,7 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * the rate at which the edge of the current live playlist is advancing or 1 if there is none
-   * @type {number}
+   * @return {number|null}
    */
   get drift(): number | null {
     return this.latencyController.drift;
@@ -847,7 +852,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * set to true when startLoad is called before MANIFEST_PARSED event
-   * @type {boolean}
    */
   get forceStartLoad(): boolean {
     return this.streamController.forceStartLoad;

@@ -1,3 +1,6 @@
+/**
+ * @typedef {string} ErrorTypes
+ */
 export enum ErrorTypes {
   // Identifier for a network error (loading error / timeout ...)
   NETWORK_ERROR = 'networkError',
@@ -12,8 +15,7 @@ export enum ErrorTypes {
 }
 
 /**
- * @enum {ErrorDetails}
- * @typedef {string} ErrorDetail
+ * @typedef {string} ErrorDetails
  */
 export enum ErrorDetails {
   KEY_SYSTEM_NO_KEYS = 'keySystemNoKeys',
