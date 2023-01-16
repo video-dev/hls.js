@@ -49,9 +49,6 @@ import {
   BufferFlushedData,
 } from './types/events';
 
-/**
- * @typedef {string} Events
- */
 export enum Events {
   // Fired before MediaSource is attaching to media element
   MEDIA_ATTACHING = 'hlsMediaAttaching',

@@ -267,8 +267,7 @@ An overview of this project's design, it's modules, events, and error handling c
 ## API docs and usage guide
 
 - [API and usage docs, with code examples](./docs/API.md)
-- [Auto-Generated API Docs (Latest Release)](https://hls-js.netlify.com/api-docs)
-- [Auto-Generated API Docs (Development Branch)](https://hls-js-dev.netlify.com/api-docs)
+- [Auto-Generated API Docs](./api-docs/)
 
 _Note you can access the docs for a particular version using "[https://github.com/video-dev/hls.js/tree/deployments](https://github.com/video-dev/hls.js/tree/deployments)"_
 

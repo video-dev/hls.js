@@ -188,8 +188,8 @@ export function parseSegmentIndex(sidx: Uint8Array): SidxInfo | null {
  * moov > trak > mdia > mdhd.timescale
  * moov > trak > mdia > hdlr
  * ```
- * @param initSegment {Uint8Array} the bytes of the init segment
- * @return {InitData} a hash of track type to timescale values or null if
+ * @param initSegment the bytes of the init segment
+ * @returns a hash of track type to timescale values or null if
  * the init segment is malformed.
  */
 
@@ -346,9 +346,9 @@ export function parseSinf(sinf: Uint8Array): Uint8Array | null {
  * ```
  * It requires the timescale value from the mdhd to interpret.
  *
- * @param initData {InitData} a hash of track type to timescale values
- * @param fmp4 {Uint8Array} the bytes of the mp4 fragment
- * @return {number} the earliest base media decode start time for the
+ * @param initData - a hash of track type to timescale values
+ * @param fmp4 - the bytes of the mp4 fragment
+ * @returns the earliest base media decode start time for the
  * fragment, in seconds
  */
 export function getStartDTS(initData: InitData, fmp4: Uint8Array): number {

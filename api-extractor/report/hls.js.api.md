@@ -417,7 +417,7 @@ export interface ErrorData {
 
 // Warning: (ae-missing-release-tag) "ErrorDetails" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public
+// @public (undocumented)
 export enum ErrorDetails {
     // (undocumented)
     AUDIO_TRACK_LOAD_ERROR = "audioTrackLoadError",
@@ -505,7 +505,7 @@ export enum ErrorDetails {
 
 // Warning: (ae-missing-release-tag) "ErrorTypes" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public
+// @public (undocumented)
 export enum ErrorTypes {
     // (undocumented)
     KEY_SYSTEM_ERROR = "keySystemError",
@@ -521,7 +521,7 @@ export enum ErrorTypes {
 
 // Warning: (ae-missing-release-tag) "Events" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public
+// @public (undocumented)
 export enum Events {
     // (undocumented)
     AUDIO_TRACK_LOADED = "hlsAudioTrackLoaded",
@@ -907,7 +907,7 @@ export const HdcpLevels: readonly ["NONE", "TYPE-0", "TYPE-1", "TYPE-2", null];
 
 // Warning: (ae-missing-release-tag) "Hls" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public
+// @public (undocumented)
 class Hls implements HlsEventEmitter {
     constructor(userConfig?: Partial<HlsConfig>);
     attachMedia(media: HTMLMediaElement): void;
@@ -938,8 +938,11 @@ class Hls implements HlsEventEmitter {
     get drift(): number | null;
     // (undocumented)
     emit<E extends keyof HlsListeners>(event: E, name: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean;
+    // (undocumented)
     static get ErrorDetails(): typeof ErrorDetails;
+    // (undocumented)
     static get ErrorTypes(): typeof ErrorTypes;
+    // (undocumented)
     static get Events(): typeof Events;
     get firstLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "firstLevel" must appear on the getter, not the setter.
@@ -947,6 +950,7 @@ class Hls implements HlsEventEmitter {
     get forceStartLoad(): boolean;
     static isSupported(): boolean;
     get latency(): number;
+    // (undocumented)
     get levels(): Level[];
     // (undocumented)
     listenerCount<E extends keyof HlsListeners>(event: E): number;

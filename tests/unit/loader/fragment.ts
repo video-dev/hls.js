@@ -9,9 +9,6 @@ chai.use(sinonChai);
 const expect = chai.expect;
 
 describe('Fragment class tests', function () {
-  /**
-   * @type {Fragment}
-   */
   let frag: Fragment;
   beforeEach(function () {
     frag = new Fragment(PlaylistLevelType.MAIN, '');
