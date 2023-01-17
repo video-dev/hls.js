@@ -60,6 +60,7 @@ export default class TransmuxerInterface {
       mp4: MediaSource.isTypeSupported('video/mp4'),
       mpeg: MediaSource.isTypeSupported('audio/mpeg'),
       mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"'),
+      ac3: MediaSource.isTypeSupported('audio/mp4; codecs="ac-3"'),
     };
     // navigator.vendor is not always available in Web Worker
     // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator

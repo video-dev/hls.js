@@ -30,6 +30,7 @@ import type { HlsConfig } from '../config';
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;
 const MPEG_AUDIO_SAMPLE_PER_FRAME = 1152;
+const AC3_SAMPLES_PER_FRAME = 1536;
 
 let chromeVersion: number | null = null;
 let safariWebkitVersion: number | null = null;
@@ -306,6 +307,10 @@ export default class MP4Remuxer implements Remuxer {
             // Firefox
             audioTrack.codec = 'mp3';
           }
+          break;
+
+        case 'ac3':
+          audioTrack.codec = 'ac-3';
           break;
       }
       tracks.audio = {
@@ -683,6 +688,17 @@ export default class MP4Remuxer implements Remuxer {
     return data;
   }
 
+  getSamplesPerFrame(track: DemuxedAudioTrack) {
+    switch (track.segmentCodec) {
+      case 'mp3':
+        return MPEG_AUDIO_SAMPLE_PER_FRAME;
+      case 'ac3':
+        return AC3_SAMPLES_PER_FRAME;
+      default:
+        return AAC_SAMPLES_PER_FRAME;
+    }
+  }
+
   remuxAudio(
     track: DemuxedAudioTrack,
     timeOffset: number,
@@ -695,10 +711,7 @@ export default class MP4Remuxer implements Remuxer {
       ? track.samplerate
       : inputTimeScale;
     const scaleFactor: number = inputTimeScale / mp4timeScale;
-    const mp4SampleDuration: number =
-      track.segmentCodec === 'aac'
-        ? AAC_SAMPLES_PER_FRAME
-        : MPEG_AUDIO_SAMPLE_PER_FRAME;
+    const mp4SampleDuration: number = this.getSamplesPerFrame(track);
     const inputSampleDuration: number = mp4SampleDuration * scaleFactor;
     const initPTS: number = this._initPTS;
     const rawMPEG: boolean =
