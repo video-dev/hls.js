@@ -611,7 +611,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
 
   const entries = Object.entries(streams);
   if (HlsjsLightBuild) {
-    entries.length = 1;
+    entries.length = 10;
   }
 
   entries

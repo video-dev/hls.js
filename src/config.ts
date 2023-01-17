@@ -324,7 +324,9 @@ export const hlsDefaultConfig: HlsConfig = {
   widevineLicenseUrl: undefined, // used by eme-controller
   drmSystems: {}, // used by eme-controller
   drmSystemOptions: {}, // used by eme-controller
-  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
+  requestMediaKeySystemAccessFunc: __USE_EME_DRM__
+    ? requestMediaKeySystemAccess
+    : null, // used by eme-controller
   testBandwidth: true,
   progressive: false,
   lowLatencyMode: true,
