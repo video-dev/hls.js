@@ -134,7 +134,7 @@ export default class BufferController implements ComponentAPI {
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
     let codecEvents: number = 2;
-    if ((data.audio && !data.video) || !data.altAudio) {
+    if ((data.audio && !data.video) || !data.altAudio || !__USE_ALT_AUDIO__) {
       codecEvents = 1;
     }
     this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = codecEvents;
