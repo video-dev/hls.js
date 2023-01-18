@@ -13,6 +13,7 @@ import {
   findFragWithCC,
 } from './fragment-finders';
 import {
+  findPart,
   getFragmentWithSN,
   getPartWith,
   updateFragPTSDTS,
@@ -321,15 +322,15 @@ export default class BaseStreamController
 
   protected loadFragment(
     frag: Fragment,
-    levelDetails: LevelDetails,
+    level: Level,
     targetBufferTime: number
   ) {
-    this._loadFragForPlayback(frag, levelDetails, targetBufferTime);
+    this._loadFragForPlayback(frag, level, targetBufferTime);
   }
 
   private _loadFragForPlayback(
     frag: Fragment,
-    levelDetails: LevelDetails,
+    level: Level,
     targetBufferTime: number
   ) {
     const progressCallback: FragmentLoadProgressCallback = (
@@ -348,7 +349,7 @@ export default class BaseStreamController
       this._handleFragmentLoadProgress(data);
     };
 
-    this._doFragLoad(frag, levelDetails, targetBufferTime, progressCallback)
+    this._doFragLoad(frag, level, targetBufferTime, progressCallback)
       .then((data) => {
         if (!data) {
           // if we're here we probably needed to backtrack or are waiting for more parts
@@ -400,8 +401,8 @@ export default class BaseStreamController
     this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
   }
 
-  protected _loadInitSegment(frag: Fragment, details: LevelDetails) {
-    this._doFragLoad(frag, details)
+  protected _loadInitSegment(frag: Fragment, level: Level) {
+    this._doFragLoad(frag, level)
       .then((data) => {
         if (!data || this.fragContextChanged(frag) || !this.levels) {
           throw new Error('init load aborted');
@@ -454,12 +455,6 @@ export default class BaseStreamController
         if (!levels) {
           throw new Error('init load aborted, missing levels');
         }
-
-        const details = levels[frag.level].details as LevelDetails;
-        console.assert(
-          details,
-          'Level details are defined when init segment is loaded'
-        );
 
         const stats = frag.stats;
         this.state = State.IDLE;
@@ -559,14 +554,16 @@ export default class BaseStreamController
 
   protected _doFragLoad(
     frag: Fragment,
-    details: LevelDetails,
+    level: Level,
     targetBufferTime: number | null = null,
     progressCallback?: FragmentLoadProgressCallback
   ): Promise<PartsLoadedData | FragLoadedData | null> {
-    if (!this.levels) {
-      throw new Error('frag load aborted, missing levels');
+    const details = level?.details;
+    if (!this.levels || !details) {
+      throw new Error(
+        `frag load aborted, missing level${details ? '' : ' detail'}s`
+      );
     }
-
     let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
     if (frag.encrypted && !frag.decryptdata?.key) {
       this.log(
@@ -589,7 +586,7 @@ export default class BaseStreamController
     }
 
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
-    if (this.config.lowLatencyMode && details) {
+    if (this.config.lowLatencyMode) {
       const partList = details.partList;
       if (partList && progressCallback) {
         if (targetBufferTime > frag.end && details.fragmentHint) {
@@ -613,7 +610,7 @@ export default class BaseStreamController
           this.state = State.FRAG_LOADING;
           this.hls.trigger(Events.FRAG_LOADING, {
             frag,
-            part: partList[partIndex],
+            part,
             targetBufferTime,
           });
           this.throwIfFragContextChanged('FRAG_LOADING parts');
@@ -628,8 +625,8 @@ export default class BaseStreamController
                 }
                 return this.doFragPartsLoad(
                   frag,
-                  partList,
-                  partIndex,
+                  part,
+                  level,
                   progressCallback
                 );
               })
@@ -638,8 +635,8 @@ export default class BaseStreamController
 
           return this.doFragPartsLoad(
             frag,
-            partList,
-            partIndex,
+            part,
+            level,
             progressCallback
           ).catch((error: LoadError) => this.handleFragLoadError(error));
         } else if (
@@ -707,24 +704,26 @@ export default class BaseStreamController
 
   private doFragPartsLoad(
     frag: Fragment,
-    partList: Part[],
-    partIndex: number,
+    fromPart: Part,
+    level: Level,
     progressCallback: FragmentLoadProgressCallback
   ): Promise<PartsLoadedData | null> {
     return new Promise(
       (resolve: ResolveFragLoaded, reject: RejectFragLoaded) => {
         const partsLoaded: FragLoadedData[] = [];
-        const loadPartIndex = (index: number) => {
-          const part = partList[index];
+        const initialPartList = level.details?.partList;
+        const loadPart = (part: Part) => {
           this.fragmentLoader
             .loadPart(frag, part, progressCallback)
             .then((partLoadedData: FragLoadedData) => {
               partsLoaded[part.index] = partLoadedData;
               const loadedPart = partLoadedData.part as Part;
               this.hls.trigger(Events.FRAG_LOADED, partLoadedData);
-              const nextPart = partList[index + 1];
-              if (nextPart && nextPart.fragment === frag) {
-                loadPartIndex(index + 1);
+              const nextPart =
+                getPartWith(level, frag.sn as number, part.index + 1) ||
+                findPart(initialPartList, frag.sn as number, part.index + 1);
+              if (nextPart) {
+                loadPart(nextPart);
               } else {
                 return resolve({
                   frag,
@@ -735,7 +734,7 @@ export default class BaseStreamController
             })
             .catch(reject);
         };
-        loadPartIndex(partIndex);
+        loadPart(fromPart);
       }
     );
   }
