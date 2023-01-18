@@ -363,6 +363,7 @@ class ID3TrackController implements ComponentAPI {
           }
           cue.value = { key, data };
           cue.type = MetadataSchema.dateRange;
+          cue.id = id;
           this.id3Track.addCue(cue);
           cues[key] = cue;
         }
