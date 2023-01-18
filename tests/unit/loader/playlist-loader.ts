@@ -312,6 +312,36 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
     expect(result.totalduration).to.equal(0);
   });
 
+  it('TARGETDURATION is a decimal-integer', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-TARGETDURATION:2.5`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',
+      0,
+      PlaylistLevelType.MAIN,
+      0
+    );
+    expect(result.targetduration).to.equal(2);
+  });
+
+  it('TARGETDURATION is a decimal-integer which HLS.js assigns a minimum value of 1', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-TARGETDURATION:0.5`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',
+      0,
+      PlaylistLevelType.MAIN,
+      0
+    );
+    expect(result.targetduration).to.equal(1);
+  });
+
   it('parse level with several fragments', function () {
     const level = `#EXTM3U
 #EXT-X-VERSION:3
