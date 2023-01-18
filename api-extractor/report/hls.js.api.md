@@ -745,8 +745,6 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     abortRequests(): void;
     // (undocumented)
-    appendedPTS?: number;
-    // (undocumented)
     bitrateTest: boolean;
     // (undocumented)
     cc: number;

@@ -120,8 +120,6 @@ export class Fragment extends BaseSegment {
   public startPTS?: number;
   // The ending Presentation Time Stamp (PTS) of the fragment. Set after transmux complete.
   public endPTS?: number;
-  // The latest Presentation Time Stamp (PTS) appended to the buffer.
-  public appendedPTS?: number;
   // The starting Decode Time Stamp (DTS) of the fragment. Set after transmux complete.
   public startDTS!: number;
   // The ending Decode Time Stamp (DTS) of the fragment. Set after transmux complete.
