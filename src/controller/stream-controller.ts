@@ -746,6 +746,14 @@ export default class StreamController
         );
         this.mediaBuffer = this.media;
         const fragCurrent = this.fragCurrent;
+        if (fragCurrent) {
+          this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
+          this.fragmentTracker.removeFragmentsInRange(
+            0,
+            Number.POSITIVE_INFINITY,
+            PlaylistLevelType.MAIN
+          );
+        }
         // we need to refill audio buffer from main: cancel any frag loading to speed up audio switch
         if (fragCurrent) {
           this.log('Switching to main audio track, cancel main fragment load');
