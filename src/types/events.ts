@@ -83,10 +83,15 @@ export interface ManifestLoadingData {
   url: string;
 }
 
+export type ContentSteeringOptions = {
+  uri: string;
+  pathwayId: string;
+};
+
 export interface ManifestLoadedData {
   audioTracks: MediaPlaylist[];
   captions?: MediaPlaylist[];
-  contentSteering: Object | null;
+  contentSteering: ContentSteeringOptions | null;
   levels: LevelParsed[];
   networkDetails: any;
   sessionData: Record<string, AttrList> | null;

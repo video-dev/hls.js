@@ -11,6 +11,7 @@ import EMEController, {
   MediaKeySessionContext,
 } from './controller/eme-controller';
 import CMCDController from './controller/cmcd-controller';
+import ContentSteeringController from './controller/content-steering-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import Cues from './utils/cues';
@@ -32,6 +33,9 @@ export type ABRControllerConfig = {
   abrEwmaSlowLive: number;
   abrEwmaFastVoD: number;
   abrEwmaSlowVoD: number;
+  /**
+   * Default bandwidth estimate in bits/s prior to collecting fragment bandwidth samples
+   */
   abrEwmaDefaultEstimate: number;
   abrBandWidthFactor: number;
   abrBandWidthUpFactor: number;
@@ -229,6 +233,8 @@ export type HlsConfig = {
   // CMCD
   cmcd?: CMCDControllerConfig;
   cmcdController?: typeof CMCDController;
+  // Content Steering
+  contentSteeringController?: typeof ContentSteeringController;
 
   abrController: typeof AbrController;
   bufferController: typeof BufferController;
@@ -357,6 +363,9 @@ export const hlsDefaultConfig: HlsConfig = {
   audioTrackController: __USE_ALT_AUDIO__ ? AudioTrackController : undefined,
   emeController: __USE_EME_DRM__ ? EMEController : undefined,
   cmcdController: __USE_CMCD__ ? CMCDController : undefined,
+  contentSteeringController: __USE_CONTENT_STEERING__
+    ? ContentSteeringController
+    : undefined,
 };
 
 function timelineConfig(): TimelineControllerConfig {

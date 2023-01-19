@@ -270,6 +270,14 @@ export type CMCDControllerConfig = {
     useHeaders?: boolean;
 };
 
+// Warning: (ae-missing-release-tag) "ContentSteeringOptions" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type ContentSteeringOptions = {
+    uri: string;
+    pathwayId: string;
+};
+
 // Warning: (ae-missing-release-tag) "CuesInterface" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1055,6 +1063,7 @@ export type HlsConfig = {
     emeController?: typeof EMEController;
     cmcd?: CMCDControllerConfig;
     cmcdController?: typeof CMCDController;
+    contentSteeringController?: typeof ContentSteeringController;
     abrController: typeof AbrController;
     bufferController: typeof BufferController;
     capLevelController: typeof CapLevelController;
@@ -1714,6 +1723,8 @@ export interface Loader<T extends LoaderContext> {
     destroy(): void;
     getCacheAge?: () => number | null;
     // (undocumented)
+    getResponseHeader?: (name: string) => string | null;
+    // (undocumented)
     load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<T>): void;
     // (undocumented)
     stats: LoaderStats;
@@ -1740,7 +1751,7 @@ export interface LoaderCallbacks<T extends LoaderContext> {
 // @public (undocumented)
 export interface LoaderConfiguration {
     // (undocumented)
-    highWaterMark: number;
+    highWaterMark?: number;
     // (undocumented)
     maxRetry: number;
     // (undocumented)
@@ -1802,7 +1813,7 @@ export type LoaderOnTimeout<T extends LoaderContext> = (stats: LoaderStats, cont
 // @public (undocumented)
 export interface LoaderResponse {
     // (undocumented)
-    data: string | ArrayBuffer;
+    data: string | ArrayBuffer | Object;
     // (undocumented)
     url: string;
 }
@@ -1869,7 +1880,7 @@ export interface ManifestLoadedData {
     // (undocumented)
     captions?: MediaPlaylist[];
     // (undocumented)
-    contentSteering: Object | null;
+    contentSteering: ContentSteeringOptions | null;
     // (undocumented)
     levels: LevelParsed[];
     // (undocumented)
@@ -2334,20 +2345,21 @@ export type VariableMap = Record<string, string>;
 
 // Warnings were encountered during analysis:
 //
-// src/config.ts:93:3 - (ae-forgotten-export) The symbol "MediaKeySessionContext" needs to be exported by the entry point hls.d.ts
-// src/config.ts:108:3 - (ae-forgotten-export) The symbol "DRMSystemsConfiguration" needs to be exported by the entry point hls.d.ts
-// src/config.ts:211:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
-// src/config.ts:221:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:222:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:224:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:225:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:226:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:228:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:231:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:233:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:234:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:235:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:236:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:97:3 - (ae-forgotten-export) The symbol "MediaKeySessionContext" needs to be exported by the entry point hls.d.ts
+// src/config.ts:112:3 - (ae-forgotten-export) The symbol "DRMSystemsConfiguration" needs to be exported by the entry point hls.d.ts
+// src/config.ts:215:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
+// src/config.ts:225:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:226:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:228:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:229:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:230:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:232:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:235:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:237:3 - (ae-forgotten-export) The symbol "ContentSteeringController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:239:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:240:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:241:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:242:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 

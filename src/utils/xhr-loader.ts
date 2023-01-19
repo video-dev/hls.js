@@ -163,27 +163,20 @@ class XhrLoader implements Loader<LoaderContext> {
         xhr.onprogress = null;
         const status = xhr.status;
         // http status between 200 to 299 are all successful
-        const isArrayBuffer = xhr.responseType === 'arraybuffer';
+        const useResponse = xhr.responseType !== 'text';
         if (
           status >= 200 &&
           status < 300 &&
-          ((isArrayBuffer && xhr.response) || xhr.responseText !== null)
+          ((useResponse && xhr.response) || xhr.responseText !== null)
         ) {
           stats.loading.end = Math.max(
             self.performance.now(),
             stats.loading.first
           );
-          let data;
-          let len: number;
-          if (isArrayBuffer) {
-            data = xhr.response;
-            len = data.byteLength;
-          } else {
-            data = xhr.responseText;
-            len = data.length;
-          }
+          const data = useResponse ? xhr.response : xhr.responseText;
+          const len =
+            xhr.responseType === 'arraybuffer' ? data.byteLength : data.length;
           stats.loaded = stats.total = len;
-
           if (!this.callbacks) {
             return;
           }
@@ -273,6 +266,18 @@ class XhrLoader implements Loader<LoaderContext> {
       result = ageHeader ? parseFloat(ageHeader) : null;
     }
     return result;
+  }
+
+  getResponseHeader(name: string): string | null {
+    if (
+      this.loader &&
+      new RegExp(`^${name}:\\s*[\\d.]+\\s*$`, 'im').test(
+        this.loader.getAllResponseHeaders()
+      )
+    ) {
+      return this.loader.getResponseHeader(name);
+    }
+    return null;
   }
 }
 

@@ -21,16 +21,12 @@ import type {
 } from '../types/media-playlist';
 import type { PlaylistLevelType } from '../types/loader';
 import type { LevelAttributes, LevelParsed, VariableMap } from '../types/level';
+import type { ContentSteeringOptions } from '../types/events';
 
 type M3U8ParserFragments = Array<Fragment | null>;
 
-type ContentSteering = {
-  uri: string;
-  pathwayId: string;
-};
-
 export type ParsedMultivariantPlaylist = {
-  contentSteering: ContentSteering | null;
+  contentSteering: ContentSteeringOptions | null;
   levels: LevelParsed[];
   playlistParsingError: Error | null;
   sessionData: Record<string, AttrList> | null;
@@ -237,7 +233,10 @@ export default class M3U8Parser {
               );
             }
             parsed.contentSteering = {
-              uri: contentSteeringAttributes['SERVER-URI'],
+              uri: M3U8Parser.resolve(
+                contentSteeringAttributes['SERVER-URI'],
+                baseurl
+              ),
               pathwayId: contentSteeringAttributes['PATHWAY-ID'] || '.',
             };
             break;
@@ -351,7 +350,7 @@ export default class M3U8Parser {
     id: number,
     type: PlaylistLevelType,
     levelUrlId: number,
-    multiVariantVariableList: VariableMap | null
+    multivariantVariableList: VariableMap | null
   ): LevelDetails {
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
@@ -558,7 +557,7 @@ export default class M3U8Parser {
                 importVariableDefinition(
                   level,
                   variableAttributes,
-                  multiVariantVariableList
+                  multivariantVariableList
                 );
               } else {
                 addVariableDefinition(level, variableAttributes);

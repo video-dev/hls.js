@@ -191,6 +191,11 @@ export default class Hls implements HlsEventEmitter {
         new SubtitleStreamControllerClass(this, fragmentTracker, keyLoader)
       );
     }
+    const ConfigContentSteeringController = config.contentSteeringController;
+    if (ConfigContentSteeringController) {
+      const contentSteeing = new ConfigContentSteeringController(this);
+      networkControllers.push(contentSteeing);
+    }
     this.createController(config.timelineController, coreComponents);
     keyLoader.emeController = this.emeController = this.createController(
       config.emeController,
@@ -564,7 +569,7 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * get bandwidth estimate
+   * Returns the current bandwidth estimate in bits per second, when available. Otherwise, `NaN` is returned.
    */
   get bandwidthEstimate(): number {
     const { bwEstimator } = this.abrController;
@@ -898,6 +903,7 @@ export type {
   PlaylistLevelType,
   HlsChunkPerformanceTiming,
   HlsPerformanceTiming,
+  HlsProgressivePerformanceTiming,
   PlaylistContextType,
   PlaylistLoaderContext,
   FragmentLoaderContext,
@@ -912,7 +918,6 @@ export type {
   LoaderOnError,
   LoaderOnSuccess,
   LoaderOnTimeout,
-  HlsProgressivePerformanceTiming,
 } from './types/loader';
 export type {
   MediaPlaylistType,
@@ -969,6 +974,7 @@ export type {
   LevelSwitchingData,
   LevelUpdatedData,
   LiveBackBufferData,
+  ContentSteeringOptions,
   ManifestLoadedData,
   ManifestLoadingData,
   ManifestParsedData,

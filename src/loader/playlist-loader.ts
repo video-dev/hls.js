@@ -295,7 +295,6 @@ class PlaylistLoader implements NetworkComponentAPI {
       maxRetry,
       retryDelay,
       maxRetryDelay,
-      highWaterMark: 0,
     };
 
     const loaderCallbacks = {
