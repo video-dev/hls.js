@@ -78,7 +78,7 @@
     "coverage-istanbul-loader": "3.0.5",
     "eslint": "8.31.0",
     "eslint-config-prettier": "8.6.0",
-    "eslint-plugin-import": "2.26.0",
+    "eslint-plugin-import": "2.27.4",
     "eslint-plugin-mocha": "10.1.0",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "6.1.1",
