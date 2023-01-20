@@ -41,7 +41,7 @@ export default class GapController {
    * Checks if the playhead is stuck within a gap, and if so, attempts to free it.
    * A gap is an unbuffered range between two buffered ranges (or the start and the first buffered range).
    *
-   * @param {number} lastCurrentTime Previously read playhead position
+   * @param lastCurrentTime - Previously read playhead position
    */
   public poll(lastCurrentTime: number, activeFrag: Fragment | null) {
     const { config, media, stalled } = this;

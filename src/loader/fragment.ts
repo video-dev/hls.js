@@ -91,6 +91,9 @@ export class BaseSegment {
   }
 }
 
+/**
+ * Object representing parsed data from an HLS Segment. Found in {@link hls.js#LevelDetails.fragments}.
+ */
 export class Fragment extends BaseSegment {
   private _decryptdata: LevelKey | null = null;
 
@@ -259,6 +262,9 @@ export class Fragment extends BaseSegment {
   }
 }
 
+/**
+ * Object representing parsed data from an HLS Partial Segment. Found in {@link hls.js#LevelDetails.partList}.
+ */
 export class Part extends BaseSegment {
   public readonly fragOffset: number = 0;
   public readonly duration: number = 0;

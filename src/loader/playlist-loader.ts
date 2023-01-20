@@ -4,9 +4,6 @@
  * Once loaded, dispatches events with parsed data-models of manifest/levels/audio/subtitle tracks.
  *
  * Uses loader(s) set in config to do actual internal loading of resource tasks.
- *
- * @module
- *
  */
 
 import { Events } from '../events';

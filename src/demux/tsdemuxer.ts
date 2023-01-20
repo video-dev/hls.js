@@ -114,10 +114,6 @@ class TSDemuxer implements Demuxer {
 
   /**
    * Creates a track model internal to demuxer used to drive remuxing input
-   *
-   * @param type 'audio' | 'video' | 'id3' | 'text'
-   * @param duration
-   * @return TSDemuxer's internal track model
    */
   static createTrack(
     type: 'audio' | 'video' | 'id3' | 'text',

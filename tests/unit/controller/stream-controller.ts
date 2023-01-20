@@ -43,10 +43,6 @@ describe('StreamController', function () {
     fake.restore();
   });
 
-  /**
-   * Assert: streamController should be started
-   * @param {StreamController} streamController
-   */
   const assertStreamControllerStarted = (streamController) => {
     expect(streamController.hasInterval()).to.be.true;
     expect(streamController.state).to.equal(
@@ -55,10 +51,6 @@ describe('StreamController', function () {
     );
   };
 
-  /**
-   * Assert: streamController should be stopped
-   * @param {StreamController} streamController
-   */
   const assertStreamControllerStopped = (streamController) => {
     expect(streamController.hasInterval()).to.be.false;
     expect(streamController.state).to.equal(

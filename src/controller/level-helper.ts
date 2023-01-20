@@ -1,7 +1,6 @@
 /**
- * @module LevelHelper
- * Providing methods dealing with playlist sliding and drift
- * */
+ * Provides methods dealing with playlist sliding and drift
+ */
 
 import { logger } from '../utils/logger';
 import { Fragment, Part } from '../loader/fragment';

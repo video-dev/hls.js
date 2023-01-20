@@ -1026,8 +1026,7 @@ class MP4 {
 
   /**
    * Generate a track box.
-   * @param track {object} a track definition
-   * @return {Uint8Array} the track box
+   * @param track a track definition
    */
   static trak(track) {
     track.duration = track.duration || 0xffffffff;
