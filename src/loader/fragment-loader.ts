@@ -314,8 +314,8 @@ function createLoaderContext(
 
 export class LoadError extends Error {
   public readonly data: FragLoadFailResult;
-  constructor(data: FragLoadFailResult, ...params) {
-    super(...params);
+  constructor(data: FragLoadFailResult, message?: string) {
+    super(message);
     this.data = data;
   }
 }

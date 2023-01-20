@@ -5,6 +5,9 @@ function getSourceBuffer(): typeof self.SourceBuffer {
   return self.SourceBuffer || (self as any).WebKitSourceBuffer;
 }
 
+/**
+ * @ignore
+ */
 export function isSupported(): boolean {
   const mediaSource = getMediaSource();
   if (!mediaSource) {
@@ -17,7 +20,7 @@ export function isSupported(): boolean {
     mediaSource.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"');
 
   // if SourceBuffer is exposed ensure its API is valid
-  // safari and old version of Chrome doe not expose SourceBuffer globally so checking SourceBuffer.prototype is impossible
+  // Older browsers do not expose SourceBuffer globally so checking SourceBuffer.prototype is impossible
   const sourceBufferValidAPI =
     !sourceBuffer ||
     (sourceBuffer.prototype &&
@@ -26,6 +29,9 @@ export function isSupported(): boolean {
   return !!isTypeSupported && !!sourceBufferValidAPI;
 }
 
+/**
+ * @ignore
+ */
 export function changeTypeSupported(): boolean {
   const sourceBuffer = getSourceBuffer();
   return (
