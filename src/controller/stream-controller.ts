@@ -764,8 +764,7 @@ export default class StreamController
       if (fromAltAudio) {
         hls.trigger(Events.BUFFER_FLUSHING, {
           startOffset: 0,
-          endOffset: Number.POSITIVE_INFINITY,
-          type: 'audiovideo'
+          endOffset: Number.POSITIVE_INFINITY
         });
         this.fragmentTracker.removeAllFragments();
       }
