@@ -412,11 +412,15 @@ export default class Transmuxer {
       }
     }
     if (!mux) {
-      // If probing previous configs fail, use mp4 passthrough
-      logger.warn(
-        'Failed to find demuxer by probing frag, treating as mp4 passthrough'
-      );
-      mux = { demux: MP4Demuxer, remux: PassThroughRemuxer };
+      this.demuxer = undefined;
+      this.remuxer = undefined;
+      this.observer.emit(Events.ERROR, Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.FRAG_PARSING_ERROR,
+        fatal: true,
+        reason: 'Failed to find demuxer by probing frag',
+      });
+      return;
     }
     // so let's check that current remuxer and demuxer are still valid
     const demuxer = this.demuxer;

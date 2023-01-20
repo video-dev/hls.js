@@ -403,8 +403,10 @@ export default class LevelController extends BasePlaylistController {
           data.frag?.type === PlaylistLevelType.MAIN
             ? data.frag.level
             : this.currentLevelIndex;
-        // Do not retry level. Escalate to fatal if switching levels fails.
-        data.levelRetry = false;
+        if (data.levelRetry !== true) {
+          // Do not retry level. Escalate to fatal if switching levels fails.
+          data.levelRetry = false;
+        }
         break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:

@@ -365,7 +365,6 @@ export default class BaseStreamController
           // if we're here we probably needed to backtrack or are waiting for more parts
           return;
         }
-        this.fragLoadError = 0;
         const state = this.state;
         if (this.fragContextChanged(frag)) {
           if (
@@ -1364,6 +1363,9 @@ export default class BaseStreamController
     );
     // keep retrying until the limit will be reached
     if (this.fragLoadError + 1 <= config.fragLoadingMaxRetry) {
+      if (data.details === ErrorDetails.FRAG_PARSING_ERROR) {
+        return;
+      }
       if (!this.loadedmetadata) {
         this.startFragRequested = false;
         this.nextLoadPosition = this.startPosition;
@@ -1491,11 +1493,26 @@ export default class BaseStreamController
       },
       false
     );
-    if (!parsed) {
+    if (parsed) {
+      this.fragLoadError = 0;
+    } else {
       this.warn(
         `Found no media in fragment ${frag.sn} of level ${level.id} resetting transmuxer to fallback to playlist timing`
       );
+      this.fragLoadError++;
+      const penalizeLevel = this.fragLoadError > 3;
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.FRAG_PARSING_ERROR,
+        fatal: false,
+        frag,
+        levelRetry: !penalizeLevel,
+        reason: `Found no media in msn ${frag.sn} of level "${level.url}"`,
+      });
       this.resetTransmuxer();
+      if (penalizeLevel) {
+        return;
+      }
     }
     this.state = State.PARSED;
     this.hls.trigger(Events.FRAG_PARSED, { frag, part });
