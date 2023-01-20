@@ -492,6 +492,8 @@ export enum ErrorDetails {
     // (undocumented)
     LEVEL_LOAD_TIMEOUT = "levelLoadTimeOut",
     // (undocumented)
+    LEVEL_PARSING_ERROR = "levelParsingError",
+    // (undocumented)
     LEVEL_SWITCH_ERROR = "levelSwitchError",
     // (undocumented)
     MANIFEST_INCOMPATIBLE_CODECS_ERROR = "manifestIncompatibleCodecsError",
@@ -513,7 +515,7 @@ export enum ErrorDetails {
 
 // Warning: (ae-missing-release-tag) "ErrorTypes" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public (undocumented)
+// @public
 export enum ErrorTypes {
     // (undocumented)
     KEY_SYSTEM_ERROR = "keySystemError",
@@ -936,7 +938,6 @@ class Hls implements HlsEventEmitter {
     get currentLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "currentLevel" must appear on the getter, not the setter.
     set currentLevel(newLevel: number);
-    // (undocumented)
     static get DefaultConfig(): HlsConfig;
     // Warning: (ae-setter-with-docs) The doc comment for the property "DefaultConfig" must appear on the getter, not the setter.
     static set DefaultConfig(defaultConfig: HlsConfig);
@@ -945,20 +946,16 @@ class Hls implements HlsEventEmitter {
     get drift(): number | null;
     // (undocumented)
     emit<E extends keyof HlsListeners>(event: E, name: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean;
-    // (undocumented)
     static get ErrorDetails(): typeof ErrorDetails;
-    // (undocumented)
     static get ErrorTypes(): typeof ErrorTypes;
-    // (undocumented)
     static get Events(): typeof Events;
     get firstLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "firstLevel" must appear on the getter, not the setter.
     set firstLevel(newLevel: number);
     get forceStartLoad(): boolean;
-    // (undocumented)
     static isSupported(): boolean;
     get latency(): number;
-    get levels(): Array<Level>;
+    get levels(): Level[];
     // (undocumented)
     listenerCount<E extends keyof HlsListeners>(event: E): number;
     // (undocumented)
@@ -1022,7 +1019,6 @@ class Hls implements HlsEventEmitter {
     get ttfbEstimate(): number;
     // (undocumented)
     readonly userConfig: Partial<HlsConfig>;
-    // (undocumented)
     static get version(): string;
 }
 export default Hls;
@@ -1487,6 +1483,8 @@ export class LevelDetails {
     // (undocumented)
     get hasProgramDateTime(): boolean;
     // (undocumented)
+    hasVariableRefs: boolean;
+    // (undocumented)
     holdBack: number;
     // (undocumented)
     get lastPartIndex(): number;
@@ -1508,6 +1506,8 @@ export class LevelDetails {
     partList: Part[] | null;
     // (undocumented)
     partTarget: number;
+    // (undocumented)
+    playlistParsingError: Error | null;
     // (undocumented)
     preloadHint?: AttrList;
     // (undocumented)
@@ -1538,6 +1538,8 @@ export class LevelDetails {
     updated: boolean;
     // (undocumented)
     url: string;
+    // (undocumented)
+    variableList: VariableMap | null;
     // (undocumented)
     version: number | null;
 }
@@ -1867,6 +1869,8 @@ export interface ManifestLoadedData {
     // (undocumented)
     captions?: MediaPlaylist[];
     // (undocumented)
+    contentSteering: Object | null;
+    // (undocumented)
     levels: LevelParsed[];
     // (undocumented)
     networkDetails: any;
@@ -1875,11 +1879,15 @@ export interface ManifestLoadedData {
     // (undocumented)
     sessionKeys: LevelKey[] | null;
     // (undocumented)
+    startTimeOffset: number | null;
+    // (undocumented)
     stats: LoaderStats;
     // (undocumented)
     subtitles?: MediaPlaylist[];
     // (undocumented)
     url: string;
+    // (undocumented)
+    variableList: VariableMap | null;
 }
 
 // Warning: (ae-missing-release-tag) "ManifestLoadingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2319,22 +2327,27 @@ export interface UserdataSample {
     uuid?: string;
 }
 
+// Warning: (ae-missing-release-tag) "VariableMap" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type VariableMap = Record<string, string>;
+
 // Warnings were encountered during analysis:
 //
-// src/config.ts:90:3 - (ae-forgotten-export) The symbol "MediaKeySessionContext" needs to be exported by the entry point hls.d.ts
-// src/config.ts:105:3 - (ae-forgotten-export) The symbol "DRMSystemsConfiguration" needs to be exported by the entry point hls.d.ts
-// src/config.ts:208:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
-// src/config.ts:218:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:219:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:221:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:222:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:223:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:225:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:228:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:230:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:231:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:232:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:233:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:93:3 - (ae-forgotten-export) The symbol "MediaKeySessionContext" needs to be exported by the entry point hls.d.ts
+// src/config.ts:108:3 - (ae-forgotten-export) The symbol "DRMSystemsConfiguration" needs to be exported by the entry point hls.d.ts
+// src/config.ts:211:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
+// src/config.ts:221:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:222:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:224:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:225:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:226:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:228:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:231:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:233:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:234:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:235:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:236:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 

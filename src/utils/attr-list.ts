@@ -12,6 +12,10 @@ export class AttrList {
 
     for (const attr in attrs) {
       if (attrs.hasOwnProperty(attr)) {
+        if (attr.substring(0, 2) === 'X-') {
+          this.clientAttrs = this.clientAttrs || [];
+          this.clientAttrs.push(attr);
+        }
         this[attr] = attrs[attr];
       }
     }

@@ -1,4 +1,5 @@
 /**
+ * @ignore
  * Sub-class specialization of EventHandler base class.
  *
  * TaskLoop allows to schedule a task function being called (optionnaly repeatedly) on the main loop,

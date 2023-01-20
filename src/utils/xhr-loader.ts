@@ -8,7 +8,7 @@ import type {
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
 
-const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/m;
+const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/im;
 
 class XhrLoader implements Loader<LoaderContext> {
   private xhrSetup: Function | null;
