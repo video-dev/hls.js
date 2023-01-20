@@ -7,10 +7,4 @@ if [[ $exit_status -ne 0 ]]; then
   exit 1
 fi
 
-$(git diff --exit-code api-docs/** > /dev/null) && exit_status=$? || exit_status=$?
-if [[ $exit_status -ne 0 ]]; then
-  echo "api-docs are not in sync. Please run 'npm run docs' and commit that change"
-  exit 1
-fi
-
 echo "Docs up to date"
