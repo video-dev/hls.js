@@ -68,6 +68,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   ): HlsUrlParameters | undefined {
     const renditionReports = previous?.renditionReports;
     if (renditionReports) {
+      let foundIndex = -1;
       for (let i = 0; i < renditionReports.length; i++) {
         const attr = renditionReports[i];
         let uri: string;
@@ -79,24 +80,32 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           );
           uri = attr.URI || '';
         }
-        if (uri === playlistUri.slice(-uri.length)) {
-          const msn = parseInt(attr['LAST-MSN']) || previous?.lastPartSn;
-          let part = parseInt(attr['LAST-PART']) || previous?.lastPartIndex;
-          if (this.hls.config.lowLatencyMode) {
-            const currentGoal = Math.min(
-              previous.age - previous.partTarget,
-              previous.targetduration
-            );
-            if (part >= 0 && currentGoal > previous.partTarget) {
-              part += 1;
-            }
-          }
-          return new HlsUrlParameters(
-            msn,
-            part >= 0 ? part : undefined,
-            HlsSkip.No
-          );
+        // Return exact match, or if none, partial when playlist url included query params
+        if (uri === playlistUri) {
+          foundIndex = i;
+          break;
+        } else if (uri === playlistUri.substring(0, uri.length)) {
+          foundIndex = i;
         }
+      }
+      if (foundIndex !== -1) {
+        const attr = renditionReports[foundIndex];
+        const msn = parseInt(attr['LAST-MSN']) || previous?.lastPartSn;
+        let part = parseInt(attr['LAST-PART']) || previous?.lastPartIndex;
+        if (this.hls.config.lowLatencyMode) {
+          const currentGoal = Math.min(
+            previous.age - previous.partTarget,
+            previous.targetduration
+          );
+          if (part >= 0 && currentGoal > previous.partTarget) {
+            part += 1;
+          }
+        }
+        return new HlsUrlParameters(
+          msn,
+          part >= 0 ? part : undefined,
+          HlsSkip.No
+        );
       }
     }
   }
