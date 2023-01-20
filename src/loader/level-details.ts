@@ -6,6 +6,9 @@ import type { VariableMap } from '../types/level';
 
 const DEFAULT_TARGET_DURATION = 10;
 
+/**
+ * Object representing parsed data from an HLS Media Playlist. Found in {@link hls.js#Level.details}.
+ */
 export class LevelDetails {
   public PTSKnown: boolean = false;
   public alignedSliding: boolean = false;
