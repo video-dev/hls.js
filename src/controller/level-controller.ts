@@ -22,9 +22,7 @@ import type Hls from '../hls';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';
 import type { MediaPlaylist } from '../types/media-playlist';
 
-const chromeOrFirefox: boolean = /chrome|firefox/.test(
-  navigator.userAgent.toLowerCase()
-);
+let chromeOrFirefox: boolean;
 
 export default class LevelController extends BasePlaylistController {
   private _levels: Level[] = [];
@@ -101,12 +99,11 @@ export default class LevelController extends BasePlaylistController {
 
       // erase audio codec info if browser does not support mp4a.40.34.
       // demuxer will autodetect codec and fallback to mpeg/audio
-      if (
-        chromeOrFirefox &&
-        levelParsed.audioCodec &&
-        levelParsed.audioCodec.indexOf('mp4a.40.34') !== -1
-      ) {
-        levelParsed.audioCodec = undefined;
+      if (levelParsed.audioCodec?.indexOf('mp4a.40.34') !== -1) {
+        chromeOrFirefox ||= /chrome|firefox/i.test(navigator.userAgent);
+        if (chromeOrFirefox) {
+          levelParsed.audioCodec = undefined;
+        }
       }
 
       const levelKey = `${levelParsed.bitrate}-${levelParsed.attrs.RESOLUTION}-${levelParsed.attrs.CODECS}`;
