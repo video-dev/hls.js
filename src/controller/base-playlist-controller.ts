@@ -80,7 +80,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           );
           uri = attr.URI || '';
         }
-        // Return exact match, or if none, partial when playlist url included query params
+        // Use exact match. Otherwise, the last partial match, if any, will be used
+        // (Playlist URI includes a query string that the Rendition Report does not)
         if (uri === playlistUri) {
           foundIndex = i;
           break;
