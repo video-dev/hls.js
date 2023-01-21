@@ -79,7 +79,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: install
         run: |
@@ -141,7 +141,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -182,7 +182,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -239,7 +239,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -282,7 +282,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -336,7 +336,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -418,7 +418,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
