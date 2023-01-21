@@ -117,10 +117,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: build
+          # version number is set in package.json so need to include that
           path: |
-            **
-            !**/[.]*/**
-            !**/node_modules/
+            package.json
+            package-lock.json
+            api-docs/**
+            dist/**
 
   test_unit:
     needs: build
