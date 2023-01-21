@@ -7,7 +7,7 @@ if [[ $(git rev-parse --is-shallow-repository) = "true" ]]; then
 fi
 
 npx -y npm-ci-please@^1.1.1
-node ./scripts/set-package-version.js
+./scripts/set-package-version.sh
 npm run lint
 npm run type-check
 npm run build:ci

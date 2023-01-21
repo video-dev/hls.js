@@ -94,9 +94,7 @@ jobs:
 
       - name: set version
         run: |
-          VERSION="$(node ./scripts/get-package-version.js)"
-          echo "Setting version to '$VERSION'"
-          npm version --git-tag-version false "$VERSION"
+          ./scripts/set-package-version.sh
         env:
           CI: true
           TAG: ${{ needs.config.outputs.tag }}
