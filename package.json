@@ -27,7 +27,7 @@
     "build:watch": "webpack --progress --env debug --env demo --watch",
     "build:types": "tsc --build tsconfig-lib.json && api-extractor run --local",
     "dev": "webpack serve --progress --env debug --env demo --port 8000 --static .",
-    "docs": "doctoc ./docs/API.md && api-documenter markdown -i api-extractor -o api-extractor/api-documenter && npm run docs-md-to-html",
+    "docs": "doctoc ./docs/API.md && api-documenter markdown -i api-extractor -o api-extractor/api-documenter && rm api-extractor/api-documenter/index.md && npm run docs-md-to-html",
     "docs-md-to-html": "generate-md --layout github --input api-extractor/api-documenter --output api-docs",
     "lint": "eslint src/ tests/ --ext .js --ext .ts",
     "lint:fix": "npm run lint -- --fix",
