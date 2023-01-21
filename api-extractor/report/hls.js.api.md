@@ -906,7 +906,7 @@ export interface FragParsingUserdataData {
 // Warning: (ae-missing-release-tag) "HdcpLevel" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export type HdcpLevel = typeof HdcpLevels[number];
+export type HdcpLevel = (typeof HdcpLevels)[number];
 
 // Warning: (ae-missing-release-tag) "HdcpLevels" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
