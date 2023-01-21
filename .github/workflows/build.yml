@@ -83,7 +83,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@1
         env:
           CI: true
 
@@ -150,7 +150,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@1
         env:
           CI: true
 
@@ -191,7 +191,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@1
         env:
           CI: true
 
@@ -291,7 +291,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@1
         env:
           CI: true
 
@@ -353,7 +353,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@1
         env:
           CI: true
 
@@ -435,7 +435,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@1
         env:
           CI: true
 
