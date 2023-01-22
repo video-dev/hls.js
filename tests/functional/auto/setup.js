@@ -59,14 +59,12 @@ if (browserConfig.platform) {
   browserDescription += `, ${browserConfig.platform}`;
 }
 
-const hostname = useSauce ? 'localhost' : '127.0.0.1';
-
 // Launch static server
 HttpServer.createServer({
   showDir: false,
   autoIndex: false,
   root: './',
-}).listen(8000, hostname);
+}).listen(8000, useSauce ? '0.0.0.0' : '127.0.0.1');
 
 const wait = (ms) => new Promise((resolve) => global.setTimeout(resolve, ms));
 const stringifyResult = (result) =>
@@ -549,14 +547,13 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   beforeEach(async function () {
     try {
       await retry(async () => {
+        const testPageExt = HlsjsLightBuild ? '-light' : '';
+        const testPageUrl = `http://localhost:8000/tests/functional/auto/index${testPageExt}.html`;
         if (printDebugLogs) {
-          console.log('Loading test page...');
+          console.log(`Loading test page: ${testPageUrl}`);
         }
         try {
-          const testPageExt = HlsjsLightBuild ? '-light' : '';
-          await browser.get(
-            `http://${hostname}:8000/tests/functional/auto/index${testPageExt}.html`
-          );
+          await browser.get(testPageUrl);
         } catch (e) {
           throw new Error('failed to open test page');
         }
@@ -586,7 +583,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   afterEach(async function () {
     const failed = this.currentTest.isFailed();
     if (printDebugLogs || failed) {
-      const logString = await browser.executeScript('return logString');
+      const logString = await browser.executeScript(
+        'return window.logString || "";'
+      );
       console.log(logString);
       if (failed && useSauce) {
         browser.executeScript('sauce:job-result=failed');
