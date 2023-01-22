@@ -1,10 +1,9 @@
 import Hls from '../../src/hls';
+import type { HlsConfig } from '../../src/config';
 
-const sinon = require('sinon');
+import * as sinon from 'sinon';
 
-/**
- * All public methods of Hls instance
- */
+// All public methods of Hls instance
 const publicMethods = [
   'trigger',
   'on',
@@ -19,27 +18,25 @@ const publicMethods = [
 ];
 
 export default class HlsMock {
-  // TODO: static properties
+  config: Partial<HlsConfig>;
+  [key: string]: any;
 
-  constructor(config) {
+  constructor(config: Partial<HlsConfig> = {}) {
     // Mock arguments can at will override the default config
     // and have to specify things that are not in the default config
     this.config = Object.assign({}, Hls.DefaultConfig, config);
-
     // stub public API with spies
     publicMethods.forEach((methodName) => {
       this[methodName] = sinon.stub();
     });
   }
 
-  getEventData(n) {
+  getEventData(n: number): { name: string; payload: any } {
     const event = this.trigger.getCall(n).args;
     return { name: event[0], payload: event[1] };
   }
 
-  /**
-   * Reset all spies
-   */
+  // Reset all spies
   __reset__() {
     publicMethods.forEach((methodName) => {
       this[methodName].reset();

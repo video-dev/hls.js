@@ -59,7 +59,7 @@ const setupEach = function (config) {
     },
   ];
   media = new MediaMock();
-  emeController = new EMEController(hls) as any as EMEControllerTestable;
+  emeController = new EMEController(hls as any) as any as EMEControllerTestable;
   sinonFakeXMLHttpRequestStatic = sinon.useFakeXMLHttpRequest();
 };
 

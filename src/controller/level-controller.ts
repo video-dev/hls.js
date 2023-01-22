@@ -15,7 +15,6 @@ import { HdcpLevel, HdcpLevels, Level } from '../types/level';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
-import { addGroupId, assignTrackIdsByGroup } from './level-helper';
 import BasePlaylistController from './base-playlist-controller';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import type Hls from '../hls';
@@ -655,4 +654,30 @@ export default class LevelController extends BasePlaylistController {
 
     this.hls.trigger(Events.LEVELS_UPDATED, { levels });
   }
+}
+
+function addGroupId(level: Level, type: string, id: string): void {
+  switch (type) {
+    case 'audio':
+      if (!level.audioGroupIds) {
+        level.audioGroupIds = [];
+      }
+      level.audioGroupIds.push(id);
+      break;
+    case 'text':
+      if (!level.textGroupIds) {
+        level.textGroupIds = [];
+      }
+      level.textGroupIds.push(id);
+      break;
+  }
+}
+
+function assignTrackIdsByGroup(tracks: MediaPlaylist[]): void {
+  const groups = {};
+  tracks.forEach((track) => {
+    const groupId = track.groupId || '';
+    track.id = groups[groupId] = groups[groupId] || 0;
+    groups[groupId]++;
+  });
 }
