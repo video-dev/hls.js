@@ -46,6 +46,8 @@ const MASTER_PLAYLIST_REGEX =
   /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-(SESSION-DATA|SESSION-KEY|DEFINE|CONTENT-STEERING|START):([^\r\n]*)[\r\n]+/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
+const IS_MEDIA_PLAYLIST = /^#EXT(?:INF|-X-TARGETDURATION):/m; // Handle empty Media Playlist (first EXTINF not signaled, but TARGETDURATION present)
+
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
   [
     /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
@@ -97,6 +99,10 @@ export default class M3U8Parser {
 
   static resolve(url, baseUrl) {
     return buildAbsoluteURL(baseUrl, url, { alwaysNormalize: true });
+  }
+
+  static isMediaPlaylist(str: string): boolean {
+    return IS_MEDIA_PLAYLIST.test(str);
   }
 
   static parseMasterPlaylist(

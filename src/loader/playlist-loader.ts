@@ -330,11 +330,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     }
 
     stats.parsing.start = performance.now();
-    // Check if chunk-list or master. handle empty chunk list case (first EXTINF not signaled, but TARGETDURATION present)
-    if (
-      string.indexOf('#EXTINF:') > 0 ||
-      string.indexOf('#EXT-X-TARGETDURATION:') > 0
-    ) {
+    if (M3U8Parser.isMediaPlaylist(string)) {
       this.handleTrackOrLevelPlaylist(response, stats, context, networkDetails);
     } else {
       this.handleMasterPlaylist(response, stats, context, networkDetails);

@@ -76,25 +76,14 @@ export default class LevelController extends BasePlaylistController {
   protected onManifestLoaded(
     event: Events.MANIFEST_LOADED,
     data: ManifestLoadedData
-  ): void {
-    let levels: Level[] = [];
-    let audioTracks: MediaPlaylist[] = [];
-    let subtitleTracks: MediaPlaylist[] = [];
-    let bitrateStart: number | undefined;
+  ) {
+    const levels: Level[] = [];
     const levelSet: { [key: string]: Level } = {};
     let levelFromSet: Level;
-    let resolutionFound = false;
-    let videoCodecFound = false;
-    let audioCodecFound = false;
 
     // regroup redundant levels together
     data.levels.forEach((levelParsed: LevelParsed) => {
       const attributes = levelParsed.attrs;
-
-      resolutionFound =
-        resolutionFound || !!(levelParsed.width && levelParsed.height);
-      videoCodecFound = videoCodecFound || !!levelParsed.videoCodec;
-      audioCodecFound = audioCodecFound || !!levelParsed.audioCodec;
 
       // erase audio codec info if browser does not support mp4a.40.34.
       // demuxer will autodetect codec and fallback to mpeg/audio
@@ -105,7 +94,14 @@ export default class LevelController extends BasePlaylistController {
         }
       }
 
-      const levelKey = `${levelParsed.bitrate}-${levelParsed.attrs.RESOLUTION}-${levelParsed.attrs.CODECS}`;
+      const {
+        AUDIO,
+        CODECS,
+        'FRAME-RATE': FRAMERATE,
+        RESOLUTION,
+        SUBTITLES,
+      } = attributes;
+      const levelKey = `${levelParsed.bitrate}-${RESOLUTION}-${FRAMERATE}-${CODECS}`;
       levelFromSet = levelSet[levelKey];
 
       if (!levelFromSet) {
@@ -116,14 +112,34 @@ export default class LevelController extends BasePlaylistController {
         levelFromSet.url.push(levelParsed.url);
       }
 
-      if (attributes) {
-        if (attributes.AUDIO) {
-          addGroupId(levelFromSet, 'audio', attributes.AUDIO);
-        }
-        if (attributes.SUBTITLES) {
-          addGroupId(levelFromSet, 'text', attributes.SUBTITLES);
-        }
+      if (AUDIO) {
+        addGroupId(levelFromSet, 'audio', AUDIO);
       }
+      if (SUBTITLES) {
+        addGroupId(levelFromSet, 'text', SUBTITLES);
+      }
+    });
+
+    this.filterAndSortMediaOptions(levels, data);
+  }
+
+  private filterAndSortMediaOptions(levels: Level[], data: ManifestLoadedData) {
+    let audioTracks: MediaPlaylist[] = [];
+    let subtitleTracks: MediaPlaylist[] = [];
+
+    let resolutionFound = false;
+    let videoCodecFound = false;
+    let audioCodecFound = false;
+
+    // only keep levels with supported audio/video codecs
+    levels = levels.filter(({ audioCodec, videoCodec, width, height }) => {
+      resolutionFound ||= !!(width && height);
+      videoCodecFound ||= !!videoCodec;
+      audioCodecFound ||= !!audioCodec;
+      return (
+        (!audioCodec || isCodecSupportedInMp4(audioCodec, 'audio')) &&
+        (!videoCodec || isCodecSupportedInMp4(videoCodec, 'video'))
+      );
     });
 
     // remove audio-only level if we also have levels with video codecs or RESOLUTION signalled
@@ -133,13 +149,16 @@ export default class LevelController extends BasePlaylistController {
       );
     }
 
-    // only keep levels with supported audio/video codecs
-    levels = levels.filter(({ audioCodec, videoCodec }) => {
-      return (
-        (!audioCodec || isCodecSupportedInMp4(audioCodec, 'audio')) &&
-        (!videoCodec || isCodecSupportedInMp4(videoCodec, 'video'))
-      );
-    });
+    if (levels.length === 0) {
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
+        fatal: true,
+        url: data.url,
+        reason: 'no level with compatible codecs found in manifest',
+      });
+      return;
+    }
 
     if (data.audioTracks) {
       audioTracks = data.audioTracks.filter(
@@ -154,72 +173,69 @@ export default class LevelController extends BasePlaylistController {
       subtitleTracks = data.subtitles;
       assignTrackIdsByGroup(subtitleTracks);
     }
-
-    if (levels.length > 0) {
-      // start bitrate is the first bitrate of the manifest
-      bitrateStart = levels[0].bitrate;
-      // sort levels from lowest to highest
-      levels.sort((a, b) => {
-        if (a.attrs['HDCP-LEVEL'] !== b.attrs['HDCP-LEVEL']) {
-          return (a.attrs['HDCP-LEVEL'] || '') > (b.attrs['HDCP-LEVEL'] || '')
-            ? 1
-            : -1;
-        }
-        if (a.bitrate !== b.bitrate) {
-          return a.bitrate - b.bitrate;
-        }
-        if (a.attrs.SCORE !== b.attrs.SCORE) {
-          return (
-            a.attrs.decimalFloatingPoint('SCORE') -
-            b.attrs.decimalFloatingPoint('SCORE')
-          );
-        }
-        if (resolutionFound && a.height !== b.height) {
-          return a.height - b.height;
-        }
-        return 0;
-      });
-      this._levels = levels;
-      // find index of first level in sorted levels
-      for (let i = 0; i < levels.length; i++) {
-        if (levels[i].bitrate === bitrateStart) {
-          this._firstLevel = i;
-          this.log(
-            `manifest loaded, ${levels.length} level(s) found, first bitrate: ${bitrateStart}`
-          );
-          break;
-        }
+    // start bitrate is the first bitrate of the manifest
+    const firstLevelInPlaylist = levels[0];
+    // sort levels from lowest to highest
+    levels.sort((a, b) => {
+      if (a.attrs['HDCP-LEVEL'] !== b.attrs['HDCP-LEVEL']) {
+        return (a.attrs['HDCP-LEVEL'] || '') > (b.attrs['HDCP-LEVEL'] || '')
+          ? 1
+          : -1;
       }
-
-      // Audio is only alternate if manifest include a URI along with the audio group tag,
-      // and this is not an audio-only stream where levels contain audio-only
-      const audioOnly = audioCodecFound && !videoCodecFound;
-      const edata: ManifestParsedData = {
-        levels,
-        audioTracks,
-        subtitleTracks,
-        sessionData: data.sessionData,
-        sessionKeys: data.sessionKeys,
-        firstLevel: this._firstLevel,
-        stats: data.stats,
-        audio: audioCodecFound,
-        video: videoCodecFound,
-        altAudio: !audioOnly && audioTracks.some((t) => !!t.url),
-      };
-      this.hls.trigger(Events.MANIFEST_PARSED, edata);
-
-      // Initiate loading after all controllers have received MANIFEST_PARSED
-      if (this.hls.config.autoStartLoad || this.hls.forceStartLoad) {
-        this.hls.startLoad(this.hls.config.startPosition);
+      if (a.bitrate !== b.bitrate) {
+        return a.bitrate - b.bitrate;
       }
-    } else {
-      this.hls.trigger(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
-        fatal: true,
-        url: data.url,
-        reason: 'no level with compatible codecs found in manifest',
-      });
+      if (a.attrs['FRAME-RATE'] !== b.attrs['FRAME-RATE']) {
+        return (
+          a.attrs.decimalFloatingPoint('FRAME-RATE') -
+          b.attrs.decimalFloatingPoint('FRAME-RATE')
+        );
+      }
+      if (a.attrs.SCORE !== b.attrs.SCORE) {
+        return (
+          a.attrs.decimalFloatingPoint('SCORE') -
+          b.attrs.decimalFloatingPoint('SCORE')
+        );
+      }
+      if (resolutionFound && a.height !== b.height) {
+        return a.height - b.height;
+      }
+      return 0;
+    });
+
+    this._levels = levels;
+
+    // find index of first level in sorted levels
+    for (let i = 0; i < levels.length; i++) {
+      if (levels[i] === firstLevelInPlaylist) {
+        this._firstLevel = i;
+        this.log(
+          `manifest loaded, ${levels.length} level(s) found, first bitrate: ${firstLevelInPlaylist.bitrate}`
+        );
+        break;
+      }
+    }
+
+    // Audio is only alternate if manifest include a URI along with the audio group tag,
+    // and this is not an audio-only stream where levels contain audio-only
+    const audioOnly = audioCodecFound && !videoCodecFound;
+    const edata: ManifestParsedData = {
+      levels,
+      audioTracks,
+      subtitleTracks,
+      sessionData: data.sessionData,
+      sessionKeys: data.sessionKeys,
+      firstLevel: this._firstLevel,
+      stats: data.stats,
+      audio: audioCodecFound,
+      video: videoCodecFound,
+      altAudio: !audioOnly && audioTracks.some((t) => !!t.url),
+    };
+    this.hls.trigger(Events.MANIFEST_PARSED, edata);
+
+    // Initiate loading after all controllers have received MANIFEST_PARSED
+    if (this.hls.config.autoStartLoad || this.hls.forceStartLoad) {
+      this.hls.startLoad(this.hls.config.startPosition);
     }
   }
 
@@ -553,9 +569,11 @@ export default class LevelController extends BasePlaylistController {
         }
       }
 
-      if (urlId !== currentLevel.urlId) {
+      if (urlId !== -1 && urlId !== currentLevel.urlId) {
         currentLevel.urlId = urlId;
-        this.startLoad();
+        if (this.canLoad) {
+          this.startLoad();
+        }
       }
     }
   }
