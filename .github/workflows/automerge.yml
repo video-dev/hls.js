@@ -15,4 +15,3 @@ jobs:
         with:
           repo-token: ${{ secrets.CI_GITHUB_TOKEN }}
           allowed-actors: renovate[bot]
-          package-block-list: netlify-cli

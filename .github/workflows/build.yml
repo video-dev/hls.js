@@ -83,7 +83,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 
@@ -94,7 +94,7 @@ jobs:
 
       - name: set version
         run: |
-          node ./scripts/set-package-version.js
+          ./scripts/set-package-version.sh
         env:
           CI: true
           TAG: ${{ needs.config.outputs.tag }}
@@ -115,10 +115,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: build
+          # version number is set in package.json so need to include that
           path: |
-            **
-            !**/[.]*/**
-            !**/node_modules/
+            package.json
+            package-lock.json
+            api-docs/**
+            dist/**
 
   test_unit:
     needs: build
@@ -150,7 +152,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 
@@ -191,7 +193,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 
@@ -291,7 +293,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 
@@ -353,7 +355,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 
@@ -435,7 +437,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 
