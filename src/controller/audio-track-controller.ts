@@ -115,7 +115,7 @@ class AudioTrackController extends BasePlaylistController {
 
     const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
     if (this.groupId !== audioGroupId) {
-      this.groupId = audioGroupId;
+      this.groupId = audioGroupId || null;
 
       const audioTracks = this.tracks.filter(
         (track): boolean => !audioGroupId || track.groupId === audioGroupId

@@ -98,10 +98,14 @@ export default class LevelController extends BasePlaylistController {
         AUDIO,
         CODECS,
         'FRAME-RATE': FRAMERATE,
+        'PATHWAY-ID': PATHWAY,
         RESOLUTION,
         SUBTITLES,
       } = attributes;
-      const levelKey = `${levelParsed.bitrate}-${RESOLUTION}-${FRAMERATE}-${CODECS}`;
+      const contentSteeringPrefix = __USE_CONTENT_STEERING__
+        ? `${PATHWAY}-`
+        : '';
+      const levelKey = `${contentSteeringPrefix}${levelParsed.bitrate}-${RESOLUTION}-${FRAMERATE}-${CODECS}`;
       levelFromSet = levelSet[levelKey];
 
       if (!levelFromSet) {
@@ -109,15 +113,11 @@ export default class LevelController extends BasePlaylistController {
         levelSet[levelKey] = levelFromSet;
         levels.push(levelFromSet);
       } else {
-        levelFromSet.url.push(levelParsed.url);
+        levelFromSet.addFallback(levelParsed);
       }
 
-      if (AUDIO) {
-        addGroupId(levelFromSet, 'audio', AUDIO);
-      }
-      if (SUBTITLES) {
-        addGroupId(levelFromSet, 'text', SUBTITLES);
-      }
+      addGroupId(levelFromSet, 'audio', AUDIO);
+      addGroupId(levelFromSet, 'text', SUBTITLES);
     });
 
     this.filterAndSortMediaOptions(levels, data);
@@ -287,9 +287,12 @@ export default class LevelController extends BasePlaylistController {
     const levelSwitchingData: LevelSwitchingData = Object.assign({}, level, {
       level: newLevel,
       maxBitrate: level.maxBitrate,
+      attrs: level.attrs,
       uri: level.uri,
       urlId: level.urlId,
     });
+    // @ts-ignore
+    delete levelSwitchingData._attrs;
     // @ts-ignore
     delete levelSwitchingData._urlId;
     this.hls.trigger(Events.LEVEL_SWITCHING, levelSwitchingData);
@@ -505,9 +508,13 @@ export default class LevelController extends BasePlaylistController {
     if (redundantLevels > 1) {
       // Update the url id of all levels so that we stay on the same set of variants when level switching
       const newUrlId = (level.urlId + 1) % redundantLevels;
-      this.warn(`Switching to redundant URL-id ${newUrlId}`);
-      this._levels.forEach((level) => {
-        level.urlId = newUrlId;
+      this.log(
+        `Switching to Redundant Stream ${newUrlId + 1}/${redundantLevels}: "${
+          level.url[newUrlId]
+        }"`
+      );
+      this._levels.forEach((lv) => {
+        lv.urlId = newUrlId;
       });
       this.level = levelIndex;
     }
@@ -559,9 +566,12 @@ export default class LevelController extends BasePlaylistController {
       return;
     }
 
-    if (currentLevel.audioGroupIds) {
+    const audioGroupId = this.hls.audioTracks[data.id].groupId;
+    if (
+      currentLevel.audioGroupIds &&
+      currentLevel.audioGroupIds[currentLevel.urlId] !== audioGroupId
+    ) {
       let urlId = -1;
-      const audioGroupId = this.hls.audioTracks[data.id].groupId;
       for (let i = 0; i < currentLevel.audioGroupIds.length; i++) {
         if (currentLevel.audioGroupIds[i] === audioGroupId) {
           urlId = i;
@@ -585,7 +595,7 @@ export default class LevelController extends BasePlaylistController {
 
     if (this.canLoad && currentLevel && currentLevel.url.length > 0) {
       const id = currentLevel.urlId;
-      let url = currentLevel.url[id];
+      let url = currentLevel.uri;
       if (hlsUrlParameters) {
         try {
           url = hlsUrlParameters.addDirectives(url);
@@ -596,6 +606,7 @@ export default class LevelController extends BasePlaylistController {
         }
       }
 
+      const pathwayId = currentLevel.attrs['PATHWAY-ID'];
       this.log(
         `Attempt loading level index ${level}${
           hlsUrlParameters?.msn !== undefined
@@ -604,7 +615,9 @@ export default class LevelController extends BasePlaylistController {
               ' part ' +
               hlsUrlParameters.part
             : ''
-        } with URL-id ${id} ${url}`
+        } with${pathwayId ? ' Pathway ' + pathwayId : ''} URI ${id + 1}/${
+          currentLevel.url.length
+        } ${url}`
       );
 
       // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
@@ -674,20 +687,20 @@ export default class LevelController extends BasePlaylistController {
   }
 }
 
-function addGroupId(level: Level, type: string, id: string): void {
-  switch (type) {
-    case 'audio':
-      if (!level.audioGroupIds) {
-        level.audioGroupIds = [];
-      }
-      level.audioGroupIds.push(id);
-      break;
-    case 'text':
-      if (!level.textGroupIds) {
-        level.textGroupIds = [];
-      }
-      level.textGroupIds.push(id);
-      break;
+function addGroupId(level: Level, type: string, id: string | undefined): void {
+  if (!id) {
+    return;
+  }
+  if (type === 'audio') {
+    if (!level.audioGroupIds) {
+      level.audioGroupIds = [];
+    }
+    level.audioGroupIds[level.url.length - 1] = id;
+  } else if (type === 'text') {
+    if (!level.textGroupIds) {
+      level.textGroupIds = [];
+    }
+    level.textGroupIds[level.url.length - 1] = id;
   }
 }
 

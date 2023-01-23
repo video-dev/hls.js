@@ -212,7 +212,7 @@ class SubtitleTrackController extends BasePlaylistController {
       this.tracksInGroup = subtitleTracks;
       const initialTrackId =
         this.findTrackId(lastTrack?.name) || this.findTrackId();
-      this.groupId = textGroupId;
+      this.groupId = textGroupId || null;
 
       const subtitleTracksUpdated: SubtitleTracksUpdatedData = {
         subtitleTracks,

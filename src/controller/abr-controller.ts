@@ -472,6 +472,9 @@ class AbrController implements AbrComponentAPI {
         !levelInfo ||
         (currentCodecSet && levelInfo.codecSet !== currentCodecSet)
       ) {
+        logger.log(
+          `Skipping level ${i} with CODECS:"${levelInfo.attrs.CODECS}"; not compatible with "${level.attrs.CODECS}"`
+        );
         continue;
       }
 

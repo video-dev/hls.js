@@ -93,7 +93,7 @@ export class HlsUrlParameters {
 }
 
 export class Level {
-  public readonly attrs: LevelAttributes;
+  public readonly _attrs: LevelAttributes[];
   public readonly audioCodec: string | undefined;
   public readonly bitrate: number;
   public readonly codecSet: string;
@@ -103,19 +103,19 @@ export class Level {
   public readonly videoCodec: string | undefined;
   public readonly width: number;
   public readonly unknownCodecs: string[] | undefined;
-  public audioGroupIds?: string[];
+  public audioGroupIds?: (string | undefined)[];
   public details?: LevelDetails;
   public fragmentError: number = 0;
   public loadError: number = 0;
   public loaded?: { bytes: number; duration: number };
   public realBitrate: number = 0;
-  public textGroupIds?: string[];
+  public textGroupIds?: (string | undefined)[];
   public url: string[];
   private _urlId: number = 0;
 
   constructor(data: LevelParsed) {
     this.url = [data.url];
-    this.attrs = data.attrs;
+    this._attrs = [data.attrs];
     this.bitrate = data.bitrate;
     if (data.details) {
       this.details = data.details;
@@ -137,6 +137,10 @@ export class Level {
     return Math.max(this.realBitrate, this.bitrate);
   }
 
+  get attrs(): LevelAttributes {
+    return this._attrs[this._urlId];
+  }
+
   get uri(): string {
     return this.url[this._urlId] || '';
   }
@@ -151,5 +155,10 @@ export class Level {
       this.details = undefined;
       this._urlId = newValue;
     }
+  }
+
+  addFallback(data: LevelParsed) {
+    this.url.push(data.url);
+    this._attrs.push(data.attrs);
   }
 }

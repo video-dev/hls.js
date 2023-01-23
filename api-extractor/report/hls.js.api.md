@@ -1330,11 +1330,15 @@ export type LatencyControllerConfig = {
 export class Level {
     constructor(data: LevelParsed);
     // (undocumented)
-    readonly attrs: LevelAttributes;
+    addFallback(data: LevelParsed): void;
+    // (undocumented)
+    get attrs(): LevelAttributes;
+    // (undocumented)
+    readonly _attrs: LevelAttributes[];
     // (undocumented)
     readonly audioCodec: string | undefined;
     // (undocumented)
-    audioGroupIds?: string[];
+    audioGroupIds?: (string | undefined)[];
     // (undocumented)
     readonly bitrate: number;
     // (undocumented)
@@ -1361,7 +1365,7 @@ export class Level {
     // (undocumented)
     realBitrate: number;
     // (undocumented)
-    textGroupIds?: string[];
+    textGroupIds?: (string | undefined)[];
     // (undocumented)
     readonly unknownCodecs: string[] | undefined;
     // (undocumented)
