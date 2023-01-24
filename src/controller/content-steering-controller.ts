@@ -2,7 +2,7 @@ import { Events } from '../events';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
-import type { ManifestLoadedData } from '../types/events';
+import type { ManifestLoadedData, ManifestParsedData } from '../types/events';
 import type {
   Loader,
   LoaderCallbacks,
@@ -11,6 +11,7 @@ import type {
   LoaderResponse,
   LoaderStats,
 } from '../types/loader';
+import type { Level } from '../types/level';
 
 type SteeringManifest = {
   VERSION: 1;
@@ -37,10 +38,12 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   private loader: Loader<LoaderContext> | null = null;
   private uri: string | null = null;
   private pathwayId: string = '.';
+  private pathwayPriority: string[] | null = null;
   private timeToLoad: number = 300;
   private reloadTimer: number = -1;
   private updated: number = 0;
   private enabled: boolean = true;
+  private levels: Level[] | null = null;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -56,6 +59,9 @@ export default class ContentSteeringController implements NetworkComponentAPI {
 
   private unregisterListeners() {
     const hls = this.hls;
+    if (!hls) {
+      return;
+    }
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
   }
@@ -74,6 +80,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       }
     }
   }
+
   stopLoad(): void {
     if (this.loader) {
       this.loader.destroy();
@@ -86,7 +93,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     this.unregisterListeners();
     this.stopLoad();
     // @ts-ignore
-    this.hls = this.config = null;
+    this.hls = this.config = this.levels = null;
   }
 
   private onManifestLoading() {
@@ -96,6 +103,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     this.updated = 0;
     this.uri = null;
     this.pathwayId = '.';
+    this.levels = null;
   }
 
   private onManifestLoaded(
@@ -111,6 +119,54 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     this.startLoad();
   }
 
+  public filterParsedLevels(levels: Level[]): Level[] {
+    // Filter levels to only include those that are in the initial pathway
+    this.levels = levels;
+    let pathwayLevels = this.getLevelsForPathway(this.pathwayId);
+    if (pathwayLevels.length === 0) {
+      const pathwayId = levels[0].attrs['PATHWAY-ID'] || '.';
+      this.log(`Setting initial Pathway to "${pathwayId}"`);
+      pathwayLevels = this.getLevelsForPathway(pathwayId);
+      this.pathwayId = pathwayId;
+    }
+    if (pathwayLevels.length !== levels.length) {
+      this.log(
+        `Found ${pathwayLevels.length} levels in Pathway "${this.pathwayId}"`
+      );
+      return pathwayLevels;
+    }
+    return levels;
+  }
+
+  private getLevelsForPathway(pathwayId: string): Level[] {
+    if (this.levels === null) {
+      return [];
+    }
+    return this.levels.filter(
+      (level) => pathwayId === (level.attrs['PATHWAY-ID'] || '.')
+    );
+  }
+
+  private updatePathwayPriority(pathwayPriority: string[]) {
+    this.pathwayPriority = pathwayPriority;
+    let levels: Level[] | undefined;
+    for (let i = 0; i < pathwayPriority.length; i++) {
+      const pathwayId = pathwayPriority[i];
+      if (pathwayId === this.pathwayId) {
+        return;
+      }
+      levels = this.getLevelsForPathway(pathwayId);
+      if (levels.length > 0) {
+        this.log(`Setting Pathway to "${pathwayId}"`);
+        this.pathwayId = pathwayId;
+        break;
+      }
+    }
+    if (levels) {
+      this.hls.trigger(Events.LEVELS_UPDATED, { levels });
+    }
+  }
+
   private loadSteeringManifest(uri: string) {
     const config = this.hls.config;
     const Loader = config.loader;
@@ -119,7 +175,14 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     }
     this.loader = new Loader(config) as Loader<LoaderContext>;
 
-    const url: URL = new self.URL(uri);
+    let url: URL;
+    try {
+      url = new self.URL(uri);
+    } catch (error) {
+      this.enabled = false;
+      this.log(`Failed to parse Steering Manifest URI: ${uri}`);
+      return;
+    }
     if (url.protocol !== 'data:') {
       const throughput =
         (this.hls.bandwidthEstimate || config.abrEwmaDefaultEstimate) | 0;
@@ -131,7 +194,6 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       url: url.href,
     };
 
-    // TODO: Keys and Steering Manifests do not have their own Network Policy settings
     const loaderConfig: LoaderConfiguration = {
       timeout: config.levelLoadingTimeOut,
       maxRetry: 0,
@@ -146,13 +208,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         context: LoaderContext,
         networkDetails: any
       ) => {
-        this.log(
-          `Loaded steering manifest: ${url} ${JSON.stringify(
-            response.data,
-            null,
-            2
-          )}`
-        );
+        this.log(`Loaded steering manifest: "${url}"`);
         const steeringData = response.data as SteeringManifest;
         if (steeringData.VERSION !== 1) {
           this.log(`Steering VERSION ${steeringData.VERSION} not supported!`);
@@ -160,8 +216,17 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         }
         this.updated = Date.now();
         this.timeToLoad = steeringData.TTL;
-        if (steeringData['RELOAD-URI']) {
-          this.uri = new URL(steeringData['RELOAD-URI'], url).href;
+        const reloadUri = steeringData['RELOAD-URI'];
+        if (reloadUri) {
+          try {
+            this.uri = new URL(reloadUri, url).href;
+          } catch (error) {
+            this.enabled = false;
+            this.log(
+              `Failed to parse Steering Manifest RELOAD-URI: ${reloadUri}`
+            );
+            return;
+          }
         }
 
         this.scheduleRefresh(this.uri || context.url);
@@ -169,8 +234,10 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         // TODO: Handle PATHWAY-CLONES (if present)
         // PATHWAY-CLONES
 
-        // TODO: Handle PATHWAY-PRIORITY
-        // PATHWAY-PRIORITY: ['My-cali-CDN', 'My-creek-CDN', 'My-dry-CDN']
+        const pathwayPriority = steeringData['PATHWAY-PRIORITY'];
+        if (pathwayPriority) {
+          this.updatePathwayPriority(pathwayPriority);
+        }
       },
 
       onError: (

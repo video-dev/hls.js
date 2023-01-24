@@ -3,15 +3,9 @@ import { Fragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { LoadStats } from '../../../src/loader/load-stats';
-import {
-  FragmentLoaderContext,
-  Loader,
-  LoaderCallbacks,
-  LoaderContext,
-  PlaylistLevelType,
-} from '../../../src/types/loader';
 import { hlsDefaultConfig, mergeConfig } from '../../../src/config';
-import type { HlsConfig } from '../../../src/config';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import { MockXhr } from '../../mocks/loader.mock';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
@@ -19,23 +13,6 @@ import * as sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;
-
-class MockXhr implements Loader<LoaderContext> {
-  context!: LoaderContext;
-  stats: LoadStats;
-  callbacks?: LoaderCallbacks<FragmentLoaderContext>;
-
-  constructor(confg: HlsConfig) {
-    this.stats = new LoadStats();
-  }
-
-  load(context, config, callbacks) {
-    this.callbacks = callbacks;
-  }
-
-  abort() {}
-  destroy(): void {}
-}
 
 describe('FragmentLoader tests', function () {
   const sandbox = sinon.createSandbox();

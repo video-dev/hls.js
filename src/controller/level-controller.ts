@@ -10,6 +10,7 @@ import {
   FragLoadedData,
   ErrorData,
   LevelSwitchingData,
+  LevelsUpdatedData,
 } from '../types/events';
 import { HdcpLevel, HdcpLevels, Level } from '../types/level';
 import { Events } from '../events';
@@ -20,6 +21,7 @@ import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import type Hls from '../hls';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';
 import type { MediaPlaylist } from '../types/media-playlist';
+import ContentSteeringController from './content-steering-controller';
 
 let chromeOrFirefox: boolean;
 
@@ -29,11 +31,16 @@ export default class LevelController extends BasePlaylistController {
   private _startLevel?: number;
   private currentLevelIndex: number = -1;
   private manualLevelIndex: number = -1;
+  private steering: ContentSteeringController | null;
 
   public onParsedComplete!: Function;
 
-  constructor(hls: Hls) {
+  constructor(
+    hls: Hls,
+    contentSteeringController: ContentSteeringController | null
+  ) {
     super(hls, '[level-controller]');
+    this.steering = contentSteeringController;
     this._registerListeners();
   }
 
@@ -41,6 +48,7 @@ export default class LevelController extends BasePlaylistController {
     const { hls } = this;
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
+    hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
     hls.on(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.on(Events.ERROR, this.onError, this);
@@ -50,6 +58,7 @@ export default class LevelController extends BasePlaylistController {
     const { hls } = this;
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
+    hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
     hls.off(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.off(Events.ERROR, this.onError, this);
@@ -57,6 +66,7 @@ export default class LevelController extends BasePlaylistController {
 
   public destroy() {
     this._unregisterListeners();
+    this.steering = null;
     this.manualLevelIndex = -1;
     this._levels.length = 0;
     super.destroy();
@@ -174,7 +184,9 @@ export default class LevelController extends BasePlaylistController {
       assignTrackIdsByGroup(subtitleTracks);
     }
     // start bitrate is the first bitrate of the manifest
-    const firstLevelInPlaylist = levels[0];
+    const firstLevelInPlaylist = (
+      this.steering ? this.steering.filterParsedLevels(levels) : levels
+    )[0];
     // sort levels from lowest to highest
     levels.sort((a, b) => {
       if (a.attrs['HDCP-LEVEL'] !== b.attrs['HDCP-LEVEL']) {
@@ -202,6 +214,10 @@ export default class LevelController extends BasePlaylistController {
       }
       return 0;
     });
+
+    if (this.steering) {
+      levels = this.steering.filterParsedLevels(levels);
+    }
 
     this._levels = levels;
 
@@ -649,41 +665,45 @@ export default class LevelController extends BasePlaylistController {
 
   removeLevel(levelIndex, urlId) {
     const filterLevelAndGroupByIdIndex = (url, id) => id !== urlId;
-    const levels = this._levels
-      .filter((level, index) => {
-        if (index !== levelIndex) {
-          return true;
-        }
+    const levels = this._levels.filter((level, index) => {
+      if (index !== levelIndex) {
+        return true;
+      }
 
-        if (level.url.length > 1 && urlId !== undefined) {
-          level.url = level.url.filter(filterLevelAndGroupByIdIndex);
-          if (level.audioGroupIds) {
-            level.audioGroupIds = level.audioGroupIds.filter(
-              filterLevelAndGroupByIdIndex
-            );
-          }
-          if (level.textGroupIds) {
-            level.textGroupIds = level.textGroupIds.filter(
-              filterLevelAndGroupByIdIndex
-            );
-          }
-          level.urlId = 0;
-          return true;
+      if (level.url.length > 1 && urlId !== undefined) {
+        level.url = level.url.filter(filterLevelAndGroupByIdIndex);
+        if (level.audioGroupIds) {
+          level.audioGroupIds = level.audioGroupIds.filter(
+            filterLevelAndGroupByIdIndex
+          );
         }
-        return false;
-      })
-      .map((level, index) => {
-        const { details } = level;
-        if (details?.fragments) {
-          details.fragments.forEach((fragment) => {
-            fragment.level = index;
-          });
+        if (level.textGroupIds) {
+          level.textGroupIds = level.textGroupIds.filter(
+            filterLevelAndGroupByIdIndex
+          );
         }
-        return level;
-      });
-    this._levels = levels;
+        level.urlId = 0;
+        return true;
+      }
+      return false;
+    });
 
     this.hls.trigger(Events.LEVELS_UPDATED, { levels });
+  }
+
+  private onLevelsUpdated(
+    event: Events.LEVELS_UPDATED,
+    { levels }: LevelsUpdatedData
+  ) {
+    levels.forEach((level, index) => {
+      const { details } = level;
+      if (details?.fragments) {
+        details.fragments.forEach((fragment) => {
+          fragment.level = index;
+        });
+      }
+    });
+    this._levels = levels;
   }
 }
 

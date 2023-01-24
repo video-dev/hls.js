@@ -84,7 +84,8 @@ describe('LevelController', function () {
   beforeEach(function () {
     hls = new HlsMock({});
     levelController = new LevelController(
-      hls as any
+      hls as any,
+      null
     ) as unknown as LevelControllerTestable;
     levelController.onParsedComplete = () => {};
     hlsTrigger = hls.trigger;
@@ -703,7 +704,7 @@ http://bar.example.com/md/prog_index.m3u8`;
     });
 
     describe('with Media Playlists', function () {
-      const multivariantPlaylist = `#EXTM3U
+      const multivariantPlaylistWithRedundantFallbacks = `#EXTM3U
 ## Subtitles ###
 #EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-foo",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.foo.com/subs-en.m3u8"
 #EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-foo",LANGUAGE="fr",NAME="Français",AUTOSELECT=YES,URI="http://www.foo.com/subs-fr.m3u8"
@@ -798,11 +799,11 @@ http://www.baz.com/tier18.m3u8`;
       let parsedMediaOptions;
       beforeEach(function () {
         parsedMultivariant = M3U8Parser.parseMasterPlaylist(
-          multivariantPlaylist,
+          multivariantPlaylistWithRedundantFallbacks,
           'http://example.com/main.m3u8'
         );
         parsedMediaOptions = M3U8Parser.parseMasterPlaylistMedia(
-          multivariantPlaylist,
+          multivariantPlaylistWithRedundantFallbacks,
           'http://example.com/main.m3u8',
           parsedMultivariant
         );
@@ -1060,7 +1061,65 @@ http://www.baz.com/tier18.m3u8`;
   });
 
   describe('Content Steering Pathways', function () {
-    const multivariantPlaylist = `#EXTM3U
+    let parsedMultivariant: ParsedMultivariantPlaylist;
+    let parsedMediaOptions;
+    beforeEach(function () {
+      parsedMultivariant = M3U8Parser.parseMasterPlaylist(
+        multivariantPlaylistWithPathways,
+        'http://example.com/main.m3u8'
+      );
+      parsedMediaOptions = M3U8Parser.parseMasterPlaylistMedia(
+        multivariantPlaylistWithPathways,
+        'http://example.com/main.m3u8',
+        parsedMultivariant
+      );
+    });
+
+    it('does not group variants with pathway-ids for conten-steering', function () {
+      const { levels: parsedLevels } = parsedMultivariant;
+      const { AUDIO: parsedAudio, SUBTITLES: parsedSubs } = parsedMediaOptions;
+      expect(parsedLevels).to.have.lengthOf(30, 'MANIFEST_LOADED levels');
+      expect(parsedAudio).to.have.lengthOf(6, 'MANIFEST_LOADED audioTracks');
+      expect(parsedSubs).to.have.lengthOf(6, 'MANIFEST_LOADED subtitles');
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
+        levels: parsedLevels,
+        audioTracks: parsedAudio,
+        subtitles: parsedSubs,
+      });
+      const { name, payload } = hls.getEventData(0) as {
+        name: string;
+        payload: ManifestParsedData;
+      };
+      const { levels, audioTracks, subtitleTracks } = payload;
+      hls.levels = levels;
+      hls.audioTracks = audioTracks;
+      hls.subtitleTracks = subtitleTracks;
+
+      expect(name).to.equal(Events.MANIFEST_PARSED);
+      expect(levels).to.have.lengthOf(30, 'MANIFEST_PARSED levels');
+      // Audio and Subtitle tracks are filtered by GroupId on level switch by audio and subtitle track controllers
+      expect(audioTracks).to.have.lengthOf(6, 'MANIFEST_PARSED audioTracks'); // 3 audio groups * 2 audio tracks per group
+      expect(subtitleTracks).to.have.lengthOf(
+        6,
+        'MANIFEST_PARSED subtitleTracks'
+      ); // 3 subtitle groups * 2 subtitle tracks per group
+
+      expect(levelController.level).to.equal(-1);
+      expect(levels[0].url).to.have.lengthOf(1);
+      expect(levels[0]).to.have.property('audioGroupIds').which.has.lengthOf(1);
+      expect(levels[0]).to.have.property('textGroupIds').which.has.lengthOf(1);
+      expect(levels[0].url).to.deep.equal(['http://www.foo.com/tier6.m3u8']);
+      expect(levels[0].audioGroupIds).to.deep.equal(['AAC-foo']);
+      expect(levels[29].audioGroupIds).to.deep.equal(['EC3-baz']);
+      expect(levels[0].textGroupIds).to.deep.equal(['subs-foo']);
+      expect(levels[29].textGroupIds).to.deep.equal(['subs-baz']);
+      expect(levels[0].uri).to.equal('http://www.foo.com/tier6.m3u8');
+    });
+  });
+});
+
+export const multivariantPlaylistWithPathways = `#EXTM3U
+#EXT-X-CONTENT-STEERING:SERVER-URI="http://example.com/manifest.json",PATHWAY-ID="Bar"
 #EXT-X-MEDIA:TYPE=SUBTITLES,PATHWAY-ID="Foo",GROUP-ID="subs-foo",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.foo.com/subs-en.m3u8"
 #EXT-X-MEDIA:TYPE=SUBTITLES,PATHWAY-ID="Foo",GROUP-ID="subs-foo",LANGUAGE="it",NAME="Italiano",AUTOSELECT=YES,URI="http://www.foo.com/subs-it.m3u8"
 #EXT-X-MEDIA:TYPE=SUBTITLES,PATHWAY-ID="Bar",GROUP-ID="subs-bar",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.bar.com/subs-en.m3u8"
@@ -1133,59 +1192,3 @@ http://www.baz.com/tier14.m3u8
 http://www.baz.com/tier16.m3u8
 #EXT-X-STREAM-INF:PATHWAY-ID="Baz",AUDIO="EC3-baz",SUBTITLES="subs-baz",AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24
 http://www.baz.com/tier18.m3u8`;
-    let parsedMultivariant: ParsedMultivariantPlaylist;
-    let parsedMediaOptions;
-    beforeEach(function () {
-      parsedMultivariant = M3U8Parser.parseMasterPlaylist(
-        multivariantPlaylist,
-        'http://example.com/main.m3u8'
-      );
-      parsedMediaOptions = M3U8Parser.parseMasterPlaylistMedia(
-        multivariantPlaylist,
-        'http://example.com/main.m3u8',
-        parsedMultivariant
-      );
-    });
-
-    it('does not group variants with pathway-ids for conten-steering', function () {
-      const { levels: parsedLevels } = parsedMultivariant;
-      const { AUDIO: parsedAudio, SUBTITLES: parsedSubs } = parsedMediaOptions;
-      expect(parsedLevels).to.have.lengthOf(30, 'MANIFEST_LOADED levels');
-      expect(parsedAudio).to.have.lengthOf(6, 'MANIFEST_LOADED audioTracks');
-      expect(parsedSubs).to.have.lengthOf(6, 'MANIFEST_LOADED subtitles');
-      levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
-        levels: parsedLevels,
-        audioTracks: parsedAudio,
-        subtitles: parsedSubs,
-      });
-      const { name, payload } = hls.getEventData(0) as {
-        name: string;
-        payload: ManifestParsedData;
-      };
-      const { levels, audioTracks, subtitleTracks } = payload;
-      hls.levels = levels;
-      hls.audioTracks = audioTracks;
-      hls.subtitleTracks = subtitleTracks;
-
-      expect(name).to.equal(Events.MANIFEST_PARSED);
-      expect(levels).to.have.lengthOf(30, 'MANIFEST_PARSED levels');
-      // Audio and Subtitle tracks are filtered by GroupId on level switch by audio and subtitle track controllers
-      expect(audioTracks).to.have.lengthOf(6, 'MANIFEST_PARSED audioTracks'); // 3 audio groups * 2 audio tracks per group
-      expect(subtitleTracks).to.have.lengthOf(
-        6,
-        'MANIFEST_PARSED subtitleTracks'
-      ); // 3 subtitle groups * 2 subtitle tracks per group
-
-      expect(levelController.level).to.equal(-1);
-      expect(levels[0].url).to.have.lengthOf(1);
-      expect(levels[0]).to.have.property('audioGroupIds').which.has.lengthOf(1);
-      expect(levels[0]).to.have.property('textGroupIds').which.has.lengthOf(1);
-      expect(levels[0].url).to.deep.equal(['http://www.foo.com/tier6.m3u8']);
-      expect(levels[0].audioGroupIds).to.deep.equal(['AAC-foo']);
-      expect(levels[29].audioGroupIds).to.deep.equal(['EC3-baz']);
-      expect(levels[0].textGroupIds).to.deep.equal(['subs-foo']);
-      expect(levels[29].textGroupIds).to.deep.equal(['subs-baz']);
-      expect(levels[0].uri).to.equal('http://www.foo.com/tier6.m3u8');
-    });
-  });
-});

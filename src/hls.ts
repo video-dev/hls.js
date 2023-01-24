@@ -138,8 +138,15 @@ export default class Hls implements HlsEventEmitter {
     const playListLoader = new PlaylistLoader(this);
     const id3TrackController = new ID3TrackController(this);
 
-    // network controllers
-    const levelController = (this.levelController = new LevelController(this));
+    const ConfigContentSteeringController = config.contentSteeringController;
+    // ConentSteeringController is defined before LevelController to receive Multivariant Playlist events first
+    const contentSteeing = ConfigContentSteeringController
+      ? new ConfigContentSteeringController(this)
+      : null;
+    const levelController = (this.levelController = new LevelController(
+      this,
+      contentSteeing
+    ));
     // FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
     const keyLoader = new KeyLoader(this.config);
@@ -159,6 +166,9 @@ export default class Hls implements HlsEventEmitter {
       levelController,
       streamController,
     ];
+    if (contentSteeing) {
+      networkControllers.splice(1, 0, contentSteeing);
+    }
 
     this.networkControllers = networkControllers;
     const coreComponents: ComponentAPI[] = [
@@ -190,11 +200,6 @@ export default class Hls implements HlsEventEmitter {
       networkControllers.push(
         new SubtitleStreamControllerClass(this, fragmentTracker, keyLoader)
       );
-    }
-    const ConfigContentSteeringController = config.contentSteeringController;
-    if (ConfigContentSteeringController) {
-      const contentSteeing = new ConfigContentSteeringController(this);
-      networkControllers.push(contentSteeing);
     }
     this.createController(config.timelineController, coreComponents);
     keyLoader.emeController = this.emeController = this.createController(
