@@ -96,6 +96,13 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     this.hls = this.config = this.levels = null;
   }
 
+  removeLevel(levelToRemove: Level) {
+    const levels = this.levels;
+    if (levels) {
+      this.levels = levels.filter((level) => level === levelToRemove);
+    }
+  }
+
   private onManifestLoading() {
     this.stopLoad();
     this.enabled = true;
@@ -124,14 +131,16 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     this.levels = levels;
     let pathwayLevels = this.getLevelsForPathway(this.pathwayId);
     if (pathwayLevels.length === 0) {
-      const pathwayId = levels[0].attrs['PATHWAY-ID'] || '.';
-      this.log(`Setting initial Pathway to "${pathwayId}"`);
+      const pathwayId = levels[0].pathwayId;
+      this.log(
+        `No levels found in Pathway ${this.pathwayId}. Setting initial Pathway to "${pathwayId}"`
+      );
       pathwayLevels = this.getLevelsForPathway(pathwayId);
       this.pathwayId = pathwayId;
     }
     if (pathwayLevels.length !== levels.length) {
       this.log(
-        `Found ${pathwayLevels.length} levels in Pathway "${this.pathwayId}"`
+        `Found ${pathwayLevels.length}/${levels.length} levels in Pathway "${this.pathwayId}"`
       );
       return pathwayLevels;
     }
@@ -142,9 +151,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     if (this.levels === null) {
       return [];
     }
-    return this.levels.filter(
-      (level) => pathwayId === (level.attrs['PATHWAY-ID'] || '.')
-    );
+    return this.levels.filter((level) => pathwayId === level.pathwayId);
   }
 
   private updatePathwayPriority(pathwayPriority: string[]) {
@@ -159,11 +166,9 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       if (levels.length > 0) {
         this.log(`Setting Pathway to "${pathwayId}"`);
         this.pathwayId = pathwayId;
+        this.hls.trigger(Events.LEVELS_UPDATED, { levels });
         break;
       }
-    }
-    if (levels) {
-      this.hls.trigger(Events.LEVELS_UPDATED, { levels });
     }
   }
 
@@ -231,8 +236,9 @@ export default class ContentSteeringController implements NetworkComponentAPI {
 
         this.scheduleRefresh(this.uri || context.url);
 
-        // TODO: Handle PATHWAY-CLONES (if present)
-        // PATHWAY-CLONES
+        const pathwayClones = steeringData['PATHWAY-CLONES'];
+        if (pathwayClones) {
+        }
 
         const pathwayPriority = steeringData['PATHWAY-PRIORITY'];
         if (pathwayPriority) {
@@ -281,9 +287,6 @@ export default class ContentSteeringController implements NetworkComponentAPI {
 
     this.log(`Requesting steering manifest: ${url}`);
     this.loader.load(context, loaderConfig, callbacks);
-
-    // TODO: validate contentSteering.pathwayId on MANIFEST_PARSED / Steering Manifest parsed
-    //  How will this work with level-controller and other elements to control switching?
   }
 
   private scheduleRefresh(uri: string, ttlMs: number = this.timeToLoad * 1000) {

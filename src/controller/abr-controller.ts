@@ -465,6 +465,8 @@ class AbrController implements AbrComponentAPI {
       : fragCurrent
       ? fragCurrent.duration
       : 0;
+    let levelSkippedMin = minAutoLevel;
+    let levelSkippedMax = -1;
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       const levelInfo = levels[i];
 
@@ -472,10 +474,16 @@ class AbrController implements AbrComponentAPI {
         !levelInfo ||
         (currentCodecSet && levelInfo.codecSet !== currentCodecSet)
       ) {
-        logger.log(
-          `Skipping level ${i} with CODECS:"${levelInfo.attrs.CODECS}"; not compatible with "${level.attrs.CODECS}"`
-        );
+        if (levelInfo) {
+          levelSkippedMin = Math.min(i, levelSkippedMin);
+          levelSkippedMax = Math.max(i, levelSkippedMax);
+        }
         continue;
+      }
+      if (levelSkippedMax !== -1) {
+        logger.trace(
+          `[abr] Skipped level(s) ${levelSkippedMin}-${levelSkippedMax} with CODECS:"${levels[levelSkippedMax].attrs.CODECS}"; not compatible with "${level.attrs.CODECS}"`
+        );
       }
 
       const levelDetails = levelInfo.details;

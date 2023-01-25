@@ -184,9 +184,7 @@ export default class LevelController extends BasePlaylistController {
       assignTrackIdsByGroup(subtitleTracks);
     }
     // start bitrate is the first bitrate of the manifest
-    const firstLevelInPlaylist = (
-      this.steering ? this.steering.filterParsedLevels(levels) : levels
-    )[0];
+    const unsortedLevels = levels.slice(0);
     // sort levels from lowest to highest
     levels.sort((a, b) => {
       if (a.attrs['HDCP-LEVEL'] !== b.attrs['HDCP-LEVEL']) {
@@ -215,8 +213,17 @@ export default class LevelController extends BasePlaylistController {
       return 0;
     });
 
+    let firstLevelInPlaylist = unsortedLevels[0];
     if (this.steering) {
       levels = this.steering.filterParsedLevels(levels);
+      if (levels.length !== unsortedLevels.length) {
+        for (let i = 0; i < unsortedLevels.length; i++) {
+          if (unsortedLevels[i].pathwayId === levels[0].pathwayId) {
+            firstLevelInPlaylist = unsortedLevels[i];
+            break;
+          }
+        }
+      }
     }
 
     this._levels = levels;
@@ -684,6 +691,9 @@ export default class LevelController extends BasePlaylistController {
         }
         level.urlId = 0;
         return true;
+      }
+      if (this.steering) {
+        this.steering.removeLevel(level);
       }
       return false;
     });

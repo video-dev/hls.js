@@ -141,6 +141,10 @@ export class Level {
     return this._attrs[this._urlId];
   }
 
+  get pathwayId(): string {
+    return this.attrs['PATHWAY-ID'] || '.';
+  }
+
   get uri(): string {
     return this.url[this._urlId] || '';
   }

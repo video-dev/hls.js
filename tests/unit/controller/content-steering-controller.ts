@@ -228,14 +228,14 @@ describe('ContentSteeringController', function () {
         .to.have.property('levels')
         .that.has.lengthOf(10);
       expect(manifestParsedData.firstLevel).to.equal(0);
-      expect(manifestParsedData.levels[0].attrs['PATHWAY-ID']).to.equal('Bar');
+      expect(manifestParsedData.levels[0].pathwayId).to.equal('Bar');
       expect(levelController.levels, 'LevelController levels').to.have.lengthOf(
         10
       );
     });
 
     it('Filteres Variants (Levels) by Pathway Priority by emitting LEVELS_UPDATED', function () {
-      expect(manifestParsedData.levels[0].attrs['PATHWAY-ID']).to.equal('Bar');
+      expect(manifestParsedData.levels[0].pathwayId).to.equal('Bar');
       contentSteeringController.loader.callbacks?.onSuccess(
         {
           data: {
@@ -253,7 +253,7 @@ describe('ContentSteeringController', function () {
       expect(lastEvent.payload)
         .to.have.property('levels')
         .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
-      expect(lastEvent.payload.levels[0].attrs['PATHWAY-ID']).to.equal('Baz');
+      expect(lastEvent.payload.levels[0].pathwayId).to.equal('Baz');
       expect(levelController.levels, 'LevelController levels').to.have.lengthOf(
         10
       );
