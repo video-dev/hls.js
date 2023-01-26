@@ -8,8 +8,10 @@ import M3U8Parser, {
   ParsedMultivariantPlaylist,
 } from '../../../src/loader/m3u8-parser';
 import LevelController from '../../../src/controller/level-controller';
+import AudioTrackController from '../../../src/controller/audio-track-controller';
+import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import type {
-  ContentSteeringOptions,
+  ManifestLoadedData,
   ManifestParsedData,
 } from '../../../src/types/events';
 import type { Level } from '../../../src/types/level';
@@ -32,9 +34,10 @@ type ConentSteeringControllerTestable = Omit<
   | 'loader'
   | 'reloadTimer'
   | 'levels'
+  | 'audioTracks'
+  | 'subtitleTracks'
   | 'onManifestLoading'
   | 'onManifestLoaded'
-  | 'onManifestParsed'
 > & {
   enabled: boolean;
   timeToLoad: number;
@@ -44,15 +47,10 @@ type ConentSteeringControllerTestable = Omit<
   loader: MockXhr;
   reloadTimer: number;
   levels: Level[] | null;
+  audioTracks: MediaPlaylist[] | null;
+  subtitleTracks: MediaPlaylist[] | null;
   onManifestLoading: () => void;
-  onManifestLoaded: (
-    event: string,
-    data: { contentSteering: ContentSteeringOptions }
-  ) => void;
-  onManifestParsed: (
-    event: string,
-    data: { audioTracks: MediaPlaylist[]; subtitleTracks: MediaPlaylist[] }
-  ) => void;
+  onManifestLoaded: (event: string, data: Partial<ManifestLoadedData>) => void;
 };
 
 describe('ContentSteeringController', function () {
@@ -194,6 +192,8 @@ describe('ContentSteeringController', function () {
 
   describe('Pathway Gouping', function () {
     let levelController;
+    let audioTrackController;
+    let subtitleTrackController;
     let parsedMultivariant: ParsedMultivariantPlaylist;
     let manifestParsedData: ManifestParsedData;
 
@@ -207,31 +207,40 @@ describe('ContentSteeringController', function () {
         'http://example.com/main.m3u8',
         parsedMultivariant
       );
-      levelController = new LevelController(
-        hls as any,
-        contentSteeringController as any
-      ) as any;
-      hls.levelController = levelController;
-      hls.nextAutoLevel = 0;
-      contentSteeringController.onManifestLoaded(
-        Events.MANIFEST_LOADED,
-        parsedMultivariant as any
-      );
-      levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
+      const manifestLoadedData = {
+        contentSteering: parsedMultivariant.contentSteering,
         levels: parsedMultivariant.levels,
         audioTracks: parsedMediaOptions.AUDIO,
         subtitles: parsedMediaOptions.SUBTITLES,
-      } as any);
+      };
+      levelController = hls.levelController = new LevelController(
+        hls as any,
+        contentSteeringController as any
+      );
+      audioTrackController = hls.audioTrackController =
+        new AudioTrackController(hls as any);
+      subtitleTrackController = hls.subtitleTrackController =
+        new SubtitleTrackController(hls as any);
+      hls.nextAutoLevel = 0;
+      contentSteeringController.onManifestLoaded(
+        Events.MANIFEST_LOADED,
+        manifestLoadedData
+      );
+      levelController.onManifestLoaded(
+        Events.MANIFEST_LOADED,
+        manifestLoadedData
+      );
       const { payload } = hls.getEventData(0) as {
         name: string;
         payload: ManifestParsedData;
       };
       manifestParsedData = payload;
-      // contentSteeringController.onManifestParsed(Events.MANIFEST_PARSED, manifestParsedData);
     });
 
     afterEach(function () {
       levelController.destroy();
+      audioTrackController.destroy();
+      subtitleTrackController.destroy();
     });
 
     it('Filteres Variants (Levels) by initial Pathway', function () {
@@ -259,16 +268,22 @@ describe('ContentSteeringController', function () {
         contentSteeringController.loader.context as any,
         null
       );
-      expect(hls.trigger.callCount).to.equal(3);
+      expect(hls.trigger.callCount, 'events triggered').to.equal(6);
       expect(hls.getEventData(0).name).to.equal(Events.MANIFEST_PARSED);
+      const parsedEvent = hls.getEventData(0);
+      expect(parsedEvent.payload)
+        .to.have.property('audioTracks')
+        .that.has.lengthOf(6, 'MANIFEST_PARSED audioTracks');
+
       expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-      expect(hls.getEventData(2).name).to.equal(Events.LEVEL_SWITCHING);
-      const updatedEvent = hls.getEventData(hls.trigger.callCount - 2);
+      const updatedEvent = hls.getEventData(1);
       expect(updatedEvent.payload)
         .to.have.property('levels')
         .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
       expect(updatedEvent.payload.levels[0].pathwayId).to.equal('Baz');
-      const switchingEvent = hls.getEventData(hls.trigger.callCount - 1);
+
+      expect(hls.getEventData(2).name).to.equal(Events.LEVEL_SWITCHING);
+      const switchingEvent = hls.getEventData(2);
       expect(switchingEvent.payload).to.nested.include({
         'attrs.PATHWAY-ID': 'Baz',
       });
@@ -277,12 +292,28 @@ describe('ContentSteeringController', function () {
         textGroupIds: ['subs-baz'],
         uri: 'http://www.baz.com/tier6.m3u8',
       });
+
+      expect(hls.getEventData(3).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
+      expect(hls.getEventData(4).name).to.equal(Events.AUDIO_TRACK_SWITCHING);
+      expect(hls.getEventData(5).name).to.equal(Events.SUBTITLE_TRACKS_UPDATED);
       expect(levelController.levels, 'LevelController levels').to.have.lengthOf(
         10
       );
       expect(levelController.levels[0].uri).to.equal(
         'http://www.baz.com/tier6.m3u8'
       );
+      expect(
+        contentSteeringController.levels,
+        'Content Steering variants'
+      ).to.have.lengthOf(30);
+      expect(
+        contentSteeringController.audioTracks,
+        'Content Steering audio tracks'
+      ).to.have.lengthOf(6);
+      expect(
+        contentSteeringController.subtitleTracks,
+        'Content Steering subtitle tracks'
+      ).to.have.lengthOf(6);
     });
 
     describe('Pathway Cloning', function () {
@@ -312,20 +343,27 @@ describe('ContentSteeringController', function () {
           contentSteeringController.loader.context as any,
           null
         );
-
         expect(
           contentSteeringController.levels,
           'Content Steering variants'
         ).to.have.lengthOf(40);
+        expect(
+          contentSteeringController.audioTracks,
+          'Content Steering audio tracks'
+        ).to.have.lengthOf(8);
+        expect(
+          contentSteeringController.subtitleTracks,
+          'Content Steering subtitle tracks'
+        ).to.have.lengthOf(8);
         expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-        expect(hls.getEventData(2).name).to.equal(Events.LEVEL_SWITCHING);
-        // TODO: Audio and Subtitle events? (new tracks for track controllers)
-        const updatedEvent = hls.getEventData(hls.trigger.callCount - 2);
+        const updatedEvent = hls.getEventData(1);
         expect(updatedEvent.payload)
           .to.have.property('levels')
           .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
         expect(updatedEvent.payload.levels[0].pathwayId).to.equal('Buzz');
-        const switchingEvent = hls.getEventData(hls.trigger.callCount - 1);
+
+        expect(hls.getEventData(2).name).to.equal(Events.LEVEL_SWITCHING);
+        const switchingEvent = hls.getEventData(2);
         expect(switchingEvent.payload).to.nested.include({
           'attrs.PATHWAY-ID': 'Buzz',
         });
@@ -334,6 +372,13 @@ describe('ContentSteeringController', function () {
           textGroupIds: ['subs-foo_clone_Buzz'],
           uri: 'http://www.buzz.com/tier6.m3u8',
         });
+
+        expect(hls.getEventData(3).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
+        expect(hls.getEventData(4).name).to.equal(Events.AUDIO_TRACK_SWITCHING);
+        expect(hls.getEventData(5).name).to.equal(
+          Events.SUBTITLE_TRACKS_UPDATED
+        );
+
         expect(
           levelController.levels,
           'LevelController levels'

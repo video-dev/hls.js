@@ -212,18 +212,25 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     if (!levels) {
       return;
     }
+    const audioGroupCloneMap: Record<string, string> = {};
+    const subtitleGroupCloneMap: Record<string, string> = {};
     pathwayClones.forEach((pathwayClone) => {
       const {
         ID: cloneId,
         'BASE-ID': baseId,
         'URI-REPLACEMENT': uriReplacement,
       } = pathwayClone;
+      if (levels.some((level) => level.pathwayId === cloneId)) {
+        return;
+      }
       const clonedVariants = this.getLevelsForPathway(baseId).map(
         (baseLevel) => {
           const levelParsed: LevelParsed = Object.assign({}, baseLevel as any);
           levelParsed.details = undefined;
-          levelParsed.url = performUriReplacementOnLevel(
-            baseLevel,
+          levelParsed.url = performUriReplacement(
+            baseLevel.uri,
+            baseLevel.attrs['STABLE-VARIANT-ID'],
+            'PER-VARIANT-URIS',
             uriReplacement
           );
           const attributes = new AttrList(baseLevel.attrs);
@@ -233,9 +240,11 @@ export default class ContentSteeringController implements NetworkComponentAPI {
           const clonedSubtitleGroupId: string | undefined =
             attributes.SUBTITLES && `${attributes.SUBTITLES}_clone_${cloneId}`;
           if (clonedAudioGroupId) {
+            audioGroupCloneMap[attributes.AUDIO] = clonedAudioGroupId;
             attributes.AUDIO = clonedAudioGroupId;
           }
           if (clonedSubtitleGroupId) {
+            subtitleGroupCloneMap[attributes.SUBTITLES] = clonedSubtitleGroupId;
             attributes.SUBTITLES = clonedSubtitleGroupId;
           }
           levelParsed.attrs = attributes;
@@ -246,6 +255,18 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         }
       );
       levels.push(...clonedVariants);
+      cloneAudioGroups(
+        this.audioTracks,
+        audioGroupCloneMap,
+        uriReplacement,
+        cloneId
+      );
+      cloneAudioGroups(
+        this.subtitleTracks,
+        subtitleGroupCloneMap,
+        uriReplacement,
+        cloneId
+      );
     });
   }
 
@@ -374,20 +395,51 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   }
 }
 
-function performUriReplacementOnLevel(
-  level: Level,
+function cloneAudioGroups(
+  tracks: MediaPlaylist[] | null,
+  groupCloneMap: Record<string, string>,
+  uriReplacement: UriReplacement,
+  cloneId: string
+) {
+  if (!tracks) {
+    return;
+  }
+  Object.keys(groupCloneMap).forEach((audioGroupId) => {
+    const clonedTracks = tracks
+      .filter((track) => track.groupId === audioGroupId)
+      .map((track) => {
+        const clonedTrack = Object.assign({}, track);
+        clonedTrack.details = undefined;
+        clonedTrack.attrs = new AttrList(clonedTrack.attrs);
+        clonedTrack.url = clonedTrack.attrs.URI = performUriReplacement(
+          track.url,
+          track.attrs['STABLE-RENDITION-ID'],
+          'PER-RENDITION-URIS',
+          uriReplacement
+        );
+        clonedTrack.groupId = clonedTrack.attrs['GROUP-ID'] =
+          groupCloneMap[audioGroupId];
+        clonedTrack.attrs['PATHWAY-ID'] = cloneId;
+        return clonedTrack;
+      });
+    tracks.push(...clonedTracks);
+  });
+}
+
+function performUriReplacement(
+  uri: string,
+  stableId: string | undefined,
+  perOptionKey: 'PER-VARIANT-URIS' | 'PER-RENDITION-URIS',
   uriReplacement: UriReplacement
 ): string {
   const {
     HOST: host,
     PARAMS: params,
-    'PER-VARIANT-URIS': perVarantUris,
+    [perOptionKey]: perOptionUris,
   } = uriReplacement;
-  let uri = level.uri;
   let perVariantUri;
-  const stableVariantId = level.attrs['STABLE-VARIANT-ID'];
-  if (stableVariantId) {
-    perVariantUri = perVarantUris?.[stableVariantId];
+  if (stableId) {
+    perVariantUri = perOptionUris?.[stableId];
     if (perVariantUri) {
       uri = perVariantUri;
     }
@@ -397,10 +449,11 @@ function performUriReplacementOnLevel(
     url.host = host;
   }
   if (params) {
-    Object.keys(params).forEach((key) => {
-      url.searchParams.set(key, params[key]);
-    });
+    Object.keys(params)
+      .sort()
+      .forEach((key) => {
+        url.searchParams.set(key, params[key]);
+      });
   }
-
   return url.href;
 }

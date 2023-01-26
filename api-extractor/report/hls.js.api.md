@@ -1363,6 +1363,8 @@ export class Level {
     // (undocumented)
     readonly name: string | undefined;
     // (undocumented)
+    get pathwayId(): string;
+    // (undocumented)
     realBitrate: number;
     // (undocumented)
     textGroupIds?: (string | undefined)[];
@@ -1400,6 +1402,10 @@ export interface LevelAttributes extends AttrList {
     // (undocumented)
     'PROGRAM-ID'?: string;
     // (undocumented)
+    'STABLE-VARIANT-ID'?: string;
+    // (undocumented)
+    'SUPPLEMENTAL-CODECS'?: string;
+    // (undocumented)
     'VIDEO-RANGE'?: string;
     // (undocumented)
     AUDIO?: string;
@@ -1431,6 +1437,8 @@ export interface LevelAttributes extends AttrList {
     TYPE?: string;
     // (undocumented)
     URI?: string;
+    // (undocumented)
+    VIDEO?: string;
 }
 
 // Warning: (ae-missing-release-tag) "LevelControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
