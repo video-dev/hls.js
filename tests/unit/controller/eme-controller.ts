@@ -50,14 +50,16 @@ let sinonFakeXMLHttpRequestStatic: sinon.SinonFakeXMLHttpRequestStatic;
 
 const setupEach = function (config) {
   const hls = new HlsMock(config);
-  hls.levels = [
-    {
-      audioCodec: 'audio/foo',
-    },
-    {
-      videoCodec: 'video/foo',
-    },
-  ];
+  hls.levelController = {
+    levels: [
+      {
+        audioCodec: 'audio/foo',
+      },
+      {
+        videoCodec: 'video/foo',
+      },
+    ],
+  };
   media = new MediaMock();
   emeController = new EMEController(hls as any) as any as EMEControllerTestable;
   sinonFakeXMLHttpRequestStatic = sinon.useFakeXMLHttpRequest();

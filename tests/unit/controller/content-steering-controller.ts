@@ -13,6 +13,7 @@ import type {
   ManifestParsedData,
 } from '../../../src/types/events';
 import type { Level } from '../../../src/types/level';
+import type { MediaPlaylist } from '../../../src/types/media-playlist';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
@@ -30,8 +31,10 @@ type ConentSteeringControllerTestable = Omit<
   | 'pathwayId'
   | 'loader'
   | 'reloadTimer'
+  | 'levels'
   | 'onManifestLoading'
   | 'onManifestLoaded'
+  | 'onManifestParsed'
 > & {
   enabled: boolean;
   timeToLoad: number;
@@ -40,10 +43,15 @@ type ConentSteeringControllerTestable = Omit<
   pathwayId: string;
   loader: MockXhr;
   reloadTimer: number;
+  levels: Level[] | null;
   onManifestLoading: () => void;
   onManifestLoaded: (
     event: string,
     data: { contentSteering: ContentSteeringOptions }
+  ) => void;
+  onManifestParsed: (
+    event: string,
+    data: { audioTracks: MediaPlaylist[]; subtitleTracks: MediaPlaylist[] }
   ) => void;
 };
 
@@ -203,6 +211,8 @@ describe('ContentSteeringController', function () {
         hls as any,
         contentSteeringController as any
       ) as any;
+      hls.levelController = levelController;
+      hls.nextAutoLevel = 0;
       contentSteeringController.onManifestLoaded(
         Events.MANIFEST_LOADED,
         parsedMultivariant as any
@@ -217,6 +227,7 @@ describe('ContentSteeringController', function () {
         payload: ManifestParsedData;
       };
       manifestParsedData = payload;
+      // contentSteeringController.onManifestParsed(Events.MANIFEST_PARSED, manifestParsedData);
     });
 
     afterEach(function () {
@@ -248,19 +259,90 @@ describe('ContentSteeringController', function () {
         contentSteeringController.loader.context as any,
         null
       );
-      const lastEvent = hls.getEventData(hls.trigger.callCount - 1);
-      expect(lastEvent.name).to.equal(Events.LEVELS_UPDATED);
-      expect(lastEvent.payload)
+      expect(hls.trigger.callCount).to.equal(3);
+      expect(hls.getEventData(0).name).to.equal(Events.MANIFEST_PARSED);
+      expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
+      expect(hls.getEventData(2).name).to.equal(Events.LEVEL_SWITCHING);
+      const updatedEvent = hls.getEventData(hls.trigger.callCount - 2);
+      expect(updatedEvent.payload)
         .to.have.property('levels')
         .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
-      expect(lastEvent.payload.levels[0].pathwayId).to.equal('Baz');
+      expect(updatedEvent.payload.levels[0].pathwayId).to.equal('Baz');
+      const switchingEvent = hls.getEventData(hls.trigger.callCount - 1);
+      expect(switchingEvent.payload).to.nested.include({
+        'attrs.PATHWAY-ID': 'Baz',
+      });
+      expect(switchingEvent.payload).to.deep.include({
+        audioGroupIds: ['AAC-baz'],
+        textGroupIds: ['subs-baz'],
+        uri: 'http://www.baz.com/tier6.m3u8',
+      });
       expect(levelController.levels, 'LevelController levels').to.have.lengthOf(
         10
       );
+      expect(levelController.levels[0].uri).to.equal(
+        'http://www.baz.com/tier6.m3u8'
+      );
     });
-  });
 
-  describe('Pathway Cloning', function () {
-    it('groups by pathwayId', function () {});
+    describe('Pathway Cloning', function () {
+      it('Clones the Base Pathway', function () {
+        expect(
+          contentSteeringController.levels,
+          'Content Steering variants'
+        ).to.have.lengthOf(30);
+        contentSteeringController.loader.callbacks?.onSuccess(
+          {
+            data: {
+              VERSION: 1,
+              TTL: 300,
+              'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
+              'PATHWAY-CLONES': [
+                {
+                  ID: 'Buzz',
+                  'BASE-ID': 'Foo',
+                  'URI-REPLACEMENT': {
+                    HOST: 'www.buzz.com',
+                  },
+                },
+              ],
+            },
+          } as any,
+          new LoadStats(),
+          contentSteeringController.loader.context as any,
+          null
+        );
+
+        expect(
+          contentSteeringController.levels,
+          'Content Steering variants'
+        ).to.have.lengthOf(40);
+        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
+        expect(hls.getEventData(2).name).to.equal(Events.LEVEL_SWITCHING);
+        // TODO: Audio and Subtitle events? (new tracks for track controllers)
+        const updatedEvent = hls.getEventData(hls.trigger.callCount - 2);
+        expect(updatedEvent.payload)
+          .to.have.property('levels')
+          .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
+        expect(updatedEvent.payload.levels[0].pathwayId).to.equal('Buzz');
+        const switchingEvent = hls.getEventData(hls.trigger.callCount - 1);
+        expect(switchingEvent.payload).to.nested.include({
+          'attrs.PATHWAY-ID': 'Buzz',
+        });
+        expect(switchingEvent.payload).to.deep.include({
+          audioGroupIds: ['AAC-foo_clone_Buzz'],
+          textGroupIds: ['subs-foo_clone_Buzz'],
+          uri: 'http://www.buzz.com/tier6.m3u8',
+        });
+        expect(
+          levelController.levels,
+          'LevelController levels'
+        ).to.have.lengthOf(10);
+        expect(levelController.levels[0].uri).to.equal(
+          'http://www.buzz.com/tier6.m3u8'
+        );
+      });
+
+    });
   });
 });

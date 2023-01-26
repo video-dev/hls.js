@@ -79,7 +79,6 @@ describe('LevelController', function () {
   const sandbox = sinon.createSandbox();
   let hls: HlsMock;
   let levelController: LevelControllerTestable;
-  let hlsTrigger;
 
   beforeEach(function () {
     hls = new HlsMock({});
@@ -88,7 +87,7 @@ describe('LevelController', function () {
       null
     ) as unknown as LevelControllerTestable;
     levelController.onParsedComplete = () => {};
-    hlsTrigger = hls.trigger;
+    hls.levelController = levelController;
     sandbox.stub(MediaSource, 'isTypeSupported').returns(true);
   });
 
@@ -149,7 +148,7 @@ describe('LevelController', function () {
     // First triggers "hlsManifestParsed"
     levelController.level = nextLevel;
     // Then triggers "levelSwitching"
-    expect(hlsTrigger).to.have.been.calledWith(Events.LEVEL_SWITCHING, {
+    expect(hls.trigger).to.have.been.calledWith(Events.LEVEL_SWITCHING, {
       attrs: data.levels[1].attrs,
       audioCodec: undefined,
       audioGroupIds: undefined,
@@ -185,7 +184,7 @@ describe('LevelController', function () {
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       });
 
-      expect(hlsTrigger).to.have.been.calledWith(Events.ERROR, {
+      expect(hls.trigger).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
         fatal: true,
@@ -236,7 +235,7 @@ describe('LevelController', function () {
 
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
 
-      expect(hlsTrigger).to.have.been.calledWith(Events.MANIFEST_PARSED, {
+      expect(hls.trigger).to.have.been.calledWith(Events.MANIFEST_PARSED, {
         levels: data.levels.map((levelParsed) => new Level(levelParsed)),
         audioTracks: [],
         subtitleTracks: [],
@@ -291,7 +290,7 @@ describe('LevelController', function () {
       };
 
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
-      expect(hlsTrigger).to.have.been.calledWith(
+      expect(hls.trigger).to.have.been.calledWith(
         Events.MANIFEST_PARSED,
         parsedData
       );
@@ -322,7 +321,7 @@ describe('LevelController', function () {
       };
 
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
-      expect(hlsTrigger).to.have.been.calledWith(Events.MANIFEST_PARSED, {
+      expect(hls.trigger).to.have.been.calledWith(Events.MANIFEST_PARSED, {
         levels: data.levels.map((levelParsed) => new Level(levelParsed)),
         audioTracks: data.audioTracks,
         subtitleTracks: [],
@@ -361,7 +360,7 @@ describe('LevelController', function () {
       };
 
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
-      expect(hlsTrigger).to.have.been.calledWith(Events.MANIFEST_PARSED, {
+      expect(hls.trigger).to.have.been.calledWith(Events.MANIFEST_PARSED, {
         levels: data.levels.map((levelParsed) => new Level(levelParsed)),
         audioTracks: data.audioTracks,
         subtitleTracks: [],
@@ -826,7 +825,6 @@ http://www.baz.com/tier18.m3u8`;
           payload: ManifestParsedData;
         };
         const { levels, audioTracks, subtitleTracks } = payload;
-        hls.levels = levels;
         hls.audioTracks = audioTracks;
         hls.subtitleTracks = subtitleTracks;
 
@@ -977,7 +975,6 @@ http://www.baz.com/tier18.m3u8`;
           payload: ManifestParsedData;
         };
         const { levels, audioTracks, subtitleTracks } = payload;
-        hls.levels = levels;
         hls.audioTracks = audioTracks;
         hls.subtitleTracks = subtitleTracks;
         levelController.level = 0;
@@ -1002,7 +999,6 @@ http://www.baz.com/tier18.m3u8`;
           payload: ManifestParsedData;
         };
         const { levels, audioTracks, subtitleTracks } = payload;
-        hls.levels = levels;
         hls.audioTracks = audioTracks;
         hls.subtitleTracks = subtitleTracks;
         levelController.level = 0;
@@ -1041,7 +1037,6 @@ http://www.baz.com/tier18.m3u8`;
           payload: ManifestParsedData;
         };
         const { levels, audioTracks, subtitleTracks } = payload;
-        hls.levels = levels;
         hls.audioTracks = audioTracks;
         hls.subtitleTracks = subtitleTracks;
         levelController.level = 0;
@@ -1091,7 +1086,6 @@ http://www.baz.com/tier18.m3u8`;
         payload: ManifestParsedData;
       };
       const { levels, audioTracks, subtitleTracks } = payload;
-      hls.levels = levels;
       hls.audioTracks = audioTracks;
       hls.subtitleTracks = subtitleTracks;
 

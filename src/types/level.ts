@@ -37,9 +37,12 @@ export interface LevelAttributes extends AttrList {
   'PROGRAM-ID'?: string;
   RESOLUTION?: string;
   SCORE?: string;
+  'STABLE-VARIANT-ID'?: string;
   SUBTITLES?: string;
+  'SUPPLEMENTAL-CODECS'?: string;
   TYPE?: string;
   URI?: string;
+  VIDEO?: string;
   'VIDEO-RANGE'?: string;
 }
 

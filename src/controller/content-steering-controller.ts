@@ -1,4 +1,6 @@
 import { Events } from '../events';
+import { Level } from '../types/level';
+import { AttrList } from '../utils/attr-list';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
@@ -11,7 +13,9 @@ import type {
   LoaderResponse,
   LoaderStats,
 } from '../types/loader';
-import type { Level } from '../types/level';
+import type { LevelParsed } from '../types/level';
+import type { MediaPlaylist } from '../types/media-playlist';
+import { addGroupId } from './level-controller';
 
 type SteeringManifest = {
   VERSION: 1;
@@ -24,12 +28,14 @@ type SteeringManifest = {
 type PathwayClone = {
   'BASE-ID': string;
   ID: string;
-  'URI-REPLACEMENT': {
-    HOST?: string;
-    PARAMS?: { [queryParameter: string]: string };
-    'PER-VARIANT-URIS'?: { [stableVariantId: string]: string };
-    'PER-RENDITION-URIS'?: { [stableRenditionId: string]: string };
-  };
+  'URI-REPLACEMENT': UriReplacement;
+};
+
+type UriReplacement = {
+  HOST?: string;
+  PARAMS?: { [queryParameter: string]: string };
+  'PER-VARIANT-URIS'?: { [stableVariantId: string]: string };
+  'PER-RENDITION-URIS'?: { [stableRenditionId: string]: string };
 };
 
 export default class ContentSteeringController implements NetworkComponentAPI {
@@ -44,6 +50,8 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   private updated: number = 0;
   private enabled: boolean = true;
   private levels: Level[] | null = null;
+  private audioTracks: MediaPlaylist[] | null = null;
+  private subtitleTracks: MediaPlaylist[] | null = null;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -55,6 +63,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     const hls = this.hls;
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
   }
 
   private unregisterListeners() {
@@ -64,6 +73,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     }
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
   }
 
   startLoad(): void {
@@ -93,7 +103,8 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     this.unregisterListeners();
     this.stopLoad();
     // @ts-ignore
-    this.hls = this.config = this.levels = null;
+    this.hls = null;
+    this.levels = this.audioTracks = this.subtitleTracks = null;
   }
 
   removeLevel(levelToRemove: Level) {
@@ -110,7 +121,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     this.updated = 0;
     this.uri = null;
     this.pathwayId = '.';
-    this.levels = null;
+    this.levels = this.audioTracks = this.subtitleTracks = null;
   }
 
   private onManifestLoaded(
@@ -124,6 +135,14 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     this.pathwayId = contentSteering.pathwayId;
     this.uri = contentSteering.uri;
     this.startLoad();
+  }
+
+  private onManifestParsed(
+    event: Events.MANIFEST_PARSED,
+    data: ManifestParsedData
+  ) {
+    this.audioTracks = data.audioTracks;
+    this.subtitleTracks = data.subtitleTracks;
   }
 
   public filterParsedLevels(levels: Level[]): Level[] {
@@ -162,14 +181,72 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       if (pathwayId === this.pathwayId) {
         return;
       }
+      const selectedIndex = this.hls.nextLoadLevel;
+      const selectedLevel: Level = this.hls.levels[selectedIndex];
       levels = this.getLevelsForPathway(pathwayId);
       if (levels.length > 0) {
         this.log(`Setting Pathway to "${pathwayId}"`);
         this.pathwayId = pathwayId;
         this.hls.trigger(Events.LEVELS_UPDATED, { levels });
+        // Set LevelController's level to trigger LEVEL_SWITCHING which loads playlist if needed
+        const levelAfterChange = this.hls.levels[selectedIndex];
+        if (selectedLevel && levelAfterChange && this.levels) {
+          if (
+            levelAfterChange.attrs['STABLE-VARIANT-ID'] !==
+              selectedLevel.attrs['STABLE-VARIANT-ID'] &&
+            levelAfterChange.bitrate !== selectedLevel.bitrate
+          ) {
+            this.log(
+              `Unstable Pathways change from bitrate ${selectedLevel.bitrate} to ${levelAfterChange.bitrate}`
+            );
+          }
+          this.hls.nextLoadLevel = selectedIndex;
+        }
         break;
       }
     }
+  }
+
+  private clonePathways(pathwayClones: PathwayClone[]) {
+    const levels = this.levels;
+    if (!levels) {
+      return;
+    }
+    pathwayClones.forEach((pathwayClone) => {
+      const {
+        ID: cloneId,
+        'BASE-ID': baseId,
+        'URI-REPLACEMENT': uriReplacement,
+      } = pathwayClone;
+      const clonedVariants = this.getLevelsForPathway(baseId).map(
+        (baseLevel) => {
+          const levelParsed: LevelParsed = Object.assign({}, baseLevel as any);
+          levelParsed.details = undefined;
+          levelParsed.url = performUriReplacementOnLevel(
+            baseLevel,
+            uriReplacement
+          );
+          const attributes = new AttrList(baseLevel.attrs);
+          attributes['PATHWAY-ID'] = cloneId;
+          const clonedAudioGroupId: string | undefined =
+            attributes.AUDIO && `${attributes.AUDIO}_clone_${cloneId}`;
+          const clonedSubtitleGroupId: string | undefined =
+            attributes.SUBTITLES && `${attributes.SUBTITLES}_clone_${cloneId}`;
+          if (clonedAudioGroupId) {
+            attributes.AUDIO = clonedAudioGroupId;
+          }
+          if (clonedSubtitleGroupId) {
+            attributes.SUBTITLES = clonedSubtitleGroupId;
+          }
+          levelParsed.attrs = attributes;
+          const clonedLevel = new Level(levelParsed);
+          addGroupId(clonedLevel, 'audio', clonedAudioGroupId);
+          addGroupId(clonedLevel, 'text', clonedSubtitleGroupId);
+          return clonedLevel;
+        }
+      );
+      levels.push(...clonedVariants);
+    });
   }
 
   private loadSteeringManifest(uri: string) {
@@ -221,7 +298,11 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         }
         this.updated = Date.now();
         this.timeToLoad = steeringData.TTL;
-        const reloadUri = steeringData['RELOAD-URI'];
+        const {
+          'RELOAD-URI': reloadUri,
+          'PATHWAY-CLONES': pathwayClones,
+          'PATHWAY-PRIORITY': pathwayPriority,
+        } = steeringData;
         if (reloadUri) {
           try {
             this.uri = new URL(reloadUri, url).href;
@@ -233,14 +314,10 @@ export default class ContentSteeringController implements NetworkComponentAPI {
             return;
           }
         }
-
         this.scheduleRefresh(this.uri || context.url);
-
-        const pathwayClones = steeringData['PATHWAY-CLONES'];
         if (pathwayClones) {
+          this.clonePathways(pathwayClones);
         }
-
-        const pathwayPriority = steeringData['PATHWAY-PRIORITY'];
         if (pathwayPriority) {
           this.updatePathwayPriority(pathwayPriority);
         }
@@ -295,4 +372,35 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       this.loadSteeringManifest(uri);
     }, ttlMs);
   }
+}
+
+function performUriReplacementOnLevel(
+  level: Level,
+  uriReplacement: UriReplacement
+): string {
+  const {
+    HOST: host,
+    PARAMS: params,
+    'PER-VARIANT-URIS': perVarantUris,
+  } = uriReplacement;
+  let uri = level.uri;
+  let perVariantUri;
+  const stableVariantId = level.attrs['STABLE-VARIANT-ID'];
+  if (stableVariantId) {
+    perVariantUri = perVarantUris?.[stableVariantId];
+    if (perVariantUri) {
+      uri = perVariantUri;
+    }
+  }
+  const url = new self.URL(uri);
+  if (host && !perVariantUri) {
+    url.host = host;
+  }
+  if (params) {
+    Object.keys(params).forEach((key) => {
+      url.searchParams.set(key, params[key]);
+    });
+  }
+
+  return url.href;
 }

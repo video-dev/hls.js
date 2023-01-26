@@ -717,7 +717,11 @@ export default class LevelController extends BasePlaylistController {
   }
 }
 
-function addGroupId(level: Level, type: string, id: string | undefined): void {
+export function addGroupId(
+  level: Level,
+  type: string,
+  id: string | undefined
+): void {
   if (!id) {
     return;
   }
