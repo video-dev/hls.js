@@ -60,7 +60,7 @@
     "@babel/preset-typescript": "7.18.6",
     "@babel/register": "7.18.9",
     "@microsoft/api-documenter": "7.19.28",
-    "@microsoft/api-extractor": "7.33.7",
+    "@microsoft/api-extractor": "7.33.8",
     "@types/chai": "4.3.4",
     "@types/chart.js": "2.9.37",
     "@types/mocha": "10.0.1",
