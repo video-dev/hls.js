@@ -15,6 +15,7 @@ import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import type { HlsConfig } from '../config';
 import type { DecryptData } from '../loader/level-key';
 import type { PlaylistLevelType } from '../types/loader';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -273,7 +274,7 @@ export default class Transmuxer {
     chunkMeta.transmuxing.executeEnd = now();
   }
 
-  resetInitialTimestamp(defaultInitPts: number | undefined) {
+  resetInitialTimestamp(defaultInitPts: RationalTimestamp | null) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
@@ -483,20 +484,20 @@ export class TransmuxConfig {
   public videoCodec?: string;
   public initSegmentData?: Uint8Array;
   public duration: number;
-  public defaultInitPts?: number;
+  public defaultInitPts: RationalTimestamp | null;
 
   constructor(
     audioCodec: string | undefined,
     videoCodec: string | undefined,
     initSegmentData: Uint8Array | undefined,
     duration: number,
-    defaultInitPts?: number
+    defaultInitPts?: RationalTimestamp
   ) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.initSegmentData = initSegmentData;
     this.duration = duration;
-    this.defaultInitPts = defaultInitPts;
+    this.defaultInitPts = defaultInitPts || null;
   }
 }
 

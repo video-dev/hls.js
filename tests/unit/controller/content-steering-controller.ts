@@ -11,15 +11,20 @@ import LevelController from '../../../src/controller/level-controller';
 import AudioTrackController from '../../../src/controller/audio-track-controller';
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import type {
+  AudioTracksUpdatedData,
+  LevelsUpdatedData,
   ManifestLoadedData,
   ManifestParsedData,
+  SubtitleTracksUpdatedData,
 } from '../../../src/types/events';
 import type { Level } from '../../../src/types/level';
 import type { MediaPlaylist } from '../../../src/types/media-playlist';
+import type { SteeringManifest } from '../../../src/controller/content-steering-controller';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
+import { LoaderResponse } from '../../../src/types/loader';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -166,17 +171,12 @@ describe('ContentSteeringController', function () {
       expect(contentSteeringController.updated).to.equal(0);
       expect(contentSteeringController.timeToLoad).to.equal(300);
       expect(contentSteeringController.reloadTimer).to.equal(-1);
-      contentSteeringController.loader.callbacks?.onSuccess(
+      loadSteeringManifest(
         {
-          data: {
-            VERSION: 1,
-            TTL: 100,
-            'RELOAD-URI': 'http://beta.example2.com/manifest.json',
-          },
-        } as any,
-        new LoadStats(),
-        contentSteeringController.loader.context as any,
-        null
+          TTL: 100,
+          'RELOAD-URI': 'http://beta.example2.com/manifest.json',
+        },
+        contentSteeringController
       );
       expect(contentSteeringController.uri, 'updates the uri').to.equal(
         'http://beta.example2.com/manifest.json'
@@ -243,7 +243,7 @@ describe('ContentSteeringController', function () {
       subtitleTrackController.destroy();
     });
 
-    it('Filteres Variants (Levels) by initial Pathway', function () {
+    it('filteres Variants (Levels) by initial Pathway', function () {
       expect(manifestParsedData)
         .to.have.property('levels')
         .that.has.lengthOf(10);
@@ -254,19 +254,13 @@ describe('ContentSteeringController', function () {
       );
     });
 
-    it('Filteres Variants (Levels) by Pathway Priority by emitting LEVELS_UPDATED', function () {
+    it('filteres Variants (Levels) by Pathway Priority by emitting LEVELS_UPDATED', function () {
       expect(manifestParsedData.levels[0].pathwayId).to.equal('Bar');
-      contentSteeringController.loader.callbacks?.onSuccess(
+      loadSteeringManifest(
         {
-          data: {
-            VERSION: 1,
-            TTL: 300,
-            'PATHWAY-PRIORITY': ['Baz', 'Foo', 'Bar'],
-          },
-        } as any,
-        new LoadStats(),
-        contentSteeringController.loader.context as any,
-        null
+          'PATHWAY-PRIORITY': ['Baz', 'Foo', 'Bar'],
+        },
+        contentSteeringController
       );
       expect(hls.trigger.callCount, 'events triggered').to.equal(6);
       expect(hls.getEventData(0).name).to.equal(Events.MANIFEST_PARSED);
@@ -277,10 +271,11 @@ describe('ContentSteeringController', function () {
 
       expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
       const updatedEvent = hls.getEventData(1);
-      expect(updatedEvent.payload)
+      const eventData = updatedEvent.payload as LevelsUpdatedData;
+      expect(eventData)
         .to.have.property('levels')
         .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
-      expect(updatedEvent.payload.levels[0].pathwayId).to.equal('Baz');
+      expect(eventData.levels[0].pathwayId).to.equal('Baz');
 
       expect(hls.getEventData(2).name).to.equal(Events.LEVEL_SWITCHING);
       const switchingEvent = hls.getEventData(2);
@@ -317,31 +312,25 @@ describe('ContentSteeringController', function () {
     });
 
     describe('Pathway Cloning', function () {
-      it('Clones the Base Pathway', function () {
+      it('clones the Base Pathway', function () {
         expect(
           contentSteeringController.levels,
           'Content Steering variants'
         ).to.have.lengthOf(30);
-        contentSteeringController.loader.callbacks?.onSuccess(
+        loadSteeringManifest(
           {
-            data: {
-              VERSION: 1,
-              TTL: 300,
-              'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
-              'PATHWAY-CLONES': [
-                {
-                  ID: 'Buzz',
-                  'BASE-ID': 'Foo',
-                  'URI-REPLACEMENT': {
-                    HOST: 'www.buzz.com',
-                  },
+            'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
+            'PATHWAY-CLONES': [
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Foo',
+                'URI-REPLACEMENT': {
+                  HOST: 'www.buzz.com',
                 },
-              ],
-            },
-          } as any,
-          new LoadStats(),
-          contentSteeringController.loader.context as any,
-          null
+              },
+            ],
+          },
+          contentSteeringController
         );
         expect(
           contentSteeringController.levels,
@@ -357,10 +346,11 @@ describe('ContentSteeringController', function () {
         ).to.have.lengthOf(8);
         expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
         const updatedEvent = hls.getEventData(1);
-        expect(updatedEvent.payload)
+        const eventData = updatedEvent.payload as LevelsUpdatedData;
+        expect(eventData)
           .to.have.property('levels')
           .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
-        expect(updatedEvent.payload.levels[0].pathwayId).to.equal('Buzz');
+        expect(eventData.levels[0].pathwayId).to.equal('Buzz');
 
         expect(hls.getEventData(2).name).to.equal(Events.LEVEL_SWITCHING);
         const switchingEvent = hls.getEventData(2);
@@ -388,6 +378,416 @@ describe('ContentSteeringController', function () {
         );
       });
 
+      it('appends PARAMS to Rendition URIs in UTF-8 order, replacing existing param values in place', function () {
+        contentSteeringController.levels?.forEach((level) => {
+          level.url[0] += '?foo=bar';
+        });
+        expect(contentSteeringController.levels?.[0].uri).to.equal(
+          'http://www.foo.com/tier6.m3u8?foo=bar'
+        );
+        loadSteeringManifest(
+          {
+            'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
+            'PATHWAY-CLONES': [
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Foo',
+                'URI-REPLACEMENT': {
+                  PARAMS: {
+                    foo: 'baz',
+                    beta: 'test',
+                    app: 'player',
+                  },
+                },
+              },
+            ],
+          },
+          contentSteeringController
+        );
+        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(1);
+        const eventData = updatedEvent.payload as LevelsUpdatedData;
+        expect(eventData)
+          .to.have.property('levels')
+          .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
+        expect(eventData.levels[0].pathwayId).to.equal('Buzz');
+        expect(eventData.levels[0].uri).to.equal(
+          'http://www.foo.com/tier6.m3u8?foo=baz&app=player&beta=test'
+        );
+      });
+
+      it('sets the URI of Variants with STABLE-VARIANT-ID to the corresponding key-value pair in PER-VARIANT-URIS', function () {
+        loadSteeringManifest(
+          {
+            'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
+            'PATHWAY-CLONES': [
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Foo',
+                'URI-REPLACEMENT': {
+                  'PER-VARIANT-URIS': {
+                    foo1: 'http://www.buzz.com/1.m3u8?fallback=true',
+                    foo2: 'http://www.buzz.com/2.m3u8?fallback=true',
+                    foo3: 'http://www.buzz.com/3.m3u8?fallback=true',
+                  },
+                },
+              },
+            ],
+          },
+          contentSteeringController
+        );
+        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(1);
+        expect(updatedEvent.payload)
+          .to.have.property('levels')
+          .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
+        const eventData = updatedEvent.payload as LevelsUpdatedData;
+        expect(eventData.levels[0].pathwayId).to.equal('Buzz');
+        expect(eventData.levels[0].attrs['STABLE-VARIANT-ID']).to.equal('foo1');
+        expect(eventData.levels[0].uri).to.equal(
+          'http://www.buzz.com/1.m3u8?fallback=true'
+        );
+        expect(eventData.levels[1].attrs['STABLE-VARIANT-ID']).to.equal('foo2');
+        expect(eventData.levels[1].uri).to.equal(
+          'http://www.buzz.com/2.m3u8?fallback=true'
+        );
+        expect(eventData.levels[2].attrs['STABLE-VARIANT-ID']).to.equal('foo3');
+        expect(eventData.levels[2].uri).to.equal(
+          'http://www.buzz.com/3.m3u8?fallback=true'
+        );
+        expect(eventData.levels[3].attrs['STABLE-VARIANT-ID']).to.equal('foo4');
+        expect(eventData.levels[3].uri).to.equal(
+          'http://www.foo.com/tier10.m3u8'
+        );
+      });
+
+      it('sets the URI of Renditions with STABLE-RENDITION-ID to the corresponding key-value pair in PER-RENDITION-URIS', function () {
+        loadSteeringManifest(
+          {
+            'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
+            'PATHWAY-CLONES': [
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Foo',
+                'URI-REPLACEMENT': {
+                  'PER-RENDITION-URIS': {
+                    'audio-foo1':
+                      'http://z.buzz.com/audio_aac.m3u8?fallback=true',
+                    'audio-foo2':
+                      'http://z.buzz.com/audio_ec3.m3u8?fallback=true',
+                    'subs-foo1': 'http://z.buzz.com/subs-en.m3u8?fallback=true',
+                    'subs-foo2': 'http://z.buzz.com/subs-it.m3u8?fallback=true',
+                  },
+                },
+              },
+            ],
+          },
+          contentSteeringController
+        );
+        expect(
+          audioTrackController.tracks,
+          'AudioTrackController tracks'
+        ).to.have.lengthOf(8);
+        expect(audioTrackController.tracks[6].attrs['PATHWAY-ID']).to.equal(
+          'Buzz'
+        );
+        expect(
+          audioTrackController.tracks[6].attrs['STABLE-RENDITION-ID']
+        ).to.equal('audio-foo1');
+        expect(audioTrackController.tracks[6].groupId).to.equal(
+          'AAC-foo_clone_Buzz'
+        );
+        expect(audioTrackController.tracks[6].url).to.equal(
+          'http://z.buzz.com/audio_aac.m3u8?fallback=true'
+        );
+        expect(audioTrackController.tracks[7].attrs['PATHWAY-ID']).to.equal(
+          'Buzz'
+        );
+        expect(
+          audioTrackController.tracks[7].attrs['STABLE-RENDITION-ID']
+        ).to.equal('audio-foo2');
+        expect(audioTrackController.tracks[7].groupId).to.equal(
+          'EC3-foo_clone_Buzz'
+        );
+        expect(audioTrackController.tracks[7].url).to.equal(
+          'http://z.buzz.com/audio_ec3.m3u8?fallback=true'
+        );
+
+        expect(hls.getEventData(3).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
+        const audioTracksEvent = hls.getEventData(3);
+        const eventData = audioTracksEvent.payload as AudioTracksUpdatedData;
+        expect(eventData)
+          .to.have.property('audioTracks')
+          .that.has.lengthOf(1, 'AUDIO_TRACKS_UPDATED audioTracks');
+        expect(eventData.audioTracks[0].attrs['PATHWAY-ID']).to.equal('Buzz');
+        expect(eventData.audioTracks[0].attrs['STABLE-RENDITION-ID']).to.equal(
+          'audio-foo1'
+        );
+        expect(eventData.audioTracks[0].url).to.equal(
+          'http://z.buzz.com/audio_aac.m3u8?fallback=true'
+        );
+
+        expect(
+          subtitleTrackController.tracks,
+          'SubtitleTrackController tracks'
+        ).to.have.lengthOf(8);
+        expect(hls.getEventData(5).name).to.equal(
+          Events.SUBTITLE_TRACKS_UPDATED
+        );
+        const subtitleTracksEvent = hls.getEventData(5);
+        const subsEventData =
+          subtitleTracksEvent.payload as SubtitleTracksUpdatedData;
+        expect(subsEventData)
+          .to.have.property('subtitleTracks')
+          .that.has.lengthOf(2, 'SUBTITLE_TRACKS_UPDATED subtitleTracks');
+        expect(subsEventData.subtitleTracks[0].attrs['PATHWAY-ID']).to.equal(
+          'Buzz'
+        );
+        expect(
+          subsEventData.subtitleTracks[0].attrs['STABLE-RENDITION-ID']
+        ).to.equal('subs-foo1');
+        expect(subsEventData.subtitleTracks[0].url).to.equal(
+          'http://z.buzz.com/subs-en.m3u8?fallback=true'
+        );
+        expect(subsEventData.subtitleTracks[1].attrs['PATHWAY-ID']).to.equal(
+          'Buzz'
+        );
+        expect(
+          subsEventData.subtitleTracks[1].attrs['STABLE-RENDITION-ID']
+        ).to.equal('subs-foo2');
+        expect(subsEventData.subtitleTracks[1].url).to.equal(
+          'http://z.buzz.com/subs-it.m3u8?fallback=true'
+        );
+      });
+
+      it('clones other pathways clones that appear ealier in PATHWAY-CLONES array', function () {
+        loadSteeringManifest(
+          {
+            'PATHWAY-PRIORITY': ['Bear', 'Foo', 'Bar', 'Baz', 'Buzz'],
+            'PATHWAY-CLONES': [
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Foo',
+                'URI-REPLACEMENT': {
+                  HOST: 'www.buzz.com',
+                  PARAMS: {
+                    cloned: 'buzz',
+                  },
+                  'PER-VARIANT-URIS': {
+                    foo2: 'http://www.buzz.com/2.m3u8?fallback=true',
+                  },
+                },
+              },
+              {
+                ID: 'Bear',
+                'BASE-ID': 'Buzz',
+                'URI-REPLACEMENT': {
+                  HOST: 'www.bear.com',
+                },
+              },
+            ],
+          },
+          contentSteeringController
+        );
+        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(1);
+        expect(updatedEvent.payload)
+          .to.have.property('levels')
+          .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
+        const eventData = updatedEvent.payload as LevelsUpdatedData;
+        expect(eventData.levels[0].pathwayId).to.equal('Bear');
+        expect(eventData.levels[0].uri).to.equal(
+          'http://www.bear.com/tier6.m3u8?cloned=buzz'
+        );
+        expect(eventData.levels[1].attrs['STABLE-VARIANT-ID']).to.equal('foo2');
+        expect(eventData.levels[1].uri).to.equal(
+          'http://www.bear.com/2.m3u8?fallback=true&cloned=buzz'
+        );
+
+        expect(hls.getEventData(3).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
+        const audioTracksEvent = hls.getEventData(3);
+        const audioEventData =
+          audioTracksEvent.payload as AudioTracksUpdatedData;
+        expect(audioEventData.audioTracks[0].attrs['PATHWAY-ID']).to.equal(
+          'Bear'
+        );
+        expect(audioEventData.audioTracks[0].url).to.equal(
+          'http://www.bear.com/audio_aac.m3u8?cloned=buzz'
+        );
+
+        expect(hls.getEventData(5).name).to.equal(
+          Events.SUBTITLE_TRACKS_UPDATED
+        );
+        const subtitleTracksEvent = hls.getEventData(5);
+        const subsEventData =
+          subtitleTracksEvent.payload as SubtitleTracksUpdatedData;
+        expect(subsEventData.subtitleTracks[0].attrs['PATHWAY-ID']).to.equal(
+          'Bear'
+        );
+        expect(subsEventData.subtitleTracks[0].url).to.equal(
+          'http://www.bear.com/subs-en.m3u8?cloned=buzz'
+        );
+      });
+
+      it('ignores empty HOST', function () {
+        loadSteeringManifest(
+          {
+            'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
+            'PATHWAY-CLONES': [
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Foo',
+                'URI-REPLACEMENT': {
+                  HOST: '',
+                },
+              },
+            ],
+          },
+          contentSteeringController
+        );
+        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(1);
+        const eventData = updatedEvent.payload as LevelsUpdatedData;
+        expect(eventData.levels[0].pathwayId).to.equal('Buzz');
+        expect(eventData.levels[0].uri).to.equal(
+          'http://www.foo.com/tier6.m3u8'
+        );
+      });
+
+      it('ignores empty PARAM names', function () {
+        loadSteeringManifest(
+          {
+            'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
+            'PATHWAY-CLONES': [
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Foo',
+                'URI-REPLACEMENT': {
+                  PARAMS: {
+                    'not-empty': 'ok',
+                    '': 'not-ok',
+                  },
+                },
+              },
+            ],
+          },
+          contentSteeringController
+        );
+        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(1);
+        const eventData = updatedEvent.payload as LevelsUpdatedData;
+        expect(eventData.levels[0].pathwayId).to.equal('Buzz');
+        expect(eventData.levels[0].uri).to.equal(
+          'http://www.foo.com/tier6.m3u8?not-empty=ok'
+        );
+      });
+
+      it('ignores missing Pathway BASE-IDs', function () {
+        loadSteeringManifest(
+          {
+            'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
+            'PATHWAY-CLONES': [
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Not-Found',
+                'URI-REPLACEMENT': {
+                  HOST: 'www.buzz.com',
+                },
+              },
+            ],
+          },
+          contentSteeringController
+        );
+        expect(
+          contentSteeringController.levels,
+          'Content Steering variants'
+        ).to.have.lengthOf(30);
+        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(1);
+        const eventData = updatedEvent.payload as LevelsUpdatedData;
+        expect(eventData.levels[0].pathwayId).to.equal('Foo');
+        expect(eventData.levels[0].uri).to.equal(
+          'http://www.foo.com/tier6.m3u8'
+        );
+      });
+
+      it('only clones Pathway Clones with the same ID once', function () {
+        loadSteeringManifest(
+          {
+            'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
+            'PATHWAY-CLONES': [
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Foo',
+                'URI-REPLACEMENT': {
+                  HOST: 'www.buzz-1.com',
+                },
+              },
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Baz',
+                'URI-REPLACEMENT': {
+                  HOST: 'www.buzz-2.com',
+                },
+              },
+              {
+                ID: 'Foo',
+                'BASE-ID': 'Baz',
+                'URI-REPLACEMENT': {
+                  HOST: 'www.foo-2.com',
+                },
+              },
+            ],
+          },
+          contentSteeringController
+        );
+        loadSteeringManifest(
+          {
+            'PATHWAY-PRIORITY': ['Buzz', 'Foo', 'Bar', 'Baz'],
+            'PATHWAY-CLONES': [
+              {
+                ID: 'Buzz',
+                'BASE-ID': 'Bar',
+                'URI-REPLACEMENT': {
+                  HOST: 'www.buzz-3.com',
+                },
+              },
+            ],
+          },
+          contentSteeringController
+        );
+        expect(
+          contentSteeringController.levels,
+          'Content Steering variants'
+        ).to.have.lengthOf(40);
+        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(1);
+        const eventData = updatedEvent.payload as LevelsUpdatedData;
+        expect(eventData.levels[0].pathwayId).to.equal('Buzz');
+        expect(eventData.levels[0].uri).to.equal(
+          'http://www.buzz-1.com/tier6.m3u8'
+        );
+      });
     });
   });
 });
+
+function loadSteeringManifest(
+  partialManifest: Partial<SteeringManifest>,
+  steering: ConentSteeringControllerTestable
+) {
+  const response: LoaderResponse = {
+    url: '',
+    data: {
+      VERSION: 1,
+      TTL: 300,
+      ...partialManifest,
+    },
+  };
+  steering.loader.callbacks?.onSuccess(
+    response,
+    new LoadStats(),
+    steering.loader.context as any,
+    null
+  );
+}

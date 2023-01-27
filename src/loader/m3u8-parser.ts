@@ -18,6 +18,7 @@ import type {
   MediaPlaylist,
   AudioGroup,
   MediaPlaylistType,
+  MediaAttributes,
 } from '../types/media-playlist';
 import type { PlaylistLevelType } from '../types/loader';
 import type { LevelAttributes, LevelParsed, VariableMap } from '../types/level';
@@ -130,7 +131,7 @@ export default class M3U8Parser {
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       if (result[1]) {
         // '#EXT-X-STREAM-INF' is found, parse level tag  in group 1
-        const attrs = new AttrList(result[1]);
+        const attrs = new AttrList(result[1]) as LevelAttributes;
         if (__USE_VARIABLE_SUBSTITUTION__) {
           substituteVariablesInAttributes(parsed, attrs, [
             'CODECS',
@@ -298,7 +299,7 @@ export default class M3U8Parser {
     let id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
-      const attrs = new AttrList(result[1]) as LevelAttributes;
+      const attrs = new AttrList(result[1]) as MediaAttributes;
       const type: MediaPlaylistType | undefined = attrs.TYPE as
         | MediaPlaylistType
         | undefined;
@@ -323,7 +324,7 @@ export default class M3U8Parser {
           attrs,
           bitrate: 0,
           id: id++,
-          groupId: attrs['GROUP-ID'],
+          groupId: attrs['GROUP-ID'] || '',
           instreamId: attrs['INSTREAM-ID'],
           name: attrs.NAME || attrs.LANGUAGE || '',
           type,

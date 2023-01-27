@@ -14,10 +14,10 @@ import type {
   LoaderStats,
 } from '../types/loader';
 import type { LevelParsed } from '../types/level';
-import type { MediaPlaylist } from '../types/media-playlist';
+import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
 import { addGroupId } from './level-controller';
 
-type SteeringManifest = {
+export type SteeringManifest = {
   VERSION: 1;
   TTL: number;
   'RELOAD-URI'?: string;
@@ -110,7 +110,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   removeLevel(levelToRemove: Level) {
     const levels = this.levels;
     if (levels) {
-      this.levels = levels.filter((level) => level === levelToRemove);
+      this.levels = levels.filter((level) => level !== levelToRemove);
     }
   }
 
@@ -255,13 +255,13 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         }
       );
       levels.push(...clonedVariants);
-      cloneAudioGroups(
+      cloneRenditionGroups(
         this.audioTracks,
         audioGroupCloneMap,
         uriReplacement,
         cloneId
       );
-      cloneAudioGroups(
+      cloneRenditionGroups(
         this.subtitleTracks,
         subtitleGroupCloneMap,
         uriReplacement,
@@ -395,7 +395,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   }
 }
 
-function cloneAudioGroups(
+function cloneRenditionGroups(
   tracks: MediaPlaylist[] | null,
   groupCloneMap: Record<string, string>,
   uriReplacement: UriReplacement,
@@ -410,7 +410,7 @@ function cloneAudioGroups(
       .map((track) => {
         const clonedTrack = Object.assign({}, track);
         clonedTrack.details = undefined;
-        clonedTrack.attrs = new AttrList(clonedTrack.attrs);
+        clonedTrack.attrs = new AttrList(clonedTrack.attrs) as MediaAttributes;
         clonedTrack.url = clonedTrack.attrs.URI = performUriReplacement(
           track.url,
           track.attrs['STABLE-RENDITION-ID'],
@@ -452,7 +452,9 @@ function performUriReplacement(
     Object.keys(params)
       .sort()
       .forEach((key) => {
-        url.searchParams.set(key, params[key]);
+        if (key) {
+          url.searchParams.set(key, params[key]);
+        }
       });
   }
   return url.href;

@@ -171,17 +171,9 @@ export interface LevelPTSUpdatedData {
   end: number;
 }
 
-export interface AudioTrackSwitchingData {
-  id: number;
-  name: string;
-  groupId: string;
-  type: MediaPlaylistType | 'main';
-  url: string;
-}
+export interface AudioTrackSwitchingData extends MediaPlaylist {}
 
-export interface AudioTrackSwitchedData {
-  id: number;
-}
+export interface AudioTrackSwitchedData extends MediaPlaylist {}
 
 export interface AudioTrackLoadedData extends TrackLoadedData {}
 

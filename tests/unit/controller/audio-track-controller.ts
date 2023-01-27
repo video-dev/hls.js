@@ -1,6 +1,9 @@
 import AudioTrackController from '../../../src/controller/audio-track-controller';
 import Hls from '../../../src/hls';
-import type { MediaPlaylist } from '../../../src/types/media-playlist';
+import type {
+  MediaAttributes,
+  MediaPlaylist,
+} from '../../../src/types/media-playlist';
 import { AttrList } from '../../../src/utils/attr-list';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { Events } from '../../../src/events';
@@ -90,7 +93,7 @@ describe('AudioTrackController', function () {
     };
     tracks = [
       {
-        attrs: new AttrList({}),
+        attrs: new AttrList({}) as MediaAttributes,
         bitrate: 0,
         autoselect: false,
         default: true,
@@ -102,7 +105,7 @@ describe('AudioTrackController', function () {
         url: '',
       },
       {
-        attrs: new AttrList({}),
+        attrs: new AttrList({}) as MediaAttributes,
         bitrate: 0,
         autoselect: false,
         default: false,
@@ -114,7 +117,7 @@ describe('AudioTrackController', function () {
         url: '',
       },
       {
-        attrs: new AttrList({}),
+        attrs: new AttrList({}) as MediaAttributes,
         bitrate: 0,
         autoselect: false,
         default: false,
@@ -126,7 +129,7 @@ describe('AudioTrackController', function () {
         url: '',
       },
       {
-        attrs: new AttrList({}),
+        attrs: new AttrList({}) as MediaAttributes,
         bitrate: 0,
         autoselect: false,
         default: true,
@@ -138,7 +141,7 @@ describe('AudioTrackController', function () {
         url: '',
       },
       {
-        attrs: new AttrList({}),
+        attrs: new AttrList({}) as MediaAttributes,
         bitrate: 0,
         autoselect: false,
         default: false,
@@ -150,7 +153,7 @@ describe('AudioTrackController', function () {
         url: '',
       },
       {
-        attrs: new AttrList({}),
+        attrs: new AttrList({}) as MediaAttributes,
         bitrate: 0,
         autoselect: false,
         default: false,
@@ -251,7 +254,7 @@ describe('AudioTrackController', function () {
     audioTrackController.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, {
       details: new LevelDetails(''),
       id: 0,
-      groupId: '1',
+      groupId: '2',
       networkDetails: null,
       stats: { loading: {} } as any,
       deliveryDirectives: null,
@@ -267,7 +270,7 @@ describe('AudioTrackController', function () {
     audioTrackController.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, {
       details: new LevelDetails(''),
       id: 1,
-      groupId: '1',
+      groupId: '2',
       networkDetails: null,
       stats: { loading: {} } as any,
       deliveryDirectives: null,
@@ -357,7 +360,7 @@ describe('AudioTrackController', function () {
         name: 'A',
         default: true,
         url: './trackA.m3u8',
-        attrs: new AttrList({}),
+        attrs: new AttrList({}) as MediaAttributes,
         bitrate: 0,
         autoselect: false,
         forced: false,

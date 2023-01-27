@@ -21,7 +21,7 @@ import type CMCDController from './controller/cmcd-controller';
 import type EMEController from './controller/eme-controller';
 import type SubtitleTrackController from './controller/subtitle-track-controller';
 import type { ComponentAPI, NetworkComponentAPI } from './types/component-api';
-import type { MediaPlaylist } from './types/media-playlist';
+import type { MediaAttributes, MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
 import { HdcpLevel, HdcpLevels, Level } from './types/level';
 import type { Fragment } from './loader/fragment';
@@ -140,12 +140,12 @@ export default class Hls implements HlsEventEmitter {
 
     const ConfigContentSteeringController = config.contentSteeringController;
     // ConentSteeringController is defined before LevelController to receive Multivariant Playlist events first
-    const contentSteeing = ConfigContentSteeringController
+    const contentSteering = ConfigContentSteeringController
       ? new ConfigContentSteeringController(this)
       : null;
     const levelController = (this.levelController = new LevelController(
       this,
-      contentSteeing
+      contentSteering
     ));
     // FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
@@ -166,8 +166,8 @@ export default class Hls implements HlsEventEmitter {
       levelController,
       streamController,
     ];
-    if (contentSteeing) {
-      networkControllers.splice(1, 0, contentSteeing);
+    if (contentSteering) {
+      networkControllers.splice(1, 0, contentSteering);
     }
 
     this.networkControllers = networkControllers;
@@ -848,6 +848,7 @@ export default class Hls implements HlsEventEmitter {
 }
 
 export type {
+  MediaAttributes,
   MediaPlaylist,
   ErrorDetails,
   ErrorTypes,
@@ -857,6 +858,9 @@ export type {
   HlsEventEmitter,
   HlsConfig,
   Fragment,
+  BufferInfo,
+  HdcpLevels,
+  HdcpLevel,
 };
 
 export type {
@@ -896,8 +900,6 @@ export type {
   UserdataSample,
 } from './types/demuxer';
 export type {
-  HdcpLevel,
-  HdcpLevels,
   HlsSkip,
   HlsUrlParameters,
   LevelAttributes,
@@ -993,4 +995,3 @@ export type {
   SubtitleTrackSwitchData,
 } from './types/events';
 export type { AttrList } from './utils/attr-list';
-export type { BufferInfo } from './utils/buffer-helper';

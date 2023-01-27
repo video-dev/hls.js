@@ -72,25 +72,13 @@ export interface AudioTracksUpdatedData {
 // Warning: (ae-missing-release-tag) "AudioTrackSwitchedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface AudioTrackSwitchedData {
-    // (undocumented)
-    id: number;
+export interface AudioTrackSwitchedData extends MediaPlaylist {
 }
 
 // Warning: (ae-missing-release-tag) "AudioTrackSwitchingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface AudioTrackSwitchingData {
-    // (undocumented)
-    groupId: string;
-    // (undocumented)
-    id: number;
-    // (undocumented)
-    name: string;
-    // (undocumented)
-    type: MediaPlaylistType | 'main';
-    // (undocumented)
-    url: string;
+export interface AudioTrackSwitchingData extends MediaPlaylist {
 }
 
 // Warning: (ae-missing-release-tag) "BackBufferData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1396,47 +1384,27 @@ export interface LevelAttributes extends AttrList {
     // (undocumented)
     'FRAME-RATE'?: string;
     // (undocumented)
-    'HDCP-LEVEL'?: string;
+    'HDCP-LEVEL'?: 'TYPE-0' | 'TYPE-1' | 'NONE';
     // (undocumented)
     'PATHWAY-ID'?: string;
-    // (undocumented)
-    'PROGRAM-ID'?: string;
     // (undocumented)
     'STABLE-VARIANT-ID'?: string;
     // (undocumented)
     'SUPPLEMENTAL-CODECS'?: string;
     // (undocumented)
-    'VIDEO-RANGE'?: string;
+    'VIDEO-RANGE'?: 'SDR' | 'HLG' | 'PQ';
     // (undocumented)
     AUDIO?: string;
     // (undocumented)
-    AUTOSELECT?: string;
-    // (undocumented)
     BANDWIDTH?: string;
     // (undocumented)
-    BYTERANGE?: string;
-    // (undocumented)
-    CHARACTERISTICS?: string;
-    // (undocumented)
     CODECS?: string;
-    // (undocumented)
-    DEFAULT?: string;
-    // (undocumented)
-    FORCED?: string;
-    // (undocumented)
-    LANGUAGE?: string;
-    // (undocumented)
-    NAME?: string;
     // (undocumented)
     RESOLUTION?: string;
     // (undocumented)
     SCORE?: string;
     // (undocumented)
     SUBTITLES?: string;
-    // (undocumented)
-    TYPE?: string;
-    // (undocumented)
-    URI?: string;
     // (undocumented)
     VIDEO?: string;
 }
@@ -1963,6 +1931,40 @@ export interface MediaAttachingData {
     media: HTMLMediaElement;
 }
 
+// Warning: (ae-missing-release-tag) "MediaAttributes" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface MediaAttributes extends AttrList {
+    // (undocumented)
+    'ASSOC-LANGUAGE'?: string;
+    // (undocumented)
+    'GROUP-ID': string;
+    // (undocumented)
+    'INSTREAM-ID'?: string;
+    // (undocumented)
+    'PATHWAY-ID'?: string;
+    // (undocumented)
+    'STABLE-RENDITION-ID'?: string;
+    // (undocumented)
+    AUTOSELECT?: 'YES' | 'NO';
+    // (undocumented)
+    CHANNELS?: string;
+    // (undocumented)
+    CHARACTERISTICS?: string;
+    // (undocumented)
+    DEFAULT?: 'YES' | 'NO';
+    // (undocumented)
+    FORCED?: 'YES' | 'NO';
+    // (undocumented)
+    LANGUAGE?: string;
+    // (undocumented)
+    NAME: string;
+    // (undocumented)
+    TYPE?: 'AUDIO' | 'VIDEO' | 'SUBTITLES' | 'CLOSED-CAPTIONS';
+    // (undocumented)
+    URI?: string;
+}
+
 // Warning: (ae-missing-release-tag) "MediaKeyFunc" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1971,7 +1973,9 @@ export type MediaKeyFunc = (keySystem: KeySystems, supportedConfigurations: Medi
 // Warning: (ae-missing-release-tag) "MediaPlaylist" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface MediaPlaylist extends LevelParsed {
+export interface MediaPlaylist extends Omit<LevelParsed, 'attrs'> {
+    // (undocumented)
+    attrs: MediaAttributes;
     // (undocumented)
     autoselect: boolean;
     // (undocumented)
@@ -1979,7 +1983,7 @@ export interface MediaPlaylist extends LevelParsed {
     // (undocumented)
     forced: boolean;
     // (undocumented)
-    groupId?: string;
+    groupId: string;
     // (undocumented)
     id: number;
     // (undocumented)

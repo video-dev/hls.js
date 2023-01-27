@@ -735,7 +735,6 @@ export default class StreamController
     // if any URL found on new audio track, it is an alternate audio track
     const fromAltAudio = this.altAudio;
     const altAudio = !!data.url;
-    const trackId = data.id;
     // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
     // don't do anything if we switch to alt audio: audio stream controller is handling it.
     // we will just have to change buffer scheduling on audioTrackSwitched
@@ -768,9 +767,7 @@ export default class StreamController
           type: 'audio',
         });
       }
-      hls.trigger(Events.AUDIO_TRACK_SWITCHED, {
-        id: trackId,
-      });
+      hls.trigger(Events.AUDIO_TRACK_SWITCHED, data);
     }
   }
 
@@ -1090,7 +1087,7 @@ export default class StreamController
       const initPTS = initSegment.initPTS as number;
       const timescale = initSegment.timescale as number;
       if (Number.isFinite(initPTS)) {
-        this.initPTS[frag.cc] = initPTS;
+        this.initPTS[frag.cc] = { baseTime: initPTS, timescale };
         hls.trigger(Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale });
       }
     }

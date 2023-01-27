@@ -2,7 +2,10 @@ import { findBox } from './mp4-tools';
 import { parseTimeStamp } from './vttparser';
 import VTTCue from './vttcue';
 import { utf8ArrayToStr } from '../demux/id3';
-import { toTimescaleFromScale } from './timescale-conversion';
+import {
+  RationalTimestamp,
+  toTimescaleFromScale,
+} from './timescale-conversion';
 import { generateCueId } from './webvtt-parser';
 
 export const IMSC1_CODEC = 'stpp.ttml.im1t';
@@ -23,8 +26,7 @@ const textAlignToLineAlign: Partial<Record<string, LineAlignSetting>> = {
 
 export function parseIMSC1(
   payload: ArrayBuffer,
-  initPTS: number,
-  timescale: number,
+  initPTS: RationalTimestamp,
   callBack: (cues: Array<VTTCue>) => any,
   errorCallBack: (error: Error) => any
 ) {
@@ -36,7 +38,7 @@ export function parseIMSC1(
 
   const ttmlList = results.map((mdat) => utf8ArrayToStr(mdat));
 
-  const syncTime = toTimescaleFromScale(initPTS, 1, timescale);
+  const syncTime = toTimescaleFromScale(initPTS.baseTime, 1, initPTS.timescale);
 
   try {
     ttmlList.forEach((ttml) => callBack(parseTTML(ttml, syncTime)));
