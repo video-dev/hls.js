@@ -765,6 +765,7 @@ export default class StreamController
         hls.trigger(Events.BUFFER_FLUSHING, {
           startOffset: 0,
           endOffset: Number.POSITIVE_INFINITY,
+          type: null,
         });
         this.fragmentTracker.removeAllFragments();
       }
