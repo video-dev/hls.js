@@ -1029,7 +1029,7 @@ export default class StreamController
     frag.bitrateTest = true;
     this._doFragLoad(frag, levelDetails).then((data) => {
       const { hls } = this;
-      if (!data || hls.nextLoadLevel || this.fragContextChanged(frag)) {
+      if (!data || this.fragContextChanged(frag)) {
         return;
       }
       this.fragLoadError = 0;
