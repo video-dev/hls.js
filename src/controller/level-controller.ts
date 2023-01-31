@@ -584,7 +584,7 @@ export default class LevelController extends BasePlaylistController {
 
       this.log(
         `Attempt loading level index ${level}${
-          hlsUrlParameters
+          hlsUrlParameters?.msn !== undefined
             ? ' at sn ' +
               hlsUrlParameters.msn +
               ' part ' +
