@@ -41,6 +41,7 @@ describe('StreamController', function () {
 
   this.afterEach(function () {
     fake.restore();
+    hls.destroy();
   });
 
   const assertStreamControllerStarted = (streamController) => {
@@ -437,6 +438,7 @@ describe('StreamController', function () {
       // @ts-ignore
       streamController.gapController = {
         poll: function () {},
+        destroy: function () {},
       };
       streamController['media'] = {
         buffered: {

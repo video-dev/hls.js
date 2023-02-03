@@ -78,7 +78,10 @@ describe('BufferController', function () {
   let mockMediaSource;
   beforeEach(function () {
     hls = new Hls({});
-
+    hls.networkControllers.forEach((component) => component.destroy());
+    hls.networkControllers.length = 0;
+    hls.coreComponents.forEach((component) => component.destroy());
+    hls.coreComponents.length = 0;
     bufferController = new BufferController(hls);
     bufferController.media = mockMedia = new MockMediaElement();
     bufferController.mediaSource = mockMediaSource = new MockMediaSource();

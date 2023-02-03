@@ -434,28 +434,48 @@ describe('AudioTrackController', function () {
   });
 
   describe('onError', function () {
-    it('should clear interval (only) on fatal network errors', function () {
+    it('should clear interval (only) on fatal network and key-system errors', function () {
       audioTrackController.timer = 1000;
 
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
       });
       expect(audioTrackController.timer).to.equal(1000);
 
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true,
       });
       expect(audioTrackController.timer).to.equal(1000);
 
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: false,
       });
       expect(audioTrackController.timer).to.equal(1000);
 
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
+        fatal: true,
+      });
+      expect(audioTrackController.timer).to.equal(-1);
+
+      audioTrackController.timer = 1000;
+
+      audioTrackController.onError(Events.ERROR, {
+        type: Hls.ErrorTypes.KEY_SYSTEM_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
+        fatal: false,
+      });
+      expect(audioTrackController.timer).to.equal(1000);
+
+      audioTrackController.onError(Events.ERROR, {
+        type: Hls.ErrorTypes.KEY_SYSTEM_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true,
       });
       expect(audioTrackController.timer).to.equal(-1);
