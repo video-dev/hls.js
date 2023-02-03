@@ -159,6 +159,7 @@ export default class BufferController implements ComponentAPI {
       media.src = self.URL.createObjectURL(ms);
       // cache the locally generated object url
       this._objectUrl = media.src;
+      media.addEventListener('emptied', this._onMediaEmptied);
     }
   }
 
@@ -188,6 +189,7 @@ export default class BufferController implements ComponentAPI {
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
       if (media) {
+        media.removeEventListener('emptied', this._onMediaEmptied);
         if (_objectUrl) {
           self.URL.revokeObjectURL(_objectUrl);
         }
@@ -785,11 +787,12 @@ export default class BufferController implements ComponentAPI {
 
   // Keep as arrow functions so that we can directly reference these functions directly as event listeners
   private _onMediaSourceOpen = () => {
-    const { hls, media, mediaSource } = this;
+    const { media, mediaSource } = this;
     logger.log('[buffer-controller]: Media source opened');
     if (media) {
+      media.removeEventListener('emptied', this._onMediaEmptied);
       this.updateMediaElementDuration();
-      hls.trigger(Events.MEDIA_ATTACHED, { media });
+      this.hls.trigger(Events.MEDIA_ATTACHED, { media });
     }
 
     if (mediaSource) {
@@ -805,6 +808,16 @@ export default class BufferController implements ComponentAPI {
 
   private _onMediaSourceEnded = () => {
     logger.log('[buffer-controller]: Media source ended');
+  };
+
+  private _onMediaEmptied = () => {
+    const { media, _objectUrl } = this;
+    if (media && media.src !== _objectUrl) {
+      logger.error(
+        `Media reset while attaching MediaSource, detaching media (${_objectUrl} > ${media.src})`
+      );
+      this.hls.detachMedia();
+    }
   };
 
   private _onSBUpdateStart(type: SourceBufferName) {
