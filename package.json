@@ -74,7 +74,7 @@
     "chromedriver": "109.0.0",
     "coverage-istanbul-loader": "3.0.5",
     "doctoc": "2.2.1",
-    "eslint": "8.32.0",
+    "eslint": "8.33.0",
     "eslint-config-prettier": "8.6.0",
     "eslint-plugin-import": "2.27.5",
     "eslint-plugin-mocha": "10.1.0",
