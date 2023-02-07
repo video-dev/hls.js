@@ -108,7 +108,6 @@ export default class Transmuxer {
     const keyData = getEncryptionType(uintData, decryptdata);
     if (keyData && keyData.method === 'AES-128') {
       const decrypter = this.getDecrypter();
-      const loadingParts = chunkMeta.part > -1;
       // Software decryption is synchronous; webCrypto is not
       if (decrypter.isSync()) {
         // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
@@ -118,6 +117,8 @@ export default class Transmuxer {
           keyData.key.buffer,
           keyData.iv.buffer
         );
+        // For Low-Latency HLS Parts, decrypt in place, since part parsing is expected on push progress
+        const loadingParts = chunkMeta.part > -1;
         if (loadingParts) {
           decryptedData = decrypter.flush();
         }
