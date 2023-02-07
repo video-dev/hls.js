@@ -112,11 +112,16 @@ export default class Transmuxer {
       if (decrypter.isSync()) {
         // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
         // data is handled in the flush() call
-        const decryptedData = decrypter.softwareDecrypt(
+        let decryptedData = decrypter.softwareDecrypt(
           uintData,
           keyData.key.buffer,
           keyData.iv.buffer
         );
+        // For Low-Latency HLS Parts, decrypt in place, since part parsing is expected on push progress
+        const loadingParts = chunkMeta.part > -1;
+        if (loadingParts) {
+          decryptedData = decrypter.flush();
+        }
         if (!decryptedData) {
           stats.executeEnd = now();
           return emptyResult(chunkMeta);
