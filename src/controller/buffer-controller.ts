@@ -814,9 +814,8 @@ export default class BufferController implements ComponentAPI {
     const { media, _objectUrl } = this;
     if (media && media.src !== _objectUrl) {
       logger.error(
-        `Media reset while attaching MediaSource, detaching media (${_objectUrl} > ${media.src})`
+        `Media element src was set while attaching MediaSource (${_objectUrl} > ${media.src})`
       );
-      this.hls.detachMedia();
     }
   };
 
