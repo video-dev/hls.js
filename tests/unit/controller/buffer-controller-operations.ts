@@ -61,6 +61,8 @@ class MockMediaElement {
   public currentTime: number = 0;
   public duration: number = Infinity;
   public textTracks: any[] = [];
+  addEventListener() {}
+  removeEventListener() {}
 }
 
 const queueNames: Array<SourceBufferName> = ['audio', 'video'];
