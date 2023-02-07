@@ -108,15 +108,19 @@ export default class Transmuxer {
     const keyData = getEncryptionType(uintData, decryptdata);
     if (keyData && keyData.method === 'AES-128') {
       const decrypter = this.getDecrypter();
+      const loadingParts = chunkMeta.part > -1;
       // Software decryption is synchronous; webCrypto is not
       if (decrypter.isSync()) {
         // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
         // data is handled in the flush() call
-        const decryptedData = decrypter.softwareDecrypt(
+        let decryptedData = decrypter.softwareDecrypt(
           uintData,
           keyData.key.buffer,
           keyData.iv.buffer
         );
+        if (loadingParts) {
+          decryptedData = decrypter.flush();
+        }
         if (!decryptedData) {
           stats.executeEnd = now();
           return emptyResult(chunkMeta);

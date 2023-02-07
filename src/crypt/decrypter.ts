@@ -58,13 +58,6 @@ export default class Decrypter {
   public flush(): Uint8Array | null {
     const { currentResult, remainderData } = this;
     if (!currentResult || remainderData) {
-      logger.error(
-        `[softwareDecrypt] ${
-          remainderData
-            ? 'overflow bytes: ' + remainderData.byteLength
-            : 'no result'
-        }`
-      );
       this.reset();
       return null;
     }
