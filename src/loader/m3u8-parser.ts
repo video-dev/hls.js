@@ -258,19 +258,7 @@ export default class M3U8Parser {
         if (Number.isFinite(frag.duration)) {
           frag.start = totalduration;
           if (levelkeys) {
-            frag.levelkeys = levelkeys;
-            const { encryptedFragments } = level;
-            if (
-              frag.levelkeys &&
-              Object.keys(frag.levelkeys).some(
-                (format) => frag.levelkeys![format].isCommonEncryption
-              ) &&
-              (!encryptedFragments.length ||
-                encryptedFragments[encryptedFragments.length - 1].levelkeys !==
-                  levelkeys)
-            ) {
-              encryptedFragments.push(frag);
-            }
+            setFragLevelKeys(frag, levelkeys, level);
           }
           frag.sn = currentSN;
           frag.level = id;
@@ -512,6 +500,9 @@ export default class M3U8Parser {
       assignProgramDateTime(frag, prevFrag);
       frag.cc = discontinuityCounter;
       level.fragmentHint = frag;
+      if (levelkeys) {
+        setFragLevelKeys(frag, levelkeys, level);
+      }
     }
     const fragmentLength = fragments.length;
     const firstFragment = fragments[0];
@@ -660,4 +651,23 @@ function setInitSegment(
     frag.levelkeys = levelkeys;
   }
   frag.initSegment = null;
+}
+
+function setFragLevelKeys(
+  frag: Fragment,
+  levelkeys: { [key: string]: LevelKey },
+  level: LevelDetails
+) {
+  frag.levelkeys = levelkeys;
+  const { encryptedFragments } = level;
+  if (
+    (!encryptedFragments.length ||
+      encryptedFragments[encryptedFragments.length - 1].levelkeys !==
+        levelkeys) &&
+    Object.keys(levelkeys).some(
+      (format) => levelkeys![format].isCommonEncryption
+    )
+  ) {
+    encryptedFragments.push(frag);
+  }
 }
