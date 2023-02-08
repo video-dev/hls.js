@@ -2,9 +2,13 @@ import { Part } from './fragment';
 import type { Fragment } from './fragment';
 import type { AttrList } from '../utils/attr-list';
 import type { DateRange } from './date-range';
+import type { VariableMap } from '../types/level';
 
 const DEFAULT_TARGET_DURATION = 10;
 
+/**
+ * Object representing parsed data from an HLS Media Playlist. Found in {@link hls.js#Level.details}.
+ */
 export class LevelDetails {
   public PTSKnown: boolean = false;
   public alignedSliding: boolean = false;
@@ -48,6 +52,9 @@ export class LevelDetails {
   public driftStart: number = 0;
   public driftEnd: number = 0;
   public encryptedFragments: Fragment[];
+  public playlistParsingError: Error | null = null;
+  public variableList: VariableMap | null = null;
+  public hasVariableRefs = false;
 
   constructor(baseUrl) {
     this.fragments = [];

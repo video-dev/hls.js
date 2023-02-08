@@ -26,7 +26,7 @@ export default (function () {
   }
 
   const AllowedDirections = ['', 'lr', 'rl'] as const;
-  type Direction = typeof AllowedDirections[number];
+  type Direction = (typeof AllowedDirections)[number];
 
   const AllowedAlignments = [
     'start',
@@ -35,7 +35,7 @@ export default (function () {
     'left',
     'right',
   ] as const;
-  type Alignment = typeof AllowedAlignments[number];
+  type Alignment = (typeof AllowedAlignments)[number];
 
   function isAllowedValue<T, A>(allowed: T, value: string): A | false {
     if (typeof value !== 'string') {

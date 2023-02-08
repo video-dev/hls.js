@@ -13,6 +13,7 @@ import {
   findFragWithCC,
 } from './fragment-finders';
 import {
+  findPart,
   getFragmentWithSN,
   getPartWith,
   updateFragPTSDTS,
@@ -37,6 +38,7 @@ import type {
   MediaAttachingData,
   BufferFlushingData,
   LevelSwitchingData,
+  ManifestLoadedData,
 } from '../types/events';
 import type { FragmentTracker } from './fragment-tracker';
 import type { Level } from '../types/level';
@@ -82,6 +84,7 @@ export default class BaseStreamController
   protected lastCurrentTime: number = 0;
   protected nextLoadPosition: number = 0;
   protected startPosition: number = 0;
+  protected startTimeOffset: number | null = null;
   protected loadedmetadata: boolean = false;
   protected fragLoadError: number = 0;
   protected retryDate: number = 0;
@@ -115,6 +118,7 @@ export default class BaseStreamController
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls.config);
+    hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
   }
 
@@ -283,6 +287,13 @@ export default class BaseStreamController
     this.startPosition = this.lastCurrentTime = 0;
   }
 
+  protected onManifestLoaded(
+    event: Events.MANIFEST_LOADED,
+    data: ManifestLoadedData
+  ): void {
+    this.startTimeOffset = data.startTimeOffset;
+  }
+
   protected onLevelSwitching(
     event: Events.LEVEL_SWITCHING,
     data: LevelSwitchingData
@@ -321,15 +332,15 @@ export default class BaseStreamController
 
   protected loadFragment(
     frag: Fragment,
-    levelDetails: LevelDetails,
+    level: Level,
     targetBufferTime: number
   ) {
-    this._loadFragForPlayback(frag, levelDetails, targetBufferTime);
+    this._loadFragForPlayback(frag, level, targetBufferTime);
   }
 
   private _loadFragForPlayback(
     frag: Fragment,
-    levelDetails: LevelDetails,
+    level: Level,
     targetBufferTime: number
   ) {
     const progressCallback: FragmentLoadProgressCallback = (
@@ -348,7 +359,7 @@ export default class BaseStreamController
       this._handleFragmentLoadProgress(data);
     };
 
-    this._doFragLoad(frag, levelDetails, targetBufferTime, progressCallback)
+    this._doFragLoad(frag, level, targetBufferTime, progressCallback)
       .then((data) => {
         if (!data) {
           // if we're here we probably needed to backtrack or are waiting for more parts
@@ -400,8 +411,8 @@ export default class BaseStreamController
     this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
   }
 
-  protected _loadInitSegment(frag: Fragment, details: LevelDetails) {
-    this._doFragLoad(frag, details)
+  protected _loadInitSegment(frag: Fragment, level: Level) {
+    this._doFragLoad(frag, level)
       .then((data) => {
         if (!data || this.fragContextChanged(frag) || !this.levels) {
           throw new Error('init load aborted');
@@ -455,12 +466,6 @@ export default class BaseStreamController
           throw new Error('init load aborted, missing levels');
         }
 
-        const details = levels[frag.level].details as LevelDetails;
-        console.assert(
-          details,
-          'Level details are defined when init segment is loaded'
-        );
-
         const stats = frag.stats;
         this.state = State.IDLE;
         this.fragLoadError = 0;
@@ -506,11 +511,13 @@ export default class BaseStreamController
         part ? ' part: ' + part.index : ''
       } of ${this.logPrefix === '[stream-controller]' ? 'level' : 'track'} ${
         frag.level
-      } ${
+      } (frag:[${(frag.startPTS || NaN).toFixed(3)}-${(
+        frag.endPTS || NaN
+      ).toFixed(3)}] > buffer:${
         media
           ? TimeRanges.toString(BufferHelper.getBuffered(media))
           : '(detached)'
-      }`
+      })`
     );
     this.state = State.IDLE;
     if (!media) {
@@ -559,14 +566,16 @@ export default class BaseStreamController
 
   protected _doFragLoad(
     frag: Fragment,
-    details: LevelDetails,
+    level: Level,
     targetBufferTime: number | null = null,
     progressCallback?: FragmentLoadProgressCallback
   ): Promise<PartsLoadedData | FragLoadedData | null> {
-    if (!this.levels) {
-      throw new Error('frag load aborted, missing levels');
+    const details = level?.details;
+    if (!this.levels || !details) {
+      throw new Error(
+        `frag load aborted, missing level${details ? '' : ' detail'}s`
+      );
     }
-
     let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
     if (frag.encrypted && !frag.decryptdata?.key) {
       this.log(
@@ -579,6 +588,9 @@ export default class BaseStreamController
       keyLoadingPromise = this.keyLoader.load(frag).then((keyLoadedData) => {
         if (!this.fragContextChanged(keyLoadedData.frag)) {
           this.hls.trigger(Events.KEY_LOADED, keyLoadedData);
+          if (this.state === State.KEY_LOADING) {
+            this.state = State.IDLE;
+          }
           return keyLoadedData;
         }
       });
@@ -589,7 +601,7 @@ export default class BaseStreamController
     }
 
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
-    if (this.config.lowLatencyMode && details) {
+    if (this.config.lowLatencyMode) {
       const partList = details.partList;
       if (partList && progressCallback) {
         if (targetBufferTime > frag.end && details.fragmentHint) {
@@ -613,7 +625,7 @@ export default class BaseStreamController
           this.state = State.FRAG_LOADING;
           this.hls.trigger(Events.FRAG_LOADING, {
             frag,
-            part: partList[partIndex],
+            part,
             targetBufferTime,
           });
           this.throwIfFragContextChanged('FRAG_LOADING parts');
@@ -628,8 +640,8 @@ export default class BaseStreamController
                 }
                 return this.doFragPartsLoad(
                   frag,
-                  partList,
-                  partIndex,
+                  part,
+                  level,
                   progressCallback
                 );
               })
@@ -638,8 +650,8 @@ export default class BaseStreamController
 
           return this.doFragPartsLoad(
             frag,
-            partList,
-            partIndex,
+            part,
+            level,
             progressCallback
           ).catch((error: LoadError) => this.handleFragLoadError(error));
         } else if (
@@ -707,24 +719,26 @@ export default class BaseStreamController
 
   private doFragPartsLoad(
     frag: Fragment,
-    partList: Part[],
-    partIndex: number,
+    fromPart: Part,
+    level: Level,
     progressCallback: FragmentLoadProgressCallback
   ): Promise<PartsLoadedData | null> {
     return new Promise(
       (resolve: ResolveFragLoaded, reject: RejectFragLoaded) => {
         const partsLoaded: FragLoadedData[] = [];
-        const loadPartIndex = (index: number) => {
-          const part = partList[index];
+        const initialPartList = level.details?.partList;
+        const loadPart = (part: Part) => {
           this.fragmentLoader
             .loadPart(frag, part, progressCallback)
             .then((partLoadedData: FragLoadedData) => {
               partsLoaded[part.index] = partLoadedData;
               const loadedPart = partLoadedData.part as Part;
               this.hls.trigger(Events.FRAG_LOADED, partLoadedData);
-              const nextPart = partList[index + 1];
-              if (nextPart && nextPart.fragment === frag) {
-                loadPartIndex(index + 1);
+              const nextPart =
+                getPartWith(level, frag.sn as number, part.index + 1) ||
+                findPart(initialPartList, frag.sn as number, part.index + 1);
+              if (nextPart) {
+                loadPart(nextPart);
               } else {
                 return resolve({
                   frag,
@@ -735,7 +749,7 @@ export default class BaseStreamController
             })
             .catch(reject);
         };
-        loadPartIndex(partIndex);
+        loadPart(fromPart);
       }
     );
   }
@@ -1254,9 +1268,13 @@ export default class BaseStreamController
       startPosition = -1;
     }
     if (startPosition === -1 || this.lastCurrentTime === -1) {
-      // first, check if start time offset has been set in playlist, if yes, use this value
-      const startTimeOffset = details.startTimeOffset!;
-      if (Number.isFinite(startTimeOffset)) {
+      // Use Playlist EXT-X-START:TIME-OFFSET when set
+      // Prioritize Multivariant Playlist offset so that main, audio, and subtitle stream-controller start times match
+      const offsetInMultivariantPlaylist = this.startTimeOffset !== null;
+      const startTimeOffset = offsetInMultivariantPlaylist
+        ? this.startTimeOffset
+        : details.startTimeOffset;
+      if (startTimeOffset !== null && Number.isFinite(startTimeOffset)) {
         startPosition = sliding + startTimeOffset;
         if (startTimeOffset < 0) {
           startPosition += details.totalduration;
@@ -1266,7 +1284,9 @@ export default class BaseStreamController
           sliding + details.totalduration
         );
         this.log(
-          `Start time offset ${startTimeOffset} found in playlist, adjust startPosition to ${startPosition}`
+          `Start time offset ${startTimeOffset} found in ${
+            offsetInMultivariantPlaylist ? 'multivariant' : 'media'
+          } playlist, adjust startPosition to ${startPosition}`
         );
         this.startPosition = startPosition;
       } else if (details.live) {

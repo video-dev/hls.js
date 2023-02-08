@@ -49,10 +49,6 @@ import {
   BufferFlushedData,
 } from './types/events';
 
-/**
- * @readonly
- * @enum {string}
- */
 export enum Events {
   // Fired before MediaSource is attaching to media element
   MEDIA_ATTACHING = 'hlsMediaAttaching',
@@ -168,6 +164,9 @@ export enum Events {
   BACK_BUFFER_REACHED = 'hlsBackBufferReached',
 }
 
+/**
+ * Defines each Event type and payload by Event name. Used in {@link hls.js#HlsEventEmitter} to strongly type the event listener API.
+ */
 export interface HlsListeners {
   [Events.MEDIA_ATTACHING]: (
     event: Events.MEDIA_ATTACHING,

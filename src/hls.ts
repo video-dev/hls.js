@@ -25,22 +25,27 @@ import type { MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
 import { HdcpLevel, HdcpLevels, Level } from './types/level';
 import type { Fragment } from './loader/fragment';
-import { BufferInfo } from './utils/buffer-helper';
+import type { BufferInfo } from './utils/buffer-helper';
 
 /**
- * @module Hls
- * @class
- * @constructor
+ * The `Hls` class is the core of the HLS.js library used to instantiate player instances.
+ * @public
  */
 export default class Hls implements HlsEventEmitter {
-  private static defaultConfig?: HlsConfig;
+  private static defaultConfig: HlsConfig | undefined;
 
+  /**
+   * The runtime configuration used by the player. At instantiation this is combination of `hls.userConfig` merged over `Hls.DefaultConfig`.
+   */
   public readonly config: HlsConfig;
+
+  /**
+   * The configuration object provided on player instantiation.
+   */
   public readonly userConfig: Partial<HlsConfig>;
 
   private coreComponents: ComponentAPI[];
   private networkControllers: NetworkComponentAPI[];
-
   private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number;
   private _maxHdcpLevel: HdcpLevel = null;
@@ -54,30 +59,38 @@ export default class Hls implements HlsEventEmitter {
   private subtitleTrackController: SubtitleTrackController;
   private emeController: EMEController;
   private cmcdController: CMCDController;
-
   private _media: HTMLMediaElement | null = null;
   private url: string | null = null;
 
+  /**
+   * Get the video-dev/hls.js package version.
+   */
   static get version(): string {
     return __VERSION__;
   }
 
+  /**
+   * Check if the required MediaSource Extensions are available.
+   */
   static isSupported(): boolean {
     return isSupported();
   }
 
-  static get Events() {
+  static get Events(): typeof Events {
     return Events;
   }
 
-  static get ErrorTypes() {
+  static get ErrorTypes(): typeof ErrorTypes {
     return ErrorTypes;
   }
 
-  static get ErrorDetails() {
+  static get ErrorDetails(): typeof ErrorDetails {
     return ErrorDetails;
   }
 
+  /**
+   * Get the default configuration applied to new instances.
+   */
   static get DefaultConfig(): HlsConfig {
     if (!Hls.defaultConfig) {
       return hlsDefaultConfig;
@@ -87,7 +100,7 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * @type {HlsConfig}
+   * Replace the default configuration applied to new instances.
    */
   static set DefaultConfig(defaultConfig: HlsConfig) {
     Hls.defaultConfig = defaultConfig;
@@ -95,9 +108,7 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Creates an instance of an HLS client that can attach to exactly one `HTMLMediaElement`.
-   *
-   * @constructs Hls
-   * @param {HlsConfig} config
+   * @param userConfig - Configuration options applied over `Hls.DefaultConfig`
    */
   constructor(userConfig: Partial<HlsConfig> = {}) {
     const config = (this.config = mergeConfig(Hls.DefaultConfig, userConfig));
@@ -304,7 +315,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Attaches Hls.js to a media element
-   * @param {HTMLMediaElement} media
    */
   attachMedia(media: HTMLMediaElement) {
     logger.log('attachMedia');
@@ -323,7 +333,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Set the source URL. Can be relative or absolute.
-   * @param {string} url
    */
   loadSource(url: string) {
     this.stopLoad();
@@ -354,8 +363,8 @@ export default class Hls implements HlsEventEmitter {
    * Start loading data from the stream source.
    * Depending on default config, client starts loading automatically when a source is set.
    *
-   * @param {number} startPosition Set the start position to stream from
-   * @default -1 None (from earliest point)
+   * @param startPosition - Set the start position to stream from.
+   * Defaults to -1 (None: starts from earliest point)
    */
   startLoad(startPosition: number = -1) {
     logger.log(`startLoad(${startPosition})`);
@@ -402,26 +411,22 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * @type {Level[]}
+   * @returns an array of levels (variants) sorted by HDCP-LEVEL, BANDWIDTH, SCORE, and RESOLUTION (height)
    */
-  get levels(): Array<Level> {
+  get levels(): Level[] {
     const levels = this.levelController.levels;
     return levels ? levels : [];
   }
 
   /**
-   * Index of quality level currently played
-   * @type {number}
+   * Index of quality level (variant) currently played
    */
   get currentLevel(): number {
     return this.streamController.currentLevel;
   }
 
   /**
-   * Set quality level index immediately .
-   * This will flush the current buffer to replace the quality asap.
-   * That means playback will interrupt at least shortly to re-buffer and re-sync eventually.
-   * @type {number} -1 for automatic level selection
+   * Set quality level index immediately. This will flush the current buffer to replace the quality asap. That means playback will interrupt at least shortly to re-buffer and re-sync eventually. Set to -1 for automatic level selection.
    */
   set currentLevel(newLevel: number) {
     logger.log(`set currentLevel:${newLevel}`);
@@ -432,7 +437,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Index of next quality level loaded as scheduled by stream controller.
-   * @type {number}
    */
   get nextLevel(): number {
     return this.streamController.nextLevel;
@@ -442,7 +446,7 @@ export default class Hls implements HlsEventEmitter {
    * Set quality level index for next loaded data.
    * This will switch the video quality asap, without interrupting playback.
    * May abort current loading of data, and flush parts of buffer (outside currently played fragment region).
-   * @type {number} -1 for automatic level selection
+   * @param newLevel - Pass -1 for automatic level selection
    */
   set nextLevel(newLevel: number) {
     logger.log(`set nextLevel:${newLevel}`);
@@ -452,7 +456,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Return the quality level of the currently or last (of none is loaded currently) segment
-   * @type {number}
    */
   get loadLevel(): number {
     return this.levelController.level;
@@ -462,7 +465,7 @@ export default class Hls implements HlsEventEmitter {
    * Set quality level index for next loaded data in a conservative way.
    * This will switch the quality without flushing, but interrupt current loading.
    * Thus the moment when the quality switch will appear in effect will only be after the already existing buffer.
-   * @type {number} newLevel -1 for automatic level selection
+   * @param newLevel - Pass -1 for automatic level selection
    */
   set loadLevel(newLevel: number) {
     logger.log(`set loadLevel:${newLevel}`);
@@ -471,7 +474,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * get next quality level loaded
-   * @type {number}
    */
   get nextLoadLevel(): number {
     return this.levelController.nextLoadLevel;
@@ -480,7 +482,6 @@ export default class Hls implements HlsEventEmitter {
   /**
    * Set quality level of next loaded segment in a fully "non-destructive" way.
    * Same as `loadLevel` but will wait for next switch (until current loading is done).
-   * @type {number} level
    */
   set nextLoadLevel(level: number) {
     this.levelController.nextLoadLevel = level;
@@ -489,7 +490,6 @@ export default class Hls implements HlsEventEmitter {
   /**
    * Return "first level": like a default level, if not set,
    * falls back to index of first level referenced in manifest
-   * @type {number}
    */
   get firstLevel(): number {
     return Math.max(this.levelController.firstLevel, this.minAutoLevel);
@@ -497,7 +497,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Sets "first-level", see getter.
-   * @type {number}
    */
   set firstLevel(newLevel: number) {
     logger.log(`set firstLevel:${newLevel}`);
@@ -509,7 +508,6 @@ export default class Hls implements HlsEventEmitter {
    * if not overrided by user, first level appearing in manifest will be used as start level
    * if -1 : automatic start level selection, playback will start from level matching download bandwidth
    * (determined from download of first segment)
-   * @type {number}
    */
   get startLevel(): number {
     return this.levelController.startLevel;
@@ -520,7 +518,6 @@ export default class Hls implements HlsEventEmitter {
    * if not overrided by user, first level appearing in manifest will be used as start level
    * if -1 : automatic start level selection, playback will start from level matching download bandwidth
    * (determined from download of first segment)
-   * @type {number} newLevel
    */
   set startLevel(newLevel: number) {
     logger.log(`set startLevel:${newLevel}`);
@@ -533,18 +530,15 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * Get the current setting for capLevelToPlayerSize
-   *
-   * @type {boolean}
+   * Whether level capping is enabled.
+   * Default value is set via `config.capLevelToPlayerSize`.
    */
   get capLevelToPlayerSize(): boolean {
     return this.config.capLevelToPlayerSize;
   }
 
   /**
-   * set  dynamically set capLevelToPlayerSize against (`CapLevelController`)
-   *
-   * @type {boolean}
+   * Enables or disables level capping. If disabled after previously enabled, `nextLevelSwitch` will be immediately called.
    */
   set capLevelToPlayerSize(shouldStartCapping: boolean) {
     const newCapLevelToPlayerSize = !!shouldStartCapping;
@@ -564,7 +558,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
-   * @type {number}
    */
   get autoLevelCapping(): number {
     return this._autoLevelCapping;
@@ -572,7 +565,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * get bandwidth estimate
-   * @type {number}
    */
   get bandwidthEstimate(): number {
     const { bwEstimator } = this.abrController;
@@ -583,8 +575,19 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
+   * get time to first byte estimate
    * @type {number}
+   */
+  get ttfbEstimate(): number {
+    const { bwEstimator } = this.abrController;
+    if (!bwEstimator) {
+      return NaN;
+    }
+    return bwEstimator.getEstimateTTFB();
+  }
+
+  /**
+   * Capping/max level value that should be used by automatic level selection algorithm (`ABRController`)
    */
   set autoLevelCapping(newLevel: number) {
     if (this._autoLevelCapping !== newLevel) {
@@ -605,7 +608,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * True when automatic level selection enabled
-   * @type {boolean}
    */
   get autoLevelEnabled(): boolean {
     return this.levelController.manualLevel === -1;
@@ -613,7 +615,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Level set manually (if any)
-   * @type {number}
    */
   get manualLevel(): number {
     return this.levelController.manualLevel;
@@ -621,7 +622,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * min level selectable in auto mode according to config.minAutoBitrate
-   * @type {number}
    */
   get minAutoLevel(): number {
     const {
@@ -642,7 +642,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * max level selectable in auto mode according to autoLevelCapping
-   * @type {number}
    */
   get maxAutoLevel(): number {
     const { levels, autoLevelCapping, maxHdcpLevel } = this;
@@ -668,7 +667,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * next automatically selected quality level
-   * @type {number}
    */
   get nextAutoLevel(): number {
     // ensure next auto level is between  min and max auto level
@@ -684,7 +682,6 @@ export default class Hls implements HlsEventEmitter {
    * in case of load error on level N, hls.js can set nextAutoLevel to N-1 for example)
    * forced value is valid for one fragment. upon successful frag loading at forced level,
    * this value will be resetted to -1 by ABR controller.
-   * @type {number}
    */
   set nextAutoLevel(nextLevel: number) {
     this.abrController.nextAutoLevel = Math.max(this.minAutoLevel, nextLevel);
@@ -692,7 +689,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * get the datetime value relative to media.currentTime for the active level Program Date Time if present
-   * @type {Date}
    */
   public get playingDate(): Date | null {
     return this.streamController.currentProgramDateTime;
@@ -703,7 +699,7 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * @type {AudioTrack[]}
+   * Get the list of selectable audio tracks
    */
   get audioTracks(): Array<MediaPlaylist> {
     const audioTrackController = this.audioTrackController;
@@ -712,7 +708,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * index of the selected audio track (index in audio track lists)
-   * @type {number}
    */
   get audioTrack(): number {
     const audioTrackController = this.audioTrackController;
@@ -721,7 +716,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * selects an audio track, based on its index in audio track lists
-   * @type {number}
    */
   set audioTrack(audioTrackId: number) {
     const audioTrackController = this.audioTrackController;
@@ -732,7 +726,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * get alternate subtitle tracks list from playlist
-   * @type {MediaPlaylist[]}
    */
   get subtitleTracks(): Array<MediaPlaylist> {
     const subtitleTrackController = this.subtitleTrackController;
@@ -743,7 +736,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * index of the selected subtitle track (index in subtitle track lists)
-   * @type {number}
    */
   get subtitleTrack(): number {
     const subtitleTrackController = this.subtitleTrackController;
@@ -756,7 +748,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * select an subtitle track, based on its index in subtitle track lists
-   * @type {number}
    */
   set subtitleTrack(subtitleTrackId: number) {
     const subtitleTrackController = this.subtitleTrackController;
@@ -766,7 +757,7 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * @type {boolean}
+   * Whether subtitle display is enabled or not
    */
   get subtitleDisplay(): boolean {
     const subtitleTrackController = this.subtitleTrackController;
@@ -777,7 +768,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * Enable/disable subtitle display rendering
-   * @type {boolean}
    */
   set subtitleDisplay(value: boolean) {
     const subtitleTrackController = this.subtitleTrackController;
@@ -788,42 +778,38 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * get mode for Low-Latency HLS loading
-   * @type {boolean}
    */
-  get lowLatencyMode() {
+  get lowLatencyMode(): boolean {
     return this.config.lowLatencyMode;
   }
 
   /**
    * Enable/disable Low-Latency HLS part playlist and segment loading, and start live streams at playlist PART-HOLD-BACK rather than HOLD-BACK.
-   * @type {boolean}
    */
   set lowLatencyMode(mode: boolean) {
     this.config.lowLatencyMode = mode;
   }
 
   /**
-   * position (in seconds) of live sync point (ie edge of live position minus safety delay defined by ```hls.config.liveSyncDuration```)
-   * @type {number}
+   * Position (in seconds) of live sync point (ie edge of live position minus safety delay defined by ```hls.config.liveSyncDuration```)
+   * @returns null prior to loading live Playlist
    */
   get liveSyncPosition(): number | null {
     return this.latencyController.liveSyncPosition;
   }
 
   /**
-   * estimated position (in seconds) of live edge (ie edge of live playlist plus time sync playlist advanced)
-   * returns 0 before first playlist is loaded
-   * @type {number}
+   * Estimated position (in seconds) of live edge (ie edge of live playlist plus time sync playlist advanced)
+   * @returns 0 before first playlist is loaded
    */
-  get latency() {
+  get latency(): number {
     return this.latencyController.latency;
   }
 
   /**
    * maximum distance from the edge before the player seeks forward to ```hls.liveSyncPosition```
    * configured using ```liveMaxLatencyDurationCount``` (multiple of target duration) or ```liveMaxLatencyDuration```
-   * returns 0 before first playlist is loaded
-   * @type {number}
+   * @returns 0 before first playlist is loaded
    */
   get maxLatency(): number {
     return this.latencyController.maxLatency;
@@ -831,7 +817,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * target distance from the edge as calculated by the latency controller
-   * @type {number}
    */
   get targetLatency(): number | null {
     return this.latencyController.targetLatency;
@@ -839,7 +824,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * the rate at which the edge of the current live playlist is advancing or 1 if there is none
-   * @type {number}
    */
   get drift(): number | null {
     return this.latencyController.drift;
@@ -847,7 +831,6 @@ export default class Hls implements HlsEventEmitter {
 
   /**
    * set to true when startLoad is called before MANIFEST_PARSED event
-   * @type {boolean}
    */
   get forceStartLoad(): boolean {
     return this.streamController.forceStartLoad;
@@ -909,6 +892,7 @@ export type {
   HlsUrlParameters,
   LevelAttributes,
   LevelParsed,
+  VariableMap,
 } from './types/level';
 export type {
   PlaylistLevelType,
@@ -998,3 +982,4 @@ export type {
   SubtitleTrackSwitchData,
 } from './types/events';
 export type { AttrList } from './utils/attr-list';
+export type { BufferInfo } from './utils/buffer-helper';

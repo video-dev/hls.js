@@ -27,6 +27,8 @@ export function fetchSupported() {
   return false;
 }
 
+const BYTERANGE = /(\d+)-(\d+)\/(\d+)/;
+
 class FetchLoader implements Loader<LoaderContext> {
   private fetchSetup: Function;
   private requestTimeout?: number;
@@ -109,7 +111,8 @@ class FetchLoader implements Loader<LoaderContext> {
           self.performance.now(),
           stats.loading.start
         );
-        stats.total = parseInt(response.headers.get('Content-Length') || '0');
+
+        stats.total = getContentLength(response.headers) || stats.total;
 
         if (onProgress && Number.isFinite(config.highWaterMark)) {
           return this.loadProgressively(
@@ -241,6 +244,27 @@ function getRequestParameters(context: LoaderContext, signal): any {
   }
 
   return initParams;
+}
+
+function getByteRangeLength(byteRangeHeader: string): number | undefined {
+  const result = BYTERANGE.exec(byteRangeHeader);
+  if (result) {
+    return parseInt(result[2]) - parseInt(result[1]) + 1;
+  }
+}
+
+function getContentLength(headers: Headers): number | undefined {
+  const contentRange = headers.get('Content-Range');
+  if (contentRange) {
+    const byteRangeLength = getByteRangeLength(contentRange);
+    if (Number.isFinite(byteRangeLength)) {
+      return byteRangeLength;
+    }
+  }
+  const contentLength = headers.get('Content-Length');
+  if (contentLength) {
+    return parseInt(contentLength);
+  }
 }
 
 function getRequest(context: LoaderContext, initParams: any): Request {

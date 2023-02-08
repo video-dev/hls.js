@@ -3,7 +3,12 @@ import type { Fragment } from '../loader/fragment';
 // eslint-disable-next-line import/no-duplicates
 import type { Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
-import type { HlsUrlParameters, Level, LevelParsed } from './level';
+import type {
+  HlsUrlParameters,
+  Level,
+  LevelParsed,
+  VariableMap,
+} from './level';
 import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
 import type {
   Loader,
@@ -81,13 +86,16 @@ export interface ManifestLoadingData {
 export interface ManifestLoadedData {
   audioTracks: MediaPlaylist[];
   captions?: MediaPlaylist[];
+  contentSteering: Object | null;
   levels: LevelParsed[];
   networkDetails: any;
   sessionData: Record<string, AttrList> | null;
   sessionKeys: LevelKey[] | null;
+  startTimeOffset: number | null;
   stats: LoaderStats;
   subtitles?: MediaPlaylist[];
   url: string;
+  variableList: VariableMap | null;
 }
 
 export interface ManifestParsedData {

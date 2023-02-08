@@ -396,6 +396,7 @@ export default class LevelController extends BasePlaylistController {
         }
       }
       // eslint-disable-next-line no-fallthrough
+      case ErrorDetails.LEVEL_PARSING_ERROR:
       case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.KEY_SYSTEM_NO_SESSION:
         levelIndex =
@@ -583,7 +584,7 @@ export default class LevelController extends BasePlaylistController {
 
       this.log(
         `Attempt loading level index ${level}${
-          hlsUrlParameters
+          hlsUrlParameters?.msn !== undefined
             ? ' at sn ' +
               hlsUrlParameters.msn +
               ' part ' +

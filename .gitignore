@@ -21,6 +21,7 @@ coverage/
 /dist.zip
 /netlify
 /api-docs
+/api-docs-markdown
 
 # eslint
 .eslintcache

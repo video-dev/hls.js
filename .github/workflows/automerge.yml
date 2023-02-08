@@ -11,8 +11,7 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: tjenkinson/gh-action-auto-merge-dependency-updates@d4c15028ca52e985ee3dfbb5ed263c510ad07025
+      - uses: tjenkinson/gh-action-auto-merge-dependency-updates@cad2ad2510de92ed0c6d06d1b738654f4d4255a2
         with:
           repo-token: ${{ secrets.CI_GITHUB_TOKEN }}
           allowed-actors: renovate[bot]
-          package-block-list: netlify-cli

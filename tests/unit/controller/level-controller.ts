@@ -4,7 +4,9 @@ import { Events } from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Level } from '../../../src/types/level';
 import { AttrList } from '../../../src/utils/attr-list';
-
+import { PlaylistLevelType } from '../../../src/types/loader';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
+import type { LevelDetails } from '../../../src/loader/level-details';
 import type {
   ManifestLoadedData,
   ManifestParsedData,
@@ -21,6 +23,14 @@ import * as sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;
+
+type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
+  onManifestLoaded: (event: string, data: Partial<ManifestLoadedData>) => void;
+  switchParams: (
+    playlistUri: string,
+    previous: LevelDetails | undefined
+  ) => void;
+};
 
 function parsedLevel(
   options: Partial<LevelParsed> & { bitrate: number }
@@ -49,19 +59,19 @@ function mediaPlaylist(options: Partial<MediaPlaylist>): MediaPlaylist {
 describe('LevelController', function () {
   const sandbox = sinon.createSandbox();
   let hls;
-  let levelController;
+  let levelController: LevelControllerTestable;
   let triggerSpy;
 
   beforeEach(function () {
     hls = new HlsMock({}, sandbox);
-    levelController = new LevelController(hls);
+    levelController = new LevelController(
+      hls
+    ) as unknown as LevelControllerTestable;
     levelController.onParsedComplete = () => {};
     triggerSpy = hls.trigger;
   });
 
   afterEach(function () {
-    hls = null;
-    levelController = null;
     sandbox.restore();
   });
 
@@ -103,6 +113,9 @@ describe('LevelController', function () {
       networkDetails: '',
       sessionData: null,
       sessionKeys: null,
+      contentSteering: null,
+      startTimeOffset: null,
+      variableList: null,
       stats: {} as any,
       subtitles: [],
       url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
@@ -192,6 +205,9 @@ describe('LevelController', function () {
         subtitles: [],
         sessionData: null,
         sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
         stats: {} as any,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
@@ -230,6 +246,9 @@ describe('LevelController', function () {
         subtitles: [],
         sessionData: null,
         sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
         stats: {} as any,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
@@ -271,6 +290,9 @@ describe('LevelController', function () {
         subtitles: [],
         sessionData: null,
         sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
         stats: {} as any,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
@@ -307,6 +329,9 @@ describe('LevelController', function () {
         subtitles: [],
         sessionData: null,
         sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
         stats: {} as any,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
@@ -342,6 +367,9 @@ describe('LevelController', function () {
         subtitles: [],
         sessionData: null,
         sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
         stats: {} as any,
         url: 'foo',
       };
@@ -432,6 +460,104 @@ describe('LevelController', function () {
       expect(payload.video).to.equal(true);
       expect(payload.audio).to.equal(false);
       expect(payload.altAudio).to.equal(false);
+    });
+  });
+
+  describe('switchParams', function () {
+    const mediaPlaylist = `#EXTM3U
+#EXT-X-VERSION:7
+#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=3.000000
+#EXT-X-PART-INF:PART-TARGET=1.000000
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PROGRAM-DATE-TIME:2023-01-20T08:21:50.887Z
+#EXTINF:3.000000,
+vfrag2500.stream_3153718435_1674202910887_4_0_1.m4v?type=hls&bitrate=193521&filetype=.m4v
+#EXT-X-PART:DURATION=1.000000,URI="vfrag2500.stream_1351418703_1674202913887_7_0_2_0.m4v?type=hls&mode=cmaf&filetype=.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="vfrag2500.stream_1351418703_1674202913887_7_0_2_1.m4v?type=hls&mode=cmaf&filetype=.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="vfrag2500.stream_1351418703_1674202913887_7_0_2_2.m4v?type=hls&mode=cmaf&filetype=.m4v",INDEPENDENT=YES
+#EXTINF:3.000000,
+vfrag2500.stream_1351418703_1674202913887_7_0_2.m4v?type=hls&bitrate=209021&filetype=.m4v
+#EXT-X-PART:DURATION=1.000000,URI="vfrag2500.stream_1875648429_1674202916887_10_0_3_0.m4v?type=hls&mode=cmaf&filetype=.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="vfrag2500.stream_1875648429_1674202916887_10_0_3_1.m4v?type=hls&mode=cmaf&filetype=.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="vfrag2500.stream_1875648429_1674202916887_10_0_3_2.m4v?type=hls&mode=cmaf&filetype=.m4v",INDEPENDENT=YES
+#EXTINF:3.000000,
+vfrag2500.stream_1875648429_1674202916887_10_0_3.m4v?type=hls&bitrate=200661&filetype=.m4v
+#EXT-X-PART:DURATION=1.000000,URI="vfrag2500.stream_3900694400_1674202919887_13_0_4_0.m4v?type=hls&mode=cmaf&filetype=.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="vfrag2500.stream_3900694400_1674202919887_13_0_4_1.m4v?type=hls&mode=cmaf&filetype=.m4v",INDEPENDENT=YES
+#EXT-X-PRELOAD-HINT:TYPE=PART,URI="vfrag2500.stream_3900694400_1674202919887_13_0_4_2.m4v?type=hls&mode=cmaf&filetype=.m4v"
+#EXT-X-RENDITION-REPORT:URI="chunklist_vfrag1500.m3u8",LAST-MSN=4,LAST-PART=1
+#EXT-X-RENDITION-REPORT:URI="chunklist_vfrag400.m3u8",LAST-MSN=4,LAST-PART=1
+#EXT-X-RENDITION-REPORT:URI="chunklist_vfrag100.m3u8",LAST-MSN=4,LAST-PART=1`;
+
+    it('returns RENDITION-REPORT query values for the selected playlist URI', function () {
+      const levelDetails = M3U8Parser.parseLevelPlaylist(
+        mediaPlaylist,
+        'http://example.com/playlist.m3u8?abc=deg',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        {}
+      );
+      const selectedUri = 'http://example.com/chunklist_vfrag1500.m3u8';
+      const hlsUrlParameters = levelController.switchParams(
+        selectedUri,
+        levelDetails
+      );
+      expect(hlsUrlParameters).to.have.property('msn').which.equals(4);
+      expect(hlsUrlParameters).to.have.property('part').which.equals(1);
+      expect(hlsUrlParameters).to.have.property('skip').which.equals('');
+    });
+
+    it('returns RENDITION-REPORT query values for the selected playlist URI with additional query params', function () {
+      const levelDetails = M3U8Parser.parseLevelPlaylist(
+        mediaPlaylist,
+        'http://example.com/playlist.m3u8?abc=deg',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        {}
+      );
+      const selectedUriWithQuery =
+        'http://example.com/chunklist_vfrag1500.m3u8?abc=123';
+      const hlsUrlParameters = levelController.switchParams(
+        selectedUriWithQuery,
+        levelDetails
+      );
+      expect(hlsUrlParameters).to.not.be.undefined;
+      expect(hlsUrlParameters).to.have.property('msn').which.equals(4);
+      expect(hlsUrlParameters).to.have.property('part').which.equals(1);
+      expect(hlsUrlParameters).to.have.property('skip').which.equals('');
+    });
+
+    it('returns RENDITION-REPORT exact URI match over partial match for playlist URIs with additional query params', function () {
+      const levelDetails = M3U8Parser.parseLevelPlaylist(
+        `#EXTM3U
+#EXT-X-VERSION:7
+#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES
+#EXT-X-TARGETDURATION:3
+#EXTINF:3.0,
+#EXTINF:3.0,
+#EXTINF:3.0,
+#EXT-X-RENDITION-REPORT:URI="chunklist.m3u8?token=1234",LAST-MSN=4
+#EXT-X-RENDITION-REPORT:URI="chunklist.m3u8?token=1",LAST-MSN=5
+#EXT-X-RENDITION-REPORT:URI="chunklist.m3u8?token=123",LAST-MSN=6
+#EXT-X-RENDITION-REPORT:URI="chunklist.m3u8?token=foo",LAST-MSN=7
+#EXT-X-RENDITION-REPORT:URI="chunklist.m3u8",LAST-MSN=8`,
+        'http://example.com/playlist.m3u8?abc=deg',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        {}
+      );
+      const selectedUriWithQuery =
+        'http://example.com/chunklist.m3u8?token=123';
+      const hlsUrlParameters = levelController.switchParams(
+        selectedUriWithQuery,
+        levelDetails
+      );
+      expect(hlsUrlParameters).to.not.be.undefined;
+      expect(hlsUrlParameters).to.have.property('msn').which.equals(6);
     });
   });
 });

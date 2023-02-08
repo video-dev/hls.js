@@ -11,9 +11,11 @@ import { mockFragments } from '../../mocks/data';
 import { Fragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
+import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import { Level, LevelAttributes } from '../../../src/types/level';
+import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
@@ -23,22 +25,24 @@ chai.use(sinonChai);
 const expect = chai.expect;
 
 describe('StreamController', function () {
+  let fake;
   let hls: Hls;
   let fragmentTracker: FragmentTracker;
   let streamController: StreamController;
   const attrs: LevelAttributes = new AttrList({});
 
   beforeEach(function () {
+    fake = sinon.useFakeXMLHttpRequest();
     hls = new Hls({});
     streamController = hls['streamController'];
     fragmentTracker = streamController['fragmentTracker'];
     streamController['startFragRequested'] = true;
   });
 
-  /**
-   * Assert: streamController should be started
-   * @param {StreamController} streamController
-   */
+  this.afterEach(function () {
+    fake.restore();
+  });
+
   const assertStreamControllerStarted = (streamController) => {
     expect(streamController.hasInterval()).to.be.true;
     expect(streamController.state).to.equal(
@@ -47,16 +51,40 @@ describe('StreamController', function () {
     );
   };
 
-  /**
-   * Assert: streamController should be stopped
-   * @param {StreamController} streamController
-   */
   const assertStreamControllerStopped = (streamController) => {
     expect(streamController.hasInterval()).to.be.false;
     expect(streamController.state).to.equal(
       State.STOPPED,
       "StreamController's state should be STOPPED"
     );
+  };
+
+  const loadManifest = (manifest: string): ParsedMultivariantPlaylist => {
+    const result = M3U8Parser.parseMasterPlaylist(
+      manifest,
+      'http://www.example.com'
+    );
+    const {
+      contentSteering,
+      levels,
+      sessionData,
+      sessionKeys,
+      startTimeOffset,
+      variableList,
+    } = result;
+    hls.trigger(Events.MANIFEST_LOADED, {
+      levels,
+      audioTracks: [],
+      contentSteering,
+      url: 'http://www.example.com',
+      stats: new LoadStats(),
+      networkDetails: {},
+      sessionData,
+      sessionKeys,
+      startTimeOffset,
+      variableList,
+    });
+    return result;
   };
 
   describe('StreamController', function () {
@@ -69,31 +97,82 @@ describe('StreamController', function () {
       assertStreamControllerStopped(streamController);
     });
 
-    it('should start without levels data', function () {
-      const manifest = `#EXTM3U
-  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
-  http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
-      const { levels: levelsParsed } = M3U8Parser.parseMasterPlaylist(
-        manifest,
-        'http://www.dailymotion.com'
-      );
-      // load levels data
-      const levels = levelsParsed.map((levelParsed) => new Level(levelParsed));
-      streamController['onManifestParsed'](Events.MANIFEST_PARSED, {
-        altAudio: false,
-        audio: false,
-        audioTracks: [],
-        firstLevel: 0,
-        // @ts-ignore
-        stats: undefined,
-        subtitleTracks: [],
-        video: false,
-        levels,
-      });
-      streamController.startLoad(1);
+    it('should start without level details', function () {
+      loadManifest(`#EXTM3U
+      #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
+      http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`);
       assertStreamControllerStarted(streamController);
       streamController.stopLoad();
       assertStreamControllerStopped(streamController);
+    });
+
+    it('should use EXT-X-START from Multivariant Playlist when not overridden by startPosition', function () {
+      loadManifest(`#EXTM3U
+  #EXT-X-START:TIME-OFFSET=130.5
+  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
+  http://www.example.com/media.m3u8`);
+      assertStreamControllerStarted(streamController);
+      // Trigger Level Loaded
+      const details = new LevelDetails('');
+      details.live = false;
+      details.totalduration = 200;
+      details.fragments.push({} as any);
+      hls.trigger(Events.LEVEL_LOADED, {
+        details,
+        id: 0,
+        level: 0,
+        networkDetails: {},
+        stats: new LoadStats(),
+        deliveryDirectives: null,
+      });
+      expect(streamController['startPosition']).to.equal(130.5);
+      expect(streamController['nextLoadPosition']).to.equal(130.5);
+      expect(streamController['lastCurrentTime']).to.equal(130.5);
+    });
+
+    it('should use EXT-X-START from Multivariant Playlist when not overridden by startPosition with live playlists', function () {
+      const result = loadManifest(`#EXTM3U
+  #EXT-X-START:TIME-OFFSET=-12.0
+  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,RESOLUTION=848x360,NAME="480"
+  http://www.example.com/media.m3u8`);
+      const {
+        contentSteering,
+        levels,
+        sessionData,
+        sessionKeys,
+        startTimeOffset,
+        variableList,
+      } = result;
+      hls.trigger(Events.MANIFEST_LOADED, {
+        levels,
+        audioTracks: [],
+        contentSteering,
+        url: 'http://www.example.com',
+        stats: new LoadStats(),
+        networkDetails: {},
+        sessionData,
+        sessionKeys,
+        startTimeOffset,
+        variableList,
+      });
+      assertStreamControllerStarted(streamController);
+
+      // Trigger Level Loaded
+      const details = new LevelDetails('');
+      details.live = true;
+      details.totalduration = 30;
+      details.fragments.push({ start: 0 } as any);
+      hls.trigger(Events.LEVEL_LOADED, {
+        details,
+        id: 0,
+        level: 0,
+        networkDetails: {},
+        stats: new LoadStats(),
+        deliveryDirectives: null,
+      });
+      expect(streamController['startPosition']).to.equal(18);
+      expect(streamController['nextLoadPosition']).to.equal(18);
+      expect(streamController['lastCurrentTime']).to.equal(18);
     });
   });
 
@@ -288,7 +367,7 @@ describe('StreamController', function () {
 
     let triggerSpy;
     let frag;
-    let levelDetails;
+    let level;
     beforeEach(function () {
       streamController['levels'] = [
         new Level({
@@ -302,8 +381,14 @@ describe('StreamController', function () {
       frag = new Fragment(PlaylistLevelType.MAIN, '');
       frag.level = 0;
       frag.url = 'file';
-      levelDetails = new LevelDetails('');
-      levelDetails.fragments.push(frag);
+      level = new Level({
+        attrs: new AttrList({}),
+        bitrate: 1,
+        name: '',
+        url: '',
+      });
+      level.details = new LevelDetails('');
+      level.details.fragments.push(frag);
     });
 
     function assertLoadingState(frag) {
@@ -321,25 +406,25 @@ describe('StreamController', function () {
 
     it('should load a complete fragment which has not been previously appended', function () {
       fragStateStub(FragmentState.NOT_LOADED);
-      streamController['loadFragment'](frag, levelDetails, 0);
+      streamController['loadFragment'](frag, level, 0);
       assertLoadingState(frag);
     });
 
     it('should not load a partial fragment', function () {
       fragStateStub(FragmentState.PARTIAL);
-      streamController['loadFragment'](frag, levelDetails, 0);
+      streamController['loadFragment'](frag, level, 0);
       assertNotLoadingState();
     });
 
     it('should not load a fragment which has completely & successfully loaded', function () {
       fragStateStub(FragmentState.OK);
-      streamController['loadFragment'](frag, levelDetails, 0);
+      streamController['loadFragment'](frag, level, 0);
       assertNotLoadingState();
     });
 
     it('should not load a fragment while it is appending', function () {
       fragStateStub(FragmentState.APPENDING);
-      streamController['loadFragment'](frag, levelDetails, 0);
+      streamController['loadFragment'](frag, level, 0);
       assertNotLoadingState();
     });
   });

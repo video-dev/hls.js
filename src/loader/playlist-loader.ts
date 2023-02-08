@@ -4,16 +4,13 @@
  * Once loaded, dispatches events with parsed data-models of manifest/levels/audio/subtitle tracks.
  *
  * Uses loader(s) set in config to do actual internal loading of resource tasks.
- *
- * @module
- *
  */
 
 import { Events } from '../events';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { logger } from '../utils/logger';
 import M3U8Parser from './m3u8-parser';
-import type { LevelParsed } from '../types/level';
+import type { LevelParsed, VariableMap } from '../types/level';
 import type {
   Loader,
   LoaderConfiguration,
@@ -68,6 +65,7 @@ class PlaylistLoader implements NetworkComponentAPI {
   private readonly loaders: {
     [key: string]: Loader<LoaderContext>;
   } = Object.create(null);
+  private variableList: VariableMap | null = null;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -142,6 +140,7 @@ class PlaylistLoader implements NetworkComponentAPI {
   }
 
   public destroy(): void {
+    this.variableList = null;
     this.unregisterListeners();
     this.destroyInternalLoaders();
   }
@@ -151,6 +150,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     data: ManifestLoadingData
   ) {
     const { url } = data;
+    this.variableList = null;
     this.load({
       id: null,
       groupId: null,
@@ -324,7 +324,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       this.handleManifestParsingError(
         response,
         context,
-        'no EXTM3U delimiter',
+        new Error('no EXTM3U delimiter'),
         networkDetails
       );
       return;
@@ -369,48 +369,34 @@ class PlaylistLoader implements NetworkComponentAPI {
 
     const url = getResponseUrl(response, context);
 
-    const { levels, sessionData, sessionKeys } = M3U8Parser.parseMasterPlaylist(
-      string,
-      url
-    );
-    if (!levels.length) {
+    const parsedResult = M3U8Parser.parseMasterPlaylist(string, url);
+
+    if (parsedResult.playlistParsingError) {
       this.handleManifestParsingError(
         response,
         context,
-        'no level found in manifest',
+        parsedResult.playlistParsingError,
         networkDetails
       );
       return;
     }
 
-    // multi level playlist, parse level info
-    const audioGroups = levels.map((level: LevelParsed) => ({
-      id: level.attrs.AUDIO,
-      audioCodec: level.audioCodec,
-    }));
+    const {
+      contentSteering,
+      levels,
+      sessionData,
+      sessionKeys,
+      startTimeOffset,
+      variableList,
+    } = parsedResult;
 
-    const subtitleGroups = levels.map((level: LevelParsed) => ({
-      id: level.attrs.SUBTITLES,
-      textCodec: level.textCodec,
-    }));
+    this.variableList = variableList;
 
-    const audioTracks = M3U8Parser.parseMasterPlaylistMedia(
-      string,
-      url,
-      'AUDIO',
-      audioGroups
-    );
-    const subtitles = M3U8Parser.parseMasterPlaylistMedia(
-      string,
-      url,
-      'SUBTITLES',
-      subtitleGroups
-    );
-    const captions = M3U8Parser.parseMasterPlaylistMedia(
-      string,
-      url,
-      'CLOSED-CAPTIONS'
-    );
+    const {
+      AUDIO: audioTracks = [],
+      SUBTITLES: subtitles,
+      'CLOSED-CAPTIONS': captions,
+    } = M3U8Parser.parseMasterPlaylistMedia(string, url, parsedResult);
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -449,11 +435,14 @@ class PlaylistLoader implements NetworkComponentAPI {
       audioTracks,
       subtitles,
       captions,
+      contentSteering,
       url,
       stats,
       networkDetails,
       sessionData,
       sessionKeys,
+      startTimeOffset,
+      variableList,
     });
   }
 
@@ -467,17 +456,34 @@ class PlaylistLoader implements NetworkComponentAPI {
     const { id, level, type } = context;
 
     const url = getResponseUrl(response, context);
-    const levelUrlId = Number.isFinite(id as number) ? id : 0;
-    const levelId = Number.isFinite(level as number) ? level : levelUrlId;
+    const levelUrlId = Number.isFinite(id as number) ? (id as number) : 0;
+    const levelId = Number.isFinite(level as number)
+      ? (level as number)
+      : levelUrlId;
     const levelType = mapContextToLevelType(context);
     const levelDetails: LevelDetails = M3U8Parser.parseLevelPlaylist(
       response.data as string,
       url,
-      levelId!,
+      levelId,
       levelType,
-      levelUrlId!
+      levelUrlId,
+      this.variableList
     );
 
+    const error = levelDetails.playlistParsingError;
+    if (error) {
+      hls.trigger(Events.ERROR, {
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.LEVEL_PARSING_ERROR,
+        fatal: false,
+        url: url,
+        err: error,
+        error,
+        reason: error.message,
+        level: typeof context.level === 'number' ? context.level : undefined,
+      });
+      return;
+    }
     if (!levelDetails.fragments.length) {
       hls.trigger(Events.ERROR, {
         type: ErrorTypes.NETWORK_ERROR,
@@ -511,6 +517,9 @@ class PlaylistLoader implements NetworkComponentAPI {
         networkDetails,
         sessionData: null,
         sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
       });
     }
 
@@ -526,7 +535,7 @@ class PlaylistLoader implements NetworkComponentAPI {
   private handleManifestParsingError(
     response: LoaderResponse,
     context: PlaylistLoaderContext,
-    reason: string,
+    error: Error,
     networkDetails: any
   ): void {
     this.hls.trigger(Events.ERROR, {
@@ -534,7 +543,9 @@ class PlaylistLoader implements NetworkComponentAPI {
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
       fatal: context.type === PlaylistContextType.MANIFEST,
       url: response.url,
-      reason,
+      err: error,
+      error,
+      reason: error.message,
       response,
       context,
       networkDetails,
@@ -627,7 +638,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       this.handleManifestParsingError(
         response,
         context,
-        'invalid target duration',
+        new Error('invalid target duration'),
         networkDetails
       );
       return;
