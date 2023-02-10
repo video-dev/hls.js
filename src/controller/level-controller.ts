@@ -11,6 +11,7 @@ import {
   ErrorData,
   LevelSwitchingData,
   LevelsUpdatedData,
+  ManifestLoadingData,
 } from '../types/events';
 import { HdcpLevel, HdcpLevels, Level } from '../types/level';
 import { Events } from '../events';
@@ -29,6 +30,7 @@ export default class LevelController extends BasePlaylistController {
   private _levels: Level[] = [];
   private _firstLevel: number = -1;
   private _startLevel?: number;
+  private currentLevel: Level | null = null;
   private currentLevelIndex: number = -1;
   private manualLevelIndex: number = -1;
   private steering: ContentSteeringController | null;
@@ -46,6 +48,7 @@ export default class LevelController extends BasePlaylistController {
 
   private _registerListeners() {
     const { hls } = this;
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
@@ -56,9 +59,10 @@ export default class LevelController extends BasePlaylistController {
 
   private _unregisterListeners() {
     const { hls } = this;
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
-    hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
+    hls.off(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
     hls.off(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.off(Events.ERROR, this.onError, this);
@@ -67,8 +71,7 @@ export default class LevelController extends BasePlaylistController {
   public destroy() {
     this._unregisterListeners();
     this.steering = null;
-    this.manualLevelIndex = -1;
-    this._levels.length = 0;
+    this.resetLevels();
     super.destroy();
   }
 
@@ -81,6 +84,21 @@ export default class LevelController extends BasePlaylistController {
     });
 
     super.startLoad();
+  }
+
+  private resetLevels() {
+    this._startLevel = undefined;
+    this.manualLevelIndex = -1;
+    this.currentLevelIndex = -1;
+    this.currentLevel = null;
+    this._levels.length = 0;
+  }
+
+  private onManifestLoading(
+    event: Events.MANIFEST_LOADING,
+    data: ManifestLoadingData
+  ) {
+    this.resetLevels();
   }
 
   protected onManifestLoaded(
@@ -278,9 +296,6 @@ export default class LevelController extends BasePlaylistController {
     if (levels.length === 0) {
       return;
     }
-    if (this.currentLevelIndex === newLevel && levels[newLevel]?.details) {
-      return;
-    }
     // check if level idx is valid
     if (newLevel < 0 || newLevel >= levels.length) {
       // invalid level id given, trigger error
@@ -298,14 +313,30 @@ export default class LevelController extends BasePlaylistController {
       newLevel = Math.min(newLevel, levels.length - 1);
     }
 
-    // stopping live reloading timer if any
-    this.clearTimer();
-
     const lastLevelIndex = this.currentLevelIndex;
-    const lastLevel = levels[lastLevelIndex];
+    const lastLevel = this.currentLevel;
+    const lastPathwayId = lastLevel ? lastLevel.attrs['PATHWAY-ID'] : undefined;
     const level = levels[newLevel];
-    this.log(`switching to level ${newLevel} from ${lastLevelIndex}`);
+    const pathwayId = level.attrs['PATHWAY-ID'];
     this.currentLevelIndex = newLevel;
+    this.currentLevel = level;
+
+    if (
+      this.currentLevelIndex === newLevel &&
+      level.details &&
+      lastLevel &&
+      lastPathwayId === pathwayId
+    ) {
+      return;
+    }
+
+    this.log(
+      `Switching to level ${newLevel}${
+        pathwayId ? ' with Pathway ' + pathwayId : ''
+      } from level ${lastLevelIndex}${
+        lastPathwayId ? ' with Pathway ' + lastPathwayId : ''
+      }`
+    );
 
     const levelSwitchingData: LevelSwitchingData = Object.assign({}, level, {
       level: newLevel,
@@ -378,9 +409,10 @@ export default class LevelController extends BasePlaylistController {
 
     // Switch to redundant level when track fails to load
     const context = data.context;
-    const level = this._levels[this.currentLevelIndex];
+    const level = this.currentLevel;
     if (
       context &&
+      level &&
       ((context.type === PlaylistContextType.AUDIO_TRACK &&
         level.audioGroupIds &&
         context.groupId === level.audioGroupIds[level.urlId]) ||
@@ -422,7 +454,7 @@ export default class LevelController extends BasePlaylistController {
         }
         break;
       case ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED: {
-        const restrictedHdcpLevel = level.attrs['HDCP-LEVEL'];
+        const restrictedHdcpLevel = level?.attrs['HDCP-LEVEL'];
         if (restrictedHdcpLevel) {
           this.hls.maxHdcpLevel =
             HdcpLevels[
@@ -489,6 +521,7 @@ export default class LevelController extends BasePlaylistController {
         errorEvent.levelRetry = true;
       } else {
         this.currentLevelIndex = -1;
+        this.currentLevel = null;
         return;
       }
     }
@@ -584,7 +617,7 @@ export default class LevelController extends BasePlaylistController {
     event: Events.AUDIO_TRACK_SWITCHED,
     data: TrackSwitchedData
   ) {
-    const currentLevel = this.hls.levels[this.currentLevelIndex];
+    const currentLevel = this.currentLevel;
     if (!currentLevel) {
       return;
     }
@@ -613,8 +646,8 @@ export default class LevelController extends BasePlaylistController {
 
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters) {
     super.loadPlaylist();
-    const level = this.currentLevelIndex;
-    const currentLevel = this._levels[level];
+    const currentLevelIndex = this.currentLevelIndex;
+    const currentLevel = this.currentLevel;
 
     if (this.canLoad && currentLevel && currentLevel.url.length > 0) {
       const id = currentLevel.urlId;
@@ -631,7 +664,7 @@ export default class LevelController extends BasePlaylistController {
 
       const pathwayId = currentLevel.attrs['PATHWAY-ID'];
       this.log(
-        `Attempt loading level index ${level}${
+        `Loading level index ${currentLevelIndex}${
           hlsUrlParameters?.msn !== undefined
             ? ' at sn ' +
               hlsUrlParameters.msn +
@@ -648,7 +681,7 @@ export default class LevelController extends BasePlaylistController {
       this.clearTimer();
       this.hls.trigger(Events.LEVEL_LOADING, {
         url,
-        level,
+        level: currentLevelIndex,
         id,
         deliveryDirectives: hlsUrlParameters || null,
       });
