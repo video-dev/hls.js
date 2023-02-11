@@ -270,18 +270,16 @@ const multiConfig = [
   },
 ].map((config) => {
   const baseClone = merge({}, baseConfig);
-  // Strip console.assert statements from production webpack targets
-  if (config.mode === 'production') {
-    // eslint-disable-next-line no-restricted-properties
-    baseClone.module.rules
-      .find((rule) => rule.loader === 'babel-loader')
-      .options.plugins.push([
-        'transform-remove-console',
-        {
-          exclude: ['log', 'warn', 'error'],
-        },
-      ]);
-  }
+  // Strip console.assert statements from production and development webpack targets
+  // eslint-disable-next-line no-restricted-properties
+  baseClone.module.rules
+    .find((rule) => rule.loader === 'babel-loader')
+    .options.plugins.push([
+    'transform-remove-console',
+    {
+      exclude: ['log', 'warn', 'error'],
+    },
+  ]);
   return merge(baseClone, config);
 });
 
