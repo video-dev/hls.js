@@ -1500,7 +1500,7 @@ export default class BaseStreamController
         `Found no media in fragment ${frag.sn} of level ${level.id} resetting transmuxer to fallback to playlist timing`
       );
       this.fragLoadError++;
-      const penalizeLevel = this.fragLoadError > 3;
+      const penalizeLevel = this.fragLoadError > config.fragLoadingMaxRetry;
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.FRAG_PARSING_ERROR,
