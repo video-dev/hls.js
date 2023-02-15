@@ -347,7 +347,8 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       onError: (
         error: { code: number; text: string },
         context: LoaderContext,
-        networkDetails: any
+        networkDetails: any,
+        stats: LoaderStats
       ) => {
         this.log(
           `Error loading steering manifest: ${error.code} ${error.text} (${context.url})`

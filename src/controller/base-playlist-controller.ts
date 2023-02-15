@@ -11,8 +11,7 @@ import type {
   TrackLoadedData,
 } from '../types/events';
 import { ErrorData } from '../types/events';
-import { Events } from '../events';
-import { ErrorTypes } from '../errors';
+import { ErrorDetails } from '../errors';
 
 export default class BasePlaylistController implements NetworkComponentAPI {
   protected hls: Hls;
@@ -33,16 +32,6 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     this.clearTimer();
     // @ts-ignore
     this.hls = this.log = this.warn = null;
-  }
-
-  protected onError(event: Events.ERROR, data: ErrorData): void {
-    if (
-      data.fatal &&
-      (data.type === ErrorTypes.NETWORK_ERROR ||
-        data.type === ErrorTypes.KEY_SYSTEM_ERROR)
-    ) {
-      this.stopLoad();
-    }
   }
 
   protected clearTimer(): void {
@@ -299,7 +288,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     return new HlsUrlParameters(msn, part, skip);
   }
 
-  protected retryLoadingOrFail(errorEvent: ErrorData): boolean {
+  protected checkRetry(errorEvent: ErrorData): boolean {
     const { config } = this.hls;
     const retry = this.retryCount < config.levelLoadingMaxRetry;
     if (retry) {
@@ -318,7 +307,11 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         // exponential backoff capped to max retry timeout
         const delay = Math.min(
           Math.pow(2, this.retryCount) * config.levelLoadingRetryDelay,
-          config.levelLoadingMaxRetryTimeout
+          errorEvent.details === ErrorDetails.LEVEL_LOAD_TIMEOUT ||
+            errorEvent.details === ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT ||
+            errorEvent.details === ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT
+            ? 0
+            : config.levelLoadingMaxRetryTimeout
         );
         // Schedule level/track reload
         this.timer = self.setTimeout(() => this.loadPlaylist(), delay);
@@ -326,12 +319,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           `retry playlist loading #${this.retryCount} in ${delay} ms after "${errorEvent.details}"`
         );
       }
-    } else {
-      this.warn(`cannot recover from error "${errorEvent.details}"`);
-      // stopping live reloading timer if any
-      this.clearTimer();
-      // switch error to fatal
-      errorEvent.fatal = true;
+      // boolean used to inform other controllers that a retry is happening
+      errorEvent.levelRetry = true;
     }
     return retry;
   }

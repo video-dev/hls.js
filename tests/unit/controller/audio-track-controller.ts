@@ -434,58 +434,8 @@ describe('AudioTrackController', function () {
   });
 
   describe('onError', function () {
-    it('should clear interval (only) on fatal network and key-system errors', function () {
-      audioTrackController.timer = 1000;
-
-      audioTrackController.onError(Events.ERROR, {
-        type: Hls.ErrorTypes.MEDIA_ERROR,
-        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
-      });
-      expect(audioTrackController.timer).to.equal(1000);
-
-      audioTrackController.onError(Events.ERROR, {
-        type: Hls.ErrorTypes.MEDIA_ERROR,
-        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
-        fatal: true,
-      });
-      expect(audioTrackController.timer).to.equal(1000);
-
-      audioTrackController.onError(Events.ERROR, {
-        type: Hls.ErrorTypes.NETWORK_ERROR,
-        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
-        fatal: false,
-      });
-      expect(audioTrackController.timer).to.equal(1000);
-
-      audioTrackController.onError(Events.ERROR, {
-        type: Hls.ErrorTypes.NETWORK_ERROR,
-        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
-        fatal: true,
-      });
-      expect(audioTrackController.timer).to.equal(-1);
-
-      audioTrackController.timer = 1000;
-
-      audioTrackController.onError(Events.ERROR, {
-        type: Hls.ErrorTypes.KEY_SYSTEM_ERROR,
-        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
-        fatal: false,
-      });
-      expect(audioTrackController.timer).to.equal(1000);
-
-      audioTrackController.onError(Events.ERROR, {
-        type: Hls.ErrorTypes.KEY_SYSTEM_ERROR,
-        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
-        fatal: true,
-      });
-      expect(audioTrackController.timer).to.equal(-1);
-    });
-
     it('should retry track loading if track has not changed', function () {
-      const retryLoadingOrFail = sinon.spy(
-        audioTrackController as any,
-        'retryLoadingOrFail'
-      );
+      const checkRetry = sinon.spy(audioTrackController as any, 'checkRetry');
       const currentTrackId = 4;
       const currentGroupId = 'aac';
       audioTrackController.trackId = currentTrackId;
@@ -506,7 +456,7 @@ describe('AudioTrackController', function () {
         audioTrackController.audioTrack,
         'track index/id is not changed as there is no redundant track to choose from'
       ).to.equal(4);
-      expect(retryLoadingOrFail).to.have.been.calledOnce;
+      expect(checkRetry).to.have.been.calledOnce;
     });
   });
 });

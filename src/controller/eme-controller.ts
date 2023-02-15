@@ -1187,9 +1187,13 @@ class EMEController implements ComponentAPI {
 
 class EMEKeyError extends Error {
   public readonly data: ErrorData;
-  constructor(data: ErrorData, message: string) {
+  constructor(
+    data: Omit<ErrorData, 'error'> & { error?: Error },
+    message: string
+  ) {
     super(message);
-    this.data = data;
+    data.error ||= new Error(message);
+    this.data = data as ErrorData;
     data.err = data.error;
   }
 }

@@ -3,14 +3,14 @@ import { Events } from '../events';
 import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
 import { Level } from '../types/level';
-import { PlaylistLevelType } from '../types/loader';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { Fragment, ElementaryStreamTypes, Part } from '../loader/fragment';
 import ChunkCache from '../demux/chunk-cache';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
 import { fragmentWithinToleranceTest } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
-import { ErrorDetails, ErrorTypes } from '../errors';
+import { ErrorDetails } from '../errors';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
@@ -636,28 +636,28 @@ class AudioStreamController
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
-    if (data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
-      this.onFragmentOrKeyLoadError(PlaylistLevelType.AUDIO, data);
+    if (data.fatal) {
+      this.state = State.ERROR;
       return;
     }
     switch (data.details) {
+      case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
-      case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
-        // TODO: Skip fragments that do not belong to this.fragCurrent audio-group id
         this.onFragmentOrKeyLoadError(PlaylistLevelType.AUDIO, data);
         break;
       case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
       case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
-        //  when in ERROR state, don't switch back to IDLE state in case a non-fatal error is received
-        if (this.state !== State.ERROR && this.state !== State.STOPPED) {
-          // if fatal error, stop processing, otherwise move to IDLE to retry loading
-          this.state = data.fatal ? State.ERROR : State.IDLE;
-          this.warn(
-            `${data.details} while loading frag, switching to ${this.state} state`
-          );
+      case ErrorDetails.LEVEL_PARSING_ERROR:
+        // in case of non fatal error while loading track, if not retrying to load track, switch back to IDLE
+        if (
+          !data.levelRetry &&
+          this.state === State.WAITING_TRACK &&
+          data.context?.type === PlaylistContextType.AUDIO_TRACK
+        ) {
+          this.state = State.IDLE;
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:

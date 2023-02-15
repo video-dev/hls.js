@@ -216,15 +216,17 @@ export default class GapController {
     if (!stallReported && media) {
       // Report stalled error once
       this.stallReported = true;
-      logger.warn(
+      const error = new Error(
         `Playback stalling at @${
           media.currentTime
         } due to low buffer (${JSON.stringify(bufferInfo)})`
       );
+      logger.warn(error.message);
       hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: false,
+        error,
         buffer: bufferInfo.len,
       });
     }
@@ -261,11 +263,15 @@ export default class GapController {
         this.stalled = null;
         media.currentTime = targetTime;
         if (partial) {
+          const error = new Error(
+            `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`
+          );
           hls.trigger(Events.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
             fatal: false,
-            reason: `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`,
+            error,
+            reason: error.message,
             frag: partial,
           });
         }
@@ -291,20 +297,26 @@ export default class GapController {
     if (nudgeRetry < config.nudgeMaxRetry) {
       const targetTime = currentTime + (nudgeRetry + 1) * config.nudgeOffset;
       // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
-      logger.warn(`Nudging 'currentTime' from ${currentTime} to ${targetTime}`);
+      const error = new Error(
+        `Nudging 'currentTime' from ${currentTime} to ${targetTime}`
+      );
+      logger.warn(error.message);
       media.currentTime = targetTime;
       hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
+        error,
         fatal: false,
       });
     } else {
-      logger.error(
+      const error = new Error(
         `Playhead still not moving while enough data buffered @${currentTime} after ${config.nudgeMaxRetry} nudges`
       );
+      logger.error(error.message);
       hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
+        error,
         fatal: true,
       });
     }

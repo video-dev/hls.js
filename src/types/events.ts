@@ -227,13 +227,14 @@ export interface ErrorData {
   bytes?: number;
   chunkMeta?: ChunkMetadata;
   context?: PlaylistLoaderContext;
-  error?: Error;
+  error: Error;
   event?: keyof HlsListeners | 'demuxerWorker';
   frag?: Fragment;
   level?: number | undefined;
   levelRetry?: boolean;
   loader?: Loader<LoaderContext>;
   networkDetails?: any;
+  stats?: LoaderStats;
   mimeType?: string;
   reason?: string;
   response?: LoaderResponse;

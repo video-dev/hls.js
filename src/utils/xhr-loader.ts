@@ -110,7 +110,8 @@ class XhrLoader implements Loader<LoaderContext> {
       this.callbacks!.onError(
         { code: xhr.status, text: e.message },
         context,
-        xhr
+        xhr,
+        stats
       );
       return;
     }
@@ -203,7 +204,8 @@ class XhrLoader implements Loader<LoaderContext> {
             this.callbacks!.onError(
               { code: status, text: xhr.statusText },
               context,
-              xhr
+              xhr,
+              stats
             );
           } else {
             // retry

@@ -98,7 +98,8 @@ export type LoaderOnError<T extends LoaderContext> = (
     text: string;
   },
   context: T,
-  networkDetails: any
+  networkDetails: any,
+  stats: LoaderStats
 ) => void;
 
 export type LoaderOnTimeout<T extends LoaderContext> = (

@@ -148,7 +148,18 @@ export default class Transmuxer {
 
     const resetMuxers = this.needsProbing(discontinuity, trackSwitch);
     if (resetMuxers) {
-      this.configureTransmuxer(uintData);
+      const error = this.configureTransmuxer(uintData);
+      if (error) {
+        this.observer.emit(Events.ERROR, Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.FRAG_PARSING_ERROR,
+          fatal: false,
+          error,
+          reason: error.message,
+        });
+        stats.executeEnd = now();
+        return emptyResult(chunkMeta);
+      }
     }
 
     if (discontinuity || trackSwitch || initSegmentChange || resetMuxers) {
@@ -221,11 +232,13 @@ export default class Transmuxer {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       // If probing failed, then Hls.js has been given content its not able to handle
+      const error = new Error('no demuxer matching with content found');
       this.observer.emit(Events.ERROR, Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.FRAG_PARSING_ERROR,
-        fatal: true,
-        reason: 'no demux matching with content found',
+        fatal: false,
+        error,
+        reason: error.message,
       });
       stats.executeEnd = now();
       return [emptyResult(chunkMeta)];
@@ -407,7 +420,7 @@ export default class Transmuxer {
       });
   }
 
-  private configureTransmuxer(data: Uint8Array) {
+  private configureTransmuxer(data: Uint8Array): void | Error {
     const { config, observer, typeSupported, vendor } = this;
     // probe for content type
     let mux;
@@ -418,11 +431,7 @@ export default class Transmuxer {
       }
     }
     if (!mux) {
-      // If probing previous configs fail, use mp4 passthrough
-      logger.warn(
-        'Failed to find demuxer by probing frag, treating as mp4 passthrough'
-      );
-      mux = { demux: MP4Demuxer, remux: PassThroughRemuxer };
+      return new Error('Failed to find demuxer by probing fragment data');
     }
     // so let's check that current remuxer and demuxer are still valid
     const demuxer = this.demuxer;

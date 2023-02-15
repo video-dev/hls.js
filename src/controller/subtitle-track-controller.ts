@@ -242,7 +242,6 @@ class SubtitleTrackController extends BasePlaylistController {
   }
 
   protected onError(event: Events.ERROR, data: ErrorData): void {
-    super.onError(event, data);
     if (data.fatal || !data.context) {
       return;
     }
@@ -252,7 +251,7 @@ class SubtitleTrackController extends BasePlaylistController {
       data.context.id === this.trackId &&
       data.context.groupId === this.groupId
     ) {
-      this.retryLoadingOrFail(data);
+      this.checkRetry(data);
     }
   }
 

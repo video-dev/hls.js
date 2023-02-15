@@ -4,7 +4,8 @@ import BaseStreamController from '../../../src/controller/stream-controller';
 import KeyLoader from '../../../src/loader/key-loader';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type { BufferInfo } from '../../../src/utils/buffer-helper';
-import type { Fragment, LevelDetails, Part } from '../../../src/hls';
+import type { LevelDetails } from '../../../src/loader/level-details';
+import type { Fragment, Part } from '../../../src/loader/fragment';
 
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';

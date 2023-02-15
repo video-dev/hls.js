@@ -167,7 +167,8 @@ class FetchLoader implements Loader<LoaderContext> {
         callbacks.onError(
           { code, text },
           context,
-          error ? error.details : null
+          error ? error.details : null,
+          stats
         );
       });
   }

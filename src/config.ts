@@ -12,6 +12,7 @@ import EMEController, {
 } from './controller/eme-controller';
 import CMCDController from './controller/cmcd-controller';
 import ContentSteeringController from './controller/content-steering-controller';
+import ErrorController from './controller/error-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import Cues from './utils/cues';
@@ -239,6 +240,7 @@ export type HlsConfig = {
   abrController: typeof AbrController;
   bufferController: typeof BufferController;
   capLevelController: typeof CapLevelController;
+  errorController: typeof ErrorController;
   fpsController: typeof FPSController;
   progressive: boolean;
   lowLatencyMode: boolean;
@@ -320,6 +322,7 @@ export const hlsDefaultConfig: HlsConfig = {
   abrController: AbrController,
   bufferController: BufferController,
   capLevelController: CapLevelController,
+  errorController: ErrorController,
   fpsController: FPSController,
   stretchShortVideoTrack: false, // used by mp4-remuxer
   maxAudioFramesDrift: 1, // used by mp4-remuxer

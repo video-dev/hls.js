@@ -5,7 +5,6 @@ import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Level } from '../../../src/types/level';
 import { AttrList } from '../../../src/utils/attr-list';
 import {
-  PlaylistContextType,
   PlaylistLevelType,
   PlaylistLoaderContext,
 } from '../../../src/types/loader';
@@ -192,6 +191,7 @@ describe('LevelController', function () {
         details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
         fatal: true,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+        error: hls.trigger.getCall(0).lastArg.error,
         reason: 'no level with compatible codecs found in manifest',
       });
     });
@@ -629,8 +629,8 @@ http://bar.example.com/md/prog_index.m3u8`,
       levels[0].details = {} as any;
       levels[1].details = {} as any;
       levelController.level = 0;
-
-      levelController.redundantFailover(0);
+      levels[0].urlId++;
+      levels[1].urlId++;
       expect(levels[0].uri).to.equal(
         'http://bar.example.com/lo/prog_index.m3u8'
       );
@@ -695,108 +695,17 @@ http://bar.example.com/md/prog_index.m3u8`;
         'http://foo.example.com/md/prog_index.m3u8'
       );
       expect(levelController.level).to.equal(-1);
-      levelController.redundantFailover(1);
+      levels[0].urlId++;
+      levels[1].urlId++;
       expect(levels[0].uri).to.equal(
         'http://foo.example.com/lo/prog_index.m3u8'
       );
       expect(levels[1].uri).to.equal(
         'http://bar.example.com/md/prog_index.m3u8'
       );
-      expect(levelController.level).to.equal(1);
     });
 
     describe('with Media Playlists', function () {
-      const multivariantPlaylistWithRedundantFallbacks = `#EXTM3U
-## Subtitles ###
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-foo",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.foo.com/subs-en.m3u8"
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-foo",LANGUAGE="fr",NAME="Français",AUTOSELECT=YES,URI="http://www.foo.com/subs-fr.m3u8"
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-foo",LANGUAGE="it",NAME="Italiano",AUTOSELECT=YES,URI="http://www.foo.com/subs-it.m3u8"
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-bar",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.bar.com/subs-en.m3u8"
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-bar",LANGUAGE="fr",NAME="Français",AUTOSELECT=YES,URI="http://www.bar.com/subs-fr.m3u8"
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-bar",LANGUAGE="it",NAME="Italiano",AUTOSELECT=YES,URI="http://www.bar.com/subs-it.m3u8"
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-baz",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.baz.com/subs-en.m3u8"
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-baz",LANGUAGE="fr",NAME="Français",AUTOSELECT=YES,URI="http://www.baz.com/subs-fr.m3u8"
-#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-baz",LANGUAGE="it",NAME="Italiano",AUTOSELECT=YES,URI="http://www.baz.com/subs-it.m3u8"
-
-### Audio ###
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="AAC-foo",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",URI="http://www.foo.com/audio_aac.m3u8"
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="EC3-foo",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="6",URI="http://www.foo.com/audio_ec3.m3u8"
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="AAC-bar",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",URI="http://www.bar.com/audio_aac.m3u8"
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="EC3-bar",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="6",URI="http://www.bar.com/audio_ec3.m3u8"
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="AAC-baz",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",URI="http://www.baz.com/audio_aac.m3u8"
-#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="EC3-baz",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="6",URI="http://www.baz.com/audio_ec3.m3u8"
-
-### AAC FOO ###
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-foo",SUBTITLES="subs-foo"
-http://www.foo.com/tier6.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-foo",SUBTITLES="subs-foo"
-http://www.foo.com/tier10.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-foo",SUBTITLES="subs-foo"
-http://www.foo.com/tier14.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-foo",SUBTITLES="subs-foo"
-http://www.foo.com/tier16.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-foo",SUBTITLES="subs-foo"
-http://www.foo.com/tier18.m3u8
-
-### EC3 FOO ###
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,ec-3",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-foo",SUBTITLES="subs-foo"
-http://www.foo.com/tier6.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,ec-3",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-foo",SUBTITLES="subs-foo"
-http://www.foo.com/tier10.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,ec-3",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-foo",SUBTITLES="subs-foo"
-http://www.foo.com/tier14.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-foo",SUBTITLES="subs-foo"
-http://www.foo.com/tier16.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-foo",SUBTITLES="subs-foo"
-http://www.foo.com/tier18.m3u8
-
-### AAC BAR ###
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-bar",SUBTITLES="subs-bar"
-http://www.bar.com/tier6.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-bar",SUBTITLES="subs-bar"
-http://www.bar.com/tier10.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-bar",SUBTITLES="subs-bar"
-http://www.bar.com/tier14.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-bar",SUBTITLES="subs-bar"
-http://www.bar.com/tier16.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-bar",SUBTITLES="subs-bar"
-http://www.bar.com/tier18.m3u8
-
-### EC3 BAR ###
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,ec-3",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-bar",SUBTITLES="subs-bar"
-http://www.bar.com/tier6.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,ec-3",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-bar",SUBTITLES="subs-bar"
-http://www.bar.com/tier10.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,ec-3",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-bar",SUBTITLES="subs-bar"
-http://www.bar.com/tier14.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-bar",SUBTITLES="subs-bar"
-http://www.bar.com/tier16.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-bar",SUBTITLES="subs-bar"
-http://www.bar.com/tier18.m3u8
-
-### AAC BAZ ###
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-baz",SUBTITLES="subs-baz"
-http://www.baz.com/tier6.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-baz",SUBTITLES="subs-baz"
-http://www.baz.com/tier10.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-baz",SUBTITLES="subs-baz"
-http://www.baz.com/tier14.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-baz",SUBTITLES="subs-baz"
-http://www.baz.com/tier16.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-baz",SUBTITLES="subs-baz"
-http://www.baz.com/tier18.m3u8
-
-### EC3 BAZ ###
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,ec-3",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
-http://www.baz.com/tier6.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,ec-3",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
-http://www.baz.com/tier10.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,ec-3",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
-http://www.baz.com/tier14.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
-http://www.baz.com/tier16.m3u8
-#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
-http://www.baz.com/tier18.m3u8`;
       let parsedMultivariant: ParsedMultivariantPlaylist;
       let parsedMediaOptions;
       beforeEach(function () {
@@ -951,14 +860,13 @@ http://www.baz.com/tier18.m3u8`;
         expect(levels[0].uri).to.equal('http://www.foo.com/tier6.m3u8');
         expect(levels[9].audioGroupIds?.[levels[9].urlId]).to.equal('EC3-foo');
 
-        levelController.redundantFailover(2);
-        expect(levelController.level).to.equal(2);
+        levels[0].urlId++;
+        levels[9].urlId++;
         expect(levels[0].uri).to.equal('http://www.bar.com/tier6.m3u8');
         expect(levels[9].uri).to.equal('http://www.bar.com/tier18.m3u8');
         expect(levels[9].audioGroupIds?.[levels[9].urlId]).to.equal('EC3-bar');
-
-        levelController.redundantFailover(9);
-        expect(levelController.level).to.equal(9);
+        levels[0].urlId++;
+        levels[9].urlId++;
         expect(levels[0].uri).to.equal('http://www.baz.com/tier6.m3u8');
         expect(levels[9].uri).to.equal('http://www.baz.com/tier18.m3u8');
         expect(levels[9].audioGroupIds?.[levels[9].urlId]).to.equal('EC3-baz');
@@ -985,74 +893,6 @@ http://www.baz.com/tier18.m3u8`;
         levelController.onAudioTrackSwitched(Events.AUDIO_TRACK_SWITCHED, {
           id: 2,
         });
-        expect(levels[0].uri).to.equal('http://www.bar.com/tier6.m3u8');
-      });
-
-      it('switches to fallback variants after `fragLoadingMaxRetry` segment errors in level', function () {
-        const { levels: parsedLevels } = parsedMultivariant;
-        const { AUDIO: parsedAudioTracks, SUBTITLES: parsedSubtitles } =
-          parsedMediaOptions;
-        levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
-          levels: parsedLevels,
-          audioTracks: parsedAudioTracks,
-          subtitles: parsedSubtitles,
-        });
-        const { payload } = hls.getEventData(0) as {
-          name: string;
-          payload: ManifestParsedData;
-        };
-        const { levels, audioTracks, subtitleTracks } = payload;
-        hls.audioTracks = audioTracks;
-        hls.subtitleTracks = subtitleTracks;
-        levelController.level = 0;
-        expect(levels[0].uri).to.equal('http://www.foo.com/tier6.m3u8');
-
-        hls.config.fragLoadingMaxRetry = 1;
-        levelController.onError(Events.ERROR, {
-          type: ErrorTypes.MEDIA_ERROR,
-          details: ErrorDetails.FRAG_LOAD_ERROR,
-          fatal: false,
-          frag: { level: 0, type: PlaylistLevelType.MAIN, urlId: 0 },
-        } as any);
-        expect(levels[0].fragmentError).to.equal(1);
-        expect(levels[0].uri).to.equal('http://www.foo.com/tier6.m3u8');
-        levelController.onError(Events.ERROR, {
-          type: ErrorTypes.MEDIA_ERROR,
-          details: ErrorDetails.FRAG_LOAD_ERROR,
-          fatal: false,
-          frag: { level: 0, type: PlaylistLevelType.AUDIO, urlId: 0 },
-        } as any);
-        expect(levels[0].fragmentError).to.equal(2);
-        expect(levels[0].uri).to.equal('http://www.bar.com/tier6.m3u8');
-      });
-
-      it('switches to fallback variants after media track error', function () {
-        const { levels: parsedLevels } = parsedMultivariant;
-        const { AUDIO: parsedAudioTracks, SUBTITLES: parsedSubtitles } =
-          parsedMediaOptions;
-        levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
-          levels: parsedLevels,
-          audioTracks: parsedAudioTracks,
-          subtitles: parsedSubtitles,
-        });
-        const { payload } = hls.getEventData(0) as {
-          name: string;
-          payload: ManifestParsedData;
-        };
-        const { levels, audioTracks, subtitleTracks } = payload;
-        hls.audioTracks = audioTracks;
-        hls.subtitleTracks = subtitleTracks;
-        levelController.level = 0;
-        expect(levels[0].uri).to.equal('http://www.foo.com/tier6.m3u8');
-        levelController.onError(Events.ERROR, {
-          type: ErrorTypes.MEDIA_ERROR,
-          details: ErrorDetails.FRAG_LOAD_ERROR,
-          fatal: false,
-          context: {
-            type: PlaylistContextType.AUDIO_TRACK,
-            groupId: 'AAC-foo',
-          },
-        } as any);
         expect(levels[0].uri).to.equal('http://www.bar.com/tier6.m3u8');
       });
     });
@@ -1188,4 +1028,96 @@ http://www.baz.com/tier14.m3u8
 #EXT-X-STREAM-INF:PATHWAY-ID="Baz",STABLE-VARIANT-ID="baz8",AUDIO="EC3-baz",SUBTITLES="subs-baz",AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24
 http://www.baz.com/tier16.m3u8
 #EXT-X-STREAM-INF:PATHWAY-ID="Baz",STABLE-VARIANT-ID="baz10",AUDIO="EC3-baz",SUBTITLES="subs-baz",AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24
+http://www.baz.com/tier18.m3u8`;
+
+export const multivariantPlaylistWithRedundantFallbacks = `#EXTM3U
+## Subtitles ###
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-foo",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.foo.com/subs-en.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-foo",LANGUAGE="fr",NAME="Français",AUTOSELECT=YES,URI="http://www.foo.com/subs-fr.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-foo",LANGUAGE="it",NAME="Italiano",AUTOSELECT=YES,URI="http://www.foo.com/subs-it.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-bar",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.bar.com/subs-en.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-bar",LANGUAGE="fr",NAME="Français",AUTOSELECT=YES,URI="http://www.bar.com/subs-fr.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-bar",LANGUAGE="it",NAME="Italiano",AUTOSELECT=YES,URI="http://www.bar.com/subs-it.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-baz",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.baz.com/subs-en.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-baz",LANGUAGE="fr",NAME="Français",AUTOSELECT=YES,URI="http://www.baz.com/subs-fr.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-baz",LANGUAGE="it",NAME="Italiano",AUTOSELECT=YES,URI="http://www.baz.com/subs-it.m3u8"
+
+### Audio ###
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="AAC-foo",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",URI="http://www.foo.com/audio_aac.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="EC3-foo",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="6",URI="http://www.foo.com/audio_ec3.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="AAC-bar",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",URI="http://www.bar.com/audio_aac.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="EC3-bar",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="6",URI="http://www.bar.com/audio_ec3.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="AAC-baz",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",URI="http://www.baz.com/audio_aac.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="EC3-baz",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="6",URI="http://www.baz.com/audio_ec3.m3u8"
+
+### AAC FOO ###
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-foo",SUBTITLES="subs-foo"
+http://www.foo.com/tier6.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-foo",SUBTITLES="subs-foo"
+http://www.foo.com/tier10.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-foo",SUBTITLES="subs-foo"
+http://www.foo.com/tier14.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-foo",SUBTITLES="subs-foo"
+http://www.foo.com/tier16.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-foo",SUBTITLES="subs-foo"
+http://www.foo.com/tier18.m3u8
+
+### EC3 FOO ###
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,ec-3",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-foo",SUBTITLES="subs-foo"
+http://www.foo.com/tier6.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,ec-3",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-foo",SUBTITLES="subs-foo"
+http://www.foo.com/tier10.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,ec-3",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-foo",SUBTITLES="subs-foo"
+http://www.foo.com/tier14.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-foo",SUBTITLES="subs-foo"
+http://www.foo.com/tier16.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-foo",SUBTITLES="subs-foo"
+http://www.foo.com/tier18.m3u8
+
+### AAC BAR ###
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-bar",SUBTITLES="subs-bar"
+http://www.bar.com/tier6.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-bar",SUBTITLES="subs-bar"
+http://www.bar.com/tier10.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-bar",SUBTITLES="subs-bar"
+http://www.bar.com/tier14.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-bar",SUBTITLES="subs-bar"
+http://www.bar.com/tier16.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-bar",SUBTITLES="subs-bar"
+http://www.bar.com/tier18.m3u8
+
+### EC3 BAR ###
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,ec-3",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-bar",SUBTITLES="subs-bar"
+http://www.bar.com/tier6.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,ec-3",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-bar",SUBTITLES="subs-bar"
+http://www.bar.com/tier10.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,ec-3",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-bar",SUBTITLES="subs-bar"
+http://www.bar.com/tier14.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-bar",SUBTITLES="subs-bar"
+http://www.bar.com/tier16.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-bar",SUBTITLES="subs-bar"
+http://www.bar.com/tier18.m3u8
+
+### AAC BAZ ###
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-baz",SUBTITLES="subs-baz"
+http://www.baz.com/tier6.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="AAC-baz",SUBTITLES="subs-baz"
+http://www.baz.com/tier10.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-baz",SUBTITLES="subs-baz"
+http://www.baz.com/tier14.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-baz",SUBTITLES="subs-baz"
+http://www.baz.com/tier16.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,mp4a.40.2",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="AAC-baz",SUBTITLES="subs-baz"
+http://www.baz.com/tier18.m3u8
+
+### EC3 BAZ ###
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,ec-3",RESOLUTION=480x270,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
+http://www.baz.com/tier6.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,ec-3",RESOLUTION=768x432,HDCP-LEVEL=NONE,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
+http://www.baz.com/tier10.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=3827162,BANDWIDTH=6080788,CODECS="avc1.64001f,ec-3",RESOLUTION=1280x720,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
+http://www.baz.com/tier14.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=4957795,BANDWIDTH=7679463,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
+http://www.baz.com/tier16.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
 http://www.baz.com/tier18.m3u8`;

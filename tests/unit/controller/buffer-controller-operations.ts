@@ -161,6 +161,7 @@ describe('BufferController', function () {
       ).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_APPENDING_ERROR,
+        error: triggerSpy.getCall(0).lastArg.error,
         fatal: false,
       });
       expect(shiftAndExecuteNextSpy, 'The queue should not have been cycled').to

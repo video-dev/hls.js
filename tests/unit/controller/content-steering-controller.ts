@@ -560,7 +560,7 @@ describe('ContentSteeringController', function () {
         );
       });
 
-      it('clones other pathways clones that appear ealier in PATHWAY-CLONES array', function () {
+      it('clones other pathway clones that appear ealier in PATHWAY-CLONES array', function () {
         loadSteeringManifest(
           {
             'PATHWAY-PRIORITY': ['Bear', 'Foo', 'Bar', 'Baz', 'Buzz'],

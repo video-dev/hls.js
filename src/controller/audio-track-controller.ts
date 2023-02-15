@@ -146,7 +146,6 @@ class AudioTrackController extends BasePlaylistController {
   }
 
   protected onError(event: Events.ERROR, data: ErrorData): void {
-    super.onError(event, data);
     if (data.fatal || !data.context) {
       return;
     }
@@ -156,7 +155,7 @@ class AudioTrackController extends BasePlaylistController {
       data.context.id === this.trackId &&
       data.context.groupId === this.groupId
     ) {
-      this.retryLoadingOrFail(data);
+      this.checkRetry(data);
     }
   }
 
@@ -217,12 +216,16 @@ class AudioTrackController extends BasePlaylistController {
     if (trackId !== -1) {
       this.setAudioTrack(trackId);
     } else {
-      this.warn(`No track found for running audio group-ID: ${this.groupId}`);
+      const error = new Error(
+        `No track found for running audio group-ID: ${this.groupId}`
+      );
+      this.warn(error.message);
 
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true,
+        error,
       });
     }
   }

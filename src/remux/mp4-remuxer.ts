@@ -544,6 +544,7 @@ export default class MP4Remuxer implements Remuxer {
         type: ErrorTypes.MUX_ERROR,
         details: ErrorDetails.REMUX_ALLOC_ERROR,
         fatal: false,
+        error: err,
         bytes: mdatSize,
         reason: `fail allocating video mdat ${mdatSize}`,
       });
@@ -918,6 +919,7 @@ export default class MP4Remuxer implements Remuxer {
               type: ErrorTypes.MUX_ERROR,
               details: ErrorDetails.REMUX_ALLOC_ERROR,
               fatal: false,
+              error: err,
               bytes: mdatSize,
               reason: `fail allocating audio mdat ${mdatSize}`,
             });
