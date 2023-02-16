@@ -296,8 +296,6 @@ class EMEController implements ComponentAPI {
     keySystem: KeySystems;
     mediaKeys: MediaKeys;
   }): MediaKeySessionContext {
-    console.assert(!!mediaKeys, 'mediaKeys is defined');
-
     this.log(
       `Creating key-system session "${keySystem}" keyId: ${Hex.hexDump(
         decryptdata.keyId! || []

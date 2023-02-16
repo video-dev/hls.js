@@ -270,8 +270,8 @@ const multiConfig = [
   },
 ].map((config) => {
   const baseClone = merge({}, baseConfig);
-  // Strip console.assert statements from production webpack targets
-  if (config.mode === 'production') {
+  // Strip console.assert statements from build targets
+  if (config.mode === 'production' || env.NETLIFY === 'true') {
     // eslint-disable-next-line no-restricted-properties
     baseClone.module.rules
       .find((rule) => rule.loader === 'babel-loader')

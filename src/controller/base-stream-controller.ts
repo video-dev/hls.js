@@ -1481,7 +1481,10 @@ export default class BaseStreamController
     partial: boolean
   ) {
     const details = level.details as LevelDetails;
-    console.assert(!!details, 'level.details must be defined');
+    if (!details) {
+      this.warn('level.details undefined');
+      return;
+    }
     const parsed = Object.keys(frag.elementaryStreams).reduce(
       (result, type) => {
         const info = frag.elementaryStreams[type];

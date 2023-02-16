@@ -878,7 +878,6 @@ export default class BufferController implements ComponentAPI {
       logger.log(
         `[buffer-controller]: Removing [${removeStart},${removeEnd}] from the ${type} SourceBuffer`
       );
-      console.assert(!sb.updating, `${type} sourceBuffer must not be updating`);
       sb.remove(removeStart, removeEnd);
     } else {
       // Cycle the queue
@@ -899,7 +898,6 @@ export default class BufferController implements ComponentAPI {
     }
 
     sb.ended = false;
-    console.assert(!sb.updating, `${type} sourceBuffer must not be updating`);
     sb.appendBuffer(data);
   }
 

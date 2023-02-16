@@ -206,10 +206,6 @@ class AudioTrackController extends BasePlaylistController {
 
   private selectInitialTrack(): void {
     const audioTracks = this.tracksInGroup;
-    console.assert(
-      audioTracks.length,
-      'Initial audio track should be selected when tracks are known'
-    );
     const trackId =
       this.findTrackId(this.currentTrack) | this.findTrackId(null);
 
@@ -217,7 +213,7 @@ class AudioTrackController extends BasePlaylistController {
       this.setAudioTrack(trackId);
     } else {
       const error = new Error(
-        `No track found for running audio group-ID: ${this.groupId}`
+        `No track found for running audio group-ID: ${this.groupId} track count: ${audioTracks.length}`
       );
       this.warn(error.message);
 

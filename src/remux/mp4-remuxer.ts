@@ -678,11 +678,6 @@ export default class MP4Remuxer implements Remuxer {
         }
       }
     }
-
-    console.assert(
-      mp4SampleDuration !== null,
-      'mp4SampleDuration must be computed'
-    );
     // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
     mp4SampleDuration =
       stretchedLastFrame || !mp4SampleDuration
@@ -712,12 +707,8 @@ export default class MP4Remuxer implements Remuxer {
       nb: outputSamples.length,
       dropped: track.dropped,
     };
-
     track.samples = [];
     track.dropped = 0;
-
-    console.assert(mdat.length, 'MDAT length must not be zero');
-
     return data;
   }
 
@@ -984,8 +975,6 @@ export default class MP4Remuxer implements Remuxer {
     };
 
     this.isAudioContiguous = true;
-
-    console.assert(mdat.length, 'MDAT length must not be zero');
     return audioData;
   }
 
