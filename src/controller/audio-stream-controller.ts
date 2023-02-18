@@ -644,6 +644,7 @@ class AudioStreamController
     }
     switch (data.details) {
       case ErrorDetails.FRAG_PARSING_ERROR:
+      case ErrorDetails.FRAG_DECRYPT_ERROR:
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
       case ErrorDetails.KEY_LOAD_ERROR:

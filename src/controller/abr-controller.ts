@@ -1,6 +1,5 @@
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import { Events } from '../events';
-import { ErrorDetails, ErrorTypes } from '../errors';
 import { PlaylistLevelType } from '../types/loader';
 import { logger } from '../utils/logger';
 import type { Fragment } from '../loader/fragment';
@@ -11,7 +10,6 @@ import type {
   FragLoadingData,
   FragLoadedData,
   FragBufferedData,
-  ErrorData,
   LevelLoadedData,
 } from '../types/events';
 import type { AbrComponentAPI } from '../types/component-api';
@@ -47,7 +45,6 @@ class AbrController implements AbrComponentAPI {
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
-    hls.on(Events.ERROR, this.onError, this);
   }
 
   protected unregisterListeners() {
@@ -56,7 +53,6 @@ class AbrController implements AbrComponentAPI {
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
     hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
-    hls.off(Events.ERROR, this.onError, this);
   }
 
   public destroy() {
@@ -306,26 +302,6 @@ class AbrController implements AbrComponentAPI {
       this.bitrateTestDelay = processingMs / 1000;
     } else {
       this.bitrateTestDelay = 0;
-    }
-  }
-
-  protected onError(event: Events.ERROR, data: ErrorData) {
-    // stop timer in case of frag loading error
-    if (data.frag?.type === PlaylistLevelType.MAIN) {
-      if (data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
-        this.clearTimer();
-        return;
-      }
-      switch (data.details) {
-        case ErrorDetails.FRAG_LOAD_ERROR:
-        case ErrorDetails.FRAG_LOAD_TIMEOUT:
-        case ErrorDetails.KEY_LOAD_ERROR:
-        case ErrorDetails.KEY_LOAD_TIMEOUT:
-          this.clearTimer();
-          break;
-        default:
-          break;
-      }
     }
   }
 

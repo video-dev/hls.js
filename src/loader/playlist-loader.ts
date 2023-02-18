@@ -13,6 +13,7 @@ import M3U8Parser from './m3u8-parser';
 import type { LevelParsed, VariableMap } from '../types/level';
 import type {
   Loader,
+  LoaderCallbacks,
   LoaderConfiguration,
   LoaderContext,
   LoaderResponse,
@@ -287,71 +288,63 @@ class PlaylistLoader implements NetworkComponentAPI {
       maxRetryDelay: legacyRetryCompatibility.maxRetryDelayMs || 0,
     };
 
-    const loaderCallbacks = {
-      onSuccess: this.loadsuccess.bind(this),
-      onError: this.loaderror.bind(this),
-      onTimeout: this.loadtimeout.bind(this),
+    const loaderCallbacks: LoaderCallbacks<PlaylistLoaderContext> = {
+      onSuccess: (response, stats, context, networkDetails) => {
+        const loader = this.getInternalLoader(context) as
+          | Loader<PlaylistLoaderContext>
+          | undefined;
+        this.resetInternalLoader(context.type);
+
+        const string = response.data as string;
+
+        // Validate if it is an M3U8 at all
+        if (string.indexOf('#EXTM3U') !== 0) {
+          this.handleManifestParsingError(
+            response,
+            context,
+            new Error('no EXTM3U delimiter'),
+            networkDetails || null,
+            stats
+          );
+          return;
+        }
+
+        stats.parsing.start = performance.now();
+        if (M3U8Parser.isMediaPlaylist(string)) {
+          this.handleTrackOrLevelPlaylist(
+            response,
+            stats,
+            context,
+            networkDetails || null,
+            loader
+          );
+        } else {
+          this.handleMasterPlaylist(response, stats, context, networkDetails);
+        }
+      },
+      onError: (response, context, networkDetails, stats) => {
+        this.handleNetworkError(
+          context,
+          networkDetails,
+          false,
+          response,
+          stats
+        );
+      },
+      onTimeout: (stats, context, networkDetails) => {
+        this.handleNetworkError(
+          context,
+          networkDetails,
+          true,
+          undefined,
+          stats
+        );
+      },
     };
 
     // logger.debug(`[playlist-loader]: Calling internal loader delegate for URL: ${context.url}`);
 
     loader.load(context, loaderConfig, loaderCallbacks);
-  }
-
-  private loadsuccess(
-    response: LoaderResponse,
-    stats: LoaderStats,
-    context: PlaylistLoaderContext,
-    networkDetails: any = null
-  ): void {
-    const loader = this.getInternalLoader(context) as
-      | Loader<PlaylistLoaderContext>
-      | undefined;
-    this.resetInternalLoader(context.type);
-
-    const string = response.data as string;
-
-    // Validate if it is an M3U8 at all
-    if (string.indexOf('#EXTM3U') !== 0) {
-      this.handleManifestParsingError(
-        response,
-        context,
-        new Error('no EXTM3U delimiter'),
-        networkDetails,
-        stats
-      );
-      return;
-    }
-
-    stats.parsing.start = performance.now();
-    if (M3U8Parser.isMediaPlaylist(string)) {
-      this.handleTrackOrLevelPlaylist(
-        response,
-        stats,
-        context,
-        networkDetails,
-        loader
-      );
-    } else {
-      this.handleMasterPlaylist(response, stats, context, networkDetails);
-    }
-  }
-
-  private loaderror(
-    response: LoaderResponse,
-    context: PlaylistLoaderContext,
-    networkDetails: any,
-    stats: LoaderStats
-  ): void {
-    this.handleNetworkError(context, networkDetails, false, response, stats);
-  }
-
-  private loadtimeout(
-    stats: LoaderStats,
-    context: PlaylistLoaderContext,
-    networkDetails: any
-  ): void {
-    this.handleNetworkError(context, networkDetails, true, undefined, stats);
   }
 
   private handleMasterPlaylist(
@@ -538,7 +531,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     context: PlaylistLoaderContext,
     networkDetails: any,
     timeout = false,
-    response: LoaderResponse | undefined,
+    response: { code: number; text: string } | undefined,
     stats: LoaderStats
   ): void {
     let message = `A network ${
@@ -603,7 +596,8 @@ class PlaylistLoader implements NetworkComponentAPI {
     };
 
     if (response) {
-      errorData.response = response;
+      const url = networkDetails?.url || context.url;
+      errorData.response = { url, data: undefined as any, ...response };
     }
 
     this.hls.trigger(Events.ERROR, errorData);

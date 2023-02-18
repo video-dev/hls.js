@@ -594,7 +594,11 @@ export default class BaseStreamController
         }
       });
       this.hls.trigger(Events.KEY_LOADING, { frag });
-      this.throwIfFragContextChanged('KEY_LOADING');
+      if (this.fragCurrent === null) {
+        keyLoadingPromise = Promise.reject(
+          new Error(`frag load aborted, context changed in KEY_LOADING`)
+        );
+      }
     } else if (!frag.encrypted && details.encryptedFragments.length) {
       this.keyLoader.loadClear(frag, details.encryptedFragments);
     }
@@ -653,7 +657,13 @@ export default class BaseStreamController
             part,
             targetBufferTime,
           });
-          this.throwIfFragContextChanged('FRAG_LOADING parts');
+          if (this.fragCurrent === null) {
+            return Promise.reject(
+              new Error(
+                `frag load aborted, context changed in FRAG_LOADING parts`
+              )
+            );
+          }
           return result;
         } else if (
           !frag.url ||
@@ -709,15 +719,12 @@ export default class BaseStreamController
         .catch((error) => this.handleFragLoadError(error));
     }
     this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
-    this.throwIfFragContextChanged('FRAG_LOADING');
-    return result;
-  }
-
-  private throwIfFragContextChanged(context: string): void | never {
-    // exit if context changed during event loop
     if (this.fragCurrent === null) {
-      throw new Error(`frag load aborted, context changed in ${context}`);
+      return Promise.reject(
+        new Error(`frag load aborted, context changed in FRAG_LOADING`)
+      );
     }
+    return result;
   }
 
   private doFragPartsLoad(
@@ -1389,7 +1396,7 @@ export default class BaseStreamController
       }
       // exponential backoff capped to max retry delay
       const backoffFactor =
-        retryConfig.backoff === 'linear' ? 1 : Math.pow(2, retryCount);
+        retryConfig.backoff === 'linear' ? 1 : Math.pow(2, fragmentErrors);
       const delay = Math.min(
         backoffFactor * retryConfig.retryDelayMs,
         retryConfig.maxRetryDelayMs
@@ -1521,7 +1528,7 @@ export default class BaseStreamController
     );
     if (parsed) {
       level.fragmentError = 0;
-    } else {
+    } else if (this.transmuxer?.error === null) {
       const error = new Error(
         `Found no media in fragment ${frag.sn} of level ${level.id} resetting transmuxer to fallback to playlist timing`
       );
@@ -1535,6 +1542,7 @@ export default class BaseStreamController
         reason: `Found no media in msn ${frag.sn} of level "${level.url}"`,
       });
       this.resetTransmuxer();
+      // For this error fallthrough. Marking parsed will allow advancing to next fragment.
     }
     this.state = State.PARSED;
     this.hls.trigger(Events.FRAG_PARSED, { frag, part });

@@ -296,10 +296,13 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       errorDetails === ErrorDetails.LEVEL_LOAD_TIMEOUT ||
       errorDetails === ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT ||
       errorDetails === ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT;
+    const httpStatus = errorEvent.response?.code;
     const retryConfig =
       playlistLoadPolicy.default[`${isTimeout ? 'timeout' : 'error'}Retry`];
-    const retry = !!retryConfig && this.retryCount < retryConfig.maxNumRetry;
-    // TODO: Don't try on bad network status
+    const retry =
+      !!retryConfig &&
+      this.retryCount < retryConfig.maxNumRetry &&
+      httpStatus !== 0;
     if (retry) {
       this.requestScheduled = -1;
       const retryCount = ++this.retryCount;
@@ -312,7 +315,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       } else {
         // exponential backoff capped to max retry delay
         const backoffFactor =
-          retryConfig.backoff === 'linear' ? 1 : Math.pow(2, retryCount);
+          retryConfig.backoff === 'linear' ? 1 : Math.pow(2, retryCount - 1);
         const delay = Math.min(
           backoffFactor * retryConfig.retryDelayMs,
           retryConfig.maxRetryDelayMs

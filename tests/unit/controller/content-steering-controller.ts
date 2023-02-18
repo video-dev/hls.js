@@ -20,11 +20,11 @@ import type {
 import type { Level } from '../../../src/types/level';
 import type { MediaPlaylist } from '../../../src/types/media-playlist';
 import type { SteeringManifest } from '../../../src/controller/content-steering-controller';
+import type { LoaderResponse } from '../../../src/types/loader';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
-import { LoaderResponse } from '../../../src/types/loader';
 
 chai.use(sinonChai);
 const expect = chai.expect;

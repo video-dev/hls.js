@@ -63,6 +63,9 @@ export interface LoaderConfiguration {
 export interface LoaderResponse {
   url: string;
   data: string | ArrayBuffer | Object;
+  // Errors can include HTTP status code and error message
+  code?: number;
+  text?: string;
 }
 
 export interface LoaderStats {

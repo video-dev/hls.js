@@ -33,8 +33,6 @@ export class AbrController implements AbrComponentAPI {
     get nextAutoLevel(): number;
     set nextAutoLevel(nextLevel: number);
     // (undocumented)
-    protected onError(event: Events.ERROR, data: ErrorData): void;
-    // (undocumented)
     protected onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData): void;
     // (undocumented)
     protected onFragLoaded(event: Events.FRAG_LOADED, { frag, part }: FragLoadedData): void;
@@ -2381,7 +2379,11 @@ export type LoaderOnTimeout<T extends LoaderContext> = (stats: LoaderStats, cont
 // @public (undocumented)
 export interface LoaderResponse {
     // (undocumented)
+    code?: number;
+    // (undocumented)
     data: string | ArrayBuffer | Object;
+    // (undocumented)
+    text?: string;
     // (undocumented)
     url: string;
 }

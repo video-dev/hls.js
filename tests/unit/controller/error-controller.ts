@@ -461,7 +461,6 @@ describe('ErrorController Integration Tests', function () {
       });
       hls.on(Events.FRAG_LOADING, (event, data) => {
         timers.tick(hls.config.fragLoadPolicy.default.maxTimeToFirstByteMs);
-        // timers.tick(hls.config.fragLoadPolicy.default.maxLoadTimeMs);
       });
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => {
@@ -490,7 +489,7 @@ describe('ErrorController Integration Tests', function () {
       });
     });
 
-    it('Init segment decrypt errors are fatal with no alternates', function () {
+    it('Init segment decrypt errors are fatal with no alternates after retries', function () {
       server.respondWith(
         'aes-128-init-segment.m3u8',
         `#EXTM3U
@@ -517,19 +516,18 @@ segment.mp4
         {},
         new ArrayBuffer(1024),
       ]);
+      hls.config.fragLoadPolicy.default.errorRetry!.maxNumRetry = 1;
       hls.loadSource('aes-128-init-segment.m3u8');
-      hls.on(Events.KEY_LOADING, (event, data) => {
-        server.respond();
-      });
-      hls.on(Events.LEVEL_LOADING, (event, data) => {
-        server.respond();
-      });
-      hls.on(Events.FRAG_LOADING, (event, data) => {
-        server.respond();
-      });
+      hls.on(Events.KEY_LOADING, loadingEventCallback(server, timers));
+      hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
+      hls.on(Events.FRAG_LOADING, loadingEventCallback(server, timers));
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => {
-          resolve(data);
+          if (data.fatal) {
+            resolve(data);
+          } else {
+            timers.tick(2000);
+          }
         });
         hls.on(Events.FRAG_DECRYPTED, (event, data) =>
           reject(
@@ -550,30 +548,24 @@ segment.mp4
   });
 
   describe('Transmuxer Error Handling', function () {
-    it('Fragment parsing errors are fatal with no alternates', function () {
+    it('Fragment parsing errors are fatal with no alternates after retries', function () {
       server.respondWith('oneSegmentVod-mp2ts.m3u8/segment.ts', [
         200,
         {},
         new ArrayBuffer(188 * 5),
       ]);
+      hls.config.fragLoadPolicy.default.errorRetry!.maxNumRetry = 2;
       hls.loadSource('oneSegmentVod-mp2ts.m3u8');
-      hls.on(Events.LEVEL_LOADING, (event, data) => {
-        server.respond();
-      });
-      hls.on(Events.FRAG_LOADING, (event, data) => {
-        server.respond();
-      });
+      hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
+      hls.on(Events.FRAG_LOADING, loadingEventCallback(server, timers));
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => {
-          resolve(data);
+          if (data.fatal) {
+            resolve(data);
+          } else {
+            timers.tick(8000);
+          }
         });
-        hls.on(Events.FRAG_PARSED, (event, data) =>
-          reject(
-            new Error(
-              'Frag Parsed should not be triggered when frag parsing fails'
-            )
-          )
-        );
         server.respond();
       }).then(
         expectFatalErrorEventToStopPlayer(
