@@ -30,6 +30,7 @@ import type { HlsConfig } from '../config';
 import type { CuesInterface } from '../utils/cues';
 import type { MediaPlaylist } from '../types/media-playlist';
 import type { VTTCCs } from '../types/vtt';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 type TrackProperties = {
   label: string;
@@ -54,8 +55,7 @@ export class TimelineController implements ComponentAPI {
   private Cues: CuesInterface;
   private textTracks: Array<TextTrack> = [];
   private tracks: Array<MediaPlaylist> = [];
-  private initPTS: Array<number> = [];
-  private timescale: Array<number> = [];
+  private initPTS: RationalTimestamp[] = [];
   private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private captionsTracks: Record<string, TextTrack> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
@@ -187,8 +187,7 @@ export class TimelineController implements ComponentAPI {
   ) {
     const { unparsedVttFrags } = this;
     if (id === 'main') {
-      this.initPTS[frag.cc] = initPTS;
-      this.timescale[frag.cc] = timescale;
+      this.initPTS[frag.cc] = { baseTime: initPTS, timescale };
     }
 
     // Due to asynchronous processing, initial PTS may arrive later than the first VTT fragments are loaded.
@@ -306,7 +305,6 @@ export class TimelineController implements ComponentAPI {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
-    this.timescale = [];
     if (this.cea608Parser1 && this.cea608Parser2) {
       this.cea608Parser1.reset();
       this.cea608Parser2.reset();
@@ -480,7 +478,7 @@ export class TimelineController implements ComponentAPI {
       // If fragment is subtitle type, parse as WebVTT.
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
-        if (!Number.isFinite(initPTS[frag.cc])) {
+        if (!initPTS[frag.cc]) {
           unparsedVttFrags.push(data);
           if (initPTS.length) {
             // finish unsuccessfully, otherwise the subtitle-stream-controller could be blocked from loading new frags.
@@ -533,7 +531,6 @@ export class TimelineController implements ComponentAPI {
     parseIMSC1(
       payload,
       this.initPTS[frag.cc],
-      this.timescale[frag.cc],
       (cues) => {
         this._appendCues(cues, frag.level);
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
@@ -561,7 +558,6 @@ export class TimelineController implements ComponentAPI {
     parseWebVTT(
       payloadWebVTT,
       this.initPTS[frag.cc],
-      this.timescale[frag.cc],
       vttCCs,
       frag.cc,
       frag.start,
@@ -592,7 +588,6 @@ export class TimelineController implements ComponentAPI {
       parseIMSC1(
         payload,
         this.initPTS[frag.cc],
-        this.timescale[frag.cc],
         () => {
           trackPlaylistMedia.textCodec = IMSC1_CODEC;
           this._parseIMSC1(frag, payload);
@@ -632,7 +627,7 @@ export class TimelineController implements ComponentAPI {
   ) {
     const { frag } = data;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
-      if (!Number.isFinite(this.initPTS[frag.cc])) {
+      if (!this.initPTS[frag.cc]) {
         this.unparsedVttFrags.push(data as unknown as FragLoadedData);
         return;
       }

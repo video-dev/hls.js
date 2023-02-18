@@ -21,7 +21,7 @@ import type CMCDController from './controller/cmcd-controller';
 import type EMEController from './controller/eme-controller';
 import type SubtitleTrackController from './controller/subtitle-track-controller';
 import type { ComponentAPI, NetworkComponentAPI } from './types/component-api';
-import type { MediaPlaylist } from './types/media-playlist';
+import type { MediaAttributes, MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
 import { HdcpLevel, HdcpLevels, Level } from './types/level';
 import type { Fragment } from './loader/fragment';
@@ -138,8 +138,15 @@ export default class Hls implements HlsEventEmitter {
     const playListLoader = new PlaylistLoader(this);
     const id3TrackController = new ID3TrackController(this);
 
-    // network controllers
-    const levelController = (this.levelController = new LevelController(this));
+    const ConfigContentSteeringController = config.contentSteeringController;
+    // ConentSteeringController is defined before LevelController to receive Multivariant Playlist events first
+    const contentSteering = ConfigContentSteeringController
+      ? new ConfigContentSteeringController(this)
+      : null;
+    const levelController = (this.levelController = new LevelController(
+      this,
+      contentSteering
+    ));
     // FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
     const keyLoader = new KeyLoader(this.config);
@@ -159,6 +166,9 @@ export default class Hls implements HlsEventEmitter {
       levelController,
       streamController,
     ];
+    if (contentSteering) {
+      networkControllers.splice(1, 0, contentSteering);
+    }
 
     this.networkControllers = networkControllers;
     const coreComponents: ComponentAPI[] = [
@@ -564,7 +574,7 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * get bandwidth estimate
+   * Returns the current bandwidth estimate in bits per second, when available. Otherwise, `NaN` is returned.
    */
   get bandwidthEstimate(): number {
     const { bwEstimator } = this.abrController;
@@ -838,6 +848,7 @@ export default class Hls implements HlsEventEmitter {
 }
 
 export type {
+  MediaAttributes,
   MediaPlaylist,
   ErrorDetails,
   ErrorTypes,
@@ -847,6 +858,9 @@ export type {
   HlsEventEmitter,
   HlsConfig,
   Fragment,
+  BufferInfo,
+  HdcpLevels,
+  HdcpLevel,
 };
 
 export type {
@@ -886,8 +900,6 @@ export type {
   UserdataSample,
 } from './types/demuxer';
 export type {
-  HdcpLevel,
-  HdcpLevels,
   HlsSkip,
   HlsUrlParameters,
   LevelAttributes,
@@ -898,6 +910,7 @@ export type {
   PlaylistLevelType,
   HlsChunkPerformanceTiming,
   HlsPerformanceTiming,
+  HlsProgressivePerformanceTiming,
   PlaylistContextType,
   PlaylistLoaderContext,
   FragmentLoaderContext,
@@ -912,7 +925,6 @@ export type {
   LoaderOnError,
   LoaderOnSuccess,
   LoaderOnTimeout,
-  HlsProgressivePerformanceTiming,
 } from './types/loader';
 export type {
   MediaPlaylistType,
@@ -969,6 +981,7 @@ export type {
   LevelSwitchingData,
   LevelUpdatedData,
   LiveBackBufferData,
+  ContentSteeringOptions,
   ManifestLoadedData,
   ManifestLoadingData,
   ManifestParsedData,
@@ -982,4 +995,3 @@ export type {
   SubtitleTrackSwitchData,
 } from './types/events';
 export type { AttrList } from './utils/attr-list';
-export type { BufferInfo } from './utils/buffer-helper';

@@ -83,10 +83,15 @@ export interface ManifestLoadingData {
   url: string;
 }
 
+export type ContentSteeringOptions = {
+  uri: string;
+  pathwayId: string;
+};
+
 export interface ManifestLoadedData {
   audioTracks: MediaPlaylist[];
   captions?: MediaPlaylist[];
-  contentSteering: Object | null;
+  contentSteering: ContentSteeringOptions | null;
   levels: LevelParsed[];
   networkDetails: any;
   sessionData: Record<string, AttrList> | null;
@@ -166,17 +171,9 @@ export interface LevelPTSUpdatedData {
   end: number;
 }
 
-export interface AudioTrackSwitchingData {
-  id: number;
-  name: string;
-  groupId: string;
-  type: MediaPlaylistType | 'main';
-  url: string;
-}
+export interface AudioTrackSwitchingData extends MediaPlaylist {}
 
-export interface AudioTrackSwitchedData {
-  id: number;
-}
+export interface AudioTrackSwitchedData extends MediaPlaylist {}
 
 export interface AudioTrackLoadedData extends TrackLoadedData {}
 

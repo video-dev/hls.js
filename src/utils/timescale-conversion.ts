@@ -1,34 +1,39 @@
 const MPEG_TS_CLOCK_FREQ_HZ = 90000;
 
+export type RationalTimestamp = {
+  baseTime: number; // ticks
+  timescale: number; // ticks per second
+};
+
 export function toTimescaleFromBase(
-  value,
+  baseTime: number,
   destScale: number,
   srcBase: number = 1,
   round: boolean = false
 ): number {
-  const result = value * destScale * srcBase; // equivalent to `(value * scale) / (1 / base)`
+  const result = baseTime * destScale * srcBase; // equivalent to `(value * scale) / (1 / base)`
   return round ? Math.round(result) : result;
 }
 
 export function toTimescaleFromScale(
-  value,
+  baseTime: number,
   destScale: number,
   srcScale: number = 1,
   round: boolean = false
 ): number {
-  return toTimescaleFromBase(value, destScale, 1 / srcScale, round);
+  return toTimescaleFromBase(baseTime, destScale, 1 / srcScale, round);
 }
 
 export function toMsFromMpegTsClock(
-  value: number,
+  baseTime: number,
   round: boolean = false
 ): number {
-  return toTimescaleFromBase(value, 1000, 1 / MPEG_TS_CLOCK_FREQ_HZ, round);
+  return toTimescaleFromBase(baseTime, 1000, 1 / MPEG_TS_CLOCK_FREQ_HZ, round);
 }
 
 export function toMpegTsClockFromTimescale(
-  value: number,
+  baseTime: number,
   srcScale: number = 1
 ): number {
-  return toTimescaleFromBase(value, MPEG_TS_CLOCK_FREQ_HZ, 1 / srcScale);
+  return toTimescaleFromBase(baseTime, MPEG_TS_CLOCK_FREQ_HZ, 1 / srcScale);
 }

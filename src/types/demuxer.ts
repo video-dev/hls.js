@@ -1,3 +1,5 @@
+import type { RationalTimestamp } from '../utils/timescale-conversion';
+
 export interface Demuxer {
   demux(
     data: Uint8Array,
@@ -18,7 +20,7 @@ export interface Demuxer {
     videoCodec: string | undefined,
     trackDuration: number
   );
-  resetTimeStamp(defaultInitPTS?: number | null): void;
+  resetTimeStamp(defaultInitPTS?: RationalTimestamp | null): void;
   resetContiguity(): void;
 }
 

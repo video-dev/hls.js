@@ -29,19 +29,20 @@ import type {
   PassthroughTrack,
 } from '../types/demuxer';
 import type { DecryptData } from '../loader/level-key';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 class PassThroughRemuxer implements Remuxer {
   private emitInitSegment: boolean = false;
   private audioCodec?: string;
   private videoCodec?: string;
   private initData?: InitData;
-  private initPTS?: number;
+  private initPTS: RationalTimestamp | null = null;
   private initTracks?: TrackSet;
   private lastEndTime: number | null = null;
 
   public destroy() {}
 
-  public resetTimeStamp(defaultInitPTS) {
+  public resetTimeStamp(defaultInitPTS: RationalTimestamp | null) {
     this.initPTS = defaultInitPTS;
     this.lastEndTime = null;
   }
@@ -166,16 +167,20 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     const startDTS = getStartDTS(initData, data);
-    if (!Number.isFinite(initPTS!)) {
-      this.initPTS = initSegment.initPTS = initPTS = startDTS - timeOffset;
+    if (!initPTS) {
+      initSegment.initPTS = startDTS - timeOffset;
+      this.initPTS = initPTS = {
+        baseTime: initSegment.initPTS,
+        timescale: 1,
+      };
     }
 
     const duration = getDuration(data, initData);
     const startTime = audioTrack
-      ? startDTS - (initPTS as number)
+      ? startDTS - initPTS.baseTime
       : (lastEndTime as number);
     const endTime = startTime + duration;
-    offsetStartDTS(initData, data, initPTS as number);
+    offsetStartDTS(initData, data, initPTS.baseTime);
 
     if (duration > 0) {
       this.lastEndTime = endTime;
@@ -212,19 +217,18 @@ class PassThroughRemuxer implements Remuxer {
     result.audio = track.type === 'audio' ? track : undefined;
     result.video = track.type !== 'audio' ? track : undefined;
     result.initSegment = initSegment;
-    const initPtsNum = this.initPTS ?? 0;
     result.id3 = flushTextTrackMetadataCueSamples(
       id3Track,
       timeOffset,
-      initPtsNum,
-      initPtsNum
+      initPTS,
+      initPTS
     );
 
     if (textTrack.samples.length) {
       result.text = flushTextTrackUserdataCueSamples(
         textTrack,
         timeOffset,
-        initPtsNum
+        initPTS
       );
     }
 

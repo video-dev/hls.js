@@ -127,6 +127,9 @@ class FetchLoader implements Loader<LoaderContext> {
         if (isArrayBuffer) {
           return response.arrayBuffer();
         }
+        if (context.responseType === 'json') {
+          return response.json();
+        }
         return response.text();
       })
       .then((responseData: string | ArrayBuffer) => {
@@ -176,6 +179,10 @@ class FetchLoader implements Loader<LoaderContext> {
       result = ageHeader ? parseFloat(ageHeader) : null;
     }
     return result;
+  }
+
+  getResponseHeader(name: string): string | null {
+    return this.response ? this.response.headers.get(name) : null;
   }
 
   private loadProgressively(

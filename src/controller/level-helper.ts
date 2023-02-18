@@ -6,37 +6,10 @@ import { logger } from '../utils/logger';
 import { Fragment, Part } from '../loader/fragment';
 import { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
-import type { MediaPlaylist } from '../types/media-playlist';
 import { DateRange } from '../loader/date-range';
 
 type FragmentIntersection = (oldFrag: Fragment, newFrag: Fragment) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;
-
-export function addGroupId(level: Level, type: string, id: string): void {
-  switch (type) {
-    case 'audio':
-      if (!level.audioGroupIds) {
-        level.audioGroupIds = [];
-      }
-      level.audioGroupIds.push(id);
-      break;
-    case 'text':
-      if (!level.textGroupIds) {
-        level.textGroupIds = [];
-      }
-      level.textGroupIds.push(id);
-      break;
-  }
-}
-
-export function assignTrackIdsByGroup(tracks: MediaPlaylist[]): void {
-  const groups = {};
-  tracks.forEach((track) => {
-    const groupId = track.groupId || '';
-    track.id = groups[groupId] = groups[groupId] || 0;
-    groups[groupId]++;
-  });
-}
 
 export function updatePTS(
   fragments: Fragment[],

@@ -13,6 +13,7 @@ import {
 import { dummyTrack } from './dummy-demuxed-track';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { sliceUint8 } from '../utils/typed-array';
+import { RationalTimestamp } from '../utils/timescale-conversion';
 
 class BaseAudioDemuxer implements Demuxer {
   protected _audioTrack!: DemuxedAudioTrack;
@@ -20,7 +21,7 @@ class BaseAudioDemuxer implements Demuxer {
   protected frameIndex: number = 0;
   protected cachedData: Uint8Array | null = null;
   protected basePTS: number | null = null;
-  protected initPTS: number | null = null;
+  protected initPTS: RationalTimestamp | null = null;
   protected lastPTS: number | null = null;
 
   resetInitSegment(
@@ -40,7 +41,7 @@ class BaseAudioDemuxer implements Demuxer {
     };
   }
 
-  resetTimeStamp(deaultTimestamp) {
+  resetTimeStamp(deaultTimestamp: RationalTimestamp | null) {
     this.initPTS = deaultTimestamp;
     this.resetContiguity();
   }
@@ -181,11 +182,14 @@ class BaseAudioDemuxer implements Demuxer {
 export const initPTSFn = (
   timestamp: number | undefined,
   timeOffset: number,
-  initPTS: number | null
+  initPTS: RationalTimestamp | null
 ): number => {
   if (Number.isFinite(timestamp as number)) {
     return timestamp! * 90;
   }
-  return timeOffset * 90000 + (initPTS || 0);
+  const init90kHz = initPTS
+    ? (initPTS.baseTime * 90000) / initPTS.timescale
+    : 0;
+  return timeOffset * 90000 + init90kHz;
 };
 export default BaseAudioDemuxer;

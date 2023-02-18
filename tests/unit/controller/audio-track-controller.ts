@@ -1,109 +1,170 @@
 import AudioTrackController from '../../../src/controller/audio-track-controller';
-import Hls, { MediaPlaylist } from '../../../src/hls';
+import Hls from '../../../src/hls';
+import type {
+  MediaAttributes,
+  MediaPlaylist,
+} from '../../../src/types/media-playlist';
 import { AttrList } from '../../../src/utils/attr-list';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { Events } from '../../../src/events';
+import { PlaylistContextType } from '../../../src/types/loader';
+import type {
+  AudioTrackLoadedData,
+  ErrorData,
+} from '../../../src/types/events';
+import type { Level } from '../../../src/types/level';
+import type {
+  ComponentAPI,
+  NetworkComponentAPI,
+} from '../../../src/types/component-api';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
-import { PlaylistContextType } from '../../../src/types/loader';
 
 chai.use(sinonChai);
 const expect = chai.expect;
 
+type HlsTestable = Omit<
+  Hls,
+  'levelController' | 'networkControllers' | 'coreComponents'
+> & {
+  levelController: {
+    levels: Partial<Level>[];
+  };
+  coreComponents: ComponentAPI[];
+  networkControllers: NetworkComponentAPI[];
+};
+
+type AudioTrackControllerTestable = Omit<
+  AudioTrackController,
+  | 'tracks'
+  | 'tracksInGroup'
+  | 'groupId'
+  | 'trackId'
+  | 'canLoad'
+  | 'shouldLoadTrack'
+  | 'timer'
+  | 'onManifestLoading'
+  | 'onManifestParsed'
+  | 'onLevelLoading'
+  | 'onAudioTrackLoaded'
+  | 'onError'
+> & {
+  tracks: MediaPlaylist[];
+  tracksInGroup: MediaPlaylist[];
+  groupId: string | null;
+  trackId: number;
+  canLoad: boolean;
+  timer: number;
+  shouldLoadTrack: (track: Object) => boolean;
+  onManifestLoading: () => void;
+  onManifestParsed: (
+    type: string,
+    data: { audioTracks: MediaPlaylist[] }
+  ) => void;
+  onLevelLoading: (type: string, data: { level: number }) => void;
+  onAudioTrackLoaded: (type: string, data: AudioTrackLoadedData) => void;
+  onError: (type: string, data: Partial<ErrorData>) => void;
+};
+
 describe('AudioTrackController', function () {
-  const tracks: MediaPlaylist[] = [
-    {
-      attrs: new AttrList({}),
-      bitrate: 0,
-      autoselect: false,
-      default: true,
-      forced: false,
-      groupId: '1',
-      id: 0,
-      name: 'A',
-      type: 'AUDIO',
-      url: '',
-    },
-    {
-      attrs: new AttrList({}),
-      bitrate: 0,
-      autoselect: false,
-      default: false,
-      forced: false,
-      groupId: '1',
-      id: 1,
-      name: 'B',
-      type: 'AUDIO',
-      url: '',
-    },
-    {
-      attrs: new AttrList({}),
-      bitrate: 0,
-      autoselect: false,
-      default: false,
-      forced: false,
-      groupId: '1',
-      id: 2,
-      name: 'C',
-      type: 'AUDIO',
-      url: '',
-    },
-    {
-      attrs: new AttrList({}),
-      bitrate: 0,
-      autoselect: false,
-      default: true,
-      forced: false,
-      groupId: '2',
-      id: 0,
-      name: 'A',
-      type: 'AUDIO',
-      url: '',
-    },
-    {
-      attrs: new AttrList({}),
-      bitrate: 0,
-      autoselect: false,
-      default: false,
-      forced: false,
-      groupId: '2',
-      id: 1,
-      name: 'B',
-      type: 'AUDIO',
-      url: '',
-    },
-    {
-      attrs: new AttrList({}),
-      bitrate: 0,
-      autoselect: false,
-      default: false,
-      forced: false,
-      groupId: '2',
-      id: 2,
-      name: 'C',
-      type: 'AUDIO',
-      url: '',
-    },
-  ];
-
-  let hls; //: Hls;
-  let audioTrackController; //: AudioTrackController;
-
-  const levels = [
-    {
-      urlId: 1,
-      audioGroupIds: ['1', '2'],
-    },
-  ];
+  let hls: HlsTestable;
+  let audioTrackController: AudioTrackControllerTestable;
+  let tracks: MediaPlaylist[];
 
   beforeEach(function () {
-    hls = new Hls();
-    audioTrackController = new AudioTrackController(hls);
+    hls = new Hls() as unknown as HlsTestable;
+    hls.networkControllers.forEach((component) => component.destroy());
+    hls.networkControllers.length = 0;
+    hls.coreComponents.forEach((component) => component.destroy());
+    hls.coreComponents.length = 0;
+    audioTrackController = new AudioTrackController(
+      hls as unknown as Hls
+    ) as unknown as AudioTrackControllerTestable;
+    hls.networkControllers.push(audioTrackController);
     hls.levelController = {
-      levels,
+      levels: [
+        {
+          urlId: 1,
+          audioGroupIds: ['1', '2'],
+        },
+      ],
     };
+    tracks = [
+      {
+        attrs: new AttrList({}) as MediaAttributes,
+        bitrate: 0,
+        autoselect: false,
+        default: true,
+        forced: false,
+        groupId: '1',
+        id: 0,
+        name: 'A',
+        type: 'AUDIO',
+        url: '',
+      },
+      {
+        attrs: new AttrList({}) as MediaAttributes,
+        bitrate: 0,
+        autoselect: false,
+        default: false,
+        forced: false,
+        groupId: '1',
+        id: 1,
+        name: 'B',
+        type: 'AUDIO',
+        url: '',
+      },
+      {
+        attrs: new AttrList({}) as MediaAttributes,
+        bitrate: 0,
+        autoselect: false,
+        default: false,
+        forced: false,
+        groupId: '1',
+        id: 2,
+        name: 'C',
+        type: 'AUDIO',
+        url: '',
+      },
+      {
+        attrs: new AttrList({}) as MediaAttributes,
+        bitrate: 0,
+        autoselect: false,
+        default: true,
+        forced: false,
+        groupId: '2',
+        id: 0,
+        name: 'A',
+        type: 'AUDIO',
+        url: '',
+      },
+      {
+        attrs: new AttrList({}) as MediaAttributes,
+        bitrate: 0,
+        autoselect: false,
+        default: false,
+        forced: false,
+        groupId: '2',
+        id: 1,
+        name: 'B',
+        type: 'AUDIO',
+        url: '',
+      },
+      {
+        attrs: new AttrList({}) as MediaAttributes,
+        bitrate: 0,
+        autoselect: false,
+        default: false,
+        forced: false,
+        groupId: '2',
+        id: 2,
+        name: 'C',
+        type: 'AUDIO',
+        url: '',
+      },
+    ];
   });
 
   afterEach(function () {
@@ -146,8 +207,8 @@ describe('AudioTrackController', function () {
       done();
     });
 
-    const newLevelInfo = levels[0];
-    const newGroupId = newLevelInfo.audioGroupIds[newLevelInfo.urlId];
+    const newLevelInfo = hls.levels[0];
+    const newGroupId = newLevelInfo.audioGroupIds?.[newLevelInfo.urlId];
 
     audioTrackController.tracks = tracks;
     // Update the level to set audioGroupId
@@ -193,9 +254,9 @@ describe('AudioTrackController', function () {
     audioTrackController.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, {
       details: new LevelDetails(''),
       id: 0,
-      groupId: '1',
+      groupId: '2',
       networkDetails: null,
-      stats: { loading: {} },
+      stats: { loading: {} } as any,
       deliveryDirectives: null,
     });
     expect(audioTrackController.tracksInGroup[0], 'tracksInGroup[0]')
@@ -209,9 +270,9 @@ describe('AudioTrackController', function () {
     audioTrackController.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, {
       details: new LevelDetails(''),
       id: 1,
-      groupId: '1',
+      groupId: '2',
       networkDetails: null,
-      stats: { loading: {} },
+      stats: { loading: {} } as any,
       deliveryDirectives: null,
     });
     expect(audioTrackController.tracksInGroup[1], 'tracksInGroup[1]')
@@ -262,8 +323,8 @@ describe('AudioTrackController', function () {
         level: 0,
       };
 
-      const newLevelInfo = levels[levelLoadedEvent.level];
-      const newGroupId = newLevelInfo.audioGroupIds[newLevelInfo.urlId];
+      const newLevelInfo = hls.levels[levelLoadedEvent.level];
+      const newGroupId = newLevelInfo.audioGroupIds?.[newLevelInfo.urlId];
 
       audioTrackController.tracks = tracks;
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
@@ -293,12 +354,17 @@ describe('AudioTrackController', function () {
         'shouldLoadTrack'
       );
       const audioTrackLoadingCallback = sinon.spy();
-      const trackWithUrl = {
+      const trackWithUrl: MediaPlaylist = {
         groupId: '1',
         id: 0,
         name: 'A',
         default: true,
         url: './trackA.m3u8',
+        attrs: new AttrList({}) as MediaAttributes,
+        bitrate: 0,
+        autoselect: false,
+        forced: false,
+        type: 'AUDIO',
       };
 
       hls.on(Hls.Events.AUDIO_TRACK_LOADING, audioTrackLoadingCallback);
@@ -357,7 +423,7 @@ describe('AudioTrackController', function () {
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
         level: 0,
       });
-      audioTrackController.startLoad(0);
+      audioTrackController.startLoad();
 
       expect(shouldLoadTrack).to.have.been.calledTwice;
       expect(shouldLoadTrack).to.have.been.calledWith(trackWithOutUrl);
@@ -368,28 +434,48 @@ describe('AudioTrackController', function () {
   });
 
   describe('onError', function () {
-    it('should clear interval (only) on fatal network errors', function () {
+    it('should clear interval (only) on fatal network and key-system errors', function () {
       audioTrackController.timer = 1000;
 
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
       });
       expect(audioTrackController.timer).to.equal(1000);
 
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.MEDIA_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true,
       });
       expect(audioTrackController.timer).to.equal(1000);
 
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: false,
       });
       expect(audioTrackController.timer).to.equal(1000);
 
       audioTrackController.onError(Events.ERROR, {
         type: Hls.ErrorTypes.NETWORK_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
+        fatal: true,
+      });
+      expect(audioTrackController.timer).to.equal(-1);
+
+      audioTrackController.timer = 1000;
+
+      audioTrackController.onError(Events.ERROR, {
+        type: Hls.ErrorTypes.KEY_SYSTEM_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
+        fatal: false,
+      });
+      expect(audioTrackController.timer).to.equal(1000);
+
+      audioTrackController.onError(Events.ERROR, {
+        type: Hls.ErrorTypes.KEY_SYSTEM_ERROR,
+        details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true,
       });
       expect(audioTrackController.timer).to.equal(-1);
@@ -397,7 +483,7 @@ describe('AudioTrackController', function () {
 
     it('should retry track loading if track has not changed', function () {
       const retryLoadingOrFail = sinon.spy(
-        audioTrackController,
+        audioTrackController as any,
         'retryLoadingOrFail'
       );
       const currentTrackId = 4;
@@ -414,7 +500,7 @@ describe('AudioTrackController', function () {
           type: PlaylistContextType.AUDIO_TRACK,
           id: currentTrackId,
           groupId: currentGroupId,
-        },
+        } as any,
       });
       expect(
         audioTrackController.audioTrack,

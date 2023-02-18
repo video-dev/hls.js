@@ -10,6 +10,7 @@ import {
 import type { SourceBufferName } from './buffer';
 import type { PlaylistLevelType } from './loader';
 import type { DecryptData } from '../loader/level-key';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 export interface Remuxer {
   remux(
@@ -28,7 +29,7 @@ export interface Remuxer {
     videoCodec: string | undefined,
     decryptdata: DecryptData | null
   ): void;
-  resetTimeStamp(defaultInitPTS): void;
+  resetTimeStamp(defaultInitPTS: RationalTimestamp | null): void;
   resetNextTimestamp(): void;
   destroy(): void;
 }

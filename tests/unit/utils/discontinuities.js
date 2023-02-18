@@ -38,7 +38,7 @@ const mockFrags = [
   },
 ];
 
-describe('level-helper', function () {
+describe('discontinuities', function () {
   it('adjusts level fragments with overlapping CC range using a reference fragment', function () {
     const details = {
       fragments: mockFrags.slice(0),

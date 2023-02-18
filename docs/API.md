@@ -1160,8 +1160,6 @@ parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
 
 Default bandwidth estimate in bits/s prior to collecting fragment bandwidth samples.
 
-parameter should be a float
-
 ### `abrBandWidthFactor`
 
 (default: `0.95`)
