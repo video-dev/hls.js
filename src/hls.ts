@@ -117,9 +117,9 @@ export default class Hls implements HlsEventEmitter {
    * @param userConfig - Configuration options applied over `Hls.DefaultConfig`
    */
   constructor(userConfig: Partial<HlsConfig> = {}) {
+    enableLogs(userConfig.debug || false, 'Hls instance');
     const config = (this.config = mergeConfig(Hls.DefaultConfig, userConfig));
     this.userConfig = userConfig;
-    enableLogs(config.debug, 'Hls instance');
 
     this._autoLevelCapping = -1;
 
@@ -905,10 +905,14 @@ export type {
   FPSControllerConfig,
   FragmentLoaderConfig,
   FragmentLoaderConstructor,
+  HlsLoadPolicies,
   LevelControllerConfig,
+  LoaderConfig,
+  LoadPolicy,
   MP4RemuxerConfig,
   PlaylistLoaderConfig,
   PlaylistLoaderConstructor,
+  RetryConfig,
   StreamControllerConfig,
   LatencyControllerConfig,
   MetadataControllerConfig,

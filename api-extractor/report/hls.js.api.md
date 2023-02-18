@@ -311,8 +311,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected fragContextChanged(frag: Fragment | null): boolean;
     // (undocumented)
     protected fragCurrent: Fragment | null;
-    // (undocumented)
-    protected fragLoadError: number;
     // Warning: (ae-forgotten-export) The symbol "FragmentLoader" needs to be exported by the entry point hls.d.ts
     //
     // (undocumented)
@@ -389,8 +387,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected onHandlerDestroyed(): void;
     // (undocumented)
     protected onHandlerDestroying(): void;
-    // (undocumented)
-    protected onLevelSwitching(event: Events.LEVEL_SWITCHING, data: LevelSwitchingData): void;
     // (undocumented)
     protected onManifestLoaded(event: Events.MANIFEST_LOADED, data: ManifestLoadedData): void;
     // (undocumented)
@@ -1372,9 +1368,8 @@ export class Fragment extends BaseSegment {
 
 // Warning: (ae-missing-release-tag) "FragmentLoaderConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public (undocumented)
+// @public @deprecated (undocumented)
 export type FragmentLoaderConfig = {
-    fLoader?: FragmentLoaderConstructor;
     fragLoadingTimeOut: number;
     fragLoadingMaxRetry: number;
     fragLoadingRetryDelay: number;
@@ -1587,6 +1582,8 @@ export type HlsConfig = {
     loader: {
         new (confg: HlsConfig): Loader<LoaderContext>;
     };
+    fLoader?: FragmentLoaderConstructor;
+    pLoader?: PlaylistLoaderConstructor;
     fetchSetup?: (context: LoaderContext, initParams: any) => Request;
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
     audioStreamController?: typeof AudioStreamController;
@@ -1605,7 +1602,7 @@ export type HlsConfig = {
     fpsController: typeof FPSController;
     progressive: boolean;
     lowLatencyMode: boolean;
-} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & FragmentLoaderConfig & LevelControllerConfig & MP4RemuxerConfig & PlaylistLoaderConfig & StreamControllerConfig & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig;
+} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & FragmentLoaderConfig & PlaylistLoaderConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1740,6 +1737,18 @@ export interface HlsListeners {
     // (undocumented)
     [Events.SUBTITLE_TRACK_SWITCH]: (event: Events.SUBTITLE_TRACK_SWITCH, data: SubtitleTrackSwitchData) => void;
 }
+
+// Warning: (ae-missing-release-tag) "HlsLoadPolicies" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type HlsLoadPolicies = {
+    fragLoadPolicy: LoadPolicy;
+    keyLoadPolicy: LoadPolicy;
+    certLoadPolicy: LoadPolicy;
+    playlistLoadPolicy: LoadPolicy;
+    manifestLoadPolicy: LoadPolicy;
+    steeringManifestLoadPolicy: LoadPolicy;
+};
 
 // Warning: (ae-missing-release-tag) "HlsPerformanceTiming" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2293,6 +2302,16 @@ export interface LoaderCallbacks<T extends LoaderContext> {
     onTimeout: LoaderOnTimeout<T>;
 }
 
+// Warning: (ae-missing-release-tag) "LoaderConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type LoaderConfig = {
+    maxTimeToFirstByteMs: number;
+    maxLoadTimeMs: number;
+    timeoutRetry: RetryConfig | null;
+    errorRetry: RetryConfig | null;
+};
+
 // Warning: (ae-missing-release-tag) "LoaderConfiguration" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2300,12 +2319,14 @@ export interface LoaderConfiguration {
     // (undocumented)
     highWaterMark?: number;
     // (undocumented)
+    loadPolicy: LoaderConfig;
+    // @deprecated (undocumented)
     maxRetry: number;
-    // (undocumented)
+    // @deprecated (undocumented)
     maxRetryDelay: number;
-    // (undocumented)
+    // @deprecated (undocumented)
     retryDelay: number;
-    // (undocumented)
+    // @deprecated (undocumented)
     timeout: number;
 }
 
@@ -2388,6 +2409,13 @@ export interface LoaderStats {
     // (undocumented)
     total: number;
 }
+
+// Warning: (ae-missing-release-tag) "LoadPolicy" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type LoadPolicy = {
+    default: LoaderConfig;
+};
 
 // Warning: (ae-missing-release-tag) "LoadStats" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2726,9 +2754,8 @@ export enum PlaylistLevelType {
 
 // Warning: (ae-missing-release-tag) "PlaylistLoaderConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public (undocumented)
+// @public @deprecated (undocumented)
 export type PlaylistLoaderConfig = {
-    pLoader?: PlaylistLoaderConstructor;
     manifestLoadingTimeOut: number;
     manifestLoadingMaxRetry: number;
     manifestLoadingRetryDelay: number;
@@ -2754,7 +2781,7 @@ export interface PlaylistLoaderContext extends LoaderContext {
     // (undocumented)
     deliveryDirectives: HlsUrlParameters | null;
     // (undocumented)
-    groupId: string | null;
+    groupId?: string;
     // (undocumented)
     id: number | null;
     // (undocumented)
@@ -2762,10 +2789,18 @@ export interface PlaylistLoaderContext extends LoaderContext {
     // (undocumented)
     levelDetails?: LevelDetails;
     // (undocumented)
-    loader?: Loader<PlaylistLoaderContext>;
-    // (undocumented)
     type: PlaylistContextType;
 }
+
+// Warning: (ae-missing-release-tag) "RetryConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type RetryConfig = {
+    maxNumRetry: number;
+    retryDelayMs: number;
+    maxRetryDelayMs: number;
+    backoff?: 'exponential' | 'linear';
+};
 
 // Warning: (ae-missing-release-tag) "SourceBufferName" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //

@@ -149,6 +149,7 @@ export class Level {
   set urlId(value: number) {
     const newValue = value % this.url.length;
     if (this._urlId !== newValue) {
+      this.fragmentError = 0;
       this.details = undefined;
       this._urlId = newValue;
     }

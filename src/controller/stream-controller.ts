@@ -120,7 +120,6 @@ export default class StreamController
       this.stopLoad();
       this.setInterval(TICK_INTERVAL);
       this.level = -1;
-      this.fragLoadError = 0;
       if (!this.startFragRequested) {
         // determine load level
         let startLevel = hls.startLevel;
@@ -1022,7 +1021,7 @@ export default class StreamController
       if (!data || this.fragContextChanged(frag)) {
         return;
       }
-      this.fragLoadError = 0;
+      level.fragmentError = 0;
       this.state = State.IDLE;
       this.startFragRequested = false;
       this.bitrateTest = false;

@@ -104,6 +104,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     if (this.requestScheduled === -1) {
       this.requestScheduled = self.performance.now();
     }
+    // Loading is handled by the subclasses
   }
 
   protected shouldLoadTrack(track: MediaPlaylist): boolean {
@@ -289,37 +290,40 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   }
 
   protected checkRetry(errorEvent: ErrorData): boolean {
-    const { config } = this.hls;
-    const retry = this.retryCount < config.levelLoadingMaxRetry;
+    const { playlistLoadPolicy } = this.hls.config;
+    const errorDetails = errorEvent.details;
+    const isTimeout =
+      errorDetails === ErrorDetails.LEVEL_LOAD_TIMEOUT ||
+      errorDetails === ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT ||
+      errorDetails === ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT;
+    const retryConfig =
+      playlistLoadPolicy.default[`${isTimeout ? 'timeout' : 'error'}Retry`];
+    const retry = !!retryConfig && this.retryCount < retryConfig.maxNumRetry;
+    // TODO: Don't try on bad network status
     if (retry) {
       this.requestScheduled = -1;
-      this.retryCount++;
-      if (
-        errorEvent.details.indexOf('LoadTimeOut') > -1 &&
-        errorEvent.context?.deliveryDirectives
-      ) {
+      const retryCount = ++this.retryCount;
+      if (isTimeout && errorEvent.context?.deliveryDirectives) {
         // The LL-HLS request already timed out so retry immediately
         this.warn(
-          `retry playlist loading #${this.retryCount} after "${errorEvent.details}"`
+          `Retrying playlist loading ${retryCount}/${retryConfig.maxNumRetry} after "${errorDetails}" without delivery-directives`
         );
         this.loadPlaylist();
       } else {
-        // exponential backoff capped to max retry timeout
+        // exponential backoff capped to max retry delay
+        const backoffFactor =
+          retryConfig.backoff === 'linear' ? 1 : Math.pow(2, retryCount);
         const delay = Math.min(
-          Math.pow(2, this.retryCount) * config.levelLoadingRetryDelay,
-          errorEvent.details === ErrorDetails.LEVEL_LOAD_TIMEOUT ||
-            errorEvent.details === ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT ||
-            errorEvent.details === ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT
-            ? 0
-            : config.levelLoadingMaxRetryTimeout
+          backoffFactor * retryConfig.retryDelayMs,
+          retryConfig.maxRetryDelayMs
         );
         // Schedule level/track reload
         this.timer = self.setTimeout(() => this.loadPlaylist(), delay);
         this.warn(
-          `retry playlist loading #${this.retryCount} in ${delay} ms after "${errorEvent.details}"`
+          `Retrying playlist loading ${retryCount}/${retryConfig.maxNumRetry} after "${errorDetails}" in ${delay}ms`
         );
       }
-      // boolean used to inform other controllers that a retry is happening
+      // `levelRetry = true` used to inform other controllers that a retry is happening
       errorEvent.levelRetry = true;
     }
     return retry;

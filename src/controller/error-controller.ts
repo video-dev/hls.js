@@ -56,9 +56,20 @@ export default class ErrorController {
           const level = hls.levels[variantLevelIndex];
           // Switch levels when out of retried or level index out of bounds
           if (level) {
-            // TODO: Is this counter the best way to handle this?
-            level.fragmentError++;
-            if (level.fragmentError > hls.config.fragLoadingMaxRetry) {
+            const { fragLoadPolicy, keyLoadPolicy } = hls.config;
+            const isTimeout =
+              data.details === ErrorDetails.FRAG_LOAD_TIMEOUT ||
+              data.details === ErrorDetails.KEY_LOAD_TIMEOUT;
+            const retryConfig = (
+              data.details.startsWith('key') ? keyLoadPolicy : fragLoadPolicy
+            ).default[`${isTimeout ? 'timeout' : 'error'}Retry`];
+            const fragmentErrors = hls.levels.reduce(
+              (acc, level) => acc + level.fragmentError,
+              0
+            );
+            const retry =
+              !!retryConfig && fragmentErrors < retryConfig.maxNumRetry;
+            if (!retry) {
               this.levelSwitch(data, variantLevelIndex);
             }
           } else {
@@ -201,7 +212,7 @@ export default class ErrorController {
           }
         }
         if (nextLevel > -1 && hls.loadLevel !== nextLevel) {
-          this.warn(`${errorEvent.details}: switching to ${nextLevel}`);
+          this.warn(`${errorEvent.details}: switching to level ${nextLevel}`);
           errorEvent.levelRetry = true;
           this.hls.nextAutoLevel = nextLevel;
         } else if (errorEvent.levelRetry === false) {

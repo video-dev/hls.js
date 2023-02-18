@@ -87,7 +87,6 @@ export default class BaseStreamController
   protected startPosition: number = 0;
   protected startTimeOffset: number | null = null;
   protected loadedmetadata: boolean = false;
-  protected fragLoadError: number = 0;
   protected retryDate: number = 0;
   protected levels: Array<Level> | null = null;
   protected fragmentLoader: FragmentLoader;
@@ -120,7 +119,6 @@ export default class BaseStreamController
     this.config = hls.config;
     this.decrypter = new Decrypter(hls.config);
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
-    hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
   }
 
   protected doTick() {
@@ -295,13 +293,6 @@ export default class BaseStreamController
     this.startTimeOffset = data.startTimeOffset;
   }
 
-  protected onLevelSwitching(
-    event: Events.LEVEL_SWITCHING,
-    data: LevelSwitchingData
-  ): void {
-    this.fragLoadError = 0;
-  }
-
   protected onHandlerDestroying() {
     this.stopLoad();
     super.onHandlerDestroying();
@@ -309,7 +300,6 @@ export default class BaseStreamController
 
   protected onHandlerDestroyed() {
     this.state = State.STOPPED;
-    this.hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
     if (this.fragmentLoader) {
       this.fragmentLoader.destroy();
     }
@@ -366,7 +356,7 @@ export default class BaseStreamController
           // if we're here we probably needed to backtrack or are waiting for more parts
           return;
         }
-        this.fragLoadError = 0;
+        level.fragmentError = 0;
         const state = this.state;
         if (this.fragContextChanged(frag)) {
           if (
@@ -407,8 +397,6 @@ export default class BaseStreamController
     // When alternate audio is playing, the audio-stream-controller is responsible for the audio buffer. Otherwise,
     // passing a null type flushes both buffers
     const flushScope: BufferFlushingData = { startOffset, endOffset, type };
-    // Reset load errors on flush
-    this.fragLoadError = 0;
     this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
   }
 
@@ -480,7 +468,7 @@ export default class BaseStreamController
 
         const stats = frag.stats;
         this.state = State.IDLE;
-        this.fragLoadError = 0;
+        level.fragmentError = 0;
         frag.data = new Uint8Array(data.payload);
         stats.parsing.start = stats.buffering.start = self.performance.now();
         stats.parsing.end = stats.buffering.end = self.performance.now();
@@ -1371,43 +1359,53 @@ export default class BaseStreamController
     }
     const frag = data.frag;
     // Handle frag error related to caller's filterType
-    if (!frag || frag.type !== filterType) {
+    if (!frag || frag.type !== filterType || !this.levels) {
       return;
     }
+    const level = this.levels[frag.level];
     if (this.fragContextChanged(frag)) {
       this.warn(
         `Frag load error must match current frag to retry ${frag.url} > ${this.fragCurrent?.url}`
       );
       return;
     }
-
     // keep retrying until the limit will be reached
-    const config = this.config;
-    if (this.fragLoadError + 1 <= config.fragLoadingMaxRetry) {
+    const fragmentErrors = this.levels.reduce(
+      (acc, level) => acc + level.fragmentError,
+      0
+    );
+    const retryCount = level ? fragmentErrors + 1 : Infinity;
+    const { fragLoadPolicy, keyLoadPolicy } = this.config;
+    const isTimeout =
+      data.details === ErrorDetails.FRAG_LOAD_TIMEOUT ||
+      data.details === ErrorDetails.KEY_LOAD_TIMEOUT;
+    const retryConfig = (
+      data.details.startsWith('key') ? keyLoadPolicy : fragLoadPolicy
+    ).default[`${isTimeout ? 'timeout' : 'error'}Retry`];
+    const retry = !!retryConfig && retryCount <= retryConfig.maxNumRetry;
+    if (retry) {
+      level.fragmentError++;
       if (!this.loadedmetadata) {
         this.startFragRequested = false;
         this.nextLoadPosition = this.startPosition;
       }
-      // exponential backoff capped to config.fragLoadingMaxRetryTimeout
+      // exponential backoff capped to max retry delay
+      const backoffFactor =
+        retryConfig.backoff === 'linear' ? 1 : Math.pow(2, retryCount);
       const delay = Math.min(
-        Math.pow(2, this.fragLoadError) * config.fragLoadingRetryDelay,
-        data.details === ErrorDetails.FRAG_LOAD_TIMEOUT ||
-          data.details === ErrorDetails.KEY_LOAD_TIMEOUT
-          ? 0
-          : config.fragLoadingMaxRetryTimeout
+        backoffFactor * retryConfig.retryDelayMs,
+        retryConfig.maxRetryDelayMs
       );
-      this.fragLoadError++;
       this.warn(
-        `Fragment ${frag.sn} of ${filterType} ${frag.level} errored with ${data.details}, retrying ${this.fragLoadError}/${config.fragLoadingMaxRetry} in ${delay}ms`
+        `Fragment ${frag.sn} of ${filterType} ${frag.level} errored with ${data.details}, retrying loading ${retryCount}/${retryConfig.maxNumRetry} in ${delay}ms`
       );
       this.retryDate = self.performance.now() + delay;
       this.state = State.FRAG_LOADING_WAITING_RETRY;
     } else if (data.levelRetry) {
       this.resetFragmentErrors(filterType);
     } else {
-      logger.error(
-        `${data.details} reaches max retry, redispatch as fatal ...`
-      );
+      logger.warn(`${data.details} reached max retry (${fragmentErrors})`);
+      // `levelRetry = false` used to inform other controllers that if a level switch is not possible, error should escalated to fatal
       data.levelRetry = false;
       this.state = State.ERROR;
     }
@@ -1420,7 +1418,6 @@ export default class BaseStreamController
     }
     // Fragment errors that result in a level switch or redundant fail-over
     // should reset the stream controller state to idle
-    this.fragLoadError = 0;
     if (!this.loadedmetadata) {
       this.startFragRequested = false;
     }

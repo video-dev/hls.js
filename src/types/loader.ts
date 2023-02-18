@@ -1,3 +1,4 @@
+import type { LoaderConfig } from '../config';
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { KeyLoaderInfo } from '../loader/key-loader';
@@ -31,14 +32,28 @@ export interface KeyLoaderContext extends LoaderContext {
 }
 
 export interface LoaderConfiguration {
+  // LoaderConfig policy that overrides required settings
+  loadPolicy: LoaderConfig;
+  /**
+   * @deprecated use LoaderConfig timeoutRetry and errorRetry maxNumRetry
+   */
   // Max number of load retries
   maxRetry: number;
+  /**
+   * @deprecated use LoaderConfig maxTimeToFirstByteMs and maxLoadTimeMs
+   */
   // Timeout after which `onTimeOut` callback will be triggered
-  // (if loading is still not finished after that delay)
+  //  when loading has not finished after that delay
   timeout: number;
+  /**
+   * @deprecated use LoaderConfig timeoutRetry and errorRetry retryDelayMs
+   */
   // Delay between an I/O error and following connection retry (ms).
   // This to avoid spamming the server
   retryDelay: number;
+  /**
+   * @deprecated use LoaderConfig timeoutRetry and errorRetry maxRetryDelayMs
+   */
   // max connection retry delay (ms)
   maxRetryDelay: number;
   // When streaming progressively, this is the minimum chunk size required to emit a PROGRESS event
@@ -159,15 +174,13 @@ export enum PlaylistLevelType {
 }
 
 export interface PlaylistLoaderContext extends LoaderContext {
-  loader?: Loader<PlaylistLoaderContext>;
-
   type: PlaylistContextType;
   // the level index to load
   level: number | null;
   // level or track id from LevelLoadingData / TrackLoadingData
   id: number | null;
   // track group id
-  groupId: string | null;
+  groupId?: string;
   // internal representation of a parsed m3u8 level playlist
   levelDetails?: LevelDetails;
   // Blocking playlist request delivery directives (or null id none were added to playlist url

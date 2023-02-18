@@ -74,11 +74,16 @@ export default class FragmentLoader {
             ? new FragmentILoader(config)
             : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag);
+      const loadPolicy = Object.assign({}, config.fragLoadPolicy.default, {
+        timeoutRetry: null,
+        errorRetry: null,
+      });
       const loaderConfig: LoaderConfiguration = {
-        timeout: config.fragLoadingTimeOut,
+        loadPolicy,
+        timeout: loadPolicy.maxLoadTimeMs,
         maxRetry: 0,
         retryDelay: 0,
-        maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+        maxRetryDelay: 0,
         highWaterMark: frag.sn === 'initSegment' ? Infinity : MIN_CHUNK_SIZE,
       };
       // Assign frag stats to the loader's stats reference
@@ -177,11 +182,14 @@ export default class FragmentLoader {
             ? new FragmentILoader(config)
             : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag, part);
+      // Should we define another load policy for parts?
+      const loadPolicy = config.fragLoadPolicy.default;
       const loaderConfig: LoaderConfiguration = {
-        timeout: config.fragLoadingTimeOut,
+        loadPolicy,
+        timeout: loadPolicy.maxLoadTimeMs,
         maxRetry: 0,
         retryDelay: 0,
-        maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+        maxRetryDelay: 0,
         highWaterMark: MIN_CHUNK_SIZE,
       };
       // Assign part stats to the loader's stats reference

@@ -16,6 +16,7 @@ import type {
 import type { LevelParsed } from '../types/level';
 import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
 import { addGroupId } from './level-controller';
+import { RetryConfig } from '../config';
 
 export type SteeringManifest = {
   VERSION: 1;
@@ -297,11 +298,15 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       url: url.href,
     };
 
+    const loadPolicy = config.steeringManifestLoadPolicy.default;
+    const legacyRetryCompatibility: RetryConfig | Record<string, void> =
+      loadPolicy.errorRetry || loadPolicy.timeoutRetry || {};
     const loaderConfig: LoaderConfiguration = {
-      timeout: config.levelLoadingTimeOut,
-      maxRetry: 0,
-      retryDelay: config.levelLoadingRetryDelay,
-      maxRetryDelay: config.levelLoadingMaxRetryTimeout,
+      loadPolicy,
+      timeout: loadPolicy.maxLoadTimeMs,
+      maxRetry: legacyRetryCompatibility.maxNumRetry || 0,
+      retryDelay: legacyRetryCompatibility.retryDelayMs || 0,
+      maxRetryDelay: legacyRetryCompatibility.maxRetryDelayMs || 0,
     };
 
     const callbacks: LoaderCallbacks<LoaderContext> = {

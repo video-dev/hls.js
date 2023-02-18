@@ -238,11 +238,13 @@ export default class KeyLoader implements ComponentAPI {
       // maxRetry is 0 so that instead of retrying the same key on the same variant multiple times,
       // key-loader will trigger an error and rely on stream-controller to handle retry logic.
       // this will also align retry logic with fragment-loader
+      const loadPolicy = config.keyLoadPolicy.default;
       const loaderConfig: LoaderConfiguration = {
-        timeout: config.fragLoadingTimeOut,
+        loadPolicy,
+        timeout: loadPolicy.maxLoadTimeMs,
         maxRetry: 0,
-        retryDelay: config.fragLoadingRetryDelay,
-        maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+        retryDelay: 0,
+        maxRetryDelay: 0,
       };
 
       const loaderCallbacks: LoaderCallbacks<KeyLoaderContext> = {

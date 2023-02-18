@@ -21,16 +21,17 @@ import type {
 } from '../types/loader';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { LevelDetails } from './level-details';
-import type Hls from '../hls';
 import { AttrList } from '../utils/attr-list';
+import type Hls from '../hls';
 import type {
   ErrorData,
   LevelLoadingData,
   ManifestLoadingData,
   TrackLoadingData,
 } from '../types/events';
-import { NetworkComponentAPI } from '../types/component-api';
-import { MediaAttributes } from '../types/media-playlist';
+import type { NetworkComponentAPI } from '../types/component-api';
+import type { MediaAttributes } from '../types/media-playlist';
+import type { LoaderConfig, RetryConfig } from '../config';
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext
@@ -105,18 +106,15 @@ class PlaylistLoader implements NetworkComponentAPI {
     const PLoader = config.pLoader;
     const Loader = config.loader;
     const InternalLoader = PLoader || Loader;
-
     const loader = new InternalLoader(config) as Loader<PlaylistLoaderContext>;
 
-    context.loader = loader;
     this.loaders[context.type] = loader;
-
     return loader;
   }
 
   private getInternalLoader(
     context: PlaylistLoaderContext
-  ): Loader<LoaderContext> {
+  ): Loader<LoaderContext> | undefined {
     return this.loaders[context.type];
   }
 
@@ -154,7 +152,6 @@ class PlaylistLoader implements NetworkComponentAPI {
     this.variableList = null;
     this.load({
       id: null,
-      groupId: null,
       level: 0,
       responseType: 'text',
       type: PlaylistContextType.MANIFEST,
@@ -167,7 +164,6 @@ class PlaylistLoader implements NetworkComponentAPI {
     const { id, level, url, deliveryDirectives } = data;
     this.load({
       id,
-      groupId: null,
       level,
       responseType: 'text',
       type: PlaylistContextType.LEVEL,
@@ -228,35 +224,17 @@ class PlaylistLoader implements NetworkComponentAPI {
       loader.abort();
     }
 
-    let maxRetry;
-    let timeout;
-    let retryDelay;
-    let maxRetryDelay;
-
     // apply different configs for retries depending on
     // context (manifest, level, audio/subs playlist)
-    switch (context.type) {
-      case PlaylistContextType.MANIFEST:
-        maxRetry = config.manifestLoadingMaxRetry;
-        timeout = config.manifestLoadingTimeOut;
-        retryDelay = config.manifestLoadingRetryDelay;
-        maxRetryDelay = config.manifestLoadingMaxRetryTimeout;
-        break;
-      case PlaylistContextType.LEVEL:
-      case PlaylistContextType.AUDIO_TRACK:
-      case PlaylistContextType.SUBTITLE_TRACK:
-        // Manage retries in Level/Track Controller
-        maxRetry = 0;
-        timeout = config.levelLoadingTimeOut;
-        break;
-      default:
-        maxRetry = config.levelLoadingMaxRetry;
-        timeout = config.levelLoadingTimeOut;
-        retryDelay = config.levelLoadingRetryDelay;
-        maxRetryDelay = config.levelLoadingMaxRetryTimeout;
-        break;
+    let loadPolicy: LoaderConfig;
+    if (context.type === PlaylistContextType.MANIFEST) {
+      loadPolicy = config.manifestLoadPolicy.default;
+    } else {
+      loadPolicy = Object.assign({}, config.playlistLoadPolicy.default, {
+        timeoutRetry: null,
+        errorRetry: null,
+      });
     }
-
     loader = this.createInternalLoader(context);
 
     // Override level/track timeout for LL-HLS requests
@@ -283,19 +261,30 @@ class PlaylistLoader implements NetworkComponentAPI {
         const partTarget = levelDetails.partTarget;
         const targetDuration = levelDetails.targetduration;
         if (partTarget && targetDuration) {
-          timeout = Math.min(
-            Math.max(partTarget * 3, targetDuration * 0.8) * 1000,
-            timeout
-          );
+          const maxLowLatencyPlaylistRefresh =
+            Math.max(partTarget * 3, targetDuration * 0.8) * 1000;
+          loadPolicy = Object.assign({}, loadPolicy, {
+            maxTimeToFirstByteMs: Math.min(
+              maxLowLatencyPlaylistRefresh,
+              loadPolicy.maxTimeToFirstByteMs
+            ),
+            maxLoadTimeMs: Math.min(
+              maxLowLatencyPlaylistRefresh,
+              loadPolicy.maxTimeToFirstByteMs
+            ),
+          });
         }
       }
     }
 
+    const legacyRetryCompatibility: RetryConfig | Record<string, void> =
+      loadPolicy.errorRetry || loadPolicy.timeoutRetry || {};
     const loaderConfig: LoaderConfiguration = {
-      timeout,
-      maxRetry,
-      retryDelay,
-      maxRetryDelay,
+      loadPolicy,
+      timeout: loadPolicy.maxLoadTimeMs,
+      maxRetry: legacyRetryCompatibility.maxNumRetry || 0,
+      retryDelay: legacyRetryCompatibility.retryDelayMs || 0,
+      maxRetryDelay: legacyRetryCompatibility.maxRetryDelayMs || 0,
     };
 
     const loaderCallbacks = {
@@ -315,6 +304,9 @@ class PlaylistLoader implements NetworkComponentAPI {
     context: PlaylistLoaderContext,
     networkDetails: any = null
   ): void {
+    const loader = this.getInternalLoader(context) as
+      | Loader<PlaylistLoaderContext>
+      | undefined;
     this.resetInternalLoader(context.type);
 
     const string = response.data as string;
@@ -333,7 +325,13 @@ class PlaylistLoader implements NetworkComponentAPI {
 
     stats.parsing.start = performance.now();
     if (M3U8Parser.isMediaPlaylist(string)) {
-      this.handleTrackOrLevelPlaylist(response, stats, context, networkDetails);
+      this.handleTrackOrLevelPlaylist(
+        response,
+        stats,
+        context,
+        networkDetails,
+        loader
+      );
     } else {
       this.handleMasterPlaylist(response, stats, context, networkDetails);
     }
@@ -450,7 +448,8 @@ class PlaylistLoader implements NetworkComponentAPI {
     response: LoaderResponse,
     stats: LoaderStats,
     context: PlaylistLoaderContext,
-    networkDetails: any
+    networkDetails: any,
+    loader: Loader<PlaylistLoaderContext> | undefined
   ): void {
     const hls = this.hls;
     const { id, level, type } = context;
@@ -508,7 +507,8 @@ class PlaylistLoader implements NetworkComponentAPI {
       response,
       stats,
       context,
-      networkDetails
+      networkDetails,
+      loader
     );
   }
 
@@ -614,11 +614,11 @@ class PlaylistLoader implements NetworkComponentAPI {
     response: LoaderResponse,
     stats: LoaderStats,
     context: PlaylistLoaderContext,
-    networkDetails: any
+    networkDetails: any,
+    loader: Loader<PlaylistLoaderContext> | undefined
   ): void {
     const hls = this.hls;
-    const { type, level, id, groupId, loader, deliveryDirectives } = context;
-
+    const { type, level, id, groupId, deliveryDirectives } = context;
     const url = getResponseUrl(response, context);
     const parent = mapContextToLevelType(context);
     const levelIndex =
@@ -664,11 +664,8 @@ class PlaylistLoader implements NetworkComponentAPI {
       });
       return;
     }
-    if (!loader) {
-      return;
-    }
 
-    if (levelDetails.live) {
+    if (levelDetails.live && loader) {
       if (loader.getCacheAge) {
         levelDetails.ageHeader = loader.getCacheAge() || 0;
       }

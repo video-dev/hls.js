@@ -137,7 +137,6 @@ class AudioStreamController
     const lastCurrentTime = this.lastCurrentTime;
     this.stopLoad();
     this.setInterval(TICK_INTERVAL);
-    this.fragLoadError = 0;
     if (lastCurrentTime > 0 && startPosition === -1) {
       this.log(
         `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(

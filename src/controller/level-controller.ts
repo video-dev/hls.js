@@ -81,6 +81,7 @@ export default class LevelController extends BasePlaylistController {
     // clean up live level details to force reload them, and reset load errors
     levels.forEach((level) => {
       level.loadError = 0;
+      level.fragmentError = 0;
     });
 
     super.startLoad();

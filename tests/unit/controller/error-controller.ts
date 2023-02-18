@@ -153,8 +153,8 @@ describe('ErrorController Integration Tests', function () {
       );
     });
 
-    it('Manifest HTTP status >= 500 Errors fail silently until exhausting all retries then are fatal', function () {
-      server.respondWith('http500.m3u8', [500, {}, ``]);
+    it('Manifest HTTP status 501 and >= 505 Errors fail silently until exhausting all retries then are fatal', function () {
+      server.respondWith('http500.m3u8', [501, {}, ``]);
       hls.loadSource('http500.m3u8');
       hls.stopLoad.should.have.been.calledOnce;
       return new Promise((resolve, reject) => {
@@ -175,11 +175,11 @@ describe('ErrorController Integration Tests', function () {
           server.requests[0].should.have
             .property('url')
             .which.equals('http500.m3u8');
-          server.requests[0].should.have.property('status').which.equals(500);
+          server.requests[0].should.have.property('status').which.equals(501);
           server.requests[1].should.have
             .property('url')
             .which.equals('http500.m3u8');
-          server.requests[1].should.have.property('status').which.equals(500);
+          server.requests[1].should.have.property('status').which.equals(501);
           return data;
         })
         .then(
@@ -203,7 +203,8 @@ describe('ErrorController Integration Tests', function () {
             )
           )
         );
-        timers.tick(20000);
+        timers.tick(hls.config.playlistLoadPolicy.default.maxLoadTimeMs);
+        timers.tick(hls.config.playlistLoadPolicy.default.maxLoadTimeMs);
       }).then(
         expectFatalErrorEventToStopPlayer(
           hls,
@@ -408,7 +409,7 @@ describe('ErrorController Integration Tests', function () {
   });
 
   describe('Segment Error Handling', function () {
-    it('Fragment HTTP Load Errors retry `fragLoadingMaxRetry` times before switching down and continues no lower levels are available', function () {
+    it('Fragment HTTP Load Errors retry fragLoadPolicy `errorRetry.maxNumRetry` times before switching down and continues until no lower levels are available', function () {
       server.respondWith('multivariantPlaylist.m3u8/segment.mp4', [
         400,
         {},
@@ -426,7 +427,7 @@ describe('ErrorController Integration Tests', function () {
           if (data.fatal) {
             resolve(data);
           } else {
-            timers.tick(hls.config.fragLoadingMaxRetryTimeout);
+            timers.tick(hls.config.fragLoadPolicy.default.maxTimeToFirstByteMs);
           }
         });
         hls.on(Events.FRAG_LOADED, (event, data) =>
@@ -438,7 +439,7 @@ describe('ErrorController Integration Tests', function () {
         );
         server.respond();
       }).then((errorData: ErrorData) => {
-        expect(server.requests).to.have.lengthOf(25);
+        expect(server.requests).to.have.lengthOf(13);
         const finalAssertion = expectFatalErrorEventToStopPlayer(
           hls,
           ErrorDetails.FRAG_LOAD_ERROR,
@@ -448,7 +449,7 @@ describe('ErrorController Integration Tests', function () {
       });
     });
 
-    it('Fragment Timout Errors retry within a tick `fragLoadingMaxRetry` times before switching down and continues no lower levels are available', function () {
+    it('Fragment Timout Errors retry within a tick fragLoadPolicy `timeoutRetry.maxNumRetry` times before switching down and continues no lower levels are available', function () {
       server.respondWith('multivariantPlaylist.m3u8/segment.mp4', [
         400,
         {},
@@ -459,7 +460,8 @@ describe('ErrorController Integration Tests', function () {
         server.respond();
       });
       hls.on(Events.FRAG_LOADING, (event, data) => {
-        timers.tick(hls.config.fragLoadingTimeOut);
+        timers.tick(hls.config.fragLoadPolicy.default.maxTimeToFirstByteMs);
+        // timers.tick(hls.config.fragLoadPolicy.default.maxLoadTimeMs);
       });
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => {
@@ -477,13 +479,15 @@ describe('ErrorController Integration Tests', function () {
           )
         );
         server.respond();
-      }).then(
-        expectFatalErrorEventToStopPlayer(
+      }).then((errorData: ErrorData) => {
+        expect(server.requests).to.have.lengthOf(11);
+        const finalAssertion = expectFatalErrorEventToStopPlayer(
           hls,
           ErrorDetails.FRAG_LOAD_TIMEOUT,
-          'Timeout after 20000ms'
-        )
-      );
+          'Timeout after 10000ms'
+        );
+        finalAssertion(errorData);
+      });
     });
 
     it('Init segment decrypt errors are fatal with no alternates', function () {
@@ -656,7 +660,7 @@ segment.mp4
   });
 
   describe('Redundant Stream Error Handling', function () {
-    it('switches to fallback variants after `fragLoadingMaxRetry` segment errors in level', function () {
+    it('switches to fallback variants after fragLoadPolicy `errorRetry.maxNumRetry` segment errors in level', function () {
       const errors: ErrorData[] = [];
       // All segments from foo and bar fail, baz succeeds
       const fakeMP2TS = new ArrayBuffer(188 * 3);
@@ -683,11 +687,10 @@ segment.mp4
           'subs-segment.mp4'
         )
       );
-      server.respondWith(/http:\/\/www\.(foo|bar)\.com\/video-segment.mp4/, [
-        500,
-        {},
-        new ArrayBuffer(0),
-      ]);
+      server.respondWith(
+        /http:\/\/www\.(foo|bar)\.com\/(video|audio)-segment.mp4/,
+        [500, {}, new ArrayBuffer(0)]
+      );
       server.respondWith(/http:\/\/www\.baz\.com\/audio-segment.mp4/, [
         200,
         {},
@@ -703,7 +706,7 @@ segment.mp4
         {},
         fakeMP2TS,
       ]);
-      hls.config.fragLoadingMaxRetry = 1;
+      hls.config.fragLoadPolicy.default.errorRetry!.maxNumRetry = 1;
       hls.loadSource('multivariantRedundantFallbacks.m3u8');
       hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
       hls.on(Events.AUDIO_TRACK_LOADING, loadingEventCallback(server, timers));
@@ -714,7 +717,7 @@ segment.mp4
       hls.on(Events.FRAG_LOADING, loadingEventCallback(server, timers));
       hls.on(Events.ERROR, (event, data) => {
         errors.push(data);
-        timers.tick(1000);
+        timers.tick(2000);
       });
       return new Promise((resolve, reject) => {
         hls.on(Events.LEVEL_SWITCHING, (event, data) => {
@@ -725,12 +728,8 @@ segment.mp4
         server.respond();
       })
         .then((data: LevelSwitchingData) => {
-          const fragmentErrors = hls.levels.reduce(
-            (acc, level) => acc + level.fragmentError,
-            0
-          );
           expect(
-            fragmentErrors,
+            errors.length,
             'fragment errors after yeilding to first error event'
           ).to.equal(2);
           expect(hls.levels[0].uri).to.equal('http://www.bar.com/tier6.m3u8');
@@ -743,14 +742,10 @@ segment.mp4
           });
         })
         .then((data: LevelSwitchingData) => {
-          const fragmentErrors = hls.levels.reduce(
-            (acc, level) => acc + level.fragmentError,
-            0
-          );
           expect(
-            fragmentErrors,
+            errors.length,
             'fragment errors after yeilding to second error event'
-          ).to.equal(3);
+          ).to.equal(4);
           expect(hls.levels[0].uri).to.equal('http://www.baz.com/tier6.m3u8');
           return new Promise((resolve, reject) => {
             hls.on(Events.FRAG_LOADED, (event, data) => {
@@ -819,7 +814,7 @@ segment.mp4
         {},
         fakeMP2TS,
       ]);
-      hls.config.fragLoadingMaxRetry = 1;
+      hls.config.fragLoadPolicy.default.errorRetry!.maxNumRetry = 1;
       hls.loadSource('multivariantRedundantFallbacks.m3u8');
       hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
       hls.on(Events.AUDIO_TRACK_LOADING, loadingEventCallback(server, timers));
@@ -830,7 +825,7 @@ segment.mp4
       hls.on(Events.FRAG_LOADING, loadingEventCallback(server, timers));
       hls.on(Events.ERROR, (event, data) => {
         errors.push(data);
-        timers.tick(1000);
+        timers.tick(2000);
       });
       return new Promise((resolve, reject) => {
         hls.on(Events.LEVEL_SWITCHING, (event, data) => {
@@ -841,12 +836,8 @@ segment.mp4
         server.respond();
       })
         .then((data: LevelSwitchingData) => {
-          const fragmentErrors = hls.levels.reduce(
-            (acc, level) => acc + level.fragmentError,
-            0
-          );
           expect(
-            fragmentErrors,
+            errors.length,
             'fragment errors after yeilding to first error event'
           ).to.equal(2);
           expect(hls.levels[0].uri).to.equal('http://www.bar.com/tier6.m3u8');
@@ -859,14 +850,10 @@ segment.mp4
           });
         })
         .then((data: LevelSwitchingData) => {
-          const fragmentErrors = hls.levels.reduce(
-            (acc, level) => acc + level.fragmentError,
-            0
-          );
           expect(
-            fragmentErrors,
+            errors.length,
             'fragment errors after yeilding to second error event'
-          ).to.equal(3);
+          ).to.equal(4);
           expect(hls.levels[0].uri).to.equal('http://www.baz.com/tier6.m3u8');
           return new Promise((resolve, reject) => {
             hls.on(Events.FRAG_LOADED, (event, data) => {
