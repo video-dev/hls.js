@@ -43,7 +43,7 @@ type AudioTrackControllerTestable = Omit<
   | 'groupId'
   | 'trackId'
   | 'canLoad'
-  | 'shouldLoadTrack'
+  | 'shouldLoadPlaylist'
   | 'timer'
   | 'onManifestLoading'
   | 'onManifestParsed'
@@ -57,7 +57,7 @@ type AudioTrackControllerTestable = Omit<
   trackId: number;
   canLoad: boolean;
   timer: number;
-  shouldLoadTrack: (track: Object) => boolean;
+  shouldLoadPlaylist: (track: Object) => boolean;
   onManifestLoading: () => void;
   onManifestParsed: (
     type: string,
@@ -284,19 +284,20 @@ describe('AudioTrackController', function () {
       .to.have.been.calledThrice;
   });
 
-  describe('shouldLoadTrack', function () {
+  describe('shouldLoadPlaylist', function () {
     it('should not need loading because the audioTrack is embedded in the main playlist', function () {
       audioTrackController.canLoad = true;
-      expect(audioTrackController.shouldLoadTrack({ details: { live: true } }))
-        .to.be.false;
-      expect(audioTrackController.shouldLoadTrack({ details: undefined })).to.be
-        .false;
+      expect(
+        audioTrackController.shouldLoadPlaylist({ details: { live: true } })
+      ).to.be.false;
+      expect(audioTrackController.shouldLoadPlaylist({ details: undefined })).to
+        .be.false;
     });
 
     it('should need loading because the track has not been loaded yet', function () {
       audioTrackController.canLoad = true;
       expect(
-        audioTrackController.shouldLoadTrack({
+        audioTrackController.shouldLoadPlaylist({
           details: { live: true },
           url: 'http://example.com/manifest.m3u8',
         }),
@@ -304,7 +305,7 @@ describe('AudioTrackController', function () {
       ).to.be.true;
 
       expect(
-        audioTrackController.shouldLoadTrack({
+        audioTrackController.shouldLoadPlaylist({
           details: null,
           url: 'http://example.com/manifest.m3u8',
         }),
@@ -349,9 +350,9 @@ describe('AudioTrackController', function () {
     });
 
     it('should load audio tracks with a url', function () {
-      const shouldLoadTrack = sinon.spy(
+      const shouldLoadPlaylist = sinon.spy(
         audioTrackController,
-        'shouldLoadTrack'
+        'shouldLoadPlaylist'
       );
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithUrl: MediaPlaylist = {
@@ -385,24 +386,24 @@ describe('AudioTrackController', function () {
       });
       audioTrackController.startLoad();
 
-      expect(shouldLoadTrack).to.have.been.calledTwice;
-      expect(shouldLoadTrack).to.have.been.calledWith(trackWithUrl);
+      expect(shouldLoadPlaylist).to.have.been.calledTwice;
+      expect(shouldLoadPlaylist).to.have.been.calledWith(trackWithUrl);
       expect(
-        shouldLoadTrack.firstCall.returnValue,
-        'expected shouldLoadTrack to return false before startLoad() is called'
+        shouldLoadPlaylist.firstCall.returnValue,
+        'expected shouldLoadPlaylist to return false before startLoad() is called'
       ).to.be.false;
       expect(
-        shouldLoadTrack.secondCall.returnValue,
-        'expected shouldLoadTrack to return true after startLoad() is called'
+        shouldLoadPlaylist.secondCall.returnValue,
+        'expected shouldLoadPlaylist to return true after startLoad() is called'
       ).to.be.true;
 
       expect(audioTrackLoadingCallback).to.have.been.calledOnce;
     });
 
     it('should not attempt to load audio tracks without a url', function () {
-      const shouldLoadTrack = sinon.spy(
+      const shouldLoadPlaylist = sinon.spy(
         audioTrackController,
-        'shouldLoadTrack'
+        'shouldLoadPlaylist'
       );
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithOutUrl = tracks[0];
@@ -425,10 +426,10 @@ describe('AudioTrackController', function () {
       });
       audioTrackController.startLoad();
 
-      expect(shouldLoadTrack).to.have.been.calledTwice;
-      expect(shouldLoadTrack).to.have.been.calledWith(trackWithOutUrl);
-      expect(shouldLoadTrack.firstCall.returnValue).to.be.false;
-      expect(shouldLoadTrack.secondCall.returnValue).to.be.false;
+      expect(shouldLoadPlaylist).to.have.been.calledTwice;
+      expect(shouldLoadPlaylist).to.have.been.calledWith(trackWithOutUrl);
+      expect(shouldLoadPlaylist.firstCall.returnValue).to.be.false;
+      expect(shouldLoadPlaylist.secondCall.returnValue).to.be.false;
       expect(audioTrackLoadingCallback).to.not.have.been.called;
     });
   });

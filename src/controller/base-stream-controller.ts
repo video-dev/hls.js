@@ -808,7 +808,7 @@ export default class BaseStreamController
   protected getCurrentContext(
     chunkMeta: ChunkMetadata
   ): { frag: Fragment; part: Part | null; level: Level } | null {
-    const { levels } = this;
+    const { levels, fragCurrent } = this;
     const { level: levelIndex, sn, part: partIndex } = chunkMeta;
     if (!levels?.[levelIndex]) {
       this.warn(
@@ -820,9 +820,13 @@ export default class BaseStreamController
     const part = partIndex > -1 ? getPartWith(level, sn, partIndex) : null;
     const frag = part
       ? part.fragment
-      : getFragmentWithSN(level, sn, this.fragCurrent);
+      : getFragmentWithSN(level, sn, fragCurrent);
     if (!frag) {
       return null;
+    }
+    if (fragCurrent && fragCurrent !== frag) {
+      logger.warn(`Expected current context to match fragCurrent`);
+      return { frag: fragCurrent, part, level };
     }
     return { frag, part, level };
   }

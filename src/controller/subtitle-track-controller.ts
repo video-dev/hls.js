@@ -276,7 +276,7 @@ class SubtitleTrackController extends BasePlaylistController {
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
     super.loadPlaylist();
     const currentTrack = this.tracksInGroup[this.trackId];
-    if (this.shouldLoadTrack(currentTrack)) {
+    if (this.shouldLoadPlaylist(currentTrack)) {
       const id = currentTrack.id;
       const groupId = currentTrack.groupId as string;
       let url = currentTrack.url;

@@ -512,7 +512,7 @@ export default class LevelController extends BasePlaylistController {
     const currentLevelIndex = this.currentLevelIndex;
     const currentLevel = this.currentLevel;
 
-    if (this.canLoad && currentLevel && currentLevel.url.length > 0) {
+    if (currentLevel && this.shouldLoadPlaylist(currentLevel)) {
       const id = currentLevel.urlId;
       let url = currentLevel.uri;
       if (hlsUrlParameters) {

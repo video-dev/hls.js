@@ -234,7 +234,7 @@ export class BasePlaylistController implements NetworkComponentAPI {
     // (undocumented)
     protected retryCount: number;
     // (undocumented)
-    protected shouldLoadTrack(track: MediaPlaylist): boolean;
+    protected shouldLoadPlaylist(playlist: Level | MediaPlaylist): boolean;
     // (undocumented)
     startLoad(): void;
     // (undocumented)

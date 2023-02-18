@@ -252,7 +252,7 @@ class AudioTrackController extends BasePlaylistController {
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
     super.loadPlaylist();
     const audioTrack = this.tracksInGroup[this.trackId];
-    if (this.shouldLoadTrack(audioTrack)) {
+    if (this.shouldLoadPlaylist(audioTrack)) {
       const id = audioTrack.id;
       const groupId = audioTrack.groupId as string;
       let url = audioTrack.url;

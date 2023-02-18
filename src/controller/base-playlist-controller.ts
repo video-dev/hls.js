@@ -1,6 +1,6 @@
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
-import { getSkipValue, HlsSkip, HlsUrlParameters } from '../types/level';
+import { getSkipValue, HlsSkip, HlsUrlParameters, Level } from '../types/level';
 import { computeReloadInterval, mergeDetails } from './level-helper';
 import { logger } from '../utils/logger';
 import type { LevelDetails } from '../loader/level-details';
@@ -107,12 +107,12 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     // Loading is handled by the subclasses
   }
 
-  protected shouldLoadTrack(track: MediaPlaylist): boolean {
+  protected shouldLoadPlaylist(playlist: Level | MediaPlaylist): boolean {
     return (
       this.canLoad &&
-      track &&
-      !!track.url &&
-      (!track.details || track.details.live)
+      playlist &&
+      !!playlist.url &&
+      (!playlist.details || playlist.details.live)
     );
   }
 
