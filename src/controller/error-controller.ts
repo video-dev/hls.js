@@ -94,8 +94,7 @@ export default class ErrorController {
       case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.FRAG_DECRYPT_ERROR: {
         const levelIndex = this.getVariantLevelIndex(data.frag);
-        // Do not retry level. Escalate to fatal if switching levels fails.
-        data.levelRetry = false;
+        // Switch level if possible, otherwise allow retry count to reach max error retries
         this.levelSwitch(data, levelIndex);
         return;
       }

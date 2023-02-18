@@ -37,7 +37,6 @@ import type {
   KeyLoadedData,
   MediaAttachingData,
   BufferFlushingData,
-  LevelSwitchingData,
   ManifestLoadedData,
 } from '../types/events';
 import type { FragmentTracker } from './fragment-tracker';
@@ -356,7 +355,6 @@ export default class BaseStreamController
           // if we're here we probably needed to backtrack or are waiting for more parts
           return;
         }
-        level.fragmentError = 0;
         const state = this.state;
         if (this.fragContextChanged(frag)) {
           if (
@@ -1521,10 +1519,21 @@ export default class BaseStreamController
       },
       false
     );
-    if (!parsed) {
-      this.warn(
+    if (parsed) {
+      level.fragmentError = 0;
+    } else {
+      const error = new Error(
         `Found no media in fragment ${frag.sn} of level ${level.id} resetting transmuxer to fallback to playlist timing`
       );
+      this.warn(error.message);
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.FRAG_PARSING_ERROR,
+        fatal: false,
+        error,
+        frag,
+        reason: `Found no media in msn ${frag.sn} of level "${level.url}"`,
+      });
       this.resetTransmuxer();
     }
     this.state = State.PARSED;

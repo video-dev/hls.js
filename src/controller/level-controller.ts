@@ -445,7 +445,6 @@ export default class LevelController extends BasePlaylistController {
     if (frag !== undefined && frag.type === PlaylistLevelType.MAIN) {
       const level = this._levels[frag.level];
       if (level !== undefined) {
-        level.fragmentError = 0;
         level.loadError = 0;
       }
     }
