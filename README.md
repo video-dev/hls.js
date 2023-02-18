@@ -2,6 +2,7 @@
 [![npm](https://img.shields.io/npm/v/hls.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/canary)
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
 [![Sauce Test Status](https://saucelabs.com/buildstatus/robwalch)](https://app.saucelabs.com/u/robwalch)
+[![jsDeliver](https://data.jsdelivr.com/v1/package/npm/hls.js/badge)](https://www.jsdelivr.com/package/npm/hls.js)
 
 [comment]: <> ([![Sauce Test Status]&#40;https://saucelabs.com/browser-matrix/robwalch.svg&#41;]&#40;https://saucelabs.com/u/robwalch&#41;)
 
@@ -46,6 +47,7 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
 - SAMPLE-AES decryption (only supported if using MPEG-2 TS container)
 - Encrypted media extensions (EME) support for DRM (digital rights management)
   - FairPlay, PlayReady, Widevine CDMs with fmp4 segments
+- Level capping based on HTMLMediaElement resolution, dropped-frames, and HDCP-Level
 - CEA-608/708 captions
 - WebVTT subtitles
 - Alternate Audio Track Rendition (Master Playlist with Alternative Audio) for VoD and Live playlists
@@ -71,18 +73,20 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
 
 For details on the HLS format and these tags' meanings, see https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis
 
-#### Multi-Variant Playlist tags
+#### Multivariant Playlist tags
 
 - `#EXT-X-STREAM-INF:<attribute-list>`
   `<URI>`
 - `#EXT-X-MEDIA:<attribute-list>`
 - `#EXT-X-SESSION-DATA:<attribute-list>`
+- `#EXT-X-SESSION-KEY:<attribute-list>` EME Key-System selection and preloading
 - `#EXT-X-START:TIME-OFFSET=<n>`
-- `#EXT-X-DEFINE` Variable Substitution
+- `#EXT-X-CONTENT-STEERING:<attribute-list>` Content Steering
+- `#EXT-X-DEFINE:<attribute-list>` Variable Substitution
 
 The following properties are added to their respective variants' attribute list but are not implemented in their selection and playback.
 
-- `VIDEO-RANGE` and `HDCP-LEVEL` (See [#2489](https://github.com/video-dev/hls.js/issues/2489))
+- `VIDEO-RANGE` (See [#2489](https://github.com/video-dev/hls.js/issues/2489))
 
 #### Media Playlist tags
 
@@ -105,7 +109,7 @@ The following properties are added to their respective variants' attribute list 
 - `#EXT-X-SKIP:<attribute-list>` Delta Playlists
 - `#EXT-X-RENDITION-REPORT:<attribute-list>`
 - `#EXT-X-DATERANGE:<attribute-list>` Metadata
-- `#EXT-X-DEFINE` Variable Substitution
+- `#EXT-X-DEFINE:<attribute-list>` Variable Import and Substitution
 
 The following tags are added to their respective fragment's attribute list but are not implemented in streaming and playback.
 
@@ -114,8 +118,6 @@ The following tags are added to their respective fragment's attribute list but a
 
 Parsed but missing feature support
 
-- `#EXT-X-CONTENT-STEERING:<attribute-list>` (See [#3988](https://github.com/video-dev/hls.js/issues/3988))
-  - #3988
 - `#EXT-X-PRELOAD-HINT:<attribute-list>` (See [#5074](https://github.com/video-dev/hls.js/issues/3988))
   - #5074
 

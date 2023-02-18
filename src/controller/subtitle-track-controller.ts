@@ -212,7 +212,7 @@ class SubtitleTrackController extends BasePlaylistController {
       this.tracksInGroup = subtitleTracks;
       const initialTrackId =
         this.findTrackId(lastTrack?.name) || this.findTrackId();
-      this.groupId = textGroupId;
+      this.groupId = textGroupId || null;
 
       const subtitleTracksUpdated: SubtitleTracksUpdatedData = {
         subtitleTracks,
@@ -368,7 +368,13 @@ class SubtitleTrackController extends BasePlaylistController {
     this.clearTimer();
 
     const track = tracks[newId];
-    this.log(`Switching to subtitle track ${newId}`);
+
+    this.log(
+      `Switching to subtitle-track ${newId}` +
+        (track
+          ? ` "${track.name}" lang:${track.lang} group:${track.groupId}`
+          : '')
+    );
     this.trackId = newId;
     if (track) {
       const { id, groupId = '', name, type, url } = track;

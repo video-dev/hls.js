@@ -236,7 +236,6 @@ export default class KeyLoader implements ComponentAPI {
         maxRetry: 0,
         retryDelay: config.fragLoadingRetryDelay,
         maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-        highWaterMark: 0,
       };
 
       const loaderCallbacks: LoaderCallbacks<KeyLoaderContext> = {

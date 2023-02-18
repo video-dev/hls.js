@@ -12,7 +12,7 @@ const mediaMock = {
   removeEventListener() {},
 };
 
-const tracksMock = [{ id: 0, details: { url: '' } }, { id: 1 }];
+const tracksMock = [{ id: 0, details: { url: '', fragments: [] } }, { id: 1 }];
 
 describe('SubtitleStreamController', function () {
   let hls;
@@ -96,7 +96,7 @@ describe('SubtitleStreamController', function () {
 
     // Details are in subtitle-track-controller.js' onSubtitleTrackLoaded handler
     it('should handle the event if the data matches the current track', function () {
-      const details = { foo: 'bar' };
+      const details = { foo: 'bar', fragments: [] };
       subtitleStreamController.currentTrackId = 1;
       hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         id: 1,
@@ -106,7 +106,7 @@ describe('SubtitleStreamController', function () {
     });
 
     it('should ignore the event if the data does not match the current track', function () {
-      const details = { foo: 'bar' };
+      const details = { foo: 'bar', fragments: [] };
       subtitleStreamController.currentTrackId = 0;
       hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         id: 1,
@@ -119,7 +119,7 @@ describe('SubtitleStreamController', function () {
     it('should ignore the event if there are no tracks, or the id is not within the tracks array', function () {
       subtitleStreamController.levels = [];
       subtitleStreamController.trackId = 0;
-      const details = { foo: 'bar' };
+      const details = { foo: 'bar', fragments: [] };
       hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         id: 0,
         details,

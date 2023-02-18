@@ -70,12 +70,11 @@ export default class CMCDController implements ComponentAPI {
     hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
-
-    this.onMediaDetached();
   }
 
   destroy() {
     this.unregisterListeners();
+    this.onMediaDetached();
 
     // @ts-ignore
     this.hls = this.config = this.audioBuffer = this.videoBuffer = null;

@@ -13,8 +13,13 @@ import { logger } from '../../../src/utils/logger';
 chai.use(sinonChai);
 const expect = chai.expect;
 describe('TransmuxerInterface tests', function () {
+  let hls;
+
   afterEach(function () {
     sinon.restore();
+    if (hls) {
+      hls.destroy();
+    }
   });
 
   const onTransmuxComplete = (res: TransmuxerResult) => {};
@@ -22,7 +27,7 @@ describe('TransmuxerInterface tests', function () {
 
   it('can construct without a worker', function () {
     const config = { enableWorker: false }; // Option debug : true crashes mocha
-    const hls = new Hls(config);
+    hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
     const transmuxerInterface = new TransmuxerInterface(
@@ -40,7 +45,7 @@ describe('TransmuxerInterface tests', function () {
 
   it('can construct with a worker', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
-    const hls = new Hls(config);
+    hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
     const transmuxerInterface = new TransmuxerInterface(
@@ -58,7 +63,7 @@ describe('TransmuxerInterface tests', function () {
 
   it('can destroy a transmuxer worker', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
-    const hls = new Hls(config);
+    hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
     const transmuxerInterface = new TransmuxerInterface(
@@ -76,7 +81,7 @@ describe('TransmuxerInterface tests', function () {
 
   it('can destroy an inline transmuxer', function () {
     const config = { enableWorker: false }; // Option debug : true crashes mocha
-    const hls = new Hls(config);
+    hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
     const transmuxerInterface = new TransmuxerInterface(
@@ -94,7 +99,7 @@ describe('TransmuxerInterface tests', function () {
 
   it('pushes data to a transmuxer worker', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
-    const hls = new Hls(config);
+    hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
     const transmuxerInterface = new TransmuxerInterface(
@@ -182,7 +187,7 @@ describe('TransmuxerInterface tests', function () {
 
   it('pushes data to demuxer with no worker', function () {
     const config = { enableWorker: false }; // Option debug : true crashes mocha
-    const hls = new Hls(config);
+    hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const id = PlaylistLevelType.MAIN;
     const transmuxerInterface = new TransmuxerInterface(
@@ -249,7 +254,7 @@ describe('TransmuxerInterface tests', function () {
 
   it('sends worker generic message', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
-    const hls = new Hls(config);
+    hls = new Hls(config);
     const triggerStub = sinon.stub(hls, 'trigger');
     triggerStub.callsFake(function (event, data) {
       expect(event).to.equal(evt.data.event);
@@ -280,7 +285,7 @@ describe('TransmuxerInterface tests', function () {
 
   it('Handles the init event', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
-    const hls = new Hls(config);
+    hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const transmuxerInterface = new TransmuxerInterface(
       hls,
@@ -303,7 +308,7 @@ describe('TransmuxerInterface tests', function () {
 
   it('Handles logger events from the worker', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
-    const hls = new Hls(config);
+    hls = new Hls(config);
     sinon.stub(hls, 'trigger');
     const transmuxerInterface = new TransmuxerInterface(
       hls,

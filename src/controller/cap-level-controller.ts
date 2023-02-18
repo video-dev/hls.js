@@ -14,16 +14,16 @@ import StreamController from './stream-controller';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 
+type RestrictedLevel = { width: number; height: number; bitrate: number };
 class CapLevelController implements ComponentAPI {
-  public autoLevelCapping: number;
-  public firstLevel: number;
-  public media: HTMLVideoElement | null;
-  public restrictedLevels: Array<number>;
-  public timer: number | undefined;
-
   private hls: Hls;
+  private autoLevelCapping: number;
+  private firstLevel: number;
+  private media: HTMLVideoElement | null;
+  private restrictedLevels: RestrictedLevel[];
+  private timer: number | undefined;
+  private clientRect: { width: number; height: number } | null;
   private streamController?: StreamController;
-  public clientRect: { width: number; height: number } | null;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -75,13 +75,13 @@ class CapLevelController implements ComponentAPI {
     data: FPSDropLevelCappingData
   ) {
     // Don't add a restricted level more than once
-    if (
-      CapLevelController.isLevelAllowed(
-        data.droppedLevel,
-        this.restrictedLevels
-      )
-    ) {
-      this.restrictedLevels.push(data.droppedLevel);
+    const level = this.hls.levels[data.droppedLevel];
+    if (this.isLevelAllowed(level)) {
+      this.restrictedLevels.push({
+        bitrate: level.bitrate,
+        height: level.height,
+        width: level.width,
+      });
     }
   }
 
@@ -152,9 +152,7 @@ class CapLevelController implements ComponentAPI {
     }
 
     const validLevels = levels.filter(
-      (level, index) =>
-        CapLevelController.isLevelAllowed(index, this.restrictedLevels) &&
-        index <= capLevelIndex
+      (level, index) => this.isLevelAllowed(level) && index <= capLevelIndex
     );
 
     this.clientRect = null;
@@ -235,11 +233,15 @@ class CapLevelController implements ComponentAPI {
     return pixelRatio;
   }
 
-  static isLevelAllowed(
-    level: number,
-    restrictedLevels: Array<number> = []
-  ): boolean {
-    return restrictedLevels.indexOf(level) === -1;
+  private isLevelAllowed(level: Level): boolean {
+    const restrictedLevels = this.restrictedLevels;
+    return !restrictedLevels.some((restrictedLevel) => {
+      return (
+        level.bitrate === restrictedLevel.bitrate &&
+        level.width === restrictedLevel.width &&
+        level.height === restrictedLevel.height
+      );
+    });
   }
 
   static getMaxLevelByMediaSize(

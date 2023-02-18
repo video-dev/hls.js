@@ -72,25 +72,13 @@ export interface AudioTracksUpdatedData {
 // Warning: (ae-missing-release-tag) "AudioTrackSwitchedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface AudioTrackSwitchedData {
-    // (undocumented)
-    id: number;
+export interface AudioTrackSwitchedData extends MediaPlaylist {
 }
 
 // Warning: (ae-missing-release-tag) "AudioTrackSwitchingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface AudioTrackSwitchingData {
-    // (undocumented)
-    groupId: string;
-    // (undocumented)
-    id: number;
-    // (undocumented)
-    name: string;
-    // (undocumented)
-    type: MediaPlaylistType | 'main';
-    // (undocumented)
-    url: string;
+export interface AudioTrackSwitchingData extends MediaPlaylist {
 }
 
 // Warning: (ae-missing-release-tag) "BackBufferData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -268,6 +256,14 @@ export type CMCDControllerConfig = {
     sessionId?: string;
     contentId?: string;
     useHeaders?: boolean;
+};
+
+// Warning: (ae-missing-release-tag) "ContentSteeringOptions" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type ContentSteeringOptions = {
+    uri: string;
+    pathwayId: string;
 };
 
 // Warning: (ae-missing-release-tag) "CuesInterface" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1055,6 +1051,7 @@ export type HlsConfig = {
     emeController?: typeof EMEController;
     cmcd?: CMCDControllerConfig;
     cmcdController?: typeof CMCDController;
+    contentSteeringController?: typeof ContentSteeringController;
     abrController: typeof AbrController;
     bufferController: typeof BufferController;
     capLevelController: typeof CapLevelController;
@@ -1321,11 +1318,15 @@ export type LatencyControllerConfig = {
 export class Level {
     constructor(data: LevelParsed);
     // (undocumented)
-    readonly attrs: LevelAttributes;
+    addFallback(data: LevelParsed): void;
+    // (undocumented)
+    get attrs(): LevelAttributes;
+    // (undocumented)
+    readonly _attrs: LevelAttributes[];
     // (undocumented)
     readonly audioCodec: string | undefined;
     // (undocumented)
-    audioGroupIds?: string[];
+    audioGroupIds?: (string | undefined)[];
     // (undocumented)
     readonly bitrate: number;
     // (undocumented)
@@ -1350,9 +1351,11 @@ export class Level {
     // (undocumented)
     readonly name: string | undefined;
     // (undocumented)
+    get pathwayId(): string;
+    // (undocumented)
     realBitrate: number;
     // (undocumented)
-    textGroupIds?: string[];
+    textGroupIds?: (string | undefined)[];
     // (undocumented)
     readonly unknownCodecs: string[] | undefined;
     // (undocumented)
@@ -1381,33 +1384,21 @@ export interface LevelAttributes extends AttrList {
     // (undocumented)
     'FRAME-RATE'?: string;
     // (undocumented)
-    'HDCP-LEVEL'?: string;
+    'HDCP-LEVEL'?: 'TYPE-0' | 'TYPE-1' | 'NONE';
     // (undocumented)
     'PATHWAY-ID'?: string;
     // (undocumented)
-    'PROGRAM-ID'?: string;
+    'STABLE-VARIANT-ID'?: string;
     // (undocumented)
-    'VIDEO-RANGE'?: string;
+    'SUPPLEMENTAL-CODECS'?: string;
+    // (undocumented)
+    'VIDEO-RANGE'?: 'SDR' | 'HLG' | 'PQ';
     // (undocumented)
     AUDIO?: string;
     // (undocumented)
-    AUTOSELECT?: string;
-    // (undocumented)
     BANDWIDTH?: string;
     // (undocumented)
-    BYTERANGE?: string;
-    // (undocumented)
-    CHARACTERISTICS?: string;
-    // (undocumented)
     CODECS?: string;
-    // (undocumented)
-    DEFAULT?: string;
-    // (undocumented)
-    FORCED?: string;
-    // (undocumented)
-    LANGUAGE?: string;
-    // (undocumented)
-    NAME?: string;
     // (undocumented)
     RESOLUTION?: string;
     // (undocumented)
@@ -1415,9 +1406,7 @@ export interface LevelAttributes extends AttrList {
     // (undocumented)
     SUBTITLES?: string;
     // (undocumented)
-    TYPE?: string;
-    // (undocumented)
-    URI?: string;
+    VIDEO?: string;
 }
 
 // Warning: (ae-missing-release-tag) "LevelControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1714,6 +1703,8 @@ export interface Loader<T extends LoaderContext> {
     destroy(): void;
     getCacheAge?: () => number | null;
     // (undocumented)
+    getResponseHeader?: (name: string) => string | null;
+    // (undocumented)
     load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<T>): void;
     // (undocumented)
     stats: LoaderStats;
@@ -1740,7 +1731,7 @@ export interface LoaderCallbacks<T extends LoaderContext> {
 // @public (undocumented)
 export interface LoaderConfiguration {
     // (undocumented)
-    highWaterMark: number;
+    highWaterMark?: number;
     // (undocumented)
     maxRetry: number;
     // (undocumented)
@@ -1802,7 +1793,7 @@ export type LoaderOnTimeout<T extends LoaderContext> = (stats: LoaderStats, cont
 // @public (undocumented)
 export interface LoaderResponse {
     // (undocumented)
-    data: string | ArrayBuffer;
+    data: string | ArrayBuffer | Object;
     // (undocumented)
     url: string;
 }
@@ -1869,7 +1860,7 @@ export interface ManifestLoadedData {
     // (undocumented)
     captions?: MediaPlaylist[];
     // (undocumented)
-    contentSteering: Object | null;
+    contentSteering: ContentSteeringOptions | null;
     // (undocumented)
     levels: LevelParsed[];
     // (undocumented)
@@ -1940,6 +1931,40 @@ export interface MediaAttachingData {
     media: HTMLMediaElement;
 }
 
+// Warning: (ae-missing-release-tag) "MediaAttributes" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface MediaAttributes extends AttrList {
+    // (undocumented)
+    'ASSOC-LANGUAGE'?: string;
+    // (undocumented)
+    'GROUP-ID': string;
+    // (undocumented)
+    'INSTREAM-ID'?: string;
+    // (undocumented)
+    'PATHWAY-ID'?: string;
+    // (undocumented)
+    'STABLE-RENDITION-ID'?: string;
+    // (undocumented)
+    AUTOSELECT?: 'YES' | 'NO';
+    // (undocumented)
+    CHANNELS?: string;
+    // (undocumented)
+    CHARACTERISTICS?: string;
+    // (undocumented)
+    DEFAULT?: 'YES' | 'NO';
+    // (undocumented)
+    FORCED?: 'YES' | 'NO';
+    // (undocumented)
+    LANGUAGE?: string;
+    // (undocumented)
+    NAME: string;
+    // (undocumented)
+    TYPE?: 'AUDIO' | 'VIDEO' | 'SUBTITLES' | 'CLOSED-CAPTIONS';
+    // (undocumented)
+    URI?: string;
+}
+
 // Warning: (ae-missing-release-tag) "MediaKeyFunc" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1948,7 +1973,9 @@ export type MediaKeyFunc = (keySystem: KeySystems, supportedConfigurations: Medi
 // Warning: (ae-missing-release-tag) "MediaPlaylist" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface MediaPlaylist extends LevelParsed {
+export interface MediaPlaylist extends Omit<LevelParsed, 'attrs'> {
+    // (undocumented)
+    attrs: MediaAttributes;
     // (undocumented)
     autoselect: boolean;
     // (undocumented)
@@ -1956,7 +1983,7 @@ export interface MediaPlaylist extends LevelParsed {
     // (undocumented)
     forced: boolean;
     // (undocumented)
-    groupId?: string;
+    groupId: string;
     // (undocumented)
     id: number;
     // (undocumented)
@@ -2334,20 +2361,21 @@ export type VariableMap = Record<string, string>;
 
 // Warnings were encountered during analysis:
 //
-// src/config.ts:93:3 - (ae-forgotten-export) The symbol "MediaKeySessionContext" needs to be exported by the entry point hls.d.ts
-// src/config.ts:108:3 - (ae-forgotten-export) The symbol "DRMSystemsConfiguration" needs to be exported by the entry point hls.d.ts
-// src/config.ts:211:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
-// src/config.ts:221:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:222:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:224:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:225:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:226:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:228:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:231:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:233:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:234:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:235:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
-// src/config.ts:236:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:97:3 - (ae-forgotten-export) The symbol "MediaKeySessionContext" needs to be exported by the entry point hls.d.ts
+// src/config.ts:112:3 - (ae-forgotten-export) The symbol "DRMSystemsConfiguration" needs to be exported by the entry point hls.d.ts
+// src/config.ts:215:3 - (ae-forgotten-export) The symbol "ILogger" needs to be exported by the entry point hls.d.ts
+// src/config.ts:225:3 - (ae-forgotten-export) The symbol "AudioStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:226:3 - (ae-forgotten-export) The symbol "AudioTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:228:3 - (ae-forgotten-export) The symbol "SubtitleStreamController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:229:3 - (ae-forgotten-export) The symbol "SubtitleTrackController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:230:3 - (ae-forgotten-export) The symbol "TimelineController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:232:3 - (ae-forgotten-export) The symbol "EMEController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:235:3 - (ae-forgotten-export) The symbol "CMCDController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:237:3 - (ae-forgotten-export) The symbol "ContentSteeringController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:239:3 - (ae-forgotten-export) The symbol "AbrController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:240:3 - (ae-forgotten-export) The symbol "BufferController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:241:3 - (ae-forgotten-export) The symbol "CapLevelController" needs to be exported by the entry point hls.d.ts
+// src/config.ts:242:3 - (ae-forgotten-export) The symbol "FPSController" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 

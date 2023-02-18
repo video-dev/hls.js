@@ -15,6 +15,7 @@ import type Hls from '../hls';
 import type { HlsEventEmitter } from '../events';
 import type { PlaylistLevelType } from '../types/loader';
 import type { TypeSupported } from './tsdemuxer';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
@@ -157,7 +158,7 @@ export default class TransmuxerInterface {
     duration: number,
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata,
-    defaultInitPTS?: number
+    defaultInitPTS?: RationalTimestamp
   ): void {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;

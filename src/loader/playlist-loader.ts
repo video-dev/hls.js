@@ -30,6 +30,7 @@ import type {
   TrackLoadingData,
 } from '../types/events';
 import { NetworkComponentAPI } from '../types/component-api';
+import { MediaAttributes } from '../types/media-playlist';
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext
@@ -295,7 +296,6 @@ class PlaylistLoader implements NetworkComponentAPI {
       maxRetry,
       retryDelay,
       maxRetryDelay,
-      highWaterMark: 0,
     };
 
     const loaderCallbacks = {
@@ -331,11 +331,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     }
 
     stats.parsing.start = performance.now();
-    // Check if chunk-list or master. handle empty chunk list case (first EXTINF not signaled, but TARGETDURATION present)
-    if (
-      string.indexOf('#EXTINF:') > 0 ||
-      string.indexOf('#EXT-X-TARGETDURATION:') > 0
-    ) {
+    if (M3U8Parser.isMediaPlaylist(string)) {
       this.handleTrackOrLevelPlaylist(response, stats, context, networkDetails);
     } else {
       this.handleMasterPlaylist(response, stats, context, networkDetails);
@@ -419,11 +415,12 @@ class PlaylistLoader implements NetworkComponentAPI {
         audioTracks.unshift({
           type: 'main',
           name: 'main',
+          groupId: 'main',
           default: false,
           autoselect: false,
           forced: false,
           id: -1,
-          attrs: new AttrList({}),
+          attrs: new AttrList({}) as MediaAttributes,
           bitrate: 0,
           url: '',
         });

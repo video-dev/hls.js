@@ -8,10 +8,14 @@ import { Events } from '../../../src/events';
 describe('SubtitleTrackController', function () {
   let subtitleTrackController;
   let videoElement;
+  let hls;
   let sandbox;
+  let fake;
 
   beforeEach(function () {
-    const hls = new Hls({
+    sandbox = sinon.createSandbox();
+    fake = sinon.useFakeXMLHttpRequest();
+    hls = new Hls({
       renderNatively: true,
     });
 
@@ -55,11 +59,12 @@ describe('SubtitleTrackController', function () {
 
     textTrack1.mode = 'disabled';
     textTrack2.mode = 'disabled';
-    sandbox = sinon.createSandbox();
   });
 
   afterEach(function () {
+    hls.destroy();
     sandbox.restore();
+    fake.restore();
   });
 
   describe('onTextTrackChanged', function () {
