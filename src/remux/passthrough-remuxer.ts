@@ -65,7 +65,7 @@ class PassThroughRemuxer implements Remuxer {
 
   private generateInitSegment(initSegment: Uint8Array | undefined): void {
     let { audioCodec, videoCodec } = this;
-    if (!initSegment || !initSegment.byteLength) {
+    if (!initSegment?.byteLength) {
       this.initTracks = undefined;
       this.initData = undefined;
       return;
@@ -143,7 +143,7 @@ class PassThroughRemuxer implements Remuxer {
     // The binary segment data is added to the videoTrack in the mp4demuxer. We don't check to see if the data is only
     // audio or video (or both); adding it to video was an arbitrary choice.
     const data = videoTrack.samples;
-    if (!data || !data.length) {
+    if (!data?.length) {
       return result;
     }
 
@@ -152,11 +152,11 @@ class PassThroughRemuxer implements Remuxer {
       timescale: 1,
     };
     let initData = this.initData;
-    if (!initData || !initData.length) {
+    if (!initData?.length) {
       this.generateInitSegment(data);
       initData = this.initData;
     }
-    if (!initData || !initData.length) {
+    if (!initData?.length) {
       // We can't remux if the initSegment could not be generated
       logger.warn('[passthrough-remuxer.ts]: Failed to generate initSegment.');
       return result;
