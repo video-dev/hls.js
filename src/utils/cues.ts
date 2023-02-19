@@ -63,7 +63,7 @@ const Cues: CuesInterface = {
         const id = generateCueId(startTime, endTime, cueText);
 
         // If this cue already exists in the track do not push it
-        if (!track || !track.cues || !track.cues.getCueById(id)) {
+        if (!track?.cues?.getCueById(id)) {
           cue = new Cue(startTime, endTime, cueText);
           cue.id = id;
           cue.line = r + 1;

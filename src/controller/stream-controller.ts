@@ -226,7 +226,7 @@ export default class StreamController
       return;
     }
 
-    if (!levels || !levels[level]) {
+    if (!levels?.[level]) {
       return;
     }
 

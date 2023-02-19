@@ -25,12 +25,12 @@ export class TimeRangesMock {
   start(i) {
     const { _ranges: ranges, length } = this;
     assertValidRange('start', length, i);
-    return ranges[i] && ranges[i][0];
+    return ranges[i]?.[0];
   }
 
   end(i) {
     const { _ranges: ranges, length } = this;
     assertValidRange('end', length, i);
-    return ranges[i] && ranges[i][1];
+    return ranges[i]?.[1];
   }
 }

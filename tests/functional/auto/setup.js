@@ -596,7 +596,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   after(async function () {
     if (useSauce && this.currentTest && this.currentTest.parent) {
       const tests = this.currentTest.parent.tests;
-      if (tests && tests.length && tests.every((test) => test.isPassed())) {
+      if (tests?.length && tests.every((test) => test.isPassed())) {
         browser.executeScript('sauce:job-result=passed');
       }
     }
@@ -621,8 +621,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       const url = stream.url;
       const config = stream.config || {};
       if (
-        stream.skip_ua &&
-        stream.skip_ua.some((browserInfo) => {
+        stream.skip_ua?.some((browserInfo) => {
           if (typeof browserInfo === 'string') {
             return browserInfo === browserConfig.name;
           }
