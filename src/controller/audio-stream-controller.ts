@@ -257,7 +257,7 @@ class AudioStreamController
 
   protected onTickEnd() {
     const { media } = this;
-    if (!media || !media.readyState) {
+    if (!media?.readyState) {
       // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
       return;
     }
@@ -269,7 +269,7 @@ class AudioStreamController
     const { hls, levels, media, trackId } = this;
     const config = hls.config;
 
-    if (!levels || !levels[trackId]) {
+    if (!levels?.[trackId]) {
       return;
     }
 
@@ -356,7 +356,7 @@ class AudioStreamController
       return;
     }
     // wait for main buffer after buffing some audio
-    if ((!mainBufferInfo || !mainBufferInfo.len) && bufferInfo.len) {
+    if (!mainBufferInfo?.len && bufferInfo.len) {
       return;
     }
 

@@ -929,7 +929,7 @@ export default class BufferController implements ComponentAPI {
         // Only cycle the queue if the SB is not updating. There's a bug in Chrome which sets the SB updating flag to
         // true when changing the MediaSource duration (https://bugs.chromium.org/p/chromium/issues/detail?id=959359&can=2&q=mediasource%20duration)
         // While this is a workaround, it's probably useful to have around
-        if (!sb || !sb.updating) {
+        if (!sb?.updating) {
           operationQueue.shiftAndExecuteNext(type);
         }
       });

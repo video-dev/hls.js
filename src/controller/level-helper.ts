@@ -437,7 +437,7 @@ export function getFragmentWithSN(
   sn: number,
   fragCurrent: Fragment | null
 ): Fragment | null {
-  if (!level || !level.details) {
+  if (!level?.details) {
     return null;
   }
   const levelDetails = level.details;
@@ -461,7 +461,7 @@ export function getPartWith(
   sn: number,
   partIndex: number
 ): Part | null {
-  if (!level || !level.details) {
+  if (!level?.details) {
     return null;
   }
   return findPart(level.details?.partList, sn, partIndex);

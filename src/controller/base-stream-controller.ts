@@ -800,7 +800,7 @@ export default class BaseStreamController
   ): { frag: Fragment; part: Part | null; level: Level } | null {
     const { levels } = this;
     const { level: levelIndex, sn, part: partIndex } = chunkMeta;
-    if (!levels || !levels[levelIndex]) {
+    if (!levels?.[levelIndex]) {
       this.warn(
         `Levels object was unset while buffering fragment ${sn} of level ${levelIndex}. The current chunk will not be buffered.`
       );
@@ -834,7 +834,7 @@ export default class BaseStreamController
       buffer = appendUint8Array(data1, data2);
     }
 
-    if (!buffer || !buffer.length) {
+    if (!buffer?.length) {
       return;
     }
 
