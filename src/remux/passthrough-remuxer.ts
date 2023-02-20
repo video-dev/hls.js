@@ -122,7 +122,8 @@ class PassThroughRemuxer implements Remuxer {
     videoTrack: PassthroughTrack,
     id3Track: DemuxedMetadataTrack,
     textTrack: DemuxedUserdataTrack,
-    timeOffset: number
+    timeOffset: number,
+    accurateTimeOffset: boolean
   ): RemuxerResult {
     let { initPTS, lastEndTime } = this;
     const result: RemuxerResult = {
@@ -167,7 +168,10 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     const startDTS = getStartDTS(initData, data);
-    if (!initPTS) {
+    if (
+      isInvalidInitPts(initPTS, startDTS, timeOffset) ||
+      (initSegment.timescale !== initPTS.timescale && accurateTimeOffset)
+    ) {
       initSegment.initPTS = startDTS - timeOffset;
       this.initPTS = initPTS = {
         baseTime: initSegment.initPTS,
@@ -177,10 +181,10 @@ class PassThroughRemuxer implements Remuxer {
 
     const duration = getDuration(data, initData);
     const startTime = audioTrack
-      ? startDTS - initPTS.baseTime
+      ? startDTS - initPTS.baseTime / initPTS.timescale
       : (lastEndTime as number);
     const endTime = startTime + duration;
-    offsetStartDTS(initData, data, initPTS.baseTime);
+    offsetStartDTS(initData, data, initPTS.baseTime / initPTS.timescale);
 
     if (duration > 0) {
       this.lastEndTime = endTime;
@@ -234,6 +238,19 @@ class PassThroughRemuxer implements Remuxer {
 
     return result;
   }
+}
+
+function isInvalidInitPts(
+  initPTS: RationalTimestamp | null,
+  startDTS: number,
+  timeOffset: number
+): initPTS is null {
+  if (initPTS === null) {
+    return true;
+  }
+  // InitPTS is invalid when it would cause start time to be negative, or distance from time offset to be more than 1 second
+  const startTime = startDTS - initPTS.baseTime / initPTS.timescale;
+  return startTime < 0 && Math.abs(startTime - timeOffset) > 1;
 }
 
 function getParsedTrackCodec(

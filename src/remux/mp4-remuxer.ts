@@ -147,7 +147,12 @@ export default class MP4Remuxer implements Remuxer {
 
     if (canRemuxAvc) {
       if (!this.ISGenerated) {
-        initSegment = this.generateIS(audioTrack, videoTrack, timeOffset);
+        initSegment = this.generateIS(
+          audioTrack,
+          videoTrack,
+          timeOffset,
+          accurateTimeOffset
+        );
       }
 
       const isVideoContiguous = this.isVideoContiguous;
@@ -199,7 +204,12 @@ export default class MP4Remuxer implements Remuxer {
             logger.warn(
               '[mp4-remuxer]: regenerate InitSegment as audio detected'
             );
-            initSegment = this.generateIS(audioTrack, videoTrack, timeOffset);
+            initSegment = this.generateIS(
+              audioTrack,
+              videoTrack,
+              timeOffset,
+              accurateTimeOffset
+            );
           }
           audio = this.remuxAudio(
             audioTrack,
@@ -219,7 +229,12 @@ export default class MP4Remuxer implements Remuxer {
               logger.warn(
                 '[mp4-remuxer]: regenerate InitSegment as video detected'
               );
-              initSegment = this.generateIS(audioTrack, videoTrack, timeOffset);
+              initSegment = this.generateIS(
+                audioTrack,
+                videoTrack,
+                timeOffset,
+                accurateTimeOffset
+              );
             }
             video = this.remuxVideo(
               videoTrack,
@@ -277,13 +292,15 @@ export default class MP4Remuxer implements Remuxer {
   generateIS(
     audioTrack: DemuxedAudioTrack,
     videoTrack: DemuxedAvcTrack,
-    timeOffset
+    timeOffset: number,
+    accurateTimeOffset: boolean
   ): InitSegmentData | undefined {
     const audioSamples = audioTrack.samples;
     const videoSamples = videoTrack.samples;
     const typeSupported = this.typeSupported;
     const tracks: TrackSet = {};
-    const computePTSDTS = !this._initPTS;
+    const _initPTS = this._initPTS;
+    let computePTSDTS = !_initPTS || accurateTimeOffset;
     let container = 'audio/mp4';
     let initPTS: number | undefined;
     let initDTS: number | undefined;
@@ -325,9 +342,13 @@ export default class MP4Remuxer implements Remuxer {
       };
       if (computePTSDTS) {
         timescale = audioTrack.inputTimeScale;
-        // remember first PTS of this demuxing context. for audio, PTS = DTS
-        initPTS = initDTS =
-          audioSamples[0].pts - Math.round(timescale * timeOffset);
+        if (!_initPTS || timescale !== _initPTS.timescale) {
+          // remember first PTS of this demuxing context. for audio, PTS = DTS
+          initPTS = initDTS =
+            audioSamples[0].pts - Math.round(timescale * timeOffset);
+        } else {
+          computePTSDTS = false;
+        }
       }
     }
 
@@ -347,13 +368,17 @@ export default class MP4Remuxer implements Remuxer {
       };
       if (computePTSDTS) {
         timescale = videoTrack.inputTimeScale;
-        const startPTS = this.getVideoStartPts(videoSamples);
-        const startOffset = Math.round(timescale * timeOffset);
-        initDTS = Math.min(
-          initDTS as number,
-          normalizePts(videoSamples[0].dts, startPTS) - startOffset
-        );
-        initPTS = Math.min(initPTS as number, startPTS - startOffset);
+        if (!_initPTS || timescale !== _initPTS.timescale) {
+          const startPTS = this.getVideoStartPts(videoSamples);
+          const startOffset = Math.round(timescale * timeOffset);
+          initDTS = Math.min(
+            initDTS as number,
+            normalizePts(videoSamples[0].dts, startPTS) - startOffset
+          );
+          initPTS = Math.min(initPTS as number, startPTS - startOffset);
+        } else {
+          computePTSDTS = false;
+        }
       }
     }
 
@@ -368,6 +393,8 @@ export default class MP4Remuxer implements Remuxer {
           baseTime: initDTS as number,
           timescale: timescale as number,
         };
+      } else {
+        initPTS = timescale = undefined;
       }
 
       return {
