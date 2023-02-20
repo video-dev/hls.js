@@ -309,6 +309,7 @@ jobs:
     needs: [config, test_unit]
     if: needs.config.outputs.canUseSauce == 'true'
     runs-on: ubuntu-latest
+    name: test_functional_required (${{ matrix.config }})
     strategy:
       fail-fast: true
       max-parallel: 8
@@ -382,6 +383,7 @@ jobs:
     needs: test_functional_required
     runs-on: ubuntu-latest
     continue-on-error: true
+    name: test_functional_optional (${{ matrix.config }})
     strategy:
       fail-fast: false
       max-parallel: 8
