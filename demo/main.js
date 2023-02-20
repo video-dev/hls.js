@@ -235,8 +235,8 @@ $(document).ready(function () {
       toggleTab($('.demo-tab-btn')[parseInt(indexString) || 0], true);
     });
   }
-  $(window).on('popstate', function () {
-    window.location.reload();
+  $(self).on('popstate', function () {
+    self.location.reload();
   });
 });
 
@@ -539,6 +539,15 @@ function loadSelectedStream() {
   });
 
   hls.on(Hls.Events.FRAG_BUFFERED, function (eventName, data) {
+    const stats =
+      data.part && data.part.stats && data.part.stats.loaded
+        ? data.part.stats
+        : data.frag.stats;
+    if (data.stats.aborted) {
+      console.assert('Aborted request being buffered.', data);
+      return;
+    }
+
     const event = {
       type: data.frag.type + (data.part ? ' part' : ' fragment'),
       id: data.frag.level,
@@ -553,13 +562,15 @@ function loadSelectedStream() {
       bw: Math.round(
         (8 * data.stats.total) /
           (data.stats.buffering.end - data.stats.loading.start)
-      ),
+      ), // bandwidth of this fragment
+      ewma: Math.round(hls.bandwidthEstimate / 1000), // estimated bandwidth
       size: data.stats.total,
     };
     events.load.push(event);
     events.bitrate.push({
       time: self.performance.now() - events.t0,
       bitrate: event.bw,
+      ewma: event.ewma,
       duration: data.frag.duration,
       level: event.id,
     });
@@ -1039,7 +1050,7 @@ function handleVolumeEvent() {
 }
 
 function handleLevelError(data) {
-  var levelObj = data.context || data;
+  const levelObj = data.context || data;
   hls.removeLevel(levelObj.level, levelObj.urlId || 0);
   if (!hls.levels.length) {
     logError('All levels have been removed');
@@ -1485,8 +1496,8 @@ function onDemoConfigChanged(firstLoad) {
   )}&demoConfig=${serializedDemoConfig}`;
 
   $('#StreamPermalink').html(`<a href="${permalinkURL}">${permalinkURL}</a>`);
-  if (!firstLoad && window.location.href !== permalinkURL) {
-    window.history.pushState(null, null, permalinkURL);
+  if (!firstLoad && self.location.href !== permalinkURL) {
+    self.history.pushState(null, null, permalinkURL);
   }
 }
 

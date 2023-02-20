@@ -577,6 +577,7 @@ export default class BaseStreamController
         `frag load aborted, missing level${details ? '' : ' detail'}s`
       );
     }
+
     let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
     if (frag.encrypted && !frag.decryptdata?.key) {
       this.log(

@@ -426,8 +426,16 @@ function canvasBitrateEventUpdate(
   for (var i = 0; i < bitrateEvents.length; i++) {
     sumLevel += bitrateEvents[i].duration * bitrateEvents[i].level;
     sumDuration += bitrateEvents[i].duration;
-    maxBitrate = Math.max(maxBitrate, bitrateEvents[i].bitrate);
-    minBitrate = Math.min(minBitrate, bitrateEvents[i].bitrate);
+    maxBitrate = Math.max(
+      maxBitrate,
+      bitrateEvents[i].bitrate,
+      bitrateEvents[i].ewma
+    );
+    minBitrate = Math.min(
+      minBitrate,
+      bitrateEvents[i].bitrate,
+      bitrateEvents[i].ewma
+    );
   }
 
   maxLevel = minLevel = levelEvents[0].id;
@@ -456,6 +464,13 @@ function canvasBitrateEventUpdate(
   var legend =
     'last bitrate:' +
     (bitrateEvents[bitrateEvents.length - 1].bitrate / 1000).toFixed(2) +
+    'Mb/s';
+  ctx.fillText(legend, x_offset, y_offset);
+
+  y_offset += 15;
+  legend =
+    'last estimation:' +
+    (bitrateEvents[bitrateEvents.length - 1].ewma / 1000).toFixed(2) +
     'Mb/s';
   ctx.fillText(legend, x_offset, y_offset);
 
@@ -513,6 +528,20 @@ function canvasBitrateEventUpdate(
       (bufferChartWidth * (event.time - minTime)) / (maxTime - minTime);
     ctx.lineTo(x_offset, y_offset);
     y_offset = ctx.canvas.height * (1 - event.bitrate / maxBitrate);
+    ctx.lineTo(x_offset, y_offset);
+  }
+  ctx.lineTo(bufferChartStart + bufferChartWidth, y_offset);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'yellow';
+  ctx.beginPath();
+  ctx.moveTo(bufferChartStart, ctx.canvas.height);
+  for (var m = 0; m < bitrateEvents.length; m++) {
+    event = bitrateEvents[m];
+    x_offset =
+      bufferChartStart +
+      (bufferChartWidth * (event.time - minTime)) / (maxTime - minTime);
+    y_offset = ctx.canvas.height * (1 - event.ewma / maxBitrate);
     ctx.lineTo(x_offset, y_offset);
   }
   ctx.lineTo(bufferChartStart + bufferChartWidth, y_offset);
