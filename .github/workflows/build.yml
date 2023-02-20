@@ -313,12 +313,18 @@ jobs:
       fail-fast: true
       max-parallel: 8
       matrix:
-        config: [chrome-win_10]
-
         include:
           - config: chrome-win_10
             ua: chrome
             os: Windows 10
+          - config: chrome-osx_10.11-79.0
+            ua: chrome
+            os: OS X 10.11
+            uaVersion: '79.0'
+          - config: chrome-win_7-75.0
+            ua: chrome
+            os: Windows 7
+            uaVersion: '75.0'
 
     steps:
       - uses: actions/checkout@v3
@@ -380,12 +386,6 @@ jobs:
       fail-fast: false
       max-parallel: 8
       matrix:
-        config:
-          - safari-macOS_10.15
-          - firefox-win_10
-          - chrome-osx_10.11-79.0
-          - chrome-win_7-75.0
-
         include:
           - config: safari-macOS_10.15
             ua: safari
@@ -393,14 +393,6 @@ jobs:
           - config: firefox-win_10
             ua: firefox
             os: Windows 10
-          - config: chrome-osx_10.11-79.0
-            ua: chrome
-            os: OS X 10.11
-            uaVersion: '79.0'
-          - config: chrome-win_7-75.0
-            ua: chrome
-            os: Windows 7
-            uaVersion: '75.0'
 
     steps:
       - uses: actions/checkout@v3
