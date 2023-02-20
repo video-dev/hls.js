@@ -36,8 +36,12 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   }
 
   protected onError(event: Events.ERROR, data: ErrorData): void {
-    if (data.fatal && data.type === ErrorTypes.NETWORK_ERROR) {
-      this.clearTimer();
+    if (
+      data.fatal &&
+      (data.type === ErrorTypes.NETWORK_ERROR ||
+        data.type === ErrorTypes.KEY_SYSTEM_ERROR)
+    ) {
+      this.stopLoad();
     }
   }
 
@@ -60,33 +64,49 @@ export default class BasePlaylistController implements NetworkComponentAPI {
 
   protected switchParams(
     playlistUri: string,
-    previous?: LevelDetails
+    previous: LevelDetails | undefined
   ): HlsUrlParameters | undefined {
     const renditionReports = previous?.renditionReports;
     if (renditionReports) {
+      let foundIndex = -1;
       for (let i = 0; i < renditionReports.length; i++) {
         const attr = renditionReports[i];
-        const uri = '' + attr.URI;
-        if (uri === playlistUri.slice(-uri.length)) {
-          const msn = parseInt(attr['LAST-MSN']);
-          let part = parseInt(attr['LAST-PART']);
-          if (previous && this.hls.config.lowLatencyMode) {
-            const currentGoal = Math.min(
-              previous.age - previous.partTarget,
-              previous.targetduration
-            );
-            if (part !== undefined && currentGoal > previous.partTarget) {
-              part += 1;
-            }
-          }
-          if (Number.isFinite(msn)) {
-            return new HlsUrlParameters(
-              msn,
-              Number.isFinite(part) ? part : undefined,
-              HlsSkip.No
-            );
+        let uri: string;
+        try {
+          uri = new self.URL(attr.URI, previous.url).href;
+        } catch (error) {
+          logger.warn(
+            `Could not construct new URL for Rendition Report: ${error}`
+          );
+          uri = attr.URI || '';
+        }
+        // Use exact match. Otherwise, the last partial match, if any, will be used
+        // (Playlist URI includes a query string that the Rendition Report does not)
+        if (uri === playlistUri) {
+          foundIndex = i;
+          break;
+        } else if (uri === playlistUri.substring(0, uri.length)) {
+          foundIndex = i;
+        }
+      }
+      if (foundIndex !== -1) {
+        const attr = renditionReports[foundIndex];
+        const msn = parseInt(attr['LAST-MSN']) || previous?.lastPartSn;
+        let part = parseInt(attr['LAST-PART']) || previous?.lastPartIndex;
+        if (this.hls.config.lowLatencyMode) {
+          const currentGoal = Math.min(
+            previous.age - previous.partTarget,
+            previous.targetduration
+          );
+          if (part >= 0 && currentGoal > previous.partTarget) {
+            part += 1;
           }
         }
+        return new HlsUrlParameters(
+          msn,
+          part >= 0 ? part : undefined,
+          HlsSkip.No
+        );
       }
     }
   }

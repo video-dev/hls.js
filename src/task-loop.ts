@@ -1,4 +1,5 @@
 /**
+ * @ignore
  * Sub-class specialization of EventHandler base class.
  *
  * TaskLoop allows to schedule a task function being called (optionnaly repeatedly) on the main loop,
@@ -49,23 +50,17 @@ export default class TaskLoop {
 
   protected onHandlerDestroyed() {}
 
-  /**
-   * @returns {boolean}
-   */
   public hasInterval(): boolean {
     return !!this._tickInterval;
   }
 
-  /**
-   * @returns {boolean}
-   */
   public hasNextTick(): boolean {
     return !!this._tickTimer;
   }
 
   /**
-   * @param {number} millis Interval time (ms)
-   * @returns {boolean} True when interval has been scheduled, false when already scheduled (no effect)
+   * @param millis - Interval time (ms)
+   * @eturns True when interval has been scheduled, false when already scheduled (no effect)
    */
   public setInterval(millis: number): boolean {
     if (!this._tickInterval) {
@@ -76,7 +71,7 @@ export default class TaskLoop {
   }
 
   /**
-   * @returns {boolean} True when interval was cleared, false when none was set (no effect)
+   * @returns True when interval was cleared, false when none was set (no effect)
    */
   public clearInterval(): boolean {
     if (this._tickInterval) {
@@ -88,7 +83,7 @@ export default class TaskLoop {
   }
 
   /**
-   * @returns {boolean} True when timeout was cleared, false when none was set (no effect)
+   * @returns True when timeout was cleared, false when none was set (no effect)
    */
   public clearNextTick(): boolean {
     if (this._tickTimer) {

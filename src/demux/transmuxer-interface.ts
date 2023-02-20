@@ -15,6 +15,7 @@ import type Hls from '../hls';
 import type { HlsEventEmitter } from '../events';
 import type { PlaylistLevelType } from '../types/loader';
 import type { TypeSupported } from './tsdemuxer';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
@@ -157,7 +158,7 @@ export default class TransmuxerInterface {
     duration: number,
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata,
-    defaultInitPTS?: number
+    defaultInitPTS?: RationalTimestamp
   ): void {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;
@@ -239,10 +240,20 @@ export default class TransmuxerInterface {
         state
       );
       if (isPromise(transmuxResult)) {
-        transmuxResult.then((data) => {
-          this.handleTransmuxComplete(data);
-        });
+        transmuxer.async = true;
+        transmuxResult
+          .then((data) => {
+            this.handleTransmuxComplete(data);
+          })
+          .catch((error) => {
+            this.transmuxerError(
+              error,
+              chunkMeta,
+              'transmuxer-interface push error'
+            );
+          });
       } else {
+        transmuxer.async = false;
         this.handleTransmuxComplete(transmuxResult as TransmuxerResult);
       }
     }
@@ -252,16 +263,29 @@ export default class TransmuxerInterface {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;
     if (worker) {
+      1;
       worker.postMessage({
         cmd: 'flush',
         chunkMeta,
       });
     } else if (transmuxer) {
-      const transmuxResult = transmuxer.flush(chunkMeta);
-      if (isPromise(transmuxResult)) {
-        transmuxResult.then((data) => {
-          this.handleFlushResult(data, chunkMeta);
-        });
+      let transmuxResult = transmuxer.flush(chunkMeta);
+      const asyncFlush = isPromise(transmuxResult);
+      if (asyncFlush || transmuxer.async) {
+        if (!isPromise(transmuxResult)) {
+          transmuxResult = Promise.resolve(transmuxResult);
+        }
+        transmuxResult
+          .then((data) => {
+            this.handleFlushResult(data, chunkMeta);
+          })
+          .catch((error) => {
+            this.transmuxerError(
+              error,
+              chunkMeta,
+              'transmuxer-interface flush error'
+            );
+          });
       } else {
         this.handleFlushResult(
           transmuxResult as Array<TransmuxerResult>,
@@ -269,6 +293,25 @@ export default class TransmuxerInterface {
         );
       }
     }
+  }
+
+  private transmuxerError(
+    error: Error,
+    chunkMeta: ChunkMetadata,
+    reason: string
+  ) {
+    if (!this.hls) {
+      return;
+    }
+    this.hls.trigger(Events.ERROR, {
+      type: ErrorTypes.MEDIA_ERROR,
+      details: ErrorDetails.FRAG_PARSING_ERROR,
+      chunkMeta,
+      fatal: false,
+      error,
+      err: error,
+      reason,
+    });
   }
 
   private handleFlushResult(

@@ -4,17 +4,13 @@
  * Once loaded, dispatches events with parsed data-models of manifest/levels/audio/subtitle tracks.
  *
  * Uses loader(s) set in config to do actual internal loading of resource tasks.
- *
- * @module
- *
  */
 
 import { Events } from '../events';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { logger } from '../utils/logger';
-import { parseSegmentIndex, findBox } from '../utils/mp4-tools';
 import M3U8Parser from './m3u8-parser';
-import type { LevelParsed } from '../types/level';
+import type { LevelParsed, VariableMap } from '../types/level';
 import type {
   Loader,
   LoaderConfiguration,
@@ -34,6 +30,7 @@ import type {
   TrackLoadingData,
 } from '../types/events';
 import { NetworkComponentAPI } from '../types/component-api';
+import { MediaAttributes } from '../types/media-playlist';
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext
@@ -69,6 +66,7 @@ class PlaylistLoader implements NetworkComponentAPI {
   private readonly loaders: {
     [key: string]: Loader<LoaderContext>;
   } = Object.create(null);
+  private variableList: VariableMap | null = null;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -143,6 +141,7 @@ class PlaylistLoader implements NetworkComponentAPI {
   }
 
   public destroy(): void {
+    this.variableList = null;
     this.unregisterListeners();
     this.destroyInternalLoaders();
   }
@@ -152,6 +151,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     data: ManifestLoadingData
   ) {
     const { url } = data;
+    this.variableList = null;
     this.load({
       id: null,
       groupId: null,
@@ -296,7 +296,6 @@ class PlaylistLoader implements NetworkComponentAPI {
       maxRetry,
       retryDelay,
       maxRetryDelay,
-      highWaterMark: 0,
     };
 
     const loaderCallbacks = {
@@ -316,12 +315,6 @@ class PlaylistLoader implements NetworkComponentAPI {
     context: PlaylistLoaderContext,
     networkDetails: any = null
   ): void {
-    if (context.isSidxRequest) {
-      this.handleSidxRequest(response, context);
-      this.handlePlaylistLoaded(response, stats, context, networkDetails);
-      return;
-    }
-
     this.resetInternalLoader(context.type);
 
     const string = response.data as string;
@@ -331,18 +324,14 @@ class PlaylistLoader implements NetworkComponentAPI {
       this.handleManifestParsingError(
         response,
         context,
-        'no EXTM3U delimiter',
+        new Error('no EXTM3U delimiter'),
         networkDetails
       );
       return;
     }
 
     stats.parsing.start = performance.now();
-    // Check if chunk-list or master. handle empty chunk list case (first EXTINF not signaled, but TARGETDURATION present)
-    if (
-      string.indexOf('#EXTINF:') > 0 ||
-      string.indexOf('#EXT-X-TARGETDURATION:') > 0
-    ) {
+    if (M3U8Parser.isMediaPlaylist(string)) {
       this.handleTrackOrLevelPlaylist(response, stats, context, networkDetails);
     } else {
       this.handleMasterPlaylist(response, stats, context, networkDetails);
@@ -376,45 +365,34 @@ class PlaylistLoader implements NetworkComponentAPI {
 
     const url = getResponseUrl(response, context);
 
-    const { levels, sessionData } = M3U8Parser.parseMasterPlaylist(string, url);
-    if (!levels.length) {
+    const parsedResult = M3U8Parser.parseMasterPlaylist(string, url);
+
+    if (parsedResult.playlistParsingError) {
       this.handleManifestParsingError(
         response,
         context,
-        'no level found in manifest',
+        parsedResult.playlistParsingError,
         networkDetails
       );
       return;
     }
 
-    // multi level playlist, parse level info
-    const audioGroups = levels.map((level: LevelParsed) => ({
-      id: level.attrs.AUDIO,
-      audioCodec: level.audioCodec,
-    }));
+    const {
+      contentSteering,
+      levels,
+      sessionData,
+      sessionKeys,
+      startTimeOffset,
+      variableList,
+    } = parsedResult;
 
-    const subtitleGroups = levels.map((level: LevelParsed) => ({
-      id: level.attrs.SUBTITLES,
-      textCodec: level.textCodec,
-    }));
+    this.variableList = variableList;
 
-    const audioTracks = M3U8Parser.parseMasterPlaylistMedia(
-      string,
-      url,
-      'AUDIO',
-      audioGroups
-    );
-    const subtitles = M3U8Parser.parseMasterPlaylistMedia(
-      string,
-      url,
-      'SUBTITLES',
-      subtitleGroups
-    );
-    const captions = M3U8Parser.parseMasterPlaylistMedia(
-      string,
-      url,
-      'CLOSED-CAPTIONS'
-    );
+    const {
+      AUDIO: audioTracks = [],
+      SUBTITLES: subtitles,
+      'CLOSED-CAPTIONS': captions,
+    } = M3U8Parser.parseMasterPlaylistMedia(string, url, parsedResult);
 
     if (audioTracks.length) {
       // check if we have found an audio track embedded in main playlist (audio track without URI attribute)
@@ -437,11 +415,12 @@ class PlaylistLoader implements NetworkComponentAPI {
         audioTracks.unshift({
           type: 'main',
           name: 'main',
+          groupId: 'main',
           default: false,
           autoselect: false,
           forced: false,
           id: -1,
-          attrs: new AttrList({}),
+          attrs: new AttrList({}) as MediaAttributes,
           bitrate: 0,
           url: '',
         });
@@ -453,10 +432,14 @@ class PlaylistLoader implements NetworkComponentAPI {
       audioTracks,
       subtitles,
       captions,
+      contentSteering,
       url,
       stats,
       networkDetails,
       sessionData,
+      sessionKeys,
+      startTimeOffset,
+      variableList,
     });
   }
 
@@ -470,17 +453,34 @@ class PlaylistLoader implements NetworkComponentAPI {
     const { id, level, type } = context;
 
     const url = getResponseUrl(response, context);
-    const levelUrlId = Number.isFinite(id as number) ? id : 0;
-    const levelId = Number.isFinite(level as number) ? level : levelUrlId;
+    const levelUrlId = Number.isFinite(id as number) ? (id as number) : 0;
+    const levelId = Number.isFinite(level as number)
+      ? (level as number)
+      : levelUrlId;
     const levelType = mapContextToLevelType(context);
     const levelDetails: LevelDetails = M3U8Parser.parseLevelPlaylist(
       response.data as string,
       url,
-      levelId!,
+      levelId,
       levelType,
-      levelUrlId!
+      levelUrlId,
+      this.variableList
     );
 
+    const error = levelDetails.playlistParsingError;
+    if (error) {
+      hls.trigger(Events.ERROR, {
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.LEVEL_PARSING_ERROR,
+        fatal: false,
+        url: url,
+        err: error,
+        error,
+        reason: error.message,
+        level: typeof context.level === 'number' ? context.level : undefined,
+      });
+      return;
+    }
     if (!levelDetails.fragments.length) {
       hls.trigger(Events.ERROR, {
         type: ErrorTypes.NETWORK_ERROR,
@@ -513,32 +513,15 @@ class PlaylistLoader implements NetworkComponentAPI {
         stats,
         networkDetails,
         sessionData: null,
+        sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
       });
     }
 
     // save parsing time
     stats.parsing.end = performance.now();
-
-    // in case we need SIDX ranges
-    // return early after calling load for
-    // the SIDX box.
-    if (levelDetails.needSidxRanges) {
-      const sidxUrl = levelDetails.fragments[0].initSegment?.url as string;
-      this.load({
-        url: sidxUrl,
-        isSidxRequest: true,
-        type,
-        level,
-        levelDetails,
-        id,
-        groupId: null,
-        rangeStart: 0,
-        rangeEnd: 2048,
-        responseType: 'arraybuffer',
-        deliveryDirectives: null,
-      });
-      return;
-    }
 
     // extend the context with the new levelDetails property
     context.levelDetails = levelDetails;
@@ -546,45 +529,10 @@ class PlaylistLoader implements NetworkComponentAPI {
     this.handlePlaylistLoaded(response, stats, context, networkDetails);
   }
 
-  private handleSidxRequest(
-    response: LoaderResponse,
-    context: PlaylistLoaderContext
-  ): void {
-    const data = new Uint8Array(response.data as ArrayBuffer);
-    const sidxBox = findBox(data, ['sidx'])[0];
-    // if provided fragment does not contain sidx, early return
-    if (!sidxBox) {
-      return;
-    }
-    const sidxInfo = parseSegmentIndex(sidxBox);
-    if (!sidxInfo) {
-      return;
-    }
-    const sidxReferences = sidxInfo.references;
-    const levelDetails = context.levelDetails as LevelDetails;
-    sidxReferences.forEach((segmentRef, index) => {
-      const segRefInfo = segmentRef.info;
-      const frag = levelDetails.fragments[index];
-
-      if (frag.byteRange.length === 0) {
-        frag.setByteRange(
-          String(1 + segRefInfo.end - segRefInfo.start) +
-            '@' +
-            String(segRefInfo.start)
-        );
-      }
-      if (frag.initSegment) {
-        const moovBox = findBox(data, ['moov'])[0];
-        const moovEndOffset = moovBox ? moovBox.length : null;
-        frag.initSegment.setByteRange(String(moovEndOffset) + '@0');
-      }
-    });
-  }
-
   private handleManifestParsingError(
     response: LoaderResponse,
     context: PlaylistLoaderContext,
-    reason: string,
+    error: Error,
     networkDetails: any
   ): void {
     this.hls.trigger(Events.ERROR, {
@@ -592,7 +540,9 @@ class PlaylistLoader implements NetworkComponentAPI {
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
       fatal: context.type === PlaylistContextType.MANIFEST,
       url: response.url,
-      reason,
+      err: error,
+      error,
+      reason: error.message,
       response,
       context,
       networkDetails,
@@ -685,7 +635,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       this.handleManifestParsingError(
         response,
         context,
-        'invalid target duration',
+        new Error('invalid target duration'),
         networkDetails
       );
       return;

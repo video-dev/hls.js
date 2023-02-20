@@ -346,7 +346,7 @@ export class VTTParser {
         // strip of UTF-8 BOM if any
         // https://en.wikipedia.org/wiki/Byte_order_mark#UTF-8
         const m = line.match(/^(ï»¿)?WEBVTT([ \t].*)?$/);
-        if (!m || !m[0]) {
+        if (!m?.[0]) {
           throw new Error('Malformed WebVTT signature.');
         }
 

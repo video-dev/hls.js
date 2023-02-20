@@ -192,13 +192,38 @@ describe('Fragment finders', function () {
       expect(actual).to.equal(-1);
     });
 
-    it('does not skip very small fragments', function () {
+    it('does not skip very small fragments at the start', function () {
       const frag = {
         start: 0.2,
         duration: 0.1,
         deltaPTS: 0.1,
       };
       const actual = fragmentWithinToleranceTest(0, tolerance, frag);
+      expect(actual).to.equal(0);
+    });
+    it('does not skip very small fragments', function () {
+      const frag = {
+        start: 5,
+        duration: 0.1,
+        deltaPTS: 0.1,
+      };
+      const actual = fragmentWithinToleranceTest(5, tolerance, frag);
+      expect(actual).to.equal(0);
+    });
+    it('does not skip very small fragments without deltaPTS', function () {
+      const frag = {
+        start: 5,
+        duration: 0.1,
+      };
+      const actual = fragmentWithinToleranceTest(5, tolerance, frag);
+      expect(actual).to.equal(0);
+    });
+    it('does not skip fragments when searching near boundaries', function () {
+      const frag = {
+        start: 19.96916,
+        duration: 9.98458,
+      };
+      const actual = fragmentWithinToleranceTest(29, 0.25, frag);
       expect(actual).to.equal(0);
     });
   });

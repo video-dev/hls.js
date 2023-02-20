@@ -165,8 +165,7 @@ describe('FragmentTracker', function () {
 
   describe('getBufferedFrag', function () {
     let hls;
-    /** @type {FragmentTracker} */
-    let fragmentTracker;
+    let fragmentTracker: FragmentTracker;
     beforeEach(function () {
       hls = new Hls({});
       fragmentTracker = new FragmentTracker(hls);
@@ -458,14 +457,22 @@ describe('FragmentTracker', function () {
     });
   });
 
+  type FragmentTrackerTestable = Omit<
+    FragmentTracker,
+    'hasFragment' | 'removeFragment'
+  > & {
+    hasFragment: (fragment: Fragment) => void;
+    removeFragment: (fragment: Fragment) => void;
+  };
+
   describe('removeFragment', function () {
-    /** @type {Hls} */
-    let hls;
-    /** @type {FragmentTracker} */
-    let fragmentTracker;
+    let hls: Hls;
+    let fragmentTracker: FragmentTrackerTestable;
     beforeEach(function () {
       hls = new Hls({});
-      fragmentTracker = new FragmentTracker(hls);
+      fragmentTracker = new FragmentTracker(
+        hls
+      ) as unknown as FragmentTrackerTestable;
     });
     it('should remove fragment', function () {
       const fragment = createMockFragment(
@@ -497,13 +504,13 @@ describe('FragmentTracker', function () {
     });
   });
   describe('removeAllFragments', function () {
-    /** @type {Hls} */
-    let hls;
-    /** @type {FragmentTracker} */
-    let fragmentTracker;
+    let hls: Hls;
+    let fragmentTracker: FragmentTrackerTestable;
     beforeEach(function () {
       hls = new Hls({});
-      fragmentTracker = new FragmentTracker(hls);
+      fragmentTracker = new FragmentTracker(
+        hls
+      ) as unknown as FragmentTrackerTestable;
     });
     it('should remove all fragments', function () {
       const fragments = [

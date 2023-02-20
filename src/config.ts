@@ -7,16 +7,20 @@ import BufferController from './controller/buffer-controller';
 import { TimelineController } from './controller/timeline-controller';
 import CapLevelController from './controller/cap-level-controller';
 import FPSController from './controller/fps-controller';
-import EMEController from './controller/eme-controller';
+import EMEController, {
+  MediaKeySessionContext,
+} from './controller/eme-controller';
 import CMCDController from './controller/cmcd-controller';
+import ContentSteeringController from './controller/content-steering-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import Cues from './utils/cues';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { ILogger, logger } from './utils/logger';
 
+import type Hls from './hls';
 import type { CuesInterface } from './utils/cues';
-import type { MediaKeyFunc } from './utils/mediakeys-helper';
+import type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
 import type {
   FragmentLoaderContext,
   Loader,
@@ -29,6 +33,9 @@ export type ABRControllerConfig = {
   abrEwmaSlowLive: number;
   abrEwmaFastVoD: number;
   abrEwmaSlowVoD: number;
+  /**
+   * Default bandwidth estimate in bits/s prior to collecting fragment bandwidth samples
+   */
   abrEwmaDefaultEstimate: number;
   abrBandWidthFactor: number;
   abrBandWidthUpFactor: number;
@@ -41,6 +48,9 @@ export type BufferControllerConfig = {
   appendErrorMaxRetry: number;
   backBufferLength: number;
   liveDurationInfinity: boolean;
+  /**
+   * @deprecated use backBufferLength
+   */
   liveBackBufferLength: number | null;
 };
 
@@ -57,13 +67,49 @@ export type CMCDControllerConfig = {
 export type DRMSystemOptions = {
   audioRobustness?: string;
   videoRobustness?: string;
+  audioEncryptionScheme?: string | null;
+  videoEncryptionScheme?: string | null;
+  persistentState?: MediaKeysRequirement;
+  distinctiveIdentifier?: MediaKeysRequirement;
+  sessionTypes?: string[];
+  sessionType?: string;
 };
 
+export type DRMSystemConfiguration = {
+  licenseUrl: string;
+  serverCertificateUrl?: string;
+  generateRequest?: (
+    this: Hls,
+    initDataType: string,
+    initData: ArrayBuffer | null,
+    keyContext: MediaKeySessionContext
+  ) =>
+    | { initDataType: string; initData: ArrayBuffer | null }
+    | undefined
+    | never;
+};
+
+export type DRMSystemsConfiguration = Partial<
+  Record<KeySystems, DRMSystemConfiguration>
+>;
+
 export type EMEControllerConfig = {
-  licenseXhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
-  licenseResponseCallback?: (xhr: XMLHttpRequest, url: string) => ArrayBuffer;
+  licenseXhrSetup?: (
+    this: Hls,
+    xhr: XMLHttpRequest,
+    url: string,
+    keyContext: MediaKeySessionContext,
+    licenseChallenge: Uint8Array
+  ) => void | Uint8Array | Promise<Uint8Array | void>;
+  licenseResponseCallback?: (
+    this: Hls,
+    xhr: XMLHttpRequest,
+    url: string,
+    keyContext: MediaKeySessionContext
+  ) => ArrayBuffer;
   emeEnabled: boolean;
   widevineLicenseUrl?: string;
+  drmSystems: DRMSystemsConfiguration;
   drmSystemOptions: DRMSystemOptions;
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
@@ -187,6 +233,8 @@ export type HlsConfig = {
   // CMCD
   cmcd?: CMCDControllerConfig;
   cmcdController?: typeof CMCDController;
+  // Content Steering
+  contentSteeringController?: typeof ContentSteeringController;
 
   abrController: typeof AbrController;
   bufferController: typeof BufferController;
@@ -209,9 +257,12 @@ export type HlsConfig = {
   TimelineControllerConfig &
   TSDemuxerConfig;
 
-// If possible, keep hlsDefaultConfig shallow
-// It is cloned whenever a new Hls instance is created, by keeping the config
-// shallow the properties are cloned, and we don't end up manipulating the default
+/**
+ * @ignore
+ * If possible, keep hlsDefaultConfig shallow
+ * It is cloned whenever a new Hls instance is created, by keeping the config
+ * shallow the properties are cloned, and we don't end up manipulating the default
+ */
 export const hlsDefaultConfig: HlsConfig = {
   autoStartLoad: true, // used by stream-controller
   startPosition: -1, // used by stream-controller
@@ -235,6 +286,9 @@ export const hlsDefaultConfig: HlsConfig = {
   liveMaxLatencyDuration: undefined, // used by latency-controller
   maxLiveSyncPlaybackRate: 1, // used by latency-controller
   liveDurationInfinity: false, // used by buffer-controller
+  /**
+   * @deprecated use backBufferLength
+   */
   liveBackBufferLength: null, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller
   enableWorker: true, // used by demuxer
@@ -283,8 +337,11 @@ export const hlsDefaultConfig: HlsConfig = {
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: undefined, // used by eme-controller
+  drmSystems: {}, // used by eme-controller
   drmSystemOptions: {}, // used by eme-controller
-  requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess, // used by eme-controller
+  requestMediaKeySystemAccessFunc: __USE_EME_DRM__
+    ? requestMediaKeySystemAccess
+    : null, // used by eme-controller
   testBandwidth: true,
   progressive: false,
   lowLatencyMode: true,
@@ -306,6 +363,9 @@ export const hlsDefaultConfig: HlsConfig = {
   audioTrackController: __USE_ALT_AUDIO__ ? AudioTrackController : undefined,
   emeController: __USE_EME_DRM__ ? EMEController : undefined,
   cmcdController: __USE_CMCD__ ? CMCDController : undefined,
+  contentSteeringController: __USE_CONTENT_STEERING__
+    ? ContentSteeringController
+    : undefined,
 };
 
 function timelineConfig(): TimelineControllerConfig {
@@ -326,6 +386,9 @@ function timelineConfig(): TimelineControllerConfig {
   };
 }
 
+/**
+ * @ignore
+ */
 export function mergeConfig(
   defaultConfig: HlsConfig,
   userConfig: Partial<HlsConfig>
@@ -364,6 +427,9 @@ export function mergeConfig(
   return Object.assign({}, defaultConfig, userConfig);
 }
 
+/**
+ * @ignore
+ */
 export function enableStreamingMode(config) {
   const currentLoader = config.loader;
   if (currentLoader !== FetchLoader && currentLoader !== XhrLoader) {

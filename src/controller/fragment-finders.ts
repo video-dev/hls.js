@@ -2,11 +2,10 @@ import BinarySearch from '../utils/binary-search';
 import { Fragment } from '../loader/fragment';
 
 /**
- * Returns first fragment whose endPdt value exceeds the given PDT.
- * @param {Array<Fragment>} fragments - The array of candidate fragments
- * @param {number|null} [PDTValue = null] - The PDT value which must be exceeded
- * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start/end can be within in order to be considered contiguous
- * @returns {*|null} fragment - The best matching fragment
+ * Returns first fragment whose endPdt value exceeds the given PDT, or null.
+ * @param fragments - The array of candidate fragments
+ * @param PDTValue - The PDT value which must be exceeded
+ * @param maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  */
 export function findFragmentByPDT(
   fragments: Array<Fragment>,
@@ -48,11 +47,11 @@ export function findFragmentByPDT(
  * Finds a fragment based on the SN of the previous fragment; or based on the needs of the current buffer.
  * This method compensates for small buffer gaps by applying a tolerance to the start of any candidate fragment, thus
  * breaking any traps which would cause the same fragment to be continuously selected within a small range.
- * @param {*} fragPrevious - The last frag successfully appended
- * @param {Array} fragments - The array of candidate fragments
- * @param {number} [bufferEnd = 0] - The end of the contiguous buffered range the playhead is currently within
- * @param {number} maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
- * @returns {*} foundFrag - The best matching fragment
+ * @param fragPrevious - The last frag successfully appended
+ * @param fragments - The array of candidate fragments
+ * @param bufferEnd - The end of the contiguous buffered range the playhead is currently within
+ * @param maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
+ * @returns a matching fragment or null
  */
 export function findFragmentByPTS(
   fragPrevious: Fragment | null,
@@ -82,7 +81,7 @@ export function findFragmentByPTS(
     fragments,
     fragmentWithinToleranceTest.bind(null, bufferEnd, maxFragLookUpTolerance)
   );
-  if (foundFragment) {
+  if (foundFragment && (foundFragment !== fragPrevious || !fragNext)) {
     return foundFragment;
   }
   // If no match was found return the next fragment after fragPrevious, or null
@@ -91,16 +90,23 @@ export function findFragmentByPTS(
 
 /**
  * The test function used by the findFragmentBySn's BinarySearch to look for the best match to the current buffer conditions.
- * @param {*} candidate - The fragment to test
- * @param {number} [bufferEnd = 0] - The end of the current buffered range the playhead is currently within
- * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start can be within in order to be considered contiguous
- * @returns {number} - 0 if it matches, 1 if too low, -1 if too high
+ * @param candidate - The fragment to test
+ * @param bufferEnd - The end of the current buffered range the playhead is currently within
+ * @param maxFragLookUpTolerance - The amount of time that a fragment's start can be within in order to be considered contiguous
+ * @returns 0 if it matches, 1 if too low, -1 if too high
  */
 export function fragmentWithinToleranceTest(
   bufferEnd = 0,
   maxFragLookUpTolerance = 0,
   candidate: Fragment
 ) {
+  // eagerly accept an accurate match (no tolerance)
+  if (
+    candidate.start <= bufferEnd &&
+    candidate.start + candidate.duration > bufferEnd
+  ) {
+    return 0;
+  }
   // offset should be within fragment boundary - config.maxFragLookUpTolerance
   // this is to cope with situations like
   // bufferEnd = 9.991
@@ -138,10 +144,10 @@ export function fragmentWithinToleranceTest(
 /**
  * The test function used by the findFragmentByPdt's BinarySearch to look for the best match to the current buffer conditions.
  * This function tests the candidate's program date time values, as represented in Unix time
- * @param {*} candidate - The fragment to test
- * @param {number} [pdtBufferEnd = 0] - The Unix time representing the end of the current buffered range
- * @param {number} [maxFragLookUpTolerance = 0] - The amount of time that a fragment's start can be within in order to be considered contiguous
- * @returns {boolean} True if contiguous, false otherwise
+ * @param candidate - The fragment to test
+ * @param pdtBufferEnd - The Unix time representing the end of the current buffered range
+ * @param maxFragLookUpTolerance - The amount of time that a fragment's start can be within in order to be considered contiguous
+ * @returns true if contiguous, false otherwise
  */
 export function pdtWithinToleranceTest(
   pdtBufferEnd: number,

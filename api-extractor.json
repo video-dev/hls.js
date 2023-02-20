@@ -11,7 +11,8 @@
     "reportTempFolder": "<projectFolder>/api-extractor/report-temp"
   },
   "docModel": {
-    "enabled": false
+    "enabled": true,
+    "apiJsonFilePath": "<projectFolder>/api-extractor/<unscopedPackageName>.api.json"
   },
   "dtsRollup": {
     "enabled": true,

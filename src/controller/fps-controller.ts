@@ -31,7 +31,7 @@ class FPSController implements ComponentAPI {
   }
 
   protected unregisterListeners() {
-    this.hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching);
+    this.hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
   }
 
   destroy() {
