@@ -27,6 +27,8 @@ export function fetchSupported() {
   return false;
 }
 
+const BYTERANGE = /(\d+)-(\d+)\/(\d+)/;
+
 class FetchLoader implements Loader<LoaderContext> {
   private fetchSetup: Function;
   private requestTimeout?: number;
@@ -52,7 +54,7 @@ class FetchLoader implements Loader<LoaderContext> {
 
   abortInternal(): void {
     const response = this.response;
-    if (!response || !response.ok) {
+    if (!response?.ok) {
       this.stats.aborted = true;
       this.controller.abort();
     }
@@ -109,7 +111,8 @@ class FetchLoader implements Loader<LoaderContext> {
           self.performance.now(),
           stats.loading.start
         );
-        stats.total = parseInt(response.headers.get('Content-Length') || '0');
+
+        stats.total = getContentLength(response.headers) || stats.total;
 
         if (onProgress && Number.isFinite(config.highWaterMark)) {
           return this.loadProgressively(
@@ -123,6 +126,9 @@ class FetchLoader implements Loader<LoaderContext> {
 
         if (isArrayBuffer) {
           return response.arrayBuffer();
+        }
+        if (context.responseType === 'json') {
+          return response.json();
         }
         return response.text();
       })
@@ -173,6 +179,10 @@ class FetchLoader implements Loader<LoaderContext> {
       result = ageHeader ? parseFloat(ageHeader) : null;
     }
     return result;
+  }
+
+  getResponseHeader(name: string): string | null {
+    return this.response ? this.response.headers.get(name) : null;
   }
 
   private loadProgressively(
@@ -241,6 +251,27 @@ function getRequestParameters(context: LoaderContext, signal): any {
   }
 
   return initParams;
+}
+
+function getByteRangeLength(byteRangeHeader: string): number | undefined {
+  const result = BYTERANGE.exec(byteRangeHeader);
+  if (result) {
+    return parseInt(result[2]) - parseInt(result[1]) + 1;
+  }
+}
+
+function getContentLength(headers: Headers): number | undefined {
+  const contentRange = headers.get('Content-Range');
+  if (contentRange) {
+    const byteRangeLength = getByteRangeLength(contentRange);
+    if (Number.isFinite(byteRangeLength)) {
+      return byteRangeLength;
+    }
+  }
+  const contentLength = headers.get('Content-Length');
+  if (contentLength) {
+    return parseInt(contentLength);
+  }
 }
 
 function getRequest(context: LoaderContext, initParams: any): Request {

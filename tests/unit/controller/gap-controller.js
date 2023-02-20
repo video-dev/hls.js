@@ -15,6 +15,9 @@ describe('GapController', function () {
 
   beforeEach(function () {
     const hls = new Hls({});
+    hls.networkControllers.forEach((component) => component.destroy());
+    hls.networkControllers.length = 0;
+    hls.coreComponents.forEach((component) => component.destroy());
     media = {
       currentTime: 0,
     };

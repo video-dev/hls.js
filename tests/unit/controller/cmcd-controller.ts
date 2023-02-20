@@ -29,7 +29,7 @@ const data = {
 };
 
 const setupEach = function (cmcd?: CMCDControllerConfig) {
-  cmcdController = new CMCDController(new HlsMock({ cmcd }));
+  cmcdController = new CMCDController(new HlsMock({ cmcd }) as any);
 };
 
 describe('CMCDController', function () {

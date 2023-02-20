@@ -1,7 +1,5 @@
 /**
- * @module BufferHelper
- *
- * Providing methods dealing with buffer length retrieval for example.
+ * Provides methods dealing with buffer length retrieval for example.
  *
  * In general, a helper around HTML5 MediaElement TimeRanges gathered from `buffered` property.
  *
@@ -35,9 +33,6 @@ const noopBuffered: TimeRanges = {
 export class BufferHelper {
   /**
    * Return true if `media`'s buffered include `position`
-   * @param {Bufferable} media
-   * @param {number} position
-   * @returns {boolean}
    */
   static isBuffered(media: Bufferable, position: number): boolean {
     try {

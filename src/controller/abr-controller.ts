@@ -1,6 +1,6 @@
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import { Events } from '../events';
-import { ErrorDetails } from '../errors';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { PlaylistLevelType } from '../types/loader';
 import { logger } from '../utils/logger';
 import type { Fragment } from '../loader/fragment';
@@ -14,9 +14,9 @@ import type {
   ErrorData,
   LevelLoadedData,
 } from '../types/events';
-import type { ComponentAPI } from '../types/component-api';
+import type { AbrComponentAPI } from '../types/component-api';
 
-class AbrController implements ComponentAPI {
+class AbrController implements AbrComponentAPI {
   protected hls: Hls;
   private lastLoadedFragLevel: number = 0;
   private _nextAutoLevel: number = -1;
@@ -311,13 +311,21 @@ class AbrController implements ComponentAPI {
 
   protected onError(event: Events.ERROR, data: ErrorData) {
     // stop timer in case of frag loading error
-    switch (data.details) {
-      case ErrorDetails.FRAG_LOAD_ERROR:
-      case ErrorDetails.FRAG_LOAD_TIMEOUT:
+    if (data.frag?.type === PlaylistLevelType.MAIN) {
+      if (data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
         this.clearTimer();
-        break;
-      default:
-        break;
+        return;
+      }
+      switch (data.details) {
+        case ErrorDetails.FRAG_LOAD_ERROR:
+        case ErrorDetails.FRAG_LOAD_TIMEOUT:
+        case ErrorDetails.KEY_LOAD_ERROR:
+        case ErrorDetails.KEY_LOAD_TIMEOUT:
+          this.clearTimer();
+          break;
+        default:
+          break;
+      }
     }
   }
 
@@ -457,6 +465,8 @@ class AbrController implements ComponentAPI {
       : fragCurrent
       ? fragCurrent.duration
       : 0;
+    let levelSkippedMin = minAutoLevel;
+    let levelSkippedMax = -1;
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       const levelInfo = levels[i];
 
@@ -464,7 +474,16 @@ class AbrController implements ComponentAPI {
         !levelInfo ||
         (currentCodecSet && levelInfo.codecSet !== currentCodecSet)
       ) {
+        if (levelInfo) {
+          levelSkippedMin = Math.min(i, levelSkippedMin);
+          levelSkippedMax = Math.max(i, levelSkippedMax);
+        }
         continue;
+      }
+      if (levelSkippedMax !== -1) {
+        logger.trace(
+          `[abr] Skipped level(s) ${levelSkippedMin}-${levelSkippedMax} with CODECS:"${levels[levelSkippedMax].attrs.CODECS}"; not compatible with "${level.attrs.CODECS}"`
+        );
       }
 
       const levelDetails = levelInfo.details;

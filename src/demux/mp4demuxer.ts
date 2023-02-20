@@ -63,7 +63,7 @@ class MP4Demuxer implements Demuxer {
     this.id3Track = dummyTrack('id3', 1) as DemuxedMetadataTrack;
     this.timeOffset = 0;
 
-    if (!initSegment || !initSegment.byteLength) {
+    if (!initSegment?.byteLength) {
       return;
     }
     const initData = parseInitSegment(initSegment);

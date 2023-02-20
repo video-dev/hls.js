@@ -163,7 +163,7 @@ class ID3TrackController implements ComponentAPI {
       return;
     }
 
-    const { frag: fragment, samples, details } = data;
+    const { samples } = data;
 
     // create track dynamically
     if (!this.id3Track) {
@@ -363,6 +363,7 @@ class ID3TrackController implements ComponentAPI {
           }
           cue.value = { key, data };
           cue.type = MetadataSchema.dateRange;
+          cue.id = id;
           this.id3Track.addCue(cue);
           cues[key] = cue;
         }

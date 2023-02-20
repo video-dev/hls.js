@@ -2,9 +2,7 @@
 /* eslint-env node */
 'use strict';
 
-const fs = require('fs');
 const versionParser = require('./version-parser.js');
-const packageJson = require('../package.json');
 const { isValidStableVersion, incrementPatch } = require('./version-parser.js');
 
 const latestVersion = getLatestVersionTag();
@@ -75,11 +73,7 @@ try {
     );
   }
 
-  packageJson.version = newVersion;
-  fs.writeFileSync('./package.json', JSON.stringify(packageJson), {
-    encoding: 'utf8',
-  });
-  console.log('Set version: ' + newVersion);
+  console.log(newVersion);
 } catch (e) {
   console.error(e);
   process.exit(1);

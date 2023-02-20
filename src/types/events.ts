@@ -3,7 +3,12 @@ import type { Fragment } from '../loader/fragment';
 // eslint-disable-next-line import/no-duplicates
 import type { Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
-import type { HlsUrlParameters, Level, LevelParsed } from './level';
+import type {
+  HlsUrlParameters,
+  Level,
+  LevelParsed,
+  VariableMap,
+} from './level';
 import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
 import type {
   Loader,
@@ -21,6 +26,8 @@ import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
 import type { AttrList } from '../utils/attr-list';
 import type { HlsListeners } from '../events';
+import { KeyLoaderInfo } from '../loader/key-loader';
+import { LevelKey } from '../loader/level-key';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
@@ -76,21 +83,32 @@ export interface ManifestLoadingData {
   url: string;
 }
 
+export type ContentSteeringOptions = {
+  uri: string;
+  pathwayId: string;
+};
+
 export interface ManifestLoadedData {
   audioTracks: MediaPlaylist[];
   captions?: MediaPlaylist[];
+  contentSteering: ContentSteeringOptions | null;
   levels: LevelParsed[];
   networkDetails: any;
   sessionData: Record<string, AttrList> | null;
+  sessionKeys: LevelKey[] | null;
+  startTimeOffset: number | null;
   stats: LoaderStats;
   subtitles?: MediaPlaylist[];
   url: string;
+  variableList: VariableMap | null;
 }
 
 export interface ManifestParsedData {
   levels: Level[];
   audioTracks: MediaPlaylist[];
   subtitleTracks: MediaPlaylist[];
+  sessionData: Record<string, AttrList> | null;
+  sessionKeys: LevelKey[] | null;
   firstLevel: number;
   stats: LoaderStats;
   audio: boolean;
@@ -153,17 +171,9 @@ export interface LevelPTSUpdatedData {
   end: number;
 }
 
-export interface AudioTrackSwitchingData {
-  id: number;
-  name: string;
-  groupId: string;
-  type: MediaPlaylistType | 'main';
-  url: string;
-}
+export interface AudioTrackSwitchingData extends MediaPlaylist {}
 
-export interface AudioTrackSwitchedData {
-  id: number;
-}
+export interface AudioTrackSwitchedData extends MediaPlaylist {}
 
 export interface AudioTrackLoadedData extends TrackLoadedData {}
 
@@ -215,6 +225,7 @@ export interface ErrorData {
   fatal: boolean;
   buffer?: number;
   bytes?: number;
+  chunkMeta?: ChunkMetadata;
   context?: PlaylistLoaderContext;
   error?: Error;
   event?: keyof HlsListeners | 'demuxerWorker';
@@ -338,6 +349,7 @@ export interface KeyLoadingData {
 
 export interface KeyLoadedData {
   frag: Fragment;
+  keyInfo: KeyLoaderInfo;
 }
 
 export interface BackBufferData {

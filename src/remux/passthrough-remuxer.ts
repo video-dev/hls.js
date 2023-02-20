@@ -2,7 +2,11 @@ import {
   flushTextTrackMetadataCueSamples,
   flushTextTrackUserdataCueSamples,
 } from './mp4-remuxer';
-import type { InitData, InitDataTrack } from '../utils/mp4-tools';
+import {
+  InitData,
+  InitDataTrack,
+  patchEncyptionData,
+} from '../utils/mp4-tools';
 import {
   getDuration,
   getStartDTS,
@@ -24,19 +28,21 @@ import type {
   DemuxedUserdataTrack,
   PassthroughTrack,
 } from '../types/demuxer';
+import type { DecryptData } from '../loader/level-key';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 class PassThroughRemuxer implements Remuxer {
   private emitInitSegment: boolean = false;
   private audioCodec?: string;
   private videoCodec?: string;
   private initData?: InitData;
-  private initPTS?: number;
+  private initPTS: RationalTimestamp | null = null;
   private initTracks?: TrackSet;
   private lastEndTime: number | null = null;
 
   public destroy() {}
 
-  public resetTimeStamp(defaultInitPTS) {
+  public resetTimeStamp(defaultInitPTS: RationalTimestamp | null) {
     this.initPTS = defaultInitPTS;
     this.lastEndTime = null;
   }
@@ -48,17 +54,18 @@ class PassThroughRemuxer implements Remuxer {
   public resetInitSegment(
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
-    videoCodec: string | undefined
+    videoCodec: string | undefined,
+    decryptdata: DecryptData | null
   ) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
-    this.generateInitSegment(initSegment);
+    this.generateInitSegment(patchEncyptionData(initSegment, decryptdata));
     this.emitInitSegment = true;
   }
 
   private generateInitSegment(initSegment: Uint8Array | undefined): void {
     let { audioCodec, videoCodec } = this;
-    if (!initSegment || !initSegment.byteLength) {
+    if (!initSegment?.byteLength) {
       this.initTracks = undefined;
       this.initData = undefined;
       return;
@@ -136,7 +143,7 @@ class PassThroughRemuxer implements Remuxer {
     // The binary segment data is added to the videoTrack in the mp4demuxer. We don't check to see if the data is only
     // audio or video (or both); adding it to video was an arbitrary choice.
     const data = videoTrack.samples;
-    if (!data || !data.length) {
+    if (!data?.length) {
       return result;
     }
 
@@ -145,11 +152,11 @@ class PassThroughRemuxer implements Remuxer {
       timescale: 1,
     };
     let initData = this.initData;
-    if (!initData || !initData.length) {
+    if (!initData?.length) {
       this.generateInitSegment(data);
       initData = this.initData;
     }
-    if (!initData || !initData.length) {
+    if (!initData?.length) {
       // We can't remux if the initSegment could not be generated
       logger.warn('[passthrough-remuxer.ts]: Failed to generate initSegment.');
       return result;
@@ -160,16 +167,20 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     const startDTS = getStartDTS(initData, data);
-    if (!Number.isFinite(initPTS!)) {
-      this.initPTS = initSegment.initPTS = initPTS = startDTS - timeOffset;
+    if (!initPTS) {
+      initSegment.initPTS = startDTS - timeOffset;
+      this.initPTS = initPTS = {
+        baseTime: initSegment.initPTS,
+        timescale: 1,
+      };
     }
 
     const duration = getDuration(data, initData);
     const startTime = audioTrack
-      ? startDTS - (initPTS as number)
+      ? startDTS - initPTS.baseTime
       : (lastEndTime as number);
     const endTime = startTime + duration;
-    offsetStartDTS(initData, data, initPTS as number);
+    offsetStartDTS(initData, data, initPTS.baseTime);
 
     if (duration > 0) {
       this.lastEndTime = endTime;
@@ -206,19 +217,18 @@ class PassThroughRemuxer implements Remuxer {
     result.audio = track.type === 'audio' ? track : undefined;
     result.video = track.type !== 'audio' ? track : undefined;
     result.initSegment = initSegment;
-    const initPtsNum = this.initPTS ?? 0;
     result.id3 = flushTextTrackMetadataCueSamples(
       id3Track,
       timeOffset,
-      initPtsNum,
-      initPtsNum
+      initPTS,
+      initPTS
     );
 
     if (textTrack.samples.length) {
       result.text = flushTextTrackUserdataCueSamples(
         textTrack,
         timeOffset,
-        initPtsNum
+        initPTS
       );
     }
 

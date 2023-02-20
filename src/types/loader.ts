@@ -1,5 +1,6 @@
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
+import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
 import type { HlsUrlParameters } from './level';
 
@@ -24,7 +25,10 @@ export interface FragmentLoaderContext extends LoaderContext {
   resetIV?: boolean;
 }
 
-export interface KeyLoaderContext extends FragmentLoaderContext {}
+export interface KeyLoaderContext extends LoaderContext {
+  keyInfo: KeyLoaderInfo;
+  frag: Fragment;
+}
 
 export interface LoaderConfiguration {
   // Max number of load retries
@@ -38,12 +42,12 @@ export interface LoaderConfiguration {
   // max connection retry delay (ms)
   maxRetryDelay: number;
   // When streaming progressively, this is the minimum chunk size required to emit a PROGRESS event
-  highWaterMark: number;
+  highWaterMark?: number;
 }
 
 export interface LoaderResponse {
   url: string;
-  data: string | ArrayBuffer;
+  data: string | ArrayBuffer | Object;
 }
 
 export interface LoaderStats {
@@ -135,6 +139,7 @@ export interface Loader<T extends LoaderContext> {
    * @returns time object being lodaded
    */
   getCacheAge?: () => number | null;
+  getResponseHeader?: (name: string) => string | null;
   context: T;
   stats: LoaderStats;
 }
@@ -162,8 +167,6 @@ export interface PlaylistLoaderContext extends LoaderContext {
   id: number | null;
   // track group id
   groupId: string | null;
-  // defines if the loader is handling a sidx request for the playlist
-  isSidxRequest?: boolean;
   // internal representation of a parsed m3u8 level playlist
   levelDetails?: LevelDetails;
   // Blocking playlist request delivery directives (or null id none were added to playlist url

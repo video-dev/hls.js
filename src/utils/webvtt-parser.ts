@@ -1,6 +1,9 @@
 import { VTTParser } from './vttparser';
 import { utf8ArrayToStr } from '../demux/id3';
-import { toMpegTsClockFromTimescale } from './timescale-conversion';
+import {
+  RationalTimestamp,
+  toMpegTsClockFromTimescale,
+} from './timescale-conversion';
 import { normalizePts } from '../remux/mp4-remuxer';
 import type { VTTCCs } from '../types/vtt';
 
@@ -89,8 +92,7 @@ const calculateOffset = function (vttCCs: VTTCCs, cc, presentationTime) {
 
 export function parseWebVTT(
   vttByteArray: ArrayBuffer,
-  initPTS: number,
-  timescale: number,
+  initPTS: RationalTimestamp,
   vttCCs: VTTCCs,
   cc: number,
   timeOffset: number,
@@ -105,7 +107,10 @@ export function parseWebVTT(
     .replace(LINEBREAKS, '\n')
     .split('\n');
   const cues: VTTCue[] = [];
-  const initPTS90Hz = toMpegTsClockFromTimescale(initPTS, timescale);
+  const init90kHz = toMpegTsClockFromTimescale(
+    initPTS.baseTime,
+    initPTS.timescale
+  );
   let cueTime = '00:00.000';
   let timestampMapMPEGTS = 0;
   let timestampMapLOCAL = 0;
@@ -118,7 +123,7 @@ export function parseWebVTT(
     let cueOffset = vttCCs.ccOffset;
 
     // Calculate subtitle PTS offset
-    const webVttMpegTsMapOffset = (timestampMapMPEGTS - initPTS90Hz) / 90000;
+    const webVttMpegTsMapOffset = (timestampMapMPEGTS - init90kHz) / 90000;
 
     // Update offsets for new discontinuities
     if (currCC?.new) {

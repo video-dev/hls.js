@@ -389,9 +389,6 @@ class MP4 {
     );
   }
 
-  /**
-   * @param tracks... (optional) {array} the tracks associated with this movie
-   */
   static moov(tracks) {
     let i = tracks.length;
     const boxes: Uint8Array[] = [];
@@ -1029,8 +1026,7 @@ class MP4 {
 
   /**
    * Generate a track box.
-   * @param track {object} a track definition
-   * @return {Uint8Array} the track box
+   * @param track a track definition
    */
   static trak(track) {
     track.duration = track.duration || 0xffffffff;

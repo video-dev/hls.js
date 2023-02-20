@@ -1,18 +1,21 @@
 # Number of days of inactivity before an issue becomes stale
-daysUntilStale: 21
+daysUntilStale: 18
 
 # Number of days of inactivity before a stale issue is closed
-daysUntilClose: 3
+daysUntilClose: 7
 
 # Issues with these labels will never be considered stale
 exemptLabels:
   - pinned
   - security
+  - good-first-issue
+  - Browser issue
+  - CI
   - Confirmed
   - Chore
   - Enhancement
   - Feature proposal
-  - Question
+  - Missing Feature
   - Needs Triage
 
 # Set to true to ignore issues in a project (defaults to false)

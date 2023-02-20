@@ -144,7 +144,17 @@ describe('BufferController tests', function () {
     let createSbStub;
     let checkPendingTracksSpy;
     beforeEach(function () {
-      createSbStub = sandbox.stub(bufferController, 'createSourceBuffers');
+      createSbStub = sandbox
+        .stub(bufferController, 'createSourceBuffers')
+        .callsFake(() => {
+          Object.keys(bufferController.pendingTracks).forEach((type) => {
+            bufferController.sourceBuffer ||= {};
+            bufferController.sourceBuffer[type] = {
+              appendBuffer: () => {},
+              remove: () => {},
+            };
+          });
+        });
       checkPendingTracksSpy = sandbox.spy(
         bufferController,
         'checkPendingTracks'
