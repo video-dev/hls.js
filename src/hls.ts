@@ -995,4 +995,3 @@ export type {
   SubtitleTrackSwitchData,
 } from './types/events';
 export type { AttrList } from './utils/attr-list';
-export type { BufferInfo } from './utils/buffer-helper';
