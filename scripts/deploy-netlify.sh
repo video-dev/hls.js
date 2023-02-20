@@ -37,7 +37,7 @@ git clone --depth 1 "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" -b
 cd "$root/deployments"
 echo "- [\`$idShort\`](https://github.com/video-dev/hls.js/commit/$id): [https://$commitSiteName.netlify.app/](https://$commitSiteName.netlify.app/)" >> "README.md"
 git add "README.md"
-git -c user.name="HLS.JS CI" commit -m "update for $id"
+git -c user.name="hlsjs-ci" -c user.email="40664919+hlsjs-ci@users.noreply.github.com" commit -m "update for $id"
 git push "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git"
 cd ..
 echo "Updated deployments branch."
