@@ -579,7 +579,7 @@ export default class BaseStreamController
     }
 
     let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
-    if (frag.encrypted && !frag.decryptdata?.key && details) {
+    if (frag.encrypted && !frag.decryptdata?.key) {
       this.log(
         `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${
           this.logPrefix === '[stream-controller]' ? 'level' : 'track'
