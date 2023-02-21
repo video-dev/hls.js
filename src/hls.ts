@@ -186,7 +186,6 @@ export default class Hls implements HlsEventEmitter {
       fpsController,
       id3TrackController,
       fragmentTracker,
-      errorController,
     ];
 
     this.audioTrackController = this.createController(
@@ -228,6 +227,7 @@ export default class Hls implements HlsEventEmitter {
 
     // Error controller handles errors before and after all other controllers
     // This listener will be invoked after all other controllers error listeners
+    networkControllers.push(errorController);
     const onErrorOut = errorController.onErrorOut;
     if (typeof onErrorOut === 'function') {
       this.on(Events.ERROR, onErrorOut, errorController);
@@ -1036,4 +1036,9 @@ export type {
   SubtitleTracksUpdatedData,
   SubtitleTrackSwitchData,
 } from './types/events';
+export type {
+  IErrorAction,
+  NetworkErrorAction,
+  ErrorActionFlags,
+} from './errors';
 export type { AttrList } from './utils/attr-list';

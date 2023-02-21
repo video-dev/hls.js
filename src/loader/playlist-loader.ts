@@ -535,7 +535,9 @@ class PlaylistLoader implements NetworkComponentAPI {
     stats: LoaderStats
   ): void {
     let message = `A network ${
-      timeout ? 'timeout' : 'error'
+      timeout
+        ? 'timeout'
+        : 'error' + (response ? ' (status ' + response.code + ')' : '')
     } occurred while loading ${context.type}`;
     if (context.type === PlaylistContextType.LEVEL) {
       message += `: ${context.level} id: ${context.id}`;

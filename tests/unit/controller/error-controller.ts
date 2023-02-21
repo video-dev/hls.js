@@ -148,7 +148,7 @@ describe('ErrorController Integration Tests', function () {
         expectFatalErrorEventToStopPlayer(
           hls,
           ErrorDetails.MANIFEST_LOAD_ERROR,
-          'A network error occurred while loading manifest'
+          'A network error (status 400) occurred while loading manifest'
         )
       );
     });
@@ -186,7 +186,7 @@ describe('ErrorController Integration Tests', function () {
           expectFatalErrorEventToStopPlayer(
             hls,
             ErrorDetails.MANIFEST_LOAD_ERROR,
-            'A network error occurred while loading manifest'
+            'A network error (status 501) occurred while loading manifest'
           )
         );
     });
@@ -322,11 +322,7 @@ describe('ErrorController Integration Tests', function () {
         errorIndex = data.level;
         server.respondWith(data.url, testResponses['noTargetDuration.m3u8']);
       });
-      hls.on(Events.LEVEL_LOADING, (event, data) => {
-        Promise.resolve().then(() => {
-          server.respond();
-        });
-      });
+      hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
       return new Promise((resolve) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         server.respond();
@@ -358,9 +354,7 @@ describe('ErrorController Integration Tests', function () {
         errorIndex = data.level;
         server.respondWith(data.url, [400, {}, '']);
       });
-      hls.on(Events.LEVEL_LOADING, (event, data) => {
-        server.respond();
-      });
+      hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
       return new Promise((resolve) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         server.respond();
@@ -368,7 +362,7 @@ describe('ErrorController Integration Tests', function () {
         expect(data.details).to.equal(ErrorDetails.LEVEL_LOAD_ERROR);
         expect(data.fatal).to.equal(false, 'Error should not be fatal');
         expect(data.error.message).to.equal(
-          'A network error occurred while loading level: 1 id: 0',
+          'A network error (status 400) occurred while loading level: 1 id: 0',
           data.error.message
         );
         hls.stopLoad.should.have.been.calledOnce;
@@ -411,23 +405,21 @@ describe('ErrorController Integration Tests', function () {
   describe('Segment Error Handling', function () {
     it('Fragment HTTP Load Errors retry fragLoadPolicy `errorRetry.maxNumRetry` times before switching down and continues until no lower levels are available', function () {
       server.respondWith('multivariantPlaylist.m3u8/segment.mp4', [
-        400,
+        500,
         {},
         new ArrayBuffer(0),
       ]);
       hls.loadSource('multivariantPlaylist.m3u8');
-      hls.on(Events.LEVEL_LOADING, (event, data) => {
-        server.respond();
-      });
-      hls.on(Events.FRAG_LOADING, (event, data) => {
-        server.respond();
-      });
+      hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
+      hls.on(Events.FRAG_LOADING, loadingEventCallback(server, timers));
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => {
           if (data.fatal) {
             resolve(data);
           } else {
-            timers.tick(hls.config.fragLoadPolicy.default.maxTimeToFirstByteMs);
+            timers.tick(
+              hls.config.fragLoadPolicy.default.errorRetry!.maxRetryDelayMs
+            );
           }
         });
         hls.on(Events.FRAG_LOADED, (event, data) =>
@@ -443,7 +435,7 @@ describe('ErrorController Integration Tests', function () {
         const finalAssertion = expectFatalErrorEventToStopPlayer(
           hls,
           ErrorDetails.FRAG_LOAD_ERROR,
-          'HTTP Error 400 Bad Request'
+          'HTTP Error 500 Internal Server Error'
         );
         finalAssertion(errorData);
       });
@@ -558,10 +550,18 @@ segment.mp4
       hls.loadSource('oneSegmentVod-mp2ts.m3u8');
       hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
       hls.on(Events.FRAG_LOADING, loadingEventCallback(server, timers));
+      let errorCount = 0;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => {
-          if (data.fatal) {
+          errorCount++;
+          if (errorCount === 3 && data.fatal) {
             resolve(data);
+          } else if (data.fatal) {
+            reject(
+              new Error(
+                `Error fatal before retries exhausted: "${data.error.message}"`
+              )
+            );
           } else {
             timers.tick(8000);
           }
@@ -709,7 +709,7 @@ segment.mp4
       hls.on(Events.FRAG_LOADING, loadingEventCallback(server, timers));
       hls.on(Events.ERROR, (event, data) => {
         errors.push(data);
-        timers.tick(2000);
+        Promise.resolve().then(() => timers.tick(2000));
       });
       return new Promise((resolve, reject) => {
         hls.on(Events.LEVEL_SWITCHING, (event, data) => {
@@ -744,7 +744,9 @@ segment.mp4
               resolve(data);
             });
             hls.on(Events.ERROR, (event, data) => {
-              reject(new Error('Unexpected error after fallback'));
+              reject(
+                new Error(`Unexpected error after fallback: ${data.error}`)
+              );
             });
           });
         })
@@ -754,7 +756,7 @@ segment.mp4
             'Error should not be fatal'
           );
           expect(data.frag.url).to.equal(
-            'http://www.baz.com/video-segment.mp4'
+            'http://www.baz.com/audio-segment.mp4'
           );
         });
     });
@@ -817,7 +819,7 @@ segment.mp4
       hls.on(Events.FRAG_LOADING, loadingEventCallback(server, timers));
       hls.on(Events.ERROR, (event, data) => {
         errors.push(data);
-        timers.tick(2000);
+        Promise.resolve().then(() => timers.tick(2000));
       });
       return new Promise((resolve, reject) => {
         hls.on(Events.LEVEL_SWITCHING, (event, data) => {
@@ -862,7 +864,7 @@ segment.mp4
             'Error should not be fatal'
           );
           expect(data.frag.url).to.equal(
-            'http://www.baz.com/video-segment.mp4'
+            'http://www.baz.com/audio-segment.mp4'
           );
         });
     });

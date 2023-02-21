@@ -142,6 +142,7 @@ describe('ContentSteeringController', function () {
 
   describe('Steering Manifest', function () {
     it('loads the steering manifest', function () {
+      contentSteeringController.startLoad();
       contentSteeringController.onManifestLoaded(Events.MANIFEST_LOADED, {
         contentSteering: {
           uri: 'http://example.com/manifest.json',
@@ -776,6 +777,7 @@ function loadSteeringManifest(
   partialManifest: Partial<SteeringManifest>,
   steering: ConentSteeringControllerTestable
 ) {
+  steering.startLoad();
   const response: LoaderResponse = {
     url: '',
     data: {

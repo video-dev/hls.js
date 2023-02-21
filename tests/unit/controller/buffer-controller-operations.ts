@@ -267,8 +267,6 @@ describe('BufferController', function () {
               data.id,
               'The id of the event should be equal to the frag type'
             ).to.equal(frag.type);
-            // TODO: remove stats from event & place onto frag
-            // expect(data.stats).to.equal({});
           } catch (e) {
             reject(e);
           }

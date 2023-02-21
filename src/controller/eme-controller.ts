@@ -33,10 +33,15 @@ import type {
   ErrorData,
   ManifestLoadedData,
 } from '../types/events';
-import type { EMEControllerConfig } from '../config';
+import type { EMEControllerConfig, HlsConfig, LoadPolicy } from '../config';
 import type { Fragment } from '../loader/fragment';
+import type {
+  Loader,
+  LoaderCallbacks,
+  LoaderConfiguration,
+  LoaderContext,
+} from '../types/loader';
 
-const MAX_LICENSE_REQUEST_FAILURES = 3;
 const LOGGER_PREFIX = '[eme]';
 
 interface KeySystemAccessPromises {
@@ -65,7 +70,11 @@ class EMEController implements ComponentAPI {
   public static CDMCleanupPromise: Promise<void> | void;
 
   private readonly hls: Hls;
-  private readonly config: EMEControllerConfig;
+  private readonly config: EMEControllerConfig & {
+    loader: { new (confg: HlsConfig): Loader<LoaderContext> };
+    certLoadPolicy: LoadPolicy;
+    keyLoadPolicy: LoadPolicy;
+  };
   private media: HTMLMediaElement | null = null;
   private keyFormatPromise: Promise<KeySystemFormats> | null = null;
   private keySystemAccessPromises: {
@@ -832,36 +841,73 @@ class EMEController implements ComponentAPI {
   private fetchServerCertificate(
     keySystem: KeySystems
   ): Promise<BufferSource | void> {
+    const config = this.config;
+    const Loader = config.loader;
+    const certLoader = new Loader(config as HlsConfig) as Loader<LoaderContext>;
+    const url = this.getServerCertificateUrl(keySystem);
+    if (!url) {
+      return Promise.resolve();
+    }
+    this.log(`Fetching serverCertificate for "${keySystem}"`);
     return new Promise((resolve, reject) => {
-      const url = this.getServerCertificateUrl(keySystem);
-      if (!url) {
-        return resolve();
-      }
-      this.log(`Fetching serverCertificate for "${keySystem}"`);
-      const xhr = new XMLHttpRequest();
-      xhr.open('GET', url, true);
-      xhr.responseType = 'arraybuffer';
-      xhr.onreadystatechange = () => {
-        if (xhr.readyState === XMLHttpRequest.DONE) {
-          if (xhr.status === 200) {
-            resolve(xhr.response);
-          } else {
-            reject(
-              new EMEKeyError(
-                {
-                  type: ErrorTypes.KEY_SYSTEM_ERROR,
-                  details:
-                    ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED,
-                  fatal: true,
-                  networkDetails: xhr,
-                },
-                `"${keySystem}" certificate request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`
-              )
-            );
-          }
-        }
+      const loaderContext: LoaderContext = {
+        responseType: 'arraybuffer',
+        url,
       };
-      xhr.send();
+      const loadPolicy = config.certLoadPolicy.default;
+      const loaderConfig: LoaderConfiguration = {
+        loadPolicy,
+        timeout: loadPolicy.maxLoadTimeMs,
+        maxRetry: 0,
+        retryDelay: 0,
+        maxRetryDelay: 0,
+      };
+      const loaderCallbacks: LoaderCallbacks<LoaderContext> = {
+        onSuccess: (response, stats, context, networkDetails) => {
+          resolve(response.data as ArrayBuffer);
+        },
+        onError: (response, contex, networkDetails, stats) => {
+          reject(
+            new EMEKeyError(
+              {
+                type: ErrorTypes.KEY_SYSTEM_ERROR,
+                details:
+                  ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED,
+                fatal: true,
+                networkDetails,
+                response: {
+                  url: loaderContext.url,
+                  data: undefined,
+                  ...response,
+                },
+              },
+              `"${keySystem}" certificate request failed (${url}). Status: ${response.code} (${response.text})`
+            )
+          );
+        },
+        onTimeout: (stats, context, networkDetails) => {
+          reject(
+            new EMEKeyError(
+              {
+                type: ErrorTypes.KEY_SYSTEM_ERROR,
+                details:
+                  ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED,
+                fatal: true,
+                networkDetails,
+                response: {
+                  url: loaderContext.url,
+                  data: undefined,
+                },
+              },
+              `"${keySystem}" certificate request timed out (${url})`
+            )
+          );
+        },
+        onAbort: (stats, context, networkDetails) => {
+          reject(new Error('aborted'));
+        },
+      };
+      certLoader.load(loaderContext, loaderConfig, loaderCallbacks);
     });
   }
 
@@ -980,6 +1026,7 @@ class EMEController implements ComponentAPI {
     keySessionContext: MediaKeySessionContext,
     licenseChallenge: Uint8Array
   ): Promise<ArrayBuffer> {
+    const keyLoadPolicy = this.config.keyLoadPolicy.default;
     return new Promise((resolve, reject) => {
       const url = this.getLicenseServerUrl(keySessionContext.keySystem);
       this.log(`Sending license request to URL: ${url}`);
@@ -1013,9 +1060,11 @@ class EMEController implements ComponentAPI {
             }
             resolve(data);
           } else {
+            const retryConfig = keyLoadPolicy.errorRetry;
+            const maxNumRetry = retryConfig ? retryConfig.maxNumRetry : 0;
             this._requestLicenseFailureCount++;
             if (
-              this._requestLicenseFailureCount > MAX_LICENSE_REQUEST_FAILURES ||
+              this._requestLicenseFailureCount > maxNumRetry ||
               (xhr.status >= 400 && xhr.status < 500)
             ) {
               reject(
@@ -1025,15 +1074,19 @@ class EMEController implements ComponentAPI {
                     details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
                     fatal: true,
                     networkDetails: xhr,
+                    response: {
+                      url,
+                      data: undefined as any,
+                      code: xhr.status,
+                      text: xhr.statusText,
+                    },
                   },
                   `License Request XHR failed (${url}). Status: ${xhr.status} (${xhr.statusText})`
                 )
               );
             } else {
               const attemptsLeft =
-                MAX_LICENSE_REQUEST_FAILURES -
-                this._requestLicenseFailureCount +
-                1;
+                maxNumRetry - this._requestLicenseFailureCount + 1;
               this.warn(
                 `Retrying license request, ${attemptsLeft} attempts left`
               );

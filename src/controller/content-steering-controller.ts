@@ -1,10 +1,17 @@
 import { Events } from '../events';
 import { Level } from '../types/level';
 import { AttrList } from '../utils/attr-list';
+import { addGroupId } from './level-controller';
+import { ErrorActionFlags, NetworkErrorAction } from '../errors';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
-import type { ManifestLoadedData, ManifestParsedData } from '../types/events';
+import type {
+  ErrorData,
+  ManifestLoadedData,
+  ManifestParsedData,
+} from '../types/events';
+import type { RetryConfig } from '../config';
 import type {
   Loader,
   LoaderCallbacks,
@@ -15,8 +22,6 @@ import type {
 } from '../types/loader';
 import type { LevelParsed } from '../types/level';
 import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
-import { addGroupId } from './level-controller';
-import { RetryConfig } from '../config';
 
 export type SteeringManifest = {
   VERSION: 1;
@@ -39,6 +44,8 @@ type UriReplacement = {
   'PER-RENDITION-URIS'?: { [stableRenditionId: string]: string };
 };
 
+const PATHWAY_PENALTY_DURATION_MS = 300000;
+
 export default class ContentSteeringController implements NetworkComponentAPI {
   private readonly hls: Hls;
   private log: (msg: any) => void;
@@ -49,10 +56,12 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   private timeToLoad: number = 300;
   private reloadTimer: number = -1;
   private updated: number = 0;
+  private started: boolean = false;
   private enabled: boolean = true;
   private levels: Level[] | null = null;
   private audioTracks: MediaPlaylist[] | null = null;
   private subtitleTracks: MediaPlaylist[] | null = null;
+  private penalizedPathways: { [pathwayId: string]: number } = {};
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -65,6 +74,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.on(Events.ERROR, this.onError, this);
   }
 
   private unregisterListeners() {
@@ -75,14 +85,16 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
+    hls.off(Events.ERROR, this.onError, this);
   }
 
   startLoad(): void {
+    this.started = true;
     self.clearTimeout(this.reloadTimer);
     if (this.enabled && this.uri) {
       if (this.updated) {
         const ttl = Math.max(
-          this.timeToLoad * 1000 - (Date.now() - this.updated),
+          this.timeToLoad * 1000 - (performance.now() - this.updated),
           0
         );
         this.scheduleRefresh(this.uri, ttl);
@@ -93,6 +105,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   }
 
   stopLoad(): void {
+    this.started = false;
     if (this.loader) {
       this.loader.destroy();
       this.loader = null;
@@ -135,7 +148,9 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     }
     this.pathwayId = contentSteering.pathwayId;
     this.uri = contentSteering.uri;
-    this.startLoad();
+    if (this.started) {
+      this.startLoad();
+    }
   }
 
   private onManifestParsed(
@@ -144,6 +159,33 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   ) {
     this.audioTracks = data.audioTracks;
     this.subtitleTracks = data.subtitleTracks;
+  }
+
+  private onError(event: Events.ERROR, data: ErrorData) {
+    const { errorAction } = data;
+    if (
+      errorAction?.action === NetworkErrorAction.SendAlternateToPenaltyBox &&
+      errorAction.flags === ErrorActionFlags.MoveAllAlternatesMatchingHost
+    ) {
+      let pathwayPriority = this.pathwayPriority;
+      const pathwayId = this.pathwayId;
+      if (!this.penalizedPathways[pathwayId]) {
+        this.penalizedPathways[pathwayId] = performance.now();
+      }
+      if (!pathwayPriority && this.levels) {
+        // If PATHWAY-PRIORITY was not provided, list pathways for error handling
+        pathwayPriority = this.levels.reduce((pathways, level) => {
+          if (pathways.indexOf(level.pathwayId) === -1) {
+            pathways.push(level.pathwayId);
+          }
+          return pathways;
+        }, [] as string[]);
+      }
+      if (pathwayPriority && pathwayPriority.length > 1) {
+        this.updatePathwayPriority(pathwayPriority);
+        errorAction.resolved = this.pathwayId !== pathwayId;
+      }
+    }
   }
 
   public filterParsedLevels(levels: Level[]): Level[] {
@@ -177,8 +219,20 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   private updatePathwayPriority(pathwayPriority: string[]) {
     this.pathwayPriority = pathwayPriority;
     let levels: Level[] | undefined;
+
+    // Evaluate if we should remove the pathway from the penalized list
+    const penalizedPathways = this.penalizedPathways;
+    const now = performance.now();
+    Object.keys(penalizedPathways).forEach((pathwayId) => {
+      if (now - penalizedPathways[pathwayId] > PATHWAY_PENALTY_DURATION_MS) {
+        delete penalizedPathways[pathwayId];
+      }
+    });
     for (let i = 0; i < pathwayPriority.length; i++) {
       const pathwayId = pathwayPriority[i];
+      if (penalizedPathways[pathwayId]) {
+        continue;
+      }
       if (pathwayId === this.pathwayId) {
         return;
       }
@@ -322,7 +376,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
           this.log(`Steering VERSION ${steeringData.VERSION} not supported!`);
           return;
         }
-        this.updated = Date.now();
+        this.updated = performance.now();
         this.timeToLoad = steeringData.TTL;
         const {
           'RELOAD-URI': reloadUri,

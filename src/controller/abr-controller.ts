@@ -11,6 +11,7 @@ import type {
   FragLoadedData,
   FragBufferedData,
   LevelLoadedData,
+  LevelSwitchingData,
 } from '../types/events';
 import type { AbrComponentAPI } from '../types/component-api';
 
@@ -44,6 +45,7 @@ class AbrController implements AbrComponentAPI {
     hls.on(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
   }
 
@@ -52,6 +54,7 @@ class AbrController implements AbrComponentAPI {
     hls.off(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
     hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
   }
 
@@ -72,6 +75,13 @@ class AbrController implements AbrComponentAPI {
     this.partCurrent = data.part ?? null;
     this.clearTimer();
     this.timer = self.setInterval(this.onCheck, 100);
+  }
+
+  protected onLevelSwitching(
+    event: Events.LEVEL_SWITCHING,
+    data: LevelSwitchingData
+  ): void {
+    this.clearTimer();
   }
 
   protected onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {

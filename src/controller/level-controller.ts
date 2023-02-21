@@ -18,7 +18,7 @@ import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
 import BasePlaylistController from './base-playlist-controller';
-import { PlaylistLevelType } from '../types/loader';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import type Hls from '../hls';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';
 import type { MediaPlaylist } from '../types/media-playlist';
@@ -170,7 +170,7 @@ export default class LevelController extends BasePlaylistController {
         videoCodecFound ||= !!videoCodec;
         audioCodecFound ||= !!audioCodec;
         return (
-          (!unknownCodecs || !unknownCodecs.length) &&
+          !unknownCodecs?.length &&
           (!audioCodec || isCodecSupportedInMp4(audioCodec, 'audio')) &&
           (!videoCodec || isCodecSupportedInMp4(videoCodec, 'video'))
         );
@@ -185,16 +185,21 @@ export default class LevelController extends BasePlaylistController {
     }
 
     if (levels.length === 0) {
-      const error = new Error(
-        'no level with compatible codecs found in manifest'
-      );
-      this.hls.trigger(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
-        fatal: true,
-        url: data.url,
-        error,
-        reason: error.message,
+      // Dispatch error after MANIFEST_LOADED is done propagating
+      Promise.resolve().then(() => {
+        if (this.hls) {
+          const error = new Error(
+            'no level with compatible codecs found in manifest'
+          );
+          this.hls.trigger(Events.ERROR, {
+            type: ErrorTypes.MEDIA_ERROR,
+            details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
+            fatal: true,
+            url: data.url,
+            error,
+            reason: error.message,
+          });
+        }
       });
       return;
     }
@@ -415,28 +420,15 @@ export default class LevelController extends BasePlaylistController {
   }
 
   protected onError(event: Events.ERROR, data: ErrorData) {
-    if (data.fatal) {
+    if (data.fatal || !data.context) {
       return;
     }
-    // try to recover not fatal errors
-    switch (data.details) {
-      case ErrorDetails.LEVEL_EMPTY_ERROR:
-      case ErrorDetails.LEVEL_PARSING_ERROR:
-        // Only retry when empty and live
-        if (
-          data.details === ErrorDetails.LEVEL_EMPTY_ERROR &&
-          !!data.context?.levelDetails?.live
-        ) {
-          this.checkRetry(data);
-        } else {
-          // Escalate to fatal if not retrying or switching
-          data.levelRetry = false;
-        }
-        break;
-      case ErrorDetails.LEVEL_LOAD_ERROR:
-      case ErrorDetails.LEVEL_LOAD_TIMEOUT:
-        this.checkRetry(data);
-        break;
+
+    if (
+      data.context.type === PlaylistContextType.LEVEL &&
+      data.context.level === this.level
+    ) {
+      this.checkRetry(data);
     }
   }
 
@@ -467,7 +459,6 @@ export default class LevelController extends BasePlaylistController {
       // reset level load error counter on successful level loaded only if there is no issues with fragments
       if (curLevel.fragmentError === 0) {
         curLevel.loadError = 0;
-        this.retryCount = 0;
       }
       this.playlistLoaded(level, data, curLevel.details);
     } else if (data.deliveryDirectives?.skip) {

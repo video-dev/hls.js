@@ -400,9 +400,9 @@ class AudioStreamController
 
     if (fragCurrent) {
       fragCurrent.abortRequests();
+      this.fragmentTracker.removeFragment(fragCurrent);
     }
-    this.fragCurrent = null;
-    this.clearWaitingFragment();
+    this.resetLoadingState();
     // destroy useless transmuxer when switching audio to main
     if (!altAudio) {
       this.resetTransmuxer();

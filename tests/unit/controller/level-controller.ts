@@ -186,13 +186,15 @@ describe('LevelController', function () {
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       });
 
-      expect(hls.trigger).to.have.been.calledWith(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
-        fatal: true,
-        url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
-        error: hls.trigger.getCall(0).lastArg.error,
-        reason: 'no level with compatible codecs found in manifest',
+      return Promise.resolve().then(() => {
+        expect(hls.trigger).to.have.been.calledWith(Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
+          fatal: true,
+          url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+          error: hls.trigger.getCall(0).lastArg.error,
+          reason: 'no level with compatible codecs found in manifest',
+        });
       });
     });
 

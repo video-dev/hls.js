@@ -3,7 +3,7 @@ import { FragmentState } from './fragment-tracker';
 import { Bufferable, BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import { Events } from '../events';
-import { ErrorDetails, ErrorTypes } from '../errors';
+import { ErrorDetails, ErrorTypes, NetworkErrorAction } from '../errors';
 import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { alignStream } from '../utils/discontinuities';
@@ -47,6 +47,7 @@ import type { HlsConfig } from '../config';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { SourceBufferName } from '../types/buffer';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
+import { getRetryDelay } from '../utils/error-helper';
 
 type ResolveFragLoaded = (FragLoadedEndData) => void;
 type RejectFragLoaded = (LoadError) => void;
@@ -133,7 +134,7 @@ export default class BaseStreamController
     this.fragmentLoader.abort();
     this.keyLoader.abort();
     const frag = this.fragCurrent;
-    if (frag) {
+    if (frag?.loader) {
       frag.abortRequests();
       this.fragmentTracker.removeFragment(frag);
     }
@@ -1354,24 +1355,17 @@ export default class BaseStreamController
     filterType: PlaylistLevelType,
     data: ErrorData
   ) {
-    if (data.chunkMeta) {
-      // Parsing Error: no retries
+    if (data.chunkMeta && !data.frag) {
       const context = this.getCurrentContext(data.chunkMeta);
-      if (
-        context &&
-        !this.fragContextChanged(context.frag) &&
-        context.frag.type === filterType
-      ) {
-        this.resetFragmentErrors(filterType);
+      if (context) {
+        data.frag = context.frag;
       }
-      return;
     }
     const frag = data.frag;
     // Handle frag error related to caller's filterType
     if (!frag || frag.type !== filterType || !this.levels) {
       return;
     }
-    const level = this.levels[frag.level];
     if (this.fragContextChanged(frag)) {
       this.warn(
         `Frag load error must match current frag to retry ${frag.url} > ${this.fragCurrent?.url}`
@@ -1379,43 +1373,39 @@ export default class BaseStreamController
       return;
     }
     // keep retrying until the limit will be reached
-    const fragmentErrors = this.levels.reduce(
-      (acc, level) => acc + level.fragmentError,
-      0
-    );
-    const retryCount = level ? fragmentErrors + 1 : Infinity;
-    const { fragLoadPolicy, keyLoadPolicy } = this.config;
-    const isTimeout =
-      data.details === ErrorDetails.FRAG_LOAD_TIMEOUT ||
-      data.details === ErrorDetails.KEY_LOAD_TIMEOUT;
-    const retryConfig = (
-      data.details.startsWith('key') ? keyLoadPolicy : fragLoadPolicy
-    ).default[`${isTimeout ? 'timeout' : 'error'}Retry`];
-    const retry = !!retryConfig && retryCount <= retryConfig.maxNumRetry;
-    if (retry) {
-      level.fragmentError++;
+    const errorAction = data.errorAction;
+    const { action, retryCount = 0, retryConfig } = errorAction || {};
+    if (
+      errorAction &&
+      action === NetworkErrorAction.RetryRequest &&
+      retryConfig
+    ) {
       if (!this.loadedmetadata) {
         this.startFragRequested = false;
         this.nextLoadPosition = this.startPosition;
       }
-      // exponential backoff capped to max retry delay
-      const backoffFactor =
-        retryConfig.backoff === 'linear' ? 1 : Math.pow(2, fragmentErrors);
-      const delay = Math.min(
-        backoffFactor * retryConfig.retryDelayMs,
-        retryConfig.maxRetryDelayMs
-      );
+      const delay = getRetryDelay(retryConfig, retryCount);
       this.warn(
-        `Fragment ${frag.sn} of ${filterType} ${frag.level} errored with ${data.details}, retrying loading ${retryCount}/${retryConfig.maxNumRetry} in ${delay}ms`
+        `Fragment ${frag.sn} of ${filterType} ${frag.level} errored with ${
+          data.details
+        }, retrying loading ${retryCount + 1}/${
+          retryConfig.maxNumRetry
+        } in ${delay}ms`
       );
+      errorAction.resolved = true;
       this.retryDate = self.performance.now() + delay;
       this.state = State.FRAG_LOADING_WAITING_RETRY;
-    } else if (data.levelRetry) {
+    } else if (retryConfig && errorAction) {
       this.resetFragmentErrors(filterType);
+      if (retryCount < retryConfig.maxNumRetry) {
+        // Network retry is skipped for when level switch is preferred
+        errorAction.resolved = true;
+      } else {
+        logger.warn(
+          `${data.details} reached or exceeded max retry (${retryCount})`
+        );
+      }
     } else {
-      logger.warn(`${data.details} reached max retry (${fragmentErrors})`);
-      // `levelRetry = false` used to inform other controllers that if a level switch is not possible, error should escalated to fatal
-      data.levelRetry = false;
       this.state = State.ERROR;
     }
   }
@@ -1545,6 +1535,9 @@ export default class BaseStreamController
         frag,
         reason: `Found no media in msn ${frag.sn} of level "${level.url}"`,
       });
+      if (!this.hls) {
+        return;
+      }
       this.resetTransmuxer();
       // For this error fallthrough. Marking parsed will allow advancing to next fragment.
     }

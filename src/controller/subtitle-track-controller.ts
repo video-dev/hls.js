@@ -175,7 +175,6 @@ class SubtitleTrackController extends BasePlaylistController {
     );
 
     if (id === this.trackId) {
-      this.retryCount = 0;
       this.playlistLoaded(id, data, curDetails);
     }
   }

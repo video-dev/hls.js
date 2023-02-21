@@ -22,12 +22,12 @@ import type { Track, TrackSet } from './track';
 import type { SourceBufferName } from './buffer';
 import type { ChunkMetadata } from './transmuxer';
 import type { LoadStats } from '../loader/load-stats';
-import type { ErrorDetails, ErrorTypes } from '../errors';
+import type { ErrorDetails, ErrorTypes, IErrorAction } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
 import type { AttrList } from '../utils/attr-list';
 import type { HlsListeners } from '../events';
-import { KeyLoaderInfo } from '../loader/key-loader';
-import { LevelKey } from '../loader/level-key';
+import type { KeyLoaderInfo } from '../loader/key-loader';
+import type { LevelKey } from '../loader/level-key';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
@@ -222,12 +222,13 @@ export interface FPSDropLevelCappingData {
 export interface ErrorData {
   type: ErrorTypes;
   details: ErrorDetails;
+  error: Error;
   fatal: boolean;
+  errorAction?: IErrorAction;
   buffer?: number;
   bytes?: number;
   chunkMeta?: ChunkMetadata;
   context?: PlaylistLoaderContext;
-  error: Error;
   event?: keyof HlsListeners | 'demuxerWorker';
   frag?: Fragment;
   level?: number | undefined;
@@ -240,6 +241,9 @@ export interface ErrorData {
   response?: LoaderResponse;
   url?: string;
   parent?: PlaylistLevelType;
+  /**
+   * @deprecated Use ErrorData.error
+   */
   err?: {
     // comes from transmuxer interface
     message: string;
@@ -358,6 +362,6 @@ export interface BackBufferData {
 }
 
 /**
- * Deprecated; please use BackBufferData
+ * @deprecated Use BackBufferData
  */
 export interface LiveBackBufferData extends BackBufferData {}

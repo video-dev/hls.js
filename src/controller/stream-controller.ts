@@ -743,6 +743,7 @@ export default class StreamController
         if (fragCurrent) {
           this.log('Switching to main audio track, cancel main fragment load');
           fragCurrent.abortRequests();
+          this.fragmentTracker.removeFragment(fragCurrent);
         }
         // destroy transmuxer to force init segment generation (following audio switch)
         this.resetTransmuxer();

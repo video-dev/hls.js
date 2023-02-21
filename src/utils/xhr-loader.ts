@@ -8,6 +8,7 @@ import type {
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
 import { RetryConfig } from '../config';
+import { getRetryDelay, shouldRetry } from './error-helper';
 
 const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/im;
 
@@ -204,14 +205,11 @@ class XhrLoader implements Loader<LoaderContext> {
           this.callbacks.onSuccess(response, stats, context, xhr);
         } else {
           const retryConfig = config.loadPolicy.errorRetry;
+          const retryCount = stats.retry;
           // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-          if (
-            (status >= 400 && status <= 500) ||
-            (status >= 502 && status <= 504) ||
-            status === 0 ||
-            !retryConfig ||
-            stats.retry >= retryConfig.maxNumRetry
-          ) {
+          if (shouldRetry(retryConfig, retryCount, status)) {
+            this.retry(retryConfig);
+          } else {
             logger.error(`${status} while loading ${context.url}`);
             this.callbacks!.onError(
               { code: status, text: xhr.statusText },
@@ -219,8 +217,6 @@ class XhrLoader implements Loader<LoaderContext> {
               xhr,
               stats
             );
-          } else if (retryConfig) {
-            this.retry(retryConfig);
           }
         }
       }
@@ -229,7 +225,8 @@ class XhrLoader implements Loader<LoaderContext> {
 
   loadtimeout(): void {
     const retryConfig = this.config?.loadPolicy.timeoutRetry;
-    if (retryConfig && this.stats.retry < retryConfig.maxNumRetry) {
+    const retryCount = this.stats.retry;
+    if (retryConfig && retryCount < retryConfig.maxNumRetry) {
       this.retry(retryConfig);
     } else {
       logger.warn(`timeout while loading ${this.context.url}`);
@@ -243,13 +240,14 @@ class XhrLoader implements Loader<LoaderContext> {
 
   retry(retryConfig: RetryConfig) {
     const { context, stats } = this;
-    if (this.retryDelay === 0) {
-      this.retryDelay = retryConfig.retryDelayMs;
-    }
+    this.retryDelay = getRetryDelay(retryConfig, stats.retry);
+    stats.retry++;
     logger.warn(
       `${status ? 'HTTP Status ' + status : 'Timeout'} while loading ${
         context.url
-      }, retrying in ${this.retryDelay}ms`
+      }, retrying ${stats.retry}/${retryConfig.maxNumRetry} in ${
+        this.retryDelay
+      }ms`
     );
     // abort and reset internal state
     this.abortInternal();
@@ -260,12 +258,6 @@ class XhrLoader implements Loader<LoaderContext> {
       this.loadInternal.bind(this),
       this.retryDelay
     );
-    const backoffFactor = retryConfig.backoff === 'exponential' ? 2 : 1;
-    this.retryDelay = Math.min(
-      backoffFactor * this.retryDelay,
-      retryConfig.maxRetryDelayMs
-    );
-    stats.retry++;
   }
 
   loadprogress(event: ProgressEvent): void {

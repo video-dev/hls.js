@@ -291,6 +291,13 @@ export type HlsConfig = {
   FragmentLoaderConfig &
   PlaylistLoaderConfig;
 
+const defaultLoadPolicy: LoaderConfig = {
+  maxTimeToFirstByteMs: 8000,
+  maxLoadTimeMs: 20000,
+  timeoutRetry: null,
+  errorRetry: null,
+};
+
 /**
  * @ignore
  * If possible, keep hlsDefaultConfig shallow
@@ -374,12 +381,7 @@ export const hlsDefaultConfig: HlsConfig = {
   enableID3MetadataCues: true,
 
   certLoadPolicy: {
-    default: {
-      maxTimeToFirstByteMs: 8000,
-      maxLoadTimeMs: 20000,
-      timeoutRetry: null,
-      errorRetry: null,
-    },
+    default: defaultLoadPolicy,
   },
   keyLoadPolicy: {
     default: {
@@ -448,20 +450,22 @@ export const hlsDefaultConfig: HlsConfig = {
     },
   },
   steeringManifestLoadPolicy: {
-    default: {
-      maxTimeToFirstByteMs: 10000,
-      maxLoadTimeMs: 20000,
-      timeoutRetry: {
-        maxNumRetry: 2,
-        retryDelayMs: 0,
-        maxRetryDelayMs: 0,
-      },
-      errorRetry: {
-        maxNumRetry: 1,
-        retryDelayMs: 1000,
-        maxRetryDelayMs: 8000,
-      },
-    },
+    default: __USE_CONTENT_STEERING__
+      ? {
+          maxTimeToFirstByteMs: 10000,
+          maxLoadTimeMs: 20000,
+          timeoutRetry: {
+            maxNumRetry: 2,
+            retryDelayMs: 0,
+            maxRetryDelayMs: 0,
+          },
+          errorRetry: {
+            maxNumRetry: 1,
+            retryDelayMs: 1000,
+            maxRetryDelayMs: 8000,
+          },
+        }
+      : defaultLoadPolicy,
   },
 
   // These default settings are deprecated in favor of the above policies

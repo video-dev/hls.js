@@ -41,6 +41,8 @@ export class AbrController implements AbrComponentAPI {
     // (undocumented)
     protected onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData): void;
     // (undocumented)
+    protected onLevelSwitching(event: Events.LEVEL_SWITCHING, data: LevelSwitchingData): void;
+    // (undocumented)
     protected registerListeners(): void;
     // (undocumented)
     protected unregisterListeners(): void;
@@ -231,8 +233,6 @@ export class BasePlaylistController implements NetworkComponentAPI {
     protected playlistLoaded(index: number, data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData, previousDetails?: LevelDetails): void;
     // (undocumented)
     protected requestScheduled: number;
-    // (undocumented)
-    protected retryCount: number;
     // (undocumented)
     protected shouldLoadPlaylist(playlist: Level | MediaPlaylist): boolean;
     // (undocumented)
@@ -879,15 +879,35 @@ export type EMEControllerConfig = {
     requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
 };
 
+// Warning: (ae-missing-release-tag) "ErrorActionFlags" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export enum ErrorActionFlags {
+    // (undocumented)
+    MoveAllAlternatesMatchingHDCP = 2,
+    // (undocumented)
+    MoveAllAlternatesMatchingHost = 1,
+    // (undocumented)
+    None = 0,
+    // (undocumented)
+    SwitchToSDR = 4
+}
+
 // Warning: (ae-missing-release-tag) "ErrorController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export class ErrorController {
+export class ErrorController implements NetworkComponentAPI {
     constructor(hls: Hls);
     // (undocumented)
     destroy(): void;
     // (undocumented)
     onErrorOut(event: Events.ERROR, data: ErrorData): void;
+    // (undocumented)
+    sendAlternateToPenaltyBox(data: ErrorData): void;
+    // (undocumented)
+    startLoad(startPosition: number): void;
+    // (undocumented)
+    stopLoad(): void;
 }
 
 // Warning: (ae-missing-release-tag) "ErrorData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -904,12 +924,14 @@ export interface ErrorData {
     context?: PlaylistLoaderContext;
     // (undocumented)
     details: ErrorDetails;
-    // (undocumented)
+    // @deprecated (undocumented)
     err?: {
         message: string;
     };
     // (undocumented)
     error: Error;
+    // (undocumented)
+    errorAction?: IErrorAction;
     // (undocumented)
     event?: keyof HlsListeners | 'demuxerWorker';
     // (undocumented)
@@ -1446,7 +1468,7 @@ export type HdcpLevel = (typeof HdcpLevels)[number];
 // Warning: (ae-missing-release-tag) "HdcpLevels" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export const HdcpLevels: readonly ["NONE", "TYPE-0", "TYPE-1", "TYPE-2", null];
+export const HdcpLevels: readonly ["NONE", "TYPE-0", "TYPE-1", null];
 
 // @public
 class Hls implements HlsEventEmitter {
@@ -1792,6 +1814,19 @@ export class HlsUrlParameters {
     // (undocumented)
     skip?: HlsSkip;
 }
+
+// Warning: (ae-missing-release-tag) "IErrorAction" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type IErrorAction = {
+    action: NetworkErrorAction;
+    flags: ErrorActionFlags;
+    retryCount?: number;
+    retryConfig?: RetryConfig;
+    hdcpLevel?: HdcpLevel;
+    nextAutoLevel?: number;
+    resolved?: boolean;
+};
 
 // Warning: (ae-missing-release-tag) "ILogger" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2261,7 +2296,7 @@ export interface LevelUpdatedData {
 
 // Warning: (ae-missing-release-tag) "LiveBackBufferData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public
+// @public @deprecated (undocumented)
 export interface LiveBackBufferData extends BackBufferData {
 }
 
@@ -2381,7 +2416,7 @@ export interface LoaderResponse {
     // (undocumented)
     code?: number;
     // (undocumented)
-    data: string | ArrayBuffer | Object;
+    data?: string | ArrayBuffer | Object;
     // (undocumented)
     text?: string;
     // (undocumented)
@@ -2671,6 +2706,24 @@ export interface NetworkComponentAPI extends ComponentAPI {
     startLoad(startPosition: number): void;
     // (undocumented)
     stopLoad(): void;
+}
+
+// Warning: (ae-missing-release-tag) "NetworkErrorAction" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export enum NetworkErrorAction {
+    // (undocumented)
+    DoNothing = 0,
+    // (undocumented)
+    InsertDiscontinuity = 4,
+    // (undocumented)
+    RemoveAlternatePermanently = 3,
+    // (undocumented)
+    RetryRequest = 5,
+    // (undocumented)
+    SendAlternateToPenaltyBox = 2,
+    // (undocumented)
+    SendEndCallback = 1
 }
 
 // Warning: (ae-missing-release-tag) "NonNativeTextTrack" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
