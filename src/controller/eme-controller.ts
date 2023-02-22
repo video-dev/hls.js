@@ -24,7 +24,7 @@ import { base64Decode } from '../utils/numeric-encoding-utils';
 import { DecryptData, LevelKey } from '../loader/level-key';
 import Hex from '../utils/hex';
 import { bin2str, parsePssh, parseSinf } from '../utils/mp4-tools';
-import EventEmitter from 'eventemitter3';
+import { EventEmitter } from 'eventemitter3';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 import type {

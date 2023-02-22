@@ -131,7 +131,11 @@ export default class GapController {
       const maxStartGapJump = isLive
         ? level!.details!.targetduration * 2
         : MAX_START_GAP_JUMP;
-      if (startJump > 0 && startJump <= maxStartGapJump) {
+      if (
+        startJump > 0 &&
+        (startJump <= maxStartGapJump ||
+          this.fragmentTracker.getPartialFragment(0))
+      ) {
         this._trySkipBufferHole(null);
         return;
       }
@@ -194,7 +198,9 @@ export default class GapController {
     // needs to cross some sort of threshold covering all source-buffers content
     // to start playing properly.
     if (
-      bufferInfo.len > config.maxBufferHole &&
+      (bufferInfo.len > config.maxBufferHole ||
+        (bufferInfo.nextStart &&
+          bufferInfo.nextStart - currentTime < config.maxBufferHole)) &&
       stalledDurationMs > config.highBufferWatchdogPeriod * 1000
     ) {
       logger.warn('Trying to nudge playhead over buffer-hole');

@@ -68,6 +68,21 @@ export default class FragmentLoader {
       if (this.loader) {
         this.loader.destroy();
       }
+      if (frag.gap) {
+        frag.stats.aborted = true;
+        frag.stats.retry++;
+        reject(
+          new LoadError({
+            type: ErrorTypes.MEDIA_ERROR,
+            details: ErrorDetails.FRAG_GAP,
+            fatal: false,
+            frag,
+            error: new Error('GAP tag found'),
+            networkDetails: null,
+          })
+        );
+        return;
+      }
       const loader =
         (this.loader =
         frag.loader =
@@ -174,6 +189,22 @@ export default class FragmentLoader {
     return new Promise((resolve, reject) => {
       if (this.loader) {
         this.loader.destroy();
+      }
+      if (frag.gap || part.gap) {
+        frag.stats.aborted = true;
+        frag.stats.retry++;
+        reject(
+          new LoadError({
+            type: ErrorTypes.MEDIA_ERROR,
+            details: ErrorDetails.FRAG_GAP,
+            fatal: false,
+            frag,
+            part,
+            error: new Error(`GAP ${frag.gap ? 'tag' : 'attribute'} found`),
+            networkDetails: null,
+          })
+        );
+        return;
       }
       const loader =
         (this.loader =

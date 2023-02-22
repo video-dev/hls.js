@@ -1161,7 +1161,10 @@ export default class BaseStreamController
       const curSNIdx = frag.sn - levelDetails.startSN;
       // Move fragPrevious forward to support forcing the next fragment to load
       // when the buffer catches up to a previously buffered range.
-      if (this.fragmentTracker.getState(frag) === FragmentState.OK) {
+      if (
+        this.fragmentTracker.getState(frag) === FragmentState.OK ||
+        (frag.gap && frag.stats.aborted)
+      ) {
         fragPrevious = frag;
       }
       if (fragPrevious && frag.sn === fragPrevious.sn && !loadingParts) {
@@ -1371,6 +1374,9 @@ export default class BaseStreamController
         `Frag load error must match current frag to retry ${frag.url} > ${this.fragCurrent?.url}`
       );
       return;
+    }
+    if (data.details === ErrorDetails.FRAG_GAP) {
+      this.fragmentTracker.fragBuffered(frag, true);
     }
     // keep retrying until the limit will be reached
     const errorAction = data.errorAction;

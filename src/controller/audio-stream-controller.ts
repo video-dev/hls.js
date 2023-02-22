@@ -356,7 +356,13 @@ class AudioStreamController
     }
     // wait for main buffer after buffing some audio
     if (!mainBufferInfo?.len && bufferInfo.len) {
-      return;
+      if (
+        !mainBufferInfo?.nextStart ||
+        mainBufferInfo.nextStart >
+          bufferInfo.end + trackDetails.targetduration * 2
+      ) {
+        return;
+      }
     }
 
     const frag = this.getNextFragment(targetBufferTime, trackDetails);
@@ -643,6 +649,7 @@ class AudioStreamController
       return;
     }
     switch (data.details) {
+      case ErrorDetails.FRAG_GAP:
       case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.FRAG_DECRYPT_ERROR:
       case ErrorDetails.FRAG_LOAD_ERROR:

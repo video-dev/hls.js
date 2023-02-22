@@ -96,6 +96,7 @@ export default class ErrorController implements NetworkComponentAPI {
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         data.errorAction = this.getFragRetryOrSwitchAction(data);
         return;
+      case ErrorDetails.FRAG_GAP:
       case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.FRAG_DECRYPT_ERROR: {
         // Switch level if possible, otherwise allow retry count to reach max error retries
@@ -264,7 +265,9 @@ export default class ErrorController implements NetworkComponentAPI {
     );
     // Switch levels when out of retried or level index out of bounds
     if (level) {
-      level.fragmentError++;
+      if (data.details !== ErrorDetails.FRAG_GAP) {
+        level.fragmentError++;
+      }
       const httpStatus = data.response?.code;
       const retry = shouldRetry(
         retryConfig,

@@ -991,6 +991,8 @@ export enum ErrorDetails {
     // (undocumented)
     FRAG_DECRYPT_ERROR = "fragDecryptError",
     // (undocumented)
+    FRAG_GAP = "fragGap",
+    // (undocumented)
     FRAG_LOAD_ERROR = "fragLoadError",
     // (undocumented)
     FRAG_LOAD_TIMEOUT = "fragLoadTimeOut",
@@ -1342,6 +1344,8 @@ export class Fragment extends BaseSegment {
     get endProgramDateTime(): number | null;
     // (undocumented)
     endPTS?: number;
+    // (undocumented)
+    gap?: boolean;
     // (undocumented)
     initSegment: Fragment | null;
     // Warning: (ae-forgotten-export) The symbol "KeyLoaderContext" needs to be exported by the entry point hls.d.ts
