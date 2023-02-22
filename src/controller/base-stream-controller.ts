@@ -826,8 +826,7 @@ export default class BaseStreamController
       return null;
     }
     if (fragCurrent && fragCurrent !== frag) {
-      logger.warn(`Expected current context to match fragCurrent`);
-      return { frag: fragCurrent, part, level };
+      frag.stats = fragCurrent.stats;
     }
     return { frag, part, level };
   }

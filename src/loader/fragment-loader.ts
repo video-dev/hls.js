@@ -5,6 +5,7 @@ import {
   LoaderConfiguration,
   FragmentLoaderContext,
 } from '../types/loader';
+import { getLoaderConfigWithoutReties } from '../utils/error-helper';
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
 import type {
@@ -74,10 +75,9 @@ export default class FragmentLoader {
             ? new FragmentILoader(config)
             : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag);
-      const loadPolicy = Object.assign({}, config.fragLoadPolicy.default, {
-        timeoutRetry: null,
-        errorRetry: null,
-      });
+      const loadPolicy = getLoaderConfigWithoutReties(
+        config.fragLoadPolicy.default
+      );
       const loaderConfig: LoaderConfiguration = {
         loadPolicy,
         timeout: loadPolicy.maxLoadTimeMs,
@@ -183,7 +183,9 @@ export default class FragmentLoader {
             : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag, part);
       // Should we define another load policy for parts?
-      const loadPolicy = config.fragLoadPolicy.default;
+      const loadPolicy = getLoaderConfigWithoutReties(
+        config.fragLoadPolicy.default
+      );
       const loaderConfig: LoaderConfiguration = {
         loadPolicy,
         timeout: loadPolicy.maxLoadTimeMs,

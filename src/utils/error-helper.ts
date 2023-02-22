@@ -1,4 +1,4 @@
-import { LoadPolicy, RetryConfig } from '../config';
+import { LoadPolicy, LoaderConfig, RetryConfig } from '../config';
 import { ErrorDetails } from '../errors';
 import { ErrorData } from '../types/events';
 
@@ -34,10 +34,22 @@ export function getRetryDelay(
   );
 }
 
+export function getLoaderConfigWithoutReties(
+  loderConfig: LoaderConfig
+): LoaderConfig {
+  return {
+    ...loderConfig,
+    ...{
+      errorRetry: null,
+      timeoutRetry: null,
+    },
+  };
+}
+
 export function shouldRetry(
-  retryConfig: RetryConfig | null,
+  retryConfig: RetryConfig | null | undefined,
   retryCount: number,
-  httpStatus: number | undefined
+  httpStatus?: number | undefined
 ): retryConfig is RetryConfig & boolean {
   return (
     !!retryConfig &&

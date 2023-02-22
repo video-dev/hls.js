@@ -226,7 +226,7 @@ class XhrLoader implements Loader<LoaderContext> {
   loadtimeout(): void {
     const retryConfig = this.config?.loadPolicy.timeoutRetry;
     const retryCount = this.stats.retry;
-    if (retryConfig && retryCount < retryConfig.maxNumRetry) {
+    if (shouldRetry(retryConfig, retryCount)) {
       this.retry(retryConfig);
     } else {
       logger.warn(`timeout while loading ${this.context.url}`);
