@@ -99,13 +99,14 @@ class TSDemuxer implements Demuxer {
   }
 
   static syncOffset(data: Uint8Array): number {
+    const length = data.length;
     const scanwindow =
       Math.min(PACKET_LENGTH * 5, data.length - PACKET_LENGTH) + 1;
     let i = 0;
     while (i < scanwindow) {
       // a TS init segment should contain at least 2 TS packets: PAT and PMT, each starting with 0x47
       let foundPat = false;
-      for (let j = 0; j < scanwindow; j += PACKET_LENGTH) {
+      for (let j = i; j < length; j += PACKET_LENGTH) {
         if (data[j] === 0x47) {
           if (!foundPat && parsePID(data, j) === 0) {
             foundPat = true;
@@ -357,7 +358,9 @@ class TSDemuxer implements Demuxer {
             }
 
             if (unknownPID !== null && !pmtParsed) {
-              logger.log(`unknown PID '${unknownPID}' in TS found`);
+              logger.warn(
+                `MPEG-TS PMT found at ${start} after unknown PID '${unknownPID}'. Backtracking to sync byte @${syncOffset} to parse all TS packets.`
+              );
               unknownPID = null;
               // we set it to -188, the += 188 in the for loop will reset start to 0
               start = syncOffset - 188;
