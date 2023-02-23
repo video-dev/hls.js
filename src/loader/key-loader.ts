@@ -143,7 +143,8 @@ export default class KeyLoader implements ComponentAPI {
         )
       );
     }
-    let keyInfo = this.keyUriToKeyInfo[uri];
+    const keyId = this.getKeyId(uri, frag);
+    let keyInfo = this.keyUriToKeyInfo[keyId];
 
     if (keyInfo?.decryptdata.key) {
       decryptdata.key = keyInfo.decryptdata.key;
@@ -163,7 +164,7 @@ export default class KeyLoader implements ComponentAPI {
     }
 
     // Load the key or return the loading promise
-    keyInfo = this.keyUriToKeyInfo[uri] = {
+    keyInfo = this.keyUriToKeyInfo[keyId] = {
       decryptdata,
       keyLoadPromise: null,
       loader: null,
@@ -246,7 +247,8 @@ export default class KeyLoader implements ComponentAPI {
           networkDetails: any
         ) => {
           const { frag, keyInfo, url: uri } = context;
-          if (!frag.decryptdata || keyInfo !== this.keyUriToKeyInfo[uri]) {
+          const keyId = this.getKeyId(uri, frag);
+          if (!frag.decryptdata || keyInfo !== this.keyUriToKeyInfo[keyId]) {
             return reject(
               this.createKeyLoadError(
                 frag,
@@ -323,13 +325,18 @@ export default class KeyLoader implements ComponentAPI {
   private resetLoader(context: KeyLoaderContext) {
     const { frag, keyInfo, url: uri } = context;
     const loader = keyInfo.loader;
+    const keyId = this.getKeyId(uri, frag);
     if (frag.keyLoader === loader) {
       frag.keyLoader = null;
       keyInfo.loader = null;
     }
-    delete this.keyUriToKeyInfo[uri];
+    delete this.keyUriToKeyInfo[keyId];
     if (loader) {
       loader.destroy();
     }
+  }
+
+  private getKeyId(uri: string, frag: Fragment) {
+    return `${uri}_${frag.type}_${frag.level}`;
   }
 }
