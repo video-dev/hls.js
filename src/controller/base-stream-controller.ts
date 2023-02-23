@@ -506,8 +506,8 @@ export default class BaseStreamController
         part ? ' part: ' + part.index : ''
       } of ${this.logPrefix === '[stream-controller]' ? 'level' : 'track'} ${
         frag.level
-      } (frag:[${(frag.startPTS || NaN).toFixed(3)}-${(
-        frag.endPTS || NaN
+      } (frag:[${(frag.startPTS ?? NaN).toFixed(3)}-${(
+        frag.endPTS ?? NaN
       ).toFixed(3)}] > buffer:${
         media
           ? TimeRanges.toString(BufferHelper.getBuffered(media))
