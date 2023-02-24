@@ -1397,7 +1397,7 @@ export default class BaseStreamController
     } else if (retryConfig && errorAction) {
       this.resetFragmentErrors(filterType);
       if (retryCount < retryConfig.maxNumRetry) {
-        // Network retry is skipped for when level switch is preferred
+        // Network retry is skipped when level switch is preferred
         errorAction.resolved = true;
       } else {
         logger.warn(

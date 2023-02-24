@@ -49,18 +49,17 @@ export function getLoaderConfigWithoutReties(
 export function shouldRetry(
   retryConfig: RetryConfig | null | undefined,
   retryCount: number,
+  isTimeout: boolean,
   httpStatus?: number | undefined
 ): retryConfig is RetryConfig & boolean {
   return (
     !!retryConfig &&
     retryCount < retryConfig.maxNumRetry &&
-    retryForHttpStatus(httpStatus)
+    (retryForHttpStatus(httpStatus) || !!isTimeout)
   );
 }
 
 export function retryForHttpStatus(httpStatus: number | undefined) {
-  return (
-    httpStatus === undefined ||
-    (httpStatus !== 0 && (httpStatus < 400 || httpStatus > 499))
-  );
+  // Do not retry on status 4xx, status 0 (CORS error), or undefined (decrypt/gap/parse error)
+  return !!httpStatus && (httpStatus < 400 || httpStatus > 499);
 }

@@ -64,6 +64,7 @@ export interface LoaderResponse {
   url: string;
   data?: string | ArrayBuffer | Object;
   // Errors can include HTTP status code and error message
+  // Successful responses should include status code 200
   code?: number;
   text?: string;
 }

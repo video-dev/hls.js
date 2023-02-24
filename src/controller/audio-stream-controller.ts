@@ -515,7 +515,7 @@ class AudioStreamController
     }
     const details = track.details as LevelDetails;
     if (!details) {
-      this.warn('Audio track details are defined on fragment load progress');
+      this.warn('Audio track details undefined on fragment load progress');
       return;
     }
     const audioCodec =

@@ -7,7 +7,11 @@ import {
   NetworkErrorAction,
 } from '../errors';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
-import { getRetryConfig, shouldRetry } from '../utils/error-helper';
+import {
+  getRetryConfig,
+  isTimeoutError,
+  shouldRetry,
+} from '../utils/error-helper';
 import { HdcpLevels } from '../types/level';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
@@ -187,7 +191,12 @@ export default class ErrorController implements NetworkComponentAPI {
     const retryConfig = getRetryConfig(hls.config.playlistLoadPolicy, data);
     const retryCount = this.playlistError++;
     const httpStatus = data.response?.code;
-    const retry = shouldRetry(retryConfig, retryCount, httpStatus);
+    const retry = shouldRetry(
+      retryConfig,
+      retryCount,
+      isTimeoutError(data),
+      httpStatus
+    );
     if (retry) {
       return {
         action: NetworkErrorAction.RetryRequest,
@@ -232,7 +241,12 @@ export default class ErrorController implements NetworkComponentAPI {
     if (level) {
       level.fragmentError++;
       const httpStatus = data.response?.code;
-      const retry = shouldRetry(retryConfig, fragmentErrors, httpStatus);
+      const retry = shouldRetry(
+        retryConfig,
+        fragmentErrors,
+        isTimeoutError(data),
+        httpStatus
+      );
       if (retry) {
         return {
           action: NetworkErrorAction.RetryRequest,

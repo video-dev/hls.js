@@ -5,6 +5,7 @@ import {
   LoaderStats,
   LoaderConfiguration,
   LoaderOnProgress,
+  LoaderResponse,
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
@@ -151,9 +152,10 @@ class FetchLoader implements Loader<LoaderContext> {
           stats.loaded = stats.total = total;
         }
 
-        const loaderResponse = {
+        const loaderResponse: LoaderResponse = {
           url: response.url,
           data: responseData,
+          code: response.status,
         };
 
         if (onProgress && !Number.isFinite(config.highWaterMark)) {

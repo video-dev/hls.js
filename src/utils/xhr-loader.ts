@@ -5,6 +5,7 @@ import type {
   LoaderStats,
   Loader,
   LoaderConfiguration,
+  LoaderResponse,
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
 import { RetryConfig } from '../config';
@@ -197,9 +198,10 @@ class XhrLoader implements Loader<LoaderContext> {
           if (!this.callbacks) {
             return;
           }
-          const response = {
+          const response: LoaderResponse = {
             url: xhr.responseURL,
             data: data,
+            code: status,
           };
 
           this.callbacks.onSuccess(response, stats, context, xhr);
@@ -207,7 +209,7 @@ class XhrLoader implements Loader<LoaderContext> {
           const retryConfig = config.loadPolicy.errorRetry;
           const retryCount = stats.retry;
           // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-          if (shouldRetry(retryConfig, retryCount, status)) {
+          if (shouldRetry(retryConfig, retryCount, false, status)) {
             this.retry(retryConfig);
           } else {
             logger.error(`${status} while loading ${context.url}`);
@@ -226,7 +228,7 @@ class XhrLoader implements Loader<LoaderContext> {
   loadtimeout(): void {
     const retryConfig = this.config?.loadPolicy.timeoutRetry;
     const retryCount = this.stats.retry;
-    if (shouldRetry(retryConfig, retryCount)) {
+    if (shouldRetry(retryConfig, retryCount, true)) {
       this.retry(retryConfig);
     } else {
       logger.warn(`timeout while loading ${this.context.url}`);
