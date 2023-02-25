@@ -118,7 +118,6 @@ export default class ErrorController implements NetworkComponentAPI {
       case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
       case ErrorDetails.SUBTITLE_LOAD_ERROR:
       case ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT:
-        // Switch to redundant level when track fails to load
         if (context) {
           const level = hls.levels[hls.loadLevel];
           if (
@@ -130,11 +129,16 @@ export default class ErrorController implements NetworkComponentAPI {
                 level.textGroupIds &&
                 context.groupId === level.textGroupIds[level.urlId]))
           ) {
-            // redundant failover
-            data.errorAction = {
-              action: NetworkErrorAction.SendAlternateToPenaltyBox,
-              flags: ErrorActionFlags.MoveAllAlternatesMatchingHost,
-            };
+            // Perform Pathway switch or Redundant failover if possible for fastest recovery
+            // otherwise allow playlist retry count to reach max error retries
+            data.errorAction = this.getPlaylistRetryOrSwitchAction(
+              data,
+              hls.loadLevel
+            );
+            data.errorAction.action =
+              NetworkErrorAction.SendAlternateToPenaltyBox;
+            data.errorAction.flags =
+              ErrorActionFlags.MoveAllAlternatesMatchingHost;
             return;
           }
         }
@@ -335,7 +339,7 @@ export default class ErrorController implements NetworkComponentAPI {
     }
   }
 
-  sendAlternateToPenaltyBox(data: ErrorData) {
+  private sendAlternateToPenaltyBox(data: ErrorData) {
     const hls = this.hls;
     const errorAction = data.errorAction;
     if (!errorAction) {
@@ -345,13 +349,7 @@ export default class ErrorController implements NetworkComponentAPI {
 
     switch (flags) {
       case ErrorActionFlags.None:
-        if (nextAutoLevel !== undefined) {
-          this.warn(`${data.details}: switching to level ${nextAutoLevel}`);
-          this.hls.nextAutoLevel = nextAutoLevel;
-          errorAction.resolved = true;
-          // Stream controller is responsible for this but won't switch on false start
-          this.hls.nextLoadLevel = this.hls.nextAutoLevel;
-        }
+        this.switchLevel(data, nextAutoLevel);
         break;
       case ErrorActionFlags.MoveAllAlternatesMatchingHost:
         {
@@ -374,6 +372,20 @@ export default class ErrorController implements NetworkComponentAPI {
           `Restricting playback to HDCP-LEVEL of "${hls.maxHdcpLevel}" or lower`
         );
         break;
+    }
+    // If not resolved by previous actions try to switch to next level
+    if (!errorAction.resolved) {
+      this.switchLevel(data, nextAutoLevel);
+    }
+  }
+
+  private switchLevel(data: ErrorData, levelIndex: number | undefined) {
+    if (levelIndex !== undefined && data.errorAction) {
+      this.warn(`${data.details}: switching to level ${levelIndex}`);
+      this.hls.nextAutoLevel = levelIndex;
+      data.errorAction.resolved = true;
+      // Stream controller is responsible for this but won't switch on false start
+      this.hls.nextLoadLevel = this.hls.nextAutoLevel;
     }
   }
 

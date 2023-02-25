@@ -234,7 +234,9 @@ export class BasePlaylistController implements NetworkComponentAPI {
     // (undocumented)
     protected requestScheduled: number;
     // (undocumented)
-    protected shouldLoadPlaylist(playlist: Level | MediaPlaylist): boolean;
+    protected shouldLoadPlaylist(playlist: Level | MediaPlaylist | null | undefined): boolean;
+    // (undocumented)
+    protected shouldReloadPlaylist(playlist: Level | MediaPlaylist | null | undefined): boolean;
     // (undocumented)
     startLoad(): void;
     // (undocumented)
@@ -902,8 +904,6 @@ export class ErrorController implements NetworkComponentAPI {
     destroy(): void;
     // (undocumented)
     onErrorOut(event: Events.ERROR, data: ErrorData): void;
-    // (undocumented)
-    sendAlternateToPenaltyBox(data: ErrorData): void;
     // (undocumented)
     startLoad(startPosition: number): void;
     // (undocumented)

@@ -198,13 +198,11 @@ class SubtitleTrackController extends BasePlaylistController {
     if (!levelInfo?.textGroupIds) {
       return;
     }
-
     const textGroupId = levelInfo.textGroupIds[levelInfo.urlId];
+    const lastTrack = this.tracksInGroup
+      ? this.tracksInGroup[this.trackId]
+      : undefined;
     if (this.groupId !== textGroupId) {
-      const lastTrack = this.tracksInGroup
-        ? this.tracksInGroup[this.trackId]
-        : undefined;
-
       const subtitleTracks = this.tracks.filter(
         (track): boolean => !textGroupId || track.groupId === textGroupId
       );
@@ -224,6 +222,9 @@ class SubtitleTrackController extends BasePlaylistController {
       if (initialTrackId !== -1) {
         this.setSubtitleTrack(initialTrackId, lastTrack);
       }
+    } else if (this.shouldReloadPlaylist(lastTrack)) {
+      // Retry playlist loading if no playlist is or has been loaded yet
+      this.setSubtitleTrack(this.trackId, lastTrack);
     }
   }
 

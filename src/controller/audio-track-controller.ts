@@ -141,6 +141,9 @@ class AudioTrackController extends BasePlaylistController {
       this.hls.trigger(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
 
       this.selectInitialTrack();
+    } else if (this.shouldReloadPlaylist(this.currentTrack)) {
+      // Retry playlist loading if no playlist is or has been loaded yet
+      this.setAudioTrack(this.trackId);
     }
   }
 
@@ -154,6 +157,7 @@ class AudioTrackController extends BasePlaylistController {
       data.context.id === this.trackId &&
       data.context.groupId === this.groupId
     ) {
+      this.requestScheduled = -1;
       this.checkRetry(data);
     }
   }

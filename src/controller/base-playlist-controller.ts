@@ -106,12 +106,24 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     // Loading is handled by the subclasses
   }
 
-  protected shouldLoadPlaylist(playlist: Level | MediaPlaylist): boolean {
+  protected shouldLoadPlaylist(
+    playlist: Level | MediaPlaylist | null | undefined
+  ): boolean {
     return (
       this.canLoad &&
-      playlist &&
+      !!playlist &&
       !!playlist.url &&
       (!playlist.details || playlist.details.live)
+    );
+  }
+
+  protected shouldReloadPlaylist(
+    playlist: Level | MediaPlaylist | null | undefined
+  ): boolean {
+    return (
+      this.timer === -1 &&
+      this.requestScheduled === -1 &&
+      this.shouldLoadPlaylist(playlist)
     );
   }
 
