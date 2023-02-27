@@ -1,6 +1,7 @@
 import CMCDController from '../../../src/controller/cmcd-controller';
-import { CMCDControllerConfig } from '../../../src/hls';
 import HlsMock from '../../mocks/hls.mock';
+import type { CMCDControllerConfig } from '../../../src/config';
+
 import * as chai from 'chai';
 
 const expect = chai.expect;

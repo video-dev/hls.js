@@ -7,6 +7,7 @@ import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import { PlaylistLevelType } from '../types/loader';
 import { Level } from '../types/level';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
@@ -199,16 +200,15 @@ export class SubtitleStreamController
   // If something goes wrong, proceed to next frag, if we were processing one.
   onError(event: Events.ERROR, data: ErrorData) {
     const frag = data.frag;
-    // don't handle error not related to subtitle fragment
-    if (!frag || frag.type !== PlaylistLevelType.SUBTITLE) {
-      return;
-    }
 
-    if (this.fragCurrent) {
-      this.fragCurrent.abortRequests();
+    if (frag?.type === PlaylistLevelType.SUBTITLE) {
+      if (this.fragCurrent) {
+        this.fragCurrent.abortRequests();
+      }
+      if (this.state !== State.STOPPED) {
+        this.state = State.IDLE;
+      }
     }
-
-    this.state = State.IDLE;
   }
 
   // Got all new subtitle levels.
@@ -346,6 +346,17 @@ export class SubtitleStreamController
           decryptData.key.buffer,
           decryptData.iv.buffer
         )
+        .catch((err) => {
+          hls.trigger(Events.ERROR, {
+            type: ErrorTypes.MEDIA_ERROR,
+            details: ErrorDetails.FRAG_DECRYPT_ERROR,
+            fatal: false,
+            error: err,
+            reason: err.message,
+            frag,
+          });
+          throw err;
+        })
         .then((decryptedData) => {
           const endTime = performance.now();
           hls.trigger(Events.FRAG_DECRYPTED, {
@@ -399,11 +410,6 @@ export class SubtitleStreamController
       if (bufferLen > maxBufLen) {
         return;
       }
-
-      console.assert(
-        trackDetails,
-        'Subtitle track details are defined on idle subtitle stream controller tick'
-      );
       const fragments = trackDetails.fragments;
       const fragLen = fragments.length;
       const end = trackDetails.edge;

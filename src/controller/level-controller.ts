@@ -13,7 +13,7 @@ import {
   LevelsUpdatedData,
   ManifestLoadingData,
 } from '../types/events';
-import { HdcpLevel, HdcpLevels, Level } from '../types/level';
+import { Level } from '../types/level';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { isCodecSupportedInMp4 } from '../utils/codecs';
@@ -81,6 +81,7 @@ export default class LevelController extends BasePlaylistController {
     // clean up live level details to force reload them, and reset load errors
     levels.forEach((level) => {
       level.loadError = 0;
+      level.fragmentError = 0;
     });
 
     super.startLoad();
@@ -91,7 +92,7 @@ export default class LevelController extends BasePlaylistController {
     this.manualLevelIndex = -1;
     this.currentLevelIndex = -1;
     this.currentLevel = null;
-    this._levels.length = 0;
+    this._levels = [];
   }
 
   private onManifestLoading(
@@ -131,7 +132,7 @@ export default class LevelController extends BasePlaylistController {
         SUBTITLES,
       } = attributes;
       const contentSteeringPrefix = __USE_CONTENT_STEERING__
-        ? `${PATHWAY}-`
+        ? `${PATHWAY || '.'}-`
         : '';
       const levelKey = `${contentSteeringPrefix}${levelParsed.bitrate}-${RESOLUTION}-${FRAMERATE}-${CODECS}`;
       levelFromSet = levelSet[levelKey];
@@ -151,7 +152,10 @@ export default class LevelController extends BasePlaylistController {
     this.filterAndSortMediaOptions(levels, data);
   }
 
-  private filterAndSortMediaOptions(levels: Level[], data: ManifestLoadedData) {
+  private filterAndSortMediaOptions(
+    unfilteredLevels: Level[],
+    data: ManifestLoadedData
+  ) {
     let audioTracks: MediaPlaylist[] = [];
     let subtitleTracks: MediaPlaylist[] = [];
 
@@ -160,15 +164,18 @@ export default class LevelController extends BasePlaylistController {
     let audioCodecFound = false;
 
     // only keep levels with supported audio/video codecs
-    levels = levels.filter(({ audioCodec, videoCodec, width, height }) => {
-      resolutionFound ||= !!(width && height);
-      videoCodecFound ||= !!videoCodec;
-      audioCodecFound ||= !!audioCodec;
-      return (
-        (!audioCodec || isCodecSupportedInMp4(audioCodec, 'audio')) &&
-        (!videoCodec || isCodecSupportedInMp4(videoCodec, 'video'))
-      );
-    });
+    let levels = unfilteredLevels.filter(
+      ({ audioCodec, videoCodec, width, height, unknownCodecs }) => {
+        resolutionFound ||= !!(width && height);
+        videoCodecFound ||= !!videoCodec;
+        audioCodecFound ||= !!audioCodec;
+        return (
+          !unknownCodecs?.length &&
+          (!audioCodec || isCodecSupportedInMp4(audioCodec, 'audio')) &&
+          (!videoCodec || isCodecSupportedInMp4(videoCodec, 'video'))
+        );
+      }
+    );
 
     // remove audio-only level if we also have levels with video codecs or RESOLUTION signalled
     if ((resolutionFound || videoCodecFound) && audioCodecFound) {
@@ -178,12 +185,21 @@ export default class LevelController extends BasePlaylistController {
     }
 
     if (levels.length === 0) {
-      this.hls.trigger(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
-        fatal: true,
-        url: data.url,
-        reason: 'no level with compatible codecs found in manifest',
+      // Dispatch error after MANIFEST_LOADED is done propagating
+      Promise.resolve().then(() => {
+        if (this.hls) {
+          const error = new Error(
+            'no level with compatible codecs found in manifest'
+          );
+          this.hls.trigger(Events.ERROR, {
+            type: ErrorTypes.MEDIA_ERROR,
+            details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
+            fatal: true,
+            url: data.url,
+            error,
+            reason: error.message,
+          });
+        }
       });
       return;
     }
@@ -299,13 +315,15 @@ export default class LevelController extends BasePlaylistController {
     // check if level idx is valid
     if (newLevel < 0 || newLevel >= levels.length) {
       // invalid level id given, trigger error
+      const error = new Error('invalid level idx');
       const fatal = newLevel < 0;
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.OTHER_ERROR,
         details: ErrorDetails.LEVEL_SWITCH_ERROR,
         level: newLevel,
         fatal,
-        reason: 'invalid level idx',
+        error,
+        reason: error.message,
       });
       if (fatal) {
         return;
@@ -402,177 +420,15 @@ export default class LevelController extends BasePlaylistController {
   }
 
   protected onError(event: Events.ERROR, data: ErrorData) {
-    super.onError(event, data);
-    if (data.fatal) {
+    if (data.fatal || !data.context) {
       return;
     }
 
-    // Switch to redundant level when track fails to load
-    const context = data.context;
-    const level = this.currentLevel;
     if (
-      context &&
-      level &&
-      ((context.type === PlaylistContextType.AUDIO_TRACK &&
-        level.audioGroupIds &&
-        context.groupId === level.audioGroupIds[level.urlId]) ||
-        (context.type === PlaylistContextType.SUBTITLE_TRACK &&
-          level.textGroupIds &&
-          context.groupId === level.textGroupIds[level.urlId]))
+      data.context.type === PlaylistContextType.LEVEL &&
+      data.context.level === this.level
     ) {
-      this.redundantFailover(this.currentLevelIndex);
-      return;
-    }
-
-    let levelError = false;
-    let levelSwitch = true;
-    let levelIndex;
-
-    // try to recover not fatal errors
-    switch (data.details) {
-      case ErrorDetails.FRAG_LOAD_ERROR:
-      case ErrorDetails.FRAG_LOAD_TIMEOUT:
-      case ErrorDetails.KEY_LOAD_ERROR:
-      case ErrorDetails.KEY_LOAD_TIMEOUT:
-        if (data.frag) {
-          // Share fragment error count accross media options (main, audio, subs)
-          // This allows for level based rendition switching when media option assets fail
-          const variantLevelIndex =
-            data.frag.type === PlaylistLevelType.MAIN
-              ? data.frag.level
-              : this.currentLevelIndex;
-          const level = this._levels[variantLevelIndex];
-          // Set levelIndex when we're out of fragment retries
-          if (level) {
-            level.fragmentError++;
-            if (level.fragmentError > this.hls.config.fragLoadingMaxRetry) {
-              levelIndex = variantLevelIndex;
-            }
-          } else {
-            levelIndex = variantLevelIndex;
-          }
-        }
-        break;
-      case ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED: {
-        const restrictedHdcpLevel = level?.attrs['HDCP-LEVEL'];
-        if (restrictedHdcpLevel) {
-          this.hls.maxHdcpLevel =
-            HdcpLevels[
-              HdcpLevels.indexOf(restrictedHdcpLevel as HdcpLevel) - 1
-            ];
-          this.warn(
-            `Restricting playback to HDCP-LEVEL of "${this.hls.maxHdcpLevel}" or lower`
-          );
-        }
-      }
-      // eslint-disable-next-line no-fallthrough
-      case ErrorDetails.LEVEL_PARSING_ERROR:
-      case ErrorDetails.FRAG_PARSING_ERROR:
-      case ErrorDetails.KEY_SYSTEM_NO_SESSION:
-        levelIndex =
-          data.frag?.type === PlaylistLevelType.MAIN
-            ? data.frag.level
-            : this.currentLevelIndex;
-        // Do not retry level. Escalate to fatal if switching levels fails.
-        data.levelRetry = false;
-        break;
-      case ErrorDetails.LEVEL_LOAD_ERROR:
-      case ErrorDetails.LEVEL_LOAD_TIMEOUT:
-        // Do not perform level switch if an error occurred using delivery directives
-        // Attempt to reload level without directives first
-        if (context) {
-          if (context.deliveryDirectives) {
-            levelSwitch = false;
-          }
-          levelIndex = context.level;
-        }
-        levelError = true;
-        break;
-      case ErrorDetails.REMUX_ALLOC_ERROR:
-        levelIndex = data.level ?? this.currentLevelIndex;
-        levelError = true;
-        break;
-    }
-
-    if (levelIndex !== undefined) {
-      this.recoverLevel(data, levelIndex, levelError, levelSwitch);
-    }
-  }
-
-  /**
-   * Switch to a redundant stream if any available.
-   * If redundant stream is not available, emergency switch down if ABR mode is enabled.
-   */
-  private recoverLevel(
-    errorEvent: ErrorData,
-    levelIndex: number,
-    levelError: boolean,
-    levelSwitch: boolean
-  ): void {
-    const { details: errorDetails } = errorEvent;
-    const level = this._levels[levelIndex];
-
-    level.loadError++;
-
-    if (levelError) {
-      const retrying = this.retryLoadingOrFail(errorEvent);
-      if (retrying) {
-        // boolean used to inform stream controller not to switch back to IDLE on non fatal error
-        errorEvent.levelRetry = true;
-      } else {
-        this.currentLevelIndex = -1;
-        this.currentLevel = null;
-        return;
-      }
-    }
-
-    if (levelSwitch) {
-      const redundantLevels = level.url.length;
-      // Try redundant fail-over until level.loadError reaches redundantLevels
-      if (redundantLevels > 1 && level.loadError < redundantLevels) {
-        errorEvent.levelRetry = true;
-        this.redundantFailover(levelIndex);
-      } else if (this.manualLevelIndex === -1) {
-        // Search for next level to retry
-        let nextLevel = -1;
-        const levels = this._levels;
-        for (let i = levels.length; i--; ) {
-          const candidate = (i + this.currentLevelIndex) % levels.length;
-          if (
-            candidate !== this.currentLevelIndex &&
-            levels[candidate].loadError === 0
-          ) {
-            nextLevel = candidate;
-            break;
-          }
-        }
-        if (nextLevel > -1 && this.currentLevelIndex !== nextLevel) {
-          this.warn(`${errorDetails}: switch to ${nextLevel}`);
-          errorEvent.levelRetry = true;
-          this.hls.nextAutoLevel = nextLevel;
-        } else if (errorEvent.levelRetry === false) {
-          // No levels to switch to and no more retries
-          errorEvent.fatal = true;
-        }
-      }
-    }
-  }
-
-  private redundantFailover(levelIndex: number) {
-    const level = this._levels[levelIndex];
-    const redundantLevels = level.url.length;
-    if (redundantLevels > 1) {
-      // Update the url id of all levels so that we stay on the same set of variants when level switching
-      const newUrlId = (level.urlId + 1) % redundantLevels;
-      this.log(
-        `Switching to Redundant Stream ${newUrlId + 1}/${redundantLevels}: "${
-          level.url[newUrlId]
-        }"`
-      );
-      this._levels.forEach((lv) => {
-        lv.urlId = newUrlId;
-      });
-      this.level = levelIndex;
+      this.checkRetry(data);
     }
   }
 
@@ -581,7 +437,6 @@ export default class LevelController extends BasePlaylistController {
     if (frag !== undefined && frag.type === PlaylistLevelType.MAIN) {
       const level = this._levels[frag.level];
       if (level !== undefined) {
-        level.fragmentError = 0;
         level.loadError = 0;
       }
     }
@@ -604,7 +459,6 @@ export default class LevelController extends BasePlaylistController {
       // reset level load error counter on successful level loaded only if there is no issues with fragments
       if (curLevel.fragmentError === 0) {
         curLevel.loadError = 0;
-        this.retryCount = 0;
       }
       this.playlistLoaded(level, data, curLevel.details);
     } else if (data.deliveryDirectives?.skip) {
@@ -649,7 +503,7 @@ export default class LevelController extends BasePlaylistController {
     const currentLevelIndex = this.currentLevelIndex;
     const currentLevel = this.currentLevel;
 
-    if (this.canLoad && currentLevel && currentLevel.url.length > 0) {
+    if (currentLevel && this.shouldLoadPlaylist(currentLevel)) {
       const id = currentLevel.urlId;
       let url = currentLevel.uri;
       if (hlsUrlParameters) {

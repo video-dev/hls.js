@@ -20,11 +20,11 @@ import type {
 import type { Level } from '../../../src/types/level';
 import type { MediaPlaylist } from '../../../src/types/media-playlist';
 import type { SteeringManifest } from '../../../src/controller/content-steering-controller';
+import type { LoaderResponse } from '../../../src/types/loader';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
 import * as sinonChai from 'sinon-chai';
-import { LoaderResponse } from '../../../src/types/loader';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -142,6 +142,7 @@ describe('ContentSteeringController', function () {
 
   describe('Steering Manifest', function () {
     it('loads the steering manifest', function () {
+      contentSteeringController.startLoad();
       contentSteeringController.onManifestLoaded(Events.MANIFEST_LOADED, {
         contentSteering: {
           uri: 'http://example.com/manifest.json',
@@ -560,7 +561,7 @@ describe('ContentSteeringController', function () {
         );
       });
 
-      it('clones other pathways clones that appear ealier in PATHWAY-CLONES array', function () {
+      it('clones other pathway clones that appear ealier in PATHWAY-CLONES array', function () {
         loadSteeringManifest(
           {
             'PATHWAY-PRIORITY': ['Bear', 'Foo', 'Bar', 'Baz', 'Buzz'],
@@ -776,6 +777,7 @@ function loadSteeringManifest(
   partialManifest: Partial<SteeringManifest>,
   steering: ConentSteeringControllerTestable
 ) {
+  steering.startLoad();
   const response: LoaderResponse = {
     url: '',
     data: {

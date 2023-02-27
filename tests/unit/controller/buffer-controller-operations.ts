@@ -161,6 +161,7 @@ describe('BufferController', function () {
       ).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_APPENDING_ERROR,
+        error: triggerSpy.getCall(0).lastArg.error,
         fatal: false,
       });
       expect(shiftAndExecuteNextSpy, 'The queue should not have been cycled').to
@@ -266,8 +267,6 @@ describe('BufferController', function () {
               data.id,
               'The id of the event should be equal to the frag type'
             ).to.equal(frag.type);
-            // TODO: remove stats from event & place onto frag
-            // expect(data.stats).to.equal({});
           } catch (e) {
             reject(e);
           }

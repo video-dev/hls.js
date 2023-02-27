@@ -5,8 +5,11 @@ import type {
   LoaderStats,
   Loader,
   LoaderConfiguration,
+  LoaderResponse,
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
+import { RetryConfig } from '../config';
+import { getRetryDelay, shouldRetry } from './error-helper';
 
 const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/im;
 
@@ -68,7 +71,6 @@ class XhrLoader implements Loader<LoaderContext> {
     this.context = context;
     this.config = config;
     this.callbacks = callbacks;
-    this.retryDelay = config.retryDelay;
     this.loadInternal();
   }
 
@@ -110,7 +112,8 @@ class XhrLoader implements Loader<LoaderContext> {
       this.callbacks!.onError(
         { code: xhr.status, text: e.message },
         context,
-        xhr
+        xhr,
+        stats
       );
       return;
     }
@@ -127,9 +130,10 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.responseType = context.responseType as XMLHttpRequestResponseType;
     // setup timeout before we perform request
     self.clearTimeout(this.requestTimeout);
+    config.timeout = config.loadPolicy.maxTimeToFirstByteMs;
     this.requestTimeout = self.setTimeout(
       this.loadtimeout.bind(this),
-      config.timeout
+      config.loadPolicy.maxTimeToFirstByteMs
     );
     xhr.send();
   }
@@ -149,16 +153,23 @@ class XhrLoader implements Loader<LoaderContext> {
 
     // >= HEADERS_RECEIVED
     if (readyState >= 2) {
-      // clear xhr timeout and rearm it if readyState less than 4
-      self.clearTimeout(this.requestTimeout);
       if (stats.loading.first === 0) {
         stats.loading.first = Math.max(
           self.performance.now(),
           stats.loading.start
         );
+        // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
+        self.clearTimeout(this.requestTimeout);
+        config.timeout = config.loadPolicy.maxLoadTimeMs;
+        this.requestTimeout = self.setTimeout(
+          this.loadtimeout.bind(this),
+          config.loadPolicy.maxLoadTimeMs -
+            (stats.loading.first - stats.loading.start)
+        );
       }
 
       if (readyState === 4) {
+        self.clearTimeout(this.requestTimeout);
         xhr.onreadystatechange = null;
         xhr.onprogress = null;
         const status = xhr.status;
@@ -187,64 +198,68 @@ class XhrLoader implements Loader<LoaderContext> {
           if (!this.callbacks) {
             return;
           }
-          const response = {
+          const response: LoaderResponse = {
             url: xhr.responseURL,
             data: data,
+            code: status,
           };
 
           this.callbacks.onSuccess(response, stats, context, xhr);
         } else {
+          const retryConfig = config.loadPolicy.errorRetry;
+          const retryCount = stats.retry;
           // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-          if (
-            stats.retry >= config.maxRetry ||
-            (status >= 400 && status < 499)
-          ) {
+          if (shouldRetry(retryConfig, retryCount, false, status)) {
+            this.retry(retryConfig);
+          } else {
             logger.error(`${status} while loading ${context.url}`);
             this.callbacks!.onError(
               { code: status, text: xhr.statusText },
               context,
-              xhr
+              xhr,
+              stats
             );
-          } else {
-            // retry
-            logger.warn(
-              `${status} while loading ${context.url}, retrying in ${this.retryDelay}...`
-            );
-            // abort and reset internal state
-            this.abortInternal();
-            this.loader = null;
-            // schedule retry
-            self.clearTimeout(this.retryTimeout);
-            this.retryTimeout = self.setTimeout(
-              this.loadInternal.bind(this),
-              this.retryDelay
-            );
-            // set exponential backoff
-            this.retryDelay = Math.min(
-              2 * this.retryDelay,
-              config.maxRetryDelay
-            );
-            stats.retry++;
           }
         }
-      } else {
-        // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
-        self.clearTimeout(this.requestTimeout);
-        this.requestTimeout = self.setTimeout(
-          this.loadtimeout.bind(this),
-          config.timeout
-        );
       }
     }
   }
 
   loadtimeout(): void {
-    logger.warn(`timeout while loading ${this.context.url}`);
-    const callbacks = this.callbacks;
-    if (callbacks) {
-      this.abortInternal();
-      callbacks.onTimeout(this.stats, this.context, this.loader);
+    const retryConfig = this.config?.loadPolicy.timeoutRetry;
+    const retryCount = this.stats.retry;
+    if (shouldRetry(retryConfig, retryCount, true)) {
+      this.retry(retryConfig);
+    } else {
+      logger.warn(`timeout while loading ${this.context.url}`);
+      const callbacks = this.callbacks;
+      if (callbacks) {
+        this.abortInternal();
+        callbacks.onTimeout(this.stats, this.context, this.loader);
+      }
     }
+  }
+
+  retry(retryConfig: RetryConfig) {
+    const { context, stats } = this;
+    this.retryDelay = getRetryDelay(retryConfig, stats.retry);
+    stats.retry++;
+    logger.warn(
+      `${status ? 'HTTP Status ' + status : 'Timeout'} while loading ${
+        context.url
+      }, retrying ${stats.retry}/${retryConfig.maxNumRetry} in ${
+        this.retryDelay
+      }ms`
+    );
+    // abort and reset internal state
+    this.abortInternal();
+    this.loader = null;
+    // schedule retry
+    self.clearTimeout(this.retryTimeout);
+    this.retryTimeout = self.setTimeout(
+      this.loadInternal.bind(this),
+      this.retryDelay
+    );
   }
 
   loadprogress(event: ProgressEvent): void {

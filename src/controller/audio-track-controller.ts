@@ -92,7 +92,6 @@ class AudioTrackController extends BasePlaylistController {
     );
 
     if (id === this.trackId) {
-      this.retryCount = 0;
       this.playlistLoaded(id, data, curDetails);
     }
   }
@@ -142,11 +141,13 @@ class AudioTrackController extends BasePlaylistController {
       this.hls.trigger(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
 
       this.selectInitialTrack();
+    } else if (this.shouldReloadPlaylist(this.currentTrack)) {
+      // Retry playlist loading if no playlist is or has been loaded yet
+      this.setAudioTrack(this.trackId);
     }
   }
 
   protected onError(event: Events.ERROR, data: ErrorData): void {
-    super.onError(event, data);
     if (data.fatal || !data.context) {
       return;
     }
@@ -156,7 +157,8 @@ class AudioTrackController extends BasePlaylistController {
       data.context.id === this.trackId &&
       data.context.groupId === this.groupId
     ) {
-      this.retryLoadingOrFail(data);
+      this.requestScheduled = -1;
+      this.checkRetry(data);
     }
   }
 
@@ -207,22 +209,22 @@ class AudioTrackController extends BasePlaylistController {
 
   private selectInitialTrack(): void {
     const audioTracks = this.tracksInGroup;
-    console.assert(
-      audioTracks.length,
-      'Initial audio track should be selected when tracks are known'
-    );
     const trackId =
       this.findTrackId(this.currentTrack) | this.findTrackId(null);
 
     if (trackId !== -1) {
       this.setAudioTrack(trackId);
     } else {
-      this.warn(`No track found for running audio group-ID: ${this.groupId}`);
+      const error = new Error(
+        `No track found for running audio group-ID: ${this.groupId} track count: ${audioTracks.length}`
+      );
+      this.warn(error.message);
 
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true,
+        error,
       });
     }
   }
@@ -253,7 +255,7 @@ class AudioTrackController extends BasePlaylistController {
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
     super.loadPlaylist();
     const audioTrack = this.tracksInGroup[this.trackId];
-    if (this.shouldLoadTrack(audioTrack)) {
+    if (this.shouldLoadPlaylist(audioTrack)) {
       const id = audioTrack.id;
       const groupId = audioTrack.groupId as string;
       let url = audioTrack.url;

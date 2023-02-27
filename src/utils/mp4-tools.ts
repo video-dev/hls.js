@@ -136,8 +136,7 @@ export function parseSegmentIndex(sidx: Uint8Array): SidxInfo | null {
     const referenceType = (referenceInfo & 0x80000000) >>> 31;
 
     if (referenceType === 1) {
-      // eslint-disable-next-line no-console
-      console.warn('SIDX has hierarchical references (not supported)');
+      logger.warn('SIDX has hierarchical references (not supported)');
       return null;
     }
 
@@ -991,8 +990,7 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
     presentationTime = 2 ** 32 * leftPresentationTime + rightPresentationTime;
     if (!Number.isSafeInteger(presentationTime)) {
       presentationTime = Number.MAX_SAFE_INTEGER;
-      // eslint-disable-next-line no-console
-      console.warn(
+      logger.warn(
         'Presentation time exceeds safe integer limit and wrapped to max safe integer in parsing emsg box'
       );
     }

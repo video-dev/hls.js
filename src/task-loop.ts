@@ -64,6 +64,7 @@ export default class TaskLoop {
    */
   public setInterval(millis: number): boolean {
     if (!this._tickInterval) {
+      this._tickCallCount = 0;
       this._tickInterval = self.setInterval(this._boundTick, millis);
       return true;
     }

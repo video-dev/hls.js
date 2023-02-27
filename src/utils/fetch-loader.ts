@@ -5,6 +5,7 @@ import {
   LoaderStats,
   LoaderConfiguration,
   LoaderOnProgress,
+  LoaderResponse,
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
@@ -89,6 +90,7 @@ class FetchLoader implements Loader<LoaderContext> {
     this.callbacks = callbacks;
     this.request = this.fetchSetup(context, initParams);
     self.clearTimeout(this.requestTimeout);
+    config.timeout = config.loadPolicy.maxTimeToFirstByteMs;
     this.requestTimeout = self.setTimeout(() => {
       this.abortInternal();
       callbacks.onTimeout(stats, context, this.response);
@@ -99,6 +101,15 @@ class FetchLoader implements Loader<LoaderContext> {
       .then((response: Response): Promise<string | ArrayBuffer> => {
         this.response = this.loader = response;
 
+        const first = Math.max(self.performance.now(), stats.loading.start);
+
+        self.clearTimeout(this.requestTimeout);
+        config.timeout = config.loadPolicy.maxLoadTimeMs;
+        this.requestTimeout = self.setTimeout(() => {
+          this.abortInternal();
+          callbacks.onTimeout(stats, context, this.response);
+        }, config.loadPolicy.maxLoadTimeMs - (first - stats.loading.start));
+
         if (!response.ok) {
           const { status, statusText } = response;
           throw new FetchError(
@@ -107,10 +118,7 @@ class FetchLoader implements Loader<LoaderContext> {
             response
           );
         }
-        stats.loading.first = Math.max(
-          self.performance.now(),
-          stats.loading.start
-        );
+        stats.loading.first = first;
 
         stats.total = getContentLength(response.headers) || stats.total;
 
@@ -144,9 +152,10 @@ class FetchLoader implements Loader<LoaderContext> {
           stats.loaded = stats.total = total;
         }
 
-        const loaderResponse = {
+        const loaderResponse: LoaderResponse = {
           url: response.url,
           data: responseData,
+          code: response.status,
         };
 
         if (onProgress && !Number.isFinite(config.highWaterMark)) {
@@ -167,7 +176,8 @@ class FetchLoader implements Loader<LoaderContext> {
         callbacks.onError(
           { code, text },
           context,
-          error ? error.details : null
+          error ? error.details : null,
+          stats
         );
       });
   }

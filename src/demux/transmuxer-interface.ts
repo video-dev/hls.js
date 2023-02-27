@@ -20,6 +20,7 @@ import type { RationalTimestamp } from '../utils/timescale-conversion';
 const MediaSource = getMediaSource() || { isTypeSupported: () => false };
 
 export default class TransmuxerInterface {
+  public error: Error | null = null;
   private hls: Hls;
   private id: PlaylistLevelType;
   private observer: HlsEventEmitter;
@@ -49,6 +50,9 @@ export default class TransmuxerInterface {
       data = data || {};
       data.frag = this.frag;
       data.id = this.id;
+      if (ev === Events.ERROR) {
+        this.error = data.error;
+      }
       this.hls.trigger(ev, data);
     };
 
@@ -75,16 +79,18 @@ export default class TransmuxerInterface {
         this.onwmsg = this.onWorkerMessage.bind(this);
         worker.addEventListener('message', this.onwmsg);
         worker.onerror = (event) => {
+          const error = new Error(
+            `${event.message}  (${event.filename}:${event.lineno})`
+          );
           this.useWorker = false;
+          this.error = null;
           logger.warn('Exception in webworker, fallback to inline');
           this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
             details: ErrorDetails.INTERNAL_EXCEPTION,
             fatal: false,
             event: 'demuxerWorker',
-            error: new Error(
-              `${event.message}  (${event.filename}:${event.lineno})`
-            ),
+            error,
           });
         };
         worker.postMessage({
@@ -103,6 +109,7 @@ export default class TransmuxerInterface {
           // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
           self.URL.revokeObjectURL(worker.objectURL);
         }
+        this.error = null;
         this.transmuxer = new Transmuxer(
           this.observer,
           typeSupported,
@@ -303,6 +310,7 @@ export default class TransmuxerInterface {
     if (!this.hls) {
       return;
     }
+    this.error = error;
     this.hls.trigger(Events.ERROR, {
       type: ErrorTypes.MEDIA_ERROR,
       details: ErrorDetails.FRAG_PARSING_ERROR,

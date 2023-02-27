@@ -175,7 +175,6 @@ class SubtitleTrackController extends BasePlaylistController {
     );
 
     if (id === this.trackId) {
-      this.retryCount = 0;
       this.playlistLoaded(id, data, curDetails);
     }
   }
@@ -199,13 +198,11 @@ class SubtitleTrackController extends BasePlaylistController {
     if (!levelInfo?.textGroupIds) {
       return;
     }
-
     const textGroupId = levelInfo.textGroupIds[levelInfo.urlId];
+    const lastTrack = this.tracksInGroup
+      ? this.tracksInGroup[this.trackId]
+      : undefined;
     if (this.groupId !== textGroupId) {
-      const lastTrack = this.tracksInGroup
-        ? this.tracksInGroup[this.trackId]
-        : undefined;
-
       const subtitleTracks = this.tracks.filter(
         (track): boolean => !textGroupId || track.groupId === textGroupId
       );
@@ -225,6 +222,9 @@ class SubtitleTrackController extends BasePlaylistController {
       if (initialTrackId !== -1) {
         this.setSubtitleTrack(initialTrackId, lastTrack);
       }
+    } else if (this.shouldReloadPlaylist(lastTrack)) {
+      // Retry playlist loading if no playlist is or has been loaded yet
+      this.setSubtitleTrack(this.trackId, lastTrack);
     }
   }
 
@@ -242,7 +242,6 @@ class SubtitleTrackController extends BasePlaylistController {
   }
 
   protected onError(event: Events.ERROR, data: ErrorData): void {
-    super.onError(event, data);
     if (data.fatal || !data.context) {
       return;
     }
@@ -252,7 +251,7 @@ class SubtitleTrackController extends BasePlaylistController {
       data.context.id === this.trackId &&
       data.context.groupId === this.groupId
     ) {
-      this.retryLoadingOrFail(data);
+      this.checkRetry(data);
     }
   }
 
@@ -277,7 +276,7 @@ class SubtitleTrackController extends BasePlaylistController {
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
     super.loadPlaylist();
     const currentTrack = this.tracksInGroup[this.trackId];
-    if (this.shouldLoadTrack(currentTrack)) {
+    if (this.shouldLoadPlaylist(currentTrack)) {
       const id = currentTrack.id;
       const groupId = currentTrack.groupId as string;
       let url = currentTrack.url;

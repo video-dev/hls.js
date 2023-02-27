@@ -5,9 +5,14 @@ import {
   LoaderConfiguration,
   FragmentLoaderContext,
 } from '../types/loader';
+import { getLoaderConfigWithoutReties } from '../utils/error-helper';
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
-import type { FragLoadedData, PartsLoadedData } from '../types/events';
+import type {
+  ErrorData,
+  FragLoadedData,
+  PartsLoadedData,
+} from '../types/events';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
@@ -41,16 +46,16 @@ export default class FragmentLoader {
     const url = frag.url;
     if (!url) {
       return Promise.reject(
-        new LoadError(
-          {
-            type: ErrorTypes.NETWORK_ERROR,
-            details: ErrorDetails.FRAG_LOAD_ERROR,
-            fatal: false,
-            frag,
-            networkDetails: null,
-          },
-          `Fragment does not have a ${url ? 'part list' : 'url'}`
-        )
+        new LoadError({
+          type: ErrorTypes.NETWORK_ERROR,
+          details: ErrorDetails.FRAG_LOAD_ERROR,
+          fatal: false,
+          frag,
+          error: new Error(
+            `Fragment does not have a ${url ? 'part list' : 'url'}`
+          ),
+          networkDetails: null,
+        })
       );
     }
     this.abort();
@@ -70,11 +75,15 @@ export default class FragmentLoader {
             ? new FragmentILoader(config)
             : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag);
+      const loadPolicy = getLoaderConfigWithoutReties(
+        config.fragLoadPolicy.default
+      );
       const loaderConfig: LoaderConfiguration = {
-        timeout: config.fragLoadingTimeOut,
+        loadPolicy,
+        timeout: loadPolicy.maxLoadTimeMs,
         maxRetry: 0,
         retryDelay: 0,
-        maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+        maxRetryDelay: 0,
         highWaterMark: frag.sn === 'initSegment' ? Infinity : MIN_CHUNK_SIZE,
       };
       // Assign frag stats to the loader's stats reference
@@ -94,7 +103,7 @@ export default class FragmentLoader {
             networkDetails,
           });
         },
-        onError: (response, context, networkDetails) => {
+        onError: (response, context, networkDetails, stats) => {
           this.resetLoader(frag, loader);
           reject(
             new LoadError({
@@ -102,8 +111,10 @@ export default class FragmentLoader {
               details: ErrorDetails.FRAG_LOAD_ERROR,
               fatal: false,
               frag,
-              response,
+              response: { url, data: undefined, ...response },
+              error: new Error(`HTTP Error ${response.code} ${response.text}`),
               networkDetails,
+              stats,
             })
           );
         },
@@ -115,11 +126,13 @@ export default class FragmentLoader {
               details: ErrorDetails.INTERNAL_ABORTED,
               fatal: false,
               frag,
+              error: new Error('Aborted'),
               networkDetails,
+              stats,
             })
           );
         },
-        onTimeout: (response, context, networkDetails) => {
+        onTimeout: (stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
           reject(
             new LoadError({
@@ -127,7 +140,9 @@ export default class FragmentLoader {
               details: ErrorDetails.FRAG_LOAD_TIMEOUT,
               fatal: false,
               frag,
+              error: new Error(`Timeout after ${loaderConfig.timeout}ms`),
               networkDetails,
+              stats,
             })
           );
         },
@@ -167,11 +182,16 @@ export default class FragmentLoader {
             ? new FragmentILoader(config)
             : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag, part);
+      // Should we define another load policy for parts?
+      const loadPolicy = getLoaderConfigWithoutReties(
+        config.fragLoadPolicy.default
+      );
       const loaderConfig: LoaderConfiguration = {
-        timeout: config.fragLoadingTimeOut,
+        loadPolicy,
+        timeout: loadPolicy.maxLoadTimeMs,
         maxRetry: 0,
         retryDelay: 0,
-        maxRetryDelay: config.fragLoadingMaxRetryTimeout,
+        maxRetryDelay: 0,
         highWaterMark: MIN_CHUNK_SIZE,
       };
       // Assign part stats to the loader's stats reference
@@ -189,7 +209,7 @@ export default class FragmentLoader {
           onProgress(partLoadedData);
           resolve(partLoadedData);
         },
-        onError: (response, context, networkDetails) => {
+        onError: (response, context, networkDetails, stats) => {
           this.resetLoader(frag, loader);
           reject(
             new LoadError({
@@ -198,8 +218,14 @@ export default class FragmentLoader {
               fatal: false,
               frag,
               part,
-              response,
+              response: {
+                url: loaderContext.url,
+                data: undefined,
+                ...response,
+              },
+              error: new Error(`HTTP Error ${response.code} ${response.text}`),
               networkDetails,
+              stats,
             })
           );
         },
@@ -213,11 +239,13 @@ export default class FragmentLoader {
               fatal: false,
               frag,
               part,
+              error: new Error('Aborted'),
               networkDetails,
+              stats,
             })
           );
         },
-        onTimeout: (response, context, networkDetails) => {
+        onTimeout: (stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
           reject(
             new LoadError({
@@ -226,7 +254,9 @@ export default class FragmentLoader {
               fatal: false,
               frag,
               part,
+              error: new Error(`Timeout after ${loaderConfig.timeout}ms`),
               networkDetails,
+              stats,
             })
           );
         },
@@ -314,23 +344,22 @@ function createLoaderContext(
 
 export class LoadError extends Error {
   public readonly data: FragLoadFailResult;
-  constructor(data: FragLoadFailResult, message?: string) {
-    super(message);
+  constructor(data: FragLoadFailResult) {
+    super(data.error.message);
     this.data = data;
   }
 }
 
-export interface FragLoadFailResult {
-  type: string;
-  details: string;
-  fatal: boolean;
+export interface FragLoadFailResult extends ErrorData {
   frag: Fragment;
   part?: Part;
   response?: {
+    data: any;
     // error status code
     code: number;
     // error description
     text: string;
+    url: string;
   };
   networkDetails: any;
 }

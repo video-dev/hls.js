@@ -2381,11 +2381,6 @@ a{$bar}.mp4
   });
 });
 
-describe('#EXT-X-CONTENT-STEERING', function () {
-  // TODO: CONTENT-STEERING
-  it('', function () {});
-});
-
 function expectWithJSONMessage(value: any, msg?: string) {
   return expect(value, `${msg || 'actual:'} ${JSON.stringify(value, null, 2)}`);
 }
