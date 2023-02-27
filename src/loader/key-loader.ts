@@ -159,7 +159,11 @@ export default class KeyLoader implements ComponentAPI {
         case 'status-pending':
         case 'usable':
         case 'usable-in-future':
-          return keyInfo.keyLoadPromise;
+          return keyInfo.keyLoadPromise.then((keyLoadedData) => {
+            // Return the correct fragment with updated decryptdata key and loaded keyInfo
+            decryptdata.key = keyLoadedData.keyInfo.decryptdata.key;
+            return { frag, keyInfo };
+          });
       }
       // If we have a key session and status and it is not pending or usable, continue
       // This will go back to the eme-controller for expired keys to get a new keyLoadPromise
