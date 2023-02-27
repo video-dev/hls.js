@@ -143,8 +143,7 @@ export default class KeyLoader implements ComponentAPI {
         )
       );
     }
-    const keyId = this.getKeyId(uri, frag);
-    let keyInfo = this.keyUriToKeyInfo[keyId];
+    let keyInfo = this.keyUriToKeyInfo[uri];
 
     if (keyInfo?.decryptdata.key) {
       decryptdata.key = keyInfo.decryptdata.key;
@@ -157,14 +156,18 @@ export default class KeyLoader implements ComponentAPI {
         case 'status-pending':
         case 'usable':
         case 'usable-in-future':
-          return keyInfo.keyLoadPromise;
+          return keyInfo.keyLoadPromise.then((keyLoadedData) => {
+            // Return the correct fragment with updated decryptdata key and loaded keyInfo
+            decryptdata.key = keyLoadedData.keyInfo.decryptdata.key;
+            return { frag, keyInfo };
+          });
       }
       // If we have a key session and status and it is not pending or usable, continue
       // This will go back to the eme-controller for expired keys to get a new keyLoadPromise
     }
 
     // Load the key or return the loading promise
-    keyInfo = this.keyUriToKeyInfo[keyId] = {
+    keyInfo = this.keyUriToKeyInfo[uri] = {
       decryptdata,
       keyLoadPromise: null,
       loader: null,
@@ -247,8 +250,7 @@ export default class KeyLoader implements ComponentAPI {
           networkDetails: any
         ) => {
           const { frag, keyInfo, url: uri } = context;
-          const keyId = this.getKeyId(uri, frag);
-          if (!frag.decryptdata || keyInfo !== this.keyUriToKeyInfo[keyId]) {
+          if (!frag.decryptdata || keyInfo !== this.keyUriToKeyInfo[uri]) {
             return reject(
               this.createKeyLoadError(
                 frag,
@@ -325,18 +327,13 @@ export default class KeyLoader implements ComponentAPI {
   private resetLoader(context: KeyLoaderContext) {
     const { frag, keyInfo, url: uri } = context;
     const loader = keyInfo.loader;
-    const keyId = this.getKeyId(uri, frag);
     if (frag.keyLoader === loader) {
       frag.keyLoader = null;
       keyInfo.loader = null;
     }
-    delete this.keyUriToKeyInfo[keyId];
+    delete this.keyUriToKeyInfo[uri];
     if (loader) {
       loader.destroy();
     }
-  }
-
-  private getKeyId(uri: string, frag: Fragment) {
-    return `${uri}_${frag.type}_${frag.level}`;
   }
 }
