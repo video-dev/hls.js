@@ -72,8 +72,8 @@ export interface DemuxedVideoTrack extends DemuxedTrack {
   height?: number;
   pixelRatio?: [number, number];
   audFound?: boolean;
-  pps?: number[];
-  sps?: number[];
+  pps?: Uint8Array[];
+  sps?: Uint8Array[];
   naluState?: number;
   samples: AvcSample[] | Uint8Array;
 }

@@ -102,63 +102,72 @@ describe('FragmentLoader tests', function () {
   });
 
   it('handles fragment load errors', function () {
-    return new Promise<void>((resolve, reject) => {
-      const fragmentLoaderPrivates = fragmentLoader as any;
+    const fragmentLoaderPrivates = fragmentLoader as any;
+    return new Promise<LoadError>((resolve, reject) => {
       fragmentLoader
         .load(frag, levelDetails)
         .then(() => {
           reject(new Error('Fragment loader should not have resolved'));
         })
         .catch((error) => {
-          expect(error).to.be.instanceOf(LoadError);
-          expect(error.data).to.deep.equal({
-            type: ErrorTypes.NETWORK_ERROR,
-            details: ErrorDetails.FRAG_LOAD_ERROR,
-            fatal: false,
-            frag,
-            response,
-            networkDetails,
-          });
-          expect(fragmentLoaderPrivates.loader).to.not.exist;
-          expect(frag.loader).to.not.exist;
-          resolve();
+          resolve(error);
         });
       expect(fragmentLoaderPrivates.loader).to.be.instanceOf(MockXhr);
+      const stats = new LoadStats();
       fragmentLoaderPrivates.loader.callbacks.onError(
         response,
         context,
-        networkDetails
+        networkDetails,
+        stats
       );
+    }).then((error: LoadError) => {
+      expect(error).to.be.instanceOf(LoadError);
+      expect(error.data).to.deep.equal(
+        {
+          type: ErrorTypes.NETWORK_ERROR,
+          details: ErrorDetails.FRAG_LOAD_ERROR,
+          fatal: false,
+          frag,
+          response: { url: frag.url, data: undefined, ...response },
+          error: error.data.error,
+          networkDetails,
+          stats,
+        },
+        JSON.stringify(error.data, null, 2)
+      );
+      expect(fragmentLoaderPrivates.loader).to.not.exist;
+      expect(frag.loader).to.not.exist;
     });
   });
 
   it('handles fragment load timeouts', function () {
-    // let abortSpy;
-    return new Promise<void>((resolve, reject) => {
-      const fragmentLoaderPrivates = fragmentLoader as any;
+    const fragmentLoaderPrivates = fragmentLoader as any;
+    return new Promise<LoadError>((resolve, reject) => {
       fragmentLoader
         .load(frag, levelDetails)
         .then(() => {
           reject(new Error('Fragment loader should not have resolved'));
         })
         .catch((error) => {
-          expect(error).to.be.instanceOf(LoadError);
-          expect(error.data).to.deep.equal({
-            type: ErrorTypes.NETWORK_ERROR,
-            details: ErrorDetails.FRAG_LOAD_TIMEOUT,
-            fatal: false,
-            frag,
-            networkDetails,
-          });
-          expect(fragmentLoaderPrivates.loader).to.not.exist;
-          expect(frag.loader).to.not.exist;
-          // expect(abortSpy).to.have.been.calledOnce();
-          resolve();
+          resolve(error);
         });
       const loaderInstance: MockXhr = fragmentLoaderPrivates.loader;
       expect(loaderInstance).to.be.instanceOf(MockXhr);
-      // abortSpy = sinon.spy(loaderInstance.abort);
-      loaderInstance.callbacks!.onTimeout(response, context, networkDetails);
+      const stats = new LoadStats();
+      loaderInstance.callbacks!.onTimeout(stats, context, networkDetails);
+    }).then((error: LoadError) => {
+      expect(error).to.be.instanceOf(LoadError);
+      expect(error.data).to.deep.equal({
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.FRAG_LOAD_TIMEOUT,
+        fatal: false,
+        frag,
+        error: error.data.error,
+        networkDetails,
+        stats,
+      });
+      expect(fragmentLoaderPrivates.loader).to.not.exist;
+      expect(frag.loader).to.not.exist;
     });
   });
 });

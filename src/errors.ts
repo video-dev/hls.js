@@ -1,3 +1,6 @@
+import { RetryConfig } from './config';
+import { HdcpLevel } from './types/level';
+
 export enum ErrorTypes {
   // Identifier for a network error (loading error / timeout ...)
   NETWORK_ERROR = 'networkError',
@@ -86,3 +89,29 @@ export enum ErrorDetails {
   // Uncategorized error
   UNKNOWN = 'unknown',
 }
+
+export enum NetworkErrorAction {
+  DoNothing = 0,
+  SendEndCallback = 1, // Reserved for future use
+  SendAlternateToPenaltyBox = 2,
+  RemoveAlternatePermanently = 3, // Reserved for future use
+  InsertDiscontinuity = 4, // Reserved for future use
+  RetryRequest = 5,
+}
+
+export enum ErrorActionFlags {
+  None = 0,
+  MoveAllAlternatesMatchingHost = 1,
+  MoveAllAlternatesMatchingHDCP = 1 << 1,
+  SwitchToSDR = 1 << 2, // Reserved for future use
+}
+
+export type IErrorAction = {
+  action: NetworkErrorAction;
+  flags: ErrorActionFlags;
+  retryCount?: number;
+  retryConfig?: RetryConfig;
+  hdcpLevel?: HdcpLevel;
+  nextAutoLevel?: number;
+  resolved?: boolean;
+};

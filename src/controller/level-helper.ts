@@ -36,9 +36,6 @@ function updateFromToPTS(fragFrom: Fragment, fragTo: Fragment) {
       duration = fragFrom.start - fragToPTS;
       frag = fragTo;
     }
-    // TODO? Drift can go either way, or the playlist could be completely accurate
-    // console.assert(duration > 0,
-    //   `duration of ${duration} computed for frag ${frag.sn}, level ${frag.level}, there should be some duration drift between playlist and fragment!`);
     if (frag.duration !== duration) {
       frag.duration = duration;
     }

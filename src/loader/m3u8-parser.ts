@@ -267,11 +267,7 @@ export default class M3U8Parser {
       ? levelsWithKnownCodecs
       : parsed.levels;
     if (parsed.levels.length === 0) {
-      parsed.playlistParsingError = new Error(
-        `no level found in manifest: ${
-          stripUnknownCodecLevels ? 'unknown codecs' : 'empty'
-        }`
-      );
+      parsed.playlistParsingError = new Error('no levels found in manifest');
     }
 
     return parsed;

@@ -36,7 +36,7 @@ export interface LevelAttributes extends AttrList {
   'VIDEO-RANGE'?: 'SDR' | 'HLG' | 'PQ';
 }
 
-export const HdcpLevels = ['NONE', 'TYPE-0', 'TYPE-1', 'TYPE-2', null] as const;
+export const HdcpLevels = ['NONE', 'TYPE-0', 'TYPE-1', null] as const;
 export type HdcpLevel = (typeof HdcpLevels)[number];
 
 export type VariableMap = Record<string, string>;
@@ -149,6 +149,7 @@ export class Level {
   set urlId(value: number) {
     const newValue = value % this.url.length;
     if (this._urlId !== newValue) {
+      this.fragmentError = 0;
       this.details = undefined;
       this._urlId = newValue;
     }
