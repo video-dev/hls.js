@@ -129,6 +129,7 @@ function getAliasesForLightDist() {
     aliases = Object.assign({}, aliases, {
       './controller/eme-controller': './empty.js',
       './utils/mediakeys-helper': './empty.js',
+      '../utils/mediakeys-helper': '../empty.js',
     });
   }
 
@@ -139,7 +140,7 @@ function getAliasesForLightDist() {
   }
 
   if (!addSubtitleSupport) {
-    aliases = Object.assign(aliases, {
+    aliases = Object.assign({}, aliases, {
       './utils/cues': './empty.js',
       './controller/timeline-controller': './empty.js',
       './controller/subtitle-track-controller': './empty.js',
@@ -148,7 +149,7 @@ function getAliasesForLightDist() {
   }
 
   if (!addAltAudioSupport) {
-    aliases = Object.assign(aliases, {
+    aliases = Object.assign({}, aliases, {
       './controller/audio-track-controller': './empty.js',
       './controller/audio-stream-controller': './empty.js',
     });
@@ -157,6 +158,7 @@ function getAliasesForLightDist() {
   if (!addVariableSubstitutionSupport) {
     aliases = Object.assign({}, aliases, {
       './utils/variable-substitution': './empty.js',
+      '../utils/variable-substitution': '../empty.js',
     });
   }
 

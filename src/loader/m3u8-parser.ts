@@ -224,8 +224,9 @@ export default class M3U8Parser {
               substituteVariablesInAttributes(parsed, variableAttributes, [
                 'NAME',
                 'VALUE',
+                'QUERYPARAM',
               ]);
-              addVariableDefinition(parsed, variableAttributes);
+              addVariableDefinition(parsed, variableAttributes, baseurl);
             }
             break;
           }
@@ -555,6 +556,7 @@ export default class M3U8Parser {
                 'NAME',
                 'VALUE',
                 'IMPORT',
+                'QUERYPARAM',
               ]);
               if ('IMPORT' in variableAttributes) {
                 importVariableDefinition(
@@ -563,7 +565,7 @@ export default class M3U8Parser {
                   multivariantVariableList
                 );
               } else {
-                addVariableDefinition(level, variableAttributes);
+                addVariableDefinition(level, variableAttributes, baseurl);
               }
             }
             break;
