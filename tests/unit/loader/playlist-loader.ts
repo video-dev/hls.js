@@ -2285,6 +2285,89 @@ a{$mvpVariable}.mp4
     });
   });
 
+  it('defines variables using QUERYPARAM name/value pairs in parent Playlist URIs and substites variable references', function () {
+    const manifest = `#EXTM3U
+#EXT-X-DEFINE:QUERYPARAM="token"
+#EXT-X-DEFINE:QUERYPARAM="foo"
+#EXT-X-SESSION-DATA:DATA-ID="var-applied",VALUE="{$foo}"
+#EXT-X-STREAM-INF:BANDWIDTH=836280,RESOLUTION=848x360
+https://www.x.com/sec/video/1.m3u8?parent-token={$token}
+#EXT-X-STREAM-INF:BANDWIDTH=1836280,RESOLUTION=848x360
+https://www.x.com/sec/video/2.m3u8?parent-token={$token}`;
+
+    const result = M3U8Parser.parseMasterPlaylist(
+      manifest,
+      'https://www.x.com?foo=bar&a=ok&token=1234'
+    );
+
+    if (result.variableList === null) {
+      expect(result.variableList, 'variableList').to.not.equal(null);
+      return;
+    }
+    expect(result.variableList.foo).to.equal('bar');
+    expect(result.variableList.token).to.equal('1234');
+    expect(result.variableList).to.not.have.property('a');
+
+    if (result.sessionData === null) {
+      expect(result.sessionData, 'sessionData').to.not.equal(null);
+      return;
+    }
+    expect(result.sessionData['var-applied'].VALUE).to.equal('bar');
+    expect(result.levels[0]).to.deep.include(
+      {
+        url: 'https://www.x.com/sec/video/1.m3u8?parent-token=1234',
+      },
+      JSON.stringify(result.levels[0], null, 2)
+    );
+    expect(result.levels[1]).to.deep.include(
+      {
+        url: 'https://www.x.com/sec/video/2.m3u8?parent-token=1234',
+      },
+      JSON.stringify(result.levels[0], null, 2)
+    );
+    const level = `#EXTM3U
+#EXT-X-VERSION:1
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-TARGETDURATION:5
+#EXT-X-DEFINE:IMPORT="token"
+#EXT-X-DEFINE:QUERYPARAM="parent-token"
+#EXT-X-DEFINE:NAME="extra",VALUE="yes"
+#EXTINF:4
+segment-1.mp4?pt={$parent-token}&t={$token}&x={$extra}
+#EXTINF:4
+segment-2.mp4?t={$token}
+#EXTINF:4
+segment-3.mp4?t={$token}`;
+    const details = M3U8Parser.parseLevelPlaylist(
+      level,
+      'https://www.x.com/sec/video/1.m3u8?parent-token=1234',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      result.variableList
+    );
+    if (details.variableList === null) {
+      expect(details.variableList, 'variableList').to.not.equal(null);
+      return;
+    }
+    expect(details.variableList.token).to.equal('1234');
+    expect(details.variableList['parent-token']).to.equal('1234');
+    expect(details.variableList).to.not.have.property('foo');
+    expect(details.fragments).to.have.lengthOf(3);
+    expect(details.fragments[0]).to.deep.include({
+      relurl: 'segment-1.mp4?pt=1234&t=1234&x=yes',
+      url: 'https://www.x.com/sec/video/segment-1.mp4?pt=1234&t=1234&x=yes',
+    });
+    expect(details.fragments[1]).to.deep.include({
+      relurl: 'segment-2.mp4?t=1234',
+      url: 'https://www.x.com/sec/video/segment-2.mp4?t=1234',
+    });
+    expect(details.fragments[2]).to.deep.include({
+      relurl: 'segment-3.mp4?t=1234',
+      url: 'https://www.x.com/sec/video/segment-3.mp4?t=1234',
+    });
+  });
+
   it('fails to parse Media Playlist when IMPORT variable is not present', function () {
     const level = `#EXTM3U
 #EXT-X-VERSION:1

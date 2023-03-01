@@ -82,7 +82,7 @@ For details on the HLS format and these tags' meanings, see https://datatracker.
 - `#EXT-X-SESSION-KEY:<attribute-list>` EME Key-System selection and preloading
 - `#EXT-X-START:TIME-OFFSET=<n>`
 - `#EXT-X-CONTENT-STEERING:<attribute-list>` Content Steering
-- `#EXT-X-DEFINE:<attribute-list>` Variable Substitution
+- `#EXT-X-DEFINE:<attribute-list>` Variable Substitution (`NAME,VALUE,QUERYPARAM` attributes)
 
 The following properties are added to their respective variants' attribute list but are not implemented in their selection and playback.
 
@@ -109,7 +109,7 @@ The following properties are added to their respective variants' attribute list 
 - `#EXT-X-SKIP:<attribute-list>` Delta Playlists
 - `#EXT-X-RENDITION-REPORT:<attribute-list>`
 - `#EXT-X-DATERANGE:<attribute-list>` Metadata
-- `#EXT-X-DEFINE:<attribute-list>` Variable Import and Substitution
+- `#EXT-X-DEFINE:<attribute-list>` Variable Import and Substitution (`NAME,VALUE,IMPORT,QUERYPARAM` attributes)
 
 The following tags are added to their respective fragment's attribute list but are not implemented in streaming and playback.
 

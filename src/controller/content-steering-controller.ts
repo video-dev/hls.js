@@ -385,7 +385,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         } = steeringData;
         if (reloadUri) {
           try {
-            this.uri = new URL(reloadUri, url).href;
+            this.uri = new self.URL(reloadUri, url).href;
           } catch (error) {
             this.enabled = false;
             this.log(

@@ -63,19 +63,41 @@ export function addVariableDefinition(
     ParsedMultivariantPlaylist | LevelDetails,
     'variableList' | 'playlistParsingError'
   >,
-  attr: AttrList
+  attr: AttrList,
+  parentUrl: string
 ) {
   let variableList = parsed.variableList;
   if (!variableList) {
     parsed.variableList = variableList = {};
   }
-  const NAME = attr.NAME;
+  let NAME: string;
+  let VALUE;
+  if ('QUERYPARAM' in attr) {
+    NAME = attr.QUERYPARAM;
+    try {
+      const searchParams = new self.URL(parentUrl).searchParams;
+      if (searchParams.has(NAME)) {
+        VALUE = searchParams.get(NAME);
+      } else {
+        throw new Error(
+          `"${NAME}" does not match any query parameter in URI: "${parentUrl}"`
+        );
+      }
+    } catch (error) {
+      parsed.playlistParsingError ||= new Error(
+        `EXT-X-DEFINE QUERYPARAM: ${error.message}`
+      );
+    }
+  } else {
+    NAME = attr.NAME;
+    VALUE = attr.VALUE;
+  }
   if (NAME in variableList) {
     parsed.playlistParsingError ||= new Error(
       `EXT-X-DEFINE duplicate Variable Name declarations: "${NAME}"`
     );
   } else {
-    variableList[NAME] = attr.VALUE || '';
+    variableList[NAME] = VALUE || '';
   }
 }
 
