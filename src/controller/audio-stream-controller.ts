@@ -671,33 +671,12 @@ class AudioStreamController
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
-        // if in appending state
-        if (
-          data.parent === 'audio' &&
-          (this.state === State.PARSING || this.state === State.PARSED)
-        ) {
-          let flushBuffer = true;
-          const bufferedInfo = this.getFwdBufferInfo(
-            this.mediaBuffer,
-            PlaylistLevelType.AUDIO
-          );
-          // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-          // reduce max buf len if current position is buffered
-          if (bufferedInfo && bufferedInfo.len > 0.5) {
-            flushBuffer = !this.reduceMaxBufferLength(bufferedInfo.len);
-          }
-          if (flushBuffer) {
-            // current position is not buffered, but browser is still complaining about buffer full error
-            // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
-            // in that case flush the whole audio buffer to recover
-            this.warn(
-              'Buffer full error also media.currentTime is not buffered, flush audio buffer'
-            );
-            this.fragCurrent = null;
-            this.bufferedTrack = null;
-            super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
-          }
-          this.resetLoadingState();
+        if (!data.parent || data.parent !== 'audio') {
+          return;
+        }
+        if (this.reduceLengthAndFlushBuffer(data)) {
+          this.bufferedTrack = null;
+          super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
         }
         break;
       case ErrorDetails.INTERNAL_EXCEPTION:

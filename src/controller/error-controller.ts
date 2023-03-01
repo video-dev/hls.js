@@ -6,6 +6,7 @@ import {
   isTimeoutError,
   shouldRetry,
 } from '../utils/error-helper';
+import { findFragmentByPTS } from './fragment-finders';
 import { HdcpLevel, HdcpLevels } from '../types/level';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
@@ -305,7 +306,10 @@ export default class ErrorController implements NetworkComponentAPI {
     }
     const level = this.hls.levels[levelIndex];
     if (level) {
-      level.loadError++;
+      // No penalty for GAP tags so that player can switch back when GAPs are found in other levels
+      if (data.details !== ErrorDetails.FRAG_GAP) {
+        level.loadError++;
+      }
       const redundantLevels = level.url.length;
       // Try redundant fail-over until level.loadError reaches redundantLevels
       if (redundantLevels > 1 && level.loadError < redundantLevels) {
@@ -320,6 +324,20 @@ export default class ErrorController implements NetworkComponentAPI {
             candidate !== hls.loadLevel &&
             levels[candidate].loadError === 0
           ) {
+            // Skip level switch if GAP tag is found in next level
+            if (data.details === ErrorDetails.FRAG_GAP && data.frag) {
+              const levelDetails = hls.levels[candidate].details;
+              if (levelDetails) {
+                const fragCandidate = findFragmentByPTS(
+                  data.frag,
+                  levelDetails.fragments,
+                  data.frag.start
+                );
+                if (fragCandidate?.gap) {
+                  continue;
+                }
+              }
+            }
             nextLevel = candidate;
             break;
           }
@@ -405,7 +423,7 @@ export default class ErrorController implements NetworkComponentAPI {
 
   private switchLevel(data: ErrorData, levelIndex: number | undefined) {
     if (levelIndex !== undefined && data.errorAction) {
-      this.warn(`${data.details}: switching to level ${levelIndex}`);
+      this.warn(`switching to level ${levelIndex} after ${data.details}`);
       this.hls.nextAutoLevel = levelIndex;
       data.errorAction.resolved = true;
       // Stream controller is responsible for this but won't switch on false start

@@ -900,16 +900,22 @@ export default class BaseStreamController
     bufferable: Bufferable | null,
     type: PlaylistLevelType
   ): BufferInfo | null {
-    const { config } = this;
     const pos = this.getLoadPosition();
     if (!Number.isFinite(pos)) {
       return null;
     }
-    const bufferInfo = BufferHelper.bufferInfo(
-      bufferable,
-      pos,
-      config.maxBufferHole
-    );
+    return this.getFwdBufferInfoAtPos(bufferable, pos, type);
+  }
+
+  protected getFwdBufferInfoAtPos(
+    bufferable: Bufferable | null,
+    pos: number,
+    type: PlaylistLevelType
+  ): BufferInfo | null {
+    const {
+      config: { maxBufferHole },
+    } = this;
+    const bufferInfo = BufferHelper.bufferInfo(bufferable, pos, maxBufferHole);
     // Workaround flaw in getting forward buffer when maxBufferHole is smaller than gap at current pos
     if (bufferInfo.len === 0 && bufferInfo.nextStart !== undefined) {
       const bufferedFragAtPos = this.fragmentTracker.getBufferedFrag(pos, type);
@@ -917,7 +923,7 @@ export default class BaseStreamController
         return BufferHelper.bufferInfo(
           bufferable,
           pos,
-          Math.max(bufferInfo.nextStart, config.maxBufferHole)
+          Math.max(bufferInfo.nextStart, maxBufferHole)
         );
       }
     }
@@ -938,7 +944,7 @@ export default class BaseStreamController
     return Math.min(maxBufLen, config.maxMaxBufferLength);
   }
 
-  protected reduceMaxBufferLength(threshold?: number) {
+  protected reduceMaxBufferLength(threshold: number) {
     const config = this.config;
     const minLength = threshold || config.maxBufferLength;
     if (config.maxMaxBufferLength >= minLength) {
@@ -1178,7 +1184,7 @@ export default class BaseStreamController
             this.fragmentTracker.getState(nextFrag) !== FragmentState.OK
           ) {
             this.log(
-              `SN ${frag.sn} just loaded, load next one: ${nextFrag.sn}`
+              `Skipping loaded ${frag.type} SN ${frag.sn} at buffer end`
             );
             frag = nextFrag;
           } else {
@@ -1414,6 +1420,39 @@ export default class BaseStreamController
     } else {
       this.state = State.ERROR;
     }
+    // Perform next async tick sooner to speed up error action resolution
+    this.tickImmediate();
+  }
+
+  protected reduceLengthAndFlushBuffer(data: ErrorData): boolean {
+    // if in appending state
+    if (this.state === State.PARSING || this.state === State.PARSED) {
+      const playlistType = data.parent as PlaylistLevelType;
+      const bufferedInfo = this.getFwdBufferInfo(
+        this.mediaBuffer,
+        playlistType
+      );
+      // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
+      // reduce max buf len if current position is buffered
+      let flushBuffer = true;
+      if (bufferedInfo && bufferedInfo.len > 0.5) {
+        flushBuffer = !this.reduceMaxBufferLength(bufferedInfo.len);
+      }
+      if (flushBuffer) {
+        // current position is not buffered, but browser is still complaining about buffer full error
+        // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
+        // in that case flush the whole audio buffer to recover
+        this.warn(
+          `Buffer full error while media.currentTime is not buffered, flush ${playlistType} buffer`
+        );
+      }
+      if (data.frag) {
+        this.nextLoadPosition = data.frag.start;
+      }
+      this.resetLoadingState();
+      return flushBuffer;
+    }
+    return false;
   }
 
   protected resetFragmentErrors(filterType: PlaylistLevelType) {

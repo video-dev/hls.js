@@ -302,25 +302,42 @@ export default class StreamController
     } else if (this.backtrackFragment && bufferInfo.len) {
       this.backtrackFragment = null;
     }
-    // Avoid loop loading by using nextLoadPosition set for backtracking
-    if (
-      frag &&
-      this.fragmentTracker.getState(frag) === FragmentState.OK &&
-      this.nextLoadPosition > targetBufferTime
-    ) {
-      // Cleanup the fragment tracker before trying to find the next unbuffered fragment
-      const type =
-        this.audioOnly && !this.altAudio
-          ? ElementaryStreamTypes.AUDIO
-          : ElementaryStreamTypes.VIDEO;
-      const mediaBuffer =
-        (type === ElementaryStreamTypes.VIDEO
-          ? this.videoBuffer
-          : this.mediaBuffer) || this.media;
-      if (mediaBuffer) {
-        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
+    if (frag) {
+      // Avoid loop loading by using nextLoadPosition set for backtracking and skipping consecutive GAP tags
+      const trackerState = this.fragmentTracker.getState(frag);
+      if (
+        (trackerState === FragmentState.OK ||
+          (trackerState === FragmentState.PARTIAL && frag.gap)) &&
+        this.nextLoadPosition > targetBufferTime
+      ) {
+        const gapStart = frag.gap;
+        if (!gapStart) {
+          // Cleanup the fragment tracker before trying to find the next unbuffered fragment
+          const type =
+            this.audioOnly && !this.altAudio
+              ? ElementaryStreamTypes.AUDIO
+              : ElementaryStreamTypes.VIDEO;
+          const mediaBuffer =
+            (type === ElementaryStreamTypes.VIDEO
+              ? this.videoBuffer
+              : this.mediaBuffer) || this.media;
+          if (mediaBuffer) {
+            this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
+          }
+        }
+        frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
+        if (gapStart && frag && !frag.gap && bufferInfo.nextStart) {
+          // Make sure this doesn't make the next buffer timerange exceed forward buffer length after a gap
+          const nextbufferInfo = this.getFwdBufferInfoAtPos(
+            this.mediaBuffer ? this.mediaBuffer : this.media,
+            bufferInfo.nextStart,
+            PlaylistLevelType.MAIN
+          );
+          if (nextbufferInfo !== null && nextbufferInfo.len > maxBufLen) {
+            return;
+          }
+        }
       }
-      frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
     }
     if (!frag) {
       return;
@@ -877,32 +894,11 @@ export default class StreamController
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
-        // if in appending state
-        if (
-          data.parent === 'main' &&
-          (this.state === State.PARSING || this.state === State.PARSED)
-        ) {
-          let flushBuffer = true;
-          const bufferedInfo = this.getFwdBufferInfo(
-            this.media,
-            PlaylistLevelType.MAIN
-          );
-          // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-          // reduce max buf len if current position is buffered
-          if (bufferedInfo && bufferedInfo.len > 0.5) {
-            flushBuffer = !this.reduceMaxBufferLength(bufferedInfo.len);
-          }
-          if (flushBuffer) {
-            // current position is not buffered, but browser is still complaining about buffer full error
-            // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
-            // in that case flush the whole buffer to recover
-            this.warn(
-              'buffer full error also media.currentTime is not buffered, flush main'
-            );
-            // flush main buffer
-            this.immediateLevelSwitch();
-          }
-          this.resetLoadingState();
+        if (!data.parent || data.parent !== 'main') {
+          return;
+        }
+        if (this.reduceLengthAndFlushBuffer(data)) {
+          this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
         }
         break;
       case ErrorDetails.INTERNAL_EXCEPTION:
