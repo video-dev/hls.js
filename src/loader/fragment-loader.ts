@@ -69,18 +69,7 @@ export default class FragmentLoader {
         this.loader.destroy();
       }
       if (frag.gap) {
-        frag.stats.aborted = true;
-        frag.stats.retry++;
-        reject(
-          new LoadError({
-            type: ErrorTypes.MEDIA_ERROR,
-            details: ErrorDetails.FRAG_GAP,
-            fatal: false,
-            frag,
-            error: new Error('GAP tag found'),
-            networkDetails: null,
-          })
-        );
+        reject(createGapLoadError(frag));
         return;
       }
       const loader =
@@ -191,19 +180,7 @@ export default class FragmentLoader {
         this.loader.destroy();
       }
       if (frag.gap || part.gap) {
-        frag.stats.aborted = true;
-        frag.stats.retry++;
-        reject(
-          new LoadError({
-            type: ErrorTypes.MEDIA_ERROR,
-            details: ErrorDetails.FRAG_GAP,
-            fatal: false,
-            frag,
-            part,
-            error: new Error(`GAP ${frag.gap ? 'tag' : 'attribute'} found`),
-            networkDetails: null,
-          })
-        );
+        reject(createGapLoadError(frag, part));
         return;
       }
       const loader =
@@ -371,6 +348,22 @@ function createLoaderContext(
     loaderContext.rangeEnd = byteRangeEnd;
   }
   return loaderContext;
+}
+
+function createGapLoadError(frag: Fragment, part?: Part): LoadError {
+  const error = new Error(`GAP ${frag.gap ? 'tag' : 'attribute'} found`);
+  const errorData: FragLoadFailResult = {
+    type: ErrorTypes.MEDIA_ERROR,
+    details: ErrorDetails.FRAG_GAP,
+    fatal: false,
+    frag,
+    error,
+    networkDetails: null,
+  };
+  if (part) {
+    errorData.part = part;
+  }
+  return new LoadError(errorData);
 }
 
 export class LoadError extends Error {

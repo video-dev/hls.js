@@ -327,13 +327,16 @@ export default class StreamController
         }
         frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
         if (gapStart && frag && !frag.gap && bufferInfo.nextStart) {
-          // Make sure this doesn't make the next buffer timerange exceed forward buffer length after a gap
+          // Media buffered after GAP tags should not make the next buffer timerange exceed forward buffer length
           const nextbufferInfo = this.getFwdBufferInfoAtPos(
             this.mediaBuffer ? this.mediaBuffer : this.media,
             bufferInfo.nextStart,
             PlaylistLevelType.MAIN
           );
-          if (nextbufferInfo !== null && nextbufferInfo.len > maxBufLen) {
+          if (
+            nextbufferInfo !== null &&
+            bufferLen + nextbufferInfo.len >= maxBufLen
+          ) {
             return;
           }
         }

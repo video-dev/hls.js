@@ -1167,9 +1167,10 @@ export default class BaseStreamController
       const curSNIdx = frag.sn - levelDetails.startSN;
       // Move fragPrevious forward to support forcing the next fragment to load
       // when the buffer catches up to a previously buffered range.
+      const fragState = this.fragmentTracker.getState(frag);
       if (
-        this.fragmentTracker.getState(frag) === FragmentState.OK ||
-        (frag.gap && frag.stats.aborted)
+        fragState === FragmentState.OK ||
+        (fragState === FragmentState.PARTIAL && frag.gap)
       ) {
         fragPrevious = frag;
       }

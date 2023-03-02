@@ -324,7 +324,7 @@ export default class ErrorController implements NetworkComponentAPI {
             candidate !== hls.loadLevel &&
             levels[candidate].loadError === 0
           ) {
-            // Skip level switch if GAP tag is found in next level
+            // Skip level switch if GAP tag is found in next level at same position
             if (data.details === ErrorDetails.FRAG_GAP && data.frag) {
               const levelDetails = hls.levels[candidate].details;
               if (levelDetails) {

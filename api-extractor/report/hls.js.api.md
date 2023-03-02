@@ -330,6 +330,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected getFwdBufferInfo(bufferable: Bufferable | null, type: PlaylistLevelType): BufferInfo | null;
     // (undocumented)
+    protected getFwdBufferInfoAtPos(bufferable: Bufferable | null, pos: number, type: PlaylistLevelType): BufferInfo | null;
+    // (undocumented)
     protected getInitialLiveFragment(levelDetails: LevelDetails, fragments: Array<Fragment>): Fragment | null;
     // (undocumented)
     protected getLevelDetails(): LevelDetails | undefined;
@@ -406,7 +408,9 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected recoverWorkerError(data: ErrorData): void;
     // (undocumented)
-    protected reduceMaxBufferLength(threshold?: number): boolean;
+    protected reduceLengthAndFlushBuffer(data: ErrorData): boolean;
+    // (undocumented)
+    protected reduceMaxBufferLength(threshold: number): boolean;
     // (undocumented)
     protected resetFragmentErrors(filterType: PlaylistLevelType): void;
     // (undocumented)
