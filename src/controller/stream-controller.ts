@@ -904,6 +904,9 @@ export default class StreamController
           this.resetLoadingState();
         }
         break;
+      case ErrorDetails.INTERNAL_EXCEPTION:
+        this.recoverWorkerError(data);
+        break;
       default:
         break;
     }

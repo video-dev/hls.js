@@ -1551,6 +1551,13 @@ export default class BaseStreamController
     }
   }
 
+  protected recoverWorkerError(data: ErrorData) {
+    if (data.event === 'demuxerWorker') {
+      this.resetTransmuxer();
+      this.resetLoadingState();
+    }
+  }
+
   set state(nextState) {
     const previousState = this._state;
     if (previousState !== nextState) {
