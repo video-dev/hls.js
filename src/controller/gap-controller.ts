@@ -131,12 +131,9 @@ export default class GapController {
       const maxStartGapJump = isLive
         ? level!.details!.targetduration * 2
         : MAX_START_GAP_JUMP;
-      if (
-        startJump > 0 &&
-        (startJump <= maxStartGapJump ||
-          this.fragmentTracker.getPartialFragment(0))
-      ) {
-        this._trySkipBufferHole(null);
+      const partialOrGap = this.fragmentTracker.getPartialFragment(currentTime);
+      if (startJump > 0 && (startJump <= maxStartGapJump || partialOrGap)) {
+        this._trySkipBufferHole(partialOrGap);
         return;
       }
     }
@@ -187,7 +184,7 @@ export default class GapController {
       // This method isn't limited by the size of the gap between buffered ranges
       const targetTime = this._trySkipBufferHole(partial);
       // we return here in this case, meaning
-      // the branch below only executes when we don't handle a partial fragment
+      // the branch below only executes when we haven't seeked to a new position
       if (targetTime || !this.media) {
         return;
       }
@@ -248,19 +245,20 @@ export default class GapController {
     if (media === null) {
       return 0;
     }
-    const currentTime = media.currentTime;
-    let lastEndTime = 0;
+
     // Check if currentTime is between unbuffered regions of partial fragments
-    const buffered = BufferHelper.getBuffered(media);
-    for (let i = 0; i < buffered.length; i++) {
-      const startTime = buffered.start(i);
-      if (
-        currentTime + config.maxBufferHole >= lastEndTime &&
-        currentTime < startTime
-      ) {
+    const currentTime = media.currentTime;
+    const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
+    const startTime =
+      currentTime < bufferInfo.start ? bufferInfo.start : bufferInfo.nextStart;
+    if (startTime) {
+      const bufferStarved = bufferInfo.len <= config.maxBufferHole;
+      const waiting =
+        bufferInfo.len > 0 && bufferInfo.len < 1 && media.readyState < 3;
+      if (currentTime < startTime && (bufferStarved || waiting)) {
         const targetTime = Math.max(
           startTime + SKIP_BUFFER_RANGE_START,
-          media.currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS
+          currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS
         );
         logger.warn(
           `skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`
@@ -268,7 +266,7 @@ export default class GapController {
         this.moved = true;
         this.stalled = null;
         media.currentTime = targetTime;
-        if (partial) {
+        if (partial && !partial.gap) {
           const error = new Error(
             `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`
           );
@@ -283,7 +281,6 @@ export default class GapController {
         }
         return targetTime;
       }
-      lastEndTime = buffered.end(i);
     }
     return 0;
   }
