@@ -15,7 +15,7 @@ import type {
 } from '../types/events';
 import type Hls from '../hls';
 
-export enum FragmentState {
+export const enum FragmentState {
   NOT_LOADED = 'NOT_LOADED',
   APPENDING = 'APPENDING',
   PARTIAL = 'PARTIAL',

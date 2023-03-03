@@ -22,12 +22,13 @@ import type { Track, TrackSet } from './track';
 import type { SourceBufferName } from './buffer';
 import type { ChunkMetadata } from './transmuxer';
 import type { LoadStats } from '../loader/load-stats';
-import type { ErrorDetails, ErrorTypes, IErrorAction } from '../errors';
+import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
 import type { AttrList } from '../utils/attr-list';
 import type { HlsListeners } from '../events';
 import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelKey } from '../loader/level-key';
+import type { IErrorAction } from '../controller/error-controller';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;

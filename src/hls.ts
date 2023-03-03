@@ -1037,8 +1037,8 @@ export type {
   SubtitleTrackSwitchData,
 } from './types/events';
 export type {
-  IErrorAction,
   NetworkErrorAction,
   ErrorActionFlags,
-} from './errors';
+  IErrorAction,
+} from './controller/error-controller';
 export type { AttrList } from './utils/attr-list';

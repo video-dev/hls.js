@@ -10,7 +10,7 @@ import type {
 } from '../types/loader';
 import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
-export enum ElementaryStreamTypes {
+export const enum ElementaryStreamTypes {
   AUDIO = 'audio',
   VIDEO = 'video',
   AUDIOVIDEO = 'audiovideo',

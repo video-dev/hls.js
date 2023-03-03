@@ -3,7 +3,7 @@ import type { DRMSystemOptions, EMEControllerConfig } from '../config';
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess
  */
-export enum KeySystems {
+export const enum KeySystems {
   CLEARKEY = 'org.w3.clearkey',
   FAIRPLAY = 'com.apple.fps',
   PLAYREADY = 'com.microsoft.playready',
@@ -11,7 +11,7 @@ export enum KeySystems {
 }
 
 // Playlist #EXT-X-KEY KEYFORMAT values
-export enum KeySystemFormats {
+export const enum KeySystemFormats {
   CLEARKEY = 'org.w3.clearkey',
   FAIRPLAY = 'com.apple.streamingkeydelivery',
   PLAYREADY = 'com.microsoft.playready',
@@ -34,7 +34,7 @@ export function keySystemFormatToKeySystemDomain(
 }
 
 // System IDs for which we can extract a key ID from "encrypted" event PSSH
-export enum KeySystemIds {
+export const enum KeySystemIds {
   // CENC = '1077efecc0b24d02ace33c1e52e2fb4b'
   // CLEARKEY = 'e2719d58a985b3c9781ab030af78d30e',
   // FAIRPLAY = '94ce86fb07ff4f43adb893d2fa968ca2',

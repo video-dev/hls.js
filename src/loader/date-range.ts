@@ -1,7 +1,8 @@
 import { AttrList } from '../utils/attr-list';
 import { logger } from '../utils/logger';
 
-export enum DateRangeAttribute {
+// Avoid exporting const enum so that these values can be inlined
+const enum DateRangeAttribute {
   ID = 'ID',
   CLASS = 'CLASS',
   START_DATE = 'START-DATE',
@@ -11,6 +12,24 @@ export enum DateRangeAttribute {
   PLANNED_DURATION = 'PLANNED-DURATION',
   SCTE35_OUT = 'SCTE35-OUT',
   SCTE35_IN = 'SCTE35-IN',
+}
+
+export function isDateRangeCueAttribute(attrName: string): boolean {
+  return (
+    attrName !== DateRangeAttribute.ID &&
+    attrName !== DateRangeAttribute.CLASS &&
+    attrName !== DateRangeAttribute.START_DATE &&
+    attrName !== DateRangeAttribute.DURATION &&
+    attrName !== DateRangeAttribute.END_DATE &&
+    attrName !== DateRangeAttribute.END_ON_NEXT
+  );
+}
+
+export function isSCTE35Attribute(attrName: string): boolean {
+  return (
+    attrName === DateRangeAttribute.SCTE35_OUT ||
+    attrName === DateRangeAttribute.SCTE35_IN
+  );
 }
 
 export class DateRange {
