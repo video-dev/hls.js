@@ -404,6 +404,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected onvseeking: EventListener | null;
     // (undocumented)
+    protected recoverWorkerError(data: ErrorData): void;
+    // (undocumented)
     protected reduceMaxBufferLength(threshold?: number): boolean;
     // (undocumented)
     protected resetFragmentErrors(filterType: PlaylistLevelType): void;

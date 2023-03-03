@@ -82,8 +82,7 @@ export default class TransmuxerInterface {
           const error = new Error(
             `${event.message}  (${event.filename}:${event.lineno})`
           );
-          this.useWorker = false;
-          this.error = null;
+          config.enableWorker = false;
           logger.warn('Exception in webworker, fallback to inline');
           this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.OTHER_ERROR,
@@ -105,10 +104,7 @@ export default class TransmuxerInterface {
         logger.error(
           'Error while initializing DemuxerWorker, fallback to inline'
         );
-        if (worker) {
-          // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
-          self.URL.revokeObjectURL(worker.objectURL);
-        }
+        this.resetWorker();
         this.error = null;
         this.transmuxer = new Transmuxer(
           this.observer,
@@ -117,7 +113,6 @@ export default class TransmuxerInterface {
           vendor,
           id
         );
-        this.worker = null;
       }
     } else {
       this.transmuxer = new Transmuxer(
@@ -130,12 +125,24 @@ export default class TransmuxerInterface {
     }
   }
 
+  resetWorker(): void {
+    const worker = this.worker;
+    if (worker) {
+      if (worker?.objectURL) {
+        // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
+        self.URL.revokeObjectURL(worker.objectURL);
+      }
+      worker.removeEventListener('message', this.onwmsg);
+      worker.onerror = null;
+      worker.terminate();
+      this.worker = null;
+    }
+  }
+
   destroy(): void {
     const w = this.worker;
     if (w) {
-      w.removeEventListener('message', this.onwmsg);
-      w.terminate();
-      this.worker = null;
+      this.resetWorker();
       this.onwmsg = undefined;
     } else {
       const transmuxer = this.transmuxer;
