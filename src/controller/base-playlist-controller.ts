@@ -2,6 +2,9 @@ import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
 import { getSkipValue, HlsSkip, HlsUrlParameters, Level } from '../types/level';
 import { computeReloadInterval, mergeDetails } from './level-helper';
+import { ErrorData } from '../types/events';
+import { getRetryDelay, isTimeoutError } from '../utils/error-helper';
+import { NetworkErrorAction } from './error-controller';
 import { logger } from '../utils/logger';
 import type { LevelDetails } from '../loader/level-details';
 import type { MediaPlaylist } from '../types/media-playlist';
@@ -10,9 +13,6 @@ import type {
   LevelLoadedData,
   TrackLoadedData,
 } from '../types/events';
-import { ErrorData } from '../types/events';
-import { NetworkErrorAction } from '../errors';
-import { getRetryDelay, isTimeoutError } from '../utils/error-helper';
 
 export default class BasePlaylistController implements NetworkComponentAPI {
   protected hls: Hls;

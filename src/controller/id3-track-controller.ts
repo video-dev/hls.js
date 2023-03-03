@@ -5,7 +5,11 @@ import {
   removeCuesInRange,
 } from '../utils/texttrack-utils';
 import * as ID3 from '../demux/id3';
-import { DateRange, DateRangeAttribute } from '../loader/date-range';
+import {
+  DateRange,
+  isDateRangeCueAttribute,
+  isSCTE35Attribute,
+} from '../loader/date-range';
 import { MetadataSchema } from '../types/demuxer';
 import type {
   BufferFlushingData,
@@ -337,14 +341,7 @@ class ID3TrackController implements ComponentAPI {
       const attributes = Object.keys(dateRange.attr);
       for (let j = 0; j < attributes.length; j++) {
         const key = attributes[j];
-        if (
-          key === DateRangeAttribute.ID ||
-          key === DateRangeAttribute.CLASS ||
-          key === DateRangeAttribute.START_DATE ||
-          key === DateRangeAttribute.DURATION ||
-          key === DateRangeAttribute.END_DATE ||
-          key === DateRangeAttribute.END_ON_NEXT
-        ) {
+        if (!isDateRangeCueAttribute(key)) {
           continue;
         }
         let cue = cues[key] as any;
@@ -355,10 +352,7 @@ class ID3TrackController implements ComponentAPI {
         } else {
           let data = dateRange.attr[key];
           cue = new Cue(startTime, endTime, '');
-          if (
-            key === DateRangeAttribute.SCTE35_OUT ||
-            key === DateRangeAttribute.SCTE35_IN
-          ) {
+          if (isSCTE35Attribute(key)) {
             data = hexToArrayBuffer(data);
           }
           cue.value = { key, data };

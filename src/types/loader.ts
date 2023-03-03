@@ -164,14 +164,14 @@ export interface Loader<T extends LoaderContext> {
   stats: LoaderStats;
 }
 
-export enum PlaylistContextType {
+export const enum PlaylistContextType {
   MANIFEST = 'manifest',
   LEVEL = 'level',
   AUDIO_TRACK = 'audioTrack',
   SUBTITLE_TRACK = 'subtitleTrack',
 }
 
-export enum PlaylistLevelType {
+export const enum PlaylistLevelType {
   MAIN = 'main',
   AUDIO = 'audio',
   SUBTITLE = 'subtitle',

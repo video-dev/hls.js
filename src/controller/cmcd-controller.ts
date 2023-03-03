@@ -4,7 +4,7 @@ import {
   CMCD,
   CMCDHeaders,
   CMCDObjectType,
-  CMCDStreamingFormat,
+  CMCDStreamingFormatHLS,
   CMCDVersion,
 } from '../types/cmcd';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -132,7 +132,7 @@ export default class CMCDController implements ComponentAPI {
   private createData(): CMCD {
     return {
       v: CMCDVersion,
-      sf: CMCDStreamingFormat.HLS,
+      sf: CMCDStreamingFormatHLS,
       sid: this.sid,
       cid: this.cid,
       pr: this.media?.playbackRate,

@@ -3,7 +3,7 @@ import { FragmentState } from './fragment-tracker';
 import { Bufferable, BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import { Events } from '../events';
-import { ErrorDetails, ErrorTypes, NetworkErrorAction } from '../errors';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { alignStream } from '../utils/discontinuities';
@@ -29,6 +29,8 @@ import { LevelDetails } from '../loader/level-details';
 import Decrypter from '../crypt/decrypter';
 import TimeRanges from '../utils/time-ranges';
 import { PlaylistLevelType } from '../types/loader';
+import { getRetryDelay } from '../utils/error-helper';
+import { NetworkErrorAction } from './error-controller';
 import type {
   BufferAppendingData,
   ErrorData,
@@ -47,7 +49,6 @@ import type { HlsConfig } from '../config';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { SourceBufferName } from '../types/buffer';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
-import { getRetryDelay } from '../utils/error-helper';
 
 type ResolveFragLoaded = (FragLoadedEndData) => void;
 type RejectFragLoaded = (LoadError) => void;

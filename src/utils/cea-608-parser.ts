@@ -208,7 +208,7 @@ const backgroundColors = [
   'transparent',
 ];
 
-enum VerboseLevel {
+const enum VerboseLevel {
   ERROR = 0,
   TEXT = 1,
   WARNING = 2,
