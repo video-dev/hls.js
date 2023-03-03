@@ -693,6 +693,9 @@ class AudioStreamController
           this.resetLoadingState();
         }
         break;
+      case ErrorDetails.INTERNAL_EXCEPTION:
+        this.recoverWorkerError(data);
+        break;
       default:
         break;
     }
