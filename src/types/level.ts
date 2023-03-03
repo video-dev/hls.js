@@ -41,7 +41,7 @@ export type HdcpLevel = (typeof HdcpLevels)[number];
 
 export type VariableMap = Record<string, string>;
 
-export enum HlsSkip {
+export const enum HlsSkip {
   No = '',
   Yes = 'YES',
   v2 = 'v2',

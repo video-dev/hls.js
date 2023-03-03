@@ -1,3 +1,4 @@
+/* global process:false, __dirname:false */
 const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
@@ -64,7 +65,12 @@ const baseConfig = {
         options: {
           babelrc: false,
           presets: [
-            '@babel/preset-typescript',
+            [
+              '@babel/preset-typescript',
+              {
+                optimizeConstEnums: true,
+              },
+            ],
             [
               '@babel/preset-env',
               {

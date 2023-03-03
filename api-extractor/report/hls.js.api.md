@@ -844,7 +844,7 @@ export type ElementaryStreams = Record<ElementaryStreamTypes, ElementaryStreamIn
 // Warning: (ae-missing-release-tag) "ElementaryStreamTypes" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export enum ElementaryStreamTypes {
+export const enum ElementaryStreamTypes {
     // (undocumented)
     AUDIO = "audio",
     // (undocumented)
@@ -884,7 +884,7 @@ export type EMEControllerConfig = {
 // Warning: (ae-missing-release-tag) "ErrorActionFlags" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export enum ErrorActionFlags {
+export const enum ErrorActionFlags {
     // (undocumented)
     MoveAllAlternatesMatchingHDCP = 2,
     // (undocumented)
@@ -1791,7 +1791,7 @@ export interface HlsProgressivePerformanceTiming extends HlsPerformanceTiming {
 // Warning: (ae-missing-release-tag) "HlsSkip" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export enum HlsSkip {
+export const enum HlsSkip {
     // (undocumented)
     No = "",
     // (undocumented)
@@ -1885,7 +1885,7 @@ export interface KeyLoadingData {
 // Warning: (ae-missing-release-tag) "KeySystemFormats" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export enum KeySystemFormats {
+export const enum KeySystemFormats {
     // (undocumented)
     CLEARKEY = "org.w3.clearkey",
     // (undocumented)
@@ -1899,7 +1899,7 @@ export enum KeySystemFormats {
 // Warning: (ae-missing-release-tag) "KeySystems" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export enum KeySystems {
+export const enum KeySystems {
     // (undocumented)
     CLEARKEY = "org.w3.clearkey",
     // (undocumented)
@@ -2681,7 +2681,7 @@ export interface MetadataSample {
 // Warning: (ae-missing-release-tag) "MetadataSchema" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export enum MetadataSchema {
+export const enum MetadataSchema {
     // (undocumented)
     audioId3 = "org.id3",
     // (undocumented)
@@ -2711,7 +2711,7 @@ export interface NetworkComponentAPI extends ComponentAPI {
 // Warning: (ae-missing-release-tag) "NetworkErrorAction" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export enum NetworkErrorAction {
+export const enum NetworkErrorAction {
     // (undocumented)
     DoNothing = 0,
     // (undocumented)
@@ -2784,7 +2784,7 @@ export class Part extends BaseSegment {
 // Warning: (ae-missing-release-tag) "PlaylistContextType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export enum PlaylistContextType {
+export const enum PlaylistContextType {
     // (undocumented)
     AUDIO_TRACK = "audioTrack",
     // (undocumented)
@@ -2798,7 +2798,7 @@ export enum PlaylistContextType {
 // Warning: (ae-missing-release-tag) "PlaylistLevelType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export enum PlaylistLevelType {
+export const enum PlaylistLevelType {
     // (undocumented)
     AUDIO = "audio",
     // (undocumented)

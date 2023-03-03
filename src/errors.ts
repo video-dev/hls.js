@@ -90,7 +90,7 @@ export enum ErrorDetails {
   UNKNOWN = 'unknown',
 }
 
-export enum NetworkErrorAction {
+export const enum NetworkErrorAction {
   DoNothing = 0,
   SendEndCallback = 1, // Reserved for future use
   SendAlternateToPenaltyBox = 2,
@@ -99,7 +99,7 @@ export enum NetworkErrorAction {
   RetryRequest = 5,
 }
 
-export enum ErrorActionFlags {
+export const enum ErrorActionFlags {
   None = 0,
   MoveAllAlternatesMatchingHost = 1,
   MoveAllAlternatesMatchingHDCP = 1 << 1,
