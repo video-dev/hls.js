@@ -1,23 +1,44 @@
 import { Events } from '../events';
-import {
-  ErrorActionFlags,
-  ErrorDetails,
-  ErrorTypes,
-  IErrorAction,
-  NetworkErrorAction,
-} from '../errors';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import {
   getRetryConfig,
   isTimeoutError,
   shouldRetry,
 } from '../utils/error-helper';
-import { HdcpLevels } from '../types/level';
+import { HdcpLevel, HdcpLevels } from '../types/level';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
+import type { RetryConfig } from '../config';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { ErrorData } from '../types/events';
 import type { Fragment } from '../loader/fragment';
+
+export const enum NetworkErrorAction {
+  DoNothing = 0,
+  SendEndCallback = 1, // Reserved for future use
+  SendAlternateToPenaltyBox = 2,
+  RemoveAlternatePermanently = 3, // Reserved for future use
+  InsertDiscontinuity = 4, // Reserved for future use
+  RetryRequest = 5,
+}
+
+export const enum ErrorActionFlags {
+  None = 0,
+  MoveAllAlternatesMatchingHost = 1,
+  MoveAllAlternatesMatchingHDCP = 1 << 1,
+  SwitchToSDR = 1 << 2, // Reserved for future use
+}
+
+export type IErrorAction = {
+  action: NetworkErrorAction;
+  flags: ErrorActionFlags;
+  retryCount?: number;
+  retryConfig?: RetryConfig;
+  hdcpLevel?: HdcpLevel;
+  nextAutoLevel?: number;
+  resolved?: boolean;
+};
 
 export default class ErrorController implements NetworkComponentAPI {
   private readonly hls: Hls;
