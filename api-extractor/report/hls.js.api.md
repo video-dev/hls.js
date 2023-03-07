@@ -1607,7 +1607,7 @@ export type HlsConfig = {
     fLoader?: FragmentLoaderConstructor;
     pLoader?: PlaylistLoaderConstructor;
     fetchSetup?: (context: LoaderContext, initParams: any) => Request;
-    xhrSetup?: (xhr: XMLHttpRequest, url: string) => void;
+    xhrSetup?: (xhr: XMLHttpRequest, url: string) => Promise<void>;
     audioStreamController?: typeof AudioStreamController;
     audioTrackController?: typeof AudioTrackController;
     subtitleStreamController?: typeof SubtitleStreamController;
