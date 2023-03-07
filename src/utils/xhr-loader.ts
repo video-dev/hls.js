@@ -74,7 +74,7 @@ class XhrLoader implements Loader<LoaderContext> {
     this.loadInternal();
   }
 
-  loadInternal(): void {
+  async loadInternal(): Promise<void> {
     const { config, context } = this;
     if (!config) {
       return;
@@ -89,12 +89,12 @@ class XhrLoader implements Loader<LoaderContext> {
     try {
       if (xhrSetup) {
         try {
-          xhrSetup(xhr, context.url);
+          await xhrSetup(xhr, context.url);
         } catch (e) {
           // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
           // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
           xhr.open('GET', context.url, true);
-          xhrSetup(xhr, context.url);
+          await xhrSetup(xhr, context.url);
         }
       }
       if (!xhr.readyState) {
