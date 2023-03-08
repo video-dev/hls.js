@@ -105,12 +105,19 @@ class EMEController implements ComponentAPI {
   public destroy() {
     this.unregisterListeners();
     this.onMediaDetached();
+    // Remove any references that could be held in config options or callbacks
+    const config = this.config;
+    config.requestMediaKeySystemAccessFunc = null;
+    config.licenseXhrSetup = config.licenseResponseCallback = undefined;
+    config.drmSystems = config.drmSystemOptions = {};
     // @ts-ignore
     this.hls =
       this.onMediaEncrypted =
       this.onWaitingForKey =
       this.keyIdToKeySessionPromise =
         null as any;
+    // @ts-ignore
+    this.config = null;
   }
 
   private registerListeners() {
