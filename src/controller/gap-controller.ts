@@ -77,6 +77,7 @@ export default class GapController {
     // Clear stalled state when beginning or finishing seeking so that we don't report stalls coming out of a seek
     if (beginSeek || seeked) {
       this.stalled = null;
+      return;
     }
 
     // The playhead should not be moving

@@ -557,6 +557,17 @@ export default class StreamController
       this.log(`Media seeked to ${(currentTime as number).toFixed(3)}`);
     }
 
+    // If seeked was issued before buffer was appended do not tick immediately
+    const bufferInfo = this.getMainFwdBufferInfo();
+    if (bufferInfo === null || bufferInfo.len === 0) {
+      this.warn(
+        `Main forward buffer length on "seeked" event ${
+          bufferInfo ? bufferInfo.len : 'empty'
+        })`
+      );
+      return;
+    }
+
     // tick to speed up FRAG_CHANGED triggering
     this.tick();
   }
