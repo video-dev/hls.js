@@ -882,7 +882,7 @@ This allows user to easily modify/setup XHR. See example below.
 
 ```js
 var config = {
-  xhrSetup: async function (xhr, url) {
+  xhrSetup: function (xhr, url) {
     xhr.withCredentials = true; // do send cookies
   },
 };
