@@ -337,6 +337,11 @@ export default class Hls implements HlsEventEmitter {
 
     this.coreComponents.forEach((component) => component.destroy());
     this.coreComponents.length = 0;
+    // Remove any references that could be held in config options or callbacks
+    const config = this.config;
+    config.xhrSetup = config.fetchSetup = undefined;
+    // @ts-ignore
+    this.config = this.userConfig = null;
   }
 
   /**
