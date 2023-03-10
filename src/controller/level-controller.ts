@@ -340,7 +340,7 @@ export default class LevelController extends BasePlaylistController {
     this.currentLevel = level;
 
     if (
-      this.currentLevelIndex === newLevel &&
+      lastLevelIndex === newLevel &&
       level.details &&
       lastLevel &&
       lastPathwayId === pathwayId
