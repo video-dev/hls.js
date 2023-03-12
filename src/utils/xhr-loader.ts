@@ -139,7 +139,7 @@ class XhrLoader implements Loader<LoaderContext> {
     self.clearTimeout(this.requestTimeout);
     this.requestTimeout = self.setTimeout(
       this.loadtimeout.bind(this),
-      config.timeout
+      config.loadPolicy.maxTimeToFirstByteMs
     );
     xhr.send();
   }
