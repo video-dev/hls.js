@@ -365,7 +365,7 @@ class AudioStreamController
       return;
     }
 
-    this.loadFragment(frag, levelInfo, targetBufferTime);
+    this.loadFragment(frag, levelInfo, targetBufferTime, null);
   }
 
   protected getMaxBufferLength(mainBufferLength?: number): number {
@@ -505,18 +505,18 @@ class AudioStreamController
       this.warn(
         `Audio tracks were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`
       );
-      return;
+      return Promise.resolve();
     }
 
     const track = levels[trackId] as Level;
     if (!track) {
       this.warn('Audio track is defined on fragment load progress');
-      return;
+      return Promise.resolve();
     }
     const details = track.details as LevelDetails;
     if (!details) {
       this.warn('Audio track details undefined on fragment load progress');
-      return;
+      return Promise.resolve();
     }
     const audioCodec =
       config.defaultAudioCodec || track.audioCodec || 'mp4a.40.2';
@@ -575,14 +575,17 @@ class AudioStreamController
       this.waitingVideoCC = this.videoTrackCC;
       this.state = State.WAITING_INIT_PTS;
     }
+
+    return Promise.resolve();
   }
 
   protected _handleFragmentLoadComplete(fragLoadedData: FragLoadedData) {
     if (this.waitingData) {
       this.waitingData.complete = true;
-      return;
+      return Promise.resolve();
     }
     super._handleFragmentLoadComplete(fragLoadedData);
+    return Promise.resolve();
   }
 
   onBufferReset(/* event: Events.BUFFER_RESET */) {
@@ -838,7 +841,8 @@ class AudioStreamController
   protected loadFragment(
     frag: Fragment,
     track: Level,
-    targetBufferTime: number
+    targetBufferTime: number,
+    data: FragLoadedData | null
   ) {
     // only load if fragment is not loaded or if in audio switch
     const fragState = this.fragmentTracker.getState(frag);
@@ -859,9 +863,11 @@ class AudioStreamController
         this.state = State.WAITING_INIT_PTS;
       } else {
         this.startFragRequested = true;
-        super.loadFragment(frag, track, targetBufferTime);
+        super.loadFragment(frag, track, targetBufferTime, data);
       }
     }
+
+    return Promise.resolve();
   }
 
   private completeAudioSwitch(switchingTrack: MediaPlaylist) {

@@ -41,6 +41,7 @@ export default class FragmentLoader {
 
   load(
     frag: Fragment,
+    data: FragLoadedData | null,
     onProgress?: FragmentLoadProgressCallback
   ): Promise<FragLoadedData> {
     const url = frag.url;
@@ -88,75 +89,83 @@ export default class FragmentLoader {
       };
       // Assign frag stats to the loader's stats reference
       frag.stats = loader.stats;
-      loader.load(loaderContext, loaderConfig, {
-        onSuccess: (response, stats, context, networkDetails) => {
-          this.resetLoader(frag, loader);
-          let payload = response.data as ArrayBuffer;
-          if (context.resetIV && frag.decryptdata) {
-            frag.decryptdata.iv = new Uint8Array(payload.slice(0, 16));
-            payload = payload.slice(16);
-          }
-          resolve({
-            frag,
-            part: null,
-            payload,
-            networkDetails,
-          });
-        },
-        onError: (response, context, networkDetails, stats) => {
-          this.resetLoader(frag, loader);
-          reject(
-            new LoadError({
-              type: ErrorTypes.NETWORK_ERROR,
-              details: ErrorDetails.FRAG_LOAD_ERROR,
-              fatal: false,
-              frag,
-              response: { url, data: undefined, ...response },
-              error: new Error(`HTTP Error ${response.code} ${response.text}`),
-              networkDetails,
-              stats,
-            })
-          );
-        },
-        onAbort: (stats, context, networkDetails) => {
-          this.resetLoader(frag, loader);
-          reject(
-            new LoadError({
-              type: ErrorTypes.NETWORK_ERROR,
-              details: ErrorDetails.INTERNAL_ABORTED,
-              fatal: false,
-              frag,
-              error: new Error('Aborted'),
-              networkDetails,
-              stats,
-            })
-          );
-        },
-        onTimeout: (stats, context, networkDetails) => {
-          this.resetLoader(frag, loader);
-          reject(
-            new LoadError({
-              type: ErrorTypes.NETWORK_ERROR,
-              details: ErrorDetails.FRAG_LOAD_TIMEOUT,
-              fatal: false,
-              frag,
-              error: new Error(`Timeout after ${loaderConfig.timeout}ms`),
-              networkDetails,
-              stats,
-            })
-          );
-        },
-        onProgress: (stats, context, data, networkDetails) => {
-          if (onProgress) {
-            onProgress({
+
+      if (data) {
+        this.resetLoader(frag, loader);
+        resolve(data);
+      } else {
+        loader.load(loaderContext, loaderConfig, {
+          onSuccess: (response, stats, context, networkDetails) => {
+            this.resetLoader(frag, loader);
+            let payload = response.data as ArrayBuffer;
+            if (context.resetIV && frag.decryptdata) {
+              frag.decryptdata.iv = new Uint8Array(payload.slice(0, 16));
+              payload = payload.slice(16);
+            }
+            resolve({
               frag,
               part: null,
-              payload: data as ArrayBuffer,
+              payload,
               networkDetails,
             });
-          }
-        },
-      });
+          },
+          onError: (response, context, networkDetails, stats) => {
+            this.resetLoader(frag, loader);
+            reject(
+              new LoadError({
+                type: ErrorTypes.NETWORK_ERROR,
+                details: ErrorDetails.FRAG_LOAD_ERROR,
+                fatal: false,
+                frag,
+                response: { url, data: undefined, ...response },
+                error: new Error(
+                  `HTTP Error ${response.code} ${response.text}`
+                ),
+                networkDetails,
+                stats,
+              })
+            );
+          },
+          onAbort: (stats, context, networkDetails) => {
+            this.resetLoader(frag, loader);
+            reject(
+              new LoadError({
+                type: ErrorTypes.NETWORK_ERROR,
+                details: ErrorDetails.INTERNAL_ABORTED,
+                fatal: false,
+                frag,
+                error: new Error('Aborted'),
+                networkDetails,
+                stats,
+              })
+            );
+          },
+          onTimeout: (stats, context, networkDetails) => {
+            this.resetLoader(frag, loader);
+            reject(
+              new LoadError({
+                type: ErrorTypes.NETWORK_ERROR,
+                details: ErrorDetails.FRAG_LOAD_TIMEOUT,
+                fatal: false,
+                frag,
+                error: new Error(`Timeout after ${loaderConfig.timeout}ms`),
+                networkDetails,
+                stats,
+              })
+            );
+          },
+          onProgress: (stats, context, data, networkDetails) => {
+            if (onProgress) {
+              onProgress({
+                frag,
+                part: null,
+                payload: data as ArrayBuffer,
+                networkDetails,
+              });
+            }
+          },
+        });
+      }
     });
   }
 
@@ -366,4 +375,4 @@ export interface FragLoadFailResult extends ErrorData {
 
 export type FragmentLoadProgressCallback = (
   result: FragLoadedData | PartsLoadedData
-) => void;
+) => Promise<void>;
