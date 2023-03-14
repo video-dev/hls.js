@@ -137,6 +137,7 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.responseType = context.responseType as XMLHttpRequestResponseType;
     // setup timeout before we perform request
     self.clearTimeout(this.requestTimeout);
+    config.timeout = config.loadPolicy.maxTimeToFirstByteMs;
     this.requestTimeout = self.setTimeout(
       this.loadtimeout.bind(this),
       config.loadPolicy.maxTimeToFirstByteMs
