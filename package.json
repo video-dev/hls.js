@@ -92,7 +92,7 @@
     "karma-sinon-chai": "2.0.2",
     "karma-sourcemap-loader": "0.4.0",
     "karma-webpack": "5.0.0",
-    "lint-staged": "13.1.4",
+    "lint-staged": "13.2.0",
     "markdown-styles": "3.2.0",
     "micromatch": "4.0.5",
     "mocha": "10.2.0",
