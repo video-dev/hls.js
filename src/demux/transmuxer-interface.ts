@@ -30,14 +30,16 @@ export default class TransmuxerInterface {
   private worker: any;
   private onwmsg?: Function;
   private transmuxer: Transmuxer | null = null;
-  private onTransmuxComplete: (transmuxResult: TransmuxerResult) => void;
-  private onFlush: (chunkMeta: ChunkMetadata) => void;
+  private onTransmuxComplete: (
+    transmuxResult: TransmuxerResult
+  ) => Promise<void>;
+  private onFlush: (chunkMeta: ChunkMetadata) => Promise<void>;
 
   constructor(
     hls: Hls,
     id: PlaylistLevelType,
-    onTransmuxComplete: (transmuxResult: TransmuxerResult) => void,
-    onFlush: (chunkMeta: ChunkMetadata) => void
+    onTransmuxComplete: (transmuxResult: TransmuxerResult) => Promise<void>,
+    onFlush: (chunkMeta: ChunkMetadata) => Promise<void>
   ) {
     const config = hls.config;
     this.hls = hls;
@@ -173,7 +175,7 @@ export default class TransmuxerInterface {
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata,
     defaultInitPTS?: RationalTimestamp
-  ): void {
+  ): Promise<void> {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;
     const timeOffset = part ? part.start : frag.start;
@@ -246,6 +248,22 @@ export default class TransmuxerInterface {
         },
         data instanceof ArrayBuffer ? [data] : []
       );
+      if (this.hls.userConfig.parallelFragments) {
+        return new Promise((resolve) => {
+          const msgMethod = async (ev) => {
+            const data = ev.data;
+            switch (data.event) {
+              case 'transmuxComplete': {
+                await this.handleTransmuxComplete(data.data);
+                resolve();
+                break;
+              }
+            }
+          };
+
+          worker.addEventListener('message', msgMethod);
+        });
+      }
     } else if (transmuxer) {
       const transmuxResult = transmuxer.push(
         data,
@@ -268,12 +286,14 @@ export default class TransmuxerInterface {
           });
       } else {
         transmuxer.async = false;
-        this.handleTransmuxComplete(transmuxResult as TransmuxerResult);
+        return this.handleTransmuxComplete(transmuxResult as TransmuxerResult);
       }
     }
+
+    return Promise.resolve();
   }
 
-  flush(chunkMeta: ChunkMetadata) {
+  flush(chunkMeta: ChunkMetadata): Promise<void> {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer, worker } = this;
     if (worker) {
@@ -282,6 +302,22 @@ export default class TransmuxerInterface {
         cmd: 'flush',
         chunkMeta,
       });
+      if (this.hls.userConfig.parallelFragments) {
+        return new Promise((resolve) => {
+          const msgMethod = async (ev) => {
+            const data = ev.data;
+            switch (data.event) {
+              case 'flush': {
+                await this.onFlush(data.data);
+                resolve();
+                break;
+              }
+            }
+          };
+
+          worker.addEventListener('message', msgMethod);
+        });
+      }
     } else if (transmuxer) {
       let transmuxResult = transmuxer.flush(chunkMeta);
       const asyncFlush = isPromise(transmuxResult);
@@ -307,6 +343,8 @@ export default class TransmuxerInterface {
         );
       }
     }
+
+    return Promise.resolve();
   }
 
   private transmuxerError(
@@ -349,22 +387,22 @@ export default class TransmuxerInterface {
         break;
       }
 
-      case 'transmuxComplete': {
-        this.handleTransmuxComplete(data.data);
-        break;
-      }
-
-      case 'flush': {
-        this.onFlush(data.data);
-        break;
-      }
-
       // pass logs from the worker thread to the main logger
       case 'workerLog':
         if (logger[data.data.logType]) {
           logger[data.data.logType](data.data.message);
         }
         break;
+
+      case 'transmuxComplete': {
+        if (!this.hls.userConfig.parallelFragments)
+          this.handleTransmuxComplete(data.data);
+        break;
+      }
+      case 'flush': {
+        if (!this.hls.userConfig.parallelFragments) this.onFlush(data.data);
+        break;
+      }
 
       default: {
         data.data = data.data || {};
@@ -390,6 +428,6 @@ export default class TransmuxerInterface {
 
   private handleTransmuxComplete(result: TransmuxerResult) {
     result.chunkMeta.transmuxing.end = self.performance.now();
-    this.onTransmuxComplete(result);
+    return this.onTransmuxComplete(result);
   }
 }

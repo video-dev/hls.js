@@ -98,6 +98,7 @@ export default class BaseStreamController
   protected initPTS: RationalTimestamp[] = [];
   protected onvseeking: EventListener | null = null;
   protected onvended: EventListener | null = null;
+  protected lastFragmentsSN: any[] = [];
 
   private readonly logPrefix: string = '';
   protected log: (msg: any) => void;
@@ -325,17 +326,19 @@ export default class BaseStreamController
   protected loadFragment(
     frag: Fragment,
     level: Level,
-    targetBufferTime: number
+    targetBufferTime: number,
+    data: FragLoadedData | null
   ) {
-    this._loadFragForPlayback(frag, level, targetBufferTime);
+    return this._loadFragForPlayback(frag, level, targetBufferTime, data);
   }
 
-  private _loadFragForPlayback(
+  private async _loadFragForPlayback(
     frag: Fragment,
     level: Level,
-    targetBufferTime: number
+    targetBufferTime: number,
+    data: FragLoadedData | null
   ) {
-    const progressCallback: FragmentLoadProgressCallback = (
+    const progressCallback: FragmentLoadProgressCallback = async (
       data: FragLoadedData
     ) => {
       if (this.fragContextChanged(frag)) {
@@ -345,45 +348,60 @@ export default class BaseStreamController
           } of level ${frag.level} was dropped during download.`
         );
         this.fragmentTracker.removeFragment(frag);
-        return;
+        return Promise.resolve();
       }
       frag.stats.chunkCount++;
-      this._handleFragmentLoadProgress(data);
+      if (this.hls.userConfig.parallelFragments) {
+        await this._handleFragmentLoadProgress(data);
+      } else {
+        this._handleFragmentLoadProgress(data);
+      }
+      return;
     };
 
-    this._doFragLoad(frag, level, targetBufferTime, progressCallback)
-      .then((data) => {
-        if (!data) {
-          // if we're here we probably needed to backtrack or are waiting for more parts
-          return;
+    try {
+      const theData = await this._doFragLoad(
+        frag,
+        level,
+        targetBufferTime,
+        data,
+        progressCallback
+      );
+      if (!theData) {
+        // if we're here we probably needed to backtrack or are waiting for more parts
+        return;
+      }
+      const state = this.state;
+      if (this.fragContextChanged(frag)) {
+        if (
+          state === State.FRAG_LOADING ||
+          (!this.fragCurrent && state === State.PARSING)
+        ) {
+          this.fragmentTracker.removeFragment(frag);
+          this.state = State.IDLE;
         }
-        const state = this.state;
-        if (this.fragContextChanged(frag)) {
-          if (
-            state === State.FRAG_LOADING ||
-            (!this.fragCurrent && state === State.PARSING)
-          ) {
-            this.fragmentTracker.removeFragment(frag);
-            this.state = State.IDLE;
-          }
-          return;
-        }
+        return;
+      }
 
-        if ('payload' in data) {
-          this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
-          this.hls.trigger(Events.FRAG_LOADED, data);
-        }
+      if ('payload' in theData) {
+        this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
+        this.hls.trigger(Events.FRAG_LOADED, theData);
+      }
 
-        // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
-        this._handleFragmentLoadComplete(data);
-      })
-      .catch((reason) => {
-        if (this.state === State.STOPPED || this.state === State.ERROR) {
-          return;
-        }
-        this.warn(reason);
-        this.resetFragmentLoading(frag);
-      });
+      // Pass through the whole payload; controllers not implementing progressive loading receive data from this callback
+
+      if (this.hls.userConfig.parallelFragments) {
+        await this._handleFragmentLoadComplete(theData);
+      } else {
+        this._handleFragmentLoadComplete(theData);
+      }
+    } catch (e) {
+      if (this.state === State.STOPPED || this.state === State.ERROR) {
+        return;
+      }
+      this.warn(e);
+      this.resetFragmentLoading(frag);
+    }
   }
 
   protected flushMainBuffer(
@@ -401,7 +419,7 @@ export default class BaseStreamController
   }
 
   protected _loadInitSegment(frag: Fragment, level: Level) {
-    this._doFragLoad(frag, level)
+    this._doFragLoad(frag, level, null, null)
       .then((data) => {
         if (!data || this.fragContextChanged(frag) || !this.levels) {
           throw new Error('init load aborted');
@@ -537,7 +555,9 @@ export default class BaseStreamController
 
   protected seekToStartPos() {}
 
-  protected _handleFragmentLoadComplete(fragLoadedEndData: PartsLoadedData) {
+  protected async _handleFragmentLoadComplete(
+    fragLoadedEndData: PartsLoadedData
+  ) {
     const { transmuxer } = this;
     if (!transmuxer) {
       return;
@@ -556,18 +576,25 @@ export default class BaseStreamController
       part ? part.index : -1,
       !complete
     );
-    transmuxer.flush(chunkMeta);
+    if (this.hls.userConfig.parallelFragments) {
+      await transmuxer.flush(chunkMeta);
+    } else {
+      transmuxer.flush(chunkMeta);
+    }
   }
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected _handleFragmentLoadProgress(
     frag: PartsLoadedData | FragLoadedData
-  ) {}
+  ): Promise<void> {
+    return Promise.resolve();
+  }
 
   protected _doFragLoad(
     frag: Fragment,
     level: Level,
     targetBufferTime: number | null = null,
+    data: FragLoadedData | null,
     progressCallback?: FragmentLoadProgressCallback
   ): Promise<PartsLoadedData | FragLoadedData | null> {
     const details = level?.details;
@@ -699,7 +726,7 @@ export default class BaseStreamController
           if (!keyLoadedData || this.fragContextChanged(keyLoadedData?.frag)) {
             return null;
           }
-          return this.fragmentLoader.load(frag, progressCallback);
+          return this.fragmentLoader.load(frag, data, progressCallback);
         })
         .catch((error) => this.handleFragLoadError(error));
     } else {
@@ -708,19 +735,24 @@ export default class BaseStreamController
       result = Promise.all([
         this.fragmentLoader.load(
           frag,
+          data,
           dataOnProgress ? progressCallback : undefined
         ),
         keyLoadingPromise,
       ])
-        .then(([fragLoadedData]) => {
+        .then(async ([fragLoadedData]) => {
+          this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
           if (!dataOnProgress && fragLoadedData && progressCallback) {
-            progressCallback(fragLoadedData);
+            if (this.hls.userConfig.parallelFragments) {
+              await progressCallback(fragLoadedData);
+            } else {
+              progressCallback(fragLoadedData);
+            }
           }
           return fragLoadedData;
         })
         .catch((error) => this.handleFragLoadError(error));
     }
-    this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
     if (this.fragCurrent === null) {
       return Promise.reject(
         new Error(`frag load aborted, context changed in FRAG_LOADING`)
@@ -796,7 +828,7 @@ export default class BaseStreamController
       ) {
         this.state = State.IDLE;
       }
-      return;
+      return Promise.resolve();
     }
     const { frag, part, level } = context;
     const now = self.performance.now();
@@ -805,6 +837,7 @@ export default class BaseStreamController
       part.stats.parsing.end = now;
     }
     this.updateLevelTiming(frag, part, level, chunkMeta.partial);
+    return Promise.resolve();
   }
 
   protected getCurrentContext(
@@ -948,6 +981,29 @@ export default class BaseStreamController
       return true;
     }
     return false;
+  }
+
+  protected getNextFragments(
+    pos: number,
+    levelDetails: LevelDetails
+  ): Fragment[] {
+    const nextFragment = this.getNextFragment(pos, levelDetails);
+    if (!nextFragment) {
+      return [];
+    }
+
+    let nextFragmentIndex: any = null;
+    if (Number.isInteger(nextFragment.sn)) {
+      nextFragmentIndex = nextFragment.sn;
+    }
+
+    return levelDetails.fragments.filter(
+      (frag) =>
+        frag.sn >= nextFragment.sn &&
+        nextFragmentIndex &&
+        frag.sn >= nextFragmentIndex - 6 &&
+        !this.lastFragmentsSN.includes(frag.sn)
+    );
   }
 
   protected getNextFragment(

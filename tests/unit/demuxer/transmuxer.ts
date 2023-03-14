@@ -22,8 +22,12 @@ describe('TransmuxerInterface tests', function () {
     }
   });
 
-  const onTransmuxComplete = (res: TransmuxerResult) => {};
-  const onFlush = (meta: ChunkMetadata) => {};
+  const onTransmuxComplete = (res: TransmuxerResult) => {
+    return Promise.resolve();
+  };
+  const onFlush = (meta: ChunkMetadata) => {
+    return Promise.resolve();
+  };
 
   it('can construct without a worker', function () {
     const config = { enableWorker: false }; // Option debug : true crashes mocha

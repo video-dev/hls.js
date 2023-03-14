@@ -113,11 +113,11 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     protected getMaxBufferLength(mainBufferLength?: number): number;
     // (undocumented)
-    protected _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
+    protected _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): Promise<void>;
     // (undocumented)
-    _handleFragmentLoadProgress(data: FragLoadedData): void;
+    _handleFragmentLoadProgress(data: FragLoadedData): Promise<void>;
     // (undocumented)
-    protected loadFragment(frag: Fragment, track: Level, targetBufferTime: number): void;
+    protected loadFragment(frag: Fragment, track: Level, targetBufferTime: number, data: FragLoadedData | null): Promise<void>;
     // (undocumented)
     onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData): void;
     // (undocumented)
@@ -298,7 +298,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // Warning: (ae-forgotten-export) The symbol "FragmentLoadProgressCallback" needs to be exported by the entry point hls.d.ts
     //
     // (undocumented)
-    protected _doFragLoad(frag: Fragment, level: Level, targetBufferTime?: number | null, progressCallback?: FragmentLoadProgressCallback): Promise<PartsLoadedData | FragLoadedData | null>;
+    protected _doFragLoad(frag: Fragment, level: Level, targetBufferTime: number | null | undefined, data: FragLoadedData | null, progressCallback?: FragmentLoadProgressCallback): Promise<PartsLoadedData | FragLoadedData | null>;
     // (undocumented)
     protected doTick(): void;
     // (undocumented)
@@ -340,15 +340,17 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected getNextFragment(pos: number, levelDetails: LevelDetails): Fragment | null;
     // (undocumented)
+    protected getNextFragments(pos: number, levelDetails: LevelDetails): Fragment[];
+    // (undocumented)
     getNextPart(partList: Part[], frag: Fragment, targetBufferTime: number): number;
     // Warning: (ae-forgotten-export) The symbol "PartsLoadedData" needs to be exported by the entry point hls.d.ts
     //
     // (undocumented)
-    protected _handleFragmentLoadComplete(fragLoadedEndData: PartsLoadedData): void;
+    protected _handleFragmentLoadComplete(fragLoadedEndData: PartsLoadedData): Promise<void>;
     // (undocumented)
-    protected _handleFragmentLoadProgress(frag: PartsLoadedData | FragLoadedData): void;
+    protected _handleFragmentLoadProgress(frag: PartsLoadedData | FragLoadedData): Promise<void>;
     // (undocumented)
-    protected _handleTransmuxerFlush(chunkMeta: ChunkMetadata): void;
+    protected _handleTransmuxerFlush(chunkMeta: ChunkMetadata): Promise<void>;
     // (undocumented)
     protected hls: Hls;
     // Warning: (ae-forgotten-export) The symbol "RationalTimestamp" needs to be exported by the entry point hls.d.ts
@@ -360,13 +362,15 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected lastCurrentTime: number;
     // (undocumented)
+    protected lastFragmentsSN: any[];
+    // (undocumented)
     protected levelLastLoaded: number | null;
     // (undocumented)
     protected levels: Array<Level> | null;
     // (undocumented)
     protected loadedmetadata: boolean;
     // (undocumented)
-    protected loadFragment(frag: Fragment, level: Level, targetBufferTime: number): void;
+    protected loadFragment(frag: Fragment, level: Level, targetBufferTime: number, data: FragLoadedData | null): Promise<void>;
     // (undocumented)
     protected _loadInitSegment(frag: Fragment, level: Level): void;
     // (undocumented)
@@ -2882,6 +2886,7 @@ export type StreamControllerConfig = {
     maxMaxBufferLength: number;
     startFragPrefetch: boolean;
     testBandwidth: boolean;
+    parallelFragments: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "SubtitleFragProcessedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2911,11 +2916,11 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     // (undocumented)
     protected getMaxBufferLength(mainBufferLength?: number): number;
     // (undocumented)
-    _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
+    _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): Promise<void>;
     // (undocumented)
     protected levels: Array<Level>;
     // (undocumented)
-    protected loadFragment(frag: Fragment, level: Level, targetBufferTime: number): void;
+    protected loadFragment(frag: Fragment, level: Level, targetBufferTime: number, data: FragLoadedData | null): Promise<void>;
     // (undocumented)
     get mediaBufferTimeRanges(): Bufferable;
     // (undocumented)

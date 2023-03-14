@@ -10,7 +10,7 @@ import { ChunkMetadata } from '../types/transmuxer';
 import GapController from './gap-controller';
 import { ErrorDetails } from '../errors';
 import type { NetworkComponentAPI } from '../types/component-api';
-import type Hls from '../hls';
+import Hls from '../hls';
 import type { Level } from '../types/level';
 import type { LevelDetails } from '../loader/level-details';
 import type { FragmentTracker } from './fragment-tracker';
@@ -56,6 +56,7 @@ export default class StreamController
   private backtrackFragment: Fragment | null = null;
   private audioCodecSwitch: boolean = false;
   private videoBuffer: any | null = null;
+  private running: boolean = false;
 
   constructor(
     hls: Hls,
@@ -204,6 +205,9 @@ export default class StreamController
   }
 
   private doTickIdle() {
+    if (this.hls.userConfig.parallelFragments && this.running) {
+      return;
+    }
     const { hls, levelLastLoaded, levels, media } = this;
     const { config, nextLoadLevel: level } = hls;
 
@@ -283,6 +287,7 @@ export default class StreamController
     const targetBufferTime = this.backtrackFragment
       ? this.backtrackFragment.start
       : bufferInfo.end;
+
     let frag = this.getNextFragment(targetBufferTime, levelDetails);
     // Avoid backtracking by loading an earlier segment in streams with segments that do not start with a key frame (flagged by `couldBacktrack`)
     if (
@@ -329,13 +334,63 @@ export default class StreamController
       frag = frag.initSegment;
     }
 
-    this.loadFragment(frag, levelInfo, targetBufferTime);
+    if (this.hls.userConfig.parallelFragments) {
+      this.loadFragments(levelInfo, targetBufferTime);
+    } else {
+      this.loadFragment(frag, levelInfo, targetBufferTime, null);
+    }
+  }
+
+  protected loadFragments(level: Level, targetBufferTime: number) {
+    this.running = true;
+
+    // Need to download framgents here
+
+    if (level.details) {
+      const fragments = this.getNextFragments(targetBufferTime, level.details);
+      Promise.all(
+        fragments.map(async (frag) => {
+          const response = await fetch(frag.url);
+          const data = await response.arrayBuffer();
+
+          return {
+            frag,
+            part: null,
+            payload: data,
+            networkDetails: null,
+          };
+        })
+      ).then((fragments) => {
+        this.lastFragmentsSN = this.lastFragmentsSN.concat(
+          fragments.map((frag) => frag.frag.sn)
+        );
+        let totalTargetBufferTime = targetBufferTime;
+
+        fragments.reduce(async (promise, frag) => {
+          await promise;
+          return new Promise((resolve) => {
+            this.loadFragment(
+              frag.frag,
+              level,
+              totalTargetBufferTime,
+              frag
+            ).then(() => {
+              totalTargetBufferTime += frag.frag.duration;
+              resolve();
+            });
+          });
+        }, Promise.resolve());
+
+        this.running = false;
+      });
+    }
   }
 
   protected loadFragment(
     frag: Fragment,
     level: Level,
-    targetBufferTime: number
+    targetBufferTime: number,
+    data: FragLoadedData | null
   ) {
     // Check if fragment is not loaded
     const fragState = this.fragmentTracker.getState(frag);
@@ -350,7 +405,7 @@ export default class StreamController
         this._loadBitrateTestFrag(frag, level);
       } else {
         this.startFragRequested = true;
-        super.loadFragment(frag, level, targetBufferTime);
+        return super.loadFragment(frag, level, targetBufferTime, data);
       }
     } else if (fragState === FragmentState.APPENDING) {
       // Lower the buffer size and try again
@@ -361,6 +416,8 @@ export default class StreamController
       // Stop gap for bad tracker / buffer flush behavior
       this.fragmentTracker.removeAllFragments();
     }
+
+    return Promise.resolve();
   }
 
   private getAppendedFrag(position): Fragment | null {
@@ -669,7 +726,7 @@ export default class StreamController
       this.warn(
         `Levels were reset while fragment load was in progress. Fragment ${frag.sn} of level ${frag.level} will not be buffered`
       );
-      return;
+      return Promise.resolve();
     }
     const currentLevel = levels[frag.level];
     const details = currentLevel.details as LevelDetails;
@@ -677,7 +734,7 @@ export default class StreamController
       this.warn(
         `Dropping fragment ${frag.sn} of level ${frag.level} after level details were reset`
       );
-      return;
+      return Promise.resolve();
     }
     const videoCodec = currentLevel.videoCodec;
 
@@ -708,7 +765,7 @@ export default class StreamController
     );
     const initPTS = this.initPTS[frag.cc];
 
-    transmuxer.push(
+    return transmuxer.push(
       payload,
       initSegmentData,
       audioCodec,
@@ -826,7 +883,10 @@ export default class StreamController
     if (frag && frag.type !== PlaylistLevelType.MAIN) {
       return;
     }
-    if (this.fragContextChanged(frag)) {
+    if (
+      !this.hls.userConfig.parallelFragments &&
+      this.fragContextChanged(frag)
+    ) {
       // If a level switch was requested while a fragment was buffering, it will emit the FRAG_BUFFERED event upon completion
       // Avoid setting state back to IDLE, since that will interfere with a level switch
       this.warn(
@@ -1021,7 +1081,7 @@ export default class StreamController
 
   private _loadBitrateTestFrag(frag: Fragment, level: Level) {
     frag.bitrateTest = true;
-    this._doFragLoad(frag, level).then((data) => {
+    this._doFragLoad(frag, level, null, null).then((data) => {
       const { hls } = this;
       if (!data || this.fragContextChanged(frag)) {
         return;
@@ -1053,7 +1113,7 @@ export default class StreamController
         `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
       );
       this.resetStartWhenNotLoaded(chunkMeta.level);
-      return;
+      return Promise.resolve();
     }
     const { frag, part, level } = context;
     const { video, text, id3, initSegment } = remuxResult;
@@ -1064,7 +1124,7 @@ export default class StreamController
     // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
     // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
     if (this.fragContextChanged(frag)) {
-      return;
+      return Promise.resolve();
     }
 
     this.state = State.PARSING;
@@ -1115,7 +1175,7 @@ export default class StreamController
               : startPTS;
             if (targetBufferTime < startTime - this.config.maxBufferHole) {
               this.backtrack(frag);
-              return;
+              return Promise.resolve();
             }
             // Set video stream start to fragment start so that truncated samples do not distort the timeline, and mark it partial
             frag.setElementaryStreamInfo(
@@ -1142,7 +1202,7 @@ export default class StreamController
       }
     } else if (remuxResult.independent === false) {
       this.backtrack(frag);
-      return;
+      return Promise.resolve();
     }
 
     if (audio) {
@@ -1183,6 +1243,8 @@ export default class StreamController
       };
       hls.trigger(Events.FRAG_PARSING_USERDATA, emittedText);
     }
+
+    return Promise.resolve();
   }
 
   private _bufferInitSegment(

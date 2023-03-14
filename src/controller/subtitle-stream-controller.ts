@@ -327,7 +327,7 @@ export class SubtitleStreamController
     const hls = this.hls;
 
     if (this.fragContextChanged(frag)) {
-      return;
+      return Promise.resolve();
     }
     // check to see if the payload needs to be decrypted
     if (
@@ -373,6 +373,8 @@ export class SubtitleStreamController
           this.state = State.IDLE;
         });
     }
+
+    return Promise.resolve();
   }
 
   doTick() {
@@ -443,7 +445,7 @@ export class SubtitleStreamController
         this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
       ) {
         // only load if fragment is not loaded
-        this.loadFragment(foundFrag, track, targetBufferTime);
+        this.loadFragment(foundFrag, track, targetBufferTime, null);
       }
     }
   }
@@ -459,15 +461,18 @@ export class SubtitleStreamController
   protected loadFragment(
     frag: Fragment,
     level: Level,
-    targetBufferTime: number
+    targetBufferTime: number,
+    data: FragLoadedData | null
   ) {
     this.fragCurrent = frag;
     if (frag.sn === 'initSegment') {
       this._loadInitSegment(frag, level);
     } else {
       this.startFragRequested = true;
-      super.loadFragment(frag, level, targetBufferTime);
+      super.loadFragment(frag, level, targetBufferTime, null);
     }
+
+    return Promise.resolve();
   }
 
   get mediaBufferTimeRanges(): Bufferable {

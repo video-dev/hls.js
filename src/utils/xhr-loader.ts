@@ -95,8 +95,8 @@ class XhrLoader implements Loader<LoaderContext> {
           xhr.open('GET', context.url, true);
           return xhrSetup(xhr, context.url);
         })
-        .then(() => {
-          this.openAndSendXhr(xhr, context, config);
+        .then((data) => {
+          this.openAndSendXhr(xhr, context, config, data);
         })
         .catch((error) => {
           // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
@@ -109,39 +109,63 @@ class XhrLoader implements Loader<LoaderContext> {
           return;
         });
     } else {
-      this.openAndSendXhr(xhr, context, config);
+      this.openAndSendXhr(xhr, context, config, null);
     }
   }
 
-  openAndSendXhr(xhr, context, config): void {
-    if (!xhr.readyState) {
-      xhr.open('GET', context.url, true);
-    }
-
-    const headers = this.context.headers;
-    if (headers) {
-      for (const header in headers) {
-        xhr.setRequestHeader(header, headers[header]);
+  openAndSendXhr(xhr, context, config, data): void {
+    if (data) {
+      const { context, stats } = this;
+      stats.loading.end = Math.max(self.performance.now(), stats.loading.first);
+      const len = data.data.length;
+      stats.loaded = stats.total = len;
+      if (!this.callbacks) {
+        return;
       }
-    }
+      const onProgress = this.callbacks.onProgress;
+      if (onProgress) {
+        onProgress(stats, context, data, xhr);
+      }
+      if (!this.callbacks) {
+        return;
+      }
+      const response: LoaderResponse = {
+        url: data.url,
+        data: data.data,
+        code: 200,
+      };
 
-    if (context.rangeEnd) {
-      xhr.setRequestHeader(
-        'Range',
-        'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1)
+      this.callbacks.onSuccess(response, stats, context, xhr);
+    } else {
+      if (!xhr.readyState) {
+        xhr.open('GET', context.url, true);
+      }
+
+      const headers = this.context.headers;
+      if (headers) {
+        for (const header in headers) {
+          xhr.setRequestHeader(header, headers[header]);
+        }
+      }
+
+      if (context.rangeEnd) {
+        xhr.setRequestHeader(
+          'Range',
+          'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1)
+        );
+      }
+
+      xhr.onreadystatechange = this.readystatechange.bind(this);
+      xhr.onprogress = this.loadprogress.bind(this);
+      xhr.responseType = context.responseType as XMLHttpRequestResponseType;
+      // setup timeout before we perform request
+      self.clearTimeout(this.requestTimeout);
+      this.requestTimeout = self.setTimeout(
+        this.loadtimeout.bind(this),
+        config.loadPolicy.maxTimeToFirstByteMs
       );
+      xhr.send();
     }
-
-    xhr.onreadystatechange = this.readystatechange.bind(this);
-    xhr.onprogress = this.loadprogress.bind(this);
-    xhr.responseType = context.responseType as XMLHttpRequestResponseType;
-    // setup timeout before we perform request
-    self.clearTimeout(this.requestTimeout);
-    this.requestTimeout = self.setTimeout(
-      this.loadtimeout.bind(this),
-      config.loadPolicy.maxTimeToFirstByteMs
-    );
-    xhr.send();
   }
 
   readystatechange(): void {

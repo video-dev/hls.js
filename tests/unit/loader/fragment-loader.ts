@@ -44,7 +44,12 @@ describe('FragmentLoader tests', function () {
   it('handles successful fragment loading', function () {
     response = { data: new Uint8Array(4) };
     return new Promise<void>((resolve, reject) => {
-      const onProgress = sinon.spy();
+      const onProgress = sinon.spy({
+        frag,
+        part: null,
+        payload: new ArrayBuffer(0),
+        networkDetails,
+      });
       const fragmentLoaderPrivates = fragmentLoader as any;
       fragmentLoader
         .load(frag, onProgress)

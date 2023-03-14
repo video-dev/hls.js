@@ -205,6 +205,7 @@ export type StreamControllerConfig = {
   maxMaxBufferLength: number;
   startFragPrefetch: boolean;
   testBandwidth: boolean;
+  parallelFragments: boolean;
 };
 
 export type LatencyControllerConfig = {
@@ -327,6 +328,7 @@ export const hlsDefaultConfig: HlsConfig = {
   liveMaxLatencyDuration: undefined, // used by latency-controller
   maxLiveSyncPlaybackRate: 1, // used by latency-controller
   liveDurationInfinity: false, // used by buffer-controller
+  parallelFragments: false,
   /**
    * @deprecated use backBufferLength
    */
