@@ -55,6 +55,7 @@ See [API Reference](https://hls-js-dev.netlify.app/api-docs/) for a complete lis
   - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay)
   - [`startFragPrefetch`](#startfragprefetch)
   - [`testBandwidth`](#testbandwidth)
+  - [`parallelFragments`](#parallelfragments)
   - [`progressive`](#progressive)
   - [`lowLatencyMode`](#lowlatencymode)
   - [`fpsDroppedMonitoringPeriod`](#fpsdroppedmonitoringperiod)
@@ -370,6 +371,7 @@ var config = {
   fragLoadingMaxRetryTimeout: 64000,
   startFragPrefetch: false,
   testBandwidth: true,
+  parallelFragments: false,
   progressive: false,
   lowLatencyMode: true,
   fpsDroppedMonitoringPeriod: 5000,
@@ -704,6 +706,12 @@ Start prefetching start fragment although media not attached yet.
 
 You must also set `startLevel = -1` for this to have any impact. Otherwise, hls.js will load the first level in the manifest and start playback from there. If you do set `startLevel = -1`, a fragment of the lowest level will be downloaded to establish a bandwidth estimate before selecting the first auto-level.
 Disable this test if you'd like to provide your own estimate or use the default `abrEwmaDefaultEstimate`.
+
+### `parallelFragments`
+
+(default: `false`)
+
+Enable live stream fragment to be fetch parallely (experimental).
 
 ### `progressive`
 
