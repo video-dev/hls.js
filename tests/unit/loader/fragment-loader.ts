@@ -7,9 +7,9 @@ import { hlsDefaultConfig, mergeConfig } from '../../../src/config';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { MockXhr } from '../../mocks/loader.mock';
 
-import * as sinon from 'sinon';
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+import sinon from 'sinon';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;
