@@ -1,6 +1,6 @@
-import * as sinon from 'sinon';
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+import sinon from 'sinon';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 import Hls from '../../../src/hls';
 
 import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';

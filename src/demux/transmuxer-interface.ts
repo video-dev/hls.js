@@ -1,4 +1,4 @@
-import work from './webworkify-webpack';
+import { WorkerContext, hasUMDWorker, injectWorker } from './inject-worker';
 import { Events } from '../events';
 import Transmuxer, {
   TransmuxConfig,
@@ -27,7 +27,7 @@ export default class TransmuxerInterface {
   private frag: Fragment | null = null;
   private part: Part | null = null;
   private useWorker: boolean;
-  private worker: any;
+  private workerContext: WorkerContext | null = null;
   private onwmsg?: Function;
   private transmuxer: Transmuxer | null = null;
   private onTransmuxComplete: (transmuxResult: TransmuxerResult) => void;
@@ -70,78 +70,79 @@ export default class TransmuxerInterface {
     // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
     const vendor = navigator.vendor;
     if (this.useWorker && typeof Worker !== 'undefined') {
-      logger.log('demuxing in webworker');
-      let worker;
-      try {
-        worker = this.worker = work(
-          require.resolve('../demux/transmuxer-worker.ts')
-        );
-        this.onwmsg = this.onWorkerMessage.bind(this);
-        worker.addEventListener('message', this.onwmsg);
-        worker.onerror = (event) => {
-          const error = new Error(
-            `${event.message}  (${event.filename}:${event.lineno})`
-          );
-          config.enableWorker = false;
-          logger.warn('Exception in webworker, fallback to inline');
-          this.hls.trigger(Events.ERROR, {
-            type: ErrorTypes.OTHER_ERROR,
-            details: ErrorDetails.INTERNAL_EXCEPTION,
-            fatal: false,
-            event: 'demuxerWorker',
-            error,
+      // TODO: Offer a way to pass the worker URL rather than injecting it from UMD bundle
+      if (hasUMDWorker()) {
+        logger.log('instantiating webworker');
+        try {
+          this.workerContext = injectWorker();
+          this.onwmsg = (ev: any) => this.onWorkerMessage(ev);
+          const { worker } = this.workerContext;
+          worker.addEventListener('message', this.onwmsg as any);
+          worker.onerror = (event) => {
+            const error = new Error(
+              `${event.message}  (${event.filename}:${event.lineno})`
+            );
+            config.enableWorker = false;
+            logger.warn('Exception in webworker, fallback to inline');
+            this.hls.trigger(Events.ERROR, {
+              type: ErrorTypes.OTHER_ERROR,
+              details: ErrorDetails.INTERNAL_EXCEPTION,
+              fatal: false,
+              event: 'demuxerWorker',
+              error,
+            });
+          };
+          worker.postMessage({
+            cmd: 'init',
+            typeSupported: typeSupported,
+            vendor: vendor,
+            id: id,
+            config: JSON.stringify(config),
           });
-        };
-        worker.postMessage({
-          cmd: 'init',
-          typeSupported: typeSupported,
-          vendor: vendor,
-          id: id,
-          config: JSON.stringify(config),
-        });
-      } catch (err) {
-        logger.warn('Error in worker:', err);
-        logger.error(
-          'Error while initializing DemuxerWorker, fallback to inline'
-        );
-        this.resetWorker();
-        this.error = null;
-        this.transmuxer = new Transmuxer(
-          this.observer,
-          typeSupported,
-          config,
-          vendor,
-          id
-        );
+        } catch (err) {
+          logger.warn('Error in worker:', err);
+          logger.error(
+            'Error while initializing DemuxerWorker, fallback to inline'
+          );
+          this.resetWorker();
+          this.error = null;
+          this.transmuxer = new Transmuxer(
+            this.observer,
+            typeSupported,
+            config,
+            vendor,
+            id
+          );
+        }
+        return;
       }
-    } else {
-      this.transmuxer = new Transmuxer(
-        this.observer,
-        typeSupported,
-        config,
-        vendor,
-        id
-      );
     }
+
+    this.transmuxer = new Transmuxer(
+      this.observer,
+      typeSupported,
+      config,
+      vendor,
+      id
+    );
   }
 
   resetWorker(): void {
-    const worker = this.worker;
-    if (worker) {
-      if (worker?.objectURL) {
+    if (this.workerContext) {
+      const { worker, objectURL } = this.workerContext;
+      if (objectURL) {
         // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
-        self.URL.revokeObjectURL(worker.objectURL);
+        self.URL.revokeObjectURL(objectURL);
       }
-      worker.removeEventListener('message', this.onwmsg);
+      worker.removeEventListener('message', this.onwmsg as any);
       worker.onerror = null;
       worker.terminate();
-      this.worker = null;
+      this.workerContext = null;
     }
   }
 
   destroy(): void {
-    const w = this.worker;
-    if (w) {
+    if (this.workerContext) {
       this.resetWorker();
       this.onwmsg = undefined;
     } else {
@@ -175,7 +176,7 @@ export default class TransmuxerInterface {
     defaultInitPTS?: RationalTimestamp
   ): void {
     chunkMeta.transmuxing.start = self.performance.now();
-    const { transmuxer, worker } = this;
+    const { transmuxer } = this;
     const timeOffset = part ? part.start : frag.start;
     // TODO: push "clear-lead" decrypt data for unencrypted fragments in streams with encrypted ones
     const decryptdata = frag.decryptdata;
@@ -234,9 +235,9 @@ export default class TransmuxerInterface {
     this.part = part;
 
     // Frags with sn of 'initSegment' are not transmuxed
-    if (worker) {
+    if (this.workerContext) {
       // post fragment payload as transferable objects for ArrayBuffer (no copy)
-      worker.postMessage(
+      this.workerContext.worker.postMessage(
         {
           cmd: 'demux',
           data,
@@ -275,10 +276,10 @@ export default class TransmuxerInterface {
 
   flush(chunkMeta: ChunkMetadata) {
     chunkMeta.transmuxing.start = self.performance.now();
-    const { transmuxer, worker } = this;
-    if (worker) {
+    const { transmuxer } = this;
+    if (this.workerContext) {
       1;
-      worker.postMessage({
+      this.workerContext.worker.postMessage({
         cmd: 'flush',
         chunkMeta,
       });
@@ -344,8 +345,11 @@ export default class TransmuxerInterface {
     const hls = this.hls;
     switch (data.event) {
       case 'init': {
-        // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
-        self.URL.revokeObjectURL(this.worker.objectURL);
+        const objectURL = this.workerContext?.objectURL;
+        if (objectURL) {
+          // revoke the Object URL that was used to create transmuxer worker, so as not to leak it
+          self.URL.revokeObjectURL(objectURL);
+        }
         break;
       }
 
@@ -377,9 +381,9 @@ export default class TransmuxerInterface {
   }
 
   private configureTransmuxer(config: TransmuxConfig) {
-    const { worker, transmuxer } = this;
-    if (worker) {
-      worker.postMessage({
+    const { transmuxer } = this;
+    if (this.workerContext) {
+      this.workerContext.worker.postMessage({
         cmd: 'configure',
         config,
       });
