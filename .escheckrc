@@ -2,10 +2,6 @@
   "ecmaVersion": "es5",
   "modules": "false",
   "files": [
-    "./dist/hls-demo.js",
-    "./dist/hls.js",
-    "./dist/hls.min.js",
-    "./dist/hls.light.js",
-    "./dist/hls.light.min.js"
+    "./dist/**/*.js"
   ]
 }
