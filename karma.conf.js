@@ -1,87 +1,18 @@
-/* global process:false */
-const { nodeResolve } = require('@rollup/plugin-node-resolve');
-const commonjs = require('@rollup/plugin-commonjs');
-const babel = require('@rollup/plugin-babel').babel;
-const replace = require('@rollup/plugin-replace');
+const { buildRollupConfig, BUILD_TYPE, FORMAT } = require('./build-config');
 
-const extensions = ['.ts', '.js'];
-
-const rollupPreprocessor = {
-  output: {
-    format: 'umd',
-    banner: '(function __HLS_UMD_BUNDLE__(__IN_WORKER__){',
-    footer: '})(false);',
-    name: 'hlsjsunittests',
-    dir: 'temp',
-    sourcemap: 'inline',
-  },
-  plugins: [
-    nodeResolve({
-      extensions,
-    }),
-    commonjs({
-      transformMixedEsModules: true,
-    }),
-    replace({
-      preventAssignment: true,
-      values: {
-        __VERSION__: JSON.stringify(''),
-        __USE_SUBTITLES__: JSON.stringify(true),
-        __USE_ALT_AUDIO__: JSON.stringify(true),
-        __USE_EME_DRM__: JSON.stringify(true),
-        __USE_CMCD__: JSON.stringify(true),
-        __USE_CONTENT_STEERING__: JSON.stringify(true),
-        __USE_VARIABLE_SUBSTITUTION__: JSON.stringify(true),
-        __HLS_UMD_WORKER__: JSON.stringify(true),
-      },
-    }),
-    babel({
-      extensions,
-      babelHelpers: 'bundled',
-      presets: [
-        [
-          '@babel/preset-typescript',
-          {
-            optimizeConstEnums: true,
-          },
-        ],
-        [
-          '@babel/preset-env',
-          {
-            loose: true,
-            modules: false,
-            targets: {
-              browsers: [
-                'chrome >= 47',
-                'firefox >= 51',
-                'safari >= 8',
-                'ios >= 8',
-                'android >= 4',
-              ],
-            },
-          },
-        ],
-      ],
-      plugins: [
-        [
-          '@babel/plugin-proposal-class-properties',
-          {
-            loose: true,
-          },
-        ],
-        '@babel/plugin-proposal-object-rest-spread',
-        '@babel/plugin-transform-object-assign',
-        '@babel/plugin-proposal-optional-chaining',
-      ],
-    }),
-  ],
-};
+const rollupPreprocessor = buildRollupConfig({
+  type: BUILD_TYPE.full,
+  format: FORMAT.umd,
+  minified: false,
+  allowCircularDeps: true,
+});
 
 // Do not add coverage for JavaScript debugging when running `test:unit:debug`
 const preprocessors = {
   './tests/index.js': ['rollup'],
 };
 
+// eslint-disable-next-line no-undef
 if (!process.env.DEBUG_UNIT_TESTS) {
   preprocessors['./src/**/*.ts'] = ['coverage'];
 }
