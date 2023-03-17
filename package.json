@@ -71,7 +71,7 @@
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.3.7",
     "chart.js": "2.9.4",
-    "chromedriver": "110.0.0",
+    "chromedriver": "111.0.0",
     "coverage-istanbul-loader": "3.0.5",
     "doctoc": "2.2.1",
     "eslint": "8.35.0",
