@@ -2,9 +2,9 @@
 set -e
 
 # GITHUB_TOKEN and CLOUDFLARE_API_TOKEN required
-accountId="8c9d432e3647d63cd0953ca4a26e02ed"
-stableProjectName="hlsjs"
-latestProjectName="hlsjs-dev"
+accountId="0b5dddd7f1257d8d0b3594dbe325053c"
+stableProjectName="hls-js"
+latestProjectName="hls-js-dev"
 
 currentCommit=$(git rev-parse HEAD)
 
