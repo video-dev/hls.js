@@ -49,12 +49,20 @@ describe('SubtitleTrackController', function () {
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
+    const textTrack3 = videoElement.addTextTrack(
+      'captions',
+      'Untitled CC',
+      'en'
+    );
+
     textTrack1.groupId = 'default-text-group';
     textTrack2.groupId = 'default-text-group';
+    textTrack3.groupId = 'default-text-group';
     subtitleTrackController.groupId = 'default-text-group';
 
     textTrack1.mode = 'disabled';
     textTrack2.mode = 'disabled';
+    textTrack3.mode = 'disabled';
     sandbox = sinon.createSandbox();
   });
 
@@ -88,6 +96,16 @@ describe('SubtitleTrackController', function () {
       subtitleTrackController.onTextTracksChanged();
 
       expect(subtitleTrackController.subtitleTrack).to.equal(0);
+    });
+
+    it('should set subtitleTrack id captions track is showing', function () {
+      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+
+      videoElement.textTracks[2].mode = 'showing';
+      subtitleTrackController.onTextTracksChanged();
+
+      expect(videoElement.textTracks[2].kind).to.equal('captions');
+      expect(subtitleTrackController.subtitleTrack).to.equal(2);
     });
   });
 
