@@ -142,6 +142,8 @@ You can safely require this library in Node and **absolutely nothing will happen
 
 ## Getting started with development
 
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/video-dev/hls.js/tree/master?title=HLS.JS)
+
 First, checkout the repository and install the required dependencies
 
 ```sh
