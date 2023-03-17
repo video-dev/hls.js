@@ -262,13 +262,11 @@ const multiConfig = [
     plugins: [
       ...mainPlugins,
       new webpack.DefinePlugin({
-        __NETLIFY__: JSON.stringify(
-          env.NETLIFY === 'true'
+        __CLOUDFLARE_PAGES__: JSON.stringify(
+          env.CF_PAGES
             ? {
-                branch: env.BRANCH,
-                commitRef: env.COMMIT_REF,
-                reviewID:
-                  env.PULL_REQUEST === 'true' ? parseInt(env.REVIEW_ID) : null,
+                branch: env.CF_PAGES_BRANCH,
+                commitRef: env.CF_PAGES_COMMIT_SHA,
               }
             : {}
         ),
@@ -279,7 +277,7 @@ const multiConfig = [
 ].map((config) => {
   const baseClone = merge({}, baseConfig);
   // Strip console.assert statements from build targets
-  if (config.mode === 'production' || env.NETLIFY === 'true') {
+  if (config.mode === 'production' || env.CF_PAGES) {
     // eslint-disable-next-line no-restricted-properties
     baseClone.module.rules
       .find((rule) => rule.loader === 'babel-loader')

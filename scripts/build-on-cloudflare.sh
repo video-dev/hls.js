@@ -12,4 +12,4 @@ npm run lint
 npm run type-check
 npm run build:ci
 npm run docs
-./scripts/build-netlify.sh
+./scripts/build-cloudflare.sh

@@ -269,8 +269,8 @@ An overview of this project's design, it's modules, events, and error handling c
 ## API docs and usage guide
 
 - [API and usage docs, with code examples](./docs/API.md)
-- [Auto-Generated API Docs (Latest Release)](https://hls-js.netlify.com/api-docs)
-- [Auto-Generated API Docs (Development Branch)](https://hls-js-dev.netlify.com/api-docs)
+- [Auto-Generated API Docs (Latest Release)](https://hlsjs.pages.dev/api-docs)
+- [Auto-Generated API Docs (Development Branch)](https://hlsjs-dev.pages.dev/api-docs)
 
 _Note you can access the docs for a particular version using "[https://github.com/video-dev/hls.js/tree/deployments](https://github.com/video-dev/hls.js/tree/deployments)"_
 
@@ -278,17 +278,15 @@ _Note you can access the docs for a particular version using "[https://github.co
 
 ### Latest Release
 
-[https://hls-js.netlify.com/demo](https://hls-js.netlify.com/demo)
+[https://hlsjs.pages.dev/demo](https://hlsjs.pages.dev/demo)
 
 ### Master
 
-[https://hls-js-dev.netlify.com/demo](https://hls-js-dev.netlify.com/demo)
+[https://hlsjs-dev.pages.dev/demo](https://hlsjs-dev.pages.dev/demo)
 
 ### Specific Version
 
 Find the commit on [https://github.com/video-dev/hls.js/tree/deployments](https://github.com/video-dev/hls.js/tree/deployments).
-
-[![](https://www.netlify.com/img/global/badges/netlify-color-accent.svg)](https://www.netlify.com)
 
 [![](https://opensource.saucelabs.com/images/opensauce/powered-by-saucelabs-badge-gray.png?sanitize=true)](https://saucelabs.com)
 
