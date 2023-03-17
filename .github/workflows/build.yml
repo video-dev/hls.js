@@ -162,7 +162,7 @@ jobs:
         env:
           CI: true
 
-  cloudflare:
+  cloudflare_pages:
     needs: [config, test_unit]
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
