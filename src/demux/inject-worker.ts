@@ -1,17 +1,11 @@
 import startWorker from './transmuxer-worker';
 
-let workerInstance;
-
 if (typeof __IN_WORKER__ !== 'undefined' && __IN_WORKER__) {
-  workerInstance = startWorker(self);
+  startWorker(self);
 }
 
 export function hasUMDWorker(): boolean {
-  return (
-    __HLS_UMD_WORKER__ &&
-    !!startWorker &&
-    typeof __HLS_UMD_BUNDLE__ === 'function'
-  );
+  return __HLS_UMD_WORKER__ && typeof __HLS_UMD_BUNDLE__ === 'function';
 }
 
 export type WorkerContext = {
