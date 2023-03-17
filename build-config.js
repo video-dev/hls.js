@@ -62,8 +62,7 @@ const buildConstants = (type, format) => ({
   },
 });
 
-const umdBanner =
-  '(function __HLS_UMD_BUNDLE__(__IN_WORKER__){var self = this;';
+const umdBanner = '(function __HLS_UMD_BUNDLE__(__IN_WORKER__){';
 const umdFooter = '})(false);';
 
 const extensions = ['.ts', '.js'];
