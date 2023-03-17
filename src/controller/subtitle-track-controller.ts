@@ -425,7 +425,10 @@ function filterSubtitleTracks(textTrackList: TextTrackList): TextTrack[] {
   for (let i = 0; i < textTrackList.length; i++) {
     const track = textTrackList[i];
     // Edge adds a track without a label; we don't want to use it
-    if (track.kind === 'subtitles' && track.label) {
+    if (
+      (track.kind === 'subtitles' || track.kind === 'captions') &&
+      track.label
+    ) {
       tracks.push(textTrackList[i]);
     }
   }
