@@ -1,12 +1,12 @@
 #!/bin/bash
 set -e
 
-root="./netlify"
+root="./cloudflare-pages"
 
 rm -rf "$root"
 mkdir "$root"
 
-echo "Building netlify..."
+echo "Building for CloudFlare..."
 
 # redirect / to /demo
 echo "/ /demo" > "$root/_redirects"
@@ -16,4 +16,4 @@ cp -r "./dist" "$root/dist"
 cp -r "./demo" "$root/demo"
 cp -r "./api-docs" "$root/api-docs"
 
-echo "Built netlify."
+echo "Built for CloudFlare."

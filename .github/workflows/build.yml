@@ -162,7 +162,7 @@ jobs:
         env:
           CI: true
 
-  netlify:
+  cloudflare:
     needs: [config, test_unit]
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
@@ -197,19 +197,19 @@ jobs:
         env:
           CI: true
 
-      - name: build netlify
+      - name: build for CloudFlare
         run: |
-          ./scripts/build-netlify.sh
+          ./scripts/build-cloudflare.sh
         env:
           CI: true
 
-      - name: deploy netlify
+      - name: deploy to CloudFlare
         run: |
-          ./scripts/deploy-netlify.sh
+          ./scripts/deploy-cloudflare.sh
         env:
           CI: true
           GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
-          NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
   update_draft_release:
     needs: [config, test_unit]

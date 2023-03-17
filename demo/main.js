@@ -1,4 +1,4 @@
-/* global $, Hls, __NETLIFY__ */
+/* global $, Hls, __CLOUDFLARE_PAGES__ */
 /* eslint camelcase: 0 */
 
 import { pack } from 'jsonpack';
@@ -6,7 +6,7 @@ import 'promise-polyfill/src/polyfill';
 import { sortObject, copyTextToClipboard } from './demo-utils';
 import { TimelineChart } from './chart/timeline-chart';
 
-const NETLIFY = __NETLIFY__; // replaced in build
+const CLOUDFLARE_PAGES = __CLOUDFLARE_PAGES__; // replaced in build
 
 const STORAGE_KEYS = {
   Editor_Persistence: 'hlsjs:config-editor-persist',
@@ -175,26 +175,24 @@ $(document).ready(function () {
   $('#dumpfMP4').prop('checked', dumpfMP4);
   $('#levelCapping').val(levelCapping);
 
-  // link to version on npm if canary
-  // github branch for a branch version
-  // github tag for a normal tag
-  // github PR for a pr
+  // If cloudflare pages build link to branch
+  // If not a stable tag link to npm
+  // otherwise link to github tag
   function getVersionLink(version) {
-    const alphaRegex = /[-.]0\.alpha\./;
-    if (alphaRegex.test(version)) {
+    const noneStable = version.includes('-');
+    if (CLOUDFLARE_PAGES) {
+      return `https://github.com/video-dev/hls.js/tree/${encodeURIComponent(
+        CLOUDFLARE_PAGES.branch
+      )}`;
+    } else if (noneStable) {
       return `https://www.npmjs.com/package/hls.js/v/${encodeURIComponent(
         version
       )}`;
-    } else if (NETLIFY.reviewID) {
-      return `https://github.com/video-dev/hls.js/pull/${NETLIFY.reviewID}`;
-    } else if (NETLIFY.branch) {
-      return `https://github.com/video-dev/hls.js/tree/${encodeURIComponent(
-        NETLIFY.branch
+    } else {
+      return `https://github.com/video-dev/hls.js/releases/tag/v${encodeURIComponent(
+        version
       )}`;
     }
-    return `https://github.com/video-dev/hls.js/releases/tag/v${encodeURIComponent(
-      version
-    )}`;
   }
 
   const version = Hls.version;
