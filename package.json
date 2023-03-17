@@ -96,7 +96,6 @@
     "markdown-styles": "3.2.0",
     "micromatch": "4.0.5",
     "mocha": "10.2.0",
-    "netlify-cli": "12.14.0",
     "node-fetch": "3.3.0",
     "prettier": "2.8.4",
     "promise-polyfill": "8.3.0",

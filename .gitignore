@@ -19,7 +19,7 @@ coverage/
 /lib
 /dist
 /dist.zip
-/netlify
+/cloudflare-pages
 /api-docs
 /api-docs-markdown
 

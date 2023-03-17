@@ -8,7 +8,7 @@ latestProjectName="hlsjs-latest"
 
 currentCommit=$(git rev-parse HEAD)
 
-root="./netlify"
+root="./cloudflare-pages"
 version="$(jq -r -e '.version' "./package.json")"
 idShort="$(echo "$currentCommit" | cut -c 1-8) ($version)"
 

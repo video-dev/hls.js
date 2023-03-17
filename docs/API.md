@@ -1,6 +1,6 @@
 # HLS.js v1 API
 
-See [API Reference](https://hls-js-dev.netlify.app/api-docs/) for a complete list of interfaces available in the hls.js package.
+See [API Reference](https://hlsjs-dev.pages.dev/api-docs/) for a complete list of interfaces available in the hls.js package.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
