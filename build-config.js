@@ -294,17 +294,13 @@ const configs = Object.entries({
       replace({
         preventAssignment: true,
         values: {
-          __NETLIFY__: JSON.stringify(
-            env.NETLIFY === 'true'
+          __CLOUDFLARE_PAGES__: JSON.stringify(
+            env.CF_PAGES
               ? {
-                  branch: env.BRANCH,
-                  commitRef: env.COMMIT_REF,
-                  reviewID:
-                    env.PULL_REQUEST === 'true'
-                      ? parseInt(env.REVIEW_ID)
-                      : null,
+                  branch: env.CF_PAGES_BRANCH,
+                  commitRef: env.CF_PAGES_COMMIT_SHA,
                 }
-              : {}
+              : null
           ),
         },
       }),
