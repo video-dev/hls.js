@@ -268,7 +268,7 @@ const multiConfig = [
                 branch: env.CF_PAGES_BRANCH,
                 commitRef: env.CF_PAGES_COMMIT_SHA,
               }
-            : {}
+            : null
         ),
       }),
     ],
