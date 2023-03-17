@@ -182,7 +182,7 @@ $(document).ready(function () {
     const noneStable = version.includes('-');
     if (CLOUDFLARE_PAGES) {
       return `https://github.com/video-dev/hls.js/tree/${encodeURIComponent(
-        CLOUDFLARE_PAGES.branch.replace(/[^a-zA-Z-]/g, '-')
+        CLOUDFLARE_PAGES.branch
       )}`;
     } else if (noneStable) {
       return `https://www.npmjs.com/package/hls.js/v/${encodeURIComponent(
