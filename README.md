@@ -1,7 +1,7 @@
 # Deployments
 
-- **Stable:** [https://hlsjs.pages.dev/](https://hlsjs.pages.dev/)
-- **Latest:** [https://hlsjs-dev.pages.dev/](https://hlsjs-dev.pages.dev/)
+- **Stable:** [https://hlsjs.video-dev.org/](https://hlsjs.video-dev.org/)
+- **Latest:** [https://hlsjs-dev.video-dev.org/](https://hlsjs-dev.video-dev.org/)
 
 Below you can find the URL's to deployments for individual commits:
 - [`7100b7fc (0.12.1)`](https://github.com/video-dev/hls.js/commit/7100b7fc417e2d7e9a80756ad98a810d261c6982): [https://hls-js-38D695E4-877F-4C99-BCF7-B95DD6192FA2.netlify.app/](https://hls-js-38D695E4-877F-4C99-BCF7-B95DD6192FA2.netlify.app/)
