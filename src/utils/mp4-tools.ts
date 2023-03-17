@@ -366,6 +366,10 @@ export function getStartDTS(initData: InitData, fmp4: Uint8Array): number {
             if (version === 1) {
               baseTime *= Math.pow(2, 32);
               baseTime += readUint32(tfdt, 8);
+              if (baseTime > Number.MAX_SAFE_INTEGER) {
+                logger.warn('Base media decode time exceeds 53 bits');
+                return null;
+              }
             }
             // assume a 90kHz clock if no timescale was specified
             const scale = track.timescale || 90e3;
