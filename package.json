@@ -110,6 +110,7 @@
     "webpack": "5.76.0",
     "webpack-cli": "5.0.1",
     "webpack-dev-server": "4.11.1",
-    "webpack-merge": "5.8.0"
+    "webpack-merge": "5.8.0",
+    "wrangler": "^2.12.3"
   }
 }
