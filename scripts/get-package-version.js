@@ -42,7 +42,10 @@ try {
     intermediateVersion = intermediateVersion.substring(1);
 
     const suffix = process.env.CF_PAGES
-      ? `pr.${process.env.CF_PAGES_BRANCH}.${getCommitHash().slice(0, 8)}`
+      ? `pr.${process.env.CF_PAGES_BRANCH.replace(
+          /[^a-zA-Z-]/g,
+          '-'
+        )}.${getCommitHash().slice(0, 8)}`
       : `0.canary.${getCommitNum()}`;
 
     newVersion = `${intermediateVersion}${isStable ? '-' : '.'}${suffix}`;
