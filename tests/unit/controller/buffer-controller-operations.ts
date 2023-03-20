@@ -61,6 +61,8 @@ class MockMediaElement {
   public currentTime: number = 0;
   public duration: number = Infinity;
   public textTracks: any[] = [];
+  addEventListener() {}
+  removeEventListener() {}
 }
 
 const queueNames: Array<SourceBufferName> = ['audio', 'video'];
@@ -76,7 +78,10 @@ describe('BufferController', function () {
   let mockMediaSource;
   beforeEach(function () {
     hls = new Hls({});
-
+    hls.networkControllers.forEach((component) => component.destroy());
+    hls.networkControllers.length = 0;
+    hls.coreComponents.forEach((component) => component.destroy());
+    hls.coreComponents.length = 0;
     bufferController = new BufferController(hls);
     bufferController.media = mockMedia = new MockMediaElement();
     bufferController.mediaSource = mockMediaSource = new MockMediaSource();
@@ -156,6 +161,7 @@ describe('BufferController', function () {
       ).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_APPENDING_ERROR,
+        error: triggerSpy.getCall(0).lastArg.error,
         fatal: false,
       });
       expect(shiftAndExecuteNextSpy, 'The queue should not have been cycled').to
@@ -261,8 +267,6 @@ describe('BufferController', function () {
               data.id,
               'The id of the event should be equal to the frag type'
             ).to.equal(frag.type);
-            // TODO: remove stats from event & place onto frag
-            // expect(data.stats).to.equal({});
           } catch (e) {
             reject(e);
           }

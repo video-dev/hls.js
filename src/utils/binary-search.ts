@@ -6,15 +6,15 @@ const BinarySearch = {
    * This requires the condition to only match one item in the array,
    * and for the array to be ordered.
    *
-   * @param {Array<T>} list The array to search.
-   * @param {BinarySearchComparison<T>} comparisonFn
+   * @param list The array to search.
+   * @param comparisonFn
    *      Called and provided a candidate item as the first argument.
    *      Should return:
    *          > -1 if the item should be located at a lower index than the provided item.
    *          > 1 if the item should be located at a higher index than the provided item.
    *          > 0 if the item is the item you're looking for.
    *
-   * @return {T | null} The object if it is found or null otherwise.
+   * @returns the object if found, otherwise returns null
    */
   search: function <T>(
     list: T[],

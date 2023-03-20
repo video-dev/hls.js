@@ -1,3 +1,5 @@
+import type { RationalTimestamp } from '../utils/timescale-conversion';
+
 export interface Demuxer {
   demux(
     data: Uint8Array,
@@ -18,7 +20,7 @@ export interface Demuxer {
     videoCodec: string | undefined,
     trackDuration: number
   );
-  resetTimeStamp(defaultInitPTS?: number | null): void;
+  resetTimeStamp(defaultInitPTS?: RationalTimestamp | null): void;
   resetContiguity(): void;
 }
 
@@ -70,8 +72,8 @@ export interface DemuxedVideoTrack extends DemuxedTrack {
   height?: number;
   pixelRatio?: [number, number];
   audFound?: boolean;
-  pps?: number[];
-  sps?: number[];
+  pps?: Uint8Array[];
+  sps?: Uint8Array[];
   naluState?: number;
   samples: AvcSample[] | Uint8Array;
 }
@@ -88,7 +90,7 @@ export interface DemuxedUserdataTrack extends DemuxedTrack {
   samples: UserdataSample[];
 }
 
-export enum MetadataSchema {
+export const enum MetadataSchema {
   audioId3 = 'org.id3',
   dateRange = 'com.apple.quicktime.HLS',
   emsg = 'https://aomedia.org/emsg/ID3',

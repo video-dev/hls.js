@@ -1,3 +1,4 @@
+/* global process:false, __dirname:false */
 const pkgJson = require('./package.json');
 const path = require('path');
 const webpack = require('webpack');
@@ -11,6 +12,10 @@ const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES;
 const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
 const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
 const addCMCDSupport = !!env.CMCD || !!env.USE_CMCD;
+const addContentSteeringSupport =
+  !!env.CONTENT_STEERING || !!env.USE_CONTENT_STEERING;
+const addVariableSubstitutionSupport =
+  !!env.VARIABLE_SUBSTITUTION || !!env.USE_VARIABLE_SUBSTITUTION;
 
 const createDefinePlugin = (type) => {
   const buildConstants = {
@@ -19,6 +24,12 @@ const createDefinePlugin = (type) => {
     __USE_ALT_AUDIO__: JSON.stringify(type === 'main' || addAltAudioSupport),
     __USE_EME_DRM__: JSON.stringify(type === 'main' || addEMESupport),
     __USE_CMCD__: JSON.stringify(type === 'main' || addCMCDSupport),
+    __USE_CONTENT_STEERING__: JSON.stringify(
+      type === 'main' || addContentSteeringSupport
+    ),
+    __USE_VARIABLE_SUBSTITUTION__: JSON.stringify(
+      type === 'main' || addVariableSubstitutionSupport
+    ),
   };
   return new webpack.DefinePlugin(buildConstants);
 };
@@ -54,7 +65,12 @@ const baseConfig = {
         options: {
           babelrc: false,
           presets: [
-            '@babel/preset-typescript',
+            [
+              '@babel/preset-typescript',
+              {
+                optimizeConstEnums: true,
+              },
+            ],
             [
               '@babel/preset-env',
               {
@@ -118,6 +134,8 @@ function getAliasesForLightDist() {
   if (!addEMESupport) {
     aliases = Object.assign({}, aliases, {
       './controller/eme-controller': './empty.js',
+      './utils/mediakeys-helper': './empty.js',
+      '../utils/mediakeys-helper': '../empty.js',
     });
   }
 
@@ -128,7 +146,7 @@ function getAliasesForLightDist() {
   }
 
   if (!addSubtitleSupport) {
-    aliases = Object.assign(aliases, {
+    aliases = Object.assign({}, aliases, {
       './utils/cues': './empty.js',
       './controller/timeline-controller': './empty.js',
       './controller/subtitle-track-controller': './empty.js',
@@ -137,9 +155,16 @@ function getAliasesForLightDist() {
   }
 
   if (!addAltAudioSupport) {
-    aliases = Object.assign(aliases, {
+    aliases = Object.assign({}, aliases, {
       './controller/audio-track-controller': './empty.js',
       './controller/audio-stream-controller': './empty.js',
+    });
+  }
+
+  if (!addVariableSubstitutionSupport) {
+    aliases = Object.assign({}, aliases, {
+      './utils/variable-substitution': './empty.js',
+      '../utils/variable-substitution': '../empty.js',
     });
   }
 
@@ -237,17 +262,13 @@ const multiConfig = [
     plugins: [
       ...mainPlugins,
       new webpack.DefinePlugin({
-        __NETLIFY__: JSON.stringify(
-          process.env.NETLIFY === 'true'
+        __CLOUDFLARE_PAGES__: JSON.stringify(
+          env.CF_PAGES
             ? {
-                branch: process.env.BRANCH,
-                commitRef: process.env.COMMIT_REF,
-                reviewID:
-                  process.env.PULL_REQUEST === 'true'
-                    ? parseInt(process.env.REVIEW_ID)
-                    : null,
+                branch: env.CF_PAGES_BRANCH,
+                commitRef: env.CF_PAGES_COMMIT_SHA,
               }
-            : {}
+            : null
         ),
       }),
     ],
@@ -255,8 +276,8 @@ const multiConfig = [
   },
 ].map((config) => {
   const baseClone = merge({}, baseConfig);
-  // Strip console.assert statements from production webpack targets
-  if (config.mode === 'production') {
+  // Strip console.assert statements from build targets
+  if (config.mode === 'production' || env.CF_PAGES) {
     // eslint-disable-next-line no-restricted-properties
     baseClone.module.rules
       .find((rule) => rule.loader === 'babel-loader')

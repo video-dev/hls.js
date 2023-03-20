@@ -1,33 +1,35 @@
-import BaseStreamController from '../../../src/controller/stream-controller';
 import Hls from '../../../src/hls';
+import { hlsDefaultConfig } from '../../../src/config';
+import BaseStreamController from '../../../src/controller/stream-controller';
+import KeyLoader from '../../../src/loader/key-loader';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
+import type { BufferInfo } from '../../../src/utils/buffer-helper';
+import type { LevelDetails } from '../../../src/loader/level-details';
+import type { Fragment, Part } from '../../../src/loader/fragment';
+
+import * as chai from 'chai';
+import * as sinonChai from 'sinon-chai';
+
+chai.use(sinonChai);
+const expect = chai.expect;
+
+type BaseStreamControllerTestable = Omit<
+  BaseStreamController,
+  'media' | '_streamEnded'
+> & {
+  media: HTMLMediaElement | null;
+  _streamEnded: (bufferInfo: BufferInfo, levelDetails: LevelDetails) => boolean;
+};
 
 describe('BaseStreamController', function () {
-  let baseStreamController;
-  let bufferInfo;
-  let levelDetails;
+  let hls: Hls;
+  let baseStreamController: BaseStreamControllerTestable;
+  let bufferInfo: BufferInfo;
+  let levelDetails: LevelDetails;
   let fragmentTracker;
   let media;
   beforeEach(function () {
-    baseStreamController = new BaseStreamController(new Hls({}));
-    bufferInfo = {
-      nextStart: 0,
-      end: 1,
-    };
-    levelDetails = {
-      endSN: 0,
-      live: false,
-      get fragments() {
-        const frags = [];
-        for (let i = 0; i < this.endSN; i++) {
-          frags.push({ sn: i, type: 'main' });
-        }
-        return frags;
-      },
-    };
-    media = {
-      duration: 0,
-    };
+    hls = new Hls({});
     fragmentTracker = {
       state: null,
       getState() {
@@ -37,8 +39,33 @@ describe('BaseStreamController', function () {
         return true;
       },
     };
+    baseStreamController = new BaseStreamController(
+      hls,
+      fragmentTracker,
+      new KeyLoader(hlsDefaultConfig)
+    ) as unknown as BaseStreamControllerTestable;
+    bufferInfo = {
+      len: 1,
+      nextStart: 0,
+      start: 0,
+      end: 1,
+    };
+    levelDetails = {
+      endSN: 0,
+      live: false,
+      get fragments() {
+        const frags: Fragment[] = [];
+        for (let i = 0; i < this.endSN; i++) {
+          frags.push({ sn: i, type: 'main' } as unknown as Fragment);
+        }
+        return frags;
+      },
+    } as unknown as LevelDetails;
+    media = {
+      duration: 0,
+      buffered: new TimeRangesMock(),
+    } as unknown as HTMLMediaElement;
     baseStreamController.media = media;
-    baseStreamController.fragmentTracker = fragmentTracker;
   });
 
   describe('_streamEnded', function () {
@@ -58,7 +85,7 @@ describe('BaseStreamController', function () {
     it('returns true if parts are buffered for low latency content', function () {
       media.buffered = new TimeRangesMock([0, 1]);
       levelDetails.endSN = 10;
-      levelDetails.partList = [{ start: 0, duration: 1 }];
+      levelDetails.partList = [{ start: 0, duration: 1 } as unknown as Part];
 
       expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
         .true;

@@ -7,6 +7,7 @@ import { Events } from '../../../src/events';
 import { ErrorTypes, ErrorDetails } from '../../../src/errors';
 
 describe('GapController', function () {
+  let hls;
   let gapController;
   let config;
   let media;
@@ -14,7 +15,11 @@ describe('GapController', function () {
   const sandbox = sinon.createSandbox();
 
   beforeEach(function () {
-    const hls = new Hls({});
+    hls = new Hls({});
+    hls.networkControllers.forEach((component) => component.destroy());
+    hls.networkControllers.length = 0;
+    hls.coreComponents.forEach((component) => component.destroy());
+    hls.coreComponents.length = 0;
     media = {
       currentTime: 0,
     };
@@ -30,6 +35,7 @@ describe('GapController', function () {
 
   afterEach(function () {
     sandbox.restore();
+    hls.destroy();
   });
 
   describe('_tryNudgeBuffer', function () {
@@ -45,6 +51,7 @@ describe('GapController', function () {
           type: ErrorTypes.MEDIA_ERROR,
           details: ErrorDetails.BUFFER_NUDGE_ON_STALL,
           fatal: false,
+          error: triggerSpy.getCall(0).lastArg.error,
         });
       }
 
@@ -66,6 +73,7 @@ describe('GapController', function () {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: true,
+        error: triggerSpy.getCall(0).lastArg.error,
       });
     });
   });
@@ -77,6 +85,7 @@ describe('GapController', function () {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
         fatal: false,
+        error: triggerSpy.getCall(0).lastArg.error,
         buffer: 42,
       });
     });

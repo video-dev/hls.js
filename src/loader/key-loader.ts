@@ -8,7 +8,7 @@ import {
   KeyLoaderContext,
 } from '../types/loader';
 import { LoadError } from './fragment-loader';
-import type { HlsConfig } from '../hls';
+import type { HlsConfig } from '../config';
 import type { Fragment } from '../loader/fragment';
 import type { ComponentAPI } from '../types/component-api';
 import type { KeyLoadedData } from '../types/events';
@@ -68,14 +68,17 @@ export default class KeyLoader implements ComponentAPI {
   createKeyLoadError(
     frag: Fragment,
     details: ErrorDetails = ErrorDetails.KEY_LOAD_ERROR,
+    error: Error,
     networkDetails?: any,
-    message?: string
+    response?: { url: string; data: undefined; code: number; text: string }
   ): LoadError {
     return new LoadError({
       type: ErrorTypes.NETWORK_ERROR,
       details,
       fatal: false,
       frag,
+      response,
+      error,
       networkDetails,
     });
   }
@@ -89,7 +92,10 @@ export default class KeyLoader implements ComponentAPI {
       const { sn, cc } = loadingFrag;
       for (let i = 0; i < encryptedFragments.length; i++) {
         const frag = encryptedFragments[i];
-        if (cc <= frag.cc && (sn === 'initSegment' || sn < frag.sn)) {
+        if (
+          cc <= frag.cc &&
+          (sn === 'initSegment' || frag.sn === 'initSegment' || sn < frag.sn)
+        ) {
           this.emeController
             .selectKeySystemFormat(frag)
             .then((keySystemFormat) => {
@@ -123,16 +129,13 @@ export default class KeyLoader implements ComponentAPI {
     }
     const decryptdata = frag.decryptdata;
     if (!decryptdata) {
-      const errorMessage = keySystemFormat
-        ? `Expected frag.decryptdata to be defined after setting format ${keySystemFormat}`
-        : 'Missing decryption data on fragment in onKeyLoading';
+      const error = new Error(
+        keySystemFormat
+          ? `Expected frag.decryptdata to be defined after setting format ${keySystemFormat}`
+          : 'Missing decryption data on fragment in onKeyLoading'
+      );
       return Promise.reject(
-        this.createKeyLoadError(
-          frag,
-          ErrorDetails.KEY_LOAD_ERROR,
-          null,
-          errorMessage
-        )
+        this.createKeyLoadError(frag, ErrorDetails.KEY_LOAD_ERROR, error)
       );
     }
     const uri = decryptdata.uri;
@@ -141,8 +144,7 @@ export default class KeyLoader implements ComponentAPI {
         this.createKeyLoadError(
           frag,
           ErrorDetails.KEY_LOAD_ERROR,
-          null,
-          `Invalid key URI: "${uri}"`
+          new Error(`Invalid key URI: "${uri}"`)
         )
       );
     }
@@ -159,7 +161,11 @@ export default class KeyLoader implements ComponentAPI {
         case 'status-pending':
         case 'usable':
         case 'usable-in-future':
-          return keyInfo.keyLoadPromise;
+          return keyInfo.keyLoadPromise.then((keyLoadedData) => {
+            // Return the correct fragment with updated decryptdata key and loaded keyInfo
+            decryptdata.key = keyLoadedData.keyInfo.decryptdata.key;
+            return { frag, keyInfo };
+          });
       }
       // If we have a key session and status and it is not pending or usable, continue
       // This will go back to the eme-controller for expired keys to get a new keyLoadPromise
@@ -190,8 +196,9 @@ export default class KeyLoader implements ComponentAPI {
           this.createKeyLoadError(
             frag,
             ErrorDetails.KEY_LOAD_ERROR,
-            null,
-            `Key supplied with unsupported METHOD: "${decryptdata.method}"`
+            new Error(
+              `Key supplied with unsupported METHOD: "${decryptdata.method}"`
+            )
           )
         );
     }
@@ -235,12 +242,13 @@ export default class KeyLoader implements ComponentAPI {
       // maxRetry is 0 so that instead of retrying the same key on the same variant multiple times,
       // key-loader will trigger an error and rely on stream-controller to handle retry logic.
       // this will also align retry logic with fragment-loader
+      const loadPolicy = config.keyLoadPolicy.default;
       const loaderConfig: LoaderConfiguration = {
-        timeout: config.fragLoadingTimeOut,
+        loadPolicy,
+        timeout: loadPolicy.maxLoadTimeMs,
         maxRetry: 0,
-        retryDelay: config.fragLoadingRetryDelay,
-        maxRetryDelay: config.fragLoadingMaxRetryTimeout,
-        highWaterMark: 0,
+        retryDelay: 0,
+        maxRetryDelay: 0,
       };
 
       const loaderCallbacks: LoaderCallbacks<KeyLoaderContext> = {
@@ -256,8 +264,8 @@ export default class KeyLoader implements ComponentAPI {
               this.createKeyLoadError(
                 frag,
                 ErrorDetails.KEY_LOAD_ERROR,
-                networkDetails,
-                'after key load, decryptdata unset or changed'
+                new Error('after key load, decryptdata unset or changed'),
+                networkDetails
               )
             );
           }
@@ -273,16 +281,21 @@ export default class KeyLoader implements ComponentAPI {
         },
 
         onError: (
-          error: { code: number; text: string },
+          response: { code: number; text: string },
           context: KeyLoaderContext,
-          networkDetails: any
+          networkDetails: any,
+          stats: LoaderStats
         ) => {
           this.resetLoader(context);
           reject(
             this.createKeyLoadError(
               frag,
               ErrorDetails.KEY_LOAD_ERROR,
-              networkDetails
+              new Error(
+                `HTTP Error ${response.code} loading key ${response.text}`
+              ),
+              networkDetails,
+              { url: loaderContext.url, data: undefined, ...response }
             )
           );
         },
@@ -297,6 +310,7 @@ export default class KeyLoader implements ComponentAPI {
             this.createKeyLoadError(
               frag,
               ErrorDetails.KEY_LOAD_TIMEOUT,
+              new Error('key loading timed out'),
               networkDetails
             )
           );
@@ -312,6 +326,7 @@ export default class KeyLoader implements ComponentAPI {
             this.createKeyLoadError(
               frag,
               ErrorDetails.INTERNAL_ABORTED,
+              new Error('key loading aborted'),
               networkDetails
             )
           );

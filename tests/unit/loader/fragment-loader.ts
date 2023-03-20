@@ -3,15 +3,9 @@ import { Fragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { LoadStats } from '../../../src/loader/load-stats';
-import {
-  FragmentLoaderContext,
-  Loader,
-  LoaderCallbacks,
-  LoaderContext,
-  PlaylistLevelType,
-} from '../../../src/types/loader';
 import { hlsDefaultConfig, mergeConfig } from '../../../src/config';
-import type { HlsConfig } from '../../../src/config';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import { MockXhr } from '../../mocks/loader.mock';
 
 import * as sinon from 'sinon';
 import * as chai from 'chai';
@@ -19,23 +13,6 @@ import * as sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;
-
-class MockXhr implements Loader<LoaderContext> {
-  context!: LoaderContext;
-  stats: LoadStats;
-  callbacks?: LoaderCallbacks<FragmentLoaderContext>;
-
-  constructor(confg: HlsConfig) {
-    this.stats = new LoadStats();
-  }
-
-  load(context, config, callbacks) {
-    this.callbacks = callbacks;
-  }
-
-  abort() {}
-  destroy(): void {}
-}
 
 describe('FragmentLoader tests', function () {
   const sandbox = sinon.createSandbox();
@@ -125,63 +102,72 @@ describe('FragmentLoader tests', function () {
   });
 
   it('handles fragment load errors', function () {
-    return new Promise<void>((resolve, reject) => {
-      const fragmentLoaderPrivates = fragmentLoader as any;
+    const fragmentLoaderPrivates = fragmentLoader as any;
+    return new Promise<LoadError>((resolve, reject) => {
       fragmentLoader
         .load(frag, levelDetails)
         .then(() => {
           reject(new Error('Fragment loader should not have resolved'));
         })
         .catch((error) => {
-          expect(error).to.be.instanceOf(LoadError);
-          expect(error.data).to.deep.equal({
-            type: ErrorTypes.NETWORK_ERROR,
-            details: ErrorDetails.FRAG_LOAD_ERROR,
-            fatal: false,
-            frag,
-            response,
-            networkDetails,
-          });
-          expect(fragmentLoaderPrivates.loader).to.not.exist;
-          expect(frag.loader).to.not.exist;
-          resolve();
+          resolve(error);
         });
       expect(fragmentLoaderPrivates.loader).to.be.instanceOf(MockXhr);
+      const stats = new LoadStats();
       fragmentLoaderPrivates.loader.callbacks.onError(
         response,
         context,
-        networkDetails
+        networkDetails,
+        stats
       );
+    }).then((error: LoadError) => {
+      expect(error).to.be.instanceOf(LoadError);
+      expect(error.data).to.deep.equal(
+        {
+          type: ErrorTypes.NETWORK_ERROR,
+          details: ErrorDetails.FRAG_LOAD_ERROR,
+          fatal: false,
+          frag,
+          response: { url: frag.url, data: undefined, ...response },
+          error: error.data.error,
+          networkDetails,
+          stats,
+        },
+        JSON.stringify(error.data, null, 2)
+      );
+      expect(fragmentLoaderPrivates.loader).to.not.exist;
+      expect(frag.loader).to.not.exist;
     });
   });
 
   it('handles fragment load timeouts', function () {
-    // let abortSpy;
-    return new Promise<void>((resolve, reject) => {
-      const fragmentLoaderPrivates = fragmentLoader as any;
+    const fragmentLoaderPrivates = fragmentLoader as any;
+    return new Promise<LoadError>((resolve, reject) => {
       fragmentLoader
         .load(frag, levelDetails)
         .then(() => {
           reject(new Error('Fragment loader should not have resolved'));
         })
         .catch((error) => {
-          expect(error).to.be.instanceOf(LoadError);
-          expect(error.data).to.deep.equal({
-            type: ErrorTypes.NETWORK_ERROR,
-            details: ErrorDetails.FRAG_LOAD_TIMEOUT,
-            fatal: false,
-            frag,
-            networkDetails,
-          });
-          expect(fragmentLoaderPrivates.loader).to.not.exist;
-          expect(frag.loader).to.not.exist;
-          // expect(abortSpy).to.have.been.calledOnce();
-          resolve();
+          resolve(error);
         });
       const loaderInstance: MockXhr = fragmentLoaderPrivates.loader;
       expect(loaderInstance).to.be.instanceOf(MockXhr);
-      // abortSpy = sinon.spy(loaderInstance.abort);
-      loaderInstance.callbacks!.onTimeout(response, context, networkDetails);
+      const stats = new LoadStats();
+      loaderInstance.callbacks!.onTimeout(stats, context, networkDetails);
+    }).then((error: LoadError) => {
+      expect(error).to.be.instanceOf(LoadError);
+      expect(error.data).to.deep.equal({
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.FRAG_LOAD_TIMEOUT,
+        fatal: false,
+        frag,
+        error: error.data.error,
+        networkDetails,
+        stats,
+      });
+      expect(fragmentLoaderPrivates.loader).to.not.exist;
+      expect(frag.loader).to.not.exist;
     });
   });
 });

@@ -58,9 +58,9 @@ body:
       options:
         - label: The issue observed is not already reported by searching on Github under https://github.com/video-dev/hls.js/issues
           required: true
-        - label: The issue occurs in the stable client (latest release) on https://hls-js.netlify.com/demo and not just on my page
+        - label: The issue occurs in the stable client (latest release) on https://hlsjs.video-dev.org/demo and not just on my page
           required: true
-        - label: The issue occurs in the latest client (main branch) on https://hls-js-dev.netlify.com/demo and not just on my page
+        - label: The issue occurs in the latest client (main branch) on https://hlsjs-dev.video-dev.org/demo and not just on my page
           required: true
         - label: The stream has correct Access-Control-Allow-Origin headers (CORS)
           required: true

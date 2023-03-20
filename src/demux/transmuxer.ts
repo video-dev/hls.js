@@ -15,6 +15,7 @@ import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import type { HlsConfig } from '../config';
 import type { DecryptData } from '../loader/level-key';
 import type { PlaylistLevelType } from '../types/loader';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -112,11 +113,16 @@ export default class Transmuxer {
       if (decrypter.isSync()) {
         // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
         // data is handled in the flush() call
-        const decryptedData = decrypter.softwareDecrypt(
+        let decryptedData = decrypter.softwareDecrypt(
           uintData,
           keyData.key.buffer,
           keyData.iv.buffer
         );
+        // For Low-Latency HLS Parts, decrypt in place, since part parsing is expected on push progress
+        const loadingParts = chunkMeta.part > -1;
+        if (loadingParts) {
+          decryptedData = decrypter.flush();
+        }
         if (!decryptedData) {
           stats.executeEnd = now();
           return emptyResult(chunkMeta);
@@ -142,7 +148,19 @@ export default class Transmuxer {
 
     const resetMuxers = this.needsProbing(discontinuity, trackSwitch);
     if (resetMuxers) {
-      this.configureTransmuxer(uintData);
+      const error = this.configureTransmuxer(uintData);
+      if (error) {
+        logger.warn(`[transmuxer] ${error.message}`);
+        this.observer.emit(Events.ERROR, Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.FRAG_PARSING_ERROR,
+          fatal: false,
+          error,
+          reason: error.message,
+        });
+        stats.executeEnd = now();
+        return emptyResult(chunkMeta);
+      }
     }
 
     if (discontinuity || trackSwitch || initSegmentChange || resetMuxers) {
@@ -215,12 +233,6 @@ export default class Transmuxer {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       // If probing failed, then Hls.js has been given content its not able to handle
-      this.observer.emit(Events.ERROR, Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.FRAG_PARSING_ERROR,
-        fatal: true,
-        reason: 'no demux matching with content found',
-      });
       stats.executeEnd = now();
       return [emptyResult(chunkMeta)];
     }
@@ -268,7 +280,7 @@ export default class Transmuxer {
     chunkMeta.transmuxing.executeEnd = now();
   }
 
-  resetInitialTimestamp(defaultInitPts: number | undefined) {
+  resetInitialTimestamp(defaultInitPts: RationalTimestamp | null) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
@@ -401,7 +413,7 @@ export default class Transmuxer {
       });
   }
 
-  private configureTransmuxer(data: Uint8Array) {
+  private configureTransmuxer(data: Uint8Array): void | Error {
     const { config, observer, typeSupported, vendor } = this;
     // probe for content type
     let mux;
@@ -412,11 +424,7 @@ export default class Transmuxer {
       }
     }
     if (!mux) {
-      // If probing previous configs fail, use mp4 passthrough
-      logger.warn(
-        'Failed to find demuxer by probing frag, treating as mp4 passthrough'
-      );
-      mux = { demux: MP4Demuxer, remux: PassThroughRemuxer };
+      return new Error('Failed to find demuxer by probing fragment data');
     }
     // so let's check that current remuxer and demuxer are still valid
     const demuxer = this.demuxer;
@@ -478,20 +486,20 @@ export class TransmuxConfig {
   public videoCodec?: string;
   public initSegmentData?: Uint8Array;
   public duration: number;
-  public defaultInitPts?: number;
+  public defaultInitPts: RationalTimestamp | null;
 
   constructor(
     audioCodec: string | undefined,
     videoCodec: string | undefined,
     initSegmentData: Uint8Array | undefined,
     duration: number,
-    defaultInitPts?: number
+    defaultInitPts?: RationalTimestamp
   ) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.initSegmentData = initSegmentData;
     this.duration = duration;
-    this.defaultInitPts = defaultInitPts;
+    this.defaultInitPts = defaultInitPts || null;
   }
 }
 

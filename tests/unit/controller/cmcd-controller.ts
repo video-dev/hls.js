@@ -1,6 +1,7 @@
 import CMCDController from '../../../src/controller/cmcd-controller';
-import { CMCDControllerConfig } from '../../../src/hls';
 import HlsMock from '../../mocks/hls.mock';
+import type { CMCDControllerConfig } from '../../../src/config';
+
 import * as chai from 'chai';
 
 const expect = chai.expect;
@@ -29,7 +30,7 @@ const data = {
 };
 
 const setupEach = function (cmcd?: CMCDControllerConfig) {
-  cmcdController = new CMCDController(new HlsMock({ cmcd }));
+  cmcdController = new CMCDController(new HlsMock({ cmcd }) as any);
 };
 
 describe('CMCDController', function () {

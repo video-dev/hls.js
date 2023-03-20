@@ -11,10 +11,6 @@ export enum ErrorTypes {
   OTHER_ERROR = 'otherError',
 }
 
-/**
- * @enum {ErrorDetails}
- * @typedef {string} ErrorDetail
- */
 export enum ErrorDetails {
   KEY_SYSTEM_NO_KEYS = 'keySystemNoKeys',
   KEY_SYSTEM_NO_ACCESS = 'keySystemNoAccess',
@@ -40,6 +36,8 @@ export enum ErrorDetails {
   LEVEL_LOAD_ERROR = 'levelLoadError',
   // Identifier for a level load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
   LEVEL_LOAD_TIMEOUT = 'levelLoadTimeOut',
+  // Identifier for a level parse error - data: { url : faulty URL, error: Error, reason: error message }
+  LEVEL_PARSING_ERROR = 'levelParsingError',
   // Identifier for a level switch error - data: { level : faulty level Id, event : error description}
   LEVEL_SWITCH_ERROR = 'levelSwitchError',
   // Identifier for an audio track load error - data: { url : faulty URL, response : { code: error code, text: error text }}

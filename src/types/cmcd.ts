@@ -6,7 +6,7 @@ export const CMCDVersion = 1;
 /**
  * CMCD Object Type
  */
-export enum CMCDObjectType {
+export const enum CMCDObjectType {
   MANIFEST = 'm',
   AUDIO = 'a',
   VIDEO = 'v',
@@ -21,17 +21,12 @@ export enum CMCDObjectType {
 /**
  * CMCD Streaming Format
  */
-export enum CMCDStreamingFormat {
-  DASH = 'd',
-  HLS = 'h',
-  SMOOTH = 's',
-  OTHER = 'o',
-}
+export const CMCDStreamingFormatHLS = 'h';
 
 /**
  * CMCD Streaming Type
  */
-export enum CMCDStreamType {
+const enum CMCDStreamType {
   VOD = 'v',
   LIVE = 'l',
 }
@@ -212,7 +207,7 @@ export interface CMCD {
    *
    * If the streaming format being requested is unknown, then this key MUST NOT be used.
    */
-  sf?: CMCDStreamingFormat;
+  sf?: typeof CMCDStreamingFormatHLS;
 
   /**
    * Session ID

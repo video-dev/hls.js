@@ -1,7 +1,10 @@
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
-import { getSkipValue, HlsSkip, HlsUrlParameters } from '../types/level';
+import { getSkipValue, HlsSkip, HlsUrlParameters, Level } from '../types/level';
 import { computeReloadInterval, mergeDetails } from './level-helper';
+import { ErrorData } from '../types/events';
+import { getRetryDelay, isTimeoutError } from '../utils/error-helper';
+import { NetworkErrorAction } from './error-controller';
 import { logger } from '../utils/logger';
 import type { LevelDetails } from '../loader/level-details';
 import type { MediaPlaylist } from '../types/media-playlist';
@@ -10,16 +13,12 @@ import type {
   LevelLoadedData,
   TrackLoadedData,
 } from '../types/events';
-import { ErrorData } from '../types/events';
-import { Events } from '../events';
-import { ErrorTypes } from '../errors';
 
 export default class BasePlaylistController implements NetworkComponentAPI {
   protected hls: Hls;
   protected timer: number = -1;
   protected requestScheduled: number = -1;
   protected canLoad: boolean = false;
-  protected retryCount: number = 0;
   protected log: (msg: any) => void;
   protected warn: (msg: any) => void;
 
@@ -35,16 +34,6 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     this.hls = this.log = this.warn = null;
   }
 
-  protected onError(event: Events.ERROR, data: ErrorData): void {
-    if (
-      data.fatal &&
-      (data.type === ErrorTypes.NETWORK_ERROR ||
-        data.type === ErrorTypes.KEY_SYSTEM_ERROR)
-    ) {
-      this.stopLoad();
-    }
-  }
-
   protected clearTimer(): void {
     clearTimeout(this.timer);
     this.timer = -1;
@@ -52,7 +41,6 @@ export default class BasePlaylistController implements NetworkComponentAPI {
 
   public startLoad(): void {
     this.canLoad = true;
-    this.retryCount = 0;
     this.requestScheduled = -1;
     this.loadPlaylist();
   }
@@ -68,6 +56,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   ): HlsUrlParameters | undefined {
     const renditionReports = previous?.renditionReports;
     if (renditionReports) {
+      let foundIndex = -1;
       for (let i = 0; i < renditionReports.length; i++) {
         const attr = renditionReports[i];
         let uri: string;
@@ -79,24 +68,33 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           );
           uri = attr.URI || '';
         }
-        if (uri === playlistUri.slice(-uri.length)) {
-          const msn = parseInt(attr['LAST-MSN']) || previous?.lastPartSn;
-          let part = parseInt(attr['LAST-PART']) || previous?.lastPartIndex;
-          if (this.hls.config.lowLatencyMode) {
-            const currentGoal = Math.min(
-              previous.age - previous.partTarget,
-              previous.targetduration
-            );
-            if (part >= 0 && currentGoal > previous.partTarget) {
-              part += 1;
-            }
-          }
-          return new HlsUrlParameters(
-            msn,
-            part >= 0 ? part : undefined,
-            HlsSkip.No
-          );
+        // Use exact match. Otherwise, the last partial match, if any, will be used
+        // (Playlist URI includes a query string that the Rendition Report does not)
+        if (uri === playlistUri) {
+          foundIndex = i;
+          break;
+        } else if (uri === playlistUri.substring(0, uri.length)) {
+          foundIndex = i;
         }
+      }
+      if (foundIndex !== -1) {
+        const attr = renditionReports[foundIndex];
+        const msn = parseInt(attr['LAST-MSN']) || previous?.lastPartSn;
+        let part = parseInt(attr['LAST-PART']) || previous?.lastPartIndex;
+        if (this.hls.config.lowLatencyMode) {
+          const currentGoal = Math.min(
+            previous.age - previous.partTarget,
+            previous.targetduration
+          );
+          if (part >= 0 && currentGoal > previous.partTarget) {
+            part += 1;
+          }
+        }
+        return new HlsUrlParameters(
+          msn,
+          part >= 0 ? part : undefined,
+          HlsSkip.No
+        );
       }
     }
   }
@@ -105,14 +103,27 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     if (this.requestScheduled === -1) {
       this.requestScheduled = self.performance.now();
     }
+    // Loading is handled by the subclasses
   }
 
-  protected shouldLoadTrack(track: MediaPlaylist): boolean {
+  protected shouldLoadPlaylist(
+    playlist: Level | MediaPlaylist | null | undefined
+  ): boolean {
     return (
       this.canLoad &&
-      track &&
-      !!track.url &&
-      (!track.details || track.details.live)
+      !!playlist &&
+      !!playlist.url &&
+      (!playlist.details || playlist.details.live)
+    );
+  }
+
+  protected shouldReloadPlaylist(
+    playlist: Level | MediaPlaylist | null | undefined
+  ): boolean {
+    return (
+      this.timer === -1 &&
+      this.requestScheduled === -1 &&
+      this.shouldLoadPlaylist(playlist)
     );
   }
 
@@ -289,39 +300,38 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     return new HlsUrlParameters(msn, part, skip);
   }
 
-  protected retryLoadingOrFail(errorEvent: ErrorData): boolean {
-    const { config } = this.hls;
-    const retry = this.retryCount < config.levelLoadingMaxRetry;
+  protected checkRetry(errorEvent: ErrorData): boolean {
+    const errorDetails = errorEvent.details;
+    const isTimeout = isTimeoutError(errorEvent);
+    const errorAction = errorEvent.errorAction;
+    const { action, retryCount = 0, retryConfig } = errorAction || {};
+    const retry =
+      action === NetworkErrorAction.RetryRequest &&
+      !!errorAction &&
+      !!retryConfig;
     if (retry) {
       this.requestScheduled = -1;
-      this.retryCount++;
-      if (
-        errorEvent.details.indexOf('LoadTimeOut') > -1 &&
-        errorEvent.context?.deliveryDirectives
-      ) {
+      if (isTimeout && errorEvent.context?.deliveryDirectives) {
         // The LL-HLS request already timed out so retry immediately
         this.warn(
-          `retry playlist loading #${this.retryCount} after "${errorEvent.details}"`
+          `Retrying playlist loading ${retryCount + 1}/${
+            retryConfig.maxNumRetry
+          } after "${errorDetails}" without delivery-directives`
         );
         this.loadPlaylist();
       } else {
-        // exponential backoff capped to max retry timeout
-        const delay = Math.min(
-          Math.pow(2, this.retryCount) * config.levelLoadingRetryDelay,
-          config.levelLoadingMaxRetryTimeout
-        );
+        const delay = getRetryDelay(retryConfig, retryCount);
         // Schedule level/track reload
         this.timer = self.setTimeout(() => this.loadPlaylist(), delay);
         this.warn(
-          `retry playlist loading #${this.retryCount} in ${delay} ms after "${errorEvent.details}"`
+          `Retrying playlist loading ${retryCount + 1}/${
+            retryConfig.maxNumRetry
+          } after "${errorDetails}" in ${delay}ms`
         );
       }
-    } else {
-      this.warn(`cannot recover from error "${errorEvent.details}"`);
-      // stopping live reloading timer if any
-      this.clearTimer();
-      // switch error to fatal
-      errorEvent.fatal = true;
+      // `levelRetry = true` used to inform other controllers that a retry is happening
+      errorEvent.levelRetry = true;
+      errorAction.resolved = true;
     }
     return retry;
   }

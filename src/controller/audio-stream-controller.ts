@@ -3,14 +3,14 @@ import { Events } from '../events';
 import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
 import { Level } from '../types/level';
-import { PlaylistLevelType } from '../types/loader';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { Fragment, ElementaryStreamTypes, Part } from '../loader/fragment';
 import ChunkCache from '../demux/chunk-cache';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
 import { fragmentWithinToleranceTest } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
-import { ErrorDetails, ErrorTypes } from '../errors';
+import { ErrorDetails } from '../errors';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
@@ -33,6 +33,7 @@ import type {
   FragBufferedData,
   ErrorData,
 } from '../types/events';
+import type { MediaPlaylist } from '../types/media-playlist';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -50,7 +51,8 @@ class AudioStreamController
   private videoBuffer: Bufferable | null = null;
   private videoTrackCC: number = -1;
   private waitingVideoCC: number = -1;
-  private audioSwitch: boolean = false;
+  private bufferedTrack: MediaPlaylist | null = null;
+  private switchingTrack: MediaPlaylist | null = null;
   private trackId: number = -1;
   private waitingData: WaitingForPTSData | null = null;
   private mainDetails: LevelDetails | null = null;
@@ -69,6 +71,8 @@ class AudioStreamController
   protected onHandlerDestroying() {
     this._unregisterListeners();
     this.mainDetails = null;
+    this.bufferedTrack = null;
+    this.switchingTrack = null;
   }
 
   private _registerListeners() {
@@ -108,13 +112,13 @@ class AudioStreamController
   // INIT_PTS_FOUND is triggered when the video track parsed in the stream-controller has a new PTS value
   onInitPtsFound(
     event: Events.INIT_PTS_FOUND,
-    { frag, id, initPTS }: InitPTSFoundData
+    { frag, id, initPTS, timescale }: InitPTSFoundData
   ) {
     // Always update the new INIT PTS
     // Can change due level switch
     if (id === 'main') {
       const cc = frag.cc;
-      this.initPTS[frag.cc] = initPTS;
+      this.initPTS[frag.cc] = { baseTime: initPTS, timescale };
       this.log(`InitPTS for cc: ${cc} found from main: ${initPTS}`);
       this.videoTrackCC = cc;
       // If we are waiting, tick immediately to unblock audio fragment transmuxing
@@ -133,7 +137,6 @@ class AudioStreamController
     const lastCurrentTime = this.lastCurrentTime;
     this.stopLoad();
     this.setInterval(TICK_INTERVAL);
-    this.fragLoadError = 0;
     if (lastCurrentTime > 0 && startPosition === -1) {
       this.log(
         `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
@@ -253,7 +256,7 @@ class AudioStreamController
 
   protected onTickEnd() {
     const { media } = this;
-    if (!media || !media.readyState) {
+    if (!media?.readyState) {
       // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
       return;
     }
@@ -265,7 +268,7 @@ class AudioStreamController
     const { hls, levels, media, trackId } = this;
     const config = hls.config;
 
-    if (!levels || !levels[trackId]) {
+    if (!levels?.[trackId]) {
       return;
     }
 
@@ -306,7 +309,7 @@ class AudioStreamController
     if (bufferInfo === null) {
       return;
     }
-    const audioSwitch = this.audioSwitch;
+    const audioSwitch = !!this.switchingTrack;
 
     if (!audioSwitch && this._streamEnded(bufferInfo, trackDetails)) {
       hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
@@ -352,7 +355,7 @@ class AudioStreamController
       return;
     }
     // wait for main buffer after buffing some audio
-    if ((!mainBufferInfo || !mainBufferInfo.len) && bufferInfo.len) {
+    if (!mainBufferInfo?.len && bufferInfo.len) {
       return;
     }
 
@@ -362,7 +365,7 @@ class AudioStreamController
       return;
     }
 
-    this.loadFragment(frag, trackDetails, targetBufferTime);
+    this.loadFragment(frag, levelInfo, targetBufferTime);
   }
 
   protected getMaxBufferLength(mainBufferLength?: number): number {
@@ -397,9 +400,9 @@ class AudioStreamController
 
     if (fragCurrent) {
       fragCurrent.abortRequests();
+      this.fragmentTracker.removeFragment(fragCurrent);
     }
-    this.fragCurrent = null;
-    this.clearWaitingFragment();
+    this.resetLoadingState();
     // destroy useless transmuxer when switching audio to main
     if (!altAudio) {
       this.resetTransmuxer();
@@ -410,10 +413,12 @@ class AudioStreamController
 
     // should we switch tracks ?
     if (altAudio) {
-      this.audioSwitch = true;
+      this.switchingTrack = data;
       // main audio track are handled by stream-controller, just do something if switching to alt audio track
       this.state = State.IDLE;
     } else {
+      this.switchingTrack = null;
+      this.bufferedTrack = data;
       this.state = State.STOPPED;
     }
     this.tick();
@@ -424,6 +429,8 @@ class AudioStreamController
     this.fragmentTracker.removeAllFragments();
     this.startPosition = this.lastCurrentTime = 0;
     this.bufferFlushed = false;
+    this.bufferedTrack = null;
+    this.switchingTrack = null;
   }
 
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
@@ -502,12 +509,15 @@ class AudioStreamController
     }
 
     const track = levels[trackId] as Level;
-    console.assert(track, 'Audio track is defined on fragment load progress');
+    if (!track) {
+      this.warn('Audio track is defined on fragment load progress');
+      return;
+    }
     const details = track.details as LevelDetails;
-    console.assert(
-      details,
-      'Audio track details are defined on fragment load progress'
-    );
+    if (!details) {
+      this.warn('Audio track details undefined on fragment load progress');
+      return;
+    }
     const audioCodec =
       config.defaultAudioCodec || track.audioCodec || 'mp4a.40.2';
 
@@ -609,43 +619,48 @@ class AudioStreamController
           frag.level
         } finished buffering, but was aborted. state: ${
           this.state
-        }, audioSwitch: ${this.audioSwitch}`
+        }, audioSwitch: ${
+          this.switchingTrack ? this.switchingTrack.name : 'false'
+        }`
       );
       return;
     }
     if (frag.sn !== 'initSegment') {
       this.fragPrevious = frag;
-      if (this.audioSwitch) {
-        this.audioSwitch = false;
-        this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: this.trackId });
+      const track = this.switchingTrack;
+      if (track) {
+        this.bufferedTrack = track;
+        this.switchingTrack = null;
+        this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...track });
       }
     }
     this.fragBufferedComplete(frag, part);
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
-    if (data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
-      this.onFragmentOrKeyLoadError(PlaylistLevelType.AUDIO, data);
+    if (data.fatal) {
+      this.state = State.ERROR;
       return;
     }
     switch (data.details) {
+      case ErrorDetails.FRAG_PARSING_ERROR:
+      case ErrorDetails.FRAG_DECRYPT_ERROR:
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
-      case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
-        // TODO: Skip fragments that do not belong to this.fragCurrent audio-group id
         this.onFragmentOrKeyLoadError(PlaylistLevelType.AUDIO, data);
         break;
       case ErrorDetails.AUDIO_TRACK_LOAD_ERROR:
       case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
-        //  when in ERROR state, don't switch back to IDLE state in case a non-fatal error is received
-        if (this.state !== State.ERROR && this.state !== State.STOPPED) {
-          // if fatal error, stop processing, otherwise move to IDLE to retry loading
-          this.state = data.fatal ? State.ERROR : State.IDLE;
-          this.warn(
-            `${data.details} while loading frag, switching to ${this.state} state`
-          );
+      case ErrorDetails.LEVEL_PARSING_ERROR:
+        // in case of non fatal error while loading track, if not retrying to load track, switch back to IDLE
+        if (
+          !data.levelRetry &&
+          this.state === State.WAITING_TRACK &&
+          data.context?.type === PlaylistContextType.AUDIO_TRACK
+        ) {
+          this.state = State.IDLE;
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
@@ -672,10 +687,14 @@ class AudioStreamController
               'Buffer full error also media.currentTime is not buffered, flush audio buffer'
             );
             this.fragCurrent = null;
+            this.bufferedTrack = null;
             super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
           }
           this.resetLoadingState();
         }
+        break;
+      case ErrorDetails.INTERNAL_EXCEPTION:
+        this.recoverWorkerError(data);
         break;
       default:
         break;
@@ -707,11 +726,8 @@ class AudioStreamController
       this.resetStartWhenNotLoaded(chunkMeta.level);
       return;
     }
-    const {
-      frag,
-      part,
-      level: { details },
-    } = context;
+    const { frag, part, level } = context;
+    const { details } = level;
     const { audio, text, id3, initSegment } = remuxResult;
 
     // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
@@ -721,8 +737,8 @@ class AudioStreamController
     }
 
     this.state = State.PARSING;
-    if (this.audioSwitch && audio) {
-      this.completeAudioSwitch();
+    if (this.switchingTrack && audio) {
+      this.completeAudioSwitch(this.switchingTrack);
     }
 
     if (initSegment?.tracks) {
@@ -821,7 +837,7 @@ class AudioStreamController
 
   protected loadFragment(
     frag: Fragment,
-    trackDetails: LevelDetails,
+    track: Level,
     targetBufferTime: number
   ) {
     // only load if fragment is not loaded or if in audio switch
@@ -830,32 +846,41 @@ class AudioStreamController
 
     // we force a frag loading in audio switch as fragment tracker might not have evicted previous frags in case of quick audio switch
     if (
-      this.audioSwitch ||
+      this.switchingTrack ||
       fragState === FragmentState.NOT_LOADED ||
       fragState === FragmentState.PARTIAL
     ) {
       if (frag.sn === 'initSegment') {
-        this._loadInitSegment(frag, trackDetails);
-      } else if (trackDetails.live && !Number.isFinite(this.initPTS[frag.cc])) {
+        this._loadInitSegment(frag, track);
+      } else if (track.details?.live && !this.initPTS[frag.cc]) {
         this.log(
           `Waiting for video PTS in continuity counter ${frag.cc} of live stream before loading audio fragment ${frag.sn} of level ${this.trackId}`
         );
         this.state = State.WAITING_INIT_PTS;
       } else {
         this.startFragRequested = true;
-        super.loadFragment(frag, trackDetails, targetBufferTime);
+        super.loadFragment(frag, track, targetBufferTime);
       }
     }
   }
 
-  private completeAudioSwitch() {
-    const { hls, media, trackId } = this;
-    if (media) {
+  private completeAudioSwitch(switchingTrack: MediaPlaylist) {
+    const { hls, media, bufferedTrack } = this;
+    const bufferedAttributes = bufferedTrack?.attrs;
+    const switchAttributes = switchingTrack.attrs;
+    if (
+      media &&
+      bufferedAttributes &&
+      (bufferedAttributes.CHANNELS !== switchAttributes.CHANNELS ||
+        bufferedAttributes.NAME !== switchAttributes.NAME ||
+        bufferedAttributes.LANGUAGE !== switchAttributes.LANGUAGE)
+    ) {
       this.log('Switching audio track : flushing all audio');
       super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
     }
-    this.audioSwitch = false;
-    hls.trigger(Events.AUDIO_TRACK_SWITCHED, { id: trackId });
+    this.bufferedTrack = switchingTrack;
+    this.switchingTrack = null;
+    hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...switchingTrack });
   }
 }
 export default AudioStreamController;

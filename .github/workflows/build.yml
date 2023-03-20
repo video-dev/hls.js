@@ -8,6 +8,10 @@ on:
 
 permissions: {}
 
+defaults:
+  run:
+    shell: bash
+
 jobs:
   config:
     runs-on: ubuntu-latest
@@ -75,11 +79,11 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 
@@ -90,7 +94,7 @@ jobs:
 
       - name: set version
         run: |
-          node ./scripts/set-package-version.js
+          ./scripts/set-package-version.sh
         env:
           CI: true
           TAG: ${{ needs.config.outputs.tag }}
@@ -99,6 +103,8 @@ jobs:
         run: |
           npm run build:ci
           npm run docs
+          ./scripts/check-docs-built.sh
+
           # check that hls.js doesn't error if requiring in node
           # see https://github.com/video-dev/hls.js/pull/1642
           node -e 'require("./" + require("./package.json").main)'
@@ -109,10 +115,12 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: build
+          # version number is set in package.json so need to include that
           path: |
-            **
-            !**/[.]*/**
-            !**/node_modules/
+            package.json
+            package-lock.json
+            api-docs/**
+            dist/**
 
   test_unit:
     needs: build
@@ -135,7 +143,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -144,7 +152,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 
@@ -154,7 +162,7 @@ jobs:
         env:
           CI: true
 
-  netlify:
+  cloudflare_pages:
     needs: [config, test_unit]
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
@@ -176,7 +184,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -185,23 +193,23 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 
-      - name: build netlify
+      - name: build for CloudFlare
         run: |
-          ./scripts/build-netlify.sh
+          ./scripts/build-cloudflare.sh
         env:
           CI: true
 
-      - name: deploy netlify
+      - name: deploy to CloudFlare
         run: |
-          ./scripts/deploy-netlify.sh
+          ./scripts/deploy-cloudflare.sh
         env:
           CI: true
           GITHUB_TOKEN: ${{ secrets.CI_GITHUB_TOKEN }}
-          NETLIFY_ACCESS_TOKEN: ${{ secrets.NETLIFY_ACCESS_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
   update_draft_release:
     needs: [config, test_unit]
@@ -233,7 +241,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -276,7 +284,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -285,7 +293,7 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 
@@ -301,89 +309,14 @@ jobs:
     needs: [config, test_unit]
     if: needs.config.outputs.canUseSauce == 'true'
     runs-on: ubuntu-latest
+    name: test_functional_required (${{ matrix.config }})
     strategy:
       fail-fast: true
       max-parallel: 8
       matrix:
-        config: [chrome-win_10]
-
         include:
           - config: chrome-win_10
             ua: chrome
-            os: Windows 10
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: cache node_modules
-        uses: actions/cache@v3
-        env:
-          cache-name: cache-node-modules
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-${{ env.cache-name }}-
-            ${{ runner.os }}-build-
-            ${{ runner.os }}-
-
-      - name: use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '16'
-
-      - name: download build
-        uses: actions/download-artifact@v3
-        with:
-          name: build
-
-      - name: start SauceConnect tunnel
-        uses: tjenkinson/sauce-connect-action@cb0550b782d59960a9864e3629a619fde1cb2c74
-        with:
-          username: ${{ secrets.SAUCE_USERNAME }}
-          accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
-          tunnelIdentifier: ${{ github.run_id }}-${{ matrix.config }}
-          retryTimeout: 300
-
-      - name: install
-        run: |
-          npm ci
-        env:
-          CI: true
-
-      - name: run functional tests
-        run: |
-          npm run test:func
-          npm run test:func:light
-        env:
-          CI: true
-          SAUCE_TUNNEL_ID: ${{ github.run_id }}-${{ matrix.config }}
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
-          UA: ${{ matrix.ua }}
-          UA_VERSION: ${{ matrix.uaVersion }}
-          OS: ${{ matrix.os }}
-
-  test_functional_optional:
-    needs: test_functional_required
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    strategy:
-      fail-fast: false
-      max-parallel: 8
-      matrix:
-        config:
-          - safari-macOS_10.15
-          - firefox-win_10
-          - chrome-osx_10.11-79.0
-          - chrome-win_7-75.0
-
-        include:
-          - config: safari-macOS_10.15
-            ua: safari
-            os: macOS 10.15
-          - config: firefox-win_10
-            ua: firefox
             os: Windows 10
           - config: chrome-osx_10.11-79.0
             ua: chrome
@@ -412,7 +345,7 @@ jobs:
       - name: use Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version-file: '.node-version'
 
       - name: download build
         uses: actions/download-artifact@v3
@@ -420,7 +353,7 @@ jobs:
           name: build
 
       - name: start SauceConnect tunnel
-        uses: tjenkinson/sauce-connect-action@cb0550b782d59960a9864e3629a619fde1cb2c74
+        uses: saucelabs/sauce-connect-action@b632f7b7d4c5fce8bac327911322b033330b04ab
         with:
           username: ${{ secrets.SAUCE_USERNAME }}
           accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
@@ -429,7 +362,76 @@ jobs:
 
       - name: install
         run: |
-          npm ci
+          npx -y npm-ci-please@^1.1.1
+        env:
+          CI: true
+
+      - name: run functional tests
+        run: |
+          npm run test:func
+          npm run test:func:light
+        env:
+          CI: true
+          SAUCE_TUNNEL_ID: ${{ github.run_id }}-${{ matrix.config }}
+          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
+          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          UA: ${{ matrix.ua }}
+          UA_VERSION: ${{ matrix.uaVersion }}
+          OS: ${{ matrix.os }}
+
+  test_functional_optional:
+    needs: test_functional_required
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    name: test_functional_optional (${{ matrix.config }})
+    strategy:
+      fail-fast: false
+      max-parallel: 8
+      matrix:
+        include:
+          - config: safari-macOS_10.15
+            ua: safari
+            os: macOS 10.15
+          - config: firefox-win_10
+            ua: firefox
+            os: Windows 10
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: cache node_modules
+        uses: actions/cache@v3
+        env:
+          cache-name: cache-node-modules
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-build-${{ env.cache-name }}-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-${{ env.cache-name }}-
+            ${{ runner.os }}-build-
+            ${{ runner.os }}-
+
+      - name: use Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version-file: '.node-version'
+
+      - name: download build
+        uses: actions/download-artifact@v3
+        with:
+          name: build
+
+      - name: start SauceConnect tunnel
+        uses: saucelabs/sauce-connect-action@b632f7b7d4c5fce8bac327911322b033330b04ab
+        with:
+          username: ${{ secrets.SAUCE_USERNAME }}
+          accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
+          tunnelIdentifier: ${{ github.run_id }}-${{ matrix.config }}
+          retryTimeout: 300
+
+      - name: install
+        run: |
+          npx -y npm-ci-please@^1.1.1
         env:
           CI: true
 

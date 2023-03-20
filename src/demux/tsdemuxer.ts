@@ -98,14 +98,25 @@ class TSDemuxer implements Demuxer {
     return syncOffset !== -1;
   }
 
-  static syncOffset(data: Uint8Array) {
+  static syncOffset(data: Uint8Array): number {
+    const length = data.length;
     const scanwindow =
-      Math.min(PACKET_LENGTH * 5, data.length - PACKET_LENGTH * 2) + 1;
+      Math.min(PACKET_LENGTH * 5, data.length - PACKET_LENGTH) + 1;
     let i = 0;
     while (i < scanwindow) {
       // a TS init segment should contain at least 2 TS packets: PAT and PMT, each starting with 0x47
-      if (data[i] === 0x47 && data[i + PACKET_LENGTH] === 0x47) {
-        return i;
+      let foundPat = false;
+      for (let j = i; j < length; j += PACKET_LENGTH) {
+        if (data[j] === 0x47) {
+          if (!foundPat && parsePID(data, j) === 0) {
+            foundPat = true;
+          }
+          if (foundPat && j + PACKET_LENGTH > scanwindow) {
+            return i;
+          }
+        } else {
+          break;
+        }
       }
       i++;
     }
@@ -114,10 +125,6 @@ class TSDemuxer implements Demuxer {
 
   /**
    * Creates a track model internal to demuxer used to drive remuxing input
-   *
-   * @param type 'audio' | 'video' | 'id3' | 'text'
-   * @param duration
-   * @return TSDemuxer's internal track model
    */
   static createTrack(
     type: 'audio' | 'video' | 'id3' | 'text',
@@ -245,8 +252,7 @@ class TSDemuxer implements Demuxer {
     for (let start = syncOffset; start < len; start += PACKET_LENGTH) {
       if (data[start] === 0x47) {
         const stt = !!(data[start + 1] & 0x40);
-        // pid is a 13-bit field starting at the last bit of TS[1]
-        const pid = ((data[start + 1] & 0x1f) << 8) + data[start + 2];
+        const pid = parsePID(data, start);
         const atf = (data[start + 3] & 0x30) >> 4;
 
         // if an adaption field is present, its length is specified by the fifth byte of the TS packet header.
@@ -312,6 +318,7 @@ class TSDemuxer implements Demuxer {
             }
 
             pmtId = this._pmtId = parsePAT(data, offset);
+            // logger.log('PMT PID:'  + this._pmtId);
             break;
           case pmtId: {
             if (stt) {
@@ -347,7 +354,9 @@ class TSDemuxer implements Demuxer {
             }
 
             if (unknownPID !== null && !pmtParsed) {
-              logger.log(`unknown PID '${unknownPID}' in TS found`);
+              logger.warn(
+                `MPEG-TS PMT found at ${start} after unknown PID '${unknownPID}'. Backtracking to sync byte @${syncOffset} to parse all TS packets.`
+              );
               unknownPID = null;
               // we set it to -188, the += 188 in the for loop will reset start to 0
               start = syncOffset - 188;
@@ -355,7 +364,7 @@ class TSDemuxer implements Demuxer {
             pmtParsed = this.pmtParsed = true;
             break;
           }
-          case 17:
+          case 0x11:
           case 0x1fff:
             break;
           default:
@@ -368,11 +377,15 @@ class TSDemuxer implements Demuxer {
     }
 
     if (tsPacketErrors > 0) {
+      const error = new Error(
+        `Found ${tsPacketErrors} TS packet/s that do not start with 0x47`
+      );
       this.observer.emit(Events.ERROR, Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.FRAG_PARSING_ERROR,
         fatal: false,
-        reason: `Found ${tsPacketErrors} TS packet/s that do not start with 0x47`,
+        error,
+        reason: error.message,
       });
     }
 
@@ -616,15 +629,15 @@ class TSDemuxer implements Demuxer {
           }
 
           if (!track.sps) {
-            const expGolombDecoder = new ExpGolomb(unit.data);
+            const sps = unit.data;
+            const expGolombDecoder = new ExpGolomb(sps);
             const config = expGolombDecoder.readSPS();
             track.width = config.width;
             track.height = config.height;
             track.pixelRatio = config.pixelRatio;
-            // TODO: `track.sps` is defined as a `number[]`, but we're setting it to a `Uint8Array[]`.
-            track.sps = [unit.data] as any;
+            track.sps = [sps];
             track.duration = this._duration;
-            const codecarray = unit.data.subarray(1, 4);
+            const codecarray = sps.subarray(1, 4);
             let codecstring = 'avc1.';
             for (let i = 0; i < 3; i++) {
               let h = codecarray[i].toString(16);
@@ -645,8 +658,7 @@ class TSDemuxer implements Demuxer {
           }
 
           if (!track.pps) {
-            // TODO: `track.pss` is defined as a `number[]`, but we're setting it to a `Uint8Array[]`.
-            track.pps = [unit.data] as any;
+            track.pps = [unit.data];
           }
 
           break;
@@ -862,23 +874,24 @@ class TSDemuxer implements Demuxer {
     }
     // if ADTS header does not start straight from the beginning of the PES payload, raise an error
     if (offset !== startOffset) {
-      let reason;
-      let fatal;
-      if (offset < len - 1) {
+      let reason: string;
+      const recoverable = offset < len - 1;
+      if (recoverable) {
         reason = `AAC PES did not start with ADTS header,offset:${offset}`;
-        fatal = false;
       } else {
-        reason = 'no ADTS header found in AAC PES';
-        fatal = true;
+        reason = 'No ADTS header found in AAC PES';
       }
-      logger.warn(`parsing error:${reason}`);
+      const error = new Error(reason);
+      logger.warn(`parsing error: ${reason}`);
       this.observer.emit(Events.ERROR, Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.FRAG_PARSING_ERROR,
-        fatal,
+        fatal: false,
+        levelRetry: recoverable,
+        error,
         reason,
       });
-      if (fatal) {
+      if (!recoverable) {
         return;
       }
     }
@@ -988,13 +1001,22 @@ function createAVCSample(
   };
 }
 
-function parsePAT(data, offset) {
-  // skip the PSI header and parse the first PMT entry
-  return ((data[offset + 10] & 0x1f) << 8) | data[offset + 11];
-  // logger.log('PMT PID:'  + this._pmtId);
+function parsePID(data: Uint8Array, offset: number): number {
+  // pid is a 13-bit field starting at the last bit of TS[1]
+  return ((data[offset + 1] & 0x1f) << 8) + data[offset + 2];
 }
 
-function parsePMT(data, offset, typeSupported, isSampleAes) {
+function parsePAT(data: Uint8Array, offset: number): number {
+  // skip the PSI header and parse the first PMT entry
+  return ((data[offset + 10] & 0x1f) << 8) | data[offset + 11];
+}
+
+function parsePMT(
+  data: Uint8Array,
+  offset: number,
+  typeSupported: TypeSupported,
+  isSampleAes: boolean
+) {
   const result = { audio: -1, avc: -1, id3: -1, segmentCodec: 'aac' };
   const sectionLength = ((data[offset + 1] & 0x0f) << 8) | data[offset + 2];
   const tableEnd = offset + 3 + sectionLength - 4;
@@ -1005,7 +1027,7 @@ function parsePMT(data, offset, typeSupported, isSampleAes) {
   // advance the offset to the first entry in the mapping table
   offset += 12 + programInfoLength;
   while (offset < tableEnd) {
-    const pid = ((data[offset + 1] & 0x1f) << 8) | data[offset + 2];
+    const pid = parsePID(data, offset);
     switch (data[offset]) {
       case 0xcf: // SAMPLE-AES AAC
         if (!isSampleAes) {

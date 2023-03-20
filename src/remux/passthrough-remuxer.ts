@@ -29,19 +29,20 @@ import type {
   PassthroughTrack,
 } from '../types/demuxer';
 import type { DecryptData } from '../loader/level-key';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 class PassThroughRemuxer implements Remuxer {
   private emitInitSegment: boolean = false;
   private audioCodec?: string;
   private videoCodec?: string;
   private initData?: InitData;
-  private initPTS?: number;
+  private initPTS: RationalTimestamp | null = null;
   private initTracks?: TrackSet;
   private lastEndTime: number | null = null;
 
   public destroy() {}
 
-  public resetTimeStamp(defaultInitPTS) {
+  public resetTimeStamp(defaultInitPTS: RationalTimestamp | null) {
     this.initPTS = defaultInitPTS;
     this.lastEndTime = null;
   }
@@ -64,7 +65,7 @@ class PassThroughRemuxer implements Remuxer {
 
   private generateInitSegment(initSegment: Uint8Array | undefined): void {
     let { audioCodec, videoCodec } = this;
-    if (!initSegment || !initSegment.byteLength) {
+    if (!initSegment?.byteLength) {
       this.initTracks = undefined;
       this.initData = undefined;
       return;
@@ -121,7 +122,8 @@ class PassThroughRemuxer implements Remuxer {
     videoTrack: PassthroughTrack,
     id3Track: DemuxedMetadataTrack,
     textTrack: DemuxedUserdataTrack,
-    timeOffset: number
+    timeOffset: number,
+    accurateTimeOffset: boolean
   ): RemuxerResult {
     let { initPTS, lastEndTime } = this;
     const result: RemuxerResult = {
@@ -142,7 +144,7 @@ class PassThroughRemuxer implements Remuxer {
     // The binary segment data is added to the videoTrack in the mp4demuxer. We don't check to see if the data is only
     // audio or video (or both); adding it to video was an arbitrary choice.
     const data = videoTrack.samples;
-    if (!data || !data.length) {
+    if (!data?.length) {
       return result;
     }
 
@@ -151,11 +153,11 @@ class PassThroughRemuxer implements Remuxer {
       timescale: 1,
     };
     let initData = this.initData;
-    if (!initData || !initData.length) {
+    if (!initData?.length) {
       this.generateInitSegment(data);
       initData = this.initData;
     }
-    if (!initData || !initData.length) {
+    if (!initData?.length) {
       // We can't remux if the initSegment could not be generated
       logger.warn('[passthrough-remuxer.ts]: Failed to generate initSegment.');
       return result;
@@ -166,16 +168,23 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     const startDTS = getStartDTS(initData, data);
-    if (!Number.isFinite(initPTS!)) {
-      this.initPTS = initSegment.initPTS = initPTS = startDTS - timeOffset;
+    if (
+      isInvalidInitPts(initPTS, startDTS, timeOffset) ||
+      (initSegment.timescale !== initPTS.timescale && accurateTimeOffset)
+    ) {
+      initSegment.initPTS = startDTS - timeOffset;
+      this.initPTS = initPTS = {
+        baseTime: initSegment.initPTS,
+        timescale: 1,
+      };
     }
 
     const duration = getDuration(data, initData);
     const startTime = audioTrack
-      ? startDTS - (initPTS as number)
+      ? startDTS - initPTS.baseTime / initPTS.timescale
       : (lastEndTime as number);
     const endTime = startTime + duration;
-    offsetStartDTS(initData, data, initPTS as number);
+    offsetStartDTS(initData, data, initPTS.baseTime / initPTS.timescale);
 
     if (duration > 0) {
       this.lastEndTime = endTime;
@@ -212,24 +221,36 @@ class PassThroughRemuxer implements Remuxer {
     result.audio = track.type === 'audio' ? track : undefined;
     result.video = track.type !== 'audio' ? track : undefined;
     result.initSegment = initSegment;
-    const initPtsNum = this.initPTS ?? 0;
     result.id3 = flushTextTrackMetadataCueSamples(
       id3Track,
       timeOffset,
-      initPtsNum,
-      initPtsNum
+      initPTS,
+      initPTS
     );
 
     if (textTrack.samples.length) {
       result.text = flushTextTrackUserdataCueSamples(
         textTrack,
         timeOffset,
-        initPtsNum
+        initPTS
       );
     }
 
     return result;
   }
+}
+
+function isInvalidInitPts(
+  initPTS: RationalTimestamp | null,
+  startDTS: number,
+  timeOffset: number
+): initPTS is null {
+  if (initPTS === null) {
+    return true;
+  }
+  // InitPTS is invalid when it would cause start time to be negative, or distance from time offset to be more than 1 second
+  const startTime = startDTS - initPTS.baseTime / initPTS.timescale;
+  return startTime < 0 && Math.abs(startTime - timeOffset) > 1;
 }
 
 function getParsedTrackCodec(

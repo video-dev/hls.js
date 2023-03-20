@@ -134,7 +134,7 @@ export default class BufferController implements ComponentAPI {
     // in case alt audio is not used, only one BUFFER_CODEC event will be fired from main stream controller
     // it will contain the expected nb of source buffers, no need to compute it
     let codecEvents: number = 2;
-    if ((data.audio && !data.video) || !data.altAudio) {
+    if ((data.audio && !data.video) || !data.altAudio || !__USE_ALT_AUDIO__) {
       codecEvents = 1;
     }
     this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = codecEvents;
@@ -159,6 +159,7 @@ export default class BufferController implements ComponentAPI {
       media.src = self.URL.createObjectURL(ms);
       // cache the locally generated object url
       this._objectUrl = media.src;
+      media.addEventListener('emptied', this._onMediaEmptied);
     }
   }
 
@@ -188,6 +189,7 @@ export default class BufferController implements ComponentAPI {
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
       if (media) {
+        media.removeEventListener('emptied', this._onMediaEmptied);
         if (_objectUrl) {
           self.URL.revokeObjectURL(_objectUrl);
         }
@@ -412,6 +414,7 @@ export default class BufferController implements ComponentAPI {
           type: ErrorTypes.MEDIA_ERROR,
           parent: frag.type,
           details: ErrorDetails.BUFFER_APPEND_ERROR,
+          error: err,
           err,
           fatal: false,
         };
@@ -431,7 +434,6 @@ export default class BufferController implements ComponentAPI {
               `[buffer-controller]: Failed ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`
             );
             event.fatal = true;
-            hls.stopLoad();
           }
         }
         hls.trigger(Events.ERROR, event);
@@ -715,18 +717,23 @@ export default class BufferController implements ComponentAPI {
       this.pendingTracks = {};
       // append any pending segments now !
       const buffers = this.getSourceBufferTypes();
-      if (buffers.length === 0) {
+      if (buffers.length) {
+        this.hls.trigger(Events.BUFFER_CREATED, { tracks: this.tracks });
+        buffers.forEach((type: SourceBufferName) => {
+          operationQueue.executeNext(type);
+        });
+      } else {
+        const error = new Error(
+          'could not create source buffer for media codec(s)'
+        );
         this.hls.trigger(Events.ERROR, {
           type: ErrorTypes.MEDIA_ERROR,
           details: ErrorDetails.BUFFER_INCOMPATIBLE_CODECS_ERROR,
           fatal: true,
-          reason: 'could not create source buffer for media codec(s)',
+          error,
+          reason: error.message,
         });
-        return;
       }
-      buffers.forEach((type: SourceBufferName) => {
-        operationQueue.executeNext(type);
-      });
     }
   }
 
@@ -735,7 +742,6 @@ export default class BufferController implements ComponentAPI {
     if (!mediaSource) {
       throw Error('createSourceBuffers called when mediaSource was null');
     }
-    let tracksCreated = 0;
     for (const trackName in tracks) {
       if (!sourceBuffer[trackName]) {
         const track = tracks[trackName as keyof TrackSet];
@@ -763,7 +769,6 @@ export default class BufferController implements ComponentAPI {
             metadata: track.metadata,
             id: track.id,
           };
-          tracksCreated++;
         } catch (err) {
           logger.error(
             `[buffer-controller]: error while trying to add sourceBuffer: ${err.message}`
@@ -778,18 +783,16 @@ export default class BufferController implements ComponentAPI {
         }
       }
     }
-    if (tracksCreated) {
-      this.hls.trigger(Events.BUFFER_CREATED, { tracks: this.tracks });
-    }
   }
 
   // Keep as arrow functions so that we can directly reference these functions directly as event listeners
   private _onMediaSourceOpen = () => {
-    const { hls, media, mediaSource } = this;
+    const { media, mediaSource } = this;
     logger.log('[buffer-controller]: Media source opened');
     if (media) {
+      media.removeEventListener('emptied', this._onMediaEmptied);
       this.updateMediaElementDuration();
-      hls.trigger(Events.MEDIA_ATTACHED, { media });
+      this.hls.trigger(Events.MEDIA_ATTACHED, { media });
     }
 
     if (mediaSource) {
@@ -807,6 +810,15 @@ export default class BufferController implements ComponentAPI {
     logger.log('[buffer-controller]: Media source ended');
   };
 
+  private _onMediaEmptied = () => {
+    const { media, _objectUrl } = this;
+    if (media && media.src !== _objectUrl) {
+      logger.error(
+        `Media element src was set while attaching MediaSource (${_objectUrl} > ${media.src})`
+      );
+    }
+  };
+
   private _onSBUpdateStart(type: SourceBufferName) {
     const { operationQueue } = this;
     const operation = operationQueue.current(type);
@@ -821,12 +833,14 @@ export default class BufferController implements ComponentAPI {
   }
 
   private _onSBUpdateError(type: SourceBufferName, event: Event) {
-    logger.error(`[buffer-controller]: ${type} SourceBuffer error`, event);
+    const error = new Error(`${type} SourceBuffer error`);
+    logger.error(`[buffer-controller]: ${error}`, event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // SourceBuffer errors are not necessarily fatal; if so, the HTMLMediaElement will fire an error event
     this.hls.trigger(Events.ERROR, {
       type: ErrorTypes.MEDIA_ERROR,
       details: ErrorDetails.BUFFER_APPENDING_ERROR,
+      error,
       fatal: false,
     });
     // updateend is always fired after error, so we'll allow that to shift the current operation off of the queue
@@ -864,7 +878,6 @@ export default class BufferController implements ComponentAPI {
       logger.log(
         `[buffer-controller]: Removing [${removeStart},${removeEnd}] from the ${type} SourceBuffer`
       );
-      console.assert(!sb.updating, `${type} sourceBuffer must not be updating`);
       sb.remove(removeStart, removeEnd);
     } else {
       // Cycle the queue
@@ -885,7 +898,6 @@ export default class BufferController implements ComponentAPI {
     }
 
     sb.ended = false;
-    console.assert(!sb.updating, `${type} sourceBuffer must not be updating`);
     sb.appendBuffer(data);
   }
 
@@ -917,7 +929,7 @@ export default class BufferController implements ComponentAPI {
         // Only cycle the queue if the SB is not updating. There's a bug in Chrome which sets the SB updating flag to
         // true when changing the MediaSource duration (https://bugs.chromium.org/p/chromium/issues/detail?id=959359&can=2&q=mediasource%20duration)
         // While this is a workaround, it's probably useful to have around
-        if (!sb || !sb.updating) {
+        if (!sb?.updating) {
           operationQueue.shiftAndExecuteNext(type);
         }
       });

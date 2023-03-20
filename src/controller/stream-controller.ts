@@ -3,12 +3,12 @@ import { changeTypeSupported } from '../is-supported';
 import { Events } from '../events';
 import { BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
-import { PlaylistLevelType } from '../types/loader';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ElementaryStreamTypes, Fragment } from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
 import GapController from './gap-controller';
-import { ErrorDetails, ErrorTypes } from '../errors';
+import { ErrorDetails } from '../errors';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { Level } from '../types/level';
@@ -120,7 +120,6 @@ export default class StreamController
       this.stopLoad();
       this.setInterval(TICK_INTERVAL);
       this.level = -1;
-      this.fragLoadError = 0;
       if (!this.startFragRequested) {
         // determine load level
         let startLevel = hls.startLevel;
@@ -166,9 +165,6 @@ export default class StreamController
 
   protected doTick() {
     switch (this.state) {
-      case State.IDLE:
-        this.doTickIdle();
-        break;
       case State.WAITING_LEVEL: {
         const { levels, level } = this;
         const details = levels?.[level]?.details;
@@ -187,7 +183,6 @@ export default class StreamController
           const retryDate = this.retryDate;
           // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
           if (!retryDate || now >= retryDate || this.media?.seeking) {
-            this.log('retryDate reached, switch back to IDLE state');
             this.resetStartWhenNotLoaded(this.level);
             this.state = State.IDLE;
           }
@@ -196,8 +191,9 @@ export default class StreamController
       default:
         break;
     }
-    // check buffer
-    // check/update current fragment
+    if (this.state === State.IDLE) {
+      this.doTickIdle();
+    }
     this.onTickEnd();
   }
 
@@ -226,7 +222,7 @@ export default class StreamController
       return;
     }
 
-    if (!levels || !levels[level]) {
+    if (!levels?.[level]) {
       return;
     }
 
@@ -333,12 +329,12 @@ export default class StreamController
       frag = frag.initSegment;
     }
 
-    this.loadFragment(frag, levelDetails, targetBufferTime);
+    this.loadFragment(frag, levelInfo, targetBufferTime);
   }
 
   protected loadFragment(
     frag: Fragment,
-    levelDetails: LevelDetails,
+    level: Level,
     targetBufferTime: number
   ) {
     // Check if fragment is not loaded
@@ -346,15 +342,15 @@ export default class StreamController
     this.fragCurrent = frag;
     if (fragState === FragmentState.NOT_LOADED) {
       if (frag.sn === 'initSegment') {
-        this._loadInitSegment(frag, levelDetails);
+        this._loadInitSegment(frag, level);
       } else if (this.bitrateTest) {
         this.log(
           `Fragment ${frag.sn} of level ${frag.level} is being downloaded to test bitrate and will not be buffered`
         );
-        this._loadBitrateTestFrag(frag, levelDetails);
+        this._loadBitrateTestFrag(frag, level);
       } else {
         this.startFragRequested = true;
-        super.loadFragment(frag, levelDetails, targetBufferTime);
+        super.loadFragment(frag, level, targetBufferTime);
       }
     } else if (fragState === FragmentState.APPENDING) {
       // Lower the buffer size and try again
@@ -623,9 +619,7 @@ export default class StreamController
         this.state === State.FRAG_LOADING_WAITING_RETRY)
     ) {
       if (fragCurrent.level !== data.level && fragCurrent.loader) {
-        this.state = State.IDLE;
-        this.backtrackFragment = null;
-        fragCurrent.abortRequests();
+        this.abortCurrentFrag();
       }
     }
 
@@ -735,7 +729,6 @@ export default class StreamController
     // if any URL found on new audio track, it is an alternate audio track
     const fromAltAudio = this.altAudio;
     const altAudio = !!data.url;
-    const trackId = data.id;
     // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
     // don't do anything if we switch to alt audio: audio stream controller is handling it.
     // we will just have to change buffer scheduling on audioTrackSwitched
@@ -750,6 +743,7 @@ export default class StreamController
         if (fragCurrent) {
           this.log('Switching to main audio track, cancel main fragment load');
           fragCurrent.abortRequests();
+          this.fragmentTracker.removeFragment(fragCurrent);
         }
         // destroy transmuxer to force init segment generation (following audio switch)
         this.resetTransmuxer();
@@ -765,12 +759,11 @@ export default class StreamController
         hls.trigger(Events.BUFFER_FLUSHING, {
           startOffset: 0,
           endOffset: Number.POSITIVE_INFINITY,
-          type: 'audio',
+          type: null,
         });
+        this.fragmentTracker.removeAllFragments();
       }
-      hls.trigger(Events.AUDIO_TRACK_SWITCHED, {
-        id: trackId,
-      });
+      hls.trigger(Events.AUDIO_TRACK_SWITCHED, data);
     }
   }
 
@@ -857,31 +850,29 @@ export default class StreamController
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
-    if (data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
-      this.onFragmentOrKeyLoadError(PlaylistLevelType.MAIN, data);
+    if (data.fatal) {
+      this.state = State.ERROR;
       return;
     }
     switch (data.details) {
+      case ErrorDetails.FRAG_PARSING_ERROR:
+      case ErrorDetails.FRAG_DECRYPT_ERROR:
       case ErrorDetails.FRAG_LOAD_ERROR:
       case ErrorDetails.FRAG_LOAD_TIMEOUT:
-      case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.KEY_LOAD_ERROR:
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         this.onFragmentOrKeyLoadError(PlaylistLevelType.MAIN, data);
         break;
       case ErrorDetails.LEVEL_LOAD_ERROR:
       case ErrorDetails.LEVEL_LOAD_TIMEOUT:
-        if (this.state !== State.ERROR) {
-          if (data.fatal) {
-            // if fatal error, stop processing
-            this.warn(`${data.details}`);
-            this.state = State.ERROR;
-          } else {
-            // in case of non fatal error while loading level, if level controller is not retrying to load level , switch back to IDLE
-            if (!data.levelRetry && this.state === State.WAITING_LEVEL) {
-              this.state = State.IDLE;
-            }
-          }
+      case ErrorDetails.LEVEL_PARSING_ERROR:
+        // in case of non fatal error while loading level, if level controller is not retrying to load level, switch back to IDLE
+        if (
+          !data.levelRetry &&
+          this.state === State.WAITING_LEVEL &&
+          data.context?.type === PlaylistContextType.LEVEL
+        ) {
+          this.state = State.IDLE;
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
@@ -912,6 +903,9 @@ export default class StreamController
           }
           this.resetLoadingState();
         }
+        break;
+      case ErrorDetails.INTERNAL_EXCEPTION:
+        this.recoverWorkerError(data);
         break;
       default:
         break;
@@ -1025,14 +1019,14 @@ export default class StreamController
     return audioCodec;
   }
 
-  private _loadBitrateTestFrag(frag: Fragment, levelDetails: LevelDetails) {
+  private _loadBitrateTestFrag(frag: Fragment, level: Level) {
     frag.bitrateTest = true;
-    this._doFragLoad(frag, levelDetails).then((data) => {
+    this._doFragLoad(frag, level).then((data) => {
       const { hls } = this;
-      if (!data || hls.nextLoadLevel || this.fragContextChanged(frag)) {
+      if (!data || this.fragContextChanged(frag)) {
         return;
       }
-      this.fragLoadError = 0;
+      level.fragmentError = 0;
       this.state = State.IDLE;
       this.startFragRequested = false;
       this.bitrateTest = false;
@@ -1089,7 +1083,7 @@ export default class StreamController
       const initPTS = initSegment.initPTS as number;
       const timescale = initSegment.timescale as number;
       if (Number.isFinite(initPTS)) {
-        this.initPTS[frag.cc] = initPTS;
+        this.initPTS[frag.cc] = { baseTime: initPTS, timescale };
         hls.trigger(Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale });
       }
     }
