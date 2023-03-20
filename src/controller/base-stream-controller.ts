@@ -997,13 +997,15 @@ export default class BaseStreamController
       nextFragmentIndex = nextFragment.sn;
     }
 
-    return levelDetails.fragments.filter(
+    const fragments = levelDetails.fragments.filter(
       (frag) =>
         frag.sn >= nextFragment.sn &&
-        nextFragmentIndex &&
-        frag.sn >= nextFragmentIndex - 6 &&
+        nextFragmentIndex != null &&
+        frag.sn >= nextFragmentIndex &&
         !this.lastFragmentsSN.includes(frag.sn)
     );
+
+    return fragments;
   }
 
   protected getNextFragment(
