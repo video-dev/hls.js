@@ -57,6 +57,8 @@ export default class StreamController
   private audioCodecSwitch: boolean = false;
   private videoBuffer: any | null = null;
   private running: boolean = false;
+  private abortController: AbortController = new AbortController();
+  private signal = this.abortController.signal;
 
   constructor(
     hls: Hls,
@@ -350,7 +352,7 @@ export default class StreamController
       const fragments = this.getNextFragments(targetBufferTime, level.details);
       Promise.all(
         fragments.map(async (frag) => {
-          const response = await fetch(frag.url);
+          const response = await fetch(frag.url, { signal: this.signal });
           const data = await response.arrayBuffer();
 
           return {
@@ -575,6 +577,7 @@ export default class StreamController
       this.videoBuffer = null;
     }
     this.fragPlaying = null;
+    this.abortController.abort();
     if (this.gapController) {
       this.gapController.destroy();
       this.gapController = null;
