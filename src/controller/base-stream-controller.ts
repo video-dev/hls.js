@@ -37,7 +37,7 @@ import type {
   FragLoadedData,
   PartsLoadedData,
   KeyLoadedData,
-  MediaAttachingData,
+  MediaAttachedData,
   BufferFlushingData,
   ManifestLoadedData,
 } from '../types/events';
@@ -191,7 +191,7 @@ export default class BaseStreamController
 
   protected onMediaAttached(
     event: Events.MEDIA_ATTACHED,
-    data: MediaAttachingData
+    data: MediaAttachedData
   ) {
     const media = (this.media = this.mediaBuffer = data.media);
     this.onvseeking = this.onMediaSeeking.bind(this) as EventListener;
