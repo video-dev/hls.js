@@ -1425,7 +1425,8 @@ export default class BaseStreamController
       );
       return;
     }
-    if (data.details === ErrorDetails.FRAG_GAP) {
+    const gapTagEncountered = data.details === ErrorDetails.FRAG_GAP;
+    if (gapTagEncountered) {
       this.fragmentTracker.fragBuffered(frag, true);
     }
     // keep retrying until the limit will be reached
@@ -1455,7 +1456,9 @@ export default class BaseStreamController
       this.resetFragmentErrors(filterType);
       if (retryCount < retryConfig.maxNumRetry) {
         // Network retry is skipped when level switch is preferred
-        errorAction.resolved = true;
+        if (!gapTagEncountered) {
+          errorAction.resolved = true;
+        }
       } else {
         logger.warn(
           `${data.details} reached or exceeded max retry (${retryCount})`

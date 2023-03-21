@@ -44,6 +44,7 @@ export type IErrorAction = {
 export default class ErrorController implements NetworkComponentAPI {
   private readonly hls: Hls;
   private playlistError: number = 0;
+  private failoverError?: ErrorData;
   private log: (msg: any) => void;
   private warn: (msg: any) => void;
   private error: (msg: any) => void;
@@ -146,11 +147,9 @@ export default class ErrorController implements NetworkComponentAPI {
           if (
             level &&
             ((context.type === PlaylistContextType.AUDIO_TRACK &&
-              level.audioGroupIds &&
-              context.groupId === level.audioGroupIds[level.urlId]) ||
+              context.groupId === level.audioGroupId) ||
               (context.type === PlaylistContextType.SUBTITLE_TRACK &&
-                level.textGroupIds &&
-                context.groupId === level.textGroupIds[level.urlId]))
+                context.groupId === level.textGroupId))
           ) {
             // Perform Pathway switch or Redundant failover if possible for fastest recovery
             // otherwise allow playlist retry count to reach max error retries
@@ -310,23 +309,23 @@ export default class ErrorController implements NetworkComponentAPI {
       if (data.details !== ErrorDetails.FRAG_GAP) {
         level.loadError++;
       }
-      const redundantLevels = level.url.length;
-      // Try redundant fail-over until level.loadError reaches redundantLevels
-      if (redundantLevels > 1 && level.loadError < redundantLevels) {
-        data.levelRetry = true;
-      } else if (hls.autoLevelEnabled) {
+      if (hls.autoLevelEnabled) {
         // Search for next level to retry
         let nextLevel = -1;
         const levels = hls.levels;
+        const fragErrorType = data.frag?.type;
+        const { type: playlistErrorType, groupId: playlistErrorGroupId } =
+          data.context ?? {};
         for (let i = levels.length; i--; ) {
           const candidate = (i + hls.loadLevel) % levels.length;
           if (
             candidate !== hls.loadLevel &&
             levels[candidate].loadError === 0
           ) {
+            const levelCandidate = levels[candidate];
             // Skip level switch if GAP tag is found in next level at same position
             if (data.details === ErrorDetails.FRAG_GAP && data.frag) {
-              const levelDetails = hls.levels[candidate].details;
+              const levelDetails = levels[candidate].details;
               if (levelDetails) {
                 const fragCandidate = findFragmentByPTS(
                   data.frag,
@@ -337,6 +336,22 @@ export default class ErrorController implements NetworkComponentAPI {
                   continue;
                 }
               }
+            } else if (
+              (playlistErrorType === PlaylistContextType.AUDIO_TRACK &&
+                playlistErrorGroupId === levelCandidate.audioGroupId) ||
+              (playlistErrorType === PlaylistContextType.SUBTITLE_TRACK &&
+                playlistErrorGroupId === levelCandidate.textGroupId)
+            ) {
+              // For audio/subs playlist errors find another group ID or fallthrough to redundant fail-over
+              continue;
+            } else if (
+              (fragErrorType === PlaylistLevelType.AUDIO &&
+                level.audioGroupId === levelCandidate.audioGroupId) ||
+              (fragErrorType === PlaylistLevelType.SUBTITLE &&
+                level.textGroupId === levelCandidate.textGroupId)
+            ) {
+              // For audio/subs frag errors find another group ID or fallthrough to redundant fail-over
+              continue;
             }
             nextLevel = candidate;
             break;
@@ -366,7 +381,10 @@ export default class ErrorController implements NetworkComponentAPI {
         break;
       case NetworkErrorAction.SendAlternateToPenaltyBox:
         this.sendAlternateToPenaltyBox(data);
-        if (!data.errorAction.resolved) {
+        if (
+          !data.errorAction.resolved &&
+          data.details !== ErrorDetails.FRAG_GAP
+        ) {
           data.fatal = true;
         }
         break;
@@ -395,13 +413,9 @@ export default class ErrorController implements NetworkComponentAPI {
         break;
       case ErrorActionFlags.MoveAllAlternatesMatchingHost:
         {
-          const levelIndex =
-            data.parent === PlaylistLevelType.MAIN
-              ? (data.level as number)
-              : hls.loadLevel;
-          // Handle Redundant Levels here. Patway switching is handled by content-steering-controller
+          // Handle Redundant Levels here. Pathway switching is handled by content-steering-controller
           if (!errorAction.resolved) {
-            errorAction.resolved = this.redundantFailover(levelIndex);
+            errorAction.resolved = this.redundantFailover(data);
           }
         }
         break;
@@ -431,13 +445,27 @@ export default class ErrorController implements NetworkComponentAPI {
     }
   }
 
-  private redundantFailover(levelIndex: number): boolean {
-    const hls = this.hls;
+  private redundantFailover(data: ErrorData): boolean {
+    const { hls, failoverError } = this;
+    const levelIndex: number =
+      data.parent === PlaylistLevelType.MAIN
+        ? (data.level as number)
+        : hls.loadLevel;
     const level = hls.levels[levelIndex];
     const redundantLevels = level.url.length;
-    if (redundantLevels > 1) {
+    const newUrlId = (level.urlId + 1) % redundantLevels;
+    if (
+      redundantLevels > 1 &&
+      // FIXME: Don't loop back to first redundant renditions unless the last gap is more than 60 seconds ago
+      // TODO: We throw out information about the other redundant renditions but should keep track of gap ranges to avoid looping back to the same problem
+      (newUrlId !== 0 ||
+        !failoverError ||
+        (failoverError.frag &&
+          data.frag &&
+          Math.abs(data.frag.start - failoverError.frag.start) > 60))
+    ) {
+      this.failoverError = data;
       // Update the url id of all levels so that we stay on the same set of variants when level switching
-      const newUrlId = (level.urlId + 1) % redundantLevels;
       this.log(
         `Switching to Redundant Stream ${newUrlId + 1}/${redundantLevels}: "${
           level.url[newUrlId]

@@ -737,7 +737,7 @@ segment.mp4
           expect(
             errors.length,
             'fragment errors after yeilding to second error event'
-          ).to.equal(4);
+          ).to.equal(6);
           expect(hls.levels[0].uri).to.equal('http://www.baz.com/tier6.m3u8');
           return new Promise((resolve, reject) => {
             hls.on(Events.FRAG_LOADED, (event, data) => {
@@ -847,7 +847,7 @@ segment.mp4
           expect(
             errors.length,
             'fragment errors after yeilding to second error event'
-          ).to.equal(4);
+          ).to.equal(6);
           expect(hls.levels[0].uri).to.equal('http://www.baz.com/tier6.m3u8');
           return new Promise((resolve, reject) => {
             hls.on(Events.FRAG_LOADED, (event, data) => {

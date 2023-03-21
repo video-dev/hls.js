@@ -1949,6 +1949,8 @@ export class Level {
     // (undocumented)
     readonly audioCodec: string | undefined;
     // (undocumented)
+    get audioGroupId(): string | undefined;
+    // (undocumented)
     audioGroupIds?: (string | undefined)[];
     // (undocumented)
     readonly bitrate: number;
@@ -1977,6 +1979,8 @@ export class Level {
     get pathwayId(): string;
     // (undocumented)
     realBitrate: number;
+    // (undocumented)
+    get textGroupId(): string | undefined;
     // (undocumented)
     textGroupIds?: (string | undefined)[];
     // (undocumented)

@@ -208,7 +208,7 @@ describe('AudioTrackController', function () {
     });
 
     const newLevelInfo = hls.levels[0];
-    const newGroupId = newLevelInfo.audioGroupIds?.[newLevelInfo.urlId];
+    const newGroupId = newLevelInfo.audioGroupId;
 
     audioTrackController.tracks = tracks;
     // Update the level to set audioGroupId
@@ -325,7 +325,7 @@ describe('AudioTrackController', function () {
       };
 
       const newLevelInfo = hls.levels[levelLoadedEvent.level];
-      const newGroupId = newLevelInfo.audioGroupIds?.[newLevelInfo.urlId];
+      const newGroupId = newLevelInfo.audioGroupId;
 
       audioTrackController.tracks = tracks;
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
