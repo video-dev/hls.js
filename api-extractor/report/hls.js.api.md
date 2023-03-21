@@ -390,7 +390,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected onManifestLoaded(event: Events.MANIFEST_LOADED, data: ManifestLoadedData): void;
     // (undocumented)
-    protected onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachingData): void;
+    protected onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachedData): void;
     // (undocumented)
     protected onMediaDetaching(): void;
     // (undocumented)
