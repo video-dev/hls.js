@@ -1010,6 +1010,52 @@ export default class BaseStreamController
     return this.mapToInitFragWhenRequired(frag);
   }
 
+  protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean {
+    const trackerState = this.fragmentTracker.getState(frag);
+    return (
+      (trackerState === FragmentState.OK ||
+        (trackerState === FragmentState.PARTIAL && !!frag.gap)) &&
+      this.nextLoadPosition > targetBufferTime
+    );
+  }
+
+  protected getNextFragmentLoopLoading(
+    frag: Fragment,
+    levelDetails: LevelDetails,
+    bufferInfo: BufferInfo,
+    playlistType: PlaylistLevelType,
+    maxBufLen: number
+  ): Fragment | null {
+    const gapStart = frag.gap;
+    const nextFragment = this.getNextFragment(
+      this.nextLoadPosition,
+      levelDetails
+    );
+    if (nextFragment === null) {
+      return nextFragment;
+    }
+    frag = nextFragment;
+    if (gapStart && frag && !frag.gap && bufferInfo.nextStart) {
+      // Media buffered after GAP tags should not make the next buffer timerange exceed forward buffer length
+      const nextbufferInfo = this.getFwdBufferInfoAtPos(
+        this.mediaBuffer ? this.mediaBuffer : this.media,
+        bufferInfo.nextStart,
+        playlistType
+      );
+      if (
+        nextbufferInfo !== null &&
+        bufferInfo.len + nextbufferInfo.len >= maxBufLen
+      ) {
+        // Returning here might result in not finding an audio and video candiate to skip to
+        this.log(
+          `buffer full after gaps in "${playlistType}" playlist starting at sn: ${frag.sn}`
+        );
+        return null;
+      }
+    }
+    return frag;
+  }
+
   mapToInitFragWhenRequired(frag: Fragment | null): typeof frag {
     // If an initSegment is present, it must be buffered first
     if (frag?.initSegment && !frag?.initSegment.data && !this.bitrateTest) {
@@ -1184,9 +1230,6 @@ export default class BaseStreamController
             frag.sn < endSN &&
             this.fragmentTracker.getState(nextFrag) !== FragmentState.OK
           ) {
-            this.log(
-              `Skipping loaded ${frag.type} SN ${frag.sn} at buffer end`
-            );
             frag = nextFrag;
           } else {
             frag = null;

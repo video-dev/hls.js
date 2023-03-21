@@ -302,45 +302,30 @@ export default class StreamController
     } else if (this.backtrackFragment && bufferInfo.len) {
       this.backtrackFragment = null;
     }
-    if (frag) {
-      // Avoid loop loading by using nextLoadPosition set for backtracking and skipping consecutive GAP tags
-      const trackerState = this.fragmentTracker.getState(frag);
-      if (
-        (trackerState === FragmentState.OK ||
-          (trackerState === FragmentState.PARTIAL && frag.gap)) &&
-        this.nextLoadPosition > targetBufferTime
-      ) {
-        const gapStart = frag.gap;
-        if (!gapStart) {
-          // Cleanup the fragment tracker before trying to find the next unbuffered fragment
-          const type =
-            this.audioOnly && !this.altAudio
-              ? ElementaryStreamTypes.AUDIO
-              : ElementaryStreamTypes.VIDEO;
-          const mediaBuffer =
-            (type === ElementaryStreamTypes.VIDEO
-              ? this.videoBuffer
-              : this.mediaBuffer) || this.media;
-          if (mediaBuffer) {
-            this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
-          }
-        }
-        frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
-        if (gapStart && frag && !frag.gap && bufferInfo.nextStart) {
-          // Media buffered after GAP tags should not make the next buffer timerange exceed forward buffer length
-          const nextbufferInfo = this.getFwdBufferInfoAtPos(
-            this.mediaBuffer ? this.mediaBuffer : this.media,
-            bufferInfo.nextStart,
-            PlaylistLevelType.MAIN
-          );
-          if (
-            nextbufferInfo !== null &&
-            bufferLen + nextbufferInfo.len >= maxBufLen
-          ) {
-            return;
-          }
+    // Avoid loop loading by using nextLoadPosition set for backtracking and skipping consecutive GAP tags
+    if (frag && this.isLoopLoading(frag, targetBufferTime)) {
+      const gapStart = frag.gap;
+      if (!gapStart) {
+        // Cleanup the fragment tracker before trying to find the next unbuffered fragment
+        const type =
+          this.audioOnly && !this.altAudio
+            ? ElementaryStreamTypes.AUDIO
+            : ElementaryStreamTypes.VIDEO;
+        const mediaBuffer =
+          (type === ElementaryStreamTypes.VIDEO
+            ? this.videoBuffer
+            : this.mediaBuffer) || this.media;
+        if (mediaBuffer) {
+          this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
         }
       }
+      frag = this.getNextFragmentLoopLoading(
+        frag,
+        levelDetails,
+        bufferInfo,
+        PlaylistLevelType.MAIN,
+        maxBufLen
+      );
     }
     if (!frag) {
       return;

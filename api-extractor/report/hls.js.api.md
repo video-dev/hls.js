@@ -342,6 +342,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected getNextFragment(pos: number, levelDetails: LevelDetails): Fragment | null;
     // (undocumented)
+    protected getNextFragmentLoopLoading(frag: Fragment, levelDetails: LevelDetails, bufferInfo: BufferInfo, playlistType: PlaylistLevelType, maxBufLen: number): Fragment | null;
+    // (undocumented)
     getNextPart(partList: Part[], frag: Fragment, targetBufferTime: number): number;
     // Warning: (ae-forgotten-export) The symbol "PartsLoadedData" needs to be exported by the entry point hls.d.ts
     //
@@ -357,6 +359,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     //
     // (undocumented)
     protected initPTS: RationalTimestamp[];
+    // (undocumented)
+    protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean;
     // (undocumented)
     protected keyLoader: KeyLoader;
     // (undocumented)

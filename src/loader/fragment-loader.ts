@@ -363,6 +363,7 @@ function createGapLoadError(frag: Fragment, part?: Part): LoadError {
   if (part) {
     errorData.part = part;
   }
+  (part ? part : frag).stats.aborted = true;
   return new LoadError(errorData);
 }
 
