@@ -8,13 +8,15 @@ import type {
   LoaderResponse,
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
-import { RetryConfig } from '../config';
+import { type HlsConfig, RetryConfig } from '../config';
 import { getRetryDelay, shouldRetry } from './error-helper';
 
 const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/im;
 
 class XhrLoader implements Loader<LoaderContext> {
-  private xhrSetup: Function | null;
+  private xhrSetup:
+    | ((xhr: XMLHttpRequest, url: string) => Promise<void> | void)
+    | null;
   private requestTimeout?: number;
   private retryTimeout?: number;
   private retryDelay: number;
@@ -25,20 +27,20 @@ class XhrLoader implements Loader<LoaderContext> {
   private loader: XMLHttpRequest | null = null;
   public stats: LoaderStats;
 
-  constructor(config /* HlsConfig */) {
-    this.xhrSetup = config ? config.xhrSetup : null;
+  constructor(config: HlsConfig) {
+    this.xhrSetup = config ? config.xhrSetup || null : null;
     this.stats = new LoadStats();
     this.retryDelay = 0;
   }
 
-  destroy(): void {
+  destroy() {
     this.callbacks = null;
     this.abortInternal();
     this.loader = null;
     this.config = null;
   }
 
-  abortInternal(): void {
+  abortInternal() {
     const loader = this.loader;
     self.clearTimeout(this.requestTimeout);
     self.clearTimeout(this.retryTimeout);
@@ -52,7 +54,7 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  abort(): void {
+  abort() {
     this.abortInternal();
     if (this.callbacks?.onAbort) {
       this.callbacks.onAbort(this.stats, this.context, this.loader);
@@ -63,7 +65,7 @@ class XhrLoader implements Loader<LoaderContext> {
     context: LoaderContext,
     config: LoaderConfiguration,
     callbacks: LoaderCallbacks<LoaderContext>
-  ): void {
+  ) {
     if (this.stats.loading.start) {
       throw new Error('Loader can only be used once.');
     }
@@ -74,7 +76,7 @@ class XhrLoader implements Loader<LoaderContext> {
     this.loadInternal();
   }
 
-  loadInternal(): void {
+  loadInternal() {
     const { config, context } = this;
     if (!config) {
       return;
@@ -89,16 +91,18 @@ class XhrLoader implements Loader<LoaderContext> {
     if (xhrSetup) {
       Promise.resolve()
         .then(() => {
+          if (this.stats.aborted) return;
           return xhrSetup(xhr, context.url);
         })
-        .catch((error) => {
+        .catch((error: Error) => {
           xhr.open('GET', context.url, true);
           return xhrSetup(xhr, context.url);
         })
         .then(() => {
+          if (this.stats.aborted) return;
           this.openAndSendXhr(xhr, context, config);
         })
-        .catch((error) => {
+        .catch((error: Error) => {
           // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
           this.callbacks!.onError(
             { code: xhr.status, text: error.message },
@@ -113,7 +117,11 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  openAndSendXhr(xhr, context, config): void {
+  openAndSendXhr(
+    xhr: XMLHttpRequest,
+    context: LoaderContext,
+    config: LoaderConfiguration
+  ) {
     if (!xhr.readyState) {
       xhr.open('GET', context.url, true);
     }
@@ -145,7 +153,7 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.send();
   }
 
-  readystatechange(): void {
+  readystatechange() {
     const { context, loader: xhr, stats } = this;
     if (!context || !xhr) {
       return;
@@ -232,7 +240,7 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  loadtimeout(): void {
+  loadtimeout() {
     const retryConfig = this.config?.loadPolicy.timeoutRetry;
     const retryCount = this.stats.retry;
     if (shouldRetry(retryConfig, retryCount, true)) {
@@ -269,7 +277,7 @@ class XhrLoader implements Loader<LoaderContext> {
     );
   }
 
-  loadprogress(event: ProgressEvent): void {
+  loadprogress(event: ProgressEvent) {
     const stats = this.stats;
 
     stats.loaded = event.loaded;
