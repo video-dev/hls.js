@@ -86,36 +86,43 @@ class XhrLoader implements Loader<LoaderContext> {
     stats.loaded = 0;
     const xhrSetup = this.xhrSetup;
 
-    try {
-      if (xhrSetup) {
-        try {
-          xhrSetup(xhr, context.url);
-        } catch (e) {
-          // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
-          // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+    if (xhrSetup) {
+      Promise.resolve()
+        .then(() => {
+          return xhrSetup(xhr, context.url);
+        })
+        .catch((error) => {
           xhr.open('GET', context.url, true);
-          xhrSetup(xhr, context.url);
-        }
-      }
-      if (!xhr.readyState) {
-        xhr.open('GET', context.url, true);
-      }
+          return xhrSetup(xhr, context.url);
+        })
+        .then(() => {
+          this.openAndSendXhr(xhr, context, config);
+        })
+        .catch((error) => {
+          // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+          this.callbacks!.onError(
+            { code: xhr.status, text: error.message },
+            context,
+            xhr,
+            stats
+          );
+          return;
+        });
+    } else {
+      this.openAndSendXhr(xhr, context, config);
+    }
+  }
 
-      const headers = this.context.headers;
-      if (headers) {
-        for (const header in headers) {
-          xhr.setRequestHeader(header, headers[header]);
-        }
+  openAndSendXhr(xhr, context, config): void {
+    if (!xhr.readyState) {
+      xhr.open('GET', context.url, true);
+    }
+
+    const headers = this.context.headers;
+    if (headers) {
+      for (const header in headers) {
+        xhr.setRequestHeader(header, headers[header]);
       }
-    } catch (e) {
-      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
-      this.callbacks!.onError(
-        { code: xhr.status, text: e.message },
-        context,
-        xhr,
-        stats
-      );
-      return;
     }
 
     if (context.rangeEnd) {
