@@ -876,9 +876,15 @@ var hls = new Hls({
 
 `XMLHttpRequest` customization callback for default XHR based loader.
 
-Parameter should be a function with two arguments `(xhr: XMLHttpRequest, url: string)`.
-If `xhrSetup` is specified, default loader will invoke it before calling `xhr.send()`.
-This allows user to easily modify/setup XHR. See example below.
+`xhrSetup` should be a function with two arguments `(xhr: XMLHttpRequest, url: string)`.
+If `xhrSetup` is specified, the default loader will invoke it before calling `xhr.send()`.
+This allows users to easily modify the `XMLHttpRequest` instance before sending a request.
+Optionally, a Promise can be returned to wait before the request is sent.
+
+Note that `xhr.open()` should be called in `xhrSetup` if the callback modifies the `XMLHttpRequest`
+instance in ways that require it to be opened first. If `xhrSetup` throws,
+the error will be caught, and `xhrSetup` will be called a second time after opening a GET
+request.
 
 ```js
 var config = {
