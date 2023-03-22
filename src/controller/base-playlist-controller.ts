@@ -160,7 +160,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       if (!this.canLoad || !details.live) {
         return;
       }
-      let deliveryDirectives: HlsUrlParameters;
+      let deliveryDirectives: HlsUrlParameters | undefined;
       let msn: number | undefined = undefined;
       let part: number | undefined = undefined;
       if (details.canBlockReload && details.endSN && details.advanced) {
@@ -224,7 +224,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           this.loadPlaylist(deliveryDirectives);
           return;
         }
-      } else {
+      } else if (details.canBlockReload) {
         deliveryDirectives = this.getDeliveryDirectives(
           details,
           data.deliveryDirectives,
@@ -239,9 +239,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         details,
         distanceToLiveEdgeMs
       );
-      if (!details.updated) {
-        this.requestScheduled = -1;
-      } else if (now > this.requestScheduled + reloadInterval) {
+      if (details.updated && now > this.requestScheduled + reloadInterval) {
         this.requestScheduled = stats.loading.start;
       }
 
@@ -250,10 +248,13 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           stats.loading.first +
           reloadInterval -
           (details.partTarget * 1000 || 1000);
-      } else {
-        this.requestScheduled =
-          (this.requestScheduled === -1 ? now : this.requestScheduled) +
-          reloadInterval;
+      } else if (
+        this.requestScheduled === -1 ||
+        this.requestScheduled + reloadInterval < now
+      ) {
+        this.requestScheduled = now;
+      } else if (this.requestScheduled - now <= 0) {
+        this.requestScheduled += reloadInterval;
       }
       let estimatedTimeUntilUpdate = this.requestScheduled - now;
       estimatedTimeUntilUpdate = Math.max(0, estimatedTimeUntilUpdate);
@@ -262,19 +263,21 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           estimatedTimeUntilUpdate
         )} ms`
       );
-      //     this.log(
-      //       `live reload ${details.updated ? 'REFRESHED' : 'MISSED'}
+      // this.log(
+      //   `live reload ${details.updated ? 'REFRESHED' : 'MISSED'}
       // reload in ${estimatedTimeUntilUpdate / 1000}
       // round trip ${(stats.loading.end - stats.loading.start) / 1000}
       // diff ${
       //   (reloadInterval -
-      //     (estimatedTimeUntilUpdate + stats.loading.end - stats.loading.start)) /
+      //     (estimatedTimeUntilUpdate +
+      //       stats.loading.end -
+      //       stats.loading.start)) /
       //   1000
       // }
       // reload interval ${reloadInterval / 1000}
       // target duration ${details.targetduration}
       // distance to edge ${distanceToLiveEdgeMs / 1000}`
-      //     );
+      // );
 
       this.timer = self.setTimeout(
         () => this.loadPlaylist(deliveryDirectives),
