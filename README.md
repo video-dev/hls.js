@@ -110,11 +110,11 @@ The following properties are added to their respective variants' attribute list 
 - `#EXT-X-RENDITION-REPORT:<attribute-list>`
 - `#EXT-X-DATERANGE:<attribute-list>` Metadata
 - `#EXT-X-DEFINE:<attribute-list>` Variable Import and Substitution (`NAME,VALUE,IMPORT,QUERYPARAM` attributes)
+- `#EXT-X-GAP` (Skips loading GAP segments and parts. Skips playback of unbuffered program containing only GAP content and no suitable alternates. See [#2940](https://github.com/video-dev/hls.js/issues/2940))
 
 The following tags are added to their respective fragment's attribute list but are not implemented in streaming and playback.
 
 - `#EXT-X-BITRATE` (Not used in ABR controller)
-- `#EXT-X-GAP` (Not implemented. See [#2940](https://github.com/video-dev/hls.js/issues/2940))
 
 Parsed but missing feature support
 

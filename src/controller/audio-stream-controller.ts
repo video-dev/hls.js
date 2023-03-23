@@ -347,22 +347,50 @@ class AudioStreamController
       }
     }
 
-    // buffer audio up to one target duration ahead of main buffer
-    if (
-      mainBufferInfo &&
-      targetBufferTime > mainBufferInfo.end + trackDetails.targetduration
-    ) {
-      return;
+    let frag = this.getNextFragment(targetBufferTime, trackDetails);
+    let atGap = false;
+    // Avoid loop loading by using nextLoadPosition set for backtracking and skipping consecutive GAP tags
+    if (frag && this.isLoopLoading(frag, targetBufferTime)) {
+      atGap = !!frag.gap;
+      frag = this.getNextFragmentLoopLoading(
+        frag,
+        trackDetails,
+        bufferInfo,
+        PlaylistLevelType.MAIN,
+        maxBufLen
+      );
     }
-    // wait for main buffer after buffing some audio
-    if (!mainBufferInfo?.len && bufferInfo.len) {
-      return;
-    }
-
-    const frag = this.getNextFragment(targetBufferTime, trackDetails);
     if (!frag) {
       this.bufferFlushed = true;
       return;
+    }
+
+    // Buffer audio up to one target duration ahead of main buffer
+    const atBufferSyncLimit =
+      mainBufferInfo &&
+      frag.start > mainBufferInfo.end + trackDetails.targetduration;
+    if (
+      atBufferSyncLimit ||
+      // Or wait for main buffer after buffing some audio
+      (!mainBufferInfo?.len && bufferInfo.len)
+    ) {
+      // Check fragment-tracker for main fragments since GAP segments do not show up in bufferInfo
+      const mainFrag = this.fragmentTracker.getBufferedFrag(
+        frag.start,
+        PlaylistLevelType.MAIN
+      );
+      if (mainFrag === null) {
+        return;
+      }
+      // Bridge gaps in main buffer
+      atGap ||=
+        !!mainFrag.gap || (!!atBufferSyncLimit && mainBufferInfo.len === 0);
+      if (
+        (atBufferSyncLimit && !atGap) ||
+        (atGap && bufferInfo.nextStart && bufferInfo.nextStart < mainFrag.end)
+      ) {
+        return;
+      }
     }
 
     this.loadFragment(frag, levelInfo, targetBufferTime);
@@ -643,6 +671,7 @@ class AudioStreamController
       return;
     }
     switch (data.details) {
+      case ErrorDetails.FRAG_GAP:
       case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.FRAG_DECRYPT_ERROR:
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -664,33 +693,12 @@ class AudioStreamController
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
-        // if in appending state
-        if (
-          data.parent === 'audio' &&
-          (this.state === State.PARSING || this.state === State.PARSED)
-        ) {
-          let flushBuffer = true;
-          const bufferedInfo = this.getFwdBufferInfo(
-            this.mediaBuffer,
-            PlaylistLevelType.AUDIO
-          );
-          // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-          // reduce max buf len if current position is buffered
-          if (bufferedInfo && bufferedInfo.len > 0.5) {
-            flushBuffer = !this.reduceMaxBufferLength(bufferedInfo.len);
-          }
-          if (flushBuffer) {
-            // current position is not buffered, but browser is still complaining about buffer full error
-            // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
-            // in that case flush the whole audio buffer to recover
-            this.warn(
-              'Buffer full error also media.currentTime is not buffered, flush audio buffer'
-            );
-            this.fragCurrent = null;
-            this.bufferedTrack = null;
-            super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
-          }
-          this.resetLoadingState();
+        if (!data.parent || data.parent !== 'audio') {
+          return;
+        }
+        if (this.reduceLengthAndFlushBuffer(data)) {
+          this.bufferedTrack = null;
+          super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
         }
         break;
       case ErrorDetails.INTERNAL_EXCEPTION:

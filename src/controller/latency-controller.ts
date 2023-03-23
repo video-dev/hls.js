@@ -184,9 +184,11 @@ export default class LatencyController implements ComponentAPI {
       return;
     }
     this.stallCount++;
-    logger.warn(
-      '[playback-rate-controller]: Stall detected, adjusting target latency'
-    );
+    if (this.levelDetails?.live) {
+      logger.warn(
+        '[playback-rate-controller]: Stall detected, adjusting target latency'
+      );
+    }
   }
 
   private timeupdate() {
