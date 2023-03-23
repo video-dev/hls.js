@@ -203,6 +203,8 @@ class XhrLoader implements Loader<LoaderContext> {
           const len =
             xhr.responseType === 'arraybuffer' ? data.byteLength : data.length;
           stats.loaded = stats.total = len;
+          stats.bwEstimate =
+            (stats.total * 8000) / (stats.loading.end - stats.loading.first);
           if (!this.callbacks) {
             return;
           }
