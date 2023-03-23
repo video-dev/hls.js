@@ -57,6 +57,8 @@ export enum ErrorDetails {
   // Identifier for a fragment parsing error event - data: { id : demuxer Id, reason : parsing error description }
   // will be renamed DEMUX_PARSING_ERROR and switched to MUX_ERROR in the next major release
   FRAG_PARSING_ERROR = 'fragParsingError',
+  // Identifier for a fragment or part load skipped because of a GAP tag or attribute
+  FRAG_GAP = 'fragGap',
   // Identifier for a remux alloc error event - data: { id : demuxer Id, frag : fragment object, bytes : nb of bytes on which allocation failed , reason : error text }
   REMUX_ALLOC_ERROR = 'remuxAllocError',
   // Identifier for decrypt key load error - data: { frag : fragment object, response : { code: error code, text: error text }}

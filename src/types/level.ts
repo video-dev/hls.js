@@ -155,6 +155,14 @@ export class Level {
     }
   }
 
+  get audioGroupId(): string | undefined {
+    return this.audioGroupIds?.[this.urlId];
+  }
+
+  get textGroupId(): string | undefined {
+    return this.textGroupIds?.[this.urlId];
+  }
+
   addFallback(data: LevelParsed) {
     this.url.push(data.url);
     this._attrs.push(data.attrs);

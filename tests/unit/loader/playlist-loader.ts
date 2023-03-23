@@ -1582,7 +1582,7 @@ fileSequence2.ts
     ]);
   });
 
-  it('adds GAP to fragment.tagList', function () {
+  it('adds GAP to fragment.tagList and sets fragment.gap', function () {
     const playlist = `#EXTM3U
 #EXT-X-TARGETDURATION:5
 #EXT-X-VERSION:3
@@ -1613,6 +1613,9 @@ fileSequence2.ts
       ['GAP'],
     ]);
     expectWithJSONMessage(fragments[2].tagList).to.deep.equal([['INF', '5']]);
+    expect(fragments[0].gap).to.equal(undefined);
+    expect(fragments[1].gap).to.equal(true);
+    expect(fragments[2].gap).to.equal(undefined);
   });
 
   it('adds unhandled tags (DATERANGE) and comments to fragment.tagList', function () {

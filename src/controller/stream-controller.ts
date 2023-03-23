@@ -302,25 +302,30 @@ export default class StreamController
     } else if (this.backtrackFragment && bufferInfo.len) {
       this.backtrackFragment = null;
     }
-    // Avoid loop loading by using nextLoadPosition set for backtracking
-    if (
-      frag &&
-      this.fragmentTracker.getState(frag) === FragmentState.OK &&
-      this.nextLoadPosition > targetBufferTime
-    ) {
-      // Cleanup the fragment tracker before trying to find the next unbuffered fragment
-      const type =
-        this.audioOnly && !this.altAudio
-          ? ElementaryStreamTypes.AUDIO
-          : ElementaryStreamTypes.VIDEO;
-      const mediaBuffer =
-        (type === ElementaryStreamTypes.VIDEO
-          ? this.videoBuffer
-          : this.mediaBuffer) || this.media;
-      if (mediaBuffer) {
-        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
+    // Avoid loop loading by using nextLoadPosition set for backtracking and skipping consecutive GAP tags
+    if (frag && this.isLoopLoading(frag, targetBufferTime)) {
+      const gapStart = frag.gap;
+      if (!gapStart) {
+        // Cleanup the fragment tracker before trying to find the next unbuffered fragment
+        const type =
+          this.audioOnly && !this.altAudio
+            ? ElementaryStreamTypes.AUDIO
+            : ElementaryStreamTypes.VIDEO;
+        const mediaBuffer =
+          (type === ElementaryStreamTypes.VIDEO
+            ? this.videoBuffer
+            : this.mediaBuffer) || this.media;
+        if (mediaBuffer) {
+          this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
+        }
       }
-      frag = this.getNextFragment(this.nextLoadPosition, levelDetails);
+      frag = this.getNextFragmentLoopLoading(
+        frag,
+        levelDetails,
+        bufferInfo,
+        PlaylistLevelType.MAIN,
+        maxBufLen
+      );
     }
     if (!frag) {
       return;
@@ -535,6 +540,17 @@ export default class StreamController
     const currentTime = media ? media.currentTime : null;
     if (Number.isFinite(currentTime)) {
       this.log(`Media seeked to ${(currentTime as number).toFixed(3)}`);
+    }
+
+    // If seeked was issued before buffer was appended do not tick immediately
+    const bufferInfo = this.getMainFwdBufferInfo();
+    if (bufferInfo === null || bufferInfo.len === 0) {
+      this.warn(
+        `Main forward buffer length on "seeked" event ${
+          bufferInfo ? bufferInfo.len : 'empty'
+        })`
+      );
+      return;
     }
 
     // tick to speed up FRAG_CHANGED triggering
@@ -855,6 +871,7 @@ export default class StreamController
       return;
     }
     switch (data.details) {
+      case ErrorDetails.FRAG_GAP:
       case ErrorDetails.FRAG_PARSING_ERROR:
       case ErrorDetails.FRAG_DECRYPT_ERROR:
       case ErrorDetails.FRAG_LOAD_ERROR:
@@ -876,32 +893,11 @@ export default class StreamController
         }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
-        // if in appending state
-        if (
-          data.parent === 'main' &&
-          (this.state === State.PARSING || this.state === State.PARSED)
-        ) {
-          let flushBuffer = true;
-          const bufferedInfo = this.getFwdBufferInfo(
-            this.media,
-            PlaylistLevelType.MAIN
-          );
-          // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
-          // reduce max buf len if current position is buffered
-          if (bufferedInfo && bufferedInfo.len > 0.5) {
-            flushBuffer = !this.reduceMaxBufferLength(bufferedInfo.len);
-          }
-          if (flushBuffer) {
-            // current position is not buffered, but browser is still complaining about buffer full error
-            // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
-            // in that case flush the whole buffer to recover
-            this.warn(
-              'buffer full error also media.currentTime is not buffered, flush main'
-            );
-            // flush main buffer
-            this.immediateLevelSwitch();
-          }
-          this.resetLoadingState();
+        if (!data.parent || data.parent !== 'main') {
+          return;
+        }
+        if (this.reduceLengthAndFlushBuffer(data)) {
+          this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
         }
         break;
       case ErrorDetails.INTERNAL_EXCEPTION:

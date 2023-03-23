@@ -147,6 +147,8 @@ export class Fragment extends BaseSegment {
   public initSegment: Fragment | null = null;
   // Fragment is the last fragment in the media playlist
   public endList?: boolean;
+  // Fragment is marked by an EXT-X-GAP tag indicating that it does not contain media data and should not be loaded
+  public gap?: boolean;
 
   constructor(type: PlaylistLevelType, baseurl: string) {
     super(baseurl);

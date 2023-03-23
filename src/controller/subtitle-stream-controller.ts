@@ -220,7 +220,11 @@ export class SubtitleStreamController
     this.levels = subtitleTracks.map(
       (mediaPlaylist) => new Level(mediaPlaylist)
     );
-    this.fragmentTracker.removeAllFragments();
+    this.fragmentTracker.removeFragmentsInRange(
+      0,
+      Number.POSITIVE_INFINITY,
+      PlaylistLevelType.SUBTITLE
+    );
     this.fragPrevious = null;
     this.levels.forEach((level: Level) => {
       this.tracksBuffered[level.id] = [];

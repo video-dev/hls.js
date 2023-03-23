@@ -479,7 +479,7 @@ export default class LevelController extends BasePlaylistController {
     const audioGroupId = this.hls.audioTracks[data.id].groupId;
     if (
       currentLevel.audioGroupIds &&
-      currentLevel.audioGroupIds[currentLevel.urlId] !== audioGroupId
+      currentLevel.audioGroupId !== audioGroupId
     ) {
       let urlId = -1;
       for (let i = 0; i < currentLevel.audioGroupIds.length; i++) {

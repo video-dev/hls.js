@@ -513,6 +513,7 @@ export default class M3U8Parser {
             frag.tagList.push(['DIS']);
             break;
           case 'GAP':
+            frag.gap = true;
             frag.tagList.push([tag]);
             break;
           case 'BITRATE':
