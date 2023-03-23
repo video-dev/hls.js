@@ -17,6 +17,7 @@ import type { AbrComponentAPI } from '../types/component-api';
 
 class AbrController implements AbrComponentAPI {
   protected hls: Hls;
+  private lastLevelLoadSec: number = 0;
   private lastLoadedFragLevel: number = 0;
   private _nextAutoLevel: number = -1;
   private timer: number = -1;
@@ -84,8 +85,24 @@ class AbrController implements AbrComponentAPI {
     this.clearTimer();
   }
 
+  private getTimeToLoadFrag(
+    timeToFirstByteSec: number,
+    bandwidth: number,
+    fragSizeBits: number,
+    isSwitch: boolean
+  ) {
+    const fragLoadSec = timeToFirstByteSec + fragSizeBits / bandwidth;
+    const playlistLoadSec = isSwitch ? this.lastLevelLoadSec : 0;
+    return fragLoadSec + playlistLoadSec;
+  }
+
   protected onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     const config = this.hls.config;
+    const { total, bwEstimate } = data.stats;
+    // Total is the bytelength and bwEstimate in bits/sec
+    if (Number.isFinite(total) && Number.isFinite(bwEstimate)) {
+      this.lastLevelLoadSec = (8 * total) / bwEstimate;
+    }
     if (data.details.live) {
       this.bwEstimator.update(config.abrEwmaSlowLive, config.abrEwmaFastLive);
     } else {
@@ -178,6 +195,7 @@ class AbrController implements AbrComponentAPI {
       return;
     }
 
+    const bwe = loadRate ? loadRate * 8 : bwEstimate;
     let fragLevelNextLoadedDelay: number = Number.POSITIVE_INFINITY;
     let nextLoadLevel: number;
     // Iterate through lower level and try to find the largest one that avoids rebuffering
@@ -189,9 +207,12 @@ class AbrController implements AbrComponentAPI {
       // compute time to load next fragment at lower level
       // 8 = bits per byte (bps/Bps)
       const levelNextBitrate = levels[nextLoadLevel].maxBitrate;
-      const bwe = loadRate ? loadRate * 8 : bwEstimate;
-      fragLevelNextLoadedDelay =
-        (duration * levelNextBitrate) / bwe + ttfbEstimate / 1000;
+      fragLevelNextLoadedDelay = this.getTimeToLoadFrag(
+        ttfbEstimate / 1000,
+        bwe,
+        duration * levelNextBitrate,
+        !levels[nextLoadLevel].details
+      );
       if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
         break;
       }
@@ -451,6 +472,8 @@ class AbrController implements AbrComponentAPI {
       : fragCurrent
       ? fragCurrent.duration
       : 0;
+
+    const ttfbEstimateSec = this.bwEstimator.getEstimateTTFB() / 1000;
     let levelSkippedMin = minAutoLevel;
     let levelSkippedMax = -1;
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
@@ -491,10 +514,13 @@ class AbrController implements AbrComponentAPI {
         adjustedbw = bwUpFactor * currentBw;
       }
 
-      const ttfbEstimate = this.bwEstimator.getEstimateTTFB();
       const bitrate: number = levels[i].maxBitrate;
-      const fetchDuration: number =
-        (bitrate * avgDuration) / adjustedbw + ttfbEstimate / 1000;
+      const fetchDuration: number = this.getTimeToLoadFrag(
+        ttfbEstimateSec,
+        adjustedbw,
+        bitrate * avgDuration,
+        levelDetails === undefined
+      );
 
       logger.trace(
         `[abr] level:${i} adjustedbw-bitrate:${Math.round(
