@@ -1,20 +1,33 @@
 const { buildRollupConfig, BUILD_TYPE, FORMAT } = require('./build-config');
 
+// Do not add coverage for JavaScript debugging when running `test:unit:debug`
+// eslint-disable-next-line no-undef
+const includeCoverage = !process.env.DEBUG_UNIT_TESTS;
+
 const rollupPreprocessor = buildRollupConfig({
   type: BUILD_TYPE.full,
   format: FORMAT.umd,
   minified: false,
   allowCircularDeps: true,
+  includeCoverage,
 });
 
-// Do not add coverage for JavaScript debugging when running `test:unit:debug`
+// preprocess matching files before serving them to the browser
+// available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
 const preprocessors = {
   './tests/index.js': ['rollup'],
 };
+// test results reporter to use
+// possible values: 'dots', 'progress'
+// available reporters: https://npmjs.org/browse/keyword/karma-reporter
+const reporters = ['mocha'];
+const coverageReporter = {
+  reporters: [],
+};
 
-// eslint-disable-next-line no-undef
-if (!process.env.DEBUG_UNIT_TESTS) {
-  preprocessors['./src/**/*.ts'] = ['coverage'];
+if (includeCoverage) {
+  reporters.push('coverage');
+  coverageReporter.reporters.push({ type: 'html', subdir: '.' });
 }
 
 module.exports = function (config) {
@@ -34,21 +47,9 @@ module.exports = function (config) {
     // list of files to exclude
     exclude: [],
 
-    // preprocess matching files before serving them to the browser
-    // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
     preprocessors,
-
-    // test results reporter to use
-    // possible values: 'dots', 'progress'
-    // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['mocha', 'coverage'],
-
-    coverageReporter: {
-      reporters: [
-        { type: 'lcov', subdir: '.' },
-        { type: 'text', subdir: '.' },
-      ],
-    },
+    coverageReporter,
+    reporters,
 
     rollupPreprocessor,
 

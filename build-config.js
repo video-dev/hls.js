@@ -6,6 +6,7 @@ const babel = require('@rollup/plugin-babel');
 const alias = require('@rollup/plugin-alias');
 const replace = require('@rollup/plugin-replace');
 const terser = require('@rollup/plugin-terser');
+const istanbul = require('rollup-plugin-istanbul');
 const fs = require('fs');
 
 const pkgJson = JSON.parse(
@@ -207,7 +208,13 @@ function getAliasesForLightDist() {
   return aliases;
 }
 
-const buildRollupConfig = ({ type, minified, format, allowCircularDeps }) => {
+const buildRollupConfig = ({
+  type,
+  minified,
+  format,
+  allowCircularDeps,
+  includeCoverage,
+}) => {
   const outputName = buildTypeToOutputName[type];
   const extension = format === FORMAT.esm ? 'mjs' : 'js';
 
@@ -242,6 +249,9 @@ const buildRollupConfig = ({ type, minified, format, allowCircularDeps }) => {
         ? [buildBabelEsm({ stripConsole: true })]
         : [buildBabelLegacyBrowsers({ stripConsole: true })]),
       ...(minified ? [terser()] : []),
+      ...(includeCoverage
+        ? [istanbul({ exclude: ['tests/**/*', 'node_modules/**/*'] })]
+        : []),
     ],
   };
 };
