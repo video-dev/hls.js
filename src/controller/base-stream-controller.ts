@@ -1481,10 +1481,11 @@ export default class BaseStreamController
       );
       // 0.5 : tolerance needed as some browsers stalls playback before reaching buffered end
       // reduce max buf len if current position is buffered
-      let flushBuffer = true;
-      if (bufferedInfo && bufferedInfo.len > 0.5) {
-        flushBuffer = !this.reduceMaxBufferLength(bufferedInfo.len);
+      const buffered = bufferedInfo && bufferedInfo.len > 0.5;
+      if (buffered) {
+        this.reduceMaxBufferLength(bufferedInfo.len);
       }
+      const flushBuffer = !buffered;
       if (flushBuffer) {
         // current position is not buffered, but browser is still complaining about buffer full error
         // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
