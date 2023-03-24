@@ -378,7 +378,10 @@ class AbrController extends Logger implements AbrComponentAPI {
     { frag, part }: FragLoadedData,
   ) {
     const stats = part ? part.stats : frag.stats;
-    if (frag.type === PlaylistLevelType.MAIN) {
+    if (
+      frag.type === PlaylistLevelType.MAIN &&
+      !(part?.isPreload || frag.isPreload)
+    ) {
       this.bwEstimator.sampleTTFB(stats.loading.first - stats.loading.start);
     }
     if (this.ignoreFragment(frag)) {
@@ -434,9 +437,12 @@ class AbrController extends Logger implements AbrComponentAPI {
     // Use the difference between parsing and request instead of buffering and request to compute fragLoadingProcessing;
     // rationale is that buffer appending only happens once media is attached. This can happen when config.startFragPrefetch
     // is used. If we used buffering in that case, our BW estimate sample will be very large.
+    const loadStart = part?.isPreload
+      ? stats.loading.first
+      : stats.loading.start;
     const processingMs =
       stats.parsing.end -
-      stats.loading.start -
+      loadStart -
       Math.min(
         stats.loading.first - stats.loading.start,
         this.bwEstimator.getEstimateTTFB(),

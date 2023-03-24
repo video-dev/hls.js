@@ -536,6 +536,8 @@ class AudioStreamController
     let sliding = 0;
     if (newDetails.live || track.details?.live) {
       this.checkLiveUpdate(newDetails);
+      // reset the preloader state to IDLE if we have finished loading, never loaded, or have old data
+      this.fragmentPreloader.revalidate(data);
       const mainDetails = this.mainDetails;
       if (newDetails.deltaUpdateFailed || !mainDetails) {
         return;

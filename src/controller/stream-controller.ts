@@ -40,6 +40,7 @@ import type {
   ManifestParsedData,
   MediaAttachedData,
 } from '../types/events';
+import { FragPreloadRequestState } from '../loader/fragment-preloader';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -652,6 +653,15 @@ export default class StreamController
     let sliding = 0;
     if (newDetails.live || curLevel.details?.live) {
       this.checkLiveUpdate(newDetails);
+      if (
+        this.fragmentPreloader.state === FragPreloadRequestState.LOADING &&
+        this.fragmentPreloader.frag?.level !== data.level
+      ) {
+        this.fragmentPreloader.abort();
+      } else {
+        // reset the preloader state to IDLE if we have finished loading, never loaded, or have old data
+        this.fragmentPreloader.revalidate(data);
+      }
       if (newDetails.deltaUpdateFailed) {
         return;
       }

@@ -43,6 +43,7 @@ export class BaseSegment {
     [ElementaryStreamTypes.VIDEO]: null,
     [ElementaryStreamTypes.AUDIOVIDEO]: null,
   };
+  public isPreload?: boolean;
 
   constructor(baseurl: string) {
     this.baseurl = baseurl;
@@ -288,6 +289,7 @@ export class Part extends BaseSegment {
     baseurl: string,
     index: number,
     previous?: Part,
+    isPreload?: boolean,
   ) {
     super(baseurl);
     this.duration = partAttrs.decimalFloatingPoint('DURATION');
@@ -302,6 +304,9 @@ export class Part extends BaseSegment {
     }
     if (previous) {
       this.fragOffset = previous.fragOffset + previous.duration;
+    }
+    if (isPreload) {
+      this.isPreload = isPreload;
     }
   }
 
