@@ -367,17 +367,17 @@ export function getStartDTS(
           if (track) {
             let baseTime = readUint32(tfdt, 4);
             if (version === 1) {
-              baseTime *= Math.pow(2, 32);
-              baseTime += readUint32(tfdt, 8);
               // If value is too large, assume signed 64-bit. Negative track fragment decode times are invalid, but they exist in the wild.
               // This prevents large values from being used for initPTS, which can cause playlist sync issues.
               // https://github.com/video-dev/hls.js/issues/5303
-              if (baseTime > Math.pow(2, 63)) {
+              if (baseTime === UINT32_MAX) {
                 logger.warn(
-                  `[mp4-demuxer]: Found large track fragment decode time of ${baseTime}, using last result ${result} or playlist time instead.`
+                  `[mp4-demuxer]: Ignoring assumed invalid signed 64-bit track fragment decode time`
                 );
                 return result;
               }
+              baseTime *= UINT32_MAX + 1;
+              baseTime += readUint32(tfdt, 8);
             }
             // assume a 90kHz clock if no timescale was specified
             const scale = track.timescale || 90e3;
