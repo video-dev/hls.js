@@ -401,7 +401,10 @@ class AudioStreamController
     if (!mainBufferLength) {
       return maxConfigBuffer;
     }
-    return Math.max(maxConfigBuffer, mainBufferLength);
+    return Math.min(
+      Math.max(maxConfigBuffer, mainBufferLength),
+      this.config.maxMaxBufferLength
+    );
   }
 
   onMediaDetaching() {
