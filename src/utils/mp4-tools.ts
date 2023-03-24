@@ -350,10 +350,13 @@ export function parseSinf(sinf: Uint8Array): Uint8Array | null {
  * @returns the earliest base media decode start time for the
  * fragment, in seconds
  */
-export function getStartDTS(initData: InitData, fmp4: Uint8Array): number {
+export function getStartDTS(
+  initData: InitData,
+  fmp4: Uint8Array
+): number | null {
   // we need info from two children of each track fragment box
-  return (
-    findBox(fmp4, ['moof', 'traf']).reduce((result: number | null, traf) => {
+  return findBox(fmp4, ['moof', 'traf']).reduce(
+    (result: number | null, traf) => {
       const tfdt = findBox(traf, ['tfdt'])[0];
       const version = tfdt[0];
       const start = findBox(traf, ['tfhd']).reduce(
@@ -370,11 +373,10 @@ export function getStartDTS(initData: InitData, fmp4: Uint8Array): number {
               // This prevents large values from being used for initPTS, which can cause playlist sync issues.
               // https://github.com/video-dev/hls.js/issues/5303
               if (baseTime > Math.pow(2, 63)) {
-                const signedValue = baseTime - Math.pow(2, 64);
                 logger.warn(
-                  `[mp4-demuxer]: Found large track fragment decode time of ${baseTime}, treating as signed 64-bit int ${signedValue}`
+                  `[mp4-demuxer]: Found large track fragment decode time of ${baseTime}, using last result ${result} or playlist time instead.`
                 );
-                baseTime = signedValue;
+                return result;
               }
             }
             // assume a 90kHz clock if no timescale was specified
@@ -400,7 +402,8 @@ export function getStartDTS(initData: InitData, fmp4: Uint8Array): number {
         return start;
       }
       return result;
-    }, null) || 0
+    },
+    null
   );
 }
 

@@ -168,11 +168,12 @@ class PassThroughRemuxer implements Remuxer {
     }
 
     const startDTS = getStartDTS(initData, data);
+    const decodeTime = startDTS === null ? timeOffset : startDTS;
     if (
-      isInvalidInitPts(initPTS, startDTS, timeOffset) ||
+      isInvalidInitPts(initPTS, decodeTime, timeOffset) ||
       (initSegment.timescale !== initPTS.timescale && accurateTimeOffset)
     ) {
-      initSegment.initPTS = startDTS - timeOffset;
+      initSegment.initPTS = decodeTime - timeOffset;
       this.initPTS = initPTS = {
         baseTime: initSegment.initPTS,
         timescale: 1,
@@ -181,7 +182,7 @@ class PassThroughRemuxer implements Remuxer {
 
     const duration = getDuration(data, initData);
     const startTime = audioTrack
-      ? startDTS - initPTS.baseTime / initPTS.timescale
+      ? decodeTime - initPTS.baseTime / initPTS.timescale
       : (lastEndTime as number);
     const endTime = startTime + duration;
     offsetStartDTS(initData, data, initPTS.baseTime / initPTS.timescale);
