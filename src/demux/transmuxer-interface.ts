@@ -1,4 +1,9 @@
-import { WorkerContext, hasUMDWorker, injectWorker } from './inject-worker';
+import {
+  WorkerContext,
+  hasUMDWorker,
+  injectWorker,
+  loadWorker,
+} from './inject-worker';
 import { Events } from '../events';
 import Transmuxer, {
   TransmuxConfig,
@@ -70,11 +75,16 @@ export default class TransmuxerInterface {
     // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
     const vendor = navigator.vendor;
     if (this.useWorker && typeof Worker !== 'undefined') {
-      // TODO: Offer a way to pass the worker URL rather than injecting it from UMD bundle
-      if (hasUMDWorker()) {
-        logger.log('instantiating webworker');
+      const canCreateWorker = config.workerPath || hasUMDWorker();
+      if (canCreateWorker) {
         try {
-          this.workerContext = injectWorker();
+          if (config.workerPath) {
+            logger.log(`loading Web Worker ${config.workerPath}`);
+            this.workerContext = loadWorker(config.workerPath);
+          } else {
+            logger.log('injecting Web Worker');
+            this.workerContext = injectWorker();
+          }
           this.onwmsg = (ev: any) => this.onWorkerMessage(ev);
           const { worker } = this.workerContext;
           worker.addEventListener('message', this.onwmsg as any);
