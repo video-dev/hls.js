@@ -1,5 +1,5 @@
 import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
-import { BufferOperation, SourceBuffers } from '../../../src/types/buffer';
+import type { BufferOperation, SourceBuffers } from '../../../src/types/buffer';
 
 import sinon from 'sinon';
 import chai from 'chai';

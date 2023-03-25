@@ -21,6 +21,7 @@ const BUILD_TYPE = {
 const FORMAT = {
   umd: 'umd',
   esm: 'esm',
+  iife: 'iife',
 };
 
 const buildTypeToOutputName = {
@@ -59,28 +60,33 @@ const buildConstants = (type, format) => ({
     __USE_VARIABLE_SUBSTITUTION__: JSON.stringify(
       type === BUILD_TYPE.full || addVariableSubstitutionSupport
     ),
-    __HLS_UMD_WORKER__: JSON.stringify(format === FORMAT.umd),
   },
 });
 
-const umdBanner = '(function __HLS_UMD_BUNDLE__(__IN_WORKER__){';
-const umdFooter = '})(false);';
+const workerFnBanner = '(function __HLS_WORKER_BUNDLE__(__IN_WORKER__){';
+const workerFnFooter = '})(false);';
 
 const extensions = ['.ts', '.js'];
 
-const babelPresetEnvLegacyBrowserList = [
-  'chrome >= 47',
-  'firefox >= 51',
-  'safari >= 8',
-  'ios >= 8',
-  'android >= 4',
-];
+const babelPresetEnvTargets = {
+  chrome: '47',
+  firefox: '51',
+  safari: '8',
+  ios: '8',
+  android: '4',
+  samsung: '5',
+  edge: '14',
+};
 
 const babelTsWithPresetEnvTargets = ({ targets, stripConsole }) =>
   babel({
     extensions,
     babelHelpers: 'bundled',
     exclude: 'node_modules/**',
+    assumptions: {
+      noDocumentAll: true,
+      noClassCalls: true,
+    },
     presets: [
       [
         '@babel/preset-typescript',
@@ -92,8 +98,8 @@ const babelTsWithPresetEnvTargets = ({ targets, stripConsole }) =>
         '@babel/preset-env',
         {
           loose: true,
-          modules: false,
           targets,
+          bugfixes: true,
         },
       ],
     ],
@@ -145,9 +151,7 @@ const babelTsWithPresetEnvTargets = ({ targets, stripConsole }) =>
 
 const buildBabelLegacyBrowsers = ({ stripConsole }) =>
   babelTsWithPresetEnvTargets({
-    targets: {
-      browsers: babelPresetEnvLegacyBrowserList,
-    },
+    targets: babelPresetEnvTargets,
     stripConsole,
   });
 
@@ -214,6 +218,8 @@ const buildRollupConfig = ({
   format,
   allowCircularDeps,
   includeCoverage,
+  sourcemap = true,
+  outputFile = null,
 }) => {
   const outputName = buildTypeToOutputName[type];
   const extension = format === FORMAT.esm ? 'mjs' : 'js';
@@ -228,13 +234,15 @@ const buildRollupConfig = ({
     },
     output: {
       name: 'Hls',
-      file: minified
+      file: outputFile
+        ? outputFile
+        : minified
         ? `./dist/${outputName}.min.${extension}`
         : `./dist/${outputName}.${extension}`,
       format,
-      banner: format === FORMAT.umd ? umdBanner : null,
-      footer: format === FORMAT.umd ? umdFooter : null,
-      sourcemap: true,
+      banner: format === FORMAT.esm ? null : workerFnBanner,
+      footer: format === FORMAT.esm ? null : workerFnFooter,
+      sourcemap,
       sourcemapFile: minified
         ? `${outputName}.${extension}.min.map`
         : `${outputName}.${extension}.map`,
