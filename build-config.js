@@ -220,7 +220,6 @@ const buildRollupConfig = ({
   allowCircularDeps,
   includeCoverage,
   sourcemap = true,
-  outputFile = null,
 }) => {
   const outputName = buildTypeToOutputName[type];
   const extension = format === FORMAT.esm ? 'mjs' : 'js';
@@ -235,9 +234,7 @@ const buildRollupConfig = ({
     },
     output: {
       name: 'Hls',
-      file: outputFile
-        ? outputFile
-        : minified
+      file: minified
         ? `./dist/${outputName}.min.${extension}`
         : `./dist/${outputName}.${extension}`,
       format,
