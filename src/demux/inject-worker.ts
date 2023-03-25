@@ -1,16 +1,11 @@
-import startWorker from './transmuxer-worker';
-
-if (typeof __IN_WORKER__ !== 'undefined' && __IN_WORKER__) {
-  startWorker(self);
-}
-
 export function hasUMDWorker(): boolean {
   return typeof __HLS_WORKER_BUNDLE__ === 'function';
 }
 
 export type WorkerContext = {
   worker: Worker;
-  objectURL: string;
+  objectURL?: string;
+  scriptURL?: string;
 };
 
 export function injectWorker(): WorkerContext {
@@ -22,13 +17,21 @@ export function injectWorker(): WorkerContext {
       type: 'text/javascript',
     }
   );
-  // @ts-ignore
-  const URL = self.URL || self.webkitURL || self.mozURL || self.msURL;
-  const objectURL = URL.createObjectURL(blob);
+  const objectURL = self.URL.createObjectURL(blob);
   const worker = new self.Worker(objectURL);
 
   return {
     worker,
     objectURL,
+  };
+}
+
+export function loadWorker(path: string): WorkerContext {
+  const scriptURL = new self.URL(path, self.location.href).href;
+  const worker = new self.Worker(scriptURL);
+
+  return {
+    worker,
+    scriptURL,
   };
 }

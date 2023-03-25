@@ -290,6 +290,28 @@ const configs = Object.entries({
     format: FORMAT.umd,
     minified: true,
   }),
+  worker: {
+    input: './src/demux/transmuxer-worker.ts',
+    onwarn: (e) => {
+      // treat warnings as errors
+      throw new Error(e);
+    },
+    output: {
+      name: 'HlsWorker',
+      file: './dist/hls.worker.js',
+      format: FORMAT.iife,
+      banner: workerFnBanner,
+      footer: workerFnFooter.replace('false', 'true'),
+      sourcemap: true,
+      sourcemapFile: 'hls.worker.js.map',
+    },
+    plugins: [
+      ...basePlugins,
+      replace(buildConstants(BUILD_TYPE.full, FORMAT.iife)),
+      buildBabelLegacyBrowsers({ stripConsole: true }),
+      terser(),
+    ],
+  },
   demo: {
     input: './demo/main.js',
     onwarn: (e) => {

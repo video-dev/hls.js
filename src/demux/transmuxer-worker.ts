@@ -6,7 +6,11 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import type { RemuxedTrack, RemuxerResult } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 
-export default function startWorker(self) {
+if (typeof __IN_WORKER__ !== 'undefined' && __IN_WORKER__) {
+  startWorker(self);
+}
+
+function startWorker(self) {
   const observer = new EventEmitter();
   const forwardMessage = (ev, data) => {
     self.postMessage({ event: ev, data: data });
