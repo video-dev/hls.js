@@ -42,6 +42,8 @@ const addContentSteeringSupport =
 const addVariableSubstitutionSupport =
   !!env.VARIABLE_SUBSTITUTION || !!env.USE_VARIABLE_SUBSTITUTION;
 
+const shouldBundleWorker = (format) => format !== FORMAT.esm;
+
 const buildConstants = (type, additional = {}) => ({
   preventAssignment: true,
   values: {
@@ -241,8 +243,8 @@ const buildRollupConfig = ({
         ? `./dist/${outputName}.min.${extension}`
         : `./dist/${outputName}.${extension}`,
       format,
-      banner: format === FORMAT.esm ? null : workerFnBanner,
-      footer: format === FORMAT.esm ? null : workerFnFooter,
+      banner: shouldBundleWorker(format) ? workerFnBanner : null,
+      footer: shouldBundleWorker(format) ? workerFnFooter : null,
       sourcemap,
       sourcemapFile: minified
         ? `${outputName}.${extension}.min.map`
@@ -251,6 +253,9 @@ const buildRollupConfig = ({
     plugins: [
       ...basePlugins,
       replace(buildConstants(type)),
+      ...(!shouldBundleWorker(format)
+        ? [alias({ entries: { './transmuxer-worker': '../empty.js' } })]
+        : []),
       ...(type === BUILD_TYPE.light
         ? [alias({ entries: getAliasesForLightDist() })]
         : []),

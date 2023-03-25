@@ -1,3 +1,7 @@
+// ensure the worker ends up in the bundle
+// If the worker should not be included this gets aliased to empty.js
+import './transmuxer-worker';
+
 export function hasUMDWorker(): boolean {
   return typeof __HLS_WORKER_BUNDLE__ === 'function';
 }
