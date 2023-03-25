@@ -15,7 +15,6 @@ chai.use(sinonChai);
 const expect = chai.expect;
 
 describe('FragmentLoader tests', function () {
-  const sandbox = sinon.createSandbox();
   let fragmentLoader: FragmentLoader;
   let frag;
   let levelDetails;
@@ -23,6 +22,7 @@ describe('FragmentLoader tests', function () {
   let context;
   let stats;
   let networkDetails;
+
   beforeEach(function () {
     fragmentLoader = new FragmentLoader(
       mergeConfig(hlsDefaultConfig, { loader: MockXhr })
@@ -38,7 +38,7 @@ describe('FragmentLoader tests', function () {
   });
 
   afterEach(function () {
-    sandbox.restore();
+    fragmentLoader.destroy();
   });
 
   it('handles successful fragment loading', function () {
