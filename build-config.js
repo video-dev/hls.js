@@ -42,7 +42,7 @@ const addContentSteeringSupport =
 const addVariableSubstitutionSupport =
   !!env.VARIABLE_SUBSTITUTION || !!env.USE_VARIABLE_SUBSTITUTION;
 
-const buildConstants = (type, format) => ({
+const buildConstants = (type, additional = {}) => ({
   preventAssignment: true,
   values: {
     __VERSION__: JSON.stringify(pkgJson.version),
@@ -60,6 +60,7 @@ const buildConstants = (type, format) => ({
     __USE_VARIABLE_SUBSTITUTION__: JSON.stringify(
       type === BUILD_TYPE.full || addVariableSubstitutionSupport
     ),
+    ...additional,
   },
 });
 
@@ -249,7 +250,7 @@ const buildRollupConfig = ({
     },
     plugins: [
       ...basePlugins,
-      replace(buildConstants(type, format)),
+      replace(buildConstants(type)),
       ...(type === BUILD_TYPE.light
         ? [alias({ entries: getAliasesForLightDist() })]
         : []),
@@ -300,14 +301,16 @@ const configs = Object.entries({
       name: 'HlsWorker',
       file: './dist/hls.worker.js',
       format: FORMAT.iife,
-      banner: workerFnBanner,
-      footer: workerFnFooter.replace('false', 'true'),
       sourcemap: true,
       sourcemapFile: 'hls.worker.js.map',
     },
     plugins: [
       ...basePlugins,
-      replace(buildConstants(BUILD_TYPE.full, FORMAT.iife)),
+      replace(
+        buildConstants(BUILD_TYPE.full, {
+          __IN_WORKER__: JSON.stringify(true),
+        })
+      ),
       buildBabelLegacyBrowsers({ stripConsole: true }),
       terser(),
     ],
