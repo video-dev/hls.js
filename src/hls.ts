@@ -341,7 +341,7 @@ export default class Hls implements HlsEventEmitter {
     const config = this.config;
     config.xhrSetup = config.fetchSetup = undefined;
     // @ts-ignore
-    this.config = this.userConfig = null;
+    this.userConfig = null;
   }
 
   /**

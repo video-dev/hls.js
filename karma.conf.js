@@ -2,14 +2,16 @@ const { buildRollupConfig, BUILD_TYPE, FORMAT } = require('./build-config');
 
 // Do not add coverage for JavaScript debugging when running `test:unit:debug`
 // eslint-disable-next-line no-undef
-const includeCoverage = !process.env.DEBUG_UNIT_TESTS;
+const includeCoverage = !process.env.DEBUG_UNIT_TESTS && !process.env.CI;
 
 const rollupPreprocessor = buildRollupConfig({
   type: BUILD_TYPE.full,
-  format: FORMAT.umd,
+  format: FORMAT.iife,
   minified: false,
   allowCircularDeps: true,
   includeCoverage,
+  sourcemap: false,
+  outputFile: 'temp/tests.js',
 });
 
 // preprocess matching files before serving them to the browser

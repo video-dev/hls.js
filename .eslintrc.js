@@ -16,7 +16,6 @@ module.exports = {
     __USE_CMCD__: true,
     __USE_CONTENT_STEERING__: true,
     __USE_VARIABLE_SUBSTITUTION__: true,
-    __HLS_UMD_WORKER__: true,
   },
   // see https://github.com/standard/eslint-config-standard
   // 'prettier' (https://github.com/prettier/eslint-config-prettier) must be last
