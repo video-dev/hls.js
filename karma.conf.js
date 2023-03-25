@@ -11,6 +11,7 @@ const rollupPreprocessor = buildRollupConfig({
   allowCircularDeps: true,
   includeCoverage,
   sourcemap: false,
+  outputFile: 'temp/tests.js',
 });
 
 // preprocess matching files before serving them to the browser
