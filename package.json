@@ -24,7 +24,6 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "demo/**/*",
     "dist/**/*",
     "src/**/*"
   ],
