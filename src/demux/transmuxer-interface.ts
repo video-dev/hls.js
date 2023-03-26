@@ -79,10 +79,10 @@ export default class TransmuxerInterface {
       if (canCreateWorker) {
         try {
           if (config.workerPath) {
-            logger.log(`loading Web Worker ${config.workerPath}`);
+            logger.log(`loading Web Worker ${config.workerPath} for "${id}"`);
             this.workerContext = loadWorker(config.workerPath);
           } else {
-            logger.log('injecting Web Worker');
+            logger.log(`injecting Web Worker for "${id}"`);
             this.workerContext = injectWorker();
           }
           this.onwmsg = (ev: any) => this.onWorkerMessage(ev);
@@ -93,7 +93,7 @@ export default class TransmuxerInterface {
               `${event.message}  (${event.filename}:${event.lineno})`
             );
             config.enableWorker = false;
-            logger.warn('Exception in webworker, fallback to inline');
+            logger.warn(`Error in "${id}" Web Worker, fallback to inline`);
             this.hls.trigger(Events.ERROR, {
               type: ErrorTypes.OTHER_ERROR,
               details: ErrorDetails.INTERNAL_EXCEPTION,
@@ -110,9 +110,9 @@ export default class TransmuxerInterface {
             config: JSON.stringify(config),
           });
         } catch (err) {
-          logger.warn('Error in worker:', err);
-          logger.error(
-            'Error while initializing DemuxerWorker, fallback to inline'
+          logger.warn(
+            `Error setting up "${id}" Web Worker, fallback to inline`,
+            err
           );
           this.resetWorker();
           this.error = null;
