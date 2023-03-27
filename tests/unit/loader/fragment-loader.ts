@@ -7,15 +7,14 @@ import { hlsDefaultConfig, mergeConfig } from '../../../src/config';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { MockXhr } from '../../mocks/loader.mock';
 
-import * as sinon from 'sinon';
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+import sinon from 'sinon';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;
 
 describe('FragmentLoader tests', function () {
-  const sandbox = sinon.createSandbox();
   let fragmentLoader: FragmentLoader;
   let frag;
   let levelDetails;
@@ -23,6 +22,7 @@ describe('FragmentLoader tests', function () {
   let context;
   let stats;
   let networkDetails;
+
   beforeEach(function () {
     fragmentLoader = new FragmentLoader(
       mergeConfig(hlsDefaultConfig, { loader: MockXhr })
@@ -38,7 +38,7 @@ describe('FragmentLoader tests', function () {
   });
 
   afterEach(function () {
-    sandbox.restore();
+    fragmentLoader.destroy();
   });
 
   it('handles successful fragment loading', function () {

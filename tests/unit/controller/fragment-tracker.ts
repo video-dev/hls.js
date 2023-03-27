@@ -14,8 +14,8 @@ import type {
   FragLoadedData,
 } from '../../../src/types/events';
 
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

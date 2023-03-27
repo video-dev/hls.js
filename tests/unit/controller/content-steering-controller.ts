@@ -22,9 +22,9 @@ import type { MediaPlaylist } from '../../../src/types/media-playlist';
 import type { SteeringManifest } from '../../../src/controller/content-steering-controller';
 import type { LoaderResponse } from '../../../src/types/loader';
 
-import * as sinon from 'sinon';
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+import sinon from 'sinon';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

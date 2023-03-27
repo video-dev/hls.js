@@ -23,7 +23,7 @@ try {
   now = self.performance.now.bind(self.performance);
 } catch (err) {
   logger.debug('Unable to use Performance API on this environment');
-  now = self.Date.now;
+  now = typeof self !== 'undefined' && self.Date.now;
 }
 
 type MuxConfig =
