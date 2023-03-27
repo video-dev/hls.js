@@ -2,11 +2,15 @@ import Transmuxer, { isPromise } from '../demux/transmuxer';
 import { Events } from '../events';
 import { ILogFunction, enableLogs, logger } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import type { RemuxedTrack, RemuxerResult } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
-import { ErrorDetails, ErrorTypes } from '../errors';
 
-export default function TransmuxerWorker(self) {
+if (typeof __IN_WORKER__ !== 'undefined' && __IN_WORKER__) {
+  startWorker(self);
+}
+
+function startWorker(self) {
   const observer = new EventEmitter();
   const forwardMessage = (ev, data) => {
     self.postMessage({ event: ev, data: data });

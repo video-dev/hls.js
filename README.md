@@ -19,7 +19,7 @@ HLS.js works directly on top of a standard HTML`<video>` element.
 
 HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using [Babel](https://babeljs.io/) and the [TypeScript compiler].
 
-[Webpack] is used to build the distro bundle and serve the local development environment.
+[Rollup] is used to build the distro bundle and serve the local development environment.
 
 [html5 video]: https://www.html5rocks.com/en/tutorials/video/basics/
 [mediasource extensions]: https://w3c.github.io/media-source/
@@ -28,7 +28,7 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
 [ecmascript6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
 [typescript]: https://www.typescriptlang.org/
 [typescript compiler]: https://www.typescriptlang.org/docs/handbook/compiler-options.html
-[webpack]: https://webpack.js.org/
+[rollup]: https://rollupjs.org/
 
 ## Features
 
@@ -177,7 +177,7 @@ Only debug-mode artifacts:
 npm run build:debug
 ```
 
-Build and watch (customized dev setups where you'll want to host through another server than webpacks' - for example in a sub-module/project)
+Build and watch (customized dev setups where you'll want to host through another server - for example in a sub-module/project)
 
 ```
 npm run build:watch

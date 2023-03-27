@@ -4,8 +4,8 @@ import { PlaylistLevelType } from '../../../src/types/loader';
 import { LevelKey } from '../../../src/loader/level-key';
 import { Fragment, Part } from '../../../src/loader/fragment';
 
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

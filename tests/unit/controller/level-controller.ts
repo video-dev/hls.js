@@ -24,9 +24,9 @@ import type {
 } from '../../../src/types/media-playlist';
 import type { Fragment } from '../../../src/loader/fragment';
 
-import * as sinon from 'sinon';
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+import sinon from 'sinon';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

@@ -244,6 +244,7 @@ export type TSDemuxerConfig = {
 export type HlsConfig = {
   debug: boolean | ILogger;
   enableWorker: boolean;
+  workerPath: null | string;
   enableSoftwareAES: boolean;
   minAutoBitrate: number;
   ignoreDevicePixelRatio: boolean;
@@ -332,7 +333,8 @@ export const hlsDefaultConfig: HlsConfig = {
    */
   liveBackBufferLength: null, // used by buffer-controller
   maxMaxBufferLength: 600, // used by stream-controller
-  enableWorker: true, // used by demuxer
+  enableWorker: true, // used by transmuxer
+  workerPath: null, // used by transmuxer
   enableSoftwareAES: true, // used by decrypter
   startLevel: undefined, // used by level-controller
   startFragPrefetch: false, // used by stream-controller

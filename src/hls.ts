@@ -1,4 +1,4 @@
-import * as URLToolkit from 'url-toolkit';
+import { buildAbsoluteURL } from 'url-toolkit';
 import PlaylistLoader from './loader/playlist-loader';
 import ID3TrackController from './controller/id3-track-controller';
 import LatencyController from './controller/latency-controller';
@@ -341,7 +341,7 @@ export default class Hls implements HlsEventEmitter {
     const config = this.config;
     config.xhrSetup = config.fetchSetup = undefined;
     // @ts-ignore
-    this.config = this.userConfig = null;
+    this.userConfig = null;
   }
 
   /**
@@ -369,7 +369,7 @@ export default class Hls implements HlsEventEmitter {
     this.stopLoad();
     const media = this.media;
     const loadedSource = this.url;
-    const loadingSource = (this.url = URLToolkit.buildAbsoluteURL(
+    const loadingSource = (this.url = buildAbsoluteURL(
       self.location.href,
       url,
       {

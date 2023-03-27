@@ -6,9 +6,9 @@ import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails } from '../../../src/errors';
 import { Events } from '../../../src/events';
 
-import * as sinon from 'sinon';
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+import sinon from 'sinon';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 import { MediaAttachedData } from '../../../src/types/events';
 
 chai.use(sinonChai);

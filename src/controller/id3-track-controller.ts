@@ -31,6 +31,8 @@ type Cue = VTTCue | TextTrackCue;
 const MIN_CUE_DURATION = 0.25;
 
 function getCueClass() {
+  if (typeof self === 'undefined') return undefined;
+
   // Attempt to recreate Safari functionality by creating
   // WebKitDataCue objects when available and store the decoded
   // ID3 data in the value property of the cue

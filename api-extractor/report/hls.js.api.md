@@ -1610,6 +1610,7 @@ export interface HlsChunkPerformanceTiming extends HlsPerformanceTiming {
 export type HlsConfig = {
     debug: boolean | ILogger;
     enableWorker: boolean;
+    workerPath: null | string;
     enableSoftwareAES: boolean;
     minAutoBitrate: number;
     ignoreDevicePixelRatio: boolean;

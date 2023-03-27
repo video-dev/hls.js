@@ -1,6 +1,6 @@
 import { TimelineController } from '../../../src/controller/timeline-controller';
 import Hls from '../../../src/hls';
-const sinon = require('sinon');
+import sinon from 'sinon';
 
 describe('Non-Native TimelineController functions', function () {
   let timelineController;

@@ -7,8 +7,8 @@ import type { BufferInfo } from '../../../src/utils/buffer-helper';
 import type { LevelDetails } from '../../../src/loader/level-details';
 import type { Fragment, Part } from '../../../src/loader/fragment';
 
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

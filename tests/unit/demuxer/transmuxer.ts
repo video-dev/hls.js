@@ -5,9 +5,9 @@ import { Fragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import Hls from '../../../src/hls';
 
-import * as sinon from 'sinon';
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
+import sinon from 'sinon';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 import { logger } from '../../../src/utils/logger';
 
 chai.use(sinonChai);
@@ -40,7 +40,8 @@ describe('TransmuxerInterface tests', function () {
     expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
     expect(transmuxerInterface.observer.emit, 'emit exists').to.exist;
     expect(transmuxerInterface.observer.off, 'off exists').to.exist;
-    expect(transmuxerInterface.worker, 'worker is null').to.not.exist;
+    expect(transmuxerInterface.workerContext, 'workerContext is null').to.not
+      .exist;
   });
 
   it('can construct with a worker', function () {
@@ -58,7 +59,7 @@ describe('TransmuxerInterface tests', function () {
     expect(transmuxerInterface.id).to.equal(id, 'Id has been set up');
     expect(transmuxerInterface.observer.emit, 'emit exists').to.exist;
     expect(transmuxerInterface.observer.off, 'off exists').to.exist;
-    expect(transmuxerInterface.worker, 'worker exists').to.exist;
+    expect(transmuxerInterface.workerContext, 'workerContext exists').to.exist;
   });
 
   it('can destroy a transmuxer worker', function () {
@@ -76,7 +77,8 @@ describe('TransmuxerInterface tests', function () {
     transmuxerInterface.destroy();
     expect(transmuxerInterfacePrivates.observer, 'observer').to.not.exist;
     expect(transmuxerInterfacePrivates.transmuxer, 'transmuxer').to.not.exist;
-    expect(transmuxerInterfacePrivates.worker, 'worker').to.not.exist;
+    expect(transmuxerInterfacePrivates.workerContext, 'workerContext').to.not
+      .exist;
   });
 
   it('can destroy an inline transmuxer', function () {
@@ -94,7 +96,8 @@ describe('TransmuxerInterface tests', function () {
     transmuxerInterface.destroy();
     expect(transmuxerInterfacePrivates.observer, 'observer').to.not.exist;
     expect(transmuxerInterfacePrivates.transmuxer, 'transmuxer').to.not.exist;
-    expect(transmuxerInterfacePrivates.worker, 'worker').to.not.exist;
+    expect(transmuxerInterfacePrivates.workerContext, 'workerContext').to.not
+      .exist;
   });
 
   it('pushes data to a transmuxer worker', function () {
@@ -109,7 +112,10 @@ describe('TransmuxerInterface tests', function () {
       onFlush
     );
     const transmuxerInterfacePrivates = transmuxerInterface as any;
-    const stub = sinon.stub(transmuxerInterfacePrivates.worker, 'postMessage');
+    const stub = sinon.stub(
+      transmuxerInterfacePrivates.workerContext.worker,
+      'postMessage'
+    );
     const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
     currentFrag.cc = 100;
     currentFrag.sn = 5;

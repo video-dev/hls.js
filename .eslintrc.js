@@ -20,7 +20,6 @@ module.exports = {
   // see https://github.com/standard/eslint-config-standard
   // 'prettier' (https://github.com/prettier/eslint-config-prettier) must be last
   extends: ['eslint:recommended', 'prettier'],
-  ignorePatterns: ['/src/demux/webworkify-webpack.js'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     sourceType: 'module',
