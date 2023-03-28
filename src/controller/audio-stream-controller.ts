@@ -873,6 +873,8 @@ class AudioStreamController
         this.startFragRequested = true;
         super.loadFragment(frag, track, targetBufferTime);
       }
+    } else {
+      this.clearTrackerIfNeeded(frag);
     }
   }
 

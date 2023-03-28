@@ -386,6 +386,28 @@ export default class BaseStreamController
       });
   }
 
+  protected clearTrackerIfNeeded(frag: Fragment) {
+    const fragState = this.fragmentTracker.getState(frag);
+    if (fragState === FragmentState.APPENDING) {
+      // Lower the buffer size and try again
+      const playlistType = frag.type as PlaylistLevelType;
+      const bufferedInfo = this.getFwdBufferInfo(
+        this.mediaBuffer,
+        playlistType
+      );
+      const minForwardBufferLength = Math.max(
+        frag.duration,
+        bufferedInfo ? bufferedInfo.len : this.config.maxBufferLength
+      );
+      if (this.reduceMaxBufferLength(minForwardBufferLength)) {
+        this.fragmentTracker.removeFragment(frag);
+      }
+    } else if (this.mediaBuffer?.buffered.length === 0) {
+      // Stop gap for bad tracker / buffer flush behavior
+      this.fragmentTracker.removeAllFragments();
+    }
+  }
+
   protected flushMainBuffer(
     startOffset: number,
     endOffset: number,
@@ -1495,6 +1517,7 @@ export default class BaseStreamController
         );
       }
       if (data.frag) {
+        this.fragmentTracker.removeFragment(data.frag);
         this.nextLoadPosition = data.frag.start;
       }
       this.resetLoadingState();
