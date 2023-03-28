@@ -106,6 +106,11 @@ export class SubtitleStreamController
     this.fragmentTracker.removeAllFragments();
   }
 
+  onMediaDetaching(): void {
+    this.tracksBuffered = [];
+    super.onMediaDetaching();
+  }
+
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     this.mainDetails = data.details;
   }
