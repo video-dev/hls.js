@@ -744,6 +744,7 @@ class AudioStreamController
     // Check if the current fragment has been aborted. We check this by first seeing if we're still playing the current level.
     // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
     if (this.fragContextChanged(frag) || !details) {
+      this.fragmentTracker.removeFragment(frag);
       return;
     }
 
