@@ -290,6 +290,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected bufferFragmentData(data: RemuxedTrack, frag: Fragment, part: Part | null, chunkMeta: ChunkMetadata): void;
     // (undocumented)
+    protected clearTrackerIfNeeded(frag: Fragment): void;
+    // (undocumented)
     protected config: HlsConfig;
     // Warning: (ae-forgotten-export) The symbol "Decrypter" needs to be exported by the entry point hls.d.ts
     //
