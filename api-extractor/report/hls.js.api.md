@@ -2947,6 +2947,8 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData): void;
     // (undocumented)
     onManifestLoading(): void;
+    // (undocumented)
+    onMediaDetaching(): void;
     // Warning: (ae-forgotten-export) The symbol "SubtitleFragProcessed" needs to be exported by the entry point hls.d.ts
     //
     // (undocumented)
