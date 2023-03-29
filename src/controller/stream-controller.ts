@@ -357,14 +357,8 @@ export default class StreamController
         this.startFragRequested = true;
         super.loadFragment(frag, level, targetBufferTime);
       }
-    } else if (fragState === FragmentState.APPENDING) {
-      // Lower the buffer size and try again
-      if (this.reduceMaxBufferLength(frag.duration)) {
-        this.fragmentTracker.removeFragment(frag);
-      }
-    } else if (this.media?.buffered.length === 0) {
-      // Stop gap for bad tracker / buffer flush behavior
-      this.fragmentTracker.removeAllFragments();
+    } else {
+      this.clearTrackerIfNeeded(frag);
     }
   }
 
