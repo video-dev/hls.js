@@ -203,8 +203,10 @@ describe('ErrorController Integration Tests', function () {
             )
           )
         );
-        timers.tick(hls.config.playlistLoadPolicy.default.maxLoadTimeMs);
-        timers.tick(hls.config.playlistLoadPolicy.default.maxLoadTimeMs);
+        // tick 3 times to trigger 2 retries and then an error
+        timers.tick(hls.config.manifestLoadPolicy.default.maxLoadTimeMs + 1);
+        timers.tick(hls.config.manifestLoadPolicy.default.maxLoadTimeMs + 1);
+        timers.tick(hls.config.manifestLoadPolicy.default.maxLoadTimeMs);
       }).then(
         expectFatalErrorEventToStopPlayer(
           hls,
