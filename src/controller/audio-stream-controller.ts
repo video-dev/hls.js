@@ -64,7 +64,13 @@ class AudioStreamController
     fragmentTracker: FragmentTracker,
     keyLoader: KeyLoader
   ) {
-    super(hls, fragmentTracker, keyLoader, '[audio-stream-controller]');
+    super(
+      hls,
+      fragmentTracker,
+      keyLoader,
+      '[audio-stream-controller]',
+      PlaylistLevelType.AUDIO
+    );
     this._registerListeners();
   }
 

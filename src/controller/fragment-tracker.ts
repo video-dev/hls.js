@@ -220,7 +220,7 @@ export class FragmentTracker implements ComponentAPI {
     }
   }
 
-  public fragBuffered(frag: Fragment, force?: boolean) {
+  public fragBuffered(frag: Fragment, force?: true) {
     const fragKey = getFragmentKey(frag);
     let fragmentEntity = this.fragments[fragKey];
     if (!fragmentEntity && force) {
@@ -447,7 +447,8 @@ export class FragmentTracker implements ComponentAPI {
   public removeFragmentsInRange(
     start: number,
     end: number,
-    playlistType: PlaylistLevelType
+    playlistType: PlaylistLevelType,
+    withGap?: true
   ) {
     Object.keys(this.fragments).forEach((key) => {
       const fragmentEntity = this.fragments[key];

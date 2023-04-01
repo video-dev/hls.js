@@ -79,6 +79,7 @@ export default class BaseStreamController
   protected fragmentTracker: FragmentTracker;
   protected transmuxer: TransmuxerInterface | null = null;
   protected _state: string = State.STOPPED;
+  protected playlistType: PlaylistLevelType;
   protected media: HTMLMediaElement | null = null;
   protected mediaBuffer: Bufferable | null = null;
   protected config: HlsConfig;
@@ -107,9 +108,11 @@ export default class BaseStreamController
     hls: Hls,
     fragmentTracker: FragmentTracker,
     keyLoader: KeyLoader,
-    logPrefix: string
+    logPrefix: string,
+    playlistType: PlaylistLevelType
   ) {
     super();
+    this.playlistType = playlistType;
     this.logPrefix = logPrefix;
     this.log = logger.log.bind(logger, `${logPrefix}:`);
     this.warn = logger.warn.bind(logger, `${logPrefix}:`);
@@ -270,6 +273,16 @@ export default class BaseStreamController
     }
 
     if (media) {
+      // Remove gap fragments
+      if (this.lastCurrentTime > currentTime) {
+        this.fragmentTracker.removeFragmentsInRange(
+          currentTime,
+          this.lastCurrentTime,
+          this.playlistType,
+          true
+        );
+      }
+
       this.lastCurrentTime = currentTime;
     }
 

@@ -62,7 +62,13 @@ export default class StreamController
     fragmentTracker: FragmentTracker,
     keyLoader: KeyLoader
   ) {
-    super(hls, fragmentTracker, keyLoader, '[stream-controller]');
+    super(
+      hls,
+      fragmentTracker,
+      keyLoader,
+      '[stream-controller]',
+      PlaylistLevelType.MAIN
+    );
     this._registerListeners();
   }
 
