@@ -292,6 +292,7 @@ export default class BaseStreamController
     data: ManifestLoadedData
   ): void {
     this.startTimeOffset = data.startTimeOffset;
+    this.initPTS = [];
   }
 
   protected onHandlerDestroying() {
