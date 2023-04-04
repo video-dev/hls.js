@@ -84,13 +84,17 @@ class FetchLoader implements Loader<LoaderContext> {
       callbacks.onProgress;
     const isArrayBuffer = context.responseType === 'arraybuffer';
     const LENGTH = isArrayBuffer ? 'byteLength' : 'length';
+    const { maxTimeToFirstByteMs, maxLoadTimeMs } = config.loadPolicy;
 
     this.context = context;
     this.config = config;
     this.callbacks = callbacks;
     this.request = this.fetchSetup(context, initParams);
     self.clearTimeout(this.requestTimeout);
-    config.timeout = config.loadPolicy.maxTimeToFirstByteMs;
+    config.timeout =
+      maxTimeToFirstByteMs && Number.isFinite(maxTimeToFirstByteMs)
+        ? maxTimeToFirstByteMs
+        : maxLoadTimeMs;
     this.requestTimeout = self.setTimeout(() => {
       this.abortInternal();
       callbacks.onTimeout(stats, context, this.response);
@@ -104,11 +108,11 @@ class FetchLoader implements Loader<LoaderContext> {
         const first = Math.max(self.performance.now(), stats.loading.start);
 
         self.clearTimeout(this.requestTimeout);
-        config.timeout = config.loadPolicy.maxLoadTimeMs;
+        config.timeout = maxLoadTimeMs;
         this.requestTimeout = self.setTimeout(() => {
           this.abortInternal();
           callbacks.onTimeout(stats, context, this.response);
-        }, config.loadPolicy.maxLoadTimeMs - (first - stats.loading.start));
+        }, maxLoadTimeMs - (first - stats.loading.start));
 
         if (!response.ok) {
           const { status, statusText } = response;

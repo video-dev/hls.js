@@ -127,6 +127,7 @@ class XhrLoader implements Loader<LoaderContext> {
     }
 
     const headers = this.context.headers;
+    const { maxTimeToFirstByteMs, maxLoadTimeMs } = config.loadPolicy;
     if (headers) {
       for (const header in headers) {
         xhr.setRequestHeader(header, headers[header]);
@@ -145,10 +146,13 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.responseType = context.responseType as XMLHttpRequestResponseType;
     // setup timeout before we perform request
     self.clearTimeout(this.requestTimeout);
-    config.timeout = config.loadPolicy.maxTimeToFirstByteMs;
+    config.timeout =
+      maxTimeToFirstByteMs && Number.isFinite(maxTimeToFirstByteMs)
+        ? maxTimeToFirstByteMs
+        : maxLoadTimeMs;
     this.requestTimeout = self.setTimeout(
       this.loadtimeout.bind(this),
-      config.loadPolicy.maxTimeToFirstByteMs
+      config.timeout
     );
     xhr.send();
   }
@@ -174,13 +178,15 @@ class XhrLoader implements Loader<LoaderContext> {
           stats.loading.start
         );
         // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
-        self.clearTimeout(this.requestTimeout);
-        config.timeout = config.loadPolicy.maxLoadTimeMs;
-        this.requestTimeout = self.setTimeout(
-          this.loadtimeout.bind(this),
-          config.loadPolicy.maxLoadTimeMs -
-            (stats.loading.first - stats.loading.start)
-        );
+        if (config.timeout !== config.loadPolicy.maxLoadTimeMs) {
+          self.clearTimeout(this.requestTimeout);
+          config.timeout = config.loadPolicy.maxLoadTimeMs;
+          this.requestTimeout = self.setTimeout(
+            this.loadtimeout.bind(this),
+            config.loadPolicy.maxLoadTimeMs -
+              (stats.loading.first - stats.loading.start)
+          );
+        }
       }
 
       if (readyState === 4) {
