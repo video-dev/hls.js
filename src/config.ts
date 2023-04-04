@@ -405,7 +405,7 @@ export const hlsDefaultConfig: HlsConfig = {
   },
   manifestLoadPolicy: {
     default: {
-      maxTimeToFirstByteMs: 10000,
+      maxTimeToFirstByteMs: Infinity,
       maxLoadTimeMs: 20000,
       timeoutRetry: {
         maxNumRetry: 2,

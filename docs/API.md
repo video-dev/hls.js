@@ -50,10 +50,21 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`workerPath`](#workerpath)
   - [`enableSoftwareAES`](#enablesoftwareaes)
   - [`startLevel`](#startlevel)
-  - [`fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`](#fragloadingtimeout--manifestloadingtimeout--levelloadingtimeout)
-  - [`fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry`](#fragloadingmaxretry--manifestloadingmaxretry--levelloadingmaxretry)
-  - [`fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`](#fragloadingmaxretrytimeout--manifestloadingmaxretrytimeout--levelloadingmaxretrytimeout)
-  - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay)
+  - [`fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut` (deprecated)](#fragloadingtimeout--manifestloadingtimeout--levelloadingtimeout-deprecated)
+  - [`fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry` (deprecated)](#fragloadingmaxretry--manifestloadingmaxretry--levelloadingmaxretry-deprecated)
+  - [`fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout` (deprecated)](#fragloadingmaxretrytimeout--manifestloadingmaxretrytimeout--levelloadingmaxretrytimeout-deprecated)
+  - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay` (deprecated)](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay-deprecated)
+  - [`fragLoadPolicy` / `keyLoadPolicy` / `certLoadPolicy` / `playlistLoadPolicy` / `manifestLoadPolicy` / `steeringManifestLoadPolicy`](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy)
+    - [`LoaderConfig`](#loaderconfig)
+      - [`maxTimeToFirstByteMs: number`](#maxtimetofirstbytems-number)
+      - [`maxLoadTimeMs: number`](#maxloadtimems-number)
+      - [`timeoutRetry: RetryConfig | null`](#timeoutretry-retryconfig--null)
+      - [`errorRetry: RetryConfig | null`](#errorretry-retryconfig--null)
+    - [`RetryConfig`](#retryconfig)
+      - [`maxNumRetry: number`](#maxnumretry-number)
+      - [`retryDelayMs: number`](#retrydelayms-number)
+      - [`maxRetryDelayMs: number`](#maxretrydelayms-number)
+      - [`backoff?: 'exponential' | 'linear'`](#backoff-exponential--linear)
   - [`startFragPrefetch`](#startfragprefetch)
   - [`testBandwidth`](#testbandwidth)
   - [`progressive`](#progressive)
@@ -668,36 +679,195 @@ Enable to use JavaScript version AES decryption for fallback of WebCrypto API.
 
 When set, use this level as the default hls.startLevel. Keep in mind that the startLevel set with the API takes precedence over config.startLevel configuration parameter.
 
-### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut`
+### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut` (deprecated)
 
 (default: 20000ms for fragment / 10000ms for level and manifest)
 
-URL Loader timeout.
-A timeout callback will be triggered if loading duration exceeds this timeout.
-no further action will be done : the load operation will not be cancelled/aborted.
-It is up to the application to catch this event and treat it as needed.
+x-LoadingTimeOut settings have been deprecated. Use one of the LoadPolicy settings instead.
 
-### `fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry`
+### `fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry` (deprecated)
 
 (default: `6` / `1` / `4`)
 
-Max number of load retries.
+x-LoadingMaxRetry settings have been deprecated. Use one of the LoadPolicy settings instead.
 
-### `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout`
+### `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout` (deprecated)
 
 (default: `64000` ms)
 
-Maximum frag/manifest/key retry timeout (in milliseconds) in case I/O errors are met.
+x-LoadingMaxRetryTimeout settings have been deprecated. Use one of the LoadPolicy settings instead.
+
+Maximum frag/manifest/key retry timeout (in milliseconds).
 This value is used as capping value for exponential grow of `loading retry delays`, i.e. the retry delay can not be bigger than this value, but overall time will be based on the overall number of retries.
 
-### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay`
+### `fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay` (deprecated)
 
 (default: `1000` ms)
+
+x-LoadingRetryDelay settings have been deprecated. Use one of the LoadPolicy settings instead.
 
 Initial delay between `XMLHttpRequest` error and first load retry (in ms).
 Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout` value (exponential backoff).
 
-Prefetch start fragment although media not attached.
+### `fragLoadPolicy` / `keyLoadPolicy` / `certLoadPolicy` / `playlistLoadPolicy` / `manifestLoadPolicy` / `steeringManifestLoadPolicy`
+
+LoadPolicies specify the default settings for request timeouts and the timing and number of retries after a request error or timeout for a particular type of asset.
+
+- `manifestLoadPolicy`: The `LoadPolicy` for Multivariant Playlist requests
+- `playlistLoadPolicy`: The `LoadPolicy` for Media Playlist requests
+- `fragLoadPolicy`: The `LoadPolicy` for Segment and Part\* requests
+- `keyLoadPolicy`: The `LoadPolicy` for Key requests
+- `certLoadPolicy`: The `LoadPolicy` for License Server certificate requests
+- `steeringManifestLoadPolicy`: The `LoadPolicy` for Content Steering manifest requests
+
+\*Some timeout settings are adjusted for Low-Latency Part requests based on Part duration or target.
+
+Each `LoadPolicy` contains a set of contexts. The `default` property is the only context supported at this time. It contains the `LoaderConfig` for that asset type. Future releases may include support for other policy contexts besides `default`.
+
+HLS.js config defines the following default policies. Each can be overridden on player instantiation in the user configuration:
+
+```js
+manifestLoadPolicy: {
+  default: {
+    maxTimeToFirstByteMs: Infinity,
+    maxLoadTimeMs: 20000,
+    timeoutRetry: {
+      maxNumRetry: 2,
+      retryDelayMs: 0,
+      maxRetryDelayMs: 0,
+    },
+    errorRetry: {
+      maxNumRetry: 1,
+      retryDelayMs: 1000,
+      maxRetryDelayMs: 8000,
+    },
+  },
+},
+playlistLoadPolicy: {
+  default: {
+    maxTimeToFirstByteMs: 10000,
+    maxLoadTimeMs: 20000,
+    timeoutRetry: {
+      maxNumRetry: 2,
+      retryDelayMs: 0,
+      maxRetryDelayMs: 0,
+    },
+    errorRetry: {
+      maxNumRetry: 2,
+      retryDelayMs: 1000,
+      maxRetryDelayMs: 8000,
+    },
+  },
+},
+fragLoadPolicy: {
+  default: {
+    maxTimeToFirstByteMs: 10000,
+    maxLoadTimeMs: 120000,
+    timeoutRetry: {
+      maxNumRetry: 4,
+      retryDelayMs: 0,
+      maxRetryDelayMs: 0,
+    },
+    errorRetry: {
+      maxNumRetry: 6,
+      retryDelayMs: 1000,
+      maxRetryDelayMs: 8000,
+    },
+  },
+},
+keyLoadPolicy: {
+  default: {
+    maxTimeToFirstByteMs: 8000,
+    maxLoadTimeMs: 20000,
+    timeoutRetry: {
+      maxNumRetry: 1,
+      retryDelayMs: 1000,
+      maxRetryDelayMs: 20000,
+      backoff: 'linear',
+    },
+    errorRetry: {
+      maxNumRetry: 8,
+      retryDelayMs: 1000,
+      maxRetryDelayMs: 20000,
+      backoff: 'linear',
+    },
+  },
+},
+certLoadPolicy: {
+  default: {
+    maxTimeToFirstByteMs: 8000,
+    maxLoadTimeMs: 20000,
+    timeoutRetry: null,
+    errorRetry: null,
+  },
+},
+steeringManifestLoadPolicy: {
+  default: {
+    maxTimeToFirstByteMs: 10000,
+    maxLoadTimeMs: 20000,
+    timeoutRetry: {
+      maxNumRetry: 2,
+      retryDelayMs: 0,
+      maxRetryDelayMs: 0,
+    },
+    errorRetry: {
+      maxNumRetry: 1,
+      retryDelayMs: 1000,
+      maxRetryDelayMs: 8000,
+    },
+  }
+}
+```
+
+#### `LoaderConfig`
+
+Each `LoaderConfig` has the following properties:
+
+##### `maxTimeToFirstByteMs: number`
+
+Maximum time-to-first-byte in milliseconds. If no bytes or readyState change happens in this time, a network timeout error will be triggered for the asset.
+
+Non-finite values and 0 will be ignored, resulting in only a single `maxLoadTimeMs` timeout timer for the entire request.
+
+##### `maxLoadTimeMs: number`
+
+Maximum time to load the asset in milliseconds. If the request is not completed in time, a network timeout error will be triggered for the asset.
+
+##### `timeoutRetry: RetryConfig | null`
+
+Retry rules for timeout errors. Specifying null results in no retries after a timeout error for the asset type.
+
+##### `errorRetry: RetryConfig | null`
+
+Retry rules for network I/O errors. Specifying null results in no retries after a timeout error for the asset type.
+
+#### `RetryConfig`
+
+Each `RetryConfig` has the following properties:
+
+##### `maxNumRetry: number`
+
+Maximum number of retries. After an error, the request will be retried this many times before other recovery
+measures are taken. For example, after having retried a segment or playlist request this number of times\*, if it continues to error, the player will try switching to another level or fall back to another Pathway to recover playback.
+
+When no valid recovery options are available, the error will escalate to fatal, and the player will stop loading all media and asset types.
+
+\*Requests resulting in a stall may trigger a level switch before all retries are performed.
+
+##### `retryDelayMs: number`
+
+The time to wait before performing a retry in milliseconds. Delays are added to prevent the player from overloading
+servers having trouble responding to requests.
+
+Retry delay = 2^retryCount _ retryDelayMs (exponential) or retryCount _ retryDelayMs (linear)
+
+##### `maxRetryDelayMs: number`
+
+Maximum delay between retries in milliseconds. With each retry, the delay is increased up to `maxRetryDelayMs`.
+
+##### `backoff?: 'exponential' | 'linear'`
+
+Used to determine retry backoff duration: Retry delay = 2^retryCount \* retryDelayMs (exponential).
 
 ### `startFragPrefetch`
 
