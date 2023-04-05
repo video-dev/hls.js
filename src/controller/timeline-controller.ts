@@ -8,6 +8,7 @@ import {
   addCueToTrack,
   removeCuesInRange,
 } from '../utils/texttrack-utils';
+import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { PlaylistLevelType } from '../types/loader';
@@ -329,20 +330,23 @@ export class TimelineController implements ComponentAPI {
     event: Events.SUBTITLE_TRACKS_UPDATED,
     data: SubtitleTracksUpdatedData
   ) {
-    this.textTracks = [];
     const tracks: Array<MediaPlaylist> = data.subtitleTracks || [];
     const hasIMSC1 = tracks.some((track) => track.textCodec === IMSC1_CODEC);
     if (this.config.enableWebVTT || (hasIMSC1 && this.config.enableIMSC1)) {
-      const sameTracks =
-        this.tracks && tracks && this.tracks.length === tracks.length;
-      this.tracks = tracks || [];
+      const listIsIdentical = subtitleOptionsIdentical(this.tracks, tracks);
+      if (listIsIdentical) {
+        this.tracks = tracks;
+        return;
+      }
+      this.textTracks = [];
+      this.tracks = tracks;
 
       if (this.config.renderTextTracksNatively) {
-        const inUseTracks = this.media ? this.media.textTracks : [];
+        const inUseTracks = this.media ? this.media.textTracks : null;
 
         this.tracks.forEach((track, index) => {
           let textTrack: TextTrack | undefined;
-          if (index < inUseTracks.length) {
+          if (inUseTracks && index < inUseTracks.length) {
             let inUseTrack: TextTrack | null = null;
 
             for (let i = 0; i < inUseTracks.length; i++) {
@@ -376,7 +380,7 @@ export class TimelineController implements ComponentAPI {
             this.textTracks.push(textTrack);
           }
         });
-      } else if (!sameTracks && this.tracks && this.tracks.length) {
+      } else if (this.tracks.length) {
         // Create a list of tracks for the provider to consume
         const tracksList = this.tracks.map((track) => {
           return {
@@ -396,7 +400,7 @@ export class TimelineController implements ComponentAPI {
   private _captionsOrSubtitlesFromCharacteristics(
     track: MediaPlaylist
   ): TextTrackKind {
-    if (track.attrs?.CHARACTERISTICS) {
+    if (track.attrs.CHARACTERISTICS) {
       const transcribesSpokenDialog = /transcribes-spoken-dialog/gi.test(
         track.attrs.CHARACTERISTICS
       );
@@ -728,9 +732,12 @@ export class TimelineController implements ComponentAPI {
   }
 }
 
-function canReuseVttTextTrack(inUseTrack, manifestTrack): boolean {
+function canReuseVttTextTrack(
+  inUseTrack: (TextTrack & { textTrack1?; textTrack2? }) | null,
+  manifestTrack: MediaPlaylist
+): boolean {
   return (
-    inUseTrack &&
+    !!inUseTrack &&
     inUseTrack.label === manifestTrack.name &&
     !(inUseTrack.textTrack1 || inUseTrack.textTrack2)
   );

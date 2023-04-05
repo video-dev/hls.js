@@ -12,7 +12,17 @@ const mediaMock = {
   removeEventListener() {},
 };
 
-const tracksMock = [{ id: 0, details: { url: '', fragments: [] } }, { id: 1 }];
+const tracksMock = [
+  {
+    id: 0,
+    details: { url: '', fragments: [] },
+    attrs: {},
+  },
+  {
+    id: 1,
+    attrs: {},
+  },
+];
 
 describe('SubtitleStreamController', function () {
   let hls;
@@ -41,6 +51,7 @@ describe('SubtitleStreamController', function () {
     subtitleStreamController.onMediaDetaching(Events.MEDIA_DETACHING, {
       media: mediaMock,
     });
+    hls.destroy();
   });
 
   describe('onSubtitleTracksUpdate', function () {
