@@ -7,6 +7,7 @@ import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import { PlaylistLevelType } from '../types/loader';
 import { Level } from '../types/level';
+import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
@@ -221,19 +222,24 @@ export class SubtitleStreamController
     event: Events.SUBTITLE_TRACKS_UPDATED,
     { subtitleTracks }: SubtitleTracksUpdatedData
   ) {
+    if (subtitleOptionsIdentical(this.levels, subtitleTracks)) {
+      this.levels = subtitleTracks.map(
+        (mediaPlaylist) => new Level(mediaPlaylist)
+      );
+      return;
+    }
     this.tracksBuffered = [];
-    this.levels = subtitleTracks.map(
-      (mediaPlaylist) => new Level(mediaPlaylist)
-    );
+    this.levels = subtitleTracks.map((mediaPlaylist) => {
+      const level = new Level(mediaPlaylist);
+      this.tracksBuffered[level.id] = [];
+      return level;
+    });
     this.fragmentTracker.removeFragmentsInRange(
       0,
       Number.POSITIVE_INFINITY,
       PlaylistLevelType.SUBTITLE
     );
     this.fragPrevious = null;
-    this.levels.forEach((level: Level) => {
-      this.tracksBuffered[level.id] = [];
-    });
     this.mediaBuffer = null;
   }
 
