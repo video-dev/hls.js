@@ -278,7 +278,7 @@ export class BaseSegment {
 //
 // @public (undocumented)
 export class BaseStreamController extends TaskLoop implements NetworkComponentAPI {
-    constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader, logPrefix: string);
+    constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader, logPrefix: string, playlistType: PlaylistLevelType);
     // (undocumented)
     protected afterBufferFlushed(media: Bufferable, bufferType: SourceBufferName, playlistType: PlaylistLevelType): void;
     // (undocumented)
@@ -412,11 +412,15 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected onvseeking: EventListener | null;
     // (undocumented)
+    protected playlistType: PlaylistLevelType;
+    // (undocumented)
     protected recoverWorkerError(data: ErrorData): void;
     // (undocumented)
     protected reduceLengthAndFlushBuffer(data: ErrorData): boolean;
     // (undocumented)
     protected reduceMaxBufferLength(threshold: number): boolean;
+    // (undocumented)
+    protected removeUnbufferedFrags(start?: number): void;
     // (undocumented)
     protected resetFragmentErrors(filterType: PlaylistLevelType): void;
     // (undocumented)
@@ -427,6 +431,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected resetStartWhenNotLoaded(level: number): void;
     // (undocumented)
     protected resetTransmuxer(): void;
+    // (undocumented)
+    protected resetWhenMissingContext(chunkMeta: ChunkMetadata): void;
     // (undocumented)
     protected retryDate: number;
     // (undocumented)

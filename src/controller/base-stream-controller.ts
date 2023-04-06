@@ -79,6 +79,7 @@ export default class BaseStreamController
   protected fragmentTracker: FragmentTracker;
   protected transmuxer: TransmuxerInterface | null = null;
   protected _state: string = State.STOPPED;
+  protected playlistType: PlaylistLevelType;
   protected media: HTMLMediaElement | null = null;
   protected mediaBuffer: Bufferable | null = null;
   protected config: HlsConfig;
@@ -107,9 +108,11 @@ export default class BaseStreamController
     hls: Hls,
     fragmentTracker: FragmentTracker,
     keyLoader: KeyLoader,
-    logPrefix: string
+    logPrefix: string,
+    playlistType: PlaylistLevelType
   ) {
     super();
+    this.playlistType = playlistType;
     this.logPrefix = logPrefix;
     this.log = logger.log.bind(logger, `${logPrefix}:`);
     this.warn = logger.warn.bind(logger, `${logPrefix}:`);
@@ -270,6 +273,14 @@ export default class BaseStreamController
     }
 
     if (media) {
+      // Remove gap fragments
+      this.fragmentTracker.removeFragmentsInRange(
+        currentTime,
+        Infinity,
+        this.playlistType,
+        true
+      );
+
       this.lastCurrentTime = currentTime;
     }
 
@@ -1585,6 +1596,25 @@ export default class BaseStreamController
         this.nextLoadPosition = this.startPosition;
       }
     }
+  }
+
+  protected resetWhenMissingContext(chunkMeta: ChunkMetadata) {
+    this.warn(
+      `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
+    );
+    this.removeUnbufferedFrags();
+    this.resetStartWhenNotLoaded(chunkMeta.level);
+    this.resetLoadingState();
+  }
+
+  protected removeUnbufferedFrags(start: number = 0) {
+    this.fragmentTracker.removeFragmentsInRange(
+      start,
+      Infinity,
+      this.playlistType,
+      false,
+      true
+    );
   }
 
   private updateLevelTiming(

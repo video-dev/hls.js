@@ -37,6 +37,7 @@ export class FragmentTracker implements ComponentAPI {
 
   private bufferPadding: number = 0.2;
   private hls: Hls;
+  private hasGaps: boolean = false;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -220,7 +221,7 @@ export class FragmentTracker implements ComponentAPI {
     }
   }
 
-  public fragBuffered(frag: Fragment, force?: boolean) {
+  public fragBuffered(frag: Fragment, force?: true) {
     const fragKey = getFragmentKey(frag);
     let fragmentEntity = this.fragments[fragKey];
     if (!fragmentEntity && force) {
@@ -231,6 +232,9 @@ export class FragmentTracker implements ComponentAPI {
         buffered: false,
         range: Object.create(null),
       };
+      if (frag.gap) {
+        this.hasGaps = true;
+      }
     }
     if (fragmentEntity) {
       fragmentEntity.loaded = null;
@@ -447,22 +451,28 @@ export class FragmentTracker implements ComponentAPI {
   public removeFragmentsInRange(
     start: number,
     end: number,
-    playlistType: PlaylistLevelType
+    playlistType: PlaylistLevelType,
+    withGapOnly?: boolean,
+    unbufferedOnly?: boolean
   ) {
+    if (withGapOnly && !this.hasGaps) {
+      return;
+    }
     Object.keys(this.fragments).forEach((key) => {
       const fragmentEntity = this.fragments[key];
       if (!fragmentEntity) {
         return;
       }
-      if (fragmentEntity.buffered) {
-        const frag = fragmentEntity.body;
-        if (
-          frag.type === playlistType &&
-          frag.start < end &&
-          frag.end > start
-        ) {
-          this.removeFragment(frag);
-        }
+      const frag = fragmentEntity.body;
+      if (frag.type !== playlistType || (withGapOnly && !frag.gap)) {
+        return;
+      }
+      if (
+        frag.start < end &&
+        frag.end > start &&
+        (fragmentEntity.buffered || unbufferedOnly)
+      ) {
+        this.removeFragment(frag);
       }
     });
   }
@@ -485,6 +495,7 @@ export class FragmentTracker implements ComponentAPI {
     this.endListFragments = Object.create(null);
     this.mainFragEntity = null;
     this.activeParts = null;
+    this.hasGaps = false;
   }
 }
 
