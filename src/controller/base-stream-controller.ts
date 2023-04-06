@@ -274,14 +274,12 @@ export default class BaseStreamController
 
     if (media) {
       // Remove gap fragments
-      if (this.lastCurrentTime > currentTime) {
-        this.fragmentTracker.removeFragmentsInRange(
-          currentTime,
-          this.lastCurrentTime,
-          this.playlistType,
-          true
-        );
-      }
+      this.fragmentTracker.removeFragmentsInRange(
+        currentTime,
+        Infinity,
+        this.playlistType,
+        true
+      );
 
       this.lastCurrentTime = currentTime;
     }
@@ -1598,6 +1596,25 @@ export default class BaseStreamController
         this.nextLoadPosition = this.startPosition;
       }
     }
+  }
+
+  protected resetWhenMissingContext(chunkMeta: ChunkMetadata) {
+    this.warn(
+      `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
+    );
+    this.removeUnbufferedFrags();
+    this.resetStartWhenNotLoaded(chunkMeta.level);
+    this.resetLoadingState();
+  }
+
+  protected removeUnbufferedFrags(start: number = 0) {
+    this.fragmentTracker.removeFragmentsInRange(
+      start,
+      Infinity,
+      this.playlistType,
+      false,
+      true
+    );
   }
 
   private updateLevelTiming(

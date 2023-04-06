@@ -420,6 +420,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected reduceMaxBufferLength(threshold: number): boolean;
     // (undocumented)
+    protected removeUnbufferedFrags(start?: number): void;
+    // (undocumented)
     protected resetFragmentErrors(filterType: PlaylistLevelType): void;
     // (undocumented)
     protected resetFragmentLoading(frag: Fragment): void;
@@ -429,6 +431,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected resetStartWhenNotLoaded(level: number): void;
     // (undocumented)
     protected resetTransmuxer(): void;
+    // (undocumented)
+    protected resetWhenMissingContext(chunkMeta: ChunkMetadata): void;
     // (undocumented)
     protected retryDate: number;
     // (undocumented)

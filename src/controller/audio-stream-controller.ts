@@ -315,9 +315,9 @@ class AudioStreamController
     if (bufferInfo === null) {
       return;
     }
-    const audioSwitch = !!this.switchingTrack;
+    const { bufferedTrack, switchingTrack } = this;
 
-    if (!audioSwitch && this._streamEnded(bufferInfo, trackDetails)) {
+    if (!switchingTrack && this._streamEnded(bufferInfo, trackDetails)) {
       hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
       this.state = State.ENDED;
       return;
@@ -331,16 +331,18 @@ class AudioStreamController
     const maxBufLen = this.getMaxBufferLength(mainBufferInfo?.len);
 
     // if buffer length is less than maxBufLen try to load a new fragment
-    if (bufferLen >= maxBufLen && !audioSwitch) {
+    if (bufferLen >= maxBufLen && !switchingTrack) {
       return;
     }
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
     let targetBufferTime = bufferInfo.end;
 
-    if (audioSwitch && media) {
+    if (switchingTrack && media) {
       const pos = this.getLoadPosition();
-      targetBufferTime = pos;
+      if (bufferedTrack && switchingTrack.attrs !== bufferedTrack.attrs) {
+        targetBufferTime = pos;
+      }
       // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
       if (trackDetails.PTSKnown && pos < start) {
         // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
@@ -437,7 +439,7 @@ class AudioStreamController
 
     if (fragCurrent) {
       fragCurrent.abortRequests();
-      this.fragmentTracker.removeFragment(fragCurrent);
+      this.removeUnbufferedFrags(fragCurrent.start);
     }
     this.resetLoadingState();
     // destroy useless transmuxer when switching audio to main
@@ -547,12 +549,13 @@ class AudioStreamController
 
     const track = levels[trackId] as Level;
     if (!track) {
-      this.warn('Audio track is defined on fragment load progress');
+      this.warn('Audio track is undefined on fragment load progress');
       return;
     }
     const details = track.details as LevelDetails;
     if (!details) {
       this.warn('Audio track details undefined on fragment load progress');
+      this.removeUnbufferedFrags(frag.start);
       return;
     }
     const audioCodec =
@@ -737,10 +740,7 @@ class AudioStreamController
 
     const context = this.getCurrentContext(chunkMeta);
     if (!context) {
-      this.warn(
-        `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
-      );
-      this.resetStartWhenNotLoaded(chunkMeta.level);
+      this.resetWhenMissingContext(chunkMeta);
       return;
     }
     const { frag, part, level } = context;
