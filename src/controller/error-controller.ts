@@ -88,6 +88,7 @@ export default class ErrorController implements NetworkComponentAPI {
     this.unregisterListeners();
     // @ts-ignore
     this.hls = null;
+    this.penalizedRenditions = {};
   }
 
   startLoad(startPosition: number): void {
@@ -328,10 +329,7 @@ export default class ErrorController implements NetworkComponentAPI {
     }
     const level = this.hls.levels[levelIndex];
     if (level) {
-      // No penalty for GAP tags so that player can switch back when GAPs are found in other levels
-      if (data.details !== ErrorDetails.FRAG_GAP) {
-        level.loadError++;
-      }
+      level.loadError++;
       if (hls.autoLevelEnabled) {
         // Search for next level to retry
         let nextLevel = -1;
@@ -476,14 +474,17 @@ export default class ErrorController implements NetworkComponentAPI {
         : hls.loadLevel;
     const level = hls.levels[levelIndex];
     const redundantLevels = level.url.length;
-    this.penalizeRendition(level, data);
+    const errorUrlId = data.frag ? data.frag.urlId : level.urlId;
+    if (level.urlId === errorUrlId && (!data.frag || level.details)) {
+      this.penalizeRendition(level, data);
+    }
     for (let i = 1; i < redundantLevels; i++) {
-      const newUrlId = (level.urlId + i) % redundantLevels;
+      const newUrlId = (errorUrlId + i) % redundantLevels;
       const penalizedRendition = penalizedRenditions[newUrlId];
       // Check if rendition is penalized and skip if it is a bad fit for failover
       if (
         !penalizedRendition ||
-        checkExpired(penalizedRendition, data, penalizedRenditions[level.urlId])
+        checkExpired(penalizedRendition, data, penalizedRenditions[errorUrlId])
       ) {
         // delete penalizedRenditions[newUrlId];
         // Update the url id of all levels so that we stay on the same set of variants when level switching

@@ -49,7 +49,13 @@ export class SubtitleStreamController
     fragmentTracker: FragmentTracker,
     keyLoader: KeyLoader
   ) {
-    super(hls, fragmentTracker, keyLoader, '[subtitle-stream-controller]');
+    super(
+      hls,
+      fragmentTracker,
+      keyLoader,
+      '[subtitle-stream-controller]',
+      PlaylistLevelType.SUBTITLE
+    );
     this._registerListeners();
   }
 

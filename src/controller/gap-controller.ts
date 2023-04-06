@@ -1,6 +1,7 @@
 import type { BufferInfo } from '../utils/buffer-helper';
 import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
+import { PlaylistLevelType } from '../types/loader';
 import { Events } from '../events';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
@@ -256,7 +257,46 @@ export default class GapController {
       const bufferStarved = bufferInfo.len <= config.maxBufferHole;
       const waiting =
         bufferInfo.len > 0 && bufferInfo.len < 1 && media.readyState < 3;
-      if (currentTime < startTime && (bufferStarved || waiting)) {
+      const gapLength = startTime - currentTime;
+      if (gapLength > 0 && (bufferStarved || waiting)) {
+        // Only allow large gaps to be skipped if it is a start gap, or all fragments in skip range are partial
+        if (gapLength > config.maxBufferHole) {
+          const { fragmentTracker } = this;
+          let startGap = false;
+          if (currentTime === 0) {
+            const startFrag = fragmentTracker.getAppendedFrag(
+              0,
+              PlaylistLevelType.MAIN
+            );
+            if (startFrag && startTime < startFrag.end) {
+              startGap = true;
+            }
+          }
+          if (!startGap) {
+            const startProvisioned =
+              partial ||
+              fragmentTracker.getAppendedFrag(
+                currentTime,
+                PlaylistLevelType.MAIN
+              );
+            if (startProvisioned) {
+              let moreToLoad = false;
+              let pos = startProvisioned.end;
+              while (pos < startTime) {
+                const provisioned = fragmentTracker.getPartialFragment(pos);
+                if (provisioned) {
+                  pos += provisioned.duration;
+                } else {
+                  moreToLoad = true;
+                  break;
+                }
+              }
+              if (moreToLoad) {
+                return 0;
+              }
+            }
+          }
+        }
         const targetTime = Math.max(
           startTime + SKIP_BUFFER_RANGE_START,
           currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS

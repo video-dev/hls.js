@@ -62,7 +62,13 @@ export default class StreamController
     fragmentTracker: FragmentTracker,
     keyLoader: KeyLoader
   ) {
-    super(hls, fragmentTracker, keyLoader, '[stream-controller]');
+    super(
+      hls,
+      fragmentTracker,
+      keyLoader,
+      '[stream-controller]',
+      PlaylistLevelType.MAIN
+    );
     this._registerListeners();
   }
 
@@ -248,6 +254,9 @@ export default class StreamController
     }
 
     // set next load level : this will trigger a playlist load if needed
+    if (hls.loadLevel !== level && hls.manualLevel === -1) {
+      this.log(`Adapting to level ${level} from level ${this.level}`);
+    }
     this.level = hls.nextLoadLevel = level;
 
     const levelDetails = levelInfo.details;
@@ -469,6 +478,7 @@ export default class StreamController
     this.backtrackFragment = null;
     if (fragCurrent) {
       fragCurrent.abortRequests();
+      this.fragmentTracker.removeFragment(fragCurrent);
     }
     switch (this.state) {
       case State.KEY_LOADING:
@@ -622,18 +632,22 @@ export default class StreamController
       `Level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}], cc [${newDetails.startCC}, ${newDetails.endCC}] duration:${duration}`
     );
 
+    const curLevel = levels[newLevelId];
     const fragCurrent = this.fragCurrent;
     if (
       fragCurrent &&
       (this.state === State.FRAG_LOADING ||
         this.state === State.FRAG_LOADING_WAITING_RETRY)
     ) {
-      if (fragCurrent.level !== data.level && fragCurrent.loader) {
+      if (
+        (fragCurrent.level !== data.level ||
+          fragCurrent.urlId !== curLevel.urlId) &&
+        fragCurrent.loader
+      ) {
         this.abortCurrentFrag();
       }
     }
 
-    const curLevel = levels[newLevelId];
     let sliding = 0;
     if (newDetails.live || curLevel.details?.live) {
       if (!newDetails.fragments[0]) {
@@ -687,6 +701,7 @@ export default class StreamController
       this.warn(
         `Dropping fragment ${frag.sn} of level ${frag.level} after level details were reset`
       );
+      this.fragmentTracker.removeFragment(frag);
       return;
     }
     const videoCodec = currentLevel.videoCodec;
@@ -1039,10 +1054,7 @@ export default class StreamController
 
     const context = this.getCurrentContext(chunkMeta);
     if (!context) {
-      this.warn(
-        `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
-      );
-      this.resetStartWhenNotLoaded(chunkMeta.level);
+      this.resetWhenMissingContext(chunkMeta);
       return;
     }
     const { frag, part, level } = context;

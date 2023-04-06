@@ -88,10 +88,13 @@ export function updateFragPTSDTS(
     endPTS = Math.max(endPTS, fragEndPts);
     endDTS = Math.max(endDTS, frag.endDTS);
   }
-  frag.duration = endPTS - startPTS;
 
   const drift = startPTS - frag.start;
-  frag.start = frag.startPTS = startPTS;
+  if (frag.start !== 0) {
+    frag.start = startPTS;
+  }
+  frag.duration = endPTS - frag.start;
+  frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
   frag.startDTS = startDTS;
   frag.endPTS = endPTS;

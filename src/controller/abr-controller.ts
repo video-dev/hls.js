@@ -357,8 +357,14 @@ class AbrController implements AbrComponentAPI {
     // compute next level using ABR logic
     let nextABRAutoLevel = this.getNextABRAutoLevel();
     // use forced auto level when ABR selected level has errored
-    if (forcedAutoLevel !== -1 && this.hls.levels[nextABRAutoLevel].loadError) {
-      return forcedAutoLevel;
+    if (forcedAutoLevel !== -1) {
+      const levels = this.hls.levels;
+      if (
+        levels.length > Math.max(forcedAutoLevel, nextABRAutoLevel) &&
+        levels[forcedAutoLevel].loadError <= levels[nextABRAutoLevel].loadError
+      ) {
+        return forcedAutoLevel;
+      }
     }
     // if forced auto level has been defined, use it to cap ABR computed quality level
     if (forcedAutoLevel !== -1) {
