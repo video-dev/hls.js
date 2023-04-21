@@ -6,6 +6,7 @@
   "prCreation": "not-pending",
   "internalChecksAsSuccess": true,
   "stabilityDays": 7,
+  "prNotPendingHours": 0,
   "vulnerabilityAlerts": {
     "addLabels": ["security"]
   },
