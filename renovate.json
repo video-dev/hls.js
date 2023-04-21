@@ -4,6 +4,7 @@
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "prCreation": "not-pending",
+  "internalChecksAsSuccess": true,
   "stabilityDays": 7,
   "vulnerabilityAlerts": {
     "addLabels": ["security"]
