@@ -1187,6 +1187,8 @@ export enum Events {
     // (undocumented)
     NON_NATIVE_TEXT_TRACKS_FOUND = "hlsNonNativeTextTracksFound",
     // (undocumented)
+    STEERING_MANIFEST_LOADED = "hlsSteeringManifestLoaded",
+    // (undocumented)
     SUBTITLE_FRAG_PROCESSED = "hlsSubtitleFragProcessed",
     // (undocumented)
     SUBTITLE_TRACK_LOADED = "hlsSubtitleTrackLoaded",
@@ -1767,6 +1769,8 @@ export interface HlsListeners {
     [Events.MEDIA_DETACHING]: (event: Events.MEDIA_DETACHING) => void;
     // (undocumented)
     [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (event: Events.NON_NATIVE_TEXT_TRACKS_FOUND, data: NonNativeTextTracksData) => void;
+    // (undocumented)
+    [Events.STEERING_MANIFEST_LOADED]: (event: Events.STEERING_MANIFEST_LOADED, data: SteeringManifestLoadedData) => void;
     // (undocumented)
     [Events.SUBTITLE_FRAG_PROCESSED]: (event: Events.SUBTITLE_FRAG_PROCESSED, data: SubtitleFragProcessedData) => void;
     // (undocumented)
@@ -2808,6 +2812,15 @@ export class Part extends BaseSegment {
     stats: LoadStats;
 }
 
+// Warning: (ae-missing-release-tag) "PathwayClone" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type PathwayClone = {
+    'BASE-ID': string;
+    ID: string;
+    'URI-REPLACEMENT': UriReplacement;
+};
+
 // Warning: (ae-missing-release-tag) "PlaylistContextType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2888,6 +2901,27 @@ export type RetryConfig = {
 //
 // @public (undocumented)
 export type SourceBufferName = 'video' | 'audio' | 'audiovideo';
+
+// Warning: (ae-missing-release-tag) "SteeringManifest" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type SteeringManifest = {
+    VERSION: 1;
+    TTL: number;
+    'RELOAD-URI'?: string;
+    'PATHWAY-PRIORITY': string[];
+    'PATHWAY-CLONES'?: PathwayClone[];
+};
+
+// Warning: (ae-missing-release-tag) "SteeringManifestLoadedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface SteeringManifestLoadedData {
+    // (undocumented)
+    response: SteeringManifest;
+    // (undocumented)
+    url: string;
+}
 
 // Warning: (ae-missing-release-tag) "StreamControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -3139,6 +3173,22 @@ export interface TrackSet {
 // @public (undocumented)
 export type TSDemuxerConfig = {
     forceKeyFrameOnDiscontinuity: boolean;
+};
+
+// Warning: (ae-missing-release-tag) "UriReplacement" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type UriReplacement = {
+    HOST?: string;
+    PARAMS?: {
+        [queryParameter: string]: string;
+    };
+    'PER-VARIANT-URIS'?: {
+        [stableVariantId: string]: string;
+    };
+    'PER-RENDITION-URIS'?: {
+        [stableRenditionId: string]: string;
+    };
 };
 
 // Warning: (ae-missing-release-tag) "UserdataSample" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

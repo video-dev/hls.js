@@ -7,6 +7,7 @@ import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type {
+  SteeringManifestLoadedData,
   ErrorData,
   ManifestLoadedData,
   ManifestParsedData,
@@ -31,13 +32,13 @@ export type SteeringManifest = {
   'PATHWAY-CLONES'?: PathwayClone[];
 };
 
-type PathwayClone = {
+export type PathwayClone = {
   'BASE-ID': string;
   ID: string;
   'URI-REPLACEMENT': UriReplacement;
 };
 
-type UriReplacement = {
+export type UriReplacement = {
   HOST?: string;
   PARAMS?: { [queryParameter: string]: string };
   'PER-VARIANT-URIS'?: { [stableVariantId: string]: string };
@@ -383,6 +384,13 @@ export default class ContentSteeringController implements NetworkComponentAPI {
           'PATHWAY-CLONES': pathwayClones,
           'PATHWAY-PRIORITY': pathwayPriority,
         } = steeringData;
+
+        const loaded_data: SteeringManifestLoadedData = {
+          response: steeringData,
+          url: url.toString(),
+        };
+        this.hls.trigger(Events.STEERING_MANIFEST_LOADED, loaded_data);
+
         if (reloadUri) {
           try {
             this.uri = new self.URL(reloadUri, url).href;

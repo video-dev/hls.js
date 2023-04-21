@@ -1762,6 +1762,8 @@ Full list of Events is available below:
   - data: { levels : [available quality levels], audioTracks : [available audio tracks], captions? [available closed-captions media], subtitles?: [available subtitle tracks], url : manifestURL, stats : [LoaderStats], sessionData: [parsed #EXT-X-SESSION-DATA], networkDetails: [Loader specific object for debugging (XMLHttpRequest or fetch Response)]}
 - `Hls.Events.MANIFEST_PARSED` - fired after manifest has been parsed
   - data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest, audioTracks, subtitleTracks, stats, audio: boolean, video: boolean, altAudio: boolean }
+- `Hls.Events.STEERING_MANIFEST_LOADED` - fired when the Content Steering Manifest is loaded
+  - data: { `url`: steering manifest URL, `response`: SteeringManifest object } }
 - `Hls.Events.LEVEL_SWITCHING` - fired when a level switch is requested
   - data: { `level` and Level object properties (please see [below](#level) for more information) }
 - `Hls.Events.LEVEL_SWITCHED` - fired when a level switch is effective

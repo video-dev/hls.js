@@ -263,23 +263,30 @@ describe('ContentSteeringController', function () {
         },
         contentSteeringController
       );
-      expect(hls.trigger.callCount, 'events triggered').to.equal(6);
+      expect(hls.trigger.callCount, 'events triggered').to.equal(7);
       expect(hls.getEventData(0).name).to.equal(Events.MANIFEST_PARSED);
       const parsedEvent = hls.getEventData(0);
       expect(parsedEvent.payload)
         .to.have.property('audioTracks')
         .that.has.lengthOf(6, 'MANIFEST_PARSED audioTracks');
 
-      expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-      const updatedEvent = hls.getEventData(1);
+      expect(hls.getEventData(1).name).to.equal(
+        Events.STEERING_MANIFEST_LOADED
+      );
+      const steeringManifestLoadedEvent = hls.getEventData(1);
+      expect(steeringManifestLoadedEvent.payload).to.have.property('url');
+      expect(steeringManifestLoadedEvent.payload).to.have.property('response');
+
+      expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
+      const updatedEvent = hls.getEventData(2);
       const eventData = updatedEvent.payload as LevelsUpdatedData;
       expect(eventData)
         .to.have.property('levels')
         .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
       expect(eventData.levels[0].pathwayId).to.equal('Baz');
 
-      expect(hls.getEventData(2).name).to.equal(Events.LEVEL_SWITCHING);
-      const switchingEvent = hls.getEventData(2);
+      expect(hls.getEventData(3).name).to.equal(Events.LEVEL_SWITCHING);
+      const switchingEvent = hls.getEventData(3);
       expect(switchingEvent.payload).to.nested.include({
         'attrs.PATHWAY-ID': 'Baz',
       });
@@ -289,9 +296,9 @@ describe('ContentSteeringController', function () {
         uri: 'http://www.baz.com/tier6.m3u8',
       });
 
-      expect(hls.getEventData(3).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
-      expect(hls.getEventData(4).name).to.equal(Events.AUDIO_TRACK_SWITCHING);
-      expect(hls.getEventData(5).name).to.equal(Events.SUBTITLE_TRACKS_UPDATED);
+      expect(hls.getEventData(4).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
+      expect(hls.getEventData(5).name).to.equal(Events.AUDIO_TRACK_SWITCHING);
+      expect(hls.getEventData(6).name).to.equal(Events.SUBTITLE_TRACKS_UPDATED);
       expect(levelController.levels, 'LevelController levels').to.have.lengthOf(
         10
       );
@@ -345,16 +352,26 @@ describe('ContentSteeringController', function () {
           contentSteeringController.subtitleTracks,
           'Content Steering subtitle tracks'
         ).to.have.lengthOf(8);
-        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-        const updatedEvent = hls.getEventData(1);
+
+        expect(hls.getEventData(1).name).to.equal(
+          Events.STEERING_MANIFEST_LOADED
+        );
+        const steeringManifestLoadedEvent = hls.getEventData(1);
+        expect(steeringManifestLoadedEvent.payload).to.have.property('url');
+        expect(steeringManifestLoadedEvent.payload).to.have.property(
+          'response'
+        );
+
+        expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(2);
         const eventData = updatedEvent.payload as LevelsUpdatedData;
         expect(eventData)
           .to.have.property('levels')
           .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
         expect(eventData.levels[0].pathwayId).to.equal('Buzz');
 
-        expect(hls.getEventData(2).name).to.equal(Events.LEVEL_SWITCHING);
-        const switchingEvent = hls.getEventData(2);
+        expect(hls.getEventData(3).name).to.equal(Events.LEVEL_SWITCHING);
+        const switchingEvent = hls.getEventData(3);
         expect(switchingEvent.payload).to.nested.include({
           'attrs.PATHWAY-ID': 'Buzz',
         });
@@ -364,9 +381,9 @@ describe('ContentSteeringController', function () {
           uri: 'http://www.buzz.com/tier6.m3u8',
         });
 
-        expect(hls.getEventData(3).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
-        expect(hls.getEventData(4).name).to.equal(Events.AUDIO_TRACK_SWITCHING);
-        expect(hls.getEventData(5).name).to.equal(
+        expect(hls.getEventData(4).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
+        expect(hls.getEventData(5).name).to.equal(Events.AUDIO_TRACK_SWITCHING);
+        expect(hls.getEventData(6).name).to.equal(
           Events.SUBTITLE_TRACKS_UPDATED
         );
 
@@ -405,8 +422,18 @@ describe('ContentSteeringController', function () {
           },
           contentSteeringController
         );
-        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-        const updatedEvent = hls.getEventData(1);
+
+        expect(hls.getEventData(1).name).to.equal(
+          Events.STEERING_MANIFEST_LOADED
+        );
+        const steeringManifestLoadedEvent = hls.getEventData(1);
+        expect(steeringManifestLoadedEvent.payload).to.have.property('url');
+        expect(steeringManifestLoadedEvent.payload).to.have.property(
+          'response'
+        );
+
+        expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(2);
         const eventData = updatedEvent.payload as LevelsUpdatedData;
         expect(eventData)
           .to.have.property('levels')
@@ -437,8 +464,18 @@ describe('ContentSteeringController', function () {
           },
           contentSteeringController
         );
-        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-        const updatedEvent = hls.getEventData(1);
+
+        expect(hls.getEventData(1).name).to.equal(
+          Events.STEERING_MANIFEST_LOADED
+        );
+        const steeringManifestLoadedEvent = hls.getEventData(1);
+        expect(steeringManifestLoadedEvent.payload).to.have.property('url');
+        expect(steeringManifestLoadedEvent.payload).to.have.property(
+          'response'
+        );
+
+        expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(2);
         expect(updatedEvent.payload)
           .to.have.property('levels')
           .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
@@ -514,8 +551,8 @@ describe('ContentSteeringController', function () {
           'http://z.buzz.com/audio_ec3.m3u8?fallback=true'
         );
 
-        expect(hls.getEventData(3).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
-        const audioTracksEvent = hls.getEventData(3);
+        expect(hls.getEventData(4).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
+        const audioTracksEvent = hls.getEventData(4);
         const eventData = audioTracksEvent.payload as AudioTracksUpdatedData;
         expect(eventData)
           .to.have.property('audioTracks')
@@ -532,10 +569,10 @@ describe('ContentSteeringController', function () {
           subtitleTrackController.tracks,
           'SubtitleTrackController tracks'
         ).to.have.lengthOf(8);
-        expect(hls.getEventData(5).name).to.equal(
+        expect(hls.getEventData(6).name).to.equal(
           Events.SUBTITLE_TRACKS_UPDATED
         );
-        const subtitleTracksEvent = hls.getEventData(5);
+        const subtitleTracksEvent = hls.getEventData(6);
         const subsEventData =
           subtitleTracksEvent.payload as SubtitleTracksUpdatedData;
         expect(subsEventData)
@@ -590,8 +627,18 @@ describe('ContentSteeringController', function () {
           },
           contentSteeringController
         );
-        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-        const updatedEvent = hls.getEventData(1);
+
+        expect(hls.getEventData(1).name).to.equal(
+          Events.STEERING_MANIFEST_LOADED
+        );
+        const steeringManifestLoadedEvent = hls.getEventData(1);
+        expect(steeringManifestLoadedEvent.payload).to.have.property('url');
+        expect(steeringManifestLoadedEvent.payload).to.have.property(
+          'response'
+        );
+
+        expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(2);
         expect(updatedEvent.payload)
           .to.have.property('levels')
           .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
@@ -605,8 +652,8 @@ describe('ContentSteeringController', function () {
           'http://www.bear.com/2.m3u8?fallback=true&cloned=buzz'
         );
 
-        expect(hls.getEventData(3).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
-        const audioTracksEvent = hls.getEventData(3);
+        expect(hls.getEventData(4).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
+        const audioTracksEvent = hls.getEventData(4);
         const audioEventData =
           audioTracksEvent.payload as AudioTracksUpdatedData;
         expect(audioEventData.audioTracks[0].attrs['PATHWAY-ID']).to.equal(
@@ -616,10 +663,10 @@ describe('ContentSteeringController', function () {
           'http://www.bear.com/audio_aac.m3u8?cloned=buzz'
         );
 
-        expect(hls.getEventData(5).name).to.equal(
+        expect(hls.getEventData(6).name).to.equal(
           Events.SUBTITLE_TRACKS_UPDATED
         );
-        const subtitleTracksEvent = hls.getEventData(5);
+        const subtitleTracksEvent = hls.getEventData(6);
         const subsEventData =
           subtitleTracksEvent.payload as SubtitleTracksUpdatedData;
         expect(subsEventData.subtitleTracks[0].attrs['PATHWAY-ID']).to.equal(
@@ -646,8 +693,18 @@ describe('ContentSteeringController', function () {
           },
           contentSteeringController
         );
-        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-        const updatedEvent = hls.getEventData(1);
+
+        expect(hls.getEventData(1).name).to.equal(
+          Events.STEERING_MANIFEST_LOADED
+        );
+        const steeringManifestLoadedEvent = hls.getEventData(1);
+        expect(steeringManifestLoadedEvent.payload).to.have.property('url');
+        expect(steeringManifestLoadedEvent.payload).to.have.property(
+          'response'
+        );
+
+        expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(2);
         const eventData = updatedEvent.payload as LevelsUpdatedData;
         expect(eventData.levels[0].pathwayId).to.equal('Buzz');
         expect(eventData.levels[0].uri).to.equal(
@@ -674,8 +731,18 @@ describe('ContentSteeringController', function () {
           },
           contentSteeringController
         );
-        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-        const updatedEvent = hls.getEventData(1);
+
+        expect(hls.getEventData(1).name).to.equal(
+          Events.STEERING_MANIFEST_LOADED
+        );
+        const steeringManifestLoadedEvent = hls.getEventData(1);
+        expect(steeringManifestLoadedEvent.payload).to.have.property('url');
+        expect(steeringManifestLoadedEvent.payload).to.have.property(
+          'response'
+        );
+
+        expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(2);
         const eventData = updatedEvent.payload as LevelsUpdatedData;
         expect(eventData.levels[0].pathwayId).to.equal('Buzz');
         expect(eventData.levels[0].uri).to.equal(
@@ -703,8 +770,18 @@ describe('ContentSteeringController', function () {
           contentSteeringController.levels,
           'Content Steering variants'
         ).to.have.lengthOf(30);
-        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-        const updatedEvent = hls.getEventData(1);
+
+        expect(hls.getEventData(1).name).to.equal(
+          Events.STEERING_MANIFEST_LOADED
+        );
+        const steeringManifestLoadedEvent = hls.getEventData(1);
+        expect(steeringManifestLoadedEvent.payload).to.have.property('url');
+        expect(steeringManifestLoadedEvent.payload).to.have.property(
+          'response'
+        );
+
+        expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(2);
         const eventData = updatedEvent.payload as LevelsUpdatedData;
         expect(eventData.levels[0].pathwayId).to.equal('Foo');
         expect(eventData.levels[0].uri).to.equal(
@@ -761,8 +838,18 @@ describe('ContentSteeringController', function () {
           contentSteeringController.levels,
           'Content Steering variants'
         ).to.have.lengthOf(40);
-        expect(hls.getEventData(1).name).to.equal(Events.LEVELS_UPDATED);
-        const updatedEvent = hls.getEventData(1);
+
+        expect(hls.getEventData(1).name).to.equal(
+          Events.STEERING_MANIFEST_LOADED
+        );
+        const steeringManifestLoadedEvent = hls.getEventData(1);
+        expect(steeringManifestLoadedEvent.payload).to.have.property('url');
+        expect(steeringManifestLoadedEvent.payload).to.have.property(
+          'response'
+        );
+
+        expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
+        const updatedEvent = hls.getEventData(2);
         const eventData = updatedEvent.payload as LevelsUpdatedData;
         expect(eventData.levels[0].pathwayId).to.equal('Buzz');
         expect(eventData.levels[0].uri).to.equal(
