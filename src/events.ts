@@ -163,7 +163,7 @@ export enum Events {
   LIVE_BACK_BUFFER_REACHED = 'hlsLiveBackBufferReached',
   // fired when the back buffer is reached as defined by the backBufferLength config option - data : { bufferEnd: number }
   BACK_BUFFER_REACHED = 'hlsBackBufferReached',
-  // fired after steering manifest has been loaded - data: { response: SteeringManifest object, url: steering manifest URL }
+  // fired after steering manifest has been loaded - data: { steeringManifest: SteeringManifest object, url: steering manifest URL }
   STEERING_MANIFEST_LOADED = 'hlsSteeringManifestLoaded',
 }
 

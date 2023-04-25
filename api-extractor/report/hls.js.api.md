@@ -2918,7 +2918,7 @@ export type SteeringManifest = {
 // @public (undocumented)
 export interface SteeringManifestLoadedData {
     // (undocumented)
-    response: SteeringManifest;
+    steeringManifest: SteeringManifest;
     // (undocumented)
     url: string;
 }

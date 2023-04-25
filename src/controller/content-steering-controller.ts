@@ -384,13 +384,6 @@ export default class ContentSteeringController implements NetworkComponentAPI {
           'PATHWAY-CLONES': pathwayClones,
           'PATHWAY-PRIORITY': pathwayPriority,
         } = steeringData;
-
-        const loadedSteeringData: SteeringManifestLoadedData = {
-          steeringManifest: steeringData,
-          url: url.toString(),
-        };
-        this.hls.trigger(Events.STEERING_MANIFEST_LOADED, loadedSteeringData);
-
         if (reloadUri) {
           try {
             this.uri = new self.URL(reloadUri, url).href;
@@ -406,6 +399,13 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         if (pathwayClones) {
           this.clonePathways(pathwayClones);
         }
+
+        const loadedSteeringData: SteeringManifestLoadedData = {
+          steeringManifest: steeringData,
+          url: url.toString(),
+        };
+        this.hls.trigger(Events.STEERING_MANIFEST_LOADED, loadedSteeringData);
+
         if (pathwayPriority) {
           this.updatePathwayPriority(pathwayPriority);
         }
