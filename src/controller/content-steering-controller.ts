@@ -385,11 +385,11 @@ export default class ContentSteeringController implements NetworkComponentAPI {
           'PATHWAY-PRIORITY': pathwayPriority,
         } = steeringData;
 
-        const loaded_data: SteeringManifestLoadedData = {
-          response: steeringData,
+        const loadedSteeringData: SteeringManifestLoadedData = {
+          steeringManifest: steeringData,
           url: url.toString(),
         };
-        this.hls.trigger(Events.STEERING_MANIFEST_LOADED, loaded_data);
+        this.hls.trigger(Events.STEERING_MANIFEST_LOADED, loadedSteeringData);
 
         if (reloadUri) {
           try {

@@ -29,7 +29,7 @@ import type { HlsListeners } from '../events';
 import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelKey } from '../loader/level-key';
 import type { IErrorAction } from '../controller/error-controller';
-import { SteeringManifest } from '../controller/content-steering-controller';
+import type { SteeringManifest } from '../controller/content-steering-controller';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
@@ -369,6 +369,6 @@ export interface BackBufferData {
 export interface LiveBackBufferData extends BackBufferData {}
 
 export interface SteeringManifestLoadedData {
-  response: SteeringManifest;
+  steeringManifest: SteeringManifest;
   url: string;
 }

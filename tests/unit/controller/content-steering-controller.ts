@@ -275,7 +275,9 @@ describe('ContentSteeringController', function () {
       );
       const steeringManifestLoadedEvent = hls.getEventData(1);
       expect(steeringManifestLoadedEvent.payload).to.have.property('url');
-      expect(steeringManifestLoadedEvent.payload).to.have.property('response');
+      expect(steeringManifestLoadedEvent.payload).to.have.property(
+        'steeringManifest'
+      );
 
       expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
       const updatedEvent = hls.getEventData(2);
@@ -359,7 +361,7 @@ describe('ContentSteeringController', function () {
         const steeringManifestLoadedEvent = hls.getEventData(1);
         expect(steeringManifestLoadedEvent.payload).to.have.property('url');
         expect(steeringManifestLoadedEvent.payload).to.have.property(
-          'response'
+          'steeringManifest'
         );
 
         expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
@@ -429,7 +431,7 @@ describe('ContentSteeringController', function () {
         const steeringManifestLoadedEvent = hls.getEventData(1);
         expect(steeringManifestLoadedEvent.payload).to.have.property('url');
         expect(steeringManifestLoadedEvent.payload).to.have.property(
-          'response'
+          'steeringManifest'
         );
 
         expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
@@ -471,7 +473,7 @@ describe('ContentSteeringController', function () {
         const steeringManifestLoadedEvent = hls.getEventData(1);
         expect(steeringManifestLoadedEvent.payload).to.have.property('url');
         expect(steeringManifestLoadedEvent.payload).to.have.property(
-          'response'
+          'steeringManifest'
         );
 
         expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
@@ -634,7 +636,7 @@ describe('ContentSteeringController', function () {
         const steeringManifestLoadedEvent = hls.getEventData(1);
         expect(steeringManifestLoadedEvent.payload).to.have.property('url');
         expect(steeringManifestLoadedEvent.payload).to.have.property(
-          'response'
+          'steeringManifest'
         );
 
         expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
@@ -700,7 +702,7 @@ describe('ContentSteeringController', function () {
         const steeringManifestLoadedEvent = hls.getEventData(1);
         expect(steeringManifestLoadedEvent.payload).to.have.property('url');
         expect(steeringManifestLoadedEvent.payload).to.have.property(
-          'response'
+          'steeringManifest'
         );
 
         expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
@@ -738,7 +740,7 @@ describe('ContentSteeringController', function () {
         const steeringManifestLoadedEvent = hls.getEventData(1);
         expect(steeringManifestLoadedEvent.payload).to.have.property('url');
         expect(steeringManifestLoadedEvent.payload).to.have.property(
-          'response'
+          'steeringManifest'
         );
 
         expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
@@ -777,7 +779,7 @@ describe('ContentSteeringController', function () {
         const steeringManifestLoadedEvent = hls.getEventData(1);
         expect(steeringManifestLoadedEvent.payload).to.have.property('url');
         expect(steeringManifestLoadedEvent.payload).to.have.property(
-          'response'
+          'steeringManifest'
         );
 
         expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
@@ -845,7 +847,7 @@ describe('ContentSteeringController', function () {
         const steeringManifestLoadedEvent = hls.getEventData(1);
         expect(steeringManifestLoadedEvent.payload).to.have.property('url');
         expect(steeringManifestLoadedEvent.payload).to.have.property(
-          'response'
+          'steeringManifest'
         );
 
         expect(hls.getEventData(2).name).to.equal(Events.LEVELS_UPDATED);
