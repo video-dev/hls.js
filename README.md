@@ -410,6 +410,10 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 
 Video is controlled through HTML `<video>` element `HTMLVideoElement` methods, events and optional UI controls (`<video controls>`).
 
+## Build a Custom UI
+
+- [Media Chrome](https://github.com/muxinc/media-chrome)
+
 ## Player Integration
 
 The following players integrate HLS.js for HLS playback:
