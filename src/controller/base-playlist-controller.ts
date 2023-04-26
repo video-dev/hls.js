@@ -309,9 +309,11 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     const errorAction = errorEvent.errorAction;
     const { action, retryCount = 0, retryConfig } = errorAction || {};
     const retry =
-      action === NetworkErrorAction.RetryRequest &&
       !!errorAction &&
-      !!retryConfig;
+      !!retryConfig &&
+      (action === NetworkErrorAction.RetryRequest ||
+        (!errorAction.resolved &&
+          action === NetworkErrorAction.SendAlternateToPenaltyBox));
     if (retry) {
       this.requestScheduled = -1;
       if (isTimeout && errorEvent.context?.deliveryDirectives) {
