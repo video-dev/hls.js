@@ -103,7 +103,7 @@
     "husky": "8.0.3",
     "jsonpack": "1.1.5",
     "karma": "6.4.1",
-    "karma-chrome-launcher": "3.1.1",
+    "karma-chrome-launcher": "3.2.0",
     "karma-coverage": "2.2.0",
     "karma-mocha": "2.0.1",
     "karma-mocha-reporter": "2.2.5",
