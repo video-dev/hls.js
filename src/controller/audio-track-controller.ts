@@ -236,8 +236,9 @@ class AudioTrackController extends BasePlaylistController {
       if (!this.selectDefaultTrack || track.default) {
         if (
           !currentTrack ||
-          currentTrack.attrs['STABLE-RENDITION-ID'] ===
-            track.attrs['STABLE-RENDITION-ID']
+          (currentTrack.attrs['STABLE-RENDITION-ID'] !== undefined &&
+            currentTrack.attrs['STABLE-RENDITION-ID'] ===
+              track.attrs['STABLE-RENDITION-ID'])
         ) {
           return track.id;
         }
