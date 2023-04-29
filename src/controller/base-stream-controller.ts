@@ -266,8 +266,9 @@ export default class BaseStreamController
               'seeking outside of buffer while fragment load in progress, cancel fragment load'
             );
             fragCurrent.abortRequests();
+            this.resetLoadingState();
           }
-          this.resetLoadingState();
+          this.fragPrevious = null;
         }
       }
     }
@@ -399,7 +400,8 @@ export default class BaseStreamController
   }
 
   protected clearTrackerIfNeeded(frag: Fragment) {
-    const fragState = this.fragmentTracker.getState(frag);
+    const { fragmentTracker } = this;
+    const fragState = fragmentTracker.getState(frag);
     if (fragState === FragmentState.APPENDING) {
       // Lower the buffer size and try again
       const playlistType = frag.type as PlaylistLevelType;
@@ -412,11 +414,22 @@ export default class BaseStreamController
         bufferedInfo ? bufferedInfo.len : this.config.maxBufferLength
       );
       if (this.reduceMaxBufferLength(minForwardBufferLength)) {
-        this.fragmentTracker.removeFragment(frag);
+        fragmentTracker.removeFragment(frag);
       }
     } else if (this.mediaBuffer?.buffered.length === 0) {
       // Stop gap for bad tracker / buffer flush behavior
-      this.fragmentTracker.removeAllFragments();
+      fragmentTracker.removeAllFragments();
+    } else if (fragmentTracker.hasParts(frag.type)) {
+      // In low latency mode, remove fragments for which only some parts were buffered
+      fragmentTracker.detectPartialFragments({
+        frag,
+        part: null,
+        stats: frag.stats,
+        id: frag.type,
+      });
+      if (fragmentTracker.getState(frag) === FragmentState.PARTIAL) {
+        fragmentTracker.removeFragment(frag);
+      }
     }
   }
 
@@ -543,9 +556,9 @@ export default class BaseStreamController
     this.log(
       `Buffered ${frag.type} sn: ${frag.sn}${
         part ? ' part: ' + part.index : ''
-      } of ${this.logPrefix === '[stream-controller]' ? 'level' : 'track'} ${
-        frag.level
-      } (frag:[${(frag.startPTS ?? NaN).toFixed(3)}-${(
+      } of ${
+        this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'
+      } ${frag.level} (frag:[${(frag.startPTS ?? NaN).toFixed(3)}-${(
         frag.endPTS ?? NaN
       ).toFixed(3)}] > buffer:${
         media
@@ -640,7 +653,7 @@ export default class BaseStreamController
     }
 
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
-    if (this.config.lowLatencyMode) {
+    if (this.config.lowLatencyMode && frag.sn !== 'initSegment') {
       const partList = details.partList;
       if (partList && progressCallback) {
         if (targetBufferTime > frag.end && details.fragmentHint) {
@@ -1215,10 +1228,11 @@ export default class BaseStreamController
     let { fragments, endSN } = levelDetails;
     const { fragmentHint } = levelDetails;
     const tolerance = config.maxFragLookUpTolerance;
+    const partList = levelDetails.partList;
 
     const loadingParts = !!(
       config.lowLatencyMode &&
-      levelDetails.partList &&
+      partList?.length &&
       fragmentHint
     );
     if (loadingParts && fragmentHint && !this.bitrateTest) {
@@ -1254,7 +1268,11 @@ export default class BaseStreamController
       ) {
         fragPrevious = frag;
       }
-      if (fragPrevious && frag.sn === fragPrevious.sn && !loadingParts) {
+      if (
+        fragPrevious &&
+        frag.sn === fragPrevious.sn &&
+        (!loadingParts || partList[0].fragment.sn > frag.sn)
+      ) {
         // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
         // non-uniform fragment durations
         const sameLevel = fragPrevious && frag.level === fragPrevious.level;
@@ -1420,7 +1438,7 @@ export default class BaseStreamController
   private handleFragLoadAborted(frag: Fragment, part: Part | undefined) {
     if (this.transmuxer && frag.sn !== 'initSegment' && frag.stats.aborted) {
       this.warn(
-        `Fragment ${frag.sn}${part ? ' part' + part.index : ''} of level ${
+        `Fragment ${frag.sn}${part ? ' part ' + part.index : ''} of level ${
           frag.level
         } was aborted`
       );

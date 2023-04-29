@@ -470,6 +470,7 @@ class AudioStreamController
     this.bufferFlushed = false;
     this.bufferedTrack = null;
     this.switchingTrack = null;
+    this.startFragRequested = false;
   }
 
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
@@ -492,7 +493,11 @@ class AudioStreamController
       return;
     }
     this.log(
-      `Track ${trackId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${newDetails.totalduration}`
+      `Track ${trackId} loaded [${newDetails.startSN},${newDetails.endSN}]${
+        newDetails.lastPartSn
+          ? `[part-${newDetails.lastPartSn}-${newDetails.lastPartIndex}]`
+          : ''
+      },duration:${newDetails.totalduration}`
     );
 
     const track = levels[trackId];
@@ -760,9 +765,10 @@ class AudioStreamController
     }
 
     if (initSegment?.tracks) {
-      this._bufferInitSegment(initSegment.tracks, frag, chunkMeta);
+      const mapFragment = frag.initSegment || frag;
+      this._bufferInitSegment(initSegment.tracks, mapFragment, chunkMeta);
       hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, {
-        frag,
+        frag: mapFragment,
         id,
         tracks: initSegment.tracks,
       });
