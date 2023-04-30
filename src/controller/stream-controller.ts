@@ -579,8 +579,8 @@ export default class StreamController
     this.fragmentTracker.removeAllFragments();
     this.couldBacktrack = false;
     this.startPosition = this.lastCurrentTime = 0;
-    this.fragPlaying = null;
-    this.backtrackFragment = null;
+    this.levels = this.fragPlaying = this.backtrackFragment = null;
+    this.altAudio = this.audioOnly = false;
   }
 
   private onManifestParsed(

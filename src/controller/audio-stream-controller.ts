@@ -464,13 +464,18 @@ class AudioStreamController
   }
 
   onManifestLoading() {
-    this.mainDetails = null;
     this.fragmentTracker.removeAllFragments();
     this.startPosition = this.lastCurrentTime = 0;
     this.bufferFlushed = false;
-    this.bufferedTrack = null;
-    this.switchingTrack = null;
+    this.levels =
+      this.mainDetails =
+      this.waitingData =
+      this.bufferedTrack =
+      this.cachedTrackLoadedData =
+      this.switchingTrack =
+        null;
     this.startFragRequested = false;
+    this.trackId = this.videoTrackCC = this.waitingVideoCC = -1;
   }
 
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {

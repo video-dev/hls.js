@@ -136,7 +136,7 @@ export default class BaseStreamController
 
   public stopLoad() {
     this.fragmentLoader.abort();
-    this.keyLoader.abort();
+    this.keyLoader.abort(this.playlistType);
     const frag = this.fragCurrent;
     if (frag?.loader) {
       frag.abortRequests();
