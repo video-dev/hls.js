@@ -16,9 +16,9 @@
   "types": "./dist/hls.js.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/hls.js.d.ts",
       "import": "./dist/hls.mjs",
-      "require": "./dist/hls.js",
-      "types": "./dist/hls.js.d.ts"
+      "require": "./dist/hls.js"
     },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
