@@ -92,11 +92,6 @@ export class FragmentTracker implements ComponentAPI {
           appendedPTS !== null &&
           position <= appendedPTS
         ) {
-          // Remove other fragment parts from lookup after a match
-          const snToKeep = activePart.fragment.sn;
-          this.activePartLists[levelType] = activeParts.filter(
-            (part) => part.fragment.sn === snToKeep
-          );
           return activePart;
         }
       }
@@ -208,10 +203,24 @@ export class FragmentTracker implements ComponentAPI {
       if (fragmentEntity.body.endList) {
         this.endListFragments[fragmentEntity.body.type] = fragmentEntity;
       }
+      if (!isPartial(fragmentEntity)) {
+        // Remove older fragment parts from lookup after frag is tracked as buffered
+        this.removeParts((frag.sn as number) - 1, frag.type);
+      }
     } else {
       // remove fragment if nothing was appended
       this.removeFragment(fragmentEntity.body);
     }
+  }
+
+  private removeParts(snToKeep: number, levelType: PlaylistLevelType) {
+    const activeParts = this.activePartLists[levelType];
+    if (!activeParts) {
+      return;
+    }
+    this.activePartLists[levelType] = activeParts.filter(
+      (part) => (part.fragment.sn as number) >= snToKeep
+    );
   }
 
   public fragBuffered(frag: Fragment, force?: true) {

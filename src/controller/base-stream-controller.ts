@@ -1003,6 +1003,20 @@ export default class BaseStreamController
     return false;
   }
 
+  protected getAppendedFrag(
+    position: number,
+    playlistType: PlaylistLevelType = PlaylistLevelType.MAIN
+  ): Fragment | null {
+    const fragOrPart = this.fragmentTracker.getAppendedFrag(
+      position,
+      PlaylistLevelType.MAIN
+    );
+    if (fragOrPart && 'fragment' in fragOrPart) {
+      return fragOrPart.fragment;
+    }
+    return fragOrPart;
+  }
+
   protected getNextFragment(
     pos: number,
     levelDetails: LevelDetails

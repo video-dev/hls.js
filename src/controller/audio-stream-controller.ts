@@ -383,10 +383,7 @@ class AudioStreamController
       (!mainBufferInfo?.len && bufferInfo.len)
     ) {
       // Check fragment-tracker for main fragments since GAP segments do not show up in bufferInfo
-      const mainFrag = this.fragmentTracker.getBufferedFrag(
-        frag.start,
-        PlaylistLevelType.MAIN
-      );
+      const mainFrag = this.getAppendedFrag(frag.start, PlaylistLevelType.MAIN);
       if (mainFrag === null) {
         return;
       }

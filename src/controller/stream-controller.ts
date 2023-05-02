@@ -374,17 +374,6 @@ export default class StreamController
     }
   }
 
-  private getAppendedFrag(position): Fragment | null {
-    const fragOrPart = this.fragmentTracker.getAppendedFrag(
-      position,
-      PlaylistLevelType.MAIN
-    );
-    if (fragOrPart && 'fragment' in fragOrPart) {
-      return fragOrPart.fragment;
-    }
-    return fragOrPart;
-  }
-
   private getBufferedFrag(position) {
     return this.fragmentTracker.getBufferedFrag(
       position,
