@@ -98,7 +98,7 @@ export default class BaseStreamController
   protected initPTS: RationalTimestamp[] = [];
   protected onvseeking: EventListener | null = null;
   protected onvended: EventListener | null = null;
-  protected lastFragmentsSN: any[] = [];
+  protected lastFragmentsSN: any = [];
 
   private readonly logPrefix: string = '';
   protected log: (msg: any) => void;
@@ -1027,9 +1027,16 @@ export default class BaseStreamController
     if (levelDetails.live) {
       const initialLiveManifestSize = config.initialLiveManifestSize;
       if (fragLen < initialLiveManifestSize) {
-        this.warn(
-          `Not enough fragments to start playback (have: ${fragLen}, need: ${initialLiveManifestSize})`
-        );
+        const msg = `Not enough fragments to start playback (have: ${fragLen}, need: ${initialLiveManifestSize})`;
+        this.warn(msg);
+        this.hls.trigger(Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.NOT_ENOUGH_FRAGMENTS_TO_START_PLAYBACK,
+          fatal: false,
+          error: new Error(msg),
+          frag,
+          reason: msg,
+        });
         return null;
       }
       // The real fragment start times for a live stream are only known after the PTS range for that level is known.

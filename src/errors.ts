@@ -85,4 +85,7 @@ export enum ErrorDetails {
   INTERNAL_ABORTED = 'aborted',
   // Uncategorized error
   UNKNOWN = 'unknown',
+  MPEGTS_HEVC_NOT_SUPPORTED = 'mpegtsHEVCNotSupported',
+  OVERLAPPING_FRAGMENTS = 'overlappingFragments',
+  NOT_ENOUGH_FRAGMENTS_TO_START_PLAYBACK = 'notEnoughFragmentsToStartPlayback',
 }

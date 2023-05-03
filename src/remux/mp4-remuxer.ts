@@ -482,12 +482,20 @@ export default class MP4Remuxer implements Remuxer {
             )} ms (${delta}dts) hole between fragments detected, filling it`
           );
         } else {
+          const ms = toMsFromMpegTsClock(-delta, true);
           logger.warn(
-            `AVC: ${toMsFromMpegTsClock(
-              -delta,
-              true
-            )} ms (${delta}dts) overlapping between fragments detected`
+            `AVC: ${ms} ms (${delta}dts) overlapping between fragments detected`
           );
+          if (ms > 5000) {
+            this.observer.emit(Events.ERROR, Events.ERROR, {
+              type: ErrorTypes.MEDIA_ERROR,
+              details: ErrorDetails.OVERLAPPING_FRAGMENTS,
+              fatal: true,
+              error: new Error(`Overlapping fragments`),
+              bytes: ms,
+              reason: 'Overlapping fragments',
+            });
+          }
         }
         if (!foundOverlap || nextAvcDts > inputSamples[0].pts) {
           firstDTS = nextAvcDts;

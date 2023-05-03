@@ -27,6 +27,7 @@ import {
   SubtitleTracksUpdatedData,
   LevelSwitchedData,
   FragChangedData,
+  FragProgressData,
   BufferAppendingData,
   BufferCodecsData,
   FragParsingMetadataData,
@@ -146,6 +147,8 @@ export enum Events {
   FRAG_BUFFERED = 'hlsFragBuffered',
   // fired when fragment matching with current media position is changing - data : { id : demuxer id, frag : fragment object }
   FRAG_CHANGED = 'hlsFragChanged',
+  FRAG_PROGRESS = 'hlsFragProgress',
+  FRAG_PROGRESS_DONE = 'hlsFragProgressDone',
   // Identifier for a FPS drop event - data: { currentDropped, currentDecoded, totalDroppedFrames }
   FPS_DROP = 'hlsFpsDrop',
   // triggered when FPS drop triggers auto level capping - data: { level, droppedLevel }
@@ -341,6 +344,11 @@ export interface HlsListeners {
     event: Events.FRAG_CHANGED,
     data: FragChangedData
   ) => void;
+  [Events.FRAG_PROGRESS]: (
+    event: Events.FRAG_PROGRESS,
+    data: FragProgressData
+  ) => void;
+  [Events.FRAG_PROGRESS_DONE]: (event: Events.FRAG_PROGRESS_DONE) => void;
   [Events.FPS_DROP]: (event: Events.FPS_DROP, data: FPSDropData) => void;
   [Events.FPS_DROP_LEVEL_CAPPING]: (
     event: Events.FPS_DROP_LEVEL_CAPPING,

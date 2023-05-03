@@ -1085,6 +1085,13 @@ function parsePMT(
 
       case 0x24:
         logger.warn('Unsupported HEVC stream type found');
+        this.observer.emit(Events.ERROR, Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.MPEGTS_HEVC_NOT_SUPPORTED,
+          fatal: false,
+          error: new Error(`Unsupported HEVC stream type found`),
+          reason: 'Unsupported HEVC stream type found',
+        });
         break;
 
       default:

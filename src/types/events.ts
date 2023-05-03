@@ -209,6 +209,12 @@ export interface FragChangedData {
   frag: Fragment;
 }
 
+export interface FragProgressData {
+  index: number;
+  current: number;
+  total: number;
+}
+
 export interface FPSDropData {
   currentDropped: number;
   currentDecoded: number;

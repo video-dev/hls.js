@@ -351,18 +351,41 @@ export default class StreamController
     if (level.details) {
       const fragments = this.getNextFragments(targetBufferTime, level.details);
       Promise.all(
-        fragments.map(async (frag) => {
+        fragments.map(async (frag, index) => {
           const response = await fetch(frag.url, { signal: this.signal });
-          const data = await response.arrayBuffer();
+          const length = Number(response.headers.get('Content-Length'));
+          let array = new Uint8Array(0);
+          if (length) {
+            array = new Uint8Array(length);
+            let at = 0;
+
+            if (response.body) {
+              const reader = response.body?.getReader();
+              for (;;) {
+                const { done, value } = await reader.read();
+                if (done) {
+                  break;
+                }
+                array.set(value, at);
+                at += value.length;
+                this.hls.trigger(Events.FRAG_PROGRESS, {
+                  index: index,
+                  current: at,
+                  total: length,
+                });
+              }
+            }
+          }
 
           return {
             frag,
             part: null,
-            payload: data,
+            payload: array,
             networkDetails: null,
           };
         })
       ).then((fragments) => {
+        this.hls.trigger(Events.FRAG_PROGRESS_DONE, undefined);
         this.lastFragmentsSN = this.lastFragmentsSN.concat(
           fragments.map((frag) => frag.frag.sn)
         );
