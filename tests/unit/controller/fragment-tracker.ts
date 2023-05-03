@@ -667,5 +667,6 @@ function createMockFragment(
       data.endPTS
     );
   });
+  frag.relurl = 'not-frag-hint';
   return frag;
 }

@@ -6,6 +6,7 @@ import {
   LoaderCallbacks,
   Loader,
   KeyLoaderContext,
+  PlaylistLevelType,
 } from '../types/loader';
 import { LoadError } from './fragment-loader';
 import type { HlsConfig } from '../config';
@@ -32,10 +33,13 @@ export default class KeyLoader implements ComponentAPI {
     this.config = config;
   }
 
-  abort() {
+  abort(type?: PlaylistLevelType) {
     for (const uri in this.keyUriToKeyInfo) {
       const loader = this.keyUriToKeyInfo[uri].loader;
       if (loader) {
+        if (type && type !== loader.context.frag.type) {
+          return;
+        }
         loader.abort();
       }
     }

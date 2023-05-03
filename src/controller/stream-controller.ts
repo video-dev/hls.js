@@ -354,7 +354,10 @@ export default class StreamController
     // Check if fragment is not loaded
     const fragState = this.fragmentTracker.getState(frag);
     this.fragCurrent = frag;
-    if (fragState === FragmentState.NOT_LOADED) {
+    if (
+      fragState === FragmentState.NOT_LOADED ||
+      fragState === FragmentState.PARTIAL
+    ) {
       if (frag.sn === 'initSegment') {
         this._loadInitSegment(frag, level);
       } else if (this.bitrateTest) {
@@ -369,17 +372,6 @@ export default class StreamController
     } else {
       this.clearTrackerIfNeeded(frag);
     }
-  }
-
-  private getAppendedFrag(position): Fragment | null {
-    const fragOrPart = this.fragmentTracker.getAppendedFrag(
-      position,
-      PlaylistLevelType.MAIN
-    );
-    if (fragOrPart && 'fragment' in fragOrPart) {
-      return fragOrPart.fragment;
-    }
-    return fragOrPart;
   }
 
   private getBufferedFrag(position) {
@@ -424,6 +416,14 @@ export default class StreamController
         // flush buffer preceding current fragment (flush until current fragment start offset)
         // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
         this.flushMainBuffer(0, fragPlayingCurrent.start - 1);
+      }
+      const levelDetails = this.getLevelDetails();
+      if (levelDetails?.live) {
+        const bufferInfo = this.getMainFwdBufferInfo();
+        // Do not flush in live stream with low buffer
+        if (!bufferInfo || bufferInfo.len < levelDetails.targetduration * 2) {
+          return;
+        }
       }
       if (!media.paused && levels) {
         // add a safety delay of 1s
@@ -568,8 +568,8 @@ export default class StreamController
     this.fragmentTracker.removeAllFragments();
     this.couldBacktrack = false;
     this.startPosition = this.lastCurrentTime = 0;
-    this.fragPlaying = null;
-    this.backtrackFragment = null;
+    this.levels = this.fragPlaying = this.backtrackFragment = null;
+    this.altAudio = this.audioOnly = false;
   }
 
   private onManifestParsed(
@@ -629,7 +629,11 @@ export default class StreamController
       return;
     }
     this.log(
-      `Level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}], cc [${newDetails.startCC}, ${newDetails.endCC}] duration:${duration}`
+      `Level ${newLevelId} loaded [${newDetails.startSN},${newDetails.endSN}]${
+        newDetails.lastPartSn
+          ? `[part-${newDetails.lastPartSn}-${newDetails.lastPartIndex}]`
+          : ''
+      }, cc [${newDetails.startCC}, ${newDetails.endCC}] duration:${duration}`
     );
 
     const curLevel = levels[newLevelId];
@@ -1073,10 +1077,16 @@ export default class StreamController
     this.state = State.PARSING;
 
     if (initSegment) {
-      if (initSegment.tracks) {
-        this._bufferInitSegment(level, initSegment.tracks, frag, chunkMeta);
+      if (initSegment?.tracks) {
+        const mapFragment = frag.initSegment || frag;
+        this._bufferInitSegment(
+          level,
+          initSegment.tracks,
+          mapFragment,
+          chunkMeta
+        );
         hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, {
-          frag,
+          frag: mapFragment,
           id,
           tracks: initSegment.tracks,
         });
