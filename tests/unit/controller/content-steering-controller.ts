@@ -25,9 +25,12 @@ import type { LoaderResponse } from '../../../src/types/loader';
 import sinon from 'sinon';
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
+import { getMediaSource } from '../../../src/utils/mediasource-helper';
 
 chai.use(sinonChai);
 const expect = chai.expect;
+
+const MediaSource = getMediaSource();
 
 type ConentSteeringControllerTestable = Omit<
   ContentSteeringController,
@@ -70,6 +73,7 @@ describe('ContentSteeringController', function () {
     contentSteeringController = new ContentSteeringController(
       hls as any
     ) as unknown as ConentSteeringControllerTestable;
+    // @ts-ignore
     sandbox.stub(MediaSource, 'isTypeSupported').returns(true);
   });
 
