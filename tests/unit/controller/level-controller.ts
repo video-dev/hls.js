@@ -27,9 +27,12 @@ import type { Fragment } from '../../../src/loader/fragment';
 import sinon from 'sinon';
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
+import { getMediaSource } from '../../../src/utils/mediasource-helper';
 
 chai.use(sinonChai);
 const expect = chai.expect;
+
+const MediaSource = getMediaSource();
 
 type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
   onManifestLoaded: (event: string, data: Partial<ManifestLoadedData>) => void;
@@ -90,6 +93,7 @@ describe('LevelController', function () {
     ) as unknown as LevelControllerTestable;
     levelController.onParsedComplete = () => {};
     hls.levelController = levelController;
+    // @ts-ignore
     sandbox.stub(MediaSource, 'isTypeSupported').returns(true);
   });
 
