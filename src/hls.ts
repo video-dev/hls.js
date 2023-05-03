@@ -380,8 +380,7 @@ export default class Hls implements HlsEventEmitter {
     if (
       media &&
       loadedSource &&
-      loadedSource !== loadingSource &&
-      this.bufferController.hasSourceTypes()
+      (loadedSource !== loadingSource || this.bufferController.hasSourceTypes())
     ) {
       this.detachMedia();
       this.attachMedia(media);

@@ -88,6 +88,7 @@ export default class BufferController implements ComponentAPI {
     const { hls } = this;
     hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.on(Events.BUFFER_RESET, this.onBufferReset, this);
     hls.on(Events.BUFFER_APPENDING, this.onBufferAppending, this);
@@ -103,6 +104,7 @@ export default class BufferController implements ComponentAPI {
     const { hls } = this;
     hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.off(Events.BUFFER_RESET, this.onBufferReset, this);
     hls.off(Events.BUFFER_APPENDING, this.onBufferAppending, this);
@@ -125,6 +127,11 @@ export default class BufferController implements ComponentAPI {
     this.lastMpegAudioChunk = null;
   }
 
+  private onManifestLoading() {
+    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = 0;
+    this.details = null;
+  }
+
   protected onManifestParsed(
     event: Events.MANIFEST_PARSED,
     data: ManifestParsedData
@@ -138,7 +145,6 @@ export default class BufferController implements ComponentAPI {
       codecEvents = 1;
     }
     this.bufferCodecEventsExpected = this._bufferCodecEventsTotal = codecEvents;
-    this.details = null;
     logger.log(
       `${this.bufferCodecEventsExpected} bufferCodec event(s) expected`
     );

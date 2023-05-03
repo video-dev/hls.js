@@ -3,6 +3,8 @@ import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
+import { Fragment } from '../../../src/loader/fragment';
+import { PlaylistLevelType } from '../../../src/types/loader';
 import KeyLoader from '../../../src/loader/key-loader';
 import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
 
@@ -142,19 +144,16 @@ describe('SubtitleStreamController', function () {
 
   describe('onMediaSeeking', function () {
     it('nulls fragPrevious when seeking away from fragCurrent', function () {
-      subtitleStreamController.fragCurrent = {
-        start: 1000,
-        duration: 10,
-        loader: {
-          abort: () => {
-            this.state.aborted = true;
-          },
-          stats: {
-            aborted: false,
-          },
-        },
-      };
-      subtitleStreamController.fragPrevious = {};
+      subtitleStreamController.fragCurrent = new Fragment(
+        PlaylistLevelType.MAIN,
+        ''
+      );
+      subtitleStreamController.fragCurrent.start = 1000;
+      subtitleStreamController.fragCurrent.duration = 10;
+      subtitleStreamController.fragPrevious = new Fragment(
+        PlaylistLevelType.MAIN,
+        ''
+      );
       subtitleStreamController.onMediaSeeking();
       expect(subtitleStreamController.fragPrevious).to.not.exist;
     });

@@ -383,10 +383,7 @@ class AudioStreamController
       (!mainBufferInfo?.len && bufferInfo.len)
     ) {
       // Check fragment-tracker for main fragments since GAP segments do not show up in bufferInfo
-      const mainFrag = this.fragmentTracker.getBufferedFrag(
-        frag.start,
-        PlaylistLevelType.MAIN
-      );
+      const mainFrag = this.getAppendedFrag(frag.start, PlaylistLevelType.MAIN);
       if (mainFrag === null) {
         return;
       }
@@ -464,12 +461,18 @@ class AudioStreamController
   }
 
   onManifestLoading() {
-    this.mainDetails = null;
     this.fragmentTracker.removeAllFragments();
     this.startPosition = this.lastCurrentTime = 0;
     this.bufferFlushed = false;
-    this.bufferedTrack = null;
-    this.switchingTrack = null;
+    this.levels =
+      this.mainDetails =
+      this.waitingData =
+      this.bufferedTrack =
+      this.cachedTrackLoadedData =
+      this.switchingTrack =
+        null;
+    this.startFragRequested = false;
+    this.trackId = this.videoTrackCC = this.waitingVideoCC = -1;
   }
 
   onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
@@ -492,7 +495,11 @@ class AudioStreamController
       return;
     }
     this.log(
-      `Track ${trackId} loaded [${newDetails.startSN},${newDetails.endSN}],duration:${newDetails.totalduration}`
+      `Track ${trackId} loaded [${newDetails.startSN},${newDetails.endSN}]${
+        newDetails.lastPartSn
+          ? `[part-${newDetails.lastPartSn}-${newDetails.lastPartIndex}]`
+          : ''
+      },duration:${newDetails.totalduration}`
     );
 
     const track = levels[trackId];
@@ -760,9 +767,10 @@ class AudioStreamController
     }
 
     if (initSegment?.tracks) {
-      this._bufferInitSegment(initSegment.tracks, frag, chunkMeta);
+      const mapFragment = frag.initSegment || frag;
+      this._bufferInitSegment(initSegment.tracks, mapFragment, chunkMeta);
       hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, {
-        frag,
+        frag: mapFragment,
         id,
         tracks: initSegment.tracks,
       });

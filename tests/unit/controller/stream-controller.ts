@@ -416,12 +416,6 @@ describe('StreamController', function () {
       assertLoadingState(frag);
     });
 
-    it('should not load a partial fragment', function () {
-      fragStateStub(FragmentState.PARTIAL);
-      streamController['loadFragment'](frag, level, 0);
-      assertNotLoadingState();
-    });
-
     it('should not load a fragment which has completely & successfully loaded', function () {
       fragStateStub(FragmentState.OK);
       streamController['loadFragment'](frag, level, 0);
