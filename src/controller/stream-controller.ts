@@ -34,6 +34,7 @@ import type {
   LevelsUpdatedData,
   ManifestParsedData,
   MediaAttachedData,
+  VideoPTSNeededCC,
 } from '../types/events';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
@@ -92,6 +93,7 @@ export default class StreamController
     hls.on(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.on(Events.VIDEO_PTS_NEEDED, this.onVideoPtsNeeded, this);
   }
 
   protected _unregisterListeners() {
@@ -113,6 +115,7 @@ export default class StreamController
     hls.off(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     hls.off(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
+    hls.off(Events.VIDEO_PTS_NEEDED, this.onVideoPtsNeeded, this);
   }
 
   protected onHandlerDestroying() {
@@ -1400,5 +1403,9 @@ export default class StreamController
 
   get forceStartLoad() {
     return this._forceStartLoad;
+  }
+
+  onVideoPtsNeeded(event: Events.VIDEO_PTS_NEEDED, data: VideoPTSNeededCC) {
+    this.reAlignCC = data.cc;
   }
 }

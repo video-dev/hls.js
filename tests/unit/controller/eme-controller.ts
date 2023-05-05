@@ -150,7 +150,7 @@ describe('EMEController', function () {
       return;
     }
     return emePromise.finally(() => {
-      expect(media.setMediaKeys).callCount(1);
+      expect(media.setMediaKeys).callCount(2);
       expect(reqMediaKsAccessSpy).callCount(1);
     });
   });

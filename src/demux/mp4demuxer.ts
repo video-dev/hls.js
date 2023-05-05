@@ -16,6 +16,7 @@ import {
   segmentValidRange,
   appendUint8Array,
   parseEmsg,
+  parseEarlieastPresentationTime,
   parseSamples,
   parseInitSegment,
   RemuxerTrackIdConfig,
@@ -24,7 +25,11 @@ import { dummyTrack } from './dummy-demuxed-track';
 import type { HlsEventEmitter } from '../events';
 import type { HlsConfig } from '../config';
 
-const emsgSchemePattern = /\/emsg[-/]ID3/i;
+// Support scheme
+//   'https://aomedia.org/emsg/ID3',
+//   'https://developer.apple.com/streaming/emsg-id3',
+//    urn:scte:scte35:2013:xml
+const emsgSchemePattern = /\/emsg[-/]ID3|urn:scte:scte35:2013:xml/i;
 
 class MP4Demuxer implements Demuxer {
   private remainderData: Uint8Array | null = null;
@@ -150,14 +155,21 @@ class MP4Demuxer implements Demuxer {
   ): DemuxedMetadataTrack {
     const id3Track = this.id3Track as DemuxedMetadataTrack;
     if (videoTrack.samples.length) {
+      let earliestPresentationTime = 0;
+      const sidxInfo = parseEarlieastPresentationTime(videoTrack.samples);
+      if (sidxInfo) {
+        earliestPresentationTime =
+          sidxInfo.earliestPresentationTime / sidxInfo.timescale;
+      }
       const emsgs = findBox(videoTrack.samples, ['emsg']);
       if (emsgs) {
         emsgs.forEach((data: Uint8Array) => {
           const emsgInfo = parseEmsg(data);
           if (emsgSchemePattern.test(emsgInfo.schemeIdUri)) {
-            const pts = Number.isFinite(emsgInfo.presentationTime)
+            const pts = !Number.isFinite(emsgInfo.presentationTimeDelta)
               ? emsgInfo.presentationTime! / emsgInfo.timeScale
               : timeOffset +
+                earliestPresentationTime +
                 emsgInfo.presentationTimeDelta! / emsgInfo.timeScale;
             let duration =
               emsgInfo.eventDuration === 0xffffffff

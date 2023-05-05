@@ -60,6 +60,33 @@ export function findDiscontinuousReferenceFrag(
   return prevStartFrag;
 }
 
+export function findDiscontinuousReferenceFrag2(
+  prevDetails: LevelDetails,
+  curDetails: LevelDetails
+) {
+  const prevFrags = prevDetails.fragments;
+  const curFrags = curDetails.fragments;
+
+  if (!curFrags.length || !prevFrags.length) {
+    logger.log('No fragments to align');
+    return;
+  }
+
+  const prevStartFrag = findFirstFragWithCC(prevFrags, curFrags[0].cc + 1);
+  const curStartFrag = findFirstFragWithCC(curFrags, curFrags[0].cc + 1);
+
+  if (!prevStartFrag || (prevStartFrag && !prevStartFrag.startPTS)) {
+    logger.log('No frag in previous level to align on');
+    return;
+  }
+
+  if (curStartFrag?.start) {
+    return {
+      start: prevStartFrag.start - curStartFrag.start,
+    };
+  }
+}
+
 function adjustFragmentStart(frag: Fragment, sliding: number) {
   if (frag) {
     const start = frag.start + sliding;
@@ -131,7 +158,7 @@ function alignDiscontinuities(
   lastLevel: Level
 ) {
   if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
-    const referenceFrag = findDiscontinuousReferenceFrag(
+    const referenceFrag = findDiscontinuousReferenceFrag2(
       lastLevel.details,
       details
     );

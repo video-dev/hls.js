@@ -47,6 +47,7 @@ import {
   LiveBackBufferData,
   TrackLoadingData,
   BufferFlushedData,
+  VideoPTSNeededCC,
 } from './types/events';
 
 export enum Events {
@@ -162,6 +163,8 @@ export enum Events {
   LIVE_BACK_BUFFER_REACHED = 'hlsLiveBackBufferReached',
   // fired when the back buffer is reached as defined by the backBufferLength config option - data : { bufferEnd: number }
   BACK_BUFFER_REACHED = 'hlsBackBufferReached',
+  // fired when audio stream controller is stuck and requires video PTS to be available for a continuity, this is a temporary fix until v1
+  VIDEO_PTS_NEEDED = 'hlsVideoPtsNeeded',
 }
 
 /**
@@ -360,6 +363,10 @@ export interface HlsListeners {
   [Events.BACK_BUFFER_REACHED]: (
     event: Events.BACK_BUFFER_REACHED,
     data: BackBufferData
+  ) => void;
+  [Events.VIDEO_PTS_NEEDED]: (
+    event: Events.VIDEO_PTS_NEEDED,
+    data: VideoPTSNeededCC
   ) => void;
 }
 export interface HlsEventEmitter {

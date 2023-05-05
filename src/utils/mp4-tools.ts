@@ -964,13 +964,14 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
   let schemeIdUri: string = '';
   let value: string = '';
   let timeScale: number = 0;
-  let presentationTimeDelta: number = 0;
+  let presentationTimeDelta: number = Number.POSITIVE_INFINITY;
   let presentationTime: number = 0;
   let eventDuration: number = 0;
   let id: number = 0;
   let offset: number = 0;
 
   if (version === 0) {
+    offset += 4;
     while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
       schemeIdUri += bin2str(data.subarray(offset, offset + 1));
       offset += 1;
@@ -987,11 +988,14 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
     value += bin2str(data.subarray(offset, offset + 1));
     offset += 1;
 
-    timeScale = readUint32(data, 12);
-    presentationTimeDelta = readUint32(data, 16);
-    eventDuration = readUint32(data, 20);
-    id = readUint32(data, 24);
-    offset = 28;
+    timeScale = readUint32(data, offset);
+    offset += 4;
+    presentationTimeDelta = readUint32(data, offset);
+    offset += 4;
+    eventDuration = readUint32(data, offset);
+    offset += 4;
+    id = readUint32(data, offset);
+    offset += 4;
   } else if (version === 1) {
     offset += 4;
     timeScale = readUint32(data, offset);
@@ -1040,6 +1044,52 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
     eventDuration,
     id,
     payload,
+  };
+}
+
+export function parseEarlieastPresentationTime(
+  data: Uint8Array
+): SidxInfo | null {
+  const sidxBoxes = findBox(data, ['sidx']);
+
+  if (sidxBoxes.length <= 0) {
+    return null;
+  }
+
+  let index = 0;
+  const sidx = sidxBoxes[0];
+  const version = data[0];
+
+  // skip version and reference_id
+  index += 8;
+
+  const timescale = readUint32(sidx, index);
+  index += 4;
+
+  let earliestPresentationTime = 0;
+  if (version === 0) {
+    earliestPresentationTime = readUint32(sidx, index);
+    // skip first_offset
+    index += 8;
+  } else {
+    const leftEarliPresentationTime = readUint32(sidx, index);
+    index += 4;
+    const rightEarliPresentationTime = readUint32(sidx, index);
+    index += 4;
+    earliestPresentationTime =
+      2 ** 32 * leftEarliPresentationTime + rightEarliPresentationTime;
+    if (!Number.isSafeInteger(earliestPresentationTime)) {
+      earliestPresentationTime = Number.MAX_SAFE_INTEGER;
+    }
+    index += 8;
+  }
+
+  return {
+    earliestPresentationTime,
+    timescale,
+    version,
+    referencesCount: 0,
+    references: [],
   };
 }
 

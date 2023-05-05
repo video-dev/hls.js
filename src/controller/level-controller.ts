@@ -114,6 +114,17 @@ export default class LevelController extends BasePlaylistController {
     data.levels.forEach((levelParsed: LevelParsed) => {
       const attributes = levelParsed.attrs;
 
+      // replace codecs with the ones defined as supported by this browser
+      const { replaceCodecs } = this.hls.config;
+      for (const [from, to] of replaceCodecs) {
+        if (levelParsed.videoCodec?.toLowerCase() === from.toLowerCase()) {
+          levelParsed.videoCodec = to;
+        }
+        if (levelParsed.audioCodec?.toLowerCase() === from.toLowerCase()) {
+          levelParsed.audioCodec = to;
+        }
+      }
+
       // erase audio codec info if browser does not support mp4a.40.34.
       // demuxer will autodetect codec and fallback to mpeg/audio
       if (levelParsed.audioCodec?.indexOf('mp4a.40.34') !== -1) {

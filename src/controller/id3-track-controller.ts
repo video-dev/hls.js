@@ -30,13 +30,21 @@ type Cue = VTTCue | TextTrackCue;
 
 const MIN_CUE_DURATION = 0.25;
 
+const isPlayStation4 = () => {
+  return /PlayStation 4/i.test(navigator.userAgent);
+};
+
 function getCueClass() {
   if (typeof self === 'undefined') return undefined;
 
   // Attempt to recreate Safari functionality by creating
   // WebKitDataCue objects when available and store the decoded
   // ID3 data in the value property of the cue
-  return (self.WebKitDataCue || self.VTTCue || self.TextTrackCue) as any;
+  // WebKitDataCue exists on PlayStation 4 WebMAF,
+  // but doesn't allow its value to be set.
+  return ((!isPlayStation4() && self.WebKitDataCue) ||
+    self.VTTCue ||
+    self.TextTrackCue) as any;
 }
 
 // VTTCue latest draft allows an infinite duration, fallback

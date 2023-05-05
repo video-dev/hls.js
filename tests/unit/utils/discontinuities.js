@@ -1,6 +1,7 @@
 import {
   shouldAlignOnDiscontinuities,
   findDiscontinuousReferenceFrag,
+  findDiscontinuousReferenceFrag2,
   adjustSlidingStart,
   alignPDT,
   alignMediaPlaylistByPDT,
@@ -307,6 +308,90 @@ describe('discontinuities', function () {
   it('returns undefined if there are no frags in the current level', function () {
     const expected = undefined;
     const actual = findDiscontinuousReferenceFrag(
+      { fragments: [{ cc: 0 }] },
+      { fragments: [] }
+    );
+    expect(actual).to.equal(expected);
+  });
+
+  it('finds the first fragment in an array which matches the CC of the first fragment plus 1 in another array', function () {
+    const mockReferenceFrags = [
+      {
+        start: 20,
+        startPTS: 20,
+        endPTS: 24,
+        duration: 4,
+        cc: 0,
+      },
+      {
+        start: 24,
+        startPTS: 24,
+        endPTS: 28,
+        duration: 4,
+        cc: 0,
+      },
+      {
+        start: 28,
+        startPTS: 28,
+        endPTS: 32,
+        duration: 4,
+        cc: 1,
+      },
+    ];
+    const mockFrags = [
+      {
+        start: 0,
+        startPTS: 0,
+        endPTS: 4,
+        duration: 4,
+        cc: 0,
+      },
+      {
+        start: 4,
+        startPTS: 4,
+        endPTS: 8,
+        duration: 4,
+        cc: 1,
+      },
+      {
+        start: 8,
+        startPTS: 8,
+        endPTS: 16,
+        duration: 8,
+        cc: 1,
+      },
+    ];
+    const prevDetails = {
+      fragments: mockReferenceFrags,
+    };
+    const curDetails = {
+      fragments: mockFrags,
+    };
+    const actual = findDiscontinuousReferenceFrag2(prevDetails, curDetails);
+    expect(actual.start).to.equal(24);
+  });
+
+  it('returns undefined if there are no frags in the previous level', function () {
+    const expected = undefined;
+    const actual = findDiscontinuousReferenceFrag2(
+      { fragments: [] },
+      { fragments: mockFrags }
+    );
+    expect(actual).to.equal(expected);
+  });
+
+  it('returns undefined if there are no matching frags in the previous level', function () {
+    const expected = undefined;
+    const actual = findDiscontinuousReferenceFrag2(
+      { fragments: [{ cc: 10 }] },
+      { fragments: mockFrags }
+    );
+    expect(actual).to.equal(expected);
+  });
+
+  it('returns undefined if there are no frags in the current level', function () {
+    const expected = undefined;
+    const actual = findDiscontinuousReferenceFrag2(
       { fragments: [{ cc: 0 }] },
       { fragments: [] }
     );
