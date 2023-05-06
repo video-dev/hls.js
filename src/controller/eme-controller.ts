@@ -123,12 +123,14 @@ class EMEController implements ComponentAPI {
   private registerListeners() {
     this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     this.hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    this.hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     this.hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
   }
 
   private unregisterListeners() {
     this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     this.hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
+    this.hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
   }
 
@@ -1180,6 +1182,10 @@ class EMEController implements ComponentAPI {
           `Could not close sessions and clear media keys: ${error}. media.src: ${media?.src}`
         );
       });
+  }
+
+  private onManifestLoading() {
+    this.keyFormatPromise = null;
   }
 
   private onManifestLoaded(

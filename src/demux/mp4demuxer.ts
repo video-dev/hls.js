@@ -92,7 +92,9 @@ class MP4Demuxer implements Demuxer {
     videoTrack.duration = audioTrack.duration = trackDuration;
   }
 
-  public resetContiguity(): void {}
+  public resetContiguity(): void {
+    this.remainderData = null;
+  }
 
   static probe(data: Uint8Array) {
     // ensure we find a moof box in the first 16 kB

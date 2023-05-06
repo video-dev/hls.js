@@ -322,6 +322,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected fragPrevious: Fragment | null;
     // (undocumented)
+    protected getAppendedFrag(position: number, playlistType?: PlaylistLevelType): Fragment | null;
+    // (undocumented)
     protected getCurrentContext(chunkMeta: ChunkMetadata): {
         frag: Fragment;
         part: Part | null;
