@@ -98,7 +98,7 @@
     "eslint-plugin-mocha": "10.1.0",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "6.1.1",
-    "eventemitter3": "5.0.0",
+    "eventemitter3": "5.0.1",
     "http-server": "14.1.1",
     "husky": "8.0.3",
     "jsonpack": "1.1.5",
