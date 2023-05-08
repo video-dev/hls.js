@@ -492,7 +492,8 @@ function isPartial(fragmentEntity: FragmentEntity): boolean {
     fragmentEntity.buffered &&
     (fragmentEntity.body.gap ||
       fragmentEntity.range.video?.partial ||
-      fragmentEntity.range.audio?.partial)
+      fragmentEntity.range.audio?.partial ||
+      fragmentEntity.range.audiovideo?.partial)
   );
 }
 
