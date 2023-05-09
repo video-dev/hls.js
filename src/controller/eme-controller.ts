@@ -1216,9 +1216,7 @@ class EMEController implements ComponentAPI {
         )
         .concat(
           media?.setMediaKeys(null).catch((error) => {
-            this.log(
-              `Could not clear media keys: ${error}. media.src: ${media?.src}`,
-            );
+            this.log(`Could not clear media keys: ${error}`);
           }),
         ),
     )
@@ -1229,9 +1227,7 @@ class EMEController implements ComponentAPI {
         }
       })
       .catch((error) => {
-        this.log(
-          `Could not close sessions and clear media keys: ${error}. media.src: ${media?.src}`,
-        );
+        this.log(`Could not close sessions and clear media keys: ${error}`);
       });
   }
 

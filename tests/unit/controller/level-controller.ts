@@ -32,8 +32,6 @@ import { getMediaSource } from '../../../src/utils/mediasource-helper';
 chai.use(sinonChai);
 const expect = chai.expect;
 
-const MediaSource = getMediaSource();
-
 type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
   onManifestLoaded: (event: string, data: Partial<ManifestLoadedData>) => void;
   onAudioTrackSwitched: (event: string, data: { id: number }) => void;
@@ -86,6 +84,7 @@ describe('LevelController', function () {
   let levelController: LevelControllerTestable;
 
   beforeEach(function () {
+    const MediaSource = getMediaSource();
     hls = new HlsMock({});
     levelController = new LevelController(
       hls as any,

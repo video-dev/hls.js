@@ -279,7 +279,9 @@ function getParsedTrackCodec(
       return parsedCodec;
     }
     if (parsedCodec === 'fLaC' || parsedCodec === 'Opus') {
-      return getCodecCompatibleName(parsedCodec);
+      // Opting not to get `preferManagedMediaSource` from player config for isSupported() check for simplicity
+      const preferManagedMediaSource = false;
+      return getCodecCompatibleName(parsedCodec, preferManagedMediaSource);
     }
     const result = 'mp4a.40.5';
     logger.info(

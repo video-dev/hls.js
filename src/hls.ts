@@ -51,6 +51,7 @@ export default class Hls implements HlsEventEmitter {
 
   private coreComponents: ComponentAPI[];
   private networkControllers: NetworkComponentAPI[];
+  private started: boolean = false;
   private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number;
   private _maxHdcpLevel: HdcpLevel = null;
@@ -404,6 +405,7 @@ export default class Hls implements HlsEventEmitter {
    */
   startLoad(startPosition: number = -1) {
     logger.log(`startLoad(${startPosition})`);
+    this.started = true;
     this.networkControllers.forEach((controller) => {
       controller.startLoad(startPosition);
     });
@@ -414,8 +416,34 @@ export default class Hls implements HlsEventEmitter {
    */
   stopLoad() {
     logger.log('stopLoad');
+    this.started = false;
     this.networkControllers.forEach((controller) => {
       controller.stopLoad();
+    });
+  }
+
+  /**
+   * Resumes stream controller segment loading if previously started.
+   */
+  resumeBuffering() {
+    if (this.started) {
+      this.networkControllers.forEach((controller) => {
+        if ('fragmentLoader' in controller) {
+          controller.startLoad(-1);
+        }
+      });
+    }
+  }
+
+  /**
+   * Stops stream controller segment loading without changing 'started' state like stopLoad().
+   * This allows for media buffering to be paused without interupting playlist loading.
+   */
+  pauseBuffering() {
+    this.networkControllers.forEach((controller) => {
+      if ('fragmentLoader' in controller) {
+        controller.stopLoad();
+      }
     });
   }
 

@@ -37,6 +37,7 @@ export interface MediaAttachingData {
 
 export interface MediaAttachedData {
   media: HTMLMediaElement;
+  mediaSource?: MediaSource;
 }
 
 export interface BufferCodecsData {
