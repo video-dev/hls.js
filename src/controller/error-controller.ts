@@ -255,21 +255,12 @@ export default class ErrorController implements NetworkComponentAPI {
         retryCount,
       };
     }
-    // Do not perform level switch if an error occurred using delivery directives
-    // Allow reload without directives (handled in playlist-loader)
-    if (data.context?.deliveryDirectives) {
-      return {
-        action: NetworkErrorAction.DoNothing,
-        flags: ErrorActionFlags.None,
-        retryConfig: retryConfig || {
-          maxNumRetry: 0,
-          retryDelayMs: 0,
-          maxRetryDelayMs: 0,
-        },
-        retryCount,
-      };
+    const errorAction = this.getLevelSwitchAction(data, levelIndex);
+    if (retryConfig) {
+      errorAction.retryConfig = retryConfig;
+      errorAction.retryCount = retryCount;
     }
-    return this.getLevelSwitchAction(data, levelIndex);
+    return errorAction;
   }
 
   private getFragRetryOrSwitchAction(data: ErrorData): IErrorAction {
