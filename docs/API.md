@@ -12,7 +12,6 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [Fourth step: control through `<video>` element](#fourth-step-control-through-video-element)
   - [Fifth step: error handling](#fifth-step-error-handling)
     - [Fatal Error Recovery](#fatal-error-recovery)
-      - [`hls.startLoad()`](#hlsstartload)
       - [`hls.recoverMediaError()`](#hlsrecovermediaerror)
         - [Error recovery sample code](#error-recovery-sample-code)
       - [`hls.swapAudioCodec()`](#hlsswapaudiocodec)
@@ -258,17 +257,19 @@ video.play();
 
 All errors are signalled through a unique single event.
 
-Each error is categorized by:
+Each error is categorized by an error type, error details, and whether or not is is `fatal`:
 
-- its type:
+- Error Types:
   - `Hls.ErrorTypes.NETWORK_ERROR` for network related errors
   - `Hls.ErrorTypes.MEDIA_ERROR` for media/video related errors
+  - `Hls.ErrorTypes.KEY_SYSTEM_ERROR` for EME related errors
+  - `Hls.ErrorTypes.MUX_ERROR` for demuxing/remuxing related errors
   - `Hls.ErrorTypes.OTHER_ERROR` for all other errors
-- its details:
+- Error Details:
   - refer to [Errors details](#Errors)
-- its fatality:
-  - `false` if error is not fatal, hls.js will try to recover it
-  - `true` if error is fatal, an action is required to (try to) recover it.
+- Error is `fatal`:
+  - `false` if error is not fatal, hls.js will try to recover.
+  - `true` if error is fatal, all attempts to recover have been performed. See [LoadPolicies](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy) details on how to configure retries.
 
 Full details are described [below](#Errors)
 
@@ -292,11 +293,7 @@ hls.on(Hls.Events.ERROR, function (event, data) {
 
 #### Fatal Error Recovery
 
-hls.js provides means to 'try to' recover fatal network and media errors, through these 2 methods:
-
-##### `hls.startLoad()`
-
-Should be invoked to recover network error.
+hls.js provides means to 'try to' recover fatal media errors, through these methods:
 
 ##### `hls.recoverMediaError()`
 
@@ -308,14 +305,16 @@ Should be invoked to recover media error.
 hls.on(Hls.Events.ERROR, function (event, data) {
   if (data.fatal) {
     switch (data.type) {
-      case Hls.ErrorTypes.NETWORK_ERROR:
-        // try to recover network error
-        console.log('fatal network error encountered, try to recover');
-        hls.startLoad();
-        break;
       case Hls.ErrorTypes.MEDIA_ERROR:
         console.log('fatal media error encountered, try to recover');
         hls.recoverMediaError();
+        break;
+      case Hls.ErrorTypes.NETWORK_ERROR:
+        console.error('fatal network error encountered', data);
+        // All retries and media options have been exhausted.
+        // Immediately trying to restart loading could cause loop loading.
+        // Consider modifying loading policies to best fit your asset and network
+        // conditions (manifestLoadPolicy, playlistLoadPolicy, fragLoadPolicy).
         break;
       default:
         // cannot recover
@@ -1639,13 +1638,13 @@ Static getter: return hls.js dist version number.
 
 ## Network Loading Control API
 
-By default, hls.js will automatically start loading quality level playlists, and fragments after `Hls.Events.MANIFEST_PARSED` event has been triggered (and video element has been attached).
+By default, hls.js will automatically start loading quality level playlists, and fragments after `Hls.Events.MANIFEST_PARSED` event has been triggered.
 
-However if `config.autoStartLoad` is set to `false`, the following method needs to be called to manually start playlist and fragments loading:
+However, if `config.autoStartLoad` is set to `false`, then `hls.startLoad()` needs to be called to manually start playlist and fragments loading.
 
 ### `hls.startLoad(startPosition=-1)`
 
-Start/restart playlist/fragment loading. this is only effective if MANIFEST_PARSED event has been triggered and video element has been attached to hls object.
+Start/restart playlist/fragment loading. this is only effective if MANIFEST_PARSED event has been triggered.
 
 startPosition is the initial position in the playlist.
 If startPosition is not set to -1, it allows to override default startPosition to the one you want (it will bypass hls.config.liveSync\* config params for Live for example, so that user can start playback from whatever position)
