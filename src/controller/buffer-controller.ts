@@ -412,10 +412,6 @@ export default class BufferController implements ComponentAPI {
       },
       onError: (err) => {
         // in case any error occured while appending, put back segment in segments table
-        logger.error(
-          `[buffer-controller]: Error encountered while trying to append to the ${type} SourceBuffer`,
-          err
-        );
         const event = {
           type: ErrorTypes.MEDIA_ERROR,
           parent: frag.type,
@@ -896,14 +892,11 @@ export default class BufferController implements ComponentAPI {
 
   // This method must result in an updateend event; if append is not called, _onSBUpdateEnd must be called manually
   private appendExecutor(data: Uint8Array, type: SourceBufferName) {
-    const { operationQueue, sourceBuffer } = this;
-    const sb = sourceBuffer[type];
+    const sb = this.sourceBuffer[type];
     if (!sb) {
-      logger.warn(
-        `[buffer-controller]: Attempting to append to the ${type} SourceBuffer, but it does not exist`
+      throw new Error(
+        `Attempting to append to the ${type} SourceBuffer, but it does not exist`
       );
-      operationQueue.shiftAndExecuteNext(type);
-      return;
     }
 
     sb.ended = false;
