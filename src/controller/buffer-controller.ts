@@ -326,7 +326,7 @@ export default class BufferController implements ComponentAPI {
       },
     };
 
-    operationQueue.append(operation, type);
+    operationQueue.append(operation, type, !!this.pendingTracks[type]);
   }
 
   protected onBufferAppending(
@@ -444,7 +444,7 @@ export default class BufferController implements ComponentAPI {
         hls.trigger(Events.ERROR, event);
       },
     };
-    operationQueue.append(operation, type);
+    operationQueue.append(operation, type, !!this.pendingTracks[type]);
   }
 
   protected onBufferFlushing(
@@ -894,9 +894,12 @@ export default class BufferController implements ComponentAPI {
   private appendExecutor(data: Uint8Array, type: SourceBufferName) {
     const sb = this.sourceBuffer[type];
     if (!sb) {
-      throw new Error(
-        `Attempting to append to the ${type} SourceBuffer, but it does not exist`
-      );
+      if (!this.pendingTracks[type]) {
+        throw new Error(
+          `Attempting to append to the ${type} SourceBuffer, but it does not exist`
+        );
+      }
+      return;
     }
 
     sb.ended = false;

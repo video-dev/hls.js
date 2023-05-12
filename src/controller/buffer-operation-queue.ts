@@ -18,10 +18,14 @@ export default class BufferOperationQueue {
     this.buffers = sourceBufferReference;
   }
 
-  public append(operation: BufferOperation, type: SourceBufferName) {
+  public append(
+    operation: BufferOperation,
+    type: SourceBufferName,
+    pending?: boolean
+  ) {
     const queue = this.queues[type];
     queue.push(operation);
-    if (queue.length === 1) {
+    if (queue.length === 1 && !pending) {
       this.executeNext(type);
     }
   }
