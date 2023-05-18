@@ -2347,7 +2347,7 @@ export interface Loader<T extends LoaderContext> {
     // (undocumented)
     getResponseHeader?: (name: string) => string | null;
     // (undocumented)
-    load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<T>): void;
+    load(context: T, config: LoaderConfiguration, callbacks: LoaderCallbacks<T>): void;
     // (undocumented)
     stats: LoaderStats;
 }
