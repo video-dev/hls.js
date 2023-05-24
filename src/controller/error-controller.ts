@@ -72,6 +72,7 @@ export default class ErrorController implements NetworkComponentAPI {
     const hls = this.hls;
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
   }
 
   private unregisterListeners() {
@@ -82,6 +83,7 @@ export default class ErrorController implements NetworkComponentAPI {
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.ERROR, this.onErrorOut, this);
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
   }
 
   destroy() {
@@ -106,6 +108,10 @@ export default class ErrorController implements NetworkComponentAPI {
   private onManifestLoading() {
     this.playlistError = 0;
     this.penalizedRenditions = {};
+  }
+
+  private onLevelUpdated() {
+    this.playlistError = 0;
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
@@ -371,6 +377,7 @@ export default class ErrorController implements NetworkComponentAPI {
         }
         if (nextLevel > -1 && hls.loadLevel !== nextLevel) {
           data.levelRetry = true;
+          this.playlistError = 0;
           return {
             action: NetworkErrorAction.SendAlternateToPenaltyBox,
             flags: ErrorActionFlags.None,

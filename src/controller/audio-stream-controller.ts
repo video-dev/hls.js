@@ -652,8 +652,12 @@ class AudioStreamController
     const { frag, part } = data;
     if (frag.type !== PlaylistLevelType.AUDIO) {
       if (!this.loadedmetadata && frag.type === PlaylistLevelType.MAIN) {
-        if ((this.videoBuffer || this.media)?.buffered.length) {
-          this.loadedmetadata = true;
+        const bufferable = this.videoBuffer || this.media;
+        if (bufferable) {
+          const bufferedTimeRanges = BufferHelper.getBuffered(bufferable);
+          if (bufferedTimeRanges.length) {
+            this.loadedmetadata = true;
+          }
         }
       }
       return;
