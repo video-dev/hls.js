@@ -1077,12 +1077,12 @@ export function flushTextTrackMetadataCueSamples(
     // using this._initPTS and this._initDTS to calculate relative time
     sample.pts =
       normalizePts(
-        sample.pts - (initPTS.baseTime * 90000) / initPTS.timescale,
+        sample.pts - (initPTS.baseTime * inputTimeScale) / initPTS.timescale,
         timeOffset * inputTimeScale
       ) / inputTimeScale;
     sample.dts =
       normalizePts(
-        sample.dts - (initDTS.baseTime * 90000) / initDTS.timescale,
+        sample.dts - (initDTS.baseTime * inputTimeScale) / initDTS.timescale,
         timeOffset * inputTimeScale
       ) / inputTimeScale;
   }
