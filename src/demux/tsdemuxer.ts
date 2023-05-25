@@ -100,20 +100,43 @@ class TSDemuxer implements Demuxer {
 
   static syncOffset(data: Uint8Array): number {
     const length = data.length;
-    const scanwindow =
+    let scanwindow =
       Math.min(PACKET_LENGTH * 5, data.length - PACKET_LENGTH) + 1;
     let i = 0;
     while (i < scanwindow) {
       // a TS init segment should contain at least 2 TS packets: PAT and PMT, each starting with 0x47
       let foundPat = false;
+      let packetStart = -1;
+      let tsPackets = 0;
       for (let j = i; j < length; j += PACKET_LENGTH) {
         if (data[j] === 0x47) {
-          if (!foundPat && parsePID(data, j) === 0) {
-            foundPat = true;
+          tsPackets++;
+          if (packetStart === -1) {
+            packetStart = j;
+            // First sync word found at offset, increase scan length (#5251)
+            if (packetStart !== 0) {
+              scanwindow =
+                Math.min(
+                  packetStart + PACKET_LENGTH * 99,
+                  data.length - PACKET_LENGTH
+                ) + 1;
+            }
           }
-          if (foundPat && j + PACKET_LENGTH > scanwindow) {
-            return i;
+          if (!foundPat) {
+            foundPat = parsePID(data, j) === 0;
           }
+          // Sync word found at 0 with 3 packets, or found at offset least 2 packets up to scanwindow (#5501)
+          if (
+            foundPat &&
+            tsPackets > 1 &&
+            ((packetStart === 0 && tsPackets > 2) ||
+              j + PACKET_LENGTH > scanwindow)
+          ) {
+            return packetStart;
+          }
+        } else if (tsPackets) {
+          // Exit if sync word found, but does not contain contiguous packets (#5501)
+          return -1;
         } else {
           break;
         }
