@@ -489,7 +489,7 @@ export default class MP4Remuxer implements Remuxer {
             )} ms (${delta}dts) overlapping between fragments detected`
           );
         }
-        if (!foundOverlap || nextAvcDts > inputSamples[0].pts) {
+        if (!foundOverlap || nextAvcDts >= inputSamples[0].pts) {
           firstDTS = nextAvcDts;
           const firstPTS = inputSamples[0].pts - delta;
           inputSamples[0].dts = firstDTS;
