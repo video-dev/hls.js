@@ -135,7 +135,9 @@ export default class GapController {
         : MAX_START_GAP_JUMP;
       const partialOrGap = this.fragmentTracker.getPartialFragment(currentTime);
       if (startJump > 0 && (startJump <= maxStartGapJump || partialOrGap)) {
-        this._trySkipBufferHole(partialOrGap);
+        if (!media.paused) {
+          this._trySkipBufferHole(partialOrGap);
+        }
         return;
       }
     }
