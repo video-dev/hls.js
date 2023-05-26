@@ -296,6 +296,11 @@ const configs = Object.entries({
     format: FORMAT.umd,
     minified: true,
   }),
+  lightEsm: buildRollupConfig({
+    type: BUILD_TYPE.light,
+    format: FORMAT.esm,
+    minified: false,
+  }),
   worker: {
     input: './src/demux/transmuxer-worker.ts',
     onwarn: (e) => {

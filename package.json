@@ -1,6 +1,6 @@
 {
   "name": "hls.js",
-  "version": "1.4.3",
+  "version": "1.4.5",
   "license": "Apache-2.0",
   "description": "JavaScript HLS client using MediaSourceExtension",
   "homepage": "https://github.com/video-dev/hls.js",
@@ -62,17 +62,17 @@
     "prepare": "husky install"
   },
   "devDependencies": {
-    "@babel/core": "7.21.4",
+    "@babel/core": "7.21.8",
     "@babel/helper-module-imports": "7.21.4",
     "@babel/plugin-proposal-class-properties": "7.18.6",
     "@babel/plugin-proposal-object-rest-spread": "7.20.7",
     "@babel/plugin-proposal-optional-chaining": "7.21.0",
     "@babel/plugin-transform-object-assign": "7.18.6",
-    "@babel/preset-env": "7.21.4",
-    "@babel/preset-typescript": "7.21.4",
+    "@babel/preset-env": "7.21.5",
+    "@babel/preset-typescript": "7.21.5",
     "@babel/register": "7.21.0",
     "@microsoft/api-documenter": "7.22.4",
-    "@microsoft/api-extractor": "7.34.4",
+    "@microsoft/api-extractor": "7.34.8",
     "@rollup/plugin-alias": "5.0.0",
     "@rollup/plugin-babel": "6.0.3",
     "@rollup/plugin-commonjs": "24.1.0",
@@ -80,7 +80,7 @@
     "@rollup/plugin-replace": "5.0.2",
     "@rollup/plugin-terser": "0.4.1",
     "@rollup/plugin-typescript": "11.1.0",
-    "@types/chai": "4.3.4",
+    "@types/chai": "4.3.5",
     "@types/chart.js": "2.9.37",
     "@types/mocha": "10.0.1",
     "@types/sinon-chai": "3.2.9",
@@ -90,7 +90,7 @@
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.3.7",
     "chart.js": "2.9.4",
-    "chromedriver": "112.0.0",
+    "chromedriver": "112.0.1",
     "doctoc": "2.2.1",
     "es-check": "7.1.1",
     "eslint": "8.39.0",
@@ -99,7 +99,7 @@
     "eslint-plugin-mocha": "10.1.0",
     "eslint-plugin-node": "11.1.0",
     "eslint-plugin-promise": "6.1.1",
-    "eventemitter3": "5.0.0",
+    "eventemitter3": "5.0.1",
     "http-server": "14.1.1",
     "husky": "8.0.3",
     "jsonpack": "1.1.5",
@@ -119,7 +119,7 @@
     "npm-run-all": "4.1.5",
     "prettier": "2.8.8",
     "promise-polyfill": "8.3.0",
-    "rollup": "3.21.0",
+    "rollup": "3.21.5",
     "rollup-plugin-istanbul": "4.0.0",
     "sauce-connect-launcher": "1.3.2",
     "selenium-webdriver": "4.9.0",
@@ -128,6 +128,6 @@
     "sinon-chai": "3.7.0",
     "typescript": "5.0.4",
     "url-toolkit": "2.2.5",
-    "wrangler": "2.17.0"
+    "wrangler": "2.20.0"
   }
 }

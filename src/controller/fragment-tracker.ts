@@ -138,7 +138,7 @@ export class FragmentTracker implements ComponentAPI {
     }
     // Check if any flagged fragments have been unloaded
     // excluding anything newer than appendedPartSn
-    const appendedPartSn = (appendedPart?.fragment.sn || 0) as number;
+    const appendedPartSn = (appendedPart?.fragment.sn || -1) as number;
     Object.keys(this.fragments).forEach((key) => {
       const fragmentEntity = this.fragments[key];
       if (!fragmentEntity) {
@@ -492,7 +492,8 @@ function isPartial(fragmentEntity: FragmentEntity): boolean {
     fragmentEntity.buffered &&
     (fragmentEntity.body.gap ||
       fragmentEntity.range.video?.partial ||
-      fragmentEntity.range.audio?.partial)
+      fragmentEntity.range.audio?.partial ||
+      fragmentEntity.range.audiovideo?.partial)
   );
 }
 

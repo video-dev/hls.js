@@ -498,7 +498,7 @@ export default class MP4Remuxer implements Remuxer {
             )} ms (${delta}dts) overlapping between fragments detected`
           );
         }
-        if (!foundOverlap || nextAvcDts > inputSamples[0].pts) {
+        if (!foundOverlap || nextAvcDts >= inputSamples[0].pts) {
           firstDTS = nextAvcDts;
           const firstPTS = inputSamples[0].pts - delta;
           inputSamples[0].dts = firstDTS;
@@ -1086,12 +1086,12 @@ export function flushTextTrackMetadataCueSamples(
     // using this._initPTS and this._initDTS to calculate relative time
     sample.pts =
       normalizePts(
-        sample.pts - (initPTS.baseTime * 90000) / initPTS.timescale,
+        sample.pts - (initPTS.baseTime * inputTimeScale) / initPTS.timescale,
         timeOffset * inputTimeScale
       ) / inputTimeScale;
     sample.dts =
       normalizePts(
-        sample.dts - (initDTS.baseTime * 90000) / initDTS.timescale,
+        sample.dts - (initDTS.baseTime * inputTimeScale) / initDTS.timescale,
         timeOffset * inputTimeScale
       ) / inputTimeScale;
   }

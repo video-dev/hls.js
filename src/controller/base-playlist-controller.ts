@@ -316,6 +316,9 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           action === NetworkErrorAction.SendAlternateToPenaltyBox));
     if (retry) {
       this.requestScheduled = -1;
+      if (retryCount >= retryConfig.maxNumRetry) {
+        return false;
+      }
       if (isTimeout && errorEvent.context?.deliveryDirectives) {
         // The LL-HLS request already timed out so retry immediately
         this.warn(
