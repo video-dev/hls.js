@@ -925,6 +925,11 @@ export type {
 } from './config';
 export type { MediaKeySessionContext } from './controller/eme-controller';
 export type { ILogger } from './utils/logger';
+export type {
+  PathwayClone,
+  SteeringManifest,
+  UriReplacement,
+} from './controller/content-steering-controller';
 export type { SubtitleStreamController } from './controller/subtitle-stream-controller';
 export type { TimelineController } from './controller/timeline-controller';
 export type { CuesInterface } from './utils/cues';
@@ -1035,6 +1040,7 @@ export type {
   MediaAttachingData,
   NonNativeTextTrack,
   NonNativeTextTracksData,
+  SteeringManifestLoadedData,
   SubtitleFragProcessedData,
   SubtitleTrackLoadedData,
   SubtitleTracksUpdatedData,

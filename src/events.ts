@@ -47,6 +47,7 @@ import {
   LiveBackBufferData,
   TrackLoadingData,
   BufferFlushedData,
+  SteeringManifestLoadedData,
 } from './types/events';
 
 export enum Events {
@@ -162,6 +163,8 @@ export enum Events {
   LIVE_BACK_BUFFER_REACHED = 'hlsLiveBackBufferReached',
   // fired when the back buffer is reached as defined by the backBufferLength config option - data : { bufferEnd: number }
   BACK_BUFFER_REACHED = 'hlsBackBufferReached',
+  // fired after steering manifest has been loaded - data: { steeringManifest: SteeringManifest object, url: steering manifest URL }
+  STEERING_MANIFEST_LOADED = 'hlsSteeringManifestLoaded',
 }
 
 /**
@@ -360,6 +363,10 @@ export interface HlsListeners {
   [Events.BACK_BUFFER_REACHED]: (
     event: Events.BACK_BUFFER_REACHED,
     data: BackBufferData
+  ) => void;
+  [Events.STEERING_MANIFEST_LOADED]: (
+    event: Events.STEERING_MANIFEST_LOADED,
+    data: SteeringManifestLoadedData
   ) => void;
 }
 export interface HlsEventEmitter {
