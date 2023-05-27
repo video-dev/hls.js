@@ -93,11 +93,11 @@ export default class ErrorController implements NetworkComponentAPI {
     this.penalizedRenditions = {};
   }
 
-  startLoad(startPosition: number): void {
+  startLoad(startPosition: number): void {}
+
+  stopLoad(): void {
     this.playlistError = 0;
   }
-
-  stopLoad(): void {}
 
   private getVariantLevelIndex(frag: Fragment | undefined): number {
     return frag?.type === PlaylistLevelType.MAIN
@@ -210,6 +210,7 @@ export default class ErrorController implements NetworkComponentAPI {
         return;
       case ErrorDetails.BUFFER_ADD_CODEC_ERROR:
       case ErrorDetails.REMUX_ALLOC_ERROR:
+      case ErrorDetails.BUFFER_APPEND_ERROR:
         data.errorAction = this.getLevelSwitchAction(
           data,
           data.level ?? hls.loadLevel
@@ -217,7 +218,6 @@ export default class ErrorController implements NetworkComponentAPI {
         return;
       case ErrorDetails.INTERNAL_EXCEPTION:
       case ErrorDetails.BUFFER_APPENDING_ERROR:
-      case ErrorDetails.BUFFER_APPEND_ERROR:
       case ErrorDetails.BUFFER_FULL_ERROR:
       case ErrorDetails.LEVEL_SWITCH_ERROR:
       case ErrorDetails.BUFFER_STALLED_ERROR:

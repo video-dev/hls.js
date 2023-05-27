@@ -18,10 +18,14 @@ export default class BufferOperationQueue {
     this.buffers = sourceBufferReference;
   }
 
-  public append(operation: BufferOperation, type: SourceBufferName) {
+  public append(
+    operation: BufferOperation,
+    type: SourceBufferName,
+    pending?: boolean
+  ) {
     const queue = this.queues[type];
     queue.push(operation);
-    if (queue.length === 1 && this.buffers[type]) {
+    if (queue.length === 1 && !pending) {
       this.executeNext(type);
     }
   }
@@ -49,25 +53,23 @@ export default class BufferOperationQueue {
   }
 
   public executeNext(type: SourceBufferName) {
-    const { buffers, queues } = this;
-    const sb = buffers[type];
-    const queue = queues[type];
+    const queue = this.queues[type];
     if (queue.length) {
       const operation: BufferOperation = queue[0];
       try {
         // Operations are expected to result in an 'updateend' event being fired. If not, the queue will lock. Operations
         // which do not end with this event must call _onSBUpdateEnd manually
         operation.execute();
-      } catch (e) {
+      } catch (error) {
         logger.warn(
-          '[buffer-operation-queue]: Unhandled exception executing the current operation'
+          `[buffer-operation-queue]: Exception executing "${type}" SourceBuffer operation: ${error}`
         );
-        operation.onError(e);
+        operation.onError(error);
 
         // Only shift the current operation off, otherwise the updateend handler will do this for us
+        const sb = this.buffers[type];
         if (!sb?.updating) {
-          queue.shift();
-          this.executeNext(type);
+          this.shiftAndExecuteNext(type);
         }
       }
     }
