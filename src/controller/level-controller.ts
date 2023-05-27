@@ -75,7 +75,7 @@ export default class LevelController extends BasePlaylistController {
     super.destroy();
   }
 
-  public startLoad(): void {
+  public stopLoad(): void {
     const levels = this._levels;
 
     // clean up live level details to force reload them, and reset load errors
@@ -84,7 +84,7 @@ export default class LevelController extends BasePlaylistController {
       level.fragmentError = 0;
     });
 
-    super.startLoad();
+    super.stopLoad();
   }
 
   private resetLevels() {

@@ -905,8 +905,13 @@ export default class StreamController
           this.state = State.IDLE;
         }
         break;
+      case ErrorDetails.BUFFER_APPEND_ERROR:
       case ErrorDetails.BUFFER_FULL_ERROR:
         if (!data.parent || data.parent !== 'main') {
+          return;
+        }
+        if (data.details === ErrorDetails.BUFFER_APPEND_ERROR) {
+          this.resetLoadingState();
           return;
         }
         if (this.reduceLengthAndFlushBuffer(data)) {
@@ -1292,7 +1297,7 @@ export default class StreamController
       }
     });
     // trigger handler right now
-    this.tick();
+    this.tickImmediate();
   }
 
   public getMainFwdBufferInfo(): BufferInfo | null {

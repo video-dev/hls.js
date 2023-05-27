@@ -225,13 +225,15 @@ describe('BufferController', function () {
 
     it('should cycle the SourceBuffer operation queue if the sourceBuffer does not exist while appending', function () {
       const queueAppendSpy = sandbox.spy(operationQueue, 'append');
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
       queueNames.forEach((name, i) => {
         bufferController.sourceBuffer = {};
         bufferController.onBufferAppending(Events.BUFFER_APPENDING, {
           type: name,
           data: new Uint8Array(),
-          frag: new Fragment(PlaylistLevelType.MAIN, ''),
-          chunkMeta: new ChunkMetadata(0, 0, 0, 0),
+          frag,
+          chunkMeta,
         });
 
         expect(
@@ -243,8 +245,20 @@ describe('BufferController', function () {
           'The queue should have been cycled'
         ).to.have.callCount(i + 1);
       });
-      expect(triggerSpy, 'No event should have been triggered').to.have.not.been
-        .called;
+      expect(
+        triggerSpy,
+        'Buffer append error event should have been triggered'
+      ).to.have.been.calledWith(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.BUFFER_APPEND_ERROR,
+        parent: 'main',
+        frag,
+        part: undefined,
+        chunkMeta,
+        error: triggerSpy.getCall(0).lastArg.error,
+        err: triggerSpy.getCall(0).lastArg.error,
+        fatal: false,
+      });
     });
   });
 
