@@ -24,7 +24,7 @@ jobs:
         id: check_sauce_access
         run: |
           if ! [[ -z "$SAUCE_USERNAME" ]] && ! [[ -z "$SAUCE_ACCESS_KEY" ]]; then
-            echo "::set-output name=result::true"
+            echo "result=true" >> $GITHUB_OUTPUT
           fi
         env:
           CI: true
