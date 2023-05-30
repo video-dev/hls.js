@@ -256,11 +256,8 @@ function getParsedTrackCodec(
   if (parsedCodec === 'avc1' || type === ElementaryStreamTypes.VIDEO) {
     return 'avc1.42e01e';
   }
-  if (parsedCodec === 'fLaC') {
-    return 'fLaC';
-  }
-  if (parsedCodec === 'Opus') {
-    return 'Opus';
+  if (parsedCodec === 'fLaC' || parsedCodec === 'Opus') {
+    return parsedCodec;
   }
   return 'mp4a.40.5';
 }
