@@ -59,14 +59,12 @@ if (browserConfig.platform) {
   browserDescription += `, ${browserConfig.platform}`;
 }
 
-const hostname = useSauce ? 'localhost' : '127.0.0.1';
-
 // Launch static server
 HttpServer.createServer({
   showDir: false,
   autoIndex: false,
   root: './',
-}).listen(8000, hostname);
+}).listen(8000, useSauce ? '0.0.0.0' : '127.0.0.1');
 
 const wait = (ms) => new Promise((resolve) => global.setTimeout(resolve, ms));
 const stringifyResult = (result) =>
@@ -230,6 +228,16 @@ async function testSeekOnVOD(url, config) {
     function (url, config) {
       const callback = arguments[arguments.length - 1];
       self.startStream(url, config, callback);
+
+      let tracks;
+      self.hls.on(self.Hls.Events.BUFFER_CREATED, function (eventName, data) {
+        tracks = data.tracks;
+      });
+      const endOfStreamEvents = [];
+      self.hls.on(self.Hls.Events.BUFFER_EOS, function (eventName, data) {
+        endOfStreamEvents.push(data.type || 'main');
+      });
+
       const video = self.video;
       video.ondurationchange = function () {
         console.log(
@@ -277,11 +285,29 @@ async function testSeekOnVOD(url, config) {
           video.currentTime = seekToTime;
           self.setTimeout(function () {
             const currentTime = video.currentTime;
+            const duration = video.duration;
             const paused = video.paused;
+
+            const buffers = Object.keys(tracks).map(function (type) {
+              const sourceBuffer = tracks[type].buffer;
+              const timeRangeTuples = [];
+              const buffered = sourceBuffer.buffered;
+              for (let i = 0; i < buffered.length; i++) {
+                timeRangeTuples.push(
+                  `${buffered.start(i).toFixed(2)}-${buffered
+                    .end(i)
+                    .toFixed(2)}`
+                );
+              }
+              return `${type}: [${timeRangeTuples.join(', ')}]`;
+            });
+
             callback({
               code: 'timeout-waiting-for-ended-event',
               currentTime: currentTime,
               duration: duration,
+              buffers: buffers,
+              endOfStreamEvents: endOfStreamEvents,
               paused: paused,
               logs: self.logString,
             });
@@ -521,14 +547,13 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   beforeEach(async function () {
     try {
       await retry(async () => {
+        const testPageExt = HlsjsLightBuild ? '-light' : '';
+        const testPageUrl = `http://localhost:8000/tests/functional/auto/index${testPageExt}.html`;
         if (printDebugLogs) {
-          console.log('Loading test page...');
+          console.log(`Loading test page: ${testPageUrl}`);
         }
         try {
-          const testPageExt = HlsjsLightBuild ? '-light' : '';
-          await browser.get(
-            `http://${hostname}:8000/tests/functional/auto/index${testPageExt}.html`
-          );
+          await browser.get(testPageUrl);
         } catch (e) {
           throw new Error('failed to open test page');
         }
@@ -558,7 +583,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   afterEach(async function () {
     const failed = this.currentTest.isFailed();
     if (printDebugLogs || failed) {
-      const logString = await browser.executeScript('return logString');
+      const logString = await browser.executeScript(
+        'return window.logString || "";'
+      );
       console.log(logString);
       if (failed && useSauce) {
         browser.executeScript('sauce:job-result=failed');
@@ -583,7 +610,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
 
   const entries = Object.entries(streams);
   if (HlsjsLightBuild) {
-    entries.length = 1;
+    entries.length = 10;
   }
 
   entries

@@ -47,12 +47,9 @@ import {
   LiveBackBufferData,
   TrackLoadingData,
   BufferFlushedData,
+  SteeringManifestLoadedData,
 } from './types/events';
 
-/**
- * @readonly
- * @enum {string}
- */
 export enum Events {
   // Fired before MediaSource is attaching to media element
   MEDIA_ATTACHING = 'hlsMediaAttaching',
@@ -160,14 +157,19 @@ export enum Events {
   DESTROYING = 'hlsDestroying',
   // fired when a decrypt key loading starts - data: { frag : fragment object }
   KEY_LOADING = 'hlsKeyLoading',
-  // fired when a decrypt key loading is completed - data: { frag : fragment object, payload : key payload, stats : LoaderStats }
+  // fired when a decrypt key loading is completed - data: { frag : fragment object, keyInfo : KeyLoaderInfo }
   KEY_LOADED = 'hlsKeyLoaded',
   // deprecated; please use BACK_BUFFER_REACHED - data : { bufferEnd: number }
   LIVE_BACK_BUFFER_REACHED = 'hlsLiveBackBufferReached',
   // fired when the back buffer is reached as defined by the backBufferLength config option - data : { bufferEnd: number }
   BACK_BUFFER_REACHED = 'hlsBackBufferReached',
+  // fired after steering manifest has been loaded - data: { steeringManifest: SteeringManifest object, url: steering manifest URL }
+  STEERING_MANIFEST_LOADED = 'hlsSteeringManifestLoaded',
 }
 
+/**
+ * Defines each Event type and payload by Event name. Used in {@link hls.js#HlsEventEmitter} to strongly type the event listener API.
+ */
 export interface HlsListeners {
   [Events.MEDIA_ATTACHING]: (
     event: Events.MEDIA_ATTACHING,
@@ -361,6 +363,10 @@ export interface HlsListeners {
   [Events.BACK_BUFFER_REACHED]: (
     event: Events.BACK_BUFFER_REACHED,
     data: BackBufferData
+  ) => void;
+  [Events.STEERING_MANIFEST_LOADED]: (
+    event: Events.STEERING_MANIFEST_LOADED,
+    data: SteeringManifestLoadedData
   ) => void;
 }
 export interface HlsEventEmitter {

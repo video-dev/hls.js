@@ -1,0 +1,7 @@
+{
+  "ecmaVersion": "es5",
+  "modules": "false",
+  "files": [
+    "./dist/**/*.js"
+  ]
+}

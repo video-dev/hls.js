@@ -7,12 +7,11 @@ import {
 } from '../../../src/controller/level-helper';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { Fragment, Part } from '../../../src/loader/fragment';
-import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
-import * as sinon from 'sinon';
-import * as chai from 'chai';
-import * as sinonChai from 'sinon-chai';
 import { AttrList } from '../../../src/utils/attr-list';
+import sinon from 'sinon';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

@@ -72,7 +72,7 @@ function objectAssign(target) {
     ) {
       var nextKey = keysArray[nextIndex];
       var desc = Object.getOwnPropertyDescriptor(nextSource, nextKey);
-      if (desc !== undefined && desc.enumerable) {
+      if (desc && desc.enumerable) {
         to[nextKey] = nextSource[nextKey];
       }
     }

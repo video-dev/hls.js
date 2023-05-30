@@ -63,7 +63,7 @@ class MP4Demuxer implements Demuxer {
     this.id3Track = dummyTrack('id3', 1) as DemuxedMetadataTrack;
     this.timeOffset = 0;
 
-    if (!initSegment || !initSegment.byteLength) {
+    if (!initSegment?.byteLength) {
       return;
     }
     const initData = parseInitSegment(initSegment);
@@ -87,7 +87,9 @@ class MP4Demuxer implements Demuxer {
     videoTrack.duration = audioTrack.duration = trackDuration;
   }
 
-  public resetContiguity(): void {}
+  public resetContiguity(): void {
+    this.remainderData = null;
+  }
 
   static probe(data: Uint8Array) {
     // ensure we find a moof box in the first 16 kB

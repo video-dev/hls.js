@@ -1,5 +1,7 @@
+import type { LoaderConfig } from '../config';
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
+import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
 import type { HlsUrlParameters } from './level';
 
@@ -24,26 +26,47 @@ export interface FragmentLoaderContext extends LoaderContext {
   resetIV?: boolean;
 }
 
-export interface KeyLoaderContext extends FragmentLoaderContext {}
+export interface KeyLoaderContext extends LoaderContext {
+  keyInfo: KeyLoaderInfo;
+  frag: Fragment;
+}
 
 export interface LoaderConfiguration {
+  // LoaderConfig policy that overrides required settings
+  loadPolicy: LoaderConfig;
+  /**
+   * @deprecated use LoaderConfig timeoutRetry and errorRetry maxNumRetry
+   */
   // Max number of load retries
   maxRetry: number;
+  /**
+   * @deprecated use LoaderConfig maxTimeToFirstByteMs and maxLoadTimeMs
+   */
   // Timeout after which `onTimeOut` callback will be triggered
-  // (if loading is still not finished after that delay)
+  //  when loading has not finished after that delay
   timeout: number;
+  /**
+   * @deprecated use LoaderConfig timeoutRetry and errorRetry retryDelayMs
+   */
   // Delay between an I/O error and following connection retry (ms).
   // This to avoid spamming the server
   retryDelay: number;
+  /**
+   * @deprecated use LoaderConfig timeoutRetry and errorRetry maxRetryDelayMs
+   */
   // max connection retry delay (ms)
   maxRetryDelay: number;
   // When streaming progressively, this is the minimum chunk size required to emit a PROGRESS event
-  highWaterMark: number;
+  highWaterMark?: number;
 }
 
 export interface LoaderResponse {
   url: string;
-  data: string | ArrayBuffer;
+  data?: string | ArrayBuffer | Object;
+  // Errors can include HTTP status code and error message
+  // Successful responses should include status code 200
+  code?: number;
+  text?: string;
 }
 
 export interface LoaderStats {
@@ -94,7 +117,8 @@ export type LoaderOnError<T extends LoaderContext> = (
     text: string;
   },
   context: T,
-  networkDetails: any
+  networkDetails: any,
+  stats: LoaderStats
 ) => void;
 
 export type LoaderOnTimeout<T extends LoaderContext> = (
@@ -135,35 +159,32 @@ export interface Loader<T extends LoaderContext> {
    * @returns time object being lodaded
    */
   getCacheAge?: () => number | null;
+  getResponseHeader?: (name: string) => string | null;
   context: T;
   stats: LoaderStats;
 }
 
-export enum PlaylistContextType {
+export const enum PlaylistContextType {
   MANIFEST = 'manifest',
   LEVEL = 'level',
   AUDIO_TRACK = 'audioTrack',
   SUBTITLE_TRACK = 'subtitleTrack',
 }
 
-export enum PlaylistLevelType {
+export const enum PlaylistLevelType {
   MAIN = 'main',
   AUDIO = 'audio',
   SUBTITLE = 'subtitle',
 }
 
 export interface PlaylistLoaderContext extends LoaderContext {
-  loader?: Loader<PlaylistLoaderContext>;
-
   type: PlaylistContextType;
   // the level index to load
   level: number | null;
   // level or track id from LevelLoadingData / TrackLoadingData
   id: number | null;
   // track group id
-  groupId: string | null;
-  // defines if the loader is handling a sidx request for the playlist
-  isSidxRequest?: boolean;
+  groupId?: string;
   // internal representation of a parsed m3u8 level playlist
   levelDetails?: LevelDetails;
   // Blocking playlist request delivery directives (or null id none were added to playlist url

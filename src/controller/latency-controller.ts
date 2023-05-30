@@ -138,11 +138,11 @@ export default class LatencyController implements ComponentAPI {
   }
 
   private unregisterListeners() {
-    this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached);
-    this.hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching);
-    this.hls.off(Events.MANIFEST_LOADING, this.onManifestLoading);
-    this.hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated);
-    this.hls.off(Events.ERROR, this.onError);
+    this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    this.hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    this.hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    this.hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
+    this.hls.off(Events.ERROR, this.onError, this);
   }
 
   private onMediaAttached(
@@ -184,9 +184,11 @@ export default class LatencyController implements ComponentAPI {
       return;
     }
     this.stallCount++;
-    logger.warn(
-      '[playback-rate-controller]: Stall detected, adjusting target latency'
-    );
+    if (this.levelDetails?.live) {
+      logger.warn(
+        '[playback-rate-controller]: Stall detected, adjusting target latency'
+      );
+    }
   }
 
   private timeupdate() {

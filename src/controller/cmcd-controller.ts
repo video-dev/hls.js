@@ -1,20 +1,18 @@
-import {
-  FragmentLoaderConstructor,
-  HlsConfig,
-  PlaylistLoaderConstructor,
-} from '../config';
 import { Events } from '../events';
-import Hls, { Fragment } from '../hls';
+import Hls from '../hls';
 import {
   CMCD,
   CMCDHeaders,
   CMCDObjectType,
-  CMCDStreamingFormat,
+  CMCDStreamingFormatHLS,
   CMCDVersion,
 } from '../types/cmcd';
-import { ComponentAPI } from '../types/component-api';
-import { BufferCreatedData, MediaAttachedData } from '../types/events';
-import {
+import { BufferHelper } from '../utils/buffer-helper';
+import { logger } from '../utils/logger';
+import type { ComponentAPI } from '../types/component-api';
+import type { Fragment } from '../loader/fragment';
+import type { BufferCreatedData, MediaAttachedData } from '../types/events';
+import type {
   FragmentLoaderContext,
   Loader,
   LoaderCallbacks,
@@ -22,8 +20,11 @@ import {
   LoaderContext,
   PlaylistLoaderContext,
 } from '../types/loader';
-import { BufferHelper } from '../utils/buffer-helper';
-import { logger } from '../utils/logger';
+import type {
+  FragmentLoaderConstructor,
+  HlsConfig,
+  PlaylistLoaderConstructor,
+} from '../config';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -70,12 +71,11 @@ export default class CMCDController implements ComponentAPI {
     hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
-
-    this.onMediaDetached();
   }
 
   destroy() {
     this.unregisterListeners();
+    this.onMediaDetached();
 
     // @ts-ignore
     this.hls = this.config = this.audioBuffer = this.videoBuffer = null;
@@ -132,7 +132,7 @@ export default class CMCDController implements ComponentAPI {
   private createData(): CMCD {
     return {
       v: CMCDVersion,
-      sf: CMCDStreamingFormat.HLS,
+      sf: CMCDStreamingFormatHLS,
       sid: this.sid,
       cid: this.cid,
       pr: this.media?.playbackRate,

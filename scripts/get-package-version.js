@@ -2,9 +2,7 @@
 /* eslint-env node */
 'use strict';
 
-const fs = require('fs');
 const versionParser = require('./version-parser.js');
-const packageJson = require('../package.json');
 const { isValidStableVersion, incrementPatch } = require('./version-parser.js');
 
 const latestVersion = getLatestVersionTag();
@@ -43,17 +41,12 @@ try {
     // remove v
     intermediateVersion = intermediateVersion.substring(1);
 
-    const suffix =
-      process.env.NETLIFY && process.env.CONTEXT === 'deploy-preview'
-        ? `pr.${
-            process.env.REVIEW_ID /* set by netlify */
-          }.${getCommitHash().slice(0, 8)}`
-        : process.env.NETLIFY && process.env.CONTEXT === 'branch-deploy'
-        ? `branch.${process.env.BRANCH /* set by netlify */.replace(
-            /[^a-zA-Z0-9]/g,
-            '-'
-          )}.${getCommitHash().slice(0, 8)}`
-        : `0.canary.${getCommitNum()}`;
+    const suffix = process.env.CF_PAGES
+      ? `pr.${process.env.CF_PAGES_BRANCH.replace(
+          /[^a-zA-Z-]/g,
+          '-'
+        )}.${getCommitHash().slice(0, 8)}`
+      : `0.canary.${getCommitNum()}`;
 
     newVersion = `${intermediateVersion}${isStable ? '-' : '.'}${suffix}`;
   }
@@ -75,11 +68,7 @@ try {
     );
   }
 
-  packageJson.version = newVersion;
-  fs.writeFileSync('./package.json', JSON.stringify(packageJson), {
-    encoding: 'utf8',
-  });
-  console.log('Set version: ' + newVersion);
+  console.log(newVersion);
 } catch (e) {
   console.error(e);
   process.exit(1);

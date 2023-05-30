@@ -41,13 +41,14 @@ class ExpGolomb {
   // (count:int):void
   skipBits(count: number): void {
     let skipBytes; // :int
+    count = Math.min(count, this.bytesAvailable * 8 + this.bitsAvailable);
     if (this.bitsAvailable > count) {
       this.word <<= count;
       this.bitsAvailable -= count;
     } else {
       count -= this.bitsAvailable;
       skipBytes = count >> 3;
-      count -= skipBytes >> 3;
+      count -= skipBytes << 3;
       this.bytesAvailable -= skipBytes;
       this.loadWord();
       this.word <<= count;
@@ -68,6 +69,8 @@ class ExpGolomb {
       this.word <<= bits;
     } else if (this.bytesAvailable > 0) {
       this.loadWord();
+    } else {
+      throw new Error('no bits available');
     }
 
     bits = size - bits;
@@ -170,8 +173,7 @@ class ExpGolomb {
    * Read a sequence parameter set and return some interesting video
    * properties. A sequence parameter set is the H264 metadata that
    * describes the properties of upcoming video frames.
-   * @param data {Uint8Array} the bytes of a sequence parameter set
-   * @return {object} an object with configuration parsed from the
+   * @returns an object with configuration parsed from the
    * sequence parameter set, including the dimensions of the
    * associated video frames.
    */

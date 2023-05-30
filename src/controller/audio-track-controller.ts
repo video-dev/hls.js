@@ -19,7 +19,7 @@ class AudioTrackController extends BasePlaylistController {
   private groupId: string | null = null;
   private tracksInGroup: MediaPlaylist[] = [];
   private trackId: number = -1;
-  private trackName: string = '';
+  private currentTrack: MediaPlaylist | null = null;
   private selectDefaultTrack: boolean = true;
 
   constructor(hls: Hls) {
@@ -51,6 +51,7 @@ class AudioTrackController extends BasePlaylistController {
     this.unregisterListeners();
     this.tracks.length = 0;
     this.tracksInGroup.length = 0;
+    this.currentTrack = null;
     super.destroy();
   }
 
@@ -59,7 +60,7 @@ class AudioTrackController extends BasePlaylistController {
     this.groupId = null;
     this.tracksInGroup = [];
     this.trackId = -1;
-    this.trackName = '';
+    this.currentTrack = null;
     this.selectDefaultTrack = true;
   }
 
@@ -74,20 +75,23 @@ class AudioTrackController extends BasePlaylistController {
     event: Events.AUDIO_TRACK_LOADED,
     data: AudioTrackLoadedData
   ): void {
-    const { id, details } = data;
-    const currentTrack = this.tracksInGroup[id];
+    const { id, groupId, details } = data;
+    const trackInActiveGroup = this.tracksInGroup[id];
 
-    if (!currentTrack) {
-      this.warn(`Invalid audio track id ${id}`);
+    if (!trackInActiveGroup || trackInActiveGroup.groupId !== groupId) {
+      this.warn(
+        `Track with id:${id} and group:${groupId} not found in active group ${trackInActiveGroup.groupId}`
+      );
       return;
     }
 
-    const curDetails = currentTrack.details;
-    currentTrack.details = data.details;
-    this.log(`audioTrack ${id} loaded [${details.startSN}-${details.endSN}]`);
+    const curDetails = trackInActiveGroup.details;
+    trackInActiveGroup.details = data.details;
+    this.log(
+      `audio-track ${id} "${trackInActiveGroup.name}" lang:${trackInActiveGroup.lang} group:${groupId} loaded [${details.startSN}-${details.endSN}]`
+    );
 
     if (id === this.trackId) {
-      this.retryCount = 0;
       this.playlistLoaded(id, data, curDetails);
     }
   }
@@ -115,7 +119,7 @@ class AudioTrackController extends BasePlaylistController {
 
     const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
     if (this.groupId !== audioGroupId) {
-      this.groupId = audioGroupId;
+      this.groupId = audioGroupId || null;
 
       const audioTracks = this.tracks.filter(
         (track): boolean => !audioGroupId || track.groupId === audioGroupId
@@ -132,16 +136,18 @@ class AudioTrackController extends BasePlaylistController {
       this.tracksInGroup = audioTracks;
       const audioTracksUpdated: AudioTracksUpdatedData = { audioTracks };
       this.log(
-        `Updating audio tracks, ${audioTracks.length} track(s) found in "${audioGroupId}" group-id`
+        `Updating audio tracks, ${audioTracks.length} track(s) found in group:${audioGroupId}`
       );
       this.hls.trigger(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
 
       this.selectInitialTrack();
+    } else if (this.shouldReloadPlaylist(this.currentTrack)) {
+      // Retry playlist loading if no playlist is or has been loaded yet
+      this.setAudioTrack(this.trackId);
     }
   }
 
   protected onError(event: Events.ERROR, data: ErrorData): void {
-    super.onError(event, data);
     if (data.fatal || !data.context) {
       return;
     }
@@ -151,7 +157,8 @@ class AudioTrackController extends BasePlaylistController {
       data.context.id === this.trackId &&
       data.context.groupId === this.groupId
     ) {
-      this.retryLoadingOrFail(data);
+      this.requestScheduled = -1;
+      this.checkRetry(data);
     }
   }
 
@@ -181,20 +188,17 @@ class AudioTrackController extends BasePlaylistController {
     // stopping live reloading timer if any
     this.clearTimer();
 
-    const lastTrack = tracks[this.trackId];
-    this.log(`Now switching to audio-track index ${newId}`);
+    const lastTrack = this.currentTrack;
+    tracks[this.trackId];
     const track = tracks[newId];
-    const { id, groupId = '', name, type, url } = track;
+    const { groupId, name } = track;
+    this.log(
+      `Switching to audio-track ${newId} "${name}" lang:${track.lang} group:${groupId}`
+    );
     this.trackId = newId;
-    this.trackName = name;
+    this.currentTrack = track;
     this.selectDefaultTrack = false;
-    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, {
-      id,
-      groupId,
-      name,
-      type,
-      url,
-    });
+    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { ...track });
     // Do not reload track unless live
     if (track.details && !track.details.live) {
       return;
@@ -205,33 +209,43 @@ class AudioTrackController extends BasePlaylistController {
 
   private selectInitialTrack(): void {
     const audioTracks = this.tracksInGroup;
-    console.assert(
-      audioTracks.length,
-      'Initial audio track should be selected when tracks are known'
-    );
-    const currentAudioTrackName = this.trackName;
     const trackId =
-      this.findTrackId(currentAudioTrackName) || this.findTrackId();
+      this.findTrackId(this.currentTrack) | this.findTrackId(null);
 
     if (trackId !== -1) {
       this.setAudioTrack(trackId);
     } else {
-      this.warn(`No track found for running audio group-ID: ${this.groupId}`);
+      const error = new Error(
+        `No track found for running audio group-ID: ${this.groupId} track count: ${audioTracks.length}`
+      );
+      this.warn(error.message);
 
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: true,
+        error,
       });
     }
   }
 
-  private findTrackId(name?: string): number {
+  private findTrackId(currentTrack: MediaPlaylist | null): number {
     const audioTracks = this.tracksInGroup;
     for (let i = 0; i < audioTracks.length; i++) {
       const track = audioTracks[i];
       if (!this.selectDefaultTrack || track.default) {
-        if (!name || name === track.name) {
+        if (
+          !currentTrack ||
+          (currentTrack.attrs['STABLE-RENDITION-ID'] !== undefined &&
+            currentTrack.attrs['STABLE-RENDITION-ID'] ===
+              track.attrs['STABLE-RENDITION-ID'])
+        ) {
+          return track.id;
+        }
+        if (
+          currentTrack.name === track.name &&
+          currentTrack.lang === track.lang
+        ) {
           return track.id;
         }
       }
@@ -242,7 +256,7 @@ class AudioTrackController extends BasePlaylistController {
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
     super.loadPlaylist();
     const audioTrack = this.tracksInGroup[this.trackId];
-    if (this.shouldLoadTrack(audioTrack)) {
+    if (this.shouldLoadPlaylist(audioTrack)) {
       const id = audioTrack.id;
       const groupId = audioTrack.groupId as string;
       let url = audioTrack.url;
@@ -256,7 +270,9 @@ class AudioTrackController extends BasePlaylistController {
         }
       }
       // track not retrieved yet, or live playlist we need to (re)load it
-      this.log(`loading audio-track playlist for id: ${id}`);
+      this.log(
+        `loading audio-track playlist ${id} "${audioTrack.name}" lang:${audioTrack.lang} group:${groupId}`
+      );
       this.clearTimer();
       this.hls.trigger(Events.AUDIO_TRACK_LOADING, {
         url,

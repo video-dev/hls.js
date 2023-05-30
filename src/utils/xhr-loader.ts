@@ -5,13 +5,18 @@ import type {
   LoaderStats,
   Loader,
   LoaderConfiguration,
+  LoaderResponse,
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
+import { type HlsConfig, RetryConfig } from '../config';
+import { getRetryDelay, shouldRetry } from './error-helper';
 
-const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/m;
+const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/im;
 
 class XhrLoader implements Loader<LoaderContext> {
-  private xhrSetup: Function | null;
+  private xhrSetup:
+    | ((xhr: XMLHttpRequest, url: string) => Promise<void> | void)
+    | null;
   private requestTimeout?: number;
   private retryTimeout?: number;
   private retryDelay: number;
@@ -22,20 +27,20 @@ class XhrLoader implements Loader<LoaderContext> {
   private loader: XMLHttpRequest | null = null;
   public stats: LoaderStats;
 
-  constructor(config /* HlsConfig */) {
-    this.xhrSetup = config ? config.xhrSetup : null;
+  constructor(config: HlsConfig) {
+    this.xhrSetup = config ? config.xhrSetup || null : null;
     this.stats = new LoadStats();
     this.retryDelay = 0;
   }
 
-  destroy(): void {
+  destroy() {
     this.callbacks = null;
     this.abortInternal();
     this.loader = null;
     this.config = null;
   }
 
-  abortInternal(): void {
+  abortInternal() {
     const loader = this.loader;
     self.clearTimeout(this.requestTimeout);
     self.clearTimeout(this.retryTimeout);
@@ -49,7 +54,7 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  abort(): void {
+  abort() {
     this.abortInternal();
     if (this.callbacks?.onAbort) {
       this.callbacks.onAbort(this.stats, this.context, this.loader);
@@ -60,7 +65,7 @@ class XhrLoader implements Loader<LoaderContext> {
     context: LoaderContext,
     config: LoaderConfiguration,
     callbacks: LoaderCallbacks<LoaderContext>
-  ): void {
+  ) {
     if (this.stats.loading.start) {
       throw new Error('Loader can only be used once.');
     }
@@ -68,11 +73,10 @@ class XhrLoader implements Loader<LoaderContext> {
     this.context = context;
     this.config = config;
     this.callbacks = callbacks;
-    this.retryDelay = config.retryDelay;
     this.loadInternal();
   }
 
-  loadInternal(): void {
+  loadInternal() {
     const { config, context } = this;
     if (!config) {
       return;
@@ -84,35 +88,50 @@ class XhrLoader implements Loader<LoaderContext> {
     stats.loaded = 0;
     const xhrSetup = this.xhrSetup;
 
-    try {
-      if (xhrSetup) {
-        try {
-          xhrSetup(xhr, context.url);
-        } catch (e) {
-          // fix xhrSetup: (xhr, url) => {xhr.setRequestHeader("Content-Language", "test");}
-          // not working, as xhr.setRequestHeader expects xhr.readyState === OPEN
+    if (xhrSetup) {
+      Promise.resolve()
+        .then(() => {
+          if (this.stats.aborted) return;
+          return xhrSetup(xhr, context.url);
+        })
+        .catch((error: Error) => {
           xhr.open('GET', context.url, true);
-          xhrSetup(xhr, context.url);
-        }
-      }
-      if (!xhr.readyState) {
-        xhr.open('GET', context.url, true);
-      }
+          return xhrSetup(xhr, context.url);
+        })
+        .then(() => {
+          if (this.stats.aborted) return;
+          this.openAndSendXhr(xhr, context, config);
+        })
+        .catch((error: Error) => {
+          // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
+          this.callbacks!.onError(
+            { code: xhr.status, text: error.message },
+            context,
+            xhr,
+            stats
+          );
+          return;
+        });
+    } else {
+      this.openAndSendXhr(xhr, context, config);
+    }
+  }
 
-      const headers = this.context.headers;
-      if (headers) {
-        for (const header in headers) {
-          xhr.setRequestHeader(header, headers[header]);
-        }
+  openAndSendXhr(
+    xhr: XMLHttpRequest,
+    context: LoaderContext,
+    config: LoaderConfiguration
+  ) {
+    if (!xhr.readyState) {
+      xhr.open('GET', context.url, true);
+    }
+
+    const headers = this.context.headers;
+    const { maxTimeToFirstByteMs, maxLoadTimeMs } = config.loadPolicy;
+    if (headers) {
+      for (const header in headers) {
+        xhr.setRequestHeader(header, headers[header]);
       }
-    } catch (e) {
-      // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
-      this.callbacks!.onError(
-        { code: xhr.status, text: e.message },
-        context,
-        xhr
-      );
-      return;
     }
 
     if (context.rangeEnd) {
@@ -127,6 +146,10 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.responseType = context.responseType as XMLHttpRequestResponseType;
     // setup timeout before we perform request
     self.clearTimeout(this.requestTimeout);
+    config.timeout =
+      maxTimeToFirstByteMs && Number.isFinite(maxTimeToFirstByteMs)
+        ? maxTimeToFirstByteMs
+        : maxLoadTimeMs;
     this.requestTimeout = self.setTimeout(
       this.loadtimeout.bind(this),
       config.timeout
@@ -134,7 +157,7 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.send();
   }
 
-  readystatechange(): void {
+  readystatechange() {
     const { context, loader: xhr, stats } = this;
     if (!context || !xhr) {
       return;
@@ -149,41 +172,45 @@ class XhrLoader implements Loader<LoaderContext> {
 
     // >= HEADERS_RECEIVED
     if (readyState >= 2) {
-      // clear xhr timeout and rearm it if readyState less than 4
-      self.clearTimeout(this.requestTimeout);
       if (stats.loading.first === 0) {
         stats.loading.first = Math.max(
           self.performance.now(),
           stats.loading.start
         );
+        // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
+        if (config.timeout !== config.loadPolicy.maxLoadTimeMs) {
+          self.clearTimeout(this.requestTimeout);
+          config.timeout = config.loadPolicy.maxLoadTimeMs;
+          this.requestTimeout = self.setTimeout(
+            this.loadtimeout.bind(this),
+            config.loadPolicy.maxLoadTimeMs -
+              (stats.loading.first - stats.loading.start)
+          );
+        }
       }
 
       if (readyState === 4) {
+        self.clearTimeout(this.requestTimeout);
         xhr.onreadystatechange = null;
         xhr.onprogress = null;
         const status = xhr.status;
         // http status between 200 to 299 are all successful
-        const isArrayBuffer = xhr.responseType === 'arraybuffer';
+        const useResponse = xhr.responseType !== 'text';
         if (
           status >= 200 &&
           status < 300 &&
-          ((isArrayBuffer && xhr.response) || xhr.responseText !== null)
+          ((useResponse && xhr.response) || xhr.responseText !== null)
         ) {
           stats.loading.end = Math.max(
             self.performance.now(),
             stats.loading.first
           );
-          let data;
-          let len: number;
-          if (isArrayBuffer) {
-            data = xhr.response;
-            len = data.byteLength;
-          } else {
-            data = xhr.responseText;
-            len = data.length;
-          }
+          const data = useResponse ? xhr.response : xhr.responseText;
+          const len =
+            xhr.responseType === 'arraybuffer' ? data.byteLength : data.length;
           stats.loaded = stats.total = len;
-
+          stats.bwEstimate =
+            (stats.total * 8000) / (stats.loading.end - stats.loading.first);
           if (!this.callbacks) {
             return;
           }
@@ -194,67 +221,71 @@ class XhrLoader implements Loader<LoaderContext> {
           if (!this.callbacks) {
             return;
           }
-          const response = {
+          const response: LoaderResponse = {
             url: xhr.responseURL,
             data: data,
+            code: status,
           };
 
           this.callbacks.onSuccess(response, stats, context, xhr);
         } else {
+          const retryConfig = config.loadPolicy.errorRetry;
+          const retryCount = stats.retry;
           // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-          if (
-            stats.retry >= config.maxRetry ||
-            (status >= 400 && status < 499)
-          ) {
+          if (shouldRetry(retryConfig, retryCount, false, status)) {
+            this.retry(retryConfig);
+          } else {
             logger.error(`${status} while loading ${context.url}`);
             this.callbacks!.onError(
               { code: status, text: xhr.statusText },
               context,
-              xhr
+              xhr,
+              stats
             );
-          } else {
-            // retry
-            logger.warn(
-              `${status} while loading ${context.url}, retrying in ${this.retryDelay}...`
-            );
-            // abort and reset internal state
-            this.abortInternal();
-            this.loader = null;
-            // schedule retry
-            self.clearTimeout(this.retryTimeout);
-            this.retryTimeout = self.setTimeout(
-              this.loadInternal.bind(this),
-              this.retryDelay
-            );
-            // set exponential backoff
-            this.retryDelay = Math.min(
-              2 * this.retryDelay,
-              config.maxRetryDelay
-            );
-            stats.retry++;
           }
         }
-      } else {
-        // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
-        self.clearTimeout(this.requestTimeout);
-        this.requestTimeout = self.setTimeout(
-          this.loadtimeout.bind(this),
-          config.timeout
-        );
       }
     }
   }
 
-  loadtimeout(): void {
-    logger.warn(`timeout while loading ${this.context.url}`);
-    const callbacks = this.callbacks;
-    if (callbacks) {
-      this.abortInternal();
-      callbacks.onTimeout(this.stats, this.context, this.loader);
+  loadtimeout() {
+    const retryConfig = this.config?.loadPolicy.timeoutRetry;
+    const retryCount = this.stats.retry;
+    if (shouldRetry(retryConfig, retryCount, true)) {
+      this.retry(retryConfig);
+    } else {
+      logger.warn(`timeout while loading ${this.context.url}`);
+      const callbacks = this.callbacks;
+      if (callbacks) {
+        this.abortInternal();
+        callbacks.onTimeout(this.stats, this.context, this.loader);
+      }
     }
   }
 
-  loadprogress(event: ProgressEvent): void {
+  retry(retryConfig: RetryConfig) {
+    const { context, stats } = this;
+    this.retryDelay = getRetryDelay(retryConfig, stats.retry);
+    stats.retry++;
+    logger.warn(
+      `${status ? 'HTTP Status ' + status : 'Timeout'} while loading ${
+        context.url
+      }, retrying ${stats.retry}/${retryConfig.maxNumRetry} in ${
+        this.retryDelay
+      }ms`
+    );
+    // abort and reset internal state
+    this.abortInternal();
+    this.loader = null;
+    // schedule retry
+    self.clearTimeout(this.retryTimeout);
+    this.retryTimeout = self.setTimeout(
+      this.loadInternal.bind(this),
+      this.retryDelay
+    );
+  }
+
+  loadprogress(event: ProgressEvent) {
     const stats = this.stats;
 
     stats.loaded = event.loaded;
@@ -273,6 +304,18 @@ class XhrLoader implements Loader<LoaderContext> {
       result = ageHeader ? parseFloat(ageHeader) : null;
     }
     return result;
+  }
+
+  getResponseHeader(name: string): string | null {
+    if (
+      this.loader &&
+      new RegExp(`^${name}:\\s*[\\d.]+\\s*$`, 'im').test(
+        this.loader.getAllResponseHeaders()
+      )
+    ) {
+      return this.loader.getResponseHeader(name);
+    }
+    return null;
   }
 }
 

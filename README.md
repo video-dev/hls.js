@@ -2,10 +2,11 @@
 [![npm](https://img.shields.io/npm/v/hls.js/canary.svg?style=flat)](https://www.npmjs.com/package/hls.js/v/canary)
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
 [![Sauce Test Status](https://saucelabs.com/buildstatus/robwalch)](https://app.saucelabs.com/u/robwalch)
+[![jsDeliver](https://data.jsdelivr.com/v1/package/npm/hls.js/badge)](https://www.jsdelivr.com/package/npm/hls.js)
 
 [comment]: <> ([![Sauce Test Status]&#40;https://saucelabs.com/browser-matrix/robwalch.svg&#41;]&#40;https://saucelabs.com/u/robwalch&#41;)
 
-# ![HLS.js](./docs/logo.svg)
+# ![HLS.js](https://raw.githubusercontent.com/video-dev/hls.js/master/docs/logo.svg)
 
 HLS.js is a JavaScript library that implements an [HTTP Live Streaming] client.
 It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
@@ -18,7 +19,7 @@ HLS.js works directly on top of a standard HTML`<video>` element.
 
 HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using [Babel](https://babeljs.io/) and the [TypeScript compiler].
 
-[Webpack] is used to build the distro bundle and serve the local development environment.
+[Rollup] is used to build the distro bundle and serve the local development environment.
 
 [html5 video]: https://www.html5rocks.com/en/tutorials/video/basics/
 [mediasource extensions]: https://w3c.github.io/media-source/
@@ -27,7 +28,7 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
 [ecmascript6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
 [typescript]: https://www.typescriptlang.org/
 [typescript compiler]: https://www.typescriptlang.org/docs/handbook/compiler-options.html
-[webpack]: https://webpack.js.org/
+[rollup]: https://rollupjs.org/
 
 ## Features
 
@@ -45,7 +46,8 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
 - AES-128 decryption
 - SAMPLE-AES decryption (only supported if using MPEG-2 TS container)
 - Encrypted media extensions (EME) support for DRM (digital rights management)
-  - Widevine CDM (only tested with [shaka-packager](https://github.com/google/shaka-packager) test-stream on [the demo page](https://hls-js.netlify.app/demo/?src=https%3A%2F%2Fstorage.googleapis.com%2Fshaka-demo-assets%2Fangel-one-widevine-hls%2Fhls.m3u8&demoConfig=eyJlbmFibGVTdHJlYW1pbmciOnRydWUsImF1dG9SZWNvdmVyRXJyb3IiOnRydWUsInN0b3BPblN0YWxsIjpmYWxzZSwiZHVtcGZNUDQiOmZhbHNlLCJsZXZlbENhcHBpbmciOi0xLCJsaW1pdE1ldHJpY3MiOi0xfQ==))
+  - FairPlay, PlayReady, Widevine CDMs with fmp4 segments
+- Level capping based on HTMLMediaElement resolution, dropped-frames, and HDCP-Level
 - CEA-608/708 captions
 - WebVTT subtitles
 - Alternate Audio Track Rendition (Master Playlist with Alternative Audio) for VoD and Live playlists
@@ -65,23 +67,28 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
   - Retry mechanism embedded in the library
   - Recovery actions can be triggered fix fatal media or network errors
 - [Redundant/Failover Playlists](https://developer.apple.com/library/ios/documentation/NetworkingInternet/Conceptual/StreamingMediaGuide/UsingHTTPLiveStreaming/UsingHTTPLiveStreaming.html#//apple_ref/doc/uid/TP40008332-CH102-SW22)
+- HLS Variable Substitution
 
-### Supported M3U8 tags
+### Supported HLS tags
 
-For details on the HLS format and these tags' meanings, see https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-08
+For details on the HLS format and these tags' meanings, see https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis
 
-#### Manifest tags
+#### Multivariant Playlist tags
 
 - `#EXT-X-STREAM-INF:<attribute-list>`
   `<URI>`
 - `#EXT-X-MEDIA:<attribute-list>`
 - `#EXT-X-SESSION-DATA:<attribute-list>`
+- `#EXT-X-SESSION-KEY:<attribute-list>` EME Key-System selection and preloading
+- `#EXT-X-START:TIME-OFFSET=<n>`
+- `#EXT-X-CONTENT-STEERING:<attribute-list>` Content Steering
+- `#EXT-X-DEFINE:<attribute-list>` Variable Substitution (`NAME,VALUE,QUERYPARAM` attributes)
 
 The following properties are added to their respective variants' attribute list but are not implemented in their selection and playback.
 
-- `VIDEO-RANGE` and `HDCP-LEVEL` (See [#2489](https://github.com/video-dev/hls.js/issues/2489))
+- `VIDEO-RANGE` (See [#2489](https://github.com/video-dev/hls.js/issues/2489))
 
-#### Playlist tags
+#### Media Playlist tags
 
 - `#EXTM3U`
 - `#EXT-X-VERSION=<n>`
@@ -99,34 +106,43 @@ The following properties are added to their respective variants' attribute list 
 - `#EXT-X-SERVER-CONTROL:<attribute-list>`
 - `#EXT-X-PART-INF:PART-TARGET=<n>`
 - `#EXT-X-PART:<attribute-list>`
-- `#EXT-X-PRELOAD-HINT:<attribute-list>`
-- `#EXT-X-SKIP:<attribute-list>`
+- `#EXT-X-SKIP:<attribute-list>` Delta Playlists
 - `#EXT-X-RENDITION-REPORT:<attribute-list>`
-- `#EXT-X-DATERANGE:<attribute-list>`
+- `#EXT-X-DATERANGE:<attribute-list>` Metadata
+- `#EXT-X-DEFINE:<attribute-list>` Variable Import and Substitution (`NAME,VALUE,IMPORT,QUERYPARAM` attributes)
+- `#EXT-X-GAP` (Skips loading GAP segments and parts. Skips playback of unbuffered program containing only GAP content and no suitable alternates. See [#2940](https://github.com/video-dev/hls.js/issues/2940))
 
 The following tags are added to their respective fragment's attribute list but are not implemented in streaming and playback.
 
 - `#EXT-X-BITRATE` (Not used in ABR controller)
-- `#EXT-X-GAP` (Not implemented. See [#2940](https://github.com/video-dev/hls.js/issues/2940))
+
+Parsed but missing feature support
+
+- `#EXT-X-PRELOAD-HINT:<attribute-list>` (See [#5074](https://github.com/video-dev/hls.js/issues/3988))
+  - #5074
 
 ### Not Supported
 
 For a complete list of issues, see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependent on the runtime environment (for example, not all browsers on the same OS support HEVC).
 
-- FairPlay and PlayReady DRM ( See [#3779](https://github.com/video-dev/hls.js/issues/2360) and [issues labeled DRM](https://github.com/video-dev/hls.js/issues?q=is%3Aissue+is%3Aopen+label%3ADRM))
 - Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
 - HLS Content Steering
 - HLS Interstitials
-- `#EXT-X-DEFINE` variable substitution
 - `#EXT-X-GAP` filling [#2940](https://github.com/video-dev/hls.js/issues/2940)
 - `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
 - `SAMPLE-AES` with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
+- FairPlay, PlayReady, Widevine DRM with MPEG-2 TS segments
+- FairPlay legacy keys (For com.apple.fps.1_0 use native Safari playback)
+- Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
+- MP3 elementary stream audio in IE and Edge (<=18) on Windows 10 (See [#1641](https://github.com/video-dev/hls.js/issues/1641) and [Microsoft answers forum](https://answers.microsoft.com/en-us/ie/forum/all/ie11-on-windows-10-cannot-play-hls-with-mp3/2da994b5-8dec-4ae9-9201-7d138ede49d9))
 
 ### Server-side-rendering (SSR) and `require` from a Node.js runtime
 
 You can safely require this library in Node and **absolutely nothing will happen**. A dummy object is exported so that requiring the library does not throw an error. HLS.js is not instantiable in Node.js. See [#1841](https://github.com/video-dev/hls.js/pull/1841) for more details.
 
 ## Getting started with development
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/video-dev/hls.js/tree/master?title=HLS.JS)
 
 First, checkout the repository and install the required dependencies
 
@@ -161,7 +177,7 @@ Only debug-mode artifacts:
 npm run build:debug
 ```
 
-Build and watch (customized dev setups where you'll want to host through another server than webpacks' - for example in a sub-module/project)
+Build and watch (customized dev setups where you'll want to host through another server - for example in a sub-module/project)
 
 ```
 npm run build:watch
@@ -175,8 +191,7 @@ npm run build -- --env dist # replace "dist" by other configuration name, see ab
 
 Note: The "demo" config is always built.
 
-**NOTE:** `hls.light.*.js` dist files do not include EME, subtitles, CMCD, or alternate-audio support. In addition,
-the following types are not available in the light build:
+**NOTE:** `hls.light.*.js` dist files do not include alternate-audio, subtitles, CMCD, EME (DRM), or Variable Substitution support. In addition, the following types are not available in the light build:
 
 - `AudioStreamController`
 - `AudioTrackController`
@@ -256,8 +271,8 @@ An overview of this project's design, it's modules, events, and error handling c
 ## API docs and usage guide
 
 - [API and usage docs, with code examples](./docs/API.md)
-- [Auto-Generated API Docs (Latest Release)](https://hls-js.netlify.com/api-docs)
-- [Auto-Generated API Docs (Development Branch)](https://hls-js-dev.netlify.com/api-docs)
+- [Auto-Generated API Docs (Latest Release)](https://hlsjs.video-dev.org/api-docs)
+- [Auto-Generated API Docs (Development Branch)](https://hlsjs-dev.video-dev.org/api-docs)
 
 _Note you can access the docs for a particular version using "[https://github.com/video-dev/hls.js/tree/deployments](https://github.com/video-dev/hls.js/tree/deployments)"_
 
@@ -265,17 +280,15 @@ _Note you can access the docs for a particular version using "[https://github.co
 
 ### Latest Release
 
-[https://hls-js.netlify.com/demo](https://hls-js.netlify.com/demo)
+[https://hlsjs.video-dev.org/demo](https://hlsjs.video-dev.org/demo)
 
 ### Master
 
-[https://hls-js-dev.netlify.com/demo](https://hls-js-dev.netlify.com/demo)
+[https://hlsjs-dev.video-dev.org/demo](https://hlsjs-dev.video-dev.org/demo)
 
 ### Specific Version
 
 Find the commit on [https://github.com/video-dev/hls.js/tree/deployments](https://github.com/video-dev/hls.js/tree/deployments).
-
-[![](https://www.netlify.com/img/global/badges/netlify-color-accent.svg)](https://www.netlify.com)
 
 [![](https://opensource.saucelabs.com/images/opensauce/powered-by-saucelabs-badge-gray.png?sanitize=true)](https://saucelabs.com)
 
@@ -397,6 +410,10 @@ All HLS resources must be delivered with [CORS headers](https://developer.mozill
 
 Video is controlled through HTML `<video>` element `HTMLVideoElement` methods, events and optional UI controls (`<video controls>`).
 
+## Build a Custom UI
+
+- [Media Chrome](https://github.com/muxinc/media-chrome)
+
 ## Player Integration
 
 The following players integrate HLS.js for HLS playback:
@@ -407,27 +424,29 @@ The following players integrate HLS.js for HLS playback:
 - [Clappr](https://github.com/clappr/clappr)
 - [Flowplayer](https://www.flowplayer.org) through [flowplayer-hlsjs](https://github.com/flowplayer/flowplayer-hlsjs)
 - [MediaElement.js](https://www.mediaelementjs.com)
+- [KalturaPlayer](https://developer.kaltura.com) through [kaltura-player-js](https://github.com/kaltura/kaltura-player-js#readme)
 - [Videojs](https://videojs.com) through [Videojs-hlsjs](https://github.com/benjipott/videojs-hlsjs)
 - [Videojs](https://videojs.com) through [videojs-hls.js](https://github.com/streamroot/videojs-hls.js). hls.js is integrated as a SourceHandler -- new feature in Video.js 5.
 - [Videojs](https://videojs.com) through [videojs-contrib-hls.js](https://github.com/Peer5/videojs-contrib-hls.js). Production ready plug-in with full fallback compatibility built-in.
 - [Fluid Player](https://www.fluidplayer.com)
 - [OpenPlayerJS](https://www.openplayerjs.com), as part of the [OpenPlayer project](https://github.com/openplayerjs)
 - [CDNBye](https://github.com/cdnbye/hlsjs-p2p-engine), a p2p engine for hls.js powered by WebRTC Datachannel.
+- [M3U IPTV](http://m3u-ip.tv/browser/)
 
 ### They use HLS.js in production!
 
 |                                                                                                                                                              |                                                                                                                                                                         |                                                                                                                                                                |                                                                                                                                                                                                                                         |
 | :----------------------------------------------------------------------------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------: | :------------------------------------------------------------------------------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------: |
 |                 [<img src="https://i.cdn.turner.com/adultswim/big/img/global/adultswim.jpg" width="120">](https://www.adultswim.com/streams)                 |                              [<img src="https://avatars3.githubusercontent.com/u/5497190?s=200&v=4" width="120">](https://www.akamai.com)                               |       [<img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Canal%2B.svg/2000px-Canal%2B.svg.png" width="120">](https://www.canalplus.fr)       |                                                                 [<img src="https://avatars2.githubusercontent.com/u/115313" width="120">](https://www.dailymotion.com)                                                                  |
-|     [<img src="https://user-images.githubusercontent.com/4006693/44003595-baff193c-9e8f-11e8-9848-7bb91563499f.png" width="120">](https://freshlive.tv)      |                                    [<img src="https://flowplayer.org/media/img/logo-blue.png" width="120">](https://flowplayer.com)                                     |                        [<img src="https://avatars1.githubusercontent.com/u/12554082?s=240" width="120">](https://www.foxsports.com.au)                         |                                          [<img src="https://cloud.githubusercontent.com/assets/244265/12556435/dfaceb48-c353-11e5-971b-2c4429725469.png" width="120">](https://www.globo.com)                                           |
+|     [<img src="https://user-images.githubusercontent.com/4006693/44003595-baff193c-9e8f-11e8-9848-7bb91563499f.png" width="120">](https://freshlive.tv)      |           [<img src="https://user-images.githubusercontent.com/360826/231535440-7cf075f1-bf38-4640-a0a7-d9ff74a1e396.png" width="120">](https://www.mux.com/)           |                        [<img src="https://avatars1.githubusercontent.com/u/12554082?s=240" width="120">](https://www.foxsports.com.au)                         |                                          [<img src="https://cloud.githubusercontent.com/assets/244265/12556435/dfaceb48-c353-11e5-971b-2c4429725469.png" width="120">](https://www.globo.com)                                           |
 |                          [<img src="https://images.gunosy.com/logo/gunosy_icon_company_logo.png" width="120">](https://gunosy.com)                           |      [<img src="https://user-images.githubusercontent.com/1480052/35802840-f8e85b8a-0a71-11e8-8eb2-eee323e3f159.png" width="120">](https://www.gl-systemhaus.de/)       |       [<img src="https://cloud.githubusercontent.com/assets/6525783/20801836/700490de-b7ea-11e6-82bd-e249f91c7bae.jpg" width="120">](https://nettrek.de)       |                                         [<img src="https://cloud.githubusercontent.com/assets/244265/12556385/999aa884-c353-11e5-9102-79df54384498.png" width="120">](https://www.nytimes.com/)                                         |
 |    [<img src="https://cloud.githubusercontent.com/assets/1798553/20356424/ba158574-ac24-11e6-95e1-1ae591b11a0a.png" width="120">](https://www.peer5.com/)    |         [<img src="https://cloud.githubusercontent.com/assets/4909096/20925062/e26e6fc8-bbb4-11e6-99a5-d4762274a342.png" width="120">](https://www.qbrick.com)          |          [<img src="https://www.radiantmediaplayer.com/images/radiantmediaplayer-new-logo-640.jpg" width="120">](https://www.radiantmediaplayer.com/)          |                                                             [<img src="https://www.rts.ch/hummingbird-static/images/logos/logo_marts.svg" width="120">](https://www.rts.ch)                                                             |
 | [<img src="https://cloud.githubusercontent.com/assets/12702747/19316434/0a3601de-9067-11e6-85e2-936b1cb099a0.png" width="120">](https://www.snapstream.com/) |                    [<img src="https://pamediagroup.com/wp-content/uploads/2019/05/StreamAMG-Logo-RGB.png" width="120">](https://www.streamamg.com/)                     |            [<img src="https://streamsharkio.sa.metacdn.com/wp-content/uploads/2015/10/streamshark-dark.svg" width="120">](https://streamshark.io/)             | [<img src="https://camo.githubusercontent.com/9580f10e9bfa8aa7fba52c5cb447bee0757e33da/68747470733a2f2f7777772e7461626c6f74762e636f6d2f7374617469632f696d616765732f7461626c6f5f6c6f676f2e706e67" width="120">](https://my.tablotv.com/) |
-|  [<img src="https://user-images.githubusercontent.com/2803310/34083705-349c8fd0-e375-11e7-92a6-5c38509f4936.png" width="120">](https://www.streamroot.io/)   |             [<img src="https://vignette1.wikia.nocookie.net/tedtalks/images/c/c0/TED_logo.png/revision/20150915192527" width="120">](https://www.ted.com/)              |              [<img src="https://www.seeklogo.net/wp-content/uploads/2014/12/twitter-logo-vector-download.jpg" width="120">](https://twitter.com/)              |                                                                 [<img src="https://player.clevercast.com/img/clevercast.png" width="120">](https://www.clevercast.com)                                                                  |
-|                        [<img src="https://player.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120">](https://www.viacom.com/)                        |             [<img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120">](https://vk.com/)              |                         [<img src="https://avatars0.githubusercontent.com/u/5090060?s=200&v=4" width="120">](https://www.jwplayer.com)                         |                                                   [<img src="https://staticftv-a.akamaihd.net/arches/francetv/default/img/og-image.jpg?20161007" width="120">](https://www.france.tv)                                                   |
-|                          [<img src="https://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)                          | [<img src="https://static3.1tv.ru/assets/web/logo-ac67852f1625b338f9d1fb96be089d03557d50bfc5790d5f48dc56799f59dec6.svg" width="120" height="120">](https://www.1tv.ru/) |       [<img src="https://user-images.githubusercontent.com/1480052/40482633-c013ebce-5f55-11e8-96d5-b776415de0ce.png" width="120">](https://www.zdf.de)        |                                              [<img src="https://github.com/cdnbye/hlsjs-p2p-engine/blob/master/figs/cdnbye.png" width="120">](https://github.com/cdnbye/hlsjs-p2p-engine)                                               |
+|  [<img src="https://user-images.githubusercontent.com/2803310/34083705-349c8fd0-e375-11e7-92a6-5c38509f4936.png" width="120">](https://www.streamroot.io/)   |           [<img src="https://user-images.githubusercontent.com/360826/231538721-156a865d-a505-45e7-a362-dafbaf2b182f.png" width="120">](https://www.ted.com/)           |              [<img src="https://www.seeklogo.net/wp-content/uploads/2014/12/twitter-logo-vector-download.jpg" width="120">](https://twitter.com/)              |                                                                 [<img src="https://player.clevercast.com/img/clevercast.png" width="120">](https://www.clevercast.com)                                                                  |
+|                        [<img src="https://player.mtvnservices.com/edge/hosted/Viacom_logo.svg" width="120">](https://www.viacom.com/)                        |             [<img src="https://user-images.githubusercontent.com/1181974/29248959-efabc440-802d-11e7-8050-7c1f4ca6c607.png" width="120">](https://vk.com/)              |                         [<img src="https://avatars0.githubusercontent.com/u/5090060?s=200&v=4" width="120">](https://www.jwplayer.com)                         |                                          [<img src="https://raw.githubusercontent.com/kaltura/kaltura-player-js/master/docs/images/kaltura-logo.svg" width="120">](https://corp.kaltura.com/)                                           |
+|                          [<img src="https://showmax.akamaized.net/e/logo/showmax_black.png" width="120">](https://tech.showmax.com)                          | [<img src="https://static3.1tv.ru/assets/web/logo-ac67852f1625b338f9d1fb96be089d03557d50bfc5790d5f48dc56799f59dec6.svg" width="120" height="120">](https://www.1tv.ru/) |       [<img src="https://user-images.githubusercontent.com/1480052/40482633-c013ebce-5f55-11e8-96d5-b776415de0ce.png" width="120">](https://www.zdf.de)        |                                                                  [<img src="https://cms-static.brid.tv/img/brid-logo-120x120.jpg" width="120">](https://www.brid.tv/)                                                                   |
 |                                                            [cdn77](https://streaming.cdn77.com/)                                                             |                                  [<img src="https://avatars0.githubusercontent.com/u/7442371?s=200&v=4" width="120">](https://r7.com/)                                  | [<img src="https://raw.githubusercontent.com/Novage/p2p-media-loader/gh-pages/images/p2pml-logo.png" width="120">](https://github.com/Novage/p2p-media-loader) |                                                              [<img src="https://avatars3.githubusercontent.com/u/45617200?s=400" width="120">](https://kayosports.com.au)                                                               |
-|    [<img src="https://avatars1.githubusercontent.com/u/5279615?s=400&u=9771a216836c613f1edf4afe71cfc69d4c5657ed&v=4" width="120">](https://flosports.tv)     |                  [<img src="https://www.logolynx.com/images/logolynx/c6/c67a2cb3ad33a82b5518f8ad8f124703.png" width="120">](https://global.axon.com/)                   |                              [<img src="https://cms-static.brid.tv/img/brid-logo-120x120.jpg" width="120">](https://www.brid.tv/)                              |                                                                                                                                                                                                                                         |
+|    [<img src="https://avatars1.githubusercontent.com/u/5279615?s=400&u=9771a216836c613f1edf4afe71cfc69d4c5657ed&v=4" width="120">](https://flosports.tv)     |                  [<img src="https://www.logolynx.com/images/logolynx/c6/c67a2cb3ad33a82b5518f8ad8f124703.png" width="120">](https://global.axon.com/)                   |                                                                                                                                                                |                                                                                                                                                                                                                                         |
 
 ## Chrome/Firefox integration
 

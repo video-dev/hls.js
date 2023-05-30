@@ -1,7 +1,10 @@
-import { sliceUint8 } from './typed-array';
 import { ElementaryStreamTypes } from '../loader/fragment';
-import { PassthroughTrack, UserdataSample } from '../types/demuxer';
+import { sliceUint8 } from './typed-array';
 import { utf8ArrayToStr } from '../demux/id3';
+import { logger } from '../utils/logger';
+import Hex from './hex';
+import type { PassthroughTrack, UserdataSample } from '../types/demuxer';
+import type { DecryptData } from '../loader/level-key';
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
 const push = [].push;
@@ -132,8 +135,7 @@ export function parseSegmentIndex(sidx: Uint8Array): SidxInfo | null {
     const referenceType = (referenceInfo & 0x80000000) >>> 31;
 
     if (referenceType === 1) {
-      // eslint-disable-next-line no-console
-      console.warn('SIDX has hierarchical references (not supported)');
+      logger.warn('SIDX has hierarchical references (not supported)');
       return null;
     }
 
@@ -184,8 +186,8 @@ export function parseSegmentIndex(sidx: Uint8Array): SidxInfo | null {
  * moov > trak > mdia > mdhd.timescale
  * moov > trak > mdia > hdlr
  * ```
- * @param initSegment {Uint8Array} the bytes of the init segment
- * @return {InitData} a hash of track type to timescale values or null if
+ * @param initSegment the bytes of the init segment
+ * @returns a hash of track type to timescale values or null if
  * the init segment is malformed.
  */
 
@@ -284,6 +286,65 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
   return result;
 }
 
+export function patchEncyptionData(
+  initSegment: Uint8Array | undefined,
+  decryptdata: DecryptData | null
+): Uint8Array | undefined {
+  if (!initSegment || !decryptdata) {
+    return initSegment;
+  }
+  const keyId = decryptdata.keyId;
+  if (keyId && decryptdata.isCommonEncryption) {
+    const traks = findBox(initSegment, ['moov', 'trak']);
+    traks.forEach((trak) => {
+      const stsd = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd'])[0];
+
+      // skip the sample entry count
+      const sampleEntries = stsd.subarray(8);
+      let encBoxes = findBox(sampleEntries, ['enca']);
+      const isAudio = encBoxes.length > 0;
+      if (!isAudio) {
+        encBoxes = findBox(sampleEntries, ['encv']);
+      }
+      encBoxes.forEach((enc) => {
+        const encBoxChildren = isAudio ? enc.subarray(28) : enc.subarray(78);
+        const sinfBoxes = findBox(encBoxChildren, ['sinf']);
+        sinfBoxes.forEach((sinf) => {
+          const tenc = parseSinf(sinf);
+          if (tenc) {
+            // Look for default key id (keyID offset is always 8 within the tenc box):
+            const tencKeyId = tenc.subarray(8, 24);
+            if (!tencKeyId.some((b) => b !== 0)) {
+              logger.log(
+                `[eme] Patching keyId in 'enc${
+                  isAudio ? 'a' : 'v'
+                }>sinf>>tenc' box: ${Hex.hexDump(tencKeyId)} -> ${Hex.hexDump(
+                  keyId
+                )}`
+              );
+              tenc.set(keyId, 8);
+            }
+          }
+        });
+      });
+    });
+  }
+
+  return initSegment;
+}
+
+export function parseSinf(sinf: Uint8Array): Uint8Array | null {
+  const schm = findBox(sinf, ['schm'])[0];
+  if (schm) {
+    const scheme = bin2str(schm.subarray(4, 8));
+    if (scheme === 'cbcs' || scheme === 'cenc') {
+      return findBox(sinf, ['schi', 'tenc'])[0];
+    }
+  }
+  logger.error(`[eme] missing 'schm' box`);
+  return null;
+}
+
 /**
  * Determine the base media decode start time, in seconds, for an MP4
  * fragment. If multiple fragments are specified, the earliest time is
@@ -296,15 +357,18 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
  * ```
  * It requires the timescale value from the mdhd to interpret.
  *
- * @param initData {InitData} a hash of track type to timescale values
- * @param fmp4 {Uint8Array} the bytes of the mp4 fragment
- * @return {number} the earliest base media decode start time for the
+ * @param initData - a hash of track type to timescale values
+ * @param fmp4 - the bytes of the mp4 fragment
+ * @returns the earliest base media decode start time for the
  * fragment, in seconds
  */
-export function getStartDTS(initData: InitData, fmp4: Uint8Array): number {
+export function getStartDTS(
+  initData: InitData,
+  fmp4: Uint8Array
+): number | null {
   // we need info from two children of each track fragment box
-  return (
-    findBox(fmp4, ['moof', 'traf']).reduce((result: number | null, traf) => {
+  return findBox(fmp4, ['moof', 'traf']).reduce(
+    (result: number | null, traf) => {
       const tfdt = findBox(traf, ['tfdt'])[0];
       const version = tfdt[0];
       const start = findBox(traf, ['tfhd']).reduce(
@@ -315,7 +379,16 @@ export function getStartDTS(initData: InitData, fmp4: Uint8Array): number {
           if (track) {
             let baseTime = readUint32(tfdt, 4);
             if (version === 1) {
-              baseTime *= Math.pow(2, 32);
+              // If value is too large, assume signed 64-bit. Negative track fragment decode times are invalid, but they exist in the wild.
+              // This prevents large values from being used for initPTS, which can cause playlist sync issues.
+              // https://github.com/video-dev/hls.js/issues/5303
+              if (baseTime === UINT32_MAX) {
+                logger.warn(
+                  `[mp4-demuxer]: Ignoring assumed invalid signed 64-bit track fragment decode time`
+                );
+                return result;
+              }
+              baseTime *= UINT32_MAX + 1;
               baseTime += readUint32(tfdt, 8);
             }
             // assume a 90kHz clock if no timescale was specified
@@ -341,7 +414,8 @@ export function getStartDTS(initData: InitData, fmp4: Uint8Array): number {
         return start;
       }
       return result;
-    }, null) || 0
+    },
+    null
   );
 }
 
@@ -941,8 +1015,7 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
     presentationTime = 2 ** 32 * leftPresentationTime + rightPresentationTime;
     if (!Number.isSafeInteger(presentationTime)) {
       presentationTime = Number.MAX_SAFE_INTEGER;
-      // eslint-disable-next-line no-console
-      console.warn(
+      logger.warn(
         'Presentation time exceeds safe integer limit and wrapped to max safe integer in parsing emsg box'
       );
     }

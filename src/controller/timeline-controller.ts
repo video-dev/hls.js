@@ -8,6 +8,7 @@ import {
   addCueToTrack,
   removeCuesInRange,
 } from '../utils/texttrack-utils';
+import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { PlaylistLevelType } from '../types/loader';
@@ -30,6 +31,7 @@ import type { HlsConfig } from '../config';
 import type { CuesInterface } from '../utils/cues';
 import type { MediaPlaylist } from '../types/media-playlist';
 import type { VTTCCs } from '../types/vtt';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 type TrackProperties = {
   label: string;
@@ -54,8 +56,7 @@ export class TimelineController implements ComponentAPI {
   private Cues: CuesInterface;
   private textTracks: Array<TextTrack> = [];
   private tracks: Array<MediaPlaylist> = [];
-  private initPTS: Array<number> = [];
-  private timescale: Array<number> = [];
+  private initPTS: RationalTimestamp[] = [];
   private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private captionsTracks: Record<string, TextTrack> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
@@ -187,8 +188,7 @@ export class TimelineController implements ComponentAPI {
   ) {
     const { unparsedVttFrags } = this;
     if (id === 'main') {
-      this.initPTS[frag.cc] = initPTS;
-      this.timescale[frag.cc] = timescale;
+      this.initPTS[frag.cc] = { baseTime: initPTS, timescale };
     }
 
     // Due to asynchronous processing, initial PTS may arrive later than the first VTT fragments are loaded.
@@ -306,7 +306,6 @@ export class TimelineController implements ComponentAPI {
     this.textTracks = [];
     this.unparsedVttFrags = this.unparsedVttFrags || [];
     this.initPTS = [];
-    this.timescale = [];
     if (this.cea608Parser1 && this.cea608Parser2) {
       this.cea608Parser1.reset();
       this.cea608Parser2.reset();
@@ -331,20 +330,23 @@ export class TimelineController implements ComponentAPI {
     event: Events.SUBTITLE_TRACKS_UPDATED,
     data: SubtitleTracksUpdatedData
   ) {
-    this.textTracks = [];
     const tracks: Array<MediaPlaylist> = data.subtitleTracks || [];
     const hasIMSC1 = tracks.some((track) => track.textCodec === IMSC1_CODEC);
     if (this.config.enableWebVTT || (hasIMSC1 && this.config.enableIMSC1)) {
-      const sameTracks =
-        this.tracks && tracks && this.tracks.length === tracks.length;
-      this.tracks = tracks || [];
+      const listIsIdentical = subtitleOptionsIdentical(this.tracks, tracks);
+      if (listIsIdentical) {
+        this.tracks = tracks;
+        return;
+      }
+      this.textTracks = [];
+      this.tracks = tracks;
 
       if (this.config.renderTextTracksNatively) {
-        const inUseTracks = this.media ? this.media.textTracks : [];
+        const inUseTracks = this.media ? this.media.textTracks : null;
 
         this.tracks.forEach((track, index) => {
           let textTrack: TextTrack | undefined;
-          if (index < inUseTracks.length) {
+          if (inUseTracks && index < inUseTracks.length) {
             let inUseTrack: TextTrack | null = null;
 
             for (let i = 0; i < inUseTracks.length; i++) {
@@ -378,7 +380,7 @@ export class TimelineController implements ComponentAPI {
             this.textTracks.push(textTrack);
           }
         });
-      } else if (!sameTracks && this.tracks && this.tracks.length) {
+      } else if (this.tracks.length) {
         // Create a list of tracks for the provider to consume
         const tracksList = this.tracks.map((track) => {
           return {
@@ -398,7 +400,7 @@ export class TimelineController implements ComponentAPI {
   private _captionsOrSubtitlesFromCharacteristics(
     track: MediaPlaylist
   ): TextTrackKind {
-    if (track.attrs?.CHARACTERISTICS) {
+    if (track.attrs.CHARACTERISTICS) {
       const transcribesSpokenDialog = /transcribes-spoken-dialog/gi.test(
         track.attrs.CHARACTERISTICS
       );
@@ -480,7 +482,7 @@ export class TimelineController implements ComponentAPI {
       // If fragment is subtitle type, parse as WebVTT.
       if (payload.byteLength) {
         // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
-        if (!Number.isFinite(initPTS[frag.cc])) {
+        if (!initPTS[frag.cc]) {
           unparsedVttFrags.push(data);
           if (initPTS.length) {
             // finish unsuccessfully, otherwise the subtitle-stream-controller could be blocked from loading new frags.
@@ -497,12 +499,7 @@ export class TimelineController implements ComponentAPI {
         // fragment after decryption has a stats object
         const decrypted = 'stats' in data;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
-        if (
-          decryptData == null ||
-          decryptData.key == null ||
-          decryptData.method !== 'AES-128' ||
-          decrypted
-        ) {
+        if (decryptData == null || !decryptData.encrypted || decrypted) {
           const trackPlaylistMedia = this.tracks[frag.level];
           const vttCCs = this.vttCCs;
           if (!vttCCs[frag.cc]) {
@@ -538,7 +535,6 @@ export class TimelineController implements ComponentAPI {
     parseIMSC1(
       payload,
       this.initPTS[frag.cc],
-      this.timescale[frag.cc],
       (cues) => {
         this._appendCues(cues, frag.level);
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
@@ -566,7 +562,6 @@ export class TimelineController implements ComponentAPI {
     parseWebVTT(
       payloadWebVTT,
       this.initPTS[frag.cc],
-      this.timescale[frag.cc],
       vttCCs,
       frag.cc,
       frag.start,
@@ -597,7 +592,6 @@ export class TimelineController implements ComponentAPI {
       parseIMSC1(
         payload,
         this.initPTS[frag.cc],
-        this.timescale[frag.cc],
         () => {
           trackPlaylistMedia.textCodec = IMSC1_CODEC;
           this._parseIMSC1(frag, payload);
@@ -637,7 +631,7 @@ export class TimelineController implements ComponentAPI {
   ) {
     const { frag } = data;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
-      if (!Number.isFinite(this.initPTS[frag.cc])) {
+      if (!this.initPTS[frag.cc]) {
         this.unparsedVttFrags.push(data as unknown as FragLoadedData);
         return;
       }
@@ -738,9 +732,12 @@ export class TimelineController implements ComponentAPI {
   }
 }
 
-function canReuseVttTextTrack(inUseTrack, manifestTrack): boolean {
+function canReuseVttTextTrack(
+  inUseTrack: (TextTrack & { textTrack1?; textTrack2? }) | null,
+  manifestTrack: MediaPlaylist
+): boolean {
   return (
-    inUseTrack &&
+    !!inUseTrack &&
     inUseTrack.label === manifestTrack.name &&
     !(inUseTrack.textTrack1 || inUseTrack.textTrack2)
   );

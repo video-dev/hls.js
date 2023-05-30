@@ -1,40 +1,36 @@
-const { merge } = require('webpack-merge');
-const webpack = require('webpack');
-const webpackConfig = require('./webpack.config')({ debug: true })[0];
-delete webpackConfig.entry;
-delete webpackConfig.output;
-const karmaWebpack = {
-  devtool: 'inline-source-map',
-  module: {
-    rules: [
-      {
-        test: /\.(ts|js)$/,
-        exclude: /(node_modules|tests)/,
-        enforce: 'post',
-        use: [
-          {
-            loader: 'coverage-istanbul-loader',
-            options: {
-              esModules: true,
-            },
-          },
-        ],
-      },
-    ],
-  },
-  resolve: {
-    fallback: {
-      util: false,
-    },
-  },
+const { buildRollupConfig, BUILD_TYPE, FORMAT } = require('./build-config');
+
+// Do not add coverage for JavaScript debugging when running `test:unit:debug`
+// eslint-disable-next-line no-undef
+const includeCoverage = !process.env.DEBUG_UNIT_TESTS && !process.env.CI;
+
+const rollupPreprocessor = buildRollupConfig({
+  type: BUILD_TYPE.full,
+  format: FORMAT.iife,
+  minified: false,
+  allowCircularDeps: true,
+  includeCoverage,
+  sourcemap: false,
+  outputFile: 'karma-temp/tests.js',
+});
+
+// preprocess matching files before serving them to the browser
+// available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
+const preprocessors = {
+  './tests/index.js': ['rollup'],
+};
+// test results reporter to use
+// possible values: 'dots', 'progress'
+// available reporters: https://npmjs.org/browse/keyword/karma-reporter
+const reporters = ['mocha'];
+const coverageReporter = {
+  reporters: [],
 };
 
-// Remove coverage post-processor for JavaScript debugging when running `test:unit:debug`
-if (process.env.DEBUG_UNIT_TESTS) {
-  karmaWebpack.module.rules = [];
+if (includeCoverage) {
+  reporters.push('coverage');
+  coverageReporter.reporters.push({ type: 'html', subdir: '.' });
 }
-
-const mergeConfig = merge(webpackConfig, karmaWebpack);
 
 module.exports = function (config) {
   config.set({
@@ -43,7 +39,6 @@ module.exports = function (config) {
     frameworks: ['mocha', 'sinon-chai'],
 
     // list of files / patterns to load in the browser
-    // https://github.com/webpack-contrib/karma-webpack#alternative-usage
     files: [
       {
         pattern: 'tests/index.js',
@@ -54,24 +49,11 @@ module.exports = function (config) {
     // list of files to exclude
     exclude: [],
 
-    // preprocess matching files before serving them to the browser
-    // available preprocessors: https://npmjs.org/browse/keyword/karma-preprocessor
-    // node_modules must not be webpacked or else Karma will fail to load frameworks
-    preprocessors: {
-      'tests/index.js': ['webpack', 'sourcemap'],
-    },
+    preprocessors,
+    coverageReporter,
+    reporters,
 
-    // test results reporter to use
-    // possible values: 'dots', 'progress'
-    // available reporters: https://npmjs.org/browse/keyword/karma-reporter
-    reporters: ['mocha', 'coverage-istanbul'],
-
-    coverageIstanbulReporter: {
-      reports: ['lcov', 'text-summary'],
-      fixWebpackSourcePaths: true,
-    },
-
-    webpack: mergeConfig,
+    rollupPreprocessor,
 
     // web server port
     port: 9876,
@@ -96,6 +78,6 @@ module.exports = function (config) {
 
     // Concurrency level
     // how many browser should be started simultaneous
-    concurrency: Infinity,
+    concurrency: 1,
   });
 };

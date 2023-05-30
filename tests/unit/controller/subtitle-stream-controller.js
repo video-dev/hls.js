@@ -3,6 +3,9 @@ import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
+import { Fragment } from '../../../src/loader/fragment';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import KeyLoader from '../../../src/loader/key-loader';
 import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
 
 const mediaMock = {
@@ -11,20 +14,34 @@ const mediaMock = {
   removeEventListener() {},
 };
 
-const tracksMock = [{ id: 0, details: { url: '' } }, { id: 1 }];
+const tracksMock = [
+  {
+    id: 0,
+    details: { url: '', fragments: [] },
+    attrs: {},
+  },
+  {
+    id: 1,
+    attrs: {},
+  },
+];
 
 describe('SubtitleStreamController', function () {
   let hls;
   let fragmentTracker;
+  let keyLoader;
   let subtitleStreamController;
 
   beforeEach(function () {
     hls = new Hls({});
     mediaMock.currentTime = 0;
     fragmentTracker = new FragmentTracker(hls);
+    keyLoader = new KeyLoader({});
+
     subtitleStreamController = new SubtitleStreamController(
       hls,
-      fragmentTracker
+      fragmentTracker,
+      keyLoader
     );
 
     subtitleStreamController.onMediaAttached(Events.MEDIA_ATTACHED, {
@@ -36,6 +53,7 @@ describe('SubtitleStreamController', function () {
     subtitleStreamController.onMediaDetaching(Events.MEDIA_DETACHING, {
       media: mediaMock,
     });
+    hls.destroy();
   });
 
   describe('onSubtitleTracksUpdate', function () {
@@ -91,7 +109,7 @@ describe('SubtitleStreamController', function () {
 
     // Details are in subtitle-track-controller.js' onSubtitleTrackLoaded handler
     it('should handle the event if the data matches the current track', function () {
-      const details = { foo: 'bar' };
+      const details = { foo: 'bar', fragments: [] };
       subtitleStreamController.currentTrackId = 1;
       hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         id: 1,
@@ -101,7 +119,7 @@ describe('SubtitleStreamController', function () {
     });
 
     it('should ignore the event if the data does not match the current track', function () {
-      const details = { foo: 'bar' };
+      const details = { foo: 'bar', fragments: [] };
       subtitleStreamController.currentTrackId = 0;
       hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         id: 1,
@@ -114,7 +132,7 @@ describe('SubtitleStreamController', function () {
     it('should ignore the event if there are no tracks, or the id is not within the tracks array', function () {
       subtitleStreamController.levels = [];
       subtitleStreamController.trackId = 0;
-      const details = { foo: 'bar' };
+      const details = { foo: 'bar', fragments: [] };
       hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
         id: 0,
         details,
@@ -126,19 +144,16 @@ describe('SubtitleStreamController', function () {
 
   describe('onMediaSeeking', function () {
     it('nulls fragPrevious when seeking away from fragCurrent', function () {
-      subtitleStreamController.fragCurrent = {
-        start: 1000,
-        duration: 10,
-        loader: {
-          abort: () => {
-            this.state.aborted = true;
-          },
-          stats: {
-            aborted: false,
-          },
-        },
-      };
-      subtitleStreamController.fragPrevious = {};
+      subtitleStreamController.fragCurrent = new Fragment(
+        PlaylistLevelType.MAIN,
+        ''
+      );
+      subtitleStreamController.fragCurrent.start = 1000;
+      subtitleStreamController.fragCurrent.duration = 10;
+      subtitleStreamController.fragPrevious = new Fragment(
+        PlaylistLevelType.MAIN,
+        ''
+      );
       subtitleStreamController.onMediaSeeking();
       expect(subtitleStreamController.fragPrevious).to.not.exist;
     });

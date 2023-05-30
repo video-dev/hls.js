@@ -6,7 +6,7 @@ if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
   # see https://docs.npmjs.com/private-modules/ci-server-config
   echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
   if [[  -z "$TAG" ]]; then
-    npm publish --tag canary
+    npm publish --provenance --tag canary
     echo "Published canary."
     curl https://purge.jsdelivr.net/npm/hls.js@canary
     curl https://purge.jsdelivr.net/npm/hls.js@canary/dist/hls-demo.js
@@ -19,7 +19,7 @@ if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
       exit 1
     fi
     echo "Publishing tag: ${tag}"
-    npm publish --tag "${tag}"
+    npm publish --provenance --tag "${tag}"
     curl "https://purge.jsdelivr.net/npm/hls.js@${tag}"
     echo "Published."
   fi

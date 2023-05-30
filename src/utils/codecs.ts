@@ -1,3 +1,5 @@
+import { getMediaSource } from './mediasource-helper';
+
 // from http://mp4ra.org/codecs.html
 const sampleEntryCodesISO = {
   audio: {
@@ -71,6 +73,8 @@ const sampleEntryCodesISO = {
   },
 };
 
+const MediaSource = getMediaSource();
+
 export type CodecType = 'audio' | 'video';
 
 export function isCodecType(codec: string, type: CodecType): boolean {
@@ -79,7 +83,8 @@ export function isCodecType(codec: string, type: CodecType): boolean {
 }
 
 export function isCodecSupportedInMp4(codec: string, type: CodecType): boolean {
-  return MediaSource.isTypeSupported(
-    `${type || 'video'}/mp4;codecs="${codec}"`
+  return (
+    MediaSource?.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`) ??
+    false
   );
 }

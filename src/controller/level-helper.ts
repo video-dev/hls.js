@@ -1,43 +1,15 @@
 /**
- * @module LevelHelper
- * Providing methods dealing with playlist sliding and drift
- * */
+ * Provides methods dealing with playlist sliding and drift
+ */
 
 import { logger } from '../utils/logger';
 import { Fragment, Part } from '../loader/fragment';
 import { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
-import type { MediaPlaylist } from '../types/media-playlist';
 import { DateRange } from '../loader/date-range';
 
 type FragmentIntersection = (oldFrag: Fragment, newFrag: Fragment) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;
-
-export function addGroupId(level: Level, type: string, id: string): void {
-  switch (type) {
-    case 'audio':
-      if (!level.audioGroupIds) {
-        level.audioGroupIds = [];
-      }
-      level.audioGroupIds.push(id);
-      break;
-    case 'text':
-      if (!level.textGroupIds) {
-        level.textGroupIds = [];
-      }
-      level.textGroupIds.push(id);
-      break;
-  }
-}
-
-export function assignTrackIdsByGroup(tracks: MediaPlaylist[]): void {
-  const groups = {};
-  tracks.forEach((track) => {
-    const groupId = track.groupId || '';
-    track.id = groups[groupId] = groups[groupId] || 0;
-    groups[groupId]++;
-  });
-}
 
 export function updatePTS(
   fragments: Fragment[],
@@ -64,9 +36,6 @@ function updateFromToPTS(fragFrom: Fragment, fragTo: Fragment) {
       duration = fragFrom.start - fragToPTS;
       frag = fragTo;
     }
-    // TODO? Drift can go either way, or the playlist could be completely accurate
-    // console.assert(duration > 0,
-    //   `duration of ${duration} computed for frag ${frag.sn}, level ${frag.level}, there should be some duration drift between playlist and fragment!`);
     if (frag.duration !== duration) {
       frag.duration = duration;
     }
@@ -119,11 +88,13 @@ export function updateFragPTSDTS(
     endPTS = Math.max(endPTS, fragEndPts);
     endDTS = Math.max(endDTS, frag.endDTS);
   }
-  frag.duration = endPTS - startPTS;
 
   const drift = startPTS - frag.start;
-  frag.appendedPTS = endPTS;
-  frag.start = frag.startPTS = startPTS;
+  if (frag.start !== 0) {
+    frag.start = startPTS;
+  }
+  frag.duration = endPTS - frag.start;
+  frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
   frag.startDTS = startDTS;
   frag.endPTS = endPTS;
@@ -200,7 +171,6 @@ export function mergeDetails(
       ) {
         newFrag.start = newFrag.startPTS = oldFrag.startPTS as number;
         newFrag.startDTS = oldFrag.startDTS;
-        newFrag.appendedPTS = oldFrag.appendedPTS;
         newFrag.maxStartPTS = oldFrag.maxStartPTS;
 
         newFrag.endPTS = oldFrag.endPTS;
@@ -467,7 +437,7 @@ export function getFragmentWithSN(
   sn: number,
   fragCurrent: Fragment | null
 ): Fragment | null {
-  if (!level || !level.details) {
+  if (!level?.details) {
     return null;
   }
   const levelDetails = level.details;
@@ -491,10 +461,17 @@ export function getPartWith(
   sn: number,
   partIndex: number
 ): Part | null {
-  if (!level || !level.details) {
+  if (!level?.details) {
     return null;
   }
-  const partList = level.details.partList;
+  return findPart(level.details?.partList, sn, partIndex);
+}
+
+export function findPart(
+  partList: Part[] | null | undefined,
+  sn: number,
+  partIndex: number
+): Part | null {
   if (partList) {
     for (let i = partList.length; i--; ) {
       const part = partList[i];

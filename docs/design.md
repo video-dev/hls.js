@@ -1,3 +1,14 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+
+**Table of Contents**
+
+- [Design principle](#design-principle)
+- [Code structure](#code-structure)
+- [Error detection and Handling](#error-detection-and-handling)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 ## Design principle
 
 design idea is pretty simple :
@@ -6,7 +17,7 @@ design idea is pretty simple :
 - all subsystems are instantiated by the Hls instance.
 - each subsystem heavily relies on events for internal/external communications.
 - Events are handled using [EventEmitter3](https://github.com/primus/eventemitter3)
-- bundled for the browser by [webpack](https://webpack.js.org/)
+- bundled for the browser by [rollup](https://rollupjs.org/)
 
 ## Code structure
 
