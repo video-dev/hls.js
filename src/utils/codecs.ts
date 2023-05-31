@@ -103,9 +103,12 @@ function getCodecCompatibleNameLower(
     return CODEC_COMPATIBLE_NAMES[lowerCaseCodec]!;
   }
 
+  // Idealy fLaC and Opus would be first (spec-compliant) but
+  // some browsers will report that fLaC is supported then fail.
+  // see: https://bugs.chromium.org/p/chromium/issues/detail?id=1422728
   const codecsToCheck = {
-    flac: ['fLaC', 'flac', 'FLAC'],
-    opus: ['Opus', 'opus'],
+    flac: ['flac', 'fLaC', 'FLAC'],
+    opus: ['opus', 'Opus'],
   }[lowerCaseCodec];
 
   for (let i = 0; i < codecsToCheck.length; i++) {
