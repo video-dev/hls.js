@@ -15,6 +15,7 @@ import {
 } from '../utils/mp4-tools';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { logger } from '../utils/logger';
+import { getCodecCompatibleName } from '../utils/codecs';
 import type { TrackSet } from '../types/track';
 import type {
   InitSegmentData,
@@ -280,6 +281,9 @@ function getParsedTrackCodec(
   }
   if (parsedCodec === 'avc1' || type === ElementaryStreamTypes.VIDEO) {
     return 'avc1.42e01e';
+  }
+  if (parsedCodec === 'fLaC' || parsedCodec === 'Opus') {
+    return getCodecCompatibleName(parsedCodec);
   }
   return 'mp4a.40.5';
 }
