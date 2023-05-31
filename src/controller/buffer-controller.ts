@@ -30,7 +30,8 @@ import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
 
 const MediaSource = getMediaSource();
-const VIDEO_CODEC_PROFILE_REPACE = /([ha]vc.)(?:\.[^.,]+)+/;
+const VIDEO_CODEC_PROFILE_REPLACE =
+  /(avc[1234]|hvc1|hev1|dvh[1e]|vp09|av01)(?:\.[^.,]+)+/;
 
 export default class BufferController implements ComponentAPI {
   // The level details used to determine duration, target-duration and live
@@ -261,11 +262,11 @@ export default class BufferController implements ComponentAPI {
           const { id, codec, levelCodec, container, metadata } =
             data[trackName];
           const currentCodec = (track.levelCodec || track.codec).replace(
-            VIDEO_CODEC_PROFILE_REPACE,
+            VIDEO_CODEC_PROFILE_REPLACE,
             '$1'
           );
           const nextCodec = (levelCodec || codec).replace(
-            VIDEO_CODEC_PROFILE_REPACE,
+            VIDEO_CODEC_PROFILE_REPLACE,
             '$1'
           );
           if (currentCodec !== nextCodec) {
