@@ -2,6 +2,7 @@ import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { BufferHelper } from '../utils/buffer-helper';
+import { getCodecCompatibleName } from '../utils/codecs';
 import { getMediaSource } from '../utils/mediasource-helper';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import type { TrackSet } from '../types/track';
@@ -268,7 +269,11 @@ export default class BufferController implements ComponentAPI {
             '$1'
           );
           if (currentCodec !== nextCodec) {
-            const mimeType = `${container};codecs=${levelCodec || codec}`;
+            let trackCodec = levelCodec || codec;
+            if (trackName.slice(0, 5) === 'audio') {
+              trackCodec = getCodecCompatibleName(trackCodec);
+            }
+            const mimeType = `${container};codecs=${trackCodec}`;
             this.appendChangeType(trackName, mimeType);
             logger.log(
               `[buffer-controller]: switching codec ${currentCodec} to ${nextCodec}`
@@ -756,7 +761,12 @@ export default class BufferController implements ComponentAPI {
           );
         }
         // use levelCodec as first priority
-        const codec = track.levelCodec || track.codec;
+        let codec = track.levelCodec || track.codec;
+        if (codec) {
+          if (trackName.slice(0, 5) === 'audio') {
+            codec = getCodecCompatibleName(codec);
+          }
+        }
         const mimeType = `${track.container};codecs=${codec}`;
         logger.log(`[buffer-controller]: creating sourceBuffer(${mimeType})`);
         try {

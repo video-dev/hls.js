@@ -16,6 +16,9 @@ const sampleEntryCodesISO = {
     dtsh: true,
     'ec-3': true,
     enca: true,
+    fLaC: true, // MP4-RA listed codec entry for FLAC
+    flac: true, // legacy browser codec name for FLAC
+    FLAC: true, // some manifests may list "FLAC" with Apple's tools
     g719: true,
     g726: true,
     m4ae: true,
@@ -86,5 +89,46 @@ export function isCodecSupportedInMp4(codec: string, type: CodecType): boolean {
   return (
     MediaSource?.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`) ??
     false
+  );
+}
+
+interface CodecNameCache {
+  flac?: string;
+  opus?: string;
+}
+
+const CODEC_COMPATIBLE_NAMES: CodecNameCache = {};
+
+type LowerCaseCodecType = 'flac' | 'opus';
+
+function getCodecCompatibleNameLower(
+  lowerCaseCodec: LowerCaseCodecType
+): string {
+  if (CODEC_COMPATIBLE_NAMES[lowerCaseCodec]) {
+    return CODEC_COMPATIBLE_NAMES[lowerCaseCodec]!;
+  }
+
+  // Idealy fLaC and Opus would be first (spec-compliant) but
+  // some browsers will report that fLaC is supported then fail.
+  // see: https://bugs.chromium.org/p/chromium/issues/detail?id=1422728
+  const codecsToCheck = {
+    flac: ['flac', 'fLaC', 'FLAC'],
+    opus: ['opus', 'Opus'],
+  }[lowerCaseCodec];
+
+  for (let i = 0; i < codecsToCheck.length; i++) {
+    if (isCodecSupportedInMp4(codecsToCheck[i], 'audio')) {
+      CODEC_COMPATIBLE_NAMES[lowerCaseCodec] = codecsToCheck[i];
+      return codecsToCheck[i];
+    }
+  }
+
+  return lowerCaseCodec;
+}
+
+const AUDIO_CODEC_REGEXP = /flac|opus/i;
+export function getCodecCompatibleName(codec: string): string {
+  return codec.replace(AUDIO_CODEC_REGEXP, (m) =>
+    getCodecCompatibleNameLower(m.toLowerCase() as LowerCaseCodecType)
   );
 }
