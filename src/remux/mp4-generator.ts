@@ -41,6 +41,8 @@ class MP4 {
       moov: [],
       mp4a: [],
       '.mp3': [],
+      dac3: [],
+      'ac-3': [],
       mvex: [],
       mvhd: [],
       pasp: [],
@@ -772,78 +774,57 @@ class MP4 {
     ); // GASpecificConfig)); // length + audio config descriptor
   }
 
-  static mp4a(track) {
+  static audioStsd(track) {
     const samplerate = track.samplerate;
+    return new Uint8Array([
+      0x00,
+      0x00,
+      0x00, // reserved
+      0x00,
+      0x00,
+      0x00, // reserved
+      0x00,
+      0x01, // data_reference_index
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x00, // reserved
+      0x00,
+      track.channelCount, // channelcount
+      0x00,
+      0x10, // sampleSize:16bits
+      0x00,
+      0x00,
+      0x00,
+      0x00, // reserved2
+      (samplerate >> 8) & 0xff,
+      samplerate & 0xff, //
+      0x00,
+      0x00,
+    ]);
+  }
+
+  static mp4a(track) {
     return MP4.box(
       MP4.types.mp4a,
-      new Uint8Array([
-        0x00,
-        0x00,
-        0x00, // reserved
-        0x00,
-        0x00,
-        0x00, // reserved
-        0x00,
-        0x01, // data_reference_index
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00, // reserved
-        0x00,
-        track.channelCount, // channelcount
-        0x00,
-        0x10, // sampleSize:16bits
-        0x00,
-        0x00,
-        0x00,
-        0x00, // reserved2
-        (samplerate >> 8) & 0xff,
-        samplerate & 0xff, //
-        0x00,
-        0x00,
-      ]),
+      MP4.audioStsd(track),
       MP4.box(MP4.types.esds, MP4.esds(track))
     );
   }
 
   static mp3(track) {
-    const samplerate = track.samplerate;
+    return MP4.box(MP4.types['.mp3'], MP4.audioStsd(track));
+  }
+
+  static ac3(track) {
     return MP4.box(
-      MP4.types['.mp3'],
-      new Uint8Array([
-        0x00,
-        0x00,
-        0x00, // reserved
-        0x00,
-        0x00,
-        0x00, // reserved
-        0x00,
-        0x01, // data_reference_index
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00,
-        0x00, // reserved
-        0x00,
-        track.channelCount, // channelcount
-        0x00,
-        0x10, // sampleSize:16bits
-        0x00,
-        0x00,
-        0x00,
-        0x00, // reserved2
-        (samplerate >> 8) & 0xff,
-        samplerate & 0xff, //
-        0x00,
-        0x00,
-      ])
+      MP4.types['ac-3'],
+      MP4.audioStsd(track),
+      MP4.box(MP4.types.dac3, track.config)
     );
   }
 
@@ -852,7 +833,9 @@ class MP4 {
       if (track.segmentCodec === 'mp3' && track.codec === 'mp3') {
         return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp3(track));
       }
-
+      if (track.segmentCodec === 'ac3') {
+        return MP4.box(MP4.types.stsd, MP4.STSD, MP4.ac3(track));
+      }
       return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp4a(track));
     } else {
       return MP4.box(MP4.types.stsd, MP4.STSD, MP4.avc1(track));
