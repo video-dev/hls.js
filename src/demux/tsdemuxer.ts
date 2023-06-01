@@ -54,6 +54,7 @@ export interface TypeSupported {
   mpeg: boolean;
   mp3: boolean;
   mp4: boolean;
+  ac3: boolean;
 }
 
 const PACKET_LENGTH = 188;
@@ -313,6 +314,9 @@ class TSDemuxer implements Demuxer {
                   case 'mp3':
                     this.parseMPEGPES(audioTrack, pes);
                     break;
+                  case 'ac3':
+                    this.parseAC3PES(pes);
+                    break;
                 }
               }
               audioData = { data: [], size: 0 };
@@ -478,6 +482,9 @@ class TSDemuxer implements Demuxer {
           break;
         case 'mp3':
           this.parseMPEGPES(audioTrack, pes);
+          break;
+        case 'ac3':
+          this.parseAC3PES(pes);
           break;
       }
       audioTrack.pesData = null;
@@ -994,6 +1001,115 @@ class TSDemuxer implements Demuxer {
     }
   }
 
+  private parseAC3PES(pes) {
+    const data = pes.data;
+    const pts = pes.pts;
+    const length = data.length;
+    let frameIndex = 0;
+    let offset = 0;
+    let parsed;
+
+    while (
+      offset < length &&
+      (parsed = this.parseAC3(data, offset, length, frameIndex++, pts)) > 0
+    ) {
+      offset += parsed;
+    }
+  }
+
+  private onAC3Frame(data, sampleRate, channelCount, config, frameIndex, pts) {
+    const frameDuration = (1536 / sampleRate) * 1000;
+    const stamp = pts + frameIndex * frameDuration;
+    const audioTrack = this._audioTrack as DemuxedAudioTrack;
+
+    audioTrack.config = config;
+    audioTrack.channelCount = channelCount;
+    audioTrack.samplerate = sampleRate;
+    audioTrack.duration = this._duration;
+    audioTrack.samples.push({ unit: data, pts: stamp });
+  }
+
+  private parseAC3(data, start, end, frameIndex, pts) {
+    if (start + 8 > end) {
+      return -1; // not enough bytes left
+    }
+
+    if (data[start] !== 0x0b || data[start + 1] !== 0x77) {
+      return -1; // invalid magic
+    }
+
+    // get sample rate
+    const samplingRateCode = data[start + 4] >> 6;
+    if (samplingRateCode >= 3) {
+      return -1; // invalid sampling rate
+    }
+
+    const samplingRateMap = [48000, 44100, 32000];
+    const sampleRate = samplingRateMap[samplingRateCode];
+
+    // get frame size
+    const frameSizeCode = data[start + 4] & 0x3f;
+    const frameSizeMap = [
+      64, 69, 96, 64, 70, 96, 80, 87, 120, 80, 88, 120, 96, 104, 144, 96, 105,
+      144, 112, 121, 168, 112, 122, 168, 128, 139, 192, 128, 140, 192, 160, 174,
+      240, 160, 175, 240, 192, 208, 288, 192, 209, 288, 224, 243, 336, 224, 244,
+      336, 256, 278, 384, 256, 279, 384, 320, 348, 480, 320, 349, 480, 384, 417,
+      576, 384, 418, 576, 448, 487, 672, 448, 488, 672, 512, 557, 768, 512, 558,
+      768, 640, 696, 960, 640, 697, 960, 768, 835, 1152, 768, 836, 1152, 896,
+      975, 1344, 896, 976, 1344, 1024, 1114, 1536, 1024, 1115, 1536, 1152, 1253,
+      1728, 1152, 1254, 1728, 1280, 1393, 1920, 1280, 1394, 1920,
+    ];
+
+    const frameLength = frameSizeMap[frameSizeCode * 3 + samplingRateCode] * 2;
+    if (start + frameLength > end) {
+      return -1;
+    }
+
+    // get channel count
+    const channelMode = data[start + 6] >> 5;
+    let skipCount = 0;
+    if (channelMode === 2) {
+      skipCount += 2;
+    } else {
+      if (channelMode & 1 && channelMode !== 1) {
+        skipCount += 2;
+      }
+      if (channelMode & 4) {
+        skipCount += 2;
+      }
+    }
+
+    const lfeon =
+      (((data[start + 6] << 8) | data[start + 7]) >> (12 - skipCount)) & 1;
+
+    const channelsMap = [2, 1, 2, 3, 3, 4, 4, 5];
+    const channelCount = channelsMap[channelMode] + lfeon;
+
+    // build dac3 box
+    const bsid = data[start + 5] >> 3;
+    const bsmod = data[start + 5] & 7;
+
+    const config = new Uint8Array([
+      (samplingRateCode << 6) | (bsid << 1) | (bsmod >> 2),
+      ((bsmod & 3) << 6) |
+        (channelMode << 3) |
+        (lfeon << 2) |
+        (frameSizeCode >> 4),
+      (frameSizeCode << 4) & 0xe0,
+    ]);
+
+    this.onAC3Frame(
+      data.subarray(start, start + frameLength),
+      sampleRate,
+      channelCount,
+      config,
+      frameIndex,
+      pts
+    );
+
+    return frameLength;
+  }
+
   private parseID3PES(id3Track: DemuxedMetadataTrack, pes: PES) {
     if (pes.pts === undefined) {
       logger.warn('[tsdemuxer]: ID3 PES unknown PTS');
@@ -1103,6 +1219,15 @@ function parsePMT(
         } else if (result.audio === -1) {
           result.audio = pid;
           result.segmentCodec = 'mp3';
+        }
+        break;
+
+      case 0x81:
+        if (typeSupported.ac3 !== true) {
+          logger.log('AC-3 audio found, not supported in this browser for now');
+        } else if (result.audio === -1) {
+          result.audio = pid;
+          result.segmentCodec = 'ac3';
         }
         break;
 
