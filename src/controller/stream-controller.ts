@@ -180,6 +180,9 @@ export default class StreamController
           }
           this.state = State.IDLE;
           break;
+        } else if (this.hls.nextLoadLevel !== this.level) {
+          this.state = State.IDLE;
+          break;
         }
         break;
       }
