@@ -809,19 +809,13 @@ function parseStartTimeOffset(startAttributes: string): number | null {
   return null;
 }
 
-function setCodecs(codecs: Array<string>, level: LevelParsed) {
+function setCodecs(codecs: string[], level: LevelParsed) {
   ['video', 'audio', 'text'].forEach((type: CodecType) => {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
     if (filtered.length) {
-      const preferred = filtered.filter((codec) => {
-        return (
-          codec.lastIndexOf('avc1', 0) === 0 ||
-          codec.lastIndexOf('mp4a', 0) === 0
-        );
-      });
-      level[`${type}Codec`] = preferred.length > 0 ? preferred[0] : filtered[0];
-
-      // remove from list
+      // Comma separated list of all codecs for type
+      level[`${type}Codec`] = filtered.join(',');
+      // Remove known codecs so that only unknownCodecs are left after iterating through each type
       codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
     }
   });

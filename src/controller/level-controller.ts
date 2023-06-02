@@ -16,7 +16,10 @@ import {
 import { Level } from '../types/level';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { isCodecSupportedInMp4, getCodecCompatibleName } from '../utils/codecs';
+import {
+  getCodecCompatibleName,
+  areCodecsMediaSourceSupported,
+} from '../utils/codecs';
 import BasePlaylistController from './base-playlist-controller';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import type Hls from '../hls';
@@ -175,8 +178,8 @@ export default class LevelController extends BasePlaylistController {
         audioCodecFound ||= !!audioCodec;
         return (
           !unknownCodecs?.length &&
-          (!audioCodec || isCodecSupportedInMp4(audioCodec, 'audio')) &&
-          (!videoCodec || isCodecSupportedInMp4(videoCodec, 'video'))
+          (!audioCodec || areCodecsMediaSourceSupported(audioCodec, 'audio')) &&
+          (!videoCodec || areCodecsMediaSourceSupported(videoCodec, 'video'))
         );
       }
     );
@@ -192,6 +195,11 @@ export default class LevelController extends BasePlaylistController {
       // Dispatch error after MANIFEST_LOADED is done propagating
       Promise.resolve().then(() => {
         if (this.hls) {
+          if (unfilteredLevels.length) {
+            this.warn(
+              `One or more CODECS in variant not supported: "${unfilteredLevels[0].attrs.CODECS}"`
+            );
+          }
           const error = new Error(
             'no level with compatible codecs found in manifest'
           );
@@ -211,7 +219,8 @@ export default class LevelController extends BasePlaylistController {
     if (data.audioTracks) {
       audioTracks = data.audioTracks.filter(
         (track) =>
-          !track.audioCodec || isCodecSupportedInMp4(track.audioCodec, 'audio')
+          !track.audioCodec ||
+          areCodecsMediaSourceSupported(track.audioCodec, 'audio')
       );
       // Assign ids after filtering as array indices by group-id
       assignTrackIdsByGroup(audioTracks);

@@ -85,7 +85,16 @@ export function isCodecType(codec: string, type: CodecType): boolean {
   return !!typeCodes && typeCodes[codec.slice(0, 4)] === true;
 }
 
-export function isCodecSupportedInMp4(codec: string, type: CodecType): boolean {
+export function areCodecsMediaSourceSupported(
+  codecs: string,
+  type: CodecType
+): boolean {
+  return !codecs
+    .split(',')
+    .some((codec) => !isCodecMediaSourceSupported(codec, type));
+}
+
+function isCodecMediaSourceSupported(codec: string, type: CodecType): boolean {
   return (
     MediaSource?.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`) ??
     false
@@ -117,7 +126,7 @@ function getCodecCompatibleNameLower(
   }[lowerCaseCodec];
 
   for (let i = 0; i < codecsToCheck.length; i++) {
-    if (isCodecSupportedInMp4(codecsToCheck[i], 'audio')) {
+    if (isCodecMediaSourceSupported(codecsToCheck[i], 'audio')) {
       CODEC_COMPATIBLE_NAMES[lowerCaseCodec] = codecsToCheck[i];
       return codecsToCheck[i];
     }

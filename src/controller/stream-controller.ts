@@ -967,6 +967,7 @@ export default class StreamController
           ? this.videoBuffer
           : this.mediaBuffer) || this.media;
       this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
+      this.tick();
     }
   }
 
