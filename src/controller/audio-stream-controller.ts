@@ -452,6 +452,7 @@ class AudioStreamController
       this.switchingTrack = data;
       // main audio track are handled by stream-controller, just do something if switching to alt audio track
       this.state = State.IDLE;
+      this.flushAudioIfNeeded(data);
     } else {
       this.switchingTrack = null;
       this.bufferedTrack = data;
@@ -746,6 +747,11 @@ class AudioStreamController
       if (this.state === State.ENDED) {
         this.state = State.IDLE;
       }
+      const mediaBuffer = this.mediaBuffer || this.media;
+      if (mediaBuffer) {
+        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.AUDIO);
+        this.tick();
+      }
     }
   }
 
@@ -912,8 +918,8 @@ class AudioStreamController
     }
   }
 
-  private completeAudioSwitch(switchingTrack: MediaPlaylist) {
-    const { hls, media, bufferedTrack } = this;
+  private flushAudioIfNeeded(switchingTrack: MediaPlaylist) {
+    const { media, bufferedTrack } = this;
     const bufferedAttributes = bufferedTrack?.attrs;
     const switchAttributes = switchingTrack.attrs;
     if (
@@ -925,7 +931,13 @@ class AudioStreamController
     ) {
       this.log('Switching audio track : flushing all audio');
       super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
+      this.bufferedTrack = null;
     }
+  }
+
+  private completeAudioSwitch(switchingTrack: MediaPlaylist) {
+    const { hls } = this;
+    this.flushAudioIfNeeded(switchingTrack);
     this.bufferedTrack = switchingTrack;
     this.switchingTrack = null;
     hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...switchingTrack });
