@@ -223,13 +223,11 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
     const tkhd = findBox(trak, ['tkhd'])[0];
     if (tkhd) {
       let version = tkhd[0];
-      let index = version === 0 ? 12 : 20;
-      const trackId = readUint32(tkhd, index);
+      const trackId = readUint32(tkhd, version === 0 ? 12 : 20);
       const mdhd = findBox(trak, ['mdia', 'mdhd'])[0];
       if (mdhd) {
         version = mdhd[0];
-        index = version === 0 ? 12 : 20;
-        const timescale = readUint32(mdhd, index);
+        const timescale = readUint32(mdhd, version === 0 ? 12 : 20);
         const hdlr = findBox(trak, ['mdia', 'hdlr'])[0];
         if (hdlr) {
           const hdlrType = bin2str(hdlr.subarray(8, 12));
@@ -240,126 +238,9 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
           if (type) {
             // Parse codec details
             const stsd = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd'])[0];
-            let codec;
-            if (stsd) {
-              codec = bin2str(stsd.subarray(12, 16));
-              // Parse codec details to be able to build MIME type
-              // TODO: Codec parsing support for AV1
-              const toHex = (x: number): string => {
-                return ('0' + x.toString(16).toUpperCase()).slice(-2);
-              };
-
-              // Handle H264
-              if (
-                codec.slice(0, 3) === 'avc' &&
-                codec[3] >= '1' &&
-                codec[3] <= '4' &&
-                stsd.length > 102 &&
-                bin2str(stsd.subarray(98, 102)) === 'avcC'
-              ) {
-                // profile + compatibility + level
-                codec +=
-                  '.' + toHex(stsd[111]) + toHex(stsd[112]) + toHex(stsd[113]);
-              }
-
-              // Handle H265
-              else if (isHEVC(codec)) {
-                // @fogarasyroland's method https://github.com/video-dev/hls.js/pull/5024
-                let hvcC;
-                const codecBox = findBox(stsd.subarray(8), [codec])[0];
-                if (codecBox) {
-                  const { end } = parseVisualSampleEntry(codecBox);
-                  hvcC = findBox(codecBox.subarray(end), ['hvcC'])[0];
-                  if (hvcC) {
-                    codec = mimeTypeBuilderHEVC(
-                      codec,
-                      parseHvcConfigurationRecord(hvcC)
-                    );
-                  }
-                }
-                // @uvjustin's method https://github.com/video-dev/hls.js/pull/4996
-                if (
-                  !hvcC &&
-                  stsd.length > 102 &&
-                  bin2str(stsd.subarray(98, 102)) === 'hvcC'
-                ) {
-                  // Profile Space
-                  const profileByte = stsd[103];
-                  const profileSpace = { 0: '', 1: 'A', 2: 'B', 3: 'C' }[
-                    profileByte >> 6
-                  ];
-                  const generalProfileIdc = profileByte & 31;
-                  codec += '.' + profileSpace + generalProfileIdc;
-
-                  // Compatibility
-                  let reversed = 0;
-                  for (let i = 0; i < 4; ++i) {
-                    // byte number
-                    for (let j = 0; j < 8; ++j) {
-                      // bit number
-                      reversed |=
-                        ((stsd[i + 104] >> (7 - j)) & 1) << (31 - 8 * i - j);
-                    }
-                  }
-                  codec += '.' + toHex(reversed >>> 0);
-
-                  // Tier Flag
-                  codec += (profileByte & 32 ? '.H' : '.L') + stsd[114];
-
-                  // Constraint String
-                  let hasByte = false;
-                  let constraintString = '';
-                  for (let i = 113; i > 107; --i) {
-                    if (stsd[i] || hasByte) {
-                      constraintString =
-                        '.' + toHex(stsd[i]) + constraintString;
-                      hasByte = true;
-                    }
-                  }
-                  codec += constraintString;
-                }
-              }
-
-              // Handle Audio
-              else if (codec === 'mp4a') {
-                // Parse ES Descriptors
-                let i: number;
-                // oti
-                for (i = 0; i < stsd.length - 5; ++i) {
-                  if (
-                    stsd[i] == 4 &&
-                    stsd[i + 1] == 128 &&
-                    stsd[i + 2] == 128 &&
-                    stsd[i + 3] == 128
-                  ) {
-                    codec += '.' + toHex(stsd[i + 5]);
-                    break;
-                  }
-                }
-
-                // dsi
-                for (i = 0; i < stsd.length - 6; ++i) {
-                  if (
-                    stsd[i] == 5 &&
-                    stsd[i + 1] == 128 &&
-                    stsd[i + 2] == 128 &&
-                    stsd[i + 3] == 128
-                  ) {
-                    let dsi = (stsd[i + 5] & 248) >> 3;
-                    if (dsi == 31 && stsd[i + 4] >= 2) {
-                      dsi =
-                        32 +
-                        ((stsd[i + 5] & 7) << 3) +
-                        ((stsd[i + 6] & 224) >> 5);
-                    }
-                    codec += '.' + dsi;
-                    break;
-                  }
-                }
-              }
-            }
+            const stsdData = parseStsd(stsd);
             result[trackId] = { timescale, type };
-            result[type] = { timescale, id: trackId, codec };
+            result[type] = { timescale, id: trackId, ...stsdData };
           }
         }
       }
@@ -379,6 +260,148 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
   });
 
   return result;
+}
+
+function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
+  const sampleEntries = stsd.subarray(8);
+  const sampleEntriesEnd = sampleEntries.subarray(8 + 78);
+  const fourCC = bin2str(sampleEntries.subarray(4, 8));
+  let codec = fourCC;
+  const encrypted = fourCC === 'enca' || fourCC === 'encv';
+  if (encrypted) {
+    const encBox = findBox(sampleEntries, [fourCC])[0];
+    const encBoxChildren = encBox.subarray(fourCC === 'enca' ? 28 : 78);
+    const sinfs = findBox(encBoxChildren, ['sinf']);
+    sinfs.forEach((sinf) => {
+      const schm = findBox(sinf, ['schm'])[0];
+      if (schm) {
+        const scheme = bin2str(schm.subarray(4, 8));
+        if (scheme === 'cbcs' || scheme === 'cenc') {
+          const frma = findBox(sinf, ['frma'])[0];
+          if (frma) {
+            // for encrypted content codec fourCC will be in frma
+            codec = bin2str(frma);
+          }
+        }
+      }
+    });
+  }
+  switch (codec) {
+    case 'avc1':
+    case 'avc2':
+    case 'avc3':
+    case 'avc4':
+      // profile + compatibility + level
+      codec += '.' + toHex(stsd[111]) + toHex(stsd[112]) + toHex(stsd[113]);
+      break;
+    case 'mp4a': {
+      const codecBox = findBox(sampleEntries, [fourCC])[0];
+      const esdsBox = findBox(codecBox.subarray(28), ['esds'])[0];
+      if (esdsBox && esdsBox.length > 12 && esdsBox[11] !== 0) {
+        codec += '.' + toHex(esdsBox[11]);
+        codec += '.' + ((esdsBox[12] >>> 2) & 0x3f).toString(16).toUpperCase();
+      }
+      break;
+    }
+    // break;
+    case 'hvc1':
+    case 'hev1': {
+      const hvcCBox = findBox(sampleEntriesEnd, ['hvcC'])[0];
+      const profileByte = hvcCBox[1];
+      const profileSpace = ['', 'A', 'B', 'C'][profileByte >> 6];
+      const generalProfileIdc = profileByte & 0x1f;
+      const profileCompat = readUint32(hvcCBox, 2);
+      const tierFlag = (profileByte & 0x20) >> 5 ? 'H' : 'L';
+      const levelIDC = hvcCBox[12];
+      const constraintIndicator = hvcCBox.subarray(6, 12);
+      codec += '.' + profileSpace + generalProfileIdc;
+      codec += '.' + profileCompat.toString(16).toUpperCase();
+      codec += '.' + tierFlag + levelIDC;
+      let constraintString = '';
+      for (let i = constraintIndicator.length; i--; ) {
+        const byte = constraintIndicator[i];
+        if (byte || constraintString) {
+          const encodedByte = byte.toString(16).toUpperCase();
+          constraintString = '.' + encodedByte + constraintString;
+        }
+      }
+      codec += constraintString;
+      break;
+    }
+    case 'dvh1':
+    case 'dvhe': {
+      const dvcCBox = findBox(sampleEntriesEnd, ['dvcC'])[0];
+      const profile = (dvcCBox[2] >> 1) & 0x7f;
+      const level = ((dvcCBox[2] << 5) & 0x20) | ((dvcCBox[3] >> 3) & 0x1f);
+      codec += '.' + addLeadingZero(profile) + '.' + addLeadingZero(level);
+      break;
+    }
+    case 'vp09': {
+      const vpcCBox = findBox(sampleEntriesEnd, ['vpcC'])[0];
+      const profile = vpcCBox[4];
+      const level = vpcCBox[5];
+      const bitDepth = (vpcCBox[6] >> 4) & 0x0f;
+      codec +=
+        '.' +
+        addLeadingZero(profile) +
+        '.' +
+        addLeadingZero(level) +
+        '.' +
+        addLeadingZero(bitDepth);
+      break;
+    }
+    case 'av01': {
+      const av1CBox = findBox(sampleEntriesEnd, ['av1C'])[0];
+      const profile = av1CBox[1] >>> 3;
+      const level = av1CBox[1] & 0x1f;
+      const tierFlag = av1CBox[2] >>> 7 ? 'H' : 'M';
+      const highBitDepth = (av1CBox[2] & 0x40) >> 6;
+      const twelveBit = (av1CBox[2] & 0x20) >> 5;
+      const bitDepth =
+        profile === 2 && highBitDepth
+          ? twelveBit
+            ? 12
+            : 10
+          : highBitDepth
+          ? 10
+          : 8;
+      const monochrome = (av1CBox[2] & 0x10) >> 4;
+      const chromaSubsamplingX = (av1CBox[2] & 0x08) >> 3;
+      const chromaSubsamplingY = (av1CBox[2] & 0x04) >> 2;
+      const chromaSamplePosition = av1CBox[2] & 0x03;
+      codec +=
+        '.' +
+        profile +
+        '.' +
+        addLeadingZero(level) +
+        tierFlag +
+        '.' +
+        addLeadingZero(bitDepth) +
+        '.' +
+        monochrome +
+        '.' +
+        chromaSubsamplingX +
+        chromaSubsamplingY +
+        chromaSamplePosition;
+      break;
+    }
+    case 'ac-3':
+    case 'ec-3':
+    case 'alac':
+    case 'fLaC':
+    case 'Opus':
+    default:
+      break;
+  }
+  return { codec, encrypted };
+}
+
+function toHex(x: number): string {
+  return ('0' + x.toString(16).toUpperCase()).slice(-2);
+}
+
+function addLeadingZero(num: number): string {
+  return (num < 10 ? '0' : '') + num;
 }
 
 export function patchEncyptionData(
@@ -1260,131 +1283,4 @@ export function parsePssh(initData: ArrayBuffer) {
     }
   }
   return result;
-}
-
-function mimeTypeBuilderHEVC(
-  codecName: string,
-  codecDetails: hvcConfigurationRecord
-): string {
-  const generalProfileSpaceMap = ['', 'A', 'B', 'C'];
-  let codecMimeType = codecName;
-  if (codecDetails) {
-    codecMimeType += '.';
-    codecMimeType += generalProfileSpaceMap[codecDetails.generalProfileSpace];
-    codecMimeType += codecDetails.generalProfileIdc;
-
-    codecMimeType += '.';
-    codecMimeType += codecDetails.generalProfileCompatibility.toString(16)[0];
-
-    codecMimeType += '.';
-    codecMimeType += codecDetails.generalTierFlag === 0 ? 'L' : 'H';
-    codecMimeType += codecDetails.generalLevelIdc;
-
-    let constraintString = '';
-    const lastByteIndex = (
-      codecDetails.generalConstraintIndicator as any
-    ).findLastIndex((x: Number) => x !== 0);
-    if (lastByteIndex !== -1) {
-      constraintString =
-        '.' +
-        (
-          codecDetails.generalConstraintIndicator.slice(
-            0,
-            lastByteIndex + 1
-          ) as any
-        )
-          .map((x: Number) => x.toString(16))
-          .join('.');
-    }
-
-    codecMimeType += constraintString;
-  }
-  return codecMimeType;
-}
-
-function parseDataReferenceIndex(data: Uint8Array) {
-  // UInt8[6] reserved
-  return readUint16(data, 6);
-}
-
-interface visualSampleEntry {
-  dataReferenceIndex: number;
-  width: number;
-  height: number;
-  horizResolution: number;
-  vertResolution: number;
-  frameCount: number;
-  compressorName: string;
-  depth: number;
-  end: number;
-}
-
-function parseVisualSampleEntry(data: Uint8Array): visualSampleEntry {
-  return {
-    dataReferenceIndex: parseDataReferenceIndex(data),
-
-    // UInt16 preDefined
-    // UInt16 reserved
-    // UInt32[3] preDefined
-
-    width: readUint16(data, 24),
-    height: readUint16(data, 26),
-
-    horizResolution: readUint32(data, 28), // 0x00480000 - 72 dpi
-    vertResolution: readUint32(data, 32), // 0x00480000 - 72 dpi
-
-    // UInt32 reserved
-
-    frameCount: readUint16(data, 40),
-    compressorName: bin2str(data.subarray(43, Math.min(data[42], 31))),
-    depth: readUint16(data, 74),
-
-    // UInt16 preDefined
-
-    end: 78,
-  };
-}
-
-interface hvcConfigurationRecord {
-  configurationVersion: number;
-  generalProfileSpace: number;
-  generalTierFlag: number;
-  generalProfileIdc: number;
-  generalProfileCompatibility: number;
-  generalConstraintIndicator: Uint8Array;
-  generalLevelIdc: number;
-  minSpatialSegmentationIdc: number;
-  parallelismType: number;
-  chromaFormatIdc: number;
-  bitDepthLumaMinus8: number;
-  bitDepthChromaMinus8: number;
-  avgFrameRate: number;
-  constantFrameRate: number;
-  numTemporalLayers: number;
-  temporalIdNested: number;
-  lengthSizeMinusOne: number;
-  naluArrays: Array<object>;
-}
-
-function parseHvcConfigurationRecord(data: Uint8Array): hvcConfigurationRecord {
-  return {
-    configurationVersion: data[0],
-    generalProfileSpace: data[1] >> 6,
-    generalTierFlag: (data[1] & 0x20) >> 5,
-    generalProfileIdc: data[1] & 0x1f,
-    generalProfileCompatibility: readUint32(data, 2),
-    generalConstraintIndicator: data.subarray(6, 12),
-    generalLevelIdc: data[12],
-    minSpatialSegmentationIdc: readUint16(data, 13) & 0xfff,
-    parallelismType: data[15] & 0x3,
-    chromaFormatIdc: data[16] & 0x3,
-    bitDepthLumaMinus8: data[17] & 0x7,
-    bitDepthChromaMinus8: data[18] & 0x7,
-    avgFrameRate: readUint16(data, 19),
-    constantFrameRate: data[21] >> 6,
-    numTemporalLayers: (data[21] & 0xd) >> 3,
-    temporalIdNested: (data[21] & 0x4) >> 2,
-    lengthSizeMinusOne: data[21] & 0x3,
-    naluArrays: [],
-  };
 }
