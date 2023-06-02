@@ -777,7 +777,12 @@ class AudioStreamController
 
     if (initSegment?.tracks) {
       const mapFragment = frag.initSegment || frag;
-      this._bufferInitSegment(initSegment.tracks, mapFragment, chunkMeta);
+      this._bufferInitSegment(
+        level,
+        initSegment.tracks,
+        mapFragment,
+        chunkMeta
+      );
       hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, {
         frag: mapFragment,
         id,
@@ -830,6 +835,7 @@ class AudioStreamController
   }
 
   private _bufferInitSegment(
+    currentLevel: Level,
     tracks: TrackSet,
     frag: Fragment,
     chunkMeta: ChunkMetadata
@@ -848,11 +854,16 @@ class AudioStreamController
       return;
     }
 
-    track.levelCodec = track.codec;
     track.id = 'audio';
+
+    const variantAudioCodecs = currentLevel.audioCodec;
     this.log(
-      `Init audio buffer, container:${track.container}, codecs[parsed]=[${track.codec}]`
+      `Init audio buffer, container:${track.container}, codecs[level/parsed]=[${variantAudioCodecs}/${track.codec}]`
     );
+    // SourceBuffer will use track.levelCodec if defined
+    if (variantAudioCodecs && variantAudioCodecs.split(',').length === 1) {
+      track.levelCodec = variantAudioCodecs;
+    }
     this.hls.trigger(Events.BUFFER_CODECS, tracks);
     const initSegment = track.initSegment;
     if (initSegment?.byteLength) {

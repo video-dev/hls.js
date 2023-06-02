@@ -74,14 +74,14 @@ class PassThroughRemuxer implements Remuxer {
     const initData = (this.initData = parseInitSegment(initSegment));
 
     // Get codec from initSegment or fallback to default
-    if (!audioCodec) {
+    if (initData.audio) {
       audioCodec = getParsedTrackCodec(
         initData.audio,
         ElementaryStreamTypes.AUDIO
       );
     }
 
-    if (!videoCodec) {
+    if (initData.video) {
       videoCodec = getParsedTrackCodec(
         initData.video,
         ElementaryStreamTypes.VIDEO
@@ -263,27 +263,36 @@ function isInvalidInitPts(
 }
 
 function getParsedTrackCodec(
-  track: InitDataTrack | undefined,
+  track: InitDataTrack,
   type: ElementaryStreamTypes.AUDIO | ElementaryStreamTypes.VIDEO
 ): string {
   const parsedCodec = track?.codec;
   if (parsedCodec && parsedCodec.length > 4) {
     return parsedCodec;
   }
+  if (type === ElementaryStreamTypes.AUDIO) {
+    if (
+      parsedCodec === 'ec-3' ||
+      parsedCodec === 'ac-3' ||
+      parsedCodec === 'alac'
+    ) {
+      return parsedCodec;
+    }
+    if (parsedCodec === 'fLaC' || parsedCodec === 'Opus') {
+      return getCodecCompatibleName(parsedCodec);
+    }
+    logger.warn(`Unhandled audio codec "${parsedCodec}" or audio object type`);
+    return 'mp4a.40.5';
+  }
   // Provide defaults based on codec type
   // This allows for some playback of some fmp4 playlists without CODECS defined in manifest
+  logger.warn(`Unhandled video codec "${parsedCodec}"`);
   if (parsedCodec === 'hvc1' || parsedCodec === 'hev1') {
     return 'hvc1.1.6.L120.90';
   }
   if (parsedCodec === 'av01') {
     return 'av01.0.04M.08';
   }
-  if (parsedCodec === 'avc1' || type === ElementaryStreamTypes.VIDEO) {
-    return 'avc1.42e01e';
-  }
-  if (parsedCodec === 'fLaC' || parsedCodec === 'Opus') {
-    return getCodecCompatibleName(parsedCodec);
-  }
-  return 'mp4a.40.5';
+  return 'avc1.42e01e';
 }
 export default PassThroughRemuxer;

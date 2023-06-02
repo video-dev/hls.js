@@ -468,7 +468,7 @@ export default class ErrorController implements NetworkComponentAPI {
     const { hls, penalizedRenditions } = this;
     const levelIndex: number =
       data.parent === PlaylistLevelType.MAIN
-        ? (data.level as number)
+        ? (data.level as number) || 0
         : hls.loadLevel;
     const level = hls.levels[levelIndex];
     const redundantLevels = level.url.length;
