@@ -206,7 +206,7 @@ class ID3TrackController implements ComponentAPI {
           // Safari doesn't put the timestamp frame in the TextTrack
           if (!ID3.isTimeStampFrame(frame)) {
             // add a bounds to any unbounded cues
-            this.updateId3CueEnds(startTime);
+            this.updateId3CueEnds(startTime, type);
 
             const cue = new Cue(startTime, endTime, '');
             cue.value = frame;
@@ -220,12 +220,16 @@ class ID3TrackController implements ComponentAPI {
     }
   }
 
-  updateId3CueEnds(startTime: number) {
+  updateId3CueEnds(startTime: number, type: MetadataSchema) {
     const cues = this.id3Track?.cues;
     if (cues) {
       for (let i = cues.length; i--; ) {
         const cue = cues[i] as any;
-        if (cue.startTime < startTime && cue.endTime === MAX_CUE_ENDTIME) {
+        if (
+          cue.type === type &&
+          cue.startTime < startTime &&
+          cue.endTime === MAX_CUE_ENDTIME
+        ) {
           cue.endTime = startTime;
         }
       }
