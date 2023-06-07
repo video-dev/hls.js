@@ -37,7 +37,7 @@ export default class KeyLoader implements ComponentAPI {
     for (const uri in this.keyUriToKeyInfo) {
       const loader = this.keyUriToKeyInfo[uri].loader;
       if (loader) {
-        if (type && type !== loader.context.frag.type) {
+        if (type && type !== loader.context?.frag.type) {
           return;
         }
         loader.abort();

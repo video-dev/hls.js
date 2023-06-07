@@ -22,7 +22,7 @@ class XhrLoader implements Loader<LoaderContext> {
   private retryDelay: number;
   private config: LoaderConfiguration | null = null;
   private callbacks: LoaderCallbacks<LoaderContext> | null = null;
-  public context!: LoaderContext;
+  public context: LoaderContext | null = null;
 
   private loader: XMLHttpRequest | null = null;
   public stats: LoaderStats;
@@ -38,6 +38,10 @@ class XhrLoader implements Loader<LoaderContext> {
     this.abortInternal();
     this.loader = null;
     this.config = null;
+    this.context = null;
+    this.xhrSetup = null;
+    // @ts-ignore
+    this.stats = null;
   }
 
   abortInternal() {
@@ -57,7 +61,11 @@ class XhrLoader implements Loader<LoaderContext> {
   abort() {
     this.abortInternal();
     if (this.callbacks?.onAbort) {
-      this.callbacks.onAbort(this.stats, this.context, this.loader);
+      this.callbacks.onAbort(
+        this.stats,
+        this.context as LoaderContext,
+        this.loader
+      );
     }
   }
 
@@ -78,7 +86,7 @@ class XhrLoader implements Loader<LoaderContext> {
 
   loadInternal() {
     const { config, context } = this;
-    if (!config) {
+    if (!config || !context) {
       return;
     }
     const xhr = (this.loader = new self.XMLHttpRequest());
@@ -126,7 +134,7 @@ class XhrLoader implements Loader<LoaderContext> {
       xhr.open('GET', context.url, true);
     }
 
-    const headers = this.context.headers;
+    const headers = context.headers;
     const { maxTimeToFirstByteMs, maxLoadTimeMs } = config.loadPolicy;
     if (headers) {
       for (const header in headers) {
@@ -254,11 +262,15 @@ class XhrLoader implements Loader<LoaderContext> {
     if (shouldRetry(retryConfig, retryCount, true)) {
       this.retry(retryConfig);
     } else {
-      logger.warn(`timeout while loading ${this.context.url}`);
+      logger.warn(`timeout while loading ${this.context?.url}`);
       const callbacks = this.callbacks;
       if (callbacks) {
         this.abortInternal();
-        callbacks.onTimeout(this.stats, this.context, this.loader);
+        callbacks.onTimeout(
+          this.stats,
+          this.context as LoaderContext,
+          this.loader
+        );
       }
     }
   }
@@ -269,7 +281,7 @@ class XhrLoader implements Loader<LoaderContext> {
     stats.retry++;
     logger.warn(
       `${status ? 'HTTP Status ' + status : 'Timeout'} while loading ${
-        context.url
+        context?.url
       }, retrying ${stats.retry}/${retryConfig.maxNumRetry} in ${
         this.retryDelay
       }ms`

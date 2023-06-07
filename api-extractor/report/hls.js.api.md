@@ -2340,7 +2340,7 @@ export interface Loader<T extends LoaderContext> {
     // (undocumented)
     abort(): void;
     // (undocumented)
-    context: T;
+    context: T | null;
     // (undocumented)
     destroy(): void;
     getCacheAge?: () => number | null;
