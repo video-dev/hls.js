@@ -145,7 +145,7 @@ export interface Loader<T extends LoaderContext> {
   destroy(): void;
   abort(): void;
   load(
-    context: LoaderContext,
+    context: T,
     config: LoaderConfiguration,
     callbacks: LoaderCallbacks<T>
   ): void;
