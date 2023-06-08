@@ -67,6 +67,7 @@ export default class Hls implements HlsEventEmitter {
   private cmcdController: CMCDController;
   private _media: HTMLMediaElement | null = null;
   private url: string | null = null;
+  private triggeringException?: boolean;
 
   /**
    * Get the video-dev/hls.js package version.
@@ -296,22 +297,28 @@ export default class Hls implements HlsEventEmitter {
     } else {
       try {
         return this.emit(event, event, eventObject);
-      } catch (e) {
+      } catch (error) {
         logger.error(
           'An internal error happened while handling event ' +
             event +
             '. Error message: "' +
-            e.message +
+            error.message +
             '". Here is a stacktrace:',
-          e
+          error
         );
-        this.trigger(Events.ERROR, {
-          type: ErrorTypes.OTHER_ERROR,
-          details: ErrorDetails.INTERNAL_EXCEPTION,
-          fatal: false,
-          event: event,
-          error: e,
-        });
+        // Prevent recursion in error event handlers that throw #5497
+        if (!this.triggeringException) {
+          this.triggeringException = true;
+          const fatal = event === Events.ERROR;
+          this.trigger(Events.ERROR, {
+            type: ErrorTypes.OTHER_ERROR,
+            details: ErrorDetails.INTERNAL_EXCEPTION,
+            fatal,
+            event,
+            error,
+          });
+          this.triggeringException = false;
+        }
       }
     }
     return false;
