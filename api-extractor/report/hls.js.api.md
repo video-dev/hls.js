@@ -534,9 +534,13 @@ export class BufferController implements ComponentAPI {
     // (undocumented)
     destroy(): void;
     // (undocumented)
+    protected error: (msg: any, obj?: any) => void;
+    // (undocumented)
     flushBackBuffer(): void;
     // (undocumented)
     hasSourceTypes(): boolean;
+    // (undocumented)
+    protected log: (msg: any) => void;
     // (undocumented)
     media: HTMLMediaElement | null;
     // (undocumented)
@@ -575,6 +579,8 @@ export class BufferController implements ComponentAPI {
     protected unregisterListeners(): void;
     // (undocumented)
     updateSeekableRange(levelDetails: any): void;
+    // (undocumented)
+    protected warn: (msg: any, obj?: any) => void;
 }
 
 // Warning: (ae-missing-release-tag) "BufferControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
