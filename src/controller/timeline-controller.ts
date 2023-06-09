@@ -62,9 +62,10 @@ export class TimelineController implements ComponentAPI {
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
   private cea608Parser1!: Cea608Parser;
   private cea608Parser2!: Cea608Parser;
-  private lastSn: number = -1;
-  private lastPartIndex: number = -1;
-  private prevCC: number = -1;
+  private lastCc: number = -1; // Last video (CEA-608) fragment CC
+  private lastSn: number = -1; // Last video (CEA-608) fragment MSN
+  private lastPartIndex: number = -1; // Last video (CEA-608) fragment Part Index
+  private prevCC: number = -1; // Last subtitle fragment CC
   private vttCCs: VTTCCs = newVTTCCs();
   private captionsProperties: {
     textTrack1: TrackProperties;
@@ -295,10 +296,14 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onManifestLoading() {
-    this.lastSn = -1; // Detect discontinuity in fragment parsing
+    // Detect discontinuity in video fragment (CEA-608) parsing
+    this.lastCc = -1;
+    this.lastSn = -1;
     this.lastPartIndex = -1;
+    // Detect discontinuity in subtitle manifests
     this.prevCC = -1;
-    this.vttCCs = newVTTCCs(); // Detect discontinuity in subtitle manifests
+    this.vttCCs = newVTTCCs();
+    // Reset tracks
     this._cleanTracks();
     this.tracks = [];
     this.captionsTracks = {};
@@ -450,23 +455,26 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
-    const { cea608Parser1, cea608Parser2, lastSn, lastPartIndex } = this;
+    const { cea608Parser1, cea608Parser2, lastCc, lastSn, lastPartIndex } =
+      this;
     if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
       return;
     }
     // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
     if (data.frag.type === PlaylistLevelType.MAIN) {
-      const sn = data.frag.sn;
+      const { cc, sn } = data.frag;
       const partIndex = data?.part?.index ?? -1;
       if (
         !(
           sn === lastSn + 1 ||
-          (sn === lastSn && partIndex === lastPartIndex + 1)
+          (sn === lastSn && partIndex === lastPartIndex + 1) ||
+          cc === lastCc
         )
       ) {
         cea608Parser1.reset();
         cea608Parser2.reset();
       }
+      this.lastCc = cc as number;
       this.lastSn = sn as number;
       this.lastPartIndex = partIndex;
     }
