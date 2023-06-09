@@ -80,11 +80,11 @@ export function updateFragPTSDTS(
       frag.deltaPTS = Math.max(deltaPTS, frag.deltaPTS as number);
     }
 
-    maxStartPTS = Math.max(startPTS, fragStartPts);
+    maxStartPTS = Math.max(startPTS, frag.maxStartPTS ?? fragStartPts);
     startPTS = Math.min(startPTS, fragStartPts);
     startDTS = Math.min(startDTS, frag.startDTS);
 
-    minEndPTS = Math.min(endPTS, fragEndPts);
+    minEndPTS = Math.min(endPTS, frag.minEndPTS ?? fragEndPts);
     endPTS = Math.max(endPTS, fragEndPts);
     endDTS = Math.max(endDTS, frag.endDTS);
   }
