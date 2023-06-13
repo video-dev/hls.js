@@ -7,6 +7,7 @@ declare const __USE_SUBTITLES__: boolean;
 declare const __USE_CMCD__: boolean;
 declare const __USE_CONTENT_STEERING__: boolean;
 declare const __USE_VARIABLE_SUBSTITUTION__: boolean;
+declare const __USE_M2TS_ADVANCED_CODECS__: boolean;
 
 // __IN_WORKER__ is provided from a closure call around the final UMD bundle.
 declare const __IN_WORKER__: boolean;
