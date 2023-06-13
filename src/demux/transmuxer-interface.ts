@@ -66,12 +66,14 @@ export default class TransmuxerInterface {
     this.observer.on(Events.FRAG_DECRYPTED, forwardMessage);
     this.observer.on(Events.ERROR, forwardMessage);
 
-    const typeSupported: TypeSupported = {
-      mp4: MediaSource.isTypeSupported('video/mp4'),
+    const m2tsTypeSupported: TypeSupported = {
       mpeg: MediaSource.isTypeSupported('audio/mpeg'),
       mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"'),
-      ac3: MediaSource.isTypeSupported('audio/mp4; codecs="ac-3"'),
+      ac3: __USE_M2TS_ADVANCED_CODECS__
+        ? MediaSource.isTypeSupported('audio/mp4; codecs="ac-3"')
+        : false,
     };
+
     // navigator.vendor is not always available in Web Worker
     // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
     const vendor = navigator.vendor;
@@ -105,7 +107,7 @@ export default class TransmuxerInterface {
           };
           worker.postMessage({
             cmd: 'init',
-            typeSupported: typeSupported,
+            typeSupported: m2tsTypeSupported,
             vendor: vendor,
             id: id,
             config: JSON.stringify(config),
@@ -119,7 +121,7 @@ export default class TransmuxerInterface {
           this.error = null;
           this.transmuxer = new Transmuxer(
             this.observer,
-            typeSupported,
+            m2tsTypeSupported,
             config,
             vendor,
             id
@@ -131,7 +133,7 @@ export default class TransmuxerInterface {
 
     this.transmuxer = new Transmuxer(
       this.observer,
-      typeSupported,
+      m2tsTypeSupported,
       config,
       vendor,
       id

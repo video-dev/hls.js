@@ -41,6 +41,8 @@ const addContentSteeringSupport =
   !!env.CONTENT_STEERING || !!env.USE_CONTENT_STEERING;
 const addVariableSubstitutionSupport =
   !!env.VARIABLE_SUBSTITUTION || !!env.USE_VARIABLE_SUBSTITUTION;
+const addM2TSAdvancedCodecSupport =
+  !!env.M2TS_ADVANCED_CODECS || !!env.USE_M2TS_ADVANCED_CODECS;
 
 const shouldBundleWorker = (format) => format !== FORMAT.esm;
 
@@ -62,6 +64,10 @@ const buildConstants = (type, additional = {}) => ({
     __USE_VARIABLE_SUBSTITUTION__: JSON.stringify(
       type === BUILD_TYPE.full || addVariableSubstitutionSupport
     ),
+    __USE_M2TS_ADVANCED_CODECS__: JSON.stringify(
+      type === BUILD_TYPE.full || addM2TSAdvancedCodecSupport
+    ),
+
     ...additional,
   },
 });
@@ -209,6 +215,13 @@ function getAliasesForLightDist() {
       ...aliases,
       './utils/variable-substitution': './empty.js',
       '../utils/variable-substitution': '../empty.js',
+    };
+  }
+
+  if (!addM2TSAdvancedCodecSupport) {
+    aliases = {
+      ...aliases,
+      './ac3-demuxer': '../empty.js',
     };
   }
 
