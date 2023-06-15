@@ -330,14 +330,16 @@ export default class ErrorController implements NetworkComponentAPI {
       if (hls.autoLevelEnabled) {
         // Search for next level to retry
         let nextLevel = -1;
-        const levels = hls.levels;
+        const { levels, loadLevel, minAutoLevel, maxAutoLevel } = hls;
         const fragErrorType = data.frag?.type;
         const { type: playlistErrorType, groupId: playlistErrorGroupId } =
           data.context ?? {};
         for (let i = levels.length; i--; ) {
-          const candidate = (i + hls.loadLevel) % levels.length;
+          const candidate = (i + loadLevel) % levels.length;
           if (
-            candidate !== hls.loadLevel &&
+            candidate !== loadLevel &&
+            candidate >= minAutoLevel &&
+            candidate <= maxAutoLevel &&
             levels[candidate].loadError === 0
           ) {
             const levelCandidate = levels[candidate];
