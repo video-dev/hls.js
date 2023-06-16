@@ -160,7 +160,7 @@ export interface Loader<T extends LoaderContext> {
    */
   getCacheAge?: () => number | null;
   getResponseHeader?: (name: string) => string | null;
-  context: T;
+  context: T | null;
   stats: LoaderStats;
 }
 
