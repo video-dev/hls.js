@@ -6,6 +6,7 @@ import AACDemuxer from '../demux/aacdemuxer';
 import MP4Demuxer from '../demux/mp4demuxer';
 import TSDemuxer, { TypeSupported } from '../demux/tsdemuxer';
 import MP3Demuxer from '../demux/mp3demuxer';
+import { AC3Demuxer } from './ac3-demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
 import { logger } from '../utils/logger';
@@ -29,6 +30,7 @@ try {
 type MuxConfig =
   | { demux: typeof MP4Demuxer; remux: typeof PassThroughRemuxer }
   | { demux: typeof TSDemuxer; remux: typeof MP4Remuxer }
+  | { demux: typeof AC3Demuxer; remux: typeof MP4Remuxer }
   | { demux: typeof AACDemuxer; remux: typeof MP4Remuxer }
   | { demux: typeof MP3Demuxer; remux: typeof MP4Remuxer };
 
@@ -38,6 +40,10 @@ const muxConfig: MuxConfig[] = [
   { demux: AACDemuxer, remux: MP4Remuxer },
   { demux: MP3Demuxer, remux: MP4Remuxer },
 ];
+
+if (__USE_M2TS_ADVANCED_CODECS__) {
+  muxConfig.splice(2, 0, { demux: AC3Demuxer, remux: MP4Remuxer });
+}
 
 export default class Transmuxer {
   public async: boolean = false;
@@ -418,7 +424,7 @@ export default class Transmuxer {
     // probe for content type
     let mux;
     for (let i = 0, len = muxConfig.length; i < len; i++) {
-      if (muxConfig[i].demux.probe(data)) {
+      if (muxConfig[i].demux?.probe(data)) {
         mux = muxConfig[i];
         break;
       }

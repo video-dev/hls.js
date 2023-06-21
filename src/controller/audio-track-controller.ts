@@ -209,8 +209,10 @@ class AudioTrackController extends BasePlaylistController {
 
   private selectInitialTrack(): void {
     const audioTracks = this.tracksInGroup;
-    const trackId =
-      this.findTrackId(this.currentTrack) | this.findTrackId(null);
+    let trackId = this.findTrackId(this.currentTrack);
+    if (trackId === -1) {
+      trackId = this.findTrackId(null);
+    }
 
     if (trackId !== -1) {
       this.setAudioTrack(trackId);

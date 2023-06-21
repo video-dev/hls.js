@@ -2,6 +2,8 @@
  * Generate MP4 Box
  */
 
+import { appendUint8Array } from '../utils/mp4-tools';
+
 type HdlrTypes = {
   video: Uint8Array;
   audio: Uint8Array;
@@ -1118,9 +1120,7 @@ class MP4 {
     }
 
     const movie = MP4.moov(tracks);
-    const result = new Uint8Array(MP4.FTYP.byteLength + movie.byteLength);
-    result.set(MP4.FTYP);
-    result.set(movie, MP4.FTYP.byteLength);
+    const result = appendUint8Array(MP4.FTYP, movie);
     return result;
   }
 }

@@ -59,7 +59,7 @@ export interface PassthroughTrack extends DemuxedTrack {
   codec: string;
 }
 export interface DemuxedAudioTrack extends DemuxedTrack {
-  config?: number[];
+  config?: number[] | Uint8Array;
   samplerate?: number;
   segmentCodec?: string;
   channelCount?: number;
@@ -127,6 +127,7 @@ export interface AvcSample {
 export interface AvcSampleUnit {
   data: Uint8Array;
   type: number;
+  state?: number;
 }
 
 export type AudioSample = {

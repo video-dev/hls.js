@@ -11,6 +11,7 @@
 
 import * as ADTS from './adts';
 import * as MpegAudio from './mpegaudio';
+import * as AC3 from './ac3-demuxer';
 import ExpGolomb from './exp-golomb';
 import SampleAesDecrypter from './sample-aes';
 import { Events } from '../events';
@@ -35,6 +36,7 @@ import {
   ElementaryStreamData,
   KeyData,
   MetadataSchema,
+  AvcSampleUnit,
 } from '../types/demuxer';
 import { AudioFrame } from '../types/demuxer';
 
@@ -53,7 +55,6 @@ type ParsedAvcSample = ParsedTimestamp & Omit<AvcSample, 'pts' | 'dts'>;
 export interface TypeSupported {
   mpeg: boolean;
   mp3: boolean;
-  mp4: boolean;
   ac3: boolean;
 }
 
@@ -315,7 +316,9 @@ class TSDemuxer implements Demuxer {
                     this.parseMPEGPES(audioTrack, pes);
                     break;
                   case 'ac3':
-                    this.parseAC3PES(pes);
+                    if (__USE_M2TS_ADVANCED_CODECS__) {
+                      this.parseAC3PES(audioTrack, pes);
+                    }
                     break;
                 }
               }
@@ -484,7 +487,9 @@ class TSDemuxer implements Demuxer {
           this.parseMPEGPES(audioTrack, pes);
           break;
         case 'ac3':
-          this.parseAC3PES(pes);
+          if (__USE_M2TS_ADVANCED_CODECS__) {
+            this.parseAC3PES(audioTrack, pes);
+          }
           break;
       }
       audioTrack.pesData = null;
@@ -731,9 +736,9 @@ class TSDemuxer implements Demuxer {
     }
   }
 
-  private getLastNalUnit(samples: AvcSample[]) {
+  private getLastNalUnit(samples: AvcSample[]): AvcSampleUnit | undefined {
     let avcSample = this.avcSample;
-    let lastUnit;
+    let lastUnit: AvcSampleUnit | undefined;
     // try to fallback to previous sample if current one is empty
     if (!avcSample || avcSample.units.length === 0) {
       avcSample = samples[samples.length - 1];
@@ -756,15 +761,11 @@ class TSDemuxer implements Demuxer {
     const len = array.byteLength;
     let state = track.naluState || 0;
     const lastState = state;
-    const units = [] as Array<{
-      data: Uint8Array;
-      type: number;
-      state?: number;
-    }>;
+    const units: AvcSampleUnit[] = [];
     let i = 0;
-    let value;
-    let overflow;
-    let unitType;
+    let value: number;
+    let overflow: number;
+    let unitType: number;
     let lastUnitStart = -1;
     let lastUnitType: number = 0;
     // logger.log('PES:' + Hex.hexDump(array));
@@ -793,9 +794,10 @@ class TSDemuxer implements Demuxer {
       if (!value) {
         state = 3;
       } else if (value === 1) {
+        overflow = i - state - 1;
         if (lastUnitStart >= 0) {
-          const unit = {
-            data: array.subarray(lastUnitStart, i - state - 1),
+          const unit: AvcSampleUnit = {
+            data: array.subarray(lastUnitStart, overflow),
             type: lastUnitType,
           };
           // logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
@@ -820,13 +822,13 @@ class TSDemuxer implements Demuxer {
               }
             }
             // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
-            overflow = i - state - 1;
+
             if (overflow > 0) {
               // logger.log('first NALU found with overflow:' + overflow);
-              const tmp = new Uint8Array(lastUnit.data.byteLength + overflow);
-              tmp.set(lastUnit.data, 0);
-              tmp.set(array.subarray(0, overflow), lastUnit.data.byteLength);
-              lastUnit.data = tmp;
+              lastUnit.data = appendUint8Array(
+                lastUnit.data,
+                array.subarray(0, overflow)
+              );
               lastUnit.state = 0;
             }
           }
@@ -847,7 +849,7 @@ class TSDemuxer implements Demuxer {
       }
     }
     if (lastUnitStart >= 0 && state >= 0) {
-      const unit = {
+      const unit: AvcSampleUnit = {
         data: array.subarray(lastUnitStart, len),
         type: lastUnitType,
         state: state,
@@ -860,10 +862,7 @@ class TSDemuxer implements Demuxer {
       // append pes.data to previous NAL unit
       const lastUnit = this.getLastNalUnit(track.samples);
       if (lastUnit) {
-        const tmp = new Uint8Array(lastUnit.data.byteLength + array.byteLength);
-        tmp.set(lastUnit.data, 0);
-        tmp.set(array, lastUnit.data.byteLength);
-        lastUnit.data = tmp;
+        lastUnit.data = appendUint8Array(lastUnit.data, array);
       }
     }
     track.naluState = state;
@@ -880,10 +879,7 @@ class TSDemuxer implements Demuxer {
       const sampleLength = aacOverFlow.sample.unit.byteLength;
       // logger.log(`AAC: append overflowing ${sampleLength} bytes to beginning of new PES`);
       if (frameMissingBytes === -1) {
-        const tmp = new Uint8Array(sampleLength + data.byteLength);
-        tmp.set(aacOverFlow.sample.unit, 0);
-        tmp.set(data, sampleLength);
-        data = tmp;
+        data = appendUint8Array(aacOverFlow.sample.unit, data);
       } else {
         const frameOverflowBytes = sampleLength - frameMissingBytes;
         aacOverFlow.sample.unit.set(
@@ -1001,113 +997,25 @@ class TSDemuxer implements Demuxer {
     }
   }
 
-  private parseAC3PES(pes) {
-    const data = pes.data;
-    const pts = pes.pts;
-    const length = data.length;
-    let frameIndex = 0;
-    let offset = 0;
-    let parsed;
-
-    while (
-      offset < length &&
-      (parsed = this.parseAC3(data, offset, length, frameIndex++, pts)) > 0
-    ) {
-      offset += parsed;
-    }
-  }
-
-  private onAC3Frame(data, sampleRate, channelCount, config, frameIndex, pts) {
-    const frameDuration = (1536 / sampleRate) * 1000;
-    const stamp = pts + frameIndex * frameDuration;
-    const audioTrack = this._audioTrack as DemuxedAudioTrack;
-
-    audioTrack.config = config;
-    audioTrack.channelCount = channelCount;
-    audioTrack.samplerate = sampleRate;
-    audioTrack.duration = this._duration;
-    audioTrack.samples.push({ unit: data, pts: stamp });
-  }
-
-  private parseAC3(data, start, end, frameIndex, pts) {
-    if (start + 8 > end) {
-      return -1; // not enough bytes left
-    }
-
-    if (data[start] !== 0x0b || data[start + 1] !== 0x77) {
-      return -1; // invalid magic
-    }
-
-    // get sample rate
-    const samplingRateCode = data[start + 4] >> 6;
-    if (samplingRateCode >= 3) {
-      return -1; // invalid sampling rate
-    }
-
-    const samplingRateMap = [48000, 44100, 32000];
-    const sampleRate = samplingRateMap[samplingRateCode];
-
-    // get frame size
-    const frameSizeCode = data[start + 4] & 0x3f;
-    const frameSizeMap = [
-      64, 69, 96, 64, 70, 96, 80, 87, 120, 80, 88, 120, 96, 104, 144, 96, 105,
-      144, 112, 121, 168, 112, 122, 168, 128, 139, 192, 128, 140, 192, 160, 174,
-      240, 160, 175, 240, 192, 208, 288, 192, 209, 288, 224, 243, 336, 224, 244,
-      336, 256, 278, 384, 256, 279, 384, 320, 348, 480, 320, 349, 480, 384, 417,
-      576, 384, 418, 576, 448, 487, 672, 448, 488, 672, 512, 557, 768, 512, 558,
-      768, 640, 696, 960, 640, 697, 960, 768, 835, 1152, 768, 836, 1152, 896,
-      975, 1344, 896, 976, 1344, 1024, 1114, 1536, 1024, 1115, 1536, 1152, 1253,
-      1728, 1152, 1254, 1728, 1280, 1393, 1920, 1280, 1394, 1920,
-    ];
-
-    const frameLength = frameSizeMap[frameSizeCode * 3 + samplingRateCode] * 2;
-    if (start + frameLength > end) {
-      return -1;
-    }
-
-    // get channel count
-    const channelMode = data[start + 6] >> 5;
-    let skipCount = 0;
-    if (channelMode === 2) {
-      skipCount += 2;
-    } else {
-      if (channelMode & 1 && channelMode !== 1) {
-        skipCount += 2;
+  private parseAC3PES(track: DemuxedAudioTrack, pes: PES) {
+    if (__USE_M2TS_ADVANCED_CODECS__) {
+      const data = pes.data;
+      const pts = pes.pts;
+      if (pts === undefined) {
+        logger.warn('[tsdemuxer]: AC3 PES unknown PTS');
+        return;
       }
-      if (channelMode & 4) {
-        skipCount += 2;
+      let frameIndex = 0;
+      let offset = 0;
+      let parsed;
+
+      while (
+        offset < length &&
+        (parsed = AC3.appendFrame(track, data, offset, pts, frameIndex++)) > 0
+      ) {
+        offset += parsed;
       }
     }
-
-    const lfeon =
-      (((data[start + 6] << 8) | data[start + 7]) >> (12 - skipCount)) & 1;
-
-    const channelsMap = [2, 1, 2, 3, 3, 4, 4, 5];
-    const channelCount = channelsMap[channelMode] + lfeon;
-
-    // build dac3 box
-    const bsid = data[start + 5] >> 3;
-    const bsmod = data[start + 5] & 7;
-
-    const config = new Uint8Array([
-      (samplingRateCode << 6) | (bsid << 1) | (bsmod >> 2),
-      ((bsmod & 3) << 6) |
-        (channelMode << 3) |
-        (lfeon << 2) |
-        (frameSizeCode >> 4),
-      (frameSizeCode << 4) & 0xe0,
-    ]);
-
-    this.onAC3Frame(
-      data.subarray(start, start + frameLength),
-      sampleRate,
-      channelCount,
-      config,
-      frameIndex,
-      pts
-    );
-
-    return frameLength;
   }
 
   private parseID3PES(id3Track: DemuxedMetadataTrack, pes: PES) {
@@ -1170,9 +1078,7 @@ function parsePMT(
     switch (data[offset]) {
       case 0xcf: // SAMPLE-AES AAC
         if (!isSampleAes) {
-          logger.log(
-            'ADTS AAC with AES-128-CBC frame encryption found in unencrypted stream'
-          );
+          logEncryptedSamplesFoundInUnencryptedStream('ADTS AAC');
           break;
         }
       /* falls through */
@@ -1195,9 +1101,7 @@ function parsePMT(
 
       case 0xdb: // SAMPLE-AES AVC
         if (!isSampleAes) {
-          logger.log(
-            'H.264 with AES-128-CBC slice encryption found in unencrypted stream'
-          );
+          logEncryptedSamplesFoundInUnencryptedStream('H.264');
           break;
         }
       /* falls through */
@@ -1214,7 +1118,7 @@ function parsePMT(
       case 0x03:
       case 0x04:
         // logger.log('MPEG PID:'  + pid);
-        if (typeSupported.mpeg !== true && typeSupported.mp3 !== true) {
+        if (!typeSupported.mpeg && !typeSupported.mp3) {
           logger.log('MPEG audio found, not supported in this browser');
         } else if (result.audio === -1) {
           result.audio = pid;
@@ -1222,17 +1126,32 @@ function parsePMT(
         }
         break;
 
+      case 0xc1: // SAMPLE-AES AC3
+        if (!isSampleAes) {
+          logEncryptedSamplesFoundInUnencryptedStream('AC-3');
+          break;
+        }
+      /* falls through */
       case 0x81:
-        if (typeSupported.ac3 !== true) {
-          logger.log('AC-3 audio found, not supported in this browser for now');
-        } else if (result.audio === -1) {
-          result.audio = pid;
-          result.segmentCodec = 'ac3';
+        if (__USE_M2TS_ADVANCED_CODECS__) {
+          if (!typeSupported.ac3) {
+            logger.log('AC-3 audio found, not supported in this browser');
+          } else if (result.audio === -1) {
+            result.audio = pid;
+            result.segmentCodec = 'ac3';
+          }
+        } else {
+          logger.warn('AC-3 in M2TS support not included in build');
         }
         break;
 
+      case 0xc2: // SAMPLE-AES EC3
+      /* falls through */
+      case 0x87:
+        logger.warn('Unsupported EC-3 in M2TS found');
+        break;
       case 0x24:
-        logger.warn('Unsupported HEVC stream type found');
+        logger.warn('Unsupported HEVC in M2TS found');
         break;
 
       default:
@@ -1244,6 +1163,10 @@ function parsePMT(
     offset += (((data[offset + 3] & 0x0f) << 8) | data[offset + 4]) + 5;
   }
   return result;
+}
+
+function logEncryptedSamplesFoundInUnencryptedStream(type: string) {
+  logger.log(`${type} with AES-128-CBC encryption found in unencrypted stream`);
 }
 
 function parsePES(stream: ElementaryStreamData): PES | null {
@@ -1263,10 +1186,7 @@ function parsePES(stream: ElementaryStreamData): PES | null {
   // if first chunk of data is less than 19 bytes, let's merge it with following ones until we get 19 bytes
   // usually only one merge is needed (and this is rare ...)
   while (data[0].length < 19 && data.length > 1) {
-    const newData = new Uint8Array(data[0].length + data[1].length);
-    newData.set(data[0]);
-    newData.set(data[1], data[0].length);
-    data[0] = newData;
+    data[0] = appendUint8Array(data[0], data[1]);
     data.splice(1, 1);
   }
   // retrieve PTS/DTS from first fragment
