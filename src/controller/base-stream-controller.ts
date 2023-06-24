@@ -1530,6 +1530,10 @@ export default class BaseStreamController
           `${data.details} reached or exceeded max retry (${retryCount})`
         );
       }
+    } else if (
+      errorAction?.action === NetworkErrorAction.SendAlternateToPenaltyBox
+    ) {
+      this.state = State.WAITING_LEVEL;
     } else {
       this.state = State.ERROR;
     }
