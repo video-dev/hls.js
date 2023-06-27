@@ -1524,6 +1524,10 @@ export default class BaseStreamController
         );
         return;
       }
+    } else if (
+      errorAction?.action === NetworkErrorAction.SendAlternateToPenaltyBox
+    ) {
+      this.state = State.WAITING_LEVEL;
     } else {
       this.state = State.ERROR;
     }
