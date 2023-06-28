@@ -206,7 +206,11 @@ export default class LatencyController implements ComponentAPI {
 
     // Adapt playbackRate to meet target latency in low-latency mode
     const { lowLatencyMode, maxLiveSyncPlaybackRate } = this.config;
-    if (!lowLatencyMode || maxLiveSyncPlaybackRate === 1) {
+    if (
+      !lowLatencyMode ||
+      maxLiveSyncPlaybackRate === 1 ||
+      !levelDetails.live
+    ) {
       return;
     }
     const targetLatency = this.targetLatency;
@@ -222,8 +226,8 @@ export default class LatencyController implements ComponentAPI {
       targetLatency + levelDetails.targetduration,
     );
     const inLiveRange = distanceFromTarget < liveMinLatencyDuration;
+
     if (
-      levelDetails.live &&
       inLiveRange &&
       distanceFromTarget > 0.05 &&
       this.forwardBufferLength > 1
