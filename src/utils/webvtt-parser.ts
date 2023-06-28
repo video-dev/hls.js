@@ -92,7 +92,7 @@ const calculateOffset = function (vttCCs: VTTCCs, cc, presentationTime) {
 
 export function parseWebVTT(
   vttByteArray: ArrayBuffer,
-  initPTS: RationalTimestamp,
+  initPTS: RationalTimestamp | undefined,
   vttCCs: VTTCCs,
   cc: number,
   timeOffset: number,
@@ -107,10 +107,9 @@ export function parseWebVTT(
     .replace(LINEBREAKS, '\n')
     .split('\n');
   const cues: VTTCue[] = [];
-  const init90kHz = toMpegTsClockFromTimescale(
-    initPTS.baseTime,
-    initPTS.timescale
-  );
+  const init90kHz = initPTS
+    ? toMpegTsClockFromTimescale(initPTS.baseTime, initPTS.timescale)
+    : 0;
   let cueTime = '00:00.000';
   let timestampMapMPEGTS = 0;
   let timestampMapLOCAL = 0;
@@ -134,8 +133,11 @@ export function parseWebVTT(
         calculateOffset(vttCCs, cc, webVttMpegTsMapOffset);
       }
     }
-
     if (webVttMpegTsMapOffset) {
+      if (!initPTS) {
+        parsingError = new Error('Missing initPTS for VTT MPEGTS');
+        return;
+      }
       // If we have MPEGTS, offset = presentation time + discontinuity offset
       cueOffset = webVttMpegTsMapOffset - vttCCs.presentationOffset;
     }
