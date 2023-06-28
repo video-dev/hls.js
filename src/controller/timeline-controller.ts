@@ -576,6 +576,9 @@ export class TimelineController implements ComponentAPI {
         }
         // Something went wrong while parsing. Trigger event with success false.
         logger.log(`Failed to parse VTT cue: ${error}`);
+        if (missingInitPTS && maxAvCC > frag.cc) {
+          return;
+        }
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
           success: false,
           frag: frag,

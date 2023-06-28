@@ -450,11 +450,12 @@ export class SubtitleStreamController
       }
       foundFrag = this.mapToInitFragWhenRequired(foundFrag) as Fragment;
       if (foundFrag.sn !== 'initSegment') {
-        // Load earlier fragment to make up for misaligned playlists and cues that extend beyond end of segment
+        // Load earlier fragment in same discontinuity to make up for misaligned playlists and cues that extend beyond end of segment
         const curSNIdx = foundFrag.sn - trackDetails.startSN;
         const prevFrag = fragments[curSNIdx - 1];
         if (
           prevFrag &&
+          prevFrag.cc === foundFrag.cc &&
           this.fragmentTracker.getState(prevFrag) === FragmentState.NOT_LOADED
         ) {
           foundFrag = prevFrag;
