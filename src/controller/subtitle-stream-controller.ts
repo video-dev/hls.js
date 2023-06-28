@@ -165,17 +165,7 @@ export class SubtitleStreamController
   onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData) {
     const { startOffset, endOffset } = data;
     if (startOffset === 0 && endOffset !== Number.POSITIVE_INFINITY) {
-      const { currentTrackId, levels } = this;
-      if (
-        !levels.length ||
-        !levels[currentTrackId] ||
-        !levels[currentTrackId].details
-      ) {
-        return;
-      }
-      const trackDetails = levels[currentTrackId].details as LevelDetails;
-      const targetDuration = trackDetails.targetduration;
-      const endOffsetSubtitles = endOffset - targetDuration;
+      const endOffsetSubtitles = endOffset - 1;
       if (endOffsetSubtitles <= 0) {
         return;
       }
@@ -408,15 +398,11 @@ export class SubtitleStreamController
       if (!levels.length || !track || !track.details) {
         return;
       }
-
-      // Expand range of subs loaded by one target-duration in either direction to make up for misaligned playlists
-      const trackDetails = track.details as LevelDetails;
-      const targetDuration = trackDetails.targetduration;
       const { config } = this;
       const currentTime = this.getLoadPosition();
       const bufferedInfo = BufferHelper.bufferedInfo(
         this.tracksBuffered[this.currentTrackId] || [],
-        currentTime - targetDuration,
+        currentTime,
         config.maxBufferHole
       );
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
@@ -425,8 +411,10 @@ export class SubtitleStreamController
         this.media,
         PlaylistLevelType.MAIN
       );
+      const trackDetails = track.details as LevelDetails;
       const maxBufLen =
-        this.getMaxBufferLength(mainBufferInfo?.len) + targetDuration;
+        this.getMaxBufferLength(mainBufferInfo?.len) +
+        trackDetails.levelTargetDuration;
 
       if (bufferLen > maxBufLen) {
         return;
@@ -438,12 +426,14 @@ export class SubtitleStreamController
       let foundFrag: Fragment | null = null;
       const fragPrevious = this.fragPrevious;
       if (targetBufferTime < end) {
-        const { maxFragLookUpTolerance } = config;
+        const tolerance = config.maxFragLookUpTolerance;
+        const lookupTolerance =
+          targetBufferTime > end - tolerance ? 0 : tolerance;
         foundFrag = findFragmentByPTS(
           fragPrevious,
           fragments,
           Math.max(fragments[0].start, targetBufferTime),
-          maxFragLookUpTolerance
+          lookupTolerance
         );
         if (
           !foundFrag &&
@@ -458,8 +448,19 @@ export class SubtitleStreamController
       if (!foundFrag) {
         return;
       }
-
       foundFrag = this.mapToInitFragWhenRequired(foundFrag) as Fragment;
+      if (foundFrag.sn !== 'initSegment') {
+        // Load earlier fragment in same discontinuity to make up for misaligned playlists and cues that extend beyond end of segment
+        const curSNIdx = foundFrag.sn - trackDetails.startSN;
+        const prevFrag = fragments[curSNIdx - 1];
+        if (
+          prevFrag &&
+          prevFrag.cc === foundFrag.cc &&
+          this.fragmentTracker.getState(prevFrag) === FragmentState.NOT_LOADED
+        ) {
+          foundFrag = prevFrag;
+        }
+      }
       if (
         this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
       ) {

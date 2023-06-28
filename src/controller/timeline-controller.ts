@@ -304,7 +304,7 @@ export class TimelineController implements ComponentAPI {
     this.captionsTracks = {};
     this.nonNativeCaptionsTracks = {};
     this.textTracks = [];
-    this.unparsedVttFrags = this.unparsedVttFrags || [];
+    this.unparsedVttFrags = [];
     this.initPTS = [];
     if (this.cea608Parser1 && this.cea608Parser2) {
       this.cea608Parser1.reset();
@@ -477,24 +477,9 @@ export class TimelineController implements ComponentAPI {
     data: FragDecryptedData | FragLoadedData
   ) {
     const { frag, payload } = data;
-    const { initPTS, unparsedVttFrags } = this;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
       // If fragment is subtitle type, parse as WebVTT.
       if (payload.byteLength) {
-        // We need an initial synchronisation PTS. Store fragments as long as none has arrived.
-        if (!initPTS[frag.cc]) {
-          unparsedVttFrags.push(data);
-          if (initPTS.length) {
-            // finish unsuccessfully, otherwise the subtitle-stream-controller could be blocked from loading new frags.
-            this.hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
-              success: false,
-              frag,
-              error: new Error('Missing initial subtitle PTS'),
-            });
-          }
-          return;
-        }
-
         const decryptData = frag.decryptdata;
         // fragment after decryption has a stats object
         const decrypted = 'stats' in data;
@@ -516,7 +501,7 @@ export class TimelineController implements ComponentAPI {
           ) {
             this._parseIMSC1(frag, payload);
           } else {
-            this._parseVTTs(frag, payload, vttCCs);
+            this._parseVTTs(data);
           }
         }
       } else {
@@ -553,7 +538,16 @@ export class TimelineController implements ComponentAPI {
     );
   }
 
-  private _parseVTTs(frag: Fragment, payload: ArrayBuffer, vttCCs: any) {
+  private _parseVTTs(data: FragDecryptedData | FragLoadedData) {
+    const { frag, payload } = data;
+    // We need an initial synchronisation PTS. Store fragments as long as none has arrived
+    const { initPTS, unparsedVttFrags } = this;
+    const maxAvCC = initPTS.length - 1;
+    if (!initPTS[frag.cc] && maxAvCC === -1) {
+      unparsedVttFrags.push(data);
+      return;
+    }
+
     const hls = this.hls;
     // Parse the WebVTT file contents.
     const payloadWebVTT = frag.initSegment?.data
@@ -562,7 +556,7 @@ export class TimelineController implements ComponentAPI {
     parseWebVTT(
       payloadWebVTT,
       this.initPTS[frag.cc],
-      vttCCs,
+      this.vttCCs,
       frag.cc,
       frag.start,
       (cues) => {
@@ -573,9 +567,18 @@ export class TimelineController implements ComponentAPI {
         });
       },
       (error) => {
-        this._fallbackToIMSC1(frag, payload);
+        const missingInitPTS =
+          error.message === 'Missing initPTS for VTT MPEGTS';
+        if (missingInitPTS) {
+          unparsedVttFrags.push(data);
+        } else {
+          this._fallbackToIMSC1(frag, payload);
+        }
         // Something went wrong while parsing. Trigger event with success false.
         logger.log(`Failed to parse VTT cue: ${error}`);
+        if (missingInitPTS && maxAvCC > frag.cc) {
+          return;
+        }
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
           success: false,
           frag: frag,
@@ -631,10 +634,6 @@ export class TimelineController implements ComponentAPI {
   ) {
     const { frag } = data;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
-      if (!this.initPTS[frag.cc]) {
-        this.unparsedVttFrags.push(data as unknown as FragLoadedData);
-        return;
-      }
       this.onFragLoaded(Events.FRAG_LOADED, data as unknown as FragLoadedData);
     }
   }
