@@ -124,7 +124,11 @@ class CapLevelController implements ComponentAPI {
   }
 
   detectPlayerSize() {
-    if (this.media && this.mediaHeight > 0 && this.mediaWidth > 0) {
+    if (this.media) {
+      if (this.mediaHeight <= 0 || this.mediaWidth <= 0) {
+        this.clientRect = null;
+        return;
+      }
       const levels = this.hls.levels;
       if (levels.length) {
         const hls = this.hls;
