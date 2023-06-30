@@ -11,6 +11,7 @@ import type {
   FPSDropLevelCappingData,
 } from '../types/events';
 import StreamController from './stream-controller';
+import { logger } from '../utils/logger';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 
@@ -132,7 +133,13 @@ class CapLevelController implements ComponentAPI {
       const levels = this.hls.levels;
       if (levels.length) {
         const hls = this.hls;
-        hls.autoLevelCapping = this.getMaxLevel(levels.length - 1);
+        const maxLevel = this.getMaxLevel(levels.length - 1);
+        if (maxLevel !== this.autoLevelCapping) {
+          logger.log(
+            `Setting autoLevelCapping to ${maxLevel}: ${levels[maxLevel].height}p@${levels[maxLevel].bitrate} for media ${this.mediaWidth}x${this.mediaHeight}`
+          );
+        }
+        hls.autoLevelCapping = maxLevel;
         if (
           hls.autoLevelCapping > this.autoLevelCapping &&
           this.streamController
@@ -273,11 +280,12 @@ class CapLevelController implements ComponentAPI {
     // If we run through the loop without breaking, the media's dimensions are greater than every level, so default to
     // the max level
     let maxLevelIndex = levels.length - 1;
-
+    // Prevent changes in aspect-ratio from causing capping to toggle back and forth
+    const squareSize = Math.max(width, height);
     for (let i = 0; i < levels.length; i += 1) {
       const level = levels[i];
       if (
-        (level.width >= width || level.height >= height) &&
+        (level.width >= squareSize || level.height >= squareSize) &&
         atGreatestBandwidth(level, levels[i + 1])
       ) {
         maxLevelIndex = i;
