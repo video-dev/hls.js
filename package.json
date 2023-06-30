@@ -104,7 +104,7 @@
     "jsonpack": "1.1.5",
     "karma": "6.4.2",
     "karma-chrome-launcher": "3.2.0",
-    "karma-coverage": "2.2.0",
+    "karma-coverage": "2.2.1",
     "karma-mocha": "2.0.1",
     "karma-mocha-reporter": "2.2.5",
     "karma-rollup-preprocessor": "7.0.8",
