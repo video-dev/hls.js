@@ -1493,10 +1493,7 @@ export default class BaseStreamController
       action === NetworkErrorAction.RetryRequest &&
       retryConfig
     ) {
-      if (!this.loadedmetadata) {
-        this.startFragRequested = false;
-        this.nextLoadPosition = this.startPosition;
-      }
+      this.resetStartWhenNotLoaded(this.levelLastLoaded ?? frag.level);
       const delay = getRetryDelay(retryConfig, retryCount);
       this.warn(
         `Fragment ${frag.sn} of ${filterType} ${frag.level} errored with ${
@@ -1633,7 +1630,7 @@ export default class BaseStreamController
       `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`
     );
     this.removeUnbufferedFrags();
-    this.resetStartWhenNotLoaded(chunkMeta.level);
+    this.resetStartWhenNotLoaded(this.levelLastLoaded ?? chunkMeta.level);
     this.resetLoadingState();
   }
 
@@ -1731,7 +1728,11 @@ export default class BaseStreamController
 
   protected recoverWorkerError(data: ErrorData) {
     if (data.event === 'demuxerWorker') {
+      this.fragmentTracker.removeAllFragments();
       this.resetTransmuxer();
+      this.resetStartWhenNotLoaded(
+        this.levelLastLoaded ?? this.fragCurrent?.level ?? 0
+      );
       this.resetLoadingState();
     }
   }
