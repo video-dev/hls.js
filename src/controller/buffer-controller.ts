@@ -23,6 +23,7 @@ import type {
   BufferFlushingData,
   FragParsedData,
   FragChangedData,
+  ErrorData,
 } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
 import type { ChunkMetadata } from '../types/transmuxer';
@@ -61,7 +62,11 @@ export default class BufferController implements ComponentAPI {
   private lastMpegAudioChunk: ChunkMetadata | null = null;
 
   // counters
-  public appendError: number = 0;
+  public appendErrors = {
+    audio: 0,
+    video: 0,
+    audiovideo: 0,
+  };
 
   public tracks: TrackSet = {};
   public pendingTracks: TrackSet = {};
@@ -400,7 +405,7 @@ export default class BufferController implements ComponentAPI {
         for (const type in sourceBuffer) {
           timeRanges[type] = BufferHelper.getBuffered(sourceBuffer[type]);
         }
-        this.appendError = 0;
+        this.appendErrors[type] = 0;
         this.hls.trigger(Events.BUFFER_APPENDED, {
           type,
           frag,
@@ -412,10 +417,11 @@ export default class BufferController implements ComponentAPI {
       },
       onError: (err) => {
         // in case any error occured while appending, put back segment in segments table
-        const event = {
+        const event: ErrorData = {
           type: ErrorTypes.MEDIA_ERROR,
           parent: frag.type,
           details: ErrorDetails.BUFFER_APPEND_ERROR,
+          sourceBufferName: type,
           frag,
           part,
           chunkMeta,
@@ -429,15 +435,15 @@ export default class BufferController implements ComponentAPI {
           // let's stop appending any segments, and report BUFFER_FULL_ERROR error
           event.details = ErrorDetails.BUFFER_FULL_ERROR;
         } else {
-          this.appendError++;
+          const appendErrorCount = ++this.appendErrors[type];
           event.details = ErrorDetails.BUFFER_APPEND_ERROR;
           /* with UHD content, we could get loop of quota exceeded error until
             browser is able to evict some data from sourcebuffer. Retrying can help recover.
           */
-          if (this.appendError > hls.config.appendErrorMaxRetry) {
-            this.error(
-              `Failed ${hls.config.appendErrorMaxRetry} times to append segment in sourceBuffer`
-            );
+          this.warn(
+            `Failed ${appendErrorCount}/${hls.config.appendErrorMaxRetry} times to append segment in "${type}" sourceBuffer`
+          );
+          if (appendErrorCount > hls.config.appendErrorMaxRetry) {
             event.fatal = true;
           }
         }
@@ -779,6 +785,7 @@ export default class BufferController implements ComponentAPI {
             details: ErrorDetails.BUFFER_ADD_CODEC_ERROR,
             fatal: false,
             error: err,
+            sourceBufferName: trackName as SourceBufferName,
             mimeType: mimeType,
           });
         }
@@ -841,6 +848,7 @@ export default class BufferController implements ComponentAPI {
     this.hls.trigger(Events.ERROR, {
       type: ErrorTypes.MEDIA_ERROR,
       details: ErrorDetails.BUFFER_APPENDING_ERROR,
+      sourceBufferName: type,
       error,
       fatal: false,
     });
