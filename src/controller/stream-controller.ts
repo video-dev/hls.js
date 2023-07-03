@@ -1111,6 +1111,7 @@ export default class StreamController
     }
 
     // Avoid buffering if backtracking this fragment
+    const notFirstFragment = frag.sn !== details?.startSN;
     if (video && remuxResult.independent !== false) {
       if (details) {
         const { startPTS, endPTS, startDTS, endDTS } = video;
@@ -1135,7 +1136,10 @@ export default class StreamController
             const startTime = video.firstKeyFramePTS
               ? video.firstKeyFramePTS
               : startPTS;
-            if (targetBufferTime < startTime - this.config.maxBufferHole) {
+            if (
+              notFirstFragment &&
+              targetBufferTime < startTime - this.config.maxBufferHole
+            ) {
               this.backtrack(frag);
               return;
             }
@@ -1162,7 +1166,7 @@ export default class StreamController
         }
         this.bufferFragmentData(video, frag, part, chunkMeta);
       }
-    } else if (remuxResult.independent === false) {
+    } else if (notFirstFragment && remuxResult.independent === false) {
       this.backtrack(frag);
       return;
     }
