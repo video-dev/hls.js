@@ -161,6 +161,7 @@ describe('BufferController', function () {
       ).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_APPENDING_ERROR,
+        sourceBufferName: triggerSpy.getCall(0).lastArg.sourceBufferName,
         error: triggerSpy.getCall(0).lastArg.error,
         fatal: false,
       });
@@ -251,6 +252,7 @@ describe('BufferController', function () {
       ).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_APPEND_ERROR,
+        sourceBufferName: triggerSpy.getCall(0).lastArg.sourceBufferName,
         parent: 'main',
         frag,
         part: undefined,
