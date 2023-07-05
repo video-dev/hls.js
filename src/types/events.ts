@@ -233,6 +233,7 @@ export interface ErrorData {
   context?: PlaylistLoaderContext;
   event?: keyof HlsListeners | 'demuxerWorker';
   frag?: Fragment;
+  part?: Part | null;
   level?: number | undefined;
   levelRetry?: boolean;
   loader?: Loader<LoaderContext>;
@@ -243,6 +244,7 @@ export interface ErrorData {
   response?: LoaderResponse;
   url?: string;
   parent?: PlaylistLevelType;
+  sourceBufferName?: SourceBufferName;
   /**
    * @deprecated Use ErrorData.error
    */

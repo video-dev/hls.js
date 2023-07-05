@@ -524,7 +524,11 @@ export class BufferController implements ComponentAPI {
     // (undocumented)
     protected appendChangeType(type: any, mimeType: any): void;
     // (undocumented)
-    appendError: number;
+    appendErrors: {
+        audio: number;
+        video: number;
+        audiovideo: number;
+    };
     // (undocumented)
     bufferCodecEventsExpected: number;
     // (undocumented)
@@ -977,9 +981,13 @@ export interface ErrorData {
     // (undocumented)
     parent?: PlaylistLevelType;
     // (undocumented)
+    part?: Part | null;
+    // (undocumented)
     reason?: string;
     // (undocumented)
     response?: LoaderResponse;
+    // (undocumented)
+    sourceBufferName?: SourceBufferName;
     // (undocumented)
     stats?: LoaderStats;
     // (undocumented)
