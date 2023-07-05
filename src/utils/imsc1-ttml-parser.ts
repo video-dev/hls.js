@@ -77,7 +77,7 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
   const cueElements = getElementCollection(tt, 'body', '[begin]');
 
   return [].map
-    .call(cueElements, (cueElement) => {
+    .call(cueElements, (cueElement: HTMLElement) => {
       const cueText = getTextContent(cueElement, trim);
 
       if (!cueText || !cueElement.hasAttribute('begin')) {
@@ -101,8 +101,10 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
       const cue = new VTTCue(startTime - syncTime, endTime - syncTime, cueText);
       cue.id = generateCueId(cue.startTime, cue.endTime, cue.text);
 
-      const region = regionElements[cueElement.getAttribute('region')];
-      const style = styleElements[cueElement.getAttribute('style')];
+      const region: HTMLElement | undefined =
+        regionElements[cueElement.getAttribute('region') || ''];
+      const style: HTMLElement | undefined =
+        styleElements[cueElement.getAttribute('style') || ''];
 
       // Apply styles to cue
       const styles = getTtmlStyles(region, style, styleElements);
@@ -146,27 +148,35 @@ function collectionToDictionary(elementsWithId: Array<HTMLElement>): {
   }, {});
 }
 
-function getTextContent(element, trim): string {
-  return [].slice.call(element.childNodes).reduce((str, node, i) => {
-    if (node.nodeName === 'br' && i) {
-      return str + '\n';
-    }
-    if (node.childNodes?.length) {
-      return getTextContent(node, trim);
-    } else if (trim) {
-      return str + node.textContent.trim().replace(/\s+/g, ' ');
-    }
-    return str + node.textContent;
-  }, '');
+function getTextContent(element: Node, trim: boolean): string {
+  return [].slice
+    .call(element.childNodes)
+    .reduce((str: string, node: Node, i: number) => {
+      if (node.nodeName === 'br' && i) {
+        return str + '\n';
+      }
+      if (node.childNodes?.length) {
+        return str + getTextContent(node, trim);
+      } else {
+        const textContent = node.textContent;
+        if (textContent) {
+          if (trim) {
+            return str + textContent.trim().replace(/\s+/g, ' ');
+          }
+          return str + textContent;
+        }
+      }
+      return str;
+    }, '');
 }
 
 function getTtmlStyles(
-  region,
-  style,
-  styleElements,
+  region: HTMLElement | undefined,
+  style: HTMLElement | undefined,
+  styleElements: { [id: string]: HTMLElement },
 ): { [style: string]: string } {
   const ttsNs = 'http://www.w3.org/ns/ttml#styling';
-  let regionStyle = null;
+  let regionStyle: HTMLElement | undefined;
   const styleAttributes = [
     'displayAlign',
     'textAlign',
@@ -202,7 +212,11 @@ function getTtmlStyles(
   }, {});
 }
 
-function getAttributeNS(element, ns, name): string | null {
+function getAttributeNS(
+  element: HTMLElement | undefined,
+  ns: string,
+  name: string,
+): string | null {
   if (!element) {
     return null;
   }
