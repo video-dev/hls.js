@@ -7,9 +7,9 @@ import Decrypter from '../crypt/decrypter';
 import { HlsEventEmitter } from '../events';
 import type {
   AudioSample,
-  AvcSample,
-  AvcSampleUnit,
-  DemuxedVideoTrack,
+  VideoSample,
+  VideoSampleUnit,
+  DemuxedVideoTrackBase,
   KeyData,
 } from '../types/demuxer';
 import { discardEPB } from '../utils/mp4-tools';
@@ -128,11 +128,11 @@ class SampleAesDecrypter {
   }
 
   decryptAvcSample(
-    samples: AvcSample[],
+    samples: VideoSample[],
     sampleIndex: number,
     unitIndex: number,
     callback: () => void,
-    curUnit: AvcSampleUnit
+    curUnit: VideoSampleUnit
   ) {
     const decodedData = discardEPB(curUnit.data);
     const encryptedData = this.getAvcEncryptedData(decodedData);
@@ -149,7 +149,7 @@ class SampleAesDecrypter {
   }
 
   decryptAvcSamples(
-    samples: DemuxedVideoTrack['samples'],
+    samples: DemuxedVideoTrackBase['samples'],
     sampleIndex: number,
     unitIndex: number,
     callback: () => void

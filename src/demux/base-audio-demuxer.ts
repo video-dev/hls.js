@@ -5,7 +5,7 @@ import {
   DemuxedAudioTrack,
   AudioFrame,
   DemuxedMetadataTrack,
-  DemuxedVideoTrack,
+  DemuxedVideoTrackBase,
   DemuxedUserdataTrack,
   KeyData,
   MetadataSchema,
@@ -138,7 +138,7 @@ class BaseAudioDemuxer implements Demuxer {
 
     return {
       audioTrack: track,
-      videoTrack: dummyTrack() as DemuxedVideoTrack,
+      videoTrack: dummyTrack() as DemuxedVideoTrackBase,
       id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
@@ -164,7 +164,7 @@ class BaseAudioDemuxer implements Demuxer {
 
     return {
       audioTrack: this._audioTrack,
-      videoTrack: dummyTrack() as DemuxedVideoTrack,
+      videoTrack: dummyTrack() as DemuxedVideoTrackBase,
       id3Track: this._id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
     };

@@ -25,18 +25,18 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import {
-  DemuxedAvcTrack,
+  DemuxedVideoTrack,
   DemuxedAudioTrack,
   DemuxedTrack,
   Demuxer,
   DemuxerResult,
-  AvcSample,
+  VideoSample,
   DemuxedMetadataTrack,
   DemuxedUserdataTrack,
   ElementaryStreamData,
   KeyData,
   MetadataSchema,
-  AvcSampleUnit,
+  VideoSampleUnit,
 } from '../types/demuxer';
 import { AudioFrame } from '../types/demuxer';
 
@@ -50,7 +50,7 @@ type PES = ParsedTimestamp & {
   len: number;
 };
 
-type ParsedAvcSample = ParsedTimestamp & Omit<AvcSample, 'pts' | 'dts'>;
+type ParsedVideoSample = ParsedTimestamp & Omit<VideoSample, 'pts' | 'dts'>;
 
 export interface TypeSupported {
   mpeg: boolean;
@@ -72,12 +72,12 @@ class TSDemuxer implements Demuxer {
   private _duration: number = 0;
   private _pmtId: number = -1;
 
-  private _avcTrack?: DemuxedAvcTrack;
+  private _videoTrack?: DemuxedVideoTrack;
   private _audioTrack?: DemuxedAudioTrack;
   private _id3Track?: DemuxedMetadataTrack;
   private _txtTrack?: DemuxedUserdataTrack;
   private aacOverFlow: AudioFrame | null = null;
-  private avcSample: ParsedAvcSample | null = null;
+  private VideoSample: ParsedVideoSample | null = null;
   private remainderData: Uint8Array | null = null;
 
   constructor(
@@ -182,7 +182,7 @@ class TSDemuxer implements Demuxer {
     this.pmtParsed = false;
     this._pmtId = -1;
 
-    this._avcTrack = TSDemuxer.createTrack('video') as DemuxedAvcTrack;
+    this._videoTrack = TSDemuxer.createTrack('video') as DemuxedVideoTrack;
     this._audioTrack = TSDemuxer.createTrack(
       'audio',
       trackDuration
@@ -193,7 +193,7 @@ class TSDemuxer implements Demuxer {
 
     // flush any partial content
     this.aacOverFlow = null;
-    this.avcSample = null;
+    this.VideoSample = null;
     this.remainderData = null;
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
@@ -203,18 +203,18 @@ class TSDemuxer implements Demuxer {
   public resetTimeStamp() {}
 
   public resetContiguity(): void {
-    const { _audioTrack, _avcTrack, _id3Track } = this;
+    const { _audioTrack, _videoTrack, _id3Track } = this;
     if (_audioTrack) {
       _audioTrack.pesData = null;
     }
-    if (_avcTrack) {
-      _avcTrack.pesData = null;
+    if (_videoTrack) {
+      _videoTrack.pesData = null;
     }
     if (_id3Track) {
       _id3Track.pesData = null;
     }
     this.aacOverFlow = null;
-    this.avcSample = null;
+    this.VideoSample = null;
     this.remainderData = null;
   }
 
@@ -230,15 +230,15 @@ class TSDemuxer implements Demuxer {
 
     let pes: PES | null;
 
-    const videoTrack = this._avcTrack as DemuxedAvcTrack;
+    const videoTrack = this._videoTrack as DemuxedVideoTrack;
     const audioTrack = this._audioTrack as DemuxedAudioTrack;
     const id3Track = this._id3Track as DemuxedMetadataTrack;
     const textTrack = this._txtTrack as DemuxedUserdataTrack;
 
-    let avcId = videoTrack.pid;
-    let avcData = videoTrack.pesData;
-    let audioId = audioTrack.pid;
-    let id3Id = id3Track.pid;
+    let videoPid = videoTrack.pid;
+    let videoData = videoTrack.pesData;
+    let audioPid = audioTrack.pid;
+    let id3Pid = id3Track.pid;
     let audioData = audioTrack.pesData;
     let id3Data = id3Track.pesData;
     let unknownPID: number | null = null;
@@ -292,20 +292,20 @@ class TSDemuxer implements Demuxer {
           offset = start + 4;
         }
         switch (pid) {
-          case avcId:
+          case videoPid:
             if (stt) {
-              if (avcData && (pes = parsePES(avcData))) {
+              if (videoData && (pes = parsePES(videoData))) {
                 this.parseAVCPES(videoTrack, textTrack, pes, false);
               }
 
-              avcData = { data: [], size: 0 };
+              videoData = { data: [], size: 0 };
             }
-            if (avcData) {
-              avcData.data.push(data.subarray(offset, start + PACKET_LENGTH));
-              avcData.size += start + PACKET_LENGTH - offset;
+            if (videoData) {
+              videoData.data.push(data.subarray(offset, start + PACKET_LENGTH));
+              videoData.size += start + PACKET_LENGTH - offset;
             }
             break;
-          case audioId:
+          case audioPid:
             if (stt) {
               if (audioData && (pes = parsePES(audioData))) {
                 switch (audioTrack.segmentCodec) {
@@ -329,7 +329,7 @@ class TSDemuxer implements Demuxer {
               audioData.size += start + PACKET_LENGTH - offset;
             }
             break;
-          case id3Id:
+          case id3Pid:
             if (stt) {
               if (id3Data && (pes = parsePES(id3Data))) {
                 this.parseID3PES(id3Track, pes);
@@ -368,19 +368,19 @@ class TSDemuxer implements Demuxer {
             // this could happen in case of transient missing audio samples for example
             // NOTE this is only the PID of the track as found in TS,
             // but we are not using this for MP4 track IDs.
-            avcId = parsedPIDs.avc;
-            if (avcId > 0) {
-              videoTrack.pid = avcId;
+            videoPid = parsedPIDs.videoPid;
+            if (videoPid > 0) {
+              videoTrack.pid = videoPid;
             }
 
-            audioId = parsedPIDs.audio;
-            if (audioId > 0) {
-              audioTrack.pid = audioId;
+            audioPid = parsedPIDs.audioPid;
+            if (audioPid > 0) {
+              audioTrack.pid = audioPid;
               audioTrack.segmentCodec = parsedPIDs.segmentCodec;
             }
-            id3Id = parsedPIDs.id3;
-            if (id3Id > 0) {
-              id3Track.pid = id3Id;
+            id3Pid = parsedPIDs.id3Pid;
+            if (id3Pid > 0) {
+              id3Track.pid = id3Pid;
             }
 
             if (unknownPID !== null && !pmtParsed) {
@@ -419,7 +419,7 @@ class TSDemuxer implements Demuxer {
       });
     }
 
-    videoTrack.pesData = avcData;
+    videoTrack.pesData = videoData;
     audioTrack.pesData = audioData;
     id3Track.pesData = id3Data;
 
@@ -445,7 +445,7 @@ class TSDemuxer implements Demuxer {
       result = this.demux(remainderData, -1, false, true);
     } else {
       result = {
-        videoTrack: this._avcTrack as DemuxedAvcTrack,
+        videoTrack: this._videoTrack as DemuxedVideoTrack,
         audioTrack: this._audioTrack as DemuxedAudioTrack,
         id3Track: this._id3Track as DemuxedMetadataTrack,
         textTrack: this._txtTrack as DemuxedUserdataTrack,
@@ -460,14 +460,14 @@ class TSDemuxer implements Demuxer {
 
   private extractRemainingSamples(demuxResult: DemuxerResult) {
     const { audioTrack, videoTrack, id3Track, textTrack } = demuxResult;
-    const avcData = videoTrack.pesData;
+    const videoData = videoTrack.pesData;
     const audioData = audioTrack.pesData;
     const id3Data = id3Track.pesData;
     // try to parse last PES packets
     let pes: PES | null;
-    if (avcData && (pes = parsePES(avcData))) {
+    if (videoData && (pes = parsePES(videoData))) {
       this.parseAVCPES(
-        videoTrack as DemuxedAvcTrack,
+        videoTrack as DemuxedVideoTrack,
         textTrack as DemuxedUserdataTrack,
         pes,
         true
@@ -475,7 +475,7 @@ class TSDemuxer implements Demuxer {
       videoTrack.pesData = null;
     } else {
       // either avcData null or PES truncated, keep it for next frag parsing
-      videoTrack.pesData = avcData;
+      videoTrack.pesData = videoData;
     }
 
     if (audioData && (pes = parsePES(audioData))) {
@@ -561,14 +561,14 @@ class TSDemuxer implements Demuxer {
   }
 
   private parseAVCPES(
-    track: DemuxedAvcTrack,
+    track: DemuxedVideoTrack,
     textTrack: DemuxedUserdataTrack,
     pes: PES,
     last: boolean
   ) {
     const units = this.parseAVCNALu(track, pes.data);
     const debug = false;
-    let avcSample = this.avcSample;
+    let VideoSample = this.VideoSample;
     let push: boolean;
     let spsfound = false;
     // free pes.data to save up some memory
@@ -576,9 +576,14 @@ class TSDemuxer implements Demuxer {
 
     // if new NAL units found and last sample still there, let's push ...
     // this helps parsing streams with missing AUD (only do this if AUD never found)
-    if (avcSample && units.length && !track.audFound) {
-      pushAccessUnit(avcSample, track);
-      avcSample = this.avcSample = createAVCSample(false, pes.pts, pes.dts, '');
+    if (VideoSample && units.length && !track.audFound) {
+      pushAccessUnit(VideoSample, track);
+      VideoSample = this.VideoSample = createVideoSample(
+        false,
+        pes.pts,
+        pes.dts,
+        ''
+      );
     }
 
     units.forEach((unit) => {
@@ -586,8 +591,8 @@ class TSDemuxer implements Demuxer {
         // NDR
         case 1: {
           push = true;
-          if (!avcSample) {
-            avcSample = this.avcSample = createAVCSample(
+          if (!VideoSample) {
+            VideoSample = this.VideoSample = createVideoSample(
               true,
               pes.pts,
               pes.dts,
@@ -596,10 +601,10 @@ class TSDemuxer implements Demuxer {
           }
 
           if (debug) {
-            avcSample.debug += 'NDR ';
+            VideoSample.debug += 'NDR ';
           }
 
-          avcSample.frame = true;
+          VideoSample.frame = true;
           const data = unit.data;
           // only check slice type to detect KF in case SPS found in same packet (any keyframe is preceded by SPS ...)
           if (spsfound && data.length > 4) {
@@ -616,7 +621,7 @@ class TSDemuxer implements Demuxer {
               sliceType === 7 ||
               sliceType === 9
             ) {
-              avcSample.key = true;
+              VideoSample.key = true;
             }
           }
           break;
@@ -625,8 +630,8 @@ class TSDemuxer implements Demuxer {
         case 5:
           push = true;
           // handle PES not starting with AUD
-          if (!avcSample) {
-            avcSample = this.avcSample = createAVCSample(
+          if (!VideoSample) {
+            VideoSample = this.VideoSample = createVideoSample(
               true,
               pes.pts,
               pes.dts,
@@ -635,17 +640,17 @@ class TSDemuxer implements Demuxer {
           }
 
           if (debug) {
-            avcSample.debug += 'IDR ';
+            VideoSample.debug += 'IDR ';
           }
 
-          avcSample.key = true;
-          avcSample.frame = true;
+          VideoSample.key = true;
+          VideoSample.frame = true;
           break;
         // SEI
         case 6: {
           push = true;
-          if (debug && avcSample) {
-            avcSample.debug += 'SEI ';
+          if (debug && VideoSample) {
+            VideoSample.debug += 'SEI ';
           }
           parseSEIMessageFromNALu(
             unit.data,
@@ -659,8 +664,8 @@ class TSDemuxer implements Demuxer {
         case 7:
           push = true;
           spsfound = true;
-          if (debug && avcSample) {
-            avcSample.debug += 'SPS ';
+          if (debug && VideoSample) {
+            VideoSample.debug += 'SPS ';
           }
 
           if (!track.sps) {
@@ -688,8 +693,8 @@ class TSDemuxer implements Demuxer {
         // PPS
         case 8:
           push = true;
-          if (debug && avcSample) {
-            avcSample.debug += 'PPS ';
+          if (debug && VideoSample) {
+            VideoSample.debug += 'PPS ';
           }
 
           if (!track.pps) {
@@ -701,11 +706,11 @@ class TSDemuxer implements Demuxer {
         case 9:
           push = false;
           track.audFound = true;
-          if (avcSample) {
-            pushAccessUnit(avcSample, track);
+          if (VideoSample) {
+            pushAccessUnit(VideoSample, track);
           }
 
-          avcSample = this.avcSample = createAVCSample(
+          VideoSample = this.VideoSample = createVideoSample(
             false,
             pes.pts,
             pes.dts,
@@ -718,40 +723,40 @@ class TSDemuxer implements Demuxer {
           break;
         default:
           push = false;
-          if (avcSample) {
-            avcSample.debug += 'unknown NAL ' + unit.type + ' ';
+          if (VideoSample) {
+            VideoSample.debug += 'unknown NAL ' + unit.type + ' ';
           }
 
           break;
       }
-      if (avcSample && push) {
-        const units = avcSample.units;
+      if (VideoSample && push) {
+        const units = VideoSample.units;
         units.push(unit);
       }
     });
     // if last PES packet, push samples
-    if (last && avcSample) {
-      pushAccessUnit(avcSample, track);
-      this.avcSample = null;
+    if (last && VideoSample) {
+      pushAccessUnit(VideoSample, track);
+      this.VideoSample = null;
     }
   }
 
-  private getLastNalUnit(samples: AvcSample[]): AvcSampleUnit | undefined {
-    let avcSample = this.avcSample;
-    let lastUnit: AvcSampleUnit | undefined;
+  private getLastNalUnit(samples: VideoSample[]): VideoSampleUnit | undefined {
+    let VideoSample = this.VideoSample;
+    let lastUnit: VideoSampleUnit | undefined;
     // try to fallback to previous sample if current one is empty
-    if (!avcSample || avcSample.units.length === 0) {
-      avcSample = samples[samples.length - 1];
+    if (!VideoSample || VideoSample.units.length === 0) {
+      VideoSample = samples[samples.length - 1];
     }
-    if (avcSample?.units) {
-      const units = avcSample.units;
+    if (VideoSample?.units) {
+      const units = VideoSample.units;
       lastUnit = units[units.length - 1];
     }
     return lastUnit;
   }
 
   private parseAVCNALu(
-    track: DemuxedAvcTrack,
+    track: DemuxedVideoTrack,
     array: Uint8Array
   ): Array<{
     data: Uint8Array;
@@ -761,7 +766,7 @@ class TSDemuxer implements Demuxer {
     const len = array.byteLength;
     let state = track.naluState || 0;
     const lastState = state;
-    const units: AvcSampleUnit[] = [];
+    const units: VideoSampleUnit[] = [];
     let i = 0;
     let value: number;
     let overflow: number;
@@ -796,7 +801,7 @@ class TSDemuxer implements Demuxer {
       } else if (value === 1) {
         overflow = i - state - 1;
         if (lastUnitStart >= 0) {
-          const unit: AvcSampleUnit = {
+          const unit: VideoSampleUnit = {
             data: array.subarray(lastUnitStart, overflow),
             type: lastUnitType,
           };
@@ -849,7 +854,7 @@ class TSDemuxer implements Demuxer {
       }
     }
     if (lastUnitStart >= 0 && state >= 0) {
-      const unit: AvcSampleUnit = {
+      const unit: VideoSampleUnit = {
         data: array.subarray(lastUnitStart, len),
         type: lastUnitType,
         state: state,
@@ -1024,19 +1029,19 @@ class TSDemuxer implements Demuxer {
       return;
     }
     const id3Sample = Object.assign({}, pes as Required<PES>, {
-      type: this._avcTrack ? MetadataSchema.emsg : MetadataSchema.audioId3,
+      type: this._videoTrack ? MetadataSchema.emsg : MetadataSchema.audioId3,
       duration: Number.POSITIVE_INFINITY,
     });
     id3Track.samples.push(id3Sample);
   }
 }
 
-function createAVCSample(
+function createVideoSample(
   key: boolean,
   pts: number | undefined,
   dts: number | undefined,
   debug: string
-): ParsedAvcSample {
+): ParsedVideoSample {
   return {
     key,
     frame: false,
@@ -1064,7 +1069,12 @@ function parsePMT(
   typeSupported: TypeSupported,
   isSampleAes: boolean
 ) {
-  const result = { audio: -1, avc: -1, id3: -1, segmentCodec: 'aac' };
+  const result = {
+    audioPid: -1,
+    videoPid: -1,
+    id3Pid: -1,
+    segmentCodec: 'aac',
+  };
   const sectionLength = ((data[offset + 1] & 0x0f) << 8) | data[offset + 2];
   const tableEnd = offset + 3 + sectionLength - 4;
   // to determine where the table is, we have to figure out how
@@ -1084,8 +1094,8 @@ function parsePMT(
       /* falls through */
       case 0x0f: // ISO/IEC 13818-7 ADTS AAC (MPEG-2 lower bit-rate audio)
         // logger.log('AAC PID:'  + pid);
-        if (result.audio === -1) {
-          result.audio = pid;
+        if (result.audioPid === -1) {
+          result.audioPid = pid;
         }
 
         break;
@@ -1093,8 +1103,8 @@ function parsePMT(
       // Packetized metadata (ID3)
       case 0x15:
         // logger.log('ID3 PID:'  + pid);
-        if (result.id3 === -1) {
-          result.id3 = pid;
+        if (result.id3Pid === -1) {
+          result.id3Pid = pid;
         }
 
         break;
@@ -1107,8 +1117,8 @@ function parsePMT(
       /* falls through */
       case 0x1b: // ITU-T Rec. H.264 and ISO/IEC 14496-10 (lower bit-rate video)
         // logger.log('AVC PID:'  + pid);
-        if (result.avc === -1) {
-          result.avc = pid;
+        if (result.videoPid === -1) {
+          result.videoPid = pid;
         }
 
         break;
@@ -1120,8 +1130,8 @@ function parsePMT(
         // logger.log('MPEG PID:'  + pid);
         if (!typeSupported.mpeg && !typeSupported.mp3) {
           logger.log('MPEG audio found, not supported in this browser');
-        } else if (result.audio === -1) {
-          result.audio = pid;
+        } else if (result.audioPid === -1) {
+          result.audioPid = pid;
           result.segmentCodec = 'mp3';
         }
         break;
@@ -1136,8 +1146,8 @@ function parsePMT(
         if (__USE_M2TS_ADVANCED_CODECS__) {
           if (!typeSupported.ac3) {
             logger.log('AC-3 audio found, not supported in this browser');
-          } else if (result.audio === -1) {
-            result.audio = pid;
+          } else if (result.audioPid === -1) {
+            result.audioPid = pid;
             result.segmentCodec = 'ac3';
           }
         } else {
@@ -1268,26 +1278,31 @@ function parsePES(stream: ElementaryStreamData): PES | null {
   return null;
 }
 
-function pushAccessUnit(avcSample: ParsedAvcSample, avcTrack: DemuxedAvcTrack) {
-  if (avcSample.units.length && avcSample.frame) {
+function pushAccessUnit(
+  VideoSample: ParsedVideoSample,
+  videoTrack: DemuxedVideoTrack
+) {
+  if (VideoSample.units.length && VideoSample.frame) {
     // if sample does not have PTS/DTS, patch with last sample PTS/DTS
-    if (avcSample.pts === undefined) {
-      const samples = avcTrack.samples;
+    if (VideoSample.pts === undefined) {
+      const samples = videoTrack.samples;
       const nbSamples = samples.length;
       if (nbSamples) {
         const lastSample = samples[nbSamples - 1];
-        avcSample.pts = lastSample.pts;
-        avcSample.dts = lastSample.dts;
+        VideoSample.pts = lastSample.pts;
+        VideoSample.dts = lastSample.dts;
       } else {
         // dropping samples, no timestamp found
-        avcTrack.dropped++;
+        videoTrack.dropped++;
         return;
       }
     }
-    avcTrack.samples.push(avcSample as AvcSample);
+    videoTrack.samples.push(VideoSample as VideoSample);
   }
-  if (avcSample.debug.length) {
-    logger.log(avcSample.pts + '/' + avcSample.dts + ':' + avcSample.debug);
+  if (VideoSample.debug.length) {
+    logger.log(
+      VideoSample.pts + '/' + VideoSample.dts + ':' + VideoSample.debug
+    );
   }
 }
 
