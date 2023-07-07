@@ -1,4 +1,4 @@
-import { initPTSFn } from '../../../src/demux/base-audio-demuxer';
+import { initPTSFn } from '../../../src/demux/audio/base-audio-demuxer';
 import { expect } from 'chai';
 
 describe('BaseAudioDemuxer', function () {

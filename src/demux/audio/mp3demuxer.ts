@@ -2,8 +2,8 @@
  * MP3 demuxer
  */
 import BaseAudioDemuxer from './base-audio-demuxer';
-import * as ID3 from '../demux/id3';
-import { logger } from '../utils/logger';
+import * as ID3 from '../id3';
+import { logger } from '../../utils/logger';
 import * as MpegAudio from './mpegaudio';
 
 class MP3Demuxer extends BaseAudioDemuxer {

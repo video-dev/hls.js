@@ -1,4 +1,4 @@
-import * as ID3 from '../demux/id3';
+import * as ID3 from '../id3';
 import {
   DemuxerResult,
   Demuxer,
@@ -9,11 +9,11 @@ import {
   DemuxedUserdataTrack,
   KeyData,
   MetadataSchema,
-} from '../types/demuxer';
-import { dummyTrack } from './dummy-demuxed-track';
-import { appendUint8Array } from '../utils/mp4-tools';
-import { sliceUint8 } from '../utils/typed-array';
-import { RationalTimestamp } from '../utils/timescale-conversion';
+} from '../../types/demuxer';
+import { dummyTrack } from '../dummy-demuxed-track';
+import { appendUint8Array } from '../../utils/mp4-tools';
+import { sliceUint8 } from '../../utils/typed-array';
+import { RationalTimestamp } from '../../utils/timescale-conversion';
 
 class BaseAudioDemuxer implements Demuxer {
   protected _audioTrack!: DemuxedAudioTrack;

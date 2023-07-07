@@ -1,7 +1,7 @@
 import BaseAudioDemuxer from './base-audio-demuxer';
-import { getID3Data, getTimeStamp } from './id3';
-import type { HlsEventEmitter } from '../events';
-import type { AudioFrame, DemuxedAudioTrack } from '../types/demuxer';
+import { getID3Data, getTimeStamp } from '../id3';
+import type { HlsEventEmitter } from '../../events';
+import type { AudioFrame, DemuxedAudioTrack } from '../../types/demuxer';
 
 export class AC3Demuxer extends BaseAudioDemuxer {
   private readonly observer: HlsEventEmitter;
