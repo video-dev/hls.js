@@ -30,6 +30,7 @@ describe('ErrorController Integration Tests', function () {
       // debug: true,
       startFragPrefetch: true,
       enableWorker: false,
+      testBandwidth: false,
     });
     sinon.spy(hls, 'stopLoad');
     sinon.spy(hls, 'trigger');
@@ -364,7 +365,7 @@ describe('ErrorController Integration Tests', function () {
         expect(data.details).to.equal(ErrorDetails.LEVEL_LOAD_ERROR);
         expect(data.fatal).to.equal(false, 'Error should not be fatal');
         expect(data.error.message).to.equal(
-          'A network error (status 400) occurred while loading level: 1 id: 0',
+          'A network error (status 400) occurred while loading level: 2 id: 0',
           data.error.message
         );
         hls.stopLoad.should.have.been.calledOnce;
@@ -390,7 +391,7 @@ describe('ErrorController Integration Tests', function () {
         expect(data.details).to.equal(ErrorDetails.LEVEL_LOAD_TIMEOUT);
         expect(data.fatal).to.equal(false, 'Error should not be fatal');
         expect(data.error.message).to.equal(
-          'A network timeout occurred while loading level: 1 id: 0',
+          'A network timeout occurred while loading level: 2 id: 0',
           data.error.message
         );
         server.respond();

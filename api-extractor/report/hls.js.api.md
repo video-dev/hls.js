@@ -28,10 +28,16 @@ export class AbrController implements AbrComponentAPI {
     // (undocumented)
     destroy(): void;
     // (undocumented)
+    get firstAutoLevel(): number;
+    // (undocumented)
+    get forcedAutoLevel(): number;
+    // (undocumented)
     protected hls: Hls;
     // (undocumented)
     get nextAutoLevel(): number;
     set nextAutoLevel(nextLevel: number);
+    // (undocumented)
+    protected onError(event: Events.ERROR, data: ErrorData): void;
     // (undocumented)
     protected onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData): void;
     // (undocumented)
@@ -42,6 +48,8 @@ export class AbrController implements AbrComponentAPI {
     protected onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData): void;
     // (undocumented)
     protected onLevelSwitching(event: Events.LEVEL_SWITCHING, data: LevelSwitchingData): void;
+    // (undocumented)
+    protected onManifestLoading(event: Events.MANIFEST_LOADING, data: ManifestLoadingData): void;
     // (undocumented)
     protected registerListeners(): void;
     // (undocumented)
@@ -156,6 +164,8 @@ export class AudioStreamController extends BaseStreamController implements Netwo
 // @public (undocumented)
 export class AudioTrackController extends BasePlaylistController {
     constructor(hls: Hls);
+    // (undocumented)
+    get allAudioTracks(): MediaPlaylist[];
     // (undocumented)
     get audioTrack(): number;
     set audioTrack(newId: number);
@@ -1505,19 +1515,17 @@ export interface FragParsingUserdataData {
     samples: UserdataSample[];
 }
 
+// Warning: (ae-forgotten-export) The symbol "HdcpLevels" needs to be exported by the entry point hls.d.ts
 // Warning: (ae-missing-release-tag) "HdcpLevel" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
 export type HdcpLevel = (typeof HdcpLevels)[number];
 
-// Warning: (ae-missing-release-tag) "HdcpLevels" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
-//
-// @public (undocumented)
-export const HdcpLevels: readonly ["NONE", "TYPE-0", "TYPE-1", null];
-
 // @public
 class Hls implements HlsEventEmitter {
     constructor(userConfig?: Partial<HlsConfig>);
+    get allAudioTracks(): Array<MediaPlaylist>;
+    get allSubtitleTracks(): Array<MediaPlaylist>;
     attachMedia(media: HTMLMediaElement): void;
     get audioTrack(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "audioTrack" must appear on the getter, not the setter.
@@ -1552,6 +1560,8 @@ class Hls implements HlsEventEmitter {
     static get ErrorTypes(): typeof ErrorTypes;
     // (undocumented)
     static get Events(): typeof Events;
+    // (undocumented)
+    get firstAutoLevel(): number;
     get firstLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "firstLevel" must appear on the getter, not the setter.
     set firstLevel(newLevel: number);
@@ -1992,11 +2002,15 @@ export class Level {
     // (undocumented)
     readonly bitrate: number;
     // (undocumented)
+    get codecs(): string;
+    // (undocumented)
     readonly codecSet: string;
     // (undocumented)
     details?: LevelDetails;
     // (undocumented)
     fragmentError: number;
+    // (undocumented)
+    readonly frameRate: number;
     // (undocumented)
     readonly height: number;
     // (undocumented)
@@ -2031,6 +2045,10 @@ export class Level {
     set urlId(value: number);
     // (undocumented)
     readonly videoCodec: string | undefined;
+    // Warning: (ae-forgotten-export) The symbol "VideoRange" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    get videoRange(): VideoRange;
     // (undocumented)
     readonly width: number;
 }
@@ -2056,7 +2074,7 @@ export interface LevelAttributes extends AttrList {
     // (undocumented)
     'SUPPLEMENTAL-CODECS'?: string;
     // (undocumented)
-    'VIDEO-RANGE'?: 'SDR' | 'HLG' | 'PQ';
+    'VIDEO-RANGE'?: VideoRange;
     // (undocumented)
     AUDIO?: string;
     // (undocumented)
@@ -3036,6 +3054,8 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
 // @public (undocumented)
 export class SubtitleTrackController extends BasePlaylistController {
     constructor(hls: Hls);
+    // (undocumented)
+    get allSubtitleTracks(): MediaPlaylist[];
     // (undocumented)
     destroy(): void;
     // (undocumented)

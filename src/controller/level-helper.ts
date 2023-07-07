@@ -482,3 +482,14 @@ export function findPart(
   }
   return null;
 }
+
+export function reassignFragmentLevelIndexes(levels: Level[]) {
+  levels.forEach((level, index) => {
+    const { details } = level;
+    if (details?.fragments) {
+      details.fragments.forEach((fragment) => {
+        fragment.level = index;
+      });
+    }
+  });
+}

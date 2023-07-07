@@ -1,5 +1,6 @@
 import { Events } from '../events';
 import { Level, addGroupId } from '../types/level';
+import { reassignFragmentLevelIndexes } from './level-helper';
 import { AttrList } from '../utils/attr-list';
 import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
 import { logger } from '../utils/logger';
@@ -249,6 +250,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       if (levels.length > 0) {
         this.log(`Setting Pathway to "${pathwayId}"`);
         this.pathwayId = pathwayId;
+        reassignFragmentLevelIndexes(levels);
         this.hls.trigger(Events.LEVELS_UPDATED, { levels });
         // Set LevelController's level to trigger LEVEL_SWITCHING which loads playlist if needed
         const levelAfterChange = this.hls.levels[selectedIndex];

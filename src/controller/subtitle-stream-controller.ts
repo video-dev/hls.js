@@ -160,6 +160,7 @@ export class SubtitleStreamController
       buffered.push(timeRange);
     }
     this.fragmentTracker.fragBuffered(frag);
+    this.fragBufferedComplete(frag, null);
   }
 
   onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData) {

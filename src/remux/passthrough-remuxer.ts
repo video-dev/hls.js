@@ -281,8 +281,11 @@ function getParsedTrackCodec(
     if (parsedCodec === 'fLaC' || parsedCodec === 'Opus') {
       return getCodecCompatibleName(parsedCodec);
     }
-    logger.warn(`Unhandled audio codec "${parsedCodec}" or audio object type`);
-    return 'mp4a.40.5';
+    const result = 'mp4a.40.5';
+    logger.info(
+      `Parsed audio codec "${parsedCodec}" or audio object type not handled. Using "${result}"`
+    );
+    return result;
   }
   // Provide defaults based on codec type
   // This allows for some playback of some fmp4 playlists without CODECS defined in manifest

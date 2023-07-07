@@ -1,80 +1,81 @@
 import { getMediaSource } from './mediasource-helper';
 
 // from http://mp4ra.org/codecs.html
+// values indicate codec selection preference (lower is higher priority)
 const sampleEntryCodesISO = {
   audio: {
-    a3ds: true,
-    'ac-3': true,
-    'ac-4': true,
-    alac: true,
-    alaw: true,
-    dra1: true,
-    'dts+': true,
-    'dts-': true,
-    dtsc: true,
-    dtse: true,
-    dtsh: true,
-    'ec-3': true,
-    enca: true,
-    fLaC: true, // MP4-RA listed codec entry for FLAC
-    flac: true, // legacy browser codec name for FLAC
-    FLAC: true, // some manifests may list "FLAC" with Apple's tools
-    g719: true,
-    g726: true,
-    m4ae: true,
-    mha1: true,
-    mha2: true,
-    mhm1: true,
-    mhm2: true,
-    mlpa: true,
-    mp4a: true,
-    'raw ': true,
-    Opus: true,
-    opus: true, // browsers expect this to be lowercase despite MP4RA says 'Opus'
-    samr: true,
-    sawb: true,
-    sawp: true,
-    sevc: true,
-    sqcp: true,
-    ssmv: true,
-    twos: true,
-    ulaw: true,
+    a3ds: 1,
+    'ac-3': 0.95,
+    'ac-4': 1,
+    alac: 0.9,
+    alaw: 1,
+    dra1: 1,
+    'dts+': 1,
+    'dts-': 1,
+    dtsc: 1,
+    dtse: 1,
+    dtsh: 1,
+    'ec-3': 0.9,
+    enca: 1,
+    fLaC: 0.9, // MP4-RA listed codec entry for FLAC
+    flac: 0.9, // legacy browser codec name for FLAC
+    FLAC: 0.9, // some manifests may list "FLAC" with Apple's tools
+    g719: 1,
+    g726: 1,
+    m4ae: 1,
+    mha1: 1,
+    mha2: 1,
+    mhm1: 1,
+    mhm2: 1,
+    mlpa: 1,
+    mp4a: 1,
+    'raw ': 1,
+    Opus: 1,
+    opus: 1, // browsers expect this to be lowercase despite MP4RA says 'Opus'
+    samr: 1,
+    sawb: 1,
+    sawp: 1,
+    sevc: 1,
+    sqcp: 1,
+    ssmv: 1,
+    twos: 1,
+    ulaw: 1,
   },
   video: {
-    avc1: true,
-    avc2: true,
-    avc3: true,
-    avc4: true,
-    avcp: true,
-    av01: true,
-    drac: true,
-    dva1: true,
-    dvav: true,
-    dvh1: true,
-    dvhe: true,
-    encv: true,
-    hev1: true,
-    hvc1: true,
-    mjp2: true,
-    mp4v: true,
-    mvc1: true,
-    mvc2: true,
-    mvc3: true,
-    mvc4: true,
-    resv: true,
-    rv60: true,
-    s263: true,
-    svc1: true,
-    svc2: true,
-    'vc-1': true,
-    vp08: true,
-    vp09: true,
+    avc1: 1,
+    avc2: 1,
+    avc3: 1,
+    avc4: 1,
+    avcp: 1,
+    av01: 0.8,
+    drac: 1,
+    dva1: 1,
+    dvav: 1,
+    dvh1: 0.7,
+    dvhe: 0.7,
+    encv: 1,
+    hev1: 0.75,
+    hvc1: 0.75,
+    mjp2: 1,
+    mp4v: 1,
+    mvc1: 1,
+    mvc2: 1,
+    mvc3: 1,
+    mvc4: 1,
+    resv: 1,
+    rv60: 1,
+    s263: 1,
+    svc1: 1,
+    svc2: 1,
+    'vc-1': 1,
+    vp08: 1,
+    vp09: 0.9,
   },
   text: {
-    stpp: true,
-    wvtt: true,
+    stpp: 1,
+    wvtt: 1,
   },
-};
+} as const;
 
 const MediaSource = getMediaSource();
 
@@ -82,7 +83,7 @@ export type CodecType = 'audio' | 'video';
 
 export function isCodecType(codec: string, type: CodecType): boolean {
   const typeCodes = sampleEntryCodesISO[type];
-  return !!typeCodes && typeCodes[codec.slice(0, 4)] === true;
+  return !!typeCodes && !!typeCodes[codec.slice(0, 4)];
 }
 
 export function areCodecsMediaSourceSupported(
@@ -95,10 +96,17 @@ export function areCodecsMediaSourceSupported(
 }
 
 function isCodecMediaSourceSupported(codec: string, type: CodecType): boolean {
-  return (
-    MediaSource?.isTypeSupported(`${type || 'video'}/mp4;codecs="${codec}"`) ??
-    false
-  );
+  return MediaSource?.isTypeSupported(`${type}/mp4;codecs="${codec}"`) ?? false;
+}
+
+export function codecsSetSelectionPreferenceValue(codecSet: string): number {
+  return codecSet.split(',').reduce((num, fourCC) => {
+    const preferenceValue = sampleEntryCodesISO.video[fourCC];
+    if (preferenceValue) {
+      return (preferenceValue * 2 + num) / (num ? 3 : 2);
+    }
+    return (sampleEntryCodesISO.audio[fourCC] + num) / (num ? 2 : 1);
+  }, 0);
 }
 
 interface CodecNameCache {

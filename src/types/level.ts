@@ -33,11 +33,22 @@ export interface LevelAttributes extends AttrList {
   SUBTITLES?: string;
   'SUPPLEMENTAL-CODECS'?: string;
   VIDEO?: string;
-  'VIDEO-RANGE'?: 'SDR' | 'HLG' | 'PQ';
+  'VIDEO-RANGE'?: VideoRange;
 }
 
 export const HdcpLevels = ['NONE', 'TYPE-0', 'TYPE-1', null] as const;
 export type HdcpLevel = (typeof HdcpLevels)[number];
+
+export function isHdcpLevel(value: any): value is HdcpLevel {
+  return HdcpLevels.indexOf(value) > -1;
+}
+
+export const VideoRangeValues = ['SDR', 'PQ', 'HLG'] as const;
+export type VideoRange = (typeof VideoRangeValues)[number];
+
+export function isVideoRange(value: any): value is VideoRange {
+  return !!value && VideoRangeValues.indexOf(value) > -1;
+}
 
 export type VariableMap = Record<string, string>;
 
@@ -90,6 +101,7 @@ export class Level {
   public readonly audioCodec: string | undefined;
   public readonly bitrate: number;
   public readonly codecSet: string;
+  public readonly frameRate: number;
   public readonly height: number;
   public readonly id: number;
   public readonly name: string | undefined;
@@ -118,14 +130,15 @@ export class Level {
     this.name = data.name;
     this.width = data.width || 0;
     this.height = data.height || 0;
+    this.frameRate = data.attrs.optionalFloat('FRAME-RATE', 0);
     this._avgBitrate = this.attrs.decimalInteger('AVERAGE-BANDWIDTH');
     this.audioCodec = data.audioCodec;
     this.videoCodec = data.videoCodec;
     this.unknownCodecs = data.unknownCodecs;
     this.codecSet = [data.videoCodec, data.audioCodec]
-      .filter((c) => c)
-      .join(',')
-      .replace(/\.[^.,]+/g, '');
+      .filter((c) => !!c)
+      .map((s: string) => s.substring(0, 4))
+      .join(',');
   }
 
   get maxBitrate(): number {
@@ -140,8 +153,16 @@ export class Level {
     return this._attrs[this._urlId];
   }
 
+  get codecs(): string {
+    return this.attrs.CODECS || '';
+  }
+
   get pathwayId(): string {
     return this.attrs['PATHWAY-ID'] || '.';
+  }
+
+  get videoRange(): VideoRange {
+    return this.attrs['VIDEO-RANGE'] || 'SDR';
   }
 
   get uri(): string {
