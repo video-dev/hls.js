@@ -2,7 +2,7 @@
  * Parser for exponential Golomb codes, a variable-bitwidth number encoding scheme used by h264.
  */
 
-import { logger } from '../utils/logger';
+import { logger } from '../../utils/logger';
 
 class ExpGolomb {
   private data: Uint8Array;

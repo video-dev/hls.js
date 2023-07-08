@@ -1,5 +1,5 @@
 import { expect } from 'chai';
-import ExpGolomb from '../../../src/demux/exp-golomb';
+import ExpGolomb from '../../../src/demux/video/exp-golomb';
 
 describe('Exp-Golomb reader', function () {
   const testBuffer = new Uint8Array([

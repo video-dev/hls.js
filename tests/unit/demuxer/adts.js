@@ -9,7 +9,7 @@ import {
   getFrameDuration,
   parseFrameHeader,
   appendFrame,
-} from '../../../src/demux/adts';
+} from '../../../src/demux/audio/adts';
 import { ErrorTypes } from '../../../src/errors';
 import sinon from 'sinon';
 

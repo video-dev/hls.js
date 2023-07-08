@@ -1,19 +1,19 @@
-import * as ID3 from '../demux/id3';
+import * as ID3 from '../id3';
 import {
   DemuxerResult,
   Demuxer,
   DemuxedAudioTrack,
   AudioFrame,
   DemuxedMetadataTrack,
-  DemuxedVideoTrack,
+  DemuxedVideoTrackBase,
   DemuxedUserdataTrack,
   KeyData,
   MetadataSchema,
-} from '../types/demuxer';
-import { dummyTrack } from './dummy-demuxed-track';
-import { appendUint8Array } from '../utils/mp4-tools';
-import { sliceUint8 } from '../utils/typed-array';
-import { RationalTimestamp } from '../utils/timescale-conversion';
+} from '../../types/demuxer';
+import { dummyTrack } from '../dummy-demuxed-track';
+import { appendUint8Array } from '../../utils/mp4-tools';
+import { sliceUint8 } from '../../utils/typed-array';
+import { RationalTimestamp } from '../../utils/timescale-conversion';
 
 class BaseAudioDemuxer implements Demuxer {
   protected _audioTrack!: DemuxedAudioTrack;
@@ -138,7 +138,7 @@ class BaseAudioDemuxer implements Demuxer {
 
     return {
       audioTrack: track,
-      videoTrack: dummyTrack() as DemuxedVideoTrack,
+      videoTrack: dummyTrack() as DemuxedVideoTrackBase,
       id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
@@ -164,7 +164,7 @@ class BaseAudioDemuxer implements Demuxer {
 
     return {
       audioTrack: this._audioTrack,
-      videoTrack: dummyTrack() as DemuxedVideoTrack,
+      videoTrack: dummyTrack() as DemuxedVideoTrackBase,
       id3Track: this._id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
