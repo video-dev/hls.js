@@ -3,7 +3,7 @@ import {
   DemuxedAudioTrack,
   DemuxedMetadataTrack,
   DemuxedUserdataTrack,
-  DemuxedVideoTrack,
+  DemuxedVideoTrackBase,
   MetadataSample,
   UserdataSample,
 } from './demuxer';
@@ -15,7 +15,7 @@ import type { RationalTimestamp } from '../utils/timescale-conversion';
 export interface Remuxer {
   remux(
     audioTrack: DemuxedAudioTrack,
-    videoTrack: DemuxedVideoTrack,
+    videoTrack: DemuxedVideoTrackBase,
     id3Track: DemuxedMetadataTrack,
     textTrack: DemuxedUserdataTrack,
     timeOffset: number,
