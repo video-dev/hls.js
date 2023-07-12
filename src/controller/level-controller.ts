@@ -13,7 +13,7 @@ import {
   LevelsUpdatedData,
   ManifestLoadingData,
 } from '../types/events';
-import { Level } from '../types/level';
+import { Level, addGroupId } from '../types/level';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import {
@@ -22,10 +22,11 @@ import {
 } from '../utils/codecs';
 import BasePlaylistController from './base-playlist-controller';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import ContentSteeringController from './content-steering-controller';
+import { hlsDefaultConfig } from '../config';
 import type Hls from '../hls';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';
 import type { MediaPlaylist } from '../types/media-playlist';
-import ContentSteeringController from './content-steering-controller';
 
 let chromeOrFirefox: boolean;
 
@@ -279,9 +280,24 @@ export default class LevelController extends BasePlaylistController {
     for (let i = 0; i < levels.length; i++) {
       if (levels[i] === firstLevelInPlaylist) {
         this._firstLevel = i;
+        const firstLevelBitrate = firstLevelInPlaylist.bitrate;
+        const bandwidthEstimate = this.hls.bandwidthEstimate;
         this.log(
-          `manifest loaded, ${levels.length} level(s) found, first bitrate: ${firstLevelInPlaylist.bitrate}`
+          `manifest loaded, ${levels.length} level(s) found, first bitrate: ${firstLevelBitrate}`
         );
+        // Update default bwe to first variant bitrate as long it has not been configured or set
+        if (this.hls.userConfig?.abrEwmaDefaultEstimate === undefined) {
+          const startingBwEstimate = Math.min(
+            firstLevelBitrate,
+            this.hls.config.abrEwmaDefaultEstimateMax
+          );
+          if (
+            startingBwEstimate > bandwidthEstimate &&
+            bandwidthEstimate === hlsDefaultConfig.abrEwmaDefaultEstimate
+          ) {
+            this.hls.bandwidthEstimate = startingBwEstimate;
+          }
+        }
         break;
       }
     }
@@ -380,6 +396,8 @@ export default class LevelController extends BasePlaylistController {
     delete levelSwitchingData._attrs;
     // @ts-ignore
     delete levelSwitchingData._urlId;
+    // @ts-ignore
+    delete levelSwitchingData._avgBitrate;
     this.hls.trigger(Events.LEVEL_SWITCHING, levelSwitchingData);
     // check if we need to load playlist for this level
     const levelDetails = level.details;
@@ -614,27 +632,6 @@ export default class LevelController extends BasePlaylistController {
       }
     });
     this._levels = levels;
-  }
-}
-
-export function addGroupId(
-  level: Level,
-  type: string,
-  id: string | undefined
-): void {
-  if (!id) {
-    return;
-  }
-  if (type === 'audio') {
-    if (!level.audioGroupIds) {
-      level.audioGroupIds = [];
-    }
-    level.audioGroupIds[level.url.length - 1] = id;
-  } else if (type === 'text') {
-    if (!level.textGroupIds) {
-      level.textGroupIds = [];
-    }
-    level.textGroupIds[level.url.length - 1] = id;
   }
 }
 

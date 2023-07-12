@@ -26,19 +26,28 @@ class AbrController implements AbrComponentAPI {
   private partCurrent: Part | null = null;
   private bitrateTestDelay: number = 0;
 
-  public readonly bwEstimator: EwmaBandWidthEstimator;
+  public bwEstimator: EwmaBandWidthEstimator;
 
   constructor(hls: Hls) {
     this.hls = hls;
+    this.bwEstimator = this.initEstimator();
+    this.registerListeners();
+  }
 
-    const config = hls.config;
-    this.bwEstimator = new EwmaBandWidthEstimator(
+  public resetEstimator(abrEwmaDefaultEstimate?: number) {
+    if (abrEwmaDefaultEstimate) {
+      logger.log(`setting initial bwe to ${abrEwmaDefaultEstimate}`);
+      this.hls.config.abrEwmaDefaultEstimate = abrEwmaDefaultEstimate;
+    }
+    this.bwEstimator = this.initEstimator();
+  }
+  private initEstimator(): EwmaBandWidthEstimator {
+    const config = this.hls.config;
+    return new EwmaBandWidthEstimator(
       config.abrEwmaSlowVoD,
       config.abrEwmaFastVoD,
       config.abrEwmaDefaultEstimate
     );
-
-    this.registerListeners();
   }
 
   protected registerListeners() {
@@ -90,7 +99,7 @@ class AbrController implements AbrComponentAPI {
     bandwidth: number,
     fragSizeBits: number,
     isSwitch: boolean
-  ) {
+  ): number {
     const fragLoadSec = timeToFirstByteSec + fragSizeBits / bandwidth;
     const playlistLoadSec = isSwitch ? this.lastLevelLoadSec : 0;
     return fragLoadSec + playlistLoadSec;
@@ -173,7 +182,7 @@ class AbrController implements AbrComponentAPI {
       ? stats.loading.first - stats.loading.start
       : -1;
     const loadedFirstByte = stats.loaded && ttfb > -1;
-    const bwEstimate: number = this.bwEstimator.getEstimate();
+    const bwEstimate: number = this.getBwEstimate();
     const { levels, minAutoLevel } = hls;
     const level = levels[frag.level];
     const expectedLen =
@@ -328,7 +337,7 @@ class AbrController implements AbrComponentAPI {
         this.bwEstimator.getEstimateTTFB()
       );
     this.bwEstimator.sample(processingMs, stats.loaded);
-    stats.bwEstimate = this.bwEstimator.getEstimate();
+    stats.bwEstimate = this.getBwEstimate();
     if (frag.bitrateTest) {
       this.bitrateTestDelay = processingMs / 1000;
     } else {
@@ -346,7 +355,7 @@ class AbrController implements AbrComponentAPI {
   }
 
   // return next auto level
-  get nextAutoLevel() {
+  get nextAutoLevel(): number {
     const forcedAutoLevel = this._nextAutoLevel;
     const bwEstimator = this.bwEstimator;
     // in case next auto level has been forced, and bw not available or not reliable, return forced value
@@ -387,9 +396,7 @@ class AbrController implements AbrComponentAPI {
     // if we're playing back at the normal rate.
     const playbackRate =
       media && media.playbackRate !== 0 ? Math.abs(media.playbackRate) : 1.0;
-    const avgbw = this.bwEstimator
-      ? this.bwEstimator.getEstimate()
-      : config.abrEwmaDefaultEstimate;
+    const avgbw = this.getBwEstimate();
     // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
     const bufferInfo = hls.mainForwardBufferInfo;
     const bufferStarvationDelay =
@@ -453,6 +460,12 @@ class AbrController implements AbrComponentAPI {
       bwUpFactor
     );
     return Math.max(bestLevel, 0);
+  }
+
+  private getBwEstimate(): number {
+    return this.bwEstimator
+      ? this.bwEstimator.getEstimate()
+      : this.hls.config.abrEwmaDefaultEstimate;
   }
 
   private findBestLevel(
@@ -543,7 +556,7 @@ class AbrController implements AbrComponentAPI {
         // fragment fetchDuration unknown OR live stream OR fragment fetchDuration less than max allowed fetch duration, then this level matches
         // we don't account for max Fetch Duration for live streams, this is to avoid switching down when near the edge of live sliding window ...
         // special case to support startLevel = -1 (bitrateTest) on live streams : in that case we should not exit loop so that findBestLevel will return -1
-        (fetchDuration === 0 ||
+        (fetchDuration <= ttfbEstimateSec ||
           !Number.isFinite(fetchDuration) ||
           (live && !this.bitrateTestDelay) ||
           fetchDuration < maxFetchDuration)
@@ -556,7 +569,7 @@ class AbrController implements AbrComponentAPI {
     return -1;
   }
 
-  set nextAutoLevel(nextLevel) {
+  set nextAutoLevel(nextLevel: number) {
     this._nextAutoLevel = nextLevel;
   }
 }
