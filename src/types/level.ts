@@ -105,6 +105,7 @@ export class Level {
   public textGroupIds?: (string | undefined)[];
   public url: string[];
   private _urlId: number = 0;
+  private _avgBitrate: number = 0;
 
   constructor(data: LevelParsed) {
     this.url = [data.url];
@@ -117,6 +118,7 @@ export class Level {
     this.name = data.name;
     this.width = data.width || 0;
     this.height = data.height || 0;
+    this._avgBitrate = this.attrs.decimalInteger('AVERAGE-BANDWIDTH');
     this.audioCodec = data.audioCodec;
     this.videoCodec = data.videoCodec;
     this.unknownCodecs = data.unknownCodecs;
@@ -128,6 +130,10 @@ export class Level {
 
   get maxBitrate(): number {
     return Math.max(this.realBitrate, this.bitrate);
+  }
+
+  get averageBitrate(): number {
+    return this._avgBitrate || this.realBitrate || this.bitrate;
   }
 
   get attrs(): LevelAttributes {
@@ -167,5 +173,26 @@ export class Level {
   addFallback(data: LevelParsed) {
     this.url.push(data.url);
     this._attrs.push(data.attrs);
+  }
+}
+
+export function addGroupId(
+  level: Level,
+  type: string,
+  id: string | undefined
+): void {
+  if (!id) {
+    return;
+  }
+  if (type === 'audio') {
+    if (!level.audioGroupIds) {
+      level.audioGroupIds = [];
+    }
+    level.audioGroupIds[level.url.length - 1] = id;
+  } else if (type === 'text') {
+    if (!level.textGroupIds) {
+      level.textGroupIds = [];
+    }
+    level.textGroupIds[level.url.length - 1] = id;
   }
 }

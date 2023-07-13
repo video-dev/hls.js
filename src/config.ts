@@ -38,6 +38,7 @@ export type ABRControllerConfig = {
    * Default bandwidth estimate in bits/s prior to collecting fragment bandwidth samples
    */
   abrEwmaDefaultEstimate: number;
+  abrEwmaDefaultEstimateMax: number;
   abrBandWidthFactor: number;
   abrBandWidthUpFactor: number;
   abrMaxWithRealBitrate: boolean;
@@ -361,6 +362,7 @@ export const hlsDefaultConfig: HlsConfig = {
   abrEwmaFastVoD: 3, // used by abr-controller
   abrEwmaSlowVoD: 9, // used by abr-controller
   abrEwmaDefaultEstimate: 5e5, // 500 kbps  // used by abr-controller
+  abrEwmaDefaultEstimateMax: 5e6, // 5 mbps
   abrBandWidthFactor: 0.95, // used by abr-controller
   abrBandWidthUpFactor: 0.7, // used by abr-controller
   abrMaxWithRealBitrate: false, // used by abr-controller

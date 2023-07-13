@@ -611,6 +611,10 @@ export default class Hls implements HlsEventEmitter {
     return bwEstimator.getEstimate();
   }
 
+  set bandwidthEstimate(abrEwmaDefaultEstimate: number) {
+    this.abrController.resetEstimator(abrEwmaDefaultEstimate);
+  }
+
   /**
    * get time to first byte estimate
    * @type {number}

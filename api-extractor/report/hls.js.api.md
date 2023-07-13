@@ -22,7 +22,7 @@ export interface AbrComponentAPI extends ComponentAPI {
 export class AbrController implements AbrComponentAPI {
     constructor(hls: Hls);
     // (undocumented)
-    readonly bwEstimator: EwmaBandWidthEstimator;
+    bwEstimator: EwmaBandWidthEstimator;
     // (undocumented)
     clearTimer(): void;
     // (undocumented)
@@ -45,6 +45,8 @@ export class AbrController implements AbrComponentAPI {
     // (undocumented)
     protected registerListeners(): void;
     // (undocumented)
+    resetEstimator(abrEwmaDefaultEstimate?: number): void;
+    // (undocumented)
     protected unregisterListeners(): void;
 }
 
@@ -57,6 +59,7 @@ export type ABRControllerConfig = {
     abrEwmaFastVoD: number;
     abrEwmaSlowVoD: number;
     abrEwmaDefaultEstimate: number;
+    abrEwmaDefaultEstimateMax: number;
     abrBandWidthFactor: number;
     abrBandWidthUpFactor: number;
     abrMaxWithRealBitrate: boolean;
@@ -1523,6 +1526,7 @@ class Hls implements HlsEventEmitter {
     set autoLevelCapping(newLevel: number);
     get autoLevelEnabled(): boolean;
     get bandwidthEstimate(): number;
+    set bandwidthEstimate(abrEwmaDefaultEstimate: number);
     get capLevelToPlayerSize(): boolean;
     // Warning: (ae-setter-with-docs) The doc comment for the property "capLevelToPlayerSize" must appear on the getter, not the setter.
     set capLevelToPlayerSize(shouldStartCapping: boolean);
@@ -1981,6 +1985,8 @@ export class Level {
     get audioGroupId(): string | undefined;
     // (undocumented)
     audioGroupIds?: (string | undefined)[];
+    // (undocumented)
+    get averageBitrate(): number;
     // (undocumented)
     readonly bitrate: number;
     // (undocumented)
