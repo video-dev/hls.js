@@ -104,6 +104,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`abrEwmaFastVoD`](#abrewmafastvod)
   - [`abrEwmaSlowVoD`](#abrewmaslowvod)
   - [`abrEwmaDefaultEstimate`](#abrewmadefaultestimate)
+  - [`abrEwmaDefaultEstimateMax`](#abrewmadefaultestimatemax)
   - [`abrBandWidthFactor`](#abrbandwidthfactor)
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
@@ -410,6 +411,7 @@ var config = {
   abrEwmaFastVoD: 3.0,
   abrEwmaSlowVoD: 9.0,
   abrEwmaDefaultEstimate: 500000,
+  abrEwmaDefaultEstimateMax: 5000000,
   abrBandWidthFactor: 0.95,
   abrBandWidthUpFactor: 0.7,
   abrMaxWithRealBitrate: false,
@@ -1342,6 +1344,12 @@ parameter should be a float greater than [abrEwmaFastVoD](#abrewmafastvod)
 
 Default bandwidth estimate in bits/s prior to collecting fragment bandwidth samples.
 
+### `abrEwmaDefaultEstimateMax`
+
+(default: `5000000`)
+
+Limits value of updated bandwidth estimate taken from first variant found in multivariant playlist on start.
+
 ### `abrBandWidthFactor`
 
 (default: `0.95`)
@@ -1621,6 +1629,8 @@ Default value is set via [`capLevelToPlayerSize`](#capleveltoplayersize) in conf
 ### `hls.bandwidthEstimate`
 
 get: Returns the current bandwidth estimate in bits/s, if available. Otherwise, `NaN` is returned.
+
+set: Reset `EwmaBandWidthEstimator` using the value set as the new default estimate. This will update the value of `config.abrEwmaDefaultEstimate`.
 
 ### `hls.removeLevel(levelIndex, urlId)`
 

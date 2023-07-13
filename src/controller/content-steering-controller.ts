@@ -1,7 +1,6 @@
 import { Events } from '../events';
-import { Level } from '../types/level';
+import { Level, addGroupId } from '../types/level';
 import { AttrList } from '../utils/attr-list';
-import { addGroupId } from './level-controller';
 import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';

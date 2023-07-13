@@ -152,8 +152,8 @@ export default class M3U8Parser {
         const level: LevelParsed = {
           attrs,
           bitrate:
-            attrs.decimalInteger('AVERAGE-BANDWIDTH') ||
-            attrs.decimalInteger('BANDWIDTH'),
+            attrs.decimalInteger('BANDWIDTH') ||
+            attrs.decimalInteger('AVERAGE-BANDWIDTH'),
           name: attrs.NAME,
           url: M3U8Parser.resolve(uri, baseurl),
         };

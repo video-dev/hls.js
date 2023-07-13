@@ -7,6 +7,7 @@ import { Fragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import KeyLoader from '../../../src/loader/key-loader';
 import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
+import { AttrList } from '../../../src/utils/attr-list';
 
 const mediaMock = {
   currentTime: 0,
@@ -18,11 +19,11 @@ const tracksMock = [
   {
     id: 0,
     details: { url: '', fragments: [] },
-    attrs: {},
+    attrs: new AttrList(),
   },
   {
     id: 1,
-    attrs: {},
+    attrs: new AttrList(),
   },
 ];
 
