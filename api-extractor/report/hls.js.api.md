@@ -2917,6 +2917,7 @@ export type RetryConfig = {
     retryDelayMs: number;
     maxRetryDelayMs: number;
     backoff?: 'exponential' | 'linear';
+    shouldRetry?: (retryConfig: RetryConfig | null | undefined, retryCount: number, isTimeout: boolean, httpStatus: number | undefined, retry: boolean) => boolean;
 };
 
 // Warning: (ae-missing-release-tag) "SourceBufferName" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
