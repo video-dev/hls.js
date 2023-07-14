@@ -573,21 +573,8 @@ class TSDemuxer implements Demuxer {
       switch (unit.type) {
         // NDR
         case 1: {
+          let iskey = false;
           push = true;
-          if (!avcSample) {
-            avcSample = this.avcSample = createAVCSample(
-              true,
-              pes.pts,
-              pes.dts,
-              ''
-            );
-          }
-
-          if (debug) {
-            avcSample.debug += 'NDR ';
-          }
-
-          avcSample.frame = true;
           const data = unit.data;
           // only check slice type to detect KF in case SPS found in same packet (any keyframe is preceded by SPS ...)
           if (spsfound && data.length > 4) {
@@ -604,15 +591,42 @@ class TSDemuxer implements Demuxer {
               sliceType === 7 ||
               sliceType === 9
             ) {
-              avcSample.key = true;
+              iskey = true;
             }
           }
+          if (iskey) {
+            // if we have non-keyframe data already, that cannot belong to the same frame as a keyframe, so force a push
+            if (avcSample?.frame && !avcSample.key) {
+              pushAccessUnit(avcSample, track);
+              avcSample = this.avcSample = null;
+            }
+          }
+          if (!avcSample) {
+            avcSample = this.avcSample = createAVCSample(
+              true,
+              pes.pts,
+              pes.dts,
+              ''
+            );
+          }
+
+          if (debug) {
+            avcSample.debug += 'NDR ';
+          }
+
+          avcSample.frame = true;
+          avcSample.key = iskey;
           break;
           // IDR
         }
         case 5:
           push = true;
           // handle PES not starting with AUD
+          // if we have non-keyframe data already, that cannot belong to the same frame as a keyframe, so force a push
+          if (avcSample?.frame && !avcSample.key) {
+            pushAccessUnit(avcSample, track);
+            avcSample = this.avcSample = null;
+          }
           if (!avcSample) {
             avcSample = this.avcSample = createAVCSample(
               true,
