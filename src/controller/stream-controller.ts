@@ -1175,7 +1175,13 @@ export default class StreamController
         if (this.backtrackFragment) {
           this.backtrackFragment = frag;
         }
-        this.bufferFragmentData(video, frag, part, chunkMeta);
+        this.bufferFragmentData(
+          video,
+          frag,
+          part,
+          chunkMeta,
+          isFirstFragment || isFirstInDiscontinuity
+        );
       } else if (isFirstFragment || isFirstInDiscontinuity) {
         // Mark segment with a gap to avoid loop loading
         frag.gap = true;
