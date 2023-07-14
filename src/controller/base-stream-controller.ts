@@ -883,7 +883,8 @@ export default class BaseStreamController
     data: RemuxedTrack,
     frag: Fragment,
     part: Part | null,
-    chunkMeta: ChunkMetadata
+    chunkMeta: ChunkMetadata,
+    noBacktracking?: boolean
   ) {
     if (!data || this.state !== State.PARSING) {
       return;
@@ -911,6 +912,9 @@ export default class BaseStreamController
     this.hls.trigger(Events.BUFFER_APPENDING, segment);
 
     if (data.dropped && data.independent && !part) {
+      if (noBacktracking) {
+        return;
+      }
       // Clear buffer so that we reload previous segments sequentially if required
       this.flushBufferGap(frag);
     }
