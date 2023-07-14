@@ -1111,9 +1111,11 @@ export default class StreamController
     }
 
     // Avoid buffering if backtracking this fragment
-    const notFirstFragment = frag.sn !== details?.startSN;
-    if (video && remuxResult.independent !== false) {
-      if (details) {
+    if (video && details && frag.sn !== 'initSegment') {
+      const prevFrag = details.fragments[frag.sn - 1 - details.startSN];
+      const isFirstFragment = frag.sn === details.startSN;
+      const isFirstInDiscontinuity = !prevFrag || frag.cc > prevFrag.cc;
+      if (remuxResult.independent !== false) {
         const { startPTS, endPTS, startDTS, endDTS } = video;
         if (part) {
           part.elementaryStreams[video.type] = {
@@ -1123,7 +1125,12 @@ export default class StreamController
             endDTS,
           };
         } else {
-          if (video.firstKeyFrame && video.independent && chunkMeta.id === 1) {
+          if (
+            video.firstKeyFrame &&
+            video.independent &&
+            chunkMeta.id === 1 &&
+            !isFirstInDiscontinuity
+          ) {
             this.couldBacktrack = true;
           }
           if (video.dropped && video.independent) {
@@ -1137,11 +1144,15 @@ export default class StreamController
               ? video.firstKeyFramePTS
               : startPTS;
             if (
-              notFirstFragment &&
-              targetBufferTime < startTime - this.config.maxBufferHole
+              !isFirstFragment &&
+              targetBufferTime < startTime - this.config.maxBufferHole &&
+              !isFirstInDiscontinuity
             ) {
               this.backtrack(frag);
               return;
+            } else if (isFirstInDiscontinuity) {
+              // Mark segment with a gap to avoid loop loading
+              frag.gap = true;
             }
             // Set video stream start to fragment start so that truncated samples do not distort the timeline, and mark it partial
             frag.setElementaryStreamInfo(
@@ -1165,10 +1176,13 @@ export default class StreamController
           this.backtrackFragment = frag;
         }
         this.bufferFragmentData(video, frag, part, chunkMeta);
+      } else if (isFirstFragment || isFirstInDiscontinuity) {
+        // Mark segment with a gap to avoid loop loading
+        frag.gap = true;
+      } else {
+        this.backtrack(frag);
+        return;
       }
-    } else if (notFirstFragment && remuxResult.independent === false) {
-      this.backtrack(frag);
-      return;
     }
 
     if (audio) {

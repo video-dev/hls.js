@@ -69,8 +69,13 @@ export default class FragmentLoader {
         this.loader.destroy();
       }
       if (frag.gap) {
-        reject(createGapLoadError(frag));
-        return;
+        if (frag.tagList.some((tags) => tags[0] === 'GAP')) {
+          reject(createGapLoadError(frag));
+          return;
+        } else {
+          // Reset temporary treatment as GAP tag
+          frag.gap = false;
+        }
       }
       const loader =
         (this.loader =
