@@ -614,6 +614,7 @@ function createBufferAppendedData(
       video: createMockBuffer(video),
       audio: createMockBuffer(audio || video),
     },
+    videoBufferStarvation: 0,
   };
 }
 

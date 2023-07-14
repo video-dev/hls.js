@@ -109,7 +109,15 @@ class MP4Demuxer implements Demuxer {
       if (this.remainderData) {
         videoSamples = appendUint8Array(this.remainderData, data);
       }
-      const segmentedData = segmentValidRange(videoSamples);
+      let segmentedData = segmentValidRange(videoSamples);
+      if (
+        !segmentedData.valid &&
+        segmentedData.remainder &&
+        MP4Demuxer.probe(data)
+      ) {
+        // drop invalid remainder data
+        segmentedData = segmentValidRange(data);
+      }
       this.remainderData = segmentedData.remainder;
       videoTrack.samples = segmentedData.valid || new Uint8Array();
     } else {

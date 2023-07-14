@@ -857,18 +857,28 @@ export function parseSamples(
     const trafs = findBox(moof, ['traf']);
     trafs.map((traf) => {
       // get the base media decode time from the tfdt
-      const baseTime = findBox(traf, ['tfdt']).map((tfdt) => {
-        const version = tfdt[0];
-        let result = readUint32(tfdt, 4);
-        if (version === 1) {
-          result *= Math.pow(2, 32);
-          result += readUint32(tfdt, 8);
-        }
-        return result / timescale;
-      })[0];
+      const baseTime = findBox(traf, ['tfdt']).reduce(
+        (result: null | number, tfdt) => {
+          const version = tfdt[0];
+          let basetime = readUint32(tfdt, 4);
+          if (version === 1) {
+            // https://github.com/video-dev/hls.js/issues/5303
+            if (basetime === UINT32_MAX) {
+              return result;
+            }
+            basetime *= Math.pow(2, 32);
+            basetime += readUint32(tfdt, 8);
+          }
+          if (result === null || basetime < result) {
+            return basetime;
+          }
+          return result;
+        },
+        null,
+      );
 
-      if (baseTime !== undefined) {
-        timeOffset = baseTime;
+      if (baseTime !== null) {
+        timeOffset = baseTime / timescale;
       }
 
       return findBox(traf, ['tfhd']).map((tfhd) => {

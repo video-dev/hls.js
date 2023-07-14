@@ -524,6 +524,8 @@ export interface BufferAppendedData {
     timeRanges: Partial<Record<SourceBufferName, TimeRanges>>;
     // (undocumented)
     type: SourceBufferName;
+    // (undocumented)
+    videoBufferStarvation: number;
 }
 
 // Warning: (ae-missing-release-tag) "BufferAppendingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -637,6 +639,7 @@ export type BufferControllerConfig = {
     backBufferLength: number;
     frontBufferFlushThreshold: number;
     liveDurationInfinity: boolean;
+    videoBufferStarvationThreshold: number;
     liveBackBufferLength: number | null;
 };
 

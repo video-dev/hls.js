@@ -84,14 +84,18 @@ class FPSController implements ComponentAPI {
           totalDroppedFrames: droppedFrames,
         });
         if (droppedFPS > 0) {
-          // logger.log('checkFPS : droppedFPS/decodedFPS:' + droppedFPS/(1000 * currentDecoded / currentPeriod));
+          logger.log(
+            `dropped frames: ${currentDropped} decoded frames: ${currentDecoded} droppedFPS/decodedFPS: ${
+              droppedFPS / ((1000 * currentDecoded) / currentPeriod)
+            }`,
+          );
           if (
             currentDropped >
             hls.config.fpsDroppedMonitoringThreshold * currentDecoded
           ) {
             let currentLevel = hls.currentLevel;
             logger.warn(
-              'drop FPS ratio greater than max allowed value for currentLevel: ' +
+              'dropped frames ratio greater than max allowed value for currentLevel: ' +
                 currentLevel,
             );
             if (

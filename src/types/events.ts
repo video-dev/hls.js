@@ -67,6 +67,7 @@ export interface BufferAppendedData {
   chunkMeta: ChunkMetadata;
   parent: PlaylistLevelType;
   timeRanges: Partial<Record<SourceBufferName, TimeRanges>>;
+  videoBufferStarvation: number;
 }
 
 export interface BufferEOSData {

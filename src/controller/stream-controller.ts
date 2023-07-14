@@ -241,8 +241,6 @@ export default class StreamController
       return;
     }
 
-    const levelInfo = levels[level];
-
     // if buffer length is less than maxBufLen try to load a new fragment
 
     const bufferInfo = this.getMainFwdBufferInfo();
@@ -268,6 +266,7 @@ export default class StreamController
     }
     this.level = hls.nextLoadLevel = level;
 
+    const levelInfo = levels[level];
     const levelDetails = levelInfo.details;
     // if level info not retrieved yet, switch state and wait for level retrieval
     // if live playlist, ensure that new playlist has been refreshed to avoid loading/try to load
@@ -275,9 +274,12 @@ export default class StreamController
     if (
       !levelDetails ||
       this.state === State.WAITING_LEVEL ||
-      (levelDetails.live && this.levelLastLoaded !== levelInfo)
+      (levelDetails.live && this.levelLastLoaded !== levelInfo) ||
+      (levelDetails.live &&
+        levelDetails.age >
+          ((this.config.lowLatencyMode && levelDetails.partTarget) ||
+            levelDetails.targetduration))
     ) {
-      this.level = level;
       this.state = State.WAITING_LEVEL;
       return;
     }
