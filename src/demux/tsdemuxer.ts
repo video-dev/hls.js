@@ -699,6 +699,7 @@ class TSDemuxer implements Demuxer {
         logger.warn('[tsdemuxer]: AC3 PES unknown PTS');
         return;
       }
+      const length = data.length;
       let frameIndex = 0;
       let offset = 0;
       let parsed;
