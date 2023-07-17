@@ -759,6 +759,7 @@ function parsePMT(
   offset += 12 + programInfoLength;
   while (offset < tableEnd) {
     const pid = parsePID(data, offset);
+    const esInfoLength = ((data[offset + 3] & 0x0f) << 8) | data[offset + 4];
     switch (data[offset]) {
       case 0xcf: // SAMPLE-AES AAC
         if (!isSampleAes) {
@@ -830,6 +831,42 @@ function parsePMT(
         }
         break;
 
+      case 0x06:
+        // stream_type 6 can mean a lot of different things in case of DVB.
+        // We need to look at the descriptors. Right now, we're only interested
+        // in AC-3 audio, so we do the descriptor parsing only when we don't have
+        // an audio PID yet.
+        if (result.audioPid === -1 && esInfoLength > 0) {
+          let parsePos = offset + 5;
+          let remaining = esInfoLength;
+
+          while (remaining > 2) {
+            const descriptorId = data[parsePos];
+
+            switch (descriptorId) {
+              case 0x6a: // DVB Descriptor for AC-3
+                if (__USE_M2TS_ADVANCED_CODECS__) {
+                  if (typeSupported.ac3 !== true) {
+                    logger.log(
+                      'AC-3 audio found, not supported in this browser for now'
+                    );
+                  } else {
+                    result.audioPid = pid;
+                    result.segmentAudioCodec = 'ac3';
+                  }
+                } else {
+                  logger.warn('AC-3 in M2TS support not included in build');
+                }
+                break;
+            }
+
+            const descriptorLen = data[parsePos + 1] + 2;
+            parsePos += descriptorLen;
+            remaining -= descriptorLen;
+          }
+        }
+        break;
+
       case 0xc2: // SAMPLE-AES EC3
       /* falls through */
       case 0x87:
@@ -845,7 +882,7 @@ function parsePMT(
     }
     // move to the next table entry
     // skip past the elementary stream descriptors, if present
-    offset += (((data[offset + 3] & 0x0f) << 8) | data[offset + 4]) + 5;
+    offset += esInfoLength + 5;
   }
   return result;
 }
