@@ -185,7 +185,7 @@ export class FragmentTracker implements ComponentAPI {
 
     const fragKey = getFragmentKey(frag);
     const fragmentEntity = this.fragments[fragKey];
-    if (!fragmentEntity) {
+    if (!fragmentEntity || (fragmentEntity.buffered && frag.gap)) {
       return;
     }
     const isFragHint = !frag.relurl;

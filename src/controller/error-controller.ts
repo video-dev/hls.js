@@ -128,8 +128,17 @@ export default class ErrorController implements NetworkComponentAPI {
       case ErrorDetails.KEY_LOAD_TIMEOUT:
         data.errorAction = this.getFragRetryOrSwitchAction(data);
         return;
-      case ErrorDetails.FRAG_GAP:
       case ErrorDetails.FRAG_PARSING_ERROR:
+        // ignore empty segment errors marked as gap
+        if (data.frag?.gap) {
+          data.errorAction = {
+            action: NetworkErrorAction.DoNothing,
+            flags: ErrorActionFlags.None,
+          };
+          return;
+        }
+      // falls through
+      case ErrorDetails.FRAG_GAP:
       case ErrorDetails.FRAG_DECRYPT_ERROR: {
         // Switch level if possible, otherwise allow retry count to reach max error retries
         data.errorAction = this.getFragRetryOrSwitchAction(data);
