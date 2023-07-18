@@ -1702,8 +1702,15 @@ export default class BaseStreamController
       level.fragmentError = 0;
     } else if (this.transmuxer?.error === null) {
       const error = new Error(
-        `Found no media in fragment ${frag.sn} of level ${level.id} resetting transmuxer to fallback to playlist timing`
+        `Found no media in fragment ${frag.sn} of level ${frag.level} resetting transmuxer to fallback to playlist timing`
       );
+      if (level.fragmentError === 0) {
+        // Mark and track the odd empty segment as a gap to avoid reloading
+        level.fragmentError++;
+        frag.gap = true;
+        this.fragmentTracker.removeFragment(frag);
+        this.fragmentTracker.fragBuffered(frag, true);
+      }
       this.warn(error.message);
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
