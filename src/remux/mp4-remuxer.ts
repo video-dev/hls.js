@@ -1110,7 +1110,7 @@ export function flushTextTrackUserdataCueSamples(
     // using this._initPTS and this._initDTS to calculate relative time
     sample.pts =
       normalizePts(
-        sample.pts - (initPTS.baseTime * 90000) / initPTS.timescale,
+        sample.pts - (initPTS.baseTime * inputTimeScale) / initPTS.timescale,
         timeOffset * inputTimeScale
       ) / inputTimeScale;
   }
