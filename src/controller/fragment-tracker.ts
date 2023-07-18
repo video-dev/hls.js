@@ -179,13 +179,13 @@ export class FragmentTracker implements ComponentAPI {
   public detectPartialFragments(data: FragBufferedData) {
     const timeRanges = this.timeRanges;
     const { frag, part } = data;
-    if (!timeRanges || frag.sn === 'initSegment' || frag.gap) {
+    if (!timeRanges || frag.sn === 'initSegment') {
       return;
     }
 
     const fragKey = getFragmentKey(frag);
     const fragmentEntity = this.fragments[fragKey];
-    if (!fragmentEntity) {
+    if (!fragmentEntity || (fragmentEntity.buffered && frag.gap)) {
       return;
     }
     const isFragHint = !frag.relurl;
