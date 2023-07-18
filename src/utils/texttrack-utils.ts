@@ -29,13 +29,19 @@ export function addCueToTrack(track: TextTrack, cue: VTTCue) {
       }
     } catch (err) {
       logger.debug(`[texttrack-utils]: ${err}`);
-      const textTrackCue = new (self.TextTrackCue as any)(
-        cue.startTime,
-        cue.endTime,
-        cue.text
-      );
-      textTrackCue.id = cue.id;
-      track.addCue(textTrackCue);
+      try {
+        const textTrackCue = new (self.TextTrackCue as any)(
+          cue.startTime,
+          cue.endTime,
+          cue.text
+        );
+        textTrackCue.id = cue.id;
+        track.addCue(textTrackCue);
+      } catch (err2) {
+        logger.debug(
+          `[texttrack-utils]: Legacy TextTrackCue fallback failed: ${err2}`
+        );
+      }
     }
   }
   if (mode === 'disabled') {
