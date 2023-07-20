@@ -878,17 +878,14 @@ export default class Hls implements HlsEventEmitter {
   }
 }
 
+export { ErrorDetails, ErrorTypes, Events, HdcpLevels };
 export type {
   MediaPlaylist,
-  ErrorDetails,
-  ErrorTypes,
-  Events,
   Level,
   HlsListeners,
   HlsEventEmitter,
   HlsConfig,
   BufferInfo,
-  HdcpLevels,
   HdcpLevel,
   AbrController,
   AudioStreamController,
@@ -944,34 +941,27 @@ export type {
 export type { SubtitleStreamController } from './controller/subtitle-stream-controller';
 export type { TimelineController } from './controller/timeline-controller';
 export type { CuesInterface } from './utils/cues';
-export type {
-  MediaKeyFunc,
-  KeySystems,
-  KeySystemFormats,
-} from './utils/mediakeys-helper';
+export { KeySystems, KeySystemFormats } from './utils/mediakeys-helper';
+export type { MediaKeyFunc } from './utils/mediakeys-helper';
 export type { DateRange } from './loader/date-range';
 export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
 export type { LevelDetails } from './loader/level-details';
 export type { SourceBufferName } from './types/buffer';
+export { MetadataSchema } from './types/demuxer';
+export type { MetadataSample, UserdataSample } from './types/demuxer';
+export { HlsSkip } from './types/level';
 export type {
-  MetadataSample,
-  MetadataSchema,
-  UserdataSample,
-} from './types/demuxer';
-export type {
-  HlsSkip,
   HlsUrlParameters,
   LevelAttributes,
   LevelParsed,
   VariableMap,
 } from './types/level';
+export { PlaylistLevelType, PlaylistContextType } from './types/loader';
 export type {
-  PlaylistLevelType,
   HlsChunkPerformanceTiming,
   HlsPerformanceTiming,
   HlsProgressivePerformanceTiming,
-  PlaylistContextType,
   PlaylistLoaderContext,
   FragmentLoaderContext,
   Loader,
@@ -1057,9 +1047,9 @@ export type {
   SubtitleTracksUpdatedData,
   SubtitleTrackSwitchData,
 } from './types/events';
-export type {
+export {
   NetworkErrorAction,
   ErrorActionFlags,
-  IErrorAction,
 } from './controller/error-controller';
+export type { IErrorAction } from './controller/error-controller';
 export type { AttrList } from './utils/attr-list';
