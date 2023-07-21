@@ -4,7 +4,6 @@ import {
   VideoSample,
   VideoSampleUnit,
 } from '../../types/demuxer';
-import { RationalTimestamp } from '../../utils/timescale-conversion';
 import { logger } from '../../utils/logger';
 
 class BaseVideoParser {
