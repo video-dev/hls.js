@@ -411,14 +411,10 @@ export class TimelineController implements ComponentAPI {
     track: MediaPlaylist
   ): TextTrackKind {
     if (track.attrs.CHARACTERISTICS) {
-      const transcribesSpokenDialog = /transcribes-spoken-dialog/gi.test(
-        track.attrs.CHARACTERISTICS
-      );
-      const describesMusicAndSound = /describes-music-and-sound/gi.test(
-        track.attrs.CHARACTERISTICS
-      );
-
-      if (transcribesSpokenDialog && describesMusicAndSound) {
+      if (
+        /transcribes-spoken-dialog/gi.test(track.attrs.CHARACTERISTICS) &&
+        /describes-music-and-sound/gi.test(track.attrs.CHARACTERISTICS)
+      ) {
         return 'captions';
       }
     }

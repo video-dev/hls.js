@@ -1022,18 +1022,16 @@ type CmdHistory = {
 class Cea608Parser {
   channels: Array<Cea608Channel | null>;
   currentChannel: Channels = 0;
-  cmdHistory: CmdHistory;
+  cmdHistory: CmdHistory = createCmdHistory();
   logger: CaptionsLogger;
 
   constructor(field: SupportedField, out1: OutputFilter, out2: OutputFilter) {
-    const logger = new CaptionsLogger();
+    const logger = (this.logger = new CaptionsLogger());
     this.channels = [
       null,
       new Cea608Channel(field, out1, logger),
       new Cea608Channel(field + 1, out2, logger),
     ];
-    this.cmdHistory = createCmdHistory();
-    this.logger = logger;
   }
 
   getHandler(channel: number) {

@@ -88,9 +88,9 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     hls.off(Events.ERROR, this.onError, this);
   }
 
-  startLoad(): void {
+  startLoad() {
     this.started = true;
-    self.clearTimeout(this.reloadTimer);
+    this.clearTimeout();
     if (this.enabled && this.uri) {
       if (this.updated) {
         const ttl = Math.max(
@@ -104,13 +104,20 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     }
   }
 
-  stopLoad(): void {
+  stopLoad() {
     this.started = false;
     if (this.loader) {
       this.loader.destroy();
       this.loader = null;
     }
-    self.clearTimeout(this.reloadTimer);
+    this.clearTimeout();
+  }
+
+  clearTimeout() {
+    if (this.reloadTimer !== -1) {
+      self.clearTimeout(this.reloadTimer);
+      this.reloadTimer = -1;
+    }
   }
 
   destroy() {
@@ -455,7 +462,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   }
 
   private scheduleRefresh(uri: string, ttlMs: number = this.timeToLoad * 1000) {
-    self.clearTimeout(this.reloadTimer);
+    this.clearTimeout();
     this.reloadTimer = self.setTimeout(() => {
       this.loadSteeringManifest(uri);
     }, ttlMs);
