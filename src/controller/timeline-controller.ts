@@ -131,7 +131,10 @@ export class TimelineController implements ComponentAPI {
   }
 
   private lazyInit608() {
-    if (this.config.enableCEA708Captions) {
+    if (
+      this.config.enableCEA708Captions &&
+      (!this.cea608Parser1 || !this.cea608Parser2)
+    ) {
       const channel1 = new OutputFilter(this, 'textTrack1');
       const channel2 = new OutputFilter(this, 'textTrack2');
       const channel3 = new OutputFilter(this, 'textTrack3');

@@ -35,8 +35,10 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   }
 
   protected clearTimer(): void {
-    clearTimeout(this.timer);
-    this.timer = -1;
+    if (this.timer !== -1) {
+      self.clearTimeout(this.timer);
+      this.timer = -1;
+    }
   }
 
   public startLoad(): void {
