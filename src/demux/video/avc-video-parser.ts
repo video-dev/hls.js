@@ -176,7 +176,7 @@ class AvcVideoParser extends BaseVideoParser {
           break;
         // AUD
         case 9:
-          push = false;
+          push = true;
           track.audFound = true;
           if (VideoSample) {
             this.pushAccessUnit(VideoSample, track);

@@ -1137,6 +1137,15 @@ export function flushTextTrackUserdataCueSamples(
   };
 }
 
+type Mp4SampleFlags = {
+  isLeading: 0;
+  isDependedOn: 0;
+  hasRedundancy: 0;
+  degradPrio: 0;
+  dependsOn: 1 | 2;
+  isNonSync: 0 | 1;
+};
+
 class Mp4Sample {
   public size: number;
   public duration: number;
@@ -1152,20 +1161,13 @@ class Mp4Sample {
     this.duration = duration;
     this.size = size;
     this.cts = cts;
-    this.flags = new Mp4SampleFlags(isKeyframe);
-  }
-}
-
-class Mp4SampleFlags {
-  public isLeading: 0 = 0;
-  public isDependedOn: 0 = 0;
-  public hasRedundancy: 0 = 0;
-  public degradPrio: 0 = 0;
-  public dependsOn: 1 | 2 = 1;
-  public isNonSync: 0 | 1 = 1;
-
-  constructor(isKeyframe) {
-    this.dependsOn = isKeyframe ? 2 : 1;
-    this.isNonSync = isKeyframe ? 0 : 1;
+    this.flags = {
+      isLeading: 0,
+      isDependedOn: 0,
+      hasRedundancy: 0,
+      degradPrio: 0,
+      dependsOn: isKeyframe ? 2 : 1,
+      isNonSync: isKeyframe ? 0 : 1,
+    };
   }
 }
