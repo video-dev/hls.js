@@ -41,7 +41,7 @@ class AACDemuxer extends BaseAudioDemuxer {
   }
 
   // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
-  static probe(data): boolean {
+  static probe(data: Uint8Array | undefined): boolean {
     if (!data) {
       return false;
     }
