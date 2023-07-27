@@ -18,6 +18,13 @@ Set `backBufferLength` to `Infinity` and `liveBackBufferLength` to `90` if you w
 eviction for Live and VOD streams as older versions did. While `liveBackBufferLength` can still be used, it has been
 marked deprecated and may be removed in an upcoming minor release.
 
+### Front Buffer Eviction
+
+The new `frontBufferFlushThreshold` setting defaults to Infinity seconds and governs active eviction of buffered ranges outside of
+the current contiguous front buffer. For example, given currentTime=0 and bufferedRanges=[[0, 100], [150, 200]] with
+a configured frontBufferFlushThreshold=60, we will only remove the range from [150, 200] as it lies outside of the target buffer length
+and is not contiguous with the forward buffer from the currentTime of 0.
+
 ### Low Latency Streams
 
 The new `lowLatencyMode` setting is enabled by default. Set to `false` to disable Low-latency part loading and target

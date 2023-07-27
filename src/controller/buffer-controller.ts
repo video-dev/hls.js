@@ -32,6 +32,7 @@ import type { ComponentAPI } from '../types/component-api';
 import type { ChunkMetadata } from '../types/transmuxer';
 import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
+import type { HlsConfig } from '../hls';
 
 const MediaSource = getMediaSource();
 const VIDEO_CODEC_PROFILE_REPLACE =
@@ -550,7 +551,7 @@ export default class BufferController implements ComponentAPI {
   }
 
   private onFragChanged(event: Events.FRAG_CHANGED, data: FragChangedData) {
-    this.flushBackBuffer();
+    this.trimBuffers();
   }
 
   // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
@@ -609,8 +610,8 @@ export default class BufferController implements ComponentAPI {
     }
   }
 
-  flushBackBuffer() {
-    const { hls, details, media, sourceBuffer } = this;
+  trimBuffers() {
+    const { hls, details, media } = this;
     if (!media || details === null) {
       return;
     }
@@ -620,22 +621,59 @@ export default class BufferController implements ComponentAPI {
       return;
     }
 
-    // Support for deprecated liveBackBufferLength
-    const backBufferLength =
-      details.live && hls.config.liveBackBufferLength !== null
-        ? hls.config.liveBackBufferLength
-        : hls.config.backBufferLength;
-
-    if (!Number.isFinite(backBufferLength) || backBufferLength < 0) {
-      return;
-    }
-
+    const config: Readonly<HlsConfig> = hls.config;
     const currentTime = media.currentTime;
     const targetDuration = details.levelTargetDuration;
-    const maxBackBufferLength = Math.max(backBufferLength, targetDuration);
-    const targetBackBufferPosition =
-      Math.floor(currentTime / targetDuration) * targetDuration -
-      maxBackBufferLength;
+
+    // Support for deprecated liveBackBufferLength
+    const backBufferLength =
+      details.live && config.liveBackBufferLength !== null
+        ? config.liveBackBufferLength
+        : config.backBufferLength;
+
+    if (Number.isFinite(backBufferLength) && backBufferLength > 0) {
+      const maxBackBufferLength = Math.max(backBufferLength, targetDuration);
+      const targetBackBufferPosition =
+        Math.floor(currentTime / targetDuration) * targetDuration -
+        maxBackBufferLength;
+
+      this.flushBackBuffer(
+        currentTime,
+        targetDuration,
+        targetBackBufferPosition,
+      );
+    }
+
+    if (
+      Number.isFinite(config.frontBufferFlushThreshold) &&
+      config.frontBufferFlushThreshold > 0
+    ) {
+      const frontBufferLength = Math.max(
+        config.maxBufferLength,
+        config.frontBufferFlushThreshold,
+      );
+
+      const maxFrontBufferLength = Math.max(frontBufferLength, targetDuration);
+      const targetFrontBufferPosition =
+        Math.floor(currentTime / targetDuration) * targetDuration +
+        maxFrontBufferLength;
+
+      this.flushFrontBuffer(
+        currentTime,
+        targetDuration,
+        targetFrontBufferPosition,
+      );
+    }
+  }
+
+  flushBackBuffer(
+    currentTime: number,
+    targetDuration: number,
+    targetBackBufferPosition: number,
+  ) {
+    const { details, sourceBuffer } = this;
+    const sourceBufferTypes = this.getSourceBufferTypes();
+
     sourceBufferTypes.forEach((type: SourceBufferName) => {
       const sb = sourceBuffer[type];
       if (sb) {
@@ -645,13 +683,13 @@ export default class BufferController implements ComponentAPI {
           buffered.length > 0 &&
           targetBackBufferPosition > buffered.start(0)
         ) {
-          hls.trigger(Events.BACK_BUFFER_REACHED, {
+          this.hls.trigger(Events.BACK_BUFFER_REACHED, {
             bufferEnd: targetBackBufferPosition,
           });
 
           // Support for deprecated event:
-          if (details.live) {
-            hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, {
+          if (details?.live) {
+            this.hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, {
               bufferEnd: targetBackBufferPosition,
             });
           } else if (
@@ -664,12 +702,53 @@ export default class BufferController implements ComponentAPI {
             return;
           }
 
-          hls.trigger(Events.BUFFER_FLUSHING, {
+          this.hls.trigger(Events.BUFFER_FLUSHING, {
             startOffset: 0,
             endOffset: targetBackBufferPosition,
             type,
           });
         }
+      }
+    });
+  }
+
+  flushFrontBuffer(
+    currentTime: number,
+    targetDuration: number,
+    targetFrontBufferPosition: number,
+  ) {
+    const { sourceBuffer } = this;
+    const sourceBufferTypes = this.getSourceBufferTypes();
+
+    sourceBufferTypes.forEach((type: SourceBufferName) => {
+      const sb = sourceBuffer[type];
+      if (sb) {
+        const buffered = BufferHelper.getBuffered(sb);
+        const numBufferedRanges = buffered.length;
+        // The buffer is either empty or contiguous
+        if (numBufferedRanges < 2) {
+          return;
+        }
+        const bufferStart = buffered.start(numBufferedRanges - 1);
+        const bufferEnd = buffered.end(numBufferedRanges - 1);
+        // No flush if we can tolerate the current buffer length or the current buffer range we would flush is contiguous with current position
+        if (
+          targetFrontBufferPosition > bufferStart ||
+          (currentTime >= bufferStart && currentTime <= bufferEnd)
+        ) {
+          return;
+        } else if (sb.ended && currentTime - bufferEnd < 2 * targetDuration) {
+          this.log(
+            `Cannot flush ${type} front buffer while SourceBuffer is in ended state`,
+          );
+          return;
+        }
+
+        this.hls.trigger(Events.BUFFER_FLUSHING, {
+          startOffset: bufferStart,
+          endOffset: Infinity,
+          type,
+        });
       }
     });
   }
