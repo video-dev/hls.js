@@ -206,11 +206,12 @@ class AbrController implements AbrComponentAPI {
     const stats: LoaderStats = part ? part.stats : frag.stats;
     const duration = part ? part.duration : frag.duration;
     const timeLoading = now - stats.loading.start;
+    const minAutoLevel = hls.minAutoLevel;
     // If frag loading is aborted, complete, or from lowest level, stop timer and return
     if (
       stats.aborted ||
       (stats.loaded && stats.loaded === stats.total) ||
-      frag.level === 0
+      frag.level <= minAutoLevel
     ) {
       this.clearTimer();
       // reset forced auto level value so that next level will be selected
@@ -255,12 +256,12 @@ class AbrController implements AbrComponentAPI {
       : -1;
     const loadedFirstByte = stats.loaded && ttfb > -1;
     const bwEstimate: number = this.getBwEstimate();
-    const { levels, minAutoLevel } = hls;
+    const levels = hls.levels;
     const level = levels[frag.level];
     const expectedLen =
       stats.total ||
       Math.max(stats.loaded, Math.round((duration * level.maxBitrate) / 8));
-    let timeStreaming = timeLoading - ttfb;
+    let timeStreaming = loadedFirstByte ? timeLoading - ttfb : timeLoading;
     if (timeStreaming < 1 && loadedFirstByte) {
       timeStreaming = Math.min(timeLoading, (stats.loaded * 8) / bwEstimate);
     }
