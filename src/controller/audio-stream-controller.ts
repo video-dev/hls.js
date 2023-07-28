@@ -909,6 +909,13 @@ class AudioStreamController
           `Waiting for video PTS in continuity counter ${frag.cc} of live stream before loading audio fragment ${frag.sn} of level ${this.trackId}`
         );
         this.state = State.WAITING_INIT_PTS;
+        const mainDetails = this.mainDetails;
+        if (
+          mainDetails &&
+          mainDetails.fragments[0].start !== track.details.fragments[0].start
+        ) {
+          alignMediaPlaylistByPDT(track.details, mainDetails);
+        }
       } else {
         this.startFragRequested = true;
         super.loadFragment(frag, track, targetBufferTime);
