@@ -43,7 +43,7 @@ export function isHdcpLevel(value: any): value is HdcpLevel {
   return HdcpLevels.indexOf(value) > -1;
 }
 
-export const VideoRangeValues = ['SDR', 'PQ', 'HLG'] as const;
+export const VideoRangeValues = ['SDR', 'HLG', 'PQ'] as const;
 export type VideoRange = (typeof VideoRangeValues)[number];
 
 export function isVideoRange(value: any): value is VideoRange {

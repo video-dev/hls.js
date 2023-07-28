@@ -258,6 +258,47 @@ describe('LevelController', function () {
         altAudio: false,
       });
     });
+
+    it('filters out audio-only and invalid video-range levels if we also have levels with video codecs or RESOLUTION signalled', function () {
+      const { levels: parsedLevels } = M3U8Parser.parseMasterPlaylist(
+        `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=200000,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=720x480,VIDEO-RANGE=SDR
+http://foo.example.com/sdr/prog_index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=200000,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=360x240
+http://foo.example.com/sdr-default/prog_index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=300000,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=1920x1080,VIDEO-RANGE=PQ
+http://foo.example.com/pq/prog_index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=350000,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=1920x1080,VIDEO-RANGE=HLG
+http://foo.example.com/hlg/prog_index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=400000,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=1920x1080,VIDEO-RANGE=NA
+http://bar.example.com/foo/prog_index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=80000,CODECS="mp4a.40.2",RESOLUTION=0x0
+http://bar.example.com/audio-only/prog_index.m3u8`,
+        'http://example.com/main.m3u8'
+      );
+      expect(parsedLevels).to.have.lengthOf(6, 'MANIFEST_LOADED levels');
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
+        levels: parsedLevels,
+      });
+      const {
+        name,
+        payload: { levels },
+      } = hls.getEventData(0) as { name: string; payload: ManifestParsedData };
+      expect(name).to.equal(Events.MANIFEST_PARSED);
+      expect(levels).to.have.lengthOf(4, 'MANIFEST_PARSED levels');
+      expect(levels[0].uri).to.equal(
+        'http://foo.example.com/sdr-default/prog_index.m3u8'
+      );
+      expect(levels[1].uri).to.equal(
+        'http://foo.example.com/sdr/prog_index.m3u8'
+      );
+      expect(levels[2].uri).to.equal(
+        'http://foo.example.com/hlg/prog_index.m3u8'
+      );
+      expect(levels[3].uri).to.equal(
+        'http://foo.example.com/pq/prog_index.m3u8'
+      );
+    });
   });
 
   describe('Manifest Parsed Alt-Audio', function () {

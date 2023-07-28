@@ -196,7 +196,7 @@ export default class LevelController extends BasePlaylistController {
     if ((resolutionFound || videoCodecFound) && audioCodecFound) {
       levels = levels.filter(
         ({ videoCodec, videoRange, width, height }) =>
-          !!videoCodec || !!(width && height) || !isVideoRange(videoRange)
+          (!!videoCodec || !!(width && height)) && isVideoRange(videoRange)
       );
     }
 
