@@ -794,15 +794,49 @@ class AbrController implements AbrComponentAPI {
       (selected: string | undefined, candidate: string) => {
         // Remove candiates which do not meet bitrate, default audio, stereo, 1080p or lower, 30fps or lower, or SDR if present
         const candidateTier = codecTiers[candidate];
-        if (
-          candidate === selected ||
-          candidateTier.minBitrate > currentBw ||
-          !candidateTier.hasDefaultAudio ||
-          (hasStereo && candidateTier.channels['2'] === 0) ||
-          candidateTier.minHeight > maxHeight ||
-          candidateTier.minFramerate > maxFramerate ||
-          (videoRange && candidateTier.videoRanges[videoRange] === 0)
-        ) {
+        if (candidate === selected) {
+          return selected;
+        }
+        if (candidateTier.minBitrate > currentBw) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `min bitrate of ${candidateTier.minBitrate} > current estimate of ${currentBw}`
+          );
+          return selected;
+        }
+        if (!candidateTier.hasDefaultAudio) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `no renditions with default or auto-select sound found`
+          );
+          return selected;
+        }
+        if (hasStereo && candidateTier.channels['2'] === 0) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `no renditions with stereo sound found`
+          );
+          return selected;
+        }
+        if (candidateTier.minHeight > maxHeight) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `min resolution of ${candidateTier.minHeight} > maximum of ${maxHeight}`
+          );
+          return selected;
+        }
+        if (candidateTier.minFramerate > maxFramerate) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `min framerate of ${candidateTier.minFramerate} > maximum of ${maxFramerate}`
+          );
+          return selected;
+        }
+        if (videoRange && candidateTier.videoRanges[videoRange] === 0) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `no variants with VIDEO-RANGE of ${videoRange} found`
+          );
           return selected;
         }
         // Remove candiates with less preferred codecs or more errors
@@ -844,8 +878,9 @@ class AbrController implements AbrComponentAPI {
               hasAutoSelect: false,
             };
           }
-          trackGroup.channels[track.attrs.CHANNELS || 2] =
-            (trackGroup.channels[track.attrs.CHANNELS || 2] || 0) + 1;
+          const channels = track.attrs.CHANNELS;
+          trackGroup.channels[channels || 2] =
+            (trackGroup.channels[channels || 2] || 0) + 1;
           trackGroup.hasDefault = trackGroup.hasDefault || track.default;
           trackGroup.hasAutoSelect =
             trackGroup.hasAutoSelect || track.autoselect;
@@ -914,6 +949,12 @@ class AbrController implements AbrComponentAPI {
       this._nextAutoLevel = value;
     }
   }
+}
+
+function logStartCodecCandidateIgnored(codeSet: string, reason: string) {
+  logger.log(
+    `[abr] start candidates with "${codeSet}" ignored because ${reason}`
+  );
 }
 
 export default AbrController;
