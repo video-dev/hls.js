@@ -516,6 +516,7 @@ export default class MP4Remuxer implements Remuxer {
 
     let nbNalu = 0;
     let naluLen = 0;
+    let dtsStep = firstDTS;
     for (let i = 0; i < nbSamples; i++) {
       // compute total/avc sample length and nb of NAL units
       const sample = inputSamples[i];
@@ -531,7 +532,7 @@ export default class MP4Remuxer implements Remuxer {
       sample.length = sampleLen;
 
       // ensure sample monotonic DTS
-      sample.dts = Math.max(sample.dts, firstDTS);
+      sample.dts = sample.dts < dtsStep ? dtsStep++ : sample.dts;
 
       minPTS = Math.min(sample.pts, minPTS);
       maxPTS = Math.max(sample.pts, maxPTS);
