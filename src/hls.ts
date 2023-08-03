@@ -447,7 +447,7 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * @returns an array of levels (variants) sorted by HDCP-LEVEL, BANDWIDTH, SCORE, and RESOLUTION (height)
+   * @returns an array of levels (variants) sorted by HDCP-LEVEL, RESOLUTION (height), FRAME-RATE, CODECS, VIDEO-RANGE, and BANDWIDTH
    */
   get levels(): Level[] {
     const levels = this.levelController.levels;

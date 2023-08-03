@@ -165,6 +165,10 @@ export class Level {
     return this.attrs['VIDEO-RANGE'] || 'SDR';
   }
 
+  get score(): number {
+    return this.attrs.optionalFloat('SCORE', 0);
+  }
+
   get uri(): string {
     return this.url[this._urlId] || '';
   }

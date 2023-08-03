@@ -2031,6 +2031,8 @@ export class Level {
     // (undocumented)
     realBitrate: number;
     // (undocumented)
+    get score(): number;
+    // (undocumented)
     get textGroupId(): string | undefined;
     // (undocumented)
     textGroupIds?: (string | undefined)[];

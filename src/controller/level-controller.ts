@@ -273,12 +273,6 @@ export default class LevelController extends BasePlaylistController {
       if (a.bitrate !== b.bitrate) {
         return a.bitrate - b.bitrate;
       }
-      if (a.attrs.SCORE !== b.attrs.SCORE) {
-        return (
-          a.attrs.decimalFloatingPoint('SCORE') -
-          b.attrs.decimalFloatingPoint('SCORE')
-        );
-      }
       return 0;
     });
 
