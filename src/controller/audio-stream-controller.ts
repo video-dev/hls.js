@@ -330,10 +330,6 @@ class AudioStreamController
     const bufferLen = bufferInfo.len;
     const maxBufLen = this.getMaxBufferLength(mainBufferInfo?.len);
 
-    // if buffer length is less than maxBufLen try to load a new fragment
-    if (bufferLen >= maxBufLen && !switchingTrack) {
-      return;
-    }
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
     let targetBufferTime = bufferInfo.end;
@@ -353,6 +349,15 @@ class AudioStreamController
           media.currentTime = start + 0.05;
         }
       }
+    }
+
+    // if buffer length is less than maxBufLen, or near the end, find a fragment to load
+    if (
+      bufferLen >= maxBufLen &&
+      !switchingTrack &&
+      targetBufferTime < fragments[fragments.length - 1].start
+    ) {
+      return;
     }
 
     let frag = this.getNextFragment(targetBufferTime, trackDetails);

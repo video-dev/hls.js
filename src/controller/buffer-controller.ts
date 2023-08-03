@@ -882,7 +882,7 @@ export default class BufferController implements ComponentAPI {
       : Infinity;
     const removeStart = Math.max(0, startOffset);
     const removeEnd = Math.min(endOffset, mediaDuration, msDuration);
-    if (removeEnd > removeStart && !sb.ending) {
+    if (removeEnd > removeStart && (!sb.ending || sb.ended)) {
       sb.ended = false;
       this.log(
         `Removing [${removeStart},${removeEnd}] from the ${type} SourceBuffer`
