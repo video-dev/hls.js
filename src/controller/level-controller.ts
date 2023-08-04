@@ -29,7 +29,7 @@ import {
 import BasePlaylistController from './base-playlist-controller';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import ContentSteeringController from './content-steering-controller';
-import { reassignFragmentLevelIndexes } from './level-helper';
+import { reassignFragmentLevelIndexes } from '../utils/level-helper';
 import { hlsDefaultConfig } from '../config';
 import type Hls from '../hls';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';

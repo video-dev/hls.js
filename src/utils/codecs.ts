@@ -96,7 +96,11 @@ export function areCodecsMediaSourceSupported(
 }
 
 function isCodecMediaSourceSupported(codec: string, type: CodecType): boolean {
-  return MediaSource?.isTypeSupported(`${type}/mp4;codecs="${codec}"`) ?? false;
+  return MediaSource?.isTypeSupported(mimeTypeForCodec(codec, type)) ?? false;
+}
+
+export function mimeTypeForCodec(codec: string, type: CodecType): string {
+  return `${type}/mp4;codecs="${codec}"`;
 }
 
 export function codecsSetSelectionPreferenceValue(codecSet: string): number {

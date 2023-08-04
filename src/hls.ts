@@ -986,6 +986,7 @@ export type {
   LevelParsed,
   VariableMap,
 } from './types/level';
+export type { MediaDecodingInfo } from './utils/mediacapabilities-helper';
 export type {
   PlaylistLevelType,
   HlsChunkPerformanceTiming,

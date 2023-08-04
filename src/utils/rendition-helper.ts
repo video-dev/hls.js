@@ -1,5 +1,5 @@
-import { codecsSetSelectionPreferenceValue } from '../utils/codecs';
-import { logger } from '../utils/logger';
+import { codecsSetSelectionPreferenceValue } from './codecs';
+import { logger } from './logger';
 import type { Level, VideoRange } from '../types/level';
 import type { MediaPlaylist } from '../types/media-playlist';
 
@@ -137,6 +137,12 @@ export function getStartCodecTier(
   };
 }
 
+function logStartCodecCandidateIgnored(codeSet: string, reason: string) {
+  logger.log(
+    `[abr] start candidates with "${codeSet}" ignored because ${reason}`
+  );
+}
+
 export function getCodecTiers(
   levels: Level[],
   allAudioTracks: MediaPlaylist[],
@@ -155,9 +161,9 @@ export function getCodecTiers(
           hasAutoSelect: false,
         };
       }
-      const channels = track.attrs.CHANNELS;
-      trackGroup.channels[channels || 2] =
-        (trackGroup.channels[channels || 2] || 0) + 1;
+      const channelsKey = track.attrs.CHANNELS || '2';
+      trackGroup.channels[channelsKey] =
+        (trackGroup.channels[channelsKey] || 0) + 1;
       trackGroup.hasDefault = trackGroup.hasDefault || track.default;
       trackGroup.hasAutoSelect = trackGroup.hasAutoSelect || track.autoselect;
       if (trackGroup.hasDefault) {
@@ -188,7 +194,7 @@ export function getCodecTiers(
           minFramerate: Infinity,
           maxScore: 0,
           videoRanges: { SDR: 0 },
-          channels: { 2: 0 },
+          channels: { '2': 0 },
           hasDefaultAudio: !audioGroup,
           fragmentError: 0,
         };
@@ -216,10 +222,4 @@ export function getCodecTiers(
 
       return tiers;
     }, {});
-}
-
-function logStartCodecCandidateIgnored(codeSet: string, reason: string) {
-  logger.log(
-    `[abr] start candidates with "${codeSet}" ignored because ${reason}`
-  );
 }

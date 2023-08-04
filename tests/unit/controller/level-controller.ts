@@ -160,6 +160,8 @@ describe('LevelController', function () {
       audioGroupIds: undefined,
       bitrate: 246440,
       codecSet: '',
+      supportedPromise: undefined,
+      supportedResult: undefined,
       frameRate: 0,
       details: undefined,
       fragmentError: 0,
@@ -293,10 +295,10 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
         'http://foo.example.com/sdr/prog_index.m3u8'
       );
       expect(levels[2].uri).to.equal(
-        'http://foo.example.com/hlg/prog_index.m3u8'
+        'http://foo.example.com/pq/prog_index.m3u8'
       );
       expect(levels[3].uri).to.equal(
-        'http://foo.example.com/pq/prog_index.m3u8'
+        'http://foo.example.com/hlg/prog_index.m3u8'
       );
     });
   });

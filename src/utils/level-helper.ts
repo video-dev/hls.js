@@ -2,7 +2,7 @@
  * Provides methods dealing with playlist sliding and drift
  */
 
-import { logger } from '../utils/logger';
+import { logger } from './logger';
 import { Fragment, Part } from '../loader/fragment';
 import { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';

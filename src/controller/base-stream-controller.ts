@@ -17,7 +17,7 @@ import {
   getFragmentWithSN,
   getPartWith,
   updateFragPTSDTS,
-} from './level-helper';
+} from '../utils/level-helper';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { Fragment, Part } from '../loader/fragment';
 import FragmentLoader, {

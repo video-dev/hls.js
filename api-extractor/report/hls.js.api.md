@@ -1672,6 +1672,7 @@ export type HlsConfig = {
     cmcd?: CMCDControllerConfig;
     cmcdController?: typeof CMCDController;
     contentSteeringController?: typeof ContentSteeringController;
+    useMediaCapabilities: boolean;
     abrController: typeof AbrController;
     bufferController: typeof BufferController;
     capLevelController: typeof CapLevelController;
@@ -2032,6 +2033,10 @@ export class Level {
     realBitrate: number;
     // (undocumented)
     get score(): number;
+    // (undocumented)
+    supportedPromise?: Promise<MediaDecodingInfo>;
+    // (undocumented)
+    supportedResult?: MediaDecodingInfo;
     // (undocumented)
     get textGroupId(): string | undefined;
     // (undocumented)
@@ -2671,6 +2676,16 @@ export interface MediaAttributes extends AttrList {
     // (undocumented)
     URI?: string;
 }
+
+// Warning: (ae-missing-release-tag) "MediaDecodingInfo" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type MediaDecodingInfo = {
+    supported: boolean;
+    configurations: readonly MediaDecodingConfiguration[];
+    decodingInfoResults: readonly MediaCapabilitiesDecodingInfo[];
+    error?: Error;
+};
 
 // Warning: (ae-missing-release-tag) "MediaKeyFunc" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //

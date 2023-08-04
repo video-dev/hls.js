@@ -1,6 +1,6 @@
 import { Events } from '../events';
 import { Level, addGroupId } from '../types/level';
-import { reassignFragmentLevelIndexes } from './level-helper';
+import { reassignFragmentLevelIndexes } from '../utils/level-helper';
 import { AttrList } from '../utils/attr-list';
 import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
 import { logger } from '../utils/logger';

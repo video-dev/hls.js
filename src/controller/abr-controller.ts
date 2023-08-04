@@ -4,10 +4,15 @@ import { ErrorDetails } from '../errors';
 import { PlaylistLevelType } from '../types/loader';
 import { logger } from '../utils/logger';
 import {
+  SUPPORTED_INFO_DEFAULT,
+  getMediaDecodingInfoPromise,
+  requiresMediaCapabilitiesDecodingInfo,
+} from '../utils/mediacapabilities-helper';
+import {
   getCodecTiers,
   getStartCodecTier,
   type CodecSetTier,
-} from './rendition-helper';
+} from '../utils/rendition-helper';
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { Level, VideoRange } from '../types/level';
@@ -640,21 +645,56 @@ class AbrController implements AbrComponentAPI {
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       const levelInfo = levels[i];
       const upSwitch = i > selectionBaseLevel;
+      if (!levelInfo) {
+        continue;
+      }
+      if (
+        this.hls.config.useMediaCapabilities &&
+        !levelInfo.supportedResult &&
+        !levelInfo.supportedPromise
+      ) {
+        const mediaCapabilities = navigator.mediaCapabilities;
+        if (
+          requiresMediaCapabilitiesDecodingInfo(
+            levelInfo,
+            mediaCapabilities,
+            currentVideoRange,
+            currentFrameRate,
+            currentBw
+          )
+        ) {
+          levelInfo.supportedPromise = getMediaDecodingInfoPromise(
+            levelInfo,
+            mediaCapabilities
+          );
+          levelInfo.supportedPromise.then((decodingInfo) => {
+            levelInfo.supportedResult = decodingInfo;
+            if (!decodingInfo.supported) {
+              logger.warn(
+                `[abr] Removing unsupported level ${i} after MediaCapabilities decodingInfo check failed ${JSON.stringify(
+                  decodingInfo
+                )}`
+              );
+              this.hls.removeLevel(i);
+            }
+          });
+        } else {
+          levelInfo.supportedResult = SUPPORTED_INFO_DEFAULT;
+        }
+      }
 
       // skip candidates which change codec-family or video-range,
       // and which decrease or increase frame-rate for up and down-switch respectfully
       if (
-        !levelInfo ||
         (currentCodecSet && levelInfo.codecSet !== currentCodecSet) ||
         (currentVideoRange && levelInfo.videoRange !== currentVideoRange) ||
-        (upSwitch && levelInfo.frameRate < currentFrameRate) ||
+        (upSwitch && currentFrameRate > levelInfo.frameRate) ||
         (!upSwitch &&
-          currentFrameRate &&
-          levelInfo.frameRate > currentFrameRate)
+          currentFrameRate > 0 &&
+          currentFrameRate < levelInfo.frameRate) ||
+        !levelInfo.supportedResult?.decodingInfoResults?.[0].smooth
       ) {
-        if (levelInfo) {
-          levelsSkipped.push(i);
-        }
+        levelsSkipped.push(i);
         continue;
       }
 

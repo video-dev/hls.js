@@ -1,5 +1,6 @@
-import { LevelDetails } from '../loader/level-details';
-import { AttrList } from '../utils/attr-list';
+import type { LevelDetails } from '../loader/level-details';
+import type { AttrList } from '../utils/attr-list';
+import type { MediaDecodingInfo } from '../utils/mediacapabilities-helper';
 
 export interface LevelParsed {
   attrs: LevelAttributes;
@@ -43,7 +44,7 @@ export function isHdcpLevel(value: any): value is HdcpLevel {
   return HdcpLevels.indexOf(value) > -1;
 }
 
-export const VideoRangeValues = ['SDR', 'HLG', 'PQ'] as const;
+export const VideoRangeValues = ['SDR', 'PQ', 'HLG'] as const;
 export type VideoRange = (typeof VideoRangeValues)[number];
 
 export function isVideoRange(value: any): value is VideoRange {
@@ -116,6 +117,8 @@ export class Level {
   public realBitrate: number = 0;
   public textGroupIds?: (string | undefined)[];
   public url: string[];
+  public supportedPromise?: Promise<MediaDecodingInfo>;
+  public supportedResult?: MediaDecodingInfo;
   private _urlId: number = 0;
   private _avgBitrate: number = 0;
 
