@@ -330,10 +330,6 @@ class AudioStreamController
     const bufferLen = bufferInfo.len;
     const maxBufLen = this.getMaxBufferLength(mainBufferInfo?.len);
 
-    // if buffer length is less than maxBufLen try to load a new fragment
-    if (bufferLen >= maxBufLen && !switchingTrack) {
-      return;
-    }
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
     let targetBufferTime = bufferInfo.end;
@@ -353,6 +349,15 @@ class AudioStreamController
           media.currentTime = start + 0.05;
         }
       }
+    }
+
+    // if buffer length is less than maxBufLen, or near the end, find a fragment to load
+    if (
+      bufferLen >= maxBufLen &&
+      !switchingTrack &&
+      targetBufferTime < fragments[fragments.length - 1].start
+    ) {
+      return;
     }
 
     let frag = this.getNextFragment(targetBufferTime, trackDetails);
@@ -909,6 +914,13 @@ class AudioStreamController
           `Waiting for video PTS in continuity counter ${frag.cc} of live stream before loading audio fragment ${frag.sn} of level ${this.trackId}`
         );
         this.state = State.WAITING_INIT_PTS;
+        const mainDetails = this.mainDetails;
+        if (
+          mainDetails &&
+          mainDetails.fragments[0].start !== track.details.fragments[0].start
+        ) {
+          alignMediaPlaylistByPDT(track.details, mainDetails);
+        }
       } else {
         this.startFragRequested = true;
         super.loadFragment(frag, track, targetBufferTime);

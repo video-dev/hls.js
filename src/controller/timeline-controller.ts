@@ -60,8 +60,8 @@ export class TimelineController implements ComponentAPI {
   private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private captionsTracks: Record<string, TextTrack> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
-  private cea608Parser1!: Cea608Parser;
-  private cea608Parser2!: Cea608Parser;
+  private cea608Parser1?: Cea608Parser;
+  private cea608Parser2?: Cea608Parser;
   private lastCc: number = -1; // Last video (CEA-608) fragment CC
   private lastSn: number = -1; // Last video (CEA-608) fragment MSN
   private lastPartIndex: number = -1; // Last video (CEA-608) fragment Part Index
@@ -98,15 +98,6 @@ export class TimelineController implements ComponentAPI {
       },
     };
 
-    if (this.config.enableCEA708Captions) {
-      const channel1 = new OutputFilter(this, 'textTrack1');
-      const channel2 = new OutputFilter(this, 'textTrack2');
-      const channel3 = new OutputFilter(this, 'textTrack3');
-      const channel4 = new OutputFilter(this, 'textTrack4');
-      this.cea608Parser1 = new Cea608Parser(1, channel1, channel2);
-      this.cea608Parser2 = new Cea608Parser(3, channel3, channel4);
-    }
-
     hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
@@ -137,6 +128,20 @@ export class TimelineController implements ComponentAPI {
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
     // @ts-ignore
     this.hls = this.config = this.cea608Parser1 = this.cea608Parser2 = null;
+  }
+
+  private lazyInit608() {
+    if (
+      this.config.enableCEA708Captions &&
+      (!this.cea608Parser1 || !this.cea608Parser2)
+    ) {
+      const channel1 = new OutputFilter(this, 'textTrack1');
+      const channel2 = new OutputFilter(this, 'textTrack2');
+      const channel3 = new OutputFilter(this, 'textTrack3');
+      const channel4 = new OutputFilter(this, 'textTrack4');
+      this.cea608Parser1 = new Cea608Parser(1, channel1, channel2);
+      this.cea608Parser2 = new Cea608Parser(3, channel3, channel4);
+    }
   }
 
   public addCues(
@@ -406,14 +411,10 @@ export class TimelineController implements ComponentAPI {
     track: MediaPlaylist
   ): TextTrackKind {
     if (track.attrs.CHARACTERISTICS) {
-      const transcribesSpokenDialog = /transcribes-spoken-dialog/gi.test(
-        track.attrs.CHARACTERISTICS
-      );
-      const describesMusicAndSound = /describes-music-and-sound/gi.test(
-        track.attrs.CHARACTERISTICS
-      );
-
-      if (transcribesSpokenDialog && describesMusicAndSound) {
+      if (
+        /transcribes-spoken-dialog/gi.test(track.attrs.CHARACTERISTICS) &&
+        /describes-music-and-sound/gi.test(track.attrs.CHARACTERISTICS)
+      ) {
         return 'captions';
       }
     }
@@ -655,16 +656,19 @@ export class TimelineController implements ComponentAPI {
     event: Events.FRAG_PARSING_USERDATA,
     data: FragParsingUserdataData
   ) {
-    const { cea608Parser1, cea608Parser2 } = this;
-    if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
+    if (!this.enabled) {
       return;
     }
-
     const { frag, samples } = data;
     if (
       frag.type === PlaylistLevelType.MAIN &&
       this.closedCaptionsForLevel(frag) === 'NONE'
     ) {
+      return;
+    }
+    this.lazyInit608();
+    const { cea608Parser1, cea608Parser2 } = this;
+    if (!cea608Parser1 || !cea608Parser2) {
       return;
     }
     // If the event contains captions (found in the bytes property), push all bytes into the parser immediately
