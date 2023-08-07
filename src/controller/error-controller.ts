@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import {
@@ -114,7 +114,7 @@ export default class ErrorController implements NetworkComponentAPI {
     this.playlistError = 0;
   }
 
-  private onError(event: Events.ERROR, data: ErrorData) {
+  private onError(event: EventsType['ERROR'], data: ErrorData) {
     if (data.fatal) {
       return;
     }
@@ -405,7 +405,7 @@ export default class ErrorController implements NetworkComponentAPI {
     };
   }
 
-  public onErrorOut(event: Events.ERROR, data: ErrorData) {
+  public onErrorOut(event: EventsType['ERROR'], data: ErrorData) {
     switch (data.errorAction?.action) {
       case NetworkErrorAction.DoNothing:
         break;

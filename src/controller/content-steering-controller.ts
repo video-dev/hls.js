@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { Level, addGroupId } from '../types/level';
 import { AttrList } from '../utils/attr-list';
 import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
@@ -146,7 +146,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   }
 
   private onManifestLoaded(
-    event: Events.MANIFEST_LOADED,
+    event: EventsType['MANIFEST_LOADED'],
     data: ManifestLoadedData
   ) {
     const { contentSteering } = data;
@@ -161,14 +161,14 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   }
 
   private onManifestParsed(
-    event: Events.MANIFEST_PARSED,
+    event: EventsType['MANIFEST_PARSED'],
     data: ManifestParsedData
   ) {
     this.audioTracks = data.audioTracks;
     this.subtitleTracks = data.subtitleTracks;
   }
 
-  private onError(event: Events.ERROR, data: ErrorData) {
+  private onError(event: EventsType['ERROR'], data: ErrorData) {
     const { errorAction } = data;
     if (
       errorAction?.action === NetworkErrorAction.SendAlternateToPenaltyBox &&

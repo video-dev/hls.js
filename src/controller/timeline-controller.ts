@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import Cea608Parser, { CaptionScreen } from '../utils/cea-608-parser';
 import OutputFilter from '../utils/output-filter';
 import { parseWebVTT } from '../utils/webvtt-parser';
@@ -189,7 +189,7 @@ export class TimelineController implements ComponentAPI {
 
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
   private onInitPtsFound(
-    event: Events.INIT_PTS_FOUND,
+    event: EventsType['INIT_PTS_FOUND'],
     { frag, id, initPTS, timescale }: InitPTSFoundData
   ) {
     const { unparsedVttFrags } = this;
@@ -284,7 +284,7 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onMediaAttaching(
-    event: Events.MEDIA_ATTACHING,
+    event: EventsType['MEDIA_ATTACHING'],
     data: MediaAttachingData
   ) {
     this.media = data.media;
@@ -337,7 +337,7 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onSubtitleTracksUpdated(
-    event: Events.SUBTITLE_TRACKS_UPDATED,
+    event: EventsType['SUBTITLE_TRACKS_UPDATED'],
     data: SubtitleTracksUpdatedData
   ) {
     const tracks: Array<MediaPlaylist> = data.subtitleTracks || [];
@@ -423,7 +423,7 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onManifestLoaded(
-    event: Events.MANIFEST_LOADED,
+    event: EventsType['MANIFEST_LOADED'],
     data: ManifestLoadedData
   ) {
     if (this.config.enableCEA708Captions && data.captions) {
@@ -455,7 +455,10 @@ export class TimelineController implements ComponentAPI {
     return level?.attrs['CLOSED-CAPTIONS'];
   }
 
-  private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
+  private onFragLoading(
+    event: EventsType['FRAG_LOADING'],
+    data: FragLoadingData
+  ) {
     const { cea608Parser1, cea608Parser2, lastCc, lastSn, lastPartIndex } =
       this;
     if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
@@ -482,7 +485,7 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onFragLoaded(
-    event: Events.FRAG_LOADED,
+    event: EventsType['FRAG_LOADED'],
     data: FragDecryptedData | FragLoadedData
   ) {
     const { frag, payload } = data;
@@ -638,7 +641,7 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onFragDecrypted(
-    event: Events.FRAG_DECRYPTED,
+    event: EventsType['FRAG_DECRYPTED'],
     data: FragDecryptedData
   ) {
     const { frag } = data;
@@ -653,7 +656,7 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onFragParsingUserdata(
-    event: Events.FRAG_PARSING_USERDATA,
+    event: EventsType['FRAG_PARSING_USERDATA'],
     data: FragParsingUserdataData
   ) {
     if (!this.enabled) {
@@ -684,7 +687,7 @@ export class TimelineController implements ComponentAPI {
   }
 
   onBufferFlushing(
-    event: Events.BUFFER_FLUSHING,
+    event: EventsType['BUFFER_FLUSHING'],
     { startOffset, endOffset, endOffsetSubtitles, type }: BufferFlushingData
   ) {
     const { media } = this;

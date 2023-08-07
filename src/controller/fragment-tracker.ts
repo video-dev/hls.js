@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { Fragment, Part } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
 import type { SourceBufferName } from '../types/buffer';
@@ -370,7 +370,7 @@ export class FragmentTracker implements ComponentAPI {
     return false;
   }
 
-  private onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
+  private onFragLoaded(event: EventsType['FRAG_LOADED'], data: FragLoadedData) {
     const { frag, part } = data;
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
@@ -392,7 +392,7 @@ export class FragmentTracker implements ComponentAPI {
   }
 
   private onBufferAppended(
-    event: Events.BUFFER_APPENDED,
+    event: EventsType['BUFFER_APPENDED'],
     data: BufferAppendedData
   ) {
     const { frag, part, timeRanges } = data;
@@ -420,7 +420,10 @@ export class FragmentTracker implements ComponentAPI {
     });
   }
 
-  private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+  private onFragBuffered(
+    event: EventsType['FRAG_BUFFERED'],
+    data: FragBufferedData
+  ) {
     this.detectPartialFragments(data);
   }
 

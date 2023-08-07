@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { logger } from '../utils/logger';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
@@ -45,7 +45,7 @@ class FPSController implements ComponentAPI {
   }
 
   protected onMediaAttaching(
-    event: Events.MEDIA_ATTACHING,
+    event: EventsType['MEDIA_ATTACHING'],
     data: MediaAttachingData
   ) {
     const config = this.hls.config;

@@ -2,7 +2,7 @@
  * cap stream level to media size dimension controller
  */
 
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import type { Level } from '../types/level';
 import type {
   ManifestParsedData,
@@ -72,7 +72,7 @@ class CapLevelController implements ComponentAPI {
   }
 
   protected onFpsDropLevelCapping(
-    event: Events.FPS_DROP_LEVEL_CAPPING,
+    event: EventsType['FPS_DROP_LEVEL_CAPPING'],
     data: FPSDropLevelCappingData
   ) {
     // Don't add a restricted level more than once
@@ -87,7 +87,7 @@ class CapLevelController implements ComponentAPI {
   }
 
   protected onMediaAttaching(
-    event: Events.MEDIA_ATTACHING,
+    event: EventsType['MEDIA_ATTACHING'],
     data: MediaAttachingData
   ) {
     this.media = data.media instanceof HTMLVideoElement ? data.media : null;
@@ -95,7 +95,7 @@ class CapLevelController implements ComponentAPI {
   }
 
   protected onManifestParsed(
-    event: Events.MANIFEST_PARSED,
+    event: EventsType['MANIFEST_PARSED'],
     data: ManifestParsedData
   ) {
     const hls = this.hls;
@@ -110,7 +110,7 @@ class CapLevelController implements ComponentAPI {
   // Only activate capping when playing a video stream; otherwise, multi-bitrate audio-only streams will be restricted
   // to the first level
   protected onBufferCodecs(
-    event: Events.BUFFER_CODECS,
+    event: EventsType['BUFFER_CODECS'],
     data: BufferCodecsData
   ) {
     const hls = this.hls;

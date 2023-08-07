@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import Hls from '../hls';
 import {
   CMCD,
@@ -82,7 +82,7 @@ export default class CMCDController implements ComponentAPI {
   }
 
   private onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
+    event: EventsType['MEDIA_ATTACHED'],
     data: MediaAttachedData
   ) {
     this.media = data.media;
@@ -103,7 +103,7 @@ export default class CMCDController implements ComponentAPI {
   }
 
   private onBufferCreated(
-    event: Events.BUFFER_CREATED,
+    event: EventsType['BUFFER_CREATED'],
     data: BufferCreatedData
   ) {
     this.audioBuffer = data.tracks.audio?.buffer;

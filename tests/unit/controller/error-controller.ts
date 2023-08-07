@@ -1,6 +1,10 @@
 import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
-import { ErrorDetails, ErrorTypes } from '../../../src/errors';
+import {
+  ErrorDetails,
+  ErrorDetailsValue,
+  ErrorTypes,
+} from '../../../src/errors';
 import type {
   ErrorData,
   FragLoadedData,
@@ -974,7 +978,7 @@ function loadingEventCallback(server, timers) {
 
 function expectFatalErrorEventToStopPlayer(
   hls: Hls,
-  withErrorDetails: ErrorDetails,
+  withErrorDetails: ErrorDetailsValue,
   withErrorMessage: string
 ) {
   return (data: ErrorData) => {

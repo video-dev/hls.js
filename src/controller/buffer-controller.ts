@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -148,7 +148,7 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onManifestParsed(
-    event: Events.MANIFEST_PARSED,
+    event: EventsType['MANIFEST_PARSED'],
     data: ManifestParsedData
   ) {
     // in case of alt audio 2 BUFFER_CODECS events will be triggered, one per stream controller
@@ -164,7 +164,7 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onMediaAttaching(
-    event: Events.MEDIA_ATTACHING,
+    event: EventsType['MEDIA_ATTACHING'],
     data: MediaAttachingData
   ) {
     const media = (this.media = data.media);
@@ -255,7 +255,7 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onBufferCodecs(
-    event: Events.BUFFER_CODECS,
+    event: EventsType['BUFFER_CODECS'],
     data: BufferCodecsData
   ) {
     const sourceBufferCount = this.getSourceBufferTypes().length;
@@ -335,7 +335,7 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onBufferAppending(
-    event: Events.BUFFER_APPENDING,
+    event: EventsType['BUFFER_APPENDING'],
     eventData: BufferAppendingData
   ) {
     const { hls, operationQueue, tracks } = this;
@@ -454,7 +454,7 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onBufferFlushing(
-    event: Events.BUFFER_FLUSHING,
+    event: EventsType['BUFFER_FLUSHING'],
     data: BufferFlushingData
   ) {
     const { operationQueue } = this;
@@ -486,7 +486,10 @@ export default class BufferController implements ComponentAPI {
     }
   }
 
-  protected onFragParsed(event: Events.FRAG_PARSED, data: FragParsedData) {
+  protected onFragParsed(
+    event: EventsType['FRAG_PARSED'],
+    data: FragParsedData
+  ) {
     const { frag, part } = data;
     const buffersAppendedTo: Array<SourceBufferName> = [];
     const elementaryStreams = part
@@ -527,13 +530,16 @@ export default class BufferController implements ComponentAPI {
     this.blockBuffers(onUnblocked, buffersAppendedTo);
   }
 
-  private onFragChanged(event: Events.FRAG_CHANGED, data: FragChangedData) {
+  private onFragChanged(
+    event: EventsType['FRAG_CHANGED'],
+    data: FragChangedData
+  ) {
     this.flushBackBuffer();
   }
 
   // on BUFFER_EOS mark matching sourcebuffer(s) as ended and trigger checkEos()
   // an undefined data.type will mark all buffers as EOS.
-  protected onBufferEos(event: Events.BUFFER_EOS, data: BufferEOSData) {
+  protected onBufferEos(event: EventsType['BUFFER_EOS'], data: BufferEOSData) {
     const ended = this.getSourceBufferTypes().reduce((acc, type) => {
       const sb = this.sourceBuffer[type];
       if (sb && (!data.type || data.type === type)) {
@@ -572,7 +578,7 @@ export default class BufferController implements ComponentAPI {
   }
 
   protected onLevelUpdated(
-    event: Events.LEVEL_UPDATED,
+    event: EventsType['LEVEL_UPDATED'],
     { details }: LevelUpdatedData
   ) {
     if (!details.fragments.length) {

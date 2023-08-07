@@ -1,4 +1,4 @@
-import { ErrorTypes, ErrorDetails } from '../errors';
+import { ErrorTypes, ErrorDetails, ErrorDetailsValue } from '../errors';
 import {
   LoaderStats,
   LoaderResponse,
@@ -71,7 +71,7 @@ export default class KeyLoader implements ComponentAPI {
 
   createKeyLoadError(
     frag: Fragment,
-    details: ErrorDetails = ErrorDetails.KEY_LOAD_ERROR,
+    details: ErrorDetailsValue = ErrorDetails.KEY_LOAD_ERROR,
     error: Error,
     networkDetails?: any,
     response?: { url: string; data: undefined; code: number; text: string }

@@ -3,7 +3,7 @@
  *
  * DRM support for Hls.js
  */
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
 import {
@@ -1124,7 +1124,7 @@ class EMEController implements ComponentAPI {
   }
 
   private onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
+    event: EventsType['MEDIA_ATTACHED'],
     data: MediaAttachedData
   ) {
     if (!this.config.emeEnabled) {
@@ -1188,7 +1188,7 @@ class EMEController implements ComponentAPI {
   }
 
   private onManifestLoaded(
-    event: Events.MANIFEST_LOADED,
+    event: EventsType['MANIFEST_LOADED'],
     { sessionKeys }: ManifestLoadedData
   ) {
     if (!sessionKeys || !this.config.emeEnabled) {

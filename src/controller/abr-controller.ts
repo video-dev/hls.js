@@ -1,5 +1,5 @@
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { PlaylistLevelType } from '../types/loader';
 import { logger } from '../utils/logger';
 import type { Fragment } from '../loader/fragment';
@@ -76,7 +76,10 @@ class AbrController implements AbrComponentAPI {
     this.fragCurrent = this.partCurrent = null;
   }
 
-  protected onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
+  protected onFragLoading(
+    event: EventsType['FRAG_LOADING'],
+    data: FragLoadingData
+  ) {
     const frag = data.frag;
     if (this.ignoreFragment(frag)) {
       return;
@@ -88,7 +91,7 @@ class AbrController implements AbrComponentAPI {
   }
 
   protected onLevelSwitching(
-    event: Events.LEVEL_SWITCHING,
+    event: EventsType['LEVEL_SWITCHING'],
     data: LevelSwitchingData
   ): void {
     this.clearTimer();
@@ -105,7 +108,10 @@ class AbrController implements AbrComponentAPI {
     return fragLoadSec + playlistLoadSec;
   }
 
-  protected onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+  protected onLevelLoaded(
+    event: EventsType['LEVEL_LOADED'],
+    data: LevelLoadedData
+  ) {
     const config = this.hls.config;
     const { total, bwEstimate } = data.stats;
     // Total is the bytelength and bwEstimate in bits/sec
@@ -273,7 +279,7 @@ class AbrController implements AbrComponentAPI {
   }
 
   protected onFragLoaded(
-    event: Events.FRAG_LOADED,
+    event: EventsType['FRAG_LOADED'],
     { frag, part }: FragLoadedData
   ) {
     const stats = part ? part.stats : frag.stats;
@@ -314,7 +320,7 @@ class AbrController implements AbrComponentAPI {
   }
 
   protected onFragBuffered(
-    event: Events.FRAG_BUFFERED,
+    event: EventsType['FRAG_BUFFERED'],
     data: FragBufferedData
   ) {
     const { frag, part } = data;

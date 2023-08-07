@@ -2,7 +2,7 @@ import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
 import { Bufferable, BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
@@ -193,7 +193,7 @@ export default class BaseStreamController
   }
 
   protected onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
+    event: EventsType['MEDIA_ATTACHED'],
     data: MediaAttachedData
   ) {
     const media = (this.media = this.mediaBuffer = data.media);
@@ -300,7 +300,7 @@ export default class BaseStreamController
   }
 
   protected onManifestLoaded(
-    event: Events.MANIFEST_LOADED,
+    event: EventsType['MANIFEST_LOADED'],
     data: ManifestLoadedData
   ): void {
     this.startTimeOffset = data.startTimeOffset;

@@ -22,7 +22,7 @@ import type { Track, TrackSet } from './track';
 import type { SourceBufferName } from './buffer';
 import type { ChunkMetadata } from './transmuxer';
 import type { LoadStats } from '../loader/load-stats';
-import type { ErrorDetails, ErrorTypes } from '../errors';
+import type { ErrorDetailsValue, ErrorTypesValue } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
 import type { AttrList } from '../utils/attr-list';
 import type { HlsListeners } from '../events';
@@ -222,8 +222,8 @@ export interface FPSDropLevelCappingData {
 }
 
 export interface ErrorData {
-  type: ErrorTypes;
-  details: ErrorDetails;
+  type: ErrorTypesValue;
+  details: ErrorDetailsValue;
   error: Error;
   fatal: boolean;
   errorAction?: IErrorAction;

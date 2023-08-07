@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { clearCurrentCues } from '../utils/texttrack-utils';
 import BasePlaylistController from './base-playlist-controller';
 import type { HlsUrlParameters } from '../types/level';
@@ -78,7 +78,7 @@ class SubtitleTrackController extends BasePlaylistController {
 
   // Listen for subtitle track change, then extract the current track ID.
   protected onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
+    event: EventsType['MEDIA_ATTACHED'],
     data: MediaAttachedData
   ): void {
     this.media = data.media;
@@ -149,14 +149,14 @@ class SubtitleTrackController extends BasePlaylistController {
 
   // Fired whenever a new manifest is loaded.
   protected onManifestParsed(
-    event: Events.MANIFEST_PARSED,
+    event: EventsType['MANIFEST_PARSED'],
     data: ManifestParsedData
   ): void {
     this.tracks = data.subtitleTracks;
   }
 
   protected onSubtitleTrackLoaded(
-    event: Events.SUBTITLE_TRACK_LOADED,
+    event: EventsType['SUBTITLE_TRACK_LOADED'],
     data: TrackLoadedData
   ): void {
     const { id, details } = data;
@@ -180,14 +180,14 @@ class SubtitleTrackController extends BasePlaylistController {
   }
 
   protected onLevelLoading(
-    event: Events.LEVEL_LOADING,
+    event: EventsType['LEVEL_LOADING'],
     data: LevelLoadingData
   ): void {
     this.switchLevel(data.level);
   }
 
   protected onLevelSwitching(
-    event: Events.LEVEL_SWITCHING,
+    event: EventsType['LEVEL_SWITCHING'],
     data: LevelSwitchingData
   ): void {
     this.switchLevel(data.level);
@@ -241,7 +241,7 @@ class SubtitleTrackController extends BasePlaylistController {
     return -1;
   }
 
-  protected onError(event: Events.ERROR, data: ErrorData): void {
+  protected onError(event: EventsType['ERROR'], data: ErrorData): void {
     if (data.fatal || !data.context) {
       return;
     }

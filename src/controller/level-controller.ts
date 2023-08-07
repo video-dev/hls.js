@@ -14,7 +14,7 @@ import {
   ManifestLoadingData,
 } from '../types/events';
 import { Level, addGroupId } from '../types/level';
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import {
   getCodecCompatibleName,
@@ -100,14 +100,14 @@ export default class LevelController extends BasePlaylistController {
   }
 
   private onManifestLoading(
-    event: Events.MANIFEST_LOADING,
+    event: EventsType['MANIFEST_LOADING'],
     data: ManifestLoadingData
   ) {
     this.resetLevels();
   }
 
   protected onManifestLoaded(
-    event: Events.MANIFEST_LOADED,
+    event: EventsType['MANIFEST_LOADED'],
     data: ManifestLoadedData
   ) {
     const levels: Level[] = [];
@@ -450,7 +450,7 @@ export default class LevelController extends BasePlaylistController {
     this._startLevel = newLevel;
   }
 
-  protected onError(event: Events.ERROR, data: ErrorData) {
+  protected onError(event: EventsType['ERROR'], data: ErrorData) {
     if (data.fatal || !data.context) {
       return;
     }
@@ -464,7 +464,10 @@ export default class LevelController extends BasePlaylistController {
   }
 
   // reset errors on the successful load of a fragment
-  protected onFragLoaded(event: Events.FRAG_LOADED, { frag }: FragLoadedData) {
+  protected onFragLoaded(
+    event: EventsType['FRAG_LOADED'],
+    { frag }: FragLoadedData
+  ) {
     if (frag !== undefined && frag.type === PlaylistLevelType.MAIN) {
       const level = this._levels[frag.level];
       if (level !== undefined) {
@@ -473,7 +476,10 @@ export default class LevelController extends BasePlaylistController {
     }
   }
 
-  protected onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+  protected onLevelLoaded(
+    event: EventsType['LEVEL_LOADED'],
+    data: LevelLoadedData
+  ) {
     const { level, details } = data;
     const curLevel = this._levels[level];
 
@@ -499,7 +505,7 @@ export default class LevelController extends BasePlaylistController {
   }
 
   protected onAudioTrackSwitched(
-    event: Events.AUDIO_TRACK_SWITCHED,
+    event: EventsType['AUDIO_TRACK_SWITCHED'],
     data: TrackSwitchedData
   ) {
     const currentLevel = this.currentLevel;
@@ -620,7 +626,7 @@ export default class LevelController extends BasePlaylistController {
   }
 
   private onLevelsUpdated(
-    event: Events.LEVELS_UPDATED,
+    event: EventsType['LEVELS_UPDATED'],
     { levels }: LevelsUpdatedData
   ) {
     levels.forEach((level, index) => {

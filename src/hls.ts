@@ -10,8 +10,13 @@ import { isSupported } from './is-supported';
 import { logger, enableLogs } from './utils/logger';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
 import { EventEmitter } from 'eventemitter3';
-import { Events } from './events';
-import { ErrorTypes, ErrorDetails } from './errors';
+import { Events, EventsType } from './events';
+import {
+  ErrorTypes,
+  ErrorDetails,
+  ErrorTypesType,
+  ErrorDetailsType,
+} from './errors';
 import { HdcpLevels } from './types/level';
 import type { HlsEventEmitter, HlsListeners } from './events';
 import type AudioTrackController from './controller/audio-track-controller';
@@ -880,9 +885,9 @@ export default class Hls implements HlsEventEmitter {
 
 export type {
   MediaPlaylist,
-  ErrorDetails,
-  ErrorTypes,
-  Events,
+  ErrorDetailsType as ErrorDetails,
+  ErrorTypesType as ErrorTypes,
+  EventsType as Events,
   Level,
   HlsListeners,
   HlsEventEmitter,

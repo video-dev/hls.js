@@ -1,7 +1,12 @@
 import LevelController from '../../../src/controller/level-controller';
 import HlsMock from '../../mocks/hls.mock';
 import { Events } from '../../../src/events';
-import { ErrorDetails, ErrorTypes } from '../../../src/errors';
+import {
+  ErrorDetails,
+  ErrorDetailsValue,
+  ErrorTypes,
+  ErrorTypesValue,
+} from '../../../src/errors';
 import { Level } from '../../../src/types/level';
 import { AttrList } from '../../../src/utils/attr-list';
 import {
@@ -40,8 +45,8 @@ type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
   onError: (
     event: string,
     data: {
-      type: ErrorTypes;
-      details: ErrorDetails;
+      type: ErrorTypesValue;
+      details: ErrorDetailsValue;
       context?: PlaylistLoaderContext;
       frag?: Fragment;
       level?: number;

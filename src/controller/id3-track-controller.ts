@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import {
   sendAddTrackEvent,
   clearCurrentCues,
@@ -109,7 +109,7 @@ class ID3TrackController implements ComponentAPI {
 
   // Add ID3 metatadata text track.
   protected onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
+    event: EventsType['MEDIA_ATTACHED'],
     data: MediaAttachedData
   ): void {
     this.media = data.media;
@@ -153,7 +153,7 @@ class ID3TrackController implements ComponentAPI {
   }
 
   onFragParsingMetadata(
-    event: Events.FRAG_PARSING_METADATA,
+    event: EventsType['FRAG_PARSING_METADATA'],
     data: FragParsingMetadataData
   ) {
     if (!this.media) {
@@ -237,7 +237,7 @@ class ID3TrackController implements ComponentAPI {
   }
 
   onBufferFlushing(
-    event: Events.BUFFER_FLUSHING,
+    event: EventsType['BUFFER_FLUSHING'],
     { startOffset, endOffset, type }: BufferFlushingData
   ) {
     const { id3Track, hls } = this;
@@ -268,7 +268,10 @@ class ID3TrackController implements ComponentAPI {
     }
   }
 
-  onLevelUpdated(event: Events.LEVEL_UPDATED, { details }: LevelUpdatedData) {
+  onLevelUpdated(
+    event: EventsType['LEVEL_UPDATED'],
+    { details }: LevelUpdatedData
+  ) {
     if (
       !this.media ||
       !details.hasProgramDateTime ||

@@ -4,7 +4,7 @@ import EMEController, {
 import HlsMock from '../../mocks/hls.mock';
 import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails } from '../../../src/errors';
-import { Events } from '../../../src/events';
+import { Events, EventsType } from '../../../src/events';
 
 import sinon from 'sinon';
 import chai from 'chai';
@@ -24,7 +24,7 @@ type EMEControllerTestable = Omit<
   };
   mediaKeySessions: MediaKeySessionContext[];
   onMediaAttached: (
-    event: Events.MEDIA_ATTACHED,
+    event: EventsType['MEDIA_ATTACHED'],
     data: MediaAttachedData
   ) => void;
   onMediaDetached: () => void;

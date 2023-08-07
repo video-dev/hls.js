@@ -1,6 +1,6 @@
 import BaseStreamController, { State } from './base-stream-controller';
 import { changeTypeSupported } from '../is-supported';
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
@@ -504,7 +504,7 @@ export default class StreamController
   }
 
   protected onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
+    event: EventsType['MEDIA_ATTACHED'],
     data: MediaAttachedData
   ) {
     super.onMediaAttached(event, data);
@@ -576,7 +576,7 @@ export default class StreamController
   }
 
   private onManifestParsed(
-    event: Events.MANIFEST_PARSED,
+    event: EventsType['MANIFEST_PARSED'],
     data: ManifestParsedData
   ) {
     let aac = false;
@@ -606,7 +606,10 @@ export default class StreamController
     this.startFragRequested = false;
   }
 
-  private onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData) {
+  private onLevelLoading(
+    event: EventsType['LEVEL_LOADING'],
+    data: LevelLoadingData
+  ) {
     const { levels } = this;
     if (!levels || this.state !== State.IDLE) {
       return;
@@ -621,7 +624,10 @@ export default class StreamController
     }
   }
 
-  private onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+  private onLevelLoaded(
+    event: EventsType['LEVEL_LOADED'],
+    data: LevelLoadedData
+  ) {
     const { levels } = this;
     const newLevelId = data.level;
     const newDetails = data.details;
@@ -755,7 +761,7 @@ export default class StreamController
   }
 
   private onAudioTrackSwitching(
-    event: Events.AUDIO_TRACK_SWITCHING,
+    event: EventsType['AUDIO_TRACK_SWITCHING'],
     data: AudioTrackSwitchingData
   ) {
     // if any URL found on new audio track, it is an alternate audio track
@@ -800,7 +806,7 @@ export default class StreamController
   }
 
   private onAudioTrackSwitched(
-    event: Events.AUDIO_TRACK_SWITCHED,
+    event: EventsType['AUDIO_TRACK_SWITCHED'],
     data: AudioTrackSwitchedData
   ) {
     const trackId = data.id;
@@ -820,7 +826,7 @@ export default class StreamController
   }
 
   private onBufferCreated(
-    event: Events.BUFFER_CREATED,
+    event: EventsType['BUFFER_CREATED'],
     data: BufferCreatedData
   ) {
     const tracks = data.tracks;
@@ -853,7 +859,10 @@ export default class StreamController
     }
   }
 
-  private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+  private onFragBuffered(
+    event: EventsType['FRAG_BUFFERED'],
+    data: FragBufferedData
+  ) {
     const { frag, part } = data;
     if (frag && frag.type !== PlaylistLevelType.MAIN) {
       return;
@@ -881,7 +890,7 @@ export default class StreamController
     this.fragBufferedComplete(frag, part);
   }
 
-  private onError(event: Events.ERROR, data: ErrorData) {
+  private onError(event: EventsType['ERROR'], data: ErrorData) {
     if (data.fatal) {
       this.state = State.ERROR;
       return;
@@ -958,7 +967,7 @@ export default class StreamController
   }
 
   private onBufferFlushed(
-    event: Events.BUFFER_FLUSHED,
+    event: EventsType['BUFFER_FLUSHED'],
     { type }: BufferFlushedData
   ) {
     if (
@@ -975,7 +984,7 @@ export default class StreamController
   }
 
   private onLevelsUpdated(
-    event: Events.LEVELS_UPDATED,
+    event: EventsType['LEVELS_UPDATED'],
     data: LevelsUpdatedData
   ) {
     this.levels = data.levels;

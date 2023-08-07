@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import {
   ManifestParsedData,
@@ -65,14 +65,14 @@ class AudioTrackController extends BasePlaylistController {
   }
 
   protected onManifestParsed(
-    event: Events.MANIFEST_PARSED,
+    event: EventsType['MANIFEST_PARSED'],
     data: ManifestParsedData
   ): void {
     this.tracks = data.audioTracks || [];
   }
 
   protected onAudioTrackLoaded(
-    event: Events.AUDIO_TRACK_LOADED,
+    event: EventsType['AUDIO_TRACK_LOADED'],
     data: AudioTrackLoadedData
   ): void {
     const { id, groupId, details } = data;
@@ -97,14 +97,14 @@ class AudioTrackController extends BasePlaylistController {
   }
 
   protected onLevelLoading(
-    event: Events.LEVEL_LOADING,
+    event: EventsType['LEVEL_LOADING'],
     data: LevelLoadingData
   ): void {
     this.switchLevel(data.level);
   }
 
   protected onLevelSwitching(
-    event: Events.LEVEL_SWITCHING,
+    event: EventsType['LEVEL_SWITCHING'],
     data: LevelSwitchingData
   ): void {
     this.switchLevel(data.level);
@@ -147,7 +147,7 @@ class AudioTrackController extends BasePlaylistController {
     }
   }
 
-  protected onError(event: Events.ERROR, data: ErrorData): void {
+  protected onError(event: EventsType['ERROR'], data: ErrorData): void {
     if (data.fatal || !data.context) {
       return;
     }

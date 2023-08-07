@@ -1,4 +1,4 @@
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPTS } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
@@ -118,12 +118,12 @@ export class SubtitleStreamController
     super.onMediaDetaching();
   }
 
-  onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+  onLevelLoaded(event: EventsType['LEVEL_LOADED'], data: LevelLoadedData) {
     this.mainDetails = data.details;
   }
 
   onSubtitleFragProcessed(
-    event: Events.SUBTITLE_FRAG_PROCESSED,
+    event: EventsType['SUBTITLE_FRAG_PROCESSED'],
     data: SubtitleFragProcessed
   ) {
     const { frag, success } = data;
@@ -162,7 +162,10 @@ export class SubtitleStreamController
     this.fragmentTracker.fragBuffered(frag);
   }
 
-  onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData) {
+  onBufferFlushing(
+    event: EventsType['BUFFER_FLUSHING'],
+    data: BufferFlushingData
+  ) {
     const { startOffset, endOffset } = data;
     if (startOffset === 0 && endOffset !== Number.POSITIVE_INFINITY) {
       const endOffsetSubtitles = endOffset - 1;
@@ -191,7 +194,7 @@ export class SubtitleStreamController
     }
   }
 
-  onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+  onFragBuffered(event: EventsType['FRAG_BUFFERED'], data: FragBufferedData) {
     if (!this.loadedmetadata && data.frag.type === PlaylistLevelType.MAIN) {
       if (this.media?.buffered.length) {
         this.loadedmetadata = true;
@@ -200,7 +203,7 @@ export class SubtitleStreamController
   }
 
   // If something goes wrong, proceed to next frag, if we were processing one.
-  onError(event: Events.ERROR, data: ErrorData) {
+  onError(event: EventsType['ERROR'], data: ErrorData) {
     const frag = data.frag;
 
     if (frag?.type === PlaylistLevelType.SUBTITLE) {
@@ -215,7 +218,7 @@ export class SubtitleStreamController
 
   // Got all new subtitle levels.
   onSubtitleTracksUpdated(
-    event: Events.SUBTITLE_TRACKS_UPDATED,
+    event: EventsType['SUBTITLE_TRACKS_UPDATED'],
     { subtitleTracks }: SubtitleTracksUpdatedData
   ) {
     if (subtitleOptionsIdentical(this.levels, subtitleTracks)) {
@@ -240,7 +243,7 @@ export class SubtitleStreamController
   }
 
   onSubtitleTrackSwitch(
-    event: Events.SUBTITLE_TRACK_SWITCH,
+    event: EventsType['SUBTITLE_TRACK_SWITCH'],
     data: TrackSwitchedData
   ) {
     this.currentTrackId = data.id;
@@ -264,7 +267,7 @@ export class SubtitleStreamController
 
   // Got a new set of subtitle fragments.
   onSubtitleTrackLoaded(
-    event: Events.SUBTITLE_TRACK_LOADED,
+    event: EventsType['SUBTITLE_TRACK_LOADED'],
     data: TrackLoadedData
   ) {
     const { details: newDetails, id: trackId } = data;

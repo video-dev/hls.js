@@ -6,8 +6,8 @@
  * Uses loader(s) set in config to do actual internal loading of resource tasks.
  */
 
-import { Events } from '../events';
-import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events, EventsType } from '../events';
+import { ErrorDetails, ErrorDetailsValue, ErrorTypes } from '../errors';
 import { logger } from '../utils/logger';
 import M3U8Parser from './m3u8-parser';
 import type { LevelParsed, VariableMap } from '../types/level';
@@ -146,7 +146,7 @@ class PlaylistLoader implements NetworkComponentAPI {
   }
 
   private onManifestLoading(
-    event: Events.MANIFEST_LOADING,
+    event: EventsType['MANIFEST_LOADING'],
     data: ManifestLoadingData
   ) {
     const { url } = data;
@@ -161,7 +161,10 @@ class PlaylistLoader implements NetworkComponentAPI {
     });
   }
 
-  private onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData) {
+  private onLevelLoading(
+    event: EventsType['LEVEL_LOADING'],
+    data: LevelLoadingData
+  ) {
     const { id, level, url, deliveryDirectives } = data;
     this.load({
       id,
@@ -174,7 +177,7 @@ class PlaylistLoader implements NetworkComponentAPI {
   }
 
   private onAudioTrackLoading(
-    event: Events.AUDIO_TRACK_LOADING,
+    event: EventsType['AUDIO_TRACK_LOADING'],
     data: TrackLoadingData
   ) {
     const { id, groupId, url, deliveryDirectives } = data;
@@ -190,7 +193,7 @@ class PlaylistLoader implements NetworkComponentAPI {
   }
 
   private onSubtitleTrackLoading(
-    event: Events.SUBTITLE_TRACK_LOADING,
+    event: EventsType['SUBTITLE_TRACK_LOADING'],
     data: TrackLoadingData
   ) {
     const { id, groupId, url, deliveryDirectives } = data;
@@ -549,7 +552,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     }
     const error = new Error(message);
     logger.warn(`[playlist-loader]: ${message}`);
-    let details = ErrorDetails.UNKNOWN;
+    let details: ErrorDetailsValue = ErrorDetails.UNKNOWN;
     let fatal = false;
 
     const loader = this.getInternalLoader(context);

@@ -1,5 +1,5 @@
 import BaseStreamController, { State } from './base-stream-controller';
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
 import { Level } from '../types/level';
@@ -117,7 +117,7 @@ class AudioStreamController
 
   // INIT_PTS_FOUND is triggered when the video track parsed in the stream-controller has a new PTS value
   onInitPtsFound(
-    event: Events.INIT_PTS_FOUND,
+    event: EventsType['INIT_PTS_FOUND'],
     { frag, id, initPTS, timescale }: InitPTSFoundData
   ) {
     // Always update the new INIT PTS
@@ -423,7 +423,7 @@ class AudioStreamController
   }
 
   onAudioTracksUpdated(
-    event: Events.AUDIO_TRACKS_UPDATED,
+    event: EventsType['AUDIO_TRACKS_UPDATED'],
     { audioTracks }: AudioTracksUpdatedData
   ) {
     this.resetTransmuxer();
@@ -431,7 +431,7 @@ class AudioStreamController
   }
 
   onAudioTrackSwitching(
-    event: Events.AUDIO_TRACK_SWITCHING,
+    event: EventsType['AUDIO_TRACK_SWITCHING'],
     data: AudioTrackSwitchingData
   ) {
     // if any URL found on new audio track, it is an alternate audio track
@@ -481,7 +481,7 @@ class AudioStreamController
     this.trackId = this.videoTrackCC = this.waitingVideoCC = -1;
   }
 
-  onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+  onLevelLoaded(event: EventsType['LEVEL_LOADED'], data: LevelLoadedData) {
     this.mainDetails = data.details;
     if (this.cachedTrackLoadedData !== null) {
       this.hls.trigger(Events.AUDIO_TRACK_LOADED, this.cachedTrackLoadedData);
@@ -489,7 +489,10 @@ class AudioStreamController
     }
   }
 
-  onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData) {
+  onAudioTrackLoaded(
+    event: EventsType['AUDIO_TRACK_LOADED'],
+    data: TrackLoadedData
+  ) {
     if (this.mainDetails == null) {
       this.cachedTrackLoadedData = data;
       return;
@@ -638,13 +641,16 @@ class AudioStreamController
     super._handleFragmentLoadComplete(fragLoadedData);
   }
 
-  onBufferReset(/* event: Events.BUFFER_RESET */) {
+  onBufferReset(/* event: EventsType['BUFFER_RESET'] */) {
     // reset reference to sourcebuffers
     this.mediaBuffer = this.videoBuffer = null;
     this.loadedmetadata = false;
   }
 
-  onBufferCreated(event: Events.BUFFER_CREATED, data: BufferCreatedData) {
+  onBufferCreated(
+    event: EventsType['BUFFER_CREATED'],
+    data: BufferCreatedData
+  ) {
     const audioTrack = data.tracks.audio;
     if (audioTrack) {
       this.mediaBuffer = audioTrack.buffer || null;
@@ -654,7 +660,7 @@ class AudioStreamController
     }
   }
 
-  onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+  onFragBuffered(event: EventsType['FRAG_BUFFERED'], data: FragBufferedData) {
     const { frag, part } = data;
     if (frag.type !== PlaylistLevelType.AUDIO) {
       if (!this.loadedmetadata && frag.type === PlaylistLevelType.MAIN) {
@@ -694,7 +700,7 @@ class AudioStreamController
     this.fragBufferedComplete(frag, part);
   }
 
-  private onError(event: Events.ERROR, data: ErrorData) {
+  private onError(event: EventsType['ERROR'], data: ErrorData) {
     if (data.fatal) {
       this.state = State.ERROR;
       return;
@@ -744,7 +750,7 @@ class AudioStreamController
   }
 
   private onBufferFlushed(
-    event: Events.BUFFER_FLUSHED,
+    event: EventsType['BUFFER_FLUSHED'],
     { type }: BufferFlushedData
   ) {
     if (type === ElementaryStreamTypes.AUDIO) {

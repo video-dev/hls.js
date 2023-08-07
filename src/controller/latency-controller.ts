@@ -1,6 +1,6 @@
 import { LevelDetails } from '../loader/level-details';
 import { ErrorDetails } from '../errors';
-import { Events } from '../events';
+import { Events, EventsType } from '../events';
 import type {
   ErrorData,
   LevelUpdatedData,
@@ -146,7 +146,7 @@ export default class LatencyController implements ComponentAPI {
   }
 
   private onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
+    event: EventsType['MEDIA_ATTACHED'],
     data: MediaAttachingData
   ) {
     this.media = data.media;
@@ -167,7 +167,7 @@ export default class LatencyController implements ComponentAPI {
   }
 
   private onLevelUpdated(
-    event: Events.LEVEL_UPDATED,
+    event: EventsType['LEVEL_UPDATED'],
     { details }: LevelUpdatedData
   ) {
     this.levelDetails = details;
@@ -179,7 +179,7 @@ export default class LatencyController implements ComponentAPI {
     }
   }
 
-  private onError(event: Events.ERROR, data: ErrorData) {
+  private onError(event: EventsType['ERROR'], data: ErrorData) {
     if (data.details !== ErrorDetails.BUFFER_STALLED_ERROR) {
       return;
     }
