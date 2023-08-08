@@ -73,7 +73,7 @@ export default class MP4Remuxer implements Remuxer {
     }
   }
 
-  destroy() {}
+  destroy() { }
 
   resetTimeStamp(defaultTimeStamp: RationalTimestamp | null) {
     logger.log('[mp4-remuxer]: initPTS & initDTS reset');
@@ -279,6 +279,14 @@ export default class MP4Remuxer implements Remuxer {
         );
       }
     }
+    console.log({
+      audio,
+      video,
+      initSegment,
+      independent,
+      text,
+      id3,
+    }, 'remux');
 
     return {
       audio,
@@ -616,10 +624,8 @@ export default class MP4Remuxer implements Remuxer {
               stretchedLastFrame = true;
             }
             logger.log(
-              `[mp4-remuxer]: It is approximately ${
-                deltaToFrameEnd / 90
-              } ms to the next segment; using duration ${
-                mp4SampleDuration / 90
+              `[mp4-remuxer]: It is approximately ${deltaToFrameEnd / 90
+              } ms to the next segment; using duration ${mp4SampleDuration / 90
               } ms for the last video frame.`
             );
           } else {
@@ -774,9 +780,9 @@ export default class MP4Remuxer implements Remuxer {
           Math.abs(timeOffsetMpegTS - nextAudioPts) < 9000) ||
           Math.abs(
             normalizePts(inputSamples[0].pts - initTime, timeOffsetMpegTS) -
-              nextAudioPts
+            nextAudioPts
           ) <
-            20 * inputSampleDuration)) as boolean);
+          20 * inputSampleDuration)) as boolean);
 
     // compute normalized PTS
     inputSamples.forEach(function (sample) {
@@ -966,10 +972,10 @@ export default class MP4Remuxer implements Remuxer {
     const moof = rawMPEG
       ? new Uint8Array(0)
       : MP4.moof(
-          track.sequenceNumber++,
-          firstPTS! / scaleFactor,
-          Object.assign({}, track, { samples: outputSamples })
-        );
+        track.sequenceNumber++,
+        firstPTS! / scaleFactor,
+        Object.assign({}, track, { samples: outputSamples })
+      );
 
     // Clear the track samples. This also clears the samples array in the demuxer, since the reference is shared
     track.samples = [];

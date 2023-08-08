@@ -337,13 +337,13 @@ class ExpGolomb {
     return {
       width: Math.ceil(
         (picWidthInMbsMinus1 + 1) * 16 -
-          frameCropLeftOffset * 2 -
-          frameCropRightOffset * 2
+        frameCropLeftOffset * 2 -
+        frameCropRightOffset * 2
       ),
       height:
         (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 -
         (frameMbsOnlyFlag ? 2 : 4) *
-          (frameCropTopOffset + frameCropBottomOffset),
+        (frameCropTopOffset + frameCropBottomOffset),
       pixelRatio: pixelRatio,
     };
   }
@@ -355,6 +355,9 @@ class ExpGolomb {
     this.readUEG();
     // return slice_type
     return this.readUEG();
+  }
+  destroy() {
+    this.data = null as any;
   }
 }
 

@@ -3,20 +3,19 @@
   <head>
     <meta charset="utf-8" />
     <title>hls.js demo</title>
-    <!-- <link
+    <link
       rel="stylesheet"
       href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css"
     />
     <link
       rel="stylesheet"
       href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap-theme.min.css"
-    /> -->
+    />
     <link rel="stylesheet" href="style.css" />
-    <!-- <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script> -->
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
-    <!-- <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script> -->
-    <script src="FileSaver.min.js"></script>
-    <script src="ace.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.15.2/ace.js"></script>
   </head>
   <body>
     <div class="header-container">
@@ -29,10 +28,10 @@
           </a>
         </h1>
 
-        <h2 class="title">demo</h2>
+        <h2 class="title">light demo</h2>
 
         <h3>
-          <a href="../api-docs/">API docs | usage guide</a>
+          <a href="../api-docs">API docs | usage guide</a>
         </h3>
       </header>
     </div>
@@ -46,8 +45,9 @@
         <p>Advanced controls are available at the bottom of this page.</p>
         <p>
           <b
-            >Looking for a more <i>basic</i> usage example? Go
-            <a href="basic-usage.html">here</a>.</b
+            >This page uses hls.light.js. It does not support EME, subs or
+            alt-audio. Looking for the <i>complete hls.js</i> demo? Go
+            <a href=".">here</a>.</b
           ><br />
         </p>
       </header>
@@ -398,7 +398,7 @@
         id="timelineTab"
         style="display: none"
       >
-        <canvas id="timeline-chart" style="touch-action: manipulation"></canvas>
+        <canvas id="timeline-chart"></canvas>
       </div>
 
       <div
@@ -670,7 +670,7 @@
     <script src="metrics.js"></script>
 
     <!-- demo build -->
-    <script src="../dist/hls.js"></script>
+    <script src="../dist/hls.light.js"></script>
     <script src="../dist/hls-demo.js"></script>
   </body>
 </html>

@@ -17,9 +17,7 @@ const STORAGE_KEYS = {
 
 const testStreams = require('../tests/test-streams');
 const defaultTestStreamUrl = testStreams[Object.keys(testStreams)[0]].url;
-
-// const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
-const sourceURL = 'http://127.0.0.1:8080/demo/video/playlist.m3u8';
+const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
 
 let demoConfig = getURLParam('demoConfig', null);
 if (demoConfig) {
@@ -124,9 +122,6 @@ $(document).ready(function () {
     selectedTestStream = testStreams[key];
     const streamUrl = selectedTestStream.url;
     $('#streamURL').val(streamUrl);
-    // $('#streamURL').val(
-    //   'https://msstest.sankuai.com/aiot-video-player/hls-test/playlist.m3u8'
-    // );
     loadSelectedStream();
   });
 
