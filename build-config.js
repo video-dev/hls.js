@@ -43,6 +43,8 @@ const addVariableSubstitutionSupport =
   !!env.VARIABLE_SUBSTITUTION || !!env.USE_VARIABLE_SUBSTITUTION;
 const addM2TSAdvancedCodecSupport =
   !!env.M2TS_ADVANCED_CODECS || !!env.USE_M2TS_ADVANCED_CODECS;
+const addMediaCapabilitiesSupport =
+  !!env.MEDIA_CAPABILITIES || !!env.USE_MEDIA_CAPABILITIES;
 
 const shouldBundleWorker = (format) => format !== FORMAT.esm;
 
@@ -66,6 +68,9 @@ const buildConstants = (type, additional = {}) => ({
     ),
     __USE_M2TS_ADVANCED_CODECS__: JSON.stringify(
       type === BUILD_TYPE.full || addM2TSAdvancedCodecSupport
+    ),
+    __USE_MEDIA_CAPABILITIES__: JSON.stringify(
+      type === BUILD_TYPE.full || addMediaCapabilitiesSupport
     ),
 
     ...additional,
@@ -222,6 +227,13 @@ function getAliasesForLightDist() {
     aliases = {
       ...aliases,
       './ac3-demuxer': '../empty.js',
+    };
+  }
+
+  if (!addMediaCapabilitiesSupport) {
+    aliases = {
+      ...aliases,
+      '../utils/mediacapabilities-helper': '../empty.js',
     };
   }
 

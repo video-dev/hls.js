@@ -386,7 +386,7 @@ export const hlsDefaultConfig: HlsConfig = {
   enableDateRangeMetadataCues: true,
   enableEmsgMetadataCues: true,
   enableID3MetadataCues: true,
-  useMediaCapabilities: true,
+  useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
 
   certLoadPolicy: {
     default: defaultLoadPolicy,

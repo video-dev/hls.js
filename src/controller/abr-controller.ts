@@ -656,6 +656,7 @@ class AbrController implements AbrComponentAPI {
         continue;
       }
       if (
+        __USE_MEDIA_CAPABILITIES__ &&
         this.hls.config.useMediaCapabilities &&
         !levelInfo.supportedResult &&
         !levelInfo.supportedPromise
