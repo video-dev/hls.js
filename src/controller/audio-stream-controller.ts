@@ -938,8 +938,8 @@ class AudioStreamController
       media &&
       bufferedAttributes &&
       (bufferedAttributes.CHANNELS !== switchAttributes.CHANNELS ||
-        bufferedAttributes.NAME !== switchAttributes.NAME ||
-        bufferedAttributes.LANGUAGE !== switchAttributes.LANGUAGE)
+        bufferedTrack.name !== switchingTrack.name ||
+        bufferedTrack.lang !== switchingTrack.lang)
     ) {
       this.log('Switching audio track : flushing all audio');
       super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');

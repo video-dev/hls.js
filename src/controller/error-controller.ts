@@ -214,6 +214,8 @@ export default class ErrorController implements NetworkComponentAPI {
               flags: ErrorActionFlags.MoveAllAlternatesMatchingHDCP,
               hdcpLevel: restrictedHdcpLevel,
             };
+          } else {
+            this.keySystemError(data);
           }
         }
         return;
@@ -240,12 +242,15 @@ export default class ErrorController implements NetworkComponentAPI {
     }
 
     if (data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
-      const levelIndex = this.getVariantLevelIndex(data.frag);
-      // Do not retry level. Escalate to fatal if switching levels fails.
-      data.levelRetry = false;
-      data.errorAction = this.getLevelSwitchAction(data, levelIndex);
-      return;
+      this.keySystemError(data);
     }
+  }
+
+  private keySystemError(data: ErrorData) {
+    const levelIndex = this.getVariantLevelIndex(data.frag);
+    // Do not retry level. Escalate to fatal if switching levels fails.
+    data.levelRetry = false;
+    data.errorAction = this.getLevelSwitchAction(data, levelIndex);
   }
 
   private getPlaylistRetryOrSwitchAction(

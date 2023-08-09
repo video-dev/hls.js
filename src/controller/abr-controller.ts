@@ -9,8 +9,10 @@ import {
   requiresMediaCapabilitiesDecodingInfo,
 } from '../utils/mediacapabilities-helper';
 import {
+  getAudioTracksByGroup,
   getCodecTiers,
   getStartCodecTier,
+  type AudioTracksByGroup,
   type CodecSetTier,
 } from '../utils/rendition-helper';
 import type { Fragment } from '../loader/fragment';
@@ -35,6 +37,7 @@ class AbrController implements AbrComponentAPI {
   private lastLoadedFragLevel: number = -1;
   private _nextAutoLevel: number = -1;
   private nextAutoLevelKey: string = '';
+  private audioTracksByGroup: AudioTracksByGroup | null = null;
   private codecTiers: Record<string, CodecSetTier> | null = null;
   private timer: number = -1;
   private onCheck: Function = this._abandonRulesCheck.bind(this);
@@ -108,6 +111,7 @@ class AbrController implements AbrComponentAPI {
     this.lastLoadedFragLevel = -1;
     this.lastLevelLoadSec = 0;
     this.fragCurrent = this.partCurrent = null;
+    this.audioTracksByGroup = null;
     this.onLevelsUpdated();
     this.clearTimer();
   }
@@ -614,12 +618,15 @@ class AbrController implements AbrComponentAPI {
     let currentCodecSet: string | undefined;
     let currentVideoRange: VideoRange | undefined = 'SDR';
     let currentFrameRate = level?.frameRate || 0;
+    const audioTracksByGroup =
+      this.audioTracksByGroup ||
+      (this.audioTracksByGroup = getAudioTracksByGroup(allAudioTracks));
     if (firstSelection) {
       const codecTiers =
         this.codecTiers ||
         (this.codecTiers = getCodecTiers(
           levels,
-          allAudioTracks,
+          audioTracksByGroup,
           minAutoLevel,
           maxAutoLevel
         ));
@@ -657,6 +664,7 @@ class AbrController implements AbrComponentAPI {
         if (
           requiresMediaCapabilitiesDecodingInfo(
             levelInfo,
+            audioTracksByGroup,
             mediaCapabilities,
             currentVideoRange,
             currentFrameRate,
@@ -665,6 +673,7 @@ class AbrController implements AbrComponentAPI {
         ) {
           levelInfo.supportedPromise = getMediaDecodingInfoPromise(
             levelInfo,
+            audioTracksByGroup,
             mediaCapabilities
           );
           levelInfo.supportedPromise.then((decodingInfo) => {
@@ -675,7 +684,9 @@ class AbrController implements AbrComponentAPI {
                   decodingInfo
                 )}`
               );
-              this.hls.removeLevel(i);
+              if (i > 0) {
+                this.hls.removeLevel(i);
+              }
             }
           });
         } else {

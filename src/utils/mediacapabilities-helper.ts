@@ -1,5 +1,6 @@
 import { mimeTypeForCodec } from './codecs';
 import type { Level, VideoRange } from '../types/level';
+import type { AudioTracksByGroup } from './rendition-helper';
 
 export type MediaDecodingInfo = {
   supported: boolean;
@@ -24,34 +25,43 @@ export const SUPPORTED_INFO_DEFAULT: MediaDecodingInfo = {
 
 export const SUPPORTED_INFO_CACHE: Record<
   string,
-  Promise<MediaDecodingInfo>
+  Promise<MediaCapabilitiesDecodingInfo>
 > = {};
 
 export function requiresMediaCapabilitiesDecodingInfo(
   level: Level,
+  audioTracksByGroup: AudioTracksByGroup,
   mediaCapabilities: MediaCapabilities | undefined,
   currentVideoRange: VideoRange | undefined,
   currentFrameRate: number,
   currentBw: number
 ): boolean {
   // Only test support when configuration is exceeds minimum options
+  const audioGroupId = level.audioCodec ? level.audioGroupId : null;
+  const audioChannels = audioGroupId
+    ? audioTracksByGroup.groups[audioGroupId].channels
+    : null;
   return (
-    typeof mediaCapabilities?.decodingInfo == 'function' &&
-    level.videoCodec !== undefined &&
-    ((level.width > 1920 && level.height > 1088) ||
-      (level.height > 1920 && level.width > 1088) ||
-      level.frameRate > Math.max(currentFrameRate, 30) ||
-      (level.videoRange !== 'SDR' && level.videoRange !== currentVideoRange) ||
-      level.bitrate > Math.max(currentBw, 8e6))
+    (typeof mediaCapabilities?.decodingInfo == 'function' &&
+      level.videoCodec !== undefined &&
+      ((level.width > 1920 && level.height > 1088) ||
+        (level.height > 1920 && level.width > 1088) ||
+        level.frameRate > Math.max(currentFrameRate, 30) ||
+        (level.videoRange !== 'SDR' &&
+          level.videoRange !== currentVideoRange) ||
+        level.bitrate > Math.max(currentBw, 8e6))) ||
+    (!!audioChannels && Object.keys(audioChannels).length > 1)
   );
 }
 
 export function getMediaDecodingInfoPromise(
   level: Level,
+  audioTracksByGroup: AudioTracksByGroup,
   mediaCapabilities: MediaCapabilities
 ): Promise<MediaDecodingInfo> {
   const videoCodecs = level.videoCodec;
-  if (!videoCodecs) {
+  const audioCodecs = level.audioCodec;
+  if (!videoCodecs || !audioCodecs) {
     return Promise.resolve(SUPPORTED_INFO_DEFAULT);
   }
 
@@ -68,30 +78,50 @@ export function getMediaDecodingInfoPromise(
       videoRange.toLowerCase() as TransferFunction;
   }
 
-  // Cache MediaCapabilities promises
-  const decodingInfoKey = getMediaDecodingInfoKey(
-    baseVideoConfiguration,
-    videoCodecs
-  );
-  let supportedPromise = SUPPORTED_INFO_CACHE[decodingInfoKey];
-  if (supportedPromise) {
-    return supportedPromise;
-  }
-
   const configurations: MediaDecodingConfiguration[] = videoCodecs
     .split(',')
-    .map((codec) => ({
+    .map((videoCodec) => ({
       type: 'media-source',
       video: {
         ...baseVideoConfiguration,
-        contentType: mimeTypeForCodec(codec, 'video'),
+        contentType: mimeTypeForCodec(videoCodec, 'video'),
       },
     }));
 
-  supportedPromise = SUPPORTED_INFO_CACHE[decodingInfoKey] = Promise.all(
-    configurations.map((configuration) =>
-      mediaCapabilities.decodingInfo(configuration)
-    )
+  const audioGroupId = level.audioGroupId;
+  if (audioCodecs && audioGroupId) {
+    audioTracksByGroup.groups[audioGroupId]?.tracks.forEach((audioTrack) => {
+      if (audioTrack.groupId === audioGroupId) {
+        const channels = audioTrack.attrs.CHANNELS || '';
+        const channelsNumber = parseFloat(channels);
+        if (Number.isFinite(channelsNumber) && channelsNumber > 2) {
+          configurations.push.apply(
+            configurations,
+            audioCodecs.split(',').map((audioCodec) => ({
+              type: 'media-source',
+              audio: {
+                contentType: mimeTypeForCodec(audioCodec, 'audio'),
+                channels: '' + channelsNumber,
+                // spatialRendering:
+                //   audioCodec === 'ec-3' && channels.indexOf('JOC'),
+              },
+            }))
+          );
+        }
+      }
+    });
+  }
+
+  return Promise.all(
+    configurations.map((configuration) => {
+      // Cache MediaCapabilities promises
+      const decodingInfoKey = getMediaDecodingInfoKey(configuration);
+      return (
+        SUPPORTED_INFO_CACHE[decodingInfoKey] ||
+        (SUPPORTED_INFO_CACHE[decodingInfoKey] =
+          mediaCapabilities.decodingInfo(configuration))
+      );
+    })
   )
     .then((decodingInfoResults) => ({
       supported: !decodingInfoResults.some((info) => !info.supported),
@@ -104,16 +134,21 @@ export function getMediaDecodingInfoPromise(
       decodingInfoResults: [] as MediaCapabilitiesDecodingInfo[],
       error,
     }));
-  return supportedPromise;
 }
 
-function getMediaDecodingInfoKey(
-  video: BaseVideoConfiguration,
-  videoCodecs: string
-): string {
-  return `r${video.height}x${video.width}b${Math.ceil(
-    video.bitrate / 1e5
-  )}f${Math.ceil(video.framerate)}${
-    video.transferFunction || 'sd'
-  }_${videoCodecs}`;
+function getMediaDecodingInfoKey(config: MediaDecodingConfiguration): string {
+  const { audio, video } = config;
+  const mediaConfig = video || audio;
+  if (mediaConfig) {
+    const codec = mediaConfig.contentType.split('"')[1];
+    if (video) {
+      return `r${video.height}x${video.width}f${Math.ceil(video.framerate)}${
+        video.transferFunction || 'sd'
+      }_${codec}_${Math.ceil(video.bitrate / 1e5)}`;
+    }
+    if (audio) {
+      return `c${audio.channels}${audio.spatialRendering ? 's' : 'n'}_${codec}`;
+    }
+  }
+  return '';
 }

@@ -15,6 +15,7 @@ export type CodecSetTier = {
 };
 
 type AudioTrackGroup = {
+  tracks: MediaPlaylist[];
   channels: Record<string, number>;
   hasDefault: boolean;
   hasAutoSelect: boolean;
@@ -143,40 +144,52 @@ function logStartCodecCandidateIgnored(codeSet: string, reason: string) {
   );
 }
 
-export function getCodecTiers(
-  levels: Level[],
-  allAudioTracks: MediaPlaylist[],
-  minAutoLevel: number,
-  maxAutoLevel: number
-): Record<string, CodecSetTier> {
-  let hasDefaultAudio = false;
-  let hasAutoSelectAudio = false;
-  const audioTracksByGroup = allAudioTracks.reduce(
-    (trackGroups: Record<string, AudioTrackGroup>, track) => {
-      let trackGroup = trackGroups[track.groupId];
+export type AudioTracksByGroup = {
+  hasDefaultAudio: boolean;
+  hasAutoSelectAudio: boolean;
+  groups: Record<string, AudioTrackGroup>;
+};
+
+export function getAudioTracksByGroup(allAudioTracks: MediaPlaylist[]) {
+  return allAudioTracks.reduce(
+    (audioTracksByGroup: AudioTracksByGroup, track) => {
+      let trackGroup = audioTracksByGroup.groups[track.groupId];
       if (!trackGroup) {
-        trackGroup = trackGroups[track.groupId] = {
+        trackGroup = audioTracksByGroup.groups[track.groupId] = {
+          tracks: [],
           channels: { 2: 0 },
           hasDefault: false,
           hasAutoSelect: false,
         };
       }
+      trackGroup.tracks.push(track);
       const channelsKey = track.attrs.CHANNELS || '2';
       trackGroup.channels[channelsKey] =
         (trackGroup.channels[channelsKey] || 0) + 1;
       trackGroup.hasDefault = trackGroup.hasDefault || track.default;
       trackGroup.hasAutoSelect = trackGroup.hasAutoSelect || track.autoselect;
       if (trackGroup.hasDefault) {
-        hasDefaultAudio = true;
+        audioTracksByGroup.hasDefaultAudio = true;
       }
       if (trackGroup.hasAutoSelect) {
-        hasAutoSelectAudio = true;
+        audioTracksByGroup.hasAutoSelectAudio = true;
       }
-      return trackGroups;
+      return audioTracksByGroup;
     },
-    {}
+    {
+      hasDefaultAudio: false,
+      hasAutoSelectAudio: false,
+      groups: {},
+    }
   );
+}
 
+export function getCodecTiers(
+  levels: Level[],
+  audioTracksByGroup: AudioTracksByGroup,
+  minAutoLevel: number,
+  maxAutoLevel: number
+): Record<string, CodecSetTier> {
   return levels
     .slice(minAutoLevel, maxAutoLevel + 1)
     .reduce((tiers: Record<string, CodecSetTier>, level) => {
@@ -184,7 +197,7 @@ export function getCodecTiers(
         return tiers;
       }
       const audioGroup = level.audioGroupId
-        ? audioTracksByGroup[level.audioGroupId]
+        ? audioTracksByGroup.groups[level.audioGroupId]
         : null;
       let tier = tiers[level.codecSet];
       if (!tier) {
@@ -210,10 +223,11 @@ export function getCodecTiers(
       if (audioGroup) {
         // Default audio is any group with DEFAULT=YES, or if missing then any group with AUTOSELECT=YES, or all variants
         tier.hasDefaultAudio =
-          tier.hasDefaultAudio || hasDefaultAudio
+          tier.hasDefaultAudio || audioTracksByGroup.hasDefaultAudio
             ? audioGroup.hasDefault
             : audioGroup.hasAutoSelect ||
-              (!hasDefaultAudio && !hasAutoSelectAudio);
+              (!audioTracksByGroup.hasDefaultAudio &&
+                !audioTracksByGroup.hasAutoSelectAudio);
         Object.keys(audioGroup.channels).forEach((channels) => {
           tier.channels[channels] =
             (tier.channels[channels] || 0) + audioGroup.channels[channels];
