@@ -679,7 +679,13 @@ class AbrController implements AbrComponentAPI {
           );
           levelInfo.supportedPromise.then((decodingInfo) => {
             levelInfo.supportedResult = decodingInfo;
-            if (!decodingInfo.supported) {
+            if (decodingInfo.error) {
+              logger.warn(
+                `[abr] MediaCapabilities decodingInfo error: "${
+                  decodingInfo.error
+                }" for level ${i} ${JSON.stringify(decodingInfo)}`
+              );
+            } else if (!decodingInfo.supported) {
               logger.warn(
                 `[abr] Removing unsupported level ${i} after MediaCapabilities decodingInfo check failed ${JSON.stringify(
                   decodingInfo

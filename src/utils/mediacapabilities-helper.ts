@@ -69,7 +69,8 @@ export function getMediaDecodingInfoPromise(
     width: level.width,
     height: level.height,
     bitrate: Math.ceil(Math.max(level.bitrate * 0.9, level.averageBitrate)),
-    framerate: level.frameRate,
+    // Assume a framerate of 30fps since MediaCapabilities will not accept Level default of 0.
+    framerate: level.frameRate || 30,
   };
 
   const videoRange = level.videoRange;
