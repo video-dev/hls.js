@@ -35,7 +35,7 @@ export interface DemuxedTrack {
   type: string;
   id: number;
   pid: number;
-  segmentVideoCodec: string;
+  segmentVideoCodec?: string;
   inputTimeScale: number;
   sequenceNumber: number;
   samples:
