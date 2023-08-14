@@ -465,7 +465,6 @@ class TSDemuxer implements Demuxer {
     if (flush) {
       this.extractRemainingSamples(demuxResult);
     }
-    console.log(demuxResult, 'demuxResult');
     return demuxResult;
   }
 

@@ -86,21 +86,17 @@ class HevcVideoParser extends BaseVideoParser {
           VideoSample.key = true;
           VideoSample.frame = true;
           break;
-        // SEI
-        case 39: {
+        case 32:
+          // VPS
           push = true;
           if (debug && VideoSample) {
-            VideoSample.debug += 'SEI ';
+            VideoSample.debug += 'VPS ';
           }
-          parseSEIMessageFromNALu(
-            unit.data,
-            1,
-            pes.pts as number,
-            textTrack.samples
-          );
-          break;
 
-        }
+          if (!track.vps) {
+            track.vps = [unit.data];
+          }
+          break;
         case 33:
           // SPS
           push = true;
@@ -156,6 +152,20 @@ class HevcVideoParser extends BaseVideoParser {
             debug ? 'AUD ' : ''
           );
           break;
+        // SEI
+        case 39: {
+          push = true;
+          if (debug && VideoSample) {
+            VideoSample.debug += 'SEI ';
+          }
+          parseSEIMessageFromNALu(
+            unit.data,
+            1,
+            pes.pts as number,
+            textTrack.samples
+          );
+          break;
+        }
         default:
           push = true;
           break;
@@ -165,7 +175,6 @@ class HevcVideoParser extends BaseVideoParser {
         units.push(unit);
       }
     });
-    debugger
     // if last PES packet, push samples
     if (last && VideoSample) {
       this.pushAccessUnit(VideoSample, track);
