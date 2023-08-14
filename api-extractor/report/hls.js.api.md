@@ -767,6 +767,8 @@ export interface ComponentAPI {
 export class ContentSteeringController implements NetworkComponentAPI {
     constructor(hls: Hls);
     // (undocumented)
+    clearTimeout(): void;
+    // (undocumented)
     destroy(): void;
     // (undocumented)
     filterParsedLevels(levels: Level[]): Level[];

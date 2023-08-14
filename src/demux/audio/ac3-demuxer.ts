@@ -1,5 +1,6 @@
 import BaseAudioDemuxer from './base-audio-demuxer';
 import { getID3Data, getTimeStamp } from '../id3';
+import { getAudioBSID } from './dolby';
 import type { HlsEventEmitter } from '../../events';
 import type { AudioFrame, DemuxedAudioTrack } from '../../types/demuxer';
 
@@ -55,7 +56,7 @@ export class AC3Demuxer extends BaseAudioDemuxer {
     }
   }
 
-  static probe(data): boolean {
+  static probe(data: Uint8Array | undefined): boolean {
     if (!data) {
       return false;
     }
@@ -66,33 +67,15 @@ export class AC3Demuxer extends BaseAudioDemuxer {
     }
 
     // look for the ac-3 sync bytes
-    let offset = id3Data.length;
+    const offset = id3Data.length;
     if (
       data[offset] === 0x0b &&
       data[offset + 1] === 0x77 &&
-      getTimeStamp(id3Data) !== undefined
-    ) {
+      getTimeStamp(id3Data) !== undefined &&
       // check the bsid to confirm ac-3
-      let bsid = 0;
-      let numBits = 5;
-      offset += numBits;
-      const temp = new Uint32Array(1); // unsigned 32 bit for temporary storage
-      const mask = new Uint32Array(1); // unsigned 32 bit mask value
-      const byte = new Uint8Array(1); // unsigned 8 bit for temporary storage
-      while (numBits > 0) {
-        byte[0] = data[offset];
-        // read remaining bits, upto 8 bits at a time
-        const bits = Math.min(numBits, 8);
-        const shift = 8 - bits;
-        mask[0] = (0xff000000 >>> (24 + shift)) << shift;
-        temp[0] = (byte[0] & mask[0]) >> shift;
-        bsid = !bsid ? temp[0] : (bsid << bits) | temp[0];
-        offset += 1;
-        numBits -= bits;
-      }
-      if (bsid < 16) {
-        return true;
-      }
+      getAudioBSID(data, offset) < 16
+    ) {
+      return true;
     }
     return false;
   }

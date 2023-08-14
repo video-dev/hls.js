@@ -27,10 +27,12 @@ coverage/
 # eslint
 .eslintcache
 
-# Visual Studio 2015/2017 cache/options directory
+# Visual Studio exclusions
+*.suo
+*.user
 .vs/
-
-# Visual Studio 2017 auto generated files
+bin/
+obj/
 Generated\ Files/
 
 /web.config

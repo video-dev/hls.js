@@ -247,25 +247,11 @@ type PenStyles = {
 };
 
 class PenState {
-  public foreground: string;
-  public underline: boolean;
-  public italics: boolean;
-  public background: string;
-  public flash: boolean;
-
-  constructor(
-    foreground?: string,
-    underline?: boolean,
-    italics?: boolean,
-    background?: string,
-    flash?: boolean
-  ) {
-    this.foreground = foreground || 'white';
-    this.underline = underline || false;
-    this.italics = italics || false;
-    this.background = background || 'black';
-    this.flash = flash || false;
-  }
+  public foreground: string = 'white';
+  public underline: boolean = false;
+  public italics: boolean = false;
+  public background: string = 'black';
+  public flash: boolean = false;
 
   reset() {
     this.foreground = 'white';
@@ -340,26 +326,8 @@ class PenState {
  * @constructor
  */
 class StyledUnicodeChar {
-  uchar: string;
-  penState: PenState;
-
-  constructor(
-    uchar?: string,
-    foreground?: string,
-    underline?: boolean,
-    italics?: boolean,
-    background?: string,
-    flash?: boolean
-  ) {
-    this.uchar = uchar || ' '; // unicode character
-    this.penState = new PenState(
-      foreground,
-      underline,
-      italics,
-      background,
-      flash
-    );
-  }
+  uchar: string = ' ';
+  penState: PenState = new PenState();
 
   reset() {
     this.uchar = ' ';
@@ -394,32 +362,26 @@ class StyledUnicodeChar {
  * @constructor
  */
 export class Row {
-  public chars: StyledUnicodeChar[];
-  public pos: number;
-  public currPenState: PenState;
-  public cueStartTime?: number;
-  logger: CaptionsLogger;
+  public chars: StyledUnicodeChar[] = [];
+  public pos: number = 0;
+  public currPenState: PenState = new PenState();
+  public cueStartTime: number | null = null;
+  private logger: CaptionsLogger;
 
   constructor(logger: CaptionsLogger) {
-    this.chars = [];
     for (let i = 0; i < NR_COLS; i++) {
       this.chars.push(new StyledUnicodeChar());
     }
-
     this.logger = logger;
-    this.pos = 0;
-    this.currPenState = new PenState();
   }
 
   equals(other: Row) {
-    let equal = true;
     for (let i = 0; i < NR_COLS; i++) {
       if (!this.chars[i].equals(other.chars[i])) {
-        equal = false;
-        break;
+        return false;
       }
     }
-    return equal;
+    return true;
   }
 
   copy(other: Row) {
@@ -554,30 +516,23 @@ export class Row {
  * @constructor
  */
 export class CaptionScreen {
-  rows: Row[];
-  currRow: number;
-  nrRollUpRows: number | null;
-  lastOutputScreen: CaptionScreen | null;
+  rows: Row[] = [];
+  currRow: number = NR_ROWS - 1;
+  nrRollUpRows: number | null = null;
+  lastOutputScreen: CaptionScreen | null = null;
   logger: CaptionsLogger;
 
   constructor(logger: CaptionsLogger) {
-    this.rows = [];
     for (let i = 0; i < NR_ROWS; i++) {
       this.rows.push(new Row(logger));
-    } // Note that we use zero-based numbering (0-14)
-
+    }
     this.logger = logger;
-    this.currRow = NR_ROWS - 1;
-    this.nrRollUpRows = null;
-    this.lastOutputScreen = null;
-    this.reset();
   }
 
   reset() {
     for (let i = 0; i < NR_ROWS; i++) {
       this.rows[i].clear();
     }
-
     this.currRow = NR_ROWS - 1;
   }
 
@@ -669,7 +624,7 @@ export class CaptionScreen {
       if (lastOutputScreen) {
         const prevLineTime = lastOutputScreen.rows[topRowIndex].cueStartTime;
         const time = this.logger.time;
-        if (prevLineTime && time !== null && prevLineTime < time) {
+        if (prevLineTime !== null && time !== null && prevLineTime < time) {
           for (let i = 0; i < this.nrRollUpRows; i++) {
             this.rows[newRow - this.nrRollUpRows + i + 1].copy(
               lastOutputScreen.rows[topRowIndex + i]
@@ -1067,18 +1022,16 @@ type CmdHistory = {
 class Cea608Parser {
   channels: Array<Cea608Channel | null>;
   currentChannel: Channels = 0;
-  cmdHistory: CmdHistory;
+  cmdHistory: CmdHistory = createCmdHistory();
   logger: CaptionsLogger;
 
   constructor(field: SupportedField, out1: OutputFilter, out2: OutputFilter) {
-    const logger = new CaptionsLogger();
+    const logger = (this.logger = new CaptionsLogger());
     this.channels = [
       null,
       new Cea608Channel(field, out1, logger),
       new Cea608Channel(field + 1, out2, logger),
     ];
-    this.cmdHistory = createCmdHistory();
-    this.logger = logger;
   }
 
   getHandler(channel: number) {

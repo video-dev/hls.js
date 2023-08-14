@@ -240,7 +240,7 @@ class PlaylistLoader implements NetworkComponentAPI {
 
     // Override level/track timeout for LL-HLS requests
     // (the default of 10000ms is counter productive to blocking playlist reload requests)
-    if (context.deliveryDirectives?.part) {
+    if (Number.isFinite(context.deliveryDirectives?.part)) {
       let levelDetails: LevelDetails | undefined;
       if (
         context.type === PlaylistContextType.LEVEL &&

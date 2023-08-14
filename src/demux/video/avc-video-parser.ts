@@ -45,21 +45,8 @@ class AvcVideoParser extends BaseVideoParser {
       switch (unit.type) {
         // NDR
         case 1: {
+          let iskey = false;
           push = true;
-          if (!VideoSample) {
-            VideoSample = this.VideoSample = this.createVideoSample(
-              true,
-              pes.pts,
-              pes.dts,
-              ''
-            );
-          }
-
-          if (debug) {
-            VideoSample.debug += 'NDR ';
-          }
-
-          VideoSample.frame = true;
           const data = unit.data;
           // only check slice type to detect KF in case SPS found in same packet (any keyframe is preceded by SPS ...)
           if (spsfound && data.length > 4) {
@@ -76,15 +63,45 @@ class AvcVideoParser extends BaseVideoParser {
               sliceType === 7 ||
               sliceType === 9
             ) {
-              VideoSample.key = true;
+              iskey = true;
             }
           }
+
+          if (iskey) {
+            // if we have non-keyframe data already, that cannot belong to the same frame as a keyframe, so force a push
+            if (VideoSample?.frame && !VideoSample.key) {
+              this.pushAccessUnit(VideoSample, track);
+              VideoSample = this.VideoSample = null;
+            }
+          }
+
+          if (!VideoSample) {
+            VideoSample = this.VideoSample = this.createVideoSample(
+              true,
+              pes.pts,
+              pes.dts,
+              ''
+            );
+          }
+
+          if (debug) {
+            VideoSample.debug += 'NDR ';
+          }
+
+          VideoSample.frame = true;
+          VideoSample.key = iskey;
+
           break;
           // IDR
         }
         case 5:
           push = true;
           // handle PES not starting with AUD
+          // if we have frame data already, that cannot belong to the same frame, so force a push
+          if (VideoSample?.frame && !VideoSample.key) {
+            this.pushAccessUnit(VideoSample, track);
+            VideoSample = this.VideoSample = null;
+          }
           if (!VideoSample) {
             VideoSample = this.VideoSample = this.createVideoSample(
               true,
@@ -159,7 +176,7 @@ class AvcVideoParser extends BaseVideoParser {
           break;
         // AUD
         case 9:
-          push = false;
+          push = true;
           track.audFound = true;
           if (VideoSample) {
             this.pushAccessUnit(VideoSample, track);
