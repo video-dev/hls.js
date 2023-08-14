@@ -128,8 +128,5 @@
     "typescript": "5.1.6",
     "url-toolkit": "2.2.5",
     "wrangler": "3.4.0"
-  },
-  "dependencies": {
-    "ci": "^2.2.0"
   }
 }
