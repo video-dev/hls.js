@@ -276,13 +276,17 @@ export class FragmentTracker implements ComponentAPI {
         });
         break;
       } else if (startPTS < endTime && endPTS > startTime) {
-        buffered.partial = true;
-        // Check for intersection with buffer
-        // Get playable sections of the fragment
-        buffered.time.push({
-          startPTS: Math.max(startPTS, timeRange.start(i)),
-          endPTS: Math.min(endPTS, timeRange.end(i)),
-        });
+        const start = Math.max(startPTS, timeRange.start(i));
+        const end = Math.min(endPTS, timeRange.end(i));
+        if (end > start) {
+          buffered.partial = true;
+          // Check for intersection with buffer
+          // Get playable sections of the fragment
+          buffered.time.push({
+            startPTS: start,
+            endPTS: end,
+          });
+        }
       } else if (endPTS <= startTime) {
         // No need to check the rest of the timeRange as it is in order
         break;
