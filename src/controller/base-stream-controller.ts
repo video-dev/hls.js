@@ -1040,12 +1040,13 @@ export default class BaseStreamController
       // Do not load using live logic if the starting frag is requested - we want to use getFragmentAtPosition() so that
       // we get the fragment matching that start time
       if (
-        !levelDetails.PTSKnown &&
-        !this.startFragRequested &&
-        this.startPosition === -1
+        (!levelDetails.PTSKnown &&
+          !this.startFragRequested &&
+          this.startPosition === -1) ||
+        pos < start
       ) {
         frag = this.getInitialLiveFragment(levelDetails, fragments);
-        this.startPosition = frag
+        this.startPosition = this.nextLoadPosition = frag
           ? this.hls.liveSyncPosition || frag.start
           : pos;
       }
