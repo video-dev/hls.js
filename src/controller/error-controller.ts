@@ -340,8 +340,9 @@ export default class ErrorController implements NetworkComponentAPI {
     }
     const level = this.hls.levels[levelIndex];
     if (level) {
+      const errorDetails = data.details;
       level.loadError++;
-      if (data.details === ErrorDetails.BUFFER_APPEND_ERROR) {
+      if (errorDetails === ErrorDetails.BUFFER_APPEND_ERROR) {
         level.fragmentError++;
       }
       // Search for next level to retry
@@ -351,11 +352,27 @@ export default class ErrorController implements NetworkComponentAPI {
         hls.loadLevel = -1;
       }
       const fragErrorType = data.frag?.type;
-      // Find alternate audio codec if available on audio frag parsing error
+      // Find alternate audio codec if available on audio codec error
+      const isAudioCodecError =
+        (fragErrorType === PlaylistLevelType.AUDIO &&
+          errorDetails === ErrorDetails.FRAG_PARSING_ERROR) ||
+        (data.sourceBufferName === 'audio' &&
+          (errorDetails === ErrorDetails.BUFFER_ADD_CODEC_ERROR ||
+            errorDetails === ErrorDetails.BUFFER_APPEND_ERROR));
       const findAudioCodecAlternate =
-        fragErrorType === PlaylistLevelType.AUDIO &&
-        data.details === ErrorDetails.FRAG_PARSING_ERROR &&
+        isAudioCodecError &&
         levels.some(({ audioCodec }) => level.audioCodec !== audioCodec);
+      // Find alternate video codec if available on video codec error
+      const isVideoCodecError =
+        data.sourceBufferName === 'video' &&
+        (errorDetails === ErrorDetails.BUFFER_ADD_CODEC_ERROR ||
+          errorDetails === ErrorDetails.BUFFER_APPEND_ERROR);
+      const findVideoCodecAlternate =
+        isVideoCodecError &&
+        levels.some(
+          ({ codecSet, audioCodec }) =>
+            level.codecSet !== codecSet && level.audioCodec === audioCodec
+        );
       const { type: playlistErrorType, groupId: playlistErrorGroupId } =
         data.context ?? {};
       for (let i = levels.length; i--; ) {
@@ -368,7 +385,7 @@ export default class ErrorController implements NetworkComponentAPI {
         ) {
           const levelCandidate = levels[candidate];
           // Skip level switch if GAP tag is found in next level at same position
-          if (data.details === ErrorDetails.FRAG_GAP && data.frag) {
+          if (errorDetails === ErrorDetails.FRAG_GAP && data.frag) {
             const levelDetails = levels[candidate].details;
             if (levelDetails) {
               const fragCandidate = findFragmentByPTS(
@@ -390,13 +407,16 @@ export default class ErrorController implements NetworkComponentAPI {
             continue;
           } else if (
             (fragErrorType === PlaylistLevelType.AUDIO &&
-              (level.audioGroupId === levelCandidate.audioGroupId ||
-                (findAudioCodecAlternate &&
-                  level.audioCodec === levelCandidate.audioCodec))) ||
+              level.audioGroupId === levelCandidate.audioGroupId) ||
             (fragErrorType === PlaylistLevelType.SUBTITLE &&
-              level.textGroupId === levelCandidate.textGroupId)
+              level.textGroupId === levelCandidate.textGroupId) ||
+            (findAudioCodecAlternate &&
+              level.audioCodec === levelCandidate.audioCodec) ||
+            (findVideoCodecAlternate &&
+              level.codecSet === levelCandidate.codecSet) ||
+            level.audioCodec !== levelCandidate.audioCodec
           ) {
-            // For audio/subs frag errors find another group ID or fallthrough to redundant fail-over
+            // For video/audio/subs frag errors find another group ID or fallthrough to redundant fail-over
             continue;
           }
           nextLevel = candidate;
