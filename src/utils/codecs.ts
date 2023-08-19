@@ -153,3 +153,15 @@ export function getCodecCompatibleName(codec: string): string {
     getCodecCompatibleNameLower(m.toLowerCase() as LowerCaseCodecType)
   );
 }
+
+export function pickMostCompleteCodecName(
+  parsedCodec: string,
+  levelCodec: string
+): string {
+  // Parsing of mp4a codecs strings in mp4-tools from media is incomplete as of d8c6c7a
+  // so use level codec is parsed codec is unavailable or incomplete
+  if (parsedCodec && parsedCodec !== 'mp4a') {
+    return parsedCodec;
+  }
+  return levelCodec;
+}

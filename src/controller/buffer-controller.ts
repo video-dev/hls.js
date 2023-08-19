@@ -2,7 +2,10 @@ import { Events } from '../events';
 import { logger } from '../utils/logger';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { BufferHelper } from '../utils/buffer-helper';
-import { getCodecCompatibleName } from '../utils/codecs';
+import {
+  getCodecCompatibleName,
+  pickMostCompleteCodecName,
+} from '../utils/codecs';
 import { getMediaSource } from '../utils/mediasource-helper';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import type { TrackSet } from '../types/track';
@@ -276,22 +279,26 @@ export default class BufferController implements ComponentAPI {
         if (track && typeof track.buffer.changeType === 'function') {
           const { id, codec, levelCodec, container, metadata } =
             data[trackName];
-          const currentCodec = (track.levelCodec || track.codec).replace(
+          const currentCodedFull = pickMostCompleteCodecName(
+            track.codec,
+            track.levelCodec
+          );
+          const currentCodec = currentCodedFull.replace(
             VIDEO_CODEC_PROFILE_REPLACE,
             '$1'
           );
-          const nextCodec = (levelCodec || codec).replace(
+          let trackCodec = pickMostCompleteCodecName(codec, levelCodec);
+          const nextCodec = trackCodec.replace(
             VIDEO_CODEC_PROFILE_REPLACE,
             '$1'
           );
           if (currentCodec !== nextCodec) {
-            let trackCodec = levelCodec || codec;
             if (trackName.slice(0, 5) === 'audio') {
               trackCodec = getCodecCompatibleName(trackCodec);
             }
             const mimeType = `${container};codecs=${trackCodec}`;
             this.appendChangeType(trackName, mimeType);
-            this.log(`switching codec ${currentCodec} to ${nextCodec}`);
+            this.log(`switching codec ${currentCodedFull} to ${trackCodec}`);
             this.tracks[trackName] = {
               buffer: track.buffer,
               codec,
