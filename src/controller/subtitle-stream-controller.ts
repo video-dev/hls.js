@@ -2,7 +2,7 @@ import { Events } from '../events';
 import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { findFragmentByPTS } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
-import { addSliding } from './level-helper';
+import { addSliding } from '../utils/level-helper';
 import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
 import { PlaylistLevelType } from '../types/loader';
@@ -160,6 +160,7 @@ export class SubtitleStreamController
       buffered.push(timeRange);
     }
     this.fragmentTracker.fragBuffered(frag);
+    this.fragBufferedComplete(frag, null);
   }
 
   onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData) {

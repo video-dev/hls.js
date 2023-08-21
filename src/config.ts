@@ -270,6 +270,9 @@ export type HlsConfig = {
   // Content Steering
   contentSteeringController?: typeof ContentSteeringController;
 
+  // MediaCapabilies API for level, track, and switch filtering
+  useMediaCapabilities: boolean;
+
   abrController: typeof AbrController;
   bufferController: typeof BufferController;
   capLevelController: typeof CapLevelController;
@@ -383,6 +386,7 @@ export const hlsDefaultConfig: HlsConfig = {
   enableDateRangeMetadataCues: true,
   enableEmsgMetadataCues: true,
   enableID3MetadataCues: true,
+  useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
 
   certLoadPolicy: {
     default: defaultLoadPolicy,

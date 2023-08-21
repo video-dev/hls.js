@@ -144,9 +144,8 @@ function createMediaKeySystemConfigurations(
 ): MediaKeySystemConfiguration[] {
   const baseConfig: MediaKeySystemConfiguration = {
     initDataTypes: initDataTypes,
-    persistentState: drmSystemOptions.persistentState || 'not-allowed',
-    distinctiveIdentifier:
-      drmSystemOptions.distinctiveIdentifier || 'not-allowed',
+    persistentState: drmSystemOptions.persistentState || 'optional',
+    distinctiveIdentifier: drmSystemOptions.distinctiveIdentifier || 'optional',
     sessionTypes: drmSystemOptions.sessionTypes || [
       drmSystemOptions.sessionType || 'temporary',
     ],

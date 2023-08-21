@@ -4,7 +4,7 @@ import {
   mapFragmentIntersection,
   mapPartIntersection,
   mergeDetails,
-} from '../../../src/controller/level-helper';
+} from '../../../src/utils/level-helper';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { Fragment, Part } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';

@@ -1,5 +1,5 @@
 import { logger } from './logger';
-import { adjustSliding } from '../controller/level-helper';
+import { adjustSliding } from './level-helper';
 
 import type { Fragment } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';

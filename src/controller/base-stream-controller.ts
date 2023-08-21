@@ -17,7 +17,7 @@ import {
   getFragmentWithSN,
   getPartWith,
   updateFragPTSDTS,
-} from './level-helper';
+} from '../utils/level-helper';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { Fragment, Part } from '../loader/fragment';
 import FragmentLoader, {
@@ -500,26 +500,10 @@ export default class BaseStreamController
                 },
               });
               data.payload = decryptedData;
-
-              return data;
+              return this.completeInitSegmentLoad(data);
             });
         }
-
-        return data;
-      })
-      .then((data: FragLoadedData) => {
-        const { levels } = this;
-        if (!levels) {
-          throw new Error('init load aborted, missing levels');
-        }
-
-        const stats = frag.stats;
-        this.state = State.IDLE;
-        level.fragmentError = 0;
-        frag.data = new Uint8Array(data.payload);
-        stats.parsing.start = stats.buffering.start = self.performance.now();
-        stats.parsing.end = stats.buffering.end = self.performance.now();
-        this.tick();
+        return this.completeInitSegmentLoad(data);
       })
       .catch((reason) => {
         if (this.state === State.STOPPED || this.state === State.ERROR) {
@@ -528,6 +512,19 @@ export default class BaseStreamController
         this.warn(reason);
         this.resetFragmentLoading(frag);
       });
+  }
+
+  private completeInitSegmentLoad(data: FragLoadedData) {
+    const { levels } = this;
+    if (!levels) {
+      throw new Error('init load aborted, missing levels');
+    }
+    const stats = data.frag.stats;
+    this.state = State.IDLE;
+    data.frag.data = new Uint8Array(data.payload);
+    stats.parsing.start = stats.buffering.start = self.performance.now();
+    stats.parsing.end = stats.buffering.end = self.performance.now();
+    this.tick();
   }
 
   protected fragContextChanged(frag: Fragment | null) {
@@ -556,6 +553,23 @@ export default class BaseStreamController
           : '(detached)'
       })`
     );
+    if (frag.sn !== 'initSegment') {
+      if (frag.type !== PlaylistLevelType.SUBTITLE) {
+        const el = frag.elementaryStreams;
+        if (!Object.keys(el).some((type) => !!el[type])) {
+          // empty segment
+          this.state = State.IDLE;
+          return;
+        }
+      }
+      const level = this.levels?.[frag.level];
+      if (level?.fragmentError) {
+        this.log(
+          `Resetting level fragment error count of ${level.fragmentError} on frag buffered`
+        );
+        level.fragmentError = 0;
+      }
+    }
     this.state = State.IDLE;
     if (!media) {
       return;
@@ -1699,9 +1713,7 @@ export default class BaseStreamController
       },
       false
     );
-    if (parsed) {
-      level.fragmentError = 0;
-    } else if (this.transmuxer?.error === null) {
+    if (!parsed && this.transmuxer?.error === null) {
       const error = new Error(
         `Found no media in fragment ${frag.sn} of level ${frag.level} resetting transmuxer to fallback to playlist timing`
       );

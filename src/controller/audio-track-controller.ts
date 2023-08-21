@@ -162,6 +162,10 @@ class AudioTrackController extends BasePlaylistController {
     }
   }
 
+  get allAudioTracks(): MediaPlaylist[] {
+    return this.tracks;
+  }
+
   get audioTracks(): MediaPlaylist[] {
     return this.tracksInGroup;
   }

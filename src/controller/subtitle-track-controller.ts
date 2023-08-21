@@ -255,6 +255,10 @@ class SubtitleTrackController extends BasePlaylistController {
     }
   }
 
+  get allSubtitleTracks(): MediaPlaylist[] {
+    return this.tracks;
+  }
+
   /** get alternate subtitle tracks list from playlist **/
   get subtitleTracks(): MediaPlaylist[] {
     return this.tracksInGroup;
