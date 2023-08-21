@@ -135,7 +135,7 @@ export default class StreamController
             startLevel = 0;
             this.bitrateTest = true;
           } else {
-            startLevel = hls.nextAutoLevel;
+            startLevel = hls.firstAutoLevel;
           }
         }
         // set new level to playlist loader : this will trigger start level load
@@ -978,6 +978,9 @@ export default class StreamController
     event: Events.LEVELS_UPDATED,
     data: LevelsUpdatedData
   ) {
+    if (this.level > -1 && this.fragCurrent) {
+      this.level = this.fragCurrent.level;
+    }
     this.levels = data.levels;
   }
 
@@ -1306,11 +1309,7 @@ export default class StreamController
     }
     if (audiovideo) {
       this.log(
-        `Init audiovideo buffer, container:${
-          audiovideo.container
-        }, codecs[level/parsed]=[${currentLevel.attrs.CODECS || ''}/${
-          audiovideo.codec
-        }]`
+        `Init audiovideo buffer, container:${audiovideo.container}, codecs[level/parsed]=[${currentLevel.codecs}/${audiovideo.codec}]`
       );
     }
     this.hls.trigger(Events.BUFFER_CODECS, tracks);

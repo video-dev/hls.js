@@ -17,6 +17,7 @@ module.exports = {
     __USE_CONTENT_STEERING__: true,
     __USE_VARIABLE_SUBSTITUTION__: true,
     __USE_M2TS_ADVANCED_CODECS__: true,
+    __USE_MEDIA_CAPABILITIES__: true,
   },
   // see https://github.com/standard/eslint-config-standard
   // 'prettier' (https://github.com/prettier/eslint-config-prettier) must be last

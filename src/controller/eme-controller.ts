@@ -857,7 +857,7 @@ class EMEController implements ComponentAPI {
     if (!url) {
       return Promise.resolve();
     }
-    this.log(`Fetching serverCertificate for "${keySystem}"`);
+    this.log(`Fetching server certificate for "${keySystem}"`);
     return new Promise((resolve, reject) => {
       const loaderContext: LoaderContext = {
         responseType: 'arraybuffer',

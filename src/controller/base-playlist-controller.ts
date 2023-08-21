@@ -1,7 +1,7 @@
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
 import { getSkipValue, HlsSkip, HlsUrlParameters, Level } from '../types/level';
-import { computeReloadInterval, mergeDetails } from './level-helper';
+import { computeReloadInterval, mergeDetails } from '../utils/level-helper';
 import { ErrorData } from '../types/events';
 import { getRetryDelay, isTimeoutError } from '../utils/error-helper';
 import { NetworkErrorAction } from './error-controller';

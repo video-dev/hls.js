@@ -7,22 +7,29 @@ import {
   ManifestParsedData,
   LevelLoadedData,
   TrackSwitchedData,
-  FragLoadedData,
   ErrorData,
   LevelSwitchingData,
   LevelsUpdatedData,
   ManifestLoadingData,
+  FragBufferedData,
 } from '../types/events';
-import { Level, addGroupId } from '../types/level';
+import {
+  Level,
+  VideoRangeValues,
+  addGroupId,
+  isVideoRange,
+} from '../types/level';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import {
-  getCodecCompatibleName,
   areCodecsMediaSourceSupported,
+  codecsSetSelectionPreferenceValue,
+  getCodecCompatibleName,
 } from '../utils/codecs';
 import BasePlaylistController from './base-playlist-controller';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import ContentSteeringController from './content-steering-controller';
+import { reassignFragmentLevelIndexes } from '../utils/level-helper';
 import { hlsDefaultConfig } from '../config';
 import type Hls from '../hls';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';
@@ -57,7 +64,7 @@ export default class LevelController extends BasePlaylistController {
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
     hls.on(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
-    hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
     hls.on(Events.ERROR, this.onError, this);
   }
 
@@ -68,7 +75,7 @@ export default class LevelController extends BasePlaylistController {
     hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.off(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
     hls.off(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
-    hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
+    hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
     hls.off(Events.ERROR, this.onError, this);
   }
 
@@ -185,10 +192,11 @@ export default class LevelController extends BasePlaylistController {
       }
     );
 
-    // remove audio-only level if we also have levels with video codecs or RESOLUTION signalled
+    // remove audio-only and invalid video-range levels if we also have levels with video codecs or RESOLUTION signalled
     if ((resolutionFound || videoCodecFound) && audioCodecFound) {
       levels = levels.filter(
-        ({ videoCodec, width, height }) => !!videoCodec || !!(width && height)
+        ({ videoCodec, videoRange, width, height }) =>
+          (!!videoCodec || !!(width && height)) && isVideoRange(videoRange)
       );
     }
 
@@ -198,7 +206,9 @@ export default class LevelController extends BasePlaylistController {
         if (this.hls) {
           if (unfilteredLevels.length) {
             this.warn(
-              `One or more CODECS in variant not supported: "${unfilteredLevels[0].attrs.CODECS}"`
+              `One or more CODECS in variant not supported: ${JSON.stringify(
+                unfilteredLevels[0].attrs
+              )}`
             );
           }
           const error = new Error(
@@ -240,23 +250,28 @@ export default class LevelController extends BasePlaylistController {
           ? 1
           : -1;
       }
-      if (a.bitrate !== b.bitrate) {
-        return a.bitrate - b.bitrate;
-      }
-      if (a.attrs['FRAME-RATE'] !== b.attrs['FRAME-RATE']) {
-        return (
-          a.attrs.decimalFloatingPoint('FRAME-RATE') -
-          b.attrs.decimalFloatingPoint('FRAME-RATE')
-        );
-      }
-      if (a.attrs.SCORE !== b.attrs.SCORE) {
-        return (
-          a.attrs.decimalFloatingPoint('SCORE') -
-          b.attrs.decimalFloatingPoint('SCORE')
-        );
-      }
+      // sort on height before bitrate for cap-level-controller
       if (resolutionFound && a.height !== b.height) {
         return a.height - b.height;
+      }
+      if (a.frameRate !== b.frameRate) {
+        return a.frameRate - b.frameRate;
+      }
+      if (a.codecSet !== b.codecSet) {
+        const valueA = codecsSetSelectionPreferenceValue(a.codecSet);
+        const valueB = codecsSetSelectionPreferenceValue(b.codecSet);
+        if (valueA !== valueB) {
+          return valueB - valueA;
+        }
+      }
+      if (a.videoRange !== b.videoRange) {
+        return (
+          VideoRangeValues.indexOf(a.videoRange) -
+          VideoRangeValues.indexOf(b.videoRange)
+        );
+      }
+      if (a.bitrate !== b.bitrate) {
+        return a.bitrate - b.bitrate;
       }
       return 0;
     });
@@ -378,7 +393,11 @@ export default class LevelController extends BasePlaylistController {
     }
 
     this.log(
-      `Switching to level ${newLevel}${
+      `Switching to level ${newLevel} (${
+        level.height ? level.height + 'p ' : ''
+      }${level.videoRange ? level.videoRange + ' ' : ''}${
+        level.codecSet ? level.codecSet + ' ' : ''
+      }@${level.bitrate})${
         pathwayId ? ' with Pathway ' + pathwayId : ''
       } from level ${lastLevelIndex}${
         lastPathwayId ? ' with Pathway ' + lastPathwayId : ''
@@ -431,22 +450,19 @@ export default class LevelController extends BasePlaylistController {
     this._firstLevel = newLevel;
   }
 
-  get startLevel() {
-    // hls.startLevel takes precedence over config.startLevel
-    // if none of these values are defined, fallback on this._firstLevel (first quality level appearing in variant manifest)
+  get startLevel(): number {
+    // Setting hls.startLevel (this._startLevel) overrides config.startLevel
     if (this._startLevel === undefined) {
       const configStartLevel = this.hls.config.startLevel;
       if (configStartLevel !== undefined) {
         return configStartLevel;
-      } else {
-        return this._firstLevel;
       }
-    } else {
-      return this._startLevel;
+      return this.hls.firstAutoLevel;
     }
+    return this._startLevel;
   }
 
-  set startLevel(newLevel) {
+  set startLevel(newLevel: number) {
     this._startLevel = newLevel;
   }
 
@@ -464,10 +480,20 @@ export default class LevelController extends BasePlaylistController {
   }
 
   // reset errors on the successful load of a fragment
-  protected onFragLoaded(event: Events.FRAG_LOADED, { frag }: FragLoadedData) {
+  protected onFragBuffered(
+    event: Events.FRAG_BUFFERED,
+    { frag }: FragBufferedData
+  ) {
     if (frag !== undefined && frag.type === PlaylistLevelType.MAIN) {
+      const el = frag.elementaryStreams;
+      if (!Object.keys(el).some((type) => !!el[type])) {
+        return;
+      }
       const level = this._levels[frag.level];
-      if (level !== undefined) {
+      if (level?.loadError) {
+        this.log(
+          `Resetting level error count of ${level.loadError} on frag buffered`
+        );
         level.loadError = 0;
       }
     }
@@ -613,9 +639,20 @@ export default class LevelController extends BasePlaylistController {
       if (this.steering) {
         this.steering.removeLevel(level);
       }
+      if (level === this.currentLevel) {
+        this.currentLevel = null;
+        this.currentLevelIndex = -1;
+        if (level.details) {
+          level.details.fragments.forEach((f) => (f.level = -1));
+        }
+      }
       return false;
     });
-
+    reassignFragmentLevelIndexes(levels);
+    this._levels = levels;
+    if (this.currentLevelIndex > -1 && this.currentLevel?.details) {
+      this.currentLevelIndex = this.currentLevel.details.fragments[0].level;
+    }
     this.hls.trigger(Events.LEVELS_UPDATED, { levels });
   }
 
@@ -623,14 +660,6 @@ export default class LevelController extends BasePlaylistController {
     event: Events.LEVELS_UPDATED,
     { levels }: LevelsUpdatedData
   ) {
-    levels.forEach((level, index) => {
-      const { details } = level;
-      if (details?.fragments) {
-        details.fragments.forEach((fragment) => {
-          fragment.level = index;
-        });
-      }
-    });
     this._levels = levels;
   }
 }

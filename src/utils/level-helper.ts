@@ -2,7 +2,7 @@
  * Provides methods dealing with playlist sliding and drift
  */
 
-import { logger } from '../utils/logger';
+import { logger } from './logger';
 import { Fragment, Part } from '../loader/fragment';
 import { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
@@ -481,4 +481,15 @@ export function findPart(
     }
   }
   return null;
+}
+
+export function reassignFragmentLevelIndexes(levels: Level[]) {
+  levels.forEach((level, index) => {
+    const { details } = level;
+    if (details?.fragments) {
+      details.fragments.forEach((fragment) => {
+        fragment.level = index;
+      });
+    }
+  });
 }

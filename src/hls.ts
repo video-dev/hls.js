@@ -12,7 +12,7 @@ import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
 import { EventEmitter } from 'eventemitter3';
 import { Events } from './events';
 import { ErrorTypes, ErrorDetails } from './errors';
-import { HdcpLevels } from './types/level';
+import { isHdcpLevel, type HdcpLevel, type Level } from './types/level';
 import type { HlsEventEmitter, HlsListeners } from './events';
 import type AudioTrackController from './controller/audio-track-controller';
 import type AbrController from './controller/abr-controller';
@@ -24,7 +24,6 @@ import type SubtitleTrackController from './controller/subtitle-track-controller
 import type { ComponentAPI, NetworkComponentAPI } from './types/component-api';
 import type { MediaPlaylist } from './types/media-playlist';
 import type { HlsConfig } from './config';
-import type { HdcpLevel, Level } from './types/level';
 import type { BufferInfo } from './utils/buffer-helper';
 import type AudioStreamController from './controller/audio-stream-controller';
 import type BasePlaylistController from './controller/base-playlist-controller';
@@ -448,7 +447,7 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * @returns an array of levels (variants) sorted by HDCP-LEVEL, BANDWIDTH, SCORE, and RESOLUTION (height)
+   * @returns an array of levels (variants) sorted by HDCP-LEVEL, RESOLUTION (height), FRAME-RATE, CODECS, VIDEO-RANGE, and BANDWIDTH
    */
   get levels(): Level[] {
     const levels = this.levelController.levels;
@@ -541,13 +540,17 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
-   * Return start level (level of first fragment that will be played back)
-   * if not overrided by user, first level appearing in manifest will be used as start level
-   * if -1 : automatic start level selection, playback will start from level matching download bandwidth
-   * (determined from download of first segment)
+   * Return the desired start level for the first fragment that will be loaded.
+   * The default value of -1 indicates automatic start level selection.
+   * Setting hls.nextAutoLevel without setting a startLevel will result in
+   * the nextAutoLevel value being used for one fragment load.
    */
   get startLevel(): number {
-    return this.levelController.startLevel;
+    const startLevel = this.levelController.startLevel;
+    if (startLevel === -1 && this.abrController.forcedAutoLevel > -1) {
+      return this.abrController.forcedAutoLevel;
+    }
+    return startLevel;
   }
 
   /**
@@ -642,7 +645,7 @@ export default class Hls implements HlsEventEmitter {
   }
 
   set maxHdcpLevel(value: HdcpLevel) {
-    if (HdcpLevels.indexOf(value) > -1) {
+    if (isHdcpLevel(value)) {
       this._maxHdcpLevel = value;
     }
   }
@@ -706,15 +709,15 @@ export default class Hls implements HlsEventEmitter {
     return maxAutoLevel;
   }
 
+  get firstAutoLevel(): number {
+    return this.abrController.firstAutoLevel;
+  }
+
   /**
    * next automatically selected quality level
    */
   get nextAutoLevel(): number {
-    // ensure next auto level is between  min and max auto level
-    return Math.min(
-      Math.max(this.abrController.nextAutoLevel, this.minAutoLevel),
-      this.maxAutoLevel
-    );
+    return this.abrController.nextAutoLevel;
   }
 
   /**
@@ -725,7 +728,7 @@ export default class Hls implements HlsEventEmitter {
    * this value will be resetted to -1 by ABR controller.
    */
   set nextAutoLevel(nextLevel: number) {
-    this.abrController.nextAutoLevel = Math.max(this.minAutoLevel, nextLevel);
+    this.abrController.nextAutoLevel = nextLevel;
   }
 
   /**
@@ -737,6 +740,14 @@ export default class Hls implements HlsEventEmitter {
 
   public get mainForwardBufferInfo(): BufferInfo | null {
     return this.streamController.getMainFwdBufferInfo();
+  }
+
+  /**
+   * Get the complete list of audio tracks across all media groups
+   */
+  get allAudioTracks(): Array<MediaPlaylist> {
+    const audioTrackController = this.audioTrackController;
+    return audioTrackController ? audioTrackController.allAudioTracks : [];
   }
 
   /**
@@ -763,6 +774,16 @@ export default class Hls implements HlsEventEmitter {
     if (audioTrackController) {
       audioTrackController.audioTrack = audioTrackId;
     }
+  }
+
+  /**
+   * get the complete list of subtitle tracks across all media groups
+   */
+  get allSubtitleTracks(): Array<MediaPlaylist> {
+    const subtitleTrackController = this.subtitleTrackController;
+    return subtitleTrackController
+      ? subtitleTrackController.allSubtitleTracks
+      : [];
   }
 
   /**
@@ -888,7 +909,6 @@ export type {
   HlsEventEmitter,
   HlsConfig,
   BufferInfo,
-  HdcpLevels,
   HdcpLevel,
   AbrController,
   AudioStreamController,
@@ -966,6 +986,7 @@ export type {
   LevelParsed,
   VariableMap,
 } from './types/level';
+export type { MediaDecodingInfo } from './utils/mediacapabilities-helper';
 export type {
   PlaylistLevelType,
   HlsChunkPerformanceTiming,

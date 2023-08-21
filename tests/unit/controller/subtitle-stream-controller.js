@@ -5,9 +5,9 @@ import { Events } from '../../../src/events';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { Fragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
+import { AttrList } from '../../../src/utils/attr-list';
 import KeyLoader from '../../../src/loader/key-loader';
 import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
-import { AttrList } from '../../../src/utils/attr-list';
 
 const mediaMock = {
   currentTime: 0,

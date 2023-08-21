@@ -129,6 +129,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.loadLevel`](#hlsloadlevel)
   - [`hls.nextLoadLevel`](#hlsnextloadlevel)
   - [`hls.firstLevel`](#hlsfirstlevel)
+  - [`hls.firstAutoLevel`](#hlsfirstautolevel)
   - [`hls.startLevel`](#hlsstartlevel)
   - [`hls.autoLevelEnabled`](#hlsautolevelenabled)
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
@@ -1593,7 +1594,11 @@ Set to `-1` for automatic level selection.
 
 ### `hls.firstLevel`
 
-- get: First level index (index of first level appearing in Manifest. it is usually defined as start level hint for player).
+- get: First level index (index of the first Variant appearing in the Multivariant Playlist).
+
+### `hls.firstAutoLevel`
+
+- get: Return quality level that will be used to load the first fragment when not overridden by `startLevel`.
 
 ### `hls.startLevel`
 
@@ -2020,12 +2025,35 @@ See sample `Level` object below:
 
 ```js
 {
-  url: [ 'http://levelURL.com', 'http://levelURLfailover.com' ],
-  bitrate: 246440,
-  name: "240",
-  codecs: "mp4a.40.5,avc1.42000d",
-  width: 320,
-  height: 136,
+  audioCodec: "mp4a.40.2"
+  audioGroupIds: <string[]> | undefined,
+  bitrate: 3000000,
+  codecSet: "avc1,mp4a",
+  details: <LevelDetails> | undefined
+  fragmentError: 0,
+  frameRate: 30,
+  height: 720,
+  loadError: 0
+  name: "720p",
+  realBitrate: 0,
+  supportedPromise: undefined,
+  supportedResult: {supported: true, configurations: <MediaDecodingConfiguration[]>, decodingInfoResults: <MediaCapabilitiesDecodingInfo[]>}
+  textGroupIds: <string[]> | undefined,
+  unknownCodecs: [],
+  url: [ "http://levelURL.com", "http://levelURLfailover.com" ],
+  videoCodec: "avc1.66.30",
+  width: 1280,
+  attrs: <AttrList>,
+  audioGroupId: undefined,
+  averageBitrate: 2962000,
+  codecs: "avc1.66.30,mp4a.40.2",
+  maxBitrate: 3000000,
+  pathwayId: ".",
+  score: 0,
+  textGroupId: "subs",
+  uri: "http://levelURL.com",
+  urlId: 0,
+  videoRange: "SDR"
 }
 ```
 
@@ -2075,6 +2103,7 @@ See sample object below:
 {
   duration: 10,
   level: 3,
+  cc: 0
   sn: 35,
   start: 30,
   url: 'http://fragURL.com'
