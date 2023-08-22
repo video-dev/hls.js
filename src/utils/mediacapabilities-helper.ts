@@ -34,7 +34,7 @@ export function requiresMediaCapabilitiesDecodingInfo(
   mediaCapabilities: MediaCapabilities | undefined,
   currentVideoRange: VideoRange | undefined,
   currentFrameRate: number,
-  currentBw: number
+  currentBw: number,
 ): boolean {
   // Only test support when configuration is exceeds minimum options
   const audioGroupId = level.audioCodec ? level.audioGroupId : null;
@@ -57,7 +57,7 @@ export function requiresMediaCapabilitiesDecodingInfo(
 export function getMediaDecodingInfoPromise(
   level: Level,
   audioTracksByGroup: AudioTracksByGroup,
-  mediaCapabilities: MediaCapabilities
+  mediaCapabilities: MediaCapabilities,
 ): Promise<MediaDecodingInfo> {
   const videoCodecs = level.videoCodec;
   const audioCodecs = level.audioCodec;
@@ -106,7 +106,7 @@ export function getMediaDecodingInfoPromise(
                 // spatialRendering:
                 //   audioCodec === 'ec-3' && channels.indexOf('JOC'),
               },
-            }))
+            })),
           );
         }
       }
@@ -122,7 +122,7 @@ export function getMediaDecodingInfoPromise(
         (SUPPORTED_INFO_CACHE[decodingInfoKey] =
           mediaCapabilities.decodingInfo(configuration))
       );
-    })
+    }),
   )
     .then((decodingInfoResults) => ({
       supported: !decodingInfoResults.some((info) => !info.supported),

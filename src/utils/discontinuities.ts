@@ -8,7 +8,7 @@ import type { RequiredProperties } from '../types/general';
 
 export function findFirstFragWithCC(
   fragments: Fragment[],
-  cc: number
+  cc: number,
 ): Fragment | null {
   for (let i = 0, len = fragments.length; i < len; i++) {
     if (fragments[i]?.cc === cc) {
@@ -21,7 +21,7 @@ export function findFirstFragWithCC(
 export function shouldAlignOnDiscontinuities(
   lastFrag: Fragment | null,
   lastLevel: Level,
-  details: LevelDetails
+  details: LevelDetails,
 ): lastLevel is RequiredProperties<Level, 'details'> {
   if (lastLevel.details) {
     if (
@@ -37,7 +37,7 @@ export function shouldAlignOnDiscontinuities(
 // Find the first frag in the previous level which matches the CC of the first frag of the new level
 export function findDiscontinuousReferenceFrag(
   prevDetails: LevelDetails,
-  curDetails: LevelDetails
+  curDetails: LevelDetails,
 ) {
   const prevFrags = prevDetails.fragments;
   const curFrags = curDetails.fragments;
@@ -91,7 +91,7 @@ export function adjustSlidingStart(sliding: number, details: LevelDetails) {
 export function alignStream(
   lastFrag: Fragment | null,
   lastLevel: Level | null,
-  details: LevelDetails
+  details: LevelDetails,
 ) {
   if (!lastLevel) {
     return;
@@ -125,16 +125,16 @@ export function alignStream(
 function alignDiscontinuities(
   lastFrag: Fragment | null,
   details: LevelDetails,
-  lastLevel: Level
+  lastLevel: Level,
 ) {
   if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
     const referenceFrag = findDiscontinuousReferenceFrag(
       lastLevel.details,
-      details
+      details,
     );
     if (referenceFrag && Number.isFinite(referenceFrag.start)) {
       logger.log(
-        `Adjusting PTS using last level due to CC increase within current level ${details.url}`
+        `Adjusting PTS using last level due to CC increase within current level ${details.url}`,
       );
       adjustSlidingStart(referenceFrag.start, details);
     }
@@ -156,7 +156,7 @@ function alignDiscontinuities(
  */
 export function alignMediaPlaylistByPDT(
   details: LevelDetails,
-  refDetails: LevelDetails
+  refDetails: LevelDetails,
 ) {
   if (!details.hasProgramDateTime || !refDetails.hasProgramDateTime) {
     return;

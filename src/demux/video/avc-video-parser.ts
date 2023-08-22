@@ -19,7 +19,7 @@ class AvcVideoParser extends BaseVideoParser {
     textTrack: DemuxedUserdataTrack,
     pes: PES,
     last: boolean,
-    duration: number
+    duration: number,
   ) {
     const units = this.parseAVCNALu(track, pes.data);
     const debug = false;
@@ -37,7 +37,7 @@ class AvcVideoParser extends BaseVideoParser {
         false,
         pes.pts,
         pes.dts,
-        ''
+        '',
       );
     }
 
@@ -80,7 +80,7 @@ class AvcVideoParser extends BaseVideoParser {
               true,
               pes.pts,
               pes.dts,
-              ''
+              '',
             );
           }
 
@@ -107,7 +107,7 @@ class AvcVideoParser extends BaseVideoParser {
               true,
               pes.pts,
               pes.dts,
-              ''
+              '',
             );
           }
 
@@ -128,7 +128,7 @@ class AvcVideoParser extends BaseVideoParser {
             unit.data,
             1,
             pes.pts as number,
-            textTrack.samples
+            textTrack.samples,
           );
           break;
           // SPS
@@ -186,7 +186,7 @@ class AvcVideoParser extends BaseVideoParser {
             false,
             pes.pts,
             pes.dts,
-            debug ? 'AUD ' : ''
+            debug ? 'AUD ' : '',
           );
           break;
         // Filler Data
@@ -215,7 +215,7 @@ class AvcVideoParser extends BaseVideoParser {
 
   private parseAVCNALu(
     track: DemuxedVideoTrack,
-    array: Uint8Array
+    array: Uint8Array,
   ): Array<{
     data: Uint8Array;
     type: number;
@@ -280,7 +280,7 @@ class AvcVideoParser extends BaseVideoParser {
                 // strip last bytes
                 lastUnit.data = lastUnit.data.subarray(
                   0,
-                  lastUnit.data.byteLength - lastState
+                  lastUnit.data.byteLength - lastState,
                 );
               }
             }
@@ -290,7 +290,7 @@ class AvcVideoParser extends BaseVideoParser {
               // logger.log('first NALU found with overflow:' + overflow);
               lastUnit.data = appendUint8Array(
                 lastUnit.data,
-                array.subarray(0, overflow)
+                array.subarray(0, overflow),
               );
               lastUnit.state = 0;
             }

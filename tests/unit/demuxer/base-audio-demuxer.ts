@@ -10,19 +10,19 @@ describe('BaseAudioDemuxer', function () {
     });
     it('should use the timeOffset if timestamp is undefined or not finite', function () {
       expect(initPTSFn(undefined, 1, { baseTime: 0, timescale: 1 })).to.be.eq(
-        90000
+        90000,
       );
       expect(initPTSFn(NaN, 1, { baseTime: 0, timescale: 1 })).to.be.eq(90000);
       expect(initPTSFn(Infinity, 1, { baseTime: 0, timescale: 1 })).to.be.eq(
-        90000
+        90000,
       );
     });
     it('should add initPTS to timeOffset when timestamp is undefined or not finite', function () {
       expect(
-        initPTSFn(undefined, 1, { baseTime: 42, timescale: 90000 })
+        initPTSFn(undefined, 1, { baseTime: 42, timescale: 90000 }),
       ).to.be.eq(90042);
       expect(initPTSFn(NaN, 1, { baseTime: 42, timescale: 90000 })).to.be.eq(
-        90042
+        90042,
       );
     });
   });

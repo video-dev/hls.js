@@ -61,7 +61,7 @@ type AudioTrackControllerTestable = Omit<
   onManifestLoading: () => void;
   onManifestParsed: (
     type: string,
-    data: { audioTracks: MediaPlaylist[] }
+    data: { audioTracks: MediaPlaylist[] },
   ) => void;
   onLevelLoading: (type: string, data: { level: number }) => void;
   onAudioTrackLoaded: (type: string, data: AudioTrackLoadedData) => void;
@@ -80,7 +80,7 @@ describe('AudioTrackController', function () {
     hls.coreComponents.forEach((component) => component.destroy());
     hls.coreComponents.length = 0;
     audioTrackController = new AudioTrackController(
-      hls as unknown as Hls
+      hls as unknown as Hls,
     ) as unknown as AudioTrackControllerTestable;
     hls.networkControllers.push(audioTrackController);
     hls.levelController = {
@@ -197,7 +197,7 @@ describe('AudioTrackController', function () {
         Events.AUDIO_TRACKS_UPDATED,
         {
           audioTracks: tracks.slice(3, 6),
-        }
+        },
       );
     });
   });
@@ -228,7 +228,7 @@ describe('AudioTrackController', function () {
     expect(audioTrackController.groupId).to.equal(newGroupId);
     // name is still the same
     expect(tracks[audioTrackController.audioTrack].name).to.equal(
-      audioTrackName
+      audioTrackName,
     );
   });
 
@@ -248,7 +248,7 @@ describe('AudioTrackController', function () {
       .calledOnce;
     expect(
       audioTrackSwitchingCallback,
-      'AUDIO_TRACK_SWITCHING to initial track 0'
+      'AUDIO_TRACK_SWITCHING to initial track 0',
     ).to.have.been.calledOnce;
 
     audioTrackController.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, {
@@ -288,7 +288,7 @@ describe('AudioTrackController', function () {
     it('should not need loading because the audioTrack is embedded in the main playlist', function () {
       audioTrackController.canLoad = true;
       expect(
-        audioTrackController.shouldLoadPlaylist({ details: { live: true } })
+        audioTrackController.shouldLoadPlaylist({ details: { live: true } }),
       ).to.be.false;
       expect(audioTrackController.shouldLoadPlaylist({ details: undefined })).to
         .be.false;
@@ -301,7 +301,7 @@ describe('AudioTrackController', function () {
           details: { live: true },
           url: 'http://example.com/manifest.m3u8',
         }),
-        'track 1'
+        'track 1',
       ).to.be.true;
 
       expect(
@@ -309,7 +309,7 @@ describe('AudioTrackController', function () {
           details: null,
           url: 'http://example.com/manifest.m3u8',
         }),
-        'track 2'
+        'track 2',
       ).to.be.true;
     });
   });
@@ -338,21 +338,21 @@ describe('AudioTrackController', function () {
 
       audioTrackController.onLevelLoading(
         Events.LEVEL_LOADING,
-        levelLoadedEvent
+        levelLoadedEvent,
       );
 
       // group has switched
       expect(audioTrackController.groupId).to.equal(newGroupId);
       // name is still the same
       expect(tracks[audioTrackController.audioTrack].name).to.equal(
-        audioTrackName
+        audioTrackName,
       );
     });
 
     it('should load audio tracks with a url', function () {
       const shouldLoadPlaylist = sinon.spy(
         audioTrackController,
-        'shouldLoadPlaylist'
+        'shouldLoadPlaylist',
       );
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithUrl: MediaPlaylist = {
@@ -390,11 +390,11 @@ describe('AudioTrackController', function () {
       expect(shouldLoadPlaylist).to.have.been.calledWith(trackWithUrl);
       expect(
         shouldLoadPlaylist.firstCall.returnValue,
-        'expected shouldLoadPlaylist to return false before startLoad() is called'
+        'expected shouldLoadPlaylist to return false before startLoad() is called',
       ).to.be.false;
       expect(
         shouldLoadPlaylist.secondCall.returnValue,
-        'expected shouldLoadPlaylist to return true after startLoad() is called'
+        'expected shouldLoadPlaylist to return true after startLoad() is called',
       ).to.be.true;
 
       expect(audioTrackLoadingCallback).to.have.been.calledOnce;
@@ -403,7 +403,7 @@ describe('AudioTrackController', function () {
     it('should not attempt to load audio tracks without a url', function () {
       const shouldLoadPlaylist = sinon.spy(
         audioTrackController,
-        'shouldLoadPlaylist'
+        'shouldLoadPlaylist',
       );
       const audioTrackLoadingCallback = sinon.spy();
       const trackWithOutUrl = tracks[0];
@@ -455,7 +455,7 @@ describe('AudioTrackController', function () {
       });
       expect(
         audioTrackController.audioTrack,
-        'track index/id is not changed as there is no redundant track to choose from'
+        'track index/id is not changed as there is no redundant track to choose from',
       ).to.equal(4);
       expect(checkRetry).to.have.been.calledOnce;
     });

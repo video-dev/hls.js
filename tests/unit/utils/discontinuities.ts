@@ -182,8 +182,8 @@ describe('discontinuities', function () {
       `actual:\n\n${JSON.stringify(
         lastLevel.details,
         null,
-        2
-      )}\n\nexpected\n\n${JSON.stringify(detailsExpected, null, 2)}`
+        2,
+      )}\n\nexpected\n\n${JSON.stringify(detailsExpected, null, 2)}`,
     ).to.deep.equal(detailsExpected);
   });
 
@@ -437,7 +437,7 @@ describe('discontinuities', function () {
     const expected = undefined;
     const actual = findDiscontinuousReferenceFrag(
       objToLevelDetails({ fragments: [] }),
-      objToLevelDetails({ fragments: mockFrags })
+      objToLevelDetails({ fragments: mockFrags }),
     );
     expect(actual).to.equal(expected);
   });
@@ -446,7 +446,7 @@ describe('discontinuities', function () {
     const expected = undefined;
     const actual = findDiscontinuousReferenceFrag(
       objToLevelDetails({ fragments: [{ cc: 10 }].map(objToFragment) }),
-      objToLevelDetails({ fragments: mockFrags })
+      objToLevelDetails({ fragments: mockFrags }),
     );
     expect(actual).to.equal(expected);
   });
@@ -455,7 +455,7 @@ describe('discontinuities', function () {
     const expected = undefined;
     const actual = findDiscontinuousReferenceFrag(
       objToLevelDetails({ fragments: [{ cc: 0 }].map(objToFragment) }),
-      objToLevelDetails({ fragments: [] })
+      objToLevelDetails({ fragments: [] }),
     );
     expect(actual).to.equal(expected);
   });
@@ -488,7 +488,7 @@ describe('discontinuities', function () {
     const actual = shouldAlignOnDiscontinuities(
       lastFrag,
       lastLevel,
-      curDetails
+      curDetails,
     );
     expect(actual).to.be.true;
   });
@@ -508,7 +508,7 @@ describe('discontinuities', function () {
     const actual = shouldAlignOnDiscontinuities(
       lastFrag,
       lastLevel,
-      curDetails
+      curDetails,
     );
     expect(actual).to.be.false;
   });
@@ -526,7 +526,7 @@ describe('discontinuities', function () {
     const actual = shouldAlignOnDiscontinuities(
       lastFrag,
       lastLevel,
-      curDetails
+      curDetails,
     );
     expect(actual).to.be.false;
   });

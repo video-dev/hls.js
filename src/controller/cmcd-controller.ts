@@ -83,7 +83,7 @@ export default class CMCDController implements ComponentAPI {
 
   private onMediaAttached(
     event: Events.MEDIA_ATTACHED,
-    data: MediaAttachedData
+    data: MediaAttachedData,
   ) {
     this.media = data.media;
     this.media.addEventListener('waiting', this.onWaiting);
@@ -104,7 +104,7 @@ export default class CMCDController implements ComponentAPI {
 
   private onBufferCreated(
     event: Events.BUFFER_CREATED,
-    data: BufferCreatedData
+    data: BufferCreatedData,
   ) {
     this.audioBuffer = data.tracks.audio?.buffer;
     this.videoBuffer = data.tracks.video?.buffer;
@@ -297,7 +297,7 @@ export default class CMCDController implements ComponentAPI {
     const info = BufferHelper.bufferInfo(
       buffer,
       media.currentTime,
-      this.config.maxBufferHole
+      this.config.maxBufferHole,
     );
 
     return info.len * 1000;
@@ -337,7 +337,7 @@ export default class CMCDController implements ComponentAPI {
       load(
         context: PlaylistLoaderContext,
         config: LoaderConfiguration,
-        callbacks: LoaderCallbacks<PlaylistLoaderContext>
+        callbacks: LoaderCallbacks<PlaylistLoaderContext>,
       ) {
         apply(context);
         this.loader.load(context, config, callbacks);
@@ -379,7 +379,7 @@ export default class CMCDController implements ComponentAPI {
       load(
         context: FragmentLoaderContext,
         config: LoaderConfiguration,
-        callbacks: LoaderCallbacks<FragmentLoaderContext>
+        callbacks: LoaderCallbacks<FragmentLoaderContext>,
       ) {
         apply(context);
         this.loader.load(context, config, callbacks);

@@ -43,7 +43,7 @@ export class LevelKey implements DecryptData {
     uri: string,
     format: string,
     formatversions: number[] = [1],
-    iv: Uint8Array | null = null
+    iv: Uint8Array | null = null,
   ) {
     this.method = method;
     this.uri = uri;
@@ -95,7 +95,7 @@ export class LevelKey implements DecryptData {
         // It must have an IV defined. We cannot substitute the Segment Number in.
         if (this.method === 'AES-128' && !this.iv) {
           logger.warn(
-            `missing IV for initialization segment with method="${this.method}" - compliance issue`
+            `missing IV for initialization segment with method="${this.method}" - compliance issue`,
           );
         }
         // Explicitly set sn to resulting value from implicit conversions 'initSegment' values for IV generation.
@@ -107,7 +107,7 @@ export class LevelKey implements DecryptData {
         this.uri,
         'identity',
         this.keyFormatVersions,
-        iv
+        iv,
       );
       return decryptdata;
     }
@@ -126,7 +126,7 @@ export class LevelKey implements DecryptData {
           if (keyBytes.length >= 22) {
             this.keyId = keyBytes.subarray(
               keyBytes.length - 22,
-              keyBytes.length - 6
+              keyBytes.length - 6,
             );
           }
           break;
@@ -141,17 +141,17 @@ export class LevelKey implements DecryptData {
           const keyBytesUtf16 = new Uint16Array(
             keyBytes.buffer,
             keyBytes.byteOffset,
-            keyBytes.byteLength / 2
+            keyBytes.byteLength / 2,
           );
           const keyByteStr = String.fromCharCode.apply(
             null,
-            Array.from(keyBytesUtf16)
+            Array.from(keyBytesUtf16),
           );
 
           // Parse Playready WRMHeader XML
           const xmlKeyBytes = keyByteStr.substring(
             keyByteStr.indexOf('<'),
-            keyByteStr.length
+            keyByteStr.length,
           );
           const parser = new DOMParser();
           const xmlDoc = parser.parseFromString(xmlKeyBytes, 'text/xml');

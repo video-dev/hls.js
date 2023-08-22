@@ -10,7 +10,7 @@ describe('VTTParser', function () {
     function assertTimeStampValue(timestamp, value) {
       expect(parseTimeStamp(timestamp)).to.eq(
         value,
-        `"${timestamp}" should equal ${value}`
+        `"${timestamp}" should equal ${value}`,
       );
     }
     it('should parse fractional seconds correctly regardless of length', function () {

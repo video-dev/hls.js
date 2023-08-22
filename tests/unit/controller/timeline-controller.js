@@ -25,7 +25,7 @@ describe('TimelineController', function () {
             { id: 0, name: 'en', attrs: { LANGUAGE: 'en', NAME: 'en' } },
             { id: 1, name: 'ru', attrs: { LANGUAGE: 'ru', NAME: 'ru' } },
           ],
-        }
+        },
       );
 
       // text tracks model contain only newly added manifest tracks, in same order as in manifest
@@ -44,7 +44,7 @@ describe('TimelineController', function () {
             { id: 0, name: 'en', attrs: { LANGUAGE: 'en', NAME: 'en' } },
             { id: 1, name: 'ru', attrs: { LANGUAGE: 'ru', NAME: 'ru' } },
           ],
-        }
+        },
       );
 
       // text tracks model contain only newly added manifest tracks, in same order

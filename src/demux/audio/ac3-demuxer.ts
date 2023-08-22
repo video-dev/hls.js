@@ -16,7 +16,7 @@ export class AC3Demuxer extends BaseAudioDemuxer {
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    trackDuration: number
+    trackDuration: number,
   ) {
     super.resetInitSegment(initSegment, audioCodec, videoCodec, trackDuration);
     this._audioTrack = {
@@ -41,14 +41,14 @@ export class AC3Demuxer extends BaseAudioDemuxer {
   appendFrame(
     track: DemuxedAudioTrack,
     data: Uint8Array,
-    offset: number
+    offset: number,
   ): AudioFrame | void {
     const frameLength = appendFrame(
       track,
       data,
       offset,
       this.basePTS as number,
-      this.frameIndex
+      this.frameIndex,
     );
     if (frameLength !== -1) {
       const sample = track.samples[track.samples.length - 1];
@@ -86,7 +86,7 @@ export function appendFrame(
   data: Uint8Array,
   start: number,
   pts: number,
-  frameIndex: number
+  frameIndex: number,
 ): number {
   if (start + 8 > data.length) {
     return -1; // not enough bytes left

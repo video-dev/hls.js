@@ -13,20 +13,20 @@ module.exports = ({ configType = [] }) => {
   } else {
     // Filter out enabled configs
     const enabledEntries = configs.filter(([name]) =>
-      requestedConfigs.includes(name)
+      requestedConfigs.includes(name),
     );
     if (!enabledEntries.length) {
       throw new Error(
         `Couldn't find a valid config with the names ${JSON.stringify(
-          requestedConfigs
-        )}. Known configs are: ${configs.map(([name]) => name).join(', ')}`
+          requestedConfigs,
+        )}. Known configs are: ${configs.map(([name]) => name).join(', ')}`,
       );
     }
     configEntries = enabledEntries;
   }
 
   console.log(
-    `Building configs: ${configEntries.map(([name]) => name).join(', ')}.\n`
+    `Building configs: ${configEntries.map(([name]) => name).join(', ')}.\n`,
   );
   return configEntries.map(([, config]) => config);
 };
