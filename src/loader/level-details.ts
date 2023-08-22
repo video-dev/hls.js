@@ -88,7 +88,7 @@ export class LevelDetails {
   get hasProgramDateTime(): boolean {
     if (this.fragments.length) {
       return Number.isFinite(
-        this.fragments[this.fragments.length - 1].programDateTime as number
+        this.fragments[this.fragments.length - 1].programDateTime as number,
       );
     }
     return false;

@@ -124,11 +124,11 @@ describe('BufferController', function () {
       bufferController.sourceBuffer[name].dispatchEvent(new Event('updateend'));
       expect(
         currentOnComplete,
-        'onComplete should have been called on the current operation'
+        'onComplete should have been called on the current operation',
       ).to.have.callCount(i + 1);
       expect(
         shiftAndExecuteNextSpy,
-        'The queue should have been cycled'
+        'The queue should have been cycled',
       ).to.have.callCount(i + 1);
     });
   });
@@ -149,15 +149,15 @@ describe('BufferController', function () {
 
       expect(
         onError,
-        'onError should have been called on the current operation'
+        'onError should have been called on the current operation',
       ).to.have.callCount(i + 1);
       expect(
         onError,
-        'onError should be called with the error event'
+        'onError should be called with the error event',
       ).to.have.been.calledWith(errorEvent);
       expect(
         triggerSpy,
-        'ERROR should have been triggered in response to the SourceBuffer error'
+        'ERROR should have been triggered in response to the SourceBuffer error',
       ).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_APPENDING_ERROR,
@@ -191,21 +191,21 @@ describe('BufferController', function () {
         bufferController.onBufferAppending(Events.BUFFER_APPENDING, data);
         expect(
           queueAppendSpy,
-          'The append operation should have been enqueued'
+          'The append operation should have been enqueued',
         ).to.have.callCount(i + 1);
 
         buffer.dispatchEvent(new Event('updateend'));
         expect(
           buffer.ended,
-          `The ${name} buffer should not be marked as true if an append occurred`
+          `The ${name} buffer should not be marked as true if an append occurred`,
         ).to.be.false;
         expect(
           buffer.appendBuffer,
-          'appendBuffer should have been called with the remuxed data'
+          'appendBuffer should have been called with the remuxed data',
         ).to.have.been.calledWith(segmentData);
         expect(
           triggerSpy,
-          'BUFFER_APPENDED should be triggered upon completion of the operation'
+          'BUFFER_APPENDED should be triggered upon completion of the operation',
         ).to.have.been.calledWith(Events.BUFFER_APPENDED, {
           parent: 'main',
           type: name,
@@ -219,7 +219,7 @@ describe('BufferController', function () {
         });
         expect(
           shiftAndExecuteNextSpy,
-          'The queue should have been cycled'
+          'The queue should have been cycled',
         ).to.have.callCount(i + 1);
       });
     });
@@ -239,16 +239,16 @@ describe('BufferController', function () {
 
         expect(
           queueAppendSpy,
-          'The append operation should have been enqueued'
+          'The append operation should have been enqueued',
         ).to.have.callCount(i + 1);
         expect(
           shiftAndExecuteNextSpy,
-          'The queue should have been cycled'
+          'The queue should have been cycled',
         ).to.have.callCount(i + 1);
       });
       expect(
         triggerSpy,
-        'Buffer append error event should have been triggered'
+        'Buffer append error event should have been triggered',
       ).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_APPEND_ERROR,
@@ -277,11 +277,11 @@ describe('BufferController', function () {
           try {
             expect(
               data.frag,
-              'The frag emitted in FRAG_BUFFERED should be the frag passed in onFragParsed'
+              'The frag emitted in FRAG_BUFFERED should be the frag passed in onFragParsed',
             ).to.equal(frag);
             expect(
               data.id,
-              'The id of the event should be equal to the frag type'
+              'The id of the event should be equal to the frag type',
             ).to.equal(frag.type);
           } catch (e) {
             reject(e);
@@ -313,31 +313,31 @@ describe('BufferController', function () {
 
       expect(
         queueAppendSpy,
-        'A remove operation should have been appended to each queue'
+        'A remove operation should have been appended to each queue',
       ).to.have.been.calledTwice;
       queueNames.forEach((name, i) => {
         const buffer = bufferController.sourceBuffer[name];
         expect(
           buffer.remove,
-          `Remove should have been called once on the ${name} SourceBuffer`
+          `Remove should have been called once on the ${name} SourceBuffer`,
         ).to.have.been.calledOnce;
         expect(
           buffer.remove,
-          'Remove should have been called with the expected range'
+          'Remove should have been called with the expected range',
         ).to.have.been.calledWith(0, 10);
 
         buffer.dispatchEvent(new Event('updateend'));
         expect(
           triggerSpy,
-          'The BUFFER_FLUSHED event should be called once per buffer'
+          'The BUFFER_FLUSHED event should be called once per buffer',
         ).to.have.callCount(i + 1);
         expect(
           triggerSpy,
-          'BUFFER_FLUSHED should be the only event fired'
+          'BUFFER_FLUSHED should be the only event fired',
         ).to.have.been.calledWith(Events.BUFFER_FLUSHED);
         expect(
           shiftAndExecuteNextSpy,
-          'The queue should have been cycled'
+          'The queue should have been cycled',
         ).to.have.callCount(i + 1);
       });
     });
@@ -351,7 +351,7 @@ describe('BufferController', function () {
 
       expect(
         queueAppendSpy,
-        'No remove operations should have been appended'
+        'No remove operations should have been appended',
       ).to.have.callCount(0);
     });
 
@@ -365,7 +365,7 @@ describe('BufferController', function () {
       });
       expect(
         queueAppendSpy,
-        'Queue one remove for muxed "audiovideo" SourceBuffer'
+        'Queue one remove for muxed "audiovideo" SourceBuffer',
       ).to.have.been.calledOnce;
     });
 
@@ -378,17 +378,17 @@ describe('BufferController', function () {
 
       expect(
         queueAppendSpy,
-        'Two remove operations should have been appended'
+        'Two remove operations should have been appended',
       ).to.have.callCount(2);
       expect(
         shiftAndExecuteNextSpy,
-        'The queues should have been cycled'
+        'The queues should have been cycled',
       ).to.have.callCount(2);
       queueNames.forEach((name) => {
         const buffer = bufferController.sourceBuffer[name];
         expect(
           buffer.remove,
-          `Remove should not have been called on the ${name} buffer`
+          `Remove should not have been called on the ${name} buffer`,
         ).to.have.not.been.called;
       });
       expect(triggerSpy, 'No event should have been triggered').to.have.not.been
@@ -433,7 +433,7 @@ describe('BufferController', function () {
       queueNames.forEach((name) => {
         expect(
           triggerSpy,
-          `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`
+          `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`,
         ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
           startOffset: 0,
           endOffset: 20,
@@ -449,7 +449,7 @@ describe('BufferController', function () {
       bufferController.flushBackBuffer();
 
       expect(
-        triggerSpy.withArgs(Events.LIVE_BACK_BUFFER_REACHED)
+        triggerSpy.withArgs(Events.LIVE_BACK_BUFFER_REACHED),
       ).to.have.callCount(2);
     });
 
@@ -460,7 +460,7 @@ describe('BufferController', function () {
       queueNames.forEach((name) => {
         expect(
           triggerSpy,
-          `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`
+          `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`,
         ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
           startOffset: 0,
           endOffset: 10,
@@ -537,11 +537,11 @@ describe('BufferController', function () {
       // media is null prior to attaching
       bufferController.media = null;
       expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(
-        Infinity
+        Infinity,
       );
       bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
       expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(
-        Infinity
+        Infinity,
       );
       // simulate attach and open source buffers
       bufferController.media = media;

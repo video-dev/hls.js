@@ -47,7 +47,7 @@ describe('AbrController', function () {
     it('estimate can be reset with new value', function () {
       const { abrEwmaDefaultEstimate } = hls.config;
       expect(abrController.bwEstimator.getEstimate()).to.equal(
-        abrEwmaDefaultEstimate
+        abrEwmaDefaultEstimate,
       );
       const updatedEstimate = 5e6 + 1;
       abrController.resetEstimator(updatedEstimate);
@@ -86,7 +86,7 @@ describe('AbrController', function () {
       abrController.resetEstimator(hls.levels[hls.firstLevel].bitrate);
       expect(abrController.firstAutoLevel).to.equal(
         4,
-        'firstAutoLevel exact match'
+        'firstAutoLevel exact match',
       );
 
       hls.autoLevelCapping = 3;
@@ -95,7 +95,7 @@ describe('AbrController', function () {
       expect(hls.maxAutoLevel).to.equal(3);
       expect(abrController.firstAutoLevel).to.equal(
         3,
-        'firstAutoLevel capped to 3'
+        'firstAutoLevel capped to 3',
       );
 
       hls.autoLevelCapping = 0;
@@ -104,7 +104,7 @@ describe('AbrController', function () {
       expect(hls.maxAutoLevel).to.equal(0);
       expect(abrController.firstAutoLevel).to.equal(
         0,
-        'firstAutoLevel capped to 0'
+        'firstAutoLevel capped to 0',
       );
     });
 
@@ -136,7 +136,7 @@ describe('AbrController', function () {
         abrController,
         0,
         requiredBitrateForLevel2 / 8,
-        1000
+        1000,
       );
       expect(abrController.nextAutoLevel).to.equal(2);
     });
@@ -165,7 +165,7 @@ function loadAndBufferFragment(
   sizeInBytes: number,
   timeToLoad: number,
   timeToFirstByte: number = 0,
-  timeToParse: number = 0
+  timeToParse: number = 0,
 ) {
   const frag = new Fragment(PlaylistLevelType.MAIN, '');
   frag.level = levelIndex;
@@ -187,7 +187,7 @@ function loadAndBufferFragment(
       part: null,
       payload: new ArrayBuffer(0),
       networkDetails: null,
-    }
+    },
   );
   ((abrController as any).onFragBuffered as HlsListeners[Events.FRAG_BUFFERED])(
     Events.FRAG_BUFFERED,
@@ -196,14 +196,14 @@ function loadAndBufferFragment(
       part: null,
       stats: frag.stats,
       id: 'video',
-    }
+    },
   );
 }
 
 function setForwardBufferlength(
   sandbox: sinon.SinonSandbox,
   hls: Hls,
-  length: number
+  length: number,
 ) {
   sandbox
     .stub((hls as any).streamController, 'getMainFwdBufferInfo')

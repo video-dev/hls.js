@@ -84,7 +84,7 @@ export type DRMSystemConfiguration = {
     this: Hls,
     initDataType: string,
     initData: ArrayBuffer | null,
-    keyContext: MediaKeySessionContext
+    keyContext: MediaKeySessionContext,
   ) =>
     | { initDataType: string; initData: ArrayBuffer | null }
     | undefined
@@ -101,13 +101,13 @@ export type EMEControllerConfig = {
     xhr: XMLHttpRequest,
     url: string,
     keyContext: MediaKeySessionContext,
-    licenseChallenge: Uint8Array
+    licenseChallenge: Uint8Array,
   ) => void | Uint8Array | Promise<Uint8Array | void>;
   licenseResponseCallback?: (
     this: Hls,
     xhr: XMLHttpRequest,
     url: string,
-    keyContext: MediaKeySessionContext
+    keyContext: MediaKeySessionContext,
   ) => ArrayBuffer;
   emeEnabled: boolean;
   widevineLicenseUrl?: string;
@@ -532,7 +532,7 @@ function timelineConfig(): TimelineControllerConfig {
  */
 export function mergeConfig(
   defaultConfig: HlsConfig,
-  userConfig: Partial<HlsConfig>
+  userConfig: Partial<HlsConfig>,
 ): HlsConfig {
   if (
     (userConfig.liveSyncDurationCount ||
@@ -540,7 +540,7 @@ export function mergeConfig(
     (userConfig.liveSyncDuration || userConfig.liveMaxLatencyDuration)
   ) {
     throw new Error(
-      "Illegal hls.js config: don't mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration"
+      "Illegal hls.js config: don't mix up liveSyncDurationCount/liveMaxLatencyDurationCount and liveSyncDuration/liveMaxLatencyDuration",
     );
   }
 
@@ -551,7 +551,7 @@ export function mergeConfig(
         userConfig.liveSyncDurationCount)
   ) {
     throw new Error(
-      'Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"'
+      'Illegal hls.js config: "liveMaxLatencyDurationCount" must be greater than "liveSyncDurationCount"',
     );
   }
 
@@ -561,7 +561,7 @@ export function mergeConfig(
       userConfig.liveMaxLatencyDuration <= userConfig.liveSyncDuration)
   ) {
     throw new Error(
-      'Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"'
+      'Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"',
     );
   }
 
@@ -609,10 +609,10 @@ export function mergeConfig(
     if (report.length) {
       logger.warn(
         `hls.js config: "${report.join(
-          '", "'
+          '", "',
         )}" setting(s) are deprecated, use "${policyName}": ${JSON.stringify(
-          userConfig[policyName]
-        )}`
+          userConfig[policyName],
+        )}`,
       );
     }
   });
@@ -644,7 +644,7 @@ export function enableStreamingMode(config) {
   if (currentLoader !== FetchLoader && currentLoader !== XhrLoader) {
     // If a developer has configured their own loader, respect that choice
     logger.log(
-      '[config]: Custom loader detected, cannot enable progressive streaming'
+      '[config]: Custom loader detected, cannot enable progressive streaming',
     );
     config.progressive = false;
   } else {

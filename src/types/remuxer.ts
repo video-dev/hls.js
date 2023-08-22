@@ -21,13 +21,13 @@ export interface Remuxer {
     timeOffset: number,
     accurateTimeOffset: boolean,
     flush: boolean,
-    playlistType: PlaylistLevelType
+    playlistType: PlaylistLevelType,
   ): RemuxerResult;
   resetInitSegment(
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    decryptdata: DecryptData | null
+    decryptdata: DecryptData | null,
   ): void;
   resetTimeStamp(defaultInitPTS: RationalTimestamp | null): void;
   resetNextTimestamp(): void;

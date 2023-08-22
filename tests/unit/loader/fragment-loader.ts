@@ -25,7 +25,7 @@ describe('FragmentLoader tests', function () {
 
   beforeEach(function () {
     fragmentLoader = new FragmentLoader(
-      mergeConfig(hlsDefaultConfig, { loader: MockXhr })
+      mergeConfig(hlsDefaultConfig, { loader: MockXhr }),
     );
     frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.url = 'foo';
@@ -76,13 +76,13 @@ describe('FragmentLoader tests', function () {
         stats,
         context,
         response.data,
-        networkDetails
+        networkDetails,
       );
       fragmentLoaderPrivates.loader.callbacks.onSuccess(
         response,
         stats,
         context,
-        networkDetails
+        networkDetails,
       );
     });
   });
@@ -118,7 +118,7 @@ describe('FragmentLoader tests', function () {
         response,
         context,
         networkDetails,
-        stats
+        stats,
       );
     }).then((error: LoadError) => {
       expect(error).to.be.instanceOf(LoadError);
@@ -133,7 +133,7 @@ describe('FragmentLoader tests', function () {
           networkDetails,
           stats,
         },
-        JSON.stringify(error.data, null, 2)
+        JSON.stringify(error.data, null, 2),
       );
       expect(fragmentLoaderPrivates.loader).to.not.exist;
       expect(frag.loader).to.not.exist;

@@ -29,7 +29,7 @@ export function getAudioConfig(
   observer,
   data: Uint8Array,
   offset: number,
-  audioCodec: string
+  audioCodec: string,
 ): AudioConfig | void {
   let adtsObjectType: number;
   let adtsExtensionSamplingIndex: number;
@@ -57,7 +57,7 @@ export function getAudioConfig(
   // byte 3
   adtsChannelConfig |= (data[offset + 3] & 0xc0) >>> 6;
   logger.log(
-    `manifest codec:${audioCodec}, ADTS type:${adtsObjectType}, samplingIndex:${adtsSamplingIndex}`
+    `manifest codec:${audioCodec}, ADTS type:${adtsObjectType}, samplingIndex:${adtsSamplingIndex}`,
   );
   // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
   if (/firefox/i.test(userAgent)) {
@@ -230,7 +230,7 @@ export function initTrackConfig(
   observer: HlsEventEmitter,
   data: Uint8Array,
   offset: number,
-  audioCodec: string
+  audioCodec: string,
 ) {
   if (!track.samplerate) {
     const config = getAudioConfig(observer, data, offset, audioCodec);
@@ -243,7 +243,7 @@ export function initTrackConfig(
     track.codec = config.codec;
     track.manifestCodec = config.manifestCodec;
     logger.log(
-      `parsed codec:${track.codec}, rate:${config.samplerate}, channels:${config.channelCount}`
+      `parsed codec:${track.codec}, rate:${config.samplerate}, channels:${config.channelCount}`,
     );
   }
 }
@@ -254,7 +254,7 @@ export function getFrameDuration(samplerate: number): number {
 
 export function parseFrameHeader(
   data: Uint8Array,
-  offset: number
+  offset: number,
 ): FrameHeader | void {
   // The protection skip bit tells us if we have 2 bytes of CRC data at the end of the ADTS header
   const headerLength = getHeaderLength(data, offset);
@@ -273,7 +273,7 @@ export function appendFrame(
   data: Uint8Array,
   offset: number,
   pts: number,
-  frameIndex: number
+  frameIndex: number,
 ): AudioFrame {
   const frameDuration = getFrameDuration(track.samplerate as number);
   const stamp = pts + frameIndex * frameDuration;

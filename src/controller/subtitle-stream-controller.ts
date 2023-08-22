@@ -47,14 +47,14 @@ export class SubtitleStreamController
   constructor(
     hls: Hls,
     fragmentTracker: FragmentTracker,
-    keyLoader: KeyLoader
+    keyLoader: KeyLoader,
   ) {
     super(
       hls,
       fragmentTracker,
       keyLoader,
       '[subtitle-stream-controller]',
-      PlaylistLevelType.SUBTITLE
+      PlaylistLevelType.SUBTITLE,
     );
     this._registerListeners();
   }
@@ -124,7 +124,7 @@ export class SubtitleStreamController
 
   onSubtitleFragProcessed(
     event: Events.SUBTITLE_FRAG_PROCESSED,
-    data: SubtitleFragProcessed
+    data: SubtitleFragProcessed,
   ) {
     const { frag, success } = data;
     this.fragPrevious = frag;
@@ -187,7 +187,7 @@ export class SubtitleStreamController
       this.fragmentTracker.removeFragmentsInRange(
         startOffset,
         endOffsetSubtitles,
-        PlaylistLevelType.SUBTITLE
+        PlaylistLevelType.SUBTITLE,
       );
     }
   }
@@ -217,11 +217,11 @@ export class SubtitleStreamController
   // Got all new subtitle levels.
   onSubtitleTracksUpdated(
     event: Events.SUBTITLE_TRACKS_UPDATED,
-    { subtitleTracks }: SubtitleTracksUpdatedData
+    { subtitleTracks }: SubtitleTracksUpdatedData,
   ) {
     if (subtitleOptionsIdentical(this.levels, subtitleTracks)) {
       this.levels = subtitleTracks.map(
-        (mediaPlaylist) => new Level(mediaPlaylist)
+        (mediaPlaylist) => new Level(mediaPlaylist),
       );
       return;
     }
@@ -234,7 +234,7 @@ export class SubtitleStreamController
     this.fragmentTracker.removeFragmentsInRange(
       0,
       Number.POSITIVE_INFINITY,
-      PlaylistLevelType.SUBTITLE
+      PlaylistLevelType.SUBTITLE,
     );
     this.fragPrevious = null;
     this.mediaBuffer = null;
@@ -242,7 +242,7 @@ export class SubtitleStreamController
 
   onSubtitleTrackSwitch(
     event: Events.SUBTITLE_TRACK_SWITCH,
-    data: TrackSwitchedData
+    data: TrackSwitchedData,
   ) {
     this.currentTrackId = data.id;
 
@@ -266,7 +266,7 @@ export class SubtitleStreamController
   // Got a new set of subtitle fragments.
   onSubtitleTrackLoaded(
     event: Events.SUBTITLE_TRACK_LOADED,
-    data: TrackLoadedData
+    data: TrackLoadedData,
   ) {
     const { details: newDetails, id: trackId } = data;
     const { currentTrackId, levels } = this;
@@ -324,7 +324,7 @@ export class SubtitleStreamController
         null,
         newDetails.fragments,
         this.media.currentTime,
-        0
+        0,
       );
       if (!foundFrag) {
         this.warn('Subtitle playlist not aligned with playback');
@@ -356,7 +356,7 @@ export class SubtitleStreamController
         .decrypt(
           new Uint8Array(payload),
           decryptData.key.buffer,
-          decryptData.iv.buffer
+          decryptData.iv.buffer,
         )
         .catch((err) => {
           hls.trigger(Events.ERROR, {
@@ -404,13 +404,13 @@ export class SubtitleStreamController
       const bufferedInfo = BufferHelper.bufferedInfo(
         this.tracksBuffered[this.currentTrackId] || [],
         currentTime,
-        config.maxBufferHole
+        config.maxBufferHole,
       );
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
 
       const mainBufferInfo = this.getFwdBufferInfo(
         this.media,
-        PlaylistLevelType.MAIN
+        PlaylistLevelType.MAIN,
       );
       const trackDetails = track.details as LevelDetails;
       const maxBufLen =
@@ -434,7 +434,7 @@ export class SubtitleStreamController
           fragPrevious,
           fragments,
           Math.max(fragments[0].start, targetBufferTime),
-          lookupTolerance
+          lookupTolerance,
         );
         if (
           !foundFrag &&
@@ -482,7 +482,7 @@ export class SubtitleStreamController
   protected loadFragment(
     frag: Fragment,
     level: Level,
-    targetBufferTime: number
+    targetBufferTime: number,
   ) {
     this.fragCurrent = frag;
     if (frag.sn === 'initSegment') {
@@ -495,7 +495,7 @@ export class SubtitleStreamController
 
   get mediaBufferTimeRanges(): Bufferable {
     return new BufferableInstance(
-      this.tracksBuffered[this.currentTrackId] || []
+      this.tracksBuffered[this.currentTrackId] || [],
     );
   }
 }
@@ -507,12 +507,12 @@ class BufferableInstance implements Bufferable {
     const getRange = (
       name: 'start' | 'end',
       index: number,
-      length: number
+      length: number,
     ): number => {
       index = index >>> 0;
       if (index > length - 1) {
         throw new DOMException(
-          `Failed to execute '${name}' on 'TimeRanges': The index provided (${index}) is greater than the maximum bound (${length})`
+          `Failed to execute '${name}' on 'TimeRanges': The index provided (${index}) is greater than the maximum bound (${length})`,
         );
       }
       return timeranges[index][name];

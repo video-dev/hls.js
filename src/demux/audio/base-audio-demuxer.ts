@@ -28,7 +28,7 @@ class BaseAudioDemuxer implements Demuxer {
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    trackDuration: number
+    trackDuration: number,
   ) {
     this._id3Track = {
       type: 'id3',
@@ -59,7 +59,7 @@ class BaseAudioDemuxer implements Demuxer {
   appendFrame(
     track: DemuxedAudioTrack,
     data: Uint8Array,
-    offset: number
+    offset: number,
   ): AudioFrame | void {}
 
   // feed incoming data to the front of the parsing pipeline
@@ -147,10 +147,12 @@ class BaseAudioDemuxer implements Demuxer {
   demuxSampleAes(
     data: Uint8Array,
     keyData: KeyData,
-    timeOffset: number
+    timeOffset: number,
   ): Promise<DemuxerResult> {
     return Promise.reject(
-      new Error(`[${this}] This demuxer does not support Sample-AES decryption`)
+      new Error(
+        `[${this}] This demuxer does not support Sample-AES decryption`,
+      ),
     );
   }
 
@@ -182,7 +184,7 @@ class BaseAudioDemuxer implements Demuxer {
 export const initPTSFn = (
   timestamp: number | undefined,
   timeOffset: number,
-  initPTS: RationalTimestamp | null
+  initPTS: RationalTimestamp | null,
 ): number => {
   if (Number.isFinite(timestamp as number)) {
     return timestamp! * 90;

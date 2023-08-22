@@ -47,7 +47,7 @@ export class DateRange {
           dateRangeAttr[key] !== previousAttr[key]
         ) {
           logger.warn(
-            `DATERANGE tag attribute: "${key}" does not match for tags with ID: "${dateRangeAttr.ID}"`
+            `DATERANGE tag attribute: "${key}" does not match for tags with ID: "${dateRangeAttr.ID}"`,
           );
           this._badValueForSameId = key;
           break;
@@ -57,7 +57,7 @@ export class DateRange {
       dateRangeAttr = Object.assign(
         new AttrList({}),
         previousAttr,
-        dateRangeAttr
+        dateRangeAttr,
       );
     }
     this.attr = dateRangeAttr;
@@ -96,7 +96,7 @@ export class DateRange {
   get duration(): number | null {
     if (DateRangeAttribute.DURATION in this.attr) {
       const duration = this.attr.decimalFloatingPoint(
-        DateRangeAttribute.DURATION
+        DateRangeAttribute.DURATION,
       );
       if (Number.isFinite(duration)) {
         return duration;
@@ -110,7 +110,7 @@ export class DateRange {
   get plannedDuration(): number | null {
     if (DateRangeAttribute.PLANNED_DURATION in this.attr) {
       return this.attr.decimalFloatingPoint(
-        DateRangeAttribute.PLANNED_DURATION
+        DateRangeAttribute.PLANNED_DURATION,
       );
     }
     return null;

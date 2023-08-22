@@ -81,7 +81,7 @@ export default class Decrypter {
   public decrypt(
     data: Uint8Array | ArrayBuffer,
     key: ArrayBuffer,
-    iv: ArrayBuffer
+    iv: ArrayBuffer,
   ): Promise<ArrayBuffer> {
     if (this.useSoftware) {
       return new Promise((resolve, reject) => {
@@ -102,7 +102,7 @@ export default class Decrypter {
   public softwareDecrypt(
     data: Uint8Array,
     key: ArrayBuffer,
-    iv: ArrayBuffer
+    iv: ArrayBuffer,
   ): ArrayBuffer | null {
     const { currentIV, currentResult, remainderData } = this;
     this.logOnce('JS AES decrypt');
@@ -146,7 +146,7 @@ export default class Decrypter {
   public webCryptoDecrypt(
     data: Uint8Array,
     key: ArrayBuffer,
-    iv: ArrayBuffer
+    iv: ArrayBuffer,
   ): Promise<ArrayBuffer> {
     const subtle = this.subtle;
     if (this.key !== key || !this.fastAesKey) {
@@ -166,7 +166,7 @@ export default class Decrypter {
       })
       .catch((err) => {
         logger.warn(
-          `[decrypter]: WebCrypto Error, disable WebCrypto API, ${err.name}: ${err.message}`
+          `[decrypter]: WebCrypto Error, disable WebCrypto API, ${err.name}: ${err.message}`,
         );
 
         return this.onWebCryptoError(data, key, iv);

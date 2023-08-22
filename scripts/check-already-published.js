@@ -24,8 +24,8 @@ async function versionPublished() {
   //https://github.com/npm/registry/blob/master/docs/REGISTRY-API.md
   const response = await fetch(
     `https://registry.npmjs.org/${encodeURIComponent(
-      packageJson.name
-    )}/${encodeURIComponent(packageJson.version)}`
+      packageJson.name,
+    )}/${encodeURIComponent(packageJson.version)}`,
   );
   if (response.status === 200) {
     return true;

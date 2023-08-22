@@ -14,7 +14,7 @@ type PartIntersection = (oldPart: Part, newPart: Part) => void;
 export function updatePTS(
   fragments: Fragment[],
   fromIdx: number,
-  toIdx: number
+  toIdx: number,
 ): void {
   const fragFrom = fragments[fromIdx];
   const fragTo = fragments[toIdx];
@@ -59,7 +59,7 @@ export function updateFragPTSDTS(
   startPTS: number,
   endPTS: number,
   startDTS: number,
-  endDTS: number
+  endDTS: number,
 ): number {
   const parsedMediaDuration = endPTS - startPTS;
   if (parsedMediaDuration <= 0) {
@@ -134,7 +134,7 @@ export function updateFragPTSDTS(
 
 export function mergeDetails(
   oldDetails: LevelDetails,
-  newDetails: LevelDetails
+  newDetails: LevelDetails,
 ): void {
   // Track the last initSegment processed. Initialize it to the last one on the timeline.
   let currentInitSegment: Fragment | null = null;
@@ -194,7 +194,7 @@ export function mergeDetails(
         newFrag.initSegment = oldFrag.initSegment;
         currentInitSegment = oldFrag.initSegment;
       }
-    }
+    },
   );
 
   if (currentInitSegment) {
@@ -215,7 +215,7 @@ export function mergeDetails(
     newDetails.deltaUpdateFailed = newDetails.fragments.some((frag) => !frag);
     if (newDetails.deltaUpdateFailed) {
       logger.warn(
-        '[level-helper] Previous playlist missing segments skipped in delta playlist'
+        '[level-helper] Previous playlist missing segments skipped in delta playlist',
       );
       for (let i = newDetails.skippedSegments; i--; ) {
         newDetails.fragments.shift();
@@ -226,7 +226,7 @@ export function mergeDetails(
       newDetails.dateRanges = mergeDateRanges(
         oldDetails.dateRanges,
         newDetails.dateRanges,
-        newDetails.recentlyRemovedDateranges
+        newDetails.recentlyRemovedDateranges,
       );
     }
   }
@@ -249,7 +249,7 @@ export function mergeDetails(
     (oldPart: Part, newPart: Part) => {
       newPart.elementaryStreams = oldPart.elementaryStreams;
       newPart.stats = oldPart.stats;
-    }
+    },
   );
 
   // if at least one fragment contains PTS info, recompute PTS information for all fragments
@@ -260,7 +260,7 @@ export function mergeDetails(
       PTSFrag.startPTS,
       PTSFrag.endPTS,
       PTSFrag.startDTS,
-      PTSFrag.endDTS
+      PTSFrag.endDTS,
     );
   } else {
     // ensure that delta is within oldFragments range
@@ -294,7 +294,7 @@ export function mergeDetails(
 function mergeDateRanges(
   oldDateRanges: Record<string, DateRange>,
   deltaDateRanges: Record<string, DateRange>,
-  recentlyRemovedDateranges: string[] | undefined
+  recentlyRemovedDateranges: string[] | undefined,
 ): Record<string, DateRange> {
   const dateRanges = Object.assign({}, oldDateRanges);
   if (recentlyRemovedDateranges) {
@@ -309,8 +309,8 @@ function mergeDateRanges(
     } else {
       logger.warn(
         `Ignoring invalid Playlist Delta Update DATERANGE tag: "${JSON.stringify(
-          deltaDateRanges[id].attr
-        )}"`
+          deltaDateRanges[id].attr,
+        )}"`,
       );
     }
   });
@@ -320,7 +320,7 @@ function mergeDateRanges(
 export function mapPartIntersection(
   oldParts: Part[] | null,
   newParts: Part[] | null,
-  intersectionFn: PartIntersection
+  intersectionFn: PartIntersection,
 ) {
   if (oldParts && newParts) {
     let delta = 0;
@@ -344,7 +344,7 @@ export function mapPartIntersection(
 export function mapFragmentIntersection(
   oldDetails: LevelDetails,
   newDetails: LevelDetails,
-  intersectionFn: FragmentIntersection
+  intersectionFn: FragmentIntersection,
 ): void {
   const skippedSegments = newDetails.skippedSegments;
   const start =
@@ -378,7 +378,7 @@ export function mapFragmentIntersection(
 
 export function adjustSliding(
   oldDetails: LevelDetails,
-  newDetails: LevelDetails
+  newDetails: LevelDetails,
 ): void {
   const delta =
     newDetails.startSN + newDetails.skippedSegments - oldDetails.startSN;
@@ -403,7 +403,7 @@ export function addSliding(details: LevelDetails, start: number) {
 
 export function computeReloadInterval(
   newDetails: LevelDetails,
-  distanceToLiveEdgeMs: number = Infinity
+  distanceToLiveEdgeMs: number = Infinity,
 ): number {
   let reloadInterval = 1000 * newDetails.targetduration;
 
@@ -435,7 +435,7 @@ export function computeReloadInterval(
 export function getFragmentWithSN(
   level: Level,
   sn: number,
-  fragCurrent: Fragment | null
+  fragCurrent: Fragment | null,
 ): Fragment | null {
   if (!level?.details) {
     return null;
@@ -459,7 +459,7 @@ export function getFragmentWithSN(
 export function getPartWith(
   level: Level,
   sn: number,
-  partIndex: number
+  partIndex: number,
 ): Part | null {
   if (!level?.details) {
     return null;
@@ -470,7 +470,7 @@ export function getPartWith(
 export function findPart(
   partList: Part[] | null | undefined,
   sn: number,
-  partIndex: number
+  partIndex: number,
 ): Part | null {
   if (partList) {
     for (let i = partList.length; i--; ) {

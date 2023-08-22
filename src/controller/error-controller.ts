@@ -159,7 +159,7 @@ export default class ErrorController implements NetworkComponentAPI {
           ) {
             data.errorAction = this.getPlaylistRetryOrSwitchAction(
               data,
-              levelIndex
+              levelIndex,
             );
           } else {
             // Escalate to fatal if not retrying or switching
@@ -173,7 +173,7 @@ export default class ErrorController implements NetworkComponentAPI {
         if (typeof context?.level === 'number') {
           data.errorAction = this.getPlaylistRetryOrSwitchAction(
             data,
-            context.level
+            context.level,
           );
         }
         return;
@@ -194,7 +194,7 @@ export default class ErrorController implements NetworkComponentAPI {
             // otherwise allow playlist retry count to reach max error retries
             data.errorAction = this.getPlaylistRetryOrSwitchAction(
               data,
-              hls.loadLevel
+              hls.loadLevel,
             );
             data.errorAction.action =
               NetworkErrorAction.SendAlternateToPenaltyBox;
@@ -224,7 +224,7 @@ export default class ErrorController implements NetworkComponentAPI {
       case ErrorDetails.BUFFER_APPEND_ERROR:
         data.errorAction = this.getLevelSwitchAction(
           data,
-          data.level ?? hls.loadLevel
+          data.level ?? hls.loadLevel,
         );
         return;
       case ErrorDetails.INTERNAL_EXCEPTION:
@@ -255,7 +255,7 @@ export default class ErrorController implements NetworkComponentAPI {
 
   private getPlaylistRetryOrSwitchAction(
     data: ErrorData,
-    levelIndex: number | null | undefined
+    levelIndex: number | null | undefined,
   ): IErrorAction {
     const hls = this.hls;
     const retryConfig = getRetryConfig(hls.config.playlistLoadPolicy, data);
@@ -265,7 +265,7 @@ export default class ErrorController implements NetworkComponentAPI {
       retryConfig,
       retryCount,
       isTimeoutError(data),
-      httpStatus
+      httpStatus,
     );
     if (retry) {
       return {
@@ -292,11 +292,11 @@ export default class ErrorController implements NetworkComponentAPI {
     const { fragLoadPolicy, keyLoadPolicy } = hls.config;
     const retryConfig = getRetryConfig(
       data.details.startsWith('key') ? keyLoadPolicy : fragLoadPolicy,
-      data
+      data,
     );
     const fragmentErrors = hls.levels.reduce(
       (acc, level) => acc + level.fragmentError,
-      0
+      0,
     );
     // Switch levels when out of retried or level index out of bounds
     if (level) {
@@ -308,7 +308,7 @@ export default class ErrorController implements NetworkComponentAPI {
         retryConfig,
         fragmentErrors,
         isTimeoutError(data),
-        httpStatus
+        httpStatus,
       );
       if (retry) {
         return {
@@ -332,7 +332,7 @@ export default class ErrorController implements NetworkComponentAPI {
 
   private getLevelSwitchAction(
     data: ErrorData,
-    levelIndex: number | null | undefined
+    levelIndex: number | null | undefined,
   ): IErrorAction {
     const hls = this.hls;
     if (levelIndex === null || levelIndex === undefined) {
@@ -371,7 +371,7 @@ export default class ErrorController implements NetworkComponentAPI {
         isVideoCodecError &&
         levels.some(
           ({ codecSet, audioCodec }) =>
-            level.codecSet !== codecSet && level.audioCodec === audioCodec
+            level.codecSet !== codecSet && level.audioCodec === audioCodec,
         );
       const { type: playlistErrorType, groupId: playlistErrorGroupId } =
         data.context ?? {};
@@ -391,7 +391,7 @@ export default class ErrorController implements NetworkComponentAPI {
               const fragCandidate = findFragmentByPTS(
                 data.frag,
                 levelDetails.fragments,
-                data.frag.start
+                data.frag.start,
               );
               if (fragCandidate?.gap) {
                 continue;
@@ -491,7 +491,7 @@ export default class ErrorController implements NetworkComponentAPI {
           errorAction.resolved = true;
         }
         this.warn(
-          `Restricting playback to HDCP-LEVEL of "${hls.maxHdcpLevel}" or lower`
+          `Restricting playback to HDCP-LEVEL of "${hls.maxHdcpLevel}" or lower`,
         );
         break;
     }
@@ -536,7 +536,7 @@ export default class ErrorController implements NetworkComponentAPI {
         this.warn(
           `Switching to Redundant Stream ${newUrlId + 1}/${redundantLevels}: "${
             level.url[newUrlId]
-          }" after ${data.details}`
+          }" after ${data.details}`,
         );
         this.playlistError = 0;
         hls.levels.forEach((lv) => {
@@ -566,7 +566,7 @@ export default class ErrorController implements NetworkComponentAPI {
 function checkExpired(
   penalizedRendition: PenalizedRendition,
   data: ErrorData,
-  currentPenaltyState: PenalizedRendition | undefined
+  currentPenaltyState: PenalizedRendition | undefined,
 ): boolean {
   // Expire penalty for switching back to rendition after RENDITION_PENALTY_DURATION_MS
   if (
@@ -582,7 +582,7 @@ function checkExpired(
     const candidateFrag = findFragmentByPTS(
       null,
       lastErrorDetails.fragments,
-      position
+      position,
     );
     if (candidateFrag && !candidateFrag.gap) {
       return true;

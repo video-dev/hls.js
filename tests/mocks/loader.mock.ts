@@ -21,7 +21,7 @@ export class MockXhr implements Loader<LoaderContext> {
   load(
     context: LoaderContext,
     config: LoaderConfiguration,
-    callbacks: LoaderCallbacks<LoaderContext>
+    callbacks: LoaderCallbacks<LoaderContext>,
   ) {
     this.stats.loading.start = self.performance.now();
     this.context = context;

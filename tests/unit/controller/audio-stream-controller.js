@@ -54,7 +54,7 @@ describe('AudioStreamController', function () {
     audioStreamController = new AudioStreamController(
       hls,
       fragmentTracker,
-      keyLoader
+      keyLoader,
     );
   });
 

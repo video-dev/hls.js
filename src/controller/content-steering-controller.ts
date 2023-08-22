@@ -96,7 +96,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       if (this.updated) {
         const ttl = Math.max(
           this.timeToLoad * 1000 - (performance.now() - this.updated),
-          0
+          0,
         );
         this.scheduleRefresh(this.uri, ttl);
       } else {
@@ -148,7 +148,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
 
   private onManifestLoaded(
     event: Events.MANIFEST_LOADED,
-    data: ManifestLoadedData
+    data: ManifestLoadedData,
   ) {
     const { contentSteering } = data;
     if (contentSteering === null) {
@@ -163,7 +163,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
 
   private onManifestParsed(
     event: Events.MANIFEST_PARSED,
-    data: ManifestParsedData
+    data: ManifestParsedData,
   ) {
     this.audioTracks = data.audioTracks;
     this.subtitleTracks = data.subtitleTracks;
@@ -203,14 +203,14 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     if (pathwayLevels.length === 0) {
       const pathwayId = levels[0].pathwayId;
       this.log(
-        `No levels found in Pathway ${this.pathwayId}. Setting initial Pathway to "${pathwayId}"`
+        `No levels found in Pathway ${this.pathwayId}. Setting initial Pathway to "${pathwayId}"`,
       );
       pathwayLevels = this.getLevelsForPathway(pathwayId);
       this.pathwayId = pathwayId;
     }
     if (pathwayLevels.length !== levels.length) {
       this.log(
-        `Found ${pathwayLevels.length}/${levels.length} levels in Pathway "${this.pathwayId}"`
+        `Found ${pathwayLevels.length}/${levels.length} levels in Pathway "${this.pathwayId}"`,
       );
       return pathwayLevels;
     }
@@ -261,7 +261,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
             levelAfterChange.bitrate !== selectedLevel.bitrate
           ) {
             this.log(
-              `Unstable Pathways change from bitrate ${selectedLevel.bitrate} to ${levelAfterChange.bitrate}`
+              `Unstable Pathways change from bitrate ${selectedLevel.bitrate} to ${levelAfterChange.bitrate}`,
             );
           }
           this.hls.nextLoadLevel = selectedIndex;
@@ -295,7 +295,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
             baseLevel.uri,
             baseLevel.attrs['STABLE-VARIANT-ID'],
             'PER-VARIANT-URIS',
-            uriReplacement
+            uriReplacement,
           );
           const attributes = new AttrList(baseLevel.attrs);
           attributes['PATHWAY-ID'] = cloneId;
@@ -316,20 +316,20 @@ export default class ContentSteeringController implements NetworkComponentAPI {
           addGroupId(clonedLevel, 'audio', clonedAudioGroupId);
           addGroupId(clonedLevel, 'text', clonedSubtitleGroupId);
           return clonedLevel;
-        }
+        },
       );
       levels.push(...clonedVariants);
       cloneRenditionGroups(
         this.audioTracks,
         audioGroupCloneMap,
         uriReplacement,
-        cloneId
+        cloneId,
       );
       cloneRenditionGroups(
         this.subtitleTracks,
         subtitleGroupCloneMap,
         uriReplacement,
-        cloneId
+        cloneId,
       );
     });
   }
@@ -377,7 +377,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         response: LoaderResponse,
         stats: LoaderStats,
         context: LoaderContext,
-        networkDetails: any
+        networkDetails: any,
       ) => {
         this.log(`Loaded steering manifest: "${url}"`);
         const steeringData = response.data as SteeringManifest;
@@ -398,7 +398,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
           } catch (error) {
             this.enabled = false;
             this.log(
-              `Failed to parse Steering Manifest RELOAD-URI: ${reloadUri}`
+              `Failed to parse Steering Manifest RELOAD-URI: ${reloadUri}`,
             );
             return;
           }
@@ -423,10 +423,10 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         error: { code: number; text: string },
         context: LoaderContext,
         networkDetails: any,
-        stats: LoaderStats
+        stats: LoaderStats,
       ) => {
         this.log(
-          `Error loading steering manifest: ${error.code} ${error.text} (${context.url})`
+          `Error loading steering manifest: ${error.code} ${error.text} (${context.url})`,
         );
         this.stopLoad();
         if (error.code === 410) {
@@ -452,7 +452,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       onTimeout: (
         stats: LoaderStats,
         context: LoaderContext,
-        networkDetails: any
+        networkDetails: any,
       ) => {
         this.log(`Timeout loading steering manifest (${context.url})`);
         this.scheduleRefresh(this.uri || context.url);
@@ -475,7 +475,7 @@ function cloneRenditionGroups(
   tracks: MediaPlaylist[] | null,
   groupCloneMap: Record<string, string>,
   uriReplacement: UriReplacement,
-  cloneId: string
+  cloneId: string,
 ) {
   if (!tracks) {
     return;
@@ -491,7 +491,7 @@ function cloneRenditionGroups(
           track.url,
           track.attrs['STABLE-RENDITION-ID'],
           'PER-RENDITION-URIS',
-          uriReplacement
+          uriReplacement,
         );
         clonedTrack.groupId = clonedTrack.attrs['GROUP-ID'] =
           groupCloneMap[audioGroupId];
@@ -506,7 +506,7 @@ function performUriReplacement(
   uri: string,
   stableId: string | undefined,
   perOptionKey: 'PER-VARIANT-URIS' | 'PER-RENDITION-URIS',
-  uriReplacement: UriReplacement
+  uriReplacement: UriReplacement,
 ): string {
   const {
     HOST: host,

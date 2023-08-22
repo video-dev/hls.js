@@ -13,7 +13,7 @@ const LINEBREAKS = /\r\n|\n\r|\n|\r/g;
 const startsWith = function (
   inputString: string,
   searchString: string,
-  position: number = 0
+  position: number = 0,
 ) {
   return (
     inputString.slice(position, position + searchString.length) === searchString
@@ -61,7 +61,7 @@ const hash = function (text: string) {
 export function generateCueId(
   startTime: number,
   endTime: number,
-  text: string
+  text: string,
 ) {
   return hash(startTime.toString()) + hash(endTime.toString()) + hash(text);
 }
@@ -97,7 +97,7 @@ export function parseWebVTT(
   cc: number,
   timeOffset: number,
   callBack: (cues: VTTCue[]) => void,
-  errorCallBack: (error: Error) => void
+  errorCallBack: (error: Error) => void,
 ) {
   const parser = new VTTParser();
   // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
@@ -146,7 +146,7 @@ export function parseWebVTT(
     const startTime =
       normalizePts(
         (cue.startTime + cueOffset - timestampMapLOCAL) * 90000,
-        timeOffset * 90000
+        timeOffset * 90000,
       ) / 90000;
     cue.startTime = Math.max(startTime, 0);
     cue.endTime = Math.max(startTime + duration, 0);

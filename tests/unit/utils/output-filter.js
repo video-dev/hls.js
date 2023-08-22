@@ -32,7 +32,7 @@ describe('OutputFilter', function () {
       1,
       0,
       1,
-      lastScreen
+      lastScreen,
     );
   });
 
@@ -47,7 +47,7 @@ describe('OutputFilter', function () {
       1,
       0,
       4,
-      lastScreen
+      lastScreen,
     );
   });
 

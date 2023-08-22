@@ -21,7 +21,7 @@ describe('Fragment class tests', function () {
       const key = new LevelKey(
         'AES-128',
         'https://wamsbayclus001kd-hs.cloudapp.net/HlsHandler.ashx?kid=da3813af-55e6-48e7-aa9f-a4d6031f7b4d',
-        'identity'
+        'identity',
       );
       frag.levelkeys = { identity: key };
       expect(frag.encrypted).to.equal(true);
@@ -32,7 +32,7 @@ describe('Fragment class tests', function () {
         'SAMPLE-AES',
         'skd://one',
         'com.apple.streamingkeydelivery',
-        [1]
+        [1],
       );
       frag.levelkeys = { 'com.apple.streamingkeydelivery': key };
       expect(frag.encrypted).to.equal(true);
@@ -46,7 +46,7 @@ describe('Fragment class tests', function () {
         'SAMPLE-AES',
         'data:text/plain;base64,AAAAPXBzc2gAAAAA7e+LqXnWSs6jyCfc1R0h7QAAAB0aDXdpZGV2aW5lX3Rlc3QiDHRlc3QgY29udGVudA==',
         'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
-        [1]
+        [1],
       );
       frag.levelkeys = { 'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed': key };
       expect(frag.encrypted).to.equal(true);
@@ -60,7 +60,7 @@ describe('Fragment class tests', function () {
         'SAMPLE-AES',
         'data:text/plain;charset=UTF-16;base64,xAEAAAEAAQC6ATwAVwBSAE0ASABFAEEARABFAFIAIAB4AG0AbABuAHMAPQAiAGgAdAB0AHAAOgAvAC8AcwBjAGgAZQBtAGEAcwAuAG0AaQBjAHIAbwBzAG8AZgB0AC4AYwBvAG0ALwBEAFIATQAvADIAMAAwADcALwAwADMALwBQAGwAYQB5AFIAZQBhAGQAeQBIAGUAYQBkAGUAcgAiACAAdgBlAHIAcwBpAG8AbgA9ACIANAAuADAALgAwAC4AMAAiAD4APABEAEEAVABBAD4APABQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsARQBZAEwARQBOAD4AMQA2ADwALwBLAEUAWQBMAEUATgA+ADwAQQBMAEcASQBEAD4AQQBFAFMAQwBUAFIAPAAvAEEATABHAEkARAA+ADwALwBQAFIATwBUAEUAQwBUAEkATgBGAE8APgA8AEsASQBEAD4AdgBHAFYAagBOAEsAZwBZAE0ARQBxAHAATwBMAGgAMQBWAGQAUgBUADAAQQA9AD0APAAvAEsASQBEAD4APAAvAEQAQQBUAEEAPgA8AC8AVwBSAE0ASABFAEEARABFAFIAPgA=',
         'com.microsoft.playready',
-        [1]
+        [1],
       );
       frag.levelkeys = { 'com.microsoft.playready': key };
       expect(frag.encrypted).to.equal(true);

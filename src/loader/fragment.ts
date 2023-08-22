@@ -235,7 +235,7 @@ export class Fragment extends BaseSegment {
     endPTS: number,
     startDTS: number,
     endDTS: number,
-    partial: boolean = false
+    partial: boolean = false,
   ) {
     const { elementaryStreams } = this;
     const info = elementaryStreams[type];
@@ -282,7 +282,7 @@ export class Part extends BaseSegment {
     frag: Fragment,
     baseurl: string,
     index: number,
-    previous?: Part
+    previous?: Part,
   ) {
     super(baseurl);
     this.duration = partAttrs.decimalFloatingPoint('DURATION');

@@ -46,7 +46,7 @@ class FPSController implements ComponentAPI {
 
   protected onMediaAttaching(
     event: Events.MEDIA_ATTACHING,
-    data: MediaAttachingData
+    data: MediaAttachingData,
   ) {
     const config = this.hls.config;
     if (config.capLevelOnFPSDrop) {
@@ -60,7 +60,7 @@ class FPSController implements ComponentAPI {
       self.clearInterval(this.timer);
       this.timer = self.setInterval(
         this.checkFPSInterval.bind(this),
-        config.fpsDroppedMonitoringPeriod
+        config.fpsDroppedMonitoringPeriod,
       );
     }
   }
@@ -68,7 +68,7 @@ class FPSController implements ComponentAPI {
   checkFPS(
     video: HTMLVideoElement,
     decodedFrames: number,
-    droppedFrames: number
+    droppedFrames: number,
   ) {
     const currentTime = performance.now();
     if (decodedFrames) {
@@ -92,7 +92,7 @@ class FPSController implements ComponentAPI {
             let currentLevel = hls.currentLevel;
             logger.warn(
               'drop FPS ratio greater than max allowed value for currentLevel: ' +
-                currentLevel
+                currentLevel,
             );
             if (
               currentLevel > 0 &&
@@ -124,14 +124,14 @@ class FPSController implements ComponentAPI {
         this.checkFPS(
           video,
           videoPlaybackQuality.totalVideoFrames,
-          videoPlaybackQuality.droppedVideoFrames
+          videoPlaybackQuality.droppedVideoFrames,
         );
       } else {
         // HTMLVideoElement doesn't include the webkit types
         this.checkFPS(
           video,
           (video as any).webkitDecodedFrameCount as number,
-          (video as any).webkitDroppedFrameCount as number
+          (video as any).webkitDroppedFrameCount as number,
         );
       }
     }

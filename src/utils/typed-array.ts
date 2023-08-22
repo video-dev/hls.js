@@ -1,7 +1,7 @@
 export function sliceUint8(
   array: Uint8Array,
   start?: number,
-  end?: number
+  end?: number,
 ): Uint8Array {
   // @ts-expect-error This polyfills IE11 usage of Uint8Array slice.
   // It always exists in the TypeScript definition so fails, but it fails at runtime on IE11.

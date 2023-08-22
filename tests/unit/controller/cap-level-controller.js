@@ -33,7 +33,7 @@ describe('CapLevelController', function () {
       const actual = CapLevelController.getMaxLevelByMediaSize(
         levels,
         300,
-        300
+        300,
       );
       expect(expected).to.equal(actual);
     });
@@ -43,7 +43,7 @@ describe('CapLevelController', function () {
       const actual = CapLevelController.getMaxLevelByMediaSize(
         levels,
         500,
-        500
+        500,
       );
       expect(expected).to.equal(actual);
     });
@@ -53,7 +53,7 @@ describe('CapLevelController', function () {
       const actual = CapLevelController.getMaxLevelByMediaSize(
         levels,
         5000,
-        5000
+        5000,
       );
       expect(expected).to.equal(actual);
     });
@@ -69,7 +69,7 @@ describe('CapLevelController', function () {
       const actual = CapLevelController.getMaxLevelByMediaSize(
         undefined,
         5000,
-        5000
+        5000,
       );
       expect(expected).to.equal(actual);
     });
@@ -184,7 +184,7 @@ describe('CapLevelController', function () {
       it('immediately caps and sets a timer for monitoring size size', function () {
         const detectPlayerSizeSpy = sinon.spy(
           capLevelController,
-          'detectPlayerSize'
+          'detectPlayerSize',
         );
         capLevelController.startCapping();
 
@@ -198,7 +198,7 @@ describe('CapLevelController', function () {
         capLevelController.stopCapping();
 
         expect(capLevelController.autoLevelCapping).to.equal(
-          Number.POSITIVE_INFINITY
+          Number.POSITIVE_INFINITY,
         );
         expect(capLevelController.restrictedLevels).to.be.empty;
         expect(capLevelController.firstLevel).to.equal(-1);
@@ -210,7 +210,7 @@ describe('CapLevelController', function () {
       expect(capLevelController.restrictedLevels).to.be.empty;
       expect(capLevelController.timer).to.not.exist;
       expect(capLevelController.autoLevelCapping).to.equal(
-        Number.POSITIVE_INFINITY
+        Number.POSITIVE_INFINITY,
       );
     });
 

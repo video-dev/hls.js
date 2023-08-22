@@ -44,7 +44,7 @@ function startWorker(self) {
           data.typeSupported,
           config,
           data.vendor,
-          data.id
+          data.id,
         );
         enableLogs(config.debug, data.id);
         forwardWorkerLogs();
@@ -61,7 +61,7 @@ function startWorker(self) {
             data.data,
             data.decryptdata,
             data.chunkMeta,
-            data.state
+            data.state,
           );
         if (isPromise(transmuxResult)) {
           self.transmuxer.async = true;
@@ -113,7 +113,7 @@ function startWorker(self) {
           handleFlushResult(
             self,
             transmuxResult as Array<TransmuxerResult>,
-            id
+            id,
           );
         }
         break;
@@ -126,7 +126,7 @@ function startWorker(self) {
 
 function emitTransmuxComplete(
   self: any,
-  transmuxResult: TransmuxerResult
+  transmuxResult: TransmuxerResult,
 ): boolean {
   if (isEmptyResult(transmuxResult.remuxResult)) {
     return false;
@@ -141,7 +141,7 @@ function emitTransmuxComplete(
   }
   self.postMessage(
     { event: 'transmuxComplete', data: transmuxResult },
-    transferable
+    transferable,
   );
   return true;
 }
@@ -150,7 +150,7 @@ function emitTransmuxComplete(
 // in order to minimize message passing overhead
 function addToTransferable(
   transferable: Array<ArrayBuffer>,
-  track: RemuxedTrack
+  track: RemuxedTrack,
 ) {
   if (track.data1) {
     transferable.push(track.data1.buffer);
@@ -163,11 +163,11 @@ function addToTransferable(
 function handleFlushResult(
   self: any,
   results: Array<TransmuxerResult>,
-  chunkMeta: ChunkMetadata
+  chunkMeta: ChunkMetadata,
 ) {
   const parsed = results.reduce(
     (parsed, result) => emitTransmuxComplete(self, result) || parsed,
-    false
+    false,
   );
   if (!parsed) {
     // Emit at least one "transmuxComplete" message even if media is not found to update stream-controller state to PARSING

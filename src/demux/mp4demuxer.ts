@@ -45,19 +45,19 @@ class MP4Demuxer implements Demuxer {
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    trackDuration: number
+    trackDuration: number,
   ) {
     const videoTrack = (this.videoTrack = dummyTrack(
       'video',
-      1
+      1,
     ) as PassthroughTrack);
     const audioTrack = (this.audioTrack = dummyTrack(
       'audio',
-      1
+      1,
     ) as DemuxedAudioTrack);
     const captionTrack = (this.txtTrack = dummyTrack(
       'text',
-      1
+      1,
     ) as DemuxedUserdataTrack);
 
     this.id3Track = dummyTrack('id3', 1) as DemuxedMetadataTrack;
@@ -148,7 +148,7 @@ class MP4Demuxer implements Demuxer {
 
   private extractID3Track(
     videoTrack: PassthroughTrack,
-    timeOffset: number
+    timeOffset: number,
   ): DemuxedMetadataTrack {
     const id3Track = this.id3Track as DemuxedMetadataTrack;
     if (videoTrack.samples.length) {
@@ -188,10 +188,10 @@ class MP4Demuxer implements Demuxer {
   demuxSampleAes(
     data: Uint8Array,
     keyData: KeyData,
-    timeOffset: number
+    timeOffset: number,
   ): Promise<DemuxerResult> {
     return Promise.reject(
-      new Error('The MP4 demuxer does not support SAMPLE-AES decryption')
+      new Error('The MP4 demuxer does not support SAMPLE-AES decryption'),
     );
   }
 

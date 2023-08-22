@@ -12,7 +12,7 @@ function createTestStream(
   description,
   live = false,
   abr = true,
-  skip_ua = []
+  skip_ua = [],
 ) {
   return {
     url: url,
@@ -38,7 +38,7 @@ function createTestStreamWithConfig(target, config) {
     target.description,
     target.live,
     target.abr,
-    target.skip_ua
+    target.skip_ua,
   );
 
   testStream.config = config;
@@ -147,7 +147,7 @@ module.exports = {
     {
       widevineLicenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
       emeEnabled: true,
-    }
+    },
   ),
   audioOnlyMultipleLevels: {
     url: 'https://s3.amazonaws.com/qa.jwplayer.com/~alex/121628/new_master.m3u8',
@@ -183,7 +183,7 @@ module.exports = {
     },
     {
       avBufferOffset: 10.5,
-    }
+    },
   ),
   altAudioAndTracks: {
     // url: 'https://wowzaec2demo.streamlock.net/vod-multitrack/_definst_/smil:ElephantsDream/elephantsdream2.smil/playlist.m3u',
@@ -203,7 +203,7 @@ module.exports = {
       // the timeline shifts roughly 10 seconds seconds back, and as a result buffering skips several segments
       // to adjust for the currentTime now being places at the very end of the stream.
       allowedBufferedRangesInSeekTest: 3,
-    }
+    },
   ),
   altAudioMultiAudioOnly: {
     url: 'https://playertest.longtailvideo.com/adaptive/alt-audio-no-video/angel-one.m3u8',

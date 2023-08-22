@@ -53,7 +53,7 @@ describe('StreamController', function () {
     expect(streamController.hasInterval()).to.be.true;
     expect(streamController.state).to.equal(
       State.IDLE,
-      "StreamController's state should not be STOPPED"
+      "StreamController's state should not be STOPPED",
     );
   };
 
@@ -61,14 +61,14 @@ describe('StreamController', function () {
     expect(streamController.hasInterval()).to.be.false;
     expect(streamController.state).to.equal(
       State.STOPPED,
-      "StreamController's state should be STOPPED"
+      "StreamController's state should be STOPPED",
     );
   };
 
   const loadManifest = (manifest: string): ParsedMultivariantPlaylist => {
     const result = M3U8Parser.parseMasterPlaylist(
       manifest,
-      'http://www.example.com'
+      'http://www.example.com',
     );
     const {
       contentSteering,
@@ -207,19 +207,19 @@ describe('StreamController', function () {
       levelDetails.targetduration = mockFragments[0].duration;
       levelDetails.totalduration = mockFragments.reduce(
         (sum, frag) => sum + frag.duration,
-        0
+        0,
       );
     });
 
     it('PTS search choosing wrong fragment (3 instead of 2) after level loaded', function () {
       const foundFragment = streamController['getNextFragment'](
         bufferEnd,
-        levelDetails
+        levelDetails,
       );
       const resultSN = foundFragment ? foundFragment.sn : -1;
       expect(foundFragment).to.equal(
         mockFragments[3],
-        'Expected sn 3, found sn segment ' + resultSN
+        'Expected sn 3, found sn segment ' + resultSN,
       );
     });
 
@@ -227,12 +227,12 @@ describe('StreamController', function () {
       streamController['fragPrevious'] = null;
       const foundFragment = streamController['getNextFragment'](
         bufferEnd,
-        levelDetails
+        levelDetails,
       );
       const resultSN = foundFragment ? foundFragment.sn : -1;
       expect(foundFragment).to.equal(
         mockFragments[3],
-        'Expected sn 3, found sn segment ' + resultSN
+        'Expected sn 3, found sn segment ' + resultSN,
       );
     });
 
@@ -267,13 +267,13 @@ describe('StreamController', function () {
         it('does PDT search, choosing fragment after level loaded', function () {
           const foundFragment = streamController['getInitialLiveFragment'](
             levelDetails,
-            mockFragments
+            mockFragments,
           );
           expect(foundFragment).to.equal(
             mockFragments[4],
             `Expected sn 4, found sn segment ${
               foundFragment ? foundFragment.sn : -1
-            }`
+            }`,
           );
         });
       });
@@ -303,25 +303,25 @@ describe('StreamController', function () {
           fragPrevious.sn = 0;
           let foundFragment = streamController['getInitialLiveFragment'](
             levelDetails,
-            fragmentsWithoutPdt
+            fragmentsWithoutPdt,
           );
           expect(foundFragment).to.equal(
             fragmentsWithoutPdt[1],
             `Expected sn 1, found sn segment ${
               foundFragment ? foundFragment.sn : -1
-            }`
+            }`,
           );
 
           fragPrevious.sn = 3;
           foundFragment = streamController['getInitialLiveFragment'](
             levelDetails,
-            fragmentsWithoutPdt
+            fragmentsWithoutPdt,
           );
           expect(foundFragment).to.equal(
             fragmentsWithoutPdt[4],
             `Expected sn 4, found sn segment ${
               foundFragment ? foundFragment.sn : -1
-            }`
+            }`,
           );
         });
 
@@ -330,13 +330,13 @@ describe('StreamController', function () {
 
           const foundFragment = streamController['getInitialLiveFragment'](
             levelDetails,
-            fragmentsWithoutPdt
+            fragmentsWithoutPdt,
           );
           expect(foundFragment).to.equal(
             fragmentsWithoutPdt[2],
             `Expected sn 2, found sn segment ${
               foundFragment ? foundFragment.sn : -1
-            }`
+            }`,
           );
         });
 
@@ -344,13 +344,13 @@ describe('StreamController', function () {
           fragPrevious.cc = 0;
           const foundFragment = streamController['getInitialLiveFragment'](
             levelDetails,
-            fragmentsWithoutPdt
+            fragmentsWithoutPdt,
           );
           expect(foundFragment).to.equal(
             fragmentsWithoutPdt[0],
             `Expected sn 0, found sn segment ${
               foundFragment ? foundFragment.sn : -1
-            }`
+            }`,
           );
         });
 
@@ -358,7 +358,7 @@ describe('StreamController', function () {
           fragPrevious.cc = 2;
           const foundFragment = streamController['getInitialLiveFragment'](
             levelDetails,
-            fragmentsWithoutPdt
+            fragmentsWithoutPdt,
           );
           expect(foundFragment).to.equal(null);
         });

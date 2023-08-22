@@ -207,7 +207,7 @@ export class Level {
 export function addGroupId(
   level: Level,
   type: string,
-  id: string | undefined
+  id: string | undefined,
 ): void {
   if (!id) {
     return;

@@ -28,7 +28,7 @@ describe('GapController', function () {
       config,
       media,
       new FragmentTracker(hls),
-      hls
+      hls,
     );
     triggerSpy = sinon.spy(hls, 'trigger');
   });
@@ -298,7 +298,7 @@ describe('GapController', function () {
       });
       expect(gapController.stalled).to.equal(
         null,
-        'seeking while loading fragment'
+        'seeking while loading fragment',
       );
     });
 

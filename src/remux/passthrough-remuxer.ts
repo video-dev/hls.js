@@ -56,7 +56,7 @@ class PassThroughRemuxer implements Remuxer {
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    decryptdata: DecryptData | null
+    decryptdata: DecryptData | null,
   ) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
@@ -77,14 +77,14 @@ class PassThroughRemuxer implements Remuxer {
     if (initData.audio) {
       audioCodec = getParsedTrackCodec(
         initData.audio,
-        ElementaryStreamTypes.AUDIO
+        ElementaryStreamTypes.AUDIO,
       );
     }
 
     if (initData.video) {
       videoCodec = getParsedTrackCodec(
         initData.video,
-        ElementaryStreamTypes.VIDEO
+        ElementaryStreamTypes.VIDEO,
       );
     }
 
@@ -112,7 +112,7 @@ class PassThroughRemuxer implements Remuxer {
       };
     } else {
       logger.warn(
-        '[passthrough-remuxer.ts]: initSegment does not contain moov or trak boxes.'
+        '[passthrough-remuxer.ts]: initSegment does not contain moov or trak boxes.',
       );
     }
     this.initTracks = tracks;
@@ -124,7 +124,7 @@ class PassThroughRemuxer implements Remuxer {
     id3Track: DemuxedMetadataTrack,
     textTrack: DemuxedUserdataTrack,
     timeOffset: number,
-    accurateTimeOffset: boolean
+    accurateTimeOffset: boolean,
   ): RemuxerResult {
     let { initPTS, lastEndTime } = this;
     const result: RemuxerResult = {
@@ -178,7 +178,7 @@ class PassThroughRemuxer implements Remuxer {
       initSegment.initPTS = decodeTime - timeOffset;
       if (initPTS && initPTS.timescale === 1) {
         logger.warn(
-          `Adjusting initPTS by ${initSegment.initPTS - initPTS.baseTime}`
+          `Adjusting initPTS by ${initSegment.initPTS - initPTS.baseTime}`,
         );
       }
       this.initPTS = initPTS = {
@@ -232,14 +232,14 @@ class PassThroughRemuxer implements Remuxer {
       id3Track,
       timeOffset,
       initPTS,
-      initPTS
+      initPTS,
     );
 
     if (textTrack.samples.length) {
       result.text = flushTextTrackUserdataCueSamples(
         textTrack,
         timeOffset,
-        initPTS
+        initPTS,
       );
     }
 
@@ -251,7 +251,7 @@ function isInvalidInitPts(
   initPTS: RationalTimestamp | null,
   startDTS: number,
   timeOffset: number,
-  duration: number
+  duration: number,
 ): initPTS is null {
   if (initPTS === null) {
     return true;
@@ -264,7 +264,7 @@ function isInvalidInitPts(
 
 function getParsedTrackCodec(
   track: InitDataTrack,
-  type: ElementaryStreamTypes.AUDIO | ElementaryStreamTypes.VIDEO
+  type: ElementaryStreamTypes.AUDIO | ElementaryStreamTypes.VIDEO,
 ): string {
   const parsedCodec = track?.codec;
   if (parsedCodec && parsedCodec.length > 4) {
@@ -283,7 +283,7 @@ function getParsedTrackCodec(
     }
     const result = 'mp4a.40.5';
     logger.info(
-      `Parsed audio codec "${parsedCodec}" or audio object type not handled. Using "${result}"`
+      `Parsed audio codec "${parsedCodec}" or audio object type not handled. Using "${result}"`,
     );
     return result;
   }

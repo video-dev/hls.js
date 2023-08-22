@@ -149,7 +149,7 @@ export class TimelineController implements ComponentAPI {
     startTime: number,
     endTime: number,
     screen: CaptionScreen,
-    cueRanges: Array<[number, number]>
+    cueRanges: Array<[number, number]>,
   ) {
     // skip cues which overlap more than 50% with previously parsed time ranges
     let merged = false;
@@ -159,7 +159,7 @@ export class TimelineController implements ComponentAPI {
         cueRange[0],
         cueRange[1],
         startTime,
-        endTime
+        endTime,
       );
       if (overlap >= 0) {
         cueRange[0] = Math.min(cueRange[0], startTime);
@@ -190,7 +190,7 @@ export class TimelineController implements ComponentAPI {
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
   private onInitPtsFound(
     event: Events.INIT_PTS_FOUND,
-    { frag, id, initPTS, timescale }: InitPTSFoundData
+    { frag, id, initPTS, timescale }: InitPTSFoundData,
   ) {
     const { unparsedVttFrags } = this;
     if (id === 'main') {
@@ -274,7 +274,7 @@ export class TimelineController implements ComponentAPI {
   private createTextTrack(
     kind: TextTrackKind,
     label: string,
-    lang?: string
+    lang?: string,
   ): TextTrack | undefined {
     const media = this.media;
     if (!media) {
@@ -285,7 +285,7 @@ export class TimelineController implements ComponentAPI {
 
   private onMediaAttaching(
     event: Events.MEDIA_ATTACHING,
-    data: MediaAttachingData
+    data: MediaAttachingData,
   ) {
     this.media = data.media;
     this._cleanTracks();
@@ -338,7 +338,7 @@ export class TimelineController implements ComponentAPI {
 
   private onSubtitleTracksUpdated(
     event: Events.SUBTITLE_TRACKS_UPDATED,
-    data: SubtitleTracksUpdatedData
+    data: SubtitleTracksUpdatedData,
   ) {
     const tracks: Array<MediaPlaylist> = data.subtitleTracks || [];
     const hasIMSC1 = tracks.some((track) => track.textCodec === IMSC1_CODEC);
@@ -379,7 +379,7 @@ export class TimelineController implements ComponentAPI {
             textTrack = this.createTextTrack(
               textTrackKind,
               track.name,
-              track.lang
+              track.lang,
             );
             if (textTrack) {
               textTrack.mode = 'disabled';
@@ -408,7 +408,7 @@ export class TimelineController implements ComponentAPI {
   }
 
   private _captionsOrSubtitlesFromCharacteristics(
-    track: MediaPlaylist
+    track: MediaPlaylist,
   ): TextTrackKind {
     if (track.attrs.CHARACTERISTICS) {
       if (
@@ -424,12 +424,12 @@ export class TimelineController implements ComponentAPI {
 
   private onManifestLoaded(
     event: Events.MANIFEST_LOADED,
-    data: ManifestLoadedData
+    data: ManifestLoadedData,
   ) {
     if (this.config.enableCEA708Captions && data.captions) {
       data.captions.forEach((captionsTrack) => {
         const instreamIdMatch = /(?:CC|SERVICE)([1-4])/.exec(
-          captionsTrack.instreamId as string
+          captionsTrack.instreamId as string,
         );
         if (!instreamIdMatch) {
           return;
@@ -483,7 +483,7 @@ export class TimelineController implements ComponentAPI {
 
   private onFragLoaded(
     event: Events.FRAG_LOADED,
-    data: FragDecryptedData | FragLoadedData
+    data: FragDecryptedData | FragLoadedData,
   ) {
     const { frag, payload } = data;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
@@ -543,7 +543,7 @@ export class TimelineController implements ComponentAPI {
           frag: frag,
           error,
         });
-      }
+      },
     );
   }
 
@@ -593,7 +593,7 @@ export class TimelineController implements ComponentAPI {
           frag: frag,
           error,
         });
-      }
+      },
     );
   }
 
@@ -610,7 +610,7 @@ export class TimelineController implements ComponentAPI {
         },
         () => {
           trackPlaylistMedia.textCodec = 'wvtt';
-        }
+        },
       );
     }
   }
@@ -639,7 +639,7 @@ export class TimelineController implements ComponentAPI {
 
   private onFragDecrypted(
     event: Events.FRAG_DECRYPTED,
-    data: FragDecryptedData
+    data: FragDecryptedData,
   ) {
     const { frag } = data;
     if (frag.type === PlaylistLevelType.SUBTITLE) {
@@ -654,7 +654,7 @@ export class TimelineController implements ComponentAPI {
 
   private onFragParsingUserdata(
     event: Events.FRAG_PARSING_USERDATA,
-    data: FragParsingUserdataData
+    data: FragParsingUserdataData,
   ) {
     if (!this.enabled) {
       return;
@@ -685,7 +685,7 @@ export class TimelineController implements ComponentAPI {
 
   onBufferFlushing(
     event: Events.BUFFER_FLUSHING,
-    { startOffset, endOffset, endOffsetSubtitles, type }: BufferFlushingData
+    { startOffset, endOffset, endOffsetSubtitles, type }: BufferFlushingData,
   ) {
     const { media } = this;
     if (!media || media.currentTime < endOffset) {
@@ -696,7 +696,7 @@ export class TimelineController implements ComponentAPI {
     if (!type || type === 'video') {
       const { captionsTracks } = this;
       Object.keys(captionsTracks).forEach((trackName) =>
-        removeCuesInRange(captionsTracks[trackName], startOffset, endOffset)
+        removeCuesInRange(captionsTracks[trackName], startOffset, endOffset),
       );
     }
     if (this.config.renderTextTracksNatively) {
@@ -707,8 +707,8 @@ export class TimelineController implements ComponentAPI {
           removeCuesInRange(
             textTracks[trackName],
             startOffset,
-            endOffsetSubtitles
-          )
+            endOffsetSubtitles,
+          ),
         );
       }
     }
@@ -745,7 +745,7 @@ export class TimelineController implements ComponentAPI {
 
 function canReuseVttTextTrack(
   inUseTrack: (TextTrack & { textTrack1?; textTrack2? }) | null,
-  manifestTrack: MediaPlaylist
+  manifestTrack: MediaPlaylist,
 ): boolean {
   return (
     !!inUseTrack &&

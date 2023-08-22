@@ -75,7 +75,7 @@ class FetchLoader implements Loader<LoaderContext> {
       this.callbacks.onAbort(
         this.stats,
         this.context as LoaderContext,
-        this.response
+        this.response,
       );
     }
   }
@@ -83,7 +83,7 @@ class FetchLoader implements Loader<LoaderContext> {
   load(
     context: LoaderContext,
     config: LoaderConfiguration,
-    callbacks: LoaderCallbacks<LoaderContext>
+    callbacks: LoaderCallbacks<LoaderContext>,
   ): void {
     const stats = this.stats;
     if (stats.loading.start) {
@@ -121,17 +121,20 @@ class FetchLoader implements Loader<LoaderContext> {
 
         self.clearTimeout(this.requestTimeout);
         config.timeout = maxLoadTimeMs;
-        this.requestTimeout = self.setTimeout(() => {
-          this.abortInternal();
-          callbacks.onTimeout(stats, context, this.response);
-        }, maxLoadTimeMs - (first - stats.loading.start));
+        this.requestTimeout = self.setTimeout(
+          () => {
+            this.abortInternal();
+            callbacks.onTimeout(stats, context, this.response);
+          },
+          maxLoadTimeMs - (first - stats.loading.start),
+        );
 
         if (!response.ok) {
           const { status, statusText } = response;
           throw new FetchError(
             statusText || 'fetch, bad network response',
             status,
-            response
+            response,
           );
         }
         stats.loading.first = first;
@@ -144,7 +147,7 @@ class FetchLoader implements Loader<LoaderContext> {
             stats,
             context,
             config.highWaterMark,
-            onProgress
+            onProgress,
           );
         }
 
@@ -164,7 +167,7 @@ class FetchLoader implements Loader<LoaderContext> {
         self.clearTimeout(this.requestTimeout);
         stats.loading.end = Math.max(
           self.performance.now(),
-          stats.loading.first
+          stats.loading.first,
         );
         const total = responseData[LENGTH];
         if (total) {
@@ -196,7 +199,7 @@ class FetchLoader implements Loader<LoaderContext> {
           { code, text },
           context,
           error ? error.details : null,
-          stats
+          stats,
         );
       });
   }
@@ -219,7 +222,7 @@ class FetchLoader implements Loader<LoaderContext> {
     stats: LoaderStats,
     context: LoaderContext,
     highWaterMark: number = 0,
-    onProgress: LoaderOnProgress<LoaderContext>
+    onProgress: LoaderOnProgress<LoaderContext>,
   ): Promise<ArrayBuffer> {
     const chunkCache = new ChunkCache();
     const reader = (response.body as ReadableStream).getReader();
@@ -275,7 +278,7 @@ function getRequestParameters(context: LoaderContext, signal): any {
   if (context.rangeEnd) {
     initParams.headers.set(
       'Range',
-      'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1)
+      'bytes=' + context.rangeStart + '-' + String(context.rangeEnd - 1),
     );
   }
 

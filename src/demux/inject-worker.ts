@@ -19,7 +19,7 @@ export function injectWorker(): WorkerContext {
     ],
     {
       type: 'text/javascript',
-    }
+    },
   );
   const objectURL = self.URL.createObjectURL(blob);
   const worker = new self.Worker(objectURL);

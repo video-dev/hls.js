@@ -30,7 +30,7 @@ describe('Events tests', function () {
           const value = Events[event];
           const expected = 'hls' + getAllCapsSnakeCaseToCamelCase(event);
           expect(value).to.equal(expected);
-        }
+        },
       );
     });
   });

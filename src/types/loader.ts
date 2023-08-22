@@ -99,14 +99,14 @@ export type LoaderOnSuccess<T extends LoaderContext> = (
   response: LoaderResponse,
   stats: LoaderStats,
   context: T,
-  networkDetails: any
+  networkDetails: any,
 ) => void;
 
 export type LoaderOnProgress<T extends LoaderContext> = (
   stats: LoaderStats,
   context: T,
   data: string | ArrayBuffer,
-  networkDetails: any
+  networkDetails: any,
 ) => void;
 
 export type LoaderOnError<T extends LoaderContext> = (
@@ -118,19 +118,19 @@ export type LoaderOnError<T extends LoaderContext> = (
   },
   context: T,
   networkDetails: any,
-  stats: LoaderStats
+  stats: LoaderStats,
 ) => void;
 
 export type LoaderOnTimeout<T extends LoaderContext> = (
   stats: LoaderStats,
   context: T,
-  networkDetails: any
+  networkDetails: any,
 ) => void;
 
 export type LoaderOnAbort<T extends LoaderContext> = (
   stats: LoaderStats,
   context: T,
-  networkDetails: any
+  networkDetails: any,
 ) => void;
 
 export interface LoaderCallbacks<T extends LoaderContext> {
@@ -147,7 +147,7 @@ export interface Loader<T extends LoaderContext> {
   load(
     context: T,
     config: LoaderConfiguration,
-    callbacks: LoaderCallbacks<T>
+    callbacks: LoaderCallbacks<T>,
   ): void;
   /**
    * `getCacheAge()` is called by hls.js to get the duration that a given object

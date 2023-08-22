@@ -12,7 +12,7 @@ class MP3Demuxer extends BaseAudioDemuxer {
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    trackDuration: number
+    trackDuration: number,
   ) {
     super.resetInitSegment(initSegment, audioCodec, videoCodec, trackDuration);
     this._audioTrack = {
@@ -76,7 +76,7 @@ class MP3Demuxer extends BaseAudioDemuxer {
       data,
       offset,
       this.basePTS,
-      this.frameIndex
+      this.frameIndex,
     );
   }
 }

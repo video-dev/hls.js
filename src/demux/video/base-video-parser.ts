@@ -13,7 +13,7 @@ class BaseVideoParser {
     key: boolean,
     pts: number | undefined,
     dts: number | undefined,
-    debug: string
+    debug: string,
   ): ParsedVideoSample {
     return {
       key,
@@ -27,7 +27,7 @@ class BaseVideoParser {
   }
 
   protected getLastNalUnit(
-    samples: VideoSample[]
+    samples: VideoSample[],
   ): VideoSampleUnit | undefined {
     let VideoSample = this.VideoSample;
     let lastUnit: VideoSampleUnit | undefined;
@@ -44,7 +44,7 @@ class BaseVideoParser {
 
   protected pushAccessUnit(
     VideoSample: ParsedVideoSample,
-    videoTrack: DemuxedVideoTrack
+    videoTrack: DemuxedVideoTrack,
   ) {
     if (VideoSample.units.length && VideoSample.frame) {
       // if sample does not have PTS/DTS, patch with last sample PTS/DTS
@@ -65,7 +65,7 @@ class BaseVideoParser {
     }
     if (VideoSample.debug.length) {
       logger.log(
-        VideoSample.pts + '/' + VideoSample.dts + ':' + VideoSample.debug
+        VideoSample.pts + '/' + VideoSample.dts + ':' + VideoSample.debug,
       );
     }
   }

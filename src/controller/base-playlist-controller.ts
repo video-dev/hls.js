@@ -54,7 +54,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
 
   protected switchParams(
     playlistUri: string,
-    previous: LevelDetails | undefined
+    previous: LevelDetails | undefined,
   ): HlsUrlParameters | undefined {
     const renditionReports = previous?.renditionReports;
     if (renditionReports) {
@@ -66,7 +66,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           uri = new self.URL(attr.URI, previous.url).href;
         } catch (error) {
           logger.warn(
-            `Could not construct new URL for Rendition Report: ${error}`
+            `Could not construct new URL for Rendition Report: ${error}`,
           );
           uri = attr.URI || '';
         }
@@ -86,7 +86,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         if (this.hls.config.lowLatencyMode) {
           const currentGoal = Math.min(
             previous.age - previous.partTarget,
-            previous.targetduration
+            previous.targetduration,
           );
           if (part >= 0 && currentGoal > previous.partTarget) {
             part += 1;
@@ -95,7 +95,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         return new HlsUrlParameters(
           msn,
           part >= 0 ? part : undefined,
-          HlsSkip.No
+          HlsSkip.No,
         );
       }
     }
@@ -109,7 +109,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   }
 
   protected shouldLoadPlaylist(
-    playlist: Level | MediaPlaylist | null | undefined
+    playlist: Level | MediaPlaylist | null | undefined,
   ): boolean {
     return (
       this.canLoad &&
@@ -120,7 +120,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   }
 
   protected shouldReloadPlaylist(
-    playlist: Level | MediaPlaylist | null | undefined
+    playlist: Level | MediaPlaylist | null | undefined,
   ): boolean {
     return (
       this.timer === -1 &&
@@ -132,7 +132,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   protected playlistLoaded(
     index: number,
     data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData,
-    previousDetails?: LevelDetails
+    previousDetails?: LevelDetails,
   ) {
     const { details, stats } = data;
 
@@ -152,7 +152,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
             details.advanced
               ? 'REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex
               : 'MISSED'
-          }`
+          }`,
         );
       }
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
@@ -187,14 +187,14 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         const cdnAge = lastAdvanced + details.ageHeader;
         let currentGoal = Math.min(
           cdnAge - details.partTarget,
-          details.targetduration * 1.5
+          details.targetduration * 1.5,
         );
         if (currentGoal > 0) {
           if (previousDetails && currentGoal > previousDetails.tuneInGoal) {
             // If we attempted to get the next or latest playlist update, but currentGoal increased,
             // then we either can't catchup, or the "age" header cannot be trusted.
             this.warn(
-              `CDN Tune-in goal increased from: ${previousDetails.tuneInGoal} to: ${currentGoal} with playlist age: ${details.age}`
+              `CDN Tune-in goal increased from: ${previousDetails.tuneInGoal} to: ${currentGoal} with playlist age: ${details.age}`,
             );
             currentGoal = 0;
           } else {
@@ -202,7 +202,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
             msn += segments;
             if (part !== undefined) {
               const parts = Math.round(
-                (currentGoal % details.targetduration) / details.partTarget
+                (currentGoal % details.targetduration) / details.partTarget,
               );
               part += parts;
             }
@@ -210,8 +210,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
               `CDN Tune-in age: ${
                 details.ageHeader
               }s last advanced ${lastAdvanced.toFixed(
-                2
-              )}s goal: ${currentGoal} skip sn ${segments} to part ${part}`
+                2,
+              )}s goal: ${currentGoal} skip sn ${segments} to part ${part}`,
             );
           }
           details.tuneInGoal = currentGoal;
@@ -220,7 +220,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           details,
           data.deliveryDirectives,
           msn,
-          part
+          part,
         );
         if (lowLatencyMode || !lastPart) {
           this.loadPlaylist(deliveryDirectives);
@@ -231,7 +231,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           details,
           data.deliveryDirectives,
           msn,
-          part
+          part,
         );
       }
       const bufferInfo = this.hls.mainForwardBufferInfo;
@@ -239,7 +239,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       const distanceToLiveEdgeMs = (details.edge - position) * 1000;
       const reloadInterval = computeReloadInterval(
         details,
-        distanceToLiveEdgeMs
+        distanceToLiveEdgeMs,
       );
       if (details.updated && now > this.requestScheduled + reloadInterval) {
         this.requestScheduled = stats.loading.start;
@@ -262,8 +262,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
       estimatedTimeUntilUpdate = Math.max(0, estimatedTimeUntilUpdate);
       this.log(
         `reload live playlist ${index} in ${Math.round(
-          estimatedTimeUntilUpdate
-        )} ms`
+          estimatedTimeUntilUpdate,
+        )} ms`,
       );
       // this.log(
       //   `live reload ${details.updated ? 'REFRESHED' : 'MISSED'}
@@ -283,7 +283,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
 
       this.timer = self.setTimeout(
         () => this.loadPlaylist(deliveryDirectives),
-        estimatedTimeUntilUpdate
+        estimatedTimeUntilUpdate,
       );
     } else {
       this.clearTimer();
@@ -294,7 +294,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     details: LevelDetails,
     previousDeliveryDirectives: HlsUrlParameters | null,
     msn?: number,
-    part?: number
+    part?: number,
   ): HlsUrlParameters {
     let skip = getSkipValue(details, msn);
     if (previousDeliveryDirectives?.skip && details.deltaUpdateFailed) {
@@ -326,7 +326,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         this.warn(
           `Retrying playlist loading ${retryCount + 1}/${
             retryConfig.maxNumRetry
-          } after "${errorDetails}" without delivery-directives`
+          } after "${errorDetails}" without delivery-directives`,
         );
         this.loadPlaylist();
       } else {
@@ -336,7 +336,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         this.warn(
           `Retrying playlist loading ${retryCount + 1}/${
             retryConfig.maxNumRetry
-          } after "${errorDetails}" in ${delay}ms`
+          } after "${errorDetails}" in ${delay}ms`,
         );
       }
       // `levelRetry = true` used to inform other controllers that a retry is happening

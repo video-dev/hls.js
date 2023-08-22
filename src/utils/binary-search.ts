@@ -18,7 +18,7 @@ const BinarySearch = {
    */
   search: function <T>(
     list: T[],
-    comparisonFn: BinarySearchComparison<T>
+    comparisonFn: BinarySearchComparison<T>,
   ): T | null {
     let minIndex: number = 0;
     let maxIndex: number = list.length - 1;

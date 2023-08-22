@@ -79,7 +79,7 @@ class TSDemuxer implements Demuxer {
   constructor(
     observer: HlsEventEmitter,
     config: HlsConfig,
-    typeSupported: TypeSupported
+    typeSupported: TypeSupported,
   ) {
     this.observer = observer;
     this.config = config;
@@ -91,7 +91,7 @@ class TSDemuxer implements Demuxer {
     const syncOffset = TSDemuxer.syncOffset(data);
     if (syncOffset > 0) {
       logger.warn(
-        `MPEG2-TS detected but first sync word found @ offset ${syncOffset}`
+        `MPEG2-TS detected but first sync word found @ offset ${syncOffset}`,
       );
     }
     return syncOffset !== -1;
@@ -117,7 +117,7 @@ class TSDemuxer implements Demuxer {
               scanwindow =
                 Math.min(
                   packetStart + PACKET_LENGTH * 99,
-                  data.length - PACKET_LENGTH
+                  data.length - PACKET_LENGTH,
                 ) + 1;
             }
           }
@@ -150,7 +150,7 @@ class TSDemuxer implements Demuxer {
    */
   static createTrack(
     type: 'audio' | 'video' | 'id3' | 'text',
-    duration?: number
+    duration?: number,
   ): DemuxedTrack {
     return {
       container:
@@ -174,7 +174,7 @@ class TSDemuxer implements Demuxer {
     initSegment: Uint8Array | undefined,
     audioCodec: string,
     videoCodec: string,
-    trackDuration: number
+    trackDuration: number,
   ) {
     this.pmtParsed = false;
     this._pmtId = -1;
@@ -182,7 +182,7 @@ class TSDemuxer implements Demuxer {
     this._videoTrack = TSDemuxer.createTrack('video') as DemuxedVideoTrack;
     this._audioTrack = TSDemuxer.createTrack(
       'audio',
-      trackDuration
+      trackDuration,
     ) as DemuxedAudioTrack;
     this._id3Track = TSDemuxer.createTrack('id3') as DemuxedMetadataTrack;
     this._txtTrack = TSDemuxer.createTrack('text') as DemuxedUserdataTrack;
@@ -217,7 +217,7 @@ class TSDemuxer implements Demuxer {
     data: Uint8Array,
     timeOffset: number,
     isSampleAes = false,
-    flush = false
+    flush = false,
   ): DemuxerResult {
     if (!isSampleAes) {
       this.sampleAes = null;
@@ -263,7 +263,7 @@ class TSDemuxer implements Demuxer {
       this.remainderData = new Uint8Array(
         data.buffer,
         len,
-        data.buffer.byteLength - len
+        data.buffer.byteLength - len,
       );
     }
 
@@ -295,7 +295,7 @@ class TSDemuxer implements Demuxer {
                   textTrack,
                   pes,
                   false,
-                  this._duration
+                  this._duration,
                 );
               }
 
@@ -360,7 +360,7 @@ class TSDemuxer implements Demuxer {
               data,
               offset,
               this.typeSupported,
-              isSampleAes
+              isSampleAes,
             );
 
             // only update track id if track PID found while parsing PMT
@@ -387,7 +387,7 @@ class TSDemuxer implements Demuxer {
 
             if (unknownPID !== null && !pmtParsed) {
               logger.warn(
-                `MPEG-TS PMT found at ${start} after unknown PID '${unknownPID}'. Backtracking to sync byte @${syncOffset} to parse all TS packets.`
+                `MPEG-TS PMT found at ${start} after unknown PID '${unknownPID}'. Backtracking to sync byte @${syncOffset} to parse all TS packets.`,
               );
               unknownPID = null;
               // we set it to -188, the += 188 in the for loop will reset start to 0
@@ -410,7 +410,7 @@ class TSDemuxer implements Demuxer {
 
     if (tsPacketErrors > 0) {
       const error = new Error(
-        `Found ${tsPacketErrors} TS packet/s that do not start with 0x47`
+        `Found ${tsPacketErrors} TS packet/s that do not start with 0x47`,
       );
       this.observer.emit(Events.ERROR, Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
@@ -473,7 +473,7 @@ class TSDemuxer implements Demuxer {
         textTrack as DemuxedUserdataTrack,
         pes,
         true,
-        this._duration
+        this._duration,
       );
       videoTrack.pesData = null;
     } else {
@@ -499,7 +499,7 @@ class TSDemuxer implements Demuxer {
     } else {
       if (audioData?.size) {
         logger.log(
-          'last AAC PES packet truncated,might overlap between fragments'
+          'last AAC PES packet truncated,might overlap between fragments',
         );
       }
 
@@ -519,25 +519,25 @@ class TSDemuxer implements Demuxer {
   public demuxSampleAes(
     data: Uint8Array,
     keyData: KeyData,
-    timeOffset: number
+    timeOffset: number,
   ): Promise<DemuxerResult> {
     const demuxResult = this.demux(
       data,
       timeOffset,
       true,
-      !this.config.progressive
+      !this.config.progressive,
     );
     const sampleAes = (this.sampleAes = new SampleAesDecrypter(
       this.observer,
       this.config,
-      keyData
+      keyData,
     ));
     return this.decrypt(demuxResult, sampleAes);
   }
 
   private decrypt(
     demuxResult: DemuxerResult,
-    sampleAes: SampleAesDecrypter
+    sampleAes: SampleAesDecrypter,
   ): Promise<DemuxerResult> {
     return new Promise((resolve) => {
       const { audioTrack, videoTrack } = demuxResult;
@@ -578,7 +578,7 @@ class TSDemuxer implements Demuxer {
         const frameOverflowBytes = sampleLength - frameMissingBytes;
         aacOverFlow.sample.unit.set(
           data.subarray(0, frameMissingBytes),
-          frameOverflowBytes
+          frameOverflowBytes,
         );
         track.samples.push(aacOverFlow.sample);
         startOffset = aacOverFlow.missing;
@@ -621,7 +621,7 @@ class TSDemuxer implements Demuxer {
       this.observer,
       data,
       offset,
-      this.audioCodec as string
+      this.audioCodec as string,
     );
 
     let pts: number;
@@ -675,7 +675,7 @@ class TSDemuxer implements Demuxer {
           data,
           offset,
           pts,
-          frameIndex
+          frameIndex,
         );
         if (frame) {
           offset += frame.length;
@@ -740,7 +740,7 @@ function parsePMT(
   data: Uint8Array,
   offset: number,
   typeSupported: TypeSupported,
-  isSampleAes: boolean
+  isSampleAes: boolean,
 ) {
   const result = {
     audioPid: -1,
@@ -848,7 +848,7 @@ function parsePMT(
                 if (__USE_M2TS_ADVANCED_CODECS__) {
                   if (typeSupported.ac3 !== true) {
                     logger.log(
-                      'AC-3 audio found, not supported in this browser for now'
+                      'AC-3 audio found, not supported in this browser for now',
                     );
                   } else {
                     result.audioPid = pid;
@@ -945,8 +945,8 @@ function parsePES(stream: ElementaryStreamData): PES | null {
         if (pesPts - pesDts > 60 * 90000) {
           logger.warn(
             `${Math.round(
-              (pesPts - pesDts) / 90000
-            )}s delta between PTS and DTS, align them`
+              (pesPts - pesDts) / 90000,
+            )}s delta between PTS and DTS, align them`,
           );
           pesPts = pesDts;
         }

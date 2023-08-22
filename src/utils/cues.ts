@@ -10,7 +10,7 @@ export interface CuesInterface {
     track: TextTrack | null,
     startTime: number,
     endTime: number,
-    captionScreen: CaptionScreen
+    captionScreen: CaptionScreen,
   ): VTTCue[];
 }
 
@@ -19,7 +19,7 @@ const Cues: CuesInterface = {
     track: TextTrack | null,
     startTime: number,
     endTime: number,
-    captionScreen: CaptionScreen
+    captionScreen: CaptionScreen,
   ): VTTCue[] {
     const result: VTTCue[] = [];
     let row: Row;

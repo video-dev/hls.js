@@ -49,7 +49,7 @@ var // this is the start of a huge multi-line var decl
     var avcView = new DataView(
         avcStream.buffer,
         avcStream.byteOffset,
-        avcStream.byteLength
+        avcStream.byteLength,
       ),
       result = [],
       i,
@@ -124,7 +124,7 @@ var // this is the start of a huge multi-line var decl
         nalSize = view.getUint16(offset);
         offset += 2;
         result.sps.push(
-          new Uint8Array(data.subarray(offset, offset + nalSize))
+          new Uint8Array(data.subarray(offset, offset + nalSize)),
         );
         offset += nalSize;
       }
@@ -135,7 +135,7 @@ var // this is the start of a huge multi-line var decl
         nalSize = view.getUint16(offset);
         offset += 2;
         result.pps.push(
-          new Uint8Array(data.subarray(offset, offset + nalSize))
+          new Uint8Array(data.subarray(offset, offset + nalSize)),
         );
         offset += nalSize;
       }

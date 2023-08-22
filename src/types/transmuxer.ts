@@ -30,7 +30,7 @@ export class ChunkMetadata {
     id: number,
     size = 0,
     part = -1,
-    partial = false
+    partial = false,
   ) {
     this.level = level;
     this.sn = sn;

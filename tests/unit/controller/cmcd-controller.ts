@@ -51,7 +51,7 @@ describe('CMCDController', function () {
     it('appends with ?', function () {
       const result = CMCDController.appendQueryToUri(
         'http://test.com',
-        'CMCD=d%3D6067'
+        'CMCD=d%3D6067',
       );
       expect(result).to.equal('http://test.com?CMCD=d%3D6067');
     });
@@ -59,7 +59,7 @@ describe('CMCDController', function () {
     it('appends with &', function () {
       const result = CMCDController.appendQueryToUri(
         'http://test.com?testing=123',
-        'CMCD=d%3D6067'
+        'CMCD=d%3D6067',
       );
       expect(result).to.equal('http://test.com?testing=123&CMCD=d%3D6067');
     });

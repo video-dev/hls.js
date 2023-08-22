@@ -114,15 +114,15 @@ describe('LevelHelper Tests', function () {
       expect(intersectionFn).to.have.been.calledThrice;
       expect(intersectionFn.firstCall).to.have.been.calledWith(
         oldParts[3],
-        newParts[0]
+        newParts[0],
       );
       expect(intersectionFn.secondCall).to.have.been.calledWith(
         oldParts[4],
-        newParts[1]
+        newParts[1],
       );
       expect(intersectionFn.thirdCall).to.have.been.calledWith(
         oldParts[5],
-        newParts[2]
+        newParts[2],
       );
     });
   });
@@ -198,7 +198,7 @@ describe('LevelHelper Tests', function () {
           frag,
           `Fragment sn: ${frag.sn} does not match expected:
 actual: ${JSON.stringify(frag)}
-expect: ${JSON.stringify(merged.fragments[i])}`
+expect: ${JSON.stringify(merged.fragments[i])}`,
         ).to.deep.equal(merged.fragments[i]);
       });
     });
@@ -220,7 +220,7 @@ expect: ${JSON.stringify(merged.fragments[i])}`
           frag,
           `Fragment sn: ${frag.sn} does not match expected:
 actual: ${JSON.stringify(frag)}
-expect: ${JSON.stringify(merged.fragments[i])}`
+expect: ${JSON.stringify(merged.fragments[i])}`,
         ).to.deep.equal(merged.fragments[i]);
       });
     });
@@ -253,12 +253,12 @@ expect: ${JSON.stringify(merged.fragments[i])}`
       newPlaylist.fragments.forEach((frag, i) => {
         expect(
           frag.initSegment,
-          `Fragment sn: ${frag.sn} does not have correct initSegment`
+          `Fragment sn: ${frag.sn} does not have correct initSegment`,
         ).to.equal(oldInitSegment);
       });
       expect(
         newPlaylist.fragmentHint.initSegment,
-        'fragmentHint does not have correct initSegment'
+        'fragmentHint does not have correct initSegment',
       ).to.equal(oldInitSegment);
     });
   });

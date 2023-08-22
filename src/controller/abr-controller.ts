@@ -65,7 +65,7 @@ class AbrController implements AbrComponentAPI {
     return new EwmaBandWidthEstimator(
       config.abrEwmaSlowVoD,
       config.abrEwmaFastVoD,
-      config.abrEwmaDefaultEstimate
+      config.abrEwmaDefaultEstimate,
     );
   }
 
@@ -106,7 +106,7 @@ class AbrController implements AbrComponentAPI {
 
   protected onManifestLoading(
     event: Events.MANIFEST_LOADING,
-    data: ManifestLoadingData
+    data: ManifestLoadingData,
   ) {
     this.lastLoadedFragLevel = -1;
     this.lastLevelLoadSec = 0;
@@ -140,7 +140,7 @@ class AbrController implements AbrComponentAPI {
 
   protected onLevelSwitching(
     event: Events.LEVEL_SWITCHING,
-    data: LevelSwitchingData
+    data: LevelSwitchingData,
   ): void {
     this.clearTimer();
   }
@@ -161,7 +161,7 @@ class AbrController implements AbrComponentAPI {
     timeToFirstByteSec: number,
     bandwidth: number,
     fragSizeBits: number,
-    isSwitch: boolean
+    isSwitch: boolean,
   ): number {
     const fragLoadSec = timeToFirstByteSec + fragSizeBits / bandwidth;
     const playlistLoadSec = isSwitch ? this.lastLevelLoadSec : 0;
@@ -284,7 +284,7 @@ class AbrController implements AbrComponentAPI {
         ttfbEstimate / 1000,
         bwe,
         duration * levelNextBitrate,
-        !levels[nextLoadLevel].details
+        !levels[nextLoadLevel].details,
       );
       if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
         break;
@@ -305,7 +305,7 @@ class AbrController implements AbrComponentAPI {
       // If there has been loading progress, sample bandwidth using loading time offset by minimum TTFB time
       this.bwEstimator.sample(
         timeLoading - Math.min(ttfbEstimate, ttfb),
-        stats.loaded
+        stats.loaded,
       );
     } else {
       // If there has been no loading progress, sample TTFB
@@ -319,7 +319,7 @@ class AbrController implements AbrComponentAPI {
       Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s
       Estimated load time for current fragment: ${fragLoadedDelay.toFixed(3)} s
       Estimated load time for down switch fragment: ${fragLevelNextLoadedDelay.toFixed(
-        3
+        3,
       )} s
       TTFB estimate: ${ttfb}
       Current BW estimate: ${
@@ -336,7 +336,7 @@ class AbrController implements AbrComponentAPI {
 
   protected onFragLoaded(
     event: Events.FRAG_LOADED,
-    { frag, part }: FragLoadedData
+    { frag, part }: FragLoadedData,
   ) {
     const stats = part ? part.stats : frag.stats;
     if (frag.type === PlaylistLevelType.MAIN) {
@@ -378,7 +378,7 @@ class AbrController implements AbrComponentAPI {
 
   protected onFragBuffered(
     event: Events.FRAG_BUFFERED,
-    data: FragBufferedData
+    data: FragBufferedData,
   ) {
     const { frag, part } = data;
     const stats = part?.stats.loaded ? part.stats : frag.stats;
@@ -397,7 +397,7 @@ class AbrController implements AbrComponentAPI {
       stats.loading.start -
       Math.min(
         stats.loading.first - stats.loading.start,
-        this.bwEstimator.getEstimateTTFB()
+        this.bwEstimator.getEstimateTTFB(),
       );
     this.bwEstimator.sample(processingMs, stats.loaded);
     stats.bwEstimate = this.getBwEstimate();
@@ -430,7 +430,7 @@ class AbrController implements AbrComponentAPI {
       0,
       maxStartDelay,
       1,
-      1
+      1,
     );
     if (abrAutoLevel > -1) {
       return abrAutoLevel;
@@ -438,7 +438,7 @@ class AbrController implements AbrComponentAPI {
     const firstLevel = this.hls.firstLevel;
     const clamped = Math.min(Math.max(firstLevel, minAutoLevel), maxAutoLevel);
     logger.warn(
-      `[abr] Could not find best starting auto level. Defaulting to first in playlist ${firstLevel} clamped to ${clamped}`
+      `[abr] Could not find best starting auto level. Defaulting to first in playlist ${firstLevel} clamped to ${clamped}`,
     );
     return clamped;
   }
@@ -529,7 +529,7 @@ class AbrController implements AbrComponentAPI {
         bufferStarvationDelay,
         0,
         bwFactor,
-        bwUpFactor
+        bwUpFactor,
       );
       if (bestLevel >= 0) {
         return bestLevel;
@@ -555,10 +555,10 @@ class AbrController implements AbrComponentAPI {
         maxStarvationDelay = maxLoadingDelay - bitrateTestDelay;
         logger.info(
           `[abr] bitrate test took ${Math.round(
-            1000 * bitrateTestDelay
+            1000 * bitrateTestDelay,
           )}ms, set first fragment max fetchDuration to ${Math.round(
-            1000 * maxStarvationDelay
-          )} ms`
+            1000 * maxStarvationDelay,
+          )} ms`,
         );
         // don't use conservative factor on bitrate test
         bwFactor = bwUpFactor = 1;
@@ -571,12 +571,12 @@ class AbrController implements AbrComponentAPI {
       bufferStarvationDelay,
       maxStarvationDelay,
       bwFactor,
-      bwUpFactor
+      bwUpFactor,
     );
     logger.info(
       `[abr] ${
         bufferStarvationDelay ? 'rebuffering expected' : 'buffer is empty'
-      }, optimal quality level ${bestLevel}`
+      }, optimal quality level ${bestLevel}`,
     );
     if (bestLevel > -1) {
       return bestLevel;
@@ -604,7 +604,7 @@ class AbrController implements AbrComponentAPI {
     bufferStarvationDelay: number,
     maxStarvationDelay: number,
     bwFactor: number,
-    bwUpFactor: number
+    bwUpFactor: number,
   ): number {
     const maxFetchDuration: number = bufferStarvationDelay + maxStarvationDelay;
     const lastLoadedFragLevel = this.lastLoadedFragLevel;
@@ -628,7 +628,7 @@ class AbrController implements AbrComponentAPI {
           levels,
           audioTracksByGroup,
           minAutoLevel,
-          maxAutoLevel
+          maxAutoLevel,
         ));
       const { codecSet, videoRange, minFramerate, minBitrate } =
         getStartCodecTier(codecTiers, currentVideoRange, currentBw);
@@ -669,13 +669,13 @@ class AbrController implements AbrComponentAPI {
             mediaCapabilities,
             currentVideoRange,
             currentFrameRate,
-            currentBw
+            currentBw,
           )
         ) {
           levelInfo.supportedPromise = getMediaDecodingInfoPromise(
             levelInfo,
             audioTracksByGroup,
-            mediaCapabilities
+            mediaCapabilities,
           );
           levelInfo.supportedPromise.then((decodingInfo) => {
             levelInfo.supportedResult = decodingInfo;
@@ -683,13 +683,13 @@ class AbrController implements AbrComponentAPI {
               logger.warn(
                 `[abr] MediaCapabilities decodingInfo error: "${
                   decodingInfo.error
-                }" for level ${i} ${JSON.stringify(decodingInfo)}`
+                }" for level ${i} ${JSON.stringify(decodingInfo)}`,
               );
             } else if (!decodingInfo.supported) {
               logger.warn(
                 `[abr] Removing unsupported level ${i} after MediaCapabilities decodingInfo check failed ${JSON.stringify(
-                  decodingInfo
-                )}`
+                  decodingInfo,
+                )}`,
               );
               if (i > 0) {
                 this.hls.removeLevel(i);
@@ -746,7 +746,7 @@ class AbrController implements AbrComponentAPI {
         ttfbEstimateSec,
         adjustedbw,
         bitrate * avgDuration,
-        levelDetails === undefined
+        levelDetails === undefined,
       );
 
       const canSwitchWithinTolerance =
@@ -767,28 +767,28 @@ class AbrController implements AbrComponentAPI {
           if (levelsSkipped.length) {
             logger.trace(
               `[abr] Skipped level(s) ${levelsSkipped.join(
-                ','
+                ',',
               )} of ${maxAutoLevel} max with CODECS and VIDEO-RANGE:"${
                 levels[levelsSkipped[0]].codecs
               }" ${levels[levelsSkipped[0]].videoRange}; not compatible with "${
                 level.codecs
-              }" ${currentVideoRange}`
+              }" ${currentVideoRange}`,
             );
           }
           logger.info(
             `[abr] switch candidate:${selectionBaseLevel}->${i} adjustedbw(${Math.round(
-              adjustedbw
+              adjustedbw,
             )})-bitrate=${Math.round(
-              adjustedbw - bitrate
+              adjustedbw - bitrate,
             )} ttfb:${ttfbEstimateSec.toFixed(
-              1
+              1,
             )} avgDuration:${avgDuration.toFixed(
-              1
+              1,
             )} maxFetchDuration:${maxFetchDuration.toFixed(
-              1
+              1,
             )} fetchDuration:${fetchDuration.toFixed(
-              1
-            )} firstSelection:${firstSelection} codecSet:${currentCodecSet} videoRange:${currentVideoRange} hls.loadLevel:${loadLevel}`
+              1,
+            )} firstSelection:${firstSelection} codecSet:${currentCodecSet} videoRange:${currentVideoRange} hls.loadLevel:${loadLevel}`,
           );
         }
         // as we are looping from highest to lowest, this will return the best achievable quality level
