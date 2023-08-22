@@ -189,6 +189,13 @@ export type RetryConfig = {
   retryDelayMs: number; // Retry delay = 2^retryCount * retryDelayMs (exponential) or retryCount * retryDelayMs (linear)
   maxRetryDelayMs: number; // Maximum delay between retries
   backoff?: 'exponential' | 'linear'; // used to determine retry backoff duration (see retryDelayMs)
+  shouldRetry?: (
+    retryConfig: RetryConfig | null | undefined,
+    retryCount: number,
+    isTimeout: boolean,
+    httpStatus: number | undefined,
+    retry: boolean
+  ) => boolean;
 };
 
 export type StreamControllerConfig = {

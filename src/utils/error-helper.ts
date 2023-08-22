@@ -52,11 +52,21 @@ export function shouldRetry(
   isTimeout: boolean,
   httpStatus?: number | undefined,
 ): retryConfig is RetryConfig & boolean {
-  return (
-    !!retryConfig &&
+  if (!retryConfig) {
+    return false;
+  }
+  const retry =
     retryCount < retryConfig.maxNumRetry &&
-    (retryForHttpStatus(httpStatus) || !!isTimeout)
-  );
+    (retryForHttpStatus(httpStatus) || !!isTimeout);
+  return retryConfig.shouldRetry
+    ? retryConfig.shouldRetry(
+        retryConfig,
+        retryCount,
+        isTimeout,
+        httpStatus,
+        retry
+      )
+    : retry;
 }
 
 export function retryForHttpStatus(httpStatus: number | undefined) {
