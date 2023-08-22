@@ -91,7 +91,7 @@ export const isFooter = (data: Uint8Array, offset: number): boolean => {
  */
 export const getID3Data = (
   data: Uint8Array,
-  offset: number
+  offset: number,
 ): Uint8Array | undefined => {
   const front = offset;
   let length = 0;
@@ -222,7 +222,7 @@ export const decodeFrame = (frame: RawFrame): Frame | undefined => {
 };
 
 const decodePrivFrame = (
-  frame: RawFrame
+  frame: RawFrame,
 ): DecodedFrame<ArrayBuffer> | undefined => {
   /*
   Format: <text string>\0<binary data>
@@ -279,7 +279,7 @@ const decodeURLFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
     let index = 1;
     const description: string = utf8ArrayToStr(
       frame.data.subarray(index),
-      true
+      true,
     );
 
     index += description.length + 1;
@@ -296,7 +296,7 @@ const decodeURLFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
 };
 
 const readTimeStamp = (
-  timeStampFrame: DecodedFrame<ArrayBuffer>
+  timeStampFrame: DecodedFrame<ArrayBuffer>,
 ): number | undefined => {
   if (timeStampFrame.data.byteLength === 8) {
     const data = new Uint8Array(timeStampFrame.data);
@@ -328,7 +328,7 @@ const readTimeStamp = (
  */
 export const utf8ArrayToStr = (
   array: Uint8Array,
-  exitOnNull: boolean = false
+  exitOnNull: boolean = false,
 ): string => {
   const decoder = getTextDecoder();
   if (decoder) {
@@ -381,7 +381,7 @@ export const utf8ArrayToStr = (
         char2 = array[i++];
         char3 = array[i++];
         out += String.fromCharCode(
-          ((c & 0x0f) << 12) | ((char2 & 0x3f) << 6) | ((char3 & 0x3f) << 0)
+          ((c & 0x0f) << 12) | ((char2 & 0x3f) << 6) | ((char3 & 0x3f) << 0),
         );
         break;
       default:

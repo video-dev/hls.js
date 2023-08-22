@@ -64,7 +64,7 @@ class XhrLoader implements Loader<LoaderContext> {
       this.callbacks.onAbort(
         this.stats,
         this.context as LoaderContext,
-        this.loader
+        this.loader,
       );
     }
   }
@@ -72,7 +72,7 @@ class XhrLoader implements Loader<LoaderContext> {
   load(
     context: LoaderContext,
     config: LoaderConfiguration,
-    callbacks: LoaderCallbacks<LoaderContext>
+    callbacks: LoaderCallbacks<LoaderContext>,
   ) {
     if (this.stats.loading.start) {
       throw new Error('Loader can only be used once.');
@@ -117,7 +117,7 @@ class XhrLoader implements Loader<LoaderContext> {
             { code: xhr.status, text: error.message },
             context,
             xhr,
-            stats
+            stats,
           );
           return;
         });
@@ -129,7 +129,7 @@ class XhrLoader implements Loader<LoaderContext> {
   openAndSendXhr(
     xhr: XMLHttpRequest,
     context: LoaderContext,
-    config: LoaderConfiguration
+    config: LoaderConfiguration,
   ) {
     if (!xhr.readyState) {
       xhr.open('GET', context.url, true);
@@ -146,7 +146,7 @@ class XhrLoader implements Loader<LoaderContext> {
     if (context.rangeEnd) {
       xhr.setRequestHeader(
         'Range',
-        'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1)
+        'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1),
       );
     }
 
@@ -161,7 +161,7 @@ class XhrLoader implements Loader<LoaderContext> {
         : maxLoadTimeMs;
     this.requestTimeout = self.setTimeout(
       this.loadtimeout.bind(this),
-      config.timeout
+      config.timeout,
     );
     xhr.send();
   }
@@ -184,7 +184,7 @@ class XhrLoader implements Loader<LoaderContext> {
       if (stats.loading.first === 0) {
         stats.loading.first = Math.max(
           self.performance.now(),
-          stats.loading.start
+          stats.loading.start,
         );
         // readyState >= 2 AND readyState !==4 (readyState = HEADERS_RECEIVED || LOADING) rearm timeout as xhr not finished yet
         if (config.timeout !== config.loadPolicy.maxLoadTimeMs) {
@@ -193,7 +193,7 @@ class XhrLoader implements Loader<LoaderContext> {
           this.requestTimeout = self.setTimeout(
             this.loadtimeout.bind(this),
             config.loadPolicy.maxLoadTimeMs -
-              (stats.loading.first - stats.loading.start)
+              (stats.loading.first - stats.loading.start),
           );
         }
       }
@@ -212,7 +212,7 @@ class XhrLoader implements Loader<LoaderContext> {
         ) {
           stats.loading.end = Math.max(
             self.performance.now(),
-            stats.loading.first
+            stats.loading.first,
           );
           const data = useResponse ? xhr.response : xhr.responseText;
           const len =
@@ -249,7 +249,7 @@ class XhrLoader implements Loader<LoaderContext> {
               { code: status, text: xhr.statusText },
               context,
               xhr,
-              stats
+              stats,
             );
           }
         }
@@ -270,7 +270,7 @@ class XhrLoader implements Loader<LoaderContext> {
         callbacks.onTimeout(
           this.stats,
           this.context as LoaderContext,
-          this.loader
+          this.loader,
         );
       }
     }
@@ -281,11 +281,11 @@ class XhrLoader implements Loader<LoaderContext> {
     this.retryDelay = getRetryDelay(retryConfig, stats.retry);
     stats.retry++;
     logger.warn(
-      `${status ? 'HTTP Status ' + status : 'Timeout'} while loading ${
-        context?.url
-      }, retrying ${stats.retry}/${retryConfig.maxNumRetry} in ${
-        this.retryDelay
-      }ms`
+      `${
+        status ? 'HTTP Status ' + status : 'Timeout'
+      } while loading ${context?.url}, retrying ${stats.retry}/${
+        retryConfig.maxNumRetry
+      } in ${this.retryDelay}ms`,
     );
     // abort and reset internal state
     this.abortInternal();
@@ -294,7 +294,7 @@ class XhrLoader implements Loader<LoaderContext> {
     self.clearTimeout(this.retryTimeout);
     this.retryTimeout = self.setTimeout(
       this.loadInternal.bind(this),
-      this.retryDelay
+      this.retryDelay,
     );
   }
 
@@ -323,7 +323,7 @@ class XhrLoader implements Loader<LoaderContext> {
     if (
       this.loader &&
       new RegExp(`^${name}:\\s*[\\d.]+\\s*$`, 'im').test(
-        this.loader.getAllResponseHeaders()
+        this.loader.getAllResponseHeaders(),
       )
     ) {
       return this.loader.getResponseHeader(name);

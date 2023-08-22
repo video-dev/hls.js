@@ -88,7 +88,7 @@ export function isCodecType(codec: string, type: CodecType): boolean {
 
 export function areCodecsMediaSourceSupported(
   codecs: string,
-  type: CodecType
+  type: CodecType,
 ): boolean {
   return !codecs
     .split(',')
@@ -123,7 +123,7 @@ const CODEC_COMPATIBLE_NAMES: CodecNameCache = {};
 type LowerCaseCodecType = 'flac' | 'opus';
 
 function getCodecCompatibleNameLower(
-  lowerCaseCodec: LowerCaseCodecType
+  lowerCaseCodec: LowerCaseCodecType,
 ): string {
   if (CODEC_COMPATIBLE_NAMES[lowerCaseCodec]) {
     return CODEC_COMPATIBLE_NAMES[lowerCaseCodec]!;
@@ -150,13 +150,13 @@ function getCodecCompatibleNameLower(
 const AUDIO_CODEC_REGEXP = /flac|opus/i;
 export function getCodecCompatibleName(codec: string): string {
   return codec.replace(AUDIO_CODEC_REGEXP, (m) =>
-    getCodecCompatibleNameLower(m.toLowerCase() as LowerCaseCodecType)
+    getCodecCompatibleNameLower(m.toLowerCase() as LowerCaseCodecType),
   );
 }
 
 export function pickMostCompleteCodecName(
   parsedCodec: string,
-  levelCodec: string
+  levelCodec: string,
 ): string {
   // Parsing of mp4a codecs strings in mp4-tools from media is incomplete as of d8c6c7a
   // so use level codec is parsed codec is unavailable or incomplete

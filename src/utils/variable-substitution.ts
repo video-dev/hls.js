@@ -15,7 +15,7 @@ export function substituteVariablesInAttributes(
     'variableList' | 'hasVariableRefs' | 'playlistParsingError'
   >,
   attr: AttrList,
-  attributeNames: string[]
+  attributeNames: string[],
 ) {
   if (parsed.variableList !== null || parsed.hasVariableRefs) {
     for (let i = attributeNames.length; i--; ) {
@@ -33,7 +33,7 @@ export function substituteVariables(
     ParsedMultivariantPlaylist | LevelDetails,
     'variableList' | 'hasVariableRefs' | 'playlistParsingError'
   >,
-  value: string
+  value: string,
 ): string {
   if (parsed.variableList !== null || parsed.hasVariableRefs) {
     const variableList = parsed.variableList;
@@ -42,17 +42,17 @@ export function substituteVariables(
       (variableReference: string) => {
         const variableName = variableReference.substring(
           2,
-          variableReference.length - 1
+          variableReference.length - 1,
         );
         const variableValue = variableList?.[variableName];
         if (variableValue === undefined) {
           parsed.playlistParsingError ||= new Error(
-            `Missing preceding EXT-X-DEFINE tag for Variable Reference: "${variableName}"`
+            `Missing preceding EXT-X-DEFINE tag for Variable Reference: "${variableName}"`,
           );
           return variableReference;
         }
         return variableValue;
-      }
+      },
     );
   }
   return value;
@@ -64,7 +64,7 @@ export function addVariableDefinition(
     'variableList' | 'playlistParsingError'
   >,
   attr: AttrList,
-  parentUrl: string
+  parentUrl: string,
 ) {
   let variableList = parsed.variableList;
   if (!variableList) {
@@ -80,12 +80,12 @@ export function addVariableDefinition(
         VALUE = searchParams.get(NAME);
       } else {
         throw new Error(
-          `"${NAME}" does not match any query parameter in URI: "${parentUrl}"`
+          `"${NAME}" does not match any query parameter in URI: "${parentUrl}"`,
         );
       }
     } catch (error) {
       parsed.playlistParsingError ||= new Error(
-        `EXT-X-DEFINE QUERYPARAM: ${error.message}`
+        `EXT-X-DEFINE QUERYPARAM: ${error.message}`,
       );
     }
   } else {
@@ -94,7 +94,7 @@ export function addVariableDefinition(
   }
   if (NAME in variableList) {
     parsed.playlistParsingError ||= new Error(
-      `EXT-X-DEFINE duplicate Variable Name declarations: "${NAME}"`
+      `EXT-X-DEFINE duplicate Variable Name declarations: "${NAME}"`,
     );
   } else {
     variableList[NAME] = VALUE || '';
@@ -107,7 +107,7 @@ export function importVariableDefinition(
     'variableList' | 'playlistParsingError'
   >,
   attr: AttrList,
-  sourceVariableList: VariableMap | null
+  sourceVariableList: VariableMap | null,
 ) {
   const IMPORT = attr.IMPORT;
   if (sourceVariableList && IMPORT in sourceVariableList) {
@@ -118,7 +118,7 @@ export function importVariableDefinition(
     variableList[IMPORT] = sourceVariableList[IMPORT];
   } else {
     parsed.playlistParsingError ||= new Error(
-      `EXT-X-DEFINE IMPORT attribute not found in Multivariant Playlist: "${IMPORT}"`
+      `EXT-X-DEFINE IMPORT attribute not found in Multivariant Playlist: "${IMPORT}"`,
     );
   }
 }

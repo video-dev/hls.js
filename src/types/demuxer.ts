@@ -5,12 +5,12 @@ export interface Demuxer {
     data: Uint8Array,
     timeOffset: number,
     isSampleAes?: boolean,
-    flush?: boolean
+    flush?: boolean,
   ): DemuxerResult;
   demuxSampleAes(
     data: Uint8Array,
     keyData: KeyData,
-    timeOffset: number
+    timeOffset: number,
   ): Promise<DemuxerResult>;
   flush(timeOffset?: number): DemuxerResult | Promise<DemuxerResult>;
   destroy(): void;
@@ -18,7 +18,7 @@ export interface Demuxer {
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    trackDuration: number
+    trackDuration: number,
   );
   resetTimeStamp(defaultInitPTS?: RationalTimestamp | null): void;
   resetContiguity(): void;

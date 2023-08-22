@@ -66,21 +66,21 @@ class AudioTrackController extends BasePlaylistController {
 
   protected onManifestParsed(
     event: Events.MANIFEST_PARSED,
-    data: ManifestParsedData
+    data: ManifestParsedData,
   ): void {
     this.tracks = data.audioTracks || [];
   }
 
   protected onAudioTrackLoaded(
     event: Events.AUDIO_TRACK_LOADED,
-    data: AudioTrackLoadedData
+    data: AudioTrackLoadedData,
   ): void {
     const { id, groupId, details } = data;
     const trackInActiveGroup = this.tracksInGroup[id];
 
     if (!trackInActiveGroup || trackInActiveGroup.groupId !== groupId) {
       this.warn(
-        `Track with id:${id} and group:${groupId} not found in active group ${trackInActiveGroup.groupId}`
+        `Track with id:${id} and group:${groupId} not found in active group ${trackInActiveGroup.groupId}`,
       );
       return;
     }
@@ -88,7 +88,7 @@ class AudioTrackController extends BasePlaylistController {
     const curDetails = trackInActiveGroup.details;
     trackInActiveGroup.details = data.details;
     this.log(
-      `audio-track ${id} "${trackInActiveGroup.name}" lang:${trackInActiveGroup.lang} group:${groupId} loaded [${details.startSN}-${details.endSN}]`
+      `audio-track ${id} "${trackInActiveGroup.name}" lang:${trackInActiveGroup.lang} group:${groupId} loaded [${details.startSN}-${details.endSN}]`,
     );
 
     if (id === this.trackId) {
@@ -98,14 +98,14 @@ class AudioTrackController extends BasePlaylistController {
 
   protected onLevelLoading(
     event: Events.LEVEL_LOADING,
-    data: LevelLoadingData
+    data: LevelLoadingData,
   ): void {
     this.switchLevel(data.level);
   }
 
   protected onLevelSwitching(
     event: Events.LEVEL_SWITCHING,
-    data: LevelSwitchingData
+    data: LevelSwitchingData,
   ): void {
     this.switchLevel(data.level);
   }
@@ -122,7 +122,7 @@ class AudioTrackController extends BasePlaylistController {
       this.groupId = audioGroupId || null;
 
       const audioTracks = this.tracks.filter(
-        (track): boolean => !audioGroupId || track.groupId === audioGroupId
+        (track): boolean => !audioGroupId || track.groupId === audioGroupId,
       );
 
       // Disable selectDefaultTrack if there are no default tracks
@@ -136,7 +136,7 @@ class AudioTrackController extends BasePlaylistController {
       this.tracksInGroup = audioTracks;
       const audioTracksUpdated: AudioTracksUpdatedData = { audioTracks };
       this.log(
-        `Updating audio tracks, ${audioTracks.length} track(s) found in group:${audioGroupId}`
+        `Updating audio tracks, ${audioTracks.length} track(s) found in group:${audioGroupId}`,
       );
       this.hls.trigger(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
 
@@ -197,7 +197,7 @@ class AudioTrackController extends BasePlaylistController {
     const track = tracks[newId];
     const { groupId, name } = track;
     this.log(
-      `Switching to audio-track ${newId} "${name}" lang:${track.lang} group:${groupId}`
+      `Switching to audio-track ${newId} "${name}" lang:${track.lang} group:${groupId}`,
     );
     this.trackId = newId;
     this.currentTrack = track;
@@ -222,7 +222,7 @@ class AudioTrackController extends BasePlaylistController {
       this.setAudioTrack(trackId);
     } else {
       const error = new Error(
-        `No track found for running audio group-ID: ${this.groupId} track count: ${audioTracks.length}`
+        `No track found for running audio group-ID: ${this.groupId} track count: ${audioTracks.length}`,
       );
       this.warn(error.message);
 
@@ -271,13 +271,13 @@ class AudioTrackController extends BasePlaylistController {
           url = hlsUrlParameters.addDirectives(url);
         } catch (error) {
           this.warn(
-            `Could not construct new URL with HLS Delivery Directives: ${error}`
+            `Could not construct new URL with HLS Delivery Directives: ${error}`,
           );
         }
       }
       // track not retrieved yet, or live playlist we need to (re)load it
       this.log(
-        `loading audio-track playlist ${id} "${audioTrack.name}" lang:${audioTrack.lang} group:${groupId}`
+        `loading audio-track playlist ${id} "${audioTrack.name}" lang:${audioTrack.lang} group:${groupId}`,
       );
       this.clearTimer();
       this.hls.trigger(Events.AUDIO_TRACK_LOADING, {

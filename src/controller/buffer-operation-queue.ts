@@ -21,7 +21,7 @@ export default class BufferOperationQueue {
   public append(
     operation: BufferOperation,
     type: SourceBufferName,
-    pending?: boolean
+    pending?: boolean,
   ) {
     const queue = this.queues[type];
     queue.push(operation);
@@ -62,7 +62,7 @@ export default class BufferOperationQueue {
         operation.execute();
       } catch (error) {
         logger.warn(
-          `[buffer-operation-queue]: Exception executing "${type}" SourceBuffer operation: ${error}`
+          `[buffer-operation-queue]: Exception executing "${type}" SourceBuffer operation: ${error}`,
         );
         operation.onError(error);
 

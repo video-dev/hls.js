@@ -10,7 +10,7 @@ const istanbul = require('rollup-plugin-istanbul');
 const fs = require('fs');
 
 const pkgJson = JSON.parse(
-  fs.readFileSync('./package.json', { encoding: 'utf-8' })
+  fs.readFileSync('./package.json', { encoding: 'utf-8' }),
 );
 
 const BUILD_TYPE = {
@@ -53,24 +53,24 @@ const buildConstants = (type, additional = {}) => ({
   values: {
     __VERSION__: JSON.stringify(pkgJson.version),
     __USE_SUBTITLES__: JSON.stringify(
-      type === BUILD_TYPE.full || addSubtitleSupport
+      type === BUILD_TYPE.full || addSubtitleSupport,
     ),
     __USE_ALT_AUDIO__: JSON.stringify(
-      type === BUILD_TYPE.full || addAltAudioSupport
+      type === BUILD_TYPE.full || addAltAudioSupport,
     ),
     __USE_EME_DRM__: JSON.stringify(type === BUILD_TYPE.full || addEMESupport),
     __USE_CMCD__: JSON.stringify(type === BUILD_TYPE.full || addCMCDSupport),
     __USE_CONTENT_STEERING__: JSON.stringify(
-      type === BUILD_TYPE.full || addContentSteeringSupport
+      type === BUILD_TYPE.full || addContentSteeringSupport,
     ),
     __USE_VARIABLE_SUBSTITUTION__: JSON.stringify(
-      type === BUILD_TYPE.full || addVariableSubstitutionSupport
+      type === BUILD_TYPE.full || addVariableSubstitutionSupport,
     ),
     __USE_M2TS_ADVANCED_CODECS__: JSON.stringify(
-      type === BUILD_TYPE.full || addM2TSAdvancedCodecSupport
+      type === BUILD_TYPE.full || addM2TSAdvancedCodecSupport,
     ),
     __USE_MEDIA_CAPABILITIES__: JSON.stringify(
-      type === BUILD_TYPE.full || addMediaCapabilitiesSupport
+      type === BUILD_TYPE.full || addMediaCapabilitiesSupport,
     ),
 
     ...additional,
@@ -132,7 +132,7 @@ const babelTsWithPresetEnvTargets = ({ targets, stripConsole }) =>
               espath.node.callee = importHelper.addNamed(
                 espath,
                 'isFiniteNumber',
-                path.resolve('src/polyfills/number')
+                path.resolve('src/polyfills/number'),
               );
             } else if (
               espath.get('callee').matchesPattern('Number.MAX_SAFE_INTEGER')
@@ -140,7 +140,7 @@ const babelTsWithPresetEnvTargets = ({ targets, stripConsole }) =>
               espath.node.callee = importHelper.addNamed(
                 espath,
                 'MAX_SAFE_INTEGER',
-                path.resolve('src/polyfills/number')
+                path.resolve('src/polyfills/number'),
               );
             }
           },
@@ -344,7 +344,7 @@ const configs = Object.entries({
       replace(
         buildConstants(BUILD_TYPE.full, {
           __IN_WORKER__: JSON.stringify(true),
-        })
+        }),
       ),
       buildBabelLegacyBrowsers({ stripConsole: true }),
       terser(),
@@ -377,7 +377,7 @@ const configs = Object.entries({
                   branch: env.CF_PAGES_BRANCH,
                   commitRef: env.CF_PAGES_COMMIT_SHA,
                 }
-              : null
+              : null,
           ),
         },
       }),

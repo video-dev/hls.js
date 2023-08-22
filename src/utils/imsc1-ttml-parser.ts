@@ -28,7 +28,7 @@ export function parseIMSC1(
   payload: ArrayBuffer,
   initPTS: RationalTimestamp,
   callBack: (cues: Array<VTTCue>) => any,
-  errorCallBack: (error: Error) => any
+  errorCallBack: (error: Error) => any,
 ) {
   const results = findBox(new Uint8Array(payload), ['mdat']);
   if (results.length === 0) {
@@ -65,16 +65,16 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
       result[key] = tt.getAttribute(`ttp:${key}`) || defaultRateInfo[key];
       return result;
     },
-    {}
+    {},
   );
 
   const trim = tt.getAttribute('xml:space') !== 'preserve';
 
   const styleElements = collectionToDictionary(
-    getElementCollection(tt, 'styling', 'style')
+    getElementCollection(tt, 'styling', 'style'),
   );
   const regionElements = collectionToDictionary(
-    getElementCollection(tt, 'layout', 'region')
+    getElementCollection(tt, 'layout', 'region'),
   );
   const cueElements = getElementCollection(tt, 'body', '[begin]');
 
@@ -87,7 +87,7 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
       }
       const startTime = parseTtmlTime(
         cueElement.getAttribute('begin'),
-        rateInfo
+        rateInfo,
       );
       const duration = parseTtmlTime(cueElement.getAttribute('dur'), rateInfo);
       let endTime = parseTtmlTime(cueElement.getAttribute('end'), rateInfo);
@@ -127,7 +127,7 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
 function getElementCollection(
   fromElement,
   parentName,
-  childName
+  childName,
 ): Array<HTMLElement> {
   const parent = fromElement.getElementsByTagName(parentName)[0];
   if (parent) {
@@ -165,7 +165,7 @@ function getTextContent(element, trim): string {
 function getTtmlStyles(
   region,
   style,
-  styleElements
+  styleElements,
 ): { [style: string]: string } {
   const ttsNs = 'http://www.w3.org/ns/ttml#styling';
   let regionStyle = null;

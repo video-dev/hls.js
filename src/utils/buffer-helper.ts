@@ -55,7 +55,7 @@ export class BufferHelper {
   static bufferInfo(
     media: Bufferable | null,
     pos: number,
-    maxHoleDuration: number
+    maxHoleDuration: number,
   ): BufferInfo {
     try {
       if (media) {
@@ -79,7 +79,7 @@ export class BufferHelper {
   static bufferedInfo(
     buffered: BufferTimeRange[],
     pos: number,
-    maxHoleDuration: number
+    maxHoleDuration: number,
   ): {
     len: number;
     start: number;

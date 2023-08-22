@@ -23,7 +23,7 @@ try {
       // 1.2.3-0.caaanary.custom => bad
       // 1.2.3-0.caaanary.custom.0.canary.503 => now lower than 1.2.3-0.canary.501
       throw new Error(
-        `It's possible that "${newVersion}" has a lower precedense than an existing canary version which is not allowed.`
+        `It's possible that "${newVersion}" has a lower precedense than an existing canary version which is not allowed.`,
       );
     }
   } else {
@@ -44,7 +44,7 @@ try {
     const suffix = process.env.CF_PAGES
       ? `pr.${process.env.CF_PAGES_BRANCH.replace(
           /[^a-zA-Z-]/g,
-          '-'
+          '-',
         )}.${getCommitHash().slice(0, 8)}`
       : `0.canary.${getCommitNum()}`;
 
@@ -53,18 +53,18 @@ try {
 
   if (!versionParser.isGreaterOrEqual(newVersion, latestVersion)) {
     throw new Error(
-      `New version "${newVersion}" is not >= latest version "${latestVersion}" on this branch.`
+      `New version "${newVersion}" is not >= latest version "${latestVersion}" on this branch.`,
     );
   }
 
   const foundPreviousVersion = versionParser
     .getPotentialPreviousStableVersions(`v${newVersion}`)
     .every((potentialPreviousVersion) =>
-      hasTag(`v${potentialPreviousVersion}`)
+      hasTag(`v${potentialPreviousVersion}`),
     );
   if (!foundPreviousVersion) {
     throw new Error(
-      'Could not find a previous version. The tag must follow a previous stable version number.'
+      'Could not find a previous version. The tag must follow a previous stable version number.',
     );
   }
 

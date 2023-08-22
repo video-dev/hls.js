@@ -406,7 +406,7 @@ function addLeadingZero(num: number): string {
 
 export function patchEncyptionData(
   initSegment: Uint8Array | undefined,
-  decryptdata: DecryptData | null
+  decryptdata: DecryptData | null,
 ): Uint8Array | undefined {
   if (!initSegment || !decryptdata) {
     return initSegment;
@@ -437,8 +437,8 @@ export function patchEncyptionData(
                 `[eme] Patching keyId in 'enc${
                   isAudio ? 'a' : 'v'
                 }>sinf>>tenc' box: ${Hex.hexDump(tencKeyId)} -> ${Hex.hexDump(
-                  keyId
-                )}`
+                  keyId,
+                )}`,
               );
               tenc.set(keyId, 8);
             }
@@ -482,7 +482,7 @@ export function parseSinf(sinf: Uint8Array): Uint8Array | null {
  */
 export function getStartDTS(
   initData: InitData,
-  fmp4: Uint8Array
+  fmp4: Uint8Array,
 ): number | null {
   // we need info from two children of each track fragment box
   return findBox(fmp4, ['moof', 'traf']).reduce(
@@ -502,7 +502,7 @@ export function getStartDTS(
               // https://github.com/video-dev/hls.js/issues/5303
               if (baseTime === UINT32_MAX) {
                 logger.warn(
-                  `[mp4-demuxer]: Ignoring assumed invalid signed 64-bit track fragment decode time`
+                  `[mp4-demuxer]: Ignoring assumed invalid signed 64-bit track fragment decode time`,
                 );
                 return result;
               }
@@ -522,7 +522,7 @@ export function getStartDTS(
           }
           return result;
         },
-        null
+        null,
       );
       if (
         start !== null &&
@@ -533,7 +533,7 @@ export function getStartDTS(
       }
       return result;
     },
-    null
+    null,
   );
 }
 
@@ -607,7 +607,7 @@ export function getDuration(data: Uint8Array, initData: InitData) {
       if (sidx?.references) {
         sidxDuration += sidx.references.reduce(
           (dur, ref) => dur + ref.info.duration || 0,
-          0
+          0,
         );
       }
     }
@@ -682,7 +682,7 @@ export function computeRawDurationFromSamples(trun): number {
 export function offsetStartDTS(
   initData: InitData,
   fmp4: Uint8Array,
-  timeOffset: number
+  timeOffset: number,
 ) {
   findBox(fmp4, ['moof', 'traf']).forEach((traf) => {
     findBox(traf, ['tfhd']).forEach((tfhd) => {
@@ -746,7 +746,7 @@ export interface SegmentedRange {
 
 export function appendUint8Array(
   data1: Uint8Array,
-  data2: Uint8Array
+  data2: Uint8Array,
 ): Uint8Array {
   const temp = new Uint8Array(data1.length + data2.length);
   temp.set(data1);
@@ -768,7 +768,7 @@ export interface IEmsgParsingData {
 
 export function parseSamples(
   timeOffset: number,
-  track: PassthroughTrack
+  track: PassthroughTrack,
 ): UserdataSample[] {
   const seiSamples = [] as UserdataSample[];
   const videoData = track.samples;
@@ -888,13 +888,13 @@ export function parseSamples(
                   if (isSEIMessage(isHEVCFlavor, videoData[sampleOffset])) {
                     const data = videoData.subarray(
                       sampleOffset,
-                      sampleOffset + naluSize
+                      sampleOffset + naluSize,
                     );
                     parseSEIMessageFromNALu(
                       data,
                       isHEVCFlavor ? 2 : 1,
                       timeOffset + compositionOffset / timescale,
-                      seiSamples
+                      seiSamples,
                     );
                   }
                   sampleOffset += naluSize;
@@ -941,7 +941,7 @@ export function parseSEIMessageFromNALu(
   unescapedData: Uint8Array,
   headerSize: number,
   pts: number,
-  samples: UserdataSample[]
+  samples: UserdataSample[],
 ) {
   const data = discardEPB(unescapedData);
   let seiPtr = 0;
@@ -1134,7 +1134,7 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
     if (!Number.isSafeInteger(presentationTime)) {
       presentationTime = Number.MAX_SAFE_INTEGER;
       logger.warn(
-        'Presentation time exceeds safe integer limit and wrapped to max safe integer in parsing emsg box'
+        'Presentation time exceeds safe integer limit and wrapped to max safe integer in parsing emsg box',
       );
     }
 
@@ -1196,7 +1196,7 @@ export function mp4Box(type: ArrayLike<number>, ...payload: Uint8Array[]) {
 export function mp4pssh(
   systemId: Uint8Array,
   keyids: Array<Uint8Array> | null,
-  data: Uint8Array
+  data: Uint8Array,
 ) {
   if (systemId.byteLength !== 16) {
     throw new RangeError('Invalid system id');
@@ -1242,7 +1242,7 @@ export function mp4pssh(
     kidCount,
     kids,
     dataSize,
-    data || new Uint8Array()
+    data || new Uint8Array(),
   );
 }
 

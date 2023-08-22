@@ -33,7 +33,7 @@ export default class HlsMock extends EventEmitter implements HlsEventEmitter {
     // add spies to event emitters
     this.trigger = <E extends keyof HlsListeners>(
       event: E,
-      eventObject: Parameters<HlsListeners[E]>[1]
+      eventObject: Parameters<HlsListeners[E]>[1],
     ): boolean => this.emit(event as string, event, eventObject);
     sinon.spy(this, 'on');
     sinon.spy(this, 'once');

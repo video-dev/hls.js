@@ -89,7 +89,7 @@ describe('BufferHelper', function () {
       };
       const maxHoleDuration = 0;
       expect(
-        BufferHelper.bufferInfo(invalidMedia, 0, maxHoleDuration)
+        BufferHelper.bufferInfo(invalidMedia, 0, maxHoleDuration),
       ).to.deep.equal({
         len: 0,
         start: 0,
@@ -124,7 +124,7 @@ describe('BufferHelper', function () {
       ];
       const maxHoleDuration = 0;
       expect(
-        BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration),
       ).to.deep.equal({
         len: 0.5,
         start: 0,
@@ -132,7 +132,7 @@ describe('BufferHelper', function () {
         nextStart: 1,
       });
       expect(
-        BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration),
       ).to.deep.equal({
         len: 0,
         start: 0.5,
@@ -140,7 +140,7 @@ describe('BufferHelper', function () {
         nextStart: 1,
       });
       expect(
-        BufferHelper.bufferedInfo(buffered, 1, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 1, maxHoleDuration),
       ).to.deep.equal({
         len: 1,
         start: 1,
@@ -148,7 +148,7 @@ describe('BufferHelper', function () {
         nextStart: undefined,
       });
       expect(
-        BufferHelper.bufferedInfo(buffered, 1.5, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 1.5, maxHoleDuration),
       ).to.deep.equal({
         len: 0.5,
         start: 1,
@@ -171,7 +171,7 @@ describe('BufferHelper', function () {
       ];
       const maxHoleDuration = 0.5;
       expect(
-        BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration),
       ).to.deep.equal({
         len: 0.5,
         start: 0,
@@ -182,7 +182,7 @@ describe('BufferHelper', function () {
       // |////////|________|////////////////|
       // 0       0.5 - M - 1                2
       expect(
-        BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration),
       ).to.deep.equal({
         len: 1.5,
         start: 1,
@@ -190,7 +190,7 @@ describe('BufferHelper', function () {
         nextStart: undefined,
       });
       expect(
-        BufferHelper.bufferedInfo(buffered, 1, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 1, maxHoleDuration),
       ).to.deep.equal({
         len: 1,
         start: 1,
@@ -198,7 +198,7 @@ describe('BufferHelper', function () {
         nextStart: undefined,
       });
       expect(
-        BufferHelper.bufferedInfo(buffered, 2, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 2, maxHoleDuration),
       ).to.deep.equal({
         len: 0,
         start: 2,
@@ -221,7 +221,7 @@ describe('BufferHelper', function () {
       ];
       const maxHoleDuration = 0.5;
       expect(
-        BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 0, maxHoleDuration),
       ).to.deep.equal({
         len: 0.5,
         start: 0,
@@ -244,7 +244,7 @@ describe('BufferHelper', function () {
       ];
       const maxHoleDuration = 1;
       expect(
-        BufferHelper.bufferedInfo(buffered, 0.8, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 0.8, maxHoleDuration),
       ).to.deep.equal({
         len: 1.2,
         start: 0,
@@ -268,7 +268,7 @@ describe('BufferHelper', function () {
       ];
       const maxHoleDuration = 0.5;
       expect(
-        BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration),
       ).to.deep.equal({
         len: 0.5,
         start: 0,
@@ -289,7 +289,7 @@ describe('BufferHelper', function () {
       ];
       const maxHoleDuration = 0;
       expect(
-        BufferHelper.bufferedInfo(buffered, 5, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 5, maxHoleDuration),
       ).to.deep.equal({
         len: 0,
         start: 5,
@@ -301,7 +301,7 @@ describe('BufferHelper', function () {
       const buffered = [];
       const maxHoleDuration = 0;
       expect(
-        BufferHelper.bufferedInfo(buffered, 5, maxHoleDuration)
+        BufferHelper.bufferedInfo(buffered, 5, maxHoleDuration),
       ).to.deep.equal({
         len: 0,
         start: 5,

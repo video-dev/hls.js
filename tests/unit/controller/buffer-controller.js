@@ -157,7 +157,7 @@ describe('BufferController tests', function () {
         });
       checkPendingTracksSpy = sandbox.spy(
         bufferController,
-        'checkPendingTracks'
+        'checkPendingTracks',
       );
     });
 
@@ -298,7 +298,7 @@ describe('BufferController tests', function () {
       /* eslint-disable-next-line no-unused-vars */
       const appendChangeType = sandbox.stub(
         bufferController,
-        'appendChangeType'
+        'appendChangeType',
       );
       const buffer = {
         changeType: sandbox.stub(),
@@ -334,7 +334,7 @@ describe('BufferController tests', function () {
       expect(bufferController.appendChangeType).to.have.been.calledOnce;
       expect(bufferController.appendChangeType).to.have.been.calledWith(
         'audio',
-        'audio/mp4;codecs=mp4a.40.5'
+        'audio/mp4;codecs=mp4a.40.5',
       );
       expect(bufferController.tracks.audio).to.deep.equal({
         buffer,
@@ -348,7 +348,7 @@ describe('BufferController tests', function () {
       expect(bufferController.appendChangeType).to.have.been.calledTwice;
       expect(bufferController.appendChangeType).to.have.been.calledWith(
         'audio',
-        'audio/mp4;codecs=mp4a.40.2'
+        'audio/mp4;codecs=mp4a.40.2',
       );
       expect(bufferController.tracks.audio).to.deep.equal({
         buffer,

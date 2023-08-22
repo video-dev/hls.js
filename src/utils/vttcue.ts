@@ -58,14 +58,14 @@ export default (function () {
   function findDirectionSetting(value: string) {
     return isAllowedValue<typeof AllowedDirections, Direction>(
       AllowedDirections,
-      value
+      value,
     );
   }
 
   function findAlignSetting(value: string) {
     return isAllowedValue<typeof AllowedAlignments, Alignment>(
       AllowedAlignments,
-      value
+      value,
     );
   }
 
@@ -124,7 +124,7 @@ export default (function () {
         set: function (value: string) {
           _id = '' + value;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -137,7 +137,7 @@ export default (function () {
         set: function (value: boolean) {
           _pauseOnExit = !!value;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -155,7 +155,7 @@ export default (function () {
           _startTime = value;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -173,7 +173,7 @@ export default (function () {
           _endTime = value;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -187,7 +187,7 @@ export default (function () {
           _text = '' + value;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     // todo: implement VTTRegion polyfill?
@@ -202,7 +202,7 @@ export default (function () {
           _region = value;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -217,14 +217,14 @@ export default (function () {
           // Have to check for false because the setting an be an empty string.
           if (setting === false) {
             throw new SyntaxError(
-              'An invalid or illegal string was specified.'
+              'An invalid or illegal string was specified.',
             );
           }
 
           _vertical = setting;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -238,7 +238,7 @@ export default (function () {
           _snapToLines = !!value;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -251,14 +251,14 @@ export default (function () {
         set: function (value: number | 'auto') {
           if (typeof value !== 'number' && value !== 'auto') {
             throw new SyntaxError(
-              'An invalid number or illegal string was specified.'
+              'An invalid number or illegal string was specified.',
             );
           }
 
           _line = value;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -272,14 +272,14 @@ export default (function () {
           const setting = findAlignSetting(value);
           if (!setting) {
             throw new SyntaxError(
-              'An invalid or illegal string was specified.'
+              'An invalid or illegal string was specified.',
             );
           }
 
           _lineAlign = setting;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -297,7 +297,7 @@ export default (function () {
           _position = value;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -311,14 +311,14 @@ export default (function () {
           const setting = findAlignSetting(value);
           if (!setting) {
             throw new SyntaxError(
-              'An invalid or illegal string was specified.'
+              'An invalid or illegal string was specified.',
             );
           }
 
           _positionAlign = setting;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -336,7 +336,7 @@ export default (function () {
           _size = value;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     Object.defineProperty(
@@ -350,14 +350,14 @@ export default (function () {
           const setting = findAlignSetting(value);
           if (!setting) {
             throw new SyntaxError(
-              'An invalid or illegal string was specified.'
+              'An invalid or illegal string was specified.',
             );
           }
 
           _align = setting;
           this.hasBeenReset = true;
         },
-      })
+      }),
     );
 
     /**

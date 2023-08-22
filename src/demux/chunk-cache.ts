@@ -29,7 +29,7 @@ export default class ChunkCache {
 
 function concatUint8Arrays(
   chunks: Array<Uint8Array>,
-  dataLength: number
+  dataLength: number,
 ): Uint8Array {
   const result = new Uint8Array(dataLength);
   let offset = 0;

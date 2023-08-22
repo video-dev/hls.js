@@ -30,7 +30,7 @@ type StartParameters = {
 export function getStartCodecTier(
   codecTiers: Record<string, CodecSetTier>,
   videoRange: VideoRange | undefined,
-  currentBw: number
+  currentBw: number,
 ): StartParameters {
   const codecSets = Object.keys(codecTiers);
   // Use first level set to determine stereo, and minimum resolution and framerate
@@ -70,49 +70,49 @@ export function getStartCodecTier(
       if (candidateTier.minBitrate > currentBw) {
         logStartCodecCandidateIgnored(
           candidate,
-          `min bitrate of ${candidateTier.minBitrate} > current estimate of ${currentBw}`
+          `min bitrate of ${candidateTier.minBitrate} > current estimate of ${currentBw}`,
         );
         return selected;
       }
       if (!candidateTier.hasDefaultAudio) {
         logStartCodecCandidateIgnored(
           candidate,
-          `no renditions with default or auto-select sound found`
+          `no renditions with default or auto-select sound found`,
         );
         return selected;
       }
       if (hasStereo && candidateTier.channels['2'] === 0) {
         logStartCodecCandidateIgnored(
           candidate,
-          `no renditions with stereo sound found`
+          `no renditions with stereo sound found`,
         );
         return selected;
       }
       if (candidateTier.minHeight > maxHeight) {
         logStartCodecCandidateIgnored(
           candidate,
-          `min resolution of ${candidateTier.minHeight} > maximum of ${maxHeight}`
+          `min resolution of ${candidateTier.minHeight} > maximum of ${maxHeight}`,
         );
         return selected;
       }
       if (candidateTier.minFramerate > maxFramerate) {
         logStartCodecCandidateIgnored(
           candidate,
-          `min framerate of ${candidateTier.minFramerate} > maximum of ${maxFramerate}`
+          `min framerate of ${candidateTier.minFramerate} > maximum of ${maxFramerate}`,
         );
         return selected;
       }
       if (videoRange && candidateTier.videoRanges[videoRange] === 0) {
         logStartCodecCandidateIgnored(
           candidate,
-          `no variants with VIDEO-RANGE of ${videoRange} found`
+          `no variants with VIDEO-RANGE of ${videoRange} found`,
         );
         return selected;
       }
       if (candidateTier.maxScore < selectedScore) {
         logStartCodecCandidateIgnored(
           candidate,
-          `max score of ${candidateTier.maxScore} < selected max of ${selectedScore}`
+          `max score of ${candidateTier.maxScore} < selected max of ${selectedScore}`,
         );
         return selected;
       }
@@ -128,7 +128,7 @@ export function getStartCodecTier(
       selectedScore = candidateTier.maxScore;
       return candidate;
     },
-    undefined
+    undefined,
   );
   return {
     codecSet,
@@ -140,7 +140,7 @@ export function getStartCodecTier(
 
 function logStartCodecCandidateIgnored(codeSet: string, reason: string) {
   logger.log(
-    `[abr] start candidates with "${codeSet}" ignored because ${reason}`
+    `[abr] start candidates with "${codeSet}" ignored because ${reason}`,
   );
 }
 
@@ -180,7 +180,7 @@ export function getAudioTracksByGroup(allAudioTracks: MediaPlaylist[]) {
       hasDefaultAudio: false,
       hasAutoSelectAudio: false,
       groups: {},
-    }
+    },
   );
 }
 
@@ -188,7 +188,7 @@ export function getCodecTiers(
   levels: Level[],
   audioTracksByGroup: AudioTracksByGroup,
   minAutoLevel: number,
-  maxAutoLevel: number
+  maxAutoLevel: number,
 ): Record<string, CodecSetTier> {
   return levels
     .slice(minAutoLevel, maxAutoLevel + 1)

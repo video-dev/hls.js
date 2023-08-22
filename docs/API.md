@@ -235,7 +235,7 @@ You need to provide manifest URL as below:
     });
     hls.on(Hls.Events.MANIFEST_PARSED, function (event, data) {
       console.log(
-        'manifest loaded, found ' + data.levels.length + ' quality level'
+        'manifest loaded, found ' + data.levels.length + ' quality level',
       );
     });
     hls.loadSource('http://my.streamURL.com/playlist.m3u8');

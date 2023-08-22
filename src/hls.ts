@@ -153,7 +153,7 @@ export default class Hls implements HlsEventEmitter {
       : null;
     const levelController = (this.levelController = new LevelController(
       this,
-      contentSteering
+      contentSteering,
     ));
     // FragmentTracker must be defined before StreamController because the order of event handling is important
     const fragmentTracker = new FragmentTracker(this);
@@ -161,7 +161,7 @@ export default class Hls implements HlsEventEmitter {
     const streamController = (this.streamController = new StreamController(
       this,
       fragmentTracker,
-      keyLoader
+      keyLoader,
     ));
 
     // Cap level controller uses streamController to flush the buffer
@@ -190,37 +190,37 @@ export default class Hls implements HlsEventEmitter {
 
     this.audioTrackController = this.createController(
       config.audioTrackController,
-      networkControllers
+      networkControllers,
     );
     const AudioStreamControllerClass = config.audioStreamController;
     if (AudioStreamControllerClass) {
       networkControllers.push(
-        new AudioStreamControllerClass(this, fragmentTracker, keyLoader)
+        new AudioStreamControllerClass(this, fragmentTracker, keyLoader),
       );
     }
     // subtitleTrackController must be defined before subtitleStreamController because the order of event handling is important
     this.subtitleTrackController = this.createController(
       config.subtitleTrackController,
-      networkControllers
+      networkControllers,
     );
     const SubtitleStreamControllerClass = config.subtitleStreamController;
     if (SubtitleStreamControllerClass) {
       networkControllers.push(
-        new SubtitleStreamControllerClass(this, fragmentTracker, keyLoader)
+        new SubtitleStreamControllerClass(this, fragmentTracker, keyLoader),
       );
     }
     this.createController(config.timelineController, coreComponents);
     keyLoader.emeController = this.emeController = this.createController(
       config.emeController,
-      coreComponents
+      coreComponents,
     );
     this.cmcdController = this.createController(
       config.cmcdController,
-      coreComponents
+      coreComponents,
     );
     this.latencyController = this.createController(
       LatencyController,
-      coreComponents
+      coreComponents,
     );
 
     this.coreComponents = coreComponents;
@@ -249,7 +249,7 @@ export default class Hls implements HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
-    context: Context = this as any
+    context: Context = this as any,
   ) {
     this._emitter.on(event, listener, context);
   }
@@ -257,7 +257,7 @@ export default class Hls implements HlsEventEmitter {
   once<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
-    context: Context = this as any
+    context: Context = this as any,
   ) {
     this._emitter.once(event, listener, context);
   }
@@ -270,7 +270,7 @@ export default class Hls implements HlsEventEmitter {
     event: E,
     listener?: HlsListeners[E] | undefined,
     context: Context = this as any,
-    once?: boolean | undefined
+    once?: boolean | undefined,
   ) {
     this._emitter.off(event, listener, context, once);
   }
@@ -282,14 +282,14 @@ export default class Hls implements HlsEventEmitter {
   emit<E extends keyof HlsListeners>(
     event: E,
     name: E,
-    eventObject: Parameters<HlsListeners[E]>[1]
+    eventObject: Parameters<HlsListeners[E]>[1],
   ): boolean {
     return this._emitter.emit(event, name, eventObject);
   }
 
   trigger<E extends keyof HlsListeners>(
     event: E,
-    eventObject: Parameters<HlsListeners[E]>[1]
+    eventObject: Parameters<HlsListeners[E]>[1],
   ): boolean {
     if (this.config.debug) {
       return this.emit(event, event, eventObject);
@@ -303,7 +303,7 @@ export default class Hls implements HlsEventEmitter {
             '. Error message: "' +
             error.message +
             '". Here is a stacktrace:',
-          error
+          error,
         );
         // Prevent recursion in error event handlers that throw #5497
         if (!this.triggeringException) {
@@ -380,7 +380,7 @@ export default class Hls implements HlsEventEmitter {
       url,
       {
         alwaysNormalize: true,
-      }
+      },
     ));
     logger.log(`loadSource:${loadingSource}`);
     if (

@@ -101,7 +101,7 @@ function parseOptions(
   input: string,
   callback: (k: string, v: any) => void,
   keyValueDelim: RegExp,
-  groupDelim?: RegExp
+  groupDelim?: RegExp,
 ) {
   const groups = groupDelim ? input.split(groupDelim) : [input];
   for (const i in groups) {
@@ -198,7 +198,7 @@ function parseCue(input: string, cue: VTTCue, regionList: Region[]) {
         }
       },
       /:/,
-      /\s/
+      /\s/,
     );
 
     // Apply default values for any missing fields.
@@ -238,7 +238,8 @@ function parseCue(input: string, cue: VTTCue, regionList: Region[]) {
   if (input.slice(0, 3) !== '-->') {
     // (3) next characters must match '-->'
     throw new Error(
-      "Malformed time stamp (time stamps must be separated by '-->'): " + oInput
+      "Malformed time stamp (time stamps must be separated by '-->'): " +
+        oInput,
     );
   }
   input = input.slice(3);
@@ -329,7 +330,7 @@ export class VTTParser {
           // break;
           // }
         },
-        /:/
+        /:/,
       );
     }
 

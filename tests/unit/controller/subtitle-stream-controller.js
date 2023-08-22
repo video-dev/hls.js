@@ -42,7 +42,7 @@ describe('SubtitleStreamController', function () {
     subtitleStreamController = new SubtitleStreamController(
       hls,
       fragmentTracker,
-      keyLoader
+      keyLoader,
     );
 
     subtitleStreamController.onMediaAttached(Events.MEDIA_ATTACHED, {
@@ -147,13 +147,13 @@ describe('SubtitleStreamController', function () {
     it('nulls fragPrevious when seeking away from fragCurrent', function () {
       subtitleStreamController.fragCurrent = new Fragment(
         PlaylistLevelType.MAIN,
-        ''
+        '',
       );
       subtitleStreamController.fragCurrent.start = 1000;
       subtitleStreamController.fragCurrent.duration = 10;
       subtitleStreamController.fragPrevious = new Fragment(
         PlaylistLevelType.MAIN,
-        ''
+        '',
       );
       subtitleStreamController.onMediaSeeking();
       expect(subtitleStreamController.fragPrevious).to.not.exist;

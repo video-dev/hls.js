@@ -22,7 +22,7 @@ class AACDemuxer extends BaseAudioDemuxer {
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    trackDuration: number
+    trackDuration: number,
   ) {
     super.resetInitSegment(initSegment, audioCodec, videoCodec, trackDuration);
     this._audioTrack = {
@@ -72,14 +72,14 @@ class AACDemuxer extends BaseAudioDemuxer {
       this.observer,
       data,
       offset,
-      track.manifestCodec
+      track.manifestCodec,
     );
     const frame = ADTS.appendFrame(
       track,
       data,
       offset,
       this.basePTS as number,
-      this.frameIndex
+      this.frameIndex,
     );
     if (frame && frame.missing === 0) {
       return frame;

@@ -36,10 +36,10 @@ describe('Non-Native TimelineController functions', function () {
       expect(track.kind).to.equal('captions');
       expect(track.default).to.equal(false);
       expect(track.label).to.equal(
-        timelineController.captionsProperties.textTrack1.label
+        timelineController.captionsProperties.textTrack1.label,
       );
       expect(timelineController.nonNativeCaptionsTracks.textTrack1).to.equal(
-        track
+        track,
       );
       done();
     });

@@ -15,7 +15,7 @@ export function isTimeoutError(error: ErrorData): boolean {
 
 export function getRetryConfig(
   loadPolicy: LoadPolicy,
-  error: ErrorData
+  error: ErrorData,
 ): RetryConfig | null {
   const isTimeout = isTimeoutError(error);
   return loadPolicy.default[`${isTimeout ? 'timeout' : 'error'}Retry`];
@@ -23,19 +23,19 @@ export function getRetryConfig(
 
 export function getRetryDelay(
   retryConfig: RetryConfig,
-  retryCount: number
+  retryCount: number,
 ): number {
   // exponential backoff capped to max retry delay
   const backoffFactor =
     retryConfig.backoff === 'linear' ? 1 : Math.pow(2, retryCount);
   return Math.min(
     backoffFactor * retryConfig.retryDelayMs,
-    retryConfig.maxRetryDelayMs
+    retryConfig.maxRetryDelayMs,
   );
 }
 
 export function getLoaderConfigWithoutReties(
-  loderConfig: LoaderConfig
+  loderConfig: LoaderConfig,
 ): LoaderConfig {
   return {
     ...loderConfig,
@@ -50,7 +50,7 @@ export function shouldRetry(
   retryConfig: RetryConfig | null | undefined,
   retryCount: number,
   isTimeout: boolean,
-  httpStatus?: number | undefined
+  httpStatus?: number | undefined,
 ): retryConfig is RetryConfig & boolean {
   return (
     !!retryConfig &&

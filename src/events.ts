@@ -173,212 +173,212 @@ export enum Events {
 export interface HlsListeners {
   [Events.MEDIA_ATTACHING]: (
     event: Events.MEDIA_ATTACHING,
-    data: MediaAttachingData
+    data: MediaAttachingData,
   ) => void;
   [Events.MEDIA_ATTACHED]: (
     event: Events.MEDIA_ATTACHED,
-    data: MediaAttachedData
+    data: MediaAttachedData,
   ) => void;
   [Events.MEDIA_DETACHING]: (event: Events.MEDIA_DETACHING) => void;
   [Events.MEDIA_DETACHED]: (event: Events.MEDIA_DETACHED) => void;
   [Events.BUFFER_RESET]: (event: Events.BUFFER_RESET) => void;
   [Events.BUFFER_CODECS]: (
     event: Events.BUFFER_CODECS,
-    data: BufferCodecsData
+    data: BufferCodecsData,
   ) => void;
   [Events.BUFFER_CREATED]: (
     event: Events.BUFFER_CREATED,
-    data: BufferCreatedData
+    data: BufferCreatedData,
   ) => void;
   [Events.BUFFER_APPENDING]: (
     event: Events.BUFFER_APPENDING,
-    data: BufferAppendingData
+    data: BufferAppendingData,
   ) => void;
   [Events.BUFFER_APPENDED]: (
     event: Events.BUFFER_APPENDED,
-    data: BufferAppendedData
+    data: BufferAppendedData,
   ) => void;
   [Events.BUFFER_EOS]: (event: Events.BUFFER_EOS, data: BufferEOSData) => void;
   [Events.BUFFER_FLUSHING]: (
     event: Events.BUFFER_FLUSHING,
-    data: BufferFlushingData
+    data: BufferFlushingData,
   ) => void;
   [Events.BUFFER_FLUSHED]: (
     event: Events.BUFFER_FLUSHED,
-    data: BufferFlushedData
+    data: BufferFlushedData,
   ) => void;
   [Events.MANIFEST_LOADING]: (
     event: Events.MANIFEST_LOADING,
-    data: ManifestLoadingData
+    data: ManifestLoadingData,
   ) => void;
   [Events.MANIFEST_LOADED]: (
     event: Events.MANIFEST_LOADED,
-    data: ManifestLoadedData
+    data: ManifestLoadedData,
   ) => void;
   [Events.MANIFEST_PARSED]: (
     event: Events.MANIFEST_PARSED,
-    data: ManifestParsedData
+    data: ManifestParsedData,
   ) => void;
   [Events.LEVEL_SWITCHING]: (
     event: Events.LEVEL_SWITCHING,
-    data: LevelSwitchingData
+    data: LevelSwitchingData,
   ) => void;
   [Events.LEVEL_SWITCHED]: (
     event: Events.LEVEL_SWITCHED,
-    data: LevelSwitchedData
+    data: LevelSwitchedData,
   ) => void;
   [Events.LEVEL_LOADING]: (
     event: Events.LEVEL_LOADING,
-    data: LevelLoadingData
+    data: LevelLoadingData,
   ) => void;
   [Events.LEVEL_LOADED]: (
     event: Events.LEVEL_LOADED,
-    data: LevelLoadedData
+    data: LevelLoadedData,
   ) => void;
   [Events.LEVEL_UPDATED]: (
     event: Events.LEVEL_UPDATED,
-    data: LevelUpdatedData
+    data: LevelUpdatedData,
   ) => void;
   [Events.LEVEL_PTS_UPDATED]: (
     event: Events.LEVEL_PTS_UPDATED,
-    data: LevelPTSUpdatedData
+    data: LevelPTSUpdatedData,
   ) => void;
   [Events.LEVELS_UPDATED]: (
     event: Events.LEVELS_UPDATED,
-    data: LevelsUpdatedData
+    data: LevelsUpdatedData,
   ) => void;
   [Events.AUDIO_TRACKS_UPDATED]: (
     event: Events.AUDIO_TRACKS_UPDATED,
-    data: AudioTracksUpdatedData
+    data: AudioTracksUpdatedData,
   ) => void;
   [Events.AUDIO_TRACK_SWITCHING]: (
     event: Events.AUDIO_TRACK_SWITCHING,
-    data: AudioTrackSwitchingData
+    data: AudioTrackSwitchingData,
   ) => void;
   [Events.AUDIO_TRACK_SWITCHED]: (
     event: Events.AUDIO_TRACK_SWITCHED,
-    data: AudioTrackSwitchedData
+    data: AudioTrackSwitchedData,
   ) => void;
   [Events.AUDIO_TRACK_LOADING]: (
     event: Events.AUDIO_TRACK_LOADING,
-    data: TrackLoadingData
+    data: TrackLoadingData,
   ) => void;
   [Events.AUDIO_TRACK_LOADED]: (
     event: Events.AUDIO_TRACK_LOADED,
-    data: AudioTrackLoadedData
+    data: AudioTrackLoadedData,
   ) => void;
   [Events.SUBTITLE_TRACKS_UPDATED]: (
     event: Events.SUBTITLE_TRACKS_UPDATED,
-    data: SubtitleTracksUpdatedData
+    data: SubtitleTracksUpdatedData,
   ) => void;
   [Events.SUBTITLE_TRACKS_CLEARED]: (
-    event: Events.SUBTITLE_TRACKS_CLEARED
+    event: Events.SUBTITLE_TRACKS_CLEARED,
   ) => void;
   [Events.SUBTITLE_TRACK_SWITCH]: (
     event: Events.SUBTITLE_TRACK_SWITCH,
-    data: SubtitleTrackSwitchData
+    data: SubtitleTrackSwitchData,
   ) => void;
   [Events.SUBTITLE_TRACK_LOADING]: (
     event: Events.SUBTITLE_TRACK_LOADING,
-    data: TrackLoadingData
+    data: TrackLoadingData,
   ) => void;
   [Events.SUBTITLE_TRACK_LOADED]: (
     event: Events.SUBTITLE_TRACK_LOADED,
-    data: SubtitleTrackLoadedData
+    data: SubtitleTrackLoadedData,
   ) => void;
   [Events.SUBTITLE_FRAG_PROCESSED]: (
     event: Events.SUBTITLE_FRAG_PROCESSED,
-    data: SubtitleFragProcessedData
+    data: SubtitleFragProcessedData,
   ) => void;
   [Events.CUES_PARSED]: (
     event: Events.CUES_PARSED,
-    data: CuesParsedData
+    data: CuesParsedData,
   ) => void;
   [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (
     event: Events.NON_NATIVE_TEXT_TRACKS_FOUND,
-    data: NonNativeTextTracksData
+    data: NonNativeTextTracksData,
   ) => void;
   [Events.INIT_PTS_FOUND]: (
     event: Events.INIT_PTS_FOUND,
-    data: InitPTSFoundData
+    data: InitPTSFoundData,
   ) => void;
   [Events.FRAG_LOADING]: (
     event: Events.FRAG_LOADING,
-    data: FragLoadingData
+    data: FragLoadingData,
   ) => void;
   // [Events.FRAG_LOAD_PROGRESS]: TodoEventType
   [Events.FRAG_LOAD_EMERGENCY_ABORTED]: (
     event: Events.FRAG_LOAD_EMERGENCY_ABORTED,
-    data: FragLoadEmergencyAbortedData
+    data: FragLoadEmergencyAbortedData,
   ) => void;
   [Events.FRAG_LOADED]: (
     event: Events.FRAG_LOADED,
-    data: FragLoadedData
+    data: FragLoadedData,
   ) => void;
   [Events.FRAG_DECRYPTED]: (
     event: Events.FRAG_DECRYPTED,
-    data: FragDecryptedData
+    data: FragDecryptedData,
   ) => void;
   [Events.FRAG_PARSING_INIT_SEGMENT]: (
     event: Events.FRAG_PARSING_INIT_SEGMENT,
-    data: FragParsingInitSegmentData
+    data: FragParsingInitSegmentData,
   ) => void;
   [Events.FRAG_PARSING_USERDATA]: (
     event: Events.FRAG_PARSING_USERDATA,
-    data: FragParsingUserdataData
+    data: FragParsingUserdataData,
   ) => void;
   [Events.FRAG_PARSING_METADATA]: (
     event: Events.FRAG_PARSING_METADATA,
-    data: FragParsingMetadataData
+    data: FragParsingMetadataData,
   ) => void;
   // [Events.FRAG_PARSING_DATA]: TodoEventType
   [Events.FRAG_PARSED]: (
     event: Events.FRAG_PARSED,
-    data: FragParsedData
+    data: FragParsedData,
   ) => void;
   [Events.FRAG_BUFFERED]: (
     event: Events.FRAG_BUFFERED,
-    data: FragBufferedData
+    data: FragBufferedData,
   ) => void;
   [Events.FRAG_CHANGED]: (
     event: Events.FRAG_CHANGED,
-    data: FragChangedData
+    data: FragChangedData,
   ) => void;
   [Events.FPS_DROP]: (event: Events.FPS_DROP, data: FPSDropData) => void;
   [Events.FPS_DROP_LEVEL_CAPPING]: (
     event: Events.FPS_DROP_LEVEL_CAPPING,
-    data: FPSDropLevelCappingData
+    data: FPSDropLevelCappingData,
   ) => void;
   [Events.ERROR]: (event: Events.ERROR, data: ErrorData) => void;
   [Events.DESTROYING]: (event: Events.DESTROYING) => void;
   [Events.KEY_LOADING]: (
     event: Events.KEY_LOADING,
-    data: KeyLoadingData
+    data: KeyLoadingData,
   ) => void;
   [Events.KEY_LOADED]: (event: Events.KEY_LOADED, data: KeyLoadedData) => void;
   [Events.LIVE_BACK_BUFFER_REACHED]: (
     event: Events.LIVE_BACK_BUFFER_REACHED,
-    data: LiveBackBufferData
+    data: LiveBackBufferData,
   ) => void;
   [Events.BACK_BUFFER_REACHED]: (
     event: Events.BACK_BUFFER_REACHED,
-    data: BackBufferData
+    data: BackBufferData,
   ) => void;
   [Events.STEERING_MANIFEST_LOADED]: (
     event: Events.STEERING_MANIFEST_LOADED,
-    data: SteeringManifestLoadedData
+    data: SteeringManifestLoadedData,
   ) => void;
 }
 export interface HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
-    context?: Context
+    context?: Context,
   ): void;
   once<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
-    context?: Context
+    context?: Context,
   ): void;
 
   removeAllListeners<E extends keyof HlsListeners>(event?: E): void;
@@ -386,14 +386,14 @@ export interface HlsEventEmitter {
     event: E,
     listener?: HlsListeners[E],
     context?: Context,
-    once?: boolean
+    once?: boolean,
   ): void;
 
   listeners<E extends keyof HlsListeners>(event: E): HlsListeners[E][];
   emit<E extends keyof HlsListeners>(
     event: E,
     name: E,
-    eventObject: Parameters<HlsListeners[E]>[1]
+    eventObject: Parameters<HlsListeners[E]>[1],
   ): boolean;
   listenerCount<E extends keyof HlsListeners>(event: E): number;
 }

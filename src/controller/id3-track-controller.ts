@@ -61,7 +61,7 @@ function hexToArrayBuffer(str): ArrayBuffer {
       .replace(/^0x/, '')
       .replace(/([\da-fA-F]{2}) ?/g, '0x$1 ')
       .replace(/ +$/, '')
-      .split(' ')
+      .split(' '),
   ).buffer;
 }
 class ID3TrackController implements ComponentAPI {
@@ -110,7 +110,7 @@ class ID3TrackController implements ComponentAPI {
   // Add ID3 metatadata text track.
   protected onMediaAttached(
     event: Events.MEDIA_ATTACHED,
-    data: MediaAttachedData
+    data: MediaAttachedData,
   ): void {
     this.media = data.media;
   }
@@ -154,7 +154,7 @@ class ID3TrackController implements ComponentAPI {
 
   onFragParsingMetadata(
     event: Events.FRAG_PARSING_METADATA,
-    data: FragParsingMetadataData
+    data: FragParsingMetadataData,
   ) {
     if (!this.media) {
       return;
@@ -238,7 +238,7 @@ class ID3TrackController implements ComponentAPI {
 
   onBufferFlushing(
     event: Events.BUFFER_FLUSHING,
-    { startOffset, endOffset, type }: BufferFlushingData
+    { startOffset, endOffset, type }: BufferFlushingData,
   ) {
     const { id3Track, hls } = this;
     if (!hls) {
@@ -282,7 +282,7 @@ class ID3TrackController implements ComponentAPI {
     // Remove cues from track not found in details.dateRanges
     if (id3Track) {
       const idsToRemove = Object.keys(dateRangeCuesAppended).filter(
-        (id) => !ids.includes(id)
+        (id) => !ids.includes(id),
       );
       for (let i = idsToRemove.length; i--; ) {
         const id = idsToRemove[i];
@@ -314,7 +314,7 @@ class ID3TrackController implements ComponentAPI {
       let durationKnown = appendedDateRangeCues?.durationKnown || false;
       const startTime = dateRangeDateToTimelineSeconds(
         dateRange.startDate,
-        dateTimeOffset
+        dateTimeOffset,
       );
       let endTime = MAX_CUE_ENDTIME;
       const endDate = dateRange.endDate;
@@ -338,7 +338,7 @@ class ID3TrackController implements ComponentAPI {
         if (nextDateRangeWithSameClass) {
           endTime = dateRangeDateToTimelineSeconds(
             nextDateRangeWithSameClass.startDate,
-            dateTimeOffset
+            dateTimeOffset,
           );
           durationKnown = true;
         }

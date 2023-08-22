@@ -45,17 +45,17 @@ type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
       context?: PlaylistLoaderContext;
       frag?: Fragment;
       level?: number;
-    }
+    },
   ) => void;
   switchParams: (
     playlistUri: string,
-    previous: LevelDetails | undefined
+    previous: LevelDetails | undefined,
   ) => void;
   redundantFailover: (levelIndex: number) => void;
 };
 
 function parsedLevel(
-  options: Partial<LevelParsed> & { bitrate: number }
+  options: Partial<LevelParsed> & { bitrate: number },
 ): LevelParsed {
   const level: LevelParsed = {
     attrs: new AttrList(''),
@@ -89,7 +89,7 @@ describe('LevelController', function () {
     hls = new HlsMock({});
     levelController = new LevelController(
       hls as any,
-      null
+      null,
     ) as unknown as LevelControllerTestable;
     levelController.onParsedComplete = () => {};
     hls.levelController = levelController;
@@ -276,7 +276,7 @@ http://foo.example.com/hlg/prog_index.m3u8
 http://bar.example.com/foo/prog_index.m3u8
 #EXT-X-STREAM-INF:BANDWIDTH=80000,CODECS="mp4a.40.2",RESOLUTION=0x0
 http://bar.example.com/audio-only/prog_index.m3u8`,
-        'http://example.com/main.m3u8'
+        'http://example.com/main.m3u8',
       );
       expect(parsedLevels).to.have.lengthOf(6, 'MANIFEST_LOADED levels');
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
@@ -289,16 +289,16 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
       expect(name).to.equal(Events.MANIFEST_PARSED);
       expect(levels).to.have.lengthOf(4, 'MANIFEST_PARSED levels');
       expect(levels[0].uri).to.equal(
-        'http://foo.example.com/sdr-default/prog_index.m3u8'
+        'http://foo.example.com/sdr-default/prog_index.m3u8',
       );
       expect(levels[1].uri).to.equal(
-        'http://foo.example.com/sdr/prog_index.m3u8'
+        'http://foo.example.com/sdr/prog_index.m3u8',
       );
       expect(levels[2].uri).to.equal(
-        'http://foo.example.com/pq/prog_index.m3u8'
+        'http://foo.example.com/pq/prog_index.m3u8',
       );
       expect(levels[3].uri).to.equal(
-        'http://foo.example.com/hlg/prog_index.m3u8'
+        'http://foo.example.com/hlg/prog_index.m3u8',
       );
     });
   });
@@ -345,7 +345,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
       expect(hls.trigger).to.have.been.calledWith(
         Events.MANIFEST_PARSED,
-        parsedData
+        parsedData,
       );
     });
 
@@ -574,12 +574,12 @@ vfrag3.m4v
         0,
         PlaylistLevelType.MAIN,
         0,
-        {}
+        {},
       );
       const selectedUri = 'http://example.com/chunklist_vfrag1500.m3u8';
       const hlsUrlParameters = levelController.switchParams(
         selectedUri,
-        levelDetails
+        levelDetails,
       );
       expect(hlsUrlParameters).to.have.property('msn').which.equals(4);
       expect(hlsUrlParameters).to.have.property('part').which.equals(1);
@@ -593,13 +593,13 @@ vfrag3.m4v
         0,
         PlaylistLevelType.MAIN,
         0,
-        {}
+        {},
       );
       const selectedUriWithQuery =
         'http://example.com/chunklist_vfrag1500.m3u8?abc=123';
       const hlsUrlParameters = levelController.switchParams(
         selectedUriWithQuery,
-        levelDetails
+        levelDetails,
       );
       expect(hlsUrlParameters).to.not.be.undefined;
       expect(hlsUrlParameters).to.have.property('msn').which.equals(4);
@@ -628,13 +628,13 @@ vfrag3.m4v
         0,
         PlaylistLevelType.MAIN,
         0,
-        {}
+        {},
       );
       const selectedUriWithQuery =
         'http://example.com/chunklist.m3u8?token=123';
       const hlsUrlParameters = levelController.switchParams(
         selectedUriWithQuery,
-        levelDetails
+        levelDetails,
       );
       expect(hlsUrlParameters).to.not.be.undefined;
       expect(hlsUrlParameters).to.have.property('msn').which.equals(6);
@@ -653,7 +653,7 @@ http://bar.example.com/lo/prog_index.m3u8
 http://foo.example.com/md/prog_index.m3u8
 #EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=1920x1080
 http://bar.example.com/md/prog_index.m3u8`,
-        'http://example.com/main.m3u8'
+        'http://example.com/main.m3u8',
       );
       expect(parsedLevels).to.have.lengthOf(4, 'MANIFEST_LOADED levels');
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
@@ -668,12 +668,12 @@ http://bar.example.com/md/prog_index.m3u8`,
       expect(levels[0].url).to.have.lengthOf(2);
       expect(levels[0].urlId).to.equal(0);
       expect(levels[0].uri).to.equal(
-        'http://foo.example.com/lo/prog_index.m3u8'
+        'http://foo.example.com/lo/prog_index.m3u8',
       );
       expect(levels[1].url).to.have.lengthOf(2);
       expect(levels[1].urlId).to.equal(0);
       expect(levels[1].uri).to.equal(
-        'http://foo.example.com/md/prog_index.m3u8'
+        'http://foo.example.com/md/prog_index.m3u8',
       );
       expect(levelController.level).to.equal(-1);
       levels[0].details = {} as any;
@@ -682,10 +682,10 @@ http://bar.example.com/md/prog_index.m3u8`,
       levels[0].urlId++;
       levels[1].urlId++;
       expect(levels[0].uri).to.equal(
-        'http://bar.example.com/lo/prog_index.m3u8'
+        'http://bar.example.com/lo/prog_index.m3u8',
       );
       expect(levels[1].uri).to.equal(
-        'http://bar.example.com/md/prog_index.m3u8'
+        'http://bar.example.com/md/prog_index.m3u8',
       );
       expect(levelController.level).to.equal(0);
       expect(levels[0].details, 'Resets LevelDetails').to.be.undefined;
@@ -703,12 +703,12 @@ http://foo.example.com/md/prog_index.m3u8
 http://bar.example.com/md/prog_index.m3u8`;
       const parsedMultivariant = M3U8Parser.parseMasterPlaylist(
         multivariantPlaylist,
-        'http://example.com/main.m3u8'
+        'http://example.com/main.m3u8',
       );
       const parsedMediaOptions = M3U8Parser.parseMasterPlaylistMedia(
         multivariantPlaylist,
         'http://example.com/main.m3u8',
-        parsedMultivariant
+        parsedMultivariant,
       );
       const { levels: parsedLevels } = parsedMultivariant;
       const { AUDIO: parsedAudio, SUBTITLES: parsedSubs } = parsedMediaOptions;
@@ -727,7 +727,7 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(levels[0].url).to.have.lengthOf(1);
       expect(levels[0].urlId).to.equal(0);
       expect(levels[0].uri).to.equal(
-        'http://foo.example.com/lo/prog_index.m3u8'
+        'http://foo.example.com/lo/prog_index.m3u8',
       );
 
       expect(levels[0]).to.have.property('audioGroupIds').which.has.lengthOf(1);
@@ -742,16 +742,16 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(levels[1].url).to.have.lengthOf(2);
       expect(levels[1].urlId).to.equal(0);
       expect(levels[1].uri).to.equal(
-        'http://foo.example.com/md/prog_index.m3u8'
+        'http://foo.example.com/md/prog_index.m3u8',
       );
       expect(levelController.level).to.equal(-1);
       levels[0].urlId++;
       levels[1].urlId++;
       expect(levels[0].uri).to.equal(
-        'http://foo.example.com/lo/prog_index.m3u8'
+        'http://foo.example.com/lo/prog_index.m3u8',
       );
       expect(levels[1].uri).to.equal(
-        'http://bar.example.com/md/prog_index.m3u8'
+        'http://bar.example.com/md/prog_index.m3u8',
       );
     });
 
@@ -761,12 +761,12 @@ http://bar.example.com/md/prog_index.m3u8`;
       beforeEach(function () {
         parsedMultivariant = M3U8Parser.parseMasterPlaylist(
           multivariantPlaylistWithRedundantFallbacks,
-          'http://example.com/main.m3u8'
+          'http://example.com/main.m3u8',
         );
         parsedMediaOptions = M3U8Parser.parseMasterPlaylistMedia(
           multivariantPlaylistWithRedundantFallbacks,
           'http://example.com/main.m3u8',
-          parsedMultivariant
+          parsedMultivariant,
         );
       });
 
@@ -826,7 +826,7 @@ http://bar.example.com/md/prog_index.m3u8`;
         });
         expect(subtitleTracks).to.have.lengthOf(
           9,
-          'MANIFEST_PARSED subtitleTracks'
+          'MANIFEST_PARSED subtitleTracks',
         ); // 3 subtitle groups * 3 subtitle tracks per group
         expect(subtitleTracks[0]).to.deep.include({
           id: 0,
@@ -954,12 +954,12 @@ http://bar.example.com/md/prog_index.m3u8`;
     beforeEach(function () {
       parsedMultivariant = M3U8Parser.parseMasterPlaylist(
         multivariantPlaylistWithPathways,
-        'http://example.com/main.m3u8'
+        'http://example.com/main.m3u8',
       );
       parsedMediaOptions = M3U8Parser.parseMasterPlaylistMedia(
         multivariantPlaylistWithPathways,
         'http://example.com/main.m3u8',
-        parsedMultivariant
+        parsedMultivariant,
       );
     });
 
@@ -988,7 +988,7 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(audioTracks).to.have.lengthOf(6, 'MANIFEST_PARSED audioTracks'); // 3 audio groups * 2 audio tracks per group
       expect(subtitleTracks).to.have.lengthOf(
         6,
-        'MANIFEST_PARSED subtitleTracks'
+        'MANIFEST_PARSED subtitleTracks',
       ); // 3 subtitle groups * 2 subtitle tracks per group
 
       expect(levelController.level).to.equal(-1);
