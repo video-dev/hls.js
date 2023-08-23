@@ -40,6 +40,7 @@ let chromeOrFirefox: boolean;
 export default class LevelController extends BasePlaylistController {
   private _levels: Level[] = [];
   private _firstLevel: number = -1;
+  private _maxAutoLevel: number = -1;
   private _startLevel?: number;
   private currentLevel: Level | null = null;
   private currentLevelIndex: number = -1;
@@ -104,6 +105,7 @@ export default class LevelController extends BasePlaylistController {
     this.currentLevelIndex = -1;
     this.currentLevel = null;
     this._levels = [];
+    this._maxAutoLevel = -1;
   }
 
   private onManifestLoading(
@@ -661,6 +663,20 @@ export default class LevelController extends BasePlaylistController {
     { levels }: LevelsUpdatedData,
   ) {
     this._levels = levels;
+  }
+
+  public checkMaxAutoUpdated() {
+    const { autoLevelCapping, maxAutoLevel, maxHdcpLevel } = this.hls;
+    if (this._maxAutoLevel !== maxAutoLevel) {
+      this._maxAutoLevel = maxAutoLevel;
+      this.hls.trigger(Events.MAX_AUTO_LEVEL_UPDATED, {
+        autoLevelCapping,
+        levels: this.levels,
+        maxAutoLevel,
+        minAutoLevel: this.hls.minAutoLevel,
+        maxHdcpLevel,
+      });
+    }
   }
 }
 

@@ -1208,6 +1208,8 @@ export enum Events {
     // (undocumented)
     MANIFEST_PARSED = "hlsManifestParsed",
     // (undocumented)
+    MAX_AUTO_LEVEL_UPDATED = "hlsMaxAutoLevelUpdated",
+    // (undocumented)
     MEDIA_ATTACHED = "hlsMediaAttached",
     // (undocumented)
     MEDIA_ATTACHING = "hlsMediaAttaching",
@@ -1792,6 +1794,10 @@ export interface HlsListeners {
     [Events.MANIFEST_LOADING]: (event: Events.MANIFEST_LOADING, data: ManifestLoadingData) => void;
     // (undocumented)
     [Events.MANIFEST_PARSED]: (event: Events.MANIFEST_PARSED, data: ManifestParsedData) => void;
+    // Warning: (ae-forgotten-export) The symbol "MaxAutoLevelUpdatedData" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    [Events.MAX_AUTO_LEVEL_UPDATED]: (event: Events.MAX_AUTO_LEVEL_UPDATED, data: MaxAutoLevelUpdatedData) => void;
     // (undocumented)
     [Events.MEDIA_ATTACHED]: (event: Events.MEDIA_ATTACHED, data: MediaAttachedData) => void;
     // (undocumented)

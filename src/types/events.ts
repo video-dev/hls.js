@@ -4,6 +4,7 @@ import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type {
+  HdcpLevel,
   HlsUrlParameters,
   Level,
   LevelParsed,
@@ -219,6 +220,14 @@ export interface FPSDropData {
 export interface FPSDropLevelCappingData {
   droppedLevel: number;
   level: number;
+}
+
+export interface MaxAutoLevelUpdatedData {
+  autoLevelCapping: number;
+  levels: Level[] | null;
+  maxAutoLevel: number;
+  minAutoLevel: number;
+  maxHdcpLevel: HdcpLevel;
 }
 
 export interface ErrorData {
