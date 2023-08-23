@@ -26,6 +26,7 @@ import type {
   FragmentLoaderContext,
   Loader,
   LoaderContext,
+  LoaderResponse,
   PlaylistLoaderContext,
 } from './types/loader';
 
@@ -193,8 +194,8 @@ export type RetryConfig = {
     retryConfig: RetryConfig | null | undefined,
     retryCount: number,
     isTimeout: boolean,
-    httpStatus: number | undefined,
-    retry: boolean
+    loaderResponse: LoaderResponse | undefined,
+    retry: boolean,
   ) => boolean;
 };
 

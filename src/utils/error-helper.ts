@@ -1,6 +1,7 @@
-import { LoadPolicy, LoaderConfig, RetryConfig } from '../config';
 import { ErrorDetails } from '../errors';
-import { ErrorData } from '../types/events';
+import type { LoadPolicy, LoaderConfig, RetryConfig } from '../config';
+import type { ErrorData } from '../types/events';
+import type { LoaderResponse } from '../types/loader';
 
 export function isTimeoutError(error: ErrorData): boolean {
   switch (error.details) {
@@ -50,11 +51,12 @@ export function shouldRetry(
   retryConfig: RetryConfig | null | undefined,
   retryCount: number,
   isTimeout: boolean,
-  httpStatus?: number | undefined,
+  loaderResponse?: LoaderResponse | undefined,
 ): retryConfig is RetryConfig & boolean {
   if (!retryConfig) {
     return false;
   }
+  const httpStatus = loaderResponse?.code;
   const retry =
     retryCount < retryConfig.maxNumRetry &&
     (retryForHttpStatus(httpStatus) || !!isTimeout);
@@ -63,8 +65,8 @@ export function shouldRetry(
         retryConfig,
         retryCount,
         isTimeout,
-        httpStatus,
-        retry
+        loaderResponse,
+        retry,
       )
     : retry;
 }

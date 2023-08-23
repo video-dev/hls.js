@@ -241,7 +241,12 @@ class XhrLoader implements Loader<LoaderContext> {
           const retryConfig = config.loadPolicy.errorRetry;
           const retryCount = stats.retry;
           // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-          if (shouldRetry(retryConfig, retryCount, false, status)) {
+          const response: LoaderResponse = {
+            url: context.url,
+            data: undefined,
+            code: status,
+          };
+          if (shouldRetry(retryConfig, retryCount, false, response)) {
             this.retry(retryConfig);
           } else {
             logger.error(`${status} while loading ${context.url}`);
