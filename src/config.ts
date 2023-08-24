@@ -249,6 +249,7 @@ export type HlsConfig = {
   enableSoftwareAES: boolean;
   minAutoBitrate: number;
   ignoreDevicePixelRatio: boolean;
+  preferManagedMediaSource: boolean;
   loader: { new (confg: HlsConfig): Loader<LoaderContext> };
   fLoader?: FragmentLoaderConstructor;
   pLoader?: PlaylistLoaderConstructor;
@@ -317,6 +318,7 @@ export const hlsDefaultConfig: HlsConfig = {
   capLevelOnFPSDrop: false, // used by fps-controller
   capLevelToPlayerSize: false, // used by cap-level-controller
   ignoreDevicePixelRatio: false, // used by cap-level-controller
+  preferManagedMediaSource: true,
   initialLiveManifestSize: 1, // used by stream-controller
   maxBufferLength: 30, // used by stream-controller
   backBufferLength: Infinity, // used by buffer-controller
