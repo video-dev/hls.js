@@ -135,7 +135,10 @@ export default class LevelController extends BasePlaylistController {
       }
 
       if (levelParsed.audioCodec) {
-        levelParsed.audioCodec = getCodecCompatibleName(levelParsed.audioCodec);
+        levelParsed.audioCodec = getCodecCompatibleName(
+          levelParsed.audioCodec,
+          this.hls.config.preferManagedMediaSource,
+        );
       }
 
       const {
@@ -171,6 +174,7 @@ export default class LevelController extends BasePlaylistController {
     unfilteredLevels: Level[],
     data: ManifestLoadedData,
   ) {
+    const { preferManagedMediaSource } = this.hls.config;
     let audioTracks: MediaPlaylist[] = [];
     let subtitleTracks: MediaPlaylist[] = [];
 
@@ -186,8 +190,18 @@ export default class LevelController extends BasePlaylistController {
         audioCodecFound ||= !!audioCodec;
         return (
           !unknownCodecs?.length &&
-          (!audioCodec || areCodecsMediaSourceSupported(audioCodec, 'audio')) &&
-          (!videoCodec || areCodecsMediaSourceSupported(videoCodec, 'video'))
+          (!audioCodec ||
+            areCodecsMediaSourceSupported(
+              audioCodec,
+              'audio',
+              preferManagedMediaSource,
+            )) &&
+          (!videoCodec ||
+            areCodecsMediaSourceSupported(
+              videoCodec,
+              'video',
+              preferManagedMediaSource,
+            ))
         );
       },
     );
@@ -231,7 +245,11 @@ export default class LevelController extends BasePlaylistController {
       audioTracks = data.audioTracks.filter(
         (track) =>
           !track.audioCodec ||
-          areCodecsMediaSourceSupported(track.audioCodec, 'audio'),
+          areCodecsMediaSourceSupported(
+            track.audioCodec,
+            'audio',
+            preferManagedMediaSource,
+          ),
       );
       // Assign ids after filtering as array indices by group-id
       assignTrackIdsByGroup(audioTracks);

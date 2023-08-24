@@ -16,6 +16,7 @@ import {
   SourceBufferName,
   SourceBufferListeners,
 } from '../types/buffer';
+import CapLevelController from './cap-level-controller';
 import type {
   LevelUpdatedData,
   BufferAppendingData,
@@ -33,7 +34,6 @@ import type { ChunkMetadata } from '../types/transmuxer';
 import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
 
-const MediaSource = getMediaSource();
 const VIDEO_CODEC_PROFILE_REPLACE =
   /(avc[1234]|hvc1|hev1|dvh[1e]|vp09|av01)(?:\.[^.,]+)+/;
 
@@ -64,6 +64,8 @@ export default class BufferController implements ComponentAPI {
   // Last MP3 audio chunk appended
   private lastMpegAudioChunk: ChunkMetadata | null = null;
 
+  private appendSource: boolean;
+
   // counters
   public appendErrors = {
     audio: 0,
@@ -82,6 +84,7 @@ export default class BufferController implements ComponentAPI {
   constructor(hls: Hls) {
     this.hls = hls;
     const logPrefix = '[buffer-controller]';
+    this.appendSource = hls.config.preferManagedMediaSource;
     this.log = logger.log.bind(logger, logPrefix);
     this.warn = logger.warn.bind(logger, logPrefix);
     this.error = logger.error.bind(logger, logPrefix);
@@ -176,19 +179,67 @@ export default class BufferController implements ComponentAPI {
     data: MediaAttachingData,
   ) {
     const media = (this.media = data.media);
+    const MediaSource = getMediaSource(this.appendSource);
     if (media && MediaSource) {
       const ms = (this.mediaSource = new MediaSource());
+      this.log(`created media source: ${ms.constructor?.name}`);
       // MediaSource listeners are arrow functions with a lexical scope, and do not need to be bound
       ms.addEventListener('sourceopen', this._onMediaSourceOpen);
       ms.addEventListener('sourceended', this._onMediaSourceEnded);
       ms.addEventListener('sourceclose', this._onMediaSourceClose);
-      // link video and media Source
-      media.src = self.URL.createObjectURL(ms);
+      ms.addEventListener('startstreaming', this._onStartStreaming);
+      ms.addEventListener('endstreaming', this._onEndStreaming);
+
       // cache the locally generated object url
-      this._objectUrl = media.src;
+      const objectUrl = (this._objectUrl = self.URL.createObjectURL(ms));
+      // link video and media Source
+      if (this.appendSource) {
+        try {
+          media.removeAttribute('src');
+          // ManagedMediaSource will not open without disableRemotePlayback set to false or source alternatives
+          media.disableRemotePlayback =
+            media.disableRemotePlayback ||
+            ms instanceof (self as any).ManagedMediaSource;
+          removeChildren(media);
+          addSource(media, objectUrl);
+          media.load();
+        } catch (error) {
+          media.src = objectUrl;
+        }
+      } else {
+        media.src = objectUrl;
+      }
       media.addEventListener('emptied', this._onMediaEmptied);
     }
   }
+  private _onEndStreaming = (event) => {
+    this.hls.pauseBuffering();
+  };
+  private _onStartStreaming = (event) => {
+    const { hls, mediaSource } = this;
+    if (!hls || !mediaSource) {
+      return;
+    }
+    if ('quality' in mediaSource) {
+      if (mediaSource.quality === 'low') {
+        hls.autoLevelCapping = CapLevelController.getMaxLevelByMediaSize(
+          hls.levels,
+          1280,
+          720,
+        );
+      } else if (mediaSource.quality === 'medium') {
+        hls.autoLevelCapping = CapLevelController.getMaxLevelByMediaSize(
+          hls.levels,
+          1920,
+          1080,
+        );
+      } else {
+        // do not cap max quality
+        hls.autoLevelCapping = -1;
+      }
+    }
+    hls.resumeBuffering();
+  };
 
   protected onMediaDetaching() {
     const { media, mediaSource, _objectUrl } = this;
@@ -212,6 +263,8 @@ export default class BufferController implements ComponentAPI {
       mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);
       mediaSource.removeEventListener('sourceended', this._onMediaSourceEnded);
       mediaSource.removeEventListener('sourceclose', this._onMediaSourceClose);
+      mediaSource.removeEventListener('startstreaming', this._onStartStreaming);
+      mediaSource.removeEventListener('endstreaming', this._onEndStreaming);
 
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
@@ -223,11 +276,16 @@ export default class BufferController implements ComponentAPI {
 
         // clean up video tag src only if it's our own url. some external libraries might
         // hijack the video tag and change its 'src' without destroying the Hls instance first
-        if (media.src === _objectUrl) {
+        if (this.mediaSrc === _objectUrl) {
           media.removeAttribute('src');
+          if (this.appendSource) {
+            removeChildren(media);
+          }
           media.load();
         } else {
-          this.warn('media.src was changed by a third party - skip cleanup');
+          this.warn(
+            'media|source.src was changed by a third party - skip cleanup',
+          );
         }
       }
 
@@ -294,7 +352,10 @@ export default class BufferController implements ComponentAPI {
           );
           if (currentCodec !== nextCodec) {
             if (trackName.slice(0, 5) === 'audio') {
-              trackCodec = getCodecCompatibleName(trackCodec);
+              trackCodec = getCodecCompatibleName(
+                trackCodec,
+                this.hls.config.preferManagedMediaSource,
+              );
             }
             const mimeType = `${container};codecs=${trackCodec}`;
             this.appendChangeType(trackName, mimeType);
@@ -780,7 +841,10 @@ export default class BufferController implements ComponentAPI {
         let codec = track.levelCodec || track.codec;
         if (codec) {
           if (trackName.slice(0, 5) === 'audio') {
-            codec = getCodecCompatibleName(codec);
+            codec = getCodecCompatibleName(
+              codec,
+              this.hls.config.preferManagedMediaSource,
+            );
           }
         }
         const mimeType = `${track.container};codecs=${codec}`;
@@ -792,6 +856,13 @@ export default class BufferController implements ComponentAPI {
           this.addBufferListener(sbName, 'updatestart', this._onSBUpdateStart);
           this.addBufferListener(sbName, 'updateend', this._onSBUpdateEnd);
           this.addBufferListener(sbName, 'error', this._onSBUpdateError);
+          // ManagedSourceBuffer bufferedchange event
+          this.addBufferListener(sbName, 'bufferedchange', (event) => {
+            this.hls.trigger(Events.BUFFER_FLUSHED, {
+              type: trackName as SourceBufferName,
+            });
+          });
+
           this.tracks[trackName] = {
             buffer: sb,
             codec: codec,
@@ -822,7 +893,10 @@ export default class BufferController implements ComponentAPI {
     if (media) {
       media.removeEventListener('emptied', this._onMediaEmptied);
       this.updateMediaElementDuration();
-      this.hls.trigger(Events.MEDIA_ATTACHED, { media });
+      this.hls.trigger(Events.MEDIA_ATTACHED, {
+        media,
+        mediaSource: mediaSource as MediaSource,
+      });
     }
 
     if (mediaSource) {
@@ -841,13 +915,19 @@ export default class BufferController implements ComponentAPI {
   };
 
   private _onMediaEmptied = () => {
-    const { media, _objectUrl } = this;
-    if (media && media.src !== _objectUrl) {
-      this.error(
-        `Media element src was set while attaching MediaSource (${_objectUrl} > ${media.src})`,
+    const { mediaSrc, _objectUrl } = this;
+    if (mediaSrc !== _objectUrl) {
+      logger.error(
+        `Media element src was set while attaching MediaSource (${_objectUrl} > ${mediaSrc})`,
       );
     }
   };
+
+  private get mediaSrc(): string | undefined {
+    const media =
+      (this.media?.firstChild as HTMLSourceElement | null) || this.media;
+    return media?.src;
+  }
 
   private _onSBUpdateStart(type: SourceBufferName) {
     const { operationQueue } = this;
@@ -996,4 +1076,17 @@ export default class BufferController implements ComponentAPI {
       buffer.removeEventListener(l.event, l.listener);
     });
   }
+}
+
+function removeChildren(node: HTMLElement) {
+  while (node.firstChild) {
+    node.removeChild(node.firstChild);
+  }
+}
+
+function addSource(media: HTMLMediaElement, url: string) {
+  const source = self.document.createElement('source');
+  source.type = 'video/mp4';
+  source.src = url;
+  media.appendChild(source);
 }

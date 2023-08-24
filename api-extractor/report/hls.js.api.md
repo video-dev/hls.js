@@ -1608,12 +1608,14 @@ class Hls implements HlsEventEmitter {
     on<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context): void;
     // (undocumented)
     once<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context): void;
+    pauseBuffering(): void;
     get playingDate(): Date | null;
     recoverMediaError(): void;
     // (undocumented)
     removeAllListeners<E extends keyof HlsListeners>(event?: E | undefined): void;
     // (undocumented)
     removeLevel(levelIndex: any, urlId?: number): void;
+    resumeBuffering(): void;
     get startLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "startLevel" must appear on the getter, not the setter.
     set startLevel(newLevel: number);
@@ -1656,6 +1658,7 @@ export type HlsConfig = {
     enableSoftwareAES: boolean;
     minAutoBitrate: number;
     ignoreDevicePixelRatio: boolean;
+    preferManagedMediaSource: boolean;
     loader: {
         new (confg: HlsConfig): Loader<LoaderContext>;
     };
@@ -2633,6 +2636,8 @@ export interface ManifestParsedData {
 export interface MediaAttachedData {
     // (undocumented)
     media: HTMLMediaElement;
+    // (undocumented)
+    mediaSource?: MediaSource;
 }
 
 // Warning: (ae-missing-release-tag) "MediaAttachingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

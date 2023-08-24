@@ -30,8 +30,6 @@ import { getMediaSource } from '../../../src/utils/mediasource-helper';
 chai.use(sinonChai);
 const expect = chai.expect;
 
-const MediaSource = getMediaSource();
-
 type ConentSteeringControllerTestable = Omit<
   ContentSteeringController,
   | 'enabled'
@@ -67,6 +65,7 @@ describe('ContentSteeringController', function () {
   let contentSteeringController: ConentSteeringControllerTestable;
 
   beforeEach(function () {
+    const MediaSource = getMediaSource();
     hls = new HlsMock({
       loader: MockXhr,
     });
