@@ -352,7 +352,7 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
     }
     case 'av01': {
       const av1CBox = findBox(sampleEntriesEnd, ['av1C'])[0];
-      const profile = av1CBox[1] >>> 3;
+      const profile = av1CBox[1] >>> 5;
       const level = av1CBox[1] & 0x1f;
       const tierFlag = av1CBox[2] >>> 7 ? 'H' : 'M';
       const highBitDepth = (av1CBox[2] & 0x40) >> 6;
