@@ -351,7 +351,8 @@ export default class BufferController implements ComponentAPI {
             '$1',
           );
           if (currentCodec !== nextCodec) {
-            if (trackName.slice(0, 5) === 'audio') {
+            const trackType = trackName.slice(0, 5);
+            if (trackType === 'audio' || trackType === 'video') {
               trackCodec = getCodecCompatibleName(
                 trackCodec,
                 this.hls.config.preferManagedMediaSource,
@@ -840,7 +841,8 @@ export default class BufferController implements ComponentAPI {
         // use levelCodec as first priority
         let codec = track.levelCodec || track.codec;
         if (codec) {
-          if (trackName.slice(0, 5) === 'audio') {
+          const trackType = trackName.slice(0, 5);
+          if (trackType === 'audio' || trackType === 'video') {
             codec = getCodecCompatibleName(
               codec,
               this.hls.config.preferManagedMediaSource,
