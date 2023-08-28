@@ -207,7 +207,13 @@ Let's
 <script>
   if (Hls.isSupported()) {
     var video = document.getElementById('video');
+
+    // If you are using the ESM version of the library (hls.mjs), you
+    // should specify the "workerPath" config option here if you want
+    // web workers to be used. Note that bundlers (such as webpack)
+    // will likely use the ESM version by default.
     var hls = new Hls();
+
     // bind them together
     hls.attachMedia(video);
     // MEDIA_ATTACHED event is fired by hls object once MediaSource is ready
@@ -668,6 +674,8 @@ Enable WebWorker (if available on browser) for TS demuxing/MP4 remuxing, to impr
 (default: `null`)
 
 Provide a path to hls.worker.js as an alternative to injecting the worker based on the iife library wrapper function. When `workerPath` is defined as a string, the transmuxer interface will initialize a WebWorker using the resolved `workerPath` URL.
+
+When using the ESM version of the library (hls.mjs), this option is required in order for web workers to be used.
 
 ### `enableSoftwareAES`
 
