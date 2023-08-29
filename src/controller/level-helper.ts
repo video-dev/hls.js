@@ -194,7 +194,11 @@ export function mergeDetails(
         newFrag.initSegment = oldFrag.initSegment;
         currentInitSegment = oldFrag.initSegment;
       }
-    }
+      if (newFrag.endList) {
+        // Update frag body for fragment-tracker endListFragments
+        oldFrag.endList = true;
+      }
+    },
   );
 
   if (currentInitSegment) {
