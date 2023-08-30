@@ -92,13 +92,7 @@ export default class GapController {
     }
 
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
-    const isBuffered = bufferInfo.len > 0;
     const nextStart = bufferInfo.nextStart || 0;
-
-    // There is no playable buffer (seeked, waiting for buffer)
-    if (!isBuffered && !nextStart) {
-      return;
-    }
 
     if (seeking) {
       // Waiting for seeking in a buffered range to complete
@@ -119,6 +113,11 @@ export default class GapController {
     // Skip start gaps if we haven't played, but the last poll detected the start of a stall
     // The addition poll gives the browser a chance to jump the gap for us
     if (!this.moved && this.stalled !== null) {
+      // There is no playable buffer (seeked, waiting for buffer)
+      const isBuffered = bufferInfo.len > 0;
+      if (!isBuffered && !nextStart) {
+        return;
+      }
       // Jump start gaps within jump threshold
       const startJump =
         Math.max(nextStart, bufferInfo.start || 0) - currentTime;
