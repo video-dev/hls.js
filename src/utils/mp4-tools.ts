@@ -697,21 +697,23 @@ export function offsetStartDTS(
       // get the base media decode time from the tfdt
       findBox(traf, ['tfdt']).forEach((tfdt) => {
         const version = tfdt[0];
-        let baseMediaDecodeTime = readUint32(tfdt, 4);
-
-        if (version === 0) {
-          baseMediaDecodeTime -= timeOffset * timescale;
-          baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
-          writeUint32(tfdt, 4, baseMediaDecodeTime);
-        } else {
-          baseMediaDecodeTime *= Math.pow(2, 32);
-          baseMediaDecodeTime += readUint32(tfdt, 8);
-          baseMediaDecodeTime -= timeOffset * timescale;
-          baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
-          const upper = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
-          const lower = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
-          writeUint32(tfdt, 4, upper);
-          writeUint32(tfdt, 8, lower);
+        const offset = timeOffset * timescale;
+        if (offset) {
+          let baseMediaDecodeTime = readUint32(tfdt, 4);
+          if (version === 0) {
+            baseMediaDecodeTime -= offset;
+            baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
+            writeUint32(tfdt, 4, baseMediaDecodeTime);
+          } else {
+            baseMediaDecodeTime *= Math.pow(2, 32);
+            baseMediaDecodeTime += readUint32(tfdt, 8);
+            baseMediaDecodeTime -= offset;
+            baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
+            const upper = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
+            const lower = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
+            writeUint32(tfdt, 4, upper);
+            writeUint32(tfdt, 8, lower);
+          }
         }
       });
     });
