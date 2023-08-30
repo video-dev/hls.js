@@ -337,20 +337,20 @@ export default class BufferController implements ComponentAPI {
         if (track && typeof track.buffer.changeType === 'function') {
           const { id, codec, levelCodec, container, metadata } =
             data[trackName];
-          const currentCodedFull = pickMostCompleteCodecName(
+          const currentCodecFull = pickMostCompleteCodecName(
             track.codec,
             track.levelCodec,
           );
-          const currentCodec = currentCodedFull.replace(
+          const currentCodec = currentCodecFull?.replace(
             VIDEO_CODEC_PROFILE_REPLACE,
             '$1',
           );
           let trackCodec = pickMostCompleteCodecName(codec, levelCodec);
-          const nextCodec = trackCodec.replace(
+          const nextCodec = trackCodec?.replace(
             VIDEO_CODEC_PROFILE_REPLACE,
             '$1',
           );
-          if (currentCodec !== nextCodec) {
+          if (trackCodec && currentCodec !== nextCodec) {
             if (trackName.slice(0, 5) === 'audio') {
               trackCodec = getCodecCompatibleName(
                 trackCodec,
@@ -359,7 +359,7 @@ export default class BufferController implements ComponentAPI {
             }
             const mimeType = `${container};codecs=${trackCodec}`;
             this.appendChangeType(trackName, mimeType);
-            this.log(`switching codec ${currentCodedFull} to ${trackCodec}`);
+            this.log(`switching codec ${currentCodecFull} to ${trackCodec}`);
             this.tracks[trackName] = {
               buffer: track.buffer,
               codec,
