@@ -35,6 +35,7 @@ import {
   BufferFlushingData,
   BufferEOSData,
   LevelSwitchingData,
+  MaxAutoLevelUpdatedData,
   FPSDropLevelCappingData,
   FPSDropData,
   BufferCreatedData,
@@ -151,6 +152,8 @@ export enum Events {
   FPS_DROP = 'hlsFpsDrop',
   // triggered when FPS drop triggers auto level capping - data: { level, droppedLevel }
   FPS_DROP_LEVEL_CAPPING = 'hlsFpsDropLevelCapping',
+  // triggered when maxAutoLevel changes - data { autoLevelCapping, levels, maxAutoLevel, minAutoLevel, maxHdcpLevel }
+  MAX_AUTO_LEVEL_UPDATED = 'hlsMaxAutoLevelUpdated',
   // Identifier for an error event - data: { type : error type, details : error details, fatal : if true, hls.js cannot/will not try to recover, if false, hls.js will try to recover,other error specific data }
   ERROR = 'hlsError',
   // fired when hls.js instance starts destroying. Different from MEDIA_DETACHED as one could want to detach and reattach a media to the instance of hls.js to handle mid-rolls for example - data: { }
@@ -348,6 +351,10 @@ export interface HlsListeners {
   [Events.FPS_DROP_LEVEL_CAPPING]: (
     event: Events.FPS_DROP_LEVEL_CAPPING,
     data: FPSDropLevelCappingData,
+  ) => void;
+  [Events.MAX_AUTO_LEVEL_UPDATED]: (
+    event: Events.MAX_AUTO_LEVEL_UPDATED,
+    data: MaxAutoLevelUpdatedData,
   ) => void;
   [Events.ERROR]: (event: Events.ERROR, data: ErrorData) => void;
   [Events.DESTROYING]: (event: Events.DESTROYING) => void;
