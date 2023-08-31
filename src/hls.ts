@@ -53,7 +53,7 @@ export default class Hls implements HlsEventEmitter {
   private networkControllers: NetworkComponentAPI[];
   private started: boolean = false;
   private _emitter: HlsEventEmitter = new EventEmitter();
-  private _autoLevelCapping: number;
+  private _autoLevelCapping: number = -1;
   private _maxHdcpLevel: HdcpLevel = null;
   private abrController: AbrController;
   private bufferController: BufferController;
@@ -121,8 +121,6 @@ export default class Hls implements HlsEventEmitter {
     enableLogs(userConfig.debug || false, 'Hls instance');
     const config = (this.config = mergeConfig(Hls.DefaultConfig, userConfig));
     this.userConfig = userConfig;
-
-    this._autoLevelCapping = -1;
 
     if (config.progressive) {
       enableStreamingMode(config);
@@ -383,6 +381,8 @@ export default class Hls implements HlsEventEmitter {
         alwaysNormalize: true,
       },
     ));
+    this._autoLevelCapping = -1;
+    this._maxHdcpLevel = null;
     logger.log(`loadSource:${loadingSource}`);
     if (
       media &&
@@ -665,6 +665,7 @@ export default class Hls implements HlsEventEmitter {
     if (this._autoLevelCapping !== newLevel) {
       logger.log(`set autoLevelCapping:${newLevel}`);
       this._autoLevelCapping = newLevel;
+      this.levelController.checkMaxAutoUpdated();
     }
   }
 
@@ -673,8 +674,9 @@ export default class Hls implements HlsEventEmitter {
   }
 
   set maxHdcpLevel(value: HdcpLevel) {
-    if (isHdcpLevel(value)) {
+    if (isHdcpLevel(value) && this._maxHdcpLevel !== value) {
       this._maxHdcpLevel = value;
+      this.levelController.checkMaxAutoUpdated();
     }
   }
 
