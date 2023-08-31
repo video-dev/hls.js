@@ -72,7 +72,10 @@ export class LevelDetails {
     const partSnDiff = this.lastPartSn - previous.lastPartSn;
     const partIndexDiff = this.lastPartIndex - previous.lastPartIndex;
     this.updated =
-      this.endSN !== previous.endSN || !!partIndexDiff || !!partSnDiff;
+      this.endSN !== previous.endSN ||
+      !!partIndexDiff ||
+      !!partSnDiff ||
+      !this.live;
     this.advanced =
       this.endSN > previous.endSN ||
       partSnDiff > 0 ||
