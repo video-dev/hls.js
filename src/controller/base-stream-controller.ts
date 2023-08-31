@@ -433,6 +433,22 @@ export default class BaseStreamController
     }
   }
 
+  protected checkLiveUpdate(details: LevelDetails) {
+    if (details.updated && !details.live) {
+      // Live stream ended, update fragment tracker
+      const lastFragment = details.fragments[details.fragments.length - 1];
+      this.fragmentTracker.detectPartialFragments({
+        frag: lastFragment,
+        part: null,
+        stats: lastFragment.stats,
+        id: lastFragment.type,
+      });
+    }
+    if (!details.fragments[0]) {
+      details.deltaUpdateFailed = true;
+    }
+  }
+
   protected flushMainBuffer(
     startOffset: number,
     endOffset: number,

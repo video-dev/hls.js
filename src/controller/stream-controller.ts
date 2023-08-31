@@ -657,9 +657,7 @@ export default class StreamController
 
     let sliding = 0;
     if (newDetails.live || curLevel.details?.live) {
-      if (!newDetails.fragments[0]) {
-        newDetails.deltaUpdateFailed = true;
-      }
+      this.checkLiveUpdate(newDetails);
       if (newDetails.deltaUpdateFailed) {
         return;
       }

@@ -149,6 +149,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           `live playlist ${index} ${
             details.advanced
               ? 'REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex
+              : details.updated
+              ? 'UPDATED'
               : 'MISSED'
           }`
         );
