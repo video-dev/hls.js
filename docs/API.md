@@ -64,6 +64,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
       - [`retryDelayMs: number`](#retrydelayms-number)
       - [`maxRetryDelayMs: number`](#maxretrydelayms-number)
       - [`backoff?: 'exponential' | 'linear'`](#backoff-exponential--linear)
+      - [`shouldRetry`](#shouldretry)
   - [`startFragPrefetch`](#startfragprefetch)
   - [`testBandwidth`](#testbandwidth)
   - [`progressive`](#progressive)
@@ -878,6 +879,12 @@ Maximum delay between retries in milliseconds. With each retry, the delay is inc
 ##### `backoff?: 'exponential' | 'linear'`
 
 Used to determine retry backoff duration: Retry delay = 2^retryCount \* retryDelayMs (exponential).
+
+##### `shouldRetry`
+
+(default: internal shouldRetry function, type: `(retryConfig: RetryConfig | null | undefined, retryCount: number, isTimeout: boolean, httpStatus: number | undefined,retry: boolean) => boolean`)
+
+Override default shouldRetry check
 
 ### `startFragPrefetch`
 
