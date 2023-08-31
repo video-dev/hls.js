@@ -33,27 +33,80 @@ class MockMediaSource {
   endOfStream() {}
 }
 
+type TimeRange = { start: number; end: number };
+
+class MockBufferedRanges {
+  public _ranges: Array<TimeRange> = [];
+  start(index: number) {
+    if (index < 0 || index >= this._ranges.length) {
+      throw new Error(
+        `Index out of bounds: index=${index} but buffered.length=${this._ranges.length}`,
+      );
+    }
+    return this._ranges[index].start;
+  }
+
+  end(index: number) {
+    if (index < 0 || index >= this._ranges.length) {
+      throw new Error(
+        `Index out of bounds: index=${index} but buffered.length=${this._ranges.length}`,
+      );
+    }
+    return this._ranges[index].end;
+  }
+
+  get length() {
+    return this._ranges.length;
+  }
+
+  add(range: TimeRange) {
+    // Empty
+    if (this._ranges.length === 0) {
+      this._ranges.push(range);
+      return;
+    }
+
+    // No overlap from beginning
+    if (range.end < this.start(0)) {
+      this._ranges.unshift(range);
+      return;
+    }
+
+    // No overlap from end
+    if (range.start > this.end(this.length - 1)) {
+      this._ranges.push(range);
+      return;
+    }
+
+    const result = [this._ranges[0]];
+    this._ranges.push(range);
+    this._ranges.sort((a, b) => a.start - b.start);
+
+    let j = 0;
+    // Find and merge overlapping range
+    for (let i = 1; i < this._ranges.length; i++) {
+      const curRange = result[j];
+      const nextRange = this._ranges[i];
+      if (curRange.end >= nextRange.start) {
+        curRange.end = Math.max(curRange.end, nextRange.end);
+      } else {
+        result.push(nextRange);
+        j++;
+      }
+    }
+
+    this._ranges = result;
+  }
+}
+
 class MockSourceBuffer extends EventTarget {
   public updating: boolean = false;
   public appendBuffer = sandbox.stub();
   public remove = sandbox.stub();
+  public buffered: MockBufferedRanges = new MockBufferedRanges();
 
-  public buffered = {
-    start() {
-      return this._start;
-    },
-    end() {
-      return this._end;
-    },
-    length: 1,
-    _start: 0,
-    _end: 0,
-  };
-
-  setBuffered(start, end) {
-    this.buffered._start = start;
-    this.buffered._end = end;
-    this.buffered.length = start === end ? 0 : 1;
+  setBuffered(start: number, end: number) {
+    this.buffered.add({ start, end });
   }
 }
 
@@ -396,86 +449,10 @@ describe('BufferController', function () {
     });
   });
 
-  describe('flushBackBuffer', function () {
-    beforeEach(function () {
-      bufferController.details = {
-        levelTargetDuration: 10,
-      };
-      hls.config.backBufferLength = 10;
-      queueNames.forEach((name) => {
-        const sb = bufferController.sourceBuffer[name];
-        sb.setBuffered(0, 30);
-      });
-      mockMedia.currentTime = 30;
-    });
-
+  describe('trimBuffers', function () {
     it('exits early if no media is defined', function () {
       delete bufferController.media;
-      bufferController.flushBackBuffer();
-      expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
-        .have.not.been.called;
-    });
-
-    it('exits early if the backBufferLength config is not a finite number, or less than 0', function () {
-      hls.config.backBufferLength = null;
-      bufferController.flushBackBuffer();
-      hls.config.backBufferLength = -1;
-      bufferController.flushBackBuffer();
-      hls.config.backBufferLength = Infinity;
-      bufferController.flushBackBuffer();
-      expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
-        .have.not.been.called;
-    });
-
-    it('should execute a remove operation if flushing a valid backBuffer range', function () {
-      bufferController.flushBackBuffer();
-      expect(triggerSpy.withArgs(Events.BUFFER_FLUSHING)).to.have.callCount(2);
-      queueNames.forEach((name) => {
-        expect(
-          triggerSpy,
-          `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`,
-        ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
-          startOffset: 0,
-          endOffset: 20,
-          type: name,
-        });
-      });
-    });
-
-    it('should support the deprecated liveBackBufferLength for live content', function () {
-      bufferController.details.live = true;
-      hls.config.backBufferLength = Infinity;
-      hls.config.liveBackBufferLength = 10;
-      bufferController.flushBackBuffer();
-
-      expect(
-        triggerSpy.withArgs(Events.LIVE_BACK_BUFFER_REACHED),
-      ).to.have.callCount(2);
-    });
-
-    it('removes a maximum of one targetDuration from currentTime at intervals of targetDuration', function () {
-      mockMedia.currentTime = 25;
-      hls.config.backBufferLength = 5;
-      bufferController.flushBackBuffer();
-      queueNames.forEach((name) => {
-        expect(
-          triggerSpy,
-          `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`,
-        ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
-          startOffset: 0,
-          endOffset: 10,
-          type: name,
-        });
-      });
-    });
-
-    it('removes nothing if no buffered range intersects with back buffer limit', function () {
-      mockMedia.currentTime = 15;
-      queueNames.forEach((name) => {
-        const buffer = bufferController.sourceBuffer[name];
-        buffer.setBuffered(10, 30);
-      });
-      bufferController.flushBackBuffer();
+      bufferController.trimBuffers();
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
     });
@@ -485,13 +462,187 @@ describe('BufferController', function () {
         const buffer = bufferController.sourceBuffer[name];
         buffer.setBuffered(0, 0);
       });
-      bufferController.flushBackBuffer();
+      bufferController.trimBuffers();
 
       bufferController.sourceBuffer = {};
-      bufferController.flushBackBuffer();
+      bufferController.trimBuffers();
 
       expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
         .have.not.been.called;
+    });
+
+    describe('flushBackBuffer', function () {
+      beforeEach(function () {
+        bufferController.details = {
+          levelTargetDuration: 10,
+        };
+        hls.config.backBufferLength = 10;
+        queueNames.forEach((name) => {
+          const sb = bufferController.sourceBuffer[name];
+          sb.setBuffered(0, 30);
+        });
+        mockMedia.currentTime = 30;
+      });
+
+      it('exits early if the backBufferLength config is not a finite number, or less than 0', function () {
+        hls.config.backBufferLength = null;
+        bufferController.trimBuffers();
+        hls.config.backBufferLength = -1;
+        bufferController.trimBuffers();
+        hls.config.backBufferLength = Infinity;
+        bufferController.trimBuffers();
+        expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
+          .have.not.been.called;
+      });
+
+      it('should execute a remove operation if flushing a valid backBuffer range', function () {
+        bufferController.trimBuffers();
+        expect(triggerSpy.withArgs(Events.BUFFER_FLUSHING)).to.have.callCount(
+          2,
+        );
+        queueNames.forEach((name) => {
+          expect(
+            triggerSpy,
+            `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`,
+          ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
+            startOffset: 0,
+            endOffset: 20,
+            type: name,
+          });
+        });
+      });
+
+      it('should support the deprecated liveBackBufferLength for live content', function () {
+        bufferController.details.live = true;
+        hls.config.backBufferLength = Infinity;
+        hls.config.liveBackBufferLength = 10;
+        bufferController.trimBuffers();
+
+        expect(
+          triggerSpy.withArgs(Events.LIVE_BACK_BUFFER_REACHED),
+        ).to.have.callCount(2);
+      });
+
+      it('removes a maximum of one targetDuration from currentTime at intervals of targetDuration', function () {
+        mockMedia.currentTime = 25;
+        hls.config.backBufferLength = 5;
+        bufferController.trimBuffers();
+        queueNames.forEach((name) => {
+          expect(
+            triggerSpy,
+            `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`,
+          ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
+            startOffset: 0,
+            endOffset: 10,
+            type: name,
+          });
+        });
+      });
+
+      it('removes nothing if no buffered range intersects with back buffer limit', function () {
+        mockMedia.currentTime = 15;
+        queueNames.forEach((name) => {
+          const buffer = bufferController.sourceBuffer[name];
+          buffer.setBuffered(10, 30);
+        });
+        bufferController.trimBuffers();
+        expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
+          .have.not.been.called;
+      });
+    });
+
+    describe('flushFrontBuffer', function () {
+      beforeEach(function () {
+        bufferController.details = {
+          levelTargetDuration: 10,
+        };
+        hls.config.maxBufferLength = 60;
+        hls.config.frontBufferFlushThreshold = hls.config.maxBufferLength;
+        queueNames.forEach((name) => {
+          const sb = bufferController.sourceBuffer[name];
+          sb.setBuffered(0, 100);
+        });
+        mockMedia.currentTime = 0;
+      });
+
+      it('exits early if the frontBufferFlushThreshold config is not a finite number, or less than 0', function () {
+        hls.config.frontBufferFlushThreshold = null;
+        bufferController.trimBuffers();
+        hls.config.frontBufferFlushThreshold = -1;
+        bufferController.trimBuffers();
+        hls.config.frontBufferFlushThreshold = Infinity;
+        bufferController.trimBuffers();
+        expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
+          .have.not.been.called;
+      });
+
+      it('should execute a remove operation if flushing a valid frontBuffer range', function () {
+        queueNames.forEach((name) => {
+          const sb = bufferController.sourceBuffer[name];
+          sb.setBuffered(150, 200);
+        });
+
+        bufferController.trimBuffers();
+        expect(triggerSpy.withArgs(Events.BUFFER_FLUSHING)).to.have.callCount(
+          2,
+        );
+        queueNames.forEach((name) => {
+          expect(
+            triggerSpy,
+            `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`,
+          ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
+            startOffset: 150,
+            endOffset: Infinity,
+            type: name,
+          });
+        });
+      });
+
+      it('should do nothing if the buffer is contiguous', function () {
+        bufferController.trimBuffers();
+        expect(triggerSpy.withArgs(Events.BUFFER_FLUSHING)).to.have.callCount(
+          0,
+        );
+        queueNames.forEach((name) => {
+          expect(
+            triggerSpy,
+            `BUFFER_FLUSHING should not have been triggered for the ${name} SourceBuffer`,
+          ).to.have.been.callCount(0);
+        });
+      });
+
+      it('should use maxBufferLength if frontBufferFlushThreshold < maxBufferLength', function () {
+        queueNames.forEach((name) => {
+          const sb = bufferController.sourceBuffer[name];
+          sb.setBuffered(150, 200);
+        });
+        hls.config.frontBufferFlushThreshold = 10;
+        bufferController.trimBuffers();
+        expect(triggerSpy.withArgs(Events.BUFFER_FLUSHING)).to.have.callCount(
+          2,
+        );
+        queueNames.forEach((name) => {
+          expect(
+            triggerSpy,
+            `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`,
+          ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
+            startOffset: 150,
+            endOffset: Infinity,
+            type: name,
+          });
+        });
+      });
+
+      it('removes nothing if no buffered range intersects with front buffer limit', function () {
+        mockMedia.currentTime = 0;
+        queueNames.forEach((name) => {
+          const buffer = bufferController.sourceBuffer[name];
+          buffer.setBuffered(0, 20);
+        });
+        bufferController.trimBuffers();
+        expect(triggerSpy, 'BUFFER_FLUSHING should not have been triggered').to
+          .have.not.been.called;
+      });
     });
   });
 
