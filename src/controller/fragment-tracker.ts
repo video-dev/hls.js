@@ -206,7 +206,9 @@ export class FragmentTracker implements ComponentAPI {
     fragmentEntity.loaded = null;
     if (Object.keys(fragmentEntity.range).length) {
       fragmentEntity.buffered = true;
-      if (fragmentEntity.body.endList) {
+      const endList = (fragmentEntity.body.endList =
+        frag.endList || fragmentEntity.body.endList);
+      if (endList) {
         this.endListFragments[fragmentEntity.body.type] = fragmentEntity;
       }
       if (!isPartial(fragmentEntity)) {
