@@ -3,6 +3,7 @@
  */
 import BaseAudioDemuxer from './base-audio-demuxer';
 import * as ADTS from './adts';
+import * as MpegAudio from './mpegaudio';
 import { logger } from '../../utils/logger';
 import * as ID3 from '../id3';
 import type { HlsEventEmitter } from '../../events';
@@ -50,8 +51,12 @@ class AACDemuxer extends BaseAudioDemuxer {
     // Look for ADTS header | 1111 1111 | 1111 X00X | where X can be either 0 or 1
     // Layer bits (position 14 and 15) in header should be always 0 for ADTS
     // More info https://wiki.multimedia.cx/index.php?title=ADTS
-    const id3Data = ID3.getID3Data(data, 0) || [];
-    let offset = id3Data.length;
+    const id3Data = ID3.getID3Data(data, 0);
+    let offset = id3Data?.length || 0;
+
+    if (MpegAudio.probe(data, offset)) {
+      return false;
+    }
 
     for (let length = data.length; offset < length; offset++) {
       if (ADTS.probe(data, offset)) {
