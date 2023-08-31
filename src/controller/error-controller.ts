@@ -260,12 +260,11 @@ export default class ErrorController implements NetworkComponentAPI {
     const hls = this.hls;
     const retryConfig = getRetryConfig(hls.config.playlistLoadPolicy, data);
     const retryCount = this.playlistError++;
-    const httpStatus = data.response?.code;
     const retry = shouldRetry(
       retryConfig,
       retryCount,
       isTimeoutError(data),
-      httpStatus,
+      data.response,
     );
     if (retry) {
       return {
@@ -303,12 +302,11 @@ export default class ErrorController implements NetworkComponentAPI {
       if (data.details !== ErrorDetails.FRAG_GAP) {
         level.fragmentError++;
       }
-      const httpStatus = data.response?.code;
       const retry = shouldRetry(
         retryConfig,
         fragmentErrors,
         isTimeoutError(data),
-        httpStatus,
+        data.response,
       );
       if (retry) {
         return {
