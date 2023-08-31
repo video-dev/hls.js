@@ -555,7 +555,9 @@ export class BufferController implements ComponentAPI {
     // (undocumented)
     protected error: (msg: any, obj?: any) => void;
     // (undocumented)
-    flushBackBuffer(): void;
+    flushBackBuffer(currentTime: number, targetDuration: number, targetBackBufferPosition: number): void;
+    // (undocumented)
+    flushFrontBuffer(currentTime: number, targetDuration: number, targetFrontBufferPosition: number): void;
     // (undocumented)
     hasSourceTypes(): boolean;
     // (undocumented)
@@ -595,6 +597,8 @@ export class BufferController implements ComponentAPI {
     // (undocumented)
     tracks: TrackSet;
     // (undocumented)
+    trimBuffers(): void;
+    // (undocumented)
     protected unregisterListeners(): void;
     // (undocumented)
     updateSeekableRange(levelDetails: any): void;
@@ -608,6 +612,7 @@ export class BufferController implements ComponentAPI {
 export type BufferControllerConfig = {
     appendErrorMaxRetry: number;
     backBufferLength: number;
+    frontBufferFlushThreshold: number;
     liveDurationInfinity: boolean;
     liveBackBufferLength: number | null;
 };

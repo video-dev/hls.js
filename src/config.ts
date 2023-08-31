@@ -50,6 +50,7 @@ export type ABRControllerConfig = {
 export type BufferControllerConfig = {
   appendErrorMaxRetry: number;
   backBufferLength: number;
+  frontBufferFlushThreshold: number;
   liveDurationInfinity: boolean;
   /**
    * @deprecated use backBufferLength
@@ -330,6 +331,7 @@ export const hlsDefaultConfig: HlsConfig = {
   initialLiveManifestSize: 1, // used by stream-controller
   maxBufferLength: 30, // used by stream-controller
   backBufferLength: Infinity, // used by buffer-controller
+  frontBufferFlushThreshold: Infinity,
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxBufferHole: 0.1, // used by stream-controller
   highBufferWatchdogPeriod: 2, // used by stream-controller

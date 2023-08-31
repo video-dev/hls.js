@@ -28,6 +28,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`initialLiveManifestSize`](#initiallivemanifestsize)
   - [`maxBufferLength`](#maxbufferlength)
   - [`backBufferLength`](#backbufferlength)
+  - [`frontBufferFlushThreshold`](#frontbufferflushthreshold)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
@@ -364,6 +365,7 @@ var config = {
   maxBufferLength: 30,
   maxMaxBufferLength: 600,
   backBufferLength: Infinity,
+  frontBufferFlushThreshold: Infinity,
   maxBufferSize: 60 * 1000 * 1000,
   maxBufferHole: 0.5,
   highBufferWatchdogPeriod: 2,
@@ -517,6 +519,12 @@ This is the guaranteed buffer length hls.js will try to reach, regardless of max
 (default: `Infinity`)
 
 The maximum duration of buffered media to keep once it has been played, in seconds. Any video buffered past this duration will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted.
+
+### `frontBufferFlushThreshold`
+
+(default: `Infinity`)
+
+The maximum duration of buffered media, in seconds, from the play position to keep before evicting non-contiguous forward ranges. A value of `Infinity` means no active eviction will take place; This value will always be at least the `maxBufferLength`.
 
 ### `maxBufferSize`
 
