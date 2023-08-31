@@ -226,7 +226,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
           this.loadPlaylist(deliveryDirectives);
           return;
         }
-      } else if (details.canBlockReload) {
+      } else if (details.canBlockReload || details.canSkipUntil) {
         deliveryDirectives = this.getDeliveryDirectives(
           details,
           data.deliveryDirectives,
