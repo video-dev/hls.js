@@ -369,6 +369,13 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
       const chromaSubsamplingX = (av1CBox[2] & 0x08) >> 3;
       const chromaSubsamplingY = (av1CBox[2] & 0x04) >> 2;
       const chromaSamplePosition = av1CBox[2] & 0x03;
+      // TODO: parse color_description_present_flag
+      // default it to BT.709/limited range for now
+      // more info https://aomediacodec.github.io/av1-isobmff/#av1codecconfigurationbox-syntax
+      const colorPrimaries = 1;
+      const transferCharacteristics = 1;
+      const matrixCoefficients = 1;
+      const videoFullRangeFlag = 0;
       codec +=
         '.' +
         profile +
@@ -382,7 +389,15 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
         '.' +
         chromaSubsamplingX +
         chromaSubsamplingY +
-        chromaSamplePosition;
+        chromaSamplePosition +
+        '.' +
+        addLeadingZero(colorPrimaries) +
+        '.' +
+        addLeadingZero(transferCharacteristics) +
+        '.' +
+        addLeadingZero(matrixCoefficients) +
+        '.' +
+        videoFullRangeFlag;
       break;
     }
     case 'ac-3':
