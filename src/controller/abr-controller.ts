@@ -612,6 +612,9 @@ class AbrController implements AbrComponentAPI {
       lastLoadedFragLevel === -1 ? this.hls.firstLevel : lastLoadedFragLevel;
     const { fragCurrent, partCurrent } = this;
     const { levels, allAudioTracks, loadLevel } = this.hls;
+    if (levels.length === 1) {
+      return 0;
+    }
     const level: Level | undefined = levels[selectionBaseLevel];
     const live = !!level?.details?.live;
     const firstSelection = loadLevel === -1 || lastLoadedFragLevel === -1;
