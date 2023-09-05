@@ -8,10 +8,9 @@ import {
   appendUint8Array,
   parseSEIMessageFromNALu,
 } from '../../utils/mp4-tools';
-
-import type { PES } from '../tsdemuxer';
-
 import ExpGolomb from './exp-golomb';
+import { logger } from '../../utils/logger';
+import type { PES } from '../tsdemuxer';
 
 class AvcVideoParser extends BaseVideoParser {
   public parseAVCPES(
@@ -133,17 +132,23 @@ class AvcVideoParser extends BaseVideoParser {
           break;
           // SPS
         }
-        case 7:
+        case 7: {
           push = true;
           spsfound = true;
           if (debug && VideoSample) {
             VideoSample.debug += 'SPS ';
           }
+          const sps = unit.data;
+          const expGolombDecoder = new ExpGolomb(sps);
+          const config = expGolombDecoder.readSPS();
 
-          if (!track.sps) {
-            const sps = unit.data;
-            const expGolombDecoder = new ExpGolomb(sps);
-            const config = expGolombDecoder.readSPS();
+          if (
+            !track.sps ||
+            track.width !== config.width ||
+            track.height !== config.height ||
+            track.pixelRatio?.[0] !== config.pixelRatio[0] ||
+            track.pixelRatio?.[1] !== config.pixelRatio[1]
+          ) {
             track.width = config.width;
             track.height = config.height;
             track.pixelRatio = config.pixelRatio;
@@ -161,7 +166,9 @@ class AvcVideoParser extends BaseVideoParser {
             }
             track.codec = codecstring;
           }
+
           break;
+        }
         // PPS
         case 8:
           push = true;
@@ -169,9 +176,7 @@ class AvcVideoParser extends BaseVideoParser {
             VideoSample.debug += 'PPS ';
           }
 
-          if (!track.pps) {
-            track.pps = [unit.data];
-          }
+          track.pps = [unit.data];
 
           break;
         // AUD

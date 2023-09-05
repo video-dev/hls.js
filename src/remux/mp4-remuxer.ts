@@ -50,6 +50,11 @@ export default class MP4Remuxer implements Remuxer {
   private videoSampleDuration: number | null = null;
   private isAudioContiguous: boolean = false;
   private isVideoContiguous: boolean = false;
+  private videoTrackConfig?: {
+    width?: number;
+    height?: number;
+    pixelRatio?: [number, number];
+  };
 
   constructor(
     observer: HlsEventEmitter,
@@ -73,7 +78,10 @@ export default class MP4Remuxer implements Remuxer {
     }
   }
 
-  destroy() {}
+  destroy() {
+    // @ts-ignore
+    this.config = this.videoTrackConfig = this._initPTS = this._initDTS = null;
+  }
 
   resetTimeStamp(defaultTimeStamp: RationalTimestamp | null) {
     logger.log('[mp4-remuxer]: initPTS & initDTS reset');
@@ -89,6 +97,7 @@ export default class MP4Remuxer implements Remuxer {
   resetInitSegment() {
     logger.log('[mp4-remuxer]: ISGenerated flag reset');
     this.ISGenerated = false;
+    this.videoTrackConfig = undefined;
   }
 
   getVideoStartPts(videoSamples) {
@@ -147,7 +156,18 @@ export default class MP4Remuxer implements Remuxer {
       flush;
 
     if (canRemuxAvc) {
-      if (!this.ISGenerated) {
+      if (this.ISGenerated) {
+        const config = this.videoTrackConfig;
+        if (
+          config &&
+          (videoTrack.width !== config.width ||
+            videoTrack.height !== config.height ||
+            videoTrack.pixelRatio?.[0] !== config.pixelRatio?.[0] ||
+            videoTrack.pixelRatio?.[1] !== config.pixelRatio?.[1])
+        ) {
+          this.resetInitSegment();
+        }
+      } else {
         initSegment = this.generateIS(
           audioTrack,
           videoTrack,
@@ -385,6 +405,11 @@ export default class MP4Remuxer implements Remuxer {
           computePTSDTS = false;
         }
       }
+      this.videoTrackConfig = {
+        width: videoTrack.width,
+        height: videoTrack.height,
+        pixelRatio: videoTrack.pixelRatio,
+      };
     }
 
     if (Object.keys(tracks).length) {
