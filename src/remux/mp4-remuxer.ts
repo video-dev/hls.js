@@ -509,23 +509,41 @@ export default class MP4Remuxer implements Remuxer {
             `AVC: ${toMsFromMpegTsClock(
               delta,
               true,
-            )} ms (${delta}dts) hole between fragments detected, filling it`,
+            )} ms (${delta}dts) hole between fragments detected at ${timeOffset.toFixed(
+              3,
+            )}`,
           );
         } else {
           logger.warn(
             `AVC: ${toMsFromMpegTsClock(
               -delta,
               true,
-            )} ms (${delta}dts) overlapping between fragments detected`,
+            )} ms (${delta}dts) overlapping between fragments detected at ${timeOffset.toFixed(
+              3,
+            )}`,
           );
         }
-        if (!foundOverlap || nextAvcDts >= inputSamples[0].pts) {
+        if (
+          !foundOverlap ||
+          nextAvcDts >= inputSamples[0].pts ||
+          chromeVersion
+        ) {
           firstDTS = nextAvcDts;
           const firstPTS = inputSamples[0].pts - delta;
-          inputSamples[0].dts = firstDTS;
-          inputSamples[0].pts = firstPTS;
+          if (foundHole) {
+            inputSamples[0].dts = firstDTS;
+            inputSamples[0].pts = firstPTS;
+          } else {
+            for (let i = 0; i < inputSamples.length; i++) {
+              if (inputSamples[i].dts > firstPTS) {
+                break;
+              }
+              inputSamples[i].dts -= delta;
+              inputSamples[i].pts -= delta;
+            }
+          }
           logger.log(
-            `Video: First PTS/DTS adjusted: ${toMsFromMpegTsClock(
+            `Video: Initial PTS/DTS adjusted: ${toMsFromMpegTsClock(
               firstPTS,
               true,
             )}/${toMsFromMpegTsClock(
@@ -557,6 +575,9 @@ export default class MP4Remuxer implements Remuxer {
       sample.length = sampleLen;
 
       // ensure sample monotonic DTS
+      if (dtsStep < sample.dts) {
+        dtsStep = sample.dts;
+      }
       sample.dts = sample.dts < dtsStep ? dtsStep++ : sample.dts;
 
       minPTS = Math.min(sample.pts, minPTS);
