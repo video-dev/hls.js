@@ -464,9 +464,9 @@ export default class StreamController
               Math.min(
                 Math.max(
                   fragDuration - this.config.maxFragLookUpTolerance,
-                  fragDuration * 0.5,
+                  fragDuration * (this.couldBacktrack ? 0.5 : 0.125),
                 ),
-                fragDuration * 0.75,
+                fragDuration * (this.couldBacktrack ? 0.75 : 0.25),
               ),
           );
           this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY);
