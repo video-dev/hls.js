@@ -65,12 +65,18 @@ export function findFragmentByPTS(
       fragments[
         (fragPrevious.sn as number) - (fragments[0].sn as number) + 1
       ] || null;
+    // check for buffer-end rounding error
+    const bufferEdgeError = fragPrevious.endDTS - bufferEnd;
+    if (bufferEdgeError > 0 && bufferEdgeError < 0.0000015) {
+      bufferEnd += 0.0000015;
+    }
   } else if (bufferEnd === 0 && fragments[0].start === 0) {
     fragNext = fragments[0];
   }
   // Prefer the next fragment if it's within tolerance
   if (
     fragNext &&
+    (!fragPrevious || fragPrevious.level === fragNext.level) &&
     fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext) ===
       0
   ) {

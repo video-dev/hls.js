@@ -32,8 +32,9 @@ describe('Fragment finders', function () {
     });
 
     it('finds a fragment with SN sequential to the previous fragment', function () {
+      const fragPreviousSameLevel = { ...fragPrevious, level: 2 };
       const actual = findFragmentByPTS(
-        fragPrevious,
+        fragPreviousSameLevel,
         mockFragments,
         bufferEnd,
         tolerance,
