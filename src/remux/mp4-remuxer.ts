@@ -461,8 +461,17 @@ export default class MP4Remuxer implements Remuxer {
       const cts =
         inputSamples[0].pts -
         normalizePts(inputSamples[0].dts, inputSamples[0].pts);
-      // if not contiguous, let's use target timeOffset
-      nextAvcDts = pts - cts;
+      if (
+        chromeVersion &&
+        nextAvcDts !== null &&
+        Math.abs(pts - cts - nextAvcDts) < 15000
+      ) {
+        // treat as contigous to adjust samples that would otherwise produce video buffer gaps in Chrome
+        contiguous = true;
+      } else {
+        // if not contiguous, let's use target timeOffset
+        nextAvcDts = pts - cts;
+      }
     }
 
     // PTS is coded on 33bits, and can loop from -2^32 to 2^32
@@ -575,10 +584,12 @@ export default class MP4Remuxer implements Remuxer {
       sample.length = sampleLen;
 
       // ensure sample monotonic DTS
-      if (dtsStep < sample.dts) {
+      if (sample.dts < dtsStep) {
+        sample.dts = dtsStep;
+        dtsStep += (averageSampleDuration / 4) | 0 || 1;
+      } else {
         dtsStep = sample.dts;
       }
-      sample.dts = sample.dts < dtsStep ? dtsStep++ : sample.dts;
 
       minPTS = Math.min(sample.pts, minPTS);
       maxPTS = Math.max(sample.pts, maxPTS);
