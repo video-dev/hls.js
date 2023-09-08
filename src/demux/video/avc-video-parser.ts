@@ -9,7 +9,6 @@ import {
   parseSEIMessageFromNALu,
 } from '../../utils/mp4-tools';
 import ExpGolomb from './exp-golomb';
-import { logger } from '../../utils/logger';
 import type { PES } from '../tsdemuxer';
 
 class AvcVideoParser extends BaseVideoParser {
