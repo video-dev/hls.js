@@ -80,7 +80,7 @@
     "@rollup/plugin-terser": "0.4.3",
     "@rollup/plugin-typescript": "11.1.3",
     "@types/chai": "4.3.5",
-    "@types/chart.js": "2.9.37",
+    "@types/chart.js": "2.9.38",
     "@types/mocha": "10.0.1",
     "@types/sinon-chai": "3.2.9",
     "@typescript-eslint/eslint-plugin": "5.62.0",
