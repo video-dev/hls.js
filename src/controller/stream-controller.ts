@@ -7,7 +7,7 @@ import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ElementaryStreamTypes, Fragment } from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
-import GapController from './gap-controller';
+import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
 import { ErrorDetails } from '../errors';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
@@ -1164,6 +1164,9 @@ export default class StreamController
               endDTS,
               true,
             );
+          } else if (isFirstFragment && startPTS > MAX_START_GAP_JUMP) {
+            // Mark segment with a gap to skip large start gap
+            frag.gap = true;
           }
         }
         frag.setElementaryStreamInfo(
