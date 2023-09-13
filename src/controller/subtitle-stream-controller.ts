@@ -295,7 +295,11 @@ export class SubtitleStreamController
           addSliding(newDetails, sliding);
         }
       } else {
-        sliding = this.alignPlaylists(newDetails, track.details);
+        sliding = this.alignPlaylists(
+          newDetails,
+          track.details,
+          this.levelLastLoaded?.details,
+        );
         if (sliding === 0 && mainSlidingStartFragment) {
           // realign with main when there is no overlap with last refresh
           sliding = mainSlidingStartFragment.start;
@@ -304,7 +308,7 @@ export class SubtitleStreamController
       }
     }
     track.details = newDetails;
-    this.levelLastLoaded = trackId;
+    this.levelLastLoaded = track;
 
     if (!this.startFragRequested && (this.mainDetails || !newDetails.live)) {
       this.setStartPosition(track.details, sliding);

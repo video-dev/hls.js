@@ -93,7 +93,7 @@ export default class BaseStreamController
   protected levels: Array<Level> | null = null;
   protected fragmentLoader: FragmentLoader;
   protected keyLoader: KeyLoader;
-  protected levelLastLoaded: number | null = null;
+  protected levelLastLoaded: Level | null = null;
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
   protected initPTS: RationalTimestamp[] = [];
@@ -188,7 +188,7 @@ export default class BaseStreamController
 
   protected getLevelDetails(): LevelDetails | undefined {
     if (this.levels && this.levelLastLoaded !== null) {
-      return this.levels[this.levelLastLoaded]?.details;
+      return this.levelLastLoaded?.details;
     }
   }
 
@@ -1378,12 +1378,9 @@ export default class BaseStreamController
 
   protected alignPlaylists(
     details: LevelDetails,
-    previousDetails?: LevelDetails,
+    previousDetails: LevelDetails | undefined,
+    switchDetails: LevelDetails | undefined,
   ): number {
-    const { levels, levelLastLoaded, fragPrevious } = this;
-    const lastLevel: Level | null =
-      levelLastLoaded !== null ? levels![levelLastLoaded] : null;
-
     // FIXME: If not for `shouldAlignOnDiscontinuities` requiring fragPrevious.cc,
     //  this could all go in level-helper mergeDetails()
     const length = details.fragments.length;
@@ -1395,7 +1392,8 @@ export default class BaseStreamController
     const firstLevelLoad = !previousDetails;
     const aligned = details.alignedSliding && Number.isFinite(slidingStart);
     if (firstLevelLoad || (!aligned && !slidingStart)) {
-      alignStream(fragPrevious, lastLevel, details);
+      const { fragPrevious } = this;
+      alignStream(fragPrevious, switchDetails, details);
       const alignedSlidingStart = details.fragments[0].start;
       this.log(
         `Live playlist sliding: ${alignedSlidingStart.toFixed(2)} start-sn: ${
@@ -1528,7 +1526,7 @@ export default class BaseStreamController
       action === NetworkErrorAction.RetryRequest &&
       retryConfig
     ) {
-      this.resetStartWhenNotLoaded(this.levelLastLoaded ?? frag.level);
+      this.resetStartWhenNotLoaded(this.levelLastLoaded);
       const delay = getRetryDelay(retryConfig, retryCount);
       this.warn(
         `Fragment ${frag.sn} of ${filterType} ${frag.level} errored with ${
@@ -1643,12 +1641,12 @@ export default class BaseStreamController
     this.state = State.IDLE;
   }
 
-  protected resetStartWhenNotLoaded(level: number): void {
+  protected resetStartWhenNotLoaded(level: Level | null): void {
     // if loadedmetadata is not set, it means that first frag request failed
     // in that case, reset startFragRequested flag
     if (!this.loadedmetadata) {
       this.startFragRequested = false;
-      const details = this.levels ? this.levels[level].details : null;
+      const details = level ? level.details : null;
       if (details?.live) {
         // Update the start position and return to IDLE to recover live start
         this.startPosition = -1;
@@ -1665,7 +1663,7 @@ export default class BaseStreamController
       `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`,
     );
     this.removeUnbufferedFrags();
-    this.resetStartWhenNotLoaded(this.levelLastLoaded ?? chunkMeta.level);
+    this.resetStartWhenNotLoaded(this.levelLastLoaded);
     this.resetLoadingState();
   }
 
@@ -1770,9 +1768,7 @@ export default class BaseStreamController
     if (data.event === 'demuxerWorker') {
       this.fragmentTracker.removeAllFragments();
       this.resetTransmuxer();
-      this.resetStartWhenNotLoaded(
-        this.levelLastLoaded ?? this.fragCurrent?.level ?? 0,
-      );
+      this.resetStartWhenNotLoaded(this.levelLastLoaded);
       this.resetLoadingState();
     }
   }

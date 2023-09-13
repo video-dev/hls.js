@@ -184,8 +184,9 @@ class AudioStreamController
         const retryDate = this.retryDate;
         // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
         if (!retryDate || now >= retryDate || this.media?.seeking) {
+          const { levels, trackId } = this;
           this.log('RetryDate reached, switch back to IDLE state');
-          this.resetStartWhenNotLoaded(this.trackId);
+          this.resetStartWhenNotLoaded(levels?.[trackId] || null);
           this.state = State.IDLE;
         }
         break;
@@ -291,7 +292,7 @@ class AudioStreamController
     const trackDetails = levelInfo.details;
     if (
       !trackDetails ||
-      (trackDetails.live && this.levelLastLoaded !== trackId) ||
+      (trackDetails.live && this.levelLastLoaded !== levelInfo) ||
       this.waitForCdnTuneIn(trackDetails)
     ) {
       this.state = State.WAITING_TRACK;
@@ -526,11 +527,15 @@ class AudioStreamController
         alignMediaPlaylistByPDT(newDetails, mainDetails);
         sliding = newDetails.fragments[0].start;
       } else {
-        sliding = this.alignPlaylists(newDetails, track.details);
+        sliding = this.alignPlaylists(
+          newDetails,
+          track.details,
+          this.levelLastLoaded?.details,
+        );
       }
     }
     track.details = newDetails;
-    this.levelLastLoaded = trackId;
+    this.levelLastLoaded = track;
 
     // compute start position if we are aligned with the main playlist
     if (!this.startFragRequested && (this.mainDetails || !newDetails.live)) {

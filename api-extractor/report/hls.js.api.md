@@ -295,7 +295,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected afterBufferFlushed(media: Bufferable, bufferType: SourceBufferName, playlistType: PlaylistLevelType): void;
     // (undocumented)
-    protected alignPlaylists(details: LevelDetails, previousDetails?: LevelDetails): number;
+    protected alignPlaylists(details: LevelDetails, previousDetails: LevelDetails | undefined, switchDetails: LevelDetails | undefined): number;
     // (undocumented)
     protected bitrateTest: boolean;
     // Warning: (ae-forgotten-export) The symbol "RemuxedTrack" needs to be exported by the entry point hls.d.ts
@@ -385,7 +385,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected lastCurrentTime: number;
     // (undocumented)
-    protected levelLastLoaded: number | null;
+    protected levelLastLoaded: Level | null;
     // (undocumented)
     protected levels: Array<Level> | null;
     // (undocumented)
@@ -445,7 +445,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected resetLoadingState(): void;
     // (undocumented)
-    protected resetStartWhenNotLoaded(level: number): void;
+    protected resetStartWhenNotLoaded(level: Level | null): void;
     // (undocumented)
     protected resetTransmuxer(): void;
     // (undocumented)

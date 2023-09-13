@@ -3,8 +3,6 @@ import { adjustSliding } from './level-helper';
 
 import type { Fragment } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
-import type { Level } from '../types/level';
-import type { RequiredProperties } from '../types/general';
 
 export function findFirstFragWithCC(
   fragments: Fragment[],
@@ -20,10 +18,10 @@ export function findFirstFragWithCC(
 
 export function shouldAlignOnDiscontinuities(
   lastFrag: Fragment | null,
-  lastLevel: Level,
+  switchDetails: LevelDetails | undefined,
   details: LevelDetails,
-): lastLevel is RequiredProperties<Level, 'details'> {
-  if (lastLevel.details) {
+): switchDetails is LevelDetails & boolean {
+  if (switchDetails) {
     if (
       details.endCC > details.startCC ||
       (lastFrag && lastFrag.cc < details.startCC)
@@ -90,28 +88,24 @@ export function adjustSlidingStart(sliding: number, details: LevelDetails) {
  */
 export function alignStream(
   lastFrag: Fragment | null,
-  lastLevel: Level | null,
+  switchDetails: LevelDetails | undefined,
   details: LevelDetails,
 ) {
-  if (!lastLevel) {
+  if (!switchDetails) {
     return;
   }
-  alignDiscontinuities(lastFrag, details, lastLevel);
-  if (!details.alignedSliding && lastLevel.details) {
+  alignDiscontinuities(lastFrag, details, switchDetails);
+  if (!details.alignedSliding && switchDetails) {
     // If the PTS wasn't figured out via discontinuity sequence that means there was no CC increase within the level.
     // Aligning via Program Date Time should therefore be reliable, since PDT should be the same within the same
     // discontinuity sequence.
-    alignMediaPlaylistByPDT(details, lastLevel.details);
+    alignMediaPlaylistByPDT(details, switchDetails);
   }
-  if (
-    !details.alignedSliding &&
-    lastLevel.details &&
-    !details.skippedSegments
-  ) {
+  if (!details.alignedSliding && switchDetails && !details.skippedSegments) {
     // Try to align on sn so that we pick a better start fragment.
     // Do not perform this on playlists with delta updates as this is only to align levels on switch
     // and adjustSliding only adjusts fragments after skippedSegments.
-    adjustSliding(lastLevel.details, details);
+    adjustSliding(switchDetails, details);
   }
 }
 
@@ -125,11 +119,11 @@ export function alignStream(
 function alignDiscontinuities(
   lastFrag: Fragment | null,
   details: LevelDetails,
-  lastLevel: Level,
+  switchDetails: LevelDetails | undefined,
 ) {
-  if (shouldAlignOnDiscontinuities(lastFrag, lastLevel, details)) {
+  if (shouldAlignOnDiscontinuities(lastFrag, switchDetails, details)) {
     const referenceFrag = findDiscontinuousReferenceFrag(
-      lastLevel.details,
+      switchDetails,
       details,
     );
     if (referenceFrag && Number.isFinite(referenceFrag.start)) {

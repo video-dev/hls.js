@@ -469,7 +469,11 @@ describe('discontinuities', function () {
       endCC: 1,
     });
 
-    const actual = shouldAlignOnDiscontinuities(null, lastLevel, curDetails);
+    const actual = shouldAlignOnDiscontinuities(
+      null,
+      lastLevel.details,
+      curDetails,
+    );
     expect(actual).to.be.true;
   });
 
@@ -487,7 +491,7 @@ describe('discontinuities', function () {
 
     const actual = shouldAlignOnDiscontinuities(
       lastFrag,
-      lastLevel,
+      lastLevel.details,
       curDetails,
     );
     expect(actual).to.be.true;
@@ -507,7 +511,7 @@ describe('discontinuities', function () {
 
     const actual = shouldAlignOnDiscontinuities(
       lastFrag,
-      lastLevel,
+      lastLevel.details,
       curDetails,
     );
     expect(actual).to.be.false;
@@ -525,7 +529,7 @@ describe('discontinuities', function () {
 
     const actual = shouldAlignOnDiscontinuities(
       lastFrag,
-      lastLevel,
+      lastLevel.details,
       curDetails,
     );
     expect(actual).to.be.false;

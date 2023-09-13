@@ -173,8 +173,12 @@ export default class StreamController
     switch (this.state) {
       case State.WAITING_LEVEL: {
         const { levels, level } = this;
-        const details = levels?.[level]?.details;
-        if (details && (!details.live || this.levelLastLoaded === this.level)) {
+        const currentLevel = levels?.[level];
+        const details = currentLevel?.details;
+        if (
+          details &&
+          (!details.live || this.levelLastLoaded === currentLevel)
+        ) {
           if (this.waitForCdnTuneIn(details)) {
             break;
           }
@@ -192,7 +196,9 @@ export default class StreamController
           const retryDate = this.retryDate;
           // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
           if (!retryDate || now >= retryDate || this.media?.seeking) {
-            this.resetStartWhenNotLoaded(this.level);
+            const { levels, level } = this;
+            const currentLevel = levels?.[level];
+            this.resetStartWhenNotLoaded(currentLevel || null);
             this.state = State.IDLE;
           }
         }
@@ -269,7 +275,7 @@ export default class StreamController
     if (
       !levelDetails ||
       this.state === State.WAITING_LEVEL ||
-      (levelDetails.live && this.levelLastLoaded !== level)
+      (levelDetails.live && this.levelLastLoaded !== levelInfo)
     ) {
       this.level = level;
       this.state = State.WAITING_LEVEL;
@@ -614,7 +620,7 @@ export default class StreamController
     const level = levels[data.level];
     if (
       !level.details ||
-      (level.details.live && this.levelLastLoaded !== data.level) ||
+      (level.details.live && this.levelLastLoaded !== level) ||
       this.waitForCdnTuneIn(level.details)
     ) {
       this.state = State.WAITING_LEVEL;
@@ -661,11 +667,15 @@ export default class StreamController
       if (newDetails.deltaUpdateFailed) {
         return;
       }
-      sliding = this.alignPlaylists(newDetails, curLevel.details);
+      sliding = this.alignPlaylists(
+        newDetails,
+        curLevel.details,
+        this.levelLastLoaded?.details,
+      );
     }
     // override level info
     curLevel.details = newDetails;
-    this.levelLastLoaded = newLevelId;
+    this.levelLastLoaded = curLevel;
 
     this.hls.trigger(Events.LEVEL_UPDATED, {
       details: newDetails,
