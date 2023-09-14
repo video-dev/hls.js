@@ -47,4 +47,4 @@ Pull requests are welcome and pair well with bug reports and feature requests. H
 
 ## Contact
 
-If you aren't already a member, consider joining video-dev on Slack https://video-dev.herokuapp.com/ and chatting with us in the `#hlsjs` channel.
+If you aren't already a member, consider joining video-dev on Slack https://www.video-dev.org/ and chatting with us in the `#hlsjs` channel.
