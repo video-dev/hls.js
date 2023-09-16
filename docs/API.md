@@ -46,6 +46,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`maxLiveSyncPlaybackRate`](#maxlivesyncplaybackrate)
   - [`liveDurationInfinity`](#livedurationinfinity)
   - [`liveBackBufferLength` (deprecated)](#livebackbufferlength-deprecated)
+  - [`preferManagedMediaSource`](#prefermanagedmediasource)
   - [`enableWorker`](#enableworker)
   - [`workerPath`](#workerpath)
   - [`enableSoftwareAES`](#enablesoftwareaes)
@@ -375,6 +376,7 @@ var config = {
   liveSyncDurationCount: 3,
   liveMaxLatencyDurationCount: Infinity,
   liveDurationInfinity: false,
+  preferManagedMediaSource: false,
   enableWorker: true,
   enableSoftwareAES: true,
   manifestLoadingTimeOut: 10000,
@@ -671,6 +673,12 @@ If you want to have a native Live UI in environments like iOS Safari, Safari, An
 ### `liveBackBufferLength` (deprecated)
 
 `liveBackBufferLength` has been deprecated. Use `backBufferLength` instead.
+
+### `preferManagedMediaSource`
+
+(default `true`)
+
+HLS.js uses the Managed Media Source API (`ManagedMediaSource` global) instead of the `MediaSource` global by default when present. Setting this to `false` will only use `ManagedMediaSource` when `MediaSource` is undefined.
 
 ### `enableWorker`
 

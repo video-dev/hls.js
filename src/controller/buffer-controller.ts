@@ -936,11 +936,19 @@ export default class BufferController implements ComponentAPI {
           this.addBufferListener(sbName, 'updateend', this._onSBUpdateEnd);
           this.addBufferListener(sbName, 'error', this._onSBUpdateError);
           // ManagedSourceBuffer bufferedchange event
-          this.addBufferListener(sbName, 'bufferedchange', (event) => {
-            this.hls.trigger(Events.BUFFER_FLUSHED, {
-              type: trackName as SourceBufferName,
-            });
-          });
+          this.addBufferListener(
+            sbName,
+            'bufferedchange',
+            (type: SourceBufferName, event: Event) => {
+              // If media was ejected check for a change. Added ranges are redundant with changes on 'updateend' event.
+              const removedRanges = (event as any).removedRanges;
+              if (removedRanges) {
+                this.hls.trigger(Events.BUFFER_FLUSHED, {
+                  type: trackName as SourceBufferName,
+                });
+              }
+            },
+          );
 
           this.tracks[trackName] = {
             buffer: sb,
