@@ -132,7 +132,10 @@ class AudioTrackController extends BasePlaylistController {
       ) {
         this.selectDefaultTrack = false;
       }
-
+      if (!audioTracks.length) {
+        this.trackId = -1;
+        this.currentTrack = null;
+      }
       this.tracksInGroup = audioTracks;
       const audioTracksUpdated: AudioTracksUpdatedData = { audioTracks };
       this.log(
@@ -213,6 +216,9 @@ class AudioTrackController extends BasePlaylistController {
 
   private selectInitialTrack(): void {
     const audioTracks = this.tracksInGroup;
+    if (!audioTracks.length) {
+      return;
+    }
     let trackId = this.findTrackId(this.currentTrack);
     if (trackId === -1) {
       trackId = this.findTrackId(null);
