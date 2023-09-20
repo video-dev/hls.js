@@ -38,6 +38,11 @@ import type { HlsConfig } from '../hls';
 const VIDEO_CODEC_PROFILE_REPLACE =
   /(avc[1234]|hvc1|hev1|dvh[1e]|vp09|av01)(?:\.[^.,]+)+/;
 
+interface BufferedChangeEvent extends Event {
+  readonly addedRanges?: TimeRanges;
+  readonly removedRanges?: TimeRanges;
+}
+
 export default class BufferController implements ComponentAPI {
   // The level details used to determine duration, target-duration and live
   private details: LevelDetails | null = null;
@@ -936,11 +941,19 @@ export default class BufferController implements ComponentAPI {
           this.addBufferListener(sbName, 'updateend', this._onSBUpdateEnd);
           this.addBufferListener(sbName, 'error', this._onSBUpdateError);
           // ManagedSourceBuffer bufferedchange event
-          this.addBufferListener(sbName, 'bufferedchange', (event) => {
-            this.hls.trigger(Events.BUFFER_FLUSHED, {
-              type: trackName as SourceBufferName,
-            });
-          });
+          this.addBufferListener(
+            sbName,
+            'bufferedchange',
+            (type: SourceBufferName, event: BufferedChangeEvent) => {
+              // If media was ejected check for a change. Added ranges are redundant with changes on 'updateend' event.
+              const removedRanges = event.removedRanges;
+              if (removedRanges) {
+                this.hls.trigger(Events.BUFFER_FLUSHED, {
+                  type: trackName as SourceBufferName,
+                });
+              }
+            },
+          );
 
           this.tracks[trackName] = {
             buffer: sb,
