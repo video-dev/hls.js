@@ -520,7 +520,7 @@ This is the guaranteed buffer length hls.js will try to reach, regardless of max
 
 (default: `Infinity`)
 
-The maximum duration of buffered media to keep once it has been played, in seconds. Any video buffered past this duration will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted.
+The maximum duration of buffered media to keep once it has been played, in seconds. Any video buffered past this duration will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted. Keep in mind, the browser can and does evict media from the buffer on its own, so with the `Infinity` setting, hls.js will let the browser do what it needs to do. (Ref: the MSE spec under [coded frame eviction](https://www.w3.org/TR/media-source-2/#sourcebuffer-coded-frame-eviction)).
 
 ### `frontBufferFlushThreshold`
 
