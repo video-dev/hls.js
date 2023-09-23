@@ -19,11 +19,9 @@ include your own Promise polyfill.
 
 ### Back Buffer Eviction
 
-The new `backBufferLength` setting defaults to 90 seconds, and applies to Live and VOD streams. In version 1.0 and up,
-the back buffer on VOD content will be cleared by hls.js rather than leaving it up to the browser by default.
+The new `backBufferLength` setting applies to Live and VOD streams. It defaults to Infinity, leaving back buffer eviction to the browser to perform on SourceBuffer append (https://www.w3.org/TR/media-source-2/#sourcebuffer-coded-frame-eviction). The demo page includes a setting of 90 seconds for demonstration purposes.
 
-Set `backBufferLength` to `Infinity` and `liveBackBufferLength` to `90` if you would like 1.0 to handle back buffer
-eviction for Live and VOD streams as older versions did. While `liveBackBufferLength` can still be used, it has been
+In v1.0 and up, the back buffer on VOD and Live content will be left up to the browser by default. Set `backBufferLength` to `Infinity` and `liveBackBufferLength` to `90` if you would like v1 to handle back buffer eviction for Live and VOD streams as older versions did. While `liveBackBufferLength` can still be used, it has been
 marked deprecated and may be removed in an upcoming minor release.
 
 ### Front Buffer Eviction
