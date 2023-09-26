@@ -410,9 +410,10 @@ export default class ErrorController implements NetworkComponentAPI {
               level.textGroupId === levelCandidate.textGroupId) ||
             (findAudioCodecAlternate &&
               level.audioCodec === levelCandidate.audioCodec) ||
+            (!findAudioCodecAlternate &&
+              level.audioCodec !== levelCandidate.audioCodec) ||
             (findVideoCodecAlternate &&
-              level.codecSet === levelCandidate.codecSet) ||
-            level.audioCodec !== levelCandidate.audioCodec
+              level.codecSet === levelCandidate.codecSet)
           ) {
             // For video/audio/subs frag errors find another group ID or fallthrough to redundant fail-over
             continue;
