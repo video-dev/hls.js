@@ -19,6 +19,7 @@ import {
   parseSamples,
   parseInitSegment,
   RemuxerTrackIdConfig,
+  hasMoofData,
 } from '../utils/mp4-tools';
 import { dummyTrack } from './dummy-demuxed-track';
 import type { HlsEventEmitter } from '../events';
@@ -92,9 +93,7 @@ class MP4Demuxer implements Demuxer {
   }
 
   static probe(data: Uint8Array) {
-    // ensure we find a moof box in the first 16 kB
-    data = data.length > 16384 ? data.subarray(0, 16384) : data;
-    return findBox(data, ['moof']).length > 0;
+    return hasMoofData(data);
   }
 
   public demux(data: Uint8Array, timeOffset: number): DemuxerResult {

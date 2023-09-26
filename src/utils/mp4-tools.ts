@@ -54,6 +54,25 @@ export function writeUint32(buffer: Uint8Array, offset: number, value: number) {
   buffer[offset + 3] = value & 0xff;
 }
 
+// Find "moof" box
+export function hasMoofData(data: Uint8Array): boolean {
+  const end = data.byteLength;
+  for (let i = 0; i < end; ) {
+    const size = readUint32(data, i);
+    if (
+      size > 8 &&
+      data[i + 4] === 0x6d &&
+      data[i + 5] === 0x6f &&
+      data[i + 6] === 0x6f &&
+      data[i + 7] === 0x66
+    ) {
+      return true;
+    }
+    i = size > 1 ? i + size : end;
+  }
+  return false;
+}
+
 // Find the data for a box specified by its path
 export function findBox(data: Uint8Array, path: string[]): Uint8Array[] {
   const results = [] as Uint8Array[];
@@ -743,9 +762,7 @@ export function segmentValidRange(data: Uint8Array): SegmentedRange {
   };
 
   const moofs = findBox(data, ['moof']);
-  if (!moofs) {
-    return segmentedRange;
-  } else if (moofs.length < 2) {
+  if (moofs.length < 2) {
     segmentedRange.remainder = data;
     return segmentedRange;
   }
