@@ -410,10 +410,10 @@ export class TimelineController implements ComponentAPI {
   private _captionsOrSubtitlesFromCharacteristics(
     track: MediaPlaylist,
   ): TextTrackKind {
-    if (track.attrs.CHARACTERISTICS) {
+    if (track.characteristics) {
       if (
-        /transcribes-spoken-dialog/gi.test(track.attrs.CHARACTERISTICS) &&
-        /describes-music-and-sound/gi.test(track.attrs.CHARACTERISTICS)
+        /transcribes-spoken-dialog/gi.test(track.characteristics) &&
+        /describes-music-and-sound/gi.test(track.characteristics)
       ) {
         return 'captions';
       }

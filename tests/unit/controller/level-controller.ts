@@ -179,6 +179,8 @@ describe('LevelController', function () {
       urlId: 0,
       videoCodec: undefined,
       width: 0,
+      _audioGroups: undefined,
+      _subtitleGroups: undefined,
     });
   });
 
@@ -280,6 +282,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
       expect(parsedLevels).to.have.lengthOf(6, 'MANIFEST_LOADED levels');
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
+        audioTracks: [],
       });
       const {
         name,
@@ -657,6 +660,7 @@ http://bar.example.com/md/prog_index.m3u8`,
       expect(parsedLevels).to.have.lengthOf(4, 'MANIFEST_LOADED levels');
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
+        audioTracks: [],
       });
       const {
         name,
@@ -716,6 +720,7 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(parsedSubs).to.be.undefined;
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
+        audioTracks: parsedAudio,
       });
       const {
         name,
@@ -738,6 +743,9 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(levels[0].audioGroupIds).to.deep.equal(['aac']);
       expect(levels[1].audioGroupIds).to.deep.equal(['aac', 'aac']);
       expect(levels[1].audioGroupIds?.[levels[1].urlId]).to.equal('aac');
+      expect(levels[0].audioGroups).to.deep.equal(['aac']);
+      expect(levels[1].audioGroups).to.deep.equal(['aac']);
+      expect(levels[0].subtitleGroups).to.deep.equal(undefined);
       expect(levels[1].url).to.have.lengthOf(2);
       expect(levels[1].urlId).to.equal(0);
       expect(levels[1].uri).to.equal(
@@ -906,6 +914,10 @@ http://bar.example.com/md/prog_index.m3u8`;
           'subs-bar',
           'subs-baz',
         ]);
+        expect(levels[0].audioGroups).to.deep.equal(['AAC-foo']);
+        expect(levels[9].audioGroups).to.deep.equal(['EC3-foo']);
+        expect(levels[0].subtitleGroups).to.deep.equal(['subs-foo']);
+        expect(levels[9].subtitleGroups).to.deep.equal(['subs-foo']);
         expect(levels[0].uri).to.equal('http://www.foo.com/tier6.m3u8');
         expect(levels[9].audioGroupIds?.[levels[9].urlId]).to.equal('EC3-foo');
 
@@ -944,6 +956,92 @@ http://bar.example.com/md/prog_index.m3u8`;
         });
         expect(levels[0].uri).to.equal('http://www.bar.com/tier6.m3u8');
       });
+    });
+  });
+
+  describe('Variant STREAM-INF collapsing with Media Playlists ()', function () {
+    let parsedMultivariant: ParsedMultivariantPlaylist;
+    let parsedMediaOptions;
+    beforeEach(function () {
+      parsedMultivariant = M3U8Parser.parseMasterPlaylist(
+        multivariantPlaylistWithMultiGroupVariants,
+        'http://example.com/main.m3u8',
+      );
+      parsedMediaOptions = M3U8Parser.parseMasterPlaylistMedia(
+        multivariantPlaylistWithMultiGroupVariants,
+        'http://example.com/main.m3u8',
+        parsedMultivariant,
+      );
+    });
+
+    it('groups identical STREAM-INF variants with split audio and subtitle groups', function () {
+      const { levels: parsedLevels } = parsedMultivariant;
+      const { AUDIO: parsedAudio, SUBTITLES: parsedSubs } = parsedMediaOptions;
+      expect(parsedLevels).to.have.lengthOf(12, 'MANIFEST_LOADED levels');
+      expect(parsedAudio).to.have.lengthOf(2, 'MANIFEST_LOADED audioTracks');
+      expect(parsedSubs).to.have.lengthOf(3, 'MANIFEST_LOADED subtitles');
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
+        levels: parsedLevels,
+        audioTracks: parsedAudio,
+        subtitles: parsedSubs,
+      });
+      const { name, payload } = hls.getEventData(0) as {
+        name: string;
+        payload: ManifestParsedData;
+      };
+      const { levels, audioTracks, subtitleTracks } = payload;
+
+      expect(name).to.equal(Events.MANIFEST_PARSED);
+      expect(levels).to.have.lengthOf(2, 'MANIFEST_PARSED levels');
+
+      // Audio and Subtitle tracks are filtered by GroupId on level switch by audio and subtitle track controllers
+      expect(audioTracks).to.have.lengthOf(2, 'MANIFEST_PARSED audioTracks');
+      expect(audioTracks[0]).to.deep.include({
+        id: 0,
+        name: 'English',
+        groupId: 'aud-en',
+      });
+      expect(audioTracks[1]).to.deep.include({
+        id: 0, // index is assigned after MANIFEST_LOADED by audio-track-controller
+        name: 'Italiano',
+        groupId: 'aud-it',
+      });
+      expect(subtitleTracks).to.have.lengthOf(
+        3,
+        'MANIFEST_PARSED subtitleTracks',
+      ); // 3 subtitle groups * 3 subtitle tracks per group
+      expect(subtitleTracks[0]).to.deep.include({
+        id: 0,
+        name: 'English ',
+        groupId: 'subs-en',
+      });
+      expect(subtitleTracks[1]).to.deep.include({
+        id: 0, // index is assigned after MANIFEST_LOADED by audio-track-controller
+        name: 'Français',
+        groupId: 'subs-fr',
+      });
+      expect(subtitleTracks[2]).to.deep.include({
+        id: 0, // index is assigned after MANIFEST_LOADED by audio-track-controller
+        name: 'Italiano',
+        groupId: 'subs-it',
+      });
+
+      expect(levelController.level).to.equal(-1);
+      expect(levels[0].url).to.have.lengthOf(1);
+      expect(levels[0].url).to.deep.equal(['http://www.foo.com/tier1.m3u8']);
+      expect(levels[1].url).to.deep.equal(['http://www.foo.com/tier2.m3u8']);
+      expect(levels[0].audioGroups).to.deep.equal(['aud-en', 'aud-it']);
+      expect(levels[1].audioGroups).to.deep.equal(['aud-en', 'aud-it']);
+      expect(levels[0].subtitleGroups).to.deep.equal([
+        'subs-en',
+        'subs-fr',
+        'subs-it',
+      ]);
+      expect(levels[1].subtitleGroups).to.deep.equal([
+        'subs-en',
+        'subs-fr',
+        'subs-it',
+      ]);
     });
   });
 
@@ -1170,3 +1268,41 @@ http://www.baz.com/tier14.m3u8
 http://www.baz.com/tier16.m3u8
 #EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=9782853,BANDWIDTH=14440256,CODECS="avc1.640028,ec-3",RESOLUTION=1920x1080,HDCP-LEVEL=TYPE-0,FRAME-RATE=24,AUDIO="EC3-baz",SUBTITLES="subs-baz"
 http://www.baz.com/tier18.m3u8`;
+
+const multivariantPlaylistWithMultiGroupVariants = `#EXTM3U
+## Subtitles (These should be a single group, but identical variants with different groups can be collapsed into a single variant that uses those groups) ###
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-en",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.foo.com/subs-en.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-fr",LANGUAGE="fr",NAME="Français",AUTOSELECT=YES,URI="http://www.foo.com/subs-fr.m3u8"
+#EXT-X-MEDIA:TYPE=SUBTITLES,GROUP-ID="subs-it",LANGUAGE="it",NAME="Italiano",AUTOSELECT=YES,URI="http://www.foo.com/subs-it.m3u8"
+
+### Audio (These should be a single group, but identical variants with different groups can be collapsed into a single variant that uses those groups) ###
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud-en",LANGUAGE="en-US",NAME="English",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",URI="http://www.foo.com/audio_en.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="aud-it",LANGUAGE="it",NAME="Italiano",DEFAULT=YES,AUTOSELECT=YES,CHANNELS="2",URI="http://www.foo.com/audio_it.m3u8"
+
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,AUDIO="aud-en",SUBTITLES="subs-en"
+http://www.foo.com/tier1.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,AUDIO="aud-en",SUBTITLES="subs-fr"
+http://www.foo.com/tier1.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,AUDIO="aud-en",SUBTITLES="subs-it"
+http://www.foo.com/tier1.m3u8
+
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,AUDIO="aud-en",SUBTITLES="subs-en"
+http://www.foo.com/tier2.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,AUDIO="aud-en",SUBTITLES="subs-fr"
+http://www.foo.com/tier2.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,AUDIO="aud-en",SUBTITLES="subs-it"
+http://www.foo.com/tier2.m3u8
+
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,AUDIO="aud-it",SUBTITLES="subs-en"
+http://www.foo.com/tier1.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,AUDIO="aud-it",SUBTITLES="subs-fr"
+http://www.foo.com/tier1.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=254512,BANDWIDTH=410540,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=480x270,AUDIO="aud-it",SUBTITLES="subs-it"
+http://www.foo.com/tier1.m3u8
+
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,AUDIO="aud-it",SUBTITLES="subs-en"
+http://www.foo.com/tier2.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,AUDIO="aud-it",SUBTITLES="subs-fr"
+http://www.foo.com/tier2.m3u8
+#EXT-X-STREAM-INF:AVERAGE-BANDWIDTH=1098229,BANDWIDTH=1771920,CODECS="avc1.64001f,mp4a.40.2",RESOLUTION=768x432,AUDIO="aud-it",SUBTITLES="subs-it"
+http://www.foo.com/tier2.m3u8`;

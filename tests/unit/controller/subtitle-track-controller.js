@@ -31,8 +31,8 @@ describe('SubtitleTrackController', function () {
       {
         id: 1,
         groupId: 'default-text-group',
-        lang: 'en',
-        name: 'English',
+        lang: 'sv',
+        name: 'Swedish',
         type: 'SUBTITLES',
         url: 'bar',
       },
@@ -40,7 +40,7 @@ describe('SubtitleTrackController', function () {
         id: 2,
         groupId: 'default-text-group',
         lang: 'en',
-        name: 'English',
+        name: 'Untitled CC',
         type: 'SUBTITLES',
         url: 'foo',
         details: { live: true },
@@ -48,7 +48,7 @@ describe('SubtitleTrackController', function () {
     ];
 
     const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
-    const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'se');
+    const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'sv');
     const textTrack3 = videoElement.addTextTrack(
       'captions',
       'Untitled CC',
@@ -148,7 +148,7 @@ describe('SubtitleTrackController', function () {
         {
           id: 1,
           groupId: 'default-text-group',
-          name: 'English',
+          name: 'Swedish',
           type: 'SUBTITLES',
           url: 'bar',
         },
@@ -267,6 +267,7 @@ describe('SubtitleTrackController', function () {
 
         const mockLoadedEvent = {
           id: 999,
+          groupId: 'default-text-group',
           details: { foo: 'bar' },
           stats: new LoadStats(),
         };
@@ -300,7 +301,12 @@ describe('SubtitleTrackController', function () {
         subtitleTrackController.trackId = 1;
         subtitleTrackController.onSubtitleTrackLoaded(
           Events.SUBTITLE_TRACK_LOADED,
-          { id: 1, details, stats: new LoadStats() },
+          {
+            id: 1,
+            groupId: 'default-text-group',
+            details,
+            stats: new LoadStats(),
+          },
         );
         expect(subtitleTrackController.timer).to.equal(-1);
       });
@@ -311,7 +317,12 @@ describe('SubtitleTrackController', function () {
         subtitleTrackController.trackId = 1;
         subtitleTrackController.onSubtitleTrackLoaded(
           Events.SUBTITLE_TRACK_LOADED,
-          { id: 1, details, stats: new LoadStats() },
+          {
+            id: 1,
+            groupId: 'default-text-group',
+            details,
+            stats: new LoadStats(),
+          },
         );
         expect(subtitleTrackController.timer).to.exist;
       });
@@ -323,7 +334,12 @@ describe('SubtitleTrackController', function () {
         subtitleTrackController.timer = self.setTimeout(() => {}, 0);
         subtitleTrackController.onSubtitleTrackLoaded(
           Events.SUBTITLE_TRACK_LOADED,
-          { id: 1, details, stats: new LoadStats() },
+          {
+            id: 1,
+            groupId: 'default-text-group',
+            details,
+            stats: new LoadStats(),
+          },
         );
         expect(subtitleTrackController.timer).to.equal(-1);
       });

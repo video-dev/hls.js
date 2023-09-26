@@ -121,6 +121,8 @@ export class Level {
   public supportedResult?: MediaDecodingInfo;
   private _urlId: number = 0;
   private _avgBitrate: number = 0;
+  private _audioGroups?: (string | undefined)[][];
+  private _subtitleGroups?: (string | undefined)[][];
 
   constructor(data: LevelParsed) {
     this.url = [data.url];
@@ -198,29 +200,52 @@ export class Level {
     return this.textGroupIds?.[this.urlId];
   }
 
+  get audioGroups(): (string | undefined)[] | undefined {
+    return this._audioGroups?.[this.urlId];
+  }
+
+  get subtitleGroups(): (string | undefined)[] | undefined {
+    return this._subtitleGroups?.[this.urlId];
+  }
+
   addFallback(data: LevelParsed) {
     this.url.push(data.url);
     this._attrs.push(data.attrs);
   }
-}
 
-export function addGroupId(
-  level: Level,
-  type: string,
-  id: string | undefined,
-): void {
-  if (!id) {
-    return;
-  }
-  if (type === 'audio') {
-    if (!level.audioGroupIds) {
-      level.audioGroupIds = [];
+  addGroupId(type: string, groupId: string | undefined, fallbackIndex: number) {
+    if (!groupId) {
+      return;
     }
-    level.audioGroupIds[level.url.length - 1] = id;
-  } else if (type === 'text') {
-    if (!level.textGroupIds) {
-      level.textGroupIds = [];
+    const lastIndex = this.url.length - 1;
+    if (type === 'audio') {
+      let audioGroupsByUrlId = this._audioGroups;
+      if (!this.audioGroupIds) {
+        this.audioGroupIds = [];
+      }
+      if (!audioGroupsByUrlId) {
+        audioGroupsByUrlId = this._audioGroups = [];
+      }
+      if (fallbackIndex === -1) {
+        this.audioGroupIds[lastIndex] = groupId;
+        audioGroupsByUrlId[lastIndex] = [groupId];
+      } else if (audioGroupsByUrlId[fallbackIndex].indexOf(groupId) === -1) {
+        audioGroupsByUrlId[fallbackIndex].push(groupId);
+      }
+    } else if (type === 'text') {
+      let subtitleGroupsByUrlId = this._subtitleGroups;
+      if (!this.textGroupIds) {
+        this.textGroupIds = [];
+      }
+      if (!subtitleGroupsByUrlId) {
+        subtitleGroupsByUrlId = this._subtitleGroups = [];
+      }
+      if (fallbackIndex === -1) {
+        this.textGroupIds[lastIndex] = groupId;
+        subtitleGroupsByUrlId[lastIndex] = [groupId];
+      } else if (subtitleGroupsByUrlId[fallbackIndex].indexOf(groupId) === -1) {
+        subtitleGroupsByUrlId[fallbackIndex].push(groupId);
+      }
     }
-    level.textGroupIds[level.url.length - 1] = id;
   }
 }

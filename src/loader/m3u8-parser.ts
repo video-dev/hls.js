@@ -317,20 +317,32 @@ export default class M3U8Parser {
             'CHANNELS',
           ]);
         }
+        const lang = attrs.LANGUAGE;
+        const channels = attrs.CHANNELS;
+        const characteristics = attrs.CHARACTERISTICS;
+        const instreamId = attrs['INSTREAM-ID'];
         const media: MediaPlaylist = {
           attrs,
           bitrate: 0,
           id: id++,
           groupId: attrs['GROUP-ID'] || '',
-          instreamId: attrs['INSTREAM-ID'],
-          name: attrs.NAME || attrs.LANGUAGE || '',
+          name: attrs.NAME || lang || '',
           type,
           default: attrs.bool('DEFAULT'),
           autoselect: attrs.bool('AUTOSELECT'),
           forced: attrs.bool('FORCED'),
-          lang: attrs.LANGUAGE,
+          lang: lang,
           url: attrs.URI ? M3U8Parser.resolve(attrs.URI, baseurl) : '',
         };
+        if (channels) {
+          media.channels = channels;
+        }
+        if (characteristics) {
+          media.characteristics = characteristics;
+        }
+        if (instreamId) {
+          media.instreamId = instreamId;
+        }
 
         if (groups?.length) {
           // If there are audio or text groups signalled in the manifest, let's look for a matching codec string for this track

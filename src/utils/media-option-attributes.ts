@@ -10,7 +10,7 @@ export function subtitleOptionsIdentical(
   }
   for (let i = 0; i < trackList1.length; i++) {
     if (
-      !subtitleAttributesIdentical(
+      !mediaAttributesIdentical(
         trackList1[i].attrs as MediaAttributes,
         trackList2[i].attrs,
       )
@@ -21,24 +21,28 @@ export function subtitleOptionsIdentical(
   return true;
 }
 
-export function subtitleAttributesIdentical(
+export function mediaAttributesIdentical(
   attrs1: MediaAttributes,
   attrs2: MediaAttributes,
+  customAttributes?: string[],
 ): boolean {
   // Media options with the same rendition ID must be bit identical
   const stableRenditionId = attrs1['STABLE-RENDITION-ID'];
-  if (stableRenditionId) {
+  if (stableRenditionId && !customAttributes) {
     return stableRenditionId === attrs2['STABLE-RENDITION-ID'];
   }
   // When rendition ID is not present, compare attributes
-  return ![
-    'LANGUAGE',
-    'NAME',
-    'CHARACTERISTICS',
-    'AUTOSELECT',
-    'DEFAULT',
-    'FORCED',
-  ].some(
+  return !(
+    customAttributes || [
+      'LANGUAGE',
+      'ASSOC-LANGUAGE',
+      'NAME',
+      'CHARACTERISTICS',
+      'AUTOSELECT',
+      'DEFAULT',
+      'FORCED',
+    ]
+  ).some(
     (subtitleAttribute) =>
       attrs1[subtitleAttribute] !== attrs2[subtitleAttribute],
   );
