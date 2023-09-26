@@ -89,7 +89,7 @@
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.3.8",
     "chart.js": "2.9.4",
-    "chromedriver": "115.0.1",
+    "chromedriver": "116.0.0",
     "doctoc": "2.2.1",
     "es-check": "7.1.1",
     "eslint": "8.49.0",
