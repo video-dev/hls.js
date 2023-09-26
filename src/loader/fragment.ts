@@ -30,7 +30,7 @@ export type ElementaryStreams = Record<
 >;
 
 export class BaseSegment {
-  private _byteRange: number[] | null = null;
+  private _byteRange: [number, number] | null = null;
   private _url: string | null = null;
 
   // baseurl is the URL to the playlist
@@ -51,17 +51,16 @@ export class BaseSegment {
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
   setByteRange(value: string, previous?: BaseSegment) {
     const params = value.split('@', 2);
-    const byteRange: number[] = [];
+    let start: number;
     if (params.length === 1) {
-      byteRange[0] = previous ? previous.byteRangeEndOffset : 0;
+      start = previous?.byteRangeEndOffset || 0;
     } else {
-      byteRange[0] = parseInt(params[1]);
+      start = parseInt(params[1]);
     }
-    byteRange[1] = parseInt(params[0]) + byteRange[0];
-    this._byteRange = byteRange;
+    this._byteRange = [start, parseInt(params[0]) + start];
   }
 
-  get byteRange(): number[] {
+  get byteRange(): [number, number] | [] {
     if (!this._byteRange) {
       return [];
     }
@@ -69,11 +68,11 @@ export class BaseSegment {
     return this._byteRange;
   }
 
-  get byteRangeStartOffset(): number {
+  get byteRangeStartOffset(): number | undefined {
     return this.byteRange[0];
   }
 
-  get byteRangeEndOffset(): number {
+  get byteRangeEndOffset(): number | undefined {
     return this.byteRange[1];
   }
 
