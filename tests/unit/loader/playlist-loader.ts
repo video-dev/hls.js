@@ -725,6 +725,52 @@ lo008ts`;
     expect(result.fragments[9].byteRangeEndOffset).to.equal(817988);
   });
 
+  it('parse level with #EXT-X-BYTERANGE before #EXT-X-MAP tag', function () {
+    const level = `#EXTM3U
+#EXT-X-ALLOW-CACHE:YES
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:4
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-BYTERANGE:10000@24000
+#EXT-X-MAP:URI="initsegment.m4v",BYTERANGE="24000@0"
+#EXTINF:4.000,
+lo007.m4v
+#EXT-X-BYTERANGE:30000@34000
+#EXTINF:4.000,
+lo007.m4v
+#EXT-X-BYTERANGE:40000@64000
+#EXTINF:4.000,
+lo007.m4v
+#EXT-X-ENDLIST`;
+
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://dummy.com/playlist.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+    expect(result.fragments.length).to.equal(3);
+    expect(result.fragments[0].initSegment?.url).to.equal(
+      'http://dummy.com/initsegment.m4v',
+    );
+    expect(result.fragments[0].initSegment?.byteRangeStartOffset).to.equal(0);
+    expect(result.fragments[0].initSegment?.byteRangeEndOffset).to.equal(
+      24000,
+      'init end',
+    );
+    expect(result.fragments[0].url).to.equal('http://dummy.com/lo007.m4v');
+    expect(result.fragments[0].byteRangeStartOffset).to.equal(24000, '1 start');
+    expect(result.fragments[0].byteRangeEndOffset).to.equal(34000, '1 end');
+    expect(result.fragments[1].url).to.equal('http://dummy.com/lo007.m4v');
+    expect(result.fragments[1].byteRangeStartOffset).to.equal(34000, '2 start');
+    expect(result.fragments[1].byteRangeEndOffset).to.equal(64000, '2 end');
+    expect(result.fragments[2].url).to.equal('http://dummy.com/lo007.m4v');
+    expect(result.fragments[2].byteRangeStartOffset).to.equal(64000, '3 start');
+    expect(result.fragments[2].byteRangeEndOffset).to.equal(104000, '3 end');
+  });
+
   it('parse level with #EXT-X-BYTERANGE without offset', function () {
     const level = `#EXTM3U
 #EXT-X-VERSION:4

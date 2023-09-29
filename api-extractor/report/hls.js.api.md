@@ -270,11 +270,11 @@ export class BaseSegment {
     // (undocumented)
     readonly baseurl: string;
     // (undocumented)
-    get byteRange(): number[];
+    get byteRange(): [number, number] | [];
     // (undocumented)
-    get byteRangeEndOffset(): number;
+    get byteRangeEndOffset(): number | undefined;
     // (undocumented)
-    get byteRangeStartOffset(): number;
+    get byteRangeStartOffset(): number | undefined;
     // (undocumented)
     elementaryStreams: ElementaryStreams;
     // (undocumented)
