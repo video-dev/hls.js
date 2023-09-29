@@ -371,6 +371,7 @@ export default class M3U8Parser {
     let levelkeys: { [key: string]: LevelKey } | undefined;
     let firstPdtIndex = -1;
     let createNextFrag = false;
+    let nextByteRange: string | null = null;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
     level.m3u8 = string;
@@ -391,6 +392,10 @@ export default class M3U8Parser {
           frag.initSegment = currentInitSegment;
           frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
           currentInitSegment.rawProgramDateTime = null;
+          if (nextByteRange) {
+            frag.setByteRange(nextByteRange);
+            nextByteRange = null;
+          }
         }
       }
 
@@ -621,6 +626,14 @@ export default class M3U8Parser {
               }
             } else {
               // Initial segment tag is before segment duration tag
+              // Handle case where EXT-X-MAP is declared after EXT-X-BYTERANGE
+              const end = frag.byteRangeEndOffset;
+              if (end) {
+                const start = frag.byteRangeStartOffset as number;
+                nextByteRange = `${end - start}@${start}`;
+              } else {
+                nextByteRange = null;
+              }
               setInitSegment(frag, mapAttrs, id, levelkeys);
               currentInitSegment = frag;
               createNextFrag = true;

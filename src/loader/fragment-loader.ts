@@ -331,8 +331,8 @@ function createLoaderContext(
     rangeStart: 0,
     rangeEnd: 0,
   };
-  const start = segment.byteRangeStartOffset;
-  const end = segment.byteRangeEndOffset;
+  const start = segment.byteRangeStartOffset as number;
+  const end = segment.byteRangeEndOffset as number;
   if (Number.isFinite(start) && Number.isFinite(end)) {
     let byteRangeStart = start;
     let byteRangeEnd = end;
