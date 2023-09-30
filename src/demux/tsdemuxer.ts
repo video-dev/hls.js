@@ -99,8 +99,7 @@ class TSDemuxer implements Demuxer {
 
   static syncOffset(data: Uint8Array): number {
     const length = data.length;
-    let scanwindow =
-      Math.min(PACKET_LENGTH * 5, data.length - PACKET_LENGTH) + 1;
+    let scanwindow = Math.min(PACKET_LENGTH * 5, length - PACKET_LENGTH) + 1;
     let i = 0;
     while (i < scanwindow) {
       // a TS init segment should contain at least 2 TS packets: PAT and PMT, each starting with 0x47
@@ -108,7 +107,10 @@ class TSDemuxer implements Demuxer {
       let packetStart = -1;
       let tsPackets = 0;
       for (let j = i; j < length; j += PACKET_LENGTH) {
-        if (data[j] === 0x47) {
+        if (
+          data[j] === 0x47 &&
+          (length - j === PACKET_LENGTH || data[j + PACKET_LENGTH] === 0x47)
+        ) {
           tsPackets++;
           if (packetStart === -1) {
             packetStart = j;
@@ -134,7 +136,7 @@ class TSDemuxer implements Demuxer {
             return packetStart;
           }
         } else if (tsPackets) {
-          // Exit if sync word found, but does not contain contiguous packets (#5501)
+          // Exit if sync word found, but does not contain contiguous packets
           return -1;
         } else {
           break;

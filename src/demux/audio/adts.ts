@@ -26,7 +26,7 @@ type FrameHeader = {
 };
 
 export function getAudioConfig(
-  observer,
+  observer: HlsEventEmitter,
   data: Uint8Array,
   offset: number,
   audioCodec: string,
@@ -45,11 +45,13 @@ export function getAudioConfig(
   adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
   const adtsSamplingIndex = (data[offset + 2] & 0x3c) >>> 2;
   if (adtsSamplingIndex > adtsSamplingRates.length - 1) {
-    observer.trigger(Events.ERROR, {
+    const error = new Error(`invalid ADTS sampling index:${adtsSamplingIndex}`);
+    observer.emit(Events.ERROR, Events.ERROR, {
       type: ErrorTypes.MEDIA_ERROR,
       details: ErrorDetails.FRAG_PARSING_ERROR,
       fatal: true,
-      reason: `invalid ADTS sampling index:${adtsSamplingIndex}`,
+      error,
+      reason: error.message,
     });
     return;
   }
