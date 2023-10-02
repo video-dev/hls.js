@@ -576,9 +576,13 @@ export default class StreamController
     this.hls.trigger(Events.BUFFER_RESET, undefined);
     this.fragmentTracker.removeAllFragments();
     this.couldBacktrack = false;
-    this.startPosition = this.lastCurrentTime = 0;
-    this.levels = this.fragPlaying = this.backtrackFragment = null;
-    this.altAudio = this.audioOnly = false;
+    this.startPosition = this.lastCurrentTime = this.fragLastKbps = 0;
+    this.levels =
+      this.fragPlaying =
+      this.backtrackFragment =
+      this.levelLastLoaded =
+        null;
+    this.altAudio = this.audioOnly = this.startFragRequested = false;
   }
 
   private onManifestParsed(
