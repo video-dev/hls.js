@@ -546,7 +546,7 @@ class EMEController extends Logger implements ComponentAPI {
       const json = bin2str(new Uint8Array(initData));
       try {
         const sinf = base64Decode(JSON.parse(json).sinf);
-        const tenc = parseSinf(new Uint8Array(sinf));
+        const tenc = parseSinf(sinf);
         if (!tenc) {
           throw new Error(
             `'schm' box missing or not cbcs/cenc with schi > tenc`,
