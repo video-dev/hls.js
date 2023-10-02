@@ -82,7 +82,7 @@
     "@types/chai": "4.3.6",
     "@types/chart.js": "2.9.38",
     "@types/mocha": "10.0.1",
-    "@types/sinon-chai": "3.2.9",
+    "@types/sinon-chai": "3.2.10",
     "@typescript-eslint/eslint-plugin": "5.62.0",
     "@typescript-eslint/parser": "5.62.0",
     "babel-loader": "9.1.3",
