@@ -97,15 +97,16 @@ describe('TimelineController', function () {
   describe('text track kind', function () {
     it('should be kind captions when there is both transcribes-spoken-dialog and describes-music-and-sound', function () {
       hls.subtitleTrackController = { subtitleDisplay: false };
-
+      const characteristics =
+        'public.accessibility.transcribes-spoken-dialog,public.accessibility.describes-music-and-sound';
       timelineController.onSubtitleTracksUpdated(Events.MANIFEST_LOADED, {
         subtitleTracks: [
           {
             id: 0,
             name: 'en',
+            characteristics,
             attrs: {
-              CHARACTERISTICS:
-                'public.accessibility.transcribes-spoken-dialog,public.accessibility.describes-music-and-sound',
+              CHARACTERISTICS: characteristics,
             },
           },
         ],

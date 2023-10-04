@@ -111,7 +111,6 @@ class AbrController implements AbrComponentAPI {
     this.lastLoadedFragLevel = -1;
     this.lastLevelLoadSec = 0;
     this.fragCurrent = this.partCurrent = null;
-    this.audioTracksByGroup = null;
     this.onLevelsUpdated();
     this.clearTimer();
   }
@@ -123,6 +122,7 @@ class AbrController implements AbrComponentAPI {
     this._nextAutoLevel = -1;
     this.nextAutoLevelKey = '';
     this.codecTiers = null;
+    this.audioTracksByGroup = null;
   }
 
   protected onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {

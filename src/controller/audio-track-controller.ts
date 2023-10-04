@@ -1,6 +1,12 @@
+import BasePlaylistController from './base-playlist-controller';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import {
+import { PlaylistContextType } from '../types/loader';
+import { mediaAttributesIdentical } from '../utils/media-option-attributes';
+import type Hls from '../hls';
+import type { MediaPlaylist } from '../types/media-playlist';
+import type { HlsUrlParameters } from '../types/level';
+import type {
   ManifestParsedData,
   AudioTracksUpdatedData,
   ErrorData,
@@ -8,15 +14,10 @@ import {
   AudioTrackLoadedData,
   LevelSwitchingData,
 } from '../types/events';
-import BasePlaylistController from './base-playlist-controller';
-import { PlaylistContextType } from '../types/loader';
-import type Hls from '../hls';
-import type { HlsUrlParameters } from '../types/level';
-import type { MediaPlaylist } from '../types/media-playlist';
 
 class AudioTrackController extends BasePlaylistController {
   private tracks: MediaPlaylist[] = [];
-  private groupId: string | null = null;
+  private groupIds: (string | undefined)[] | null = null;
   private tracksInGroup: MediaPlaylist[] = [];
   private trackId: number = -1;
   private currentTrack: MediaPlaylist | null = null;
@@ -57,7 +58,7 @@ class AudioTrackController extends BasePlaylistController {
 
   protected onManifestLoading(): void {
     this.tracks = [];
-    this.groupId = null;
+    this.groupIds = null;
     this.tracksInGroup = [];
     this.trackId = -1;
     this.currentTrack = null;
@@ -80,7 +81,7 @@ class AudioTrackController extends BasePlaylistController {
 
     if (!trackInActiveGroup || trackInActiveGroup.groupId !== groupId) {
       this.warn(
-        `Track with id:${id} and group:${groupId} not found in active group ${trackInActiveGroup.groupId}`,
+        `Audio track with id:${id} and group:${groupId} not found in active group ${trackInActiveGroup?.groupId}`,
       );
       return;
     }
@@ -88,7 +89,7 @@ class AudioTrackController extends BasePlaylistController {
     const curDetails = trackInActiveGroup.details;
     trackInActiveGroup.details = data.details;
     this.log(
-      `audio-track ${id} "${trackInActiveGroup.name}" lang:${trackInActiveGroup.lang} group:${groupId} loaded [${details.startSN}-${details.endSN}]`,
+      `Audio track ${id} "${trackInActiveGroup.name}" lang:${trackInActiveGroup.lang} group:${groupId} loaded [${details.startSN}-${details.endSN}]`,
     );
 
     if (id === this.trackId) {
@@ -113,16 +114,22 @@ class AudioTrackController extends BasePlaylistController {
   private switchLevel(levelIndex: number) {
     const levelInfo = this.hls.levels[levelIndex];
 
-    if (!levelInfo?.audioGroupIds) {
+    if (!levelInfo) {
       return;
     }
 
-    const audioGroupId = levelInfo.audioGroupIds[levelInfo.urlId];
-    if (this.groupId !== audioGroupId) {
-      this.groupId = audioGroupId || null;
+    const audioGroups = levelInfo.audioGroups || null;
+    const currentGroups = this.groupIds;
+    if (
+      !audioGroups ||
+      currentGroups?.length !== audioGroups?.length ||
+      audioGroups?.some((groupId) => currentGroups?.indexOf(groupId) === -1)
+    ) {
+      this.groupIds = audioGroups;
 
       const audioTracks = this.tracks.filter(
-        (track): boolean => !audioGroupId || track.groupId === audioGroupId,
+        (track): boolean =>
+          !audioGroups || audioGroups.indexOf(track.groupId) !== -1,
       );
 
       // Disable selectDefaultTrack if there are no default tracks
@@ -136,10 +143,15 @@ class AudioTrackController extends BasePlaylistController {
         this.trackId = -1;
         this.currentTrack = null;
       }
+      audioTracks.forEach((track, i) => {
+        track.id = i;
+      });
       this.tracksInGroup = audioTracks;
       const audioTracksUpdated: AudioTracksUpdatedData = { audioTracks };
       this.log(
-        `Updating audio tracks, ${audioTracks.length} track(s) found in group:${audioGroupId}`,
+        `Updating audio tracks, ${
+          audioTracks.length
+        } track(s) found in group(s): ${audioGroups?.join(',')}`,
       );
       this.hls.trigger(Events.AUDIO_TRACKS_UPDATED, audioTracksUpdated);
 
@@ -158,7 +170,7 @@ class AudioTrackController extends BasePlaylistController {
     if (
       data.context.type === PlaylistContextType.AUDIO_TRACK &&
       data.context.id === this.trackId &&
-      data.context.groupId === this.groupId
+      (!this.groupIds || this.groupIds.indexOf(data.context.groupId) !== -1)
     ) {
       this.requestScheduled = -1;
       this.checkRetry(data);
@@ -188,26 +200,28 @@ class AudioTrackController extends BasePlaylistController {
 
     // check if level idx is valid
     if (newId < 0 || newId >= tracks.length) {
-      this.warn('Invalid id passed to audio-track controller');
+      this.warn(`Invalid audio track id: ${newId}`);
       return;
     }
 
     // stopping live reloading timer if any
     this.clearTimer();
 
+    this.selectDefaultTrack = false;
     const lastTrack = this.currentTrack;
-    tracks[this.trackId];
     const track = tracks[newId];
-    const { groupId, name } = track;
+    const trackLoaded = track.details && !track.details.live;
+    if (newId === this.trackId && track === lastTrack && trackLoaded) {
+      return;
+    }
     this.log(
-      `Switching to audio-track ${newId} "${name}" lang:${track.lang} group:${groupId}`,
+      `Switching to audio-track ${newId} "${track.name}" lang:${track.lang} group:${track.groupId}`,
     );
     this.trackId = newId;
     this.currentTrack = track;
-    this.selectDefaultTrack = false;
     this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { ...track });
     // Do not reload track unless live
-    if (track.details && !track.details.live) {
+    if (trackLoaded) {
       return;
     }
     const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
@@ -228,7 +242,9 @@ class AudioTrackController extends BasePlaylistController {
       this.setAudioTrack(trackId);
     } else {
       const error = new Error(
-        `No track found for running audio group-ID: ${this.groupId} track count: ${audioTracks.length}`,
+        `No track found for running audio group-ID(s): ${this.groupIds?.join(
+          ',',
+        )} track count: ${audioTracks.length}`,
       );
       this.warn(error.message);
 
@@ -248,15 +264,16 @@ class AudioTrackController extends BasePlaylistController {
       if (!this.selectDefaultTrack || track.default) {
         if (
           !currentTrack ||
-          (currentTrack.attrs['STABLE-RENDITION-ID'] !== undefined &&
-            currentTrack.attrs['STABLE-RENDITION-ID'] ===
-              track.attrs['STABLE-RENDITION-ID'])
+          mediaAttributesIdentical(currentTrack.attrs, track.attrs)
         ) {
           return track.id;
         }
         if (
-          currentTrack.name === track.name &&
-          currentTrack.lang === track.lang
+          mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
+            'LANGUAGE',
+            'ASSOC-LANGUAGE',
+            'CHARACTERISTICS',
+          ])
         ) {
           return track.id;
         }
@@ -266,9 +283,9 @@ class AudioTrackController extends BasePlaylistController {
   }
 
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
-    super.loadPlaylist();
-    const audioTrack = this.tracksInGroup[this.trackId];
-    if (this.shouldLoadPlaylist(audioTrack)) {
+    const audioTrack = this.currentTrack;
+    if (this.shouldLoadPlaylist(audioTrack) && audioTrack) {
+      super.loadPlaylist();
       const id = audioTrack.id;
       const groupId = audioTrack.groupId as string;
       let url = audioTrack.url;

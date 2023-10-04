@@ -494,8 +494,7 @@ export default class Hls implements HlsEventEmitter {
    */
   set currentLevel(newLevel: number) {
     logger.log(`set currentLevel:${newLevel}`);
-    this.loadLevel = newLevel;
-    this.abrController.clearTimer();
+    this.levelController.manualLevel = newLevel;
     this.streamController.immediateLevelSwitch();
   }
 

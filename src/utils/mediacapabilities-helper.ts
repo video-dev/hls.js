@@ -37,10 +37,34 @@ export function requiresMediaCapabilitiesDecodingInfo(
   currentBw: number,
 ): boolean {
   // Only test support when configuration is exceeds minimum options
-  const audioGroupId = level.audioCodec ? level.audioGroupId : null;
-  const audioChannels = audioGroupId
-    ? audioTracksByGroup.groups[audioGroupId].channels
-    : null;
+  const audioGroups = level.audioCodec ? level.audioGroups : null;
+  let audioChannels: Record<string, number> | null = null;
+  if (audioGroups?.length) {
+    try {
+      if (audioGroups.length === 1 && audioGroups[0]) {
+        audioChannels = audioTracksByGroup.groups[audioGroups[0]].channels;
+      } else {
+        audioChannels = audioGroups.reduce(
+          (acc, groupId) => {
+            if (groupId) {
+              const audioTrackGroup = audioTracksByGroup.groups[groupId];
+              if (!audioTrackGroup) {
+                throw new Error(`Audio track group ${groupId} not found`);
+              }
+              // Sum all channel key values
+              Object.keys(audioTrackGroup.channels).forEach((key) => {
+                acc[key] = (acc[key] || 0) + audioTrackGroup.channels[key];
+              });
+            }
+            return acc;
+          },
+          { 2: 0 },
+        );
+      }
+    } catch (error) {
+      return true;
+    }
+  }
   return (
     (typeof mediaCapabilities?.decodingInfo == 'function' &&
       level.videoCodec !== undefined &&
@@ -93,7 +117,7 @@ export function getMediaDecodingInfoPromise(
   if (audioCodecs && audioGroupId) {
     audioTracksByGroup.groups[audioGroupId]?.tracks.forEach((audioTrack) => {
       if (audioTrack.groupId === audioGroupId) {
-        const channels = audioTrack.attrs.CHANNELS || '';
+        const channels = audioTrack.channels || '';
         const channelsNumber = parseFloat(channels);
         if (Number.isFinite(channelsNumber) && channelsNumber > 2) {
           configurations.push.apply(
