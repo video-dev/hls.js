@@ -1,7 +1,3 @@
-/*
- * Level Controller
- */
-
 import {
   ManifestLoadedData,
   ManifestParsedData,
@@ -13,12 +9,7 @@ import {
   ManifestLoadingData,
   FragBufferedData,
 } from '../types/events';
-import {
-  Level,
-  VideoRangeValues,
-  addGroupId,
-  isVideoRange,
-} from '../types/level';
+import { Level, VideoRangeValues, isVideoRange } from '../types/level';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import {
@@ -147,26 +138,30 @@ export default class LevelController extends BasePlaylistController {
         AUDIO,
         CODECS,
         'FRAME-RATE': FRAMERATE,
+        'HDCP-LEVEL': HDCP,
         'PATHWAY-ID': PATHWAY,
         RESOLUTION,
         SUBTITLES,
+        'VIDEO-RANGE': VIDEO_RANGE,
       } = attributes;
       const contentSteeringPrefix = __USE_CONTENT_STEERING__
         ? `${PATHWAY || '.'}-`
         : '';
-      const levelKey = `${contentSteeringPrefix}${levelParsed.bitrate}-${RESOLUTION}-${FRAMERATE}-${CODECS}`;
-      levelFromSet = levelSet[levelKey];
+      const levelKey = `${contentSteeringPrefix}${levelParsed.bitrate}-${RESOLUTION}-${FRAMERATE}-${CODECS}-${VIDEO_RANGE}-${HDCP}`;
 
+      levelFromSet = levelSet[levelKey];
+      let fallbackIndex = -1;
       if (!levelFromSet) {
         levelFromSet = new Level(levelParsed);
         levelSet[levelKey] = levelFromSet;
         levels.push(levelFromSet);
-      } else {
+      } else if (
+        (fallbackIndex = levelFromSet.url.indexOf(levelParsed.url)) === -1
+      ) {
         levelFromSet.addFallback(levelParsed);
       }
-
-      addGroupId(levelFromSet, 'audio', AUDIO);
-      addGroupId(levelFromSet, 'text', SUBTITLES);
+      levelFromSet.addGroupId('audio', AUDIO, fallbackIndex);
+      levelFromSet.addGroupId('text', SUBTITLES, fallbackIndex);
     });
 
     this.filterAndSortMediaOptions(levels, data);

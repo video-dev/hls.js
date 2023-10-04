@@ -10,6 +10,7 @@ import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
 import { fragmentWithinToleranceTest } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
+import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import { ErrorDetails } from '../errors';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
@@ -32,6 +33,7 @@ import type {
   FragParsingUserdataData,
   FragBufferedData,
   ErrorData,
+  BufferFlushingData,
 } from '../types/events';
 import type { MediaPlaylist } from '../types/media-playlist';
 
@@ -56,6 +58,7 @@ class AudioStreamController
   private trackId: number = -1;
   private waitingData: WaitingForPTSData | null = null;
   private mainDetails: LevelDetails | null = null;
+  private flushing: boolean = false;
   private bufferFlushed: boolean = false;
   private cachedTrackLoadedData: TrackLoadedData | null = null;
 
@@ -93,6 +96,7 @@ class AudioStreamController
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.BUFFER_RESET, this.onBufferReset, this);
     hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
+    hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
     hls.on(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
@@ -110,6 +114,7 @@ class AudioStreamController
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.BUFFER_RESET, this.onBufferReset, this);
     hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
+    hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
     hls.off(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
@@ -275,15 +280,15 @@ class AudioStreamController
     const { hls, levels, media, trackId } = this;
     const config = hls.config;
 
-    if (!levels?.[trackId]) {
-      return;
-    }
-
-    // if video not attached AND
-    // start fragment already requested OR start frag prefetch not enabled
-    // exit loop
+    // 1. if video not attached AND
+    //    start fragment already requested OR start frag prefetch not enabled
+    // 2. if tracks or track not loaded and selected
+    // then exit loop
     // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
-    if (!media && (this.startFragRequested || !config.startFragPrefetch)) {
+    if (
+      (!media && (this.startFragRequested || !config.startFragPrefetch)) ||
+      !levels?.[trackId]
+    ) {
       return;
     }
 
@@ -333,11 +338,17 @@ class AudioStreamController
 
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
-    let targetBufferTime = bufferInfo.end;
+    let targetBufferTime = this.flushing
+      ? this.getLoadPosition()
+      : bufferInfo.end;
 
     if (switchingTrack && media) {
       const pos = this.getLoadPosition();
-      if (bufferedTrack && switchingTrack.attrs !== bufferedTrack.attrs) {
+      // STABLE
+      if (
+        bufferedTrack &&
+        !mediaAttributesIdentical(switchingTrack.attrs, bufferedTrack.attrs)
+      ) {
         targetBufferTime = pos;
       }
       // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
@@ -420,6 +431,7 @@ class AudioStreamController
 
   onMediaDetaching() {
     this.videoBuffer = null;
+    this.bufferFlushed = this.flushing = false;
     super.onMediaDetaching();
   }
 
@@ -427,6 +439,7 @@ class AudioStreamController
     event: Events.AUDIO_TRACKS_UPDATED,
     { audioTracks }: AudioTracksUpdatedData,
   ) {
+    // Reset tranxmuxer is essential for large context switches (Content Steering)
     this.resetTransmuxer();
     this.levels = audioTracks.map((mediaPlaylist) => new Level(mediaPlaylist));
   }
@@ -470,7 +483,7 @@ class AudioStreamController
   onManifestLoading() {
     this.fragmentTracker.removeAllFragments();
     this.startPosition = this.lastCurrentTime = 0;
-    this.bufferFlushed = false;
+    this.bufferFlushed = this.flushing = false;
     this.levels =
       this.mainDetails =
       this.waitingData =
@@ -502,7 +515,9 @@ class AudioStreamController
       return;
     }
     this.log(
-      `Track ${trackId} loaded [${newDetails.startSN},${newDetails.endSN}]${
+      `Audio track ${trackId} loaded [${newDetails.startSN},${
+        newDetails.endSN
+      }]${
         newDetails.lastPartSn
           ? `[part-${newDetails.lastPartSn}-${newDetails.lastPartIndex}]`
           : ''
@@ -746,11 +761,21 @@ class AudioStreamController
     }
   }
 
+  private onBufferFlushing(
+    event: Events.BUFFER_FLUSHING,
+    { type }: BufferFlushingData,
+  ) {
+    if (type !== ElementaryStreamTypes.VIDEO) {
+      this.flushing = true;
+    }
+  }
+
   private onBufferFlushed(
     event: Events.BUFFER_FLUSHED,
     { type }: BufferFlushedData,
   ) {
-    if (type === ElementaryStreamTypes.AUDIO) {
+    if (type !== ElementaryStreamTypes.VIDEO) {
+      this.flushing = false;
       this.bufferFlushed = true;
       if (this.state === State.ENDED) {
         this.state = State.IDLE;

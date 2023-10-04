@@ -1,25 +1,28 @@
+import BasePlaylistController from './base-playlist-controller';
 import { Events } from '../events';
 import { clearCurrentCues } from '../utils/texttrack-utils';
-import BasePlaylistController from './base-playlist-controller';
-import type { HlsUrlParameters } from '../types/level';
+import { PlaylistContextType } from '../types/loader';
+import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import type Hls from '../hls';
+import type { MediaPlaylist } from '../types/media-playlist';
+import type { HlsUrlParameters } from '../types/level';
 import type {
-  TrackLoadedData,
+  ErrorData,
+  LevelLoadingData,
   MediaAttachedData,
   SubtitleTracksUpdatedData,
   ManifestParsedData,
+  TrackLoadedData,
   LevelSwitchingData,
 } from '../types/events';
-import type { MediaPlaylist } from '../types/media-playlist';
-import { ErrorData, LevelLoadingData } from '../types/events';
-import { PlaylistContextType } from '../types/loader';
 
 class SubtitleTrackController extends BasePlaylistController {
   private media: HTMLMediaElement | null = null;
   private tracks: MediaPlaylist[] = [];
-  private groupId: string | null = null;
+  private groupIds: (string | undefined)[] | null = null;
   private tracksInGroup: MediaPlaylist[] = [];
   private trackId: number = -1;
+  private currentTrack: MediaPlaylist | null = null;
   private selectDefaultTrack: boolean = true;
   private queuedDefaultTrack: number = -1;
   private trackChangeListener: () => void = () => this.onTextTracksChanged();
@@ -37,6 +40,7 @@ class SubtitleTrackController extends BasePlaylistController {
     this.unregisterListeners();
     this.tracks.length = 0;
     this.tracksInGroup.length = 0;
+    this.currentTrack = null;
     this.trackChangeListener = this.asyncPollTrackChange = null as any;
     super.destroy();
   }
@@ -141,9 +145,10 @@ class SubtitleTrackController extends BasePlaylistController {
 
   protected onManifestLoading(): void {
     this.tracks = [];
-    this.groupId = null;
+    this.groupIds = null;
     this.tracksInGroup = [];
     this.trackId = -1;
+    this.currentTrack = null;
     this.selectDefaultTrack = true;
   }
 
@@ -159,19 +164,20 @@ class SubtitleTrackController extends BasePlaylistController {
     event: Events.SUBTITLE_TRACK_LOADED,
     data: TrackLoadedData,
   ): void {
-    const { id, details } = data;
-    const { trackId } = this;
-    const currentTrack = this.tracksInGroup[trackId];
+    const { id, groupId, details } = data;
+    const trackInActiveGroup = this.tracksInGroup[id];
 
-    if (!currentTrack) {
-      this.warn(`Invalid subtitle track id ${id}`);
+    if (!trackInActiveGroup || trackInActiveGroup.groupId !== groupId) {
+      this.warn(
+        `Subtitle track with id:${id} and group:${groupId} not found in active group ${trackInActiveGroup?.groupId}`,
+      );
       return;
     }
 
-    const curDetails = currentTrack.details;
-    currentTrack.details = data.details;
+    const curDetails = trackInActiveGroup.details;
+    trackInActiveGroup.details = data.details;
     this.log(
-      `subtitle track ${id} loaded [${details.startSN}-${details.endSN}]`,
+      `Subtitle track ${id} "${trackInActiveGroup.name}" lang:${trackInActiveGroup.lang} group:${groupId} loaded [${details.startSN}-${details.endSN}]`,
     );
 
     if (id === this.trackId) {
@@ -198,44 +204,70 @@ class SubtitleTrackController extends BasePlaylistController {
     if (!levelInfo?.textGroupIds) {
       return;
     }
-    const textGroupId = levelInfo.textGroupIds[levelInfo.urlId];
-    const lastTrack = this.tracksInGroup
-      ? this.tracksInGroup[this.trackId]
-      : undefined;
-    if (this.groupId !== textGroupId) {
+    const subtitleGroups = levelInfo.subtitleGroups || null;
+    const currentGroups = this.groupIds;
+    const currentTrack = this.currentTrack;
+    if (
+      !subtitleGroups ||
+      currentGroups?.length !== subtitleGroups?.length ||
+      subtitleGroups?.some((groupId) => currentGroups?.indexOf(groupId) === -1)
+    ) {
+      this.groupIds = subtitleGroups;
+
       const subtitleTracks = this.tracks.filter(
-        (track): boolean => !textGroupId || track.groupId === textGroupId,
+        (track): boolean =>
+          !subtitleGroups || subtitleGroups.indexOf(track.groupId) !== -1,
       );
+      if (!subtitleTracks.length) {
+        this.trackId = -1;
+        this.currentTrack = null;
+      }
+      subtitleTracks.forEach((track, i) => {
+        track.id = i;
+      });
       this.tracksInGroup = subtitleTracks;
-      const initialTrackId =
-        this.findTrackId(lastTrack?.name) || this.findTrackId();
-      this.groupId = textGroupId || null;
+      let initialTrackId = this.findTrackId(currentTrack);
+      if (initialTrackId === -1) {
+        initialTrackId = this.findTrackId(null);
+      }
 
       const subtitleTracksUpdated: SubtitleTracksUpdatedData = {
         subtitleTracks,
       };
       this.log(
-        `Updating subtitle tracks, ${subtitleTracks.length} track(s) found in "${textGroupId}" group-id`,
+        `Updating subtitle tracks, ${
+          subtitleTracks.length
+        } track(s) found in "${subtitleGroups?.join(',')}" group-id`,
       );
       this.hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
       if (initialTrackId !== -1) {
-        this.setSubtitleTrack(initialTrackId, lastTrack);
+        this.setSubtitleTrack(initialTrackId);
       }
-    } else if (this.shouldReloadPlaylist(lastTrack)) {
+    } else if (this.shouldReloadPlaylist(currentTrack)) {
       // Retry playlist loading if no playlist is or has been loaded yet
-      this.setSubtitleTrack(this.trackId, lastTrack);
+      this.setSubtitleTrack(this.trackId);
     }
   }
 
-  private findTrackId(name?: string): number {
+  private findTrackId(currentTrack: MediaPlaylist | null): number {
     const textTracks = this.tracksInGroup;
     for (let i = 0; i < textTracks.length; i++) {
       const track = textTracks[i];
-      if (!this.selectDefaultTrack || track.default) {
-        if (!name || name === track.name) {
-          return track.id;
-        }
+      if (
+        !currentTrack ||
+        mediaAttributesIdentical(currentTrack.attrs, track.attrs)
+      ) {
+        return track.id;
+      }
+      if (
+        mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
+          'LANGUAGE',
+          'ASSOC-LANGUAGE',
+          'CHARACTERISTICS',
+        ])
+      ) {
+        return track.id;
       }
     }
     return -1;
@@ -249,7 +281,7 @@ class SubtitleTrackController extends BasePlaylistController {
     if (
       data.context.type === PlaylistContextType.SUBTITLE_TRACK &&
       data.context.id === this.trackId &&
-      data.context.groupId === this.groupId
+      (!this.groupIds || this.groupIds.indexOf(data.context.groupId) !== -1)
     ) {
       this.checkRetry(data);
     }
@@ -271,16 +303,13 @@ class SubtitleTrackController extends BasePlaylistController {
 
   set subtitleTrack(newId: number) {
     this.selectDefaultTrack = false;
-    const lastTrack = this.tracksInGroup
-      ? this.tracksInGroup[this.trackId]
-      : undefined;
-    this.setSubtitleTrack(newId, lastTrack);
+    this.setSubtitleTrack(newId);
   }
 
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
     super.loadPlaylist();
-    const currentTrack = this.tracksInGroup[this.trackId];
-    if (this.shouldLoadPlaylist(currentTrack)) {
+    const currentTrack = this.currentTrack;
+    if (this.shouldLoadPlaylist(currentTrack) && currentTrack) {
       const id = currentTrack.id;
       const groupId = currentTrack.groupId as string;
       let url = currentTrack.url;
@@ -315,8 +344,9 @@ class SubtitleTrackController extends BasePlaylistController {
     }
 
     const textTracks = filterSubtitleTracks(media.textTracks);
+    const groupIds = this.groupIds;
     const groupTracks = textTracks.filter(
-      (track) => (track as any).groupId === this.groupId,
+      (track) => !groupIds || groupIds.indexOf((track as any).groupId) !== -1,
     );
     if (newId === -1) {
       [].slice.call(textTracks).forEach((track) => {
@@ -339,10 +369,7 @@ class SubtitleTrackController extends BasePlaylistController {
    * This method is responsible for validating the subtitle index and periodically reloading if live.
    * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
    */
-  private setSubtitleTrack(
-    newId: number,
-    lastTrack: MediaPlaylist | undefined,
-  ): void {
+  private setSubtitleTrack(newId: number): void {
     const tracks = this.tracksInGroup;
 
     // setting this.subtitleTrack will trigger internal logic
@@ -359,41 +386,43 @@ class SubtitleTrackController extends BasePlaylistController {
     }
 
     // exit if track id as already set or invalid
-    if (
-      (this.trackId === newId && (newId === -1 || tracks[newId]?.details)) ||
-      newId < -1 ||
-      newId >= tracks.length
-    ) {
+    if (newId < -1 || newId >= tracks.length) {
+      this.warn(`Invalid subtitle track id: ${newId}`);
       return;
     }
 
     // stopping live reloading timer if any
     this.clearTimer();
 
-    const track = tracks[newId];
-
+    const lastTrack = this.currentTrack;
+    const track: MediaPlaylist | null = tracks[newId] || null;
+    this.trackId = newId;
+    this.currentTrack = track;
+    if (!track) {
+      // switch to -1
+      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
+      return;
+    }
+    const trackLoaded = track.details && !track.details.live;
+    if (newId === this.trackId && track === lastTrack && trackLoaded) {
+      return;
+    }
     this.log(
       `Switching to subtitle-track ${newId}` +
         (track
           ? ` "${track.name}" lang:${track.lang} group:${track.groupId}`
           : ''),
     );
-    this.trackId = newId;
-    if (track) {
-      const { id, groupId = '', name, type, url } = track;
-      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
-        id,
-        groupId,
-        name,
-        type,
-        url,
-      });
-      const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
-      this.loadPlaylist(hlsUrlParameters);
-    } else {
-      // switch to -1
-      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
-    }
+    const { id, groupId = '', name, type, url } = track;
+    this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
+      id,
+      groupId,
+      name,
+      type,
+      url,
+    });
+    const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
+    this.loadPlaylist(hlsUrlParameters);
   }
 
   private onTextTracksChanged(): void {

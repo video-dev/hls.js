@@ -163,7 +163,7 @@ export function getAudioTracksByGroup(allAudioTracks: MediaPlaylist[]) {
         };
       }
       trackGroup.tracks.push(track);
-      const channelsKey = track.attrs.CHANNELS || '2';
+      const channelsKey = track.channels || '2';
       trackGroup.channels[channelsKey] =
         (trackGroup.channels[channelsKey] || 0) + 1;
       trackGroup.hasDefault = trackGroup.hasDefault || track.default;

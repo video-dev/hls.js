@@ -17,6 +17,8 @@ export type MediaPlaylistType = MainPlaylistType | SubtitlePlaylistType;
 export interface MediaPlaylist extends Omit<LevelParsed, 'attrs'> {
   attrs: MediaAttributes;
   autoselect: boolean; // implicit false if not present
+  channels?: string;
+  characteristics?: string;
   default: boolean; // implicit false if not present
   forced: boolean; // implicit false if not present
   groupId: string; // required in HLS playlists

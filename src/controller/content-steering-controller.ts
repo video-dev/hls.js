@@ -1,5 +1,5 @@
 import { Events } from '../events';
-import { Level, addGroupId } from '../types/level';
+import { Level } from '../types/level';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
 import { AttrList } from '../utils/attr-list';
 import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
@@ -313,8 +313,8 @@ export default class ContentSteeringController implements NetworkComponentAPI {
           }
           levelParsed.attrs = attributes;
           const clonedLevel = new Level(levelParsed);
-          addGroupId(clonedLevel, 'audio', clonedAudioGroupId);
-          addGroupId(clonedLevel, 'text', clonedSubtitleGroupId);
+          clonedLevel.addGroupId('audio', clonedAudioGroupId, -1);
+          clonedLevel.addGroupId('text', clonedSubtitleGroupId, -1);
           return clonedLevel;
         },
       );

@@ -38,8 +38,6 @@ export class SubtitleStreamController
   extends BaseStreamController
   implements NetworkComponentAPI
 {
-  protected levels: Array<Level> = [];
-
   private currentTrackId: number = -1;
   private tracksBuffered: Array<TimeRange[]> = [];
   private mainDetails: LevelDetails | null = null;
@@ -219,7 +217,7 @@ export class SubtitleStreamController
     event: Events.SUBTITLE_TRACKS_UPDATED,
     { subtitleTracks }: SubtitleTracksUpdatedData,
   ) {
-    if (subtitleOptionsIdentical(this.levels, subtitleTracks)) {
+    if (!this.levels || subtitleOptionsIdentical(this.levels, subtitleTracks)) {
       this.levels = subtitleTracks.map(
         (mediaPlaylist) => new Level(mediaPlaylist),
       );
@@ -246,7 +244,7 @@ export class SubtitleStreamController
   ) {
     this.currentTrackId = data.id;
 
-    if (!this.levels.length || this.currentTrackId === -1) {
+    if (!this.levels?.length || this.currentTrackId === -1) {
       this.clearInterval();
       return;
     }
@@ -268,15 +266,25 @@ export class SubtitleStreamController
     event: Events.SUBTITLE_TRACK_LOADED,
     data: TrackLoadedData,
   ) {
-    const { details: newDetails, id: trackId } = data;
     const { currentTrackId, levels } = this;
-    if (!levels.length) {
+    const { details: newDetails, id: trackId } = data;
+    if (!levels) {
+      this.warn(`Subtitle tracks were reset while loading level ${trackId}`);
       return;
     }
     const track: Level = levels[currentTrackId];
     if (trackId >= levels.length || trackId !== currentTrackId || !track) {
       return;
     }
+    this.log(
+      `Subtitle track ${trackId} loaded [${newDetails.startSN},${
+        newDetails.endSN
+      }]${
+        newDetails.lastPartSn
+          ? `[part-${newDetails.lastPartSn}-${newDetails.lastPartIndex}]`
+          : ''
+      },duration:${newDetails.totalduration}`,
+    );
     this.mediaBuffer = this.mediaBufferTimeRanges;
     let sliding = 0;
     if (newDetails.live || track.details?.live) {
@@ -399,8 +407,8 @@ export class SubtitleStreamController
 
     if (this.state === State.IDLE) {
       const { currentTrackId, levels } = this;
-      const track = levels[currentTrackId];
-      if (!levels.length || !track || !track.details) {
+      const track = levels?.[currentTrackId];
+      if (!track || !levels.length || !track.details) {
         return;
       }
       const { config } = this;
