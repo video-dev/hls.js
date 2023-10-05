@@ -277,6 +277,13 @@ class AudioTrackController extends BasePlaylistController {
         ) {
           return track.id;
         }
+        if (
+          mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
+            'LANGUAGE',
+          ])
+        ) {
+          return track.id;
+        }
       }
     }
     return -1;

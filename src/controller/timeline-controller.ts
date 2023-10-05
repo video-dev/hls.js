@@ -7,13 +7,14 @@ import {
   clearCurrentCues,
   addCueToTrack,
   removeCuesInRange,
+  filterSubtitleTracks,
 } from '../utils/texttrack-utils';
 import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { PlaylistLevelType } from '../types/loader';
 import { Fragment } from '../loader/fragment';
-import {
+import type {
   FragParsingUserdataData,
   FragLoadedData,
   FragDecryptedData,
@@ -207,12 +208,12 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
-  private getExistingTrack(trackName: string): TextTrack | null {
+  private getExistingTrack(label: string, language: string): TextTrack | null {
     const { media } = this;
     if (media) {
       for (let i = 0; i < media.textTracks.length; i++) {
         const textTrack = media.textTracks[i];
-        if (textTrack[trackName]) {
+        if (canReuseVttTextTrack(textTrack, { name: label, lang: language })) {
           return textTrack;
         }
       }
@@ -235,7 +236,7 @@ export class TimelineController implements ComponentAPI {
     const { captionsProperties, captionsTracks, media } = this;
     const { label, languageCode } = captionsProperties[trackName];
     // Enable reuse of existing text track.
-    const existingTrack = this.getExistingTrack(trackName);
+    const existingTrack = this.getExistingTrack(label, languageCode);
     if (!existingTrack) {
       const textTrack = this.createTextTrack('captions', label, languageCode);
       if (textTrack) {
@@ -352,21 +353,26 @@ export class TimelineController implements ComponentAPI {
       this.tracks = tracks;
 
       if (this.config.renderTextTracksNatively) {
-        const inUseTracks = this.media ? this.media.textTracks : null;
+        const media = this.media;
+        const inUseTracks: (TextTrack | null)[] | null = media
+          ? filterSubtitleTracks(media.textTracks)
+          : null;
 
         this.tracks.forEach((track, index) => {
+          // Reuse tracks with the same label and lang, but do not reuse 608/708 tracks
           let textTrack: TextTrack | undefined;
-          if (inUseTracks && index < inUseTracks.length) {
+          if (inUseTracks) {
             let inUseTrack: TextTrack | null = null;
-
             for (let i = 0; i < inUseTracks.length; i++) {
-              if (canReuseVttTextTrack(inUseTracks[i], track)) {
+              if (
+                inUseTracks[i] &&
+                canReuseVttTextTrack(inUseTracks[i], track)
+              ) {
                 inUseTrack = inUseTracks[i];
+                inUseTracks[i] = null;
                 break;
               }
             }
-
-            // Reuse tracks with the same label, but do not reuse 608/708 tracks
             if (inUseTrack) {
               textTrack = inUseTrack;
             }
@@ -386,10 +392,22 @@ export class TimelineController implements ComponentAPI {
             }
           }
           if (textTrack) {
-            (textTrack as any).groupId = track.groupId;
             this.textTracks.push(textTrack);
           }
         });
+        // Warn when video element has captions or subtitle TextTracks carried over from another source
+        if (inUseTracks?.length) {
+          const unusedTextTracks = inUseTracks
+            .filter((t) => t !== null)
+            .map((t) => (t as TextTrack).label);
+          if (unusedTextTracks.length) {
+            logger.warn(
+              `Media element contains unused subtitle tracks: ${unusedTextTracks.join(
+                ', ',
+              )}. Replace media element for each source to clear TextTracks and captions menu.`,
+            );
+          }
+        }
       } else if (this.tracks.length) {
         // Create a list of tracks for the provider to consume
         const tracksList = this.tracks.map((track) => {
@@ -744,13 +762,14 @@ export class TimelineController implements ComponentAPI {
 }
 
 function canReuseVttTextTrack(
-  inUseTrack: (TextTrack & { textTrack1?; textTrack2? }) | null,
-  manifestTrack: MediaPlaylist,
+  inUseTrack: TextTrack | null,
+  manifestTrack: Pick<MediaPlaylist, 'name' | 'lang'>,
 ): boolean {
   return (
     !!inUseTrack &&
+    (inUseTrack.kind === 'subtitles' || inUseTrack.kind === 'captions') &&
     inUseTrack.label === manifestTrack.name &&
-    !(inUseTrack.textTrack1 || inUseTrack.textTrack2)
+    inUseTrack.language.substring(0, 2) === manifestTrack.lang?.substring(0, 2)
   );
 }
 
