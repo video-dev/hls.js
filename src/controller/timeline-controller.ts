@@ -9,7 +9,10 @@ import {
   removeCuesInRange,
   filterSubtitleTracks,
 } from '../utils/texttrack-utils';
-import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
+import {
+  subtitleOptionsIdentical,
+  subtitleTrackMatchesTextTrack,
+} from '../utils/media-option-attributes';
 import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { PlaylistLevelType } from '../types/loader';
@@ -213,7 +216,13 @@ export class TimelineController implements ComponentAPI {
     if (media) {
       for (let i = 0; i < media.textTracks.length; i++) {
         const textTrack = media.textTracks[i];
-        if (canReuseVttTextTrack(textTrack, { name: label, lang: language })) {
+        if (
+          canReuseVttTextTrack(textTrack, {
+            name: label,
+            lang: language,
+            attrs: {} as any,
+          })
+        ) {
           return textTrack;
         }
       }
@@ -380,8 +389,7 @@ export class TimelineController implements ComponentAPI {
           if (textTrack) {
             clearCurrentCues(textTrack);
           } else {
-            const textTrackKind =
-              this._captionsOrSubtitlesFromCharacteristics(track);
+            const textTrackKind = captionsOrSubtitlesFromCharacteristics(track);
             textTrack = this.createTextTrack(
               textTrackKind,
               track.name,
@@ -423,21 +431,6 @@ export class TimelineController implements ComponentAPI {
         });
       }
     }
-  }
-
-  private _captionsOrSubtitlesFromCharacteristics(
-    track: MediaPlaylist,
-  ): TextTrackKind {
-    if (track.characteristics) {
-      if (
-        /transcribes-spoken-dialog/gi.test(track.characteristics) &&
-        /describes-music-and-sound/gi.test(track.characteristics)
-      ) {
-        return 'captions';
-      }
-    }
-
-    return 'subtitles';
   }
 
   private onManifestLoaded(
@@ -761,15 +754,32 @@ export class TimelineController implements ComponentAPI {
   }
 }
 
+function captionsOrSubtitlesFromCharacteristics(
+  track: Pick<MediaPlaylist, 'name' | 'lang' | 'attrs' | 'characteristics'>,
+): TextTrackKind {
+  if (track.characteristics) {
+    if (
+      /transcribes-spoken-dialog/gi.test(track.characteristics) &&
+      /describes-music-and-sound/gi.test(track.characteristics)
+    ) {
+      return 'captions';
+    }
+  }
+
+  return 'subtitles';
+}
+
 function canReuseVttTextTrack(
   inUseTrack: TextTrack | null,
-  manifestTrack: Pick<MediaPlaylist, 'name' | 'lang'>,
+  manifestTrack: Pick<
+    MediaPlaylist,
+    'name' | 'lang' | 'attrs' | 'characteristics'
+  >,
 ): boolean {
   return (
     !!inUseTrack &&
-    (inUseTrack.kind === 'subtitles' || inUseTrack.kind === 'captions') &&
-    inUseTrack.label === manifestTrack.name &&
-    inUseTrack.language.substring(0, 2) === manifestTrack.lang?.substring(0, 2)
+    inUseTrack.kind === captionsOrSubtitlesFromCharacteristics(manifestTrack) &&
+    subtitleTrackMatchesTextTrack(manifestTrack, inUseTrack)
   );
 }
 

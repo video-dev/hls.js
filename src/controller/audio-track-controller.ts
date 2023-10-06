@@ -257,29 +257,28 @@ class AudioTrackController extends BasePlaylistController {
     const audioTracks = this.tracksInGroup;
     for (let i = 0; i < audioTracks.length; i++) {
       const track = audioTracks[i];
-      if (!this.selectDefaultTrack || track.default) {
-        if (
-          !currentTrack ||
-          mediaAttributesIdentical(currentTrack.attrs, track.attrs)
-        ) {
-          return track.id;
-        }
-        if (
-          mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
-            'LANGUAGE',
-            'ASSOC-LANGUAGE',
-            'CHARACTERISTICS',
-          ])
-        ) {
-          return track.id;
-        }
-        if (
-          mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
-            'LANGUAGE',
-          ])
-        ) {
-          return track.id;
-        }
+      if (this.selectDefaultTrack && !track.default) {
+        continue;
+      }
+      if (
+        !currentTrack ||
+        mediaAttributesIdentical(currentTrack.attrs, track.attrs)
+      ) {
+        return track.id;
+      }
+      if (
+        mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
+          'LANGUAGE',
+          'ASSOC-LANGUAGE',
+          'CHARACTERISTICS',
+        ])
+      ) {
+        return track.id;
+      }
+      if (
+        mediaAttributesIdentical(currentTrack.attrs, track.attrs, ['LANGUAGE'])
+      ) {
+        return track.id;
       }
     }
     return -1;
