@@ -35,12 +35,12 @@ export function mediaAttributesIdentical(
   return !(
     customAttributes || [
       'LANGUAGE',
-      'ASSOC-LANGUAGE',
       'NAME',
       'CHARACTERISTICS',
       'AUTOSELECT',
       'DEFAULT',
       'FORCED',
+      'ASSOC-LANGUAGE',
     ]
   ).some(
     (subtitleAttribute) =>

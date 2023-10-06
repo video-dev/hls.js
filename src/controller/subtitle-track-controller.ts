@@ -204,7 +204,7 @@ class SubtitleTrackController extends BasePlaylistController {
 
   private switchLevel(levelIndex: number) {
     const levelInfo = this.hls.levels[levelIndex];
-    if (!levelInfo?.textGroupIds) {
+    if (!levelInfo) {
       return;
     }
     const subtitleGroups = levelInfo.subtitleGroups || null;
@@ -216,22 +216,27 @@ class SubtitleTrackController extends BasePlaylistController {
       subtitleGroups?.some((groupId) => currentGroups?.indexOf(groupId) === -1)
     ) {
       this.groupIds = subtitleGroups;
+      this.trackId = -1;
+      this.currentTrack = null;
 
       const subtitleTracks = this.tracks.filter(
         (track): boolean =>
           !subtitleGroups || subtitleGroups.indexOf(track.groupId) !== -1,
       );
-      if (!subtitleTracks.length) {
-        this.trackId = -1;
-        this.currentTrack = null;
+      if (subtitleTracks.length) {
+        // track.id should match hls.audioTracks index
+        subtitleTracks.forEach((track, i) => {
+          track.id = i;
+        });
+      } else if (!currentTrack && !this.tracksInGroup.length) {
+        // Do not dispatch SUBTITLE_TRACKS_UPDATED when there were and are no tracks
+        return;
       }
-      subtitleTracks.forEach((track, i) => {
-        track.id = i;
-      });
+
       this.tracksInGroup = subtitleTracks;
-      let initialTrackId = this.findTrackId(currentTrack);
-      if (initialTrackId === -1) {
-        initialTrackId = this.findTrackId(null);
+      let trackId = this.findTrackId(currentTrack);
+      if (trackId === -1 && currentTrack) {
+        trackId = this.findTrackId(null);
       }
 
       const subtitleTracksUpdated: SubtitleTracksUpdatedData = {
@@ -244,8 +249,8 @@ class SubtitleTrackController extends BasePlaylistController {
       );
       this.hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
-      if (initialTrackId !== -1) {
-        this.setSubtitleTrack(initialTrackId);
+      if (trackId !== -1 && this.trackId === -1) {
+        this.setSubtitleTrack(trackId);
       }
     } else if (this.shouldReloadPlaylist(currentTrack)) {
       // Retry playlist loading if no playlist is or has been loaded yet
