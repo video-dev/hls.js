@@ -11,7 +11,7 @@ jobs:
   run:
     runs-on: ubuntu-latest
     steps:
-      - uses: tjenkinson/gh-action-auto-merge-dependency-updates@9ae30b3a4a7294ac22c48ac06073f03d0aca1098
+      - uses: tjenkinson/gh-action-auto-merge-dependency-updates@c75e7647e59e2569ff9f4b85107cd181d26e449b # v1
         with:
           repo-token: ${{ secrets.CI_GITHUB_TOKEN }}
           allowed-actors: renovate[bot]
