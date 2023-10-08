@@ -3,5 +3,10 @@
   "compilerOptions": {
     "emitDeclarationOnly": false
   },
-  "include": ["src/**/*", "tests/unit/**/*", "demo/**/*"]
+  "include": [
+    "src/**/*",
+    "tests/**/*",
+    "demo/**/*",
+    "tests/**/.eslintrc.js" /* needed for eslint to work for some reason ¯\_(ツ)_/¯ */
+  ]
 }
