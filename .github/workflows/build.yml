@@ -32,7 +32,7 @@ jobs:
           SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
       - name: extract tag
         id: extract_tag
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
         with:
           script: |
             const prefix = 'refs/tags/';
@@ -45,12 +45,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
         with:
           fetch-depth: 0
 
       - name: check package-lock.json version
-        uses: actions/github-script@v6
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
         with:
           script: |
             const fs = require('fs');
@@ -64,7 +64,7 @@ jobs:
             }
 
       - name: cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         env:
           cache-name: cache-node-modules
         with:
@@ -76,7 +76,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
         with:
           node-version-file: '.node-version'
 
@@ -111,7 +111,7 @@ jobs:
           CI: true
 
       - name: upload build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@a8a3f3ad30e3422c9c7b888a15615d19a852ae32 # v3
         with:
           name: build
           # version number is set in package.json so need to include that
@@ -125,10 +125,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - name: cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         env:
           cache-name: cache-node-modules
         with:
@@ -140,12 +140,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: build
 
@@ -166,10 +166,10 @@ jobs:
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - name: cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         env:
           cache-name: cache-node-modules
         with:
@@ -181,12 +181,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: build
 
@@ -235,15 +235,15 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - name: use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: build
 
@@ -252,7 +252,7 @@ jobs:
           zip -r dist.zip dist
 
       - name: upload assets to github release
-        uses: actions/upload-release-asset@v1
+        uses: actions/upload-release-asset@e8f9f06c4b078e705bd2ea027f0926603fc9b4d5 # v1
         with:
           upload_url: ${{ needs.update_draft_release.outputs.upload_url }}
           asset_path: dist.zip
@@ -268,10 +268,10 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - name: cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         env:
           cache-name: cache-node-modules
         with:
@@ -283,12 +283,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: build
 
@@ -329,10 +329,10 @@ jobs:
             uaVersion: '75.0'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - name: cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         env:
           cache-name: cache-node-modules
         with:
@@ -344,12 +344,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: build
 
@@ -398,10 +398,10 @@ jobs:
             os: Windows 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@8ade135a41bc03ea155e62e844d188df1ea18608 # v4
 
       - name: cache node_modules
-        uses: actions/cache@v3
+        uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84 # v3
         env:
           cache-name: cache-node-modules
         with:
@@ -413,12 +413,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@5e21ff4d9bc1a8cf6de233a3057d20ec6b3fb69d # v3
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@9bc31d5ccc31df68ecc42ccf4149144866c47d8a # v3
         with:
           name: build
 
