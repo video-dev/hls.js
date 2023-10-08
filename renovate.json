@@ -1,5 +1,5 @@
 {
-  "extends": ["config:base", "helpers:pinGitHubActionDigests"],
+  "extends": ["config:base"],
   "labels": ["dependencies", "skip-change-log"],
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
