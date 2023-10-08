@@ -93,11 +93,7 @@ export type MediaKeyFunc = (
 ) => Promise<MediaKeySystemAccess>;
 
 export const requestMediaKeySystemAccess = (function (): MediaKeyFunc | null {
-  if (
-    typeof self !== 'undefined' &&
-    self.navigator &&
-    self.navigator.requestMediaKeySystemAccess
-  ) {
+  if (self?.navigator?.requestMediaKeySystemAccess) {
     return self.navigator.requestMediaKeySystemAccess.bind(self.navigator);
   } else {
     return null;

@@ -357,8 +357,7 @@ export class SubtitleStreamController
     if (
       payload &&
       payload.byteLength > 0 &&
-      decryptData &&
-      decryptData.key &&
+      decryptData?.key &&
       decryptData.iv &&
       decryptData.method === 'AES-128'
     ) {

@@ -21,7 +21,7 @@ declare interface VTTCuePolyfill extends VTTCue {
 }
 
 export default (function () {
-  if (typeof self !== 'undefined' && self.VTTCue) {
+  if (self?.VTTCue) {
     return self.VTTCue;
   }
 

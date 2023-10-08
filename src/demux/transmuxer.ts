@@ -24,7 +24,7 @@ try {
   now = self.performance.now.bind(self.performance);
 } catch (err) {
   logger.debug('Unable to use Performance API on this environment');
-  now = typeof self !== 'undefined' && self.Date.now;
+  now = self?.Date.now;
 }
 
 type MuxConfig =
@@ -468,8 +468,7 @@ function getEncryptionType(
   let encryptionType: KeyData | null = null;
   if (
     data.byteLength > 0 &&
-    decryptData != null &&
-    decryptData.key != null &&
+    decryptData?.key != null &&
     decryptData.iv !== null &&
     decryptData.method != null
   ) {
