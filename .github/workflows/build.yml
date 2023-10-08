@@ -15,6 +15,9 @@ defaults:
 jobs:
   config:
     runs-on: ubuntu-latest
+    concurrency:
+      group: '${{ github.workflow }}:${{ github.job }}:${{ github.ref }}'
+      cancel-in-progress: true
     outputs:
       canUseSauce: ${{ steps.check_sauce_access.outputs.result == 'true' }}
       tag: ${{ steps.extract_tag.outputs.result }}
@@ -43,7 +46,9 @@ jobs:
   build:
     needs: config
     runs-on: ubuntu-latest
-
+    concurrency:
+      group: '${{ github.workflow }}:${{ github.job }}:${{ github.ref }}'
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -124,6 +129,9 @@ jobs:
   test_unit:
     needs: build
     runs-on: ubuntu-latest
+    concurrency:
+      group: '${{ github.workflow }}:${{ github.job }}:${{ github.ref }}'
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
 
@@ -165,6 +173,9 @@ jobs:
     needs: [config, test_unit]
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: '${{ github.workflow }}:${{ github.job }}:${{ github.ref }}'
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v4
 
@@ -214,6 +225,9 @@ jobs:
     needs: [config, test_unit]
     if: needs.config.outputs.tag
     runs-on: ubuntu-latest
+    concurrency:
+      group: '${{ github.workflow }}:${{ github.job }}:${{ github.ref }}'
+      cancel-in-progress: true
     outputs:
       upload_url: ${{ steps.draft_release.outputs.upload_url }}
     permissions:
@@ -232,6 +246,9 @@ jobs:
     needs: [config, test_unit, update_draft_release]
     if: needs.config.outputs.tag
     runs-on: ubuntu-latest
+    concurrency:
+      group: '${{ github.workflow }}:${{ github.job }}:${{ github.ref }}'
+      cancel-in-progress: true
     permissions:
       contents: write
     steps:
@@ -265,6 +282,9 @@ jobs:
     needs: [config, test_unit]
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: '${{ github.workflow }}:${{ github.job }}:${{ github.ref }}'
+      cancel-in-progress: true
     permissions:
       id-token: write
     steps:
@@ -310,6 +330,9 @@ jobs:
     needs: [config, test_unit]
     if: needs.config.outputs.canUseSauce == 'true'
     runs-on: ubuntu-latest
+    concurrency:
+      group: '${{ github.workflow }}:${{ github.job }}:${{ matrix.config }}:${{ github.ref }}'
+      cancel-in-progress: true
     name: test_functional_required (${{ matrix.config }})
     strategy:
       fail-fast: true
@@ -383,6 +406,9 @@ jobs:
   test_functional_optional:
     needs: test_functional_required
     runs-on: ubuntu-latest
+    concurrency:
+      group: '${{ github.workflow }}:${{ github.job }}:${{ matrix.config }}:${{ github.ref }}'
+      cancel-in-progress: true
     continue-on-error: true
     name: test_functional_optional (${{ matrix.config }})
     strategy:
