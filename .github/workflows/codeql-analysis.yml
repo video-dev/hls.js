@@ -16,7 +16,9 @@ jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
-
+    concurrency:
+      group: '${{ github.workflow }}:${{ github.job }}:${{ github.ref }}'
+      cancel-in-progress: true
     strategy:
       fail-fast: false
       matrix:
