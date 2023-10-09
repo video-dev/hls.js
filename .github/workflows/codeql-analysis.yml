@@ -17,7 +17,7 @@ jobs:
     name: Analyze
     runs-on: ubuntu-latest
     concurrency:
-      group: '${{ github.workflow }}:${{ github.job }}:${{ github.ref }}'
+      group: 'codeql-analysis:analyze:${{ github.ref }}'
       cancel-in-progress: true
     strategy:
       fail-fast: false
