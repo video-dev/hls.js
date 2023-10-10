@@ -1,4 +1,5 @@
 import type { DRMSystemOptions, EMEControllerConfig } from '../config';
+import { optionalSelf } from './global';
 
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess
@@ -93,11 +94,7 @@ export type MediaKeyFunc = (
 ) => Promise<MediaKeySystemAccess>;
 
 export const requestMediaKeySystemAccess = (function (): MediaKeyFunc | null {
-  if (
-    typeof self !== 'undefined' &&
-    self.navigator &&
-    self.navigator.requestMediaKeySystemAccess
-  ) {
+  if (optionalSelf?.navigator?.requestMediaKeySystemAccess) {
     return self.navigator.requestMediaKeySystemAccess.bind(self.navigator);
   } else {
     return null;

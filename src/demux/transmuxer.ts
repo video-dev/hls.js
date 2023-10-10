@@ -17,6 +17,7 @@ import type { HlsConfig } from '../config';
 import type { DecryptData } from '../loader/level-key';
 import type { PlaylistLevelType } from '../types/loader';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
+import { optionalSelf } from '../utils/global';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -24,7 +25,7 @@ try {
   now = self.performance.now.bind(self.performance);
 } catch (err) {
   logger.debug('Unable to use Performance API on this environment');
-  now = typeof self !== 'undefined' && self.Date.now;
+  now = optionalSelf?.Date.now;
 }
 
 type MuxConfig =
@@ -468,8 +469,7 @@ function getEncryptionType(
   let encryptionType: KeyData | null = null;
   if (
     data.byteLength > 0 &&
-    decryptData != null &&
-    decryptData.key != null &&
+    decryptData?.key != null &&
     decryptData.iv !== null &&
     decryptData.method != null
   ) {
