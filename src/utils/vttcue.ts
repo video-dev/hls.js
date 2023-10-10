@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import { optionalSelf } from './global';
+
 declare interface VTTCuePolyfill extends VTTCue {
   new (...args): VTTCuePolyfill;
   hasBeenReset: boolean;
@@ -21,7 +23,7 @@ declare interface VTTCuePolyfill extends VTTCue {
 }
 
 export default (function () {
-  if (typeof self !== 'undefined' && self.VTTCue) {
+  if (optionalSelf?.VTTCue) {
     return self.VTTCue;
   }
 

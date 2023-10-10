@@ -720,7 +720,7 @@ export default class Hls implements HlsEventEmitter {
     const { levels, autoLevelCapping, maxHdcpLevel } = this;
 
     let maxAutoLevel;
-    if (autoLevelCapping === -1 && levels && levels.length) {
+    if (autoLevelCapping === -1 && levels?.length) {
       maxAutoLevel = levels.length - 1;
     } else {
       maxAutoLevel = autoLevelCapping;
