@@ -11,7 +11,7 @@ jobs:
   run:
     runs-on: ubuntu-latest
     concurrency:
-      group: 'automerge:run:${{ github.ref }}'
+      group: 'automerge:run:${{ github.head_ref }}'
       cancel-in-progress: true
     steps:
       - uses: tjenkinson/gh-action-auto-merge-dependency-updates@c75e7647e59e2569ff9f4b85107cd181d26e449b # v1
