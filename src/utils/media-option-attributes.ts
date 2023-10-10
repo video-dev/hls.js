@@ -35,15 +35,27 @@ export function mediaAttributesIdentical(
   return !(
     customAttributes || [
       'LANGUAGE',
-      'ASSOC-LANGUAGE',
       'NAME',
       'CHARACTERISTICS',
       'AUTOSELECT',
       'DEFAULT',
       'FORCED',
+      'ASSOC-LANGUAGE',
     ]
   ).some(
     (subtitleAttribute) =>
       attrs1[subtitleAttribute] !== attrs2[subtitleAttribute],
+  );
+}
+
+export function subtitleTrackMatchesTextTrack(
+  subtitleTrack: Pick<MediaPlaylist, 'name' | 'lang' | 'attrs'>,
+  textTrack: TextTrack,
+) {
+  return (
+    textTrack.label.toLowerCase() === subtitleTrack.name.toLowerCase() &&
+    (!textTrack.language ||
+      textTrack.language.toLowerCase() ===
+        (subtitleTrack.lang || '').toLowerCase())
   );
 }
