@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import { maybeSelf } from './self';
+import { optionalSelf } from './global';
 
 declare interface VTTCuePolyfill extends VTTCue {
   new (...args): VTTCuePolyfill;
@@ -23,7 +23,7 @@ declare interface VTTCuePolyfill extends VTTCue {
 }
 
 export default (function () {
-  if (maybeSelf()?.VTTCue) {
+  if (optionalSelf?.VTTCue) {
     return self.VTTCue;
   }
 
