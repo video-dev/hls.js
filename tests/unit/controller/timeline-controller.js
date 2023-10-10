@@ -62,8 +62,18 @@ describe('TimelineController', function () {
 
       timelineController.onSubtitleTracksUpdated(Events.MANIFEST_LOADED, {
         subtitleTracks: [
-          { id: 0, name: 'en', attrs: { LANGUAGE: 'en', NAME: 'en' } },
-          { id: 1, name: 'ru', attrs: { LANGUAGE: 'ru', NAME: 'ru' } },
+          {
+            id: 0,
+            name: 'en',
+            lang: 'en',
+            attrs: { LANGUAGE: 'en', NAME: 'en' },
+          },
+          {
+            id: 1,
+            name: 'ru',
+            lang: 'ru',
+            attrs: { LANGUAGE: 'ru', NAME: 'ru' },
+          },
         ],
       });
 
@@ -78,8 +88,18 @@ describe('TimelineController', function () {
 
       timelineController.onSubtitleTracksUpdated(Events.MANIFEST_LOADED, {
         subtitleTracks: [
-          { id: 0, name: 'ru', attrs: { LANGUAGE: 'ru', NAME: 'ru' } },
-          { id: 1, name: 'en', attrs: { LANGUAGE: 'en', NAME: 'en' } },
+          {
+            id: 0,
+            name: 'ru',
+            lang: 'ru',
+            attrs: { LANGUAGE: 'ru', NAME: 'ru' },
+          },
+          {
+            id: 1,
+            name: 'en',
+            lang: 'en',
+            attrs: { LANGUAGE: 'en', NAME: 'en' },
+          },
         ],
       });
 

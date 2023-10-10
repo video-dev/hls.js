@@ -1,8 +1,14 @@
 import BasePlaylistController from './base-playlist-controller';
 import { Events } from '../events';
-import { clearCurrentCues } from '../utils/texttrack-utils';
+import {
+  clearCurrentCues,
+  filterSubtitleTracks,
+} from '../utils/texttrack-utils';
 import { PlaylistContextType } from '../types/loader';
-import { mediaAttributesIdentical } from '../utils/media-option-attributes';
+import {
+  mediaAttributesIdentical,
+  subtitleTrackMatchesTextTrack,
+} from '../utils/media-option-attributes';
 import type Hls from '../hls';
 import type { MediaPlaylist } from '../types/media-playlist';
 import type { HlsUrlParameters } from '../types/level';
@@ -52,7 +58,7 @@ class SubtitleTrackController extends BasePlaylistController {
   public set subtitleDisplay(value: boolean) {
     this._subtitleDisplay = value;
     if (this.trackId > -1) {
-      this.toggleTrackModes(this.trackId);
+      this.toggleTrackModes();
     }
   }
 
@@ -201,7 +207,7 @@ class SubtitleTrackController extends BasePlaylistController {
 
   private switchLevel(levelIndex: number) {
     const levelInfo = this.hls.levels[levelIndex];
-    if (!levelInfo?.textGroupIds) {
+    if (!levelInfo) {
       return;
     }
     const subtitleGroups = levelInfo.subtitleGroups || null;
@@ -213,22 +219,36 @@ class SubtitleTrackController extends BasePlaylistController {
       subtitleGroups?.some((groupId) => currentGroups?.indexOf(groupId) === -1)
     ) {
       this.groupIds = subtitleGroups;
+      this.trackId = -1;
+      this.currentTrack = null;
 
       const subtitleTracks = this.tracks.filter(
         (track): boolean =>
           !subtitleGroups || subtitleGroups.indexOf(track.groupId) !== -1,
       );
-      if (!subtitleTracks.length) {
-        this.trackId = -1;
-        this.currentTrack = null;
+      if (subtitleTracks.length) {
+        // Disable selectDefaultTrack if there are no default tracks
+        if (
+          this.selectDefaultTrack &&
+          !subtitleTracks.some(
+            (track) => track.default || track.forced || track.autoselect,
+          )
+        ) {
+          this.selectDefaultTrack = false;
+        }
+        // track.id should match hls.audioTracks index
+        subtitleTracks.forEach((track, i) => {
+          track.id = i;
+        });
+      } else if (!currentTrack && !this.tracksInGroup.length) {
+        // Do not dispatch SUBTITLE_TRACKS_UPDATED when there were and are no tracks
+        return;
       }
-      subtitleTracks.forEach((track, i) => {
-        track.id = i;
-      });
+
       this.tracksInGroup = subtitleTracks;
-      let initialTrackId = this.findTrackId(currentTrack);
-      if (initialTrackId === -1) {
-        initialTrackId = this.findTrackId(null);
+      let trackId = this.findTrackId(currentTrack);
+      if (trackId === -1 && currentTrack) {
+        trackId = this.findTrackId(null);
       }
 
       const subtitleTracksUpdated: SubtitleTracksUpdatedData = {
@@ -241,8 +261,8 @@ class SubtitleTrackController extends BasePlaylistController {
       );
       this.hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, subtitleTracksUpdated);
 
-      if (initialTrackId !== -1) {
-        this.setSubtitleTrack(initialTrackId);
+      if (trackId !== -1 && this.trackId === -1) {
+        this.setSubtitleTrack(trackId);
       }
     } else if (this.shouldReloadPlaylist(currentTrack)) {
       // Retry playlist loading if no playlist is or has been loaded yet
@@ -251,9 +271,19 @@ class SubtitleTrackController extends BasePlaylistController {
   }
 
   private findTrackId(currentTrack: MediaPlaylist | null): number {
-    const textTracks = this.tracksInGroup;
-    for (let i = 0; i < textTracks.length; i++) {
-      const track = textTracks[i];
+    const tracks = this.tracksInGroup;
+    const selectDefault = this.selectDefaultTrack;
+    for (let i = 0; i < tracks.length; i++) {
+      const track = tracks[i];
+      if (
+        (selectDefault &&
+          !track.default &&
+          !track.forced &&
+          !track.autoselect) ||
+        (!selectDefault && !currentTrack)
+      ) {
+        continue;
+      }
       if (
         !currentTrack ||
         mediaAttributesIdentical(currentTrack.attrs, track.attrs)
@@ -268,6 +298,24 @@ class SubtitleTrackController extends BasePlaylistController {
         ])
       ) {
         return track.id;
+      }
+      if (
+        mediaAttributesIdentical(currentTrack.attrs, track.attrs, ['LANGUAGE'])
+      ) {
+        return track.id;
+      }
+    }
+    return -1;
+  }
+
+  private findTrackForTextTrack(textTrack: TextTrack | null): number {
+    if (textTrack) {
+      const tracks = this.tracksInGroup;
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        if (subtitleTrackMatchesTextTrack(track, textTrack)) {
+          return i;
+        }
       }
     }
     return -1;
@@ -337,31 +385,35 @@ class SubtitleTrackController extends BasePlaylistController {
    * This operates on the DOM textTracks.
    * A value of -1 will disable all subtitle tracks.
    */
-  private toggleTrackModes(newId: number): void {
-    const { media, trackId } = this;
+  private toggleTrackModes(): void {
+    const { media } = this;
     if (!media) {
       return;
     }
 
     const textTracks = filterSubtitleTracks(media.textTracks);
-    const groupIds = this.groupIds;
-    const groupTracks = textTracks.filter(
-      (track) => !groupIds || groupIds.indexOf((track as any).groupId) !== -1,
-    );
-    if (newId === -1) {
-      [].slice.call(textTracks).forEach((track) => {
-        track.mode = 'disabled';
-      });
-    } else {
-      const oldTrack = groupTracks[trackId];
-      if (oldTrack) {
-        oldTrack.mode = 'disabled';
+    const currentTrack = this.currentTrack;
+    let nextTrack;
+    if (currentTrack) {
+      nextTrack = textTracks.filter((textTrack) =>
+        subtitleTrackMatchesTextTrack(currentTrack, textTrack),
+      )[0];
+      if (!nextTrack) {
+        this.warn(
+          `Unable to find subtitle TextTrack with name "${currentTrack.name}" and language "${currentTrack.lang}"`,
+        );
       }
     }
-
-    const nextTrack = groupTracks[newId];
+    [].slice.call(textTracks).forEach((track) => {
+      if (track.mode !== 'disabled' && track !== nextTrack) {
+        track.mode = 'disabled';
+      }
+    });
     if (nextTrack) {
-      nextTrack.mode = this.subtitleDisplay ? 'showing' : 'hidden';
+      const mode = this.subtitleDisplay ? 'showing' : 'hidden';
+      if (nextTrack.mode !== mode) {
+        nextTrack.mode = mode;
+      }
     }
   }
 
@@ -381,10 +433,6 @@ class SubtitleTrackController extends BasePlaylistController {
       return;
     }
 
-    if (this.trackId !== newId) {
-      this.toggleTrackModes(newId);
-    }
-
     // exit if track id as already set or invalid
     if (newId < -1 || newId >= tracks.length) {
       this.warn(`Invalid subtitle track id: ${newId}`);
@@ -394,10 +442,12 @@ class SubtitleTrackController extends BasePlaylistController {
     // stopping live reloading timer if any
     this.clearTimer();
 
+    this.selectDefaultTrack = false;
     const lastTrack = this.currentTrack;
     const track: MediaPlaylist | null = tracks[newId] || null;
     this.trackId = newId;
     this.currentTrack = track;
+    this.toggleTrackModes();
     if (!track) {
       // switch to -1
       this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
@@ -434,38 +484,24 @@ class SubtitleTrackController extends BasePlaylistController {
       return;
     }
 
-    let trackId: number = -1;
+    let textTrack: TextTrack | null = null;
     const tracks = filterSubtitleTracks(this.media.textTracks);
-    for (let id = 0; id < tracks.length; id++) {
-      if (tracks[id].mode === 'hidden') {
+    for (let i = 0; i < tracks.length; i++) {
+      if (tracks[i].mode === 'hidden') {
         // Do not break in case there is a following track with showing.
-        trackId = id;
-      } else if (tracks[id].mode === 'showing') {
-        trackId = id;
+        textTrack = tracks[i];
+      } else if (tracks[i].mode === 'showing') {
+        textTrack = tracks[i];
         break;
       }
     }
 
-    // Setting current subtitleTrack will invoke code.
+    // Find internal track index for TextTrack
+    const trackId = this.findTrackForTextTrack(textTrack);
     if (this.subtitleTrack !== trackId) {
-      this.subtitleTrack = trackId;
+      this.setSubtitleTrack(trackId);
     }
   }
-}
-
-function filterSubtitleTracks(textTrackList: TextTrackList): TextTrack[] {
-  const tracks: TextTrack[] = [];
-  for (let i = 0; i < textTrackList.length; i++) {
-    const track = textTrackList[i];
-    // Edge adds a track without a label; we don't want to use it
-    if (
-      (track.kind === 'subtitles' || track.kind === 'captions') &&
-      track.label
-    ) {
-      tracks.push(textTrackList[i]);
-    }
-  }
-  return tracks;
 }
 
 export default SubtitleTrackController;
