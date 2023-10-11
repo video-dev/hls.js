@@ -58,6 +58,9 @@ export default class GapController {
     // The playhead is moving, no-op
     if (currentTime !== lastCurrentTime) {
       this.moved = true;
+      if (!seeking) {
+        this.nudgeRetry = 0;
+      }
       if (stalled !== null) {
         // The playhead is now moving, but was previously stalled
         if (this.stallReported) {
@@ -70,7 +73,6 @@ export default class GapController {
           this.stallReported = false;
         }
         this.stalled = null;
-        this.nudgeRetry = 0;
       }
       return;
     }
@@ -88,6 +90,7 @@ export default class GapController {
       media.playbackRate === 0 ||
       !BufferHelper.getBuffered(media).length
     ) {
+      this.nudgeRetry = 0;
       return;
     }
 
