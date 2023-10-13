@@ -4,6 +4,7 @@
     "emitDeclarationOnly": false
   },
   "include": [
+    "*.js",
     "src/**/*",
     "tests/**/*",
     "demo/**/*",

@@ -96,7 +96,7 @@ const babelTsWithPresetEnvTargets = ({ targets, stripConsole }) =>
   babel({
     extensions,
     babelHelpers: 'bundled',
-    exclude: 'node_modules\/(?!(@svta)\/).*',
+    exclude: /node_modules\/(?!(@svta)\/).*/,
     assumptions: {
       noDocumentAll: true,
       noClassCalls: true,
