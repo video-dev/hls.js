@@ -25,16 +25,15 @@ const applyPlaylistData = (data = { frag: {} }) => {
   const context = Object.assign(data, base);
   cmcdController.applyPlaylistData(context);
   return context;
-}
+};
 
 const expectField = (result, expected) => {
   const regex = new RegExp(expected);
   expect(regex.test(result)).to.equal(true);
-}
+};
 
 describe('CMCDController', function () {
   describe('cmcdController instance', function () {
-
     describe('configuration', function () {
       it('does not modify requests when disabled', function () {
         setupEach();
