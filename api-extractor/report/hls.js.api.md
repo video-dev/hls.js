@@ -750,15 +750,8 @@ export class ChunkMetadata {
 // @public
 export class CMCDController implements ComponentAPI {
     constructor(hls: Hls);
-    static appendQueryToUri(uri: any, query: any): any;
     // (undocumented)
     destroy(): void;
-    // Warning: (ae-forgotten-export) The symbol "CMCD" needs to be exported by the entry point hls.d.ts
-    static serialize(data: CMCD): string;
-    // Warning: (ae-forgotten-export) The symbol "CMCDHeaders" needs to be exported by the entry point hls.d.ts
-    static toHeaders(data: CMCD): Partial<CMCDHeaders>;
-    static toQuery(data: CMCD): string;
-    static uuid(): string;
 }
 
 // Warning: (ae-missing-release-tag) "CMCDControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

@@ -1,12 +1,11 @@
 import { Events } from '../events';
 import Hls from '../hls';
-import {
-  CMCD,
-  CMCDHeaders,
-  CMCDObjectType,
-  CMCDStreamingFormatHLS,
-  CMCDVersion,
-} from '../types/cmcd';
+import { Cmcd } from '@svta/common-media-library/cmcd/Cmcd';
+import { CmcdObjectType } from '@svta/common-media-library/cmcd/CmcdObjectType';
+import { CmcdStreamingFormat } from '@svta/common-media-library/cmcd/CmcdStreamingFormat';
+import { appendCmcdHeaders } from '@svta/common-media-library/cmcd/appendCmcdHeaders';
+import { appendCmcdQuery } from '@svta/common-media-library/cmcd/appendCmcdQuery';
+import { uuid } from '@svta/common-media-library/utils/uuid';
 import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
 import type { ComponentAPI } from '../types/component-api';
@@ -52,7 +51,7 @@ export default class CMCDController implements ComponentAPI {
       config.pLoader = this.createPlaylistLoader();
       config.fLoader = this.createFragmentLoader();
 
-      this.sid = cmcd.sessionId || CMCDController.uuid();
+      this.sid = cmcd.sessionId || uuid();
       this.cid = cmcd.contentId;
       this.useHeaders = cmcd.useHeaders === true;
       this.registerListeners();
@@ -129,10 +128,10 @@ export default class CMCDController implements ComponentAPI {
   /**
    * Create baseline CMCD data
    */
-  private createData(): CMCD {
+  private createData(): Cmcd {
     return {
-      v: CMCDVersion,
-      sf: CMCDStreamingFormatHLS,
+      v: 1,
+      sf: CmcdStreamingFormat.HLS,
       sid: this.sid,
       cid: this.cid,
       pr: this.media?.playbackRate,
@@ -143,14 +142,14 @@ export default class CMCDController implements ComponentAPI {
   /**
    * Apply CMCD data to a request.
    */
-  private apply(context: LoaderContext, data: CMCD = {}) {
+  private apply(context: LoaderContext, data: Cmcd = {}) {
     // apply baseline data
     Object.assign(data, this.createData());
 
     const isVideo =
-      data.ot === CMCDObjectType.INIT ||
-      data.ot === CMCDObjectType.VIDEO ||
-      data.ot === CMCDObjectType.MUXED;
+      data.ot === CmcdObjectType.INIT ||
+      data.ot === CmcdObjectType.VIDEO ||
+      data.ot === CmcdObjectType.MUXED;
 
     if (this.starved && isVideo) {
       data.bs = true;
@@ -165,23 +164,13 @@ export default class CMCDController implements ComponentAPI {
     // TODO: Implement rtp, nrr, nor, dl
 
     if (this.useHeaders) {
-      const headers = CMCDController.toHeaders(data);
-      if (!Object.keys(headers).length) {
-        return;
-      }
-
       if (!context.headers) {
         context.headers = {};
       }
 
-      Object.assign(context.headers, headers);
+      appendCmcdHeaders(context.headers, data);
     } else {
-      const query = CMCDController.toQuery(data);
-      if (!query) {
-        return;
-      }
-
-      context.url = CMCDController.appendQueryToUri(context.url, query);
+      context.url = appendCmcdQuery(context.url, data);
     }
   }
 
@@ -191,7 +180,7 @@ export default class CMCDController implements ComponentAPI {
   private applyPlaylistData = (context: PlaylistLoaderContext) => {
     try {
       this.apply(context, {
-        ot: CMCDObjectType.MANIFEST,
+        ot: CmcdObjectType.MANIFEST,
         su: !this.initialized,
       });
     } catch (error) {
@@ -207,15 +196,15 @@ export default class CMCDController implements ComponentAPI {
       const fragment = context.frag;
       const level = this.hls.levels[fragment.level];
       const ot = this.getObjectType(fragment);
-      const data: CMCD = {
+      const data: Cmcd = {
         d: fragment.duration * 1000,
         ot,
       };
 
       if (
-        ot === CMCDObjectType.VIDEO ||
-        ot === CMCDObjectType.AUDIO ||
-        ot == CMCDObjectType.MUXED
+        ot === CmcdObjectType.VIDEO ||
+        ot === CmcdObjectType.AUDIO ||
+        ot == CmcdObjectType.MUXED
       ) {
         data.br = level.bitrate / 1000;
         data.tb = this.getTopBandwidth(ot) / 1000;
@@ -231,27 +220,27 @@ export default class CMCDController implements ComponentAPI {
   /**
    * The CMCD object type.
    */
-  private getObjectType(fragment: Fragment): CMCDObjectType | undefined {
+  private getObjectType(fragment: Fragment): CmcdObjectType | undefined {
     const { type } = fragment;
 
     if (type === 'subtitle') {
-      return CMCDObjectType.TIMED_TEXT;
+      return CmcdObjectType.TIMED_TEXT;
     }
 
     if (fragment.sn === 'initSegment') {
-      return CMCDObjectType.INIT;
+      return CmcdObjectType.INIT;
     }
 
     if (type === 'audio') {
-      return CMCDObjectType.AUDIO;
+      return CmcdObjectType.AUDIO;
     }
 
     if (type === 'main') {
       if (!this.hls.audioTracks.length) {
-        return CMCDObjectType.MUXED;
+        return CmcdObjectType.MUXED;
       }
 
-      return CMCDObjectType.VIDEO;
+      return CmcdObjectType.VIDEO;
     }
 
     return undefined;
@@ -260,12 +249,12 @@ export default class CMCDController implements ComponentAPI {
   /**
    * Get the highest bitrate.
    */
-  private getTopBandwidth(type: CMCDObjectType) {
+  private getTopBandwidth(type: CmcdObjectType) {
     let bitrate: number = 0;
     let levels;
     const hls = this.hls;
 
-    if (type === CMCDObjectType.AUDIO) {
+    if (type === CmcdObjectType.AUDIO) {
       levels = hls.audioTracks;
     } else {
       const max = hls.maxAutoLevel;
@@ -285,10 +274,10 @@ export default class CMCDController implements ComponentAPI {
   /**
    * Get the buffer length for a media type in milliseconds
    */
-  private getBufferLength(type: CMCDObjectType) {
+  private getBufferLength(type: CmcdObjectType) {
     const media = this.hls.media;
     const buffer =
-      type === CMCDObjectType.AUDIO ? this.audioBuffer : this.videoBuffer;
+      type === CmcdObjectType.AUDIO ? this.audioBuffer : this.videoBuffer;
 
     if (!buffer || !media) {
       return NaN;
@@ -385,154 +374,5 @@ export default class CMCDController implements ComponentAPI {
         this.loader.load(context, config, callbacks);
       }
     };
-  }
-
-  /**
-   * Generate a random v4 UUI
-   *
-   * @returns {string}
-   */
-  static uuid(): string {
-    const url = URL.createObjectURL(new Blob());
-    const uuid = url.toString();
-    URL.revokeObjectURL(url);
-    return uuid.slice(uuid.lastIndexOf('/') + 1);
-  }
-
-  /**
-   * Serialize a CMCD data object according to the rules defined in the
-   * section 3.2 of
-   * [CTA-5004](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf).
-   */
-  static serialize(data: CMCD): string {
-    const results: string[] = [];
-    const isValid = (value: any) =>
-      !Number.isNaN(value) && value != null && value !== '' && value !== false;
-    const toRounded = (value: number) => Math.round(value);
-    const toHundred = (value: number) => toRounded(value / 100) * 100;
-    const toUrlSafe = (value: string) => encodeURIComponent(value);
-    const formatters = {
-      br: toRounded,
-      d: toRounded,
-      bl: toHundred,
-      dl: toHundred,
-      mtp: toHundred,
-      nor: toUrlSafe,
-      rtp: toHundred,
-      tb: toRounded,
-    };
-
-    const keys = Object.keys(data || {}).sort();
-
-    for (const key of keys) {
-      let value = data[key];
-
-      // ignore invalid values
-      if (!isValid(value)) {
-        continue;
-      }
-
-      // Version should only be reported if not equal to 1.
-      if (key === 'v' && value === 1) {
-        continue;
-      }
-
-      // Playback rate should only be sent if not equal to 1.
-      if (key == 'pr' && value === 1) {
-        continue;
-      }
-
-      // Certain values require special formatting
-      const formatter = formatters[key];
-      if (formatter) {
-        value = formatter(value);
-      }
-
-      // Serialize the key/value pair
-      const type = typeof value;
-      let result: string;
-
-      if (key === 'ot' || key === 'sf' || key === 'st') {
-        result = `${key}=${value}`;
-      } else if (type === 'boolean') {
-        result = key;
-      } else if (type === 'number') {
-        result = `${key}=${value}`;
-      } else {
-        result = `${key}=${JSON.stringify(value)}`;
-      }
-
-      results.push(result);
-    }
-
-    return results.join(',');
-  }
-
-  /**
-   * Convert a CMCD data object to request headers according to the rules
-   * defined in the section 2.1 and 3.2 of
-   * [CTA-5004](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf).
-   */
-  static toHeaders(data: CMCD): Partial<CMCDHeaders> {
-    const keys = Object.keys(data);
-    const headers = {};
-    const headerNames = ['Object', 'Request', 'Session', 'Status'];
-    const headerGroups = [{}, {}, {}, {}];
-    const headerMap = {
-      br: 0,
-      d: 0,
-      ot: 0,
-      tb: 0,
-      bl: 1,
-      dl: 1,
-      mtp: 1,
-      nor: 1,
-      nrr: 1,
-      su: 1,
-      cid: 2,
-      pr: 2,
-      sf: 2,
-      sid: 2,
-      st: 2,
-      v: 2,
-      bs: 3,
-      rtp: 3,
-    };
-
-    for (const key of keys) {
-      // Unmapped fields are mapped to the Request header
-      const index = headerMap[key] != null ? headerMap[key] : 1;
-      headerGroups[index][key] = data[key];
-    }
-
-    for (let i = 0; i < headerGroups.length; i++) {
-      const value = CMCDController.serialize(headerGroups[i]);
-      if (value) {
-        headers[`CMCD-${headerNames[i]}`] = value;
-      }
-    }
-
-    return headers;
-  }
-
-  /**
-   * Convert a CMCD data object to query args according to the rules
-   * defined in the section 2.2 and 3.2 of
-   * [CTA-5004](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf).
-   */
-  static toQuery(data: CMCD): string {
-    return `CMCD=${encodeURIComponent(CMCDController.serialize(data))}`;
-  }
-
-  /**
-   * Append query args to a uri.
-   */
-  static appendQueryToUri(uri, query) {
-    if (!query) {
-      return uri;
-    }
-
-    const separator = uri.includes('?') ? '&' : '?';
-    return `${uri}${separator}${query}`;
   }
 }
