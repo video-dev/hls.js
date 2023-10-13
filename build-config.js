@@ -29,7 +29,7 @@ const buildTypeToOutputName = {
   light: `hls.light`,
 };
 
-/* Allow to customise builds through env-vars */
+/* Allow to customize builds through env-vars */
 // eslint-disable-next-line no-undef
 const env = process.env;
 
@@ -96,7 +96,7 @@ const babelTsWithPresetEnvTargets = ({ targets, stripConsole }) =>
   babel({
     extensions,
     babelHelpers: 'bundled',
-    exclude: 'node_modules/**',
+    exclude: 'node_modules\/(?!(@svta)\/).*',
     assumptions: {
       noDocumentAll: true,
       noClassCalls: true,
