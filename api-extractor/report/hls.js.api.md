@@ -85,6 +85,8 @@ export class AttrList {
     // (undocumented)
     bool(attrName: string): boolean;
     // (undocumented)
+    get clientAttrs(): string[];
+    // (undocumented)
     decimalFloatingPoint(attrName: string): number;
     // (undocumented)
     decimalInteger(attrName: string): number;
