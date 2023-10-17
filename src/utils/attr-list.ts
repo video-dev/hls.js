@@ -9,16 +9,11 @@ export class AttrList {
     if (typeof attrs === 'string') {
       attrs = AttrList.parseAttrList(attrs);
     }
+    Object.assign(this, attrs);
+  }
 
-    for (const attr in attrs) {
-      if (attrs.hasOwnProperty(attr)) {
-        if (attr.substring(0, 2) === 'X-') {
-          this.clientAttrs = this.clientAttrs || [];
-          this.clientAttrs.push(attr);
-        }
-        this[attr] = attrs[attr];
-      }
-    }
+  get clientAttrs(): string[] {
+    return Object.keys(this).filter((attr) => attr.substring(0, 2) === 'X-');
   }
 
   decimalInteger(attrName: string): number {
