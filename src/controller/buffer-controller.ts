@@ -203,10 +203,10 @@ export default class BufferController implements ComponentAPI {
         try {
           media.removeAttribute('src');
           // ManagedMediaSource will not open without disableRemotePlayback set to false or source alternatives
+          const MMS = (self as any).ManagedMediaSource;
           media.disableRemotePlayback =
-            media.disableRemotePlayback ||
-            ms instanceof (self as any).ManagedMediaSource;
-          removeChildren(media);
+            media.disableRemotePlayback || (MMS && ms instanceof MMS);
+          removeSourceChildren(media);
           addSource(media, objectUrl);
           media.load();
         } catch (error) {
@@ -219,32 +219,16 @@ export default class BufferController implements ComponentAPI {
     }
   }
   private _onEndStreaming = (event) => {
+    if (!this.hls) {
+      return;
+    }
     this.hls.pauseBuffering();
   };
   private _onStartStreaming = (event) => {
-    const { hls, mediaSource } = this;
-    if (!hls || !mediaSource) {
+    if (!this.hls) {
       return;
     }
-    if ('quality' in mediaSource) {
-      if (mediaSource.quality === 'low') {
-        hls.autoLevelCapping = CapLevelController.getMaxLevelByMediaSize(
-          hls.levels,
-          1280,
-          720,
-        );
-      } else if (mediaSource.quality === 'medium') {
-        hls.autoLevelCapping = CapLevelController.getMaxLevelByMediaSize(
-          hls.levels,
-          1920,
-          1080,
-        );
-      } else {
-        // do not cap max quality
-        hls.autoLevelCapping = -1;
-      }
-    }
-    hls.resumeBuffering();
+    this.hls.resumeBuffering();
   };
 
   protected onMediaDetaching() {
@@ -285,7 +269,7 @@ export default class BufferController implements ComponentAPI {
         if (this.mediaSrc === _objectUrl) {
           media.removeAttribute('src');
           if (this.appendSource) {
-            removeChildren(media);
+            removeSourceChildren(media);
           }
           media.load();
         } else {
@@ -335,8 +319,8 @@ export default class BufferController implements ComponentAPI {
     data: BufferCodecsData,
   ) {
     const sourceBufferCount = this.getSourceBufferTypes().length;
-
-    Object.keys(data).forEach((trackName) => {
+    const trackNames = Object.keys(data);
+    trackNames.forEach((trackName) => {
       if (sourceBufferCount) {
         // check if SourceBuffer codec needs to change
         const track = this.tracks[trackName];
@@ -387,10 +371,19 @@ export default class BufferController implements ComponentAPI {
       return;
     }
 
-    this.bufferCodecEventsExpected = Math.max(
+    const bufferCodecEventsExpected = Math.max(
       this.bufferCodecEventsExpected - 1,
       0,
     );
+    if (this.bufferCodecEventsExpected !== bufferCodecEventsExpected) {
+      this.log(
+        `${bufferCodecEventsExpected} bufferCodec event(s) expected ${trackNames.join(
+          ',',
+        )}`,
+      );
+      this.bufferCodecEventsExpected = this._bufferCodecEventsTotal =
+        bufferCodecEventsExpected;
+    }
     if (this.mediaSource && this.mediaSource.readyState === 'open') {
       this.checkPendingTracks();
     }
@@ -561,7 +554,7 @@ export default class BufferController implements ComponentAPI {
         // logger.debug(`[buffer-controller]: Finished flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
         this.hls.trigger(Events.BUFFER_FLUSHED, { type });
       },
-      onError: (error) => {
+      onError: (error: Error) => {
         this.warn(`Failed to remove from ${type} SourceBuffer`, error);
       },
     });
@@ -880,8 +873,10 @@ export default class BufferController implements ComponentAPI {
     // 2 tracks is the max (one for audio, one for video). If we've reach this max go ahead and create the buffers.
     const pendingTracksCount = Object.keys(pendingTracks).length;
     if (
-      (pendingTracksCount && !bufferCodecEventsExpected) ||
-      pendingTracksCount === 2
+      pendingTracksCount &&
+      (!bufferCodecEventsExpected ||
+        pendingTracksCount === 2 ||
+        'audiovideo' in pendingTracks)
     ) {
       // ok, let's create them now !
       this.createSourceBuffers(pendingTracks);
@@ -1170,10 +1165,11 @@ export default class BufferController implements ComponentAPI {
   }
 }
 
-function removeChildren(node: HTMLElement) {
-  while (node.firstChild) {
-    node.removeChild(node.firstChild);
-  }
+function removeSourceChildren(node: HTMLElement) {
+  const sourceChildren = node.querySelectorAll('source');
+  [].slice.call(sourceChildren).forEach((source) => {
+    node.removeChild(source);
+  });
 }
 
 function addSource(media: HTMLMediaElement, url: string) {

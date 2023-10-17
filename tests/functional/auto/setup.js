@@ -112,6 +112,9 @@ async function testIdleBufferLength(url, config) {
       self.startStream(url, config, callback, autoplay);
       const video = self.video;
       const maxBufferLength = self.hls.config.maxBufferLength;
+      if (self.ManagedMediaSource) {
+        config.avBufferOffset = Math.max(config.avBufferOffset || 0, 3);
+      }
       video.onprogress = function () {
         const buffered = video.buffered;
         if (buffered.length) {
