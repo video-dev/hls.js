@@ -79,7 +79,7 @@
     "@rollup/plugin-replace": "5.0.3",
     "@rollup/plugin-terser": "0.4.4",
     "@rollup/plugin-typescript": "11.1.5",
-    "@types/chai": "4.3.7",
+    "@types/chai": "4.3.8",
     "@types/chart.js": "2.9.38",
     "@types/mocha": "10.0.2",
     "@types/sinon-chai": "3.2.10",
