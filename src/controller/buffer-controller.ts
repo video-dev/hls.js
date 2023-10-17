@@ -219,32 +219,16 @@ export default class BufferController implements ComponentAPI {
     }
   }
   private _onEndStreaming = (event) => {
+    if (!this.hls) {
+      return;
+    }
     this.hls.pauseBuffering();
   };
   private _onStartStreaming = (event) => {
-    const { hls, mediaSource } = this;
-    if (!hls || !mediaSource) {
+    if (!this.hls) {
       return;
     }
-    if ('quality' in mediaSource) {
-      if (mediaSource.quality === 'low') {
-        hls.autoLevelCapping = CapLevelController.getMaxLevelByMediaSize(
-          hls.levels,
-          1280,
-          720,
-        );
-      } else if (mediaSource.quality === 'medium') {
-        hls.autoLevelCapping = CapLevelController.getMaxLevelByMediaSize(
-          hls.levels,
-          1920,
-          1080,
-        );
-      } else {
-        // do not cap max quality
-        hls.autoLevelCapping = -1;
-      }
-    }
-    hls.resumeBuffering();
+    this.hls.resumeBuffering();
   };
 
   protected onMediaDetaching() {
