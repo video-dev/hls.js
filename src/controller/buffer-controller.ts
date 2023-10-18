@@ -942,7 +942,7 @@ export default class BufferController implements ComponentAPI {
             (type: SourceBufferName, event: BufferedChangeEvent) => {
               // If media was ejected check for a change. Added ranges are redundant with changes on 'updateend' event.
               const removedRanges = event.removedRanges;
-              if (removedRanges) {
+              if (removedRanges?.length) {
                 this.hls.trigger(Events.BUFFER_FLUSHED, {
                   type: trackName as SourceBufferName,
                 });
