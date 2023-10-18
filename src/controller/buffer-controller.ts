@@ -16,7 +16,6 @@ import {
   SourceBufferName,
   SourceBufferListeners,
 } from '../types/buffer';
-import CapLevelController from './cap-level-controller';
 import type {
   LevelUpdatedData,
   BufferAppendingData,
