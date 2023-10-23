@@ -763,6 +763,7 @@ export type CMCDControllerConfig = {
     sessionId?: string;
     contentId?: string;
     useHeaders?: boolean;
+    includeKeys?: string[];
 };
 
 // Warning: (ae-missing-release-tag) "ComponentAPI" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
