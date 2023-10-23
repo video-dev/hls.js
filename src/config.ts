@@ -66,6 +66,7 @@ export type CMCDControllerConfig = {
   sessionId?: string;
   contentId?: string;
   useHeaders?: boolean;
+  includeKeys?: string[];
 };
 
 export type DRMSystemOptions = {

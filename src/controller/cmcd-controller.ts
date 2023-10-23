@@ -36,6 +36,7 @@ export default class CMCDController implements ComponentAPI {
   private sid?: string;
   private cid?: string;
   private useHeaders: boolean = false;
+  private includeKeys?: string[];
   private initialized: boolean = false;
   private starved: boolean = false;
   private buffering: boolean = true;
@@ -54,6 +55,7 @@ export default class CMCDController implements ComponentAPI {
       this.sid = cmcd.sessionId || uuid();
       this.cid = cmcd.contentId;
       this.useHeaders = cmcd.useHeaders === true;
+      this.includeKeys = cmcd.includeKeys;
       this.registerListeners();
     }
   }
@@ -162,6 +164,16 @@ export default class CMCDController implements ComponentAPI {
     }
 
     // TODO: Implement rtp, nrr, nor, dl
+
+    const { includeKeys } = this;
+    if (includeKeys) {
+      data = Object.keys(data)
+        .filter((key) => includeKeys.includes(key))
+        .reduce((acc, key) => {
+          acc[key] = data[key];
+          return acc;
+        }, {});
+    }
 
     if (this.useHeaders) {
       if (!context.headers) {
