@@ -81,7 +81,7 @@
     "@rollup/plugin-typescript": "11.1.5",
     "@types/chai": "4.3.9",
     "@types/chart.js": "2.9.38",
-    "@types/mocha": "10.0.2",
+    "@types/mocha": "10.0.3",
     "@types/sinon-chai": "3.2.10",
     "@typescript-eslint/eslint-plugin": "6.9.0",
     "@typescript-eslint/parser": "6.9.0",
