@@ -1005,7 +1005,6 @@ export function parseSEIMessageFromNALu(
       }
       b = data[seiPtr++];
       payloadSize += b;
-      payloadSize &= 0xff;
     } while (b === 0xff);
 
     const leftOver = data.length - seiPtr;
@@ -1018,8 +1017,9 @@ export function parseSEIMessageFromNALu(
     } else if (payloadSize > leftOver) {
       // Some type of corruption has happened?
       logger.error(
-        `SEI payload of ${payloadSize} is too small, only ${leftOver} bytes left.`,
+        `Malformed SEI payload. ${payloadSize} is too small, only ${leftOver} bytes left to parse.`,
       );
+      // We might be able to parse some data, but let's be safe and ignore it.
       break;
     }
 
