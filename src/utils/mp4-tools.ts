@@ -983,10 +983,10 @@ export function parseSEIMessageFromNALu(
   seiPtr += headerSize;
   let payloadType = 0;
   let payloadSize = 0;
-  let endOfCaptions = false;
   let b = 0;
 
   while (seiPtr < data.length) {
+    // payloadType is a uint8, so we need to mask it when extracting it and the pyloadSize
     payloadType = 0;
     do {
       if (seiPtr >= data.length) {
@@ -994,6 +994,7 @@ export function parseSEIMessageFromNALu(
       }
       b = data[seiPtr++];
       payloadType += b;
+      payloadType &= 0xff;
     } while (b === 0xff);
 
     // Parse payload size.
@@ -1004,28 +1005,40 @@ export function parseSEIMessageFromNALu(
       }
       b = data[seiPtr++];
       payloadSize += b;
+      payloadSize &= 0xff;
     } while (b === 0xff);
 
     const leftOver = data.length - seiPtr;
+    // Create a variable to process the payload
+    let payPtr = seiPtr;
 
-    if (!endOfCaptions && payloadType === 4 && seiPtr < data.length) {
-      endOfCaptions = true;
+    // Increment the seiPtr to the end of the payload
+    if (payloadSize < leftOver) {
+      seiPtr += payloadSize;
+    } else if (payloadSize > leftOver) {
+      // Some type of corruption has happened?
+      logger.error(
+        `SEI payload of ${payloadSize} is too small, only ${leftOver} bytes left.`,
+      );
+      break;
+    }
 
-      const countryCode = data[seiPtr++];
+    if (payloadType === 4) {
+      const countryCode = data[payPtr++];
       if (countryCode === 181) {
-        const providerCode = readUint16(data, seiPtr);
-        seiPtr += 2;
+        const providerCode = readUint16(data, payPtr);
+        payPtr += 2;
 
         if (providerCode === 49) {
-          const userStructure = readUint32(data, seiPtr);
-          seiPtr += 4;
+          const userStructure = readUint32(data, payPtr);
+          payPtr += 4;
 
           if (userStructure === 0x47413934) {
-            const userDataType = data[seiPtr++];
+            const userDataType = data[payPtr++];
 
             // Raw CEA-608 bytes wrapped in CEA-708 packet
             if (userDataType === 3) {
-              const firstByte = data[seiPtr++];
+              const firstByte = data[payPtr++];
               const totalCCs = 0x1f & firstByte;
               const enabled = 0x40 & firstByte;
               const totalBytes = enabled ? 2 + totalCCs * 3 : 0;
@@ -1033,7 +1046,7 @@ export function parseSEIMessageFromNALu(
               if (enabled) {
                 byteArray[0] = firstByte;
                 for (let i = 1; i < totalBytes; i++) {
-                  byteArray[i] = data[seiPtr++];
+                  byteArray[i] = data[payPtr++];
                 }
               }
 
@@ -1047,13 +1060,11 @@ export function parseSEIMessageFromNALu(
           }
         }
       }
-    } else if (payloadType === 5 && payloadSize < leftOver) {
-      endOfCaptions = true;
-
+    } else if (payloadType === 5) {
       if (payloadSize > 16) {
         const uuidStrArray: Array<string> = [];
         for (let i = 0; i < 16; i++) {
-          const b = data[seiPtr++].toString(16);
+          const b = data[payPtr++].toString(16);
           uuidStrArray.push(b.length == 1 ? '0' + b : b);
 
           if (i === 3 || i === 5 || i === 7 || i === 9) {
@@ -1063,7 +1074,7 @@ export function parseSEIMessageFromNALu(
         const length = payloadSize - 16;
         const userDataBytes = new Uint8Array(length);
         for (let i = 0; i < length; i++) {
-          userDataBytes[i] = data[seiPtr++];
+          userDataBytes[i] = data[payPtr++];
         }
 
         samples.push({
@@ -1074,10 +1085,6 @@ export function parseSEIMessageFromNALu(
           userDataBytes,
         });
       }
-    } else if (payloadSize < leftOver) {
-      seiPtr += payloadSize;
-    } else if (payloadSize > leftOver) {
-      break;
     }
   }
 }
