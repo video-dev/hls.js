@@ -14,7 +14,7 @@ import type { RetryConfig } from '../config';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { ErrorData } from '../types/events';
 import type { Fragment } from '../loader/fragment';
-import type { LevelDetails } from '../hls';
+import type { LevelDetails } from '../loader/level-details';
 
 const RENDITION_PENALTY_DURATION_MS = 300000;
 
