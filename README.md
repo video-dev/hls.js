@@ -101,7 +101,7 @@ The following properties are added to their respective variants' attribute list 
 - `#EXT-X-DISCONTINUITY-SEQUENCE=<n>`
 - `#EXT-X-BYTERANGE=<n>[@<o>]`
 - `#EXT-X-MAP:<attribute-list>`
-- `#EXT-X-KEY:<attribute-list>` (`METHOD=SAMPLE-AES` is only supports with MPEG-2 TS segments)
+- `#EXT-X-KEY:<attribute-list>` (`KEYFORMAT="identity",METHOD=SAMPLE-AES` is only supports with MPEG-2 TS segments)
 - `#EXT-X-PROGRAM-DATE-TIME:<attribute-list>`
 - `#EXT-X-START:TIME-OFFSET=<n>`
 - `#EXT-X-SERVER-CONTROL:<attribute-list>`
@@ -128,7 +128,7 @@ For a complete list of issues, see ["Top priorities" in the Release Planning and
 
 - HLS Interstitials
 - `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
-- `SAMPLE-AES` with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
+- "identity" format `SAMPLE-AES` method keys with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
 - MPEG-2 TS segments with FairPlay Streaming, PlayReady, or Widevine encryption 
 - FairPlay Streaming legacy keys (For com.apple.fps.1_0 use native Safari playback)
 - MP3 elementary stream audio in IE and Edge (<=18) on Windows 10 (See [#1641](https://github.com/video-dev/hls.js/issues/1641) and [Microsoft answers forum](https://answers.microsoft.com/en-us/ie/forum/all/ie11-on-windows-10-cannot-play-hls-with-mp3/2da994b5-8dec-4ae9-9201-7d138ede49d9))
