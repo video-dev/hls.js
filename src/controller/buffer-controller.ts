@@ -380,8 +380,7 @@ export default class BufferController implements ComponentAPI {
           ',',
         )}`,
       );
-      this.bufferCodecEventsExpected = this._bufferCodecEventsTotal =
-        bufferCodecEventsExpected;
+      this.bufferCodecEventsExpected = bufferCodecEventsExpected;
     }
     if (this.mediaSource && this.mediaSource.readyState === 'open') {
       this.checkPendingTracks();
