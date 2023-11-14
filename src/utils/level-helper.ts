@@ -189,7 +189,6 @@ export function mergeDetails(
       newFrag.elementaryStreams = oldFrag.elementaryStreams;
       newFrag.loader = oldFrag.loader;
       newFrag.stats = oldFrag.stats;
-      newFrag.urlId = oldFrag.urlId;
       if (oldFrag.initSegment) {
         newFrag.initSegment = oldFrag.initSegment;
         currentInitSegment = oldFrag.initSegment;

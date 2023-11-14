@@ -470,8 +470,8 @@ export default class Hls implements HlsEventEmitter {
     }
   }
 
-  removeLevel(levelIndex, urlId = 0) {
-    this.levelController.removeLevel(levelIndex, urlId);
+  removeLevel(levelIndex: number) {
+    this.levelController.removeLevel(levelIndex);
   }
 
   /**

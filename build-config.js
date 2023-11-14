@@ -61,7 +61,7 @@ const buildConstants = (type, additional = {}) => ({
     __USE_EME_DRM__: JSON.stringify(type === BUILD_TYPE.full || addEMESupport),
     __USE_CMCD__: JSON.stringify(type === BUILD_TYPE.full || addCMCDSupport),
     __USE_CONTENT_STEERING__: JSON.stringify(
-      type === BUILD_TYPE.full || addContentSteeringSupport,
+      type === BUILD_TYPE.full || BUILD_TYPE.light || addContentSteeringSupport,
     ),
     __USE_VARIABLE_SUBSTITUTION__: JSON.stringify(
       type === BUILD_TYPE.full || addVariableSubstitutionSupport,

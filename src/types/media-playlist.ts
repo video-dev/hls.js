@@ -1,9 +1,5 @@
-import type { LevelParsed } from './level';
 import type { AttrList } from '../utils/attr-list';
-export interface AudioGroup {
-  id?: string;
-  codec?: string;
-}
+import type { LevelDetails } from '../loader/level-details';
 
 export type AudioPlaylistType = 'AUDIO';
 
@@ -14,11 +10,15 @@ export type SubtitlePlaylistType = 'SUBTITLES' | 'CLOSED-CAPTIONS';
 export type MediaPlaylistType = MainPlaylistType | SubtitlePlaylistType;
 
 // audioTracks, captions and subtitles returned by `M3U8Parser.parseMasterPlaylistMedia`
-export interface MediaPlaylist extends Omit<LevelParsed, 'attrs'> {
+export interface MediaPlaylist {
   attrs: MediaAttributes;
+  audioCodec?: string;
   autoselect: boolean; // implicit false if not present
+  bitrate: number;
   channels?: string;
   characteristics?: string;
+  details?: LevelDetails;
+  height?: number;
   default: boolean; // implicit false if not present
   forced: boolean; // implicit false if not present
   groupId: string; // required in HLS playlists
@@ -26,8 +26,13 @@ export interface MediaPlaylist extends Omit<LevelParsed, 'attrs'> {
   instreamId?: string;
   lang?: string;
   name: string;
+  textCodec?: string;
+  unknownCodecs?: string[];
   // 'main' is a custom type added to signal a audioCodec in main track?; see playlist-loader~L310
   type: MediaPlaylistType | 'main';
+  url: string;
+  videoCodec?: string;
+  width?: number;
 }
 
 export interface MediaAttributes extends AttrList {

@@ -656,11 +656,7 @@ export default class StreamController
       (this.state === State.FRAG_LOADING ||
         this.state === State.FRAG_LOADING_WAITING_RETRY)
     ) {
-      if (
-        (fragCurrent.level !== data.level ||
-          fragCurrent.urlId !== curLevel.urlId) &&
-        fragCurrent.loader
-      ) {
+      if (fragCurrent.level !== data.level && fragCurrent.loader) {
         this.abortCurrentFrag();
       }
     }
@@ -1395,8 +1391,7 @@ export default class StreamController
         if (
           !fragPlaying ||
           fragPlayingCurrent.sn !== fragPlaying.sn ||
-          fragPlaying.level !== fragCurrentLevel ||
-          fragPlayingCurrent.urlId !== fragPlaying.urlId
+          fragPlaying.level !== fragCurrentLevel
         ) {
           this.fragPlaying = fragPlayingCurrent;
           this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });

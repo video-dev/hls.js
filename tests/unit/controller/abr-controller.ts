@@ -152,7 +152,7 @@ describe('AbrController', function () {
       expect(abrController.forcedAutoLevel).to.equal(1);
       expect(abrController.nextAutoLevel).to.equal(1);
 
-      loadAndBufferFragment(abrController, 0, 5e6, 1000);
+      loadAndBufferFragment(abrController, 1, 5e6, 1000);
       expect(abrController.forcedAutoLevel).to.equal(-1);
       expect(abrController.nextAutoLevel).to.equal(5);
     });

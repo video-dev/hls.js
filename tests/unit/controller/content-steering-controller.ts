@@ -296,8 +296,8 @@ describe('ContentSteeringController', function () {
         'attrs.PATHWAY-ID': 'Baz',
       });
       expect(switchingEvent.payload).to.deep.include({
-        audioGroupIds: ['AAC-baz'],
-        textGroupIds: ['subs-baz'],
+        audioGroups: ['AAC-baz'],
+        subtitleGroups: ['subs-baz'],
         uri: 'http://www.baz.com/tier6.m3u8',
       });
 
@@ -381,8 +381,8 @@ describe('ContentSteeringController', function () {
           'attrs.PATHWAY-ID': 'Buzz',
         });
         expect(switchingEvent.payload).to.deep.include({
-          audioGroupIds: ['AAC-foo_clone_Buzz'],
-          textGroupIds: ['subs-foo_clone_Buzz'],
+          audioGroups: ['AAC-foo_clone_Buzz'],
+          subtitleGroups: ['subs-foo_clone_Buzz'],
           uri: 'http://www.buzz.com/tier6.m3u8',
         });
 
@@ -459,9 +459,9 @@ describe('ContentSteeringController', function () {
                 'BASE-ID': 'Foo',
                 'URI-REPLACEMENT': {
                   'PER-VARIANT-URIS': {
-                    foo1: 'http://www.buzz.com/1.m3u8?fallback=true',
-                    foo2: 'http://www.buzz.com/2.m3u8?fallback=true',
-                    foo3: 'http://www.buzz.com/3.m3u8?fallback=true',
+                    tier6: 'http://www.buzz.com/tier6.m3u8?fallback=true',
+                    tier10: 'http://www.buzz.com/tier10.m3u8?fallback=true',
+                    tier14: 'http://www.buzz.com/tier14.m3u8?fallback=true',
                   },
                 },
               },
@@ -486,21 +486,57 @@ describe('ContentSteeringController', function () {
           .that.has.lengthOf(10, 'LEVELS_UPDATED levels');
         const eventData = updatedEvent.payload as LevelsUpdatedData;
         expect(eventData.levels[0].pathwayId).to.equal('Buzz');
-        expect(eventData.levels[0].attrs['STABLE-VARIANT-ID']).to.equal('foo1');
+        expect(
+          eventData.levels.map(({ attrs }) => attrs['STABLE-VARIANT-ID']),
+        ).to.deep.equal(
+          [
+            'tier6',
+            'tier6',
+            'tier10',
+            'tier10',
+            'tier14',
+            'tier14',
+            'tier16',
+            'tier16',
+            'tier18',
+            'tier18',
+          ],
+          JSON.stringify(
+            eventData.levels.map(
+              ({
+                attrs: {
+                  'PATHWAY-ID': pathwayId,
+                  'STABLE-VARIANT-ID': stableVariantId,
+                  RESOLUTION,
+                  CODECS,
+                  BANDWIDTH,
+                },
+              }) => ({
+                pathwayId,
+                stableVariantId,
+                RESOLUTION,
+                CODECS,
+                BANDWIDTH,
+              }),
+            ),
+            null,
+            2,
+          ),
+        );
         expect(eventData.levels[0].uri).to.equal(
-          'http://www.buzz.com/1.m3u8?fallback=true',
+          'http://www.buzz.com/tier6.m3u8?fallback=true',
         );
-        expect(eventData.levels[1].attrs['STABLE-VARIANT-ID']).to.equal('foo2');
-        expect(eventData.levels[1].uri).to.equal(
-          'http://www.buzz.com/2.m3u8?fallback=true',
-        );
-        expect(eventData.levels[2].attrs['STABLE-VARIANT-ID']).to.equal('foo3');
         expect(eventData.levels[2].uri).to.equal(
-          'http://www.buzz.com/3.m3u8?fallback=true',
+          'http://www.buzz.com/tier10.m3u8?fallback=true',
         );
-        expect(eventData.levels[3].attrs['STABLE-VARIANT-ID']).to.equal('foo4');
-        expect(eventData.levels[3].uri).to.equal(
-          'http://www.foo.com/tier10.m3u8',
+        expect(eventData.levels[4].uri).to.equal(
+          'http://www.buzz.com/tier14.m3u8?fallback=true',
+        );
+        expect(eventData.levels[6].uri).to.equal(
+          'http://www.foo.com/tier16.m3u8',
+        );
+        expect(eventData.levels[8].uri).to.equal(
+          'http://www.foo.com/tier18.m3u8',
         );
       });
 
@@ -514,12 +550,10 @@ describe('ContentSteeringController', function () {
                 'BASE-ID': 'Foo',
                 'URI-REPLACEMENT': {
                   'PER-RENDITION-URIS': {
-                    'audio-foo1':
-                      'http://z.buzz.com/audio_aac.m3u8?fallback=true',
-                    'audio-foo2':
-                      'http://z.buzz.com/audio_ec3.m3u8?fallback=true',
-                    'subs-foo1': 'http://z.buzz.com/subs-en.m3u8?fallback=true',
-                    'subs-foo2': 'http://z.buzz.com/subs-it.m3u8?fallback=true',
+                    audio_aac: 'http://z.buzz.com/audio_aac.m3u8?fallback=true',
+                    audio_ec3: 'http://z.buzz.com/audio_ec3.m3u8?fallback=true',
+                    'subs-en': 'http://z.buzz.com/subs-en.m3u8?fallback=true',
+                    'subs-it': 'http://z.buzz.com/subs-it.m3u8?fallback=true',
                   },
                 },
               },
@@ -536,7 +570,7 @@ describe('ContentSteeringController', function () {
         );
         expect(
           audioTrackController.tracks[6].attrs['STABLE-RENDITION-ID'],
-        ).to.equal('audio-foo1');
+        ).to.equal('audio_aac');
         expect(audioTrackController.tracks[6].groupId).to.equal(
           'AAC-foo_clone_Buzz',
         );
@@ -548,7 +582,7 @@ describe('ContentSteeringController', function () {
         );
         expect(
           audioTrackController.tracks[7].attrs['STABLE-RENDITION-ID'],
-        ).to.equal('audio-foo2');
+        ).to.equal('audio_ec3');
         expect(audioTrackController.tracks[7].groupId).to.equal(
           'EC3-foo_clone_Buzz',
         );
@@ -564,7 +598,7 @@ describe('ContentSteeringController', function () {
           .that.has.lengthOf(1, 'AUDIO_TRACKS_UPDATED audioTracks');
         expect(eventData.audioTracks[0].attrs['PATHWAY-ID']).to.equal('Buzz');
         expect(eventData.audioTracks[0].attrs['STABLE-RENDITION-ID']).to.equal(
-          'audio-foo1',
+          'audio_aac',
         );
         expect(eventData.audioTracks[0].url).to.equal(
           'http://z.buzz.com/audio_aac.m3u8?fallback=true',
@@ -588,7 +622,7 @@ describe('ContentSteeringController', function () {
         );
         expect(
           subsEventData.subtitleTracks[0].attrs['STABLE-RENDITION-ID'],
-        ).to.equal('subs-foo1');
+        ).to.equal('subs-en');
         expect(subsEventData.subtitleTracks[0].url).to.equal(
           'http://z.buzz.com/subs-en.m3u8?fallback=true',
         );
@@ -597,7 +631,7 @@ describe('ContentSteeringController', function () {
         );
         expect(
           subsEventData.subtitleTracks[1].attrs['STABLE-RENDITION-ID'],
-        ).to.equal('subs-foo2');
+        ).to.equal('subs-it');
         expect(subsEventData.subtitleTracks[1].url).to.equal(
           'http://z.buzz.com/subs-it.m3u8?fallback=true',
         );
@@ -617,7 +651,7 @@ describe('ContentSteeringController', function () {
                     cloned: 'buzz',
                   },
                   'PER-VARIANT-URIS': {
-                    foo2: 'http://www.buzz.com/2.m3u8?fallback=true',
+                    tier10: 'http://www.buzz.com/tier10.m3u8?fallback=true',
                   },
                 },
               },
@@ -652,9 +686,11 @@ describe('ContentSteeringController', function () {
         expect(eventData.levels[0].uri).to.equal(
           'http://www.bear.com/tier6.m3u8?cloned=buzz',
         );
-        expect(eventData.levels[1].attrs['STABLE-VARIANT-ID']).to.equal('foo2');
-        expect(eventData.levels[1].uri).to.equal(
-          'http://www.bear.com/2.m3u8?fallback=true&cloned=buzz',
+        expect(eventData.levels[2].attrs['STABLE-VARIANT-ID']).to.equal(
+          'tier10',
+        );
+        expect(eventData.levels[2].uri).to.equal(
+          'http://www.bear.com/tier10.m3u8?fallback=true&cloned=buzz',
         );
 
         expect(hls.getEventData(4).name).to.equal(Events.AUDIO_TRACKS_UPDATED);

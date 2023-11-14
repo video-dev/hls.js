@@ -110,6 +110,16 @@ export function mimeTypeForCodec(codec: string, type: CodecType): string {
   return `${type}/mp4;codecs="${codec}"`;
 }
 
+export function videoCodecPreferenceValue(
+  videoCodec: string | undefined,
+): number {
+  if (videoCodec) {
+    const fourCC = videoCodec.substring(0, 4);
+    return sampleEntryCodesISO.video[fourCC];
+  }
+  return 2;
+}
+
 export function codecsSetSelectionPreferenceValue(codecSet: string): number {
   return codecSet.split(',').reduce((num, fourCC) => {
     const preferenceValue = sampleEntryCodesISO.video[fourCC];
@@ -184,4 +194,18 @@ export function pickMostCompleteCodecName(
     return parsedCodec;
   }
   return levelCodec;
+}
+
+export function convertAVC1ToAVCOTI(codec: string) {
+  // Convert avc1 codec string from RFC-4281 to RFC-6381 for MediaSource.isTypeSupported
+  const avcdata = codec.split('.');
+  if (avcdata.length > 2) {
+    let result = avcdata.shift() + '.';
+    result += parseInt(avcdata.shift() as string).toString(16);
+    result += ('000' + parseInt(avcdata.shift() as string).toString(16)).slice(
+      -4,
+    );
+    return result;
+  }
+  return codec;
 }

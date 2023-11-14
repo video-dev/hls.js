@@ -30,7 +30,7 @@ type HlsTestable = Omit<
   'levelController' | 'networkControllers' | 'coreComponents'
 > & {
   levelController: {
-    levels: Pick<Level, 'urlId' | 'audioGroups'>[];
+    levels: Pick<Level, 'audioGroups'>[];
   };
   coreComponents: ComponentAPI[];
   networkControllers: NetworkComponentAPI[];
@@ -53,7 +53,7 @@ type AudioTrackControllerTestable = Omit<
 > & {
   tracks: MediaPlaylist[];
   tracksInGroup: MediaPlaylist[];
-  groupId: string | null;
+  groupIds: (string | undefined)[] | null;
   trackId: number;
   canLoad: boolean;
   timer: number;
@@ -86,7 +86,6 @@ describe('AudioTrackController', function () {
     hls.levelController = {
       levels: [
         {
-          urlId: 1,
           audioGroups: ['2'],
         },
       ],
@@ -233,7 +232,7 @@ describe('AudioTrackController', function () {
     });
 
     const newLevelInfo = hls.levels[0];
-    const newGroupId = newLevelInfo.audioGroupId;
+    const audioGroups = newLevelInfo.audioGroups;
 
     audioTrackController.tracks = tracks;
     // Update the level to set audioGroupId
@@ -250,7 +249,9 @@ describe('AudioTrackController', function () {
     });
 
     // group has switched
-    expect(audioTrackController.groupId).to.equal(newGroupId);
+    expect(audioGroups).to.include(
+      tracks[audioTrackController.audioTrack].groupId,
+    );
     // name is still the same
     expect(tracks[audioTrackController.audioTrack].name).to.equal(
       audioTrackName,
@@ -350,7 +351,7 @@ describe('AudioTrackController', function () {
       };
 
       const newLevelInfo = hls.levels[levelLoadedEvent.level];
-      const newGroupId = newLevelInfo.audioGroupId;
+      const audioGroups = newLevelInfo.audioGroups;
 
       audioTrackController.tracks = tracks;
       audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
@@ -367,7 +368,9 @@ describe('AudioTrackController', function () {
       );
 
       // group has switched
-      expect(audioTrackController.groupId).to.equal(newGroupId);
+      expect(audioGroups).to.include(
+        tracks[audioTrackController.audioTrack].groupId,
+      );
       // name is still the same
       expect(tracks[audioTrackController.audioTrack].name).to.equal(
         audioTrackName,
@@ -398,7 +401,6 @@ describe('AudioTrackController', function () {
       hls.levelController = {
         levels: [
           {
-            urlId: 0,
             audioGroups: ['1'],
           },
         ],
@@ -438,7 +440,6 @@ describe('AudioTrackController', function () {
       hls.levelController = {
         levels: [
           {
-            urlId: 0,
             audioGroups: ['1'],
           },
         ],
@@ -465,7 +466,7 @@ describe('AudioTrackController', function () {
       const currentTrackId = 4;
       const currentGroupId = 'aac';
       audioTrackController.trackId = currentTrackId;
-      audioTrackController.groupId = currentGroupId;
+      audioTrackController.groupIds = [currentGroupId];
       audioTrackController.tracks = tracks;
 
       audioTrackController.onError(Events.ERROR, {

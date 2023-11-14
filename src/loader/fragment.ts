@@ -136,7 +136,7 @@ export class Fragment extends BaseSegment {
   public minEndPTS?: number;
   // Load/parse timing information
   public stats: LoadStats = new LoadStats();
-  public urlId: number = 0;
+  // Init Segment bytes (unset for media segments)
   public data?: Uint8Array;
   // A flag indicating whether the segment was downloaded in order to test bitrate, and was not buffered
   public bitrateTest: boolean = false;
@@ -148,6 +148,8 @@ export class Fragment extends BaseSegment {
   public endList?: boolean;
   // Fragment is marked by an EXT-X-GAP tag indicating that it does not contain media data and should not be loaded
   public gap?: boolean;
+  // Deprecated
+  public urlId: number = 0;
 
   constructor(type: PlaylistLevelType, baseurl: string) {
     super(baseurl);

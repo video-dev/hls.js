@@ -7,6 +7,7 @@ import type {
   HdcpLevel,
   HlsUrlParameters,
   Level,
+  LevelAttributes,
   LevelParsed,
   VariableMap,
 } from './level';
@@ -120,8 +121,32 @@ export interface ManifestParsedData {
   altAudio: boolean;
 }
 
-export interface LevelSwitchingData extends Omit<Level, '_urlId'> {
+export interface LevelSwitchingData {
   level: number;
+  attrs: LevelAttributes;
+  details: LevelDetails | undefined;
+  bitrate: number;
+  averageBitrate: number;
+  maxBitrate: number;
+  realBitrate: number;
+  width: number;
+  height: number;
+  codecSet: string;
+  audioCodec: string | undefined;
+  videoCodec: string | undefined;
+  audioGroups: (string | undefined)[] | undefined;
+  subtitleGroups: (string | undefined)[] | undefined;
+  loaded: { bytes: number; duration: number } | undefined;
+  loadError: number;
+  fragmentError: number;
+  name: string | undefined;
+  id: number;
+  uri: string;
+  // Deprecated (retained for backwards compatibility)
+  url: string[];
+  urlId: 0;
+  audioGroupIds: (string | undefined)[] | undefined;
+  textGroupIds: (string | undefined)[] | undefined;
 }
 
 export interface LevelSwitchedData {

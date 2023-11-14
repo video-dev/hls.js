@@ -13,13 +13,14 @@ import type {
   ManifestParsedData,
 } from '../types/events';
 import type { RetryConfig } from '../config';
-import type {
-  Loader,
-  LoaderCallbacks,
-  LoaderConfiguration,
-  LoaderContext,
-  LoaderResponse,
-  LoaderStats,
+import {
+  PlaylistContextType,
+  type Loader,
+  type LoaderCallbacks,
+  type LoaderConfiguration,
+  type LoaderContext,
+  type LoaderResponse,
+  type LoaderStats,
 } from '../types/loader';
 import type { LevelParsed } from '../types/level';
 import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
@@ -175,14 +176,25 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       errorAction?.action === NetworkErrorAction.SendAlternateToPenaltyBox &&
       errorAction.flags === ErrorActionFlags.MoveAllAlternatesMatchingHost
     ) {
+      const levels = this.levels;
       let pathwayPriority = this.pathwayPriority;
-      const pathwayId = this.pathwayId;
-      if (!this.penalizedPathways[pathwayId]) {
-        this.penalizedPathways[pathwayId] = performance.now();
+      let errorPathway = this.pathwayId;
+      // Match network error URL to level pathway
+      if (data.context?.type === PlaylistContextType.LEVEL && levels) {
+        const levelUrl = data.context.url;
+        for (let i = levels.length; i--; ) {
+          if (levels[i].uri === levelUrl) {
+            errorPathway = levels[i].pathwayId;
+            break;
+          }
+        }
       }
-      if (!pathwayPriority && this.levels) {
+      if (!this.penalizedPathways[errorPathway]) {
+        this.penalizedPathways[errorPathway] = performance.now();
+      }
+      if (!pathwayPriority && levels) {
         // If PATHWAY-PRIORITY was not provided, list pathways for error handling
-        pathwayPriority = this.levels.reduce((pathways, level) => {
+        pathwayPriority = levels.reduce((pathways, level) => {
           if (pathways.indexOf(level.pathwayId) === -1) {
             pathways.push(level.pathwayId);
           }
@@ -191,7 +203,18 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       }
       if (pathwayPriority && pathwayPriority.length > 1) {
         this.updatePathwayPriority(pathwayPriority);
-        errorAction.resolved = this.pathwayId !== pathwayId;
+        errorAction.resolved = this.pathwayId !== errorPathway;
+      }
+      if (!errorAction.resolved) {
+        logger.warn(
+          `Could not resolve ${data.details} ("${
+            data.error.message
+          }") with content-steering for Pathway: ${errorPathway} levels: ${
+            levels ? levels.length : levels
+          } priorities: ${JSON.stringify(
+            pathwayPriority,
+          )} penalized: ${JSON.stringify(this.penalizedPathways)}`,
+        );
       }
     }
   }
@@ -238,7 +261,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     });
     for (let i = 0; i < pathwayPriority.length; i++) {
       const pathwayId = pathwayPriority[i];
-      if (penalizedPathways[pathwayId]) {
+      if (pathwayId in penalizedPathways) {
         continue;
       }
       if (pathwayId === this.pathwayId) {
@@ -313,8 +336,22 @@ export default class ContentSteeringController implements NetworkComponentAPI {
           }
           levelParsed.attrs = attributes;
           const clonedLevel = new Level(levelParsed);
-          clonedLevel.addGroupId('audio', clonedAudioGroupId, -1);
-          clonedLevel.addGroupId('text', clonedSubtitleGroupId, -1);
+          if (baseLevel.audioGroups) {
+            for (let i = 1; i < baseLevel.audioGroups.length; i++) {
+              clonedLevel.addGroupId(
+                'audio',
+                `${baseLevel.audioGroups[i]}_clone_${cloneId}`,
+              );
+            }
+          }
+          if (baseLevel.subtitleGroups) {
+            for (let i = 1; i < baseLevel.subtitleGroups.length; i++) {
+              clonedLevel.addGroupId(
+                'text',
+                `${baseLevel.subtitleGroups[i]}_clone_${cloneId}`,
+              );
+            }
+          }
           return clonedLevel;
         },
       );
