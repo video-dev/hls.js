@@ -610,6 +610,7 @@ export default class LevelController extends BasePlaylistController {
       this.hls.trigger(Events.LEVEL_LOADING, {
         url,
         level: currentLevelIndex,
+        pathwayId: currentLevel.attrs['PATHWAY-ID'],
         id: 0, // Deprecated Level urlId
         deliveryDirectives: hlsUrlParameters || null,
       });

@@ -163,6 +163,7 @@ export interface TrackLoadingData {
 export interface LevelLoadingData {
   id: number;
   level: number;
+  pathwayId: string | undefined;
   url: string;
   deliveryDirectives: HlsUrlParameters | null;
 }

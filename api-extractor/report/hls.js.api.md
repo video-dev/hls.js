@@ -2311,6 +2311,8 @@ export interface LevelLoadingData {
     // (undocumented)
     level: number;
     // (undocumented)
+    pathwayId: string | undefined;
+    // (undocumented)
     url: string;
 }
 
@@ -3039,6 +3041,8 @@ export interface PlaylistLoaderContext extends LoaderContext {
     level: number | null;
     // (undocumented)
     levelDetails?: LevelDetails;
+    // (undocumented)
+    pathwayId?: string;
     // (undocumented)
     type: PlaylistContextType;
 }

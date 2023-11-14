@@ -162,10 +162,11 @@ class PlaylistLoader implements NetworkComponentAPI {
   }
 
   private onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData) {
-    const { id, level, url, deliveryDirectives } = data;
+    const { id, level, pathwayId, url, deliveryDirectives } = data;
     this.load({
       id,
       level,
+      pathwayId,
       responseType: 'text',
       type: PlaylistContextType.LEVEL,
       url,

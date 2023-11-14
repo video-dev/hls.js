@@ -179,17 +179,15 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       const levels = this.levels;
       let pathwayPriority = this.pathwayPriority;
       let errorPathway = this.pathwayId;
-      // Match network error URL to level pathway
-      if (data.context?.type === PlaylistContextType.LEVEL && levels) {
-        const levelUrl = data.context.url;
-        for (let i = levels.length; i--; ) {
-          if (levels[i].uri === levelUrl) {
-            errorPathway = levels[i].pathwayId;
-            break;
-          }
+      if (data.context) {
+        const { groupId, pathwayId, type } = data.context;
+        if (groupId && levels) {
+          errorPathway = this.getPathwayForGroupId(groupId, type, errorPathway);
+        } else if (pathwayId) {
+          errorPathway = pathwayId;
         }
       }
-      if (!this.penalizedPathways[errorPathway]) {
+      if (!(errorPathway in this.penalizedPathways)) {
         this.penalizedPathways[errorPathway] = performance.now();
       }
       if (!pathwayPriority && levels) {
@@ -292,6 +290,27 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         break;
       }
     }
+  }
+
+  private getPathwayForGroupId(
+    groupId: string,
+    type: PlaylistContextType,
+    defaultPathway: string,
+  ): string {
+    const levels = this.getLevelsForPathway(defaultPathway).concat(
+      this.levels || [],
+    );
+    for (let i = 0; i < levels.length; i++) {
+      if (
+        (type === PlaylistContextType.AUDIO_TRACK &&
+          levels[i].hasAudioGroup(groupId)) ||
+        (type === PlaylistContextType.SUBTITLE_TRACK &&
+          levels[i].hasSubtitleGroup(groupId))
+      ) {
+        return levels[i].pathwayId;
+      }
+    }
+    return defaultPathway;
   }
 
   private clonePathways(pathwayClones: PathwayClone[]) {
