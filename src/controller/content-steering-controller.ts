@@ -95,14 +95,13 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     this.clearTimeout();
     if (this.enabled && this.uri) {
       if (this.updated) {
-        const ttl = Math.max(
-          this.timeToLoad * 1000 - (performance.now() - this.updated),
-          0,
-        );
-        this.scheduleRefresh(this.uri, ttl);
-      } else {
-        this.loadSteeringManifest(this.uri);
+        const ttl = this.timeToLoad * 1000 - (performance.now() - this.updated);
+        if (ttl > 0) {
+          this.scheduleRefresh(this.uri, ttl);
+          return;
+        }
       }
+      this.loadSteeringManifest(this.uri);
     }
   }
 
@@ -522,7 +521,12 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   private scheduleRefresh(uri: string, ttlMs: number = this.timeToLoad * 1000) {
     this.clearTimeout();
     this.reloadTimer = self.setTimeout(() => {
-      this.loadSteeringManifest(uri);
+      const media = this.hls?.media;
+      if (media && !media.ended) {
+        this.loadSteeringManifest(uri);
+        return;
+      }
+      this.scheduleRefresh(uri, this.timeToLoad * 1000);
     }, ttlMs);
   }
 }
