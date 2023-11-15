@@ -79,6 +79,8 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`pLoader`](#ploader)
   - [`xhrSetup`](#xhrsetup)
   - [`fetchSetup`](#fetchsetup)
+  - [`audioPreference`](#audiopreference)
+  - [`subtitlePreference`](#subtitlepreference)
   - [`abrController`](#abrcontroller)
   - [`bufferController`](#buffercontroller)
   - [`capLevelController`](#caplevelcontroller)
@@ -146,9 +148,13 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.startLoad(startPosition=-1)`](#hlsstartloadstartposition-1)
   - [`hls.stopLoad()`](#hlsstopload)
 - [Audio Tracks Control API](#audio-tracks-control-api)
+  - [`hls.setAudioOption(audioOption)`](#hlssetaudiooptionaudiooption)
+  - [`hls.allAudioTracks`](#hlsallaudiotracks)
   - [`hls.audioTracks`](#hlsaudiotracks)
   - [`hls.audioTrack`](#hlsaudiotrack)
 - [Subtitle Tracks Control API](#subtitle-tracks-control-api)
+  - [`hls.setSubtitleOption(subtitleOption)`](#hlssetsubtitleoptionsubtitleoption)
+  - [`hls.allSubtitleTracks`](#hlsallsubtitletracks)
   - [`hls.subtitleTracks`](#hlssubtitletracks)
   - [`hls.subtitleTrack`](#hlssubtitletrack)
   - [`hls.subtitleDisplay`](#hlssubtitledisplay)
@@ -379,19 +385,30 @@ var config = {
   preferManagedMediaSource: false,
   enableWorker: true,
   enableSoftwareAES: true,
-  manifestLoadingTimeOut: 10000,
-  manifestLoadingMaxRetry: 1,
-  manifestLoadingRetryDelay: 1000,
-  manifestLoadingMaxRetryTimeout: 64000,
+  fragLoadPolicy: {
+    default: {
+      maxTimeToFirstByteMs: 9000,
+      maxLoadTimeMs: 100000,
+      timeoutRetry: {
+        maxNumRetry: 2,
+        retryDelayMs: 0,
+        maxRetryDelayMs: 0,
+      },
+      errorRetry: {
+        maxNumRetry: 5,
+        retryDelayMs: 3000,
+        maxRetryDelayMs: 15000,
+        backoff: 'linear',
+      },
+    },
+  },
   startLevel: undefined,
-  levelLoadingTimeOut: 10000,
-  levelLoadingMaxRetry: 4,
-  levelLoadingRetryDelay: 1000,
-  levelLoadingMaxRetryTimeout: 64000,
-  fragLoadingTimeOut: 20000,
-  fragLoadingMaxRetry: 6,
-  fragLoadingRetryDelay: 1000,
-  fragLoadingMaxRetryTimeout: 64000,
+  audioPreference: {
+    characteristics: 'public.accessibility.describes-video',
+  },
+  subtitlePreference: {
+    lang: 'en-US',
+  },
   startFragPrefetch: false,
   testBandwidth: true,
   progressive: false,
@@ -435,7 +452,11 @@ var config = {
   drmSystems: {},
   drmSystemOptions: {},
   requestMediaKeySystemAccessFunc: requestMediaKeySystemAccess,
-  cmcd: undefined,
+  cmcd: {
+    sessionId: uuid(),
+    contentId: hash(contentURL),
+    useHeaders: false,
+  },
 };
 
 var hls = new Hls(config);
@@ -1124,6 +1145,18 @@ var config = {
 };
 ```
 
+### `audioPreference`
+
+(default: `undefined`)
+
+Set a preference used to find and select the best matching audio track on start. The selection can influence starting level selection based on the audio group(s) available to match the preference. `audioPreference` accepts a value of an audio track object (MediaPlaylist), AudioSelectionOption (track fields to match), or undefined. If not set or set to a value of `undefined`, HLS.js will auto select a default track on start.
+
+### `subtitlePreference`
+
+(default: `undefined`)
+
+Set a preference used to find and select the best matching subtitle track on start. `subtitlePreference` accepts a value of a subtitle track object (MediaPlaylist), SubtitleSelectionOption (track fields to match), or undefined. If not set or set to a value of `undefined`, HLS.js will not enable subtitles unless there is a default or forced option.
+
 ### `abrController`
 
 (default: internal ABR controller)
@@ -1701,23 +1734,39 @@ stop playlist/fragment loading. could be resumed later on by calling `hls.startL
 
 ## Audio Tracks Control API
 
+### `hls.setAudioOption(audioOption)`
+
+Find and select the best matching audio track, making a level switch when a Group change is necessary. Updates `hls.config.audioPreference`. Returns the selected track or null when no matching track is found.
+
+### `hls.allAudioTracks`
+
+get : array of all supported audio tracks found in the Multivariant Playlist
+
 ### `hls.audioTracks`
 
-get : array of audio tracks exposed in manifest
+get : array of supported audio tracks in the active audio group ID
 
 ### `hls.audioTrack`
 
-get/set : audio track id (returned by)
+get/set : index of selected audio track in `hls.audioTracks`
 
 ## Subtitle Tracks Control API
 
+### `hls.setSubtitleOption(subtitleOption)`
+
+Find and select the best matching subtitle track, making a level switch when a Group change is necessary. Updates `hls.config.subtitlePreference`. Returns the selected track or null when no matching track is found.
+
+### `hls.allSubtitleTracks`
+
+get : array of all subtitle tracks found in the Multivariant Playlist
+
 ### `hls.subtitleTracks`
 
-get : array of subtitle tracks exposed in manifest
+get : array of subtitle tracks in the active subtitle group ID
 
 ### `hls.subtitleTrack`
 
-get/set : subtitle track id (returned by). Returns -1 if no track is visible. Set to -1 to disable all subtitle tracks.
+get/set : index of selected subtitle track in `hls.subtitleTracks`. Returns -1 if no track is visible. Set to -1 to disable all subtitle tracks.
 
 ### `hls.subtitleDisplay`
 

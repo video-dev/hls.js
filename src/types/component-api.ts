@@ -5,8 +5,11 @@ export interface ComponentAPI {
 }
 
 export interface AbrComponentAPI extends ComponentAPI {
+  firstAutoLevel: number;
+  forcedAutoLevel: number;
   nextAutoLevel: number;
   readonly bwEstimator?: EwmaBandWidthEstimator;
+  resetEstimator(abrEwmaDefaultEstimate: number);
 }
 
 export interface NetworkComponentAPI extends ComponentAPI {
