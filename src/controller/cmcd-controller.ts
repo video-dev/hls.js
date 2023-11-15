@@ -167,12 +167,10 @@ export default class CMCDController implements ComponentAPI {
 
     const { includeKeys } = this;
     if (includeKeys) {
-      data = Object.keys(data)
-        .filter((key) => includeKeys.includes(key))
-        .reduce((acc, key) => {
-          acc[key] = data[key];
-          return acc;
-        }, {});
+      data = Object.keys(data).reduce((acc, key) => {
+        includeKeys.includes(key) && (acc[key] = data[key]);
+        return acc;
+      }, {});
     }
 
     if (this.useHeaders) {
