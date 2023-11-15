@@ -56,7 +56,7 @@ export class LevelDetails {
   public variableList: VariableMap | null = null;
   public hasVariableRefs = false;
 
-  constructor(baseUrl) {
+  constructor(baseUrl: string) {
     this.fragments = [];
     this.encryptedFragments = [];
     this.dateRanges = {};

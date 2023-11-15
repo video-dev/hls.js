@@ -548,8 +548,8 @@ export default class BaseStreamController
     return (
       !frag ||
       !fragCurrent ||
-      frag.level !== fragCurrent.level ||
-      frag.sn !== fragCurrent.sn
+      frag.sn !== fragCurrent.sn ||
+      frag.level !== fragCurrent.level
     );
   }
 

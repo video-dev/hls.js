@@ -6,6 +6,10 @@ import { LoadStats } from '../../../src/loader/load-stats';
 import { AttrList } from '../../../src/utils/attr-list';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { Events, HlsListeners } from '../../../src/events';
+import {
+  MediaAttributes,
+  MediaPlaylist,
+} from '../../../src/types/media-playlist';
 import Hls from '../../../src/hls';
 
 import sinon from 'sinon';
@@ -106,6 +110,53 @@ describe('AbrController', function () {
         0,
         'firstAutoLevel capped to 0',
       );
+    });
+
+    it('ignores starting level with config.audioPreference.channels when not within bandwidth estimate', function () {
+      const { levels, audioTracks } = getMultiChannelAudioLevels();
+      (hls as any).levelController._levels = levels;
+      (hls as any).audioTrackController.tracks = audioTracks;
+      hls.config.audioPreference = {
+        channels: '6',
+      };
+      const bwe = hls.bandwidthEstimate;
+      expect(bwe).to.equal(5e5);
+      const firstAutoLevel = abrController.firstAutoLevel;
+      const level = hls.levels[firstAutoLevel];
+      expect(level.bitrate).to.be.lessThanOrEqual(bwe);
+      expect(level.codecSet).to.equal('avc1,mp4a');
+      expect(level.height).to.equal(1080);
+      expect(firstAutoLevel).to.equal(5);
+    });
+
+    it('returns starting level with config.audioPreference.channels when within bandwidth estimate', function () {
+      const { levels, audioTracks } = getMultiChannelAudioLevels();
+      (hls as any).levelController._levels = levels;
+      (hls as any).audioTrackController.tracks = audioTracks;
+      hls.config.audioPreference = {
+        channels: '6',
+      };
+      hls.bandwidthEstimate = 501000;
+      const firstAutoLevel = abrController.firstAutoLevel;
+      const level = hls.levels[firstAutoLevel];
+      expect(level.codecSet).to.equal('hevc,ac-3');
+      expect(level.height).to.equal(720);
+      expect(firstAutoLevel).to.equal(3);
+    });
+
+    it('returns starting level with config.audioPreference.audioCodec when within bandwidth estimate', function () {
+      const { levels, audioTracks } = getMultiChannelAudioLevels();
+      (hls as any).levelController._levels = levels;
+      (hls as any).audioTrackController.tracks = audioTracks;
+      hls.config.audioPreference = {
+        audioCodec: 'ec-3',
+      };
+      hls.bandwidthEstimate = 511000;
+      const firstAutoLevel = abrController.firstAutoLevel;
+      const level = hls.levels[firstAutoLevel];
+      expect(level.codecSet).to.equal('hevc,ec-3');
+      expect(level.height).to.equal(720);
+      expect(firstAutoLevel).to.equal(4);
     });
 
     it('returns hls.firstLevel when match cannot be found', function () {
@@ -339,4 +390,160 @@ function getMultiCodecLevels(): Level[] {
     },
   ];
   return parsedLevels.map((parsedLevel) => new Level(parsedLevel));
+}
+
+function getMultiChannelAudioLevels(): {
+  levels: Level[];
+  audioTracks: MediaPlaylist[];
+} {
+  const parsedLevels: LevelParsed[] = [
+    {
+      bitrate: 336280,
+      name: '480',
+      width: 852,
+      height: 480,
+      details: levelDetailsWithDuration(10),
+      attrs: new AttrList({ AUDIO: 'mp4a' }),
+      url: '',
+      videoCodec: 'avc1',
+      audioCodec: 'mp4a',
+    },
+    {
+      bitrate: 414928,
+      name: '720',
+      width: 1280,
+      height: 720,
+      details: levelDetailsWithDuration(10),
+      attrs: new AttrList({ AUDIO: 'mp4a' }),
+      url: '',
+      videoCodec: 'avc1',
+      audioCodec: 'mp4a',
+    },
+    {
+      bitrate: 480928,
+      name: '720',
+      width: 1280,
+      height: 720,
+      details: levelDetailsWithDuration(10),
+      attrs: new AttrList({ AUDIO: 'mp4a' }),
+      url: '',
+      videoCodec: 'hevc',
+      audioCodec: 'mp4a',
+    },
+    {
+      bitrate: 500928,
+      name: '720',
+      width: 1280,
+      height: 720,
+      details: levelDetailsWithDuration(10),
+      attrs: new AttrList({ AUDIO: 'ac-3' }),
+      url: '',
+      videoCodec: 'hevc',
+      audioCodec: 'ac-3',
+    },
+    {
+      bitrate: 510928,
+      name: '720',
+      width: 1280,
+      height: 720,
+      details: levelDetailsWithDuration(10),
+      attrs: new AttrList({ AUDIO: 'ec-3' }),
+      url: '',
+      videoCodec: 'hevc',
+      audioCodec: 'ec-3',
+    },
+    {
+      bitrate: 480000,
+      name: '1080',
+      width: 1920,
+      height: 1080,
+      details: levelDetailsWithDuration(10),
+      attrs: new AttrList({ AUDIO: 'mp4a' }),
+      url: '',
+      videoCodec: 'avc1',
+      audioCodec: 'mp4a',
+    },
+    {
+      bitrate: 500060,
+      name: '1080',
+      width: 1920,
+      height: 1080,
+      details: levelDetailsWithDuration(10),
+      attrs: new AttrList({ AUDIO: 'mp4a' }),
+      url: '',
+      videoCodec: 'hevc',
+      audioCodec: 'mp4a',
+    },
+    {
+      bitrate: 510060,
+      name: '1080',
+      width: 1920,
+      height: 1080,
+      details: levelDetailsWithDuration(10),
+      attrs: new AttrList({ AUDIO: 'ac-3' }),
+      url: '',
+      videoCodec: 'hevc',
+      audioCodec: 'ac-3',
+    },
+    {
+      bitrate: 520060,
+      name: '1080',
+      width: 1920,
+      height: 1080,
+      details: levelDetailsWithDuration(10),
+      attrs: new AttrList({ AUDIO: 'ec-3' }),
+      url: '',
+      videoCodec: 'hevc',
+      audioCodec: 'ec-3',
+    },
+  ];
+  const levels = parsedLevels.map((parsedLevel) => {
+    const level = new Level(parsedLevel);
+    return level;
+  });
+  const audioTracks: MediaPlaylist[] = [
+    {
+      attrs: new AttrList({}) as MediaAttributes,
+      autoselect: true,
+      bitrate: 0,
+      default: true,
+      forced: false,
+      channels: '2',
+      groupId: 'mp4a',
+      name: 'English',
+      type: 'AUDIO',
+      id: 0,
+      url: 'data://',
+    },
+    {
+      attrs: new AttrList({}) as MediaAttributes,
+      autoselect: true,
+      bitrate: 0,
+      default: true,
+      forced: false,
+      channels: '6',
+      groupId: 'ac-3',
+      name: 'English',
+      type: 'AUDIO',
+      id: 0,
+      url: 'data://',
+    },
+    {
+      attrs: new AttrList({}) as MediaAttributes,
+      autoselect: true,
+      bitrate: 0,
+      default: true,
+      forced: false,
+      channels: '16/JOC',
+      groupId: 'ec-3',
+      name: 'English',
+      type: 'AUDIO',
+      id: 0,
+      url: 'data://',
+    },
+  ];
+  return {
+    levels,
+    audioTracks,
+  };
 }

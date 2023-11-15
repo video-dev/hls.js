@@ -3,8 +3,17 @@ import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { PlaylistContextType } from '../types/loader';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
+import {
+  audioMatchPredicate,
+  findClosestLevelWithAudioGroup,
+  findMatchingOption,
+  matchesOption,
+} from '../utils/rendition-helper';
 import type Hls from '../hls';
-import type { MediaPlaylist } from '../types/media-playlist';
+import type {
+  AudioSelectionOption,
+  MediaPlaylist,
+} from '../types/media-playlist';
 import type { HlsUrlParameters } from '../types/level';
 import type {
   ManifestParsedData,
@@ -118,7 +127,7 @@ class AudioTrackController extends BasePlaylistController {
     }
     const audioGroups = levelInfo.audioGroups || null;
     const currentGroups = this.groupIds;
-    const currentTrack = this.currentTrack;
+    let currentTrack = this.currentTrack;
     if (
       !audioGroups ||
       currentGroups?.length !== audioGroups?.length ||
@@ -147,6 +156,10 @@ class AudioTrackController extends BasePlaylistController {
       } else if (!currentTrack && !this.tracksInGroup.length) {
         // Do not dispatch AUDIO_TRACKS_UPDATED when there were and are no tracks
         return;
+      }
+
+      if (!currentTrack) {
+        currentTrack = this.setAudioOption(this.hls.config.audioPreference);
       }
 
       this.tracksInGroup = audioTracks;
@@ -220,6 +233,69 @@ class AudioTrackController extends BasePlaylistController {
     this.setAudioTrack(newId);
   }
 
+  public setAudioOption(
+    audioOption: MediaPlaylist | AudioSelectionOption | undefined,
+  ): MediaPlaylist | null {
+    const hls = this.hls;
+    hls.config.audioPreference = audioOption;
+    if (audioOption) {
+      const allAudioTracks = this.allAudioTracks;
+      this.selectDefaultTrack = false;
+      if (allAudioTracks.length) {
+        // First see if current option matches (no switch op)
+        const currentTrack = this.currentTrack;
+        if (
+          currentTrack &&
+          matchesOption(audioOption, currentTrack, audioMatchPredicate)
+        ) {
+          return currentTrack;
+        }
+        // Find option in available tracks (tracksInGroup)
+        const groupIndex = findMatchingOption(
+          audioOption,
+          this.tracksInGroup,
+          audioMatchPredicate,
+        );
+        if (groupIndex > -1) {
+          const track = this.tracksInGroup[groupIndex];
+          this.setAudioTrack(groupIndex);
+          return track;
+        } else if (currentTrack) {
+          // Find option in nearest level audio group
+          let searchIndex = hls.loadLevel;
+          if (searchIndex === -1) {
+            searchIndex = hls.firstAutoLevel;
+          }
+          const switchIndex = findClosestLevelWithAudioGroup(
+            audioOption,
+            hls.levels,
+            allAudioTracks,
+            searchIndex,
+            audioMatchPredicate,
+          );
+          if (switchIndex === -1) {
+            // could not find matching variant
+            return null;
+          }
+          // and switch level to acheive the audio group switch
+          hls.nextLoadLevel = switchIndex;
+        }
+        if (audioOption.channels || audioOption.audioCodec) {
+          // Could not find a match with codec / channels predicate
+          // Find a match without channels or codec
+          const withoutCodecAndChannelsMatch = findMatchingOption(
+            audioOption,
+            allAudioTracks,
+          );
+          if (withoutCodecAndChannelsMatch > -1) {
+            return allAudioTracks[withoutCodecAndChannelsMatch];
+          }
+        }
+      }
+    }
+    return null;
+  }
+
   private setAudioTrack(newId: number): void {
     const tracks = this.tracksInGroup;
 
@@ -240,7 +316,7 @@ class AudioTrackController extends BasePlaylistController {
       return;
     }
     this.log(
-      `Switching to audio-track ${newId} "${track.name}" lang:${track.lang} group:${track.groupId}`,
+      `Switching to audio-track ${newId} "${track.name}" lang:${track.lang} group:${track.groupId} channels:${track.channels}`,
     );
     this.trackId = newId;
     this.currentTrack = track;
@@ -262,23 +338,47 @@ class AudioTrackController extends BasePlaylistController {
       }
       if (
         !currentTrack ||
-        mediaAttributesIdentical(currentTrack.attrs, track.attrs)
+        matchesOption(currentTrack, track, audioMatchPredicate)
       ) {
-        return track.id;
+        return i;
       }
-      if (
-        mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
-          'LANGUAGE',
-          'ASSOC-LANGUAGE',
-          'CHARACTERISTICS',
-        ])
-      ) {
-        return track.id;
+    }
+    if (currentTrack) {
+      const { name, lang, assocLang, characteristics, audioCodec, channels } =
+        currentTrack;
+      for (let i = 0; i < audioTracks.length; i++) {
+        const track = audioTracks[i];
+        if (
+          matchesOption(
+            { name, lang, assocLang, characteristics, audioCodec, channels },
+            track,
+            audioMatchPredicate,
+          )
+        ) {
+          return i;
+        }
       }
-      if (
-        mediaAttributesIdentical(currentTrack.attrs, track.attrs, ['LANGUAGE'])
-      ) {
-        return track.id;
+      for (let i = 0; i < audioTracks.length; i++) {
+        const track = audioTracks[i];
+        if (
+          mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
+            'LANGUAGE',
+            'ASSOC-LANGUAGE',
+            'CHARACTERISTICS',
+          ])
+        ) {
+          return i;
+        }
+      }
+      for (let i = 0; i < audioTracks.length; i++) {
+        const track = audioTracks[i];
+        if (
+          mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
+            'LANGUAGE',
+          ])
+        ) {
+          return i;
+        }
       }
     }
     return -1;
