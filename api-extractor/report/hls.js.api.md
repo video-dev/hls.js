@@ -1619,7 +1619,7 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     removeAllListeners<E extends keyof HlsListeners>(event?: E | undefined): void;
     // (undocumented)
-    removeLevel(levelIndex: any, urlId?: number): void;
+    removeLevel(levelIndex: number): void;
     resumeBuffering(): void;
     get startLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "startLevel" must appear on the getter, not the setter.
@@ -1997,11 +1997,11 @@ export type LatencyControllerConfig = {
 //
 // @public (undocumented)
 export class Level {
-    constructor(data: LevelParsed);
+    constructor(data: LevelParsed | MediaPlaylist);
     // (undocumented)
-    addFallback(data: LevelParsed): void;
+    addFallback(): void;
     // (undocumented)
-    addGroupId(type: string, groupId: string | undefined, fallbackIndex: number): void;
+    addGroupId(type: string, groupId: string | undefined): void;
     // (undocumented)
     get attrs(): LevelAttributes;
     // (undocumented)
@@ -2011,7 +2011,7 @@ export class Level {
     // (undocumented)
     get audioGroupId(): string | undefined;
     // (undocumented)
-    audioGroupIds?: (string | undefined)[];
+    get audioGroupIds(): (string | undefined)[] | undefined;
     // (undocumented)
     get audioGroups(): (string | undefined)[] | undefined;
     // (undocumented)
@@ -2028,6 +2028,10 @@ export class Level {
     fragmentError: number;
     // (undocumented)
     readonly frameRate: number;
+    // (undocumented)
+    hasAudioGroup(groupId: string | undefined): boolean;
+    // (undocumented)
+    hasSubtitleGroup(groupId: string | undefined): boolean;
     // (undocumented)
     readonly height: number;
     // (undocumented)
@@ -2058,13 +2062,11 @@ export class Level {
     // (undocumented)
     get textGroupId(): string | undefined;
     // (undocumented)
-    textGroupIds?: (string | undefined)[];
-    // (undocumented)
-    readonly unknownCodecs: string[] | undefined;
+    get textGroupIds(): (string | undefined)[] | undefined;
     // (undocumented)
     get uri(): string;
     // (undocumented)
-    url: string[];
+    readonly url: string[];
     // (undocumented)
     get urlId(): number;
     set urlId(value: number);
@@ -2303,6 +2305,8 @@ export interface LevelLoadingData {
     // (undocumented)
     level: number;
     // (undocumented)
+    pathwayId: string | undefined;
+    // (undocumented)
     url: string;
 }
 
@@ -2322,8 +2326,6 @@ export interface LevelParsed {
     height?: number;
     // (undocumented)
     id?: number;
-    // (undocumented)
-    level?: number;
     // (undocumented)
     name: string;
     // (undocumented)
@@ -2377,9 +2379,58 @@ export interface LevelSwitchedData {
 // Warning: (ae-missing-release-tag) "LevelSwitchingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface LevelSwitchingData extends Omit<Level, '_urlId'> {
+export interface LevelSwitchingData {
+    // (undocumented)
+    attrs: LevelAttributes;
+    // (undocumented)
+    audioCodec: string | undefined;
+    // (undocumented)
+    audioGroupIds: (string | undefined)[] | undefined;
+    // (undocumented)
+    audioGroups: (string | undefined)[] | undefined;
+    // (undocumented)
+    averageBitrate: number;
+    // (undocumented)
+    bitrate: number;
+    // (undocumented)
+    codecSet: string;
+    // (undocumented)
+    details: LevelDetails | undefined;
+    // (undocumented)
+    fragmentError: number;
+    // (undocumented)
+    height: number;
+    // (undocumented)
+    id: number;
     // (undocumented)
     level: number;
+    // (undocumented)
+    loaded: {
+        bytes: number;
+        duration: number;
+    } | undefined;
+    // (undocumented)
+    loadError: number;
+    // (undocumented)
+    maxBitrate: number;
+    // (undocumented)
+    name: string | undefined;
+    // (undocumented)
+    realBitrate: number;
+    // (undocumented)
+    subtitleGroups: (string | undefined)[] | undefined;
+    // (undocumented)
+    textGroupIds: (string | undefined)[] | undefined;
+    // (undocumented)
+    uri: string;
+    // (undocumented)
+    url: string[];
+    // (undocumented)
+    urlId: 0;
+    // (undocumented)
+    videoCodec: string | undefined;
+    // (undocumented)
+    width: number;
 }
 
 // Warning: (ae-missing-release-tag) "LevelUpdatedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2733,11 +2784,15 @@ export interface MediaKeySessionContext {
 // Warning: (ae-missing-release-tag) "MediaPlaylist" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface MediaPlaylist extends Omit<LevelParsed, 'attrs'> {
+export interface MediaPlaylist {
     // (undocumented)
     attrs: MediaAttributes;
     // (undocumented)
+    audioCodec?: string;
+    // (undocumented)
     autoselect: boolean;
+    // (undocumented)
+    bitrate: number;
     // (undocumented)
     channels?: string;
     // (undocumented)
@@ -2745,9 +2800,13 @@ export interface MediaPlaylist extends Omit<LevelParsed, 'attrs'> {
     // (undocumented)
     default: boolean;
     // (undocumented)
+    details?: LevelDetails;
+    // (undocumented)
     forced: boolean;
     // (undocumented)
     groupId: string;
+    // (undocumented)
+    height?: number;
     // (undocumented)
     id: number;
     // (undocumented)
@@ -2757,7 +2816,17 @@ export interface MediaPlaylist extends Omit<LevelParsed, 'attrs'> {
     // (undocumented)
     name: string;
     // (undocumented)
+    textCodec?: string;
+    // (undocumented)
     type: MediaPlaylistType | 'main';
+    // (undocumented)
+    unknownCodecs?: string[];
+    // (undocumented)
+    url: string;
+    // (undocumented)
+    videoCodec?: string;
+    // (undocumented)
+    width?: number;
 }
 
 // Warning: (ae-missing-release-tag) "MediaPlaylistType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2966,6 +3035,8 @@ export interface PlaylistLoaderContext extends LoaderContext {
     level: number | null;
     // (undocumented)
     levelDetails?: LevelDetails;
+    // (undocumented)
+    pathwayId?: string;
     // (undocumented)
     type: PlaylistContextType;
 }

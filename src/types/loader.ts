@@ -183,8 +183,10 @@ export interface PlaylistLoaderContext extends LoaderContext {
   level: number | null;
   // level or track id from LevelLoadingData / TrackLoadingData
   id: number | null;
-  // track group id
+  // Media Playlist Group ID
   groupId?: string;
+  // Content Steering Pathway ID (or undefined for default Pathway ".")
+  pathwayId?: string;
   // internal representation of a parsed m3u8 level playlist
   levelDetails?: LevelDetails;
   // Blocking playlist request delivery directives (or null id none were added to playlist url

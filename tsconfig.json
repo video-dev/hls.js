@@ -8,6 +8,9 @@
     "src/**/*",
     "tests/**/*",
     "demo/**/*",
-    "tests/**/.eslintrc.js" /* needed for eslint to work for some reason ¯\_(ツ)_/¯ */
+    /* needed for eslint to work for some reason ¯\_(ツ)_/¯ */
+    "tests/**/.eslintrc.js",
+    "rollup.config.js",
+    "build-config.js"
   ]
 }

@@ -45,7 +45,7 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
 - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
 - Timed Metadata for HTTP Live Streaming (ID3 format carried in MPEG-2 TS, Emsg in CMAF/Fragmented MP4, and DATERANGE playlist tags)
 - AES-128 decryption
-- SAMPLE-AES decryption (only supported if using MPEG-2 TS container)
+- "identity" format SAMPLE-AES decryption of MPEG-2 TS segments only
 - Encrypted media extensions (EME) support for DRM (digital rights management)
   - FairPlay, PlayReady, Widevine CDMs with fmp4 segments
 - Level capping based on HTMLMediaElement resolution, dropped-frames, and HDCP-Level
@@ -101,7 +101,7 @@ The following properties are added to their respective variants' attribute list 
 - `#EXT-X-DISCONTINUITY-SEQUENCE=<n>`
 - `#EXT-X-BYTERANGE=<n>[@<o>]`
 - `#EXT-X-MAP:<attribute-list>`
-- `#EXT-X-KEY:<attribute-list>` (`METHOD=SAMPLE-AES` is only supports with MPEG-2 TS segments)
+- `#EXT-X-KEY:<attribute-list>` (`KEYFORMAT="identity",METHOD=SAMPLE-AES` is only supports with MPEG-2 TS segments)
 - `#EXT-X-PROGRAM-DATE-TIME:<attribute-list>`
 - `#EXT-X-START:TIME-OFFSET=<n>`
 - `#EXT-X-SERVER-CONTROL:<attribute-list>`
@@ -126,15 +126,11 @@ Parsed but missing feature support
 
 For a complete list of issues, see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependent on the runtime environment (for example, not all browsers on the same OS support HEVC).
 
-- Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
-- HLS Content Steering
 - HLS Interstitials
-- `#EXT-X-GAP` filling [#2940](https://github.com/video-dev/hls.js/issues/2940)
 - `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
-- `SAMPLE-AES` with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
-- FairPlay, PlayReady, Widevine DRM with MPEG-2 TS segments
-- FairPlay legacy keys (For com.apple.fps.1_0 use native Safari playback)
-- Advanced variant selection based on runtime media capabilities (See issues labeled [`media-capabilities`](https://github.com/video-dev/hls.js/labels/media-capabilities))
+- "identity" format `SAMPLE-AES` method keys with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
+- MPEG-2 TS segments with FairPlay Streaming, PlayReady, or Widevine encryption
+- FairPlay Streaming legacy keys (For com.apple.fps.1_0 use native Safari playback)
 - MP3 elementary stream audio in IE and Edge (<=18) on Windows 10 (See [#1641](https://github.com/video-dev/hls.js/issues/1641) and [Microsoft answers forum](https://answers.microsoft.com/en-us/ie/forum/all/ie11-on-windows-10-cannot-play-hls-with-mp3/2da994b5-8dec-4ae9-9201-7d138ede49d9))
 
 ### Server-side-rendering (SSR) and `require` from a Node.js runtime

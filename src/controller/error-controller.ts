@@ -7,16 +7,14 @@ import {
   shouldRetry,
 } from '../utils/error-helper';
 import { findFragmentByPTS } from './fragment-finders';
-import { HdcpLevel, HdcpLevels, type Level } from '../types/level';
+import { HdcpLevel, HdcpLevels } from '../types/level';
 import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { RetryConfig } from '../config';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { ErrorData } from '../types/events';
 import type { Fragment } from '../loader/fragment';
-import type { LevelDetails } from '../hls';
-
-const RENDITION_PENALTY_DURATION_MS = 300000;
+import type { LevelDetails } from '../loader/level-details';
 
 export const enum NetworkErrorAction {
   DoNothing = 0,
@@ -186,9 +184,9 @@ export default class ErrorController implements NetworkComponentAPI {
           if (
             level &&
             ((context.type === PlaylistContextType.AUDIO_TRACK &&
-              context.groupId === level.audioGroupId) ||
+              level.hasAudioGroup(context.groupId)) ||
               (context.type === PlaylistContextType.SUBTITLE_TRACK &&
-                context.groupId === level.textGroupId))
+                level.hasSubtitleGroup(context.groupId)))
           ) {
             // Perform Pathway switch or Redundant failover if possible for fastest recovery
             // otherwise allow playlist retry count to reach max error retries
@@ -397,17 +395,21 @@ export default class ErrorController implements NetworkComponentAPI {
             }
           } else if (
             (playlistErrorType === PlaylistContextType.AUDIO_TRACK &&
-              playlistErrorGroupId === levelCandidate.audioGroupId) ||
+              levelCandidate.hasAudioGroup(playlistErrorGroupId)) ||
             (playlistErrorType === PlaylistContextType.SUBTITLE_TRACK &&
-              playlistErrorGroupId === levelCandidate.textGroupId)
+              levelCandidate.hasSubtitleGroup(playlistErrorGroupId))
           ) {
             // For audio/subs playlist errors find another group ID or fallthrough to redundant fail-over
             continue;
           } else if (
             (fragErrorType === PlaylistLevelType.AUDIO &&
-              level.audioGroupId === levelCandidate.audioGroupId) ||
+              level.audioGroups?.some((groupId) =>
+                levelCandidate.hasAudioGroup(groupId),
+              )) ||
             (fragErrorType === PlaylistLevelType.SUBTITLE &&
-              level.textGroupId === levelCandidate.textGroupId) ||
+              level.subtitleGroups?.some((groupId) =>
+                levelCandidate.hasSubtitleGroup(groupId),
+              )) ||
             (findAudioCodecAlternate &&
               level.audioCodec === levelCandidate.audioCodec) ||
             (!findAudioCodecAlternate &&
@@ -476,14 +478,6 @@ export default class ErrorController implements NetworkComponentAPI {
       case ErrorActionFlags.None:
         this.switchLevel(data, nextAutoLevel);
         break;
-      case ErrorActionFlags.MoveAllAlternatesMatchingHost:
-        {
-          // Handle Redundant Levels here. Pathway switching is handled by content-steering-controller
-          if (!errorAction.resolved) {
-            errorAction.resolved = this.redundantFailover(data);
-          }
-        }
-        break;
       case ErrorActionFlags.MoveAllAlternatesMatchingHDCP:
         if (hdcpLevel) {
           hls.maxHdcpLevel = HdcpLevels[HdcpLevels.indexOf(hdcpLevel) - 1];
@@ -509,100 +503,4 @@ export default class ErrorController implements NetworkComponentAPI {
       this.hls.nextLoadLevel = this.hls.nextAutoLevel;
     }
   }
-
-  private redundantFailover(data: ErrorData): boolean {
-    const { hls, penalizedRenditions } = this;
-    const levelIndex: number =
-      data.parent === PlaylistLevelType.MAIN
-        ? (data.level as number) || 0
-        : hls.loadLevel;
-    const level = hls.levels[levelIndex];
-    const redundantLevels = level.url.length;
-    const errorUrlId = data.frag ? data.frag.urlId : level.urlId;
-    if (level.urlId === errorUrlId && (!data.frag || level.details)) {
-      this.penalizeRendition(level, data);
-    }
-    for (let i = 1; i < redundantLevels; i++) {
-      const newUrlId = (errorUrlId + i) % redundantLevels;
-      const penalizedRendition = penalizedRenditions[newUrlId];
-      // Check if rendition is penalized and skip if it is a bad fit for failover
-      if (
-        !penalizedRendition ||
-        checkExpired(penalizedRendition, data, penalizedRenditions[errorUrlId])
-      ) {
-        // delete penalizedRenditions[newUrlId];
-        // Update the url id of all levels so that we stay on the same set of variants when level switching
-        this.warn(
-          `Switching to Redundant Stream ${newUrlId + 1}/${redundantLevels}: "${
-            level.url[newUrlId]
-          }" after ${data.details}`,
-        );
-        this.playlistError = 0;
-        hls.levels.forEach((lv) => {
-          lv.urlId = newUrlId;
-        });
-        hls.nextLoadLevel = levelIndex;
-        return true;
-      }
-    }
-    return false;
-  }
-
-  private penalizeRendition(level: Level, data: ErrorData) {
-    const { penalizedRenditions } = this;
-    const penalizedRendition = penalizedRenditions[level.urlId] || {
-      lastErrorPerfMs: 0,
-      errors: [],
-      details: undefined,
-    };
-    penalizedRendition.lastErrorPerfMs = performance.now();
-    penalizedRendition.errors.push(data);
-    penalizedRendition.details = level.details;
-    penalizedRenditions[level.urlId] = penalizedRendition;
-  }
-}
-
-function checkExpired(
-  penalizedRendition: PenalizedRendition,
-  data: ErrorData,
-  currentPenaltyState: PenalizedRendition | undefined,
-): boolean {
-  // Expire penalty for switching back to rendition after RENDITION_PENALTY_DURATION_MS
-  if (
-    performance.now() - penalizedRendition.lastErrorPerfMs >
-    RENDITION_PENALTY_DURATION_MS
-  ) {
-    return true;
-  }
-  // Expire penalty on GAP tag error if rendition has no GAP at position (does not cover media tracks)
-  const lastErrorDetails = penalizedRendition.details;
-  if (data.details === ErrorDetails.FRAG_GAP && lastErrorDetails && data.frag) {
-    const position = data.frag.start;
-    const candidateFrag = findFragmentByPTS(
-      null,
-      lastErrorDetails.fragments,
-      position,
-    );
-    if (candidateFrag && !candidateFrag.gap) {
-      return true;
-    }
-  }
-  // Expire penalty if there are more errors in currentLevel than in penalizedRendition
-  if (
-    currentPenaltyState &&
-    penalizedRendition.errors.length < currentPenaltyState.errors.length
-  ) {
-    const lastCandidateError =
-      penalizedRendition.errors[penalizedRendition.errors.length - 1];
-    if (
-      lastErrorDetails &&
-      lastCandidateError.frag &&
-      data.frag &&
-      Math.abs(lastCandidateError.frag.start - data.frag.start) >
-        lastErrorDetails.targetduration * 3
-    ) {
-      return true;
-    }
-  }
-  return false;
 }

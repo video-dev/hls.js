@@ -61,7 +61,7 @@ const buildConstants = (type, additional = {}) => ({
     __USE_EME_DRM__: JSON.stringify(type === BUILD_TYPE.full || addEMESupport),
     __USE_CMCD__: JSON.stringify(type === BUILD_TYPE.full || addCMCDSupport),
     __USE_CONTENT_STEERING__: JSON.stringify(
-      type === BUILD_TYPE.full || addContentSteeringSupport,
+      type === BUILD_TYPE.full || BUILD_TYPE.light || addContentSteeringSupport,
     ),
     __USE_VARIABLE_SUBSTITUTION__: JSON.stringify(
       type === BUILD_TYPE.full || addVariableSubstitutionSupport,
@@ -248,12 +248,13 @@ const buildRollupConfig = ({
   includeCoverage,
   sourcemap = true,
   outputFile = null,
+  input = './src/exports-default.ts',
 }) => {
   const outputName = buildTypeToOutputName[type];
   const extension = format === FORMAT.esm ? 'mjs' : 'js';
 
   return {
-    input: './src/hls.ts',
+    input,
     onwarn: (e) => {
       if (allowCircularDeps && e.code === 'CIRCULAR_DEPENDENCY') return;
 
@@ -307,6 +308,7 @@ const configs = Object.entries({
     minified: true,
   }),
   fullEsm: buildRollupConfig({
+    input: './src/exports-named.ts',
     type: BUILD_TYPE.full,
     format: FORMAT.esm,
     minified: false,
@@ -322,6 +324,7 @@ const configs = Object.entries({
     minified: true,
   }),
   lightEsm: buildRollupConfig({
+    input: './src/exports-named.ts',
     type: BUILD_TYPE.light,
     format: FORMAT.esm,
     minified: false,
