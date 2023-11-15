@@ -162,10 +162,11 @@ class PlaylistLoader implements NetworkComponentAPI {
   }
 
   private onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData) {
-    const { id, level, url, deliveryDirectives } = data;
+    const { id, level, pathwayId, url, deliveryDirectives } = data;
     this.load({
       id,
       level,
+      pathwayId,
       responseType: 'text',
       type: PlaylistContextType.LEVEL,
       url,
@@ -213,8 +214,12 @@ class PlaylistLoader implements NetworkComponentAPI {
     // Check if a loader for this context already exists
     let loader = this.getInternalLoader(context);
     if (loader) {
-      const loaderContext = loader.context;
-      if (loaderContext && loaderContext.url === context.url) {
+      const loaderContext = loader.context as PlaylistLoaderContext;
+      if (
+        loaderContext &&
+        loaderContext.url === context.url &&
+        loaderContext.level === context.level
+      ) {
         // same URL can't overlap
         logger.trace('[playlist-loader]: playlist request ongoing');
         return;
@@ -448,10 +453,12 @@ class PlaylistLoader implements NetworkComponentAPI {
     const { id, level, type } = context;
 
     const url = getResponseUrl(response, context);
-    const levelUrlId = Number.isFinite(id as number) ? (id as number) : 0;
+    const levelUrlId = 0;
     const levelId = Number.isFinite(level as number)
       ? (level as number)
-      : levelUrlId;
+      : Number.isFinite(id as number)
+      ? (id as number)
+      : 0;
     const levelType = mapContextToLevelType(context);
     const levelDetails: LevelDetails = M3U8Parser.parseLevelPlaylist(
       response.data as string,

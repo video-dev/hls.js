@@ -740,7 +740,7 @@ segment.mp4
           expect(
             errors,
             'fragment errors after yeilding to second error event',
-          ).to.have.lengthOf(12);
+          ).to.have.lengthOf(8);
           expect(hls.levels[0].uri).to.equal('http://www.baz.com/tier6.m3u8');
           return new Promise((resolve, reject) => {
             hls.on(Events.FRAG_LOADED, (event, data) => {
@@ -759,7 +759,7 @@ segment.mp4
             'Error should not be fatal',
           );
           expect(data.frag.url).to.equal(
-            'http://www.baz.com/audio-segment.mp4',
+            'http://www.baz.com/video-segment.mp4',
           );
         });
     });
@@ -850,7 +850,7 @@ segment.mp4
           expect(
             errors,
             'fragment errors after yeilding to second error event',
-          ).to.have.lengthOf(12);
+          ).to.have.lengthOf(7);
           expect(hls.levels[0].uri).to.equal('http://www.baz.com/tier6.m3u8');
           return new Promise((resolve, reject) => {
             hls.on(Events.FRAG_LOADED, (event, data) => {
@@ -867,7 +867,7 @@ segment.mp4
             'Error should not be fatal',
           );
           expect(data.frag.url).to.equal(
-            'http://www.baz.com/audio-segment.mp4',
+            'http://www.baz.com/video-segment.mp4',
           );
         });
     });
