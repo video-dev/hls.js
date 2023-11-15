@@ -308,6 +308,7 @@ export default class BaseStreamController
   }
 
   protected onHandlerDestroying() {
+    this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     this.stopLoad();
     super.onHandlerDestroying();
   }
@@ -548,8 +549,7 @@ export default class BaseStreamController
       !frag ||
       !fragCurrent ||
       frag.level !== fragCurrent.level ||
-      frag.sn !== fragCurrent.sn ||
-      frag.urlId !== fragCurrent.urlId
+      frag.sn !== fragCurrent.sn
     );
   }
 

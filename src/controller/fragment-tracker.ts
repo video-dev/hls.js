@@ -504,5 +504,5 @@ function isPartial(fragmentEntity: FragmentEntity): boolean {
 }
 
 function getFragmentKey(fragment: Fragment): string {
-  return `${fragment.type}_${fragment.level}_${fragment.urlId}_${fragment.sn}`;
+  return `${fragment.type}_${fragment.level}_${fragment.sn}`;
 }

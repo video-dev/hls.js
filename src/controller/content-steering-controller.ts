@@ -13,13 +13,14 @@ import type {
   ManifestParsedData,
 } from '../types/events';
 import type { RetryConfig } from '../config';
-import type {
-  Loader,
-  LoaderCallbacks,
-  LoaderConfiguration,
-  LoaderContext,
-  LoaderResponse,
-  LoaderStats,
+import {
+  PlaylistContextType,
+  type Loader,
+  type LoaderCallbacks,
+  type LoaderConfiguration,
+  type LoaderContext,
+  type LoaderResponse,
+  type LoaderStats,
 } from '../types/loader';
 import type { LevelParsed } from '../types/level';
 import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
@@ -94,14 +95,13 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     this.clearTimeout();
     if (this.enabled && this.uri) {
       if (this.updated) {
-        const ttl = Math.max(
-          this.timeToLoad * 1000 - (performance.now() - this.updated),
-          0,
-        );
-        this.scheduleRefresh(this.uri, ttl);
-      } else {
-        this.loadSteeringManifest(this.uri);
+        const ttl = this.timeToLoad * 1000 - (performance.now() - this.updated);
+        if (ttl > 0) {
+          this.scheduleRefresh(this.uri, ttl);
+          return;
+        }
       }
+      this.loadSteeringManifest(this.uri);
     }
   }
 
@@ -175,14 +175,23 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       errorAction?.action === NetworkErrorAction.SendAlternateToPenaltyBox &&
       errorAction.flags === ErrorActionFlags.MoveAllAlternatesMatchingHost
     ) {
+      const levels = this.levels;
       let pathwayPriority = this.pathwayPriority;
-      const pathwayId = this.pathwayId;
-      if (!this.penalizedPathways[pathwayId]) {
-        this.penalizedPathways[pathwayId] = performance.now();
+      let errorPathway = this.pathwayId;
+      if (data.context) {
+        const { groupId, pathwayId, type } = data.context;
+        if (groupId && levels) {
+          errorPathway = this.getPathwayForGroupId(groupId, type, errorPathway);
+        } else if (pathwayId) {
+          errorPathway = pathwayId;
+        }
       }
-      if (!pathwayPriority && this.levels) {
+      if (!(errorPathway in this.penalizedPathways)) {
+        this.penalizedPathways[errorPathway] = performance.now();
+      }
+      if (!pathwayPriority && levels) {
         // If PATHWAY-PRIORITY was not provided, list pathways for error handling
-        pathwayPriority = this.levels.reduce((pathways, level) => {
+        pathwayPriority = levels.reduce((pathways, level) => {
           if (pathways.indexOf(level.pathwayId) === -1) {
             pathways.push(level.pathwayId);
           }
@@ -191,7 +200,18 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       }
       if (pathwayPriority && pathwayPriority.length > 1) {
         this.updatePathwayPriority(pathwayPriority);
-        errorAction.resolved = this.pathwayId !== pathwayId;
+        errorAction.resolved = this.pathwayId !== errorPathway;
+      }
+      if (!errorAction.resolved) {
+        logger.warn(
+          `Could not resolve ${data.details} ("${
+            data.error.message
+          }") with content-steering for Pathway: ${errorPathway} levels: ${
+            levels ? levels.length : levels
+          } priorities: ${JSON.stringify(
+            pathwayPriority,
+          )} penalized: ${JSON.stringify(this.penalizedPathways)}`,
+        );
       }
     }
   }
@@ -238,7 +258,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
     });
     for (let i = 0; i < pathwayPriority.length; i++) {
       const pathwayId = pathwayPriority[i];
-      if (penalizedPathways[pathwayId]) {
+      if (pathwayId in penalizedPathways) {
         continue;
       }
       if (pathwayId === this.pathwayId) {
@@ -269,6 +289,27 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         break;
       }
     }
+  }
+
+  private getPathwayForGroupId(
+    groupId: string,
+    type: PlaylistContextType,
+    defaultPathway: string,
+  ): string {
+    const levels = this.getLevelsForPathway(defaultPathway).concat(
+      this.levels || [],
+    );
+    for (let i = 0; i < levels.length; i++) {
+      if (
+        (type === PlaylistContextType.AUDIO_TRACK &&
+          levels[i].hasAudioGroup(groupId)) ||
+        (type === PlaylistContextType.SUBTITLE_TRACK &&
+          levels[i].hasSubtitleGroup(groupId))
+      ) {
+        return levels[i].pathwayId;
+      }
+    }
+    return defaultPathway;
   }
 
   private clonePathways(pathwayClones: PathwayClone[]) {
@@ -313,8 +354,22 @@ export default class ContentSteeringController implements NetworkComponentAPI {
           }
           levelParsed.attrs = attributes;
           const clonedLevel = new Level(levelParsed);
-          clonedLevel.addGroupId('audio', clonedAudioGroupId, -1);
-          clonedLevel.addGroupId('text', clonedSubtitleGroupId, -1);
+          if (baseLevel.audioGroups) {
+            for (let i = 1; i < baseLevel.audioGroups.length; i++) {
+              clonedLevel.addGroupId(
+                'audio',
+                `${baseLevel.audioGroups[i]}_clone_${cloneId}`,
+              );
+            }
+          }
+          if (baseLevel.subtitleGroups) {
+            for (let i = 1; i < baseLevel.subtitleGroups.length; i++) {
+              clonedLevel.addGroupId(
+                'text',
+                `${baseLevel.subtitleGroups[i]}_clone_${cloneId}`,
+              );
+            }
+          }
           return clonedLevel;
         },
       );
@@ -466,7 +521,12 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   private scheduleRefresh(uri: string, ttlMs: number = this.timeToLoad * 1000) {
     this.clearTimeout();
     this.reloadTimer = self.setTimeout(() => {
-      this.loadSteeringManifest(uri);
+      const media = this.hls?.media;
+      if (media && !media.ended) {
+        this.loadSteeringManifest(uri);
+        return;
+      }
+      this.scheduleRefresh(uri, this.timeToLoad * 1000);
     }, ttlMs);
   }
 }
