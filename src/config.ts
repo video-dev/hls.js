@@ -32,6 +32,7 @@ import type {
 import type {
   AudioSelectionOption,
   SubtitleSelectionOption,
+  VideoSelectionOption,
 } from './types/media-playlist';
 
 export type ABRControllerConfig = {
@@ -223,6 +224,7 @@ export type StreamControllerConfig = {
 };
 
 export type SelectionPreferences = {
+  videoPreference?: VideoSelectionOption;
   audioPreference?: AudioSelectionOption;
   subtitlePreference?: SubtitleSelectionOption;
 };
