@@ -79,6 +79,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`pLoader`](#ploader)
   - [`xhrSetup`](#xhrsetup)
   - [`fetchSetup`](#fetchsetup)
+  - [`videoPreference`](#videopreference)
   - [`audioPreference`](#audiopreference)
   - [`subtitlePreference`](#subtitlepreference)
   - [`abrController`](#abrcontroller)
@@ -1144,6 +1145,22 @@ var config = {
   },
 };
 ```
+
+### `videoPreference`
+
+(default `undefined`)
+
+These settings determine whether HDR video should be selected before SDR video. Which VIDEO-RANGE values are allowed, and in what order of priority can also be specified.
+
+Format `{ preferHDR: boolean, allowedVideoRanges: ('SDR' | 'PQ' | 'HLG')[] }`
+
+- Allow all video ranges if `allowedVideoRanges` is unspecified.
+- If `preferHDR` is defined, use the value to filter `allowedVideoRanges`.
+- Else check window for HDR support and set `preferHDR` to the result.
+
+When `preferHDR` is set, skip checking if the window supports HDR and instead use the value provided to determine level selection preference via dynamic range. A value of `preferHDR === true` will attempt to use HDR levels before selecting from SDR levels.
+
+`allowedVideoRanges` can restrict playback to a limited set of VIDEO-RANGE transfer functions and set their priority for selection. For example, to ignore all HDR variants, set `allowedVideoRanges` to `['SDR']`. Or, to ignore all HLG variants, set `allowedVideoRanges` to `['SDR', 'PQ']`. To prioritize PQ variants over HLG, set `allowedVideoRanges` to `['SDR', 'HLG', 'PQ']`.
 
 ### `audioPreference`
 
