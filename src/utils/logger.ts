@@ -55,7 +55,7 @@ function exportLoggerFunctions(
 export function enableLogs(debugConfig: boolean | ILogger, id: string): void {
   // check that console is available
   if (
-    (self.console && debugConfig === true) ||
+    (typeof console === 'object' && debugConfig === true) ||
     typeof debugConfig === 'object'
   ) {
     exportLoggerFunctions(
