@@ -457,8 +457,8 @@ class PlaylistLoader implements NetworkComponentAPI {
     const levelId = Number.isFinite(level as number)
       ? (level as number)
       : Number.isFinite(id as number)
-      ? (id as number)
-      : 0;
+        ? (id as number)
+        : 0;
     const levelType = mapContextToLevelType(context);
     const levelDetails: LevelDetails = M3U8Parser.parseLevelPlaylist(
       response.data as string,

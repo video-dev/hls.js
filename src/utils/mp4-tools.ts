@@ -382,8 +382,8 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
             ? 12
             : 10
           : highBitDepth
-          ? 10
-          : 8;
+            ? 10
+            : 8;
       const monochrome = (av1CBox[2] & 0x10) >> 4;
       const chromaSubsamplingX = (av1CBox[2] & 0x08) >> 3;
       const chromaSubsamplingY = (av1CBox[2] & 0x04) >> 2;

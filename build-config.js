@@ -266,8 +266,8 @@ const buildRollupConfig = ({
       file: outputFile
         ? outputFile
         : minified
-        ? `./dist/${outputName}.min.${extension}`
-        : `./dist/${outputName}.${extension}`,
+          ? `./dist/${outputName}.min.${extension}`
+          : `./dist/${outputName}.${extension}`,
       format,
       banner: shouldBundleWorker(format) ? workerFnBanner : null,
       footer: shouldBundleWorker(format) ? workerFnFooter : null,
