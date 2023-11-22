@@ -26,6 +26,7 @@ coverage/
 
 # eslint
 .eslintcache
+/cache.tsbuildinfo
 
 # Visual Studio exclusions
 *.suo
