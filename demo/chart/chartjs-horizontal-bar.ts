@@ -19,14 +19,14 @@ Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (
     value.start === undefined
       ? 0
       : value.max >= 0 && value.min >= 0
-      ? value.min
-      : value.max;
+        ? value.min
+        : value.max;
   const length =
     value.start === undefined
       ? value.end
       : value.max >= 0 && value.min >= 0
-      ? value.max - value.min
-      : value.min - value.max;
+        ? value.max - value.min
+        : value.min - value.max;
   const base = scale.getPixelForValue(start);
   const head = scale.getPixelForValue(start + length);
   const size = head - base;

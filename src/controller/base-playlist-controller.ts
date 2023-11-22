@@ -152,8 +152,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
             details.advanced
               ? 'REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex
               : details.updated
-              ? 'UPDATED'
-              : 'MISSED'
+                ? 'UPDATED'
+                : 'MISSED'
           }`,
         );
       }

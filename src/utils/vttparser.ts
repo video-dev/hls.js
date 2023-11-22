@@ -221,8 +221,8 @@ function parseCue(input: string, cue: VTTCue, regionList: Region[]) {
         cue.align === 'start' || cue.align === 'left'
           ? 0
           : cue.align === 'end' || cue.align === 'right'
-          ? 100
-          : 50;
+            ? 100
+            : 50;
     }
     cue.position = position;
   }

@@ -1465,8 +1465,8 @@ function getURLParam(sParam, defaultValue) {
       return sParameterName[1] === 'undefined'
         ? undefined
         : sParameterName[1] === 'false'
-        ? false
-        : sParameterName[1];
+          ? false
+          : sParameterName[1];
     }
   }
   return defaultValue;
