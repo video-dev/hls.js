@@ -20,6 +20,6 @@ module.exports = async (allStagedFiles) => {
     eslintFiles.length &&
       `eslint --cache --fix ${eslintFiles.map(addQuotes).join(' ')}`,
     prettierFiles.length &&
-      `prettier --write ${prettierFiles.map(addQuotes).join(' ')}`,
+      `prettier --cache --write ${prettierFiles.map(addQuotes).join(' ')}`,
   ].filter(Boolean);
 };

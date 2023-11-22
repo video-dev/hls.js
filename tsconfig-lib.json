@@ -11,7 +11,9 @@
     "lib": ["dom", "es2015"],
     "outDir": "./lib/",
     "allowSyntheticDefaultImports": true,
-    "emitDeclarationOnly": true
+    "emitDeclarationOnly": true,
+    "incremental": true,
+    "tsBuildInfoFile": "cache.tsbuildinfo"
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist/**/*", "demo/libs/**/*"]
