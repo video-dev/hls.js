@@ -131,10 +131,11 @@ export class TimelineController implements ComponentAPI {
     hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
     // @ts-ignore
-    this.hls = this.config = this.cea608Parser1 = this.cea608Parser2 = null;
+    this.hls = this.config = null;
+    this.cea608Parser1 = this.cea608Parser2 = undefined;
   }
 
-  private lazyInit608() {
+  private initCea608Parsers() {
     if (
       this.config.enableCEA708Captions &&
       (!this.cea608Parser1 || !this.cea608Parser2)
@@ -467,9 +468,10 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
+    this.initCea608Parsers();
     const { cea608Parser1, cea608Parser2, lastCc, lastSn, lastPartIndex } =
       this;
-    if (!this.enabled || !(cea608Parser1 && cea608Parser2)) {
+    if (!this.enabled || !cea608Parser1 || !cea608Parser2) {
       return;
     }
     // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
@@ -667,7 +669,9 @@ export class TimelineController implements ComponentAPI {
     event: Events.FRAG_PARSING_USERDATA,
     data: FragParsingUserdataData,
   ) {
-    if (!this.enabled) {
+    this.initCea608Parsers();
+    const { cea608Parser1, cea608Parser2 } = this;
+    if (!this.enabled || !cea608Parser1 || !cea608Parser2) {
       return;
     }
     const { frag, samples } = data;
@@ -675,11 +679,6 @@ export class TimelineController implements ComponentAPI {
       frag.type === PlaylistLevelType.MAIN &&
       this.closedCaptionsForLevel(frag) === 'NONE'
     ) {
-      return;
-    }
-    this.lazyInit608();
-    const { cea608Parser1, cea608Parser2 } = this;
-    if (!cea608Parser1 || !cea608Parser2) {
       return;
     }
     // If the event contains captions (found in the bytes property), push all bytes into the parser immediately
