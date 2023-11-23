@@ -108,7 +108,7 @@
     "karma-coverage": "2.2.1",
     "karma-mocha": "2.0.1",
     "karma-mocha-reporter": "2.2.5",
-    "karma-rollup-preprocessor": "7.0.8",
+    "karma-rollup-preprocessor": "github:jlmakes/karma-rollup-preprocessor#7a7268d91149307b3cf2888ee4e65ccd079955a3",
     "karma-sinon-chai": "2.0.2",
     "karma-sourcemap-loader": "0.4.0",
     "lint-staged": "15.1.0",
