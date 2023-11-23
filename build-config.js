@@ -77,6 +77,19 @@ const buildConstants = (type, additional = {}) => ({
   },
 });
 
+const buildOnLog = ({ allowCircularDeps } = {}) => {
+  return (level, log, handler) => {
+    if (allowCircularDeps && log.code === 'CIRCULAR_DEPENDENCY') return;
+
+    if (level === 'warn') {
+      // treat warnings as errors
+      handler('error', log);
+    } else {
+      handler(level, log);
+    }
+  };
+};
+
 const workerFnBanner = '(function __HLS_WORKER_BUNDLE__(__IN_WORKER__){';
 const workerFnFooter = '})(false);';
 
@@ -255,12 +268,7 @@ const buildRollupConfig = ({
 
   return {
     input,
-    onwarn: (e) => {
-      if (allowCircularDeps && e.code === 'CIRCULAR_DEPENDENCY') return;
-
-      // treat warnings as errors
-      throw new Error(e);
-    },
+    onLog: buildOnLog({ allowCircularDeps }),
     output: {
       name: 'Hls',
       file: outputFile
@@ -331,10 +339,7 @@ const configs = Object.entries({
   }),
   worker: {
     input: './src/demux/transmuxer-worker.ts',
-    onwarn: (e) => {
-      // treat warnings as errors
-      throw new Error(e);
-    },
+    onLog: buildOnLog(),
     output: {
       name: 'HlsWorker',
       file: './dist/hls.worker.js',
@@ -355,10 +360,7 @@ const configs = Object.entries({
   },
   demo: {
     input: './demo/main.js',
-    onwarn: (e) => {
-      // treat warnings as errors
-      throw new Error(e);
-    },
+    onLog: buildOnLog(),
     output: {
       name: 'HlsDemo',
       file: './dist/hls-demo.js',
