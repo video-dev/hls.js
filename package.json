@@ -93,7 +93,7 @@
     "chromedriver": "119.0.1",
     "doctoc": "2.2.1",
     "es-check": "7.1.1",
-    "eslint": "8.53.0",
+    "eslint": "8.54.0",
     "eslint-config-prettier": "9.0.0",
     "eslint-plugin-import": "2.29.0",
     "eslint-plugin-mocha": "10.2.0",
