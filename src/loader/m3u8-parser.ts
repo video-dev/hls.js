@@ -14,11 +14,7 @@ import {
 } from '../utils/variable-substitution';
 import { isCodecType } from '../utils/codecs';
 import type { CodecType } from '../utils/codecs';
-import type {
-  MediaPlaylist,
-  MediaPlaylistType,
-  MediaAttributes,
-} from '../types/media-playlist';
+import type { MediaPlaylist, MediaAttributes } from '../types/media-playlist';
 import type { PlaylistLevelType } from '../types/loader';
 import type { LevelAttributes, LevelParsed, VariableMap } from '../types/level';
 import type { ContentSteeringOptions } from '../types/events';
@@ -157,10 +153,7 @@ export default class M3U8Parser {
           level.height = resolution.height;
         }
 
-        setCodecs(
-          ((attrs.CODECS as string) || '').split(/[ ,]+/).filter((c) => c),
-          level,
-        );
+        setCodecs(attrs.CODECS, level);
 
         if (!level.unknownCodecs?.length) {
           levelsWithKnownCodecs.push(level);
@@ -286,11 +279,10 @@ export default class M3U8Parser {
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
       const attrs = new AttrList(result[1]) as MediaAttributes;
-      const type: MediaPlaylistType | undefined = attrs.TYPE as
-        | MediaPlaylistType
-        | undefined;
+      const type = attrs.TYPE;
       if (type) {
-        const groups = groupsByType[type];
+        const groups: (typeof groupsByType)[keyof typeof groupsByType] =
+          groupsByType[type];
         const medias: MediaPlaylist[] = results[type] || [];
         results[type] = medias;
         if (__USE_VARIABLE_SUBSTITUTION__) {
@@ -307,6 +299,7 @@ export default class M3U8Parser {
           ]);
         }
         const lang = attrs.LANGUAGE;
+        const assocLang = attrs['ASSOC-LANGUAGE'];
         const channels = attrs.CHANNELS;
         const characteristics = attrs.CHARACTERISTICS;
         const instreamId = attrs['INSTREAM-ID'];
@@ -320,9 +313,12 @@ export default class M3U8Parser {
           default: attrs.bool('DEFAULT'),
           autoselect: attrs.bool('AUTOSELECT'),
           forced: attrs.bool('FORCED'),
-          lang: lang,
+          lang,
           url: attrs.URI ? M3U8Parser.resolve(attrs.URI, baseurl) : '',
         };
+        if (assocLang) {
+          media.assocLang = assocLang;
+        }
         if (channels) {
           media.channels = channels;
         }
@@ -822,7 +818,11 @@ function parseStartTimeOffset(startAttributes: string): number | null {
   return null;
 }
 
-function setCodecs(codecs: string[], level: LevelParsed) {
+function setCodecs(
+  codecsAttributeValue: string | undefined,
+  level: LevelParsed,
+) {
+  let codecs = (codecsAttributeValue || '').split(/[ ,]+/).filter((c) => c);
   ['video', 'audio', 'text'].forEach((type: CodecType) => {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
     if (filtered.length) {
@@ -832,11 +832,14 @@ function setCodecs(codecs: string[], level: LevelParsed) {
       codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
     }
   });
-
   level.unknownCodecs = codecs;
 }
 
-function assignCodec(media, groupItem, codecProperty) {
+function assignCodec(
+  media: MediaPlaylist,
+  groupItem: { audioCodec?: string; textCodec?: string },
+  codecProperty: 'audioCodec' | 'textCodec',
+) {
   const codecValue = groupItem[codecProperty];
   if (codecValue) {
     media[codecProperty] = codecValue;

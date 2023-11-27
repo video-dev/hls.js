@@ -9,6 +9,24 @@ export type SubtitlePlaylistType = 'SUBTITLES' | 'CLOSED-CAPTIONS';
 
 export type MediaPlaylistType = MainPlaylistType | SubtitlePlaylistType;
 
+export type AudioSelectionOption = {
+  lang?: string;
+  assocLang?: string;
+  characteristics?: string;
+  channels?: string;
+  name?: string;
+  audioCodec?: string;
+  groupId?: string;
+};
+
+export type SubtitleSelectionOption = {
+  lang?: string;
+  assocLang?: string;
+  characteristics?: string;
+  name?: string;
+  groupId?: string;
+};
+
 // audioTracks, captions and subtitles returned by `M3U8Parser.parseMasterPlaylistMedia`
 export interface MediaPlaylist {
   attrs: MediaAttributes;
@@ -25,6 +43,7 @@ export interface MediaPlaylist {
   id: number; // incrementing number to track media playlists
   instreamId?: string;
   lang?: string;
+  assocLang?: string;
   name: string;
   textCodec?: string;
   unknownCodecs?: string[];

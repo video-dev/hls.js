@@ -589,20 +589,14 @@ export default class StreamController
     event: Events.MANIFEST_PARSED,
     data: ManifestParsedData,
   ) {
+    // detect if we have different kind of audio codecs used amongst playlists
     let aac = false;
     let heaac = false;
-    let codec;
     data.levels.forEach((level) => {
-      // detect if we have different kind of audio codecs used amongst playlists
-      codec = level.audioCodec;
+      const codec = level.audioCodec;
       if (codec) {
-        if (codec.indexOf('mp4a.40.2') !== -1) {
-          aac = true;
-        }
-
-        if (codec.indexOf('mp4a.40.5') !== -1) {
-          heaac = true;
-        }
+        aac = aac || codec.indexOf('mp4a.40.2') !== -1;
+        heaac = heaac || codec.indexOf('mp4a.40.5') !== -1;
       }
     });
     this.audioCodecSwitch = aac && heaac && !changeTypeSupported();

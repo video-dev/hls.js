@@ -4,15 +4,6 @@ import { reassignFragmentLevelIndexes } from '../utils/level-helper';
 import { AttrList } from '../utils/attr-list';
 import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
 import { logger } from '../utils/logger';
-import type Hls from '../hls';
-import type { NetworkComponentAPI } from '../types/component-api';
-import type {
-  SteeringManifestLoadedData,
-  ErrorData,
-  ManifestLoadedData,
-  ManifestParsedData,
-} from '../types/events';
-import type { RetryConfig } from '../config';
 import {
   PlaylistContextType,
   type Loader,
@@ -22,7 +13,16 @@ import {
   type LoaderResponse,
   type LoaderStats,
 } from '../types/loader';
-import type { LevelParsed } from '../types/level';
+import type Hls from '../hls';
+import type { NetworkComponentAPI } from '../types/component-api';
+import type {
+  SteeringManifestLoadedData,
+  ErrorData,
+  ManifestLoadedData,
+  ManifestParsedData,
+} from '../types/events';
+import type { RetryConfig } from '../config';
+
 import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
 
 export type SteeringManifest = {
@@ -330,14 +330,6 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       }
       const clonedVariants = this.getLevelsForPathway(baseId).map(
         (baseLevel) => {
-          const levelParsed: LevelParsed = Object.assign({}, baseLevel as any);
-          levelParsed.details = undefined;
-          levelParsed.url = performUriReplacement(
-            baseLevel.uri,
-            baseLevel.attrs['STABLE-VARIANT-ID'],
-            'PER-VARIANT-URIS',
-            uriReplacement,
-          );
           const attributes = new AttrList(baseLevel.attrs);
           attributes['PATHWAY-ID'] = cloneId;
           const clonedAudioGroupId: string | undefined =
@@ -352,8 +344,22 @@ export default class ContentSteeringController implements NetworkComponentAPI {
             subtitleGroupCloneMap[attributes.SUBTITLES] = clonedSubtitleGroupId;
             attributes.SUBTITLES = clonedSubtitleGroupId;
           }
-          levelParsed.attrs = attributes;
-          const clonedLevel = new Level(levelParsed);
+          const url = performUriReplacement(
+            baseLevel.uri,
+            attributes['STABLE-VARIANT-ID'],
+            'PER-VARIANT-URIS',
+            uriReplacement,
+          );
+          const clonedLevel = new Level({
+            attrs: attributes,
+            audioCodec: baseLevel.audioCodec,
+            bitrate: baseLevel.bitrate,
+            height: baseLevel.height,
+            name: baseLevel.name,
+            url,
+            videoCodec: baseLevel.videoCodec,
+            width: baseLevel.width,
+          });
           if (baseLevel.audioGroups) {
             for (let i = 1; i < baseLevel.audioGroups.length; i++) {
               clonedLevel.addGroupId(
