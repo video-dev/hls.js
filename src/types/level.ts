@@ -106,7 +106,7 @@ export class Level {
   public readonly frameRate: number;
   public readonly height: number;
   public readonly id: number;
-  public readonly name: string | undefined;
+  public readonly name: string;
   public readonly videoCodec: string | undefined;
   public readonly width: number;
   public details?: LevelDetails;
@@ -134,7 +134,7 @@ export class Level {
     this.width = data.width || 0;
     this.height = data.height || 0;
     this.frameRate = data.attrs.optionalFloat('FRAME-RATE', 0);
-    this._avgBitrate = this.attrs.decimalInteger('AVERAGE-BANDWIDTH');
+    this._avgBitrate = data.attrs.decimalInteger('AVERAGE-BANDWIDTH');
     this.audioCodec = data.audioCodec;
     this.videoCodec = data.videoCodec;
     this.codecSet = [data.videoCodec, data.audioCodec]

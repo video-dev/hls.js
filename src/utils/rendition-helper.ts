@@ -1,7 +1,11 @@
 import { codecsSetSelectionPreferenceValue } from './codecs';
 import { logger } from './logger';
 import type { Level, VideoRange } from '../types/level';
-import type { MediaPlaylist } from '../types/media-playlist';
+import type {
+  AudioSelectionOption,
+  MediaPlaylist,
+  SubtitleSelectionOption,
+} from '../types/media-playlist';
 
 export type CodecSetTier = {
   minBitrate: number;
@@ -31,8 +35,12 @@ export function getStartCodecTier(
   codecTiers: Record<string, CodecSetTier>,
   videoRange: VideoRange | undefined,
   currentBw: number,
+  audioPreference: AudioSelectionOption | undefined,
 ): StartParameters {
   const codecSets = Object.keys(codecTiers);
+  const channelsPreference = audioPreference?.channels;
+  const audioCodecPreference = audioPreference?.audioCodec;
+  const preferStereo = channelsPreference && parseInt(channelsPreference) === 2;
   // Use first level set to determine stereo, and minimum resolution and framerate
   let hasStereo = true;
   let hasCurrentVideoRange = false;
@@ -62,7 +70,7 @@ export function getStartCodecTier(
   }
   const codecSet = codecSets.reduce(
     (selected: string | undefined, candidate: string) => {
-      // Remove candiates which do not meet bitrate, default audio, stereo, 1080p or lower, 30fps or lower, or SDR if present
+      // Remove candiates which do not meet bitrate, default audio, stereo or channels preference, 1080p or lower, 30fps or lower, or SDR/HDR selection if present
       const candidateTier = codecTiers[candidate];
       if (candidate === selected) {
         return selected;
@@ -81,7 +89,31 @@ export function getStartCodecTier(
         );
         return selected;
       }
-      if (hasStereo && candidateTier.channels['2'] === 0) {
+      if (
+        audioCodecPreference &&
+        candidate.indexOf(audioCodecPreference.substring(0, 4)) % 5 !== 0
+      ) {
+        logStartCodecCandidateIgnored(
+          candidate,
+          `audio codec preference "${audioCodecPreference}" not found`,
+        );
+        return selected;
+      }
+      if (channelsPreference && !preferStereo) {
+        if (!candidateTier.channels[channelsPreference]) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `no renditions with ${channelsPreference} channel sound found (channels options: ${Object.keys(
+              candidateTier.channels,
+            )})`,
+          );
+          return selected;
+        }
+      } else if (
+        (!audioCodecPreference || preferStereo) &&
+        hasStereo &&
+        candidateTier.channels['2'] === 0
+      ) {
         logStartCodecCandidateIgnored(
           candidate,
           `no renditions with stereo sound found`,
@@ -196,9 +228,7 @@ export function getCodecTiers(
       if (!level.codecSet) {
         return tiers;
       }
-      const audioGroup = level.audioGroupId
-        ? audioTracksByGroup.groups[level.audioGroupId]
-        : null;
+      const audioGroups = level.audioGroups;
       let tier = tiers[level.codecSet];
       if (!tier) {
         tiers[level.codecSet] = tier = {
@@ -208,7 +238,7 @@ export function getCodecTiers(
           maxScore: 0,
           videoRanges: { SDR: 0 },
           channels: { '2': 0 },
-          hasDefaultAudio: !audioGroup,
+          hasDefaultAudio: !audioGroups,
           fragmentError: 0,
         };
       }
@@ -220,20 +250,173 @@ export function getCodecTiers(
       tier.fragmentError += level.fragmentError;
       tier.videoRanges[level.videoRange] =
         (tier.videoRanges[level.videoRange] || 0) + 1;
-      if (audioGroup) {
-        // Default audio is any group with DEFAULT=YES, or if missing then any group with AUTOSELECT=YES, or all variants
-        tier.hasDefaultAudio =
-          tier.hasDefaultAudio || audioTracksByGroup.hasDefaultAudio
-            ? audioGroup.hasDefault
-            : audioGroup.hasAutoSelect ||
-              (!audioTracksByGroup.hasDefaultAudio &&
-                !audioTracksByGroup.hasAutoSelectAudio);
-        Object.keys(audioGroup.channels).forEach((channels) => {
-          tier.channels[channels] =
-            (tier.channels[channels] || 0) + audioGroup.channels[channels];
+      if (audioGroups) {
+        audioGroups.forEach((audioGroupId) => {
+          if (!audioGroupId) {
+            return;
+          }
+          const audioGroup = audioTracksByGroup.groups[audioGroupId];
+          // Default audio is any group with DEFAULT=YES, or if missing then any group with AUTOSELECT=YES, or all variants
+          tier.hasDefaultAudio =
+            tier.hasDefaultAudio || audioTracksByGroup.hasDefaultAudio
+              ? audioGroup.hasDefault
+              : audioGroup.hasAutoSelect ||
+                (!audioTracksByGroup.hasDefaultAudio &&
+                  !audioTracksByGroup.hasAutoSelectAudio);
+          Object.keys(audioGroup.channels).forEach((channels) => {
+            tier.channels[channels] =
+              (tier.channels[channels] || 0) + audioGroup.channels[channels];
+          });
         });
       }
-
       return tiers;
     }, {});
+}
+
+export function findMatchingOption(
+  option: MediaPlaylist | AudioSelectionOption | SubtitleSelectionOption,
+  tracks: MediaPlaylist[],
+  matchPredicate?: (
+    option: MediaPlaylist | AudioSelectionOption | SubtitleSelectionOption,
+    track: MediaPlaylist,
+  ) => boolean,
+): number {
+  if ('attrs' in option) {
+    const index = tracks.indexOf(option);
+    if (index !== -1) {
+      return index;
+    }
+  }
+  for (let i = 0; i < tracks.length; i++) {
+    const track = tracks[i];
+    if (matchesOption(option, track, matchPredicate)) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+export function matchesOption(
+  option: MediaPlaylist | AudioSelectionOption | SubtitleSelectionOption,
+  track: MediaPlaylist,
+  matchPredicate?: (
+    option: MediaPlaylist | AudioSelectionOption | SubtitleSelectionOption,
+    track: MediaPlaylist,
+  ) => boolean,
+): boolean {
+  const { groupId, name, lang, assocLang, characteristics } = option;
+  return (
+    (groupId === undefined || track.groupId === groupId) &&
+    (name === undefined || track.name === name) &&
+    (lang === undefined || track.lang === lang) &&
+    (lang === undefined || track.assocLang === assocLang) &&
+    (characteristics === undefined ||
+      characteristicsMatch(characteristics, track.characteristics)) &&
+    (matchPredicate === undefined || matchPredicate(option, track))
+  );
+}
+
+function characteristicsMatch(
+  characteristicsA: string,
+  characteristicsB: string = '',
+): boolean {
+  const arrA = characteristicsA.split(',');
+  const arrB = characteristicsB.split(',');
+  // Expects each item to be unique:
+  return (
+    arrA.length === arrB.length && !arrA.some((el) => arrB.indexOf(el) === -1)
+  );
+}
+
+export function audioMatchPredicate(
+  option: MediaPlaylist | AudioSelectionOption,
+  track: MediaPlaylist,
+) {
+  const { audioCodec, channels } = option;
+  return (
+    (audioCodec === undefined ||
+      (track.audioCodec || '').substring(0, 4) ===
+        audioCodec.substring(0, 4)) &&
+    (channels === undefined || channels === (track.channels || '2'))
+  );
+}
+
+export function findClosestLevelWithAudioGroup(
+  option: MediaPlaylist | AudioSelectionOption,
+  levels: Level[],
+  allAudioTracks: MediaPlaylist[],
+  searchIndex: number,
+  matchPredicate: (
+    option: MediaPlaylist | AudioSelectionOption,
+    track: MediaPlaylist,
+  ) => boolean,
+): number {
+  const currentLevel = levels[searchIndex];
+  // Are there variants with same URI as current level?
+  // If so, find a match that does not require any level URI change
+  const variants = levels.reduce(
+    (variantMap: { [uri: string]: number[] }, level, index) => {
+      const uri = level.uri;
+      const renditions = variantMap[uri] || (variantMap[uri] = []);
+      renditions.push(index);
+      return variantMap;
+    },
+    {},
+  );
+  const renditions = variants[currentLevel.uri];
+  if (renditions.length > 1) {
+    searchIndex = Math.max.apply(Math, renditions);
+  }
+  // Find best match
+  const currentVideoRange = currentLevel.videoRange;
+  const currentFrameRate = currentLevel.frameRate;
+  const currentVideoCodec = currentLevel.codecSet.substring(0, 4);
+  const matchingVideo = searchDownAndUpList(
+    levels,
+    searchIndex,
+    (level: Level) => {
+      if (
+        level.videoRange !== currentVideoRange ||
+        level.frameRate !== currentFrameRate ||
+        level.codecSet.substring(0, 4) !== currentVideoCodec
+      ) {
+        return false;
+      }
+      const audioGroups = level.audioGroups;
+      const tracks = allAudioTracks.filter(
+        (track): boolean =>
+          !audioGroups || audioGroups.indexOf(track.groupId) !== -1,
+      );
+      return findMatchingOption(option, tracks, matchPredicate) > -1;
+    },
+  );
+  if (matchingVideo > -1) {
+    return matchingVideo;
+  }
+  return searchDownAndUpList(levels, searchIndex, (level: Level) => {
+    const audioGroups = level.audioGroups;
+    const tracks = allAudioTracks.filter(
+      (track): boolean =>
+        !audioGroups || audioGroups.indexOf(track.groupId) !== -1,
+    );
+    return findMatchingOption(option, tracks, matchPredicate) > -1;
+  });
+}
+
+function searchDownAndUpList(
+  arr: any[],
+  searchIndex: number,
+  predicate: (item: any) => boolean,
+): number {
+  for (let i = searchIndex; i; i--) {
+    if (predicate(arr[i])) {
+      return i;
+    }
+  }
+  for (let i = searchIndex + 1; i < arr.length; i++) {
+    if (predicate(arr[i])) {
+      return i;
+    }
+  }
+  return -1;
 }

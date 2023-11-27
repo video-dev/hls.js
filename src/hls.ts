@@ -21,8 +21,16 @@ import type CapLevelController from './controller/cap-level-controller';
 import type CMCDController from './controller/cmcd-controller';
 import type EMEController from './controller/eme-controller';
 import type SubtitleTrackController from './controller/subtitle-track-controller';
-import type { ComponentAPI, NetworkComponentAPI } from './types/component-api';
-import type { MediaPlaylist } from './types/media-playlist';
+import type {
+  AbrComponentAPI,
+  ComponentAPI,
+  NetworkComponentAPI,
+} from './types/component-api';
+import type {
+  AudioSelectionOption,
+  MediaPlaylist,
+  SubtitleSelectionOption,
+} from './types/media-playlist';
 import type { HlsConfig } from './config';
 import type { BufferInfo } from './utils/buffer-helper';
 import type AudioStreamController from './controller/audio-stream-controller';
@@ -55,7 +63,7 @@ export default class Hls implements HlsEventEmitter {
   private _emitter: HlsEventEmitter = new EventEmitter();
   private _autoLevelCapping: number = -1;
   private _maxHdcpLevel: HdcpLevel = null;
-  private abrController: AbrController;
+  private abrController: AbrComponentAPI;
   private bufferController: BufferController;
   private capLevelController: CapLevelController;
   private latencyController: LatencyController;
@@ -772,6 +780,26 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
+   * Find and select the best matching audio track, making a level switch when a Group change is necessary.
+   * Updates `hls.config.audioPreference`. Returns the selected track, or null when no matching track is found.
+   */
+  public setAudioOption(
+    audioOption: MediaPlaylist | AudioSelectionOption | undefined,
+  ): MediaPlaylist | null {
+    return this.audioTrackController?.setAudioOption(audioOption);
+  }
+  /**
+   * Find and select the best matching subtitle track, making a level switch when a Group change is necessary.
+   * Updates `hls.config.subtitlePreference`. Returns the selected track, or null when no matching track is found.
+   */
+  public setSubtitleOption(
+    subtitleOption: MediaPlaylist | SubtitleSelectionOption | undefined,
+  ): MediaPlaylist | null {
+    this.subtitleTrackController?.setSubtitleOption(subtitleOption);
+    return null;
+  }
+
+  /**
    * Get the complete list of audio tracks across all media groups
    */
   get allAudioTracks(): Array<MediaPlaylist> {
@@ -929,6 +957,8 @@ export default class Hls implements HlsEventEmitter {
 }
 
 export type {
+  AudioSelectionOption,
+  SubtitleSelectionOption,
   MediaPlaylist,
   ErrorDetails,
   ErrorTypes,
@@ -977,6 +1007,7 @@ export type {
   PlaylistLoaderConfig,
   PlaylistLoaderConstructor,
   RetryConfig,
+  SelectionPreferences,
   StreamControllerConfig,
   LatencyControllerConfig,
   MetadataControllerConfig,

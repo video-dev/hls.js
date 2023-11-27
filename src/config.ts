@@ -29,6 +29,10 @@ import type {
   LoaderResponse,
   PlaylistLoaderContext,
 } from './types/loader';
+import type {
+  AudioSelectionOption,
+  SubtitleSelectionOption,
+} from './types/media-playlist';
 
 export type ABRControllerConfig = {
   abrEwmaFastLive: number;
@@ -218,6 +222,11 @@ export type StreamControllerConfig = {
   testBandwidth: boolean;
 };
 
+export type SelectionPreferences = {
+  audioPreference?: AudioSelectionOption;
+  subtitlePreference?: SubtitleSelectionOption;
+};
+
 export type LatencyControllerConfig = {
   liveSyncDurationCount: number;
   liveMaxLatencyDurationCount: number;
@@ -299,6 +308,7 @@ export type HlsConfig = {
   LevelControllerConfig &
   MP4RemuxerConfig &
   StreamControllerConfig &
+  SelectionPreferences &
   LatencyControllerConfig &
   MetadataControllerConfig &
   TimelineControllerConfig &

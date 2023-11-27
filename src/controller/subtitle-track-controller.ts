@@ -9,8 +9,12 @@ import {
   mediaAttributesIdentical,
   subtitleTrackMatchesTextTrack,
 } from '../utils/media-option-attributes';
+import { findMatchingOption, matchesOption } from '../utils/rendition-helper';
 import type Hls from '../hls';
-import type { MediaPlaylist } from '../types/media-playlist';
+import type {
+  MediaPlaylist,
+  SubtitleSelectionOption,
+} from '../types/media-playlist';
 import type { HlsUrlParameters } from '../types/level';
 import type {
   ErrorData,
@@ -212,7 +216,7 @@ class SubtitleTrackController extends BasePlaylistController {
     }
     const subtitleGroups = levelInfo.subtitleGroups || null;
     const currentGroups = this.groupIds;
-    const currentTrack = this.currentTrack;
+    let currentTrack = this.currentTrack;
     if (
       !subtitleGroups ||
       currentGroups?.length !== subtitleGroups?.length ||
@@ -227,7 +231,7 @@ class SubtitleTrackController extends BasePlaylistController {
           !subtitleGroups || subtitleGroups.indexOf(track.groupId) !== -1,
       );
       if (subtitleTracks.length) {
-        // Disable selectDefaultTrack if there are no default tracks
+        // Disable selectDefaultTrack if there are no default or forced tracks
         if (
           this.selectDefaultTrack &&
           !subtitleTracks.some(
@@ -243,6 +247,12 @@ class SubtitleTrackController extends BasePlaylistController {
       } else if (!currentTrack && !this.tracksInGroup.length) {
         // Do not dispatch SUBTITLE_TRACKS_UPDATED when there were and are no tracks
         return;
+      }
+
+      if (!currentTrack) {
+        currentTrack = this.setSubtitleOption(
+          this.hls.config.subtitlePreference,
+        );
       }
 
       this.tracksInGroup = subtitleTracks;
@@ -284,25 +294,32 @@ class SubtitleTrackController extends BasePlaylistController {
       ) {
         continue;
       }
-      if (
-        !currentTrack ||
-        mediaAttributesIdentical(currentTrack.attrs, track.attrs)
-      ) {
-        return track.id;
+      if (!currentTrack || matchesOption(track, currentTrack)) {
+        return i;
       }
-      if (
-        mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
-          'LANGUAGE',
-          'ASSOC-LANGUAGE',
-          'CHARACTERISTICS',
-        ])
-      ) {
-        return track.id;
+    }
+    if (currentTrack) {
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        if (
+          mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
+            'LANGUAGE',
+            'ASSOC-LANGUAGE',
+            'CHARACTERISTICS',
+          ])
+        ) {
+          return i;
+        }
       }
-      if (
-        mediaAttributesIdentical(currentTrack.attrs, track.attrs, ['LANGUAGE'])
-      ) {
-        return track.id;
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        if (
+          mediaAttributesIdentical(currentTrack.attrs, track.attrs, [
+            'LANGUAGE',
+          ])
+        ) {
+          return i;
+        }
       }
     }
     return -1;
@@ -352,6 +369,47 @@ class SubtitleTrackController extends BasePlaylistController {
   set subtitleTrack(newId: number) {
     this.selectDefaultTrack = false;
     this.setSubtitleTrack(newId);
+  }
+
+  public setSubtitleOption(
+    subtitleOption: MediaPlaylist | SubtitleSelectionOption | undefined,
+  ): MediaPlaylist | null {
+    this.hls.config.subtitlePreference = subtitleOption;
+    if (subtitleOption) {
+      const allSubtitleTracks = this.allSubtitleTracks;
+      this.selectDefaultTrack = false;
+      if (allSubtitleTracks.length) {
+        // First see if current option matches (no switch op)
+        const currentTrack = this.currentTrack;
+        if (currentTrack && matchesOption(subtitleOption, currentTrack)) {
+          return currentTrack;
+        }
+        // Find option in current group
+        const groupIndex = findMatchingOption(
+          subtitleOption,
+          this.tracksInGroup,
+        );
+        if (groupIndex > -1) {
+          const track = this.tracksInGroup[groupIndex];
+          this.setSubtitleTrack(groupIndex);
+          return track;
+        } else if (currentTrack) {
+          // If this is not the initial selection return null
+          // option should have matched one in active group
+          return null;
+        } else {
+          // Find the option in all tracks for initial selection
+          const allIndex = findMatchingOption(
+            subtitleOption,
+            allSubtitleTracks,
+          );
+          if (allIndex > -1) {
+            return allSubtitleTracks[allIndex];
+          }
+        }
+      }
+    }
+    return null;
   }
 
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
