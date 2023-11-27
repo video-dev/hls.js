@@ -986,7 +986,6 @@ export function parseSEIMessageFromNALu(
   let b = 0;
 
   while (seiPtr < data.length) {
-    // payloadType is a uint8, so we need to mask it when extracting it and the pyloadSize
     payloadType = 0;
     do {
       if (seiPtr >= data.length) {
@@ -994,7 +993,6 @@ export function parseSEIMessageFromNALu(
       }
       b = data[seiPtr++];
       payloadType += b;
-      payloadType &= 0xff;
     } while (b === 0xff);
 
     // Parse payload size.
