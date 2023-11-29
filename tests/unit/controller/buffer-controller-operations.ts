@@ -199,6 +199,7 @@ describe('BufferController', function () {
       currentQueue.push(operation);
       const errorEvent = new Event('error');
       bufferController.sourceBuffer[name].dispatchEvent(errorEvent);
+      const sbErrorObject = triggerSpy.getCall(0).lastArg.error;
 
       expect(
         onError,
@@ -206,8 +207,11 @@ describe('BufferController', function () {
       ).to.have.callCount(i + 1);
       expect(
         onError,
-        'onError should be called with the error event',
-      ).to.have.been.calledWith(errorEvent);
+        'onError should be called with an error object',
+      ).to.have.been.calledWith(sbErrorObject);
+      expect(sbErrorObject.message).equals(
+        'audio SourceBuffer error. MediaSource readyState: open',
+      );
       expect(
         triggerSpy,
         'ERROR should have been triggered in response to the SourceBuffer error',

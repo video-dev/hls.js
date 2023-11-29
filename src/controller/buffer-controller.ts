@@ -400,8 +400,8 @@ export default class BufferController implements ComponentAPI {
       },
       onStart: () => {},
       onComplete: () => {},
-      onError: (e) => {
-        this.warn(`Failed to change ${type} SourceBuffer type`, e);
+      onError: (error: Error) => {
+        this.warn(`Failed to change ${type} SourceBuffer type`, error);
       },
     };
 
@@ -495,7 +495,7 @@ export default class BufferController implements ComponentAPI {
           timeRanges,
         });
       },
-      onError: (err) => {
+      onError: (error: Error) => {
         // in case any error occured while appending, put back segment in segments table
         const event: ErrorData = {
           type: ErrorTypes.MEDIA_ERROR,
@@ -505,12 +505,12 @@ export default class BufferController implements ComponentAPI {
           frag,
           part,
           chunkMeta,
-          error: err,
-          err,
+          error,
+          err: error,
           fatal: false,
         };
 
-        if (err.code === DOMException.QUOTA_EXCEEDED_ERR) {
+        if ((error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR) {
           // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
           // let's stop appending any segments, and report BUFFER_FULL_ERROR error
           event.details = ErrorDetails.BUFFER_FULL_ERROR;
@@ -1032,7 +1032,9 @@ export default class BufferController implements ComponentAPI {
   }
 
   private _onSBUpdateError(type: SourceBufferName, event: Event) {
-    const error = new Error(`${type} SourceBuffer error`);
+    const error = new Error(
+      `${type} SourceBuffer error. MediaSource readyState: ${this.mediaSource?.readyState}`,
+    );
     this.error(`${error}`, event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // SourceBuffer errors are not necessarily fatal; if so, the HTMLMediaElement will fire an error event
@@ -1046,7 +1048,7 @@ export default class BufferController implements ComponentAPI {
     // updateend is always fired after error, so we'll allow that to shift the current operation off of the queue
     const operation = this.operationQueue.current(type);
     if (operation) {
-      operation.onError(event);
+      operation.onError(error);
     }
   }
 
