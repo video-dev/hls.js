@@ -453,6 +453,11 @@ export default class ErrorController implements NetworkComponentAPI {
           data.details !== ErrorDetails.FRAG_GAP
         ) {
           data.fatal = true;
+        } else if (/MediaSource readyState: ended/.test(data.error.message)) {
+          this.warn(
+            `MediaSource ended after "${data.sourceBufferName}" sourceBuffer append error. Attempting to recover from media error.`,
+          );
+          this.hls.recoverMediaError();
         }
         break;
       case NetworkErrorAction.RetryRequest:
