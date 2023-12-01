@@ -691,12 +691,14 @@ class AbrController implements AbrComponentAPI {
         !levelInfo.supportedResult &&
         !levelInfo.supportedPromise
       ) {
-        const mediaCapabilities = navigator.mediaCapabilities;
+        const mediaCapabilities = navigator.mediaCapabilities as
+          | MediaCapabilities
+          | undefined;
         if (
+          typeof mediaCapabilities?.decodingInfo === 'function' &&
           requiresMediaCapabilitiesDecodingInfo(
             levelInfo,
             audioTracksByGroup,
-            mediaCapabilities,
             currentVideoRange,
             currentFrameRate,
             currentBw,

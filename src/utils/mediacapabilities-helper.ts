@@ -32,7 +32,6 @@ export const SUPPORTED_INFO_CACHE: Record<
 export function requiresMediaCapabilitiesDecodingInfo(
   level: Level,
   audioTracksByGroup: AudioTracksByGroup,
-  mediaCapabilities: MediaCapabilities | undefined,
   currentVideoRange: VideoRange | undefined,
   currentFrameRate: number,
   currentBw: number,
@@ -75,8 +74,7 @@ export function requiresMediaCapabilitiesDecodingInfo(
     }
   }
   return (
-    (typeof mediaCapabilities?.decodingInfo == 'function' &&
-      level.videoCodec !== undefined &&
+    (level.videoCodec !== undefined &&
       ((level.width > 1920 && level.height > 1088) ||
         (level.height > 1920 && level.width > 1088) ||
         level.frameRate > Math.max(currentFrameRate, 30) ||
@@ -94,11 +92,11 @@ export function requiresMediaCapabilitiesDecodingInfo(
 export function getMediaDecodingInfoPromise(
   level: Level,
   audioTracksByGroup: AudioTracksByGroup,
-  mediaCapabilities: MediaCapabilities,
+  mediaCapabilities: MediaCapabilities | undefined,
 ): Promise<MediaDecodingInfo> {
   const videoCodecs = level.videoCodec;
   const audioCodecs = level.audioCodec;
-  if (!videoCodecs || !audioCodecs) {
+  if (!videoCodecs || !audioCodecs || !mediaCapabilities) {
     return Promise.resolve(SUPPORTED_INFO_DEFAULT);
   }
 
