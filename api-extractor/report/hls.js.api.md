@@ -3081,6 +3081,7 @@ export type RetryConfig = {
 //
 // @public (undocumented)
 export type SelectionPreferences = {
+    videoPreference?: VideoSelectionOption;
     audioPreference?: AudioSelectionOption;
     subtitlePreference?: SubtitleSelectionOption;
 };
@@ -3416,6 +3417,14 @@ export interface UserdataSample {
 //
 // @public (undocumented)
 export type VariableMap = Record<string, string>;
+
+// Warning: (ae-missing-release-tag) "VideoSelectionOption" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type VideoSelectionOption = {
+    preferHDR?: boolean;
+    allowedVideoRanges?: Array<VideoRange>;
+};
 
 // (No @packageDocumentation comment for this package)
 

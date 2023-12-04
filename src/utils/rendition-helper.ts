@@ -1,10 +1,12 @@
 import { codecsSetSelectionPreferenceValue } from './codecs';
+import { getVideoSelectionOptions } from './hdr';
 import { logger } from './logger';
 import type { Level, VideoRange } from '../types/level';
 import type {
   AudioSelectionOption,
   MediaPlaylist,
   SubtitleSelectionOption,
+  VideoSelectionOption,
 } from '../types/media-playlist';
 
 export type CodecSetTier = {
@@ -26,16 +28,18 @@ type AudioTrackGroup = {
 };
 type StartParameters = {
   codecSet: string | undefined;
-  videoRange: VideoRange | undefined;
+  videoRanges: Array<VideoRange>;
+  preferHDR: boolean;
   minFramerate: number;
   minBitrate: number;
 };
 
 export function getStartCodecTier(
   codecTiers: Record<string, CodecSetTier>,
-  videoRange: VideoRange | undefined,
+  currentVideoRange: VideoRange | undefined,
   currentBw: number,
   audioPreference: AudioSelectionOption | undefined,
+  videoPreference: VideoSelectionOption | undefined,
 ): StartParameters {
   const codecSets = Object.keys(codecTiers);
   const channelsPreference = audioPreference?.channels;
@@ -48,14 +52,25 @@ export function getStartCodecTier(
   let minFramerate = Infinity;
   let minBitrate = Infinity;
   let selectedScore = 0;
+  let videoRanges: Array<VideoRange> = [];
+
+  const { preferHDR, allowedVideoRanges } = getVideoSelectionOptions(
+    currentVideoRange,
+    videoPreference,
+  );
+
   for (let i = codecSets.length; i--; ) {
     const tier = codecTiers[codecSets[i]];
     hasStereo = tier.channels[2] > 0;
     minHeight = Math.min(minHeight, tier.minHeight);
     minFramerate = Math.min(minFramerate, tier.minFramerate);
     minBitrate = Math.min(minBitrate, tier.minBitrate);
-    if (videoRange) {
-      hasCurrentVideoRange ||= tier.videoRanges[videoRange] > 0;
+    const matchingVideoRanges = allowedVideoRanges.filter(
+      (range) => tier.videoRanges[range] > 0,
+    );
+    if (matchingVideoRanges.length > 0) {
+      hasCurrentVideoRange = true;
+      videoRanges = matchingVideoRanges;
     }
   }
   minHeight = Number.isFinite(minHeight) ? minHeight : 0;
@@ -64,9 +79,10 @@ export function getStartCodecTier(
   const maxFramerate = Math.max(30, minFramerate);
   minBitrate = Number.isFinite(minBitrate) ? minBitrate : currentBw;
   currentBw = Math.max(minBitrate, currentBw);
-  // If there are no SDR variants, set currentVideoRange to undefined
+  // If there are no variants with matching preference, set currentVideoRange to undefined
   if (!hasCurrentVideoRange) {
-    videoRange = undefined;
+    currentVideoRange = undefined;
+    videoRanges = [];
   }
   const codecSet = codecSets.reduce(
     (selected: string | undefined, candidate: string) => {
@@ -134,10 +150,12 @@ export function getStartCodecTier(
         );
         return selected;
       }
-      if (videoRange && candidateTier.videoRanges[videoRange] === 0) {
+      if (!videoRanges.some((range) => candidateTier.videoRanges[range] > 0)) {
         logStartCodecCandidateIgnored(
           candidate,
-          `no variants with VIDEO-RANGE of ${videoRange} found`,
+          `no variants with VIDEO-RANGE of ${JSON.stringify(
+            videoRanges,
+          )} found`,
         );
         return selected;
       }
@@ -164,7 +182,8 @@ export function getStartCodecTier(
   );
   return {
     codecSet,
-    videoRange,
+    videoRanges,
+    preferHDR,
     minFramerate,
     minBitrate,
   };

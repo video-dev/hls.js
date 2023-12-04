@@ -633,7 +633,8 @@ class AbrController implements AbrComponentAPI {
     let currentCodecSet: string | undefined;
     let currentVideoRange: VideoRange | undefined = 'SDR';
     let currentFrameRate = level?.frameRate || 0;
-    const audioPreference = config.audioPreference;
+
+    const { audioPreference, videoPreference } = config;
     const audioTracksByGroup =
       this.audioTracksByGroup ||
       (this.audioTracksByGroup = getAudioTracksByGroup(allAudioTracks));
@@ -654,10 +655,14 @@ class AbrController implements AbrComponentAPI {
         currentVideoRange,
         currentBw,
         audioPreference,
+        videoPreference,
       );
-      const { codecSet, videoRange, minFramerate, minBitrate } = startTier;
+      const { codecSet, videoRanges, minFramerate, minBitrate, preferHDR } =
+        startTier;
       currentCodecSet = codecSet;
-      currentVideoRange = videoRange;
+      currentVideoRange = preferHDR
+        ? videoRanges[videoRanges.length - 1]
+        : videoRanges[0];
       currentFrameRate = minFramerate;
       currentBw = Math.max(currentBw, minBitrate);
       logger.log(`[abr] picked start tier ${JSON.stringify(startTier)}`);
@@ -686,12 +691,14 @@ class AbrController implements AbrComponentAPI {
         !levelInfo.supportedResult &&
         !levelInfo.supportedPromise
       ) {
-        const mediaCapabilities = navigator.mediaCapabilities;
+        const mediaCapabilities = navigator.mediaCapabilities as
+          | MediaCapabilities
+          | undefined;
         if (
+          typeof mediaCapabilities?.decodingInfo === 'function' &&
           requiresMediaCapabilitiesDecodingInfo(
             levelInfo,
             audioTracksByGroup,
-            mediaCapabilities,
             currentVideoRange,
             currentFrameRate,
             currentBw,
