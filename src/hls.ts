@@ -30,6 +30,7 @@ import type {
   AudioSelectionOption,
   MediaPlaylist,
   SubtitleSelectionOption,
+  VideoSelectionOption,
 } from './types/media-playlist';
 import type { HlsConfig } from './config';
 import type { BufferInfo } from './utils/buffer-helper';
@@ -959,6 +960,7 @@ export default class Hls implements HlsEventEmitter {
 export type {
   AudioSelectionOption,
   SubtitleSelectionOption,
+  VideoSelectionOption,
   MediaPlaylist,
   ErrorDetails,
   ErrorTypes,
