@@ -6,7 +6,8 @@ import LevelController from './controller/level-controller';
 import { FragmentTracker } from './controller/fragment-tracker';
 import KeyLoader from './loader/key-loader';
 import StreamController from './controller/stream-controller';
-import { isSupported } from './is-supported';
+import { isMSESupported, isSupported } from './is-supported';
+import { getMediaSource } from './utils/mediasource-helper';
 import { logger, enableLogs } from './utils/logger';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
 import { EventEmitter } from 'eventemitter3';
@@ -88,8 +89,22 @@ export default class Hls implements HlsEventEmitter {
   /**
    * Check if the required MediaSource Extensions are available.
    */
+  static isMSESupported(): boolean {
+    return isMSESupported();
+  }
+
+  /**
+   * Check if MediaSource Extensions are available and isTypeSupported checks pass for any baseline codecs.
+   */
   static isSupported(): boolean {
     return isSupported();
+  }
+
+  /**
+   * Get the MediaSource global used for MSE playback (ManagedMediaSource, MediaSource, or WebKitMediaSource).
+   */
+  static getMediaSource(): typeof MediaSource | undefined {
+    return getMediaSource();
   }
 
   static get Events(): typeof Events {

@@ -191,15 +191,26 @@ First include `https://cdn.jsdelivr.net/npm/hls.js@1` (or `/hls.js` for unminifi
 <script src="//cdn.jsdelivr.net/npm/hls.js@1"></script>
 ```
 
-Invoke the following static method: `Hls.isSupported()` to check whether your browser is supporting [MediaSource Extensions](http://w3c.github.io/media-source/).
+Invoke the following static method: `Hls.isSupported()` to check whether your browser supports [MediaSource Extensions](http://w3c.github.io/media-source/) with any baseline codecs.
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
 <script>
   if (Hls.isSupported()) {
-    console.log('hello hls.js!');
+    console.log('Hello HLS.js!');
   }
 </script>
+```
+
+If you want to test for MSE support without testing for baseline codecs, use `isMSESupported`:
+
+```js
+if (
+  Hls.isMSESupported() &&
+  Hls.getMediaSource().isTypeSupported('video/mp4;codecs="av01.0.01M.08"')
+) {
+  console.log('Hello AV1 playback! AVC who?');
+}
 ```
 
 ### Second step: instantiate Hls object and bind it to `<video>` element
