@@ -316,13 +316,48 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
     case 'mp4a': {
       const codecBox = findBox(sampleEntries, [fourCC])[0];
       const esdsBox = findBox(codecBox.subarray(28), ['esds'])[0];
-      if (esdsBox && esdsBox.length > 12 && esdsBox[11] !== 0) {
-        codec += '.' + toHex(esdsBox[11]);
-        codec += '.' + ((esdsBox[12] >>> 2) & 0x3f).toString(16).toUpperCase();
+      if (esdsBox && esdsBox.length > 12) {
+        let i = 4;
+        // ES Descriptor tag
+        if (esdsBox[i++] !== 0x03) {
+          break;
+        }
+        i = skipBERInteger(esdsBox, i);
+        i += 2; // skip es_id;
+        const flags = esdsBox[i++];
+        if (flags & 0x80) {
+          i += 2; // skip dependency es_id
+        }
+        if (flags & 0x40) {
+          i += esdsBox[i++]; // skip URL
+        }
+        // Decoder config descriptor
+        if (esdsBox[i++] !== 0x04) {
+          break;
+        }
+        i = skipBERInteger(esdsBox, i);
+        const objectType = esdsBox[i++];
+        if (objectType === 0x40) {
+          codec += '.' + toHex(objectType);
+        } else {
+          break;
+        }
+        i += 12;
+        // Decoder specific info
+        if (esdsBox[i++] !== 0x05) {
+          break;
+        }
+        i = skipBERInteger(esdsBox, i);
+        const firstByte = esdsBox[i++];
+        let audioObjectType = (firstByte & 0xf8) >> 3;
+        if (audioObjectType === 31) {
+          audioObjectType +=
+            1 + ((firstByte & 0x7) << 3) + ((esdsBox[i] & 0xe0) >> 5);
+        }
+        codec += '.' + audioObjectType;
       }
       break;
     }
-    // break;
     case 'hvc1':
     case 'hev1': {
       const hvcCBox = findBox(sampleEntriesEnd, ['hvcC'])[0];
@@ -428,6 +463,12 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
       break;
   }
   return { codec, encrypted };
+}
+
+function skipBERInteger(bytes: Uint8Array, i: number): number {
+  const limit = i + 5;
+  while (bytes[i++] & 0x80 && i < limit) {}
+  return i;
 }
 
 function toHex(x: number): string {
