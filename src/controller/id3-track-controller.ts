@@ -26,17 +26,34 @@ declare global {
   }
 }
 
-type Cue = VTTCue | TextTrackCue;
-
 const MIN_CUE_DURATION = 0.25;
 
-function getCueClass() {
+function getCueClass(): typeof VTTCue | typeof TextTrackCue | undefined {
   if (typeof self === 'undefined') return undefined;
+  return self.VTTCue || self.TextTrackCue;
+}
 
-  // Attempt to recreate Safari functionality by creating
-  // WebKitDataCue objects when available and store the decoded
-  // ID3 data in the value property of the cue
-  return (self.WebKitDataCue || self.VTTCue || self.TextTrackCue) as any;
+function createCueWithDataFields(
+  Cue: typeof VTTCue | typeof TextTrackCue,
+  startTime: number,
+  endTime: number,
+  data: Object,
+  type?: string
+): VTTCue | TextTrackCue | undefined {
+  let cue = new Cue(startTime, endTime, '');
+  try {
+    (cue as any).value = data;
+    if (type) {
+      (cue as any).type = type;
+    }
+  } catch (e) {
+    cue = new Cue(
+      startTime,
+      endTime,
+      JSON.stringify(type ? { type, ...data } : data)
+    );
+  }
+  return cue;
 }
 
 // VTTCue latest draft allows an infinite duration, fallback
@@ -44,7 +61,7 @@ function getCueClass() {
 const MAX_CUE_ENDTIME = (() => {
   const Cue = getCueClass();
   try {
-    new Cue(0, Number.POSITIVE_INFINITY, '');
+    Cue && new Cue(0, Number.POSITIVE_INFINITY, '');
   } catch (e) {
     return Number.MAX_VALUE;
   }
@@ -70,7 +87,11 @@ class ID3TrackController implements ComponentAPI {
   private media: HTMLMediaElement | null = null;
   private dateRangeCuesAppended: Record<
     string,
-    { cues: Record<string, Cue>; dateRange: DateRange; durationKnown: boolean }
+    {
+      cues: Record<string, VTTCue | TextTrackCue>;
+      dateRange: DateRange;
+      durationKnown: boolean;
+    }
   > = {};
 
   constructor(hls) {
@@ -177,6 +198,9 @@ class ID3TrackController implements ComponentAPI {
     }
 
     const Cue = getCueClass();
+    if (!Cue) {
+      return;
+    }
 
     for (let i = 0; i < samples.length; i++) {
       const type = samples[i].type;
@@ -207,13 +231,16 @@ class ID3TrackController implements ComponentAPI {
           if (!ID3.isTimeStampFrame(frame)) {
             // add a bounds to any unbounded cues
             this.updateId3CueEnds(startTime, type);
-
-            const cue = new Cue(startTime, endTime, '');
-            cue.value = frame;
-            if (type) {
-              cue.type = type;
+            const cue = createCueWithDataFields(
+              Cue,
+              startTime,
+              endTime,
+              frame,
+              type
+            );
+            if (cue) {
+              this.id3Track.addCue(cue);
             }
-            this.id3Track.addCue(cue);
           }
         }
       }
@@ -350,22 +377,28 @@ class ID3TrackController implements ComponentAPI {
         if (!isDateRangeCueAttribute(key)) {
           continue;
         }
-        let cue = cues[key] as any;
+        const cue = cues[key];
         if (cue) {
           if (durationKnown && !appendedDateRangeCues.durationKnown) {
             cue.endTime = endTime;
           }
-        } else {
+        } else if (Cue) {
           let data = dateRange.attr[key];
-          cue = new Cue(startTime, endTime, '');
           if (isSCTE35Attribute(key)) {
             data = hexToArrayBuffer(data);
           }
-          cue.value = { key, data };
-          cue.type = MetadataSchema.dateRange;
-          cue.id = id;
-          this.id3Track.addCue(cue);
-          cues[key] = cue;
+          const cue = createCueWithDataFields(
+            Cue,
+            startTime,
+            endTime,
+            { key, data },
+            MetadataSchema.dateRange
+          );
+          if (cue) {
+            cue.id = id;
+            this.id3Track.addCue(cue);
+            cues[key] = cue;
+          }
         }
       }
       dateRangeCuesAppended[id] = {
