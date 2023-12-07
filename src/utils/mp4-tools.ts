@@ -384,7 +384,7 @@ export function getStartDTS(
             // convert base time to seconds
             const startTime = baseTime / scale;
             if (
-              isFinite(startTime) &&
+              Number.isFinite(startTime) &&
               (result === null || startTime < result)
             ) {
               return startTime;
@@ -396,7 +396,7 @@ export function getStartDTS(
       );
       if (
         start !== null &&
-        isFinite(start) &&
+        Number.isFinite(start) &&
         (result === null || start < result)
       ) {
         return start;
