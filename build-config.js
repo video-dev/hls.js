@@ -148,6 +148,14 @@ const babelTsWithPresetEnvTargets = ({ targets, stripConsole }) =>
                 path.resolve('src/polyfills/number'),
               );
             } else if (
+              espath.get('callee').matchesPattern('Number.isSafeInteger')
+            ) {
+              espath.node.callee = importHelper.addNamed(
+                espath,
+                'isSafeInteger',
+                path.resolve('src/polyfills/number'),
+              );
+            } else if (
               espath.get('callee').matchesPattern('Number.MAX_SAFE_INTEGER')
             ) {
               espath.node.callee = importHelper.addNamed(
