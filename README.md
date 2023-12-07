@@ -300,8 +300,9 @@ HLS.js is supported on:
 - Firefox 41+ for Android
 - Firefox 42+ for Desktop
 - Edge for Windows 10+
-- Safari 8+ for MacOS 10.10+
-- Safari for ipadOS 13+
+- Safari 9+ for macOS 10.11+
+- Safari for iPadOS 13+
+- Safari for iOS 17.1+
 
 A [Promise polyfill](https://github.com/taylorhakes/promise-polyfill) is required in browsers missing native promise support.
 
