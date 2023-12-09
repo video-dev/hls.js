@@ -94,7 +94,7 @@
     "doctoc": "2.2.1",
     "es-check": "7.1.1",
     "eslint": "8.55.0",
-    "eslint-config-prettier": "9.0.0",
+    "eslint-config-prettier": "9.1.0",
     "eslint-plugin-import": "2.29.0",
     "eslint-plugin-mocha": "10.2.0",
     "eslint-plugin-node": "11.1.0",
