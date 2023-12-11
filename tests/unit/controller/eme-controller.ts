@@ -44,6 +44,34 @@ class MediaMock extends EventEmitter {
   }
 }
 
+class MediaKeySessionMock extends EventEmitter {
+  addEventListener: any;
+  removeEventListener: any;
+  keyStatuses: Map<Uint8Array, string>;
+  constructor() {
+    super();
+    this.keyStatuses = new Map();
+    this.addEventListener = this.addListener.bind(this);
+    this.removeEventListener = this.removeListener.bind(this);
+  }
+  generateRequest() {
+    return Promise.resolve().then(() => {
+      this.emit('message', {
+        messageType: 'license-request',
+        message: new Uint8Array(0),
+      });
+      this.keyStatuses.set(new Uint8Array(0), 'usable');
+      this.emit('keystatuseschange', {});
+    });
+  }
+  remove() {
+    return Promise.resolve();
+  }
+  update() {
+    return Promise.resolve();
+  }
+}
+
 let emeController: EMEControllerTestable;
 let media: MediaMock;
 let sinonFakeXMLHttpRequestStatic: sinon.SinonFakeXMLHttpRequestStatic;
@@ -82,24 +110,7 @@ describe('EMEController', function () {
         createMediaKeys: sinon.spy(() =>
           Promise.resolve({
             setServerCertificate: () => Promise.resolve(),
-            createSession: (): Partial<MediaKeySession> => ({
-              addEventListener: () => {},
-              onmessage: null,
-              onkeystatuseschange: null,
-              generateRequest() {
-                return Promise.resolve().then(() => {
-                  this.onmessage({
-                    messageType: 'license-request',
-                    message: new Uint8Array(0),
-                  });
-                  this.keyStatuses.set(new Uint8Array(0), 'usable');
-                  this.onkeystatuseschange({});
-                });
-              },
-              remove: () => Promise.resolve(),
-              update: () => Promise.resolve(),
-              keyStatuses: new Map(),
-            }),
+            createSession: () => new MediaKeySessionMock(),
           }),
         ),
       });
@@ -163,24 +174,7 @@ describe('EMEController', function () {
         createMediaKeys: sinon.spy(() =>
           Promise.resolve({
             setServerCertificate: () => Promise.resolve(),
-            createSession: (): Partial<MediaKeySession> => ({
-              addEventListener: () => {},
-              onmessage: null,
-              onkeystatuseschange: null,
-              generateRequest() {
-                return Promise.resolve().then(() => {
-                  this.onmessage({
-                    messageType: 'license-request',
-                    message: new Uint8Array(0),
-                  });
-                  this.keyStatuses.set(new Uint8Array(0), 'usable');
-                  this.onkeystatuseschange({});
-                });
-              },
-              remove: () => Promise.resolve(),
-              update: () => Promise.resolve(),
-              keyStatuses: new Map(),
-            }),
+            createSession: () => new MediaKeySessionMock(),
           }),
         ),
       });
@@ -260,6 +254,7 @@ describe('EMEController', function () {
             setServerCertificate: () => Promise.resolve(),
             createSession: () => ({
               addEventListener: () => {},
+              removeEventListener: () => {},
               generateRequest: () => Promise.reject(new Error('bad data')),
               remove: () => Promise.resolve(),
               update: () => Promise.resolve(),
@@ -324,24 +319,7 @@ describe('EMEController', function () {
         createMediaKeys: sinon.spy(() =>
           Promise.resolve({
             setServerCertificate: mediaKeysSetServerCertificateSpy,
-            createSession: () => ({
-              addEventListener: () => {},
-              onmessage: null,
-              onkeystatuseschange: null,
-              generateRequest() {
-                return Promise.resolve().then(() => {
-                  this.onmessage({
-                    messageType: 'license-request',
-                    message: new Uint8Array(0),
-                  });
-                  this.keyStatuses.set(new Uint8Array(0), 'usable');
-                  this.onkeystatuseschange({});
-                });
-              },
-              remove: () => Promise.resolve(),
-              update: () => Promise.resolve(),
-              keyStatuses: new Map(),
-            }),
+            createSession: () => new MediaKeySessionMock(),
           }),
         ),
       });
@@ -421,6 +399,7 @@ describe('EMEController', function () {
             setServerCertificate: mediaKeysSetServerCertificateSpy,
             createSession: () => ({
               addEventListener: () => {},
+              removeEventListener: () => {},
               generateRequest: () => Promise.resolve(),
               remove: () => Promise.resolve(),
               update: () => Promise.resolve(),
@@ -505,6 +484,7 @@ describe('EMEController', function () {
           Promise.resolve({
             createSession: () => ({
               addEventListener: () => {},
+              removeEventListener: () => {},
               generateRequest: () => Promise.resolve(),
               remove: () => Promise.resolve(),
               update: () => Promise.resolve(),
@@ -583,6 +563,7 @@ describe('EMEController', function () {
             setServerCertificate: () => Promise.resolve(),
             createSession: () => ({
               addEventListener: () => {},
+              removeEventListener: () => {},
               generateRequest: () => Promise.resolve(),
               remove: () => Promise.resolve(),
               update: () => Promise.resolve(),
