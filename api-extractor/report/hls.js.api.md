@@ -2804,6 +2804,10 @@ export interface MediaKeySessionContext {
     mediaKeys: MediaKeys;
     // (undocumented)
     mediaKeysSession: MediaKeySession;
+    // (undocumented)
+    _onkeystatuseschange?: (this: MediaKeySession, ev: Event) => any;
+    // (undocumented)
+    _onmessage?: (this: MediaKeySession, ev: MediaKeyMessageEvent) => any;
 }
 
 // Warning: (ae-missing-release-tag) "MediaPlaylist" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

@@ -57,6 +57,8 @@ export interface MediaKeySessionContext {
   mediaKeysSession: MediaKeySession;
   keyStatus: MediaKeyStatus;
   licenseXhr?: XMLHttpRequest;
+  _onmessage?: (this: MediaKeySession, ev: MediaKeyMessageEvent) => any;
+  _onkeystatuseschange?: (this: MediaKeySession, ev: Event) => any;
 }
 
 /**
@@ -717,7 +719,7 @@ class EMEController implements ComponentAPI {
 
     const licenseStatus = new EventEmitter();
 
-    context.mediaKeysSession.onmessage = (event: MediaKeyMessageEvent) => {
+    const onmessage = (context._onmessage = (event: MediaKeyMessageEvent) => {
       const keySession = context.mediaKeysSession;
       if (!keySession) {
         licenseStatus.emit('error', new Error('invalid state'));
@@ -743,10 +745,10 @@ class EMEController implements ComponentAPI {
       } else {
         this.warn(`unhandled media key message type "${messageType}"`);
       }
-    };
+    });
 
-    context.mediaKeysSession.onkeystatuseschange = (
-      event: MediaKeyMessageEvent,
+    const onkeystatuseschange = (context._onkeystatuseschange = (
+      event: Event,
     ) => {
       const keySession = context.mediaKeysSession;
       if (!keySession) {
@@ -760,7 +762,13 @@ class EMEController implements ComponentAPI {
         this.warn(`${context.keySystem} expired for key ${keyId}`);
         this.renewKeySession(context);
       }
-    };
+    });
+
+    context.mediaKeysSession.addEventListener('message', onmessage);
+    context.mediaKeysSession.addEventListener(
+      'keystatuseschange',
+      onkeystatuseschange,
+    );
 
     const keyUsablePromise = new Promise(
       (resolve: (value?: void) => void, reject) => {
@@ -1269,8 +1277,21 @@ class EMEController implements ComponentAPI {
       this.log(
         `Remove licenses and keys and close session ${mediaKeysSession.sessionId}`,
       );
-      mediaKeysSession.onmessage = null;
-      mediaKeysSession.onkeystatuseschange = null;
+      if (mediaKeySessionContext._onmessage) {
+        mediaKeysSession.removeEventListener(
+          'message',
+          mediaKeySessionContext._onmessage,
+        );
+        mediaKeySessionContext._onmessage = undefined;
+      }
+      if (mediaKeySessionContext._onkeystatuseschange) {
+        mediaKeysSession.removeEventListener(
+          'keystatuseschange',
+          mediaKeySessionContext._onkeystatuseschange,
+        );
+        mediaKeySessionContext._onkeystatuseschange = undefined;
+      }
+
       if (licenseXhr && licenseXhr.readyState !== XMLHttpRequest.DONE) {
         licenseXhr.abort();
       }
