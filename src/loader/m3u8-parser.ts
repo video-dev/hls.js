@@ -60,7 +60,7 @@ const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
     /#(EXTM3U)/.source,
     /#EXT-X-(DATERANGE|DEFINE|KEY|MAP|PART|PART-INF|PLAYLIST-TYPE|PRELOAD-HINT|RENDITION-REPORT|SERVER-CONTROL|SKIP|START):(.+)/
       .source,
-    /#EXT-X-(BITRATE|DISCONTINUITY-SEQUENCE|MEDIA-SEQUENCE|TARGETDURATION|VERSION): *(\d+)/
+    /#EXT-X-(BITRATE|DISCONTINUITY-SEQUENCE|MEDIA-SEQUENCE|TARGETDURATION|VERSION|INDEPENDENT-SEGMENTS): *(\d+)/
       .source,
     /#EXT-X-(DISCONTINUITY|ENDLIST|GAP)/.source,
     /(#)([^:]*):(.*)/.source,
@@ -499,6 +499,7 @@ export default class M3U8Parser {
           case 'VERSION':
             level.version = parseInt(value1);
             break;
+          case 'INDEPENDENT-SEGMENTS':
           case 'EXTM3U':
             break;
           case 'ENDLIST':
