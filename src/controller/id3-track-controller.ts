@@ -336,32 +336,38 @@ class ID3TrackController implements ComponentAPI {
     for (let i = 0; i < ids.length; i++) {
       const id = ids[i];
       const dateRange = dateRanges[id];
-      const appendedDateRangeCues = dateRangeCuesAppended[id];
-      const cues = appendedDateRangeCues?.cues || {};
-      let durationKnown = appendedDateRangeCues?.durationKnown || false;
       const startTime = dateRangeDateToTimelineSeconds(
         dateRange.startDate,
         dateTimeOffset,
       );
+
+      // Process DateRanges to determine end-time (known DURATION, END-DATE, or END-ON-NEXT)
+      const appendedDateRangeCues = dateRangeCuesAppended[id];
+      const cues = appendedDateRangeCues?.cues || {};
+      let durationKnown = appendedDateRangeCues?.durationKnown || false;
       let endTime = MAX_CUE_ENDTIME;
       const endDate = dateRange.endDate;
       if (endDate) {
         endTime = dateRangeDateToTimelineSeconds(endDate, dateTimeOffset);
         durationKnown = true;
       } else if (dateRange.endOnNext && !durationKnown) {
-        const nextDateRangeWithSameClass = ids
-          .reduce((filterMapArray, id) => {
-            const candidate = dateRanges[id];
-            if (
-              candidate.class === dateRange.class &&
-              candidate.id !== id &&
-              candidate.startDate > dateRange.startDate
-            ) {
-              filterMapArray.push(candidate);
+        const nextDateRangeWithSameClass = ids.reduce(
+          (candidateDateRange: DateRange | null, id) => {
+            if (id !== dateRange.id) {
+              const otherDateRange = dateRanges[id];
+              if (
+                otherDateRange.class === dateRange.class &&
+                otherDateRange.startDate > dateRange.startDate &&
+                (!candidateDateRange ||
+                  dateRange.startDate < candidateDateRange.startDate)
+              ) {
+                return otherDateRange;
+              }
             }
-            return filterMapArray;
-          }, [] as DateRange[])
-          .sort((a, b) => a.startDate.getTime() - b.startDate.getTime())[0];
+            return candidateDateRange;
+          },
+          null,
+        );
         if (nextDateRangeWithSameClass) {
           endTime = dateRangeDateToTimelineSeconds(
             nextDateRangeWithSameClass.startDate,
@@ -371,6 +377,8 @@ class ID3TrackController implements ComponentAPI {
         }
       }
 
+      // Create TextTrack Cues for each MetadataGroup Item (select DateRange attribute)
+      // This is to emulate Safari HLS playback handling of DateRange tags
       const attributes = Object.keys(dateRange.attr);
       for (let j = 0; j < attributes.length; j++) {
         const key = attributes[j];
@@ -401,6 +409,8 @@ class ID3TrackController implements ComponentAPI {
           }
         }
       }
+
+      // Keep track of processed DateRanges by ID for updating cues with new DateRange tag attributes
       dateRangeCuesAppended[id] = {
         cues,
         dateRange,
