@@ -132,7 +132,7 @@ async function testIdleBufferLength(url, config) {
               durationOffsetTolerance
           );
           if (
-            bufferEnd >= maxBufferLength ||
+            bufferEnd >= maxBufferLength - config.avBufferOffset ||
             bufferEnd > duration - durationOffsetTolerance
           ) {
             callback({ code: 'loadeddata', logs: self.logString });
@@ -250,7 +250,7 @@ async function testSeekOnVOD(url, config) {
             video.currentTime
         );
       };
-      video.onloadeddata = function () {
+      self.hls.on(self.Hls.Events.FRAG_BUFFERED, function () {
         console.log('[test] > video  "loadeddata"');
         self.setTimeout(function () {
           const duration = video.duration;
@@ -316,7 +316,7 @@ async function testSeekOnVOD(url, config) {
             });
           }, 12000);
         }, 3000);
-      };
+      });
       // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
       const allowedBufferedRanges = config.allowedBufferedRangesInSeekTest || 2;
       video.onprogress = function () {
