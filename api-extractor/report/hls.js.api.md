@@ -2929,13 +2929,13 @@ export const enum NetworkErrorAction {
     // (undocumented)
     DoNothing = 0,
     // (undocumented)
-    InsertDiscontinuity = 4,
+    InsertDiscontinuity = 4,// Reserved for future use
     // (undocumented)
     RemoveAlternatePermanently = 3,
     // (undocumented)
-    RetryRequest = 5,
+    RetryRequest = 5,// Reserved for future use
     // (undocumented)
-    SendAlternateToPenaltyBox = 2,
+    SendAlternateToPenaltyBox = 2,// Reserved for future use
     // (undocumented)
     SendEndCallback = 1
 }
