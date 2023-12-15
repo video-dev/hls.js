@@ -10,6 +10,7 @@ currentCommit=$(git rev-parse HEAD)
 
 root="./cloudflare-pages"
 version="$(jq -r -e '.version' "./package.json")"
+commitShort="$(echo "$currentCommit" | cut -c 1-8)"
 
 deploy () {
   projectName=$1
@@ -60,7 +61,7 @@ git add "deployments.json"
 git add "deployments.txt"
 git add "README.md"
 
-git -c user.name="hlsjs-ci" -c user.email="40664919+hlsjs-ci@users.noreply.github.com" commit -m "update for $id"
+git -c user.name="hlsjs-ci" -c user.email="40664919+hlsjs-ci@users.noreply.github.com" commit -m "update for $commitShort"
 git push "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git"
 cd ..
 echo "Updated deployments branch."
