@@ -5,7 +5,8 @@
 
 Below you can find the URL's to deployments for individual commits:
 
-- [`c8955005 (1.5.0-beta.2.0.canary.9827)`](https://github.com/video-dev/hls.js/commit/c8955005746b4fa9b81c44ce2b987857ae4d0c43): [https://c03c9ede.hls-js-dev.pages.dev](https://c03c9ede.hls-js-dev.pages.dev)
+- [`48982955 (1.5.0-beta.2.0.canary.9828)`](https://github.com/video-dev/hls.js/commit/48982955e439acebadb5fdfbae44b7953a6e2060): [https://56dbae50.hls-js-dev.pages.dev/](https://56dbae50.hls-js-dev.pages.dev/)
+- [`c8955005 (1.5.0-beta.2.0.canary.9827)`](https://github.com/video-dev/hls.js/commit/c8955005746b4fa9b81c44ce2b987857ae4d0c43): [https://c03c9ede.hls-js-dev.pages.dev/](https://c03c9ede.hls-js-dev.pages.dev/)
 - [`344e79d9 (1.5.0-beta.2.0.canary.9823)`](https://github.com/video-dev/hls.js/commit/344e79d9e6eb3b146f388fb5e8bca5bcd306a442): [https://5a17bd16.hls-js-dev.pages.dev/](https://5a17bd16.hls-js-dev.pages.dev/)
 - [`dafcfc67 (1.5.0-beta.2.0.canary.9821)`](https://github.com/video-dev/hls.js/commit/dafcfc672ba894f63fd86fd6a0978e275cf747cc): [https://eae211f6.hls-js-dev.pages.dev/](https://eae211f6.hls-js-dev.pages.dev/)
 - [`b7bb324d (1.5.0-beta.2.0.canary.9819)`](https://github.com/video-dev/hls.js/commit/b7bb324dfe3042867698a5c4d8ae0498a9954105): [https://1e4d8e26.hls-js-dev.pages.dev/](https://1e4d8e26.hls-js-dev.pages.dev/)
@@ -104,6 +105,5 @@ Below you can find the URL's to deployments for individual commits:
 - [`328abc57 (1.5.0-alpha.1.0.canary.9648)`](https://github.com/video-dev/hls.js/commit/328abc5799a72d08c945e73df3d0d7cf0353ad7b): [https://df9f5391.hls-js-dev.pages.dev/](https://df9f5391.hls-js-dev.pages.dev/)
 - [`2b7c57d8 (1.5.0-alpha.1.0.canary.9646)`](https://github.com/video-dev/hls.js/commit/2b7c57d82f547940b10a6693cc4a7fa69b00d863): [https://a2c899fa.hls-js-dev.pages.dev/](https://a2c899fa.hls-js-dev.pages.dev/)
 - [`9ba35c99 (1.5.0-alpha.1.0.canary.9644)`](https://github.com/video-dev/hls.js/commit/9ba35c99695c0837e45f518e5f9a47a53e7339d2): [https://1a3370e9.hls-js-dev.pages.dev/](https://1a3370e9.hls-js-dev.pages.dev/)
-- [`664f76f8 (1.5.0-alpha.1)`](https://github.com/video-dev/hls.js/commit/664f76f813b37a00cf6a8abfea92627685421275): [https://bd74a16c.hls-js-dev.pages.dev/](https://bd74a16c.hls-js-dev.pages.dev/)
 
   _Note for older deployments please check [deployments.txt](./deployments.txt)._
