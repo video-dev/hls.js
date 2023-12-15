@@ -36,7 +36,7 @@ ${Array.from(individual)
   )
   .join('\n')}
 
-  _Note for older deployments please check [${txtFileName}](./${txtFileName})._
+_Note for older deployments please check [${txtFileName}](./${txtFileName})._
 `;
 
   await fs.promises.writeFile(path.resolve(outputDir, 'README.md'), mdContent, {
