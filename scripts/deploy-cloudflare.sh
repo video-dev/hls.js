@@ -47,7 +47,7 @@ mv deployments.json.tmp deployments.json
 jq \
   --arg version "$version" \
   --arg commit "$currentCommit" \
-  --arg url "$deploymentUrl" \
+  --arg url "$deploymentUrl/" \
   '.individual += [{
   "version": $version,
   "commit": $commit,
