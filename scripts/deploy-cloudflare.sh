@@ -55,7 +55,7 @@ jq \
 }]' deployments.json > deployments.json.tmp
 mv deployments.json.tmp deployments.json
 
-node $root/scripts/build-deployments-readme.js './deployments.json' '.'
+node ../../scripts/build-deployments-readme.js './deployments.json' '.'
 
 git add "deployments.json"
 git add "deployments.txt"
