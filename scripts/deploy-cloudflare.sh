@@ -10,7 +10,6 @@ currentCommit=$(git rev-parse HEAD)
 
 root="./cloudflare-pages"
 version="$(jq -r -e '.version' "./package.json")"
-idShort="$(echo "$currentCommit" | cut -c 1-8) ($version)"
 
 deploy () {
   projectName=$1
@@ -37,8 +36,30 @@ deploymentUrl=`curl -X GET --fail "https://api.cloudflare.com/client/v4/accounts
 echo "Updating deployments branch."
 git clone --depth 1 "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git" -b deployments "$root/deployments"
 cd "$root/deployments"
-echo "- [\`$idShort\`](https://github.com/video-dev/hls.js/commit/$currentCommit): [$deploymentUrl/]($deploymentUrl/)" >> "README.md"
+
+jq '.stable = "https://hlsjs.video-dev.org/"' deployments.json > deployments.json.tmp
+mv deployments.json.tmp deployments.json
+
+jq '.latest = "https://hlsjs-dev.video-dev.org/"' deployments.json > deployments.json.tmp
+mv deployments.json.tmp deployments.json
+
+jq \
+  --arg version "$version" \
+  --arg commit "$currentCommit" \
+  --arg url "$deploymentUrl" \
+  '.individual += [{
+  "version": $version,
+  "commit": $commit,
+  "url": $url,
+}]' deployments.json > deployments.json.tmp
+mv deployments.json.tmp deployments.json
+
+node scripts/build-deployments-readme.js './deployments.json' '.'
+
+git add "deployments.json"
+git add "deployments.txt"
 git add "README.md"
+
 git -c user.name="hlsjs-ci" -c user.email="40664919+hlsjs-ci@users.noreply.github.com" commit -m "update for $id"
 git push "https://${GITHUB_TOKEN}@github.com/video-dev/hls.js.git"
 cd ..
