@@ -11001,6 +11001,11 @@
       "version": "1.5.0-beta.3",
       "commit": "9cdbf56cf6e151f66048f6610522b14f6c1e2aa4",
       "url": "https://04777092.hls-js-dev.pages.dev/"
+    },
+    {
+      "version": "1.5.0-beta.3.0.canary.9834",
+      "commit": "26f0916d78f4df27d31df6bde8a9817439fab378",
+      "url": "https://b1b45bee.hls-js-dev.pages.dev/"
     }
   ]
 }
