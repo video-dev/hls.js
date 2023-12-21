@@ -79,6 +79,7 @@ class AudioStreamController
 
   protected onHandlerDestroying() {
     this._unregisterListeners();
+    super.onHandlerDestroying();
     this.mainDetails = null;
     this.bufferedTrack = null;
     this.switchingTrack = null;

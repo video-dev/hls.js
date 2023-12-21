@@ -117,7 +117,7 @@ export default class StreamController
 
   protected onHandlerDestroying() {
     this._unregisterListeners();
-    this.onMediaDetaching();
+    super.onHandlerDestroying();
   }
 
   public startLoad(startPosition: number): void {

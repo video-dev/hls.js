@@ -311,6 +311,8 @@ export default class BaseStreamController
     this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     this.stopLoad();
     super.onHandlerDestroying();
+    // @ts-ignore
+    this.hls = null;
   }
 
   protected onHandlerDestroyed() {

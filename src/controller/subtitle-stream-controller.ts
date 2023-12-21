@@ -59,6 +59,7 @@ export class SubtitleStreamController
 
   protected onHandlerDestroying() {
     this._unregisterListeners();
+    super.onHandlerDestroying();
     this.mainDetails = null;
   }
 

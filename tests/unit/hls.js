@@ -35,5 +35,11 @@ describe('Hls', function () {
       hls.destroy();
       expect(() => hls.startLoad()).to.not.throw();
     });
+
+    it('has no circular references after calling destroy()', function () {
+      const hls = new Hls();
+      hls.destroy();
+      expect(() => JSON.stringify(hls)).to.not.throw();
+    });
   });
 });
