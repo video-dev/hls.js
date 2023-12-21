@@ -108,6 +108,8 @@ export default class BufferController implements ComponentAPI {
     this.unregisterListeners();
     this.details = null;
     this.lastMpegAudioChunk = null;
+    // @ts-ignore
+    this.hls = null;
   }
 
   protected registerListeners() {
