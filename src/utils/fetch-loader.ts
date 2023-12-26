@@ -62,8 +62,7 @@ class FetchLoader implements Loader<LoaderContext> {
   }
 
   abortInternal(): void {
-    const response = this.response;
-    if (this.controller && !response?.ok) {
+    if (this.controller && !this.stats.loading.end) {
       this.stats.aborted = true;
       this.controller.abort();
     }
