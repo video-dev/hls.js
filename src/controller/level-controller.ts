@@ -556,7 +556,13 @@ export default class LevelController extends BasePlaylistController {
       if (curLevel.fragmentError === 0) {
         curLevel.loadError = 0;
       }
-      this.playlistLoaded(level, data, curLevel.details);
+      // Ignore matching details populated by loading a Media Playlist directly
+      let previousDetails = curLevel.details;
+      if (previousDetails === data.details && previousDetails.advanced) {
+        previousDetails = undefined;
+      }
+
+      this.playlistLoaded(level, data, previousDetails);
     } else if (data.deliveryDirectives?.skip) {
       // received a delta playlist update that cannot be merged
       details.deltaUpdateFailed = true;
