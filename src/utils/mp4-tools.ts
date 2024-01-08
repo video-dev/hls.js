@@ -309,10 +309,12 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
     case 'avc1':
     case 'avc2':
     case 'avc3':
-    case 'avc4':
-      // profile + compatibility + level
-      codec += '.' + toHex(stsd[111]) + toHex(stsd[112]) + toHex(stsd[113]);
+    case 'avc4': {
+      // extract profile + compatibility + level out of avcC box
+      const avcCBox = findBox(sampleEntriesEnd, ['avcC'])[0];
+      codec += '.' + toHex(avcCBox[1]) + toHex(avcCBox[2]) + toHex(avcCBox[3]);
       break;
+    }
     case 'mp4a': {
       const codecBox = findBox(sampleEntries, [fourCC])[0];
       const esdsBox = findBox(codecBox.subarray(28), ['esds'])[0];
