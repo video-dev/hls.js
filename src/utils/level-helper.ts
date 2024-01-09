@@ -202,8 +202,9 @@ export function mergeDetails(
       : newDetails.fragments;
     fragmentsToCheck.forEach((frag) => {
       if (
-        !frag.initSegment ||
-        frag.initSegment.relurl === currentInitSegment?.relurl
+        frag &&
+        (!frag.initSegment ||
+          frag.initSegment.relurl === currentInitSegment?.relurl)
       ) {
         frag.initSegment = currentInitSegment;
       }
