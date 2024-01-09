@@ -234,9 +234,7 @@ class SubtitleTrackController extends BasePlaylistController {
         // Disable selectDefaultTrack if there are no default or forced tracks
         if (
           this.selectDefaultTrack &&
-          !subtitleTracks.some(
-            (track) => track.default || track.forced || track.autoselect,
-          )
+          !subtitleTracks.some((track) => track.default || track.forced)
         ) {
           this.selectDefaultTrack = false;
         }
@@ -286,10 +284,7 @@ class SubtitleTrackController extends BasePlaylistController {
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
       if (
-        (selectDefault &&
-          !track.default &&
-          !track.forced &&
-          !track.autoselect) ||
+        (selectDefault && !track.default && !track.forced) ||
         (!selectDefault && !currentTrack)
       ) {
         continue;
