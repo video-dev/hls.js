@@ -70,8 +70,8 @@
     "@babel/preset-env": "7.23.7",
     "@babel/preset-typescript": "7.23.3",
     "@babel/register": "7.23.7",
-    "@microsoft/api-documenter": "7.23.15",
-    "@microsoft/api-extractor": "7.39.0",
+    "@microsoft/api-documenter": "7.23.16",
+    "@microsoft/api-extractor": "7.39.1",
     "@rollup/plugin-alias": "5.1.0",
     "@rollup/plugin-babel": "6.0.4",
     "@rollup/plugin-commonjs": "25.0.7",
@@ -128,6 +128,6 @@
     "sinon-chai": "3.7.0",
     "typescript": "5.3.3",
     "url-toolkit": "2.2.5",
-    "wrangler": "3.22.1"
+    "wrangler": "3.22.4"
   }
 }

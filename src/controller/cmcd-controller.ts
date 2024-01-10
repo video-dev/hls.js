@@ -81,6 +81,8 @@ export default class CMCDController implements ComponentAPI {
 
     // @ts-ignore
     this.hls = this.config = this.audioBuffer = this.videoBuffer = null;
+    // @ts-ignore
+    this.onWaiting = this.onPlaying = null;
   }
 
   private onMediaAttached(
