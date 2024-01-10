@@ -5,6 +5,7 @@ import { CmcdObjectType } from '@svta/common-media-library/cmcd/CmcdObjectType';
 import { CmcdStreamingFormat } from '@svta/common-media-library/cmcd/CmcdStreamingFormat';
 import { appendCmcdHeaders } from '@svta/common-media-library/cmcd/appendCmcdHeaders';
 import { appendCmcdQuery } from '@svta/common-media-library/cmcd/appendCmcdQuery';
+import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEncodeOptions';
 import { uuid } from '@svta/common-media-library/utils/uuid';
 import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
@@ -24,7 +25,6 @@ import type {
   HlsConfig,
   PlaylistLoaderConstructor,
 } from '../config';
-import { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEncodeOptions';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -240,19 +240,10 @@ export default class CMCDController implements ComponentAPI {
   };
 
   private getNextFrag(fragment: Fragment): Fragment | undefined {
-    const level = this.hls.levels[fragment.level];
-    const fragments = level.details?.fragments;
-
-    if (fragments) {
-      let index = fragments.length;
-
-      while (--index > -1) {
-        if (fragments[index] !== fragment) {
-          continue;
-        }
-
-        return fragments[index + 1];
-      }
+    const levelDetails = this.hls.levels[fragment.level]?.details;
+    if (levelDetails) {
+      const index = (fragment.sn as number) - levelDetails.startSN;
+      return levelDetails.fragments[index + 1];
     }
 
     return undefined;
