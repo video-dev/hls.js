@@ -229,19 +229,17 @@ class SubtitleTrackController extends BasePlaylistController {
         (track): boolean =>
           !subtitleGroups || subtitleGroups.indexOf(track.groupId) !== -1,
       );
-      let forcedCount = 0;
       if (subtitleTracks.length) {
-        // Disable selectDefaultTrack if there are no default or more than one forced tracks
+        // Disable selectDefaultTrack if there are no default tracks
         if (
           this.selectDefaultTrack &&
-          !subtitleTracks.some((track) => track.default || track.forced)
+          !subtitleTracks.some((track) => track.default)
         ) {
           this.selectDefaultTrack = false;
         }
         // track.id should match hls.audioTracks index
         subtitleTracks.forEach((track, i) => {
           track.id = i;
-          track.forced && forcedCount++;
         });
       } else if (!currentTrack && !this.tracksInGroup.length) {
         // Do not dispatch SUBTITLE_TRACKS_UPDATED when there were and are no tracks
@@ -266,9 +264,9 @@ class SubtitleTrackController extends BasePlaylistController {
       }
 
       // Select initial track
-      let trackId = this.findTrackId(currentTrack, forcedCount);
+      let trackId = this.findTrackId(currentTrack);
       if (trackId === -1 && currentTrack) {
-        trackId = this.findTrackId(null, forcedCount);
+        trackId = this.findTrackId(null);
       }
 
       // Dispatch events and load track if needed
@@ -291,21 +289,13 @@ class SubtitleTrackController extends BasePlaylistController {
     }
   }
 
-  private findTrackId(
-    currentTrack: MediaPlaylist | null,
-    forcedCount: number,
-  ): number {
+  private findTrackId(currentTrack: MediaPlaylist | null): number {
     const tracks = this.tracksInGroup;
     const selectDefault = this.selectDefaultTrack;
-    // Select forced track over default when there is only one choice
-    // (apps should select best forced option if there is more than one)
-    const selectForced = forcedCount === 1;
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
       if (
-        (selectDefault &&
-          (!track.default || selectForced) &&
-          (!track.forced || !selectForced)) ||
+        (selectDefault && !track.default) ||
         (!selectDefault && !currentTrack)
       ) {
         continue;

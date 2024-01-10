@@ -234,10 +234,10 @@ describe('SubtitleTrackController', function () {
       expect(subtitleTrackController.subtitleTrack).to.equal(-1);
     });
 
-    it('should select the forced track when there is only one', function () {
+    it('should not select forced tracks', function () {
       subtitleTracks[1].forced = true;
       switchLevel();
-      expect(subtitleTrackController.subtitleTrack).to.equal(1);
+      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
     });
 
     it('should select the default track when there are no forced tracks', function () {
@@ -254,14 +254,14 @@ describe('SubtitleTrackController', function () {
       expect(subtitleTrackController.subtitleTrack).to.equal(0);
     });
 
-    it('should select the forced track over the default track when there is only one forced track', function () {
+    it('should not select forced tracks over the default tracks (one forced track)', function () {
       subtitleTracks[1].default = true;
       subtitleTracks[2].forced = true;
       switchLevel();
-      expect(subtitleTrackController.subtitleTrack).to.equal(2);
+      expect(subtitleTrackController.subtitleTrack).to.equal(1);
     });
 
-    it('should select the default track when there is more than one forced track (app must choose best forced option)', function () {
+    it('should not select forced tracks over the default tracks (two forced track)', function () {
       subtitleTracks[0].forced = true;
       subtitleTracks[1].forced = true;
       subtitleTracks[2].default = true;
