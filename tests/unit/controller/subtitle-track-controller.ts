@@ -70,7 +70,7 @@ describe('SubtitleTrackController', function () {
         forced: false,
         id: 0,
         groupId: 'default-text-group',
-        lang: 'en',
+        lang: 'en-US',
         name: 'English',
         type: 'SUBTITLES',
         url: 'baz',
@@ -97,7 +97,7 @@ describe('SubtitleTrackController', function () {
         forced: false,
         id: 2,
         groupId: 'default-text-group',
-        lang: 'en',
+        lang: 'en-US',
         name: 'Untitled CC',
         type: 'SUBTITLES',
         url: 'foo',
@@ -132,12 +132,16 @@ describe('SubtitleTrackController', function () {
       });
     };
 
-    const textTrack1 = videoElement.addTextTrack('subtitles', 'English', 'en');
+    const textTrack1 = videoElement.addTextTrack(
+      'subtitles',
+      'English',
+      'en-US',
+    );
     const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'sv');
     const textTrack3 = videoElement.addTextTrack(
       'captions',
       'Untitled CC',
-      'en',
+      'en-US',
     );
 
     textTrack1.groupId = 'default-text-group';
@@ -230,32 +234,67 @@ describe('SubtitleTrackController', function () {
       expect(subtitleTrackController.subtitleTrack).to.equal(-1);
     });
 
-    it('should select the first default or forced track (index 1 is forced)', function () {
+    it('should select the forced track when there is only one', function () {
       subtitleTracks[1].forced = true;
       switchLevel();
       expect(subtitleTrackController.subtitleTrack).to.equal(1);
     });
 
-    it('should select the first default or forced track (index 2 is default)', function () {
+    it('should select the default track when there are no forced tracks', function () {
       subtitleTracks[2].default = true;
       switchLevel();
       expect(subtitleTrackController.subtitleTrack).to.equal(2);
     });
 
-    it('should select the first default or forced track (index 1 is default and index 2 is forced)', function () {
-      // NOTE: There can only be one default option, but several forced options
+    it('should select the first default track when there are no forced tracks', function () {
+      subtitleTracks[0].default = true;
+      subtitleTracks[1].default = true;
+      subtitleTracks[2].default = true;
+      switchLevel();
+      expect(subtitleTrackController.subtitleTrack).to.equal(0);
+    });
+
+    it('should select the forced track over the default track when there is only one forced track', function () {
       subtitleTracks[1].default = true;
       subtitleTracks[2].forced = true;
       switchLevel();
-      expect(subtitleTrackController.subtitleTrack).to.equal(1);
+      expect(subtitleTrackController.subtitleTrack).to.equal(2);
     });
 
-    it('should select the first default or forced track (index 1 is forced and index 2 is default)', function () {
-      // NOTE: There can only be one default option, but several forced options
+    it('should select the default track when there is more than one forced track (app must choose best forced option)', function () {
+      subtitleTracks[0].forced = true;
       subtitleTracks[1].forced = true;
       subtitleTracks[2].default = true;
       switchLevel();
-      expect(subtitleTrackController.subtitleTrack).to.equal(1);
+      expect(subtitleTrackController.subtitleTrack).to.equal(2);
+    });
+
+    describe('with subtitlePreference', function () {
+      it('should select the first track with matching lang', function () {
+        hls.config.subtitlePreference = {
+          lang: 'en-US',
+        };
+        subtitleTracks[2].default = true;
+        switchLevel();
+        expect(subtitleTrackController.subtitleTrack).to.equal(0);
+      });
+      it('should select the first track with matching properties', function () {
+        hls.config.subtitlePreference = {
+          lang: 'en-US',
+          default: true,
+        };
+        subtitleTracks[2].default = true;
+        switchLevel();
+        expect(subtitleTrackController.subtitleTrack).to.equal(2);
+      });
+      it('should not select default track if an unmatched preference is present', function () {
+        hls.config.subtitlePreference = {
+          lang: 'none',
+        };
+        subtitleTracks[2].default = true;
+        switchLevel();
+        expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+      });
     });
   });
 

@@ -230,8 +230,9 @@ class SubtitleTrackController extends BasePlaylistController {
         (track): boolean =>
           !subtitleGroups || subtitleGroups.indexOf(track.groupId) !== -1,
       );
+      let forcedCount = 0;
       if (subtitleTracks.length) {
-        // Disable selectDefaultTrack if there are no default or forced tracks
+        // Disable selectDefaultTrack if there are no default or more than one forced tracks
         if (
           this.selectDefaultTrack &&
           !subtitleTracks.some((track) => track.default || track.forced)
@@ -241,22 +242,23 @@ class SubtitleTrackController extends BasePlaylistController {
         // track.id should match hls.audioTracks index
         subtitleTracks.forEach((track, i) => {
           track.id = i;
+          track.forced && forcedCount++;
         });
       } else if (!currentTrack && !this.tracksInGroup.length) {
         // Do not dispatch SUBTITLE_TRACKS_UPDATED when there were and are no tracks
         return;
       }
 
+      this.tracksInGroup = subtitleTracks;
       if (!currentTrack) {
         currentTrack = this.setSubtitleOption(
           this.hls.config.subtitlePreference,
         );
       }
 
-      this.tracksInGroup = subtitleTracks;
-      let trackId = this.findTrackId(currentTrack);
+      let trackId = this.findTrackId(currentTrack, forcedCount);
       if (trackId === -1 && currentTrack) {
-        trackId = this.findTrackId(null);
+        trackId = this.findTrackId(null, forcedCount);
       }
 
       const subtitleTracksUpdated: SubtitleTracksUpdatedData = {
@@ -278,13 +280,20 @@ class SubtitleTrackController extends BasePlaylistController {
     }
   }
 
-  private findTrackId(currentTrack: MediaPlaylist | null): number {
+  private findTrackId(
+    currentTrack: MediaPlaylist | null,
+    forcedCount: number,
+  ): number {
     const tracks = this.tracksInGroup;
     const selectDefault = this.selectDefaultTrack;
+    // Select forced track over default when there is only one choice (apps must choose when there is more than one)
+    const selectForced = forcedCount === 1;
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
       if (
-        (selectDefault && !track.default && !track.forced) ||
+        (selectDefault &&
+          (!track.default || selectForced) &&
+          (!track.forced || !selectForced)) ||
         (!selectDefault && !currentTrack)
       ) {
         continue;
