@@ -157,17 +157,31 @@ class AudioTrackController extends BasePlaylistController {
         // Do not dispatch AUDIO_TRACKS_UPDATED when there were and are no tracks
         return;
       }
+      this.tracksInGroup = audioTracks;
 
-      if (!currentTrack) {
-        currentTrack = this.setAudioOption(this.hls.config.audioPreference);
+      // Find preferred track
+      const audioPreference = this.hls.config.audioPreference;
+      if (!currentTrack && audioPreference) {
+        const groupIndex = findMatchingOption(
+          audioPreference,
+          audioTracks,
+          audioMatchPredicate,
+        );
+        if (groupIndex > -1) {
+          currentTrack = audioTracks[groupIndex];
+        } else {
+          const allIndex = findMatchingOption(audioPreference, this.tracks);
+          currentTrack = this.tracks[allIndex];
+        }
       }
 
-      this.tracksInGroup = audioTracks;
+      // Select initial track
       let trackId = this.findTrackId(currentTrack);
       if (trackId === -1 && currentTrack) {
         trackId = this.findTrackId(null);
       }
 
+      // Dispatch events and load track if needed
       const audioTracksUpdated: AudioTracksUpdatedData = { audioTracks };
       this.log(
         `Updating audio tracks, ${
