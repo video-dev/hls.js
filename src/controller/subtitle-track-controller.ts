@@ -297,7 +297,8 @@ class SubtitleTrackController extends BasePlaylistController {
   ): number {
     const tracks = this.tracksInGroup;
     const selectDefault = this.selectDefaultTrack;
-    // Select forced track over default when there is only one choice (apps must choose when there is more than one)
+    // Select forced track over default when there is only one choice
+    // (apps should select best forced option if there is more than one)
     const selectForced = forcedCount === 1;
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
