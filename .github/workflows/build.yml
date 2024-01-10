@@ -116,7 +116,7 @@ jobs:
           CI: true
 
       - name: upload build
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: build
           # version number is set in package.json so need to include that
