@@ -487,7 +487,7 @@ class SubtitleTrackController extends BasePlaylistController {
     }
 
     // exit if track id as already set or invalid
-    if (newId < -1 || newId >= tracks.length) {
+    if (newId < -1 || newId >= tracks.length || !Number.isFinite(newId)) {
       this.warn(`Invalid subtitle track id: ${newId}`);
       return;
     }
@@ -506,7 +506,7 @@ class SubtitleTrackController extends BasePlaylistController {
       this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
       return;
     }
-    const trackLoaded = track.details && !track.details.live;
+    const trackLoaded = !!track.details && !track.details.live;
     if (newId === this.trackId && track === lastTrack && trackLoaded) {
       return;
     }
