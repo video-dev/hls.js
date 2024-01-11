@@ -623,6 +623,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     .forEach(([name, stream]) => {
       const url = stream.url;
       const config = stream.config || {};
+      config.preferManagedMediaSource = false;
       if (
         stream.skip_ua &&
         stream.skip_ua.some((browserInfo) => {
