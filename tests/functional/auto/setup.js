@@ -650,7 +650,16 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
         );
       }
 
-      if (stream.abr && !HlsjsLightBuild) {
+      // Segment media is shorted than playlist duration resulting in overlapping appends on switch
+      // This appears to prevent playback in Safari which causes smoothswitch tests to fail
+      const isSafari = browserConfig.name === 'safari';
+      const isStreamsWithOverlappingAppends =
+        name === 'arte' || name === 'oceansAES';
+      if (
+        stream.abr &&
+        !HlsjsLightBuild &&
+        (!isSafari || !isStreamsWithOverlappingAppends)
+      ) {
         it(
           `should "smooth switch" to highest level and still play after 2s for ${stream.description}`,
           testSmoothSwitch.bind(null, url, config)
