@@ -416,9 +416,9 @@ jobs:
       max-parallel: 8
       matrix:
         include:
-          - config: safari-macOS_10.15
+          - config: safari-macOS_13
             ua: safari
-            os: macOS 10.15
+            os: macOS 13
           - config: firefox-win_10
             ua: firefox
             os: Windows 10
