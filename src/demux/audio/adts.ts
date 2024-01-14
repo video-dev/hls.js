@@ -61,8 +61,8 @@ export function getAudioConfig(
   logger.log(
     `manifest codec:${audioCodec}, ADTS type:${adtsObjectType}, samplingIndex:${adtsSamplingIndex}`,
   );
-  // firefox: freq less than 24kHz = AAC SBR (HE-AAC)
-  if (/firefox/i.test(userAgent)) {
+  // Firefox and Pale Moon: freq less than 24kHz = AAC SBR (HE-AAC)
+  if (/firefox|palemoon/i.test(userAgent)) {
     if (adtsSamplingIndex >= 6) {
       adtsObjectType = 5;
       config = new Array(4);
