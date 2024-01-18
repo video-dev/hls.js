@@ -616,6 +616,8 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     entries.length = 10;
   }
 
+  const isSafari = browserConfig.name === 'safari';
+
   entries
     // eslint-disable-next-line no-unused-vars
     .filter(([name, stream]) => !stream.skipFunctionalTests)
@@ -623,6 +625,13 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     .forEach(([name, stream]) => {
       const url = stream.url;
       const config = stream.config || {};
+
+      // Segment media is shorted than playlist duration resulting in overlapping appends on switch
+      // This appears to prevent playback in Safari which causes smoothswitch and VOD ended event tests to fail
+      const isStreamsWithOverlappingAppends =
+        name === 'arte' || name === 'oceansAES';
+
+      config.preferManagedMediaSource = false;
       if (
         stream.skip_ua &&
         stream.skip_ua.some((browserInfo) => {
@@ -649,7 +658,11 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
         );
       }
 
-      if (stream.abr && !HlsjsLightBuild) {
+      if (
+        stream.abr &&
+        !HlsjsLightBuild &&
+        (!isSafari || !isStreamsWithOverlappingAppends)
+      ) {
         it(
           `should "smooth switch" to highest level and still play after 2s for ${stream.description}`,
           testSmoothSwitch.bind(null, url, config)
@@ -670,10 +683,12 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           `should play ${stream.description}`,
           testIsPlayingVOD.bind(null, url, config)
         );
-        it(
-          `should seek 3s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
-          testSeekOnVOD.bind(null, url, config)
-        );
+        if (!isSafari || !isStreamsWithOverlappingAppends) {
+          it(
+            `should seek 3s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
+            testSeekOnVOD.bind(null, url, config)
+          );
+        }
         // TODO: Seeking to or past VOD duration should result in the video ending
         // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
       }

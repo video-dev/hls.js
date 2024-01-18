@@ -129,6 +129,7 @@ export type AudioSelectionOption = {
     name?: string;
     audioCodec?: string;
     groupId?: string;
+    default?: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "AudioStreamController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -3164,6 +3165,8 @@ export type SubtitleSelectionOption = {
     characteristics?: string;
     name?: string;
     groupId?: string;
+    default?: boolean;
+    forced?: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "SubtitleStreamController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

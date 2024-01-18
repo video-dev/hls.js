@@ -23,6 +23,7 @@ export type AudioSelectionOption = {
   name?: string;
   audioCodec?: string;
   groupId?: string;
+  default?: boolean;
 };
 
 export type SubtitleSelectionOption = {
@@ -31,6 +32,8 @@ export type SubtitleSelectionOption = {
   characteristics?: string;
   name?: string;
   groupId?: string;
+  default?: boolean;
+  forced?: boolean;
 };
 
 // audioTracks, captions and subtitles returned by `M3U8Parser.parseMasterPlaylistMedia`
