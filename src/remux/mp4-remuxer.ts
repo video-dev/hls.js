@@ -584,6 +584,11 @@ export default class MP4Remuxer implements Remuxer {
       nbNalu += nbUnits;
       sample.length = sampleLen;
 
+      // ensure sample increasing PTS
+      if (i > 0 && safariWebkitVersion) {
+        sample.pts = Math.max(inputSamples[i - 1].pts + 1, sample.pts);
+      }
+
       // ensure sample monotonic DTS
       if (sample.dts < dtsStep) {
         sample.dts = dtsStep;
