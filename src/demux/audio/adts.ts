@@ -17,7 +17,7 @@ type AudioConfig = {
   samplerate: number;
   channelCount: number;
   codec: string;
-  originalCodec: string;
+  parsedCodec: string;
   manifestCodec: string;
 };
 
@@ -170,7 +170,7 @@ export function getAudioConfig(
     samplerate: adtsSamplingRates[adtsSamplingIndex],
     channelCount: adtsChannelConfig,
     codec: 'mp4a.40.' + adtsObjectType,
-    originalCodec: 'mp4a.40.' + originalAdtsObjectType,
+    parsedCodec: 'mp4a.40.' + originalAdtsObjectType,
     manifestCodec,
   };
 }
@@ -248,9 +248,9 @@ export function initTrackConfig(
     track.channelCount = config.channelCount;
     track.codec = config.codec;
     track.manifestCodec = config.manifestCodec;
-    track.originalCodec = config.originalCodec;
+    track.parsedCodec = config.parsedCodec;
     logger.log(
-      `parsed codec:${track.codec}, originalCodec:${track.originalCodec}, rate:${config.samplerate}, channels:${config.channelCount}`,
+      `parsed codec:${track.parsedCodec}, codec:${track.codec}, rate:${config.samplerate}, channels:${config.channelCount}`,
     );
   }
 }

@@ -64,7 +64,7 @@ export interface DemuxedAudioTrack extends DemuxedTrack {
   segmentCodec?: string;
   channelCount?: number;
   manifestCodec?: string;
-  originalCodec?: string;
+  parsedCodec?: string;
   samples: AudioSample[];
 }
 
