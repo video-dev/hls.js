@@ -206,7 +206,7 @@ class AudioStreamController
             this.waitingData = null;
             this.waitingVideoCC = -1;
             this.state = State.FRAG_LOADING;
-            const payload = cache.flush();
+            const payload = cache.flush().buffer;
             const data: FragLoadedData = {
               frag,
               part,
