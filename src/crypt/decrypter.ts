@@ -19,9 +19,10 @@ export default class Decrypter {
   private currentIV: ArrayBuffer | null = null;
   private currentResult: ArrayBuffer | null = null;
   private useSoftware: boolean;
+  private enableSoftwareAES: boolean;
 
   constructor(config: HlsConfig, { removePKCS7Padding = true } = {}) {
-    this.useSoftware = config.enableSoftwareAES;
+    this.enableSoftwareAES = config.enableSoftwareAES;
     this.removePKCS7Padding = removePKCS7Padding;
     // built in decryptor expects PKCS7 padding
     if (removePKCS7Padding) {
@@ -36,9 +37,7 @@ export default class Decrypter {
         /* no-op */
       }
     }
-    if (this.subtle === null) {
-      this.useSoftware = true;
-    }
+    this.useSoftware = this.subtle === null;
   }
 
   destroy() {
@@ -174,14 +173,21 @@ export default class Decrypter {
   }
 
   private onWebCryptoError(data, key, iv): ArrayBuffer | never {
-    this.useSoftware = true;
-    this.logEnabled = true;
-    this.softwareDecrypt(data, key, iv);
-    const decryptResult = this.flush();
-    if (decryptResult) {
-      return decryptResult.buffer;
+    const enableSoftwareAES = this.enableSoftwareAES;
+    if (enableSoftwareAES) {
+      this.useSoftware = true;
+      this.logEnabled = true;
+      this.softwareDecrypt(data, key, iv);
+      const decryptResult = this.flush();
+      if (decryptResult) {
+        return decryptResult.buffer;
+      }
     }
-    throw new Error('WebCrypto and softwareDecrypt: failed to decrypt data');
+    throw new Error(
+      'WebCrypto' +
+        (enableSoftwareAES ? ' and softwareDecrypt' : '') +
+        ': failed to decrypt data',
+    );
   }
 
   private getValidChunk(data: Uint8Array): Uint8Array {
