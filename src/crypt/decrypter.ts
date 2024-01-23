@@ -4,6 +4,7 @@ import AESDecryptor, { removePadding } from './aes-decryptor';
 import { logger } from '../utils/logger';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { sliceUint8 } from '../utils/typed-array';
+import { DecrypterAesMode } from './decrypter-aes-mode';
 import type { HlsConfig } from '../config';
 
 const CHUNK_SIZE = 16; // 16 bytes, 128 bits
@@ -81,10 +82,11 @@ export default class Decrypter {
     data: Uint8Array | ArrayBuffer,
     key: ArrayBuffer,
     iv: ArrayBuffer,
+    aesMode: DecrypterAesMode,
   ): Promise<ArrayBuffer> {
     if (this.useSoftware) {
       return new Promise((resolve, reject) => {
-        this.softwareDecrypt(new Uint8Array(data), key, iv);
+        this.softwareDecrypt(new Uint8Array(data), key, iv, aesMode);
         const decryptResult = this.flush();
         if (decryptResult) {
           resolve(decryptResult.buffer);
@@ -93,7 +95,7 @@ export default class Decrypter {
         }
       });
     }
-    return this.webCryptoDecrypt(new Uint8Array(data), key, iv);
+    return this.webCryptoDecrypt(new Uint8Array(data), key, iv, aesMode);
   }
 
   // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
@@ -102,8 +104,13 @@ export default class Decrypter {
     data: Uint8Array,
     key: ArrayBuffer,
     iv: ArrayBuffer,
+    aesMode: DecrypterAesMode,
   ): ArrayBuffer | null {
     const { currentIV, currentResult, remainderData } = this;
+    if (aesMode !== DecrypterAesMode.cbc || key.byteLength !== 16) {
+      logger.warn('SoftwareDecrypt: can only handle AES-128-CBC');
+      return null;
+    }
     this.logOnce('JS AES decrypt');
     // The output is staggered during progressive parsing - the current result is cached, and emitted on the next call
     // This is done in order to strip PKCS7 padding, which is found at the end of each segment. We only know we've reached
@@ -146,21 +153,22 @@ export default class Decrypter {
     data: Uint8Array,
     key: ArrayBuffer,
     iv: ArrayBuffer,
+    aesMode: DecrypterAesMode,
   ): Promise<ArrayBuffer> {
     const subtle = this.subtle;
     if (this.key !== key || !this.fastAesKey) {
       this.key = key;
-      this.fastAesKey = new FastAESKey(subtle, key);
+      this.fastAesKey = new FastAESKey(subtle, key, aesMode);
     }
     return this.fastAesKey
       .expandKey()
-      .then((aesKey) => {
+      .then((aesKey: CryptoKey) => {
         // decrypt using web crypto
         if (!subtle) {
           return Promise.reject(new Error('web crypto not initialized'));
         }
         this.logOnce('WebCrypto AES decrypt');
-        const crypto = new AESCrypto(subtle, new Uint8Array(iv));
+        const crypto = new AESCrypto(subtle, new Uint8Array(iv), aesMode);
         return crypto.decrypt(data.buffer, aesKey);
       })
       .catch((err) => {
@@ -168,16 +176,16 @@ export default class Decrypter {
           `[decrypter]: WebCrypto Error, disable WebCrypto API, ${err.name}: ${err.message}`,
         );
 
-        return this.onWebCryptoError(data, key, iv);
+        return this.onWebCryptoError(data, key, iv, aesMode);
       });
   }
 
-  private onWebCryptoError(data, key, iv): ArrayBuffer | never {
+  private onWebCryptoError(data, key, iv, aesMode): ArrayBuffer | never {
     const enableSoftwareAES = this.enableSoftwareAES;
     if (enableSoftwareAES) {
       this.useSoftware = true;
       this.logEnabled = true;
-      this.softwareDecrypt(data, key, iv);
+      this.softwareDecrypt(data, key, iv, aesMode);
       const decryptResult = this.flush();
       if (decryptResult) {
         return decryptResult.buffer;

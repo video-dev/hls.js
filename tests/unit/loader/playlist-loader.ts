@@ -613,6 +613,57 @@ oceans_aes-audio=65000-video=236000-3.ts
     );
   });
 
+  it('parse AES-256 and AES-256-CTR encrypted URLs, with explicit IV', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:1
+## Created with Unified Streaming Platform(version=1.6.7)
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-ALLOW-CACHE:NO
+#EXT-X-TARGETDURATION:11
+#EXT-X-KEY:METHOD=AES-256,URI="bob1.key256",IV=0x10000000000000000000000000001234
+#EXTINF:11,no desc
+bob_1.m4s
+#EXT-X-KEY:METHOD=AES-256-CTR,URI="bob2.key256",IV=0x10000000000000000000000000004567
+#EXTINF:11,no desc
+bob_2.m4s
+#EXT-X-ENDLIST`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://foo.com/stream/bob.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+
+    const ivExpected = new Uint8Array(16);
+    ivExpected[0] = 0x10;
+
+    expect(result.totalduration).to.equal(22);
+    expect(result.startSN).to.equal(1);
+    expect(result.targetduration).to.equal(11);
+    expect(result.fragments).to.have.lengthOf(2);
+    expect(result.fragments[0].duration).to.equal(11);
+    expect(result.fragments[0].url).to.equal('http://foo.com/stream/bob_1.m4s');
+    expect(result.fragments[0].decryptdata?.uri).to.equal(
+      'http://foo.com/stream/bob1.key256',
+    );
+    expect(result.fragments[0].decryptdata?.method).to.equal('AES-256');
+    ivExpected[14] = 0x12;
+    ivExpected[15] = 0x34;
+    expect(result.fragments[0].decryptdata?.iv).to.deep.equal(ivExpected);
+
+    expect(result.fragments[1].duration).to.equal(11);
+    expect(result.fragments[1].url).to.equal('http://foo.com/stream/bob_2.m4s');
+    expect(result.fragments[1].decryptdata?.uri).to.equal(
+      'http://foo.com/stream/bob2.key256',
+    );
+    expect(result.fragments[1].decryptdata?.method).to.equal('AES-256-CTR');
+    ivExpected[14] = 0x45;
+    ivExpected[15] = 0x67;
+    expect(result.fragments[1].decryptdata?.iv).to.deep.equal(ivExpected);
+  });
+
   it('parse level with #EXT-X-BYTERANGE before #EXTINF', function () {
     const level = `#EXTM3U
 #EXT-X-VERSION:4
@@ -2036,7 +2087,7 @@ describe('#EXT-X-START', function () {
   it('parses EXT-X-START in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
   #EXT-X-START:TIME-OFFSET=300.0,PRECISE=YES
-  
+
   #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
   http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
@@ -2047,7 +2098,7 @@ describe('#EXT-X-START', function () {
   it('parses negative EXT-X-START values in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
   #EXT-X-START:TIME-OFFSET=-30.0
-  
+
   #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
   http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
@@ -2057,7 +2108,7 @@ describe('#EXT-X-START', function () {
 
   it('result is null when EXT-X-START is not present', function () {
     const manifest = `#EXTM3U
-  
+
   #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
   http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
@@ -2072,7 +2123,7 @@ describe('#EXT-X-DEFINE', function () {
   #EXT-X-DEFINE:NAME="x",VALUE="1"
   #EXT-X-DEFINE:NAME="y",VALUE="2"
   #EXT-X-DEFINE:NAME="hello-var",VALUE="Hello there!"
-  
+
   #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
   http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
@@ -2091,7 +2142,7 @@ describe('#EXT-X-DEFINE', function () {
   #EXT-X-DEFINE:NAME="foo",VALUE="ok"
   #EXT-X-DEFINE:NAME="bar",VALUE="ok"
   #EXT-X-DEFINE:NAME="foo",VALUE="duped"
-  
+
   #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
   http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 

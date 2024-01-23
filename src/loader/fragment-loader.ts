@@ -336,8 +336,11 @@ function createLoaderContext(
   if (Number.isFinite(start) && Number.isFinite(end)) {
     let byteRangeStart = start;
     let byteRangeEnd = end;
-    if (frag.sn === 'initSegment' && frag.decryptdata?.method === 'AES-128') {
-      // MAP segment encrypted with method 'AES-128', when served with HTTP Range,
+    if (
+      frag.sn === 'initSegment' &&
+      isMethodFullSegmentAesCbc(frag.decryptdata?.method)
+    ) {
+      // MAP segment encrypted with method 'AES-128' or 'AES-256' (cbc), when served with HTTP Range,
       // has the unencrypted size specified in the range.
       // Ref: https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-08#section-6.3.6
       const fragmentLen = end - start;
@@ -370,6 +373,10 @@ function createGapLoadError(frag: Fragment, part?: Part): LoadError {
   }
   (part ? part : frag).stats.aborted = true;
   return new LoadError(errorData);
+}
+
+function isMethodFullSegmentAesCbc(method) {
+  return method === 'AES-128' || method === 'AES-256';
 }
 
 export class LoadError extends Error {

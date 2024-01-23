@@ -9,6 +9,10 @@ import { PlaylistLevelType } from '../types/loader';
 import { Level } from '../types/level';
 import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import {
+  isFullSegmentEncryption,
+  getAesModeFromFullSegmentMethod,
+} from '../utils/encryption-methods-util';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
@@ -360,7 +364,7 @@ export class SubtitleStreamController
       payload.byteLength > 0 &&
       decryptData?.key &&
       decryptData.iv &&
-      decryptData.method === 'AES-128'
+      isFullSegmentEncryption(decryptData.method)
     ) {
       const startTime = performance.now();
       // decrypt the subtitles
@@ -369,6 +373,7 @@ export class SubtitleStreamController
           new Uint8Array(payload),
           decryptData.key.buffer,
           decryptData.iv.buffer,
+          getAesModeFromFullSegmentMethod(decryptData.method),
         )
         .catch((err) => {
           hls.trigger(Events.ERROR, {
