@@ -2,7 +2,7 @@ import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import { Events } from '../events';
 import { ErrorDetails } from '../errors';
 import { PlaylistLevelType } from '../types/loader';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import {
   SUPPORTED_INFO_DEFAULT,
   getMediaDecodingInfoPromise,
@@ -31,7 +31,7 @@ import type {
 } from '../types/events';
 import type { AbrComponentAPI } from '../types/component-api';
 
-class AbrController implements AbrComponentAPI {
+class AbrController extends Logger implements AbrComponentAPI {
   protected hls: Hls;
   private lastLevelLoadSec: number = 0;
   private lastLoadedFragLevel: number = -1;
@@ -48,6 +48,7 @@ class AbrController implements AbrComponentAPI {
   public bwEstimator: EwmaBandWidthEstimator;
 
   constructor(hls: Hls) {
+    super('abr', hls.logger);
     this.hls = hls;
     this.bwEstimator = this.initEstimator();
     this.registerListeners();
@@ -55,7 +56,7 @@ class AbrController implements AbrComponentAPI {
 
   public resetEstimator(abrEwmaDefaultEstimate?: number) {
     if (abrEwmaDefaultEstimate) {
-      logger.log(`setting initial bwe to ${abrEwmaDefaultEstimate}`);
+      this.log(`setting initial bwe to ${abrEwmaDefaultEstimate}`);
       this.hls.config.abrEwmaDefaultEstimate = abrEwmaDefaultEstimate;
     }
     this.firstSelection = -1;
@@ -355,7 +356,7 @@ class AbrController implements AbrComponentAPI {
     }
 
     this.clearTimer();
-    logger.warn(`[abr] Fragment ${frag.sn}${
+    this.warn(`Fragment ${frag.sn}${
       part ? ' part ' + part.index : ''
     } of level ${frag.level} is loading too slowly;
       Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s
@@ -479,8 +480,8 @@ class AbrController implements AbrComponentAPI {
     }
     const firstLevel = this.hls.firstLevel;
     const clamped = Math.min(Math.max(firstLevel, minAutoLevel), maxAutoLevel);
-    logger.warn(
-      `[abr] Could not find best starting auto level. Defaulting to first in playlist ${firstLevel} clamped to ${clamped}`,
+    this.warn(
+      `Could not find best starting auto level. Defaulting to first in playlist ${firstLevel} clamped to ${clamped}`,
     );
     return clamped;
   }
@@ -591,8 +592,8 @@ class AbrController implements AbrComponentAPI {
           ? Math.min(currentFragDuration, config.maxLoadingDelay)
           : config.maxLoadingDelay;
         maxStarvationDelay = maxLoadingDelay - bitrateTestDelay;
-        logger.info(
-          `[abr] bitrate test took ${Math.round(
+        this.info(
+          `bitrate test took ${Math.round(
             1000 * bitrateTestDelay,
           )}ms, set first fragment max fetchDuration to ${Math.round(
             1000 * maxStarvationDelay,
@@ -611,8 +612,8 @@ class AbrController implements AbrComponentAPI {
       bwFactor,
       bwUpFactor,
     );
-    logger.info(
-      `[abr] ${
+    this.info(
+      `${
         bufferStarvationDelay ? 'rebuffering expected' : 'buffer is empty'
       }, optimal quality level ${bestLevel}`,
     );
@@ -691,7 +692,7 @@ class AbrController implements AbrComponentAPI {
         : videoRanges[0];
       currentFrameRate = minFramerate;
       currentBw = Math.max(currentBw, minBitrate);
-      logger.log(`[abr] picked start tier ${JSON.stringify(startTier)}`);
+      this.log(`picked start tier ${JSON.stringify(startTier)}`);
     } else {
       currentCodecSet = level?.codecSet;
       currentVideoRange = level?.videoRange;
@@ -741,19 +742,19 @@ class AbrController implements AbrComponentAPI {
             const levels = this.hls.levels;
             const index = levels.indexOf(levelInfo);
             if (decodingInfo.error) {
-              logger.warn(
-                `[abr] MediaCapabilities decodingInfo error: "${
+              this.warn(
+                `MediaCapabilities decodingInfo error: "${
                   decodingInfo.error
                 }" for level ${index} ${JSON.stringify(decodingInfo)}`,
               );
             } else if (!decodingInfo.supported) {
-              logger.warn(
-                `[abr] Unsupported MediaCapabilities decodingInfo result for level ${index} ${JSON.stringify(
+              this.warn(
+                `Unsupported MediaCapabilities decodingInfo result for level ${index} ${JSON.stringify(
                   decodingInfo,
                 )}`,
               );
               if (index > -1 && levels.length > 1) {
-                logger.log(`[abr] Removing unsupported level ${index}`);
+                this.log(`Removing unsupported level ${index}`);
                 this.hls.removeLevel(index);
               }
             }
@@ -831,8 +832,8 @@ class AbrController implements AbrComponentAPI {
           (forcedAutoLevel === -1 || forcedAutoLevel !== loadLevel)
         ) {
           if (levelsSkipped.length) {
-            logger.trace(
-              `[abr] Skipped level(s) ${levelsSkipped.join(
+            this.trace(
+              `Skipped level(s) ${levelsSkipped.join(
                 ',',
               )} of ${maxAutoLevel} max with CODECS and VIDEO-RANGE:"${
                 levels[levelsSkipped[0]].codecs
@@ -841,8 +842,8 @@ class AbrController implements AbrComponentAPI {
               }" ${currentVideoRange}`,
             );
           }
-          logger.info(
-            `[abr] switch candidate:${selectionBaseLevel}->${i} adjustedbw(${Math.round(
+          this.info(
+            `switch candidate:${selectionBaseLevel}->${i} adjustedbw(${Math.round(
               adjustedbw,
             )})-bitrate=${Math.round(
               adjustedbw - bitrate,

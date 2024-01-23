@@ -5,7 +5,7 @@
  */
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import {
   getKeySystemsForConfig,
   getSupportedMediaKeySystemConfigurations,
@@ -41,9 +41,6 @@ import type {
   LoaderConfiguration,
   LoaderContext,
 } from '../types/loader';
-
-const LOGGER_PREFIX = '[eme]';
-
 interface KeySystemAccessPromises {
   keySystemAccess: Promise<MediaKeySystemAccess>;
   mediaKeys?: Promise<MediaKeys>;
@@ -68,7 +65,7 @@ export interface MediaKeySessionContext {
  * @class
  * @constructor
  */
-class EMEController implements ComponentAPI {
+class EMEController extends Logger implements ComponentAPI {
   public static CDMCleanupPromise: Promise<void> | void;
 
   private readonly hls: Hls;
@@ -91,12 +88,8 @@ class EMEController implements ComponentAPI {
     ? [EMEController.CDMCleanupPromise]
     : [];
 
-  private debug: (msg: any) => void = logger.debug.bind(logger, LOGGER_PREFIX);
-  private log: (msg: any) => void = logger.log.bind(logger, LOGGER_PREFIX);
-  private warn: (msg: any) => void = logger.warn.bind(logger, LOGGER_PREFIX);
-  private error: (msg: any) => void = logger.error.bind(logger, LOGGER_PREFIX);
-
   constructor(hls: Hls) {
+    super('eme', hls.logger);
     this.hls = hls;
     this.config = hls.config;
     this.registerListeners();

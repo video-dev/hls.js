@@ -28,7 +28,6 @@ import type {
   BufferFlushingData,
   FragLoadingData,
 } from '../types/events';
-import { logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
 import type { HlsConfig } from '../config';
@@ -405,7 +404,7 @@ export class TimelineController implements ComponentAPI {
             .filter((t) => t !== null)
             .map((t) => (t as TextTrack).label);
           if (unusedTextTracks.length) {
-            logger.warn(
+            this.hls.logger.warn(
               `Media element contains unused subtitle tracks: ${unusedTextTracks.join(
                 ', ',
               )}. Replace media element for each source to clear TextTracks and captions menu.`,
@@ -543,7 +542,7 @@ export class TimelineController implements ComponentAPI {
         });
       },
       (error) => {
-        logger.log(`Failed to parse IMSC1: ${error}`);
+        hls.logger.log(`Failed to parse IMSC1: ${error}`);
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
           success: false,
           frag: frag,
@@ -590,7 +589,7 @@ export class TimelineController implements ComponentAPI {
           this._fallbackToIMSC1(frag, payload);
         }
         // Something went wrong while parsing. Trigger event with success false.
-        logger.log(`Failed to parse VTT cue: ${error}`);
+        hls.logger.log(`Failed to parse VTT cue: ${error}`);
         if (missingInitPTS && maxAvCC > frag.cc) {
           return;
         }

@@ -5,7 +5,7 @@ import { computeReloadInterval, mergeDetails } from '../utils/level-helper';
 import { ErrorData } from '../types/events';
 import { getRetryDelay, isTimeoutError } from '../utils/error-helper';
 import { NetworkErrorAction } from './error-controller';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import type { LevelDetails } from '../loader/level-details';
 import type { MediaPlaylist } from '../types/media-playlist';
 import type {
@@ -14,17 +14,17 @@ import type {
   TrackLoadedData,
 } from '../types/events';
 
-export default class BasePlaylistController implements NetworkComponentAPI {
+export default class BasePlaylistController
+  extends Logger
+  implements NetworkComponentAPI
+{
   protected hls: Hls;
   protected timer: number = -1;
   protected requestScheduled: number = -1;
   protected canLoad: boolean = false;
-  protected log: (msg: any) => void;
-  protected warn: (msg: any) => void;
 
   constructor(hls: Hls, logPrefix: string) {
-    this.log = logger.log.bind(logger, `${logPrefix}:`);
-    this.warn = logger.warn.bind(logger, `${logPrefix}:`);
+    super(logPrefix, hls.logger);
     this.hls = hls;
   }
 
@@ -65,7 +65,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
         try {
           uri = new self.URL(attr.URI, previous.url).href;
         } catch (error) {
-          logger.warn(
+          this.warn(
             `Could not construct new URL for Rendition Report: ${error}`,
           );
           uri = attr.URI || '';
