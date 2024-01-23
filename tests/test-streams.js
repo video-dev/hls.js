@@ -262,4 +262,9 @@ module.exports = {
        NAL units are not starting right at the beginning of the PES packet when using hardware accelerated decoding.`,
     abr: false,
   },
+  aes256: {
+    url: 'https://jvaryhlstests.blob.core.windows.net/hlstestdata/playlist_encrypted.m3u8',
+    description: 'aes-256 and aes-256-ctr full segment encryption',
+    abr: false,
+  },
 };
