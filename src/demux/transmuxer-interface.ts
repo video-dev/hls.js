@@ -12,14 +12,13 @@ import Transmuxer, {
 } from '../demux/transmuxer';
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { getMediaSource } from '../utils/mediasource-helper';
 import { EventEmitter } from 'eventemitter3';
 import { Fragment, Part } from '../loader/fragment';
+import { getM2TSSupportedAudioTypes } from '../utils/codecs';
 import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type Hls from '../hls';
 import type { HlsEventEmitter } from '../events';
 import type { PlaylistLevelType } from '../types/loader';
-import type { TypeSupported } from './tsdemuxer';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 export default class TransmuxerInterface {
@@ -64,16 +63,9 @@ export default class TransmuxerInterface {
     this.observer.on(Events.FRAG_DECRYPTED, forwardMessage);
     this.observer.on(Events.ERROR, forwardMessage);
 
-    const MediaSource = getMediaSource(config.preferManagedMediaSource) || {
-      isTypeSupported: () => false,
-    };
-    const m2tsTypeSupported: TypeSupported = {
-      mpeg: MediaSource.isTypeSupported('audio/mpeg'),
-      mp3: MediaSource.isTypeSupported('audio/mp4; codecs="mp3"'),
-      ac3: __USE_M2TS_ADVANCED_CODECS__
-        ? MediaSource.isTypeSupported('audio/mp4; codecs="ac-3"')
-        : false,
-    };
+    const m2tsTypeSupported = getM2TSSupportedAudioTypes(
+      config.preferManagedMediaSource,
+    );
 
     // navigator.vendor is not always available in Web Worker
     // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator

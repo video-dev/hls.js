@@ -4,7 +4,7 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from './audio/aacdemuxer';
 import MP4Demuxer from '../demux/mp4demuxer';
-import TSDemuxer, { TypeSupported } from '../demux/tsdemuxer';
+import TSDemuxer from '../demux/tsdemuxer';
 import MP3Demuxer from './audio/mp3demuxer';
 import { AC3Demuxer } from './audio/ac3-demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
@@ -16,6 +16,7 @@ import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import type { HlsConfig } from '../config';
 import type { DecryptData } from '../loader/level-key';
 import type { PlaylistLevelType } from '../types/loader';
+import type { TypeSupported } from '../utils/codecs';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 import { optionalSelf } from '../utils/global';
 
