@@ -16,6 +16,7 @@ import {
   codecsSetSelectionPreferenceValue,
   convertAVC1ToAVCOTI,
   getCodecCompatibleName,
+  getM2TSSupportedAudioTypes,
   videoCodecPreferenceValue,
 } from '../utils/codecs';
 import BasePlaylistController from './base-playlist-controller';
@@ -26,8 +27,6 @@ import { hlsDefaultConfig } from '../config';
 import type Hls from '../hls';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';
 import type { MediaPlaylist } from '../types/media-playlist';
-
-let chromeOrFirefox: boolean;
 
 export default class LevelController extends BasePlaylistController {
   private _levels: Level[] = [];
@@ -119,22 +118,12 @@ export default class LevelController extends BasePlaylistController {
 
     data.levels.forEach((levelParsed: LevelParsed) => {
       const attributes = levelParsed.attrs;
-
-      // erase audio codec info if browser does not support mp4a.40.34.
-      // demuxer will autodetect codec and fallback to mpeg/audio
       let { audioCodec, videoCodec } = levelParsed;
-      if (audioCodec?.indexOf('mp4a.40.34') !== -1) {
-        chromeOrFirefox ||= /chrome|firefox/i.test(navigator.userAgent);
-        if (chromeOrFirefox) {
-          levelParsed.audioCodec = audioCodec = undefined;
-        }
-      }
-
       if (audioCodec) {
-        levelParsed.audioCodec = audioCodec = getCodecCompatibleName(
-          audioCodec,
-          preferManagedMediaSource,
-        );
+        // Returns empty and set to undefined for 'mp4a.40.34' with fallback to 'audio/mpeg' SourceBuffer
+        levelParsed.audioCodec = audioCodec =
+          getCodecCompatibleName(audioCodec, preferManagedMediaSource) ||
+          undefined;
       }
 
       if (videoCodec?.indexOf('avc1') === 0) {

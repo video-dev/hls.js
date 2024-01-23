@@ -20,20 +20,21 @@ import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
+import type { TypeSupported } from '../utils/codecs';
 import {
-  DemuxedVideoTrack,
-  DemuxedAudioTrack,
-  DemuxedTrack,
-  Demuxer,
-  DemuxerResult,
-  VideoSample,
-  DemuxedMetadataTrack,
-  DemuxedUserdataTrack,
-  ElementaryStreamData,
-  KeyData,
   MetadataSchema,
+  type DemuxedVideoTrack,
+  type DemuxedAudioTrack,
+  type DemuxedTrack,
+  type Demuxer,
+  type DemuxerResult,
+  type VideoSample,
+  type DemuxedMetadataTrack,
+  type DemuxedUserdataTrack,
+  type ElementaryStreamData,
+  type KeyData,
 } from '../types/demuxer';
-import { AudioFrame } from '../types/demuxer';
+import type { AudioFrame } from '../types/demuxer';
 
 export type ParsedTimestamp = {
   pts?: number;
@@ -47,12 +48,6 @@ export type PES = ParsedTimestamp & {
 
 export type ParsedVideoSample = ParsedTimestamp &
   Omit<VideoSample, 'pts' | 'dts'>;
-
-export interface TypeSupported {
-  mpeg: boolean;
-  mp3: boolean;
-  ac3: boolean;
-}
 
 const PACKET_LENGTH = 188;
 
