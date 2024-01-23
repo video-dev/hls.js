@@ -26,6 +26,7 @@ import './unit/controller/subtitle-track-controller';
 import './unit/controller/timeline-controller-nonnative';
 import './unit/controller/timeline-controller';
 import './unit/crypt/aes-decryptor';
+import './unit/crypt/decrypter';
 import './unit/demuxer/adts';
 import './unit/demuxer/base-audio-demuxer';
 import './unit/demuxer/id3';

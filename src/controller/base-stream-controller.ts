@@ -8,6 +8,10 @@ import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { alignStream } from '../utils/discontinuities';
 import {
+  isFullSegmentEncryption,
+  getAesModeFromFullSegmentMethod,
+} from '../utils/encryption-methods-util';
+import {
   findFragmentByPDT,
   findFragmentByPTS,
   findFragWithCC,
@@ -481,7 +485,7 @@ export default class BaseStreamController
           payload.byteLength > 0 &&
           decryptData?.key &&
           decryptData.iv &&
-          decryptData.method === 'AES-128'
+          isFullSegmentEncryption(decryptData.method)
         ) {
           const startTime = self.performance.now();
           // decrypt init segment data
@@ -490,6 +494,7 @@ export default class BaseStreamController
               new Uint8Array(payload),
               decryptData.key.buffer,
               decryptData.iv.buffer,
+              getAesModeFromFullSegmentMethod(decryptData.method),
             )
             .catch((err) => {
               hls.trigger(Events.ERROR, {

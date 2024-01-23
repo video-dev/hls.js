@@ -4,6 +4,7 @@
 
 import { HlsConfig } from '../config';
 import Decrypter from '../crypt/decrypter';
+import { DecrypterAesMode } from '../crypt/decrypter-aes-mode';
 import { HlsEventEmitter } from '../events';
 import type {
   AudioSample,
@@ -30,6 +31,7 @@ class SampleAesDecrypter {
       encryptedData,
       this.keyData.key.buffer,
       this.keyData.iv.buffer,
+      DecrypterAesMode.cbc,
     );
   }
 
