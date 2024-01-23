@@ -79,7 +79,7 @@ describe('LatencyController', function () {
     currentTimeStub.get(() => currentTime);
     currentTimeStub.set((value: number) => {
       currentTime = value;
-      latencyController['timeupdate']();
+      latencyController['onTimeupdate']();
     });
   });
 

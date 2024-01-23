@@ -97,8 +97,6 @@ export default class BaseStreamController
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
   protected initPTS: RationalTimestamp[] = [];
-  protected onvseeking: EventListener | null = null;
-  protected onvended: EventListener | null = null;
 
   private readonly logPrefix: string = '';
   protected log: (msg: any) => void;
@@ -197,10 +195,8 @@ export default class BaseStreamController
     data: MediaAttachedData,
   ) {
     const media = (this.media = this.mediaBuffer = data.media);
-    this.onvseeking = this.onMediaSeeking.bind(this) as EventListener;
-    this.onvended = this.onMediaEnded.bind(this) as EventListener;
-    media.addEventListener('seeking', this.onvseeking);
-    media.addEventListener('ended', this.onvended);
+    media.addEventListener('seeking', this.onMediaSeeking);
+    media.addEventListener('ended', this.onMediaEnded);
     const config = this.config;
     if (this.levels && config.autoStartLoad && this.state === State.STOPPED) {
       this.startLoad(config.startPosition);
@@ -215,10 +211,9 @@ export default class BaseStreamController
     }
 
     // remove video listeners
-    if (media && this.onvseeking && this.onvended) {
-      media.removeEventListener('seeking', this.onvseeking);
-      media.removeEventListener('ended', this.onvended);
-      this.onvseeking = this.onvended = null;
+    if (media) {
+      media.removeEventListener('seeking', this.onMediaSeeking);
+      media.removeEventListener('ended', this.onMediaEnded);
     }
     if (this.keyLoader) {
       this.keyLoader.detach();
@@ -229,7 +224,7 @@ export default class BaseStreamController
     this.stopLoad();
   }
 
-  protected onMediaSeeking() {
+  protected onMediaSeeking = () => {
     const { config, fragCurrent, media, mediaBuffer, state } = this;
     const currentTime: number = media ? media.currentTime : 0;
     const bufferInfo = BufferHelper.bufferInfo(
@@ -292,12 +287,12 @@ export default class BaseStreamController
 
     // Async tick to speed up processing
     this.tickImmediate();
-  }
+  };
 
-  protected onMediaEnded() {
+  protected onMediaEnded = () => {
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.startPosition = this.lastCurrentTime = 0;
-  }
+  };
 
   protected onManifestLoaded(
     event: Events.MANIFEST_LOADED,
@@ -312,7 +307,7 @@ export default class BaseStreamController
     this.stopLoad();
     super.onHandlerDestroying();
     // @ts-ignore
-    this.hls = null;
+    this.hls = this.onMediaSeeking = this.onMediaEnded = null;
   }
 
   protected onHandlerDestroyed() {
