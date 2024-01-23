@@ -8,7 +8,7 @@ import KeyLoader from './loader/key-loader';
 import StreamController from './controller/stream-controller';
 import { isMSESupported, isSupported } from './is-supported';
 import { getMediaSource } from './utils/mediasource-helper';
-import { logger, enableLogs } from './utils/logger';
+import { enableLogs, type ILogger } from './utils/logger';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
 import { EventEmitter } from 'eventemitter3';
 import { Events } from './events';
@@ -58,6 +58,11 @@ export default class Hls implements HlsEventEmitter {
    * The configuration object provided on player instantiation.
    */
   public readonly userConfig: Partial<HlsConfig>;
+
+  /**
+   * The logger functions used by this player instance, configured on player instantiation.
+   */
+  public readonly logger: ILogger;
 
   private coreComponents: ComponentAPI[];
   private networkControllers: NetworkComponentAPI[];
@@ -142,12 +147,19 @@ export default class Hls implements HlsEventEmitter {
    * @param userConfig - Configuration options applied over `Hls.DefaultConfig`
    */
   constructor(userConfig: Partial<HlsConfig> = {}) {
-    enableLogs(userConfig.debug || false, 'Hls instance');
-    const config = (this.config = mergeConfig(Hls.DefaultConfig, userConfig));
+    const logger = (this.logger = enableLogs(
+      userConfig.debug || false,
+      'Hls instance',
+    ));
+    const config = (this.config = mergeConfig(
+      Hls.DefaultConfig,
+      userConfig,
+      logger,
+    ));
     this.userConfig = userConfig;
 
     if (config.progressive) {
-      enableStreamingMode(config);
+      enableStreamingMode(config, logger);
     }
 
     // core controllers and network loaders
@@ -320,7 +332,7 @@ export default class Hls implements HlsEventEmitter {
       try {
         return this.emit(event, event, eventObject);
       } catch (error) {
-        logger.error(
+        this.logger.error(
           'An internal error happened while handling event ' +
             event +
             '. Error message: "' +
@@ -354,7 +366,7 @@ export default class Hls implements HlsEventEmitter {
    * Dispose of the instance
    */
   destroy() {
-    logger.log('destroy');
+    this.logger.log('destroy');
     this.trigger(Events.DESTROYING, undefined);
     this.detachMedia();
     this.removeAllListeners();
@@ -377,7 +389,7 @@ export default class Hls implements HlsEventEmitter {
    * Attaches Hls.js to a media element
    */
   attachMedia(media: HTMLMediaElement) {
-    logger.log('attachMedia');
+    this.logger.log('attachMedia');
     this._media = media;
     this.trigger(Events.MEDIA_ATTACHING, { media: media });
   }
@@ -386,7 +398,7 @@ export default class Hls implements HlsEventEmitter {
    * Detach Hls.js from the media
    */
   detachMedia() {
-    logger.log('detachMedia');
+    this.logger.log('detachMedia');
     this.trigger(Events.MEDIA_DETACHING, undefined);
     this._media = null;
   }
@@ -407,7 +419,7 @@ export default class Hls implements HlsEventEmitter {
     ));
     this._autoLevelCapping = -1;
     this._maxHdcpLevel = null;
-    logger.log(`loadSource:${loadingSource}`);
+    this.logger.log(`loadSource:${loadingSource}`);
     if (
       media &&
       loadedSource &&
@@ -428,7 +440,7 @@ export default class Hls implements HlsEventEmitter {
    * Defaults to -1 (None: starts from earliest point)
    */
   startLoad(startPosition: number = -1) {
-    logger.log(`startLoad(${startPosition})`);
+    this.logger.log(`startLoad(${startPosition})`);
     this.started = true;
     this.networkControllers.forEach((controller) => {
       controller.startLoad(startPosition);
@@ -439,7 +451,7 @@ export default class Hls implements HlsEventEmitter {
    * Stop loading of any stream data.
    */
   stopLoad() {
-    logger.log('stopLoad');
+    this.logger.log('stopLoad');
     this.started = false;
     this.networkControllers.forEach((controller) => {
       controller.stopLoad();
@@ -475,7 +487,7 @@ export default class Hls implements HlsEventEmitter {
    * Swap through possible audio codecs in the stream (for example to switch from stereo to 5.1)
    */
   swapAudioCodec() {
-    logger.log('swapAudioCodec');
+    this.logger.log('swapAudioCodec');
     this.streamController.swapAudioCodec();
   }
 
@@ -486,7 +498,7 @@ export default class Hls implements HlsEventEmitter {
    * Automatic recovery of media-errors by this process is configurable.
    */
   recoverMediaError() {
-    logger.log('recoverMediaError');
+    this.logger.log('recoverMediaError');
     const media = this._media;
     this.detachMedia();
     if (media) {
@@ -517,7 +529,7 @@ export default class Hls implements HlsEventEmitter {
    * Set quality level index immediately. This will flush the current buffer to replace the quality asap. That means playback will interrupt at least shortly to re-buffer and re-sync eventually. Set to -1 for automatic level selection.
    */
   set currentLevel(newLevel: number) {
-    logger.log(`set currentLevel:${newLevel}`);
+    this.logger.log(`set currentLevel:${newLevel}`);
     this.levelController.manualLevel = newLevel;
     this.streamController.immediateLevelSwitch();
   }
@@ -536,7 +548,7 @@ export default class Hls implements HlsEventEmitter {
    * @param newLevel - Pass -1 for automatic level selection
    */
   set nextLevel(newLevel: number) {
-    logger.log(`set nextLevel:${newLevel}`);
+    this.logger.log(`set nextLevel:${newLevel}`);
     this.levelController.manualLevel = newLevel;
     this.streamController.nextLevelSwitch();
   }
@@ -555,7 +567,7 @@ export default class Hls implements HlsEventEmitter {
    * @param newLevel - Pass -1 for automatic level selection
    */
   set loadLevel(newLevel: number) {
-    logger.log(`set loadLevel:${newLevel}`);
+    this.logger.log(`set loadLevel:${newLevel}`);
     this.levelController.manualLevel = newLevel;
   }
 
@@ -586,7 +598,7 @@ export default class Hls implements HlsEventEmitter {
    * Sets "first-level", see getter.
    */
   set firstLevel(newLevel: number) {
-    logger.log(`set firstLevel:${newLevel}`);
+    this.logger.log(`set firstLevel:${newLevel}`);
     this.levelController.firstLevel = newLevel;
   }
 
@@ -611,7 +623,7 @@ export default class Hls implements HlsEventEmitter {
    * (determined from download of first segment)
    */
   set startLevel(newLevel: number) {
-    logger.log(`set startLevel:${newLevel}`);
+    this.logger.log(`set startLevel:${newLevel}`);
     // if not in automatic start level detection, ensure startLevel is greater than minAutoLevel
     if (newLevel !== -1) {
       newLevel = Math.max(newLevel, this.minAutoLevel);
@@ -686,7 +698,7 @@ export default class Hls implements HlsEventEmitter {
    */
   set autoLevelCapping(newLevel: number) {
     if (this._autoLevelCapping !== newLevel) {
-      logger.log(`set autoLevelCapping:${newLevel}`);
+      this.logger.log(`set autoLevelCapping:${newLevel}`);
       this._autoLevelCapping = newLevel;
       this.levelController.checkMaxAutoUpdated();
     }
@@ -1032,7 +1044,7 @@ export type {
   TSDemuxerConfig,
 } from './config';
 export type { MediaKeySessionContext } from './controller/eme-controller';
-export type { ILogger } from './utils/logger';
+export type { ILogger, Logger } from './utils/logger';
 export type {
   PathwayClone,
   SteeringManifest,

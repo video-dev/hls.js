@@ -6,7 +6,6 @@ import type {
   LevelUpdatedData,
   MediaAttachingData,
 } from '../types/events';
-import { logger } from '../utils/logger';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { HlsConfig } from '../config';
@@ -125,7 +124,7 @@ export default class LatencyController implements ComponentAPI {
     this.onMediaDetaching();
     this.levelDetails = null;
     // @ts-ignore
-    this.hls = this.onTimeupdate = null;
+    this.hls = null;
   }
 
   private registerListeners() {
@@ -184,8 +183,8 @@ export default class LatencyController implements ComponentAPI {
     }
     this.stallCount++;
     if (this.levelDetails?.live) {
-      logger.warn(
-        '[playback-rate-controller]: Stall detected, adjusting target latency',
+      this.hls.logger.warn(
+        '[latency-controller]: Stall detected, adjusting target latency',
       );
     }
   }

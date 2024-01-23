@@ -33,7 +33,7 @@ class AudioTrackController extends BasePlaylistController {
   private selectDefaultTrack: boolean = true;
 
   constructor(hls: Hls) {
-    super(hls, '[audio-track-controller]');
+    super(hls, 'audio-track-controller');
     this.registerListeners();
   }
 

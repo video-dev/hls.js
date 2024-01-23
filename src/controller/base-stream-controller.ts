@@ -1,7 +1,6 @@
 import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
 import { Bufferable, BufferHelper, BufferInfo } from '../utils/buffer-helper';
-import { logger } from '../utils/logger';
 import { Events } from '../events';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { ChunkMetadata } from '../types/transmuxer';
@@ -102,10 +101,6 @@ export default class BaseStreamController
   protected decrypter: Decrypter;
   protected initPTS: RationalTimestamp[] = [];
 
-  private readonly logPrefix: string = '';
-  protected log: (msg: any) => void;
-  protected warn: (msg: any) => void;
-
   constructor(
     hls: Hls,
     fragmentTracker: FragmentTracker,
@@ -113,18 +108,32 @@ export default class BaseStreamController
     logPrefix: string,
     playlistType: PlaylistLevelType,
   ) {
-    super();
+    super(logPrefix, hls.logger);
     this.playlistType = playlistType;
-    this.logPrefix = logPrefix;
-    this.log = logger.log.bind(logger, `${logPrefix}:`);
-    this.warn = logger.warn.bind(logger, `${logPrefix}:`);
     this.hls = hls;
     this.fragmentLoader = new FragmentLoader(hls.config);
     this.keyLoader = keyLoader;
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls.config);
+  }
+
+  protected registerListeners() {
+    const { hls } = this;
+    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.on(Events.ERROR, this.onError, this);
+  }
+
+  protected unregisterListeners() {
+    const { hls } = this;
+    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.off(Events.ERROR, this.onError, this);
   }
 
   protected doTick() {
@@ -227,6 +236,10 @@ export default class BaseStreamController
     this.fragmentTracker.removeAllFragments();
     this.stopLoad();
   }
+
+  protected onManifestLoading() {}
+
+  protected onError(event: Events.ERROR, data: ErrorData) {}
 
   protected onMediaSeeking = () => {
     const { config, fragCurrent, media, mediaBuffer, state } = this;
@@ -649,7 +662,7 @@ export default class BaseStreamController
     if (frag.encrypted && !frag.decryptdata?.key) {
       this.log(
         `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${
-          this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+          this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'
         } ${frag.level}`,
       );
       this.state = State.KEY_LOADING;
@@ -689,7 +702,7 @@ export default class BaseStreamController
             } of playlist [${details.startSN}-${
               details.endSN
             }] parts [0-${partIndex}-${partList.length - 1}] ${
-              this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+              this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'
             }: ${frag.level}, target: ${parseFloat(
               targetBufferTime.toFixed(3),
             )}`,
@@ -748,7 +761,7 @@ export default class BaseStreamController
     this.log(
       `Loading fragment ${frag.sn} cc: ${frag.cc} ${
         details ? 'of [' + details.startSN + '-' + details.endSN + '] ' : ''
-      }${this.logPrefix === '[stream-controller]' ? 'level' : 'track'}: ${
+      }${this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'}: ${
         frag.level
       }, target: ${parseFloat(targetBufferTime.toFixed(3))}`,
     );
@@ -1550,7 +1563,7 @@ export default class BaseStreamController
           errorAction.resolved = true;
         }
       } else {
-        logger.warn(
+        this.warn(
           `${data.details} reached or exceeded max retry (${retryCount})`,
         );
         return;

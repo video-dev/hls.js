@@ -11,6 +11,25 @@ export interface ILogger {
   error: ILogFunction;
 }
 
+export class Logger implements ILogger {
+  trace: ILogFunction;
+  debug: ILogFunction;
+  log: ILogFunction;
+  warn: ILogFunction;
+  info: ILogFunction;
+  error: ILogFunction;
+
+  constructor(label: string, logger: ILogger) {
+    const lb = `[${label}]:`;
+    this.trace = noop;
+    this.debug = logger.debug.bind(null, lb);
+    this.log = logger.log.bind(null, lb);
+    this.warn = logger.warn.bind(null, lb);
+    this.info = logger.info.bind(null, lb);
+    this.error = logger.error.bind(null, lb);
+  }
+}
+
 const noop: ILogFunction = function () {};
 
 const fakeLogger: ILogger = {
@@ -22,7 +41,9 @@ const fakeLogger: ILogger = {
   error: noop,
 };
 
-let exportedLogger: ILogger = fakeLogger;
+function createLogger() {
+  return Object.assign({}, fakeLogger);
+}
 
 // let lastCallTime;
 // function formatMsgWithTimeInfo(type, msg) {
@@ -33,33 +54,37 @@ let exportedLogger: ILogger = fakeLogger;
 //   return msg;
 // }
 
-function consolePrintFn(type: string): ILogFunction {
+function consolePrintFn(type: string, id: string | undefined): ILogFunction {
   const func: ILogFunction = self.console[type];
-  if (func) {
-    return func.bind(self.console, `[${type}] >`);
-  }
-  return noop;
+  return func
+    ? func.bind(self.console, `${id ? '[' + id + '] ' : ''}[${type}] >`)
+    : noop;
 }
 
-function exportLoggerFunctions(
+function getLoggerFn(
+  key: string,
+  debugConfig: boolean | Partial<ILogger>,
+  id: string | undefined,
+): ILogFunction {
+  return debugConfig[key]
+    ? debugConfig[key].bind(debugConfig)
+    : consolePrintFn(key, id);
+}
+
+let exportedLogger: ILogger = createLogger();
+
+export function enableLogs(
   debugConfig: boolean | ILogger,
-  ...functions: string[]
-): void {
-  functions.forEach(function (type) {
-    exportedLogger[type] = debugConfig[type]
-      ? debugConfig[type].bind(debugConfig)
-      : consolePrintFn(type);
-  });
-}
-
-export function enableLogs(debugConfig: boolean | ILogger, id: string): void {
+  context: string,
+  id?: string | undefined,
+): ILogger {
   // check that console is available
+  const newLogger = createLogger();
   if (
     (typeof console === 'object' && debugConfig === true) ||
     typeof debugConfig === 'object'
   ) {
-    exportLoggerFunctions(
-      debugConfig,
+    const keys: (keyof ILogger)[] = [
       // Remove out from list here to hard-disable a log-level
       // 'trace',
       'debug',
@@ -67,19 +92,23 @@ export function enableLogs(debugConfig: boolean | ILogger, id: string): void {
       'info',
       'warn',
       'error',
-    );
+    ];
+    keys.forEach((key) => {
+      newLogger[key] = getLoggerFn(key, debugConfig, id);
+    });
     // Some browsers don't allow to use bind on console object anyway
     // fallback to default if needed
     try {
-      exportedLogger.log(
-        `Debug logs enabled for "${id}" in hls.js version ${__VERSION__}`,
+      newLogger.log(
+        `Debug logs enabled for "${context}" in hls.js version ${__VERSION__}`,
       );
     } catch (e) {
-      exportedLogger = fakeLogger;
+      /* log fn threw an exception. All logger methods are no-ops. */
+      return createLogger();
     }
-  } else {
-    exportedLogger = fakeLogger;
   }
+  exportedLogger = newLogger;
+  return newLogger;
 }
 
 export const logger: ILogger = exportedLogger;

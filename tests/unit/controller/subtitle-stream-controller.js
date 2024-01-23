@@ -7,6 +7,7 @@ import { Fragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import KeyLoader from '../../../src/loader/key-loader';
+import { State } from '../../../src/controller/base-stream-controller';
 import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
 
 const mediaMock = {
@@ -48,6 +49,7 @@ describe('SubtitleStreamController', function () {
     subtitleStreamController.onMediaAttached(Events.MEDIA_ATTACHED, {
       media: mediaMock,
     });
+    subtitleStreamController.state = State.IDLE;
   });
 
   afterEach(function () {
