@@ -443,15 +443,11 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected onMediaDetaching(): void;
     // (undocumented)
-    protected onMediaEnded(): void;
+    protected onMediaEnded: () => void;
     // (undocumented)
-    protected onMediaSeeking(): void;
+    protected onMediaSeeking: () => void;
     // (undocumented)
     protected onTickEnd(): void;
-    // (undocumented)
-    protected onvended: EventListener | null;
-    // (undocumented)
-    protected onvseeking: EventListener | null;
     // (undocumented)
     protected playlistType: PlaylistLevelType;
     // (undocumented)

@@ -110,6 +110,12 @@ export default class BufferController implements ComponentAPI {
     this.lastMpegAudioChunk = null;
     // @ts-ignore
     this.hls = null;
+    // @ts-ignore
+    this._onMediaSourceOpen = this._onMediaSourceClose = null;
+    // @ts-ignore
+    this._onMediaSourceEnded = null;
+    // @ts-ignore
+    this._onStartStreaming = this._onEndStreaming = null;
   }
 
   protected registerListeners() {
