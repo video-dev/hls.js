@@ -1,5 +1,5 @@
 import { Events } from '../events';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { BufferHelper } from '../utils/buffer-helper';
 import {
@@ -42,7 +42,7 @@ interface BufferedChangeEvent extends Event {
   readonly removedRanges?: TimeRanges;
 }
 
-export default class BufferController implements ComponentAPI {
+export default class BufferController extends Logger implements ComponentAPI {
   // The level details used to determine duration, target-duration and live
   private details: LevelDetails | null = null;
   // cache the self generated object url to detect hijack of video tag
@@ -82,17 +82,10 @@ export default class BufferController implements ComponentAPI {
   public pendingTracks: TrackSet = {};
   public sourceBuffer!: SourceBuffers;
 
-  protected log: (msg: any) => void;
-  protected warn: (msg: any, obj?: any) => void;
-  protected error: (msg: any, obj?: any) => void;
-
   constructor(hls: Hls) {
+    super('buffer-controller', hls.logger);
     this.hls = hls;
-    const logPrefix = '[buffer-controller]';
     this.appendSource = hls.config.preferManagedMediaSource;
-    this.log = logger.log.bind(logger, logPrefix);
-    this.warn = logger.warn.bind(logger, logPrefix);
-    this.error = logger.error.bind(logger, logPrefix);
     this._initSourceBuffer();
     this.registerListeners();
   }
@@ -1010,7 +1003,7 @@ export default class BufferController implements ComponentAPI {
   private _onMediaEmptied = () => {
     const { mediaSrc, _objectUrl } = this;
     if (mediaSrc !== _objectUrl) {
-      logger.error(
+      this.error(
         `Media element src was set while attaching MediaSource (${_objectUrl} > ${mediaSrc})`,
       );
     }

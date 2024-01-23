@@ -12,7 +12,6 @@ import type {
   LevelsUpdatedData,
 } from '../types/events';
 import StreamController from './stream-controller';
-import { logger } from '../utils/logger';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 
@@ -152,7 +151,7 @@ class CapLevelController implements ComponentAPI {
         const hls = this.hls;
         const maxLevel = this.getMaxLevel(levels.length - 1);
         if (maxLevel !== this.autoLevelCapping) {
-          logger.log(
+          hls.logger.log(
             `Setting autoLevelCapping to ${maxLevel}: ${levels[maxLevel].height}p@${levels[maxLevel].bitrate} for media ${this.mediaWidth}x${this.mediaHeight}`,
           );
         }

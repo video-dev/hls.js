@@ -17,10 +17,10 @@ import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import Cues from './utils/cues';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
-import { ILogger, logger } from './utils/logger';
 
 import type Hls from './hls';
 import type { CuesInterface } from './utils/cues';
+import type { ILogger } from './utils/logger';
 import type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
 import type {
   FragmentLoaderContext,
@@ -558,6 +558,7 @@ function timelineConfig(): TimelineControllerConfig {
 export function mergeConfig(
   defaultConfig: HlsConfig,
   userConfig: Partial<HlsConfig>,
+  logger: ILogger,
 ): HlsConfig {
   if (
     (userConfig.liveSyncDurationCount ||
@@ -664,7 +665,7 @@ function deepCpy(obj: any): any {
 /**
  * @ignore
  */
-export function enableStreamingMode(config) {
+export function enableStreamingMode(config: HlsConfig, logger: ILogger) {
   const currentLoader = config.loader;
   if (currentLoader !== FetchLoader && currentLoader !== XhrLoader) {
     // If a developer has configured their own loader, respect that choice

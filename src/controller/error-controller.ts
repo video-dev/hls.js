@@ -8,7 +8,7 @@ import {
 } from '../utils/error-helper';
 import { findFragmentByPTS } from './fragment-finders';
 import { HdcpLevel, HdcpLevels } from '../types/level';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import type Hls from '../hls';
 import type { RetryConfig } from '../config';
 import type { NetworkComponentAPI } from '../types/component-api';
@@ -50,19 +50,17 @@ type PenalizedRendition = {
 
 type PenalizedRenditions = { [key: number]: PenalizedRendition };
 
-export default class ErrorController implements NetworkComponentAPI {
+export default class ErrorController
+  extends Logger
+  implements NetworkComponentAPI
+{
   private readonly hls: Hls;
   private playlistError: number = 0;
   private penalizedRenditions: PenalizedRenditions = {};
-  private log: (msg: any) => void;
-  private warn: (msg: any) => void;
-  private error: (msg: any) => void;
 
   constructor(hls: Hls) {
+    super('error-controller', hls.logger);
     this.hls = hls;
-    this.log = logger.log.bind(logger, `[info]:`);
-    this.warn = logger.warn.bind(logger, `[warning]:`);
-    this.error = logger.error.bind(logger, `[error]:`);
     this.registerListeners();
   }
 

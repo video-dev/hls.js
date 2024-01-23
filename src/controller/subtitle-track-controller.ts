@@ -42,7 +42,7 @@ class SubtitleTrackController extends BasePlaylistController {
   private asyncPollTrackChange = () => this.pollTrackChange(0);
 
   constructor(hls: Hls) {
-    super(hls, '[subtitle-track-controller]');
+    super(hls, 'subtitle-track-controller');
     this.registerListeners();
   }
 

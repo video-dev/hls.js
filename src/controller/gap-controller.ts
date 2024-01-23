@@ -1,10 +1,10 @@
-import type { BufferInfo } from '../utils/buffer-helper';
 import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { PlaylistLevelType } from '../types/loader';
 import { Events } from '../events';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import type Hls from '../hls';
+import type { BufferInfo } from '../utils/buffer-helper';
 import type { HlsConfig } from '../config';
 import type { Fragment } from '../loader/fragment';
 import type { FragmentTracker } from './fragment-tracker';
@@ -14,7 +14,7 @@ export const MAX_START_GAP_JUMP = 2.0;
 export const SKIP_BUFFER_HOLE_STEP_SECONDS = 0.1;
 export const SKIP_BUFFER_RANGE_START = 0.05;
 
-export default class GapController {
+export default class GapController extends Logger {
   private config: HlsConfig;
   private media: HTMLMediaElement | null = null;
   private fragmentTracker: FragmentTracker;
@@ -25,7 +25,13 @@ export default class GapController {
   private moved: boolean = false;
   private seeking: boolean = false;
 
-  constructor(config, media, fragmentTracker, hls) {
+  constructor(
+    config: HlsConfig,
+    media: HTMLMediaElement,
+    fragmentTracker: FragmentTracker,
+    hls: Hls,
+  ) {
+    super('gap-controller', hls.logger);
     this.config = config;
     this.media = media;
     this.fragmentTracker = fragmentTracker;
@@ -65,7 +71,7 @@ export default class GapController {
         // The playhead is now moving, but was previously stalled
         if (this.stallReported) {
           const stalledDuration = self.performance.now() - stalled;
-          logger.warn(
+          this.warn(
             `playback not stuck anymore @${currentTime}, after ${Math.round(
               stalledDuration,
             )}ms`,
@@ -206,7 +212,7 @@ export default class GapController {
           bufferInfo.nextStart - currentTime < config.maxBufferHole)) &&
       stalledDurationMs > config.highBufferWatchdogPeriod * 1000
     ) {
-      logger.warn('Trying to nudge playhead over buffer-hole');
+      this.warn('Trying to nudge playhead over buffer-hole');
       // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
       // We only try to jump the hole if it's under the configured size
       // Reset stalled so to rearm watchdog timer
@@ -230,7 +236,7 @@ export default class GapController {
           media.currentTime
         } due to low buffer (${JSON.stringify(bufferInfo)})`,
       );
-      logger.warn(error.message);
+      this.warn(error.message);
       hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
@@ -305,7 +311,7 @@ export default class GapController {
           startTime + SKIP_BUFFER_RANGE_START,
           currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS,
         );
-        logger.warn(
+        this.warn(
           `skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`,
         );
         this.moved = true;
@@ -348,7 +354,7 @@ export default class GapController {
       const error = new Error(
         `Nudging 'currentTime' from ${currentTime} to ${targetTime}`,
       );
-      logger.warn(error.message);
+      this.warn(error.message);
       media.currentTime = targetTime;
       hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
@@ -360,7 +366,7 @@ export default class GapController {
       const error = new Error(
         `Playhead still not moving while enough data buffered @${currentTime} after ${config.nudgeMaxRetry} nudges`,
       );
-      logger.error(error.message);
+      this.error(error.message);
       hls.trigger(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,

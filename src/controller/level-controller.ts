@@ -45,7 +45,7 @@ export default class LevelController extends BasePlaylistController {
     hls: Hls,
     contentSteeringController: ContentSteeringController | null,
   ) {
-    super(hls, '[level-controller]');
+    super(hls, 'level-controller');
     this.steering = contentSteeringController;
     this._registerListeners();
   }

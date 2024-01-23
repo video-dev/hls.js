@@ -3,7 +3,7 @@ import { Level } from '../types/level';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
 import { AttrList } from '../utils/attr-list';
 import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import {
   PlaylistContextType,
   type Loader,
@@ -48,9 +48,11 @@ export type UriReplacement = {
 
 const PATHWAY_PENALTY_DURATION_MS = 300000;
 
-export default class ContentSteeringController implements NetworkComponentAPI {
+export default class ContentSteeringController
+  extends Logger
+  implements NetworkComponentAPI
+{
   private readonly hls: Hls;
-  private log: (msg: any) => void;
   private loader: Loader<LoaderContext> | null = null;
   private uri: string | null = null;
   private pathwayId: string = '.';
@@ -66,8 +68,8 @@ export default class ContentSteeringController implements NetworkComponentAPI {
   private penalizedPathways: { [pathwayId: string]: number } = {};
 
   constructor(hls: Hls) {
+    super('content-steering', hls.logger);
     this.hls = hls;
-    this.log = logger.log.bind(logger, `[content-steering]:`);
     this.registerListeners();
   }
 
@@ -203,7 +205,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
         errorAction.resolved = this.pathwayId !== errorPathway;
       }
       if (!errorAction.resolved) {
-        logger.warn(
+        this.warn(
           `Could not resolve ${data.details} ("${
             data.error.message
           }") with content-steering for Pathway: ${errorPathway} levels: ${
@@ -442,7 +444,7 @@ export default class ContentSteeringController implements NetworkComponentAPI {
       ) => {
         this.log(`Loaded steering manifest: "${url}"`);
         const steeringData = response.data as SteeringManifest;
-        if (steeringData.VERSION !== 1) {
+        if (steeringData?.VERSION !== 1) {
           this.log(`Steering VERSION ${steeringData.VERSION} not supported!`);
           return;
         }
