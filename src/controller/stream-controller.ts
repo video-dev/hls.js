@@ -932,8 +932,10 @@ export default class StreamController
 
     if (this.loadedmetadata || !BufferHelper.getBuffered(media).length) {
       // Resolve gaps using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
-      const activeFrag = this.state !== State.IDLE ? this.fragCurrent : null;
-      gapController.poll(this.lastCurrentTime, activeFrag);
+      const state = this.state;
+      const activeFrag = state !== State.IDLE ? this.fragCurrent : null;
+      const levelDetails = this.getLevelDetails();
+      gapController.poll(this.lastCurrentTime, activeFrag, levelDetails, state);
     }
 
     this.lastCurrentTime = media.currentTime;

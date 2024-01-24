@@ -330,10 +330,16 @@ async function testSeekOnVOD(url, config) {
           });
         }
       };
-      video.onended = function () {
-        console.log('[test] > video  "ended"');
-        callback({ code: 'ended', logs: self.logString });
-      };
+      self.hls.on(self.Hls.Events.MEDIA_ENDED, function (eventName, data) {
+        console.log(
+          '[test] > video  "ended"' + data.stalled ? ' (stalled near end)' : ''
+        );
+        callback({
+          code: 'ended',
+          stalled: data.stalled,
+          logs: self.logString,
+        });
+      });
 
       video.oncanplaythrough = video.onwaiting = function (e) {
         console.log(
