@@ -928,7 +928,7 @@ export default class MP4Remuxer implements Remuxer {
           for (let j = 0; j < missing; j++) {
             const newStamp = Math.max(nextPts as number, 0);
             let fillFrame = AAC.getSilentFrame(
-              track.manifestCodec || track.codec,
+              track.parsedCodec || track.manifestCodec || track.codec,
               track.channelCount,
             );
             if (!fillFrame) {
@@ -1078,7 +1078,7 @@ export default class MP4Remuxer implements Remuxer {
     const nbSamples: number = Math.ceil((endDTS - startDTS) / frameDuration);
     // silent frame
     const silentFrame: Uint8Array | undefined = AAC.getSilentFrame(
-      track.manifestCodec || track.codec,
+      track.parsedCodec || track.manifestCodec || track.codec,
       track.channelCount,
     );
 

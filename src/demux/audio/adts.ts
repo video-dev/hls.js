@@ -17,6 +17,7 @@ type AudioConfig = {
   samplerate: number;
   channelCount: number;
   codec: string;
+  parsedCodec: string;
   manifestCodec: string;
 };
 
@@ -32,6 +33,7 @@ export function getAudioConfig(
   audioCodec: string,
 ): AudioConfig | void {
   let adtsObjectType: number;
+  let originalAdtsObjectType: number;
   let adtsExtensionSamplingIndex: number;
   let adtsChannelConfig: number;
   let config: number[];
@@ -42,7 +44,8 @@ export function getAudioConfig(
     8000, 7350,
   ];
   // byte 2
-  adtsObjectType = ((data[offset + 2] & 0xc0) >>> 6) + 1;
+  adtsObjectType = originalAdtsObjectType =
+    ((data[offset + 2] & 0xc0) >>> 6) + 1;
   const adtsSamplingIndex = (data[offset + 2] & 0x3c) >>> 2;
   if (adtsSamplingIndex > adtsSamplingRates.length - 1) {
     const error = new Error(`invalid ADTS sampling index:${adtsSamplingIndex}`);
@@ -167,6 +170,7 @@ export function getAudioConfig(
     samplerate: adtsSamplingRates[adtsSamplingIndex],
     channelCount: adtsChannelConfig,
     codec: 'mp4a.40.' + adtsObjectType,
+    parsedCodec: 'mp4a.40.' + originalAdtsObjectType,
     manifestCodec,
   };
 }
@@ -244,8 +248,9 @@ export function initTrackConfig(
     track.channelCount = config.channelCount;
     track.codec = config.codec;
     track.manifestCodec = config.manifestCodec;
+    track.parsedCodec = config.parsedCodec;
     logger.log(
-      `parsed codec:${track.codec}, rate:${config.samplerate}, channels:${config.channelCount}`,
+      `parsed codec:${track.parsedCodec}, codec:${track.codec}, rate:${config.samplerate}, channels:${config.channelCount}`,
     );
   }
 }
