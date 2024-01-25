@@ -136,17 +136,12 @@ export class TimelineController implements ComponentAPI {
   }
 
   private initCea608Parsers() {
-    if (
-      this.config.enableCEA708Captions &&
-      (!this.cea608Parser1 || !this.cea608Parser2)
-    ) {
-      const channel1 = new OutputFilter(this, 'textTrack1');
-      const channel2 = new OutputFilter(this, 'textTrack2');
-      const channel3 = new OutputFilter(this, 'textTrack3');
-      const channel4 = new OutputFilter(this, 'textTrack4');
-      this.cea608Parser1 = new Cea608Parser(1, channel1, channel2);
-      this.cea608Parser2 = new Cea608Parser(3, channel3, channel4);
-    }
+    const channel1 = new OutputFilter(this, 'textTrack1');
+    const channel2 = new OutputFilter(this, 'textTrack2');
+    const channel3 = new OutputFilter(this, 'textTrack3');
+    const channel4 = new OutputFilter(this, 'textTrack4');
+    this.cea608Parser1 = new Cea608Parser(1, channel1, channel2);
+    this.cea608Parser2 = new Cea608Parser(3, channel3, channel4);
   }
 
   public addCues(
@@ -667,7 +662,7 @@ export class TimelineController implements ComponentAPI {
     event: Events.FRAG_PARSING_USERDATA,
     data: FragParsingUserdataData,
   ) {
-    if (!this.enabled) {
+    if (!this.enabled || !this.config.enableCEA708Captions) {
       return;
     }
     const { frag, samples } = data;
@@ -682,13 +677,12 @@ export class TimelineController implements ComponentAPI {
     for (let i = 0; i < samples.length; i++) {
       const ccBytes = samples[i].bytes;
       if (ccBytes) {
-        this.initCea608Parsers();
-        if (!this.cea608Parser1 || !this.cea608Parser2) {
-          return;
+        if (!this.cea608Parser1) {
+          this.initCea608Parsers();
         }
         const ccdatas = this.extractCea608Data(ccBytes);
-        this.cea608Parser1.addData(samples[i].pts, ccdatas[0]);
-        this.cea608Parser2.addData(samples[i].pts, ccdatas[1]);
+        this.cea608Parser1!.addData(samples[i].pts, ccdatas[0]);
+        this.cea608Parser2!.addData(samples[i].pts, ccdatas[1]);
       }
     }
   }
