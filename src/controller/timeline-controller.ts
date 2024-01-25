@@ -136,17 +136,12 @@ export class TimelineController implements ComponentAPI {
   }
 
   private initCea608Parsers() {
-    if (
-      this.config.enableCEA708Captions &&
-      (!this.cea608Parser1 || !this.cea608Parser2)
-    ) {
-      const channel1 = new OutputFilter(this, 'textTrack1');
-      const channel2 = new OutputFilter(this, 'textTrack2');
-      const channel3 = new OutputFilter(this, 'textTrack3');
-      const channel4 = new OutputFilter(this, 'textTrack4');
-      this.cea608Parser1 = new Cea608Parser(1, channel1, channel2);
-      this.cea608Parser2 = new Cea608Parser(3, channel3, channel4);
-    }
+    const channel1 = new OutputFilter(this, 'textTrack1');
+    const channel2 = new OutputFilter(this, 'textTrack2');
+    const channel3 = new OutputFilter(this, 'textTrack3');
+    const channel4 = new OutputFilter(this, 'textTrack4');
+    this.cea608Parser1 = new Cea608Parser(1, channel1, channel2);
+    this.cea608Parser2 = new Cea608Parser(3, channel3, channel4);
   }
 
   public addCues(
@@ -468,21 +463,19 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
-    this.initCea608Parsers();
-    const { cea608Parser1, cea608Parser2, lastCc, lastSn, lastPartIndex } =
-      this;
-    if (!this.enabled || !cea608Parser1 || !cea608Parser2) {
-      return;
-    }
     // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
-    if (data.frag.type === PlaylistLevelType.MAIN) {
+    if (this.enabled && data.frag.type === PlaylistLevelType.MAIN) {
+      const { cea608Parser1, cea608Parser2, lastSn } = this;
+      if (!cea608Parser1 || !cea608Parser2) {
+        return;
+      }
       const { cc, sn } = data.frag;
-      const partIndex = data?.part?.index ?? -1;
+      const partIndex = data.part?.index ?? -1;
       if (
         !(
           sn === lastSn + 1 ||
-          (sn === lastSn && partIndex === lastPartIndex + 1) ||
-          cc === lastCc
+          (sn === lastSn && partIndex === this.lastPartIndex + 1) ||
+          cc === this.lastCc
         )
       ) {
         cea608Parser1.reset();
@@ -669,9 +662,7 @@ export class TimelineController implements ComponentAPI {
     event: Events.FRAG_PARSING_USERDATA,
     data: FragParsingUserdataData,
   ) {
-    this.initCea608Parsers();
-    const { cea608Parser1, cea608Parser2 } = this;
-    if (!this.enabled || !cea608Parser1 || !cea608Parser2) {
+    if (!this.enabled || !this.config.enableCEA708Captions) {
       return;
     }
     const { frag, samples } = data;
@@ -686,9 +677,12 @@ export class TimelineController implements ComponentAPI {
     for (let i = 0; i < samples.length; i++) {
       const ccBytes = samples[i].bytes;
       if (ccBytes) {
+        if (!this.cea608Parser1) {
+          this.initCea608Parsers();
+        }
         const ccdatas = this.extractCea608Data(ccBytes);
-        cea608Parser1.addData(samples[i].pts, ccdatas[0]);
-        cea608Parser2.addData(samples[i].pts, ccdatas[1]);
+        this.cea608Parser1!.addData(samples[i].pts, ccdatas[0]);
+        this.cea608Parser2!.addData(samples[i].pts, ccdatas[1]);
       }
     }
   }
