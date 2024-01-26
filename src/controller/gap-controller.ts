@@ -1,3 +1,4 @@
+import { State } from './base-stream-controller';
 import { BufferHelper } from '../utils/buffer-helper';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { PlaylistLevelType } from '../types/loader';
@@ -8,6 +9,7 @@ import type { BufferInfo } from '../utils/buffer-helper';
 import type { HlsConfig } from '../config';
 import type { Fragment } from '../loader/fragment';
 import type { FragmentTracker } from './fragment-tracker';
+import type { LevelDetails } from '../loader/level-details';
 
 export const STALL_MINIMUM_DURATION_MS = 250;
 export const MAX_START_GAP_JUMP = 2.0;
@@ -24,6 +26,7 @@ export default class GapController extends Logger {
   private stalled: number | null = null;
   private moved: boolean = false;
   private seeking: boolean = false;
+  private ended: number = 0;
 
   constructor(
     config: HlsConfig,
@@ -50,7 +53,12 @@ export default class GapController extends Logger {
    *
    * @param lastCurrentTime - Previously read playhead position
    */
-  public poll(lastCurrentTime: number, activeFrag: Fragment | null) {
+  public poll(
+    lastCurrentTime: number,
+    activeFrag: Fragment | null,
+    levelDetails: LevelDetails | undefined,
+    state: string,
+  ) {
     const { config, media, stalled } = this;
     if (media === null) {
       return;
@@ -63,6 +71,7 @@ export default class GapController extends Logger {
 
     // The playhead is moving, no-op
     if (currentTime !== lastCurrentTime) {
+      this.ended = 0;
       this.moved = true;
       if (!seeking) {
         this.nudgeRetry = 0;
@@ -134,12 +143,9 @@ export default class GapController extends Logger {
       // When joining a live stream with audio tracks, account for live playlist window sliding by allowing
       // a larger jump over start gaps caused by the audio-stream-controller buffering a start fragment
       // that begins over 1 target duration after the video start position.
-      const level = this.hls.levels
-        ? this.hls.levels[this.hls.currentLevel]
-        : null;
-      const isLive = level?.details?.live;
+      const isLive = !!levelDetails?.live;
       const maxStartGapJump = isLive
-        ? level!.details!.targetduration * 2
+        ? levelDetails!.targetduration * 2
         : MAX_START_GAP_JUMP;
       const partialOrGap = this.fragmentTracker.getPartialFragment(currentTime);
       if (startJump > 0 && (startJump <= maxStartGapJump || partialOrGap)) {
@@ -159,6 +165,21 @@ export default class GapController extends Logger {
 
     const stalledDuration = tnow - stalled;
     if (!seeking && stalledDuration >= STALL_MINIMUM_DURATION_MS) {
+      // Dispatch MEDIA_ENDED when media.ended/ended event is not signalled at end of stream
+      if (
+        state === State.ENDED &&
+        !(levelDetails && levelDetails.live) &&
+        Math.abs(currentTime - (levelDetails?.edge || 0)) < 1
+      ) {
+        if (stalledDuration < 1000 || this.ended) {
+          return;
+        }
+        this.ended = currentTime;
+        this.hls.trigger(Events.MEDIA_ENDED, {
+          stalled: true,
+        });
+        return;
+      }
       // Report stalling after trying to fix
       this._reportStall(bufferInfo);
       if (!this.media) {

@@ -309,6 +309,11 @@ export default class BaseStreamController
   protected onMediaEnded = () => {
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.startPosition = this.lastCurrentTime = 0;
+    if (this.playlistType === PlaylistLevelType.MAIN) {
+      this.hls.trigger(Events.MEDIA_ENDED, {
+        stalled: false,
+      });
+    }
   };
 
   protected onManifestLoaded(

@@ -3,6 +3,7 @@ import {
   ManifestLoadingData,
   MediaAttachedData,
   MediaAttachingData,
+  MediaEndedData,
   LevelLoadingData,
   LevelLoadedData,
   ManifestParsedData,
@@ -60,6 +61,8 @@ export enum Events {
   MEDIA_DETACHING = 'hlsMediaDetaching',
   // Fired when MediaSource has been detached from media element
   MEDIA_DETACHED = 'hlsMediaDetached',
+  // Fired when HTMLMediaElement dispatches "ended" event, or stalls at end of VOD program
+  MEDIA_ENDED = 'hlsMediaEnded',
   // Fired when the buffer is going to be reset
   BUFFER_RESET = 'hlsBufferReset',
   // Fired when we know about the codecs that we need buffers for to push into - data: {tracks : { container, codec, levelCodec, initSegment, metadata }}
@@ -184,6 +187,10 @@ export interface HlsListeners {
   ) => void;
   [Events.MEDIA_DETACHING]: (event: Events.MEDIA_DETACHING) => void;
   [Events.MEDIA_DETACHED]: (event: Events.MEDIA_DETACHED) => void;
+  [Events.MEDIA_ENDED]: (
+    event: Events.MEDIA_ENDED,
+    data: MediaEndedData,
+  ) => void;
   [Events.BUFFER_RESET]: (event: Events.BUFFER_RESET) => void;
   [Events.BUFFER_CODECS]: (
     event: Events.BUFFER_CODECS,
