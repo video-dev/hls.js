@@ -4,18 +4,23 @@ import { ErrorTypes, ErrorDetails } from '../errors';
 import Decrypter from '../crypt/decrypter';
 import AACDemuxer from './audio/aacdemuxer';
 import MP4Demuxer from '../demux/mp4demuxer';
-import TSDemuxer, { TypeSupported } from '../demux/tsdemuxer';
+import TSDemuxer from '../demux/tsdemuxer';
 import MP3Demuxer from './audio/mp3demuxer';
 import { AC3Demuxer } from './audio/ac3-demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
 import { logger } from '../utils/logger';
+import {
+  isFullSegmentEncryption,
+  getAesModeFromFullSegmentMethod,
+} from '../utils/encryption-methods-util';
 import type { Demuxer, DemuxerResult, KeyData } from '../types/demuxer';
 import type { Remuxer } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import type { HlsConfig } from '../config';
 import type { DecryptData } from '../loader/level-key';
 import type { PlaylistLevelType } from '../types/loader';
+import type { TypeSupported } from '../utils/codecs';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 import { optionalSelf } from '../utils/global';
 
@@ -114,8 +119,10 @@ export default class Transmuxer {
     } = transmuxConfig;
 
     const keyData = getEncryptionType(uintData, decryptdata);
-    if (keyData && keyData.method === 'AES-128') {
+    if (keyData && isFullSegmentEncryption(keyData.method)) {
       const decrypter = this.getDecrypter();
+      const aesMode = getAesModeFromFullSegmentMethod(keyData.method);
+
       // Software decryption is synchronous; webCrypto is not
       if (decrypter.isSync()) {
         // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
@@ -124,6 +131,7 @@ export default class Transmuxer {
           uintData,
           keyData.key.buffer,
           keyData.iv.buffer,
+          aesMode,
         );
         // For Low-Latency HLS Parts, decrypt in place, since part parsing is expected on push progress
         const loadingParts = chunkMeta.part > -1;
@@ -137,7 +145,12 @@ export default class Transmuxer {
         uintData = new Uint8Array(decryptedData);
       } else {
         this.decryptionPromise = decrypter
-          .webCryptoDecrypt(uintData, keyData.key.buffer, keyData.iv.buffer)
+          .webCryptoDecrypt(
+            uintData,
+            keyData.key.buffer,
+            keyData.iv.buffer,
+            aesMode,
+          )
           .then((decryptedData): TransmuxerResult => {
             // Calling push here is important; if flush() is called while this is still resolving, this ensures that
             // the decrypted data has been transmuxed

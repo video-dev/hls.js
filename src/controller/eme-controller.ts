@@ -5,7 +5,7 @@
  */
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import {
   getKeySystemsForConfig,
   getSupportedMediaKeySystemConfigurations,
@@ -41,9 +41,6 @@ import type {
   LoaderConfiguration,
   LoaderContext,
 } from '../types/loader';
-
-const LOGGER_PREFIX = '[eme]';
-
 interface KeySystemAccessPromises {
   keySystemAccess: Promise<MediaKeySystemAccess>;
   mediaKeys?: Promise<MediaKeys>;
@@ -68,7 +65,7 @@ export interface MediaKeySessionContext {
  * @class
  * @constructor
  */
-class EMEController implements ComponentAPI {
+class EMEController extends Logger implements ComponentAPI {
   public static CDMCleanupPromise: Promise<void> | void;
 
   private readonly hls: Hls;
@@ -90,15 +87,9 @@ class EMEController implements ComponentAPI {
   private setMediaKeysQueue: Promise<void>[] = EMEController.CDMCleanupPromise
     ? [EMEController.CDMCleanupPromise]
     : [];
-  private onMediaEncrypted = this._onMediaEncrypted.bind(this);
-  private onWaitingForKey = this._onWaitingForKey.bind(this);
-
-  private debug: (msg: any) => void = logger.debug.bind(logger, LOGGER_PREFIX);
-  private log: (msg: any) => void = logger.log.bind(logger, LOGGER_PREFIX);
-  private warn: (msg: any) => void = logger.warn.bind(logger, LOGGER_PREFIX);
-  private error: (msg: any) => void = logger.error.bind(logger, LOGGER_PREFIX);
 
   constructor(hls: Hls) {
+    super('eme', hls.logger);
     this.hls = hls;
     this.config = hls.config;
     this.registerListeners();
@@ -113,13 +104,9 @@ class EMEController implements ComponentAPI {
     config.licenseXhrSetup = config.licenseResponseCallback = undefined;
     config.drmSystems = config.drmSystemOptions = {};
     // @ts-ignore
-    this.hls =
-      this.onMediaEncrypted =
-      this.onWaitingForKey =
-      this.keyIdToKeySessionPromise =
-        null as any;
+    this.hls = this.config = this.keyIdToKeySessionPromise = null;
     // @ts-ignore
-    this.config = null;
+    this.onMediaEncrypted = this.onWaitingForKey = null;
   }
 
   private registerListeners() {
@@ -523,7 +510,7 @@ class EMEController implements ComponentAPI {
     return this.attemptKeySystemAccess(keySystemsToAttempt);
   }
 
-  private _onMediaEncrypted(event: MediaEncryptedEvent) {
+  private onMediaEncrypted = (event: MediaEncryptedEvent) => {
     const { initDataType, initData } = event;
     this.debug(`"${event.type}" event: init data type: "${initDataType}"`);
 
@@ -639,11 +626,11 @@ class EMEController implements ComponentAPI {
         );
     }
     keySessionContextPromise.catch((error) => this.handleError(error));
-  }
+  };
 
-  private _onWaitingForKey(event: Event) {
+  private onWaitingForKey = (event: Event) => {
     this.log(`"${event.type}" event`);
-  }
+  };
 
   private attemptSetMediaKeys(
     keySystem: KeySystems,

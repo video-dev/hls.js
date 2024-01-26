@@ -29,6 +29,7 @@ import type { TrackSet } from '../types/track';
 import type { SourceBufferName } from '../types/buffer';
 import type { Fragment } from '../loader/fragment';
 import type { HlsConfig } from '../config';
+import type { TypeSupported } from '../utils/codecs';
 
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;
@@ -41,7 +42,7 @@ let safariWebkitVersion: number | null = null;
 export default class MP4Remuxer implements Remuxer {
   private observer: HlsEventEmitter;
   private config: HlsConfig;
-  private typeSupported: any;
+  private typeSupported: TypeSupported;
   private ISGenerated: boolean = false;
   private _initPTS: RationalTimestamp | null = null;
   private _initDTS: RationalTimestamp | null = null;
@@ -927,7 +928,7 @@ export default class MP4Remuxer implements Remuxer {
           for (let j = 0; j < missing; j++) {
             const newStamp = Math.max(nextPts as number, 0);
             let fillFrame = AAC.getSilentFrame(
-              track.manifestCodec || track.codec,
+              track.parsedCodec || track.manifestCodec || track.codec,
               track.channelCount,
             );
             if (!fillFrame) {
@@ -1077,7 +1078,7 @@ export default class MP4Remuxer implements Remuxer {
     const nbSamples: number = Math.ceil((endDTS - startDTS) / frameDuration);
     // silent frame
     const silentFrame: Uint8Array | undefined = AAC.getSilentFrame(
-      track.manifestCodec || track.codec,
+      track.parsedCodec || track.manifestCodec || track.codec,
       track.channelCount,
     );
 

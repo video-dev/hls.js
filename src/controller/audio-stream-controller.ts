@@ -71,30 +71,27 @@ class AudioStreamController
       hls,
       fragmentTracker,
       keyLoader,
-      '[audio-stream-controller]',
+      'audio-stream-controller',
       PlaylistLevelType.AUDIO,
     );
-    this._registerListeners();
+    this.registerListeners();
   }
 
   protected onHandlerDestroying() {
-    this._unregisterListeners();
+    this.unregisterListeners();
     super.onHandlerDestroying();
     this.mainDetails = null;
     this.bufferedTrack = null;
     this.switchingTrack = null;
   }
 
-  private _registerListeners() {
+  protected registerListeners() {
+    super.registerListeners();
     const { hls } = this;
-    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.on(Events.AUDIO_TRACKS_UPDATED, this.onAudioTracksUpdated, this);
     hls.on(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
     hls.on(Events.AUDIO_TRACK_LOADED, this.onAudioTrackLoaded, this);
-    hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.BUFFER_RESET, this.onBufferReset, this);
     hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
     hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
@@ -103,16 +100,16 @@ class AudioStreamController
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
-  private _unregisterListeners() {
+  protected unregisterListeners() {
     const { hls } = this;
-    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    if (!hls) {
+      return;
+    }
+    super.unregisterListeners();
     hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.off(Events.AUDIO_TRACKS_UPDATED, this.onAudioTracksUpdated, this);
     hls.off(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
     hls.off(Events.AUDIO_TRACK_LOADED, this.onAudioTrackLoaded, this);
-    hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.BUFFER_RESET, this.onBufferReset, this);
     hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
@@ -713,7 +710,7 @@ class AudioStreamController
     this.fragBufferedComplete(frag, part);
   }
 
-  private onError(event: Events.ERROR, data: ErrorData) {
+  protected onError(event: Events.ERROR, data: ErrorData) {
     if (data.fatal) {
       this.state = State.ERROR;
       return;

@@ -35,13 +35,14 @@ class SubtitleTrackController extends BasePlaylistController {
   private currentTrack: MediaPlaylist | null = null;
   private selectDefaultTrack: boolean = true;
   private queuedDefaultTrack: number = -1;
-  private asyncPollTrackChange: () => void = () => this.pollTrackChange(0);
   private useTextTrackPolling: boolean = false;
   private subtitlePollingInterval: number = -1;
   private _subtitleDisplay: boolean = true;
 
+  private asyncPollTrackChange = () => this.pollTrackChange(0);
+
   constructor(hls: Hls) {
-    super(hls, '[subtitle-track-controller]');
+    super(hls, 'subtitle-track-controller');
     this.registerListeners();
   }
 
@@ -50,7 +51,8 @@ class SubtitleTrackController extends BasePlaylistController {
     this.tracks.length = 0;
     this.tracksInGroup.length = 0;
     this.currentTrack = null;
-    this.onTextTracksChanged = this.asyncPollTrackChange = null as any;
+    // @ts-ignore
+    this.onTextTracksChanged = this.asyncPollTrackChange = null;
     super.destroy();
   }
 

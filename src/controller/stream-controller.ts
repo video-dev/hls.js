@@ -49,8 +49,6 @@ export default class StreamController
   private altAudio: boolean = false;
   private audioOnly: boolean = false;
   private fragPlaying: Fragment | null = null;
-  private onvplaying: EventListener | null = null;
-  private onvseeked: EventListener | null = null;
   private fragLastKbps: number = 0;
   private couldBacktrack: boolean = false;
   private backtrackFragment: Fragment | null = null;
@@ -66,17 +64,15 @@ export default class StreamController
       hls,
       fragmentTracker,
       keyLoader,
-      '[stream-controller]',
+      'stream-controller',
       PlaylistLevelType.MAIN,
     );
-    this._registerListeners();
+    this.registerListeners();
   }
 
-  private _registerListeners() {
+  protected registerListeners() {
+    super.registerListeners();
     const { hls } = this;
-    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
@@ -85,7 +81,6 @@ export default class StreamController
       this.onFragLoadEmergencyAborted,
       this,
     );
-    hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
     hls.on(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
     hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
@@ -94,11 +89,9 @@ export default class StreamController
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
-  protected _unregisterListeners() {
+  protected unregisterListeners() {
+    super.unregisterListeners();
     const { hls } = this;
-    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
     hls.off(
@@ -106,7 +99,6 @@ export default class StreamController
       this.onFragLoadEmergencyAborted,
       this,
     );
-    hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.AUDIO_TRACK_SWITCHING, this.onAudioTrackSwitching, this);
     hls.off(Events.AUDIO_TRACK_SWITCHED, this.onAudioTrackSwitched, this);
     hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
@@ -116,7 +108,9 @@ export default class StreamController
   }
 
   protected onHandlerDestroying() {
-    this._unregisterListeners();
+    // @ts-ignore
+    this.onMediaPlaying = this.onMediaSeeked = null;
+    this.unregisterListeners();
     super.onHandlerDestroying();
   }
 
@@ -515,10 +509,8 @@ export default class StreamController
   ) {
     super.onMediaAttached(event, data);
     const media = data.media;
-    this.onvplaying = this.onMediaPlaying.bind(this);
-    this.onvseeked = this.onMediaSeeked.bind(this);
-    media.addEventListener('playing', this.onvplaying as EventListener);
-    media.addEventListener('seeked', this.onvseeked as EventListener);
+    media.addEventListener('playing', this.onMediaPlaying);
+    media.addEventListener('seeked', this.onMediaSeeked);
     this.gapController = new GapController(
       this.config,
       media,
@@ -529,10 +521,9 @@ export default class StreamController
 
   protected onMediaDetaching() {
     const { media } = this;
-    if (media && this.onvplaying && this.onvseeked) {
-      media.removeEventListener('playing', this.onvplaying);
-      media.removeEventListener('seeked', this.onvseeked);
-      this.onvplaying = this.onvseeked = null;
+    if (media) {
+      media.removeEventListener('playing', this.onMediaPlaying);
+      media.removeEventListener('seeked', this.onMediaSeeked);
       this.videoBuffer = null;
     }
     this.fragPlaying = null;
@@ -543,12 +534,12 @@ export default class StreamController
     super.onMediaDetaching();
   }
 
-  private onMediaPlaying() {
+  private onMediaPlaying = () => {
     // tick to speed up FRAG_CHANGED triggering
     this.tick();
-  }
+  };
 
-  private onMediaSeeked() {
+  private onMediaSeeked = () => {
     const media = this.media;
     const currentTime = media ? media.currentTime : null;
     if (Number.isFinite(currentTime)) {
@@ -568,9 +559,9 @@ export default class StreamController
 
     // tick to speed up FRAG_CHANGED triggering
     this.tick();
-  }
+  };
 
-  private onManifestLoading() {
+  protected onManifestLoading() {
     // reset buffer on manifest loading
     this.log('Trigger BUFFER_RESET');
     this.hls.trigger(Events.BUFFER_RESET, undefined);
@@ -883,7 +874,7 @@ export default class StreamController
     this.fragBufferedComplete(frag, part);
   }
 
-  private onError(event: Events.ERROR, data: ErrorData) {
+  protected onError(event: Events.ERROR, data: ErrorData) {
     if (data.fatal) {
       this.state = State.ERROR;
       return;

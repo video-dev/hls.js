@@ -1,12 +1,15 @@
 import TaskLoop from '../task-loop';
 import { FragmentState } from './fragment-tracker';
 import { Bufferable, BufferHelper, BufferInfo } from '../utils/buffer-helper';
-import { logger } from '../utils/logger';
 import { Events } from '../events';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { ChunkMetadata } from '../types/transmuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { alignStream } from '../utils/discontinuities';
+import {
+  isFullSegmentEncryption,
+  getAesModeFromFullSegmentMethod,
+} from '../utils/encryption-methods-util';
 import {
   findFragmentByPDT,
   findFragmentByPTS,
@@ -97,12 +100,6 @@ export default class BaseStreamController
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
   protected initPTS: RationalTimestamp[] = [];
-  protected onvseeking: EventListener | null = null;
-  protected onvended: EventListener | null = null;
-
-  private readonly logPrefix: string = '';
-  protected log: (msg: any) => void;
-  protected warn: (msg: any) => void;
 
   constructor(
     hls: Hls,
@@ -111,18 +108,32 @@ export default class BaseStreamController
     logPrefix: string,
     playlistType: PlaylistLevelType,
   ) {
-    super();
+    super(logPrefix, hls.logger);
     this.playlistType = playlistType;
-    this.logPrefix = logPrefix;
-    this.log = logger.log.bind(logger, `${logPrefix}:`);
-    this.warn = logger.warn.bind(logger, `${logPrefix}:`);
     this.hls = hls;
     this.fragmentLoader = new FragmentLoader(hls.config);
     this.keyLoader = keyLoader;
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
     this.decrypter = new Decrypter(hls.config);
+  }
+
+  protected registerListeners() {
+    const { hls } = this;
+    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.on(Events.ERROR, this.onError, this);
+  }
+
+  protected unregisterListeners() {
+    const { hls } = this;
+    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.off(Events.ERROR, this.onError, this);
   }
 
   protected doTick() {
@@ -197,10 +208,8 @@ export default class BaseStreamController
     data: MediaAttachedData,
   ) {
     const media = (this.media = this.mediaBuffer = data.media);
-    this.onvseeking = this.onMediaSeeking.bind(this) as EventListener;
-    this.onvended = this.onMediaEnded.bind(this) as EventListener;
-    media.addEventListener('seeking', this.onvseeking);
-    media.addEventListener('ended', this.onvended);
+    media.addEventListener('seeking', this.onMediaSeeking);
+    media.addEventListener('ended', this.onMediaEnded);
     const config = this.config;
     if (this.levels && config.autoStartLoad && this.state === State.STOPPED) {
       this.startLoad(config.startPosition);
@@ -215,10 +224,9 @@ export default class BaseStreamController
     }
 
     // remove video listeners
-    if (media && this.onvseeking && this.onvended) {
-      media.removeEventListener('seeking', this.onvseeking);
-      media.removeEventListener('ended', this.onvended);
-      this.onvseeking = this.onvended = null;
+    if (media) {
+      media.removeEventListener('seeking', this.onMediaSeeking);
+      media.removeEventListener('ended', this.onMediaEnded);
     }
     if (this.keyLoader) {
       this.keyLoader.detach();
@@ -229,7 +237,11 @@ export default class BaseStreamController
     this.stopLoad();
   }
 
-  protected onMediaSeeking() {
+  protected onManifestLoading() {}
+
+  protected onError(event: Events.ERROR, data: ErrorData) {}
+
+  protected onMediaSeeking = () => {
     const { config, fragCurrent, media, mediaBuffer, state } = this;
     const currentTime: number = media ? media.currentTime : 0;
     const bufferInfo = BufferHelper.bufferInfo(
@@ -292,12 +304,12 @@ export default class BaseStreamController
 
     // Async tick to speed up processing
     this.tickImmediate();
-  }
+  };
 
-  protected onMediaEnded() {
+  protected onMediaEnded = () => {
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.startPosition = this.lastCurrentTime = 0;
-  }
+  };
 
   protected onManifestLoaded(
     event: Events.MANIFEST_LOADED,
@@ -312,7 +324,7 @@ export default class BaseStreamController
     this.stopLoad();
     super.onHandlerDestroying();
     // @ts-ignore
-    this.hls = null;
+    this.hls = this.onMediaSeeking = this.onMediaEnded = null;
   }
 
   protected onHandlerDestroyed() {
@@ -486,7 +498,7 @@ export default class BaseStreamController
           payload.byteLength > 0 &&
           decryptData?.key &&
           decryptData.iv &&
-          decryptData.method === 'AES-128'
+          isFullSegmentEncryption(decryptData.method)
         ) {
           const startTime = self.performance.now();
           // decrypt init segment data
@@ -495,6 +507,7 @@ export default class BaseStreamController
               new Uint8Array(payload),
               decryptData.key.buffer,
               decryptData.iv.buffer,
+              getAesModeFromFullSegmentMethod(decryptData.method),
             )
             .catch((err) => {
               hls.trigger(Events.ERROR, {
@@ -649,7 +662,7 @@ export default class BaseStreamController
     if (frag.encrypted && !frag.decryptdata?.key) {
       this.log(
         `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${
-          this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+          this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'
         } ${frag.level}`,
       );
       this.state = State.KEY_LOADING;
@@ -689,7 +702,7 @@ export default class BaseStreamController
             } of playlist [${details.startSN}-${
               details.endSN
             }] parts [0-${partIndex}-${partList.length - 1}] ${
-              this.logPrefix === '[stream-controller]' ? 'level' : 'track'
+              this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'
             }: ${frag.level}, target: ${parseFloat(
               targetBufferTime.toFixed(3),
             )}`,
@@ -748,7 +761,7 @@ export default class BaseStreamController
     this.log(
       `Loading fragment ${frag.sn} cc: ${frag.cc} ${
         details ? 'of [' + details.startSN + '-' + details.endSN + '] ' : ''
-      }${this.logPrefix === '[stream-controller]' ? 'level' : 'track'}: ${
+      }${this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'}: ${
         frag.level
       }, target: ${parseFloat(targetBufferTime.toFixed(3))}`,
     );
@@ -1550,7 +1563,7 @@ export default class BaseStreamController
           errorAction.resolved = true;
         }
       } else {
-        logger.warn(
+        this.warn(
           `${data.details} reached or exceeded max retry (${retryCount})`,
         );
         return;

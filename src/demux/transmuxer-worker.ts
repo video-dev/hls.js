@@ -1,6 +1,6 @@
 import Transmuxer, { isPromise } from '../demux/transmuxer';
 import { Events } from '../events';
-import { ILogFunction, enableLogs, logger } from '../utils/logger';
+import { enableLogs, type ILogFunction, type ILogger } from '../utils/logger';
 import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import type { RemuxedTrack, RemuxerResult } from '../types/remuxer';
@@ -21,7 +21,7 @@ function startWorker(self) {
   observer.on(Events.ERROR, forwardMessage);
 
   // forward logger events to main thread
-  const forwardWorkerLogs = () => {
+  const forwardWorkerLogs = (logger: ILogger) => {
     for (const logFn in logger) {
       const func: ILogFunction = (message?) => {
         forwardMessage('workerLog', {
@@ -46,8 +46,8 @@ function startWorker(self) {
           data.vendor,
           data.id,
         );
-        enableLogs(config.debug, data.id);
-        forwardWorkerLogs();
+        const logger = enableLogs(config.debug, data.id);
+        forwardWorkerLogs(logger);
         forwardMessage('init', null);
         break;
       }

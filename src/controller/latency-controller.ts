@@ -6,7 +6,6 @@ import type {
   LevelUpdatedData,
   MediaAttachingData,
 } from '../types/events';
-import { logger } from '../utils/logger';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { HlsConfig } from '../config';
@@ -19,7 +18,6 @@ export default class LatencyController implements ComponentAPI {
   private currentTime: number = 0;
   private stallCount: number = 0;
   private _latency: number | null = null;
-  private timeupdateHandler = () => this.timeupdate();
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -126,7 +124,7 @@ export default class LatencyController implements ComponentAPI {
     this.onMediaDetaching();
     this.levelDetails = null;
     // @ts-ignore
-    this.hls = this.timeupdateHandler = null;
+    this.hls = null;
   }
 
   private registerListeners() {
@@ -150,12 +148,12 @@ export default class LatencyController implements ComponentAPI {
     data: MediaAttachingData,
   ) {
     this.media = data.media;
-    this.media.addEventListener('timeupdate', this.timeupdateHandler);
+    this.media.addEventListener('timeupdate', this.onTimeupdate);
   }
 
   private onMediaDetaching() {
     if (this.media) {
-      this.media.removeEventListener('timeupdate', this.timeupdateHandler);
+      this.media.removeEventListener('timeupdate', this.onTimeupdate);
       this.media = null;
     }
   }
@@ -172,10 +170,10 @@ export default class LatencyController implements ComponentAPI {
   ) {
     this.levelDetails = details;
     if (details.advanced) {
-      this.timeupdate();
+      this.onTimeupdate();
     }
     if (!details.live && this.media) {
-      this.media.removeEventListener('timeupdate', this.timeupdateHandler);
+      this.media.removeEventListener('timeupdate', this.onTimeupdate);
     }
   }
 
@@ -185,13 +183,13 @@ export default class LatencyController implements ComponentAPI {
     }
     this.stallCount++;
     if (this.levelDetails?.live) {
-      logger.warn(
-        '[playback-rate-controller]: Stall detected, adjusting target latency',
+      this.hls.logger.warn(
+        '[latency-controller]: Stall detected, adjusting target latency',
       );
     }
   }
 
-  private timeupdate() {
+  private onTimeupdate = () => {
     const { media, levelDetails } = this;
     if (!media || !levelDetails) {
       return;
@@ -242,7 +240,7 @@ export default class LatencyController implements ComponentAPI {
     } else if (media.playbackRate !== 1 && media.playbackRate !== 0) {
       media.playbackRate = 1;
     }
-  }
+  };
 
   private estimateLiveEdge(): number | null {
     const { levelDetails } = this;

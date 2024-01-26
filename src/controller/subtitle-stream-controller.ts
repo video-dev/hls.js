@@ -9,6 +9,10 @@ import { PlaylistLevelType } from '../types/loader';
 import { Level } from '../types/level';
 import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import {
+  isFullSegmentEncryption,
+  getAesModeFromFullSegmentMethod,
+} from '../utils/encryption-methods-util';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
@@ -51,25 +55,22 @@ export class SubtitleStreamController
       hls,
       fragmentTracker,
       keyLoader,
-      '[subtitle-stream-controller]',
+      'subtitle-stream-controller',
       PlaylistLevelType.SUBTITLE,
     );
-    this._registerListeners();
+    this.registerListeners();
   }
 
   protected onHandlerDestroying() {
-    this._unregisterListeners();
+    this.unregisterListeners();
     super.onHandlerDestroying();
     this.mainDetails = null;
   }
 
-  private _registerListeners() {
+  protected registerListeners() {
+    super.registerListeners();
     const { hls } = this;
-    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.LEVEL_LOADED, this.onLevelLoaded, this);
-    hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
     hls.on(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
     hls.on(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
@@ -78,13 +79,10 @@ export class SubtitleStreamController
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
-  private _unregisterListeners() {
+  protected unregisterListeners() {
+    super.unregisterListeners();
     const { hls } = this;
-    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.LEVEL_LOADED, this.onLevelLoaded, this);
-    hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.SUBTITLE_TRACKS_UPDATED, this.onSubtitleTracksUpdated, this);
     hls.off(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
     hls.off(Events.SUBTITLE_TRACK_LOADED, this.onSubtitleTrackLoaded, this);
@@ -360,7 +358,7 @@ export class SubtitleStreamController
       payload.byteLength > 0 &&
       decryptData?.key &&
       decryptData.iv &&
-      decryptData.method === 'AES-128'
+      isFullSegmentEncryption(decryptData.method)
     ) {
       const startTime = performance.now();
       // decrypt the subtitles
@@ -369,6 +367,7 @@ export class SubtitleStreamController
           new Uint8Array(payload),
           decryptData.key.buffer,
           decryptData.iv.buffer,
+          getAesModeFromFullSegmentMethod(decryptData.method),
         )
         .catch((err) => {
           hls.trigger(Events.ERROR, {

@@ -44,6 +44,7 @@ describe('getAudioConfig', function () {
       samplerate: 96000,
       channelCount: 0,
       codec: 'mp4a.40.2',
+      parsedCodec: 'mp4a.40.1',
       manifestCodec: 'mp4a.40.29',
     });
   });
@@ -61,6 +62,7 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
+      parsedCodec: 'mp4a.40.1',
       manifestCodec: 'mp4a.40.29',
     });
   });
@@ -78,6 +80,7 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.2',
+      parsedCodec: 'mp4a.40.1',
       manifestCodec: 'mp4a.40.29',
     });
   });
@@ -95,6 +98,7 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
+      parsedCodec: 'mp4a.40.1',
       manifestCodec: 'mp4a.40.29',
     });
   });
@@ -112,6 +116,7 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
+      parsedCodec: 'mp4a.40.1',
       manifestCodec: undefined,
     });
   });
@@ -129,6 +134,7 @@ describe('getAudioConfig', function () {
       samplerate: 64000,
       channelCount: 0,
       codec: 'mp4a.40.5',
+      parsedCodec: 'mp4a.40.1',
       manifestCodec: undefined,
     });
   });
@@ -146,6 +152,7 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
+      parsedCodec: 'mp4a.40.1',
       manifestCodec: 'mp4a.40.5',
     });
   });
@@ -164,6 +171,7 @@ describe('getAudioConfig', function () {
       samplerate: 11025,
       channelCount: 1,
       codec: 'mp4a.40.2',
+      parsedCodec: 'mp4a.40.1',
       manifestCodec: 'mp4a.40.2',
     });
   });
@@ -181,6 +189,7 @@ describe('getAudioConfig', function () {
       samplerate: 64000,
       channelCount: 0,
       codec: 'mp4a.40.2',
+      parsedCodec: 'mp4a.40.1',
       manifestCodec: 'mp4a.40.2',
     });
   });
@@ -350,6 +359,7 @@ describe('initTrackConfig', function () {
       samplerate: 11025,
       channelCount: 0,
       codec: 'mp4a.40.5',
+      parsedCodec: 'mp4a.40.1',
       manifestCodec: 'mp4a.40.29',
     });
   });

@@ -2,6 +2,7 @@ import {
   changeEndianness,
   convertDataUriToArrayBytes,
 } from '../utils/keysystem-util';
+import { isFullSegmentEncryption } from '../utils/encryption-methods-util';
 import { KeySystemFormats } from '../utils/mediakeys-helper';
 import { mp4pssh } from '../utils/mp4-tools';
 import { logger } from '../utils/logger';
@@ -51,13 +52,14 @@ export class LevelKey implements DecryptData {
     this.keyFormatVersions = formatversions;
     this.iv = iv;
     this.encrypted = method ? method !== 'NONE' : false;
-    this.isCommonEncryption = this.encrypted && method !== 'AES-128';
+    this.isCommonEncryption =
+      this.encrypted && !isFullSegmentEncryption(method);
   }
 
   public isSupported(): boolean {
     // If it's Segment encryption or No encryption, just select that key system
     if (this.method) {
-      if (this.method === 'AES-128' || this.method === 'NONE') {
+      if (isFullSegmentEncryption(this.method) || this.method === 'NONE') {
         return true;
       }
       if (this.keyFormat === 'identity') {
@@ -88,16 +90,15 @@ export class LevelKey implements DecryptData {
       return null;
     }
 
-    if (this.method === 'AES-128' && this.uri && !this.iv) {
+    if (isFullSegmentEncryption(this.method) && this.uri && !this.iv) {
       if (typeof sn !== 'number') {
         // We are fetching decryption data for a initialization segment
-        // If the segment was encrypted with AES-128
+        // If the segment was encrypted with AES-128/256
         // It must have an IV defined. We cannot substitute the Segment Number in.
-        if (this.method === 'AES-128' && !this.iv) {
-          logger.warn(
-            `missing IV for initialization segment with method="${this.method}" - compliance issue`,
-          );
-        }
+        logger.warn(
+          `missing IV for initialization segment with method="${this.method}" - compliance issue`,
+        );
+
         // Explicitly set sn to resulting value from implicit conversions 'initSegment' values for IV generation.
         sn = 0;
       }
