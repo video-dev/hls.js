@@ -287,7 +287,7 @@ class AbrController extends Logger implements AbrComponentAPI {
     const level = levels[frag.level];
     const expectedLen =
       stats.total ||
-      Math.max(stats.loaded, Math.round((duration * level.maxBitrate) / 8));
+      Math.max(stats.loaded, Math.round((duration * level.averageBitrate) / 8));
     let timeStreaming = loadedFirstByte ? timeLoading - ttfb : timeLoading;
     if (timeStreaming < 1 && loadedFirstByte) {
       timeStreaming = Math.min(timeLoading, (stats.loaded * 8) / bwEstimate);
@@ -347,7 +347,7 @@ class AbrController extends Logger implements AbrComponentAPI {
       // If there has been no loading progress, sample TTFB
       this.bwEstimator.sampleTTFB(timeLoading);
     }
-    const nextLoadLevelBitrate = levels[nextLoadLevel].bitrate;
+    const nextLoadLevelBitrate = levels[nextLoadLevel].maxBitrate;
     if (
       this.getBwEstimate() * this.hls.config.abrBandWidthUpFactor >
       nextLoadLevelBitrate
