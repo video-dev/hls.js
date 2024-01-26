@@ -42,6 +42,10 @@ export interface MediaAttachedData {
   mediaSource?: MediaSource;
 }
 
+export interface MediaEndedData {
+  stalled: boolean;
+}
+
 export interface BufferCodecsData {
   video?: Track;
   audio?: Track;

@@ -1159,6 +1159,7 @@ export type {
   ManifestParsedData,
   MediaAttachedData,
   MediaAttachingData,
+  MediaEndedData,
   NonNativeTextTrack,
   NonNativeTextTracksData,
   SteeringManifestLoadedData,

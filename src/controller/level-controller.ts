@@ -16,7 +16,6 @@ import {
   codecsSetSelectionPreferenceValue,
   convertAVC1ToAVCOTI,
   getCodecCompatibleName,
-  getM2TSSupportedAudioTypes,
   videoCodecPreferenceValue,
 } from '../utils/codecs';
 import BasePlaylistController from './base-playlist-controller';

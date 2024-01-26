@@ -1239,6 +1239,8 @@ export enum Events {
     // (undocumented)
     MEDIA_DETACHING = "hlsMediaDetaching",
     // (undocumented)
+    MEDIA_ENDED = "hlsMediaEnded",
+    // (undocumented)
     NON_NATIVE_TEXT_TRACKS_FOUND = "hlsNonNativeTextTracksFound",
     // (undocumented)
     STEERING_MANIFEST_LOADED = "hlsSteeringManifestLoaded",
@@ -1835,6 +1837,8 @@ export interface HlsListeners {
     [Events.MEDIA_DETACHED]: (event: Events.MEDIA_DETACHED) => void;
     // (undocumented)
     [Events.MEDIA_DETACHING]: (event: Events.MEDIA_DETACHING) => void;
+    // (undocumented)
+    [Events.MEDIA_ENDED]: (event: Events.MEDIA_ENDED, data: MediaEndedData) => void;
     // (undocumented)
     [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (event: Events.NON_NATIVE_TEXT_TRACKS_FOUND, data: NonNativeTextTracksData) => void;
     // (undocumented)
@@ -2799,6 +2803,14 @@ export type MediaDecodingInfo = {
     decodingInfoResults: readonly MediaCapabilitiesDecodingInfo[];
     error?: Error;
 };
+
+// Warning: (ae-missing-release-tag) "MediaEndedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface MediaEndedData {
+    // (undocumented)
+    stalled: boolean;
+}
 
 // Warning: (ae-missing-release-tag) "MediaKeyFunc" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
