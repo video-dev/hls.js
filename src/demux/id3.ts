@@ -1,3 +1,9 @@
+// import { canParseId3 } from '@svta/common-media-library'
+// import { getId3Data } from '@svta/common-media-library'
+// import { getId3Frames } from '@svta/common-media-library'
+// import { getId3Timestamp } from '@svta/common-media-library'
+// import {isId3TimestampFrame} from '@svta/common-media-library'
+
 type RawFrame = { type: string; size: number; data: Uint8Array };
 
 // breaking up those two types in order to clarify what is happening in the decoding path.
@@ -89,127 +95,127 @@ export const isFooter = (data: Uint8Array, offset: number): boolean => {
  * @returns the block of data containing any ID3 tags found
  * or *undefined* if no header is found at the starting offset
  */
-export const getID3Data = (
-  data: Uint8Array,
-  offset: number,
-): Uint8Array | undefined => {
-  const front = offset;
-  let length = 0;
+// export const getID3Data = (
+//   data: Uint8Array,
+//   offset: number,
+// ): Uint8Array | undefined => {
+//   const front = offset;
+//   let length = 0;
 
-  while (isHeader(data, offset)) {
-    // ID3 header is 10 bytes
-    length += 10;
+//   while (isHeader(data, offset)) {
+//     // ID3 header is 10 bytes
+//     length += 10;
 
-    const size = readSize(data, offset + 6);
-    length += size;
+//     const size = readSize(data, offset + 6);
+//     length += size;
 
-    if (isFooter(data, offset + 10)) {
-      // ID3 footer is 10 bytes
-      length += 10;
-    }
+//     if (isFooter(data, offset + 10)) {
+//       // ID3 footer is 10 bytes
+//       length += 10;
+//     }
 
-    offset += length;
-  }
+//     offset += length;
+//   }
 
-  if (length > 0) {
-    return data.subarray(front, front + length);
-  }
+//   if (length > 0) {
+//     return data.subarray(front, front + length);
+//   }
 
-  return undefined;
-};
+//   return undefined;
+// };
 
-const readSize = (data: Uint8Array, offset: number): number => {
-  let size = 0;
-  size = (data[offset] & 0x7f) << 21;
-  size |= (data[offset + 1] & 0x7f) << 14;
-  size |= (data[offset + 2] & 0x7f) << 7;
-  size |= data[offset + 3] & 0x7f;
-  return size;
-};
+// const readSize = (data: Uint8Array, offset: number): number => {
+//   let size = 0;
+//   size = (data[offset] & 0x7f) << 21;
+//   size |= (data[offset + 1] & 0x7f) << 14;
+//   size |= (data[offset + 2] & 0x7f) << 7;
+//   size |= data[offset + 3] & 0x7f;
+//   return size;
+// };
 
-export const canParse = (data: Uint8Array, offset: number): boolean => {
-  return (
-    isHeader(data, offset) &&
-    readSize(data, offset + 6) + 10 <= data.length - offset
-  );
-};
+// export const canParse = (data: Uint8Array, offset: number): boolean => {
+//   return (
+//     isHeader(data, offset) &&
+//     readSize(data, offset + 6) + 10 <= data.length - offset
+//   );
+// };
 
 /**
  * Searches for the Elementary Stream timestamp found in the ID3 data chunk
  * @param data - Block of data containing one or more ID3 tags
  */
-export const getTimeStamp = (data: Uint8Array): number | undefined => {
-  const frames: Frame[] = getID3Frames(data);
+// export const getTimeStamp = (data: Uint8Array): number | undefined => {
+//   const frames: Frame[] = getID3Frames(data);
 
-  for (let i = 0; i < frames.length; i++) {
-    const frame = frames[i];
+//   for (let i = 0; i < frames.length; i++) {
+//     const frame = frames[i];
 
-    if (isTimeStampFrame(frame)) {
-      return readTimeStamp(frame as DecodedFrame<ArrayBuffer>);
-    }
-  }
+//     if (isId3TimestampFrame(frame)) {
+//       return readTimeStamp(frame as DecodedFrame<ArrayBuffer>);
+//     }
+//   }
 
-  return undefined;
-};
+//   return undefined;
+// };
 
 /**
  * Returns true if the ID3 frame is an Elementary Stream timestamp frame
  */
-export const isTimeStampFrame = (frame: Frame): boolean => {
-  return (
-    frame &&
-    frame.key === 'PRIV' &&
-    frame.info === 'com.apple.streaming.transportStreamTimestamp'
-  );
-};
+// export const isTimeStampFrame = (frame: Frame): boolean => {
+//   return (
+//     frame &&
+//     frame.key === 'PRIV' &&
+//     frame.info === 'com.apple.streaming.transportStreamTimestamp'
+//   );
+// };
 
-const getFrameData = (data: Uint8Array): RawFrame => {
-  /*
-  Frame ID       $xx xx xx xx (four characters)
-  Size           $xx xx xx xx
-  Flags          $xx xx
-  */
-  const type: string = String.fromCharCode(data[0], data[1], data[2], data[3]);
-  const size: number = readSize(data, 4);
+// const getFrameData = (data: Uint8Array): RawFrame => {
+//   /*
+//   Frame ID       $xx xx xx xx (four characters)
+//   Size           $xx xx xx xx
+//   Flags          $xx xx
+//   */
+//   const type: string = String.fromCharCode(data[0], data[1], data[2], data[3]);
+//   const size: number = readSize(data, 4);
 
-  // skip frame id, size, and flags
-  const offset = 10;
+//   // skip frame id, size, and flags
+//   const offset = 10;
 
-  return { type, size, data: data.subarray(offset, offset + size) };
-};
+//   return { type, size, data: data.subarray(offset, offset + size) };
+// };
 
 /**
  * Returns an array of ID3 frames found in all the ID3 tags in the id3Data
  * @param id3Data - The ID3 data containing one or more ID3 tags
  */
-export const getID3Frames = (id3Data: Uint8Array): Frame[] => {
-  let offset = 0;
-  const frames: Frame[] = [];
+// export const getID3Frames = (id3Data: Uint8Array): Frame[] => {
+//   let offset = 0;
+//   const frames: Frame[] = [];
 
-  while (isHeader(id3Data, offset)) {
-    const size = readSize(id3Data, offset + 6);
-    // skip past ID3 header
-    offset += 10;
-    const end = offset + size;
-    // loop through frames in the ID3 tag
-    while (offset + 8 < end) {
-      const frameData: RawFrame = getFrameData(id3Data.subarray(offset));
-      const frame: Frame | undefined = decodeFrame(frameData);
-      if (frame) {
-        frames.push(frame);
-      }
+//   while (isHeader(id3Data, offset)) {
+//     const size = readSize(id3Data, offset + 6);
+//     // skip past ID3 header
+//     offset += 10;
+//     const end = offset + size;
+//     // loop through frames in the ID3 tag
+//     while (offset + 8 < end) {
+//       const frameData: RawFrame = getFrameData(id3Data.subarray(offset));
+//       const frame: Frame | undefined = decodeFrame(frameData);
+//       if (frame) {
+//         frames.push(frame);
+//       }
 
-      // skip frame header and frame data
-      offset += frameData.size + 10;
-    }
+//       // skip frame header and frame data
+//       offset += frameData.size + 10;
+//     }
 
-    if (isFooter(id3Data, offset)) {
-      offset += 10;
-    }
-  }
+//     if (isFooter(id3Data, offset)) {
+//       offset += 10;
+//     }
+//   }
 
-  return frames;
-};
+//   return frames;
+// };
 
 export const decodeFrame = (frame: RawFrame): Frame | undefined => {
   if (frame.type === 'PRIV') {
@@ -295,27 +301,27 @@ const decodeURLFrame = (frame: RawFrame): DecodedFrame<string> | undefined => {
   return { key: frame.type, data: url };
 };
 
-const readTimeStamp = (
-  timeStampFrame: DecodedFrame<ArrayBuffer>,
-): number | undefined => {
-  if (timeStampFrame.data.byteLength === 8) {
-    const data = new Uint8Array(timeStampFrame.data);
-    // timestamp is 33 bit expressed as a big-endian eight-octet number,
-    // with the upper 31 bits set to zero.
-    const pts33Bit = data[3] & 0x1;
-    let timestamp =
-      (data[4] << 23) + (data[5] << 15) + (data[6] << 7) + data[7];
-    timestamp /= 45;
+// const readTimeStamp = (
+//   timeStampFrame: DecodedFrame<ArrayBuffer>,
+// ): number | undefined => {
+//   if (timeStampFrame.data.byteLength === 8) {
+//     const data = new Uint8Array(timeStampFrame.data);
+//     // timestamp is 33 bit expressed as a big-endian eight-octet number,
+//     // with the upper 31 bits set to zero.
+//     const pts33Bit = data[3] & 0x1;
+//     let timestamp =
+//       (data[4] << 23) + (data[5] << 15) + (data[6] << 7) + data[7];
+//     timestamp /= 45;
 
-    if (pts33Bit) {
-      timestamp += 47721858.84;
-    } // 2^32 / 90
+//     if (pts33Bit) {
+//       timestamp += 47721858.84;
+//     } // 2^32 / 90
 
-    return Math.round(timestamp);
-  }
+//     return Math.round(timestamp);
+//   }
 
-  return undefined;
-};
+//   return undefined;
+// };
 
 // http://stackoverflow.com/questions/8936984/uint8array-to-string-in-javascript/22373197
 // http://www.onicos.com/staff/iz/amuse/javascript/expert/utf.txt

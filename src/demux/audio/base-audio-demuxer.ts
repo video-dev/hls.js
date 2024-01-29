@@ -14,6 +14,9 @@ import { dummyTrack } from '../dummy-demuxed-track';
 import { appendUint8Array } from '../../utils/mp4-tools';
 import { sliceUint8 } from '../../utils/typed-array';
 import { RationalTimestamp } from '../../utils/timescale-conversion';
+import { getId3Timestamp } from '@svta/common-media-library'
+import { getId3Data } from '@svta/common-media-library'
+import { canParseId3 } from '@svta/common-media-library'
 
 class BaseAudioDemuxer implements Demuxer {
   protected _audioTrack!: DemuxedAudioTrack;
@@ -69,12 +72,12 @@ class BaseAudioDemuxer implements Demuxer {
       this.cachedData = null;
     }
 
-    let id3Data: Uint8Array | undefined = ID3.getID3Data(data, 0);
+    let id3Data: Uint8Array | undefined = getId3Data(data, 0);
     let offset = id3Data ? id3Data.length : 0;
     let lastDataIndex;
     const track = this._audioTrack;
     const id3Track = this._id3Track;
-    const timestamp = id3Data ? ID3.getTimeStamp(id3Data) : undefined;
+    const timestamp = id3Data ? getId3Timestamp(id3Data) : undefined;
     const length = data.length;
 
     if (
@@ -111,9 +114,9 @@ class BaseAudioDemuxer implements Demuxer {
         } else {
           offset = length;
         }
-      } else if (ID3.canParse(data, offset)) {
+      } else if (canParseId3(data, offset)) {
         // after a ID3.canParse, a call to ID3.getID3Data *should* always returns some data
-        id3Data = ID3.getID3Data(data, offset)!;
+        id3Data = getId3Data(data, offset)!;
         id3Track.samples.push({
           pts: this.lastPTS,
           dts: this.lastPTS,

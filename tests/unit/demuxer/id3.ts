@@ -1,6 +1,8 @@
 import * as ID3 from '../../../src/demux/id3';
 import { expect } from 'chai';
 import { utf8ArrayToStr } from '../../../src/demux/id3';
+import { canParseId3 } from '@svta/common-media-library'
+
 
 describe('ID3 tests', function () {
   const mockID3Header = Uint8Array.from([
@@ -35,9 +37,9 @@ describe('ID3 tests', function () {
     expect(ID3.isHeader(mockID3HeaderMissingTrailingByte, 0)).to.equal(true);
   });
   it('Properly parses ID3 Info', function () {
-    expect(ID3.canParse(mockID3Header, 0)).to.equal(true);
-    expect(ID3.canParse(mockID3HeaderMissingLeadingByte, 0)).to.equal(false);
-    expect(ID3.canParse(mockID3HeaderMissingTrailingByte, 0)).to.equal(false);
+    expect(canParseId3(mockID3Header, 0)).to.equal(true);
+    expect(canParseId3(mockID3HeaderMissingLeadingByte, 0)).to.equal(false);
+    expect(canParseId3(mockID3HeaderMissingTrailingByte, 0)).to.equal(false);
   });
 
   it('should decode a TXXX frame', function () {
