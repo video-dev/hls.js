@@ -75,6 +75,15 @@ describe('CMCDController', function () {
         expect(url).to.equal(base.url);
         expectField(headers[CmcdHeaderField.SESSION], `cid="${contentId}"`);
       });
+
+      it('uses includeKeys if configured', function () {
+        const contentId = 'CONTENT_ID';
+        setupEach({ includeKeys: ['cid'], contentId });
+
+        const { url } = applyPlaylistData();
+
+        expect(url).to.equal(`${base.url}?CMCD=cid%3D%22${contentId}%22`);
+      });
     });
   });
 });
