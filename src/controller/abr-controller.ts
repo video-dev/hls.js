@@ -772,7 +772,8 @@ class AbrController implements AbrComponentAPI {
         (!upSwitch &&
           currentFrameRate > 0 &&
           currentFrameRate < levelInfo.frameRate) ||
-        !levelInfo.supportedResult?.decodingInfoResults?.[0].smooth
+        (levelInfo.supportedResult &&
+          !levelInfo.supportedResult.decodingInfoResults?.[0].smooth)
       ) {
         levelsSkipped.push(i);
         continue;
