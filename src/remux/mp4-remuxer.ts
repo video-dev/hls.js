@@ -544,12 +544,27 @@ export default class MP4Remuxer implements Remuxer {
             inputSamples[0].dts = firstDTS;
             inputSamples[0].pts = firstPTS;
           } else {
+            let isPTSOrderRetained = true;
             for (let i = 0; i < inputSamples.length; i++) {
-              if (inputSamples[i].dts > firstPTS) {
+              if (inputSamples[i].dts > firstPTS && isPTSOrderRetained) {
                 break;
               }
+
+              const prevPTS = inputSamples[i].pts;
               inputSamples[i].dts -= delta;
               inputSamples[i].pts -= delta;
+
+              // check to see if this sample's PTS order has changed
+              // relative to the next one
+              if (i < inputSamples.length - 1) {
+                const nextSamplePTS = inputSamples[i + 1].pts;
+                const currentSamplePTS = inputSamples[i].pts;
+
+                const currentOrder = nextSamplePTS <= currentSamplePTS;
+                const prevOrder = nextSamplePTS <= prevPTS;
+
+                isPTSOrderRetained = currentOrder == prevOrder;
+              }
             }
           }
           logger.log(
