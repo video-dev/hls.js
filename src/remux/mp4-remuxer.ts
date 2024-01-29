@@ -560,8 +560,8 @@ export default class MP4Remuxer implements Remuxer {
                 const nextSamplePTS = inputSamples[i + 1].pts;
                 const currentSamplePTS = inputSamples[i].pts;
 
-                const currentOrder = nextSamplePTS - currentSamplePTS <= 0;
-                const prevOrder = nextSamplePTS - prevPTS <= 0;
+                const currentOrder = nextSamplePTS <= currentSamplePTS;
+                const prevOrder = nextSamplePTS <= prevPTS;
 
                 isPTSOrderRetained = currentOrder == prevOrder;
               }
