@@ -5,6 +5,7 @@ import { CmcdObjectType } from '@svta/common-media-library/cmcd/CmcdObjectType';
 import { CmcdStreamingFormat } from '@svta/common-media-library/cmcd/CmcdStreamingFormat';
 import { appendCmcdHeaders } from '@svta/common-media-library/cmcd/appendCmcdHeaders';
 import { appendCmcdQuery } from '@svta/common-media-library/cmcd/appendCmcdQuery';
+import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEncodeOptions';
 import { uuid } from '@svta/common-media-library/utils/uuid';
 import { BufferHelper } from '../utils/buffer-helper';
 import { logger } from '../utils/logger';
@@ -165,7 +166,7 @@ export default class CMCDController implements ComponentAPI {
       data.su = this.buffering;
     }
 
-    // TODO: Implement rtp, nrr, nor, dl
+    // TODO: Implement rtp, nrr, dl
 
     const { includeKeys } = this;
     if (includeKeys) {
@@ -175,14 +176,18 @@ export default class CMCDController implements ComponentAPI {
       }, {});
     }
 
+    const options: CmcdEncodeOptions = {
+      baseUrl: context.url,
+    };
+
     if (this.useHeaders) {
       if (!context.headers) {
         context.headers = {};
       }
 
-      appendCmcdHeaders(context.headers, data);
+      appendCmcdHeaders(context.headers, data, options);
     } else {
-      context.url = appendCmcdQuery(context.url, data);
+      context.url = appendCmcdQuery(context.url, data, options);
     }
   }
 
@@ -223,11 +228,28 @@ export default class CMCDController implements ComponentAPI {
         data.bl = this.getBufferLength(ot);
       }
 
+      const next = this.getNextFrag(fragment);
+      if (next) {
+        if (next.url && next.url !== fragment.url) {
+          data.nor = next.url;
+        }
+      }
+
       this.apply(context, data);
     } catch (error) {
       logger.warn('Could not generate segment CMCD data.', error);
     }
   };
+
+  private getNextFrag(fragment: Fragment): Fragment | undefined {
+    const levelDetails = this.hls.levels[fragment.level]?.details;
+    if (levelDetails) {
+      const index = (fragment.sn as number) - levelDetails.startSN;
+      return levelDetails.fragments[index + 1];
+    }
+
+    return undefined;
+  }
 
   /**
    * The CMCD object type.
