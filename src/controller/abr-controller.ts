@@ -539,6 +539,9 @@ class AbrController extends Logger implements AbrComponentAPI {
 
   private getNextABRAutoLevel(): number {
     const { fragCurrent, partCurrent, hls } = this;
+    if (hls.levels.length <= 1) {
+      return hls.loadLevel;
+    }
     const { maxAutoLevel, config, minAutoLevel } = hls;
     const currentFragDuration = partCurrent
       ? partCurrent.duration

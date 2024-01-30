@@ -144,8 +144,6 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     doTick(): void;
     // (undocumented)
-    protected getMaxBufferLength(mainBufferLength?: number): number;
-    // (undocumented)
     protected _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
     // (undocumented)
     _handleFragmentLoadProgress(data: FragLoadedData): void;
@@ -567,9 +565,9 @@ export interface BufferCodecsData {
 //
 // @public (undocumented)
 export class BufferController extends Logger implements ComponentAPI {
-    constructor(hls: Hls);
+    constructor(hls: Hls, fragmentTracker: FragmentTracker);
     // (undocumented)
-    protected appendChangeType(type: any, mimeType: any): void;
+    protected appendChangeType(type: SourceBufferName, mimeType: string): void;
     // (undocumented)
     appendErrors: {
         audio: number;
@@ -628,8 +626,6 @@ export class BufferController extends Logger implements ComponentAPI {
     trimBuffers(): void;
     // (undocumented)
     protected unregisterListeners(): void;
-    // (undocumented)
-    updateSeekableRange(levelDetails: any): void;
 }
 
 // Warning: (ae-missing-release-tag) "BufferControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1620,6 +1616,8 @@ class Hls implements HlsEventEmitter {
     get mainForwardBufferInfo(): BufferInfo | null;
     get manualLevel(): number;
     get maxAutoLevel(): number;
+    // (undocumented)
+    get maxBufferLength(): number;
     // (undocumented)
     get maxHdcpLevel(): HdcpLevel;
     set maxHdcpLevel(value: HdcpLevel);
@@ -3214,8 +3212,6 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader);
     // (undocumented)
     doTick(): void;
-    // (undocumented)
-    protected getMaxBufferLength(mainBufferLength?: number): number;
     // (undocumented)
     _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
     // (undocumented)
