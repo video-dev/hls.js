@@ -1338,6 +1338,15 @@ export default class StreamController
     );
   }
 
+  public get maxBufferLength(): number {
+    const { levels, level } = this;
+    const levelInfo = levels?.[level];
+    if (!levelInfo) {
+      return this.config.maxBufferLength;
+    }
+    return this.getMaxBufferLength(levelInfo.maxBitrate);
+  }
+
   private backtrack(frag: Fragment) {
     this.couldBacktrack = true;
     // Causes findFragments to backtrack through fragments to find the keyframe
