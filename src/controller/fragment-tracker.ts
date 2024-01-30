@@ -108,11 +108,22 @@ export class FragmentTracker implements ComponentAPI {
     position: number,
     levelType: PlaylistLevelType,
   ): Fragment | null {
+    return this.getFragAtPos(position, levelType, true);
+  }
+
+  public getFragAtPos(
+    position: number,
+    levelType: PlaylistLevelType,
+    buffered?: boolean,
+  ): Fragment | null {
     const { fragments } = this;
     const keys = Object.keys(fragments);
     for (let i = keys.length; i--; ) {
       const fragmentEntity = fragments[keys[i]];
-      if (fragmentEntity?.body.type === levelType && fragmentEntity.buffered) {
+      if (
+        fragmentEntity?.body.type === levelType &&
+        (!buffered || fragmentEntity.buffered)
+      ) {
         const frag = fragmentEntity.body;
         if (frag.start <= position && position <= frag.end) {
           return frag;
@@ -401,7 +412,7 @@ export class FragmentTracker implements ComponentAPI {
     event: Events.BUFFER_APPENDED,
     data: BufferAppendedData,
   ) {
-    const { frag, part, timeRanges } = data;
+    const { frag, part, timeRanges, type } = data;
     if (frag.sn === 'initSegment') {
       return;
     }
@@ -415,15 +426,8 @@ export class FragmentTracker implements ComponentAPI {
     }
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = timeRanges;
-    Object.keys(timeRanges).forEach((elementaryStream: SourceBufferName) => {
-      const timeRange = timeRanges[elementaryStream] as TimeRanges;
-      this.detectEvictedFragments(
-        elementaryStream,
-        timeRange,
-        playlistType,
-        part,
-      );
-    });
+    const timeRange = timeRanges[type] as TimeRanges;
+    this.detectEvictedFragments(type, timeRange, playlistType, part);
   }
 
   private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {

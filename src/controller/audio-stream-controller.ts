@@ -329,12 +329,8 @@ class AudioStreamController
       return;
     }
 
-    const mainBufferInfo = this.getFwdBufferInfo(
-      this.videoBuffer ? this.videoBuffer : this.media,
-      PlaylistLevelType.MAIN,
-    );
     const bufferLen = bufferInfo.len;
-    const maxBufLen = this.getMaxBufferLength(mainBufferInfo?.len);
+    const maxBufLen = hls.maxBufferLength;
 
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
@@ -390,43 +386,35 @@ class AudioStreamController
       return;
     }
 
-    // Buffer audio up to one target duration ahead of main buffer
-    const atBufferSyncLimit =
-      mainBufferInfo &&
-      frag.start > mainBufferInfo.end + trackDetails.targetduration;
-    if (
-      atBufferSyncLimit ||
-      // Or wait for main buffer after buffing some audio
-      (!mainBufferInfo?.len && bufferInfo.len)
-    ) {
-      // Check fragment-tracker for main fragments since GAP segments do not show up in bufferInfo
-      const mainFrag = this.getAppendedFrag(frag.start, PlaylistLevelType.MAIN);
-      if (mainFrag === null) {
-        return;
-      }
-      // Bridge gaps in main buffer
-      atGap ||=
-        !!mainFrag.gap || (!!atBufferSyncLimit && mainBufferInfo.len === 0);
-      if (
-        (atBufferSyncLimit && !atGap) ||
-        (atGap && bufferInfo.nextStart && bufferInfo.nextStart < mainFrag.end)
-      ) {
-        return;
+    if (!trackDetails.live || targetBufferTime < this.hls.liveSyncPosition!) {
+      // Request audio segments up to one fragment ahead of main buffer
+      const mainBufferInfo = this.getFwdBufferInfo(
+        this.videoBuffer ? this.videoBuffer : this.media,
+        PlaylistLevelType.MAIN,
+      );
+      const atBufferSyncLimit =
+        !!mainBufferInfo && frag.start > mainBufferInfo.end + frag.duration;
+      if (atBufferSyncLimit) {
+        // Check fragment-tracker for main fragments since GAP segments do not show up in bufferInfo
+        const mainFrag = this.fragmentTracker.getFragAtPos(
+          frag.start,
+          PlaylistLevelType.MAIN,
+        );
+        if (mainFrag === null) {
+          return;
+        }
+        // Bridge gaps in main buffer (also prevents loop loading at gaps)
+        atGap ||= !!mainFrag.gap || mainBufferInfo.len === 0;
+        if (
+          !atGap ||
+          (bufferInfo.nextStart && bufferInfo.nextStart < mainFrag.end)
+        ) {
+          return;
+        }
       }
     }
 
     this.loadFragment(frag, levelInfo, targetBufferTime);
-  }
-
-  protected getMaxBufferLength(mainBufferLength?: number): number {
-    const maxConfigBuffer = super.getMaxBufferLength();
-    if (!mainBufferLength) {
-      return maxConfigBuffer;
-    }
-    return Math.min(
-      Math.max(maxConfigBuffer, mainBufferLength),
-      this.config.maxMaxBufferLength,
-    );
   }
 
   onMediaDetaching() {

@@ -171,8 +171,10 @@ export default class Hls implements HlsEventEmitter {
     } = config;
     const errorController = new ConfigErrorController(this);
     const abrController = (this.abrController = new ConfigAbrController(this));
+    // FragmentTracker must be defined before StreamController because the order of event handling is important
+    const fragmentTracker = new FragmentTracker(this);
     const bufferController = (this.bufferController =
-      new ConfigBufferController(this));
+      new ConfigBufferController(this, fragmentTracker));
     const capLevelController = (this.capLevelController =
       new ConfigCapLevelController(this));
 
@@ -189,8 +191,6 @@ export default class Hls implements HlsEventEmitter {
       this,
       contentSteering,
     ));
-    // FragmentTracker must be defined before StreamController because the order of event handling is important
-    const fragmentTracker = new FragmentTracker(this);
     const keyLoader = new KeyLoader(this.config);
     const streamController = (this.streamController = new StreamController(
       this,
@@ -800,6 +800,10 @@ export default class Hls implements HlsEventEmitter {
 
   public get mainForwardBufferInfo(): BufferInfo | null {
     return this.streamController.getMainFwdBufferInfo();
+  }
+
+  public get maxBufferLength(): number {
+    return this.streamController.maxBufferLength;
   }
 
   /**

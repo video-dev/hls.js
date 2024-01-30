@@ -30,26 +30,23 @@ export default class BufferOperationQueue {
     }
   }
 
-  public insertAbort(operation: BufferOperation, type: SourceBufferName) {
-    const queue = this.queues[type];
-    queue.unshift(operation);
-    this.executeNext(type);
+  public appendBlocker(type: SourceBufferName): Promise<void> {
+    return new Promise((resolve) => {
+      const operation: BufferOperation = {
+        execute: resolve,
+        onStart: () => {},
+        onComplete: () => {},
+        onError: () => {},
+      };
+      this.append(operation, type);
+    });
   }
 
-  public appendBlocker(type: SourceBufferName): Promise<{}> {
-    let execute;
-    const promise: Promise<{}> = new Promise((resolve) => {
-      execute = resolve;
-    });
-    const operation: BufferOperation = {
-      execute,
-      onStart: () => {},
-      onComplete: () => {},
-      onError: () => {},
-    };
-
-    this.append(operation, type);
-    return promise;
+  unblockAudio(op: BufferOperation) {
+    const queue = this.queues.audio;
+    if (queue[0] === op) {
+      this.shiftAndExecuteNext('audio');
+    }
   }
 
   public executeNext(type: SourceBufferName) {
@@ -80,7 +77,7 @@ export default class BufferOperationQueue {
     this.executeNext(type);
   }
 
-  public current(type: SourceBufferName) {
+  public current(type: SourceBufferName): BufferOperation {
     return this.queues[type][0];
   }
 }

@@ -418,15 +418,9 @@ export class SubtitleStreamController
         config.maxBufferHole,
       );
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
-
-      const mainBufferInfo = this.getFwdBufferInfo(
-        this.media,
-        PlaylistLevelType.MAIN,
-      );
       const trackDetails = track.details as LevelDetails;
       const maxBufLen =
-        this.getMaxBufferLength(mainBufferInfo?.len) +
-        trackDetails.levelTargetDuration;
+        this.hls.maxBufferLength + trackDetails.levelTargetDuration;
 
       if (bufferLen > maxBufLen) {
         return;
@@ -480,14 +474,6 @@ export class SubtitleStreamController
         this.loadFragment(foundFrag, track, targetBufferTime);
       }
     }
-  }
-
-  protected getMaxBufferLength(mainBufferLength?: number): number {
-    const maxConfigBuffer = super.getMaxBufferLength();
-    if (!mainBufferLength) {
-      return maxConfigBuffer;
-    }
-    return Math.max(maxConfigBuffer, mainBufferLength);
   }
 
   protected loadFragment(

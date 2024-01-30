@@ -8,6 +8,7 @@ import BufferController from '../../../src/controller/buffer-controller';
 import { BufferOperation, SourceBufferName } from '../../../src/types/buffer';
 import { BufferAppendingData } from '../../../src/types/events';
 import { Events } from '../../../src/events';
+import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
@@ -135,7 +136,7 @@ describe('BufferController', function () {
     hls.networkControllers.length = 0;
     hls.coreComponents.forEach((component) => component.destroy());
     hls.coreComponents.length = 0;
-    bufferController = new BufferController(hls);
+    bufferController = new BufferController(hls, new FragmentTracker(hls));
     bufferController.media = mockMedia = new MockMediaElement();
     bufferController.mediaSource = mockMediaSource = new MockMediaSource();
     bufferController.createSourceBuffers({
@@ -328,7 +329,6 @@ describe('BufferController', function () {
       frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 0, 0, 0);
 
       bufferController.onFragParsed(Events.FRAG_PARSED, { frag });
-      expect(queueAppendBlockerSpy).to.have.been.calledTwice;
       return new Promise<void>((resolve, reject) => {
         hls.on(Events.FRAG_BUFFERED, (event, data) => {
           try {
@@ -345,9 +345,6 @@ describe('BufferController', function () {
           }
           resolve();
         });
-      }).then(() => {
-        expect(shiftAndExecuteNextSpy, 'The queues should have been cycled').to
-          .have.been.calledTwice;
       });
     });
   });
@@ -673,12 +670,6 @@ describe('BufferController', function () {
       expect(bufferController.details).to.equal(data.details);
     });
 
-    it('enqueues a blocking operation which updates the MediaSource duration', function () {
-      bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
-      expect(queueAppendBlockerSpy).to.have.been.calledTwice;
-      // Updating the duration is aync and has no event to signal completion, so we are unable to test for it directly
-    });
-
     it('synchronously sets media duration if no SourceBuffers exist', function () {
       bufferController.sourceBuffer = {};
       bufferController.onLevelUpdated(Events.LEVEL_UPDATED, data);
@@ -709,7 +700,6 @@ describe('BufferController', function () {
     it('marks the ExtendedSourceBuffer as ended', function () {
       // No type arg ends both SourceBuffers
       bufferController.onBufferEos(Events.BUFFER_EOS, {});
-      expect(queueAppendBlockerSpy).to.have.been.calledTwice;
       queueNames.forEach((type) => {
         const buffer = bufferController.sourceBuffer[type];
         expect(buffer.ended, 'ExtendedSourceBuffer.ended').to.be.true;
