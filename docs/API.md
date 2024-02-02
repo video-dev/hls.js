@@ -1625,6 +1625,7 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
 - `sessionId`: The CMCD session id. One will be automatically generated if none is provided.
 - `contentId`: The CMCD content id.
 - `useHeaders`: Send CMCD data in request headers instead of as query args. Defaults to `false`.
+- `includeKeys`: An optional array of CMCD keys. When present, only these CMCD fields will be included with each each request.
 
 ## Video Binding/Unbinding API
 
