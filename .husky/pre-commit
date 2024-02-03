@@ -1,6 +1,2 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
-set -e
 npm run lint:staged
 npm run type-check
