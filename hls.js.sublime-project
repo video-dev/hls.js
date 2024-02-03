@@ -6,8 +6,8 @@
       "file_exclude_patterns": [
         ".gitignore",
         "hls.js.sublime-project",
-        "hls.js.sublime-workspace"
-      ]
-    }
-  ]
+        "hls.js.sublime-workspace",
+      ],
+    },
+  ],
 }
