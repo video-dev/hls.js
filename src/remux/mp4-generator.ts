@@ -28,6 +28,8 @@ class MP4 {
     MP4.types = {
       avc1: [], // codingname
       avcC: [],
+      hvc1: [],
+      hvcC: [],
       btrt: [],
       dinf: [],
       dref: [],
@@ -839,8 +841,10 @@ class MP4 {
         return MP4.box(MP4.types.stsd, MP4.STSD, MP4.ac3(track));
       }
       return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp4a(track));
-    } else {
+    } else if (track.segmentCodec === 'avc') {
       return MP4.box(MP4.types.stsd, MP4.STSD, MP4.avc1(track));
+    } else {
+      return MP4.box(MP4.types.stsd, MP4.STSD, MP4.hvc1(track));
     }
   }
 
@@ -1122,6 +1126,197 @@ class MP4 {
     const movie = MP4.moov(tracks);
     const result = appendUint8Array(MP4.FTYP, movie);
     return result;
+  }
+
+  static hvc1(track) {
+    const ps = track.params;
+    const units = [track.vps, track.sps, track.pps];
+    const NALuLengthSize = 4;
+    const config = new Uint8Array([
+      0x01,
+      (ps.general_profile_space << 6) |
+        (ps.general_tier_flag ? 32 : 0) |
+        ps.general_profile_idc,
+      ps.general_profile_compatibility_flags[0],
+      ps.general_profile_compatibility_flags[1],
+      ps.general_profile_compatibility_flags[2],
+      ps.general_profile_compatibility_flags[3],
+      ps.general_constraint_indicator_flags[0],
+      ps.general_constraint_indicator_flags[1],
+      ps.general_constraint_indicator_flags[2],
+      ps.general_constraint_indicator_flags[3],
+      ps.general_constraint_indicator_flags[4],
+      ps.general_constraint_indicator_flags[5],
+      ps.general_level_idc,
+      240 | (ps.min_spatial_segmentation_idc >> 8),
+      255 & ps.min_spatial_segmentation_idc,
+      252 | ps.parallelismType,
+      252 | ps.chroma_format_idc,
+      248 | ps.bit_depth_luma_minus8,
+      248 | ps.bit_depth_chroma_minus8,
+      0x00,
+      parseInt(ps.frame_rate.fps),
+      (NALuLengthSize - 1) |
+        (ps.temporal_id_nested << 2) |
+        (ps.num_temporal_layers << 3) |
+        (ps.frame_rate.fixed ? 64 : 0),
+      units.length,
+    ]);
+
+    // compute hvcC size in bytes
+    let length = config.length;
+    for (let i = 0; i < units.length; i += 1) {
+      length += 3;
+      for (let j = 0; j < units[i].length; j += 1) {
+        length += 2 + units[i][j].length;
+      }
+    }
+
+    const hvcC = new Uint8Array(length);
+    hvcC.set(config, 0);
+    length = config.length;
+    // append parameter set units: one vps, one or more sps and pps
+    const iMax = units.length - 1;
+    for (let i = 0; i < units.length; i += 1) {
+      hvcC.set(
+        new Uint8Array([
+          (32 + i) | (i === iMax ? 128 : 0),
+          0x00,
+          units[i].length,
+        ]),
+        length,
+      );
+      length += 3;
+      for (let j = 0; j < units[i].length; j += 1) {
+        hvcC.set(
+          new Uint8Array([units[i][j].length >> 8, units[i][j].length & 255]),
+          length,
+        );
+        length += 2;
+        hvcC.set(units[i][j], length);
+        length += units[i][j].length;
+      }
+    }
+    const hvcc = MP4.box(MP4.types.hvcC, hvcC);
+    const width = track.width;
+    const height = track.height;
+    const hSpacing = track.pixelRatio[0];
+    const vSpacing = track.pixelRatio[1];
+
+    return MP4.box(
+      MP4.types.hvc1,
+      new Uint8Array([
+        0x00,
+        0x00,
+        0x00, // reserved
+        0x00,
+        0x00,
+        0x00, // reserved
+        0x00,
+        0x01, // data_reference_index
+        0x00,
+        0x00, // pre_defined
+        0x00,
+        0x00, // reserved
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00, // pre_defined
+        (width >> 8) & 0xff,
+        width & 0xff, // width
+        (height >> 8) & 0xff,
+        height & 0xff, // height
+        0x00,
+        0x48,
+        0x00,
+        0x00, // horizresolution
+        0x00,
+        0x48,
+        0x00,
+        0x00, // vertresolution
+        0x00,
+        0x00,
+        0x00,
+        0x00, // reserved
+        0x00,
+        0x01, // frame_count
+        0x12,
+        0x64,
+        0x61,
+        0x69,
+        0x6c, // dailymotion/hls.js
+        0x79,
+        0x6d,
+        0x6f,
+        0x74,
+        0x69,
+        0x6f,
+        0x6e,
+        0x2f,
+        0x68,
+        0x6c,
+        0x73,
+        0x2e,
+        0x6a,
+        0x73,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00, // compressorname
+        0x00,
+        0x18, // depth = 24
+        0x11,
+        0x11,
+      ]), // pre_defined = -1
+      hvcc,
+      MP4.box(
+        MP4.types.btrt,
+        new Uint8Array([
+          0x00,
+          0x1c,
+          0x9c,
+          0x80, // bufferSizeDB
+          0x00,
+          0x2d,
+          0xc6,
+          0xc0, // maxBitrate
+          0x00,
+          0x2d,
+          0xc6,
+          0xc0,
+        ]),
+      ), // avgBitrate
+      MP4.box(
+        MP4.types.pasp,
+        new Uint8Array([
+          hSpacing >> 24, // hSpacing
+          (hSpacing >> 16) & 0xff,
+          (hSpacing >> 8) & 0xff,
+          hSpacing & 0xff,
+          vSpacing >> 24, // vSpacing
+          (vSpacing >> 16) & 0xff,
+          (vSpacing >> 8) & 0xff,
+          vSpacing & 0xff,
+        ]),
+      ),
+    );
   }
 }
 
