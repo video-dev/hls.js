@@ -12,6 +12,7 @@
 import * as ADTS from './audio/adts';
 import * as MpegAudio from './audio/mpegaudio';
 import * as AC3 from './audio/ac3-demuxer';
+import BaseVideoParser from './video/base-video-parser';
 import AvcVideoParser from './video/avc-video-parser';
 import SampleAesDecrypter from './sample-aes';
 import { Events } from '../events';
@@ -69,7 +70,7 @@ class TSDemuxer implements Demuxer {
   private _txtTrack?: DemuxedUserdataTrack;
   private aacOverFlow: AudioFrame | null = null;
   private remainderData: Uint8Array | null = null;
-  private videoParser: AvcVideoParser;
+  private videoParser: BaseVideoParser;
 
   constructor(
     observer: HlsEventEmitter,
@@ -287,7 +288,7 @@ class TSDemuxer implements Demuxer {
           case videoPid:
             if (stt) {
               if (videoData && (pes = parsePES(videoData))) {
-                this.videoParser.parseAVCPES(
+                this.videoParser.parsePES(
                   videoTrack,
                   textTrack,
                   pes,
@@ -465,7 +466,7 @@ class TSDemuxer implements Demuxer {
     // try to parse last PES packets
     let pes: PES | null;
     if (videoData && (pes = parsePES(videoData))) {
-      this.videoParser.parseAVCPES(
+      this.videoParser.parsePES(
         videoTrack as DemuxedVideoTrack,
         textTrack as DemuxedUserdataTrack,
         pes,

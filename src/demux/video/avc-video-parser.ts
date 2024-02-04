@@ -1,25 +1,23 @@
 import BaseVideoParser from './base-video-parser';
-import {
+import type {
   DemuxedVideoTrack,
   DemuxedUserdataTrack,
-  VideoSampleUnit,
 } from '../../types/demuxer';
-import {
-  appendUint8Array,
-  parseSEIMessageFromNALu,
-} from '../../utils/mp4-tools';
-import ExpGolomb from './exp-golomb';
+import { parseSEIMessageFromNALu } from '../../utils/mp4-tools';
+
 import type { PES } from '../tsdemuxer';
 
+import ExpGolomb from './exp-golomb';
+
 class AvcVideoParser extends BaseVideoParser {
-  public parseAVCPES(
+  public parsePES(
     track: DemuxedVideoTrack,
     textTrack: DemuxedUserdataTrack,
     pes: PES,
     last: boolean,
     duration: number,
   ) {
-    const units = this.parseAVCNALu(track, pes.data);
+    const units = this.parseNALu(track, pes.data);
     const debug = false;
     let VideoSample = this.VideoSample;
     let push: boolean;
@@ -49,7 +47,7 @@ class AvcVideoParser extends BaseVideoParser {
           // only check slice type to detect KF in case SPS found in same packet (any keyframe is preceded by SPS ...)
           if (spsfound && data.length > 4) {
             // retrieve slice type by parsing beginning of NAL unit (follow H264 spec, slice_header definition) to detect keyframe embedded in NDR
-            const sliceType = new ExpGolomb(data).readSliceType();
+            const sliceType = this.readSliceType(data);
             // 2 : I slice, 4 : SI slice, 7 : I slice, 9: SI slice
             // SI slice : A slice that is coded using intra prediction only and using quantisation of the prediction samples.
             // An SI slice can be coded such that its decoded samples can be constructed identically to an SP slice.
@@ -138,9 +136,7 @@ class AvcVideoParser extends BaseVideoParser {
             VideoSample.debug += 'SPS ';
           }
           const sps = unit.data;
-          const expGolombDecoder = new ExpGolomb(sps);
-          const config = expGolombDecoder.readSPS();
-
+          const config = this.readSPS(sps);
           if (
             !track.sps ||
             track.width !== config.width ||
@@ -165,7 +161,6 @@ class AvcVideoParser extends BaseVideoParser {
             }
             track.codec = codecstring;
           }
-
           break;
         }
         // PPS
@@ -217,123 +212,217 @@ class AvcVideoParser extends BaseVideoParser {
     }
   }
 
-  private parseAVCNALu(
-    track: DemuxedVideoTrack,
-    array: Uint8Array,
-  ): Array<{
-    data: Uint8Array;
-    type: number;
-    state?: number;
-  }> {
-    const len = array.byteLength;
-    let state = track.naluState || 0;
-    const lastState = state;
-    const units: VideoSampleUnit[] = [];
-    let i = 0;
-    let value: number;
-    let overflow: number;
-    let unitType: number;
-    let lastUnitStart = -1;
-    let lastUnitType: number = 0;
-    // logger.log('PES:' + Hex.hexDump(array));
+  protected getNALuType(data: Uint8Array, offset: number): number {
+    return data[offset] & 0x1f;
+  }
 
-    if (state === -1) {
-      // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
-      lastUnitStart = 0;
-      // NALu type is value read from offset 0
-      lastUnitType = array[0] & 0x1f;
-      state = 0;
-      i = 1;
+  readSliceType(data: Uint8Array) {
+    const eg = new ExpGolomb(data);
+    // skip NALu type
+    eg.readUByte();
+    // discard first_mb_in_slice
+    eg.readUEG();
+    // return slice_type
+    return eg.readUEG();
+  }
+
+  /**
+   * The scaling list is optionally transmitted as part of a sequence parameter
+   * set and is not relevant to transmuxing.
+   * @param count the number of entries in this scaling list
+   * @see Recommendation ITU-T H.264, Section 7.3.2.1.1.1
+   */
+  skipScalingList(count: number, reader: ExpGolomb): void {
+    let lastScale = 8;
+    let nextScale = 8;
+    let deltaScale;
+    for (let j = 0; j < count; j++) {
+      if (nextScale !== 0) {
+        deltaScale = reader.readEG();
+        nextScale = (lastScale + deltaScale + 256) % 256;
+      }
+      lastScale = nextScale === 0 ? lastScale : nextScale;
     }
+  }
 
-    while (i < len) {
-      value = array[i++];
-      // optimization. state 0 and 1 are the predominant case. let's handle them outside of the switch/case
-      if (!state) {
-        state = value ? 0 : 1;
-        continue;
-      }
-      if (state === 1) {
-        state = value ? 0 : 2;
-        continue;
-      }
-      // here we have state either equal to 2 or 3
-      if (!value) {
-        state = 3;
-      } else if (value === 1) {
-        overflow = i - state - 1;
-        if (lastUnitStart >= 0) {
-          const unit: VideoSampleUnit = {
-            data: array.subarray(lastUnitStart, overflow),
-            type: lastUnitType,
-          };
-          // logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
-          units.push(unit);
-        } else {
-          // lastUnitStart is undefined => this is the first start code found in this PES packet
-          // first check if start code delimiter is overlapping between 2 PES packets,
-          // ie it started in last packet (lastState not zero)
-          // and ended at the beginning of this PES packet (i <= 4 - lastState)
-          const lastUnit = this.getLastNalUnit(track.samples);
-          if (lastUnit) {
-            if (lastState && i <= 4 - lastState) {
-              // start delimiter overlapping between PES packets
-              // strip start delimiter bytes from the end of last NAL unit
-              // check if lastUnit had a state different from zero
-              if (lastUnit.state) {
-                // strip last bytes
-                lastUnit.data = lastUnit.data.subarray(
-                  0,
-                  lastUnit.data.byteLength - lastState,
-                );
-              }
-            }
-            // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
+  /**
+   * Read a sequence parameter set and return some interesting video
+   * properties. A sequence parameter set is the H264 metadata that
+   * describes the properties of upcoming video frames.
+   * @returns an object with configuration parsed from the
+   * sequence parameter set, including the dimensions of the
+   * associated video frames.
+   */
+  readSPS(sps: Uint8Array): {
+    width: number;
+    height: number;
+    pixelRatio: [number, number];
+  } {
+    const eg = new ExpGolomb(sps);
+    let frameCropLeftOffset = 0;
+    let frameCropRightOffset = 0;
+    let frameCropTopOffset = 0;
+    let frameCropBottomOffset = 0;
+    let numRefFramesInPicOrderCntCycle;
+    let scalingListCount;
+    let i;
+    const readUByte = eg.readUByte.bind(eg);
+    const readBits = eg.readBits.bind(eg);
+    const readUEG = eg.readUEG.bind(eg);
+    const readBoolean = eg.readBoolean.bind(eg);
+    const skipBits = eg.skipBits.bind(eg);
+    const skipEG = eg.skipEG.bind(eg);
+    const skipUEG = eg.skipUEG.bind(eg);
+    const skipScalingList = this.skipScalingList.bind(this);
 
-            if (overflow > 0) {
-              // logger.log('first NALU found with overflow:' + overflow);
-              lastUnit.data = appendUint8Array(
-                lastUnit.data,
-                array.subarray(0, overflow),
-              );
-              lastUnit.state = 0;
+    readUByte();
+    const profileIdc = readUByte(); // profile_idc
+    readBits(5); // profileCompat constraint_set[0-4]_flag, u(5)
+    skipBits(3); // reserved_zero_3bits u(3),
+    readUByte(); // level_idc u(8)
+    skipUEG(); // seq_parameter_set_id
+    // some profiles have more optional data we don't need
+    if (
+      profileIdc === 100 ||
+      profileIdc === 110 ||
+      profileIdc === 122 ||
+      profileIdc === 244 ||
+      profileIdc === 44 ||
+      profileIdc === 83 ||
+      profileIdc === 86 ||
+      profileIdc === 118 ||
+      profileIdc === 128
+    ) {
+      const chromaFormatIdc = readUEG();
+      if (chromaFormatIdc === 3) {
+        skipBits(1);
+      } // separate_colour_plane_flag
+
+      skipUEG(); // bit_depth_luma_minus8
+      skipUEG(); // bit_depth_chroma_minus8
+      skipBits(1); // qpprime_y_zero_transform_bypass_flag
+      if (readBoolean()) {
+        // seq_scaling_matrix_present_flag
+        scalingListCount = chromaFormatIdc !== 3 ? 8 : 12;
+        for (i = 0; i < scalingListCount; i++) {
+          if (readBoolean()) {
+            // seq_scaling_list_present_flag[ i ]
+            if (i < 6) {
+              skipScalingList(16, eg);
+            } else {
+              skipScalingList(64, eg);
             }
           }
         }
-        // check if we can read unit type
-        if (i < len) {
-          unitType = array[i] & 0x1f;
-          // logger.log('find NALU @ offset:' + i + ',type:' + unitType);
-          lastUnitStart = i;
-          lastUnitType = unitType;
-          state = 0;
-        } else {
-          // not enough byte to read unit type. let's read it on next PES parsing
-          state = -1;
+      }
+    }
+    skipUEG(); // log2_max_frame_num_minus4
+    const picOrderCntType = readUEG();
+    if (picOrderCntType === 0) {
+      readUEG(); // log2_max_pic_order_cnt_lsb_minus4
+    } else if (picOrderCntType === 1) {
+      skipBits(1); // delta_pic_order_always_zero_flag
+      skipEG(); // offset_for_non_ref_pic
+      skipEG(); // offset_for_top_to_bottom_field
+      numRefFramesInPicOrderCntCycle = readUEG();
+      for (i = 0; i < numRefFramesInPicOrderCntCycle; i++) {
+        skipEG();
+      } // offset_for_ref_frame[ i ]
+    }
+    skipUEG(); // max_num_ref_frames
+    skipBits(1); // gaps_in_frame_num_value_allowed_flag
+    const picWidthInMbsMinus1 = readUEG();
+    const picHeightInMapUnitsMinus1 = readUEG();
+    const frameMbsOnlyFlag = readBits(1);
+    if (frameMbsOnlyFlag === 0) {
+      skipBits(1);
+    } // mb_adaptive_frame_field_flag
+
+    skipBits(1); // direct_8x8_inference_flag
+    if (readBoolean()) {
+      // frame_cropping_flag
+      frameCropLeftOffset = readUEG();
+      frameCropRightOffset = readUEG();
+      frameCropTopOffset = readUEG();
+      frameCropBottomOffset = readUEG();
+    }
+    let pixelRatio: [number, number] = [1, 1];
+    if (readBoolean()) {
+      // vui_parameters_present_flag
+      if (readBoolean()) {
+        // aspect_ratio_info_present_flag
+        const aspectRatioIdc = readUByte();
+        switch (aspectRatioIdc) {
+          case 1:
+            pixelRatio = [1, 1];
+            break;
+          case 2:
+            pixelRatio = [12, 11];
+            break;
+          case 3:
+            pixelRatio = [10, 11];
+            break;
+          case 4:
+            pixelRatio = [16, 11];
+            break;
+          case 5:
+            pixelRatio = [40, 33];
+            break;
+          case 6:
+            pixelRatio = [24, 11];
+            break;
+          case 7:
+            pixelRatio = [20, 11];
+            break;
+          case 8:
+            pixelRatio = [32, 11];
+            break;
+          case 9:
+            pixelRatio = [80, 33];
+            break;
+          case 10:
+            pixelRatio = [18, 11];
+            break;
+          case 11:
+            pixelRatio = [15, 11];
+            break;
+          case 12:
+            pixelRatio = [64, 33];
+            break;
+          case 13:
+            pixelRatio = [160, 99];
+            break;
+          case 14:
+            pixelRatio = [4, 3];
+            break;
+          case 15:
+            pixelRatio = [3, 2];
+            break;
+          case 16:
+            pixelRatio = [2, 1];
+            break;
+          case 255: {
+            pixelRatio = [
+              (readUByte() << 8) | readUByte(),
+              (readUByte() << 8) | readUByte(),
+            ];
+            break;
+          }
         }
-      } else {
-        state = 0;
       }
     }
-    if (lastUnitStart >= 0 && state >= 0) {
-      const unit: VideoSampleUnit = {
-        data: array.subarray(lastUnitStart, len),
-        type: lastUnitType,
-        state: state,
-      };
-      units.push(unit);
-      // logger.log('pushing NALU, type/size/state:' + unit.type + '/' + unit.data.byteLength + '/' + state);
-    }
-    // no NALu found
-    if (units.length === 0) {
-      // append pes.data to previous NAL unit
-      const lastUnit = this.getLastNalUnit(track.samples);
-      if (lastUnit) {
-        lastUnit.data = appendUint8Array(lastUnit.data, array);
-      }
-    }
-    track.naluState = state;
-    return units;
+    return {
+      width: Math.ceil(
+        (picWidthInMbsMinus1 + 1) * 16 -
+          frameCropLeftOffset * 2 -
+          frameCropRightOffset * 2,
+      ),
+      height:
+        (2 - frameMbsOnlyFlag) * (picHeightInMapUnitsMinus1 + 1) * 16 -
+        (frameMbsOnlyFlag ? 2 : 4) *
+          (frameCropTopOffset + frameCropBottomOffset),
+      pixelRatio: pixelRatio,
+    };
   }
 }
 
