@@ -101,7 +101,7 @@
     "eslint-plugin-promise": "6.1.1",
     "eventemitter3": "5.0.1",
     "http-server": "14.1.1",
-    "husky": "9.0.7",
+    "husky": "9.0.10",
     "jsonpack": "1.1.5",
     "karma": "6.4.2",
     "karma-chrome-launcher": "3.2.0",
