@@ -13,11 +13,9 @@ import { dummyTrack } from '../dummy-demuxed-track';
 import { appendUint8Array } from '../../utils/mp4-tools';
 import { sliceUint8 } from '../../utils/typed-array';
 import { RationalTimestamp } from '../../utils/timescale-conversion';
-import {
-  getId3Data,
-  getId3Timestamp,
-  canParseId3,
-} from '@svta/common-media-library';
+import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
+import { getId3Timestamp } from '@svta/common-media-library/id3/getId3Timestamp';
+import { canParseId3 } from '@svta/common-media-library/id3/canParseId3';
 
 class BaseAudioDemuxer implements Demuxer {
   protected _audioTrack!: DemuxedAudioTrack;

@@ -7,7 +7,7 @@ import * as MpegAudio from './mpegaudio';
 import { logger } from '../../utils/logger';
 import type { HlsEventEmitter } from '../../events';
 import type { HlsConfig } from '../../config';
-import { getId3Data } from '@svta/common-media-library';
+import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
 
 class AACDemuxer extends BaseAudioDemuxer {
   private readonly observer: HlsEventEmitter;

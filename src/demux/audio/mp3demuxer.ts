@@ -5,7 +5,8 @@ import BaseAudioDemuxer from './base-audio-demuxer';
 import { getAudioBSID } from './dolby';
 import { logger } from '../../utils/logger';
 import * as MpegAudio from './mpegaudio';
-import { getId3Data, getId3Timestamp } from '@svta/common-media-library';
+import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
+import { getId3Timestamp } from '@svta/common-media-library/id3/getId3Timestamp';
 
 class MP3Demuxer extends BaseAudioDemuxer {
   resetInitSegment(

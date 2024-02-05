@@ -18,7 +18,8 @@ import type {
 } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
-import { getId3Frames, isId3TimestampFrame } from '@svta/common-media-library';
+import { getId3Frames } from '@svta/common-media-library/id3/getId3Frames';
+import { isId3TimestampFrame } from '@svta/common-media-library/id3/isId3TimestampFrame';
 
 declare global {
   interface Window {
