@@ -281,12 +281,14 @@ class AudioStreamController
     const { hls, levels, media, trackId } = this;
     const config = hls.config;
 
-    // 1. if video not attached AND
+    // 1. if buffering is suspended
+    // 2. if video not attached AND
     //    start fragment already requested OR start frag prefetch not enabled
-    // 2. if tracks or track not loaded and selected
+    // 3. if tracks or track not loaded and selected
     // then exit loop
     // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
     if (
+      !this.buffering ||
       (!media && (this.startFragRequested || !config.startFragPrefetch)) ||
       !levels?.[trackId]
     ) {

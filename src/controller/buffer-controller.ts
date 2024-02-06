@@ -309,6 +309,7 @@ export default class BufferController implements ComponentAPI {
       this.resetBuffer(type);
     });
     this._initSourceBuffer();
+    this.hls.resumeBuffering();
   }
 
   private resetBuffer(type: SourceBufferName) {

@@ -237,7 +237,7 @@ export default class StreamController
       return;
     }
 
-    const level = hls.nextLoadLevel;
+    const level = this.buffering ? hls.nextLoadLevel : hls.loadLevel;
     if (!levels?.[level]) {
       return;
     }
@@ -260,6 +260,9 @@ export default class StreamController
 
       this.hls.trigger(Events.BUFFER_EOS, data);
       this.state = State.ENDED;
+      return;
+    }
+    if (!this.buffering) {
       return;
     }
 

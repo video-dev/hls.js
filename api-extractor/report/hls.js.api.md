@@ -327,6 +327,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected bufferFragmentData(data: RemuxedTrack, frag: Fragment, part: Part | null, chunkMeta: ChunkMetadata, noBacktracking?: boolean): void;
     // (undocumented)
+    protected buffering: boolean;
+    // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
     protected clearTrackerIfNeeded(frag: Fragment): void;
@@ -453,6 +455,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected onvseeking: EventListener | null;
     // (undocumented)
+    pauseBuffering(): void;
+    // (undocumented)
     protected playlistType: PlaylistLevelType;
     // (undocumented)
     protected recoverWorkerError(data: ErrorData): void;
@@ -474,6 +478,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected resetTransmuxer(): void;
     // (undocumented)
     protected resetWhenMissingContext(chunkMeta: ChunkMetadata): void;
+    // (undocumented)
+    resumeBuffering(): void;
     // (undocumented)
     protected retryDate: number;
     // (undocumented)
@@ -2917,6 +2923,10 @@ export type MP4RemuxerConfig = {
 //
 // @public (undocumented)
 export interface NetworkComponentAPI extends ComponentAPI {
+    // (undocumented)
+    pauseBuffering?(): void;
+    // (undocumented)
+    resumeBuffering?(): void;
     // (undocumented)
     startLoad(startPosition: number): void;
     // (undocumented)
