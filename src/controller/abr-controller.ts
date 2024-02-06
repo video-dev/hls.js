@@ -871,8 +871,9 @@ class AbrController extends Logger implements AbrComponentAPI {
   }
 
   public set nextAutoLevel(nextLevel: number) {
-    const value = Math.max(this.hls.minAutoLevel, nextLevel);
-    if (this._nextAutoLevel != value) {
+    const { maxAutoLevel, minAutoLevel } = this.hls;
+    const value = Math.min(Math.max(nextLevel, minAutoLevel), maxAutoLevel);
+    if (this._nextAutoLevel !== value) {
       this.nextAutoLevelKey = '';
       this._nextAutoLevel = value;
     }

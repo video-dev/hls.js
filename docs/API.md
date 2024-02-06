@@ -737,7 +737,7 @@ Enable to use JavaScript version AES decryption for fallback of WebCrypto API.
 
 (default: `undefined`)
 
-When set, use this level as the default hls.startLevel. Keep in mind that the startLevel set with the API takes precedence over config.startLevel configuration parameter.
+When set, use this level as the default `hls.startLevel`. Keep in mind that the `startLevel` set with the API takes precedence over config.startLevel configuration parameter. `startLevel` should be set to value between 0 and the maximum index of `hls.levels`.
 
 ### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut` (deprecated)
 
