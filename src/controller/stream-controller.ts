@@ -232,7 +232,7 @@ export default class StreamController
       return;
     }
 
-    if (!levels?.[level]) {
+    if (!this.buffering || !levels?.[level]) {
       return;
     }
 
