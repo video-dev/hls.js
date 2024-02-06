@@ -295,6 +295,7 @@ export default class BufferController extends Logger implements ComponentAPI {
       this.resetBuffer(type);
     });
     this._initSourceBuffer();
+    this.hls.resumeBuffering();
   }
 
   private resetBuffer(type: SourceBufferName) {

@@ -100,6 +100,7 @@ export default class BaseStreamController
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
   protected initPTS: RationalTimestamp[] = [];
+  protected buffering: boolean = true;
 
   constructor(
     hls: Hls,
@@ -159,6 +160,14 @@ export default class BaseStreamController
     this.clearInterval();
     this.clearNextTick();
     this.state = State.STOPPED;
+  }
+
+  public pauseBuffering() {
+    this.buffering = false;
+  }
+
+  public resumeBuffering() {
+    this.buffering = true;
   }
 
   protected _streamEnded(
