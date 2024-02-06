@@ -320,7 +320,7 @@ export class SubtitleStreamController
     this.levelLastLoaded = track;
 
     if (!this.startFragRequested && (this.mainDetails || !newDetails.live)) {
-      this.setStartPosition(track.details, sliding);
+      this.setStartPosition(this.mainDetails || newDetails, sliding);
     }
 
     // trigger handler right now

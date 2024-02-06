@@ -555,7 +555,7 @@ class AudioStreamController
 
     // compute start position if we are aligned with the main playlist
     if (!this.startFragRequested && (this.mainDetails || !newDetails.live)) {
-      this.setStartPosition(track.details, sliding);
+      this.setStartPosition(this.mainDetails || newDetails, sliding);
     }
     // only switch back to IDLE state if we were waiting for track to start downloading a new fragment
     if (
