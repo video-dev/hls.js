@@ -71,7 +71,7 @@ function getLoggerFn(
     : consolePrintFn(key, id);
 }
 
-let exportedLogger: ILogger = createLogger();
+const exportedLogger: ILogger = createLogger();
 
 export function enableLogs(
   debugConfig: boolean | ILogger,
@@ -107,7 +107,8 @@ export function enableLogs(
       return createLogger();
     }
   }
-  exportedLogger = newLogger;
+  // global exported logger uses the log methods from last call to `enableLogs`
+  Object.assign(exportedLogger, newLogger);
   return newLogger;
 }
 

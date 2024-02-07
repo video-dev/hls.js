@@ -8,7 +8,6 @@ import { appendCmcdQuery } from '@svta/common-media-library/cmcd/appendCmcdQuery
 import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEncodeOptions';
 import { uuid } from '@svta/common-media-library/utils/uuid';
 import { BufferHelper } from '../utils/buffer-helper';
-import { logger } from '../utils/logger';
 import type { ComponentAPI } from '../types/component-api';
 import type { Fragment } from '../loader/fragment';
 import type { BufferCreatedData, MediaAttachedData } from '../types/events';
@@ -201,7 +200,7 @@ export default class CMCDController implements ComponentAPI {
         su: !this.initialized,
       });
     } catch (error) {
-      logger.warn('Could not generate manifest CMCD data.', error);
+      this.hls.logger.warn('Could not generate manifest CMCD data.', error);
     }
   };
 
@@ -237,7 +236,7 @@ export default class CMCDController implements ComponentAPI {
 
       this.apply(context, data);
     } catch (error) {
-      logger.warn('Could not generate segment CMCD data.', error);
+      this.hls.logger.warn('Could not generate segment CMCD data.', error);
     }
   };
 
