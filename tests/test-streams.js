@@ -267,4 +267,9 @@ module.exports = {
     description: 'aes-256 and aes-256-ctr full segment encryption',
     abr: false,
   },
+  mpegTsHevcHls: {
+    url: 'https://devoldemar.github.io/streams/hls/bipbop/hevc.m3u8',
+    description: 'Advanced stream (HEVC Main 10, MPEG-TS segments)',
+    skipFunctionalTests: true,
+  },
 };

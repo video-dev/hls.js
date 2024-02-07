@@ -516,7 +516,7 @@ export default class MP4Remuxer implements Remuxer {
       if (foundHole || foundOverlap) {
         if (foundHole) {
           logger.warn(
-            `AVC: ${toMsFromMpegTsClock(
+            `${(track.segmentCodec || '').toUpperCase()}: ${toMsFromMpegTsClock(
               delta,
               true,
             )} ms (${delta}dts) hole between fragments detected at ${timeOffset.toFixed(
@@ -525,7 +525,7 @@ export default class MP4Remuxer implements Remuxer {
           );
         } else {
           logger.warn(
-            `AVC: ${toMsFromMpegTsClock(
+            `${(track.segmentCodec || '').toUpperCase()}: ${toMsFromMpegTsClock(
               -delta,
               true,
             )} ms (${delta}dts) overlapping between fragments detected at ${timeOffset.toFixed(
@@ -759,7 +759,7 @@ export default class MP4Remuxer implements Remuxer {
         }
       }
     }
-    // next AVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
+    // next AVC/HEVC sample DTS should be equal to last sample DTS + last sample duration (in PES timescale)
     mp4SampleDuration =
       stretchedLastFrame || !mp4SampleDuration
         ? averageSampleDuration

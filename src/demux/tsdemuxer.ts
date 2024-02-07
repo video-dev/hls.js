@@ -2,7 +2,7 @@
  * highly optimized TS demuxer:
  * parse PAT, PMT
  * extract PES packet from audio and video PIDs
- * extract AVC/H264 NAL units and AAC/ADTS samples from PES packet
+ * extract AVC/H264 (or HEVC/H265) NAL units and AAC/ADTS samples from PES packet
  * trigger the remuxer upon parsing completion
  * it also tries to workaround as best as it can audio codec switch (HE-AAC to AAC and vice versa), without having to restart the MediaSource.
  * it also controls the remuxing process :
@@ -12,7 +12,9 @@
 import * as ADTS from './audio/adts';
 import * as MpegAudio from './audio/mpegaudio';
 import * as AC3 from './audio/ac3-demuxer';
+import BaseVideoParser from './video/base-video-parser';
 import AvcVideoParser from './video/avc-video-parser';
+import HevcVideoParser from './video/hevc-video-parser';
 import SampleAesDecrypter from './sample-aes';
 import { Events } from '../events';
 import { appendUint8Array, RemuxerTrackIdConfig } from '../utils/mp4-tools';
@@ -69,7 +71,7 @@ class TSDemuxer implements Demuxer {
   private _txtTrack?: DemuxedUserdataTrack;
   private aacOverFlow: AudioFrame | null = null;
   private remainderData: Uint8Array | null = null;
-  private videoParser: AvcVideoParser;
+  private videoParser: BaseVideoParser | null;
 
   constructor(
     observer: HlsEventEmitter,
@@ -79,7 +81,7 @@ class TSDemuxer implements Demuxer {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
-    this.videoParser = new AvcVideoParser();
+    this.videoParser = null;
   }
 
   static probe(data: Uint8Array) {
@@ -287,13 +289,25 @@ class TSDemuxer implements Demuxer {
           case videoPid:
             if (stt) {
               if (videoData && (pes = parsePES(videoData))) {
-                this.videoParser.parseAVCPES(
-                  videoTrack,
-                  textTrack,
-                  pes,
-                  false,
-                  this._duration,
-                );
+                if (this.videoParser === null) {
+                  switch (videoTrack.segmentCodec) {
+                    case 'avc':
+                      this.videoParser = new AvcVideoParser();
+                      break;
+                    case 'hevc':
+                      this.videoParser = new HevcVideoParser();
+                      break;
+                  }
+                }
+                if (this.videoParser !== null) {
+                  this.videoParser.parsePES(
+                    videoTrack,
+                    textTrack,
+                    pes,
+                    false,
+                    this._duration,
+                  );
+                }
               }
 
               videoData = { data: [], size: 0 };
@@ -465,14 +479,26 @@ class TSDemuxer implements Demuxer {
     // try to parse last PES packets
     let pes: PES | null;
     if (videoData && (pes = parsePES(videoData))) {
-      this.videoParser.parseAVCPES(
-        videoTrack as DemuxedVideoTrack,
-        textTrack as DemuxedUserdataTrack,
-        pes,
-        true,
-        this._duration,
-      );
-      videoTrack.pesData = null;
+      if (this.videoParser === null) {
+        switch (videoTrack.segmentCodec) {
+          case 'avc':
+            this.videoParser = new AvcVideoParser();
+            break;
+          case 'hevc':
+            this.videoParser = new HevcVideoParser();
+            break;
+        }
+      }
+      if (this.videoParser !== null) {
+        this.videoParser.parsePES(
+          videoTrack as DemuxedVideoTrack,
+          textTrack as DemuxedUserdataTrack,
+          pes,
+          true,
+          this._duration,
+        );
+        videoTrack.pesData = null;
+      }
     } else {
       // either avcData null or PES truncated, keep it for next frag parsing
       videoTrack.pesData = videoData;
@@ -869,8 +895,13 @@ function parsePMT(
       case 0x87:
         logger.warn('Unsupported EC-3 in M2TS found');
         break;
-      case 0x24:
-        logger.warn('Unsupported HEVC in M2TS found');
+
+      case 0x24: // ITU-T Rec. H.265 and ISO/IEC 23008-2 (HEVC)
+        if (result.videoPid === -1) {
+          result.videoPid = pid;
+          result.segmentVideoCodec = 'hevc';
+          logger.log('HEVC in M2TS found');
+        }
         break;
 
       default:

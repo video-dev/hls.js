@@ -37,6 +37,7 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
 - Fragmented MP4 container
 - MPEG-2 TS container
   - ITU-T Rec. H.264 and ISO/IEC 14496-10 Elementary Stream
+  - ITU-T Rec. H.265 and ISO/IEC 23008-2 Elementary Stream
   - ISO/IEC 13818-7 ADTS AAC Elementary Stream
   - ISO/IEC 11172-3 / ISO/IEC 13818-3 (MPEG-1/2 Audio Layer III) Elementary Stream
   - ATSC A/52 / AC-3 / Dolby Digital Elementary Stream
