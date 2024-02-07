@@ -248,6 +248,7 @@ function getAliasesForLightDist() {
     aliases = {
       ...aliases,
       './ac3-demuxer': '../empty.js',
+      './video/hevc-video-parser': '../empty.js',
     };
   }
 
