@@ -303,7 +303,7 @@ HLS.js is supported on:
 - Edge for Windows 10+
 - Safari 9+ for macOS 10.11+
 - Safari for iPadOS 13+
-- Safari for iOS 17.1+
+- Safari for iOS 17.1+ since HLS version [1.5.0](https://github.com/video-dev/hls.js/releases/tag/v1.5.0) using Managed Media Source (MMS) [WebKit blog](https://webkit.org/blog/14735/webkit-features-in-safari-17-1/)
 
 A [Promise polyfill](https://github.com/taylorhakes/promise-polyfill) is required in browsers missing native promise support.
 
