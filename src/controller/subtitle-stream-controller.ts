@@ -216,7 +216,7 @@ export class SubtitleStreamController
     event: Events.SUBTITLE_TRACKS_UPDATED,
     { subtitleTracks }: SubtitleTracksUpdatedData,
   ) {
-    if (!this.levels || subtitleOptionsIdentical(this.levels, subtitleTracks)) {
+    if (this.levels && subtitleOptionsIdentical(this.levels, subtitleTracks)) {
       this.levels = subtitleTracks.map(
         (mediaPlaylist) => new Level(mediaPlaylist),
       );
