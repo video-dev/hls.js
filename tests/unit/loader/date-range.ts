@@ -7,13 +7,13 @@ const expect = chai.expect;
 
 describe('DateRange class', function () {
   const startDateAndDuration = new AttrList(
-    'ID="ad1",CLASS="com.apple.hls.interstitial",START-DATE="2020-01-02T21:55:44.000Z",DURATION=15.0',
+    'ID="ad1",CLASS="com.apple.hls.interstitial",START-DATE="2020-01-02T21:55:44.000Z",DURATION=15.0,X-ASSET-URI="i.m3u8"',
   );
   const startDateAndEndDate = new AttrList(
-    'ID="ad2",CLASS="com.apple.hls.interstitial",START-DATE="2020-01-02T21:55:44.000Z",END-DATE="2020-01-02T21:56:44.001Z"',
+    'ID="ad2",CLASS="com.apple.hls.interstitial",START-DATE="2020-01-02T21:55:44.000Z",END-DATE="2020-01-02T21:56:44.001Z",X-ASSET-URI="i.m3u8"',
   );
   const startDateAndEndOnNext = new AttrList(
-    'ID="ad3",CLASS="com.apple.hls.interstitial",START-DATE="2022-01-01T00:00:00.100Z",END-ON-NEXT=YES',
+    'ID="ad3",CLASS="com.apple.hls.interstitial",START-DATE="2022-01-01T00:00:00.100Z",END-ON-NEXT=YES,X-ASSET-URI="i.m3u8"',
   );
 
   const sctePlanned = new AttrList(
@@ -43,6 +43,27 @@ describe('DateRange class', function () {
   );
   const endOnNextWithNoClass = new AttrList(
     'ID="ad3",START-DATE="2022-01-01T00:00:00.100Z",END-ON-NEXT=YES',
+  );
+  const cueWithPre = new AttrList(
+    'ID="mid1",CLASS="com.apple.hls.interstitial",CUE="PRE",START-DATE="2024-01-12T10:00:10.000Z",DURATION=15.0,X-ASSET-URI="b.m3u8"',
+  );
+  const cueWithPost = new AttrList(
+    'ID="mid1",CLASS="com.apple.hls.interstitial",CUE="POST",START-DATE="2024-01-12T10:00:10.000Z",DURATION=15.0,X-ASSET-URI="b.m3u8"',
+  );
+  const cueWithPreOnce = new AttrList(
+    'ID="mid1",CLASS="com.apple.hls.interstitial",CUE="PRE,ONCE",START-DATE="2024-01-12T10:00:10.000Z",DURATION=15.0,X-ASSET-URI="b.m3u8"',
+  );
+  const cueWithPostOnce = new AttrList(
+    'ID="mid1",CLASS="com.apple.hls.interstitial",CUE="POST,ONCE",START-DATE="2024-01-12T10:00:10.000Z",DURATION=15.0,X-ASSET-URI="b.m3u8"',
+  );
+  const cueWithPreAndPost = new AttrList(
+    'ID="mid1",CLASS="com.apple.hls.interstitial",CUE="PRE,POST",START-DATE="2024-01-12T10:00:10.000Z",DURATION=15.0,X-ASSET-URI="b.m3u8"',
+  );
+  const invalidQuotedAttributeId = new AttrList(
+    'ID=bad,START-DATE="2020-01-02T21:55:44.000Z",DURATION=1.0',
+  );
+  const invalidQuotedAttributeStartDate = new AttrList(
+    'ID="ok",START-DATE=2020-01-02T21:55:44.000Z,DURATION=1.0',
   );
 
   it('parses id, class, date, duration, and end-on-next attributes', function () {
@@ -92,7 +113,7 @@ describe('DateRange class', function () {
     expect(dateRangeEndDate.duration).to.equal(60.001);
   });
 
-  describe('merges tags with matching ID attributes', function () {
+  it('merges tags with matching ID attributes', function () {
     const scteOut = new DateRange(sctePlanned);
     const scteIn = new DateRange(scteDurationUpdate, scteOut);
     expect(scteIn.startDate.toISOString()).to.equal('2014-03-05T11:15:00.000Z');
@@ -101,6 +122,26 @@ describe('DateRange class', function () {
     expect(scteIn.attr['SCTE35-OUT']).to.equal('0xFC');
     expect(scteIn.attr['SCTE35-IN']).to.equal('0xFC01');
     expect(scteIn.isValid).to.equal(true);
+  });
+
+  describe('isInterstitial', function () {
+    it('identifies Interstitial DateRange tags with CLASS="com.apple.hls.interstitial"', function () {
+      expect(new DateRange(startDateAndDuration).isInterstitial).to.be.true;
+      expect(new DateRange(startDateAndEndDate).isInterstitial).to.be.true;
+      expect(new DateRange(startDateAndEndOnNext).isInterstitial).to.be.true;
+    });
+    it('is false for non-Interstitial DateRanges', function () {
+      expect(new DateRange(sctePlanned).isInterstitial).to.be.false;
+      expect(new DateRange(scteDurationUpdate).isInterstitial).to.be.false;
+      expect(new DateRange(scteInvalidChange).isInterstitial).to.be.false;
+      expect(new DateRange(missingId).isInterstitial).to.be.false;
+      expect(new DateRange(missingStartDate).isInterstitial).to.be.false;
+      expect(new DateRange(invalidStartDate).isInterstitial).to.be.false;
+      expect(new DateRange(negativeDuration).isInterstitial).to.be.false;
+      expect(new DateRange(endDateEarlierThanStartDate).isInterstitial).to.be
+        .false;
+      expect(new DateRange(endOnNextWithNoClass).isInterstitial).to.be.false;
+    });
   });
 
   describe('isValid indicates that DATERANGE tag:', function () {
@@ -150,5 +191,36 @@ describe('DateRange class', function () {
         )}\n${JSON.stringify(scteIn)}`,
       );
     });
+
+    it('parses the CUE attribute PRE, POST, and ONCE Trigger Identifiers', function () {
+      const pre = new DateRange(cueWithPre);
+      const post = new DateRange(cueWithPost);
+      const preOnce = new DateRange(cueWithPreOnce);
+      const postOnce = new DateRange(cueWithPostOnce);
+      expect(pre.isValid).to.equal(true, JSON.stringify(pre));
+      expect(post.isValid).to.equal(true, JSON.stringify(post));
+      expect(preOnce.isValid).to.equal(true, JSON.stringify(preOnce));
+      expect(postOnce.isValid).to.equal(true, JSON.stringify(postOnce));
+    });
+
+    it('MUST NOT include both PRE and POST CUE Trigger Identifiers', function () {
+      const preAndPost = new DateRange(cueWithPreAndPost);
+      expect(preAndPost.isValid).to.equal(
+        false,
+        `Expected DateRange with CUE to have PRE or POST enumerated string values, but not both\n${JSON.stringify(
+          preAndPost,
+        )}`,
+      );
+    });
+
+    // it('considers tags invalid when attributes whose values are expected to be quoted-strings are missing quotes', function () {
+    //   const invalidId = new DateRange(invalidQuotedAttributeId);
+    //   expect(invalidId.isValid).to.equal(false, 'ID is missing quotes');
+    //   const invalidDate = new DateRange(invalidQuotedAttributeStartDate);
+    //   expect(invalidDate.isValid).to.equal(
+    //     false,
+    //     'START-DATE is missing quotes',
+    //   );
+    // });
   });
 });

@@ -1,10 +1,12 @@
 import { AttrList } from '../utils/attr-list';
 import { logger } from '../utils/logger';
+import type { Fragment } from './fragment';
 
 // Avoid exporting const enum so that these values can be inlined
 const enum DateRangeAttribute {
   ID = 'ID',
   CLASS = 'CLASS',
+  CUE = 'CUE',
   START_DATE = 'START-DATE',
   DURATION = 'DURATION',
   END_DATE = 'END-DATE',
@@ -12,12 +14,22 @@ const enum DateRangeAttribute {
   PLANNED_DURATION = 'PLANNED-DURATION',
   SCTE35_OUT = 'SCTE35-OUT',
   SCTE35_IN = 'SCTE35-IN',
+  SCTE35_CMD = 'SCTE35-CMD',
 }
+
+export type DateRangeCue = {
+  pre: boolean;
+  post: boolean;
+  once: boolean;
+};
+
+const CLASS_INTERSTITIAL = 'com.apple.hls.interstitial';
 
 export function isDateRangeCueAttribute(attrName: string): boolean {
   return (
     attrName !== DateRangeAttribute.ID &&
     attrName !== DateRangeAttribute.CLASS &&
+    attrName !== DateRangeAttribute.CUE &&
     attrName !== DateRangeAttribute.START_DATE &&
     attrName !== DateRangeAttribute.DURATION &&
     attrName !== DateRangeAttribute.END_DATE &&
@@ -28,17 +40,28 @@ export function isDateRangeCueAttribute(attrName: string): boolean {
 export function isSCTE35Attribute(attrName: string): boolean {
   return (
     attrName === DateRangeAttribute.SCTE35_OUT ||
-    attrName === DateRangeAttribute.SCTE35_IN
+    attrName === DateRangeAttribute.SCTE35_IN ||
+    attrName === DateRangeAttribute.SCTE35_CMD
   );
 }
 
 export class DateRange {
   public attr: AttrList;
+  public tagAnchor: Fragment | null;
+  public tagOrder: number;
   private _startDate: Date;
   private _endDate?: Date;
+  private _cue?: DateRangeCue;
   private _badValueForSameId?: string;
 
-  constructor(dateRangeAttr: AttrList, dateRangeWithSameId?: DateRange) {
+  constructor(
+    dateRangeAttr: AttrList,
+    dateRangeWithSameId?: DateRange | undefined,
+    frag: Fragment | null = null,
+    tagCount: number = 0,
+  ) {
+    this.tagAnchor = dateRangeWithSameId?.tagAnchor ?? frag;
+    this.tagOrder = dateRangeWithSameId?.tagOrder ?? tagCount;
     if (dateRangeWithSameId) {
       const previousAttr = dateRangeWithSameId.attr;
       for (const key in previousAttr) {
@@ -76,6 +99,36 @@ export class DateRange {
 
   get class(): string {
     return this.attr.CLASS;
+  }
+
+  get cue(): DateRangeCue {
+    const _cue = this._cue;
+    if (_cue === undefined) {
+      return (this._cue = this.attr.enumeratedStringList(
+        this.attr.CUE ? 'CUE' : 'X-CUE',
+        {
+          pre: false,
+          post: false,
+          once: false,
+        },
+      ));
+    }
+    return _cue;
+  }
+
+  get startTime(): number {
+    const { tagAnchor } = this;
+    // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
+    if (tagAnchor === null || tagAnchor.programDateTime === null) {
+      logger.warn(
+        `Expected tagAnchor Fragment with PDT set for DateRange "${this.id}": ${tagAnchor}`,
+      );
+      return NaN;
+    }
+    return (
+      tagAnchor.start +
+      (this.startDate.getTime() - tagAnchor.programDateTime) / 1000
+    );
   }
 
   get startDate(): Date {
@@ -120,13 +173,23 @@ export class DateRange {
     return this.attr.bool(DateRangeAttribute.END_ON_NEXT);
   }
 
+  get isInterstitial(): boolean {
+    return this.class === CLASS_INTERSTITIAL;
+  }
+
   get isValid(): boolean {
     return (
       !!this.id &&
       !this._badValueForSameId &&
       Number.isFinite(this.startDate.getTime()) &&
       (this.duration === null || this.duration >= 0) &&
-      (!this.endOnNext || !!this.class)
+      (!this.endOnNext || !!this.class) &&
+      (!this.attr.CUE ||
+        (!this.cue.pre && !this.cue.post) ||
+        this.cue.pre !== this.cue.post) &&
+      (!this.isInterstitial ||
+        'X-ASSET-URI' in this.attr ||
+        'X-ASSET-LIST' in this.attr)
     );
   }
 }

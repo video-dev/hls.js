@@ -19,6 +19,7 @@ export class LevelDetails {
   public fragmentHint?: Fragment;
   public partList: Part[] | null = null;
   public dateRanges: Record<string, DateRange>;
+  public dateRangeTagCount: number = 0;
   public live: boolean = true;
   public ageHeader: number = 0;
   public advancedDateTime?: number;

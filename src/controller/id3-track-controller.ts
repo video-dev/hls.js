@@ -69,10 +69,6 @@ const MAX_CUE_ENDTIME = (() => {
   return Number.POSITIVE_INFINITY;
 })();
 
-function dateRangeDateToTimelineSeconds(date: Date, offset: number): number {
-  return date.getTime() / 1000 - offset;
-}
-
 function hexToArrayBuffer(str): ArrayBuffer {
   return Uint8Array.from(
     str
@@ -329,26 +325,20 @@ class ID3TrackController implements ComponentAPI {
       this.id3Track = this.createTrack(this.media);
     }
 
-    const dateTimeOffset =
-      (lastFragment.programDateTime as number) / 1000 - lastFragment.start;
     const Cue = getCueClass();
-
     for (let i = 0; i < ids.length; i++) {
       const id = ids[i];
       const dateRange = dateRanges[id];
-      const startTime = dateRangeDateToTimelineSeconds(
-        dateRange.startDate,
-        dateTimeOffset,
-      );
+      const startTime = dateRange.startTime;
 
       // Process DateRanges to determine end-time (known DURATION, END-DATE, or END-ON-NEXT)
       const appendedDateRangeCues = dateRangeCuesAppended[id];
       const cues = appendedDateRangeCues?.cues || {};
       let durationKnown = appendedDateRangeCues?.durationKnown || false;
       let endTime = MAX_CUE_ENDTIME;
-      const endDate = dateRange.endDate;
-      if (endDate) {
-        endTime = dateRangeDateToTimelineSeconds(endDate, dateTimeOffset);
+      const { duration, endDate } = dateRange;
+      if (endDate && duration !== null) {
+        endTime = startTime + duration;
         durationKnown = true;
       } else if (dateRange.endOnNext && !durationKnown) {
         const nextDateRangeWithSameClass = ids.reduce(
@@ -369,10 +359,7 @@ class ID3TrackController implements ComponentAPI {
           null,
         );
         if (nextDateRangeWithSameClass) {
-          endTime = dateRangeDateToTimelineSeconds(
-            nextDateRangeWithSameClass.startDate,
-            dateTimeOffset,
-          );
+          endTime = nextDateRangeWithSameClass.startTime;
           durationKnown = true;
         }
       }
