@@ -114,7 +114,7 @@
     "lint-staged": "15.2.2",
     "markdown-styles": "3.2.0",
     "micromatch": "4.0.5",
-    "mocha": "10.2.0",
+    "mocha": "10.3.0",
     "node-fetch": "3.3.2",
     "npm-run-all2": "5.0.2",
     "prettier": "3.2.4",
