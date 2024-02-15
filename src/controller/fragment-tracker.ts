@@ -294,6 +294,12 @@ export class FragmentTracker implements ComponentAPI {
         break;
       }
     }
+    if (buffered.time.length === 0) {
+      // Nothing found in buffer, mark as gap
+      fragment.gap = true;
+      this.removeFragment(fragment);
+      this.fragBuffered(fragment, true);
+    }
     return buffered;
   }
 
