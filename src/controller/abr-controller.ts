@@ -534,27 +534,20 @@ class AbrController extends Logger implements AbrComponentAPI {
   }
 
   private getAutoLevelKey(): string {
-    return `${this.getBwEstimate()}_${this.hls.mainForwardBufferInfo?.len}`;
+    return `${this.getBwEstimate()}_${this.getStarvationDelay().toFixed(2)}`;
   }
 
   private getNextABRAutoLevel(): number {
     const { fragCurrent, partCurrent, hls } = this;
-    const { maxAutoLevel, config, minAutoLevel, media } = hls;
+    const { maxAutoLevel, config, minAutoLevel } = hls;
     const currentFragDuration = partCurrent
       ? partCurrent.duration
       : fragCurrent
         ? fragCurrent.duration
         : 0;
-
-    // playbackRate is the absolute value of the playback rate; if media.playbackRate is 0, we use 1 to load as
-    // if we're playing back at the normal rate.
-    const playbackRate =
-      media && media.playbackRate !== 0 ? Math.abs(media.playbackRate) : 1.0;
     const avgbw = this.getBwEstimate();
     // bufferStarvationDelay is the wall-clock time left until the playback buffer is exhausted.
-    const bufferInfo = hls.mainForwardBufferInfo;
-    const bufferStarvationDelay =
-      (bufferInfo ? bufferInfo.len : 0) / playbackRate;
+    const bufferStarvationDelay = this.getStarvationDelay();
 
     let bwFactor = config.abrBandWidthFactor;
     let bwUpFactor = config.abrBandWidthUpFactor;
@@ -628,6 +621,20 @@ class AbrController extends Logger implements AbrComponentAPI {
     }
     // or if bitrate is not lower, continue to use loadLevel
     return hls.loadLevel;
+  }
+
+  private getStarvationDelay(): number {
+    const hls = this.hls;
+    const media = hls.media;
+    if (!media) {
+      return Infinity;
+    }
+    // playbackRate is the absolute value of the playback rate; if media.playbackRate is 0, we use 1 to load as
+    // if we're playing back at the normal rate.
+    const playbackRate =
+      media && media.playbackRate !== 0 ? Math.abs(media.playbackRate) : 1.0;
+    const bufferInfo = hls.mainForwardBufferInfo;
+    return (bufferInfo ? bufferInfo.len : 0) / playbackRate;
   }
 
   private getBwEstimate(): number {
@@ -738,6 +745,9 @@ class AbrController extends Logger implements AbrComponentAPI {
             mediaCapabilities,
           );
           levelInfo.supportedPromise.then((decodingInfo) => {
+            if (!this.hls) {
+              return;
+            }
             levelInfo.supportedResult = decodingInfo;
             const levels = this.hls.levels;
             const index = levels.indexOf(levelInfo);

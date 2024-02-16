@@ -215,14 +215,13 @@ export default class StreamController
 
   private doTickIdle() {
     const { hls, levelLastLoaded, levels, media } = this;
-    const { config, nextLoadLevel: level } = hls;
 
     // if start level not parsed yet OR
     // if video not attached AND start fragment already requested OR start frag prefetch not enabled
     // exit loop, as we either need more info (level not parsed) or we need media to be attached to load new fragment
     if (
       levelLastLoaded === null ||
-      (!media && (this.startFragRequested || !config.startFragPrefetch))
+      (!media && (this.startFragRequested || !hls.config.startFragPrefetch))
     ) {
       return;
     }
@@ -232,6 +231,7 @@ export default class StreamController
       return;
     }
 
+    const level = hls.nextLoadLevel;
     if (!this.buffering || !levels?.[level]) {
       return;
     }
