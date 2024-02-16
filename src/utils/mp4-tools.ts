@@ -634,10 +634,19 @@ export function getStartDTS(
      unsigned int(32)  default_sample_flags
   }
  */
-export function getDuration(data: Uint8Array, initData: InitData) {
+export function getSampleData(
+  data: Uint8Array,
+  initData: InitData,
+): {
+  duration: number;
+  firstKeyFrame?: number;
+  sampleCount?: number;
+} {
   let rawDuration = 0;
   let videoDuration = 0;
   let audioDuration = 0;
+  let firstKeyFrame: number | undefined;
+  let sampleCount: number | undefined;
   const trafs = findBox(data, ['moof', 'traf']);
   for (let i = 0; i < trafs.length; i++) {
     const traf = trafs[i];
@@ -670,12 +679,63 @@ export function getDuration(data: Uint8Array, initData: InitData) {
     const timescale = track.timescale || 90e3;
     const truns = findBox(traf, ['trun']);
     for (let j = 0; j < truns.length; j++) {
-      rawDuration = computeRawDurationFromSamples(truns[j]);
+      const trun = truns[j];
+      rawDuration = computeRawDurationFromSamples(trun);
       if (!rawDuration && sampleDuration) {
-        const sampleCount = readUint32(truns[j], 4);
+        const sampleCount = readUint32(trun, 4);
         rawDuration = sampleDuration * sampleCount;
       }
       if (track.type === ElementaryStreamTypes.VIDEO) {
+        firstKeyFrame = -1;
+        const dataOffsetPresent = trun[3] & 0x01;
+        const firstSampleFlagsPresent = trun[3] & 0x04;
+        const sampleDurationPresent = trun[2] & 0x01;
+        const sampleSizePresent = trun[2] & 0x02;
+        const sampleFlagsPresent = trun[2] & 0x04;
+        const sampleCompositionTimeOffsetPresent = trun[2] & 0x08;
+        sampleCount = readUint32(trun, 4);
+        let offset = 8;
+        let remaining = sampleCount;
+        if (dataOffsetPresent) {
+          offset += 4;
+        }
+        if (firstSampleFlagsPresent && sampleCount) {
+          const isNonSyncSample = trun[offset + 1] & 0x01;
+          if (!isNonSyncSample) {
+            firstKeyFrame = 0;
+          }
+          offset += 4;
+          if (sampleDurationPresent) {
+            offset += 4;
+          }
+          if (sampleSizePresent) {
+            offset += 4;
+          }
+          if (sampleCompositionTimeOffsetPresent) {
+            offset += 4;
+          }
+          remaining--;
+        }
+        while (remaining--) {
+          if (sampleDurationPresent) {
+            offset += 4;
+          }
+          if (sampleSizePresent) {
+            offset += 4;
+          }
+          if (sampleFlagsPresent) {
+            const isNonSyncSample = trun[offset + 1] & 0x01;
+            if (!isNonSyncSample) {
+              if (firstKeyFrame === -1) {
+                firstKeyFrame = sampleCount - (remaining + 1);
+              }
+            }
+            offset += 4;
+          }
+          if (sampleCompositionTimeOffsetPresent) {
+            offset += 4;
+          }
+        }
         videoDuration += rawDuration / timescale;
       } else if (track.type === ElementaryStreamTypes.AUDIO) {
         audioDuration += rawDuration / timescale;
@@ -686,7 +746,7 @@ export function getDuration(data: Uint8Array, initData: InitData) {
     // If duration samples are not available in the traf use sidx subsegment_duration
     let sidxMinStart = Infinity;
     let sidxMaxEnd = 0;
-    let sidxDuration = 0;
+    let duration = 0;
     const sidxs = findBox(data, ['sidx']);
     for (let i = 0; i < sidxs.length; i++) {
       const sidx = parseSegmentIndex(sidxs[i]);
@@ -703,17 +763,25 @@ export function getDuration(data: Uint8Array, initData: InitData) {
           sidxMaxEnd,
           subSegmentDuration + sidx.earliestPresentationTime / sidx.timescale,
         );
-        sidxDuration = sidxMaxEnd - sidxMinStart;
+        duration = sidxMaxEnd - sidxMinStart;
       }
     }
-    if (sidxDuration && Number.isFinite(sidxDuration)) {
-      return sidxDuration;
+    if (duration && Number.isFinite(duration)) {
+      return {
+        duration,
+      };
     }
   }
   if (videoDuration) {
-    return videoDuration;
+    return {
+      duration: videoDuration,
+      firstKeyFrame,
+      sampleCount,
+    };
   }
-  return audioDuration;
+  return {
+    duration: audioDuration,
+  };
 }
 
 /*
@@ -736,7 +804,7 @@ export function getDuration(data: Uint8Array, initData: InitData) {
      }[ sample_count ]
   }
  */
-export function computeRawDurationFromSamples(trun): number {
+export function computeRawDurationFromSamples(trun: Uint8Array): number {
   const flags = readUint32(trun, 0);
   // Flags are at offset 0, non-optional sample_count is at offset 4. Therefore we start 8 bytes in.
   // Each field is an int32, which is 4 bytes

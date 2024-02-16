@@ -1862,7 +1862,7 @@ export default class BaseStreamController
         fatal: false,
         error,
         frag,
-        reason: `Found no media in msn ${frag.sn} of level "${level.url}"`,
+        reason: error.message,
       });
       if (!this.hls) {
         return;
