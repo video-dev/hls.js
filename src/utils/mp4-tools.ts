@@ -136,11 +136,13 @@ export function parseSegmentIndex(sidx: Uint8Array): SidxInfo | null {
   let firstOffset = 0;
 
   if (version === 0) {
-    earliestPresentationTime = readUint32(sidx, (index += 4));
-    firstOffset = readUint32(sidx, (index += 4));
+    earliestPresentationTime = readUint32(sidx, index);
+    firstOffset = readUint32(sidx, index + 4);
+    index += 8;
   } else {
-    earliestPresentationTime = readUint64(sidx, (index += 8));
-    firstOffset = readUint64(sidx, (index += 8));
+    earliestPresentationTime = readUint64(sidx, index);
+    firstOffset = readUint64(sidx, index + 8);
+    index += 16;
   }
 
   // skip reserved
