@@ -232,7 +232,7 @@ export default class StreamController
     }
 
     const level = hls.nextLoadLevel;
-    if (!this.buffering || !levels?.[level]) {
+    if (!levels?.[level]) {
       return;
     }
 
