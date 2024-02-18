@@ -158,7 +158,8 @@ class CapLevelController implements ComponentAPI {
         hls.autoLevelCapping = maxLevel;
         if (
           hls.autoLevelCapping > this.autoLevelCapping &&
-          this.streamController
+          this.streamController &&
+          hls.autoLevelCapping > this.streamController.currentLevel
         ) {
           // if auto level capping has a higher value for the previous one, flush the buffer using nextLevelSwitch
           // usually happen when the user go to the fullscreen mode.
