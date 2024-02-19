@@ -478,7 +478,9 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
 
 function skipBERInteger(bytes: Uint8Array, i: number): number {
   const limit = i + 5;
-  while (bytes[i++] & 0x80 && i < limit) {}
+  while (bytes[i++] & 0x80 && i < limit) {
+    /* do nothing */
+  }
   return i;
 }
 
