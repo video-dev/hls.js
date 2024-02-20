@@ -1758,7 +1758,9 @@ export default class BaseStreamController
     this.log('Reset loading state');
     this.fragCurrent = null;
     this.fragPrevious = null;
-    this.state = State.IDLE;
+    if (this.state !== State.STOPPED) {
+      this.state = State.IDLE;
+    }
   }
 
   protected resetStartWhenNotLoaded(level: Level | null): void {
