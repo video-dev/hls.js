@@ -255,7 +255,9 @@ class AudioStreamController
       this.fragmentTracker.removeFragment(waitingData.frag);
       this.waitingData = null;
       this.waitingVideoCC = -1;
-      this.state = State.IDLE;
+      if (this.state !== State.STOPPED) {
+        this.state = State.IDLE;
+      }
     }
   }
 
@@ -417,13 +419,13 @@ class AudioStreamController
     this.loadFragment(frag, levelInfo, targetBufferTime);
   }
 
-  onMediaDetaching() {
+  protected onMediaDetaching() {
     this.videoBuffer = null;
     this.bufferFlushed = this.flushing = false;
     super.onMediaDetaching();
   }
 
-  onAudioTracksUpdated(
+  private onAudioTracksUpdated(
     event: Events.AUDIO_TRACKS_UPDATED,
     { audioTracks }: AudioTracksUpdatedData,
   ) {
@@ -432,7 +434,7 @@ class AudioStreamController
     this.levels = audioTracks.map((mediaPlaylist) => new Level(mediaPlaylist));
   }
 
-  onAudioTrackSwitching(
+  private onAudioTrackSwitching(
     event: Events.AUDIO_TRACK_SWITCHING,
     data: AudioTrackSwitchingData,
   ) {
@@ -446,29 +448,28 @@ class AudioStreamController
       this.removeUnbufferedFrags(fragCurrent.start);
     }
     this.resetLoadingState();
-    // destroy useless transmuxer when switching audio to main
-    if (!altAudio) {
-      this.resetTransmuxer();
-    } else {
-      // switching to audio track, start timer if not already started
-      this.setInterval(TICK_INTERVAL);
-    }
 
     // should we switch tracks ?
     if (altAudio) {
       this.switchingTrack = data;
       // main audio track are handled by stream-controller, just do something if switching to alt audio track
-      this.state = State.IDLE;
       this.flushAudioIfNeeded(data);
+      if (this.state !== State.STOPPED) {
+        // switching to audio track, start timer if not already started
+        this.setInterval(TICK_INTERVAL);
+        this.state = State.IDLE;
+        this.tick();
+      }
     } else {
+      // destroy useless transmuxer when switching audio to main
+      this.resetTransmuxer();
       this.switchingTrack = null;
       this.bufferedTrack = data;
-      this.state = State.STOPPED;
+      this.clearInterval();
     }
-    this.tick();
   }
 
-  onManifestLoading() {
+  protected onManifestLoading() {
     this.fragmentTracker.removeAllFragments();
     this.startPosition = this.lastCurrentTime = 0;
     this.bufferFlushed = this.flushing = false;
@@ -483,7 +484,7 @@ class AudioStreamController
     this.trackId = this.videoTrackCC = this.waitingVideoCC = -1;
   }
 
-  onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+  private onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     this.mainDetails = data.details;
     if (this.cachedTrackLoadedData !== null) {
       this.hls.trigger(Events.AUDIO_TRACK_LOADED, this.cachedTrackLoadedData);
@@ -491,7 +492,10 @@ class AudioStreamController
     }
   }
 
-  onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData) {
+  private onAudioTrackLoaded(
+    event: Events.AUDIO_TRACK_LOADED,
+    data: TrackLoadedData,
+  ) {
     if (this.mainDetails == null) {
       this.cachedTrackLoadedData = data;
       return;
@@ -644,13 +648,16 @@ class AudioStreamController
     super._handleFragmentLoadComplete(fragLoadedData);
   }
 
-  onBufferReset(/* event: Events.BUFFER_RESET */) {
+  private onBufferReset(/* event: Events.BUFFER_RESET */) {
     // reset reference to sourcebuffers
     this.mediaBuffer = this.videoBuffer = null;
     this.loadedmetadata = false;
   }
 
-  onBufferCreated(event: Events.BUFFER_CREATED, data: BufferCreatedData) {
+  private onBufferCreated(
+    event: Events.BUFFER_CREATED,
+    data: BufferCreatedData,
+  ) {
     const audioTrack = data.tracks.audio;
     if (audioTrack) {
       this.mediaBuffer = audioTrack.buffer || null;
@@ -660,7 +667,7 @@ class AudioStreamController
     }
   }
 
-  onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+  private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     const { frag, part } = data;
     if (frag.type !== PlaylistLevelType.AUDIO) {
       if (!this.loadedmetadata && frag.type === PlaylistLevelType.MAIN) {

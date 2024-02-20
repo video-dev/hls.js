@@ -150,29 +150,15 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     protected loadFragment(frag: Fragment, track: Level, targetBufferTime: number): void;
     // (undocumented)
-    onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData): void;
-    // (undocumented)
-    onAudioTracksUpdated(event: Events.AUDIO_TRACKS_UPDATED, { audioTracks }: AudioTracksUpdatedData): void;
-    // (undocumented)
-    onAudioTrackSwitching(event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData): void;
-    // (undocumented)
-    onBufferCreated(event: Events.BUFFER_CREATED, data: BufferCreatedData): void;
-    // (undocumented)
-    onBufferReset(): void;
-    // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
-    // (undocumented)
-    onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData): void;
     // (undocumented)
     protected onHandlerDestroying(): void;
     // (undocumented)
     onInitPtsFound(event: Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale }: InitPTSFoundData): void;
     // (undocumented)
-    onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData): void;
+    protected onManifestLoading(): void;
     // (undocumented)
-    onManifestLoading(): void;
-    // (undocumented)
-    onMediaDetaching(): void;
+    protected onMediaDetaching(): void;
     // (undocumented)
     protected onTickEnd(): void;
     // (undocumented)
@@ -3219,31 +3205,13 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     // (undocumented)
     get mediaBufferTimeRanges(): Bufferable;
     // (undocumented)
-    onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData): void;
-    // (undocumented)
-    onError(event: Events.ERROR, data: ErrorData): void;
-    // (undocumented)
-    onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData): void;
+    protected onError(event: Events.ERROR, data: ErrorData): void;
     // (undocumented)
     protected onHandlerDestroying(): void;
     // (undocumented)
-    onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData): void;
+    protected onManifestLoading(): void;
     // (undocumented)
-    onManifestLoading(): void;
-    // (undocumented)
-    onMediaDetaching(): void;
-    // Warning: (ae-forgotten-export) The symbol "SubtitleFragProcessed" needs to be exported by the entry point hls.d.ts
-    //
-    // (undocumented)
-    onSubtitleFragProcessed(event: Events.SUBTITLE_FRAG_PROCESSED, data: SubtitleFragProcessed): void;
-    // (undocumented)
-    onSubtitleTrackLoaded(event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData): void;
-    // (undocumented)
-    onSubtitleTracksUpdated(event: Events.SUBTITLE_TRACKS_UPDATED, { subtitleTracks }: SubtitleTracksUpdatedData): void;
-    // Warning: (ae-forgotten-export) The symbol "TrackSwitchedData" needs to be exported by the entry point hls.d.ts
-    //
-    // (undocumented)
-    onSubtitleTrackSwitch(event: Events.SUBTITLE_TRACK_SWITCH, data: TrackSwitchedData): void;
+    protected onMediaDetaching(): void;
     // (undocumented)
     protected registerListeners(): void;
     // (undocumented)
