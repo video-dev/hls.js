@@ -136,11 +136,13 @@ export function parseSegmentIndex(sidx: Uint8Array): SidxInfo | null {
   let firstOffset = 0;
 
   if (version === 0) {
-    earliestPresentationTime = readUint32(sidx, (index += 4));
-    firstOffset = readUint32(sidx, (index += 4));
+    earliestPresentationTime = readUint32(sidx, index);
+    firstOffset = readUint32(sidx, index + 4);
+    index += 8;
   } else {
-    earliestPresentationTime = readUint64(sidx, (index += 8));
-    firstOffset = readUint64(sidx, (index += 8));
+    earliestPresentationTime = readUint64(sidx, index);
+    firstOffset = readUint64(sidx, index + 8);
+    index += 16;
   }
 
   // skip reserved
@@ -325,7 +327,7 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
     case 'mp4a': {
       const codecBox = findBox(sampleEntries, [fourCC])[0];
       const esdsBox = findBox(codecBox.subarray(28), ['esds'])[0];
-      if (esdsBox && esdsBox.length > 12) {
+      if (esdsBox && esdsBox.length > 7) {
         let i = 4;
         // ES Descriptor tag
         if (esdsBox[i++] !== 0x03) {
@@ -476,7 +478,9 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
 
 function skipBERInteger(bytes: Uint8Array, i: number): number {
   const limit = i + 5;
-  while (bytes[i++] & 0x80 && i < limit) {}
+  while (bytes[i++] & 0x80 && i < limit) {
+    /* do nothing */
+  }
   return i;
 }
 
