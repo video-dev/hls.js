@@ -35,19 +35,13 @@ export class BufferHelper {
    * Return true if `media`'s buffered include `position`
    */
   static isBuffered(media: Bufferable, position: number): boolean {
-    try {
-      if (media) {
-        const buffered = BufferHelper.getBuffered(media);
-        for (let i = 0; i < buffered.length; i++) {
-          if (position >= buffered.start(i) && position <= buffered.end(i)) {
-            return true;
-          }
+    if (media) {
+      const buffered = BufferHelper.getBuffered(media);
+      for (let i = buffered.length; i--; ) {
+        if (position >= buffered.start(i) && position <= buffered.end(i)) {
+          return true;
         }
       }
-    } catch (error) {
-      // this is to catch
-      // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
-      // This SourceBuffer has been removed from the parent media source
     }
     return false;
   }
@@ -57,21 +51,15 @@ export class BufferHelper {
     pos: number,
     maxHoleDuration: number,
   ): BufferInfo {
-    try {
-      if (media) {
-        const vbuffered = BufferHelper.getBuffered(media);
+    if (media) {
+      const vbuffered = BufferHelper.getBuffered(media);
+      if (vbuffered.length) {
         const buffered: BufferTimeRange[] = [];
-        let i: number;
-        for (i = 0; i < vbuffered.length; i++) {
+        for (let i = 0; i < vbuffered.length; i++) {
           buffered.push({ start: vbuffered.start(i), end: vbuffered.end(i) });
         }
-
-        return this.bufferedInfo(buffered, pos, maxHoleDuration);
+        return BufferHelper.bufferedInfo(buffered, pos, maxHoleDuration);
       }
-    } catch (error) {
-      // this is to catch
-      // InvalidStateError: Failed to read the 'buffered' property from 'SourceBuffer':
-      // This SourceBuffer has been removed from the parent media source
     }
     return { len: 0, start: pos, end: pos, nextStart: undefined };
   }
@@ -88,14 +76,7 @@ export class BufferHelper {
   } {
     pos = Math.max(0, pos);
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
-    buffered.sort(function (a, b) {
-      const diff = a.start - b.start;
-      if (diff) {
-        return diff;
-      } else {
-        return b.end - a.end;
-      }
-    });
+    buffered.sort((a, b) => a.start - b.start || b.end - a.end);
 
     let buffered2: BufferTimeRange[] = [];
     if (maxHoleDuration) {
@@ -164,7 +145,7 @@ export class BufferHelper {
    */
   static getBuffered(media: Bufferable): TimeRanges {
     try {
-      return media.buffered;
+      return media.buffered || noopBuffered;
     } catch (e) {
       logger.log('failed to get media.buffered', e);
       return noopBuffered;
