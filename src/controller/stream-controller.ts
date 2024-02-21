@@ -214,6 +214,9 @@ export default class StreamController
   }
 
   private doTickIdle() {
+    if (!this.buffering) {
+      return;
+    }
     const { hls, levelLastLoaded, levels, media } = this;
 
     // if start level not parsed yet OR
