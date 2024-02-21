@@ -157,6 +157,7 @@ class CapLevelController implements ComponentAPI {
         }
         hls.autoLevelCapping = maxLevel;
         if (
+          hls.autoLevelEnabled &&
           hls.autoLevelCapping > this.autoLevelCapping &&
           this.streamController
         ) {
