@@ -1102,7 +1102,10 @@ export default class BaseStreamController
     // Workaround flaw in getting forward buffer when maxBufferHole is smaller than gap at current pos
     if (bufferInfo.len === 0 && bufferInfo.nextStart !== undefined) {
       const bufferedFragAtPos = this.fragmentTracker.getBufferedFrag(pos, type);
-      if (bufferedFragAtPos && bufferInfo.nextStart < bufferedFragAtPos.end) {
+      if (
+        bufferedFragAtPos &&
+        (bufferInfo.nextStart <= bufferedFragAtPos.end || bufferedFragAtPos.gap)
+      ) {
         return BufferHelper.bufferInfo(
           bufferable,
           pos,
@@ -1115,7 +1118,7 @@ export default class BaseStreamController
 
   protected getMaxBufferLength(levelBitrate?: number): number {
     const { config } = this;
-    let maxBufLen;
+    let maxBufLen: number;
     if (levelBitrate) {
       maxBufLen = Math.max(
         (8 * config.maxBufferSize) / levelBitrate,

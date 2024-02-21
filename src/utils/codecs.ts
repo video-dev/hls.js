@@ -193,7 +193,7 @@ export function getCodecCompatibleName(
 }
 
 export function pickMostCompleteCodecName(
-  parsedCodec: string,
+  parsedCodec: string | undefined,
   levelCodec: string | undefined,
 ): string | undefined {
   // Parsing of mp4a codecs strings in mp4-tools from media is incomplete as of d8c6c7a
