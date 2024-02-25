@@ -59,12 +59,12 @@ describe('DateRange class', function () {
   const cueWithPreAndPost = new AttrList(
     'ID="mid1",CLASS="com.apple.hls.interstitial",CUE="PRE,POST",START-DATE="2024-01-12T10:00:10.000Z",DURATION=15.0,X-ASSET-URI="b.m3u8"',
   );
-  const invalidQuotedAttributeId = new AttrList(
-    'ID=bad,START-DATE="2020-01-02T21:55:44.000Z",DURATION=1.0',
-  );
-  const invalidQuotedAttributeStartDate = new AttrList(
-    'ID="ok",START-DATE=2020-01-02T21:55:44.000Z,DURATION=1.0',
-  );
+  // const invalidQuotedAttributeId = new AttrList(
+  //   'ID=bad,START-DATE="2020-01-02T21:55:44.000Z",DURATION=1.0',
+  // );
+  // const invalidQuotedAttributeStartDate = new AttrList(
+  //   'ID="ok",START-DATE=2020-01-02T21:55:44.000Z,DURATION=1.0',
+  // );
 
   it('parses id, class, date, duration, and end-on-next attributes', function () {
     const dateRangeDuration = new DateRange(startDateAndDuration);
@@ -130,6 +130,7 @@ describe('DateRange class', function () {
       expect(new DateRange(startDateAndEndDate).isInterstitial).to.be.true;
       expect(new DateRange(startDateAndEndOnNext).isInterstitial).to.be.true;
     });
+
     it('is false for non-Interstitial DateRanges', function () {
       expect(new DateRange(sctePlanned).isInterstitial).to.be.false;
       expect(new DateRange(scteDurationUpdate).isInterstitial).to.be.false;

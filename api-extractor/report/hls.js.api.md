@@ -844,7 +844,7 @@ export interface CuesParsedData {
 //
 // @public (undocumented)
 export class DateRange {
-    constructor(dateRangeAttr: AttrList, dateRangeWithSameId?: DateRange | undefined, frag?: Fragment | null, tagCount?: number);
+    constructor(dateRangeAttr: AttrList, dateRangeWithSameId?: DateRange | undefined, tagCount?: number);
     // (undocumented)
     attr: AttrList;
     // (undocumented)

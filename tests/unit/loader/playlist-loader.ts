@@ -1739,8 +1739,9 @@ fileSequence2.ts
     expect(fragments[2].gap).to.equal(undefined);
   });
 
-  it('parsed DATERANGE tags including Interstitials', function () {
-    const playlist = `#EXTM3U
+  describe('#EXT-X-DATERANGE', function () {
+    it('parses DATERANGE tags including Interstitials', function () {
+      const playlist = `#EXTM3U
 #EXT-X-TARGETDURATION:6
 #EXT-X-VERSION:10
 #EXT-X-DISCONTINUITY-SEQUENCE:1
@@ -1773,44 +1774,76 @@ segment.m4s
 segment.m4s
 
 #EXT-X-DATERANGE:ID="post",CLASS="com.apple.hls.interstitial",CUE="POST,ONCE",START-DATE="2024-01-12T10:00:00.000Z",DURATION=15.0,X-ASSET-URI="e.m3u8?_HLS_interstitial_id=post"`;
-    const details = M3U8Parser.parseLevelPlaylist(
-      playlist,
-      'http://dummy.url.com/playlist.m3u8',
-      0,
-      PlaylistLevelType.MAIN,
-      0,
-      null,
-    );
-    expect(details.dateRangeTagCount).to.equal(4);
-    expect(details.dateRanges.pre.isInterstitial).to.be.true;
-    expect(details.dateRanges.mid1.isInterstitial).to.be.true;
-    expect(details.dateRanges.mid2.isInterstitial).to.be.true;
-    expect(details.dateRanges.post.isInterstitial).to.be.true;
-    expect(details.dateRanges).to.have.property('pre').which.deep.includes({
-      tagOrder: 0,
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.dateRangeTagCount).to.equal(4);
+      expect(details.dateRanges.pre.isInterstitial).to.be.true;
+      expect(details.dateRanges.mid1.isInterstitial).to.be.true;
+      expect(details.dateRanges.mid2.isInterstitial).to.be.true;
+      expect(details.dateRanges.post.isInterstitial).to.be.true;
+      expect(details.dateRanges).to.have.property('pre').which.deep.includes({
+        tagOrder: 0,
+      });
+      expect(details.dateRanges).to.have.property('mid1').which.deep.includes({
+        tagOrder: 1,
+      });
+      expect(details.dateRanges).to.have.property('mid2').which.deep.includes({
+        tagOrder: 2,
+      });
+      expect(details.dateRanges).to.have.property('post').which.deep.includes({
+        tagOrder: 3,
+      });
+      expect(details.dateRanges.pre.cue.pre).to.be.true;
+      expect(details.dateRanges.mid1.cue.once).to.be.true;
+      expect(details.dateRanges.post.cue.post).to.be.true;
+      expect(details.dateRanges.post.cue.once).to.be.true;
+      // DateRange start times are mapped to the primary timeline and not changed by CUE Interstitial DURATION
+      expect(details.dateRanges.pre.startTime).to.equal(-7200);
+      expect(details.dateRanges.mid1.startTime).to.equal(10);
+      expect(details.dateRanges.mid2.startTime).to.equal(25);
+      expect(details.dateRanges.post.startTime).to.equal(0);
     });
-    expect(details.dateRanges).to.have.property('mid1').which.deep.includes({
-      tagOrder: 1,
-    });
-    expect(details.dateRanges).to.have.property('mid2').which.deep.includes({
-      tagOrder: 2,
-    });
-    expect(details.dateRanges).to.have.property('post').which.deep.includes({
-      tagOrder: 3,
-    });
-    expect(details.dateRanges.pre.cue.pre).to.be.true;
-    expect(details.dateRanges.mid1.cue.once).to.be.true;
-    expect(details.dateRanges.post.cue.post).to.be.true;
-    expect(details.dateRanges.post.cue.once).to.be.true;
-    // DateRange start times are mapped to the primary timeline and not changed by CUE Interstitial DURATION
-    expect(details.dateRanges.pre.startTime).to.equal(-7200);
-    expect(details.dateRanges.mid1.startTime).to.equal(10);
-    expect(details.dateRanges.mid2.startTime).to.equal(25);
-    expect(details.dateRanges.post.startTime).to.equal(0);
-  });
 
-  it('adds PROGRAM-DATE-TIME and DATERANGE tag text to fragment[].tagList for backwards compatibility', function () {
-    const playlist = `#EXTM3U
+    it('ensures DateRanges are mapped to a segment whose TimeRange covers the start date of the DATERANGE tag', function () {
+      const playlist = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PROGRAM-DATE-TIME:1970-01-01T00:00:00.000Z
+#EXT-X-DATERANGE:ID="sooner",START-DATE="1970-01-01T00:00:20.000Z"
+#EXTINF:10
+1.mp4
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:1970-01-01T00:00:20.000Z
+#EXTINF:10
+2.mp4
+#EXTINF:10
+3.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.dateRanges.sooner.isValid).to.equal(
+        true,
+        'is valid DateRange',
+      );
+      expect(details.dateRanges.sooner.tagAnchor)
+        .to.have.property('sn')
+        .which.equals(2);
+      expect(details.dateRanges.sooner.startTime).to.equal(10);
+    });
+
+    it('adds PROGRAM-DATE-TIME and DATERANGE tag text to fragment[].tagList for backwards compatibility', function () {
+      const playlist = `#EXTM3U
 #EXT-X-TARGETDURATION:10
 #EXT-X-VERSION:4
 #EXT-X-MEDIA-SEQUENCE:0
@@ -1828,38 +1861,39 @@ main3.aac
 #EXT-X-DATERANGE:ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:51:18Z",DURATION=30.0,SCTE35-IN=0xFC002F0000000000FF
 #EXTINF:9.9846,
 main4.aac
-`;
-    const details = M3U8Parser.parseLevelPlaylist(
-      playlist,
-      'http://dummy.url.com/playlist.m3u8',
-      0,
-      PlaylistLevelType.MAIN,
-      0,
-      null,
-    );
-    expectWithJSONMessage(details.fragments[0].tagList).to.deep.equal([
-      ['PROGRAM-DATE-TIME', '2018-09-28T16:50:26Z'],
-      ['INF', '10'],
-    ]);
-    expectWithJSONMessage(details.fragments[1].tagList).to.deep.equal([
-      ['PROGRAM-DATE-TIME', '2018-09-28T16:50:36Z'],
-      [
-        'EXT-X-DATERANGE',
-        'ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:50:48Z",PLANNED-DURATION=20.0,X-CUSTOM="Hi!",SCTE35-OUT=0xFC002F0000000000FF',
-      ],
-      ['INF', '10'],
-    ]);
-    expectWithJSONMessage(details.fragments[2].tagList).to.deep.equal([
-      ['INF', '10'],
-    ]);
-    expectWithJSONMessage(details.fragments[3].tagList).to.deep.equal([
-      ['PROGRAM-DATE-TIME', '2018-09-28T16:50:56Z'],
-      [
-        'EXT-X-DATERANGE',
-        'ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:51:18Z",DURATION=30.0,SCTE35-IN=0xFC002F0000000000FF',
-      ],
-      ['INF', '9.9846'],
-    ]);
+  `;
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectWithJSONMessage(details.fragments[0].tagList).to.deep.equal([
+        ['PROGRAM-DATE-TIME', '2018-09-28T16:50:26Z'],
+        ['INF', '10'],
+      ]);
+      expectWithJSONMessage(details.fragments[1].tagList).to.deep.equal([
+        ['PROGRAM-DATE-TIME', '2018-09-28T16:50:36Z'],
+        [
+          'EXT-X-DATERANGE',
+          'ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:50:48Z",PLANNED-DURATION=20.0,X-CUSTOM="Hi!",SCTE35-OUT=0xFC002F0000000000FF',
+        ],
+        ['INF', '10'],
+      ]);
+      expectWithJSONMessage(details.fragments[2].tagList).to.deep.equal([
+        ['INF', '10'],
+      ]);
+      expectWithJSONMessage(details.fragments[3].tagList).to.deep.equal([
+        ['PROGRAM-DATE-TIME', '2018-09-28T16:50:56Z'],
+        [
+          'EXT-X-DATERANGE',
+          'ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:51:18Z",DURATION=30.0,SCTE35-IN=0xFC002F0000000000FF',
+        ],
+        ['INF', '9.9846'],
+      ]);
+    });
   });
 
   it('tests : at end of tag name is used to divide custom tags', function () {

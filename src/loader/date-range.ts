@@ -57,10 +57,9 @@ export class DateRange {
   constructor(
     dateRangeAttr: AttrList,
     dateRangeWithSameId?: DateRange | undefined,
-    frag: Fragment | null = null,
     tagCount: number = 0,
   ) {
-    this.tagAnchor = dateRangeWithSameId?.tagAnchor ?? frag;
+    this.tagAnchor = dateRangeWithSameId?.tagAnchor || null;
     this.tagOrder = dateRangeWithSameId?.tagOrder ?? tagCount;
     if (dateRangeWithSameId) {
       const previousAttr = dateRangeWithSameId.attr;
