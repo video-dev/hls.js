@@ -350,7 +350,6 @@ export default class BaseStreamController
   }
 
   protected onHandlerDestroying() {
-    this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     this.stopLoad();
     super.onHandlerDestroying();
     // @ts-ignore
@@ -581,7 +580,9 @@ export default class BaseStreamController
       throw new Error('init load aborted, missing levels');
     }
     const stats = data.frag.stats;
-    this.state = State.IDLE;
+    if (this.state !== State.STOPPED) {
+      this.state = State.IDLE;
+    }
     data.frag.data = new Uint8Array(data.payload);
     stats.parsing.start = stats.buffering.start = self.performance.now();
     stats.parsing.end = stats.buffering.end = self.performance.now();
