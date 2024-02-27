@@ -693,19 +693,13 @@ export default class M3U8Parser {
             startDateTime,
             programDateTimes,
             pdtIndex,
-            totalduration,
           )
         ) {
           // DateRange not mappable to segments between surrounding ProgramDateTime tags, find alternate starting at anchor and looping backwards:
           for (let j = programDateTimeCount; j--; ) {
             const k = (j + pdtIndex) % programDateTimeCount;
             if (
-              dateRangeMapsToProgramDateTime(
-                startDateTime,
-                programDateTimes,
-                k,
-                totalduration,
-              )
+              dateRangeMapsToProgramDateTime(startDateTime, programDateTimes, k)
             ) {
               dateRange.tagAnchor = programDateTimes[k];
               break;
@@ -725,12 +719,11 @@ function dateRangeMapsToProgramDateTime(
   startDateTime: number,
   programDateTimes: Fragment[],
   index: number,
-  totalduration: number,
 ): boolean {
   const pdtFragment = programDateTimes[index];
   if (pdtFragment) {
     const durationBetweenPdt =
-      (programDateTimes[index + 1]?.start || totalduration) - pdtFragment.start;
+      (programDateTimes[index + 1]?.start || Infinity) - pdtFragment.start;
     const pdtStart = pdtFragment.programDateTime as number;
     return (
       startDateTime >= pdtStart &&
