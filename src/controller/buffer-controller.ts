@@ -101,7 +101,10 @@ export default class BufferController extends Logger implements ComponentAPI {
     super('buffer-controller', hls.logger);
     this.hls = hls;
     this.fragmentTracker = fragmentTracker;
-    this.appendSource = hls.config.preferManagedMediaSource;
+    this.appendSource =
+      hls.config.preferManagedMediaSource &&
+      typeof self !== 'undefined' &&
+      (self as any).ManagedMediaSource;
     this._initSourceBuffer();
     this.registerListeners();
   }
@@ -211,8 +214,10 @@ export default class BufferController extends Logger implements ComponentAPI {
       ms.addEventListener('sourceopen', this._onMediaSourceOpen);
       ms.addEventListener('sourceended', this._onMediaSourceEnded);
       ms.addEventListener('sourceclose', this._onMediaSourceClose);
-      ms.addEventListener('startstreaming', this._onStartStreaming);
-      ms.addEventListener('endstreaming', this._onEndStreaming);
+      if (this.appendSource) {
+        ms.addEventListener('startstreaming', this._onStartStreaming);
+        ms.addEventListener('endstreaming', this._onEndStreaming);
+      }
 
       // cache the locally generated object url
       const objectUrl = (this._objectUrl = self.URL.createObjectURL(ms));
@@ -271,8 +276,13 @@ export default class BufferController extends Logger implements ComponentAPI {
       mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);
       mediaSource.removeEventListener('sourceended', this._onMediaSourceEnded);
       mediaSource.removeEventListener('sourceclose', this._onMediaSourceClose);
-      mediaSource.removeEventListener('startstreaming', this._onStartStreaming);
-      mediaSource.removeEventListener('endstreaming', this._onEndStreaming);
+      if (this.appendSource) {
+        mediaSource.removeEventListener(
+          'startstreaming',
+          this._onStartStreaming,
+        );
+        mediaSource.removeEventListener('endstreaming', this._onEndStreaming);
+      }
 
       // Detach properly the MediaSource from the HTMLMediaElement as
       // suggested in https://github.com/w3c/media-source/issues/53.
@@ -363,7 +373,7 @@ export default class BufferController extends Logger implements ComponentAPI {
             if (trackName.slice(0, 5) === 'audio') {
               trackCodec = getCodecCompatibleName(
                 trackCodec,
-                this.hls.config.preferManagedMediaSource,
+                this.appendSource,
               );
             }
             const mimeType = `${container};codecs=${trackCodec}`;
@@ -1049,10 +1059,7 @@ export default class BufferController extends Logger implements ComponentAPI {
         let codec = track.levelCodec || track.codec;
         if (codec) {
           if (trackName.slice(0, 5) === 'audio') {
-            codec = getCodecCompatibleName(
-              codec,
-              this.hls.config.preferManagedMediaSource,
-            );
+            codec = getCodecCompatibleName(codec, this.appendSource);
           }
         }
         const mimeType = `${track.container};codecs=${codec}`;
@@ -1065,19 +1072,21 @@ export default class BufferController extends Logger implements ComponentAPI {
           this.addBufferListener(sbName, 'updateend', this._onSBUpdateEnd);
           this.addBufferListener(sbName, 'error', this._onSBUpdateError);
           // ManagedSourceBuffer bufferedchange event
-          this.addBufferListener(
-            sbName,
-            'bufferedchange',
-            (type: SourceBufferName, event: BufferedChangeEvent) => {
-              // If media was ejected check for a change. Added ranges are redundant with changes on 'updateend' event.
-              const removedRanges = event.removedRanges;
-              if (removedRanges?.length) {
-                this.hls.trigger(Events.BUFFER_FLUSHED, {
-                  type: trackName as SourceBufferName,
-                });
-              }
-            },
-          );
+          if (this.appendSource) {
+            this.addBufferListener(
+              sbName,
+              'bufferedchange',
+              (type: SourceBufferName, event: BufferedChangeEvent) => {
+                // If media was ejected check for a change. Added ranges are redundant with changes on 'updateend' event.
+                const removedRanges = event.removedRanges;
+                if (removedRanges?.length) {
+                  this.hls.trigger(Events.BUFFER_FLUSHED, {
+                    type: trackName as SourceBufferName,
+                  });
+                }
+              },
+            );
+          }
 
           this.tracks[trackName] = {
             buffer: sb,
