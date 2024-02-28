@@ -138,6 +138,7 @@ class CapLevelController implements ComponentAPI {
 
   protected onMediaDetaching() {
     this.stopCapping();
+    this.media = null;
   }
 
   detectPlayerSize() {
