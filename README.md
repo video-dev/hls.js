@@ -307,7 +307,7 @@ HLS.js is supported on:
 
 A [Promise polyfill](https://github.com/taylorhakes/promise-polyfill) is required in browsers missing native promise support.
 
-**Please note:** 
+**Please note:**
 
 Safari browsers (iOS, iPadOS, and macOS) have built-in HLS support through the plain video "tag" source URL. See the example below (Using HLS.js) to run appropriate feature detection and choose between using HLS.js or natively built-in HLS support.
 
