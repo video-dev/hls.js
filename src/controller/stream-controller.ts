@@ -528,8 +528,8 @@ export default class StreamController
     if (media) {
       media.removeEventListener('playing', this.onMediaPlaying);
       media.removeEventListener('seeked', this.onMediaSeeked);
-      this.videoBuffer = null;
     }
+    this.videoBuffer = null;
     this.fragPlaying = null;
     if (this.gapController) {
       this.gapController.destroy();

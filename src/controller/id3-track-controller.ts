@@ -137,11 +137,10 @@ class ID3TrackController implements ComponentAPI {
   }
 
   protected onMediaDetaching(): void {
-    if (!this.id3Track) {
-      return;
+    if (this.id3Track) {
+      clearCurrentCues(this.id3Track);
+      this.id3Track = null;
     }
-    clearCurrentCues(this.id3Track);
-    this.id3Track = null;
     this.media = null;
     this.dateRangeCuesAppended = {};
   }
