@@ -27,10 +27,12 @@ class FPSController implements ComponentAPI {
 
   protected registerListeners() {
     this.hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    this.hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
   }
 
   protected unregisterListeners() {
     this.hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    this.hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
   }
 
   destroy() {
@@ -62,6 +64,10 @@ class FPSController implements ComponentAPI {
         config.fpsDroppedMonitoringPeriod,
       );
     }
+  }
+
+  private onMediaDetaching() {
+    this.media = null;
   }
 
   checkFPS(

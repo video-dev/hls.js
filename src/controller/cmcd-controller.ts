@@ -81,7 +81,7 @@ export default class CMCDController implements ComponentAPI {
     // @ts-ignore
     this.hls = this.config = this.audioBuffer = this.videoBuffer = null;
     // @ts-ignore
-    this.onWaiting = this.onPlaying = null;
+    this.onWaiting = this.onPlaying = this.media = null;
   }
 
   private onMediaAttached(
@@ -308,7 +308,7 @@ export default class CMCDController implements ComponentAPI {
    * Get the buffer length for a media type in milliseconds
    */
   private getBufferLength(type: CmcdObjectType) {
-    const media = this.hls.media;
+    const media = this.media;
     const buffer =
       type === CmcdObjectType.AUDIO ? this.audioBuffer : this.videoBuffer;
 

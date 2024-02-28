@@ -284,36 +284,37 @@ export default class BufferController extends Logger implements ComponentAPI {
         mediaSource.removeEventListener('endstreaming', this._onEndStreaming);
       }
 
-      // Detach properly the MediaSource from the HTMLMediaElement as
-      // suggested in https://github.com/w3c/media-source/issues/53.
-      if (media) {
-        media.removeEventListener('emptied', this._onMediaEmptied);
-        if (_objectUrl) {
-          self.URL.revokeObjectURL(_objectUrl);
-        }
+      this.mediaSource = null;
+      this._objectUrl = null;
+    }
 
-        // clean up video tag src only if it's our own url. some external libraries might
-        // hijack the video tag and change its 'src' without destroying the Hls instance first
-        if (this.mediaSrc === _objectUrl) {
-          media.removeAttribute('src');
-          if (this.appendSource) {
-            removeSourceChildren(media);
-          }
-          media.load();
-        } else {
-          this.warn(
-            'media|source.src was changed by a third party - skip cleanup',
-          );
-        }
+    // Detach properly the MediaSource from the HTMLMediaElement as
+    // suggested in https://github.com/w3c/media-source/issues/53.
+    if (media) {
+      media.removeEventListener('emptied', this._onMediaEmptied);
+      if (_objectUrl) {
+        self.URL.revokeObjectURL(_objectUrl);
       }
 
-      this.mediaSource = null;
+      // clean up video tag src only if it's our own url. some external libraries might
+      // hijack the video tag and change its 'src' without destroying the Hls instance first
+      if (this.mediaSrc === _objectUrl) {
+        media.removeAttribute('src');
+        if (this.appendSource) {
+          removeSourceChildren(media);
+        }
+        media.load();
+      } else {
+        this.warn(
+          'media|source.src was changed by a third party - skip cleanup',
+        );
+      }
       this.media = null;
-      this._objectUrl = null;
-      this.bufferCodecEventsExpected = this._bufferCodecEventsTotal;
-      this.pendingTracks = {};
-      this.tracks = {};
     }
+
+    this.bufferCodecEventsExpected = this._bufferCodecEventsTotal;
+    this.pendingTracks = {};
+    this.tracks = {};
 
     this.hls.trigger(Events.MEDIA_DETACHED, undefined);
   }
