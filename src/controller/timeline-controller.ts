@@ -130,7 +130,7 @@ export class TimelineController implements ComponentAPI {
     hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
     // @ts-ignore
-    this.hls = this.config = null;
+    this.hls = this.config = this.media = null;
     this.cea608Parser1 = this.cea608Parser2 = undefined;
   }
 
@@ -303,6 +303,7 @@ export class TimelineController implements ComponentAPI {
       delete captionsTracks[trackName];
     });
     this.nonNativeCaptionsTracks = {};
+    this.media = null;
   }
 
   private onManifestLoading() {
