@@ -129,8 +129,5 @@
     "typescript": "5.3.3",
     "url-toolkit": "2.2.5",
     "wrangler": "3.24.0"
-  },
-  "dependencies": {
-    "ci": "^2.3.0"
   }
 }
