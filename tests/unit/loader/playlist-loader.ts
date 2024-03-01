@@ -1842,6 +1842,38 @@ segment.m4s
       expect(details.dateRanges.sooner.startTime).to.equal(10);
     });
 
+    it('ensures DateRanges that start before the program are mapped to the first PDT tag', function () {
+      const playlist = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PROGRAM-DATE-TIME:2000-01-01T00:00:00.000Z
+#EXT-X-DATERANGE:ID="earlier",START-DATE="1999-12-31T23:59:50.000Z"
+#EXTINF:10
+1.mp4
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2000-01-01T00:00:20.000Z
+#EXTINF:10
+2.mp4
+#EXTINF:10
+3.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.dateRanges.earlier.isValid).to.equal(
+        true,
+        'is valid DateRange',
+      );
+      expect(details.dateRanges.earlier.tagAnchor)
+        .to.have.property('sn')
+        .which.equals(1);
+      expect(details.dateRanges.earlier.startTime).to.equal(-10);
+    });
+
     it('adds PROGRAM-DATE-TIME and DATERANGE tag text to fragment[].tagList for backwards compatibility', function () {
       const playlist = `#EXTM3U
 #EXT-X-TARGETDURATION:10

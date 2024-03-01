@@ -427,14 +427,19 @@ export default class M3U8Parser {
             currentSN = level.startSN = parseInt(value1);
             break;
           case 'SKIP': {
+            if (level.skippedSegments) {
+              level.playlistParsingError = new Error(
+                `#EXT-X-SKIP MUST NOT appear more than once in a Playlist`,
+              );
+            }
             const skipAttrs = new AttrList(value1, level);
             const skippedSegments =
               skipAttrs.decimalInteger('SKIPPED-SEGMENTS');
             if (Number.isFinite(skippedSegments)) {
-              level.skippedSegments = skippedSegments;
+              level.skippedSegments += skippedSegments;
               // This will result in fragments[] containing undefined values, which we will fill in with `mergeDetails`
               for (let i = skippedSegments; i--; ) {
-                fragments.unshift(null);
+                fragments.push(null);
               }
               currentSN += skippedSegments;
             }
@@ -442,8 +447,9 @@ export default class M3U8Parser {
               'RECENTLY-REMOVED-DATERANGES',
             );
             if (recentlyRemovedDateranges) {
-              level.recentlyRemovedDateranges =
-                recentlyRemovedDateranges.split('\t');
+              level.recentlyRemovedDateranges = (
+                level.recentlyRemovedDateranges || []
+              ).concat(recentlyRemovedDateranges.split('\t'));
             }
             break;
           }
@@ -660,58 +666,73 @@ export default class M3U8Parser {
     if (level.fragmentHint) {
       totalduration += level.fragmentHint.duration;
     }
-    const programDateTimeCount = programDateTimes.length;
-    if (programDateTimeCount) {
-      /**
-       * Backfill any missing PDT values
-       * "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
-       * one or more Media Segment URIs, the client SHOULD extrapolate
-       * backward from that tag (using EXTINF durations and/or media
-       * timestamps) to associate dates with those segments."
-       * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
-       * computed.
-       */
-      if (firstPdtIndex > 0) {
-        backfillProgramDateTimes(fragments, firstPdtIndex);
-        if (firstFragment) {
-          programDateTimes.unshift(firstFragment);
-        }
-      }
-      // Make sure DateRanges are mapped to a ProgramDateTime tag that applies a date to a segment that overlaps with its start date
-      const lastProgramDateTime = programDateTimes[programDateTimeCount - 1];
-      for (let i = dateRangeMapping.length; i--; ) {
-        const dateRange = dateRangeMapping[i][0];
-        const pdtIndex = dateRange.tagAnchor
-          ? dateRangeMapping[i][1]
-          : programDateTimeCount - 1;
-        if (!dateRange.tagAnchor) {
-          dateRange.tagAnchor = lastProgramDateTime;
-        }
-        const startDateTime = dateRange.startDate.getTime();
-        if (
-          !dateRangeMapsToProgramDateTime(
-            startDateTime,
-            programDateTimes,
-            pdtIndex,
-          )
-        ) {
-          // DateRange not mappable to segments between surrounding ProgramDateTime tags, find alternate starting at anchor and looping backwards:
-          for (let j = programDateTimeCount; j--; ) {
-            const k = (j + pdtIndex) % programDateTimeCount;
-            if (
-              dateRangeMapsToProgramDateTime(startDateTime, programDateTimes, k)
-            ) {
-              dateRange.tagAnchor = programDateTimes[k];
-              break;
-            }
-          }
-        }
+    level.totalduration = totalduration;
+    if (programDateTimes.length && firstFragment) {
+      mapDateRanges(programDateTimes, dateRangeMapping, level);
+    }
+    /**
+     * Backfill any missing PDT values
+     * "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
+     * one or more Media Segment URIs, the client SHOULD extrapolate
+     * backward from that tag (using EXTINF durations and/or media
+     * timestamps) to associate dates with those segments."
+     * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
+     * computed.
+     */
+    if (firstPdtIndex > 0) {
+      backfillProgramDateTimes(fragments, firstPdtIndex);
+      if (firstFragment) {
+        programDateTimes.unshift(firstFragment);
       }
     }
-    level.totalduration = totalduration;
+
     level.endCC = discontinuityCounter;
 
     return level;
+  }
+}
+
+export function mapDateRanges(
+  programDateTimes: Fragment[],
+  dateRangeMapping: [DateRange, number][],
+  details: LevelDetails,
+) {
+  // Make sure DateRanges are mapped to a ProgramDateTime tag that applies a date to a segment that overlaps with its start date
+  const programDateTimeCount = programDateTimes.length;
+  const lastProgramDateTime = programDateTimes[programDateTimeCount - 1];
+  const playlistEnd = details.live ? Infinity : details.totalduration;
+  for (let i = dateRangeMapping.length; i--; ) {
+    const dateRange = dateRangeMapping[i][0];
+    const pdtIndex = dateRange.tagAnchor
+      ? dateRangeMapping[i][1]
+      : programDateTimeCount - 1;
+    if (!dateRange.tagAnchor) {
+      dateRange.tagAnchor = lastProgramDateTime;
+    }
+    const startDateTime = dateRange.startDate.getTime();
+    if (
+      !dateRangeMapsToProgramDateTime(
+        startDateTime,
+        programDateTimes,
+        pdtIndex,
+        playlistEnd,
+      )
+    ) {
+      // DateRange not mappable to segments between surrounding ProgramDateTime tags, find alternate starting at anchor and looping backwards:
+      for (let j = programDateTimeCount; j--; ) {
+        if (
+          dateRangeMapsToProgramDateTime(
+            startDateTime,
+            programDateTimes,
+            j,
+            playlistEnd,
+          )
+        ) {
+          dateRange.tagAnchor = programDateTimes[j];
+          break;
+        }
+      }
+    }
   }
 }
 
@@ -719,15 +740,16 @@ function dateRangeMapsToProgramDateTime(
   startDateTime: number,
   programDateTimes: Fragment[],
   index: number,
+  endTime: number,
 ): boolean {
   const pdtFragment = programDateTimes[index];
   if (pdtFragment) {
     const durationBetweenPdt =
-      (programDateTimes[index + 1]?.start || Infinity) - pdtFragment.start;
+      (programDateTimes[index + 1]?.start || endTime) - pdtFragment.start;
     const pdtStart = pdtFragment.programDateTime as number;
     return (
-      startDateTime >= pdtStart &&
-      startDateTime <= pdtStart + durationBetweenPdt
+      (startDateTime >= pdtStart || index === 0) &&
+      startDateTime <= pdtStart + durationBetweenPdt * 1000
     );
   }
   return false;
@@ -823,22 +845,22 @@ function backfillProgramDateTimes(
   }
 }
 
-function assignProgramDateTime(
+export function assignProgramDateTime(
   frag: Fragment,
   prevFrag: Fragment | null,
-  programDateTimeMap: Fragment[],
+  programDateTimes: Fragment[],
   dateRangeMapping: [DateRange, number][],
 ) {
   if (frag.rawProgramDateTime) {
     frag.programDateTime = Date.parse(frag.rawProgramDateTime);
     if (frag.sn !== 'initSegment' && Number.isFinite(frag.programDateTime)) {
-      programDateTimeMap.push(frag);
+      programDateTimes.push(frag);
       // Anchor DateRanges to last ProgramDateTime initially. Mapping to segments is finalized at the end of Playlist parsing.
       for (let i = dateRangeMapping.length; i--; ) {
         const dateRange = dateRangeMapping[i][0];
         if (!dateRange.tagAnchor) {
           dateRange.tagAnchor = frag;
-          dateRangeMapping[i][1] = programDateTimeMap.length - 1;
+          dateRangeMapping[i][1] = programDateTimes.length - 1;
         }
       }
     }
