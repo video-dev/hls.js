@@ -1,7 +1,6 @@
 // breaking up those two types in order to clarify what is happening in the decoding path.
 type DecodedFrame<T> = { key: string; data: T; info?: any };
 export type Frame = DecodedFrame<ArrayBuffer | string>;
-
 // http://stackoverflow.com/questions/8936984/uint8array-to-string-in-javascript/22373197
 // http://www.onicos.com/staff/iz/amuse/javascript/expert/utf.txt
 /* utf.js - UTF-8 <=> UTF-16 convertion
@@ -18,17 +17,14 @@ export const utf8ArrayToStr = (
   const decoder = getTextDecoder();
   if (decoder) {
     const decoded = decoder.decode(array);
-
     if (exitOnNull) {
       // grab up to the first null
       const idx = decoded.indexOf('\0');
       return idx !== -1 ? decoded.substring(0, idx) : decoded;
     }
-
     // remove any null characters
     return decoded.replace(/\0/g, '');
   }
-
   const len = array.length;
   let c;
   let char2;
@@ -74,19 +70,20 @@ export const utf8ArrayToStr = (
   }
   return out;
 };
-
 let decoder: TextDecoder;
-
 function getTextDecoder() {
   // On Play Station 4, TextDecoder is defined but partially implemented.
   // Manual decoding option is preferable
   if (navigator.userAgent.includes('PlayStation 4')) {
     return;
   }
-
   if (!decoder && typeof self.TextDecoder !== 'undefined') {
     decoder = new self.TextDecoder('utf-8');
   }
-
   return decoder;
+}
+export function strToUtf8array(str: string): Uint8Array {
+  return Uint8Array.from(unescape(encodeURIComponent(str)), (c) =>
+    c.charCodeAt(0),
+  );
 }

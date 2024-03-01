@@ -1,7 +1,7 @@
 import { expect } from 'chai';
-import { utf8ArrayToStr } from '../../../src/demux/id3';
+import { utf8ArrayToStr } from '../../../src/utils/utf8-utils';
 
-describe('ID3 tests', function () {
+describe('UTF8 tests', function () {
   it('utf8ArrayToStr', function (done) {
     const aB = new Uint8Array([97, 98]);
     const aNullBNullC = new Uint8Array([97, 0, 98, 0, 99]);
