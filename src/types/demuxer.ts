@@ -77,6 +77,7 @@ export interface DemuxedVideoTrackBase extends DemuxedTrack {
   pps?: Uint8Array[];
   sps?: Uint8Array[];
   naluState?: number;
+  lastNalu?: VideoSampleUnit | null;
   segmentCodec?: string;
   manifestCodec?: string;
   samples: VideoSample[] | Uint8Array;
