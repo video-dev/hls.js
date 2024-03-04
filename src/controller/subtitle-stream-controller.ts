@@ -105,21 +105,21 @@ export class SubtitleStreamController
     this.tick();
   }
 
-  onManifestLoading() {
+  protected onManifestLoading() {
     this.mainDetails = null;
     this.fragmentTracker.removeAllFragments();
   }
 
-  onMediaDetaching(): void {
+  protected onMediaDetaching(): void {
     this.tracksBuffered = [];
     super.onMediaDetaching();
   }
 
-  onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
+  private onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     this.mainDetails = data.details;
   }
 
-  onSubtitleFragProcessed(
+  private onSubtitleFragProcessed(
     event: Events.SUBTITLE_FRAG_PROCESSED,
     data: SubtitleFragProcessed,
   ) {
@@ -160,7 +160,10 @@ export class SubtitleStreamController
     this.fragBufferedComplete(frag, null);
   }
 
-  onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData) {
+  private onBufferFlushing(
+    event: Events.BUFFER_FLUSHING,
+    data: BufferFlushingData,
+  ) {
     const { startOffset, endOffset } = data;
     if (startOffset === 0 && endOffset !== Number.POSITIVE_INFINITY) {
       const endOffsetSubtitles = endOffset - 1;
@@ -189,7 +192,7 @@ export class SubtitleStreamController
     }
   }
 
-  onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+  private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     if (!this.loadedmetadata && data.frag.type === PlaylistLevelType.MAIN) {
       if (this.media?.buffered.length) {
         this.loadedmetadata = true;
@@ -198,7 +201,7 @@ export class SubtitleStreamController
   }
 
   // If something goes wrong, proceed to next frag, if we were processing one.
-  onError(event: Events.ERROR, data: ErrorData) {
+  protected onError(event: Events.ERROR, data: ErrorData) {
     const frag = data.frag;
 
     if (frag?.type === PlaylistLevelType.SUBTITLE) {
@@ -212,11 +215,11 @@ export class SubtitleStreamController
   }
 
   // Got all new subtitle levels.
-  onSubtitleTracksUpdated(
+  private onSubtitleTracksUpdated(
     event: Events.SUBTITLE_TRACKS_UPDATED,
     { subtitleTracks }: SubtitleTracksUpdatedData,
   ) {
-    if (!this.levels || subtitleOptionsIdentical(this.levels, subtitleTracks)) {
+    if (this.levels && subtitleOptionsIdentical(this.levels, subtitleTracks)) {
       this.levels = subtitleTracks.map(
         (mediaPlaylist) => new Level(mediaPlaylist),
       );
@@ -237,7 +240,7 @@ export class SubtitleStreamController
     this.mediaBuffer = null;
   }
 
-  onSubtitleTrackSwitch(
+  private onSubtitleTrackSwitch(
     event: Events.SUBTITLE_TRACK_SWITCH,
     data: TrackSwitchedData,
   ) {
@@ -255,13 +258,13 @@ export class SubtitleStreamController
     } else {
       this.mediaBuffer = null;
     }
-    if (currentTrack) {
+    if (currentTrack && this.state !== State.STOPPED) {
       this.setInterval(TICK_INTERVAL);
     }
   }
 
   // Got a new set of subtitle fragments.
-  onSubtitleTrackLoaded(
+  private onSubtitleTrackLoaded(
     event: Events.SUBTITLE_TRACK_LOADED,
     data: TrackLoadedData,
   ) {
@@ -318,7 +321,7 @@ export class SubtitleStreamController
     this.levelLastLoaded = track;
 
     if (!this.startFragRequested && (this.mainDetails || !newDetails.live)) {
-      this.setStartPosition(track.details, sliding);
+      this.setStartPosition(this.mainDetails || newDetails, sliding);
     }
 
     // trigger handler right now
@@ -418,15 +421,9 @@ export class SubtitleStreamController
         config.maxBufferHole,
       );
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
-
-      const mainBufferInfo = this.getFwdBufferInfo(
-        this.media,
-        PlaylistLevelType.MAIN,
-      );
       const trackDetails = track.details as LevelDetails;
       const maxBufLen =
-        this.getMaxBufferLength(mainBufferInfo?.len) +
-        trackDetails.levelTargetDuration;
+        this.hls.maxBufferLength + trackDetails.levelTargetDuration;
 
       if (bufferLen > maxBufLen) {
         return;
@@ -480,14 +477,6 @@ export class SubtitleStreamController
         this.loadFragment(foundFrag, track, targetBufferTime);
       }
     }
-  }
-
-  protected getMaxBufferLength(mainBufferLength?: number): number {
-    const maxConfigBuffer = super.getMaxBufferLength();
-    if (!mainBufferLength) {
-      return maxConfigBuffer;
-    }
-    return Math.max(maxConfigBuffer, mainBufferLength);
   }
 
   protected loadFragment(

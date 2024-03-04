@@ -144,37 +144,21 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     doTick(): void;
     // (undocumented)
-    protected getMaxBufferLength(mainBufferLength?: number): number;
-    // (undocumented)
     protected _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
     // (undocumented)
     _handleFragmentLoadProgress(data: FragLoadedData): void;
     // (undocumented)
     protected loadFragment(frag: Fragment, track: Level, targetBufferTime: number): void;
     // (undocumented)
-    onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: TrackLoadedData): void;
-    // (undocumented)
-    onAudioTracksUpdated(event: Events.AUDIO_TRACKS_UPDATED, { audioTracks }: AudioTracksUpdatedData): void;
-    // (undocumented)
-    onAudioTrackSwitching(event: Events.AUDIO_TRACK_SWITCHING, data: AudioTrackSwitchingData): void;
-    // (undocumented)
-    onBufferCreated(event: Events.BUFFER_CREATED, data: BufferCreatedData): void;
-    // (undocumented)
-    onBufferReset(): void;
-    // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
-    // (undocumented)
-    onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData): void;
     // (undocumented)
     protected onHandlerDestroying(): void;
     // (undocumented)
     onInitPtsFound(event: Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale }: InitPTSFoundData): void;
     // (undocumented)
-    onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData): void;
+    protected onManifestLoading(): void;
     // (undocumented)
-    onManifestLoading(): void;
-    // (undocumented)
-    onMediaDetaching(): void;
+    protected onMediaDetaching(): void;
     // (undocumented)
     protected onTickEnd(): void;
     // (undocumented)
@@ -329,6 +313,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected bufferFragmentData(data: RemuxedTrack, frag: Fragment, part: Part | null, chunkMeta: ChunkMetadata, noBacktracking?: boolean): void;
     // (undocumented)
+    protected buffering: boolean;
+    // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
     protected clearTrackerIfNeeded(frag: Fragment): void;
@@ -453,6 +439,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected onTickEnd(): void;
     // (undocumented)
+    pauseBuffering(): void;
+    // (undocumented)
     protected playlistType: PlaylistLevelType;
     // (undocumented)
     protected recoverWorkerError(data: ErrorData): void;
@@ -476,6 +464,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected resetTransmuxer(): void;
     // (undocumented)
     protected resetWhenMissingContext(chunkMeta: ChunkMetadata): void;
+    // (undocumented)
+    resumeBuffering(): void;
     // (undocumented)
     protected retryDate: number;
     // (undocumented)
@@ -561,9 +551,9 @@ export interface BufferCodecsData {
 //
 // @public (undocumented)
 export class BufferController extends Logger implements ComponentAPI {
-    constructor(hls: Hls);
+    constructor(hls: Hls, fragmentTracker: FragmentTracker);
     // (undocumented)
-    protected appendChangeType(type: any, mimeType: any): void;
+    protected appendChangeType(type: SourceBufferName, mimeType: string): void;
     // (undocumented)
     appendErrors: {
         audio: number;
@@ -622,8 +612,6 @@ export class BufferController extends Logger implements ComponentAPI {
     trimBuffers(): void;
     // (undocumented)
     protected unregisterListeners(): void;
-    // (undocumented)
-    updateSeekableRange(levelDetails: any): void;
 }
 
 // Warning: (ae-missing-release-tag) "BufferControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1614,6 +1602,8 @@ class Hls implements HlsEventEmitter {
     get mainForwardBufferInfo(): BufferInfo | null;
     get manualLevel(): number;
     get maxAutoLevel(): number;
+    // (undocumented)
+    get maxBufferLength(): number;
     // (undocumented)
     get maxHdcpLevel(): HdcpLevel;
     set maxHdcpLevel(value: HdcpLevel);
@@ -2946,6 +2936,10 @@ export type MP4RemuxerConfig = {
 // @public (undocumented)
 export interface NetworkComponentAPI extends ComponentAPI {
     // (undocumented)
+    pauseBuffering?(): void;
+    // (undocumented)
+    resumeBuffering?(): void;
+    // (undocumented)
     startLoad(startPosition: number): void;
     // (undocumented)
     stopLoad(): void;
@@ -3205,39 +3199,19 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     // (undocumented)
     doTick(): void;
     // (undocumented)
-    protected getMaxBufferLength(mainBufferLength?: number): number;
-    // (undocumented)
     _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
     // (undocumented)
     protected loadFragment(frag: Fragment, level: Level, targetBufferTime: number): void;
     // (undocumented)
     get mediaBufferTimeRanges(): Bufferable;
     // (undocumented)
-    onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData): void;
-    // (undocumented)
-    onError(event: Events.ERROR, data: ErrorData): void;
-    // (undocumented)
-    onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData): void;
+    protected onError(event: Events.ERROR, data: ErrorData): void;
     // (undocumented)
     protected onHandlerDestroying(): void;
     // (undocumented)
-    onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData): void;
+    protected onManifestLoading(): void;
     // (undocumented)
-    onManifestLoading(): void;
-    // (undocumented)
-    onMediaDetaching(): void;
-    // Warning: (ae-forgotten-export) The symbol "SubtitleFragProcessed" needs to be exported by the entry point hls.d.ts
-    //
-    // (undocumented)
-    onSubtitleFragProcessed(event: Events.SUBTITLE_FRAG_PROCESSED, data: SubtitleFragProcessed): void;
-    // (undocumented)
-    onSubtitleTrackLoaded(event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData): void;
-    // (undocumented)
-    onSubtitleTracksUpdated(event: Events.SUBTITLE_TRACKS_UPDATED, { subtitleTracks }: SubtitleTracksUpdatedData): void;
-    // Warning: (ae-forgotten-export) The symbol "TrackSwitchedData" needs to be exported by the entry point hls.d.ts
-    //
-    // (undocumented)
-    onSubtitleTrackSwitch(event: Events.SUBTITLE_TRACK_SWITCH, data: TrackSwitchedData): void;
+    protected onMediaDetaching(): void;
     // (undocumented)
     protected registerListeners(): void;
     // (undocumented)

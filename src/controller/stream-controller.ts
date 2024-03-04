@@ -134,7 +134,8 @@ export default class StreamController
         }
         // set new level to playlist loader : this will trigger start level load
         // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
-        this.level = hls.nextLoadLevel = startLevel;
+        hls.nextLoadLevel = startLevel;
+        this.level = hls.loadLevel;
         this.loadedmetadata = false;
       }
       // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
@@ -213,15 +214,17 @@ export default class StreamController
   }
 
   private doTickIdle() {
+    if (!this.buffering) {
+      return;
+    }
     const { hls, levelLastLoaded, levels, media } = this;
-    const { config, nextLoadLevel: level } = hls;
 
     // if start level not parsed yet OR
     // if video not attached AND start fragment already requested OR start frag prefetch not enabled
     // exit loop, as we either need more info (level not parsed) or we need media to be attached to load new fragment
     if (
       levelLastLoaded === null ||
-      (!media && (this.startFragRequested || !config.startFragPrefetch))
+      (!media && (this.startFragRequested || !hls.config.startFragPrefetch))
     ) {
       return;
     }
@@ -231,6 +234,7 @@ export default class StreamController
       return;
     }
 
+    const level = hls.nextLoadLevel;
     if (!levels?.[level]) {
       return;
     }
@@ -524,8 +528,8 @@ export default class StreamController
     if (media) {
       media.removeEventListener('playing', this.onMediaPlaying);
       media.removeEventListener('seeked', this.onMediaSeeked);
-      this.videoBuffer = null;
     }
+    this.videoBuffer = null;
     this.fragPlaying = null;
     if (this.gapController) {
       this.gapController.destroy();
@@ -1335,6 +1339,15 @@ export default class StreamController
       this.mediaBuffer ? this.mediaBuffer : this.media,
       PlaylistLevelType.MAIN,
     );
+  }
+
+  public get maxBufferLength(): number {
+    const { levels, level } = this;
+    const levelInfo = levels?.[level];
+    if (!levelInfo) {
+      return this.config.maxBufferLength;
+    }
+    return this.getMaxBufferLength(levelInfo.maxBitrate);
   }
 
   private backtrack(frag: Fragment) {

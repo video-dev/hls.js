@@ -38,6 +38,13 @@ export function readUint32(buffer: Uint8Array, offset: number): number {
   return val < 0 ? 4294967296 + val : val;
 }
 
+export function readUint64(buffer: Uint8Array, offset: number) {
+  let result = readUint32(buffer, offset);
+  result *= Math.pow(2, 32);
+  result += readUint32(buffer, offset + 4);
+  return result;
+}
+
 export function readSint32(buffer: Uint8Array, offset: number): number {
   return (
     (buffer[offset] << 24) |
@@ -125,14 +132,16 @@ export function parseSegmentIndex(sidx: Uint8Array): SidxInfo | null {
   const timescale = readUint32(sidx, index);
   index += 4;
 
-  // TODO: parse earliestPresentationTime and firstOffset
-  // usually zero in our case
-  const earliestPresentationTime = 0;
-  const firstOffset = 0;
+  let earliestPresentationTime = 0;
+  let firstOffset = 0;
 
   if (version === 0) {
+    earliestPresentationTime = readUint32(sidx, index);
+    firstOffset = readUint32(sidx, index + 4);
     index += 8;
   } else {
+    earliestPresentationTime = readUint64(sidx, index);
+    firstOffset = readUint64(sidx, index + 8);
     index += 16;
   }
 
@@ -318,7 +327,7 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
     case 'mp4a': {
       const codecBox = findBox(sampleEntries, [fourCC])[0];
       const esdsBox = findBox(codecBox.subarray(28), ['esds'])[0];
-      if (esdsBox && esdsBox.length > 12) {
+      if (esdsBox && esdsBox.length > 7) {
         let i = 4;
         // ES Descriptor tag
         if (esdsBox[i++] !== 0x03) {
@@ -469,7 +478,9 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
 
 function skipBERInteger(bytes: Uint8Array, i: number): number {
   const limit = i + 5;
-  while (bytes[i++] & 0x80 && i < limit) {}
+  while (bytes[i++] & 0x80 && i < limit) {
+    /* do nothing */
+  }
   return i;
 }
 
@@ -677,19 +688,31 @@ export function getDuration(data: Uint8Array, initData: InitData) {
   }
   if (videoDuration === 0 && audioDuration === 0) {
     // If duration samples are not available in the traf use sidx subsegment_duration
+    let sidxMinStart = Infinity;
+    let sidxMaxEnd = 0;
     let sidxDuration = 0;
     const sidxs = findBox(data, ['sidx']);
     for (let i = 0; i < sidxs.length; i++) {
       const sidx = parseSegmentIndex(sidxs[i]);
       if (sidx?.references) {
-        sidxDuration += sidx.references.reduce(
+        sidxMinStart = Math.min(
+          sidxMinStart,
+          sidx.earliestPresentationTime / sidx.timescale,
+        );
+        const subSegmentDuration = sidx.references.reduce(
           (dur, ref) => dur + ref.info.duration || 0,
           0,
         );
+        sidxMaxEnd = Math.max(
+          sidxMaxEnd,
+          subSegmentDuration + sidx.earliestPresentationTime / sidx.timescale,
+        );
+        sidxDuration = sidxMaxEnd - sidxMinStart;
       }
     }
-
-    return sidxDuration;
+    if (sidxDuration && Number.isFinite(sidxDuration)) {
+      return sidxDuration;
+    }
   }
   if (videoDuration) {
     return videoDuration;

@@ -192,7 +192,19 @@ export default class BasePlaylistController
           details.targetduration * 1.5,
         );
         if (currentGoal > 0) {
-          if (previousDetails && currentGoal > previousDetails.tuneInGoal) {
+          if (cdnAge > details.targetduration * 3) {
+            // Omit segment and part directives when the last response was more than 3 target durations ago,
+            this.log(
+              `Playlist last advanced ${lastAdvanced.toFixed(
+                2,
+              )}s ago. Omitting segment and part directives.`,
+            );
+            msn = undefined;
+            part = undefined;
+          } else if (
+            previousDetails?.tuneInGoal &&
+            cdnAge - details.partTarget > previousDetails.tuneInGoal
+          ) {
             // If we attempted to get the next or latest playlist update, but currentGoal increased,
             // then we either can't catchup, or the "age" header cannot be trusted.
             this.warn(

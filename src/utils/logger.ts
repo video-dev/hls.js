@@ -64,14 +64,14 @@ function consolePrintFn(type: string, id: string | undefined): ILogFunction {
 function getLoggerFn(
   key: string,
   debugConfig: boolean | Partial<ILogger>,
-  id: string | undefined,
+  id?: string,
 ): ILogFunction {
   return debugConfig[key]
     ? debugConfig[key].bind(debugConfig)
     : consolePrintFn(key, id);
 }
 
-let exportedLogger: ILogger = createLogger();
+const exportedLogger: ILogger = createLogger();
 
 export function enableLogs(
   debugConfig: boolean | ILogger,
@@ -106,8 +106,14 @@ export function enableLogs(
       /* log fn threw an exception. All logger methods are no-ops. */
       return createLogger();
     }
+    // global exported logger uses the same functions as new logger without `id`
+    keys.forEach((key) => {
+      exportedLogger[key] = getLoggerFn(key, debugConfig);
+    });
+  } else {
+    // Reset global exported logger
+    Object.assign(exportedLogger, newLogger);
   }
-  exportedLogger = newLogger;
   return newLogger;
 }
 

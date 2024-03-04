@@ -73,12 +73,14 @@ export interface DemuxedVideoTrackBase extends DemuxedTrack {
   height?: number;
   pixelRatio?: [number, number];
   audFound?: boolean;
+  vps?: Uint8Array[];
   pps?: Uint8Array[];
   sps?: Uint8Array[];
   naluState?: number;
   segmentCodec?: string;
   manifestCodec?: string;
   samples: VideoSample[] | Uint8Array;
+  params?: object;
 }
 
 export interface DemuxedVideoTrack extends DemuxedVideoTrackBase {

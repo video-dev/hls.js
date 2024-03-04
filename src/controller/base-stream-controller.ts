@@ -100,6 +100,8 @@ export default class BaseStreamController
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
   protected initPTS: RationalTimestamp[] = [];
+  protected buffering: boolean = true;
+  private loadingParts: boolean = false;
 
   constructor(
     hls: Hls,
@@ -159,6 +161,14 @@ export default class BaseStreamController
     this.clearInterval();
     this.clearNextTick();
     this.state = State.STOPPED;
+  }
+
+  public pauseBuffering() {
+    this.buffering = false;
+  }
+
+  public resumeBuffering() {
+    this.buffering = true;
   }
 
   protected _streamEnded(
@@ -295,6 +305,21 @@ export default class BaseStreamController
       );
 
       this.lastCurrentTime = currentTime;
+      if (!this.loadingParts) {
+        const bufferEnd = Math.max(bufferInfo.end, currentTime);
+        const shouldLoadParts = this.shouldLoadParts(
+          this.getLevelDetails(),
+          bufferEnd,
+        );
+        if (shouldLoadParts) {
+          this.log(
+            `LL-Part loading ON after seeking to ${currentTime.toFixed(
+              2,
+            )} with buffer @${bufferEnd.toFixed(2)}`,
+          );
+          this.loadingParts = shouldLoadParts;
+        }
+      }
     }
 
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
@@ -325,7 +350,6 @@ export default class BaseStreamController
   }
 
   protected onHandlerDestroying() {
-    this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     this.stopLoad();
     super.onHandlerDestroying();
     // @ts-ignore
@@ -556,7 +580,9 @@ export default class BaseStreamController
       throw new Error('init load aborted, missing levels');
     }
     const stats = data.frag.stats;
-    this.state = State.IDLE;
+    if (this.state !== State.STOPPED) {
+      this.state = State.IDLE;
+    }
     data.frag.data = new Uint8Array(data.payload);
     stats.parsing.start = stats.buffering.start = self.performance.now();
     stats.parsing.end = stats.buffering.end = self.performance.now();
@@ -691,8 +717,23 @@ export default class BaseStreamController
       this.keyLoader.loadClear(frag, details.encryptedFragments);
     }
 
+    const fragPrevious = this.fragPrevious;
+    if (
+      frag.sn !== 'initSegment' &&
+      (!fragPrevious || frag.sn !== fragPrevious.sn)
+    ) {
+      const shouldLoadParts = this.shouldLoadParts(level.details, frag.end);
+      if (shouldLoadParts !== this.loadingParts) {
+        this.log(
+          `LL-Part loading ${
+            shouldLoadParts ? 'ON' : 'OFF'
+          } loading sn ${fragPrevious?.sn}->${frag.sn}`,
+        );
+        this.loadingParts = shouldLoadParts;
+      }
+    }
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
-    if (this.config.lowLatencyMode && frag.sn !== 'initSegment') {
+    if (this.loadingParts && frag.sn !== 'initSegment') {
       const partList = details.partList;
       if (partList && progressCallback) {
         if (targetBufferTime > frag.end && details.fragmentHint) {
@@ -761,6 +802,18 @@ export default class BaseStreamController
           return Promise.resolve(null);
         }
       }
+    }
+
+    if (frag.sn !== 'initSegment' && this.loadingParts) {
+      this.log(
+        `LL-Part loading OFF after next part miss @${targetBufferTime.toFixed(
+          2,
+        )}`,
+      );
+      this.loadingParts = false;
+    } else if (!frag.url) {
+      // Selected fragment hint for part but not loading parts
+      return Promise.resolve(null);
     }
 
     this.log(
@@ -890,7 +943,48 @@ export default class BaseStreamController
     if (part) {
       part.stats.parsing.end = now;
     }
+    // See if part loading should be disabled/enabled based on buffer and playback position.
+    if (frag.sn !== 'initSegment') {
+      const levelDetails = this.getLevelDetails();
+      const loadingPartsAtEdge = levelDetails && frag.sn > levelDetails.endSN;
+      const shouldLoadParts =
+        loadingPartsAtEdge || this.shouldLoadParts(levelDetails, frag.end);
+      if (shouldLoadParts !== this.loadingParts) {
+        this.log(
+          `LL-Part loading ${
+            shouldLoadParts ? 'ON' : 'OFF'
+          } after parsing segment ending @${frag.end.toFixed(2)}`,
+        );
+        this.loadingParts = shouldLoadParts;
+      }
+    }
+
     this.updateLevelTiming(frag, part, level, chunkMeta.partial);
+  }
+
+  private shouldLoadParts(
+    details: LevelDetails | undefined,
+    bufferEnd: number,
+  ): boolean {
+    if (this.config.lowLatencyMode) {
+      if (!details) {
+        return this.loadingParts;
+      }
+      if (details?.partList) {
+        // Buffer must be ahead of first part + duration of parts after last segment
+        // and playback must be at or past segment adjacent to part list
+        const firstPart = details.partList[0];
+        const safePartStart =
+          firstPart.end + (details.fragmentHint?.duration || 0);
+        if (
+          bufferEnd >= safePartStart &&
+          this.lastCurrentTime > firstPart.start - firstPart.fragment.duration
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   protected getCurrentContext(
@@ -1009,7 +1103,10 @@ export default class BaseStreamController
     // Workaround flaw in getting forward buffer when maxBufferHole is smaller than gap at current pos
     if (bufferInfo.len === 0 && bufferInfo.nextStart !== undefined) {
       const bufferedFragAtPos = this.fragmentTracker.getBufferedFrag(pos, type);
-      if (bufferedFragAtPos && bufferInfo.nextStart < bufferedFragAtPos.end) {
+      if (
+        bufferedFragAtPos &&
+        (bufferInfo.nextStart <= bufferedFragAtPos.end || bufferedFragAtPos.gap)
+      ) {
         return BufferHelper.bufferInfo(
           bufferable,
           pos,
@@ -1022,7 +1119,7 @@ export default class BaseStreamController
 
   protected getMaxBufferLength(levelBitrate?: number): number {
     const { config } = this;
-    let maxBufLen;
+    let maxBufLen: number;
     if (levelBitrate) {
       maxBufLen = Math.max(
         (8 * config.maxBufferSize) / levelBitrate,
@@ -1074,7 +1171,8 @@ export default class BaseStreamController
     // find fragment index, contiguous with end of buffer position
     const { config } = this;
     const start = fragments[0].start;
-    let frag;
+    const canLoadParts = config.lowLatencyMode && !!levelDetails.partList;
+    let frag: Fragment | null = null;
 
     if (levelDetails.live) {
       const initialLiveManifestSize = config.initialLiveManifestSize;
@@ -1094,6 +1192,10 @@ export default class BaseStreamController
           this.startPosition === -1) ||
         pos < start
       ) {
+        if (canLoadParts && !this.loadingParts) {
+          this.log(`LL-Part loading ON for initial live fragment`);
+          this.loadingParts = true;
+        }
         frag = this.getInitialLiveFragment(levelDetails, fragments);
         this.startPosition = this.nextLoadPosition = frag
           ? this.hls.liveSyncPosition || frag.start
@@ -1106,7 +1208,7 @@ export default class BaseStreamController
 
     // If we haven't run into any special cases already, just load the fragment most closely matching the requested position
     if (!frag) {
-      const end = config.lowLatencyMode
+      const end = this.loadingParts
         ? levelDetails.partEnd
         : levelDetails.fragmentEnd;
       frag = this.getFragmentAtPosition(pos, end, levelDetails);
@@ -1289,7 +1391,7 @@ export default class BaseStreamController
     const partList = levelDetails.partList;
 
     const loadingParts = !!(
-      config.lowLatencyMode &&
+      this.loadingParts &&
       partList?.length &&
       fragmentHint
     );
@@ -1657,7 +1759,9 @@ export default class BaseStreamController
     this.log('Reset loading state');
     this.fragCurrent = null;
     this.fragPrevious = null;
-    this.state = State.IDLE;
+    if (this.state !== State.STOPPED) {
+      this.state = State.IDLE;
+    }
   }
 
   protected resetStartWhenNotLoaded(level: Level | null): void {

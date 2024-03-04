@@ -737,7 +737,7 @@ Enable to use JavaScript version AES decryption for fallback of WebCrypto API.
 
 (default: `undefined`)
 
-When set, use this level as the default hls.startLevel. Keep in mind that the startLevel set with the API takes precedence over config.startLevel configuration parameter.
+When set, use this level as the default `hls.startLevel`. Keep in mind that the `startLevel` set with the API takes precedence over config.startLevel configuration parameter. `startLevel` should be set to value between 0 and the maximum index of `hls.levels`.
 
 ### `fragLoadingTimeOut` / `manifestLoadingTimeOut` / `levelLoadingTimeOut` (deprecated)
 
@@ -1625,6 +1625,7 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
 - `sessionId`: The CMCD session id. One will be automatically generated if none is provided.
 - `contentId`: The CMCD content id.
 - `useHeaders`: Send CMCD data in request headers instead of as query args. Defaults to `false`.
+- `includeKeys`: An optional array of CMCD keys. When present, only these CMCD fields will be included with each each request.
 
 ## Video Binding/Unbinding API
 

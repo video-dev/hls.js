@@ -138,6 +138,7 @@ class CapLevelController implements ComponentAPI {
 
   protected onMediaDetaching() {
     this.stopCapping();
+    this.media = null;
   }
 
   detectPlayerSize() {
@@ -157,6 +158,7 @@ class CapLevelController implements ComponentAPI {
         }
         hls.autoLevelCapping = maxLevel;
         if (
+          hls.autoLevelEnabled &&
           hls.autoLevelCapping > this.autoLevelCapping &&
           this.streamController
         ) {
