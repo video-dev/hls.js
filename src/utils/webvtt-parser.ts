@@ -1,5 +1,5 @@
 import { VTTParser } from './vttparser';
-import { utf8ArrayToStr } from './utf8-utils';
+import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
 import {
   RationalTimestamp,
   toMpegTsClockFromTimescale,

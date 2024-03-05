@@ -1,6 +1,6 @@
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { sliceUint8 } from './typed-array';
-import { utf8ArrayToStr } from './utf8-utils';
+import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
 import { logger } from '../utils/logger';
 import Hex from './hex';
 import type { PassthroughTrack, UserdataSample } from '../types/demuxer';
