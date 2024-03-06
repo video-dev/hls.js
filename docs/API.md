@@ -142,7 +142,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.maxHdcpLevel`](#hlsmaxhdcplevel)
   - [`hls.capLevelToPlayerSize`](#hlscapleveltoplayersize)
   - [`hls.bandwidthEstimate`](#hlsbandwidthestimate)
-  - [`hls.removeLevel(levelIndex, urlId)`](#hlsremovelevellevelindex-urlid)
+  - [`hls.removeLevel(levelIndex)`](#hlsremovelevellevelindex)
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
@@ -1729,9 +1729,9 @@ get: Returns the current bandwidth estimate in bits/s, if available. Otherwise, 
 
 set: Reset `EwmaBandWidthEstimator` using the value set as the new default estimate. This will update the value of `config.abrEwmaDefaultEstimate`.
 
-### `hls.removeLevel(levelIndex, urlId)`
+### `hls.removeLevel(levelIndex)`
 
-Remove a loaded level from the list of levels, or a url from a level's list of redundant urls.
+Remove a level from the list of loaded levels.
 This can be used to remove a rendition or playlist url that errors frequently from the list of levels that a user
 or hls.js can choose from.
 
