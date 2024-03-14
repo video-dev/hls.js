@@ -11,18 +11,6 @@ export type Frame = DecodedFrame<ArrayBuffer | string>;
  * This library is free.  You can redistribute it and/or modify it.
  */
 
-let decoder: TextDecoder;
-function getTextDecoder() {
-  // On Play Station 4, TextDecoder is defined but partially implemented.
-  // Manual decoding option is preferable
-  if (navigator.userAgent.includes('PlayStation 4')) {
-    return;
-  }
-  if (!decoder && typeof self.TextDecoder !== 'undefined') {
-    decoder = new self.TextDecoder('utf-8');
-  }
-  return decoder;
-}
 export function strToUtf8array(str: string): Uint8Array {
   return Uint8Array.from(unescape(encodeURIComponent(str)), (c) =>
     c.charCodeAt(0),
