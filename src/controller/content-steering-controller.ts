@@ -56,7 +56,7 @@ export default class ContentSteeringController
   private loader: Loader<LoaderContext> | null = null;
   private uri: string | null = null;
   private pathwayId: string = '.';
-  private pathwayPriority: string[] | null = null;
+  private _pathwayPriority: string[] | null = null;
   private timeToLoad: number = 300;
   private reloadTimer: number = -1;
   private updated: number = 0;
@@ -90,6 +90,16 @@ export default class ContentSteeringController
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
     hls.off(Events.MANIFEST_PARSED, this.onManifestParsed, this);
     hls.off(Events.ERROR, this.onError, this);
+  }
+
+  get pathwayPriority() {
+    return this._pathwayPriority;
+  }
+
+  set pathwayPriority(pathwayPriority) {
+    if (pathwayPriority) {
+      this.updatePathwayPriority(pathwayPriority);
+    }
   }
 
   startLoad() {
@@ -178,7 +188,7 @@ export default class ContentSteeringController
       errorAction.flags === ErrorActionFlags.MoveAllAlternatesMatchingHost
     ) {
       const levels = this.levels;
-      let pathwayPriority = this.pathwayPriority;
+      let pathwayPriority = this._pathwayPriority;
       let errorPathway = this.pathwayId;
       if (data.context) {
         const { groupId, pathwayId, type } = data.context;
@@ -247,7 +257,7 @@ export default class ContentSteeringController
   }
 
   private updatePathwayPriority(pathwayPriority: string[]) {
-    this.pathwayPriority = pathwayPriority;
+    this._pathwayPriority = pathwayPriority;
     let levels: Level[] | undefined;
 
     // Evaluate if we should remove the pathway from the penalized list

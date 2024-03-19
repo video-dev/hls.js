@@ -505,6 +505,20 @@ export default class LevelController extends BasePlaylistController {
     this._startLevel = newLevel;
   }
 
+  get pathwayPriority(): string[] | null {
+    if (this.steering) {
+      return this.steering.pathwayPriority;
+    }
+
+    return null;
+  }
+
+  set pathwayPriority(pathwayPriority) {
+    if (this.steering) {
+      this.steering.pathwayPriority = pathwayPriority;
+    }
+  }
+
   protected onError(event: Events.ERROR, data: ErrorData) {
     if (data.fatal || !data.context) {
       return;
