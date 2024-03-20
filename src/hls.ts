@@ -989,7 +989,7 @@ export default class Hls implements HlsEventEmitter {
     return this.levelController.pathwayPriority;
   }
 
-  set pathwayPriority(pathwayPriority: string[] | null) {
+  set pathwayPriority(pathwayPriority: string[]) {
     this.levelController.pathwayPriority = pathwayPriority;
   }
 }

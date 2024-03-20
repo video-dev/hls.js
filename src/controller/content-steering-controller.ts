@@ -62,7 +62,7 @@ export default class ContentSteeringController
   private updated: number = 0;
   private started: boolean = false;
   private enabled: boolean = true;
-  private levels: Level[] | null = null;
+  private _levels: Level[] | null = null;
   private audioTracks: MediaPlaylist[] | null = null;
   private subtitleTracks: MediaPlaylist[] | null = null;
   private penalizedPathways: { [pathwayId: string]: number } = {};
@@ -92,14 +92,25 @@ export default class ContentSteeringController
     hls.off(Events.ERROR, this.onError, this);
   }
 
-  get pathwayPriority() {
+  getPathwaysList(levels: Level[]) {
+    return levels.reduce((pathways, level) => {
+      if (pathways.indexOf(level.pathwayId) === -1) {
+        pathways.push(level.pathwayId);
+      }
+      return pathways;
+    }, [] as string[]);
+  }
+
+  get pathwayPriority(): string[] | null {
     return this._pathwayPriority;
   }
 
-  set pathwayPriority(pathwayPriority) {
-    if (pathwayPriority) {
-      this.updatePathwayPriority(pathwayPriority);
-    }
+  set pathwayPriority(pathwayPriority: string[]) {
+    this.updatePathwayPriority(pathwayPriority);
+  }
+
+  get levels(): Level[] {
+    return this._levels || [];
   }
 
   startLoad() {
@@ -138,13 +149,13 @@ export default class ContentSteeringController
     this.stopLoad();
     // @ts-ignore
     this.hls = null;
-    this.levels = this.audioTracks = this.subtitleTracks = null;
+    this._levels = this.audioTracks = this.subtitleTracks = null;
   }
 
   removeLevel(levelToRemove: Level) {
-    const levels = this.levels;
+    const levels = this._levels;
     if (levels) {
-      this.levels = levels.filter((level) => level !== levelToRemove);
+      this._levels = levels.filter((level) => level !== levelToRemove);
     }
   }
 
@@ -155,7 +166,7 @@ export default class ContentSteeringController
     this.updated = 0;
     this.uri = null;
     this.pathwayId = '.';
-    this.levels = this.audioTracks = this.subtitleTracks = null;
+    this._levels = this.audioTracks = this.subtitleTracks = null;
   }
 
   private onManifestLoaded(
@@ -187,7 +198,7 @@ export default class ContentSteeringController
       errorAction?.action === NetworkErrorAction.SendAlternateToPenaltyBox &&
       errorAction.flags === ErrorActionFlags.MoveAllAlternatesMatchingHost
     ) {
-      const levels = this.levels;
+      const levels = this._levels;
       let pathwayPriority = this._pathwayPriority;
       let errorPathway = this.pathwayId;
       if (data.context) {
@@ -203,12 +214,7 @@ export default class ContentSteeringController
       }
       if (!pathwayPriority && levels) {
         // If PATHWAY-PRIORITY was not provided, list pathways for error handling
-        pathwayPriority = levels.reduce((pathways, level) => {
-          if (pathways.indexOf(level.pathwayId) === -1) {
-            pathways.push(level.pathwayId);
-          }
-          return pathways;
-        }, [] as string[]);
+        pathwayPriority = this.getPathwaysList(levels);
       }
       if (pathwayPriority && pathwayPriority.length > 1) {
         this.updatePathwayPriority(pathwayPriority);
@@ -230,7 +236,7 @@ export default class ContentSteeringController
 
   public filterParsedLevels(levels: Level[]): Level[] {
     // Filter levels to only include those that are in the initial pathway
-    this.levels = levels;
+    this._levels = levels;
     let pathwayLevels = this.getLevelsForPathway(this.pathwayId);
     if (pathwayLevels.length === 0) {
       const pathwayId = levels[0].pathwayId;
@@ -250,10 +256,10 @@ export default class ContentSteeringController
   }
 
   private getLevelsForPathway(pathwayId: string): Level[] {
-    if (this.levels === null) {
+    if (this._levels === null) {
       return [];
     }
-    return this.levels.filter((level) => pathwayId === level.pathwayId);
+    return this._levels.filter((level) => pathwayId === level.pathwayId);
   }
 
   private updatePathwayPriority(pathwayPriority: string[]) {
@@ -286,7 +292,7 @@ export default class ContentSteeringController
         this.hls.trigger(Events.LEVELS_UPDATED, { levels });
         // Set LevelController's level to trigger LEVEL_SWITCHING which loads playlist if needed
         const levelAfterChange = this.hls.levels[selectedIndex];
-        if (selectedLevel && levelAfterChange && this.levels) {
+        if (selectedLevel && levelAfterChange && this._levels) {
           if (
             levelAfterChange.attrs['STABLE-VARIANT-ID'] !==
               selectedLevel.attrs['STABLE-VARIANT-ID'] &&
@@ -309,7 +315,7 @@ export default class ContentSteeringController
     defaultPathway: string,
   ): string {
     const levels = this.getLevelsForPathway(defaultPathway).concat(
-      this.levels || [],
+      this._levels || [],
     );
     for (let i = 0; i < levels.length; i++) {
       if (
@@ -325,7 +331,7 @@ export default class ContentSteeringController
   }
 
   private clonePathways(pathwayClones: PathwayClone[]) {
-    const levels = this.levels;
+    const levels = this._levels;
     if (!levels) {
       return;
     }

@@ -792,8 +792,12 @@ export class ContentSteeringController extends Logger implements NetworkComponen
     // (undocumented)
     filterParsedLevels(levels: Level[]): Level[];
     // (undocumented)
+    getPathwaysList(levels: Level[]): string[];
+    // (undocumented)
+    get levels(): Level[];
+    // (undocumented)
     get pathwayPriority(): string[] | null;
-    set pathwayPriority(pathwayPriority: string[] | null);
+    set pathwayPriority(pathwayPriority: string[]);
     // (undocumented)
     removeLevel(levelToRemove: Level): void;
     // (undocumented)
@@ -1630,7 +1634,7 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     once<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context): void;
     get pathwayPriority(): string[] | null;
-    set pathwayPriority(pathwayPriority: string[] | null);
+    set pathwayPriority(pathwayPriority: string[]);
     pauseBuffering(): void;
     get playingDate(): Date | null;
     recoverMediaError(): void;
