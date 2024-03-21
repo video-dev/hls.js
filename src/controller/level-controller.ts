@@ -514,8 +514,8 @@ export default class LevelController extends BasePlaylistController {
   }
 
   set pathwayPriority(pathwayPriority: string[]) {
-    if (this.steering?.levels?.length) {
-      const pathwaysList = this.steering.getPathwaysList(this.steering.levels);
+    if (this.steering) {
+      const pathwaysList = this.steering.pathways();
       const filteredPathwayPriority = pathwayPriority.filter((pathwayId) => {
         return pathwaysList.indexOf(pathwayId) !== -1;
       });
