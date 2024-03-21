@@ -792,12 +792,10 @@ export class ContentSteeringController extends Logger implements NetworkComponen
     // (undocumented)
     filterParsedLevels(levels: Level[]): Level[];
     // (undocumented)
-    getPathwaysList(levels: Level[]): string[];
-    // (undocumented)
-    get levels(): Level[];
-    // (undocumented)
     get pathwayPriority(): string[] | null;
     set pathwayPriority(pathwayPriority: string[]);
+    // (undocumented)
+    pathways(): string[];
     // (undocumented)
     removeLevel(levelToRemove: Level): void;
     // (undocumented)
