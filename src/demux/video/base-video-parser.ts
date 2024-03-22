@@ -29,22 +29,6 @@ abstract class BaseVideoParser {
     };
   }
 
-  protected getLastNalUnit(
-    samples: VideoSample[],
-  ): VideoSampleUnit | undefined {
-    let VideoSample = this.VideoSample;
-    let lastUnit: VideoSampleUnit | undefined;
-    // try to fallback to previous sample if current one is empty
-    if (!VideoSample || VideoSample.units.length === 0) {
-      VideoSample = samples[samples.length - 1];
-    }
-    if (VideoSample?.units) {
-      const units = VideoSample.units;
-      lastUnit = units[units.length - 1];
-    }
-    return lastUnit;
-  }
-
   protected pushAccessUnit(
     VideoSample: ParsedVideoSample,
     videoTrack: DemuxedVideoTrack,
@@ -86,6 +70,7 @@ abstract class BaseVideoParser {
   protected parseNALu(
     track: DemuxedVideoTrack,
     array: Uint8Array,
+    last: boolean,
   ): Array<{
     data: Uint8Array;
     type: number;
@@ -133,6 +118,10 @@ abstract class BaseVideoParser {
             data: array.subarray(lastUnitStart, overflow),
             type: lastUnitType,
           };
+          if (track.lastNalu) {
+            units.push(track.lastNalu);
+            track.lastNalu = null;
+          }
           // logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
           units.push(unit);
         } else {
@@ -140,7 +129,7 @@ abstract class BaseVideoParser {
           // first check if start code delimiter is overlapping between 2 PES packets,
           // ie it started in last packet (lastState not zero)
           // and ended at the beginning of this PES packet (i <= 4 - lastState)
-          const lastUnit = this.getLastNalUnit(track.samples);
+          const lastUnit = track.lastNalu;
           if (lastUnit) {
             if (lastState && i <= 4 - lastState) {
               // start delimiter overlapping between PES packets
@@ -163,6 +152,8 @@ abstract class BaseVideoParser {
                 array.subarray(0, overflow),
               );
               lastUnit.state = 0;
+              units.push(lastUnit);
+              track.lastNalu = null;
             }
           }
         }
@@ -187,15 +178,21 @@ abstract class BaseVideoParser {
         type: lastUnitType,
         state: state,
       };
-      units.push(unit);
-      // logger.log('pushing NALU, type/size/state:' + unit.type + '/' + unit.data.byteLength + '/' + state);
-    }
-    // no NALu found
-    if (units.length === 0) {
+      if (!last) {
+        track.lastNalu = unit;
+        // logger.log('store NALu to push it on next PES');
+      } else {
+        units.push(unit);
+        // logger.log('pushing NALU, type/size/state:' + unit.type + '/' + unit.data.byteLength + '/' + state);
+      }
+    } else if (units.length === 0) {
+      // no NALu found
       // append pes.data to previous NAL unit
-      const lastUnit = this.getLastNalUnit(track.samples);
+      const lastUnit = track.lastNalu;
       if (lastUnit) {
         lastUnit.data = appendUint8Array(lastUnit.data, array);
+        units.push(lastUnit);
+        track.lastNalu = null;
       }
     }
     track.naluState = state;

@@ -17,7 +17,7 @@ class AvcVideoParser extends BaseVideoParser {
     last: boolean,
     duration: number,
   ) {
-    const units = this.parseNALu(track, pes.data);
+    const units = this.parseNALu(track, pes.data, last);
     const debug = false;
     let VideoSample = this.VideoSample;
     let push: boolean;

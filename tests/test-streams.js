@@ -272,4 +272,11 @@ module.exports = {
     description: 'Advanced stream (HEVC Main 10, MPEG-TS segments)',
     skipFunctionalTests: true,
   },
+  mpegTsBitmovinHevc: {
+    url: 'https://bitmovin-a.akamaihd.net/content/dataset/multi-codec/hevc/v720p_ts.m3u8',
+    description:
+      'HLS M2TS by Bitmovin (HEVC Main, many NALUs overflowing PESes, video only)',
+    abr: false,
+    skipFunctionalTests: true,
+  },
 };
