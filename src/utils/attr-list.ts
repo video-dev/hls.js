@@ -1,3 +1,8 @@
+import type { LevelDetails } from '../loader/level-details';
+import type { ParsedMultivariantPlaylist } from '../loader/m3u8-parser';
+import { logger } from './logger';
+import { substituteVariables } from './variable-substitution';
+
 const DECIMAL_RESOLUTION_REGEX = /^(\d+)x(\d+)$/;
 const ATTR_LIST_REGEX = /(.+?)=(".*?"|.*?)(?:,|$)/g;
 
@@ -5,9 +10,15 @@ const ATTR_LIST_REGEX = /(.+?)=(".*?"|.*?)(?:,|$)/g;
 export class AttrList {
   [key: string]: any;
 
-  constructor(attrs: string | Record<string, any>) {
+  constructor(
+    attrs: string | Record<string, any>,
+    parsed?: Pick<
+      ParsedMultivariantPlaylist | LevelDetails,
+      'variableList' | 'hasVariableRefs' | 'playlistParsingError'
+    >,
+  ) {
     if (typeof attrs === 'string') {
-      attrs = AttrList.parseAttrList(attrs);
+      attrs = AttrList.parseAttrList(attrs, parsed);
     }
     Object.assign(this, attrs);
   }
@@ -63,6 +74,20 @@ export class AttrList {
     return this[attrName];
   }
 
+  enumeratedStringList<T extends { [key: string]: boolean }>(
+    attrName: string,
+    dict: T,
+  ): { [key in keyof T]: boolean } {
+    const attrValue = this[attrName];
+    return (attrValue ? attrValue.split(/[ ,]+/) : []).reduce(
+      (result: { [key in keyof T]: boolean }, identifier: string) => {
+        result[identifier.toLowerCase() as keyof T] = true;
+        return result;
+      },
+      dict,
+    );
+  }
+
   bool(attrName: string): boolean {
     return this[attrName] === 'YES';
   }
@@ -84,21 +109,83 @@ export class AttrList {
     };
   }
 
-  static parseAttrList(input: string): Record<string, any> {
-    let match;
+  static parseAttrList(
+    input: string,
+    parsed?: Pick<
+      ParsedMultivariantPlaylist | LevelDetails,
+      'variableList' | 'hasVariableRefs' | 'playlistParsingError'
+    >,
+  ): Record<string, string> {
+    let match: RegExpExecArray | null;
     const attrs = {};
     const quote = '"';
     ATTR_LIST_REGEX.lastIndex = 0;
     while ((match = ATTR_LIST_REGEX.exec(input)) !== null) {
-      let value = match[2];
-
-      if (
-        value.indexOf(quote) === 0 &&
-        value.lastIndexOf(quote) === value.length - 1
-      ) {
-        value = value.slice(1, -1);
-      }
       const name = match[1].trim();
+      let value = match[2];
+      const quotedString =
+        value.indexOf(quote) === 0 &&
+        value.lastIndexOf(quote) === value.length - 1;
+      let hexadecimalSequence = false;
+      if (quotedString) {
+        value = value.slice(1, -1);
+      } else {
+        switch (name) {
+          case 'IV':
+          case 'SCTE35-CMD':
+          case 'SCTE35-IN':
+          case 'SCTE35-OUT':
+            hexadecimalSequence = true;
+        }
+      }
+      if (parsed && (quotedString || hexadecimalSequence)) {
+        if (__USE_VARIABLE_SUBSTITUTION__) {
+          value = substituteVariables(parsed, value);
+        }
+      } else if (!hexadecimalSequence && !quotedString) {
+        switch (name) {
+          case 'CLOSED-CAPTIONS':
+            if (value === 'NONE') {
+              break;
+            }
+          // falls through
+          case 'ALLOWED-CPC':
+          case 'CLASS':
+          case 'ASSOC-LANGUAGE':
+          case 'AUDIO':
+          case 'BYTERANGE':
+          case 'CHANNELS':
+          case 'CHARACTERISTICS':
+          case 'CODECS':
+          case 'DATA-ID':
+          case 'END-DATE':
+          case 'GROUP-ID':
+          case 'ID':
+          case 'IMPORT':
+          case 'INSTREAM-ID':
+          case 'KEYFORMAT':
+          case 'KEYFORMATVERSIONS':
+          case 'LANGUAGE':
+          case 'NAME':
+          case 'PATHWAY-ID':
+          case 'QUERYPARAM':
+          case 'RECENTLY-REMOVED-DATERANGES':
+          case 'SERVER-URI':
+          case 'STABLE-RENDITION-ID':
+          case 'STABLE-VARIANT-ID':
+          case 'START-DATE':
+          case 'SUBTITLES':
+          case 'SUPPLEMENTAL-CODECS':
+          case 'URI':
+          case 'VALUE':
+          case 'VIDEO':
+          case 'X-ASSET-LIST':
+          case 'X-ASSET-URI':
+            // Since we are not checking tag:attribute combination, just warn rather than ignoring attribute
+            logger.warn(`${input}: attribute ${name} is missing quotes`);
+          // continue;
+        }
+      }
       attrs[name] = value;
     }
     return attrs;

@@ -3,10 +3,11 @@
  */
 
 import { logger } from './logger';
-import { Fragment, Part } from '../loader/fragment';
-import { LevelDetails } from '../loader/level-details';
-import type { Level } from '../types/level';
 import { DateRange } from '../loader/date-range';
+import { assignProgramDateTime, mapDateRanges } from '../loader/m3u8-parser';
+import type { Fragment, Part } from '../loader/fragment';
+import type { LevelDetails } from '../loader/level-details';
+import type { Level } from '../types/level';
 
 type FragmentIntersection = (oldFrag: Fragment, newFrag: Fragment) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;
@@ -196,10 +197,10 @@ export function mergeDetails(
     },
   );
 
+  const fragmentsToCheck = newDetails.fragmentHint
+    ? newDetails.fragments.concat(newDetails.fragmentHint)
+    : newDetails.fragments;
   if (currentInitSegment) {
-    const fragmentsToCheck = newDetails.fragmentHint
-      ? newDetails.fragments.concat(newDetails.fragmentHint)
-      : newDetails.fragments;
     fragmentsToCheck.forEach((frag) => {
       if (
         frag &&
@@ -222,12 +223,32 @@ export function mergeDetails(
       }
       newDetails.startSN = newDetails.fragments[0].sn as number;
       newDetails.startCC = newDetails.fragments[0].cc;
-    } else if (newDetails.canSkipDateRanges) {
-      newDetails.dateRanges = mergeDateRanges(
-        oldDetails.dateRanges,
-        newDetails.dateRanges,
-        newDetails.recentlyRemovedDateranges,
+    } else {
+      if (newDetails.canSkipDateRanges) {
+        newDetails.dateRanges = mergeDateRanges(
+          oldDetails.dateRanges,
+          newDetails,
+        );
+      }
+      const programDateTimes = oldDetails.fragments.filter(
+        (frag) => frag.rawProgramDateTime,
       );
+      const dateRangeMapping: [DateRange, number][] = Object.keys(
+        newDetails.dateRanges,
+      ).map((id) => [newDetails.dateRanges[id], -1]);
+      if (oldDetails.hasProgramDateTime && !newDetails.hasProgramDateTime) {
+        for (let i = 1; i < fragmentsToCheck.length; i++) {
+          if (fragmentsToCheck[i].programDateTime === null) {
+            assignProgramDateTime(
+              fragmentsToCheck[i],
+              fragmentsToCheck[i - 1],
+              programDateTimes,
+              dateRangeMapping,
+            );
+          }
+        }
+      }
+      mapDateRanges(programDateTimes, dateRangeMapping, newDetails);
     }
   }
 
@@ -293,27 +314,38 @@ export function mergeDetails(
 
 function mergeDateRanges(
   oldDateRanges: Record<string, DateRange>,
-  deltaDateRanges: Record<string, DateRange>,
-  recentlyRemovedDateranges: string[] | undefined,
+  newDetails: LevelDetails,
 ): Record<string, DateRange> {
+  const { dateRanges: deltaDateRanges, recentlyRemovedDateranges } = newDetails;
   const dateRanges = Object.assign({}, oldDateRanges);
   if (recentlyRemovedDateranges) {
     recentlyRemovedDateranges.forEach((id) => {
       delete dateRanges[id];
     });
   }
-  Object.keys(deltaDateRanges).forEach((id) => {
-    const dateRange = new DateRange(deltaDateRanges[id].attr, dateRanges[id]);
-    if (dateRange.isValid) {
-      dateRanges[id] = dateRange;
-    } else {
-      logger.warn(
-        `Ignoring invalid Playlist Delta Update DATERANGE tag: "${JSON.stringify(
-          deltaDateRanges[id].attr,
-        )}"`,
+  const mergeIds = Object.keys(dateRanges);
+  const mergeCount = mergeIds.length;
+  if (mergeCount) {
+    Object.keys(deltaDateRanges).forEach((id) => {
+      const mergedDateRange = dateRanges[id];
+      const dateRange = new DateRange(
+        deltaDateRanges[id].attr,
+        mergedDateRange,
       );
-    }
-  });
+      if (dateRange.isValid) {
+        dateRanges[id] = dateRange;
+        if (!mergedDateRange) {
+          dateRange.tagOrder += mergeCount;
+        }
+      } else {
+        logger.warn(
+          `Ignoring invalid Playlist Delta Update DATERANGE tag: "${JSON.stringify(
+            deltaDateRanges[id].attr,
+          )}"`,
+        );
+      }
+    });
+  }
   return dateRanges;
 }
 
@@ -366,7 +398,7 @@ export function mapFragmentIntersection(
   for (let i = start; i <= end; i++) {
     const oldFrag = oldFrags[delta + i];
     let newFrag = newFrags[i];
-    if (skippedSegments && !newFrag && i < skippedSegments) {
+    if (skippedSegments && !newFrag && oldFrag) {
       // Fill in skipped segments in delta playlist
       newFrag = newDetails.fragments[i] = oldFrag;
     }

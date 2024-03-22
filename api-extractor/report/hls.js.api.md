@@ -85,7 +85,7 @@ export type ABRControllerConfig = {
 //
 // @public (undocumented)
 export class AttrList {
-    constructor(attrs: string | Record<string, any>);
+    constructor(attrs: string | Record<string, any>, parsed?: Pick<ParsedMultivariantPlaylist | LevelDetails, 'variableList' | 'hasVariableRefs' | 'playlistParsingError'>);
     // (undocumented)
     [key: string]: any;
     // (undocumented)
@@ -104,13 +104,19 @@ export class AttrList {
     // (undocumented)
     enumeratedString(attrName: string): string | undefined;
     // (undocumented)
+    enumeratedStringList<T extends {
+        [key: string]: boolean;
+    }>(attrName: string, dict: T): {
+        [key in keyof T]: boolean;
+    };
+    // (undocumented)
     hexadecimalInteger(attrName: string): Uint8Array | null;
     // (undocumented)
     hexadecimalIntegerAsNumber(attrName: string): number;
     // (undocumented)
     optionalFloat(attrName: string, defaultValue: number): number;
     // (undocumented)
-    static parseAttrList(input: string): Record<string, any>;
+    static parseAttrList(input: string, parsed?: Pick<ParsedMultivariantPlaylist | LevelDetails, 'variableList' | 'hasVariableRefs' | 'playlistParsingError'>): Record<string, string>;
 }
 
 // Warning: (ae-missing-release-tag) "AudioPlaylistType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -833,11 +839,13 @@ export interface CuesParsedData {
 //
 // @public (undocumented)
 export class DateRange {
-    constructor(dateRangeAttr: AttrList, dateRangeWithSameId?: DateRange);
+    constructor(dateRangeAttr: AttrList, dateRangeWithSameId?: DateRange | undefined, tagCount?: number);
     // (undocumented)
     attr: AttrList;
     // (undocumented)
     get class(): string;
+    // (undocumented)
+    get cue(): DateRangeCue;
     // (undocumented)
     get duration(): number | null;
     // (undocumented)
@@ -847,12 +855,29 @@ export class DateRange {
     // (undocumented)
     get id(): string;
     // (undocumented)
+    get isInterstitial(): boolean;
+    // (undocumented)
     get isValid(): boolean;
     // (undocumented)
     get plannedDuration(): number | null;
     // (undocumented)
     get startDate(): Date;
+    // (undocumented)
+    get startTime(): number;
+    // (undocumented)
+    tagAnchor: Fragment | null;
+    // (undocumented)
+    tagOrder: number;
 }
+
+// Warning: (ae-missing-release-tag) "DateRangeCue" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type DateRangeCue = {
+    pre: boolean;
+    post: boolean;
+    once: boolean;
+};
 
 // Warning: (ae-missing-release-tag) "DRMSystemOptions" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2170,6 +2195,8 @@ export class LevelDetails {
     // (undocumented)
     dateRanges: Record<string, DateRange>;
     // (undocumented)
+    dateRangeTagCount: number;
+    // (undocumented)
     deltaUpdateFailed?: boolean;
     // (undocumented)
     get drift(): number;
@@ -2988,6 +3015,20 @@ export interface NonNativeTextTracksData {
     // (undocumented)
     tracks: Array<NonNativeTextTrack>;
 }
+
+// Warning: (ae-missing-release-tag) "ParsedMultivariantPlaylist" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type ParsedMultivariantPlaylist = {
+    contentSteering: ContentSteeringOptions | null;
+    levels: LevelParsed[];
+    playlistParsingError: Error | null;
+    sessionData: Record<string, AttrList> | null;
+    sessionKeys: LevelKey[] | null;
+    startTimeOffset: number | null;
+    variableList: VariableMap | null;
+    hasVariableRefs: boolean;
+};
 
 // Warning: (ae-missing-release-tag) "Part" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //

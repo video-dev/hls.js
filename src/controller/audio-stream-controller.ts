@@ -128,7 +128,9 @@ class AudioStreamController
     if (id === 'main') {
       const cc = frag.cc;
       this.initPTS[frag.cc] = { baseTime: initPTS, timescale };
-      this.log(`InitPTS for cc: ${cc} found from main: ${initPTS}`);
+      this.log(
+        `InitPTS for cc: ${cc} found from main: ${initPTS}/${timescale}`,
+      );
       this.videoTrackCC = cc;
       // If we are waiting, tick immediately to unblock audio fragment transmuxing
       if (this.state === State.WAITING_INIT_PTS) {

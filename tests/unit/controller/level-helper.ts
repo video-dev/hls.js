@@ -7,6 +7,7 @@ import {
 } from '../../../src/utils/level-helper';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { Fragment, Part } from '../../../src/loader/fragment';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import sinon from 'sinon';
@@ -260,6 +261,269 @@ expect: ${JSON.stringify(merged.fragments[i])}`,
         newPlaylist.fragmentHint.initSegment,
         'fragmentHint does not have correct initSegment',
       ).to.equal(oldInitSegment);
+    });
+
+    it('handles delta Playlist updates with merged program date time and skipped date ranges', function () {
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-MEDIA-SEQUENCE:3
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36.0,CAN-SKIP-DATERANGES=YES,CAN-BLOCK-RELOAD=YES,HOLDBACK=18,PART-HOLDBACK=3
+#EXTINF:6,
+fileSequence3.ts
+#EXT-X-DATERANGE:ID="one",START-DATE="2024-02-29T12:00:04.000Z"
+#EXT-X-MAP:URI="map.ts\
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="key.bin"
+#EXT-X-PROGRAM-DATE-TIME:2024-02-29T12:00:06.000Z
+#EXTINF:6,
+fileSequence4.ts
+#EXT-X-BITRATE:2000
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2024-02-29T12:01:00.000Z
+#EXTINF:6,
+fileSequence5.ts
+#EXT-X-DATERANGE:ID="two",START-DATE="2024-02-29T12:00:10.000Z"
+#EXTINF:6,
+fileSequence6.ts
+#EXTINF:6,
+fileSequence7.ts
+#EXTINF:6,
+fileSequence8.ts
+#EXTINF:6,
+fileSequence9.ts
+#EXTINF:6,
+fileSequence10.ts
+#EXT-X-DATERANGE:ID="three",START-DATE="2024-02-29T12:01:04.000Z"`;
+      const playlistUpdate = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-MEDIA-SEQUENCE:4
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36.0,CAN-SKIP-DATERANGES=YES,CAN-BLOCK-RELOAD=YES,HOLDBACK=18,PART-HOLDBACK=3
+#EXT-X-SKIP:SKIPPED-SEGMENTS=3
+#EXTINF:6,
+fileSequence7.ts
+#EXTINF:6,
+fileSequence8.ts
+#EXTINF:6,
+fileSequence9.ts
+#EXTINF:6,
+fileSequence10.ts
+#EXT-X-DATERANGE:ID="three",START-DATE="2024-02-29T12:01:04.000Z"
+#EXTINF:6,
+fileSequence11.ts
+#EXT-X-DATERANGE:ID="four",START-DATE="2024-02-29T12:02:04.000Z"`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      const detailsUpdated = M3U8Parser.parseLevelPlaylist(
+        playlistUpdate,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      mergeDetails(details, detailsUpdated);
+      expect(details.hasProgramDateTime, 'details.hasProgramDateTime').to.be
+        .true;
+      expect(details.dateRanges, 'one')
+        .to.have.property('one')
+        .which.has.property('tagAnchor')
+        .which.equals(details.fragments[1])
+        .which.has.property('sn')
+        .which.equals(4);
+      expect(details.dateRanges, 'two')
+        .to.have.property('two')
+        .which.has.property('tagAnchor')
+        .which.equals(details.fragments[1])
+        .which.has.property('sn')
+        .which.equals(4);
+      expect(details.dateRanges, 'three')
+        .to.have.property('three')
+        .which.has.property('tagAnchor')
+        .which.equals(details.fragments[2])
+        .which.has.property('sn')
+        .which.equals(5);
+      expect(details.dateRanges.one.startTime).to.equal(4);
+      expect(details.dateRanges.two.startTime).to.equal(10);
+      expect(details.dateRanges.three.startTime).to.equal(16);
+      expect(details.dateRanges.one.tagOrder, 'one.tagOrder').to.equal(0);
+      expect(details.dateRanges.two.tagOrder, 'two.tagOrder').to.equal(1);
+      expect(details.dateRanges.three.tagOrder, 'three.tagOrder').to.equal(2);
+      expect(
+        detailsUpdated.hasProgramDateTime,
+        'detailsUpdated.hasProgramDateTime',
+      ).to.be.true;
+      expect(detailsUpdated.dateRanges, 'one updated')
+        .to.have.property('one')
+        .which.has.property('tagAnchor')
+        .which.equals(detailsUpdated.fragments[0])
+        .which.has.property('sn')
+        .which.equals(4);
+      expect(detailsUpdated.dateRanges, 'two updated')
+        .to.have.property('two')
+        .which.has.property('tagAnchor')
+        .which.equals(detailsUpdated.fragments[0])
+        .which.has.property('sn')
+        .which.equals(4);
+      expect(detailsUpdated.dateRanges, 'three updated')
+        .to.have.property('three')
+        .which.has.property('tagAnchor')
+        .which.equals(detailsUpdated.fragments[1])
+        .which.has.property('sn')
+        .which.equals(5);
+      expect(detailsUpdated.dateRanges, 'four')
+        .to.have.property('four')
+        .which.has.property('tagAnchor')
+        .which.has.property('sn')
+        .which.equals(5);
+      expect(detailsUpdated.dateRanges.one.startTime).to.equal(4);
+      expect(detailsUpdated.dateRanges.two.startTime).to.equal(10);
+      expect(detailsUpdated.dateRanges.three.startTime).to.equal(16);
+      expect(detailsUpdated.dateRanges.four.startTime).to.equal(76);
+      expect(
+        detailsUpdated.dateRanges.one.tagOrder,
+        'one.tagOrder updated',
+      ).to.equal(0);
+      expect(
+        detailsUpdated.dateRanges.two.tagOrder,
+        'two.tagOrder updated',
+      ).to.equal(1);
+      expect(
+        detailsUpdated.dateRanges.three.tagOrder,
+        'three.tagOrder updated',
+      ).to.equal(2);
+      expect(detailsUpdated.dateRanges.four.tagOrder, 'four.tagOrder').to.equal(
+        3,
+      );
+    });
+
+    it('handles delta Playlist updates with multiple skip tags and removed date ranges', function () {
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:10
+#EXT-X-MEDIA-SEQUENCE:3
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36.0,CAN-SKIP-DATERANGES=YES,CAN-BLOCK-RELOAD=YES,HOLDBACK=18,PART-HOLDBACK=3
+#EXT-X-PROGRAM-DATE-TIME:2019-04-29T19:52:19.060Z
+#EXT-X-DATERANGE:ID="d0",START-DATE="2019-04-29T19:52:20.000Z",DURATION=0
+#EXT-X-DATERANGE:ID="d1",START-DATE="2019-04-29T19:52:21.000Z",DURATION=1
+#EXT-X-DATERANGE:ID="d2",START-DATE="2019-04-29T19:52:22.000Z",DURATION=2
+#EXT-X-DATERANGE:ID="d3",START-DATE="2019-04-29T19:52:23.000Z",DURATION=3
+#EXT-X-DATERANGE:ID="d4",START-DATE="2019-04-29T19:52:24.000Z",DURATION=4
+#EXTINF:6,
+fileSequence3.ts
+#EXTINF:6,
+fileSequence4.ts
+#EXTINF:6,
+fileSequence5.ts
+#EXTINF:6,
+fileSequence6.ts
+#EXTINF:6,
+fileSequence7.ts
+#EXTINF:6,
+fileSequence8.ts
+#EXTINF:6,
+fileSequence9.ts
+#EXTINF:6,
+fileSequence10.ts
+#EXTINF:6,
+fileSequence11.ts
+#EXTINF:6,
+fileSequence12.ts
+#EXTINF:6,
+fileSequence13.ts
+#EXTINF:6,
+fileSequence14.ts
+#EXTINF:6,
+fileSequence15.ts
+#EXTINF:6,
+fileSequence16.ts
+#EXTINF:6,
+fileSequence17.ts`;
+      const playlistUpdate = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:10
+#EXT-X-MEDIA-SEQUENCE:3
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36.0,CAN-SKIP-DATERANGES=YES,CAN-BLOCK-RELOAD=YES,HOLDBACK=18,PART-HOLDBACK=3
+#EXT-X-DATERANGE:ID="d3",START-DATE="2019-04-29T19:52:23.000Z",DURATION=3
+#EXT-X-DATERANGE:ID="d5",START-DATE="2019-04-29T19:52:25.000Z",DURATION=5
+#EXT-X-DATERANGE:ID="d6",START-DATE="2019-04-29T19:52:26.000Z",DURATION=6
+#EXT-X-SKIP:SKIPPED-SEGMENTS=2,RECENTLY-REMOVED-DATERANGES="d1	d4"
+#EXTINF:6,
+fileSequence5.ts
+#EXTINF:6,
+fileSequence6.ts
+#EXT-X-SKIP:SKIPPED-SEGMENTS=2,RECENTLY-REMOVED-DATERANGES="d0"
+#EXTINF:6,
+fileSequence9.ts
+#EXTINF:6,
+fileSequence10.ts
+#EXTINF:6,
+fileSequence11.ts
+#EXTINF:6,
+fileSequence12.ts
+#EXTINF:6,
+fileSequence13.ts
+#EXTINF:6,
+fileSequence14.ts
+#EXTINF:6,
+fileSequence15.ts
+#EXTINF:6,
+fileSequence16.ts
+#EXTINF:6,
+fileSequence17.ts
+#EXTINF:6,
+fileSequence18.ts`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      const detailsUpdated = M3U8Parser.parseLevelPlaylist(
+        playlistUpdate,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      mergeDetails(details, detailsUpdated);
+      expect(details.hasProgramDateTime, 'details.hasProgramDateTime').to.be
+        .true;
+      expect(
+        Object.keys(details.dateRanges),
+        'first playlist daterange ids',
+      ).to.have.deep.equal(['d0', 'd1', 'd2', 'd3', 'd4']);
+      expect(details.dateRanges.d2.startTime).to.equal(2.94);
+      expect(details.dateRanges.d3.startTime).to.equal(3.94);
+      expect(
+        detailsUpdated.hasProgramDateTime,
+        'detailsUpdated.hasProgramDateTime',
+      ).to.be.true;
+      expect(
+        detailsUpdated.recentlyRemovedDateranges,
+        'removed daterange ids',
+      ).to.deep.equal(['d1', 'd4', 'd0']);
+      expect(
+        Object.keys(detailsUpdated.dateRanges),
+        'delta playlist merged daterange ids',
+      ).to.have.deep.equal(['d2', 'd3', 'd5', 'd6']);
+      expect(detailsUpdated.dateRanges, 'd2 updated')
+        .to.have.property('d2')
+        .which.has.property('tagAnchor')
+        .which.equals(detailsUpdated.fragments[0])
+        .which.has.property('sn')
+        .which.equals(3);
+      expect(detailsUpdated.dateRanges.d2.startTime).to.equal(2.94);
+      expect(detailsUpdated.dateRanges.d3.startTime).to.equal(3.94);
     });
   });
 
