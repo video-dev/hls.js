@@ -8,7 +8,12 @@ import {
   ManifestLoadingData,
   FragBufferedData,
 } from '../types/events';
-import { Level, VideoRangeValues, isVideoRange } from '../types/level';
+import {
+  Level,
+  VideoRangeValues,
+  isVideoRange,
+  getSkipValue,
+} from '../types/level';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import {
@@ -575,9 +580,13 @@ export default class LevelController extends BasePlaylistController {
     const currentLevel = this.currentLevel;
 
     if (currentLevel && this.shouldLoadPlaylist(currentLevel)) {
+      const skipValue = currentLevel.details
+        ? getSkipValue(currentLevel.details)
+        : undefined;
       let url = currentLevel.uri;
       if (hlsUrlParameters) {
         try {
+          hlsUrlParameters.skip = skipValue;
           url = hlsUrlParameters.addDirectives(url);
         } catch (error) {
           this.warn(

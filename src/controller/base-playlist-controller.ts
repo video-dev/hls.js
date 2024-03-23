@@ -1,6 +1,6 @@
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
-import { getSkipValue, HlsSkip, HlsUrlParameters, Level } from '../types/level';
+import { HlsSkip, HlsUrlParameters, Level } from '../types/level';
 import { computeReloadInterval, mergeDetails } from '../utils/level-helper';
 import { ErrorData } from '../types/events';
 import { getRetryDelay, isTimeoutError } from '../utils/error-helper';
@@ -310,7 +310,7 @@ export default class BasePlaylistController
     msn?: number,
     part?: number,
   ): HlsUrlParameters {
-    let skip = getSkipValue(details, msn);
+    let skip: HlsSkip | undefined;
     if (previousDeliveryDirectives?.skip && details.deltaUpdateFailed) {
       msn = previousDeliveryDirectives.msn;
       part = previousDeliveryDirectives.part;
