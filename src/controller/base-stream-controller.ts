@@ -1454,7 +1454,7 @@ export default class BaseStreamController
 
   protected synchronizeToLiveEdge(levelDetails: LevelDetails) {
     const { config, media } = this;
-    if (!media) {
+    if (!media || media.paused) {
       return;
     }
     const liveSyncPosition = this.hls.liveSyncPosition;
