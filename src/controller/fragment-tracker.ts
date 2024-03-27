@@ -1,6 +1,7 @@
 import { Events } from '../events';
 import { Fragment, Part } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import type { SourceBufferName } from '../types/buffer';
 import type {
   FragmentBufferedRange,
@@ -304,6 +305,23 @@ export class FragmentTracker implements ComponentAPI {
         // No need to check the rest of the timeRange as it is in order
         break;
       }
+    }
+    if (buffered.time.length === 0) {
+      // Nothing found in buffer, mark as gap
+      fragment.gap = true;
+      this.removeFragment(fragment);
+      this.fragBuffered(fragment, true);
+      const error = new Error(
+        `No media appended for msn ${fragment.sn} of level "${fragment.level}"`,
+      );
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.FRAG_PARSING_ERROR,
+        fatal: false,
+        error,
+        frag: fragment,
+        reason: error.message,
+      });
     }
     return buffered;
   }
