@@ -2,10 +2,11 @@
  * MP3 demuxer
  */
 import BaseAudioDemuxer from './base-audio-demuxer';
-import { getID3Data, getTimeStamp } from '../id3';
 import { getAudioBSID } from './dolby';
 import { logger } from '../../utils/logger';
 import * as MpegAudio from './mpegaudio';
+import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
+import { getId3Timestamp } from '@svta/common-media-library/id3/getId3Timestamp';
 
 class MP3Demuxer extends BaseAudioDemuxer {
   resetInitSegment(
@@ -39,7 +40,7 @@ class MP3Demuxer extends BaseAudioDemuxer {
     // Look for MPEG header | 1111 1111 | 111X XYZX | where X can be either 0 or 1 and Y or Z should be 1
     // Layer bits (position 14 and 15) in header should be always different from 0 (Layer I or Layer II or Layer III)
     // More info http://www.mp3-tech.org/programmer/frame_header.html
-    const id3Data = getID3Data(data, 0);
+    const id3Data = getId3Data(data, 0);
     let offset = id3Data?.length || 0;
 
     // Check for ac-3|ec-3 sync bytes and return false if present
@@ -47,7 +48,7 @@ class MP3Demuxer extends BaseAudioDemuxer {
       id3Data &&
       data[offset] === 0x0b &&
       data[offset + 1] === 0x77 &&
-      getTimeStamp(id3Data) !== undefined &&
+      getId3Timestamp(id3Data) !== undefined &&
       // check the bsid to confirm ac-3 or ec-3 (not mp3)
       getAudioBSID(data, offset) <= 16
     ) {

@@ -1,5 +1,5 @@
 import { VTTParser } from './vttparser';
-import { utf8ArrayToStr } from '../demux/id3';
+import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
 import {
   RationalTimestamp,
   toMpegTsClockFromTimescale,
