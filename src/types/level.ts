@@ -59,10 +59,13 @@ export const enum HlsSkip {
   v2 = 'v2',
 }
 
-export function getSkipValue(details: LevelDetails, msn?: number): HlsSkip {
-  const { canSkipUntil, canSkipDateRanges, endSN } = details;
-  const snChangeGoal = msn !== undefined ? msn - endSN : 0;
-  if (canSkipUntil && snChangeGoal < canSkipUntil) {
+export function getSkipValue(details: LevelDetails): HlsSkip {
+  const { canSkipUntil, canSkipDateRanges, age } = details;
+  // A Client SHOULD NOT request a Playlist Delta Update unless it already
+  // has a version of the Playlist that is no older than one-half of the Skip Boundary.
+  // @see: https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis#section-6.3.7
+  const playlistRecentEnough = age < canSkipUntil / 2;
+  if (canSkipUntil && playlistRecentEnough) {
     if (canSkipDateRanges) {
       return HlsSkip.v2;
     }
