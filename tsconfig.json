@@ -1,7 +1,7 @@
 {
   "extends": "./tsconfig-lib.json",
   "compilerOptions": {
-    "emitDeclarationOnly": false,
+    "emitDeclarationOnly": false
   },
   "include": [
     "src/**/*",
@@ -12,6 +12,6 @@
     "rollup.config.js",
     "build-config.js",
     "lint-staged.config.js",
-    "scripts/**/*",
-  ],
+    "scripts/**/*"
+  ]
 }
