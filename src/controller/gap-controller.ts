@@ -168,7 +168,7 @@ export default class GapController extends Logger {
       // Dispatch MEDIA_ENDED when media.ended/ended event is not signalled at end of stream
       if (
         state === State.ENDED &&
-        !(levelDetails && levelDetails.live) &&
+        !levelDetails?.live &&
         Math.abs(currentTime - (levelDetails?.edge || 0)) < 1
       ) {
         if (stalledDuration < 1000 || this.ended) {
