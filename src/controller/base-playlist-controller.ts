@@ -1,6 +1,6 @@
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
-import { HlsSkip, HlsUrlParameters, Level } from '../types/level';
+import { HlsSkip, HlsUrlParameters, Level, getSkipValue } from '../types/level';
 import { computeReloadInterval, mergeDetails } from '../utils/level-helper';
 import { ErrorData } from '../types/events';
 import { getRetryDelay, isTimeoutError } from '../utils/error-helper';
@@ -101,7 +101,14 @@ export default class BasePlaylistController
     }
   }
 
-  protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
+  protected loadPlaylist(
+    hlsUrlParameters?: HlsUrlParameters,
+    levelDetails?: LevelDetails,
+  ): void {
+    const skipValue = levelDetails && getSkipValue(levelDetails);
+    if (hlsUrlParameters) {
+      hlsUrlParameters.skip = skipValue;
+    }
     if (this.requestScheduled === -1) {
       this.requestScheduled = self.performance.now();
     }
