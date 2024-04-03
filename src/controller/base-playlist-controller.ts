@@ -101,14 +101,7 @@ export default class BasePlaylistController
     }
   }
 
-  protected loadPlaylist(
-    hlsUrlParameters?: HlsUrlParameters,
-    levelDetails?: LevelDetails,
-  ): void {
-    const skipValue = levelDetails && getSkipValue(levelDetails);
-    if (hlsUrlParameters) {
-      hlsUrlParameters.skip = skipValue;
-    }
+  protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
     if (this.requestScheduled === -1) {
       this.requestScheduled = self.performance.now();
     }
@@ -317,7 +310,7 @@ export default class BasePlaylistController
     msn?: number,
     part?: number,
   ): HlsUrlParameters {
-    let skip: HlsSkip | undefined;
+    let skip = getSkipValue(details);
     if (previousDeliveryDirectives?.skip && details.deltaUpdateFailed) {
       msn = previousDeliveryDirectives.msn;
       part = previousDeliveryDirectives.part;
