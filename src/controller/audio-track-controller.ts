@@ -339,7 +339,11 @@ class AudioTrackController extends BasePlaylistController {
     if (trackLoaded) {
       return;
     }
-    const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
+    const hlsUrlParameters = this.switchParams(
+      track.url,
+      lastTrack?.details,
+      track.details,
+    );
     this.loadPlaylist(hlsUrlParameters);
   }
 
