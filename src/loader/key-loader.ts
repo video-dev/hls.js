@@ -1,5 +1,5 @@
 import { ErrorTypes, ErrorDetails } from '../errors';
-import {
+import type {
   LoaderStats,
   LoaderResponse,
   LoaderConfiguration,

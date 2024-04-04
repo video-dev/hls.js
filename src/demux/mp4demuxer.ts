@@ -2,13 +2,13 @@
  * MP4 demuxer
  */
 import {
-  Demuxer,
-  DemuxerResult,
-  PassthroughTrack,
-  DemuxedAudioTrack,
-  DemuxedUserdataTrack,
-  DemuxedMetadataTrack,
-  KeyData,
+  type Demuxer,
+  type DemuxerResult,
+  type PassthroughTrack,
+  type DemuxedAudioTrack,
+  type DemuxedUserdataTrack,
+  type DemuxedMetadataTrack,
+  type KeyData,
   MetadataSchema,
 } from '../types/demuxer';
 import {

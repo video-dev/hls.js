@@ -1,4 +1,4 @@
-import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
+import type EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 
 export interface ComponentAPI {
   destroy(): void;

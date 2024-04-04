@@ -1,12 +1,12 @@
 import {
-  DemuxerResult,
-  Demuxer,
-  DemuxedAudioTrack,
-  AudioFrame,
-  DemuxedMetadataTrack,
-  DemuxedVideoTrackBase,
-  DemuxedUserdataTrack,
-  KeyData,
+  type DemuxerResult,
+  type Demuxer,
+  type DemuxedAudioTrack,
+  type AudioFrame,
+  type DemuxedMetadataTrack,
+  type DemuxedVideoTrackBase,
+  type DemuxedUserdataTrack,
+  type KeyData,
   MetadataSchema,
 } from '../../types/demuxer';
 import { dummyTrack } from '../dummy-demuxed-track';

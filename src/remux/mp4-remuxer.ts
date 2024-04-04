@@ -4,7 +4,7 @@ import type { HlsEventEmitter } from '../events';
 import { Events } from '../events';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { logger } from '../utils/logger';
-import {
+import type {
   InitSegmentData,
   Remuxer,
   RemuxerResult,

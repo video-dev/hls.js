@@ -1,5 +1,5 @@
 import { Events } from '../events';
-import Hls from '../hls';
+import type Hls from '../hls';
 import { Cmcd } from '@svta/common-media-library/cmcd/Cmcd';
 import { CmcdObjectType } from '@svta/common-media-library/cmcd/CmcdObjectType';
 import { CmcdStreamingFormat } from '@svta/common-media-library/cmcd/CmcdStreamingFormat';
