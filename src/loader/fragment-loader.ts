@@ -1,6 +1,6 @@
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { Fragment } from './fragment';
-import {
+import type {
   Loader,
   LoaderConfiguration,
   FragmentLoaderContext,
