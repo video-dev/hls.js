@@ -1,7 +1,7 @@
 /**
  *  MPEG parser helper
  */
-import { DemuxedAudioTrack } from '../../types/demuxer';
+import type { DemuxedAudioTrack } from '../../types/demuxer';
 
 let chromeVersion: number | null = null;
 
