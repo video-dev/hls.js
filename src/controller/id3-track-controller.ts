@@ -4,7 +4,6 @@ import {
   clearCurrentCues,
   removeCuesInRange,
 } from '../utils/texttrack-utils';
-import * as ID3 from '../demux/id3';
 import {
   DateRange,
   isDateRangeCueAttribute,
@@ -19,6 +18,8 @@ import type {
 } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
+import { getId3Frames } from '@svta/common-media-library/id3/getId3Frames';
+import { isId3TimestampFrame } from '@svta/common-media-library/id3/isId3TimestampFrame';
 
 declare global {
   interface Window {
@@ -210,7 +211,7 @@ class ID3TrackController implements ComponentAPI {
         continue;
       }
 
-      const frames = ID3.getID3Frames(samples[i].data);
+      const frames = getId3Frames(samples[i].data);
       if (frames) {
         const startTime = samples[i].pts;
         let endTime: number = startTime + samples[i].duration;
@@ -227,7 +228,7 @@ class ID3TrackController implements ComponentAPI {
         for (let j = 0; j < frames.length; j++) {
           const frame = frames[j];
           // Safari doesn't put the timestamp frame in the TextTrack
-          if (!ID3.isTimeStampFrame(frame)) {
+          if (!isId3TimestampFrame(frame)) {
             // add a bounds to any unbounded cues
             this.updateId3CueEnds(startTime, type);
             const cue = createCueWithDataFields(
