@@ -48,6 +48,7 @@ type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
   switchParams: (
     playlistUri: string,
     previous: LevelDetails | undefined,
+    current: LevelDetails | undefined,
   ) => void;
   redundantFailover: (levelIndex: number) => void;
 };
@@ -582,7 +583,7 @@ vfrag3.m4v
 #EXT-X-RENDITION-REPORT:URI="chunklist_vfrag100.m3u8",LAST-MSN=4,LAST-PART=1`;
 
     it('returns RENDITION-REPORT query values for the selected playlist URI', function () {
-      const levelDetails = M3U8Parser.parseLevelPlaylist(
+      const previousLevelDetails = M3U8Parser.parseLevelPlaylist(
         mediaPlaylist,
         'http://example.com/playlist.m3u8?abc=deg',
         0,
@@ -590,18 +591,20 @@ vfrag3.m4v
         0,
         {},
       );
+      const mockCurrentDetails = undefined;
       const selectedUri = 'http://example.com/chunklist_vfrag1500.m3u8';
       const hlsUrlParameters = levelController.switchParams(
         selectedUri,
-        levelDetails,
+        previousLevelDetails,
+        mockCurrentDetails,
       );
       expect(hlsUrlParameters).to.have.property('msn').which.equals(4);
       expect(hlsUrlParameters).to.have.property('part').which.equals(1);
-      expect(hlsUrlParameters).to.have.property('skip').which.equals('');
+      expect(hlsUrlParameters).to.have.property('skip').to.be.undefined;
     });
 
     it('returns RENDITION-REPORT query values for the selected playlist URI with additional query params', function () {
-      const levelDetails = M3U8Parser.parseLevelPlaylist(
+      const previousDetails = M3U8Parser.parseLevelPlaylist(
         mediaPlaylist,
         'http://example.com/playlist.m3u8?abc=deg',
         0,
@@ -609,20 +612,22 @@ vfrag3.m4v
         0,
         {},
       );
+      const mockCurrentDetails = undefined;
       const selectedUriWithQuery =
         'http://example.com/chunklist_vfrag1500.m3u8?abc=123';
       const hlsUrlParameters = levelController.switchParams(
         selectedUriWithQuery,
-        levelDetails,
+        previousDetails,
+        mockCurrentDetails,
       );
       expect(hlsUrlParameters).to.not.be.undefined;
       expect(hlsUrlParameters).to.have.property('msn').which.equals(4);
       expect(hlsUrlParameters).to.have.property('part').which.equals(1);
-      expect(hlsUrlParameters).to.have.property('skip').which.equals('');
+      expect(hlsUrlParameters).to.have.property('skip').to.be.undefined;
     });
 
     it('returns RENDITION-REPORT exact URI match over partial match for playlist URIs with additional query params', function () {
-      const levelDetails = M3U8Parser.parseLevelPlaylist(
+      const previousLevelDetails = M3U8Parser.parseLevelPlaylist(
         `#EXTM3U
 #EXT-X-VERSION:7
 #EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES
@@ -644,11 +649,13 @@ vfrag3.m4v
         0,
         {},
       );
+      const mockCurrentDetails = undefined;
       const selectedUriWithQuery =
         'http://example.com/chunklist.m3u8?token=123';
       const hlsUrlParameters = levelController.switchParams(
         selectedUriWithQuery,
-        levelDetails,
+        previousLevelDetails,
+        mockCurrentDetails,
       );
       expect(hlsUrlParameters).to.not.be.undefined;
       expect(hlsUrlParameters).to.have.property('msn').which.equals(6);
