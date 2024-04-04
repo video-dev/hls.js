@@ -1,5 +1,6 @@
 import BaseAudioDemuxer from './base-audio-demuxer';
-import { getID3Data, getTimeStamp } from '../id3';
+import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
+import { getId3Timestamp } from '@svta/common-media-library/id3/getId3Timestamp';
 import { getAudioBSID } from './dolby';
 import type { HlsEventEmitter } from '../../events';
 import type { AudioFrame, DemuxedAudioTrack } from '../../types/demuxer';
@@ -61,7 +62,7 @@ export class AC3Demuxer extends BaseAudioDemuxer {
       return false;
     }
 
-    const id3Data = getID3Data(data, 0);
+    const id3Data = getId3Data(data, 0);
     if (!id3Data) {
       return false;
     }
@@ -71,7 +72,7 @@ export class AC3Demuxer extends BaseAudioDemuxer {
     if (
       data[offset] === 0x0b &&
       data[offset + 1] === 0x77 &&
-      getTimeStamp(id3Data) !== undefined &&
+      getId3Timestamp(id3Data) !== undefined &&
       // check the bsid to confirm ac-3
       getAudioBSID(data, offset) < 16
     ) {
