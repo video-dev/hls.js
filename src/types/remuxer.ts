@@ -1,5 +1,5 @@
 import type { TrackSet } from './track';
-import {
+import type {
   DemuxedAudioTrack,
   DemuxedMetadataTrack,
   DemuxedUserdataTrack,
