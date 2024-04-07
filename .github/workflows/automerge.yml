@@ -14,7 +14,7 @@ jobs:
       group: 'automerge:run:${{ github.head_ref }}'
       cancel-in-progress: true
     steps:
-      - uses: tjenkinson/gh-action-auto-merge-dependency-updates@93fed7c1e20b34a68fa26f715772450bfb04602a # v1.4.0
+      - uses: tjenkinson/gh-action-auto-merge-dependency-updates@964cf1547be62862846b42466ae1f68f7bdafee8 # v1.4.2
         with:
           repo-token: ${{ secrets.CI_GITHUB_TOKEN }}
           use-auto-merge: true
