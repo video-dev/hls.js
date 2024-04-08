@@ -55,6 +55,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
   protected switchParams(
     playlistUri: string,
     previous: LevelDetails | undefined,
+    current: LevelDetails | undefined,
   ): HlsUrlParameters | undefined {
     const renditionReports = previous?.renditionReports;
     if (renditionReports) {
@@ -92,11 +93,8 @@ export default class BasePlaylistController implements NetworkComponentAPI {
             part += 1;
           }
         }
-        return new HlsUrlParameters(
-          msn,
-          part >= 0 ? part : undefined,
-          HlsSkip.No,
-        );
+        const skip = current && getSkipValue(current);
+        return new HlsUrlParameters(msn, part >= 0 ? part : undefined, skip);
       }
     }
   }
@@ -298,7 +296,7 @@ export default class BasePlaylistController implements NetworkComponentAPI {
     msn?: number,
     part?: number,
   ): HlsUrlParameters {
-    let skip = getSkipValue(details, msn);
+    let skip = getSkipValue(details);
     if (previousDeliveryDirectives?.skip && details.deltaUpdateFailed) {
       msn = previousDeliveryDirectives.msn;
       part = previousDeliveryDirectives.part;

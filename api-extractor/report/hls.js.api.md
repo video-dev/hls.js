@@ -279,7 +279,7 @@ export class BasePlaylistController implements NetworkComponentAPI {
     // (undocumented)
     stopLoad(): void;
     // (undocumented)
-    protected switchParams(playlistUri: string, previous: LevelDetails | undefined): HlsUrlParameters | undefined;
+    protected switchParams(playlistUri: string, previous: LevelDetails | undefined, current: LevelDetails | undefined): HlsUrlParameters | undefined;
     // (undocumented)
     protected timer: number;
     // (undocumented)
