@@ -461,7 +461,11 @@ export default class LevelController extends BasePlaylistController {
     const levelDetails = level.details;
     if (!levelDetails || levelDetails.live) {
       // level not retrieved yet, or live playlist we need to (re)load it
-      const hlsUrlParameters = this.switchParams(level.uri, lastLevel?.details);
+      const hlsUrlParameters = this.switchParams(
+        level.uri,
+        lastLevel?.details,
+        levelDetails,
+      );
       this.loadPlaylist(hlsUrlParameters);
     }
   }
