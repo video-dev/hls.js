@@ -537,7 +537,11 @@ class SubtitleTrackController extends BasePlaylistController {
       type,
       url,
     });
-    const hlsUrlParameters = this.switchParams(track.url, lastTrack?.details);
+    const hlsUrlParameters = this.switchParams(
+      track.url,
+      lastTrack?.details,
+      track.details,
+    );
     this.loadPlaylist(hlsUrlParameters);
   }
 
