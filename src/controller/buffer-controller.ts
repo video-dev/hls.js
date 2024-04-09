@@ -210,7 +210,7 @@ export default class BufferController extends Logger implements ComponentAPI {
   ) {
     const media = (this.media = data.media);
     const MediaSource = getMediaSource(this.appendSource);
-    this.appendSource = this.appendSource || isManagedMediaSource(MediaSource);
+    this.appendSource ||= isManagedMediaSource(MediaSource);
 
     if (media && MediaSource) {
       const ms = (this.mediaSource = new MediaSource());
