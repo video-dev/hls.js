@@ -6,7 +6,10 @@ import {
   getCodecCompatibleName,
   pickMostCompleteCodecName,
 } from '../utils/codecs';
-import { getMediaSource } from '../utils/mediasource-helper';
+import {
+  getMediaSource,
+  isManagedMediaSource,
+} from '../utils/mediasource-helper';
 import {
   ElementaryStreamTypes,
   type Part,
@@ -207,6 +210,8 @@ export default class BufferController extends Logger implements ComponentAPI {
   ) {
     const media = (this.media = data.media);
     const MediaSource = getMediaSource(this.appendSource);
+    this.appendSource = this.appendSource || isManagedMediaSource(MediaSource);
+
     if (media && MediaSource) {
       const ms = (this.mediaSource = new MediaSource());
       this.log(`created media source: ${ms.constructor?.name}`);
