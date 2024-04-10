@@ -269,12 +269,15 @@ export function getCodecTiers(
       tier.fragmentError += level.fragmentError;
       tier.videoRanges[level.videoRange] =
         (tier.videoRanges[level.videoRange] || 0) + 1;
-      if (audioGroups) {
+      if (__USE_ALT_AUDIO__ && audioGroups) {
         audioGroups.forEach((audioGroupId) => {
           if (!audioGroupId) {
             return;
           }
           const audioGroup = audioTracksByGroup.groups[audioGroupId];
+          if (!audioGroup) {
+            return;
+          }
           // Default audio is any group with DEFAULT=YES, or if missing then any group with AUTOSELECT=YES, or all variants
           tier.hasDefaultAudio =
             tier.hasDefaultAudio || audioTracksByGroup.hasDefaultAudio
