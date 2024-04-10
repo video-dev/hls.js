@@ -17,5 +17,7 @@ export function getMediaSource(
 }
 
 export function isManagedMediaSource(source: typeof MediaSource | undefined) {
-  return source === (self as any).ManagedMediaSource;
+  return (
+    typeof self !== 'undefined' && source === (self as any).ManagedMediaSource
+  );
 }

@@ -104,10 +104,10 @@ export default class BufferController extends Logger implements ComponentAPI {
     super('buffer-controller', hls.logger);
     this.hls = hls;
     this.fragmentTracker = fragmentTracker;
-    this.appendSource =
-      hls.config.preferManagedMediaSource &&
-      typeof self !== 'undefined' &&
-      (self as any).ManagedMediaSource;
+    this.appendSource = isManagedMediaSource(
+      getMediaSource(hls.config.preferManagedMediaSource),
+    );
+
     this._initSourceBuffer();
     this.registerListeners();
   }
@@ -210,7 +210,6 @@ export default class BufferController extends Logger implements ComponentAPI {
   ) {
     const media = (this.media = data.media);
     const MediaSource = getMediaSource(this.appendSource);
-    this.appendSource ||= isManagedMediaSource(MediaSource);
 
     if (media && MediaSource) {
       const ms = (this.mediaSource = new MediaSource());
