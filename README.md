@@ -5,6 +5,7 @@
 
 Below you can find the URL's to deployments for individual commits:
 
+- [`0d00e7e4 (1.5.8-0.canary.10162)`](https://github.com/video-dev/hls.js/commit/0d00e7e4e72193970d3596037882a2159c2e5f6b): [https://6d093f86.hls-js-dev.pages.dev/](https://6d093f86.hls-js-dev.pages.dev/)
 - [`f6e2ff9a (1.5.8-0.canary.10161)`](https://github.com/video-dev/hls.js/commit/f6e2ff9a908c472abca54a93f6e3679883ccfe51): [https://df1830c8.hls-js-dev.pages.dev/](https://df1830c8.hls-js-dev.pages.dev/)
 - [`2d34eb25 (1.5.8-0.canary.10159)`](https://github.com/video-dev/hls.js/commit/2d34eb25010e3bcbbd49adb4e1f81079543f9526): [https://807284c4.hls-js-dev.pages.dev/](https://807284c4.hls-js-dev.pages.dev/)
 - [`d802d601 (1.5.8-0.canary.10157)`](https://github.com/video-dev/hls.js/commit/d802d6013c7044cdfc7db6963643abbcf1b2d351): [https://5a356d50.hls-js-dev.pages.dev/](https://5a356d50.hls-js-dev.pages.dev/)
@@ -104,6 +105,5 @@ Below you can find the URL's to deployments for individual commits:
 - [`aa8c22d7 (1.5.5-0.canary.9993)`](https://github.com/video-dev/hls.js/commit/aa8c22d72d1eeae9cceb05c8a15a3941a89f54ec): [https://03111c8f.hls-js-dev.pages.dev/](https://03111c8f.hls-js-dev.pages.dev/)
 - [`978dd815 (1.5.5-0.canary.9991)`](https://github.com/video-dev/hls.js/commit/978dd8151ff6af3158fe340f774bc802683caf1e): [https://8ff3d037.hls-js-dev.pages.dev/](https://8ff3d037.hls-js-dev.pages.dev/)
 - [`65b8a82d (1.5.5-0.canary.9989)`](https://github.com/video-dev/hls.js/commit/65b8a82d83939e116318bbf9039a8512372fd648): [https://d83a2763.hls-js-dev.pages.dev/](https://d83a2763.hls-js-dev.pages.dev/)
-- [`3d891c72 (1.5.5-0.canary.9987)`](https://github.com/video-dev/hls.js/commit/3d891c72778835fcc58e74435c020869d90dccf3): [https://d0a7e813.hls-js-dev.pages.dev/](https://d0a7e813.hls-js-dev.pages.dev/)
 
 _Note for older deployments please check [deployments.txt](./deployments.txt)._
