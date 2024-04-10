@@ -6,7 +6,10 @@ import {
   getCodecCompatibleName,
   pickMostCompleteCodecName,
 } from '../utils/codecs';
-import { getMediaSource } from '../utils/mediasource-helper';
+import {
+  getMediaSource,
+  isManagedMediaSource,
+} from '../utils/mediasource-helper';
 import {
   ElementaryStreamTypes,
   type Part,
@@ -101,10 +104,10 @@ export default class BufferController extends Logger implements ComponentAPI {
     super('buffer-controller', hls.logger);
     this.hls = hls;
     this.fragmentTracker = fragmentTracker;
-    this.appendSource =
-      hls.config.preferManagedMediaSource &&
-      typeof self !== 'undefined' &&
-      (self as any).ManagedMediaSource;
+    this.appendSource = isManagedMediaSource(
+      getMediaSource(hls.config.preferManagedMediaSource),
+    );
+
     this._initSourceBuffer();
     this.registerListeners();
   }
@@ -207,6 +210,7 @@ export default class BufferController extends Logger implements ComponentAPI {
   ) {
     const media = (this.media = data.media);
     const MediaSource = getMediaSource(this.appendSource);
+
     if (media && MediaSource) {
       const ms = (this.mediaSource = new MediaSource());
       this.log(`created media source: ${ms.constructor?.name}`);

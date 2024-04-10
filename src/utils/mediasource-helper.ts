@@ -15,3 +15,9 @@ export function getMediaSource(
     ((self as any).WebKitMediaSource as typeof MediaSource)
   );
 }
+
+export function isManagedMediaSource(source: typeof MediaSource | undefined) {
+  return (
+    typeof self !== 'undefined' && source === (self as any).ManagedMediaSource
+  );
+}
