@@ -193,7 +193,7 @@ export function pickMostCompleteCodecName(
   if (parsedCodec && parsedCodec !== 'mp4a') {
     return parsedCodec;
   }
-  return levelCodec;
+  return levelCodec ? levelCodec.split(',')[0] : levelCodec;
 }
 
 export function convertAVC1ToAVCOTI(codec: string) {
