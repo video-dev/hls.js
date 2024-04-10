@@ -929,8 +929,11 @@ export default class BufferController implements ComponentAPI {
             `source buffer exists for track ${trackName}, however track does not`,
           );
         }
-        // use levelCodec as first priority
-        let codec = track.levelCodec || track.codec;
+        // use levelCodec as first priority unless it contains multiple comma-separated codec values
+        let codec =
+          track.levelCodec?.indexOf(',') === -1
+            ? track.levelCodec
+            : track.codec;
         if (codec) {
           if (trackName.slice(0, 5) === 'audio') {
             codec = getCodecCompatibleName(codec, this.appendSource);
