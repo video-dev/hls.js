@@ -6,7 +6,10 @@ import {
   getCodecCompatibleName,
   pickMostCompleteCodecName,
 } from '../utils/codecs';
-import { getMediaSource } from '../utils/mediasource-helper';
+import {
+  getMediaSource,
+  isManagedMediaSource,
+} from '../utils/mediasource-helper';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import type { TrackSet } from '../types/track';
 import BufferOperationQueue from './buffer-operation-queue';
@@ -89,10 +92,9 @@ export default class BufferController implements ComponentAPI {
   constructor(hls: Hls) {
     this.hls = hls;
     const logPrefix = '[buffer-controller]';
-    this.appendSource =
-      hls.config.preferManagedMediaSource &&
-      typeof self !== 'undefined' &&
-      (self as any).ManagedMediaSource;
+    this.appendSource = isManagedMediaSource(
+      getMediaSource(hls.config.preferManagedMediaSource),
+    );
     this.log = logger.log.bind(logger, logPrefix);
     this.warn = logger.warn.bind(logger, logPrefix);
     this.error = logger.error.bind(logger, logPrefix);
@@ -190,6 +192,7 @@ export default class BufferController implements ComponentAPI {
   ) {
     const media = (this.media = data.media);
     const MediaSource = getMediaSource(this.appendSource);
+
     if (media && MediaSource) {
       const ms = (this.mediaSource = new MediaSource());
       this.log(`created media source: ${ms.constructor?.name}`);
