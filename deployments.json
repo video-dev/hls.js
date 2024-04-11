@@ -12021,6 +12021,11 @@
       "version": "1.5.8-0.canary.10172",
       "commit": "02f5364d801847873aecd5a215f2865f68421de3",
       "url": "https://27ae21fc.hls-js-dev.pages.dev/"
+    },
+    {
+      "version": "1.5.9-0.canary.10178",
+      "commit": "f1a73b6f39fe1b1f58b2292348c33dd3b890ed3c",
+      "url": "https://6f192c78.hls-js-dev.pages.dev/"
     }
   ]
 }
