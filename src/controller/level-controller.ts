@@ -509,6 +509,30 @@ export default class LevelController extends BasePlaylistController {
     this._startLevel = newLevel;
   }
 
+  get pathwayPriority(): string[] | null {
+    if (this.steering) {
+      return this.steering.pathwayPriority;
+    }
+
+    return null;
+  }
+
+  set pathwayPriority(pathwayPriority: string[]) {
+    if (this.steering) {
+      const pathwaysList = this.steering.pathways();
+      const filteredPathwayPriority = pathwayPriority.filter((pathwayId) => {
+        return pathwaysList.indexOf(pathwayId) !== -1;
+      });
+      if (pathwayPriority.length < 1) {
+        this.warn(
+          `pathwayPriority ${pathwayPriority} should contain at least one pathway from list: ${pathwaysList}`,
+        );
+        return;
+      }
+      this.steering.pathwayPriority = filteredPathwayPriority;
+    }
+  }
+
   protected onError(event: Events.ERROR, data: ErrorData) {
     if (data.fatal || !data.context) {
       return;
