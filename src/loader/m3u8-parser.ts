@@ -659,6 +659,21 @@ export default class M3U8Parser {
       if (firstFragment) {
         level.startCC = firstFragment.cc;
       }
+      /**
+       * Backfill any missing PDT values
+       * "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
+       * one or more Media Segment URIs, the client SHOULD extrapolate
+       * backward from that tag (using EXTINF durations and/or media
+       * timestamps) to associate dates with those segments."
+       * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
+       * computed.
+       */
+      if (firstPdtIndex > 0) {
+        backfillProgramDateTimes(fragments, firstPdtIndex);
+        if (firstFragment) {
+          programDateTimes.unshift(firstFragment);
+        }
+      }
     } else {
       level.endSN = 0;
       level.startCC = 0;
@@ -669,21 +684,6 @@ export default class M3U8Parser {
     level.totalduration = totalduration;
     if (programDateTimes.length && firstFragment) {
       mapDateRanges(programDateTimes, dateRangeMapping, level);
-    }
-    /**
-     * Backfill any missing PDT values
-     * "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
-     * one or more Media Segment URIs, the client SHOULD extrapolate
-     * backward from that tag (using EXTINF durations and/or media
-     * timestamps) to associate dates with those segments."
-     * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
-     * computed.
-     */
-    if (firstPdtIndex > 0) {
-      backfillProgramDateTimes(fragments, firstPdtIndex);
-      if (firstFragment) {
-        programDateTimes.unshift(firstFragment);
-      }
     }
 
     level.endCC = discontinuityCounter;
@@ -710,25 +710,27 @@ export function mapDateRanges(
       dateRange.tagAnchor = lastProgramDateTime;
     }
     const startDateTime = dateRange.startDate.getTime();
-    if (
-      !dateRangeMapsToProgramDateTime(
-        startDateTime,
-        programDateTimes,
-        pdtIndex,
-        playlistEnd,
-      )
-    ) {
-      // DateRange not mappable to segments between surrounding ProgramDateTime tags, find alternate starting at anchor and looping backwards:
+    let fragIndex = findFragmentWithStartDate(
+      details,
+      startDateTime,
+      programDateTimes,
+      pdtIndex,
+      playlistEnd,
+    );
+    if (fragIndex !== -1) {
+      dateRange.tagAnchor = details.fragments[fragIndex];
+    } else {
+      // DateRange not mappable to segments between surrounding ProgramDateTime tags, find alternate looping backwards from last PDT
       for (let j = programDateTimeCount; j--; ) {
-        if (
-          dateRangeMapsToProgramDateTime(
-            startDateTime,
-            programDateTimes,
-            j,
-            playlistEnd,
-          )
-        ) {
-          dateRange.tagAnchor = programDateTimes[j];
+        fragIndex = findFragmentWithStartDate(
+          details,
+          startDateTime,
+          programDateTimes,
+          j,
+          playlistEnd,
+        );
+        if (fragIndex !== -1) {
+          dateRange.tagAnchor = details.fragments[fragIndex];
           break;
         }
       }
@@ -736,23 +738,43 @@ export function mapDateRanges(
   }
 }
 
-function dateRangeMapsToProgramDateTime(
+function findFragmentWithStartDate(
+  details: LevelDetails,
   startDateTime: number,
   programDateTimes: Fragment[],
   index: number,
   endTime: number,
-): boolean {
+): number {
   const pdtFragment = programDateTimes[index];
   if (pdtFragment) {
+    // find matching range between PDT tags
     const durationBetweenPdt =
       (programDateTimes[index + 1]?.start || endTime) - pdtFragment.start;
     const pdtStart = pdtFragment.programDateTime as number;
-    return (
+    if (
       (startDateTime >= pdtStart || index === 0) &&
       startDateTime <= pdtStart + durationBetweenPdt * 1000
-    );
+    ) {
+      // map to fragment with date-time range
+      const fragments = details.fragments;
+      const endSegment =
+        programDateTimes[index + 1] || fragments[fragments.length - 1];
+      const startIndex =
+        (programDateTimes[index].sn as number) - details.startSN;
+      const endIndex = (endSegment.sn as number) - details.startSN;
+      for (let i = endIndex; i > startIndex; i--) {
+        const fragStartDateTime = fragments[i].programDateTime as number;
+        if (
+          startDateTime >= fragStartDateTime &&
+          startDateTime < fragStartDateTime + fragments[i].duration * 1000
+        ) {
+          return i;
+        }
+      }
+      return startIndex;
+    }
   }
-  return false;
+  return -1;
 }
 
 function parseKey(
