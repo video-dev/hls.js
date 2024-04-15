@@ -96,8 +96,9 @@ export default class FragmentPreloader extends FragmentLoader {
       this.log(
         `[${this.getPreloadStateStr()}] check cache for [${frag.type}] ${
           frag.sn
-        }:${part?.index} / preloadInfo=${request?.frag?.sn}/${request?.part
-          ?.index}`,
+        }:${part?.index} / preloadInfo=${request?.frag?.sn}/${
+          request?.part?.index
+        }`,
       );
     }
     if (
