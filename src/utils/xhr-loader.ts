@@ -250,7 +250,7 @@ class XhrLoader implements Loader<LoaderContext> {
             this.retry(retryConfig);
           } else {
             logger.error(`${status} while loading ${context.url}`);
-            this.callbacks!.onError(
+            this.callbacks.onError(
               { code: status, text: xhr.statusText },
               context,
               xhr,
