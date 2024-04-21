@@ -90,7 +90,7 @@ design idea is pretty simple :
 
 - [src/controller/stream-controller.ts][]
   - stream controller is in charge of:
-    - triggering BUFFER_RESET on MANIFEST_PARSED or startLoad()
+    - triggering BUFFER_RESET on MANIFEST_LOADING
     - **ensuring that media buffer is filled as per defined quality selection logic**.
   - if buffer is not filled up appropriately (i.e. as per defined maximum buffer size, or as per defined quality level), stream controller will trigger the following actions:
     - retrieve "not buffered" media position greater then current playback position. this is performed by comparing video.buffered and video.currentTime.
