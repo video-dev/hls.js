@@ -485,6 +485,8 @@ This configuration will be applied by default to all instances.
 
 - if set to true, the adaptive algorithm with limit levels usable in auto-quality by the HTML video element dimensions (width and height).
   If dimensions between multiple levels are equal, the cap is chosen as the level with the greatest bandwidth.
+  In some devices, the video element dimensions will be multiplied by the device pixel ratio.
+  Use `ignoreDevicePixelRatio` for a strict level limitation based on the size of the video element.
 - if set to false, levels will not be limited. All available levels could be used in auto-quality mode taking only bandwidth into consideration.
 
 ### `capLevelOnFPSDrop`
