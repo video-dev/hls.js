@@ -4,7 +4,6 @@ import type { CMCDControllerConfig } from '../../../src/config';
 import { CmcdHeaderField } from '@svta/common-media-library/cmcd/CmcdHeaderField';
 
 import chai from 'chai';
-import type { FragmentLoaderContext } from '../../../src/types/loader';
 
 const expect = chai.expect;
 
