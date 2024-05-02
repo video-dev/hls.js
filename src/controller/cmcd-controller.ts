@@ -260,17 +260,21 @@ export default class CMCDController implements ComponentAPI {
   }
 
   private getNextPart(part: Part): Part | undefined {
-    const partList = this.hls.levels[part.fragment.level]?.details?.partList;
-    if (!partList) {
-      return undefined;
+    const { fragment } = part;
+    const partList = this.hls.levels[fragment.level]?.details?.partList;
+
+    if (partList) {
+      const nextIndex = part.index + 1;
+      const { sn } = fragment;
+      for (let i = partList.length - 1; i >= 0; i--) {
+        const p = partList[i];
+        if (p.index === nextIndex && p.fragment.sn === sn) {
+          return p;
+        }
+      }
     }
 
-    const index = partList.indexOf(part);
-    if (index === -1) {
-      return undefined;
-    }
-
-    return partList[index + 1];
+    return undefined;
   }
 
   /**
