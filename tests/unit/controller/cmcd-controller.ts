@@ -59,13 +59,13 @@ const setupEach = (cmcd?: CMCDControllerConfig) => {
   cmcdController = new CMCDController(hls);
 };
 
-const base = {
+const playlist = {
   url: 'https://test.com/test.mpd',
   headers: undefined,
 };
 
 const applyPlaylistData = (data = {}) => {
-  const context = Object.assign(data, base);
+  const context = Object.assign(data, playlist);
   cmcdController.applyPlaylistData(context);
   return context;
 };
@@ -121,7 +121,7 @@ describe('CMCDController', function () {
 
         const { url, headers = {} } = applyPlaylistData();
 
-        expect(url).to.equal(base.url);
+        expect(url).to.equal(playlist.url);
         expectField(headers[CmcdHeaderField.SESSION], `cid="${contentId}"`);
       });
 
@@ -131,7 +131,7 @@ describe('CMCDController', function () {
 
         const { url } = applyPlaylistData();
 
-        expect(url).to.equal(`${base.url}?CMCD=cid%3D%22${contentId}%22`);
+        expect(url).to.equal(`${playlist.url}?CMCD=cid%3D%22${contentId}%22`);
       });
 
       it('uses fragment data', function () {
