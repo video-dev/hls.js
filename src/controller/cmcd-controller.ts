@@ -9,7 +9,7 @@ import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEnco
 import { uuid } from '@svta/common-media-library/utils/uuid';
 import { BufferHelper } from '../utils/buffer-helper';
 import type { ComponentAPI } from '../types/component-api';
-import type { Fragment } from '../loader/fragment';
+import type { BaseSegment, Fragment, Part } from '../loader/fragment';
 import type { BufferCreatedData, MediaAttachedData } from '../types/events';
 import type {
   FragmentLoaderContext,
@@ -227,11 +227,20 @@ export default class CMCDController implements ComponentAPI {
         data.bl = this.getBufferLength(ot);
       }
 
-      const next = this.getNextFrag(fragment);
-      if (next) {
-        if (next.url && next.url !== fragment.url) {
-          data.nor = next.url;
-        }
+      let next: BaseSegment | undefined;
+      const part = context.part;
+
+      if (part) {
+        data.d = part.duration * 1000;
+        next = this.getNextPart(part);
+      }
+
+      if (!next) {
+        next = this.getNextFrag(fragment);
+      }
+
+      if (next?.url && next.url !== fragment.url) {
+        data.nor = next.url;
       }
 
       this.apply(context, data);
@@ -248,6 +257,20 @@ export default class CMCDController implements ComponentAPI {
     }
 
     return undefined;
+  }
+
+  private getNextPart(part: Part): Part | undefined {
+    const partList = this.hls.levels[part.fragment.level]?.details?.partList;
+    if (!partList) {
+      return undefined;
+    }
+
+    const index = partList.indexOf(part);
+    if (index === -1) {
+      return undefined;
+    }
+
+    return partList[index + 1];
   }
 
   /**
