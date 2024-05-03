@@ -1,26 +1,25 @@
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
 import AudioTrackController from '../../../src/controller/audio-track-controller';
-import Hls from '../../../src/hls';
-import type {
-  MediaAttributes,
-  MediaPlaylist,
-} from '../../../src/types/media-playlist';
-import { AttrList } from '../../../src/utils/attr-list';
-import { LevelDetails } from '../../../src/loader/level-details';
 import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
+import { LevelDetails } from '../../../src/loader/level-details';
 import { PlaylistContextType } from '../../../src/types/loader';
+import { AttrList } from '../../../src/utils/attr-list';
+import type {
+  ComponentAPI,
+  NetworkComponentAPI,
+} from '../../../src/types/component-api';
 import type {
   AudioTrackLoadedData,
   ErrorData,
 } from '../../../src/types/events';
 import type { Level } from '../../../src/types/level';
 import type {
-  ComponentAPI,
-  NetworkComponentAPI,
-} from '../../../src/types/component-api';
-
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
+  MediaAttributes,
+  MediaPlaylist,
+} from '../../../src/types/media-playlist';
 
 chai.use(sinonChai);
 const expect = chai.expect;

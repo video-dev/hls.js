@@ -1,25 +1,25 @@
+import { getId3Frames } from '@svta/common-media-library/id3/getId3Frames';
+import { isId3TimestampFrame } from '@svta/common-media-library/id3/isId3TimestampFrame';
 import { Events } from '../events';
 import {
-  sendAddTrackEvent,
-  clearCurrentCues,
-  removeCuesInRange,
-} from '../utils/texttrack-utils';
-import {
-  DateRange,
   isDateRangeCueAttribute,
   isSCTE35Attribute,
 } from '../loader/date-range';
 import { MetadataSchema } from '../types/demuxer';
+import {
+  clearCurrentCues,
+  removeCuesInRange,
+  sendAddTrackEvent,
+} from '../utils/texttrack-utils';
+import type Hls from '../hls';
+import type { DateRange } from '../loader/date-range';
+import type { ComponentAPI } from '../types/component-api';
 import type {
   BufferFlushingData,
   FragParsingMetadataData,
   LevelUpdatedData,
   MediaAttachedData,
 } from '../types/events';
-import type { ComponentAPI } from '../types/component-api';
-import type Hls from '../hls';
-import { getId3Frames } from '@svta/common-media-library/id3/getId3Frames';
-import { isId3TimestampFrame } from '@svta/common-media-library/id3/isId3TimestampFrame';
 
 declare global {
   interface Window {

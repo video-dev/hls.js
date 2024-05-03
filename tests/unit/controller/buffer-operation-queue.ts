@@ -1,9 +1,8 @@
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
 import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import type { BufferOperation, SourceBuffers } from '../../../src/types/buffer';
-
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

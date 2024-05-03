@@ -2,18 +2,18 @@
  * SAMPLE-AES decrypter
  */
 
-import { HlsConfig } from '../config';
 import Decrypter from '../crypt/decrypter';
 import { DecrypterAesMode } from '../crypt/decrypter-aes-mode';
-import { HlsEventEmitter } from '../events';
+import { discardEPB } from '../utils/mp4-tools';
+import type { HlsConfig } from '../config';
+import type { HlsEventEmitter } from '../events';
 import type {
   AudioSample,
-  VideoSample,
-  VideoSampleUnit,
   DemuxedVideoTrackBase,
   KeyData,
+  VideoSample,
+  VideoSampleUnit,
 } from '../types/demuxer';
-import { discardEPB } from '../utils/mp4-tools';
 
 class SampleAesDecrypter {
   private keyData: KeyData;

@@ -3,10 +3,10 @@
  */
 
 import { logger } from './logger';
-import { Fragment, Part } from '../loader/fragment';
-import { LevelDetails } from '../loader/level-details';
-import type { Level } from '../types/level';
 import { DateRange } from '../loader/date-range';
+import type { Fragment, Part } from '../loader/fragment';
+import type { LevelDetails } from '../loader/level-details';
+import type { Level } from '../types/level';
 
 type FragmentIntersection = (oldFrag: Fragment, newFrag: Fragment) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;

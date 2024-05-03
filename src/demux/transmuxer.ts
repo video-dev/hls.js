@@ -1,28 +1,28 @@
-import type { HlsEventEmitter } from '../events';
-import { Events } from '../events';
-import { ErrorTypes, ErrorDetails } from '../errors';
-import Decrypter from '../crypt/decrypter';
 import AACDemuxer from './audio/aacdemuxer';
+import { AC3Demuxer } from './audio/ac3-demuxer';
+import MP3Demuxer from './audio/mp3demuxer';
+import Decrypter from '../crypt/decrypter';
 import MP4Demuxer from '../demux/mp4demuxer';
 import TSDemuxer from '../demux/tsdemuxer';
-import MP3Demuxer from './audio/mp3demuxer';
-import { AC3Demuxer } from './audio/ac3-demuxer';
+import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
-import { logger } from '../utils/logger';
 import {
-  isFullSegmentEncryption,
   getAesModeFromFullSegmentMethod,
+  isFullSegmentEncryption,
 } from '../utils/encryption-methods-util';
-import type { Demuxer, DemuxerResult, KeyData } from '../types/demuxer';
-import type { Remuxer } from '../types/remuxer';
-import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
+import { optionalSelf } from '../utils/global';
+import { logger } from '../utils/logger';
 import type { HlsConfig } from '../config';
+import type { HlsEventEmitter } from '../events';
 import type { DecryptData } from '../loader/level-key';
+import type { Demuxer, DemuxerResult, KeyData } from '../types/demuxer';
 import type { PlaylistLevelType } from '../types/loader';
+import type { Remuxer } from '../types/remuxer';
+import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type { TypeSupported } from '../utils/codecs';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
-import { optionalSelf } from '../utils/global';
 
 let now;
 // performance.now() not available on WebWorker, at least on Safari Desktop

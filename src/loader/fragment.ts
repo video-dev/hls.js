@@ -1,13 +1,13 @@
 import { buildAbsoluteURL } from 'url-toolkit';
-import { LevelKey } from './level-key';
 import { LoadStats } from './load-stats';
-import { AttrList } from '../utils/attr-list';
+import type { LevelKey } from './level-key';
 import type {
   FragmentLoaderContext,
   KeyLoaderContext,
   Loader,
   PlaylistLevelType,
 } from '../types/loader';
+import type { AttrList } from '../utils/attr-list';
 import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
 export const enum ElementaryStreamTypes {

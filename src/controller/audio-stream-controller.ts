@@ -1,41 +1,43 @@
 import BaseStreamController, { State } from './base-stream-controller';
-import { Events } from '../events';
-import { Bufferable, BufferHelper } from '../utils/buffer-helper';
+import { fragmentWithinToleranceTest } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
-import { Level } from '../types/level';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
-import { Fragment, ElementaryStreamTypes, Part } from '../loader/fragment';
 import ChunkCache from '../demux/chunk-cache';
 import TransmuxerInterface from '../demux/transmuxer-interface';
+import { ErrorDetails } from '../errors';
+import { Events } from '../events';
+import { ElementaryStreamTypes } from '../loader/fragment';
+import { Level } from '../types/level';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
-import { fragmentWithinToleranceTest } from './fragment-finders';
+import { BufferHelper } from '../utils/buffer-helper';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
-import { ErrorDetails } from '../errors';
-import type { NetworkComponentAPI } from '../types/component-api';
-import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
+import type Hls from '../hls';
+import type { Fragment, Part } from '../loader/fragment';
 import type KeyLoader from '../loader/key-loader';
-import type { TransmuxerResult } from '../types/transmuxer';
 import type { LevelDetails } from '../loader/level-details';
-import type { TrackSet } from '../types/track';
+import type { NetworkComponentAPI } from '../types/component-api';
 import type {
-  BufferCreatedData,
   AudioTracksUpdatedData,
   AudioTrackSwitchingData,
-  LevelLoadedData,
-  TrackLoadedData,
   BufferAppendingData,
+  BufferCreatedData,
   BufferFlushedData,
-  InitPTSFoundData,
+  BufferFlushingData,
+  ErrorData,
+  FragBufferedData,
   FragLoadedData,
   FragParsingMetadataData,
   FragParsingUserdataData,
-  FragBufferedData,
-  ErrorData,
-  BufferFlushingData,
+  InitPTSFoundData,
+  LevelLoadedData,
+  TrackLoadedData,
 } from '../types/events';
 import type { MediaPlaylist } from '../types/media-playlist';
+import type { TrackSet } from '../types/track';
+import type { TransmuxerResult } from '../types/transmuxer';
+import type { Bufferable } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 

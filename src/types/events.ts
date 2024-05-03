@@ -1,8 +1,5 @@
-// eslint-disable-next-line import/no-duplicates
-import type { Fragment } from '../loader/fragment';
-// eslint-disable-next-line import/no-duplicates
-import type { Part } from '../loader/fragment';
-import type { LevelDetails } from '../loader/level-details';
+import type { SourceBufferName } from './buffer';
+import type { MetadataSample, UserdataSample } from './demuxer';
 import type {
   HdcpLevel,
   HlsUrlParameters,
@@ -11,7 +8,6 @@ import type {
   LevelParsed,
   VariableMap,
 } from './level';
-import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
 import type {
   Loader,
   LoaderContext,
@@ -20,18 +16,20 @@ import type {
   PlaylistLevelType,
   PlaylistLoaderContext,
 } from './loader';
+import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
 import type { Track, TrackSet } from './track';
-import type { SourceBufferName } from './buffer';
 import type { ChunkMetadata } from './transmuxer';
-import type { LoadStats } from '../loader/load-stats';
-import type { ErrorDetails, ErrorTypes } from '../errors';
-import type { MetadataSample, UserdataSample } from './demuxer';
-import type { AttrList } from '../utils/attr-list';
-import type { HlsListeners } from '../events';
-import type { KeyLoaderInfo } from '../loader/key-loader';
-import type { LevelKey } from '../loader/level-key';
-import type { IErrorAction } from '../controller/error-controller';
 import type { SteeringManifest } from '../controller/content-steering-controller';
+import type { IErrorAction } from '../controller/error-controller';
+import type { ErrorDetails, ErrorTypes } from '../errors';
+import type { HlsListeners } from '../events';
+import type { Part } from '../loader/fragment';
+import type { Fragment } from '../loader/fragment';
+import type { KeyLoaderInfo } from '../loader/key-loader';
+import type { LevelDetails } from '../loader/level-details';
+import type { LevelKey } from '../loader/level-key';
+import type { LoadStats } from '../loader/load-stats';
+import type { AttrList } from '../utils/attr-list';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;

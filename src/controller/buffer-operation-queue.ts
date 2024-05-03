@@ -2,8 +2,8 @@ import { logger } from '../utils/logger';
 import type {
   BufferOperation,
   BufferOperationQueues,
-  SourceBuffers,
   SourceBufferName,
+  SourceBuffers,
 } from '../types/buffer';
 
 export default class BufferOperationQueue {

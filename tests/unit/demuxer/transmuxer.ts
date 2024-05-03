@@ -1,14 +1,14 @@
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import { TransmuxConfig, TransmuxState } from '../../../src/demux/transmuxer';
 import TransmuxerInterface from '../../../src/demux/transmuxer-interface';
-import { TransmuxState, TransmuxConfig } from '../../../src/demux/transmuxer';
-import { ChunkMetadata, TransmuxerResult } from '../../../src/types/transmuxer';
+import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
-import Hls from '../../../src/hls';
-
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
+import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { logger } from '../../../src/utils/logger';
+import type { TransmuxerResult } from '../../../src/types/transmuxer';
 
 chai.use(sinonChai);
 const expect = chai.expect;

@@ -1,10 +1,6 @@
-import Hls from './hls';
-import { Events } from './events';
-import { ErrorTypes, ErrorDetails } from './errors';
-import type { Level } from './types/level';
 import AbrController from './controller/abr-controller';
-import AudioTrackController from './controller/audio-track-controller';
 import AudioStreamController from './controller/audio-stream-controller';
+import AudioTrackController from './controller/audio-track-controller';
 import BasePlaylistController from './controller/base-playlist-controller';
 import BaseStreamController from './controller/base-stream-controller';
 import BufferController from './controller/buffer-controller';
@@ -15,6 +11,10 @@ import EMEController from './controller/eme-controller';
 import ErrorController from './controller/error-controller';
 import FPSController from './controller/fps-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
+import { ErrorDetails, ErrorTypes } from './errors';
+import { Events } from './events';
+import Hls from './hls';
+import type { Level } from './types/level';
 
 export default Hls;
 

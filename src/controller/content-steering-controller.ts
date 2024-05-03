@@ -1,28 +1,27 @@
+import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
 import { Events } from '../events';
 import { Level } from '../types/level';
-import { reassignFragmentLevelIndexes } from '../utils/level-helper';
-import { AttrList } from '../utils/attr-list';
-import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
-import { Logger } from '../utils/logger';
 import {
-  PlaylistContextType,
   type Loader,
   type LoaderCallbacks,
   type LoaderConfiguration,
   type LoaderContext,
   type LoaderResponse,
   type LoaderStats,
+  PlaylistContextType,
 } from '../types/loader';
+import { AttrList } from '../utils/attr-list';
+import { reassignFragmentLevelIndexes } from '../utils/level-helper';
+import { Logger } from '../utils/logger';
+import type { RetryConfig } from '../config';
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type {
-  SteeringManifestLoadedData,
   ErrorData,
   ManifestLoadedData,
   ManifestParsedData,
+  SteeringManifestLoadedData,
 } from '../types/events';
-import type { RetryConfig } from '../config';
-
 import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
 
 export type SteeringManifest = {

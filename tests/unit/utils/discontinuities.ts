@@ -1,17 +1,16 @@
-import {
-  shouldAlignOnDiscontinuities,
-  findDiscontinuousReferenceFrag,
-  adjustSlidingStart,
-  alignMediaPlaylistByPDT,
-} from '../../../src/utils/discontinuities';
-import { LevelDetails } from '../../../src/loader/level-details';
-import { Fragment } from '../../../src/loader/fragment';
-import { PlaylistLevelType } from '../../../src/types/loader';
-
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
-import { AttrList } from '../../../src/utils/attr-list';
+import { Fragment } from '../../../src/loader/fragment';
+import { LevelDetails } from '../../../src/loader/level-details';
 import { Level } from '../../../src/types/level';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import { AttrList } from '../../../src/utils/attr-list';
+import {
+  adjustSlidingStart,
+  alignMediaPlaylistByPDT,
+  findDiscontinuousReferenceFrag,
+  shouldAlignOnDiscontinuities,
+} from '../../../src/utils/discontinuities';
 
 chai.use(sinonChai);
 const expect = chai.expect;

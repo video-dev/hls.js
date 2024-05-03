@@ -3,17 +3,17 @@
  */
 
 import { Events } from '../events';
-import type { Level } from '../types/level';
+import type StreamController from './stream-controller';
+import type Hls from '../hls';
+import type { ComponentAPI } from '../types/component-api';
 import type {
-  ManifestParsedData,
   BufferCodecsData,
-  MediaAttachingData,
   FPSDropLevelCappingData,
   LevelsUpdatedData,
+  ManifestParsedData,
+  MediaAttachingData,
 } from '../types/events';
-import StreamController from './stream-controller';
-import type { ComponentAPI } from '../types/component-api';
-import type Hls from '../hls';
+import type { Level } from '../types/level';
 
 type RestrictedLevel = { width: number; height: number; bitrate: number };
 class CapLevelController implements ComponentAPI {

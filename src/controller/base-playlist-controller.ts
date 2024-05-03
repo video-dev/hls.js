@@ -1,23 +1,23 @@
-import type Hls from '../hls';
-import type { NetworkComponentAPI } from '../types/component-api';
+import { NetworkErrorAction } from './error-controller';
 import {
   getSkipValue,
   HlsSkip,
   HlsUrlParameters,
   type Level,
 } from '../types/level';
-import { computeReloadInterval, mergeDetails } from '../utils/level-helper';
-import type { ErrorData } from '../types/events';
 import { getRetryDelay, isTimeoutError } from '../utils/error-helper';
-import { NetworkErrorAction } from './error-controller';
+import { computeReloadInterval, mergeDetails } from '../utils/level-helper';
 import { Logger } from '../utils/logger';
+import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
-import type { MediaPlaylist } from '../types/media-playlist';
+import type { NetworkComponentAPI } from '../types/component-api';
+import type { ErrorData } from '../types/events';
 import type {
   AudioTrackLoadedData,
   LevelLoadedData,
   TrackLoadedData,
 } from '../types/events';
+import type { MediaPlaylist } from '../types/media-playlist';
 
 export default class BasePlaylistController
   extends Logger

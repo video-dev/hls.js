@@ -1,9 +1,8 @@
-import Hls from '../../src/hls';
-import { hlsDefaultConfig } from '../../src/config';
-import { Events } from '../../src/events';
-
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
+import { hlsDefaultConfig } from '../../src/config';
+import { Events } from '../../src/events';
+import Hls from '../../src/hls';
 
 chai.use(sinonChai);
 const expect = chai.expect;

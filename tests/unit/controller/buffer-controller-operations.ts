@@ -1,19 +1,21 @@
-import sinon from 'sinon';
 import chai from 'chai';
+import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
-import Hls from '../../../src/hls';
-
-import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import BufferController from '../../../src/controller/buffer-controller';
-import { BufferOperation, SourceBufferName } from '../../../src/types/buffer';
-import { BufferAppendingData } from '../../../src/types/events';
-import { Events } from '../../../src/events';
+import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
 import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
+import { LevelDetails } from '../../../src/loader/level-details';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
-import { LevelDetails } from '../../../src/loader/level-details';
+import type {
+  BufferOperation,
+  SourceBufferName,
+} from '../../../src/types/buffer';
+import type { BufferAppendingData } from '../../../src/types/events';
 
 chai.use(sinonChai);
 const expect = chai.expect;

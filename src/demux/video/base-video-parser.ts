@@ -1,13 +1,13 @@
-import type { ParsedVideoSample } from '../tsdemuxer';
+import { logger } from '../../utils/logger';
+import { appendUint8Array } from '../../utils/mp4-tools';
 import type {
-  DemuxedVideoTrack,
   DemuxedUserdataTrack,
+  DemuxedVideoTrack,
   VideoSample,
   VideoSampleUnit,
 } from '../../types/demuxer';
+import type { ParsedVideoSample } from '../tsdemuxer';
 import type { PES } from '../tsdemuxer';
-import { logger } from '../../utils/logger';
-import { appendUint8Array } from '../../utils/mp4-tools';
 
 abstract class BaseVideoParser {
   protected VideoSample: ParsedVideoSample | null = null;

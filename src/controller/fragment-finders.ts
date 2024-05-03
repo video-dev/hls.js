@@ -1,5 +1,5 @@
 import BinarySearch from '../utils/binary-search';
-import { Fragment } from '../loader/fragment';
+import type { Fragment } from '../loader/fragment';
 
 /**
  * Returns first fragment whose endPdt value exceeds the given PDT, or null.

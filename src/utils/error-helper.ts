@@ -1,5 +1,5 @@
 import { ErrorDetails } from '../errors';
-import type { LoadPolicy, LoaderConfig, RetryConfig } from '../config';
+import type { LoaderConfig, LoadPolicy, RetryConfig } from '../config';
 import type { ErrorData } from '../types/events';
 import type { LoaderResponse } from '../types/loader';
 

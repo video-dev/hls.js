@@ -1,35 +1,33 @@
 import AAC from './aac-helper';
 import MP4 from './mp4-generator';
-import type { HlsEventEmitter } from '../events';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { ErrorTypes, ErrorDetails } from '../errors';
+import { PlaylistLevelType } from '../types/loader';
 import { logger } from '../utils/logger';
+import { toMsFromMpegTsClock } from '../utils/timescale-conversion';
+import type { HlsConfig } from '../config';
+import type { HlsEventEmitter } from '../events';
+import type { Fragment } from '../loader/fragment';
+import type { SourceBufferName } from '../types/buffer';
+import type {
+  AudioSample,
+  DemuxedAudioTrack,
+  DemuxedMetadataTrack,
+  DemuxedUserdataTrack,
+  DemuxedVideoTrack,
+  VideoSample,
+} from '../types/demuxer';
 import type {
   InitSegmentData,
-  Remuxer,
-  RemuxerResult,
   RemuxedMetadata,
   RemuxedTrack,
   RemuxedUserdata,
+  Remuxer,
+  RemuxerResult,
 } from '../types/remuxer';
-import { PlaylistLevelType } from '../types/loader';
-import {
-  RationalTimestamp,
-  toMsFromMpegTsClock,
-} from '../utils/timescale-conversion';
-import type {
-  AudioSample,
-  VideoSample,
-  DemuxedAudioTrack,
-  DemuxedVideoTrack,
-  DemuxedMetadataTrack,
-  DemuxedUserdataTrack,
-} from '../types/demuxer';
 import type { TrackSet } from '../types/track';
-import type { SourceBufferName } from '../types/buffer';
-import type { Fragment } from '../loader/fragment';
-import type { HlsConfig } from '../config';
 import type { TypeSupported } from '../utils/codecs';
+import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;

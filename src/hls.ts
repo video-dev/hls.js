@@ -1,27 +1,34 @@
+import { EventEmitter } from 'eventemitter3';
 import { buildAbsoluteURL } from 'url-toolkit';
-import PlaylistLoader from './loader/playlist-loader';
+import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
+import { FragmentTracker } from './controller/fragment-tracker';
 import ID3TrackController from './controller/id3-track-controller';
 import LatencyController from './controller/latency-controller';
 import LevelController from './controller/level-controller';
-import { FragmentTracker } from './controller/fragment-tracker';
-import KeyLoader from './loader/key-loader';
 import StreamController from './controller/stream-controller';
-import { isMSESupported, isSupported } from './is-supported';
-import { getMediaSource } from './utils/mediasource-helper';
-import { enableLogs, type ILogger } from './utils/logger';
-import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
-import { EventEmitter } from 'eventemitter3';
+import { ErrorDetails, ErrorTypes } from './errors';
 import { Events } from './events';
-import { ErrorTypes, ErrorDetails } from './errors';
-import { isHdcpLevel, type HdcpLevel, type Level } from './types/level';
-import type { HlsEventEmitter, HlsListeners } from './events';
-import type AudioTrackController from './controller/audio-track-controller';
+import { isMSESupported, isSupported } from './is-supported';
+import KeyLoader from './loader/key-loader';
+import PlaylistLoader from './loader/playlist-loader';
+import { type HdcpLevel, isHdcpLevel, type Level } from './types/level';
+import { enableLogs, type ILogger } from './utils/logger';
+import { getMediaSource } from './utils/mediasource-helper';
+import type { HlsConfig } from './config';
 import type AbrController from './controller/abr-controller';
+import type AudioStreamController from './controller/audio-stream-controller';
+import type AudioTrackController from './controller/audio-track-controller';
+import type BasePlaylistController from './controller/base-playlist-controller';
+import type BaseStreamController from './controller/base-stream-controller';
 import type BufferController from './controller/buffer-controller';
 import type CapLevelController from './controller/cap-level-controller';
 import type CMCDController from './controller/cmcd-controller';
+import type ContentSteeringController from './controller/content-steering-controller';
 import type EMEController from './controller/eme-controller';
+import type ErrorController from './controller/error-controller';
+import type FPSController from './controller/fps-controller';
 import type SubtitleTrackController from './controller/subtitle-track-controller';
+import type { HlsEventEmitter, HlsListeners } from './events';
 import type {
   AbrComponentAPI,
   ComponentAPI,
@@ -33,14 +40,7 @@ import type {
   SubtitleSelectionOption,
   VideoSelectionOption,
 } from './types/media-playlist';
-import type { HlsConfig } from './config';
 import type { BufferInfo } from './utils/buffer-helper';
-import type AudioStreamController from './controller/audio-stream-controller';
-import type BasePlaylistController from './controller/base-playlist-controller';
-import type BaseStreamController from './controller/base-stream-controller';
-import type ContentSteeringController from './controller/content-steering-controller';
-import type ErrorController from './controller/error-controller';
-import type FPSController from './controller/fps-controller';
 
 /**
  * The `Hls` class is the core of the HLS.js library used to instantiate player instances.

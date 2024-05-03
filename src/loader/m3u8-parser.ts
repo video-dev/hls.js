@@ -4,6 +4,7 @@ import { Fragment, Part } from './fragment';
 import { LevelDetails } from './level-details';
 import { LevelKey } from './level-key';
 import { AttrList } from '../utils/attr-list';
+import { isCodecType } from '../utils/codecs';
 import { logger } from '../utils/logger';
 import {
   addVariableDefinition,
@@ -12,12 +13,11 @@ import {
   substituteVariables,
   substituteVariablesInAttributes,
 } from '../utils/variable-substitution';
-import { isCodecType } from '../utils/codecs';
-import type { CodecType } from '../utils/codecs';
-import type { MediaPlaylist, MediaAttributes } from '../types/media-playlist';
-import type { PlaylistLevelType } from '../types/loader';
-import type { LevelAttributes, LevelParsed, VariableMap } from '../types/level';
 import type { ContentSteeringOptions } from '../types/events';
+import type { LevelAttributes, LevelParsed, VariableMap } from '../types/level';
+import type { PlaylistLevelType } from '../types/loader';
+import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
+import type { CodecType } from '../utils/codecs';
 
 type M3U8ParserFragments = Array<Fragment | null>;
 

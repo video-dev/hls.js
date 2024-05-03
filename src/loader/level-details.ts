@@ -1,8 +1,8 @@
-import { Part } from './fragment';
-import type { Fragment } from './fragment';
-import type { AttrList } from '../utils/attr-list';
 import type { DateRange } from './date-range';
+import type { Part } from './fragment';
+import type { Fragment } from './fragment';
 import type { VariableMap } from '../types/level';
+import type { AttrList } from '../utils/attr-list';
 
 const DEFAULT_TARGET_DURATION = 10;
 

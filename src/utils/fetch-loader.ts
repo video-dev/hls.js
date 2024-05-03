@@ -1,14 +1,14 @@
+import ChunkCache from '../demux/chunk-cache';
+import { LoadStats } from '../loader/load-stats';
 import type {
-  LoaderCallbacks,
-  LoaderContext,
   Loader,
-  LoaderStats,
+  LoaderCallbacks,
   LoaderConfiguration,
+  LoaderContext,
   LoaderOnProgress,
   LoaderResponse,
+  LoaderStats,
 } from '../types/loader';
-import { LoadStats } from '../loader/load-stats';
-import ChunkCache from '../demux/chunk-cache';
 
 export function fetchSupported() {
   if (

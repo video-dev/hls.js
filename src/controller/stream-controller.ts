@@ -1,23 +1,21 @@
 import BaseStreamController, { State } from './base-stream-controller';
-import { changeTypeSupported } from '../is-supported';
-import { Events } from '../events';
-import { BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
-import { ElementaryStreamTypes, Fragment } from '../loader/fragment';
-import TransmuxerInterface from '../demux/transmuxer-interface';
-import { ChunkMetadata } from '../types/transmuxer';
 import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
+import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ErrorDetails } from '../errors';
-import type { NetworkComponentAPI } from '../types/component-api';
-import type Hls from '../hls';
-import type { Level } from '../types/level';
-import type { LevelDetails } from '../loader/level-details';
+import { Events } from '../events';
+import { changeTypeSupported } from '../is-supported';
+import { ElementaryStreamTypes } from '../loader/fragment';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import { ChunkMetadata } from '../types/transmuxer';
+import { BufferHelper } from '../utils/buffer-helper';
 import type { FragmentTracker } from './fragment-tracker';
+import type Hls from '../hls';
+import type { Fragment } from '../loader/fragment';
 import type KeyLoader from '../loader/key-loader';
-import type { TransmuxerResult } from '../types/transmuxer';
-import type { TrackSet } from '../types/track';
+import type { LevelDetails } from '../loader/level-details';
 import type { SourceBufferName } from '../types/buffer';
+import type { NetworkComponentAPI } from '../types/component-api';
 import type {
   AudioTrackSwitchedData,
   AudioTrackSwitchingData,
@@ -35,6 +33,10 @@ import type {
   ManifestParsedData,
   MediaAttachedData,
 } from '../types/events';
+import type { Level } from '../types/level';
+import type { TrackSet } from '../types/track';
+import type { TransmuxerResult } from '../types/transmuxer';
+import type { BufferInfo } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 

@@ -1,11 +1,11 @@
+import { isFullSegmentEncryption } from '../utils/encryption-methods-util';
 import {
   changeEndianness,
   convertDataUriToArrayBytes,
 } from '../utils/keysystem-util';
-import { isFullSegmentEncryption } from '../utils/encryption-methods-util';
+import { logger } from '../utils/logger';
 import { KeySystemFormats } from '../utils/mediakeys-helper';
 import { mp4pssh } from '../utils/mp4-tools';
-import { logger } from '../utils/logger';
 import { base64Decode } from '../utils/numeric-encoding-utils';
 
 let keyUriToKeyIdMap: { [uri: string]: Uint8Array } = {};

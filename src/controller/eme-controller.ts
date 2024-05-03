@@ -3,44 +3,45 @@
  *
  * DRM support for Hls.js
  */
+import { EventEmitter } from 'eventemitter3';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { ErrorTypes, ErrorDetails } from '../errors';
+import { LevelKey } from '../loader/level-key';
+import Hex from '../utils/hex';
 import { Logger } from '../utils/logger';
 import {
   getKeySystemsForConfig,
   getSupportedMediaKeySystemConfigurations,
-  keySystemDomainToKeySystemFormat as keySystemToKeySystemFormat,
-  KeySystemFormats,
   keySystemFormatToKeySystemDomain,
   KeySystemIds,
   keySystemIdToKeySystemDomain,
+  keySystemDomainToKeySystemFormat as keySystemToKeySystemFormat,
 } from '../utils/mediakeys-helper';
 import {
   KeySystems,
   requestMediaKeySystemAccess,
 } from '../utils/mediakeys-helper';
-import { strToUtf8array } from '../utils/utf8-utils';
-import { base64Decode } from '../utils/numeric-encoding-utils';
-import { DecryptData, LevelKey } from '../loader/level-key';
-import Hex from '../utils/hex';
 import { bin2str, parsePssh, parseSinf } from '../utils/mp4-tools';
-import { EventEmitter } from 'eventemitter3';
+import { base64Decode } from '../utils/numeric-encoding-utils';
+import { strToUtf8array } from '../utils/utf8-utils';
+import type { EMEControllerConfig, HlsConfig, LoadPolicy } from '../config';
 import type Hls from '../hls';
+import type { Fragment } from '../loader/fragment';
+import type { DecryptData } from '../loader/level-key';
 import type { ComponentAPI } from '../types/component-api';
 import type {
-  MediaAttachedData,
-  KeyLoadedData,
   ErrorData,
+  KeyLoadedData,
   ManifestLoadedData,
+  MediaAttachedData,
 } from '../types/events';
-import type { EMEControllerConfig, HlsConfig, LoadPolicy } from '../config';
-import type { Fragment } from '../loader/fragment';
 import type {
   Loader,
   LoaderCallbacks,
   LoaderConfiguration,
   LoaderContext,
 } from '../types/loader';
+import type { KeySystemFormats } from '../utils/mediakeys-helper';
 interface KeySystemAccessPromises {
   keySystemAccess: Promise<MediaKeySystemAccess>;
   mediaKeys?: Promise<MediaKeys>;

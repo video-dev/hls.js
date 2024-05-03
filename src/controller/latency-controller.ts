@@ -1,14 +1,14 @@
-import { LevelDetails } from '../loader/level-details';
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
+import type { HlsConfig } from '../config';
+import type Hls from '../hls';
+import type { LevelDetails } from '../loader/level-details';
+import type { ComponentAPI } from '../types/component-api';
 import type {
   ErrorData,
   LevelUpdatedData,
   MediaAttachingData,
 } from '../types/events';
-import type { ComponentAPI } from '../types/component-api';
-import type Hls from '../hls';
-import type { HlsConfig } from '../config';
 
 export default class LatencyController implements ComponentAPI {
   private hls: Hls;

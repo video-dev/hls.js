@@ -1,5 +1,5 @@
-import type { TimelineController } from '../controller/timeline-controller';
 import type { CaptionScreen } from './cea-608-parser';
+import type { TimelineController } from '../controller/timeline-controller';
 
 export default class OutputFilter {
   private timelineController: TimelineController;

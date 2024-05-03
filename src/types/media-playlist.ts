@@ -1,6 +1,6 @@
-import type { AttrList } from '../utils/attr-list';
-import type { LevelDetails } from '../loader/level-details';
 import type { VideoRange } from './level';
+import type { LevelDetails } from '../loader/level-details';
+import type { AttrList } from '../utils/attr-list';
 
 export type AudioPlaylistType = 'AUDIO';
 

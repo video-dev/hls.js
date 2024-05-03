@@ -1,3 +1,10 @@
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import { Fragment, Part } from '../../../src/loader/fragment';
+import { LevelDetails } from '../../../src/loader/level-details';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import { AttrList } from '../../../src/utils/attr-list';
 import {
   adjustSliding,
   computeReloadInterval,
@@ -5,13 +12,6 @@ import {
   mapPartIntersection,
   mergeDetails,
 } from '../../../src/utils/level-helper';
-import { LevelDetails } from '../../../src/loader/level-details';
-import { Fragment, Part } from '../../../src/loader/fragment';
-import { PlaylistLevelType } from '../../../src/types/loader';
-import { AttrList } from '../../../src/utils/attr-list';
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

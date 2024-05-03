@@ -1,47 +1,47 @@
-import { Events } from '../events';
-import { Logger } from '../utils/logger';
+import BufferOperationQueue from './buffer-operation-queue';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
+import {
+  ElementaryStreamTypes,
+  type Fragment,
+  type Part,
+} from '../loader/fragment';
+import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
 import {
   getCodecCompatibleName,
   pickMostCompleteCodecName,
 } from '../utils/codecs';
+import { Logger } from '../utils/logger';
 import {
   getMediaSource,
   isManagedMediaSource,
 } from '../utils/mediasource-helper';
-import {
-  ElementaryStreamTypes,
-  type Part,
-  type Fragment,
-} from '../loader/fragment';
-import { PlaylistLevelType } from '../types/loader';
-import type { TrackSet } from '../types/track';
-import BufferOperationQueue from './buffer-operation-queue';
-import {
-  BufferOperation,
-  SourceBuffers,
-  SourceBufferName,
-  SourceBufferListeners,
-} from '../types/buffer';
+import type { FragmentTracker } from './fragment-tracker';
+import type { HlsConfig } from '../config';
+import type Hls from '../hls';
+import type { LevelDetails } from '../loader/level-details';
 import type {
-  LevelUpdatedData,
+  BufferOperation,
+  SourceBufferListeners,
+  SourceBufferName,
+  SourceBuffers,
+} from '../types/buffer';
+import type { ComponentAPI } from '../types/component-api';
+import type {
   BufferAppendingData,
-  MediaAttachingData,
-  ManifestParsedData,
   BufferCodecsData,
   BufferEOSData,
   BufferFlushingData,
-  FragParsedData,
-  FragChangedData,
   ErrorData,
+  FragChangedData,
+  FragParsedData,
+  LevelUpdatedData,
+  ManifestParsedData,
+  MediaAttachingData,
 } from '../types/events';
-import type { ComponentAPI } from '../types/component-api';
+import type { TrackSet } from '../types/track';
 import type { ChunkMetadata } from '../types/transmuxer';
-import type Hls from '../hls';
-import type { FragmentTracker } from './fragment-tracker';
-import type { LevelDetails } from '../loader/level-details';
-import type { HlsConfig } from '../config';
 
 const VIDEO_CODEC_PROFILE_REPLACE =
   /(avc[1234]|hvc1|hev1|dvh[1e]|vp09|av01)(?:\.[^.,]+)+/;

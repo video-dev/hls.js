@@ -1,12 +1,10 @@
-import { findBox } from './mp4-tools';
-import { parseTimeStamp } from './vttparser';
-import VTTCue from './vttcue';
 import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
-import {
-  RationalTimestamp,
-  toTimescaleFromScale,
-} from './timescale-conversion';
+import { findBox } from './mp4-tools';
+import { toTimescaleFromScale } from './timescale-conversion';
+import VTTCue from './vttcue';
+import { parseTimeStamp } from './vttparser';
 import { generateCueId } from './webvtt-parser';
+import type { RationalTimestamp } from './timescale-conversion';
 
 export const IMSC1_CODEC = 'stpp.ttml.im1t';
 

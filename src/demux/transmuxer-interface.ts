@@ -1,24 +1,20 @@
-import {
-  WorkerContext,
-  hasUMDWorker,
-  injectWorker,
-  loadWorker,
-} from './inject-worker';
-import { Events } from '../events';
+import { EventEmitter } from 'eventemitter3';
+import { hasUMDWorker, injectWorker, loadWorker } from './inject-worker';
 import Transmuxer, {
+  isPromise,
   TransmuxConfig,
   TransmuxState,
-  isPromise,
 } from '../demux/transmuxer';
-import { logger } from '../utils/logger';
-import { ErrorTypes, ErrorDetails } from '../errors';
-import { EventEmitter } from 'eventemitter3';
-import { Fragment, Part } from '../loader/fragment';
+import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
 import { getM2TSSupportedAudioTypes } from '../utils/codecs';
-import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
-import type Hls from '../hls';
+import { logger } from '../utils/logger';
+import type { WorkerContext } from './inject-worker';
 import type { HlsEventEmitter } from '../events';
+import type Hls from '../hls';
+import type { Fragment, Part } from '../loader/fragment';
 import type { PlaylistLevelType } from '../types/loader';
+import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 export default class TransmuxerInterface {

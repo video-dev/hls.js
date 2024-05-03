@@ -1,5 +1,5 @@
-import type { DRMSystemOptions, EMEControllerConfig } from '../config';
 import { optionalSelf } from './global';
+import type { DRMSystemOptions, EMEControllerConfig } from '../config';
 
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess

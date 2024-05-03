@@ -1,18 +1,18 @@
-import { ErrorTypes, ErrorDetails } from '../errors';
-import { Fragment } from './fragment';
-import type {
-  Loader,
-  LoaderConfiguration,
-  FragmentLoaderContext,
-} from '../types/loader';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { getLoaderConfigWithoutReties } from '../utils/error-helper';
-import type { HlsConfig } from '../config';
 import type { BaseSegment, Part } from './fragment';
+import type { Fragment } from './fragment';
+import type { HlsConfig } from '../config';
 import type {
   ErrorData,
   FragLoadedData,
   PartsLoadedData,
 } from '../types/events';
+import type {
+  FragmentLoaderContext,
+  Loader,
+  LoaderConfiguration,
+} from '../types/loader';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 

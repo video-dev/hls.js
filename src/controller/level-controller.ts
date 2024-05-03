@@ -1,16 +1,9 @@
-import type {
-  ManifestLoadedData,
-  ManifestParsedData,
-  LevelLoadedData,
-  ErrorData,
-  LevelSwitchingData,
-  LevelsUpdatedData,
-  ManifestLoadingData,
-  FragBufferedData,
-} from '../types/events';
-import { Level, VideoRangeValues, isVideoRange } from '../types/level';
+import BasePlaylistController from './base-playlist-controller';
+import { hlsDefaultConfig } from '../config';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { ErrorTypes, ErrorDetails } from '../errors';
+import { isVideoRange, Level, VideoRangeValues } from '../types/level';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import {
   areCodecsMediaSourceSupported,
   codecsSetSelectionPreferenceValue,
@@ -18,12 +11,19 @@ import {
   getCodecCompatibleName,
   videoCodecPreferenceValue,
 } from '../utils/codecs';
-import BasePlaylistController from './base-playlist-controller';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
-import ContentSteeringController from './content-steering-controller';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
-import { hlsDefaultConfig } from '../config';
+import type ContentSteeringController from './content-steering-controller';
 import type Hls from '../hls';
+import type {
+  ErrorData,
+  FragBufferedData,
+  LevelLoadedData,
+  LevelsUpdatedData,
+  LevelSwitchingData,
+  ManifestLoadedData,
+  ManifestLoadingData,
+  ManifestParsedData,
+} from '../types/events';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';
 import type { MediaPlaylist } from '../types/media-playlist';
 

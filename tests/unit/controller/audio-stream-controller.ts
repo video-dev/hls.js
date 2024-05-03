@@ -1,27 +1,26 @@
-import Hls from '../../../src/hls';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
 import AudioStreamController from '../../../src/controller/audio-stream-controller';
-import { Events } from '../../../src/events';
+import { State } from '../../../src/controller/base-stream-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
 import KeyLoader from '../../../src/loader/key-loader';
 import { LoadStats } from '../../../src/loader/load-stats';
+import { Level } from '../../../src/types/level';
 import { AttrList } from '../../../src/utils/attr-list';
-import {
+import type { Fragment } from '../../../src/loader/fragment';
+import type { LevelDetails } from '../../../src/loader/level-details';
+import type {
+  AudioTrackLoadedData,
+  AudioTrackSwitchingData,
+  TrackLoadedData,
+} from '../../../src/types/events';
+import type {
   MediaAttributes,
   MediaPlaylist,
 } from '../../../src/types/media-playlist';
-import { Level } from '../../../src/types/level';
-import type {
-  AudioTrackSwitchingData,
-  AudioTrackLoadedData,
-  TrackLoadedData,
-} from '../../../src/types/events';
-import type { LevelDetails } from '../../../src/loader/level-details';
-import type { Fragment } from '../../../src/loader/fragment';
-
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
-import { State } from '../../../src/controller/base-stream-controller';
 
 chai.use(sinonChai);
 const expect = chai.expect;
