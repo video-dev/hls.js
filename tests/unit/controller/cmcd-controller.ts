@@ -159,7 +159,10 @@ describe('CMCDController', function () {
       it('uses part data when available', function () {
         setupEach({});
 
-        const { url } = applyFragmentData(details.fragments[2], details.partList?.[0]);
+        const { url } = applyFragmentData(
+          details.fragments[2],
+          details.partList?.[0],
+        );
 
         expectField(url, `nor%3D%2210904.1.m4s%22`);
         expectField(url, `br%3D1`);
