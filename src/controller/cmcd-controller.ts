@@ -209,11 +209,11 @@ export default class CMCDController implements ComponentAPI {
    */
   private applyFragmentData = (context: FragmentLoaderContext) => {
     try {
-      const fragment = context.frag;
-      const level = this.hls.levels[fragment.level];
-      const ot = this.getObjectType(fragment);
+      const { frag, part } = context;
+      const level = this.hls.levels[frag.level];
+      const ot = this.getObjectType(frag);
       const data: Cmcd = {
-        d: fragment.duration * 1000,
+        d: (part || frag).duration * 1000,
         ot,
       };
 
@@ -227,19 +227,9 @@ export default class CMCDController implements ComponentAPI {
         data.bl = this.getBufferLength(ot);
       }
 
-      let next: BaseSegment | undefined;
-      const part = context.part;
+      const next = part ? this.getNextPart(part) : this.getNextFrag(frag);
 
-      if (part) {
-        data.d = part.duration * 1000;
-        next = this.getNextPart(part);
-      }
-
-      if (!next) {
-        next = this.getNextFrag(fragment);
-      }
-
-      if (next?.url && next.url !== fragment.url) {
+      if (next?.url && next.url !== frag.url) {
         data.nor = next.url;
       }
 
@@ -260,16 +250,15 @@ export default class CMCDController implements ComponentAPI {
   }
 
   private getNextPart(part: Part): Part | undefined {
-    const { fragment } = part;
+    const { index, fragment } = part;
     const partList = this.hls.levels[fragment.level]?.details?.partList;
 
     if (partList) {
-      const nextIndex = part.index + 1;
       const { sn } = fragment;
       for (let i = partList.length - 1; i >= 0; i--) {
         const p = partList[i];
-        if (p.index === nextIndex && p.fragment.sn === sn) {
-          return p;
+        if (p.index === index && p.fragment.sn === sn) {
+          return partList[i + 1];
         }
       }
     }
