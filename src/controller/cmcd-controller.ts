@@ -9,7 +9,7 @@ import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEnco
 import { uuid } from '@svta/common-media-library/utils/uuid';
 import { BufferHelper } from '../utils/buffer-helper';
 import type { ComponentAPI } from '../types/component-api';
-import type { Fragment } from '../loader/fragment';
+import type { Fragment, Part } from '../loader/fragment';
 import type { BufferCreatedData, MediaAttachedData } from '../types/events';
 import type {
   FragmentLoaderContext,
@@ -209,11 +209,11 @@ export default class CMCDController implements ComponentAPI {
    */
   private applyFragmentData = (context: FragmentLoaderContext) => {
     try {
-      const fragment = context.frag;
-      const level = this.hls.levels[fragment.level];
-      const ot = this.getObjectType(fragment);
+      const { frag, part } = context;
+      const level = this.hls.levels[frag.level];
+      const ot = this.getObjectType(frag);
       const data: Cmcd = {
-        d: fragment.duration * 1000,
+        d: (part || frag).duration * 1000,
         ot,
       };
 
@@ -227,11 +227,10 @@ export default class CMCDController implements ComponentAPI {
         data.bl = this.getBufferLength(ot);
       }
 
-      const next = this.getNextFrag(fragment);
-      if (next) {
-        if (next.url && next.url !== fragment.url) {
-          data.nor = next.url;
-        }
+      const next = part ? this.getNextPart(part) : this.getNextFrag(frag);
+
+      if (next?.url && next.url !== frag.url) {
+        data.nor = next.url;
       }
 
       this.apply(context, data);
@@ -245,6 +244,23 @@ export default class CMCDController implements ComponentAPI {
     if (levelDetails) {
       const index = (fragment.sn as number) - levelDetails.startSN;
       return levelDetails.fragments[index + 1];
+    }
+
+    return undefined;
+  }
+
+  private getNextPart(part: Part): Part | undefined {
+    const { index, fragment } = part;
+    const partList = this.hls.levels[fragment.level]?.details?.partList;
+
+    if (partList) {
+      const { sn } = fragment;
+      for (let i = partList.length - 1; i >= 0; i--) {
+        const p = partList[i];
+        if (p.index === index && p.fragment.sn === sn) {
+          return partList[i + 1];
+        }
+      }
     }
 
     return undefined;

@@ -183,7 +183,7 @@ export default class Hls implements HlsEventEmitter {
     const id3TrackController = new ID3TrackController(this);
 
     const ConfigContentSteeringController = config.contentSteeringController;
-    // ConentSteeringController is defined before LevelController to receive Multivariant Playlist events first
+    // ContentSteeringController is defined before LevelController to receive Multivariant Playlist events first
     const contentSteering = ConfigContentSteeringController
       ? new ConfigContentSteeringController(this)
       : null;
