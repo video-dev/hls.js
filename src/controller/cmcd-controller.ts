@@ -9,7 +9,7 @@ import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEnco
 import { uuid } from '@svta/common-media-library/utils/uuid';
 import { BufferHelper } from '../utils/buffer-helper';
 import type { ComponentAPI } from '../types/component-api';
-import type { BaseSegment, Fragment, Part } from '../loader/fragment';
+import type { Fragment, Part } from '../loader/fragment';
 import type { BufferCreatedData, MediaAttachedData } from '../types/events';
 import type {
   FragmentLoaderContext,
