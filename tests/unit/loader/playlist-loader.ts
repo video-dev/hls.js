@@ -427,6 +427,30 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
     expect(result.fragments[1].relurl).to.equal('1');
   });
 
+  it('parse level with unicode white-space in fragment URI', function () {
+    const uriWithIrregularWs0 = 'sample-mp4-file\u3000_240p_00000.ts';
+    const uriWithIrregularWs1 = 'sample-mp4-file\u3000_another\u3000_00001.ts';
+    const level = `#EXTM3U
+#EXT-X-ALLOW-CACHE:NO
+#EXT-X-TARGETDURATION:2
+#EXTINF:2,
+${uriWithIrregularWs0}
+#EXTINF:2,
+${uriWithIrregularWs1}
+#EXT-X-ENDLIST`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/frag(5)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+    expect(result.fragments).to.have.lengthOf(2);
+    expect(result.fragments[0].relurl).to.equal(uriWithIrregularWs0);
+    expect(result.fragments[1].relurl).to.equal(uriWithIrregularWs1);
+  });
+
   it('parse level with EXTINF line without comma', function () {
     const level = `#EXTM3U
 #EXT-X-VERSION:3
