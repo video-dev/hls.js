@@ -38,7 +38,7 @@ export default class FragmentPreloader extends FragmentLoader {
     this.log = logger.log.bind(logger, `${logPrefix}>preloader:`);
   }
 
-  private getPreloadStateStr() {
+  private getStateString() {
     switch (this.storage.state) {
       case FragRequestState.IDLE:
         return 'IDLE   ';
@@ -61,7 +61,7 @@ export default class FragmentPreloader extends FragmentLoader {
     return request !== undefined && state !== FragRequestState.IDLE;
   }
 
-  public preload(frag: Fragment, part: Part | undefined): void {
+  public cache(frag: Fragment, part: Part | undefined): void {
     if (this.has(frag, part)) {
       return;
     } else {
@@ -69,7 +69,7 @@ export default class FragmentPreloader extends FragmentLoader {
     }
 
     this.log(
-      `[${this.getPreloadStateStr()}] create request for [${frag.type}] ${
+      `[${this.getStateString()}] create request for [${frag.type}] ${
         frag.sn
       }:${part?.index}`,
     );
@@ -104,7 +104,7 @@ export default class FragmentPreloader extends FragmentLoader {
     const cacheHit = this.has(frag, part);
 
     this.log(
-      `[${this.getPreloadStateStr()}] check cache for [${frag.type}] ${
+      `[${this.getStateString()}] check cache for [${frag.type}] ${
         frag.sn
       }:${part?.index ?? ''} / have: ${request.frag.sn}:${request.part?.index ?? ''} hit=${cacheHit}`,
     );

@@ -323,6 +323,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected buffering: boolean;
     // (undocumented)
+    protected cachePreloadHint(details: LevelDetails): void;
+    // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
     protected clearTrackerIfNeeded(frag: Fragment): void;
@@ -410,8 +412,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected levelLastLoaded: Level | null;
     // (undocumented)
     protected levels: Array<Level> | null;
-    // (undocumented)
-    protected loadAndCachePreloadHint(details: LevelDetails): void;
     // (undocumented)
     protected loadedEndOfParts(partList: Part[], targetBufferTime: number): boolean;
     // (undocumented)

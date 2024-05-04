@@ -658,7 +658,7 @@ export default class StreamController
       ) {
         this.fragmentPreloader.abort();
       } else {
-        // reset the preloader state to IDLE if we have finished loading, never loaded, or have old data
+        // reset the preloader state if we have finished loading, never loaded, or have old data
         this.fragmentPreloader.revalidate(data);
       }
       if (newDetails.deltaUpdateFailed) {
