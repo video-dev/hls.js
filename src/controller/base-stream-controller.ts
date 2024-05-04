@@ -52,9 +52,7 @@ import type { HlsConfig } from '../config';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { SourceBufferName } from '../types/buffer';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
-import FragmentPreloader, {
-  FragPreloadRequestState,
-} from '../loader/fragment-preloader';
+import FragmentPreloader from '../loader/fragment-preloader';
 
 type ResolveFragLoaded = (FragLoadedEndData) => void;
 type RejectFragLoaded = (LoadError) => void;
@@ -846,7 +844,7 @@ export default class BaseStreamController
             this.hls.lowLatencyMode &&
             details?.live &&
             details.canBlockReload &&
-            this.fragmentPreloader.state === FragPreloadRequestState.IDLE
+            !this.fragmentPreloader.loading
           ) {
             this.loadAndCachePreloadHint(details);
           }
@@ -890,8 +888,8 @@ export default class BaseStreamController
           }
           return this.getCachedRequestOrLoad(
             frag,
-            null,
-            true,
+            /*part*/ undefined,
+            /*dataOnProgress*/ true,
             progressCallback,
           );
         })
@@ -901,7 +899,7 @@ export default class BaseStreamController
       // or handle fragment result after key and fragment are finished loading
       const loadRequest = this.getCachedRequestOrLoad(
         frag,
-        null,
+        /*part*/ undefined,
         dataOnProgress,
         progressCallback,
       );
@@ -961,12 +959,12 @@ export default class BaseStreamController
 
   private getCachedRequestOrLoad(
     frag: Fragment,
-    part: Part | null,
+    part: Part | undefined,
     dataOnProgress: boolean,
     progressCallback?: FragmentLoadProgressCallback,
   ): Promise<FragLoadedData | PartsLoadedData> {
     const request = this.fragmentPreloader.getCachedRequest(frag, part);
-    if (request !== null) {
+    if (request !== undefined) {
       return request.then((data) => {
         if (progressCallback) {
           progressCallback(data);

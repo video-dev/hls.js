@@ -10,26 +10,26 @@ import {
 import { HlsConfig } from '../hls';
 import { logger } from '../utils/logger';
 
-export const enum FragPreloadRequestState {
+export const enum FragRequestState {
   IDLE,
   LOADING,
 }
 
 type FragPreloadRequest = {
   frag: Fragment;
-  part: Part | null;
+  part: Part | undefined;
   loadPromise: Promise<FragLoadedData>;
 };
 
-type FragPreloadRequestInfo = {
-  info: FragPreloadRequest | null;
-  state: FragPreloadRequestState;
+type FragPreloaderStorage = {
+  request: FragPreloadRequest | undefined;
+  state: FragRequestState;
 };
 
 export default class FragmentPreloader extends FragmentLoader {
-  private storage: FragPreloadRequestInfo = {
-    info: null,
-    state: FragPreloadRequestState.IDLE,
+  private storage: FragPreloaderStorage = {
+    request: undefined,
+    state: FragRequestState.IDLE,
   };
   protected log: (msg: any) => void;
 
@@ -40,27 +40,32 @@ export default class FragmentPreloader extends FragmentLoader {
 
   private getPreloadStateStr() {
     switch (this.storage.state) {
-      case FragPreloadRequestState.IDLE:
-        return 'IDLE';
-      case FragPreloadRequestState.LOADING:
+      case FragRequestState.IDLE:
+        return 'IDLE   ';
+      case FragRequestState.LOADING:
         return 'LOADING';
     }
   }
 
-  public haveMatchingRequest(frag: Fragment, part: Part | null): boolean {
-    const request = this.storage.info;
+  public has(frag: Fragment, part: Part | undefined): boolean {
+    const { request } = this.storage;
     return (
-      request !== null &&
+      request !== undefined &&
       request.frag.sn === frag.sn &&
       request.part?.index === part?.index
     );
   }
 
+  public get loading(): boolean {
+    const { request, state } = this.storage;
+    return request !== undefined && state !== FragRequestState.IDLE;
+  }
+
   public preload(frag: Fragment, part: Part | undefined): void {
-    // We might have a stale request preloaded
-    const { info, state } = this.storage;
-    if (info && state !== FragPreloadRequestState.IDLE) {
+    if (this.has(frag, part)) {
       return;
+    } else {
+      this.abort();
     }
 
     this.log(
@@ -69,7 +74,6 @@ export default class FragmentPreloader extends FragmentLoader {
       }:${part?.index}`,
     );
 
-    const noop = () => {};
     const loadPromise =
       part !== undefined
         ? this.loadPart(frag, part, noop)
@@ -77,49 +81,45 @@ export default class FragmentPreloader extends FragmentLoader {
 
     const request = {
       frag,
-      part: part ?? null,
+      part,
       loadPromise,
     };
 
     this.storage = {
-      info: request,
-      state: FragPreloadRequestState.LOADING,
+      request: request,
+      state: FragRequestState.LOADING,
     };
   }
 
   public getCachedRequest(
     frag: Fragment,
-    part: Part | null,
-  ): Promise<FragLoadedData | PartsLoadedData> | null {
-    const request = this.storage.info;
-    if (request) {
-      this.log(
-        `[${this.getPreloadStateStr()}] check cache for [${frag.type}] ${
-          frag.sn
-        }:${part?.index} / preloadInfo=${request?.frag?.sn}/${
-          request?.part?.index
-        }`,
-      );
+    part: Part | undefined,
+  ): Promise<FragLoadedData | PartsLoadedData> | undefined {
+    const request = this.storage.request;
+
+    if (!request) {
+      return undefined;
     }
-    if (
-      this.storage.state !== FragPreloadRequestState.IDLE &&
-      request &&
-      this.haveMatchingRequest(frag, part)
-    ) {
-      // Do we need to merge the preload frag into the frag/part?
+
+    const cacheHit = this.has(frag, part);
+
+    this.log(
+      `[${this.getPreloadStateStr()}] check cache for [${frag.type}] ${
+        frag.sn
+      }:${part?.index ?? ''} / have: ${request.frag.sn}:${request.part?.index ?? ''} hit=${cacheHit}`,
+    );
+    if (cacheHit) {
       return request.loadPromise.then((data) => {
         mergeFragData(frag, part, data);
         this.reset();
         return data;
       });
-    }
-
-    if (request && this.storage.state !== FragPreloadRequestState.IDLE) {
+    } else if (this.loading) {
       const { frag: preloadFrag, part: preloadPart } = request;
       const haveOldSn = preloadFrag.sn < frag.sn;
       const haveOldPart =
-        preloadPart !== null &&
-        part !== null &&
+        preloadPart !== undefined &&
+        part !== undefined &&
         !haveOldSn &&
         preloadPart.index < part.index;
 
@@ -128,7 +128,7 @@ export default class FragmentPreloader extends FragmentLoader {
       }
     }
 
-    return null;
+    return undefined;
   }
 
   public revalidate(data: LevelLoadedData | TrackLoadedData) {
@@ -144,16 +144,16 @@ export default class FragmentPreloader extends FragmentLoader {
   }
 
   public get frag() {
-    if (this.storage.info) {
-      return this.storage.info.frag;
+    if (this.storage.request) {
+      return this.storage.request.frag;
     }
-    return null;
+    return undefined;
   }
 
   public reset() {
     this.storage = {
-      info: null,
-      state: FragPreloadRequestState.IDLE,
+      request: undefined,
+      state: FragRequestState.IDLE,
     };
   }
 
@@ -168,9 +168,11 @@ export default class FragmentPreloader extends FragmentLoader {
   }
 }
 
+function noop() {}
+
 function mergeFragData(
   frag: Fragment,
-  part: Part | null,
+  part: Part | undefined,
   data: FragLoadedData,
 ) {
   const loadedFrag = data.frag;

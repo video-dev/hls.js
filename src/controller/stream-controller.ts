@@ -40,7 +40,6 @@ import type {
   ManifestParsedData,
   MediaAttachedData,
 } from '../types/events';
-import { FragPreloadRequestState } from '../loader/fragment-preloader';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -654,7 +653,7 @@ export default class StreamController
     if (newDetails.live || curLevel.details?.live) {
       this.checkLiveUpdate(newDetails);
       if (
-        this.fragmentPreloader.state === FragPreloadRequestState.LOADING &&
+        this.fragmentPreloader.loading &&
         this.fragmentPreloader.frag?.level !== data.level
       ) {
         this.fragmentPreloader.abort();
