@@ -1660,6 +1660,7 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     trigger<E extends keyof HlsListeners>(event: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean;
     get ttfbEstimate(): number;
+    get url(): string | null;
     readonly userConfig: Partial<HlsConfig>;
     static get version(): string;
 }
