@@ -506,6 +506,33 @@ describe('SubtitleTrackController', function () {
       expect(playlistLoadedSpy).to.have.been.calledOnce;
     });
 
+    it('retains loaded details on track if active track synchronously set to something else', function () {
+      const playlistLoadedSpy = sandbox.spy(
+        subtitleTrackController,
+        'playlistLoaded',
+      );
+      subtitleTrackController.startLoad();
+      (subtitleTrackController as any).trackId = 1;
+      (subtitleTrackController as any).currentTrack = subtitleTracks[1];
+
+      const mockLoadedEvent = {
+        id: 1,
+        groupId: 'default-text-group',
+        details: { foo: 'bar' } as any,
+        stats: new LoadStats(),
+        networkDetails: {},
+        deliveryDirectives: null,
+      };
+
+      hls.subtitleTrack = -1;
+      hls.trigger(Events.SUBTITLE_TRACK_LOADED, mockLoadedEvent);
+
+      expect(subtitleTracks[1].details).not.to.be.undefined;
+      expect((subtitleTrackController as any).timer).to.equal(-1);
+      // We will still emit playlist loaded since we did load and store the details
+      expect(playlistLoadedSpy).to.have.been.called;
+    });
+
     it('does not set the reload timer if loading has not started', function () {
       const details = new LevelDetails('');
       subtitleTrackController.stopLoad();
