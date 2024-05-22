@@ -273,8 +273,8 @@ export class SubtitleStreamController
       this.warn(`Subtitle tracks were reset while loading level ${trackId}`);
       return;
     }
-    const track: Level = levels[currentTrackId];
-    if (trackId >= levels.length || trackId !== currentTrackId || !track) {
+    const track: Level = levels[trackId];
+    if (trackId >= levels.length || !track) {
       return;
     }
     this.log(
@@ -318,6 +318,10 @@ export class SubtitleStreamController
     }
     track.details = newDetails;
     this.levelLastLoaded = track;
+
+    if (trackId !== currentTrackId) {
+      return;
+    }
 
     if (!this.startFragRequested && (this.mainDetails || !newDetails.live)) {
       this.setStartPosition(this.mainDetails || newDetails, sliding);
