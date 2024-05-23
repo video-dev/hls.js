@@ -145,14 +145,8 @@ const specialCea608CharsCodes = {
 /**
  * Utils
  */
-const getCharForByte = function (byte: number) {
-  let charCode = byte;
-  if (specialCea608CharsCodes.hasOwnProperty(byte)) {
-    charCode = specialCea608CharsCodes[byte];
-  }
-
-  return String.fromCharCode(charCode);
-};
+const getCharForByte = (byte: number) =>
+  String.fromCharCode(specialCea608CharsCodes[byte] || byte);
 
 const NR_ROWS = 15;
 const NR_COLS = 100;
@@ -1046,22 +1040,20 @@ class Cea608Parser {
    * Add data for time t in forms of list of bytes (unsigned ints). The bytes are treated as pairs.
    */
   addData(time: number | null, byteList: number[]) {
-    let cmdFound: boolean;
-    let a: number;
-    let b: number;
-    let charsFound: number[] | boolean | null = false;
-
     this.logger.time = time;
-
     for (let i = 0; i < byteList.length; i += 2) {
-      a = byteList[i] & 0x7f;
-      b = byteList[i + 1] & 0x7f;
+      const a = byteList[i] & 0x7f;
+      const b = byteList[i + 1] & 0x7f;
+      let cmdFound: boolean = false;
+      let charsFound: number[] | null = null;
+
       if (a === 0 && b === 0) {
         continue;
       } else {
         this.logger.log(
           VerboseLevel.DATA,
-          '[' +
+          () =>
+            '[' +
             numArrayToHexArray([byteList[i], byteList[i + 1]]) +
             '] -> (' +
             numArrayToHexArray([a, b]) +
@@ -1069,20 +1061,39 @@ class Cea608Parser {
         );
       }
 
-      cmdFound = this.parseCmd(a, b);
+      const cmdHistory = this.cmdHistory;
+      const isControlCode = a >= 0x10 && a <= 0x1f;
+      if (isControlCode) {
+        // Skip redundant control codes
+        if (hasCmdRepeated(a, b, cmdHistory)) {
+          setLastCmd(null, null, cmdHistory);
+          this.logger.log(
+            VerboseLevel.DEBUG,
+            () =>
+              'Repeated command (' +
+              numArrayToHexArray([a, b]) +
+              ') is dropped',
+          );
+          continue;
+        }
+        setLastCmd(a, b, this.cmdHistory);
 
-      if (!cmdFound) {
-        cmdFound = this.parseMidrow(a, b);
+        cmdFound = this.parseCmd(a, b);
+
+        if (!cmdFound) {
+          cmdFound = this.parseMidrow(a, b);
+        }
+
+        if (!cmdFound) {
+          cmdFound = this.parsePAC(a, b);
+        }
+
+        if (!cmdFound) {
+          cmdFound = this.parseBackgroundAttributes(a, b);
+        }
+      } else {
+        setLastCmd(null, null, cmdHistory);
       }
-
-      if (!cmdFound) {
-        cmdFound = this.parsePAC(a, b);
-      }
-
-      if (!cmdFound) {
-        cmdFound = this.parseBackgroundAttributes(a, b);
-      }
-
       if (!cmdFound) {
         charsFound = this.parseChars(a, b);
         if (charsFound) {
@@ -1101,7 +1112,8 @@ class Cea608Parser {
       if (!cmdFound && !charsFound) {
         this.logger.log(
           VerboseLevel.WARNING,
-          "Couldn't parse cleaned data " +
+          () =>
+            "Couldn't parse cleaned data " +
             numArrayToHexArray([a, b]) +
             ' orig: ' +
             numArrayToHexArray([byteList[i], byteList[i + 1]]),
@@ -1115,7 +1127,6 @@ class Cea608Parser {
    * @returns True if a command was found
    */
   parseCmd(a: number, b: number): boolean {
-    const { cmdHistory } = this;
     const cond1 =
       (a === 0x14 || a === 0x1c || a === 0x15 || a === 0x1d) &&
       b >= 0x20 &&
@@ -1123,15 +1134,6 @@ class Cea608Parser {
     const cond2 = (a === 0x17 || a === 0x1f) && b >= 0x21 && b <= 0x23;
     if (!(cond1 || cond2)) {
       return false;
-    }
-
-    if (hasCmdRepeated(a, b, cmdHistory)) {
-      setLastCmd(null, null, cmdHistory);
-      this.logger.log(
-        VerboseLevel.DEBUG,
-        'Repeated command (' + numArrayToHexArray([a, b]) + ') is dropped',
-      );
-      return true;
     }
 
     const chNr = a === 0x14 || a === 0x15 || a === 0x17 ? 1 : 2;
@@ -1175,7 +1177,6 @@ class Cea608Parser {
       // a == 0x17 || a == 0x1F
       channel.ccTO(b - 0x20);
     }
-    setLastCmd(a, b, cmdHistory);
     this.currentChannel = chNr;
     return true;
   }
@@ -1207,7 +1208,7 @@ class Cea608Parser {
       channel.ccMIDROW(b);
       this.logger.log(
         VerboseLevel.DEBUG,
-        'MIDROW (' + numArrayToHexArray([a, b]) + ')',
+        () => 'MIDROW (' + numArrayToHexArray([a, b]) + ')',
       );
       return true;
     }
@@ -1220,7 +1221,6 @@ class Cea608Parser {
    */
   parsePAC(a: number, b: number): boolean {
     let row: number;
-    const cmdHistory = this.cmdHistory;
 
     const case1 =
       ((a >= 0x11 && a <= 0x17) || (a >= 0x19 && a <= 0x1f)) &&
@@ -1229,11 +1229,6 @@ class Cea608Parser {
     const case2 = (a === 0x10 || a === 0x18) && b >= 0x40 && b <= 0x5f;
     if (!(case1 || case2)) {
       return false;
-    }
-
-    if (hasCmdRepeated(a, b, cmdHistory)) {
-      setLastCmd(null, null, cmdHistory);
-      return true; // Repeated commands are dropped (once)
     }
 
     const chNr: Channels = a <= 0x17 ? 1 : 2;
@@ -1249,7 +1244,6 @@ class Cea608Parser {
       return false;
     }
     channel.setPAC(this.interpretPAC(row, b));
-    setLastCmd(a, b, cmdHistory);
     this.currentChannel = chNr;
     return true;
   }
@@ -1324,7 +1318,8 @@ class Cea608Parser {
 
       this.logger.log(
         VerboseLevel.INFO,
-        "Special char '" +
+        () =>
+          "Special char '" +
           getCharForByte(oneCode) +
           "' in channel " +
           channelNr,
@@ -1334,12 +1329,12 @@ class Cea608Parser {
       charCodes = b === 0 ? [a] : [a, b];
     }
     if (charCodes) {
-      const hexCodes = numArrayToHexArray(charCodes);
       this.logger.log(
         VerboseLevel.DEBUG,
-        'Char codes =  ' + hexCodes.join(','),
+        () =>
+          'Char codes =  ' +
+          numArrayToHexArray(charCodes as number[]).join(','),
       );
-      setLastCmd(a, b, this.cmdHistory);
     }
     return charCodes;
   }
@@ -1373,7 +1368,6 @@ class Cea608Parser {
     const chNr: Channels = a <= 0x17 ? 1 : 2;
     const channel: Cea608Channel = this.channels[chNr] as Cea608Channel;
     channel.setBkgData(bkgData);
-    setLastCmd(a, b, this.cmdHistory);
     return true;
   }
 
@@ -1387,7 +1381,7 @@ class Cea608Parser {
         channel.reset();
       }
     }
-    this.cmdHistory = createCmdHistory();
+    setLastCmd(null, null, this.cmdHistory);
   }
 
   /**
