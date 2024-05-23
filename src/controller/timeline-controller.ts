@@ -468,25 +468,20 @@ export class TimelineController implements ComponentAPI {
   }
 
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
-    this.initCea608Parsers();
-    const { cea608Parser1, cea608Parser2, lastCc, lastSn, lastPartIndex } =
-      this;
-    if (!this.enabled || !cea608Parser1 || !cea608Parser2) {
-      return;
-    }
     // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
-    if (data.frag.type === PlaylistLevelType.MAIN) {
+    if (this.enabled && data.frag.type === PlaylistLevelType.MAIN) {
+      const { cea608Parser1, cea608Parser2, lastSn } = this;
       const { cc, sn } = data.frag;
-      const partIndex = data?.part?.index ?? -1;
-      if (
-        !(
-          sn === lastSn + 1 ||
-          (sn === lastSn && partIndex === lastPartIndex + 1) ||
-          cc === lastCc
-        )
-      ) {
-        cea608Parser1.reset();
-        cea608Parser2.reset();
+      const partIndex = data.part?.index ?? -1;
+      if (cea608Parser1 && cea608Parser2) {
+        if (
+          sn !== lastSn + 1 ||
+          (sn === lastSn && partIndex !== this.lastPartIndex + 1) ||
+          cc !== this.lastCc
+        ) {
+          cea608Parser1.reset();
+          cea608Parser2.reset();
+        }
       }
       this.lastCc = cc as number;
       this.lastSn = sn as number;
