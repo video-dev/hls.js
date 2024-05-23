@@ -406,7 +406,7 @@ export default class BaseStreamController
     const { fragmentTracker } = this;
     const fragState = fragmentTracker.getState(frag);
     if (fragState === FragmentState.APPENDING) {
-      // Lower the buffer size and try again
+      // Lower the max buffer length and try again
       const playlistType = frag.type as PlaylistLevelType;
       const bufferedInfo = this.getFwdBufferInfo(
         this.mediaBuffer,
@@ -416,7 +416,17 @@ export default class BaseStreamController
         frag.duration,
         bufferedInfo ? bufferedInfo.len : this.config.maxBufferLength,
       );
-      if (this.reduceMaxBufferLength(minForwardBufferLength)) {
+      // If backtracking, always remove from the tracker without reducing max buffer length
+      const backtrackFragment = (this as any).backtrackFragment as
+        | Fragment
+        | undefined;
+      const backtracked = backtrackFragment
+        ? (frag.sn as number) - (backtrackFragment.sn as number)
+        : 0;
+      if (
+        backtracked === 1 ||
+        this.reduceMaxBufferLength(minForwardBufferLength)
+      ) {
         fragmentTracker.removeFragment(frag);
       }
     } else if (this.mediaBuffer?.buffered.length === 0) {
@@ -1019,10 +1029,11 @@ export default class BaseStreamController
   protected reduceMaxBufferLength(threshold: number) {
     const config = this.config;
     const minLength = threshold || config.maxBufferLength;
-    if (config.maxMaxBufferLength >= minLength) {
+    const reducedLength = config.maxMaxBufferLength / 2;
+    if (reducedLength >= minLength) {
       // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
-      config.maxMaxBufferLength /= 2;
-      this.warn(`Reduce max buffer length to ${config.maxMaxBufferLength}s`);
+      config.maxMaxBufferLength = reducedLength;
+      this.warn(`Reduce max buffer length to ${reducedLength}s`);
       return true;
     }
     return false;
