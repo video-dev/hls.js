@@ -897,8 +897,7 @@ function parsePMT(
       case 0xc2: // SAMPLE-AES EC3
       /* falls through */
       case 0x87:
-        logger.warn('Unsupported EC-3 in M2TS found');
-        break;
+        throw new Error('Unsupported EC-3 in M2TS found');
 
       case 0x24: // ITU-T Rec. H.265 and ISO/IEC 23008-2 (HEVC)
         if (__USE_M2TS_ADVANCED_CODECS__) {
@@ -908,7 +907,7 @@ function parsePMT(
             logger.log('HEVC in M2TS found');
           }
         } else {
-          logger.warn('Unsupported HEVC in M2TS found');
+          throw new Error('Unsupported HEVC in M2TS found');
         }
         break;
 
