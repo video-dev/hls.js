@@ -466,20 +466,17 @@ export class TimelineController implements ComponentAPI {
     // if this frag isn't contiguous, clear the parser so cues with bad start/end times aren't added to the textTrack
     if (this.enabled && data.frag.type === PlaylistLevelType.MAIN) {
       const { cea608Parser1, cea608Parser2, lastSn } = this;
-      if (!cea608Parser1 || !cea608Parser2) {
-        return;
-      }
       const { cc, sn } = data.frag;
       const partIndex = data.part?.index ?? -1;
-      if (
-        !(
-          sn === lastSn + 1 ||
-          (sn === lastSn && partIndex === this.lastPartIndex + 1) ||
-          cc === this.lastCc
-        )
-      ) {
-        cea608Parser1.reset();
-        cea608Parser2.reset();
+      if (cea608Parser1 && cea608Parser2) {
+        if (
+          sn !== lastSn + 1 ||
+          (sn === lastSn && partIndex !== this.lastPartIndex + 1) ||
+          cc !== this.lastCc
+        ) {
+          cea608Parser1.reset();
+          cea608Parser2.reset();
+        }
       }
       this.lastCc = cc as number;
       this.lastSn = sn as number;
