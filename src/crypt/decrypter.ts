@@ -38,7 +38,7 @@ export default class Decrypter {
         /* no-op */
       }
     }
-    this.useSoftware = this.subtle === null;
+    this.useSoftware = !this.subtle;
   }
 
   destroy() {
@@ -155,20 +155,22 @@ export default class Decrypter {
     iv: ArrayBuffer,
     aesMode: DecrypterAesMode,
   ): Promise<ArrayBuffer> {
-    const subtle = this.subtle;
     if (this.key !== key || !this.fastAesKey) {
+      if (!this.subtle) {
+        return Promise.resolve(this.onWebCryptoError(data, key, iv, aesMode));
+      }
       this.key = key;
-      this.fastAesKey = new FastAESKey(subtle, key, aesMode);
+      this.fastAesKey = new FastAESKey(this.subtle, key, aesMode);
     }
     return this.fastAesKey
       .expandKey()
       .then((aesKey: CryptoKey) => {
         // decrypt using web crypto
-        if (!subtle) {
+        if (!this.subtle) {
           return Promise.reject(new Error('web crypto not initialized'));
         }
         this.logOnce('WebCrypto AES decrypt');
-        const crypto = new AESCrypto(subtle, new Uint8Array(iv), aesMode);
+        const crypto = new AESCrypto(this.subtle, new Uint8Array(iv), aesMode);
         return crypto.decrypt(data.buffer, aesKey);
       })
       .catch((err) => {
@@ -180,7 +182,12 @@ export default class Decrypter {
       });
   }
 
-  private onWebCryptoError(data, key, iv, aesMode): ArrayBuffer | never {
+  private onWebCryptoError(
+    data: Uint8Array,
+    key: ArrayBuffer,
+    iv: ArrayBuffer,
+    aesMode: DecrypterAesMode,
+  ): ArrayBuffer | never {
     const enableSoftwareAES = this.enableSoftwareAES;
     if (enableSoftwareAES) {
       this.useSoftware = true;
