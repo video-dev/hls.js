@@ -872,11 +872,10 @@ function parsePMT(
       case 0xc2: // SAMPLE-AES EC3
       /* falls through */
       case 0x87:
-        logger.warn('Unsupported EC-3 in M2TS found');
-        break;
+        throw new Error('Unsupported EC-3 in M2TS found');
+
       case 0x24:
-        logger.warn('Unsupported HEVC in M2TS found');
-        break;
+        throw new Error('Unsupported HEVC in M2TS found');
 
       default:
         // logger.log('unknown stream type:' + data[offset]);

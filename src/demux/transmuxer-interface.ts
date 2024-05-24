@@ -337,6 +337,7 @@ export default class TransmuxerInterface {
       type: ErrorTypes.MEDIA_ERROR,
       details: ErrorDetails.FRAG_PARSING_ERROR,
       chunkMeta,
+      frag: this.frag || undefined,
       fatal: false,
       error,
       err: error,
