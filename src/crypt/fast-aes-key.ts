@@ -1,8 +1,8 @@
 export default class FastAESKey {
-  private subtle: any;
+  private subtle: SubtleCrypto;
   private key: ArrayBuffer;
 
-  constructor(subtle, key) {
+  constructor(subtle: SubtleCrypto, key: ArrayBuffer) {
     this.subtle = subtle;
     this.key = key;
   }
