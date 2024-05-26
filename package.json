@@ -124,7 +124,7 @@
     "sauce-connect-launcher": "1.3.2",
     "selenium-webdriver": "4.21.0",
     "semver": "7.6.2",
-    "sinon": "17.0.1",
+    "sinon": "18.0.0",
     "sinon-chai": "3.7.0",
     "typescript": "5.4.5",
     "url-toolkit": "2.2.5",
