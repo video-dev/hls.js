@@ -12341,6 +12341,11 @@
       "version": "1.5.9",
       "commit": "a247d343faf8575f146b1ac55b8667ab4b8b9f64",
       "url": "https://467b758b.hls-js-dev.pages.dev/"
+    },
+    {
+      "version": "1.5.9",
+      "commit": "7c9e9a40ff0e5351a1671ed385065535d6f74778",
+      "url": "https://978f0c41.hls-js-dev.pages.dev/"
     }
   ]
 }
