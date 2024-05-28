@@ -215,6 +215,8 @@ export class TimelineController implements ComponentAPI {
           canReuseVttTextTrack(textTrack, {
             name: label,
             lang: language,
+            characteristics:
+              'transcribes-spoken-dialog,describes-music-and-sound',
             attrs: {} as any,
           })
         ) {
