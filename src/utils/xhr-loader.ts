@@ -108,7 +108,7 @@ class XhrLoader implements Loader<LoaderContext> {
           return xhrSetup(xhr, context.url);
         })
         .then(() => {
-          if (this.stats?.aborted) return;
+          if (this.stats === null || this.stats.aborted) return;
           this.openAndSendXhr(xhr, context, config);
         })
         .catch((error: Error) => {
