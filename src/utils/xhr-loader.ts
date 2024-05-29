@@ -100,7 +100,7 @@ class XhrLoader implements Loader<LoaderContext> {
     if (xhrSetup) {
       Promise.resolve()
         .then(() => {
-          if (this.stats?.aborted) return;
+          if (this.stats === null || this.stats.aborted) return;
           return xhrSetup(xhr, context.url);
         })
         .catch((error: Error) => {
