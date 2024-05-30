@@ -40,8 +40,6 @@ class XhrLoader implements Loader<LoaderContext> {
     this.config = null;
     this.context = null;
     this.xhrSetup = null;
-    // @ts-ignore
-    this.stats = null;
   }
 
   abortInternal() {
@@ -100,15 +98,16 @@ class XhrLoader implements Loader<LoaderContext> {
     if (xhrSetup) {
       Promise.resolve()
         .then(() => {
-          if (this.stats === null || this.stats.aborted) return;
+          if (this.loader !== xhr || this.stats.aborted) return;
           return xhrSetup(xhr, context.url);
         })
         .catch((error: Error) => {
+          if (this.loader !== xhr || this.stats.aborted) return;
           xhr.open('GET', context.url, true);
           return xhrSetup(xhr, context.url);
         })
         .then(() => {
-          if (this.stats === null || this.stats.aborted) return;
+          if (this.loader !== xhr || this.stats.aborted) return;
           this.openAndSendXhr(xhr, context, config);
         })
         .catch((error: Error) => {
@@ -263,8 +262,9 @@ class XhrLoader implements Loader<LoaderContext> {
   }
 
   loadtimeout() {
-    const retryConfig = this.config?.loadPolicy.timeoutRetry;
-    const retryCount = this.stats?.retry;
+    if (!this.config) return;
+    const retryConfig = this.config.loadPolicy.timeoutRetry;
+    const retryCount = this.stats.retry;
     if (shouldRetry(retryConfig, retryCount, true)) {
       this.retry(retryConfig);
     } else {
