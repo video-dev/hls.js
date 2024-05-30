@@ -306,11 +306,9 @@ class XhrLoader implements Loader<LoaderContext> {
   loadprogress(event: ProgressEvent) {
     const stats = this.stats;
 
-    if (stats) {
-      stats.loaded = event.loaded;
-      if (event.lengthComputable) {
-        stats.total = event.total;
-      }
+    stats.loaded = event.loaded;
+    if (event.lengthComputable) {
+      stats.total = event.total;
     }
   }
 
