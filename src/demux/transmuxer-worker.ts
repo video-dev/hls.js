@@ -43,7 +43,7 @@ function startWorker(self) {
           observer,
           data.typeSupported,
           config,
-          data.vendor,
+          '',
           data.id,
         );
         const logger = enableLogs(config.debug, data.id);
