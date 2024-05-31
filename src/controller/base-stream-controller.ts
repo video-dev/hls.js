@@ -1278,7 +1278,7 @@ export default class BaseStreamController
     let { fragPrevious } = this;
     let { fragments, endSN } = levelDetails;
     const { fragmentHint } = levelDetails;
-    const tolerance = config.maxFragLookUpTolerance;
+    const { maxFragLookUpTolerance } = config;
     const partList = levelDetails.partList;
 
     const loadingParts = !!(
@@ -1294,7 +1294,8 @@ export default class BaseStreamController
 
     let frag;
     if (bufferEnd < end) {
-      const lookupTolerance = bufferEnd > end - tolerance ? 0 : tolerance;
+      const lookupTolerance =
+        bufferEnd > end - maxFragLookUpTolerance ? 0 : maxFragLookUpTolerance;
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
       frag = findFragmentByPTS(
