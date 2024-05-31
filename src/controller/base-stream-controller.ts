@@ -397,7 +397,7 @@ export default class BaseStreamController
         if (this.state === State.STOPPED || this.state === State.ERROR) {
           return;
         }
-        this.warn(reason);
+        this.warn(`Frag error: ${reason?.message || reason}`);
         this.resetFragmentLoading(frag);
       });
   }
