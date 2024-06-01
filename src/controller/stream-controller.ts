@@ -1272,7 +1272,13 @@ export default class StreamController
         // In the case that AAC and HE-AAC audio codecs are signalled in manifest,
         // force HE-AAC, as it seems that most browsers prefers it.
         // don't force HE-AAC if mono stream, or in Firefox
-        if (audio.metadata.channelCount !== 1 && ua.indexOf('firefox') === -1) {
+        const audioMetadata = audio.metadata;
+        if (
+          audioMetadata &&
+          'channelCount' in audioMetadata &&
+          (audioMetadata.channelCount || 1) !== 1 &&
+          ua.indexOf('firefox') === -1
+        ) {
           audioCodec = 'mp4a.40.5';
         }
       }
