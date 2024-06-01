@@ -17,7 +17,7 @@ import { Fragment, Part } from '../loader/fragment';
 import { getM2TSSupportedAudioTypes } from '../utils/codecs';
 import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type Hls from '../hls';
-import type { HlsEventEmitter } from '../events';
+import type { HlsEventEmitter, HlsListeners } from '../events';
 import type { PlaylistLevelType } from '../types/loader';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
@@ -30,7 +30,9 @@ export default class TransmuxerInterface {
   private part: Part | null = null;
   private useWorker: boolean;
   private workerContext: WorkerContext | null = null;
-  private onwmsg?: Function;
+  private onwmsg?: (
+    event: MessageEvent<{ event: string; data?: any } | null>,
+  ) => void;
   private transmuxer: Transmuxer | null = null;
   private onTransmuxComplete: (transmuxResult: TransmuxerResult) => void;
   private onFlush: (chunkMeta: ChunkMetadata) => void;
@@ -67,9 +69,6 @@ export default class TransmuxerInterface {
       config.preferManagedMediaSource,
     );
 
-    // navigator.vendor is not always available in Web Worker
-    // refer to https://developer.mozilla.org/en-US/docs/Web/API/WorkerGlobalScope/navigator
-    const vendor = navigator.vendor;
     if (this.useWorker && typeof Worker !== 'undefined') {
       const canCreateWorker = config.workerPath || hasUMDWorker();
       if (canCreateWorker) {
@@ -81,9 +80,9 @@ export default class TransmuxerInterface {
             logger.log(`injecting Web Worker for "${id}"`);
             this.workerContext = injectWorker();
           }
-          this.onwmsg = (ev: any) => this.onWorkerMessage(ev);
+          this.onwmsg = (event) => this.onWorkerMessage(event);
           const { worker } = this.workerContext;
-          worker.addEventListener('message', this.onwmsg as any);
+          worker.addEventListener('message', this.onwmsg);
           worker.onerror = (event) => {
             const error = new Error(
               `${event.message}  (${event.filename}:${event.lineno})`,
@@ -101,7 +100,7 @@ export default class TransmuxerInterface {
           worker.postMessage({
             cmd: 'init',
             typeSupported: m2tsTypeSupported,
-            vendor: vendor,
+            vendor: '',
             id: id,
             config: JSON.stringify(config),
           });
@@ -116,7 +115,7 @@ export default class TransmuxerInterface {
             this.observer,
             m2tsTypeSupported,
             config,
-            vendor,
+            '',
             id,
           );
         }
@@ -128,12 +127,12 @@ export default class TransmuxerInterface {
       this.observer,
       m2tsTypeSupported,
       config,
-      vendor,
+      '',
       id,
     );
   }
 
-  resetWorker(): void {
+  resetWorker() {
     if (this.workerContext) {
       const { worker, objectURL } = this.workerContext;
       if (objectURL) {
@@ -147,7 +146,7 @@ export default class TransmuxerInterface {
     }
   }
 
-  destroy(): void {
+  destroy() {
     if (this.workerContext) {
       this.resetWorker();
       this.onwmsg = undefined;
@@ -180,7 +179,7 @@ export default class TransmuxerInterface {
     accurateTimeOffset: boolean,
     chunkMeta: ChunkMetadata,
     defaultInitPTS?: RationalTimestamp,
-  ): void {
+  ) {
     chunkMeta.transmuxing.start = self.performance.now();
     const { transmuxer } = this;
     const timeOffset = part ? part.start : frag.start;
@@ -347,9 +346,20 @@ export default class TransmuxerInterface {
     this.onFlush(chunkMeta);
   }
 
-  private onWorkerMessage(ev: any): void {
-    const data = ev.data;
+  private onWorkerMessage(
+    event: MessageEvent<{ event: string; data?: any } | null>,
+  ) {
+    const data = event.data;
+    if (!data?.event) {
+      logger.warn(
+        `worker message received with no ${data ? 'event name' : 'data'}`,
+      );
+      return;
+    }
     const hls = this.hls;
+    if (!this.hls) {
+      return;
+    }
     switch (data.event) {
       case 'init': {
         const objectURL = this.workerContext?.objectURL;
@@ -381,7 +391,7 @@ export default class TransmuxerInterface {
         data.data = data.data || {};
         data.data.frag = this.frag;
         data.data.id = this.id;
-        hls.trigger(data.event, data.data);
+        hls.trigger(data.event as keyof HlsListeners, data.data);
         break;
       }
     }

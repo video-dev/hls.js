@@ -374,6 +374,7 @@ class TSDemuxer implements Demuxer {
               offset,
               this.typeSupported,
               isSampleAes,
+              this.observer,
             );
 
             // only update track id if track PID found while parsing PMT
@@ -422,16 +423,12 @@ class TSDemuxer implements Demuxer {
     }
 
     if (tsPacketErrors > 0) {
-      const error = new Error(
-        `Found ${tsPacketErrors} TS packet/s that do not start with 0x47`,
+      emitParsingError(
+        this.observer,
+        new Error(
+          `Found ${tsPacketErrors} TS packet/s that do not start with 0x47`,
+        ),
       );
-      this.observer.emit(Events.ERROR, Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.FRAG_PARSING_ERROR,
-        fatal: false,
-        error,
-        reason: error.message,
-      });
     }
 
     videoTrack.pesData = videoData;
@@ -628,16 +625,7 @@ class TSDemuxer implements Demuxer {
       } else {
         reason = 'No ADTS header found in AAC PES';
       }
-      const error = new Error(reason);
-      logger.warn(`parsing error: ${reason}`);
-      this.observer.emit(Events.ERROR, Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.FRAG_PARSING_ERROR,
-        fatal: false,
-        levelRetry: recoverable,
-        error,
-        reason,
-      });
+      emitParsingError(this.observer, new Error(reason), recoverable);
       if (!recoverable) {
         return;
       }
@@ -768,6 +756,7 @@ function parsePMT(
   offset: number,
   typeSupported: TypeSupported,
   isSampleAes: boolean,
+  observer: HlsEventEmitter,
 ) {
   const result = {
     audioPid: -1,
@@ -897,7 +886,8 @@ function parsePMT(
       case 0xc2: // SAMPLE-AES EC3
       /* falls through */
       case 0x87:
-        throw new Error('Unsupported EC-3 in M2TS found');
+        emitParsingError(observer, new Error('Unsupported EC-3 in M2TS found'));
+        return result;
 
       case 0x24: // ITU-T Rec. H.265 and ISO/IEC 23008-2 (HEVC)
         if (__USE_M2TS_ADVANCED_CODECS__) {
@@ -907,7 +897,11 @@ function parsePMT(
             logger.log('HEVC in M2TS found');
           }
         } else {
-          throw new Error('Unsupported HEVC in M2TS found');
+          emitParsingError(
+            observer,
+            new Error('Unsupported HEVC in M2TS found'),
+          );
+          return result;
         }
         break;
 
@@ -920,6 +914,22 @@ function parsePMT(
     offset += esInfoLength + 5;
   }
   return result;
+}
+
+function emitParsingError(
+  observer: HlsEventEmitter,
+  error: Error,
+  levelRetry?: boolean,
+) {
+  logger.warn(`parsing error: ${error.message}`);
+  observer.emit(Events.ERROR, Events.ERROR, {
+    type: ErrorTypes.MEDIA_ERROR,
+    details: ErrorDetails.FRAG_PARSING_ERROR,
+    fatal: false,
+    levelRetry,
+    error,
+    reason: error.message,
+  });
 }
 
 function logEncryptedSamplesFoundInUnencryptedStream(type: string) {
