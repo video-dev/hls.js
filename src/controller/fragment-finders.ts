@@ -58,6 +58,7 @@ export function findFragmentByPTS(
   fragments: Array<Fragment>,
   bufferEnd: number = 0,
   maxFragLookUpTolerance: number = 0,
+  nextFragLookupTolerance: number = 0.005,
 ): Fragment | null {
   let fragNext: Fragment | null = null;
   if (fragPrevious) {
@@ -76,9 +77,17 @@ export function findFragmentByPTS(
   // Prefer the next fragment if it's within tolerance
   if (
     fragNext &&
-    (!fragPrevious || fragPrevious.level === fragNext.level) &&
-    fragmentWithinToleranceTest(bufferEnd, maxFragLookUpTolerance, fragNext) ===
-      0
+    (((!fragPrevious || fragPrevious.level === fragNext.level) &&
+      fragmentWithinToleranceTest(
+        bufferEnd,
+        maxFragLookUpTolerance,
+        fragNext,
+      ) === 0) ||
+      fragmentWithinFastStartSwitch(
+        fragNext,
+        fragPrevious,
+        Math.min(nextFragLookupTolerance, maxFragLookUpTolerance),
+      ))
   ) {
     return fragNext;
   }
@@ -92,6 +101,28 @@ export function findFragmentByPTS(
   }
   // If no match was found return the next fragment after fragPrevious, or null
   return fragNext;
+}
+
+function fragmentWithinFastStartSwitch(
+  fragNext: Fragment,
+  fragPrevious: Fragment | null,
+  nextFragLookupTolerance: number,
+): boolean {
+  if (
+    fragPrevious &&
+    fragPrevious.start === 0 &&
+    fragPrevious.level < fragNext.level &&
+    (fragPrevious.endPTS || 0) > 0
+  ) {
+    const firstDuration = fragPrevious.tagList.reduce((duration, tag) => {
+      if (tag[0] === 'INF') {
+        duration += parseFloat(tag[1]);
+      }
+      return duration;
+    }, nextFragLookupTolerance);
+    return fragNext.start <= firstDuration;
+  }
+  return false;
 }
 
 /**
