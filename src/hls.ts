@@ -968,6 +968,10 @@ export default class Hls implements HlsEventEmitter {
     return this.latencyController.targetLatency;
   }
 
+  set targetLatency(latency: number) {
+    this.latencyController.targetLatency = latency;
+  }
+
   /**
    * the rate at which the edge of the current live playlist is advancing or 1 if there is none
    */

@@ -1657,6 +1657,7 @@ class Hls implements HlsEventEmitter {
     get subtitleTracks(): Array<MediaPlaylist>;
     swapAudioCodec(): void;
     get targetLatency(): number | null;
+    set targetLatency(latency: number);
     // (undocumented)
     trigger<E extends keyof HlsListeners>(event: E, eventObject: Parameters<HlsListeners[E]>[1]): boolean;
     get ttfbEstimate(): number;

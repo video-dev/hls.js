@@ -181,6 +181,23 @@ describe('LatencyController', function () {
       latencyController['stallCount'] += 1;
       expect(latencyController.targetLatency).to.equal(6.5);
     });
+
+    it('can be set and will reset stallCount', function () {
+      latencyController['config'].lowLatencyMode = true;
+      levelDetails.targetduration = 3.5;
+      levelDetails.partHoldBack = 3;
+      levelDetails.age = 0;
+      expect(latencyController.targetLatency).to.equal(3);
+      latencyController['stallCount'] = 1;
+      expect(latencyController.targetLatency).to.equal(4);
+      expect(latencyController['config'].liveSyncDuration).to.be.undefined;
+      latencyController.targetLatency = 2;
+      expect(latencyController['stallCount']).to.equal(0);
+      expect(latencyController['config'].liveSyncDuration).to.equal(2);
+      expect(latencyController['hls'].userConfig.liveSyncDuration).to.be
+        .undefined;
+      expect(latencyController.targetLatency).to.equal(2);
+    });
   });
 
   describe('liveSyncPosition', function () {
