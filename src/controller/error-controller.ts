@@ -381,7 +381,11 @@ export default class ErrorController implements NetworkComponentAPI {
         ) {
           const levelCandidate = levels[candidate];
           // Skip level switch if GAP tag is found in next level at same position
-          if (errorDetails === ErrorDetails.FRAG_GAP && data.frag) {
+          if (
+            errorDetails === ErrorDetails.FRAG_GAP &&
+            fragErrorType === PlaylistLevelType.MAIN &&
+            data.frag
+          ) {
             const levelDetails = levels[candidate].details;
             if (levelDetails) {
               const fragCandidate = findFragmentByPTS(
