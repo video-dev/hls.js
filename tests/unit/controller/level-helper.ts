@@ -6,7 +6,7 @@ import {
   mergeDetails,
 } from '../../../src/utils/level-helper';
 import { LevelDetails } from '../../../src/loader/level-details';
-import { Fragment, Part } from '../../../src/loader/fragment';
+import { Fragment, MediaFragment, Part } from '../../../src/loader/fragment';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
@@ -234,7 +234,10 @@ expect: ${JSON.stringify(merged.fragments[i])}`,
       oldPlaylist.fragments.forEach((frag) => {
         frag.initSegment = oldInitSegment;
       });
-      oldPlaylist.fragmentHint = new Fragment(PlaylistLevelType.MAIN, '');
+      oldPlaylist.fragmentHint = new Fragment(
+        PlaylistLevelType.MAIN,
+        '',
+      ) as MediaFragment;
       oldPlaylist.fragmentHint.sn = 4;
       oldPlaylist.fragmentHint.initSegment = oldInitSegment;
 
@@ -245,7 +248,10 @@ expect: ${JSON.stringify(merged.fragments[i])}`,
       newPlaylist.fragments.forEach((frag) => {
         frag.initSegment = newInitSegment;
       });
-      newPlaylist.fragmentHint = new Fragment(PlaylistLevelType.MAIN, '');
+      newPlaylist.fragmentHint = new Fragment(
+        PlaylistLevelType.MAIN,
+        '',
+      ) as MediaFragment;
       newPlaylist.fragmentHint.sn = 5;
       newPlaylist.fragmentHint.initSegment = newInitSegment;
 

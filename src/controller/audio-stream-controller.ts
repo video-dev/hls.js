@@ -4,7 +4,12 @@ import { Bufferable, BufferHelper } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
 import { Level } from '../types/level';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
-import { Fragment, ElementaryStreamTypes, Part } from '../loader/fragment';
+import {
+  Fragment,
+  ElementaryStreamTypes,
+  Part,
+  MediaFragment,
+} from '../loader/fragment';
 import ChunkCache from '../demux/chunk-cache';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
@@ -40,7 +45,7 @@ import type { MediaPlaylist } from '../types/media-playlist';
 const TICK_INTERVAL = 100; // how often to tick in ms
 
 type WaitingForPTSData = {
-  frag: Fragment;
+  frag: MediaFragment;
   part: Part | null;
   cache: ChunkCache;
   complete: boolean;
@@ -563,7 +568,8 @@ class AudioStreamController
   }
 
   _handleFragmentLoadProgress(data: FragLoadedData) {
-    const { frag, part, payload } = data;
+    const frag = data.frag as MediaFragment;
+    const { part, payload } = data;
     const { config, trackId, levels } = this;
     if (!levels) {
       this.warn(
@@ -608,7 +614,7 @@ class AudioStreamController
       const partial = partIndex !== -1;
       const chunkMeta = new ChunkMetadata(
         frag.level,
-        frag.sn as number,
+        frag.sn,
         frag.stats.chunkCount,
         payload.byteLength,
         partIndex,

@@ -358,18 +358,18 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected getAppendedFrag(position: number, playlistType?: PlaylistLevelType): Fragment | null;
     // (undocumented)
     protected getCurrentContext(chunkMeta: ChunkMetadata): {
-        frag: Fragment;
+        frag: MediaFragment;
         part: Part | null;
         level: Level;
     } | null;
     // (undocumented)
-    protected getFragmentAtPosition(bufferEnd: number, end: number, levelDetails: LevelDetails): Fragment | null;
+    protected getFragmentAtPosition(bufferEnd: number, end: number, levelDetails: LevelDetails): MediaFragment | null;
     // (undocumented)
     protected getFwdBufferInfo(bufferable: Bufferable | null, type: PlaylistLevelType): BufferInfo | null;
     // (undocumented)
     protected getFwdBufferInfoAtPos(bufferable: Bufferable | null, pos: number, type: PlaylistLevelType): BufferInfo | null;
     // (undocumented)
-    protected getInitialLiveFragment(levelDetails: LevelDetails, fragments: Array<Fragment>): Fragment | null;
+    protected getInitialLiveFragment(levelDetails: LevelDetails, fragments: MediaFragment[]): MediaFragment | null;
     // (undocumented)
     protected getLevelDetails(): LevelDetails | undefined;
     // (undocumented)
@@ -1974,7 +1974,7 @@ export interface ILogger {
 // @public (undocumented)
 export interface InitPTSFoundData {
     // (undocumented)
-    frag: Fragment;
+    frag: MediaFragment;
     // (undocumented)
     id: string;
     // (undocumented)
@@ -2226,9 +2226,9 @@ export class LevelDetails {
     // (undocumented)
     get fragmentEnd(): number;
     // (undocumented)
-    fragmentHint?: Fragment;
+    fragmentHint?: MediaFragment;
     // (undocumented)
-    fragments: Fragment[];
+    fragments: MediaFragment[];
     // (undocumented)
     get hasProgramDateTime(): boolean;
     // (undocumented)
@@ -2836,6 +2836,14 @@ export interface MediaEndedData {
     stalled: boolean;
 }
 
+// Warning: (ae-missing-release-tag) "MediaFragment" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface MediaFragment extends Fragment {
+    // (undocumented)
+    sn: number;
+}
+
 // Warning: (ae-missing-release-tag) "MediaKeyFunc" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -3041,13 +3049,13 @@ export type ParsedMultivariantPlaylist = {
 //
 // @public
 export class Part extends BaseSegment {
-    constructor(partAttrs: AttrList, frag: Fragment, baseurl: string, index: number, previous?: Part);
+    constructor(partAttrs: AttrList, frag: MediaFragment, baseurl: string, index: number, previous?: Part);
     // (undocumented)
     readonly duration: number;
     // (undocumented)
     get end(): number;
     // (undocumented)
-    readonly fragment: Fragment;
+    readonly fragment: MediaFragment;
     // (undocumented)
     readonly fragOffset: number;
     // (undocumented)

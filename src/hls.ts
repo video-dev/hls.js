@@ -1118,6 +1118,7 @@ export type { ChunkMetadata } from './types/transmuxer';
 export type {
   BaseSegment,
   Fragment,
+  MediaFragment,
   Part,
   ElementaryStreams,
   ElementaryStreamTypes,

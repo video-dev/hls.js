@@ -5,7 +5,7 @@
 import { logger } from './logger';
 import { DateRange } from '../loader/date-range';
 import { assignProgramDateTime, mapDateRanges } from '../loader/m3u8-parser';
-import type { Fragment, Part } from '../loader/fragment';
+import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
 
@@ -13,7 +13,7 @@ type FragmentIntersection = (oldFrag: Fragment, newFrag: Fragment) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;
 
 export function updatePTS(
-  fragments: Fragment[],
+  fragments: MediaFragment[],
   fromIdx: number,
   toIdx: number,
 ): void {
@@ -22,7 +22,7 @@ export function updatePTS(
   updateFromToPTS(fragFrom, fragTo);
 }
 
-function updateFromToPTS(fragFrom: Fragment, fragTo: Fragment) {
+function updateFromToPTS(fragFrom: MediaFragment, fragTo: MediaFragment) {
   const fragToPTS = fragTo.startPTS as number;
   // if we know startPTS[toIdx]
   if (Number.isFinite(fragToPTS)) {
@@ -56,7 +56,7 @@ function updateFromToPTS(fragFrom: Fragment, fragTo: Fragment) {
 
 export function updateFragPTSDTS(
   details: LevelDetails | undefined,
-  frag: Fragment,
+  frag: MediaFragment,
   startPTS: number,
   endPTS: number,
   startDTS: number,
@@ -83,11 +83,11 @@ export function updateFragPTSDTS(
 
     maxStartPTS = Math.max(startPTS, fragStartPts);
     startPTS = Math.min(startPTS, fragStartPts);
-    startDTS = Math.min(startDTS, frag.startDTS);
+    startDTS = Math.min(startDTS, frag.startDTS as number);
 
     minEndPTS = Math.min(endPTS, fragEndPts);
     endPTS = Math.max(endPTS, fragEndPts);
-    endDTS = Math.max(endDTS, frag.endDTS);
+    endDTS = Math.max(endDTS, frag.endDTS as number);
   }
 
   const drift = startPTS - frag.start;
@@ -102,7 +102,7 @@ export function updateFragPTSDTS(
   frag.minEndPTS = minEndPTS;
   frag.endDTS = endDTS;
 
-  const sn = frag.sn as number; // 'initSegment'
+  const sn = frag.sn;
   // exit if sn out of range
   if (!details || sn < details.startSN || sn > details.endSN) {
     return 0;
@@ -221,7 +221,7 @@ export function mergeDetails(
       for (let i = newDetails.skippedSegments; i--; ) {
         newDetails.fragments.shift();
       }
-      newDetails.startSN = newDetails.fragments[0].sn as number;
+      newDetails.startSN = newDetails.fragments[0].sn;
       newDetails.startCC = newDetails.fragments[0].cc;
     } else {
       if (newDetails.canSkipDateRanges) {
@@ -233,9 +233,6 @@ export function mergeDetails(
       const programDateTimes = oldDetails.fragments.filter(
         (frag) => frag.rawProgramDateTime,
       );
-      const dateRangeMapping: [DateRange, number][] = Object.keys(
-        newDetails.dateRanges,
-      ).map((id) => [newDetails.dateRanges[id], -1]);
       if (oldDetails.hasProgramDateTime && !newDetails.hasProgramDateTime) {
         for (let i = 1; i < fragmentsToCheck.length; i++) {
           if (fragmentsToCheck[i].programDateTime === null) {
@@ -243,12 +240,11 @@ export function mergeDetails(
               fragmentsToCheck[i],
               fragmentsToCheck[i - 1],
               programDateTimes,
-              dateRangeMapping,
             );
           }
         }
       }
-      mapDateRanges(programDateTimes, dateRangeMapping, newDetails);
+      mapDateRanges(programDateTimes, newDetails);
     }
   }
 
@@ -468,22 +464,22 @@ export function getFragmentWithSN(
   level: Level,
   sn: number,
   fragCurrent: Fragment | null,
-): Fragment | null {
-  if (!level?.details) {
+): MediaFragment | null {
+  const details = level?.details;
+  if (!details) {
     return null;
   }
-  const levelDetails = level.details;
-  let fragment: Fragment | undefined =
-    levelDetails.fragments[sn - levelDetails.startSN];
+  let fragment: MediaFragment | undefined =
+    details.fragments[sn - details.startSN];
   if (fragment) {
     return fragment;
   }
-  fragment = levelDetails.fragmentHint;
+  fragment = details.fragmentHint;
   if (fragment && fragment.sn === sn) {
     return fragment;
   }
-  if (sn < levelDetails.startSN && fragCurrent && fragCurrent.sn === sn) {
-    return fragCurrent;
+  if (sn < details.startSN && fragCurrent && fragCurrent.sn === sn) {
+    return fragCurrent as MediaFragment;
   }
   return null;
 }

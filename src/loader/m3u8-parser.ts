@@ -1,6 +1,6 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 import { DateRange } from './date-range';
-import { Fragment, Part } from './fragment';
+import { Fragment, MediaFragment, Part } from './fragment';
 import { LevelDetails } from './level-details';
 import { LevelKey } from './level-key';
 import { AttrList } from '../utils/attr-list';
@@ -307,8 +307,7 @@ export default class M3U8Parser {
   ): LevelDetails {
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
-    const programDateTimes: Fragment[] = [];
-    const dateRangeMapping: [DateRange, number][] = [];
+    const programDateTimes: MediaFragment[] = [];
     // The most recent init segment seen (applies to all subsequent segments)
     let currentInitSegment: Fragment | null = null;
     let currentSN = 0;
@@ -375,10 +374,9 @@ export default class M3U8Parser {
             ? substituteVariables(level, uri)
             : uri;
           assignProgramDateTime(
-            frag,
-            prevFrag,
+            frag as MediaFragment,
+            prevFrag as MediaFragment,
             programDateTimes,
-            dateRangeMapping,
           );
           prevFrag = frag;
           totalduration += frag.duration;
@@ -491,7 +489,6 @@ export default class M3U8Parser {
             level.dateRangeTagCount++;
             if (dateRange.isValid || level.skippedSegments) {
               level.dateRanges[dateRange.id] = dateRange;
-              dateRangeMapping.push([dateRange, -1]);
             } else {
               logger.warn(`Ignoring invalid DATERANGE tag: "${value1}"`);
             }
@@ -570,6 +567,7 @@ export default class M3U8Parser {
               currentInitSegment = frag;
               createNextFrag = true;
             }
+            currentInitSegment.cc = discontinuityCounter;
             break;
           }
           case 'SERVER-CONTROL': {
@@ -605,7 +603,7 @@ export default class M3U8Parser {
             const partAttrs = new AttrList(value1, level);
             const part = new Part(
               partAttrs,
-              frag,
+              frag as MediaFragment,
               baseurl,
               index,
               previousFragmentPart,
@@ -635,12 +633,16 @@ export default class M3U8Parser {
       fragments.pop();
       totalduration -= prevFrag.duration;
       if (level.partList) {
-        level.fragmentHint = prevFrag;
+        level.fragmentHint = prevFrag as MediaFragment;
       }
     } else if (level.partList) {
-      assignProgramDateTime(frag, prevFrag, programDateTimes, dateRangeMapping);
+      assignProgramDateTime(
+        frag as MediaFragment,
+        prevFrag as MediaFragment,
+        programDateTimes,
+      );
       frag.cc = discontinuityCounter;
-      level.fragmentHint = frag;
+      level.fragmentHint = frag as MediaFragment;
       if (levelkeys) {
         setFragLevelKeys(frag, levelkeys, level);
       }
@@ -671,7 +673,7 @@ export default class M3U8Parser {
       if (firstPdtIndex > 0) {
         backfillProgramDateTimes(fragments, firstPdtIndex);
         if (firstFragment) {
-          programDateTimes.unshift(firstFragment);
+          programDateTimes.unshift(firstFragment as MediaFragment);
         }
       }
     } else {
@@ -682,8 +684,8 @@ export default class M3U8Parser {
       totalduration += level.fragmentHint.duration;
     }
     level.totalduration = totalduration;
-    if (programDateTimes.length && firstFragment) {
-      mapDateRanges(programDateTimes, dateRangeMapping, level);
+    if (programDateTimes.length && level.dateRangeTagCount && firstFragment) {
+      mapDateRanges(programDateTimes, level);
     }
 
     level.endCC = discontinuityCounter;
@@ -693,46 +695,29 @@ export default class M3U8Parser {
 }
 
 export function mapDateRanges(
-  programDateTimes: Fragment[],
-  dateRangeMapping: [DateRange, number][],
+  programDateTimes: MediaFragment[],
   details: LevelDetails,
 ) {
   // Make sure DateRanges are mapped to a ProgramDateTime tag that applies a date to a segment that overlaps with its start date
   const programDateTimeCount = programDateTimes.length;
   const lastProgramDateTime = programDateTimes[programDateTimeCount - 1];
   const playlistEnd = details.live ? Infinity : details.totalduration;
-  for (let i = dateRangeMapping.length; i--; ) {
-    const dateRange = dateRangeMapping[i][0];
-    const pdtIndex = dateRange.tagAnchor
-      ? dateRangeMapping[i][1]
-      : programDateTimeCount - 1;
-    if (!dateRange.tagAnchor) {
-      dateRange.tagAnchor = lastProgramDateTime;
-    }
+  const dateRangeIds = Object.keys(details.dateRanges);
+  for (let i = dateRangeIds.length; i--; ) {
+    const dateRange = details.dateRanges[dateRangeIds[i]];
     const startDateTime = dateRange.startDate.getTime();
-    let fragIndex = findFragmentWithStartDate(
-      details,
-      startDateTime,
-      programDateTimes,
-      pdtIndex,
-      playlistEnd,
-    );
-    if (fragIndex !== -1) {
-      dateRange.tagAnchor = details.fragments[fragIndex];
-    } else {
-      // DateRange not mappable to segments between surrounding ProgramDateTime tags, find alternate looping backwards from last PDT
-      for (let j = programDateTimeCount; j--; ) {
-        fragIndex = findFragmentWithStartDate(
-          details,
-          startDateTime,
-          programDateTimes,
-          j,
-          playlistEnd,
-        );
-        if (fragIndex !== -1) {
-          dateRange.tagAnchor = details.fragments[fragIndex];
-          break;
-        }
+    dateRange.tagAnchor = lastProgramDateTime;
+    for (let j = programDateTimeCount; j--; ) {
+      const fragIndex = findFragmentWithStartDate(
+        details,
+        startDateTime,
+        programDateTimes,
+        j,
+        playlistEnd,
+      );
+      if (fragIndex !== -1) {
+        dateRange.tagAnchor = details.fragments[fragIndex];
+        break;
       }
     }
   }
@@ -741,7 +726,7 @@ export function mapDateRanges(
 function findFragmentWithStartDate(
   details: LevelDetails,
   startDateTime: number,
-  programDateTimes: Fragment[],
+  programDateTimes: MediaFragment[],
   index: number,
   endTime: number,
 ): number {
@@ -756,19 +741,20 @@ function findFragmentWithStartDate(
       startDateTime <= pdtStart + durationBetweenPdt * 1000
     ) {
       // map to fragment with date-time range
+      const startIndex = programDateTimes[index].sn - details.startSN;
       const fragments = details.fragments;
-      const endSegment =
-        programDateTimes[index + 1] || fragments[fragments.length - 1];
-      const startIndex =
-        (programDateTimes[index].sn as number) - details.startSN;
-      const endIndex = (endSegment.sn as number) - details.startSN;
-      for (let i = endIndex; i > startIndex; i--) {
-        const fragStartDateTime = fragments[i].programDateTime as number;
-        if (
-          startDateTime >= fragStartDateTime &&
-          startDateTime < fragStartDateTime + fragments[i].duration * 1000
-        ) {
-          return i;
+      if (fragments.length > programDateTimes.length) {
+        const endSegment =
+          programDateTimes[index + 1] || fragments[fragments.length - 1];
+        const endIndex = endSegment.sn - details.startSN;
+        for (let i = endIndex; i > startIndex; i--) {
+          const fragStartDateTime = fragments[i].programDateTime as number;
+          if (
+            startDateTime >= fragStartDateTime &&
+            startDateTime < fragStartDateTime + fragments[i].duration * 1000
+          ) {
+            return i;
+          }
         }
       }
       return startIndex;
@@ -868,31 +854,20 @@ function backfillProgramDateTimes(
 }
 
 export function assignProgramDateTime(
-  frag: Fragment,
-  prevFrag: Fragment | null,
-  programDateTimes: Fragment[],
-  dateRangeMapping: [DateRange, number][],
+  frag: MediaFragment,
+  prevFrag: MediaFragment | null,
+  programDateTimes: MediaFragment[],
 ) {
   if (frag.rawProgramDateTime) {
     frag.programDateTime = Date.parse(frag.rawProgramDateTime);
-    if (frag.sn !== 'initSegment' && Number.isFinite(frag.programDateTime)) {
-      programDateTimes.push(frag);
-      // Anchor DateRanges to last ProgramDateTime initially. Mapping to segments is finalized at the end of Playlist parsing.
-      for (let i = dateRangeMapping.length; i--; ) {
-        const dateRange = dateRangeMapping[i][0];
-        if (!dateRange.tagAnchor) {
-          dateRange.tagAnchor = frag;
-          dateRangeMapping[i][1] = programDateTimes.length - 1;
-        }
-      }
+    if (!Number.isFinite(frag.programDateTime)) {
+      frag.programDateTime = null;
+      frag.rawProgramDateTime = null;
+      return;
     }
+    programDateTimes.push(frag);
   } else if (prevFrag?.programDateTime) {
     frag.programDateTime = prevFrag.endProgramDateTime;
-  }
-
-  if (!Number.isFinite(frag.programDateTime)) {
-    frag.programDateTime = null;
-    frag.rawProgramDateTime = null;
   }
 }
 

@@ -1,7 +1,7 @@
 import TransmuxerInterface from '../../../src/demux/transmuxer-interface';
 import { TransmuxState, TransmuxConfig } from '../../../src/demux/transmuxer';
 import { ChunkMetadata, TransmuxerResult } from '../../../src/types/transmuxer';
-import { Fragment } from '../../../src/loader/fragment';
+import { Fragment, MediaFragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import Hls from '../../../src/hls';
 
@@ -137,7 +137,7 @@ describe('TransmuxerInterface tests', function () {
       initSegmentData,
       audioCodec,
       videoCodec,
-      currentFrag,
+      currentFrag as MediaFragment,
       part,
       duration,
       accurateTimeOffset,
@@ -170,7 +170,7 @@ describe('TransmuxerInterface tests', function () {
       initSegmentData,
       audioCodec,
       videoCodec,
-      newFrag,
+      newFrag as MediaFragment,
       part,
       duration,
       accurateTimeOffset,
@@ -237,7 +237,7 @@ describe('TransmuxerInterface tests', function () {
       initSegmentData,
       audioCodec,
       videoCodec,
-      newFrag,
+      newFrag as MediaFragment,
       part,
       duration,
       accurateTimeOffset,

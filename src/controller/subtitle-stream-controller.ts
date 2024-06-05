@@ -18,7 +18,7 @@ import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
 import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
-import type { Fragment } from '../loader/fragment';
+import type { Fragment, MediaFragment } from '../loader/fragment';
 import type {
   ErrorData,
   FragLoadedData,
@@ -156,7 +156,7 @@ export class SubtitleStreamController
       };
       buffered.push(timeRange);
     }
-    this.fragmentTracker.fragBuffered(frag);
+    this.fragmentTracker.fragBuffered(frag as MediaFragment);
     this.fragBufferedComplete(frag, null);
   }
 
@@ -206,7 +206,7 @@ export class SubtitleStreamController
 
     if (frag?.type === PlaylistLevelType.SUBTITLE) {
       if (data.details === ErrorDetails.FRAG_GAP) {
-        this.fragmentTracker.fragBuffered(frag, true);
+        this.fragmentTracker.fragBuffered(frag as MediaFragment, true);
       }
       if (this.fragCurrent) {
         this.fragCurrent.abortRequests();
