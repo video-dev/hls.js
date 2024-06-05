@@ -748,6 +748,62 @@ export default class M3U8Parser {
     level.totalduration = totalduration;
     level.endCC = discontinuityCounter;
 
+    const preloadHintAttrs = level.preloadHint;
+    if (preloadHintAttrs) {
+      let byteRange: string | undefined;
+      if (
+        preloadHintAttrs['BYTERANGE-START'] ||
+        preloadHintAttrs['BYTERANGE-LENGTH']
+      ) {
+        const byteRangeStartOffset = preloadHintAttrs['BYTERANGE-START'] | 0;
+        const byteRangeLength =
+          preloadHintAttrs['BYTERANGE-LENGTH'] | (2 ** 53 - 1);
+        byteRange = `${byteRangeLength}@${byteRangeStartOffset}`;
+      }
+      const preloadType = preloadHintAttrs.TYPE;
+      if (preloadType === 'PART' && level.partList) {
+        const lastPart = level.partList[level.partList.length - 1];
+        const lastPartSn = lastPart.fragment.sn;
+        const lastPartPublished = lastPartSn === lastFragment?.sn;
+        const partIndex = lastPartPublished ? 0 : lastPart.index + 1;
+
+        let preloadFrag = lastPart.fragment;
+        // Need to construct fake fragment for this part since the fragment this part belongs to
+        // is not published either.
+        if (lastPartPublished && level.fragmentHint) {
+          preloadFrag = level.fragmentHint;
+        }
+        const partAttrs = new AttrList({
+          DURATION: level.partTarget,
+          URI: preloadHintAttrs.URI,
+          BYTERANGE: byteRange,
+        });
+        const preloadPart = new Part(
+          partAttrs,
+          preloadFrag,
+          baseurl,
+          partIndex,
+          lastPartPublished ? undefined : lastPart,
+          true,
+        );
+        level.preloadData = {
+          frag: preloadFrag,
+          part: preloadPart,
+        };
+      } else if (preloadType === 'MAP') {
+        const preloadFrag = new Fragment(type, baseurl);
+        const mapAttrs = new AttrList({
+          URI: preloadHintAttrs.URI,
+          BYTERANGE: byteRange,
+        });
+        // Initial segment tag is before segment duration tag
+        setInitSegment(preloadFrag, mapAttrs, id, levelkeys);
+        level.preloadData = {
+          frag: preloadFrag,
+        };
+      }
+    }
+
     /**
      * Backfill any missing PDT values
      * "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
@@ -760,7 +816,6 @@ export default class M3U8Parser {
     if (firstPdtIndex > 0) {
       backfillProgramDateTimes(fragments, firstPdtIndex);
     }
-
     return level;
   }
 }

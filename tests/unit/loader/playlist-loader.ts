@@ -1587,6 +1587,26 @@ fileSequence1151226.ts`,
       });
     });
 
+    it('Creates preload hinted part', function () {
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.preloadData).to.be.an('object');
+      const frag = details.preloadData?.frag;
+      const part = details.preloadData?.part;
+
+      expect(frag?.sn).to.equal(1151234);
+
+      expect(part).to.be.an('object');
+      expect(part?.fragment.sn).to.equal(1151234);
+      expect(part?.index).to.equal(0);
+    });
+
     it('Parses EXT-X-RENDITION-REPORT', function () {
       const details = M3U8Parser.parseLevelPlaylist(
         playlist,
