@@ -83,9 +83,13 @@ export class DateRange {
       );
     }
     this.attr = dateRangeAttr;
-    this._startDate = new Date(dateRangeAttr[DateRangeAttribute.START_DATE]);
+    this._startDate = dateRangeWithSameId
+      ? dateRangeWithSameId.startDate
+      : new Date(dateRangeAttr[DateRangeAttribute.START_DATE]);
     if (DateRangeAttribute.END_DATE in this.attr) {
-      const endDate = new Date(this.attr[DateRangeAttribute.END_DATE]);
+      const endDate =
+        dateRangeWithSameId?.endDate ||
+        new Date(this.attr[DateRangeAttribute.END_DATE]);
       if (Number.isFinite(endDate.getTime())) {
         this._endDate = endDate;
       }
