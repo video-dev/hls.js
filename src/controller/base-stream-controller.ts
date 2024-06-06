@@ -22,7 +22,7 @@ import {
   updateFragPTSDTS,
 } from '../utils/level-helper';
 import TransmuxerInterface from '../demux/transmuxer-interface';
-import { Fragment, Part } from '../loader/fragment';
+import { Fragment, MediaFragment, Part } from '../loader/fragment';
 import FragmentLoader, {
   FragmentLoadProgressCallback,
   LoadError,
@@ -954,22 +954,24 @@ export default class BaseStreamController
       part.stats.parsing.end = now;
     }
     // See if part loading should be disabled/enabled based on buffer and playback position.
-    if (frag.sn !== 'initSegment') {
-      const levelDetails = this.getLevelDetails();
-      const loadingPartsAtEdge = levelDetails && frag.sn > levelDetails.endSN;
-      const shouldLoadParts =
-        loadingPartsAtEdge || this.shouldLoadParts(levelDetails, frag.end);
-      if (shouldLoadParts !== this.loadingParts) {
-        this.log(
-          `LL-Part loading ${
-            shouldLoadParts ? 'ON' : 'OFF'
-          } after parsing segment ending @${frag.end.toFixed(2)}`,
-        );
-        this.loadingParts = shouldLoadParts;
-      }
+    const levelDetails = this.getLevelDetails();
+    const loadingPartsAtEdge = levelDetails && frag.sn > levelDetails.endSN;
+    const shouldLoadParts =
+      loadingPartsAtEdge || this.shouldLoadParts(levelDetails, frag.end);
+    if (shouldLoadParts !== this.loadingParts) {
+      this.log(
+        `LL-Part loading ${
+          shouldLoadParts ? 'ON' : 'OFF'
+        } after parsing segment ending @${frag.end.toFixed(2)}`,
+      );
+      this.loadingParts = shouldLoadParts;
     }
-
-    this.updateLevelTiming(frag, part, level, chunkMeta.partial);
+    this.updateLevelTiming(
+      frag as MediaFragment,
+      part,
+      level,
+      chunkMeta.partial,
+    );
   }
 
   private shouldLoadParts(
@@ -999,7 +1001,7 @@ export default class BaseStreamController
 
   protected getCurrentContext(
     chunkMeta: ChunkMetadata,
-  ): { frag: Fragment; part: Part | null; level: Level } | null {
+  ): { frag: MediaFragment; part: Part | null; level: Level } | null {
     const { levels, fragCurrent } = this;
     const { level: levelIndex, sn, part: partIndex } = chunkMeta;
     if (!levels?.[levelIndex]) {
@@ -1183,7 +1185,7 @@ export default class BaseStreamController
     const { config } = this;
     const start = fragments[0].start;
     const canLoadParts = config.lowLatencyMode && !!levelDetails.partList;
-    let frag: Fragment | null = null;
+    let frag: MediaFragment | null = null;
 
     if (levelDetails.live) {
       const initialLiveManifestSize = config.initialLiveManifestSize;
@@ -1326,10 +1328,10 @@ export default class BaseStreamController
   */
   protected getInitialLiveFragment(
     levelDetails: LevelDetails,
-    fragments: Array<Fragment>,
-  ): Fragment | null {
+    fragments: MediaFragment[],
+  ): MediaFragment | null {
     const fragPrevious = this.fragPrevious;
-    let frag: Fragment | null = null;
+    let frag: MediaFragment | null = null;
     if (fragPrevious) {
       if (levelDetails.hasProgramDateTime) {
         // Prefer using PDT, because it can be accurate enough to choose the correct fragment without knowing the level sliding
@@ -1393,7 +1395,7 @@ export default class BaseStreamController
     bufferEnd: number,
     end: number,
     levelDetails: LevelDetails,
-  ): Fragment | null {
+  ): MediaFragment | null {
     const { config } = this;
     let { fragPrevious } = this;
     let { fragments, endSN } = levelDetails;
@@ -1409,10 +1411,10 @@ export default class BaseStreamController
     if (loadingParts && fragmentHint && !this.bitrateTest) {
       // Include incomplete fragment with parts at end
       fragments = fragments.concat(fragmentHint);
-      endSN = fragmentHint.sn as number;
+      endSN = fragmentHint.sn;
     }
 
-    let frag;
+    let frag: MediaFragment | null;
     if (bufferEnd < end) {
       const lookupTolerance =
         bufferEnd > end - maxFragLookUpTolerance ? 0 : maxFragLookUpTolerance;
@@ -1649,7 +1651,7 @@ export default class BaseStreamController
     }
     const gapTagEncountered = data.details === ErrorDetails.FRAG_GAP;
     if (gapTagEncountered) {
-      this.fragmentTracker.fragBuffered(frag, true);
+      this.fragmentTracker.fragBuffered(frag as MediaFragment, true);
     }
     // keep retrying until the limit will be reached
     const errorAction = data.errorAction;
@@ -1813,7 +1815,7 @@ export default class BaseStreamController
   }
 
   private updateLevelTiming(
-    frag: Fragment,
+    frag: MediaFragment,
     part: Part | null,
     level: Level,
     partial: boolean,

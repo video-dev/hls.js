@@ -90,6 +90,10 @@ export class BaseSegment {
   }
 }
 
+export interface MediaFragment extends Fragment {
+  sn: number;
+}
+
 /**
  * Object representing parsed data from an HLS Segment. Found in {@link hls.js#LevelDetails.fragments}.
  */
@@ -274,13 +278,13 @@ export class Part extends BaseSegment {
   public readonly gap: boolean = false;
   public readonly independent: boolean = false;
   public readonly relurl: string;
-  public readonly fragment: Fragment;
+  public readonly fragment: MediaFragment;
   public readonly index: number;
   public stats: LoadStats = new LoadStats();
 
   constructor(
     partAttrs: AttrList,
-    frag: Fragment,
+    frag: MediaFragment,
     baseurl: string,
     index: number,
     previous?: Part,

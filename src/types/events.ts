@@ -1,7 +1,4 @@
-// eslint-disable-next-line import/no-duplicates
-import type { Fragment } from '../loader/fragment';
-// eslint-disable-next-line import/no-duplicates
-import type { Part } from '../loader/fragment';
+import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type {
   HdcpLevel,
@@ -321,7 +318,7 @@ export interface NonNativeTextTracksData {
 
 export interface InitPTSFoundData {
   id: string;
-  frag: Fragment;
+  frag: MediaFragment;
   initPTS: number;
   timescale: number;
 }

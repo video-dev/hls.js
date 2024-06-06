@@ -167,7 +167,7 @@ describe('StreamController', function () {
       const details = new LevelDetails('');
       details.live = true;
       details.totalduration = 30;
-      details.fragments.push({ start: 0 } as any);
+      details.fragments.push({ start: 0, end: details.totalduration } as any);
       hls.trigger(Events.LEVEL_LOADED, {
         details,
         id: 0,

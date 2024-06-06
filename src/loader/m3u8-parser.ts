@@ -1,6 +1,6 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 import { DateRange } from './date-range';
-import { Fragment, Part } from './fragment';
+import { Fragment, MediaFragment, Part } from './fragment';
 import { LevelDetails } from './level-details';
 import { LevelKey } from './level-key';
 import { AttrList } from '../utils/attr-list';
@@ -10,7 +10,6 @@ import {
   hasVariableReferences,
   importVariableDefinition,
   substituteVariables,
-  substituteVariablesInAttributes,
 } from '../utils/variable-substitution';
 import { isCodecType } from '../utils/codecs';
 import type { CodecType } from '../utils/codecs';
@@ -120,21 +119,7 @@ export default class M3U8Parser {
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       if (result[1]) {
         // '#EXT-X-STREAM-INF' is found, parse level tag  in group 1
-        const attrs = new AttrList(result[1]) as LevelAttributes;
-        if (__USE_VARIABLE_SUBSTITUTION__) {
-          substituteVariablesInAttributes(parsed, attrs, [
-            'CODECS',
-            'SUPPLEMENTAL-CODECS',
-            'ALLOWED-CPC',
-            'PATHWAY-ID',
-            'STABLE-VARIANT-ID',
-            'AUDIO',
-            'VIDEO',
-            'SUBTITLES',
-            'CLOSED-CAPTIONS',
-            'NAME',
-          ]);
-        }
+        const attrs = new AttrList(result[1], parsed) as LevelAttributes;
         const uri = __USE_VARIABLE_SUBSTITUTION__
           ? substituteVariables(parsed, result[2])
           : result[2];
@@ -166,15 +151,7 @@ export default class M3U8Parser {
         switch (tag) {
           case 'SESSION-DATA': {
             // #EXT-X-SESSION-DATA
-            const sessionAttrs = new AttrList(attributes);
-            if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(parsed, sessionAttrs, [
-                'DATA-ID',
-                'LANGUAGE',
-                'VALUE',
-                'URI',
-              ]);
-            }
+            const sessionAttrs = new AttrList(attributes, parsed);
             const dataId = sessionAttrs['DATA-ID'];
             if (dataId) {
               if (parsed.sessionData === null) {
@@ -202,26 +179,14 @@ export default class M3U8Parser {
           case 'DEFINE': {
             // #EXT-X-DEFINE
             if (__USE_VARIABLE_SUBSTITUTION__) {
-              const variableAttributes = new AttrList(attributes);
-              substituteVariablesInAttributes(parsed, variableAttributes, [
-                'NAME',
-                'VALUE',
-                'QUERYPARAM',
-              ]);
+              const variableAttributes = new AttrList(attributes, parsed);
               addVariableDefinition(parsed, variableAttributes, baseurl);
             }
             break;
           }
           case 'CONTENT-STEERING': {
             // #EXT-X-CONTENT-STEERING
-            const contentSteeringAttributes = new AttrList(attributes);
-            if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(
-                parsed,
-                contentSteeringAttributes,
-                ['SERVER-URI', 'PATHWAY-ID'],
-              );
-            }
+            const contentSteeringAttributes = new AttrList(attributes, parsed);
             parsed.contentSteering = {
               uri: M3U8Parser.resolve(
                 contentSteeringAttributes['SERVER-URI'],
@@ -278,26 +243,13 @@ export default class M3U8Parser {
     let id = 0;
     MASTER_PLAYLIST_MEDIA_REGEX.lastIndex = 0;
     while ((result = MASTER_PLAYLIST_MEDIA_REGEX.exec(string)) !== null) {
-      const attrs = new AttrList(result[1]) as MediaAttributes;
+      const attrs = new AttrList(result[1], parsed) as MediaAttributes;
       const type = attrs.TYPE;
       if (type) {
         const groups: (typeof groupsByType)[keyof typeof groupsByType] =
           groupsByType[type];
         const medias: MediaPlaylist[] = results[type] || [];
         results[type] = medias;
-        if (__USE_VARIABLE_SUBSTITUTION__) {
-          substituteVariablesInAttributes(parsed, attrs, [
-            'URI',
-            'GROUP-ID',
-            'LANGUAGE',
-            'ASSOC-LANGUAGE',
-            'STABLE-RENDITION-ID',
-            'NAME',
-            'INSTREAM-ID',
-            'CHARACTERISTICS',
-            'CHANNELS',
-          ]);
-        }
         const lang = attrs.LANGUAGE;
         const assocLang = attrs['ASSOC-LANGUAGE'];
         const channels = attrs.CHANNELS;
@@ -355,6 +307,7 @@ export default class M3U8Parser {
   ): LevelDetails {
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
+    const programDateTimes: MediaFragment[] = [];
     // The most recent init segment seen (applies to all subsequent segments)
     let currentInitSegment: Fragment | null = null;
     let currentSN = 0;
@@ -420,7 +373,11 @@ export default class M3U8Parser {
           frag.relurl = __USE_VARIABLE_SUBSTITUTION__
             ? substituteVariables(level, uri)
             : uri;
-          assignProgramDateTime(frag, prevFrag);
+          assignProgramDateTime(
+            frag as MediaFragment,
+            prevFrag as MediaFragment,
+            programDateTimes,
+          );
           prevFrag = frag;
           totalduration += frag.duration;
           currentSN++;
@@ -468,19 +425,19 @@ export default class M3U8Parser {
             currentSN = level.startSN = parseInt(value1);
             break;
           case 'SKIP': {
-            const skipAttrs = new AttrList(value1);
-            if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(level, skipAttrs, [
-                'RECENTLY-REMOVED-DATERANGES',
-              ]);
+            if (level.skippedSegments) {
+              level.playlistParsingError = new Error(
+                `#EXT-X-SKIP MUST NOT appear more than once in a Playlist`,
+              );
             }
+            const skipAttrs = new AttrList(value1, level);
             const skippedSegments =
               skipAttrs.decimalInteger('SKIPPED-SEGMENTS');
             if (Number.isFinite(skippedSegments)) {
-              level.skippedSegments = skippedSegments;
+              level.skippedSegments += skippedSegments;
               // This will result in fragments[] containing undefined values, which we will fill in with `mergeDetails`
               for (let i = skippedSegments; i--; ) {
-                fragments.unshift(null);
+                fragments.push(null);
               }
               currentSN += skippedSegments;
             }
@@ -488,8 +445,9 @@ export default class M3U8Parser {
               'RECENTLY-REMOVED-DATERANGES',
             );
             if (recentlyRemovedDateranges) {
-              level.recentlyRemovedDateranges =
-                recentlyRemovedDateranges.split('\t');
+              level.recentlyRemovedDateranges = (
+                level.recentlyRemovedDateranges || []
+              ).concat(recentlyRemovedDateranges.split('\t'));
             }
             break;
           }
@@ -522,27 +480,13 @@ export default class M3U8Parser {
             frag.tagList.push([tag, value1]);
             break;
           case 'DATERANGE': {
-            const dateRangeAttr = new AttrList(value1);
-            if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(level, dateRangeAttr, [
-                'ID',
-                'CLASS',
-                'START-DATE',
-                'END-DATE',
-                'SCTE35-CMD',
-                'SCTE35-OUT',
-                'SCTE35-IN',
-              ]);
-              substituteVariablesInAttributes(
-                level,
-                dateRangeAttr,
-                dateRangeAttr.clientAttrs,
-              );
-            }
+            const dateRangeAttr = new AttrList(value1, level);
             const dateRange = new DateRange(
               dateRangeAttr,
               level.dateRanges[dateRangeAttr.ID],
+              level.dateRangeTagCount,
             );
+            level.dateRangeTagCount++;
             if (dateRange.isValid || level.skippedSegments) {
               level.dateRanges[dateRange.id] = dateRange;
             } else {
@@ -554,13 +498,7 @@ export default class M3U8Parser {
           }
           case 'DEFINE': {
             if (__USE_VARIABLE_SUBSTITUTION__) {
-              const variableAttributes = new AttrList(value1);
-              substituteVariablesInAttributes(level, variableAttributes, [
-                'NAME',
-                'VALUE',
-                'IMPORT',
-                'QUERYPARAM',
-              ]);
+              const variableAttributes = new AttrList(value1, level);
               if ('IMPORT' in variableAttributes) {
                 importVariableDefinition(
                   level,
@@ -600,13 +538,7 @@ export default class M3U8Parser {
             level.startTimeOffset = parseStartTimeOffset(value1);
             break;
           case 'MAP': {
-            const mapAttrs = new AttrList(value1);
-            if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(level, mapAttrs, [
-                'BYTERANGE',
-                'URI',
-              ]);
-            }
+            const mapAttrs = new AttrList(value1, level);
             if (frag.duration) {
               // Initial segment tag is after segment duration tag.
               //   #EXTINF: 6.0
@@ -635,6 +567,7 @@ export default class M3U8Parser {
               currentInitSegment = frag;
               createNextFrag = true;
             }
+            currentInitSegment.cc = discontinuityCounter;
             break;
           }
           case 'SERVER-CONTROL': {
@@ -667,16 +600,10 @@ export default class M3U8Parser {
             const previousFragmentPart =
               currentPart > 0 ? partList[partList.length - 1] : undefined;
             const index = currentPart++;
-            const partAttrs = new AttrList(value1);
-            if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(level, partAttrs, [
-                'BYTERANGE',
-                'URI',
-              ]);
-            }
+            const partAttrs = new AttrList(value1, level);
             const part = new Part(
               partAttrs,
-              frag,
+              frag as MediaFragment,
               baseurl,
               index,
               previousFragmentPart,
@@ -686,20 +613,12 @@ export default class M3U8Parser {
             break;
           }
           case 'PRELOAD-HINT': {
-            const preloadHintAttrs = new AttrList(value1);
-            if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(level, preloadHintAttrs, ['URI']);
-            }
+            const preloadHintAttrs = new AttrList(value1, level);
             level.preloadHint = preloadHintAttrs;
             break;
           }
           case 'RENDITION-REPORT': {
-            const renditionReportAttrs = new AttrList(value1);
-            if (__USE_VARIABLE_SUBSTITUTION__) {
-              substituteVariablesInAttributes(level, renditionReportAttrs, [
-                'URI',
-              ]);
-            }
+            const renditionReportAttrs = new AttrList(value1, level);
             level.renditionReports = level.renditionReports || [];
             level.renditionReports.push(renditionReportAttrs);
             break;
@@ -714,12 +633,16 @@ export default class M3U8Parser {
       fragments.pop();
       totalduration -= prevFrag.duration;
       if (level.partList) {
-        level.fragmentHint = prevFrag;
+        level.fragmentHint = prevFrag as MediaFragment;
       }
     } else if (level.partList) {
-      assignProgramDateTime(frag, prevFrag);
+      assignProgramDateTime(
+        frag as MediaFragment,
+        prevFrag as MediaFragment,
+        programDateTimes,
+      );
       frag.cc = discontinuityCounter;
-      level.fragmentHint = frag;
+      level.fragmentHint = frag as MediaFragment;
       if (levelkeys) {
         setFragLevelKeys(frag, levelkeys, level);
       }
@@ -738,6 +661,21 @@ export default class M3U8Parser {
       if (firstFragment) {
         level.startCC = firstFragment.cc;
       }
+      /**
+       * Backfill any missing PDT values
+       * "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
+       * one or more Media Segment URIs, the client SHOULD extrapolate
+       * backward from that tag (using EXTINF durations and/or media
+       * timestamps) to associate dates with those segments."
+       * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
+       * computed.
+       */
+      if (firstPdtIndex > 0) {
+        backfillProgramDateTimes(fragments, firstPdtIndex);
+        if (firstFragment) {
+          programDateTimes.unshift(firstFragment as MediaFragment);
+        }
+      }
     } else {
       level.endSN = 0;
       level.startCC = 0;
@@ -746,23 +684,83 @@ export default class M3U8Parser {
       totalduration += level.fragmentHint.duration;
     }
     level.totalduration = totalduration;
-    level.endCC = discontinuityCounter;
-
-    /**
-     * Backfill any missing PDT values
-     * "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
-     * one or more Media Segment URIs, the client SHOULD extrapolate
-     * backward from that tag (using EXTINF durations and/or media
-     * timestamps) to associate dates with those segments."
-     * We have already extrapolated forward, but all fragments up to the first instance of PDT do not have their PDTs
-     * computed.
-     */
-    if (firstPdtIndex > 0) {
-      backfillProgramDateTimes(fragments, firstPdtIndex);
+    if (programDateTimes.length && level.dateRangeTagCount && firstFragment) {
+      mapDateRanges(programDateTimes, level);
     }
+
+    level.endCC = discontinuityCounter;
 
     return level;
   }
+}
+
+export function mapDateRanges(
+  programDateTimes: MediaFragment[],
+  details: LevelDetails,
+) {
+  // Make sure DateRanges are mapped to a ProgramDateTime tag that applies a date to a segment that overlaps with its start date
+  const programDateTimeCount = programDateTimes.length;
+  const lastProgramDateTime = programDateTimes[programDateTimeCount - 1];
+  const playlistEnd = details.live ? Infinity : details.totalduration;
+  const dateRangeIds = Object.keys(details.dateRanges);
+  for (let i = dateRangeIds.length; i--; ) {
+    const dateRange = details.dateRanges[dateRangeIds[i]];
+    const startDateTime = dateRange.startDate.getTime();
+    dateRange.tagAnchor = lastProgramDateTime;
+    for (let j = programDateTimeCount; j--; ) {
+      const fragIndex = findFragmentWithStartDate(
+        details,
+        startDateTime,
+        programDateTimes,
+        j,
+        playlistEnd,
+      );
+      if (fragIndex !== -1) {
+        dateRange.tagAnchor = details.fragments[fragIndex];
+        break;
+      }
+    }
+  }
+}
+
+function findFragmentWithStartDate(
+  details: LevelDetails,
+  startDateTime: number,
+  programDateTimes: MediaFragment[],
+  index: number,
+  endTime: number,
+): number {
+  const pdtFragment = programDateTimes[index];
+  if (pdtFragment) {
+    // find matching range between PDT tags
+    const durationBetweenPdt =
+      (programDateTimes[index + 1]?.start || endTime) - pdtFragment.start;
+    const pdtStart = pdtFragment.programDateTime as number;
+    if (
+      (startDateTime >= pdtStart || index === 0) &&
+      startDateTime <= pdtStart + durationBetweenPdt * 1000
+    ) {
+      // map to fragment with date-time range
+      const startIndex = programDateTimes[index].sn - details.startSN;
+      const fragments = details.fragments;
+      if (fragments.length > programDateTimes.length) {
+        const endSegment =
+          programDateTimes[index + 1] || fragments[fragments.length - 1];
+        const endIndex = endSegment.sn - details.startSN;
+        for (let i = endIndex; i > startIndex; i--) {
+          const fragStartDateTime = fragments[i].programDateTime as number;
+          if (
+            startDateTime >= fragStartDateTime &&
+            startDateTime < fragStartDateTime + fragments[i].duration * 1000
+          ) {
+            return i;
+          }
+        }
+      }
+      return startIndex;
+    }
+  }
+  return -1;
 }
 
 function parseKey(
@@ -771,16 +769,7 @@ function parseKey(
   parsed: ParsedMultivariantPlaylist | LevelDetails,
 ): LevelKey {
   // https://tools.ietf.org/html/rfc8216#section-4.3.2.4
-  const keyAttrs = new AttrList(keyTagAttributes);
-  if (__USE_VARIABLE_SUBSTITUTION__) {
-    substituteVariablesInAttributes(parsed, keyAttrs, [
-      'KEYFORMAT',
-      'KEYFORMATVERSIONS',
-      'URI',
-      'IV',
-      'URI',
-    ]);
-  }
+  const keyAttrs = new AttrList(keyTagAttributes, parsed);
   const decryptmethod = keyAttrs.METHOD ?? '';
   const decrypturi = keyAttrs.URI;
   const decryptiv = keyAttrs.hexadecimalInteger('IV');
@@ -864,16 +853,21 @@ function backfillProgramDateTimes(
   }
 }
 
-function assignProgramDateTime(frag, prevFrag) {
+export function assignProgramDateTime(
+  frag: MediaFragment,
+  prevFrag: MediaFragment | null,
+  programDateTimes: MediaFragment[],
+) {
   if (frag.rawProgramDateTime) {
     frag.programDateTime = Date.parse(frag.rawProgramDateTime);
+    if (!Number.isFinite(frag.programDateTime)) {
+      frag.programDateTime = null;
+      frag.rawProgramDateTime = null;
+      return;
+    }
+    programDateTimes.push(frag);
   } else if (prevFrag?.programDateTime) {
     frag.programDateTime = prevFrag.endProgramDateTime;
-  }
-
-  if (!Number.isFinite(frag.programDateTime)) {
-    frag.programDateTime = null;
-    frag.rawProgramDateTime = null;
   }
 }
 
