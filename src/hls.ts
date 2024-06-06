@@ -1068,7 +1068,7 @@ export type {
   KeySystems,
   KeySystemFormats,
 } from './utils/mediakeys-helper';
-export type { DateRange } from './loader/date-range';
+export type { DateRange, DateRangeCue } from './loader/date-range';
 export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
 export type { LevelDetails } from './loader/level-details';
@@ -1118,6 +1118,7 @@ export type { ChunkMetadata } from './types/transmuxer';
 export type {
   BaseSegment,
   Fragment,
+  MediaFragment,
   Part,
   ElementaryStreams,
   ElementaryStreamTypes,
@@ -1184,3 +1185,4 @@ export type {
   IErrorAction,
 } from './controller/error-controller';
 export type { AttrList } from './utils/attr-list';
+export type { ParsedMultivariantPlaylist } from './loader/m3u8-parser';

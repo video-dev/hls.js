@@ -1,9 +1,9 @@
-import type { Fragment } from '../loader/fragment';
+import type { MediaFragment } from '../loader/fragment';
 import type { SourceBufferName } from './buffer';
 import type { FragLoadedData } from './events';
 
 export interface FragmentEntity {
-  body: Fragment;
+  body: MediaFragment;
   // appendedPTS is the latest buffered presentation time within the fragment's time range.
   // It is used to determine: which fragment is appended at any given position, and hls.currentLevel.
   appendedPTS: number | null;

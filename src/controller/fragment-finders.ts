@@ -1,5 +1,5 @@
 import BinarySearch from '../utils/binary-search';
-import { Fragment } from '../loader/fragment';
+import type { Fragment, MediaFragment } from '../loader/fragment';
 
 /**
  * Returns first fragment whose endPdt value exceeds the given PDT, or null.
@@ -8,10 +8,10 @@ import { Fragment } from '../loader/fragment';
  * @param maxFragLookUpTolerance - The amount of time that a fragment's start/end can be within in order to be considered contiguous
  */
 export function findFragmentByPDT(
-  fragments: Array<Fragment>,
+  fragments: MediaFragment[],
   PDTValue: number | null,
   maxFragLookUpTolerance: number,
-): Fragment | null {
+): MediaFragment | null {
   if (
     PDTValue === null ||
     !Array.isArray(fragments) ||
@@ -55,19 +55,17 @@ export function findFragmentByPDT(
  */
 export function findFragmentByPTS(
   fragPrevious: Fragment | null,
-  fragments: Array<Fragment>,
+  fragments: MediaFragment[],
   bufferEnd: number = 0,
   maxFragLookUpTolerance: number = 0,
   nextFragLookupTolerance: number = 0.005,
-): Fragment | null {
-  let fragNext: Fragment | null = null;
+): MediaFragment | null {
+  let fragNext: MediaFragment | null = null;
   if (fragPrevious) {
     fragNext =
-      fragments[
-        (fragPrevious.sn as number) - (fragments[0].sn as number) + 1
-      ] || null;
+      fragments[(fragPrevious.sn as number) - fragments[0].sn + 1] || null;
     // check for buffer-end rounding error
-    const bufferEdgeError = fragPrevious.endDTS - bufferEnd;
+    const bufferEdgeError = (fragPrevious.endDTS as number) - bufferEnd;
     if (bufferEdgeError > 0 && bufferEdgeError < 0.0000015) {
       bufferEnd += 0.0000015;
     }
@@ -135,7 +133,7 @@ function fragmentWithinFastStartSwitch(
 export function fragmentWithinToleranceTest(
   bufferEnd = 0,
   maxFragLookUpTolerance = 0,
-  candidate: Fragment,
+  candidate: MediaFragment,
 ) {
   // eagerly accept an accurate match (no tolerance)
   if (
@@ -189,7 +187,7 @@ export function fragmentWithinToleranceTest(
 export function pdtWithinToleranceTest(
   pdtBufferEnd: number,
   maxFragLookUpTolerance: number,
-  candidate: Fragment,
+  candidate: MediaFragment,
 ): boolean {
   const candidateLookupTolerance =
     Math.min(
@@ -203,9 +201,9 @@ export function pdtWithinToleranceTest(
 }
 
 export function findFragWithCC(
-  fragments: Fragment[],
+  fragments: MediaFragment[],
   cc: number,
-): Fragment | null {
+): MediaFragment | null {
   return BinarySearch.search(fragments, (candidate) => {
     if (candidate.cc < cc) {
       return 1;

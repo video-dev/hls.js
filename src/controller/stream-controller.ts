@@ -4,7 +4,11 @@ import { Events } from '../events';
 import { BufferHelper, BufferInfo } from '../utils/buffer-helper';
 import { FragmentState } from './fragment-tracker';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
-import { ElementaryStreamTypes, Fragment } from '../loader/fragment';
+import {
+  ElementaryStreamTypes,
+  Fragment,
+  MediaFragment,
+} from '../loader/fragment';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
 import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
@@ -691,7 +695,8 @@ export default class StreamController
   }
 
   protected _handleFragmentLoadProgress(data: FragLoadedData) {
-    const { frag, part, payload } = data;
+    const frag = data.frag as MediaFragment;
+    const { part, payload } = data;
     const { levels } = this;
     if (!levels) {
       this.warn(
@@ -729,7 +734,7 @@ export default class StreamController
     const partial = partIndex !== -1;
     const chunkMeta = new ChunkMetadata(
       frag.level,
-      frag.sn as number,
+      frag.sn,
       frag.stats.chunkCount,
       payload.byteLength,
       partIndex,
@@ -1113,7 +1118,7 @@ export default class StreamController
     }
 
     // Avoid buffering if backtracking this fragment
-    if (video && details && frag.sn !== 'initSegment') {
+    if (video && details) {
       const prevFrag = details.fragments[frag.sn - 1 - details.startSN];
       const isFirstFragment = frag.sn === details.startSN;
       const isFirstInDiscontinuity = !prevFrag || frag.cc > prevFrag.cc;

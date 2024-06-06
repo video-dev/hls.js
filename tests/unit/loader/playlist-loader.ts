@@ -1739,8 +1739,143 @@ fileSequence2.ts
     expect(fragments[2].gap).to.equal(undefined);
   });
 
-  it('adds unhandled tags (DATERANGE) and comments to fragment.tagList', function () {
-    const playlist = `#EXTM3U
+  describe('#EXT-X-DATERANGE', function () {
+    it('parses DATERANGE tags including Interstitials', function () {
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:10
+#EXT-X-DISCONTINUITY-SEQUENCE:1
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-TIMESTAMP:1705081564
+#EXT-X-PROGRAM-DATE-TIME:2024-01-12T10:00:00.000Z
+#EXT-X-DATERANGE:ID="pre",CLASS="com.apple.hls.interstitial",CUE="PRE",START-DATE="2024-01-12T08:00:00.000Z",DURATION=15.0,X-ASSET-URI="b.m3u8?_HLS_interstitial_id=pre",X-RESTRICT="SKIP,JUMP",X-SNAP="IN"
+#EXT-X-MAP:URI="init_0.mp4"
+#EXTINF:6,
+segment.m4s
+#EXTINF:6,
+segment.m4s
+#EXT-X-DATERANGE:ID="mid1",CLASS="com.apple.hls.interstitial",CUE="ONCE",START-DATE="2024-01-12T10:00:10.000Z",DURATION=15.0,X-ASSET-URI="b.m3u8?_HLS_interstitial_id=mid1",X-RESTRICT="SKIP,JUMP"
+#EXTINF:4,
+segment.m4s
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2024-01-12T10:00:16.000Z
+#EXT-X-MAP:URI="init_1.mp4"
+#EXTINF:6,
+segment.m4s
+#EXTINF:4,
+segment.m4s
+#EXT-X-DATERANGE:ID="mid2",CLASS="com.apple.hls.interstitial",START-DATE="2024-01-12T10:00:25.000Z",DURATION=15.0,X-ASSET-URI="b.m3u8?_HLS_interstitial_id=mid2",X-SNAP="OUT,IN"
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2024-01-12T10:00:26.000Z
+#EXT-X-MAP:URI="init_2.mp4"
+#EXTINF:6,
+segment.m4s
+#EXTINF:6,
+segment.m4s
+
+#EXT-X-DATERANGE:ID="post",CLASS="com.apple.hls.interstitial",CUE="POST,ONCE",START-DATE="2024-01-12T10:00:00.000Z",DURATION=15.0,X-ASSET-URI="e.m3u8?_HLS_interstitial_id=post"`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.dateRangeTagCount).to.equal(4);
+      expect(details.dateRanges.pre.isInterstitial).to.be.true;
+      expect(details.dateRanges.mid1.isInterstitial).to.be.true;
+      expect(details.dateRanges.mid2.isInterstitial).to.be.true;
+      expect(details.dateRanges.post.isInterstitial).to.be.true;
+      expect(details.dateRanges).to.have.property('pre').which.deep.includes({
+        tagOrder: 0,
+      });
+      expect(details.dateRanges).to.have.property('mid1').which.deep.includes({
+        tagOrder: 1,
+      });
+      expect(details.dateRanges).to.have.property('mid2').which.deep.includes({
+        tagOrder: 2,
+      });
+      expect(details.dateRanges).to.have.property('post').which.deep.includes({
+        tagOrder: 3,
+      });
+      expect(details.dateRanges.pre.cue.pre).to.be.true;
+      expect(details.dateRanges.mid1.cue.once).to.be.true;
+      expect(details.dateRanges.post.cue.post).to.be.true;
+      expect(details.dateRanges.post.cue.once).to.be.true;
+      // DateRange start times are mapped to the primary timeline and not changed by CUE Interstitial DURATION
+      expect(details.dateRanges.pre.startTime).to.equal(-7200);
+      expect(details.dateRanges.mid1.startTime).to.equal(10);
+      expect(details.dateRanges.mid2.startTime).to.equal(25);
+      expect(details.dateRanges.post.startTime).to.equal(0);
+    });
+
+    it('ensures DateRanges are mapped to a segment whose TimeRange covers the start date of the DATERANGE tag', function () {
+      const playlist = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PROGRAM-DATE-TIME:1970-01-01T00:00:00.000Z
+#EXT-X-DATERANGE:ID="sooner",START-DATE="1970-01-01T00:00:20.000Z"
+#EXTINF:10
+1.mp4
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:1970-01-01T00:00:20.000Z
+#EXTINF:10
+2.mp4
+#EXTINF:10
+3.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.dateRanges.sooner.isValid).to.equal(
+        true,
+        'is valid DateRange',
+      );
+      expect(details.dateRanges.sooner.tagAnchor)
+        .to.have.property('sn')
+        .which.equals(2);
+      expect(details.dateRanges.sooner.startTime).to.equal(10);
+    });
+
+    it('ensures DateRanges that start before the program are mapped to the first PDT tag', function () {
+      const playlist = `#EXTM3U
+#EXT-X-VERSION:4
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PROGRAM-DATE-TIME:2000-01-01T00:00:00.000Z
+#EXT-X-DATERANGE:ID="earlier",START-DATE="1999-12-31T23:59:50.000Z"
+#EXTINF:10
+1.mp4
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2000-01-01T00:00:20.000Z
+#EXTINF:10
+2.mp4
+#EXTINF:10
+3.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.dateRanges.earlier.isValid).to.equal(
+        true,
+        'is valid DateRange',
+      );
+      expect(details.dateRanges.earlier.tagAnchor)
+        .to.have.property('sn')
+        .which.equals(1);
+      expect(details.dateRanges.earlier.startTime).to.equal(-10);
+    });
+
+    it('adds PROGRAM-DATE-TIME and DATERANGE tag text to fragment[].tagList for backwards compatibility', function () {
+      const playlist = `#EXTM3U
 #EXT-X-TARGETDURATION:10
 #EXT-X-VERSION:4
 #EXT-X-MEDIA-SEQUENCE:0
@@ -1758,38 +1893,39 @@ main3.aac
 #EXT-X-DATERANGE:ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:51:18Z",DURATION=30.0,SCTE35-IN=0xFC002F0000000000FF
 #EXTINF:9.9846,
 main4.aac
-`;
-    const details = M3U8Parser.parseLevelPlaylist(
-      playlist,
-      'http://dummy.url.com/playlist.m3u8',
-      0,
-      PlaylistLevelType.MAIN,
-      0,
-      null,
-    );
-    expectWithJSONMessage(details.fragments[0].tagList).to.deep.equal([
-      ['PROGRAM-DATE-TIME', '2018-09-28T16:50:26Z'],
-      ['INF', '10'],
-    ]);
-    expectWithJSONMessage(details.fragments[1].tagList).to.deep.equal([
-      ['PROGRAM-DATE-TIME', '2018-09-28T16:50:36Z'],
-      [
-        'EXT-X-DATERANGE',
-        'ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:50:48Z",PLANNED-DURATION=20.0,X-CUSTOM="Hi!",SCTE35-OUT=0xFC002F0000000000FF',
-      ],
-      ['INF', '10'],
-    ]);
-    expectWithJSONMessage(details.fragments[2].tagList).to.deep.equal([
-      ['INF', '10'],
-    ]);
-    expectWithJSONMessage(details.fragments[3].tagList).to.deep.equal([
-      ['PROGRAM-DATE-TIME', '2018-09-28T16:50:56Z'],
-      [
-        'EXT-X-DATERANGE',
-        'ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:51:18Z",DURATION=30.0,SCTE35-IN=0xFC002F0000000000FF',
-      ],
-      ['INF', '9.9846'],
-    ]);
+  `;
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectWithJSONMessage(details.fragments[0].tagList).to.deep.equal([
+        ['PROGRAM-DATE-TIME', '2018-09-28T16:50:26Z'],
+        ['INF', '10'],
+      ]);
+      expectWithJSONMessage(details.fragments[1].tagList).to.deep.equal([
+        ['PROGRAM-DATE-TIME', '2018-09-28T16:50:36Z'],
+        [
+          'EXT-X-DATERANGE',
+          'ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:50:48Z",PLANNED-DURATION=20.0,X-CUSTOM="Hi!",SCTE35-OUT=0xFC002F0000000000FF',
+        ],
+        ['INF', '10'],
+      ]);
+      expectWithJSONMessage(details.fragments[2].tagList).to.deep.equal([
+        ['INF', '10'],
+      ]);
+      expectWithJSONMessage(details.fragments[3].tagList).to.deep.equal([
+        ['PROGRAM-DATE-TIME', '2018-09-28T16:50:56Z'],
+        [
+          'EXT-X-DATERANGE',
+          'ID="splice-6FFFFFF0",START-DATE="2018-09-28T16:51:18Z",DURATION=30.0,SCTE35-IN=0xFC002F0000000000FF',
+        ],
+        ['INF', '9.9846'],
+      ]);
+    });
   });
 
   it('tests : at end of tag name is used to divide custom tags', function () {
@@ -2110,10 +2246,10 @@ http://proxy-21.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282
 describe('#EXT-X-START', function () {
   it('parses EXT-X-START in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
-  #EXT-X-START:TIME-OFFSET=300.0,PRECISE=YES
+#EXT-X-START:TIME-OFFSET=300.0,PRECISE=YES
 
-  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
-  http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
     expect(result.startTimeOffset).to.equal(300);
@@ -2121,10 +2257,9 @@ describe('#EXT-X-START', function () {
 
   it('parses negative EXT-X-START values in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
-  #EXT-X-START:TIME-OFFSET=-30.0
-
-  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
-  http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+#EXT-X-START:TIME-OFFSET=-30.0
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
     expect(result.startTimeOffset).to.equal(-30);
@@ -2132,9 +2267,8 @@ describe('#EXT-X-START', function () {
 
   it('result is null when EXT-X-START is not present', function () {
     const manifest = `#EXTM3U
-
-  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
-  http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
     expect(result.startTimeOffset).to.equal(null);
@@ -2144,12 +2278,11 @@ describe('#EXT-X-START', function () {
 describe('#EXT-X-DEFINE', function () {
   it('parses EXT-X-DEFINE Variables in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
-  #EXT-X-DEFINE:NAME="x",VALUE="1"
-  #EXT-X-DEFINE:NAME="y",VALUE="2"
-  #EXT-X-DEFINE:NAME="hello-var",VALUE="Hello there!"
-
-  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
-  http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+#EXT-X-DEFINE:NAME="x",VALUE="1"
+#EXT-X-DEFINE:NAME="y",VALUE="2"
+#EXT-X-DEFINE:NAME="hello-var",VALUE="Hello there!"
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
     if (result.variableList === null) {
@@ -2163,12 +2296,12 @@ describe('#EXT-X-DEFINE', function () {
 
   it('returns an error when duplicate Variables are found in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
-  #EXT-X-DEFINE:NAME="foo",VALUE="ok"
-  #EXT-X-DEFINE:NAME="bar",VALUE="ok"
-  #EXT-X-DEFINE:NAME="foo",VALUE="duped"
+#EXT-X-DEFINE:NAME="foo",VALUE="ok"
+#EXT-X-DEFINE:NAME="bar",VALUE="ok"
+#EXT-X-DEFINE:NAME="foo",VALUE="duped"
 
-  #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
-  http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
     const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
     if (result.variableList === null) {
@@ -2189,29 +2322,29 @@ describe('#EXT-X-DEFINE', function () {
 
   it('substitutes variable references in quoted strings, URI lines, and hexidecimal attributes, following EXT-X-DEFINE tags in Multivariant Playlists', function () {
     const manifest = `#EXTM3U
-  #EXT-X-DEFINE:NAME="host",VALUE="example.com"
-  #EXT-X-DEFINE:NAME="foo",VALUE="ok"
-  #EXT-X-DEFINE:NAME="bar",VALUE="{$foo}"
-  #EXT-X-DEFINE:NAME="vcodec",VALUE="avc1.64001f"
+#EXT-X-DEFINE:NAME="host",VALUE="example.com"
+#EXT-X-DEFINE:NAME="foo",VALUE="ok"
+#EXT-X-DEFINE:NAME="bar",VALUE="{$foo}"
+#EXT-X-DEFINE:NAME="vcodec",VALUE="avc1.64001f"
 
-  #EXT-X-CONTENT-STEERING:SERVER-URI="https://{$host}/steering-manifest.json",PATHWAY-ID="{$foo}-CDN"
+#EXT-X-CONTENT-STEERING:SERVER-URI="https://{$host}/steering-manifest.json",PATHWAY-ID="{$foo}-CDN"
 
-  #EXT-X-DEFINE:NAME="session-var",VALUE="hmm"
-  #EXT-X-SESSION-DATA:DATA-ID="var-applied",VALUE="{$session-var}"
+#EXT-X-DEFINE:NAME="session-var",VALUE="hmm"
+#EXT-X-SESSION-DATA:DATA-ID="var-applied",VALUE="{$session-var}"
 
-  #EXT-X-DEFINE:NAME="p",VALUE="."
-  #EXT-X-DEFINE:NAME="v1",VALUE="1"
-  #EXT-X-DEFINE:NAME="two",VALUE="2"
-  #EXT-X-SESSION-KEY:METHOD=SAMPLE-AES,URI="skd://{$session-var}",KEYFORMAT="com.apple{$p}streamingkeydelivery",KEYFORMATVERSIONS="{$v1}/2",IV=0x0000000{$two}
+#EXT-X-DEFINE:NAME="p",VALUE="."
+#EXT-X-DEFINE:NAME="v1",VALUE="1"
+#EXT-X-DEFINE:NAME="two",VALUE="2"
+#EXT-X-SESSION-KEY:METHOD=SAMPLE-AES,URI="skd://{$session-var}",KEYFORMAT="com.apple{$p}streamingkeydelivery",KEYFORMATVERSIONS="{$v1}/2",IV=0x0000000{$two}
 
-  #EXT-X-DEFINE:NAME="language",VALUE="eng"
-  #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="{$two}00k",LANGUAGE="{$language}",NAME="Audio",AUTOSELECT=YES,DEFAULT=YES,URI="https://{$host}/{$two}00k.m3u8",BANDWIDTH=614400
+#EXT-X-DEFINE:NAME="language",VALUE="eng"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="{$two}00k",LANGUAGE="{$language}",NAME="Audio",AUTOSELECT=YES,DEFAULT=YES,URI="https://{$host}/{$two}00k.m3u8",BANDWIDTH=614400
 
-  #EXT-X-STREAM-INF:BANDWIDTH=836280,CODECS="mp4a.40.2,{$vcodec}",RESOLUTION=848x360,AUDIO="{$two}00k",NAME="{$bar}1"
-  https://{$host}/sec/video/1.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=836280,CODECS="mp4a.40.2,{$vcodec}",RESOLUTION=848x360,AUDIO="{$two}00k",NAME="{$bar}1"
+https://{$host}/sec/video/1.m3u8
 
-  #EXT-X-STREAM-INF:BANDWIDTH=1836280,CODECS="mp4a.40.2,{$vcodec}",RESOLUTION=848x360,NAME="{$bar}{$two}"
-  https://{$host}/sec/{$vcodec}/{$two}.m3u8`;
+#EXT-X-STREAM-INF:BANDWIDTH=1836280,CODECS="mp4a.40.2,{$vcodec}",RESOLUTION=848x360,NAME="{$bar}{$two}"
+https://{$host}/sec/{$vcodec}/{$two}.m3u8`;
 
     const result = M3U8Parser.parseMasterPlaylist(
       manifest,

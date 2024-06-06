@@ -5,7 +5,7 @@ import {
   alignMediaPlaylistByPDT,
 } from '../../../src/utils/discontinuities';
 import { LevelDetails } from '../../../src/loader/level-details';
-import { Fragment } from '../../../src/loader/fragment';
+import { Fragment, MediaFragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 
 import chai from 'chai';
@@ -536,8 +536,12 @@ describe('discontinuities', function () {
   });
 });
 
-function objToFragment(object: Partial<Fragment>): Fragment {
-  const fragment = new Fragment(PlaylistLevelType.MAIN, '');
+function objToFragment(
+  object: Partial<Fragment>,
+  i: number = 0,
+): MediaFragment {
+  const fragment = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+  fragment.sn = i;
   for (const prop in object) {
     fragment[prop] = object[prop];
   }

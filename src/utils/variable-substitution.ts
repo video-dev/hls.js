@@ -9,25 +9,6 @@ export function hasVariableReferences(str: string): boolean {
   return VARIABLE_REPLACEMENT_REGEX.test(str);
 }
 
-export function substituteVariablesInAttributes(
-  parsed: Pick<
-    ParsedMultivariantPlaylist | LevelDetails,
-    'variableList' | 'hasVariableRefs' | 'playlistParsingError'
-  >,
-  attr: AttrList,
-  attributeNames: string[],
-) {
-  if (parsed.variableList !== null || parsed.hasVariableRefs) {
-    for (let i = attributeNames.length; i--; ) {
-      const name = attributeNames[i];
-      const value = attr[name];
-      if (value) {
-        attr[name] = substituteVariables(parsed, value);
-      }
-    }
-  }
-}
-
 export function substituteVariables(
   parsed: Pick<
     ParsedMultivariantPlaylist | LevelDetails,
