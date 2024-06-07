@@ -13,6 +13,7 @@ export type CodecSetTier = {
   minBitrate: number;
   minHeight: number;
   minFramerate: number;
+  minIndex: number;
   maxScore: number;
   videoRanges: Record<string, number>;
   channels: Record<string, number>;
@@ -32,6 +33,7 @@ type StartParameters = {
   preferHDR: boolean;
   minFramerate: number;
   minBitrate: number;
+  minIndex: number;
 };
 
 export function getStartCodecTier(
@@ -52,6 +54,7 @@ export function getStartCodecTier(
   let minHeight = Infinity;
   let minFramerate = Infinity;
   let minBitrate = Infinity;
+  let minIndex = Infinity;
   let selectedScore = 0;
   let videoRanges: Array<VideoRange> = [];
 
@@ -189,6 +192,7 @@ export function getStartCodecTier(
       ) {
         return selected;
       }
+      minIndex = candidateTier.minIndex;
       selectedScore = candidateTier.maxScore;
       return candidate;
     },
@@ -200,6 +204,7 @@ export function getStartCodecTier(
     preferHDR,
     minFramerate,
     minBitrate,
+    minIndex,
   };
 }
 
@@ -257,7 +262,7 @@ export function getCodecTiers(
 ): Record<string, CodecSetTier> {
   return levels
     .slice(minAutoLevel, maxAutoLevel + 1)
-    .reduce((tiers: Record<string, CodecSetTier>, level) => {
+    .reduce((tiers: Record<string, CodecSetTier>, level, index) => {
       if (!level.codecSet) {
         return tiers;
       }
@@ -268,6 +273,7 @@ export function getCodecTiers(
           minBitrate: Infinity,
           minHeight: Infinity,
           minFramerate: Infinity,
+          minIndex: index,
           maxScore: 0,
           videoRanges: { SDR: 0 },
           channels: { '2': 0 },
@@ -279,6 +285,7 @@ export function getCodecTiers(
       const lesserWidthOrHeight = Math.min(level.height, level.width);
       tier.minHeight = Math.min(tier.minHeight, lesserWidthOrHeight);
       tier.minFramerate = Math.min(tier.minFramerate, level.frameRate);
+      tier.minIndex = Math.min(tier.minIndex, index);
       tier.maxScore = Math.max(tier.maxScore, level.score);
       tier.fragmentError += level.fragmentError;
       tier.videoRanges[level.videoRange] =
