@@ -44,9 +44,10 @@ export function getStartCodecTier(
   const codecSets = Object.keys(codecTiers);
   const channelsPreference = audioPreference?.channels;
   const audioCodecPreference = audioPreference?.audioCodec;
+  const videoCodecPreference = videoPreference?.videoCodec;
   const preferStereo = channelsPreference && parseInt(channelsPreference) === 2;
   // Use first level set to determine stereo, and minimum resolution and framerate
-  let hasStereo = true;
+  let hasStereo = false;
   let hasCurrentVideoRange = false;
   let minHeight = Infinity;
   let minFramerate = Infinity;
@@ -61,7 +62,7 @@ export function getStartCodecTier(
 
   for (let i = codecSets.length; i--; ) {
     const tier = codecTiers[codecSets[i]];
-    hasStereo = tier.channels[2] > 0;
+    hasStereo ||= tier.channels[2] > 0;
     minHeight = Math.min(minHeight, tier.minHeight);
     minFramerate = Math.min(minFramerate, tier.minFramerate);
     minBitrate = Math.min(minBitrate, tier.minBitrate);
@@ -70,7 +71,6 @@ export function getStartCodecTier(
     );
     if (matchingVideoRanges.length > 0) {
       hasCurrentVideoRange = true;
-      videoRanges = matchingVideoRanges;
     }
   }
   minHeight = Number.isFinite(minHeight) ? minHeight : 0;
@@ -82,7 +82,6 @@ export function getStartCodecTier(
   // If there are no variants with matching preference, set currentVideoRange to undefined
   if (!hasCurrentVideoRange) {
     currentVideoRange = undefined;
-    videoRanges = [];
   }
   const codecSet = codecSets.reduce(
     (selected: string | undefined, candidate: string) => {
@@ -91,6 +90,11 @@ export function getStartCodecTier(
       if (candidate === selected) {
         return selected;
       }
+      videoRanges = hasCurrentVideoRange
+        ? allowedVideoRanges.filter(
+            (range) => candidateTier.videoRanges[range] > 0,
+          )
+        : [];
       if (candidateTier.minBitrate > currentBw) {
         logStartCodecCandidateIgnored(
           candidate,
@@ -156,6 +160,16 @@ export function getStartCodecTier(
           `no variants with VIDEO-RANGE of ${JSON.stringify(
             videoRanges,
           )} found`,
+        );
+        return selected;
+      }
+      if (
+        videoCodecPreference &&
+        candidate.indexOf(videoCodecPreference.substring(0, 4)) % 5 !== 0
+      ) {
+        logStartCodecCandidateIgnored(
+          candidate,
+          `video codec preference "${videoCodecPreference}" not found`,
         );
         return selected;
       }

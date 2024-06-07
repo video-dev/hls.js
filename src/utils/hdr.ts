@@ -49,16 +49,13 @@ export function getVideoSelectionOptions(
   if (videoPreference) {
     allowedVideoRanges =
       videoPreference.allowedVideoRanges || VideoRangeValues.slice(0);
+    const allowAutoPreferHDR =
+      allowedVideoRanges.join('') !== 'SDR' && !videoPreference.videoCodec;
     preferHDR =
       videoPreference.preferHDR !== undefined
         ? videoPreference.preferHDR
-        : isHdrSupported();
-
-    if (preferHDR) {
-      allowedVideoRanges = allowedVideoRanges.filter(
-        (range: VideoRange) => range !== 'SDR',
-      );
-    } else {
+        : allowAutoPreferHDR && isHdrSupported();
+    if (!preferHDR) {
       allowedVideoRanges = ['SDR'];
     }
   }

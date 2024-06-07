@@ -3495,6 +3495,7 @@ export type VariableMap = Record<string, string>;
 export type VideoSelectionOption = {
     preferHDR?: boolean;
     allowedVideoRanges?: Array<VideoRange>;
+    videoCodec?: string;
 };
 
 // (No @packageDocumentation comment for this package)
