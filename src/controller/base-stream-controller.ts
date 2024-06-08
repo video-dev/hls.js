@@ -102,6 +102,7 @@ export default class BaseStreamController
   protected initPTS: RationalTimestamp[] = [];
   protected buffering: boolean = true;
   private loadingParts: boolean = false;
+  private loopSn?: string | number;
 
   constructor(
     hls: Hls,
@@ -148,6 +149,9 @@ export default class BaseStreamController
   public startLoad(startPosition: number): void {}
 
   public stopLoad() {
+    if (this.state === State.STOPPED) {
+      return;
+    }
     this.fragmentLoader.abort();
     this.keyLoader.abort(this.playlistType);
     const frag = this.fragCurrent;
@@ -242,12 +246,18 @@ export default class BaseStreamController
       this.keyLoader.detach();
     }
     this.media = this.mediaBuffer = null;
-    this.loadedmetadata = false;
+    this.loopSn = undefined;
+    this.startFragRequested = this.loadedmetadata = this.loadingParts = false;
     this.fragmentTracker.removeAllFragments();
     this.stopLoad();
   }
 
-  protected onManifestLoading() {}
+  protected onManifestLoading() {
+    this.initPTS = [];
+    this.levels = this.levelLastLoaded = this.fragCurrent = null;
+    this.lastCurrentTime = this.startPosition = 0;
+    this.startFragRequested = false;
+  }
 
   protected onError(event: Events.ERROR, data: ErrorData) {}
 
@@ -346,7 +356,6 @@ export default class BaseStreamController
     data: ManifestLoadedData,
   ): void {
     this.startTimeOffset = data.startTimeOffset;
-    this.initPTS = [];
   }
 
   protected onHandlerDestroying() {
@@ -384,6 +393,7 @@ export default class BaseStreamController
     level: Level,
     targetBufferTime: number,
   ) {
+    this.startFragRequested = true;
     this._loadFragForPlayback(frag, level, targetBufferTime);
   }
 
@@ -692,6 +702,7 @@ export default class BaseStreamController
     targetBufferTime: number | null = null,
     progressCallback?: FragmentLoadProgressCallback,
   ): Promise<PartsLoadedData | FragLoadedData | null> {
+    this.fragCurrent = frag;
     const details = level?.details;
     if (!this.levels || !details) {
       throw new Error(
@@ -896,7 +907,7 @@ export default class BaseStreamController
               const loadedPart = partLoadedData.part as Part;
               this.hls.trigger(Events.FRAG_LOADED, partLoadedData);
               const nextPart =
-                getPartWith(level, frag.sn as number, part.index + 1) ||
+                getPartWith(level.details, frag.sn as number, part.index + 1) ||
                 findPart(initialPartList, frag.sn as number, part.index + 1);
               if (nextPart) {
                 loadPart(nextPart);
@@ -966,12 +977,7 @@ export default class BaseStreamController
       );
       this.loadingParts = shouldLoadParts;
     }
-    this.updateLevelTiming(
-      frag as MediaFragment,
-      part,
-      level,
-      chunkMeta.partial,
-    );
+    this.updateLevelTiming(frag, part, level, chunkMeta.partial);
   }
 
   private shouldLoadParts(
@@ -1011,10 +1017,13 @@ export default class BaseStreamController
       return null;
     }
     const level = levels[levelIndex];
-    const part = partIndex > -1 ? getPartWith(level, sn, partIndex) : null;
+    const levelDetails = level.details;
+
+    const part =
+      partIndex > -1 ? getPartWith(levelDetails, sn, partIndex) : null;
     const frag = part
       ? part.fragment
-      : getFragmentWithSN(level, sn, fragCurrent);
+      : getFragmentWithSN(levelDetails, sn, fragCurrent);
     if (!frag) {
       return null;
     }
@@ -1160,9 +1169,9 @@ export default class BaseStreamController
     position: number,
     playlistType: PlaylistLevelType = PlaylistLevelType.MAIN,
   ): Fragment | null {
-    const fragOrPart = this.fragmentTracker.getAppendedFrag(
+    const fragOrPart = this.fragmentTracker?.getAppendedFrag(
       position,
-      PlaylistLevelType.MAIN,
+      playlistType,
     );
     if (fragOrPart && 'fragment' in fragOrPart) {
       return fragOrPart.fragment;
@@ -1246,34 +1255,34 @@ export default class BaseStreamController
     playlistType: PlaylistLevelType,
     maxBufLen: number,
   ): Fragment | null {
-    const gapStart = frag.gap;
-    const nextFragment = this.getNextFragment(
-      this.nextLoadPosition,
-      levelDetails,
-    );
-    if (nextFragment === null) {
-      return nextFragment;
-    }
-    frag = nextFragment;
-    if (gapStart && frag && !frag.gap && bufferInfo.nextStart) {
-      // Media buffered after GAP tags should not make the next buffer timerange exceed forward buffer length
-      const nextbufferInfo = this.getFwdBufferInfoAtPos(
-        this.mediaBuffer ? this.mediaBuffer : this.media,
-        bufferInfo.nextStart,
-        playlistType,
-      );
-      if (
-        nextbufferInfo !== null &&
-        bufferInfo.len + nextbufferInfo.len >= maxBufLen
-      ) {
-        // Returning here might result in not finding an audio and video candiate to skip to
-        this.log(
-          `buffer full after gaps in "${playlistType}" playlist starting at sn: ${frag.sn}`,
+    let nextFragment: Fragment | null = null;
+    if (frag.gap) {
+      nextFragment = this.getNextFragment(this.nextLoadPosition, levelDetails);
+      if (nextFragment && !nextFragment.gap && bufferInfo.nextStart) {
+        // Media buffered after GAP tags should not make the next buffer timerange exceed forward buffer length
+        const nextbufferInfo = this.getFwdBufferInfoAtPos(
+          this.mediaBuffer ? this.mediaBuffer : this.media,
+          bufferInfo.nextStart,
+          playlistType,
         );
-        return null;
+        if (
+          nextbufferInfo !== null &&
+          bufferInfo.len + nextbufferInfo.len >= maxBufLen
+        ) {
+          // Returning here might result in not finding an audio and video candiate to skip to
+          const sn = nextFragment.sn;
+          if (this.loopSn !== sn) {
+            this.log(
+              `buffer full after gaps in "${playlistType}" playlist starting at sn: ${sn}`,
+            );
+            this.loopSn = sn;
+          }
+          return null;
+        }
       }
     }
-    return frag;
+    this.loopSn = undefined;
+    return nextFragment;
   }
 
   mapToInitFragWhenRequired(frag: Fragment | null): typeof frag {
@@ -1570,7 +1579,7 @@ export default class BaseStreamController
       if (startTimeOffset !== null && Number.isFinite(startTimeOffset)) {
         startPosition = sliding + startTimeOffset;
         if (startTimeOffset < 0) {
-          startPosition += details.totalduration;
+          startPosition += details.edge;
         }
         startPosition = Math.min(
           Math.max(sliding, startPosition),

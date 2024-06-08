@@ -461,11 +461,10 @@ export function computeReloadInterval(
 }
 
 export function getFragmentWithSN(
-  level: Level,
+  details: LevelDetails | undefined,
   sn: number,
   fragCurrent: Fragment | null,
 ): MediaFragment | null {
-  const details = level?.details;
   if (!details) {
     return null;
   }
@@ -485,14 +484,14 @@ export function getFragmentWithSN(
 }
 
 export function getPartWith(
-  level: Level,
+  details: LevelDetails | undefined,
   sn: number,
   partIndex: number,
 ): Part | null {
-  if (!level?.details) {
+  if (!details) {
     return null;
   }
-  return findPart(level.details?.partList, sn, partIndex);
+  return findPart(details.partList, sn, partIndex);
 }
 
 export function findPart(

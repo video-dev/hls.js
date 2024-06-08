@@ -1429,7 +1429,7 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     get end(): number;
     // (undocumented)
-    endDTS: number;
+    endDTS?: number;
     // (undocumented)
     endList?: boolean;
     // (undocumented)
@@ -1469,7 +1469,7 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     start: number;
     // (undocumented)
-    startDTS: number;
+    startDTS?: number;
     // (undocumented)
     startPTS?: number;
     // (undocumented)
@@ -1976,7 +1976,7 @@ export interface InitPTSFoundData {
     // (undocumented)
     frag: MediaFragment;
     // (undocumented)
-    id: string;
+    id: PlaylistLevelType;
     // (undocumented)
     initPTS: number;
     // (undocumented)

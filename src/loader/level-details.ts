@@ -1,6 +1,5 @@
-import type { Part } from './fragment';
+import type { Fragment, MediaFragment, Part } from './fragment';
 import type { DateRange } from './date-range';
-import type { Fragment, MediaFragment } from './fragment';
 import type { AttrList } from '../utils/attr-list';
 import type { VariableMap } from '../types/level';
 

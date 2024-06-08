@@ -127,10 +127,7 @@ export default class ErrorController
       case ErrorDetails.FRAG_PARSING_ERROR:
         // ignore empty segment errors marked as gap
         if (data.frag?.gap) {
-          data.errorAction = {
-            action: NetworkErrorAction.DoNothing,
-            flags: ErrorActionFlags.None,
-          };
+          data.errorAction = createDoNothingErrorAction();
           return;
         }
       // falls through
@@ -218,10 +215,13 @@ export default class ErrorController
       case ErrorDetails.BUFFER_ADD_CODEC_ERROR:
       case ErrorDetails.REMUX_ALLOC_ERROR:
       case ErrorDetails.BUFFER_APPEND_ERROR:
-        data.errorAction = this.getLevelSwitchAction(
-          data,
-          data.level ?? hls.loadLevel,
-        );
+        // Buffer-controller can set errorAction when append errors can be ignored or resolved locally
+        if (!data.errorAction) {
+          data.errorAction = this.getLevelSwitchAction(
+            data,
+            data.level ?? hls.loadLevel,
+          );
+        }
         return;
       case ErrorDetails.INTERNAL_EXCEPTION:
       case ErrorDetails.BUFFER_APPENDING_ERROR:
@@ -230,10 +230,7 @@ export default class ErrorController
       case ErrorDetails.BUFFER_STALLED_ERROR:
       case ErrorDetails.BUFFER_SEEK_OVER_HOLE:
       case ErrorDetails.BUFFER_NUDGE_ON_STALL:
-        data.errorAction = {
-          action: NetworkErrorAction.DoNothing,
-          flags: ErrorActionFlags.None,
-        };
+        data.errorAction = createDoNothingErrorAction();
         return;
     }
 
@@ -510,4 +507,15 @@ export default class ErrorController
       this.hls.nextLoadLevel = this.hls.nextAutoLevel;
     }
   }
+}
+
+export function createDoNothingErrorAction(resolved?: boolean): IErrorAction {
+  const errorAction: IErrorAction = {
+    action: NetworkErrorAction.DoNothing,
+    flags: ErrorActionFlags.None,
+  };
+  if (resolved) {
+    errorAction.resolved = true;
+  }
+  return errorAction;
 }

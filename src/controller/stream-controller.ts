@@ -2,6 +2,7 @@ import BaseStreamController, { State } from './base-stream-controller';
 import { changeTypeSupported } from '../is-supported';
 import { Events } from '../events';
 import { BufferHelper, BufferInfo } from '../utils/buffer-helper';
+import { findFragmentByPTS } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import {
@@ -16,15 +17,15 @@ import { ErrorDetails } from '../errors';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { Level } from '../types/level';
-import type { LevelDetails } from '../loader/level-details';
 import type { FragmentTracker } from './fragment-tracker';
 import type KeyLoader from '../loader/key-loader';
 import type { TransmuxerResult } from '../types/transmuxer';
-import type { TrackSet } from '../types/track';
+import type { Track, TrackSet } from '../types/track';
 import type { SourceBufferName } from '../types/buffer';
 import type {
   AudioTrackSwitchedData,
   AudioTrackSwitchingData,
+  BufferCodecsData,
   BufferCreatedData,
   BufferEOSData,
   BufferFlushedData,
@@ -364,7 +365,6 @@ export default class StreamController
   ) {
     // Check if fragment is not loaded
     const fragState = this.fragmentTracker.getState(frag);
-    this.fragCurrent = frag;
     if (
       fragState === FragmentState.NOT_LOADED ||
       fragState === FragmentState.PARTIAL
@@ -377,7 +377,6 @@ export default class StreamController
         );
         this._loadBitrateTestFrag(frag, level);
       } else {
-        this.startFragRequested = true;
         super.loadFragment(frag, level, targetBufferTime);
       }
     } else {
@@ -570,18 +569,14 @@ export default class StreamController
   };
 
   protected onManifestLoading() {
+    super.onManifestLoading();
     // reset buffer on manifest loading
     this.log('Trigger BUFFER_RESET');
     this.hls.trigger(Events.BUFFER_RESET, undefined);
-    this.fragmentTracker.removeAllFragments();
     this.couldBacktrack = false;
-    this.startPosition = this.lastCurrentTime = this.fragLastKbps = 0;
-    this.levels =
-      this.fragPlaying =
-      this.backtrackFragment =
-      this.levelLastLoaded =
-        null;
-    this.altAudio = this.audioOnly = this.startFragRequested = false;
+    this.fragLastKbps = 0;
+    this.fragPlaying = this.backtrackFragment = null;
+    this.altAudio = this.audioOnly = false;
   }
 
   private onManifestParsed(
@@ -705,7 +700,7 @@ export default class StreamController
       return;
     }
     const currentLevel = levels[frag.level];
-    const details = currentLevel.details as LevelDetails;
+    const details = currentLevel.details;
     if (!details) {
       this.warn(
         `Dropping fragment ${frag.sn} of level ${frag.level} after level details were reset`,
@@ -956,7 +951,7 @@ export default class StreamController
     // in that case, reset startFragRequested flag
     if (!this.loadedmetadata) {
       this.startFragRequested = false;
-      this.nextLoadPosition = this.startPosition;
+      this.nextLoadPosition = this.lastCurrentTime;
     }
     this.tickImmediate();
   }
@@ -1068,7 +1063,7 @@ export default class StreamController
   }
 
   private _handleTransmuxComplete(transmuxResult: TransmuxerResult) {
-    const id = 'main';
+    const id = this.playlistType;
     const { hls } = this;
     const { remuxResult, chunkMeta } = transmuxResult;
 
@@ -1308,6 +1303,7 @@ export default class StreamController
           currentLevel.audioCodec || ''
         }/${audio.codec}]`,
       );
+      delete tracks.audiovideo;
     }
     if (video) {
       video.levelCodec = currentLevel.videoCodec;
@@ -1319,28 +1315,34 @@ export default class StreamController
           video.codec
         }]`,
       );
+      delete tracks.audiovideo;
     }
     if (audiovideo) {
       this.log(
         `Init audiovideo buffer, container:${audiovideo.container}, codecs[level/parsed]=[${currentLevel.codecs}/${audiovideo.codec}]`,
       );
+      delete tracks.video;
+      delete tracks.audio;
     }
-    this.hls.trigger(Events.BUFFER_CODECS, tracks);
-    // loop through tracks that are going to be provided to bufferController
-    Object.keys(tracks).forEach((trackName) => {
-      const track = tracks[trackName];
-      const initSegment = track.initSegment;
-      if (initSegment?.byteLength) {
-        this.hls.trigger(Events.BUFFER_APPENDING, {
-          type: trackName as SourceBufferName,
-          data: initSegment,
-          frag,
-          part: null,
-          chunkMeta,
-          parent: frag.type,
-        });
-      }
-    });
+    const trackTypes = Object.keys(tracks);
+    if (trackTypes.length) {
+      this.hls.trigger(Events.BUFFER_CODECS, tracks as BufferCodecsData);
+      // loop through tracks that are going to be provided to bufferController
+      trackTypes.forEach((trackName) => {
+        const track = tracks[trackName] as Track;
+        const initSegment = track.initSegment;
+        if (initSegment?.byteLength) {
+          this.hls.trigger(Events.BUFFER_APPENDING, {
+            type: trackName as SourceBufferName,
+            data: initSegment,
+            frag,
+            part: null,
+            chunkMeta,
+            parent: frag.type,
+          });
+        }
+      });
+    }
     // trigger handler right now
     this.tickImmediate();
   }
@@ -1425,26 +1427,31 @@ export default class StreamController
   }
 
   get currentFrag(): Fragment | null {
-    const media = this.media;
-    if (media) {
-      return this.fragPlaying || this.getAppendedFrag(media.currentTime);
+    if (this.fragPlaying) {
+      return this.fragPlaying;
+    }
+    const currentTime = this.media?.currentTime || this.lastCurrentTime;
+    if (Number.isFinite(currentTime)) {
+      return this.getAppendedFrag(currentTime);
     }
     return null;
   }
 
   get currentProgramDateTime(): Date | null {
-    const media = this.media;
-    if (media) {
-      const currentTime = media.currentTime;
-      const frag = this.currentFrag;
-      if (
-        frag &&
-        Number.isFinite(currentTime) &&
-        Number.isFinite(frag.programDateTime)
-      ) {
-        const epocMs =
-          (frag.programDateTime as number) + (currentTime - frag.start) * 1000;
-        return new Date(epocMs);
+    const currentTime = this.media?.currentTime || this.lastCurrentTime;
+    if (Number.isFinite(currentTime)) {
+      const details = this.getLevelDetails();
+      const frag =
+        this.currentFrag ||
+        (details
+          ? findFragmentByPTS(null, details.fragments, currentTime)
+          : null);
+      if (frag) {
+        const programDateTime = frag.programDateTime;
+        if (programDateTime !== null) {
+          const epocMs = programDateTime + (currentTime - frag.start) * 1000;
+          return new Date(epocMs);
+        }
       }
     }
     return null;
