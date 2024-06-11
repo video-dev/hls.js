@@ -813,7 +813,7 @@ export default class Hls implements HlsEventEmitter {
   public setAudioOption(
     audioOption: MediaPlaylist | AudioSelectionOption | undefined,
   ): MediaPlaylist | null {
-    return this.audioTrackController?.setAudioOption(audioOption);
+    return this.audioTrackController?.setAudioOption(audioOption) || null;
   }
   /**
    * Find and select the best matching subtitle track, making a level switch when a Group change is necessary.
@@ -822,8 +822,9 @@ export default class Hls implements HlsEventEmitter {
   public setSubtitleOption(
     subtitleOption: MediaPlaylist | SubtitleSelectionOption | undefined,
   ): MediaPlaylist | null {
-    this.subtitleTrackController?.setSubtitleOption(subtitleOption);
-    return null;
+    return (
+      this.subtitleTrackController?.setSubtitleOption(subtitleOption) || null
+    );
   }
 
   /**
