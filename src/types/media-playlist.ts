@@ -1,6 +1,7 @@
 import type { AttrList } from '../utils/attr-list';
 import type { LevelDetails } from '../loader/level-details';
-import type { VideoRange } from './level';
+import type { Level, VideoRange } from './level';
+import type { PlaylistLevelType } from './loader';
 
 export type AudioPlaylistType = 'AUDIO';
 
@@ -10,9 +11,16 @@ export type SubtitlePlaylistType = 'SUBTITLES' | 'CLOSED-CAPTIONS';
 
 export type MediaPlaylistType = MainPlaylistType | SubtitlePlaylistType;
 
+export type MediaSelection = {
+  [PlaylistLevelType.MAIN]: Level;
+  [PlaylistLevelType.AUDIO]?: MediaPlaylist;
+  [PlaylistLevelType.SUBTITLE]?: MediaPlaylist;
+};
+
 export type VideoSelectionOption = {
   preferHDR?: boolean;
   allowedVideoRanges?: Array<VideoRange>;
+  videoCodec?: string;
 };
 
 export type AudioSelectionOption = {
