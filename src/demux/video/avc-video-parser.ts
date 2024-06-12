@@ -14,10 +14,10 @@ class AvcVideoParser extends BaseVideoParser {
     track: DemuxedVideoTrack,
     textTrack: DemuxedUserdataTrack,
     pes: PES,
-    last: boolean,
+    endOfSegment: boolean,
     duration: number,
   ) {
-    const units = this.parseNALu(track, pes.data, last);
+    const units = this.parseNALu(track, pes.data, endOfSegment);
     const debug = false;
     let VideoSample = this.VideoSample;
     let push: boolean;
@@ -206,7 +206,7 @@ class AvcVideoParser extends BaseVideoParser {
       }
     });
     // if last PES packet, push samples
-    if (last && VideoSample) {
+    if (endOfSegment && VideoSample) {
       this.pushAccessUnit(VideoSample, track);
       this.VideoSample = null;
     }
