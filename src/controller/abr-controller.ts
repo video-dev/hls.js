@@ -797,7 +797,7 @@ class AbrController extends Logger implements AbrComponentAPI {
         (levelInfo.supportedResult &&
           !levelInfo.supportedResult.decodingInfoResults?.[0].smooth)
       ) {
-        if (firstSelection && i !== minStartIndex) {
+        if (!firstSelection || i !== minStartIndex) {
           levelsSkipped.push(i);
           continue;
         }
