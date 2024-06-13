@@ -106,8 +106,8 @@ export class SubtitleStreamController
   }
 
   protected onManifestLoading() {
+    super.onManifestLoading();
     this.mainDetails = null;
-    this.fragmentTracker.removeAllFragments();
   }
 
   protected onMediaDetaching(): void {
@@ -124,7 +124,9 @@ export class SubtitleStreamController
     data: SubtitleFragProcessed,
   ) {
     const { frag, success } = data;
-    this.fragPrevious = frag;
+    if (frag.sn !== 'initSegment') {
+      this.fragPrevious = frag as MediaFragment;
+    }
     this.state = State.IDLE;
     if (!success) {
       return;
@@ -491,11 +493,9 @@ export class SubtitleStreamController
     level: Level,
     targetBufferTime: number,
   ) {
-    this.fragCurrent = frag;
     if (frag.sn === 'initSegment') {
       this._loadInitSegment(frag, level);
     } else {
-      this.startFragRequested = true;
       super.loadFragment(frag, level, targetBufferTime);
     }
   }

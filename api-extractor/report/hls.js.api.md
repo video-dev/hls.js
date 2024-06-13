@@ -353,7 +353,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected fragmentTracker: FragmentTracker;
     // (undocumented)
-    protected fragPrevious: Fragment | null;
+    protected fragPrevious: MediaFragment | null;
     // (undocumented)
     protected getAppendedFrag(position: number, playlistType?: PlaylistLevelType): Fragment | null;
     // (undocumented)
@@ -1429,7 +1429,7 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     get end(): number;
     // (undocumented)
-    endDTS: number;
+    endDTS?: number;
     // (undocumented)
     endList?: boolean;
     // (undocumented)
@@ -1469,7 +1469,7 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     start: number;
     // (undocumented)
-    startDTS: number;
+    startDTS?: number;
     // (undocumented)
     startPTS?: number;
     // (undocumented)
@@ -1976,7 +1976,7 @@ export interface InitPTSFoundData {
     // (undocumented)
     frag: MediaFragment;
     // (undocumented)
-    id: string;
+    id: PlaylistLevelType;
     // (undocumented)
     initPTS: number;
     // (undocumented)

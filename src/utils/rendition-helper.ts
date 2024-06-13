@@ -86,6 +86,7 @@ export function getStartCodecTier(
   if (!hasCurrentVideoRange) {
     currentVideoRange = undefined;
   }
+  const hasMultipleSets = codecSets.length > 1;
   const codecSet = codecSets.reduce(
     (selected: string | undefined, candidate: string) => {
       // Remove candiates which do not meet bitrate, default audio, stereo or channels preference, 1080p or lower, 30fps or lower, or SDR/HDR selection if present
@@ -98,90 +99,94 @@ export function getStartCodecTier(
             (range) => candidateTier.videoRanges[range] > 0,
           )
         : [];
-      if (candidateTier.minBitrate > currentBw) {
-        logStartCodecCandidateIgnored(
-          candidate,
-          `min bitrate of ${candidateTier.minBitrate} > current estimate of ${currentBw}`,
-        );
-        return selected;
-      }
-      if (!candidateTier.hasDefaultAudio) {
-        logStartCodecCandidateIgnored(
-          candidate,
-          `no renditions with default or auto-select sound found`,
-        );
-        return selected;
-      }
-      if (
-        audioCodecPreference &&
-        candidate.indexOf(audioCodecPreference.substring(0, 4)) % 5 !== 0
-      ) {
-        logStartCodecCandidateIgnored(
-          candidate,
-          `audio codec preference "${audioCodecPreference}" not found`,
-        );
-        return selected;
-      }
-      if (channelsPreference && !preferStereo) {
-        if (!candidateTier.channels[channelsPreference]) {
+      if (hasMultipleSets) {
+        if (candidateTier.minBitrate > currentBw) {
           logStartCodecCandidateIgnored(
             candidate,
-            `no renditions with ${channelsPreference} channel sound found (channels options: ${Object.keys(
-              candidateTier.channels,
-            )})`,
+            `min bitrate of ${candidateTier.minBitrate} > current estimate of ${currentBw}`,
           );
           return selected;
         }
-      } else if (
-        (!audioCodecPreference || preferStereo) &&
-        hasStereo &&
-        candidateTier.channels['2'] === 0
-      ) {
-        logStartCodecCandidateIgnored(
-          candidate,
-          `no renditions with stereo sound found`,
-        );
-        return selected;
-      }
-      if (candidateTier.minHeight > maxHeight) {
-        logStartCodecCandidateIgnored(
-          candidate,
-          `min resolution of ${candidateTier.minHeight} > maximum of ${maxHeight}`,
-        );
-        return selected;
-      }
-      if (candidateTier.minFramerate > maxFramerate) {
-        logStartCodecCandidateIgnored(
-          candidate,
-          `min framerate of ${candidateTier.minFramerate} > maximum of ${maxFramerate}`,
-        );
-        return selected;
-      }
-      if (!videoRanges.some((range) => candidateTier.videoRanges[range] > 0)) {
-        logStartCodecCandidateIgnored(
-          candidate,
-          `no variants with VIDEO-RANGE of ${JSON.stringify(
-            videoRanges,
-          )} found`,
-        );
-        return selected;
-      }
-      if (
-        videoCodecPreference &&
-        candidate.indexOf(videoCodecPreference.substring(0, 4)) % 5 !== 0
-      ) {
-        logStartCodecCandidateIgnored(
-          candidate,
-          `video codec preference "${videoCodecPreference}" not found`,
-        );
-        return selected;
-      }
-      if (candidateTier.maxScore < selectedScore) {
-        logStartCodecCandidateIgnored(
-          candidate,
-          `max score of ${candidateTier.maxScore} < selected max of ${selectedScore}`,
-        );
-        return selected;
+        if (!candidateTier.hasDefaultAudio) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `no renditions with default or auto-select sound found`,
+          );
+          return selected;
+        }
+        if (
+          audioCodecPreference &&
+          candidate.indexOf(audioCodecPreference.substring(0, 4)) % 5 !== 0
+        ) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `audio codec preference "${audioCodecPreference}" not found`,
+          );
+          return selected;
+        }
+        if (channelsPreference && !preferStereo) {
+          if (!candidateTier.channels[channelsPreference]) {
+            logStartCodecCandidateIgnored(
+              candidate,
+              `no renditions with ${channelsPreference} channel sound found (channels options: ${Object.keys(
+                candidateTier.channels,
+              )})`,
+            );
+            return selected;
+          }
+        } else if (
+          (!audioCodecPreference || preferStereo) &&
+          hasStereo &&
+          candidateTier.channels['2'] === 0
+        ) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `no renditions with stereo sound found`,
+          );
+          return selected;
+        }
+        if (candidateTier.minHeight > maxHeight) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `min resolution of ${candidateTier.minHeight} > maximum of ${maxHeight}`,
+          );
+          return selected;
+        }
+        if (candidateTier.minFramerate > maxFramerate) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `min framerate of ${candidateTier.minFramerate} > maximum of ${maxFramerate}`,
+          );
+          return selected;
+        }
+        if (
+          !videoRanges.some((range) => candidateTier.videoRanges[range] > 0)
+        ) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `no variants with VIDEO-RANGE of ${JSON.stringify(
+              videoRanges,
+            )} found`,
+          );
+          return selected;
+        }
+        if (
+          videoCodecPreference &&
+          candidate.indexOf(videoCodecPreference.substring(0, 4)) % 5 !== 0
+        ) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `video codec preference "${videoCodecPreference}" not found`,
+          );
+          return selected;
+        }
+        if (candidateTier.maxScore < selectedScore) {
+          logStartCodecCandidateIgnored(
+            candidate,
+            `max score of ${candidateTier.maxScore} < selected max of ${selectedScore}`,
+          );
+          return selected;
+        }
       }
       // Remove candiates with less preferred codecs or more errors
       if (

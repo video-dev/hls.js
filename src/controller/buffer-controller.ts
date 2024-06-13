@@ -147,6 +147,7 @@ export default class BufferController extends Logger implements ComponentAPI {
     hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.on(Events.FRAG_PARSED, this.onFragParsed, this);
     hls.on(Events.FRAG_CHANGED, this.onFragChanged, this);
+    hls.on(Events.ERROR, this.onError, this);
   }
 
   protected unregisterListeners() {
@@ -163,6 +164,7 @@ export default class BufferController extends Logger implements ComponentAPI {
     hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.off(Events.FRAG_PARSED, this.onFragParsed, this);
     hls.off(Events.FRAG_CHANGED, this.onFragChanged, this);
+    hls.off(Events.ERROR, this.onError, this);
   }
 
   private _initSourceBuffer() {
@@ -173,11 +175,7 @@ export default class BufferController extends Logger implements ComponentAPI {
       video: [],
       audiovideo: [],
     };
-    this.appendErrors = {
-      audio: 0,
-      video: 0,
-      audiovideo: 0,
-    };
+    this.resetAppendErrors();
     this.lastMpegAudioChunk = null;
     this.blockedAudioAppend = null;
     this.lastVideoAppendEnd = 0;
@@ -791,6 +789,23 @@ export default class BufferController extends Logger implements ComponentAPI {
     } else {
       this.updateMediaSource(durationAndRange);
     }
+  }
+
+  private onError(event: Events.ERROR, data: ErrorData) {
+    if (data.details === ErrorDetails.BUFFER_APPEND_ERROR && data.frag) {
+      const nextAutoLevel = data.errorAction?.nextAutoLevel;
+      if (Number.isFinite(nextAutoLevel) && nextAutoLevel !== data.frag.level) {
+        this.resetAppendErrors();
+      }
+    }
+  }
+
+  private resetAppendErrors() {
+    this.appendErrors = {
+      audio: 0,
+      video: 0,
+      audiovideo: 0,
+    };
   }
 
   trimBuffers() {
