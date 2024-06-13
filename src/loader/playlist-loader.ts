@@ -452,7 +452,6 @@ class PlaylistLoader implements NetworkComponentAPI {
     const { id, level, type } = context;
 
     const url = getResponseUrl(response, context);
-    const levelUrlId = 0;
     const levelId = Number.isFinite(level as number)
       ? (level as number)
       : Number.isFinite(id as number)
@@ -464,7 +463,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       url,
       levelId,
       levelType,
-      levelUrlId,
+      0,
       this.variableList,
     );
 

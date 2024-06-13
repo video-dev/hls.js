@@ -8,7 +8,7 @@ import {
 import StreamController from '../../../src/controller/stream-controller';
 import { State } from '../../../src/controller/base-stream-controller';
 import { mockFragments } from '../../mocks/data';
-import { Fragment } from '../../../src/loader/fragment';
+import { Fragment, MediaFragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { LoadStats } from '../../../src/loader/load-stats';
@@ -183,7 +183,10 @@ describe('StreamController', function () {
   });
 
   describe('SN Searching', function () {
-    const fragPrevious = new Fragment(PlaylistLevelType.MAIN, '');
+    const fragPrevious = new Fragment(
+      PlaylistLevelType.MAIN,
+      '',
+    ) as MediaFragment;
     fragPrevious.programDateTime = 1505502671523;
     fragPrevious.duration = 5.0;
     fragPrevious.level = 1;
@@ -464,7 +467,10 @@ describe('StreamController', function () {
     });
 
     it('should seek to start pos when data is first loaded', function () {
-      const firstFrag = new Fragment(PlaylistLevelType.MAIN, '');
+      const firstFrag = new Fragment(
+        PlaylistLevelType.MAIN,
+        '',
+      ) as MediaFragment;
       firstFrag.duration = 5.0;
       firstFrag.level = 1;
       firstFrag.start = 0;

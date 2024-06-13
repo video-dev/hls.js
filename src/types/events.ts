@@ -192,6 +192,18 @@ export interface LevelUpdatedData {
   level: number;
 }
 
+export interface AudioTrackUpdatedData {
+  details: LevelDetails;
+  id: number;
+  groupId: string;
+}
+
+export interface SubtitleTrackUpdatedData {
+  details: LevelDetails;
+  id: number;
+  groupId: string;
+}
+
 export interface LevelPTSUpdatedData {
   details: LevelDetails;
   level: Level;
@@ -317,7 +329,7 @@ export interface NonNativeTextTracksData {
 }
 
 export interface InitPTSFoundData {
-  id: string;
+  id: PlaylistLevelType;
   frag: MediaFragment;
   initPTS: number;
   timescale: number;

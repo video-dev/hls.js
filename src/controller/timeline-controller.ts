@@ -192,7 +192,7 @@ export class TimelineController implements ComponentAPI {
     { frag, id, initPTS, timescale }: InitPTSFoundData,
   ) {
     const { unparsedVttFrags } = this;
-    if (id === 'main') {
+    if (id === PlaylistLevelType.MAIN) {
       this.initPTS[frag.cc] = { baseTime: initPTS, timescale };
     }
 

@@ -47,6 +47,7 @@ export class FragmentTracker implements ComponentAPI {
 
   private _registerListeners() {
     const { hls } = this;
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.BUFFER_APPENDED, this.onBufferAppended, this);
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
@@ -54,6 +55,7 @@ export class FragmentTracker implements ComponentAPI {
 
   private _unregisterListeners() {
     const { hls } = this;
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.BUFFER_APPENDED, this.onBufferAppended, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
@@ -143,6 +145,7 @@ export class FragmentTracker implements ComponentAPI {
     timeRange: TimeRanges,
     playlistType: PlaylistLevelType,
     appendedPart?: Part | null,
+    removeAppending?: boolean,
   ) {
     if (this.timeRanges) {
       this.timeRanges[elementaryStream] = timeRange;
@@ -158,7 +161,10 @@ export class FragmentTracker implements ComponentAPI {
       if (appendedPartSn >= fragmentEntity.body.sn) {
         return;
       }
-      if (!fragmentEntity.buffered && !fragmentEntity.loaded) {
+      if (
+        !fragmentEntity.buffered &&
+        (!fragmentEntity.loaded || removeAppending)
+      ) {
         if (fragmentEntity.body.type === playlistType) {
           this.removeFragment(fragmentEntity.body);
         }
@@ -166,6 +172,10 @@ export class FragmentTracker implements ComponentAPI {
       }
       const esData = fragmentEntity.range[elementaryStream];
       if (!esData) {
+        return;
+      }
+      if (esData.time.length === 0) {
+        this.removeFragment(fragmentEntity.body);
         return;
       }
       esData.time.some((time: FragmentTimeRange) => {
@@ -387,6 +397,10 @@ export class FragmentTracker implements ComponentAPI {
     return false;
   }
 
+  private onManifestLoading() {
+    this.removeAllFragments();
+  }
+
   private onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
@@ -437,6 +451,21 @@ export class FragmentTracker implements ComponentAPI {
   private hasFragment(fragment: Fragment): boolean {
     const fragKey = getFragmentKey(fragment);
     return !!this.fragments[fragKey];
+  }
+
+  public hasFragments(type?: PlaylistLevelType): boolean {
+    const { fragments } = this;
+    const keys = Object.keys(fragments);
+    if (!type) {
+      return keys.length > 0;
+    }
+    for (let i = keys.length; i--; ) {
+      const fragmentEntity = fragments[keys[i]];
+      if (fragmentEntity?.body.type === type) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public hasParts(type: PlaylistLevelType): boolean {

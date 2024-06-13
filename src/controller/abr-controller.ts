@@ -879,7 +879,7 @@ class AbrController extends Logger implements AbrComponentAPI {
               1,
             )} fetchDuration:${fetchDuration.toFixed(
               1,
-            )} firstSelection:${firstSelection} codecSet:${level.codecSet} videoRange:${level.videoRange} hls.loadLevel:${loadLevel}`,
+            )} firstSelection:${firstSelection} codecSet:${levelInfo.codecSet} videoRange:${levelInfo.videoRange} hls.loadLevel:${loadLevel}`,
           );
         }
         if (firstSelection) {

@@ -1,18 +1,17 @@
 import { ErrorTypes, ErrorDetails } from '../errors';
-import { Fragment } from './fragment';
-import type {
-  Loader,
-  LoaderConfiguration,
-  FragmentLoaderContext,
-} from '../types/loader';
 import { getLoaderConfigWithoutReties } from '../utils/error-helper';
 import type { HlsConfig } from '../config';
-import type { BaseSegment, Part } from './fragment';
+import type { BaseSegment, Fragment, Part } from './fragment';
 import type {
   ErrorData,
   FragLoadedData,
   PartsLoadedData,
 } from '../types/events';
+import type {
+  Loader,
+  LoaderConfiguration,
+  FragmentLoaderContext,
+} from '../types/loader';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
@@ -77,13 +76,11 @@ export default class FragmentLoader {
           frag.gap = false;
         }
       }
-      const loader =
-        (this.loader =
-        frag.loader =
-          FragmentILoader
-            ? new FragmentILoader(config)
-            : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
+      const loader = (this.loader = FragmentILoader
+        ? new FragmentILoader(config)
+        : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag);
+      frag.loader = loader;
       const loadPolicy = getLoaderConfigWithoutReties(
         config.fragLoadPolicy.default,
       );
@@ -188,13 +185,11 @@ export default class FragmentLoader {
         reject(createGapLoadError(frag, part));
         return;
       }
-      const loader =
-        (this.loader =
-        frag.loader =
-          FragmentILoader
-            ? new FragmentILoader(config)
-            : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
+      const loader = (this.loader = FragmentILoader
+        ? new FragmentILoader(config)
+        : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
       const loaderContext = createLoaderContext(frag, part);
+      frag.loader = loader;
       // Should we define another load policy for parts?
       const loadPolicy = getLoaderConfigWithoutReties(
         config.fragLoadPolicy.default,

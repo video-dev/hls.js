@@ -178,7 +178,7 @@ class PassThroughRemuxer implements Remuxer {
       initSegment.initPTS = decodeTime - timeOffset;
       if (initPTS && initPTS.timescale === 1) {
         logger.warn(
-          `Adjusting initPTS by ${initSegment.initPTS - initPTS.baseTime}`,
+          `Adjusting initPTS @${timeOffset} from ${initPTS.baseTime / initPTS.timescale} to ${initSegment.initPTS}`,
         );
       }
       this.initPTS = initPTS = {

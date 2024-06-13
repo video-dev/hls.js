@@ -127,9 +127,9 @@ export class Fragment extends BaseSegment {
   // The ending Presentation Time Stamp (PTS) of the fragment. Set after transmux complete.
   public endPTS?: number;
   // The starting Decode Time Stamp (DTS) of the fragment. Set after transmux complete.
-  public startDTS!: number;
+  public startDTS?: number;
   // The ending Decode Time Stamp (DTS) of the fragment. Set after transmux complete.
-  public endDTS!: number;
+  public endDTS?: number;
   // The start time of the fragment, as listed in the manifest. Updated after transmux complete.
   public start: number = 0;
   // Set by `updateFragPTSDTS` in level-helper

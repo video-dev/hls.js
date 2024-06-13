@@ -1,5 +1,6 @@
 import BinarySearch from '../utils/binary-search';
 import type { Fragment, MediaFragment } from '../loader/fragment';
+import type { LevelDetails } from '../loader/level-details';
 
 /**
  * Returns first fragment whose endPdt value exceeds the given PDT, or null.
@@ -54,7 +55,7 @@ export function findFragmentByPDT(
  * @returns a matching fragment or null
  */
 export function findFragmentByPTS(
-  fragPrevious: Fragment | null,
+  fragPrevious: MediaFragment | null,
   fragments: MediaFragment[],
   bufferEnd: number = 0,
   maxFragLookUpTolerance: number = 0,
@@ -62,12 +63,18 @@ export function findFragmentByPTS(
 ): MediaFragment | null {
   let fragNext: MediaFragment | null = null;
   if (fragPrevious) {
-    fragNext =
-      fragments[(fragPrevious.sn as number) - fragments[0].sn + 1] || null;
+    fragNext = fragments[1 + fragPrevious.sn - fragments[0].sn] || null;
     // check for buffer-end rounding error
     const bufferEdgeError = (fragPrevious.endDTS as number) - bufferEnd;
     if (bufferEdgeError > 0 && bufferEdgeError < 0.0000015) {
       bufferEnd += 0.0000015;
+    }
+    if (
+      fragNext &&
+      fragPrevious.level !== fragNext.level &&
+      fragNext.end <= fragPrevious.end
+    ) {
+      fragNext = fragments[2 + fragPrevious.sn - fragments[0].sn] || null;
     }
   } else if (bufferEnd === 0 && fragments[0].start === 0) {
     fragNext = fragments[0];
@@ -213,4 +220,27 @@ export function findFragWithCC(
       return 0;
     }
   });
+}
+
+export function findNearestWithCC(
+  details: LevelDetails | undefined,
+  cc: number,
+  fragment: MediaFragment,
+): MediaFragment | null {
+  if (details) {
+    if (details.startCC <= cc && details.endCC >= cc) {
+      const start = fragment.start;
+      const end = fragment.end;
+      return BinarySearch.search(details.fragments, (candidate) => {
+        if (candidate.cc < cc || candidate.end <= start) {
+          return 1;
+        } else if (candidate.cc > cc || candidate.start >= end) {
+          return -1;
+        } else {
+          return 0;
+        }
+      });
+    }
+  }
+  return null;
 }
