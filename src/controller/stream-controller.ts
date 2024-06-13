@@ -873,7 +873,7 @@ export default class StreamController
       (8 * stats.total) / (stats.buffering.end - stats.loading.first),
     );
     if (frag.sn !== 'initSegment') {
-      this.fragPrevious = frag;
+      this.fragPrevious = frag as MediaFragment;
     }
     this.fragBufferedComplete(frag, part);
   }

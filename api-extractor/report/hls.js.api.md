@@ -353,7 +353,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected fragmentTracker: FragmentTracker;
     // (undocumented)
-    protected fragPrevious: Fragment | null;
+    protected fragPrevious: MediaFragment | null;
     // (undocumented)
     protected getAppendedFrag(position: number, playlistType?: PlaylistLevelType): Fragment | null;
     // (undocumented)

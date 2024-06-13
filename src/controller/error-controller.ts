@@ -13,7 +13,7 @@ import type Hls from '../hls';
 import type { RetryConfig } from '../config';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type { ErrorData } from '../types/events';
-import type { Fragment } from '../loader/fragment';
+import type { Fragment, MediaFragment } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 
 export const enum NetworkErrorAction {
@@ -384,7 +384,7 @@ export default class ErrorController
             const levelDetails = levels[candidate].details;
             if (levelDetails) {
               const fragCandidate = findFragmentByPTS(
-                data.frag,
+                data.frag as MediaFragment,
                 levelDetails.fragments,
                 data.frag.start,
               );

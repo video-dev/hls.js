@@ -124,7 +124,9 @@ export class SubtitleStreamController
     data: SubtitleFragProcessed,
   ) {
     const { frag, success } = data;
-    this.fragPrevious = frag;
+    if (frag.sn !== 'initSegment') {
+      this.fragPrevious = frag as MediaFragment;
+    }
     this.state = State.IDLE;
     if (!success) {
       return;

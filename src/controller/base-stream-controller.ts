@@ -77,7 +77,7 @@ export default class BaseStreamController
 {
   protected hls: Hls;
 
-  protected fragPrevious: Fragment | null = null;
+  protected fragPrevious: MediaFragment | null = null;
   protected fragCurrent: Fragment | null = null;
   protected fragmentTracker: FragmentTracker;
   protected transmuxer: TransmuxerInterface | null = null;
