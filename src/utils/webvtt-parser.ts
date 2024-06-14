@@ -1,5 +1,6 @@
 import { VTTParser } from './vttparser';
 import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
+import { hash } from './hash';
 import {
   RationalTimestamp,
   toMpegTsClockFromTimescale,
@@ -43,17 +44,6 @@ const cueString2millis = function (timeString: string) {
   ts += 60 * 60 * 1000 * hours;
 
   return ts;
-};
-
-// From https://github.com/darkskyapp/string-hash
-const hash = function (text: string) {
-  let hash = 5381;
-  let i = text.length;
-  while (i) {
-    hash = (hash * 33) ^ text.charCodeAt(--i);
-  }
-
-  return (hash >>> 0).toString();
 };
 
 // Create a unique hash id for a cue based on start/end times and text.
