@@ -9,6 +9,7 @@ import {
 } from '../types/events';
 import { HlsConfig } from '../hls';
 import { logger } from '../utils/logger';
+import FetchLoader from '../utils/fetch-loader';
 
 export const enum FragRequestState {
   IDLE,
@@ -32,6 +33,7 @@ export default class FragmentPreloader extends FragmentLoader {
     state: FragRequestState.IDLE,
   };
   protected log: (msg: any) => void;
+  private fetchLoader?: FetchLoader | undefined;
 
   constructor(config: HlsConfig, logPrefix: string) {
     super(config);
@@ -49,10 +51,38 @@ export default class FragmentPreloader extends FragmentLoader {
 
   public has(frag: Fragment, part: Part | undefined): boolean {
     const { request } = this.storage;
+
+    if (request === undefined || request.frag.sn !== frag.sn) {
+      return false;
+    }
+
+    const requestPart = request.part;
+    // frag preload hint only
+    if (requestPart === undefined && part === undefined) {
+      return true;
+    }
+
+    // mismatched part / frag
+    if (requestPart === undefined || part === undefined) {
+      return false;
+    }
+
+    if (requestPart.index === part.index) {
+      return true;
+    }
+
+    // Return true if byterange into requested part AND fetch loader exists
     return (
-      request !== undefined &&
-      request.frag.sn === frag.sn &&
-      request.part?.index === part?.index
+      this.fetchLoader !== undefined &&
+      // request is byterange
+      requestPart.byteRangeStartOffset !== undefined &&
+      requestPart.byteRangeEndOffset !== undefined &&
+      // part is byterange
+      part.byteRangeStartOffset !== undefined &&
+      part.byteRangeEndOffset !== undefined &&
+      // part byterange contained within request range
+      requestPart.byteRangeStartOffset <= part.byteRangeStartOffset &&
+      requestPart.byteRangeEndOffset >= part.byteRangeEndOffset
     );
   }
 
@@ -74,10 +104,17 @@ export default class FragmentPreloader extends FragmentLoader {
       }:${part?.index}`,
     );
 
-    const loadPromise =
-      part !== undefined
-        ? this.loadPart(frag, part, noop)
-        : this.load(frag, noop);
+    let loadPromise;
+    if (part !== undefined) {
+      // TODO: Use fetch loader to progressively load open-ended byterange requests
+      if (part.byteRangeEndOffset === 2 ** 53 - 1) {
+        return;
+      } else {
+        loadPromise = this.loadPart(frag, part, noop);
+      }
+    } else {
+      loadPromise = this.load(frag, noop);
+    }
 
     const request = {
       frag,

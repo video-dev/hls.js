@@ -697,10 +697,14 @@ export default class M3U8Parser {
         preloadHintAttrs['BYTERANGE-START'] ||
         preloadHintAttrs['BYTERANGE-LENGTH']
       ) {
-        const byteRangeStartOffset = preloadHintAttrs['BYTERANGE-START'] | 0;
-        const byteRangeLength =
-          preloadHintAttrs['BYTERANGE-LENGTH'] | (2 ** 53 - 1);
-        byteRange = `${byteRangeLength}@${byteRangeStartOffset}`;
+        const byteRangeStartOffset = preloadHintAttrs['BYTERANGE-START'];
+        let byteRangeLength = preloadHintAttrs['BYTERANGE-LENGTH'];
+        if (byteRangeLength <= 0) {
+          byteRangeLength = 2 ** 53 - 1;
+        }
+        if (isFinite(byteRangeLength) && isFinite(byteRangeStartOffset)) {
+          byteRange = `${byteRangeLength}@${byteRangeStartOffset}`;
+        }
       }
       const preloadType = preloadHintAttrs.TYPE;
       if (preloadType === 'PART' && level.partList) {
