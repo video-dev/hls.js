@@ -235,6 +235,7 @@ export type LatencyControllerConfig = {
   liveSyncDuration?: number;
   liveMaxLatencyDuration?: number;
   maxLiveSyncPlaybackRate: number;
+  liveSyncOnStallIncrease: number;
 };
 
 export type MetadataControllerConfig = {
@@ -352,6 +353,7 @@ export const hlsDefaultConfig: HlsConfig = {
   nudgeMaxRetry: 3, // used by stream-controller
   maxFragLookUpTolerance: 0.25, // used by stream-controller
   liveSyncDurationCount: 3, // used by latency-controller
+  liveSyncOnStallIncrease: 1, // used by latency-controller
   liveMaxLatencyDurationCount: Infinity, // used by latency-controller
   liveSyncDuration: undefined, // used by latency-controller
   liveMaxLatencyDuration: undefined, // used by latency-controller
