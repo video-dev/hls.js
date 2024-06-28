@@ -98,16 +98,10 @@ export default class FragmentPreloader extends FragmentLoader {
       this.abort();
     }
 
-    this.log(
-      `[${this.getStateString()}] create request for [${frag.type}] ${
-        frag.sn
-      }:${part?.index}`,
-    );
-
     let loadPromise;
     if (part !== undefined) {
       // TODO: Use fetch loader to progressively load open-ended byterange requests
-      if (part.byteRangeEndOffset === 2 ** 53 - 1) {
+      if (part?.byteRangeEndOffset === Number.MAX_SAFE_INTEGER) {
         return;
       } else {
         loadPromise = this.loadPart(frag, part, noop);
@@ -115,6 +109,12 @@ export default class FragmentPreloader extends FragmentLoader {
     } else {
       loadPromise = this.load(frag, noop);
     }
+
+    this.log(
+      `[${this.getStateString()}] create request for [${frag.type}] ${
+        frag.sn
+      }:${part?.index}`,
+    );
 
     const request = {
       frag,

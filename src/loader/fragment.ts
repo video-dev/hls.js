@@ -58,7 +58,13 @@ export class BaseSegment {
     } else {
       start = parseInt(params[1]);
     }
-    this._byteRange = [start, parseInt(params[0]) + start];
+    const bytelength = parseInt(params[0]);
+    const offsetEnd =
+      Number.isSafeInteger(bytelength) && bytelength !== Number.MAX_SAFE_INTEGER
+        ? start + bytelength
+        : Number.MAX_SAFE_INTEGER;
+
+    this._byteRange = [start, offsetEnd];
   }
 
   get byteRange(): [number, number] | [] {
