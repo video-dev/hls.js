@@ -1,5 +1,5 @@
 import { Events } from '../events';
-import { Fragment, Part } from '../loader/fragment';
+import { Fragment, MediaFragment, Part } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
 import type { SourceBufferName } from '../types/buffer';
 import type {
@@ -47,6 +47,7 @@ export class FragmentTracker implements ComponentAPI {
 
   private _registerListeners() {
     const { hls } = this;
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.BUFFER_APPENDED, this.onBufferAppended, this);
     hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
     hls.on(Events.FRAG_LOADED, this.onFragLoaded, this);
@@ -54,6 +55,7 @@ export class FragmentTracker implements ComponentAPI {
 
   private _unregisterListeners() {
     const { hls } = this;
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.BUFFER_APPENDED, this.onBufferAppended, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
     hls.off(Events.FRAG_LOADED, this.onFragLoaded, this);
@@ -107,7 +109,7 @@ export class FragmentTracker implements ComponentAPI {
   public getBufferedFrag(
     position: number,
     levelType: PlaylistLevelType,
-  ): Fragment | null {
+  ): MediaFragment | null {
     return this.getFragAtPos(position, levelType, true);
   }
 
@@ -115,7 +117,7 @@ export class FragmentTracker implements ComponentAPI {
     position: number,
     levelType: PlaylistLevelType,
     buffered?: boolean,
-  ): Fragment | null {
+  ): MediaFragment | null {
     const { fragments } = this;
     const keys = Object.keys(fragments);
     for (let i = keys.length; i--; ) {
@@ -143,22 +145,26 @@ export class FragmentTracker implements ComponentAPI {
     timeRange: TimeRanges,
     playlistType: PlaylistLevelType,
     appendedPart?: Part | null,
+    removeAppending?: boolean,
   ) {
     if (this.timeRanges) {
       this.timeRanges[elementaryStream] = timeRange;
     }
     // Check if any flagged fragments have been unloaded
     // excluding anything newer than appendedPartSn
-    const appendedPartSn = (appendedPart?.fragment.sn || -1) as number;
+    const appendedPartSn = appendedPart?.fragment.sn || -1;
     Object.keys(this.fragments).forEach((key) => {
       const fragmentEntity = this.fragments[key];
       if (!fragmentEntity) {
         return;
       }
-      if (appendedPartSn >= (fragmentEntity.body.sn as number)) {
+      if (appendedPartSn >= fragmentEntity.body.sn) {
         return;
       }
-      if (!fragmentEntity.buffered && !fragmentEntity.loaded) {
+      if (
+        !fragmentEntity.buffered &&
+        (!fragmentEntity.loaded || removeAppending)
+      ) {
         if (fragmentEntity.body.type === playlistType) {
           this.removeFragment(fragmentEntity.body);
         }
@@ -166,6 +172,10 @@ export class FragmentTracker implements ComponentAPI {
       }
       const esData = fragmentEntity.range[elementaryStream];
       if (!esData) {
+        return;
+      }
+      if (esData.time.length === 0) {
+        this.removeFragment(fragmentEntity.body);
         return;
       }
       esData.time.some((time: FragmentTimeRange) => {
@@ -189,11 +199,11 @@ export class FragmentTracker implements ComponentAPI {
    */
   public detectPartialFragments(data: FragBufferedData) {
     const timeRanges = this.timeRanges;
-    const { frag, part } = data;
-    if (!timeRanges || frag.sn === 'initSegment') {
+    if (!timeRanges || data.frag.sn === 'initSegment') {
       return;
     }
 
+    const frag = data.frag as MediaFragment;
     const fragKey = getFragmentKey(frag);
     const fragmentEntity = this.fragments[fragKey];
     if (!fragmentEntity || (fragmentEntity.buffered && frag.gap)) {
@@ -209,7 +219,7 @@ export class FragmentTracker implements ComponentAPI {
       const partial = isFragHint || streamInfo.partial === true;
       fragmentEntity.range[elementaryStream] = this.getBufferedTimes(
         frag,
-        part,
+        data.part,
         partial,
         timeRange,
       );
@@ -224,7 +234,7 @@ export class FragmentTracker implements ComponentAPI {
       }
       if (!isPartial(fragmentEntity)) {
         // Remove older fragment parts from lookup after frag is tracked as buffered
-        this.removeParts((frag.sn as number) - 1, frag.type);
+        this.removeParts(frag.sn - 1, frag.type);
       }
     } else {
       // remove fragment if nothing was appended
@@ -238,11 +248,11 @@ export class FragmentTracker implements ComponentAPI {
       return;
     }
     this.activePartLists[levelType] = activeParts.filter(
-      (part) => (part.fragment.sn as number) >= snToKeep,
+      (part) => part.fragment.sn >= snToKeep,
     );
   }
 
-  public fragBuffered(frag: Fragment, force?: true) {
+  public fragBuffered(frag: MediaFragment, force?: true) {
     const fragKey = getFragmentKey(frag);
     let fragmentEntity = this.fragments[fragKey];
     if (!fragmentEntity && force) {
@@ -387,16 +397,20 @@ export class FragmentTracker implements ComponentAPI {
     return false;
   }
 
+  private onManifestLoading() {
+    this.removeAllFragments();
+  }
+
   private onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
-    const { frag, part } = data;
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
-    if (frag.sn === 'initSegment' || frag.bitrateTest) {
+    if (data.frag.sn === 'initSegment' || data.frag.bitrateTest) {
       return;
     }
 
+    const frag = data.frag as MediaFragment;
     // Fragment entity `loaded` FragLoadedData is null when loading parts
-    const loaded = part ? null : data;
+    const loaded = data.part ? null : data;
 
     const fragKey = getFragmentKey(frag);
     this.fragments[fragKey] = {
@@ -437,6 +451,21 @@ export class FragmentTracker implements ComponentAPI {
   private hasFragment(fragment: Fragment): boolean {
     const fragKey = getFragmentKey(fragment);
     return !!this.fragments[fragKey];
+  }
+
+  public hasFragments(type?: PlaylistLevelType): boolean {
+    const { fragments } = this;
+    const keys = Object.keys(fragments);
+    if (!type) {
+      return keys.length > 0;
+    }
+    for (let i = keys.length; i--; ) {
+      const fragmentEntity = fragments[keys[i]];
+      if (fragmentEntity?.body.type === type) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public hasParts(type: PlaylistLevelType): boolean {

@@ -675,6 +675,7 @@ class AbrController extends Logger implements AbrComponentAPI {
     const audioTracksByGroup =
       this.audioTracksByGroup ||
       (this.audioTracksByGroup = getAudioTracksByGroup(allAudioTracks));
+    let minStartIndex = -1;
     if (firstSelection) {
       if (this.firstSelection !== -1) {
         return this.firstSelection;
@@ -694,8 +695,15 @@ class AbrController extends Logger implements AbrComponentAPI {
         audioPreference,
         videoPreference,
       );
-      const { codecSet, videoRanges, minFramerate, minBitrate, preferHDR } =
-        startTier;
+      const {
+        codecSet,
+        videoRanges,
+        minFramerate,
+        minBitrate,
+        minIndex,
+        preferHDR,
+      } = startTier;
+      minStartIndex = minIndex;
       currentCodecSet = codecSet;
       currentVideoRange = preferHDR
         ? videoRanges[videoRanges.length - 1]
@@ -789,8 +797,10 @@ class AbrController extends Logger implements AbrComponentAPI {
         (levelInfo.supportedResult &&
           !levelInfo.supportedResult.decodingInfoResults?.[0].smooth)
       ) {
-        levelsSkipped.push(i);
-        continue;
+        if (!firstSelection || i !== minStartIndex) {
+          levelsSkipped.push(i);
+          continue;
+        }
       }
 
       const levelDetails = levelInfo.details;
@@ -869,7 +879,7 @@ class AbrController extends Logger implements AbrComponentAPI {
               1,
             )} fetchDuration:${fetchDuration.toFixed(
               1,
-            )} firstSelection:${firstSelection} codecSet:${currentCodecSet} videoRange:${currentVideoRange} hls.loadLevel:${loadLevel}`,
+            )} firstSelection:${firstSelection} codecSet:${levelInfo.codecSet} videoRange:${levelInfo.videoRange} hls.loadLevel:${loadLevel}`,
           );
         }
         if (firstSelection) {

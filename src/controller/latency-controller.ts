@@ -62,11 +62,10 @@ export default class LatencyController implements ComponentAPI {
           : liveSyncDurationCount * targetduration;
     }
     const maxLiveSyncOnStallIncrease = targetduration;
-    const liveSyncOnStallIncrease = 1.0;
     return (
       targetLatency +
       Math.min(
-        this.stallCount * liveSyncOnStallIncrease,
+        this.stallCount * this.config.liveSyncOnStallIncrease,
         maxLiveSyncOnStallIncrease,
       )
     );

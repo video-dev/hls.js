@@ -1,7 +1,6 @@
-import { Part } from './fragment';
-import type { Fragment } from './fragment';
-import type { AttrList } from '../utils/attr-list';
+import type { Fragment, MediaFragment, Part } from './fragment';
 import type { DateRange } from './date-range';
+import type { AttrList } from '../utils/attr-list';
 import type { VariableMap } from '../types/level';
 
 const DEFAULT_TARGET_DURATION = 10;
@@ -15,10 +14,11 @@ export class LevelDetails {
   public averagetargetduration?: number;
   public endCC: number = 0;
   public endSN: number = 0;
-  public fragments: Fragment[];
-  public fragmentHint?: Fragment;
+  public fragments: MediaFragment[];
+  public fragmentHint?: MediaFragment;
   public partList: Part[] | null = null;
   public dateRanges: Record<string, DateRange>;
+  public dateRangeTagCount: number = 0;
   public live: boolean = true;
   public ageHeader: number = 0;
   public advancedDateTime?: number;
@@ -148,7 +148,7 @@ export class LevelDetails {
 
   get lastPartSn(): number {
     if (this.partList?.length) {
-      return this.partList[this.partList.length - 1].fragment.sn as number;
+      return this.partList[this.partList.length - 1].fragment.sn;
     }
     return this.endSN;
   }

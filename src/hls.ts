@@ -232,7 +232,7 @@ export default class Hls implements HlsEventEmitter {
         new AudioStreamControllerClass(this, fragmentTracker, keyLoader),
       );
     }
-    // subtitleTrackController must be defined before subtitleStreamController because the order of event handling is important
+    // Instantiate subtitleTrackController before SubtitleStreamController to receive level events first
     this.subtitleTrackController = this.createController(
       config.subtitleTrackController,
       networkControllers,
@@ -813,7 +813,7 @@ export default class Hls implements HlsEventEmitter {
   public setAudioOption(
     audioOption: MediaPlaylist | AudioSelectionOption | undefined,
   ): MediaPlaylist | null {
-    return this.audioTrackController?.setAudioOption(audioOption);
+    return this.audioTrackController?.setAudioOption(audioOption) || null;
   }
   /**
    * Find and select the best matching subtitle track, making a level switch when a Group change is necessary.
@@ -822,8 +822,9 @@ export default class Hls implements HlsEventEmitter {
   public setSubtitleOption(
     subtitleOption: MediaPlaylist | SubtitleSelectionOption | undefined,
   ): MediaPlaylist | null {
-    this.subtitleTrackController?.setSubtitleOption(subtitleOption);
-    return null;
+    return (
+      this.subtitleTrackController?.setSubtitleOption(subtitleOption) || null
+    );
   }
 
   /**
@@ -1072,7 +1073,7 @@ export type {
   KeySystems,
   KeySystemFormats,
 } from './utils/mediakeys-helper';
-export type { DateRange } from './loader/date-range';
+export type { DateRange, DateRangeCue } from './loader/date-range';
 export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
 export type { LevelDetails } from './loader/level-details';
@@ -1122,6 +1123,7 @@ export type { ChunkMetadata } from './types/transmuxer';
 export type {
   BaseSegment,
   Fragment,
+  MediaFragment,
   Part,
   ElementaryStreams,
   ElementaryStreamTypes,
@@ -1188,3 +1190,4 @@ export type {
   IErrorAction,
 } from './controller/error-controller';
 export type { AttrList } from './utils/attr-list';
+export type { ParsedMultivariantPlaylist } from './loader/m3u8-parser';

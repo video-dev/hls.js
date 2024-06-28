@@ -18,7 +18,7 @@ import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
 import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
-import type { Fragment } from '../loader/fragment';
+import type { Fragment, MediaFragment } from '../loader/fragment';
 import type {
   ErrorData,
   FragLoadedData,
@@ -106,8 +106,8 @@ export class SubtitleStreamController
   }
 
   protected onManifestLoading() {
+    super.onManifestLoading();
     this.mainDetails = null;
-    this.fragmentTracker.removeAllFragments();
   }
 
   protected onMediaDetaching(): void {
@@ -124,7 +124,9 @@ export class SubtitleStreamController
     data: SubtitleFragProcessed,
   ) {
     const { frag, success } = data;
-    this.fragPrevious = frag;
+    if (frag.sn !== 'initSegment') {
+      this.fragPrevious = frag as MediaFragment;
+    }
     this.state = State.IDLE;
     if (!success) {
       return;
@@ -156,7 +158,7 @@ export class SubtitleStreamController
       };
       buffered.push(timeRange);
     }
-    this.fragmentTracker.fragBuffered(frag);
+    this.fragmentTracker.fragBuffered(frag as MediaFragment);
     this.fragBufferedComplete(frag, null);
   }
 
@@ -205,6 +207,9 @@ export class SubtitleStreamController
     const frag = data.frag;
 
     if (frag?.type === PlaylistLevelType.SUBTITLE) {
+      if (data.details === ErrorDetails.FRAG_GAP) {
+        this.fragmentTracker.fragBuffered(frag as MediaFragment, true);
+      }
       if (this.fragCurrent) {
         this.fragCurrent.abortRequests();
       }
@@ -488,11 +493,9 @@ export class SubtitleStreamController
     level: Level,
     targetBufferTime: number,
   ) {
-    this.fragCurrent = frag;
     if (frag.sn === 'initSegment') {
       this._loadInitSegment(frag, level);
     } else {
-      this.startFragRequested = true;
       super.loadFragment(frag, level, targetBufferTime);
     }
   }

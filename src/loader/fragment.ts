@@ -90,6 +90,10 @@ export class BaseSegment {
   }
 }
 
+export interface MediaFragment extends Fragment {
+  sn: number;
+}
+
 /**
  * Object representing parsed data from an HLS Segment. Found in {@link hls.js#LevelDetails.fragments}.
  */
@@ -123,9 +127,9 @@ export class Fragment extends BaseSegment {
   // The ending Presentation Time Stamp (PTS) of the fragment. Set after transmux complete.
   public endPTS?: number;
   // The starting Decode Time Stamp (DTS) of the fragment. Set after transmux complete.
-  public startDTS!: number;
+  public startDTS?: number;
   // The ending Decode Time Stamp (DTS) of the fragment. Set after transmux complete.
-  public endDTS!: number;
+  public endDTS?: number;
   // The start time of the fragment, as listed in the manifest. Updated after transmux complete.
   public start: number = 0;
   // Set by `updateFragPTSDTS` in level-helper
@@ -274,13 +278,13 @@ export class Part extends BaseSegment {
   public readonly gap: boolean = false;
   public readonly independent: boolean = false;
   public readonly relurl: string;
-  public readonly fragment: Fragment;
+  public readonly fragment: MediaFragment;
   public readonly index: number;
   public stats: LoadStats = new LoadStats();
 
   constructor(
     partAttrs: AttrList,
-    frag: Fragment,
+    frag: MediaFragment,
     baseurl: string,
     index: number,
     previous?: Part,

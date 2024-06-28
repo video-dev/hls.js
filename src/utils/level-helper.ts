@@ -3,16 +3,17 @@
  */
 
 import { logger } from './logger';
-import { Fragment, Part } from '../loader/fragment';
-import { LevelDetails } from '../loader/level-details';
-import type { Level } from '../types/level';
 import { DateRange } from '../loader/date-range';
+import { assignProgramDateTime, mapDateRanges } from '../loader/m3u8-parser';
+import type { Fragment, MediaFragment, Part } from '../loader/fragment';
+import type { LevelDetails } from '../loader/level-details';
+import type { Level } from '../types/level';
 
 type FragmentIntersection = (oldFrag: Fragment, newFrag: Fragment) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;
 
 export function updatePTS(
-  fragments: Fragment[],
+  fragments: MediaFragment[],
   fromIdx: number,
   toIdx: number,
 ): void {
@@ -21,7 +22,7 @@ export function updatePTS(
   updateFromToPTS(fragFrom, fragTo);
 }
 
-function updateFromToPTS(fragFrom: Fragment, fragTo: Fragment) {
+function updateFromToPTS(fragFrom: MediaFragment, fragTo: MediaFragment) {
   const fragToPTS = fragTo.startPTS as number;
   // if we know startPTS[toIdx]
   if (Number.isFinite(fragToPTS)) {
@@ -55,7 +56,7 @@ function updateFromToPTS(fragFrom: Fragment, fragTo: Fragment) {
 
 export function updateFragPTSDTS(
   details: LevelDetails | undefined,
-  frag: Fragment,
+  frag: MediaFragment,
   startPTS: number,
   endPTS: number,
   startDTS: number,
@@ -82,11 +83,11 @@ export function updateFragPTSDTS(
 
     maxStartPTS = Math.max(startPTS, fragStartPts);
     startPTS = Math.min(startPTS, fragStartPts);
-    startDTS = Math.min(startDTS, frag.startDTS);
+    startDTS = Math.min(startDTS, frag.startDTS as number);
 
     minEndPTS = Math.min(endPTS, fragEndPts);
     endPTS = Math.max(endPTS, fragEndPts);
-    endDTS = Math.max(endDTS, frag.endDTS);
+    endDTS = Math.max(endDTS, frag.endDTS as number);
   }
 
   const drift = startPTS - frag.start;
@@ -101,7 +102,7 @@ export function updateFragPTSDTS(
   frag.minEndPTS = minEndPTS;
   frag.endDTS = endDTS;
 
-  const sn = frag.sn as number; // 'initSegment'
+  const sn = frag.sn;
   // exit if sn out of range
   if (!details || sn < details.startSN || sn > details.endSN) {
     return 0;
@@ -196,10 +197,10 @@ export function mergeDetails(
     },
   );
 
+  const fragmentsToCheck = newDetails.fragmentHint
+    ? newDetails.fragments.concat(newDetails.fragmentHint)
+    : newDetails.fragments;
   if (currentInitSegment) {
-    const fragmentsToCheck = newDetails.fragmentHint
-      ? newDetails.fragments.concat(newDetails.fragmentHint)
-      : newDetails.fragments;
     fragmentsToCheck.forEach((frag) => {
       if (
         frag &&
@@ -220,14 +221,30 @@ export function mergeDetails(
       for (let i = newDetails.skippedSegments; i--; ) {
         newDetails.fragments.shift();
       }
-      newDetails.startSN = newDetails.fragments[0].sn as number;
+      newDetails.startSN = newDetails.fragments[0].sn;
       newDetails.startCC = newDetails.fragments[0].cc;
-    } else if (newDetails.canSkipDateRanges) {
-      newDetails.dateRanges = mergeDateRanges(
-        oldDetails.dateRanges,
-        newDetails.dateRanges,
-        newDetails.recentlyRemovedDateranges,
+    } else {
+      if (newDetails.canSkipDateRanges) {
+        newDetails.dateRanges = mergeDateRanges(
+          oldDetails.dateRanges,
+          newDetails,
+        );
+      }
+      const programDateTimes = oldDetails.fragments.filter(
+        (frag) => frag.rawProgramDateTime,
       );
+      if (oldDetails.hasProgramDateTime && !newDetails.hasProgramDateTime) {
+        for (let i = 1; i < fragmentsToCheck.length; i++) {
+          if (fragmentsToCheck[i].programDateTime === null) {
+            assignProgramDateTime(
+              fragmentsToCheck[i],
+              fragmentsToCheck[i - 1],
+              programDateTimes,
+            );
+          }
+        }
+      }
+      mapDateRanges(programDateTimes, newDetails);
     }
   }
 
@@ -293,27 +310,38 @@ export function mergeDetails(
 
 function mergeDateRanges(
   oldDateRanges: Record<string, DateRange>,
-  deltaDateRanges: Record<string, DateRange>,
-  recentlyRemovedDateranges: string[] | undefined,
+  newDetails: LevelDetails,
 ): Record<string, DateRange> {
+  const { dateRanges: deltaDateRanges, recentlyRemovedDateranges } = newDetails;
   const dateRanges = Object.assign({}, oldDateRanges);
   if (recentlyRemovedDateranges) {
     recentlyRemovedDateranges.forEach((id) => {
       delete dateRanges[id];
     });
   }
-  Object.keys(deltaDateRanges).forEach((id) => {
-    const dateRange = new DateRange(deltaDateRanges[id].attr, dateRanges[id]);
-    if (dateRange.isValid) {
-      dateRanges[id] = dateRange;
-    } else {
-      logger.warn(
-        `Ignoring invalid Playlist Delta Update DATERANGE tag: "${JSON.stringify(
-          deltaDateRanges[id].attr,
-        )}"`,
+  const mergeIds = Object.keys(dateRanges);
+  const mergeCount = mergeIds.length;
+  if (mergeCount) {
+    Object.keys(deltaDateRanges).forEach((id) => {
+      const mergedDateRange = dateRanges[id];
+      const dateRange = new DateRange(
+        deltaDateRanges[id].attr,
+        mergedDateRange,
       );
-    }
-  });
+      if (dateRange.isValid) {
+        dateRanges[id] = dateRange;
+        if (!mergedDateRange) {
+          dateRange.tagOrder += mergeCount;
+        }
+      } else {
+        logger.warn(
+          `Ignoring invalid Playlist Delta Update DATERANGE tag: "${JSON.stringify(
+            deltaDateRanges[id].attr,
+          )}"`,
+        );
+      }
+    });
+  }
   return dateRanges;
 }
 
@@ -366,7 +394,7 @@ export function mapFragmentIntersection(
   for (let i = start; i <= end; i++) {
     const oldFrag = oldFrags[delta + i];
     let newFrag = newFrags[i];
-    if (skippedSegments && !newFrag && i < skippedSegments) {
+    if (skippedSegments && !newFrag && oldFrag) {
       // Fill in skipped segments in delta playlist
       newFrag = newDetails.fragments[i] = oldFrag;
     }
@@ -433,38 +461,37 @@ export function computeReloadInterval(
 }
 
 export function getFragmentWithSN(
-  level: Level,
+  details: LevelDetails | undefined,
   sn: number,
   fragCurrent: Fragment | null,
-): Fragment | null {
-  if (!level?.details) {
+): MediaFragment | null {
+  if (!details) {
     return null;
   }
-  const levelDetails = level.details;
-  let fragment: Fragment | undefined =
-    levelDetails.fragments[sn - levelDetails.startSN];
+  let fragment: MediaFragment | undefined =
+    details.fragments[sn - details.startSN];
   if (fragment) {
     return fragment;
   }
-  fragment = levelDetails.fragmentHint;
+  fragment = details.fragmentHint;
   if (fragment && fragment.sn === sn) {
     return fragment;
   }
-  if (sn < levelDetails.startSN && fragCurrent && fragCurrent.sn === sn) {
-    return fragCurrent;
+  if (sn < details.startSN && fragCurrent && fragCurrent.sn === sn) {
+    return fragCurrent as MediaFragment;
   }
   return null;
 }
 
 export function getPartWith(
-  level: Level,
+  details: LevelDetails | undefined,
   sn: number,
   partIndex: number,
 ): Part | null {
-  if (!level?.details) {
+  if (!details) {
     return null;
   }
-  return findPart(level.details?.partList, sn, partIndex);
+  return findPart(details.partList, sn, partIndex);
 }
 
 export function findPart(

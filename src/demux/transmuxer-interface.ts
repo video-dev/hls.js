@@ -13,7 +13,7 @@ import Transmuxer, {
 import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import { EventEmitter } from 'eventemitter3';
-import { Fragment, Part } from '../loader/fragment';
+import { MediaFragment, Part } from '../loader/fragment';
 import { getM2TSSupportedAudioTypes } from '../utils/codecs';
 import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type Hls from '../hls';
@@ -26,7 +26,7 @@ export default class TransmuxerInterface {
   private hls: Hls;
   private id: PlaylistLevelType;
   private observer: HlsEventEmitter;
-  private frag: Fragment | null = null;
+  private frag: MediaFragment | null = null;
   private part: Part | null = null;
   private useWorker: boolean;
   private workerContext: WorkerContext | null = null;
@@ -173,7 +173,7 @@ export default class TransmuxerInterface {
     initSegmentData: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
-    frag: Fragment,
+    frag: MediaFragment,
     part: Part | null,
     duration: number,
     accurateTimeOffset: boolean,
@@ -189,7 +189,7 @@ export default class TransmuxerInterface {
 
     const discontinuity = !(lastFrag && frag.cc === lastFrag.cc);
     const trackSwitch = !(lastFrag && chunkMeta.level === lastFrag.level);
-    const snDiff = lastFrag ? chunkMeta.sn - (lastFrag.sn as number) : -1;
+    const snDiff = lastFrag ? chunkMeta.sn - lastFrag.sn : -1;
     const partDiff = this.part ? chunkMeta.part - this.part.index : -1;
     const progressive =
       snDiff === 0 &&
