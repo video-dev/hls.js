@@ -184,12 +184,12 @@ describe('LatencyController', function () {
 
     it('liveSyncOnStallIncrease can control how fast targetduration increases on stall', function () {
       latencyController['config'].lowLatencyMode = true;
+      latencyController['config'].liveSyncOnStallIncrease = 1.3;
       levelDetails.targetduration = 3.5;
       levelDetails.partHoldBack = 3;
       levelDetails.age = 0;
       expect(latencyController.targetLatency).to.equal(3);
       latencyController['stallCount'] = 1;
-      latencyController['config'].liveSyncOnStallIncrease = 1.3;
       expect(latencyController.targetLatency).to.equal(4.3);
       latencyController['stallCount'] += 1;
       expect(latencyController.targetLatency).to.equal(5.6);
