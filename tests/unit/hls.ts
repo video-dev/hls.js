@@ -79,6 +79,32 @@ describe('Hls', function () {
     });
   });
 
+  describe('loadSource and url', function () {
+    it('url should initally be null', function () {
+      const hls = new Hls();
+      expect(hls.url).to.equal(null);
+      hls.destroy();
+    });
+    it('should return given url after load', function () {
+      const hls = new Hls();
+      hls.loadSource(
+        'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8',
+      );
+      expect(hls.url).to.equal(
+        'https://video-dev.github.io/streams/x36xhzz/x36xhzz.m3u8',
+      );
+      hls.destroy();
+    });
+    it('should make relative url absolute', function () {
+      const hls = new Hls();
+      hls.loadSource('/streams/x36xhzz/x36xhzz.m3u8');
+      expect(hls.url).to.equal(
+        `${self.location.origin}/streams/x36xhzz/x36xhzz.m3u8`,
+      );
+      hls.destroy();
+    });
+  });
+
   describe('destroy', function () {
     it('should not crash on stopLoad() after destroy()', function () {
       const hls = new Hls();

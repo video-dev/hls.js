@@ -80,7 +80,7 @@ export default class Hls implements HlsEventEmitter {
   private emeController: EMEController;
   private cmcdController: CMCDController;
   private _media: HTMLMediaElement | null = null;
-  private url: string | null = null;
+  private _url: string | null = null;
   private triggeringException?: boolean;
 
   /**
@@ -370,7 +370,7 @@ export default class Hls implements HlsEventEmitter {
     this.detachMedia();
     this.removeAllListeners();
     this._autoLevelCapping = -1;
-    this.url = null;
+    this._url = null;
 
     this.networkControllers.forEach((component) => component.destroy());
     this.networkControllers.length = 0;
@@ -408,8 +408,8 @@ export default class Hls implements HlsEventEmitter {
   loadSource(url: string) {
     this.stopLoad();
     const media = this.media;
-    const loadedSource = this.url;
-    const loadingSource = (this.url = buildAbsoluteURL(
+    const loadedSource = this._url;
+    const loadingSource = (this._url = buildAbsoluteURL(
       self.location.href,
       url,
       {
@@ -429,6 +429,13 @@ export default class Hls implements HlsEventEmitter {
     }
     // when attaching to a source URL, trigger a playlist load
     this.trigger(Events.MANIFEST_LOADING, { url: url });
+  }
+
+  /**
+   * Gets the currently loaded URL
+   */
+  public get url(): string | null {
+    return this._url;
   }
 
   /**

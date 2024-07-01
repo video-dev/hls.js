@@ -149,6 +149,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
 - [Network Loading Control API](#network-loading-control-api)
   - [`hls.startLoad(startPosition=-1)`](#hlsstartloadstartposition-1)
   - [`hls.stopLoad()`](#hlsstopload)
+  - [`hls.url`](#hlsurl)
 - [Audio Tracks Control API](#audio-tracks-control-api)
   - [`hls.setAudioOption(audioOption)`](#hlssetaudiooptionaudiooption)
   - [`hls.allAudioTracks`](#hlsallaudiotracks)
@@ -1775,6 +1776,10 @@ If startPosition is not set to -1, it allows to override default startPosition t
 ### `hls.stopLoad()`
 
 stop playlist/fragment loading. could be resumed later on by calling `hls.startLoad()`
+
+### `hls.url`
+
+get : string of current HLS asset passed to `hls.loadSource()`, otherwise null
 
 ## Audio Tracks Control API
 
