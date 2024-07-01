@@ -1839,7 +1839,17 @@ returns 0 before first playlist is loaded
 
 ### `hls.targetLatency`
 
-get : target distance from the edge as calculated by the latency controller
+get/set : target distance from the edge as calculated by the latency controller
+
+When `liveSyncDuration` is specified in config,
+`targetLatency` is calculated as `liveSyncDuration` plus `liveSyncOnStallIncrease` multiplied by number of stalls.
+Otherwise `targetLatency` is calculated as `liveSyncDurationCount` multiplied by `EXT-X-TARGETDURATION`
+plus `liveSyncOnStallIncrease` multiplied by number of stalls.
+
+Setting `targetLatency` resets number of stalls to `0` and sets `liveSyncDuration` to the new value.
+Note: if the initial config specified `liveSyncDurationCount` rather than `liveSyncDuration`,
+setting `targetLatency` will assign a new value to `liveSyncDuration`. This value will be used to calculate
+`targetLatency` from now on and `liveSyncDurationCount` will be ignored.
 
 ### `hls.drift`
 
