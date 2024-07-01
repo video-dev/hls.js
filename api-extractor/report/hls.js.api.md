@@ -459,7 +459,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected reduceLengthAndFlushBuffer(data: ErrorData): boolean;
     // (undocumented)
-    protected reduceMaxBufferLength(threshold: number): boolean;
+    protected reduceMaxBufferLength(threshold: number, fragDuration: number): boolean;
     // (undocumented)
     protected removeUnbufferedFrags(start?: number): void;
     // (undocumented)
