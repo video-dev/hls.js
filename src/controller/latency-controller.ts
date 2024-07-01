@@ -18,6 +18,7 @@ export default class LatencyController implements ComponentAPI {
   private currentTime: number = 0;
   private stallCount: number = 0;
   private _latency: number | null = null;
+  private _targetLatencyUpdated = false;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -50,6 +51,7 @@ export default class LatencyController implements ComponentAPI {
     const userConfig = this.hls.userConfig;
     let targetLatency = lowLatencyMode ? partHoldBack || holdBack : holdBack;
     if (
+      this._targetLatencyUpdated ||
       userConfig.liveSyncDuration ||
       userConfig.liveSyncDurationCount ||
       targetLatency === 0
@@ -67,6 +69,12 @@ export default class LatencyController implements ComponentAPI {
         maxLiveSyncOnStallIncrease,
       )
     );
+  }
+
+  set targetLatency(latency: number) {
+    this.stallCount = 0;
+    this.config.liveSyncDuration = latency;
+    this._targetLatencyUpdated = true;
   }
 
   get liveSyncPosition(): number | null {
