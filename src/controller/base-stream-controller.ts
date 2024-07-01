@@ -476,7 +476,7 @@ export default class BaseStreamController
         : 0;
       if (
         backtracked === 1 ||
-        this.reduceMaxBufferLength(minForwardBufferLength)
+        this.reduceMaxBufferLength(minForwardBufferLength, frag.duration)
       ) {
         fragmentTracker.removeFragment(frag);
       }
@@ -1152,10 +1152,16 @@ export default class BaseStreamController
     return Math.min(maxBufLen, config.maxMaxBufferLength);
   }
 
-  protected reduceMaxBufferLength(threshold: number) {
+  protected reduceMaxBufferLength(threshold: number, fragDuration: number) {
     const config = this.config;
-    const minLength = threshold || config.maxBufferLength;
-    const reducedLength = config.maxMaxBufferLength / 2;
+    const minLength = Math.max(
+      Math.min(threshold, config.maxBufferLength),
+      fragDuration,
+    );
+    const reducedLength = Math.max(
+      threshold - fragDuration * 3,
+      config.maxMaxBufferLength / 2,
+    );
     if (reducedLength >= minLength) {
       // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
       config.maxMaxBufferLength = reducedLength;
@@ -1712,6 +1718,7 @@ export default class BaseStreamController
   protected reduceLengthAndFlushBuffer(data: ErrorData): boolean {
     // if in appending state
     if (this.state === State.PARSING || this.state === State.PARSED) {
+      const frag = data.frag;
       const playlistType = data.parent as PlaylistLevelType;
       const bufferedInfo = this.getFwdBufferInfo(
         this.mediaBuffer,
@@ -1721,7 +1728,7 @@ export default class BaseStreamController
       // reduce max buf len if current position is buffered
       const buffered = bufferedInfo && bufferedInfo.len > 0.5;
       if (buffered) {
-        this.reduceMaxBufferLength(bufferedInfo.len);
+        this.reduceMaxBufferLength(bufferedInfo.len, frag?.duration || 10);
       }
       const flushBuffer = !buffered;
       if (flushBuffer) {
@@ -1732,9 +1739,9 @@ export default class BaseStreamController
           `Buffer full error while media.currentTime is not buffered, flush ${playlistType} buffer`,
         );
       }
-      if (data.frag) {
-        this.fragmentTracker.removeFragment(data.frag);
-        this.nextLoadPosition = data.frag.start;
+      if (frag) {
+        this.fragmentTracker.removeFragment(frag);
+        this.nextLoadPosition = frag.start;
       }
       this.resetLoadingState();
       return flushBuffer;
