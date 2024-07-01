@@ -314,7 +314,12 @@ export default class BaseStreamController
         true,
       );
 
-      this.lastCurrentTime = currentTime;
+      // Don't set lastCurrentTime with backward seeks (allows for frag selection with strict tolerances)
+      const lastCurrentTime = this.lastCurrentTime;
+      if (currentTime > lastCurrentTime) {
+        this.lastCurrentTime = currentTime;
+      }
+
       if (!this.loadingParts) {
         const bufferEnd = Math.max(bufferInfo.end, currentTime);
         const shouldLoadParts = this.shouldLoadParts(
@@ -1109,17 +1114,18 @@ export default class BaseStreamController
     if (!Number.isFinite(pos)) {
       return null;
     }
-    return this.getFwdBufferInfoAtPos(bufferable, pos, type);
+    const backwardSeek = this.lastCurrentTime > pos;
+    const maxBufferHole =
+      backwardSeek || this.media?.paused ? 0 : this.config.maxBufferHole;
+    return this.getFwdBufferInfoAtPos(bufferable, pos, type, maxBufferHole);
   }
 
-  protected getFwdBufferInfoAtPos(
+  private getFwdBufferInfoAtPos(
     bufferable: Bufferable | null,
     pos: number,
     type: PlaylistLevelType,
+    maxBufferHole: number,
   ): BufferInfo | null {
-    const {
-      config: { maxBufferHole },
-    } = this;
     const bufferInfo = BufferHelper.bufferInfo(bufferable, pos, maxBufferHole);
     // Workaround flaw in getting forward buffer when maxBufferHole is smaller than gap at current pos
     if (bufferInfo.len === 0 && bufferInfo.nextStart !== undefined) {
@@ -1270,6 +1276,7 @@ export default class BaseStreamController
           this.mediaBuffer ? this.mediaBuffer : this.media,
           bufferInfo.nextStart,
           playlistType,
+          0,
         );
         if (
           nextbufferInfo !== null &&
@@ -1431,8 +1438,13 @@ export default class BaseStreamController
 
     let frag: MediaFragment | null;
     if (bufferEnd < end) {
+      const backwardSeek = bufferEnd < this.lastCurrentTime;
       const lookupTolerance =
-        bufferEnd > end - maxFragLookUpTolerance ? 0 : maxFragLookUpTolerance;
+        backwardSeek ||
+        bufferEnd > end - maxFragLookUpTolerance ||
+        this.media?.paused
+          ? 0
+          : maxFragLookUpTolerance;
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
       frag = findFragmentByPTS(
