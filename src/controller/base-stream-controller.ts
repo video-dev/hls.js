@@ -1682,7 +1682,7 @@ export default class BaseStreamController
     }
     // keep retrying until the limit will be reached
     const errorAction = data.errorAction;
-    const { action, retryCount = 0, retryConfig } = errorAction || {};
+    const { action, retryCount = 0, retryConfig, flags } = errorAction || {};
     if (
       errorAction &&
       action === NetworkErrorAction.RetryRequest &&
@@ -1714,11 +1714,12 @@ export default class BaseStreamController
         this.warn(
           `${data.details} reached or exceeded max retry (${retryCount})`,
         );
+        if (action === NetworkErrorAction.SendAlternateToPenaltyBox && flags) {
+          this.treatAsGap(frag);
+        }
         return;
       }
-    } else if (
-      errorAction?.action === NetworkErrorAction.SendAlternateToPenaltyBox
-    ) {
+    } else if (action === NetworkErrorAction.SendAlternateToPenaltyBox) {
       this.state = State.WAITING_LEVEL;
     } else {
       this.state = State.ERROR;
@@ -1898,10 +1899,7 @@ export default class BaseStreamController
       );
       if (level.fragmentError === 0) {
         // Mark and track the odd empty segment as a gap to avoid reloading
-        level.fragmentError++;
-        frag.gap = true;
-        this.fragmentTracker.removeFragment(frag);
-        this.fragmentTracker.fragBuffered(frag, true);
+        this.treatAsGap(frag, level);
       }
       this.warn(error.message);
       this.hls.trigger(Events.ERROR, {
@@ -1920,6 +1918,15 @@ export default class BaseStreamController
     }
     this.state = State.PARSED;
     this.hls.trigger(Events.FRAG_PARSED, { frag, part });
+  }
+
+  private treatAsGap(frag: Fragment, level?: Level) {
+    if (level) {
+      level.fragmentError++;
+    }
+    frag.gap = true;
+    this.fragmentTracker.removeFragment(frag);
+    this.fragmentTracker.fragBuffered(frag, true);
   }
 
   protected resetTransmuxer() {
