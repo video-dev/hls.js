@@ -38,6 +38,7 @@ import './unit/loader/playlist-loader';
 import './unit/utils/attr-list';
 import './unit/utils/binary-search';
 import './unit/utils/buffer-helper';
+import './unit/utils/codecs';
 import './unit/utils/error-helper';
 import './unit/utils/discontinuities';
 import './unit/utils/exp-golomb';
