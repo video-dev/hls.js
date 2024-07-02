@@ -206,16 +206,20 @@ export function pickMostCompleteCodecName(
 
 export function convertAVC1ToAVCOTI(codec: string) {
   // Convert avc1 codec string from RFC-4281 to RFC-6381 for MediaSource.isTypeSupported
-  const avcdata = codec.split('.');
-  if (avcdata.length > 2) {
-    let result = avcdata.shift() + '.';
-    result += parseInt(avcdata.shift() as string).toString(16);
-    result += ('000' + parseInt(avcdata.shift() as string).toString(16)).slice(
-      -4,
-    );
-    return result;
+  // Examples: avc1.66.30 to avc1.42001e and avc1.77.30,avc1.66.30 to avc1.4d001e,avc1.42001e.
+  const codecs = codec.split(',');
+  for (let i = 0; i < codecs.length; i++) {
+    const avcdata = codecs[i].split('.');
+    if (avcdata.length > 2) {
+      let result = avcdata.shift() + '.';
+      result += parseInt(avcdata.shift() as string).toString(16);
+      result += (
+        '000' + parseInt(avcdata.shift() as string).toString(16)
+      ).slice(-4);
+      codecs[i] = result;
+    }
   }
-  return codec;
+  return codecs.join(',');
 }
 
 export interface TypeSupported {
