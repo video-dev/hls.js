@@ -1069,56 +1069,6 @@ export default class MP4Remuxer implements Remuxer {
     this.isAudioContiguous = true;
     return audioData;
   }
-
-  remuxEmptyAudio(
-    track: DemuxedAudioTrack,
-    timeOffset: number,
-    contiguous: boolean,
-    videoData: Fragment,
-  ): RemuxedTrack | undefined {
-    const inputTimeScale: number = track.inputTimeScale;
-    const mp4timeScale: number = track.samplerate
-      ? track.samplerate
-      : inputTimeScale;
-    const scaleFactor: number = inputTimeScale / mp4timeScale;
-    const nextAudioPts: number | null = this.nextAudioPts;
-    // sync with video's timestamp
-    const initDTS = this._initDTS as RationalTimestamp;
-    const init90kHz = (initDTS.baseTime * 90000) / initDTS.timescale;
-    const startDTS: number =
-      (nextAudioPts !== null
-        ? nextAudioPts
-        : (videoData.startDTS as number) * inputTimeScale) + init90kHz;
-    const endDTS: number =
-      (videoData.endDTS as number) * inputTimeScale + init90kHz;
-    // one sample's duration value
-    const frameDuration: number = scaleFactor * AAC_SAMPLES_PER_FRAME;
-    // samples count of this segment's duration
-    const nbSamples: number = Math.ceil((endDTS - startDTS) / frameDuration);
-    // silent frame
-    const silentFrame: Uint8Array | undefined = AAC.getSilentFrame(
-      track.parsedCodec || track.manifestCodec || track.codec,
-      track.channelCount,
-    );
-
-    logger.warn('[mp4-remuxer]: remux empty Audio');
-    // Can't remux if we can't generate a silent frame...
-    if (!silentFrame) {
-      logger.trace(
-        '[mp4-remuxer]: Unable to remuxEmptyAudio since we were unable to get a silent frame for given audio codec',
-      );
-      return;
-    }
-
-    const samples: Array<any> = [];
-    for (let i = 0; i < nbSamples; i++) {
-      const stamp = startDTS + i * frameDuration;
-      samples.push({ unit: silentFrame, pts: stamp, dts: stamp });
-    }
-    track.samples = samples;
-
-    return this.remuxAudio(track, timeOffset, contiguous, false);
-  }
 }
 
 export function normalizePts(value: number, reference: number | null): number {
