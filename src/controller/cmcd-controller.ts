@@ -6,8 +6,8 @@ import { CmcdStreamingFormat } from '@svta/common-media-library/cmcd/CmcdStreami
 import { appendCmcdHeaders } from '@svta/common-media-library/cmcd/appendCmcdHeaders';
 import { appendCmcdQuery } from '@svta/common-media-library/cmcd/appendCmcdQuery';
 import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEncodeOptions';
-import { uuid } from '@svta/common-media-library/utils/uuid';
 import { BufferHelper } from '../utils/buffer-helper';
+import type { ExtendedSourceBuffer } from '../types/buffer';
 import type { ComponentAPI } from '../types/component-api';
 import type { Fragment, Part } from '../loader/fragment';
 import type { BufferCreatedData, MediaAttachedData } from '../types/events';
@@ -40,8 +40,8 @@ export default class CMCDController implements ComponentAPI {
   private initialized: boolean = false;
   private starved: boolean = false;
   private buffering: boolean = true;
-  private audioBuffer?: SourceBuffer; // eslint-disable-line no-restricted-globals
-  private videoBuffer?: SourceBuffer; // eslint-disable-line no-restricted-globals
+  private audioBuffer?: ExtendedSourceBuffer;
+  private videoBuffer?: ExtendedSourceBuffer;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -52,7 +52,7 @@ export default class CMCDController implements ComponentAPI {
       config.pLoader = this.createPlaylistLoader();
       config.fLoader = this.createFragmentLoader();
 
-      this.sid = cmcd.sessionId || uuid();
+      this.sid = cmcd.sessionId || hls.sessionId;
       this.cid = cmcd.contentId;
       this.useHeaders = cmcd.useHeaders === true;
       this.includeKeys = cmcd.includeKeys;

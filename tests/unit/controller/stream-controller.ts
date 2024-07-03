@@ -300,6 +300,8 @@ describe('StreamController', function () {
           levelDetails.endSN =
             fragmentsWithoutPdt[fragmentsWithoutPdt.length - 1].sn;
           levelDetails.fragments = fragmentsWithoutPdt;
+          const latestLevelDetailsStub = sinon.stub(hls, 'latestLevelDetails');
+          latestLevelDetailsStub.get(() => levelDetails);
         });
 
         it('finds the next fragment to load based on the last fragment buffered', function () {
@@ -484,21 +486,22 @@ describe('StreamController', function () {
       };
       // @ts-ignore
       const seekStub = sandbox.stub(streamController, 'seekToStartPos');
-      streamController['loadedmetadata'] = false;
       streamController['fragCurrent'] = streamController['fragPrevious'] =
         firstFrag;
-      streamController['fragBufferedComplete'](firstFrag, null);
+      streamController['onFragBuffered'](Events.FRAG_BUFFERED, {
+        stats: new LoadStats(),
+        frag: firstFrag,
+        part: null,
+        id: 'main',
+      });
       expect(seekStub).to.have.been.calledOnce;
-      expect(streamController['loadedmetadata']).to.be.true;
     });
 
     it('should not seek to start pos when metadata has been loaded', function () {
       // @ts-ignore
       const seekStub = sandbox.stub(streamController, 'seekToStartPos');
-      streamController['loadedmetadata'] = true;
       streamController['checkBuffer']();
       expect(seekStub).to.have.not.been.called;
-      expect(streamController['loadedmetadata']).to.be.true;
     });
 
     it('should not seek to start pos when nothing has been buffered', function () {
@@ -507,7 +510,6 @@ describe('StreamController', function () {
       (streamController['media']!.buffered as any).length = 0;
       streamController['checkBuffer']();
       expect(seekStub).to.have.not.been.called;
-      expect(streamController['loadedmetadata']).to.be.false;
     });
 
     describe('seekToStartPos', function () {
