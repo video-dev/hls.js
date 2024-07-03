@@ -409,6 +409,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected loadFragment(frag: Fragment, level: Level, targetBufferTime: number): void;
     // (undocumented)
+    protected loadingParts: boolean;
+    // (undocumented)
     protected _loadInitSegment(frag: Fragment, level: Level): void;
     // (undocumented)
     mapToInitFragWhenRequired(frag: Fragment | null): typeof frag;
