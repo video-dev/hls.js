@@ -93,7 +93,7 @@ select option {
 #controls {
   display: flex;
   flex-direction: column;
-  width: 80%;
+  width: 96%;
   max-width: 1200px;
   margin: 0 auto 20px auto;
   border: 1px solid #606060;
@@ -104,6 +104,25 @@ select option {
   flex: 1 1 auto;
   max-width: 100%;
   padding: 5px 5px 0 3px;
+}
+
+.demo-timeline-chart-container {
+  position: relative;
+}
+
+#timeline-chart {
+  touch-action: manipulation;
+}
+
+#timeline-chart-current-time {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  background: transparent;
+  pointer-events: none;
+  touch-action: none;
 }
 
 .config-editor-wrapper {
@@ -157,15 +176,43 @@ select option {
   justify-content: space-between;
 }
 
-.videoCentered {
-  width: 720px;
+.buffer-bar-canvas {
+  display: block;
+  width: 640px;
   margin-left: auto;
   margin-right: auto;
-  display: block;
 }
 
+.video-container {
+  width: 100%;
+  height: 480px;
+  position: relative;
+  background-color: #333;
+}
+
+.video-item {
+  position: absolute;
+  left: 0;
+  right: 0;
+  margin: auto;
+  display: block;
+  /* width: 100%; */
+  height: 100%;
+  /* transition: top 0.5s, left 0.5s; */
+}
+
+/* #interstitial-a {
+  top: 1em;
+  left: 1em;
+}
+
+#interstitial-b {
+  top: 2em;
+  left: 2em;
+} */
+
 .center {
-  width: 70%;
+  width: 98%;
   min-width: 615px;
   overflow: hidden;
   margin-left: auto;
@@ -174,7 +221,7 @@ select option {
 }
 
 #toggleButtons button {
-  width: 16%;
+  width: 13%;
   display: inline-block;
   text-align: center;
   font-size: 10pt;
@@ -187,7 +234,7 @@ select option {
 
 #statusOut {
   height: auto;
-  max-height: calc((17px * 3) + 19px);
+  max-height: calc((17px * 10) + 19px);
   overflow: auto;
 }
 
@@ -220,6 +267,22 @@ select option {
 #StreamPermalink a {
   font-size: 10px;
   font-family: monospace;
+}
+
+#currentLevelControl .btn-success {
+  display: none;
+}
+
+#nextLevelControl .btn-success {
+  font-size: 0.5em;
+}
+
+#loadLevelControl .btn-success {
+  display: none;
+}
+
+#levelCappingControl .btn-success {
+  display: none;
 }
 
 /* Small devices (portrait tablets and large phones, 600px and up) */

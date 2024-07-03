@@ -37,6 +37,9 @@ type ParsedMultivariantMediaOptions = {
   'CLOSED-CAPTIONS'?: MediaPlaylist[];
 };
 
+const insertStartDate = Date.now() - 30000; // FIXME: Join live mid-roll mid-stream
+const endTagDate = insertStartDate + 75000;
+
 const MASTER_PLAYLIST_REGEX =
   /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-(SESSION-DATA|SESSION-KEY|DEFINE|CONTENT-STEERING|START):([^\r\n]*)[\r\n]+/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
@@ -305,6 +308,17 @@ export default class M3U8Parser {
     levelUrlId: number,
     multivariantVariableList: VariableMap | null,
   ): LevelDetails {
+    if (/^https?:\/\/\S+\.mux\.com\//.test(baseurl)) {
+      // string += `\n#EXT-X-DATERANGE:ID="pre",X-CUE="PRE",CLASS="com.apple.hls.interstitial",START-DATE="${new Date(insertStartDate).toISOString()}",DURATION=300,X-ASSET-URI="https://localhost/adaptive/meridian/becoming-valid.json"`;
+      string += `\n#EXT-X-DATERANGE:ID="1",CLASS="com.apple.hls.interstitial",START-DATE="${new Date(insertStartDate).toISOString()}",DURATION=37,X-ASSET-LIST="https://localhost/adaptive/meridian/short-preroll.json"`;
+      // string += `\n#EXT-X-DATERANGE:ID="mid-start",CLASS="com.apple.hls.interstitial",START-DATE="${new Date(insertStartDate).toISOString()}",DURATION=300,X-ASSET-URI="https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8"`;
+      // string += `\n#EXT-X-DATERANGE:ID="mid-start",CLASS="com.apple.hls.interstitial",START-DATE="${new Date(insertStartDate).toISOString()}",DURATION=300,X-ASSET-LIST="https://localhost/adaptive/meridian/assets-2-absolute.json"`;
+      // string += `\n#EXT-X-DATERANGE:ID="mid-start",CLASS="com.apple.hls.interstitial",START-DATE="${new Date(insertStartDate).toISOString()}",DURATION=300,X-ASSET-LIST="https://localhost/adaptive/meridian/becoming-valid.json"`;
+      string += `\n#EXT-X-DATERANGE:ID="2",CLASS="com.apple.hls.interstitial",START-DATE="${new Date(endTagDate).toISOString()}",DURATION=300,X-ASSET-LIST="https://localhost/adaptive/meridian/becoming-valid.json"`;
+      if (Date.now() > endTagDate) {
+        string += `\n#EXT-X-ENDLIST\n`;
+      }
+    }
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
     const programDateTimes: MediaFragment[] = [];

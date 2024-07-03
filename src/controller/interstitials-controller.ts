@@ -417,6 +417,7 @@ export default class InterstitialsController
             return timelinePos > 0 ? timelinePos : 0;
           },
           get duration() {
+            // TODO: Return end of playlist when schedule duration is non-finite
             return c.schedule.durations.primary;
           },
           seekTo: (time) => seekTo(time, 'primary'),
@@ -441,6 +442,7 @@ export default class InterstitialsController
             );
           },
           get duration() {
+            // TODO: Return end of playlist when schedule duration is non-finite
             return c.schedule.durations.playout;
           },
           seekTo: (time) => seekTo(time, 'playout'),
@@ -465,6 +467,7 @@ export default class InterstitialsController
             );
           },
           get duration() {
+            // TODO: Return end of playlist when schedule duration is non-finite
             return c.schedule.durations.integrated;
           },
           seekTo: (time) => seekTo(time, 'integrated'),

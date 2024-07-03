@@ -63,12 +63,27 @@
 
           <label
             class="innerControls"
-            title="Uncheck this to disable loading of streams selected from the drop-down above."
+            title="Uncheck to disable loading of streams selected from the drop-down above."
           >
             Enable streaming:
             <input id="enableStreaming" type="checkbox" checked />
           </label>
 
+          <label
+            class="innerControls"
+            title="Uncheck to skip calling attachMedia after loadSource. Use the Playback controls Attach Media button below attach after start."
+          >
+            attachMedia on Start:
+            <input id="attachMediaOnStart" type="checkbox" checked />
+          </label>
+
+          <label class="innerControls">
+            Interstitial Elements:
+            <select id="interstitialElements" style="float: right">
+              <option value="single">Single (Resets MediaSource)</option>
+              <option value="multiple">Multiple (Swap Media Elements)</option>
+            </select>
+          </label>
           <label
             class="innerControls"
             title="When a media error occurs, attempt to recover playback by calling `hls.recoverMediaError()`."
@@ -96,17 +111,14 @@
           </label>
 
           <label class="innerControls">
-            HTML video element width:
-            <select id="videoSize" style="float: right">
-              <option value="240px">240px</option>
-              <option value="426px">426px</option>
-              <option value="640px">640px</option>
-              <option value="720px">720px</option>
-              <option value="854px">854px</option>
-              <option value="1280px">1280px</option>
-              <option value="1920px">1920px</option>
-              <option value="80%">Responsive (80%)</option>
-              <option value="100%">Responsive (100%)</option>
+            HTML video element height:
+            <select id="videoHeight" style="float: right">
+              <option value="240px">240p</option>
+              <option value="360px">360p</option>
+              <option value="480px">480p</option>
+              <option value="540px">540p</option>
+              <option value="720px">720p</option>
+              <option value="1080px">1080p</option>
             </select>
           </label>
 
@@ -143,37 +155,68 @@
           </div>
         </div>
       </div>
-
-      <video
-        id="video"
-        controls
-        autoplay
-        playsinline
-        class="videoCentered"
-        style="width: 80%"
-      ></video>
-      <br />
+      <div class="video-container">
+        <video
+          id="video"
+          controls
+          autoplay
+          playsinline
+          class="video-item"
+        ></video>
+        <video id="interstitial-a" playsinline class="video-item"></video>
+        <video id="interstitial-b" playsinline class="video-item"></video>
+      </div>
+      <br />buffered ranges:
       <canvas
         id="bufferedCanvas"
-        width="720"
+        width="640"
         height="15"
-        class="videoCentered"
+        class="buffer-bar-canvas"
         onclick="onClickBufferedRange(event);"
         style="height: fit-content"
+        title="buffered ranges"
+      ></canvas>
+      <br />primary timeline:
+      <canvas
+        id="primaryCanvas"
+        width="640"
+        height="20"
+        class="buffer-bar-canvas"
+        style="height: fit-content"
+        title="primary"
+      ></canvas>
+      <br />playout timeline:
+      <canvas
+        id="playoutCanvas"
+        width="640"
+        height="20"
+        class="buffer-bar-canvas"
+        style="height: fit-content"
+        title="playout"
+      ></canvas>
+      <br />integrated timeline:
+      <canvas
+        id="integratedCanvas"
+        width="640"
+        height="20"
+        class="buffer-bar-canvas"
+        style="height: fit-content"
+        title="integrated"
       ></canvas>
       <br />
-      <br />
-      <label class="center">Status:</label>
-      <pre id="statusOut" class="center" style="white-space: pre-wrap"></pre>
-
-      <label class="center">Error:</label>
-      <pre id="errorOut" class="center" style="white-space: pre-wrap"></pre>
-
       <div
         class="center"
         style="text-align: center; display: none"
         id="toggleButtons"
       >
+        <button
+          type="button"
+          class="btn btn-sm demo-tab-btn"
+          data-tab="statusControlTab"
+          onclick="toggleTabClick(this);"
+        >
+          Status
+        </button>
         <button
           type="button"
           class="btn btn-sm demo-tab-btn"
@@ -223,7 +266,13 @@
           Buffer &amp; Statistics
         </button>
       </div>
+      <div id="statusControlTab" style="display: none">
+        <label class="center">Status:</label>
+        <pre id="statusOut" class="center" style="white-space: pre-wrap"></pre>
 
+        <label class="center">Error:</label>
+        <pre id="errorOut" class="center" style="white-space: pre-wrap"></pre>
+      </div>
       <div
         class="center demo-tab"
         id="playbackControlTab"
@@ -237,7 +286,7 @@
                 type="button"
                 class="btn btn-sm btn-info"
                 title="video.play()"
-                onclick="$('#video')[0].play()"
+                onclick="activeVideo.play()"
               >
                 Play
               </button>
@@ -245,7 +294,7 @@
                 type="button"
                 class="btn btn-sm btn-info"
                 title="video.pause()"
-                onclick="$('#video')[0].pause()"
+                onclick="activeVideo.pause()"
               >
                 Pause
               </button>
@@ -255,7 +304,7 @@
                 type="button"
                 class="btn btn-sm btn-info"
                 title="video.playbackRate = text input"
-                onclick="$('#video')[0].defaultPlaybackRate=$('#video')[0].playbackRate=$('#playback_rate').val();"
+                onclick="activeVideo.defaultPlaybackRate=activeVideo.playbackRate=$('#playback_rate').val();"
               >
                 Playback rate
               </button>
@@ -265,7 +314,7 @@
                 id="playback_rate"
                 size="8"
                 style="width: 3em"
-                onkeydown="if(window.event.keyCode=='13'){$('#video')[0].defaultPlaybackRate=$('#video')[0].playbackRate=$('#playback_rate').val();}"
+                onkeydown="if(window.event.keyCode=='13'){activeVideo.defaultPlaybackRate=activeVideo.playbackRate=$('#playback_rate').val();}"
               />
             </span>
             <span>
@@ -273,7 +322,7 @@
                 type="button"
                 class="btn btn-sm btn-info"
                 title="video.currentTime -= 10"
-                onclick="$('#video')[0].currentTime-=10"
+                onclick="activeVideo.currentTime-=10"
               >
                 - 10 s
               </button>
@@ -281,7 +330,7 @@
                 type="button"
                 class="btn btn-sm btn-info"
                 title="video.currentTime += 10"
-                onclick="$('#video')[0].currentTime+=10"
+                onclick="activeVideo.currentTime+=10"
               >
                 + 10 s
               </button>
@@ -291,7 +340,7 @@
                 type="button"
                 class="btn btn-sm btn-info"
                 title="video.currentTime = text input"
-                onclick="$('#video')[0].currentTime=$('#seek_pos').val();"
+                onclick="activeVideo.currentTime=$('#seek_pos').val();"
               >
                 Seek to
               </button>
@@ -300,7 +349,7 @@
                 id="seek_pos"
                 size="8"
                 style="width: 7em"
-                onkeydown="if(window.event.keyCode=='13'){$('#video')[0].currentTime=$('#seek_pos').val();}"
+                onkeydown="if(window.event.keyCode=='13'){activeVideo.currentTime=$('#seek_pos').val();}"
               />
             </span>
           </p>
@@ -328,7 +377,7 @@
                 type="button"
                 class="btn btn-xs btn-warning"
                 title="hls.attachMedia(video)"
-                onclick="hls.attachMedia($('#video')[0])"
+                onclick="hls.attachMedia(video)"
               >
                 Attach media
               </button>
@@ -339,6 +388,14 @@
                 onclick="hls.detachMedia()"
               >
                 Detach media
+              </button>
+              <button
+                type="button"
+                class="btn btn-xs btn-warning"
+                title="hls.destroy()"
+                onclick="hls.destroy()"
+              >
+                Destroy player
               </button>
             </span>
           </p>
@@ -397,7 +454,8 @@
         id="timelineTab"
         style="display: none"
       >
-        <canvas id="timeline-chart" style="touch-action: manipulation"></canvas>
+        <canvas id="timeline-chart"></canvas>
+        <canvas id="timeline-chart-current-time"></canvas>
       </div>
 
       <div
@@ -454,9 +512,25 @@
             <td><div id="audioTrackControl" style="display: inline"></div></td>
           </tr>
           <tr>
-            <td>Language / Name:</td>
+            <td>Selected:</td>
             <td>
               <div id="audioTrackLabel" style="display: inline">
+                None selected
+              </div>
+            </td>
+          </tr>
+        </table>
+        <table>
+          <tr>
+            <td>Current subtitile-track:</td>
+            <td>
+              <div id="subtitleTrackControl" style="display: inline"></div>
+            </td>
+          </tr>
+          <tr>
+            <td>Selected:</td>
+            <td>
+              <div id="subtitleTrackLabel" style="display: inline">
                 None selected
               </div>
             </td>

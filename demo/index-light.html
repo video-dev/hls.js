@@ -64,10 +64,18 @@
 
           <label
             class="innerControls"
-            title="Uncheck this to disable loading of streams selected from the drop-down above."
+            title="Uncheck to disable loading of streams selected from the drop-down above."
           >
             Enable streaming:
             <input id="enableStreaming" type="checkbox" checked />
+          </label>
+
+          <label
+            class="innerControls"
+            title="Uncheck to skip calling attachMedia after loadSource. Use the Playback controls Attach Media button below attach after start."
+          >
+            attachMedia on Start:
+            <input id="attachMediaOnStart" type="checkbox" checked />
           </label>
 
           <label
@@ -399,6 +407,7 @@
         style="display: none"
       >
         <canvas id="timeline-chart"></canvas>
+        <canvas id="timeline-chart-current-time"></canvas>
       </div>
 
       <div
@@ -455,11 +464,23 @@
             <td><div id="audioTrackControl" style="display: inline"></div></td>
           </tr>
           <tr>
-            <td>Language / Name:</td>
+            <td>Selected:</td>
             <td>
-              <div id="audioTrackLabel" style="display: inline">
-                None selected
-              </div>
+              <div id="audioTrackLabel" style="display: inline">None</div>
+            </td>
+          </tr>
+        </table>
+        <table>
+          <tr>
+            <td>Current subtitile-track:</td>
+            <td>
+              <div id="subtitleTrackControl" style="display: inline"></div>
+            </td>
+          </tr>
+          <tr>
+            <td>Selected:</td>
+            <td>
+              <div id="subtitleTrackLabel" style="display: inline">None</div>
             </td>
           </tr>
         </table>

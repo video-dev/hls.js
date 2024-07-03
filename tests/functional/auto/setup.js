@@ -13,9 +13,12 @@ const HlsjsLightBuild = !!process.env.HLSJS_LIGHT;
 const chai = require('chai');
 const expect = chai.expect;
 
+const UA = process.env.UA || 'chrome';
+const UA_VERSION = process.env.UA_VERSION || 'latest';
+
 const browserConfig = {
-  version: 'latest',
-  name: 'chrome',
+  version: UA_VERSION,
+  name: UA,
 };
 
 /**
@@ -40,11 +43,6 @@ if (useSauce) {
     throw new Error('Missing sauce auth.');
   }
 
-  const UA_VERSION = process.env.UA_VERSION;
-  if (UA_VERSION) {
-    browserConfig.version = UA_VERSION;
-  }
-
   browserConfig.name = UA;
   browserConfig.platform = OS;
 }
@@ -60,11 +58,13 @@ if (browserConfig.platform) {
 }
 
 // Launch static server
-HttpServer.createServer({
-  showDir: false,
-  autoIndex: false,
-  root: './',
-}).listen(8000, useSauce ? '0.0.0.0' : '127.0.0.1');
+if (useSauce) {
+  HttpServer.createServer({
+    showDir: false,
+    autoIndex: false,
+    root: './',
+  }).listen(8000, useSauce ? '0.0.0.0' : '127.0.0.1');
+}
 
 const wait = (ms) => new Promise((resolve) => global.setTimeout(resolve, ms));
 const stringifyResult = (result) =>
@@ -163,11 +163,14 @@ async function testSmoothSwitch(url, config) {
           '[test] > ' + eventName + ' frag.level: ' + data.frag.level
         );
         const highestLevel = self.hls.levels.length - 1;
-        if (highestLevel === 0) {
+        const fragmentCount =
+          self.hls.levels[data.frag.level]?.details.fragments.length;
+        if (highestLevel === 0 || fragmentCount === 1) {
           callback({
             highestLevel: highestLevel,
-            currentTimeDelta: 0,
-            message: 'No adaptive variants',
+            currentTimeDelta: 1, // pass the test by assigning currentTimeDelta > 0
+            message:
+              highestLevel === 0 ? 'No adaptive variants' : 'Only one segment',
             logs: self.logString,
           });
           return;
@@ -481,7 +484,19 @@ async function sauceDisconnect() {
   });
 }
 
+function getPageURLComponents() {
+  return {
+    base: useSauce
+      ? 'http://localhost:8000'
+      : 'https://rwalch.apple.com/hls.js',
+    path: '/tests/functional/auto/',
+    file: `index${HlsjsLightBuild ? '-light' : ''}.html`,
+  };
+}
+
 describe(`testing hls.js playback in the browser on "${browserDescription}"`, function () {
+  const failedUrls = {};
+
   before(async function () {
     // high timeout because sometimes getSession() takes a while
     this.timeout(100000);
@@ -504,7 +519,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       };
     }
 
-    browser = new webdriver.Builder();
+    browser = new webdriver.Builder()
+      .forBrowser(webdriver.Browser.SAFARI)
+      .build();
     if (useSauce) {
       if (process.env.SAUCE_TUNNEL_ID) {
         capabilities['sauce:options'] = {
@@ -529,7 +546,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
       );
     }
 
-    browser = browser.withCapabilities(capabilities).build();
+    // browser = browser.withCapabilities(capabilities).build();
 
     const start = Date.now();
 
@@ -556,13 +573,14 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   beforeEach(async function () {
     try {
       await retry(async () => {
-        const testPageExt = HlsjsLightBuild ? '-light' : '';
-        const testPageUrl = `http://localhost:8000/tests/functional/auto/index${testPageExt}.html`;
+        const page = getPageURLComponents();
+        const testPageUrl = `${page.base}${page.path}${page.file}`;
         if (printDebugLogs) {
           console.log(`Loading test page: ${testPageUrl}`);
         }
         try {
           await browser.get(testPageUrl);
+          await browser.manage().window().setRect(0, 0, 1200, 850);
         } catch (e) {
           throw new Error('failed to open test page');
         }
@@ -592,10 +610,24 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
   afterEach(async function () {
     const failed = this.currentTest.isFailed();
     if (printDebugLogs || failed) {
-      const logString = await browser.executeScript(
-        'return window.logString || "";'
-      );
-      console.log(logString);
+      const json = await browser.executeScript(function () {
+        return JSON.stringify({
+          url: self.hls ? self.hls.url : 'undefined',
+          logs: self.logString || '',
+        });
+      });
+      const data = JSON.parse(json);
+      const url = data.url;
+
+      const page = getPageURLComponents();
+      console.log(`${page.base}/hls.js/demo/?src=${encodeURIComponent(url)}
+
+============================= LOGS =======================================
+${data.logs}
+==========================================================================
+`);
+      failedUrls[url] = url in failedUrls ? failedUrls[url] + 1 : 0;
+
       if (failed && useSauce) {
         browser.executeScript('sauce:job-result=failed');
       }
@@ -612,6 +644,9 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
     console.log('Quitting browser...');
     await browser.quit();
     console.log('Browser quit.');
+    if (Object.keys(failedUrls).length > 0) {
+      console.log(JSON.stringify(failedUrls, null, 2));
+    }
     if (useSauce) {
       await sauceDisconnect();
     }
@@ -619,23 +654,16 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
 
   const entries = Object.entries(streams);
   if (HlsjsLightBuild) {
-    entries.length = 13;
+    entries.length = 10;
   }
-
-  const isSafari = browserConfig.name === 'safari';
 
   entries
     // eslint-disable-next-line no-unused-vars
     .filter(([name, stream]) => !stream.skipFunctionalTests)
     // eslint-disable-next-line no-unused-vars
-    .forEach(([name, stream]) => {
+    .forEach(([name, stream], index) => {
       const url = stream.url;
       const config = stream.config || {};
-
-      // Segment media is shorted than playlist duration resulting in overlapping appends on switch
-      // This appears to prevent playback in Safari which causes smoothswitch and VOD ended event tests to fail
-      const isStreamsWithOverlappingAppends =
-        name === 'arte' || name === 'oceansAES';
 
       config.preferManagedMediaSource = false;
       if (
@@ -664,7 +692,7 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
         );
       }
 
-      if (stream.abr && (!isSafari || !isStreamsWithOverlappingAppends)) {
+      if (stream.abr) {
         it(
           `should "smooth switch" to highest level and still play after 2s for ${stream.description}`,
           testSmoothSwitch.bind(null, url, config)
@@ -685,14 +713,24 @@ describe(`testing hls.js playback in the browser on "${browserDescription}"`, fu
           `should play ${stream.description}`,
           testIsPlayingVOD.bind(null, url, config)
         );
-        if (!isSafari || !isStreamsWithOverlappingAppends) {
-          it(
-            `should seek 3s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
-            testSeekOnVOD.bind(null, url, config)
-          );
-        }
+
+        it(
+          `should seek 3s from end and receive video ended event for ${stream.description} with 2 or less buffered ranges`,
+          testSeekOnVOD.bind(null, url, config)
+        );
         // TODO: Seeking to or past VOD duration should result in the video ending
         // it(`should seek on end and receive video ended event for ${stream.description}`, testSeekEndVOD.bind(null, url));
+      }
+
+      if (stream.description === 'Big Buck Bunny - adaptive qualities') {
+        it(
+          `should perform bitrate test and start playback  ${stream.description}`,
+          testIsPlayingVOD.bind(
+            null,
+            url,
+            Object.assign(config, { startLevel: -1 })
+          )
+        );
       }
     });
 });

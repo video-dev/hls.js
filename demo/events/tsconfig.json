@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "baseUrl": "src/js",
+    "target": "esnext",
+    "module": "esnext",
+    "sourceMap": true,
+    "strictNullChecks": true,
+    "strictPropertyInitialization": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noEmit": true
+  },
+  "include": ["src", "../../../../jwplayer/src/js"],
+  "exclude": ["dist/**/*"]
+}

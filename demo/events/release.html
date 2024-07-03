@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <title>HLS.js Events</title>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1.5"
+    />
+    <link href="index.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <div id="player-container" class="block">
+      <div id="player"></div>
+    </div>
+    <div class="block">
+      <div id="companion"></div>
+    </div>
+    <div class="block">
+      <div id="config-controls">
+        <button id="setup" title="Setup the player">setup</button>
+        <button id="setup-prev" disabled title="Previous configuration">
+          &#x25C0;
+        </button>
+        <button id="setup-next" disabled title="Next configuration">
+          &#x25B6;
+        </button>
+        <a
+          id="download-config"
+          type="button"
+          class="right button"
+          title="Download config"
+          >download</a
+        >
+        <button
+          id="permalink-config"
+          class="right"
+          title="Add permalink to the url bar"
+        >
+          permalink
+        </button>
+        <button
+          id="copy-config"
+          class="right"
+          title="Copy the config to the clipboard"
+          style="position: relative"
+        >
+          &#x1F4CB;<span style="position: absolute; left: 1em">&#x2190;</span>
+        </button>
+        <button id="pin-config" class="right" title="Pin config editor">
+          &#x1F4CC;
+        </button>
+      </div>
+      <textarea rows="18" id="player-config" name="config"></textarea>
+    </div>
+    <div class="block toggle-block">
+      <span id="group-toggles">
+        <!--<span>filter:</span>-->
+        <input
+          id="input-filter"
+          class="input-field"
+          type="text"
+          placeholder="filter (string or /regex/)"
+        />
+        <!--<span>modes:</span><span>groups:</span>-->
+        <!-- <pre tabindex="0" class="group-globalUi toggle" title="toggle global UI events">global UI</pre>
+            <pre tabindex="0" class="group-playback toggle" title="toggle playback events">playback</pre>
+            <pre tabindex="0" class="group-media toggle" title="toggle media events">media</pre>
+            <pre tabindex="0" class="group-error toggle" title="toggle error events">error</pre>
+            <pre tabindex="0" class="group-adRequest toggle" title="toggle ad request events">ad request</pre>
+            <pre tabindex="0" class="group-adBreak toggle" title="toggle ad break events">ad break</pre>
+            <pre tabindex="0" class="group-related toggle" title="toggle related UI events">related</pre>
+            <pre tabindex="0" class="group-ping toggle" title="toggle pings">ping</pre> -->
+        <pre
+          tabindex="0"
+          class="group-unknown toggle"
+          title="toggle uncategorized events"
+        >
+unknown</pre
+        >
+        <pre
+          tabindex="0"
+          class="group-provider toggle disabled"
+          title="toggle provider events"
+        >
+provider</pre
+        >
+        <pre
+          tabindex="0"
+          class="group-video toggle disabled"
+          title="toggle video tag events"
+        >
+video</pre
+        >
+        <pre
+          tabindex="0"
+          class="group-quickPeek toggle disabled"
+          title="toggle quick peek"
+        >
+quick peek</pre
+        >
+      </span>
+    </div>
+    <div id="event-log" class="block events-block">
+      <button id="clear-events" class="right" title="Clear Events">
+        &#x1F6AB;
+      </button>
+      <button id="event-flow-direction" class="right" title="Flip Event Flow">
+        &#x23EC;
+      </button>
+    </div>
+    <!-- ace editor files downloaded from https://github.com/ajaxorg/ace-builds/tree/v1.5.0/src-noconflict -->
+    <script type="text/javascript" src="./dist/ace.js"></script>
+    <script type="text/javascript" src="./dist/ext-language_tools.js"></script>
+    <script type="text/javascript" src="../../../dist/hls.min.js"></script>
+    <!-- <script type="text/javascript">
+        window.Hls.DefaultConfig = {};
+    </script> -->
+    <script type="text/javascript" src="./dist/index.js"></script>
+  </body>
+</html>

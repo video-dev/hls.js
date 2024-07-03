@@ -390,7 +390,7 @@ const configs = Object.entries({
     ],
   },
   demo: {
-    input: './demo/main.js',
+    input: './demo/main.ts',
     onLog: buildOnLog(),
     output: {
       name: 'HlsDemo',

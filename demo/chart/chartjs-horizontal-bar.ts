@@ -2,9 +2,9 @@ import Chart from 'chart.js';
 
 // Modify horizontalBar so that each dataset (fragments, timeRanges) draws on the same row (level, track or buffer)
 Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (
-  datasetIndex,
-  index,
-  options
+  datasetIndex: number,
+  index: number,
+  options: any
 ) {
   const chart = this.chart;
   const scale = this._getValueScale();
@@ -40,10 +40,10 @@ Chart.controllers.horizontalBar.prototype.calculateBarValuePixels = function (
 };
 
 Chart.controllers.horizontalBar.prototype.calculateBarIndexPixels = function (
-  datasetIndex,
-  index,
-  ruler,
-  options
+  datasetIndex: number,
+  index: number,
+  ruler: { start: number },
+  options: { barThickness: number; categoryPercentage: number }
 ) {
   const rowHeight = options.barThickness;
   const size = rowHeight * options.categoryPercentage;
@@ -68,7 +68,12 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
   const scale = this._getValueScale();
   scale._parseValue = scaleParseValue;
   const ctx: CanvasRenderingContext2D = chart.ctx;
-  const chartArea: { left; top; right; bottom } = chart.chartArea;
+  const chartArea: {
+    left: number;
+    top: number;
+    right: number;
+    bottom: number;
+  } = chart.chartArea;
   Chart.helpers.canvas.clipArea(ctx, chartArea);
   if (!this.lineHeight) {
     this.lineHeight =
@@ -92,16 +97,22 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
       const isFragmentHint = dataType === 'fragmentHint';
       const isFragment = dataType === 'fragment' || isPart || isFragmentHint;
       const isCue = dataType === 'cue';
+      const isDateRange = dataType === 'dateRange';
+      const isInterstitial = dataType === 'interstitial';
       if (isCue) {
         view.y += view.height * 0.5 * (i % 2) - view.height * 0.25;
+      } else if (isInterstitial) {
+        if (!obj.event && !obj.primary) {
+          view.y += view.height - 3;
+        }
       } else if (isPart) {
         view.height -= 22;
       }
       const bounds = boundingRects(view);
       const drawText = bounds.w > lineHeight * 1.5 && !isFragmentHint;
-      if (isFragment || isCue) {
+      if (isFragment || isCue || isDateRange || isInterstitial) {
         if (drawText) {
-          view.borderWidth = 1;
+          view.borderWidth = obj.hasMedia ? 2 : 1;
           if (i === 0) {
             view.borderSkipped = false;
           }
@@ -110,31 +121,43 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
             range ||
             scale.getValueForPixel(chartArea.right) -
               scale.getValueForPixel(chartArea.left);
-          if (range > 300 || isCue) {
+          if (bounds.w === 0) {
+            view.borderSkipped = false;
+            view.borderWidth = 2;
+          } else if (range > 300 || isCue) {
             view.borderWidth = 0;
           }
         }
         if (isFragmentHint) {
           view.borderWidth = 0;
-          view.backgroundColor = 'rgba(0, 0, 0, 0.1)';
+          view.backgroundColor = 'rgba(255, 0, 0, 0.2)';
         } else {
           view.backgroundColor = `rgba(0, 0, 0, ${0.05 + (i % 2) / 12})`;
         }
       }
-      rect.draw();
+      if (!isFragmentHint) {
+        rect.draw();
+      }
       if (isFragment) {
         if (!stats) {
           stats = {};
         }
         if (isPart) {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+          if (obj.gap === true) {
+            ctx.fillStyle = 'rgba(0, 100, 100, 0.25)';
+          } else {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+          }
+          ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+        } else if (obj.gap === true) {
+          ctx.fillStyle = 'rgba(0, 100, 100, 0.25)';
           ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
         }
         if (stats.aborted) {
           ctx.fillStyle = 'rgba(100, 0, 0, 0.3)';
           ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
         }
-        if (stats.loaded && stats.total) {
+        if (stats.loaded && stats.total && !isFragmentHint) {
           ctx.fillStyle = 'rgba(50, 20, 100, 0.3)';
           ctx.fillRect(
             bounds.x,
@@ -143,20 +166,27 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
             bounds.h
           );
         }
-      } else if (isCue) {
-        if (obj.active) {
-          ctx.fillStyle = 'rgba(100, 100, 10, 0.4)';
-          ctx.fillRect(bounds.x, bounds.y, bounds.w, bounds.h);
+      } else if (isCue || isDateRange || isInterstitial) {
+        if (obj.active || (obj.buffering && obj.playing)) {
+          ctx.fillStyle = 'rgba(0, 255, 0, 0.2)';
+          ctx.fillRect(bounds.x, bounds.y, Math.max(1, bounds.w), bounds.h);
+        } else if (obj.buffering) {
+          ctx.fillStyle = 'rgba(128, 128, 0, 0.2)';
+          ctx.fillRect(bounds.x, bounds.y, Math.max(1, bounds.w), bounds.h);
+        } else if (obj.playing) {
+          ctx.fillStyle = 'rgba(0, 0, 255, 0.2)';
+          ctx.fillRect(bounds.x, bounds.y, Math.max(1, bounds.w), bounds.h);
         }
       }
       if (drawText) {
         const start = val.start; // obj.start;
         ctx.fillStyle = 'rgb(0, 0, 0)';
         if (stats) {
+          let ccWidth = 0;
           const snBounds = Object.assign({}, bounds);
           if (obj.cc) {
             const ccLabel = `cc:${obj.cc}`;
-            const ccWidth = Math.min(
+            ccWidth = Math.min(
               ctx.measureText(ccLabel).width + 2,
               snBounds.w / 2 - 2
             );
@@ -172,16 +202,44 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
             }
           }
           const snLabel = isPart ? `part: ${obj.index}` : `sn: ${obj.sn}`;
-          const textWidth = Math.min(
+          const snTextWidth = Math.min(
             ctx.measureText(snLabel).width + 2,
             snBounds.w - 2
           );
           ctx.fillText(
             snLabel,
-            snBounds.x + snBounds.w - textWidth,
+            snBounds.x + snBounds.w - snTextWidth,
             snBounds.y + lineHeight,
             snBounds.w - 4
           );
+          const pdtTag = obj.rawProgramDateTime;
+          if (!isPart && (pdtTag || obj.programDateTime)) {
+            const pdtBounds = Object.assign({}, bounds);
+            const pdtLabel = `${new Date(pdtTag || obj.programDateTime).toISOString().replace(/^(\d{4})-0?(\d+)-0?(\d+)T0?(\d?\d:\d\d:\d\d.\d\d\d)Z$/, '$1/$2/$3 $4')}`;
+            const x = 1 + (ccWidth ? ccWidth + 5 : 0);
+            ctx.fillText(
+              pdtLabel,
+              pdtBounds.x + x,
+              pdtBounds.y + lineHeight,
+              pdtBounds.w - x - snTextWidth - 5
+            );
+            if (pdtTag) {
+              ctx.beginPath();
+              ctx.strokeStyle = 'rgb(0, 0, 0)';
+              ctx.lineWidth = 0.75;
+              ctx.moveTo(pdtBounds.x + 1, pdtBounds.y + lineHeight + 1);
+              ctx.lineTo(
+                pdtBounds.x +
+                  x +
+                  Math.min(
+                    ctx.measureText(pdtLabel).width,
+                    pdtBounds.w - x - snTextWidth - 5
+                  ),
+                pdtBounds.y + lineHeight + 1
+              );
+              ctx.stroke();
+            }
+          }
         }
         if (isCue) {
           const strLength = Math.min(
@@ -190,6 +248,14 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
           );
           ctx.fillText(
             ('' + obj.content).slice(0, strLength),
+            bounds.x + 2,
+            bounds.y + bounds.h - 3,
+            bounds.w - 5
+          );
+        } else if (isDateRange || isInterstitial) {
+          const startString = obj.label;
+          ctx.fillText(
+            startString,
             bounds.x + 2,
             bounds.y + bounds.h - 3,
             bounds.w - 5
@@ -214,14 +280,18 @@ Chart.controllers.horizontalBar.prototype.draw = function () {
   Chart.helpers.canvas.unclipArea(chart.ctx);
 };
 
-export function applyChartInstanceOverrides(chart) {
-  Object.keys(chart.scales).forEach((axis) => {
-    const scale = chart.scales![axis];
+export function applyChartInstanceOverrides(chart: Chart) {
+  const scales = (chart as any).scales;
+  if (!scales) {
+    return;
+  }
+  Object.keys(scales).forEach((axis) => {
+    const scale = scales[axis];
     scale._parseValue = scaleParseValue;
   });
 }
 
-function scaleParseValue(value: number[] | any) {
+function scaleParseValue(this: any, value: number[] | any) {
   if (value === undefined) {
     console.warn('Chart values undefined (update chart)');
     return {};
@@ -256,14 +326,20 @@ function scaleParseValue(value: number[] | any) {
   };
 }
 
-function intersects(x1, x2, x3, x4) {
-  return x2 > x3 && x1 < x4;
+function intersects(x1: number, x2: number, x3: number, x4: number) {
+  return x2 >= x3 && x1 <= x4;
 }
 
-function boundingRects(vm) {
+function boundingRects(vm: {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  base: number;
+}) {
   const half = vm.height / 2;
   const left = Math.min(vm.x, vm.base);
-  const right = Math.max(vm.x, vm.base);
+  const right = Math.min(Math.max(vm.x, vm.base), Number.MAX_VALUE);
   const top = vm.y - half;
   const bottom = vm.y + half;
   return {
@@ -274,17 +350,17 @@ function boundingRects(vm) {
   };
 }
 
-export function hhmmss(value, fixedDigits) {
+export function hhmmss(value: number, fixedDigits: number) {
   const h = (value / 3600) | 0;
   const m = ((value / 60) | 0) % 60;
   const s = value % 60;
-  return `${h}:${pad(m, 2)}:${pad(
+  return `${h}:${pad('' + m, 2)}:${pad(
     s.toFixed(fixedDigits),
     fixedDigits ? fixedDigits + 3 : 2
   )}`.replace(/^(?:0+:?)*(\d.*?)(?:\.0*)?$/, '$1');
 }
 
-function pad(str, length) {
+function pad(str: string, length: number) {
   str = '' + str;
   while (str.length < length) {
     str = '0' + str;

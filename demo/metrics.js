@@ -14,7 +14,7 @@ $('#windowEnd').val(windowEnd);
 
 function showMetrics() {
   metricsDisplayed = true;
-  var width = window.innerWidth - 30;
+  var width = self.innerWidth - 30;
   $('#bufferWindow_c')[0].width =
     $('#bitrateTimerange_c')[0].width =
     $('#bufferTimerange_c')[0].width =
