@@ -303,6 +303,17 @@ function loadSelectedStream() {
 
   url = $('#streamURL').val();
 
+  // Check if the URL is valid to avoid XSS issue.
+  if (url) {
+    try {
+      new URL(url);
+    } catch (error) {
+      $('#streamURL').val('');
+      alert('Invalid URL');
+      return false;
+    }
+  }
+
   setupGlobals();
   hideCanvas();
 
