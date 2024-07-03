@@ -101,7 +101,7 @@ export default class BaseStreamController
   protected decrypter: Decrypter;
   protected initPTS: RationalTimestamp[] = [];
   protected buffering: boolean = true;
-  private loadingParts: boolean = false;
+  protected loadingParts: boolean = false;
   private loopSn?: string | number;
 
   constructor(

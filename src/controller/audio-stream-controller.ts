@@ -403,18 +403,34 @@ class AudioStreamController
       return;
     }
 
+    // Request audio segments up to one fragment ahead of main stream-controller
+    const mainFragLoading = this.mainFragLoading?.frag;
     if (
       this.startFragRequested &&
-      (!trackDetails.live || targetBufferTime < this.hls.liveSyncPosition!)
+      mainFragLoading &&
+      mainFragLoading.sn !== 'initSegment' &&
+      frag.sn !== 'initSegment' &&
+      !frag.endList &&
+      (!trackDetails.live ||
+        (!this.loadingParts && targetBufferTime < this.hls.liveSyncPosition!))
     ) {
-      // Request audio segments up to one fragment ahead of main buffer
-      const mainFragLoading = this.mainFragLoading;
-      const mainTargetBufferEnd = mainFragLoading
-        ? (mainFragLoading.part || mainFragLoading.frag).end
-        : null;
-      const atBufferSyncLimit =
-        mainTargetBufferEnd !== null && frag.start > mainTargetBufferEnd;
-      if (atBufferSyncLimit && !frag.endList) {
+      let mainFrag = mainFragLoading;
+      if (frag.start > mainFrag.end) {
+        // Get buffered frag at target position from tracker (loaded out of sequence)
+        const mainFragAtPos = this.fragmentTracker.getFragAtPos(
+          targetBufferTime,
+          PlaylistLevelType.MAIN,
+        );
+        if (mainFragAtPos && mainFragAtPos.end > mainFragLoading.end) {
+          mainFrag = mainFragAtPos;
+          this.mainFragLoading = {
+            frag: mainFragAtPos,
+            targetBufferTime: null,
+          };
+        }
+      }
+      const atBufferSyncLimit = frag.start > mainFrag.end;
+      if (atBufferSyncLimit) {
         return;
       }
     }
