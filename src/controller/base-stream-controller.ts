@@ -1161,12 +1161,13 @@ export default class BaseStreamController
   protected reduceMaxBufferLength(threshold: number, fragDuration: number) {
     const config = this.config;
     const minLength = Math.max(
-      Math.min(threshold, config.maxBufferLength),
+      Math.min(threshold - fragDuration, config.maxBufferLength),
       fragDuration,
     );
     const reducedLength = Math.max(
       threshold - fragDuration * 3,
       config.maxMaxBufferLength / 2,
+      minLength,
     );
     if (reducedLength >= minLength) {
       // reduce max buffer length as it might be too high. we do this to avoid loop flushing ...
