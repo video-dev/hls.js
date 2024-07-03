@@ -40,6 +40,7 @@ import type {
   BufferFlushingData,
   BufferCodecsData,
   FragLoadingData,
+  MediaDetachingData,
 } from '../types/events';
 import type { MediaPlaylist } from '../types/media-playlist';
 
@@ -148,7 +149,7 @@ class AudioStreamController
         }
         this.tick();
       } else if (
-        !this.loadedmetadata &&
+        !this.hls.hasEnoughToStart &&
         inFlightFrag &&
         inFlightFrag.cc !== cc
       ) {
@@ -188,7 +189,6 @@ class AudioStreamController
       startPosition = lastCurrentTime;
       this.state = State.IDLE;
     } else {
-      this.loadedmetadata = false;
       this.state = State.WAITING_TRACK;
     }
     this.nextLoadPosition =
@@ -267,7 +267,7 @@ class AudioStreamController
   clearWaitingFragment() {
     const waitingData = this.waitingData;
     if (waitingData) {
-      if (!this.loadedmetadata) {
+      if (!this.hls.hasEnoughToStart) {
         // Load overlapping fragment on start when discontinuity start times are not aligned
         this.startFragRequested = false;
       }
@@ -438,9 +438,12 @@ class AudioStreamController
     this.loadFragment(frag, levelInfo, targetBufferTime);
   }
 
-  protected onMediaDetaching() {
+  protected onMediaDetaching(
+    event: Events.MEDIA_DETACHING,
+    data: MediaDetachingData,
+  ) {
     this.bufferFlushed = this.flushing = false;
-    super.onMediaDetaching();
+    super.onMediaDetaching(event, data);
   }
 
   private onAudioTracksUpdated(
@@ -548,7 +551,7 @@ class AudioStreamController
         // Make sure our audio rendition is aligned with the "main" rendition, using
         // pdt as our reference times.
         alignMediaPlaylistByPDT(newDetails, mainDetails);
-        sliding = newDetails.fragments[0].start;
+        sliding = newDetails.fragmentStart;
       } else {
         sliding = this.alignPlaylists(
           newDetails,
@@ -564,6 +567,13 @@ class AudioStreamController
     if (!this.startFragRequested && (this.mainDetails || !newDetails.live)) {
       this.setStartPosition(this.mainDetails || newDetails, sliding);
     }
+
+    this.hls.trigger(Events.AUDIO_TRACK_UPDATED, {
+      details: newDetails,
+      id: trackId,
+      groupId: data.groupId,
+    });
+
     // only switch back to IDLE state if we were waiting for track to start downloading a new fragment
     if (
       this.state === State.WAITING_TRACK &&
@@ -667,13 +677,13 @@ class AudioStreamController
   private onBufferReset(/* event: Events.BUFFER_RESET */) {
     // reset reference to sourcebuffers
     this.mediaBuffer = null;
-    this.loadedmetadata = false;
   }
 
   private onBufferCreated(
     event: Events.BUFFER_CREATED,
     data: BufferCreatedData,
   ) {
+    this.bufferFlushed = this.flushing = false;
     const audioTrack = data.tracks.audio;
     if (audioTrack) {
       this.mediaBuffer = audioTrack.buffer || null;
@@ -695,15 +705,6 @@ class AudioStreamController
   private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     const { frag, part } = data;
     if (frag.type !== PlaylistLevelType.AUDIO) {
-      if (!this.loadedmetadata && frag.type === PlaylistLevelType.MAIN) {
-        const bufferedState = this.fragmentTracker.getState(frag);
-        if (
-          bufferedState === FragmentState.OK ||
-          bufferedState === FragmentState.PARTIAL
-        ) {
-          this.loadedmetadata = true;
-        }
-      }
       return;
     }
     if (this.fragContextChanged(frag)) {
@@ -730,6 +731,9 @@ class AudioStreamController
       }
     }
     this.fragBufferedComplete(frag, part);
+    if (this.media) {
+      this.tick();
+    }
   }
 
   protected onError(event: Events.ERROR, data: ErrorData) {
@@ -967,7 +971,7 @@ class AudioStreamController
         const mainDetails = this.mainDetails;
         if (
           mainDetails &&
-          mainDetails.fragments[0].start !== track.details.fragments[0].start
+          mainDetails.fragmentStart !== track.details.fragmentStart
         ) {
           alignMediaPlaylistByPDT(track.details, mainDetails);
         }

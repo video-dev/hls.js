@@ -56,7 +56,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry` (deprecated)](#fragloadingmaxretry--manifestloadingmaxretry--levelloadingmaxretry-deprecated)
   - [`fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout` (deprecated)](#fragloadingmaxretrytimeout--manifestloadingmaxretrytimeout--levelloadingmaxretrytimeout-deprecated)
   - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay` (deprecated)](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay-deprecated)
-  - [`fragLoadPolicy` / `keyLoadPolicy` / `certLoadPolicy` / `playlistLoadPolicy` / `manifestLoadPolicy` / `steeringManifestLoadPolicy`](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy)
+  - [`fragLoadPolicy` / `keyLoadPolicy` / `certLoadPolicy` / `playlistLoadPolicy` / `manifestLoadPolicy` / `steeringManifestLoadPolicy` / `interstitialAssetListLoadPolicy`](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy--interstitialassetlistloadpolicy)
     - [`LoaderConfig`](#loaderconfig)
       - [`maxTimeToFirstByteMs: number`](#maxtimetofirstbytems-number)
       - [`maxLoadTimeMs: number`](#maxloadtimems-number)
@@ -126,9 +126,12 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`drmSystemOptions`](#drmsystemoptions)
   - [`requestMediaKeySystemAccessFunc`](#requestmediakeysystemaccessfunc)
   - [`cmcd`](#cmcd)
+  - [`enableInterstitialPlayback`](#enableinterstitialplayback)
+  - [`interstitialLiveLookAhead`](#interstitiallivelookahead)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
-  - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
+  - [`hls.attachMedia(HTMLMediaElement | MediaAttachingData)`](#hlsattachmediahtmlmediaelement--mediaattachingdata)
   - [`hls.detachMedia()`](#hlsdetachmedia)
+  - [`hls.transferMedia(): MediaAttachingData`](#hlstransfermedia-mediaattachingdata)
     - [`hls.media`](#hlsmedia)
 - [Quality switch Control API](#quality-switch-control-api)
   - [`hls.levels`](#hlslevels)
@@ -148,8 +151,13 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
-  - [`hls.startLoad(startPosition=-1)`](#hlsstartloadstartposition-1)
+  - [`hls.startLoad(startPosition=-1,skipSeekToStartPosition=false)`](#hlsstartloadstartposition-1skipseektostartpositionfalse)
   - [`hls.stopLoad()`](#hlsstopload)
+  - [`hls.startPosition`](#hlsstartposition)
+  - [`hls.pauseBuffering()`](#hlspausebuffering)
+  - [`hls.resumeBuffering()`](#hlsresumebuffering)
+  - [`hls.bufferingEnabled`](#hlsbufferingenabled)
+  - [`hls.bufferedToEnd`](#hlsbufferedtoend)
   - [`hls.url`](#hlsurl)
 - [Audio Tracks Control API](#audio-tracks-control-api)
   - [`hls.setAudioOption(audioOption)`](#hlssetaudiooptionaudiooption)
@@ -169,6 +177,10 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.targetLatency`](#hlstargetlatency)
   - [`hls.drift`](#hlsdrift)
   - [`hls.playingDate`](#hlsplayingdate)
+- [Additional data](#additional-data)
+  - [`hls.interstitialsManager`](#hlsinterstitialsmanager)
+  - [`hls.latestLevelDetails`](#hlslatestleveldetails)
+  - [`hls.sessionId`](#hlssessionid)
 - [Runtime Events](#runtime-events)
 - [Creating a Custom Loader](#creating-a-custom-loader)
 - [Errors](#errors)
@@ -301,7 +313,7 @@ Each error is categorized by an error type, error details, and whether or not is
   - refer to [Errors details](#Errors)
 - Error is `fatal`:
   - `false` if error is not fatal, hls.js will try to recover.
-  - `true` if error is fatal, all attempts to recover have been performed. See [LoadPolicies](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy) details on how to configure retries.
+  - `true` if error is fatal, all attempts to recover have been performed. See [LoadPolicies](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy--interstitialAssetListLoadPolicy) details on how to configure retries.
 
 Full details are described [below](#Errors)
 
@@ -786,7 +798,7 @@ x-LoadingRetryDelay settings have been deprecated. Use one of the LoadPolicy set
 Initial delay between `XMLHttpRequest` error and first load retry (in ms).
 Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout` value (exponential backoff).
 
-### `fragLoadPolicy` / `keyLoadPolicy` / `certLoadPolicy` / `playlistLoadPolicy` / `manifestLoadPolicy` / `steeringManifestLoadPolicy`
+### `fragLoadPolicy` / `keyLoadPolicy` / `certLoadPolicy` / `playlistLoadPolicy` / `manifestLoadPolicy` / `steeringManifestLoadPolicy` / `interstitialAssetListLoadPolicy`
 
 LoadPolicies specify the default settings for request timeouts and the timing and number of retries after a request error or timeout for a particular type of asset.
 
@@ -796,6 +808,7 @@ LoadPolicies specify the default settings for request timeouts and the timing an
 - `keyLoadPolicy`: The `LoadPolicy` for Key requests
 - `certLoadPolicy`: The `LoadPolicy` for License Server certificate requests
 - `steeringManifestLoadPolicy`: The `LoadPolicy` for Content Steering manifest requests
+- `interstitialAssetListLoadPolicy`: The `LoadPolicy` Interstitial asset list requests
 
 \*Some timeout settings are adjusted for Low-Latency Part requests based on Part duration or target.
 
@@ -892,7 +905,23 @@ steeringManifestLoadPolicy: {
       retryDelayMs: 1000,
       maxRetryDelayMs: 8000,
     },
-  }
+  },
+},
+interstitialAssetListLoadPolicy: {
+  default: {
+    maxTimeToFirstByteMs: 10000,
+    maxLoadTimeMs: 20000,
+    timeoutRetry: {
+      maxNumRetry: 0,
+      retryDelayMs: 0,
+      maxRetryDelayMs: 0,
+    },
+    errorRetry: {
+      maxNumRetry: 0,
+      retryDelayMs: 1000,
+      maxRetryDelayMs: 8000,
+    },
+  },
 }
 ```
 
@@ -1654,9 +1683,17 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
 - `useHeaders`: Send CMCD data in request headers instead of as query args. Defaults to `false`.
 - `includeKeys`: An optional array of CMCD keys. When present, only these CMCD fields will be included with each each request.
 
+### `enableInterstitialPlayback`
+
+Interstitial playback can be disabled without disabling parsing or schedule update and buffered-to events by setting this to `false` allowing for custom playout and ad managers to use Interstitials data.
+
+### `interstitialLiveLookAhead`
+
+The time (in seconds) ahead of the end of a live playlist to request scheduled Interstitials when playing at the live edge. Defaults to `10`.
+
 ## Video Binding/Unbinding API
 
-### `hls.attachMedia(videoElement)`
+### `hls.attachMedia(HTMLMediaElement | MediaAttachingData)`
 
 Calling this method will:
 
@@ -1671,6 +1708,10 @@ Calling this method will:
 - unbind VideoElement from hls instance,
 - signal the end of the stream on MediaSource
 - reset video source (`video.src = ''`)
+
+### `hls.transferMedia(): MediaAttachingData`
+
+Detaches and returns MediaSource and SourceBuffers non-destructively in a format that can be passed to `hls.attachMedia(MediaAttachingData)`. This is used by Interstitial asset players that append the same SourceBuffer as the primary player.
 
 #### `hls.media`
 
@@ -1777,16 +1818,38 @@ By default, hls.js will automatically start loading quality level playlists, and
 
 However, if `config.autoStartLoad` is set to `false`, then `hls.startLoad()` needs to be called to manually start playlist and fragments loading.
 
-### `hls.startLoad(startPosition=-1)`
+### `hls.startLoad(startPosition=-1,skipSeekToStartPosition=false)`
 
-Start/restart playlist/fragment loading. this is only effective if MANIFEST_PARSED event has been triggered.
+Start/restart playlist/fragment loading. This is only effective if MANIFEST_PARSED event has been triggered.
 
 startPosition is the initial position in the playlist.
-If startPosition is not set to -1, it allows to override default startPosition to the one you want (it will bypass hls.config.liveSync\* config params for Live for example, so that user can start playback from whatever position)
+If startPosition is not set to -1, it allows to override default startPosition to the one you want (it will bypass hls.config.liveSync\* config params for Live for example, so that user can start playback from whatever position).
+
+Once media is appended hls.js will seek to the start position. Passing in a `skipSeekToStartPosition` of `true` allows loading to begin at the start position without seeking on append. This is used when multiple players contribute to buffering media to the same source for Interstitials that overlap primary content.
 
 ### `hls.stopLoad()`
 
 stop playlist/fragment loading. could be resumed later on by calling `hls.startLoad()`
+
+### `hls.startPosition`
+
+get : Returns the resolved `startPosition` target (number) used for loading before media is buffered, and where playback will begin once media is buffered.
+
+### `hls.pauseBuffering()`
+
+Pauses fragment buffering (used internally with ManagedMediaSource streaming events).
+
+### `hls.resumeBuffering()`
+
+Resumes fragment buffering (used internally with ManagedMediaSource streaming events).
+
+### `hls.bufferingEnabled`
+
+get : Returns a boolean indicating whether fragment loading has been toggled with `pauseBuffering()` and `resumeBuffering()`.
+
+### `hls.bufferedToEnd`
+
+get : Returns a boolean indicating if EOS has been appended (media is buffered from currentTime to end of stream).
 
 ### `hls.url`
 
@@ -1874,6 +1937,66 @@ get : the rate at which the edge of the current live playlist is advancing or 1 
 ### `hls.playingDate`
 
 get: the datetime value relative to media.currentTime for the active level Program Date Time if present
+
+## Additional data
+
+### `hls.interstitialsManager`
+
+- get: Returns the InterstitialsManager (or null) with information about the current program.
+
+The data includes the list of Interstitial events with their asset lists, the schedule of event and primary segment items, information about which items and assets are buffering and playing, the player instance currently buffering media, and the queue of players responsible for the streaming of assets.
+
+```ts
+interface InterstitialsManager {
+  events: InterstitialEvent[];
+  schedule: InterstitialScheduleItem[];
+  playerQueue: HlsAssetPlayer[];
+  bufferingPlayer: HlsAssetPlayer | null;
+  bufferingAsset: InterstitialAssetItem | null;
+  bufferingItem: InterstitialScheduleItem | null;
+  bufferingIndex: number;
+  playingAsset: InterstitialAssetItem | null;
+  playingItem: InterstitialScheduleItem | null;
+  playingIndex: number;
+  waitingIndex: number;
+  primary: PlayheadTimes;
+  playout: PlayheadTimes;
+  integrated: PlayheadTimes;
+  skip: () => void;
+}
+
+type PlayheadTimes = {
+  bufferedEnd: number;
+  currentTime: number;
+  duration: number;
+  seekTo: (time: number) => void;
+};
+```
+
+- `InterstitialEvent` class representing a parsed Interstitial event
+- `InterstitialAssetItem` a parsed and scheduled asset in an `InterstitialEvent`'s `assetList`.
+- `InterstitialScheduleItem` an item or segment of the program schedule. Can be an `InterstitialScheduleEventItem` or an `InterstitialSchedulePrimaryItem`.
+- `HlsAssetPlayer` class for wrapping an instance of `Hls` used to stream Interstitial assets.
+
+Changes to Interstitial data occur with the following Hls Events:
+
+- `Hls.Events.INTERSTITIALS_UPDATED`
+- `Hls.Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY`
+- `Hls.Events.INTERSTITIAL_ASSET_PLAYER_CREATED`
+- `Hls.Events.INTERSTITIAL_STARTED`
+- `Hls.Events.INTERSTITIAL_ENDED`
+- `Hls.Events.INTERSTITIAL_ASSET_STARTED`
+- `Hls.Events.INTERSTITIAL_ASSET_ENDED`
+- `Hls.Events.INTERSTITIAL_ASSET_ERROR`
+- `Hls.Events.INTERSTITIALS_PRIMARY_RESUMED`
+
+### `hls.latestLevelDetails`
+
+- get: Returns the LevelDetails of the most up-to-date HLS variant playlist data.
+
+### `hls.sessionId`
+
+get: Returns the session UUID assigned to the Hls instance. Used as the default CMCD session ID.
 
 ## Runtime Events
 

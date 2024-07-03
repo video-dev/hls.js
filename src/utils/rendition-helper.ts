@@ -321,6 +321,21 @@ export function getCodecTiers(
     }, {});
 }
 
+export function getBasicSelectionOption(
+  option:
+    | MediaPlaylist
+    | AudioSelectionOption
+    | SubtitleSelectionOption
+    | undefined,
+): Partial<AudioSelectionOption | SubtitleSelectionOption> | undefined {
+  if (!option) {
+    return option;
+  }
+  const { lang, assocLang, characteristics, channels, audioCodec } =
+    option as AudioSelectionOption;
+  return { lang, assocLang, characteristics, channels, audioCodec };
+}
+
 export function findMatchingOption(
   option: MediaPlaylist | AudioSelectionOption | SubtitleSelectionOption,
   tracks: MediaPlaylist[],
@@ -364,7 +379,7 @@ export function matchesOption(
   return (
     (groupId === undefined || track.groupId === groupId) &&
     (name === undefined || track.name === name) &&
-    (lang === undefined || track.lang === lang) &&
+    (lang === undefined || languagesMatch(lang, track.lang)) &&
     (lang === undefined || track.assocLang === assocLang) &&
     (isDefault === undefined || track.default === isDefault) &&
     (forced === undefined || track.forced === forced) &&
@@ -372,6 +387,13 @@ export function matchesOption(
       characteristicsMatch(characteristics, track.characteristics)) &&
     (matchPredicate === undefined || matchPredicate(option, track))
   );
+}
+
+function languagesMatch(languageA: string, languageB: string = '--'): boolean {
+  if (languageA.length === languageB.length) {
+    return languageA === languageB;
+  }
+  return languageA.startsWith(languageB) || languageB.startsWith(languageA);
 }
 
 function characteristicsMatch(

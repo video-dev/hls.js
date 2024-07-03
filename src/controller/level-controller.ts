@@ -22,7 +22,6 @@ import BasePlaylistController from './base-playlist-controller';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import ContentSteeringController from './content-steering-controller';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
-import { hlsDefaultConfig } from '../config';
 import type Hls from '../hls';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';
 import type { MediaPlaylist } from '../types/media-playlist';
@@ -333,7 +332,7 @@ export default class LevelController extends BasePlaylistController {
           );
           if (
             startingBwEstimate > bandwidthEstimate &&
-            bandwidthEstimate === hlsDefaultConfig.abrEwmaDefaultEstimate
+            bandwidthEstimate === this.hls.abrEwmaDefaultEstimate
           ) {
             this.hls.bandwidthEstimate = startingBwEstimate;
           }
@@ -360,8 +359,15 @@ export default class LevelController extends BasePlaylistController {
     this.hls.trigger(Events.MANIFEST_PARSED, edata);
 
     // Initiate loading after all controllers have received MANIFEST_PARSED
-    if (this.hls.config.autoStartLoad || this.hls.forceStartLoad) {
-      this.hls.startLoad(this.hls.config.startPosition);
+    const {
+      config: { autoStartLoad, startPosition },
+      forceStartLoad,
+    } = this.hls;
+    if (autoStartLoad || forceStartLoad) {
+      this.log(
+        `${autoStartLoad ? 'auto' : 'force'} startLoad with configured startPosition ${startPosition}`,
+      );
+      this.hls.startLoad(startPosition);
     }
   }
 
