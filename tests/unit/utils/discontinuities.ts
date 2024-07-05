@@ -1,6 +1,6 @@
 import {
   shouldAlignOnDiscontinuities,
-  findDiscontinuousReferenceFrag,
+  alignDiscontinuities,
   adjustSlidingStart,
   alignMediaPlaylistByPDT,
 } from '../../../src/utils/discontinuities';
@@ -46,12 +46,12 @@ const mockFrags = [
     duration: 8,
     cc: 1,
   },
-].map(objToFragment);
+];
 
 describe('discontinuities', function () {
   it('adjusts level fragments with overlapping CC range using a reference fragment', function () {
     const details = objToLevelDetails({
-      fragments: mockFrags.slice(0),
+      fragments: mockFrags.map(objToFragment),
       PTSKnown: false,
       alignedSliding: false,
     });
@@ -421,117 +421,152 @@ describe('discontinuities', function () {
     expect(detailsExpected).to.deep.equal(details, JSON.stringify(details));
   });
 
-  it('finds the first fragment in an array which matches the CC of the first fragment in another array', function () {
-    const prevDetails = objToLevelDetails({
-      fragments: [mockReferenceFrag, { cc: 1 }].map(objToFragment),
+  describe('alignDiscontinuities', function () {
+    it('aligns playlists (LevelDetails fragments starts) based on overlapping discontinuity sequence change', function () {
+      const prevDetails = objToLevelDetails({
+        fragments: [
+          mockReferenceFrag,
+          { start: 24, startPTS: 24, endPTS: 28, duration: 4, cc: 1 },
+        ].map(objToFragment),
+      });
+      const curDetails = objToLevelDetails({
+        fragments: mockFrags.map(objToFragment),
+      });
+      alignDiscontinuities(curDetails, prevDetails);
+      expect(curDetails).to.have.property('alignedSliding').which.is.true;
+      expect(curDetails.fragments[0].start).to.equal(20);
     });
-    const curDetails = objToLevelDetails({
-      fragments: mockFrags,
+
+    it('aligns playlists (LevelDetails fragments starts) based on overlapping discontinuity sequence change even when older playlist is newer', function () {
+      const prevDetails = objToLevelDetails({
+        fragments: [
+          mockReferenceFrag,
+          { start: 24, startPTS: 24, endPTS: 28, duration: 4, cc: 1 },
+          { start: 28, startPTS: 28, endPTS: 32, duration: 4, cc: 2 },
+        ].map(objToFragment),
+      });
+      const curDetails = objToLevelDetails({
+        fragments: mockFrags.map(objToFragment),
+      });
+      alignDiscontinuities(curDetails, prevDetails);
+      expect(curDetails).to.have.property('alignedSliding').which.is.true;
+      expect(curDetails.fragments[0].start).to.equal(20);
     });
-    const expected = mockReferenceFrag;
-    const actual = findDiscontinuousReferenceFrag(prevDetails, curDetails);
-    expect(actual).to.deep.equal(expected);
+
+    it('aligns playlists (LevelDetails fragments starts) based on overlapping discontinuity sequence change using latest disco', function () {
+      const prevDetails = objToLevelDetails({
+        fragments: [
+          mockReferenceFrag,
+          { start: 24, startPTS: 24, endPTS: 28, duration: 4.5, cc: 1 },
+          { start: 28.5, startPTS: 28, endPTS: 32, duration: 4, cc: 2 },
+        ].map(objToFragment),
+      });
+      const curDetails = objToLevelDetails({
+        fragments: [
+          { start: 0, startPTS: 0, endPTS: 4, duration: 4.5, cc: 1 },
+          { start: 4.5, startPTS: 4.5, endPTS: 8.5, duration: 4, cc: 2 },
+          { start: 8.5, startPTS: 4.5, endPTS: 12.5, duration: 4, cc: 3 },
+        ].map(objToFragment),
+      });
+      alignDiscontinuities(curDetails, prevDetails);
+      expect(curDetails).to.have.property('alignedSliding').which.is.true;
+      expect(curDetails.fragments[0].start).to.equal(24);
+    });
+
+    it('does not aligns playlists if there are no frags in the previous level', function () {
+      const curDetails = objToLevelDetails({
+        fragments: mockFrags.map(objToFragment),
+      });
+      alignDiscontinuities(curDetails, objToLevelDetails({ fragments: [] }));
+      expect(curDetails).to.have.property('alignedSliding').which.is.false;
+      expect(curDetails.fragments[0].start).to.equal(0);
+    });
+
+    it('does not aligns playlists if there is no matching discontinuity sequence change', function () {
+      const curDetails = objToLevelDetails({
+        fragments: mockFrags.map(objToFragment),
+      });
+      alignDiscontinuities(
+        curDetails,
+        objToLevelDetails({ fragments: [{ cc: 10 }].map(objToFragment) }),
+      );
+      expect(curDetails).to.have.property('alignedSliding').which.is.false;
+      expect(curDetails.fragments[0].start).to.equal(0);
+    });
+
+    it('does not aligns playlists if there are no frags in the current level', function () {
+      const curDetails = objToLevelDetails({
+        fragments: [],
+      });
+      alignDiscontinuities(
+        curDetails,
+        objToLevelDetails({ fragments: [{ cc: 0 }].map(objToFragment) }),
+      );
+      expect(curDetails).to.have.property('alignedSliding').which.is.false;
+    });
   });
 
-  it('returns undefined if there are no frags in the previous level', function () {
-    const expected = undefined;
-    const actual = findDiscontinuousReferenceFrag(
-      objToLevelDetails({ fragments: [] }),
-      objToLevelDetails({ fragments: mockFrags }),
-    );
-    expect(actual).to.equal(expected);
-  });
-
-  it('returns undefined if there are no matching frags in the previous level', function () {
-    const expected = undefined;
-    const actual = findDiscontinuousReferenceFrag(
-      objToLevelDetails({ fragments: [{ cc: 10 }].map(objToFragment) }),
-      objToLevelDetails({ fragments: mockFrags }),
-    );
-    expect(actual).to.equal(expected);
-  });
-
-  it('returns undefined if there are no frags in the current level', function () {
-    const expected = undefined;
-    const actual = findDiscontinuousReferenceFrag(
-      objToLevelDetails({ fragments: [{ cc: 0 }].map(objToFragment) }),
-      objToLevelDetails({ fragments: [] }),
-    );
-    expect(actual).to.equal(expected);
-  });
-
-  it('should align current level when CC increases within the level', function () {
-    const lastLevel = objToLevel({
-      details: objToLevelDetails({}),
+  it('should align current level when there is overlap in discontinuity sequence change', function () {
+    const lastLevelDetails = objToLevelDetails({
+      startCC: 0,
+      endCC: 1,
     });
     const curDetails = objToLevelDetails({
       startCC: 0,
       endCC: 1,
     });
 
-    const actual = shouldAlignOnDiscontinuities(
-      null,
-      lastLevel.details,
-      curDetails,
-    );
+    const actual = shouldAlignOnDiscontinuities(lastLevelDetails, curDetails);
     expect(actual).to.be.true;
   });
 
-  it('should align current level when CC increases from last frag to current level', function () {
-    const lastLevel = objToLevel({
-      details: objToLevelDetails({}),
-    });
-    const lastFrag = objToFragment({
-      cc: 0,
+  it('should align current level when there is any overlap in discontinuity sequence change', function () {
+    const lastLevelDetails = objToLevelDetails({
+      startCC: 0,
+      endCC: 2,
     });
     const curDetails = objToLevelDetails({
       startCC: 1,
-      endCC: 1,
+      endCC: 3,
     });
 
-    const actual = shouldAlignOnDiscontinuities(
-      lastFrag,
-      lastLevel.details,
-      curDetails,
-    );
+    const actual = shouldAlignOnDiscontinuities(lastLevelDetails, curDetails);
     expect(actual).to.be.true;
+  });
+
+  it('should not align current level there is no overlap in discontinuity sequence change', function () {
+    const lastLevelDetails = objToLevelDetails({
+      startCC: 0,
+      endCC: 1,
+    });
+    const curDetails = objToLevelDetails({
+      startCC: 1,
+      endCC: 2,
+    });
+
+    const actual = shouldAlignOnDiscontinuities(lastLevelDetails, curDetails);
+    expect(actual).to.be.false;
   });
 
   it('should not align when there is no CC increase', function () {
-    const lastLevel = objToLevel({
-      details: objToLevelDetails({}),
+    const lastLevelDetails = objToLevelDetails({
+      startCC: 1,
+      endCC: 1,
     });
     const curDetails = objToLevelDetails({
       startCC: 1,
       endCC: 1,
     });
-    const lastFrag = objToFragment({
-      cc: 1,
-    });
-
-    const actual = shouldAlignOnDiscontinuities(
-      lastFrag,
-      lastLevel.details,
-      curDetails,
-    );
+    const actual = shouldAlignOnDiscontinuities(lastLevelDetails, curDetails);
     expect(actual).to.be.false;
   });
 
   it('should not align when there are no previous level details', function () {
-    const lastLevel = objToLevel({});
     const curDetails = objToLevelDetails({
       startCC: 1,
       endCC: 1,
     });
-    const lastFrag = objToFragment({
-      cc: 1,
-    });
-
-    const actual = shouldAlignOnDiscontinuities(
-      lastFrag,
-      lastLevel.details,
-      curDetails,
-    );
+    const actual = shouldAlignOnDiscontinuities(undefined, curDetails);
     expect(actual).to.be.false;
   });
 });
@@ -552,6 +587,11 @@ function objToLevelDetails(object: Partial<LevelDetails>): LevelDetails {
   const details = new LevelDetails('');
   for (const prop in object) {
     details[prop] = object[prop];
+  }
+  const fragCount = details.fragments.length;
+  if (fragCount) {
+    details.startCC = details.fragments[0].cc;
+    details.endCC = details.fragments[fragCount - 1].cc;
   }
   return details;
 }
