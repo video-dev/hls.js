@@ -864,6 +864,7 @@ lo008ts`;
     expect(result.fragments[9].url).to.equal('http://dummy.com/lo008ts');
     expect(result.fragments[9].byteRangeStartOffset).to.equal(684508);
     expect(result.fragments[9].byteRangeEndOffset).to.equal(817988);
+    expect(result.fragments[9].byteRange).to.deep.equal([684508, 817988]);
   });
 
   it('parse level with #EXT-X-BYTERANGE after #EXTINF', function () {
@@ -921,6 +922,7 @@ lo008ts`;
     expect(result.fragments[9].url).to.equal('http://dummy.com/lo008ts');
     expect(result.fragments[9].byteRangeStartOffset).to.equal(684508);
     expect(result.fragments[9].byteRangeEndOffset).to.equal(817988);
+    expect(result.fragments[9].byteRange).to.deep.equal([684508, 817988]);
   });
 
   it('parse level with #EXT-X-BYTERANGE before #EXT-X-MAP tag', function () {
@@ -968,6 +970,7 @@ lo007.m4v
     expect(result.fragments[2].url).to.equal('http://dummy.com/lo007.m4v');
     expect(result.fragments[2].byteRangeStartOffset).to.equal(64000, '3 start');
     expect(result.fragments[2].byteRangeEndOffset).to.equal(104000, '3 end');
+    expect(result.fragments[2].byteRange).to.deep.equal([64000, 104000]);
   });
 
   it('parse level with #EXT-X-BYTERANGE without offset', function () {
@@ -1003,6 +1006,7 @@ lo007ts`;
     expect(result.fragments[1].byteRangeEndOffset).to.equal(1039452);
     expect(result.fragments[2].byteRangeStartOffset).to.equal(1039452);
     expect(result.fragments[2].byteRangeEndOffset).to.equal(1182520);
+    expect(result.fragments[2].byteRange).to.deep.equal([1039452, 1182520]);
   });
 
   it('parses discontinuity and maintains continuity counter', function () {
@@ -1311,6 +1315,7 @@ main.mp4`;
     );
     expect(initSegment?.byteRangeStartOffset).to.equal(0);
     expect(initSegment?.byteRangeEndOffset).to.equal(718);
+    expect(initSegment?.byteRange).to.deep.equal([0, 718]);
     expect(initSegment?.sn).to.equal('initSegment');
   });
 

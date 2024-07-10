@@ -146,7 +146,7 @@ class XhrLoader implements Loader<LoaderContext> {
     if (context.rangeEnd) {
       xhr.setRequestHeader(
         'Range',
-        'bytes=' + context.rangeStart + '-' + (context.rangeEnd - 1),
+        `bytes=${context.rangeStart}-${context.rangeEnd - 1}`,
       );
     }
 
@@ -229,6 +229,14 @@ class XhrLoader implements Loader<LoaderContext> {
               data: data,
               code: status,
             };
+            if (
+              context.rangeEnd &&
+              len !== context.rangeEnd - context.rangeStart!
+            ) {
+              logger.warn(
+                `Payload length ${len} does not match requested Range: bytes=${context.rangeStart}-${context.rangeEnd - 1}`,
+              );
+            }
             this.callbacks?.onSuccess(response, stats, context, xhr);
             return;
           }

@@ -77,12 +77,14 @@ describe('Fragment class tests', function () {
       frag.setByteRange('1000@10000');
       expect(frag.byteRangeStartOffset).to.equal(10000);
       expect(frag.byteRangeEndOffset).to.equal(11000);
+      expect(frag.byteRange).to.deep.equal([10000, 11000]);
     });
 
     it('set byte range with no offset and uses 0 as offset', function () {
       frag.setByteRange('5000');
       expect(frag.byteRangeStartOffset).to.equal(0);
       expect(frag.byteRangeEndOffset).to.equal(5000);
+      expect(frag.byteRange).to.deep.equal([0, 5000]);
     });
 
     it('set byte range with no offset and uses 0 as offset', function () {
@@ -91,6 +93,7 @@ describe('Fragment class tests', function () {
       frag.setByteRange('5000', prevFrag);
       expect(frag.byteRangeStartOffset).to.equal(11000);
       expect(frag.byteRangeEndOffset).to.equal(16000);
+      expect(frag.byteRange).to.deep.equal([11000, 16000]);
     });
   });
 
