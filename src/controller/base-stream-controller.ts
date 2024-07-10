@@ -576,7 +576,7 @@ export default class BaseStreamController
 
         if ('payload' in data) {
           this.log(
-            `Loaded ${frag.type} sn: ${frag.sn} of ${this.playlistLabel()} ${frag.level}`,
+            `Loaded ${frag.type} sn: ${frag.sn} of ${this.playlistLabel()} ${frag.level} (bytes ${frag.stats.loaded})`,
           );
           this.hls.trigger(Events.FRAG_LOADED, data);
         }
@@ -936,7 +936,9 @@ export default class BaseStreamController
               frag.cc
             } [${details.startSN}-${details.endSN}], target: ${parseFloat(
               targetBufferTime.toFixed(3),
-            )}`,
+            )}${
+              part.byteRange.length ? ` range:${part.byteRange.join('-')}` : ''
+            }`,
           );
           this.nextLoadPosition = part.start + part.duration;
           this.state = State.FRAG_LOADING;
@@ -1004,7 +1006,9 @@ export default class BaseStreamController
     this.log(
       `Loading ${frag.type} sn: ${frag.sn} of ${this.fragInfo(frag, false)}) cc: ${frag.cc} ${
         '[' + details.startSN + '-' + details.endSN + ']'
-      }, target: ${parseFloat(targetBufferTime.toFixed(3))}`,
+      }, target: ${parseFloat(targetBufferTime.toFixed(3))}${
+        frag.byteRange.length ? ` range:${frag.byteRange.join('-')}` : ''
+      }`,
     );
     // Don't update nextLoadPosition for fragments which are not buffered
     if (Number.isFinite(frag.sn as number) && !this.bitrateTest) {
