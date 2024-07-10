@@ -116,7 +116,7 @@
     "micromatch": "4.0.7",
     "mocha": "10.6.0",
     "node-fetch": "3.3.2",
-    "npm-run-all2": "6.2.1",
+    "npm-run-all2": "6.2.2",
     "prettier": "3.3.2",
     "promise-polyfill": "8.3.0",
     "rollup": "4.18.0",
