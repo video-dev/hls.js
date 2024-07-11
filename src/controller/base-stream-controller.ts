@@ -442,7 +442,9 @@ export default class BaseStreamController
         }
 
         if ('payload' in data) {
-          this.log(`Loaded fragment ${frag.sn} of level ${frag.level}`);
+          this.log(
+            `Loaded ${frag.type} sn: ${frag.sn} of ${this.playlistLabel()} ${frag.level}`,
+          );
           this.hls.trigger(Events.FRAG_LOADED, data);
         }
 
@@ -629,11 +631,7 @@ export default class BaseStreamController
     this.log(
       `Buffered ${frag.type} sn: ${frag.sn}${
         part ? ' part: ' + part.index : ''
-      } of ${
-        this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'
-      } ${frag.level} (frag:[${(frag.startPTS ?? NaN).toFixed(3)}-${(
-        frag.endPTS ?? NaN
-      ).toFixed(3)}] > buffer:${
+      } of ${this.fragInfo(frag)} > buffer:${
         media
           ? TimeRanges.toString(BufferHelper.getBuffered(media))
           : '(detached)'
@@ -718,9 +716,7 @@ export default class BaseStreamController
     let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
     if (frag.encrypted && !frag.decryptdata?.key) {
       this.log(
-        `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${
-          this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'
-        } ${frag.level}`,
+        `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${this.playlistLabel()} ${frag.level}`,
       );
       this.state = State.KEY_LOADING;
       this.fragCurrent = frag;
@@ -773,9 +769,7 @@ export default class BaseStreamController
               frag.cc
             } of playlist [${details.startSN}-${
               details.endSN
-            }] parts [0-${partIndex}-${partList.length - 1}] ${
-              this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'
-            }: ${frag.level}, target: ${parseFloat(
+            }] parts [0-${partIndex}-${partList.length - 1}] ${this.playlistLabel()}: ${frag.level}, target: ${parseFloat(
               targetBufferTime.toFixed(3),
             )}`,
           );
@@ -843,10 +837,8 @@ export default class BaseStreamController
     }
 
     this.log(
-      `Loading fragment ${frag.sn} cc: ${frag.cc} ${
-        details ? 'of [' + details.startSN + '-' + details.endSN + '] ' : ''
-      }${this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track'}: ${
-        frag.level
+      `Loading ${frag.type} sn: ${frag.sn} of ${this.fragInfo(frag, false)}) cc: ${frag.cc} ${
+        details ? '[' + details.startSN + '-' + details.endSN + ']' : ''
       }, target: ${parseFloat(targetBufferTime.toFixed(3))}`,
     );
     // Don't update nextLoadPosition for fragments which are not buffered
@@ -1920,7 +1912,22 @@ export default class BaseStreamController
       // For this error fallthrough. Marking parsed will allow advancing to next fragment.
     }
     this.state = State.PARSED;
+    this.log(
+      `Parsed ${frag.type} sn: ${frag.sn}${
+        part ? ' part: ' + part.index : ''
+      } of ${this.fragInfo(frag)})`,
+    );
     this.hls.trigger(Events.FRAG_PARSED, { frag, part });
+  }
+
+  private playlistLabel() {
+    return this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track';
+  }
+
+  private fragInfo(frag: Fragment, pts: boolean = true): string {
+    return `${this.playlistLabel()} ${frag.level} (frag:[${((pts ? frag.startPTS : frag.start) ?? NaN).toFixed(3)}-${(
+      (pts ? frag.endPTS : frag.end) ?? NaN
+    ).toFixed(3)}]`;
   }
 
   protected resetTransmuxer() {
