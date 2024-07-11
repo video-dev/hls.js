@@ -17,42 +17,18 @@ export function findFirstFragWithCC(
 }
 
 export function shouldAlignOnDiscontinuities(
-  lastFrag: Fragment | null,
-  switchDetails: LevelDetails | undefined,
+  refDetails: LevelDetails | undefined,
   details: LevelDetails,
-): switchDetails is LevelDetails & boolean {
-  if (switchDetails) {
+): refDetails is LevelDetails & boolean {
+  if (refDetails) {
     if (
-      details.endCC > details.startCC ||
-      (lastFrag && lastFrag.cc < details.startCC)
+      details.startCC < refDetails.endCC &&
+      details.endCC > refDetails.startCC
     ) {
       return true;
     }
   }
   return false;
-}
-
-// Find the first frag in the previous level which matches the CC of the first frag of the new level
-export function findDiscontinuousReferenceFrag(
-  prevDetails: LevelDetails,
-  curDetails: LevelDetails,
-) {
-  const prevFrags = prevDetails.fragments;
-  const curFrags = curDetails.fragments;
-
-  if (!curFrags.length || !prevFrags.length) {
-    logger.log('No fragments to align');
-    return;
-  }
-
-  const prevStartFrag = findFirstFragWithCC(prevFrags, curFrags[0].cc);
-
-  if (!prevStartFrag || (prevStartFrag && !prevStartFrag.startPTS)) {
-    logger.log('No frag in previous level to align on');
-    return;
-  }
-
-  return prevStartFrag;
 }
 
 function adjustFragmentStart(frag: Fragment, sliding: number) {
@@ -94,7 +70,7 @@ export function alignStream(
   if (!switchDetails) {
     return;
   }
-  alignDiscontinuities(lastFrag, details, switchDetails);
+  alignDiscontinuities(details, switchDetails);
   if (!details.alignedSliding && switchDetails) {
     // If the PTS wasn't figured out via discontinuity sequence that means there was no CC increase within the level.
     // Aligning via Program Date Time should therefore be reliable, since PDT should be the same within the same
@@ -110,29 +86,27 @@ export function alignStream(
 }
 
 /**
- * Computes the PTS if a new level's fragments using the PTS of a fragment in the last level which shares the same
- * discontinuity sequence.
- * @param lastFrag - The last Fragment which shares the same discontinuity sequence
+ * Ajust the start of fragments in `details` by the difference in time between fragments of the latest
+ * shared discontinuity sequence change.
  * @param lastLevel - The details of the last loaded level
  * @param details - The details of the new level
  */
-function alignDiscontinuities(
-  lastFrag: Fragment | null,
+export function alignDiscontinuities(
   details: LevelDetails,
-  switchDetails: LevelDetails | undefined,
+  refDetails: LevelDetails | undefined,
 ) {
-  if (shouldAlignOnDiscontinuities(lastFrag, switchDetails, details)) {
-    const referenceFrag = findDiscontinuousReferenceFrag(
-      switchDetails,
-      details,
-    );
-    if (referenceFrag && Number.isFinite(referenceFrag.start)) {
-      logger.log(
-        `Adjusting PTS using last level due to CC increase within current level ${details.url}`,
-      );
-      adjustSlidingStart(referenceFrag.start, details);
-    }
+  if (!shouldAlignOnDiscontinuities(refDetails, details)) {
+    return;
   }
+  const targetCC = Math.min(refDetails.endCC, details.endCC);
+  const refFrag = findFirstFragWithCC(refDetails.fragments, targetCC);
+  const frag = findFirstFragWithCC(details.fragments, targetCC);
+  if (!refFrag || !frag) {
+    return;
+  }
+  logger.log(`Aligning playlist at start of dicontinuity sequence ${targetCC}`);
+  const delta = refFrag.start - frag.start;
+  adjustSlidingStart(delta, details);
 }
 
 /**
