@@ -365,6 +365,10 @@ export default class BaseStreamController
 
   protected onHandlerDestroying() {
     this.stopLoad();
+    if (this.transmuxer) {
+      this.transmuxer.destroy();
+      this.transmuxer = null;
+    }
     super.onHandlerDestroying();
     // @ts-ignore
     this.hls = this.onMediaSeeking = this.onMediaEnded = null;
@@ -1931,10 +1935,7 @@ export default class BaseStreamController
   }
 
   protected resetTransmuxer() {
-    if (this.transmuxer) {
-      this.transmuxer.destroy();
-      this.transmuxer = null;
-    }
+    this.transmuxer?.reset();
   }
 
   protected recoverWorkerError(data: ErrorData) {
