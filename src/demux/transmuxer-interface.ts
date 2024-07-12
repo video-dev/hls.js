@@ -275,7 +275,6 @@ export default class TransmuxerInterface {
         state,
       );
       if (isPromise(transmuxResult)) {
-        transmuxer.async = true;
         transmuxResult
           .then((data) => {
             this.handleTransmuxComplete(data);
@@ -288,7 +287,6 @@ export default class TransmuxerInterface {
             );
           });
       } else {
-        transmuxer.async = false;
         this.handleTransmuxComplete(transmuxResult as TransmuxerResult);
       }
     }
@@ -305,12 +303,8 @@ export default class TransmuxerInterface {
         chunkMeta,
       });
     } else if (transmuxer) {
-      let transmuxResult = transmuxer.flush(chunkMeta);
-      const asyncFlush = isPromise(transmuxResult);
-      if (asyncFlush || transmuxer.async) {
-        if (!isPromise(transmuxResult)) {
-          transmuxResult = Promise.resolve(transmuxResult);
-        }
+      const transmuxResult = transmuxer.flush(chunkMeta);
+      if (isPromise(transmuxResult)) {
         transmuxResult
           .then((data) => {
             this.handleFlushResult(data, chunkMeta);
@@ -323,10 +317,7 @@ export default class TransmuxerInterface {
             );
           });
       } else {
-        this.handleFlushResult(
-          transmuxResult as Array<TransmuxerResult>,
-          chunkMeta,
-        );
+        this.handleFlushResult(transmuxResult, chunkMeta);
       }
     }
   }

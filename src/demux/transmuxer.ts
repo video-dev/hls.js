@@ -22,15 +22,14 @@ import type { DecryptData } from '../loader/level-key';
 import type { PlaylistLevelType } from '../types/loader';
 import type { TypeSupported } from '../utils/codecs';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
-import { optionalSelf } from '../utils/global';
 
-let now;
+let now: () => number;
 // performance.now() not available on WebWorker, at least on Safari Desktop
 try {
   now = self.performance.now.bind(self.performance);
 } catch (err) {
   logger.debug('Unable to use Performance API on this environment');
-  now = optionalSelf?.Date.now;
+  now = Date.now;
 }
 
 type MuxConfig =
@@ -52,7 +51,7 @@ if (__USE_M2TS_ADVANCED_CODECS__) {
 }
 
 export default class Transmuxer {
-  public async: boolean = false;
+  private asyncResult: boolean = false;
   private observer: HlsEventEmitter;
   private typeSupported: TypeSupported;
   private config: HlsConfig;
@@ -144,6 +143,7 @@ export default class Transmuxer {
         }
         uintData = new Uint8Array(decryptedData);
       } else {
+        this.asyncResult = true;
         this.decryptionPromise = decrypter
           .webCryptoDecrypt(
             uintData,
@@ -162,7 +162,7 @@ export default class Transmuxer {
             this.decryptionPromise = null;
             return result;
           });
-        return this.decryptionPromise!;
+        return this.decryptionPromise;
       }
     }
 
@@ -208,6 +208,8 @@ export default class Transmuxer {
       accurateTimeOffset,
       chunkMeta,
     );
+    this.asyncResult = isPromise(result);
+
     const currentState = this.currentTransmuxState;
 
     currentState.contiguous = true;
@@ -228,6 +230,7 @@ export default class Transmuxer {
     const { decrypter, currentTransmuxState, decryptionPromise } = this;
 
     if (decryptionPromise) {
+      this.asyncResult = true;
       // Upon resolution, the decryption promise calls push() and returns its TransmuxerResult up the stack. Therefore
       // only flushing is required for async decryption
       return decryptionPromise.then(() => {
@@ -254,11 +257,16 @@ export default class Transmuxer {
     if (!demuxer || !remuxer) {
       // If probing failed, then Hls.js has been given content its not able to handle
       stats.executeEnd = now();
-      return [emptyResult(chunkMeta)];
+      const emptyResults = [emptyResult(chunkMeta)];
+      if (this.asyncResult) {
+        return Promise.resolve(emptyResults);
+      }
+      return emptyResults;
     }
 
     const demuxResultOrPromise = demuxer.flush(timeOffset);
     if (isPromise(demuxResultOrPromise)) {
+      this.asyncResult = true;
       // Decrypt final SAMPLE-AES samples
       return demuxResultOrPromise.then((demuxResult) => {
         this.flushRemux(transmuxResults, demuxResult, chunkMeta);
@@ -267,6 +275,9 @@ export default class Transmuxer {
     }
 
     this.flushRemux(transmuxResults, demuxResultOrPromise, chunkMeta);
+    if (this.asyncResult) {
+      return Promise.resolve(transmuxResults);
+    }
     return transmuxResults;
   }
 

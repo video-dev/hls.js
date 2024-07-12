@@ -61,7 +61,6 @@ function startWorker() {
             data.state,
           );
         if (isPromise(transmuxResult)) {
-          transmuxer.async = true;
           transmuxResult
             .then((data) => {
               emitTransmuxComplete(self, data, instanceNo);
@@ -83,19 +82,14 @@ function startWorker() {
               );
             });
         } else {
-          transmuxer.async = false;
           emitTransmuxComplete(self, transmuxResult, instanceNo);
         }
         break;
       }
       case 'flush': {
         const chunkMeta = data.chunkMeta as ChunkMetadata;
-        let transmuxResult = transmuxer.flush(chunkMeta);
-        const asyncFlush = isPromise(transmuxResult);
-        if (asyncFlush || transmuxer.async) {
-          if (!isPromise(transmuxResult)) {
-            transmuxResult = Promise.resolve(transmuxResult);
-          }
+        const transmuxResult = transmuxer.flush(chunkMeta);
+        if (isPromise(transmuxResult)) {
           transmuxResult
             .then((results: Array<TransmuxerResult>) => {
               handleFlushResult(
