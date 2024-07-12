@@ -40,6 +40,7 @@ function startWorker() {
         config,
         '',
         data.id,
+        logger,
       );
       forwardMessage('init', null, instanceNo);
       return;

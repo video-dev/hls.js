@@ -111,6 +111,7 @@ export default class TransmuxerInterface {
             config,
             '',
             id,
+            hls.logger,
           );
         }
         return;
@@ -123,6 +124,7 @@ export default class TransmuxerInterface {
       config,
       '',
       id,
+      hls.logger,
     );
   }
 

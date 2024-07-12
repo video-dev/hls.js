@@ -9,7 +9,7 @@ import MP3Demuxer from './audio/mp3demuxer';
 import { AC3Demuxer } from './audio/ac3-demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
-import { logger } from '../utils/logger';
+import { PlaylistLevelType } from '../types/loader';
 import {
   isFullSegmentEncryption,
   getAesModeFromFullSegmentMethod,
@@ -19,8 +19,8 @@ import type { Remuxer } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import type { HlsConfig } from '../config';
 import type { DecryptData } from '../loader/level-key';
-import type { PlaylistLevelType } from '../types/loader';
 import type { TypeSupported } from '../utils/codecs';
+import type { ILogger } from '../utils/logger';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 let now: () => number;
@@ -28,7 +28,6 @@ let now: () => number;
 try {
   now = self.performance.now.bind(self.performance);
 } catch (err) {
-  logger.debug('Unable to use Performance API on this environment');
   now = Date.now;
 }
 
@@ -52,6 +51,7 @@ if (__USE_M2TS_ADVANCED_CODECS__) {
 
 export default class Transmuxer {
   private asyncResult: boolean = false;
+  private logger: ILogger;
   private observer: HlsEventEmitter;
   private typeSupported: TypeSupported;
   private config: HlsConfig;
@@ -71,12 +71,14 @@ export default class Transmuxer {
     config: HlsConfig,
     vendor: string,
     id: PlaylistLevelType,
+    logger: ILogger,
   ) {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
     this.vendor = vendor;
     this.id = id;
+    this.logger = logger;
   }
 
   configure(transmuxConfig: TransmuxConfig) {
@@ -170,7 +172,7 @@ export default class Transmuxer {
     if (resetMuxers) {
       const error = this.configureTransmuxer(uintData);
       if (error) {
-        logger.warn(`[transmuxer] ${error.message}`);
+        this.logger.warn(`[transmuxer] ${error.message}`);
         this.observer.emit(Events.ERROR, Events.ERROR, {
           type: ErrorTypes.MEDIA_ERROR,
           details: ErrorDetails.FRAG_PARSING_ERROR,
@@ -288,10 +290,10 @@ export default class Transmuxer {
   ) {
     const { audioTrack, videoTrack, id3Track, textTrack } = demuxResult;
     const { accurateTimeOffset, timeOffset } = this.currentTransmuxState;
-    logger.log(
-      `[transmuxer.ts]: Flushed fragment ${chunkMeta.sn}${
+    this.logger.log(
+      `[transmuxer.ts]: Flushed ${this.id} sn: ${chunkMeta.sn}${
         chunkMeta.part > -1 ? ' p: ' + chunkMeta.part : ''
-      } of level ${chunkMeta.level}`,
+      } of ${this.id === PlaylistLevelType.MAIN ? 'level' : 'track'} ${chunkMeta.level}`,
     );
     const remuxResult = this.remuxer!.remux(
       audioTrack,
@@ -449,7 +451,7 @@ export default class Transmuxer {
     // probe for content type
     let mux;
     for (let i = 0, len = muxConfig.length; i < len; i++) {
-      if (muxConfig[i].demux?.probe(data)) {
+      if (muxConfig[i].demux?.probe(data, this.logger)) {
         mux = muxConfig[i];
         break;
       }
@@ -463,10 +465,10 @@ export default class Transmuxer {
     const Remuxer: MuxConfig['remux'] = mux.remux;
     const Demuxer: MuxConfig['demux'] = mux.demux;
     if (!remuxer || !(remuxer instanceof Remuxer)) {
-      this.remuxer = new Remuxer(observer, config, typeSupported, vendor);
+      this.remuxer = new Remuxer(observer, config, typeSupported, this.logger);
     }
     if (!demuxer || !(demuxer instanceof Demuxer)) {
-      this.demuxer = new Demuxer(observer, config, typeSupported);
+      this.demuxer = new Demuxer(observer, config, typeSupported, this.logger);
       this.probe = Demuxer.probe;
     }
   }

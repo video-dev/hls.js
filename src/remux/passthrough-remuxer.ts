@@ -14,8 +14,9 @@ import {
   parseInitSegment,
 } from '../utils/mp4-tools';
 import { ElementaryStreamTypes } from '../loader/fragment';
-import { logger } from '../utils/logger';
 import { getCodecCompatibleName } from '../utils/codecs';
+import type { HlsEventEmitter } from '../events';
+import type { HlsConfig } from '../config';
 import type { TrackSet } from '../types/track';
 import type {
   InitSegmentData,
@@ -30,9 +31,12 @@ import type {
   PassthroughTrack,
 } from '../types/demuxer';
 import type { DecryptData } from '../loader/level-key';
+import type { TypeSupported } from '../utils/codecs';
+import type { ILogger } from '../utils/logger';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 class PassThroughRemuxer implements Remuxer {
+  private readonly logger: ILogger;
   private emitInitSegment: boolean = false;
   private audioCodec?: string;
   private videoCodec?: string;
@@ -40,6 +44,15 @@ class PassThroughRemuxer implements Remuxer {
   private initPTS: RationalTimestamp | null = null;
   private initTracks?: TrackSet;
   private lastEndTime: number | null = null;
+
+  constructor(
+    observer: HlsEventEmitter,
+    config: HlsConfig,
+    typeSupported: TypeSupported,
+    logger: ILogger,
+  ) {
+    this.logger = logger;
+  }
 
   public destroy() {}
 
@@ -111,7 +124,7 @@ class PassThroughRemuxer implements Remuxer {
         id: 'main',
       };
     } else {
-      logger.warn(
+      this.logger.warn(
         '[passthrough-remuxer.ts]: initSegment does not contain moov or trak boxes.',
       );
     }
@@ -160,7 +173,9 @@ class PassThroughRemuxer implements Remuxer {
     }
     if (!initData?.length) {
       // We can't remux if the initSegment could not be generated
-      logger.warn('[passthrough-remuxer.ts]: Failed to generate initSegment.');
+      this.logger.warn(
+        '[passthrough-remuxer.ts]: Failed to generate initSegment.',
+      );
       return result;
     }
     if (this.emitInitSegment) {
@@ -177,7 +192,7 @@ class PassThroughRemuxer implements Remuxer {
     ) {
       initSegment.initPTS = decodeTime - timeOffset;
       if (initPTS && initPTS.timescale === 1) {
-        logger.warn(
+        this.logger.warn(
           `Adjusting initPTS @${timeOffset} from ${initPTS.baseTime / initPTS.timescale} to ${initSegment.initPTS}`,
         );
       }
@@ -196,7 +211,7 @@ class PassThroughRemuxer implements Remuxer {
     if (duration > 0) {
       this.lastEndTime = endTime;
     } else {
-      logger.warn('Duration parsed from mp4 should be greater than zero');
+      this.logger.warn('Duration parsed from mp4 should be greater than zero');
       this.resetNextTimestamp();
     }
 
@@ -284,14 +299,14 @@ function getParsedTrackCodec(
       return getCodecCompatibleName(parsedCodec, preferManagedMediaSource);
     }
     const result = 'mp4a.40.5';
-    logger.info(
+    this.logger.info(
       `Parsed audio codec "${parsedCodec}" or audio object type not handled. Using "${result}"`,
     );
     return result;
   }
   // Provide defaults based on codec type
   // This allows for some playback of some fmp4 playlists without CODECS defined in manifest
-  logger.warn(`Unhandled video codec "${parsedCodec}"`);
+  this.logger.warn(`Unhandled video codec "${parsedCodec}"`);
   if (parsedCodec === 'hvc1' || parsedCodec === 'hev1') {
     return 'hvc1.1.6.L120.90';
   }
