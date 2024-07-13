@@ -8,7 +8,6 @@ import Hls from '../../../src/hls';
 import sinon from 'sinon';
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
-import { logger } from '../../../src/utils/logger';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -149,7 +148,7 @@ describe('TransmuxerInterface tests', function () {
     expect(
       firstCall,
       'Demux call 1: ' + JSON.stringify(firstCall, null, 2),
-    ).to.deep.equal({
+    ).to.deep.include({
       cmd: 'demux',
       data,
       decryptdata: currentFrag.decryptdata,
@@ -182,7 +181,7 @@ describe('TransmuxerInterface tests', function () {
     expect(
       secondCall,
       'Demux call 2: ' + JSON.stringify(secondCall, null, 2),
-    ).to.deep.equal({
+    ).to.deep.include({
       cmd: 'demux',
       data,
       decryptdata: newFrag.decryptdata,
@@ -282,6 +281,7 @@ describe('TransmuxerInterface tests', function () {
       data: {
         event: {},
         data: {},
+        instanceNo: transmuxerInterfacePrivates.instanceNo,
       },
     } as any;
 
@@ -304,6 +304,7 @@ describe('TransmuxerInterface tests', function () {
       data: {
         event: 'init',
         data: {},
+        instanceNo: transmuxerInterfacePrivates.instanceNo,
       },
     };
 
@@ -330,10 +331,11 @@ describe('TransmuxerInterface tests', function () {
           logType: 'log',
           message: 'testing logger',
         },
+        instanceNo: transmuxerInterfacePrivates.instanceNo,
       },
     };
 
-    const spy = sinon.spy(logger, 'log');
+    const spy = sinon.spy(hls.logger, 'log');
     transmuxerInterfacePrivates.onWorkerMessage(evt);
     expect(spy).to.have.been.calledWith(evt.data.data.message);
   });
