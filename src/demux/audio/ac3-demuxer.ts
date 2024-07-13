@@ -8,7 +8,7 @@ import type { AudioFrame, DemuxedAudioTrack } from '../../types/demuxer';
 export class AC3Demuxer extends BaseAudioDemuxer {
   private readonly observer: HlsEventEmitter;
 
-  constructor(observer) {
+  constructor(observer: HlsEventEmitter) {
     super();
     this.observer = observer;
   }

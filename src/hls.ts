@@ -13,6 +13,7 @@ import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
 import { EventEmitter } from 'eventemitter3';
 import { Events } from './events';
 import { ErrorTypes, ErrorDetails } from './errors';
+import { version } from './version';
 import { isHdcpLevel, type HdcpLevel, type Level } from './types/level';
 import type { HlsEventEmitter, HlsListeners } from './events';
 import type AudioTrackController from './controller/audio-track-controller';
@@ -87,7 +88,7 @@ export default class Hls implements HlsEventEmitter {
    * Get the video-dev/hls.js package version.
    */
   static get version(): string {
-    return __VERSION__;
+    return version;
   }
 
   /**

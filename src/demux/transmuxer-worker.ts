@@ -6,114 +6,121 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import type { RemuxedTrack, RemuxerResult } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 
+const transmuxers: (Transmuxer | undefined)[] = [];
+
 if (typeof __IN_WORKER__ !== 'undefined' && __IN_WORKER__) {
-  startWorker(self);
+  startWorker();
 }
 
-function startWorker(self) {
-  const observer = new EventEmitter();
-  const forwardMessage = (ev, data) => {
-    self.postMessage({ event: ev, data: data });
-  };
-
-  // forward events to main thread
-  observer.on(Events.FRAG_DECRYPTED, forwardMessage);
-  observer.on(Events.ERROR, forwardMessage);
-
-  // forward logger events to main thread
-  const forwardWorkerLogs = (logger: ILogger) => {
-    for (const logFn in logger) {
-      const func: ILogFunction = (message?) => {
-        forwardMessage('workerLog', {
-          logType: logFn,
-          message,
-        });
-      };
-
-      logger[logFn] = func;
-    }
-  };
-
+function startWorker() {
   self.addEventListener('message', (ev) => {
     const data = ev.data;
-    switch (data.cmd) {
-      case 'init': {
-        const config = JSON.parse(data.config);
-        self.transmuxer = new Transmuxer(
-          observer,
-          data.typeSupported,
-          config,
-          '',
-          data.id,
-        );
-        const logger = enableLogs(config.debug, data.id);
-        forwardWorkerLogs(logger);
-        forwardMessage('init', null);
-        break;
+    const instanceNo = data.instanceNo;
+    if (instanceNo === undefined) {
+      return;
+    }
+    const transmuxer = transmuxers[instanceNo];
+    if (data.cmd === 'reset') {
+      delete transmuxers[data.resetNo];
+      if (transmuxer) {
+        transmuxer.destroy();
       }
+      data.cmd = 'init';
+    }
+    if (data.cmd === 'init') {
+      const config = JSON.parse(data.config);
+      const observer = new EventEmitter();
+      observer.on(Events.FRAG_DECRYPTED, forwardMessage);
+      observer.on(Events.ERROR, forwardMessage);
+      const logger = enableLogs(config.debug, data.id);
+      forwardWorkerLogs(logger, instanceNo);
+      transmuxers[instanceNo] = new Transmuxer(
+        observer,
+        data.typeSupported,
+        config,
+        '',
+        data.id,
+        logger,
+      );
+      forwardMessage('init', null, instanceNo);
+      return;
+    }
+    if (!transmuxer) {
+      return;
+    }
+    switch (data.cmd) {
       case 'configure': {
-        self.transmuxer.configure(data.config);
+        transmuxer.configure(data.config);
         break;
       }
       case 'demux': {
         const transmuxResult: TransmuxerResult | Promise<TransmuxerResult> =
-          self.transmuxer.push(
+          transmuxer.push(
             data.data,
             data.decryptdata,
             data.chunkMeta,
             data.state,
           );
         if (isPromise(transmuxResult)) {
-          self.transmuxer.async = true;
           transmuxResult
             .then((data) => {
-              emitTransmuxComplete(self, data);
+              emitTransmuxComplete(self, data, instanceNo);
             })
             .catch((error) => {
-              forwardMessage(Events.ERROR, {
-                type: ErrorTypes.MEDIA_ERROR,
-                details: ErrorDetails.FRAG_PARSING_ERROR,
-                chunkMeta: data.chunkMeta,
-                fatal: false,
-                error,
-                err: error,
-                reason: `transmuxer-worker push error`,
-              });
+              forwardMessage(
+                Events.ERROR,
+                {
+                  instanceNo,
+                  type: ErrorTypes.MEDIA_ERROR,
+                  details: ErrorDetails.FRAG_PARSING_ERROR,
+                  chunkMeta: data.chunkMeta,
+                  fatal: false,
+                  error,
+                  err: error,
+                  reason: `transmuxer-worker push error`,
+                },
+                instanceNo,
+              );
             });
         } else {
-          self.transmuxer.async = false;
-          emitTransmuxComplete(self, transmuxResult);
+          emitTransmuxComplete(self, transmuxResult, instanceNo);
         }
         break;
       }
       case 'flush': {
-        const id = data.chunkMeta;
-        let transmuxResult = self.transmuxer.flush(id);
-        const asyncFlush = isPromise(transmuxResult);
-        if (asyncFlush || self.transmuxer.async) {
-          if (!isPromise(transmuxResult)) {
-            transmuxResult = Promise.resolve(transmuxResult);
-          }
+        const chunkMeta = data.chunkMeta as ChunkMetadata;
+        const transmuxResult = transmuxer.flush(chunkMeta);
+        if (isPromise(transmuxResult)) {
           transmuxResult
             .then((results: Array<TransmuxerResult>) => {
-              handleFlushResult(self, results as Array<TransmuxerResult>, id);
+              handleFlushResult(
+                self,
+                results as Array<TransmuxerResult>,
+                chunkMeta,
+                instanceNo,
+              );
             })
             .catch((error) => {
-              forwardMessage(Events.ERROR, {
-                type: ErrorTypes.MEDIA_ERROR,
-                details: ErrorDetails.FRAG_PARSING_ERROR,
-                chunkMeta: data.chunkMeta,
-                fatal: false,
-                error,
-                err: error,
-                reason: `transmuxer-worker flush error`,
-              });
+              forwardMessage(
+                Events.ERROR,
+                {
+                  type: ErrorTypes.MEDIA_ERROR,
+                  details: ErrorDetails.FRAG_PARSING_ERROR,
+                  chunkMeta: data.chunkMeta,
+                  fatal: false,
+                  error,
+                  err: error,
+                  reason: `transmuxer-worker flush error`,
+                },
+                instanceNo,
+              );
             });
         } else {
           handleFlushResult(
             self,
             transmuxResult as Array<TransmuxerResult>,
-            id,
+            chunkMeta,
+            instanceNo,
           );
         }
         break;
@@ -127,6 +134,7 @@ function startWorker(self) {
 function emitTransmuxComplete(
   self: any,
   transmuxResult: TransmuxerResult,
+  instanceNo: number,
 ): boolean {
   if (isEmptyResult(transmuxResult.remuxResult)) {
     return false;
@@ -140,7 +148,7 @@ function emitTransmuxComplete(
     addToTransferable(transferable, video);
   }
   self.postMessage(
-    { event: 'transmuxComplete', data: transmuxResult },
+    { event: 'transmuxComplete', data: transmuxResult, instanceNo },
     transferable,
   );
   return true;
@@ -164,16 +172,42 @@ function handleFlushResult(
   self: any,
   results: Array<TransmuxerResult>,
   chunkMeta: ChunkMetadata,
+  instanceNo: number,
 ) {
   const parsed = results.reduce(
-    (parsed, result) => emitTransmuxComplete(self, result) || parsed,
+    (parsed, result) =>
+      emitTransmuxComplete(self, result, instanceNo) || parsed,
     false,
   );
   if (!parsed) {
     // Emit at least one "transmuxComplete" message even if media is not found to update stream-controller state to PARSING
-    self.postMessage({ event: 'transmuxComplete', data: results[0] });
+    self.postMessage({
+      event: 'transmuxComplete',
+      data: results[0],
+      instanceNo,
+    });
   }
-  self.postMessage({ event: 'flush', data: chunkMeta });
+  self.postMessage({ event: 'flush', data: chunkMeta, instanceNo });
+}
+
+function forwardMessage(event, data, instanceNo) {
+  self.postMessage({ event, data, instanceNo });
+}
+
+function forwardWorkerLogs(logger: ILogger, instanceNo: number) {
+  for (const logFn in logger) {
+    const func: ILogFunction = (message?) => {
+      forwardMessage(
+        'workerLog',
+        {
+          logType: logFn,
+          message,
+        },
+        instanceNo,
+      );
+    };
+    logger[logFn] = func;
+  }
 }
 
 function isEmptyResult(remuxResult: RemuxerResult) {

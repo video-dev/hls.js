@@ -18,11 +18,11 @@ import HevcVideoParser from './video/hevc-video-parser';
 import SampleAesDecrypter from './sample-aes';
 import { Events } from '../events';
 import { appendUint8Array, RemuxerTrackIdConfig } from '../utils/mp4-tools';
-import { logger } from '../utils/logger';
 import { ErrorTypes, ErrorDetails } from '../errors';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { TypeSupported } from '../utils/codecs';
+import type { ILogger } from '../utils/logger';
 import {
   MetadataSchema,
   type DemuxedVideoTrack,
@@ -54,9 +54,10 @@ export type ParsedVideoSample = ParsedTimestamp &
 const PACKET_LENGTH = 188;
 
 class TSDemuxer implements Demuxer {
+  private readonly logger: ILogger;
   private readonly observer: HlsEventEmitter;
   private readonly config: HlsConfig;
-  private typeSupported: TypeSupported;
+  private readonly typeSupported: TypeSupported;
 
   private sampleAes: SampleAesDecrypter | null = null;
   private pmtParsed: boolean = false;
@@ -77,14 +78,16 @@ class TSDemuxer implements Demuxer {
     observer: HlsEventEmitter,
     config: HlsConfig,
     typeSupported: TypeSupported,
+    logger: ILogger,
   ) {
     this.observer = observer;
     this.config = config;
     this.typeSupported = typeSupported;
+    this.logger = logger;
     this.videoParser = null;
   }
 
-  static probe(data: Uint8Array) {
+  static probe(data: Uint8Array, logger: ILogger) {
     const syncOffset = TSDemuxer.syncOffset(data);
     if (syncOffset > 0) {
       logger.warn(
@@ -288,7 +291,7 @@ class TSDemuxer implements Demuxer {
         switch (pid) {
           case videoPid:
             if (stt) {
-              if (videoData && (pes = parsePES(videoData))) {
+              if (videoData && (pes = parsePES(videoData, this.logger))) {
                 if (this.videoParser === null) {
                   switch (videoTrack.segmentCodec) {
                     case 'avc':
@@ -321,7 +324,7 @@ class TSDemuxer implements Demuxer {
             break;
           case audioPid:
             if (stt) {
-              if (audioData && (pes = parsePES(audioData))) {
+              if (audioData && (pes = parsePES(audioData, this.logger))) {
                 switch (audioTrack.segmentCodec) {
                   case 'aac':
                     this.parseAACPES(audioTrack, pes);
@@ -345,7 +348,7 @@ class TSDemuxer implements Demuxer {
             break;
           case id3Pid:
             if (stt) {
-              if (id3Data && (pes = parsePES(id3Data))) {
+              if (id3Data && (pes = parsePES(id3Data, this.logger))) {
                 this.parseID3PES(id3Track, pes);
               }
 
@@ -362,7 +365,7 @@ class TSDemuxer implements Demuxer {
             }
 
             pmtId = this._pmtId = parsePAT(data, offset);
-            // logger.log('PMT PID:'  + this._pmtId);
+            // this.logger.log('PMT PID:'  + this._pmtId);
             break;
           case pmtId: {
             if (stt) {
@@ -375,6 +378,7 @@ class TSDemuxer implements Demuxer {
               this.typeSupported,
               isSampleAes,
               this.observer,
+              this.logger,
             );
 
             // only update track id if track PID found while parsing PMT
@@ -400,7 +404,7 @@ class TSDemuxer implements Demuxer {
             }
 
             if (unknownPID !== null && !pmtParsed) {
-              logger.warn(
+              this.logger.warn(
                 `MPEG-TS PMT found at ${start} after unknown PID '${unknownPID}'. Backtracking to sync byte @${syncOffset} to parse all TS packets.`,
               );
               unknownPID = null;
@@ -428,6 +432,8 @@ class TSDemuxer implements Demuxer {
         new Error(
           `Found ${tsPacketErrors} TS packet/s that do not start with 0x47`,
         ),
+        undefined,
+        this.logger,
       );
     }
 
@@ -477,7 +483,7 @@ class TSDemuxer implements Demuxer {
     const id3Data = id3Track.pesData;
     // try to parse last PES packets
     let pes: PES | null;
-    if (videoData && (pes = parsePES(videoData))) {
+    if (videoData && (pes = parsePES(videoData, this.logger))) {
       if (this.videoParser === null) {
         switch (videoTrack.segmentCodec) {
           case 'avc':
@@ -505,7 +511,7 @@ class TSDemuxer implements Demuxer {
       videoTrack.pesData = videoData;
     }
 
-    if (audioData && (pes = parsePES(audioData))) {
+    if (audioData && (pes = parsePES(audioData, this.logger))) {
       switch (audioTrack.segmentCodec) {
         case 'aac':
           this.parseAACPES(audioTrack, pes);
@@ -522,7 +528,7 @@ class TSDemuxer implements Demuxer {
       audioTrack.pesData = null;
     } else {
       if (audioData?.size) {
-        logger.log(
+        this.logger.log(
           'last AAC PES packet truncated,might overlap between fragments',
         );
       }
@@ -531,7 +537,7 @@ class TSDemuxer implements Demuxer {
       audioTrack.pesData = audioData;
     }
 
-    if (id3Data && (pes = parsePES(id3Data))) {
+    if (id3Data && (pes = parsePES(id3Data, this.logger))) {
       this.parseID3PES(id3Track, pes);
       id3Track.pesData = null;
     } else {
@@ -625,7 +631,12 @@ class TSDemuxer implements Demuxer {
       } else {
         reason = 'No ADTS header found in AAC PES';
       }
-      emitParsingError(this.observer, new Error(reason), recoverable);
+      emitParsingError(
+        this.observer,
+        new Error(reason),
+        recoverable,
+        this.logger,
+      );
       if (!recoverable) {
         return;
       }
@@ -648,7 +659,7 @@ class TSDemuxer implements Demuxer {
       const frameDuration = ADTS.getFrameDuration(track.samplerate as number);
       pts = aacOverFlow.sample.pts + frameDuration;
     } else {
-      logger.warn('[tsdemuxer]: AAC PES unknown PTS');
+      this.logger.warn('[tsdemuxer]: AAC PES unknown PTS');
       return;
     }
 
@@ -679,7 +690,7 @@ class TSDemuxer implements Demuxer {
     let offset = 0;
     const pts = pes.pts;
     if (pts === undefined) {
-      logger.warn('[tsdemuxer]: MPEG PES unknown PTS');
+      this.logger.warn('[tsdemuxer]: MPEG PES unknown PTS');
       return;
     }
 
@@ -711,7 +722,7 @@ class TSDemuxer implements Demuxer {
       const data = pes.data;
       const pts = pes.pts;
       if (pts === undefined) {
-        logger.warn('[tsdemuxer]: AC3 PES unknown PTS');
+        this.logger.warn('[tsdemuxer]: AC3 PES unknown PTS');
         return;
       }
       const length = data.length;
@@ -730,7 +741,7 @@ class TSDemuxer implements Demuxer {
 
   private parseID3PES(id3Track: DemuxedMetadataTrack, pes: PES) {
     if (pes.pts === undefined) {
-      logger.warn('[tsdemuxer]: ID3 PES unknown PTS');
+      this.logger.warn('[tsdemuxer]: ID3 PES unknown PTS');
       return;
     }
     const id3Sample = Object.assign({}, pes as Required<PES>, {
@@ -757,6 +768,7 @@ function parsePMT(
   typeSupported: TypeSupported,
   isSampleAes: boolean,
   observer: HlsEventEmitter,
+  logger: ILogger,
 ) {
   const result = {
     audioPid: -1,
@@ -779,7 +791,7 @@ function parsePMT(
     switch (data[offset]) {
       case 0xcf: // SAMPLE-AES AAC
         if (!isSampleAes) {
-          logEncryptedSamplesFoundInUnencryptedStream('ADTS AAC');
+          logEncryptedSamplesFoundInUnencryptedStream('ADTS AAC', this.logger);
           break;
         }
       /* falls through */
@@ -802,7 +814,7 @@ function parsePMT(
 
       case 0xdb: // SAMPLE-AES AVC
         if (!isSampleAes) {
-          logEncryptedSamplesFoundInUnencryptedStream('H.264');
+          logEncryptedSamplesFoundInUnencryptedStream('H.264', this.logger);
           break;
         }
       /* falls through */
@@ -830,7 +842,7 @@ function parsePMT(
 
       case 0xc1: // SAMPLE-AES AC3
         if (!isSampleAes) {
-          logEncryptedSamplesFoundInUnencryptedStream('AC-3');
+          logEncryptedSamplesFoundInUnencryptedStream('AC-3', this.logger);
           break;
         }
       /* falls through */
@@ -886,7 +898,12 @@ function parsePMT(
       case 0xc2: // SAMPLE-AES EC3
       /* falls through */
       case 0x87:
-        emitParsingError(observer, new Error('Unsupported EC-3 in M2TS found'));
+        emitParsingError(
+          observer,
+          new Error('Unsupported EC-3 in M2TS found'),
+          undefined,
+          this.logger,
+        );
         return result;
 
       case 0x24: // ITU-T Rec. H.265 and ISO/IEC 23008-2 (HEVC)
@@ -900,6 +917,8 @@ function parsePMT(
           emitParsingError(
             observer,
             new Error('Unsupported HEVC in M2TS found'),
+            undefined,
+            this.logger,
           );
           return result;
         }
@@ -919,7 +938,8 @@ function parsePMT(
 function emitParsingError(
   observer: HlsEventEmitter,
   error: Error,
-  levelRetry?: boolean,
+  levelRetry: boolean | undefined,
+  logger: ILogger,
 ) {
   logger.warn(`parsing error: ${error.message}`);
   observer.emit(Events.ERROR, Events.ERROR, {
@@ -932,11 +952,14 @@ function emitParsingError(
   });
 }
 
-function logEncryptedSamplesFoundInUnencryptedStream(type: string) {
+function logEncryptedSamplesFoundInUnencryptedStream(
+  type: string,
+  logger: ILogger,
+) {
   logger.log(`${type} with AES-128-CBC encryption found in unencrypted stream`);
 }
 
-function parsePES(stream: ElementaryStreamData): PES | null {
+function parsePES(stream: ElementaryStreamData, logger: ILogger): PES | null {
   let i = 0;
   let frag: Uint8Array;
   let pesLen: number;
