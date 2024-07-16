@@ -4,6 +4,7 @@ import { Events } from '../../src/events';
 
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
+import sinon from 'sinon';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -51,7 +52,8 @@ describe('Hls', function () {
         );
       });
     }
-    it('should add and remove refrences to the "media" element immediately', function () {
+
+    it('should add and remove references to the "media" element immediately', function () {
       const hls = new Hls({ capLevelOnFPSDrop: true });
       expect(hls.media).to.equal(null);
       const media = document.createElement('video');
@@ -62,7 +64,7 @@ describe('Hls', function () {
       hls.destroy();
     });
 
-    it('should add and remove refrences to the "media" element after attached', function () {
+    it('should add and remove references to the "media" element after attached', function () {
       const hls = new Hls({
         capLevelOnFPSDrop: true,
         emeEnabled: true,
@@ -77,14 +79,27 @@ describe('Hls', function () {
       detachTest(hls, media, 12);
       hls.destroy();
     });
+
+    it('should trigger an error event when attachMedia is called with null', function () {
+      const hls = new Hls();
+      const triggerSpy = sinon.spy(hls, 'trigger');
+
+      hls.on(Events.ERROR, function (_event, _data) {});
+      (hls as any).attachMedia(null);
+      expect(triggerSpy.calledWith(Events.ERROR)).to.be.true;
+
+      triggerSpy.restore();
+      hls.destroy();
+    });
   });
 
   describe('loadSource and url', function () {
-    it('url should initally be null', function () {
+    it('url should initially be null', function () {
       const hls = new Hls();
       expect(hls.url).to.equal(null);
       hls.destroy();
     });
+
     it('should return given url after load', function () {
       const hls = new Hls();
       hls.loadSource(
@@ -95,6 +110,7 @@ describe('Hls', function () {
       );
       hls.destroy();
     });
+
     it('should make relative url absolute', function () {
       const hls = new Hls();
       hls.loadSource('/streams/x36xhzz/x36xhzz.m3u8');
