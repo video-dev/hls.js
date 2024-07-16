@@ -390,7 +390,7 @@ export default class Hls implements HlsEventEmitter {
    */
   attachMedia(media: HTMLMediaElement) {
     if (!media) {
-      const error = new Error('attachMedia failed: media element is null');
+      const error = new Error('attachMedia failed: media argument is ${media}');
       this.trigger(Events.ERROR, {
         type: ErrorTypes.OTHER_ERROR,
         details: ErrorDetails.ATTACH_MEDIA_ERROR,
