@@ -389,6 +389,18 @@ export default class Hls implements HlsEventEmitter {
    * Attaches Hls.js to a media element
    */
   attachMedia(media: HTMLMediaElement) {
+    if (media === null) {
+      const error = new Error('attachMedia failed: media element is null');
+      this.trigger(Events.ERROR, {
+        type: ErrorTypes.OTHER_ERROR,
+        details: ErrorDetails.ATTACH_MEDIA_ERROR,
+        fatal: true,
+        reason: 'attachMedia failed: media element is null',
+        error,
+      });
+      return;
+    }
+
     this.logger.log('attachMedia');
     this._media = media;
     this.trigger(Events.MEDIA_ATTACHING, { media: media });
