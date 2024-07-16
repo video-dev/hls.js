@@ -395,7 +395,6 @@ export default class Hls implements HlsEventEmitter {
         type: ErrorTypes.OTHER_ERROR,
         details: ErrorDetails.ATTACH_MEDIA_ERROR,
         fatal: true,
-        reason: 'attachMedia failed: media element is null',
         error,
       });
       return;
