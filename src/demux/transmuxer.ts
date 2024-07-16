@@ -55,7 +55,6 @@ export default class Transmuxer {
   private observer: HlsEventEmitter;
   private typeSupported: TypeSupported;
   private config: HlsConfig;
-  private vendor: string;
   private id: PlaylistLevelType;
   private demuxer?: Demuxer;
   private remuxer?: Remuxer;
@@ -76,7 +75,6 @@ export default class Transmuxer {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
-    this.vendor = vendor;
     this.id = id;
     this.logger = logger;
   }
@@ -447,7 +445,7 @@ export default class Transmuxer {
   }
 
   private configureTransmuxer(data: Uint8Array): void | Error {
-    const { config, observer, typeSupported, vendor } = this;
+    const { config, observer, typeSupported } = this;
     // probe for content type
     let mux;
     for (let i = 0, len = muxConfig.length; i < len; i++) {
