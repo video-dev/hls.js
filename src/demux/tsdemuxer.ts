@@ -791,7 +791,7 @@ function parsePMT(
     switch (data[offset]) {
       case 0xcf: // SAMPLE-AES AAC
         if (!isSampleAes) {
-          logEncryptedSamplesFoundInUnencryptedStream('ADTS AAC', this.logger);
+          logEncryptedSamplesFoundInUnencryptedStream('ADTS AAC', logger);
           break;
         }
       /* falls through */
@@ -814,7 +814,7 @@ function parsePMT(
 
       case 0xdb: // SAMPLE-AES AVC
         if (!isSampleAes) {
-          logEncryptedSamplesFoundInUnencryptedStream('H.264', this.logger);
+          logEncryptedSamplesFoundInUnencryptedStream('H.264', logger);
           break;
         }
       /* falls through */
@@ -842,7 +842,7 @@ function parsePMT(
 
       case 0xc1: // SAMPLE-AES AC3
         if (!isSampleAes) {
-          logEncryptedSamplesFoundInUnencryptedStream('AC-3', this.logger);
+          logEncryptedSamplesFoundInUnencryptedStream('AC-3', logger);
           break;
         }
       /* falls through */
@@ -902,7 +902,7 @@ function parsePMT(
           observer,
           new Error('Unsupported EC-3 in M2TS found'),
           undefined,
-          this.logger,
+          logger,
         );
         return result;
 
@@ -918,7 +918,7 @@ function parsePMT(
             observer,
             new Error('Unsupported HEVC in M2TS found'),
             undefined,
-            this.logger,
+            logger,
           );
           return result;
         }
