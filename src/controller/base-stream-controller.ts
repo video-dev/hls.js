@@ -1941,7 +1941,10 @@ export default class BaseStreamController
   protected recoverWorkerError(data: ErrorData) {
     if (data.event === 'demuxerWorker') {
       this.fragmentTracker.removeAllFragments();
-      this.resetTransmuxer();
+      if (this.transmuxer) {
+        this.transmuxer.destroy();
+        this.transmuxer = null;
+      }
       this.resetStartWhenNotLoaded(this.levelLastLoaded);
       this.resetLoadingState();
     }
