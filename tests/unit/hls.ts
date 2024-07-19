@@ -1,6 +1,7 @@
 import Hls from '../../src/hls';
 import { hlsDefaultConfig } from '../../src/config';
 import { Events } from '../../src/events';
+import { ErrorTypes, ErrorDetails } from '../../src/errors';
 
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
@@ -86,7 +87,25 @@ describe('Hls', function () {
 
       hls.on(Events.ERROR, function (_event, _data) {});
       (hls as any).attachMedia(null);
-      expect(triggerSpy.calledWith(Events.ERROR)).to.be.true;
+
+      const expectedEvent = {
+        type: ErrorTypes.OTHER_ERROR,
+        details: ErrorDetails.ATTACH_MEDIA_ERROR,
+        fatal: true,
+        error: sinon.match
+          .instanceOf(Error)
+          .and(
+            sinon.match.has(
+              'message',
+              'attachMedia failed: media argument is null',
+            ),
+          ),
+      };
+
+      expect(triggerSpy).to.be.calledWith(
+        Events.ERROR,
+        sinon.match(expectedEvent),
+      );
 
       triggerSpy.restore();
       hls.destroy();
