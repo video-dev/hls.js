@@ -85,6 +85,8 @@ export enum ErrorDetails {
   INTERNAL_EXCEPTION = 'internalException',
   // Identifier for an internal call to abort a loader
   INTERNAL_ABORTED = 'aborted',
+  // Triggered when attachMedia fails
+  ATTACH_MEDIA_ERROR = 'attachMediaError',
   // Uncategorized error
   UNKNOWN = 'unknown',
 }

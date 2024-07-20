@@ -1055,6 +1055,8 @@ export interface ErrorData {
 // @public (undocumented)
 export enum ErrorDetails {
     // (undocumented)
+    ATTACH_MEDIA_ERROR = "attachMediaError",
+    // (undocumented)
     AUDIO_TRACK_LOAD_ERROR = "audioTrackLoadError",
     // (undocumented)
     AUDIO_TRACK_LOAD_TIMEOUT = "audioTrackLoadTimeOut",
