@@ -659,13 +659,13 @@ export default class BaseStreamController
       }
     }
     this.state = State.IDLE;
-    if (!media) {
+    if (!media || !this.media) {
       return;
     }
     if (
       !this.loadedmetadata &&
       frag.type == PlaylistLevelType.MAIN &&
-      media.buffered.length &&
+      this.media.buffered.length &&
       this.fragCurrent?.sn === this.fragPrevious?.sn
     ) {
       this.loadedmetadata = true;
