@@ -631,13 +631,14 @@ export default class BaseStreamController
   }
 
   protected fragBufferedComplete(frag: Fragment, part: Part | null) {
-    const media = this.mediaBuffer ? this.mediaBuffer : this.media;
+    const mediaBuffer = this.mediaBuffer ? this.mediaBuffer : this.media;
+    const media = this.media;
     this.log(
       `Buffered ${frag.type} sn: ${frag.sn}${
         part ? ' part: ' + part.index : ''
       } of ${this.fragInfo(frag)} > buffer:${
-        media
-          ? TimeRanges.toString(BufferHelper.getBuffered(media))
+        mediaBuffer
+          ? TimeRanges.toString(BufferHelper.getBuffered(mediaBuffer))
           : '(detached)'
       })`,
     );
@@ -659,13 +660,13 @@ export default class BaseStreamController
       }
     }
     this.state = State.IDLE;
-    if (!media || !this.media) {
+    if (!media || !mediaBuffer) {
       return;
     }
     if (
       !this.loadedmetadata &&
       frag.type == PlaylistLevelType.MAIN &&
-      this.media.buffered.length &&
+      media.buffered.length &&
       this.fragCurrent?.sn === this.fragPrevious?.sn
     ) {
       this.loadedmetadata = true;
