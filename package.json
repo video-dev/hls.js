@@ -98,7 +98,7 @@
     "eslint-plugin-import": "2.29.1",
     "eslint-plugin-mocha": "10.4.3",
     "eslint-plugin-n": "17.9.0",
-    "eslint-plugin-promise": "6.5.0",
+    "eslint-plugin-promise": "6.6.0",
     "eventemitter3": "5.0.1",
     "http-server": "14.1.1",
     "husky": "9.1.2",
