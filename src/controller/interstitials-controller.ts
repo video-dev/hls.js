@@ -338,7 +338,11 @@ export default class InterstitialsController
         const targetItem = c.schedule.items?.[targetIndex];
         // playingAsset player
 
-        if (playingItem && c.itemsMatch(playingItem, targetItem)) {
+        if (
+          playingItem &&
+          (c.itemsMatch(playingItem, targetItem) ||
+            playingItem.event?.appendInPlace)
+        ) {
           // seek in item
           const assetPlayer = getAssetPlayer(c.playingAsset);
           const media = assetPlayer?.media || c.hls.media;
@@ -354,8 +358,10 @@ export default class InterstitialsController
                     'currentTime',
                   );
             const diff = time - currentTime;
-            media.currentTime += diff;
-            return;
+            if (media.currentTime + diff <= media.duration) {
+              media.currentTime += diff;
+              return;
+            }
           }
         }
         // seek out of item or asset
@@ -481,10 +487,10 @@ export default class InterstitialsController
           const event = item?.event;
           if (event && !event.restrictions.skip) {
             const index = c.schedule.findItemIndex(item);
-            if (!event.appendInPlace) {
-              c.advanceAfterAssetEnded(event, index, Infinity);
+            if (event.appendInPlace) {
+              seekTo(item.playout.end, 'playout');
             } else {
-              // TODO: seek to start of next item
+              c.advanceAfterAssetEnded(event, index, Infinity);
             }
           }
         },
