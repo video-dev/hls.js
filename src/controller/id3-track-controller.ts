@@ -80,6 +80,20 @@ function hexToArrayBuffer(str): ArrayBuffer {
       .split(' '),
   ).buffer;
 }
+
+function calculateEndTime(startTime: number, endTime: number): number {
+  if (endTime > MAX_CUE_ENDTIME) {
+    endTime = MAX_CUE_ENDTIME;
+  }
+
+  const timeDiff = endTime - startTime;
+  if (timeDiff < MIN_CUE_DURATION) {
+    endTime = startTime + MIN_CUE_DURATION;
+  }
+
+  return endTime;
+}
+
 class ID3TrackController implements ComponentAPI {
   private hls: Hls;
   private id3Track: TextTrack | null = null;
@@ -214,16 +228,10 @@ class ID3TrackController implements ComponentAPI {
       const frames = getId3Frames(samples[i].data);
       if (frames) {
         const startTime = samples[i].pts;
-        let endTime: number = startTime + samples[i].duration;
-
-        if (endTime > MAX_CUE_ENDTIME) {
-          endTime = MAX_CUE_ENDTIME;
-        }
-
-        const timeDiff = endTime - startTime;
-        if (timeDiff <= 0) {
-          endTime = startTime + MIN_CUE_DURATION;
-        }
+        const endTime: number = calculateEndTime(
+          startTime,
+          startTime + samples[i].duration,
+        );
 
         for (let j = 0; j < frames.length; j++) {
           const frame = frames[j];
@@ -257,7 +265,7 @@ class ID3TrackController implements ComponentAPI {
           cue.startTime < startTime &&
           cue.endTime === MAX_CUE_ENDTIME
         ) {
-          cue.endTime = startTime;
+          cue.endTime = calculateEndTime(cue.startTime, startTime);
         }
       }
     }
