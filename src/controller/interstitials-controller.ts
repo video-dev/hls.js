@@ -47,8 +47,8 @@ import type { MediaPlaylist, MediaSelection } from '../types/media-playlist';
 
 export interface InterstitialsManager {
   events: InterstitialEvent[];
-  schedule: InterstitialScheduleItem[];
   playerQueue: HlsAssetPlayer[];
+  schedule: InterstitialScheduleItem[];
   bufferingPlayer: HlsAssetPlayer | null;
   bufferingAsset: InterstitialAssetItem | null;
   bufferingItem: InterstitialScheduleItem | null;
@@ -334,16 +334,15 @@ export default class InterstitialsController
         }
         c.log(`seek to ${time} "${timelineType}"`);
         const playingItem = effectivePlayingItem();
-        const targetIndex = c.schedule.findItemIndexAtTime(time, timelineType);
-        const targetItem = c.schedule.items?.[targetIndex];
-        // playingAsset player
-
+        const playingInterstitial = playingItem?.event;
         if (
-          playingItem &&
-          (c.itemsMatch(playingItem, targetItem) ||
-            playingItem.event?.appendInPlace)
+          playingInterstitial &&
+          (playingInterstitial.appendInPlace ||
+            (c.playingAsset &&
+              c.playingAsset.parentIdentifier ===
+                playingInterstitial.identifier))
         ) {
-          // seek in item
+          // seek in asset player or primary media (appendInPlace)
           const assetPlayer = getAssetPlayer(c.playingAsset);
           const media = assetPlayer?.media || c.hls.media;
           if (media) {
@@ -358,14 +357,17 @@ export default class InterstitialsController
                     'currentTime',
                   );
             const diff = time - currentTime;
-            if (media.currentTime + diff <= media.duration) {
-              media.currentTime += diff;
+            const seekToTime = media.currentTime + diff;
+            if (seekToTime <= media.duration) {
+              media.currentTime = seekToTime;
               return;
             }
           }
         }
         // seek out of item or asset
         let assetIndex = 0;
+        const targetIndex = c.schedule.findItemIndexAtTime(time, timelineType);
+        const targetItem = c.schedule.items?.[targetIndex];
         const assetList = targetItem?.event?.assetList;
         if (assetList) {
           const eventTime =
@@ -488,7 +490,8 @@ export default class InterstitialsController
           if (event && !event.restrictions.skip) {
             const index = c.schedule.findItemIndex(item);
             if (event.appendInPlace) {
-              seekTo(item.playout.end, 'playout');
+              const time = item.playout.start + item.event.duration;
+              seekTo(time + 0.001, 'playout');
             } else {
               c.advanceAfterAssetEnded(event, index, Infinity);
             }
