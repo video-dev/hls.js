@@ -320,6 +320,13 @@ export default class InterstitialsController
         }
         return 0;
       };
+      const getMappedDuration = (timelineType: TimelineType): number => {
+        if (c.primaryDetails?.live) {
+          // return end of last event item or playlist
+          return c.primaryDetails.edge;
+        }
+        return c.schedule.durations[timelineType];
+      };
       const seekTo = (time: number, timelineType: TimelineType) => {
         const item = effectivePlayingItem();
         if (item?.event?.restrictions.skip) {
@@ -417,8 +424,7 @@ export default class InterstitialsController
             return timelinePos > 0 ? timelinePos : 0;
           },
           get duration() {
-            // TODO: Return end of playlist when schedule duration is non-finite
-            return c.schedule.durations.primary;
+            return getMappedDuration('primary');
           },
           seekTo: (time) => seekTo(time, 'primary'),
         },
@@ -442,8 +448,7 @@ export default class InterstitialsController
             );
           },
           get duration() {
-            // TODO: Return end of playlist when schedule duration is non-finite
-            return c.schedule.durations.playout;
+            return getMappedDuration('playout');
           },
           seekTo: (time) => seekTo(time, 'playout'),
         },
@@ -467,8 +472,7 @@ export default class InterstitialsController
             );
           },
           get duration() {
-            // TODO: Return end of playlist when schedule duration is non-finite
-            return c.schedule.durations.integrated;
+            return getMappedDuration('integrated');
           },
           seekTo: (time) => seekTo(time, 'integrated'),
         },
