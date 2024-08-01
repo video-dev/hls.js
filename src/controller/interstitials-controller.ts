@@ -302,16 +302,17 @@ export default class InterstitialsController
         if (item) {
           let time = item[timelineType].start;
           const interstitial = item.event;
-          if (
-            interstitial &&
-            (timelineType === 'playout' ||
-              interstitial.timelineOccupancy !== TimelineOccupancy.Point)
-          ) {
-            const assetPlayer = getAssetPlayer(asset);
-            if (assetPlayer?.interstitial === interstitial) {
-              time +=
-                assetPlayer.assetItem.startOffset +
-                assetPlayer[assetPlayerField];
+          if (interstitial) {
+            if (
+              timelineType === 'playout' ||
+              interstitial.timelineOccupancy !== TimelineOccupancy.Point
+            ) {
+              const assetPlayer = getAssetPlayer(asset);
+              if (assetPlayer?.interstitial === interstitial) {
+                time +=
+                  assetPlayer.assetItem.startOffset +
+                  assetPlayer[assetPlayerField];
+              }
             }
           } else {
             time += c[controllerField] - item.start;
@@ -334,21 +335,19 @@ export default class InterstitialsController
         }
         c.log(`seek to ${time} "${timelineType}"`);
         const playingItem = effectivePlayingItem();
+        const targetIndex = c.schedule.findItemIndexAtTime(time, timelineType);
+        const targetItem = c.schedule.items?.[targetIndex];
         const playingInterstitial = playingItem?.event;
-        if (
-          playingInterstitial &&
-          (playingInterstitial.appendInPlace ||
-            (c.playingAsset &&
-              c.playingAsset.parentIdentifier ===
-                playingInterstitial.identifier))
-        ) {
+        const appendInPlace = playingInterstitial?.appendInPlace;
+        const seekInItem = playingItem && c.itemsMatch(playingItem, targetItem);
+        if (playingItem && (appendInPlace || seekInItem)) {
           // seek in asset player or primary media (appendInPlace)
           const assetPlayer = getAssetPlayer(c.playingAsset);
           const media = assetPlayer?.media || c.hls.media;
           if (media) {
             const currentTime =
               timelineType === 'primary'
-                ? c.timelinePos
+                ? media.currentTime
                 : getMappedTime(
                     playingItem,
                     timelineType,
@@ -356,35 +355,74 @@ export default class InterstitialsController
                     'timelinePos',
                     'currentTime',
                   );
+
             const diff = time - currentTime;
             const seekToTime = media.currentTime + diff;
-            if (seekToTime <= media.duration) {
+            if (
+              !assetPlayer ||
+              appendInPlace ||
+              seekToTime <= assetPlayer.duration
+            ) {
               media.currentTime = seekToTime;
               return;
             }
           }
         }
         // seek out of item or asset
-        let assetIndex = 0;
-        const targetIndex = c.schedule.findItemIndexAtTime(time, timelineType);
-        const targetItem = c.schedule.items?.[targetIndex];
-        const assetList = targetItem?.event?.assetList;
-        if (assetList) {
-          const eventTime =
-            time - (targetItem[timelineType] || targetItem).start;
-          for (let i = assetList.length; i--; ) {
-            const asset = assetList[i];
-            if (
-              asset.duration &&
-              asset.startOffset >= eventTime &&
-              asset.startOffset + asset.duration < eventTime
-            ) {
-              assetIndex = i;
-              break;
+        if (targetItem) {
+          let seekToTime = time;
+          if (timelineType !== 'primary') {
+            const primarySegmentStart = targetItem[timelineType].start;
+            const diff = time - primarySegmentStart;
+            seekToTime = targetItem.start + diff;
+          }
+          const targetIsPrimary = !c.isInterstitial(targetItem);
+          if (
+            !c.isInterstitial(playingItem) &&
+            (targetIsPrimary || targetItem.event.appendInPlace)
+          ) {
+            const media = c.hls.media;
+            if (media) {
+              media.currentTime = seekToTime;
             }
+          } else if (playingItem) {
+            // check if an Interstitial between the current item and target item has an X-RESTRICT JUMP restriction
+            const playingIndex = c.schedule.findItemIndex(playingItem);
+            if (targetIndex > playingIndex) {
+              const jumpIndex = c.schedule.findJumpRestrictedIndex(
+                playingIndex + 1,
+                targetIndex,
+              );
+              if (jumpIndex > playingIndex) {
+                c.setSchedulePosition(jumpIndex);
+                return;
+              }
+            }
+
+            let assetIndex = 0;
+            if (targetIsPrimary) {
+              c.timelinePos = seekToTime;
+            } else {
+              const assetList = targetItem?.event?.assetList;
+              if (assetList) {
+                const eventTime =
+                  time - (targetItem[timelineType] || targetItem).start;
+                for (let i = assetList.length; i--; ) {
+                  const asset = assetList[i];
+                  if (
+                    asset.duration &&
+                    asset.startOffset >= eventTime &&
+                    asset.startOffset + asset.duration < eventTime
+                  ) {
+                    assetIndex = i;
+                    break;
+                  }
+                }
+              }
+            }
+            c.setSchedulePosition(targetIndex, assetIndex);
           }
         }
-        this.setSchedulePosition(targetIndex, assetIndex);
       };
       this.manager = {
         get events() {
@@ -671,15 +709,17 @@ export default class InterstitialsController
     ) {
       const scheduleIndex = this.schedule.findItemIndexAtTime(this.timelinePos);
       if (!backwardSeek) {
-        const playingIndex = this.schedule.findItemIndex(playingItem);
         // check if an Interstitial between the current item and target item has an X-RESTRICT JUMP restriction
-        const jumpIndex = this.schedule.findJumpRestrictedIndex(
-          playingIndex,
-          scheduleIndex,
-        );
-        if (jumpIndex > playingIndex) {
-          this.setSchedulePosition(jumpIndex);
-          return;
+        const playingIndex = this.schedule.findItemIndex(playingItem);
+        if (scheduleIndex > playingIndex) {
+          const jumpIndex = this.schedule.findJumpRestrictedIndex(
+            playingIndex + 1,
+            scheduleIndex,
+          );
+          if (jumpIndex > playingIndex) {
+            this.setSchedulePosition(jumpIndex);
+            return;
+          }
         }
       }
       this.setSchedulePosition(scheduleIndex);
@@ -879,6 +919,10 @@ export default class InterstitialsController
       }
     }
     if (this.isInterstitial(scheduledItem)) {
+      this.timelinePos = Math.min(
+        Math.max(this.timelinePos, scheduledItem.start),
+        scheduledItem.end,
+      );
       // Handle Interstitial
       const interstitial = scheduledItem.event;
       // find asset index
@@ -1009,8 +1053,14 @@ export default class InterstitialsController
     this.log(`resuming primary ${scheduledItem.start}-${scheduledItem.end}`);
 
     if (!this.detachedData?.mediaSource) {
-      const timelinePos = this.getPrimaryResumption(scheduledItem, index);
-      this.timelinePos = timelinePos;
+      let timelinePos = this.timelinePos;
+      if (
+        timelinePos < scheduledItem.start ||
+        timelinePos >= scheduledItem.end
+      ) {
+        timelinePos = this.getPrimaryResumption(scheduledItem, index);
+        this.timelinePos = timelinePos;
+      }
       this.attachPrimary(timelinePos, scheduledItem);
     }
 
