@@ -1084,10 +1084,15 @@ export default class StreamController
       const buffered = BufferHelper.getBuffered(media);
       const bufferStart = buffered.length ? buffered.start(0) : 0;
       const delta = bufferStart - startPosition;
+      const skipTolerance = Math.max(
+        this.config.maxBufferHole,
+        this.config.maxFragLookUpTolerance,
+      );
       if (
         delta > 0 &&
-        (delta < this.config.maxBufferHole ||
-          delta < this.config.maxFragLookUpTolerance)
+        (delta < skipTolerance ||
+          (this.loadingParts &&
+            delta < 2 * (this.getLevelDetails()?.partTarget || 0)))
       ) {
         this.log(`adjusting start position by ${delta} to match buffer start`);
         startPosition += delta;
@@ -1095,7 +1100,7 @@ export default class StreamController
       }
       if (currentTime < startPosition) {
         this.log(
-          `seek to target start position ${startPosition} from current time ${currentTime}`,
+          `seek to target start position ${startPosition} from current time ${currentTime} buffer start ${bufferStart}`,
         );
         media.currentTime = startPosition;
       }
