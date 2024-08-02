@@ -1045,11 +1045,13 @@ export default class BaseStreamController
         const firstPart = details.partList[0];
         const safePartStart =
           firstPart.end + (details.fragmentHint?.duration || 0);
-        if (
-          bufferEnd >= safePartStart &&
-          this.lastCurrentTime > firstPart.start - firstPart.fragment.duration
-        ) {
-          return true;
+        if (bufferEnd >= safePartStart) {
+          const playhead = this.hls.hasEnoughToStart
+            ? this.media?.currentTime || this.lastCurrentTime
+            : this.getLoadPosition();
+          if (playhead > firstPart.start - firstPart.fragment.duration) {
+            return true;
+          }
         }
       }
     }

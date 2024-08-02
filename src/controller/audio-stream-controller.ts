@@ -144,7 +144,10 @@ class AudioStreamController
       // If we are waiting, tick immediately to unblock audio fragment transmuxing
       if (this.state === State.WAITING_INIT_PTS) {
         const waitingData = this.waitingData;
-        if (!waitingData || waitingData.frag.cc !== cc) {
+        if (
+          (!waitingData && !this.loadingParts) ||
+          (waitingData && waitingData.frag.cc !== cc)
+        ) {
           this.nextLoadPosition = this.findSyncFrag(frag).start;
         }
         this.tick();
@@ -157,6 +160,8 @@ class AudioStreamController
         this.nextLoadPosition = this.findSyncFrag(frag).start;
         inFlightFrag.abortRequests();
         this.resetLoadingState();
+      } else if (this.state === State.IDLE) {
+        this.tick();
       }
     }
   }
