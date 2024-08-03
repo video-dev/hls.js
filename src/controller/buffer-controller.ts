@@ -1026,9 +1026,9 @@ export default class BufferController implements ComponentAPI {
   };
 
   private get mediaSrc(): string | undefined {
-    const media =
-      (this.media?.firstChild as HTMLSourceElement | null) || this.media;
-    return media?.src;
+    if (!this.media) return undefined;
+    const media = getSourceChild(this.media) || this.media;
+    return media.src;
   }
 
   private _onSBUpdateStart(type: SourceBufferName) {
@@ -1194,4 +1194,8 @@ function addSource(media: HTMLMediaElement, url: string) {
   source.type = 'video/mp4';
   source.src = url;
   media.appendChild(source);
+}
+
+function getSourceChild(media: HTMLMediaElement): HTMLSourceElement | null {
+  return media.querySelector('source');
 }
