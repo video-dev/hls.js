@@ -1197,5 +1197,5 @@ function addSource(media: HTMLMediaElement, url: string) {
 }
 
 function getSourceChild(media: HTMLMediaElement): HTMLSourceElement | null {
-  return media.querySelector('source');
+  return media.querySelector?.('source');
 }
