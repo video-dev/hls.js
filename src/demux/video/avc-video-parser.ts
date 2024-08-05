@@ -177,16 +177,18 @@ class AvcVideoParser extends BaseVideoParser {
         case 9:
           push = true;
           track.audFound = true;
-          if (VideoSample) {
+          if (VideoSample?.frame) {
             this.pushAccessUnit(VideoSample, track);
+            VideoSample = null;
           }
-
-          VideoSample = this.VideoSample = this.createVideoSample(
-            false,
-            pes.pts,
-            pes.dts,
-            debug ? 'AUD ' : '',
-          );
+          if (!VideoSample) {
+            VideoSample = this.VideoSample = this.createVideoSample(
+              false,
+              pes.pts,
+              pes.dts,
+              debug ? 'AUD ' : '',
+            );
+          }
           break;
         // Filler Data
         case 12:
