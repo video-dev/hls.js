@@ -1026,8 +1026,7 @@ export default class BufferController implements ComponentAPI {
   };
 
   private get mediaSrc(): string | undefined {
-    const media =
-      (this.media?.firstChild as HTMLSourceElement | null) || this.media;
+    const media = this.media?.querySelector?.('source') || this.media;
     return media?.src;
   }
 
