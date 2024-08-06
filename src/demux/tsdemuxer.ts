@@ -63,7 +63,6 @@ class TSDemuxer implements Demuxer {
   private pmtParsed: boolean = false;
   private audioCodec?: string;
   private videoCodec?: string;
-  private _duration: number = 0;
   private _pmtId: number = -1;
 
   private _videoTrack?: DemuxedVideoTrack;
@@ -182,6 +181,7 @@ class TSDemuxer implements Demuxer {
     this._pmtId = -1;
 
     this._videoTrack = TSDemuxer.createTrack('video') as DemuxedVideoTrack;
+    this._videoTrack.duration = trackDuration;
     this._audioTrack = TSDemuxer.createTrack(
       'audio',
       trackDuration,
@@ -195,7 +195,6 @@ class TSDemuxer implements Demuxer {
     this.remainderData = null;
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
-    this._duration = trackDuration;
   }
 
   public resetTimeStamp() {}
@@ -305,13 +304,7 @@ class TSDemuxer implements Demuxer {
                   }
                 }
                 if (this.videoParser !== null) {
-                  this.videoParser.parsePES(
-                    videoTrack,
-                    textTrack,
-                    pes,
-                    false,
-                    this._duration,
-                  );
+                  this.videoParser.parsePES(videoTrack, textTrack, pes, false);
                 }
               }
 
@@ -502,7 +495,6 @@ class TSDemuxer implements Demuxer {
           textTrack as DemuxedUserdataTrack,
           pes,
           true,
-          this._duration,
         );
         videoTrack.pesData = null;
       }
@@ -590,7 +582,21 @@ class TSDemuxer implements Demuxer {
   }
 
   public destroy() {
-    this._duration = 0;
+    if (this.observer) {
+      this.observer.removeAllListeners();
+    }
+    // @ts-ignore
+    this.config = this.logger = this.observer = null;
+    this.aacOverFlow =
+      this.videoParser =
+      this.remainderData =
+      this.sampleAes =
+        null;
+    this._videoTrack =
+      this._audioTrack =
+      this._id3Track =
+      this._txtTrack =
+        undefined;
   }
 
   private parseAACPES(track: DemuxedAudioTrack, pes: PES) {

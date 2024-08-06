@@ -17,7 +17,6 @@ class HevcVideoParser extends BaseVideoParser {
     textTrack: DemuxedUserdataTrack,
     pes: PES,
     endOfSegment: boolean,
-    duration: number,
   ) {
     const units = this.parseNALu(track, pes.data, endOfSegment);
     let VideoSample = this.VideoSample;
@@ -150,7 +149,6 @@ class HevcVideoParser extends BaseVideoParser {
               track.width = config.width;
               track.height = config.height;
               track.pixelRatio = config.pixelRatio;
-              track.duration = duration;
               track.codec = config.codecString;
               track.sps = [];
               for (const prop in config.params) {

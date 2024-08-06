@@ -194,7 +194,16 @@ class MP4Demuxer implements Demuxer {
     );
   }
 
-  destroy() {}
+  destroy() {
+    // @ts-ignore
+    this.config = null;
+    this.remainderData = null;
+    this.videoTrack =
+      this.audioTrack =
+      this.id3Track =
+      this.txtTrack =
+        undefined;
+  }
 }
 
 export default MP4Demuxer;
