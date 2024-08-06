@@ -18,7 +18,6 @@ class AvcVideoParser extends BaseVideoParser {
     duration: number,
   ) {
     const units = this.parseNALu(track, pes.data, endOfSegment);
-    const debug = false;
     let VideoSample = this.VideoSample;
     let push: boolean;
     let spsfound = false;
@@ -33,7 +32,6 @@ class AvcVideoParser extends BaseVideoParser {
         false,
         pes.pts,
         pes.dts,
-        '',
       );
     }
 
@@ -76,14 +74,8 @@ class AvcVideoParser extends BaseVideoParser {
               true,
               pes.pts,
               pes.dts,
-              '',
             );
           }
-
-          if (debug) {
-            VideoSample.debug += 'NDR ';
-          }
-
           VideoSample.frame = true;
           VideoSample.key = iskey;
 
@@ -103,12 +95,7 @@ class AvcVideoParser extends BaseVideoParser {
               true,
               pes.pts,
               pes.dts,
-              '',
             );
-          }
-
-          if (debug) {
-            VideoSample.debug += 'IDR ';
           }
 
           VideoSample.key = true;
@@ -117,9 +104,6 @@ class AvcVideoParser extends BaseVideoParser {
         // SEI
         case 6: {
           push = true;
-          if (debug && VideoSample) {
-            VideoSample.debug += 'SEI ';
-          }
           parseSEIMessageFromNALu(
             unit.data,
             1,
@@ -132,9 +116,6 @@ class AvcVideoParser extends BaseVideoParser {
         case 7: {
           push = true;
           spsfound = true;
-          if (debug && VideoSample) {
-            VideoSample.debug += 'SPS ';
-          }
           const sps = unit.data;
           const config = this.readSPS(sps);
           if (
@@ -166,9 +147,6 @@ class AvcVideoParser extends BaseVideoParser {
         // PPS
         case 8:
           push = true;
-          if (debug && VideoSample) {
-            VideoSample.debug += 'PPS ';
-          }
 
           track.pps = [unit.data];
 
@@ -186,7 +164,6 @@ class AvcVideoParser extends BaseVideoParser {
               false,
               pes.pts,
               pes.dts,
-              debug ? 'AUD ' : '',
             );
           }
           break;
@@ -196,9 +173,6 @@ class AvcVideoParser extends BaseVideoParser {
           break;
         default:
           push = false;
-          if (VideoSample) {
-            VideoSample.debug += 'unknown NAL ' + unit.type + ' ';
-          }
 
           break;
       }

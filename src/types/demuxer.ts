@@ -125,7 +125,6 @@ export interface VideoSample {
   key: boolean;
   frame: boolean;
   units: VideoSampleUnit[];
-  debug: string;
   length: number;
 }
 
