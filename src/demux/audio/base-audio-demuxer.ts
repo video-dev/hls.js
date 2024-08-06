@@ -174,7 +174,11 @@ class BaseAudioDemuxer implements Demuxer {
     };
   }
 
-  destroy() {}
+  destroy() {
+    this.cachedData = null;
+    // @ts-ignore
+    this._audioTrack = this._id3Track = undefined;
+  }
 }
 
 /**
