@@ -20,7 +20,6 @@ class HevcVideoParser extends BaseVideoParser {
     duration: number,
   ) {
     const units = this.parseNALu(track, pes.data, endOfSegment);
-    const debug = false;
     let VideoSample = this.VideoSample;
     let push: boolean;
     let spsfound = false;
@@ -35,7 +34,6 @@ class HevcVideoParser extends BaseVideoParser {
         false,
         pes.pts,
         pes.dts,
-        '',
       );
     }
 
@@ -57,11 +55,7 @@ class HevcVideoParser extends BaseVideoParser {
               false,
               pes.pts,
               pes.dts,
-              '',
             );
-          }
-          if (debug) {
-            VideoSample.debug += 'NDR ';
           }
           VideoSample.frame = true;
           push = true;
@@ -86,12 +80,7 @@ class HevcVideoParser extends BaseVideoParser {
               true,
               pes.pts,
               pes.dts,
-              '',
             );
-          }
-
-          if (debug) {
-            VideoSample.debug += 'RAP ';
           }
 
           VideoSample.key = true;
@@ -113,13 +102,9 @@ class HevcVideoParser extends BaseVideoParser {
               true,
               pes.pts,
               pes.dts,
-              '',
             );
           }
 
-          if (debug) {
-            VideoSample.debug += 'IDR ';
-          }
           VideoSample.key = true;
           VideoSample.frame = true;
           break;
@@ -127,9 +112,6 @@ class HevcVideoParser extends BaseVideoParser {
         // SEI
         case 39:
           push = true;
-          if (debug && VideoSample) {
-            VideoSample.debug += 'SEI ';
-          }
           parseSEIMessageFromNALu(
             unit.data,
             2, // NALu header size
@@ -141,9 +123,6 @@ class HevcVideoParser extends BaseVideoParser {
         // VPS
         case 32:
           push = true;
-          if (debug && VideoSample) {
-            VideoSample.debug += 'VPS ';
-          }
           if (!track.vps) {
             const config = this.readVPS(unit.data);
             track.params = { ...config };
@@ -156,9 +135,6 @@ class HevcVideoParser extends BaseVideoParser {
         case 33:
           push = true;
           spsfound = true;
-          if (debug && VideoSample) {
-            VideoSample.debug += 'SPS ';
-          }
           if (typeof track.params === 'object') {
             if (
               track.vps !== undefined &&
@@ -190,7 +166,6 @@ class HevcVideoParser extends BaseVideoParser {
               true,
               pes.pts,
               pes.dts,
-              '',
             );
           }
           VideoSample.key = true;
@@ -199,9 +174,6 @@ class HevcVideoParser extends BaseVideoParser {
         // PPS
         case 34:
           push = true;
-          if (debug && VideoSample) {
-            VideoSample.debug += 'PPS ';
-          }
           if (typeof track.params === 'object') {
             if (!track.pps) {
               track.pps = [];
@@ -235,9 +207,6 @@ class HevcVideoParser extends BaseVideoParser {
 
         default:
           push = false;
-          if (VideoSample) {
-            VideoSample.debug += 'unknown or irrelevant NAL ' + unit.type + ' ';
-          }
           break;
       }
       if (VideoSample && push) {
