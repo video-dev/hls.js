@@ -70,7 +70,6 @@ abstract class BaseVideoParser {
     textTrack: DemuxedUserdataTrack,
     pes: PES,
     last: boolean,
-    duration: number,
   );
 
   protected abstract getNALuType(data: Uint8Array, offset: number): number;

@@ -15,7 +15,6 @@ class AvcVideoParser extends BaseVideoParser {
     textTrack: DemuxedUserdataTrack,
     pes: PES,
     endOfSegment: boolean,
-    duration: number,
   ) {
     const units = this.parseNALu(track, pes.data, endOfSegment);
     let VideoSample = this.VideoSample;
@@ -129,7 +128,6 @@ class AvcVideoParser extends BaseVideoParser {
             track.height = config.height;
             track.pixelRatio = config.pixelRatio;
             track.sps = [sps];
-            track.duration = duration;
             const codecarray = sps.subarray(1, 4);
             let codecstring = 'avc1.';
             for (let i = 0; i < 3; i++) {
