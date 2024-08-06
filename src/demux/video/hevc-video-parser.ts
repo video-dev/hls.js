@@ -220,15 +220,17 @@ class HevcVideoParser extends BaseVideoParser {
         case 35:
           push = true;
           track.audFound = true;
-          if (VideoSample) {
+          if (VideoSample?.frame) {
             this.pushAccessUnit(VideoSample, track);
+            VideoSample = null;
           }
-          VideoSample = this.VideoSample = this.createVideoSample(
-            false,
-            pes.pts,
-            pes.dts,
-            debug ? 'AUD ' : '',
-          );
+          if (!VideoSample) {
+            VideoSample = this.VideoSample = this.createVideoSample(
+              false,
+              pes.pts,
+              pes.dts,
+            );
+          }
           break;
 
         default:
