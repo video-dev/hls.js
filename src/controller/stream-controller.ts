@@ -14,6 +14,7 @@ import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
 import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
 import { ErrorDetails } from '../errors';
+import { pickMostCompleteCodecName } from '../utils/codecs';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { Level } from '../types/level';
@@ -1367,7 +1368,16 @@ export default class StreamController
     // include levelCodec in audio and video tracks
     const { audio, video, audiovideo } = tracks;
     if (audio) {
-      let audioCodec = currentLevel.audioCodec;
+      let audioCodec = pickMostCompleteCodecName(
+        audio.codec,
+        currentLevel.audioCodec,
+      );
+      // Add level and profile to make up for passthrough-remuxer not being able to parse full codec
+      // (logger warning "Unhandled audio codec...")
+      if (audioCodec === 'mp4a') {
+        audioCodec = 'mp4a.40.5';
+      }
+      // Handle `audioCodecSwitch`
       const ua = navigator.userAgent.toLowerCase();
       if (this.audioCodecSwitch) {
         if (audioCodec) {
@@ -1420,12 +1430,29 @@ export default class StreamController
     if (video) {
       video.levelCodec = currentLevel.videoCodec;
       video.id = 'main';
+      const parsedVideoCodec = video.codec;
+      if (parsedVideoCodec?.length === 4) {
+        // Make up for passthrough-remuxer not being able to parse full codec
+        // (logger warning "Unhandled video codec...")
+        switch (parsedVideoCodec) {
+          case 'hvc1':
+          case 'hev1':
+            video.codec = 'hvc1.1.6.L120.90';
+            break;
+          case 'av01':
+            video.codec = 'av01.0.04M.08';
+            break;
+          case 'avc1':
+            video.codec = 'avc1.42e01e';
+            break;
+        }
+      }
       this.log(
         `Init video buffer, container:${
           video.container
         }, codecs[level/parsed]=[${currentLevel.videoCodec || ''}/${
-          video.codec
-        }]`,
+          parsedVideoCodec
+        }${video.codec !== parsedVideoCodec ? ' parsed-corrected=' + video.codec : ''}}]`,
       );
       delete tracks.audiovideo;
     }
