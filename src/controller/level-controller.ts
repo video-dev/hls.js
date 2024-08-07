@@ -16,6 +16,7 @@ import {
   codecsSetSelectionPreferenceValue,
   convertAVC1ToAVCOTI,
   getCodecCompatibleName,
+  sampleEntryCodesISO,
   videoCodecPreferenceValue,
 } from '../utils/codecs';
 import BasePlaylistController from './base-playlist-controller';
@@ -130,23 +131,36 @@ export default class LevelController extends BasePlaylistController {
 
       // only keep levels with supported audio/video codecs
       const { width, height, unknownCodecs } = levelParsed;
+      let unknownUnsupportedCodecCount = unknownCodecs
+        ? unknownCodecs.length
+        : 0;
+      if (unknownCodecs) {
+        // Treat unknown codec as audio or video codec based on passing `isTypeSupported` check
+        // (allows for playback of any supported codec even if not indexed in utils/codecs)
+        for (let i = unknownUnsupportedCodecCount; i--; ) {
+          const unknownCodec = unknownCodecs[i];
+          if (this.isAudioSupported(unknownCodec)) {
+            levelParsed.audioCodec = audioCodec = audioCodec
+              ? `${audioCodec},${unknownCodec}`
+              : unknownCodec;
+            unknownUnsupportedCodecCount--;
+            sampleEntryCodesISO.audio[audioCodec.substring(0, 4)] = 2;
+          } else if (this.isVideoSupported(unknownCodec)) {
+            levelParsed.videoCodec = videoCodec = videoCodec
+              ? `${videoCodec},${unknownCodec}`
+              : unknownCodec;
+            unknownUnsupportedCodecCount--;
+            sampleEntryCodesISO.video[videoCodec.substring(0, 4)] = 2;
+          }
+        }
+      }
       resolutionFound ||= !!(width && height);
       videoCodecFound ||= !!videoCodec;
       audioCodecFound ||= !!audioCodec;
       if (
-        unknownCodecs?.length ||
-        (audioCodec &&
-          !areCodecsMediaSourceSupported(
-            audioCodec,
-            'audio',
-            preferManagedMediaSource,
-          )) ||
-        (videoCodec &&
-          !areCodecsMediaSourceSupported(
-            videoCodec,
-            'video',
-            preferManagedMediaSource,
-          ))
+        unknownUnsupportedCodecCount ||
+        (audioCodec && !this.isAudioSupported(audioCodec)) ||
+        (videoCodec && !this.isVideoSupported(videoCodec))
       ) {
         return;
       }
@@ -190,6 +204,22 @@ export default class LevelController extends BasePlaylistController {
       resolutionFound,
       videoCodecFound,
       audioCodecFound,
+    );
+  }
+
+  private isAudioSupported(codec: string): boolean {
+    return areCodecsMediaSourceSupported(
+      codec,
+      'audio',
+      this.hls.config.preferManagedMediaSource,
+    );
+  }
+
+  private isVideoSupported(codec: string): boolean {
+    return areCodecsMediaSourceSupported(
+      codec,
+      'video',
+      this.hls.config.preferManagedMediaSource,
     );
   }
 
@@ -240,15 +270,8 @@ export default class LevelController extends BasePlaylistController {
     }
 
     if (data.audioTracks) {
-      const { preferManagedMediaSource } = this.hls.config;
       audioTracks = data.audioTracks.filter(
-        (track) =>
-          !track.audioCodec ||
-          areCodecsMediaSourceSupported(
-            track.audioCodec,
-            'audio',
-            preferManagedMediaSource,
-          ),
+        (track) => !track.audioCodec || this.isAudioSupported(track.audioCodec),
       );
       // Assign ids after filtering as array indices by group-id
       assignTrackIdsByGroup(audioTracks);
