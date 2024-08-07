@@ -631,7 +631,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
         if (trackName.slice(0, 5) === 'audio') {
           trackCodec = getCodecCompatibleName(trackCodec, this.appendSource);
         }
-        this.log(`switching codec ${sbCodec} to ${codec}`);
+        this.log(`switching codec ${sbCodec} to ${trackCodec}`);
         if (trackCodec !== (track.pendingCodec || track.codec)) {
           track.pendingCodec = trackCodec;
         }
@@ -1428,7 +1428,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
   }
 
   private getTrackCodec(track: BaseTrack, trackName: SourceBufferName): string {
-    const codec = track.codec || track.levelCodec;
+    const codec = pickMostCompleteCodecName(track.codec, track.levelCodec);
     if (codec) {
       if (trackName.slice(0, 5) === 'audio') {
         return getCodecCompatibleName(codec, this.appendSource);
