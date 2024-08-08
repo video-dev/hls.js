@@ -1,5 +1,6 @@
 import { findFragmentByPTS } from './fragment-finders';
 import {
+  ABUTTING_THRESHOLD_SECONDS,
   type BaseData,
   InterstitialEvent,
   InterstitialId,
@@ -374,30 +375,36 @@ export class InterstitialsSchedule {
             },
           });
         } else if (eventStart <= primaryDuration) {
-          if (primaryPosition < eventStart && !inSameStartTimeSequence) {
-            // primary segment
-            const timelineStart = primaryPosition;
-            const integratedStart = integratedTime;
+          if (!inSameStartTimeSequence) {
             const segmentDuration = eventStart - primaryPosition;
-            integratedTime += segmentDuration;
-            const playoutStart = playoutDuration;
-            playoutDuration += segmentDuration;
-            const primarySegment = {
-              previousEvent: interstitialEvents[i - 1] || null,
-              nextEvent: interstitial,
-              start: timelineStart,
-              end: timelineStart + segmentDuration,
-              playout: {
-                start: playoutStart,
-                end: playoutDuration,
-              },
-              integrated: {
-                start: integratedStart,
-                end: integratedTime,
-              },
-            };
-
-            schedule.push(primarySegment);
+            // Do not schedule a primary segment if interstitials are abutting by less than ABUTTING_THRESHOLD_SECONDS
+            if (segmentDuration > ABUTTING_THRESHOLD_SECONDS) {
+              // primary segment
+              const timelineStart = primaryPosition;
+              const integratedStart = integratedTime;
+              integratedTime += segmentDuration;
+              const playoutStart = playoutDuration;
+              playoutDuration += segmentDuration;
+              const primarySegment = {
+                previousEvent: interstitialEvents[i - 1] || null,
+                nextEvent: interstitial,
+                start: timelineStart,
+                end: timelineStart + segmentDuration,
+                playout: {
+                  start: playoutStart,
+                  end: playoutDuration,
+                },
+                integrated: {
+                  start: integratedStart,
+                  end: integratedTime,
+                },
+              };
+              schedule.push(primarySegment);
+            } else if (segmentDuration > 0 && previousEvent) {
+              // Add previous event `resumeTime` (based on duration or resumeOffset) so that it ends aligned with this one
+              previousEvent.cumulativeDuration += segmentDuration;
+              schedule[schedule.length - 1].end = eventStart;
+            }
           }
           // midroll / postroll
           const start = eventStart;
@@ -528,7 +535,6 @@ export class InterstitialsSchedule {
             0,
           ) || undefined;
       }
-
       // Check if primary fragments align with resumption offset and disable appendInPlace if they do not
       if (interstitial.appendInPlace) {
         const alignedSegmentStart = this.primaryCanResumeInPlaceAt(
@@ -542,10 +548,10 @@ export class InterstitialsSchedule {
       if (!interstitial.appendInPlace) {
         // abutting Interstitials must use the same MediaSource strategy, this applies to all whether or not they are back to back:
         for (let j = i - 1; i--; ) {
-          if (
-            interstitialEvents[j].resumeTime >=
-            interstitialEvents[j + 1].startTime
-          ) {
+          const timeBetween =
+            interstitialEvents[j + 1].startTime -
+            interstitialEvents[j].resumeTime;
+          if (timeBetween < ABUTTING_THRESHOLD_SECONDS) {
             interstitialEvents[j].appendInPlace = false;
           }
         }
