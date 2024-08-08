@@ -119,7 +119,7 @@
     "npm-run-all2": "6.2.2",
     "prettier": "3.3.3",
     "promise-polyfill": "8.3.0",
-    "rollup": "4.19.1",
+    "rollup": "4.19.2",
     "rollup-plugin-istanbul": "5.0.0",
     "sauce-connect-launcher": "1.3.2",
     "selenium-webdriver": "4.23.0",
