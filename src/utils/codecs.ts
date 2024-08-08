@@ -2,7 +2,7 @@ import { getMediaSource } from './mediasource-helper';
 
 // from http://mp4ra.org/codecs.html
 // values indicate codec selection preference (lower is higher priority)
-const sampleEntryCodesISO = {
+export const sampleEntryCodesISO = {
   audio: {
     a3ds: 1,
     'ac-3': 0.95,
@@ -198,10 +198,27 @@ export function pickMostCompleteCodecName(
 ): string | undefined {
   // Parsing of mp4a codecs strings in mp4-tools from media is incomplete as of d8c6c7a
   // so use level codec is parsed codec is unavailable or incomplete
-  if (parsedCodec && parsedCodec !== 'mp4a') {
+  if (
+    parsedCodec &&
+    (parsedCodec.length > 4 ||
+      ['ac-3', 'ec-3', 'alac', 'fLaC', 'Opus'].indexOf(parsedCodec) !== -1)
+  ) {
     return parsedCodec;
   }
-  return levelCodec ? levelCodec.split(',')[0] : levelCodec;
+  if (levelCodec) {
+    const levelCodecs = levelCodec.split(',');
+    if (levelCodecs.length > 1) {
+      if (parsedCodec) {
+        for (let i = levelCodecs.length; i--; ) {
+          if (levelCodecs[i].substring(0, 4) === parsedCodec.substring(0, 4)) {
+            return levelCodecs[i];
+          }
+        }
+      }
+      return levelCodecs[0];
+    }
+  }
+  return levelCodec || parsedCodec;
 }
 
 export function convertAVC1ToAVCOTI(codec: string) {
