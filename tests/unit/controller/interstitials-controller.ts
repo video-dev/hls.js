@@ -389,7 +389,7 @@ fileSequence4.ts
           event: {
             identifier: '4',
           },
-          start: 31,
+          start: 34,
           end: 38,
           playout: {
             start: 37,
@@ -584,7 +584,7 @@ fileSequence3.ts
           event: {
             identifier: '3',
           },
-          start: 10,
+          start: 15,
           end: 12,
           playout: {
             start: 30,
@@ -629,7 +629,7 @@ fileSequence3.ts
           event: {
             identifier: '5',
           },
-          start: 20,
+          start: 19,
           end: 24,
           playout: {
             start: 48,
@@ -939,7 +939,7 @@ fileSequence4.ts
             event: {
               identifier: '1',
             },
-            start: 4,
+            start: 34,
             end: 64,
             playout: {
               start: 34,
@@ -954,7 +954,7 @@ fileSequence4.ts
             event: {
               identifier: '2',
             },
-            start: 4,
+            start: 64,
             end: 94,
             playout: {
               start: 64,
@@ -969,7 +969,7 @@ fileSequence4.ts
             event: {
               identifier: '3',
             },
-            start: 4,
+            start: 94,
             end: 124,
             playout: {
               start: 94,
