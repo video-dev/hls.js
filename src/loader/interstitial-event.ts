@@ -50,6 +50,8 @@ export function generateAssetIdentifier(
   return `${interstitial.identifier}-${assetListIndex + 1}-${hash(uri)}`;
 }
 
+export const ABUTTING_THRESHOLD_SECONDS = 0.005;
+
 export class InterstitialEvent {
   private base: BaseData;
   private _duration: number | null = null;
@@ -171,13 +173,14 @@ export class InterstitialEvent {
     if (
       !this.cue.once &&
       !this.cue.pre && // preroll starts at startPosition before startPosition is known (live)
-      isNaN(this.resumeOffset)
+      isNaN(this.playoutLimit) &&
+      (isNaN(this.resumeOffset) ||
+        (this.resumeOffset &&
+          this.duration &&
+          Math.abs(this.resumeOffset - this.duration) <
+            ABUTTING_THRESHOLD_SECONDS))
     ) {
-      const startTime = this.startTime;
-      return (
-        startTime >= 0 && // cannot append at negative timeline offsets
-        (startTime === 0 || (this.snapOptions.in && this.snapOptions.out))
-      );
+      return true;
     }
     return false;
   }
