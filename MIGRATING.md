@@ -92,5 +92,5 @@ Event order and content have changed in some places. See **Breaking Changes** be
 ### TypeScript
 
 v0.x types are not compatible with v1.x. Type definitions are now exported with the build and npm package in
-`dist/hls.js.d.ts`. Please use these type definitions if you are having trouble with
+`dist/hls.d.ts` and `dist/hls.d.mts`. Please use these type definitions if you are having trouble with
 [DefinitelyTyped](https://github.com/DefinitelyTyped/DefinitelyTyped) `@types/hls.js` and v1.x.

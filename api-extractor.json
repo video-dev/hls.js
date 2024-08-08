@@ -16,7 +16,7 @@
   },
   "dtsRollup": {
     "enabled": true,
-    "untrimmedFilePath": "<projectFolder>/dist/hls.js.d.ts"
+    "untrimmedFilePath": "<projectFolder>/dist/hls.d.ts"
   },
   "tsdocMetadata": {
     "enabled": false
