@@ -174,6 +174,7 @@ export class InterstitialEvent {
       !this.cue.once &&
       !this.cue.pre && // preroll starts at startPosition before startPosition is known (live)
       isNaN(this.playoutLimit) &&
+      (this.startTime === 0 || this.snapOptions.out) &&
       (isNaN(this.resumeOffset) ||
         (this.resumeOffset &&
           this.duration &&
