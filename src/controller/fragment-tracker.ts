@@ -523,6 +523,10 @@ export class FragmentTracker implements ComponentAPI {
     this.endListFragments = Object.create(null);
     this.activePartLists = Object.create(null);
     this.hasGaps = false;
+    const partlist = this.hls?.latestLevelDetails?.partList;
+    if (partlist) {
+      partlist.forEach((part) => part.clearElementaryStreamInfo());
+    }
   }
 }
 

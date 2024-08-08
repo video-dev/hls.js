@@ -35,6 +35,7 @@ export type AudioSelectionOption = {
 };
 
 export type SubtitleSelectionOption = {
+  id?: number;
   lang?: string;
   assocLang?: string;
   characteristics?: string;

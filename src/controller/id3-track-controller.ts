@@ -17,6 +17,7 @@ import type {
   LevelPTSUpdatedData,
   LevelUpdatedData,
   MediaAttachedData,
+  MediaDetachingData,
 } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
@@ -137,12 +138,19 @@ class ID3TrackController implements ComponentAPI {
     this.media = data.media;
   }
 
-  private onMediaDetaching(): void {
+  private onMediaDetaching(
+    event: Events.MEDIA_DETACHING,
+    data: MediaDetachingData,
+  ) {
+    this.media = null;
+    const transferringMedia = !!data.transferMedia;
+    if (transferringMedia) {
+      return;
+    }
     if (this.id3Track) {
       clearCurrentCues(this.id3Track);
       this.id3Track = null;
     }
-    this.media = null;
     this.dateRangeCuesAppended = {};
   }
 

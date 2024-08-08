@@ -17,8 +17,15 @@ import type {
   PlaylistLevelType,
   PlaylistLoaderContext,
 } from './loader';
-import type { Track, TrackSet } from './track';
-import type { SourceBufferName } from './buffer';
+import type {
+  AttachMediaSourceData,
+  BaseTrackSet,
+  BufferCreatedTrackSet,
+  MediaOverrides,
+  ParsedTrack,
+  SourceBufferName,
+  SourceBufferTrackSet,
+} from './buffer';
 import type { ChunkMetadata } from './transmuxer';
 import type { LoadStats } from '../loader/load-stats';
 import type { ErrorDetails, ErrorTypes } from '../errors';
@@ -29,9 +36,23 @@ import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelKey } from '../loader/level-key';
 import type { IErrorAction } from '../controller/error-controller';
 import type { SteeringManifest } from '../controller/content-steering-controller';
+import type {
+  AssetListJSON,
+  InterstitialAssetItem,
+  InterstitialEvent,
+  InterstitialEventWithAssetList,
+} from '../loader/interstitial-event';
+import type { HlsAssetPlayer } from '../controller/interstitial-player';
+import type {
+  InterstitialScheduleDurations,
+  InterstitialScheduleItem,
+} from '../controller/interstitials-schedule';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
+  mediaSource?: MediaSource | null;
+  tracks?: SourceBufferTrackSet;
+  overrides?: MediaOverrides;
 }
 
 export interface MediaAttachedData {
@@ -39,17 +60,27 @@ export interface MediaAttachedData {
   mediaSource?: MediaSource;
 }
 
+export interface MediaDetachingData {
+  transferMedia?: AttachMediaSourceData | null;
+}
+
+export interface MediaDetachedData {
+  transferMedia?: AttachMediaSourceData | null;
+}
+
 export interface MediaEndedData {
   stalled: boolean;
 }
 
 export interface BufferCodecsData {
-  video?: Track;
-  audio?: Track;
+  video?: ParsedTrack;
+  audio?: ParsedTrack;
+  audiovideo?: ParsedTrack;
+  tracks?: BaseTrackSet;
 }
 
 export interface BufferCreatedData {
-  tracks: TrackSet;
+  tracks: BufferCreatedTrackSet;
 }
 
 export interface BufferAppendingData {
@@ -294,6 +325,7 @@ export interface ErrorData {
   url?: string;
   parent?: PlaylistLevelType;
   sourceBufferName?: SourceBufferName;
+  interstitial?: InterstitialEvent;
   /**
    * @deprecated Use ErrorData.error
    */
@@ -422,4 +454,80 @@ export interface LiveBackBufferData extends BackBufferData {}
 export interface SteeringManifestLoadedData {
   steeringManifest: SteeringManifest;
   url: string;
+}
+
+export interface AssetListLoadingData {
+  event: InterstitialEventWithAssetList;
+}
+
+export interface AssetListLoadedData {
+  event: InterstitialEventWithAssetList;
+  assetListResponse: AssetListJSON;
+  networkDetails: any;
+}
+
+export interface InterstitialsUpdatedData {
+  events: InterstitialEvent[];
+  schedule: InterstitialScheduleItem[];
+  durations: InterstitialScheduleDurations;
+  removedIds: string[];
+}
+
+export interface InterstitialsBufferedToBoundaryData {
+  events: InterstitialEvent[];
+  schedule: InterstitialScheduleItem[];
+  bufferingIndex: number;
+  playingIndex: number;
+}
+
+export interface InterstitialAssetPlayerCreatedData {
+  asset: InterstitialAssetItem;
+  assetListIndex: number;
+  assetListResponse?: AssetListJSON;
+  event: InterstitialEvent;
+  player: HlsAssetPlayer;
+}
+
+export interface InterstitialStartedData {
+  event: InterstitialEvent;
+  schedule: InterstitialScheduleItem[];
+  scheduleIndex: number;
+}
+
+export interface InterstitialEndedData {
+  event: InterstitialEvent;
+  schedule: InterstitialScheduleItem[];
+  scheduleIndex: number;
+}
+
+export interface InterstitialAssetStartedData {
+  asset: InterstitialAssetItem;
+  assetListIndex: number;
+  event: InterstitialEvent;
+  schedule: InterstitialScheduleItem[];
+  scheduleIndex: number;
+  player: HlsAssetPlayer;
+}
+
+export interface InterstitialAssetEndedData {
+  asset: InterstitialAssetItem;
+  assetListIndex: number;
+  event: InterstitialEvent;
+  schedule: InterstitialScheduleItem[];
+  scheduleIndex: number;
+  player: HlsAssetPlayer;
+}
+
+export type InterstitialAssetErrorData = {
+  asset: InterstitialAssetItem | null;
+  assetListIndex: number;
+  event: InterstitialEvent | null;
+  schedule: InterstitialScheduleItem[] | null;
+  scheduleIndex: number;
+  player: HlsAssetPlayer | null;
+} & ErrorData;
+
+export interface InterstitialsPrimaryResumed {
+  schedule: InterstitialScheduleItem[];
+  scheduleIndex: number;
 }

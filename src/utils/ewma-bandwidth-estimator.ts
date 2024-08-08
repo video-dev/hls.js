@@ -88,6 +88,10 @@ class EwmaBandWidthEstimator {
     }
   }
 
+  get defaultEstimate(): number {
+    return this.defaultEstimate_;
+  }
+
   destroy() {}
 }
 export default EwmaBandWidthEstimator;

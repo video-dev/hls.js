@@ -334,6 +334,7 @@ export default class M3U8Parser {
         createNextFrag = false;
         frag = new Fragment(type, baseurl);
         // setup the next fragment for part loading
+        frag.playlistOffset = totalduration;
         frag.start = totalduration;
         frag.sn = currentSN;
         frag.cc = discontinuityCounter;
@@ -360,6 +361,7 @@ export default class M3U8Parser {
       } else if (result[3]) {
         // url
         if (Number.isFinite(frag.duration)) {
+          frag.playlistOffset = totalduration;
           frag.start = totalduration;
           if (levelkeys) {
             setFragLevelKeys(frag, levelkeys, level);
