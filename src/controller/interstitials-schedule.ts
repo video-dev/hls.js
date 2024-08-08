@@ -350,12 +350,12 @@ export class InterstitialsSchedule {
             : 0;
         const resumptionOffset = interstitial.resumptionOffset;
         const inSameStartTimeSequence = previousEvent?.startTime === eventStart;
-
+        const start = eventStart + interstitial.cumulativeDuration;
+        let end = appendInPlace
+          ? start + interstitialDuration
+          : eventStart + resumptionOffset;
         if (preroll || (!postroll && eventStart <= 0)) {
           // preroll or in-progress midroll
-          const start = eventStart + interstitial.cumulativeDuration;
-          const end =
-            start + (appendInPlace ? interstitialDuration : resumptionOffset);
           const integratedStart = integratedTime;
           integratedTime += timelineDuration;
           interstitial.timelineStart = start;
@@ -407,9 +407,6 @@ export class InterstitialsSchedule {
             }
           }
           // midroll / postroll
-          const start = eventStart;
-          let end =
-            start + (appendInPlace ? interstitialDuration : resumptionOffset);
           if (postroll) {
             end = start;
           }
