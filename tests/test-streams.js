@@ -461,12 +461,35 @@ const streams = {
     {},
     appleFPSv3Gatsby,
     {
-      description: '(Internal) Preroll Decouple with back to back start dates',
+      description:
+        '(Internal) Preroll Decouple with back to back start dates - FPS Content',
       url: 'https://zm5qiypmasc4s6t6e7t7.apple.com:8443/qadrift/_media/_streams/interstitial_ads/ase_timeline_demo/TedLasso101/main_interstitial_discont_trim_backtobackdates.m3u8',
       abr: false,
       skipFunctionalTests: true,
     },
   ),
+
+  appleInterstitialsPrerollDecoupleBackToBackFPSPrimary2: Object.assign(
+    {},
+    appleFPSv3Gatsby,
+    {
+      description:
+        '(Internal) Back to back ad start dates - ASE case - Discont and Interstitial - FPS Content',
+      url: 'https://cali.apple.com/qadrift_ssl/_media/_streams/interstitial_ads/ase_timeline_demo/TedLasso101/main_interstitial_discont_trim_backtobackdates.m3u8',
+      abr: false,
+      skipFunctionalTests: true,
+    },
+  ),
+  appleInterstitialsBackToBack1: {
+    description:
+      '(Internal) Back to back ad start dates - comedian in cars - range, primary - Interstitial only',
+    url: 'https://cali.apple.com/qadrift_ssl/_media/_streams/interstitial_ads/basic_test/primary/coffecars_clip/main_interstitials_timelinetags_rangeprimary_ase_backtobackdates.m3u8',
+  },
+  appleInterstitialsBackToBack2: {
+    description:
+      '(Internal) Back to back ad start dates - Julian Test case - creek - Discont and Interstitial',
+    url: 'http://creek.apple.com/juliant/ase_airplay/mvp2.m3u8',
+  },
   meridian_with_interstitials: {
     description:
       '(Internal) Meridian (clear, AVC, HEVC, HDR10, DoVi) with Interstitials',
