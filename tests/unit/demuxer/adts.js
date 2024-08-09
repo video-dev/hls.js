@@ -31,166 +31,95 @@ describe('getAudioConfig', function () {
     );
   });
 
-  it('should return audio config for firefox if the specified sampling frequency > 24kHz', function () {
+  it('should return audio config for 48kHz', function () {
     const observer = new EventEmitter();
-    sinon.stub(navigator, 'userAgent').get(() => 'firefox');
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
-    data[2] = 0x00; // sampling_frequency_index = 0
+    data[2] = 0x4c; // sampling_frequency_index = 3
 
-    expect(getAudioConfig(observer, data, 0, 'mp4a.40.29')).to.deep.equal({
-      config: [16, 0],
-      samplerate: 96000,
+    const result = getAudioConfig(observer, data, 0, 'mp4a.40.29');
+    expect(result, JSON.stringify(result)).to.deep.equal({
+      config: [17, 128],
+      samplerate: 48000,
       channelCount: 0,
       codec: 'mp4a.40.2',
-      parsedCodec: 'mp4a.40.1',
+      parsedCodec: 'mp4a.40.2',
       manifestCodec: 'mp4a.40.29',
     });
   });
 
-  it('should return audio config with a different extension sampling index for Firefox if sampling freq is low', function () {
+  it('should return audio config for 11025Hz', function () {
     const observer = new EventEmitter();
-    sinon.stub(navigator, 'userAgent').get(() => 'Firefox');
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x28; // sampling_frequency_index = 10
 
-    expect(getAudioConfig(observer, data, 0, 'mp4a.40.29')).to.deep.equal({
-      config: [45, 3, 136, 0],
+    const result = getAudioConfig(observer, data, 0, 'mp4a.40.29');
+    expect(result, JSON.stringify(result)).to.deep.equal({
+      config: [13, 0],
       samplerate: 11025,
       channelCount: 0,
-      codec: 'mp4a.40.5',
+      codec: 'mp4a.40.1',
       parsedCodec: 'mp4a.40.1',
       manifestCodec: 'mp4a.40.29',
     });
   });
 
-  it('should return audio config for Android', function () {
+  it('should return audio config if there is no audio codec', function () {
     const observer = new EventEmitter();
-    sinon.stub(navigator, 'userAgent').get(() => 'Android');
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
-    data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
-    data[2] = 0x28; // sampling_frequency_index = 10
+    data[1] = 0xf1; // ID = 0 (MPEG-4), layer = 00
+    data[2] = 0x5c; // sampling_frequency_index = 7
+    data[3] = 0x80; // stereo channels
 
-    expect(getAudioConfig(observer, data, 0, 'mp4a.40.29')).to.deep.equal({
-      config: [21, 0],
-      samplerate: 11025,
-      channelCount: 0,
+    const result = getAudioConfig(observer, data, 0, undefined);
+    expect(result, JSON.stringify(result)).to.deep.equal({
+      config: [19, 144],
+      samplerate: 22050,
+      channelCount: 2,
       codec: 'mp4a.40.2',
-      parsedCodec: 'mp4a.40.1',
-      manifestCodec: 'mp4a.40.29',
-    });
-  });
-
-  it('should return audio config for Chrome', function () {
-    const observer = new EventEmitter();
-    sinon.stub(navigator, 'userAgent').get(() => 'Chrome');
-    const data = new Uint8Array(new ArrayBuffer(4));
-    data[0] = 0xff;
-    data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
-    data[2] = 0x28; // sampling_frequency_index = 10
-
-    expect(getAudioConfig(observer, data, 0, 'mp4a.40.29')).to.deep.equal({
-      config: [45, 3, 136, 0],
-      samplerate: 11025,
-      channelCount: 0,
-      codec: 'mp4a.40.5',
-      parsedCodec: 'mp4a.40.1',
-      manifestCodec: 'mp4a.40.29',
-    });
-  });
-
-  it('should return audio config for Chrome if there is no audio codec', function () {
-    const observer = new EventEmitter();
-    sinon.stub(navigator, 'userAgent').get(() => 'Chrome');
-    const data = new Uint8Array(new ArrayBuffer(4));
-    data[0] = 0xff;
-    data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
-    data[2] = 0x28; // sampling_frequency_index = 10
-
-    expect(getAudioConfig(observer, data, 0)).to.deep.equal({
-      config: [45, 3, 136, 0],
-      samplerate: 11025,
-      channelCount: 0,
-      codec: 'mp4a.40.5',
-      parsedCodec: 'mp4a.40.1',
+      parsedCodec: 'mp4a.40.2',
       manifestCodec: undefined,
     });
   });
 
-  it('should return audio config for Chrome if there is no audio codec and freq is high enough', function () {
+  it('should return audio config for mono audio', function () {
     const observer = new EventEmitter();
-    sinon.stub(navigator, 'userAgent').get(() => 'Chrome');
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
-    data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
-    data[2] = 0x08; // sampling_frequency_index = 2
+    data[1] = 0xf1; // ID = 0 (MPEG-4), layer = 00
+    data[2] = 0x50; // sampling_frequency_index = 4
+    data[3] = 0x40; // mono channels
 
-    expect(getAudioConfig(observer, data, 0)).to.deep.equal({
-      config: [41, 1, 8, 0],
-      samplerate: 64000,
-      channelCount: 0,
-      codec: 'mp4a.40.5',
-      parsedCodec: 'mp4a.40.1',
-      manifestCodec: undefined,
-    });
-  });
-
-  it('should return audio config for Chrome if audio codec is "mp4a.40.5"', function () {
-    const observer = new EventEmitter();
-    sinon.stub(navigator, 'userAgent').get(() => 'Chrome');
-    const data = new Uint8Array(new ArrayBuffer(4));
-    data[0] = 0xff;
-    data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
-    data[2] = 0x28; // sampling_frequency_index = 10
-
-    expect(getAudioConfig(observer, data, 0, 'mp4a.40.5')).to.deep.equal({
-      config: [45, 3, 136, 0],
-      samplerate: 11025,
-      channelCount: 0,
-      codec: 'mp4a.40.5',
-      parsedCodec: 'mp4a.40.1',
-      manifestCodec: 'mp4a.40.5',
-    });
-  });
-
-  it('should return audio config for Chrome if audio codec is "mp4a.40.2"', function () {
-    const observer = new EventEmitter();
-    sinon.stub(navigator, 'userAgent').get(() => 'Chrome');
-    const data = new Uint8Array(new ArrayBuffer(4));
-    data[0] = 0xff;
-    data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
-    data[2] = 0x28; // sampling_frequency_index = 10
-    data[3] = 0x40; // channel = 1
-
-    expect(getAudioConfig(observer, data, 0, 'mp4a.40.2')).to.deep.equal({
-      config: [21, 8],
-      samplerate: 11025,
+    const result = getAudioConfig(observer, data, 0, undefined);
+    expect(result, JSON.stringify(result)).to.deep.equal({
+      config: [18, 8],
+      samplerate: 44100,
       channelCount: 1,
       codec: 'mp4a.40.2',
-      parsedCodec: 'mp4a.40.1',
-      manifestCodec: 'mp4a.40.2',
+      parsedCodec: 'mp4a.40.2',
+      manifestCodec: undefined,
     });
   });
 
-  it('should return audio config for Vivaldi', function () {
+  it('should return audio config if there is no audio codec and freq is high enough', function () {
     const observer = new EventEmitter();
-    sinon.stub(navigator, 'userAgent').get(() => 'Vivaldi');
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
     data[2] = 0x08; // sampling_frequency_index = 2
 
-    expect(getAudioConfig(observer, data, 0, 'mp4a.40.2')).to.deep.equal({
-      config: [17, 0],
+    const result = getAudioConfig(observer, data, 0, undefined);
+    expect(result, JSON.stringify(result)).to.deep.equal({
+      config: [9, 0],
       samplerate: 64000,
       channelCount: 0,
-      codec: 'mp4a.40.2',
+      codec: 'mp4a.40.1',
       parsedCodec: 'mp4a.40.1',
-      manifestCodec: 'mp4a.40.2',
+      manifestCodec: undefined,
     });
   });
 });
@@ -355,10 +284,10 @@ describe('initTrackConfig', function () {
     initTrackConfig(track, observer, data, 0, 'mp4a.40.29');
 
     expect(track).to.deep.equal({
-      config: [45, 3, 136, 0],
+      config: [13, 0],
       samplerate: 11025,
       channelCount: 0,
-      codec: 'mp4a.40.5',
+      codec: 'mp4a.40.1',
       parsedCodec: 'mp4a.40.1',
       manifestCodec: 'mp4a.40.29',
     });

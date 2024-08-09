@@ -7,6 +7,7 @@ import * as MpegAudio from './mpegaudio';
 import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
 import type { HlsEventEmitter } from '../../events';
 import type { HlsConfig } from '../../config';
+import type { DemuxedAudioTrack } from '../../types/demuxer';
 import type { ILogger } from '../../utils/logger';
 
 class AACDemuxer extends BaseAudioDemuxer {
@@ -71,7 +72,7 @@ class AACDemuxer extends BaseAudioDemuxer {
     return ADTS.canParse(data, offset);
   }
 
-  appendFrame(track, data, offset) {
+  appendFrame(track: DemuxedAudioTrack, data: Uint8Array, offset: number) {
     ADTS.initTrackConfig(
       track,
       this.observer,
