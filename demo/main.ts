@@ -463,6 +463,22 @@ function trimEventHistory() {
   trimArray(events.videoBufferStarvation, x);
 }
 
+function routeRelativeTestContentToImgDry(url: string) {
+  const localTestRegEx = /^\/adaptive/;
+  if (localTestRegEx.test(url) && location.host === 'imgdry.apple.com') {
+    try {
+      const resolved = new URL(
+        url.replace(localTestRegEx, '.'),
+        'https://imgdry.apple.com/users/rwalch/streams/hls/'
+      );
+      return resolved.href;
+    } catch (error2) {
+      /* no-op */
+    }
+  }
+  return url;
+}
+
 function loadSelectedStream(options?) {
   $('#statusOut,#errorOut').empty();
 
@@ -476,7 +492,11 @@ function loadSelectedStream(options?) {
 
   // Check if the URL is valid to avoid XSS issue.
   if (url) {
+    // Internal demo workaround for local/hosted content
+    url = routeRelativeTestContentToImgDry(url);
+
     try {
+      // Test relative URLS
       new URL(url, location.href);
     } catch (error) {
       $('#streamURL').val('');
