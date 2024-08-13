@@ -2102,6 +2102,8 @@ export class HlsAssetPlayer {
     get timelineOffset(): number;
     set timelineOffset(value: number);
     // (undocumented)
+    toString(): string;
+    // (undocumented)
     tracks: Partial<BufferCodecsData> | null;
     // (undocumented)
     transferMedia(): AttachMediaSourceData | null;
@@ -2147,6 +2149,7 @@ export type HlsConfig = {
     contentSteeringController?: typeof ContentSteeringController;
     interstitialsController?: typeof InterstitialsController;
     enableInterstitialPlayback: boolean;
+    interstitialAppendInPlace: boolean;
     interstitialLiveLookAhead: number;
     assetPlayerId?: string;
     useMediaCapabilities: boolean;
@@ -2555,6 +2558,8 @@ export class InterstitialEvent {
     // (undocumented)
     get appendInPlace(): boolean;
     set appendInPlace(value: boolean);
+    // (undocumented)
+    appendInPlaceStarted?: boolean;
     // (undocumented)
     assetList: InterstitialAssetItem[];
     // (undocumented)

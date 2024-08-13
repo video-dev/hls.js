@@ -300,6 +300,8 @@ export type HlsConfig = {
   interstitialsController?: typeof InterstitialsController;
   // Option to disable internal playback handling of Interstitials (set to false to disable Interstitials playback without disabling parsing and schedule events)
   enableInterstitialPlayback: boolean;
+  // Option to disable appending Interstitals inline on same timeline and MediaSource as Primary media
+  interstitialAppendInPlace: boolean;
   // How many seconds past the end of a live playlist to preload Interstitial assets
   interstitialLiveLookAhead: number;
   // An optional `Hls` instance ID prefixed to debug logs
@@ -427,6 +429,7 @@ export const hlsDefaultConfig: HlsConfig = {
   enableEmsgKLVMetadata: false,
   enableID3MetadataCues: true,
   enableInterstitialPlayback: __USE_INTERSTITALS__,
+  interstitialAppendInPlace: true,
   interstitialLiveLookAhead: 10,
   useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
 

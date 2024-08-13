@@ -1,13 +1,16 @@
 import { findFragmentByPTS } from './fragment-finders';
 import {
-  ABUTTING_THRESHOLD_SECONDS,
   type BaseData,
+  type InterstitialId,
+  ALIGNED_END_THRESHOLD_SECONDS,
   InterstitialEvent,
-  InterstitialId,
   TimelineOccupancy,
 } from '../loader/interstitial-event';
 import type { DateRange } from '../loader/date-range';
 import type { MediaSelection } from '../types/media-playlist';
+import { logger } from '../utils/logger';
+
+const ABUTTING_THRESHOLD_SECONDS = 0.033;
 
 export type InterstitialScheduleEventItem = {
   event: InterstitialEvent;
@@ -533,7 +536,7 @@ export class InterstitialsSchedule {
           ) || undefined;
       }
       // Check if primary fragments align with resumption offset and disable appendInPlace if they do not
-      if (interstitial.appendInPlace) {
+      if (interstitial.appendInPlace && !interstitial.appendInPlaceStarted) {
         const alignedSegmentStart = this.primaryCanResumeInPlaceAt(
           interstitial,
           mediaSelection,
@@ -565,29 +568,56 @@ export class InterstitialsSchedule {
     interstitial: InterstitialEvent,
     mediaSelection: MediaSelection,
   ): boolean {
+    const resumeTime = interstitial.resumeTime;
     const resumesInPlaceAt =
       interstitial.startTime + interstitial.resumptionOffset;
-    if (Math.abs(interstitial.resumeTime - resumesInPlaceAt) > 0.1) {
+    if (
+      Math.abs(resumeTime - resumesInPlaceAt) > ALIGNED_END_THRESHOLD_SECONDS
+    ) {
+      logger.log(
+        `Interstitial resumption ${resumeTime} not aligned with estimated timeline end ${resumesInPlaceAt}`,
+      );
       return false;
     }
-    const time = interstitial.resumeTime;
-    return (
-      !mediaSelection ||
-      !Object.keys(mediaSelection).some((playlistType) => {
-        const details = mediaSelection[playlistType].details;
-        if (time > details.edge) {
-          return false;
-        }
-        const startFragment = findFragmentByPTS(null, details.fragments, time);
-        return (
-          !startFragment ||
-          !(
-            Math.abs(startFragment.start - time) < 0.2 ||
-            Math.abs(startFragment.end - time) < 0.2
-          )
+    if (!mediaSelection) {
+      logger.log(
+        `Interstitial resumption ${resumeTime} can not be aligned with media (none selected)`,
+      );
+      return false;
+    }
+    return !Object.keys(mediaSelection).some((playlistType) => {
+      const details = mediaSelection[playlistType].details;
+      const playlistEnd = details.edge;
+      if (resumeTime > playlistEnd) {
+        logger.log(
+          `Interstitial resumption ${resumeTime} past ${playlistType} playlist end ${playlistEnd}`,
         );
-      })
-    );
+        return true;
+      }
+      const startFragment = findFragmentByPTS(
+        null,
+        details.fragments,
+        resumeTime,
+      );
+      if (!startFragment) {
+        logger.log(
+          `Interstitial resumption ${resumeTime} does not overlap with any fragments in ${playlistType} playlist`,
+        );
+        return true;
+      }
+      const alignedWithSegment =
+        Math.abs(startFragment.start - resumeTime) <
+          ALIGNED_END_THRESHOLD_SECONDS ||
+        Math.abs(startFragment.end - resumeTime) <
+          ALIGNED_END_THRESHOLD_SECONDS;
+      if (!alignedWithSegment) {
+        logger.log(
+          `Interstitial resumption ${resumeTime} does not overlap with fragment in ${playlistType} playlist (${startFragment.start}-${startFragment.end})`,
+        );
+        return true;
+      }
+      return false;
+    });
   }
 
   private updateAssetDurations(interstitial: InterstitialEvent) {
@@ -616,4 +646,8 @@ export class InterstitialsSchedule {
     interstitial.reset();
     delete this.eventMap[interstitial.identifier];
   }
+}
+
+export function segmentToString(segment: InterstitialScheduleItem): string {
+  return `[${segment.event ? '"' + segment.event.identifier + '"' : 'primary'}: ${segment.start.toFixed(2)}-${segment.end.toFixed(2)}]`;
 }

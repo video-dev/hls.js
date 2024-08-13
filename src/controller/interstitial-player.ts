@@ -1,6 +1,7 @@
 import type Hls from '../hls';
 import type { HlsConfig } from '../config';
 import {
+  eventAssetToString,
   getInterstitialUrl,
   type InterstitialAssetId,
   type InterstitialAssetItem,
@@ -196,5 +197,9 @@ export class HlsAssetPlayer {
     context?: Context,
   ) {
     this.hls.off(event, listener);
+  }
+
+  toString(): string {
+    return `HlsAssetPlayer: ${eventAssetToString(this.assetItem)} ${this.hls.sessionId} ${this.interstitial.appendInPlace ? 'append-in-place' : ''}`;
   }
 }
