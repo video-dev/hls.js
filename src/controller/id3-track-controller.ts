@@ -337,10 +337,15 @@ class ID3TrackController implements ComponentAPI {
       );
       for (let i = idsToRemove.length; i--; ) {
         const id = idsToRemove[i];
-        Object.keys(dateRangeCuesAppended[id].cues).forEach((key) => {
-          id3Track.removeCue(dateRangeCuesAppended[id].cues[key]);
-        });
+        const cues = dateRangeCuesAppended[id].cues;
         delete dateRangeCuesAppended[id];
+        Object.keys(cues).forEach((key) => {
+          try {
+            id3Track.removeCue(cues[key]);
+          } catch (e) {
+            /* no-op */
+          }
+        });
       }
     }
     // Exit if the playlist does not have Date Ranges or does not have Program Date Time
