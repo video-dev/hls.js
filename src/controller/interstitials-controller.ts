@@ -5,6 +5,7 @@ import {
   type InterstitialScheduleEventItem,
   type InterstitialScheduleItem,
   type InterstitialSchedulePrimaryItem,
+  segmentToString,
 } from './interstitials-schedule';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
@@ -16,6 +17,8 @@ import {
   type InterstitialEvent,
   type InterstitialEventWithAssetList,
   TimelineOccupancy,
+  eventAssetToString,
+  ALIGNED_END_THRESHOLD_SECONDS,
 } from '../loader/interstitial-event';
 import { AssetListLoader } from '../loader/interstitial-asset-list';
 import { LevelDetails } from '../loader/level-details';
@@ -620,7 +623,7 @@ export default class InterstitialsController
       }
       const attachMediaSourceData = player.transferMedia();
       this.log(
-        `transfer MediaSource from Interstitial Asset Player "${player.assetId}" ${JSON.stringify(attachMediaSourceData)}`,
+        `transfer MediaSource from ${player} ${JSON.stringify(attachMediaSourceData)}`,
       );
       this.bufferingAsset = null;
       this.detachedData = attachMediaSourceData;
@@ -633,24 +636,38 @@ export default class InterstitialsController
   ) {
     let attachMediaSourceData: MediaAttachingData | null = null;
     const primaryPlayer = this.hls;
+    const isAssetPlayer = player !== primaryPlayer;
     const appendInPlace =
-      player !== primaryPlayer &&
-      (player as HlsAssetPlayer).interstitial.appendInPlace;
+      isAssetPlayer && (player as HlsAssetPlayer).interstitial.appendInPlace;
     const detachedMediaSource = this.detachedData?.mediaSource;
-    this.log(`transferMediaTo ${(player as HlsAssetPlayer).assetId || 'main'}`);
+
+    let logFromSource: string;
     if (primaryPlayer.media && appendInPlace) {
       attachMediaSourceData = primaryPlayer.transferMedia();
       this.detachedData = attachMediaSourceData;
+      logFromSource = `Primary`;
     } else if (detachedMediaSource) {
       const bufferingPlayer = this.getBufferingPlayer();
       if (bufferingPlayer) {
         attachMediaSourceData = bufferingPlayer.transferMedia();
       }
+      logFromSource = `${bufferingPlayer}`;
+    } else {
+      logFromSource = `<unknown>`;
     }
+    this.log(
+      `transferring to ${isAssetPlayer ? player + (appendInPlace ? ' append-in-place' : '') : 'Primary'}
+MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
+    );
+
     if (!attachMediaSourceData) {
       if (detachedMediaSource) {
         attachMediaSourceData = this.detachedData;
+        this.log(
+          `using detachedData: MediaSource ${JSON.stringify(attachMediaSourceData)}`,
+        );
       } else if (!this.detachedData) {
+        this.warn(`missing MediaSource (detachedData)!`);
         this.hls.detachMedia();
         this.detachedData = { media };
       }
@@ -661,13 +678,9 @@ export default class InterstitialsController
       attachMediaSourceData.mediaSource?.readyState !== 'closed';
     const dataToAttach =
       transferring && attachMediaSourceData ? attachMediaSourceData : media;
-
-    const isAssetPlayer = player !== primaryPlayer;
     this.log(
       `${transferring ? 'transfering MediaSource' : 'attaching media'} to ${
-        isAssetPlayer
-          ? 'Interstitial Asset ' + (player as HlsAssetPlayer).assetId
-          : 'Primary'
+        isAssetPlayer ? player : 'Primary'
       }`,
     );
     if (dataToAttach === attachMediaSourceData) {
@@ -887,7 +900,7 @@ export default class InterstitialsController
         this.playingAsset = null;
         const assetListIndex = interstitial.assetList.indexOf(playingAsset);
         this.log(
-          `INTERSTITIAL_ASSET_ENDED ${assetListIndex + 1}/${interstitial.assetList.length}`,
+          `INTERSTITIAL_ASSET_ENDED ${assetListIndex + 1}/${interstitial.assetList.length} ${eventAssetToString(playingAsset)}`,
         );
         this.hls.trigger(Events.INTERSTITIAL_ASSET_ENDED, {
           asset: playingAsset,
@@ -905,17 +918,16 @@ export default class InterstitialsController
       }
       if (!this.eventItemsMatch(currentItem, scheduledItem)) {
         this.playingItem = null;
-        this.log(`INTERSTITIAL_ENDED ${interstitial}`);
-        interstitial.hasPlayed = true;
+        this.log(
+          `INTERSTITIAL_ENDED ${interstitial} ${segmentToString(currentItem)}`,
+        );
         this.hls.trigger(Events.INTERSTITIAL_ENDED, {
           event: interstitial,
           schedule: scheduleItems.slice(0),
           scheduleIndex: index,
         });
         // Exiting an Interstitial
-        interstitial.assetList.forEach((asset) => {
-          this.clearAssetPlayer(asset.identifier, scheduledItem);
-        });
+        this.clearInterstitial(interstitial, scheduledItem);
       }
     }
     if (this.isInterstitial(scheduledItem)) {
@@ -940,7 +952,9 @@ export default class InterstitialsController
       }
       if (!this.eventItemsMatch(scheduledItem, currentItem || waitingItem)) {
         this.waitingItem = scheduledItem;
-        this.log(`INTERSTITIAL_STARTED ${interstitial}`);
+        this.log(
+          `INTERSTITIAL_STARTED ${segmentToString(scheduledItem)} ${interstitial.appendInPlace ? 'append in place' : ''}`,
+        );
         this.hls.trigger(Events.INTERSTITIAL_STARTED, {
           event: interstitial,
           schedule: scheduleItems.slice(0),
@@ -959,12 +973,15 @@ export default class InterstitialsController
         interstitial.assetListLoader = undefined;
       }
       if (!media) {
-        this.log(`Waiting for attachMedia to start Interstitial`);
+        this.log(
+          `Waiting for attachMedia to start Interstitial ${interstitial}`,
+        );
         return;
       }
       // Update schedule and asset list position now that it can start
       this.waitingItem = null;
       this.playingItem = scheduledItem;
+      interstitial.hasPlayed = true;
       // Start Interstitial Playback
       const assetItem = interstitial.assetList[assetListIndex];
       if (!assetItem) {
@@ -1050,7 +1067,7 @@ export default class InterstitialsController
 
     this.bufferedToItem(scheduledItem);
 
-    this.log(`resuming primary ${scheduledItem.start}-${scheduledItem.end}`);
+    this.log(`resuming ${segmentToString(scheduledItem)}`);
 
     if (!this.detachedData?.mediaSource) {
       let timelinePos = this.timelinePos;
@@ -1068,7 +1085,7 @@ export default class InterstitialsController
     if (!scheduleItems) {
       return;
     }
-    this.log(`primary resumed`);
+    this.log(`resumed ${segmentToString(scheduledItem)}`);
     this.hls.trigger(Events.INTERSTITIALS_PRIMARY_RESUMED, {
       schedule: scheduleItems.slice(0),
       scheduleIndex: index,
@@ -1291,24 +1308,18 @@ export default class InterstitialsController
       (interstitial) => interstitial.identifier,
     );
     if (interstitialEvents.length || removedIds.length) {
+      if (this.hls.config.interstitialAppendInPlace === false) {
+        interstitialEvents.forEach((event) => (event.appendInPlace = false));
+      }
       this.log(
         `Interstitial events (${
           interstitialEvents.length
         }): ${interstitialEvents}
-Schedule: ${scheduleItems.map(
-          (seg) =>
-            `${
-              this.isInterstitial(seg)
-                ? 'I' +
-                  (seg.event.cue.pre ? '<pre>' : '') +
-                  '[' +
-                  seg.event.identifier +
-                  ']'
-                : 'P[' + seg.start + '-' + seg.end + ']'
-            }`,
-        )}
-Removed events ${removedIds.length ? removedIds : '(none)'}`,
+Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       );
+    }
+    if (removedIds.length) {
+      this.log(`Removed events ${removedIds}`);
     }
     if (
       this.isInterstitial(playingItem) &&
@@ -1322,13 +1333,16 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
     this.playerQueue.forEach((player) => {
       if (player.interstitial.appendInPlace) {
         const timelineStart = player.assetItem.timelineStart;
-        if (player.timelineOffset !== timelineStart) {
+        const diff = player.timelineOffset - timelineStart;
+        if (diff) {
           try {
             player.timelineOffset = timelineStart;
           } catch (e) {
-            this.warn(
-              `${e} ("${player.assetId}" ${player.timelineOffset}->${timelineStart})`,
-            );
+            if (Math.abs(diff) > ALIGNED_END_THRESHOLD_SECONDS) {
+              this.warn(
+                `${e} ("${player.assetId}" ${player.timelineOffset}->${timelineStart})`,
+              );
+            }
           }
         }
       }
@@ -1347,9 +1361,7 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
       } else if (!this.updateItem(bufferingItem)) {
         // Interstitial removed from schedule (Live -> VOD or other scenario where Start Date is outside the range of VOD Playlist)
         this.bufferingItem = null;
-        bufferingItem.event.assetList.forEach((asset) => {
-          this.clearAssetPlayer(asset.identifier);
-        });
+        this.clearInterstitial(bufferingItem.event);
       }
     }
     // Clear waitingItem if it has been removed from the schedule
@@ -1367,6 +1379,10 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
       durations,
       removedIds,
     });
+
+    // Check is buffered to new Interstitial event boundary
+    // (Live update publishes Interstitial with new segment)
+    this.checkBuffer();
   };
 
   private updateItem<T extends InterstitialScheduleItem>(
@@ -1506,8 +1522,8 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
           ? bufferingLast.end - this.timelinePos
           : 0;
       this.log(
-        `setBufferingItem ${isInterstitial ? item.event.identifier : 'primary'}` +
-          (bufferingLast ? ` (${timeRemaining} remaining)` : ''),
+        `buffered to boundary ${segmentToString(item)}` +
+          (bufferingLast ? ` (${timeRemaining.toFixed(2)} remaining)` : ''),
       );
       this.bufferingItem = item;
       this.bufferedPos = item.start;
@@ -1544,7 +1560,6 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
       // Ensure asset list is loaded
       this.bufferedToEvent(item, assetListIndex);
     } else if (bufferingLast !== null) {
-      this.log(`buffered to segment (primary ${item?.start}-${item?.end})`);
       // If primary player is detached, it is also stopped, restart loading at primary position
       this.bufferingAsset = null;
       const detachedData = this.detachedData;
@@ -1578,15 +1593,6 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
     const playOnce = interstitial.cue.once;
     if (neverLoaded || !playOnce) {
       // Buffered to Interstitial boundary
-      this.log(
-        `buffered to interstitial: "${interstitial.identifier}" (${
-          interstitial.cue.pre
-            ? 'PRE-ROLL'
-            : interstitial.cue.post
-              ? 'POST-ROLL'
-              : interstitial.timelineStart
-        })`,
-      );
       const player = this.preloadAssets(interstitial, assetListIndex);
       if (player?.interstitial.appendInPlace) {
         // If we have a player and asset list info, start buffering
@@ -1608,7 +1614,7 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
     const playOnce = interstitial.cue.once;
     if (neverLoaded) {
       this.log(
-        `Load interstitial ${interstitial} (asset index ${assetListIndex})`,
+        `Load interstitial asset ${assetListIndex + 1}/${assetListLength} ${interstitial}`,
       );
       const timelineStart = interstitial.timelineStart;
       if (interstitial.appendInPlace) {
@@ -1725,7 +1731,7 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
     assetItem: InterstitialAssetItem,
     assetListIndex: number,
   ): HlsAssetPlayer {
-    this.log(`createAssetPlayer ${interstitial.identifier} ${assetListIndex}`);
+    this.log(`create HLSAssetPlayer for ${eventAssetToString(assetItem)}`);
     const primary = this.hls;
     const userConfig = primary.userConfig;
     let videoPreference = userConfig.videoPreference;
@@ -1768,8 +1774,11 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
         contentId: hash(assetItem.uri),
       });
     }
-    if (interstitial.appendInPlace && assetItem.timelineStart) {
-      playerConfig.timelineOffset = assetItem.timelineStart;
+    if (interstitial.appendInPlace) {
+      interstitial.appendInPlaceStarted = true;
+      if (assetItem.timelineStart) {
+        playerConfig.timelineOffset = assetItem.timelineStart;
+      }
     }
     const player = new HlsAssetPlayer(
       this.HlsPlayerClass,
@@ -1806,7 +1815,7 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
       const currentAssetDuration = assetItem.duration;
       if (currentAssetDuration === null || duration > currentAssetDuration) {
         this.log(
-          `Interstitial asset ${assetId} duration change ${currentAssetDuration} > ${duration} (${assetItem.uri}`,
+          `Interstitial asset "${assetId}" duration change ${currentAssetDuration} > ${duration}`,
         );
         assetItem.duration = duration;
       }
@@ -1840,7 +1849,7 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
     player.on(Events.BUFFER_CODECS, onBufferCodecs);
     const bufferedToEnd = (name: Events.BUFFERED_TO_END) => {
       const inQueuPlayer = this.getAssetPlayer(assetId);
-      this.log(`buffered to end of "${assetId}" player: ${inQueuPlayer}`);
+      this.log(`buffered to end of asset ${inQueuPlayer}`);
       if (!inQueuPlayer) {
         return;
       }
@@ -1922,6 +1931,16 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
     return player;
   }
 
+  private clearInterstitial(
+    interstitial: InterstitialEvent,
+    toSegment?: InterstitialScheduleItem | null,
+  ) {
+    interstitial.assetList.forEach((asset) => {
+      this.clearAssetPlayer(asset.identifier, toSegment);
+    });
+    interstitial.appendInPlaceStarted = false;
+  }
+
   private clearAssetPlayer(
     assetId: InterstitialAssetId,
     toSegment?: InterstitialScheduleItem | null,
@@ -1929,9 +1948,11 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
     if (toSegment === null) {
       return;
     }
-    this.log(`clearAssetPlayer "${assetId}" toSegment: ${toSegment}`);
     const playerIndex = this.getAssetPlayerQueueIndex(assetId);
     if (playerIndex !== -1) {
+      this.log(
+        `clearAssetPlayer "${assetId}" toSegment: ${toSegment ? segmentToString(toSegment) : toSegment}`,
+      );
       const player = this.playerQueue[playerIndex];
       this.transferMediaFromPlayer(player, toSegment);
       this.playerQueue.splice(playerIndex, 1);
@@ -1969,7 +1990,7 @@ Removed events ${removedIds.length ? removedIds : '(none)'}`,
         delete playingAsset.error;
       }
       this.log(
-        `INTERSTITIAL_ASSET_STARTED ${assetListIndex + 1}/${assetListLength}`,
+        `INTERSTITIAL_ASSET_STARTED ${assetListIndex + 1}/${assetListLength} ${player}`,
       );
       // player.resumeBuffering();
       this.hls.trigger(Events.INTERSTITIAL_ASSET_STARTED, {

@@ -3,6 +3,8 @@ import type { Loader, LoaderContext } from '../types/loader';
 import type { Fragment } from './fragment';
 import { hash } from '../utils/hash';
 
+export const ALIGNED_END_THRESHOLD_SECONDS = 0.02; // 0.1 // 0.2
+
 export type PlaybackRestrictions = {
   skip: boolean;
   jump: boolean;
@@ -50,13 +52,12 @@ export function generateAssetIdentifier(
   return `${interstitial.identifier}-${assetListIndex + 1}-${hash(uri)}`;
 }
 
-export const ABUTTING_THRESHOLD_SECONDS = 0.005;
-
 export class InterstitialEvent {
   private base: BaseData;
   private _duration: number | null = null;
   private _timelineStart: number | null = null;
   private appendInPlaceDisabled?: boolean;
+  public appendInPlaceStarted?: boolean;
   public dateRange: DateRange;
   public hasPlayed: boolean = false;
   public cumulativeDuration: number = 0;
@@ -133,7 +134,7 @@ export class InterstitialEvent {
     if (this.snapOptions.out) {
       const frag = this.dateRange.tagAnchor;
       if (frag) {
-        return getSnapToFragmentTime(startTime, frag, false);
+        return getSnapToFragmentTime(startTime, frag);
       }
     }
     return startTime;
@@ -155,12 +156,7 @@ export class InterstitialEvent {
     if (this.snapOptions.in) {
       const frag = this.resumeAnchor;
       if (frag) {
-        const resumeTimeSnapped = getSnapToFragmentTime(
-          resumeTime,
-          frag,
-          this.appendInPlace,
-        );
-        return resumeTimeSnapped;
+        return getSnapToFragmentTime(resumeTime, frag);
       }
     }
     return resumeTime;
@@ -173,13 +169,12 @@ export class InterstitialEvent {
     if (
       !this.cue.once &&
       !this.cue.pre && // preroll starts at startPosition before startPosition is known (live)
-      isNaN(this.playoutLimit) &&
       (this.startTime === 0 || this.snapOptions.out) &&
-      (isNaN(this.resumeOffset) ||
+      ((isNaN(this.playoutLimit) && isNaN(this.resumeOffset)) ||
         (this.resumeOffset &&
           this.duration &&
           Math.abs(this.resumeOffset - this.duration) <
-            ABUTTING_THRESHOLD_SECONDS))
+            ALIGNED_END_THRESHOLD_SECONDS))
     ) {
       return true;
     }
@@ -187,6 +182,9 @@ export class InterstitialEvent {
   }
 
   set appendInPlace(value: boolean) {
+    if (this.appendInPlaceStarted) {
+      return;
+    }
     this.appendInPlaceDisabled = !value;
   }
 
@@ -254,26 +252,13 @@ export class InterstitialEvent {
   }
 
   toString(): string {
-    return JSON.stringify(
-      {
-        startTime: this.startTime,
-        timelineStart: this.timelineStart,
-        attr: this.dateRange.attr,
-      },
-      (key, value) => (/^(?:SCTE35|X-ASSET)/.test(key) ? '...' : value),
-      2,
-    );
+    return eventToString(this);
   }
 }
 
-function getSnapToFragmentTime(
-  time: number,
-  frag: Fragment,
-  snapInPlace: boolean,
-) {
+function getSnapToFragmentTime(time: number, frag: Fragment) {
   return time - frag.start < frag.duration / 2 &&
-    // FIXME: Only snap to end if it aligns better with audio. When appending in place ideally the resumption fragments would be adjusted to start later to avoid overlap.
-    !(snapInPlace && time < frag.end)
+    !(Math.abs(time - frag.end) < ALIGNED_END_THRESHOLD_SECONDS)
     ? frag.start
     : frag.end;
 }
@@ -288,4 +273,14 @@ export function getInterstitialUrl(
     url.searchParams.set('_HLS_primary_id', sessionId);
   }
   return url;
+}
+
+function eventToString(interstitial: InterstitialEvent): string {
+  return `["${interstitial.identifier}" ${interstitial.cue.pre ? '<pre>' : interstitial.cue.post ? '<post>' : ''}${interstitial.timelineStart.toFixed(2)}-${interstitial.resumeTime.toFixed(2)}]`;
+}
+
+export function eventAssetToString(asset: InterstitialAssetItem): string {
+  const start = asset.timelineStart;
+  const duration = asset.duration || 0;
+  return `["${asset.identifier}" ${start.toFixed(2)}-${(start + duration).toFixed(2)}]`;
 }

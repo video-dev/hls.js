@@ -24,7 +24,7 @@ export default class BufferOperationQueue {
   public append(
     operation: BufferOperation,
     type: SourceBufferName,
-    pending?: boolean,
+    pending?: boolean | undefined,
   ) {
     if (this.queues === null || this.tracks === null) {
       return;
@@ -127,8 +127,6 @@ export default class BufferOperationQueue {
     return this.queues?.[type][0] || null;
   }
 
-  /* // Uncomment to log buffer operation queue
-
   public toString(): string {
     const { queues, tracks } = this;
     if (queues === null || tracks === null) {
@@ -158,6 +156,4 @@ ${this.list('audiovideo')}}`;
   private listOps(type: SourceBufferName): string {
     return this.queues?.[type].map((op) => op.label).join(', ') || '';
   }
-
-  */
 }

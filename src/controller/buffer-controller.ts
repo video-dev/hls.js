@@ -76,7 +76,7 @@ export default class BufferController extends Logger implements ComponentAPI {
   // cache the self generated object url to detect hijack of video tag
   private _objectUrl: string | null = null;
   // A queue of buffer operations which require the SourceBuffer to not be updating upon execution
-  private operationQueue!: BufferOperationQueue;
+  private operationQueue: BufferOperationQueue | null = null;
 
   // The total number track codecs expected before any sourceBuffers are created (2: audio and video or 1: audiovideo | audio | video)
   private bufferCodecEventsTotal: number = 0;
@@ -138,9 +138,12 @@ export default class BufferController extends Logger implements ComponentAPI {
     this.details = null;
     this.lastMpegAudioChunk = this.blockedAudioAppend = null;
     this.transferData = this.overrides = undefined;
-    this.operationQueue.destroy();
+    if (this.operationQueue) {
+      this.operationQueue.destroy();
+      this.operationQueue = null;
+    }
     // @ts-ignore
-    this.hls = this.fragmentTracker = this.operationQueue = null;
+    this.hls = this.fragmentTracker = null;
     // @ts-ignore
     this._onMediaSourceOpen = this._onMediaSourceClose = null;
     // @ts-ignore
@@ -411,7 +414,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
               EmptyTuple
             >;
             this.sourceBuffers[sbIndex] = sbTuple as any;
-            if (sb.updating) {
+            if (sb.updating && this.operationQueue) {
               this.operationQueue.prependBlocker(type);
             }
             this.trackSourceBuffer(type, track);
@@ -682,7 +685,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
             track.container = container;
           }
         }
-        this.operationQueue.shiftAndExecuteNext(type);
+        this.shiftAndExecuteNext(type);
       },
       onStart: () => {},
       onComplete: () => {},
@@ -690,11 +693,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
         this.warn(`Failed to change ${type} SourceBuffer type`, error);
       },
     };
-    this.operationQueue.append(
-      operation,
-      type,
-      this.isPending(this.tracks[type]),
-    );
+    this.append(operation, type, this.isPending(this.tracks[type]));
   }
 
   private blockAudio(partOrFrag: MediaFragment | Part) {
@@ -718,7 +717,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
             ?.gap === true
         ) {
           this.blockedAudioAppend = null;
-          this.operationQueue.shiftAndExecuteNext('audio');
+          this.shiftAndExecuteNext('audio');
         }
       },
       onStart: () => {},
@@ -728,14 +727,14 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
       },
     };
     this.blockedAudioAppend = { op, frag: partOrFrag };
-    this.operationQueue.append(op, 'audio', true);
+    this.append(op, 'audio', true);
   }
 
   private unblockAudio() {
-    const blockedAudioAppend = this.blockedAudioAppend;
-    if (blockedAudioAppend) {
+    const { blockedAudioAppend, operationQueue } = this;
+    if (blockedAudioAppend && operationQueue) {
       this.blockedAudioAppend = null;
-      this.operationQueue.unblockAudio(blockedAudioAppend.op);
+      operationQueue.unblockAudio(blockedAudioAppend.op);
     }
   }
 
@@ -783,7 +782,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
         const pStart = partOrFrag.start;
         const pTime = pStart + partOrFrag.duration * 0.05;
         const vbuffered = videoSb.buffered;
-        const vappending = this.operationQueue.current('video');
+        const vappending = this.currentOp('video');
         if (!vbuffered.length && !vappending) {
           // wait for video before appending audio
           this.blockAudio(partOrFrag);
@@ -917,11 +916,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
         this.hls.trigger(Events.ERROR, event);
       },
     };
-    this.operationQueue.append(
-      operation,
-      type,
-      this.isPending(this.tracks[type]),
-    );
+    this.append(operation, type, this.isPending(this.tracks[type]));
   }
 
   private getFlushOp(
@@ -955,20 +950,13 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
     event: Events.BUFFER_FLUSHING,
     data: BufferFlushingData,
   ) {
-    const { operationQueue } = this;
     const { type, startOffset, endOffset } = data;
     if (type) {
-      operationQueue.append(
-        this.getFlushOp(type, startOffset, endOffset),
-        type,
-      );
+      this.append(this.getFlushOp(type, startOffset, endOffset), type);
     } else {
       this.sourceBuffers.forEach(([type]) => {
         if (type) {
-          operationQueue.append(
-            this.getFlushOp(type, startOffset, endOffset),
-            type,
-          );
+          this.append(this.getFlushOp(type, startOffset, endOffset), type);
         }
       });
     }
@@ -1377,9 +1365,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
       });
       this.log(`SourceBuffers created. Running queue: ${this.operationQueue}`);
       this.sourceBuffers.forEach(([type]) => {
-        if (type) {
-          this.operationQueue.executeNext(type);
-        }
+        this.executeNext(type);
       });
     } else {
       const error = new Error(
@@ -1409,7 +1395,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
         const mimeType = `${track.container};codecs=${codec}`;
         track.codec = codec;
         this.log(
-          `creating sourceBuffer(${mimeType})${this.operationQueue.current(type) ? ' Queued' : ''} ${JSON.stringify(track)}`,
+          `creating sourceBuffer(${mimeType})${this.currentOp(type) ? ' Queued' : ''} ${JSON.stringify(track)}`,
         );
         try {
           const sb = mediaSource.addSourceBuffer(
@@ -1536,8 +1522,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
   }
 
   private onSBUpdateStart(type: SourceBufferName) {
-    const { operationQueue } = this;
-    const operation = operationQueue.current(type);
+    const operation = this.currentOp(type);
     if (!operation) {
       return;
     }
@@ -1549,13 +1534,12 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
       this.resetBuffer(type);
       return;
     }
-    const { operationQueue } = this;
-    const operation = operationQueue.current(type);
+    const operation = this.currentOp(type);
     if (!operation) {
       return;
     }
     operation.onComplete();
-    operationQueue.shiftAndExecuteNext(type);
+    this.shiftAndExecuteNext(type);
   }
 
   private onSBUpdateError(type: SourceBufferName, event: Event) {
@@ -1573,7 +1557,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
       fatal: false,
     });
     // updateend is always fired after error, so we'll allow that to shift the current operation off of the queue
-    const operation = this.operationQueue.current(type);
+    const operation = this.currentOp(type);
     if (operation) {
       operation.onError(error);
     }
@@ -1585,14 +1569,14 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
     startOffset: number,
     endOffset: number,
   ) {
-    const { media, mediaSource, operationQueue } = this;
+    const { media, mediaSource } = this;
     const track = this.tracks[type];
     const sb = track?.buffer;
     if (!media || !mediaSource || !sb) {
       this.warn(
         `Attempting to remove from the ${type} SourceBuffer, but it does not exist`,
       );
-      operationQueue.shiftAndExecuteNext(type);
+      this.shiftAndExecuteNext(type);
       return;
     }
     const mediaDuration = Number.isFinite(media.duration)
@@ -1611,7 +1595,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
       sb.remove(removeStart, removeEnd);
     } else {
       // Cycle the queue
-      operationQueue.shiftAndExecuteNext(type);
+      this.shiftAndExecuteNext(type);
     }
   }
 
@@ -1642,9 +1626,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
   }
 
   private isQueued(): boolean {
-    return this.sourceBuffers.some(
-      ([type]) => type && !!this.operationQueue.current(type),
-    );
+    return this.sourceBuffers.some(([type]) => type && !!this.currentOp(type));
   }
 
   private isPending(
@@ -1669,7 +1651,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
 
     // logger.debug(`[buffer-controller]: Blocking ${buffers} SourceBuffer`);
     const blockingOperations = bufferNames.map((type) =>
-      operationQueue.appendBlocker(type),
+      this.appendBlocker(type),
     );
     const audioBlocked = bufferNames.length > 1 && !!this.blockedAudioAppend;
     if (audioBlocked) {
@@ -1694,8 +1676,43 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
       if (!sb || sb.updating) {
         return;
       }
-      this.operationQueue.shiftAndExecuteNext(type);
+      this.shiftAndExecuteNext(type);
     });
+  }
+
+  private append(
+    operation: BufferOperation,
+    type: SourceBufferName,
+    pending?: boolean,
+  ) {
+    if (this.operationQueue) {
+      this.operationQueue.append(operation, type, pending);
+    }
+  }
+
+  private appendBlocker(type: SourceBufferName): Promise<void> | undefined {
+    if (this.operationQueue) {
+      return this.operationQueue.appendBlocker(type);
+    }
+  }
+
+  private currentOp(type: SourceBufferName): BufferOperation | null {
+    if (this.operationQueue) {
+      return this.operationQueue.current(type);
+    }
+    return null;
+  }
+
+  private executeNext(type: SourceBufferName | null) {
+    if (type && this.operationQueue) {
+      this.operationQueue.executeNext(type);
+    }
+  }
+
+  private shiftAndExecuteNext(type: SourceBufferName) {
+    if (this.operationQueue) {
+      this.operationQueue.shiftAndExecuteNext(type);
+    }
   }
 
   private get pendingTrackCount(): number {
