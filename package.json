@@ -13,10 +13,9 @@
   },
   "main": "./dist/hls.js",
   "module": "./dist/hls.mjs",
-  "types": "./dist/hls.js.d.ts",
+  "types": "./dist/hls.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/hls.js.d.ts",
       "import": "./dist/hls.mjs",
       "require": "./dist/hls.js"
     },
@@ -32,10 +31,11 @@
   },
   "scripts": {
     "build": "rollup --config && npm run build:types",
-    "build:ci": "rollup --config && tsc --build tsconfig-lib.json && api-extractor run && es-check",
+    "build:ci": "rollup --config && tsc --build tsconfig-lib.json && api-extractor run && npm run build:copy-types && es-check",
     "build:debug": "rollup --config --configType full --configType demo",
     "build:watch": "rollup --config --configType full --configType demo --watch",
-    "build:types": "tsc --build tsconfig-lib.json && api-extractor run --local",
+    "build:types": "tsc --build tsconfig-lib.json && api-extractor run --local && npm run build:copy-types",
+    "build:copy-types": "cp ./dist/hls.d.ts ./dist/hls.d.mts && cp ./dist/hls.d.ts ./dist/hls.js.d.ts",
     "dev": "run-p build:watch serve",
     "serve": "http-server -o /demo .",
     "docs": "doctoc ./docs/API.md && api-documenter markdown -i api-extractor -o api-extractor/api-documenter && rm api-extractor/api-documenter/index.md && npm run docs-md-to-html",
