@@ -2586,6 +2586,8 @@ export class InterstitialEvent {
     // (undocumented)
     error?: Error;
     // (undocumented)
+    findAssetIndex(asset: InterstitialAssetItem): number;
+    // (undocumented)
     hasPlayed: boolean;
     // (undocumented)
     get identifier(): InterstitialId;
@@ -3795,6 +3797,7 @@ export interface MediaKeySessionContext {
 export type MediaOverrides = {
     duration?: number;
     endOfStream?: boolean;
+    cueRemoval?: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "MediaPlaylist" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

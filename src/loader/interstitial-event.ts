@@ -120,6 +120,11 @@ export class InterstitialEvent {
     return assetOffset > playoutLimit;
   }
 
+  public findAssetIndex(asset: InterstitialAssetItem): number {
+    const index = this.assetList.indexOf(asset);
+    return index;
+  }
+
   get identifier(): InterstitialId {
     return this.dateRange.id;
   }
