@@ -16,7 +16,7 @@ import type {
   FragParsingMetadataData,
   LevelPTSUpdatedData,
   LevelUpdatedData,
-  MediaAttachedData,
+  MediaAttachingData,
   MediaDetachingData,
 } from '../types/events';
 import type { ComponentAPI } from '../types/component-api';
@@ -93,6 +93,7 @@ class ID3TrackController implements ComponentAPI {
       durationKnown: boolean;
     }
   > = {};
+  private removeCues: boolean = true;
 
   constructor(hls) {
     this.hls = hls;
@@ -110,7 +111,7 @@ class ID3TrackController implements ComponentAPI {
 
   private _registerListeners() {
     const { hls } = this;
-    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.FRAG_PARSING_METADATA, this.onFragParsingMetadata, this);
@@ -121,7 +122,7 @@ class ID3TrackController implements ComponentAPI {
 
   private _unregisterListeners() {
     const { hls } = this;
-    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.FRAG_PARSING_METADATA, this.onFragParsingMetadata, this);
@@ -131,11 +132,14 @@ class ID3TrackController implements ComponentAPI {
   }
 
   // Add ID3 metatadata text track.
-  private onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
-    data: MediaAttachedData,
+  private onMediaAttaching(
+    event: Events.MEDIA_ATTACHING,
+    data: MediaAttachingData,
   ): void {
     this.media = data.media;
+    if (data.overrides?.cueRemoval === false) {
+      this.removeCues = false;
+    }
   }
 
   private onMediaDetaching(
@@ -148,7 +152,9 @@ class ID3TrackController implements ComponentAPI {
       return;
     }
     if (this.id3Track) {
-      clearCurrentCues(this.id3Track);
+      if (this.removeCues) {
+        clearCurrentCues(this.id3Track);
+      }
       this.id3Track = null;
     }
     this.dateRangeCuesAppended = {};
@@ -327,25 +333,30 @@ class ID3TrackController implements ComponentAPI {
     ) {
       return;
     }
-    const { dateRangeCuesAppended, id3Track } = this;
+    const { id3Track } = this;
     const { dateRanges } = details;
     const ids = Object.keys(dateRanges);
+    let dateRangeCuesAppended = this.dateRangeCuesAppended;
     // Remove cues from track not found in details.dateRanges
     if (id3Track && removeOldCues) {
-      const idsToRemove = Object.keys(dateRangeCuesAppended).filter(
-        (id) => !ids.includes(id),
-      );
-      for (let i = idsToRemove.length; i--; ) {
-        const id = idsToRemove[i];
-        const cues = dateRangeCuesAppended[id].cues;
-        delete dateRangeCuesAppended[id];
-        Object.keys(cues).forEach((key) => {
-          try {
-            id3Track.removeCue(cues[key]);
-          } catch (e) {
-            /* no-op */
-          }
-        });
+      if (id3Track.cues?.length) {
+        const idsToRemove = Object.keys(dateRangeCuesAppended).filter(
+          (id) => !ids.includes(id),
+        );
+        for (let i = idsToRemove.length; i--; ) {
+          const id = idsToRemove[i];
+          const cues = dateRangeCuesAppended[id].cues;
+          delete dateRangeCuesAppended[id];
+          Object.keys(cues).forEach((key) => {
+            try {
+              id3Track.removeCue(cues[key]);
+            } catch (e) {
+              /* no-op */
+            }
+          });
+        }
+      } else {
+        dateRangeCuesAppended = this.dateRangeCuesAppended = {};
       }
     }
     // Exit if the playlist does not have Date Ranges or does not have Program Date Time

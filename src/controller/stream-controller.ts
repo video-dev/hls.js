@@ -1081,6 +1081,15 @@ export default class StreamController
         );
         return;
       }
+
+      // Offset start position by timeline offset
+      const details = this.getLevelDetails();
+      const configuredTimelineOffset = this.config.timelineOffset;
+      if (configuredTimelineOffset && startPosition) {
+        startPosition +=
+          details?.appliedTimelineOffset || configuredTimelineOffset;
+      }
+
       const buffered = BufferHelper.getBuffered(media);
       const bufferStart = buffered.length ? buffered.start(0) : 0;
       const delta = bufferStart - startPosition;
@@ -1091,8 +1100,7 @@ export default class StreamController
       if (
         delta > 0 &&
         (delta < skipTolerance ||
-          (this.loadingParts &&
-            delta < 2 * (this.getLevelDetails()?.partTarget || 0)))
+          (this.loadingParts && delta < 2 * (details?.partTarget || 0)))
       ) {
         this.log(`adjusting start position by ${delta} to match buffer start`);
         startPosition += delta;
