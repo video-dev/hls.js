@@ -107,7 +107,7 @@ function isCodecMediaSourceSupported(
 }
 
 export function mimeTypeForCodec(codec: string, type: CodecType): string {
-  return `${type}/mp4;codecs="${codec}"`;
+  return `${type}/mp4;codecs=${codec}`;
 }
 
 export function videoCodecPreferenceValue(
@@ -221,10 +221,10 @@ export function pickMostCompleteCodecName(
   return levelCodec || parsedCodec;
 }
 
-export function convertAVC1ToAVCOTI(codec: string) {
+export function convertAVC1ToAVCOTI(videoCodecs: string): string {
   // Convert avc1 codec string from RFC-4281 to RFC-6381 for MediaSource.isTypeSupported
   // Examples: avc1.66.30 to avc1.42001e and avc1.77.30,avc1.66.30 to avc1.4d001e,avc1.42001e.
-  const codecs = codec.split(',');
+  const codecs = videoCodecs.split(',');
   for (let i = 0; i < codecs.length; i++) {
     const avcdata = codecs[i].split('.');
     if (avcdata.length > 2) {
@@ -237,6 +237,19 @@ export function convertAVC1ToAVCOTI(codec: string) {
     }
   }
   return codecs.join(',');
+}
+
+export function fillInMissingAV01Params(videoCodec: string): string {
+  // Used to fill in incomplete AV1 playlist CODECS strings for mediaCapabilities.decodingInfo queries
+  if (videoCodec.startsWith('av01.')) {
+    const av1params = videoCodec.split('.');
+    const placeholders = ['0', '111', '01', '01', '01', '0'];
+    for (let i = av1params.length; i > 4 && i < 10; i++) {
+      av1params[i] = placeholders[i - 4];
+    }
+    return av1params.join('.');
+  }
+  return videoCodec;
 }
 
 export interface TypeSupported {

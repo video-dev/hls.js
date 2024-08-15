@@ -1918,13 +1918,13 @@ class Hls implements HlsEventEmitter {
     constructor(userConfig?: Partial<HlsConfig>);
     // (undocumented)
     get abrEwmaDefaultEstimate(): number;
-    get allAudioTracks(): Array<MediaPlaylist>;
-    get allSubtitleTracks(): Array<MediaPlaylist>;
+    get allAudioTracks(): MediaPlaylist[];
+    get allSubtitleTracks(): MediaPlaylist[];
     attachMedia(data: HTMLMediaElement | MediaAttachingData): void;
     get audioTrack(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "audioTrack" must appear on the getter, not the setter.
     set audioTrack(audioTrackId: number);
-    get audioTracks(): Array<MediaPlaylist>;
+    get audioTracks(): MediaPlaylist[];
     get autoLevelCapping(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "autoLevelCapping" must appear on the getter, not the setter.
     set autoLevelCapping(newLevel: number);
@@ -1962,6 +1962,7 @@ class Hls implements HlsEventEmitter {
     // Warning: (ae-setter-with-docs) The doc comment for the property "firstLevel" must appear on the getter, not the setter.
     set firstLevel(newLevel: number);
     get forceStartLoad(): boolean;
+    getMediaDecodingInfo(level: Level, audioTracks?: MediaPlaylist[]): Promise<MediaDecodingInfo>;
     static getMediaSource(): typeof MediaSource | undefined;
     get hasEnoughToStart(): boolean;
     get interstitialsManager(): InterstitialsManager | null;
@@ -2041,7 +2042,7 @@ class Hls implements HlsEventEmitter {
     get subtitleTrack(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "subtitleTrack" must appear on the getter, not the setter.
     set subtitleTrack(subtitleTrackId: number);
-    get subtitleTracks(): Array<MediaPlaylist>;
+    get subtitleTracks(): MediaPlaylist[];
     swapAudioCodec(): void;
     get targetLatency(): number | null;
     set targetLatency(latency: number);
