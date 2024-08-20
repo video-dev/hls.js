@@ -77,75 +77,7 @@
           /* harmony export */ hlsJsEvents: () => /* binding */ hlsJsEvents,
           /* harmony export */
         });
-        var hlsJsEvents = [
-          'hlsMediaAttaching',
-          'hlsMediaAttached',
-          'hlsMediaDetaching',
-          'hlsMediaDetached',
-          'hlsMediaEnded',
-          'hlsBufferReset',
-          'hlsBufferCodecs',
-          'hlsBufferCreated',
-          'hlsBufferAppending',
-          'hlsBufferAppended',
-          'hlsBufferEos',
-          'hlsBufferFlushing',
-          'hlsBufferFlushed',
-          'hlsManifestLoading',
-          'hlsManifestLoaded',
-          'hlsManifestParsed',
-          'hlsLevelSwitching',
-          'hlsLevelSwitched',
-          'hlsLevelLoading',
-          'hlsLevelLoaded',
-          'hlsLevelUpdated',
-          'hlsLevelPtsUpdated',
-          'hlsLevelsUpdated',
-          'hlsAudioTracksUpdated',
-          'hlsAudioTrackSwitching',
-          'hlsAudioTrackSwitched',
-          'hlsAudioTrackLoading',
-          'hlsAudioTrackLoaded',
-          'hlsSubtitleTracksUpdated',
-          'hlsSubtitleTracksCleared',
-          'hlsSubtitleTrackSwitch',
-          'hlsSubtitleTrackLoading',
-          'hlsSubtitleTrackLoaded',
-          'hlsSubtitleFragProcessed',
-          'hlsCuesParsed',
-          'hlsNonNativeTextTracksFound',
-          'hlsInitPtsFound',
-          'hlsFragLoading',
-          'hlsFragLoadEmergencyAborted',
-          'hlsFragLoaded',
-          'hlsFragDecrypted',
-          'hlsFragParsingInitSegment',
-          'hlsFragParsingUserdata',
-          'hlsFragParsingMetadata',
-          'hlsFragParsed',
-          'hlsFragBuffered',
-          'hlsFragChanged',
-          'hlsFpsDrop',
-          'hlsFpsDropLevelCapping',
-          'hlsMaxAutoLevelUpdated',
-          'hlsError',
-          'hlsDestroying',
-          'hlsKeyLoading',
-          'hlsKeyLoaded',
-          'hlsLiveBackBufferReached',
-          'hlsBackBufferReached',
-          'hlsSteeringManifestLoaded',
-          'hlsAssetListLoading',
-          'hlsAssetListLoaded',
-          'hlsInterstitialsUpdated',
-          'hlsInterstitialsBufferedToBoundary',
-          'hlsInterstitialAssetPlayerCreated',
-          'hlsInterstitialStarted',
-          'hlsInterstitialAssetStarted',
-          'hlsInterstitialAssetEnded',
-          'hlsInterstitialEnded',
-          'hlsInterstitialsPrimaryResumed',
-        ];
+        var hlsJsEvents = Object.values(self.Hls.Events);
 
         /***/
       },
@@ -583,9 +515,9 @@
     /* harmony import */ var _stringify__WEBPACK_IMPORTED_MODULE_5__ =
       __webpack_require__(/*! ./stringify */ './src/stringify.ts');
 
-    var ace = window.ace;
-    var history = window.history || {};
-    var searchOptions = new window.URL(location.href).searchParams;
+    var ace = self.ace;
+    var history = self.history || {};
+    var searchOptions = new self.URL(location.href).searchParams;
     var eventLogGroups = {};
     var eventFlow = 'down';
     var sequenceCount = 0;
@@ -610,6 +542,7 @@
       });
     }
     function getEventGroup(eventName) {
+      var Events = self.Hls.Events;
       //   for (const key in events) {
       //     if (events[key].indexOf(eventName) > -1) {
       //       return key;
@@ -622,36 +555,37 @@
       ) {
         if (
           [
-            'hlsInterstitialStarted',
-            'hlsInterstitialAssetStarted',
-            'hlsInterstitialAssetEnded',
-            'hlsInterstitialEnded',
+            Events.INTERSTITIAL_STARTED,
+            Events.INTERSTITIAL_ASSET_STARTED,
+            Events.INTERSTITIAL_ASSET_ENDED,
+            Events.INTERSTITIAL_ENDED,
           ].indexOf(eventName) > -1
         ) {
           return 'adBreak'; // 'hlsjs'
         }
-        if (['hlsInterstitialsPrimaryResumed'].indexOf(eventName) > -1) {
+        if ([Events.INTERSTITIALS_PRIMARY_RESUMED].indexOf(eventName) > -1) {
           return 'playback'; // 'hlsjs'
         }
         if (
           [
-            'hlsMediaAttaching',
-            'hlsMediaAttached',
-            'hlsMediaDetaching',
-            'hlsMediaDetached',
-            'hlsInterstitialsBufferedToBoundary',
-            'hlsBackBufferReached',
-            'hlsFragLoading',
-            'hlsFragLoaded',
-            'hlsFragParsingInitSegment',
-            'hlsFragParsingUserdata',
-            'hlsLevelPtsUpdated',
-            'hlsFragParsed',
-            'hlsBufferAppending',
-            'hlsBufferAppended',
-            'hlsFragBuffered',
-            'hlsAudioTrackSwitched',
-            'hlsBufferCodecs',
+            Events.MEDIA_ATTACHING,
+            Events.MEDIA_ATTACHED,
+            Events.MEDIA_DETACHING,
+            Events.MEDIA_DETACHED,
+            Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
+            Events.BACK_BUFFER_REACHED,
+            Events.FRAG_LOADING,
+            Events.FRAG_LOADED,
+            Events.FRAG_PARSING_INIT_SEGMENT,
+            // Events.FRAG_PARSING_METADATA,
+            Events.FRAG_PARSING_USERDATA,
+            Events.LEVEL_PTS_UPDATED,
+            Events.FRAG_PARSED,
+            Events.BUFFER_APPENDING,
+            Events.BUFFER_APPENDED,
+            Events.FRAG_BUFFERED,
+            Events.AUDIO_TRACK_SWITCHED,
+            Events.BUFFER_CODECS,
           ].indexOf(eventName) > -1
         ) {
           return 'media'; // 'hlsjs'
@@ -752,7 +686,8 @@
         if (!data) {
           return;
         }
-        div.textContent = (div.expanded = !div.expanded)
+        var expanded = (div.expanded = !div.expanded);
+        div.textContent = expanded
           ? textContentExpanded(inEvent, [data])
           : textContentGrouped(inEvent);
         if (e) {
@@ -942,7 +877,7 @@
           });
         }
       }
-      window.addEventListener('error', function (event) {
+      self.addEventListener('error', function (event) {
         errorToJSONPolyfill();
         firstEventHander('javascriptError', {
           type: 'javascriptError',
@@ -950,7 +885,7 @@
           event: event,
         });
       });
-      window.addEventListener('unhandledrejection', function (event) {
+      self.addEventListener('unhandledrejection', function (event) {
         errorToJSONPolyfill();
         firstEventHander('unhandledPromiseRejection', {
           type: 'unhandledPromiseRejection',
@@ -1024,8 +959,8 @@
             'Error parsing config. Falling back to default setup.',
             error
           );
-          if (window.hls) {
-            window.hls.destroy();
+          if (self.hls) {
+            self.hls.destroy();
           }
         });
     }
@@ -1040,13 +975,13 @@
       (0, _events_video__WEBPACK_IMPORTED_MODULE_3__.resetVideoElements)();
       genericEventHandler(
         {
-          userAgent: window.navigator.userAgent,
+          userAgent: self.navigator.userAgent,
         },
         'info:environment',
         getEventGroup('info:environment')
       );
-      var hls = new window.Hls(config);
-      window.hls = hls;
+      var hls = new self.Hls(config);
+      self.hls = hls;
       _events_providers__WEBPACK_IMPORTED_MODULE_2__.hlsJsEvents.forEach(
         function (eventName) {
           hls.on(eventName, function (type, e) {
@@ -1066,7 +1001,7 @@
         }
       );
       hls.on(
-        Hls.Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
+        self.Hls.Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
         function (type, data) {
           var childPlayer = data.player;
           if (childPlayer) {
@@ -1082,7 +1017,7 @@
                 childPlayer.on(eventName, callback);
               }
             );
-            childPlayer.on(Hls.Events.DESTROYING, function () {
+            childPlayer.on(self.Hls.Events.DESTROYING, function () {
               _events_providers__WEBPACK_IMPORTED_MODULE_2__.hlsJsEvents.forEach(
                 function (eventName) {
                   childPlayer.off(eventName, callback);
@@ -1139,8 +1074,7 @@
         var lineHeight =
           (editor.getFontSize == null ? void 0 : editor.getFontSize()) + 5;
         var availableHeight =
-          (document.documentElement.clientHeight, window.innerHeight || 0) -
-          100;
+          (document.documentElement.clientHeight, self.innerHeight || 0) - 100;
         options.maxLines = Math.min(
           Math.max(5, Math.floor(availableHeight / lineHeight)),
           150
@@ -1155,8 +1089,8 @@
       var focusTimeout;
       var saveTimeout;
       function changeCallback() {
-        clearTimeout(saveTimeout);
-        saveTimeout = setTimeout(function () {
+        self.clearTimeout(saveTimeout);
+        saveTimeout = self.setTimeout(function () {
           getAndSaveConfig(editor)
             .then(function () {
               // If the change is valid clear any config params in the url and save
@@ -1177,16 +1111,16 @@
         // Save the config when it's changed (in focus)
         editor.off('change', changeCallback);
         editor.on('change', changeCallback);
-        clearTimeout(focusTimeout);
-        focusTimeout = setTimeout(editor.expand);
+        self.clearTimeout(focusTimeout);
+        focusTimeout = self.setTimeout(editor.expand);
       });
       editor.on('blur', function () {
         editor.off('change', changeCallback);
-        clearTimeout(focusTimeout);
+        self.clearTimeout(focusTimeout);
         if (editor.pinned) {
           return;
         }
-        focusTimeout = setTimeout(editor.contract, 250);
+        focusTimeout = self.setTimeout(editor.contract, 250);
       });
       editor.commands.addCommand({
         name: 'Run',
@@ -1197,11 +1131,11 @@
         },
       });
       // When navigating, setup the player according to the current location.search params or local storage
-      window.onpopstate = function () {
+      self.onpopstate = function () {
         // getPlayerConfig(storage.setupConfig || storage.hlsjsEventsConfig).then(
         //   (configText) => {
         //     editor.setValue(configText);
-        //     clearTimeout(saveTimeout);
+        //     self.clearTimeout(saveTimeout);
         //     runSetup(editor);
         //   },
         // );
@@ -1422,8 +1356,8 @@
         );
       }
       inputFilterField.addEventListener('keyup', function () {
-        clearTimeout(filterTimeout);
-        filterTimeout = setTimeout(updateFilter);
+        self.clearTimeout(filterTimeout);
+        filterTimeout = self.setTimeout(updateFilter);
       });
     }
 
