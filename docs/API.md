@@ -179,9 +179,11 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.drift`](#hlsdrift)
   - [`hls.playingDate`](#hlsplayingdate)
 - [Interstitials](#interstitials)
+  - [Interstitials configuration options](#interstitials-configuration-options)
+  - [Interstitials Manager](#interstitials-manager)
+    - [`hls.interstitialsManager`](#hlsinterstitialsmanager)
   - [Interstitial Events](#interstitial-events)
   - [Interstitial Objects and Classes](#interstitial-objects-and-classes)
-  - [`hls.interstitialsManager`](#hlsinterstitialsmanager)
 - [Additional data](#additional-data)
   - [`hls.latestLevelDetails`](#hlslatestleveldetails)
   - [`hls.sessionId`](#hlssessionid)
@@ -1961,7 +1963,16 @@ get: the datetime value relative to media.currentTime for the active level Progr
 
 HLS.js supports playback of X-ASSET-URI and X-ASSET-LIST m3u8 playlists scheduled with Interstitial EXT-X-DATERANGE tags. The `InterstitialsManager` provides playback state with seek and skip control. There are a variety of events to notify applications of Interstitials schedule changes and playback state. Here is an overview of how they work.
 
-### `hls.interstitialsManager`
+### Interstitials configuration options
+
+- `interstitialsController` Set to `null` to disable interstitial parsing, events, and playback.
+- [`enableInterstitialPlayback`](#enableinterstitialplayback) Set to `false` to disable interstitial playback, without disabling parsing and events.
+- [`interstitialAppendInPlace`](#interstitialappendinplace) Set to `false` to disable appending "in place".
+- [`interstitialLiveLookAhead`](#interstitiallivelookahead) Adjust how far in advance to load interstitials during live playback.
+
+### Interstitials Manager
+
+#### `hls.interstitialsManager`
 
 - get: Returns the `InterstitialsManager` (or `null`) with information about the current program.
 
