@@ -1959,7 +1959,42 @@ get: the datetime value relative to media.currentTime for the active level Progr
 
 ## Interstitials
 
-HLS.js supports playback of X-ASSET-URI and X-ASSET-LIST m3u8 playlists scheduled with Interstitial EXT-X-DATERANGE tags. There are a variety of events to notify applications of Interstitials in the program and their streaming and playback state. Here is an overview of how they work.
+HLS.js supports playback of X-ASSET-URI and X-ASSET-LIST m3u8 playlists scheduled with Interstitial EXT-X-DATERANGE tags. The `InterstitialsManager` provides playback state with seek and skip control. There are a variety of events to notify applications of Interstitials schedule changes and playback state. Here is an overview of how they work.
+
+### `hls.interstitialsManager`
+
+- get: Returns the `InterstitialsManager` (or `null`) with information about the current program.
+
+The data includes the list of Interstitial events with their asset lists, the schedule of event and primary segment items, information about which items and assets are buffering and playing, the player instance currently buffering media, and the queue of players responsible for the streaming of assets.
+
+Use `skip()` to skip the current interstitial. Use `primary`, `playout`, and `integrated` to get `currentTime`, `duration` and to seek along the respective timeline.
+
+```ts
+interface InterstitialsManager {
+  events: InterstitialEvent[];
+  schedule: InterstitialScheduleItem[];
+  playerQueue: HlsAssetPlayer[];
+  bufferingPlayer: HlsAssetPlayer | null;
+  bufferingAsset: InterstitialAssetItem | null;
+  bufferingItem: InterstitialScheduleItem | null;
+  bufferingIndex: number;
+  playingAsset: InterstitialAssetItem | null;
+  playingItem: InterstitialScheduleItem | null;
+  playingIndex: number;
+  waitingIndex: number;
+  primary: PlayheadTimes;
+  playout: PlayheadTimes;
+  integrated: PlayheadTimes;
+  skip: () => void;
+}
+
+type PlayheadTimes = {
+  bufferedEnd: number;
+  currentTime: number;
+  duration: number;
+  seekTo: (time: number) => void;
+};
+```
 
 ### Interstitial Events
 
@@ -2005,20 +2040,6 @@ HLS.js determines if an interstitial will be appended "in place" on a single tim
 
 `INTERSTITIAL_STARTED` and `INTERSTITIAL_ENDED` mark entering and exiting of a scheduled interstitial event item. These event fire whenever playing or seeking into or out-of an Interstitial DATERANGE.
 
-```ts
-interface InterstitialStartedData {
-  event: InterstitialEvent;
-  schedule: InterstitialScheduleItem[];
-  scheduleIndex: number;
-}
-
-interface InterstitialEndedData {
-  event: InterstitialEvent;
-  schedule: InterstitialScheduleItem[];
-  scheduleIndex: number;
-}
-```
-
 `INTERSTITIAL_ASSET_STARTED` and `INTERSTITIAL_ASSET_ENDED` mark the entrance and exit of an asset in an interstitial.
 
 ```ts
@@ -2043,16 +2064,9 @@ interface InterstitialAssetEndedData {
 
 Adaptaion control and streaming status should be performed on asset players while assets are active. Use [`hls.interstitialsManager`](#hlsinterstitialsmanager) for integrated playback status, seeking, and skipping interstitials.
 
-When playback enters a primary schedule item `INTERSTITIALS_PRIMARY_RESUMED` is fired.
+`INTERSTITIALS_PRIMARY_RESUMED` is fired when playback enters a primary schedule item from an interstitial or the start of playback.
 
-```ts
-interface InterstitialsPrimaryResumed {
-  schedule: InterstitialScheduleItem[];
-  scheduleIndex: number;
-}
-```
-
-Errors that result in an asset not playing or finishing early because of an error are signalled by `INTERSTITIAL_ASSET_ERROR`. Playback is expected to fallback to primary. This should be accompanied by a schedule update an an `error` property present on the `InterstitialAssetItem` and the `InterstitialEvent` when all its assets failed.
+`INTERSTITIAL_ASSET_ERROR` is fired when an error results in an asset not playing or finishing early. Playback is expected to fallback to primary. This should be accompanied by a schedule update an an `error` property present on the `InterstitialAssetItem` and the `InterstitialEvent` when all its assets failed.
 
 ```ts
 type InterstitialAssetErrorData = {
@@ -2074,39 +2088,6 @@ type InterstitialAssetErrorData = {
 - `InterstitialAssetItem` A parsed and scheduled asset in an `InterstitialEvent`'s `assetList`.
 
 - `HlsAssetPlayer` A class for wrapping an instance of `Hls` used to stream Interstitial assets.
-
-### `hls.interstitialsManager`
-
-- get: Returns the `InterstitialsManager` (or `null`) with information about the current program.
-
-The data includes the list of Interstitial events with their asset lists, the schedule of event and primary segment items, information about which items and assets are buffering and playing, the player instance currently buffering media, and the queue of players responsible for the streaming of assets.
-
-```ts
-interface InterstitialsManager {
-  events: InterstitialEvent[];
-  schedule: InterstitialScheduleItem[];
-  playerQueue: HlsAssetPlayer[];
-  bufferingPlayer: HlsAssetPlayer | null;
-  bufferingAsset: InterstitialAssetItem | null;
-  bufferingItem: InterstitialScheduleItem | null;
-  bufferingIndex: number;
-  playingAsset: InterstitialAssetItem | null;
-  playingItem: InterstitialScheduleItem | null;
-  playingIndex: number;
-  waitingIndex: number;
-  primary: PlayheadTimes;
-  playout: PlayheadTimes;
-  integrated: PlayheadTimes;
-  skip: () => void;
-}
-
-type PlayheadTimes = {
-  bufferedEnd: number;
-  currentTime: number;
-  duration: number;
-  seekTo: (time: number) => void;
-};
-```
 
 ## Additional data
 
