@@ -12,6 +12,7 @@ import { enableLogs, type ILogger } from './utils/logger';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
 import { EventEmitter } from 'eventemitter3';
 import { Events } from './events';
+import { MetadataSchema } from './types/demuxer';
 import { ErrorTypes, ErrorDetails } from './errors';
 import { isHdcpLevel, type HdcpLevel, type Level } from './types/level';
 import type { HlsEventEmitter, HlsListeners } from './events';
@@ -115,6 +116,10 @@ export default class Hls implements HlsEventEmitter {
     return Events;
   }
 
+  static get MetadataSchema(): typeof MetadataSchema {
+    return MetadataSchema;
+  }
+  
   static get ErrorTypes(): typeof ErrorTypes {
     return ErrorTypes;
   }
@@ -1014,6 +1019,7 @@ export type {
   ErrorDetails,
   ErrorTypes,
   Events,
+  MetadataSchema,
   Level,
   HlsListeners,
   HlsEventEmitter,
@@ -1087,7 +1093,6 @@ export type { LevelDetails } from './loader/level-details';
 export type { SourceBufferName } from './types/buffer';
 export type {
   MetadataSample,
-  MetadataSchema,
   UserdataSample,
 } from './types/demuxer';
 export type {

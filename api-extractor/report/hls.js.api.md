@@ -2959,13 +2959,15 @@ export interface MetadataSample {
 // Warning: (ae-missing-release-tag) "MetadataSchema" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export const enum MetadataSchema {
+export enum MetadataSchema {
     // (undocumented)
     audioId3 = "org.id3",
     // (undocumented)
     dateRange = "com.apple.quicktime.HLS",
     // (undocumented)
-    emsg = "https://aomedia.org/emsg/ID3"
+    emsg = "https://aomedia.org/emsg/ID3",
+    // (undocumented)
+    misbklv = "urn:misb:KLV:bin:1910.1"
 }
 
 // Warning: (ae-missing-release-tag) "MP4RemuxerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
