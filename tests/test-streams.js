@@ -457,6 +457,12 @@ const streams = {
     url: 'http://livepoc-ftc-eng-device.streaming.siriusxm.com/v0/breakglass_SoiPMdM5tig/pri-1/AAC_Data/transcode/wmay/daipa/app_mv.m3u8',
     live: true,
   },
+  awsVodInterstitials: {
+    description: 'AWS VOD with 3 Interstitial breaks 2 assets each',
+    url: 'https://f681a00ecbc6473898b8abe50fbaa3d7.mediatailor.us-west-2.amazonaws.com/v1/master/7fcb48ee1bc8d9517179f0aebae65226d3184e01/VodDemo/hls/bbb1min_two_ads_middle/bbb1min.m3u8?aws.insertionMode=GUIDED',
+    audioTrackOptions: 0,
+    subtitleTrackOptions: 0,
+  },
   appleInterstitialsASE: {
     description: '(Internal) ASE 2024 Preroll Decouple CoreMedia Sample Stream',
     url: 'https://imgdry.apple.com/users/juliant/ase_airplay/mvp.m3u8',
