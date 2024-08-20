@@ -149,7 +149,7 @@ export class HlsAssetPlayer {
     this.removeMediaListeners();
     this.hls.destroy();
     // @ts-ignore
-    this.hls = this.interstitial = this.assetItem = null;
+    this.hls = this.interstitial = null;
     // @ts-ignore
     this.tracks = this.mediaAttached = this.checkPlayout = null;
   }
