@@ -2049,9 +2049,9 @@ interface InterstitialAssetPlayerCreatedData {
 
 The `InterstitialEvent: appendInPlace` property indicates the mode used to append assets of the interstitial.
 
-HLS.js determines if an interstitial will be appended "in place" on a single timeline, with the same SourceBuffers and MediaSource as the primary player, or if it will reset the MediaSource and duration for each asset. If additional media elements are attached to the asset players, then they are already reset ahead of playback. When the media element is shared (by default) then the mode is determed based on each interstitial event's scheduled start and resumption and how it aligns with primary playlist media.
+HLS.js determines if an interstitial will be appended "in place" on a single timeline, with the same SourceBuffers and MediaSource as the primary player, or if it will reset the MediaSource and duration for each asset. Attaching additional media elements to asset players results in their reset ahead of playback. When the media element is shared (by default), the mode is determined based on each interstitial event's scheduled start and resumption and how it aligns with primary playlist media.
 
-`INTERSTITIAL_STARTED` and `INTERSTITIAL_ENDED` mark entering and exiting of a scheduled interstitial event item. These event fire whenever playing or seeking into or out-of an Interstitial DATERANGE.
+`INTERSTITIAL_STARTED` and `INTERSTITIAL_ENDED` mark entering and exiting of a scheduled interstitial event item. These events fire whenever playing or seeking into or out-of an Interstitial DATERANGE.
 
 `INTERSTITIAL_ASSET_STARTED` and `INTERSTITIAL_ASSET_ENDED` mark the entrance and exit of an asset in an interstitial.
 
