@@ -1409,7 +1409,7 @@ function parsePssh(view: DataView): PsshData | PsshInvalidResult {
   let kids: null | Uint8Array[] = null;
   let data: null | Uint8Array = null;
   if (version === 0) {
-    if (size - 32 < dataSizeOrKidCount || dataSizeOrKidCount < 30) {
+    if (size - 32 < dataSizeOrKidCount || dataSizeOrKidCount < 22) {
       return { offset, size };
     }
     data = new Uint8Array(buffer, offset + 32, dataSizeOrKidCount);
