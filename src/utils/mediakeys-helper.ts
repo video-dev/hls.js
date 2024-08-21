@@ -36,10 +36,10 @@ export function keySystemFormatToKeySystemDomain(
 
 // System IDs for which we can extract a key ID from "encrypted" event PSSH
 export const enum KeySystemIds {
-  // CENC = '1077efecc0b24d02ace33c1e52e2fb4b'
-  // CLEARKEY = 'e2719d58a985b3c9781ab030af78d30e',
-  // FAIRPLAY = '94ce86fb07ff4f43adb893d2fa968ca2',
-  // PLAYREADY = '9a04f07998404286ab92e65be0885f95',
+  CENC = '1077efecc0b24d02ace33c1e52e2fb4b',
+  CLEARKEY = 'e2719d58a985b3c9781ab030af78d30e',
+  FAIRPLAY = '94ce86fb07ff4f43adb893d2fa968ca2',
+  PLAYREADY = '9a04f07998404286ab92e65be0885f95',
   WIDEVINE = 'edef8ba979d64acea3c827dcd51d21ed',
 }
 
@@ -48,10 +48,13 @@ export function keySystemIdToKeySystemDomain(
 ): KeySystems | undefined {
   if (systemId === KeySystemIds.WIDEVINE) {
     return KeySystems.WIDEVINE;
-    // } else if (systemId === KeySystemIds.PLAYREADY) {
-    //   return KeySystems.PLAYREADY;
-    // } else if (systemId === KeySystemIds.CENC || systemId === KeySystemIds.CLEARKEY) {
-    //   return KeySystems.CLEARKEY;
+  } else if (systemId === KeySystemIds.PLAYREADY) {
+    return KeySystems.PLAYREADY;
+  } else if (
+    systemId === KeySystemIds.CENC ||
+    systemId === KeySystemIds.CLEARKEY
+  ) {
+    return KeySystems.CLEARKEY;
   }
 }
 

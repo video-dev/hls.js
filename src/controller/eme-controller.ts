@@ -14,8 +14,6 @@ import {
   keySystemFormatToKeySystemDomain,
   KeySystemIds,
   keySystemIdToKeySystemDomain,
-} from '../utils/mediakeys-helper';
-import {
   KeySystems,
   requestMediaKeySystemAccess,
 } from '../utils/mediakeys-helper';
@@ -23,7 +21,7 @@ import { strToUtf8array } from '../utils/utf8-utils';
 import { base64Decode } from '../utils/numeric-encoding-utils';
 import { DecryptData, LevelKey } from '../loader/level-key';
 import Hex from '../utils/hex';
-import { bin2str, parsePssh, parseSinf } from '../utils/mp4-tools';
+import { bin2str, parseMultiPssh, parseSinf } from '../utils/mp4-tools';
 import { EventEmitter } from 'eventemitter3';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
@@ -542,20 +540,24 @@ class EMEController extends Logger implements ComponentAPI {
       }
     } else {
       // Support clear-lead key-session creation (otherwise depend on playlist keys)
-      const psshInfo = parsePssh(initData);
-      if (psshInfo === null) {
+      const psshInfos = parseMultiPssh(initData);
+      const psshInfo = psshInfos.filter(
+        (pssh) => pssh.systemId === KeySystemIds.WIDEVINE,
+      )[0];
+      if (!psshInfo) {
         return;
-      }
-      if (
-        psshInfo.version === 0 &&
-        psshInfo.systemId === KeySystemIds.WIDEVINE &&
-        psshInfo.data
-      ) {
-        keyId = psshInfo.data.subarray(8, 24);
       }
       keySystemDomain = keySystemIdToKeySystemDomain(
         psshInfo.systemId as KeySystemIds,
       );
+      if (
+        psshInfo.version === 0 &&
+        psshInfo.data &&
+        psshInfo.data.length >= 30
+      ) {
+        const offset = psshInfo.data.length - 22;
+        keyId = psshInfo.data.subarray(offset, offset + 16);
+      }
     }
 
     if (!keySystemDomain || !keyId) {
@@ -570,7 +572,7 @@ class EMEController extends Logger implements ComponentAPI {
       // Match playlist key
       const keyContext = mediaKeySessions[i];
       const decryptdata = keyContext.decryptdata;
-      if (decryptdata.pssh || !decryptdata.keyId) {
+      if (!decryptdata.keyId) {
         continue;
       }
       const oldKeyIdHex = Hex.hexDump(decryptdata.keyId);
@@ -579,6 +581,9 @@ class EMEController extends Logger implements ComponentAPI {
         decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1
       ) {
         keySessionContextPromise = keyIdToKeySessionPromise[oldKeyIdHex];
+        if (decryptdata.pssh) {
+          break;
+        }
         delete keyIdToKeySessionPromise[oldKeyIdHex];
         decryptdata.pssh = new Uint8Array(initData);
         decryptdata.keyId = keyId;
