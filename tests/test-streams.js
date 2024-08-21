@@ -199,6 +199,12 @@ const appleFPSv3Gatsby = createTestStreamWithConfig(
           'https://valley.stage.ott.irdeto.com/licenseServer/widevine/v1/license',
         serverCertificateUrl:
           'https://play.itunes.apple.com/WebObjects/MZPlay.woa/wa/widevineCert',
+        generateRequest(initDataType, initData, context) {
+          // if (context.decryptdata.method !== 'SAMPLE-AES') {
+          //   return { initDataType, initData: null };
+          // }
+          return { initDataType, initData };
+        },
       },
       'com.microsoft.playready': {
         licenseUrl:
@@ -392,6 +398,12 @@ const awsCmafDateRangeSpekeDRMAdsMP = createTestStreamWithConfig(
         // Widevine license acquisition url (binary response): https://lic.staging.drmtoday.com/license-proxy-widevine/cenc/?specConform=true
         licenseUrl:
           'https://lic.staging.drmtoday.com/license-proxy-widevine/cenc/?specConform=true',
+        generateRequest(initDataType, initData, context) {
+          // if (context.decryptdata.method !== 'SAMPLE-AES') {
+          //   return { initDataType, initData: null };
+          // }
+          return { initDataType, initData };
+        },
       },
       'com.microsoft.playready': {
         licenseUrl:
@@ -713,6 +725,14 @@ const streams = {
   multiDRM_MP: Object.assign({}, appleFPSv3Gatsby, {
     description: '(Internal) Multi-DRM MP (fmp4 - "emilyd_atvplus")',
     url: 'https://cali.apple.com/MoreMedia/matchpoint/perf_streams/emilyd_atvplus/main_all_formats_sessiondata_discont.m3u8',
+    skip_ua: ['firefox', 'chrome'], // Currentlty fails in Chrome
+    skipFunctionalTests: true,
+  }),
+  multiDRM_Valerian: Object.assign({}, appleFPSv3Gatsby, {
+    description: '(Internal) Valerian (FPS, PlayReady, Widevine)',
+    url: 'https://cali.apple.com/MoreMedia/matchpoint/perf_streams/valerian/master_valerian_all_formats_fps_plyrdy_wdvn.m3u8',
+    audioTrackOptions: 1,
+    subtitleTrackOptions: 3,
     skip_ua: ['firefox', 'chrome'], // Currentlty fails in Chrome
     skipFunctionalTests: true,
   }),
@@ -1054,8 +1074,7 @@ const streams = {
   multiDRM: createTestStreamWithConfig(
     {
       url: 'https://vod-qa-hdd-01.b-cdn.net/3InDYWsdUyklwEfMCl9j/6d80b715-d8d3-456f-b1bd-3e3a8e8087de/hls.m3u8',
-      description:
-        'Multi-DRM',
+      description: 'Multi-DRM',
       abr: true,
       skip_ua: [
         'firefox',
@@ -1065,19 +1084,18 @@ const streams = {
       ],
     },
     {
-      widevineLicenseUrl: 'https://drm-widevine-licensing.axtest.net/AcquireLicense',
+      widevineLicenseUrl:
+        'https://drm-widevine-licensing.axtest.net/AcquireLicense',
       emeEnabled: true,
-      licenseXhrSetup: (
-        xhr,
-        url,
-        keyContext,
-        licenseChallenge,
-      ) => { 
+      licenseXhrSetup: (xhr, url, keyContext, licenseChallenge) => {
         if (licenseChallenge.length > 10) {
           xhr.open('POST', url, true);
-          xhr.setRequestHeader('x-axdrm-message', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJiZWdpbl9kYXRlIjoiMjAwMC0wMS0wMVQwMDo1MTowNCswMzowMCIsImV4cGlyYXRpb25fZGF0ZSI6IjIwMjUtMTItMzFUMjM6NTk6NDArMDM6MDAiLCJjb21fa2V5X2lkIjoiZGRhYjgyZWMtMDM0YS00OGYxLWI1MmYtYWQ2YjAxNzI1NDBmIiwibWVzc2FnZSI6eyJ0eXBlIjoiZW50aXRsZW1lbnRfbWVzc2FnZSIsInZlcnNpb24iOjIsImxpY2Vuc2UiOnsiZHVyYXRpb24iOjE3MjgwMCwiYWxsb3dfcGVyc2lzdGVuY2UiOnRydWV9LCJjb250ZW50X2tleV91c2FnZV9wb2xpY2llcyI6W3sibmFtZSI6IlBvbGljeSBBIiwiZmFpcnBsYXkiOnsiaGRjcCI6Ik5PTkUifX1dLCJjb250ZW50X2tleXNfc291cmNlIjp7ImlubGluZSI6W3siaWQiOiI2ZDgwYjcxNS1kOGQzLTQ1NmYtYjFiZC0zZTNhOGU4MDg3ZGUiLCJ1c2FnZV9wb2xpY3kiOiJQb2xpY3kgQSJ9XX0sInNlc3Npb24iOnsidXNlcl9pZCI6IkE5UEM4RUEzeHFiRjV4RmZ0RzZaTzM0S0JlMjMifX0sImlhdCI6MTcyNDA4NzAyOH0.yj5MnErR7qzi3ueiFurZ3MN4Duiqi3A35xPNKDXXn2E');
+          xhr.setRequestHeader(
+            'x-axdrm-message',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJiZWdpbl9kYXRlIjoiMjAwMC0wMS0wMVQwMDo1MTowNCswMzowMCIsImV4cGlyYXRpb25fZGF0ZSI6IjIwMjUtMTItMzFUMjM6NTk6NDArMDM6MDAiLCJjb21fa2V5X2lkIjoiZGRhYjgyZWMtMDM0YS00OGYxLWI1MmYtYWQ2YjAxNzI1NDBmIiwibWVzc2FnZSI6eyJ0eXBlIjoiZW50aXRsZW1lbnRfbWVzc2FnZSIsInZlcnNpb24iOjIsImxpY2Vuc2UiOnsiZHVyYXRpb24iOjE3MjgwMCwiYWxsb3dfcGVyc2lzdGVuY2UiOnRydWV9LCJjb250ZW50X2tleV91c2FnZV9wb2xpY2llcyI6W3sibmFtZSI6IlBvbGljeSBBIiwiZmFpcnBsYXkiOnsiaGRjcCI6Ik5PTkUifX1dLCJjb250ZW50X2tleXNfc291cmNlIjp7ImlubGluZSI6W3siaWQiOiI2ZDgwYjcxNS1kOGQzLTQ1NmYtYjFiZC0zZTNhOGU4MDg3ZGUiLCJ1c2FnZV9wb2xpY3kiOiJQb2xpY3kgQSJ9XX0sInNlc3Npb24iOnsidXNlcl9pZCI6IkE5UEM4RUEzeHFiRjV4RmZ0RzZaTzM0S0JlMjMifX0sImlhdCI6MTcyNDA4NzAyOH0.yj5MnErR7qzi3ueiFurZ3MN4Duiqi3A35xPNKDXXn2E',
+          );
         }
-      }
+      },
     },
   ),
   angelOneShakaWidevine: createTestStreamWithConfig(
