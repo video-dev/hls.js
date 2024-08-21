@@ -1071,33 +1071,6 @@ const streams = {
       emeEnabled: true,
     },
   ),
-  multiDRM: createTestStreamWithConfig(
-    {
-      url: 'https://vod-qa-hdd-01.b-cdn.net/3InDYWsdUyklwEfMCl9j/6d80b715-d8d3-456f-b1bd-3e3a8e8087de/hls.m3u8',
-      description: 'Multi-DRM',
-      abr: true,
-      skip_ua: [
-        'firefox',
-        'safari',
-        { name: 'chrome', version: '75.0' },
-        { name: 'chrome', version: '79.0' },
-      ],
-    },
-    {
-      widevineLicenseUrl:
-        'https://drm-widevine-licensing.axtest.net/AcquireLicense',
-      emeEnabled: true,
-      licenseXhrSetup: (xhr, url, keyContext, licenseChallenge) => {
-        if (licenseChallenge.length > 10) {
-          xhr.open('POST', url, true);
-          xhr.setRequestHeader(
-            'x-axdrm-message',
-            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJiZWdpbl9kYXRlIjoiMjAwMC0wMS0wMVQwMDo1MTowNCswMzowMCIsImV4cGlyYXRpb25fZGF0ZSI6IjIwMjUtMTItMzFUMjM6NTk6NDArMDM6MDAiLCJjb21fa2V5X2lkIjoiZGRhYjgyZWMtMDM0YS00OGYxLWI1MmYtYWQ2YjAxNzI1NDBmIiwibWVzc2FnZSI6eyJ0eXBlIjoiZW50aXRsZW1lbnRfbWVzc2FnZSIsInZlcnNpb24iOjIsImxpY2Vuc2UiOnsiZHVyYXRpb24iOjE3MjgwMCwiYWxsb3dfcGVyc2lzdGVuY2UiOnRydWV9LCJjb250ZW50X2tleV91c2FnZV9wb2xpY2llcyI6W3sibmFtZSI6IlBvbGljeSBBIiwiZmFpcnBsYXkiOnsiaGRjcCI6Ik5PTkUifX1dLCJjb250ZW50X2tleXNfc291cmNlIjp7ImlubGluZSI6W3siaWQiOiI2ZDgwYjcxNS1kOGQzLTQ1NmYtYjFiZC0zZTNhOGU4MDg3ZGUiLCJ1c2FnZV9wb2xpY3kiOiJQb2xpY3kgQSJ9XX0sInNlc3Npb24iOnsidXNlcl9pZCI6IkE5UEM4RUEzeHFiRjV4RmZ0RzZaTzM0S0JlMjMifX0sImlhdCI6MTcyNDA4NzAyOH0.yj5MnErR7qzi3ueiFurZ3MN4Duiqi3A35xPNKDXXn2E',
-          );
-        }
-      },
-    },
-  ),
   angelOneShakaWidevine: createTestStreamWithConfig(
     {
       url: 'https://storage.googleapis.com/shaka-demo-assets/angel-one-widevine-hls/hls.m3u8',
@@ -1683,6 +1656,34 @@ const streams = {
     audioTrackOptions: 1, // 3 groups/bitrates
     subtitleTrackOptions: 0,
   },
+
+  issue6636: createTestStreamWithConfig(
+    {
+      url: 'https://vod-qa-hdd-01.b-cdn.net/3InDYWsdUyklwEfMCl9j/6d80b715-d8d3-456f-b1bd-3e3a8e8087de/hls.m3u8',
+      description: '#6636 Multi-DRM Widevine DRM Requests are sent twice',
+      abr: true,
+      skip_ua: [
+        'firefox',
+        'safari',
+        { name: 'chrome', version: '75.0' },
+        { name: 'chrome', version: '79.0' },
+      ],
+    },
+    {
+      widevineLicenseUrl:
+        'https://drm-widevine-licensing.axtest.net/AcquireLicense',
+      emeEnabled: true,
+      licenseXhrSetup: (xhr, url, keyContext, licenseChallenge) => {
+        if (licenseChallenge.length > 10) {
+          xhr.open('POST', url, true);
+          xhr.setRequestHeader(
+            'x-axdrm-message',
+            'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ2ZXJzaW9uIjoxLCJiZWdpbl9kYXRlIjoiMjAwMC0wMS0wMVQwMDo1MTowNCswMzowMCIsImV4cGlyYXRpb25fZGF0ZSI6IjIwMjUtMTItMzFUMjM6NTk6NDArMDM6MDAiLCJjb21fa2V5X2lkIjoiZGRhYjgyZWMtMDM0YS00OGYxLWI1MmYtYWQ2YjAxNzI1NDBmIiwibWVzc2FnZSI6eyJ0eXBlIjoiZW50aXRsZW1lbnRfbWVzc2FnZSIsInZlcnNpb24iOjIsImxpY2Vuc2UiOnsiZHVyYXRpb24iOjE3MjgwMCwiYWxsb3dfcGVyc2lzdGVuY2UiOnRydWV9LCJjb250ZW50X2tleV91c2FnZV9wb2xpY2llcyI6W3sibmFtZSI6IlBvbGljeSBBIiwiZmFpcnBsYXkiOnsiaGRjcCI6Ik5PTkUifX1dLCJjb250ZW50X2tleXNfc291cmNlIjp7ImlubGluZSI6W3siaWQiOiI2ZDgwYjcxNS1kOGQzLTQ1NmYtYjFiZC0zZTNhOGU4MDg3ZGUiLCJ1c2FnZV9wb2xpY3kiOiJQb2xpY3kgQSJ9XX0sInNlc3Npb24iOnsidXNlcl9pZCI6IkE5UEM4RUEzeHFiRjV4RmZ0RzZaTzM0S0JlMjMifX0sImlhdCI6MTcyNDA4NzAyOH0.yj5MnErR7qzi3ueiFurZ3MN4Duiqi3A35xPNKDXXn2E',
+          );
+        }
+      },
+    },
+  ),
 
   closedCaptions: {
     url: 'https://playertest.longtailvideo.com/adaptive/captions/playlist.m3u8',
