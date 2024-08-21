@@ -295,7 +295,10 @@ describe('EMEController', function () {
 
     media.emit('encrypted', badData);
 
-    expect(emeController.keyIdToKeySessionPromise).to.deep.equal({});
+    expect(emeController.keyIdToKeySessionPromise).to.deep.equal(
+      {},
+      '`keyIdToKeySessionPromise` should be an empty dictionary when no key IDs are found',
+    );
   });
 
   it('should fetch the server certificate and set it into the session', function () {

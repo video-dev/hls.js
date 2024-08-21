@@ -548,7 +548,6 @@ export function parseSinf(sinf: Uint8Array): Uint8Array | null {
       return findBox(sinf, ['schi', 'tenc'])[0];
     }
   }
-  logger.error(`[eme] missing 'schm' box`);
   return null;
 }
 
@@ -1352,61 +1351,78 @@ export function mp4pssh(
   );
 }
 
-type PsshData = {
+export type PsshData = {
   version: 0 | 1;
   systemId: KeySystemIds;
   kids: null | Uint8Array[];
   data: null | Uint8Array;
+  offset: number;
   size: number;
 };
 
-export function parseMultiPssh(initData: ArrayBuffer): PsshData[] {
-  const results: PsshData[] = [];
+export type PsshInvalidResult = {
+  systemId?: undefined;
+  offset: number;
+  size: number;
+};
+
+export function parseMultiPssh(
+  initData: ArrayBuffer,
+): (PsshData | PsshInvalidResult)[] {
+  const results: (PsshData | PsshInvalidResult)[] = [];
   if (initData instanceof ArrayBuffer) {
     const length = initData.byteLength;
     let offset = 0;
     while (offset + 32 < length) {
       const view = new DataView(initData, offset);
       const pssh = parsePssh(view);
-      if ('systemId' in pssh) {
-        results.push(pssh);
-      }
+      results.push(pssh);
       offset += pssh.size;
     }
   }
   return results;
 }
 
-function parsePssh(view: DataView): PsshData | { size: number } {
+function parsePssh(view: DataView): PsshData | PsshInvalidResult {
   const size = view.getUint32(0);
+  const offset = view.byteOffset;
   const length = view.byteLength;
-  if (view.byteLength < size) {
-    return { size: length };
+  if (length < size) {
+    return {
+      offset,
+      size: length,
+    };
   }
   const type = view.getUint32(4);
   if (type !== 0x70737368) {
-    return { size };
+    return { offset, size };
   }
   const version = view.getUint32(8) >>> 24;
   if (version !== 0 && version !== 1) {
-    return { size };
+    return { offset, size };
   }
   const buffer = view.buffer;
   const systemId = Hex.hexDump(
-    new Uint8Array(buffer, view.byteOffset + 12, 16),
+    new Uint8Array(buffer, offset + 12, 16),
   ) as KeySystemIds;
   const dataSizeOrKidCount = view.getUint32(28);
   let kids: null | Uint8Array[] = null;
   let data: null | Uint8Array = null;
   if (version === 0) {
-    if (size - 32 < dataSizeOrKidCount) {
-      return { size };
+    if (size - 32 < dataSizeOrKidCount || dataSizeOrKidCount < 30) {
+      return { offset, size };
     }
-    data = new Uint8Array(buffer, view.byteOffset + 32, dataSizeOrKidCount);
+    data = new Uint8Array(buffer, offset + 32, dataSizeOrKidCount);
   } else if (version === 1) {
+    if (
+      !dataSizeOrKidCount ||
+      length < offset + 32 + dataSizeOrKidCount * 16 + 16
+    ) {
+      return { offset, size };
+    }
     kids = [];
     for (let i = 0; i < dataSizeOrKidCount; i++) {
-      kids.push(new Uint8Array(buffer, view.byteOffset + 32 + i * 16, 16));
+      kids.push(new Uint8Array(buffer, offset + 32 + i * 16, 16));
     }
   }
   return {
@@ -1414,6 +1430,7 @@ function parsePssh(view: DataView): PsshData | { size: number } {
     systemId,
     kids,
     data,
+    offset,
     size,
   };
 }
