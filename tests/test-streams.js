@@ -43,6 +43,7 @@ const appleFPSv3Gatsby = createTestStreamWithConfig(
   },
   {
     emeEnabled: true,
+    widevineLicenseUrl: undefined,
     drmSystems: {
       'com.apple.fps': {
         licenseUrl: 'https://mortimer.apple.com/drm/fppas/Q1.0.0/m',
@@ -272,7 +273,7 @@ const appleFPSv3Gatsby = createTestStreamWithConfig(
         // 1 year from May 04, 2022
         xhr.setRequestHeader(
           'Authorization',
-          'Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6IjFiNmYxZGU1LTkwMDQtNGIyNy04ZDdhLTdkYmIxOWRlN2Y2ZSJ9.eyJqdGkiOiIwOGZkYWZiMC1lM2JkLTQyNjMtOTMxZC1jYTQzMWExOWJjZWYiLCJpc3MiOiJodHRwczovL2l0cy5hcHBsZS5jb20vIiwiYXVkIjpbImlyZGV0by5pZHJtcyJdLCJzdWIiOiJ3ZWJwbGF5ZXIuaXRzLmFwcGxlLmNvbSIsImlhdCI6MTY1MTcwMjUyMSwiZXhwIjoxNjgzMjM4NTIxfQ.G4nUpNPlBXmPXLZi69o9K5SmQYf576W6STP2smbGWkL4A11QG-610eM9N9_t2iSnEJ2n_6iwwvl1yFJiSB385L9QCwvwRlbNtKlcW07bhCmd_MhOl8p-Q0UbKUoILMWIIHjE4fOJ0_BzuQgIcpVRztOiu2Q5DBbK6OIBkDcpqYO2OPapgy2Mst21PdLXU-gt5rfzKkZmNaZ7Z9HLnEw-zrckaxqIuvY-16Dxx2pTJOtASTU-pK_nLIz-xyK2cDnwDxFb3QjYO-RHtyNpchKUV5ij-54nxJRT0Fq-0AB4rG84MKmDIs8S1BK_h_yCT8CHCgwOspf_0owSVCK_-UGhJG6LVJqs2_t6kWqd08WvUvowweM4Ppd8zJ5NSgP6sAGMBtXRpHqIBHGR4CXPOvKBipQ1RMXVDcOOQDC6wUEIWtNW9duKCQYErP3VChh503SmSxxQMY0VAgli-2fKZC_gwljEtBiMjsTLPaFuDrbsRotzE7wVm_xBvmlmnQ1eF6OM4bE0VkOLsILgquay1zq8ZBrUMSAs1PPR222mREDqH8OOMfMhg18FnMf5RFgQzP4edHGH69OoP5Xu1BVmvkimrz4GeEzUcSv7f5vxjMNFtLRpIM5Wy1OGh-jpJjrd4S9-r5E0cfMPiMqVNsVx-BsGy4Qgb5Z0hZR3kUD2OuCa_4Q',
+          'Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjAzMzczZjk5LWRlZTgtNDA5Yi1iODAzLTZlMGM4MjNkZDVlYiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3N2ZlYmRmMy1jY2U3LTQyYzYtYTU0ZS0zOWY4MzNiNDZiNDMiLCJpc3MiOiJodHRwczovL2l0cy5hcHBsZS5jb20vIiwiYXVkIjpbImlyZGV0by5pZHJtcyJdLCJzdWIiOiJ3ZWJwbGF5ZXIuaXRzLmFwcGxlLmNvbSIsImlhdCI6MTcxNzAyNDAzNSwiZXhwIjoxNzQ4NTYwMDM1fQ.DjCNXJE2o15Id7SZx1H1z1bWHD2bCOqECvTR6I9zGywoGlrnVCtCPqUJjYYCiDx1PaopK6DpTkwvmD_htMK_wDa11CKr9CN7RxylFkPXfExrWygxwvTBnIycSIo1gWVBwWQUodo4F-YoVSmYX52oDcYOKdkUfJUrbtP_zeolbim40oZh4VVJbYXNpA1e2TF5RisFhQf3pHHPqXbCOYsy6xMk9XYFOc-FCwKxgbqe7YqNH-wA8vYJwvAmd9UMQkCZez9HDakiQcPqMccV1CIaeldhhKdkGiZrT2Kct6dF0wWr5smeh3aI7rUMxgesDZFouZbjMjk-khOWLc8zb_t60nQ1W9yCQNqOsSK3-81y7wjNV7rIfl7fEO78dLOroZ_LXFtqRKuoJx21U8NZ8iCuWGjcCz5XTP6Dn5sI_yJyJfzfKHBMS_EhsoxFovm9iC3J7wnnGKD96zc5NDpOFEdXhtCTAbP-6JCMMETr41gkGY2IYNDI0vsNT7xvsSkb9POH_JZoJ5iiFXZGa8-nGUbdZtj6LDmXANj3oii1iIX5qaAB6D6IP5zjNYU3e7LW_-jRAvSWW45NdwlgPxCmHmRgYn7xYr-wXWBLN2dmTsGFErTHVlHermyevujv83wR_5zH_0Pbe-BU9sVQecIpIThawmHKZPlikP26WMY_ZwYkF2A',
         );
         console.log(
           `DEMO page [eme] license setup "${keySystem}" key URI: ${uri}, keyId: ${hexDump(
@@ -387,6 +388,7 @@ const awsCmafDateRangeSpekeDRMAdsMP = createTestStreamWithConfig(
   },
   {
     emeEnabled: true,
+    widevineLicenseUrl: undefined,
     drmSystems: {
       'com.apple.fps': {
         licenseUrl: 'https://lic.staging.drmtoday.com/license-server-fairplay/',
@@ -969,6 +971,7 @@ const streams = {
     },
     {
       emeEnabled: true,
+      widevineLicenseUrl: undefined,
       drmSystems: {
         'com.apple.fps': {
           licenseUrl:
@@ -987,6 +990,7 @@ const streams = {
   //   },
   //   {
   //     emeEnabled: true,
+  //     widevineLicenseUrl: undefined,
   //     drmSystems: {
   //       'com.apple.fps': {
   //         licenseUrl:
@@ -1088,6 +1092,7 @@ const streams = {
     },
     {
       emeEnabled: true,
+      widevineLicenseUrl: undefined,
       drmSystems: {
         'com.widevine.alpha': {
           licenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
@@ -1111,6 +1116,7 @@ const streams = {
     },
     {
       emeEnabled: true,
+      widevineLicenseUrl: undefined,
       drmSystems: {
         'com.widevine.alpha': {
           licenseUrl: 'https://cwip-shaka-proxy.appspot.com/no_auth',
