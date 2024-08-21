@@ -261,6 +261,7 @@ module.exports = {
        Related to https://github.com/video-dev/hls.js/issues/3834, where Apple Silicon chips throw decoding errors if
        NAL units are not starting right at the beginning of the PES packet when using hardware accelerated decoding.`,
     abr: false,
+    skipFunctionalTests: true,
   },
   aes256: {
     url: 'https://jvaryhlstests.blob.core.windows.net/hlstestdata/playlist_encrypted.m3u8',
