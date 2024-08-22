@@ -960,6 +960,50 @@ const streams = {
   //   url: 'https://81558cb7081e4bbaacce15fea2ce4685.mediatailor.us-east-1.amazonaws.com/v1/master/e6d234965645b411ad572802b6c9d5a10799c9c1/All_Reference_Streams_CMAF/3b229ecbde714b5998955a95eb57e83a/cmaf-thumbnails/index.m3u8',
   // },
 
+  muxDRM: createTestStreamWithConfig(
+    {
+      url: 'https://stream.mux.com/uyfbb021KU01oMhqQu00X1VyRfPhk02UhFy46LeG3zIjJTc.m3u8?token=eyJhbGciOiJSUzI1NiJ9.eyJraWQiOiJqTmhJdEVQWmtOVzN2M0RtcTJOcWM4N1hreEtmaUI2QWlCWjhuVDAwNTAwNmciLCJhdWQiOiJ2Iiwic3ViIjoidXlmYmIwMjFLVTAxb01ocVF1MDBYMVZ5UmZQaGswMlVoRnk0NkxlRzN6SWpKVGMiLCJleHAiOjE3NTQ1MDQwMzJ9.ng0pjnnxRX74_v2Vpjl0YZi3eSku0oqVhMdavPptTSAP-4c8NWBpGfbIAZbJtW5-uDOkmgsJjeAgY9ZFQBHk87Nw2y-AFiwMfjZr84fIDnFKWeXRdqe-RJ1Ub2tRLO-srl_ICScXok9VzwMdFAYSwtFHCbDzb-rNfhEibI_7dleLnIa9IWnT5dE6Fk5Xe43j6kgUA8EYHx9bvPbdiq00tvfijAbOS-F3AhEPmpmT6GM35eCnp08T91vWs7R2qlkjpHASwKjEr6wQTVxbBz207MX3CzcLy-fvhq4DErI-lDeJlCfAOzOwLreGfZFIrZWqa8AN4Yb8r3MtAQ_OWVfUow',
+      description: 'MUX with DRM',
+      skipFunctionalTests: true,
+    },
+    {
+      emeEnabled: true,
+      widevineLicenseUrl: undefined,
+      drmSystems: {
+        'com.widevine.alpha': {
+          licenseUrl: 'https://license.mux.com/license/widevine/uyfbb021KU01oMhqQu00X1VyRfPhk02UhFy46LeG3zIjJTc?token=eyJhbGciOiJSUzI1NiJ9.eyJraWQiOiJqTmhJdEVQWmtOVzN2M0RtcTJOcWM4N1hreEtmaUI2QWlCWjhuVDAwNTAwNmciLCJhdWQiOiJkIiwic3ViIjoidXlmYmIwMjFLVTAxb01ocVF1MDBYMVZ5UmZQaGswMlVoRnk0NkxlRzN6SWpKVGMiLCJleHAiOjE3NTQ1MDQwODJ9.yUEeskPWfVSjDoilFCdK0pjOJ9h4J0N9eOWNu7LeEXJVDhXt69Cqu1ibqD1khsedzT69eIZvCFBJ-3IIRwCQ2OQsnJ_yPsoHKUuK78z_Z8r82DkZzOx4LcQc9uPwfz6w1-XfqJ0bOLsmgD4IWMIbKF2xQ9HZXFzTeWtI69q-oDvSx4zJEmfs850daT1n7zqGN10vYfWTkGDLD4I86iR3ipEaDYYWQyQHB2838BkoaCo8EScULjx7z6bpDbJUb9Gn2NdoJYz6obv7Nh3IkKAklIlqsr52OorpNmBNbXTqUpRhyhH9iQ8-EIB_NWbnMBgUNULo-Dt5ezOjbfUl0Hs9OQ'
+        },
+        'com.microsoft.playready': {
+          licenseUrl: 'https://license.mux.com/license/playready/uyfbb021KU01oMhqQu00X1VyRfPhk02UhFy46LeG3zIjJTc?token=eyJhbGciOiJSUzI1NiJ9.eyJraWQiOiJqTmhJdEVQWmtOVzN2M0RtcTJOcWM4N1hreEtmaUI2QWlCWjhuVDAwNTAwNmciLCJhdWQiOiJkIiwic3ViIjoidXlmYmIwMjFLVTAxb01ocVF1MDBYMVZ5UmZQaGswMlVoRnk0NkxlRzN6SWpKVGMiLCJleHAiOjE3NTQ1MDQwODJ9.yUEeskPWfVSjDoilFCdK0pjOJ9h4J0N9eOWNu7LeEXJVDhXt69Cqu1ibqD1khsedzT69eIZvCFBJ-3IIRwCQ2OQsnJ_yPsoHKUuK78z_Z8r82DkZzOx4LcQc9uPwfz6w1-XfqJ0bOLsmgD4IWMIbKF2xQ9HZXFzTeWtI69q-oDvSx4zJEmfs850daT1n7zqGN10vYfWTkGDLD4I86iR3ipEaDYYWQyQHB2838BkoaCo8EScULjx7z6bpDbJUb9Gn2NdoJYz6obv7Nh3IkKAklIlqsr52OorpNmBNbXTqUpRhyhH9iQ8-EIB_NWbnMBgUNULo-Dt5ezOjbfUl0Hs9OQ'
+        }
+      },
+      requestMediaKeySystemAccessFunc: (e,t)=>('com.widevine.alpha' === e && (t = [...t.map(e=>{
+        var t;
+        let r = null == (t = e.videoCapabilities) ? void 0 : t.map(e=>({
+          ...e,
+          robustness: 'HW_SECURE_ALL'
+        }));
+        return {
+          ...e,
+          videoCapabilities: r
+        }
+      }
+      ), ...t]),
+      navigator.requestMediaKeySystemAccess(e, t).then(t=>{
+        const a = undefined;
+        const et = {
+          FAIRPLAY: 'fairplay',
+          PLAYREADY: 'playready',
+          WIDEVINE: 'widevine'
+        };
+        const er = (e) => e.includes('fps') ? et.FAIRPLAY : e.includes('playready') ? et.PLAYREADY : e.includes('widevine') ? et.WIDEVINE : void 0;
+        let r = er(e);
+        return null == a || a(r),
+        t
+      }
+      ))
+    },
+  ),
   ezDrmFairPlayCmaf: createTestStreamWithConfig(
     {
       url: 'https://na-fps.ezdrm.com/demo/ezdrm/master.m3u8',
