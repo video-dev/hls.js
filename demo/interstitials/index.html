@@ -1,0 +1,41 @@
+<html>
+  <head>
+    <title>HLS.js Interstitials</title>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1.5"
+    />
+    <link href="index.css" rel="stylesheet" type="text/css" />
+  </head>
+  <body>
+    <div class="top">
+      <div class="player center paused muted primary">
+        <video class="media" id="video" autoplay muted controls></video>
+        <div class="controls" id="controls">
+          <button id="play-pause">
+            <span class="play">▶️</span><span class="pause">⏸️</span>
+          </button>
+          <button id="mute-unmute">
+            <span class="mute">🔇</span><span class="unmute">🔉</span>
+          </button>
+          <button id="skip">SKIP</button>
+          <div class="slider" id="timeline"></div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom center">
+      <ul>
+        <li>Interstitials demo</li>
+        <li>
+          Select timeline type (integrated, playout, primary) ( or show controls
+          )
+        </li>
+        <li>Interstitials Manager (hls.interstitialManager()):</li>
+      </ul>
+    </div>
+    <script src="../../dist/hls.js"></script>
+    <!-- <script src="https://feature-interstitials.hls-js-4zn.pages.dev/dist/hls.js"></script> -->
+    <script src="./index.js"></script>
+  </body>
+</html>
