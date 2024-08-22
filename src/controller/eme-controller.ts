@@ -16,6 +16,7 @@ import {
   keySystemIdToKeySystemDomain,
   KeySystems,
   requestMediaKeySystemAccess,
+  parsePlayReadyWRM,
 } from '../utils/mediakeys-helper';
 import { strToUtf8array } from '../utils/utf8-utils';
 import { base64Decode } from '../utils/numeric-encoding-utils';
@@ -25,8 +26,8 @@ import {
   bin2str,
   parseMultiPssh,
   parseSinf,
-  PsshData,
-  PsshInvalidResult,
+  type PsshData,
+  type PsshInvalidResult,
 } from '../utils/mp4-tools';
 import { EventEmitter } from 'eventemitter3';
 import type Hls from '../hls';
@@ -530,7 +531,7 @@ class EMEController extends Logger implements ComponentAPI {
       return;
     }
 
-    let keyId: Uint8Array | undefined;
+    let keyId: Uint8Array | null | undefined;
     let keySystemDomain: KeySystems | undefined;
 
     if (
@@ -556,9 +557,22 @@ class EMEController extends Logger implements ComponentAPI {
     } else if (this.getLicenseServerUrl(KeySystems.WIDEVINE)) {
       // Support Widevine clear-lead key-session creation (otherwise depend on playlist keys)
       const psshResults = parseMultiPssh(initData);
-      const psshInfo = psshResults.filter(
-        (pssh): pssh is PsshData => pssh.systemId === KeySystemIds.WIDEVINE,
-      )[0];
+
+      // TODO: If using keySystemAccessPromises we might want to wait until one is resolved
+      let keySystems = Object.keys(
+        this.keySystemAccessPromises,
+      ) as KeySystems[];
+      if (!keySystems.length) {
+        keySystems = getKeySystemsForConfig(this.config);
+      }
+
+      const psshInfo = psshResults.filter((pssh): pssh is PsshData => {
+        const keySystem = pssh.systemId
+          ? keySystemIdToKeySystemDomain(pssh.systemId)
+          : null;
+        return keySystem ? keySystems.indexOf(keySystem) > -1 : false;
+      })[0];
+
       if (!psshInfo) {
         if (
           psshResults.length === 0 ||
@@ -574,10 +588,15 @@ class EMEController extends Logger implements ComponentAPI {
         }
         return;
       }
+
       keySystemDomain = keySystemIdToKeySystemDomain(psshInfo.systemId);
       if (psshInfo.version === 0 && psshInfo.data) {
-        const offset = psshInfo.data.length - 22;
-        keyId = psshInfo.data.subarray(offset, offset + 16);
+        if (keySystemDomain === KeySystems.WIDEVINE) {
+          const offset = psshInfo.data.length - 22;
+          keyId = psshInfo.data.subarray(offset, offset + 16);
+        } else if (keySystemDomain === KeySystems.PLAYREADY) {
+          keyId = parsePlayReadyWRM(psshInfo.data);
+        }
       }
     }
 
