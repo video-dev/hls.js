@@ -3,6 +3,7 @@ import { sliceUint8 } from './typed-array';
 import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
 import { logger } from '../utils/logger';
 import Hex from './hex';
+import type { KeySystemIds } from './mediakeys-helper';
 import type { PassthroughTrack, UserdataSample } from '../types/demuxer';
 import type { DecryptData } from '../loader/level-key';
 
@@ -547,7 +548,6 @@ export function parseSinf(sinf: Uint8Array): Uint8Array | null {
       return findBox(sinf, ['schi', 'tenc'])[0];
     }
   }
-  logger.error(`[eme] missing 'schm' box`);
   return null;
 }
 
@@ -1351,41 +1351,86 @@ export function mp4pssh(
   );
 }
 
-export function parsePssh(initData: ArrayBuffer) {
-  if (!(initData instanceof ArrayBuffer) || initData.byteLength < 32) {
-    return null;
+export type PsshData = {
+  version: 0 | 1;
+  systemId: KeySystemIds;
+  kids: null | Uint8Array[];
+  data: null | Uint8Array;
+  offset: number;
+  size: number;
+};
+
+export type PsshInvalidResult = {
+  systemId?: undefined;
+  offset: number;
+  size: number;
+};
+
+export function parseMultiPssh(
+  initData: ArrayBuffer,
+): (PsshData | PsshInvalidResult)[] {
+  const results: (PsshData | PsshInvalidResult)[] = [];
+  if (initData instanceof ArrayBuffer) {
+    const length = initData.byteLength;
+    let offset = 0;
+    while (offset + 32 < length) {
+      const view = new DataView(initData, offset);
+      const pssh = parsePssh(view);
+      results.push(pssh);
+      offset += pssh.size;
+    }
   }
-  const result = {
-    version: 0,
-    systemId: '',
-    kids: null as null | Uint8Array[],
-    data: null as null | Uint8Array,
-  };
-  const view = new DataView(initData);
-  const boxSize = view.getUint32(0);
-  if (initData.byteLength !== boxSize && boxSize > 44) {
-    return null;
+  return results;
+}
+
+function parsePssh(view: DataView): PsshData | PsshInvalidResult {
+  const size = view.getUint32(0);
+  const offset = view.byteOffset;
+  const length = view.byteLength;
+  if (length < size) {
+    return {
+      offset,
+      size: length,
+    };
   }
   const type = view.getUint32(4);
   if (type !== 0x70737368) {
-    return null;
+    return { offset, size };
   }
-  result.version = view.getUint32(8) >>> 24;
-  if (result.version > 1) {
-    return null;
+  const version = view.getUint32(8) >>> 24;
+  if (version !== 0 && version !== 1) {
+    return { offset, size };
   }
-  result.systemId = Hex.hexDump(new Uint8Array(initData, 12, 16));
+  const buffer = view.buffer;
+  const systemId = Hex.hexDump(
+    new Uint8Array(buffer, offset + 12, 16),
+  ) as KeySystemIds;
   const dataSizeOrKidCount = view.getUint32(28);
-  if (result.version === 0) {
-    if (boxSize - 32 < dataSizeOrKidCount) {
-      return null;
+  let kids: null | Uint8Array[] = null;
+  let data: null | Uint8Array = null;
+  if (version === 0) {
+    if (size - 32 < dataSizeOrKidCount || dataSizeOrKidCount < 22) {
+      return { offset, size };
     }
-    result.data = new Uint8Array(initData, 32, dataSizeOrKidCount);
-  } else if (result.version === 1) {
-    result.kids = [];
+    data = new Uint8Array(buffer, offset + 32, dataSizeOrKidCount);
+  } else if (version === 1) {
+    if (
+      !dataSizeOrKidCount ||
+      length < offset + 32 + dataSizeOrKidCount * 16 + 16
+    ) {
+      return { offset, size };
+    }
+    kids = [];
     for (let i = 0; i < dataSizeOrKidCount; i++) {
-      result.kids.push(new Uint8Array(initData, 32 + i * 16, 16));
+      kids.push(new Uint8Array(buffer, offset + 32 + i * 16, 16));
     }
   }
-  return result;
+  return {
+    version,
+    systemId,
+    kids,
+    data,
+    offset,
+    size,
+  };
 }
