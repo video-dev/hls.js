@@ -8,10 +8,10 @@
 
   const video = document.getElementById('video');
 
-  const hls = new Hls({
+  const hls = (self.hls = new Hls({
     debug: true,
     enableWorker: false,
-  });
+  }));
   hls.loadSource(sourceURL);
   hls.attachMedia(video);
 })(
