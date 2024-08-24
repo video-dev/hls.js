@@ -1,0 +1,112 @@
+body {
+  max-width: 1024px;
+  margin: auto;
+  font-family: sans-serif;
+  background-color: #d9d8d8;
+}
+
+textarea {
+  width: 100%;
+  height: 6em;
+  padding: 0.5em 1em;
+  box-sizing: border-box;
+  border: 2px solid #ccc;
+  border-radius: 4px;
+  background-color: #f8f8f8;
+  font-size: 16px;
+  white-space: break-spaces;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 1024px;
+  min-width: 400px;
+  text-align: center;
+}
+
+table,
+th,
+td {
+  border: 1px solid gray;
+}
+
+th,
+td {
+  height: 24px;
+  padding: 4px;
+  vertical-align: middle;
+}
+
+.ok {
+  background-color: #64bc64;
+}
+
+.maybe {
+  background-color: #f4c570;
+}
+
+.fail {
+  background-color: #ff7b7b;
+}
+
+.error {
+  font-family: monospace;
+  margin: 0;
+}
+
+.unavailable {
+  background-color: #d8d8d8;
+}
+.mime {
+  width: 120px;
+}
+.media-container {
+  min-width: 190px;
+  width: 200px;
+  padding: 0;
+}
+.media {
+  width: 100%;
+}
+.check-hdr {
+  content: 'MediaQueries is not supported';
+}
+
+.check-hdr .sdr,
+.check-hdr .hdr {
+  display: none;
+  padding: 0 1em;
+}
+
+@media (dynamic-range: standard) {
+  .check-hdr {
+    color: red;
+  }
+
+  .check-hdr::before {
+    content: 'This browser only supports SDR on this display';
+  }
+
+  .check-hdr .sdr {
+    display: inline-block;
+  }
+}
+
+@media (dynamic-range: high) {
+  .check-hdr {
+    color: green;
+  }
+
+  .check-hdr::before {
+    content: 'This browser supports HDR on this display';
+  }
+
+  .check-hdr .sdr {
+    display: none;
+  }
+
+  .check-hdr .hdr {
+    display: inline-block;
+  }
+}

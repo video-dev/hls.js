@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>codec support</title>
+    <link rel="stylesheet" type="text/css" href="index.css" />
+    <script type="text/javascript" src="../../dist/hls.js"></script>
+    <script type="text/javascript" src="index.js"></script>
+  </head>
+
+  <body>
+    <h1>Audio and Video capabilities test</h1>
+    this page will test codecs found in the HLS assets listed against
+    <a
+      href="https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement/canPlayType"
+      >canPlayType</a
+    >,
+    <a
+      href="https://developer.mozilla.org/en-US/docs/Web/API/MediaSource/isTypeSupported"
+      >isTypeSupported</a
+    >, and
+    <a
+      href="https://developer.mozilla.org/en-US/docs/Web/API/Media_Capabilities_API"
+      >mediaCapabilitieds API</a
+    >.
+
+    <h4 class="check-hdr">
+      <pre class="sdr">@media (dynamic-range: standard)</pre>
+      <pre class="hdr">@media (dynamic-range: high)</pre>
+    </h4>
+    <h4>User Agent:</h4>
+    <div id="ua"></div>
+
+    <h4>Provide a list of HSL assets as input:</h4>
+    <div class="text-input">
+      <textarea rows="5" id="hls-assets" name="hls-assets"></textarea>
+      <br />
+      <input id="hls-assets-submit" type="submit" value="Reload HLS Assets" />
+      <input
+        id="hls-assets-reset"
+        type="submit"
+        title="Reset to defaults or read ?src/dv/adv URL Parameter"
+        value="Reset"
+      />
+    </div>
+
+    <div id="results"></div>
+    <p></p>
+  </body>
+</html>

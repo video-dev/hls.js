@@ -6,12 +6,12 @@ body {
     14px/20px Helvetica,
     Arial,
     sans-serif;
-  background: #ccc;
+  background-color: #ccc;
   margin: 0;
   width: 100%;
 }
 .top {
-  background: black;
+  background-color: black;
   position: relative;
   margin: 0;
   width: 100%;
@@ -24,7 +24,7 @@ body {
 }
 
 .player {
-  background: red;
+  /* background-color: red; */
   position: relative;
   height: 100%;
 }
@@ -50,18 +50,23 @@ body {
 }
 
 .media {
-  background: blue;
+  /* background-color: blue; */
   position: absolute;
   width: 100%;
   height: 100%;
 }
 
 .controls {
-  background: rgba(0, 255, 255, 0.1);
+  color: rgb(242, 241, 234);
+  fill: rgb(242, 241, 234);
+  /* background-color: rgba(0, 255, 255, 0.1); */
   position: absolute;
   width: 100%;
   height: 50px;
   bottom: 0;
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 #play-pause {
@@ -78,6 +83,12 @@ body {
   bottom: 50px;
 }
 
+#time-display {
+  position: absolute;
+  left: 33px;
+  text-shadow: 0 0 1em rgba(0, 102, 220, 1.0), 0 0 0.2em black;
+}
+
 #skip {
   position: absolute;
   right: 40px;
@@ -85,15 +96,20 @@ body {
 }
 
 .controls .slider {
-  background: magenta;
+  /* background-color: magenta;  */
   position: absolute;
   width: 100%;
   height: 15px;
   bottom: 0;
 }
 
+.controls .slider canvas {
+  width: 100%;
+  height: 100%;
+}
+
 .bottom {
-  background: rgba(255, 255, 255, 0.5);
+  background-color: rgba(255, 255, 255, 0.5);
 }
 
 button,
@@ -106,6 +122,11 @@ textarea {
   font: inherit;
 }
 button {
+  pointer-events: auto;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  background-color: rgba(0, 103, 220, 0.66);
+  transition: background-color 0.15s linear;
   overflow: visible;
   padding: 10px;
   border: none;
@@ -113,6 +134,12 @@ button {
   outline: none;
   margin-right: 6px;
   margin-bottom: 6px;
+}
+button svg {
+  height: 20px;
+}
+button:hover {
+  background-color: rgba(0, 102, 220, 1.0);
 }
 button,
 select {
