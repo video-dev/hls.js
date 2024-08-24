@@ -447,7 +447,8 @@ export default class BaseStreamController
           // Do not stream fragments while buffering Interstitial Events (except for overlap at the start)
           if (
             bufferingInterstitial.appendInPlace ||
-            Math.abs(frag.start - bufferingItem.start) > 1
+            Math.abs(frag.start - bufferingItem.start) > 1 ||
+            bufferingItem.start === 0
           ) {
             return;
           }
