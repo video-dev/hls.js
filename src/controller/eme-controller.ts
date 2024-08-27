@@ -12,10 +12,10 @@ import {
   keySystemDomainToKeySystemFormat as keySystemToKeySystemFormat,
   KeySystemFormats,
   keySystemFormatToKeySystemDomain,
-  KeySystemIds,
   keySystemIdToKeySystemDomain,
   KeySystems,
   requestMediaKeySystemAccess,
+  parsePlayReadyWRM,
 } from '../utils/mediakeys-helper';
 import { strToUtf8array } from '../utils/utf8-utils';
 import { base64Decode } from '../utils/numeric-encoding-utils';
@@ -25,8 +25,8 @@ import {
   bin2str,
   parseMultiPssh,
   parseSinf,
-  PsshData,
-  PsshInvalidResult,
+  type PsshData,
+  type PsshInvalidResult,
 } from '../utils/mp4-tools';
 import { EventEmitter } from 'eventemitter3';
 import type Hls from '../hls';
@@ -127,7 +127,7 @@ class EMEController extends Logger implements ComponentAPI {
     this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
   }
 
-  private getLicenseServerUrl(keySystem: KeySystems): string | never {
+  private getLicenseServerUrl(keySystem: KeySystems): string | undefined {
     const { drmSystems, widevineLicenseUrl } = this.config;
     const keySystemConfiguration = drmSystems[keySystem];
 
@@ -139,10 +139,16 @@ class EMEController extends Logger implements ComponentAPI {
     if (keySystem === KeySystems.WIDEVINE && widevineLicenseUrl) {
       return widevineLicenseUrl;
     }
+  }
 
-    throw new Error(
-      `no license server URL configured for key-system "${keySystem}"`,
-    );
+  private getLicenseServerUrlOrThrow(keySystem: KeySystems): string | never {
+    const url = this.getLicenseServerUrl(keySystem);
+    if (url === undefined) {
+      throw new Error(
+        `no license server URL configured for key-system "${keySystem}"`,
+      );
+    }
+    return url;
   }
 
   private getServerCertificateUrl(keySystem: KeySystems): string | void {
@@ -524,12 +530,12 @@ class EMEController extends Logger implements ComponentAPI {
       return;
     }
 
-    let keyId: Uint8Array | undefined;
+    let keyId: Uint8Array | null | undefined;
     let keySystemDomain: KeySystems | undefined;
 
     if (
       initDataType === 'sinf' &&
-      this.config.drmSystems[KeySystems.FAIRPLAY]
+      this.getLicenseServerUrl(KeySystems.FAIRPLAY)
     ) {
       // Match sinf keyId to playlist skd://keyId=
       const json = bin2str(new Uint8Array(initData));
@@ -547,12 +553,25 @@ class EMEController extends Logger implements ComponentAPI {
         this.warn(`${logMessage} Failed to parse sinf: ${error}`);
         return;
       }
-    } else {
+    } else if (this.getLicenseServerUrl(KeySystems.WIDEVINE)) {
       // Support Widevine clear-lead key-session creation (otherwise depend on playlist keys)
       const psshResults = parseMultiPssh(initData);
-      const psshInfo = psshResults.filter(
-        (pssh): pssh is PsshData => pssh.systemId === KeySystemIds.WIDEVINE,
-      )[0];
+
+      // TODO: If using keySystemAccessPromises we might want to wait until one is resolved
+      let keySystems = Object.keys(
+        this.keySystemAccessPromises,
+      ) as KeySystems[];
+      if (!keySystems.length) {
+        keySystems = getKeySystemsForConfig(this.config);
+      }
+
+      const psshInfo = psshResults.filter((pssh): pssh is PsshData => {
+        const keySystem = pssh.systemId
+          ? keySystemIdToKeySystemDomain(pssh.systemId)
+          : null;
+        return keySystem ? keySystems.indexOf(keySystem) > -1 : false;
+      })[0];
+
       if (!psshInfo) {
         if (
           psshResults.length === 0 ||
@@ -568,10 +587,15 @@ class EMEController extends Logger implements ComponentAPI {
         }
         return;
       }
+
       keySystemDomain = keySystemIdToKeySystemDomain(psshInfo.systemId);
       if (psshInfo.version === 0 && psshInfo.data) {
-        const offset = psshInfo.data.length - 22;
-        keyId = psshInfo.data.subarray(offset, offset + 16);
+        if (keySystemDomain === KeySystems.WIDEVINE) {
+          const offset = psshInfo.data.length - 22;
+          keyId = psshInfo.data.subarray(offset, offset + 16);
+        } else if (keySystemDomain === KeySystems.PLAYREADY) {
+          keyId = parsePlayReadyWRM(psshInfo.data);
+        }
       }
     }
 
@@ -1098,7 +1122,7 @@ class EMEController extends Logger implements ComponentAPI {
   ): Promise<ArrayBuffer> {
     const keyLoadPolicy = this.config.keyLoadPolicy.default;
     return new Promise((resolve, reject) => {
-      const url = this.getLicenseServerUrl(keySessionContext.keySystem);
+      const url = this.getLicenseServerUrlOrThrow(keySessionContext.keySystem);
       this.log(`Sending license request to URL: ${url}`);
       const xhr = new XMLHttpRequest();
       xhr.responseType = 'arraybuffer';
