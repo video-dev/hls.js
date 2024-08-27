@@ -648,13 +648,7 @@ class TSDemuxer implements Demuxer {
       }
     }
 
-    ADTS.initTrackConfig(
-      track,
-      this.observer,
-      data,
-      offset,
-      this.audioCodec as string,
-    );
+    ADTS.initTrackConfig(track, this.observer, data, offset, this.audioCodec);
 
     let pts: number;
     if (pes.pts !== undefined) {

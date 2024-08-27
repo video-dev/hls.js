@@ -2,6 +2,7 @@
  * Generate MP4 Box
  */
 
+import type { DemuxedAudioTrack } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
 
 type HdlrTypes = {
@@ -739,43 +740,45 @@ class MP4 {
     );
   }
 
-  static esds(track) {
-    const configlen = track.config.length;
-    return new Uint8Array(
-      [
-        0x00, // version 0
-        0x00,
-        0x00,
-        0x00, // flags
+  static esds(track: DemuxedAudioTrack) {
+    const config = track.config as [number, number];
+    return new Uint8Array([
+      0x00, // version 0
+      0x00,
+      0x00,
+      0x00, // flags
 
-        0x03, // descriptor_type
-        0x17 + configlen, // length
-        0x00,
-        0x01, // es_id
-        0x00, // stream_priority
+      0x03, // descriptor_type
+      0x19, // length
 
-        0x04, // descriptor_type
-        0x0f + configlen, // length
-        0x40, // codec : mpeg4_audio
-        0x15, // stream_type
-        0x00,
-        0x00,
-        0x00, // buffer_size
-        0x00,
-        0x00,
-        0x00,
-        0x00, // maxBitrate
-        0x00,
-        0x00,
-        0x00,
-        0x00, // avgBitrate
+      0x00,
+      0x01, // es_id
 
-        0x05, // descriptor_type
-      ]
-        .concat([configlen])
-        .concat(track.config)
-        .concat([0x06, 0x01, 0x02]),
-    ); // GASpecificConfig)); // length + audio config descriptor
+      0x00, // stream_priority
+
+      0x04, // descriptor_type
+      0x11, // length
+      0x40, // codec : mpeg4_audio
+      0x15, // stream_type
+      0x00,
+      0x00,
+      0x00, // buffer_size
+      0x00,
+      0x00,
+      0x00,
+      0x00, // maxBitrate
+      0x00,
+      0x00,
+      0x00,
+      0x00, // avgBitrate
+
+      0x05, // descriptor_type
+      0x02, // length
+      ...config,
+      0x06,
+      0x01,
+      0x02, // GASpecificConfig)); // length + audio config descriptor
+    ]);
   }
 
   static audioStsd(track) {
