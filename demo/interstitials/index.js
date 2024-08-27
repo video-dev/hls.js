@@ -330,9 +330,9 @@ function registerManagerPrintOut(hls) {
       timelineOffset,
     });
     const serialize = {
-      playout: hls.interstitialsManager.playout,
-      integrated: hls.interstitialsManager.integrated,
-      primary: hls.interstitialsManager.primary,
+      playout: { ...hls.interstitialsManager.playout, seekTo: `ƒ seekTo(time)` },
+      integrated: { ...hls.interstitialsManager.integrated, seekTo: `ƒ seekTo(time)` },
+      primary: { ...hls.interstitialsManager.primary, seekTo: `ƒ seekTo(time)` },
 
       events: events.map(interstitialToObj),
       schedule: schedule.map(segmentToObj),
@@ -356,7 +356,7 @@ function registerManagerPrintOut(hls) {
         : bufferingPlayer,
       playerQueue: playerQueue.map(assetPlayerToObj),
 
-      skip: `function skip() {}`,
+      skip: `ƒ skip()`,
     };
     el.textContent = JSON.stringify(serialize, null, 2).replace(
       /^(\s*)"([^"]+)":/gm,
