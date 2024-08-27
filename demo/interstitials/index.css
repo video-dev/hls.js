@@ -22,6 +22,9 @@ body {
   min-width: 640px;
   max-width: 854px;
 }
+.bottom p {
+  padding: 10px 20px;
+}
 
 .player {
   /* background-color: red; */
@@ -86,7 +89,9 @@ body {
 #time-display {
   position: absolute;
   left: 33px;
-  text-shadow: 0 0 1em rgba(0, 102, 220, 1.0), 0 0 0.2em black;
+  text-shadow:
+    0 0 1em rgba(0, 102, 220, 1),
+    0 0 0.2em black;
 }
 
 #skip {
@@ -108,6 +113,16 @@ body {
   height: 100%;
 }
 
+.player.html5-controls .controls {
+  cursor: auto;
+  pointer-events: none;
+}
+
+.player.html5-controls button,
+.player.html5-controls #time-display {
+  display: none;
+}
+
 .bottom {
   background-color: rgba(255, 255, 255, 0.5);
 }
@@ -117,7 +132,6 @@ input,
 optgroup,
 select,
 textarea {
-  -webkit-appearance: none;
   color: inherit;
   font: inherit;
 }
@@ -139,7 +153,7 @@ button svg {
   height: 20px;
 }
 button:hover {
-  background-color: rgba(0, 102, 220, 1.0);
+  background-color: rgba(0, 102, 220, 1);
 }
 button,
 select {

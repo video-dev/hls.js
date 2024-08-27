@@ -148,7 +148,7 @@ function appendData(
   div: HTMLDivElement,
   inEvent: string,
   group: string,
-  data: object | undefined,
+  data: object | undefined
 ) {
   if (!data) {
     return;
@@ -188,7 +188,7 @@ function appendData(
       pre.textContent = padStart(
         inEvent,
         JSON.stringify(quickPeekProps, null, 0),
-        20,
+        20
       );
       div.appendChild(pre);
     }
@@ -200,7 +200,7 @@ function appendEvent(
   inEvent: string,
   inEventGroup: string,
   mode: string,
-  data?: object | undefined,
+  data?: object | undefined
 ): HTMLDivElementForEvent {
   const div = document.createElement('div') as HTMLDivElementForEvent;
   div.classList.add('group-' + inEventGroup, 'event-' + inEvent, 'pre');
@@ -240,7 +240,7 @@ function incrementEvent(
   inEvent: string,
   inEventGroup: string,
   div: HTMLDivElementForEvent,
-  data: object | undefined,
+  data: object | undefined
 ) {
   group[inEvent]++;
   div.textContent = textContentGrouped(inEvent, group);
@@ -284,7 +284,7 @@ function textContentExpanded(inEvent, allData) {
   return `${inEvent} (${allData
     .map(
       (item, i) =>
-        (allData.length > 1 ? `[${i}] = ` : '') + stringify(item, null, 4),
+        (allData.length > 1 ? `[${i}] = ` : '') + stringify(item, null, 4)
     )
     .join('\n')})`;
 }
@@ -301,7 +301,7 @@ function getPageEventsLoggerListeners() {
   const genericEventHandler = function (
     e: object | undefined,
     type: string,
-    eventGroup: string,
+    eventGroup: string
   ) {
     inEventGroup = eventGroup;
     inMode = getPlaybackMode(eventGroup, lastMode);
@@ -340,7 +340,7 @@ function getPageEventsLoggerListeners() {
           inEvent,
           inEventGroup,
           inMode,
-          e,
+          e
         );
       }
       return;
@@ -359,7 +359,7 @@ function getPageEventsLoggerListeners() {
             inEvent,
             inEventGroup,
             inMode,
-            e,
+            e
           );
           appendSequenceElement(group.container, eventElement);
         }
@@ -430,7 +430,7 @@ function getPageEventsLoggerListeners() {
             element.removeChild(element.firstChild);
           }
         });
-    },
+    }
   );
   setupButton(
     document.querySelector('#event-flow-direction') as HTMLButtonElement,
@@ -451,7 +451,7 @@ function getPageEventsLoggerListeners() {
       this.innerHTML = { down: '&#x23EC;', up: '&#x23EB;' }[
         eventFlow
       ] as string;
-    },
+    }
   );
 
   return hlsJsEvents.reduce(
@@ -461,7 +461,7 @@ function getPageEventsLoggerListeners() {
     },
     Object.create({
       genericEventHandler: genericEventHandler,
-    }),
+    })
   );
 }
 
@@ -479,7 +479,7 @@ function runSetup(editor) {
     .catch((error) => {
       console.warn(
         'Error parsing config. Falling back to default setup.',
-        error,
+        error
       );
       if (self.hls) {
         self.hls.destroy();
@@ -505,7 +505,7 @@ function setup(config: HlsConfig) {
       userAgent: self.navigator.userAgent,
     },
     'info:environment',
-    getEventGroup('info:environment'),
+    getEventGroup('info:environment')
   );
 
   const hls = new (self.Hls as typeof Hls)(config);
@@ -540,7 +540,7 @@ function setup(config: HlsConfig) {
           });
         });
       }
-    },
+    }
   );
   (document.querySelector('.group-provider') as HTMLPreElement).textContent =
     'hlsjs';
@@ -556,14 +556,14 @@ function setup(config: HlsConfig) {
   hls.attachMedia(video);
   hls.loadSource(
     searchOptions.get('src') ||
-      '//localhost/adaptive/meridian/index-interstitials.m3u8',
+      '//localhost/adaptive/meridian/index-interstitials.m3u8'
   );
 }
 
 function getConfigForEditor(configJs) {
   return (configJs || JSON.stringify(defaultConfig, null, 4)).replace(
     /("|')(\.\.\/)+bin-/g,
-    '$1../../../bin-',
+    '$1../../../bin-'
   );
 }
 
@@ -575,7 +575,7 @@ interface ExpandableEditor extends AceAjax.Editor {
 
 function setupEditor(savedConfig) {
   const configInput = document.querySelector(
-    '#player-config',
+    '#player-config'
   ) as HTMLInputElement;
   configInput.value = getConfigForEditor(savedConfig);
   const editor = ace.edit(configInput) as ExpandableEditor;
@@ -591,14 +591,14 @@ function setupEditor(savedConfig) {
   editor.expand = function () {
     console.assert(
       !!(editor as any).getFontSize,
-      'getFontSize does not exist on Editor',
+      'getFontSize does not exist on Editor'
     );
     const lineHeight = (editor as any).getFontSize?.() + 5;
     const availableHeight =
       (document.documentElement.clientHeight, self.innerHeight || 0) - 100;
     options.maxLines = Math.min(
       Math.max(5, Math.floor(availableHeight / lineHeight)),
-      150,
+      150
     );
     editor.setOptions(options);
     editor.focus();
@@ -620,7 +620,7 @@ function setupEditor(savedConfig) {
             history.pushState(
               editor.getValue(),
               '',
-              `${location.origin}${location.pathname}`,
+              `${location.origin}${location.pathname}`
             );
           }
         })
@@ -677,7 +677,7 @@ function setupControls(editor) {
   setupConfigNav(
     document.querySelector('#setup-prev'),
     document.querySelector('#setup-next'),
-    editor,
+    editor
   );
   setupPin(document.querySelector('#pin-config'), editor);
   setupCopy(document.querySelector('#copy-config'), editor);
@@ -742,11 +742,11 @@ function setupDownload(button, editor) {
     const nameMatch = config.match(/(\w+)\s*=/);
     button.setAttribute(
       'download',
-      (nameMatch ? nameMatch[1] : 'config') + '.js',
+      (nameMatch ? nameMatch[1] : 'config') + '.js'
     );
     button.setAttribute(
       'href',
-      'data:application/xml;charset=utf-8,' + iife(config),
+      'data:application/xml;charset=utf-8,' + iife(config)
     );
   };
 }
@@ -766,12 +766,12 @@ function setupCopy(button, editor) {
 function setupPermalink(button, editor) {
   button.onclick = function () {
     const base64Config = encodeURIComponent(
-      `data:text/plain;base64,${btoa(editor.getValue())}`,
+      `data:text/plain;base64,${btoa(editor.getValue())}`
     );
     history.pushState(
       null,
       '',
-      `${location.origin}${location.pathname}?config=${base64Config}`,
+      `${location.origin}${location.pathname}?config=${base64Config}`
     );
   };
 }
@@ -784,7 +784,7 @@ function updateToggle(element, groupClass, enabled) {
   element.classList.toggle('disabled', !enabled);
   (document.querySelector('#event-log') as HTMLDivElement).classList.toggle(
     groupClass + '-disabled',
-    !enabled,
+    !enabled
   );
 }
 
@@ -794,7 +794,7 @@ function setupLogFilters() {
     .forEach((element) => {
       const groupClass = element.className.replace(
         /^.*\b(group-\w+)\b.*$/,
-        '$1',
+        '$1'
       );
       const toggleName = groupClass + '-toggle';
       storage.defineProperty(toggleName);
@@ -812,7 +812,7 @@ function setupLogFilters() {
 
   let filterTimeout = -1;
   const inputFilterField = document.querySelector(
-    '#input-filter',
+    '#input-filter'
   ) as HTMLInputElement;
   const updateFilter = (derp: string) => {
     const filter = (function (textInput) {
@@ -835,7 +835,7 @@ function setupLogFilters() {
     filterEventElement = (element) => {
       element.classList.toggle(
         'filter-not-matched',
-        !filter(element.textContent),
+        !filter(element.textContent)
       );
     };
     Array.prototype.slice

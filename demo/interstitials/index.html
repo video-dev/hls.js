@@ -9,10 +9,16 @@
     <link href="index.css" rel="stylesheet" type="text/css" />
   </head>
   <body>
-
     <div class="top">
       <div id="player" class="player center paused muted primary">
-        <video class="media" id="video" crossorigin playsinline muted preload="none"></video>
+        <video
+          class="media"
+          id="video"
+          crossorigin
+          playsinline
+          muted
+          preload="none"
+        ></video>
         <!--
         <video class="media" id="primary" crossorigin playsinline muted preload="none"></video>
         <video class="media" id="video-a" crossorigin playsinline muted preload="none"></video>
@@ -20,43 +26,68 @@
         -->
         <div class="controls" id="controls">
           <button id="play-pause" tabindex="0" aria-label="play">
-            <span class="play"><svg aria-hidden="true" viewBox="0 0 24 24" slot="play">
-              <path d="m6.73 20.93 14.05-8.54a.46.46 0 0 0 0-.78L6.73 3.07a.48.48 0 0 0-.73.39v17.07a.48.48 0 0 0 .73.4Z" />
-            </svg></span><span class="pause"><svg aria-hidden="true" viewBox="0 0 24 24" slot="pause">
-              <path
-                d="M6 19.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-15a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v15ZM14.5 4a.5.5 0 0 0-.5.5v15a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-15a.5.5 0 0 0-.5-.5h-3Z"
-              />
-            </svg></span>
+            <span class="play"
+              ><svg aria-hidden="true" viewBox="0 0 24 24" slot="play">
+                <path
+                  d="m6.73 20.93 14.05-8.54a.46.46 0 0 0 0-.78L6.73 3.07a.48.48 0 0 0-.73.39v17.07a.48.48 0 0 0 .73.4Z"
+                /></svg></span
+            ><span class="pause"
+              ><svg aria-hidden="true" viewBox="0 0 24 24" slot="pause">
+                <path
+                  d="M6 19.5a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-15a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5v15ZM14.5 4a.5.5 0 0 0-.5.5v15a.5.5 0 0 0 .5.5h3a.5.5 0 0 0 .5-.5v-15a.5.5 0 0 0-.5-.5h-3Z"
+                /></svg
+            ></span>
           </button>
-          <div id="time-display" tabindex="0"><span id="current-time">00:00</span><span id="duration"> / 00:00</span></div>
+          <div id="time-display" tabindex="0">
+            <span id="current-time">00:00</span
+            ><span id="duration"> / 00:00</span>
+          </div>
           <button id="mute-unmute" tabindex="0" aria-label="mute">
-            <span class="unmute"><svg aria-hidden="true" viewBox="0 0 24 24" slot="off">
-              <path
-                d="m3 4.05 4.48 4.47-.33.33a.49.49 0 0 1-.36.15H3.25a.25.25 0 0 0-.25.25v5.5a.25.25 0 0 0 .25.25h3.54a.49.49 0 0 1 .36.15l4 4a.48.48 0 0 0 .36.15.5.5 0 0 0 .5-.5v-5.75l4.67 4.66a7.71 7.71 0 0 1-2.79 1.47v1.52a9.32 9.32 0 0 0 3.87-1.91L20 21l1-1L4.06 3 3 4.05Zm5.36 5.36 2.39 2.39V17L8 14.26a1.74 1.74 0 0 0-1.24-.51H4.25v-3.5h2.54A1.74 1.74 0 0 0 8 9.74l.36-.33ZM19.47 12a7.19 7.19 0 0 1-.89 3.47l1.11 1.1A8.64 8.64 0 0 0 21 12a9 9 0 0 0-7.12-8.7v1.52A7.52 7.52 0 0 1 19.47 12ZM12 8.88V5.21a.5.5 0 0 0-.5-.5.48.48 0 0 0-.36.15L9.56 6.44 12 8.88ZM15.91 12a4.284 4.284 0 0 1-.07.72l1.22 1.22a5.2 5.2 0 0 0 .38-1.94 5.49 5.49 0 0 0-3.56-5.1v1.66A4 4 0 0 1 15.91 12Z"
-              />
-            </svg></span><span class="mute"><svg aria-hidden="true" viewBox="0 0 24 24" slot="high">
-              <path
-                d="m11.14 4.86-4 4a.49.49 0 0 1-.35.14H3.25a.25.25 0 0 0-.25.25v5.5a.25.25 0 0 0 .25.25h3.54a.49.49 0 0 1 .36.15l4 4a.5.5 0 0 0 .85-.36V5.21a.5.5 0 0 0-.86-.35Zm2.74-1.56v1.52A7.52 7.52 0 0 1 19.47 12a7.52 7.52 0 0 1-5.59 7.18v1.52A9 9 0 0 0 21 12a9 9 0 0 0-7.12-8.7Zm3.56 8.7a5.49 5.49 0 0 0-3.56-5.1v1.66a3.93 3.93 0 0 1 0 6.88v1.66a5.49 5.49 0 0 0 3.56-5.1Z"
-              />
-            </svg></span>
+            <span class="unmute"
+              ><svg aria-hidden="true" viewBox="0 0 24 24" slot="off">
+                <path
+                  d="m3 4.05 4.48 4.47-.33.33a.49.49 0 0 1-.36.15H3.25a.25.25 0 0 0-.25.25v5.5a.25.25 0 0 0 .25.25h3.54a.49.49 0 0 1 .36.15l4 4a.48.48 0 0 0 .36.15.5.5 0 0 0 .5-.5v-5.75l4.67 4.66a7.71 7.71 0 0 1-2.79 1.47v1.52a9.32 9.32 0 0 0 3.87-1.91L20 21l1-1L4.06 3 3 4.05Zm5.36 5.36 2.39 2.39V17L8 14.26a1.74 1.74 0 0 0-1.24-.51H4.25v-3.5h2.54A1.74 1.74 0 0 0 8 9.74l.36-.33ZM19.47 12a7.19 7.19 0 0 1-.89 3.47l1.11 1.1A8.64 8.64 0 0 0 21 12a9 9 0 0 0-7.12-8.7v1.52A7.52 7.52 0 0 1 19.47 12ZM12 8.88V5.21a.5.5 0 0 0-.5-.5.48.48 0 0 0-.36.15L9.56 6.44 12 8.88ZM15.91 12a4.284 4.284 0 0 1-.07.72l1.22 1.22a5.2 5.2 0 0 0 .38-1.94 5.49 5.49 0 0 0-3.56-5.1v1.66A4 4 0 0 1 15.91 12Z"
+                /></svg></span
+            ><span class="mute"
+              ><svg aria-hidden="true" viewBox="0 0 24 24" slot="high">
+                <path
+                  d="m11.14 4.86-4 4a.49.49 0 0 1-.35.14H3.25a.25.25 0 0 0-.25.25v5.5a.25.25 0 0 0 .25.25h3.54a.49.49 0 0 1 .36.15l4 4a.5.5 0 0 0 .85-.36V5.21a.5.5 0 0 0-.86-.35Zm2.74-1.56v1.52A7.52 7.52 0 0 1 19.47 12a7.52 7.52 0 0 1-5.59 7.18v1.52A9 9 0 0 0 21 12a9 9 0 0 0-7.12-8.7Zm3.56 8.7a5.49 5.49 0 0 0-3.56-5.1v1.66a3.93 3.93 0 0 1 0 6.88v1.66a5.49 5.49 0 0 0 3.56-5.1Z"
+                /></svg
+            ></span>
           </button>
           <button id="skip" tabindex="0" aria-label="skip">SKIP</button>
-          <div class="slider" id="timeline"><canvas
-            id="timeline-canvas"
-            width="640"
-            height="15"
-          ></canvas></div>
+          <div class="slider" id="timeline">
+            <canvas id="timeline-canvas" width="640" height="15"></canvas>
+          </div>
         </div>
       </div>
     </div>
     <div class="bottom center">
+      <p>HLS.js Interstitial playback and ad-break management.</p>
       <ul>
-        <li>Interstitials demo</li>
         <li>
-          Select timeline type (integrated, playout, primary) ( or show controls
-          )
+          Timeline displayed:
+          <select name="timeline" id="timeline-display">
+            <option value="playout" selected>playout</option>
+            <option value="integrated">integrated</option>
+            <option value="primary">primary</option>
+          </select>
         </li>
-        <li>Interstitials Manager (hls.interstitialManager()):</li>
+        <li>
+          HTML5 controls
+          <input type="radio" id="controls-on" name="controls" value="true" />
+          <label for="controls-on">on</label>
+          <input
+            type="radio"
+            id="controls-off"
+            name="controls"
+            value="false"
+            checked
+          />
+          <label for="controls-on">off</label>
+        </li>
+        <li>Interstitials Manager:</li>
+        <pre id="interstitials-manager">hls.interstitialsManager()</pre>
       </ul>
     </div>
 

@@ -16,21 +16,33 @@ function onPageLoad(sourceURL) {
   hls.attachMedia(video);
 
   registerPlayer(document.querySelector('#player'), video, hls);
+  registerManagerPrintOut(hls);
 }
 
+// Player controls with ad transitions
 function registerPlayer(container, video, hls) {
   let shouldPlay = true;
-  const displayTime = 'playout';
+
   const timeCurrent = document.querySelector('#current-time');
   const timeDuration = document.querySelector('#duration');
+  const selectBox = document.querySelector('#timeline-display');
+  let displayTime = selectBox.value; // 'playout' || 'integrated;
 
-  registerInterstitialTimelineCanvas(
+  const timeline = registerInterstitialTimelineCanvas(
     document.querySelector('#timeline-canvas'),
     hls,
     displayTime
   );
 
-  // Skip button toggle and click 
+  registerControlsToggle(container, video);
+
+  selectBox.onchange = () => {
+    displayTime = selectBox.value;
+    displayTimeAndDuration();
+    timeline.timelineDisplay = displayTime;
+  };
+
+  // Skip button toggle and click
   hls.on(Hls.Events.INTERSTITIAL_STARTED, () => {
     timeCurrent.textContent = timeDuration.textContent = '';
     container.classList.replace('primary', 'interstitials');
@@ -71,7 +83,7 @@ function registerPlayer(container, video, hls) {
     if (shouldPlay) {
       playAttempt();
     }
-  }
+  };
 
   // Mute/Unmute button
   document.querySelector('#mute-unmute').onclick = (e) => {
@@ -90,45 +102,47 @@ function registerPlayer(container, video, hls) {
 
   // Time display
   const displayTimeAndDuration = () => {
-    timeCurrent.textContent = hhmmss(hls.interstitialsManager[displayTime].currentTime).replace(/^00?:?/, '');
-    timeDuration.textContent = ' / ' + hhmmss(hls.interstitialsManager[displayTime].duration).replace(/^00?:?/, '');
-  };
-  video.ontimeupdate = (e) =>{
     const playingItem = hls.interstitialsManager.playingItem;
     if (playingItem?.event) {
-      const timeRemaining = Math.ceil(playingItem.playout.end - hls.interstitialsManager.playout.currentTime);
+      const timeRemaining = Math.ceil(
+        playingItem.playout.end - hls.interstitialsManager.playout.currentTime
+      );
       timeDuration.textContent = '';
       timeCurrent.textContent = `${timeRemaining} seconds remaining`;
     } else {
-      displayTimeAndDuration();
+      timeCurrent.textContent = hhmmss(
+        hls.interstitialsManager[displayTime].currentTime
+      ).replace(/^00?:?/, '');
+      timeDuration.textContent =
+        ' / ' +
+        hhmmss(hls.interstitialsManager[displayTime].duration).replace(
+          /^00?:?/,
+          ''
+        );
     }
   };
-  video.ondurationchange = (e) =>{
-    if (hls.interstitialsManager.playingItem?.event) {
-      timeDuration.textContent = '';
-    } else {
-      displayTimeAndDuration();
-    }
-  };
+  video.ontimeupdate = displayTimeAndDuration;
+  video.ondurationchange = displayTimeAndDuration;
 }
 
 function hhmmss(seconds) {
   const date = new Date();
-  const tzOffset = (new Date(0)).getTimezoneOffset() * 60000;
+  const tzOffset = new Date(0).getTimezoneOffset() * 60000;
   date.setTime(tzOffset + seconds * 1000);
   return date.toLocaleTimeString('eo', { hour12: false });
 }
 
-function registerInterstitialTimelineCanvas(
-  canvas,
-  hls,
-  timelineType
-) {
+// Timeline with Interstitials
+function registerInterstitialTimelineCanvas(canvas, hls, timelineType) {
   const runningInstance = canvas.instance;
   if (runningInstance) {
     runningInstance.destroy();
   }
-  canvas.instance = new InterstitialTimelineCanvas(canvas, hls, timelineType);
+  return (canvas.instance = new InterstitialTimelineCanvas(
+    canvas,
+    hls,
+    timelineType
+  ));
 }
 
 class InterstitialTimelineCanvas {
@@ -142,6 +156,11 @@ class InterstitialTimelineCanvas {
     this.hls = hls;
     this.timelineType = timelineType;
     this.canvas.onclick = this.onClick;
+    this.refresh();
+  }
+
+  set timelineDisplay(timelineType) {
+    this.timelineType = timelineType;
     this.refresh();
   }
 
@@ -182,7 +201,8 @@ class InterstitialTimelineCanvas {
     }
 
     // redraw background
-    ctx.fillStyle = 'black';
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = 'rgba(150,150,150,0.5)';
     ctx.fillRect(0, 0, width, height);
 
     const im = this.hls.interstitialsManager;
@@ -245,15 +265,131 @@ class InterstitialTimelineCanvas {
     const xCurrentTime = (currentTime / duration) * width;
     const xBufferedEnd = (bufferedEnd / duration) * width;
     if (bufferedEnd > currentTime) {
-      ctx.fillStyle = 'gray';
-      ctx.fillRect(xCurrentTime, 2, xBufferedEnd - xCurrentTime, height - 4);
+      ctx.fillStyle = 'rgba(255,255,255,0.5)';
+      ctx.fillRect(xCurrentTime, 1, xBufferedEnd - xCurrentTime, height - 2);
     }
     // current time
-    ctx.fillStyle = 'rgb(16,128,255)';
+    ctx.fillStyle = 'rgba(0, 102, 220,0.5)';
+    ctx.fillRect(0, 0, xCurrentTime, height);
+    ctx.fillStyle = 'rgb(0, 102, 220)';
     ctx.fillRect(xCurrentTime - 0.5, 0, 2, height);
   }
 }
 
+// Display InterstitialsManager state changes on page
+function registerManagerPrintOut(hls) {
+  const el = document.querySelector('#interstitials-manager');
+  const printout = () => {
+    const {
+      events,
+      schedule,
+      playingItem,
+      bufferingItem,
+      bufferingAsset,
+      playingAsset,
+      bufferingPlayer,
+      playerQueue,
+    } = hls.interstitialsManager;
+    const assetToObj = ({ identifier, duration }) => ({ identifier, duration });
+    const interstitialToObj = ({
+      identifier,
+      appendInPlace,
+      duration,
+      timelineStart,
+      resumeTime,
+      hasPlayed,
+      assetList,
+      error,
+    }) => ({
+      identifier,
+      appendInPlace,
+      duration,
+      timelineStart,
+      resumeTime,
+      hasPlayed,
+      assetList: assetList.map(assetToObj),
+      error,
+    });
+    const segmentToObj = ({ playout: { start, end }, event }) => ({
+      playout: { start, end },
+      event: event ? { identifier: event.identifier } : undefined,
+    });
+    const assetPlayerToObj = ({
+      assetId,
+      bufferedEnd,
+      currentTime,
+      duration,
+      remaining,
+      timelineOffset,
+    }) => ({
+      assetId,
+      bufferedEnd,
+      currentTime,
+      duration,
+      remaining,
+      timelineOffset,
+    });
+    const serialize = {
+      playout: hls.interstitialsManager.playout,
+      integrated: hls.interstitialsManager.integrated,
+      primary: hls.interstitialsManager.primary,
+
+      events: events.map(interstitialToObj),
+      schedule: schedule.map(segmentToObj),
+
+      waitingIndex: hls.interstitialsManager.waitingIndex,
+
+      playingIndex: hls.interstitialsManager.playingIndex,
+      playingItem: playingItem ? segmentToObj(playingItem) : playingItem,
+      playingAsset: playingAsset ? assetToObj(playingAsset) : playingAsset,
+
+      bufferingIndex: hls.interstitialsManager.bufferingIndex,
+      bufferingItem: bufferingItem
+        ? segmentToObj(bufferingItem)
+        : bufferingItem,
+      bufferingAsset: bufferingAsset
+        ? assetToObj(bufferingAsset)
+        : bufferingAsset,
+
+      bufferingPlayer: bufferingPlayer
+        ? assetPlayerToObj(bufferingPlayer)
+        : bufferingPlayer,
+      playerQueue: playerQueue.map(assetPlayerToObj),
+
+      skip: `function skip() {}`,
+    };
+    el.textContent = JSON.stringify(serialize, null, 2).replace(
+      /^(\s*)"([^"]+)":/gm,
+      '$1$2:'
+    );
+  };
+  self.setInterval(printout, 1000);
+  hls.on(Hls.Events.INTERSTITIAL_STARTED, () => {
+    printout();
+  });
+  hls.on(Hls.Events.INTERSTITIAL_ENDED, () => {
+    printout();
+  });
+  el.onclick = () => {
+    console.log(`hls.interstitialsManager:`, hls.interstitialsManager);
+  };
+}
+
+// Toggle HTMLVideoElement controls
+function registerControlsToggle(container, video) {
+  const html5Controls = document.querySelector('#controls-on');
+  const html5ControlsOff = document.querySelector('#controls-off');
+  html5Controls.onchange = html5ControlsOff.onchange = () => {
+    const showHtml5Controls = html5Controls.checked;
+    video.controls = showHtml5Controls;
+    video.focus();
+    showHtml5Controls
+      ? container.classList.add('html5-controls')
+      : container.classList.remove('html5-controls');
+  };
+}
+
+// Page load
 function getSearchParam(key) {
   const { searchParams } = new URL(location.href);
   const value = searchParams.get(key);

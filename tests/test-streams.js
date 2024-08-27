@@ -971,37 +971,52 @@ const streams = {
       widevineLicenseUrl: undefined,
       drmSystems: {
         'com.widevine.alpha': {
-          licenseUrl: 'https://license.mux.com/license/widevine/uyfbb021KU01oMhqQu00X1VyRfPhk02UhFy46LeG3zIjJTc?token=eyJhbGciOiJSUzI1NiJ9.eyJraWQiOiJqTmhJdEVQWmtOVzN2M0RtcTJOcWM4N1hreEtmaUI2QWlCWjhuVDAwNTAwNmciLCJhdWQiOiJkIiwic3ViIjoidXlmYmIwMjFLVTAxb01ocVF1MDBYMVZ5UmZQaGswMlVoRnk0NkxlRzN6SWpKVGMiLCJleHAiOjE3NTQ1MDQwODJ9.yUEeskPWfVSjDoilFCdK0pjOJ9h4J0N9eOWNu7LeEXJVDhXt69Cqu1ibqD1khsedzT69eIZvCFBJ-3IIRwCQ2OQsnJ_yPsoHKUuK78z_Z8r82DkZzOx4LcQc9uPwfz6w1-XfqJ0bOLsmgD4IWMIbKF2xQ9HZXFzTeWtI69q-oDvSx4zJEmfs850daT1n7zqGN10vYfWTkGDLD4I86iR3ipEaDYYWQyQHB2838BkoaCo8EScULjx7z6bpDbJUb9Gn2NdoJYz6obv7Nh3IkKAklIlqsr52OorpNmBNbXTqUpRhyhH9iQ8-EIB_NWbnMBgUNULo-Dt5ezOjbfUl0Hs9OQ'
+          licenseUrl:
+            'https://license.mux.com/license/widevine/uyfbb021KU01oMhqQu00X1VyRfPhk02UhFy46LeG3zIjJTc?token=eyJhbGciOiJSUzI1NiJ9.eyJraWQiOiJqTmhJdEVQWmtOVzN2M0RtcTJOcWM4N1hreEtmaUI2QWlCWjhuVDAwNTAwNmciLCJhdWQiOiJkIiwic3ViIjoidXlmYmIwMjFLVTAxb01ocVF1MDBYMVZ5UmZQaGswMlVoRnk0NkxlRzN6SWpKVGMiLCJleHAiOjE3NTQ1MDQwODJ9.yUEeskPWfVSjDoilFCdK0pjOJ9h4J0N9eOWNu7LeEXJVDhXt69Cqu1ibqD1khsedzT69eIZvCFBJ-3IIRwCQ2OQsnJ_yPsoHKUuK78z_Z8r82DkZzOx4LcQc9uPwfz6w1-XfqJ0bOLsmgD4IWMIbKF2xQ9HZXFzTeWtI69q-oDvSx4zJEmfs850daT1n7zqGN10vYfWTkGDLD4I86iR3ipEaDYYWQyQHB2838BkoaCo8EScULjx7z6bpDbJUb9Gn2NdoJYz6obv7Nh3IkKAklIlqsr52OorpNmBNbXTqUpRhyhH9iQ8-EIB_NWbnMBgUNULo-Dt5ezOjbfUl0Hs9OQ',
         },
         'com.microsoft.playready': {
-          licenseUrl: 'https://license.mux.com/license/playready/uyfbb021KU01oMhqQu00X1VyRfPhk02UhFy46LeG3zIjJTc?token=eyJhbGciOiJSUzI1NiJ9.eyJraWQiOiJqTmhJdEVQWmtOVzN2M0RtcTJOcWM4N1hreEtmaUI2QWlCWjhuVDAwNTAwNmciLCJhdWQiOiJkIiwic3ViIjoidXlmYmIwMjFLVTAxb01ocVF1MDBYMVZ5UmZQaGswMlVoRnk0NkxlRzN6SWpKVGMiLCJleHAiOjE3NTQ1MDQwODJ9.yUEeskPWfVSjDoilFCdK0pjOJ9h4J0N9eOWNu7LeEXJVDhXt69Cqu1ibqD1khsedzT69eIZvCFBJ-3IIRwCQ2OQsnJ_yPsoHKUuK78z_Z8r82DkZzOx4LcQc9uPwfz6w1-XfqJ0bOLsmgD4IWMIbKF2xQ9HZXFzTeWtI69q-oDvSx4zJEmfs850daT1n7zqGN10vYfWTkGDLD4I86iR3ipEaDYYWQyQHB2838BkoaCo8EScULjx7z6bpDbJUb9Gn2NdoJYz6obv7Nh3IkKAklIlqsr52OorpNmBNbXTqUpRhyhH9iQ8-EIB_NWbnMBgUNULo-Dt5ezOjbfUl0Hs9OQ'
-        }
+          licenseUrl:
+            'https://license.mux.com/license/playready/uyfbb021KU01oMhqQu00X1VyRfPhk02UhFy46LeG3zIjJTc?token=eyJhbGciOiJSUzI1NiJ9.eyJraWQiOiJqTmhJdEVQWmtOVzN2M0RtcTJOcWM4N1hreEtmaUI2QWlCWjhuVDAwNTAwNmciLCJhdWQiOiJkIiwic3ViIjoidXlmYmIwMjFLVTAxb01ocVF1MDBYMVZ5UmZQaGswMlVoRnk0NkxlRzN6SWpKVGMiLCJleHAiOjE3NTQ1MDQwODJ9.yUEeskPWfVSjDoilFCdK0pjOJ9h4J0N9eOWNu7LeEXJVDhXt69Cqu1ibqD1khsedzT69eIZvCFBJ-3IIRwCQ2OQsnJ_yPsoHKUuK78z_Z8r82DkZzOx4LcQc9uPwfz6w1-XfqJ0bOLsmgD4IWMIbKF2xQ9HZXFzTeWtI69q-oDvSx4zJEmfs850daT1n7zqGN10vYfWTkGDLD4I86iR3ipEaDYYWQyQHB2838BkoaCo8EScULjx7z6bpDbJUb9Gn2NdoJYz6obv7Nh3IkKAklIlqsr52OorpNmBNbXTqUpRhyhH9iQ8-EIB_NWbnMBgUNULo-Dt5ezOjbfUl0Hs9OQ',
+        },
       },
-      requestMediaKeySystemAccessFunc: (e,t)=>('com.widevine.alpha' === e && (t = [...t.map(e=>{
-        var t;
-        let r = null == (t = e.videoCapabilities) ? void 0 : t.map(e=>({
-          ...e,
-          robustness: 'HW_SECURE_ALL'
-        }));
-        return {
-          ...e,
-          videoCapabilities: r
-        }
-      }
-      ), ...t]),
-      navigator.requestMediaKeySystemAccess(e, t).then(t=>{
-        const a = undefined;
-        const et = {
-          FAIRPLAY: 'fairplay',
-          PLAYREADY: 'playready',
-          WIDEVINE: 'widevine'
-        };
-        const er = (e) => e.includes('fps') ? et.FAIRPLAY : e.includes('playready') ? et.PLAYREADY : e.includes('widevine') ? et.WIDEVINE : void 0;
-        let r = er(e);
-        return null == a || a(r),
-        t
-      }
-      ))
+      requestMediaKeySystemAccessFunc: (e, t) => (
+        'com.widevine.alpha' === e &&
+          (t = [
+            ...t.map((e) => {
+              let t;
+              const r =
+                null == (t = e.videoCapabilities)
+                  ? undefined
+                  : t.map((e) => ({
+                      ...e,
+                      robustness: 'HW_SECURE_ALL',
+                    }));
+              return {
+                ...e,
+                videoCapabilities: r,
+              };
+            }),
+            ...t,
+          ]),
+        navigator.requestMediaKeySystemAccess(e, t).then((t) => {
+          const a = undefined;
+          const et = {
+            FAIRPLAY: 'fairplay',
+            PLAYREADY: 'playready',
+            WIDEVINE: 'widevine',
+          };
+          const er = (e) =>
+            e.includes('fps')
+              ? et.FAIRPLAY
+              : e.includes('playready')
+                ? et.PLAYREADY
+                : e.includes('widevine')
+                  ? et.WIDEVINE
+                  : undefined;
+          const r = er(e);
+          return null == a || a(r), t;
+        })
+      ),
     },
   ),
   ezDrmFairPlayCmaf: createTestStreamWithConfig(
