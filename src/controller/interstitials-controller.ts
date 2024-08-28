@@ -70,6 +70,7 @@ export type PlayheadTimes = {
   bufferedEnd: number;
   currentTime: number;
   duration: number;
+  slidingStart: number;
   seekTo: (time: number) => void;
 };
 
@@ -291,11 +292,10 @@ export default class InterstitialsController
         return null;
       }
       const c = this;
-      const effectiveBufferingItem = () =>
-        this.bufferingItem || this.waitingItem;
-      const effectivePlayingItem = () => this.playingItem || this.waitingItem;
+      const effectiveBufferingItem = () => c.bufferingItem || c.waitingItem;
+      const effectivePlayingItem = () => c.playingItem || c.waitingItem;
       const getAssetPlayer = (asset: InterstitialAssetItem | null) =>
-        asset ? this.getAssetPlayer(asset.identifier) : asset;
+        asset ? c.getAssetPlayer(asset.identifier) : asset;
       const getMappedTime = (
         item: InterstitialScheduleItem | null,
         timelineType: TimelineType,
@@ -324,6 +324,24 @@ export default class InterstitialsController
           return time;
         }
         return 0;
+      };
+      const findMappedTime = (
+        primaryTime: number,
+        timelineType: TimelineType,
+      ): number => {
+        if (
+          primaryTime !== 0 &&
+          timelineType !== 'primary' &&
+          c.schedule.length
+        ) {
+          const index = c.schedule.findItemIndexAtTime(primaryTime);
+          const item = c.schedule.items?.[index];
+          if (item) {
+            const diff = item[timelineType].start - item.start;
+            return primaryTime + diff;
+          }
+        }
+        return primaryTime;
       };
       const getMappedDuration = (timelineType: TimelineType): number => {
         if (c.primaryDetails?.live) {
@@ -476,6 +494,9 @@ export default class InterstitialsController
           get duration() {
             return getMappedDuration('primary');
           },
+          get slidingStart() {
+            return c.primaryDetails?.fragmentStart || 0;
+          },
           seekTo: (time) => seekTo(time, 'primary'),
         },
         playout: {
@@ -500,6 +521,12 @@ export default class InterstitialsController
           get duration() {
             return getMappedDuration('playout');
           },
+          get slidingStart() {
+            return findMappedTime(
+              c.primaryDetails?.fragmentStart || 0,
+              'playout',
+            );
+          },
           seekTo: (time) => seekTo(time, 'playout'),
         },
         integrated: {
@@ -523,6 +550,12 @@ export default class InterstitialsController
           },
           get duration() {
             return getMappedDuration('integrated');
+          },
+          get slidingStart() {
+            return findMappedTime(
+              c.primaryDetails?.fragmentStart || 0,
+              'integrated',
+            );
           },
           seekTo: (time) => seekTo(time, 'integrated'),
         },
@@ -802,11 +835,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
   private checkStart() {
     const schedule = this.schedule;
     const interstitialEvents = schedule.events;
-    if (
-      !interstitialEvents ||
-      interstitialEvents.length === 0 ||
-      this.playbackDisabled
-    ) {
+    if (!interstitialEvents || this.playbackDisabled) {
       return;
     }
     // Check buffered to pre-roll
@@ -819,7 +848,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     if (timelinePos === -1) {
       const startPosition = this.hls.startPosition;
       this.timelinePos = startPosition;
-      if (interstitialEvents[0].cue.pre) {
+      if (interstitialEvents.length && interstitialEvents[0].cue.pre) {
         const index = schedule.findEventIndex(interstitialEvents[0].identifier);
         this.setSchedulePosition(index);
       } else if (startPosition >= 0 || !this.primaryLive) {
@@ -1198,10 +1227,8 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     };
     this.mediaSelection = currentSelection;
     this.schedule.parseInterstitialDateRanges(currentSelection);
-    const interstitialEvents = this.schedule.events;
-    const scheduleItems = this.schedule.items;
 
-    if (scheduleItems && interstitialEvents?.length && !this.playingItem) {
+    if (!this.playingItem && this.schedule.items) {
       this.checkStart();
     }
   }
@@ -1321,7 +1348,10 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
   }
 
   // Schedule update callback
-  private onScheduleUpdate = (removedInterstitials: InterstitialEvent[]) => {
+  private onScheduleUpdate = (
+    removedInterstitials: InterstitialEvent[],
+    previousItems: InterstitialScheduleItem[] | null,
+  ) => {
     const schedule = this.schedule;
     const playingItem = this.playingItem;
     const interstitialEvents = schedule.events || [];
@@ -1330,7 +1360,10 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     const removedIds = removedInterstitials.map(
       (interstitial) => interstitial.identifier,
     );
-    if (interstitialEvents.length || removedIds.length) {
+    const interstitialsUpdated = !!(
+      interstitialEvents.length || removedIds.length
+    );
+    if (interstitialsUpdated) {
       if (this.hls.config.interstitialAppendInPlace === false) {
         interstitialEvents.forEach((event) => (event.appendInPlace = false));
       }
@@ -1396,16 +1429,18 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       });
     });
 
-    this.hls.trigger(Events.INTERSTITIALS_UPDATED, {
-      events: interstitialEvents.slice(0),
-      schedule: scheduleItems.slice(0),
-      durations,
-      removedIds,
-    });
+    if (interstitialsUpdated || previousItems) {
+      this.hls.trigger(Events.INTERSTITIALS_UPDATED, {
+        events: interstitialEvents.slice(0),
+        schedule: scheduleItems.slice(0),
+        durations,
+        removedIds,
+      });
 
-    // Check is buffered to new Interstitial event boundary
-    // (Live update publishes Interstitial with new segment)
-    this.checkBuffer();
+      // Check is buffered to new Interstitial event boundary
+      // (Live update publishes Interstitial with new segment)
+      this.checkBuffer();
+    }
   };
 
   private updateItem<T extends InterstitialScheduleItem>(
@@ -1479,12 +1514,16 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     bufferIsEmpty?: boolean,
   ) {
     const schedule = this.schedule;
+    const bufferingItem = this.bufferingItem;
     if (this.bufferedPos > bufferEnd) {
+      return;
+    }
+    if (items.length === 1 && this.itemsMatch(items[0], bufferingItem)) {
+      this.bufferedPos = bufferEnd;
       return;
     }
     const playingItem = this.playingItem;
     const playingIndex = this.findItemIndex(playingItem);
-    const bufferingItem = this.bufferingItem;
     let bufferEndIndex = schedule.findItemIndexAtTime(bufferEnd);
 
     if (this.bufferedPos < bufferEnd) {

@@ -54,7 +54,10 @@ export type InterstitialScheduleDurations = {
 
 export type TimelineType = 'primary' | 'playout' | 'integrated';
 
-type ScheduleUpdateCallback = (removed: InterstitialEvent[]) => void;
+type ScheduleUpdateCallback = (
+  removed: InterstitialEvent[],
+  previousItems: InterstitialScheduleItem[] | null,
+) => void;
 
 export class InterstitialsSchedule {
   private onScheduleUpdate: ScheduleUpdateCallback;
@@ -274,7 +277,7 @@ export class InterstitialsSchedule {
     removedInterstitials: InterstitialEvent[] = [],
   ) {
     const events = this.events || [];
-    if (events.length || removedInterstitials.length) {
+    if (events.length || removedInterstitials.length || this.length < 2) {
       const currentItems = this.items;
       const updatedItems = this.parseSchedule(events, mediaSelection);
       const updated =
@@ -290,7 +293,7 @@ export class InterstitialsSchedule {
       if (updated) {
         this.items = updatedItems;
         // call interstitials-controller onScheduleUpdated()
-        this.onScheduleUpdate(removedInterstitials);
+        this.onScheduleUpdate(removedInterstitials, currentItems);
       }
     }
   }
