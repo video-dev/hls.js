@@ -53,7 +53,7 @@ function registerPlayer(container, video, hls) {
   });
   document.querySelector('#skip').onclick = (e) => {
     shouldPlay = true;
-    hls.interstitialsManager.skip();
+    hls.interstitialsManager?.skip();
   };
 
   // Play/Pause button and autoplay
@@ -102,24 +102,26 @@ function registerPlayer(container, video, hls) {
 
   // Time display
   const displayTimeAndDuration = () => {
-    const playingItem = hls.interstitialsManager.playingItem;
+    const im = hls.interstitialsManager;
+    if (!im) {
+      return;
+    }
+    const playingItem = im.playingItem;
     if (playingItem?.event) {
       const timeRemaining = Math.ceil(
-        playingItem.playout.end - hls.interstitialsManager.playout.currentTime
+        playingItem.playout.end - im.playout.currentTime
       );
       timeDuration.textContent = '';
       timeCurrent.textContent = `${timeRemaining} seconds remaining`;
     } else {
-      timeCurrent.textContent = hhmmss(
-        hls.interstitialsManager[displayTime].currentTime
-      ).replace(/^00?:?/, '');
+      timeCurrent.textContent = hhmmss(im[displayTime].currentTime).replace(
+        /^00?:?/,
+        ''
+      );
       timeDuration.textContent =
-        ' / ' +
-        hhmmss(hls.interstitialsManager[displayTime].duration).replace(
-          /^00?:?/,
-          ''
-        );
+        ' / ' + hhmmss(im[displayTime].duration).replace(/^00?:?/, '');
     }
+    timeline.refresh();
   };
   video.ontimeupdate = displayTimeAndDuration;
   video.ondurationchange = displayTimeAndDuration;
@@ -148,7 +150,6 @@ function registerInterstitialTimelineCanvas(canvas, hls, timelineType) {
 class InterstitialTimelineCanvas {
   canvas;
   hls;
-  refreshId = -1;
   timelineType;
 
   constructor(canvas, hls, timelineType) {
@@ -165,7 +166,6 @@ class InterstitialTimelineCanvas {
   }
 
   destroy() {
-    cancelAnimationFrame(this.refreshId);
     this.canvas = this.hls = null;
   }
 
@@ -183,8 +183,6 @@ class InterstitialTimelineCanvas {
   };
 
   refresh() {
-    cancelAnimationFrame(this.refreshId);
-    this.refreshId = requestAnimationFrame(() => this.refresh());
     const canvas = this.canvas;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
@@ -211,9 +209,12 @@ class InterstitialTimelineCanvas {
     }
     const type = this.timelineType;
     const imTimes = im[type];
-    const duration = imTimes.duration;
+    const details = this.hls.latestLevelDetails;
+    const tUpdated = details?.live ? details.age : 0;
+    const duration = imTimes.duration + tUpdated;
     const currentTime = imTimes.currentTime;
     const bufferedEnd = imTimes.bufferedEnd;
+    const tStart = imTimes.slidingStart + tUpdated;
     // Interstitial event and asset boundaries
     const items = im.schedule;
     for (let i = 0; i < items.length; i++) {
@@ -222,8 +223,10 @@ class InterstitialTimelineCanvas {
       if (event) {
         // Interstitial event range
         const timeRange = type === 'primary' ? item : item[type];
-        const xEventStart = (timeRange.start / duration) * width;
-        const xEventEnd = (timeRange.end / duration) * width;
+        const xEventStart =
+          ((timeRange.start - tStart) / (duration - tStart)) * width;
+        const xEventEnd =
+          ((timeRange.end - tStart) / (duration - tStart)) * width;
         const widthEvent = xEventEnd - xEventStart;
         const restrictions = event.restrictions;
         if (restrictions.jump) {
@@ -243,10 +246,15 @@ class InterstitialTimelineCanvas {
             const asset = event.assetList[j];
             if (asset.duration) {
               const xAssetStart =
-                ((timeRange.start + asset.startOffset) / duration) * width;
+                ((timeRange.start + asset.startOffset - tStart) /
+                  (duration - tStart)) *
+                width;
               const xAssetEnd =
-                ((timeRange.start + asset.startOffset + asset.duration) /
-                  duration) *
+                ((timeRange.start +
+                  asset.startOffset +
+                  asset.duration -
+                  tStart) /
+                  (duration - tStart)) *
                 width;
               const widthAsset = xAssetEnd - xAssetStart;
               ctx.fillStyle = 'rgb(120,120,0)';
@@ -262,9 +270,10 @@ class InterstitialTimelineCanvas {
       }
     }
     // buffered
-    const xCurrentTime = (currentTime / duration) * width;
-    const xBufferedEnd = (bufferedEnd / duration) * width;
+    const xCurrentTime = ((currentTime - tStart) / (duration - tStart)) * width;
     if (bufferedEnd > currentTime) {
+      const xBufferedEnd =
+        ((bufferedEnd - tStart) / (duration - tStart)) * width;
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
       ctx.fillRect(xCurrentTime, 1, xBufferedEnd - xCurrentTime, height - 2);
     }
@@ -280,6 +289,10 @@ class InterstitialTimelineCanvas {
 function registerManagerPrintOut(hls) {
   const el = document.querySelector('#interstitials-manager');
   const printout = () => {
+    const interstitialsManager = hls.interstitialsManager;
+    if (!interstitialsManager) {
+      return interstitialsManager;
+    }
     const {
       events,
       schedule,
@@ -289,7 +302,7 @@ function registerManagerPrintOut(hls) {
       playingAsset,
       bufferingPlayer,
       playerQueue,
-    } = hls.interstitialsManager;
+    } = interstitialsManager;
     const assetToObj = ({ identifier, duration }) => ({ identifier, duration });
     const interstitialToObj = ({
       identifier,
@@ -311,7 +324,10 @@ function registerManagerPrintOut(hls) {
       error,
     });
     const segmentToObj = ({ playout: { start, end }, event }) => ({
+      start,
+      end,
       playout: { start, end },
+      integrated: { start, end },
       event: event ? { identifier: event.identifier } : undefined,
     });
     const assetPlayerToObj = ({
@@ -330,20 +346,23 @@ function registerManagerPrintOut(hls) {
       timelineOffset,
     });
     const serialize = {
-      playout: { ...hls.interstitialsManager.playout, seekTo: `ƒ seekTo(time)` },
-      integrated: { ...hls.interstitialsManager.integrated, seekTo: `ƒ seekTo(time)` },
-      primary: { ...hls.interstitialsManager.primary, seekTo: `ƒ seekTo(time)` },
+      playout: { ...interstitialsManager.playout, seekTo: `ƒ seekTo(time)` },
+      integrated: {
+        ...interstitialsManager.integrated,
+        seekTo: `ƒ seekTo(time)`,
+      },
+      primary: { ...interstitialsManager.primary, seekTo: `ƒ seekTo(time)` },
 
       events: events.map(interstitialToObj),
       schedule: schedule.map(segmentToObj),
 
-      waitingIndex: hls.interstitialsManager.waitingIndex,
+      waitingIndex: interstitialsManager.waitingIndex,
 
-      playingIndex: hls.interstitialsManager.playingIndex,
+      playingIndex: interstitialsManager.playingIndex,
       playingItem: playingItem ? segmentToObj(playingItem) : playingItem,
       playingAsset: playingAsset ? assetToObj(playingAsset) : playingAsset,
 
-      bufferingIndex: hls.interstitialsManager.bufferingIndex,
+      bufferingIndex: interstitialsManager.bufferingIndex,
       bufferingItem: bufferingItem
         ? segmentToObj(bufferingItem)
         : bufferingItem,
