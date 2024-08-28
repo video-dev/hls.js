@@ -425,38 +425,41 @@ class EMEController extends Logger implements ComponentAPI {
 
     this.log(`Starting session for key ${keyDetails}`);
 
-    let keySessionContextPromise = this.keyIdToKeySessionPromise[keyId];
-    if (!keySessionContextPromise) {
-      keySessionContextPromise = this.keyIdToKeySessionPromise[keyId] =
-        this.getKeySystemForKeyPromise(decryptdata).then(
-          ({ keySystem, mediaKeys }) => {
-            this.throwIfDestroyed();
-            this.log(
-              `Handle encrypted media sn: ${data.frag.sn} ${data.frag.type}: ${data.frag.level} using key ${keyDetails}`,
-            );
+    let keyContextPromise = this.keyIdToKeySessionPromise[keyId];
+    if (!keyContextPromise) {
+      keyContextPromise = this.getKeySystemForKeyPromise(decryptdata).then(
+        ({ keySystem, mediaKeys }) => {
+          this.throwIfDestroyed();
+          this.log(
+            `Handle encrypted media sn: ${data.frag.sn} ${data.frag.type}: ${data.frag.level} using key ${keyDetails}`,
+          );
 
-            return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
-              this.throwIfDestroyed();
-              const keySessionContext = this.createMediaKeySessionContext({
-                keySystem,
-                mediaKeys,
-                decryptdata,
-              });
-              const scheme = 'cenc';
-              return this.generateRequestWithPreferredKeySession(
-                keySessionContext,
-                scheme,
-                decryptdata.pssh,
-                'playlist-key',
-              );
+          return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
+            this.throwIfDestroyed();
+            return this.createMediaKeySessionContext({
+              keySystem,
+              mediaKeys,
+              decryptdata,
             });
-          },
-        );
+          });
+        },
+      );
+
+      const keySessionContextPromise = (this.keyIdToKeySessionPromise[keyId] =
+        keyContextPromise.then((keySessionContext) => {
+          const scheme = 'cenc';
+          return this.generateRequestWithPreferredKeySession(
+            keySessionContext,
+            scheme,
+            decryptdata.pssh,
+            'playlist-key',
+          );
+        }));
 
       keySessionContextPromise.catch((error) => this.handleError(error));
     }
 
-    return keySessionContextPromise;
+    return keyContextPromise;
   }
 
   private throwIfDestroyed(message = 'Invalid state'): void | never {
