@@ -290,7 +290,7 @@ export default class Transmuxer {
     const { accurateTimeOffset, timeOffset } = this.currentTransmuxState;
     this.logger.log(
       `[transmuxer.ts]: Flushed ${this.id} sn: ${chunkMeta.sn}${
-        chunkMeta.part > -1 ? ' p: ' + chunkMeta.part : ''
+        chunkMeta.part > -1 ? ' part: ' + chunkMeta.part : ''
       } of ${this.id === PlaylistLevelType.MAIN ? 'level' : 'track'} ${chunkMeta.level}`,
     );
     const remuxResult = this.remuxer!.remux(
