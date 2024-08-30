@@ -2646,6 +2646,8 @@ export interface LoaderStats {
     // (undocumented)
     aborted: boolean;
     // (undocumented)
+    blockingLoad: boolean;
+    // (undocumented)
     buffering: HlsProgressivePerformanceTiming;
     // (undocumented)
     bwEstimate: number;
@@ -2676,6 +2678,8 @@ export type LoadPolicy = {
 export class LoadStats implements LoaderStats {
     // (undocumented)
     aborted: boolean;
+    // (undocumented)
+    blockingLoad: boolean;
     // (undocumented)
     buffering: HlsProgressivePerformanceTiming;
     // (undocumented)
@@ -3065,7 +3069,7 @@ export type ParsedMultivariantPlaylist = {
 //
 // @public
 export class Part extends BaseSegment {
-    constructor(partAttrs: AttrList, frag: Fragment, baseurl: string, index: number, previous?: Part);
+    constructor(partAttrs: AttrList, frag: MediaFragment, baseurl: string, index: number, previous?: Part);
     // (undocumented)
     readonly duration: number;
     // (undocumented)
