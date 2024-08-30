@@ -1151,11 +1151,12 @@ export default class StreamController
     return audioCodec;
   }
 
-  private _loadBitrateTestFrag(frag: Fragment, level: Level) {
-    frag.bitrateTest = true;
-    this._doFragLoad(frag, level).then((data) => {
+  private _loadBitrateTestFrag(fragment: Fragment, level: Level) {
+    fragment.bitrateTest = true;
+    this._doFragLoad(fragment, level).then((data) => {
       const { hls } = this;
-      if (!data || this.fragContextChanged(frag)) {
+      const frag = data?.frag;
+      if (!frag || this.fragContextChanged(frag)) {
         return;
       }
       level.fragmentError = 0;

@@ -477,18 +477,19 @@ export default class BaseStreamController
   }
 
   private _loadFragForPlayback(
-    frag: Fragment,
+    fragment: Fragment,
     level: Level,
     targetBufferTime: number,
   ) {
     const progressCallback: FragmentLoadProgressCallback = (
       data: FragLoadedData,
     ) => {
+      const frag = data.frag;
       if (this.fragContextChanged(frag)) {
         this.warn(
-          `Fragment ${frag.sn}${
-            data.part ? ' p: ' + data.part.index : ''
-          } of level ${frag.level} was dropped during download.`,
+          `${frag.type} sn: ${frag.sn}${
+            data.part ? ' part: ' + data.part.index : ''
+          } of ${this.fragInfo(frag, false, data.part)}) was dropped during download.`,
         );
         this.fragmentTracker.removeFragment(frag);
         return;
@@ -497,13 +498,14 @@ export default class BaseStreamController
       this._handleFragmentLoadProgress(data);
     };
 
-    this._doFragLoad(frag, level, targetBufferTime, progressCallback)
+    this._doFragLoad(fragment, level, targetBufferTime, progressCallback)
       .then((data) => {
         if (!data) {
           // if we're here we probably needed to backtrack or are waiting for more parts
           return;
         }
         const state = this.state;
+        const frag = data.frag;
         if (this.fragContextChanged(frag)) {
           if (
             state === State.FRAG_LOADING ||
@@ -530,7 +532,7 @@ export default class BaseStreamController
           return;
         }
         this.warn(`Frag error: ${reason?.message || reason}`);
-        this.resetFragmentLoading(frag);
+        this.resetFragmentLoading(fragment);
       });
   }
 
@@ -608,10 +610,11 @@ export default class BaseStreamController
     this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
   }
 
-  protected _loadInitSegment(frag: Fragment, level: Level) {
-    this._doFragLoad(frag, level)
+  protected _loadInitSegment(fragment: Fragment, level: Level) {
+    this._doFragLoad(fragment, level)
       .then((data) => {
-        if (!data || this.fragContextChanged(frag) || !this.levels) {
+        const frag = data?.frag;
+        if (!frag || this.fragContextChanged(frag) || !this.levels) {
           throw new Error('init load aborted');
         }
 
@@ -619,7 +622,7 @@ export default class BaseStreamController
       })
       .then((data: FragLoadedData) => {
         const { hls } = this;
-        const { payload } = data;
+        const { frag, payload } = data;
         const decryptData = frag.decryptdata;
 
         // check to see if the payload needs to be decrypted
@@ -671,7 +674,7 @@ export default class BaseStreamController
           return;
         }
         this.warn(reason);
-        this.resetFragmentLoading(frag);
+        this.resetFragmentLoading(fragment);
       });
   }
 
@@ -705,7 +708,7 @@ export default class BaseStreamController
     this.log(
       `Buffered ${frag.type} sn: ${frag.sn}${
         part ? ' part: ' + part.index : ''
-      } of ${this.fragInfo(frag)} > buffer:${
+      } of ${this.fragInfo(frag, false, part)} > buffer:${
         media
           ? TimeRanges.toString(BufferHelper.getBuffered(media))
           : '(detached)'
@@ -823,12 +826,11 @@ export default class BaseStreamController
         const partIndex = this.getNextPart(partList, frag, targetBufferTime);
         if (partIndex > -1) {
           const part = partList[partIndex];
+          frag = this.fragCurrent = part.fragment;
           this.log(
-            `Loading part sn: ${frag.sn} p: ${part.index} cc: ${
+            `Loading ${frag.type} sn: ${frag.sn} part: ${part.index} (${partIndex}/${partList.length - 1}) of ${this.fragInfo(frag, false, part)}) cc: ${
               frag.cc
-            } of playlist [${details.startSN}-${
-              details.endSN
-            }] parts [0-${partIndex}-${partList.length - 1}] ${this.playlistLabel()}: ${frag.level}, target: ${parseFloat(
+            } [${details.startSN}-${details.endSN}], target: ${parseFloat(
               targetBufferTime.toFixed(3),
             )}`,
           );
@@ -1947,7 +1949,7 @@ export default class BaseStreamController
     this.log(
       `Parsed ${frag.type} sn: ${frag.sn}${
         part ? ' part: ' + part.index : ''
-      } of ${this.fragInfo(frag)})`,
+      } of ${this.fragInfo(frag, false, part)})`,
     );
     this.hls.trigger(Events.FRAG_PARSED, { frag, part });
   }
@@ -1956,10 +1958,16 @@ export default class BaseStreamController
     return this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track';
   }
 
-  private fragInfo(frag: Fragment, pts: boolean = true): string {
-    return `${this.playlistLabel()} ${frag.level} (frag:[${((pts ? frag.startPTS : frag.start) ?? NaN).toFixed(3)}-${(
-      (pts ? frag.endPTS : frag.end) ?? NaN
-    ).toFixed(3)}]`;
+  private fragInfo(
+    frag: Fragment,
+    pts: boolean = true,
+    part?: Part | null,
+  ): string {
+    return `${this.playlistLabel()} ${frag.level} (${part ? 'part' : 'frag'}:[${((pts && !part ? frag.startPTS : (part || frag).start) ?? NaN).toFixed(3)}-${(
+      (pts && !part ? frag.endPTS : (part || frag).end) ?? NaN
+    ).toFixed(
+      3,
+    )}]${part && frag.type === 'main' ? 'INDEPENDENT=' + (part.independent ? 'YES' : 'NO') : ''}`;
   }
 
   protected resetTransmuxer() {
