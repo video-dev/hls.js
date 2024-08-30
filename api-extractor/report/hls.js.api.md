@@ -294,8 +294,6 @@ export class BaseSegment {
     // (undocumented)
     elementaryStreams: ElementaryStreams;
     // (undocumented)
-    isPreload?: boolean;
-    // (undocumented)
     relurl?: string;
     // (undocumented)
     setByteRange(value: string, previous?: BaseSegment): void;
@@ -3067,7 +3065,7 @@ export type ParsedMultivariantPlaylist = {
 //
 // @public
 export class Part extends BaseSegment {
-    constructor(partAttrs: AttrList, frag: Fragment, baseurl: string, index: number, previous?: Part, isPreload?: boolean);
+    constructor(partAttrs: AttrList, frag: Fragment, baseurl: string, index: number, previous?: Part);
     // (undocumented)
     readonly duration: number;
     // (undocumented)

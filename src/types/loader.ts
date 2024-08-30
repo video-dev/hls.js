@@ -79,6 +79,7 @@ export interface LoaderStats {
   loading: HlsProgressivePerformanceTiming;
   parsing: HlsPerformanceTiming;
   buffering: HlsProgressivePerformanceTiming;
+  blockingLoad: boolean;
 }
 
 export interface HlsPerformanceTiming {

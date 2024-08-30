@@ -731,7 +731,6 @@ export default class M3U8Parser {
           baseurl,
           partIndex,
           lastPartPublished ? undefined : lastPart,
-          true,
         );
         level.preloadData = {
           frag: preloadFrag,

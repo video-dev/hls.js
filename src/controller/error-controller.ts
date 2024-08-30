@@ -276,7 +276,7 @@ export default class ErrorController
   }
 
   private getFragRetryOrSwitchAction(data: ErrorData): IErrorAction {
-    if (data.frag?.isPreload) {
+    if (data.frag?.stats.blockingLoad) {
       return {
         action: NetworkErrorAction.DoNothing,
         flags: ErrorActionFlags.None,

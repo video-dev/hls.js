@@ -215,7 +215,6 @@ function mergeFragData(
   const loadedFrag = data.frag;
   const loadedPart = data.part;
 
-  frag.isPreload = true;
   if (frag.stats.loaded === 0) {
     frag.stats = loadedFrag.stats;
   } else {
@@ -225,7 +224,9 @@ function mergeFragData(
   }
 
   if (part && loadedPart) {
-    part.isPreload = true;
     part.stats = loadedPart.stats;
+    part.stats.blockingLoad = true;
   }
+
+  frag.stats.blockingLoad = true;
 }
