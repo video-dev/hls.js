@@ -98,7 +98,7 @@ export default class FragmentPreloader extends FragmentLoader {
       this.abort();
     }
 
-    let loadPromise;
+    let loadPromise: Promise<FragLoadedData>;
     if (part !== undefined) {
       // TODO: Use fetch loader to progressively load open-ended byterange requests
       if (part?.byteRangeEndOffset === Number.MAX_SAFE_INTEGER) {

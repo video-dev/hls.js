@@ -323,8 +323,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected buffering: boolean;
     // (undocumented)
-    protected cachePreloadHint(details: LevelDetails): void;
-    // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
     protected clearTrackerIfNeeded(frag: Fragment): void;

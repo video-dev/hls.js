@@ -367,7 +367,7 @@ export default class BaseStreamController
     this.startTimeOffset = data.startTimeOffset;
   }
 
-  protected cachePreloadHint(details: LevelDetails): void {
+  private cachePreloadHint(details: LevelDetails): void {
     const data = details.preloadData;
     if (!data) {
       return;
