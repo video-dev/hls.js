@@ -12,18 +12,22 @@ import {
   keySystemDomainToKeySystemFormat as keySystemToKeySystemFormat,
   KeySystemFormats,
   keySystemFormatToKeySystemDomain,
-  KeySystemIds,
   keySystemIdToKeySystemDomain,
-} from '../utils/mediakeys-helper';
-import {
   KeySystems,
   requestMediaKeySystemAccess,
+  parsePlayReadyWRM,
 } from '../utils/mediakeys-helper';
 import { strToUtf8array } from '../utils/utf8-utils';
 import { base64Decode } from '../utils/numeric-encoding-utils';
 import { DecryptData, LevelKey } from '../loader/level-key';
 import Hex from '../utils/hex';
-import { bin2str, parsePssh, parseSinf } from '../utils/mp4-tools';
+import {
+  bin2str,
+  parseMultiPssh,
+  parseSinf,
+  type PsshData,
+  type PsshInvalidResult,
+} from '../utils/mp4-tools';
 import { EventEmitter } from 'eventemitter3';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
@@ -123,7 +127,7 @@ class EMEController extends Logger implements ComponentAPI {
     this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
   }
 
-  private getLicenseServerUrl(keySystem: KeySystems): string | never {
+  private getLicenseServerUrl(keySystem: KeySystems): string | undefined {
     const { drmSystems, widevineLicenseUrl } = this.config;
     const keySystemConfiguration = drmSystems[keySystem];
 
@@ -135,10 +139,16 @@ class EMEController extends Logger implements ComponentAPI {
     if (keySystem === KeySystems.WIDEVINE && widevineLicenseUrl) {
       return widevineLicenseUrl;
     }
+  }
 
-    throw new Error(
-      `no license server URL configured for key-system "${keySystem}"`,
-    );
+  private getLicenseServerUrlOrThrow(keySystem: KeySystems): string | never {
+    const url = this.getLicenseServerUrl(keySystem);
+    if (url === undefined) {
+      throw new Error(
+        `no license server URL configured for key-system "${keySystem}"`,
+      );
+    }
+    return url;
   }
 
   private getServerCertificateUrl(keySystem: KeySystems): string | void {
@@ -512,19 +522,20 @@ class EMEController extends Logger implements ComponentAPI {
 
   private onMediaEncrypted = (event: MediaEncryptedEvent) => {
     const { initDataType, initData } = event;
-    this.debug(`"${event.type}" event: init data type: "${initDataType}"`);
+    const logMessage = `"${event.type}" event: init data type: "${initDataType}"`;
+    this.debug(logMessage);
 
     // Ignore event when initData is null
     if (initData === null) {
       return;
     }
 
-    let keyId: Uint8Array | undefined;
+    let keyId: Uint8Array | null | undefined;
     let keySystemDomain: KeySystems | undefined;
 
     if (
       initDataType === 'sinf' &&
-      this.config.drmSystems[KeySystems.FAIRPLAY]
+      this.getLicenseServerUrl(KeySystems.FAIRPLAY)
     ) {
       // Match sinf keyId to playlist skd://keyId=
       const json = bin2str(new Uint8Array(initData));
@@ -532,30 +543,60 @@ class EMEController extends Logger implements ComponentAPI {
         const sinf = base64Decode(JSON.parse(json).sinf);
         const tenc = parseSinf(new Uint8Array(sinf));
         if (!tenc) {
-          return;
+          throw new Error(
+            `'schm' box missing or not cbcs/cenc with schi > tenc`,
+          );
         }
         keyId = tenc.subarray(8, 24);
         keySystemDomain = KeySystems.FAIRPLAY;
       } catch (error) {
-        this.warn('Failed to parse sinf "encrypted" event message initData');
+        this.warn(`${logMessage} Failed to parse sinf: ${error}`);
         return;
       }
-    } else {
-      // Support clear-lead key-session creation (otherwise depend on playlist keys)
-      const psshInfo = parsePssh(initData);
-      if (psshInfo === null) {
+    } else if (this.getLicenseServerUrl(KeySystems.WIDEVINE)) {
+      // Support Widevine clear-lead key-session creation (otherwise depend on playlist keys)
+      const psshResults = parseMultiPssh(initData);
+
+      // TODO: If using keySystemAccessPromises we might want to wait until one is resolved
+      let keySystems = Object.keys(
+        this.keySystemAccessPromises,
+      ) as KeySystems[];
+      if (!keySystems.length) {
+        keySystems = getKeySystemsForConfig(this.config);
+      }
+
+      const psshInfo = psshResults.filter((pssh): pssh is PsshData => {
+        const keySystem = pssh.systemId
+          ? keySystemIdToKeySystemDomain(pssh.systemId)
+          : null;
+        return keySystem ? keySystems.indexOf(keySystem) > -1 : false;
+      })[0];
+
+      if (!psshInfo) {
+        if (
+          psshResults.length === 0 ||
+          psshResults.some((pssh): pssh is PsshInvalidResult => !pssh.systemId)
+        ) {
+          this.warn(`${logMessage} contains incomplete or invalid pssh data`);
+        } else {
+          this.log(
+            `ignoring ${logMessage} for ${(psshResults as PsshData[])
+              .map((pssh) => keySystemIdToKeySystemDomain(pssh.systemId))
+              .join(',')} pssh data in favor of playlist keys`,
+          );
+        }
         return;
       }
-      if (
-        psshInfo.version === 0 &&
-        psshInfo.systemId === KeySystemIds.WIDEVINE &&
-        psshInfo.data
-      ) {
-        keyId = psshInfo.data.subarray(8, 24);
+
+      keySystemDomain = keySystemIdToKeySystemDomain(psshInfo.systemId);
+      if (psshInfo.version === 0 && psshInfo.data) {
+        if (keySystemDomain === KeySystems.WIDEVINE) {
+          const offset = psshInfo.data.length - 22;
+          keyId = psshInfo.data.subarray(offset, offset + 16);
+        } else if (keySystemDomain === KeySystems.PLAYREADY) {
+          keyId = parsePlayReadyWRM(psshInfo.data);
+        }
       }
-      keySystemDomain = keySystemIdToKeySystemDomain(
-        psshInfo.systemId as KeySystemIds,
-      );
     }
 
     if (!keySystemDomain || !keyId) {
@@ -570,7 +611,7 @@ class EMEController extends Logger implements ComponentAPI {
       // Match playlist key
       const keyContext = mediaKeySessions[i];
       const decryptdata = keyContext.decryptdata;
-      if (decryptdata.pssh || !decryptdata.keyId) {
+      if (!decryptdata.keyId) {
         continue;
       }
       const oldKeyIdHex = Hex.hexDump(decryptdata.keyId);
@@ -579,6 +620,9 @@ class EMEController extends Logger implements ComponentAPI {
         decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1
       ) {
         keySessionContextPromise = keyIdToKeySessionPromise[oldKeyIdHex];
+        if (decryptdata.pssh) {
+          break;
+        }
         delete keyIdToKeySessionPromise[oldKeyIdHex];
         decryptdata.pssh = new Uint8Array(initData);
         decryptdata.keyId = keyId;
@@ -1078,7 +1122,7 @@ class EMEController extends Logger implements ComponentAPI {
   ): Promise<ArrayBuffer> {
     const keyLoadPolicy = this.config.keyLoadPolicy.default;
     return new Promise((resolve, reject) => {
-      const url = this.getLicenseServerUrl(keySessionContext.keySystem);
+      const url = this.getLicenseServerUrlOrThrow(keySessionContext.keySystem);
       this.log(`Sending license request to URL: ${url}`);
       const xhr = new XMLHttpRequest();
       xhr.responseType = 'arraybuffer';

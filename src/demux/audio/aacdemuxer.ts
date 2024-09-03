@@ -4,16 +4,17 @@
 import BaseAudioDemuxer from './base-audio-demuxer';
 import * as ADTS from './adts';
 import * as MpegAudio from './mpegaudio';
-import { logger } from '../../utils/logger';
 import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
 import type { HlsEventEmitter } from '../../events';
 import type { HlsConfig } from '../../config';
+import type { DemuxedAudioTrack } from '../../types/demuxer';
+import type { ILogger } from '../../utils/logger';
 
 class AACDemuxer extends BaseAudioDemuxer {
   private readonly observer: HlsEventEmitter;
   private readonly config: HlsConfig;
 
-  constructor(observer, config) {
+  constructor(observer: HlsEventEmitter, config) {
     super();
     this.observer = observer;
     this.config = config;
@@ -42,7 +43,7 @@ class AACDemuxer extends BaseAudioDemuxer {
   }
 
   // Source for probe info - https://wiki.multimedia.cx/index.php?title=ADTS
-  static probe(data: Uint8Array | undefined): boolean {
+  static probe(data: Uint8Array | undefined, logger: ILogger): boolean {
     if (!data) {
       return false;
     }
@@ -71,7 +72,7 @@ class AACDemuxer extends BaseAudioDemuxer {
     return ADTS.canParse(data, offset);
   }
 
-  appendFrame(track, data, offset) {
+  appendFrame(track: DemuxedAudioTrack, data: Uint8Array, offset: number) {
     ADTS.initTrackConfig(
       track,
       this.observer,

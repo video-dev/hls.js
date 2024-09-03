@@ -1,5 +1,7 @@
 import type { DRMSystemOptions, EMEControllerConfig } from '../config';
 import { optionalSelf } from './global';
+import { changeEndianness } from './keysystem-util';
+import { base64Decode } from './numeric-encoding-utils';
 
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess
@@ -36,10 +38,10 @@ export function keySystemFormatToKeySystemDomain(
 
 // System IDs for which we can extract a key ID from "encrypted" event PSSH
 export const enum KeySystemIds {
-  // CENC = '1077efecc0b24d02ace33c1e52e2fb4b'
-  // CLEARKEY = 'e2719d58a985b3c9781ab030af78d30e',
-  // FAIRPLAY = '94ce86fb07ff4f43adb893d2fa968ca2',
-  // PLAYREADY = '9a04f07998404286ab92e65be0885f95',
+  CENC = '1077efecc0b24d02ace33c1e52e2fb4b',
+  CLEARKEY = 'e2719d58a985b3c9781ab030af78d30e',
+  FAIRPLAY = '94ce86fb07ff4f43adb893d2fa968ca2',
+  PLAYREADY = '9a04f07998404286ab92e65be0885f95',
   WIDEVINE = 'edef8ba979d64acea3c827dcd51d21ed',
 }
 
@@ -48,10 +50,13 @@ export function keySystemIdToKeySystemDomain(
 ): KeySystems | undefined {
   if (systemId === KeySystemIds.WIDEVINE) {
     return KeySystems.WIDEVINE;
-    // } else if (systemId === KeySystemIds.PLAYREADY) {
-    //   return KeySystems.PLAYREADY;
-    // } else if (systemId === KeySystemIds.CENC || systemId === KeySystemIds.CLEARKEY) {
-    //   return KeySystems.CLEARKEY;
+  } else if (systemId === KeySystemIds.PLAYREADY) {
+    return KeySystems.PLAYREADY;
+  } else if (
+    systemId === KeySystemIds.CENC ||
+    systemId === KeySystemIds.CLEARKEY
+  ) {
+    return KeySystems.CLEARKEY;
   }
 }
 
@@ -159,4 +164,35 @@ function createMediaKeySystemConfigurations(
   };
 
   return [baseConfig];
+}
+
+export function parsePlayReadyWRM(keyBytes: Uint8Array): Uint8Array | null {
+  const keyBytesUtf16 = new Uint16Array(
+    keyBytes.buffer,
+    keyBytes.byteOffset,
+    keyBytes.byteLength / 2,
+  );
+  const keyByteStr = String.fromCharCode.apply(null, Array.from(keyBytesUtf16));
+
+  // Parse Playready WRMHeader XML
+  const xmlKeyBytes = keyByteStr.substring(
+    keyByteStr.indexOf('<'),
+    keyByteStr.length,
+  );
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xmlKeyBytes, 'text/xml');
+  const keyData = xmlDoc.getElementsByTagName('KID')[0];
+  if (keyData) {
+    const keyId = keyData.childNodes[0]
+      ? keyData.childNodes[0].nodeValue
+      : keyData.getAttribute('VALUE');
+    if (keyId) {
+      const keyIdArray = base64Decode(keyId).subarray(0, 16);
+      // KID value in PRO is a base64-encoded little endian GUID interpretation of UUID
+      // KID value in ‘tenc’ is a big endian UUID GUID interpretation of UUID
+      changeEndianness(keyIdArray);
+      return keyIdArray;
+    }
+  }
+  return null;
 }

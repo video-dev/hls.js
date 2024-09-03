@@ -6,7 +6,6 @@ import type {
   VideoSampleUnit,
 } from '../../types/demuxer';
 import type { PES } from '../tsdemuxer';
-import { logger } from '../../utils/logger';
 import { appendUint8Array } from '../../utils/mp4-tools';
 
 abstract class BaseVideoParser {
@@ -16,7 +15,6 @@ abstract class BaseVideoParser {
     key: boolean,
     pts: number | undefined,
     dts: number | undefined,
-    debug: string,
   ): ParsedVideoSample {
     return {
       key,
@@ -24,7 +22,6 @@ abstract class BaseVideoParser {
       pts,
       dts,
       units: [],
-      debug,
       length: 0,
     };
   }
@@ -66,11 +63,6 @@ abstract class BaseVideoParser {
       }
       videoTrack.samples.push(VideoSample as VideoSample);
     }
-    if (VideoSample.debug.length) {
-      logger.log(
-        VideoSample.pts + '/' + VideoSample.dts + ':' + VideoSample.debug,
-      );
-    }
   }
 
   abstract parsePES(
@@ -78,7 +70,6 @@ abstract class BaseVideoParser {
     textTrack: DemuxedUserdataTrack,
     pes: PES,
     last: boolean,
-    duration: number,
   );
 
   protected abstract getNALuType(data: Uint8Array, offset: number): number;

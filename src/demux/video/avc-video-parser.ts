@@ -15,10 +15,8 @@ class AvcVideoParser extends BaseVideoParser {
     textTrack: DemuxedUserdataTrack,
     pes: PES,
     endOfSegment: boolean,
-    duration: number,
   ) {
     const units = this.parseNALu(track, pes.data, endOfSegment);
-    const debug = false;
     let VideoSample = this.VideoSample;
     let push: boolean;
     let spsfound = false;
@@ -33,7 +31,6 @@ class AvcVideoParser extends BaseVideoParser {
         false,
         pes.pts,
         pes.dts,
-        '',
       );
     }
 
@@ -76,14 +73,8 @@ class AvcVideoParser extends BaseVideoParser {
               true,
               pes.pts,
               pes.dts,
-              '',
             );
           }
-
-          if (debug) {
-            VideoSample.debug += 'NDR ';
-          }
-
           VideoSample.frame = true;
           VideoSample.key = iskey;
 
@@ -103,12 +94,7 @@ class AvcVideoParser extends BaseVideoParser {
               true,
               pes.pts,
               pes.dts,
-              '',
             );
-          }
-
-          if (debug) {
-            VideoSample.debug += 'IDR ';
           }
 
           VideoSample.key = true;
@@ -117,9 +103,6 @@ class AvcVideoParser extends BaseVideoParser {
         // SEI
         case 6: {
           push = true;
-          if (debug && VideoSample) {
-            VideoSample.debug += 'SEI ';
-          }
           parseSEIMessageFromNALu(
             unit.data,
             1,
@@ -132,9 +115,6 @@ class AvcVideoParser extends BaseVideoParser {
         case 7: {
           push = true;
           spsfound = true;
-          if (debug && VideoSample) {
-            VideoSample.debug += 'SPS ';
-          }
           const sps = unit.data;
           const config = this.readSPS(sps);
           if (
@@ -148,7 +128,6 @@ class AvcVideoParser extends BaseVideoParser {
             track.height = config.height;
             track.pixelRatio = config.pixelRatio;
             track.sps = [sps];
-            track.duration = duration;
             const codecarray = sps.subarray(1, 4);
             let codecstring = 'avc1.';
             for (let i = 0; i < 3; i++) {
@@ -166,9 +145,6 @@ class AvcVideoParser extends BaseVideoParser {
         // PPS
         case 8:
           push = true;
-          if (debug && VideoSample) {
-            VideoSample.debug += 'PPS ';
-          }
 
           track.pps = [unit.data];
 
@@ -177,16 +153,17 @@ class AvcVideoParser extends BaseVideoParser {
         case 9:
           push = true;
           track.audFound = true;
-          if (VideoSample) {
+          if (VideoSample?.frame) {
             this.pushAccessUnit(VideoSample, track);
+            VideoSample = null;
           }
-
-          VideoSample = this.VideoSample = this.createVideoSample(
-            false,
-            pes.pts,
-            pes.dts,
-            debug ? 'AUD ' : '',
-          );
+          if (!VideoSample) {
+            VideoSample = this.VideoSample = this.createVideoSample(
+              false,
+              pes.pts,
+              pes.dts,
+            );
+          }
           break;
         // Filler Data
         case 12:
@@ -194,9 +171,6 @@ class AvcVideoParser extends BaseVideoParser {
           break;
         default:
           push = false;
-          if (VideoSample) {
-            VideoSample.debug += 'unknown NAL ' + unit.type + ' ';
-          }
 
           break;
       }

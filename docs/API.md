@@ -388,7 +388,7 @@ var config = {
   backBufferLength: Infinity,
   frontBufferFlushThreshold: Infinity,
   maxBufferSize: 60 * 1000 * 1000,
-  maxBufferHole: 0.5,
+  maxBufferHole: 0.1,
   highBufferWatchdogPeriod: 2,
   nudgeOffset: 0.1,
   nudgeMaxRetry: 3,
@@ -574,7 +574,7 @@ The maximum duration of buffered media, in seconds, from the play position to ke
 
 ### `maxBufferHole`
 
-(default: `0.5` seconds)
+(default: `0.1` seconds)
 
 'Maximum' inter-fragment buffer hole tolerance that hls.js can cope with when searching for the next fragment to load.
 When switching between quality level, fragments might not be perfectly aligned.

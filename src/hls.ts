@@ -14,6 +14,7 @@ import { EventEmitter } from 'eventemitter3';
 import { Events } from './events';
 import { MetadataSchema } from './types/demuxer';
 import { ErrorTypes, ErrorDetails } from './errors';
+import { version } from './version';
 import { isHdcpLevel, type HdcpLevel, type Level } from './types/level';
 import type { HlsEventEmitter, HlsListeners } from './events';
 import type AudioTrackController from './controller/audio-track-controller';
@@ -88,7 +89,7 @@ export default class Hls implements HlsEventEmitter {
    * Get the video-dev/hls.js package version.
    */
   static get version(): string {
-    return __VERSION__;
+    return version;
   }
 
   /**
@@ -393,6 +394,17 @@ export default class Hls implements HlsEventEmitter {
    * Attaches Hls.js to a media element
    */
   attachMedia(media: HTMLMediaElement) {
+    if (!media) {
+      const error = new Error(`attachMedia failed: media argument is ${media}`);
+      this.trigger(Events.ERROR, {
+        type: ErrorTypes.OTHER_ERROR,
+        details: ErrorDetails.ATTACH_MEDIA_ERROR,
+        fatal: true,
+        error,
+      });
+      return;
+    }
+
     this.logger.log('attachMedia');
     this._media = media;
     this.trigger(Events.MEDIA_ATTACHING, { media: media });

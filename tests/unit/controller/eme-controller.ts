@@ -295,18 +295,10 @@ describe('EMEController', function () {
 
     media.emit('encrypted', badData);
 
-    expect(emeController.keyIdToKeySessionPromise.f000ba00).to.be.a('Promise');
-    if (!emeController.keyIdToKeySessionPromise.f000ba00) {
-      return;
-    }
-    return emeController.keyIdToKeySessionPromise.f000ba00
-      .catch(() => {})
-      .finally(() => {
-        expect(emeController.hls.trigger).callCount(1);
-        expect(emeController.hls.trigger.args[0][1].details).to.equal(
-          ErrorDetails.KEY_SYSTEM_NO_SESSION,
-        );
-      });
+    expect(emeController.keyIdToKeySessionPromise).to.deep.equal(
+      {},
+      '`keyIdToKeySessionPromise` should be an empty dictionary when no key IDs are found',
+    );
   });
 
   it('should fetch the server certificate and set it into the session', function () {

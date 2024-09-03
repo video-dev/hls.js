@@ -9,7 +9,7 @@ import MP3Demuxer from './audio/mp3demuxer';
 import { AC3Demuxer } from './audio/ac3-demuxer';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
-import { logger } from '../utils/logger';
+import { PlaylistLevelType } from '../types/loader';
 import {
   isFullSegmentEncryption,
   getAesModeFromFullSegmentMethod,
@@ -19,18 +19,16 @@ import type { Remuxer } from '../types/remuxer';
 import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
 import type { HlsConfig } from '../config';
 import type { DecryptData } from '../loader/level-key';
-import type { PlaylistLevelType } from '../types/loader';
 import type { TypeSupported } from '../utils/codecs';
+import type { ILogger } from '../utils/logger';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
-import { optionalSelf } from '../utils/global';
 
-let now;
+let now: () => number;
 // performance.now() not available on WebWorker, at least on Safari Desktop
 try {
   now = self.performance.now.bind(self.performance);
 } catch (err) {
-  logger.debug('Unable to use Performance API on this environment');
-  now = optionalSelf?.Date.now;
+  now = Date.now;
 }
 
 type MuxConfig =
@@ -52,11 +50,11 @@ if (__USE_M2TS_ADVANCED_CODECS__) {
 }
 
 export default class Transmuxer {
-  public async: boolean = false;
+  private asyncResult: boolean = false;
+  private logger: ILogger;
   private observer: HlsEventEmitter;
   private typeSupported: TypeSupported;
   private config: HlsConfig;
-  private vendor: string;
   private id: PlaylistLevelType;
   private demuxer?: Demuxer;
   private remuxer?: Remuxer;
@@ -72,12 +70,13 @@ export default class Transmuxer {
     config: HlsConfig,
     vendor: string,
     id: PlaylistLevelType,
+    logger: ILogger,
   ) {
     this.observer = observer;
     this.typeSupported = typeSupported;
     this.config = config;
-    this.vendor = vendor;
     this.id = id;
+    this.logger = logger;
   }
 
   configure(transmuxConfig: TransmuxConfig) {
@@ -144,6 +143,7 @@ export default class Transmuxer {
         }
         uintData = new Uint8Array(decryptedData);
       } else {
+        this.asyncResult = true;
         this.decryptionPromise = decrypter
           .webCryptoDecrypt(
             uintData,
@@ -162,7 +162,7 @@ export default class Transmuxer {
             this.decryptionPromise = null;
             return result;
           });
-        return this.decryptionPromise!;
+        return this.decryptionPromise;
       }
     }
 
@@ -170,7 +170,7 @@ export default class Transmuxer {
     if (resetMuxers) {
       const error = this.configureTransmuxer(uintData);
       if (error) {
-        logger.warn(`[transmuxer] ${error.message}`);
+        this.logger.warn(`[transmuxer] ${error.message}`);
         this.observer.emit(Events.ERROR, Events.ERROR, {
           type: ErrorTypes.MEDIA_ERROR,
           details: ErrorDetails.FRAG_PARSING_ERROR,
@@ -208,6 +208,8 @@ export default class Transmuxer {
       accurateTimeOffset,
       chunkMeta,
     );
+    this.asyncResult = isPromise(result);
+
     const currentState = this.currentTransmuxState;
 
     currentState.contiguous = true;
@@ -228,6 +230,7 @@ export default class Transmuxer {
     const { decrypter, currentTransmuxState, decryptionPromise } = this;
 
     if (decryptionPromise) {
+      this.asyncResult = true;
       // Upon resolution, the decryption promise calls push() and returns its TransmuxerResult up the stack. Therefore
       // only flushing is required for async decryption
       return decryptionPromise.then(() => {
@@ -254,11 +257,16 @@ export default class Transmuxer {
     if (!demuxer || !remuxer) {
       // If probing failed, then Hls.js has been given content its not able to handle
       stats.executeEnd = now();
-      return [emptyResult(chunkMeta)];
+      const emptyResults = [emptyResult(chunkMeta)];
+      if (this.asyncResult) {
+        return Promise.resolve(emptyResults);
+      }
+      return emptyResults;
     }
 
     const demuxResultOrPromise = demuxer.flush(timeOffset);
     if (isPromise(demuxResultOrPromise)) {
+      this.asyncResult = true;
       // Decrypt final SAMPLE-AES samples
       return demuxResultOrPromise.then((demuxResult) => {
         this.flushRemux(transmuxResults, demuxResult, chunkMeta);
@@ -267,6 +275,9 @@ export default class Transmuxer {
     }
 
     this.flushRemux(transmuxResults, demuxResultOrPromise, chunkMeta);
+    if (this.asyncResult) {
+      return Promise.resolve(transmuxResults);
+    }
     return transmuxResults;
   }
 
@@ -277,10 +288,10 @@ export default class Transmuxer {
   ) {
     const { audioTrack, videoTrack, id3Track, textTrack } = demuxResult;
     const { accurateTimeOffset, timeOffset } = this.currentTransmuxState;
-    logger.log(
-      `[transmuxer.ts]: Flushed fragment ${chunkMeta.sn}${
+    this.logger.log(
+      `[transmuxer.ts]: Flushed ${this.id} sn: ${chunkMeta.sn}${
         chunkMeta.part > -1 ? ' p: ' + chunkMeta.part : ''
-      } of level ${chunkMeta.level}`,
+      } of ${this.id === PlaylistLevelType.MAIN ? 'level' : 'track'} ${chunkMeta.level}`,
     );
     const remuxResult = this.remuxer!.remux(
       audioTrack,
@@ -434,11 +445,11 @@ export default class Transmuxer {
   }
 
   private configureTransmuxer(data: Uint8Array): void | Error {
-    const { config, observer, typeSupported, vendor } = this;
+    const { config, observer, typeSupported } = this;
     // probe for content type
     let mux;
     for (let i = 0, len = muxConfig.length; i < len; i++) {
-      if (muxConfig[i].demux?.probe(data)) {
+      if (muxConfig[i].demux?.probe(data, this.logger)) {
         mux = muxConfig[i];
         break;
       }
@@ -452,10 +463,10 @@ export default class Transmuxer {
     const Remuxer: MuxConfig['remux'] = mux.remux;
     const Demuxer: MuxConfig['demux'] = mux.demux;
     if (!remuxer || !(remuxer instanceof Remuxer)) {
-      this.remuxer = new Remuxer(observer, config, typeSupported, vendor);
+      this.remuxer = new Remuxer(observer, config, typeSupported, this.logger);
     }
     if (!demuxer || !(demuxer instanceof Demuxer)) {
-      this.demuxer = new Demuxer(observer, config, typeSupported);
+      this.demuxer = new Demuxer(observer, config, typeSupported, this.logger);
       this.probe = Demuxer.probe;
     }
   }
