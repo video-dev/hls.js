@@ -177,6 +177,7 @@ class MP4Demuxer implements Demuxer {
               duration: duration,
             });
           } else if (
+            this.config.enableEmsgKLVMetadata &&
             emsgInfo.schemeIdUri.startsWith('urn:misb:KLV:bin:1910.1')
           ) {
             const pts = Number.isFinite(emsgInfo.presentationTime)
