@@ -120,7 +120,7 @@ export default class Hls implements HlsEventEmitter {
   static get MetadataSchema(): typeof MetadataSchema {
     return MetadataSchema;
   }
-  
+
   static get ErrorTypes(): typeof ErrorTypes {
     return ErrorTypes;
   }
@@ -1103,10 +1103,7 @@ export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
 export type { LevelDetails } from './loader/level-details';
 export type { SourceBufferName } from './types/buffer';
-export type {
-  MetadataSample,
-  UserdataSample,
-} from './types/demuxer';
+export type { MetadataSample, UserdataSample } from './types/demuxer';
 export type {
   HlsSkip,
   HlsUrlParameters,
