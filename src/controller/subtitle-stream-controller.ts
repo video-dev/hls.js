@@ -470,7 +470,8 @@ export class SubtitleStreamController
       if (foundFrag.sn !== 'initSegment') {
         // Load earlier fragment in same discontinuity to make up for misaligned playlists and cues that extend beyond end of segment
         const curSNIdx = foundFrag.sn - trackDetails.startSN;
-        const prevFrag = fragments[curSNIdx - 1];
+        // const prevFrag = fragments[curSNIdx - 1];
+        const prevFrag = fragments[curSNIdx];
         if (
           prevFrag &&
           prevFrag.cc === foundFrag.cc &&
