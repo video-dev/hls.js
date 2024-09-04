@@ -1642,6 +1642,8 @@ class Hls implements HlsEventEmitter {
     get maxLatency(): number;
     // (undocumented)
     get media(): HTMLMediaElement | null;
+    // (undocumented)
+    static get MetadataSchema(): typeof MetadataSchema;
     get minAutoLevel(): number;
     get nextAutoLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "nextAutoLevel" must appear on the getter, not the setter.
@@ -2937,6 +2939,7 @@ export type MediaPlaylistType = MainPlaylistType | SubtitlePlaylistType;
 export type MetadataControllerConfig = {
     enableDateRangeMetadataCues: boolean;
     enableEmsgMetadataCues: boolean;
+    enableEmsgKLVMetadata: boolean;
     enableID3MetadataCues: boolean;
 };
 
