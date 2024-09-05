@@ -1254,7 +1254,7 @@ class EMEController extends Logger implements ComponentAPI {
           this.removeSession(mediaKeySessionContext),
         )
         .concat(
-          media?.setMediaKeys(null).catch((error) => {
+          media?.setMediaKeys(null)?.catch((error) => {
             this.log(`Could not clear media keys: ${error}`);
           }),
         ),
