@@ -78,6 +78,7 @@ function registerPlayer(container, video, hls) {
   video.onpause = (e) => {
     container.classList.replace('playing', 'paused');
   };
+  // TODO: InterstitialController should maintain playback state between attach/detach
   // "autoplay"
   video.oncanplaythrough = () => {
     if (shouldPlay) {
@@ -176,6 +177,9 @@ class InterstitialTimelineCanvas {
     }
     const type = this.timelineType;
     const imTimes = im[type];
+    const details = this.hls.latestLevelDetails;
+    const tUpdated = details?.live ? details.age : 0;
+    // TODO: remove sliding start and live age
     const targetTime =
       ((event.clientX - this.canvas.offsetLeft) / this.canvas.width) *
       imTimes.duration;
