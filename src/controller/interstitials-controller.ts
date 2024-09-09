@@ -70,7 +70,7 @@ export type PlayheadTimes = {
   bufferedEnd: number;
   currentTime: number;
   duration: number;
-  slidingStart: number;
+  seekableStart: number;
   seekTo: (time: number) => void;
 };
 
@@ -494,7 +494,7 @@ export default class InterstitialsController
           get duration() {
             return getMappedDuration('primary');
           },
-          get slidingStart() {
+          get seekableStart() {
             return c.primaryDetails?.fragmentStart || 0;
           },
           seekTo: (time) => seekTo(time, 'primary'),
@@ -521,7 +521,7 @@ export default class InterstitialsController
           get duration() {
             return getMappedDuration('playout');
           },
-          get slidingStart() {
+          get seekableStart() {
             return findMappedTime(
               c.primaryDetails?.fragmentStart || 0,
               'playout',
@@ -551,7 +551,7 @@ export default class InterstitialsController
           get duration() {
             return getMappedDuration('integrated');
           },
-          get slidingStart() {
+          get seekableStart() {
             return findMappedTime(
               c.primaryDetails?.fragmentStart || 0,
               'integrated',
