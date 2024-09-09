@@ -90,6 +90,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`timelineController`](#timelinecontroller)
   - [`enableDateRangeMetadataCues`](#enabledaterangemetadatacues)
   - [`enableEmsgMetadataCues`](#enableemsgmetadatacues)
+  - [`enableEmsgKLVMetadata`](#enableemsgklvmetadata)
   - [`enableID3MetadataCues`](#enableid3metadatacues)
   - [`enableWebVTT`](#enablewebvtt)
   - [`enableIMSC1`](#enableimsc1)
@@ -442,7 +443,7 @@ var config = {
   fpsController: FPSController,
   timelineController: TimelineController,
   enableDateRangeMetadataCues: true,
-  enableEmsgMetadataCues: true,
+  enableMetadataCues: true,
   enableID3MetadataCues: true,
   enableWebVTT: true,
   enableIMSC1: true,
@@ -1266,6 +1267,14 @@ whether or not to add, update, and remove cues from the metadata TextTrack for I
 
 parameter should be a boolean
 
+### `enableEmsgKLVMetadata`
+
+(default: `false`)
+
+whether or not to extract KLV Timed Metadata found in CMAF Event Message (emsg) boxes and deliver via `FRAG_PARSING_METADATA`
+
+parameter should be a boolean
+
 ### `enableID3MetadataCues`
 
 (default: `true`)
@@ -1966,8 +1975,8 @@ Full list of Events is available below:
   - data: { id: demuxer id, frag : fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment }
 - `Hls.Events.FRAG_PARSING_USERDATA` - fired when parsing sei text is completed
   - data: { id : demuxer id, frag: fragment object, samples : [ sei samples pes ], details: [LevelDetails](#leveldetails) }
-- `Hls.Events.FRAG_PARSING_METADATA` - fired when parsing ID3 is completed
-  - data: { id: demuxer id, frag : fragment object, samples : [ ID3 pes - pts and dts timestamp are relative, values are in seconds], details: [LevelDetails](#leveldetails) }
+- `Hls.Events.FRAG_PARSING_METADATA` - fired when parsing metadata is completed (ID3 / CMAF KLV)
+  - data: { id: demuxer id, frag : fragment object, samples : [ type field aligns with values from `Hls.MetadataSchema` enum. pes - pts and dts timestamp are relative, values are in seconds], details: [LevelDetails](#leveldetails) }
 - `Hls.Events.FRAG_PARSING_DATA` - [deprecated]
 - `Hls.Events.FRAG_PARSED` - fired when fragment parsing is completed
   - data: { frag : fragment object, partIndex }
