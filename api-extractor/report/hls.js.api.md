@@ -4050,7 +4050,7 @@ export type PlayheadTimes = {
     bufferedEnd: number;
     currentTime: number;
     duration: number;
-    slidingStart: number;
+    seekableStart: number;
     seekTo: (time: number) => void;
 };
 

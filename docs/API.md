@@ -1984,28 +1984,29 @@ Use `skip()` to skip the current interstitial. Use `primary`, `playout`, and `in
 
 ```ts
 interface InterstitialsManager {
-  events: InterstitialEvent[];
-  schedule: InterstitialScheduleItem[];
-  playerQueue: HlsAssetPlayer[];
-  bufferingPlayer: HlsAssetPlayer | null;
-  bufferingAsset: InterstitialAssetItem | null;
-  bufferingItem: InterstitialScheduleItem | null;
-  bufferingIndex: number;
-  playingAsset: InterstitialAssetItem | null;
-  playingItem: InterstitialScheduleItem | null;
-  playingIndex: number;
-  waitingIndex: number;
-  primary: PlayheadTimes;
-  playout: PlayheadTimes;
-  integrated: PlayheadTimes;
-  skip: () => void;
+  events: InterstitialEvent[]; // An array of Interstitials (events) parsed from the latest media playlist update
+  schedule: InterstitialScheduleItem[]; // An array of primary and event items with start and end times representing the scheduled program
+  playerQueue: HlsAssetPlayer[]; // And array of child Hls instances created to preload and stream Interstitial asset content
+  bufferingPlayer: HlsAssetPlayer | null; // The child Hls instance assigned to streaming media at the edge of the forward buffer
+  bufferingAsset: InterstitialAssetItem | null; // The Interstitial asset currently being streamed
+  bufferingItem: InterstitialScheduleItem | null; // The primary item or event item currently being streamed
+  bufferingIndex: number; // The index of `bufferingItem` in the `schedule` array
+  playingAsset: InterstitialAssetItem | null; // The Interstitial asset currently being streamed
+  playingItem: InterstitialScheduleItem | null; // The primary item or event item currently being played
+  playingIndex: number; // The index of `playingItem` in the `schedule` array
+  waitingIndex: number; // The index of the item whose asset list is being loaded in the `schedule` array
+  primary: PlayheadTimes; // playhead mapping and seekTo method based on the primary content
+  playout: PlayheadTimes; // playhead mapping and seekTo method based on playout of all items in the `schedule` array
+  integrated: PlayheadTimes; // playhead mapping and seekTo method that applies the X-TIMELINE-OCCUPIES attribute to each event item
+  skip: () => void; // A method for skipping the currently playing event item, provided it is not jump restricted
 }
 
 type PlayheadTimes = {
-  bufferedEnd: number;
-  currentTime: number;
-  duration: number;
-  seekTo: (time: number) => void;
+  bufferedEnd: number; // The buffer end time relative to the playhead in the scheduled program
+  currentTime: number; // The current playhead time in the scheduled program
+  duration: number; // The time at the end of the scheduled program
+  seekableStart: number; // The earliest available time where media is available (maps to the start of the first segment in primary media playlists)
+  seekTo: (time: number) => void; // A method for seeking to the designated time the scheduled program
 };
 ```
 
