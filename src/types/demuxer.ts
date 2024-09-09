@@ -95,10 +95,11 @@ export interface DemuxedUserdataTrack extends DemuxedTrack {
   samples: UserdataSample[];
 }
 
-export const enum MetadataSchema {
+export enum MetadataSchema {
   audioId3 = 'org.id3',
   dateRange = 'com.apple.quicktime.HLS',
   emsg = 'https://aomedia.org/emsg/ID3',
+  misbklv = 'urn:misb:KLV:bin:1910.1',
 }
 export interface MetadataSample {
   pts: number;

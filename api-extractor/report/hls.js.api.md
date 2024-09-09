@@ -1642,6 +1642,8 @@ class Hls implements HlsEventEmitter {
     get maxLatency(): number;
     // (undocumented)
     get media(): HTMLMediaElement | null;
+    // (undocumented)
+    static get MetadataSchema(): typeof MetadataSchema;
     get minAutoLevel(): number;
     get nextAutoLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "nextAutoLevel" must appear on the getter, not the setter.
@@ -2937,6 +2939,7 @@ export type MediaPlaylistType = MainPlaylistType | SubtitlePlaylistType;
 export type MetadataControllerConfig = {
     enableDateRangeMetadataCues: boolean;
     enableEmsgMetadataCues: boolean;
+    enableEmsgKLVMetadata: boolean;
     enableID3MetadataCues: boolean;
 };
 
@@ -2961,13 +2964,15 @@ export interface MetadataSample {
 // Warning: (ae-missing-release-tag) "MetadataSchema" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export const enum MetadataSchema {
+export enum MetadataSchema {
     // (undocumented)
     audioId3 = "org.id3",
     // (undocumented)
     dateRange = "com.apple.quicktime.HLS",
     // (undocumented)
-    emsg = "https://aomedia.org/emsg/ID3"
+    emsg = "https://aomedia.org/emsg/ID3",
+    // (undocumented)
+    misbklv = "urn:misb:KLV:bin:1910.1"
 }
 
 // Warning: (ae-missing-release-tag) "MP4RemuxerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

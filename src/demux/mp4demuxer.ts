@@ -115,7 +115,6 @@ class MP4Demuxer implements Demuxer {
     } else {
       videoTrack.samples = videoSamples;
     }
-
     const id3Track = this.extractID3Track(videoTrack, timeOffset);
     textTrack.samples = parseSamples(timeOffset, videoTrack);
 
@@ -176,6 +175,23 @@ class MP4Demuxer implements Demuxer {
               pts: pts,
               type: MetadataSchema.emsg,
               duration: duration,
+            });
+          } else if (
+            this.config.enableEmsgKLVMetadata &&
+            emsgInfo.schemeIdUri.startsWith('urn:misb:KLV:bin:1910.1')
+          ) {
+            const pts = Number.isFinite(emsgInfo.presentationTime)
+              ? emsgInfo.presentationTime! / emsgInfo.timeScale
+              : timeOffset +
+                emsgInfo.presentationTimeDelta! / emsgInfo.timeScale;
+
+            id3Track.samples.push({
+              data: emsgInfo.payload,
+              len: emsgInfo.payload.byteLength,
+              dts: pts,
+              pts: pts,
+              type: MetadataSchema.misbklv,
+              duration: Number.POSITIVE_INFINITY,
             });
           }
         });

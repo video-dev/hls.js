@@ -241,6 +241,7 @@ export type LatencyControllerConfig = {
 export type MetadataControllerConfig = {
   enableDateRangeMetadataCues: boolean;
   enableEmsgMetadataCues: boolean;
+  enableEmsgKLVMetadata: boolean;
   enableID3MetadataCues: boolean;
 };
 
@@ -412,6 +413,7 @@ export const hlsDefaultConfig: HlsConfig = {
   cmcd: undefined,
   enableDateRangeMetadataCues: true,
   enableEmsgMetadataCues: true,
+  enableEmsgKLVMetadata: false,
   enableID3MetadataCues: true,
   useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
 
