@@ -681,7 +681,8 @@ export default class StreamController
 
     if (!this.startFragRequested) {
       this.setStartPosition(newDetails, sliding);
-    } else if (newDetails.live) {
+    } else if (newDetails.live && newDetails.PTSKnown) {
+      // Ensure Fragments have correct starts
       this.synchronizeToLiveEdge(newDetails);
     }
 
