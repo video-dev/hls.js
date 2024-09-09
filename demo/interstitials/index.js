@@ -218,7 +218,7 @@ class InterstitialTimelineCanvas {
     const duration = imTimes.duration + tUpdated;
     const currentTime = imTimes.currentTime;
     const bufferedEnd = imTimes.bufferedEnd;
-    const tStart = imTimes.slidingStart + tUpdated;
+    const tStart = imTimes.seekableStart + tUpdated;
     // Interstitial event and asset boundaries
     const items = im.schedule;
     for (let i = 0; i < items.length; i++) {
