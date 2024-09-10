@@ -113,6 +113,7 @@ export default class InterstitialsController
   private waitingItem: InterstitialScheduleEventItem | null = null;
   private playingAsset: InterstitialAssetItem | null = null;
   private bufferingAsset: InterstitialAssetItem | null = null;
+  private shouldPlay: boolean = false;
 
   constructor(hls: Hls, HlsPlayerClass: typeof Hls) {
     super('interstitials', hls.logger);
@@ -208,7 +209,7 @@ export default class InterstitialsController
     // @ts-ignore
     this.assetListLoader = null;
     // @ts-ignore
-    this.onSeeking = this.onTimeupdate = null;
+    this.onPlay = this.onSeeking = this.onTimeupdate = null;
     // @ts-ignore
     this.onScheduleUpdate = null;
   }
@@ -216,9 +217,14 @@ export default class InterstitialsController
   private onDestroying() {
     const media = this.primaryMedia;
     if (media) {
-      media.removeEventListener('seeking', this.onSeeking);
-      media.removeEventListener('timeupdate', this.onTimeupdate);
+      this.removeMediaListeners(media);
     }
+  }
+
+  private removeMediaListeners(media: HTMLMediaElement) {
+    media.removeEventListener('play', this.onPlay);
+    media.removeEventListener('seeking', this.onSeeking);
+    media.removeEventListener('timeupdate', this.onTimeupdate);
   }
 
   private onMediaAttaching(
@@ -226,10 +232,10 @@ export default class InterstitialsController
     data: MediaAttachingData,
   ) {
     const media = (this.media = data.media);
-    media.removeEventListener('seeking', this.onSeeking);
-    media.removeEventListener('timeupdate', this.onTimeupdate);
+    this.removeMediaListeners(media);
     media.addEventListener('seeking', this.onSeeking);
     media.addEventListener('timeupdate', this.onTimeupdate);
+    media.addEventListener('play', this.onPlay);
   }
 
   private onMediaAttached(
@@ -269,8 +275,7 @@ export default class InterstitialsController
       return;
     }
     if (media) {
-      media.removeEventListener('seeking', this.onSeeking);
-      media.removeEventListener('timeupdate', this.onTimeupdate);
+      this.removeMediaListeners(media);
     }
     // If detachMedia is called while in an Interstitial, detach the asset player as well and reset the schedule position
     if (this.detachedData) {
@@ -283,6 +288,7 @@ export default class InterstitialsController
         this.detachedData = null;
         player.detachMedia();
       }
+      this.shouldPlay = false;
     }
   }
 
@@ -661,6 +667,8 @@ export default class InterstitialsController
       );
       this.bufferingAsset = null;
       this.detachedData = attachMediaSourceData;
+    } else if (toSegment && playerMedia) {
+      this.shouldPlay ||= !playerMedia.paused;
     }
   }
 
@@ -731,6 +739,10 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     player.attachMedia(dataToAttach);
   }
 
+  private onPlay = () => {
+    this.shouldPlay = true;
+  };
+
   private onSeeking = () => {
     const currentTime = this.currentTime;
     if (currentTime === undefined || this.playbackDisabled) {
@@ -756,6 +768,9 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
       currentTime >= playingItem.end
     ) {
       const scheduleIndex = this.schedule.findItemIndexAtTime(this.timelinePos);
+      if (!this.isInterstitial(playingItem) && this.media?.paused) {
+        this.shouldPlay = false;
+      }
       if (!backwardSeek) {
         // check if an Interstitial between the current item and target item has an X-RESTRICT JUMP restriction
         const playingIndex = this.findItemIndex(playingItem);
@@ -1077,8 +1092,14 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         index,
         media,
       );
+      if (this.shouldPlay) {
+        player.media?.play();
+      }
     } else if (scheduledItem !== null) {
       this.resumePrimary(scheduledItem, index);
+      if (this.shouldPlay) {
+        this.hls.media?.play();
+      }
     } else if (playingLastItem && this.isInterstitial(currentItem)) {
       // Maintain playingItem state at end of schedule (setSchedulePosition(-1) called to end program)
       // this allows onSeeking handler to update schedule position
@@ -1958,6 +1979,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
         if (!inQueuPlayer) {
           return;
         }
+        this.shouldPlay = true;
         const scheduleIndex = this.schedule.findEventIndex(
           interstitial.identifier,
         );
