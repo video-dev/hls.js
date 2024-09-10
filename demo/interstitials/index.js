@@ -21,8 +21,6 @@ function onPageLoad(sourceURL) {
 
 // Player controls with ad transitions
 function registerPlayer(container, video, hls) {
-  let shouldPlay = true;
-
   const timeCurrent = document.querySelector('#current-time');
   const timeDuration = document.querySelector('#duration');
   const selectBox = document.querySelector('#timeline-display');
@@ -52,16 +50,13 @@ function registerPlayer(container, video, hls) {
     container.classList.replace('interstitials', 'primary');
   });
   document.querySelector('#skip').onclick = (e) => {
-    shouldPlay = true;
     hls.interstitialsManager?.skip();
   };
 
   // Play/Pause button and autoplay
   const playAttempt = () => {
-    shouldPlay = true;
     video.play().catch((e) => {
       container.classList.replace('playing', 'paused');
-      shouldPlay = false;
     });
   };
   document.querySelector('#play-pause').onclick = (e) => {
@@ -69,7 +64,6 @@ function registerPlayer(container, video, hls) {
       playAttempt();
     } else {
       video.pause();
-      shouldPlay = false;
     }
   };
   video.onplaying = (e) => {
@@ -78,11 +72,11 @@ function registerPlayer(container, video, hls) {
   video.onpause = (e) => {
     container.classList.replace('playing', 'paused');
   };
-  // TODO: InterstitialController should maintain playback state between attach/detach
-  // "autoplay"
-  video.oncanplaythrough = () => {
-    if (shouldPlay) {
-      playAttempt();
+  video.oncanplaythrough = video.oncanplay = () => {
+    if (video.paused) {
+      container.classList.replace('playing', 'paused');
+    } else {
+      container.classList.replace('paused', 'playing');
     }
   };
 
@@ -181,8 +175,7 @@ class InterstitialTimelineCanvas {
     const tUpdated = details?.live ? details.age : 0;
     // TODO: remove sliding start and live age
     const targetTime =
-      ((event.clientX - this.canvas.offsetLeft) / this.canvas.width) *
-      imTimes.duration;
+      (event.offsetX / this.canvas.clientWidth) * imTimes.duration;
     imTimes.seekTo(targetTime);
   };
 
