@@ -53,7 +53,7 @@ function expectItemToHaveProperties(
   const item = schedule[itemIndex];
   Object.keys(expected).forEach((key) => {
     // Use deep equals on all properties except for InterstitialEvents ('event' and 'nextEvent')
-    if (key === 'event' || key === 'nextEvent') {
+    if (key === 'event' || key === 'nextEvent' || key === 'previousEvent') {
       expect(item, 'Schedule Index ' + itemIndex)
         .to.be.an('object')
         .which.has.property(key);
@@ -62,7 +62,7 @@ function expectItemToHaveProperties(
         JSON.stringify(
           item,
           (key, value) =>
-            key === 'nextEvent' || key === 'event'
+            key === 'nextEvent' || key === 'previousEvent' || key === 'event'
               ? `${key} <${value ? value.identifier : value}>`
               : value,
           2,
@@ -83,7 +83,9 @@ function expectItemToHaveProperties(
             JSON.stringify(
               item,
               (key, value) =>
-                key === 'nextEvent' || key === 'event'
+                key === 'nextEvent' ||
+                key === 'previousEvent' ||
+                key === 'event'
                   ? `${key} <${value ? value.identifier : value}>`
                   : value,
               2,
@@ -188,6 +190,7 @@ fileSequence4.ts
       expect(interstitialEvent.snapOptions.in).to.equal(true);
       expectScheduleToInclude(schedule, [
         {
+          previousEvent: null,
           nextEvent: {
             identifier: '0',
           },
@@ -341,6 +344,9 @@ fileSequence4.ts
           },
         },
         {
+          previousEvent: {
+            identifier: '1',
+          },
           nextEvent: {
             identifier: '2',
           },
@@ -401,6 +407,9 @@ fileSequence4.ts
           },
         },
         {
+          previousEvent: {
+            identifier: '4',
+          },
           nextEvent: null,
           start: 38,
           end: 40,
@@ -521,6 +530,7 @@ fileSequence3.ts
       });
       expectScheduleToInclude(schedule, [
         {
+          previousEvent: null,
           nextEvent: {
             identifier: '1',
           },
@@ -551,6 +561,9 @@ fileSequence3.ts
           },
         },
         {
+          previousEvent: {
+            identifier: '1',
+          },
           nextEvent: {
             identifier: '2',
           },
@@ -641,6 +654,9 @@ fileSequence3.ts
           },
         },
         {
+          previousEvent: {
+            identifier: '5',
+          },
           nextEvent: null,
           start: 24,
           end: 30,
@@ -713,6 +729,9 @@ fileSequence3.mp4
           },
         },
         {
+          previousEvent: {
+            identifier: 'ad1',
+          },
           nextEvent: {
             identifier: 'ad2',
           },
@@ -743,6 +762,9 @@ fileSequence3.mp4
           },
         },
         {
+          previousEvent: {
+            identifier: 'ad2',
+          },
           nextEvent: null,
           start: 10,
           end: 30,
@@ -753,6 +775,78 @@ fileSequence3.mp4
           integrated: {
             start: 40,
             end: 60,
+          },
+        },
+      ]);
+    });
+
+    it('should exclude date ranges that start after the end of the primary playlist from the schedule and schedule item references', function () {
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:10
+#EXT-X-VERSION:10
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-PROGRAM-DATE-TIME:2021-01-04T05:00:00.000Z
+#EXT-X-DATERANGE:ID="ad1",CLASS="com.apple.hls.interstitial",START-DATE="2021-01-04T05:00:00.000Z",DURATION=15,X-ASSET-LIST="https://example.com/asset_list.json",X-RESUME-OFFSET=0
+#EXT-X-DATERANGE:ID="ad2",CLASS="com.apple.hls.interstitial",START-DATE="2021-01-04T05:00:50.000Z",DURATION=30,X-ASSET-LIST="https://example.com/asset_list.json",X-RESUME-OFFSET=0
+#EXT-X-MAP:URI="fileSequence0.mp4"
+#EXTINF:10,
+fileSequence1.mp4
+#EXTINF:10,
+fileSequence2.mp4
+#EXTINF:10,
+fileSequence3.mp4
+#EXT-X-ENDLIST`;
+      const details = setLoadedLevelDetails(playlist);
+      hls.trigger(Events.LEVEL_UPDATED, {
+        details,
+        level: 0,
+      });
+      const insterstitials = interstitialsController.interstitialsManager;
+      if (!insterstitials) {
+        expect(insterstitials, 'interstitialsManager').to.be.an('object');
+        return;
+      }
+      const schedule = insterstitials.schedule;
+      expect(insterstitials.events).is.an('array').which.has.lengthOf(2);
+      expect(schedule).is.an('array').which.has.lengthOf(2);
+      if (!insterstitials.events || !schedule) {
+        return;
+      }
+      expect(insterstitials.events[0].identifier).to.equal('ad1');
+      expect(insterstitials.events[1].identifier).to.equal('ad2');
+      expect(insterstitials.events[0]).to.equal(schedule[0].event);
+
+      expectScheduleToInclude(schedule, [
+        {
+          event: {
+            identifier: 'ad1',
+          },
+          start: 0,
+          end: 0,
+          playout: {
+            start: 0,
+            end: 15,
+          },
+          integrated: {
+            start: 0,
+            end: 0,
+          },
+        },
+        {
+          previousEvent: {
+            identifier: 'ad1',
+          },
+          nextEvent: null,
+          start: 0,
+          end: 30,
+          playout: {
+            start: 15,
+            end: 45,
+          },
+          integrated: {
+            start: 0,
+            end: 30,
           },
         },
       ]);
@@ -906,6 +1000,7 @@ fileSequence4.ts
         });
         expectScheduleToInclude(schedule, [
           {
+            previousEvent: null,
             nextEvent: {
               identifier: '0',
             },
