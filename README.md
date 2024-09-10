@@ -393,6 +393,28 @@ To check for native browser support first and then fallback to HLS.js, swap thes
 </script>
 ```
 
+#### Ensure correct time in video
+
+HLS transcoding of an original video file often pushes the time of the first frame a bit. If you depend on having an exact match of frame times between original video and HLS stream, you need to account for this:
+
+```javascript
+let tOffset = 0;
+const getAppendedOffset = (eventName, { frag }) => {
+  if (frag.type === 'main' && frag.sn !== 'initSegment' && frag.elementaryStreams.video) {
+    const { start, startDTS, startPTS, maxStartPTS, elementaryStreams } = frag;
+    tOffset = elementaryStreams.video.startPTS - start;
+    hls.off(Hls.Events.BUFFER_APPENDED, getAppendedOffset);
+    console.log('video timestamp offset:', tOffset, { start, startDTS, startPTS, maxStartPTS, elementaryStreams });
+  }
+}
+hls.on(Hls.Events.BUFFER_APPENDED, getAppendedOffset);
+// and account for this offset, for example like this:
+const video = document.querySelector('video');
+video.addEventListener('timeupdate', () => setTime(Math.max(0, video.currentTime - tOffset))
+const seek = (t) => video.currentTime = t + tOffset;
+const getDuration = () => video.duration - tOffset;
+```
+
 For more embed and API examples see [docs/API.md](./docs/API.md).
 
 ## CORS
