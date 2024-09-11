@@ -407,14 +407,28 @@ export function mapFragmentIntersection(
 export function adjustSliding(
   oldDetails: LevelDetails,
   newDetails: LevelDetails,
+  matchingStableVariantOrRendition: boolean = true,
 ): void {
   const delta =
     newDetails.startSN + newDetails.skippedSegments - oldDetails.startSN;
   const oldFragments = oldDetails.fragments;
-  if (delta < 0 || delta >= oldFragments.length) {
+  if (delta < 0) {
     return;
   }
-  addSliding(newDetails, oldFragments[delta].start);
+  let sliding = 0;
+  if (delta < oldFragments.length) {
+    sliding = oldFragments[delta].start;
+  } else if (matchingStableVariantOrRendition) {
+    // align new start with old end (updated playlist start sequence is past end sequence of last update)
+    sliding = oldDetails.edge;
+  } else if (newDetails.fragments[0].start === 0) {
+    // align new start with old (playlist switch has a sequence with no overlap and should not be used for alignment)
+    sliding = oldDetails.fragments[0].start;
+  } else {
+    // new details already has a sliding offset
+    return;
+  }
+  addSliding(newDetails, sliding);
 }
 
 export function addSliding(details: LevelDetails, start: number) {
