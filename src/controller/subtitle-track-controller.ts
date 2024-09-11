@@ -378,6 +378,9 @@ class SubtitleTrackController extends BasePlaylistController {
 
   /** get/set index of the selected subtitle track (based on index in subtitle track lists) **/
   get subtitleTrack(): number {
+    if (this.queuedDefaultTrack !== -1) {
+      return this.queuedDefaultTrack;
+    }
     return this.trackId;
   }
 
@@ -507,6 +510,10 @@ class SubtitleTrackController extends BasePlaylistController {
     // and we'll set subtitleTrack when onMediaAttached is triggered
     if (!this.media) {
       this.queuedDefaultTrack = newId;
+      // we'll handle setting the queued track when media is attached but
+      // emit a switch event anyways as we expose queuedDefaultTrack in the
+      // subtitleTrack getter
+      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
       return;
     }
 
