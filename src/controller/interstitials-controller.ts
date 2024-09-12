@@ -325,7 +325,11 @@ export default class InterstitialsController
               }
             }
           } else {
-            time += c[controllerField] - item.start;
+            const value =
+              controllerField === 'bufferedPos'
+                ? getBufferedEnd()
+                : c[controllerField];
+            time += value - item.start;
           }
           return time;
         }
@@ -348,6 +352,13 @@ export default class InterstitialsController
           }
         }
         return primaryTime;
+      };
+      const getBufferedEnd = (): number => {
+        const value = c.bufferedPos;
+        if (value === Number.MAX_VALUE) {
+          return getMappedDuration('primary');
+        }
+        return value;
       };
       const getMappedDuration = (timelineType: TimelineType): number => {
         if (c.primaryDetails?.live) {
@@ -490,8 +501,7 @@ export default class InterstitialsController
         },
         primary: {
           get bufferedEnd() {
-            const bufferedPos = c.bufferedPos;
-            return bufferedPos > 0 ? bufferedPos : 0;
+            return getBufferedEnd();
           },
           get currentTime() {
             const timelinePos = c.timelinePos;
@@ -820,6 +830,9 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     // Only allow timeupdate to advance primary position, seeking is used for jumping back
     // this prevents primaryPos from being reset to 0 after re-attach
     if (currentTime > this.timelinePos) {
+      if (currentTime > this.bufferedPos) {
+        this.checkBuffer();
+      }
       this.timelinePos = currentTime;
     } else {
       return;
