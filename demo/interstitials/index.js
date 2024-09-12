@@ -378,6 +378,10 @@ function registerManagerPrintOut(hls) {
       timelineOffset,
     });
     const serialize = {
+      bufferingIndex: interstitialsManager.bufferingIndex,
+      playingIndex: interstitialsManager.playingIndex,
+      waitingIndex: interstitialsManager.waitingIndex,
+
       playout: { ...interstitialsManager.playout, seekTo: `ƒ seekTo(time)` },
       integrated: {
         ...interstitialsManager.integrated,
@@ -385,16 +389,12 @@ function registerManagerPrintOut(hls) {
       },
       primary: { ...interstitialsManager.primary, seekTo: `ƒ seekTo(time)` },
 
-      events: events.map(interstitialToObj),
       schedule: schedule.map(segmentToObj),
+      events: events.map(interstitialToObj),
 
-      waitingIndex: interstitialsManager.waitingIndex,
-
-      playingIndex: interstitialsManager.playingIndex,
       playingItem: playingItem ? segmentToObj(playingItem) : playingItem,
       playingAsset: playingAsset ? assetToObj(playingAsset) : playingAsset,
 
-      bufferingIndex: interstitialsManager.bufferingIndex,
       bufferingItem: bufferingItem
         ? segmentToObj(bufferingItem)
         : bufferingItem,
