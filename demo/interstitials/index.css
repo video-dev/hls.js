@@ -48,7 +48,8 @@ body {
   display: none;
 }
 
-.primary #skip {
+.primary #skip,
+.no-skip #skip {
   display: none;
 }
 

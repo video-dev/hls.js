@@ -11,9 +11,21 @@ function onPageLoad(sourceURL) {
   const hls = (self.hls = new Hls({
     debug: true,
     enableWorker: false,
+    liveDurationInfinity: true,
   }));
   hls.loadSource(sourceURL);
   hls.attachMedia(video);
+
+  hls.once(Hls.Events.MANIFEST_PARSED, (name, event) => {
+    if (event.audio && !event.video) {
+      video.muted = false;
+    }
+  });
+  hls.once(Hls.Events.LEVEL_UPDATED, (name, event) => {
+    if (event.details.live) {
+      video.play();
+    }
+  });
 
   registerPlayer(document.querySelector('#player'), video, hls);
   registerManagerPrintOut(hls);
@@ -108,6 +120,14 @@ function registerPlayer(container, video, hls) {
       );
       timeDuration.textContent = '';
       timeCurrent.textContent = `${timeRemaining} seconds remaining`;
+      const cannotSkipPastLiveEdge =
+        hls.latestLevelDetails?.live &&
+        playingItem.playout.end > hls.liveSyncPosition;
+      if (cannotSkipPastLiveEdge) {
+        container.classList.add('no-skip');
+      } else {
+        container.classList.remove('no-skip');
+      }
     } else {
       timeCurrent.textContent = hhmmss(im[displayTime].currentTime).replace(
         /^00?:?/,
@@ -173,9 +193,10 @@ class InterstitialTimelineCanvas {
     const imTimes = im[type];
     const details = this.hls.latestLevelDetails;
     const tUpdated = details?.live ? details.age : 0;
-    // TODO: remove sliding start and live age
+    const duration = imTimes.duration + tUpdated;
+    const tStart = imTimes.seekableStart + tUpdated;
     const targetTime =
-      (event.offsetX / this.canvas.clientWidth) * imTimes.duration;
+      tStart + (event.offsetX / this.canvas.clientWidth) * (duration - tStart);
     imTimes.seekTo(targetTime);
   };
 
@@ -274,10 +295,24 @@ class InterstitialTimelineCanvas {
       ctx.fillStyle = 'rgba(255,255,255,0.5)';
       ctx.fillRect(xCurrentTime, 1, xBufferedEnd - xCurrentTime, height - 2);
     }
+    // live edge
+    let xLiveEdge = width;
+    if (details.live) {
+      const liveEdge = this.hls.liveSyncPosition;
+      xLiveEdge = ((liveEdge - tStart) / (duration - tStart)) * width;
+      ctx.fillStyle = 'rgba(255,100,100,0.5)';
+      ctx.fillRect(xLiveEdge, 0, width, height);
+      ctx.fillStyle = 'rgba(255,0,0,1.0)';
+      ctx.fillText('Live', xLiveEdge + 5, height - 5);
+    }
     // current time
     ctx.fillStyle = 'rgba(0, 102, 220,0.5)';
-    ctx.fillRect(0, 0, xCurrentTime, height);
-    ctx.fillStyle = 'rgb(0, 102, 220)';
+    ctx.fillRect(0, 0, Math.min(xCurrentTime, xLiveEdge), height);
+    if (xCurrentTime < xLiveEdge) {
+      ctx.fillStyle = 'rgb(0, 102, 220)';
+    } else {
+      ctx.fillStyle = 'rgb(255, 0, 0)';
+    }
     ctx.fillRect(xCurrentTime - 0.5, 0, 2, height);
   }
 }
