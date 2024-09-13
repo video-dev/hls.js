@@ -1180,7 +1180,7 @@ var config = {
 
 These settings determine whether HDR video should be selected before SDR video. Which VIDEO-RANGE values are allowed, and in what order of priority can also be specified.
 
-Format `{ preferHDR: boolean, allowedVideoRanges: ('SDR' | 'PQ' | 'HLG')[] }`
+Format `{ preferHDR: boolean, allowedVideoRanges: ('SDR' | 'PQ' | 'HLG')[], videoCodec: string }`
 
 - Allow all video ranges if `allowedVideoRanges` is unspecified.
 - If `preferHDR` is defined, use the value to filter `allowedVideoRanges`.
@@ -1189,6 +1189,8 @@ Format `{ preferHDR: boolean, allowedVideoRanges: ('SDR' | 'PQ' | 'HLG')[] }`
 When `preferHDR` is set, skip checking if the window supports HDR and instead use the value provided to determine level selection preference via dynamic range. A value of `preferHDR === true` will attempt to use HDR levels before selecting from SDR levels.
 
 `allowedVideoRanges` can restrict playback to a limited set of VIDEO-RANGE transfer functions and set their priority for selection. For example, to ignore all HDR variants, set `allowedVideoRanges` to `['SDR']`. Or, to ignore all HLG variants, set `allowedVideoRanges` to `['SDR', 'PQ']`. To prioritize PQ variants over HLG, set `allowedVideoRanges` to `['SDR', 'HLG', 'PQ']`.
+
+`videoCodec` limits initial selection to a particular code provided a baseline vairant (1080p 30fps or lower in `allowedVideoRanges`) is found.
 
 ### `audioPreference`
 
