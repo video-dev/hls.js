@@ -172,7 +172,7 @@ describe('LevelHelper Tests', function () {
       expect(actual).to.deep.equal([15, 20, 25]);
     });
 
-    it('does not extrapolate if the new playlist starts before the old', function () {
+    it('matches start when the new playlist starts before the old', function () {
       const oldPlaylist = generatePlaylist([3, 4, 5]);
       oldPlaylist.fragments.forEach((f) => {
         f.start += 10;
@@ -180,7 +180,7 @@ describe('LevelHelper Tests', function () {
       const newPlaylist = generatePlaylist([1, 2, 3]);
       mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
-      expect(actual).to.deep.equal([0, 5, 10]);
+      expect(actual).to.deep.equal([10, 15, 20]);
     });
 
     it('merges delta playlist updates', function () {
