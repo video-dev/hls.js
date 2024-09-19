@@ -769,7 +769,11 @@ class EMEController extends Logger implements ComponentAPI {
       ) {
         this.renewLicense(context, message).catch((error) => {
           this.handleError(error);
-          licenseStatus.emit('error', error);
+          if (error instanceof EMEKeyError) {
+            if (!error.data.fatal) {
+              licenseStatus.emit('error', error);
+            }
+          }
         });
       } else if (messageType === 'license-release') {
         if (context.keySystem === KeySystems.FAIRPLAY) {
