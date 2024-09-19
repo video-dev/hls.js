@@ -773,6 +773,8 @@ class EMEController extends Logger implements ComponentAPI {
             if (!error.data.fatal) {
               licenseStatus.emit('error', error);
             }
+          } else {
+            licenseStatus.emit('error', error);
           }
         });
       } else if (messageType === 'license-release') {
