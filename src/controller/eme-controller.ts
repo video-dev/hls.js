@@ -769,10 +769,8 @@ class EMEController extends Logger implements ComponentAPI {
       ) {
         this.renewLicense(context, message).catch((error) => {
           this.handleError(error);
-          if (error instanceof EMEKeyError) {
-            if (!error.data.fatal) {
-              licenseStatus.emit('error', error);
-            }
+          if (error instanceof EMEKeyError && !error.data.fatal) {
+            licenseStatus.emit('error', error);
           } else {
             licenseStatus.emit('error', error);
           }
