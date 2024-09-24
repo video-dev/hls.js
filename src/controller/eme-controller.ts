@@ -638,6 +638,7 @@ class EMEController extends Logger implements ComponentAPI {
               'encrypted-event-key-match',
             );
           });
+        keySessionContextPromise.catch((error) => this.handleError(error));
         break;
       }
     }
@@ -671,8 +672,8 @@ class EMEController extends Logger implements ComponentAPI {
             });
           },
         );
+      keySessionContextPromise.catch((error) => this.handleError(error));
     }
-    keySessionContextPromise.catch((error) => this.handleError(error));
   };
 
   private onWaitingForKey = (event: Event) => {
@@ -768,8 +769,11 @@ class EMEController extends Logger implements ComponentAPI {
         messageType === 'license-renewal'
       ) {
         this.renewLicense(context, message).catch((error) => {
-          this.handleError(error);
-          licenseStatus.emit('error', error);
+          if (licenseStatus.eventNames().length) {
+            licenseStatus.emit('error', error);
+          } else {
+            this.handleError(error);
+          }
         });
       } else if (messageType === 'license-release') {
         if (context.keySystem === KeySystems.FAIRPLAY) {
@@ -1230,6 +1234,8 @@ class EMEController extends Logger implements ComponentAPI {
     // keep reference of media
     this.media = media;
 
+    media.removeEventListener('encrypted', this.onMediaEncrypted);
+    media.removeEventListener('waitingforkey', this.onWaitingForKey);
     media.addEventListener('encrypted', this.onMediaEncrypted);
     media.addEventListener('waitingforkey', this.onWaitingForKey);
   }
