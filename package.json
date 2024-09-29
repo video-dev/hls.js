@@ -72,7 +72,7 @@
     "@babel/register": "7.24.6",
     "@microsoft/api-documenter": "7.25.14",
     "@microsoft/api-extractor": "7.47.9",
-    "@rollup/plugin-alias": "5.1.0",
+    "@rollup/plugin-alias": "5.1.1",
     "@rollup/plugin-babel": "6.0.4",
     "@rollup/plugin-commonjs": "25.0.8",
     "@rollup/plugin-node-resolve": "15.2.3",
