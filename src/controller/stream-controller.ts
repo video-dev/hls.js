@@ -700,7 +700,7 @@ export default class StreamController
       return;
     }
     const currentLevel = levels[frag.level];
-    const details = currentLevel.details;
+    const details = currentLevel?.details;
     if (!details) {
       this.warn(
         `Dropping fragment ${frag.sn} of level ${frag.level} after level details were reset`,
