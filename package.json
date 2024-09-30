@@ -74,7 +74,7 @@
     "@microsoft/api-extractor": "7.47.9",
     "@rollup/plugin-alias": "5.1.1",
     "@rollup/plugin-babel": "6.0.4",
-    "@rollup/plugin-commonjs": "25.0.8",
+    "@rollup/plugin-commonjs": "26.0.1",
     "@rollup/plugin-node-resolve": "15.3.0",
     "@rollup/plugin-replace": "5.0.7",
     "@rollup/plugin-terser": "0.4.4",
