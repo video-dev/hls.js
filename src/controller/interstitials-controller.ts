@@ -398,9 +398,10 @@ export default class InterstitialsController
             const diff = time - currentTime;
             const seekToTime = media.currentTime + diff;
             if (
-              !assetPlayer ||
-              appendInPlace ||
-              seekToTime <= assetPlayer.duration
+              seekToTime >= 0 &&
+              (!assetPlayer ||
+                appendInPlace ||
+                seekToTime <= assetPlayer.duration)
             ) {
               media.currentTime = seekToTime;
               return;
@@ -450,8 +451,8 @@ export default class InterstitialsController
                   const asset = assetList[i];
                   if (
                     asset.duration &&
-                    asset.startOffset >= eventTime &&
-                    asset.startOffset + asset.duration < eventTime
+                    eventTime >= asset.startOffset &&
+                    eventTime < asset.startOffset + asset.duration
                   ) {
                     assetIndex = i;
                     break;
