@@ -520,6 +520,8 @@ export default class StreamController
   ) {
     super.onMediaAttached(event, data);
     const media = data.media;
+    media.removeEventListener('playing', this.onMediaPlaying);
+    media.removeEventListener('seeked', this.onMediaSeeked);
     media.addEventListener('playing', this.onMediaPlaying);
     media.addEventListener('seeked', this.onMediaSeeked);
     this.gapController = new GapController(
@@ -555,6 +557,10 @@ export default class StreamController
 
   private onMediaPlaying = () => {
     // tick to speed up FRAG_CHANGED triggering
+    const gapController = this.gapController;
+    if (gapController) {
+      gapController.ended = 0;
+    }
     this.tick();
   };
 
@@ -579,6 +585,19 @@ export default class StreamController
     // tick to speed up FRAG_CHANGED triggering
     this.tick();
   };
+
+  protected triggerEnded() {
+    const gapController = this.gapController;
+    if (gapController) {
+      if (gapController.ended) {
+        return;
+      }
+      gapController.ended = this.media?.currentTime || 1;
+    }
+    this.hls.trigger(Events.MEDIA_ENDED, {
+      stalled: false,
+    });
+  }
 
   protected onManifestLoading() {
     super.onManifestLoading();

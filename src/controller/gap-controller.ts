@@ -26,7 +26,7 @@ export default class GapController extends Logger {
   private stalled: number | null = null;
   private moved: boolean = false;
   private seeking: boolean = false;
-  private ended: number = 0;
+  public ended: number = 0;
 
   constructor(
     config: HlsConfig,
@@ -105,6 +105,13 @@ export default class GapController extends Logger {
       media.playbackRate === 0 ||
       !BufferHelper.getBuffered(media).length
     ) {
+      // Fire MEDIA_ENDED to workaround event not being dispatched by browser
+      if (!this.ended && media.ended) {
+        this.ended = currentTime || 1;
+        this.hls.trigger(Events.MEDIA_ENDED, {
+          stalled: false,
+        });
+      }
       this.nudgeRetry = 0;
       return;
     }
@@ -174,7 +181,7 @@ export default class GapController extends Logger {
         if (stalledDuration < 1000 || this.ended) {
           return;
         }
-        this.ended = currentTime;
+        this.ended = currentTime || 1;
         this.hls.trigger(Events.MEDIA_ENDED, {
           stalled: true,
         });

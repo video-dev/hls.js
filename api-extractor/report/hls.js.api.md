@@ -539,6 +539,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected transmuxer: TransmuxerInterface | null;
     // (undocumented)
+    protected triggerEnded(): void;
+    // (undocumented)
     protected unregisterListeners(): void;
     // (undocumented)
     protected waitForCdnTuneIn(details: LevelDetails): boolean | 0;
@@ -4340,6 +4342,8 @@ export class StreamController extends BaseStreamController implements NetworkCom
     stopLoad(): void;
     // (undocumented)
     swapAudioCodec(): void;
+    // (undocumented)
+    protected triggerEnded(): void;
     // (undocumented)
     protected unregisterListeners(): void;
 }
