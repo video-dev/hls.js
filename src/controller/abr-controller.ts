@@ -316,13 +316,19 @@ class AbrController extends Logger implements AbrComponentAPI {
       // compute time to load next fragment at lower level
       // 8 = bits per byte (bps/Bps)
       const levelNextBitrate = levels[nextLoadLevel].maxBitrate;
+      const requiresLevelLoad =
+        !levels[nextLoadLevel].details ||
+        this.hls.latestLevelDetails?.live === true;
       fragLevelNextLoadedDelay = this.getTimeToLoadFrag(
         ttfbEstimate / 1000,
         bwe,
         duration * levelNextBitrate,
-        !levels[nextLoadLevel].details,
+        requiresLevelLoad,
       );
-      if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
+      if (
+        fragLevelNextLoadedDelay <
+        bufferStarvationDelay - (requiresLevelLoad ? frag.duration / 2 : 0)
+      ) {
         break;
       }
     }
@@ -359,6 +365,7 @@ class AbrController extends Logger implements AbrComponentAPI {
     this.warn(`Fragment ${frag.sn}${
       part ? ' part ' + part.index : ''
     } of level ${frag.level} is loading too slowly;
+      Fragment duration: ${frag.duration.toFixed(3)}
       Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s
       Estimated load time for current fragment: ${fragLoadedDelay.toFixed(3)} s
       Estimated load time for down switch fragment: ${fragLevelNextLoadedDelay.toFixed(
@@ -370,6 +377,29 @@ class AbrController extends Logger implements AbrComponentAPI {
       } bps
       New BW estimate: ${this.getBwEstimate() | 0} bps
       Switching to level ${nextLoadLevel} @ ${nextLoadLevelBitrate | 0} bps`);
+
+    this.timer = self.setInterval(() => {
+      // Are nextLoadLevel details available or is stream-controller still in "WAITING_LEVEL" state?
+      this.clearTimer();
+      if (
+        this.fragCurrent === frag &&
+        this.hls.loadLevel === nextLoadLevel &&
+        nextLoadLevel > 0
+      ) {
+        const bufferStarvationDelay = this.getStarvationDelay();
+        this
+          .warn(`Aborting inflight request ${nextLoadLevel > 0 ? 'and switching down' : ''}
+      Fragment duration: ${frag.duration.toFixed(3)} s
+      Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s`);
+        frag.abortRequests();
+        this.fragCurrent = this.partCurrent = null;
+        if (nextLoadLevel > 0) {
+          this.hls.nextLoadLevel = this.hls.nextAutoLevel = 0;
+          this.resetEstimator(this.hls.levels[0].bitrate);
+        }
+      }
+    }, fragLevelNextLoadedDelay * 1000);
+
     hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, part, stats });
   };
 
@@ -665,7 +695,7 @@ class AbrController extends Logger implements AbrComponentAPI {
       return 0;
     }
     const level: Level | undefined = levels[selectionBaseLevel];
-    const live = !!level?.details?.live;
+    const live = !!this.hls.latestLevelDetails?.live;
     const firstSelection = loadLevel === -1 || lastLoadedFragLevel === -1;
     let currentCodecSet: string | undefined;
     let currentVideoRange: VideoRange | undefined = 'SDR';
