@@ -238,6 +238,8 @@ export default class BaseStreamController
     data: MediaAttachedData,
   ) {
     const media = (this.media = this.mediaBuffer = data.media);
+    media.removeEventListener('seeking', this.onMediaSeeking);
+    media.removeEventListener('ended', this.onMediaEnded);
     media.addEventListener('seeking', this.onMediaSeeking);
     media.addEventListener('ended', this.onMediaEnded);
     const config = this.config;
@@ -379,12 +381,12 @@ export default class BaseStreamController
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.log(`setting startPosition to 0 because media ended`);
     this.startPosition = this.lastCurrentTime = 0;
-    if (this.playlistType === PlaylistLevelType.MAIN) {
-      this.hls.trigger(Events.MEDIA_ENDED, {
-        stalled: false,
-      });
-    }
+    this.triggerEnded();
   };
+
+  protected triggerEnded() {
+    /* overridden in stream-controller */
+  }
 
   protected onManifestLoaded(
     event: Events.MANIFEST_LOADED,
