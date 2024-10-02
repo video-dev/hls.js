@@ -652,6 +652,15 @@ export default class StreamController
     let sliding = 0;
     if (newDetails.live || curLevel.details?.live) {
       this.checkLiveUpdate(newDetails);
+      if (
+        this.fragmentPreloader.loading &&
+        this.fragmentPreloader.frag?.level !== data.level
+      ) {
+        this.fragmentPreloader.abort();
+      } else {
+        // reset the preloader state if we have finished loading, never loaded, or have old data
+        this.fragmentPreloader.revalidate(data);
+      }
       if (newDetails.deltaUpdateFailed) {
         return;
       }

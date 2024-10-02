@@ -276,6 +276,12 @@ export default class ErrorController
   }
 
   private getFragRetryOrSwitchAction(data: ErrorData): IErrorAction {
+    if (data.frag?.stats.blockingLoad) {
+      return {
+        action: NetworkErrorAction.DoNothing,
+        flags: ErrorActionFlags.None,
+      };
+    }
     const hls = this.hls;
     // Share fragment error count accross media options (main, audio, subs)
     // This allows for level based rendition switching when media option assets fail
