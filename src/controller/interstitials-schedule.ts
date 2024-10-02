@@ -454,7 +454,7 @@ export class InterstitialsSchedule {
         const playoutStart = playoutDuration;
         playoutDuration += segmentDuration;
         schedule.push({
-          previousEvent: schedule[schedule.length - 1].event || null,
+          previousEvent: schedule[schedule.length - 1]?.event || null,
           nextEvent: null,
           start: primaryPosition,
           end: timelineStart + segmentDuration,
