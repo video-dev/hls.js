@@ -981,6 +981,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         this.log(
           `INTERSTITIAL_ENDED ${interstitial} ${segmentToString(currentItem)}`,
         );
+        interstitial.hasPlayed = true;
         this.hls.trigger(Events.INTERSTITIAL_ENDED, {
           event: interstitial,
           schedule: scheduleItems.slice(0),
@@ -988,6 +989,14 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         });
         // Exiting an Interstitial
         this.clearInterstitial(interstitial, scheduledItem);
+        if (interstitial.cue.once) {
+          this.updateSchedule();
+          if (scheduledItem) {
+            const updatedIndex = this.schedule.findItemIndex(scheduledItem);
+            this.setSchedulePosition(updatedIndex, assetListIndex);
+          }
+          return;
+        }
       }
     }
     // Cleanup out of range Interstitials
@@ -1055,7 +1064,6 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
       // Update schedule and asset list position now that it can start
       this.waitingItem = null;
       this.playingItem = scheduledItem;
-      interstitial.hasPlayed = true;
       // Start Interstitial Playback
       const assetItem = interstitial.assetList[assetListIndex];
       if (!assetItem) {
@@ -1927,9 +1935,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
           `Interstitial asset "${assetId}" duration change ${currentAssetDuration} > ${duration}`,
         );
         assetItem.duration = duration;
+        // Update schedule with new event and asset duration
+        this.updateSchedule();
       }
-      // Update schedule with new event and asset duration
-      this.updateSchedule();
     };
     player.on(Events.LEVEL_UPDATED, (event, { details }) =>
       updateAssetPlayerDetails(details),

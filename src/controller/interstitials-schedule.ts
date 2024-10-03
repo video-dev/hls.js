@@ -333,7 +333,9 @@ export class InterstitialsSchedule {
     let playoutDuration = 0;
 
     // Filter events that have errored from the schedule (Primary fallback)
-    interstitialEvents = interstitialEvents.filter((event) => !event.error);
+    interstitialEvents = interstitialEvents.filter(
+      (event) => !event.error && !(event.cue.once && event.hasPlayed),
+    );
     if (interstitialEvents.length) {
       // Update Schedule
       this.resolveOffsets(interstitialEvents, mediaSelection);
