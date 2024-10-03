@@ -71,7 +71,9 @@ export default class GapController extends Logger {
 
     // The playhead is moving, no-op
     if (currentTime !== lastCurrentTime) {
-      this.ended = 0;
+      if (lastCurrentTime) {
+        this.ended = 0;
+      }
       this.moved = true;
       if (!seeking) {
         this.nudgeRetry = 0;
