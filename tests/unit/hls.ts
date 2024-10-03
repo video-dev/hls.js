@@ -61,7 +61,7 @@ describe('Hls', function () {
       expect(media || null).to.not.equal(null);
       hls.attachMedia(media);
       expect(hls.media).to.equal(media);
-      detachTest(hls, media, 4);
+      detachTest(hls, media, 6);
       hls.destroy();
     });
 
@@ -77,7 +77,7 @@ describe('Hls', function () {
       hls.attachMedia(media);
       expect(hls.media).to.equal(media);
       hls.trigger(Events.MEDIA_ATTACHED, { media });
-      detachTest(hls, media, 12);
+      detachTest(hls, media, 13);
       hls.destroy();
     });
 
@@ -97,7 +97,7 @@ describe('Hls', function () {
           .and(
             sinon.match.has(
               'message',
-              'attachMedia failed: media argument is null',
+              'attachMedia failed: invalid argument (null)',
             ),
           ),
       };
