@@ -85,7 +85,7 @@ export class HlsAssetPlayer {
     if (!media) {
       return 0;
     }
-    const bufferInfo = BufferHelper.bufferInfo(media, media.currentTime, 0);
+    const bufferInfo = BufferHelper.bufferInfo(media, media.currentTime, 0.001);
     return this.getAssetTime(bufferInfo.end);
   }
 

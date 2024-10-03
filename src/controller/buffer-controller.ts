@@ -433,6 +433,9 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
     if (!this.hls) {
       return;
     }
+    if (this.mediaSource?.readyState !== 'open') {
+      return;
+    }
     this.hls.pauseBuffering();
   };
   private _onStartStreaming = (event) => {
