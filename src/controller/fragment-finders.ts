@@ -231,7 +231,14 @@ export function findNearestWithCC(
     if (details.startCC <= cc && details.endCC >= cc) {
       const start = fragment.start;
       const end = fragment.end;
-      return BinarySearch.search(details.fragments, (candidate) => {
+      let fragments = details.fragments;
+      if (!fragment.relurl) {
+        const { fragmentHint } = details;
+        if (fragmentHint) {
+          fragments = fragments.concat(fragmentHint);
+        }
+      }
+      return BinarySearch.search(fragments, (candidate) => {
         if (candidate.cc < cc || candidate.end <= start) {
           return 1;
         } else if (candidate.cc > cc || candidate.start >= end) {

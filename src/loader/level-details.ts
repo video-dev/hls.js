@@ -55,6 +55,7 @@ export class LevelDetails {
   public playlistParsingError: Error | null = null;
   public variableList: VariableMap | null = null;
   public hasVariableRefs = false;
+  public appliedTimelineOffset?: number;
 
   constructor(baseUrl: string) {
     this.fragments = [];
@@ -128,6 +129,13 @@ export class LevelDetails {
   get fragmentEnd(): number {
     if (this.fragments?.length) {
       return this.fragments[this.fragments.length - 1].end;
+    }
+    return 0;
+  }
+
+  get fragmentStart(): number {
+    if (this.fragments?.length) {
+      return this.fragments[0].start;
     }
     return 0;
   }

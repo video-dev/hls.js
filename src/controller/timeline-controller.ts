@@ -27,6 +27,7 @@ import type {
   SubtitleTracksUpdatedData,
   BufferFlushingData,
   FragLoadingData,
+  MediaDetachingData,
 } from '../types/events';
 import type Hls from '../hls';
 import type { ComponentAPI } from '../types/component-api';
@@ -295,17 +296,27 @@ export class TimelineController implements ComponentAPI {
     data: MediaAttachingData,
   ) {
     this.media = data.media;
-    this._cleanTracks();
+    if (!data.mediaSource) {
+      this._cleanTracks();
+    }
   }
 
-  private onMediaDetaching() {
+  private onMediaDetaching(
+    event: Events.MEDIA_DETACHING,
+    data: MediaDetachingData,
+  ) {
+    const transferringMedia = !!data.transferMedia;
+    this.media = null;
+    if (transferringMedia) {
+      return;
+    }
+
     const { captionsTracks } = this;
     Object.keys(captionsTracks).forEach((trackName) => {
       clearCurrentCues(captionsTracks[trackName]);
       delete captionsTracks[trackName];
     });
     this.nonNativeCaptionsTracks = {};
-    this.media = null;
   }
 
   private onManifestLoading() {

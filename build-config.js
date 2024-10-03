@@ -45,6 +45,7 @@ const addM2TSAdvancedCodecSupport =
   !!env.M2TS_ADVANCED_CODECS || !!env.USE_M2TS_ADVANCED_CODECS;
 const addMediaCapabilitiesSupport =
   !!env.MEDIA_CAPABILITIES || !!env.USE_MEDIA_CAPABILITIES;
+const addInterstitialSupport = !!env.INTERSTITALS || !!env.USE_INTERSTITALS;
 
 const shouldBundleWorker = (format) => format !== FORMAT.esm;
 
@@ -71,6 +72,9 @@ const buildConstants = (type, additional = {}) => ({
     ),
     __USE_MEDIA_CAPABILITIES__: JSON.stringify(
       type === BUILD_TYPE.full || addMediaCapabilitiesSupport,
+    ),
+    __USE_INTERSTITALS__: JSON.stringify(
+      type === BUILD_TYPE.full || addInterstitialSupport,
     ),
 
     ...additional,
@@ -258,6 +262,22 @@ function getAliasesForLightDist(format) {
     aliases = {
       ...aliases,
       '../utils/mediacapabilities-helper': `../${emptyFile}`,
+    };
+  }
+
+  if (!addInterstitialSupport) {
+    aliases = {
+      ...aliases,
+      './controller/interstitials-controller': './empty.js',
+      './controller/interstitial-player': './empty.js',
+      './controller/interstitials-schedule': './empty.js',
+      './interstitial-player': './empty.js',
+      './interstitials-schedule': './empty.js',
+      './interstitial-event': './empty.js',
+      '../controller/interstitial-player': './empty.js',
+      '../controller/interstitials-schedule': './empty.js',
+      '../loader/interstitial-event': './empty.js',
+      '../loader/interstitial-asset-list': './empty.js',
     };
   }
 

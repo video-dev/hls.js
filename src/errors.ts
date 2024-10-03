@@ -81,6 +81,14 @@ export enum ErrorDetails {
   BUFFER_SEEK_OVER_HOLE = 'bufferSeekOverHole',
   // Identifier for a buffer nudge on stall (playback is stuck although currentTime is in a buffered area)
   BUFFER_NUDGE_ON_STALL = 'bufferNudgeOnStall',
+  // Identifier for a Interstitial Asset List load error - data: { url: faulty URL, response: { code: error code, text: error text } }
+  ASSET_LIST_LOAD_ERROR = 'assetListLoadError',
+  // Identifier for a Interstitial Asset List load timeout - data: { url: faulty URL, response: { code: error code, text: error text } }
+  ASSET_LIST_LOAD_TIMEOUT = 'assetListLoadTimeout',
+  // Identifier for a Interstitial Asset List parsing error - data: { url : faulty URL, reason : error reason, response : { code: error code, text: error text }}
+  ASSET_LIST_PARSING_ERROR = 'assetListParsingError',
+  // Identifier for a Interstitial Asset List parsing error - data: { url : faulty URL, reason : error reason, response : { code: error code, text: error text }}
+  INTERSTITIAL_ASSET_ITEM_ERROR = 'interstitialAssetItemError',
   // Identifier for an internal exception happening inside hls.js while handling an event
   INTERNAL_EXCEPTION = 'internalException',
   // Identifier for an internal call to abort a loader

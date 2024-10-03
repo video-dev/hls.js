@@ -56,7 +56,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`fragLoadingMaxRetry` / `manifestLoadingMaxRetry` / `levelLoadingMaxRetry` (deprecated)](#fragloadingmaxretry--manifestloadingmaxretry--levelloadingmaxretry-deprecated)
   - [`fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout` (deprecated)](#fragloadingmaxretrytimeout--manifestloadingmaxretrytimeout--levelloadingmaxretrytimeout-deprecated)
   - [`fragLoadingRetryDelay` / `manifestLoadingRetryDelay` / `levelLoadingRetryDelay` (deprecated)](#fragloadingretrydelay--manifestloadingretrydelay--levelloadingretrydelay-deprecated)
-  - [`fragLoadPolicy` / `keyLoadPolicy` / `certLoadPolicy` / `playlistLoadPolicy` / `manifestLoadPolicy` / `steeringManifestLoadPolicy`](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy)
+  - [`fragLoadPolicy` / `keyLoadPolicy` / `certLoadPolicy` / `playlistLoadPolicy` / `manifestLoadPolicy` / `steeringManifestLoadPolicy` / `interstitialAssetListLoadPolicy`](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy--interstitialassetlistloadpolicy)
     - [`LoaderConfig`](#loaderconfig)
       - [`maxTimeToFirstByteMs: number`](#maxtimetofirstbytems-number)
       - [`maxLoadTimeMs: number`](#maxloadtimems-number)
@@ -126,9 +126,13 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`drmSystemOptions`](#drmsystemoptions)
   - [`requestMediaKeySystemAccessFunc`](#requestmediakeysystemaccessfunc)
   - [`cmcd`](#cmcd)
+  - [`enableInterstitialPlayback`](#enableinterstitialplayback)
+  - [`interstitialAppendInPlace`](#interstitialappendinplace)
+  - [`interstitialLiveLookAhead`](#interstitiallivelookahead)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
-  - [`hls.attachMedia(videoElement)`](#hlsattachmediavideoelement)
+  - [`hls.attachMedia(HTMLMediaElement | MediaAttachingData)`](#hlsattachmediahtmlmediaelement--mediaattachingdata)
   - [`hls.detachMedia()`](#hlsdetachmedia)
+  - [`hls.transferMedia(): MediaAttachingData`](#hlstransfermedia-mediaattachingdata)
     - [`hls.media`](#hlsmedia)
 - [Quality switch Control API](#quality-switch-control-api)
   - [`hls.levels`](#hlslevels)
@@ -148,8 +152,13 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
 - [Version Control](#version-control)
   - [`Hls.version`](#hlsversion)
 - [Network Loading Control API](#network-loading-control-api)
-  - [`hls.startLoad(startPosition=-1)`](#hlsstartloadstartposition-1)
+  - [`hls.startLoad(startPosition=-1,skipSeekToStartPosition=false)`](#hlsstartloadstartposition-1skipseektostartpositionfalse)
   - [`hls.stopLoad()`](#hlsstopload)
+  - [`hls.startPosition`](#hlsstartposition)
+  - [`hls.pauseBuffering()`](#hlspausebuffering)
+  - [`hls.resumeBuffering()`](#hlsresumebuffering)
+  - [`hls.bufferingEnabled`](#hlsbufferingenabled)
+  - [`hls.bufferedToEnd`](#hlsbufferedtoend)
   - [`hls.url`](#hlsurl)
 - [Audio Tracks Control API](#audio-tracks-control-api)
   - [`hls.setAudioOption(audioOption)`](#hlssetaudiooptionaudiooption)
@@ -169,6 +178,15 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.targetLatency`](#hlstargetlatency)
   - [`hls.drift`](#hlsdrift)
   - [`hls.playingDate`](#hlsplayingdate)
+- [Interstitials](#interstitials)
+  - [Interstitials configuration options](#interstitials-configuration-options)
+  - [Interstitials Manager](#interstitials-manager)
+    - [`hls.interstitialsManager`](#hlsinterstitialsmanager)
+  - [Interstitial Events](#interstitial-events)
+  - [Interstitial Objects and Classes](#interstitial-objects-and-classes)
+- [Additional data](#additional-data)
+  - [`hls.latestLevelDetails`](#hlslatestleveldetails)
+  - [`hls.sessionId`](#hlssessionid)
 - [Runtime Events](#runtime-events)
 - [Creating a Custom Loader](#creating-a-custom-loader)
 - [Errors](#errors)
@@ -301,7 +319,7 @@ Each error is categorized by an error type, error details, and whether or not is
   - refer to [Errors details](#Errors)
 - Error is `fatal`:
   - `false` if error is not fatal, hls.js will try to recover.
-  - `true` if error is fatal, all attempts to recover have been performed. See [LoadPolicies](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy) details on how to configure retries.
+  - `true` if error is fatal, all attempts to recover have been performed. See [LoadPolicies](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy--interstitialAssetListLoadPolicy) details on how to configure retries.
 
 Full details are described [below](#Errors)
 
@@ -710,7 +728,8 @@ A value too close from `liveSyncDuration` is likely to cause playback stalls.
 (default: `1` min: `1` max: `2`)
 
 When set to a value greater than `1`, the latency-controller will adjust `video.playbackRate` up to `maxLiveSyncPlaybackRate` to catch up to target latency in a live stream. `hls.targetLatency` is based on `liveSyncDuration|Count` or manifest PART-|HOLD-BACK.
-Defaults to `1`, which disables playback rate adjustment. Set `maxLiveSyncPlaybackRate` to a value greater than `1` to enable playback rate adjustment at the live edge.
+
+The default value is `1`, which disables playback rate adjustment. Set `maxLiveSyncPlaybackRate` to a value greater than `1` to enable playback rate adjustment at the live edge.
 
 ### `liveDurationInfinity`
 
@@ -786,7 +805,7 @@ x-LoadingRetryDelay settings have been deprecated. Use one of the LoadPolicy set
 Initial delay between `XMLHttpRequest` error and first load retry (in ms).
 Any I/O error will trigger retries every 500ms,1s,2s,4s,8s, ... capped to `fragLoadingMaxRetryTimeout` / `manifestLoadingMaxRetryTimeout` / `levelLoadingMaxRetryTimeout` value (exponential backoff).
 
-### `fragLoadPolicy` / `keyLoadPolicy` / `certLoadPolicy` / `playlistLoadPolicy` / `manifestLoadPolicy` / `steeringManifestLoadPolicy`
+### `fragLoadPolicy` / `keyLoadPolicy` / `certLoadPolicy` / `playlistLoadPolicy` / `manifestLoadPolicy` / `steeringManifestLoadPolicy` / `interstitialAssetListLoadPolicy`
 
 LoadPolicies specify the default settings for request timeouts and the timing and number of retries after a request error or timeout for a particular type of asset.
 
@@ -796,6 +815,7 @@ LoadPolicies specify the default settings for request timeouts and the timing an
 - `keyLoadPolicy`: The `LoadPolicy` for Key requests
 - `certLoadPolicy`: The `LoadPolicy` for License Server certificate requests
 - `steeringManifestLoadPolicy`: The `LoadPolicy` for Content Steering manifest requests
+- `interstitialAssetListLoadPolicy`: The `LoadPolicy` Interstitial asset list requests
 
 \*Some timeout settings are adjusted for Low-Latency Part requests based on Part duration or target.
 
@@ -892,7 +912,23 @@ steeringManifestLoadPolicy: {
       retryDelayMs: 1000,
       maxRetryDelayMs: 8000,
     },
-  }
+  },
+},
+interstitialAssetListLoadPolicy: {
+  default: {
+    maxTimeToFirstByteMs: 10000,
+    maxLoadTimeMs: 20000,
+    timeoutRetry: {
+      maxNumRetry: 0,
+      retryDelayMs: 0,
+      maxRetryDelayMs: 0,
+    },
+    errorRetry: {
+      maxNumRetry: 0,
+      retryDelayMs: 1000,
+      maxRetryDelayMs: 8000,
+    },
+  },
 }
 ```
 
@@ -1654,9 +1690,33 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
 - `useHeaders`: Send CMCD data in request headers instead of as query args. Defaults to `false`.
 - `includeKeys`: An optional array of CMCD keys. When present, only these CMCD fields will be included with each each request.
 
+### `enableInterstitialPlayback`
+
+(default: `true`)
+
+Interstitial playback can be disabled without disabling parsing or schedule update and buffered-to events by setting this to `false` allowing for custom playout and ad managers to use Interstitials data.
+
+### `interstitialAppendInPlace`
+
+(default: `true`)
+
+Use this option to turn off the appending of interstitials "in place" by setting it to `false`.
+
+"In place" appending is performed on a single timeline, with the same SourceBuffers and MediaSource as the primary media. The default value is `true`, allowing HLS.js to decide which mode is used based on each interstitial event's scheduled start and resumption and how it aligns with primary playlist media.
+
+Even when `true`, HLS.js may reset the MediaSource and timeline for interstitial playback as necessary. The `InterstitialEvent` instance's `appendInPlace` property indicates the mode used to append assets of the interstitial. Once the first `INTERSTITIAL_ASSET_PLAYER_CREATED` event has triggered for the interstitial, the value of `appendInPlace` will remain fixed.
+
+### `interstitialLiveLookAhead`
+
+(default: `10`)
+
+The time (in seconds) ahead of the end of a live playlist to request scheduled Interstitials when playing at the live edge.
+
+The default value is `10`, meaning that HLS.js will begin requesting interstitial ASSET-LIST and ASSET-URIs whose START-DATE is within 10 seconds of the program-date-time at the end of the primary variant playlist while the forward buffer is within a target duration of the same range.
+
 ## Video Binding/Unbinding API
 
-### `hls.attachMedia(videoElement)`
+### `hls.attachMedia(HTMLMediaElement | MediaAttachingData)`
 
 Calling this method will:
 
@@ -1671,6 +1731,10 @@ Calling this method will:
 - unbind VideoElement from hls instance,
 - signal the end of the stream on MediaSource
 - reset video source (`video.src = ''`)
+
+### `hls.transferMedia(): MediaAttachingData`
+
+Detaches and returns MediaSource and SourceBuffers non-destructively in a format that can be passed to `hls.attachMedia(MediaAttachingData)`. This is used by Interstitial asset players that append the same SourceBuffer as the primary player.
 
 #### `hls.media`
 
@@ -1777,16 +1841,38 @@ By default, hls.js will automatically start loading quality level playlists, and
 
 However, if `config.autoStartLoad` is set to `false`, then `hls.startLoad()` needs to be called to manually start playlist and fragments loading.
 
-### `hls.startLoad(startPosition=-1)`
+### `hls.startLoad(startPosition=-1,skipSeekToStartPosition=false)`
 
-Start/restart playlist/fragment loading. this is only effective if MANIFEST_PARSED event has been triggered.
+Start/restart playlist/fragment loading. This is only effective if MANIFEST_PARSED event has been triggered.
 
 startPosition is the initial position in the playlist.
-If startPosition is not set to -1, it allows to override default startPosition to the one you want (it will bypass hls.config.liveSync\* config params for Live for example, so that user can start playback from whatever position)
+If startPosition is not set to -1, it allows to override default startPosition to the one you want (it will bypass hls.config.liveSync\* config params for Live for example, so that user can start playback from whatever position).
+
+Once media is appended hls.js will seek to the start position. Passing in a `skipSeekToStartPosition` of `true` allows loading to begin at the start position without seeking on append. This is used when multiple players contribute to buffering media to the same source for Interstitials that overlap primary content.
 
 ### `hls.stopLoad()`
 
 stop playlist/fragment loading. could be resumed later on by calling `hls.startLoad()`
+
+### `hls.startPosition`
+
+get : Returns the resolved `startPosition` target (number) used for loading before media is buffered, and where playback will begin once media is buffered.
+
+### `hls.pauseBuffering()`
+
+Pauses fragment buffering (used internally with ManagedMediaSource streaming events).
+
+### `hls.resumeBuffering()`
+
+Resumes fragment buffering (used internally with ManagedMediaSource streaming events).
+
+### `hls.bufferingEnabled`
+
+get : Returns a boolean indicating whether fragment loading has been toggled with `pauseBuffering()` and `resumeBuffering()`.
+
+### `hls.bufferedToEnd`
+
+get : Returns a boolean indicating if EOS has been appended (media is buffered from currentTime to end of stream).
 
 ### `hls.url`
 
@@ -1874,6 +1960,158 @@ get : the rate at which the edge of the current live playlist is advancing or 1 
 ### `hls.playingDate`
 
 get: the datetime value relative to media.currentTime for the active level Program Date Time if present
+
+## Interstitials
+
+HLS.js supports playback of X-ASSET-URI and X-ASSET-LIST m3u8 playlists scheduled with Interstitial EXT-X-DATERANGE tags. The `InterstitialsManager` provides playback state with seek and skip control. There are a variety of events to notify applications of Interstitials schedule changes and playback state. Here is an overview of how they work.
+
+### Interstitials configuration options
+
+- `interstitialsController` Set to `null` to disable interstitial parsing, events, and playback.
+- [`enableInterstitialPlayback`](#enableinterstitialplayback) Set to `false` to disable interstitial playback, without disabling parsing and events.
+- [`interstitialAppendInPlace`](#interstitialappendinplace) Set to `false` to disable appending "in place".
+- [`interstitialLiveLookAhead`](#interstitiallivelookahead) Adjust how far in advance to load interstitials during live playback.
+
+### Interstitials Manager
+
+#### `hls.interstitialsManager`
+
+- get: Returns the `InterstitialsManager` (or `null`) with information about the current program.
+
+The data includes the list of Interstitial events with their asset lists, the schedule of event and primary segment items, information about which items and assets are buffering and playing, the player instance currently buffering media, and the queue of players responsible for the streaming of assets.
+
+Use `skip()` to skip the current interstitial. Use `primary`, `playout`, and `integrated` to get `currentTime`, `duration` and to seek along the respective timeline.
+
+```ts
+interface InterstitialsManager {
+  events: InterstitialEvent[]; // An array of Interstitials (events) parsed from the latest media playlist update
+  schedule: InterstitialScheduleItem[]; // An array of primary and event items with start and end times representing the scheduled program
+  playerQueue: HlsAssetPlayer[]; // And array of child Hls instances created to preload and stream Interstitial asset content
+  bufferingPlayer: HlsAssetPlayer | null; // The child Hls instance assigned to streaming media at the edge of the forward buffer
+  bufferingAsset: InterstitialAssetItem | null; // The Interstitial asset currently being streamed
+  bufferingItem: InterstitialScheduleItem | null; // The primary item or event item currently being streamed
+  bufferingIndex: number; // The index of `bufferingItem` in the `schedule` array
+  playingAsset: InterstitialAssetItem | null; // The Interstitial asset currently being streamed
+  playingItem: InterstitialScheduleItem | null; // The primary item or event item currently being played
+  playingIndex: number; // The index of `playingItem` in the `schedule` array
+  waitingIndex: number; // The index of the item whose asset list is being loaded in the `schedule` array
+  primary: PlayheadTimes; // playhead mapping and seekTo method based on the primary content
+  playout: PlayheadTimes; // playhead mapping and seekTo method based on playout of all items in the `schedule` array
+  integrated: PlayheadTimes; // playhead mapping and seekTo method that applies the X-TIMELINE-OCCUPIES attribute to each event item
+  skip: () => void; // A method for skipping the currently playing event item, provided it is not jump restricted
+}
+
+type PlayheadTimes = {
+  bufferedEnd: number; // The buffer end time relative to the playhead in the scheduled program
+  currentTime: number; // The current playhead time in the scheduled program
+  duration: number; // The time at the end of the scheduled program
+  seekableStart: number; // The earliest available time where media is available (maps to the start of the first segment in primary media playlists)
+  seekTo: (time: number) => void; // A method for seeking to the designated time the scheduled program
+};
+```
+
+### Interstitial Events
+
+`INTERSTITIALS_UPDATED` is fired following playlist parsing with Interstitial EXT-X-DATERANGE tags and any changes to interstitial asset duration or scheduling. It includes the list of interstitial events, the scheduled playback segments, the durations for the schedule for any chosen timeline, and any removed Interstitial EXT-X-DATERANGE since the last update (Live only).
+
+```ts
+interface InterstitialsUpdatedData {
+  events: InterstitialEvent[];
+  schedule: InterstitialScheduleItem[];
+  durations: InterstitialScheduleDurations;
+  removedIds: string[];
+}
+```
+
+Interstitials are loaded when the buffer reaches the scheduled date of an event. This will be signalled by `INTERSTITIALS_BUFFERED_TO_BOUNDARY`.
+
+```ts
+interface InterstitialsBufferedToBoundaryData {
+  events: InterstitialEvent[];
+  schedule: InterstitialScheduleItem[];
+  bufferingIndex: number;
+  playingIndex: number;
+}
+```
+
+If the Interstitial EXT-X-DATERANGE has an X-ASSET-LIST, `ASSET_LIST_LOADING` and `ASSET_LIST_LOADED` will fire (or non-fatal `ERROR` with `ErrorDetails.ASSET_LIST_(LOAD_(ERROR|TIMEOUT)|PARSING_ERROR)`).
+
+Once the asset list/uri are known, player instances will be created to preload the assets signalled by `INTERSTITIAL_ASSET_PLAYER_CREATED`. At this point the asset player is configured and requesting the HLS playlists. HLS.js will transfer the media element to this player when it is its turn to buffer or play media unless another one is attached at this time.
+
+```ts
+interface InterstitialAssetPlayerCreatedData {
+  asset: InterstitialAssetItem;
+  assetListIndex: number;
+  assetListResponse?: AssetListJSON;
+  event: InterstitialEvent;
+  player: HlsAssetPlayer;
+}
+```
+
+The `InterstitialEvent: appendInPlace` property indicates the mode used to append assets of the interstitial.
+
+HLS.js determines if an interstitial will be appended "in place" on a single timeline, with the same SourceBuffers and MediaSource as the primary player, or if it will reset the MediaSource and duration for each asset. Attaching additional media elements to asset players results in their reset ahead of playback. When the media element is shared (by default), the mode is determined based on each interstitial event's scheduled start and resumption and how it aligns with primary playlist media.
+
+`INTERSTITIAL_STARTED` and `INTERSTITIAL_ENDED` mark entering and exiting of a scheduled interstitial event item. These events fire whenever playing or seeking into or out-of an Interstitial DATERANGE.
+
+`INTERSTITIAL_ASSET_STARTED` and `INTERSTITIAL_ASSET_ENDED` mark the entrance and exit of an asset in an interstitial.
+
+```ts
+interface InterstitialAssetStartedData {
+  asset: InterstitialAssetItem;
+  assetListIndex: number;
+  event: InterstitialEvent;
+  schedule: InterstitialScheduleItem[];
+  scheduleIndex: number;
+  player: HlsAssetPlayer;
+}
+
+interface InterstitialAssetEndedData {
+  asset: InterstitialAssetItem;
+  assetListIndex: number;
+  event: InterstitialEvent;
+  schedule: InterstitialScheduleItem[];
+  scheduleIndex: number;
+  player: HlsAssetPlayer;
+}
+```
+
+Adaptaion control and streaming status should be performed on asset players while assets are active. Use [`hls.interstitialsManager`](#hlsinterstitialsmanager) for integrated playback status, seeking, and skipping interstitials.
+
+`INTERSTITIALS_PRIMARY_RESUMED` is fired when playback enters a primary schedule item from an interstitial or the start of playback.
+
+`INTERSTITIAL_ASSET_ERROR` is fired when an error results in an asset not playing or finishing early. Playback is expected to fallback to primary. This should be accompanied by a schedule update an an `error` property present on the `InterstitialAssetItem` and the `InterstitialEvent` when all its assets failed.
+
+```ts
+type InterstitialAssetErrorData = {
+  asset: InterstitialAssetItem | null;
+  assetListIndex: number;
+  event: InterstitialEvent | null;
+  schedule: InterstitialScheduleItem[] | null;
+  scheduleIndex: number;
+  player: HlsAssetPlayer | null;
+} & ErrorData;
+```
+
+### Interstitial Objects and Classes
+
+- `InterstitialEvent` A class representing a parsed Interstitial event.
+
+- `InterstitialScheduleItem` An item or segment of the program schedule. This can be an `InterstitialScheduleEventItem` or an `InterstitialSchedulePrimaryItem`.
+
+- `InterstitialAssetItem` A parsed and scheduled asset in an `InterstitialEvent`'s `assetList`.
+
+- `HlsAssetPlayer` A class for wrapping an instance of `Hls` used to stream Interstitial assets.
+
+## Additional data
+
+### `hls.latestLevelDetails`
+
+- get: Returns the LevelDetails of the most up-to-date HLS variant playlist data.
+
+### `hls.sessionId`
+
+get: Returns the session UUID assigned to the Hls instance. Used as the default CMCD session ID.
 
 ## Runtime Events
 

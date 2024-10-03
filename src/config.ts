@@ -12,6 +12,7 @@ import EMEController, {
 } from './controller/eme-controller';
 import CMCDController from './controller/cmcd-controller';
 import ContentSteeringController from './controller/content-steering-controller';
+import InterstitialsController from './controller/interstitials-controller';
 import ErrorController from './controller/error-controller';
 import XhrLoader from './utils/xhr-loader';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
@@ -179,6 +180,7 @@ export type HlsLoadPolicies = {
   playlistLoadPolicy: LoadPolicy;
   manifestLoadPolicy: LoadPolicy;
   steeringManifestLoadPolicy: LoadPolicy;
+  interstitialAssetListLoadPolicy: LoadPolicy;
 };
 
 export type LoadPolicy = {
@@ -273,6 +275,7 @@ export type HlsConfig = {
   minAutoBitrate: number;
   ignoreDevicePixelRatio: boolean;
   preferManagedMediaSource: boolean;
+  timelineOffset?: number;
   loader: { new (confg: HlsConfig): Loader<LoaderContext> };
   fLoader?: FragmentLoaderConstructor;
   pLoader?: PlaylistLoaderConstructor;
@@ -293,7 +296,16 @@ export type HlsConfig = {
   cmcdController?: typeof CMCDController;
   // Content Steering
   contentSteeringController?: typeof ContentSteeringController;
-
+  // Interstitial Controller (setting to null disables Interstitials parsing and playback)
+  interstitialsController?: typeof InterstitialsController;
+  // Option to disable internal playback handling of Interstitials (set to false to disable Interstitials playback without disabling parsing and schedule events)
+  enableInterstitialPlayback: boolean;
+  // Option to disable appending Interstitals inline on same timeline and MediaSource as Primary media
+  interstitialAppendInPlace: boolean;
+  // How many seconds past the end of a live playlist to preload Interstitial assets
+  interstitialLiveLookAhead: number;
+  // An optional `Hls` instance ID prefixed to debug logs
+  assetPlayerId?: string;
   // MediaCapabilies API for level, track, and switch filtering
   useMediaCapabilities: boolean;
 
@@ -304,6 +316,7 @@ export type HlsConfig = {
   fpsController: typeof FPSController;
   progressive: boolean;
   lowLatencyMode: boolean;
+  primarySessionId?: string;
 } & ABRControllerConfig &
   BufferControllerConfig &
   CapLevelControllerConfig &
@@ -415,6 +428,9 @@ export const hlsDefaultConfig: HlsConfig = {
   enableEmsgMetadataCues: true,
   enableEmsgKLVMetadata: false,
   enableID3MetadataCues: true,
+  enableInterstitialPlayback: __USE_INTERSTITALS__,
+  interstitialAppendInPlace: true,
+  interstitialLiveLookAhead: 10,
   useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
 
   certLoadPolicy: {
@@ -504,6 +520,24 @@ export const hlsDefaultConfig: HlsConfig = {
         }
       : defaultLoadPolicy,
   },
+  interstitialAssetListLoadPolicy: {
+    default: __USE_INTERSTITALS__
+      ? {
+          maxTimeToFirstByteMs: 10000,
+          maxLoadTimeMs: 30000,
+          timeoutRetry: {
+            maxNumRetry: 0,
+            retryDelayMs: 0,
+            maxRetryDelayMs: 0,
+          },
+          errorRetry: {
+            maxNumRetry: 0,
+            retryDelayMs: 1000,
+            maxRetryDelayMs: 8000,
+          },
+        }
+      : defaultLoadPolicy,
+  },
 
   // These default settings are deprecated in favor of the above policies
   // and are maintained for backwards compatibility
@@ -535,6 +569,9 @@ export const hlsDefaultConfig: HlsConfig = {
   cmcdController: __USE_CMCD__ ? CMCDController : undefined,
   contentSteeringController: __USE_CONTENT_STEERING__
     ? ContentSteeringController
+    : undefined,
+  interstitialsController: __USE_INTERSTITALS__
+    ? InterstitialsController
     : undefined,
 };
 

@@ -146,6 +146,16 @@ export default class BasePlaylistController
       : 0;
     details.advancedDateTime = Date.now() - elapsed;
 
+    // shift fragment starts with timelineOffset
+    const timelineOffset = this.hls.config.timelineOffset;
+    if (timelineOffset !== details.appliedTimelineOffset) {
+      const offset = Math.max(timelineOffset || 0, 0);
+      details.appliedTimelineOffset = offset;
+      details.fragments.forEach((frag) => {
+        frag.start = frag.playlistOffset + offset;
+      });
+    }
+
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live || previousDetails?.live) {
       details.reloaded(previousDetails);
