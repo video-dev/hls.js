@@ -9,6 +9,7 @@ import type {
 } from '../types/loader';
 import { LoadStats } from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
+import { isPromise } from '../demux/transmuxer';
 import { type HlsConfig } from '../config';
 
 export function fetchSupported() {
@@ -112,8 +113,11 @@ class FetchLoader implements Loader<LoaderContext> {
       callbacks.onTimeout(stats, context, this.response);
     }, config.timeout);
 
-    Promise.resolve(this.request)
-      .then(self.fetch)
+    const fetchPromise = isPromise(this.request)
+      ? this.request.then(self.fetch)
+      : self.fetch(this.request);
+
+    fetchPromise
       .then((response: Response): Promise<string | ArrayBuffer> => {
         this.response = this.loader = response;
 
