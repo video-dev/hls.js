@@ -1,15 +1,18 @@
-import { Events } from '../events';
-import type Hls from '../hls';
-import { Cmcd } from '@svta/common-media-library/cmcd/Cmcd';
 import { CmcdObjectType } from '@svta/common-media-library/cmcd/CmcdObjectType';
 import { CmcdStreamingFormat } from '@svta/common-media-library/cmcd/CmcdStreamingFormat';
 import { appendCmcdHeaders } from '@svta/common-media-library/cmcd/appendCmcdHeaders';
 import { appendCmcdQuery } from '@svta/common-media-library/cmcd/appendCmcdQuery';
-import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEncodeOptions';
+import { Events } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
+import type {
+  FragmentLoaderConstructor,
+  HlsConfig,
+  PlaylistLoaderConstructor,
+} from '../config';
+import type Hls from '../hls';
+import type { Fragment, Part } from '../loader/fragment';
 import type { ExtendedSourceBuffer } from '../types/buffer';
 import type { ComponentAPI } from '../types/component-api';
-import type { Fragment, Part } from '../loader/fragment';
 import type { BufferCreatedData, MediaAttachedData } from '../types/events';
 import type {
   FragmentLoaderContext,
@@ -19,11 +22,8 @@ import type {
   LoaderContext,
   PlaylistLoaderContext,
 } from '../types/loader';
-import type {
-  FragmentLoaderConstructor,
-  HlsConfig,
-  PlaylistLoaderConstructor,
-} from '../config';
+import type { Cmcd } from '@svta/common-media-library/cmcd/Cmcd';
+import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEncodeOptions';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)

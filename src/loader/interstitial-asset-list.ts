@@ -1,11 +1,12 @@
 import {
-  getInterstitialUrl,
-  InterstitialEvent,
   type AssetListJSON,
+  getInterstitialUrl,
   type InterstitialEventWithAssetList,
 } from './interstitial-event';
-import { Events } from '../events';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
+import type { InterstitialEvent } from './interstitial-event';
+import type Hls from '../hls';
 import type { ErrorData } from '../types/events';
 import type {
   Loader,
@@ -15,8 +16,6 @@ import type {
   LoaderResponse,
   LoaderStats,
 } from '../types/loader';
-
-import type Hls from '../hls';
 
 export class AssetListLoader {
   private hls: Hls;

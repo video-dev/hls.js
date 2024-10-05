@@ -1,5 +1,5 @@
-import { expect } from 'chai';
 import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
+import { expect } from 'chai';
 
 describe('UTF8 tests', function () {
   it('utf8ArrayToStr', function (done) {

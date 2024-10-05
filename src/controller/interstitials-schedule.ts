@@ -1,14 +1,14 @@
 import { findFragmentByPTS } from './fragment-finders';
 import {
-  type BaseData,
-  type InterstitialId,
   ALIGNED_END_THRESHOLD_SECONDS,
+  type BaseData,
   InterstitialEvent,
+  type InterstitialId,
   TimelineOccupancy,
 } from '../loader/interstitial-event';
+import { logger } from '../utils/logger';
 import type { DateRange } from '../loader/date-range';
 import type { MediaSelection } from '../types/media-playlist';
-import { logger } from '../utils/logger';
 
 const ABUTTING_THRESHOLD_SECONDS = 0.033;
 

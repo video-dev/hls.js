@@ -86,6 +86,30 @@ module.exports = {
         'no-unused-vars': 0,
         'no-undef': 0,
         'no-use-before-define': 'off',
+        'import/order': [
+          'warn',
+          {
+            alphabetize: {
+              order: 'asc',
+            },
+            groups: [
+              'builtin',
+              'external',
+              'internal',
+              ['sibling', 'index'],
+              'parent',
+              'type',
+            ],
+            'newlines-between': 'never',
+          },
+        ],
+        'sort-imports': [
+          'error',
+          {
+            ignoreCase: true,
+            ignoreDeclarationSort: true,
+          },
+        ],
         '@typescript-eslint/no-unused-vars': [
           'warn',
           {
@@ -100,6 +124,9 @@ module.exports = {
             objectLiteralTypeAssertions: 'never',
           },
         ],
+        '@typescript-eslint/consistent-type-imports': 'error',
+        '@typescript-eslint/no-import-type-side-effects': 'error',
+        '@typescript-eslint/no-restricted-imports': 'error',
       },
     },
   ],

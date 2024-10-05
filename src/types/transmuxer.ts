@@ -1,6 +1,6 @@
-import type { RemuxerResult } from './remuxer';
-import type { HlsChunkPerformanceTiming } from './loader';
 import type { SourceBufferName } from './buffer';
+import type { HlsChunkPerformanceTiming } from './loader';
+import type { RemuxerResult } from './remuxer';
 
 export interface TransmuxerResult {
   remuxResult: RemuxerResult;

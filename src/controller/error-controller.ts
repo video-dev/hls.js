@@ -1,20 +1,21 @@
-import { Events } from '../events';
+import { findFragmentByPTS } from './fragment-finders';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
+import { HdcpLevels } from '../types/level';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import {
   getRetryConfig,
   isTimeoutError,
   shouldRetry,
 } from '../utils/error-helper';
-import { findFragmentByPTS } from './fragment-finders';
-import { HdcpLevel, HdcpLevels } from '../types/level';
 import { Logger } from '../utils/logger';
-import type Hls from '../hls';
 import type { RetryConfig } from '../config';
-import type { NetworkComponentAPI } from '../types/component-api';
-import type { ErrorData } from '../types/events';
+import type Hls from '../hls';
 import type { Fragment, MediaFragment } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
+import type { NetworkComponentAPI } from '../types/component-api';
+import type { ErrorData } from '../types/events';
+import type { HdcpLevel } from '../types/level';
 
 export const enum NetworkErrorAction {
   DoNothing = 0,

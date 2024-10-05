@@ -1,7 +1,7 @@
-import type { Fragment, MediaFragment, Part } from './fragment';
 import type { DateRange } from './date-range';
-import type { AttrList } from '../utils/attr-list';
+import type { Fragment, MediaFragment, Part } from './fragment';
 import type { VariableMap } from '../types/level';
+import type { AttrList } from '../utils/attr-list';
 
 const DEFAULT_TARGET_DURATION = 10;
 
