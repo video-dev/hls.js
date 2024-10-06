@@ -1,4 +1,5 @@
 import BaseVideoParser from './base-video-parser';
+import type { ParsedVideoSample } from '../tsdemuxer';
 import type {
   DemuxedVideoTrack,
   DemuxedUserdataTrack,
@@ -180,7 +181,7 @@ class HevcVideoParser extends BaseVideoParser {
                 track.params[prop] = config[prop];
               }
             }
-            if (this.initVPS !== null || track.pps.length === 0) {
+            if (track.vps !== undefined && track.vps[0] === this.initVPS) {
               track.pps.push(unit.data);
             }
           }
@@ -237,6 +238,16 @@ class HevcVideoParser extends BaseVideoParser {
       dstIdx++;
     }
     return new Uint8Array(dst.buffer, 0, dstIdx);
+  }
+
+  protected pushAccessUnit(
+    VideoSample: ParsedVideoSample,
+    videoTrack: DemuxedVideoTrack,
+  ) {
+    super.pushAccessUnit(VideoSample, videoTrack);
+    if (this.initVPS) {
+      this.initVPS = null; // null initVPS to prevent possible track's sps/pps growth until next VPS
+    }
   }
 
   readVPS(vps: Uint8Array): {
