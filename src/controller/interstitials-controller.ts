@@ -1045,7 +1045,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         });
       }
       const assetListLength = interstitial.assetList.length;
-      if (assetListLength === 0) {
+      if (assetListLength === 0 && !interstitial.assetListResponse) {
         // Waiting at end of primary content segment
         // Expect setSchedulePosition to be called again once ASSET-LIST is loaded
         this.log(`Waiting for ASSET-LIST to complete loading ${interstitial}`);
@@ -1064,29 +1064,25 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
       // Update schedule and asset list position now that it can start
       this.waitingItem = null;
       this.playingItem = scheduledItem;
-      // Start Interstitial Playback
+
+      // If asset-list is empty or missing asset index, advance to next item
       const assetItem = interstitial.assetList[assetListIndex];
       if (!assetItem) {
-        const error = new Error(
-          `ASSET-LIST index ${assetListIndex} out of bounds [0-${
-            assetListLength - 1
-          }] ${interstitial}`,
-        );
-        const errorData: ErrorData = {
-          fatal: true,
-          type: ErrorTypes.OTHER_ERROR,
-          details: ErrorDetails.INTERSTITIAL_ASSET_ITEM_ERROR,
-          error,
-        };
-        this.handleAssetItemError(
-          errorData,
-          interstitial,
-          index,
-          assetListIndex,
-          error.message,
-        );
+        const nextItem = scheduleItems[index + 1];
+        const media = this.media;
+        if (
+          nextItem &&
+          media &&
+          !this.isInterstitial(nextItem) &&
+          media.currentTime < nextItem.start
+        ) {
+          media.currentTime = this.timelinePos = nextItem.start;
+        }
+        this.advanceAfterAssetEnded(interstitial, index, assetListIndex || 0);
         return;
       }
+
+      // Start Interstitial Playback
       if (!player) {
         player = this.getAssetPlayer(assetItem.identifier);
       }
@@ -1411,7 +1407,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         interstitialEvents.forEach((event) => (event.appendInPlace = false));
       }
       this.log(
-        `Interstitial events (${
+        `INTERSTITIALS_UPDATED (${
           interstitialEvents.length
         }): ${interstitialEvents}
 Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
