@@ -779,6 +779,10 @@ export default class StreamController
       return;
     }
     const currentLevel = levels[frag.level];
+    if (!currentLevel) {
+      this.warn(`Level ${frag.level} not found on progress`);
+      return;
+    }
     const details = currentLevel.details;
     if (!details) {
       this.warn(
