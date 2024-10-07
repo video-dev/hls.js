@@ -2139,7 +2139,7 @@ export type HlsConfig = {
     };
     fLoader?: FragmentLoaderConstructor;
     pLoader?: PlaylistLoaderConstructor;
-    fetchSetup?: (context: LoaderContext, initParams: any) => Request;
+    fetchSetup?: (context: LoaderContext, initParams: any) => Promise<Request> | Request;
     xhrSetup?: (xhr: XMLHttpRequest, url: string) => Promise<void> | void;
     audioStreamController?: typeof AudioStreamController;
     audioTrackController?: typeof AudioTrackController;
