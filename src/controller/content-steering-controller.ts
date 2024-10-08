@@ -246,9 +246,8 @@ export default class ContentSteeringController
       this.log(
         `Found ${pathwayLevels.length}/${levels.length} levels in Pathway "${this.pathwayId}"`,
       );
-      return pathwayLevels;
     }
-    return levels;
+    return pathwayLevels;
   }
 
   private getLevelsForPathway(pathwayId: string): Level[] {

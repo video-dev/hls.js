@@ -194,6 +194,107 @@ describe('ContentSteeringController', function () {
     });
   });
 
+  describe('Issue 6759', function () {
+    const multivariantPlaylist = `#EXTM3U
+#EXT-X-CONTENT-STEERING:SERVER-URI="http://example.com/manifest.json",PATHWAY-ID="."
+#EXT-X-STREAM-INF:BANDWIDTH=200000,RESOLUTION=720x480,AUDIO="aac"
+http://a.example.com/lo/prog_index.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=500000,RESOLUTION=1920x1080
+http://a.example.com/md/prog_index.m3u8`;
+    it('clones the Base Pathway without copying FAILBACK variants into hls.levels', function () {
+      const parsedMultivariant = M3U8Parser.parseMasterPlaylist(
+        multivariantPlaylist,
+        'http://example.com/main.m3u8',
+      );
+      const parsedMediaOptions = M3U8Parser.parseMasterPlaylistMedia(
+        multivariantPlaylist,
+        'http://example.com/main.m3u8',
+        parsedMultivariant,
+      );
+      const manifestLoadedData = {
+        contentSteering: parsedMultivariant.contentSteering,
+        levels: parsedMultivariant.levels,
+        audioTracks: parsedMediaOptions.AUDIO,
+        subtitles: parsedMediaOptions.SUBTITLES,
+      };
+      const levelController: any = (hls.levelController = new LevelController(
+        hls as any,
+        contentSteeringController as any,
+      ));
+
+      hls.nextAutoLevel = 0;
+      contentSteeringController.onManifestLoaded(
+        Events.MANIFEST_LOADED,
+        manifestLoadedData,
+      );
+      levelController.onManifestLoaded(
+        Events.MANIFEST_LOADED,
+        manifestLoadedData,
+      );
+
+      expect(
+        contentSteeringController.levels,
+        'Content Steering variants',
+      ).to.have.lengthOf(2);
+
+      loadSteeringManifest(
+        {
+          VERSION: 1,
+          TTL: 72000,
+          'PATHWAY-PRIORITY': ['.', 'FAILBACK'],
+          'PATHWAY-CLONES': [
+            {
+              ID: 'FAILBACK',
+              'BASE-ID': '.',
+              'URI-REPLACEMENT': {
+                HOST: 'failback.example.org',
+              },
+            },
+          ],
+        },
+        contentSteeringController,
+      );
+      expect(
+        contentSteeringController.levels,
+        'Content Steering variants',
+      ).to.have.lengthOf(4);
+      expect(hls.trigger.callCount).to.eq(2);
+      expect(hls.getEventData(1).name).to.equal(
+        Events.STEERING_MANIFEST_LOADED,
+      );
+      const steeringManifestLoadedEvent = hls.getEventData(1);
+      expect(steeringManifestLoadedEvent.payload).to.have.property('url');
+      expect(steeringManifestLoadedEvent.payload).to.have.property(
+        'steeringManifest',
+      );
+      expect(levelController.levels[0].uri).to.equal(
+        'http://a.example.com/lo/prog_index.m3u8',
+      );
+      expect(levelController.levels[1].uri).to.equal(
+        'http://a.example.com/md/prog_index.m3u8',
+      );
+      expect(levelController.levels, 'LevelController levels').to.have.lengthOf(
+        2,
+      );
+      loadSteeringManifest(
+        {
+          'PATHWAY-PRIORITY': ['FAILBACK'],
+        },
+        contentSteeringController,
+      );
+      expect(hls.trigger.callCount).to.eq(5);
+      expect(levelController.levels, 'LevelController levels').to.have.lengthOf(
+        2,
+      );
+      expect(levelController.levels[0].uri).to.equal(
+        'http://failback.example.org/lo/prog_index.m3u8',
+      );
+      expect(levelController.levels[1].uri).to.equal(
+        'http://failback.example.org/md/prog_index.m3u8',
+      );
+    });
+  });
+
   describe('Pathway Gouping', function () {
     let levelController;
     let audioTrackController;
