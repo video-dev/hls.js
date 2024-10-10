@@ -1,20 +1,21 @@
-import AbrController from '../../../src/controller/abr-controller';
-import { Level, LevelParsed } from '../../../src/types/level';
-import { LevelDetails } from '../../../src/loader/level-details';
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
+import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
-import { AttrList } from '../../../src/utils/attr-list';
+import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
-import { Events, HlsListeners } from '../../../src/events';
-import {
+import { AttrList } from '../../../src/utils/attr-list';
+import type AbrController from '../../../src/controller/abr-controller';
+import type { HlsListeners } from '../../../src/events';
+import type { LevelParsed } from '../../../src/types/level';
+import type {
   MediaAttributes,
   MediaPlaylist,
 } from '../../../src/types/media-playlist';
-import Hls from '../../../src/hls';
-
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

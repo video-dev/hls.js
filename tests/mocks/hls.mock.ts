@@ -1,11 +1,10 @@
-import Hls from '../../src/hls';
 import { EventEmitter } from 'eventemitter3';
-import { logger } from '../../src/utils/logger';
-import type { HlsEventEmitter, HlsListeners } from '../../src/events';
-import type { HlsConfig } from '../../src/config';
-import type { Level } from '../../src/types/level';
-
 import * as sinon from 'sinon';
+import Hls from '../../src/hls';
+import { logger } from '../../src/utils/logger';
+import type { HlsConfig } from '../../src/config';
+import type { HlsEventEmitter, HlsListeners } from '../../src/events';
+import type { Level } from '../../src/types/level';
 
 // All public methods of Hls instance
 const publicMethods = [

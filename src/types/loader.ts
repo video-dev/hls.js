@@ -1,9 +1,9 @@
 import type { LoaderConfig } from '../config';
+import type { HlsUrlParameters } from './level';
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
-import type { HlsUrlParameters } from './level';
 
 export interface LoaderContext {
   // target URL

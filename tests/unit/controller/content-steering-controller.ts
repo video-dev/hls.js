@@ -1,15 +1,19 @@
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import { multivariantPlaylistWithPathways } from './level-controller';
+import AudioTrackController from '../../../src/controller/audio-track-controller';
 import ContentSteeringController from '../../../src/controller/content-steering-controller';
+import LevelController from '../../../src/controller/level-controller';
+import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
 import { Events } from '../../../src/events';
 import { LoadStats } from '../../../src/loader/load-stats';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
+import { getMediaSource } from '../../../src/utils/mediasource-helper';
 import HlsMock from '../../mocks/hls.mock';
 import { MockXhr } from '../../mocks/loader.mock';
-import { multivariantPlaylistWithPathways } from './level-controller';
-import M3U8Parser, {
-  ParsedMultivariantPlaylist,
-} from '../../../src/loader/m3u8-parser';
-import LevelController from '../../../src/controller/level-controller';
-import AudioTrackController from '../../../src/controller/audio-track-controller';
-import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
+import type { SteeringManifest } from '../../../src/controller/content-steering-controller';
+import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
 import type {
   AudioTracksUpdatedData,
   LevelsUpdatedData,
@@ -18,14 +22,8 @@ import type {
   SubtitleTracksUpdatedData,
 } from '../../../src/types/events';
 import type { Level } from '../../../src/types/level';
-import type { MediaPlaylist } from '../../../src/types/media-playlist';
-import type { SteeringManifest } from '../../../src/controller/content-steering-controller';
 import type { LoaderResponse } from '../../../src/types/loader';
-
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
-import { getMediaSource } from '../../../src/utils/mediasource-helper';
+import type { MediaPlaylist } from '../../../src/types/media-playlist';
 
 chai.use(sinonChai);
 const expect = chai.expect;

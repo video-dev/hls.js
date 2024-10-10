@@ -1,5 +1,5 @@
-import { getMediaSource } from './utils/mediasource-helper';
 import { mimeTypeForCodec } from './utils/codecs';
+import { getMediaSource } from './utils/mediasource-helper';
 import type { ExtendedSourceBuffer } from './types/buffer';
 
 function getSourceBuffer(): typeof self.SourceBuffer {

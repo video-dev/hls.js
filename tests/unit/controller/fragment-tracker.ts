@@ -1,21 +1,20 @@
-import Hls from '../../../src/hls';
-import { Events } from '../../../src/events';
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 import {
-  FragmentTracker,
   FragmentState,
+  FragmentTracker,
 } from '../../../src/controller/fragment-tracker';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
+import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
+import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
-import { Fragment, ElementaryStreamTypes } from '../../../src/loader/fragment';
-import { LoadStats } from '../../../src/loader/load-stats';
 import type {
   BufferAppendedData,
   FragBufferedData,
   FragLoadedData,
 } from '../../../src/types/events';
-
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

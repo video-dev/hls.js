@@ -1,5 +1,5 @@
-import OutputFilter from './output-filter';
 import { logger } from '../utils/logger';
+import type OutputFilter from './output-filter';
 
 /**
  *

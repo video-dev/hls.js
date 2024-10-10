@@ -1,21 +1,20 @@
-import Hls from '../../../src/hls';
-import { Events } from '../../../src/events';
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
 import InterstitialsController from '../../../src/controller/interstitials-controller';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
 import { TimelineOccupancy } from '../../../src/loader/interstitial-event';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
-import M3U8Parser from '../../../src/loader/m3u8-parser';
 import type { HlsConfig } from '../../../src/config';
 import type { InterstitialScheduleItem } from '../../../src/controller/interstitials-schedule';
 import type {
   ComponentAPI,
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
-
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
 
 chai.use(sinonChai);
 const expect = chai.expect;

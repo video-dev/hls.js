@@ -1,28 +1,23 @@
 import AbrController from './controller/abr-controller';
 import AudioStreamController from './controller/audio-stream-controller';
 import AudioTrackController from './controller/audio-track-controller';
-import { SubtitleStreamController } from './controller/subtitle-stream-controller';
-import SubtitleTrackController from './controller/subtitle-track-controller';
 import BufferController from './controller/buffer-controller';
-import { TimelineController } from './controller/timeline-controller';
 import CapLevelController from './controller/cap-level-controller';
-import FPSController from './controller/fps-controller';
-import EMEController, {
-  MediaKeySessionContext,
-} from './controller/eme-controller';
 import CMCDController from './controller/cmcd-controller';
 import ContentSteeringController from './controller/content-steering-controller';
-import InterstitialsController from './controller/interstitials-controller';
+import EMEController from './controller/eme-controller';
 import ErrorController from './controller/error-controller';
-import XhrLoader from './utils/xhr-loader';
-import FetchLoader, { fetchSupported } from './utils/fetch-loader';
+import FPSController from './controller/fps-controller';
+import InterstitialsController from './controller/interstitials-controller';
+import { SubtitleStreamController } from './controller/subtitle-stream-controller';
+import SubtitleTrackController from './controller/subtitle-track-controller';
+import { TimelineController } from './controller/timeline-controller';
 import Cues from './utils/cues';
+import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
-
+import XhrLoader from './utils/xhr-loader';
+import type { MediaKeySessionContext } from './controller/eme-controller';
 import type Hls from './hls';
-import type { CuesInterface } from './utils/cues';
-import type { ILogger } from './utils/logger';
-import type { MediaKeyFunc, KeySystems } from './utils/mediakeys-helper';
 import type {
   FragmentLoaderContext,
   Loader,
@@ -35,6 +30,9 @@ import type {
   SubtitleSelectionOption,
   VideoSelectionOption,
 } from './types/media-playlist';
+import type { CuesInterface } from './utils/cues';
+import type { ILogger } from './utils/logger';
+import type { KeySystems, MediaKeyFunc } from './utils/mediakeys-helper';
 
 export type ABRControllerConfig = {
   abrEwmaFastLive: number;

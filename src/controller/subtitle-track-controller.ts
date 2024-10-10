@@ -1,31 +1,31 @@
 import BasePlaylistController from './base-playlist-controller';
 import { Events } from '../events';
-import {
-  clearCurrentCues,
-  filterSubtitleTracks,
-} from '../utils/texttrack-utils';
 import { PlaylistContextType } from '../types/loader';
 import {
   mediaAttributesIdentical,
   subtitleTrackMatchesTextTrack,
 } from '../utils/media-option-attributes';
 import { findMatchingOption, matchesOption } from '../utils/rendition-helper';
+import {
+  clearCurrentCues,
+  filterSubtitleTracks,
+} from '../utils/texttrack-utils';
 import type Hls from '../hls';
+import type {
+  ErrorData,
+  LevelLoadingData,
+  LevelSwitchingData,
+  ManifestParsedData,
+  MediaAttachedData,
+  MediaDetachingData,
+  SubtitleTracksUpdatedData,
+  TrackLoadedData,
+} from '../types/events';
+import type { HlsUrlParameters } from '../types/level';
 import type {
   MediaPlaylist,
   SubtitleSelectionOption,
 } from '../types/media-playlist';
-import type { HlsUrlParameters } from '../types/level';
-import type {
-  ErrorData,
-  LevelLoadingData,
-  MediaAttachedData,
-  SubtitleTracksUpdatedData,
-  ManifestParsedData,
-  TrackLoadedData,
-  LevelSwitchingData,
-  MediaDetachingData,
-} from '../types/events';
 
 class SubtitleTrackController extends BasePlaylistController {
   private media: HTMLMediaElement | null = null;

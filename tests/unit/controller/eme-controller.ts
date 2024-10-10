@@ -1,15 +1,13 @@
-import EMEController, {
-  MediaKeySessionContext,
-} from '../../../src/controller/eme-controller';
-import HlsMock from '../../mocks/hls.mock';
+import chai from 'chai';
 import { EventEmitter } from 'eventemitter3';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import EMEController from '../../../src/controller/eme-controller';
 import { ErrorDetails } from '../../../src/errors';
 import { Events } from '../../../src/events';
-
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
-import { MediaAttachedData } from '../../../src/types/events';
+import HlsMock from '../../mocks/hls.mock';
+import type { MediaKeySessionContext } from '../../../src/controller/eme-controller';
+import type { MediaAttachedData } from '../../../src/types/events';
 
 chai.use(sinonChai);
 const expect = chai.expect;

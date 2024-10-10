@@ -1,4 +1,4 @@
-import { BaseTrack } from './buffer';
+import type { BaseTrack } from './buffer';
 
 export interface TrackSet {
   audio?: Track;

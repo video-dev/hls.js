@@ -1,13 +1,12 @@
 /* eslint-disable dot-notation */
-import LatencyController from '../../../src/controller/latency-controller';
-import Hls from '../../../src/hls';
-import { Events } from '../../../src/events';
-import { LevelDetails } from '../../../src/loader/level-details';
-import { LevelUpdatedData } from '../../../src/types/events';
-
-import sinon from 'sinon';
 import chai from 'chai';
+import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
+import LatencyController from '../../../src/controller/latency-controller';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
+import { LevelDetails } from '../../../src/loader/level-details';
+import type { LevelUpdatedData } from '../../../src/types/events';
 
 chai.use(sinonChai);
 const expect = chai.expect;

@@ -2,37 +2,34 @@ import {
   flushTextTrackMetadataCueSamples,
   flushTextTrackUserdataCueSamples,
 } from './mp4-remuxer';
-import {
-  InitData,
-  InitDataTrack,
-  patchEncyptionData,
-} from '../utils/mp4-tools';
+import { ElementaryStreamTypes } from '../loader/fragment';
+import { getCodecCompatibleName } from '../utils/codecs';
+import { type ILogger, logger } from '../utils/logger';
+import { patchEncyptionData } from '../utils/mp4-tools';
 import {
   getDuration,
   getStartDTS,
   offsetStartDTS,
   parseInitSegment,
 } from '../utils/mp4-tools';
-import { ElementaryStreamTypes } from '../loader/fragment';
-import { getCodecCompatibleName } from '../utils/codecs';
-import type { HlsEventEmitter } from '../events';
 import type { HlsConfig } from '../config';
-import type { TrackSet } from '../types/track';
-import type {
-  InitSegmentData,
-  RemuxedTrack,
-  Remuxer,
-  RemuxerResult,
-} from '../types/remuxer';
+import type { HlsEventEmitter } from '../events';
+import type { DecryptData } from '../loader/level-key';
 import type {
   DemuxedAudioTrack,
   DemuxedMetadataTrack,
   DemuxedUserdataTrack,
   PassthroughTrack,
 } from '../types/demuxer';
-import type { DecryptData } from '../loader/level-key';
+import type {
+  InitSegmentData,
+  RemuxedTrack,
+  Remuxer,
+  RemuxerResult,
+} from '../types/remuxer';
+import type { TrackSet } from '../types/track';
 import type { TypeSupported } from '../utils/codecs';
-import { logger, type ILogger } from '../utils/logger';
+import type { InitData, InitDataTrack } from '../utils/mp4-tools';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 class PassThroughRemuxer implements Remuxer {

@@ -1,8 +1,8 @@
-import { convertDataUriToArrayBytes } from '../utils/keysystem-util';
 import { isFullSegmentEncryption } from '../utils/encryption-methods-util';
+import { convertDataUriToArrayBytes } from '../utils/keysystem-util';
+import { logger } from '../utils/logger';
 import { KeySystemFormats, parsePlayReadyWRM } from '../utils/mediakeys-helper';
 import { mp4pssh } from '../utils/mp4-tools';
-import { logger } from '../utils/logger';
 
 let keyUriToKeyIdMap: { [uri: string]: Uint8Array } = {};
 
