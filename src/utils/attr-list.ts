@@ -1,7 +1,7 @@
-import type { LevelDetails } from '../loader/level-details';
-import type { ParsedMultivariantPlaylist } from '../loader/m3u8-parser';
 import { logger } from './logger';
 import { substituteVariables } from './variable-substitution';
+import type { LevelDetails } from '../loader/level-details';
+import type { ParsedMultivariantPlaylist } from '../loader/m3u8-parser';
 
 const DECIMAL_RESOLUTION_REGEX = /^(\d+)x(\d+)$/;
 const ATTR_LIST_REGEX = /(.+?)=(".*?"|.*?)(?:,|$)/g;

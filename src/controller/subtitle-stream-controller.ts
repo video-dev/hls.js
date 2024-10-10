@@ -1,35 +1,36 @@
-import { Events } from '../events';
-import { Bufferable, BufferHelper } from '../utils/buffer-helper';
-import { findFragmentByPTS } from './fragment-finders';
-import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
-import { addSliding } from '../utils/level-helper';
-import { FragmentState } from './fragment-tracker';
 import BaseStreamController, { State } from './base-stream-controller';
-import { PlaylistLevelType } from '../types/loader';
-import { Level } from '../types/level';
-import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
+import { findFragmentByPTS } from './fragment-finders';
+import { FragmentState } from './fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
+import { Level } from '../types/level';
+import { PlaylistLevelType } from '../types/loader';
+import { BufferHelper } from '../utils/buffer-helper';
+import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import {
-  isFullSegmentEncryption,
   getAesModeFromFullSegmentMethod,
+  isFullSegmentEncryption,
 } from '../utils/encryption-methods-util';
-import type { NetworkComponentAPI } from '../types/component-api';
+import { addSliding } from '../utils/level-helper';
+import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
+import type { Fragment, MediaFragment } from '../loader/fragment';
 import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
-import type { Fragment, MediaFragment } from '../loader/fragment';
+import type { NetworkComponentAPI } from '../types/component-api';
 import type {
+  BufferFlushingData,
   ErrorData,
   FragLoadedData,
+  LevelLoadedData,
+  MediaDetachingData,
   SubtitleFragProcessed,
   SubtitleTracksUpdatedData,
   TrackLoadedData,
   TrackSwitchedData,
-  BufferFlushingData,
-  LevelLoadedData,
-  MediaDetachingData,
 } from '../types/events';
+import type { Bufferable } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 500; // how often to tick in ms
 

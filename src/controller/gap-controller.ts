@@ -1,15 +1,15 @@
 import { State } from './base-stream-controller';
-import { BufferHelper } from '../utils/buffer-helper';
-import { ErrorTypes, ErrorDetails } from '../errors';
-import { PlaylistLevelType } from '../types/loader';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
+import { PlaylistLevelType } from '../types/loader';
+import { BufferHelper } from '../utils/buffer-helper';
 import { Logger } from '../utils/logger';
-import type Hls from '../hls';
-import type { BufferInfo } from '../utils/buffer-helper';
 import type { HlsConfig } from '../config';
-import type { Fragment } from '../loader/fragment';
+import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
+import type { Fragment } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
+import type { BufferInfo } from '../utils/buffer-helper';
 
 export const STALL_MINIMUM_DURATION_MS = 250;
 export const MAX_START_GAP_JUMP = 2.0;

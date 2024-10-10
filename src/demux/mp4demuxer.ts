@@ -1,30 +1,30 @@
 /**
  * MP4 demuxer
  */
+import { dummyTrack } from './dummy-demuxed-track';
 import {
+  type DemuxedAudioTrack,
+  type DemuxedMetadataTrack,
+  type DemuxedUserdataTrack,
   type Demuxer,
   type DemuxerResult,
-  type PassthroughTrack,
-  type DemuxedAudioTrack,
-  type DemuxedUserdataTrack,
-  type DemuxedMetadataTrack,
   type KeyData,
   MetadataSchema,
+  type PassthroughTrack,
 } from '../types/demuxer';
 import {
-  findBox,
-  segmentValidRange,
   appendUint8Array,
-  parseEmsg,
-  parseSamples,
-  parseInitSegment,
-  RemuxerTrackIdConfig,
+  findBox,
   hasMoofData,
-  IEmsgParsingData,
+  parseEmsg,
+  parseInitSegment,
+  parseSamples,
+  RemuxerTrackIdConfig,
+  segmentValidRange,
 } from '../utils/mp4-tools';
-import { dummyTrack } from './dummy-demuxed-track';
-import type { HlsEventEmitter } from '../events';
 import type { HlsConfig } from '../config';
+import type { HlsEventEmitter } from '../events';
+import type { IEmsgParsingData } from '../utils/mp4-tools';
 
 const emsgSchemePattern = /\/emsg[-/]ID3/i;
 

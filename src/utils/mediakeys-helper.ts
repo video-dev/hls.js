@@ -1,7 +1,7 @@
-import type { DRMSystemOptions, EMEControllerConfig } from '../config';
 import { optionalSelf } from './global';
 import { changeEndianness } from './keysystem-util';
 import { base64Decode } from './numeric-encoding-utils';
+import type { DRMSystemOptions, EMEControllerConfig } from '../config';
 
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess

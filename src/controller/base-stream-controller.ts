@@ -1,57 +1,59 @@
-import TaskLoop from '../task-loop';
-import { FragmentState } from './fragment-tracker';
-import { Bufferable, BufferHelper, BufferInfo } from '../utils/buffer-helper';
-import { Events } from '../events';
-import { ErrorDetails, ErrorTypes } from '../errors';
-import { ChunkMetadata } from '../types/transmuxer';
-import { appendUint8Array } from '../utils/mp4-tools';
-import { alignStream } from '../utils/discontinuities';
-import {
-  isFullSegmentEncryption,
-  getAesModeFromFullSegmentMethod,
-} from '../utils/encryption-methods-util';
+import { NetworkErrorAction } from './error-controller';
 import {
   findFragmentByPDT,
   findFragmentByPTS,
   findFragWithCC,
 } from './fragment-finders';
+import { FragmentState } from './fragment-tracker';
+import Decrypter from '../crypt/decrypter';
+import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
+import FragmentLoader from '../loader/fragment-loader';
+import TaskLoop from '../task-loop';
+import { PlaylistLevelType } from '../types/loader';
+import { ChunkMetadata } from '../types/transmuxer';
+import { BufferHelper } from '../utils/buffer-helper';
+import { alignStream } from '../utils/discontinuities';
+import {
+  getAesModeFromFullSegmentMethod,
+  isFullSegmentEncryption,
+} from '../utils/encryption-methods-util';
+import { getRetryDelay } from '../utils/error-helper';
 import {
   findPart,
   getFragmentWithSN,
   getPartWith,
   updateFragPTSDTS,
 } from '../utils/level-helper';
-import TransmuxerInterface from '../demux/transmuxer-interface';
-import { Fragment, MediaFragment, Part } from '../loader/fragment';
-import FragmentLoader, {
+import { appendUint8Array } from '../utils/mp4-tools';
+import TimeRanges from '../utils/time-ranges';
+import type { FragmentTracker } from './fragment-tracker';
+import type { HlsConfig } from '../config';
+import type TransmuxerInterface from '../demux/transmuxer-interface';
+import type Hls from '../hls';
+import type { Fragment, MediaFragment, Part } from '../loader/fragment';
+import type {
   FragmentLoadProgressCallback,
   LoadError,
 } from '../loader/fragment-loader';
-import KeyLoader from '../loader/key-loader';
-import Decrypter from '../crypt/decrypter';
-import TimeRanges from '../utils/time-ranges';
-import { PlaylistLevelType } from '../types/loader';
-import { getRetryDelay } from '../utils/error-helper';
-import { NetworkErrorAction } from './error-controller';
+import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
+import type { SourceBufferName } from '../types/buffer';
+import type { NetworkComponentAPI } from '../types/component-api';
 import type {
   BufferAppendingData,
+  BufferFlushingData,
   ErrorData,
   FragLoadedData,
-  PartsLoadedData,
   KeyLoadedData,
-  MediaAttachedData,
-  BufferFlushingData,
   ManifestLoadedData,
+  MediaAttachedData,
   MediaDetachingData,
+  PartsLoadedData,
 } from '../types/events';
-import type { FragmentTracker } from './fragment-tracker';
 import type { Level } from '../types/level';
 import type { RemuxedTrack } from '../types/remuxer';
-import type Hls from '../hls';
-import type { HlsConfig } from '../config';
-import type { NetworkComponentAPI } from '../types/component-api';
-import type { SourceBufferName } from '../types/buffer';
+import type { Bufferable, BufferInfo } from '../utils/buffer-helper';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 type ResolveFragLoaded = (FragLoadedEndData) => void;

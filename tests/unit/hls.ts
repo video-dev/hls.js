@@ -1,11 +1,10 @@
-import Hls from '../../src/hls';
-import { hlsDefaultConfig } from '../../src/config';
-import { Events } from '../../src/events';
-import { ErrorTypes, ErrorDetails } from '../../src/errors';
-
 import chai from 'chai';
-import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import { hlsDefaultConfig } from '../../src/config';
+import { ErrorDetails, ErrorTypes } from '../../src/errors';
+import { Events } from '../../src/events';
+import Hls from '../../src/hls';
 
 chai.use(sinonChai);
 const expect = chai.expect;

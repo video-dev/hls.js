@@ -1,6 +1,6 @@
 import BasePlaylistController from './base-playlist-controller';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { ErrorTypes, ErrorDetails } from '../errors';
 import { PlaylistContextType } from '../types/loader';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import {
@@ -11,18 +11,18 @@ import {
 } from '../utils/rendition-helper';
 import type Hls from '../hls';
 import type {
-  AudioSelectionOption,
-  MediaPlaylist,
-} from '../types/media-playlist';
-import type { HlsUrlParameters } from '../types/level';
-import type {
-  ManifestParsedData,
+  AudioTrackLoadedData,
   AudioTracksUpdatedData,
   ErrorData,
   LevelLoadingData,
-  AudioTrackLoadedData,
   LevelSwitchingData,
+  ManifestParsedData,
 } from '../types/events';
+import type { HlsUrlParameters } from '../types/level';
+import type {
+  AudioSelectionOption,
+  MediaPlaylist,
+} from '../types/media-playlist';
 
 class AudioTrackController extends BasePlaylistController {
   private tracks: MediaPlaylist[] = [];

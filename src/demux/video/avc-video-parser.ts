@@ -1,13 +1,11 @@
 import BaseVideoParser from './base-video-parser';
-import type {
-  DemuxedVideoTrack,
-  DemuxedUserdataTrack,
-} from '../../types/demuxer';
-import { parseSEIMessageFromNALu } from '../../utils/mp4-tools';
-
-import type { PES } from '../tsdemuxer';
-
 import ExpGolomb from './exp-golomb';
+import { parseSEIMessageFromNALu } from '../../utils/mp4-tools';
+import type {
+  DemuxedUserdataTrack,
+  DemuxedVideoTrack,
+} from '../../types/demuxer';
+import type { PES } from '../tsdemuxer';
 
 class AvcVideoParser extends BaseVideoParser {
   public parsePES(

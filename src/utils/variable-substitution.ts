@@ -1,6 +1,6 @@
 import type { AttrList } from './attr-list';
-import type { ParsedMultivariantPlaylist } from '../loader/m3u8-parser';
 import type { LevelDetails } from '../loader/level-details';
+import type { ParsedMultivariantPlaylist } from '../loader/m3u8-parser';
 import type { VariableMap } from '../types/level';
 
 const VARIABLE_REPLACEMENT_REGEX = /\{\$([a-zA-Z0-9-_]+)\}/g;

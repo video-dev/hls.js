@@ -1,4 +1,4 @@
-import type { TrackSet } from './track';
+import type { SourceBufferName } from './buffer';
 import type {
   DemuxedAudioTrack,
   DemuxedMetadataTrack,
@@ -7,8 +7,8 @@ import type {
   MetadataSample,
   UserdataSample,
 } from './demuxer';
-import type { SourceBufferName } from './buffer';
 import type { PlaylistLevelType } from './loader';
+import type { TrackSet } from './track';
 import type { DecryptData } from '../loader/level-key';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 

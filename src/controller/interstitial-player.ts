@@ -1,5 +1,4 @@
-import type Hls from '../hls';
-import type { HlsConfig } from '../config';
+import { Events, type HlsListeners } from '../events';
 import {
   eventAssetToString,
   getInterstitialUrl,
@@ -8,8 +7,9 @@ import {
   type InterstitialEvent,
   type InterstitialId,
 } from '../loader/interstitial-event';
-import { Events, type HlsListeners } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
+import type { HlsConfig } from '../config';
+import type Hls from '../hls';
 import type { BufferCodecsData, MediaAttachingData } from '../types/events';
 
 export class HlsAssetPlayer {

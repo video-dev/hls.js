@@ -1,50 +1,50 @@
 import { createDoNothingErrorAction } from './error-controller';
+import { HlsAssetPlayer } from './interstitial-player';
 import {
-  InterstitialsSchedule,
-  type TimelineType,
   type InterstitialScheduleEventItem,
   type InterstitialScheduleItem,
   type InterstitialSchedulePrimaryItem,
+  InterstitialsSchedule,
   segmentToString,
+  type TimelineType,
 } from './interstitials-schedule';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import type Hls from '../hls';
+import { AssetListLoader } from '../loader/interstitial-asset-list';
 import {
+  ALIGNED_END_THRESHOLD_SECONDS,
+  eventAssetToString,
   generateAssetIdentifier,
-  type InterstitialAssetItem,
   type InterstitialAssetId,
+  type InterstitialAssetItem,
   type InterstitialEvent,
   type InterstitialEventWithAssetList,
   TimelineOccupancy,
-  eventAssetToString,
-  ALIGNED_END_THRESHOLD_SECONDS,
 } from '../loader/interstitial-event';
-import { AssetListLoader } from '../loader/interstitial-asset-list';
-import { LevelDetails } from '../loader/level-details';
-import { HlsAssetPlayer } from './interstitial-player';
 import { BufferHelper } from '../utils/buffer-helper';
 import { hash } from '../utils/hash';
 import { Logger } from '../utils/logger';
 import { isCompatibleTrackChange } from '../utils/mediasource-helper';
 import { getBasicSelectionOption } from '../utils/rendition-helper';
 import type { HlsConfig } from '../config';
+import type Hls from '../hls';
+import type { LevelDetails } from '../loader/level-details';
 import type { SourceBufferName } from '../types/buffer';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type {
-  BufferAppendedData,
-  ErrorData,
   AssetListLoadedData,
+  AudioTrackSwitchingData,
+  AudioTrackUpdatedData,
+  BufferAppendedData,
+  BufferCodecsData,
+  BufferFlushedData,
+  ErrorData,
   LevelUpdatedData,
   MediaAttachedData,
   MediaAttachingData,
   MediaDetachingData,
-  BufferCodecsData,
-  AudioTrackUpdatedData,
-  SubtitleTrackUpdatedData,
-  BufferFlushedData,
   SubtitleTrackSwitchData,
-  AudioTrackSwitchingData,
+  SubtitleTrackUpdatedData,
 } from '../types/events';
 import type { MediaPlaylist, MediaSelection } from '../types/media-playlist';
 

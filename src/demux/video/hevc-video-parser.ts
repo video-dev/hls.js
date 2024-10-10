@@ -1,14 +1,12 @@
 import BaseVideoParser from './base-video-parser';
-import type { ParsedVideoSample } from '../tsdemuxer';
-import type {
-  DemuxedVideoTrack,
-  DemuxedUserdataTrack,
-} from '../../types/demuxer';
-import { parseSEIMessageFromNALu } from '../../utils/mp4-tools';
-
-import type { PES } from '../tsdemuxer';
-
 import ExpGolomb from './exp-golomb';
+import { parseSEIMessageFromNALu } from '../../utils/mp4-tools';
+import type {
+  DemuxedUserdataTrack,
+  DemuxedVideoTrack,
+} from '../../types/demuxer';
+import type { ParsedVideoSample } from '../tsdemuxer';
+import type { PES } from '../tsdemuxer';
 
 class HevcVideoParser extends BaseVideoParser {
   protected initVPS: Uint8Array | null = null;

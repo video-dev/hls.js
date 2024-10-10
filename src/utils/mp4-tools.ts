@@ -1,11 +1,11 @@
-import { ElementaryStreamTypes } from '../loader/fragment';
-import { sliceUint8 } from './typed-array';
 import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
-import { logger } from '../utils/logger';
 import Hex from './hex';
+import { sliceUint8 } from './typed-array';
+import { ElementaryStreamTypes } from '../loader/fragment';
+import { logger } from '../utils/logger';
 import type { KeySystemIds } from './mediakeys-helper';
-import type { PassthroughTrack, UserdataSample } from '../types/demuxer';
 import type { DecryptData } from '../loader/level-key';
+import type { PassthroughTrack, UserdataSample } from '../types/demuxer';
 
 const UINT32_MAX = Math.pow(2, 32) - 1;
 const push = [].push;

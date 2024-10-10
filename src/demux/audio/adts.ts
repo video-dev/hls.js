@@ -2,14 +2,14 @@
  * ADTS parser helper
  * @link https://wiki.multimedia.cx/index.php?title=ADTS
  */
-import { logger } from '../../utils/logger';
-import { ErrorTypes, ErrorDetails } from '../../errors';
-import type { HlsEventEmitter } from '../../events';
+import { ErrorDetails, ErrorTypes } from '../../errors';
 import { Events } from '../../events';
+import { logger } from '../../utils/logger';
+import type { HlsEventEmitter } from '../../events';
 import type {
-  DemuxedAudioTrack,
   AudioFrame,
   AudioSample,
+  DemuxedAudioTrack,
 } from '../../types/demuxer';
 
 type AudioConfig = {

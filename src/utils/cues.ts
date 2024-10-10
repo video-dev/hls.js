@@ -1,7 +1,7 @@
-import { fixLineBreaks } from './vttparser';
-import type { CaptionScreen, Row } from './cea-608-parser';
-import { generateCueId } from './webvtt-parser';
 import { addCueToTrack } from './texttrack-utils';
+import { fixLineBreaks } from './vttparser';
+import { generateCueId } from './webvtt-parser';
+import type { CaptionScreen, Row } from './cea-608-parser';
 
 const WHITESPACE_CHAR = /\s/;
 

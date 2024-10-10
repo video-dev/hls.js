@@ -1,28 +1,27 @@
-import sinon from 'sinon';
 import chai from 'chai';
+import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
-import Hls from '../../../src/hls';
-
-import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import BufferController from '../../../src/controller/buffer-controller';
-import {
+import { FragmentTracker } from '../../../src/controller/fragment-tracker';
+import { ErrorDetails, ErrorTypes } from '../../../src/errors';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
+import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import { ChunkMetadata } from '../../../src/types/transmuxer';
+import type BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
+import type {
   BufferOperation,
   BufferOperationQueues,
   SourceBufferName,
   SourceBufferTrackSet,
 } from '../../../src/types/buffer';
-import { BufferAppendingData } from '../../../src/types/events';
-import { Events } from '../../../src/events';
-import { FragmentTracker } from '../../../src/controller/fragment-tracker';
-import { ErrorDetails, ErrorTypes } from '../../../src/errors';
-import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
-import M3U8Parser from '../../../src/loader/m3u8-parser';
-import { PlaylistLevelType } from '../../../src/types/loader';
-import { ChunkMetadata } from '../../../src/types/transmuxer';
 import type {
   ComponentAPI,
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
+import type { BufferAppendingData } from '../../../src/types/events';
 
 chai.use(sinonChai);
 const expect = chai.expect;

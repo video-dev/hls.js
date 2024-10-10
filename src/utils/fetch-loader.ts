@@ -1,16 +1,16 @@
-import type {
-  LoaderCallbacks,
-  LoaderContext,
-  Loader,
-  LoaderStats,
-  LoaderConfiguration,
-  LoaderOnProgress,
-  LoaderResponse,
-} from '../types/loader';
-import { LoadStats } from '../loader/load-stats';
 import ChunkCache from '../demux/chunk-cache';
 import { isPromise } from '../demux/transmuxer';
-import { type HlsConfig } from '../config';
+import { LoadStats } from '../loader/load-stats';
+import type { HlsConfig } from '../config';
+import type {
+  Loader,
+  LoaderCallbacks,
+  LoaderConfiguration,
+  LoaderContext,
+  LoaderOnProgress,
+  LoaderResponse,
+  LoaderStats,
+} from '../types/loader';
 
 export function fetchSupported() {
   if (

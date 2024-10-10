@@ -1,7 +1,6 @@
+import chai from 'chai';
 import { DateRange } from '../../../src/loader/date-range';
 import { AttrList } from '../../../src/utils/attr-list';
-
-import chai from 'chai';
 
 const expect = chai.expect;
 

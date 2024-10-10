@@ -1,15 +1,16 @@
-import { logger } from '../utils/logger';
-import type {
-  LoaderCallbacks,
-  LoaderContext,
-  LoaderStats,
-  Loader,
-  LoaderConfiguration,
-  LoaderResponse,
-} from '../types/loader';
-import { LoadStats } from '../loader/load-stats';
-import { type HlsConfig, RetryConfig } from '../config';
 import { getRetryDelay, shouldRetry } from './error-helper';
+import { LoadStats } from '../loader/load-stats';
+import { logger } from '../utils/logger';
+import type { HlsConfig } from '../config';
+import type { RetryConfig } from '../config';
+import type {
+  Loader,
+  LoaderCallbacks,
+  LoaderConfiguration,
+  LoaderContext,
+  LoaderResponse,
+  LoaderStats,
+} from '../types/loader';
 
 const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/im;
 

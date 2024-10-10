@@ -1,21 +1,25 @@
-import { Events } from '../events';
-import { Logger } from '../utils/logger';
+import BufferOperationQueue from './buffer-operation-queue';
+import { createDoNothingErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
+import { ElementaryStreamTypes } from '../loader/fragment';
+import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
 import {
   getCodecCompatibleName,
   pickMostCompleteCodecName,
 } from '../utils/codecs';
+import { Logger } from '../utils/logger';
 import {
   getMediaSource,
   isCompatibleTrackChange,
   isManagedMediaSource,
 } from '../utils/mediasource-helper';
-import { ElementaryStreamTypes } from '../loader/fragment';
-import { PlaylistLevelType } from '../types/loader';
-import BufferOperationQueue from './buffer-operation-queue';
-import { createDoNothingErrorAction } from './error-controller';
+import type Hls from '../hls';
+import type { FragmentTracker } from './fragment-tracker';
+import type { HlsConfig } from '../config';
 import type { MediaFragment, Part } from '../loader/fragment';
+import type { LevelDetails } from '../loader/level-details';
 import type {
   AttachMediaSourceData,
   BaseTrack,
@@ -27,29 +31,25 @@ import type {
   MediaOverrides,
   ParsedTrack,
   SourceBufferName,
+  SourceBuffersTuple,
   SourceBufferTrack,
   SourceBufferTrackSet,
-  SourceBuffersTuple,
 } from '../types/buffer';
+import type { ComponentAPI } from '../types/component-api';
 import type {
-  LevelUpdatedData,
   BufferAppendingData,
-  MediaAttachingData,
-  ManifestParsedData,
   BufferCodecsData,
   BufferEOSData,
   BufferFlushingData,
-  FragParsedData,
-  FragChangedData,
   ErrorData,
+  FragChangedData,
+  FragParsedData,
+  LevelUpdatedData,
+  ManifestParsedData,
+  MediaAttachingData,
   MediaDetachingData,
 } from '../types/events';
-import type { ComponentAPI } from '../types/component-api';
 import type { ChunkMetadata } from '../types/transmuxer';
-import type Hls from '../hls';
-import type { FragmentTracker } from './fragment-tracker';
-import type { LevelDetails } from '../loader/level-details';
-import type { HlsConfig } from '../config';
 
 interface BufferedChangeEvent extends Event {
   readonly addedRanges?: TimeRanges;

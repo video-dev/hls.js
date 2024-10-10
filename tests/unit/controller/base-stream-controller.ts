@@ -1,14 +1,13 @@
-import Hls from '../../../src/hls';
-import { hlsDefaultConfig } from '../../../src/config';
-import BaseStreamController from '../../../src/controller/stream-controller';
-import KeyLoader from '../../../src/loader/key-loader';
-import { TimeRangesMock } from '../../mocks/time-ranges.mock';
-import type { BufferInfo } from '../../../src/utils/buffer-helper';
-import type { LevelDetails } from '../../../src/loader/level-details';
-import type { Fragment, Part } from '../../../src/loader/fragment';
-
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
+import { hlsDefaultConfig } from '../../../src/config';
+import BaseStreamController from '../../../src/controller/stream-controller';
+import Hls from '../../../src/hls';
+import KeyLoader from '../../../src/loader/key-loader';
+import { TimeRangesMock } from '../../mocks/time-ranges.mock';
+import type { Fragment, Part } from '../../../src/loader/fragment';
+import type { LevelDetails } from '../../../src/loader/level-details';
+import type { BufferInfo } from '../../../src/utils/buffer-helper';
 
 chai.use(sinonChai);
 const expect = chai.expect;

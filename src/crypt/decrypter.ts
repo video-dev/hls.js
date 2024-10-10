@@ -1,10 +1,10 @@
 import AESCrypto from './aes-crypto';
-import FastAESKey from './fast-aes-key';
 import AESDecryptor, { removePadding } from './aes-decryptor';
+import { DecrypterAesMode } from './decrypter-aes-mode';
+import FastAESKey from './fast-aes-key';
 import { logger } from '../utils/logger';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { sliceUint8 } from '../utils/typed-array';
-import { DecrypterAesMode } from './decrypter-aes-mode';
 import type { HlsConfig } from '../config';
 
 const CHUNK_SIZE = 16; // 16 bytes, 128 bits

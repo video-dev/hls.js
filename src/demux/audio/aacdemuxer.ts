@@ -1,12 +1,12 @@
 /**
  * AAC demuxer
  */
-import BaseAudioDemuxer from './base-audio-demuxer';
-import * as ADTS from './adts';
-import * as MpegAudio from './mpegaudio';
 import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
-import type { HlsEventEmitter } from '../../events';
+import * as ADTS from './adts';
+import BaseAudioDemuxer from './base-audio-demuxer';
+import * as MpegAudio from './mpegaudio';
 import type { HlsConfig } from '../../config';
+import type { HlsEventEmitter } from '../../events';
 import type { DemuxedAudioTrack } from '../../types/demuxer';
 import type { ILogger } from '../../utils/logger';
 

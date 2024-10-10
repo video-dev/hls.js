@@ -1,22 +1,3 @@
-import type { Fragment, MediaFragment, Part } from '../loader/fragment';
-import type { LevelDetails } from '../loader/level-details';
-import type {
-  HdcpLevel,
-  HlsUrlParameters,
-  Level,
-  LevelAttributes,
-  LevelParsed,
-  VariableMap,
-} from './level';
-import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
-import type {
-  Loader,
-  LoaderContext,
-  LoaderResponse,
-  LoaderStats,
-  PlaylistLevelType,
-  PlaylistLoaderContext,
-} from './loader';
 import type {
   AttachMediaSourceData,
   BaseTrackSet,
@@ -27,26 +8,45 @@ import type {
   SourceBufferTrackSet,
 } from './buffer';
 import type { ChunkMetadata } from './transmuxer';
-import type { LoadStats } from '../loader/load-stats';
 import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
-import type { AttrList } from '../utils/attr-list';
-import type { HlsListeners } from '../events';
-import type { KeyLoaderInfo } from '../loader/key-loader';
-import type { LevelKey } from '../loader/level-key';
-import type { IErrorAction } from '../controller/error-controller';
+import type {
+  HdcpLevel,
+  HlsUrlParameters,
+  Level,
+  LevelAttributes,
+  LevelParsed,
+  VariableMap,
+} from './level';
+import type {
+  Loader,
+  LoaderContext,
+  LoaderResponse,
+  LoaderStats,
+  PlaylistLevelType,
+  PlaylistLoaderContext,
+} from './loader';
+import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
 import type { SteeringManifest } from '../controller/content-steering-controller';
+import type { IErrorAction } from '../controller/error-controller';
+import type { HlsAssetPlayer } from '../controller/interstitial-player';
+import type {
+  InterstitialScheduleDurations,
+  InterstitialScheduleItem,
+} from '../controller/interstitials-schedule';
+import type { HlsListeners } from '../events';
+import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type {
   AssetListJSON,
   InterstitialAssetItem,
   InterstitialEvent,
   InterstitialEventWithAssetList,
 } from '../loader/interstitial-event';
-import type { HlsAssetPlayer } from '../controller/interstitial-player';
-import type {
-  InterstitialScheduleDurations,
-  InterstitialScheduleItem,
-} from '../controller/interstitials-schedule';
+import type { KeyLoaderInfo } from '../loader/key-loader';
+import type { LevelDetails } from '../loader/level-details';
+import type { LevelKey } from '../loader/level-key';
+import type { LoadStats } from '../loader/load-stats';
+import type { AttrList } from '../utils/attr-list';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;

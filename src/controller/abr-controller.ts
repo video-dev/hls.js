@@ -1,35 +1,35 @@
-import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
-import { Events } from '../events';
 import { ErrorDetails } from '../errors';
+import { Events } from '../events';
 import { PlaylistLevelType } from '../types/loader';
+import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import { Logger } from '../utils/logger';
 import {
-  SUPPORTED_INFO_DEFAULT,
   getMediaDecodingInfoPromise,
   requiresMediaCapabilitiesDecodingInfo,
+  SUPPORTED_INFO_DEFAULT,
 } from '../utils/mediacapabilities-helper';
 import {
+  type AudioTracksByGroup,
+  type CodecSetTier,
   getAudioTracksByGroup,
   getCodecTiers,
   getStartCodecTier,
-  type AudioTracksByGroup,
-  type CodecSetTier,
 } from '../utils/rendition-helper';
+import type Hls from '../hls';
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
-import type { Level, VideoRange } from '../types/level';
-import type { LoaderStats } from '../types/loader';
-import type Hls from '../hls';
+import type { AbrComponentAPI } from '../types/component-api';
 import type {
-  FragLoadingData,
-  FragLoadedData,
+  ErrorData,
   FragBufferedData,
+  FragLoadedData,
+  FragLoadingData,
   LevelLoadedData,
   LevelSwitchingData,
   ManifestLoadingData,
-  ErrorData,
 } from '../types/events';
-import type { AbrComponentAPI } from '../types/component-api';
+import type { Level, VideoRange } from '../types/level';
+import type { LoaderStats } from '../types/loader';
 
 class AbrController extends Logger implements AbrComponentAPI {
   protected hls: Hls;

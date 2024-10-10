@@ -1,7 +1,7 @@
 import { fillInMissingAV01Params, mimeTypeForCodec } from './codecs';
+import type { AudioTracksByGroup } from './rendition-helper';
 import type { Level, VideoRange } from '../types/level';
 import type { AudioSelectionOption } from '../types/media-playlist';
-import type { AudioTracksByGroup } from './rendition-helper';
 
 export type MediaDecodingInfo = {
   supported: boolean;

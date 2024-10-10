@@ -1,6 +1,6 @@
-import type { MediaFragment } from '../loader/fragment';
 import type { SourceBufferName } from './buffer';
 import type { FragLoadedData } from './events';
+import type { MediaFragment } from '../loader/fragment';
 
 export interface FragmentEntity {
   body: MediaFragment;

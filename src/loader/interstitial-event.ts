@@ -1,7 +1,7 @@
-import type { DateRange, DateRangeCue } from './date-range';
-import type { Loader, LoaderContext } from '../types/loader';
-import type { Fragment } from './fragment';
 import { hash } from '../utils/hash';
+import type { DateRange, DateRangeCue } from './date-range';
+import type { Fragment } from './fragment';
+import type { Loader, LoaderContext } from '../types/loader';
 
 export const ALIGNED_END_THRESHOLD_SECONDS = 0.02; // 0.1 // 0.2
 

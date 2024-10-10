@@ -9,34 +9,34 @@
  * upon discontinuity or level switch detection, it will also notifies the remuxer so that it can reset its state.
  */
 
+import * as AC3 from './audio/ac3-demuxer';
 import * as ADTS from './audio/adts';
 import * as MpegAudio from './audio/mpegaudio';
-import * as AC3 from './audio/ac3-demuxer';
-import BaseVideoParser from './video/base-video-parser';
+import SampleAesDecrypter from './sample-aes';
 import AvcVideoParser from './video/avc-video-parser';
 import HevcVideoParser from './video/hevc-video-parser';
-import SampleAesDecrypter from './sample-aes';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { appendUint8Array, RemuxerTrackIdConfig } from '../utils/mp4-tools';
-import { ErrorTypes, ErrorDetails } from '../errors';
-import type { HlsConfig } from '../config';
-import type { HlsEventEmitter } from '../events';
-import type { TypeSupported } from '../utils/codecs';
-import type { ILogger } from '../utils/logger';
 import {
-  MetadataSchema,
-  type DemuxedVideoTrack,
   type DemuxedAudioTrack,
+  type DemuxedMetadataTrack,
   type DemuxedTrack,
+  type DemuxedUserdataTrack,
+  type DemuxedVideoTrack,
   type Demuxer,
   type DemuxerResult,
-  type VideoSample,
-  type DemuxedMetadataTrack,
-  type DemuxedUserdataTrack,
   type ElementaryStreamData,
   type KeyData,
+  MetadataSchema,
+  type VideoSample,
 } from '../types/demuxer';
+import { appendUint8Array, RemuxerTrackIdConfig } from '../utils/mp4-tools';
+import type { HlsConfig } from '../config';
+import type { HlsEventEmitter } from '../events';
+import type BaseVideoParser from './video/base-video-parser';
 import type { AudioFrame } from '../types/demuxer';
+import type { TypeSupported } from '../utils/codecs';
+import type { ILogger } from '../utils/logger';
 
 export type ParsedTimestamp = {
   pts?: number;
