@@ -111,6 +111,7 @@ The following properties are added to their respective variants' attribute list 
 - `#EXT-X-SKIP:<attribute-list>` Delta Playlists
 - `#EXT-X-RENDITION-REPORT:<attribute-list>`
 - `#EXT-X-DATERANGE:<attribute-list>` Metadata
+  - HLS EXT-X-DATERANGE Schema for Interstitials
 - `#EXT-X-DEFINE:<attribute-list>` Variable Import and Substitution (`NAME,VALUE,IMPORT,QUERYPARAM` attributes)
 - `#EXT-X-GAP` (Skips loading GAP segments and parts. Skips playback of unbuffered program containing only GAP content and no suitable alternates. See [#2940](https://github.com/video-dev/hls.js/issues/2940))
 
@@ -127,7 +128,6 @@ Parsed but missing feature support
 
 For a complete list of issues, see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependent on the runtime environment (for example, not all browsers on the same OS support HEVC).
 
-- HLS Interstitials
 - `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
 - "identity" format `SAMPLE-AES` method keys with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
 - MPEG-2 TS segments with FairPlay Streaming, PlayReady, or Widevine encryption

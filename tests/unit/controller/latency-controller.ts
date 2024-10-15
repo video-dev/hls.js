@@ -1,13 +1,12 @@
 /* eslint-disable dot-notation */
-import LatencyController from '../../../src/controller/latency-controller';
-import Hls from '../../../src/hls';
-import { Events } from '../../../src/events';
-import { LevelDetails } from '../../../src/loader/level-details';
-import { LevelUpdatedData } from '../../../src/types/events';
-
-import sinon from 'sinon';
 import chai from 'chai';
+import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
+import LatencyController from '../../../src/controller/latency-controller';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
+import { LevelDetails } from '../../../src/loader/level-details';
+import type { LevelUpdatedData } from '../../../src/types/events';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -36,6 +35,8 @@ describe('LatencyController', function () {
     levelDetails.live = true;
     levelDetails.targetduration = 5;
     levelDetails.totalduration = 15;
+    const latestLevelDetailsStub = sinon.stub(hls, 'latestLevelDetails');
+    latestLevelDetailsStub.get(() => levelDetails);
     const levelUpdatedData: LevelUpdatedData = {
       details: levelDetails,
       level: 0,
@@ -104,46 +105,46 @@ describe('LatencyController', function () {
   });
 
   describe('maxLatency', function () {
+    it('returns liveMaxLatencyDurationCount * targetduration', function () {
+      latencyController['config'].liveMaxLatencyDurationCount = 3;
+      expect(latencyController.maxLatency).to.equal(15);
+    });
+
     it('returns liveMaxLatencyDuration when set', function () {
       latencyController['config'].liveMaxLatencyDuration = 30;
       expect(latencyController.maxLatency).to.equal(30);
     });
-
-    it('returns liveMaxLatencyDurationCount * targetduration after level update', function () {
-      latencyController['config'].liveMaxLatencyDurationCount = 3;
-      expect(latencyController.maxLatency).to.equal(0);
-      levelDetails.age = 0;
-      expect(latencyController.maxLatency).to.equal(15);
-    });
   });
 
   describe('targetLatency', function () {
-    it('returns null before level update', function () {
+    it('returns null when hls.latestLevelDetails are unknown', function () {
+      expect(hls.latestLevelDetails).to.equal(
+        levelDetails,
+        'hls.latestLevelDetails',
+      ).which.is.not.null;
+      (levelDetails as any) = null;
+      expect(hls.latestLevelDetails).to.equal(null);
       expect(latencyController.targetLatency).to.equal(null);
     });
 
-    it('returns liveSyncDuration if set after level update', function () {
+    it('returns liveSyncDuration if set', function () {
       latencyController['config'].liveSyncDuration = 12;
-      levelDetails.age = 0;
       expect(latencyController.targetLatency).to.equal(12);
     });
 
-    it('returns targetduration * liveSyncDurationCount if set after level update', function () {
+    it('returns targetduration * liveSyncDurationCount if set', function () {
       latencyController['config'].liveSyncDurationCount = 2;
-      levelDetails.age = 0;
       expect(latencyController.targetLatency).to.equal(10);
     });
 
-    it('returns holdBack when set in playlist after level update', function () {
+    it('returns holdBack when set in playlist', function () {
       levelDetails.holdBack = 8;
-      levelDetails.age = 0;
       expect(latencyController.targetLatency).to.equal(8);
     });
 
-    it('returns partHoldBack in lowLatencyMode when set in playlist after level update', function () {
+    it('returns partHoldBack in lowLatencyMode when set in playlist', function () {
       levelDetails.holdBack = 8;
       levelDetails.partHoldBack = 3;
-      levelDetails.age = 0;
       latencyController['config'].lowLatencyMode = false;
       expect(latencyController.targetLatency).to.equal(8);
       latencyController['config'].lowLatencyMode = true;
@@ -154,7 +155,6 @@ describe('LatencyController', function () {
       hls.userConfig.liveSyncDuration = 12;
       latencyController['config'].liveSyncDuration = 12;
       levelDetails.holdBack = 8;
-      levelDetails.age = 0;
       expect(latencyController.targetLatency).to.equal(12);
     });
 
@@ -162,7 +162,6 @@ describe('LatencyController', function () {
       hls.userConfig.liveSyncDurationCount = 2;
       latencyController['config'].liveSyncDurationCount = 2;
       levelDetails.holdBack = 8;
-      levelDetails.age = 0;
       expect(latencyController.targetLatency).to.equal(10);
     });
 
@@ -170,7 +169,6 @@ describe('LatencyController', function () {
       latencyController['config'].lowLatencyMode = true;
       levelDetails.targetduration = 3.5;
       levelDetails.partHoldBack = 3;
-      levelDetails.age = 0;
       expect(latencyController.targetLatency).to.equal(3);
       latencyController['stallCount'] = 1;
       expect(latencyController.targetLatency).to.equal(4);
@@ -217,7 +215,13 @@ describe('LatencyController', function () {
   });
 
   describe('liveSyncPosition', function () {
-    it('returns null before level update', function () {
+    it('returns null when hls.latestLevelDetails are unknown', function () {
+      expect(hls.latestLevelDetails).to.equal(
+        levelDetails,
+        'hls.latestLevelDetails',
+      ).which.is.not.null;
+      (levelDetails as any) = null;
+      expect(hls.latestLevelDetails).to.equal(null);
       expect(latencyController.liveSyncPosition).to.equal(null);
     });
 
@@ -256,7 +260,13 @@ describe('LatencyController', function () {
   });
 
   describe('edgeStalled', function () {
-    it('returns 0 before level update', function () {
+    it('returns 0 when hls.latestLevelDetails are unknown', function () {
+      expect(hls.latestLevelDetails).to.equal(
+        levelDetails,
+        'hls.latestLevelDetails',
+      ).which.is.not.null;
+      (levelDetails as any) = null;
+      expect(hls.latestLevelDetails).to.equal(null);
       expect(latencyController.edgeStalled).to.equal(0);
     });
 

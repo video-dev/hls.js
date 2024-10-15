@@ -1,3 +1,11 @@
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import { Fragment, Part } from '../../../src/loader/fragment';
+import { LevelDetails } from '../../../src/loader/level-details';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import { AttrList } from '../../../src/utils/attr-list';
 import {
   adjustSliding,
   computeReloadInterval,
@@ -5,14 +13,7 @@ import {
   mapPartIntersection,
   mergeDetails,
 } from '../../../src/utils/level-helper';
-import { LevelDetails } from '../../../src/loader/level-details';
-import { Fragment, MediaFragment, Part } from '../../../src/loader/fragment';
-import M3U8Parser from '../../../src/loader/m3u8-parser';
-import { PlaylistLevelType } from '../../../src/types/loader';
-import { AttrList } from '../../../src/utils/attr-list';
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
+import type { MediaFragment } from '../../../src/loader/fragment';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -138,20 +139,20 @@ describe('LevelHelper Tests', function () {
       expect(actual).to.deep.equal([10, 15, 20]);
     });
 
-    it('does not apply sliding if no common segments exist', function () {
+    it('applies minimal sliding when no common segments exist', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
       adjustSliding(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
-      expect(actual).to.deep.equal([0, 5, 10]);
+      expect(actual).to.deep.equal([15, 20, 25]);
     });
 
-    it('does not apply sliding when segments meet but do not overlap', function () {
+    it('applies minimal sliding when segments meet but do not overlap', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([4, 5, 6]);
       adjustSliding(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
-      expect(actual).to.deep.equal([0, 5, 10]);
+      expect(actual).to.deep.equal([15, 20, 25]);
     });
   });
 
@@ -164,15 +165,15 @@ describe('LevelHelper Tests', function () {
       expect(actual).to.deep.equal([5, 10, 15, 20]);
     });
 
-    it('does not change start times when there is no segment overlap', function () {
+    it('applies minimal sliding when there is no segment overlap', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
       mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
-      expect(actual).to.deep.equal([0, 5, 10]);
+      expect(actual).to.deep.equal([15, 20, 25]);
     });
 
-    it('does not extrapolate if the new playlist starts before the old', function () {
+    it('matches start when the new playlist starts before the old', function () {
       const oldPlaylist = generatePlaylist([3, 4, 5]);
       oldPlaylist.fragments.forEach((f) => {
         f.start += 10;
@@ -180,7 +181,7 @@ describe('LevelHelper Tests', function () {
       const newPlaylist = generatePlaylist([1, 2, 3]);
       mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
-      expect(actual).to.deep.equal([0, 5, 10]);
+      expect(actual).to.deep.equal([10, 15, 20]);
     });
 
     it('merges delta playlist updates', function () {

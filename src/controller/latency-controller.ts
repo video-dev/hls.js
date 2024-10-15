@@ -1,20 +1,18 @@
-import { LevelDetails } from '../loader/level-details';
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
+import type { HlsConfig } from '../config';
+import type Hls from '../hls';
+import type { ComponentAPI } from '../types/component-api';
 import type {
   ErrorData,
   LevelUpdatedData,
   MediaAttachingData,
 } from '../types/events';
-import type { ComponentAPI } from '../types/component-api';
-import type Hls from '../hls';
-import type { HlsConfig } from '../config';
 
 export default class LatencyController implements ComponentAPI {
   private hls: Hls;
   private readonly config: HlsConfig;
   private media: HTMLMediaElement | null = null;
-  private levelDetails: LevelDetails | null = null;
   private currentTime: number = 0;
   private stallCount: number = 0;
   private _latency: number | null = null;
@@ -31,17 +29,18 @@ export default class LatencyController implements ComponentAPI {
   }
 
   get maxLatency(): number {
-    const { config, levelDetails } = this;
+    const { config } = this;
     if (config.liveMaxLatencyDuration !== undefined) {
       return config.liveMaxLatencyDuration;
     }
+    const levelDetails = this.hls.latestLevelDetails;
     return levelDetails
       ? config.liveMaxLatencyDurationCount * levelDetails.targetduration
       : 0;
   }
 
   get targetLatency(): number | null {
-    const { levelDetails } = this;
+    const levelDetails = this.hls.latestLevelDetails;
     if (levelDetails === null) {
       return null;
     }
@@ -80,8 +79,11 @@ export default class LatencyController implements ComponentAPI {
   get liveSyncPosition(): number | null {
     const liveEdge = this.estimateLiveEdge();
     const targetLatency = this.targetLatency;
-    const levelDetails = this.levelDetails;
-    if (liveEdge === null || targetLatency === null || levelDetails === null) {
+    if (liveEdge === null || targetLatency === null) {
+      return null;
+    }
+    const levelDetails = this.hls.latestLevelDetails;
+    if (levelDetails === null) {
       return null;
     }
     const edge = levelDetails.edge;
@@ -95,7 +97,7 @@ export default class LatencyController implements ComponentAPI {
   }
 
   get drift(): number {
-    const { levelDetails } = this;
+    const levelDetails = this.hls.latestLevelDetails;
     if (levelDetails === null) {
       return 1;
     }
@@ -103,7 +105,7 @@ export default class LatencyController implements ComponentAPI {
   }
 
   get edgeStalled(): number {
-    const { levelDetails } = this;
+    const levelDetails = this.hls.latestLevelDetails;
     if (levelDetails === null) {
       return 0;
     }
@@ -114,7 +116,8 @@ export default class LatencyController implements ComponentAPI {
   }
 
   private get forwardBufferLength(): number {
-    const { media, levelDetails } = this;
+    const { media } = this;
+    const levelDetails = this.hls.latestLevelDetails;
     if (!media || !levelDetails) {
       return 0;
     }
@@ -129,7 +132,6 @@ export default class LatencyController implements ComponentAPI {
   public destroy(): void {
     this.unregisterListeners();
     this.onMediaDetaching();
-    this.levelDetails = null;
     // @ts-ignore
     this.hls = null;
   }
@@ -166,7 +168,6 @@ export default class LatencyController implements ComponentAPI {
   }
 
   private onManifestLoading() {
-    this.levelDetails = null;
     this._latency = null;
     this.stallCount = 0;
   }
@@ -175,7 +176,6 @@ export default class LatencyController implements ComponentAPI {
     event: Events.LEVEL_UPDATED,
     { details }: LevelUpdatedData,
   ) {
-    this.levelDetails = details;
     if (details.advanced) {
       this.onTimeupdate();
     }
@@ -189,7 +189,7 @@ export default class LatencyController implements ComponentAPI {
       return;
     }
     this.stallCount++;
-    if (this.levelDetails?.live) {
+    if (this.hls.latestLevelDetails?.live) {
       this.hls.logger.warn(
         '[latency-controller]: Stall detected, adjusting target latency',
       );
@@ -197,7 +197,8 @@ export default class LatencyController implements ComponentAPI {
   }
 
   private onTimeupdate = () => {
-    const { media, levelDetails } = this;
+    const { media } = this;
+    const levelDetails = this.hls.latestLevelDetails;
     if (!media || !levelDetails) {
       return;
     }
@@ -250,7 +251,7 @@ export default class LatencyController implements ComponentAPI {
   };
 
   private estimateLiveEdge(): number | null {
-    const { levelDetails } = this;
+    const levelDetails = this.hls.latestLevelDetails;
     if (levelDetails === null) {
       return null;
     }

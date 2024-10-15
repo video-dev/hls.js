@@ -1,6 +1,5 @@
-import { logger } from './logger';
 import { adjustSliding } from './level-helper';
-
+import { logger } from './logger';
 import type { Fragment } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 
@@ -81,7 +80,7 @@ export function alignStream(
     // Try to align on sn so that we pick a better start fragment.
     // Do not perform this on playlists with delta updates as this is only to align levels on switch
     // and adjustSliding only adjusts fragments after skippedSegments.
-    adjustSliding(switchDetails, details);
+    adjustSliding(switchDetails, details, false);
   }
 }
 

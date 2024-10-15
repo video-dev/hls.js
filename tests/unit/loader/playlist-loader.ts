@@ -1,11 +1,10 @@
-import M3U8Parser from '../../../src/loader/m3u8-parser';
-import { AttrList } from '../../../src/utils/attr-list';
-import { PlaylistLevelType } from '../../../src/types/loader';
-import { LevelKey } from '../../../src/loader/level-key';
-import { Fragment, Part } from '../../../src/loader/fragment';
-
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import { AttrList } from '../../../src/utils/attr-list';
+import type { Fragment, Part } from '../../../src/loader/fragment';
+import type { LevelKey } from '../../../src/loader/level-key';
 
 chai.use(sinonChai);
 const expect = chai.expect;

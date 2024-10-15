@@ -1,33 +1,29 @@
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
 import LevelController from '../../../src/controller/level-controller';
-import HlsMock from '../../mocks/hls.mock';
-import { Events } from '../../../src/events';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
+import { Events } from '../../../src/events';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { Level } from '../../../src/types/level';
+import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
-import {
-  PlaylistLevelType,
-  PlaylistLoaderContext,
-} from '../../../src/types/loader';
-import M3U8Parser, {
-  ParsedMultivariantPlaylist,
-} from '../../../src/loader/m3u8-parser';
+import { getMediaSource } from '../../../src/utils/mediasource-helper';
+import HlsMock from '../../mocks/hls.mock';
+import type { Fragment } from '../../../src/loader/fragment';
 import type { LevelDetails } from '../../../src/loader/level-details';
+import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
 import type {
   ManifestLoadedData,
   ManifestParsedData,
 } from '../../../src/types/events';
 import type { LevelParsed } from '../../../src/types/level';
+import type { PlaylistLoaderContext } from '../../../src/types/loader';
 import type {
   MediaAttributes,
   MediaPlaylist,
   MediaPlaylistType,
 } from '../../../src/types/media-playlist';
-import type { Fragment } from '../../../src/loader/fragment';
-
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
-import { getMediaSource } from '../../../src/utils/mediasource-helper';
 
 chai.use(sinonChai);
 const expect = chai.expect;

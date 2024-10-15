@@ -1,11 +1,10 @@
-import Hls from '../../src/hls';
 import { EventEmitter } from 'eventemitter3';
-import { logger } from '../../src/utils/logger';
-import type { HlsEventEmitter, HlsListeners } from '../../src/events';
-import type { HlsConfig } from '../../src/config';
-import type { Level } from '../../src/types/level';
-
 import * as sinon from 'sinon';
+import Hls from '../../src/hls';
+import { logger } from '../../src/utils/logger';
+import type { HlsConfig } from '../../src/config';
+import type { HlsEventEmitter, HlsListeners } from '../../src/events';
+import type { Level } from '../../src/types/level';
 
 // All public methods of Hls instance
 const publicMethods = [
@@ -28,19 +27,20 @@ export default class HlsMock extends EventEmitter implements HlsEventEmitter {
     // and have to specify things that are not in the default config
     this.config = Object.assign({}, Hls.DefaultConfig, config);
     this.logger = logger;
+    const sandbox = (this.sandbox = sinon.createSandbox());
     // stub public API with spies
     publicMethods.forEach((methodName) => {
-      this[methodName] = sinon.stub();
+      this[methodName] = sandbox.stub();
     });
     // add spies to event emitters
     this.trigger = <E extends keyof HlsListeners>(
       event: E,
       eventObject: Parameters<HlsListeners[E]>[1],
     ): boolean => this.emit(event as string, event, eventObject);
-    sinon.spy(this, 'on');
-    sinon.spy(this, 'once');
-    sinon.spy(this, 'off');
-    sinon.spy(this, 'trigger');
+    sandbox.spy(this, 'on');
+    sandbox.spy(this, 'once');
+    sandbox.spy(this, 'off');
+    sandbox.spy(this, 'trigger');
   }
 
   getEventData(n: number): { name: string; payload: any } {
@@ -78,5 +78,6 @@ export default class HlsMock extends EventEmitter implements HlsEventEmitter {
     publicMethods.forEach((methodName) => {
       this[methodName].reset();
     });
+    this.sandbox.restore();
   }
 }

@@ -1,13 +1,13 @@
 import { buildAbsoluteURL } from 'url-toolkit';
-import { LevelKey } from './level-key';
 import { LoadStats } from './load-stats';
-import { AttrList } from '../utils/attr-list';
+import type { LevelKey } from './level-key';
 import type {
   FragmentLoaderContext,
   KeyLoaderContext,
   Loader,
   PlaylistLevelType,
 } from '../types/loader';
+import type { AttrList } from '../utils/attr-list';
 import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
 export const enum ElementaryStreamTypes {
@@ -88,6 +88,13 @@ export class BaseSegment {
   set url(value: string) {
     this._url = value;
   }
+
+  clearElementaryStreamInfo() {
+    const { elementaryStreams } = this;
+    elementaryStreams[ElementaryStreamTypes.AUDIO] = null;
+    elementaryStreams[ElementaryStreamTypes.VIDEO] = null;
+    elementaryStreams[ElementaryStreamTypes.AUDIOVIDEO] = null;
+  }
 }
 
 export interface MediaFragment extends Fragment {
@@ -132,6 +139,8 @@ export class Fragment extends BaseSegment {
   public endDTS?: number;
   // The start time of the fragment, as listed in the manifest. Updated after transmux complete.
   public start: number = 0;
+  // The offset time (seconds) of the fragment from the start of the Playlist
+  public playlistOffset: number = 0;
   // Set by `updateFragPTSDTS` in level-helper
   public deltaPTS?: number;
   // The maximum starting Presentation Time Stamp (audio/video PTS) of the fragment. Set after transmux complete.
@@ -259,13 +268,6 @@ export class Fragment extends BaseSegment {
     info.endPTS = Math.max(info.endPTS, endPTS);
     info.startDTS = Math.min(info.startDTS, startDTS);
     info.endDTS = Math.max(info.endDTS, endDTS);
-  }
-
-  clearElementaryStreamInfo() {
-    const { elementaryStreams } = this;
-    elementaryStreams[ElementaryStreamTypes.AUDIO] = null;
-    elementaryStreams[ElementaryStreamTypes.VIDEO] = null;
-    elementaryStreams[ElementaryStreamTypes.AUDIOVIDEO] = null;
   }
 }
 

@@ -3,24 +3,22 @@
  *
  * DRM support for Hls.js
  */
+import { EventEmitter } from 'eventemitter3';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { ErrorTypes, ErrorDetails } from '../errors';
+import { LevelKey } from '../loader/level-key';
+import Hex from '../utils/hex';
 import { Logger } from '../utils/logger';
 import {
   getKeySystemsForConfig,
   getSupportedMediaKeySystemConfigurations,
-  keySystemDomainToKeySystemFormat as keySystemToKeySystemFormat,
-  KeySystemFormats,
   keySystemFormatToKeySystemDomain,
   keySystemIdToKeySystemDomain,
   KeySystems,
-  requestMediaKeySystemAccess,
+  keySystemDomainToKeySystemFormat as keySystemToKeySystemFormat,
   parsePlayReadyWRM,
+  requestMediaKeySystemAccess,
 } from '../utils/mediakeys-helper';
-import { strToUtf8array } from '../utils/utf8-utils';
-import { base64Decode } from '../utils/numeric-encoding-utils';
-import { DecryptData, LevelKey } from '../loader/level-key';
-import Hex from '../utils/hex';
 import {
   bin2str,
   parseMultiPssh,
@@ -28,23 +26,26 @@ import {
   type PsshData,
   type PsshInvalidResult,
 } from '../utils/mp4-tools';
-import { EventEmitter } from 'eventemitter3';
+import { base64Decode } from '../utils/numeric-encoding-utils';
+import { strToUtf8array } from '../utils/utf8-utils';
+import type { EMEControllerConfig, HlsConfig, LoadPolicy } from '../config';
 import type Hls from '../hls';
+import type { Fragment } from '../loader/fragment';
+import type { DecryptData } from '../loader/level-key';
 import type { ComponentAPI } from '../types/component-api';
 import type {
-  MediaAttachedData,
-  KeyLoadedData,
   ErrorData,
+  KeyLoadedData,
   ManifestLoadedData,
+  MediaAttachedData,
 } from '../types/events';
-import type { EMEControllerConfig, HlsConfig, LoadPolicy } from '../config';
-import type { Fragment } from '../loader/fragment';
 import type {
   Loader,
   LoaderCallbacks,
   LoaderConfiguration,
   LoaderContext,
 } from '../types/loader';
+import type { KeySystemFormats } from '../utils/mediakeys-helper';
 interface KeySystemAccessPromises {
   keySystemAccess: Promise<MediaKeySystemAccess>;
   mediaKeys?: Promise<MediaKeys>;
@@ -638,6 +639,7 @@ class EMEController extends Logger implements ComponentAPI {
               'encrypted-event-key-match',
             );
           });
+        keySessionContextPromise.catch((error) => this.handleError(error));
         break;
       }
     }
@@ -671,8 +673,8 @@ class EMEController extends Logger implements ComponentAPI {
             });
           },
         );
+      keySessionContextPromise.catch((error) => this.handleError(error));
     }
-    keySessionContextPromise.catch((error) => this.handleError(error));
   };
 
   private onWaitingForKey = (event: Event) => {
@@ -768,8 +770,11 @@ class EMEController extends Logger implements ComponentAPI {
         messageType === 'license-renewal'
       ) {
         this.renewLicense(context, message).catch((error) => {
-          this.handleError(error);
-          licenseStatus.emit('error', error);
+          if (licenseStatus.eventNames().length) {
+            licenseStatus.emit('error', error);
+          } else {
+            this.handleError(error);
+          }
         });
       } else if (messageType === 'license-release') {
         if (context.keySystem === KeySystems.FAIRPLAY) {
@@ -1230,6 +1235,8 @@ class EMEController extends Logger implements ComponentAPI {
     // keep reference of media
     this.media = media;
 
+    media.removeEventListener('encrypted', this.onMediaEncrypted);
+    media.removeEventListener('waitingforkey', this.onWaitingForKey);
     media.addEventListener('encrypted', this.onMediaEncrypted);
     media.addEventListener('waitingforkey', this.onWaitingForKey);
   }

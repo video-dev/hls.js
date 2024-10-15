@@ -1,21 +1,21 @@
-import { ErrorTypes, ErrorDetails } from '../errors';
-import type {
-  LoaderStats,
-  LoaderResponse,
-  LoaderConfiguration,
-  LoaderCallbacks,
-  Loader,
-  KeyLoaderContext,
-  PlaylistLevelType,
-} from '../types/loader';
 import { LoadError } from './fragment-loader';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import type { HlsConfig } from '../config';
-import type { Fragment } from '../loader/fragment';
-import type { ComponentAPI } from '../types/component-api';
-import type { KeyLoadedData } from '../types/events';
 import type { LevelKey } from './level-key';
 import type EMEController from '../controller/eme-controller';
 import type { MediaKeySessionContext } from '../controller/eme-controller';
+import type { Fragment } from '../loader/fragment';
+import type { ComponentAPI } from '../types/component-api';
+import type { KeyLoadedData } from '../types/events';
+import type {
+  KeyLoaderContext,
+  Loader,
+  LoaderCallbacks,
+  LoaderConfiguration,
+  LoaderResponse,
+  LoaderStats,
+  PlaylistLevelType,
+} from '../types/loader';
 import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
 export interface KeyLoaderInfo {

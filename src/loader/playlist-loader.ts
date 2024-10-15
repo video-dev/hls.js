@@ -6,9 +6,21 @@
  * Uses loader(s) set in config to do actual internal loading of resource tasks.
  */
 
-import { Events } from '../events';
-import { ErrorDetails, ErrorTypes } from '../errors';
 import M3U8Parser from './m3u8-parser';
+import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import { AttrList } from '../utils/attr-list';
+import type { LevelDetails } from './level-details';
+import type { LoaderConfig, RetryConfig } from '../config';
+import type Hls from '../hls';
+import type { NetworkComponentAPI } from '../types/component-api';
+import type {
+  ErrorData,
+  LevelLoadingData,
+  ManifestLoadingData,
+  TrackLoadingData,
+} from '../types/events';
 import type { LevelParsed, VariableMap } from '../types/level';
 import type {
   Loader,
@@ -19,19 +31,7 @@ import type {
   LoaderStats,
   PlaylistLoaderContext,
 } from '../types/loader';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
-import { LevelDetails } from './level-details';
-import { AttrList } from '../utils/attr-list';
-import type Hls from '../hls';
-import type {
-  ErrorData,
-  LevelLoadingData,
-  ManifestLoadingData,
-  TrackLoadingData,
-} from '../types/events';
-import type { NetworkComponentAPI } from '../types/component-api';
 import type { MediaAttributes } from '../types/media-playlist';
-import type { LoaderConfig, RetryConfig } from '../config';
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext,

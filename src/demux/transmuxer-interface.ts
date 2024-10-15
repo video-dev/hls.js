@@ -1,26 +1,25 @@
+import { EventEmitter } from 'eventemitter3';
 import {
-  WorkerContext,
   hasUMDWorker,
   injectWorker,
   loadWorker,
   removeWorkerFromStore as removeWorkerClient,
 } from './inject-worker';
-import { Events } from '../events';
 import Transmuxer, {
+  isPromise,
   TransmuxConfig,
   TransmuxState,
-  isPromise,
 } from '../demux/transmuxer';
-import { ErrorTypes, ErrorDetails } from '../errors';
-import { EventEmitter } from 'eventemitter3';
-import { MediaFragment, Part } from '../loader/fragment';
+import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
 import { getM2TSSupportedAudioTypes } from '../utils/codecs';
-
-import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
-import type Hls from '../hls';
+import type { WorkerContext } from './inject-worker';
 import type { HlsEventEmitter, HlsListeners } from '../events';
+import type Hls from '../hls';
+import type { MediaFragment, Part } from '../loader/fragment';
 import type { ErrorData, FragDecryptedData } from '../types/events';
 import type { PlaylistLevelType } from '../types/loader';
+import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 let transmuxerInstanceCount: number = 0;

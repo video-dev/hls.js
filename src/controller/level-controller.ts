@@ -1,29 +1,29 @@
-import type {
-  ManifestLoadedData,
-  ManifestParsedData,
-  LevelLoadedData,
-  ErrorData,
-  LevelSwitchingData,
-  LevelsUpdatedData,
-  ManifestLoadingData,
-  FragBufferedData,
-} from '../types/events';
-import { Level, VideoRangeValues, isVideoRange } from '../types/level';
+import BasePlaylistController from './base-playlist-controller';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { ErrorTypes, ErrorDetails } from '../errors';
+import { isVideoRange, Level, VideoRangeValues } from '../types/level';
+import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import {
   areCodecsMediaSourceSupported,
   codecsSetSelectionPreferenceValue,
   convertAVC1ToAVCOTI,
   getCodecCompatibleName,
+  sampleEntryCodesISO,
   videoCodecPreferenceValue,
 } from '../utils/codecs';
-import BasePlaylistController from './base-playlist-controller';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
-import ContentSteeringController from './content-steering-controller';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
-import { hlsDefaultConfig } from '../config';
+import type ContentSteeringController from './content-steering-controller';
 import type Hls from '../hls';
+import type {
+  ErrorData,
+  FragBufferedData,
+  LevelLoadedData,
+  LevelsUpdatedData,
+  LevelSwitchingData,
+  ManifestLoadedData,
+  ManifestLoadingData,
+  ManifestParsedData,
+} from '../types/events';
 import type { HlsUrlParameters, LevelParsed } from '../types/level';
 import type { MediaPlaylist } from '../types/media-playlist';
 
@@ -131,23 +131,36 @@ export default class LevelController extends BasePlaylistController {
 
       // only keep levels with supported audio/video codecs
       const { width, height, unknownCodecs } = levelParsed;
+      let unknownUnsupportedCodecCount = unknownCodecs
+        ? unknownCodecs.length
+        : 0;
+      if (unknownCodecs) {
+        // Treat unknown codec as audio or video codec based on passing `isTypeSupported` check
+        // (allows for playback of any supported codec even if not indexed in utils/codecs)
+        for (let i = unknownUnsupportedCodecCount; i--; ) {
+          const unknownCodec = unknownCodecs[i];
+          if (this.isAudioSupported(unknownCodec)) {
+            levelParsed.audioCodec = audioCodec = audioCodec
+              ? `${audioCodec},${unknownCodec}`
+              : unknownCodec;
+            unknownUnsupportedCodecCount--;
+            sampleEntryCodesISO.audio[audioCodec.substring(0, 4)] = 2;
+          } else if (this.isVideoSupported(unknownCodec)) {
+            levelParsed.videoCodec = videoCodec = videoCodec
+              ? `${videoCodec},${unknownCodec}`
+              : unknownCodec;
+            unknownUnsupportedCodecCount--;
+            sampleEntryCodesISO.video[videoCodec.substring(0, 4)] = 2;
+          }
+        }
+      }
       resolutionFound ||= !!(width && height);
       videoCodecFound ||= !!videoCodec;
       audioCodecFound ||= !!audioCodec;
       if (
-        unknownCodecs?.length ||
-        (audioCodec &&
-          !areCodecsMediaSourceSupported(
-            audioCodec,
-            'audio',
-            preferManagedMediaSource,
-          )) ||
-        (videoCodec &&
-          !areCodecsMediaSourceSupported(
-            videoCodec,
-            'video',
-            preferManagedMediaSource,
-          ))
+        unknownUnsupportedCodecCount ||
+        (audioCodec && !this.isAudioSupported(audioCodec)) ||
+        (videoCodec && !this.isVideoSupported(videoCodec))
       ) {
         return;
       }
@@ -191,6 +204,22 @@ export default class LevelController extends BasePlaylistController {
       resolutionFound,
       videoCodecFound,
       audioCodecFound,
+    );
+  }
+
+  private isAudioSupported(codec: string): boolean {
+    return areCodecsMediaSourceSupported(
+      codec,
+      'audio',
+      this.hls.config.preferManagedMediaSource,
+    );
+  }
+
+  private isVideoSupported(codec: string): boolean {
+    return areCodecsMediaSourceSupported(
+      codec,
+      'video',
+      this.hls.config.preferManagedMediaSource,
     );
   }
 
@@ -241,15 +270,8 @@ export default class LevelController extends BasePlaylistController {
     }
 
     if (data.audioTracks) {
-      const { preferManagedMediaSource } = this.hls.config;
       audioTracks = data.audioTracks.filter(
-        (track) =>
-          !track.audioCodec ||
-          areCodecsMediaSourceSupported(
-            track.audioCodec,
-            'audio',
-            preferManagedMediaSource,
-          ),
+        (track) => !track.audioCodec || this.isAudioSupported(track.audioCodec),
       );
       // Assign ids after filtering as array indices by group-id
       assignTrackIdsByGroup(audioTracks);
@@ -333,7 +355,7 @@ export default class LevelController extends BasePlaylistController {
           );
           if (
             startingBwEstimate > bandwidthEstimate &&
-            bandwidthEstimate === hlsDefaultConfig.abrEwmaDefaultEstimate
+            bandwidthEstimate === this.hls.abrEwmaDefaultEstimate
           ) {
             this.hls.bandwidthEstimate = startingBwEstimate;
           }
@@ -360,8 +382,15 @@ export default class LevelController extends BasePlaylistController {
     this.hls.trigger(Events.MANIFEST_PARSED, edata);
 
     // Initiate loading after all controllers have received MANIFEST_PARSED
-    if (this.hls.config.autoStartLoad || this.hls.forceStartLoad) {
-      this.hls.startLoad(this.hls.config.startPosition);
+    const {
+      config: { autoStartLoad, startPosition },
+      forceStartLoad,
+    } = this.hls;
+    if (autoStartLoad || forceStartLoad) {
+      this.log(
+        `${autoStartLoad ? 'auto' : 'force'} startLoad with configured startPosition ${startPosition}`,
+      );
+      this.hls.startLoad(startPosition);
     }
   }
 

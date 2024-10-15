@@ -1,7 +1,7 @@
-import type { Fragment, MediaFragment, Part } from './fragment';
 import type { DateRange } from './date-range';
-import type { AttrList } from '../utils/attr-list';
+import type { Fragment, MediaFragment, Part } from './fragment';
 import type { VariableMap } from '../types/level';
+import type { AttrList } from '../utils/attr-list';
 
 const DEFAULT_TARGET_DURATION = 10;
 
@@ -55,6 +55,7 @@ export class LevelDetails {
   public playlistParsingError: Error | null = null;
   public variableList: VariableMap | null = null;
   public hasVariableRefs = false;
+  public appliedTimelineOffset?: number;
 
   constructor(baseUrl: string) {
     this.fragments = [];
@@ -128,6 +129,13 @@ export class LevelDetails {
   get fragmentEnd(): number {
     if (this.fragments?.length) {
       return this.fragments[this.fragments.length - 1].end;
+    }
+    return 0;
+  }
+
+  get fragmentStart(): number {
+    if (this.fragments?.length) {
+      return this.fragments[0].start;
     }
     return 0;
   }

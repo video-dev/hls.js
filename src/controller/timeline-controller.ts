@@ -1,39 +1,41 @@
 import { Events } from '../events';
-import Cea608Parser, { CaptionScreen } from '../utils/cea-608-parser';
-import OutputFilter from '../utils/output-filter';
-import { parseWebVTT } from '../utils/webvtt-parser';
-import {
-  sendAddTrackEvent,
-  clearCurrentCues,
-  addCueToTrack,
-  removeCuesInRange,
-  filterSubtitleTracks,
-} from '../utils/texttrack-utils';
+import { PlaylistLevelType } from '../types/loader';
+import Cea608Parser from '../utils/cea-608-parser';
+import { IMSC1_CODEC, parseIMSC1 } from '../utils/imsc1-ttml-parser';
 import {
   subtitleOptionsIdentical,
   subtitleTrackMatchesTextTrack,
 } from '../utils/media-option-attributes';
-import { parseIMSC1, IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { appendUint8Array } from '../utils/mp4-tools';
-import { PlaylistLevelType } from '../types/loader';
-import { Fragment } from '../loader/fragment';
-import type {
-  FragParsingUserdataData,
-  FragLoadedData,
-  FragDecryptedData,
-  MediaAttachingData,
-  ManifestLoadedData,
-  InitPTSFoundData,
-  SubtitleTracksUpdatedData,
-  BufferFlushingData,
-  FragLoadingData,
-} from '../types/events';
-import type Hls from '../hls';
-import type { ComponentAPI } from '../types/component-api';
+import OutputFilter from '../utils/output-filter';
+import {
+  addCueToTrack,
+  clearCurrentCues,
+  filterSubtitleTracks,
+  removeCuesInRange,
+  sendAddTrackEvent,
+} from '../utils/texttrack-utils';
+import { parseWebVTT } from '../utils/webvtt-parser';
 import type { HlsConfig } from '../config';
-import type { CuesInterface } from '../utils/cues';
+import type Hls from '../hls';
+import type { Fragment } from '../loader/fragment';
+import type { ComponentAPI } from '../types/component-api';
+import type {
+  BufferFlushingData,
+  FragDecryptedData,
+  FragLoadedData,
+  FragLoadingData,
+  FragParsingUserdataData,
+  InitPTSFoundData,
+  ManifestLoadedData,
+  MediaAttachingData,
+  MediaDetachingData,
+  SubtitleTracksUpdatedData,
+} from '../types/events';
 import type { MediaPlaylist } from '../types/media-playlist';
 import type { VTTCCs } from '../types/vtt';
+import type { CaptionScreen } from '../utils/cea-608-parser';
+import type { CuesInterface } from '../utils/cues';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 type TrackProperties = {
@@ -295,17 +297,27 @@ export class TimelineController implements ComponentAPI {
     data: MediaAttachingData,
   ) {
     this.media = data.media;
-    this._cleanTracks();
+    if (!data.mediaSource) {
+      this._cleanTracks();
+    }
   }
 
-  private onMediaDetaching() {
+  private onMediaDetaching(
+    event: Events.MEDIA_DETACHING,
+    data: MediaDetachingData,
+  ) {
+    const transferringMedia = !!data.transferMedia;
+    this.media = null;
+    if (transferringMedia) {
+      return;
+    }
+
     const { captionsTracks } = this;
     Object.keys(captionsTracks).forEach((trackName) => {
       clearCurrentCues(captionsTracks[trackName]);
       delete captionsTracks[trackName];
     });
     this.nonNativeCaptionsTracks = {};
-    this.media = null;
   }
 
   private onManifestLoading() {

@@ -1,11 +1,9 @@
-import { VTTParser } from './vttparser';
 import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
 import { hash } from './hash';
-import {
-  RationalTimestamp,
-  toMpegTsClockFromTimescale,
-} from './timescale-conversion';
+import { toMpegTsClockFromTimescale } from './timescale-conversion';
+import { VTTParser } from './vttparser';
 import { normalizePts } from '../remux/mp4-remuxer';
+import type { RationalTimestamp } from './timescale-conversion';
 import type { VTTCCs } from '../types/vtt';
 
 const LINEBREAKS = /\r\n|\n\r|\n|\r/g;

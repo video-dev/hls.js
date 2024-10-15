@@ -1,10 +1,10 @@
+import { EventEmitter } from 'eventemitter3';
 import Transmuxer, { isPromise } from '../demux/transmuxer';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { enableLogs, type ILogFunction, type ILogger } from '../utils/logger';
-import { EventEmitter } from 'eventemitter3';
-import { ErrorDetails, ErrorTypes } from '../errors';
 import type { RemuxedTrack, RemuxerResult } from '../types/remuxer';
-import type { TransmuxerResult, ChunkMetadata } from '../types/transmuxer';
+import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 
 const transmuxers: (Transmuxer | undefined)[] = [];
 

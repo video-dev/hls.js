@@ -1,55 +1,70 @@
 import type {
-  ManifestLoadedData,
-  ManifestLoadingData,
-  MediaAttachedData,
-  MediaAttachingData,
-  MediaEndedData,
-  LevelLoadingData,
-  LevelLoadedData,
-  ManifestParsedData,
-  LevelUpdatedData,
-  LevelsUpdatedData,
-  FragParsingUserdataData,
-  FragDecryptedData,
-  FragLoadedData,
-  InitPTSFoundData,
-  CuesParsedData,
-  SubtitleFragProcessedData,
-  NonNativeTextTracksData,
-  FragLoadingData,
+  AssetListLoadedData,
+  AssetListLoadingData,
   AudioTrackLoadedData,
-  SubtitleTrackLoadedData,
-  ErrorData,
-  AudioTrackSwitchingData,
+  AudioTracksUpdatedData,
   AudioTrackSwitchedData,
-  KeyLoadedData,
-  KeyLoadingData,
-  SubtitleTrackSwitchData,
-  SubtitleTracksUpdatedData,
-  LevelSwitchedData,
-  FragChangedData,
+  AudioTrackSwitchingData,
+  AudioTrackUpdatedData,
+  BackBufferData,
+  BufferAppendedData,
   BufferAppendingData,
   BufferCodecsData,
-  FragParsingMetadataData,
-  FragParsingInitSegmentData,
-  FragBufferedData,
-  BufferFlushingData,
-  BufferEOSData,
-  LevelSwitchingData,
-  MaxAutoLevelUpdatedData,
-  FPSDropLevelCappingData,
-  FPSDropData,
   BufferCreatedData,
-  BufferAppendedData,
-  LevelPTSUpdatedData,
-  FragParsedData,
-  AudioTracksUpdatedData,
-  FragLoadEmergencyAbortedData,
-  BackBufferData,
-  LiveBackBufferData,
-  TrackLoadingData,
+  BufferEOSData,
   BufferFlushedData,
+  BufferFlushingData,
+  CuesParsedData,
+  ErrorData,
+  FPSDropData,
+  FPSDropLevelCappingData,
+  FragBufferedData,
+  FragChangedData,
+  FragDecryptedData,
+  FragLoadedData,
+  FragLoadEmergencyAbortedData,
+  FragLoadingData,
+  FragParsedData,
+  FragParsingInitSegmentData,
+  FragParsingMetadataData,
+  FragParsingUserdataData,
+  InitPTSFoundData,
+  InterstitialAssetEndedData,
+  InterstitialAssetErrorData,
+  InterstitialAssetPlayerCreatedData,
+  InterstitialAssetStartedData,
+  InterstitialEndedData,
+  InterstitialsBufferedToBoundaryData,
+  InterstitialsPrimaryResumed,
+  InterstitialStartedData,
+  InterstitialsUpdatedData,
+  KeyLoadedData,
+  KeyLoadingData,
+  LevelLoadedData,
+  LevelLoadingData,
+  LevelPTSUpdatedData,
+  LevelsUpdatedData,
+  LevelSwitchedData,
+  LevelSwitchingData,
+  LevelUpdatedData,
+  LiveBackBufferData,
+  ManifestLoadedData,
+  ManifestLoadingData,
+  ManifestParsedData,
+  MaxAutoLevelUpdatedData,
+  MediaAttachedData,
+  MediaAttachingData,
+  MediaDetachedData,
+  MediaDetachingData,
+  MediaEndedData,
+  NonNativeTextTracksData,
   SteeringManifestLoadedData,
+  SubtitleFragProcessedData,
+  SubtitleTrackLoadedData,
+  SubtitleTracksUpdatedData,
+  SubtitleTrackSwitchData,
+  SubtitleTrackUpdatedData,
+  TrackLoadingData,
 } from './types/events';
 
 export enum Events {
@@ -75,6 +90,8 @@ export enum Events {
   BUFFER_APPENDED = 'hlsBufferAppended',
   // fired when the stream is finished and we want to notify the media buffer that there will be no more data - data: { }
   BUFFER_EOS = 'hlsBufferEos',
+  // fired when all buffers are full to the end of the program, after calling MediaSource.endOfStream() (unless restricted)
+  BUFFERED_TO_END = 'hlsBufferedToEnd',
   // fired when the media buffer should be flushed - data { startOffset, endOffset }
   BUFFER_FLUSHING = 'hlsBufferFlushing',
   // fired when the media buffer has been flushed - data: { }
@@ -109,6 +126,8 @@ export enum Events {
   AUDIO_TRACK_LOADING = 'hlsAudioTrackLoading',
   // fired when an audio track loading finishes - data: { details : levelDetails object, id : audio track id, stats : LoaderStats }
   AUDIO_TRACK_LOADED = 'hlsAudioTrackLoaded',
+  // fired when an audio tracks's details have been updated based on previous details, after it has been loaded - data: { details : levelDetails object, id : track id }
+  AUDIO_TRACK_UPDATED = 'hlsAudioTrackUpdated',
   // fired to notify that subtitle track lists has been updated - data: { subtitleTracks : subtitleTracks }
   SUBTITLE_TRACKS_UPDATED = 'hlsSubtitleTracksUpdated',
   // fired to notify that subtitle tracks were cleared as a result of stopping the media
@@ -119,6 +138,8 @@ export enum Events {
   SUBTITLE_TRACK_LOADING = 'hlsSubtitleTrackLoading',
   // fired when a subtitle track loading finishes - data: { details : levelDetails object, id : subtitle track id, stats : LoaderStats }
   SUBTITLE_TRACK_LOADED = 'hlsSubtitleTrackLoaded',
+  // fired when a subtitle  racks's details have been updated based on previous details, after it has been loaded - data: { details : levelDetails object, id : track id }
+  SUBTITLE_TRACK_UPDATED = 'hlsSubtitleTrackUpdated',
   // fired when a subtitle fragment has been processed - data: { success : boolean, frag : the processed frag }
   SUBTITLE_FRAG_PROCESSED = 'hlsSubtitleFragProcessed',
   // fired when a set of VTTCues to be managed externally has been parsed - data: { type: string, track: string, cues: [ VTTCue ] }
@@ -171,6 +192,30 @@ export enum Events {
   BACK_BUFFER_REACHED = 'hlsBackBufferReached',
   // fired after steering manifest has been loaded - data: { steeringManifest: SteeringManifest object, url: steering manifest URL }
   STEERING_MANIFEST_LOADED = 'hlsSteeringManifestLoaded',
+  // fired when asset list has begun loading
+  ASSET_LIST_LOADING = 'hlsAssetListLoading',
+  // fired when a valid asset list is loaded
+  ASSET_LIST_LOADED = 'hlsAssetListLoaded',
+  // fired when the list of Interstitial Events and Interstitial Schedule is updated
+  INTERSTITIALS_UPDATED = 'hlsInterstitialsUpdated',
+  // fired when the buffer reaches an Interstitial Schedule boundary (both Primary segments and Interstitial Assets)
+  INTERSTITIALS_BUFFERED_TO_BOUNDARY = 'hlsInterstitialsBufferedToBoundary',
+  // fired when a player instance for an Interstitial Asset has been created
+  INTERSTITIAL_ASSET_PLAYER_CREATED = 'hlsInterstitialAssetPlayerCreated',
+  // Interstitial playback started
+  INTERSTITIAL_STARTED = 'hlsInterstitialStarted',
+  // InterstitialAsset playback started
+  INTERSTITIAL_ASSET_STARTED = 'hlsInterstitialAssetStarted',
+  // InterstitialAsset playback ended
+  INTERSTITIAL_ASSET_ENDED = 'hlsInterstitialAssetEnded',
+  // InterstitialAsset playback errored
+  INTERSTITIAL_ASSET_ERROR = 'hlsInterstitialAssetError',
+  // Interstitial playback ended
+  INTERSTITIAL_ENDED = 'hlsInterstitialEnded',
+  // Interstitial schedule resumed primary playback
+  INTERSTITIALS_PRIMARY_RESUMED = 'hlsInterstitialsPrimaryResumed',
+  // Interstitial players dispatch this event when playout limit is reached
+  PLAYOUT_LIMIT_REACHED = 'hlsPlayoutLimitReached',
 }
 
 /**
@@ -185,8 +230,14 @@ export interface HlsListeners {
     event: Events.MEDIA_ATTACHED,
     data: MediaAttachedData,
   ) => void;
-  [Events.MEDIA_DETACHING]: (event: Events.MEDIA_DETACHING) => void;
-  [Events.MEDIA_DETACHED]: (event: Events.MEDIA_DETACHED) => void;
+  [Events.MEDIA_DETACHING]: (
+    event: Events.MEDIA_DETACHING,
+    data: MediaDetachingData,
+  ) => void;
+  [Events.MEDIA_DETACHED]: (
+    event: Events.MEDIA_DETACHED,
+    data: MediaDetachedData,
+  ) => void;
   [Events.MEDIA_ENDED]: (
     event: Events.MEDIA_ENDED,
     data: MediaEndedData,
@@ -209,6 +260,7 @@ export interface HlsListeners {
     data: BufferAppendedData,
   ) => void;
   [Events.BUFFER_EOS]: (event: Events.BUFFER_EOS, data: BufferEOSData) => void;
+  [Events.BUFFERED_TO_END]: (event: Events.BUFFERED_TO_END) => void;
   [Events.BUFFER_FLUSHING]: (
     event: Events.BUFFER_FLUSHING,
     data: BufferFlushingData,
@@ -277,6 +329,10 @@ export interface HlsListeners {
     event: Events.AUDIO_TRACK_LOADED,
     data: AudioTrackLoadedData,
   ) => void;
+  [Events.AUDIO_TRACK_UPDATED]: (
+    event: Events.AUDIO_TRACK_UPDATED,
+    data: AudioTrackUpdatedData,
+  ) => void;
   [Events.SUBTITLE_TRACKS_UPDATED]: (
     event: Events.SUBTITLE_TRACKS_UPDATED,
     data: SubtitleTracksUpdatedData,
@@ -295,6 +351,10 @@ export interface HlsListeners {
   [Events.SUBTITLE_TRACK_LOADED]: (
     event: Events.SUBTITLE_TRACK_LOADED,
     data: SubtitleTrackLoadedData,
+  ) => void;
+  [Events.SUBTITLE_TRACK_UPDATED]: (
+    event: Events.SUBTITLE_TRACK_UPDATED,
+    data: SubtitleTrackUpdatedData,
   ) => void;
   [Events.SUBTITLE_FRAG_PROCESSED]: (
     event: Events.SUBTITLE_FRAG_PROCESSED,
@@ -381,6 +441,54 @@ export interface HlsListeners {
   [Events.STEERING_MANIFEST_LOADED]: (
     event: Events.STEERING_MANIFEST_LOADED,
     data: SteeringManifestLoadedData,
+  ) => void;
+  [Events.ASSET_LIST_LOADING]: (
+    event: Events.ASSET_LIST_LOADING,
+    data: AssetListLoadingData,
+  ) => void;
+  [Events.ASSET_LIST_LOADED]: (
+    event: Events.ASSET_LIST_LOADED,
+    data: AssetListLoadedData,
+  ) => void;
+  [Events.INTERSTITIALS_UPDATED]: (
+    event: Events.INTERSTITIALS_UPDATED,
+    data: InterstitialsUpdatedData,
+  ) => void;
+  [Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY]: (
+    event: Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
+    data: InterstitialsBufferedToBoundaryData,
+  ) => void;
+  [Events.INTERSTITIAL_ASSET_PLAYER_CREATED]: (
+    event: Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
+    data: InterstitialAssetPlayerCreatedData,
+  ) => void;
+  [Events.INTERSTITIAL_STARTED]: (
+    event: Events.INTERSTITIAL_STARTED,
+    data: InterstitialStartedData,
+  ) => void;
+  [Events.INTERSTITIAL_ASSET_STARTED]: (
+    event: Events.INTERSTITIAL_ASSET_STARTED,
+    data: InterstitialAssetStartedData,
+  ) => void;
+  [Events.INTERSTITIAL_ASSET_ENDED]: (
+    event: Events.INTERSTITIAL_ASSET_ENDED,
+    data: InterstitialAssetEndedData,
+  ) => void;
+  [Events.INTERSTITIAL_ASSET_ERROR]: (
+    event: Events.INTERSTITIAL_ASSET_ERROR,
+    data: InterstitialAssetErrorData,
+  ) => void;
+  [Events.INTERSTITIAL_ENDED]: (
+    event: Events.INTERSTITIAL_ENDED,
+    data: InterstitialEndedData,
+  ) => void;
+  [Events.INTERSTITIALS_PRIMARY_RESUMED]: (
+    event: Events.INTERSTITIALS_PRIMARY_RESUMED,
+    data: InterstitialsPrimaryResumed,
+  ) => void;
+  [Events.PLAYOUT_LIMIT_REACHED]: (
+    event: Events.PLAYOUT_LIMIT_REACHED,
+    data: {},
   ) => void;
 }
 export interface HlsEventEmitter {

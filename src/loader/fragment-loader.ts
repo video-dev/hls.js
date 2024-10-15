@@ -1,4 +1,4 @@
-import { ErrorTypes, ErrorDetails } from '../errors';
+import { ErrorDetails, ErrorTypes } from '../errors';
 import { getLoaderConfigWithoutReties } from '../utils/error-helper';
 import type { HlsConfig } from '../config';
 import type { BaseSegment, Fragment, Part } from './fragment';
@@ -8,9 +8,10 @@ import type {
   PartsLoadedData,
 } from '../types/events';
 import type {
-  Loader,
-  LoaderConfiguration,
   FragmentLoaderContext,
+  Loader,
+  LoaderCallbacks,
+  LoaderConfiguration,
 } from '../types/loader';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
@@ -94,7 +95,7 @@ export default class FragmentLoader {
       };
       // Assign frag stats to the loader's stats reference
       frag.stats = loader.stats;
-      loader.load(loaderContext, loaderConfig, {
+      const callbacks: LoaderCallbacks<FragmentLoaderContext> = {
         onSuccess: (response, stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
           let payload = response.data as ArrayBuffer;
@@ -152,17 +153,17 @@ export default class FragmentLoader {
             }),
           );
         },
-        onProgress: (stats, context, data, networkDetails) => {
-          if (onProgress) {
-            onProgress({
-              frag,
-              part: null,
-              payload: data as ArrayBuffer,
-              networkDetails,
-            });
-          }
-        },
-      });
+      };
+      if (onProgress) {
+        callbacks.onProgress = (stats, context, data, networkDetails) =>
+          onProgress({
+            frag,
+            part: null,
+            payload: data as ArrayBuffer,
+            networkDetails,
+          });
+      }
+      loader.load(loaderContext, loaderConfig, callbacks);
     });
   }
 

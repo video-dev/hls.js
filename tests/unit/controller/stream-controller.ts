@@ -1,25 +1,24 @@
 /* eslint-disable dot-notation */
-import Hls from '../../../src/hls';
-import { Events } from '../../../src/events';
-import {
-  FragmentTracker,
-  FragmentState,
-} from '../../../src/controller/fragment-tracker';
-import StreamController from '../../../src/controller/stream-controller';
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
-import { mockFragments } from '../../mocks/data';
-import { Fragment, MediaFragment } from '../../../src/loader/fragment';
+import { FragmentState } from '../../../src/controller/fragment-tracker';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
+import { Fragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
-import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { LoadStats } from '../../../src/loader/load-stats';
+import M3U8Parser from '../../../src/loader/m3u8-parser';
+import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
-import { Level, LevelAttributes } from '../../../src/types/level';
+import { mockFragments } from '../../mocks/data';
+import type { FragmentTracker } from '../../../src/controller/fragment-tracker';
+import type StreamController from '../../../src/controller/stream-controller';
+import type { MediaFragment } from '../../../src/loader/fragment';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
-
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
+import type { LevelAttributes } from '../../../src/types/level';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -300,6 +299,8 @@ describe('StreamController', function () {
           levelDetails.endSN =
             fragmentsWithoutPdt[fragmentsWithoutPdt.length - 1].sn;
           levelDetails.fragments = fragmentsWithoutPdt;
+          const latestLevelDetailsStub = sinon.stub(hls, 'latestLevelDetails');
+          latestLevelDetailsStub.get(() => levelDetails);
         });
 
         it('finds the next fragment to load based on the last fragment buffered', function () {
@@ -484,21 +485,22 @@ describe('StreamController', function () {
       };
       // @ts-ignore
       const seekStub = sandbox.stub(streamController, 'seekToStartPos');
-      streamController['loadedmetadata'] = false;
       streamController['fragCurrent'] = streamController['fragPrevious'] =
         firstFrag;
-      streamController['fragBufferedComplete'](firstFrag, null);
+      streamController['onFragBuffered'](Events.FRAG_BUFFERED, {
+        stats: new LoadStats(),
+        frag: firstFrag,
+        part: null,
+        id: 'main',
+      });
       expect(seekStub).to.have.been.calledOnce;
-      expect(streamController['loadedmetadata']).to.be.true;
     });
 
     it('should not seek to start pos when metadata has been loaded', function () {
       // @ts-ignore
       const seekStub = sandbox.stub(streamController, 'seekToStartPos');
-      streamController['loadedmetadata'] = true;
       streamController['checkBuffer']();
       expect(seekStub).to.have.not.been.called;
-      expect(streamController['loadedmetadata']).to.be.true;
     });
 
     it('should not seek to start pos when nothing has been buffered', function () {
@@ -507,7 +509,6 @@ describe('StreamController', function () {
       (streamController['media']!.buffered as any).length = 0;
       streamController['checkBuffer']();
       expect(seekStub).to.have.not.been.called;
-      expect(streamController['loadedmetadata']).to.be.false;
     });
 
     describe('seekToStartPos', function () {

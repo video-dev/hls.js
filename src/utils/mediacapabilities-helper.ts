@@ -1,7 +1,7 @@
-import { mimeTypeForCodec } from './codecs';
+import { fillInMissingAV01Params, mimeTypeForCodec } from './codecs';
+import type { AudioTracksByGroup } from './rendition-helper';
 import type { Level, VideoRange } from '../types/level';
 import type { AudioSelectionOption } from '../types/media-playlist';
-import type { AudioTracksByGroup } from './rendition-helper';
 
 export type MediaDecodingInfo = {
   supported: boolean;
@@ -96,33 +96,40 @@ export function getMediaDecodingInfoPromise(
 ): Promise<MediaDecodingInfo> {
   const videoCodecs = level.videoCodec;
   const audioCodecs = level.audioCodec;
-  if (!videoCodecs || !audioCodecs || !mediaCapabilities) {
+  if ((!videoCodecs && !audioCodecs) || !mediaCapabilities) {
     return Promise.resolve(SUPPORTED_INFO_DEFAULT);
   }
 
-  const baseVideoConfiguration: BaseVideoConfiguration = {
-    width: level.width,
-    height: level.height,
-    bitrate: Math.ceil(Math.max(level.bitrate * 0.9, level.averageBitrate)),
-    // Assume a framerate of 30fps since MediaCapabilities will not accept Level default of 0.
-    framerate: level.frameRate || 30,
-  };
+  const configurations: MediaDecodingConfiguration[] = [];
 
-  const videoRange = level.videoRange;
-  if (videoRange !== 'SDR') {
-    baseVideoConfiguration.transferFunction =
-      videoRange.toLowerCase() as TransferFunction;
+  if (videoCodecs) {
+    const baseVideoConfiguration: BaseVideoConfiguration = {
+      width: level.width,
+      height: level.height,
+      bitrate: Math.ceil(Math.max(level.bitrate * 0.9, level.averageBitrate)),
+      // Assume a framerate of 30fps since MediaCapabilities will not accept Level default of 0.
+      framerate: level.frameRate || 30,
+    };
+    const videoRange = level.videoRange;
+    if (videoRange !== 'SDR') {
+      baseVideoConfiguration.transferFunction =
+        videoRange.toLowerCase() as TransferFunction;
+    }
+
+    configurations.push.apply(
+      configurations,
+      videoCodecs.split(',').map((videoCodec) => ({
+        type: 'media-source',
+        video: {
+          ...baseVideoConfiguration,
+          contentType: mimeTypeForCodec(
+            fillInMissingAV01Params(videoCodec),
+            'video',
+          ),
+        },
+      })),
+    );
   }
-
-  const configurations: MediaDecodingConfiguration[] = videoCodecs
-    .split(',')
-    .map((videoCodec) => ({
-      type: 'media-source',
-      video: {
-        ...baseVideoConfiguration,
-        contentType: mimeTypeForCodec(videoCodec, 'video'),
-      },
-    }));
 
   if (audioCodecs && level.audioGroups) {
     level.audioGroups.forEach((audioGroupId) => {

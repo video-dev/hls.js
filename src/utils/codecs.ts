@@ -2,7 +2,7 @@ import { getMediaSource } from './mediasource-helper';
 
 // from http://mp4ra.org/codecs.html
 // values indicate codec selection preference (lower is higher priority)
-const sampleEntryCodesISO = {
+export const sampleEntryCodesISO = {
   audio: {
     a3ds: 1,
     'ac-3': 0.95,
@@ -107,7 +107,7 @@ function isCodecMediaSourceSupported(
 }
 
 export function mimeTypeForCodec(codec: string, type: CodecType): string {
-  return `${type}/mp4;codecs="${codec}"`;
+  return `${type}/mp4;codecs=${codec}`;
 }
 
 export function videoCodecPreferenceValue(
@@ -198,16 +198,33 @@ export function pickMostCompleteCodecName(
 ): string | undefined {
   // Parsing of mp4a codecs strings in mp4-tools from media is incomplete as of d8c6c7a
   // so use level codec is parsed codec is unavailable or incomplete
-  if (parsedCodec && parsedCodec !== 'mp4a') {
+  if (
+    parsedCodec &&
+    (parsedCodec.length > 4 ||
+      ['ac-3', 'ec-3', 'alac', 'fLaC', 'Opus'].indexOf(parsedCodec) !== -1)
+  ) {
     return parsedCodec;
   }
-  return levelCodec ? levelCodec.split(',')[0] : levelCodec;
+  if (levelCodec) {
+    const levelCodecs = levelCodec.split(',');
+    if (levelCodecs.length > 1) {
+      if (parsedCodec) {
+        for (let i = levelCodecs.length; i--; ) {
+          if (levelCodecs[i].substring(0, 4) === parsedCodec.substring(0, 4)) {
+            return levelCodecs[i];
+          }
+        }
+      }
+      return levelCodecs[0];
+    }
+  }
+  return levelCodec || parsedCodec;
 }
 
-export function convertAVC1ToAVCOTI(codec: string) {
+export function convertAVC1ToAVCOTI(videoCodecs: string): string {
   // Convert avc1 codec string from RFC-4281 to RFC-6381 for MediaSource.isTypeSupported
   // Examples: avc1.66.30 to avc1.42001e and avc1.77.30,avc1.66.30 to avc1.4d001e,avc1.42001e.
-  const codecs = codec.split(',');
+  const codecs = videoCodecs.split(',');
   for (let i = 0; i < codecs.length; i++) {
     const avcdata = codecs[i].split('.');
     if (avcdata.length > 2) {
@@ -220,6 +237,19 @@ export function convertAVC1ToAVCOTI(codec: string) {
     }
   }
   return codecs.join(',');
+}
+
+export function fillInMissingAV01Params(videoCodec: string): string {
+  // Used to fill in incomplete AV1 playlist CODECS strings for mediaCapabilities.decodingInfo queries
+  if (videoCodec.startsWith('av01.')) {
+    const av1params = videoCodec.split('.');
+    const placeholders = ['0', '111', '01', '01', '01', '0'];
+    for (let i = av1params.length; i > 4 && i < 10; i++) {
+      av1params[i] = placeholders[i - 4];
+    }
+    return av1params.join('.');
+  }
+  return videoCodec;
 }
 
 export interface TypeSupported {

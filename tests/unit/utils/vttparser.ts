@@ -1,6 +1,6 @@
-import { parseTimeStamp } from '../../../src/utils/vttparser';
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
+import { parseTimeStamp } from '../../../src/utils/vttparser';
 
 chai.use(sinonChai);
 const expect = chai.expect;

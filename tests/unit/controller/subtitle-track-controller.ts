@@ -1,22 +1,21 @@
+import chai from 'chai';
+import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
-import Hls from '../../../src/hls';
-import { LoadStats } from '../../../src/loader/load-stats';
-import { LevelDetails } from '../../../src/loader/level-details';
 import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
+import { LevelDetails } from '../../../src/loader/level-details';
+import { LoadStats } from '../../../src/loader/load-stats';
 import { AttrList } from '../../../src/utils/attr-list';
-import type {
-  MediaAttributes,
-  MediaPlaylist,
-} from '../../../src/types/media-playlist';
-import type { Level } from '../../../src/types/level';
 import type {
   ComponentAPI,
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
-
-import sinon from 'sinon';
-import chai from 'chai';
-import sinonChai from 'sinon-chai';
+import type { Level } from '../../../src/types/level';
+import type {
+  MediaAttributes,
+  MediaPlaylist,
+} from '../../../src/types/media-playlist';
 
 chai.use(sinonChai);
 const expect = chai.expect;

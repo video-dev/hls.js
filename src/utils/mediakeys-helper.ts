@@ -1,7 +1,7 @@
-import type { DRMSystemOptions, EMEControllerConfig } from '../config';
 import { optionalSelf } from './global';
 import { changeEndianness } from './keysystem-util';
 import { base64Decode } from './numeric-encoding-utils';
+import type { DRMSystemOptions, EMEControllerConfig } from '../config';
 
 /**
  * @see https://developer.mozilla.org/en-US/docs/Web/API/Navigator/requestMediaKeySystemAccess
@@ -152,12 +152,12 @@ function createMediaKeySystemConfigurations(
       drmSystemOptions.sessionType || 'temporary',
     ],
     audioCapabilities: audioCodecs.map((codec) => ({
-      contentType: `audio/mp4; codecs="${codec}"`,
+      contentType: `audio/mp4; codecs=${codec}`,
       robustness: drmSystemOptions.audioRobustness || '',
       encryptionScheme: drmSystemOptions.audioEncryptionScheme || null,
     })),
     videoCapabilities: videoCodecs.map((codec) => ({
-      contentType: `video/mp4; codecs="${codec}"`,
+      contentType: `video/mp4; codecs=${codec}`,
       robustness: drmSystemOptions.videoRobustness || '',
       encryptionScheme: drmSystemOptions.videoEncryptionScheme || null,
     })),

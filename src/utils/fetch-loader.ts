@@ -1,14 +1,16 @@
+import ChunkCache from '../demux/chunk-cache';
+import { isPromise } from '../demux/transmuxer';
+import { LoadStats } from '../loader/load-stats';
+import type { HlsConfig } from '../config';
 import type {
-  LoaderCallbacks,
-  LoaderContext,
   Loader,
-  LoaderStats,
+  LoaderCallbacks,
   LoaderConfiguration,
+  LoaderContext,
   LoaderOnProgress,
   LoaderResponse,
+  LoaderStats,
 } from '../types/loader';
-import { LoadStats } from '../loader/load-stats';
-import ChunkCache from '../demux/chunk-cache';
 
 export function fetchSupported() {
   if (
@@ -31,9 +33,9 @@ export function fetchSupported() {
 const BYTERANGE = /(\d+)-(\d+)\/(\d+)/;
 
 class FetchLoader implements Loader<LoaderContext> {
-  private fetchSetup: Function;
+  private fetchSetup: NonNullable<HlsConfig['fetchSetup']>;
   private requestTimeout?: number;
-  private request: Request | null = null;
+  private request: Promise<Request> | Request | null = null;
   private response: Response | null = null;
   private controller: AbortController;
   public context: LoaderContext | null = null;
@@ -42,7 +44,7 @@ class FetchLoader implements Loader<LoaderContext> {
   public stats: LoaderStats;
   private loader: Response | null = null;
 
-  constructor(config /* HlsConfig */) {
+  constructor(config: HlsConfig) {
     this.fetchSetup = config.fetchSetup || getRequest;
     this.controller = new self.AbortController();
     this.stats = new LoadStats();
@@ -111,8 +113,11 @@ class FetchLoader implements Loader<LoaderContext> {
       callbacks.onTimeout(stats, context, this.response);
     }, config.timeout);
 
-    self
-      .fetch(this.request as Request)
+    const fetchPromise = isPromise(this.request)
+      ? this.request.then(self.fetch)
+      : self.fetch(this.request);
+
+    fetchPromise
       .then((response: Response): Promise<string | ArrayBuffer> => {
         this.response = this.loader = response;
 

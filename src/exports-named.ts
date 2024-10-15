@@ -1,10 +1,6 @@
-import Hls from './hls';
-import { Events } from './events';
-import { ErrorTypes, ErrorDetails } from './errors';
-import type { Level } from './types/level';
 import AbrController from './controller/abr-controller';
-import AudioTrackController from './controller/audio-track-controller';
 import AudioStreamController from './controller/audio-stream-controller';
+import AudioTrackController from './controller/audio-track-controller';
 import BasePlaylistController from './controller/base-playlist-controller';
 import BaseStreamController from './controller/base-stream-controller';
 import BufferController from './controller/buffer-controller';
@@ -15,15 +11,15 @@ import EMEController from './controller/eme-controller';
 import ErrorController from './controller/error-controller';
 import FPSController from './controller/fps-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
+import Hls from './hls';
+import Cues from './utils/cues';
+import FetchLoader from './utils/fetch-loader';
+import XhrLoader from './utils/xhr-loader';
 
 export default Hls;
 
 export {
   Hls,
-  ErrorDetails,
-  ErrorTypes,
-  Events,
-  Level,
   AbrController,
   AudioStreamController,
   AudioTrackController,
@@ -37,10 +33,21 @@ export {
   ErrorController,
   FPSController,
   SubtitleTrackController,
+  XhrLoader,
+  FetchLoader,
+  Cues,
 };
-export { SubtitleStreamController } from './controller/subtitle-stream-controller';
+
+export { Events } from './events';
+export { ErrorTypes, ErrorDetails } from './errors';
+export { Level } from './types/level';
 export { TimelineController } from './controller/timeline-controller';
-export { KeySystems, KeySystemFormats } from './utils/mediakeys-helper';
+export { SubtitleStreamController } from './controller/subtitle-stream-controller';
+export {
+  KeySystems,
+  KeySystemFormats,
+  requestMediaKeySystemAccess,
+} from './utils/mediakeys-helper';
 export { DateRange } from './loader/date-range';
 export { LoadStats } from './loader/load-stats';
 export { LevelKey } from './loader/level-key';
@@ -55,5 +62,6 @@ export {
   ErrorActionFlags,
 } from './controller/error-controller';
 export { AttrList } from './utils/attr-list';
+export { fetchSupported } from './utils/fetch-loader';
 export { isSupported, isMSESupported } from './is-supported';
 export { getMediaSource } from './utils/mediasource-helper';

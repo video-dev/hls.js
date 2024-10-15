@@ -1,9 +1,11 @@
-import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
-import type { BufferOperation, SourceBuffers } from '../../../src/types/buffer';
-
-import sinon from 'sinon';
 import chai from 'chai';
+import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
+import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
+import type {
+  BufferOperation,
+  SourceBufferTrackSet,
+} from '../../../src/types/buffer';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -14,12 +16,12 @@ describe('BufferOperationQueue tests', function () {
   let operationQueue;
   const sbMock = {
     audio: {
-      updating: false,
+      buffer: { updating: false },
     },
     video: {
-      updating: false,
+      buffer: { updating: false },
     },
-  } as any as SourceBuffers;
+  } as any as SourceBufferTrackSet;
 
   beforeEach(function () {
     operationQueue = new BufferOperationQueue(sbMock);
@@ -38,6 +40,7 @@ describe('BufferOperationQueue tests', function () {
     it('appends and executes if the queue is empty', function () {
       const execute = sandbox.spy();
       const operation: BufferOperation = {
+        label: '',
         execute,
         onStart: () => {},
         onComplete: () => {},
@@ -65,6 +68,7 @@ describe('BufferOperationQueue tests', function () {
 
     const execute = sandbox.spy();
     const operation: BufferOperation = {
+      label: '',
       execute,
       onStart: () => {},
       onComplete: () => {},
@@ -112,6 +116,7 @@ describe('BufferOperationQueue tests', function () {
       const onError = sandbox.spy();
       const error = new Error();
       const operation: BufferOperation = {
+        label: '',
         execute: () => {
           throw error;
         },
@@ -139,6 +144,7 @@ describe('BufferOperationQueue tests', function () {
   describe('shiftAndExecute', function () {
     const execute = sandbox.spy();
     const operation: BufferOperation = {
+      label: '',
       execute,
       onStart: () => {},
       onComplete: () => {},

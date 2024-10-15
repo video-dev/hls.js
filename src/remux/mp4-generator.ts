@@ -2,8 +2,8 @@
  * Generate MP4 Box
  */
 
-import type { DemuxedAudioTrack } from '../types/demuxer';
 import { appendUint8Array } from '../utils/mp4-tools';
+import type { DemuxedAudioTrack } from '../types/demuxer';
 
 type HdlrTypes = {
   video: Uint8Array;

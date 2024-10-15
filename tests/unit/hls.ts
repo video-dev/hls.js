@@ -1,11 +1,10 @@
-import Hls from '../../src/hls';
-import { hlsDefaultConfig } from '../../src/config';
-import { Events } from '../../src/events';
-import { ErrorTypes, ErrorDetails } from '../../src/errors';
-
 import chai from 'chai';
-import sinonChai from 'sinon-chai';
 import sinon from 'sinon';
+import sinonChai from 'sinon-chai';
+import { hlsDefaultConfig } from '../../src/config';
+import { ErrorDetails, ErrorTypes } from '../../src/errors';
+import { Events } from '../../src/events';
+import Hls from '../../src/hls';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -61,7 +60,7 @@ describe('Hls', function () {
       expect(media || null).to.not.equal(null);
       hls.attachMedia(media);
       expect(hls.media).to.equal(media);
-      detachTest(hls, media, 4);
+      detachTest(hls, media, 6);
       hls.destroy();
     });
 
@@ -77,7 +76,7 @@ describe('Hls', function () {
       hls.attachMedia(media);
       expect(hls.media).to.equal(media);
       hls.trigger(Events.MEDIA_ATTACHED, { media });
-      detachTest(hls, media, 12);
+      detachTest(hls, media, 13);
       hls.destroy();
     });
 
@@ -97,7 +96,7 @@ describe('Hls', function () {
           .and(
             sinon.match.has(
               'message',
-              'attachMedia failed: media argument is null',
+              'attachMedia failed: invalid argument (null)',
             ),
           ),
       };

@@ -1,19 +1,19 @@
 import { Events } from '../events';
-import { Fragment, MediaFragment, Part } from '../loader/fragment';
-import { PlaylistLevelType } from '../types/loader';
+import type Hls from '../hls';
+import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { SourceBufferName } from '../types/buffer';
-import type {
-  FragmentBufferedRange,
-  FragmentEntity,
-  FragmentTimeRange,
-} from '../types/fragment-tracker';
 import type { ComponentAPI } from '../types/component-api';
 import type {
   BufferAppendedData,
   FragBufferedData,
   FragLoadedData,
 } from '../types/events';
-import type Hls from '../hls';
+import type {
+  FragmentBufferedRange,
+  FragmentEntity,
+  FragmentTimeRange,
+} from '../types/fragment-tracker';
+import type { PlaylistLevelType } from '../types/loader';
 
 export const enum FragmentState {
   NOT_LOADED = 'NOT_LOADED',
@@ -523,6 +523,10 @@ export class FragmentTracker implements ComponentAPI {
     this.endListFragments = Object.create(null);
     this.activePartLists = Object.create(null);
     this.hasGaps = false;
+    const partlist = this.hls?.latestLevelDetails?.partList;
+    if (partlist) {
+      partlist.forEach((part) => part.clearElementaryStreamInfo());
+    }
   }
 }
 

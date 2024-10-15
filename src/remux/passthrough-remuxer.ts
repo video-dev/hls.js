@@ -2,37 +2,34 @@ import {
   flushTextTrackMetadataCueSamples,
   flushTextTrackUserdataCueSamples,
 } from './mp4-remuxer';
-import {
-  InitData,
-  InitDataTrack,
-  patchEncyptionData,
-} from '../utils/mp4-tools';
+import { ElementaryStreamTypes } from '../loader/fragment';
+import { getCodecCompatibleName } from '../utils/codecs';
+import { type ILogger, logger } from '../utils/logger';
+import { patchEncyptionData } from '../utils/mp4-tools';
 import {
   getDuration,
   getStartDTS,
   offsetStartDTS,
   parseInitSegment,
 } from '../utils/mp4-tools';
-import { ElementaryStreamTypes } from '../loader/fragment';
-import { getCodecCompatibleName } from '../utils/codecs';
-import type { HlsEventEmitter } from '../events';
 import type { HlsConfig } from '../config';
-import type { TrackSet } from '../types/track';
-import type {
-  InitSegmentData,
-  RemuxedTrack,
-  Remuxer,
-  RemuxerResult,
-} from '../types/remuxer';
+import type { HlsEventEmitter } from '../events';
+import type { DecryptData } from '../loader/level-key';
 import type {
   DemuxedAudioTrack,
   DemuxedMetadataTrack,
   DemuxedUserdataTrack,
   PassthroughTrack,
 } from '../types/demuxer';
-import type { DecryptData } from '../loader/level-key';
+import type {
+  InitSegmentData,
+  RemuxedTrack,
+  Remuxer,
+  RemuxerResult,
+} from '../types/remuxer';
+import type { TrackSet } from '../types/track';
 import type { TypeSupported } from '../utils/codecs';
-import type { ILogger } from '../utils/logger';
+import type { InitData, InitDataTrack } from '../utils/mp4-tools';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 class PassThroughRemuxer implements Remuxer {
@@ -86,7 +83,7 @@ class PassThroughRemuxer implements Remuxer {
     }
     const initData = (this.initData = parseInitSegment(initSegment));
 
-    // Get codec from initSegment or fallback to default
+    // Get codec from initSegment
     if (initData.audio) {
       audioCodec = getParsedTrackCodec(
         initData.audio,
@@ -298,21 +295,13 @@ function getParsedTrackCodec(
       const preferManagedMediaSource = false;
       return getCodecCompatibleName(parsedCodec, preferManagedMediaSource);
     }
-    const result = 'mp4a.40.5';
-    this.logger.info(
-      `Parsed audio codec "${parsedCodec}" or audio object type not handled. Using "${result}"`,
-    );
-    return result;
+
+    logger.warn(`Unhandled audio codec "${parsedCodec}" in mp4 MAP`);
+    return parsedCodec || 'mp4a';
   }
   // Provide defaults based on codec type
   // This allows for some playback of some fmp4 playlists without CODECS defined in manifest
-  this.logger.warn(`Unhandled video codec "${parsedCodec}"`);
-  if (parsedCodec === 'hvc1' || parsedCodec === 'hev1') {
-    return 'hvc1.1.6.L120.90';
-  }
-  if (parsedCodec === 'av01') {
-    return 'av01.0.04M.08';
-  }
-  return 'avc1.42e01e';
+  logger.warn(`Unhandled video codec "${parsedCodec}" in mp4 MAP`);
+  return parsedCodec || 'avc1';
 }
 export default PassThroughRemuxer;

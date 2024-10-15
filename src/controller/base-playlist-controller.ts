@@ -1,23 +1,23 @@
-import type Hls from '../hls';
-import type { NetworkComponentAPI } from '../types/component-api';
+import { NetworkErrorAction } from './error-controller';
 import {
   getSkipValue,
   HlsSkip,
   HlsUrlParameters,
   type Level,
 } from '../types/level';
-import { computeReloadInterval, mergeDetails } from '../utils/level-helper';
-import type { ErrorData } from '../types/events';
 import { getRetryDelay, isTimeoutError } from '../utils/error-helper';
-import { NetworkErrorAction } from './error-controller';
+import { computeReloadInterval, mergeDetails } from '../utils/level-helper';
 import { Logger } from '../utils/logger';
+import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
-import type { MediaPlaylist } from '../types/media-playlist';
+import type { NetworkComponentAPI } from '../types/component-api';
+import type { ErrorData } from '../types/events';
 import type {
   AudioTrackLoadedData,
   LevelLoadedData,
   TrackLoadedData,
 } from '../types/events';
+import type { MediaPlaylist } from '../types/media-playlist';
 
 export default class BasePlaylistController
   extends Logger
@@ -145,6 +145,16 @@ export default class BasePlaylistController
       ? Math.max(0, now - stats.loading.first)
       : 0;
     details.advancedDateTime = Date.now() - elapsed;
+
+    // shift fragment starts with timelineOffset
+    const timelineOffset = this.hls.config.timelineOffset;
+    if (timelineOffset !== details.appliedTimelineOffset) {
+      const offset = Math.max(timelineOffset || 0, 0);
+      details.appliedTimelineOffset = offset;
+      details.fragments.forEach((frag) => {
+        frag.start = frag.playlistOffset + offset;
+      });
+    }
 
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live || previousDetails?.live) {

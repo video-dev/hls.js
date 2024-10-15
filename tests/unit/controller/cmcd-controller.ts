@@ -1,12 +1,11 @@
-import CMCDController from '../../../src/controller/cmcd-controller';
-import HlsMock from '../../mocks/hls.mock';
-import type { CMCDControllerConfig } from '../../../src/config';
 import { CmcdHeaderField } from '@svta/common-media-library/cmcd/CmcdHeaderField';
+import chai from 'chai';
+import CMCDController from '../../../src/controller/cmcd-controller';
+import Hls from '../../../src/hls';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
+import type { CMCDControllerConfig } from '../../../src/config';
 import type { Fragment, Part } from '../../../src/loader/fragment';
-
-import chai from 'chai';
 
 const expect = chai.expect;
 
@@ -52,7 +51,7 @@ const details = M3U8Parser.parseLevelPlaylist(
 );
 
 const uuidRegex =
-  '[a-f\\d]{8}-[a-f\\d]{4}-4[a-f\\d]{3}-[89ab][a-f\\d]{3}-[a-f\\d]{12}';
+  /[a-f\d]{8}-[a-f\d]{4}-4[a-f\d]{3}-[89ab][a-f\d]{3}-[a-f\d]{12}/;
 
 const level = {
   bitrate: 1000,
@@ -60,12 +59,16 @@ const level = {
 };
 
 const setupEach = (cmcd?: CMCDControllerConfig) => {
-  const hls = new HlsMock({ cmcd }) as any;
+  const hls = new Hls({ cmcd }) as any;
+  hls.networkControllers.forEach((component) => component.destroy());
+  hls.networkControllers.length = 0;
+  hls.coreComponents.forEach((component) => component.destroy());
+  hls.coreComponents.length = 0;
   hls.levelController = {
     levels: [level],
     level: 0,
   };
-  hls.audioTracks = [];
+  // hls.audioTracks = [];
 
   cmcdController = new CMCDController(hls);
 };
@@ -111,11 +114,13 @@ describe('CMCDController', function () {
         expectField(url, `sid%3D%22${sessionId}%22`);
       });
 
-      it('generates a session id if not provided', function () {
+      it('uses the Hls instance session id if not provided', function () {
         setupEach({});
 
+        const sessionId = cmcdController.hls.sessionId;
         const { url } = applyPlaylistData();
-        expectField(url, `sid%3D%22${uuidRegex}%22`);
+        expectField(url, `sid%3D%22${sessionId}%22`);
+        expect(sessionId).to.match(uuidRegex);
       });
 
       it('uses the content id if provided', function () {
