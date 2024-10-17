@@ -118,7 +118,7 @@ class AudioStreamController
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
     hls.off(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
-    hls.on(Events.FRAG_LOADING, this.onFragLoading, this);
+    hls.off(Events.FRAG_LOADING, this.onFragLoading, this);
     hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
   }
 
