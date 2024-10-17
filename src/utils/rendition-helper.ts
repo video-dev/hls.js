@@ -440,7 +440,7 @@ function searchDownAndUpList(
   searchIndex: number,
   predicate: (item: any) => boolean,
 ): number {
-  for (let i = searchIndex; i; i--) {
+  for (let i = searchIndex; i > -1; i--) {
     if (predicate(arr[i])) {
       return i;
     }
