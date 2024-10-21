@@ -1127,7 +1127,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
         ? config.liveBackBufferLength
         : config.backBufferLength;
 
-    if (Number.isFinite(backBufferLength) && backBufferLength > 0) {
+    if (Number.isFinite(backBufferLength) && backBufferLength >= 0) {
       const maxBackBufferLength = Math.max(backBufferLength, targetDuration);
       const targetBackBufferPosition =
         Math.floor(currentTime / targetDuration) * targetDuration -
