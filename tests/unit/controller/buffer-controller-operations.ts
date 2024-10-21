@@ -617,6 +617,14 @@ describe('BufferController with attached media', function () {
         expect(triggerSpy).to.not.have.been.calledWith(Events.BUFFER_FLUSHING);
       });
 
+      it('should execute a remove operation if backBufferLength is set to 0', function () {
+        hls.config.backBufferLength = 0;
+        evokeTrimBuffers(hls);
+        expect(triggerSpy.withArgs(Events.BUFFER_FLUSHING)).to.have.callCount(
+          2,
+        );
+      });
+
       it('should execute a remove operation if flushing a valid backBuffer range', function () {
         evokeTrimBuffers(hls);
         expect(triggerSpy.withArgs(Events.BUFFER_FLUSHING)).to.have.callCount(
