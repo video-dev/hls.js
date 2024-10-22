@@ -70,7 +70,7 @@
     "@babel/preset-env": "7.25.8",
     "@babel/preset-typescript": "7.25.7",
     "@babel/register": "7.25.7",
-    "@microsoft/api-documenter": "7.25.17",
+    "@microsoft/api-documenter": "7.25.18",
     "@microsoft/api-extractor": "7.47.9",
     "@rollup/plugin-alias": "5.1.1",
     "@rollup/plugin-babel": "6.0.4",
