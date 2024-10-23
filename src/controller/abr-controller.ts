@@ -296,15 +296,18 @@ class AbrController extends Logger implements AbrComponentAPI {
       ? (stats.loaded * 1000) / timeStreaming
       : 0;
     // fragLoadDelay is an estimate of the time (in seconds) it will take to buffer the remainder of the fragment
+    const ttfbSeconds = ttfbEstimate / 1000;
     const fragLoadedDelay = loadRate
       ? (expectedLen - stats.loaded) / loadRate
-      : (expectedLen * 8) / bwEstimate + ttfbEstimate / 1000;
+      : (expectedLen * 8) / bwEstimate + ttfbSeconds;
     // Only downswitch if the time to finish loading the current fragment is greater than the amount of buffer left
     if (fragLoadedDelay <= bufferStarvationDelay) {
       return;
     }
 
     const bwe = loadRate ? loadRate * 8 : bwEstimate;
+    const live = this.hls.latestLevelDetails?.live === true;
+    const abrBandWidthUpFactor = this.hls.config.abrBandWidthUpFactor;
     let fragLevelNextLoadedDelay: number = Number.POSITIVE_INFINITY;
     let nextLoadLevel: number;
     // Iterate through lower level and try to find the largest one that avoids rebuffering
@@ -316,13 +319,17 @@ class AbrController extends Logger implements AbrComponentAPI {
       // compute time to load next fragment at lower level
       // 8 = bits per byte (bps/Bps)
       const levelNextBitrate = levels[nextLoadLevel].maxBitrate;
+      const requiresLevelLoad = !levels[nextLoadLevel].details || live;
       fragLevelNextLoadedDelay = this.getTimeToLoadFrag(
-        ttfbEstimate / 1000,
+        ttfbSeconds,
         bwe,
         duration * levelNextBitrate,
-        !levels[nextLoadLevel].details,
+        requiresLevelLoad,
       );
-      if (fragLevelNextLoadedDelay < bufferStarvationDelay) {
+      if (
+        fragLevelNextLoadedDelay <
+        Math.min(bufferStarvationDelay, duration + ttfbSeconds)
+      ) {
         break;
       }
     }
@@ -336,7 +343,6 @@ class AbrController extends Logger implements AbrComponentAPI {
     if (fragLevelNextLoadedDelay > duration * 10) {
       return;
     }
-    hls.nextLoadLevel = hls.nextAutoLevel = nextLoadLevel;
     if (loadedFirstByte) {
       // If there has been loading progress, sample bandwidth using loading time offset by minimum TTFB time
       this.bwEstimator.sample(
@@ -348,17 +354,26 @@ class AbrController extends Logger implements AbrComponentAPI {
       this.bwEstimator.sampleTTFB(timeLoading);
     }
     const nextLoadLevelBitrate = levels[nextLoadLevel].maxBitrate;
-    if (
-      this.getBwEstimate() * this.hls.config.abrBandWidthUpFactor >
-      nextLoadLevelBitrate
-    ) {
+    if (this.getBwEstimate() * abrBandWidthUpFactor > nextLoadLevelBitrate) {
       this.resetEstimator(nextLoadLevelBitrate);
     }
+    const bestSwitchLevel = this.findBestLevel(
+      nextLoadLevelBitrate,
+      minAutoLevel,
+      nextLoadLevel,
+      0,
+      bufferStarvationDelay,
+      1,
+      1,
+    );
+    if (bestSwitchLevel > -1) {
+      nextLoadLevel = bestSwitchLevel;
+    }
 
-    this.clearTimer();
     this.warn(`Fragment ${frag.sn}${
       part ? ' part ' + part.index : ''
     } of level ${frag.level} is loading too slowly;
+      Fragment duration: ${frag.duration.toFixed(3)}
       Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s
       Estimated load time for current fragment: ${fragLoadedDelay.toFixed(3)} s
       Estimated load time for down switch fragment: ${fragLevelNextLoadedDelay.toFixed(
@@ -370,6 +385,44 @@ class AbrController extends Logger implements AbrComponentAPI {
       } bps
       New BW estimate: ${this.getBwEstimate() | 0} bps
       Switching to level ${nextLoadLevel} @ ${nextLoadLevelBitrate | 0} bps`);
+
+    hls.nextLoadLevel = hls.nextAutoLevel = nextLoadLevel;
+
+    this.clearTimer();
+    this.timer = self.setInterval(() => {
+      // Are nextLoadLevel details available or is stream-controller still in "WAITING_LEVEL" state?
+      this.clearTimer();
+      if (
+        this.fragCurrent === frag &&
+        this.hls.loadLevel === nextLoadLevel &&
+        nextLoadLevel > 0
+      ) {
+        const bufferStarvationDelay = this.getStarvationDelay();
+        this
+          .warn(`Aborting inflight request ${nextLoadLevel > 0 ? 'and switching down' : ''}
+      Fragment duration: ${frag.duration.toFixed(3)} s
+      Time to underbuffer: ${bufferStarvationDelay.toFixed(3)} s`);
+        frag.abortRequests();
+        this.fragCurrent = this.partCurrent = null;
+        if (nextLoadLevel > minAutoLevel) {
+          let lowestSwitchLevel = this.findBestLevel(
+            this.hls.levels[minAutoLevel].bitrate,
+            minAutoLevel,
+            nextLoadLevel,
+            0,
+            bufferStarvationDelay,
+            1,
+            1,
+          );
+          if (lowestSwitchLevel === -1) {
+            lowestSwitchLevel = minAutoLevel;
+          }
+          this.hls.nextLoadLevel = this.hls.nextAutoLevel = lowestSwitchLevel;
+          this.resetEstimator(this.hls.levels[lowestSwitchLevel].bitrate);
+        }
+      }
+    }, fragLevelNextLoadedDelay * 1000);
+
     hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, part, stats });
   };
 
@@ -665,7 +718,7 @@ class AbrController extends Logger implements AbrComponentAPI {
       return 0;
     }
     const level: Level | undefined = levels[selectionBaseLevel];
-    const live = !!level?.details?.live;
+    const live = !!this.hls.latestLevelDetails?.live;
     const firstSelection = loadLevel === -1 || lastLoadedFragLevel === -1;
     let currentCodecSet: string | undefined;
     let currentVideoRange: VideoRange | undefined = 'SDR';
