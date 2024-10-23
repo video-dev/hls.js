@@ -126,7 +126,7 @@
     "semver": "7.6.3",
     "sinon": "18.0.1",
     "sinon-chai": "3.7.0",
-    "typescript": "5.4.5",
+    "typescript": "5.6.3",
     "url-toolkit": "2.2.5",
     "wrangler": "3.82.0"
   }
