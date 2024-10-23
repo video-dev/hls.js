@@ -439,11 +439,12 @@ export default class LevelController extends BasePlaylistController {
 
     if (
       lastLevelIndex === newLevel &&
-      level.details &&
       lastLevel &&
       lastPathwayId === pathwayId
     ) {
-      return;
+      if (level.details || this.requestScheduled !== -1) {
+        return;
+      }
     }
 
     this.log(
@@ -571,7 +572,10 @@ export default class LevelController extends BasePlaylistController {
       data.context.type === PlaylistContextType.LEVEL &&
       data.context.level === this.level
     ) {
-      this.checkRetry(data);
+      const retry = this.checkRetry(data);
+      if (!retry) {
+        this.requestScheduled = -1;
+      }
     }
   }
 
