@@ -157,6 +157,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.startPosition`](#hlsstartposition)
   - [`hls.pauseBuffering()`](#hlspausebuffering)
   - [`hls.resumeBuffering()`](#hlsresumebuffering)
+  - [`hls.flushBuffer()`](#hlsflushBuffer)
   - [`hls.bufferingEnabled`](#hlsbufferingenabled)
   - [`hls.bufferedToEnd`](#hlsbufferedtoend)
   - [`hls.url`](#hlsurl)
@@ -1865,6 +1866,10 @@ Pauses fragment buffering (used internally with ManagedMediaSource streaming eve
 ### `hls.resumeBuffering()`
 
 Resumes fragment buffering (used internally with ManagedMediaSource streaming events).
+
+### `hls.flushBuffer()`
+
+Flush loaded media buffer.
 
 ### `hls.bufferingEnabled`
 

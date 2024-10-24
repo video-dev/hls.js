@@ -41,7 +41,7 @@ import type { HlsEventEmitter, HlsListeners } from './events';
 import type FragmentLoader from './loader/fragment-loader';
 import type { LevelDetails } from './loader/level-details';
 import type TaskLoop from './task-loop';
-import type { AttachMediaSourceData } from './types/buffer';
+import type { AttachMediaSourceData, SourceBufferName } from './types/buffer';
 import type {
   AbrComponentAPI,
   ComponentAPI,
@@ -573,6 +573,16 @@ export default class Hls implements HlsEventEmitter {
         }
       });
     }
+  }
+
+  /**
+   * Flush the loaded buffer
+   * @param startOffset - start offset
+   * @param endOffset - end offset
+   */
+  flushBuffer(startOffset: number = 0, endOffset: number = Number.POSITIVE_INFINITY) {
+    this.logger.log(`flush buffer, start: ${startOffset}, end: ${endOffset}`);
+    this.streamController.flushMainBuffer(startOffset, endOffset);
   }
 
   /**

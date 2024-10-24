@@ -505,7 +505,7 @@ export default class StreamController
     this.nextLoadPosition = this.getLoadPosition();
   }
 
-  protected flushMainBuffer(startOffset: number, endOffset: number) {
+  public flushMainBuffer(startOffset: number, endOffset: number) {
     super.flushMainBuffer(
       startOffset,
       endOffset,
