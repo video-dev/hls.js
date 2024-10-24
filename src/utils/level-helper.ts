@@ -38,19 +38,19 @@ function updateFromToPTS(fragFrom: MediaFragment, fragTo: MediaFragment) {
       frag = fragTo;
     }
     if (frag.duration !== duration) {
-      frag.duration = duration;
+      frag.setDuration(duration);
     }
     // we dont know startPTS[toIdx]
   } else if (fragTo.sn > fragFrom.sn) {
     const contiguous = fragFrom.cc === fragTo.cc;
     // TODO: With part-loading end/durations we need to confirm the whole fragment is loaded before using (or setting) minEndPTS
     if (contiguous && fragFrom.minEndPTS) {
-      fragTo.start = fragFrom.start + (fragFrom.minEndPTS - fragFrom.start);
+      fragTo.setStart(fragFrom.start + (fragFrom.minEndPTS - fragFrom.start));
     } else {
-      fragTo.start = fragFrom.start + fragFrom.duration;
+      fragTo.setStart(fragFrom.start + fragFrom.duration);
     }
   } else {
-    fragTo.start = Math.max(fragFrom.start - fragTo.duration, 0);
+    fragTo.setStart(Math.max(fragFrom.start - fragTo.duration, 0));
   }
 }
 
@@ -92,9 +92,9 @@ export function updateFragPTSDTS(
 
   const drift = startPTS - frag.start;
   if (frag.start !== 0) {
-    frag.start = startPTS;
+    frag.setStart(startPTS);
   }
-  frag.duration = endPTS - frag.start;
+  frag.setDuration(endPTS - frag.start);
   frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
   frag.startDTS = startDTS;
@@ -170,15 +170,14 @@ export function mergeDetails(
         Number.isFinite(oldFrag.startPTS) &&
         Number.isFinite(oldFrag.endPTS)
       ) {
-        newFrag.start = newFrag.startPTS = oldFrag.startPTS as number;
+        newFrag.setStart((newFrag.startPTS = oldFrag.startPTS!));
         newFrag.startDTS = oldFrag.startDTS;
         newFrag.maxStartPTS = oldFrag.maxStartPTS;
 
         newFrag.endPTS = oldFrag.endPTS;
         newFrag.endDTS = oldFrag.endDTS;
         newFrag.minEndPTS = oldFrag.minEndPTS;
-        newFrag.duration =
-          (oldFrag.endPTS as number) - (oldFrag.startPTS as number);
+        newFrag.setDuration(oldFrag.endPTS! - oldFrag.startPTS!);
 
         if (newFrag.duration) {
           PTSFrag = newFrag;
@@ -187,9 +186,17 @@ export function mergeDetails(
         // PTS is known when any segment has startPTS and endPTS
         newDetails.PTSKnown = newDetails.alignedSliding = true;
       }
-      newFrag.elementaryStreams = oldFrag.elementaryStreams;
+
+      if (oldFrag.hasStreams) {
+        newFrag.elementaryStreams = oldFrag.elementaryStreams;
+      }
+
       newFrag.loader = oldFrag.loader;
-      newFrag.stats = oldFrag.stats;
+
+      if (oldFrag.hasStats) {
+        newFrag.stats = oldFrag.stats;
+      }
+
       if (oldFrag.initSegment) {
         newFrag.initSegment = oldFrag.initSegment;
         currentInitSegment = oldFrag.initSegment;
@@ -432,14 +439,14 @@ export function adjustSliding(
   addSliding(newDetails, sliding);
 }
 
-export function addSliding(details: LevelDetails, start: number) {
-  if (start) {
+export function addSliding(details: LevelDetails, sliding: number) {
+  if (sliding) {
     const fragments = details.fragments;
     for (let i = details.skippedSegments; i < fragments.length; i++) {
-      fragments[i].start += start;
+      fragments[i].addStart(sliding);
     }
     if (details.fragmentHint) {
-      details.fragmentHint.start += start;
+      details.fragmentHint.addStart(sliding);
     }
   }
 }

@@ -336,9 +336,13 @@ export class BasePlaylistController extends Logger implements NetworkComponentAP
 //
 // @public (undocumented)
 export class BaseSegment {
-    constructor(baseurl: string);
+    constructor(base: Base | string);
+    // Warning: (ae-forgotten-export) The symbol "Base" needs to be exported by the entry point hls.d.ts
+    //
     // (undocumented)
-    readonly baseurl: string;
+    readonly base: Base;
+    // (undocumented)
+    get baseurl(): string;
     // (undocumented)
     get byteRange(): [number, number] | [];
     // (undocumented)
@@ -348,11 +352,19 @@ export class BaseSegment {
     // (undocumented)
     clearElementaryStreamInfo(): void;
     // (undocumented)
-    elementaryStreams: ElementaryStreams;
+    get elementaryStreams(): ElementaryStreams;
+    set elementaryStreams(value: ElementaryStreams);
+    // (undocumented)
+    get hasStats(): boolean;
+    // (undocumented)
+    get hasStreams(): boolean;
     // (undocumented)
     relurl?: string;
     // (undocumented)
     setByteRange(value: string, previous?: BaseSegment): void;
+    // (undocumented)
+    get stats(): LoadStats;
+    set stats(value: LoadStats);
     // (undocumented)
     get url(): string;
     set url(value: string);
@@ -991,8 +1003,10 @@ export class DateRange {
     get startDate(): Date;
     // (undocumented)
     get startTime(): number;
+    // Warning: (ae-forgotten-export) The symbol "MediaFragmentRef" needs to be exported by the entry point hls.d.ts
+    //
     // (undocumented)
-    tagAnchor: Fragment | null;
+    tagAnchor: MediaFragmentRef | null;
     // (undocumented)
     tagOrder: number;
 }
@@ -1690,9 +1704,11 @@ export interface FragLoadingData {
 //
 // @public
 export class Fragment extends BaseSegment {
-    constructor(type: PlaylistLevelType, baseurl: string);
+    constructor(type: PlaylistLevelType, base: Base | string);
     // (undocumented)
     abortRequests(): void;
+    // (undocumented)
+    addStart(value: number): void;
     // (undocumented)
     bitrateTest: boolean;
     // (undocumented)
@@ -1738,13 +1754,20 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     playlistOffset: number;
     // (undocumented)
-    programDateTime: number | null;
+    get programDateTime(): number | null;
+    set programDateTime(value: number | null);
     // (undocumented)
     rawProgramDateTime: string | null;
+    // (undocumented)
+    get ref(): MediaFragmentRef | null;
+    // (undocumented)
+    setDuration(value: number): void;
     // (undocumented)
     setElementaryStreamInfo(type: ElementaryStreamTypes, startPTS: number, endPTS: number, startDTS: number, endDTS: number, partial?: boolean): void;
     // (undocumented)
     setKeyFormat(keyFormat: KeySystemFormats): void;
+    // (undocumented)
+    setStart(value: number): void;
     // (undocumented)
     sn: number | 'initSegment';
     // (undocumented)
@@ -1753,8 +1776,6 @@ export class Fragment extends BaseSegment {
     startDTS?: number;
     // (undocumented)
     startPTS?: number;
-    // (undocumented)
-    stats: LoadStats;
     // (undocumented)
     tagList: Array<string[]>;
     // (undocumented)
@@ -2603,7 +2624,7 @@ export class InterstitialEvent {
     // (undocumented)
     restrictions: PlaybackRestrictions;
     // (undocumented)
-    resumeAnchor?: Fragment;
+    resumeAnchor?: MediaFragmentRef;
     // (undocumented)
     resumeOffset: number;
     // (undocumented)
@@ -3764,6 +3785,8 @@ export interface MediaEndedData {
 // @public (undocumented)
 export interface MediaFragment extends Fragment {
     // (undocumented)
+    ref: MediaFragmentRef;
+    // (undocumented)
     sn: number;
 }
 
@@ -3992,7 +4015,7 @@ export interface ParsedTrack extends BaseTrack {
 //
 // @public
 export class Part extends BaseSegment {
-    constructor(partAttrs: AttrList, frag: MediaFragment, baseurl: string, index: number, previous?: Part);
+    constructor(partAttrs: AttrList, frag: MediaFragment, base: Base | string, index: number, previous?: Part);
     // (undocumented)
     readonly duration: number;
     // (undocumented)
@@ -4013,8 +4036,6 @@ export class Part extends BaseSegment {
     readonly relurl: string;
     // (undocumented)
     get start(): number;
-    // (undocumented)
-    stats: LoadStats;
 }
 
 // Warning: (ae-missing-release-tag) "PartsLoadedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

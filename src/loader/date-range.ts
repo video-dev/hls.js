@@ -1,6 +1,6 @@
 import { AttrList } from '../utils/attr-list';
 import { logger } from '../utils/logger';
-import type { Fragment } from './fragment';
+import type { MediaFragmentRef } from './fragment';
 
 // Avoid exporting const enum so that these values can be inlined
 const enum DateRangeAttribute {
@@ -47,7 +47,7 @@ export function isSCTE35Attribute(attrName: string): boolean {
 
 export class DateRange {
   public attr: AttrList;
-  public tagAnchor: Fragment | null;
+  public tagAnchor: MediaFragmentRef | null;
   public tagOrder: number;
   private _startDate: Date;
   private _endDate?: Date;

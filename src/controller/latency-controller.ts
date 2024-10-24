@@ -33,7 +33,7 @@ export default class LatencyController implements ComponentAPI {
     if (config.liveMaxLatencyDuration !== undefined) {
       return config.liveMaxLatencyDuration;
     }
-    const levelDetails = this.hls.latestLevelDetails;
+    const levelDetails = this.hls?.latestLevelDetails;
     return levelDetails
       ? config.liveMaxLatencyDurationCount * levelDetails.targetduration
       : 0;
