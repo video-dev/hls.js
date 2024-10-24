@@ -1963,6 +1963,7 @@ class Hls implements HlsEventEmitter {
     get firstLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "firstLevel" must appear on the getter, not the setter.
     set firstLevel(newLevel: number);
+    flushBuffer(startOffset?: number, endOffset?: number): void;
     get forceStartLoad(): boolean;
     getMediaDecodingInfo(level: Level, audioTracks?: MediaPlaylist[]): Promise<MediaDecodingInfo>;
     static getMediaSource(): typeof MediaSource | undefined;
@@ -4302,7 +4303,7 @@ export class StreamController extends BaseStreamController implements NetworkCom
     // (undocumented)
     protected doTick(): void;
     // (undocumented)
-    protected flushMainBuffer(startOffset: number, endOffset: number): void;
+    flushMainBuffer(startOffset: number, endOffset: number): void;
     // (undocumented)
     get forceStartLoad(): boolean;
     // (undocumented)
