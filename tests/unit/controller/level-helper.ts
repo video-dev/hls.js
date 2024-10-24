@@ -341,19 +341,19 @@ fileSequence11.ts
       expect(details.dateRanges, 'one')
         .to.have.property('one')
         .which.has.property('tagAnchor')
-        .which.equals(details.fragments[1])
+        .which.equals(details.fragments[1].ref)
         .which.has.property('sn')
         .which.equals(4);
       expect(details.dateRanges, 'two')
         .to.have.property('two')
         .which.has.property('tagAnchor')
-        .which.equals(details.fragments[1])
+        .which.equals(details.fragments[1].ref)
         .which.has.property('sn')
         .which.equals(4);
       expect(details.dateRanges, 'three')
         .to.have.property('three')
         .which.has.property('tagAnchor')
-        .which.equals(details.fragments[2])
+        .which.equals(details.fragments[2].ref)
         .which.has.property('sn')
         .which.equals(5);
       expect(details.dateRanges.one.startTime).to.equal(4);
@@ -369,19 +369,19 @@ fileSequence11.ts
       expect(detailsUpdated.dateRanges, 'one updated')
         .to.have.property('one')
         .which.has.property('tagAnchor')
-        .which.equals(detailsUpdated.fragments[0])
+        .which.equals(detailsUpdated.fragments[0].ref)
         .which.has.property('sn')
         .which.equals(4);
       expect(detailsUpdated.dateRanges, 'two updated')
         .to.have.property('two')
         .which.has.property('tagAnchor')
-        .which.equals(detailsUpdated.fragments[0])
+        .which.equals(detailsUpdated.fragments[0].ref)
         .which.has.property('sn')
         .which.equals(4);
       expect(detailsUpdated.dateRanges, 'three updated')
         .to.have.property('three')
         .which.has.property('tagAnchor')
-        .which.equals(detailsUpdated.fragments[1])
+        .which.equals(detailsUpdated.fragments[1].ref)
         .which.has.property('sn')
         .which.equals(5);
       expect(detailsUpdated.dateRanges, 'four')
@@ -526,7 +526,7 @@ fileSequence18.ts`;
       expect(detailsUpdated.dateRanges, 'd2 updated')
         .to.have.property('d2')
         .which.has.property('tagAnchor')
-        .which.equals(detailsUpdated.fragments[0])
+        .which.equals(detailsUpdated.fragments[0].ref)
         .which.has.property('sn')
         .which.equals(3);
       expect(detailsUpdated.dateRanges.d2.startTime).to.equal(2.94);
