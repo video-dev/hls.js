@@ -268,12 +268,6 @@ class EMEController extends Logger implements ComponentAPI {
         this.log(
           `Failed to obtain access to key-system "${keySystem}": ${error}`,
         );
-        this.hls?.trigger(Events.ERROR, {
-          type: ErrorTypes.KEY_SYSTEM_ERROR,
-          details: ErrorDetails.KEY_SYSTEM_OBTAIN_ACCESS_ERROR,
-          error,
-          fatal: false,
-        });
       });
       return keySystemAccess.then((mediaKeySystemAccess) => {
         this.log(

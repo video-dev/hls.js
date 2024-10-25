@@ -25,7 +25,6 @@ export enum ErrorDetails {
   KEY_SYSTEM_DESTROY_MEDIA_KEYS_ERROR = 'keySystemDestroyMediaKeysError',
   KEY_SYSTEM_DESTROY_CLOSE_SESSION_ERROR = 'keySystemDestroyCloseSessionError',
   KEY_SYSTEM_DESTROY_REMOVE_SESSION_ERROR = 'keySystemDestroyRemoveSessionError',
-  KEY_SYSTEM_OBTAIN_ACCESS_ERROR = 'keySystemObtainAccessError',
   // Identifier for a manifest load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   MANIFEST_LOAD_ERROR = 'manifestLoadError',
   // Identifier for a manifest load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}
