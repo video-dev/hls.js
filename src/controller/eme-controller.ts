@@ -268,6 +268,12 @@ class EMEController extends Logger implements ComponentAPI {
         this.log(
           `Failed to obtain access to key-system "${keySystem}": ${error}`,
         );
+        this.hls?.trigger(Events.ERROR, {
+          type: ErrorTypes.KEY_SYSTEM_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_OBTAIN_ACCESS_ERROR,
+          error,
+          fatal: false,
+        });
       });
       return keySystemAccess.then((mediaKeySystemAccess) => {
         this.log(
@@ -297,6 +303,12 @@ class EMEController extends Logger implements ComponentAPI {
           this.error(
             `Failed to create media-keys for "${keySystem}"}: ${error}`,
           );
+          this.hls?.trigger(Events.ERROR, {
+            type: ErrorTypes.KEY_SYSTEM_ERROR,
+            details: ErrorDetails.KEY_SYSTEM_CREATE_MEDIA_KEYS_ERROR,
+            error,
+            fatal: false,
+          });
         });
 
         return keySystemAccessPromises.mediaKeys;
@@ -1266,6 +1278,12 @@ class EMEController extends Logger implements ComponentAPI {
         .concat(
           media?.setMediaKeys(null)?.catch((error) => {
             this.log(`Could not clear media keys: ${error}`);
+            this.hls?.trigger(Events.ERROR, {
+              type: ErrorTypes.OTHER_ERROR,
+              details: ErrorDetails.KEY_SYSTEM_DESTROY_MEDIA_KEYS_ERROR,
+              fatal: false,
+              error: new Error(`Could not clear media keys: ${error}`),
+            });
           }),
         ),
     )
@@ -1277,6 +1295,14 @@ class EMEController extends Logger implements ComponentAPI {
       })
       .catch((error) => {
         this.log(`Could not close sessions and clear media keys: ${error}`);
+        this.hls?.trigger(Events.ERROR, {
+          type: ErrorTypes.OTHER_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_DESTROY_CLOSE_SESSION_ERROR,
+          fatal: false,
+          error: new Error(
+            `Could not close sessions and clear media keys: ${error}`,
+          ),
+        });
       });
   }
 
@@ -1348,12 +1374,24 @@ class EMEController extends Logger implements ComponentAPI {
         .remove()
         .catch((error) => {
           this.log(`Could not remove session: ${error}`);
+          this.hls?.trigger(Events.ERROR, {
+            type: ErrorTypes.OTHER_ERROR,
+            details: ErrorDetails.KEY_SYSTEM_DESTROY_REMOVE_SESSION_ERROR,
+            fatal: false,
+            error: new Error(`Could not remove session: ${error}`),
+          });
         })
         .then(() => {
           return mediaKeysSession.close();
         })
         .catch((error) => {
           this.log(`Could not close session: ${error}`);
+          this.hls?.trigger(Events.ERROR, {
+            type: ErrorTypes.OTHER_ERROR,
+            details: ErrorDetails.KEY_SYSTEM_DESTROY_CLOSE_SESSION_ERROR,
+            fatal: false,
+            error: new Error(`Could not close session: ${error}`),
+          });
         });
     }
   }
