@@ -303,12 +303,6 @@ class EMEController extends Logger implements ComponentAPI {
           this.error(
             `Failed to create media-keys for "${keySystem}"}: ${error}`,
           );
-          this.hls?.trigger(Events.ERROR, {
-            type: ErrorTypes.KEY_SYSTEM_ERROR,
-            details: ErrorDetails.KEY_SYSTEM_CREATE_MEDIA_KEYS_ERROR,
-            error,
-            fatal: false,
-          });
         });
 
         return keySystemAccessPromises.mediaKeys;

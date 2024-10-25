@@ -22,7 +22,6 @@ export enum ErrorDetails {
   KEY_SYSTEM_SESSION_UPDATE_FAILED = 'keySystemSessionUpdateFailed',
   KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED = 'keySystemStatusOutputRestricted',
   KEY_SYSTEM_STATUS_INTERNAL_ERROR = 'keySystemStatusInternalError',
-  KEY_SYSTEM_CREATE_MEDIA_KEYS_ERROR = 'keySystemCreateMediaKeysError',
   KEY_SYSTEM_DESTROY_MEDIA_KEYS_ERROR = 'keySystemDestroyMediaKeysError',
   KEY_SYSTEM_DESTROY_CLOSE_SESSION_ERROR = 'keySystemDestroyCloseSessionError',
   KEY_SYSTEM_DESTROY_REMOVE_SESSION_ERROR = 'keySystemDestroyRemoveSessionError',
