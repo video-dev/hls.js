@@ -97,7 +97,7 @@
     "eslint-config-prettier": "9.1.0",
     "eslint-plugin-import": "2.31.0",
     "eslint-plugin-mocha": "10.5.0",
-    "eslint-plugin-n": "17.12.0",
+    "eslint-plugin-n": "17.13.1",
     "eslint-plugin-promise": "7.1.0",
     "eventemitter3": "5.0.1",
     "http-server": "14.1.1",
