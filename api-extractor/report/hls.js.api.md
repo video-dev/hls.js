@@ -1311,6 +1311,12 @@ export enum ErrorDetails {
     // (undocumented)
     KEY_LOAD_TIMEOUT = "keyLoadTimeOut",
     // (undocumented)
+    KEY_SYSTEM_DESTROY_CLOSE_SESSION_ERROR = "keySystemDestroyCloseSessionError",
+    // (undocumented)
+    KEY_SYSTEM_DESTROY_MEDIA_KEYS_ERROR = "keySystemDestroyMediaKeysError",
+    // (undocumented)
+    KEY_SYSTEM_DESTROY_REMOVE_SESSION_ERROR = "keySystemDestroyRemoveSessionError",
+    // (undocumented)
     KEY_SYSTEM_LICENSE_REQUEST_FAILED = "keySystemLicenseRequestFailed",
     // (undocumented)
     KEY_SYSTEM_NO_ACCESS = "keySystemNoAccess",
