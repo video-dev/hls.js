@@ -1,5 +1,6 @@
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
+import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
@@ -1688,18 +1689,74 @@ fileSequence2.ts
       null,
     );
     const fragments = details.fragments as Fragment[];
+    expect(fragments[0].bitrate).to.equal(5083000);
     expectWithJSONMessage(fragments[0].tagList).to.deep.equal([
       ['INF', '5.97263', '\t'],
       ['BITRATE', '5083'],
     ]);
+
+    expect(fragments[1].bitrate).to.equal(5453000);
     expectWithJSONMessage(fragments[1].tagList).to.deep.equal([
       ['INF', '5.97263', '\t'],
       ['BITRATE', '5453'],
     ]);
+
+    expect(fragments[2].bitrate).to.equal(4802000);
     expectWithJSONMessage(fragments[2].tagList).to.deep.equal([
       ['INF', '5.97263', '\t'],
       ['BITRATE', '4802'],
     ]);
+  });
+
+  it('parses segment tags used to get bitrate and byte length from fragments', function () {
+    const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:3
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXTINF:5
+#EXT-X-BITRATE:1000
+fileSequence0.ts
+#EXTINF:5
+#EXT-X-BYTERANGE:600000@123456
+fileSequence1.ts
+#EXTINF: 5
+fileSequence2.ts
+`;
+    const details = M3U8Parser.parseLevelPlaylist(
+      playlist,
+      'http://dummy.url.com/playlist.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+    const fragments = details.fragments as Fragment[];
+    expect(fragments[0].byteLength).to.equal(null);
+    expect(fragments[0].bitrate).to.equal(1000000);
+    expect(fragments[1].byteLength).to.equal(600000);
+    expect(fragments[1].bitrate).to.equal(960000);
+    expect(fragments[2].byteLength).to.equal(null);
+    expect(fragments[2].bitrate).to.equal(
+      1000000,
+      '#EXT-X-BITRATE applies to every segment between it and the next bitrate tag',
+    );
+
+    // Stat data overrides byteLength and bitrate data
+    fragments[2].stats = new LoadStats();
+    fragments[2].stats.total = 12000;
+    expect(fragments[2].byteLength).to.equal(12000);
+    expect(fragments[2].bitrate).to.equal(19200);
+
+    fragments[1].stats = new LoadStats();
+    fragments[1].stats.total = 8000000;
+    expect(fragments[1].byteLength).to.equal(8000000);
+    expect(fragments[1].bitrate).to.equal(12800000);
+
+    fragments[0].stats = new LoadStats();
+    fragments[0].stats.total = 5000000;
+    expect(fragments[0].byteLength).to.equal(5000000);
+    expect(fragments[0].bitrate).to.equal(8000000);
   });
 
   it('adds GAP to fragment.tagList and sets fragment.gap', function () {
