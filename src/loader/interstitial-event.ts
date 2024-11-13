@@ -1,6 +1,6 @@
 import { hash } from '../utils/hash';
 import type { DateRange, DateRangeCue } from './date-range';
-import type { Fragment } from './fragment';
+import type { MediaFragmentRef } from './fragment';
 import type { Loader, LoaderContext } from '../types/loader';
 
 export const ALIGNED_END_THRESHOLD_SECONDS = 0.02; // 0.1 // 0.2
@@ -74,7 +74,7 @@ export class InterstitialEvent {
   public assetList: InterstitialAssetItem[] = [];
   public assetListLoader?: Loader<LoaderContext>;
   public assetListResponse: AssetListJSON | null = null;
-  public resumeAnchor?: Fragment;
+  public resumeAnchor?: MediaFragmentRef;
   public error?: Error;
 
   constructor(dateRange: DateRange, base: BaseData) {
@@ -261,11 +261,14 @@ export class InterstitialEvent {
   }
 }
 
-function getSnapToFragmentTime(time: number, frag: Fragment) {
+function getSnapToFragmentTime(time: number, frag: MediaFragmentRef) {
   return time - frag.start < frag.duration / 2 &&
-    !(Math.abs(time - frag.end) < ALIGNED_END_THRESHOLD_SECONDS)
+    !(
+      Math.abs(time - (frag.start + frag.duration)) <
+      ALIGNED_END_THRESHOLD_SECONDS
+    )
     ? frag.start
-    : frag.end;
+    : frag.start + frag.duration;
 }
 
 export function getInterstitialUrl(
