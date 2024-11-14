@@ -1,7 +1,7 @@
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { getLoaderConfigWithoutReties } from '../utils/error-helper';
-import type { HlsConfig } from '../config';
 import type { BaseSegment, Fragment, Part } from './fragment';
+import type { HlsConfig } from '../config';
 import type {
   ErrorData,
   FragLoadedData,

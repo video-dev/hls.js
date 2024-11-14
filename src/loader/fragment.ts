@@ -159,6 +159,8 @@ export class Fragment extends BaseSegment {
   private _decryptdata: LevelKey | null = null;
   private _programDateTime: number | null = null;
   private _ref: MediaFragmentRef | null = null;
+  // Approximate bit rate of the fragment expressed in bits per second (bps) as indicated by the last EXT-X-BITRATE (kbps) tag
+  private _bitrate?: number;
 
   public rawProgramDateTime: string | null = null;
   public tagList: Array<string[]> = [];
@@ -217,6 +219,37 @@ export class Fragment extends BaseSegment {
   constructor(type: PlaylistLevelType, base: Base | string) {
     super(base);
     this.type = type;
+  }
+
+  get byteLength(): number | null {
+    if (this.hasStats) {
+      const total = this.stats.total;
+      if (total) {
+        return total;
+      }
+    }
+    if (this.byteRange) {
+      const start = this.byteRange[0];
+      const end = this.byteRange[1];
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        return (end as number) - (start as number);
+      }
+    }
+    return null;
+  }
+
+  get bitrate(): number | null {
+    if (this.byteLength) {
+      return (this.byteLength * 8) / this.duration;
+    }
+    if (this._bitrate) {
+      return this._bitrate;
+    }
+    return null;
+  }
+
+  set bitrate(value: number) {
+    this._bitrate = value;
   }
 
   get decryptdata(): LevelKey | null {
