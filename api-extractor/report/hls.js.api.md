@@ -2159,6 +2159,7 @@ export type HlsConfig = {
     enableSoftwareAES: boolean;
     minAutoBitrate: number;
     ignoreDevicePixelRatio: boolean;
+    maxDevicePixelRatio: number;
     preferManagedMediaSource: boolean;
     timelineOffset?: number;
     loader: {
