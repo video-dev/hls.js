@@ -206,59 +206,60 @@ class XhrLoader implements Loader<LoaderContext> {
         // http status between 200 to 299 are all successful
         const useResponseText =
           xhr.responseType === 'text' ? xhr.responseText : null;
-        if (
-          status >= 200 &&
-          status < 300 &&
-          (useResponseText !== null || xhr.response)
-        ) {
-          stats.loading.end = Math.max(
-            self.performance.now(),
-            stats.loading.first,
-          );
-          const data =
-            useResponseText !== null ? useResponseText : xhr.response;
-          const len =
-            xhr.responseType === 'arraybuffer' ? data.byteLength : data.length;
-          stats.loaded = stats.total = len;
-          stats.bwEstimate =
-            (stats.total * 8000) / (stats.loading.end - stats.loading.first);
-          if (!this.callbacks) {
-            return;
-          }
-          const onProgress = this.callbacks.onProgress;
-          if (onProgress) {
-            onProgress(stats, context, data, xhr);
-          }
-          if (!this.callbacks) {
-            return;
-          }
-          const response: LoaderResponse = {
-            url: xhr.responseURL,
-            data: data,
-            code: status,
-          };
-
-          this.callbacks.onSuccess(response, stats, context, xhr);
-        } else {
-          const retryConfig = config.loadPolicy.errorRetry;
-          const retryCount = stats.retry;
-          // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
-          const response: LoaderResponse = {
-            url: context.url,
-            data: undefined,
-            code: status,
-          };
-          if (shouldRetry(retryConfig, retryCount, false, response)) {
-            this.retry(retryConfig);
-          } else {
-            logger.error(`${status} while loading ${context.url}`);
-            this.callbacks!.onError(
-              { code: status, text: xhr.statusText },
-              context,
-              xhr,
-              stats,
+        if (status >= 200 && status < 300) {
+          const data = useResponseText ?? xhr.response;
+          if (data != null) {
+            stats.loading.end = Math.max(
+              self.performance.now(),
+              stats.loading.first,
             );
+            const len =
+              xhr.responseType === 'arraybuffer'
+                ? data.byteLength
+                : data.length;
+            stats.loaded = stats.total = len;
+            stats.bwEstimate =
+              (stats.total * 8000) / (stats.loading.end - stats.loading.first);
+            if (!this.callbacks) {
+              return;
+            }
+            const onProgress = this.callbacks.onProgress;
+            if (onProgress) {
+              onProgress(stats, context, data, xhr);
+            }
+            if (!this.callbacks) {
+              return;
+            }
+            const response: LoaderResponse = {
+              url: xhr.responseURL,
+              data: data,
+              code: status,
+            };
+
+            this.callbacks.onSuccess(response, stats, context, xhr);
+            return;
           }
+        }
+
+        // Handle bad status or nullish response
+        const retryConfig = config.loadPolicy.errorRetry;
+        const retryCount = stats.retry;
+        // if max nb of retries reached or if http status between 400 and 499 (such error cannot be recovered, retrying is useless), return error
+        const response: LoaderResponse = {
+          url: context.url,
+          data: undefined,
+          code: status,
+        };
+        if (shouldRetry(retryConfig, retryCount, false, response)) {
+          this.retry(retryConfig);
+        } else {
+          logger.error(`${status} while loading ${context.url}`);
+          this.callbacks!.onError(
+            { code: status, text: xhr.statusText },
+            context,
+            xhr,
+            stats,
+          );
         }
       }
     }
