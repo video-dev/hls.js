@@ -258,7 +258,7 @@ class CapLevelController implements ComponentAPI {
       }
     }
 
-    return pixelRatio;
+    return Math.min(pixelRatio, this.hls.config.maxDevicePixelRatio);
   }
 
   private isLevelAllowed(level: Level): boolean {

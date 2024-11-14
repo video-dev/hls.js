@@ -21,6 +21,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`capLevelToPlayerSize`](#capleveltoplayersize)
   - [`capLevelOnFPSDrop`](#caplevelonfpsdrop)
   - [`ignoreDevicePixelRatio`](#ignoredevicepixelratio)
+  - [`maxDevicePixelRatio`](#maxdevicepixelratio)
   - [`debug`](#debug)
   - [`autoStartLoad`](#autostartload)
   - [`startPosition`](#startposition)
@@ -525,6 +526,12 @@ This configuration will be applied by default to all instances.
 
 - when set to true, calculations related to player size will ignore browser `devicePixelRatio`.
 - when set to false, calculations related to player size will respect browser `devicePixelRatio`.
+
+### `maxDevicePixelRatio`
+
+(default: `Number.POSITIVE_INFINITY`)
+
+- when set, calculations related to player size will limit the browser's `devicePixelRatio` to this specified value.
 
 ### `debug`
 
