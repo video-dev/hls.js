@@ -285,9 +285,10 @@ class AbrController extends Logger implements AbrComponentAPI {
     const bwEstimate: number = this.getBwEstimate();
     const levels = hls.levels;
     const level = levels[frag.level];
-    const expectedLen =
-      stats.total ||
-      Math.max(stats.loaded, Math.round((duration * level.averageBitrate) / 8));
+    const expectedLen = Math.max(
+      stats.loaded,
+      Math.round((duration * (frag.bitrate || level.averageBitrate)) / 8),
+    );
     let timeStreaming = loadedFirstByte ? timeLoading - ttfb : timeLoading;
     if (timeStreaming < 1 && loadedFirstByte) {
       timeStreaming = Math.min(timeLoading, (stats.loaded * 8) / bwEstimate);
@@ -880,8 +881,8 @@ class AbrController extends Logger implements AbrComponentAPI {
         currentFragDuration &&
         bufferStarvationDelay >= currentFragDuration * 2 &&
         maxStarvationDelay === 0
-          ? levels[i].averageBitrate
-          : levels[i].maxBitrate;
+          ? levelInfo.averageBitrate
+          : levelInfo.maxBitrate;
       const fetchDuration: number = this.getTimeToLoadFrag(
         ttfbEstimateSec,
         adjustedbw,

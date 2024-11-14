@@ -1716,7 +1716,12 @@ export class Fragment extends BaseSegment {
     // (undocumented)
     addStart(value: number): void;
     // (undocumented)
+    get bitrate(): number | null;
+    set bitrate(value: number);
+    // (undocumented)
     bitrateTest: boolean;
+    // (undocumented)
+    get byteLength(): number | null;
     // (undocumented)
     cc: number;
     // (undocumented)

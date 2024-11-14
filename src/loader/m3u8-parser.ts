@@ -314,6 +314,7 @@ export default class M3U8Parser {
     let currentPart = 0;
     let totalduration = 0;
     let discontinuityCounter = 0;
+    let currentBitrate = 0;
     let prevFrag: Fragment | null = null;
     let frag: Fragment = new Fragment(type, base);
     let result: RegExpExecArray | RegExpMatchArray | null;
@@ -338,6 +339,9 @@ export default class M3U8Parser {
         frag.start = totalduration;
         frag.sn = currentSN;
         frag.cc = discontinuityCounter;
+        if (currentBitrate) {
+          frag.bitrate = currentBitrate;
+        }
         frag.level = id;
         if (currentInitSegment) {
           frag.initSegment = currentInitSegment;
@@ -481,6 +485,12 @@ export default class M3U8Parser {
             break;
           case 'BITRATE':
             frag.tagList.push([tag, value1]);
+            currentBitrate = parseInt(value1) * 1000;
+            if (Number.isFinite(currentBitrate)) {
+              frag.bitrate = currentBitrate;
+            } else {
+              currentBitrate = 0;
+            }
             break;
           case 'DATERANGE': {
             const dateRangeAttr = new AttrList(value1, level);
