@@ -639,7 +639,7 @@ export default class StreamController
     if (!levels || this.state !== State.IDLE) {
       return;
     }
-    const level = levels[data.level];
+    const level = data.levelInfo;
     if (
       !level.details ||
       (level.details.live && this.levelLastLoaded !== level) ||
@@ -667,7 +667,7 @@ export default class StreamController
       }, cc [${newDetails.startCC}, ${newDetails.endCC}] duration:${duration}`,
     );
 
-    const curLevel = levels[newLevelId];
+    const curLevel = data.levelInfo;
     const fragCurrent = this.fragCurrent;
     if (
       fragCurrent &&

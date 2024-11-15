@@ -794,14 +794,15 @@ class AbrController extends Logger implements AbrComponentAPI {
           | undefined;
         if (
           typeof mediaCapabilities?.decodingInfo === 'function' &&
-          requiresMediaCapabilitiesDecodingInfo(
+          (requiresMediaCapabilitiesDecodingInfo(
             levelInfo,
             audioTracksByGroup,
             currentVideoRange,
             currentFrameRate,
             currentBw,
             audioPreference,
-          )
+          ) ||
+            levelInfo.videoCodec?.substring(0, 4) === 'hvc1') // Force media capabilities check for HEVC to avoid failure on Windows
         ) {
           levelInfo.supportedPromise = getMediaDecodingInfoPromise(
             levelInfo,
@@ -830,6 +831,9 @@ class AbrController extends Logger implements AbrComponentAPI {
               if (index > -1 && levels.length > 1) {
                 this.log(`Removing unsupported level ${index}`);
                 this.hls.removeLevel(index);
+                if (this.hls.loadLevel === -1) {
+                  this.hls.nextLoadLevel = 0;
+                }
               }
             }
           });

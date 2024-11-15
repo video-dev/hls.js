@@ -428,6 +428,7 @@ class AudioTrackController extends BasePlaylistController {
         id,
         groupId,
         deliveryDirectives: hlsUrlParameters || null,
+        track: audioTrack,
       });
     }
   }

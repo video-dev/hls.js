@@ -3237,6 +3237,8 @@ export interface LevelLoadedData {
     // (undocumented)
     level: number;
     // (undocumented)
+    levelInfo: Level;
+    // (undocumented)
     networkDetails: any;
     // (undocumented)
     stats: LoaderStats;
@@ -3252,6 +3254,8 @@ export interface LevelLoadingData {
     id: number;
     // (undocumented)
     level: number;
+    // (undocumented)
+    levelInfo: Level;
     // (undocumented)
     pathwayId: string | undefined;
     // (undocumented)
@@ -4141,6 +4145,8 @@ export interface PlaylistLoaderContext extends LoaderContext {
     // (undocumented)
     levelDetails?: LevelDetails;
     // (undocumented)
+    levelOrTrack: Level | MediaPlaylist | null;
+    // (undocumented)
     pathwayId?: string;
     // (undocumented)
     type: PlaylistContextType;
@@ -4626,6 +4632,8 @@ export interface TrackLoadedData {
     networkDetails: any;
     // (undocumented)
     stats: LoaderStats;
+    // (undocumented)
+    track: MediaPlaylist;
 }
 
 // Warning: (ae-missing-release-tag) "TrackLoadingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -4638,6 +4646,8 @@ export interface TrackLoadingData {
     groupId: string;
     // (undocumented)
     id: number;
+    // (undocumented)
+    track: MediaPlaylist;
     // (undocumented)
     url: string;
 }
