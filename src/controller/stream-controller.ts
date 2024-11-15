@@ -44,6 +44,12 @@ import type { BufferInfo } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
+const enum AlternateAudio {
+  DISABLED = 0,
+  SWITCHING,
+  SWITCHED,
+}
+
 export default class StreamController
   extends BaseStreamController
   implements NetworkComponentAPI
@@ -53,7 +59,7 @@ export default class StreamController
   private level: number = -1;
   private _forceStartLoad: boolean = false;
   private _hasEnoughToStart: boolean = false;
-  private altAudio: boolean = false;
+  private altAudio: AlternateAudio = AlternateAudio.DISABLED;
   private audioOnly: boolean = false;
   private fragPlaying: Fragment | null = null;
   private fragLastKbps: number = 0;
@@ -256,7 +262,7 @@ export default class StreamController
     const lastDetails = this.getLevelDetails();
     if (lastDetails && this._streamEnded(bufferInfo, lastDetails)) {
       const data: BufferEOSData = {};
-      if (this.altAudio) {
+      if (this.altAudio === AlternateAudio.SWITCHED) {
         data.type = 'video';
       }
 
@@ -509,7 +515,7 @@ export default class StreamController
     super.flushMainBuffer(
       startOffset,
       endOffset,
-      this.altAudio ? 'video' : null,
+      this.altAudio === AlternateAudio.SWITCHED ? 'video' : null,
     );
   }
 
@@ -606,7 +612,8 @@ export default class StreamController
     this.couldBacktrack = false;
     this.fragLastKbps = 0;
     this.fragPlaying = this.backtrackFragment = null;
-    this.altAudio = this.audioOnly = false;
+    this.altAudio = AlternateAudio.DISABLED;
+    this.audioOnly = false;
   }
 
   private onManifestParsed(
@@ -837,7 +844,7 @@ export default class StreamController
     data: AudioTrackSwitchingData,
   ) {
     // if any URL found on new audio track, it is an alternate audio track
-    const fromAltAudio = this.altAudio;
+    const fromAltAudio = this.altAudio === AlternateAudio.SWITCHED;
     const altAudio = !!data.url;
     // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
     // don't do anything if we switch to alt audio: audio stream controller is handling it.
@@ -874,6 +881,8 @@ export default class StreamController
         this.fragmentTracker.removeAllFragments();
       }
       hls.trigger(Events.AUDIO_TRACK_SWITCHED, data);
+    } else {
+      this.altAudio = AlternateAudio.SWITCHING;
     }
   }
 
@@ -893,7 +902,9 @@ export default class StreamController
         this.mediaBuffer = videoBuffer;
       }
     }
-    this.altAudio = altAudio;
+    this.altAudio = altAudio
+      ? AlternateAudio.SWITCHED
+      : AlternateAudio.DISABLED;
     this.tick();
   }
 
