@@ -453,6 +453,7 @@ class SubtitleTrackController extends BasePlaylistController {
         id,
         groupId,
         deliveryDirectives: hlsUrlParameters || null,
+        track: currentTrack,
       });
     }
   }

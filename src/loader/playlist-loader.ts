@@ -18,10 +18,11 @@ import type { NetworkComponentAPI } from '../types/component-api';
 import type {
   ErrorData,
   LevelLoadingData,
+  LevelsUpdatedData,
   ManifestLoadingData,
   TrackLoadingData,
 } from '../types/events';
-import type { LevelParsed, VariableMap } from '../types/level';
+import type { Level, LevelParsed, VariableMap } from '../types/level';
 import type {
   Loader,
   LoaderCallbacks,
@@ -31,7 +32,7 @@ import type {
   LoaderStats,
   PlaylistLoaderContext,
 } from '../types/loader';
-import type { MediaAttributes } from '../types/media-playlist';
+import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext,
@@ -86,6 +87,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     hls.on(Events.LEVEL_LOADING, this.onLevelLoading, this);
     hls.on(Events.AUDIO_TRACK_LOADING, this.onAudioTrackLoading, this);
     hls.on(Events.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading, this);
+    hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
   }
 
   private unregisterListeners() {
@@ -94,6 +96,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     hls.off(Events.LEVEL_LOADING, this.onLevelLoading, this);
     hls.off(Events.AUDIO_TRACK_LOADING, this.onAudioTrackLoading, this);
     hls.off(Events.SUBTITLE_TRACK_LOADING, this.onSubtitleTrackLoading, this);
+    hls.off(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
   }
 
   /**
@@ -118,7 +121,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     return this.loaders[context.type];
   }
 
-  private resetInternalLoader(contextType): void {
+  private resetInternalLoader(contextType: PlaylistContextType): void {
     if (this.loaders[contextType]) {
       delete this.loaders[contextType];
     }
@@ -134,7 +137,7 @@ class PlaylistLoader implements NetworkComponentAPI {
         loader.destroy();
       }
 
-      this.resetInternalLoader(contextType);
+      this.resetInternalLoader(contextType as PlaylistContextType);
     }
   }
 
@@ -157,11 +160,12 @@ class PlaylistLoader implements NetworkComponentAPI {
       type: PlaylistContextType.MANIFEST,
       url,
       deliveryDirectives: null,
+      levelOrTrack: null,
     });
   }
 
   private onLevelLoading(event: Events.LEVEL_LOADING, data: LevelLoadingData) {
-    const { id, level, pathwayId, url, deliveryDirectives } = data;
+    const { id, level, pathwayId, url, deliveryDirectives, levelInfo } = data;
     this.load({
       id,
       level,
@@ -170,6 +174,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       type: PlaylistContextType.LEVEL,
       url,
       deliveryDirectives,
+      levelOrTrack: levelInfo,
     });
   }
 
@@ -177,7 +182,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     event: Events.AUDIO_TRACK_LOADING,
     data: TrackLoadingData,
   ) {
-    const { id, groupId, url, deliveryDirectives } = data;
+    const { id, groupId, url, deliveryDirectives, track } = data;
     this.load({
       id,
       groupId,
@@ -186,6 +191,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       type: PlaylistContextType.AUDIO_TRACK,
       url,
       deliveryDirectives,
+      levelOrTrack: track,
     });
   }
 
@@ -193,7 +199,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     event: Events.SUBTITLE_TRACK_LOADING,
     data: TrackLoadingData,
   ) {
-    const { id, groupId, url, deliveryDirectives } = data;
+    const { id, groupId, url, deliveryDirectives, track } = data;
     this.load({
       id,
       groupId,
@@ -202,7 +208,28 @@ class PlaylistLoader implements NetworkComponentAPI {
       type: PlaylistContextType.SUBTITLE_TRACK,
       url,
       deliveryDirectives,
+      levelOrTrack: track,
     });
+  }
+
+  private onLevelsUpdated(
+    event: Events.LEVELS_UPDATED,
+    data: LevelsUpdatedData,
+  ) {
+    // abort and delete loader of removed levels
+    const loader = this.loaders[PlaylistContextType.LEVEL];
+    if (loader) {
+      const context = loader.context;
+      if (
+        context &&
+        !data.levels.some(
+          (lvl) => lvl === (context as PlaylistLoaderContext).levelOrTrack,
+        )
+      ) {
+        loader.abort();
+        delete this.loaders[PlaylistContextType.LEVEL];
+      }
+    }
   }
 
   private load(context: PlaylistLoaderContext): void {
@@ -217,7 +244,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       if (
         loaderContext &&
         loaderContext.url === context.url &&
-        loaderContext.level === context.level
+        loaderContext.levelOrTrack === context.levelOrTrack
       ) {
         // same URL can't overlap
         this.hls.logger.trace('[playlist-loader]: playlist request ongoing');
@@ -680,6 +707,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       case PlaylistContextType.LEVEL:
         hls.trigger(Events.LEVEL_LOADED, {
           details: levelDetails,
+          levelInfo: (context.levelOrTrack as Level) || hls.levels[0],
           level: levelIndex || 0,
           id: id || 0,
           stats,
@@ -690,6 +718,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       case PlaylistContextType.AUDIO_TRACK:
         hls.trigger(Events.AUDIO_TRACK_LOADED, {
           details: levelDetails,
+          track: context.levelOrTrack as MediaPlaylist,
           id: id || 0,
           groupId: groupId || '',
           stats,
@@ -700,6 +729,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       case PlaylistContextType.SUBTITLE_TRACK:
         hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
           details: levelDetails,
+          track: context.levelOrTrack as MediaPlaylist,
           id: id || 0,
           groupId: groupId || '',
           stats,

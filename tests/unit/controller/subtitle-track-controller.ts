@@ -128,6 +128,7 @@ describe('SubtitleTrackController', function () {
         pathwayId: undefined,
         url: '',
         deliveryDirectives: null,
+        levelInfo: {} as any,
       });
     };
 
@@ -386,6 +387,7 @@ describe('SubtitleTrackController', function () {
           id: 1,
           groupId: 'default-text-group',
           deliveryDirectives: null,
+          track: subtitleTrackController.subtitleTracks[1],
         },
       );
     });
@@ -432,6 +434,7 @@ describe('SubtitleTrackController', function () {
           id: 2,
           groupId: 'default-text-group',
           deliveryDirectives: null,
+          track: subtitleTrackController.subtitleTracks[2],
         },
       );
     });
@@ -489,6 +492,7 @@ describe('SubtitleTrackController', function () {
         stats: new LoadStats(),
         networkDetails: {},
         deliveryDirectives: null,
+        track: {} as any,
       };
       hls.trigger(Events.SUBTITLE_TRACK_LOADED, mockLoadedEvent);
       expect((subtitleTrackController as any).timer).to.equal(-1);
@@ -521,6 +525,7 @@ describe('SubtitleTrackController', function () {
         stats: new LoadStats(),
         networkDetails: {},
         deliveryDirectives: null,
+        track: {} as any,
       };
 
       hls.subtitleTrack = -1;
@@ -544,6 +549,7 @@ describe('SubtitleTrackController', function () {
         stats: new LoadStats(),
         networkDetails: {},
         deliveryDirectives: null,
+        track: {} as any,
       });
       expect((subtitleTrackController as any).timer).to.equal(-1);
     });
@@ -560,6 +566,7 @@ describe('SubtitleTrackController', function () {
         stats: new LoadStats(),
         networkDetails: {},
         deliveryDirectives: null,
+        track: {} as any,
       });
       expect((subtitleTrackController as any).timer).to.exist;
     });
@@ -577,6 +584,7 @@ describe('SubtitleTrackController', function () {
         stats: new LoadStats(),
         networkDetails: {},
         deliveryDirectives: null,
+        track: {} as any,
       });
       expect((subtitleTrackController as any).timer).to.equal(-1);
     });
