@@ -1247,6 +1247,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     this.schedule.reset();
     this.emptyPlayerQueue();
     this.clearScheduleState();
+    this.shouldPlay = false;
     this.bufferedPos = this.timelinePos = -1;
     this.mediaSelection =
       this.altSelection =
