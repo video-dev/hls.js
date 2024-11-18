@@ -5,7 +5,7 @@ import ChunkCache from '../demux/chunk-cache';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
-import { ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { Level } from '../types/level';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
@@ -409,8 +409,8 @@ class AudioStreamController
     if (
       this.startFragRequested &&
       mainFragLoading &&
-      mainFragLoading.sn !== 'initSegment' &&
-      frag.sn !== 'initSegment' &&
+      isMediaFragment(mainFragLoading) &&
+      isMediaFragment(frag) &&
       !frag.endList &&
       (!trackDetails.live ||
         (!this.loadingParts && targetBufferTime < this.hls.liveSyncPosition!))
@@ -694,7 +694,7 @@ class AudioStreamController
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
     if (
       data.frag.type === PlaylistLevelType.MAIN &&
-      data.frag.sn !== 'initSegment'
+      isMediaFragment(data.frag)
     ) {
       this.mainFragLoading = data;
       if (this.state === State.IDLE) {
@@ -722,8 +722,8 @@ class AudioStreamController
       );
       return;
     }
-    if (frag.sn !== 'initSegment') {
-      this.fragPrevious = frag as MediaFragment;
+    if (isMediaFragment(frag)) {
+      this.fragPrevious = frag;
       const track = this.switchingTrack;
       if (track) {
         this.bufferedTrack = track;
@@ -962,7 +962,7 @@ class AudioStreamController
       fragState === FragmentState.NOT_LOADED ||
       fragState === FragmentState.PARTIAL
     ) {
-      if (frag.sn === 'initSegment') {
+      if (!isMediaFragment(frag)) {
         this._loadInitSegment(frag, track);
       } else if (track.details?.live && !this.initPTS[frag.cc]) {
         this.log(
