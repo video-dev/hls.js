@@ -182,6 +182,7 @@ describe('AudioStreamController', function () {
           },
           targetduration: 100,
         } as unknown as LevelDetails,
+        track: {} as any,
       };
 
       audioStreamController.levels = tracks;

@@ -188,6 +188,7 @@ export interface LevelSwitchedData {
 export interface TrackLoadingData {
   id: number;
   groupId: string;
+  track: MediaPlaylist;
   url: string;
   deliveryDirectives: HlsUrlParameters | null;
 }
@@ -195,6 +196,7 @@ export interface TrackLoadingData {
 export interface LevelLoadingData {
   id: number;
   level: number;
+  levelInfo: Level;
   pathwayId: string | undefined;
   url: string;
   deliveryDirectives: HlsUrlParameters | null;
@@ -207,12 +209,14 @@ export interface TrackLoadedData {
   networkDetails: any;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
+  track: MediaPlaylist;
 }
 
 export interface LevelLoadedData {
   details: LevelDetails;
   id: number;
   level: number;
+  levelInfo: Level;
   networkDetails: any;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;

@@ -601,7 +601,7 @@ export default class LevelController extends BasePlaylistController {
 
   protected onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     const { level, details } = data;
-    const curLevel = this._levels[level];
+    const curLevel = data.levelInfo;
 
     if (!curLevel) {
       this.warn(`Invalid level index ${level}`);
@@ -612,7 +612,7 @@ export default class LevelController extends BasePlaylistController {
     }
 
     // only process level loaded events matching with expected level
-    if (level === this.currentLevelIndex) {
+    if (curLevel === this.currentLevel) {
       // reset level load error counter on successful level loaded only if there is no issues with fragments
       if (curLevel.fragmentError === 0) {
         curLevel.loadError = 0;
@@ -665,6 +665,7 @@ export default class LevelController extends BasePlaylistController {
       this.hls.trigger(Events.LEVEL_LOADING, {
         url,
         level: currentLevelIndex,
+        levelInfo: currentLevel,
         pathwayId: currentLevel.attrs['PATHWAY-ID'],
         id: 0, // Deprecated Level urlId
         deliveryDirectives: hlsUrlParameters || null,

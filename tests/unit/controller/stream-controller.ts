@@ -129,6 +129,12 @@ describe('StreamController', function () {
         networkDetails: {},
         stats: new LoadStats(),
         deliveryDirectives: null,
+        levelInfo: new Level({
+          name: '',
+          url: '',
+          attrs,
+          bitrate: 500000,
+        }),
       });
       expect(streamController['startPosition']).to.equal(130.5);
       expect(streamController['nextLoadPosition']).to.equal(130.5);
@@ -174,6 +180,12 @@ describe('StreamController', function () {
         networkDetails: {},
         stats: new LoadStats(),
         deliveryDirectives: null,
+        levelInfo: new Level({
+          name: '',
+          url: '',
+          attrs,
+          bitrate: 500000,
+        }),
       });
       expect(streamController['startPosition']).to.equal(18);
       expect(streamController['nextLoadPosition']).to.equal(18);
