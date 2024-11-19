@@ -152,6 +152,10 @@ export type MediaFragmentRef = {
   programDateTime: number | null;
 };
 
+export function isMediaFragment(frag: Fragment): frag is MediaFragment {
+  return frag.sn !== 'initSegment';
+}
+
 /**
  * Object representing parsed data from an HLS Segment. Found in {@link hls.js#LevelDetails.fragments}.
  */
@@ -323,7 +327,7 @@ export class Fragment extends BaseSegment {
   }
 
   get ref(): MediaFragmentRef | null {
-    if (this.sn === 'initSegment') {
+    if (!isMediaFragment(this)) {
       return null;
     }
     if (!this._ref) {
