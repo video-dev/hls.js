@@ -432,6 +432,10 @@ export default class Hls implements HlsEventEmitter {
       return;
     }
     this.logger.log(`attachMedia`);
+    if (this._media) {
+      this.logger.warn(`media must be detached before attaching`);
+      this.detachMedia();
+    }
     const attachMediaSource = 'media' in data;
     const media = attachMediaSource ? data.media : data;
     const attachingData = attachMediaSource ? data : { media };
