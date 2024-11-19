@@ -6,7 +6,7 @@ import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { changeTypeSupported } from '../is-supported';
-import { ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -319,7 +319,7 @@ export default class StreamController
       this.couldBacktrack &&
       !this.fragPrevious &&
       frag &&
-      frag.sn !== 'initSegment' &&
+      isMediaFragment(frag) &&
       this.fragmentTracker.getState(frag) !== FragmentState.OK
     ) {
       const backtrackSn = (this.backtrackFragment ?? frag).sn as number;
@@ -378,7 +378,7 @@ export default class StreamController
       fragState === FragmentState.NOT_LOADED ||
       fragState === FragmentState.PARTIAL
     ) {
-      if (frag.sn === 'initSegment') {
+      if (!isMediaFragment(frag)) {
         this._loadInitSegment(frag, level);
       } else if (this.bitrateTest) {
         this.log(
@@ -963,8 +963,8 @@ export default class StreamController
       this.fragLastKbps = Math.round(
         (8 * stats.total) / (stats.buffering.end - stats.loading.first),
       );
-      if (frag.sn !== 'initSegment') {
-        this.fragPrevious = frag as MediaFragment;
+      if (isMediaFragment(frag)) {
+        this.fragPrevious = frag;
       }
       this.fragBufferedComplete(frag, part);
     }

@@ -1,4 +1,4 @@
-import { NetworkErrorAction } from './error-controller';
+import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
 import {
   findFragmentByPDT,
   findFragmentByPTS,
@@ -8,6 +8,12 @@ import { FragmentState } from './fragment-tracker';
 import Decrypter from '../crypt/decrypter';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
+import {
+  type Fragment,
+  isMediaFragment,
+  type MediaFragment,
+  type Part,
+} from '../loader/fragment';
 import FragmentLoader from '../loader/fragment-loader';
 import TaskLoop from '../task-loop';
 import { PlaylistLevelType } from '../types/loader';
@@ -31,7 +37,6 @@ import type { FragmentTracker } from './fragment-tracker';
 import type { HlsConfig } from '../config';
 import type TransmuxerInterface from '../demux/transmuxer-interface';
 import type Hls from '../hls';
-import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type {
   FragmentLoadProgressCallback,
   LoadError,
@@ -714,7 +719,7 @@ export default class BaseStreamController
           : '(detached)'
       })`,
     );
-    if (frag.sn !== 'initSegment') {
+    if (isMediaFragment(frag)) {
       if (frag.type !== PlaylistLevelType.SUBTITLE) {
         const el = frag.elementaryStreams;
         if (!Object.keys(el).some((type) => !!el[type])) {
@@ -803,7 +808,7 @@ export default class BaseStreamController
 
     const fragPrevious = this.fragPrevious;
     if (
-      frag.sn !== 'initSegment' &&
+      isMediaFragment(frag) &&
       (!fragPrevious || frag.sn !== fragPrevious.sn)
     ) {
       const shouldLoadParts = this.shouldLoadParts(level.details, frag.end);
@@ -817,7 +822,7 @@ export default class BaseStreamController
       }
     }
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
-    if (this.loadingParts && frag.sn !== 'initSegment') {
+    if (this.loadingParts && isMediaFragment(frag)) {
       const partList = details.partList;
       if (partList && progressCallback) {
         if (targetBufferTime > frag.end && details.fragmentHint) {
@@ -885,7 +890,7 @@ export default class BaseStreamController
       }
     }
 
-    if (frag.sn !== 'initSegment' && this.loadingParts) {
+    if (isMediaFragment(frag) && this.loadingParts) {
       this.log(
         `LL-Part loading OFF after next part miss @${targetBufferTime.toFixed(
           2,
@@ -1661,7 +1666,7 @@ export default class BaseStreamController
   }
 
   private handleFragLoadAborted(frag: Fragment, part: Part | undefined) {
-    if (this.transmuxer && frag.sn !== 'initSegment' && frag.stats.aborted) {
+    if (this.transmuxer && isMediaFragment(frag) && frag.stats.aborted) {
       this.warn(
         `Fragment ${frag.sn}${part ? ' part ' + part.index : ''} of level ${
           frag.level
@@ -1708,12 +1713,18 @@ export default class BaseStreamController
     }
     // keep retrying until the limit will be reached
     const errorAction = data.errorAction;
-    const { action, retryCount = 0, retryConfig } = errorAction || {};
-    if (
-      errorAction &&
-      action === NetworkErrorAction.RetryRequest &&
-      retryConfig
-    ) {
+    const { action, flags, retryCount = 0, retryConfig } = errorAction || {};
+    const couldRetry = !!errorAction && !!retryConfig;
+    const retry = couldRetry && action === NetworkErrorAction.RetryRequest;
+    const noAlternate =
+      couldRetry &&
+      !errorAction.resolved &&
+      flags === ErrorActionFlags.MoveAllAlternatesMatchingHost;
+    if (!retry && noAlternate && isMediaFragment(frag) && !frag.endList) {
+      this.resetFragmentErrors(filterType);
+      this.treatAsGap(frag);
+      errorAction.resolved = true;
+    } else if ((retry || noAlternate) && retryCount < retryConfig.maxNumRetry) {
       this.resetStartWhenNotLoaded(this.levelLastLoaded);
       const delay = getRetryDelay(retryConfig, retryCount);
       this.warn(
@@ -1742,9 +1753,7 @@ export default class BaseStreamController
         );
         return;
       }
-    } else if (
-      errorAction?.action === NetworkErrorAction.SendAlternateToPenaltyBox
-    ) {
+    } else if (action === NetworkErrorAction.SendAlternateToPenaltyBox) {
       this.state = State.WAITING_LEVEL;
     } else {
       this.state = State.ERROR;
@@ -1925,10 +1934,7 @@ export default class BaseStreamController
       );
       if (level.fragmentError === 0) {
         // Mark and track the odd empty segment as a gap to avoid reloading
-        level.fragmentError++;
-        frag.gap = true;
-        this.fragmentTracker.removeFragment(frag);
-        this.fragmentTracker.fragBuffered(frag, true);
+        this.treatAsGap(frag, level);
       }
       this.warn(error.message);
       this.hls.trigger(Events.ERROR, {
@@ -1968,6 +1974,15 @@ export default class BaseStreamController
     ).toFixed(
       3,
     )}]${part && frag.type === 'main' ? 'INDEPENDENT=' + (part.independent ? 'YES' : 'NO') : ''}`;
+  }
+
+  private treatAsGap(frag: MediaFragment, level?: Level) {
+    if (level) {
+      level.fragmentError++;
+    }
+    frag.gap = true;
+    this.fragmentTracker.removeFragment(frag);
+    this.fragmentTracker.fragBuffered(frag, true);
   }
 
   protected resetTransmuxer() {

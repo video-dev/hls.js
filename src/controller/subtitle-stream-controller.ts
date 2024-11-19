@@ -3,6 +3,11 @@ import { findFragmentByPTS } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
+import {
+  type Fragment,
+  isMediaFragment,
+  type MediaFragment,
+} from '../loader/fragment';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -15,7 +20,6 @@ import { addSliding } from '../utils/level-helper';
 import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
-import type { Fragment, MediaFragment } from '../loader/fragment';
 import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
 import type { NetworkComponentAPI } from '../types/component-api';
@@ -126,8 +130,8 @@ export class SubtitleStreamController
     data: SubtitleFragProcessed,
   ) {
     const { frag, success } = data;
-    if (frag.sn !== 'initSegment') {
-      this.fragPrevious = frag as MediaFragment;
+    if (isMediaFragment(frag)) {
+      this.fragPrevious = frag;
     }
     this.state = State.IDLE;
     if (!success) {
@@ -466,7 +470,7 @@ export class SubtitleStreamController
         return;
       }
       foundFrag = this.mapToInitFragWhenRequired(foundFrag) as Fragment;
-      if (foundFrag.sn !== 'initSegment') {
+      if (isMediaFragment(foundFrag)) {
         // Load earlier fragment in same discontinuity to make up for misaligned playlists and cues that extend beyond end of segment
         const curSNIdx = foundFrag.sn - trackDetails.startSN;
         const prevFrag = fragments[curSNIdx - 1];
@@ -492,7 +496,7 @@ export class SubtitleStreamController
     level: Level,
     targetBufferTime: number,
   ) {
-    if (frag.sn === 'initSegment') {
+    if (!isMediaFragment(frag)) {
       this._loadInitSegment(frag, level);
     } else {
       super.loadFragment(frag, level, targetBufferTime);
