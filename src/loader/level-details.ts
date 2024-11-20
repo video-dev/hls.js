@@ -160,4 +160,12 @@ export class LevelDetails {
     }
     return this.endSN;
   }
+
+  get expired(): boolean {
+    if (this.live && this.age) {
+      const playlistWindowDuration = this.partEnd - this.fragmentStart;
+      return this.age > playlistWindowDuration + this.levelTargetDuration * 3;
+    }
+    return false;
+  }
 }

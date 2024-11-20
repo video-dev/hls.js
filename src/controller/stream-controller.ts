@@ -155,7 +155,11 @@ export default class StreamController
         this._hasEnoughToStart = false;
       }
       // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
-      if (lastCurrentTime > 0 && startPosition === -1) {
+      if (
+        lastCurrentTime > 0 &&
+        startPosition === -1 &&
+        !skipSeekToStartPosition
+      ) {
         this.log(
           `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
             3,
@@ -186,7 +190,9 @@ export default class StreamController
         const details = currentLevel?.details;
         if (
           details &&
-          (!details.live || this.levelLastLoaded === currentLevel)
+          (!details.live ||
+            (this.levelLastLoaded === currentLevel &&
+              !this.waitForLive(currentLevel)))
         ) {
           if (this.waitForCdnTuneIn(details)) {
             break;
@@ -287,10 +293,11 @@ export default class StreamController
     if (
       !levelDetails ||
       this.state === State.WAITING_LEVEL ||
-      (levelDetails.live && this.levelLastLoaded !== levelInfo)
+      this.waitForLive(levelInfo)
     ) {
       this.level = level;
       this.state = State.WAITING_LEVEL;
+      this.startFragRequested = false;
       return;
     }
 
@@ -649,7 +656,8 @@ export default class StreamController
     const level = data.levelInfo;
     if (
       !level.details ||
-      (level.details.live && this.levelLastLoaded !== level) ||
+      (level.details.live &&
+        (this.levelLastLoaded !== level || level.details.expired)) ||
       this.waitForCdnTuneIn(level.details)
     ) {
       this.state = State.WAITING_LEVEL;

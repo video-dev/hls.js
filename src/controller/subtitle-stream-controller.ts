@@ -18,8 +18,8 @@ import {
 } from '../utils/encryption-methods-util';
 import { addSliding } from '../utils/level-helper';
 import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
-import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
+import type Hls from '../hls';
 import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
 import type { NetworkComponentAPI } from '../types/component-api';
@@ -423,6 +423,9 @@ export class SubtitleStreamController
       const { currentTrackId, levels } = this;
       const track = levels?.[currentTrackId];
       if (!track || !levels.length || !track.details) {
+        return;
+      }
+      if (this.waitForLive(track)) {
         return;
       }
       const { config } = this;
