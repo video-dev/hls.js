@@ -447,7 +447,18 @@ class SubtitleTrackController extends BasePlaylistController {
           );
         }
       }
-      this.log(`Loading subtitle playlist for id ${id}`);
+      const details = currentTrack.details;
+      const age = details?.age;
+      this.log(
+        `Loading subtitle ${id} "${currentTrack.name}" lang:${currentTrack.lang} group:${groupId}${
+          hlsUrlParameters?.msn !== undefined
+            ? ' at sn ' +
+              hlsUrlParameters.msn +
+              ' part ' +
+              hlsUrlParameters.part
+            : ''
+        }${age && details.live ? ' age ' + age.toFixed(1) + (details.type ? ' ' + details.type || '' : '') : ''} ${url}`,
+      );
       this.hls.trigger(Events.SUBTITLE_TRACK_LOADING, {
         url,
         id,
