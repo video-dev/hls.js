@@ -164,7 +164,11 @@ export class LevelDetails {
   get expired(): boolean {
     if (this.live && this.age) {
       const playlistWindowDuration = this.partEnd - this.fragmentStart;
-      return this.age > playlistWindowDuration + this.levelTargetDuration * 3;
+      return (
+        this.age >
+        Math.max(playlistWindowDuration, this.totalduration) +
+          this.levelTargetDuration
+      );
     }
     return false;
   }
