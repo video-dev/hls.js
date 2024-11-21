@@ -9,7 +9,10 @@ import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { Level } from '../types/level';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
-import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
+import {
+  alignDiscontinuities,
+  alignMediaPlaylistByPDT,
+} from '../utils/discontinuities';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import type { FragmentTracker } from './fragment-tracker';
 import type Hls from '../hls';
@@ -546,21 +549,22 @@ class AudioStreamController
       if (newDetails.deltaUpdateFailed || !mainDetails) {
         return;
       }
-      if (
-        !track.details &&
-        newDetails.hasProgramDateTime &&
-        mainDetails.hasProgramDateTime
-      ) {
-        // Make sure our audio rendition is aligned with the "main" rendition, using
-        // pdt as our reference times.
-        alignMediaPlaylistByPDT(newDetails, mainDetails);
-        sliding = newDetails.fragmentStart;
-      } else {
+
+      if (track.details) {
         sliding = this.alignPlaylists(
           newDetails,
           track.details,
           this.levelLastLoaded?.details,
         );
+      }
+      if (!newDetails.alignedSliding) {
+        // Make sure our audio rendition is aligned with the "main" rendition, using
+        // pdt as our reference times.
+        alignDiscontinuities(newDetails, mainDetails);
+        if (!newDetails.alignedSliding) {
+          alignMediaPlaylistByPDT(newDetails, mainDetails);
+        }
+        sliding = newDetails.fragmentStart;
       }
     }
     track.details = newDetails;
