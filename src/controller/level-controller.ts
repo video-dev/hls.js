@@ -648,6 +648,8 @@ export default class LevelController extends BasePlaylistController {
       }
 
       const pathwayId = currentLevel.attrs['PATHWAY-ID'];
+      const details = currentLevel.details;
+      const age = details?.age;
       this.log(
         `Loading level index ${currentLevelIndex}${
           hlsUrlParameters?.msn !== undefined
@@ -656,7 +658,7 @@ export default class LevelController extends BasePlaylistController {
               ' part ' +
               hlsUrlParameters.part
             : ''
-        } with${pathwayId ? ' Pathway ' + pathwayId : ''} ${url}`,
+        }${pathwayId ? ' Pathway ' + pathwayId : ''}${age && details.live ? ' age ' + age.toFixed(1) + (details.type ? ' ' + details.type || '' : '') : ''} ${url}`,
       );
 
       // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);

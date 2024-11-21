@@ -240,17 +240,25 @@ class PlaylistLoader implements NetworkComponentAPI {
     // Check if a loader for this context already exists
     let loader = this.getInternalLoader(context);
     if (loader) {
+      const logger = this.hls.logger;
       const loaderContext = loader.context as PlaylistLoaderContext;
       if (
         loaderContext &&
-        loaderContext.url === context.url &&
-        loaderContext.levelOrTrack === context.levelOrTrack
+        loaderContext.levelOrTrack === context.levelOrTrack &&
+        (loaderContext.url === context.url ||
+          (loaderContext.deliveryDirectives && !context.deliveryDirectives))
       ) {
-        // same URL can't overlap
-        this.hls.logger.trace('[playlist-loader]: playlist request ongoing');
+        // same URL can't overlap, or wait for blocking request
+        if (loaderContext.url === context.url) {
+          logger.log(`[playlist-loader]: playlist request ongoing`);
+        } else {
+          logger.log(
+            `[playlist-loader]: ignore ${context.url} in favor of ${loaderContext.url}`,
+          );
+        }
         return;
       }
-      this.hls.logger.log(
+      logger.log(
         `[playlist-loader]: aborting previous loader for type: ${context.type}`,
       );
       loader.abort();
