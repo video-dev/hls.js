@@ -11,8 +11,8 @@ import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
-import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
+import type Hls from '../hls';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
@@ -207,8 +207,9 @@ class AudioStreamController
         break;
       case State.WAITING_TRACK: {
         const { levels, trackId } = this;
-        const details = levels?.[trackId]?.details;
-        if (details) {
+        const currenTrack = levels?.[trackId];
+        const details = currenTrack?.details;
+        if (details && !this.waitForLive(currenTrack)) {
           if (this.waitForCdnTuneIn(details)) {
             break;
           }
@@ -318,10 +319,11 @@ class AudioStreamController
     const trackDetails = levelInfo.details;
     if (
       !trackDetails ||
-      (trackDetails.live && this.levelLastLoaded !== levelInfo) ||
+      this.waitForLive(levelInfo) ||
       this.waitForCdnTuneIn(trackDetails)
     ) {
       this.state = State.WAITING_TRACK;
+      this.startFragRequested = false;
       return;
     }
 

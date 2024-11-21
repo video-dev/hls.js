@@ -556,6 +556,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected unregisterListeners(): void;
     // (undocumented)
     protected waitForCdnTuneIn(details: LevelDetails): boolean | 0;
+    // (undocumented)
+    protected waitForLive(levelInfo: Level): boolean | undefined;
 }
 
 // Warning: (ae-missing-release-tag) "BaseTrack" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -3131,6 +3133,8 @@ export class LevelDetails {
     endCC: number;
     // (undocumented)
     endSN: number;
+    // (undocumented)
+    get expired(): boolean;
     // (undocumented)
     get fragmentEnd(): number;
     // (undocumented)

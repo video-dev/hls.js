@@ -601,6 +601,15 @@ export default class BaseStreamController
     }
   }
 
+  protected waitForLive(levelInfo: Level) {
+    const details = levelInfo.details;
+    return (
+      details?.live &&
+      details.type !== 'EVENT' &&
+      (this.levelLastLoaded !== levelInfo || details.expired)
+    );
+  }
+
   protected flushMainBuffer(
     startOffset: number,
     endOffset: number,
@@ -1077,7 +1086,7 @@ export default class BaseStreamController
     const { level: levelIndex, sn, part: partIndex } = chunkMeta;
     if (!levels?.[levelIndex]) {
       this.warn(
-        `Levels object was unset while buffering fragment ${sn} of level ${levelIndex}. The current chunk will not be buffered.`,
+        `Levels object was unset while buffering fragment ${sn} of ${this.playlistLabel()} ${levelIndex}. The current chunk will not be buffered.`,
       );
       return null;
     }
@@ -1643,6 +1652,7 @@ export default class BaseStreamController
         // Leave this.startPosition at -1, so that we can use `getInitialLiveFragment` logic when startPosition has
         // not been specified via the config or an as an argument to startLoad (#3736).
         startPosition = this.hls.liveSyncPosition || sliding;
+        this.startPosition = -1;
       } else {
         this.log(`setting startPosition to 0 by default`);
         this.startPosition = startPosition = 0;
@@ -1666,9 +1676,14 @@ export default class BaseStreamController
   }
 
   private handleFragLoadAborted(frag: Fragment, part: Part | undefined) {
-    if (this.transmuxer && isMediaFragment(frag) && frag.stats.aborted) {
+    if (
+      this.transmuxer &&
+      frag.type === this.playlistType &&
+      isMediaFragment(frag) &&
+      frag.stats.aborted
+    ) {
       this.warn(
-        `Fragment ${frag.sn}${part ? ' part ' + part.index : ''} of level ${
+        `Fragment ${frag.sn}${part ? ' part ' + part.index : ''} of ${this.playlistLabel()} ${
           frag.level
         } was aborted`,
       );
@@ -1861,7 +1876,7 @@ export default class BaseStreamController
 
   protected resetWhenMissingContext(chunkMeta: ChunkMetadata) {
     this.warn(
-      `The loading context changed while buffering fragment ${chunkMeta.sn} of level ${chunkMeta.level}. This chunk will not be buffered.`,
+      `The loading context changed while buffering fragment ${chunkMeta.sn} of ${this.playlistLabel()} ${chunkMeta.level}. This chunk will not be buffered.`,
     );
     this.removeUnbufferedFrags();
     this.resetStartWhenNotLoaded(this.levelLastLoaded);
@@ -1930,7 +1945,7 @@ export default class BaseStreamController
     );
     if (!parsed && this.transmuxer?.error === null) {
       const error = new Error(
-        `Found no media in fragment ${frag.sn} of level ${frag.level} resetting transmuxer to fallback to playlist timing`,
+        `Found no media in fragment ${frag.sn} of ${this.playlistLabel()} ${frag.level} resetting transmuxer to fallback to playlist timing`,
       );
       if (level.fragmentError === 0) {
         // Mark and track the odd empty segment as a gap to avoid reloading
@@ -1943,7 +1958,7 @@ export default class BaseStreamController
         fatal: false,
         error,
         frag,
-        reason: `Found no media in msn ${frag.sn} of level "${level.url}"`,
+        reason: `Found no media in msn ${frag.sn} of ${this.playlistLabel()} "${level.url}"`,
       });
       if (!this.hls) {
         return;

@@ -425,8 +425,17 @@ class AudioTrackController extends BasePlaylistController {
         }
       }
       // track not retrieved yet, or live playlist we need to (re)load it
+      const details = audioTrack.details;
+      const age = details?.age;
       this.log(
-        `loading audio-track playlist ${id} "${audioTrack.name}" lang:${audioTrack.lang} group:${groupId}`,
+        `Loading audio-track ${id} "${audioTrack.name}" lang:${audioTrack.lang} group:${groupId}${
+          hlsUrlParameters?.msn !== undefined
+            ? ' at sn ' +
+              hlsUrlParameters.msn +
+              ' part ' +
+              hlsUrlParameters.part
+            : ''
+        }${age && details.live ? ' age ' + age.toFixed(1) + (details.type ? ' ' + details.type || '' : '') : ''} ${url}`,
       );
       this.clearTimer();
       this.hls.trigger(Events.AUDIO_TRACK_LOADING, {
