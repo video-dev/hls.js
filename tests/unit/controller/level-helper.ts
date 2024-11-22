@@ -1,9 +1,14 @@
 import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
+import AudioStreamController from '../../../src/controller/audio-stream-controller';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
 import { Fragment, Part } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
+import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
+import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import {
@@ -14,9 +19,22 @@ import {
   mergeDetails,
 } from '../../../src/utils/level-helper';
 import type { MediaFragment } from '../../../src/loader/fragment';
+import type {
+  ComponentAPI,
+  NetworkComponentAPI,
+} from '../../../src/types/component-api';
+import type {
+  AudioPlaylistType,
+  MediaAttributes,
+} from '../../../src/types/media-playlist';
 
 chai.use(sinonChai);
 const expect = chai.expect;
+
+type HlsTestable = Omit<Hls, 'networkControllers' | 'coreComponents'> & {
+  coreComponents: ComponentAPI[];
+  networkControllers: NetworkComponentAPI[];
+};
 
 const generatePlaylist = (sequenceNumbers, offset = 0, duration = 5) => {
   const playlist = new LevelDetails('');
@@ -586,5 +604,234 @@ fileSequence18.ts`;
       const actualLow = computeReloadInterval(newPlaylist, 14000);
       expect(actualLow).to.equal(2000);
     });
+  });
+
+  describe('main and alternate playlist alignment on live update with discontinuity', function () {
+    const mainPlaylist_01 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5428
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-PROGRAM-DATE-TIME:2024-11-20T14:14:59.135Z
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5428.m4s
+#EXTINF:2.000,
+video_5429.m4s
+#EXTINF:2.000,
+video_5430.m4s
+#EXTINF:2.000,
+video_5431.m4s
+#EXTINF:2.000,
+video_5432.m4s
+#EXTINF:2.000,
+video_5433.m4s
+#EXTINF:2.000,
+video_5434.m4s`;
+
+    const mainPlaylist_02 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5438
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-PROGRAM-DATE-TIME:2024-11-20T14:15:52.834Z
+#EXT-X-MAP:URI="video_init.mp4"
+#EXT-X-DISCONTINUITY
+#EXTINF:2.033,
+video_5438.m4s
+#EXTINF:2.000,
+video_5439.m4s
+#EXTINF:2.000,
+video_5440.m4s
+#EXTINF:2.000,
+video_5441.m4s`;
+
+    const audioPlaylist_01 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5428
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-PROGRAM-DATE-TIME:2024-11-20T14:14:58.572Z
+#EXT-X-MAP:URI="audio_init.mp4"
+#EXTINF:2.005,
+audio_5428.m4s
+#EXTINF:2.005,
+audio_5429.m4s
+#EXTINF:2.005,
+audio_5430.m4s
+#EXTINF:1.984,
+audio_5431.m4s
+#EXTINF:2.005,
+audio_5432.m4s
+#EXTINF:2.005,
+audio_5433.m4s
+#EXTINF:2.005,
+audio_5434.m4s
+#EXTINF:2.005,
+audio_5435.m4s`;
+
+    const audioPlaylist_02 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5438
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-PROGRAM-DATE-TIME:2024-11-20T14:15:52.835Z
+#EXT-X-MAP:URI="audio_init.mp4"
+#EXT-X-DISCONTINUITY
+#EXTINF:0.619,
+audio_5438.m4s
+#EXTINF:1.984,
+audio_5439.m4s
+#EXTINF:2.005,
+audio_5440.m4s
+#EXTINF:2.005,
+audio_5441.m4s`;
+
+    let hls: HlsTestable;
+
+    beforeEach(function () {
+      hls = new Hls({
+        debug: true,
+      }) as unknown as HlsTestable;
+      for (let i = hls.networkControllers.length; i--; ) {
+        const component = hls.networkControllers[i];
+        if (
+          component !== (hls as any).streamController &&
+          !(component instanceof AudioStreamController)
+        ) {
+          component.destroy();
+          hls.networkControllers.splice(i, 1);
+        }
+      }
+      hls.coreComponents.forEach(
+        (component) =>
+          component !== (hls as any).latencyController && component.destroy(),
+      );
+      hls.coreComponents.length = 0;
+    });
+
+    afterEach(function () {
+      hls.destroy();
+    });
+
+    it('aligns playlist on level update', function () {
+      const mainDetails1 = M3U8Parser.parseLevelPlaylist(
+        mainPlaylist_01,
+        'http://dummy.url.com/playlist-v.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      const mainDetails2 = M3U8Parser.parseLevelPlaylist(
+        mainPlaylist_02,
+        'http://dummy.url.com/playlist-v.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      const audioDetails1 = M3U8Parser.parseLevelPlaylist(
+        audioPlaylist_01,
+        'http://dummy.url.com/playlist-a.m3u8',
+        0,
+        PlaylistLevelType.AUDIO,
+        0,
+        null,
+      );
+      const audioDetails2 = M3U8Parser.parseLevelPlaylist(
+        audioPlaylist_02,
+        'http://dummy.url.com/playlist-a.m3u8',
+        0,
+        PlaylistLevelType.AUDIO,
+        0,
+        null,
+      );
+
+      const levelInfo = new Level({
+        attrs: new AttrList({}),
+        bitrate: 0,
+        details: mainDetails1,
+        name: '',
+        url: '',
+      });
+
+      const trackInfo = {
+        attrs: new AttrList({}) as MediaAttributes,
+        autoselect: true,
+        bitrate: 0,
+        default: true,
+        forced: false,
+        groupId: '',
+        id: 0,
+        name: '',
+        type: 'AUDIO' as AudioPlaylistType,
+        url: '',
+      };
+
+      // Set stream controller levels and tracks
+      hls.trigger(Events.MANIFEST_PARSED, {
+        levels: [levelInfo],
+        audioTracks: [trackInfo],
+        subtitleTracks: [],
+        sessionData: null,
+        sessionKeys: null,
+        firstLevel: 0,
+        stats: new LoadStats(),
+        audio: true,
+        video: true,
+        altAudio: true,
+      });
+
+      hls.trigger(Events.AUDIO_TRACKS_UPDATED, { audioTracks: [trackInfo] });
+
+      // First main and audio playlist responses
+      hls.trigger(Events.LEVEL_LOADED, {
+        details: mainDetails1,
+        levelInfo,
+        level: 0,
+        id: 0,
+        stats: new LoadStats(),
+        networkDetails: {},
+        deliveryDirectives: null,
+      });
+
+      hls.trigger(Events.AUDIO_TRACK_LOADED, {
+        details: audioDetails1,
+        track: trackInfo,
+        id: 0,
+        groupId: '',
+        stats: new LoadStats(),
+        networkDetails: {},
+        deliveryDirectives: null,
+      });
+
+      // Seconds main and audio playlist responses
+      hls.trigger(Events.LEVEL_LOADED, {
+        details: mainDetails2,
+        levelInfo,
+        level: 0,
+        id: 0,
+        stats: new LoadStats(),
+        networkDetails: {},
+        deliveryDirectives: null,
+      });
+
+      hls.trigger(Events.AUDIO_TRACK_LOADED, {
+        details: audioDetails2,
+        track: trackInfo,
+        id: 0,
+        groupId: '',
+        stats: new LoadStats(),
+        networkDetails: {},
+        deliveryDirectives: null,
+      });
+
+      expect(
+        Math.abs(mainDetails2.fragmentStart - audioDetails2.fragmentStart),
+      ).to.be.lt(0.01);
+    });
+
+    it('aligns playlist on track update');
   });
 });

@@ -521,12 +521,16 @@ class AudioStreamController
     event: Events.AUDIO_TRACK_LOADED,
     data: TrackLoadedData,
   ) {
-    if (this.mainDetails == null) {
+    const { levels } = this;
+    const { details: newDetails, id: trackId } = data;
+    if (
+      this.mainDetails == null ||
+      this.mainDetails.expired ||
+      newDetails.endCC > this.mainDetails.endCC
+    ) {
       this.cachedTrackLoadedData = data;
       return;
     }
-    const { levels } = this;
-    const { details: newDetails, id: trackId } = data;
     if (!levels) {
       this.warn(`Audio tracks were reset while loading level ${trackId}`);
       return;
