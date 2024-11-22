@@ -9,7 +9,10 @@ import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { Level } from '../types/level';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
-import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
+import {
+  alignDiscontinuities,
+  alignMediaPlaylistByPDT,
+} from '../utils/discontinuities';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import type { FragmentTracker } from './fragment-tracker';
 import type Hls from '../hls';
@@ -257,7 +260,7 @@ class AudioStreamController
             this.nextLoadPosition = this.findSyncFrag(videoAnchor).start;
             this.clearWaitingFragment();
           }
-        } else if (this.state !== State.STOPPED) {
+        } else {
           this.state = State.IDLE;
         }
       }
@@ -508,9 +511,10 @@ class AudioStreamController
 
   private onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     this.mainDetails = data.details;
-    if (this.cachedTrackLoadedData !== null) {
-      this.hls.trigger(Events.AUDIO_TRACK_LOADED, this.cachedTrackLoadedData);
+    const cachedTrackLoadedData = this.cachedTrackLoadedData;
+    if (cachedTrackLoadedData) {
       this.cachedTrackLoadedData = null;
+      this.hls.trigger(Events.AUDIO_TRACK_LOADED, cachedTrackLoadedData);
     }
   }
 
@@ -518,12 +522,19 @@ class AudioStreamController
     event: Events.AUDIO_TRACK_LOADED,
     data: TrackLoadedData,
   ) {
-    if (this.mainDetails == null) {
-      this.cachedTrackLoadedData = data;
-      return;
-    }
     const { levels } = this;
     const { details: newDetails, id: trackId } = data;
+    if (
+      this.mainDetails == null ||
+      this.mainDetails.expired ||
+      newDetails.endCC > this.mainDetails.endCC
+    ) {
+      this.cachedTrackLoadedData = data;
+      if (this.state !== State.STOPPED) {
+        this.state = State.WAITING_TRACK;
+      }
+      return;
+    }
     if (!levels) {
       this.warn(`Audio tracks were reset while loading level ${trackId}`);
       return;
@@ -546,21 +557,22 @@ class AudioStreamController
       if (newDetails.deltaUpdateFailed || !mainDetails) {
         return;
       }
-      if (
-        !track.details &&
-        newDetails.hasProgramDateTime &&
-        mainDetails.hasProgramDateTime
-      ) {
-        // Make sure our audio rendition is aligned with the "main" rendition, using
-        // pdt as our reference times.
-        alignMediaPlaylistByPDT(newDetails, mainDetails);
-        sliding = newDetails.fragmentStart;
-      } else {
+
+      if (track.details) {
         sliding = this.alignPlaylists(
           newDetails,
           track.details,
           this.levelLastLoaded?.details,
         );
+      }
+      if (!newDetails.alignedSliding) {
+        // Align audio rendition with the "main" playlist on discontinuity change
+        // or program-date-time (PDT)
+        alignDiscontinuities(newDetails, mainDetails);
+        if (!newDetails.alignedSliding) {
+          alignMediaPlaylistByPDT(newDetails, mainDetails);
+        }
+        sliding = newDetails.fragmentStart;
       }
     }
     track.details = newDetails;
@@ -665,7 +677,9 @@ class AudioStreamController
         complete: false,
       });
       cache.push(new Uint8Array(payload));
-      this.state = State.WAITING_INIT_PTS;
+      if (this.state !== State.STOPPED) {
+        this.state = State.WAITING_INIT_PTS;
+      }
     }
   }
 
