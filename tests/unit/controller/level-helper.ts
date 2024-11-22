@@ -698,7 +698,7 @@ audio_5441.m4s`;
 
     beforeEach(function () {
       hls = new Hls({
-        debug: true,
+        // debug: true,
       }) as unknown as HlsTestable;
       for (let i = hls.networkControllers.length; i--; ) {
         const component = hls.networkControllers[i];
