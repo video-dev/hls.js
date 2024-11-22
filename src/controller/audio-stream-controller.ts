@@ -566,8 +566,8 @@ class AudioStreamController
         );
       }
       if (!newDetails.alignedSliding) {
-        // Make sure our audio rendition is aligned with the "main" rendition, using
-        // pdt as our reference times.
+        // Align audio rendition with the "main" playlist on discontinuity change
+        // or program-date-time (PDT)
         alignDiscontinuities(newDetails, mainDetails);
         if (!newDetails.alignedSliding) {
           alignMediaPlaylistByPDT(newDetails, mainDetails);
