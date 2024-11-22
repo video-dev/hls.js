@@ -526,7 +526,7 @@ export default class M3U8Parser {
           }
 
           case 'DISCONTINUITY-SEQUENCE':
-            discontinuityCounter = parseInt(value1);
+            level.startCC = discontinuityCounter = parseInt(value1);
             break;
           case 'KEY': {
             const levelKey = parseKey(value1, baseurl, level);
@@ -671,7 +671,7 @@ export default class M3U8Parser {
       if (!level.live) {
         lastFragment.endList = true;
       }
-      if (firstFragment) {
+      if (firstFragment && !level.startCC) {
         level.startCC = firstFragment.cc;
       }
       /**

@@ -57,12 +57,10 @@ export function adjustSlidingStart(sliding: number, details: LevelDetails) {
  * The PTS of a fragment lets Hls.js know where it fits into a stream - by knowing every PTS, we know which fragment to
  * download at any given time. PTS is normally computed when the fragment is demuxed, so taking this step saves us time
  * and an extra download.
- * @param lastFrag
  * @param lastLevel
  * @param details
  */
 export function alignStream(
-  lastFrag: Fragment | null,
   switchDetails: LevelDetails | undefined,
   details: LevelDetails,
 ) {

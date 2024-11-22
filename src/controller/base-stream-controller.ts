@@ -1593,15 +1593,12 @@ export default class BaseStreamController
     const firstLevelLoad = !previousDetails;
     const aligned = details.alignedSliding && Number.isFinite(slidingStart);
     if (firstLevelLoad || (!aligned && !slidingStart)) {
-      const { fragPrevious } = this;
-      alignStream(fragPrevious, switchDetails, details);
+      alignStream(switchDetails, details);
       const alignedSlidingStart = details.fragmentStart;
       this.log(
         `Live playlist sliding: ${alignedSlidingStart.toFixed(2)} start-sn: ${
           previousDetails ? previousDetails.startSN : 'na'
-        }->${details.startSN} prev-sn: ${
-          fragPrevious ? fragPrevious.sn : 'na'
-        } fragments: ${length}`,
+        }->${details.startSN} fragments: ${length}`,
       );
       return alignedSlidingStart;
     }
