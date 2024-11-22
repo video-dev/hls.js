@@ -229,7 +229,9 @@ export function mergeDetails(
         newDetails.fragments.shift();
       }
       newDetails.startSN = newDetails.fragments[0].sn;
-      newDetails.startCC = newDetails.fragments[0].cc;
+      if (!newDetails.startCC) {
+        newDetails.startCC = newDetails.fragments[0].cc;
+      }
     } else {
       if (newDetails.canSkipDateRanges) {
         newDetails.dateRanges = mergeDateRanges(

@@ -260,7 +260,7 @@ class AudioStreamController
             this.nextLoadPosition = this.findSyncFrag(videoAnchor).start;
             this.clearWaitingFragment();
           }
-        } else if (this.state !== State.STOPPED) {
+        } else {
           this.state = State.IDLE;
         }
       }
@@ -511,9 +511,10 @@ class AudioStreamController
 
   private onLevelLoaded(event: Events.LEVEL_LOADED, data: LevelLoadedData) {
     this.mainDetails = data.details;
-    if (this.cachedTrackLoadedData !== null) {
-      this.hls.trigger(Events.AUDIO_TRACK_LOADED, this.cachedTrackLoadedData);
+    const cachedTrackLoadedData = this.cachedTrackLoadedData;
+    if (cachedTrackLoadedData) {
       this.cachedTrackLoadedData = null;
+      this.hls.trigger(Events.AUDIO_TRACK_LOADED, cachedTrackLoadedData);
     }
   }
 
@@ -529,6 +530,9 @@ class AudioStreamController
       newDetails.endCC > this.mainDetails.endCC
     ) {
       this.cachedTrackLoadedData = data;
+      if (this.state !== State.STOPPED) {
+        this.state = State.WAITING_TRACK;
+      }
       return;
     }
     if (!levels) {
@@ -673,7 +677,9 @@ class AudioStreamController
         complete: false,
       });
       cache.push(new Uint8Array(payload));
-      this.state = State.WAITING_INIT_PTS;
+      if (this.state !== State.STOPPED) {
+        this.state = State.WAITING_INIT_PTS;
+      }
     }
   }
 
