@@ -442,6 +442,7 @@ The following players integrate HLS.js for HLS playback:
 - [OpenPlayerJS](https://www.openplayerjs.com), as part of the [OpenPlayer project](https://github.com/openplayerjs)
 - [CDNBye](https://github.com/cdnbye/hlsjs-p2p-engine), a p2p engine for hls.js powered by WebRTC Datachannel.
 - [M3U IPTV](http://m3u-ip.tv/browser/)
+- [ArtPlayer](https://artplayer.org/?libs=https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js&example=hls)
 
 ### They use HLS.js in production!
 
