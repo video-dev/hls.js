@@ -227,6 +227,8 @@ export class AudioTrackController extends BasePlaylistController {
     // (undocumented)
     destroy(): void;
     // (undocumented)
+    protected loadingPlaylist(audioTrack: MediaPlaylist, hlsUrlParameters: HlsUrlParameters | undefined): void;
+    // (undocumented)
     protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void;
     // (undocumented)
     protected onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void;
@@ -303,33 +305,29 @@ export type BaseData = {
 export class BasePlaylistController extends Logger implements NetworkComponentAPI {
     constructor(hls: Hls, logPrefix: string);
     // (undocumented)
-    protected canLoad: boolean;
-    // (undocumented)
     protected checkRetry(errorEvent: ErrorData): boolean;
-    // (undocumented)
-    protected clearTimer(): void;
     // (undocumented)
     destroy(): void;
     // (undocumented)
+    protected getUrlWithDirectives(uri: string, hlsUrlParameters: HlsUrlParameters | undefined): string;
+    // (undocumented)
     protected hls: Hls;
+    // (undocumented)
+    protected loadingPlaylist(playlist: Level | MediaPlaylist, hlsUrlParameters?: HlsUrlParameters): void;
     // (undocumented)
     protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void;
     // (undocumented)
     protected playlistLoaded(index: number, data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData, previousDetails?: LevelDetails): void;
     // (undocumented)
-    protected requestScheduled: number;
+    protected scheduleLoading(levelOrTrack: Level | MediaPlaylist, deliveryDirectives?: HlsUrlParameters): void;
     // (undocumented)
-    protected shouldLoadPlaylist(playlist: Level | MediaPlaylist | null | undefined): boolean;
-    // (undocumented)
-    protected shouldReloadPlaylist(playlist: Level | MediaPlaylist | null | undefined): boolean;
+    protected shouldLoadPlaylist(playlist: Level | MediaPlaylist | null | undefined): playlist is Level | MediaPlaylist;
     // (undocumented)
     startLoad(): void;
     // (undocumented)
     stopLoad(): void;
     // (undocumented)
     protected switchParams(playlistUri: string, previous: LevelDetails | undefined, current: LevelDetails | undefined): HlsUrlParameters | undefined;
-    // (undocumented)
-    protected timer: number;
 }
 
 // Warning: (ae-missing-release-tag) "BaseSegment" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -3182,6 +3180,8 @@ export class LevelDetails {
     // (undocumented)
     renditionReports?: AttrList[];
     // (undocumented)
+    requestScheduled: number;
+    // (undocumented)
     skippedSegments: number;
     // (undocumented)
     startCC: number;
@@ -4481,6 +4481,8 @@ export class SubtitleTrackController extends BasePlaylistController {
     get allSubtitleTracks(): MediaPlaylist[];
     // (undocumented)
     destroy(): void;
+    // (undocumented)
+    protected loadingPlaylist(currentTrack: MediaPlaylist, hlsUrlParameters: HlsUrlParameters | undefined): void;
     // (undocumented)
     protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void;
     // (undocumented)

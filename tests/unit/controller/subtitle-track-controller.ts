@@ -420,9 +420,13 @@ describe('SubtitleTrackController', function () {
       );
     });
 
-    it('should trigger SUBTITLE_TRACK_LOADING if the track is live, even if it has details', function () {
+    it('should trigger SUBTITLE_TRACK_LOADING if the track is live and needs to be reloaded', function () {
       const triggerSpy = sandbox.spy(hls, 'trigger');
-      subtitleTracks[2].details = { live: true } as any;
+      subtitleTracks[2].details = {
+        live: true,
+        requestScheduled: -100000,
+        targetduration: 2,
+      } as any;
       subtitleTrackController.startLoad();
       subtitleTrackController.subtitleTrack = 2;
 
