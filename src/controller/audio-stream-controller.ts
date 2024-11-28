@@ -56,8 +56,9 @@ class AudioStreamController
   extends BaseStreamController
   implements NetworkComponentAPI
 {
-  private videoAnchor: MediaFragment | null = null;
+  private mainAnchor: MediaFragment | null = null;
   private mainFragLoading: FragLoadingData | null = null;
+  private audioOnly: boolean = false;
   private bufferedTrack: MediaPlaylist | null = null;
   private switchingTrack: MediaPlaylist | null = null;
   private trackId: number = -1;
@@ -85,9 +86,18 @@ class AudioStreamController
   protected onHandlerDestroying() {
     this.unregisterListeners();
     super.onHandlerDestroying();
-    this.mainDetails = null;
-    this.bufferedTrack = null;
-    this.switchingTrack = null;
+    this.resetItem();
+  }
+
+  private resetItem() {
+    this.mainDetails =
+      this.mainAnchor =
+      this.mainFragLoading =
+      this.bufferedTrack =
+      this.switchingTrack =
+      this.waitingData =
+      this.cachedTrackLoadedData =
+        null;
   }
 
   protected registerListeners() {
@@ -139,7 +149,7 @@ class AudioStreamController
       this.log(
         `InitPTS for cc: ${cc} found from main: ${initPTS}/${timescale}`,
       );
-      this.videoAnchor = frag;
+      this.mainAnchor = frag;
       // If we are waiting, tick immediately to unblock audio fragment transmuxing
       if (this.state === State.WAITING_INIT_PTS) {
         const waitingData = this.waitingData;
@@ -237,7 +247,7 @@ class AudioStreamController
         const waitingData = this.waitingData;
         if (waitingData) {
           const { frag, part, cache, complete } = waitingData;
-          const videoAnchor = this.videoAnchor;
+          const mainAnchor = this.mainAnchor;
           if (this.initPTS[frag.cc] !== undefined) {
             this.waitingData = null;
             this.state = State.FRAG_LOADING;
@@ -252,12 +262,12 @@ class AudioStreamController
             if (complete) {
               super._handleFragmentLoadComplete(data);
             }
-          } else if (videoAnchor && videoAnchor.cc !== waitingData.frag.cc) {
+          } else if (mainAnchor && mainAnchor.cc !== waitingData.frag.cc) {
             // Drop waiting fragment if videoTrackCC has changed since waitingFragment was set and initPTS was not found
             this.log(
-              `Waiting fragment cc (${frag.cc}) cancelled because video is at cc ${videoAnchor.cc}`,
+              `Waiting fragment cc (${frag.cc}) cancelled because video is at cc ${mainAnchor.cc}`,
             );
-            this.nextLoadPosition = this.findSyncFrag(videoAnchor).start;
+            this.nextLoadPosition = this.findSyncFrag(mainAnchor).start;
             this.clearWaitingFragment();
           }
         } else {
@@ -412,6 +422,7 @@ class AudioStreamController
     // Request audio segments up to one fragment ahead of main stream-controller
     const mainFragLoading = this.mainFragLoading?.frag;
     if (
+      !this.audioOnly &&
       this.startFragRequested &&
       mainFragLoading &&
       isMediaFragment(mainFragLoading) &&
@@ -498,14 +509,8 @@ class AudioStreamController
 
   protected onManifestLoading() {
     super.onManifestLoading();
-    this.bufferFlushed = this.flushing = false;
-    this.mainDetails =
-      this.waitingData =
-      this.videoAnchor =
-      this.bufferedTrack =
-      this.cachedTrackLoadedData =
-      this.switchingTrack =
-        null;
+    this.bufferFlushed = this.flushing = this.audioOnly = false;
+    this.resetItem();
     this.trackId = -1;
   }
 
@@ -524,10 +529,11 @@ class AudioStreamController
   ) {
     const { levels } = this;
     const { details: newDetails, id: trackId } = data;
+    const mainDetails = this.mainDetails;
     if (
-      this.mainDetails == null ||
-      this.mainDetails.expired ||
-      newDetails.endCC > this.mainDetails.endCC
+      !mainDetails ||
+      mainDetails.expired ||
+      newDetails.endCC > mainDetails.endCC
     ) {
       this.cachedTrackLoadedData = data;
       if (this.state !== State.STOPPED) {
@@ -553,8 +559,7 @@ class AudioStreamController
     let sliding = 0;
     if (newDetails.live || track.details?.live) {
       this.checkLiveUpdate(newDetails);
-      const mainDetails = this.mainDetails;
-      if (newDetails.deltaUpdateFailed || !mainDetails) {
+      if (newDetails.deltaUpdateFailed) {
         return;
       }
 
@@ -579,8 +584,8 @@ class AudioStreamController
     this.levelLastLoaded = track;
 
     // compute start position if we are aligned with the main playlist
-    if (!this.startFragRequested && (this.mainDetails || !newDetails.live)) {
-      this.setStartPosition(this.mainDetails || newDetails, sliding);
+    if (!this.startFragRequested) {
+      this.setStartPosition(mainDetails, sliding);
     }
 
     this.hls.trigger(Events.AUDIO_TRACK_UPDATED, {
@@ -709,6 +714,7 @@ class AudioStreamController
 
   private onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData) {
     if (
+      !this.audioOnly &&
       data.frag.type === PlaylistLevelType.MAIN &&
       isMediaFragment(data.frag)
     ) {
@@ -722,6 +728,15 @@ class AudioStreamController
   private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
     const { frag, part } = data;
     if (frag.type !== PlaylistLevelType.AUDIO) {
+      if (
+        !this.audioOnly &&
+        frag.type === PlaylistLevelType.MAIN &&
+        !frag.elementaryStreams.video &&
+        !frag.elementaryStreams.audiovideo
+      ) {
+        this.audioOnly = true;
+        this.mainFragLoading = null;
+      }
       return;
     }
     if (this.fragContextChanged(frag)) {
