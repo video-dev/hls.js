@@ -425,15 +425,14 @@ export function adjustSliding(
   let sliding = 0;
   if (advancedOrStable && delta < oldFragments.length) {
     sliding = oldFragments[delta].start;
+  } else if (advancedOrStable && newDetails.startSN === oldDetails.endSN + 1) {
+    sliding = oldDetails.fragmentEnd;
   } else if (advancedOrStable && matchingStableVariantOrRendition) {
-    // align new start with old end (updated playlist start sequence is past end sequence of last update)
-    sliding = oldDetails.edge;
-  } else if (
-    !newDetails.skippedSegments &&
-    newDetails.fragments[0].start === 0
-  ) {
+    // align with expected position (updated playlist start sequence is past end sequence of last update)
+    sliding = oldDetails.fragmentStart + delta * newDetails.levelTargetDuration;
+  } else if (!newDetails.skippedSegments && newDetails.fragmentStart === 0) {
     // align new start with old (playlist switch has a sequence with no overlap and should not be used for alignment)
-    sliding = oldDetails.fragments[0].start;
+    sliding = oldDetails.fragmentStart;
   } else {
     // new details already has a sliding offset or has skipped segments
     return;
