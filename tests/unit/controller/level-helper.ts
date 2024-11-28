@@ -41,6 +41,8 @@ const generatePlaylist = (sequenceNumbers, offset = 0, duration = 5) => {
   const playlist = new LevelDetails('');
   playlist.startSN = sequenceNumbers[0];
   playlist.endSN = sequenceNumbers[sequenceNumbers.length - 1];
+  playlist.targetduration = duration + 1;
+  playlist.averagetargetduration = duration;
   playlist.fragments = sequenceNumbers.map((n, i) => {
     const frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.sn = n;
@@ -158,12 +160,12 @@ describe('LevelHelper Tests', function () {
       expect(actual).to.deep.equal([10, 15, 20]);
     });
 
-    it('applies minimal sliding when no common segments exist', function () {
+    it('applies expected sliding when no common segments exist', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
       adjustSliding(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
-      expect(actual).to.deep.equal([15, 20, 25]);
+      expect(actual).to.deep.equal([20, 25, 30]);
     });
 
     it('applies minimal sliding when segments meet but do not overlap', function () {
@@ -184,12 +186,12 @@ describe('LevelHelper Tests', function () {
       expect(actual).to.deep.equal([5, 10, 15, 20]);
     });
 
-    it('applies minimal sliding when there is no segment overlap', function () {
+    it('applies expected sliding when there is no segment overlap', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
       mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
-      expect(actual).to.deep.equal([15, 20, 25]);
+      expect(actual).to.deep.equal([20, 25, 30]);
     });
 
     it('matches start when the new playlist starts before the old', function () {
@@ -826,8 +828,8 @@ audio_5441.m4s`;
       mergeDetails(mainDetails1, mainDetails2);
       mergeDetails(audioDetails1, audioDetails2);
       expect(audioDetails2.alignedSliding).to.be.false;
-      expect(mainDetails2.fragmentStart).to.equal(14);
-      expect(audioDetails2.fragmentStart).to.equal(15.518999999999998);
+      expect(mainDetails2.fragmentStart).to.equal(20.0825);
+      expect(audioDetails2.fragmentStart).to.equal(16.0325);
 
       expect(mainDetails2.startCC).to.equal(31);
       expect(audioDetails2.startCC).to.equal(31);
@@ -838,8 +840,8 @@ audio_5441.m4s`;
       audioTrackLoaded(audioDetails2, trackInfo);
 
       expect(audioDetails2.alignedSliding).to.be.true;
-      expect(mainDetails2.fragmentStart).to.equal(14);
-      expect(audioDetails2.fragmentStart).to.equal(14);
+      expect(mainDetails2.fragmentStart).to.equal(20.0825);
+      expect(audioDetails2.fragmentStart).to.equal(20.0825);
     });
 
     it('aligns playlist on track update', function () {
@@ -856,15 +858,15 @@ audio_5441.m4s`;
       mergeDetails(mainDetails1, mainDetails2);
       mergeDetails(audioDetails1, audioDetails2);
       expect(audioDetails2.alignedSliding).to.be.false;
-      expect(mainDetails2.fragmentStart).to.equal(14);
-      expect(audioDetails2.fragmentStart).to.equal(15.518999999999998);
+      expect(mainDetails2.fragmentStart).to.equal(20.0825);
+      expect(audioDetails2.fragmentStart).to.equal(16.0325);
 
       audioTrackLoaded(audioDetails2, trackInfo);
       levelLoaded(mainDetails2, levelInfo);
 
       expect(audioDetails2.alignedSliding).to.be.true;
-      expect(mainDetails2.fragmentStart).to.equal(14);
-      expect(audioDetails2.fragmentStart).to.equal(14);
+      expect(mainDetails2.fragmentStart).to.equal(20.0825);
+      expect(audioDetails2.fragmentStart).to.equal(20.0825);
     });
   });
 });
