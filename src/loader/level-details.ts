@@ -20,6 +20,7 @@ export class LevelDetails {
   public dateRanges: Record<string, DateRange>;
   public dateRangeTagCount: number = 0;
   public live: boolean = true;
+  public requestScheduled: number = -1;
   public ageHeader: number = 0;
   public advancedDateTime?: number;
   public updated: boolean = true;

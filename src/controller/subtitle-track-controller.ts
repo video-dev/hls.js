@@ -292,9 +292,6 @@ class SubtitleTrackController extends BasePlaylistController {
       if (trackId !== -1 && this.trackId === -1) {
         this.setSubtitleTrack(trackId);
       }
-    } else if (this.shouldReloadPlaylist(currentTrack)) {
-      // Retry playlist loading if no playlist is or has been loaded yet
-      this.setSubtitleTrack(this.trackId);
     }
   }
 
@@ -433,40 +430,35 @@ class SubtitleTrackController extends BasePlaylistController {
 
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
     super.loadPlaylist();
-    const currentTrack = this.currentTrack;
-    if (this.shouldLoadPlaylist(currentTrack) && currentTrack) {
-      const id = currentTrack.id;
-      const groupId = currentTrack.groupId as string;
-      let url = currentTrack.url;
-      if (hlsUrlParameters) {
-        try {
-          url = hlsUrlParameters.addDirectives(url);
-        } catch (error) {
-          this.warn(
-            `Could not construct new URL with HLS Delivery Directives: ${error}`,
-          );
-        }
-      }
-      const details = currentTrack.details;
-      const age = details?.age;
-      this.log(
-        `Loading subtitle ${id} "${currentTrack.name}" lang:${currentTrack.lang} group:${groupId}${
-          hlsUrlParameters?.msn !== undefined
-            ? ' at sn ' +
-              hlsUrlParameters.msn +
-              ' part ' +
-              hlsUrlParameters.part
-            : ''
-        }${age && details.live ? ' age ' + age.toFixed(1) + (details.type ? ' ' + details.type || '' : '') : ''} ${url}`,
-      );
-      this.hls.trigger(Events.SUBTITLE_TRACK_LOADING, {
-        url,
-        id,
-        groupId,
-        deliveryDirectives: hlsUrlParameters || null,
-        track: currentTrack,
-      });
+    if (this.shouldLoadPlaylist(this.currentTrack)) {
+      this.scheduleLoading(this.currentTrack, hlsUrlParameters);
     }
+  }
+
+  protected loadingPlaylist(
+    currentTrack: MediaPlaylist,
+    hlsUrlParameters: HlsUrlParameters | undefined,
+  ) {
+    super.loadingPlaylist(currentTrack, hlsUrlParameters);
+    const id = currentTrack.id;
+    const groupId = currentTrack.groupId as string;
+    const url = this.getUrlWithDirectives(currentTrack.url, hlsUrlParameters);
+    const details = currentTrack.details;
+    const age = details?.age;
+    this.log(
+      `Loading subtitle ${id} "${currentTrack.name}" lang:${currentTrack.lang} group:${groupId}${
+        hlsUrlParameters?.msn !== undefined
+          ? ' at sn ' + hlsUrlParameters.msn + ' part ' + hlsUrlParameters.part
+          : ''
+      }${age && details.live ? ' age ' + age.toFixed(1) + (details.type ? ' ' + details.type || '' : '') : ''} ${url}`,
+    );
+    this.hls.trigger(Events.SUBTITLE_TRACK_LOADING, {
+      url,
+      id,
+      groupId,
+      deliveryDirectives: hlsUrlParameters || null,
+      track: currentTrack,
+    });
   }
 
   /**
@@ -527,9 +519,6 @@ class SubtitleTrackController extends BasePlaylistController {
       this.warn(`Invalid subtitle track id: ${newId}`);
       return;
     }
-
-    // stopping live reloading timer if any
-    this.clearTimer();
 
     this.selectDefaultTrack = false;
     const lastTrack = this.currentTrack;
