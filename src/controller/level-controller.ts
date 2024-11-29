@@ -442,9 +442,7 @@ export default class LevelController extends BasePlaylistController {
       lastLevel &&
       lastPathwayId === pathwayId
     ) {
-      if (level.details || this.requestScheduled !== -1) {
-        return;
-      }
+      return;
     }
 
     this.log(
@@ -572,10 +570,7 @@ export default class LevelController extends BasePlaylistController {
       data.context.type === PlaylistContextType.LEVEL &&
       data.context.level === this.level
     ) {
-      const retry = this.checkRetry(data);
-      if (!retry) {
-        this.requestScheduled = -1;
-      }
+      this.checkRetry(data);
     }
   }
 
@@ -632,47 +627,37 @@ export default class LevelController extends BasePlaylistController {
 
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters) {
     super.loadPlaylist();
-    const currentLevelIndex = this.currentLevelIndex;
-    const currentLevel = this.currentLevel;
-
-    if (currentLevel && this.shouldLoadPlaylist(currentLevel)) {
-      let url = currentLevel.uri;
-      if (hlsUrlParameters) {
-        try {
-          url = hlsUrlParameters.addDirectives(url);
-        } catch (error) {
-          this.warn(
-            `Could not construct new URL with HLS Delivery Directives: ${error}`,
-          );
-        }
-      }
-
-      const pathwayId = currentLevel.attrs['PATHWAY-ID'];
-      const details = currentLevel.details;
-      const age = details?.age;
-      this.log(
-        `Loading level index ${currentLevelIndex}${
-          hlsUrlParameters?.msn !== undefined
-            ? ' at sn ' +
-              hlsUrlParameters.msn +
-              ' part ' +
-              hlsUrlParameters.part
-            : ''
-        }${pathwayId ? ' Pathway ' + pathwayId : ''}${age && details.live ? ' age ' + age.toFixed(1) + (details.type ? ' ' + details.type || '' : '') : ''} ${url}`,
-      );
-
-      // console.log('Current audio track group ID:', this.hls.audioTracks[this.hls.audioTrack].groupId);
-      // console.log('New video quality level audio group id:', levelObject.attrs.AUDIO, level);
-      this.clearTimer();
-      this.hls.trigger(Events.LEVEL_LOADING, {
-        url,
-        level: currentLevelIndex,
-        levelInfo: currentLevel,
-        pathwayId: currentLevel.attrs['PATHWAY-ID'],
-        id: 0, // Deprecated Level urlId
-        deliveryDirectives: hlsUrlParameters || null,
-      });
+    if (this.shouldLoadPlaylist(this.currentLevel)) {
+      this.scheduleLoading(this.currentLevel, hlsUrlParameters);
     }
+  }
+
+  protected loadingPlaylist(
+    currentLevel: Level,
+    hlsUrlParameters: HlsUrlParameters | undefined,
+  ) {
+    super.loadingPlaylist(currentLevel, hlsUrlParameters);
+    const url = this.getUrlWithDirectives(currentLevel.uri, hlsUrlParameters);
+    const currentLevelIndex = this.currentLevelIndex;
+    const pathwayId = currentLevel.attrs['PATHWAY-ID'];
+    const details = currentLevel.details;
+    const age = details?.age;
+    this.log(
+      `Loading level index ${currentLevelIndex}${
+        hlsUrlParameters?.msn !== undefined
+          ? ' at sn ' + hlsUrlParameters.msn + ' part ' + hlsUrlParameters.part
+          : ''
+      }${pathwayId ? ' Pathway ' + pathwayId : ''}${age && details.live ? ' age ' + age.toFixed(1) + (details.type ? ' ' + details.type || '' : '') : ''} ${url}`,
+    );
+
+    this.hls.trigger(Events.LEVEL_LOADING, {
+      url,
+      level: currentLevelIndex,
+      levelInfo: currentLevel,
+      pathwayId: currentLevel.attrs['PATHWAY-ID'],
+      id: 0, // Deprecated Level urlId
+      deliveryDirectives: hlsUrlParameters || null,
+    });
   }
 
   get nextLoadLevel() {

@@ -315,6 +315,9 @@ export function mergeDetails(
     newDetails.driftEnd = oldDetails.driftEnd;
     newDetails.advancedDateTime = oldDetails.advancedDateTime;
   }
+  if (newDetails.requestScheduled === -1) {
+    newDetails.requestScheduled = oldDetails.requestScheduled;
+  }
 }
 
 function mergeDateRanges(
