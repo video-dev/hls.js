@@ -544,6 +544,13 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
+   * Returns whether loading, toggled with `startLoad()` and `stopLoad()`, is active or not`.
+   */
+  get loadingEnabled(): boolean {
+    return this.streamController.hasInterval();
+  }
+
+  /**
    * Returns state of fragment loading toggled by calling `pauseBuffering()` and `resumeBuffering()`.
    */
   get bufferingEnabled(): boolean {

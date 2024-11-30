@@ -24,8 +24,8 @@ export default class BasePlaylistController
   implements NetworkComponentAPI
 {
   protected hls: Hls;
+  protected canLoad: boolean = false;
   private timer: number = -1;
-  private canLoad: boolean = false;
 
   constructor(hls: Hls, logPrefix: string) {
     super(logPrefix, hls.logger);
@@ -170,6 +170,25 @@ export default class BasePlaylistController
     if (details.live || previousDetails?.live) {
       const levelOrTrack = 'levelInfo' in data ? data.levelInfo : data.track;
       details.reloaded(previousDetails);
+      // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
+      if (previousDetails && details.fragments.length > 0) {
+        mergeDetails(previousDetails, details);
+      }
+      if (details.requestScheduled === -1) {
+        details.requestScheduled = stats.loading.start;
+      }
+      const bufferInfo = this.hls.mainForwardBufferInfo;
+      const position = bufferInfo ? bufferInfo.end - bufferInfo.len : 0;
+      const distanceToLiveEdgeMs = (details.edge - position) * 1000;
+      const reloadInterval = computeReloadInterval(
+        details,
+        distanceToLiveEdgeMs,
+      );
+      if (details.requestScheduled + reloadInterval < now) {
+        details.requestScheduled = now;
+      } else {
+        details.requestScheduled += reloadInterval;
+      }
       this.log(
         `live playlist ${index} ${
           details.advanced
@@ -179,10 +198,6 @@ export default class BasePlaylistController
               : 'MISSED'
         }`,
       );
-      // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
-      if (previousDetails && details.fragments.length > 0) {
-        mergeDetails(previousDetails, details);
-      }
       if (!this.canLoad || !details.live) {
         return;
       }
@@ -196,12 +211,16 @@ export default class BasePlaylistController
         const endSn = details.endSN;
         const lastPartIndex = details.lastPartIndex;
         const hasParts = lastPartIndex !== -1;
-        const lastPart = lastPartSn === endSn;
-        // When low latency mode is disabled, we'll skip part requests once the last part index is found
-        const nextSnStartIndex = lowLatencyMode ? 0 : lastPartIndex;
+        const atLastPartOfSegment = lastPartSn === endSn;
         if (hasParts) {
-          msn = lastPart ? endSn + 1 : lastPartSn;
-          part = lastPart ? nextSnStartIndex : lastPartIndex + 1;
+          // When low latency mode is disabled, request the last part of the next segment
+          if (atLastPartOfSegment) {
+            msn = endSn + 1;
+            part = lowLatencyMode ? 0 : lastPartIndex;
+          } else {
+            msn = lastPartSn;
+            part = lowLatencyMode ? lastPartIndex + 1 : details.maxPartIndex;
+          }
         } else {
           msn = endSn + 1;
         }
@@ -258,7 +277,8 @@ export default class BasePlaylistController
           msn,
           part,
         );
-        if (lowLatencyMode || !lastPart) {
+        if (lowLatencyMode || !atLastPartOfSegment) {
+          details.requestScheduled = now;
           this.loadingPlaylist(levelOrTrack, deliveryDirectives);
           return;
         }
@@ -270,25 +290,12 @@ export default class BasePlaylistController
           part,
         );
       }
-      if (details.requestScheduled === -1) {
-        details.requestScheduled = stats.loading.start;
-      }
       if (deliveryDirectives && msn !== undefined && details.canBlockReload) {
-        details.requestScheduled -= details.partTarget * 1000 || 1000;
+        details.requestScheduled =
+          stats.loading.first +
+          Math.max(reloadInterval - elapsed * 2, reloadInterval / 2);
       }
-      const bufferInfo = this.hls.mainForwardBufferInfo;
-      const position = bufferInfo ? bufferInfo.end - bufferInfo.len : 0;
-      const distanceToLiveEdgeMs = (details.edge - position) * 1000;
-      const reloadInterval = computeReloadInterval(
-        details,
-        distanceToLiveEdgeMs,
-      );
-      if (details.requestScheduled + reloadInterval < now) {
-        details.requestScheduled = now;
-      } else {
-        details.requestScheduled += reloadInterval;
-      }
-      this.scheduleLoading(levelOrTrack, deliveryDirectives);
+      this.scheduleLoading(levelOrTrack, deliveryDirectives, details);
     } else {
       this.clearTimer();
     }
@@ -297,8 +304,9 @@ export default class BasePlaylistController
   protected scheduleLoading(
     levelOrTrack: Level | MediaPlaylist,
     deliveryDirectives?: HlsUrlParameters,
+    updatedDetails?: LevelDetails,
   ) {
-    const details = levelOrTrack.details;
+    const details = updatedDetails || levelOrTrack.details;
     if (!details) {
       this.loadingPlaylist(levelOrTrack, deliveryDirectives);
       return;
@@ -316,22 +324,8 @@ export default class BasePlaylistController
         estimatedTimeUntilUpdate,
       )} ms`,
     );
-    // this.log(
-    //   `live reload ${details.updated ? 'REFRESHED' : 'MISSED'}
-    // reload in ${estimatedTimeUntilUpdate / 1000}
-    // round trip ${(stats.loading.end - stats.loading.start) / 1000}
-    // diff ${
-    //   (reloadInterval -
-    //     (estimatedTimeUntilUpdate +
-    //       stats.loading.end -
-    //       stats.loading.start)) /
-    //   1000
-    // }
-    // reload interval ${reloadInterval / 1000}
-    // target duration ${details.targetduration}
-    // distance to edge ${distanceToLiveEdgeMs / 1000}`
-    // );
 
+    this.clearTimer();
     this.timer = self.setTimeout(
       () => this.loadingPlaylist(levelOrTrack, deliveryDirectives),
       estimatedTimeUntilUpdate,
@@ -379,6 +373,7 @@ export default class BasePlaylistController
       } else {
         const delay = getRetryDelay(retryConfig, retryCount);
         // Schedule level/track reload
+        this.clearTimer();
         this.timer = self.setTimeout(() => this.loadPlaylist(), delay);
         this.warn(
           `Retrying playlist loading ${retryCount + 1}/${

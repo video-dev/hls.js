@@ -380,18 +380,6 @@ export default class LevelController extends BasePlaylistController {
       altAudio: !audioOnly && audioTracks.some((t) => !!t.url),
     };
     this.hls.trigger(Events.MANIFEST_PARSED, edata);
-
-    // Initiate loading after all controllers have received MANIFEST_PARSED
-    const {
-      config: { autoStartLoad, startPosition },
-      forceStartLoad,
-    } = this.hls;
-    if (autoStartLoad || forceStartLoad) {
-      this.log(
-        `${autoStartLoad ? 'auto' : 'force'} startLoad with configured startPosition ${startPosition}`,
-      );
-      this.hls.startLoad(startPosition);
-    }
   }
 
   get levels(): Level[] | null {
@@ -606,8 +594,8 @@ export default class LevelController extends BasePlaylistController {
       return;
     }
 
-    // only process level loaded events matching with expected level
-    if (curLevel === this.currentLevel) {
+    // only process level loaded events matching with expected level or prior to switch when media playlist is loaded directly
+    if (curLevel === this.currentLevel || data.withoutMultiVariant) {
       // reset level load error counter on successful level loaded only if there is no issues with fragments
       if (curLevel.fragmentError === 0) {
         curLevel.loadError = 0;

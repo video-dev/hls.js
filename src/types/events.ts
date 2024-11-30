@@ -220,6 +220,7 @@ export interface LevelLoadedData {
   networkDetails: any;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
+  withoutMultiVariant?: boolean;
 }
 
 export interface LevelUpdatedData {
