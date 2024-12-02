@@ -98,8 +98,9 @@ export default class Hls implements HlsEventEmitter {
   private cmcdController?: CMCDController;
   private _media: HTMLMediaElement | null = null;
   private _url: string | null = null;
-  private triggeringException?: boolean;
   private _sessionId?: string;
+  private triggeringException?: boolean;
+  private started: boolean = false;
 
   /**
    * Get the video-dev/hls.js package version.
@@ -527,10 +528,17 @@ export default class Hls implements HlsEventEmitter {
         (skipSeekToStartPosition ? ', <skip seek to start>' : '')
       })`,
     );
+    this.started = true;
     this.resumeBuffering();
-    this.networkControllers.forEach((controller) => {
-      controller.startLoad(startPosition, skipSeekToStartPosition);
-    });
+    for (let i = 0; i < this.networkControllers.length; i++) {
+      this.networkControllers[i].startLoad(
+        startPosition,
+        skipSeekToStartPosition,
+      );
+      if (!this.started || !this.networkControllers) {
+        break;
+      }
+    }
   }
 
   /**
@@ -538,16 +546,20 @@ export default class Hls implements HlsEventEmitter {
    */
   stopLoad() {
     this.logger.log('stopLoad');
-    this.networkControllers.forEach((controller) => {
-      controller.stopLoad();
-    });
+    this.started = false;
+    for (let i = 0; i < this.networkControllers.length; i++) {
+      this.networkControllers[i].stopLoad();
+      if (this.started || !this.networkControllers) {
+        break;
+      }
+    }
   }
 
   /**
    * Returns whether loading, toggled with `startLoad()` and `stopLoad()`, is active or not`.
    */
   get loadingEnabled(): boolean {
-    return this.streamController.hasInterval();
+    return this.started;
   }
 
   /**
