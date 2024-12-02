@@ -1871,7 +1871,7 @@ export default class BaseStreamController
     }
   }
 
-  protected resetWhenMissingContext(chunkMeta: ChunkMetadata) {
+  protected resetWhenMissingContext(chunkMeta: ChunkMetadata | Fragment) {
     this.warn(
       `The loading context changed while buffering fragment ${chunkMeta.sn} of ${this.playlistLabel()} ${chunkMeta.level}. This chunk will not be buffered.`,
     );

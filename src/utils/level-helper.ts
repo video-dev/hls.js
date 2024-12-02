@@ -538,10 +538,13 @@ export function findPart(
 
 export function reassignFragmentLevelIndexes(levels: Level[]) {
   levels.forEach((level, index) => {
-    const { details } = level;
-    if (details?.fragments) {
-      details.fragments.forEach((fragment) => {
+    const fragments = level.details?.fragments;
+    if (fragments) {
+      fragments.forEach((fragment) => {
         fragment.level = index;
+        if (fragment.initSegment) {
+          fragment.initSegment.level = index;
+        }
       });
     }
   });

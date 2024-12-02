@@ -522,7 +522,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected resetTransmuxer(): void;
     // (undocumented)
-    protected resetWhenMissingContext(chunkMeta: ChunkMetadata): void;
+    protected resetWhenMissingContext(chunkMeta: ChunkMetadata | Fragment): void;
     // (undocumented)
     resumeBuffering(): void;
     // (undocumented)

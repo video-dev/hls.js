@@ -664,6 +664,9 @@ export default class LevelController extends BasePlaylistController {
   }
 
   removeLevel(levelIndex: number) {
+    if (this._levels.length === 1) {
+      return;
+    }
     const levels = this._levels.filter((level, index) => {
       if (index !== levelIndex) {
         return true;
@@ -684,6 +687,14 @@ export default class LevelController extends BasePlaylistController {
     this._levels = levels;
     if (this.currentLevelIndex > -1 && this.currentLevel?.details) {
       this.currentLevelIndex = this.currentLevel.details.fragments[0].level;
+    }
+    if (this.manualLevelIndex > -1) {
+      this.manualLevelIndex = this.currentLevelIndex;
+    }
+    const maxLevel = levels.length - 1;
+    this._firstLevel = Math.min(this._firstLevel, maxLevel);
+    if (this._startLevel) {
+      this._startLevel = Math.min(this._startLevel, maxLevel);
     }
     this.hls.trigger(Events.LEVELS_UPDATED, { levels });
   }
