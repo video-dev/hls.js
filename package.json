@@ -117,7 +117,7 @@
     "mocha": "10.8.2",
     "node-fetch": "3.3.2",
     "npm-run-all2": "6.2.6",
-    "prettier": "3.3.3",
+    "prettier": "3.4.0",
     "promise-polyfill": "8.3.0",
     "rollup": "4.27.4",
     "rollup-plugin-istanbul": "5.0.0",
