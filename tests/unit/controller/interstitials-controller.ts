@@ -221,14 +221,11 @@ fileSequence4.ts
         },
       ]);
       expect(interstitialEvent).to.equal(schedule[1].event);
-      expect(hls.trigger).to.have.callCount(4);
+      expect(hls.trigger).to.have.callCount(3);
       expect(hls.trigger).to.have.been.calledWith(Events.LEVEL_UPDATED);
       expect(hls.trigger).to.have.been.calledWith(Events.INTERSTITIALS_UPDATED);
       expect(hls.trigger).to.have.been.calledWith(
         Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
-      );
-      expect(hls.trigger).to.have.been.calledWith(
-        Events.INTERSTITIALS_PRIMARY_RESUMED,
       );
     });
 

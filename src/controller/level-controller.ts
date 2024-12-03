@@ -380,18 +380,6 @@ export default class LevelController extends BasePlaylistController {
       altAudio: !audioOnly && audioTracks.some((t) => !!t.url),
     };
     this.hls.trigger(Events.MANIFEST_PARSED, edata);
-
-    // Initiate loading after all controllers have received MANIFEST_PARSED
-    const {
-      config: { autoStartLoad, startPosition },
-      forceStartLoad,
-    } = this.hls;
-    if (autoStartLoad || forceStartLoad) {
-      this.log(
-        `${autoStartLoad ? 'auto' : 'force'} startLoad with configured startPosition ${startPosition}`,
-      );
-      this.hls.startLoad(startPosition);
-    }
   }
 
   get levels(): Level[] | null {
@@ -606,8 +594,8 @@ export default class LevelController extends BasePlaylistController {
       return;
     }
 
-    // only process level loaded events matching with expected level
-    if (curLevel === this.currentLevel) {
+    // only process level loaded events matching with expected level or prior to switch when media playlist is loaded directly
+    if (curLevel === this.currentLevel || data.withoutMultiVariant) {
       // reset level load error counter on successful level loaded only if there is no issues with fragments
       if (curLevel.fragmentError === 0) {
         curLevel.loadError = 0;
@@ -676,6 +664,9 @@ export default class LevelController extends BasePlaylistController {
   }
 
   removeLevel(levelIndex: number) {
+    if (this._levels.length === 1) {
+      return;
+    }
     const levels = this._levels.filter((level, index) => {
       if (index !== levelIndex) {
         return true;
@@ -696,6 +687,14 @@ export default class LevelController extends BasePlaylistController {
     this._levels = levels;
     if (this.currentLevelIndex > -1 && this.currentLevel?.details) {
       this.currentLevelIndex = this.currentLevel.details.fragments[0].level;
+    }
+    if (this.manualLevelIndex > -1) {
+      this.manualLevelIndex = this.currentLevelIndex;
+    }
+    const maxLevel = levels.length - 1;
+    this._firstLevel = Math.min(this._firstLevel, maxLevel);
+    if (this._startLevel) {
+      this._startLevel = Math.min(this._startLevel, maxLevel);
     }
     this.hls.trigger(Events.LEVELS_UPDATED, { levels });
   }

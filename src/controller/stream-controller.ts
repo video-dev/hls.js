@@ -1095,6 +1095,9 @@ export default class StreamController
   ) {
     if (this.level > -1 && this.fragCurrent) {
       this.level = this.fragCurrent.level;
+      if (this.level === -1) {
+        this.resetWhenMissingContext(this.fragCurrent);
+      }
     }
     this.levels = data.levels;
   }
