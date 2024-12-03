@@ -49,7 +49,10 @@ describe('StreamController', function () {
   });
 
   const assertStreamControllerStarted = (streamController) => {
-    expect(streamController.hasInterval()).to.be.true;
+    expect(
+      streamController.hasInterval(),
+      `StreamController should be ticking. State: ${streamController.state}`,
+    ).to.be.true;
     expect(streamController.state).to.equal(
       State.IDLE,
       "StreamController's state should not be STOPPED",
@@ -57,7 +60,10 @@ describe('StreamController', function () {
   };
 
   const assertStreamControllerStopped = (streamController) => {
-    expect(streamController.hasInterval()).to.be.false;
+    expect(
+      streamController.hasInterval(),
+      `StreamController should be stopped. State: ${streamController.state}`,
+    ).to.be.false;
     expect(streamController.state).to.equal(
       State.STOPPED,
       "StreamController's state should be STOPPED",
@@ -89,6 +95,8 @@ describe('StreamController', function () {
       startTimeOffset,
       variableList,
     });
+    const playlistLoader = (hls as any).networkControllers[0];
+    (playlistLoader as any).checkAutostartLoad();
     return result;
   };
 

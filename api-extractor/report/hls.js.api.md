@@ -305,6 +305,8 @@ export type BaseData = {
 export class BasePlaylistController extends Logger implements NetworkComponentAPI {
     constructor(hls: Hls, logPrefix: string);
     // (undocumented)
+    protected canLoad: boolean;
+    // (undocumented)
     protected checkRetry(errorEvent: ErrorData): boolean;
     // (undocumented)
     destroy(): void;
@@ -319,7 +321,7 @@ export class BasePlaylistController extends Logger implements NetworkComponentAP
     // (undocumented)
     protected playlistLoaded(index: number, data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData, previousDetails?: LevelDetails): void;
     // (undocumented)
-    protected scheduleLoading(levelOrTrack: Level | MediaPlaylist, deliveryDirectives?: HlsUrlParameters): void;
+    protected scheduleLoading(levelOrTrack: Level | MediaPlaylist, deliveryDirectives?: HlsUrlParameters, updatedDetails?: LevelDetails): void;
     // (undocumented)
     protected shouldLoadPlaylist(playlist: Level | MediaPlaylist | null | undefined): playlist is Level | MediaPlaylist;
     // (undocumented)
@@ -520,7 +522,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected resetTransmuxer(): void;
     // (undocumented)
-    protected resetWhenMissingContext(chunkMeta: ChunkMetadata): void;
+    protected resetWhenMissingContext(chunkMeta: ChunkMetadata | Fragment): void;
     // (undocumented)
     resumeBuffering(): void;
     // (undocumented)
@@ -2012,6 +2014,7 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     listeners<E extends keyof HlsListeners>(event: E): HlsListeners[E][];
     get liveSyncPosition(): number | null;
+    get loadingEnabled(): boolean;
     get loadLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "loadLevel" must appear on the getter, not the setter.
     set loadLevel(newLevel: number);
@@ -3158,6 +3161,8 @@ export class LevelDetails {
     // (undocumented)
     m3u8: string;
     // (undocumented)
+    get maxPartIndex(): number;
+    // (undocumented)
     misses: number;
     // (undocumented)
     get partEnd(): number;
@@ -3258,6 +3263,8 @@ export interface LevelLoadedData {
     networkDetails: any;
     // (undocumented)
     stats: LoaderStats;
+    // (undocumented)
+    withoutMultiVariant?: boolean;
 }
 
 // Warning: (ae-missing-release-tag) "LevelLoadingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

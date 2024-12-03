@@ -250,7 +250,9 @@ class PlaylistLoader implements NetworkComponentAPI {
       ) {
         // same URL can't overlap, or wait for blocking request
         if (loaderContext.url === context.url) {
-          logger.log(`[playlist-loader]: playlist request ongoing`);
+          logger.log(
+            `[playlist-loader]: ignore ${context.url} ongoing request`,
+          );
         } else {
           logger.log(
             `[playlist-loader]: ignore ${context.url} in favor of ${loaderContext.url}`,
@@ -349,7 +351,10 @@ class PlaylistLoader implements NetworkComponentAPI {
         }
 
         stats.parsing.start = performance.now();
-        if (M3U8Parser.isMediaPlaylist(string)) {
+        if (
+          M3U8Parser.isMediaPlaylist(string) ||
+          context.type !== PlaylistContextType.MANIFEST
+        ) {
           this.handleTrackOrLevelPlaylist(
             response,
             stats,
@@ -384,6 +389,22 @@ class PlaylistLoader implements NetworkComponentAPI {
     // logger.debug(`[playlist-loader]: Calling internal loader delegate for URL: ${context.url}`);
 
     loader.load(context, loaderConfig, loaderCallbacks);
+  }
+
+  private checkAutostartLoad() {
+    if (!this.hls) {
+      return;
+    }
+    const {
+      config: { autoStartLoad, startPosition },
+      forceStartLoad,
+    } = this.hls;
+    if (autoStartLoad || forceStartLoad) {
+      this.hls.logger.log(
+        `${autoStartLoad ? 'auto' : 'force'} startLoad with configured startPosition ${startPosition}`,
+      );
+      this.hls.startLoad(startPosition);
+    }
   }
 
   private handleMasterPlaylist(
@@ -474,6 +495,8 @@ class PlaylistLoader implements NetworkComponentAPI {
       startTimeOffset,
       variableList,
     });
+
+    this.checkAutostartLoad();
   }
 
   private handleTrackOrLevelPlaylist(
@@ -493,7 +516,7 @@ class PlaylistLoader implements NetworkComponentAPI {
         ? (id as number)
         : 0;
     const levelType = mapContextToLevelType(context);
-    const levelDetails: LevelDetails = M3U8Parser.parseLevelPlaylist(
+    const levelDetails = M3U8Parser.parseLevelPlaylist(
       response.data as string,
       url,
       levelId,
@@ -543,6 +566,14 @@ class PlaylistLoader implements NetworkComponentAPI {
       networkDetails,
       loader,
     );
+
+    if (
+      type === PlaylistContextType.MANIFEST &&
+      (!levelDetails.playlistParsingError ||
+        (!levelDetails.fragments.length && levelDetails.live))
+    ) {
+      this.checkAutostartLoad();
+    }
   }
 
   private handleManifestParsingError(
@@ -662,7 +693,9 @@ class PlaylistLoader implements NetworkComponentAPI {
         ? (level as number)
         : undefined;
     if (!levelDetails.fragments.length) {
-      const error = new Error('No Segments found in Playlist');
+      const error = (levelDetails.playlistParsingError = new Error(
+        'No Segments found in Playlist',
+      ));
       hls.trigger(Events.ERROR, {
         type: ErrorTypes.NETWORK_ERROR,
         details: ErrorDetails.LEVEL_EMPTY_ERROR,
@@ -721,6 +754,7 @@ class PlaylistLoader implements NetworkComponentAPI {
           stats,
           networkDetails,
           deliveryDirectives,
+          withoutMultiVariant: type === PlaylistContextType.MANIFEST,
         });
         break;
       case PlaylistContextType.AUDIO_TRACK:

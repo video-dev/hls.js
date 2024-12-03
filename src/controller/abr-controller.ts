@@ -718,7 +718,7 @@ class AbrController extends Logger implements AbrComponentAPI {
     if (levels.length === 1) {
       return 0;
     }
-    const level: Level | undefined = levels[selectionBaseLevel];
+    const level = levels[selectionBaseLevel] as Level | undefined;
     const live = !!this.hls.latestLevelDetails?.live;
     const firstSelection = loadLevel === -1 || lastLoadedFragLevel === -1;
     let currentCodecSet: string | undefined;
@@ -920,7 +920,7 @@ class AbrController extends Logger implements AbrComponentAPI {
               )} of ${maxAutoLevel} max with CODECS and VIDEO-RANGE:"${
                 levels[levelsSkipped[0]].codecs
               }" ${levels[levelsSkipped[0]].videoRange}; not compatible with "${
-                level.codecs
+                currentCodecSet
               }" ${currentVideoRange}`,
             );
           }

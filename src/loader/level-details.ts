@@ -155,6 +155,22 @@ export class LevelDetails {
     return -1;
   }
 
+  get maxPartIndex(): number {
+    const partList = this.partList;
+    if (partList) {
+      const lastIndex = this.lastPartIndex;
+      if (lastIndex !== -1) {
+        for (let i = partList.length; i--; ) {
+          if (partList[i].index > lastIndex) {
+            return partList[i].index;
+          }
+        }
+        return lastIndex;
+      }
+    }
+    return 0;
+  }
+
   get lastPartSn(): number {
     if (this.partList?.length) {
       return this.partList[this.partList.length - 1].fragment.sn;

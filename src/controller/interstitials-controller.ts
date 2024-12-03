@@ -1114,7 +1114,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         player.media?.play();
       }
     } else if (scheduledItem !== null) {
-      this.resumePrimary(scheduledItem, index);
+      this.resumePrimary(scheduledItem, index, currentItem);
       if (this.shouldPlay) {
         this.hls.media?.play();
       }
@@ -1144,12 +1144,16 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
   private resumePrimary(
     scheduledItem: InterstitialSchedulePrimaryItem,
     index: number,
+    fromItem: InterstitialScheduleItem | null,
   ) {
     this.playingItem = scheduledItem;
     this.playingAsset = null;
     this.waitingItem = null;
 
     this.bufferedToItem(scheduledItem);
+    if (!fromItem) {
+      return;
+    }
 
     this.log(`resuming ${segmentToString(scheduledItem)}`);
 
@@ -1231,13 +1235,22 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     } else {
       this.transferMediaTo(hls, media);
       if (skipSeekToStartPosition) {
-        hls.startLoad(timelinePos, skipSeekToStartPosition);
+        this.startLoadingPrimaryAt(timelinePos, skipSeekToStartPosition);
       }
     }
     if (!skipSeekToStartPosition) {
       // Set primary position to resume time
       this.timelinePos = timelinePos;
-      hls.startLoad(timelinePos, skipSeekToStartPosition);
+      this.startLoadingPrimaryAt(timelinePos, skipSeekToStartPosition);
+    }
+  }
+
+  private startLoadingPrimaryAt(
+    timelinePos: number,
+    skipSeekToStartPosition?: boolean,
+  ) {
+    if (this.hls.loadingEnabled) {
+      this.hls.startLoad(timelinePos, skipSeekToStartPosition);
     }
   }
 
@@ -1688,7 +1701,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
   private preloadPrimary(item: InterstitialSchedulePrimaryItem) {
     const index = this.findItemIndex(item);
     const timelinePos = this.getPrimaryResumption(item, index);
-    this.hls.startLoad(timelinePos);
+    this.startLoadingPrimaryAt(timelinePos);
   }
 
   private bufferedToEvent(
@@ -1869,7 +1882,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     }
     const playerConfig: Partial<HlsConfig> = {
       ...userConfig,
-      // autoStartLoad: false,
+      autoStartLoad: true,
       startFragPrefetch: true,
       primarySessionId: primary.sessionId,
       assetPlayerId: assetItem.identifier,
