@@ -1273,6 +1273,10 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
   }
 
   private onLevelUpdated(event: Events.LEVEL_UPDATED, data: LevelUpdatedData) {
+    if (data.level === -1) {
+      // level was removed
+      return;
+    }
     const main = this.hls.levels[data.level];
     const currentSelection = {
       ...(this.mediaSelection || this.altSelection),

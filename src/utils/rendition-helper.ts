@@ -1,6 +1,7 @@
 import { codecsSetSelectionPreferenceValue } from './codecs';
 import { getVideoSelectionOptions } from './hdr';
 import { logger } from './logger';
+import type Hls from '../hls';
 import type { Level, VideoRange } from '../types/level';
 import type {
   AudioSelectionOption,
@@ -499,4 +500,8 @@ function searchDownAndUpList(
     }
   }
   return -1;
+}
+
+export function useAlternateAudio(audioTrackUrl: string, hls: Hls): boolean {
+  return !!audioTrackUrl && audioTrackUrl !== hls.levels[hls.loadLevel]?.uri;
 }

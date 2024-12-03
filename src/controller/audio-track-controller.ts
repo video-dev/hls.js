@@ -8,6 +8,7 @@ import {
   findClosestLevelWithAudioGroup,
   findMatchingOption,
   matchesOption,
+  useAlternateAudio,
 } from '../utils/rendition-helper';
 import type Hls from '../hls';
 import type {
@@ -401,11 +402,10 @@ class AudioTrackController extends BasePlaylistController {
     if (!this.shouldLoadPlaylist(audioTrack)) {
       return;
     }
-    if (audioTrack.url === this.hls.levels[this.hls.loadLevel]?.uri) {
-      // Do not load audio rendition with URI matching main variant URI
-      return;
+    // Do not load audio rendition with URI matching main variant URI
+    if (useAlternateAudio(audioTrack.url, this.hls)) {
+      this.scheduleLoading(audioTrack, hlsUrlParameters);
     }
-    this.scheduleLoading(audioTrack, hlsUrlParameters);
   }
 
   protected loadingPlaylist(
