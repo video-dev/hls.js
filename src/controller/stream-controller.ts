@@ -11,6 +11,7 @@ import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { BufferHelper } from '../utils/buffer-helper';
 import { pickMostCompleteCodecName } from '../utils/codecs';
+import { useAlternateAudio } from '../utils/rendition-helper';
 import type { FragmentTracker } from './fragment-tracker';
 import type Hls from '../hls';
 import type { Fragment, MediaFragment } from '../loader/fragment';
@@ -851,9 +852,10 @@ export default class StreamController
     event: Events.AUDIO_TRACK_SWITCHING,
     data: AudioTrackSwitchingData,
   ) {
+    const hls = this.hls;
     // if any URL found on new audio track, it is an alternate audio track
     const fromAltAudio = this.altAudio === AlternateAudio.SWITCHED;
-    const altAudio = !!data.url;
+    const altAudio = useAlternateAudio(data.url, hls);
     // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
     // don't do anything if we switch to alt audio: audio stream controller is handling it.
     // we will just have to change buffer scheduling on audioTrackSwitched
@@ -878,7 +880,6 @@ export default class StreamController
         // Reset audio transmuxer so when switching back to main audio we're not still appending where we left off
         this.resetTransmuxer();
       }
-      const hls = this.hls;
       // If switching from alt to main audio, flush all audio and trigger track switched
       if (fromAltAudio) {
         hls.trigger(Events.BUFFER_FLUSHING, {
@@ -898,8 +899,7 @@ export default class StreamController
     event: Events.AUDIO_TRACK_SWITCHED,
     data: AudioTrackSwitchedData,
   ) {
-    const trackId = data.id;
-    const altAudio = !!this.hls.audioTracks[trackId].url;
+    const altAudio = useAlternateAudio(data.url, this.hls);
     if (altAudio) {
       const videoBuffer = this.videoBuffer;
       // if we switched on alternate audio, ensure that main fragment scheduling is synced with video sourcebuffer buffered
