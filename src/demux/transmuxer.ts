@@ -135,7 +135,8 @@ export default class Transmuxer {
         // For Low-Latency HLS Parts, decrypt in place, since part parsing is expected on push progress
         const loadingParts = chunkMeta.part > -1;
         if (loadingParts) {
-          decryptedData = decrypter.flush();
+          const data = decrypter.flush();
+          decryptedData = data ? data.buffer : data;
         }
         if (!decryptedData) {
           stats.executeEnd = now();
@@ -248,7 +249,7 @@ export default class Transmuxer {
       if (decryptedData) {
         // Push always returns a TransmuxerResult if decryptdata is null
         transmuxResults.push(
-          this.push(decryptedData, null, chunkMeta) as TransmuxerResult,
+          this.push(decryptedData.buffer, null, chunkMeta) as TransmuxerResult,
         );
       }
     }

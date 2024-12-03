@@ -237,7 +237,7 @@ class FetchLoader implements Loader<LoaderContext> {
         .then((data) => {
           if (data.done) {
             if (chunkCache.dataLength) {
-              onProgress(stats, context, chunkCache.flush(), response);
+              onProgress(stats, context, chunkCache.flush().buffer, response);
             }
 
             return Promise.resolve(new ArrayBuffer(0));
@@ -251,12 +251,12 @@ class FetchLoader implements Loader<LoaderContext> {
             chunkCache.push(chunk);
             if (chunkCache.dataLength >= highWaterMark) {
               // flush in order to join the typed arrays
-              onProgress(stats, context, chunkCache.flush(), response);
+              onProgress(stats, context, chunkCache.flush().buffer, response);
             }
           } else {
             // If there's nothing cached already, and the chache is large enough
             // just emit the progress event
-            onProgress(stats, context, chunk, response);
+            onProgress(stats, context, chunk.buffer, response);
           }
           return pump();
         })

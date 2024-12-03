@@ -86,7 +86,8 @@ export default class Decrypter {
   ): Promise<ArrayBuffer> {
     if (this.useSoftware) {
       return new Promise((resolve, reject) => {
-        this.softwareDecrypt(new Uint8Array(data), key, iv, aesMode);
+        const dataView = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
+        this.softwareDecrypt(dataView, key, iv, aesMode);
         const decryptResult = this.flush();
         if (decryptResult) {
           resolve(decryptResult.buffer);

@@ -1,3 +1,12 @@
+declare global {
+  interface ArrayBuffer {
+    ' buffer_kind'?: 'array';
+  }
+  interface Uint8Array {
+    ' buffer_kind'?: 'uint8';
+  }
+}
+
 export type SourceBufferName = 'video' | 'audio' | 'audiovideo';
 
 /* eslint-disable no-restricted-globals */

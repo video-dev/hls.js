@@ -577,7 +577,7 @@ export class TimelineController implements ComponentAPI {
     const hls = this.hls;
     // Parse the WebVTT file contents.
     const payloadWebVTT = frag.initSegment?.data
-      ? appendUint8Array(frag.initSegment.data, new Uint8Array(payload))
+      ? appendUint8Array(frag.initSegment.data, new Uint8Array(payload)).buffer
       : payload;
     parseWebVTT(
       payloadWebVTT,

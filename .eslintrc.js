@@ -81,6 +81,9 @@ module.exports = {
   },
   overrides: [
     {
+      parserOptions: {
+        project: ['./tsconfig.json'],
+      },
       files: ['*.ts'],
       rules: {
         'no-unused-vars': 0,
