@@ -251,7 +251,7 @@ class AudioStreamController
           if (this.initPTS[frag.cc] !== undefined) {
             this.waitingData = null;
             this.state = State.FRAG_LOADING;
-            const payload = cache.flush();
+            const payload = cache.flush().buffer;
             const data: FragLoadedData = {
               frag,
               part,
