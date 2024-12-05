@@ -100,20 +100,24 @@ export default class MP4Remuxer implements Remuxer {
     this.videoTrackConfig = undefined;
   }
 
-  getVideoStartPts(videoSamples) {
+  getVideoStartPts(videoSamples: VideoSample[]) {
+    // Get the minimum PTS value relative to the first sample's PTS, normalized for 33-bit wrapping
     let rolloverDetected = false;
+    const firstPts = videoSamples[0].pts;
     const startPTS = videoSamples.reduce((minPTS, sample) => {
-      const delta = sample.pts - minPTS;
+      let pts = sample.pts;
+      let delta = pts - minPTS;
       if (delta < -4294967296) {
         // 2^32, see PTSNormalize for reasoning, but we're hitting a rollover here, and we don't want that to impact the timeOffset calculation
         rolloverDetected = true;
-        return normalizePts(minPTS, sample.pts);
-      } else if (delta > 0) {
-        return minPTS;
-      } else {
-        return sample.pts;
+        pts = normalizePts(pts, firstPts);
+        delta = pts - minPTS;
       }
-    }, videoSamples[0].pts);
+      if (delta > 0) {
+        return minPTS;
+      }
+      return pts;
+    }, firstPts);
     if (rolloverDetected) {
       logger.debug('PTS rollover detected');
     }
