@@ -3646,8 +3646,6 @@ export interface ManifestLoadedData {
     // (undocumented)
     contentSteering: ContentSteeringOptions | null;
     // (undocumented)
-    isMediaPlaylist?: boolean;
-    // (undocumented)
     levels: LevelParsed[];
     // (undocumented)
     networkDetails: any;

@@ -138,7 +138,6 @@ export interface ManifestLoadedData {
   subtitles?: MediaPlaylist[];
   url: string;
   variableList: VariableMap | null;
-  isMediaPlaylist?: boolean;
 }
 
 export interface ManifestParsedData {
