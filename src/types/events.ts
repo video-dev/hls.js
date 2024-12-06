@@ -7,8 +7,6 @@ import type {
   SourceBufferName,
   SourceBufferTrackSet,
 } from './buffer';
-import type { ChunkMetadata } from './transmuxer';
-import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
 import type {
   HdcpLevel,
@@ -27,6 +25,7 @@ import type {
   PlaylistLoaderContext,
 } from './loader';
 import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
+import type { ChunkMetadata } from './transmuxer';
 import type { SteeringManifest } from '../controller/content-steering-controller';
 import type { IErrorAction } from '../controller/error-controller';
 import type { HlsAssetPlayer } from '../controller/interstitial-player';
@@ -34,6 +33,7 @@ import type {
   InterstitialScheduleDurations,
   InterstitialScheduleItem,
 } from '../controller/interstitials-schedule';
+import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { HlsListeners } from '../events';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type {
@@ -138,6 +138,7 @@ export interface ManifestLoadedData {
   subtitles?: MediaPlaylist[];
   url: string;
   variableList: VariableMap | null;
+  isMediaPlaylist?: boolean;
 }
 
 export interface ManifestParsedData {

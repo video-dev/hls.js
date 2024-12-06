@@ -19,6 +19,7 @@ import type {
   ErrorData,
   LevelLoadingData,
   LevelsUpdatedData,
+  ManifestLoadedData,
   ManifestLoadingData,
   TrackLoadingData,
 } from '../types/events';
@@ -495,8 +496,12 @@ class PlaylistLoader implements NetworkComponentAPI {
       startTimeOffset,
       variableList,
     });
+  }
 
-    this.checkAutostartLoad();
+  onManifestLoaded(event: Events.MANIFEST_LOADED, data: ManifestLoadedData) {
+    if (!data.isMediaPlaylist) {
+      this.checkAutostartLoad();
+    }
   }
 
   private handleTrackOrLevelPlaylist(
@@ -549,6 +554,7 @@ class PlaylistLoader implements NetworkComponentAPI {
         contentSteering: null,
         startTimeOffset: null,
         variableList: null,
+        isMediaPlaylist: true,
       });
     }
 
