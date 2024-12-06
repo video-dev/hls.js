@@ -11,6 +11,7 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { AttrList } from '../utils/attr-list';
+import { computeReloadInterval } from '../utils/level-helper';
 import type { LevelDetails } from './level-details';
 import type { LoaderConfig, RetryConfig } from '../config';
 import type Hls from '../hls';
@@ -19,7 +20,6 @@ import type {
   ErrorData,
   LevelLoadingData,
   LevelsUpdatedData,
-  ManifestLoadedData,
   ManifestLoadingData,
   TrackLoadingData,
 } from '../types/events';
@@ -70,6 +70,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     [key: string]: Loader<LoaderContext>;
   } = Object.create(null);
   private variableList: VariableMap | null = null;
+  public onManifestLoaded = this.checkAutostartLoad;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -498,12 +499,6 @@ class PlaylistLoader implements NetworkComponentAPI {
     });
   }
 
-  onManifestLoaded(event: Events.MANIFEST_LOADED, data: ManifestLoadedData) {
-    if (!data.isMediaPlaylist) {
-      this.checkAutostartLoad();
-    }
-  }
-
   private handleTrackOrLevelPlaylist(
     response: LoaderResponse,
     stats: LoaderStats,
@@ -542,6 +537,8 @@ class PlaylistLoader implements NetworkComponentAPI {
         name: '',
         url,
       };
+      levelDetails.requestScheduled =
+        stats.loading.start + computeReloadInterval(levelDetails, 0);
 
       hls.trigger(Events.MANIFEST_LOADED, {
         levels: [singleLevel],
@@ -554,7 +551,6 @@ class PlaylistLoader implements NetworkComponentAPI {
         contentSteering: null,
         startTimeOffset: null,
         variableList: null,
-        isMediaPlaylist: true,
       });
     }
 
@@ -572,14 +568,6 @@ class PlaylistLoader implements NetworkComponentAPI {
       networkDetails,
       loader,
     );
-
-    if (
-      type === PlaylistContextType.MANIFEST &&
-      (!levelDetails.playlistParsingError ||
-        (!levelDetails.fragments.length && levelDetails.live))
-    ) {
-      this.checkAutostartLoad();
-    }
   }
 
   private handleManifestParsingError(

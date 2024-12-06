@@ -1151,9 +1151,6 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     this.waitingItem = null;
 
     this.bufferedToItem(scheduledItem);
-    if (!fromItem) {
-      return;
-    }
 
     this.log(`resuming ${segmentToString(scheduledItem)}`);
 
@@ -1167,6 +1164,10 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         this.timelinePos = timelinePos;
       }
       this.attachPrimary(timelinePos, scheduledItem);
+    }
+
+    if (!fromItem) {
+      return;
     }
 
     const scheduleItems = this.schedule.items;
@@ -1434,14 +1435,6 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     if (removedIds.length) {
       this.log(`Removed events ${removedIds}`);
     }
-    if (
-      this.isInterstitial(playingItem) &&
-      removedIds.includes(playingItem.event.identifier)
-    ) {
-      this.warn(
-        `Interstitial "${playingItem.event.identifier}" removed while playing`,
-      );
-    }
 
     this.playerQueue.forEach((player) => {
       if (player.interstitial.appendInPlace) {
@@ -1474,7 +1467,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       } else if (!this.updateItem(bufferingItem)) {
         // Interstitial removed from schedule (Live -> VOD or other scenario where Start Date is outside the range of VOD Playlist)
         this.bufferingItem = null;
-        this.clearInterstitial(bufferingItem.event);
+        this.clearInterstitial(bufferingItem.event, null);
       }
     }
     // Clear waitingItem if it has been removed from the schedule
@@ -1482,7 +1475,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
 
     removedInterstitials.forEach((interstitial) => {
       interstitial.assetList.forEach((asset) => {
-        this.clearAssetPlayer(asset.identifier);
+        this.clearAssetPlayer(asset.identifier, null);
       });
     });
 
@@ -1493,6 +1486,17 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
         durations,
         removedIds,
       });
+
+      if (
+        this.isInterstitial(playingItem) &&
+        removedIds.includes(playingItem.event.identifier)
+      ) {
+        this.warn(
+          `Interstitial "${playingItem.event.identifier}" removed while playing`,
+        );
+        this.primaryFallback(playingItem.event);
+        return;
+      }
 
       // Check is buffered to new Interstitial event boundary
       // (Live update publishes Interstitial with new segment)
@@ -2065,7 +2069,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
 
   private clearInterstitial(
     interstitial: InterstitialEvent,
-    toSegment?: InterstitialScheduleItem | null,
+    toSegment: InterstitialScheduleItem | null,
   ) {
     interstitial.assetList.forEach((asset) => {
       this.clearAssetPlayer(asset.identifier, toSegment);
@@ -2075,7 +2079,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
 
   private clearAssetPlayer(
     assetId: InterstitialAssetId,
-    toSegment?: InterstitialScheduleItem | null,
+    toSegment: InterstitialScheduleItem | null,
   ) {
     if (toSegment === null) {
       return;
@@ -2228,7 +2232,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     const error = new Error(errorMessage);
     if (assetItem) {
       if (this.playingAsset !== assetItem) {
-        this.clearAssetPlayer(assetItem.identifier);
+        this.clearAssetPlayer(assetItem.identifier, null);
       }
       assetItem.error = error;
     }
@@ -2251,6 +2255,13 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     // Update schedule now that interstitial/assets are flagged with `error` for fallback
     this.updateSchedule();
     if (playingItem) {
+      this.log(
+        `Fallback to primary from event "${interstitial.identifier}" start: ${
+          flushStart
+        } pos: ${this.timelinePos} playing: ${
+          playingItem ? segmentToString(playingItem) : '<none>'
+        } error: ${interstitial.error}`,
+      );
       if (interstitial.appendInPlace) {
         interstitial.appendInPlace = false;
         this.attachPrimary(flushStart, null);
