@@ -300,6 +300,12 @@ export default class Hls implements HlsEventEmitter {
     if (typeof onErrorOut === 'function') {
       this.on(Events.ERROR, onErrorOut, errorController);
     }
+    // Autostart load handler
+    this.on(
+      Events.MANIFEST_LOADED,
+      playListLoader.onManifestLoaded,
+      playListLoader,
+    );
   }
 
   createController(ControllerClass, components) {
