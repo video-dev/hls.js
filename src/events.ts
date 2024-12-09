@@ -216,6 +216,8 @@ export enum Events {
   INTERSTITIALS_PRIMARY_RESUMED = 'hlsInterstitialsPrimaryResumed',
   // Interstitial players dispatch this event when playout limit is reached
   PLAYOUT_LIMIT_REACHED = 'hlsPlayoutLimitReached',
+  // Event DateRange cue "enter" event dispatched
+  EVENT_CUE_ENTER = 'hlsEventCueEnter',
 }
 
 /**
@@ -490,6 +492,7 @@ export interface HlsListeners {
     event: Events.PLAYOUT_LIMIT_REACHED,
     data: {},
   ) => void;
+  [Events.EVENT_CUE_ENTER]: (event: Events.EVENT_CUE_ENTER, data: {}) => void;
 }
 export interface HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined>(
