@@ -445,7 +445,8 @@ export default class BaseStreamController
     if (
       __USE_INTERSTITALS__ &&
       config.interstitialsController &&
-      config.enableInterstitialPlayback !== false
+      config.enableInterstitialPlayback !== false &&
+      frag.type !== PlaylistLevelType.SUBTITLE
     ) {
       // Do not load fragments outside the buffering schedule segment
       const interstitials = this.hls.interstitialsManager;
