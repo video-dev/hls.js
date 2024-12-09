@@ -1429,6 +1429,8 @@ export enum Events {
     // (undocumented)
     ERROR = "hlsError",
     // (undocumented)
+    EVENT_CUE_ENTER = "hlsEventCueEnter",
+    // (undocumented)
     FPS_DROP = "hlsFpsDrop",
     // (undocumented)
     FPS_DROP_LEVEL_CAPPING = "hlsFpsDropLevelCapping",
@@ -2268,6 +2270,8 @@ export interface HlsListeners {
     [Events.DESTROYING]: (event: Events.DESTROYING) => void;
     // (undocumented)
     [Events.ERROR]: (event: Events.ERROR, data: ErrorData) => void;
+    // (undocumented)
+    [Events.EVENT_CUE_ENTER]: (event: Events.EVENT_CUE_ENTER, data: {}) => void;
     // (undocumented)
     [Events.FPS_DROP]: (event: Events.FPS_DROP, data: FPSDropData) => void;
     // (undocumented)

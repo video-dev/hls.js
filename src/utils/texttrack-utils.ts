@@ -49,7 +49,7 @@ export function addCueToTrack(track: TextTrack, cue: VTTCue) {
   }
 }
 
-export function clearCurrentCues(track: TextTrack) {
+export function clearCurrentCues(track: TextTrack, enterHandler?: () => void) {
   // When track.mode is disabled, track.cues will be null.
   // To guarantee the removal of cues, we need to temporarily
   // change the mode to hidden
@@ -59,6 +59,9 @@ export function clearCurrentCues(track: TextTrack) {
   }
   if (track.cues) {
     for (let i = track.cues.length; i--; ) {
+      if (enterHandler) {
+        track.cues[i].removeEventListener('enter', enterHandler);
+      }
       track.removeCue(track.cues[i]);
     }
   }
