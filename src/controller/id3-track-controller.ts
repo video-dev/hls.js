@@ -106,12 +106,13 @@ class ID3TrackController implements ComponentAPI {
     this.media = null;
     this.dateRangeCuesAppended = {};
     // @ts-ignore
-    this.hls = null;
+    this.hls = this.onEventCueEnter = null;
   }
 
   private _registerListeners() {
     const { hls } = this;
     hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.FRAG_PARSING_METADATA, this.onFragParsingMetadata, this);
@@ -123,6 +124,7 @@ class ID3TrackController implements ComponentAPI {
   private _unregisterListeners() {
     const { hls } = this;
     hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.FRAG_PARSING_METADATA, this.onFragParsingMetadata, this);
@@ -130,6 +132,13 @@ class ID3TrackController implements ComponentAPI {
     hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.off(Events.LEVEL_PTS_UPDATED, this.onLevelPtsUpdated, this);
   }
+
+  private onEventCueEnter = () => {
+    if (!this.hls) {
+      return;
+    }
+    this.hls.trigger(Events.EVENT_CUE_ENTER, {});
+  };
 
   // Add ID3 metatadata text track.
   private onMediaAttaching(
@@ -139,6 +148,13 @@ class ID3TrackController implements ComponentAPI {
     this.media = data.media;
     if (data.overrides?.cueRemoval === false) {
       this.removeCues = false;
+    }
+  }
+
+  private onMediaAttached() {
+    const details = this.hls.latestLevelDetails;
+    if (details) {
+      this.updateDateRangeCues(details);
     }
   }
 
@@ -153,7 +169,7 @@ class ID3TrackController implements ComponentAPI {
     }
     if (this.id3Track) {
       if (this.removeCues) {
-        clearCurrentCues(this.id3Track);
+        clearCurrentCues(this.id3Track, this.onEventCueEnter);
       }
       this.id3Track = null;
     }
@@ -349,7 +365,9 @@ class ID3TrackController implements ComponentAPI {
           delete dateRangeCuesAppended[id];
           Object.keys(cues).forEach((key) => {
             try {
-              id3Track.removeCue(cues[key]);
+              const cue = cues[key];
+              cue.removeEventListener('enter', this.onEventCueEnter);
+              id3Track.removeCue(cue);
             } catch (e) {
               /* no-op */
             }
@@ -429,17 +447,26 @@ class ID3TrackController implements ComponentAPI {
           if (isSCTE35Attribute(key)) {
             data = hexToArrayBuffer(data);
           }
+          const payload: any = { key, data };
           const cue = createCueWithDataFields(
             Cue,
             startTime,
             endTime,
-            { key, data },
+            payload,
             MetadataSchema.dateRange,
           );
           if (cue) {
             cue.id = id;
             this.id3Track.addCue(cue);
             cues[key] = cue;
+            if (
+              __USE_INTERSTITALS__ &&
+              this.hls.config.interstitialsController
+            ) {
+              if (key === 'X-ASSET-LIST' || key === 'X-ASSET-URL') {
+                cue.addEventListener('enter', this.onEventCueEnter);
+              }
+            }
           }
         }
       }

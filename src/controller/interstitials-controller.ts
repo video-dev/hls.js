@@ -135,6 +135,7 @@ export default class InterstitialsController
     hls.on(Events.AUDIO_TRACK_UPDATED, this.onAudioTrackUpdated, this);
     hls.on(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
     hls.on(Events.SUBTITLE_TRACK_UPDATED, this.onSubtitleTrackUpdated, this);
+    hls.on(Events.EVENT_CUE_ENTER, this.onInterstitialCueEnter, this);
     hls.on(Events.ASSET_LIST_LOADED, this.onAssetListLoaded, this);
     hls.on(Events.BUFFER_APPENDED, this.onBufferAppended, this);
     hls.on(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
@@ -158,6 +159,7 @@ export default class InterstitialsController
     hls.off(Events.AUDIO_TRACK_UPDATED, this.onAudioTrackUpdated, this);
     hls.off(Events.SUBTITLE_TRACK_SWITCH, this.onSubtitleTrackSwitch, this);
     hls.off(Events.SUBTITLE_TRACK_UPDATED, this.onSubtitleTrackUpdated, this);
+    hls.off(Events.EVENT_CUE_ENTER, this.onInterstitialCueEnter, this);
     hls.off(Events.ASSET_LIST_LOADED, this.onAssetListLoaded, this);
     hls.off(Events.BUFFER_CODECS, this.onBufferCodecs, this);
     hls.off(Events.BUFFER_APPENDED, this.onBufferAppended, this);
@@ -821,6 +823,10 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
       this.setScheduleToAssetAtTime(currentTime, playingAsset);
     }
   };
+
+  private onInterstitialCueEnter() {
+    this.onTimeupdate();
+  }
 
   private onTimeupdate = () => {
     const currentTime = this.currentTime;
