@@ -6,9 +6,10 @@ import {
   type InterstitialId,
   TimelineOccupancy,
 } from '../loader/interstitial-event';
-import { logger } from '../utils/logger';
+import { Logger } from '../utils/logger';
 import type { DateRange } from '../loader/date-range';
 import type { MediaSelection } from '../types/media-playlist';
+import type { ILogger } from '../utils/logger';
 
 const ABUTTING_THRESHOLD_SECONDS = 0.033;
 
@@ -59,7 +60,7 @@ type ScheduleUpdateCallback = (
   previousItems: InterstitialScheduleItem[] | null,
 ) => void;
 
-export class InterstitialsSchedule {
+export class InterstitialsSchedule extends Logger {
   private onScheduleUpdate: ScheduleUpdateCallback;
   private eventMap: Record<string, InterstitialEvent> = {};
   public events: InterstitialEvent[] | null = null;
@@ -70,7 +71,8 @@ export class InterstitialsSchedule {
     integrated: 0,
   };
 
-  constructor(onScheduleUpdate: ScheduleUpdateCallback) {
+  constructor(onScheduleUpdate: ScheduleUpdateCallback, logger: ILogger) {
+    super('interstitials-sched', logger);
     this.onScheduleUpdate = onScheduleUpdate;
   }
 
@@ -579,14 +581,14 @@ export class InterstitialsSchedule {
     if (
       Math.abs(resumeTime - resumesInPlaceAt) > ALIGNED_END_THRESHOLD_SECONDS
     ) {
-      logger.log(
-        `Interstitial resumption ${resumeTime} not aligned with estimated timeline end ${resumesInPlaceAt}`,
+      this.log(
+        `"${interstitial.identifier}" resumption ${resumeTime} not aligned with estimated timeline end ${resumesInPlaceAt}`,
       );
       return false;
     }
     if (!mediaSelection) {
-      logger.log(
-        `Interstitial resumption ${resumeTime} can not be aligned with media (none selected)`,
+      this.log(
+        `"${interstitial.identifier}" resumption ${resumeTime} can not be aligned with media (none selected)`,
       );
       return false;
     }
@@ -594,8 +596,8 @@ export class InterstitialsSchedule {
       const details = mediaSelection[playlistType].details;
       const playlistEnd = details.edge;
       if (resumeTime > playlistEnd) {
-        logger.log(
-          `Interstitial resumption ${resumeTime} past ${playlistType} playlist end ${playlistEnd}`,
+        this.log(
+          `"${interstitial.identifier}" resumption ${resumeTime} past ${playlistType} playlist end ${playlistEnd}`,
         );
         return true;
       }
@@ -605,19 +607,20 @@ export class InterstitialsSchedule {
         resumeTime,
       );
       if (!startFragment) {
-        logger.log(
-          `Interstitial resumption ${resumeTime} does not overlap with any fragments in ${playlistType} playlist`,
+        this.log(
+          `"${interstitial.identifier}" resumption ${resumeTime} does not align with any fragments in ${playlistType} playlist`,
         );
         return true;
       }
+      const endAllowance = playlistType === 'audio' ? 0.175 : 0;
       const alignedWithSegment =
         Math.abs(startFragment.start - resumeTime) <
           ALIGNED_END_THRESHOLD_SECONDS ||
         Math.abs(startFragment.end - resumeTime) <
-          ALIGNED_END_THRESHOLD_SECONDS;
+          ALIGNED_END_THRESHOLD_SECONDS + endAllowance;
       if (!alignedWithSegment) {
-        logger.log(
-          `Interstitial resumption ${resumeTime} does not overlap with fragment in ${playlistType} playlist (${startFragment.start}-${startFragment.end})`,
+        this.log(
+          `"${interstitial.identifier}" resumption ${resumeTime} not aligned with ${playlistType} fragment bounds (${startFragment.start}-${startFragment.end} sn: ${startFragment.sn} cc: ${startFragment.cc})`,
         );
         return true;
       }

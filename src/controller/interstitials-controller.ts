@@ -74,6 +74,10 @@ export type PlayheadTimes = {
   seekTo: (time: number) => void;
 };
 
+function playWithCatch(media: HTMLMediaElement | null) {
+  media?.play().catch(/* no-op */);
+}
+
 export default class InterstitialsController
   extends Logger
   implements NetworkComponentAPI
@@ -120,7 +124,10 @@ export default class InterstitialsController
     this.hls = hls;
     this.HlsPlayerClass = HlsPlayerClass;
     this.assetListLoader = new AssetListLoader(hls);
-    this.schedule = new InterstitialsSchedule(this.onScheduleUpdate);
+    this.schedule = new InterstitialsSchedule(
+      this.onScheduleUpdate,
+      hls.logger,
+    );
     this.registerListeners();
   }
 
@@ -721,8 +728,8 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         this.log(
           `using detachedData: MediaSource ${JSON.stringify(attachMediaSourceData)}`,
         );
-      } else if (!this.detachedData) {
-        this.warn(`missing MediaSource (detachedData)!`);
+      } else if (!this.detachedData || this.hls.media === media) {
+        // Media is attaching when `detachedData` and `hls.media` are populated. Detach to clear the MediaSource.
         this.hls.detachMedia();
         this.detachedData = { media };
       }
@@ -1117,12 +1124,12 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         media,
       );
       if (this.shouldPlay) {
-        player.media?.play();
+        playWithCatch(player.media);
       }
     } else if (scheduledItem !== null) {
       this.resumePrimary(scheduledItem, index, currentItem);
       if (this.shouldPlay) {
-        this.hls.media?.play();
+        playWithCatch(this.hls.media);
       }
     } else if (playingLastItem && this.isInterstitial(currentItem)) {
       // Maintain playingItem state at end of schedule (setSchedulePosition(-1) called to end program)
