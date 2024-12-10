@@ -3,7 +3,7 @@ import type { DateRange, DateRangeCue } from './date-range';
 import type { MediaFragmentRef } from './fragment';
 import type { Loader, LoaderContext } from '../types/loader';
 
-export const ALIGNED_END_THRESHOLD_SECONDS = 0.02; // 0.1 // 0.2
+export const ALIGNED_END_THRESHOLD_SECONDS = 0.02;
 
 export type PlaybackRestrictions = {
   skip: boolean;
