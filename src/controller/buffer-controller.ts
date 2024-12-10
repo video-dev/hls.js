@@ -15,9 +15,9 @@ import {
   isCompatibleTrackChange,
   isManagedMediaSource,
 } from '../utils/mediasource-helper';
-import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
 import type { HlsConfig } from '../config';
+import type Hls from '../hls';
 import type { MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type {
