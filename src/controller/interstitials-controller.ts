@@ -218,7 +218,7 @@ export default class InterstitialsController
     // @ts-ignore
     this.assetListLoader = null;
     // @ts-ignore
-    this.onPlay = this.onSeeking = this.onTimeupdate = null;
+    this.onPlay = this.onPause = this.onSeeking = this.onTimeupdate = null;
     // @ts-ignore
     this.onScheduleUpdate = null;
   }
@@ -232,6 +232,7 @@ export default class InterstitialsController
 
   private removeMediaListeners(media: HTMLMediaElement) {
     media.removeEventListener('play', this.onPlay);
+    media.removeEventListener('pause', this.onPause);
     media.removeEventListener('seeking', this.onSeeking);
     media.removeEventListener('timeupdate', this.onTimeupdate);
   }
@@ -245,6 +246,7 @@ export default class InterstitialsController
     media.addEventListener('seeking', this.onSeeking);
     media.addEventListener('timeupdate', this.onTimeupdate);
     media.addEventListener('play', this.onPlay);
+    media.addEventListener('pause', this.onPause);
   }
 
   private onMediaAttached(
@@ -761,6 +763,10 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
 
   private onPlay = () => {
     this.shouldPlay = true;
+  };
+
+  private onPause = () => {
+    this.shouldPlay = false;
   };
 
   private onSeeking = () => {
