@@ -198,18 +198,21 @@ export default class BaseStreamController
     bufferInfo: BufferInfo,
     levelDetails: LevelDetails,
   ): boolean {
-    // If playlist is live, there is another buffered range after the current range, nothing buffered, media is detached,
-    // of nothing loading/loaded return false
-    const hasTimelineOffset = this.config.timelineOffset !== undefined;
+    // Stream is never "ended" when playlist is live or media is detached
+    if (levelDetails.live || !this.media) {
+      return false;
+    }
+    // Stream is not "ended" when nothing is buffered past the start
+    const bufferEnd = bufferInfo.end || 0;
+    const timelineStart = this.config.timelineOffset || 0;
+    if (bufferEnd <= timelineStart) {
+      return false;
+    }
+    // Stream is not "ended" when there is a second buffered range starting before the end of the playlist
     const nextStart = bufferInfo.nextStart;
     const hasSecondBufferedRange =
-      nextStart && (!hasTimelineOffset || nextStart < levelDetails.edge);
-    if (
-      levelDetails.live ||
-      hasSecondBufferedRange ||
-      !bufferInfo.end ||
-      !this.media
-    ) {
+      nextStart && nextStart > timelineStart && nextStart < levelDetails.edge;
+    if (hasSecondBufferedRange) {
       return false;
     }
     const partList = levelDetails.partList;

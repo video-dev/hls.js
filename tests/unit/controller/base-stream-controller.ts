@@ -3,10 +3,12 @@ import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
 import BaseStreamController from '../../../src/controller/stream-controller';
 import Hls from '../../../src/hls';
+import { Fragment } from '../../../src/loader/fragment';
 import KeyLoader from '../../../src/loader/key-loader';
+import { LevelDetails } from '../../../src/loader/level-details';
+import { PlaylistLevelType } from '../../../src/types/loader';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
-import type { Fragment, Part } from '../../../src/loader/fragment';
-import type { LevelDetails } from '../../../src/loader/level-details';
+import type { MediaFragment, Part } from '../../../src/loader/fragment';
 import type { BufferInfo } from '../../../src/utils/buffer-helper';
 
 chai.use(sinonChai);
@@ -24,7 +26,6 @@ describe('BaseStreamController', function () {
   let hls: Hls;
   let baseStreamController: BaseStreamControllerTestable;
   let bufferInfo: BufferInfo;
-  let levelDetails: LevelDetails;
   let fragmentTracker;
   let media;
   beforeEach(function () {
@@ -49,17 +50,6 @@ describe('BaseStreamController', function () {
       start: 0,
       end: 1,
     };
-    levelDetails = {
-      endSN: 0,
-      live: false,
-      get fragments() {
-        const frags: Fragment[] = [];
-        for (let i = 0; i < this.endSN; i++) {
-          frags.push({ sn: i, type: 'main' } as unknown as Fragment);
-        }
-        return frags;
-      },
-    } as unknown as LevelDetails;
     media = {
       duration: 0,
       buffered: new TimeRangesMock(),
@@ -67,23 +57,48 @@ describe('BaseStreamController', function () {
     baseStreamController.media = media;
   });
 
+  function levelDetailsWithEndSequenceVodOrLive(
+    endSN: number = 1,
+    live: boolean = false,
+  ) {
+    const details = new LevelDetails('');
+    for (let i = 0; i < endSN; i++) {
+      const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      frag.duration = 5;
+      frag.sn = i;
+      frag.start = i * 5;
+      details.fragments.push(frag);
+    }
+    details.live = live;
+    return details;
+  }
+
   describe('_streamEnded', function () {
     it('returns false if the stream is live', function () {
-      levelDetails.live = true;
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(3, true);
       expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
         .false;
     });
 
-    it('returns false if there is subsequently buffered range', function () {
-      levelDetails.endSN = 10;
-      bufferInfo.nextStart = 100;
+    it('returns false if there is subsequently buffered range within program range', function () {
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(10);
+      expect(levelDetails.edge).to.eq(50);
+      bufferInfo.nextStart = 45;
       expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
         .false;
+    });
+
+    it('returns true if complete and subsequently buffered range is outside program range', function () {
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(10);
+      expect(levelDetails.edge).to.eq(50);
+      bufferInfo.nextStart = 100;
+      expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
+        .true;
     });
 
     it('returns true if parts are buffered for low latency content', function () {
       media.buffered = new TimeRangesMock([0, 1]);
-      levelDetails.endSN = 10;
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(10);
       levelDetails.partList = [{ start: 0, duration: 1 } as unknown as Part];
 
       expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
@@ -92,7 +107,7 @@ describe('BaseStreamController', function () {
 
     it('depends on fragment-tracker to determine if last fragment is buffered', function () {
       media.buffered = new TimeRangesMock([0, 1]);
-      levelDetails.endSN = 10;
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(10);
 
       expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
         .true;
