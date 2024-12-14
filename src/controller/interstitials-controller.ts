@@ -1476,16 +1476,23 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     });
 
     // Update schedule item references
-    // Do not change Interstitial playingItem - used for INTERSTITIAL_ASSET_ENDED and INTERSTITIAL_ENDED
-    if (playingItem && !playingItem.event) {
-      this.playingItem = this.updateItem(playingItem, this.timelinePos);
+    // Do not replace Interstitial playingItem without a match - used for INTERSTITIAL_ASSET_ENDED and INTERSTITIAL_ENDED
+    if (playingItem) {
+      const updatedPlayingItem = this.updateItem(playingItem, this.timelinePos);
+      if (this.itemsMatch(playingItem, updatedPlayingItem)) {
+        this.playingItem = updatedPlayingItem;
+      }
     }
-    // Do not change Interstitial bufferingItem - used for transfering media element or source
+    // Do not replace Interstitial bufferingItem without a match - used for transfering media element or source
     const bufferingItem = this.bufferingItem;
     if (bufferingItem) {
-      if (!bufferingItem.event) {
-        this.bufferingItem = this.updateItem(bufferingItem, this.bufferedPos);
-      } else if (!this.updateItem(bufferingItem)) {
+      const updatedBufferingItem = this.updateItem(
+        bufferingItem,
+        this.bufferedPos,
+      );
+      if (this.itemsMatch(bufferingItem, updatedBufferingItem)) {
+        this.bufferingItem = updatedBufferingItem;
+      } else if (bufferingItem.event) {
         // Interstitial removed from schedule (Live -> VOD or other scenario where Start Date is outside the range of VOD Playlist)
         this.bufferingItem = null;
         this.clearInterstitial(bufferingItem.event, null);
@@ -1658,14 +1665,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
   ): InterstitialScheduleItem | null {
     const bufferingLast = this.bufferingItem;
     const schedule = this.schedule;
-    const { items, events } = schedule;
 
-    if (
-      items &&
-      events &&
-      (!bufferingLast ||
-        schedule.findItemIndex(bufferingLast) !== schedule.findItemIndex(item))
-    ) {
+    if (!this.itemsMatch(item, bufferingLast)) {
+      const { items, events } = schedule;
+      if (!items || !events) {
+        return bufferingLast;
+      }
       const isInterstitial = this.isInterstitial(item);
       const bufferingPlayer = this.getBufferingPlayer();
       const timeRemaining = bufferingPlayer
@@ -1694,6 +1699,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
         bufferingIndex: this.findItemIndex(item),
         playingIndex: this.findItemIndex(this.playingItem),
       });
+    } else if (this.bufferingItem !== item) {
+      this.bufferingItem = item;
     }
     return bufferingLast;
   }
