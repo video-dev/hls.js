@@ -75,7 +75,9 @@ export type PlayheadTimes = {
 };
 
 function playWithCatch(media: HTMLMediaElement | null) {
-  media?.play().catch(/* no-op */);
+  media?.play().catch(() => {
+    /* no-op */
+  });
 }
 
 export default class InterstitialsController
@@ -1383,7 +1385,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     const { playingItem } = this;
     if (
       playingItem &&
-      playingItem !== this.bufferingItem &&
+      !this.itemsMatch(playingItem, this.bufferingItem) &&
       !this.isInterstitial(playingItem)
     ) {
       const timelinePos = this.timelinePos;
@@ -1644,7 +1646,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     } else if (
       bufferIsEmpty &&
       playingItem &&
-      bufferingItem !== playingItem &&
+      !this.itemsMatch(playingItem, bufferingItem) &&
       bufferEndIndex === playingIndex
     ) {
       this.bufferedToItem(playingItem);
