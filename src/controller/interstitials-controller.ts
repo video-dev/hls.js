@@ -962,7 +962,6 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     }
     this.log(`setSchedulePosition ${index}, ${assetListIndex}`);
     const scheduledItem = index >= 0 ? scheduleItems[index] : null;
-    const media = this.primaryMedia;
     // Cleanup current item / asset
     const currentItem = this.playingItem;
     const playingLastItem = this.playingLastItem;
@@ -1011,15 +1010,40 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         // Exiting an Interstitial
         this.clearInterstitial(interstitial, scheduledItem);
         if (interstitial.cue.once) {
+          // Remove interstitial with CUE attribute value of ONCE after it has played
           this.updateSchedule();
-          if (scheduledItem) {
+          const items = this.schedule.items;
+          if (scheduledItem && items) {
             const updatedIndex = this.schedule.findItemIndex(scheduledItem);
-            this.setSchedulePosition(updatedIndex, assetListIndex);
+            this.advanceSchedule(
+              updatedIndex,
+              items,
+              assetListIndex,
+              currentItem,
+              playingLastItem,
+            );
           }
           return;
         }
       }
     }
+    this.advanceSchedule(
+      index,
+      scheduleItems,
+      assetListIndex,
+      currentItem,
+      playingLastItem,
+    );
+  }
+  private advanceSchedule(
+    index: number,
+    scheduleItems: InterstitialScheduleItem[],
+    assetListIndex: number | undefined,
+    currentItem: InterstitialScheduleItem | null,
+    playedLastItem: boolean,
+  ) {
+    const scheduledItem = index >= 0 ? scheduleItems[index] : null;
+    const media = this.primaryMedia;
     // Cleanup out of range Interstitials
     const playerQueue = this.playerQueue;
     if (playerQueue.length) {
@@ -1139,7 +1163,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
       if (this.shouldPlay) {
         playWithCatch(this.hls.media);
       }
-    } else if (playingLastItem && this.isInterstitial(currentItem)) {
+    } else if (playedLastItem && this.isInterstitial(currentItem)) {
       // Maintain playingItem state at end of schedule (setSchedulePosition(-1) called to end program)
       // this allows onSeeking handler to update schedule position
       this.playingItem = currentItem;
