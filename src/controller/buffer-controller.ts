@@ -1192,10 +1192,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
             this.hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, {
               bufferEnd: targetBackBufferPosition,
             });
-          } else if (
-            track?.ended &&
-            buffered.end(buffered.length - 1) - currentTime < targetDuration * 2
-          ) {
+          } else if (track?.ended) {
             this.log(
               `Cannot flush ${type} back buffer while SourceBuffer is in ended state`,
             );
@@ -1227,20 +1224,11 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
         }
         const bufferStart = buffered.start(numBufferedRanges - 1);
         const bufferEnd = buffered.end(numBufferedRanges - 1);
-        const track = this.tracks[type];
         // No flush if we can tolerate the current buffer length or the current buffer range we would flush is contiguous with current position
         if (
           targetFrontBufferPosition > bufferStart ||
           (currentTime >= bufferStart && currentTime <= bufferEnd)
         ) {
-          return;
-        } else if (
-          track?.ended &&
-          currentTime - bufferEnd < 2 * targetDuration
-        ) {
-          this.log(
-            `Cannot flush ${type} front buffer while SourceBuffer is in ended state`,
-          );
           return;
         }
 
