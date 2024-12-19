@@ -1076,10 +1076,7 @@ export default class StreamController
     event: Events.BUFFER_FLUSHED,
     { type }: BufferFlushedData,
   ) {
-    if (
-      type !== ElementaryStreamTypes.AUDIO ||
-      (this.audioOnly && !this.altAudio)
-    ) {
+    if (type !== ElementaryStreamTypes.AUDIO || !this.altAudio) {
       const mediaBuffer =
         (type === ElementaryStreamTypes.VIDEO
           ? this.videoBuffer
