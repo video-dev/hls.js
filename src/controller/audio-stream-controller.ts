@@ -519,7 +519,7 @@ class AudioStreamController
     const cachedTrackLoadedData = this.cachedTrackLoadedData;
     if (cachedTrackLoadedData) {
       this.cachedTrackLoadedData = null;
-      this.hls.trigger(Events.AUDIO_TRACK_LOADED, cachedTrackLoadedData);
+      this.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, cachedTrackLoadedData);
     }
   }
 
@@ -529,6 +529,10 @@ class AudioStreamController
   ) {
     const { levels } = this;
     const { details: newDetails, id: trackId } = data;
+    if (!levels) {
+      this.warn(`Audio tracks were reset while loading level ${trackId}`);
+      return;
+    }
     const mainDetails = this.mainDetails;
     if (
       !mainDetails ||
@@ -541,10 +545,7 @@ class AudioStreamController
       }
       return;
     }
-    if (!levels) {
-      this.warn(`Audio tracks were reset while loading level ${trackId}`);
-      return;
-    }
+    this.cachedTrackLoadedData = null;
     this.log(
       `Audio track ${trackId} loaded [${newDetails.startSN},${
         newDetails.endSN
