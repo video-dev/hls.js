@@ -19,6 +19,10 @@
       "import": "./dist/hls.mjs",
       "require": "./dist/hls.js"
     },
+    "./light": {
+      "import": "./dist/hls.light.mjs",
+      "require": "./dist/hls.light.js"
+    },
     "./dist/*": "./dist/*",
     "./package.json": "./package.json"
   },
