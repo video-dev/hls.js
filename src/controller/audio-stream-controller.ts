@@ -14,6 +14,7 @@ import {
   alignMediaPlaylistByPDT,
 } from '../utils/discontinuities';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
+import { useAlternateAudio } from '../utils/rendition-helper';
 import type { FragmentTracker } from './fragment-tracker';
 import type Hls from '../hls';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
@@ -519,7 +520,7 @@ class AudioStreamController
     const cachedTrackLoadedData = this.cachedTrackLoadedData;
     if (cachedTrackLoadedData) {
       this.cachedTrackLoadedData = null;
-      this.hls.trigger(Events.AUDIO_TRACK_LOADED, cachedTrackLoadedData);
+      this.onAudioTrackLoaded(Events.AUDIO_TRACK_LOADED, cachedTrackLoadedData);
     }
   }
 
@@ -528,12 +529,18 @@ class AudioStreamController
     data: TrackLoadedData,
   ) {
     const { levels } = this;
-    const { details: newDetails, id: trackId } = data;
+    const { details: newDetails, id: trackId, groupId, track } = data;
+    if (!levels) {
+      this.warn(
+        `Audio tracks reset while loading track ${trackId} "${track.name}" of "${groupId}"`,
+      );
+      return;
+    }
     const mainDetails = this.mainDetails;
     if (
       !mainDetails ||
-      mainDetails.expired ||
-      newDetails.endCC > mainDetails.endCC
+      newDetails.endCC > mainDetails.endCC ||
+      mainDetails.expired
     ) {
       this.cachedTrackLoadedData = data;
       if (this.state !== State.STOPPED) {
@@ -541,12 +548,9 @@ class AudioStreamController
       }
       return;
     }
-    if (!levels) {
-      this.warn(`Audio tracks were reset while loading level ${trackId}`);
-      return;
-    }
+    this.cachedTrackLoadedData = null;
     this.log(
-      `Audio track ${trackId} loaded [${newDetails.startSN},${
+      `Audio track ${trackId} "${track.name}" of "${groupId}" loaded [${newDetails.startSN},${
         newDetails.endSN
       }]${
         newDetails.lastPartSn
@@ -555,18 +559,18 @@ class AudioStreamController
       },duration:${newDetails.totalduration}`,
     );
 
-    const track = levels[trackId];
+    const trackLevel = levels[trackId];
     let sliding = 0;
-    if (newDetails.live || track.details?.live) {
+    if (newDetails.live || trackLevel.details?.live) {
       this.checkLiveUpdate(newDetails);
       if (newDetails.deltaUpdateFailed) {
         return;
       }
 
-      if (track.details) {
+      if (trackLevel.details) {
         sliding = this.alignPlaylists(
           newDetails,
-          track.details,
+          trackLevel.details,
           this.levelLastLoaded?.details,
         );
       }
@@ -580,8 +584,8 @@ class AudioStreamController
         sliding = newDetails.fragmentStart;
       }
     }
-    track.details = newDetails;
-    this.levelLastLoaded = track;
+    trackLevel.details = newDetails;
+    this.levelLastLoaded = trackLevel;
 
     // compute start position if we are aligned with the main playlist
     if (!this.startFragRequested) {
@@ -1026,9 +1030,14 @@ class AudioStreamController
         bufferedTrack.name !== switchingTrack.name ||
         bufferedTrack.lang !== switchingTrack.lang)
     ) {
-      this.log('Switching audio track : flushing all audio');
-      super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
-      this.bufferedTrack = null;
+      if (useAlternateAudio(switchingTrack.url, this.hls)) {
+        this.log('Switching audio track : flushing all audio');
+        super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
+        this.bufferedTrack = null;
+      } else {
+        // Main is being buffered. Set bufferedTrack so that it is flushed when switching back to alt-audio
+        this.bufferedTrack = switchingTrack;
+      }
     }
   }
 

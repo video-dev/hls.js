@@ -882,12 +882,16 @@ export default class StreamController
       }
       // If switching from alt to main audio, flush all audio and trigger track switched
       if (fromAltAudio) {
+        this.fragmentTracker.removeAllFragments();
+        hls.once(Events.BUFFER_FLUSHED, () => {
+          this.hls?.trigger(Events.AUDIO_TRACK_SWITCHED, data);
+        });
         hls.trigger(Events.BUFFER_FLUSHING, {
           startOffset: 0,
           endOffset: Number.POSITIVE_INFINITY,
           type: null,
         });
-        this.fragmentTracker.removeAllFragments();
+        return;
       }
       hls.trigger(Events.AUDIO_TRACK_SWITCHED, data);
     } else {

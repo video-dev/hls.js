@@ -502,6 +502,9 @@ function searchDownAndUpList(
   return -1;
 }
 
-export function useAlternateAudio(audioTrackUrl: string, hls: Hls): boolean {
+export function useAlternateAudio(
+  audioTrackUrl: string | undefined,
+  hls: Hls,
+): boolean {
   return !!audioTrackUrl && audioTrackUrl !== hls.levels[hls.loadLevel]?.uri;
 }
