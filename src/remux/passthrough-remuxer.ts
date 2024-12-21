@@ -184,8 +184,9 @@ class PassThroughRemuxer implements Remuxer {
     const startDTS = getStartDTS(initData, data);
     const decodeTime = startDTS === null ? timeOffset : startDTS;
     if (
-      isInvalidInitPts(initPTS, decodeTime, timeOffset, duration) ||
-      (initSegment.timescale !== initPTS.timescale && accurateTimeOffset)
+      (accurateTimeOffset || !initPTS) &&
+      (isInvalidInitPts(initPTS, decodeTime, timeOffset, duration) ||
+        initSegment.timescale !== initPTS.timescale)
     ) {
       initSegment.initPTS = decodeTime - timeOffset;
       if (initPTS && initPTS.timescale === 1) {

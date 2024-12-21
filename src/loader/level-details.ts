@@ -179,7 +179,7 @@ export class LevelDetails {
   }
 
   get expired(): boolean {
-    if (this.live && this.age) {
+    if (this.live && this.age && this.misses < 3) {
       const playlistWindowDuration = this.partEnd - this.fragmentStart;
       return (
         this.age >
