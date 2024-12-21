@@ -529,9 +529,11 @@ class AudioStreamController
     data: TrackLoadedData,
   ) {
     const { levels } = this;
-    const { details: newDetails, id: trackId } = data;
+    const { details: newDetails, id: trackId, groupId, track } = data;
     if (!levels) {
-      this.warn(`Audio tracks were reset while loading level ${trackId}`);
+      this.warn(
+        `Audio tracks reset while loading track ${trackId} "${track.name}" of "${groupId}"`,
+      );
       return;
     }
     const mainDetails = this.mainDetails;
@@ -548,7 +550,7 @@ class AudioStreamController
     }
     this.cachedTrackLoadedData = null;
     this.log(
-      `Audio track ${trackId} loaded [${newDetails.startSN},${
+      `Audio track ${trackId} "${track.name}" of "${groupId}" loaded [${newDetails.startSN},${
         newDetails.endSN
       }]${
         newDetails.lastPartSn
@@ -557,18 +559,18 @@ class AudioStreamController
       },duration:${newDetails.totalduration}`,
     );
 
-    const track = levels[trackId];
+    const trackLevel = levels[trackId];
     let sliding = 0;
-    if (newDetails.live || track.details?.live) {
+    if (newDetails.live || trackLevel.details?.live) {
       this.checkLiveUpdate(newDetails);
       if (newDetails.deltaUpdateFailed) {
         return;
       }
 
-      if (track.details) {
+      if (trackLevel.details) {
         sliding = this.alignPlaylists(
           newDetails,
-          track.details,
+          trackLevel.details,
           this.levelLastLoaded?.details,
         );
       }
@@ -582,8 +584,8 @@ class AudioStreamController
         sliding = newDetails.fragmentStart;
       }
     }
-    track.details = newDetails;
-    this.levelLastLoaded = track;
+    trackLevel.details = newDetails;
+    this.levelLastLoaded = trackLevel;
 
     // compute start position if we are aligned with the main playlist
     if (!this.startFragRequested) {
