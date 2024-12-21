@@ -14,6 +14,7 @@ import {
   alignMediaPlaylistByPDT,
 } from '../utils/discontinuities';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
+import { useAlternateAudio } from '../utils/rendition-helper';
 import type { FragmentTracker } from './fragment-tracker';
 import type Hls from '../hls';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
@@ -536,8 +537,8 @@ class AudioStreamController
     const mainDetails = this.mainDetails;
     if (
       !mainDetails ||
-      mainDetails.expired ||
-      newDetails.endCC > mainDetails.endCC
+      newDetails.endCC > mainDetails.endCC ||
+      mainDetails.expired
     ) {
       this.cachedTrackLoadedData = data;
       if (this.state !== State.STOPPED) {
@@ -1027,9 +1028,14 @@ class AudioStreamController
         bufferedTrack.name !== switchingTrack.name ||
         bufferedTrack.lang !== switchingTrack.lang)
     ) {
-      this.log('Switching audio track : flushing all audio');
-      super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
-      this.bufferedTrack = null;
+      if (useAlternateAudio(switchingTrack.url, this.hls)) {
+        this.log('Switching audio track : flushing all audio');
+        super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
+        this.bufferedTrack = null;
+      } else {
+        // Main is being buffered. Set bufferedTrack so that it is flushed when switching back to alt-audio
+        this.bufferedTrack = switchingTrack;
+      }
     }
   }
 
