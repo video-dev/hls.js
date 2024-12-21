@@ -136,7 +136,10 @@ export function updateFragPTSDTS(
 export function mergeDetails(
   oldDetails: LevelDetails,
   newDetails: LevelDetails,
-): void {
+) {
+  if (oldDetails === newDetails) {
+    return;
+  }
   // Track the last initSegment processed. Initialize it to the last one on the timeline.
   let currentInitSegment: Fragment | null = null;
   const oldFragments = oldDetails.fragments;

@@ -1308,7 +1308,9 @@ export default class BaseStreamController
         const mainStart = this.hls.startPosition;
         const liveSyncPosition = this.hls.liveSyncPosition;
         const startPosition = frag
-          ? (mainStart !== -1 ? mainStart : liveSyncPosition) || frag.start
+          ? (mainStart !== -1 && mainStart >= start
+              ? mainStart
+              : liveSyncPosition) || frag.start
           : pos;
         this.log(
           `Setting startPosition to ${startPosition} to match initial live edge. mainStart: ${mainStart} liveSyncPosition: ${liveSyncPosition} frag.start: ${frag?.start}`,

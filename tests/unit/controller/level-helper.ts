@@ -12,6 +12,7 @@ import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import {
+  addSliding,
   adjustSliding,
   computeReloadInterval,
   mapFragmentIntersection,
@@ -552,6 +553,29 @@ fileSequence18.ts`;
         .which.equals(3);
       expect(detailsUpdated.dateRanges.d2.startTime).to.equal(2.94);
       expect(detailsUpdated.dateRanges.d3.startTime).to.equal(3.94);
+    });
+
+    it('does not add more sliding when LevelDetails arguments are the same object', function () {
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:10
+#EXT-X-MEDIA-SEQUENCE:3
+#EXTINF:6,
+fileSequence5.ts
+#EXTINF:6,
+fileSequence6.ts`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://dummy.url.com/playlist.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      addSliding(details, 10);
+      expect(details.fragmentStart).to.equal(10);
+      mergeDetails(details, details);
+      expect(details.fragmentStart).to.equal(10);
     });
   });
 
