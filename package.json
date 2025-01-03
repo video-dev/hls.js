@@ -120,7 +120,7 @@
     "micromatch": "4.0.8",
     "mocha": "10.8.2",
     "node-fetch": "3.3.2",
-    "npm-run-all2": "6.2.6",
+    "npm-run-all2": "7.0.2",
     "prettier": "3.4.2",
     "promise-polyfill": "8.3.0",
     "rollup": "4.29.1",
