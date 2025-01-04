@@ -47,6 +47,7 @@ import type { LevelDetails } from '../loader/level-details';
 import type { LevelKey } from '../loader/level-key';
 import type { LoadStats } from '../loader/load-stats';
 import type { AttrList } from '../utils/attr-list';
+import type { BufferInfo } from '../utils/buffer-helper';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
@@ -313,6 +314,7 @@ export interface ErrorData {
   fatal: boolean;
   errorAction?: IErrorAction;
   buffer?: number;
+  bufferInfo?: BufferInfo;
   bytes?: number;
   chunkMeta?: ChunkMetadata;
   context?: PlaylistLoaderContext;
@@ -323,6 +325,7 @@ export interface ErrorData {
   levelRetry?: boolean;
   loader?: Loader<LoaderContext>;
   networkDetails?: any;
+  stalled?: { start: number };
   stats?: LoaderStats;
   mimeType?: string;
   reason?: string;
