@@ -113,7 +113,7 @@ class XhrLoader implements Loader<LoaderContext> {
         })
         .catch((error: Error) => {
           // IE11 throws an exception on xhr.open if attempting to access an HTTP resource over HTTPS
-          this.callbacks!.onError(
+          this.callbacks?.onError(
             { code: xhr.status, text: error.message },
             context,
             xhr,
@@ -220,23 +220,16 @@ class XhrLoader implements Loader<LoaderContext> {
             stats.loaded = stats.total = len;
             stats.bwEstimate =
               (stats.total * 8000) / (stats.loading.end - stats.loading.first);
-            if (!this.callbacks) {
-              return;
-            }
-            const onProgress = this.callbacks.onProgress;
+            const onProgress = this.callbacks?.onProgress;
             if (onProgress) {
               onProgress(stats, context, data, xhr);
-            }
-            if (!this.callbacks) {
-              return;
             }
             const response: LoaderResponse = {
               url: xhr.responseURL,
               data: data,
               code: status,
             };
-
-            this.callbacks.onSuccess(response, stats, context, xhr);
+            this.callbacks?.onSuccess(response, stats, context, xhr);
             return;
           }
         }
@@ -254,7 +247,7 @@ class XhrLoader implements Loader<LoaderContext> {
           this.retry(retryConfig);
         } else {
           logger.error(`${status} while loading ${context.url}`);
-          this.callbacks!.onError(
+          this.callbacks?.onError(
             { code: status, text: xhr.statusText },
             context,
             xhr,
