@@ -123,7 +123,7 @@ export default class StreamController
 
   protected onHandlerDestroying() {
     // @ts-ignore
-    this.onMediaPlaying = this.onMediaSeeked = null;
+    this.onMediaPlaying = this.onMediaSeeked = this.onMediaWaiting = null;
     this.unregisterListeners();
     super.onHandlerDestroying();
   }
@@ -535,10 +535,11 @@ export default class StreamController
     const media = data.media;
     media.removeEventListener('playing', this.onMediaPlaying);
     media.removeEventListener('seeked', this.onMediaSeeked);
+    media.removeEventListener('waiting', this.onMediaWaiting);
     media.addEventListener('playing', this.onMediaPlaying);
     media.addEventListener('seeked', this.onMediaSeeked);
+    media.addEventListener('waiting', this.onMediaWaiting);
     this.gapController = new GapController(
-      this.config,
       media,
       this.fragmentTracker,
       this.hls,
@@ -553,6 +554,7 @@ export default class StreamController
     if (media) {
       media.removeEventListener('playing', this.onMediaPlaying);
       media.removeEventListener('seeked', this.onMediaSeeked);
+      media.removeEventListener('waiting', this.onMediaWaiting);
     }
     this.videoBuffer = null;
     this.fragPlaying = null;
@@ -568,11 +570,19 @@ export default class StreamController
     this._hasEnoughToStart = false;
   }
 
+  private onMediaWaiting = () => {
+    const gapController = this.gapController;
+    if (gapController) {
+      gapController.waiting = self.performance.now();
+    }
+  };
+
   private onMediaPlaying = () => {
     // tick to speed up FRAG_CHANGED triggering
     const gapController = this.gapController;
     if (gapController) {
       gapController.ended = 0;
+      gapController.waiting = 0;
     }
     this.tick();
   };
@@ -1119,7 +1129,7 @@ export default class StreamController
     let startPosition = this.startPosition;
     // only adjust currentTime if different from startPosition or if startPosition not buffered
     // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-    if (startPosition >= 0) {
+    if (startPosition >= 0 && currentTime < startPosition) {
       if (media.seeking) {
         this.log(
           `could not seek to ${startPosition}, already seeking at ${currentTime}`,
