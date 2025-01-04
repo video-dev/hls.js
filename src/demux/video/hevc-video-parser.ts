@@ -158,12 +158,7 @@ class HevcVideoParser extends BaseVideoParser {
               track.params[prop] = config.params[prop];
             }
           }
-          if (
-            (!track.vps && !track.sps.length) ||
-            (track.vps && track.vps[0] === this.initVPS)
-          ) {
-            track.sps.push(unit.data);
-          }
+          this.pushPPSorSPS(track.sps, unit.data, track.vps);
           if (!VideoSample) {
             VideoSample = this.VideoSample = this.createVideoSample(
               true,
@@ -185,12 +180,7 @@ class HevcVideoParser extends BaseVideoParser {
                 track.params[prop] = config[prop];
               }
             }
-            if (
-              (!track.vps && !track.pps.length) ||
-              (track.vps && track.vps[0] === this.initVPS)
-            ) {
-              track.pps.push(unit.data);
-            }
+            this.pushPPSorSPS(track.pps, unit.data, track.vps);
           }
           break;
 
@@ -224,6 +214,16 @@ class HevcVideoParser extends BaseVideoParser {
     if (endOfSegment && VideoSample) {
       this.pushAccessUnit(VideoSample, track);
       this.VideoSample = null;
+    }
+  }
+
+  private pushPPSorSPS(
+    ppsOrSps: Uint8Array[],
+    data: Uint8Array,
+    vps: Uint8Array[] | undefined,
+  ) {
+    if ((vps && vps[0] === this.initVPS) || (!vps && !ppsOrSps.length)) {
+      ppsOrSps.push(data);
     }
   }
 

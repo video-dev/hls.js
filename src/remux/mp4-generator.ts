@@ -3,7 +3,21 @@
  */
 
 import { appendUint8Array } from '../utils/mp4-tools';
-import type { DemuxedAudioTrack } from '../types/demuxer';
+import type {
+  DemuxedAC3,
+  DemuxedAudioTrack,
+  DemuxedAVC1,
+  DemuxedHEVC,
+  DemuxedVideoTrack,
+} from '../types/demuxer';
+import type {
+  Mp4SampleFlags,
+  RemuxedAudioTrackSamples,
+  RemuxedVideoTrackSamples,
+} from '../types/remuxer';
+
+type MediaTrackType = DemuxedAudioTrack | DemuxedVideoTrack;
+type RemuxedTrackType = RemuxedAudioTrackSamples | RemuxedVideoTrackSamples;
 
 type HdlrTypes = {
   video: Uint8Array;
@@ -266,7 +280,7 @@ class MP4 {
     MP4.DINF = MP4.box(MP4.types.dinf, MP4.box(MP4.types.dref, dref));
   }
 
-  static box(type, ...payload: Uint8Array[]) {
+  static box(type: number[], ...payload: Uint8Array[]) {
     let size = 8;
     let i = payload.length;
     const len = i;
@@ -290,15 +304,15 @@ class MP4 {
     return result;
   }
 
-  static hdlr(type) {
+  static hdlr(type: keyof HdlrTypes) {
     return MP4.box(MP4.types.hdlr, MP4.HDLR_TYPES[type]);
   }
 
-  static mdat(data) {
+  static mdat(data: Uint8Array) {
     return MP4.box(MP4.types.mdat, data);
   }
 
-  static mdhd(timescale, duration) {
+  static mdhd(timescale: number, duration: number) {
     duration *= timescale;
     const upperWordDuration = Math.floor(duration / (UINT32_MAX + 1));
     const lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
@@ -345,16 +359,16 @@ class MP4 {
     );
   }
 
-  static mdia(track) {
+  static mdia(track: MediaTrackType) {
     return MP4.box(
       MP4.types.mdia,
-      MP4.mdhd(track.timescale, track.duration),
+      MP4.mdhd(track.timescale || 0, track.duration || 0),
       MP4.hdlr(track.type),
       MP4.minf(track),
     );
   }
 
-  static mfhd(sequenceNumber) {
+  static mfhd(sequenceNumber: number) {
     return MP4.box(
       MP4.types.mfhd,
       new Uint8Array([
@@ -370,7 +384,7 @@ class MP4 {
     );
   }
 
-  static minf(track) {
+  static minf(track: MediaTrackType) {
     if (track.type === 'audio') {
       return MP4.box(
         MP4.types.minf,
@@ -388,7 +402,11 @@ class MP4 {
     }
   }
 
-  static moof(sn, baseMediaDecodeTime, track) {
+  static moof(
+    sn: number,
+    baseMediaDecodeTime: number,
+    track: RemuxedTrackType,
+  ) {
     return MP4.box(
       MP4.types.moof,
       MP4.mfhd(sn),
@@ -396,7 +414,7 @@ class MP4 {
     );
   }
 
-  static moov(tracks) {
+  static moov(tracks: MediaTrackType[]) {
     let i = tracks.length;
     const boxes: Uint8Array[] = [];
 
@@ -406,13 +424,16 @@ class MP4 {
 
     return MP4.box.apply(
       null,
-      [MP4.types.moov, MP4.mvhd(tracks[0].timescale, tracks[0].duration)]
+      [
+        MP4.types.moov,
+        MP4.mvhd(tracks[0].timescale || 0, tracks[0].duration || 0),
+      ]
         .concat(boxes)
         .concat(MP4.mvex(tracks)),
     );
   }
 
-  static mvex(tracks) {
+  static mvex(tracks: MediaTrackType[]) {
     let i = tracks.length;
     const boxes: Uint8Array[] = [];
 
@@ -423,7 +444,7 @@ class MP4 {
     return MP4.box.apply(null, [MP4.types.mvex, ...boxes]);
   }
 
-  static mvhd(timescale, duration) {
+  static mvhd(timescale: number, duration: number) {
     duration *= timescale;
     const upperWordDuration = Math.floor(duration / (UINT32_MAX + 1));
     const lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
@@ -544,11 +565,11 @@ class MP4 {
     return MP4.box(MP4.types.mvhd, bytes);
   }
 
-  static sdtp(track) {
+  static sdtp(track: RemuxedTrackType) {
     const samples = track.samples || [];
     const bytes = new Uint8Array(4 + samples.length);
-    let i;
-    let flags;
+    let i: number;
+    let flags: Mp4SampleFlags;
     // leave the full box header (4 bytes) all zero
     // write the sample table
     for (i = 0; i < samples.length; i++) {
@@ -562,7 +583,7 @@ class MP4 {
     return MP4.box(MP4.types.sdtp, bytes);
   }
 
-  static stbl(track) {
+  static stbl(track: MediaTrackType) {
     return MP4.box(
       MP4.types.stbl,
       MP4.stsd(track),
@@ -573,7 +594,7 @@ class MP4 {
     );
   }
 
-  static avc1(track) {
+  static avc1(track: DemuxedAVC1) {
     let sps: number[] = [];
     let pps: number[] = [];
     let i;
@@ -781,8 +802,8 @@ class MP4 {
     ]);
   }
 
-  static audioStsd(track) {
-    const samplerate = track.samplerate;
+  static audioStsd(track: DemuxedAudioTrack) {
+    const samplerate = track.samplerate || 0;
     return new Uint8Array([
       0x00,
       0x00,
@@ -801,7 +822,7 @@ class MP4 {
       0x00,
       0x00, // reserved
       0x00,
-      track.channelCount, // channelcount
+      track.channelCount || 0, // channelcount
       0x00,
       0x10, // sampleSize:16bits
       0x00,
@@ -815,7 +836,7 @@ class MP4 {
     ]);
   }
 
-  static mp4a(track) {
+  static mp4a(track: DemuxedAudioTrack) {
     return MP4.box(
       MP4.types.mp4a,
       MP4.audioStsd(track),
@@ -823,39 +844,69 @@ class MP4 {
     );
   }
 
-  static mp3(track) {
+  static mp3(track: DemuxedAudioTrack) {
     return MP4.box(MP4.types['.mp3'], MP4.audioStsd(track));
   }
 
-  static ac3(track) {
+  static ac3(track: DemuxedAudioTrack) {
     return MP4.box(
       MP4.types['ac-3'],
       MP4.audioStsd(track),
-      MP4.box(MP4.types.dac3, track.config),
+      MP4.box(MP4.types.dac3, track.config as Uint8Array),
     );
   }
 
-  static stsd(track) {
+  static stsd(track: MediaTrackType | DemuxedAC3): Uint8Array {
+    const { segmentCodec } = track;
     if (track.type === 'audio') {
-      if (track.segmentCodec === 'mp3' && track.codec === 'mp3') {
-        return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp3(track));
+      if (segmentCodec === 'aac') {
+        return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp4a(track));
       }
-      if (track.segmentCodec === 'ac3') {
+      if (
+        __USE_M2TS_ADVANCED_CODECS__ &&
+        segmentCodec === 'ac3' &&
+        track.config
+      ) {
         return MP4.box(MP4.types.stsd, MP4.STSD, MP4.ac3(track));
       }
-      return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp4a(track));
-    } else if (track.segmentCodec === 'avc') {
-      return MP4.box(MP4.types.stsd, MP4.STSD, MP4.avc1(track));
+      if (segmentCodec === 'mp3' && track.codec === 'mp3') {
+        return MP4.box(MP4.types.stsd, MP4.STSD, MP4.mp3(track));
+      }
     } else {
-      return MP4.box(MP4.types.stsd, MP4.STSD, MP4.hvc1(track));
+      if (track.pps && track.sps) {
+        if (segmentCodec === 'avc') {
+          return MP4.box(
+            MP4.types.stsd,
+            MP4.STSD,
+            MP4.avc1(track as DemuxedAVC1),
+          );
+        }
+        if (
+          __USE_M2TS_ADVANCED_CODECS__ &&
+          segmentCodec === 'hevc' &&
+          track.vps
+        ) {
+          return MP4.box(
+            MP4.types.stsd,
+            MP4.STSD,
+            MP4.hvc1(track as DemuxedHEVC),
+          );
+        }
+      } else {
+        throw new Error(`video track missing pps or sps`);
+      }
     }
+
+    throw new Error(
+      `unsupported ${track.type} segment codec (${segmentCodec}/${track.codec})`,
+    );
   }
 
-  static tkhd(track) {
+  static tkhd(track: MediaTrackType) {
     const id = track.id;
-    const duration = track.duration * track.timescale;
-    const width = track.width;
-    const height = track.height;
+    const duration = (track.duration || 0) * (track.timescale || 0);
+    const width = (track as any).width || 0;
+    const height = (track as any).height || 0;
     const upperWordDuration = Math.floor(duration / (UINT32_MAX + 1));
     const lowerWordDuration = Math.floor(duration % (UINT32_MAX + 1));
     return MP4.box(
@@ -961,7 +1012,7 @@ class MP4 {
     );
   }
 
-  static traf(track, baseMediaDecodeTime) {
+  static traf(track: RemuxedTrackType, baseMediaDecodeTime: number) {
     const sampleDependencyTable = MP4.sdtp(track);
     const id = track.id;
     const upperWordBaseMediaDecodeTime = Math.floor(
@@ -1020,12 +1071,12 @@ class MP4 {
    * Generate a track box.
    * @param track a track definition
    */
-  static trak(track) {
+  static trak(track: MediaTrackType) {
     track.duration = track.duration || 0xffffffff;
     return MP4.box(MP4.types.trak, MP4.tkhd(track), MP4.mdia(track));
   }
 
-  static trex(track) {
+  static trex(track: MediaTrackType) {
     const id = track.id;
     return MP4.box(
       MP4.types.trex,
@@ -1058,7 +1109,7 @@ class MP4 {
     );
   }
 
-  static trun(track, offset) {
+  static trun(track: MediaTrackType, offset: number) {
     const samples = track.samples || [];
     const len = samples.length;
     const arraylen = 12 + 16 * len;
@@ -1121,7 +1172,7 @@ class MP4 {
     return MP4.box(MP4.types.trun, array);
   }
 
-  static initSegment(tracks) {
+  static initSegment(tracks: MediaTrackType[]) {
     if (!MP4.types) {
       MP4.init();
     }
@@ -1131,9 +1182,12 @@ class MP4 {
     return result;
   }
 
-  static hvc1(track) {
+  static hvc1(track: DemuxedHEVC) {
+    if (!__USE_M2TS_ADVANCED_CODECS__) {
+      return new Uint8Array();
+    }
     const ps = track.params;
-    const units = [track.vps, track.sps, track.pps];
+    const units: Uint8Array[][] = [track.vps, track.sps, track.pps];
     const NALuLengthSize = 4;
     const config = new Uint8Array([
       0x01,
