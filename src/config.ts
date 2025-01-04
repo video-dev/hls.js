@@ -319,6 +319,7 @@ export type HlsConfig = {
   progressive: boolean;
   lowLatencyMode: boolean;
   primarySessionId?: string;
+  detectStallWithCurrentTimeMs: number;
 } & ABRControllerConfig &
   BufferControllerConfig &
   CapLevelControllerConfig &
@@ -427,6 +428,7 @@ export const hlsDefaultConfig: HlsConfig = {
   progressive: false,
   lowLatencyMode: true,
   cmcd: undefined,
+  detectStallWithCurrentTimeMs: 1250,
   enableDateRangeMetadataCues: true,
   enableEmsgMetadataCues: true,
   enableEmsgKLVMetadata: false,
