@@ -763,6 +763,15 @@ export type BufferInfo = {
     start: number;
     end: number;
     nextStart?: number;
+    buffered?: BufferTimeRange[];
+};
+
+// Warning: (ae-missing-release-tag) "BufferTimeRange" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public
+export type BufferTimeRange = {
+    start: number;
+    end: number;
 };
 
 // Warning: (ae-missing-release-tag) "CapLevelController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1209,6 +1218,8 @@ export interface ErrorData {
     // (undocumented)
     buffer?: number;
     // (undocumented)
+    bufferInfo?: BufferInfo;
+    // (undocumented)
     bytes?: number;
     // (undocumented)
     chunkMeta?: ChunkMetadata;
@@ -1252,6 +1263,10 @@ export interface ErrorData {
     response?: LoaderResponse;
     // (undocumented)
     sourceBufferName?: SourceBufferName;
+    // (undocumented)
+    stalled?: {
+        start: number;
+    };
     // (undocumented)
     stats?: LoaderStats;
     // (undocumented)
@@ -1516,6 +1531,8 @@ export enum Events {
     NON_NATIVE_TEXT_TRACKS_FOUND = "hlsNonNativeTextTracksFound",
     // (undocumented)
     PLAYOUT_LIMIT_REACHED = "hlsPlayoutLimitReached",
+    // (undocumented)
+    STALL_RESOLVED = "hlsStallResolved",
     // (undocumented)
     STEERING_MANIFEST_LOADED = "hlsSteeringManifestLoaded",
     // (undocumented)
@@ -2202,6 +2219,7 @@ export type HlsConfig = {
     progressive: boolean;
     lowLatencyMode: boolean;
     primarySessionId?: string;
+    detectStallWithCurrentTimeMs: number;
 } & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & FragmentLoaderConfig & PlaylistLoaderConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2358,6 +2376,8 @@ export interface HlsListeners {
     [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (event: Events.NON_NATIVE_TEXT_TRACKS_FOUND, data: NonNativeTextTracksData) => void;
     // (undocumented)
     [Events.PLAYOUT_LIMIT_REACHED]: (event: Events.PLAYOUT_LIMIT_REACHED, data: {}) => void;
+    // (undocumented)
+    [Events.STALL_RESOLVED]: (event: Events.STALL_RESOLVED, data: {}) => void;
     // (undocumented)
     [Events.STEERING_MANIFEST_LOADED]: (event: Events.STEERING_MANIFEST_LOADED, data: SteeringManifestLoadedData) => void;
     // (undocumented)

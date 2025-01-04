@@ -78,6 +78,8 @@ export enum Events {
   MEDIA_DETACHED = 'hlsMediaDetached',
   // Fired when HTMLMediaElement dispatches "ended" event, or stalls at end of VOD program
   MEDIA_ENDED = 'hlsMediaEnded',
+  // Fired after playback stall is resolved with playing, seeked, or ended event following BUFFER_STALLED_ERROR
+  STALL_RESOLVED = 'hlsStallResolved',
   // Fired when the buffer is going to be reset
   BUFFER_RESET = 'hlsBufferReset',
   // Fired when we know about the codecs that we need buffers for to push into - data: {tracks : { container, codec, levelCodec, initSegment, metadata }}
@@ -244,6 +246,7 @@ export interface HlsListeners {
     event: Events.MEDIA_ENDED,
     data: MediaEndedData,
   ) => void;
+  [Events.STALL_RESOLVED]: (event: Events.STALL_RESOLVED, data: {}) => void;
   [Events.BUFFER_RESET]: (event: Events.BUFFER_RESET) => void;
   [Events.BUFFER_CODECS]: (
     event: Events.BUFFER_CODECS,

@@ -8,7 +8,7 @@
 
 import { logger } from './logger';
 
-type BufferTimeRange = {
+export type BufferTimeRange = {
   start: number;
   end: number;
 };
@@ -22,6 +22,7 @@ export type BufferInfo = {
   start: number;
   end: number;
   nextStart?: number;
+  buffered?: BufferTimeRange[];
 };
 
 const noopBuffered: TimeRanges = {
@@ -61,19 +62,14 @@ export class BufferHelper {
         return BufferHelper.bufferedInfo(buffered, pos, maxHoleDuration);
       }
     }
-    return { len: 0, start: pos, end: pos, nextStart: undefined };
+    return { len: 0, start: pos, end: pos };
   }
 
   static bufferedInfo(
     buffered: BufferTimeRange[],
     pos: number,
     maxHoleDuration: number,
-  ): {
-    len: number;
-    start: number;
-    end: number;
-    nextStart?: number;
-  } {
+  ): BufferInfo {
     pos = Math.max(0, pos);
     // sort on buffer.start/smaller end (IE does not always return sorted buffered range)
     buffered.sort((a, b) => a.start - b.start || b.end - a.end);
@@ -136,6 +132,7 @@ export class BufferHelper {
       start: bufferStart || 0,
       end: bufferEnd || 0,
       nextStart: bufferStartNext,
+      buffered,
     };
   }
 

@@ -54,7 +54,7 @@ import type {
   SubtitleSelectionOption,
   VideoSelectionOption,
 } from './types/media-playlist';
-import type { BufferInfo } from './utils/buffer-helper';
+import type { BufferInfo, BufferTimeRange } from './utils/buffer-helper';
 import type EwmaBandWidthEstimator from './utils/ewma-bandwidth-estimator';
 import type { MediaDecodingInfo } from './utils/mediacapabilities-helper';
 
@@ -1195,6 +1195,7 @@ export type {
   HlsEventEmitter,
   HlsConfig,
   BufferInfo,
+  BufferTimeRange,
   HdcpLevel,
   AbrController,
   AudioStreamController,
