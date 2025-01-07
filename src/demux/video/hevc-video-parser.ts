@@ -158,7 +158,7 @@ class HevcVideoParser extends BaseVideoParser {
               track.params[prop] = config.params[prop];
             }
           }
-          this.pushPPSorSPS(track.sps, unit.data, track.vps);
+          this.pushParameterSet(track.sps, unit.data, track.vps);
           if (!VideoSample) {
             VideoSample = this.VideoSample = this.createVideoSample(
               true,
@@ -180,7 +180,7 @@ class HevcVideoParser extends BaseVideoParser {
                 track.params[prop] = config[prop];
               }
             }
-            this.pushPPSorSPS(track.pps, unit.data, track.vps);
+            this.pushParameterSet(track.pps, unit.data, track.vps);
           }
           break;
 
@@ -217,13 +217,13 @@ class HevcVideoParser extends BaseVideoParser {
     }
   }
 
-  private pushPPSorSPS(
-    ppsOrSps: Uint8Array[],
+  private pushParameterSet(
+    parameterSets: Uint8Array[],
     data: Uint8Array,
     vps: Uint8Array[] | undefined,
   ) {
-    if ((vps && vps[0] === this.initVPS) || (!vps && !ppsOrSps.length)) {
-      ppsOrSps.push(data);
+    if ((vps && vps[0] === this.initVPS) || (!vps && !parameterSets.length)) {
+      parameterSets.push(data);
     }
   }
 
