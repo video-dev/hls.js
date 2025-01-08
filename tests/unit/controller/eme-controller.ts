@@ -5,6 +5,7 @@ import sinonChai from 'sinon-chai';
 import EMEController from '../../../src/controller/eme-controller';
 import { ErrorDetails } from '../../../src/errors';
 import { Events } from '../../../src/events';
+import { KeySystemFormats } from '../../../src/utils/mediakeys-helper';
 import HlsMock from '../../mocks/hls.mock';
 import type { MediaKeySessionContext } from '../../../src/controller/eme-controller';
 import type { MediaAttachedData } from '../../../src/types/events';
@@ -266,6 +267,11 @@ describe('EMEController', function () {
     setupEach({
       emeEnabled: true,
       requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      drmSystems: {
+        'com.apple.fps': {
+          licenseUrl: '.',
+        },
+      },
     });
 
     const badData = {
@@ -293,10 +299,22 @@ describe('EMEController', function () {
 
     media.emit('encrypted', badData);
 
-    expect(emeController.keyIdToKeySessionPromise).to.deep.equal(
-      {},
-      '`keyIdToKeySessionPromise` should be an empty dictionary when no key IDs are found',
-    );
+    return emeController
+      .selectKeySystemFormat({
+        levelkeys: {
+          [KeySystemFormats.FAIRPLAY]: {},
+          [KeySystemFormats.WIDEVINE]: {},
+          [KeySystemFormats.PLAYREADY]: {},
+        },
+        sn: 0,
+        type: 'main',
+      } as any)
+      .then(() => {
+        expect(emeController.keyIdToKeySessionPromise).to.deep.equal(
+          {},
+          '`keyIdToKeySessionPromise` should be an empty dictionary when no key IDs are found',
+        );
+      });
   });
 
   it('should fetch the server certificate and set it into the session', function () {
