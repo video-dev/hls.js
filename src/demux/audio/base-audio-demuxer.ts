@@ -18,8 +18,8 @@ import { dummyTrack } from '../dummy-demuxed-track';
 import type { RationalTimestamp } from '../../utils/timescale-conversion';
 
 class BaseAudioDemuxer implements Demuxer {
-  protected _audioTrack!: DemuxedAudioTrack;
-  protected _id3Track!: DemuxedMetadataTrack;
+  protected _audioTrack?: DemuxedAudioTrack;
+  protected _id3Track?: DemuxedMetadataTrack;
   protected frameIndex: number = 0;
   protected cachedData: Uint8Array | null = null;
   protected basePTS: number | null = null;
@@ -74,8 +74,8 @@ class BaseAudioDemuxer implements Demuxer {
     let id3Data: Uint8Array | undefined = getId3Data(data, 0);
     let offset = id3Data ? id3Data.length : 0;
     let lastDataIndex;
-    const track = this._audioTrack;
-    const id3Track = this._id3Track;
+    const track = this._audioTrack as DemuxedAudioTrack;
+    const id3Track = this._id3Track as DemuxedMetadataTrack;
     const timestamp = id3Data ? getId3Timestamp(id3Data) : undefined;
     const length = data.length;
 
@@ -167,9 +167,9 @@ class BaseAudioDemuxer implements Demuxer {
     }
 
     return {
-      audioTrack: this._audioTrack,
+      audioTrack: this._audioTrack as DemuxedAudioTrack,
       videoTrack: dummyTrack() as DemuxedVideoTrackBase,
-      id3Track: this._id3Track,
+      id3Track: this._id3Track as DemuxedMetadataTrack,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
     };
   }
