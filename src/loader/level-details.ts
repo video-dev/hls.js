@@ -25,7 +25,6 @@ export class LevelDetails {
   public advancedDateTime?: number;
   public updated: boolean = true;
   public advanced: boolean = true;
-  public availabilityDelay?: number; // Manifest reload synchronization
   public misses: number = 0;
   public startCC: number = 0;
   public startSN: number = 0;
@@ -87,7 +86,6 @@ export class LevelDetails {
     } else {
       this.misses = previous.misses + 1;
     }
-    this.availabilityDelay = previous.availabilityDelay;
   }
 
   get hasProgramDateTime(): boolean {

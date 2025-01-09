@@ -3105,8 +3105,6 @@ export class LevelDetails {
     // (undocumented)
     appliedTimelineOffset?: number;
     // (undocumented)
-    availabilityDelay?: number;
-    // (undocumented)
     averagetargetduration?: number;
     // (undocumented)
     canBlockReload: boolean;
