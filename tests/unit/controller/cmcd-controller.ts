@@ -41,24 +41,24 @@ https://dummy.url.com/10905.m4s
 #EXTINF:2,
 https://dummy.url.com/10906.m4s`;
 
-const details = M3U8Parser.parseLevelPlaylist(
-  playlist,
-  url,
-  0,
-  PlaylistLevelType.MAIN,
-  0,
-  null,
-);
-
 const uuidRegex =
   /[a-f\d]{8}-[a-f\d]{4}-4[a-f\d]{3}-[89ab][a-f\d]{3}-[a-f\d]{12}/;
 
-const level = {
-  bitrate: 1000,
-  details,
-};
-
 const setupEach = (cmcd?: CMCDControllerConfig) => {
+  const details = M3U8Parser.parseLevelPlaylist(
+    playlist,
+    url,
+    0,
+    PlaylistLevelType.MAIN,
+    0,
+    null,
+  );
+
+  const level = {
+    bitrate: 1000,
+    details,
+  };
+
   const hls = new Hls({ cmcd }) as any;
   hls.networkControllers.forEach((component) => component.destroy());
   hls.networkControllers.length = 0;
@@ -71,6 +71,8 @@ const setupEach = (cmcd?: CMCDControllerConfig) => {
   // hls.audioTracks = [];
 
   cmcdController = new CMCDController(hls);
+
+  return details;
 };
 
 const base = {
@@ -151,7 +153,7 @@ describe('CMCDController', function () {
       });
 
       it('uses fragment data', function () {
-        setupEach({});
+        const details = setupEach({});
 
         const { url } = applyFragmentData(details.fragments[0]);
 
@@ -162,7 +164,7 @@ describe('CMCDController', function () {
       });
 
       it('uses part data when available', function () {
-        setupEach({});
+        const details = setupEach({});
 
         const { url } = applyFragmentData(
           details.fragments[2],
