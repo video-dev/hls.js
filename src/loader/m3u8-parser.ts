@@ -671,7 +671,7 @@ export default class M3U8Parser {
       if (!level.live) {
         lastFragment.endList = true;
       }
-      if (firstFragment && !level.startCC) {
+      if (firstFragment && level.startCC === undefined) {
         level.startCC = firstFragment.cc;
       }
       /**
