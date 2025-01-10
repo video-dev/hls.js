@@ -596,7 +596,7 @@ class EMEController extends Logger implements ComponentAPI {
             keySystemIdToKeySystemDomain(pssh.systemId) === keySystem,
         );
 
-        if (psshInfos.length) {
+        if (psshInfos.length > 1) {
           this.warn(
             `${logMessage} Using first of ${psshInfos.length} pssh found for selected key-system ${keySystem}`,
           );
