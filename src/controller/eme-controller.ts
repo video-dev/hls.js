@@ -525,7 +525,7 @@ class EMEController extends Logger implements ComponentAPI {
     return this.attemptKeySystemAccess(keySystemsToAttempt);
   }
 
-  private onMediaEncrypted = async (event: MediaEncryptedEvent) => {
+  private onMediaEncrypted = (event: MediaEncryptedEvent) => {
     const { initDataType, initData } = event;
     const logMessage = `"${event.type}" event: init data type: "${initDataType}"`;
     this.debug(logMessage);
@@ -535,212 +535,146 @@ class EMEController extends Logger implements ComponentAPI {
       return;
     }
 
-    type KeyIdInfo = { keyId: Uint8Array; keySystemDomain: KeySystems };
+    let keyId: Uint8Array | null | undefined;
+    let keySystemDomain: KeySystems | undefined;
 
-    // Ideally this would be a pure function...
-    // This function yields an array of candidate key id + corresponding key system pairs
-    // to use for playback based on:
-    // - the init data type + init data payload (sinf for Fairplay, pssh for PlayReady, Widevine, or both)
-    // - available DRM server configurations via config
-    // NOTE: We cannot (yet) presume a single key system, as one of the key systems may still fail
-    // based on device + browser availability and/or client/server key requests/responses.
-    const getKeyIdInfos = (): KeyIdInfo[] => {
-      if (initDataType === 'sinf') {
-        const fairplayLicenseServerUrl = this.getLicenseServerUrl(
-          KeySystems.FAIRPLAY,
-        );
-        // FairPlay and only FairPlay uses sinf boxes for EME signaling, so
-        // if we don't have a FairPlay license server URL available, we can't
-        // use the sinf for EME.
-        if (!fairplayLicenseServerUrl) return [];
-
-        // Match sinf keyId to playlist skd://keyId=
-        const json = bin2str(new Uint8Array(initData));
-        try {
-          const sinf = base64Decode(JSON.parse(json).sinf);
-          const tenc = parseSinf(sinf);
-          if (!tenc) {
-            throw new Error(
-              `'schm' box missing or not cbcs/cenc with schi > tenc`,
-            );
-          }
-          const keyId = tenc.subarray(8, 24);
-          const keySystemDomain = KeySystems.FAIRPLAY;
-          return [{ keyId, keySystemDomain }];
-        } catch (error) {
-          this.warn(`${logMessage} Failed to parse sinf: ${error}`);
+    if (
+      initDataType === 'sinf' &&
+      this.getLicenseServerUrl(KeySystems.FAIRPLAY)
+    ) {
+      // Match sinf keyId to playlist skd://keyId=
+      const json = bin2str(new Uint8Array(initData));
+      try {
+        const sinf = base64Decode(JSON.parse(json).sinf);
+        const tenc = parseSinf(sinf);
+        if (!tenc) {
+          throw new Error(
+            `'schm' box missing or not cbcs/cenc with schi > tenc`,
+          );
         }
-        return [];
+        keyId = tenc.subarray(8, 24);
+        keySystemDomain = KeySystems.FAIRPLAY;
+      } catch (error) {
+        this.warn(`${logMessage} Failed to parse sinf: ${error}`);
+        return;
       }
+    } else if (this.getLicenseServerUrl(KeySystems.WIDEVINE)) {
+      // Support Widevine clear-lead key-session creation (otherwise depend on playlist keys)
+      const psshResults = parseMultiPssh(initData);
 
-      // We can assume pssh boxes otherwise. Both PlayReady and Widevine use
-      // pssh, and pssh data may include info for either or both.
-      const KeySystemLicenseURL = {
-        [KeySystems.WIDEVINE]: this.getLicenseServerUrl(KeySystems.WIDEVINE),
-        [KeySystems.PLAYREADY]: this.getLicenseServerUrl(KeySystems.PLAYREADY),
-      };
-
-      if (
-        !(
-          KeySystemLicenseURL[KeySystems.WIDEVINE] ||
-          KeySystemLicenseURL[KeySystems.PLAYREADY]
-        )
-      )
-        return [];
-
-      // Shouldn't we not attempt key system access if we don't have a URL for the key system?
+      // TODO: If using keySystemAccessPromises we might want to wait until one is resolved
       let keySystems = Object.keys(
         this.keySystemAccessPromises,
       ) as KeySystems[];
-
       if (!keySystems.length) {
-        // getKeySystemsForConfig() does not filter out drmSystems that have no URL value
         keySystems = getKeySystemsForConfig(this.config);
       }
 
-      // Only try key systems if we actually have URLs for them via config
-      keySystems = keySystems.filter(
-        (keySystem) => !!KeySystemLicenseURL[keySystem],
-      );
-
-      if (!keySystems.length) return [];
-
-      // Support Widevine clear-lead key-session creation (otherwise depend on playlist keys)
-      const psshResults = parseMultiPssh(initData);
-      const psshInfos = psshResults.filter((pssh): pssh is PsshData => {
-        // If there's no systemId, assume it's an invalid PSSH (PsshInvalidResult)
-        if (!pssh.systemId) return false;
-        // If the parsed PSSHInfo is for a key system that is not available via config,
-        // filter it out so we don't attempt to use it.
+      const psshInfo = psshResults.filter((pssh): pssh is PsshData => {
         const keySystem = pssh.systemId
           ? keySystemIdToKeySystemDomain(pssh.systemId)
           : null;
-        return !!keySystem && keySystems.indexOf(keySystem) > -1;
-      });
+        return keySystem ? keySystems.indexOf(keySystem) > -1 : false;
+      })[0];
 
-      if (!psshInfos.length) {
-        this.warn(`${logMessage} contains incomplete or invalid pssh data`);
-        return [];
-      }
-
-      const keyInfos = psshInfos
-        .filter((psshInfo) => {
-          return (
-            psshInfo.version === 0 &&
-            !!psshInfo.data &&
-            !!keySystemIdToKeySystemDomain(psshInfo.systemId)
-          );
-        })
-        .map((psshInfo) => {
-          const keySystemDomain = keySystemIdToKeySystemDomain(
-            psshInfo.systemId,
-          ) as KeySystems;
-          const psshInfoData = psshInfo.data as Uint8Array;
-          const keyId =
-            keySystemDomain === KeySystems.PLAYREADY
-              ? (parsePlayReadyWRM(
-                  psshInfoData,
-                ) as Uint8Array) /** @TODO Confirm this is accurate under these conditions */
-              : psshInfoData.subarray(
-                  psshInfoData.length - 22,
-                  psshInfoData.length - 22 + 16,
-                );
-          return { keySystemDomain, keyId };
-        });
-
-      return keyInfos;
-    };
-
-    const keyIdInfos: KeyIdInfo[] = getKeyIdInfos();
-
-    /** @TODO errors? */
-    if (!keyIdInfos.length) return;
-
-    const errors: (EMEKeyError | Error)[] = [];
-    for (const { keyId, keySystemDomain } of keyIdInfos) {
-      const keyIdHex = Hex.hexDump(keyId);
-      const { keyIdToKeySessionPromise, mediaKeySessions } = this;
-
-      let keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex];
-      for (let i = 0; i < mediaKeySessions.length; i++) {
-        // Match playlist key
-        const keyContext = mediaKeySessions[i];
-        const decryptdata = keyContext.decryptdata;
-        if (!decryptdata.keyId) {
-          continue;
-        }
-        const oldKeyIdHex = Hex.hexDump(decryptdata.keyId);
+      if (!psshInfo) {
         if (
-          keyIdHex === oldKeyIdHex ||
-          decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1
+          psshResults.length === 0 ||
+          psshResults.some((pssh): pssh is PsshInvalidResult => !pssh.systemId)
         ) {
-          keySessionContextPromise = keyIdToKeySessionPromise[oldKeyIdHex];
-          if (decryptdata.pssh) {
-            break;
-          }
-          delete keyIdToKeySessionPromise[oldKeyIdHex];
-          decryptdata.pssh = new Uint8Array(initData);
-          decryptdata.keyId = keyId;
-          keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
-            keySessionContextPromise.then(() => {
-              return this.generateRequestWithPreferredKeySession(
-                keyContext,
-                initDataType,
-                initData,
-                'encrypted-event-key-match',
-              );
-            });
-          break;
+          this.warn(`${logMessage} contains incomplete or invalid pssh data`);
+        } else {
+          this.log(
+            `ignoring ${logMessage} for ${(psshResults as PsshData[])
+              .map((pssh) => keySystemIdToKeySystemDomain(pssh.systemId))
+              .join(',')} pssh data in favor of playlist keys`,
+          );
         }
+        return;
       }
 
-      if (!keySessionContextPromise) {
-        // keySystemDomain = KeySystems.PLAYREADY;
-        // Clear-lead key (not encountered in playlist)
-        keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
-          this.getKeySystemSelectionPromise([keySystemDomain]).then(
-            ({ keySystem, mediaKeys }) => {
-              this.throwIfDestroyed();
-              const decryptdata = new LevelKey(
-                'ISO-23001-7',
-                keyIdHex,
-                keySystemToKeySystemFormat(keySystem) ?? '',
-              );
-              decryptdata.pssh = new Uint8Array(initData);
-              decryptdata.keyId = keyId as Uint8Array;
-              return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
-                this.throwIfDestroyed();
-                const keySessionContext = this.createMediaKeySessionContext({
-                  decryptdata,
-                  keySystem,
-                  mediaKeys,
-                });
-                return this.generateRequestWithPreferredKeySession(
-                  keySessionContext,
-                  initDataType,
-                  initData,
-                  'encrypted-event-no-match',
-                );
-              });
-            },
-          );
-
-        try {
-          // Use the first successful key session context promise.
-          await keySessionContextPromise;
-          break;
-        } catch (error) {
-          errors.push(error);
+      keySystemDomain = keySystemIdToKeySystemDomain(psshInfo.systemId);
+      if (psshInfo.version === 0 && psshInfo.data) {
+        if (keySystemDomain === KeySystems.WIDEVINE) {
+          const offset = psshInfo.data.length - 22;
+          keyId = psshInfo.data.subarray(offset, offset + 16);
+        } else if (keySystemDomain === KeySystems.PLAYREADY) {
+          keyId = parsePlayReadyWRM(psshInfo.data);
         }
       }
     }
 
-    // If we have errors for all candidate key infos, this means we failed
-    // to get any key for playback. In this case, handle these errors
-    // NOTE: Currently, we will not signal failed key requests if at least
-    // one succeeds, since this *can* happen and be valid in multi-drm scenarios.
-    if (errors.length >= keyIdInfos.length) {
-      errors.forEach((error) => this.handleError(error));
+    if (!keySystemDomain || !keyId) {
+      return;
+    }
+
+    const keyIdHex = Hex.hexDump(keyId);
+    const { keyIdToKeySessionPromise, mediaKeySessions } = this;
+
+    let keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex];
+    for (let i = 0; i < mediaKeySessions.length; i++) {
+      // Match playlist key
+      const keyContext = mediaKeySessions[i];
+      const decryptdata = keyContext.decryptdata;
+      if (!decryptdata.keyId) {
+        continue;
+      }
+      const oldKeyIdHex = Hex.hexDump(decryptdata.keyId);
+      if (
+        keyIdHex === oldKeyIdHex ||
+        decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1
+      ) {
+        keySessionContextPromise = keyIdToKeySessionPromise[oldKeyIdHex];
+        if (decryptdata.pssh) {
+          break;
+        }
+        delete keyIdToKeySessionPromise[oldKeyIdHex];
+        decryptdata.pssh = new Uint8Array(initData);
+        decryptdata.keyId = keyId;
+        keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
+          keySessionContextPromise.then(() => {
+            return this.generateRequestWithPreferredKeySession(
+              keyContext,
+              initDataType,
+              initData,
+              'encrypted-event-key-match',
+            );
+          });
+        keySessionContextPromise.catch((error) => this.handleError(error));
+        break;
+      }
+    }
+
+    if (!keySessionContextPromise) {
+      // Clear-lead key (not encountered in playlist)
+      keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
+        this.getKeySystemSelectionPromise([keySystemDomain]).then(
+          ({ keySystem, mediaKeys }) => {
+            this.throwIfDestroyed();
+            const decryptdata = new LevelKey(
+              'ISO-23001-7',
+              keyIdHex,
+              keySystemToKeySystemFormat(keySystem) ?? '',
+            );
+            decryptdata.pssh = new Uint8Array(initData);
+            decryptdata.keyId = keyId as Uint8Array;
+            return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
+              this.throwIfDestroyed();
+              const keySessionContext = this.createMediaKeySessionContext({
+                decryptdata,
+                keySystem,
+                mediaKeys,
+              });
+              return this.generateRequestWithPreferredKeySession(
+                keySessionContext,
+                initDataType,
+                initData,
+                'encrypted-event-no-match',
+              );
+            });
+          },
+        );
+      keySessionContextPromise.catch((error) => this.handleError(error));
     }
   };
 
