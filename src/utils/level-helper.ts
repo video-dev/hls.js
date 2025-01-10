@@ -8,7 +8,12 @@ import { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
 import { DateRange } from '../loader/date-range';
 
-type FragmentIntersection = (oldFrag: Fragment, newFrag: Fragment) => void;
+type FragmentIntersection = (
+  oldFrag: Fragment,
+  newFrag: Fragment,
+  newFragIndex: number,
+  newFragments: Fragment[],
+) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;
 
 export function updatePTS(
@@ -106,7 +111,7 @@ export function updateFragPTSDTS(
   if (!details || sn < details.startSN || sn > details.endSN) {
     return 0;
   }
-  let i;
+  let i: number;
   const fragIdx = sn - details.startSN;
   const fragments = details.fragments;
   // update frag reference in fragments array
@@ -152,18 +157,19 @@ export function mergeDetails(
     delete oldDetails.fragmentHint.endPTS;
   }
   // check if old/new playlists have fragments in common
-  // loop through overlapping SN and update startPTS , cc, and duration if any found
-  let ccOffset = 0;
-  let PTSFrag;
+  // loop through overlapping SN and update startPTS, cc, and duration if any found
+  let PTSFrag: Fragment | undefined;
   mapFragmentIntersection(
     oldDetails,
     newDetails,
-    (oldFrag: Fragment, newFrag: Fragment) => {
-      if (oldFrag.relurl) {
-        // Do not compare CC if the old fragment has no url. This is a level.fragmentHint used by LL-HLS parts.
-        // It maybe be off by 1 if it was created before any parts or discontinuity tags were appended to the end
-        // of the playlist.
-        ccOffset = oldFrag.cc - newFrag.cc;
+    (oldFrag, newFrag, newFragIndex, newFragments) => {
+      if (newDetails.skippedSegments) {
+        if (newFrag.cc !== oldFrag.cc) {
+          const ccOffset = oldFrag.cc - newFrag.cc;
+          for (let i = newFragIndex; i < newFragments.length; i++) {
+            newFragments[i].cc += ccOffset;
+          }
+        }
       }
       if (
         Number.isFinite(oldFrag.startPTS) &&
@@ -196,10 +202,11 @@ export function mergeDetails(
     },
   );
 
+  const newFragments = newDetails.fragments;
   if (currentInitSegment) {
     const fragmentsToCheck = newDetails.fragmentHint
-      ? newDetails.fragments.concat(newDetails.fragmentHint)
-      : newDetails.fragments;
+      ? newFragments.concat(newDetails.fragmentHint)
+      : newFragments;
     fragmentsToCheck.forEach((frag) => {
       if (
         frag &&
@@ -212,34 +219,26 @@ export function mergeDetails(
   }
 
   if (newDetails.skippedSegments) {
-    newDetails.deltaUpdateFailed = newDetails.fragments.some((frag) => !frag);
+    newDetails.deltaUpdateFailed = newFragments.some((frag) => !frag);
     if (newDetails.deltaUpdateFailed) {
       logger.warn(
         '[level-helper] Previous playlist missing segments skipped in delta playlist',
       );
       for (let i = newDetails.skippedSegments; i--; ) {
-        newDetails.fragments.shift();
+        newFragments.shift();
       }
-      newDetails.startSN = newDetails.fragments[0].sn as number;
-      newDetails.startCC = newDetails.fragments[0].cc;
-    } else if (newDetails.canSkipDateRanges) {
-      newDetails.dateRanges = mergeDateRanges(
-        oldDetails.dateRanges,
-        newDetails.dateRanges,
-        newDetails.recentlyRemovedDateranges,
-      );
+      newDetails.startSN = newFragments[0].sn as number;
+    } else {
+      if (newDetails.canSkipDateRanges) {
+        newDetails.dateRanges = mergeDateRanges(
+          oldDetails.dateRanges,
+          newDetails.dateRanges,
+          newDetails.recentlyRemovedDateranges,
+        );
+      }
     }
-  }
-
-  const newFragments = newDetails.fragments;
-  if (ccOffset) {
-    logger.warn('discontinuity sliding from playlist, take drift into account');
-    for (let i = 0; i < newFragments.length; i++) {
-      newFragments[i].cc += ccOffset;
-    }
-  }
-  if (newDetails.skippedSegments) {
     newDetails.startCC = newDetails.fragments[0].cc;
+    newDetails.endCC = newFragments[newFragments.length - 1].cc;
   }
 
   // Merge parts
@@ -257,10 +256,10 @@ export function mergeDetails(
     updateFragPTSDTS(
       newDetails,
       PTSFrag,
-      PTSFrag.startPTS,
-      PTSFrag.endPTS,
-      PTSFrag.startDTS,
-      PTSFrag.endDTS,
+      PTSFrag.startPTS as number,
+      PTSFrag.endPTS as number,
+      PTSFrag.startDTS as number,
+      PTSFrag.endDTS as number,
     );
   } else {
     // ensure that delta is within oldFragments range
@@ -371,7 +370,7 @@ export function mapFragmentIntersection(
       newFrag = newDetails.fragments[i] = oldFrag;
     }
     if (oldFrag && newFrag) {
-      intersectionFn(oldFrag, newFrag);
+      intersectionFn(oldFrag, newFrag, i, newFrags);
     }
   }
 }
