@@ -2,7 +2,7 @@ import {
   changeEndianness,
   convertDataUriToArrayBytes,
 } from '../utils/keysystem-util';
-import { KeySystemFormats } from '../utils/mediakeys-helper';
+import { KeySystemFormats, parsePlayReadyWRM } from '../utils/mediakeys-helper';
 import { mp4pssh } from '../utils/mp4-tools';
 import { logger } from '../utils/logger';
 import { base64Decode } from '../utils/numeric-encoding-utils';
@@ -121,6 +121,8 @@ export class LevelKey implements DecryptData {
     if (keyBytes) {
       switch (this.keyFormat) {
         case KeySystemFormats.WIDEVINE:
+          // Setting `pssh` on this LevelKey/DecryptData allows HLS.js to generate a session using
+          // the playlist-key before the "encrypted" event. (Comment out to only use "encrypted" path.)
           this.pssh = keyBytes;
           // In case of widevine keyID is embedded in PSSH box. Read Key ID.
           if (keyBytes.length >= 22) {
@@ -136,38 +138,12 @@ export class LevelKey implements DecryptData {
             0x5b, 0xe0, 0x88, 0x5f, 0x95,
           ]);
 
+          // Setting `pssh` on this LevelKey/DecryptData allows HLS.js to generate a session using
+          // the playlist-key before the "encrypted" event. (Comment out to only use "encrypted" path.)
           this.pssh = mp4pssh(PlayReadyKeySystemUUID, null, keyBytes);
 
-          const keyBytesUtf16 = new Uint16Array(
-            keyBytes.buffer,
-            keyBytes.byteOffset,
-            keyBytes.byteLength / 2,
-          );
-          const keyByteStr = String.fromCharCode.apply(
-            null,
-            Array.from(keyBytesUtf16),
-          );
+          this.keyId = parsePlayReadyWRM(keyBytes);
 
-          // Parse Playready WRMHeader XML
-          const xmlKeyBytes = keyByteStr.substring(
-            keyByteStr.indexOf('<'),
-            keyByteStr.length,
-          );
-          const parser = new DOMParser();
-          const xmlDoc = parser.parseFromString(xmlKeyBytes, 'text/xml');
-          const keyData = xmlDoc.getElementsByTagName('KID')[0];
-          if (keyData) {
-            const keyId = keyData.childNodes[0]
-              ? keyData.childNodes[0].nodeValue
-              : keyData.getAttribute('VALUE');
-            if (keyId) {
-              const keyIdArray = base64Decode(keyId).subarray(0, 16);
-              // KID value in PRO is a base64-encoded little endian GUID interpretation of UUID
-              // KID value in ‘tenc’ is a big endian UUID GUID interpretation of UUID
-              changeEndianness(keyIdArray);
-              this.keyId = keyIdArray;
-            }
-          }
           break;
         }
         default: {
