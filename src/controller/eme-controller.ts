@@ -554,7 +554,11 @@ class EMEController extends Logger implements ComponentAPI {
       let keyId: Uint8Array | null | undefined;
       let keySystemDomain: KeySystems | undefined;
 
-      if (initDataType === 'sinf' && keySystem === KeySystems.FAIRPLAY) {
+      if (initDataType === 'sinf') {
+        if (keySystem !== KeySystems.FAIRPLAY) {
+          this.log(`Ignoring "${event.type}" event with init data type: "${initDataType}" for selected key-system ${keySystem}`);
+          return;
+        }
         // Match sinf keyId to playlist skd://keyId=
         const json = bin2str(new Uint8Array(initData));
         try {
@@ -651,7 +655,11 @@ class EMEController extends Logger implements ComponentAPI {
         }
       }
 
-      if (!keySessionContextPromise && keySystemDomain === keySystem) {
+      if (!keySessionContextPromise) {
+        if (keySystemDomain !== keySystem) {
+          this.log(`Ignoring "${event.type}" event with ${keySystemDomain} init data for selected key-system ${keySystem}`);
+          return;
+        }
         // "Clear-lead" (misc key not encountered in playlist)
         keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
           this.getKeySystemSelectionPromise([keySystemDomain]).then(
