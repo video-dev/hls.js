@@ -112,7 +112,12 @@ export default class KeyLoader implements ComponentAPI {
   }
 
   load(frag: Fragment): Promise<KeyLoadedData> {
-    if (!frag.decryptdata && frag.encrypted && this.emeController) {
+    if (
+      !frag.decryptdata &&
+      frag.encrypted &&
+      this.emeController &&
+      this.config.emeEnabled
+    ) {
       // Multiple keys, but none selected, resolve in eme-controller
       return this.emeController
         .selectKeySystemFormat(frag)
