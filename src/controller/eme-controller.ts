@@ -556,7 +556,9 @@ class EMEController extends Logger implements ComponentAPI {
 
       if (initDataType === 'sinf') {
         if (keySystem !== KeySystems.FAIRPLAY) {
-          this.log(`Ignoring "${event.type}" event with init data type: "${initDataType}" for selected key-system ${keySystem}`);
+          this.warn(
+            `Ignoring unexpected "${event.type}" event with init data type: "${initDataType}" for selected key-system ${keySystem}`,
+          );
           return;
         }
         // Match sinf keyId to playlist skd://keyId=
@@ -576,14 +578,31 @@ class EMEController extends Logger implements ComponentAPI {
           return;
         }
       } else {
+        if (
+          keySystem !== KeySystems.WIDEVINE &&
+          keySystem !== KeySystems.PLAYREADY
+        ) {
+          this.warn(
+            `Ignoring unexpected "${event.type}" event with init data type: "${initDataType}" for selected key-system ${keySystem}`,
+          );
+          return;
+        }
         // Support Widevine/PlayReady clear-lead key-session creation (otherwise depend on playlist keys)
         const psshResults = parseMultiPssh(initData);
 
-        const psshInfo = psshResults.filter(
+        const psshInfos = psshResults.filter(
           (pssh): pssh is PsshData =>
             !!pssh.systemId &&
             keySystemIdToKeySystemDomain(pssh.systemId) === keySystem,
-        )[0];
+        );
+
+        if (psshInfos.length) {
+          this.log(
+            `${logMessage} contains multiple pssh boxes for selected key-system ${keySystem}. Using first found.`,
+          );
+        }
+
+        const psshInfo = psshInfos[0];
 
         if (!psshInfo) {
           if (
@@ -657,7 +676,9 @@ class EMEController extends Logger implements ComponentAPI {
 
       if (!keySessionContextPromise) {
         if (keySystemDomain !== keySystem) {
-          this.log(`Ignoring "${event.type}" event with ${keySystemDomain} init data for selected key-system ${keySystem}`);
+          this.log(
+            `Ignoring "${event.type}" event with ${keySystemDomain} init data for selected key-system ${keySystem}`,
+          );
           return;
         }
         // "Clear-lead" (misc key not encountered in playlist)
