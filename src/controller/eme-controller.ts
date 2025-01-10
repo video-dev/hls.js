@@ -597,8 +597,8 @@ class EMEController extends Logger implements ComponentAPI {
         );
 
         if (psshInfos.length) {
-          this.log(
-            `${logMessage} contains multiple pssh boxes for selected key-system ${keySystem}. Using first found.`,
+          this.warn(
+            `${logMessage} Using first of ${psshInfos.length} pssh found for selected key-system ${keySystem}`,
           );
         }
 
