@@ -10,8 +10,8 @@ import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ChunkMetadata } from '../types/transmuxer';
 import { fragmentWithinToleranceTest } from './fragment-finders';
 import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
-import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import { ErrorDetails } from '../errors';
+import { audioMatchPredicate, matchesOption } from '../utils/rendition-helper';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
@@ -324,9 +324,8 @@ class AudioStreamController
     if (bufferInfo === null) {
       return;
     }
-    const { bufferedTrack, switchingTrack } = this;
 
-    if (!switchingTrack && this._streamEnded(bufferInfo, trackDetails)) {
+    if (!this.switchingTrack && this._streamEnded(bufferInfo, trackDetails)) {
       hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
       this.state = State.ENDED;
       return;
@@ -341,19 +340,11 @@ class AudioStreamController
 
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
-    let targetBufferTime = this.flushing
-      ? this.getLoadPosition()
-      : bufferInfo.end;
+    const loadPosition = this.getLoadPosition();
+    const targetBufferTime = this.flushing ? loadPosition : bufferInfo.end;
 
-    if (switchingTrack && media) {
-      const pos = this.getLoadPosition();
-      // STABLE
-      if (
-        bufferedTrack &&
-        !mediaAttributesIdentical(switchingTrack.attrs, bufferedTrack.attrs)
-      ) {
-        targetBufferTime = pos;
-      }
+    if (this.switchingTrack && media) {
+      const pos = loadPosition;
       // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
       if (trackDetails.PTSKnown && pos < start) {
         // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
@@ -369,7 +360,7 @@ class AudioStreamController
     // if buffer length is less than maxBufLen, or near the end, find a fragment to load
     if (
       bufferLen >= maxBufLen &&
-      !switchingTrack &&
+      !this.switchingTrack &&
       targetBufferTime < fragments[fragments.length - 1].start
     ) {
       return;
@@ -962,19 +953,20 @@ class AudioStreamController
   }
 
   private flushAudioIfNeeded(switchingTrack: MediaPlaylist) {
-    const { media, bufferedTrack } = this;
-    const bufferedAttributes = bufferedTrack?.attrs;
-    const switchAttributes = switchingTrack.attrs;
-    if (
-      media &&
-      bufferedAttributes &&
-      (bufferedAttributes.CHANNELS !== switchAttributes.CHANNELS ||
-        bufferedTrack.name !== switchingTrack.name ||
-        bufferedTrack.lang !== switchingTrack.lang)
-    ) {
-      this.log('Switching audio track : flushing all audio');
-      super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
-      this.bufferedTrack = null;
+    if (this.media && this.bufferedTrack) {
+      const { name, lang, assocLang, characteristics, audioCodec, channels } =
+        this.bufferedTrack;
+      if (
+        !matchesOption(
+          { name, lang, assocLang, characteristics, audioCodec, channels },
+          switchingTrack,
+          audioMatchPredicate,
+        )
+      ) {
+        this.log('Switching audio track : flushing all audio');
+        super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
+        this.bufferedTrack = null;
+      }
     }
   }
 
