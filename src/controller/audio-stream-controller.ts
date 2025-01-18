@@ -13,8 +13,11 @@ import {
   alignDiscontinuities,
   alignMediaPlaylistByPDT,
 } from '../utils/discontinuities';
-import { mediaAttributesIdentical } from '../utils/media-option-attributes';
-import { useAlternateAudio } from '../utils/rendition-helper';
+import {
+  audioMatchPredicate,
+  matchesOption,
+  useAlternateAudio,
+} from '../utils/rendition-helper';
 import type { FragmentTracker } from './fragment-tracker';
 import type Hls from '../hls';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
@@ -358,9 +361,8 @@ class AudioStreamController
     if (bufferInfo === null) {
       return;
     }
-    const { bufferedTrack, switchingTrack } = this;
 
-    if (!switchingTrack && this._streamEnded(bufferInfo, trackDetails)) {
+    if (!this.switchingTrack && this._streamEnded(bufferInfo, trackDetails)) {
       hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
       this.state = State.ENDED;
       return;
@@ -372,17 +374,10 @@ class AudioStreamController
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
     const loadPosition = this.getLoadPosition();
-    let targetBufferTime = this.flushing ? loadPosition : bufferInfo.end;
+    const targetBufferTime = this.flushing ? loadPosition : bufferInfo.end;
 
-    if (switchingTrack && media) {
+    if (this.switchingTrack && media) {
       const pos = loadPosition;
-      // STABLE
-      if (
-        bufferedTrack &&
-        !mediaAttributesIdentical(switchingTrack.attrs, bufferedTrack.attrs)
-      ) {
-        targetBufferTime = pos;
-      }
       // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
       if (trackDetails.PTSKnown && pos < start) {
         // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
@@ -398,7 +393,7 @@ class AudioStreamController
     // if buffer length is less than maxBufLen, or near the end, find a fragment to load
     if (
       bufferLen >= maxBufLen &&
-      !switchingTrack &&
+      !this.switchingTrack &&
       targetBufferTime < fragments[fragments.length - 1].start
     ) {
       return;
@@ -1020,23 +1015,24 @@ class AudioStreamController
   }
 
   private flushAudioIfNeeded(switchingTrack: MediaPlaylist) {
-    const { media, bufferedTrack } = this;
-    const bufferedAttributes = bufferedTrack?.attrs;
-    const switchAttributes = switchingTrack.attrs;
-    if (
-      media &&
-      bufferedAttributes &&
-      (bufferedAttributes.CHANNELS !== switchAttributes.CHANNELS ||
-        bufferedTrack.name !== switchingTrack.name ||
-        bufferedTrack.lang !== switchingTrack.lang)
-    ) {
-      if (useAlternateAudio(switchingTrack.url, this.hls)) {
-        this.log('Switching audio track : flushing all audio');
-        super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
-        this.bufferedTrack = null;
-      } else {
-        // Main is being buffered. Set bufferedTrack so that it is flushed when switching back to alt-audio
-        this.bufferedTrack = switchingTrack;
+    if (this.media && this.bufferedTrack) {
+      const { name, lang, assocLang, characteristics, audioCodec, channels } =
+        this.bufferedTrack;
+      if (
+        !matchesOption(
+          { name, lang, assocLang, characteristics, audioCodec, channels },
+          switchingTrack,
+          audioMatchPredicate,
+        )
+      ) {
+        if (useAlternateAudio(switchingTrack.url, this.hls)) {
+          this.log('Switching audio track : flushing all audio');
+          super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
+          this.bufferedTrack = null;
+        } else {
+          // Main is being buffered. Set bufferedTrack so that it is flushed when switching back to alt-audio
+          this.bufferedTrack = switchingTrack;
+        }
       }
     }
   }
