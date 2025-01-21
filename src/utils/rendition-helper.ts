@@ -326,14 +326,7 @@ export function matchesOption(
     track: MediaPlaylist,
   ) => boolean,
 ): boolean {
-  const {
-    groupId,
-    name,
-    lang,
-    assocLang,
-    characteristics,
-    default: isDefault,
-  } = option;
+  const { groupId, name, lang, assocLang, default: isDefault } = option;
   const forced = (option as SubtitleSelectionOption).forced;
   return (
     (groupId === undefined || track.groupId === groupId) &&
@@ -342,8 +335,11 @@ export function matchesOption(
     (lang === undefined || track.assocLang === assocLang) &&
     (isDefault === undefined || track.default === isDefault) &&
     (forced === undefined || track.forced === forced) &&
-    (characteristics === undefined ||
-      characteristicsMatch(characteristics, track.characteristics)) &&
+    (!('characteristics' in option) ||
+      characteristicsMatch(
+        option.characteristics || '',
+        track.characteristics,
+      )) &&
     (matchPredicate === undefined || matchPredicate(option, track))
   );
 }
