@@ -103,6 +103,7 @@ class EMEController extends Logger implements ComponentAPI {
   public destroy() {
     this.unregisterListeners();
     this.onMediaDetached();
+    this._clear();
     // Remove any references that could be held in config options or callbacks
     const config = this.config;
     config.requestMediaKeySystemAccessFunc = null;
@@ -1243,13 +1244,17 @@ class EMEController extends Logger implements ComponentAPI {
 
   private onMediaDetached() {
     const media = this.media;
-    const mediaKeysList = this.mediaKeySessions;
+
     if (media) {
       media.removeEventListener('encrypted', this.onMediaEncrypted);
       media.removeEventListener('waitingforkey', this.onWaitingForKey);
       this.media = null;
     }
+  }
 
+  private _clear() {
+    const media = this.media;
+    const mediaKeysList = this.mediaKeySessions;
     this._requestLicenseFailureCount = 0;
     this.setMediaKeysQueue = [];
     this.mediaKeySessions = [];
