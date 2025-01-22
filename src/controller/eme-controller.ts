@@ -101,9 +101,10 @@ class EMEController extends Logger implements ComponentAPI {
   }
 
   public destroy() {
+    const media = this.media;
     this.unregisterListeners();
     this.onMediaDetached();
-    this._clear();
+    this._clear(media);
     // Remove any references that could be held in config options or callbacks
     const config = this.config;
     config.requestMediaKeySystemAccessFunc = null;
@@ -1252,8 +1253,7 @@ class EMEController extends Logger implements ComponentAPI {
     }
   }
 
-  private _clear() {
-    const media = this.media;
+  private _clear(media) {
     const mediaKeysList = this.mediaKeySessions;
     this._requestLicenseFailureCount = 0;
     this.setMediaKeysQueue = [];
