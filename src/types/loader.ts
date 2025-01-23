@@ -1,5 +1,6 @@
 import type { LoaderConfig } from '../config';
-import type { HlsUrlParameters } from './level';
+import type { HlsUrlParameters, Level } from './level';
+import type { MediaPlaylist } from './media-playlist';
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { KeyLoaderInfo } from '../loader/key-loader';
@@ -191,4 +192,6 @@ export interface PlaylistLoaderContext extends LoaderContext {
   levelDetails?: LevelDetails;
   // Blocking playlist request delivery directives (or null id none were added to playlist url
   deliveryDirectives: HlsUrlParameters | null;
+  // Reference to level or track object in hls.levels, hls.allAudioTracks, or hls.allSubtitleTracks (null when loading MVP)
+  levelOrTrack: Level | MediaPlaylist | null;
 }

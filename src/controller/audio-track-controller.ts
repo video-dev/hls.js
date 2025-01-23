@@ -8,6 +8,7 @@ import {
   findClosestLevelWithAudioGroup,
   findMatchingOption,
   matchesOption,
+  useAlternateAudio,
 } from '../utils/rendition-helper';
 import type Hls from '../hls';
 import type {
@@ -208,9 +209,6 @@ class AudioTrackController extends BasePlaylistController {
           error,
         });
       }
-    } else if (this.shouldReloadPlaylist(currentTrack)) {
-      // Retry playlist loading if no playlist is or has been loaded yet
-      this.setAudioTrack(this.trackId);
     }
   }
 
@@ -224,7 +222,6 @@ class AudioTrackController extends BasePlaylistController {
       data.context.id === this.trackId &&
       (!this.groupIds || this.groupIds.indexOf(data.context.groupId) !== -1)
     ) {
-      this.requestScheduled = -1;
       this.checkRetry(data);
     }
   }
@@ -319,9 +316,6 @@ class AudioTrackController extends BasePlaylistController {
       return;
     }
 
-    // stopping live reloading timer if any
-    this.clearTimer();
-
     this.selectDefaultTrack = false;
     const lastTrack = this.currentTrack;
     const track = tracks[newId];
@@ -403,33 +397,41 @@ class AudioTrackController extends BasePlaylistController {
   }
 
   protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
+    super.loadPlaylist();
     const audioTrack = this.currentTrack;
-    if (this.shouldLoadPlaylist(audioTrack) && audioTrack) {
-      super.loadPlaylist();
-      const id = audioTrack.id;
-      const groupId = audioTrack.groupId as string;
-      let url = audioTrack.url;
-      if (hlsUrlParameters) {
-        try {
-          url = hlsUrlParameters.addDirectives(url);
-        } catch (error) {
-          this.warn(
-            `Could not construct new URL with HLS Delivery Directives: ${error}`,
-          );
-        }
-      }
-      // track not retrieved yet, or live playlist we need to (re)load it
-      this.log(
-        `loading audio-track playlist ${id} "${audioTrack.name}" lang:${audioTrack.lang} group:${groupId}`,
-      );
-      this.clearTimer();
-      this.hls.trigger(Events.AUDIO_TRACK_LOADING, {
-        url,
-        id,
-        groupId,
-        deliveryDirectives: hlsUrlParameters || null,
-      });
+    if (!this.shouldLoadPlaylist(audioTrack)) {
+      return;
     }
+    // Do not load audio rendition with URI matching main variant URI
+    if (useAlternateAudio(audioTrack.url, this.hls)) {
+      this.scheduleLoading(audioTrack, hlsUrlParameters);
+    }
+  }
+
+  protected loadingPlaylist(
+    audioTrack: MediaPlaylist,
+    hlsUrlParameters: HlsUrlParameters | undefined,
+  ) {
+    super.loadingPlaylist(audioTrack, hlsUrlParameters);
+    const id = audioTrack.id;
+    const groupId = audioTrack.groupId as string;
+    const url = this.getUrlWithDirectives(audioTrack.url, hlsUrlParameters);
+    const details = audioTrack.details;
+    const age = details?.age;
+    this.log(
+      `Loading audio-track ${id} "${audioTrack.name}" lang:${audioTrack.lang} group:${groupId}${
+        hlsUrlParameters?.msn !== undefined
+          ? ' at sn ' + hlsUrlParameters.msn + ' part ' + hlsUrlParameters.part
+          : ''
+      }${age && details.live ? ' age ' + age.toFixed(1) + (details.type ? ' ' + details.type || '' : '') : ''} ${url}`,
+    );
+    this.hls.trigger(Events.AUDIO_TRACK_LOADING, {
+      url,
+      id,
+      groupId,
+      deliveryDirectives: hlsUrlParameters || null,
+      track: audioTrack,
+    });
   }
 }
 

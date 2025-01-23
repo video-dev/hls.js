@@ -6,13 +6,14 @@ import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { changeTypeSupported } from '../is-supported';
-import { ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { BufferHelper } from '../utils/buffer-helper';
 import { pickMostCompleteCodecName } from '../utils/codecs';
-import type Hls from '../hls';
+import { useAlternateAudio } from '../utils/rendition-helper';
 import type { FragmentTracker } from './fragment-tracker';
+import type Hls from '../hls';
 import type { Fragment, MediaFragment } from '../loader/fragment';
 import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
@@ -44,6 +45,12 @@ import type { BufferInfo } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
+const enum AlternateAudio {
+  DISABLED = 0,
+  SWITCHING,
+  SWITCHED,
+}
+
 export default class StreamController
   extends BaseStreamController
   implements NetworkComponentAPI
@@ -53,7 +60,7 @@ export default class StreamController
   private level: number = -1;
   private _forceStartLoad: boolean = false;
   private _hasEnoughToStart: boolean = false;
-  private altAudio: boolean = false;
+  private altAudio: AlternateAudio = AlternateAudio.DISABLED;
   private audioOnly: boolean = false;
   private fragPlaying: Fragment | null = null;
   private fragLastKbps: number = 0;
@@ -116,7 +123,7 @@ export default class StreamController
 
   protected onHandlerDestroying() {
     // @ts-ignore
-    this.onMediaPlaying = this.onMediaSeeked = null;
+    this.onMediaPlaying = this.onMediaSeeked = this.onMediaWaiting = null;
     this.unregisterListeners();
     super.onHandlerDestroying();
   }
@@ -149,7 +156,11 @@ export default class StreamController
         this._hasEnoughToStart = false;
       }
       // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
-      if (lastCurrentTime > 0 && startPosition === -1) {
+      if (
+        lastCurrentTime > 0 &&
+        startPosition === -1 &&
+        !skipSeekToStartPosition
+      ) {
         this.log(
           `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
             3,
@@ -180,7 +191,9 @@ export default class StreamController
         const details = currentLevel?.details;
         if (
           details &&
-          (!details.live || this.levelLastLoaded === currentLevel)
+          (!details.live ||
+            (this.levelLastLoaded === currentLevel &&
+              !this.waitForLive(currentLevel)))
         ) {
           if (this.waitForCdnTuneIn(details)) {
             break;
@@ -256,7 +269,7 @@ export default class StreamController
     const lastDetails = this.getLevelDetails();
     if (lastDetails && this._streamEnded(bufferInfo, lastDetails)) {
       const data: BufferEOSData = {};
-      if (this.altAudio) {
+      if (this.altAudio === AlternateAudio.SWITCHED) {
         data.type = 'video';
       }
 
@@ -281,10 +294,11 @@ export default class StreamController
     if (
       !levelDetails ||
       this.state === State.WAITING_LEVEL ||
-      (levelDetails.live && this.levelLastLoaded !== levelInfo)
+      this.waitForLive(levelInfo)
     ) {
       this.level = level;
       this.state = State.WAITING_LEVEL;
+      this.startFragRequested = false;
       return;
     }
 
@@ -313,7 +327,7 @@ export default class StreamController
       this.couldBacktrack &&
       !this.fragPrevious &&
       frag &&
-      frag.sn !== 'initSegment' &&
+      isMediaFragment(frag) &&
       this.fragmentTracker.getState(frag) !== FragmentState.OK
     ) {
       const backtrackSn = (this.backtrackFragment ?? frag).sn as number;
@@ -372,7 +386,7 @@ export default class StreamController
       fragState === FragmentState.NOT_LOADED ||
       fragState === FragmentState.PARTIAL
     ) {
-      if (frag.sn === 'initSegment') {
+      if (!isMediaFragment(frag)) {
         this._loadInitSegment(frag, level);
       } else if (this.bitrateTest) {
         this.log(
@@ -509,7 +523,7 @@ export default class StreamController
     super.flushMainBuffer(
       startOffset,
       endOffset,
-      this.altAudio ? 'video' : null,
+      this.altAudio === AlternateAudio.SWITCHED ? 'video' : null,
     );
   }
 
@@ -521,10 +535,11 @@ export default class StreamController
     const media = data.media;
     media.removeEventListener('playing', this.onMediaPlaying);
     media.removeEventListener('seeked', this.onMediaSeeked);
+    media.removeEventListener('waiting', this.onMediaWaiting);
     media.addEventListener('playing', this.onMediaPlaying);
     media.addEventListener('seeked', this.onMediaSeeked);
+    media.addEventListener('waiting', this.onMediaWaiting);
     this.gapController = new GapController(
-      this.config,
       media,
       this.fragmentTracker,
       this.hls,
@@ -539,6 +554,7 @@ export default class StreamController
     if (media) {
       media.removeEventListener('playing', this.onMediaPlaying);
       media.removeEventListener('seeked', this.onMediaSeeked);
+      media.removeEventListener('waiting', this.onMediaWaiting);
     }
     this.videoBuffer = null;
     this.fragPlaying = null;
@@ -554,11 +570,19 @@ export default class StreamController
     this._hasEnoughToStart = false;
   }
 
+  private onMediaWaiting = () => {
+    const gapController = this.gapController;
+    if (gapController) {
+      gapController.waiting = self.performance.now();
+    }
+  };
+
   private onMediaPlaying = () => {
     // tick to speed up FRAG_CHANGED triggering
     const gapController = this.gapController;
     if (gapController) {
       gapController.ended = 0;
+      gapController.waiting = 0;
     }
     this.tick();
   };
@@ -606,7 +630,8 @@ export default class StreamController
     this.couldBacktrack = false;
     this.fragLastKbps = 0;
     this.fragPlaying = this.backtrackFragment = null;
-    this.altAudio = this.audioOnly = false;
+    this.altAudio = AlternateAudio.DISABLED;
+    this.audioOnly = false;
   }
 
   private onManifestParsed(
@@ -639,10 +664,11 @@ export default class StreamController
     if (!levels || this.state !== State.IDLE) {
       return;
     }
-    const level = levels[data.level];
+    const level = data.levelInfo;
     if (
       !level.details ||
-      (level.details.live && this.levelLastLoaded !== level) ||
+      (level.details.live &&
+        (this.levelLastLoaded !== level || level.details.expired)) ||
       this.waitForCdnTuneIn(level.details)
     ) {
       this.state = State.WAITING_LEVEL;
@@ -667,7 +693,7 @@ export default class StreamController
       }, cc [${newDetails.startCC}, ${newDetails.endCC}] duration:${duration}`,
     );
 
-    const curLevel = levels[newLevelId];
+    const curLevel = data.levelInfo;
     const fragCurrent = this.fragCurrent;
     if (
       fragCurrent &&
@@ -836,9 +862,10 @@ export default class StreamController
     event: Events.AUDIO_TRACK_SWITCHING,
     data: AudioTrackSwitchingData,
   ) {
+    const hls = this.hls;
     // if any URL found on new audio track, it is an alternate audio track
-    const fromAltAudio = this.altAudio;
-    const altAudio = !!data.url;
+    const fromAltAudio = this.altAudio === AlternateAudio.SWITCHED;
+    const altAudio = useAlternateAudio(data.url, hls);
     // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
     // don't do anything if we switch to alt audio: audio stream controller is handling it.
     // we will just have to change buffer scheduling on audioTrackSwitched
@@ -863,17 +890,22 @@ export default class StreamController
         // Reset audio transmuxer so when switching back to main audio we're not still appending where we left off
         this.resetTransmuxer();
       }
-      const hls = this.hls;
       // If switching from alt to main audio, flush all audio and trigger track switched
       if (fromAltAudio) {
+        this.fragmentTracker.removeAllFragments();
+        hls.once(Events.BUFFER_FLUSHED, () => {
+          this.hls?.trigger(Events.AUDIO_TRACK_SWITCHED, data);
+        });
         hls.trigger(Events.BUFFER_FLUSHING, {
           startOffset: 0,
           endOffset: Number.POSITIVE_INFINITY,
           type: null,
         });
-        this.fragmentTracker.removeAllFragments();
+        return;
       }
       hls.trigger(Events.AUDIO_TRACK_SWITCHED, data);
+    } else {
+      this.altAudio = AlternateAudio.SWITCHING;
     }
   }
 
@@ -881,8 +913,7 @@ export default class StreamController
     event: Events.AUDIO_TRACK_SWITCHED,
     data: AudioTrackSwitchedData,
   ) {
-    const trackId = data.id;
-    const altAudio = !!this.hls.audioTracks[trackId].url;
+    const altAudio = useAlternateAudio(data.url, this.hls);
     if (altAudio) {
       const videoBuffer = this.videoBuffer;
       // if we switched on alternate audio, ensure that main fragment scheduling is synced with video sourcebuffer buffered
@@ -893,7 +924,9 @@ export default class StreamController
         this.mediaBuffer = videoBuffer;
       }
     }
-    this.altAudio = altAudio;
+    this.altAudio = altAudio
+      ? AlternateAudio.SWITCHED
+      : AlternateAudio.DISABLED;
     this.tick();
   }
 
@@ -952,8 +985,8 @@ export default class StreamController
       this.fragLastKbps = Math.round(
         (8 * stats.total) / (stats.buffering.end - stats.loading.first),
       );
-      if (frag.sn !== 'initSegment') {
-        this.fragPrevious = frag as MediaFragment;
+      if (isMediaFragment(frag)) {
+        this.fragPrevious = frag;
       }
       this.fragBufferedComplete(frag, part);
     }
@@ -1057,10 +1090,7 @@ export default class StreamController
     event: Events.BUFFER_FLUSHED,
     { type }: BufferFlushedData,
   ) {
-    if (
-      type !== ElementaryStreamTypes.AUDIO ||
-      (this.audioOnly && !this.altAudio)
-    ) {
+    if (type !== ElementaryStreamTypes.AUDIO || !this.altAudio) {
       const mediaBuffer =
         (type === ElementaryStreamTypes.VIDEO
           ? this.videoBuffer
@@ -1076,6 +1106,9 @@ export default class StreamController
   ) {
     if (this.level > -1 && this.fragCurrent) {
       this.level = this.fragCurrent.level;
+      if (this.level === -1) {
+        this.resetWhenMissingContext(this.fragCurrent);
+      }
     }
     this.levels = data.levels;
   }
@@ -1096,7 +1129,7 @@ export default class StreamController
     let startPosition = this.startPosition;
     // only adjust currentTime if different from startPosition or if startPosition not buffered
     // at that stage, there should be only one buffered range, as we reach that code after first fragment has been buffered
-    if (startPosition >= 0) {
+    if (startPosition >= 0 && currentTime < startPosition) {
       if (media.seeking) {
         this.log(
           `could not seek to ${startPosition}, already seeking at ${currentTime}`,
@@ -1151,11 +1184,12 @@ export default class StreamController
     return audioCodec;
   }
 
-  private _loadBitrateTestFrag(frag: Fragment, level: Level) {
-    frag.bitrateTest = true;
-    this._doFragLoad(frag, level).then((data) => {
+  private _loadBitrateTestFrag(fragment: Fragment, level: Level) {
+    fragment.bitrateTest = true;
+    this._doFragLoad(fragment, level).then((data) => {
       const { hls } = this;
-      if (!data || this.fragContextChanged(frag)) {
+      const frag = data?.frag;
+      if (!frag || this.fragContextChanged(frag)) {
         return;
       }
       level.fragmentError = 0;

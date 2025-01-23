@@ -79,6 +79,10 @@ describe('BufferHelper', function () {
         start: 0,
         end: 0.5,
         nextStart: 1,
+        buffered: [
+          { start: 0, end: 0.5 },
+          { start: 1, end: 2 },
+        ],
       });
     });
     it('should return empty buffer info if media does not exist', function () {
@@ -94,7 +98,6 @@ describe('BufferHelper', function () {
         len: 0,
         start: 0,
         end: 0,
-        nextStart: undefined,
       });
     });
     it('should return empty buffer info if media does not exist', function () {
@@ -103,7 +106,6 @@ describe('BufferHelper', function () {
         len: 0,
         start: 0,
         end: 0,
-        nextStart: undefined,
       });
     });
   });
@@ -130,6 +132,7 @@ describe('BufferHelper', function () {
         start: 0,
         end: 0.5,
         nextStart: 1,
+        buffered,
       });
       expect(
         BufferHelper.bufferedInfo(buffered, 0.5, maxHoleDuration),
@@ -138,6 +141,7 @@ describe('BufferHelper', function () {
         start: 0.5,
         end: 0.5,
         nextStart: 1,
+        buffered,
       });
       expect(
         BufferHelper.bufferedInfo(buffered, 1, maxHoleDuration),
@@ -146,6 +150,7 @@ describe('BufferHelper', function () {
         start: 1,
         end: 2,
         nextStart: undefined,
+        buffered,
       });
       expect(
         BufferHelper.bufferedInfo(buffered, 1.5, maxHoleDuration),
@@ -154,6 +159,7 @@ describe('BufferHelper', function () {
         start: 1,
         end: 2,
         nextStart: undefined,
+        buffered,
       });
     });
     it('should return found buffer info when maxHoleDuration is 0.5', function () {
@@ -177,6 +183,7 @@ describe('BufferHelper', function () {
         start: 0,
         end: 0.5,
         nextStart: 1,
+        buffered,
       });
       // M: maxHoleDuration: 0.5
       // |////////|________|////////////////|
@@ -188,6 +195,7 @@ describe('BufferHelper', function () {
         start: 1,
         end: 2,
         nextStart: undefined,
+        buffered,
       });
       expect(
         BufferHelper.bufferedInfo(buffered, 1, maxHoleDuration),
@@ -196,6 +204,7 @@ describe('BufferHelper', function () {
         start: 1,
         end: 2,
         nextStart: undefined,
+        buffered,
       });
       expect(
         BufferHelper.bufferedInfo(buffered, 2, maxHoleDuration),
@@ -204,6 +213,7 @@ describe('BufferHelper', function () {
         start: 2,
         end: 2,
         nextStart: undefined,
+        buffered,
       });
     });
     it('should be able to handle unordered buffered', function () {
@@ -227,6 +237,7 @@ describe('BufferHelper', function () {
         start: 0,
         end: 0.5,
         nextStart: 1,
+        buffered,
       });
     });
     it('should be able to merge adjacent time ranges with a small hole', function () {
@@ -250,6 +261,7 @@ describe('BufferHelper', function () {
         start: 0,
         end: 2,
         nextStart: undefined,
+        buffered,
       });
     });
     it('should be able to merge overlapping time ranges', function () {
@@ -274,6 +286,7 @@ describe('BufferHelper', function () {
         start: 0,
         end: 1,
         nextStart: undefined,
+        buffered,
       });
     });
     it('should return empty buffered if pos is out of range', function () {
@@ -295,18 +308,21 @@ describe('BufferHelper', function () {
         start: 5,
         end: 5,
         nextStart: undefined,
+        buffered,
       });
     });
     it('should return empty buffered if buffered is empty', function () {
       const buffered = [];
       const maxHoleDuration = 0;
+
       expect(
         BufferHelper.bufferedInfo(buffered, 5, maxHoleDuration),
-      ).to.deep.equal({
+      ).to.include({
+        // `buffered` empty array fails deep.equal
         len: 0,
         start: 5,
         end: 5,
-        nextStart: undefined,
+        buffered,
       });
     });
   });

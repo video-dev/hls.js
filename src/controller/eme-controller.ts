@@ -349,7 +349,7 @@ class EMEController extends Logger implements ComponentAPI {
         this.generateRequestWithPreferredKeySession(
           keySessionContext,
           scheme,
-          decryptdata.pssh,
+          decryptdata.pssh.buffer,
           'expired',
         );
     } else {
@@ -451,10 +451,11 @@ class EMEController extends Logger implements ComponentAPI {
       const keySessionContextPromise = (this.keyIdToKeySessionPromise[keyId] =
         keyContextPromise.then((keySessionContext) => {
           const scheme = 'cenc';
+          const initData = decryptdata.pssh ? decryptdata.pssh.buffer : null;
           return this.generateRequestWithPreferredKeySession(
             keySessionContext,
             scheme,
-            decryptdata.pssh,
+            initData,
             'playlist-key',
           );
         }));
@@ -536,147 +537,185 @@ class EMEController extends Logger implements ComponentAPI {
       return;
     }
 
-    let keyId: Uint8Array | null | undefined;
-    let keySystemDomain: KeySystems | undefined;
-
-    if (
-      initDataType === 'sinf' &&
-      this.getLicenseServerUrl(KeySystems.FAIRPLAY)
-    ) {
-      // Match sinf keyId to playlist skd://keyId=
-      const json = bin2str(new Uint8Array(initData));
-      try {
-        const sinf = base64Decode(JSON.parse(json).sinf);
-        const tenc = parseSinf(new Uint8Array(sinf));
-        if (!tenc) {
-          throw new Error(
-            `'schm' box missing or not cbcs/cenc with schi > tenc`,
-          );
-        }
-        keyId = tenc.subarray(8, 24);
-        keySystemDomain = KeySystems.FAIRPLAY;
-      } catch (error) {
-        this.warn(`${logMessage} Failed to parse sinf: ${error}`);
-        return;
-      }
-    } else if (this.getLicenseServerUrl(KeySystems.WIDEVINE)) {
-      // Support Widevine clear-lead key-session creation (otherwise depend on playlist keys)
-      const psshResults = parseMultiPssh(initData);
-
-      // TODO: If using keySystemAccessPromises we might want to wait until one is resolved
+    if (!this.keyFormatPromise) {
       let keySystems = Object.keys(
         this.keySystemAccessPromises,
       ) as KeySystems[];
       if (!keySystems.length) {
         keySystems = getKeySystemsForConfig(this.config);
       }
+      const keyFormats = keySystems
+        .map(keySystemToKeySystemFormat)
+        .filter((k) => !!k) as KeySystemFormats[];
+      this.keyFormatPromise = this.getKeyFormatPromise(keyFormats);
+    }
 
-      const psshInfo = psshResults.filter((pssh): pssh is PsshData => {
-        const keySystem = pssh.systemId
-          ? keySystemIdToKeySystemDomain(pssh.systemId)
-          : null;
-        return keySystem ? keySystems.indexOf(keySystem) > -1 : false;
-      })[0];
+    this.keyFormatPromise.then((keySystemFormat) => {
+      const keySystem = keySystemFormatToKeySystemDomain(keySystemFormat);
 
-      if (!psshInfo) {
+      let keyId: Uint8Array | null | undefined;
+      let keySystemDomain: KeySystems | undefined;
+
+      if (initDataType === 'sinf') {
+        if (keySystem !== KeySystems.FAIRPLAY) {
+          this.warn(
+            `Ignoring unexpected "${event.type}" event with init data type: "${initDataType}" for selected key-system ${keySystem}`,
+          );
+          return;
+        }
+        // Match sinf keyId to playlist skd://keyId=
+        const json = bin2str(new Uint8Array(initData));
+        try {
+          const sinf = base64Decode(JSON.parse(json).sinf);
+          const tenc = parseSinf(sinf);
+          if (!tenc) {
+            throw new Error(
+              `'schm' box missing or not cbcs/cenc with schi > tenc`,
+            );
+          }
+          keyId = tenc.subarray(8, 24);
+          keySystemDomain = KeySystems.FAIRPLAY;
+        } catch (error) {
+          this.warn(`${logMessage} Failed to parse sinf: ${error}`);
+          return;
+        }
+      } else {
         if (
-          psshResults.length === 0 ||
-          psshResults.some((pssh): pssh is PsshInvalidResult => !pssh.systemId)
+          keySystem !== KeySystems.WIDEVINE &&
+          keySystem !== KeySystems.PLAYREADY
         ) {
-          this.warn(`${logMessage} contains incomplete or invalid pssh data`);
-        } else {
-          this.log(
-            `ignoring ${logMessage} for ${(psshResults as PsshData[])
-              .map((pssh) => keySystemIdToKeySystemDomain(pssh.systemId))
-              .join(',')} pssh data in favor of playlist keys`,
+          this.warn(
+            `Ignoring unexpected "${event.type}" event with init data type: "${initDataType}" for selected key-system ${keySystem}`,
+          );
+          return;
+        }
+        // Support Widevine/PlayReady clear-lead key-session creation (otherwise depend on playlist keys)
+        const psshResults = parseMultiPssh(initData);
+
+        const psshInfos = psshResults.filter(
+          (pssh): pssh is PsshData =>
+            !!pssh.systemId &&
+            keySystemIdToKeySystemDomain(pssh.systemId) === keySystem,
+        );
+
+        if (psshInfos.length > 1) {
+          this.warn(
+            `${logMessage} Using first of ${psshInfos.length} pssh found for selected key-system ${keySystem}`,
           );
         }
+
+        const psshInfo = psshInfos[0];
+
+        if (!psshInfo) {
+          if (
+            psshResults.length === 0 ||
+            psshResults.some(
+              (pssh): pssh is PsshInvalidResult => !pssh.systemId,
+            )
+          ) {
+            this.warn(`${logMessage} contains incomplete or invalid pssh data`);
+          } else {
+            this.log(
+              `ignoring ${logMessage} for ${(psshResults as PsshData[])
+                .map((pssh) => keySystemIdToKeySystemDomain(pssh.systemId))
+                .join(',')} pssh data in favor of playlist keys`,
+            );
+          }
+          return;
+        }
+
+        keySystemDomain = keySystemIdToKeySystemDomain(psshInfo.systemId);
+        if (psshInfo.version === 0 && psshInfo.data) {
+          if (keySystemDomain === KeySystems.WIDEVINE) {
+            const offset = psshInfo.data.length - 22;
+            keyId = psshInfo.data.subarray(offset, offset + 16);
+          } else if (keySystemDomain === KeySystems.PLAYREADY) {
+            keyId = parsePlayReadyWRM(psshInfo.data);
+          }
+        }
+      }
+
+      if (!keySystemDomain || !keyId) {
         return;
       }
 
-      keySystemDomain = keySystemIdToKeySystemDomain(psshInfo.systemId);
-      if (psshInfo.version === 0 && psshInfo.data) {
-        if (keySystemDomain === KeySystems.WIDEVINE) {
-          const offset = psshInfo.data.length - 22;
-          keyId = psshInfo.data.subarray(offset, offset + 16);
-        } else if (keySystemDomain === KeySystems.PLAYREADY) {
-          keyId = parsePlayReadyWRM(psshInfo.data);
+      const keyIdHex = Hex.hexDump(keyId);
+      const { keyIdToKeySessionPromise, mediaKeySessions } = this;
+
+      let keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex];
+      for (let i = 0; i < mediaKeySessions.length; i++) {
+        // Match playlist key
+        const keyContext = mediaKeySessions[i];
+        const decryptdata = keyContext.decryptdata;
+        if (!decryptdata.keyId) {
+          continue;
         }
-      }
-    }
-
-    if (!keySystemDomain || !keyId) {
-      return;
-    }
-
-    const keyIdHex = Hex.hexDump(keyId);
-    const { keyIdToKeySessionPromise, mediaKeySessions } = this;
-
-    let keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex];
-    for (let i = 0; i < mediaKeySessions.length; i++) {
-      // Match playlist key
-      const keyContext = mediaKeySessions[i];
-      const decryptdata = keyContext.decryptdata;
-      if (!decryptdata.keyId) {
-        continue;
-      }
-      const oldKeyIdHex = Hex.hexDump(decryptdata.keyId);
-      if (
-        keyIdHex === oldKeyIdHex ||
-        decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1
-      ) {
-        keySessionContextPromise = keyIdToKeySessionPromise[oldKeyIdHex];
-        if (decryptdata.pssh) {
-          break;
-        }
-        delete keyIdToKeySessionPromise[oldKeyIdHex];
-        decryptdata.pssh = new Uint8Array(initData);
-        decryptdata.keyId = keyId;
-        keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
-          keySessionContextPromise.then(() => {
-            return this.generateRequestWithPreferredKeySession(
-              keyContext,
-              initDataType,
-              initData,
-              'encrypted-event-key-match',
-            );
-          });
-        keySessionContextPromise.catch((error) => this.handleError(error));
-        break;
-      }
-    }
-
-    if (!keySessionContextPromise) {
-      // Clear-lead key (not encountered in playlist)
-      keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
-        this.getKeySystemSelectionPromise([keySystemDomain]).then(
-          ({ keySystem, mediaKeys }) => {
-            this.throwIfDestroyed();
-            const decryptdata = new LevelKey(
-              'ISO-23001-7',
-              keyIdHex,
-              keySystemToKeySystemFormat(keySystem) ?? '',
-            );
-            decryptdata.pssh = new Uint8Array(initData);
-            decryptdata.keyId = keyId as Uint8Array;
-            return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
-              this.throwIfDestroyed();
-              const keySessionContext = this.createMediaKeySessionContext({
-                decryptdata,
-                keySystem,
-                mediaKeys,
-              });
+        const oldKeyIdHex = Hex.hexDump(decryptdata.keyId);
+        if (
+          keyIdHex === oldKeyIdHex ||
+          decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1
+        ) {
+          keySessionContextPromise = keyIdToKeySessionPromise[oldKeyIdHex];
+          if (decryptdata.pssh) {
+            break;
+          }
+          delete keyIdToKeySessionPromise[oldKeyIdHex];
+          decryptdata.pssh = new Uint8Array(initData);
+          decryptdata.keyId = keyId;
+          keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
+            keySessionContextPromise.then(() => {
               return this.generateRequestWithPreferredKeySession(
-                keySessionContext,
+                keyContext,
                 initDataType,
                 initData,
-                'encrypted-event-no-match',
+                'encrypted-event-key-match',
               );
             });
-          },
-        );
-      keySessionContextPromise.catch((error) => this.handleError(error));
-    }
+          keySessionContextPromise.catch((error) => this.handleError(error));
+          break;
+        }
+      }
+
+      if (!keySessionContextPromise) {
+        if (keySystemDomain !== keySystem) {
+          this.log(
+            `Ignoring "${event.type}" event with ${keySystemDomain} init data for selected key-system ${keySystem}`,
+          );
+          return;
+        }
+        // "Clear-lead" (misc key not encountered in playlist)
+        keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
+          this.getKeySystemSelectionPromise([keySystemDomain]).then(
+            ({ keySystem, mediaKeys }) => {
+              this.throwIfDestroyed();
+
+              const decryptdata = new LevelKey(
+                'ISO-23001-7',
+                keyIdHex,
+                keySystemToKeySystemFormat(keySystem) ?? '',
+              );
+              decryptdata.pssh = new Uint8Array(initData);
+              decryptdata.keyId = keyId as Uint8Array;
+              return this.attemptSetMediaKeys(keySystem, mediaKeys).then(() => {
+                this.throwIfDestroyed();
+                const keySessionContext = this.createMediaKeySessionContext({
+                  decryptdata,
+                  keySystem,
+                  mediaKeys,
+                });
+                return this.generateRequestWithPreferredKeySession(
+                  keySessionContext,
+                  initDataType,
+                  initData,
+                  'encrypted-event-no-match',
+                );
+              });
+            },
+          );
+
+        keySessionContextPromise.catch((error) => this.handleError(error));
+      }
+    });
   };
 
   private onWaitingForKey = (event: Event) => {
@@ -732,9 +771,8 @@ class EMEController extends Logger implements ComponentAPI {
           );
         }
         initDataType = mappedInitData.initDataType;
-        initData = context.decryptdata.pssh = mappedInitData.initData
-          ? new Uint8Array(mappedInitData.initData)
-          : null;
+        initData = mappedInitData.initData ? mappedInitData.initData : null;
+        context.decryptdata.pssh = initData ? new Uint8Array(initData) : null;
       } catch (error) {
         this.warn(error.message);
         if (this.hls?.config.debug) {
@@ -1271,6 +1309,12 @@ class EMEController extends Logger implements ComponentAPI {
         .concat(
           media?.setMediaKeys(null)?.catch((error) => {
             this.log(`Could not clear media keys: ${error}`);
+            this.hls?.trigger(Events.ERROR, {
+              type: ErrorTypes.OTHER_ERROR,
+              details: ErrorDetails.KEY_SYSTEM_DESTROY_MEDIA_KEYS_ERROR,
+              fatal: false,
+              error: new Error(`Could not clear media keys: ${error}`),
+            });
           }),
         ),
     )
@@ -1282,6 +1326,14 @@ class EMEController extends Logger implements ComponentAPI {
       })
       .catch((error) => {
         this.log(`Could not close sessions and clear media keys: ${error}`);
+        this.hls?.trigger(Events.ERROR, {
+          type: ErrorTypes.OTHER_ERROR,
+          details: ErrorDetails.KEY_SYSTEM_DESTROY_CLOSE_SESSION_ERROR,
+          fatal: false,
+          error: new Error(
+            `Could not close sessions and clear media keys: ${error}`,
+          ),
+        });
       });
   }
 
@@ -1353,12 +1405,24 @@ class EMEController extends Logger implements ComponentAPI {
         .remove()
         .catch((error) => {
           this.log(`Could not remove session: ${error}`);
+          this.hls?.trigger(Events.ERROR, {
+            type: ErrorTypes.OTHER_ERROR,
+            details: ErrorDetails.KEY_SYSTEM_DESTROY_REMOVE_SESSION_ERROR,
+            fatal: false,
+            error: new Error(`Could not remove session: ${error}`),
+          });
         })
         .then(() => {
           return mediaKeysSession.close();
         })
         .catch((error) => {
           this.log(`Could not close session: ${error}`);
+          this.hls?.trigger(Events.ERROR, {
+            type: ErrorTypes.OTHER_ERROR,
+            details: ErrorDetails.KEY_SYSTEM_DESTROY_CLOSE_SESSION_ERROR,
+            fatal: false,
+            error: new Error(`Could not close session: ${error}`),
+          });
         });
     }
   }

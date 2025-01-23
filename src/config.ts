@@ -272,6 +272,7 @@ export type HlsConfig = {
   enableSoftwareAES: boolean;
   minAutoBitrate: number;
   ignoreDevicePixelRatio: boolean;
+  maxDevicePixelRatio: number;
   preferManagedMediaSource: boolean;
   timelineOffset?: number;
   loader: { new (confg: HlsConfig): Loader<LoaderContext> };
@@ -318,6 +319,7 @@ export type HlsConfig = {
   progressive: boolean;
   lowLatencyMode: boolean;
   primarySessionId?: string;
+  detectStallWithCurrentTimeMs: number;
 } & ABRControllerConfig &
   BufferControllerConfig &
   CapLevelControllerConfig &
@@ -356,6 +358,7 @@ export const hlsDefaultConfig: HlsConfig = {
   capLevelOnFPSDrop: false, // used by fps-controller
   capLevelToPlayerSize: false, // used by cap-level-controller
   ignoreDevicePixelRatio: false, // used by cap-level-controller
+  maxDevicePixelRatio: Number.POSITIVE_INFINITY, // used by cap-level-controller
   preferManagedMediaSource: true,
   initialLiveManifestSize: 1, // used by stream-controller
   maxBufferLength: 30, // used by stream-controller
@@ -425,6 +428,7 @@ export const hlsDefaultConfig: HlsConfig = {
   progressive: false,
   lowLatencyMode: true,
   cmcd: undefined,
+  detectStallWithCurrentTimeMs: 1250,
   enableDateRangeMetadataCues: true,
   enableEmsgMetadataCues: true,
   enableEmsgKLVMetadata: false,

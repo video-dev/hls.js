@@ -15,9 +15,9 @@ import {
   isCompatibleTrackChange,
   isManagedMediaSource,
 } from '../utils/mediasource-helper';
-import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
 import type { HlsConfig } from '../config';
+import type Hls from '../hls';
 import type { MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type {
@@ -340,11 +340,8 @@ export default class BufferController extends Logger implements ComponentAPI {
       : null;
     const trackCount = trackNames ? trackNames.length : 0;
     const mediaSourceOpenCallback = () => {
-      if (this.media) {
-        const readyState = this.mediaSource?.readyState;
-        if (readyState === 'open' || readyState === 'ended') {
-          this._onMediaSourceOpen();
-        }
+      if (this.media && this.mediaSourceOpenOrEnded) {
+        this._onMediaSourceOpen();
       }
     };
     if (transferredTracks && trackNames && trackCount) {
@@ -429,6 +426,11 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
     }
   }
 
+  private get mediaSourceOpenOrEnded(): boolean {
+    const readyState = this.mediaSource?.readyState;
+    return readyState === 'open' || readyState === 'ended';
+  }
+
   private _onEndStreaming = (event) => {
     if (!this.hls) {
       return;
@@ -466,18 +468,23 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
         });
         this.resetQueue();
       } else {
-        if (mediaSource.readyState === 'open') {
+        if (this.mediaSourceOpenOrEnded) {
+          const open = mediaSource.readyState === 'open';
           try {
             const sourceBuffers = mediaSource.sourceBuffers;
             for (let i = sourceBuffers.length; i--; ) {
-              sourceBuffers[i].abort();
+              if (open) {
+                sourceBuffers[i].abort();
+              }
               mediaSource.removeSourceBuffer(sourceBuffers[i]);
             }
-            // endOfStream could trigger exception if any sourcebuffer is in updating state
-            // we don't really care about checking sourcebuffer state here,
-            // as we are anyway detaching the MediaSource
-            // let's just avoid this exception to propagate
-            mediaSource.endOfStream();
+            if (open) {
+              // endOfStream could trigger exception if any sourcebuffer is in updating state
+              // we don't really care about checking sourcebuffer state here,
+              // as we are anyway detaching the MediaSource
+              // let's just avoid this exception to propagate
+              mediaSource.endOfStream();
+            }
           } catch (err) {
             this.warn(
               `onMediaDetaching: ${err.message} while calling endOfStream`,
@@ -651,7 +658,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
     if (this.sourceBufferCount) {
       return;
     }
-    if (this.mediaSource !== null && this.mediaSource.readyState === 'open') {
+    if (this.mediaSourceOpenOrEnded) {
       this.checkPendingTracks();
     }
   }
@@ -892,7 +899,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
           event.details = ErrorDetails.BUFFER_FULL_ERROR;
         } else if (
           (error as DOMException).code === DOMException.INVALID_STATE_ERR &&
-          this.mediaSource?.readyState === 'open' &&
+          this.mediaSourceOpenOrEnded &&
           !this.media?.error
         ) {
           // Allow retry for "Failed to execute 'appendBuffer' on 'SourceBuffer': This SourceBuffer is still processing" errors
@@ -1185,10 +1192,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
             this.hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, {
               bufferEnd: targetBackBufferPosition,
             });
-          } else if (
-            track?.ended &&
-            buffered.end(buffered.length - 1) - currentTime < targetDuration * 2
-          ) {
+          } else if (track?.ended) {
             this.log(
               `Cannot flush ${type} back buffer while SourceBuffer is in ended state`,
             );
@@ -1220,20 +1224,11 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
         }
         const bufferStart = buffered.start(numBufferedRanges - 1);
         const bufferEnd = buffered.end(numBufferedRanges - 1);
-        const track = this.tracks[type];
         // No flush if we can tolerate the current buffer length or the current buffer range we would flush is contiguous with current position
         if (
           targetFrontBufferPosition > bufferStart ||
           (currentTime >= bufferStart && currentTime <= bufferEnd)
         ) {
-          return;
-        } else if (
-          track?.ended &&
-          currentTime - bufferEnd < 2 * targetDuration
-        ) {
-          this.log(
-            `Cannot flush ${type} front buffer while SourceBuffer is in ended state`,
-          );
           return;
         }
 

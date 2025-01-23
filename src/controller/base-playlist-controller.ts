@@ -24,35 +24,33 @@ export default class BasePlaylistController
   implements NetworkComponentAPI
 {
   protected hls: Hls;
-  protected timer: number = -1;
-  protected requestScheduled: number = -1;
   protected canLoad: boolean = false;
+  private timer: number = -1;
 
   constructor(hls: Hls, logPrefix: string) {
     super(logPrefix, hls.logger);
     this.hls = hls;
   }
 
-  public destroy(): void {
+  public destroy() {
     this.clearTimer();
     // @ts-ignore
     this.hls = this.log = this.warn = null;
   }
 
-  protected clearTimer(): void {
+  private clearTimer() {
     if (this.timer !== -1) {
       self.clearTimeout(this.timer);
       this.timer = -1;
     }
   }
 
-  public startLoad(): void {
+  public startLoad() {
     this.canLoad = true;
-    this.requestScheduled = -1;
     this.loadPlaylist();
   }
 
-  public stopLoad(): void {
+  public stopLoad() {
     this.canLoad = false;
     this.clearTimer();
   }
@@ -104,16 +102,22 @@ export default class BasePlaylistController
     }
   }
 
-  protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void {
-    if (this.requestScheduled === -1) {
-      this.requestScheduled = self.performance.now();
-    }
+  protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters) {
     // Loading is handled by the subclasses
+    this.clearTimer();
+  }
+
+  protected loadingPlaylist(
+    playlist: Level | MediaPlaylist,
+    hlsUrlParameters?: HlsUrlParameters,
+  ) {
+    // Loading is handled by the subclasses
+    this.clearTimer();
   }
 
   protected shouldLoadPlaylist(
     playlist: Level | MediaPlaylist | null | undefined,
-  ): boolean {
+  ): playlist is Level | MediaPlaylist {
     return (
       this.canLoad &&
       !!playlist &&
@@ -122,14 +126,20 @@ export default class BasePlaylistController
     );
   }
 
-  protected shouldReloadPlaylist(
-    playlist: Level | MediaPlaylist | null | undefined,
-  ): boolean {
-    return (
-      this.timer === -1 &&
-      this.requestScheduled === -1 &&
-      this.shouldLoadPlaylist(playlist)
-    );
+  protected getUrlWithDirectives(
+    uri: string,
+    hlsUrlParameters: HlsUrlParameters | undefined,
+  ): string {
+    if (hlsUrlParameters) {
+      try {
+        return hlsUrlParameters.addDirectives(uri);
+      } catch (error) {
+        this.warn(
+          `Could not construct new URL with HLS Delivery Directives: ${error}`,
+        );
+      }
+    }
+    return uri;
   }
 
   protected playlistLoaded(
@@ -158,22 +168,36 @@ export default class BasePlaylistController
 
     // if current playlist is a live playlist, arm a timer to reload it
     if (details.live || previousDetails?.live) {
+      const levelOrTrack = 'levelInfo' in data ? data.levelInfo : data.track;
       details.reloaded(previousDetails);
-      if (previousDetails) {
-        this.log(
-          `live playlist ${index} ${
-            details.advanced
-              ? 'REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex
-              : details.updated
-                ? 'UPDATED'
-                : 'MISSED'
-          }`,
-        );
-      }
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
         mergeDetails(previousDetails, details);
       }
+      if (details.requestScheduled === -1) {
+        details.requestScheduled = stats.loading.start;
+      }
+      const bufferInfo = this.hls.mainForwardBufferInfo;
+      const position = bufferInfo ? bufferInfo.end - bufferInfo.len : 0;
+      const distanceToLiveEdgeMs = (details.edge - position) * 1000;
+      const reloadInterval = computeReloadInterval(
+        details,
+        distanceToLiveEdgeMs,
+      );
+      if (details.requestScheduled + reloadInterval < now) {
+        details.requestScheduled = now;
+      } else {
+        details.requestScheduled += reloadInterval;
+      }
+      this.log(
+        `live playlist ${index} ${
+          details.advanced
+            ? 'REFRESHED ' + details.lastPartSn + '-' + details.lastPartIndex
+            : details.updated
+              ? 'UPDATED'
+              : 'MISSED'
+        }`,
+      );
       if (!this.canLoad || !details.live) {
         return;
       }
@@ -187,12 +211,16 @@ export default class BasePlaylistController
         const endSn = details.endSN;
         const lastPartIndex = details.lastPartIndex;
         const hasParts = lastPartIndex !== -1;
-        const lastPart = lastPartSn === endSn;
-        // When low latency mode is disabled, we'll skip part requests once the last part index is found
-        const nextSnStartIndex = lowLatencyMode ? 0 : lastPartIndex;
+        const atLastPartOfSegment = lastPartSn === endSn;
         if (hasParts) {
-          msn = lastPart ? endSn + 1 : lastPartSn;
-          part = lastPart ? nextSnStartIndex : lastPartIndex + 1;
+          // When low latency mode is disabled, request the last part of the next segment
+          if (atLastPartOfSegment) {
+            msn = endSn + 1;
+            part = lowLatencyMode ? 0 : lastPartIndex;
+          } else {
+            msn = lastPartSn;
+            part = lowLatencyMode ? lastPartIndex + 1 : details.maxPartIndex;
+          }
         } else {
           msn = endSn + 1;
         }
@@ -249,8 +277,9 @@ export default class BasePlaylistController
           msn,
           part,
         );
-        if (lowLatencyMode || !lastPart) {
-          this.loadPlaylist(deliveryDirectives);
+        if (lowLatencyMode || !atLastPartOfSegment) {
+          details.requestScheduled = now;
+          this.loadingPlaylist(levelOrTrack, deliveryDirectives);
           return;
         }
       } else if (details.canBlockReload || details.canSkipUntil) {
@@ -261,60 +290,46 @@ export default class BasePlaylistController
           part,
         );
       }
-      const bufferInfo = this.hls.mainForwardBufferInfo;
-      const position = bufferInfo ? bufferInfo.end - bufferInfo.len : 0;
-      const distanceToLiveEdgeMs = (details.edge - position) * 1000;
-      const reloadInterval = computeReloadInterval(
-        details,
-        distanceToLiveEdgeMs,
-      );
-      if (details.updated && now > this.requestScheduled + reloadInterval) {
-        this.requestScheduled = stats.loading.start;
-      }
-
-      if (msn !== undefined && details.canBlockReload) {
-        this.requestScheduled =
+      if (deliveryDirectives && msn !== undefined && details.canBlockReload) {
+        details.requestScheduled =
           stats.loading.first +
-          reloadInterval -
-          (details.partTarget * 1000 || 1000);
-      } else if (
-        this.requestScheduled === -1 ||
-        this.requestScheduled + reloadInterval < now
-      ) {
-        this.requestScheduled = now;
-      } else if (this.requestScheduled - now <= 0) {
-        this.requestScheduled += reloadInterval;
+          Math.max(reloadInterval - elapsed * 2, reloadInterval / 2);
       }
-      let estimatedTimeUntilUpdate = this.requestScheduled - now;
-      estimatedTimeUntilUpdate = Math.max(0, estimatedTimeUntilUpdate);
-      this.log(
-        `reload live playlist ${index} in ${Math.round(
-          estimatedTimeUntilUpdate,
-        )} ms`,
-      );
-      // this.log(
-      //   `live reload ${details.updated ? 'REFRESHED' : 'MISSED'}
-      // reload in ${estimatedTimeUntilUpdate / 1000}
-      // round trip ${(stats.loading.end - stats.loading.start) / 1000}
-      // diff ${
-      //   (reloadInterval -
-      //     (estimatedTimeUntilUpdate +
-      //       stats.loading.end -
-      //       stats.loading.start)) /
-      //   1000
-      // }
-      // reload interval ${reloadInterval / 1000}
-      // target duration ${details.targetduration}
-      // distance to edge ${distanceToLiveEdgeMs / 1000}`
-      // );
-
-      this.timer = self.setTimeout(
-        () => this.loadPlaylist(deliveryDirectives),
-        estimatedTimeUntilUpdate,
-      );
+      this.scheduleLoading(levelOrTrack, deliveryDirectives, details);
     } else {
       this.clearTimer();
     }
+  }
+
+  protected scheduleLoading(
+    levelOrTrack: Level | MediaPlaylist,
+    deliveryDirectives?: HlsUrlParameters,
+    updatedDetails?: LevelDetails,
+  ) {
+    const details = updatedDetails || levelOrTrack.details;
+    if (!details) {
+      this.loadingPlaylist(levelOrTrack, deliveryDirectives);
+      return;
+    }
+    const now = self.performance.now();
+    const requestScheduled = details.requestScheduled;
+    if (now >= requestScheduled) {
+      this.loadingPlaylist(levelOrTrack, deliveryDirectives);
+      return;
+    }
+
+    const estimatedTimeUntilUpdate = requestScheduled - now;
+    this.log(
+      `reload live playlist ${levelOrTrack.name || levelOrTrack.bitrate + 'bps'} in ${Math.round(
+        estimatedTimeUntilUpdate,
+      )} ms`,
+    );
+
+    this.clearTimer();
+    this.timer = self.setTimeout(
+      () => this.loadingPlaylist(levelOrTrack, deliveryDirectives),
+      estimatedTimeUntilUpdate,
+    );
   }
 
   private getDeliveryDirectives(
@@ -344,7 +359,6 @@ export default class BasePlaylistController
         (!errorAction.resolved &&
           action === NetworkErrorAction.SendAlternateToPenaltyBox));
     if (retry) {
-      this.requestScheduled = -1;
       if (retryCount >= retryConfig.maxNumRetry) {
         return false;
       }
@@ -359,6 +373,7 @@ export default class BasePlaylistController
       } else {
         const delay = getRetryDelay(retryConfig, retryCount);
         // Schedule level/track reload
+        this.clearTimer();
         this.timer = self.setTimeout(() => this.loadPlaylist(), delay);
         this.warn(
           `Retrying playlist loading ${retryCount + 1}/${

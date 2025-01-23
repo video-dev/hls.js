@@ -93,8 +93,6 @@ class FetchLoader implements Loader<LoaderContext> {
     stats.loading.start = self.performance.now();
 
     const initParams = getRequestParameters(context, this.controller.signal);
-    const onProgress: LoaderOnProgress<LoaderContext> | undefined =
-      callbacks.onProgress;
     const isArrayBuffer = context.responseType === 'arraybuffer';
     const LENGTH = isArrayBuffer ? 'byteLength' : 'length';
     const { maxTimeToFirstByteMs, maxLoadTimeMs } = config.loadPolicy;
@@ -109,8 +107,10 @@ class FetchLoader implements Loader<LoaderContext> {
         ? maxTimeToFirstByteMs
         : maxLoadTimeMs;
     this.requestTimeout = self.setTimeout(() => {
-      this.abortInternal();
-      callbacks.onTimeout(stats, context, this.response);
+      if (this.callbacks) {
+        this.abortInternal();
+        this.callbacks.onTimeout(stats, context, this.response);
+      }
     }, config.timeout);
 
     const fetchPromise = isPromise(this.request)
@@ -127,8 +127,10 @@ class FetchLoader implements Loader<LoaderContext> {
         config.timeout = maxLoadTimeMs;
         this.requestTimeout = self.setTimeout(
           () => {
-            this.abortInternal();
-            callbacks.onTimeout(stats, context, this.response);
+            if (this.callbacks) {
+              this.abortInternal();
+              this.callbacks.onTimeout(stats, context, this.response);
+            }
           },
           maxLoadTimeMs - (first - stats.loading.start),
         );
@@ -145,6 +147,7 @@ class FetchLoader implements Loader<LoaderContext> {
 
         stats.total = getContentLength(response.headers) || stats.total;
 
+        const onProgress = this.callbacks?.onProgress;
         if (onProgress && Number.isFinite(config.highWaterMark)) {
           return this.loadProgressively(
             response,
@@ -184,11 +187,12 @@ class FetchLoader implements Loader<LoaderContext> {
           code: response.status,
         };
 
+        const onProgress = this.callbacks?.onProgress;
         if (onProgress && !Number.isFinite(config.highWaterMark)) {
           onProgress(stats, context, responseData, response);
         }
 
-        callbacks.onSuccess(loaderResponse, stats, context, response);
+        this.callbacks?.onSuccess(loaderResponse, stats, context, response);
       })
       .catch((error) => {
         self.clearTimeout(this.requestTimeout);
@@ -199,7 +203,7 @@ class FetchLoader implements Loader<LoaderContext> {
         // when destroying, 'error' itself can be undefined
         const code: number = !error ? 0 : error.code || 0;
         const text: string = !error ? null : error.message;
-        callbacks.onError(
+        this.callbacks?.onError(
           { code, text },
           context,
           error ? error.details : null,
@@ -237,7 +241,7 @@ class FetchLoader implements Loader<LoaderContext> {
         .then((data) => {
           if (data.done) {
             if (chunkCache.dataLength) {
-              onProgress(stats, context, chunkCache.flush(), response);
+              onProgress(stats, context, chunkCache.flush().buffer, response);
             }
 
             return Promise.resolve(new ArrayBuffer(0));
@@ -251,12 +255,12 @@ class FetchLoader implements Loader<LoaderContext> {
             chunkCache.push(chunk);
             if (chunkCache.dataLength >= highWaterMark) {
               // flush in order to join the typed arrays
-              onProgress(stats, context, chunkCache.flush(), response);
+              onProgress(stats, context, chunkCache.flush().buffer, response);
             }
           } else {
             // If there's nothing cached already, and the chache is large enough
             // just emit the progress event
-            onProgress(stats, context, chunk, response);
+            onProgress(stats, context, chunk.buffer, response);
           }
           return pump();
         })

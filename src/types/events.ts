@@ -7,8 +7,6 @@ import type {
   SourceBufferName,
   SourceBufferTrackSet,
 } from './buffer';
-import type { ChunkMetadata } from './transmuxer';
-import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { MetadataSample, UserdataSample } from './demuxer';
 import type {
   HdcpLevel,
@@ -27,6 +25,7 @@ import type {
   PlaylistLoaderContext,
 } from './loader';
 import type { MediaPlaylist, MediaPlaylistType } from './media-playlist';
+import type { ChunkMetadata } from './transmuxer';
 import type { SteeringManifest } from '../controller/content-steering-controller';
 import type { IErrorAction } from '../controller/error-controller';
 import type { HlsAssetPlayer } from '../controller/interstitial-player';
@@ -34,6 +33,7 @@ import type {
   InterstitialScheduleDurations,
   InterstitialScheduleItem,
 } from '../controller/interstitials-schedule';
+import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { HlsListeners } from '../events';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type {
@@ -47,6 +47,7 @@ import type { LevelDetails } from '../loader/level-details';
 import type { LevelKey } from '../loader/level-key';
 import type { LoadStats } from '../loader/load-stats';
 import type { AttrList } from '../utils/attr-list';
+import type { BufferInfo } from '../utils/buffer-helper';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
@@ -188,6 +189,7 @@ export interface LevelSwitchedData {
 export interface TrackLoadingData {
   id: number;
   groupId: string;
+  track: MediaPlaylist;
   url: string;
   deliveryDirectives: HlsUrlParameters | null;
 }
@@ -195,6 +197,7 @@ export interface TrackLoadingData {
 export interface LevelLoadingData {
   id: number;
   level: number;
+  levelInfo: Level;
   pathwayId: string | undefined;
   url: string;
   deliveryDirectives: HlsUrlParameters | null;
@@ -207,15 +210,18 @@ export interface TrackLoadedData {
   networkDetails: any;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
+  track: MediaPlaylist;
 }
 
 export interface LevelLoadedData {
   details: LevelDetails;
   id: number;
   level: number;
+  levelInfo: Level;
   networkDetails: any;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
+  withoutMultiVariant?: boolean;
 }
 
 export interface LevelUpdatedData {
@@ -308,6 +314,7 @@ export interface ErrorData {
   fatal: boolean;
   errorAction?: IErrorAction;
   buffer?: number;
+  bufferInfo?: BufferInfo;
   bytes?: number;
   chunkMeta?: ChunkMetadata;
   context?: PlaylistLoaderContext;
@@ -318,6 +325,7 @@ export interface ErrorData {
   levelRetry?: boolean;
   loader?: Loader<LoaderContext>;
   networkDetails?: any;
+  stalled?: { start: number };
   stats?: LoaderStats;
   mimeType?: string;
   reason?: string;

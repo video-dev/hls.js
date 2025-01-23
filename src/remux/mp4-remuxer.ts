@@ -17,6 +17,7 @@ import type {
 } from '../types/demuxer';
 import type {
   InitSegmentData,
+  Mp4Sample,
   RemuxedMetadata,
   RemuxedTrack,
   RemuxedUserdata,
@@ -36,6 +37,26 @@ const AC3_SAMPLES_PER_FRAME = 1536;
 let chromeVersion: number | null = null;
 let safariWebkitVersion: number | null = null;
 
+function createMp4Sample(
+  isKeyframe: boolean,
+  duration: number,
+  size: number,
+  cts: number,
+): Mp4Sample {
+  return {
+    duration,
+    size,
+    cts,
+    flags: {
+      isLeading: 0,
+      isDependedOn: 0,
+      hasRedundancy: 0,
+      degradPrio: 0,
+      dependsOn: isKeyframe ? 2 : 1,
+      isNonSync: isKeyframe ? 0 : 1,
+    },
+  };
+}
 export default class MP4Remuxer implements Remuxer {
   private readonly logger: ILogger;
   private readonly observer: HlsEventEmitter;
@@ -100,20 +121,24 @@ export default class MP4Remuxer implements Remuxer {
     this.videoTrackConfig = undefined;
   }
 
-  getVideoStartPts(videoSamples) {
+  getVideoStartPts(videoSamples: VideoSample[]) {
+    // Get the minimum PTS value relative to the first sample's PTS, normalized for 33-bit wrapping
     let rolloverDetected = false;
+    const firstPts = videoSamples[0].pts;
     const startPTS = videoSamples.reduce((minPTS, sample) => {
-      const delta = sample.pts - minPTS;
+      let pts = sample.pts;
+      let delta = pts - minPTS;
       if (delta < -4294967296) {
         // 2^32, see PTSNormalize for reasoning, but we're hitting a rollover here, and we don't want that to impact the timeOffset calculation
         rolloverDetected = true;
-        return normalizePts(minPTS, sample.pts);
-      } else if (delta > 0) {
-        return minPTS;
-      } else {
-        return sample.pts;
+        pts = normalizePts(pts, firstPts);
+        delta = pts - minPTS;
       }
-    }, videoSamples[0].pts);
+      if (delta > 0) {
+        return minPTS;
+      }
+      return pts;
+    }, firstPts);
     if (rolloverDetected) {
       this.logger.debug('PTS rollover detected');
     }
@@ -714,7 +739,7 @@ export default class MP4Remuxer implements Remuxer {
       maxPtsDelta = Math.max(maxPtsDelta, ptsDelta);
 
       outputSamples.push(
-        new Mp4Sample(
+        createMp4Sample(
           VideoSample.key,
           mp4SampleDuration,
           mp4SampleLength,
@@ -772,7 +797,7 @@ export default class MP4Remuxer implements Remuxer {
     const moof = MP4.moof(
       track.sequenceNumber++,
       firstDTS,
-      Object.assign({}, track, {
+      Object.assign(track, {
         samples: outputSamples,
       }),
     );
@@ -1023,7 +1048,7 @@ export default class MP4Remuxer implements Remuxer {
       // Default the sample's duration to the computed mp4SampleDuration, which will either be 1024 for AAC or 1152 for MPEG
       // In the case that we have 1 sample, this will be the duration. If we have more than one sample, the duration
       // becomes the PTS diff with the previous sample
-      outputSamples.push(new Mp4Sample(true, mp4SampleDuration, unitLen, 0));
+      outputSamples.push(createMp4Sample(true, mp4SampleDuration, unitLen, 0));
       lastPTS = pts;
     }
 
@@ -1162,39 +1187,4 @@ export function flushTextTrackUserdataCueSamples(
   return {
     samples,
   };
-}
-
-type Mp4SampleFlags = {
-  isLeading: 0;
-  isDependedOn: 0;
-  hasRedundancy: 0;
-  degradPrio: 0;
-  dependsOn: 1 | 2;
-  isNonSync: 0 | 1;
-};
-
-class Mp4Sample {
-  public size: number;
-  public duration: number;
-  public cts: number;
-  public flags: Mp4SampleFlags;
-
-  constructor(
-    isKeyframe: boolean,
-    duration: number,
-    size: number,
-    cts: number,
-  ) {
-    this.duration = duration;
-    this.size = size;
-    this.cts = cts;
-    this.flags = {
-      isLeading: 0,
-      isDependedOn: 0,
-      hasRedundancy: 0,
-      degradPrio: 0,
-      dependsOn: isKeyframe ? 2 : 1,
-      isNonSync: isKeyframe ? 0 : 1,
-    };
-  }
 }

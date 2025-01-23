@@ -283,6 +283,7 @@ describe('AudioTrackController', function () {
       networkDetails: null,
       stats: { loading: {} } as any,
       deliveryDirectives: null,
+      track: {} as any,
     });
     expect(audioTrackController.tracksInGroup[0], 'tracksInGroup[0]')
       .to.have.property('details')
@@ -299,6 +300,7 @@ describe('AudioTrackController', function () {
       networkDetails: null,
       stats: { loading: {} } as any,
       deliveryDirectives: null,
+      track: {} as any,
     });
     expect(audioTrackController.tracksInGroup[1], 'tracksInGroup[1]')
       .to.have.property('details')

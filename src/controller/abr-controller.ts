@@ -285,9 +285,10 @@ class AbrController extends Logger implements AbrComponentAPI {
     const bwEstimate: number = this.getBwEstimate();
     const levels = hls.levels;
     const level = levels[frag.level];
-    const expectedLen =
-      stats.total ||
-      Math.max(stats.loaded, Math.round((duration * level.averageBitrate) / 8));
+    const expectedLen = Math.max(
+      stats.loaded,
+      Math.round((duration * (frag.bitrate || level.averageBitrate)) / 8),
+    );
     let timeStreaming = loadedFirstByte ? timeLoading - ttfb : timeLoading;
     if (timeStreaming < 1 && loadedFirstByte) {
       timeStreaming = Math.min(timeLoading, (stats.loaded * 8) / bwEstimate);
@@ -717,7 +718,7 @@ class AbrController extends Logger implements AbrComponentAPI {
     if (levels.length === 1) {
       return 0;
     }
-    const level: Level | undefined = levels[selectionBaseLevel];
+    const level = levels[selectionBaseLevel] as Level | undefined;
     const live = !!this.hls.latestLevelDetails?.live;
     const firstSelection = loadLevel === -1 || lastLoadedFragLevel === -1;
     let currentCodecSet: string | undefined;
@@ -794,14 +795,15 @@ class AbrController extends Logger implements AbrComponentAPI {
           | undefined;
         if (
           typeof mediaCapabilities?.decodingInfo === 'function' &&
-          requiresMediaCapabilitiesDecodingInfo(
+          (requiresMediaCapabilitiesDecodingInfo(
             levelInfo,
             audioTracksByGroup,
             currentVideoRange,
             currentFrameRate,
             currentBw,
             audioPreference,
-          )
+          ) ||
+            levelInfo.videoCodec?.substring(0, 4) === 'hvc1') // Force media capabilities check for HEVC to avoid failure on Windows
         ) {
           levelInfo.supportedPromise = getMediaDecodingInfoPromise(
             levelInfo,
@@ -830,6 +832,9 @@ class AbrController extends Logger implements AbrComponentAPI {
               if (index > -1 && levels.length > 1) {
                 this.log(`Removing unsupported level ${index}`);
                 this.hls.removeLevel(index);
+                if (this.hls.loadLevel === -1) {
+                  this.hls.nextLoadLevel = 0;
+                }
               }
             }
           });
@@ -880,8 +885,8 @@ class AbrController extends Logger implements AbrComponentAPI {
         currentFragDuration &&
         bufferStarvationDelay >= currentFragDuration * 2 &&
         maxStarvationDelay === 0
-          ? levels[i].averageBitrate
-          : levels[i].maxBitrate;
+          ? levelInfo.averageBitrate
+          : levelInfo.maxBitrate;
       const fetchDuration: number = this.getTimeToLoadFrag(
         ttfbEstimateSec,
         adjustedbw,
@@ -915,7 +920,7 @@ class AbrController extends Logger implements AbrComponentAPI {
               )} of ${maxAutoLevel} max with CODECS and VIDEO-RANGE:"${
                 levels[levelsSkipped[0]].codecs
               }" ${levels[levelsSkipped[0]].videoRange}; not compatible with "${
-                level.codecs
+                currentCodecSet
               }" ${currentVideoRange}`,
             );
           }

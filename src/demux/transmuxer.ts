@@ -135,7 +135,8 @@ export default class Transmuxer {
         // For Low-Latency HLS Parts, decrypt in place, since part parsing is expected on push progress
         const loadingParts = chunkMeta.part > -1;
         if (loadingParts) {
-          decryptedData = decrypter.flush();
+          const data = decrypter.flush();
+          decryptedData = data ? data.buffer : data;
         }
         if (!decryptedData) {
           stats.executeEnd = now();
@@ -248,7 +249,7 @@ export default class Transmuxer {
       if (decryptedData) {
         // Push always returns a TransmuxerResult if decryptdata is null
         transmuxResults.push(
-          this.push(decryptedData, null, chunkMeta) as TransmuxerResult,
+          this.push(decryptedData.buffer, null, chunkMeta) as TransmuxerResult,
         );
       }
     }
@@ -290,7 +291,7 @@ export default class Transmuxer {
     const { accurateTimeOffset, timeOffset } = this.currentTransmuxState;
     this.logger.log(
       `[transmuxer.ts]: Flushed ${this.id} sn: ${chunkMeta.sn}${
-        chunkMeta.part > -1 ? ' p: ' + chunkMeta.part : ''
+        chunkMeta.part > -1 ? ' part: ' + chunkMeta.part : ''
       } of ${this.id === PlaylistLevelType.MAIN ? 'level' : 'track'} ${chunkMeta.level}`,
     );
     const remuxResult = this.remuxer!.remux(

@@ -122,8 +122,10 @@ class HevcVideoParser extends BaseVideoParser {
         case 32:
           push = true;
           if (!track.vps) {
-            const config = this.readVPS(unit.data);
-            track.params = { ...config };
+            if (typeof track.params !== 'object') {
+              track.params = {};
+            }
+            track.params = Object.assign(track.params, this.readVPS(unit.data));
             this.initVPS = unit.data;
           }
           track.vps = [unit.data];
@@ -133,31 +135,30 @@ class HevcVideoParser extends BaseVideoParser {
         case 33:
           push = true;
           spsfound = true;
-          if (typeof track.params === 'object') {
-            if (
-              track.vps !== undefined &&
-              track.vps[0] !== this.initVPS &&
-              track.sps !== undefined &&
-              !this.matchSPS(track.sps[0], unit.data)
-            ) {
-              this.initVPS = track.vps[0];
-              track.sps = track.pps = undefined;
+          if (
+            track.vps !== undefined &&
+            track.vps[0] !== this.initVPS &&
+            track.sps !== undefined &&
+            !this.matchSPS(track.sps[0], unit.data)
+          ) {
+            this.initVPS = track.vps[0];
+            track.sps = track.pps = undefined;
+          }
+          if (!track.sps) {
+            const config = this.readSPS(unit.data);
+            track.width = config.width;
+            track.height = config.height;
+            track.pixelRatio = config.pixelRatio;
+            track.codec = config.codecString;
+            track.sps = [];
+            if (typeof track.params !== 'object') {
+              track.params = {};
             }
-            if (!track.sps) {
-              const config = this.readSPS(unit.data);
-              track.width = config.width;
-              track.height = config.height;
-              track.pixelRatio = config.pixelRatio;
-              track.codec = config.codecString;
-              track.sps = [];
-              for (const prop in config.params) {
-                track.params[prop] = config.params[prop];
-              }
-            }
-            if (track.vps !== undefined && track.vps[0] === this.initVPS) {
-              track.sps.push(unit.data);
+            for (const prop in config.params) {
+              track.params[prop] = config.params[prop];
             }
           }
+          this.pushParameterSet(track.sps, unit.data, track.vps);
           if (!VideoSample) {
             VideoSample = this.VideoSample = this.createVideoSample(
               true,
@@ -179,9 +180,7 @@ class HevcVideoParser extends BaseVideoParser {
                 track.params[prop] = config[prop];
               }
             }
-            if (track.vps !== undefined && track.vps[0] === this.initVPS) {
-              track.pps.push(unit.data);
-            }
+            this.pushParameterSet(track.pps, unit.data, track.vps);
           }
           break;
 
@@ -215,6 +214,16 @@ class HevcVideoParser extends BaseVideoParser {
     if (endOfSegment && VideoSample) {
       this.pushAccessUnit(VideoSample, track);
       this.VideoSample = null;
+    }
+  }
+
+  private pushParameterSet(
+    parameterSets: Uint8Array[],
+    data: Uint8Array,
+    vps: Uint8Array[] | undefined,
+  ) {
+    if ((vps && vps[0] === this.initVPS) || (!vps && !parameterSets.length)) {
+      parameterSets.push(data);
     }
   }
 

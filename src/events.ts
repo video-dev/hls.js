@@ -78,6 +78,8 @@ export enum Events {
   MEDIA_DETACHED = 'hlsMediaDetached',
   // Fired when HTMLMediaElement dispatches "ended" event, or stalls at end of VOD program
   MEDIA_ENDED = 'hlsMediaEnded',
+  // Fired after playback stall is resolved with playing, seeked, or ended event following BUFFER_STALLED_ERROR
+  STALL_RESOLVED = 'hlsStallResolved',
   // Fired when the buffer is going to be reset
   BUFFER_RESET = 'hlsBufferReset',
   // Fired when we know about the codecs that we need buffers for to push into - data: {tracks : { container, codec, levelCodec, initSegment, metadata }}
@@ -216,6 +218,8 @@ export enum Events {
   INTERSTITIALS_PRIMARY_RESUMED = 'hlsInterstitialsPrimaryResumed',
   // Interstitial players dispatch this event when playout limit is reached
   PLAYOUT_LIMIT_REACHED = 'hlsPlayoutLimitReached',
+  // Event DateRange cue "enter" event dispatched
+  EVENT_CUE_ENTER = 'hlsEventCueEnter',
 }
 
 /**
@@ -242,6 +246,7 @@ export interface HlsListeners {
     event: Events.MEDIA_ENDED,
     data: MediaEndedData,
   ) => void;
+  [Events.STALL_RESOLVED]: (event: Events.STALL_RESOLVED, data: {}) => void;
   [Events.BUFFER_RESET]: (event: Events.BUFFER_RESET) => void;
   [Events.BUFFER_CODECS]: (
     event: Events.BUFFER_CODECS,
@@ -490,6 +495,7 @@ export interface HlsListeners {
     event: Events.PLAYOUT_LIMIT_REACHED,
     data: {},
   ) => void;
+  [Events.EVENT_CUE_ENTER]: (event: Events.EVENT_CUE_ENTER, data: {}) => void;
 }
 export interface HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined>(

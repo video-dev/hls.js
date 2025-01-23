@@ -54,7 +54,7 @@ import type {
   SubtitleSelectionOption,
   VideoSelectionOption,
 } from './types/media-playlist';
-import type { BufferInfo } from './utils/buffer-helper';
+import type { BufferInfo, BufferTimeRange } from './utils/buffer-helper';
 import type EwmaBandWidthEstimator from './utils/ewma-bandwidth-estimator';
 import type { MediaDecodingInfo } from './utils/mediacapabilities-helper';
 
@@ -98,8 +98,9 @@ export default class Hls implements HlsEventEmitter {
   private cmcdController?: CMCDController;
   private _media: HTMLMediaElement | null = null;
   private _url: string | null = null;
-  private triggeringException?: boolean;
   private _sessionId?: string;
+  private triggeringException?: boolean;
+  private started: boolean = false;
 
   /**
    * Get the video-dev/hls.js package version.
@@ -299,6 +300,12 @@ export default class Hls implements HlsEventEmitter {
     if (typeof onErrorOut === 'function') {
       this.on(Events.ERROR, onErrorOut, errorController);
     }
+    // Autostart load handler
+    this.on(
+      Events.MANIFEST_LOADED,
+      playListLoader.onManifestLoaded,
+      playListLoader,
+    );
   }
 
   createController(ControllerClass, components) {
@@ -432,6 +439,10 @@ export default class Hls implements HlsEventEmitter {
       return;
     }
     this.logger.log(`attachMedia`);
+    if (this._media) {
+      this.logger.warn(`media must be detached before attaching`);
+      this.detachMedia();
+    }
     const attachMediaSource = 'media' in data;
     const media = attachMediaSource ? data.media : data;
     const attachingData = attachMediaSource ? data : { media };
@@ -523,10 +534,17 @@ export default class Hls implements HlsEventEmitter {
         (skipSeekToStartPosition ? ', <skip seek to start>' : '')
       })`,
     );
+    this.started = true;
     this.resumeBuffering();
-    this.networkControllers.forEach((controller) => {
-      controller.startLoad(startPosition, skipSeekToStartPosition);
-    });
+    for (let i = 0; i < this.networkControllers.length; i++) {
+      this.networkControllers[i].startLoad(
+        startPosition,
+        skipSeekToStartPosition,
+      );
+      if (!this.started || !this.networkControllers) {
+        break;
+      }
+    }
   }
 
   /**
@@ -534,9 +552,20 @@ export default class Hls implements HlsEventEmitter {
    */
   stopLoad() {
     this.logger.log('stopLoad');
-    this.networkControllers.forEach((controller) => {
-      controller.stopLoad();
-    });
+    this.started = false;
+    for (let i = 0; i < this.networkControllers.length; i++) {
+      this.networkControllers[i].stopLoad();
+      if (this.started || !this.networkControllers) {
+        break;
+      }
+    }
+  }
+
+  /**
+   * Returns whether loading, toggled with `startLoad()` and `stopLoad()`, is active or not`.
+   */
+  get loadingEnabled(): boolean {
+    return this.started;
   }
 
   /**
@@ -1166,6 +1195,7 @@ export type {
   HlsEventEmitter,
   HlsConfig,
   BufferInfo,
+  BufferTimeRange,
   HdcpLevel,
   AbrController,
   AudioStreamController,

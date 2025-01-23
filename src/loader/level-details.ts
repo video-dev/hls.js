@@ -20,11 +20,11 @@ export class LevelDetails {
   public dateRanges: Record<string, DateRange>;
   public dateRangeTagCount: number = 0;
   public live: boolean = true;
+  public requestScheduled: number = -1;
   public ageHeader: number = 0;
   public advancedDateTime?: number;
   public updated: boolean = true;
   public advanced: boolean = true;
-  public availabilityDelay?: number; // Manifest reload synchronization
   public misses: number = 0;
   public startCC: number = 0;
   public startSN: number = 0;
@@ -86,7 +86,6 @@ export class LevelDetails {
     } else {
       this.misses = previous.misses + 1;
     }
-    this.availabilityDelay = previous.availabilityDelay;
   }
 
   get hasProgramDateTime(): boolean {
@@ -154,10 +153,38 @@ export class LevelDetails {
     return -1;
   }
 
+  get maxPartIndex(): number {
+    const partList = this.partList;
+    if (partList) {
+      const lastIndex = this.lastPartIndex;
+      if (lastIndex !== -1) {
+        for (let i = partList.length; i--; ) {
+          if (partList[i].index > lastIndex) {
+            return partList[i].index;
+          }
+        }
+        return lastIndex;
+      }
+    }
+    return 0;
+  }
+
   get lastPartSn(): number {
     if (this.partList?.length) {
       return this.partList[this.partList.length - 1].fragment.sn;
     }
     return this.endSN;
+  }
+
+  get expired(): boolean {
+    if (this.live && this.age && this.misses < 3) {
+      const playlistWindowDuration = this.partEnd - this.fragmentStart;
+      return (
+        this.age >
+        Math.max(playlistWindowDuration, this.totalduration) +
+          this.levelTargetDuration
+      );
+    }
+    return false;
   }
 }

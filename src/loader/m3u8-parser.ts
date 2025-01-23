@@ -48,8 +48,6 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
   [
     /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
     /(?!#) *(\S[^\r\n]*)/.source, // segment URI, group 3 => the URI (note newline is not eaten)
-    /#EXT-X-BYTERANGE:*(.+)/.source, // next segment's byterange, group 4 => range spec (x@y)
-    /#EXT-X-PROGRAM-DATE-TIME:(.+)/.source, // next segment's program date/time group 5 => the datetime spec
     /#.*/.source, // All other non-segment oriented tags will match with all groups empty
   ].join('|'),
   'g',
@@ -58,7 +56,7 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
 const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
   [
     /#(EXTM3U)/.source,
-    /#EXT-X-(DATERANGE|DEFINE|KEY|MAP|PART|PART-INF|PLAYLIST-TYPE|PRELOAD-HINT|RENDITION-REPORT|SERVER-CONTROL|SKIP|START):(.+)/
+    /#EXT-X-(PROGRAM-DATE-TIME|BYTERANGE|DATERANGE|DEFINE|KEY|MAP|PART|PART-INF|PLAYLIST-TYPE|PRELOAD-HINT|RENDITION-REPORT|SERVER-CONTROL|SKIP|START):(.+)/
       .source,
     /#EXT-X-(BITRATE|DISCONTINUITY-SEQUENCE|MEDIA-SEQUENCE|TARGETDURATION|VERSION): *(\d+)/
       .source,
@@ -306,6 +304,7 @@ export default class M3U8Parser {
     levelUrlId: number,
     multivariantVariableList: VariableMap | null,
   ): LevelDetails {
+    const base = { url: baseurl };
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
     const programDateTimes: MediaFragment[] = [];
@@ -315,8 +314,9 @@ export default class M3U8Parser {
     let currentPart = 0;
     let totalduration = 0;
     let discontinuityCounter = 0;
+    let currentBitrate = 0;
     let prevFrag: Fragment | null = null;
-    let frag: Fragment = new Fragment(type, baseurl);
+    let frag: Fragment = new Fragment(type, base);
     let result: RegExpExecArray | RegExpMatchArray | null;
     let i: number;
     let levelkeys: { [key: string]: LevelKey } | undefined;
@@ -333,17 +333,22 @@ export default class M3U8Parser {
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       if (createNextFrag) {
         createNextFrag = false;
-        frag = new Fragment(type, baseurl);
+        frag = new Fragment(type, base);
         // setup the next fragment for part loading
         frag.playlistOffset = totalduration;
         frag.start = totalduration;
         frag.sn = currentSN;
         frag.cc = discontinuityCounter;
+        if (currentBitrate) {
+          frag.bitrate = currentBitrate;
+        }
         frag.level = id;
         if (currentInitSegment) {
           frag.initSegment = currentInitSegment;
-          frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
-          currentInitSegment.rawProgramDateTime = null;
+          if (currentInitSegment.rawProgramDateTime) {
+            frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
+            currentInitSegment.rawProgramDateTime = null;
+          }
           if (nextByteRange) {
             frag.setByteRange(nextByteRange);
             nextByteRange = null;
@@ -387,22 +392,6 @@ export default class M3U8Parser {
           currentPart = 0;
           createNextFrag = true;
         }
-      } else if (result[4]) {
-        // X-BYTERANGE
-        const data = (' ' + result[4]).slice(1);
-        if (prevFrag) {
-          frag.setByteRange(data, prevFrag);
-        } else {
-          frag.setByteRange(data);
-        }
-      } else if (result[5]) {
-        // PROGRAM-DATE-TIME
-        // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
-        frag.rawProgramDateTime = (' ' + result[5]).slice(1);
-        frag.tagList.push(['PROGRAM-DATE-TIME', frag.rawProgramDateTime]);
-        if (firstPdtIndex === -1) {
-          firstPdtIndex = fragments.length;
-        }
       } else {
         result = result[0].match(LEVEL_PLAYLIST_REGEX_SLOW);
         if (!result) {
@@ -410,7 +399,7 @@ export default class M3U8Parser {
           continue;
         }
         for (i = 1; i < result.length; i++) {
-          if (typeof result[i] !== 'undefined') {
+          if (result[i] !== undefined) {
             break;
           }
         }
@@ -418,9 +407,24 @@ export default class M3U8Parser {
         // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
         const tag = (' ' + result[i]).slice(1);
         const value1 = (' ' + result[i + 1]).slice(1);
-        const value2 = result[i + 2] ? (' ' + result[i + 2]).slice(1) : '';
+        const value2 = result[i + 2] ? (' ' + result[i + 2]).slice(1) : null;
 
         switch (tag) {
+          case 'BYTERANGE':
+            if (prevFrag) {
+              frag.setByteRange(value1, prevFrag);
+            } else {
+              frag.setByteRange(value1);
+            }
+            break;
+          case 'PROGRAM-DATE-TIME':
+            // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
+            frag.rawProgramDateTime = value1;
+            frag.tagList.push(['PROGRAM-DATE-TIME', value1]);
+            if (firstPdtIndex === -1) {
+              firstPdtIndex = fragments.length;
+            }
+            break;
           case 'PLAYLIST-TYPE':
             level.type = value1.toUpperCase();
             break;
@@ -481,6 +485,12 @@ export default class M3U8Parser {
             break;
           case 'BITRATE':
             frag.tagList.push([tag, value1]);
+            currentBitrate = parseInt(value1) * 1000;
+            if (Number.isFinite(currentBitrate)) {
+              frag.bitrate = currentBitrate;
+            } else {
+              currentBitrate = 0;
+            }
             break;
           case 'DATERANGE': {
             const dateRangeAttr = new AttrList(value1, level);
@@ -516,7 +526,7 @@ export default class M3U8Parser {
           }
 
           case 'DISCONTINUITY-SEQUENCE':
-            discontinuityCounter = parseInt(value1);
+            level.startCC = discontinuityCounter = parseInt(value1);
             break;
           case 'KEY': {
             const levelKey = parseKey(value1, baseurl, level);
@@ -546,7 +556,7 @@ export default class M3U8Parser {
               // Initial segment tag is after segment duration tag.
               //   #EXTINF: 6.0
               //   #EXT-X-MAP:URI="init.mp4
-              const init = new Fragment(type, baseurl);
+              const init = new Fragment(type, base);
               setInitSegment(init, mapAttrs, id, levelkeys);
               currentInitSegment = init;
               frag.initSegment = currentInitSegment;
@@ -607,7 +617,7 @@ export default class M3U8Parser {
             const part = new Part(
               partAttrs,
               frag as MediaFragment,
-              baseurl,
+              base,
               index,
               previousFragmentPart,
             );
@@ -661,7 +671,7 @@ export default class M3U8Parser {
       if (!level.live) {
         lastFragment.endList = true;
       }
-      if (firstFragment) {
+      if (firstFragment && level.startCC === undefined) {
         level.startCC = firstFragment.cc;
       }
       /**
@@ -709,7 +719,7 @@ export function mapDateRanges(
   for (let i = dateRangeIds.length; i--; ) {
     const dateRange = details.dateRanges[dateRangeIds[i]];
     const startDateTime = dateRange.startDate.getTime();
-    dateRange.tagAnchor = lastProgramDateTime;
+    dateRange.tagAnchor = lastProgramDateTime.ref;
     for (let j = programDateTimeCount; j--; ) {
       const fragIndex = findFragmentWithStartDate(
         details,
@@ -719,7 +729,7 @@ export function mapDateRanges(
         playlistEnd,
       );
       if (fragIndex !== -1) {
-        dateRange.tagAnchor = details.fragments[fragIndex];
+        dateRange.tagAnchor = details.fragments[fragIndex].ref;
         break;
       }
     }
@@ -736,31 +746,30 @@ function findFragmentWithStartDate(
   const pdtFragment = programDateTimes[index];
   if (pdtFragment) {
     // find matching range between PDT tags
-    const durationBetweenPdt =
-      (programDateTimes[index + 1]?.start || endTime) - pdtFragment.start;
     const pdtStart = pdtFragment.programDateTime as number;
-    if (
-      (startDateTime >= pdtStart || index === 0) &&
-      startDateTime <= pdtStart + durationBetweenPdt * 1000
-    ) {
-      // map to fragment with date-time range
-      const startIndex = programDateTimes[index].sn - details.startSN;
-      const fragments = details.fragments;
-      if (fragments.length > programDateTimes.length) {
-        const endSegment =
-          programDateTimes[index + 1] || fragments[fragments.length - 1];
-        const endIndex = endSegment.sn - details.startSN;
-        for (let i = endIndex; i > startIndex; i--) {
-          const fragStartDateTime = fragments[i].programDateTime as number;
-          if (
-            startDateTime >= fragStartDateTime &&
-            startDateTime < fragStartDateTime + fragments[i].duration * 1000
-          ) {
-            return i;
+    if (startDateTime >= pdtStart || index === 0) {
+      const durationBetweenPdt =
+        (programDateTimes[index + 1]?.start || endTime) - pdtFragment.start;
+      if (startDateTime <= pdtStart + durationBetweenPdt * 1000) {
+        // map to fragment with date-time range
+        const startIndex = programDateTimes[index].sn - details.startSN;
+        const fragments = details.fragments;
+        if (fragments.length > programDateTimes.length) {
+          const endSegment =
+            programDateTimes[index + 1] || fragments[fragments.length - 1];
+          const endIndex = endSegment.sn - details.startSN;
+          for (let i = endIndex; i > startIndex; i--) {
+            const fragStartDateTime = fragments[i].programDateTime as number;
+            if (
+              startDateTime >= fragStartDateTime &&
+              startDateTime < fragStartDateTime + fragments[i].duration * 1000
+            ) {
+              return i;
+            }
           }
         }
+        return startIndex;
       }
-      return startIndex;
     }
   }
   return -1;
@@ -862,12 +871,6 @@ export function assignProgramDateTime(
   programDateTimes: MediaFragment[],
 ) {
   if (frag.rawProgramDateTime) {
-    frag.programDateTime = Date.parse(frag.rawProgramDateTime);
-    if (!Number.isFinite(frag.programDateTime)) {
-      frag.programDateTime = null;
-      frag.rawProgramDateTime = null;
-      return;
-    }
     programDateTimes.push(frag);
   } else if (prevFrag?.programDateTime) {
     frag.programDateTime = prevFrag.endProgramDateTime;
