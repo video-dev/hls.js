@@ -60,7 +60,7 @@ describe('Hls', function () {
       expect(media || null).to.not.equal(null);
       hls.attachMedia(media);
       expect(hls.media).to.equal(media);
-      detachTest(hls, media, 6);
+      detachTest(hls, media, 7);
       hls.destroy();
     });
 
@@ -76,7 +76,7 @@ describe('Hls', function () {
       hls.attachMedia(media);
       expect(hls.media).to.equal(media);
       hls.trigger(Events.MEDIA_ATTACHED, { media });
-      detachTest(hls, media, 13);
+      detachTest(hls, media, 14);
       hls.destroy();
     });
 

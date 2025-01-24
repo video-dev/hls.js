@@ -806,9 +806,9 @@ describe('BufferController with attached media', function () {
     it('sets media duration when attaching after level update', function () {
       (bufferController as any).resetBuffer('audio');
       (bufferController as any).resetBuffer('video');
-      const media = bufferController.media;
+      const media = (bufferController as any).media;
       // media is null prior to attaching
-      bufferController.media = null;
+      (bufferController as any).media = null;
       expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(
         Infinity,
       );
@@ -817,7 +817,7 @@ describe('BufferController with attached media', function () {
         Infinity,
       );
       // simulate attach and open source buffers
-      bufferController.media = media;
+      (bufferController as any).media = media;
       (bufferController as any)._onMediaSourceOpen();
       expect(mockMediaSource.duration, 'mediaSource.duration').to.equal(10);
     });

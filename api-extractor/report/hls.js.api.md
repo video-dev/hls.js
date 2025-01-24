@@ -551,8 +551,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected transmuxer: TransmuxerInterface | null;
     // (undocumented)
-    protected triggerEnded(): void;
-    // (undocumented)
     protected unregisterListeners(): void;
     // (undocumented)
     protected waitForCdnTuneIn(details: LevelDetails): boolean | 0;
@@ -650,47 +648,15 @@ export interface BufferCodecsData {
 export class BufferController extends Logger implements ComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker);
     // (undocumented)
-    protected appendChangeType(type: SourceBufferName, container: string, codec: string): void;
-    // (undocumented)
     get bufferedToEnd(): boolean;
-    // (undocumented)
-    protected checkPendingTracks(): void;
     // (undocumented)
     destroy(): void;
     // (undocumented)
     hasSourceTypes(): boolean;
     // (undocumented)
-    media: HTMLMediaElement | null;
-    // (undocumented)
-    mediaSource: MediaSource | null;
-    // (undocumented)
-    protected onBufferAppending(event: Events.BUFFER_APPENDING, eventData: BufferAppendingData): void;
-    // (undocumented)
-    protected onBufferCodecs(event: Events.BUFFER_CODECS, data: BufferCodecsData): void;
-    // (undocumented)
-    protected onBufferEos(event: Events.BUFFER_EOS, data: BufferEOSData): void;
-    // (undocumented)
-    protected onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData): void;
-    // (undocumented)
-    protected onBufferReset(): void;
-    // (undocumented)
-    protected onFragParsed(event: Events.FRAG_PARSED, data: FragParsedData): void;
-    // (undocumented)
-    protected onLevelUpdated(event: Events.LEVEL_UPDATED, { details }: LevelUpdatedData): void;
-    // (undocumented)
-    protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void;
-    // (undocumented)
-    protected onMediaAttaching(event: Events.MEDIA_ATTACHING, data: MediaAttachingData): void;
-    // (undocumented)
-    protected onMediaDetaching(event: Events.MEDIA_DETACHING, data: MediaDetachingData): void;
-    // (undocumented)
-    protected registerListeners(): void;
-    // (undocumented)
     get sourceBufferTracks(): BaseTrackSet;
     // (undocumented)
     transferMedia(): AttachMediaSourceData | null;
-    // (undocumented)
-    protected unregisterListeners(): void;
 }
 
 // Warning: (ae-missing-release-tag) "BufferControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -764,6 +730,7 @@ export type BufferInfo = {
     end: number;
     nextStart?: number;
     buffered?: BufferTimeRange[];
+    bufferedIndex: number;
 };
 
 // Warning: (ae-missing-release-tag) "BufferTimeRange" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1958,6 +1925,17 @@ export interface FragParsingUserdataData {
     samples: UserdataSample[];
 }
 
+// Warning: (ae-missing-release-tag) "GapControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type GapControllerConfig = {
+    detectStallWithCurrentTimeMs: number;
+    highBufferWatchdogPeriod: number;
+    nudgeOffset: number;
+    nudgeMaxRetry: number;
+    nudgeOnVideoHole: boolean;
+};
+
 // Warning: (ae-missing-release-tag) "HdcpLevel" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2219,8 +2197,7 @@ export type HlsConfig = {
     progressive: boolean;
     lowLatencyMode: boolean;
     primarySessionId?: string;
-    detectStallWithCurrentTimeMs: number;
-} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & FragmentLoaderConfig & PlaylistLoaderConfig;
+} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & FragmentLoaderConfig & PlaylistLoaderConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -4416,8 +4393,6 @@ export class StreamController extends BaseStreamController implements NetworkCom
     // (undocumented)
     swapAudioCodec(): void;
     // (undocumented)
-    protected triggerEnded(): void;
-    // (undocumented)
     protected unregisterListeners(): void;
 }
 
@@ -4432,9 +4407,6 @@ export type StreamControllerConfig = {
     maxBufferLength: number;
     maxBufferSize: number;
     maxBufferHole: number;
-    highBufferWatchdogPeriod: number;
-    nudgeOffset: number;
-    nudgeMaxRetry: number;
     maxFragLookUpTolerance: number;
     maxMaxBufferLength: number;
     startFragPrefetch: boolean;

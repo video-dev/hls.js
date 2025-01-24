@@ -3,6 +3,7 @@ import { EventEmitter } from 'eventemitter3';
 import { buildAbsoluteURL } from 'url-toolkit';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
 import { FragmentTracker } from './controller/fragment-tracker';
+import GapController from './controller/gap-controller';
 import ID3TrackController from './controller/id3-track-controller';
 import LatencyController from './controller/latency-controller';
 import LevelController from './controller/level-controller';
@@ -94,6 +95,7 @@ export default class Hls implements HlsEventEmitter {
   private audioTrackController?: AudioTrackController;
   private subtitleTrackController?: SubtitleTrackController;
   private interstitialsController?: InterstitialsController;
+  private gapController: GapController;
   private emeController?: EMEController;
   private cmcdController?: CMCDController;
   private _media: HTMLMediaElement | null = null;
@@ -229,6 +231,12 @@ export default class Hls implements HlsEventEmitter {
       keyLoader,
     ));
 
+    const gapController = (this.gapController = new GapController(
+      this,
+      fragmentTracker,
+      streamController,
+    ));
+
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
     // fpsController uses streamController to switch when frames are being dropped
@@ -250,6 +258,7 @@ export default class Hls implements HlsEventEmitter {
     const coreComponents: ComponentAPI[] = [
       abrController,
       bufferController,
+      gapController,
       capLevelController,
       fpsController,
       id3TrackController,
@@ -1232,6 +1241,7 @@ export type {
   FPSControllerConfig,
   FragmentLoaderConfig,
   FragmentLoaderConstructor,
+  GapControllerConfig,
   HlsLoadPolicies,
   LevelControllerConfig,
   LoaderConfig,

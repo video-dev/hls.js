@@ -1,7 +1,7 @@
 import BaseStreamController, { State } from './base-stream-controller';
 import { findFragmentByPTS } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
-import GapController, { MAX_START_GAP_JUMP } from './gap-controller';
+import { MAX_START_GAP_JUMP } from './gap-controller';
 import TransmuxerInterface from '../demux/transmuxer-interface';
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
@@ -11,13 +11,21 @@ import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { BufferHelper } from '../utils/buffer-helper';
 import { pickMostCompleteCodecName } from '../utils/codecs';
+import {
+  addEventListener,
+  removeEventListener,
+} from '../utils/event-listener-helper';
 import { useAlternateAudio } from '../utils/rendition-helper';
 import type { FragmentTracker } from './fragment-tracker';
 import type Hls from '../hls';
 import type { Fragment, MediaFragment } from '../loader/fragment';
 import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
-import type { SourceBufferName } from '../types/buffer';
+import type {
+  BufferCreatedTrack,
+  ExtendedSourceBuffer,
+  SourceBufferName,
+} from '../types/buffer';
 import type { NetworkComponentAPI } from '../types/component-api';
 import type {
   AudioTrackSwitchedData,
@@ -56,7 +64,6 @@ export default class StreamController
   implements NetworkComponentAPI
 {
   private audioCodecSwap: boolean = false;
-  private gapController: GapController | null = null;
   private level: number = -1;
   private _forceStartLoad: boolean = false;
   private _hasEnoughToStart: boolean = false;
@@ -67,7 +74,7 @@ export default class StreamController
   private couldBacktrack: boolean = false;
   private backtrackFragment: Fragment | null = null;
   private audioCodecSwitch: boolean = false;
-  private videoBuffer: any | null = null;
+  private videoBuffer: ExtendedSourceBuffer | null = null;
 
   constructor(
     hls: Hls,
@@ -123,7 +130,7 @@ export default class StreamController
 
   protected onHandlerDestroying() {
     // @ts-ignore
-    this.onMediaPlaying = this.onMediaSeeked = this.onMediaWaiting = null;
+    this.onMediaPlaying = this.onMediaSeeked = null;
     this.unregisterListeners();
     super.onHandlerDestroying();
   }
@@ -230,7 +237,9 @@ export default class StreamController
 
   protected onTickEnd() {
     super.onTickEnd();
-    this.checkBuffer();
+    if (this.media?.readyState) {
+      this.lastCurrentTime = this.media.currentTime;
+    }
     this.checkFragmentChanged();
   }
 
@@ -533,17 +542,8 @@ export default class StreamController
   ) {
     super.onMediaAttached(event, data);
     const media = data.media;
-    media.removeEventListener('playing', this.onMediaPlaying);
-    media.removeEventListener('seeked', this.onMediaSeeked);
-    media.removeEventListener('waiting', this.onMediaWaiting);
-    media.addEventListener('playing', this.onMediaPlaying);
-    media.addEventListener('seeked', this.onMediaSeeked);
-    media.addEventListener('waiting', this.onMediaWaiting);
-    this.gapController = new GapController(
-      media,
-      this.fragmentTracker,
-      this.hls,
-    );
+    addEventListener(media, 'playing', this.onMediaPlaying);
+    addEventListener(media, 'seeked', this.onMediaSeeked);
   }
 
   protected onMediaDetaching(
@@ -552,16 +552,11 @@ export default class StreamController
   ) {
     const { media } = this;
     if (media) {
-      media.removeEventListener('playing', this.onMediaPlaying);
-      media.removeEventListener('seeked', this.onMediaSeeked);
-      media.removeEventListener('waiting', this.onMediaWaiting);
+      removeEventListener(media, 'playing', this.onMediaPlaying);
+      removeEventListener(media, 'seeked', this.onMediaSeeked);
     }
     this.videoBuffer = null;
     this.fragPlaying = null;
-    if (this.gapController) {
-      this.gapController.destroy();
-      this.gapController = null;
-    }
     super.onMediaDetaching(event, data);
     const transferringMedia = !!data.transferMedia;
     if (transferringMedia) {
@@ -570,20 +565,8 @@ export default class StreamController
     this._hasEnoughToStart = false;
   }
 
-  private onMediaWaiting = () => {
-    const gapController = this.gapController;
-    if (gapController) {
-      gapController.waiting = self.performance.now();
-    }
-  };
-
   private onMediaPlaying = () => {
     // tick to speed up FRAG_CHANGED triggering
-    const gapController = this.gapController;
-    if (gapController) {
-      gapController.ended = 0;
-      gapController.waiting = 0;
-    }
     this.tick();
   };
 
@@ -608,19 +591,6 @@ export default class StreamController
     // tick to speed up FRAG_CHANGED triggering
     this.tick();
   };
-
-  protected triggerEnded() {
-    const gapController = this.gapController;
-    if (gapController) {
-      if (gapController.ended) {
-        return;
-      }
-      gapController.ended = this.media?.currentTime || 1;
-    }
-    this.hls.trigger(Events.MEDIA_ENDED, {
-      stalled: false,
-    });
-  }
 
   protected onManifestLoading() {
     super.onManifestLoading();
@@ -935,11 +905,11 @@ export default class StreamController
     data: BufferCreatedData,
   ) {
     const tracks = data.tracks;
-    let mediaTrack;
-    let name;
+    let mediaTrack: BufferCreatedTrack | undefined;
+    let name: string | undefined;
     let alternate = false;
     for (const type in tracks) {
-      const track = tracks[type];
+      const track: BufferCreatedTrack = tracks[type];
       if (track.id === 'main') {
         name = type;
         mediaTrack = track;
@@ -1056,25 +1026,6 @@ export default class StreamController
     }
   }
 
-  // Checks the health of the buffer and attempts to resolve playback stalls.
-  private checkBuffer() {
-    const { media, gapController } = this;
-    if (!media || !gapController || !media.readyState) {
-      // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
-      return;
-    }
-
-    if (this._hasEnoughToStart || !BufferHelper.getBuffered(media).length) {
-      // Resolve gaps using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
-      const state = this.state;
-      const activeFrag = state !== State.IDLE ? this.fragCurrent : null;
-      const levelDetails = this.getLevelDetails();
-      gapController.poll(this.lastCurrentTime, activeFrag, levelDetails, state);
-    }
-
-    this.lastCurrentTime = media.currentTime;
-  }
-
   private onFragLoadEmergencyAborted() {
     this.state = State.IDLE;
     // if loadedmetadata is not set, it means that we are emergency switch down on first frag
@@ -1095,8 +1046,10 @@ export default class StreamController
         (type === ElementaryStreamTypes.VIDEO
           ? this.videoBuffer
           : this.mediaBuffer) || this.media;
-      this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
-      this.tick();
+      if (mediaBuffer) {
+        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
+        this.tick();
+      }
     }
   }
 

@@ -1,44 +1,150 @@
 import { State } from './base-stream-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
+import TaskLoop from '../task-loop';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
-import { Logger } from '../utils/logger';
+import {
+  addEventListener,
+  removeEventListener,
+} from '../utils/event-listener-helper';
+import type StreamController from './stream-controller';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
 import type { Fragment } from '../loader/fragment';
-import type { LevelDetails } from '../loader/level-details';
+import type { SourceBufferName } from '../types/buffer';
+import type {
+  BufferAppendedData,
+  MediaAttachingData,
+  MediaDetachingData,
+} from '../types/events';
 import type { BufferInfo } from '../utils/buffer-helper';
 
 export const MAX_START_GAP_JUMP = 2.0;
 export const SKIP_BUFFER_HOLE_STEP_SECONDS = 0.1;
 export const SKIP_BUFFER_RANGE_START = 0.05;
+const TICK_INTERVAL = 100;
 
-export default class GapController extends Logger {
-  private media: HTMLMediaElement | null = null;
-  private fragmentTracker: FragmentTracker | null = null;
+export default class GapController extends TaskLoop {
   private hls: Hls | null = null;
+  private streamController: StreamController | null = null;
+  private fragmentTracker: FragmentTracker | null = null;
+  private media: HTMLMediaElement | null = null;
+
   private nudgeRetry: number = 0;
   private stallReported: boolean = false;
   private stalled: number | null = null;
   private moved: boolean = false;
   private seeking: boolean = false;
+  private buffered: Partial<Record<SourceBufferName, TimeRanges>> = {};
+
+  private lastCurrentTime: number = 0;
   public ended: number = 0;
   public waiting: number = 0;
 
   constructor(
-    media: HTMLMediaElement,
-    fragmentTracker: FragmentTracker,
     hls: Hls,
+    fragmentTracker: FragmentTracker,
+    streamController: StreamController,
   ) {
     super('gap-controller', hls.logger);
-    this.media = media;
-    this.fragmentTracker = fragmentTracker;
     this.hls = hls;
+    this.fragmentTracker = fragmentTracker;
+    this.streamController = streamController;
+    this.registerListeners();
+  }
+
+  private registerListeners() {
+    const { hls } = this;
+    if (hls) {
+      hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+      hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+      hls.on(Events.BUFFER_APPENDED, this.onBufferAppended, this);
+    }
+  }
+
+  private unregisterListeners() {
+    const { hls } = this;
+    if (hls) {
+      hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+      hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+      hls.off(Events.BUFFER_APPENDED, this.onBufferAppended, this);
+    }
   }
 
   public destroy() {
-    this.media = this.hls = this.fragmentTracker = null;
+    super.destroy();
+    this.unregisterListeners();
+    this.media = this.hls = this.fragmentTracker = this.streamController = null;
+  }
+
+  private onMediaAttaching(
+    event: Events.MEDIA_ATTACHING,
+    data: MediaAttachingData,
+  ) {
+    this.setInterval(TICK_INTERVAL);
+    const media = (this.media = data.media);
+    addEventListener(media, 'playing', this.onMediaPlaying);
+    addEventListener(media, 'waiting', this.onMediaWaiting);
+    addEventListener(media, 'ended', this.onMediaEnded);
+  }
+
+  private onMediaDetaching(
+    event: Events.MEDIA_DETACHING,
+    data: MediaDetachingData,
+  ) {
+    this.clearInterval();
+    const { media } = this;
+    if (media) {
+      removeEventListener(media, 'playing', this.onMediaPlaying);
+      removeEventListener(media, 'waiting', this.onMediaWaiting);
+      removeEventListener(media, 'ended', this.onMediaEnded);
+      this.media = null;
+    }
+  }
+
+  private onBufferAppended(
+    event: Events.BUFFER_APPENDED,
+    data: BufferAppendedData,
+  ) {
+    this.buffered = data.timeRanges;
+  }
+
+  private onMediaPlaying = () => {
+    this.ended = 0;
+    this.waiting = 0;
+  };
+
+  private onMediaWaiting = () => {
+    if (this.media?.seeking) {
+      return;
+    }
+    this.waiting = self.performance.now();
+    this.tick();
+  };
+
+  private onMediaEnded = () => {
+    if (this.hls) {
+      // ended is set when triggering MEDIA_ENDED so that we do not trigger it again on stall or on tick with media.ended
+      this.ended = this.media?.currentTime || 1;
+      this.hls.trigger(Events.MEDIA_ENDED, {
+        stalled: false,
+      });
+    }
+  };
+
+  public get hasBuffered(): boolean {
+    return Object.keys(this.buffered).length > 0;
+  }
+
+  public tick() {
+    if (!this.media?.readyState || !this.hasBuffered) {
+      return;
+    }
+
+    const currentTime = this.media.currentTime;
+    this.poll(currentTime, this.lastCurrentTime);
+    this.lastCurrentTime = currentTime;
   }
 
   /**
@@ -47,20 +153,20 @@ export default class GapController extends Logger {
    *
    * @param lastCurrentTime - Previously read playhead position
    */
-  public poll(
-    lastCurrentTime: number,
-    activeFrag: Fragment | null,
-    levelDetails: LevelDetails | undefined,
-    state: string,
-  ) {
+  public poll(currentTime: number, lastCurrentTime: number) {
+    const config = this.hls?.config;
+    if (!config) {
+      return;
+    }
     const { media, stalled } = this;
-
     if (!media) {
       return;
     }
-    const { currentTime, seeking } = media;
+    const { seeking } = media;
     const seeked = this.seeking && !seeking;
     const beginSeek = !this.seeking && seeking;
+    const pausedEndedOrHalted =
+      (media.paused && !seeking) || media.ended || media.playbackRate === 0;
 
     this.seeking = seeking;
 
@@ -72,6 +178,14 @@ export default class GapController extends Logger {
       this.moved = true;
       if (!seeking) {
         this.nudgeRetry = 0;
+        // When crossing between buffered video time ranges, but not audio, flush pipeline with seek (Chrome)
+        if (
+          config.nudgeOnVideoHole &&
+          !pausedEndedOrHalted &&
+          currentTime > lastCurrentTime
+        ) {
+          this.nudgeOnVideoHole(currentTime, lastCurrentTime);
+        }
       }
       if (this.waiting === 0) {
         this.stallResolved(currentTime);
@@ -88,7 +202,7 @@ export default class GapController extends Logger {
     }
 
     // The playhead should not be moving
-    if ((media.paused && !seeking) || media.ended || media.playbackRate === 0) {
+    if (pausedEndedOrHalted) {
       this.nudgeRetry = 0;
       this.stallResolved(currentTime);
       // Fire MEDIA_ENDED to workaround event not being dispatched by browser
@@ -106,28 +220,38 @@ export default class GapController extends Logger {
       return;
     }
 
+    // Resolve stalls at buffer holes using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
     const nextStart = bufferInfo.nextStart || 0;
     const fragmentTracker = this.fragmentTracker;
 
     if (seeking && fragmentTracker) {
+      // FIXME: would prefer to get in-flight audio and video fragments OR
+      // addess test "should not detect stalls when loading an earlier fragment while seeking"
+      // in a nicer way
+      const activeFrag =
+        this.streamController?.state !== State.IDLE
+          ? (this.streamController as any)?.fragCurrent
+          : null;
+
       // Waiting for seeking in a buffered range to complete
       const hasEnoughBuffer = bufferInfo.len > MAX_START_GAP_JUMP;
       // Next buffered range is too far ahead to jump to while still seeking
-      const noBufferGap =
+      const noBufferHole =
         !nextStart ||
         (activeFrag && activeFrag.start <= currentTime) ||
         (nextStart - currentTime > MAX_START_GAP_JUMP &&
           !fragmentTracker.getPartialFragment(currentTime));
-      if (hasEnoughBuffer || noBufferGap) {
+      if (hasEnoughBuffer || noBufferHole) {
         return;
       }
-      // Reset moved state when seeking to a point in or before a gap
+      // Reset moved state when seeking to a point in or before a gap/hole
       this.moved = false;
     }
 
     // Skip start gaps if we haven't played, but the last poll detected the start of a stall
     // The addition poll gives the browser a chance to jump the gap for us
+    const levelDetails = this.hls?.latestLevelDetails;
     if (!this.moved && this.stalled !== null && fragmentTracker) {
       // There is no playable buffer (seeked, waiting for buffer)
       const isBuffered = bufferInfo.len > 0;
@@ -155,10 +279,6 @@ export default class GapController extends Logger {
     }
 
     // Start tracking stall time
-    const config = this.hls?.config;
-    if (!config) {
-      return;
-    }
     const detectStallWithCurrentTimeMs = config.detectStallWithCurrentTimeMs;
     const tnow = self.performance.now();
     const tWaiting = this.waiting;
@@ -180,7 +300,7 @@ export default class GapController extends Logger {
     ) {
       // Dispatch MEDIA_ENDED when media.ended/ended event is not signalled at end of stream
       if (
-        state === State.ENDED &&
+        this.streamController?.state === State.ENDED &&
         !levelDetails?.live &&
         Math.abs(currentTime - (levelDetails?.edge || 0)) < 1
       ) {
@@ -215,7 +335,7 @@ export default class GapController extends Logger {
       // The playhead is now moving, but was previously stalled
       if (this.stallReported) {
         const stalledDuration = self.performance.now() - stalled;
-        this.warn(
+        this.log(
           `playback not stuck anymore @${currentTime}, after ${Math.round(
             stalledDuration,
           )}ms`,
@@ -223,6 +343,79 @@ export default class GapController extends Logger {
         this.stallReported = false;
         this.waiting = 0;
         this.hls.trigger(Events.STALL_RESOLVED, {});
+      }
+    }
+  }
+
+  private nudgeOnVideoHole(currentTime: number, lastCurrentTime: number) {
+    // Chrome will play one second past a hole in video buffered time ranges without rendering any video from the subsequent range and then stall as long as audio is buffered:
+    // https://github.com/video-dev/hls.js/issues/5631
+    // https://issues.chromium.org/issues/40280613#comment10
+    // Detect the potential for this situation and proactively seek to flush the video pipeline once the playhead passes the start of the video hole.
+    // When there are audio and video buffers and currentTime is past the end of the first video buffered range...
+    const videoSourceBuffered = this.buffered.video;
+    if (
+      this.hls &&
+      this.media &&
+      this.fragmentTracker &&
+      this.buffered.audio?.length &&
+      videoSourceBuffered &&
+      videoSourceBuffered.length > 1 &&
+      currentTime > videoSourceBuffered.end(0)
+    ) {
+      // and audio is buffered at the playhead
+      const audioBufferInfo = BufferHelper.bufferedInfo(
+        BufferHelper.timeRangesToArray(this.buffered.audio),
+        currentTime,
+        0,
+      );
+      if (audioBufferInfo.len > 1 && lastCurrentTime >= audioBufferInfo.start) {
+        return;
+      }
+      const videoTimes = BufferHelper.timeRangesToArray(videoSourceBuffered);
+      const lastBufferedIndex = BufferHelper.bufferedInfo(
+        videoTimes,
+        lastCurrentTime,
+        0,
+      ).bufferedIndex;
+      // nudge when crossing into another video buffered range (hole).
+      if (lastBufferedIndex > -1 && lastBufferedIndex < videoTimes.length - 1) {
+        const bufferedIndex = BufferHelper.bufferedInfo(
+          videoTimes,
+          currentTime,
+          0,
+        ).bufferedIndex;
+        const holeStart = videoTimes[lastBufferedIndex].end;
+        const holeEnd = videoTimes[lastBufferedIndex + 1].start;
+        if (
+          (bufferedIndex === -1 || bufferedIndex > lastBufferedIndex) &&
+          holeEnd - holeStart < 1 && // `maxBufferHole` may be too small and setting it to 0 should not disable this feature
+          currentTime - holeStart < 2
+        ) {
+          const error = new Error(
+            `nudging playhead to flush pipeline after video hole. currentTime: ${currentTime} hole: ${holeStart} -> ${holeEnd} buffered index: ${bufferedIndex}`,
+          );
+          this.warn(error.message);
+          // Magic number to flush the pipeline without interuption to audio playback:
+          this.media.currentTime += 0.000001;
+          const frag =
+            this.fragmentTracker.getPartialFragment(currentTime) || undefined;
+          const bufferInfo = BufferHelper.bufferInfo(
+            this.media,
+            currentTime,
+            0,
+          );
+          this.hls.trigger(Events.ERROR, {
+            type: ErrorTypes.MEDIA_ERROR,
+            details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+            fatal: false,
+            error,
+            reason: error.message,
+            frag,
+            buffer: bufferInfo.len,
+            bufferInfo,
+          });
+        }
       }
     }
   }
@@ -374,7 +567,7 @@ export default class GapController extends Logger {
         );
         this.moved = true;
         media.currentTime = targetTime;
-        if (partial && !partial.gap && this.hls) {
+        if (!partial?.gap && this.hls) {
           const error = new Error(
             `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`,
           );
@@ -384,7 +577,7 @@ export default class GapController extends Logger {
             fatal: false,
             error,
             reason: error.message,
-            frag: partial,
+            frag: partial || undefined,
             buffer: bufferInfo.len,
             bufferInfo,
           });

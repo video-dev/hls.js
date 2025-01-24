@@ -391,12 +391,7 @@ export default class BaseStreamController
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.log(`setting startPosition to 0 because media ended`);
     this.startPosition = this.lastCurrentTime = 0;
-    this.triggerEnded();
   };
-
-  protected triggerEnded() {
-    /* overridden in stream-controller */
-  }
 
   protected onManifestLoaded(
     event: Events.MANIFEST_LOADED,
