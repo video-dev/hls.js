@@ -483,7 +483,7 @@ export function computeReloadInterval(
       const lastSegmentDuration =
         fragments[fragments.length - 1].duration * 1000;
       if (lastSegmentDuration < reloadInterval) {
-        reloadInterval = lastSegmentDuration - 1280;
+        reloadInterval = lastSegmentDuration;
       }
     }
   } else {
