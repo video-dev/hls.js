@@ -457,7 +457,8 @@ export function computeReloadInterval(
   distanceToLiveEdgeMs: number = Infinity,
   lowLatencyMode: boolean = false,
 ): number {
-  let reloadInterval = 1000 * (lowLatencyMode ? newDetails.partTarget : newDetails.targetduration);
+  const isLowLatency = lowLatencyMode && newDetails.partTarget;
+  let reloadInterval = 1000 * (isLowLatency ? newDetails.partTarget : newDetails.targetduration);
 
   if (newDetails.updated) {
     // When shorter than target duration and near live edge
@@ -467,7 +468,7 @@ export function computeReloadInterval(
     const parts = newDetails.partList;
     const liveEdgeMaxTargetDurations = 4;
     if (
-      lowLatencyMode &&
+      isLowLatency &&
       parts.length &&
       newDetails.partHoldBack > distanceToLiveEdgeMs
     ) {
