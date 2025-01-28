@@ -461,7 +461,8 @@ export default class GapController extends TaskLoop {
         bufferInfo.len > config.maxBufferHole) ||
         (bufferInfo.nextStart &&
           bufferInfo.nextStart - currentTime < config.maxBufferHole)) &&
-      stalledDurationMs > config.highBufferWatchdogPeriod * 1000
+      (stalledDurationMs > config.highBufferWatchdogPeriod * 1000 ||
+        this.waiting)
     ) {
       this.warn('Trying to nudge playhead over buffer-hole');
       // Try to nudge currentTime over a buffer hole if we've been stalling for the configured amount of seconds
