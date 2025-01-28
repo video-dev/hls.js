@@ -215,6 +215,10 @@ export default class BaseStreamController
     if (hasSecondBufferedRange) {
       return false;
     }
+    // Playhead is in unbuffered region. Marking EoS now could result in Safari failing to dispatch "ended" event following seek on start.
+    if (this.media.currentTime < bufferInfo.start) {
+      return false;
+    }
     const partList = levelDetails.partList;
     // Since the last part isn't guaranteed to correspond to the last playlist segment for Low-Latency HLS,
     // check instead if the last part is buffered.
