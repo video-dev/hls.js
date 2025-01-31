@@ -1254,8 +1254,6 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
     }
     const playlistEnd = details.edge;
     if (details.live && this.hls.config.liveDurationInfinity) {
-      // Override duration to Infinity
-      mediaSource.duration = Infinity;
       const len = details.fragments.length;
       if (len && details.live && !!mediaSource.setLiveSeekableRange) {
         const start = Math.max(0, details.fragmentStart);
@@ -1267,6 +1265,9 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
     }
     const overrideDuration = this.overrides?.duration;
     if (overrideDuration) {
+      if (!Number.isFinite(overrideDuration)) {
+        return null;
+      }
       return { duration: overrideDuration };
     }
     const mediaDuration = this.media.duration;
