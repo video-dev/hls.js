@@ -162,6 +162,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.resumeBuffering()`](#hlsresumebuffering)
   - [`hls.bufferingEnabled`](#hlsbufferingenabled)
   - [`hls.bufferedToEnd`](#hlsbufferedtoend)
+  - [`hls.inFlightFragments`](#hlsinflightfragments)
   - [`hls.url`](#hlsurl)
 - [Audio Tracks Control API](#audio-tracks-control-api)
   - [`hls.setAudioOption(audioOption)`](#hlssetaudiooptionaudiooption)
@@ -1887,6 +1888,29 @@ get : Returns a boolean indicating whether fragment loading has been toggled wit
 ### `hls.bufferedToEnd`
 
 get : Returns a boolean indicating if EOS has been appended (media is buffered from currentTime to end of stream).
+
+### `hls.inFlightFragments`
+
+get: Returns an object with each streaming controller's state and in-flight fragment (or null).
+
+Example:
+
+```js
+{
+  main: {
+    frag: <Fragment Object>,
+    state: "FRAG_LOADING"
+  },
+  audio: {
+    frag: <Fragment Object>,
+    state: "PARSED"
+  },
+  subtitle: {
+    frag: null,
+    state: "IDLE"
+  }
+}
+```
 
 ### `hls.url`
 

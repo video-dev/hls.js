@@ -8,14 +8,15 @@ import {
   addEventListener,
   removeEventListener,
 } from '../utils/event-listener-helper';
-import type StreamController from './stream-controller';
+import type { InFlightData } from './base-stream-controller';
+import type { InFlightFragments } from '../hls';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
 import type { Fragment } from '../loader/fragment';
 import type { SourceBufferName } from '../types/buffer';
 import type {
   BufferAppendedData,
-  MediaAttachingData,
+  MediaAttachedData,
   MediaDetachingData,
 } from '../types/events';
 import type { BufferInfo } from '../utils/buffer-helper';
@@ -27,9 +28,9 @@ const TICK_INTERVAL = 100;
 
 export default class GapController extends TaskLoop {
   private hls: Hls | null = null;
-  private streamController: StreamController | null = null;
   private fragmentTracker: FragmentTracker | null = null;
   private media: HTMLMediaElement | null = null;
+  private mediaSource?: MediaSource;
 
   private nudgeRetry: number = 0;
   private stallReported: boolean = false;
@@ -42,22 +43,17 @@ export default class GapController extends TaskLoop {
   public ended: number = 0;
   public waiting: number = 0;
 
-  constructor(
-    hls: Hls,
-    fragmentTracker: FragmentTracker,
-    streamController: StreamController,
-  ) {
+  constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super('gap-controller', hls.logger);
     this.hls = hls;
     this.fragmentTracker = fragmentTracker;
-    this.streamController = streamController;
     this.registerListeners();
   }
 
   private registerListeners() {
     const { hls } = this;
     if (hls) {
-      hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+      hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
       hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
       hls.on(Events.BUFFER_APPENDED, this.onBufferAppended, this);
     }
@@ -66,7 +62,7 @@ export default class GapController extends TaskLoop {
   private unregisterListeners() {
     const { hls } = this;
     if (hls) {
-      hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
+      hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
       hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
       hls.off(Events.BUFFER_APPENDED, this.onBufferAppended, this);
     }
@@ -75,14 +71,16 @@ export default class GapController extends TaskLoop {
   public destroy() {
     super.destroy();
     this.unregisterListeners();
-    this.media = this.hls = this.fragmentTracker = this.streamController = null;
+    this.media = this.hls = this.fragmentTracker = null;
+    this.mediaSource = undefined;
   }
 
-  private onMediaAttaching(
-    event: Events.MEDIA_ATTACHING,
-    data: MediaAttachingData,
+  private onMediaAttached(
+    event: Events.MEDIA_ATTACHED,
+    data: MediaAttachedData,
   ) {
     this.setInterval(TICK_INTERVAL);
+    this.mediaSource = data.mediaSource;
     const media = (this.media = data.media);
     addEventListener(media, 'playing', this.onMediaPlaying);
     addEventListener(media, 'waiting', this.onMediaWaiting);
@@ -101,6 +99,7 @@ export default class GapController extends TaskLoop {
       removeEventListener(media, 'ended', this.onMediaEnded);
       this.media = null;
     }
+    this.mediaSource = undefined;
   }
 
   private onBufferAppended(
@@ -225,21 +224,19 @@ export default class GapController extends TaskLoop {
     const nextStart = bufferInfo.nextStart || 0;
     const fragmentTracker = this.fragmentTracker;
 
-    if (seeking && fragmentTracker) {
-      // FIXME: would prefer to get in-flight audio and video fragments OR
-      // addess test "should not detect stalls when loading an earlier fragment while seeking"
-      // in a nicer way
-      const activeFrag =
-        this.streamController?.state !== State.IDLE
-          ? (this.streamController as any)?.fragCurrent
-          : null;
+    if (seeking && fragmentTracker && this.hls) {
+      // Is there a fragment loading/parsing/appending before currentTime?
+      const inFlightDependency = getInFlightDependency(
+        this.hls.inFlightFragments,
+        currentTime,
+      );
 
       // Waiting for seeking in a buffered range to complete
       const hasEnoughBuffer = bufferInfo.len > MAX_START_GAP_JUMP;
       // Next buffered range is too far ahead to jump to while still seeking
       const noBufferHole =
         !nextStart ||
-        (activeFrag && activeFrag.start <= currentTime) ||
+        inFlightDependency ||
         (nextStart - currentTime > MAX_START_GAP_JUMP &&
           !fragmentTracker.getPartialFragment(currentTime));
       if (hasEnoughBuffer || noBufferHole) {
@@ -300,7 +297,7 @@ export default class GapController extends TaskLoop {
     ) {
       // Dispatch MEDIA_ENDED when media.ended/ended event is not signalled at end of stream
       if (
-        this.streamController?.state === State.ENDED &&
+        this.mediaSource?.readyState === 'ended' &&
         !levelDetails?.live &&
         Math.abs(currentTime - (levelDetails?.edge || 0)) < 1
       ) {
@@ -633,4 +630,33 @@ export default class GapController extends TaskLoop {
       });
     }
   }
+}
+
+function getInFlightDependency(
+  inFlightFragments: InFlightFragments,
+  currentTime: number,
+): Fragment | null {
+  const main = inFlight(inFlightFragments.main);
+  if (main && main.start <= currentTime) {
+    return main;
+  }
+  const audio = inFlight(inFlightFragments.audio);
+  if (audio && audio.start <= currentTime) {
+    return audio;
+  }
+  return null;
+}
+
+function inFlight(inFlightData: InFlightData | undefined): Fragment | null {
+  if (!inFlightData) {
+    return null;
+  }
+  switch (inFlightData.state) {
+    case State.IDLE:
+    case State.STOPPED:
+    case State.ENDED:
+    case State.ERROR:
+      return null;
+  }
+  return inFlightData.frag;
 }

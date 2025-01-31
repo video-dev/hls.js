@@ -450,6 +450,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected hls: Hls;
     // (undocumented)
+    get inFlightFrag(): InFlightData;
+    // (undocumented)
     protected initPTS: RationalTimestamp[];
     // (undocumented)
     protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean;
@@ -539,11 +541,11 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     get startPositionValue(): number;
     // (undocumented)
     protected startTimeOffset: number | null;
-    set state(nextState: string);
+    set state(nextState: (typeof State)[keyof typeof State]);
     // (undocumented)
-    get state(): string;
+    get state(): (typeof State)[keyof typeof State];
     // (undocumented)
-    protected _state: string;
+    protected _state: (typeof State)[keyof typeof State];
     // (undocumented)
     stopLoad(): void;
     // (undocumented)
@@ -1998,6 +2000,8 @@ class Hls implements HlsEventEmitter {
     getMediaDecodingInfo(level: Level, audioTracks?: MediaPlaylist[]): Promise<MediaDecodingInfo>;
     static getMediaSource(): typeof MediaSource | undefined;
     get hasEnoughToStart(): boolean;
+    // (undocumented)
+    get inFlightFragments(): InFlightFragments;
     get interstitialsManager(): InterstitialsManager | null;
     static isMSESupported(): boolean;
     static isSupported(): boolean;
@@ -2469,6 +2473,23 @@ export interface ILogger {
     // (undocumented)
     warn: ILogFunction;
 }
+
+// Warning: (ae-missing-release-tag) "InFlightData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type InFlightData = {
+    frag: Fragment | null;
+    state: (typeof State)[keyof typeof State];
+};
+
+// Warning: (ae-missing-release-tag) "InFlightFragments" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type InFlightFragments = {
+    [PlaylistLevelType.MAIN]: InFlightData;
+    [PlaylistLevelType.AUDIO]?: InFlightData;
+    [PlaylistLevelType.SUBTITLE]?: InFlightData;
+};
 
 // Warning: (ae-missing-release-tag) "InitPTSFoundData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -4315,6 +4336,24 @@ export interface SourceBufferTrack extends BaseTrack {
 //
 // @public (undocumented)
 export type SourceBufferTrackSet = Partial<Record<SourceBufferName, SourceBufferTrack>>;
+
+// Warning: (ae-missing-release-tag) "State" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export const State: {
+    STOPPED: string;
+    IDLE: string;
+    KEY_LOADING: string;
+    FRAG_LOADING: string;
+    FRAG_LOADING_WAITING_RETRY: string;
+    WAITING_TRACK: string;
+    PARSING: string;
+    PARSED: string;
+    ENDED: string;
+    ERROR: string;
+    WAITING_INIT_PTS: string;
+    WAITING_LEVEL: string;
+};
 
 // Warning: (ae-missing-release-tag) "SteeringManifest" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //

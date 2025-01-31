@@ -60,7 +60,7 @@ describe('Hls', function () {
       expect(media || null).to.not.equal(null);
       hls.attachMedia(media);
       expect(hls.media).to.equal(media);
-      detachTest(hls, media, 7);
+      detachTest(hls, media, 6);
       hls.destroy();
     });
 

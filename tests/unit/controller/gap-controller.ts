@@ -13,6 +13,7 @@ import {
   BufferHelper,
   type BufferInfo,
 } from '../../../src/utils/buffer-helper';
+import { MockMediaElement, MockMediaSource } from '../utils/mock-media';
 import type { HlsConfig } from '../../../src/config';
 import type StreamController from '../../../src/controller/stream-controller';
 import type { Fragment } from '../../../src/loader/fragment';
@@ -39,12 +40,13 @@ describe('GapController', function () {
   let streamController: StreamController;
   let config: HlsConfig;
   let gapController: GapControllerTestable;
-  let media;
+  let media: HTMLMediaElement;
+  let mediaSource: MediaSource;
   let triggerSpy;
   const sandbox = sinon.createSandbox();
 
   beforeEach(function () {
-    hls = new Hls({});
+    hls = new Hls({ debug: true });
     config = hls.config;
     const hlsTestable: any = hls;
     for (let i = hlsTestable.networkControllers.length; i--; ) {
@@ -56,17 +58,19 @@ describe('GapController', function () {
     }
     hlsTestable.coreComponents.forEach((component) => component.destroy());
     hlsTestable.coreComponents.length = 0;
-    media = {
-      currentTime: 0,
-    };
+    media = new MockMediaElement() as unknown as HTMLMediaElement;
+    mediaSource = new MockMediaSource() as unknown as MediaSource;
     streamController = (hls as any).streamController;
     streamController.state = State.IDLE;
     gapController = new GapController(
       hls,
       new FragmentTracker(hls as Hls),
-      streamController,
     ) as unknown as GapControllerTestable;
     hls.trigger(Events.MEDIA_ATTACHING, { media });
+    hls.trigger(Events.MEDIA_ATTACHED, {
+      media,
+      mediaSource,
+    });
     triggerSpy = sinon.spy(hls, 'trigger');
   });
 
@@ -250,13 +254,13 @@ describe('GapController', function () {
       // is setup in a "playable" state
       // note that the initial current time
       // is within the range of buffered data info
-      mockMedia = {
+      mockMedia = new MockMediaElement();
+      Object.assign(mockMedia, {
         currentTime: 0,
         paused: false,
         seeking: false,
         buffered: mockTimeRanges,
-        addEventListener() {},
-      };
+      });
 
       gapController.media = mockMedia;
       reportStallSpy = sandbox.spy(gapController, '_reportStall');
