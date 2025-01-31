@@ -27,6 +27,7 @@ type EMEControllerTestable = Omit<
     data: MediaAttachedData,
   ) => void;
   onMediaDetached: () => void;
+  media: HTMLMediaElement | null;
 };
 
 class MediaMock extends EventEmitter {
@@ -561,7 +562,7 @@ describe('EMEController', function () {
       });
   });
 
-  it('should close all media key sessions and remove media keys when media is detached', function () {
+  it('should remove media property  when media is detached', function () {
     const reqMediaKsAccessSpy = sinon.spy(function () {
       return Promise.resolve({
         // Media-keys mock
@@ -600,7 +601,51 @@ describe('EMEController', function () {
         },
       } as any,
     ];
-    emeController.onMediaDetached();
+    emeController.destroy();
+
+    expect(emeController.media).to.equal(null);
+  });
+
+  it('should close all media key sessions and remove media keys when call destroy', function () {
+    const reqMediaKsAccessSpy = sinon.spy(function () {
+      return Promise.resolve({
+        // Media-keys mock
+        keySystem: 'com.apple.fps',
+        createMediaKeys: sinon.spy(() =>
+          Promise.resolve({
+            setServerCertificate: () => Promise.resolve(),
+            createSession: () => ({
+              addEventListener: () => {},
+              removeEventListener: () => {},
+              generateRequest: () => Promise.resolve(),
+              remove: () => Promise.resolve(),
+              update: () => Promise.resolve(),
+              keyStatuses: new Map(),
+            }),
+          }),
+        ),
+      });
+    });
+    const keySessionRemoveSpy = sinon.spy(() => Promise.resolve());
+    const keySessionCloseSpy = sinon.spy(() => Promise.resolve());
+
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+    });
+
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+      media: media as any as HTMLMediaElement,
+    });
+    emeController.mediaKeySessions = [
+      {
+        mediaKeysSession: {
+          remove: keySessionRemoveSpy,
+          close: keySessionCloseSpy,
+        },
+      } as any,
+    ];
+    emeController.destroy();
 
     expect(EMEController.CDMCleanupPromise).to.be.a('Promise');
     if (!EMEController.CDMCleanupPromise) {
