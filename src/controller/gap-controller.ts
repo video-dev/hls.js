@@ -367,51 +367,53 @@ export default class GapController extends TaskLoop {
         0,
       );
       if (audioBufferInfo.len > 1 && lastCurrentTime >= audioBufferInfo.start) {
-        return;
-      }
-      const videoTimes = BufferHelper.timeRangesToArray(videoSourceBuffered);
-      const lastBufferedIndex = BufferHelper.bufferedInfo(
-        videoTimes,
-        lastCurrentTime,
-        0,
-      ).bufferedIndex;
-      // nudge when crossing into another video buffered range (hole).
-      if (lastBufferedIndex > -1 && lastBufferedIndex < videoTimes.length - 1) {
-        const bufferedIndex = BufferHelper.bufferedInfo(
+        const videoTimes = BufferHelper.timeRangesToArray(videoSourceBuffered);
+        const lastBufferedIndex = BufferHelper.bufferedInfo(
           videoTimes,
-          currentTime,
+          lastCurrentTime,
           0,
         ).bufferedIndex;
-        const holeStart = videoTimes[lastBufferedIndex].end;
-        const holeEnd = videoTimes[lastBufferedIndex + 1].start;
+        // nudge when crossing into another video buffered range (hole).
         if (
-          (bufferedIndex === -1 || bufferedIndex > lastBufferedIndex) &&
-          holeEnd - holeStart < 1 && // `maxBufferHole` may be too small and setting it to 0 should not disable this feature
-          currentTime - holeStart < 2
+          lastBufferedIndex > -1 &&
+          lastBufferedIndex < videoTimes.length - 1
         ) {
-          const error = new Error(
-            `nudging playhead to flush pipeline after video hole. currentTime: ${currentTime} hole: ${holeStart} -> ${holeEnd} buffered index: ${bufferedIndex}`,
-          );
-          this.warn(error.message);
-          // Magic number to flush the pipeline without interuption to audio playback:
-          this.media.currentTime += 0.000001;
-          const frag =
-            this.fragmentTracker.getPartialFragment(currentTime) || undefined;
-          const bufferInfo = BufferHelper.bufferInfo(
-            this.media,
+          const bufferedIndex = BufferHelper.bufferedInfo(
+            videoTimes,
             currentTime,
             0,
-          );
-          this.hls.trigger(Events.ERROR, {
-            type: ErrorTypes.MEDIA_ERROR,
-            details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
-            fatal: false,
-            error,
-            reason: error.message,
-            frag,
-            buffer: bufferInfo.len,
-            bufferInfo,
-          });
+          ).bufferedIndex;
+          const holeStart = videoTimes[lastBufferedIndex].end;
+          const holeEnd = videoTimes[lastBufferedIndex + 1].start;
+          if (
+            (bufferedIndex === -1 || bufferedIndex > lastBufferedIndex) &&
+            holeEnd - holeStart < 1 && // `maxBufferHole` may be too small and setting it to 0 should not disable this feature
+            currentTime - holeStart < 2
+          ) {
+            const error = new Error(
+              `nudging playhead to flush pipeline after video hole. currentTime: ${currentTime} hole: ${holeStart} -> ${holeEnd} buffered index: ${bufferedIndex}`,
+            );
+            this.warn(error.message);
+            // Magic number to flush the pipeline without interuption to audio playback:
+            this.media.currentTime += 0.000001;
+            const frag =
+              this.fragmentTracker.getPartialFragment(currentTime) || undefined;
+            const bufferInfo = BufferHelper.bufferInfo(
+              this.media,
+              currentTime,
+              0,
+            );
+            this.hls.trigger(Events.ERROR, {
+              type: ErrorTypes.MEDIA_ERROR,
+              details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+              fatal: false,
+              error,
+              reason: error.message,
+              frag,
+              buffer: bufferInfo.len,
+              bufferInfo,
+            });
+          }
         }
       }
     }
