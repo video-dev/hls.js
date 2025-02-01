@@ -450,6 +450,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected hls: Hls;
     // (undocumented)
+    get inFlightFrag(): InFlightData;
+    // (undocumented)
     protected initPTS: RationalTimestamp[];
     // (undocumented)
     protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean;
@@ -539,19 +541,17 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     get startPositionValue(): number;
     // (undocumented)
     protected startTimeOffset: number | null;
-    set state(nextState: string);
+    set state(nextState: (typeof State)[keyof typeof State]);
     // (undocumented)
-    get state(): string;
+    get state(): (typeof State)[keyof typeof State];
     // (undocumented)
-    protected _state: string;
+    protected _state: (typeof State)[keyof typeof State];
     // (undocumented)
     stopLoad(): void;
     // (undocumented)
     protected _streamEnded(bufferInfo: BufferInfo, levelDetails: LevelDetails): boolean;
     // (undocumented)
     protected transmuxer: TransmuxerInterface | null;
-    // (undocumented)
-    protected triggerEnded(): void;
     // (undocumented)
     protected unregisterListeners(): void;
     // (undocumented)
@@ -650,47 +650,15 @@ export interface BufferCodecsData {
 export class BufferController extends Logger implements ComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker);
     // (undocumented)
-    protected appendChangeType(type: SourceBufferName, container: string, codec: string): void;
-    // (undocumented)
     get bufferedToEnd(): boolean;
-    // (undocumented)
-    protected checkPendingTracks(): void;
     // (undocumented)
     destroy(): void;
     // (undocumented)
     hasSourceTypes(): boolean;
     // (undocumented)
-    media: HTMLMediaElement | null;
-    // (undocumented)
-    mediaSource: MediaSource | null;
-    // (undocumented)
-    protected onBufferAppending(event: Events.BUFFER_APPENDING, eventData: BufferAppendingData): void;
-    // (undocumented)
-    protected onBufferCodecs(event: Events.BUFFER_CODECS, data: BufferCodecsData): void;
-    // (undocumented)
-    protected onBufferEos(event: Events.BUFFER_EOS, data: BufferEOSData): void;
-    // (undocumented)
-    protected onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData): void;
-    // (undocumented)
-    protected onBufferReset(): void;
-    // (undocumented)
-    protected onFragParsed(event: Events.FRAG_PARSED, data: FragParsedData): void;
-    // (undocumented)
-    protected onLevelUpdated(event: Events.LEVEL_UPDATED, { details }: LevelUpdatedData): void;
-    // (undocumented)
-    protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void;
-    // (undocumented)
-    protected onMediaAttaching(event: Events.MEDIA_ATTACHING, data: MediaAttachingData): void;
-    // (undocumented)
-    protected onMediaDetaching(event: Events.MEDIA_DETACHING, data: MediaDetachingData): void;
-    // (undocumented)
-    protected registerListeners(): void;
-    // (undocumented)
     get sourceBufferTracks(): BaseTrackSet;
     // (undocumented)
     transferMedia(): AttachMediaSourceData | null;
-    // (undocumented)
-    protected unregisterListeners(): void;
 }
 
 // Warning: (ae-missing-release-tag) "BufferControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -764,6 +732,7 @@ export type BufferInfo = {
     end: number;
     nextStart?: number;
     buffered?: BufferTimeRange[];
+    bufferedIndex: number;
 };
 
 // Warning: (ae-missing-release-tag) "BufferTimeRange" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1958,6 +1927,17 @@ export interface FragParsingUserdataData {
     samples: UserdataSample[];
 }
 
+// Warning: (ae-missing-release-tag) "GapControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type GapControllerConfig = {
+    detectStallWithCurrentTimeMs: number;
+    highBufferWatchdogPeriod: number;
+    nudgeOffset: number;
+    nudgeMaxRetry: number;
+    nudgeOnVideoHole: boolean;
+};
+
 // Warning: (ae-missing-release-tag) "HdcpLevel" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2020,6 +2000,8 @@ class Hls implements HlsEventEmitter {
     getMediaDecodingInfo(level: Level, audioTracks?: MediaPlaylist[]): Promise<MediaDecodingInfo>;
     static getMediaSource(): typeof MediaSource | undefined;
     get hasEnoughToStart(): boolean;
+    // (undocumented)
+    get inFlightFragments(): InFlightFragments;
     get interstitialsManager(): InterstitialsManager | null;
     static isMSESupported(): boolean;
     static isSupported(): boolean;
@@ -2219,8 +2201,7 @@ export type HlsConfig = {
     progressive: boolean;
     lowLatencyMode: boolean;
     primarySessionId?: string;
-    detectStallWithCurrentTimeMs: number;
-} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & FragmentLoaderConfig & PlaylistLoaderConfig;
+} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & FragmentLoaderConfig & PlaylistLoaderConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2492,6 +2473,23 @@ export interface ILogger {
     // (undocumented)
     warn: ILogFunction;
 }
+
+// Warning: (ae-missing-release-tag) "InFlightData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type InFlightData = {
+    frag: Fragment | null;
+    state: (typeof State)[keyof typeof State];
+};
+
+// Warning: (ae-missing-release-tag) "InFlightFragments" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type InFlightFragments = {
+    [PlaylistLevelType.MAIN]: InFlightData;
+    [PlaylistLevelType.AUDIO]?: InFlightData;
+    [PlaylistLevelType.SUBTITLE]?: InFlightData;
+};
 
 // Warning: (ae-missing-release-tag) "InitPTSFoundData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -4339,6 +4337,24 @@ export interface SourceBufferTrack extends BaseTrack {
 // @public (undocumented)
 export type SourceBufferTrackSet = Partial<Record<SourceBufferName, SourceBufferTrack>>;
 
+// Warning: (ae-missing-release-tag) "State" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export const State: {
+    STOPPED: string;
+    IDLE: string;
+    KEY_LOADING: string;
+    FRAG_LOADING: string;
+    FRAG_LOADING_WAITING_RETRY: string;
+    WAITING_TRACK: string;
+    PARSING: string;
+    PARSED: string;
+    ENDED: string;
+    ERROR: string;
+    WAITING_INIT_PTS: string;
+    WAITING_LEVEL: string;
+};
+
 // Warning: (ae-missing-release-tag) "SteeringManifest" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -4416,8 +4432,6 @@ export class StreamController extends BaseStreamController implements NetworkCom
     // (undocumented)
     swapAudioCodec(): void;
     // (undocumented)
-    protected triggerEnded(): void;
-    // (undocumented)
     protected unregisterListeners(): void;
 }
 
@@ -4432,9 +4446,6 @@ export type StreamControllerConfig = {
     maxBufferLength: number;
     maxBufferSize: number;
     maxBufferHole: number;
-    highBufferWatchdogPeriod: number;
-    nudgeOffset: number;
-    nudgeMaxRetry: number;
     maxFragLookUpTolerance: number;
     maxMaxBufferLength: number;
     startFragPrefetch: boolean;

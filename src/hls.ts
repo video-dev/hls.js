@@ -3,6 +3,7 @@ import { EventEmitter } from 'eventemitter3';
 import { buildAbsoluteURL } from 'url-toolkit';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
 import { FragmentTracker } from './controller/fragment-tracker';
+import GapController from './controller/gap-controller';
 import ID3TrackController from './controller/id3-track-controller';
 import LatencyController from './controller/latency-controller';
 import LevelController from './controller/level-controller';
@@ -14,6 +15,7 @@ import KeyLoader from './loader/key-loader';
 import PlaylistLoader from './loader/playlist-loader';
 import { MetadataSchema } from './types/demuxer';
 import { type HdcpLevel, isHdcpLevel, type Level } from './types/level';
+import { PlaylistLevelType } from './types/loader';
 import { enableLogs, type ILogger } from './utils/logger';
 import { getMediaDecodingInfoPromise } from './utils/mediacapabilities-helper';
 import { getMediaSource } from './utils/mediasource-helper';
@@ -24,6 +26,7 @@ import type AbrController from './controller/abr-controller';
 import type AudioStreamController from './controller/audio-stream-controller';
 import type AudioTrackController from './controller/audio-track-controller';
 import type BasePlaylistController from './controller/base-playlist-controller';
+import type { InFlightData, State } from './controller/base-stream-controller';
 import type BaseStreamController from './controller/base-stream-controller';
 import type BufferController from './controller/buffer-controller';
 import type CapLevelController from './controller/cap-level-controller';
@@ -34,6 +37,7 @@ import type ErrorController from './controller/error-controller';
 import type FPSController from './controller/fps-controller';
 import type InterstitialsController from './controller/interstitials-controller';
 import type { InterstitialsManager } from './controller/interstitials-controller';
+import type { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import type SubtitleTrackController from './controller/subtitle-track-controller';
 import type Decrypter from './crypt/decrypter';
 import type TransmuxerInterface from './demux/transmuxer-interface';
@@ -91,9 +95,12 @@ export default class Hls implements HlsEventEmitter {
   private latencyController: LatencyController;
   private levelController: LevelController;
   private streamController: StreamController;
+  private audioStreamController?: AudioStreamController;
+  private subtititleStreamController?: SubtitleStreamController;
   private audioTrackController?: AudioTrackController;
   private subtitleTrackController?: SubtitleTrackController;
   private interstitialsController?: InterstitialsController;
+  private gapController: GapController;
   private emeController?: EMEController;
   private cmcdController?: CMCDController;
   private _media: HTMLMediaElement | null = null;
@@ -229,6 +236,11 @@ export default class Hls implements HlsEventEmitter {
       keyLoader,
     ));
 
+    const gapController = (this.gapController = new GapController(
+      this,
+      fragmentTracker,
+    ));
+
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
     // fpsController uses streamController to switch when frames are being dropped
@@ -250,6 +262,7 @@ export default class Hls implements HlsEventEmitter {
     const coreComponents: ComponentAPI[] = [
       abrController,
       bufferController,
+      gapController,
       capLevelController,
       fpsController,
       id3TrackController,
@@ -263,7 +276,11 @@ export default class Hls implements HlsEventEmitter {
     const AudioStreamControllerClass = config.audioStreamController;
     if (AudioStreamControllerClass) {
       networkControllers.push(
-        new AudioStreamControllerClass(this, fragmentTracker, keyLoader),
+        (this.audioStreamController = new AudioStreamControllerClass(
+          this,
+          fragmentTracker,
+          keyLoader,
+        )),
       );
     }
     // Instantiate subtitleTrackController before SubtitleStreamController to receive level events first
@@ -274,7 +291,11 @@ export default class Hls implements HlsEventEmitter {
     const SubtitleStreamControllerClass = config.subtitleStreamController;
     if (SubtitleStreamControllerClass) {
       networkControllers.push(
-        new SubtitleStreamControllerClass(this, fragmentTracker, keyLoader),
+        (this.subtititleStreamController = new SubtitleStreamControllerClass(
+          this,
+          fragmentTracker,
+          keyLoader,
+        )),
       );
     }
     this.createController(config.timelineController, coreComponents);
@@ -602,6 +623,21 @@ export default class Hls implements HlsEventEmitter {
         }
       });
     }
+  }
+
+  get inFlightFragments(): InFlightFragments {
+    const inFlightData = {
+      [PlaylistLevelType.MAIN]: this.streamController.inFlightFrag,
+    };
+    if (this.audioStreamController) {
+      inFlightData[PlaylistLevelType.AUDIO] =
+        this.audioStreamController.inFlightFrag;
+    }
+    if (this.subtititleStreamController) {
+      inFlightData[PlaylistLevelType.SUBTITLE] =
+        this.subtititleStreamController.inFlightFrag;
+    }
+    return inFlightData;
   }
 
   /**
@@ -1181,6 +1217,11 @@ export default class Hls implements HlsEventEmitter {
   }
 }
 
+export type InFlightFragments = {
+  [PlaylistLevelType.MAIN]: InFlightData;
+  [PlaylistLevelType.AUDIO]?: InFlightData;
+  [PlaylistLevelType.SUBTITLE]?: InFlightData;
+};
 export type {
   AudioSelectionOption,
   SubtitleSelectionOption,
@@ -1211,6 +1252,7 @@ export type {
   FPSController,
   InterstitialsController,
   StreamController,
+  SubtitleStreamController,
   SubtitleTrackController,
   EwmaBandWidthEstimator,
   InterstitialsManager,
@@ -1219,6 +1261,8 @@ export type {
   KeyLoader,
   TaskLoop,
   TransmuxerInterface,
+  InFlightData,
+  State,
 };
 export type {
   ABRControllerConfig,
@@ -1232,6 +1276,7 @@ export type {
   FPSControllerConfig,
   FragmentLoaderConfig,
   FragmentLoaderConstructor,
+  GapControllerConfig,
   HlsLoadPolicies,
   LevelControllerConfig,
   LoaderConfig,
@@ -1270,7 +1315,6 @@ export type {
   InterstitialScheduleItem,
   InterstitialSchedulePrimaryItem,
 } from './controller/interstitials-schedule';
-export type { SubtitleStreamController } from './controller/subtitle-stream-controller';
 export type { TimelineController } from './controller/timeline-controller';
 export type { DecrypterAesMode } from './crypt/decrypter-aes-mode';
 export type { DateRange, DateRangeCue } from './loader/date-range';

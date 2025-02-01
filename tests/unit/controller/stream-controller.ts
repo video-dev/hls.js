@@ -453,7 +453,7 @@ describe('StreamController', function () {
     });
   });
 
-  describe('checkBuffer', function () {
+  describe('seekToStartPos', function () {
     const sandbox = sinon.createSandbox();
     const bufStart = 5;
 
@@ -480,11 +480,6 @@ describe('StreamController', function () {
     });
     afterEach(function () {
       sandbox.restore();
-    });
-
-    it('should not throw when media is undefined', function () {
-      streamController['media'] = null;
-      streamController['checkBuffer']();
     });
 
     it('should seek to start pos when data is first loaded', function () {
@@ -514,21 +509,6 @@ describe('StreamController', function () {
         id: 'main',
       });
       expect(seekStub).to.have.been.calledOnce;
-    });
-
-    it('should not seek to start pos when metadata has been loaded', function () {
-      // @ts-ignore
-      const seekStub = sandbox.stub(streamController, 'seekToStartPos');
-      streamController['checkBuffer']();
-      expect(seekStub).to.have.not.been.called;
-    });
-
-    it('should not seek to start pos when nothing has been buffered', function () {
-      // @ts-ignore
-      const seekStub = sandbox.stub(streamController, 'seekToStartPos');
-      (streamController['media']!.buffered as any).length = 0;
-      streamController['checkBuffer']();
-      expect(seekStub).to.have.not.been.called;
     });
 
     describe('seekToStartPos', function () {

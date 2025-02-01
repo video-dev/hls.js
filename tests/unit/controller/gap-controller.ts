@@ -13,7 +13,9 @@ import {
   BufferHelper,
   type BufferInfo,
 } from '../../../src/utils/buffer-helper';
+import { MockMediaElement, MockMediaSource } from '../utils/mock-media';
 import type { HlsConfig } from '../../../src/config';
+import type StreamController from '../../../src/controller/stream-controller';
 import type { Fragment } from '../../../src/loader/fragment';
 
 chai.use(sinonChai);
@@ -35,28 +37,40 @@ type GapControllerTestable = Omit<GapController, ''> & {
 
 describe('GapController', function () {
   let hls: Hls;
+  let streamController: StreamController;
   let config: HlsConfig;
   let gapController: GapControllerTestable;
-  let media;
+  let media: HTMLMediaElement;
+  let mediaSource: MediaSource;
   let triggerSpy;
   const sandbox = sinon.createSandbox();
 
   beforeEach(function () {
-    hls = new Hls({});
+    hls = new Hls({ debug: true });
     config = hls.config;
     const hlsTestable: any = hls;
-    hlsTestable.networkControllers.forEach((component) => component.destroy());
-    hlsTestable.networkControllers.length = 0;
+    for (let i = hlsTestable.networkControllers.length; i--; ) {
+      const component = hlsTestable.networkControllers[i];
+      if (component !== (hls as any).streamController) {
+        component.destroy();
+        hlsTestable.networkControllers.splice(i, 1);
+      }
+    }
     hlsTestable.coreComponents.forEach((component) => component.destroy());
     hlsTestable.coreComponents.length = 0;
-    media = {
-      currentTime: 0,
-    };
+    media = new MockMediaElement() as unknown as HTMLMediaElement;
+    mediaSource = new MockMediaSource() as unknown as MediaSource;
+    streamController = (hls as any).streamController;
+    streamController.state = State.IDLE;
     gapController = new GapController(
-      media,
-      new FragmentTracker(hls as Hls),
       hls,
+      new FragmentTracker(hls as Hls),
     ) as unknown as GapControllerTestable;
+    hls.trigger(Events.MEDIA_ATTACHING, { media });
+    hls.trigger(Events.MEDIA_ATTACHED, {
+      media,
+      mediaSource,
+    });
     triggerSpy = sinon.spy(hls, 'trigger');
   });
 
@@ -99,6 +113,7 @@ describe('GapController', function () {
       config.nudgeMaxRetry = 0;
       gapController._tryNudgeBuffer(bufferInfo);
       expect(media.currentTime).to.equal(0);
+      expect(triggerSpy).to.have.been.called;
       expect(triggerSpy).to.have.been.calledWith(Events.ERROR, {
         type: ErrorTypes.MEDIA_ERROR,
         details: ErrorDetails.BUFFER_STALLED_ERROR,
@@ -239,13 +254,13 @@ describe('GapController', function () {
       // is setup in a "playable" state
       // note that the initial current time
       // is within the range of buffered data info
-      mockMedia = {
+      mockMedia = new MockMediaElement();
+      Object.assign(mockMedia, {
         currentTime: 0,
         paused: false,
         seeking: false,
         buffered: mockTimeRanges,
-        addEventListener() {},
-      };
+      });
 
       gapController.media = mockMedia;
       reportStallSpy = sandbox.spy(gapController, '_reportStall');
@@ -263,7 +278,7 @@ describe('GapController', function () {
         mockMedia.currentTime += incrementSec;
         gapController.waiting = 0;
       }
-      gapController.poll(lastCurrentTime, null, undefined, State.IDLE);
+      gapController.poll(lastCurrentTime, mockMedia.currentTime);
     }
 
     function setStalling() {
@@ -287,13 +302,13 @@ describe('GapController', function () {
     it('should try to fix a stall if expected to be playing', function () {
       const fixStallStub = sandbox.stub(gapController, '_tryFixBufferStall');
       setStalling();
-      gapController.poll(lastCurrentTime, null, undefined, State.IDLE);
+      gapController.poll(lastCurrentTime, mockMedia.currentTime);
 
       // The first poll call made while stalling just sets stall flags
       expect(gapController.stalled).to.be.a('number');
       expect(gapController.stallReported).to.be.false;
 
-      gapController.poll(lastCurrentTime, null, undefined, State.IDLE);
+      gapController.poll(lastCurrentTime, mockMedia.currentTime);
       expect(fixStallStub).to.have.been.calledOnce;
     });
 
@@ -303,7 +318,7 @@ describe('GapController', function () {
       gapController.nudgeRetry = 1;
       gapController.stalled = 4200;
       const fixStallStub = sandbox.stub(gapController, '_tryFixBufferStall');
-      gapController.poll(lastCurrentTime, null, undefined, State.IDLE);
+      gapController.poll(lastCurrentTime, mockMedia.currentTime);
 
       expect(gapController.stalled).to.not.exist;
       expect(gapController.nudgeRetry).to.equal(0);
@@ -345,7 +360,7 @@ describe('GapController', function () {
     it('should not detect stalls when loading an earlier fragment while seeking', function () {
       wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
       mockMedia.currentTime += 0.1;
-      gapController.poll(0, null, undefined, State.IDLE);
+      gapController.poll(0, mockMedia.currentTime);
       expect(gapController.stalled).to.equal(null, 'buffered start');
 
       wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
@@ -353,23 +368,15 @@ describe('GapController', function () {
       mockMedia.seeking = true;
       mockTimeRangesData.length = 1;
       mockTimeRangesData[0] = [5.5, 10];
-      gapController.poll(
-        mockMedia.currentTime - 5,
-        null,
-        undefined,
-        State.IDLE,
-      );
+      gapController.poll(mockMedia.currentTime - 5, mockMedia.currentTime);
       expect(gapController.stalled).to.equal(null, 'new seek position');
 
       wallClock.tick(2 * STALL_HANDLING_RETRY_PERIOD_MS);
-      gapController.poll(
-        mockMedia.currentTime,
-        {
-          start: 5,
-        } as unknown as Fragment,
-        undefined,
-        State.IDLE,
-      );
+      streamController.state = State.FRAG_LOADING;
+      (streamController as any).fragCurrent = {
+        start: 5,
+      } as unknown as Fragment;
+      gapController.poll(mockMedia.currentTime, mockMedia.currentTime);
       expect(gapController.stalled).to.equal(
         null,
         'seeking while loading fragment',
@@ -380,10 +387,10 @@ describe('GapController', function () {
       setStalling();
       wallClock.tick(250);
       gapController.stalled = 1;
-      gapController.poll(lastCurrentTime, null, undefined, State.IDLE);
+      gapController.poll(lastCurrentTime, mockMedia.currentTime);
       expect(reportStallSpy).to.not.have.been.called;
       wallClock.tick(config.detectStallWithCurrentTimeMs + 1);
-      gapController.poll(lastCurrentTime, null, undefined, State.IDLE);
+      gapController.poll(lastCurrentTime, mockMedia.currentTime);
       expect(reportStallSpy).to.have.been.calledOnce;
     });
 
@@ -391,11 +398,11 @@ describe('GapController', function () {
       setStalling();
       wallClock.tick(250);
       gapController.stalled = 1;
-      gapController.poll(lastCurrentTime, null, undefined, State.IDLE);
+      gapController.poll(lastCurrentTime, mockMedia.currentTime);
       expect(reportStallSpy).to.not.have.been.called;
       gapController.waiting = 250;
       wallClock.tick(1);
-      gapController.poll(lastCurrentTime, null, undefined, State.IDLE);
+      gapController.poll(lastCurrentTime, mockMedia.currentTime);
       expect(reportStallSpy).to.have.been.calledOnce;
     });
 
@@ -444,8 +451,8 @@ describe('GapController', function () {
     it('should skip any initial gap when not having played yet on second poll', function () {
       mockMedia.currentTime = 0;
       mockTimeRangesData = [[0.9, 10]];
-      gapController.poll(0, null, undefined, State.IDLE);
-      gapController.poll(0, null, undefined, State.IDLE);
+      gapController.poll(0, mockMedia.currentTime);
+      gapController.poll(0, mockMedia.currentTime);
       expect(mockMedia.currentTime).to.equal(0.9 + SKIP_BUFFER_RANGE_START);
     });
   });
