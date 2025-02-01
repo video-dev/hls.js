@@ -12,7 +12,7 @@ import type { InFlightData } from './base-stream-controller';
 import type { InFlightFragments } from '../hls';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
-import type { Fragment } from '../loader/fragment';
+import type { Fragment, MediaFragment } from '../loader/fragment';
 import type { SourceBufferName } from '../types/buffer';
 import type {
   BufferAppendedData,
@@ -503,7 +503,7 @@ export default class GapController extends TaskLoop {
    * @param partial - The partial fragment found at the current time (where playback is stalling).
    * @private
    */
-  private _trySkipBufferHole(partial: Fragment | null): number {
+  private _trySkipBufferHole(partial: MediaFragment | null): number {
     const { fragmentTracker, media } = this;
     const config = this.hls?.config;
     if (!media || !fragmentTracker || !config) {
@@ -515,7 +515,7 @@ export default class GapController extends TaskLoop {
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
     const startTime =
       currentTime < bufferInfo.start ? bufferInfo.start : bufferInfo.nextStart;
-    if (startTime) {
+    if (startTime && this.hls) {
       const bufferStarved = bufferInfo.len <= config.maxBufferHole;
       const waiting =
         bufferInfo.len > 0 && bufferInfo.len < 1 && media.readyState < 3;
@@ -541,6 +541,19 @@ export default class GapController extends TaskLoop {
                 PlaylistLevelType.MAIN,
               );
             if (startProvisioned) {
+              // Do not seek when switching variants
+              if (!this.hls.levels[this.hls.loadLevel]?.details) {
+                return 0;
+              }
+              // Do not seek when loading frags
+              const inFlightDependency = getInFlightDependency(
+                this.hls.inFlightFragments,
+                startTime,
+              );
+              if (inFlightDependency) {
+                return 0;
+              }
+              // Do not seek if we can't walk tracked fragments to end of gap
               let moreToLoad = false;
               let pos = startProvisioned.end;
               while (pos < startTime) {
@@ -567,7 +580,7 @@ export default class GapController extends TaskLoop {
         );
         this.moved = true;
         media.currentTime = targetTime;
-        if (!partial?.gap && this.hls) {
+        if (!partial?.gap) {
           const error = new Error(
             `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`,
           );

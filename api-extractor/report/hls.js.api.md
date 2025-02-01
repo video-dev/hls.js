@@ -1866,7 +1866,7 @@ export class FragmentTracker implements ComponentAPI {
     getBufferedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | null;
     // (undocumented)
     getFragAtPos(position: number, levelType: PlaylistLevelType, buffered?: boolean): MediaFragment | null;
-    getPartialFragment(time: number): Fragment | null;
+    getPartialFragment(time: number): MediaFragment | null;
     // (undocumented)
     getState(fragment: Fragment): FragmentState;
     // (undocumented)
