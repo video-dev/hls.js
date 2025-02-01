@@ -22,6 +22,10 @@ import {
   TimelineOccupancy,
 } from '../loader/interstitial-event';
 import { BufferHelper } from '../utils/buffer-helper';
+import {
+  addEventListener,
+  removeEventListener,
+} from '../utils/event-listener-helper';
 import { hash } from '../utils/hash';
 import { Logger } from '../utils/logger';
 import { isCompatibleTrackChange } from '../utils/mediasource-helper';
@@ -226,17 +230,17 @@ export default class InterstitialsController
   }
 
   private onDestroying() {
-    const media = this.primaryMedia;
+    const media = this.primaryMedia || this.media;
     if (media) {
       this.removeMediaListeners(media);
     }
   }
 
   private removeMediaListeners(media: HTMLMediaElement) {
-    media.removeEventListener('play', this.onPlay);
-    media.removeEventListener('pause', this.onPause);
-    media.removeEventListener('seeking', this.onSeeking);
-    media.removeEventListener('timeupdate', this.onTimeupdate);
+    removeEventListener(media, 'play', this.onPlay);
+    removeEventListener(media, 'pause', this.onPause);
+    removeEventListener(media, 'seeking', this.onSeeking);
+    removeEventListener(media, 'timeupdate', this.onTimeupdate);
   }
 
   private onMediaAttaching(
@@ -244,11 +248,10 @@ export default class InterstitialsController
     data: MediaAttachingData,
   ) {
     const media = (this.media = data.media);
-    this.removeMediaListeners(media);
-    media.addEventListener('seeking', this.onSeeking);
-    media.addEventListener('timeupdate', this.onTimeupdate);
-    media.addEventListener('play', this.onPlay);
-    media.addEventListener('pause', this.onPause);
+    addEventListener(media, 'seeking', this.onSeeking);
+    addEventListener(media, 'timeupdate', this.onTimeupdate);
+    addEventListener(media, 'play', this.onPlay);
+    addEventListener(media, 'pause', this.onPause);
   }
 
   private onMediaAttached(

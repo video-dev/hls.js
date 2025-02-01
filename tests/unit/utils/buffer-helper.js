@@ -79,13 +79,14 @@ describe('BufferHelper', function () {
         start: 0,
         end: 0.5,
         nextStart: 1,
+        bufferedIndex: 0,
         buffered: [
           { start: 0, end: 0.5 },
           { start: 1, end: 2 },
         ],
       });
     });
-    it('should return empty buffer info if media does not exist', function () {
+    it('should return empty buffer info when media.buffered throws', function () {
       const invalidMedia = {
         get buffered() {
           throw new Error('InvalidStateError');
@@ -98,6 +99,7 @@ describe('BufferHelper', function () {
         len: 0,
         start: 0,
         end: 0,
+        bufferedIndex: -1,
       });
     });
     it('should return empty buffer info if media does not exist', function () {
@@ -106,6 +108,7 @@ describe('BufferHelper', function () {
         len: 0,
         start: 0,
         end: 0,
+        bufferedIndex: -1,
       });
     });
   });
@@ -132,6 +135,7 @@ describe('BufferHelper', function () {
         start: 0,
         end: 0.5,
         nextStart: 1,
+        bufferedIndex: 0,
         buffered,
       });
       expect(
@@ -141,6 +145,7 @@ describe('BufferHelper', function () {
         start: 0.5,
         end: 0.5,
         nextStart: 1,
+        bufferedIndex: 0,
         buffered,
       });
       expect(
@@ -150,6 +155,7 @@ describe('BufferHelper', function () {
         start: 1,
         end: 2,
         nextStart: undefined,
+        bufferedIndex: 1,
         buffered,
       });
       expect(
@@ -159,6 +165,7 @@ describe('BufferHelper', function () {
         start: 1,
         end: 2,
         nextStart: undefined,
+        bufferedIndex: 1,
         buffered,
       });
     });
@@ -183,6 +190,7 @@ describe('BufferHelper', function () {
         start: 0,
         end: 0.5,
         nextStart: 1,
+        bufferedIndex: 0,
         buffered,
       });
       // M: maxHoleDuration: 0.5
@@ -195,6 +203,7 @@ describe('BufferHelper', function () {
         start: 1,
         end: 2,
         nextStart: undefined,
+        bufferedIndex: 0, // input pos (-0.5 intersects first time range which is ignored by `maxHoleDuration`)
         buffered,
       });
       expect(
@@ -204,15 +213,18 @@ describe('BufferHelper', function () {
         start: 1,
         end: 2,
         nextStart: undefined,
+        bufferedIndex: 1,
         buffered,
       });
       expect(
         BufferHelper.bufferedInfo(buffered, 2, maxHoleDuration),
+        JSON.stringify(BufferHelper.bufferedInfo(buffered, 2, maxHoleDuration)),
       ).to.deep.equal({
         len: 0,
         start: 2,
         end: 2,
         nextStart: undefined,
+        bufferedIndex: 1,
         buffered,
       });
     });
@@ -237,6 +249,7 @@ describe('BufferHelper', function () {
         start: 0,
         end: 0.5,
         nextStart: 1,
+        bufferedIndex: 0,
         buffered,
       });
     });
@@ -261,6 +274,7 @@ describe('BufferHelper', function () {
         start: 0,
         end: 2,
         nextStart: undefined,
+        bufferedIndex: 0,
         buffered,
       });
     });
@@ -286,6 +300,7 @@ describe('BufferHelper', function () {
         start: 0,
         end: 1,
         nextStart: undefined,
+        bufferedIndex: 1,
         buffered,
       });
     });
@@ -308,6 +323,7 @@ describe('BufferHelper', function () {
         start: 5,
         end: 5,
         nextStart: undefined,
+        bufferedIndex: -1,
         buffered,
       });
     });

@@ -214,13 +214,18 @@ export type StreamControllerConfig = {
   maxBufferLength: number;
   maxBufferSize: number;
   maxBufferHole: number;
-  highBufferWatchdogPeriod: number;
-  nudgeOffset: number;
-  nudgeMaxRetry: number;
   maxFragLookUpTolerance: number;
   maxMaxBufferLength: number;
   startFragPrefetch: boolean;
   testBandwidth: boolean;
+};
+
+export type GapControllerConfig = {
+  detectStallWithCurrentTimeMs: number;
+  highBufferWatchdogPeriod: number;
+  nudgeOffset: number;
+  nudgeMaxRetry: number;
+  nudgeOnVideoHole: boolean;
 };
 
 export type SelectionPreferences = {
@@ -319,12 +324,12 @@ export type HlsConfig = {
   progressive: boolean;
   lowLatencyMode: boolean;
   primarySessionId?: string;
-  detectStallWithCurrentTimeMs: number;
 } & ABRControllerConfig &
   BufferControllerConfig &
   CapLevelControllerConfig &
   EMEControllerConfig &
   FPSControllerConfig &
+  GapControllerConfig &
   LevelControllerConfig &
   MP4RemuxerConfig &
   StreamControllerConfig &
@@ -365,11 +370,13 @@ export const hlsDefaultConfig: HlsConfig = {
   backBufferLength: Infinity, // used by buffer-controller
   frontBufferFlushThreshold: Infinity,
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
-  maxBufferHole: 0.1, // used by stream-controller
-  highBufferWatchdogPeriod: 2, // used by stream-controller
-  nudgeOffset: 0.1, // used by stream-controller
-  nudgeMaxRetry: 3, // used by stream-controller
   maxFragLookUpTolerance: 0.25, // used by stream-controller
+  maxBufferHole: 0.1, // used by stream-controller and gap-controller
+  detectStallWithCurrentTimeMs: 1250, // used by gap-controller
+  highBufferWatchdogPeriod: 2, // used by gap-controller
+  nudgeOffset: 0.1, // used by gap-controller
+  nudgeMaxRetry: 3, // used by gap-controller
+  nudgeOnVideoHole: true, // used by gap-controller
   liveSyncDurationCount: 3, // used by latency-controller
   liveSyncOnStallIncrease: 1, // used by latency-controller
   liveMaxLatencyDurationCount: Infinity, // used by latency-controller
@@ -428,7 +435,6 @@ export const hlsDefaultConfig: HlsConfig = {
   progressive: false,
   lowLatencyMode: true,
   cmcd: undefined,
-  detectStallWithCurrentTimeMs: 1250,
   enableDateRangeMetadataCues: true,
   enableEmsgMetadataCues: true,
   enableEmsgKLVMetadata: false,

@@ -1,6 +1,6 @@
 # HLS.js v1 API
 
-See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete list of interfaces available in the hls.js package.
+See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete list of interfaces available in the "hls.js" package.
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -35,9 +35,11 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`maxStarvationDelay`](#maxstarvationdelay)
   - [`maxLoadingDelay`](#maxloadingdelay)
   - [`lowBufferWatchdogPeriod` (deprecated)](#lowbufferwatchdogperiod-deprecated)
+  - [`detectStallWithCurrentTimeMs`](#detectstallwithcurrenttimems)
   - [`highBufferWatchdogPeriod`](#highbufferwatchdogperiod)
   - [`nudgeOffset`](#nudgeoffset)
   - [`nudgeMaxRetry`](#nudgemaxretry)
+  - [`nudgeOnVideoHole`](#nudgeonvideohole)
   - [`maxFragLookUpTolerance`](#maxfraglookuptolerance)
   - [`maxMaxBufferLength`](#maxmaxbufferlength)
   - [`liveSyncDurationCount`](#livesyncdurationcount)
@@ -160,6 +162,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.resumeBuffering()`](#hlsresumebuffering)
   - [`hls.bufferingEnabled`](#hlsbufferingenabled)
   - [`hls.bufferedToEnd`](#hlsbufferedtoend)
+  - [`hls.inFlightFragments`](#hlsinflightfragments)
   - [`hls.url`](#hlsurl)
 - [Audio Tracks Control API](#audio-tracks-control-api)
   - [`hls.setAudioOption(audioOption)`](#hlssetaudiooptionaudiooption)
@@ -319,7 +322,7 @@ Each error is categorized by an error type, error details, and whether or not is
 - Error Details:
   - refer to [Errors details](#Errors)
 - Error is `fatal`:
-  - `false` if error is not fatal, hls.js will try to recover.
+  - `false` if error is not fatal, HLS.js will try to recover.
   - `true` if error is fatal, all attempts to recover have been performed. See [LoadPolicies](#fragloadpolicy--keyloadpolicy--certloadpolicy--playlistloadpolicy--manifestloadpolicy--steeringmanifestloadpolicy--interstitialAssetListLoadPolicy) details on how to configure retries.
 
 Full details are described [below](#Errors)
@@ -344,11 +347,11 @@ hls.on(Hls.Events.ERROR, function (event, data) {
 
 #### Fatal Error Recovery
 
-hls.js provides means to 'try to' recover fatal media errors, through these methods:
+HLS.js provides several methods for attempting playback recover in the event of a decoding error in the HTMLMediaElement:
 
 ##### `hls.recoverMediaError()`
 
-Should be invoked to recover media error.
+Resets the MediaSource and restarts streaming from the last known playhead position.
 
 ###### Error recovery sample code
 
@@ -378,13 +381,9 @@ hls.on(Hls.Events.ERROR, function (event, data) {
 
 ##### `hls.swapAudioCodec()`
 
-If media error are still raised after calling `hls.recoverMediaError()`,
-calling this method, could be useful to workaround audio codec mismatch.
-the workflow should be:
+`hls.swapAudioCodec()` can be used in the place of `hls.recoverMediaError()` when dealing with user agents that have issues handling HE-AAC and AAC audio (mp4a.40.5 and mp4a.40.2) codecs and media.
 
-on First Media Error : call `hls.recoverMediaError()`
-
-if another Media Error is raised 'quickly' after this first Media Error : first call `hls.swapAudioCodec()`, then call `hls.recoverMediaError()`.
+This should no longer be required and is not recommended. If you find a case where it is, please [file a bug](https://github.com/video-dev/hls.js/issues/new?template=bug.yaml) with steps to reproduce.
 
 ### Final step: destroying, switching between streams
 
@@ -392,7 +391,7 @@ if another Media Error is raised 'quickly' after this first Media Error : first 
 
 ## Fine Tuning
 
-Configuration parameters could be provided to hls.js upon instantiation of `Hls` object.
+Configuration parameters could be provided to HLS.js upon instantiation of `Hls` object.
 
 ```js
 var config = {
@@ -559,13 +558,11 @@ A logger object could also be provided for custom logging: `config.debug = custo
 
 (default: `undefined`)
 
-If audio codec is not signaled in variant manifest, or if only a stream manifest is provided, hls.js tries to guess audio codec by parsing audio sampling rate in ADTS header.
-If sampling rate is less or equal than 22050 Hz, then hls.js assumes it is HE-AAC, otherwise it assumes it is AAC-LC. This could result in bad guess, leading to audio decode error, ending up in media error.
-It is possible to hint default audiocodec to hls.js by configuring this value as below:
+Use this to override the multi-variant playlist audio codec, or provide one if loading only a media playlist.
 
-- `mp4a.40.2` (AAC-LC) or
-- `mp4a.40.5` (HE-AAC) or
-- `undefined` (guess based on sampling rate)
+HLS.js parses track codecs from mp4 stsd or ADTS object type in the case of AAC in MPEG-TS. If there is an error using the value it finds in the segments, it will fallback to codec found in the multi-variant playlist or `defaultAudioCodec`.
+
+This should no longer be required and is not recommended. If you find a case where it is, please [file a bug](https://github.com/video-dev/hls.js/issues/new?template=bug.yaml) with steps to reproduce.
 
 ### `initialLiveManifestSize`
 
@@ -578,13 +575,13 @@ number of segments needed to start a playback of Live stream. Buffering will beg
 (default: `30` seconds)
 
 Maximum buffer length in seconds. If buffer length is/become less than this value, a new fragment will be loaded.
-This is the guaranteed buffer length hls.js will try to reach, regardless of maxBufferSize.
+This is the guaranteed buffer length HLS.js will try to reach, regardless of maxBufferSize.
 
 ### `backBufferLength`
 
 (default: `Infinity`)
 
-The maximum duration of buffered media to keep once it has been played, in seconds. Any video buffered past this duration will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted. Keep in mind, the browser can and does evict media from the buffer on its own, so with the `Infinity` setting, hls.js will let the browser do what it needs to do. (Ref: the MSE spec under [coded frame eviction](https://www.w3.org/TR/media-source-2/#sourcebuffer-coded-frame-eviction)).
+The maximum duration of buffered media to keep once it has been played, in seconds. Any video buffered past this duration will be evicted. `Infinity` means no restriction on back buffer length; `0` keeps the minimum amount. The minimum amount is equal to the target duration of a segment to ensure that current playback is not interrupted. Keep in mind, the browser can and does evict media from the buffer on its own, so with the `Infinity` setting, HLS.js will let the browser do what it needs to do. (Ref: the MSE spec under [coded frame eviction](https://www.w3.org/TR/media-source-2/#sourcebuffer-coded-frame-eviction)).
 
 ### `frontBufferFlushThreshold`
 
@@ -602,7 +599,7 @@ The maximum duration of buffered media, in seconds, from the play position to ke
 
 (default: `0.1` seconds)
 
-'Maximum' inter-fragment buffer hole tolerance that hls.js can cope with when searching for the next fragment to load.
+'Maximum' inter-fragment buffer hole tolerance that HLS.js can cope with when searching for the next fragment to load.
 When switching between quality level, fragments might not be perfectly aligned.
 This could result in small overlapping or hole in media buffer. This tolerance factor helps cope with this.
 
@@ -626,24 +623,36 @@ max video loading delay used in automatic start level selection : in that mode A
 
 `lowBufferWatchdogPeriod` has been deprecated. Use `highBufferWatchdogPeriod` instead.
 
+### `detectStallWithCurrentTimeMs`
+
+(default: `1250` milliseconds)
+
+The amount of time that playback can progress without `currentTime` advancing before HLS.js will report a stall. Note that stalls are detected immediately when the attached HTMLMediaElement dispatched the "waiting" event outside of startup and seeking. `detectStallWithCurrentTimeMs` is used when "waiting" is not dispatched and `currentTime` fails to advance without a reasonable interval.
+
 ### `highBufferWatchdogPeriod`
 
 (default 3s)
 
-if media element is expected to play and if currentTime has not moved for more than `highBufferWatchdogPeriod` and if there are more than `maxBufferHole` seconds buffered upfront, hls.js will jump buffer gaps, or try to nudge playhead to recover playback
+if media element is expected to play and if currentTime has not moved for more than `highBufferWatchdogPeriod` and if there are more than `maxBufferHole` seconds buffered upfront, HLS.js will jump buffer gaps, or try to nudge playhead to recover playback
 
 ### `nudgeOffset`
 
-(default 0.1s)
+(default: `0.1` seconds)
 
 In case playback continues to stall after first playhead nudging, currentTime will be nudged evenmore following nudgeOffset to try to restore playback.
-media.currentTime += (nb nudge retry -1)\*nudgeOffset
+`media.currentTime += <number of nudge retries> * nudgeOffset`
 
 ### `nudgeMaxRetry`
 
-(default 3)
+(default: `3`)
 
-Max nb of nudge retries before hls.js raise a fatal BUFFER_STALLED_ERROR
+Max number of playhead (`currentTime`) nudges before HLS.js raise a fatal BUFFER_STALLED_ERROR
+
+### `nudgeOnVideoHole`
+
+(default: `true`)
+
+Whether or not HLS.js should perform a seek nudge to flush the rendering pipeline upon traversing a gap or hole in video SourceBuffer buffered time ranges. This is only performed when audio is buffered at the point where the hole is detected. For more information see `nudgeOnVideoHole` in gap-controller and issues https://issues.chromium.org/issues/40280613#comment10 and https://github.com/video-dev/hls.js/issues/5631.
 
 ### `maxFragLookUpTolerance`
 
@@ -675,12 +684,12 @@ This time, `buffered.end` is within `frag[1]` range, and `frag[1]` will be the n
 
 (default 600s)
 
-Maximum buffer length in seconds. Hls.js will never exceed this value, even if `maxBufferSize` is not reached yet.
+Maximum buffer length in seconds. HLS.js will never exceed this value, even if `maxBufferSize` is not reached yet.
 
-hls.js tries to buffer up to a maximum number of bytes (60 MB by default) rather than to buffer up to a maximum nb of seconds.
+HLS.js tries to buffer up to a maximum number of bytes (60 MB by default) rather than to buffer up to a maximum nb of seconds.
 this is to mimic the browser behaviour (the buffer eviction algorithm is starting after the browser detects that video buffer size reaches a limit in bytes)
 
-`maxBufferLength` is the minimum guaranteed buffer length that hls.js will try to achieve, even if that value exceeds the amount of bytes 60 MB of memory.
+`maxBufferLength` is the minimum guaranteed buffer length that HLS.js will try to achieve, even if that value exceeds the amount of bytes 60 MB of memory.
 `maxMaxBufferLength` acts as a capping value, as if bitrate is really low, you could need more than one hour of buffer to fill 60 MB.
 
 ### `liveSyncDurationCount`
@@ -1005,7 +1014,7 @@ Start prefetching start fragment although media not attached yet.
 
 (default: `true`)
 
-You must also set `startLevel = -1` for this to have any impact. Otherwise, hls.js will load the first level in the manifest and start playback from there. If you do set `startLevel = -1`, a fragment of the lowest level will be downloaded to establish a bandwidth estimate before selecting the first auto-level.
+You must also set `startLevel = -1` for this to have any impact. Otherwise, HLS.js will load the first level in the manifest and start playback from there. If you do set `startLevel = -1`, a fragment of the lowest level will be downloaded to establish a bandwidth estimate before selecting the first auto-level.
 Disable this test if you'd like to provide your own estimate or use the default `abrEwmaDefaultEstimate`.
 
 ### `progressive`
@@ -1441,11 +1450,11 @@ parameter should be a boolean
 Browsers are really strict about audio frames timings.
 They usually play audio frames one after the other, regardless of the timestamps advertised in the fmp4.
 If audio timestamps are not consistent (consecutive audio frames too close or too far from each other), audio will easily drift.
-hls.js is restamping audio frames so that the distance between consecutive audio frame remains constant.
-if the distance is larger than the max allowed drift, hls.js will either
+HLS.js is restamping audio frames so that the distance between consecutive audio frame remains constant.
+if the distance is larger than the max allowed drift, HLS.js will either:
 
-- drop the next audio frame if distance is too small (if next audio frame timestamp is smaller than expected time stamp - max allowed drift)
-- insert silent frames if distance is too big (next audio frame timestamp is bigger than expected timestamp + max allowed drift)
+1. drop the next audio frame if distance is too small (if next audio frame timestamp is smaller than expected time stamp - max allowed drift)
+2. (AAC only) insert silent frames if distance is too big (next audio frame timestamp is bigger than expected timestamp + max allowed drift)
 
 parameter should be an integer representing the max number of audio frames allowed to drift.
 keep in mind that one audio frame is 1024 audio samples (if using AAC), at 44.1 kHz, it gives 1024/44100 = 23ms
@@ -1831,8 +1840,7 @@ set: Reset `EwmaBandWidthEstimator` using the value set as the new default estim
 ### `hls.removeLevel(levelIndex)`
 
 Remove a level from the list of loaded levels.
-This can be used to remove a rendition or playlist url that errors frequently from the list of levels that a user
-or hls.js can choose from.
+This can be used to remove a rendition or playlist url that errors frequently from the list of levels that a user or HLS.js can choose from.
 
 Modifying the levels this way will result in a `Hls.Events.LEVELS_UPDATED` event being triggered.
 
@@ -1840,11 +1848,11 @@ Modifying the levels this way will result in a `Hls.Events.LEVELS_UPDATED` event
 
 ### `Hls.version`
 
-Static getter: return hls.js dist version number.
+Static getter: return the hls.js@version string (dist build version or src **VERSION** build const).
 
 ## Network Loading Control API
 
-By default, hls.js will automatically start loading quality level playlists, and fragments after `Hls.Events.MANIFEST_PARSED` event has been triggered.
+By default, HLS.js will automatically start loading quality level playlists, and fragments after `Hls.Events.MANIFEST_PARSED` event has been triggered.
 
 However, if `config.autoStartLoad` is set to `false`, then `hls.startLoad()` needs to be called to manually start playlist and fragments loading.
 
@@ -1855,7 +1863,7 @@ Start/restart playlist/fragment loading. This is only effective if MANIFEST_PARS
 startPosition is the initial position in the playlist.
 If startPosition is not set to -1, it allows to override default startPosition to the one you want (it will bypass hls.config.liveSync\* config params for Live for example, so that user can start playback from whatever position).
 
-Once media is appended hls.js will seek to the start position. Passing in a `skipSeekToStartPosition` of `true` allows loading to begin at the start position without seeking on append. This is used when multiple players contribute to buffering media to the same source for Interstitials that overlap primary content.
+Once media is appended HLS.js will seek to the start position. Passing in a `skipSeekToStartPosition` of `true` allows loading to begin at the start position without seeking on append. This is used when multiple players contribute to buffering media to the same source for Interstitials that overlap primary content.
 
 ### `hls.stopLoad()`
 
@@ -1880,6 +1888,29 @@ get : Returns a boolean indicating whether fragment loading has been toggled wit
 ### `hls.bufferedToEnd`
 
 get : Returns a boolean indicating if EOS has been appended (media is buffered from currentTime to end of stream).
+
+### `hls.inFlightFragments`
+
+get: Returns an object with each streaming controller's state and in-flight fragment (or null).
+
+Example:
+
+```js
+{
+  main: {
+    frag: <Fragment Object>,
+    state: "FRAG_LOADING"
+  },
+  audio: {
+    frag: <Fragment Object>,
+    state: "PARSED"
+  },
+  subtitle: {
+    frag: null,
+    state: "IDLE"
+  }
+}
+```
 
 ### `hls.url`
 
@@ -1932,7 +1963,7 @@ get/set : if set to true the active subtitle track mode will be set to `showing`
 ### `hls.liveSyncPosition`
 
 get : position of live sync point (ie edge of live position minus safety delay defined by `hls.config.liveSyncDuration`).
-If playback stalls outside the sliding window, or latency exceeds `liveMaxLatencyDuration` hls.js will seek ahead to
+If playback stalls outside the sliding window, or latency exceeds `liveMaxLatencyDuration`, HLS.js will seek ahead to
 `liveSyncPosition` to get back in sync with the stream stream.
 
 ### `hls.latency`

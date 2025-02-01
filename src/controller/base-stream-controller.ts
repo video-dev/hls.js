@@ -79,6 +79,11 @@ export const State = {
   WAITING_LEVEL: 'WAITING_LEVEL',
 };
 
+export type InFlightData = {
+  frag: Fragment | null;
+  state: (typeof State)[keyof typeof State];
+};
+
 export default class BaseStreamController
   extends TaskLoop
   implements NetworkComponentAPI
@@ -89,7 +94,7 @@ export default class BaseStreamController
   protected fragCurrent: Fragment | null = null;
   protected fragmentTracker: FragmentTracker;
   protected transmuxer: TransmuxerInterface | null = null;
-  protected _state: string = State.STOPPED;
+  protected _state: (typeof State)[keyof typeof State] = State.STOPPED;
   protected playlistType: PlaylistLevelType;
   protected media: HTMLMediaElement | null = null;
   protected mediaBuffer: Bufferable | null = null;
@@ -192,6 +197,10 @@ export default class BaseStreamController
 
   public resumeBuffering() {
     this.buffering = true;
+  }
+
+  public get inFlightFrag(): InFlightData {
+    return { frag: this.fragCurrent, state: this.state };
   }
 
   protected _streamEnded(
@@ -395,12 +404,7 @@ export default class BaseStreamController
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.log(`setting startPosition to 0 because media ended`);
     this.startPosition = this.lastCurrentTime = 0;
-    this.triggerEnded();
   };
-
-  protected triggerEnded() {
-    /* overridden in stream-controller */
-  }
 
   protected onManifestLoaded(
     event: Events.MANIFEST_LOADED,
@@ -2023,7 +2027,7 @@ export default class BaseStreamController
     }
   }
 
-  set state(nextState) {
+  set state(nextState: (typeof State)[keyof typeof State]) {
     const previousState = this._state;
     if (previousState !== nextState) {
       this._state = nextState;
@@ -2031,7 +2035,7 @@ export default class BaseStreamController
     }
   }
 
-  get state() {
+  get state(): (typeof State)[keyof typeof State] {
     return this._state;
   }
 }

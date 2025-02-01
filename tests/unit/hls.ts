@@ -76,7 +76,7 @@ describe('Hls', function () {
       hls.attachMedia(media);
       expect(hls.media).to.equal(media);
       hls.trigger(Events.MEDIA_ATTACHED, { media });
-      detachTest(hls, media, 13);
+      detachTest(hls, media, 14);
       hls.destroy();
     });
 

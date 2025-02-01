@@ -1,14 +1,11 @@
 import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
-import {
-  MockMediaElement,
-  MockMediaSource,
-} from './buffer-controller-operations';
 import BufferController from '../../../src/controller/buffer-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
+import { MockMediaElement, MockMediaSource } from '../utils/mock-media';
 import type BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import type {
   ExtendedSourceBuffer,
@@ -313,11 +310,9 @@ describe('BufferController', function () {
 
     it('creates the expected amount of sourceBuffers given the standard event flow', function () {
       bufferController.tracks = {};
-      bufferController.mediaSource = {
-        readyState: 'open',
-        removeEventListener: sandbox.stub(),
-      } as unknown as MediaSource;
-
+      bufferController.mediaSource =
+        new MockMediaSource() as unknown as MediaSource;
+      sandbox.stub(bufferController.mediaSource, 'removeEventListener');
       hls.trigger(Events.MANIFEST_PARSED, {
         altAudio: true,
       } as any);

@@ -43,6 +43,7 @@ import './unit/utils/codecs';
 import './unit/utils/error-helper';
 import './unit/utils/discontinuities';
 import './unit/utils/exp-golomb';
+import './unit/utils/mock-media';
 import './unit/utils/output-filter';
 import './unit/utils/texttrack-utils';
 import './unit/utils/vttparser';

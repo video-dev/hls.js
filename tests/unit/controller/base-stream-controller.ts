@@ -49,6 +49,8 @@ describe('BaseStreamController', function () {
       nextStart: 0,
       start: 0,
       end: 1,
+      bufferedIndex: 0,
+      buffered: [{ start: 0, end: 1 }],
     };
     media = {
       duration: 0,
