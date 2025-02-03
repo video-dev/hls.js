@@ -672,8 +672,8 @@ class AbrController extends Logger implements AbrComponentAPI {
     }
     // If no matching level found, see if min auto level would be a better option
     const minLevel = hls.levels[minAutoLevel];
-    const autoLevel = hls.levels[hls.loadLevel];
-    if (minLevel?.bitrate < autoLevel?.bitrate) {
+    const autoLevel = hls.loadLevelObj;
+    if (autoLevel && minLevel?.bitrate < autoLevel.bitrate) {
       return minAutoLevel;
     }
     // or if bitrate is not lower, continue to use loadLevel

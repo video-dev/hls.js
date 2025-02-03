@@ -541,11 +541,11 @@ export default class GapController extends TaskLoop {
                 PlaylistLevelType.MAIN,
               );
             if (startProvisioned) {
-              // Do not seek when switching variants
-              if (!this.hls.levels[this.hls.loadLevel]?.details) {
+              // Do not seek when selected variant playlist is unloaded
+              if (!this.hls.loadLevelObj?.details) {
                 return 0;
               }
-              // Do not seek when loading frags
+              // Do not seek when required fragments are inflight or appending
               const inFlightDependency = getInFlightDependency(
                 this.hls.inFlightFragments,
                 startTime,

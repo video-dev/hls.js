@@ -2019,6 +2019,8 @@ class Hls implements HlsEventEmitter {
     get loadLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "loadLevel" must appear on the getter, not the setter.
     set loadLevel(newLevel: number);
+    // (undocumented)
+    get loadLevelObj(): Level | null;
     loadSource(url: string): void;
     readonly logger: ILogger;
     get lowLatencyMode(): boolean;

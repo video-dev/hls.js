@@ -1921,7 +1921,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     const userConfig = primary.userConfig;
     let videoPreference = userConfig.videoPreference;
     const currentLevel =
-      primary.levels[primary.loadLevel] || primary.levels[primary.currentLevel];
+      primary.loadLevelObj || primary.levels[primary.currentLevel];
     if (videoPreference || currentLevel) {
       videoPreference = Object.assign({}, videoPreference);
       if (currentLevel.videoCodec) {

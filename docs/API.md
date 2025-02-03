@@ -190,6 +190,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [Interstitial Objects and Classes](#interstitial-objects-and-classes)
 - [Additional data](#additional-data)
   - [`hls.latestLevelDetails`](#hlslatestleveldetails)
+  - [`hjs.loadLevelObj`](#hjsloadlevelobj)
   - [`hls.sessionId`](#hlssessionid)
 - [Runtime Events](#runtime-events)
 - [Creating a Custom Loader](#creating-a-custom-loader)
@@ -2145,7 +2146,11 @@ type InterstitialAssetErrorData = {
 
 ### `hls.latestLevelDetails`
 
-- get: Returns the LevelDetails of the most up-to-date HLS variant playlist data.
+- get: Returns the `LevelDetails` of last loaded level (variant) or `null` prior to loading a media playlist.
+
+### `hjs.loadLevelObj`
+
+- get: Returns the `Level` object of the selected level (variant) or `null` prior to selecting a level or once the level is removed.
 
 ### `hls.sessionId`
 
