@@ -1187,6 +1187,13 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
+   * ContentSteering pathways getter
+   */
+  get pathways(): string[] {
+    return this.levelController.pathways;
+  }
+
+  /**
    * ContentSteering pathwayPriority getter/setter
    */
   get pathwayPriority(): string[] | null {
