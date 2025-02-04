@@ -389,6 +389,10 @@ export default class LevelController extends BasePlaylistController {
     return this._levels;
   }
 
+  get loadLevelObj(): Level | null {
+    return this.currentLevel;
+  }
+
   get level(): number {
     return this.currentLevelIndex;
   }

@@ -1215,11 +1215,11 @@ export default class BaseStreamController
         bufferedFragAtPos &&
         (bufferInfo.nextStart <= bufferedFragAtPos.end || bufferedFragAtPos.gap)
       ) {
-        return BufferHelper.bufferInfo(
-          bufferable,
-          pos,
-          Math.max(bufferInfo.nextStart, maxBufferHole),
+        const gapDuration = Math.max(
+          Math.min(bufferInfo.nextStart, bufferedFragAtPos.end) - pos,
+          maxBufferHole,
         );
+        return BufferHelper.bufferInfo(bufferable, pos, gapDuration);
       }
     }
     return bufferInfo;

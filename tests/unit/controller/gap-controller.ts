@@ -16,7 +16,7 @@ import {
 import { MockMediaElement, MockMediaSource } from '../utils/mock-media';
 import type { HlsConfig } from '../../../src/config';
 import type StreamController from '../../../src/controller/stream-controller';
-import type { Fragment } from '../../../src/loader/fragment';
+import type { Fragment, MediaFragment } from '../../../src/loader/fragment';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -202,7 +202,7 @@ describe('GapController', function () {
       const bufferInfo = BufferHelper.bufferedInfo([], 0, 0);
       sandbox
         .stub(gapController.fragmentTracker, 'getPartialFragment')
-        .returns({} as unknown as Fragment);
+        .returns({} as unknown as MediaFragment);
       const skipHoleStub = sandbox.stub(gapController, '_trySkipBufferHole');
       gapController._tryFixBufferStall(bufferInfo, 100);
       expect(skipHoleStub).to.have.been.calledOnce;

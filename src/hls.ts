@@ -690,8 +690,18 @@ export default class Hls implements HlsEventEmitter {
     return levels ? levels : [];
   }
 
+  /**
+   * @returns LevelDetails of last loaded level (variant) or `null` prior to loading a media playlist.
+   */
   get latestLevelDetails(): LevelDetails | null {
     return this.streamController.getLevelDetails() || null;
+  }
+
+  /**
+   * @returns Level object of selected level (variant) or `null` prior to selecting a level or once the level is removed.
+   */
+  get loadLevelObj(): Level | null {
+    return this.levelController.loadLevelObj;
   }
 
   /**

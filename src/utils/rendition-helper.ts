@@ -502,5 +502,5 @@ export function useAlternateAudio(
   audioTrackUrl: string | undefined,
   hls: Hls,
 ): boolean {
-  return !!audioTrackUrl && audioTrackUrl !== hls.levels[hls.loadLevel]?.uri;
+  return !!audioTrackUrl && audioTrackUrl !== hls.loadLevelObj?.uri;
 }
