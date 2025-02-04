@@ -394,6 +394,7 @@ describe('discontinuities', function () {
           duration: 4,
           cc: 2,
           programDateTime: 1503892850000,
+          stats: details.fragments[0].stats,
         },
         {
           start: 74,
@@ -402,6 +403,7 @@ describe('discontinuities', function () {
           duration: 4,
           cc: 2,
           programDateTime: 1503892854000,
+          stats: details.fragments[1].stats,
         },
         {
           start: 78,
@@ -410,6 +412,7 @@ describe('discontinuities', function () {
           duration: 8,
           cc: 3,
           programDateTime: 1503892858000,
+          stats: details.fragments[2].stats,
         },
       ].map(objToFragment),
       PTSKnown: false,
