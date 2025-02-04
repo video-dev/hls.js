@@ -321,7 +321,7 @@ export class FragmentTracker implements ComponentAPI {
   /**
    * Gets the partial fragment for a certain time
    */
-  public getPartialFragment(time: number): Fragment | null {
+  public getPartialFragment(time: number): MediaFragment | null {
     let bestFragment: Fragment | null = null;
     let timePadding: number;
     let startTime: number;

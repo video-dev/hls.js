@@ -176,7 +176,7 @@ export default class ErrorController
       case ErrorDetails.SUBTITLE_LOAD_ERROR:
       case ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT:
         if (context) {
-          const level = hls.levels[hls.loadLevel];
+          const level = hls.loadLevelObj;
           if (
             level &&
             ((context.type === PlaylistContextType.AUDIO_TRACK &&
@@ -200,7 +200,7 @@ export default class ErrorController
         return;
       case ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED:
         {
-          const level = hls.levels[hls.loadLevel];
+          const level = hls.loadLevelObj;
           const restrictedHdcpLevel = level?.attrs['HDCP-LEVEL'];
           if (restrictedHdcpLevel) {
             data.errorAction = {
