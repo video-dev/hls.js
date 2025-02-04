@@ -50,6 +50,7 @@ export class BaseSegment {
       base = { url: base };
     }
     this.base = base;
+    makeEnumerable(this, 'stats');
   }
 
   // setByteRange converts a EXT-X-BYTERANGE attribute into a two element array
@@ -452,5 +453,30 @@ export class Part extends BaseSegment {
       elementaryStreams.video ||
       elementaryStreams.audiovideo
     );
+  }
+}
+
+function getOwnPropertyDescriptorFromPrototypeChain(
+  object: Object | undefined,
+  property: string,
+) {
+  const prototype = Object.getPrototypeOf(object);
+  if (prototype) {
+    const propertyDescriptor = Object.getOwnPropertyDescriptor(
+      prototype,
+      property,
+    );
+    if (propertyDescriptor) {
+      return propertyDescriptor;
+    }
+    return getOwnPropertyDescriptorFromPrototypeChain(prototype, property);
+  }
+}
+
+function makeEnumerable(object: Object, property: string) {
+  const d = getOwnPropertyDescriptorFromPrototypeChain(object, property);
+  if (d) {
+    d.enumerable = true;
+    Object.defineProperty(object, property, d);
   }
 }
