@@ -2058,6 +2058,7 @@ class Hls implements HlsEventEmitter {
     once<E extends keyof HlsListeners, Context = undefined>(event: E, listener: HlsListeners[E], context?: Context): void;
     get pathwayPriority(): string[] | null;
     set pathwayPriority(pathwayPriority: string[]);
+    get pathways(): string[];
     pauseBuffering(): void;
     get playingDate(): Date | null;
     recoverMediaError(): void;
