@@ -1417,7 +1417,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     ) {
       const timelinePos = this.timelinePos;
       this.bufferedPos = timelinePos;
-      this.setBufferingItem(playingItem);
+      this.checkBuffer();
     }
   }
 
@@ -1647,9 +1647,11 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       const nextToBufferIndex = Math.min(bufferingIndex + 1, items.length - 1);
       const nextItemToBuffer = items[nextToBufferIndex];
       if (
-        bufferEndIndex === -1 &&
-        bufferingItem &&
-        bufferEnd >= bufferingItem.end
+        (bufferEndIndex === -1 &&
+          bufferingItem &&
+          bufferEnd >= bufferingItem.end) ||
+        (nextItemToBuffer.event?.appendInPlace &&
+          bufferEnd + 0.01 >= nextItemToBuffer.start)
       ) {
         bufferEndIndex = nextToBufferIndex;
       }

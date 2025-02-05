@@ -427,7 +427,11 @@ class AudioStreamController
       (!trackDetails.live ||
         (!this.loadingParts && targetBufferTime < this.hls.liveSyncPosition!))
     ) {
-      let mainFrag = mainFragLoading;
+      let mainFrag: { end: number } = mainFragLoading;
+      if (this.fragmentTracker.getState(mainFragLoading) === FragmentState.OK) {
+        this.mainFragLoading = null;
+        mainFrag = { end: Infinity };
+      }
       if (frag.start > mainFrag.end) {
         // Get buffered frag at target position from tracker (loaded out of sequence)
         const mainFragAtPos = this.fragmentTracker.getFragAtPos(

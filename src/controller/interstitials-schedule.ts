@@ -592,14 +592,18 @@ export class InterstitialsSchedule extends Logger {
       );
       return false;
     }
-    return !Object.keys(mediaSelection).some((playlistType) => {
+    const playlists = Object.keys(mediaSelection);
+    return !playlists.some((playlistType) => {
       const details = mediaSelection[playlistType].details;
       const playlistEnd = details.edge;
       if (resumeTime > playlistEnd) {
-        this.log(
-          `"${interstitial.identifier}" resumption ${resumeTime} past ${playlistType} playlist end ${playlistEnd}`,
-        );
-        return true;
+        if (playlists.length > 1) {
+          this.log(
+            `"${interstitial.identifier}" resumption ${resumeTime} past ${playlistType} playlist end ${playlistEnd}`,
+          );
+          return true;
+        }
+        return false;
       }
       const startFragment = findFragmentByPTS(
         null,

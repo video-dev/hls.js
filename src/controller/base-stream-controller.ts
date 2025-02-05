@@ -488,6 +488,20 @@ export default class BaseStreamController
           }
         }
       }
+      // Skip loading of fragments that overlap completely with appendInPlace interstitals
+      const playerQueue = interstitials?.playerQueue;
+      if (playerQueue) {
+        for (let i = playerQueue.length; i--; ) {
+          const interstitial = playerQueue[i].interstitial;
+          if (
+            interstitial.appendInPlace &&
+            frag.start >= interstitial.startTime &&
+            frag.end <= interstitial.resumeTime
+          ) {
+            return;
+          }
+        }
+      }
     }
     this.startFragRequested = true;
     this._loadFragForPlayback(frag, level, targetBufferTime);
@@ -1201,7 +1215,7 @@ export default class BaseStreamController
     return this.getFwdBufferInfoAtPos(bufferable, pos, type, maxBufferHole);
   }
 
-  private getFwdBufferInfoAtPos(
+  protected getFwdBufferInfoAtPos(
     bufferable: Bufferable | null,
     pos: number,
     type: PlaylistLevelType,
