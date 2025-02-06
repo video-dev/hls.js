@@ -416,39 +416,38 @@ class AudioStreamController
     }
 
     // Request audio segments up to one fragment ahead of main stream-controller
-    const mainFragLoading = this.mainFragLoading?.frag;
+    let mainFragLoading = this.mainFragLoading?.frag || null;
     if (
       !this.audioOnly &&
       this.startFragRequested &&
       mainFragLoading &&
-      isMediaFragment(mainFragLoading) &&
       isMediaFragment(frag) &&
       !frag.endList &&
       (!trackDetails.live ||
         (!this.loadingParts && targetBufferTime < this.hls.liveSyncPosition!))
     ) {
-      let mainFrag: { end: number } = mainFragLoading;
       if (this.fragmentTracker.getState(mainFragLoading) === FragmentState.OK) {
-        this.mainFragLoading = null;
-        mainFrag = { end: Infinity };
+        this.mainFragLoading = mainFragLoading = null;
       }
-      if (frag.start > mainFrag.end) {
-        // Get buffered frag at target position from tracker (loaded out of sequence)
-        const mainFragAtPos = this.fragmentTracker.getFragAtPos(
-          targetBufferTime,
-          PlaylistLevelType.MAIN,
-        );
-        if (mainFragAtPos && mainFragAtPos.end > mainFragLoading.end) {
-          mainFrag = mainFragAtPos;
-          this.mainFragLoading = {
-            frag: mainFragAtPos,
-            targetBufferTime: null,
-          };
+      if (mainFragLoading && isMediaFragment(mainFragLoading)) {
+        if (frag.start > mainFragLoading.end) {
+          // Get buffered frag at target position from tracker (loaded out of sequence)
+          const mainFragAtPos = this.fragmentTracker.getFragAtPos(
+            targetBufferTime,
+            PlaylistLevelType.MAIN,
+          );
+          if (mainFragAtPos && mainFragAtPos.end > mainFragLoading.end) {
+            mainFragLoading = mainFragAtPos;
+            this.mainFragLoading = {
+              frag: mainFragAtPos,
+              targetBufferTime: null,
+            };
+          }
         }
-      }
-      const atBufferSyncLimit = frag.start > mainFrag.end;
-      if (atBufferSyncLimit) {
-        return;
+        const atBufferSyncLimit = frag.start > mainFragLoading.end;
+        if (atBufferSyncLimit) {
+          return;
+        }
       }
     }
 
