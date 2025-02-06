@@ -132,6 +132,8 @@ export class InterstitialsSchedule extends Logger {
       }
       // Only return index of a Primary Item
       while (index >= 0 && items[index]?.event) {
+        // If index found is an interstitial it is not a valid result as it should have been matched up top
+        // decrement until result is negative (not found) or a primary segment
         index--;
       }
     }

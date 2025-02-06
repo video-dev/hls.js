@@ -77,7 +77,7 @@ export class HlsAssetPlayer {
   }
 
   get media(): HTMLMediaElement | null {
-    return this.hls.media;
+    return this.hls?.media || null;
   }
 
   get bufferedEnd(): number {
@@ -114,7 +114,7 @@ export class HlsAssetPlayer {
   }
 
   get timelineOffset(): number {
-    return this.hls.config.timelineOffset || 0;
+    return this.hls?.config.timelineOffset || 0;
   }
 
   set timelineOffset(value: number) {
