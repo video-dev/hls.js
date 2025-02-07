@@ -132,6 +132,8 @@ export class InterstitialsSchedule extends Logger {
       }
       // Only return index of a Primary Item
       while (index >= 0 && items[index]?.event) {
+        // If index found is an interstitial it is not a valid result as it should have been matched up top
+        // decrement until result is negative (not found) or a primary segment
         index--;
       }
     }
@@ -592,14 +594,18 @@ export class InterstitialsSchedule extends Logger {
       );
       return false;
     }
-    return !Object.keys(mediaSelection).some((playlistType) => {
+    const playlists = Object.keys(mediaSelection);
+    return !playlists.some((playlistType) => {
       const details = mediaSelection[playlistType].details;
       const playlistEnd = details.edge;
       if (resumeTime > playlistEnd) {
-        this.log(
-          `"${interstitial.identifier}" resumption ${resumeTime} past ${playlistType} playlist end ${playlistEnd}`,
-        );
-        return true;
+        if (playlists.length > 1) {
+          this.log(
+            `"${interstitial.identifier}" resumption ${resumeTime} past ${playlistType} playlist end ${playlistEnd}`,
+          );
+          return true;
+        }
+        return false;
       }
       const startFragment = findFragmentByPTS(
         null,
