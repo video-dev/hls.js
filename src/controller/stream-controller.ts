@@ -573,15 +573,25 @@ export default class StreamController
   private onMediaSeeked = () => {
     const media = this.media;
     const currentTime = media ? media.currentTime : null;
-    if (Number.isFinite(currentTime)) {
-      this.log(`Media seeked to ${(currentTime as number).toFixed(3)}`);
+    if (currentTime === null || !Number.isFinite(currentTime)) {
+      return;
     }
 
+    this.log(`Media seeked to ${currentTime.toFixed(3)}`);
+
     // If seeked was issued before buffer was appended do not tick immediately
-    const bufferInfo = this.getMainFwdBufferInfo();
+    if (!this.getBufferedFrag(currentTime)) {
+      return;
+    }
+    const bufferInfo = this.getFwdBufferInfoAtPos(
+      media,
+      currentTime,
+      PlaylistLevelType.MAIN,
+      0,
+    );
     if (bufferInfo === null || bufferInfo.len === 0) {
       this.warn(
-        `Main forward buffer length on "seeked" event ${
+        `Main forward buffer length at ${currentTime} on "seeked" event ${
           bufferInfo ? bufferInfo.len : 'empty'
         })`,
       );

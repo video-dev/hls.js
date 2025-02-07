@@ -436,9 +436,12 @@ export default class GapController extends TaskLoop {
     }
 
     const currentTime = media.currentTime;
-
+    const levelDetails = this.hls?.latestLevelDetails;
     const partial = fragmentTracker.getPartialFragment(currentTime);
-    if (partial) {
+    if (
+      partial ||
+      (levelDetails?.live && currentTime < levelDetails.fragmentStart)
+    ) {
       // Try to skip over the buffer hole caused by a partial fragment
       // This method isn't limited by the size of the gap between buffered ranges
       const targetTime = this._trySkipBufferHole(partial);
