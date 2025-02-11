@@ -267,9 +267,6 @@ describe('StreamController', function () {
       let fragPrevious;
 
       beforeEach(function () {
-        // onLevelUpdated updates  latencyController.levelDetails used to get live sync position
-        hls['latencyController']['levelDetails'] = levelDetails;
-
         fragPrevious = new Fragment(PlaylistLevelType.MAIN, '');
         // Fragment with PDT 1505502681523 in level 1 does not have the same sn as in level 2 where cc is 1
         fragPrevious.cc = 0;
