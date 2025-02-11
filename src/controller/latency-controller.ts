@@ -2,6 +2,7 @@ import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import type { HlsConfig } from '../config';
 import type Hls from '../hls';
+import type { LevelDetails } from '../loader/level-details';
 import type { ComponentAPI } from '../types/component-api';
 import type {
   ErrorData,
@@ -10,7 +11,7 @@ import type {
 } from '../types/events';
 
 export default class LatencyController implements ComponentAPI {
-  private hls: Hls;
+  private hls: Hls | null;
   private readonly config: HlsConfig;
   private media: HTMLMediaElement | null = null;
   private currentTime: number = 0;
@@ -24,6 +25,10 @@ export default class LatencyController implements ComponentAPI {
     this.registerListeners();
   }
 
+  private get levelDetails(): LevelDetails | null {
+    return this.hls?.latestLevelDetails || null;
+  }
+
   get latency(): number {
     return this._latency || 0;
   }
@@ -33,15 +38,15 @@ export default class LatencyController implements ComponentAPI {
     if (config.liveMaxLatencyDuration !== undefined) {
       return config.liveMaxLatencyDuration;
     }
-    const levelDetails = this.hls?.latestLevelDetails;
+    const levelDetails = this.levelDetails;
     return levelDetails
       ? config.liveMaxLatencyDurationCount * levelDetails.targetduration
       : 0;
   }
 
   get targetLatency(): number | null {
-    const levelDetails = this.hls.latestLevelDetails;
-    if (levelDetails === null) {
+    const levelDetails = this.levelDetails;
+    if (levelDetails === null || this.hls === null) {
       return null;
     }
     const { holdBack, partHoldBack, targetduration } = levelDetails;
@@ -82,7 +87,7 @@ export default class LatencyController implements ComponentAPI {
     if (liveEdge === null || targetLatency === null) {
       return null;
     }
-    const levelDetails = this.hls.latestLevelDetails;
+    const levelDetails = this.levelDetails;
     if (levelDetails === null) {
       return null;
     }
@@ -97,7 +102,7 @@ export default class LatencyController implements ComponentAPI {
   }
 
   get drift(): number {
-    const levelDetails = this.hls.latestLevelDetails;
+    const levelDetails = this.levelDetails;
     if (levelDetails === null) {
       return 1;
     }
@@ -105,7 +110,7 @@ export default class LatencyController implements ComponentAPI {
   }
 
   get edgeStalled(): number {
-    const levelDetails = this.hls.latestLevelDetails;
+    const levelDetails = this.levelDetails;
     if (levelDetails === null) {
       return 0;
     }
@@ -117,7 +122,7 @@ export default class LatencyController implements ComponentAPI {
 
   private get forwardBufferLength(): number {
     const { media } = this;
-    const levelDetails = this.hls.latestLevelDetails;
+    const levelDetails = this.levelDetails;
     if (!media || !levelDetails) {
       return 0;
     }
@@ -132,24 +137,31 @@ export default class LatencyController implements ComponentAPI {
   public destroy(): void {
     this.unregisterListeners();
     this.onMediaDetaching();
-    // @ts-ignore
     this.hls = null;
   }
 
   private registerListeners() {
-    this.hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    this.hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    this.hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
-    this.hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
-    this.hls.on(Events.ERROR, this.onError, this);
+    const { hls } = this;
+    if (!hls) {
+      return;
+    }
+    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
+    hls.on(Events.ERROR, this.onError, this);
   }
 
   private unregisterListeners() {
-    this.hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
-    this.hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
-    this.hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
-    this.hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
-    this.hls.off(Events.ERROR, this.onError, this);
+    const { hls } = this;
+    if (!hls) {
+      return;
+    }
+    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
+    hls.off(Events.ERROR, this.onError, this);
   }
 
   private onMediaAttached(
@@ -189,7 +201,7 @@ export default class LatencyController implements ComponentAPI {
       return;
     }
     this.stallCount++;
-    if (this.hls.latestLevelDetails?.live) {
+    if (this.hls && this.levelDetails?.live) {
       this.hls.logger.warn(
         '[latency-controller]: Stall detected, adjusting target latency',
       );
@@ -198,7 +210,7 @@ export default class LatencyController implements ComponentAPI {
 
   private onTimeupdate = () => {
     const { media } = this;
-    const levelDetails = this.hls.latestLevelDetails;
+    const levelDetails = this.levelDetails;
     if (!media || !levelDetails) {
       return;
     }
@@ -251,7 +263,7 @@ export default class LatencyController implements ComponentAPI {
   };
 
   private estimateLiveEdge(): number | null {
-    const levelDetails = this.hls.latestLevelDetails;
+    const levelDetails = this.levelDetails;
     if (levelDetails === null) {
       return null;
     }

@@ -208,7 +208,7 @@ describe('LatencyController', function () {
       latencyController.targetLatency = 2;
       expect(latencyController['stallCount']).to.equal(0);
       expect(latencyController['config'].liveSyncDuration).to.equal(2);
-      expect(latencyController['hls'].userConfig.liveSyncDuration).to.be
+      expect(latencyController['hls']?.userConfig.liveSyncDuration).to.be
         .undefined;
       expect(latencyController.targetLatency).to.equal(2);
     });
