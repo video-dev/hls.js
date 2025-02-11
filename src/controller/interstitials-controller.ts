@@ -889,7 +889,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
   private checkStart() {
     const schedule = this.schedule;
     const interstitialEvents = schedule.events;
-    if (!interstitialEvents || this.playbackDisabled) {
+    if (!interstitialEvents || this.playbackDisabled || !this.media) {
       return;
     }
     // Check buffered to pre-roll
@@ -939,6 +939,10 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         if (nextIndex >= scheduleLength) {
           this.setSchedulePosition(-1);
           return;
+        }
+        const resumptionTime = interstitial.resumeTime;
+        if (this.timelinePos < resumptionTime) {
+          this.timelinePos = resumptionTime;
         }
         this.setSchedulePosition(nextIndex);
       }
@@ -1078,10 +1082,8 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
       }
       // Ensure Interstitial is enqueued
       const waitingItem = this.waitingItem;
+      this.setBufferingItem(scheduledItem);
       let player = this.preloadAssets(interstitial, assetListIndex);
-      if (!player) {
-        this.setBufferingItem(scheduledItem);
-      }
       if (!this.eventItemsMatch(scheduledItem, currentItem || waitingItem)) {
         this.waitingItem = scheduledItem;
         this.log(
