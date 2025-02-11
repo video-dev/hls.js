@@ -1429,4 +1429,105 @@ fileSequence6.mp4`;
       expect(insterstitials.primary.currentTime).to.equal(40, 'timelinePos b');
     });
   });
+
+  describe('Live start', function () {
+    it('request asset-list with _HLS_start_offset when joining', function () {
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:10
+#EXT-X-VERSION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
+#EXT-X-MAP:URI="fileSequence0.mp4"
+#EXTINF:10,	
+fileSequence1.mp4
+#EXTINF:10,	
+fileSequence2.mp4
+#EXT-X-DATERANGE:ID="mid-live",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:20.000Z",DURATION=30,X-ASSET-LIST="https://example.com/mid.json"
+#EXTINF:10,	
+fileSequence3.mp4
+#EXTINF:10,	
+fileSequence4.mp4
+#EXTINF:10,	
+fileSequence5.mp4
+#EXTINF:10,	
+fileSequence6.mp4`;
+
+      // Loaded playlist (before attaching media)
+      setLoadedLevelDetails(playlist);
+      const insterstitials = interstitialsController.interstitialsManager;
+      if (!insterstitials) {
+        expect(insterstitials, 'interstitialsManager').to.be.an('object');
+        return;
+      }
+      expect(insterstitials.events).is.an('array').which.has.lengthOf(1);
+      expect(insterstitials.schedule).is.an('array').which.has.lengthOf(3);
+      if (!insterstitials.events || !insterstitials.schedule) {
+        return;
+      }
+
+      // Capture asset-list request
+      const loadSpy = sandbox.spy(hls.config.loader.prototype, 'load');
+
+      // Attach media
+      hls.trigger.resetHistory();
+      const media = attachMediaToHls();
+      const eventsAfterAttach = getTriggerCalls();
+      const expectedEvents = [
+        Events.MEDIA_ATTACHING,
+        Events.MEDIA_ATTACHED,
+        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
+        Events.ASSET_LIST_LOADING,
+        Events.INTERSTITIAL_STARTED,
+      ];
+      expect(loadSpy).calledOnce;
+      const assetListUrl = loadSpy.getCalls()[0].args[0].url;
+      expect(
+        assetListUrl,
+        '_HLS_primary_id and _HLS_start_offset match',
+      ).to.equal(
+        `https://example.com/mid.json?_HLS_primary_id=${hls.sessionId}&_HLS_start_offset=10`,
+      );
+      expect(eventsAfterAttach).to.deep.equal(
+        expectedEvents,
+        `Actual events after attach: ${eventsAfterAttach.join(', ')}`,
+      );
+      expect(insterstitials.bufferingIndex).to.equal(1, 'bufferingIndex a');
+      expect(insterstitials.playingIndex).to.equal(1, 'playingIndex a');
+      expect(insterstitials.primary.currentTime).to.equal(30, 'timelinePos a');
+
+      // Load asset-list
+      hls.trigger.resetHistory();
+      const interstitial = insterstitials.events[0];
+      interstitial.assetListResponse = {
+        ASSETS: [{ URI: '', DURATION: '30' }],
+      };
+      hls.trigger(Events.ASSET_LIST_LOADED, {
+        event: interstitial,
+        assetListResponse: interstitial.assetListResponse,
+        networkDetails: {},
+      });
+      const callsAfterAttach = getTriggerCalls();
+      expect(callsAfterAttach).to.deep.equal(
+        [
+          Events.ASSET_LIST_LOADED,
+          Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
+          Events.INTERSTITIAL_ASSET_STARTED,
+          Events.MEDIA_DETACHING,
+        ],
+        `Actual events after asset-list: ${callsAfterAttach.join(', ')}`,
+      );
+
+      expect(insterstitials.bufferingIndex).to.equal(1, 'bufferingIndex b');
+      expect(insterstitials.playingIndex).to.equal(1, 'playingIndex b');
+      expect(insterstitials.primary.currentTime).to.equal(30, 'timelinePos b');
+      // TODO: Make player report tentative start time (or startPosition)
+      expect(insterstitials.bufferingPlayer).to.include({
+        interstitialId: 'mid-live',
+        media,
+        // currentTime: 0,
+        duration: 30,
+        // remaining: 30,
+      });
+    });
+  });
 });
