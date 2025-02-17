@@ -1095,8 +1095,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
           scheduleIndex: index,
         });
       }
-      const assetListLength = interstitial.assetList.length;
-      if (assetListLength === 0 && !interstitial.assetListResponse) {
+      if (!interstitial.assetListLoaded) {
         // Waiting at end of primary content segment
         // Expect setSchedulePosition to be called again once ASSET-LIST is loaded
         this.log(`Waiting for ASSET-LIST to complete loading ${interstitial}`);
@@ -1138,6 +1137,7 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
         player = this.getAssetPlayer(assetItem.identifier);
       }
       if (player === null || player.destroyed) {
+        const assetListLength = interstitial.assetList.length;
         this.warn(
           `asset ${
             assetListIndex + 1
@@ -1301,8 +1301,15 @@ MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
     timelinePos: number,
     skipSeekToStartPosition?: boolean,
   ) {
-    if (this.hls.loadingEnabled) {
-      this.hls.startLoad(timelinePos, skipSeekToStartPosition);
+    const hls = this.hls;
+    if (
+      !hls.loadingEnabled ||
+      !hls.media ||
+      Math.abs(hls.media.currentTime - timelinePos) > 0.5
+    ) {
+      hls.startLoad(timelinePos, skipSeekToStartPosition);
+    } else if (!hls.bufferingEnabled) {
+      hls.resumeBuffering();
     }
   }
 
@@ -1827,6 +1834,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
           liveStartPosition = this.hls.liveSyncPosition || 0;
         }
       }
+      interstitial.assetListResponse = null;
       const assetListLoader = this.assetListLoader.loadAssetList(
         interstitial as InterstitialEventWithAssetList,
         liveStartPosition,

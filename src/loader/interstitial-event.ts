@@ -208,7 +208,7 @@ export class InterstitialEvent {
   get duration(): number {
     const playoutLimit = this.playoutLimit;
     let duration: number;
-    if (this._duration) {
+    if (this._duration !== null) {
       duration = this._duration;
     } else if (this.dateRange.duration) {
       duration = this.dateRange.duration;
@@ -254,6 +254,10 @@ export class InterstitialEvent {
 
   get baseUrl(): string {
     return this.base.url;
+  }
+
+  get assetListLoaded(): boolean {
+    return this.assetList.length > 0 || this.assetListResponse !== null;
   }
 
   toString(): string {

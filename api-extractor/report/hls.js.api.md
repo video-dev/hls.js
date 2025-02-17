@@ -2629,6 +2629,8 @@ export class InterstitialEvent {
     // (undocumented)
     assetList: InterstitialAssetItem[];
     // (undocumented)
+    get assetListLoaded(): boolean;
+    // (undocumented)
     assetListLoader?: Loader<LoaderContext>;
     // (undocumented)
     assetListResponse: AssetListJSON | null;

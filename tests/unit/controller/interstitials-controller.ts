@@ -1148,7 +1148,7 @@ fileSequence5.mp4`;
       });
     });
 
-    it('should handle empty asset-lists', function () {
+    it('should handle empty asset-lists with resume offset', function () {
       const playlist = `#EXTM3U
 #EXT-X-TARGETDURATION:10
 #EXT-X-VERSION:7
@@ -1206,6 +1206,7 @@ fileSequence3.mp4
       expect(callsAfterAttach).to.deep.equal(
         [
           Events.ASSET_LIST_LOADED,
+          Events.INTERSTITIALS_UPDATED,
           Events.INTERSTITIAL_ENDED,
           Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
           Events.INTERSTITIALS_PRIMARY_RESUMED,
@@ -1215,6 +1216,79 @@ fileSequence3.mp4
       expect(insterstitials.bufferingIndex).to.equal(1, 'bufferingIndex b');
       expect(insterstitials.playingIndex).to.equal(1, 'playingIndex b');
       expect(insterstitials.primary.currentTime).to.equal(5, 'timelinePos b');
+    });
+
+    it('should handle empty asset-lists without resume offset, ignoring date range tag duration', function () {
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:10
+#EXT-X-VERSION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
+#EXT-X-DATERANGE:ID="start",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:00.000Z",DURATION=5,X-ASSET-LIST="https://example.com/empty.json"
+#EXT-X-MAP:URI="fileSequence0.mp4"
+#EXTINF:5,
+fileSequence1.mp4
+#EXTINF:5,
+fileSequence2.mp4
+#EXTINF:5,
+fileSequence3.mp4
+#EXT-X-ENDLIST`;
+      attachMediaToHls();
+
+      setLoadedLevelDetails(playlist);
+      const insterstitials = interstitialsController.interstitialsManager;
+      if (!insterstitials) {
+        expect(insterstitials, 'interstitialsManager').to.be.an('object');
+        return;
+      }
+      expect(insterstitials.events).is.an('array').which.has.lengthOf(1);
+      expect(insterstitials.schedule).is.an('array').which.has.lengthOf(2);
+      if (!insterstitials.events || !insterstitials.schedule) {
+        return;
+      }
+      const callsBeforeAttach = getTriggerCalls();
+      expect(callsBeforeAttach).to.deep.equal(
+        [
+          Events.MEDIA_ATTACHING,
+          Events.MEDIA_ATTACHED,
+          Events.LEVEL_UPDATED,
+          Events.INTERSTITIALS_UPDATED,
+          Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
+          Events.ASSET_LIST_LOADING,
+          Events.INTERSTITIAL_STARTED,
+        ],
+        `Actual events before asset-list: ${callsBeforeAttach.join(', ')}`,
+      );
+      hls.trigger.resetHistory();
+      expect(insterstitials.bufferingIndex).to.equal(0, 'bufferingIndex a');
+      expect(insterstitials.playingIndex).to.equal(0, 'playingIndex a');
+      expect(insterstitials.primary.currentTime).to.equal(0, 'timelinePos a');
+
+      // Load empty asset-list
+      const interstitial = insterstitials.events[0];
+      interstitial.assetListResponse = { ASSETS: [] };
+      hls.trigger(Events.ASSET_LIST_LOADED, {
+        event: interstitial,
+        assetListResponse: interstitial.assetListResponse,
+        networkDetails: {},
+      });
+      const callsAfterAttach = getTriggerCalls();
+      expect(callsAfterAttach).to.deep.equal(
+        [
+          Events.ASSET_LIST_LOADED,
+          Events.INTERSTITIALS_UPDATED,
+          Events.INTERSTITIAL_ENDED,
+          Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
+          Events.INTERSTITIALS_PRIMARY_RESUMED,
+        ],
+        `Actual events after asset-list: ${callsAfterAttach.join(', ')}`,
+      );
+      expect(insterstitials.bufferingIndex).to.equal(1, 'bufferingIndex b');
+      expect(insterstitials.playingIndex).to.equal(1, 'playingIndex b');
+      expect(insterstitials.primary.currentTime).to.equal(
+        0,
+        'playback should resume primary at 0 because no interstitial played',
+      );
     });
 
     it('should resume at start plus resumption-offset (start + duration and attach after level updated)', function () {
