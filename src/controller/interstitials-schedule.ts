@@ -635,6 +635,9 @@ export class InterstitialsSchedule extends Logger {
   }
 
   private updateAssetDurations(interstitial: InterstitialEvent) {
+    if (!interstitial.assetListLoaded) {
+      return;
+    }
     const eventStart = interstitial.timelineStart;
     let sumDuration = 0;
     let hasUnknownDuration = false;
