@@ -60,10 +60,10 @@ export interface InterstitialsManager {
   bufferingAsset: InterstitialAssetItem | null;
   bufferingItem: InterstitialScheduleItem | null;
   bufferingIndex: number;
+  playingAssetPlayer: HlsAssetPlayer | null;
   playingAsset: InterstitialAssetItem | null;
   playingItem: InterstitialScheduleItem | null;
   playingIndex: number;
-  waitingIndex: number;
   primary: PlayheadTimes;
   playout: PlayheadTimes;
   integrated: PlayheadTimes;
@@ -398,7 +398,7 @@ export default class InterstitialsController
         if (playingItem && (appendInPlace || seekInItem)) {
           // seek in asset player or primary media (appendInPlace)
           const assetPlayer = getAssetPlayer(c.playingAsset);
-          const media = assetPlayer?.media || c.hls.media;
+          const media = assetPlayer?.media || c.primaryMedia;
           if (media) {
             const currentTime =
               timelineType === 'primary'
@@ -499,6 +499,9 @@ export default class InterstitialsController
         get bufferingItem() {
           return c.bufferingItem;
         },
+        get playingAssetPlayer() {
+          return getAssetPlayer(c.playingAsset);
+        },
         get playingAsset() {
           return c.playingAsset;
         },
@@ -513,15 +516,15 @@ export default class InterstitialsController
           const item = effectivePlayingItem();
           return c.findItemIndex(item);
         },
-        get waitingIndex() {
-          return c.findItemIndex(c.waitingItem);
-        },
         primary: {
           get bufferedEnd() {
             return getBufferedEnd();
           },
           get currentTime() {
             const timelinePos = c.timelinePos;
+            if (c.playingItem?.event?.appendInPlace) {
+              return c.playingItem.start;
+            }
             return timelinePos > 0 ? timelinePos : 0;
           },
           get duration() {
@@ -1726,7 +1729,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       if (!this.playbackDisabled) {
         if (isInterstitial) {
           // primary fragment loading will exit early in base-stream-controller while `bufferingItem` is set to an Interstitial block
-          this.playerQueue.forEach((player) => player.resumeBuffering());
+          item.event.assetList.forEach((asset) => {
+            const player = this.getAssetPlayer(asset.identifier);
+            if (player) {
+              player.resumeBuffering();
+            }
+          });
         } else {
           this.hls.resumeBuffering();
           this.playerQueue.forEach((player) => player.pauseBuffering());
@@ -1814,7 +1822,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       );
       const timelineStart = interstitial.timelineStart;
       if (interstitial.appendInPlace) {
-        this.flushFrontBuffer(timelineStart);
+        this.flushFrontBuffer(timelineStart + 0.25);
       }
       const uri = interstitial.assetUrl;
       if (uri) {
@@ -2193,7 +2201,6 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       this.log(
         `INTERSTITIAL_ASSET_STARTED ${assetListIndex + 1}/${assetListLength} ${player}`,
       );
-      // player.resumeBuffering();
       this.hls.trigger(Events.INTERSTITIAL_ASSET_STARTED, {
         asset: assetItem,
         assetListIndex,

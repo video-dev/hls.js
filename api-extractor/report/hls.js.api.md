@@ -2143,6 +2143,8 @@ export class HlsAssetPlayer {
     // (undocumented)
     resumeBuffering(): void;
     // (undocumented)
+    get startOffset(): number;
+    // (undocumented)
     get timelineOffset(): number;
     set timelineOffset(value: number);
     // (undocumented)
@@ -2813,6 +2815,8 @@ export interface InterstitialsManager {
     // (undocumented)
     playingAsset: InterstitialAssetItem | null;
     // (undocumented)
+    playingAssetPlayer: HlsAssetPlayer | null;
+    // (undocumented)
     playingIndex: number;
     // (undocumented)
     playingItem: InterstitialScheduleItem | null;
@@ -2824,8 +2828,6 @@ export interface InterstitialsManager {
     schedule: InterstitialScheduleItem[];
     // (undocumented)
     skip: () => void;
-    // (undocumented)
-    waitingIndex: number;
 }
 
 // Warning: (ae-missing-release-tag) "InterstitialsPrimaryResumed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
