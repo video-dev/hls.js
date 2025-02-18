@@ -2023,20 +2023,24 @@ Use `skip()` to skip the current interstitial. Use `primary`, `playout`, and `in
 
 ```ts
 interface InterstitialsManager {
-  events: InterstitialEvent[]; // An array of Interstitials (events) parsed from the latest media playlist update
   schedule: InterstitialScheduleItem[]; // An array of primary and event items with start and end times representing the scheduled program
-  playerQueue: HlsAssetPlayer[]; // And array of child Hls instances created to preload and stream Interstitial asset content
+  integrated: PlayheadTimes; // playhead mapping and seekTo method that applies the X-TIMELINE-OCCUPIES attribute to each event item
+  primary: PlayheadTimes; // playhead mapping and seekTo method based on the primary content
+  playout: PlayheadTimes; // playhead mapping and seekTo method based on playout of all items in the `schedule` array
+
   bufferingPlayer: HlsAssetPlayer | null; // The child Hls instance assigned to streaming media at the edge of the forward buffer
   bufferingAsset: InterstitialAssetItem | null; // The Interstitial asset currently being streamed
   bufferingItem: InterstitialScheduleItem | null; // The primary item or event item currently being streamed
   bufferingIndex: number; // The index of `bufferingItem` in the `schedule` array
+
+  playingAssetPlayer: HlsAssetPlayer | null; // The child Hls instance assigned to the current interstital asset if any
   playingAsset: InterstitialAssetItem | null; // The Interstitial asset currently being streamed
   playingItem: InterstitialScheduleItem | null; // The primary item or event item currently being played
   playingIndex: number; // The index of `playingItem` in the `schedule` array
-  waitingIndex: number; // The index of the item whose asset list is being loaded in the `schedule` array
-  primary: PlayheadTimes; // playhead mapping and seekTo method based on the primary content
-  playout: PlayheadTimes; // playhead mapping and seekTo method based on playout of all items in the `schedule` array
-  integrated: PlayheadTimes; // playhead mapping and seekTo method that applies the X-TIMELINE-OCCUPIES attribute to each event item
+
+  events: InterstitialEvent[]; // An array of Interstitials (events) parsed from the latest media playlist update
+  playerQueue: HlsAssetPlayer[]; // And array of child Hls instances created to preload and stream Interstitial asset content
+
   skip: () => void; // A method for skipping the currently playing event item, provided it is not jump restricted
 }
 
@@ -2047,6 +2051,40 @@ type PlayheadTimes = {
   seekableStart: number; // The earliest available time where media is available (maps to the start of the first segment in primary media playlists)
   seekTo: (time: number) => void; // A method for seeking to the designated time the scheduled program
 };
+```
+
+The interstials manager can be used to get various apects of interstitial playback.
+
+Time remaining in interstial event break:
+
+```js
+const playingItem = hls.interstitialsManager.playingItem;
+// Is the playing item an Interstitial?
+if (playingItem?.event) {
+  // Subtract the playout currentTime from playout end of the current item:
+  const timeRemaining = Math.ceil(
+    playingItem.playout.end - hls.interstitialsManager.playout.currentTime,
+  );
+}
+```
+
+The last watched position of primary content:
+
+```js
+const primaryLastWatched = hls.interstitialsManager.primary.currentTime;
+```
+
+Integrated timeline position and time ranges:
+
+```js
+const currentTime = hls.interstitialsManager.integrated.currentTime;
+const timelineRanges = hls.interstitialsManager.schedule.map((item) => {
+  return {
+    interstitial: item.event,
+    start: item.integrated.start,
+    end: item.integrated.end,
+  };
+});
 ```
 
 ### Interstitial Events
