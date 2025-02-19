@@ -30,6 +30,7 @@ import { hash } from '../utils/hash';
 import { Logger } from '../utils/logger';
 import { isCompatibleTrackChange } from '../utils/mediasource-helper';
 import { getBasicSelectionOption } from '../utils/rendition-helper';
+import { stringify } from '../utils/safe-json-stringify';
 import type { HlsConfig } from '../config';
 import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
@@ -692,7 +693,7 @@ export default class InterstitialsController
       }
       const attachMediaSourceData = player.transferMedia();
       this.log(
-        `transfer MediaSource from ${player} ${JSON.stringify(attachMediaSourceData)}`,
+        `transfer MediaSource from ${player} ${stringify(attachMediaSourceData)}`,
       );
       this.detachedData = attachMediaSourceData;
     } else if (toSegment && playerMedia) {
@@ -727,14 +728,14 @@ export default class InterstitialsController
     }
     this.log(
       `transferring to ${isAssetPlayer ? player : 'Primary'}
-MediaSource ${JSON.stringify(attachMediaSourceData)} from ${logFromSource}`,
+MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
     );
 
     if (!attachMediaSourceData) {
       if (detachedMediaSource) {
         attachMediaSourceData = this.detachedData;
         this.log(
-          `using detachedData: MediaSource ${JSON.stringify(attachMediaSourceData)}`,
+          `using detachedData: MediaSource ${stringify(attachMediaSourceData)}`,
         );
       } else if (!this.detachedData || this.hls.media === media) {
         // Media is attaching when `detachedData` and `hls.media` are populated. Detach to clear the MediaSource.
