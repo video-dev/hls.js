@@ -15,6 +15,7 @@ import { TimelineController } from './controller/timeline-controller';
 import Cues from './utils/cues';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
+import { stringify } from './utils/safe-json-stringify';
 import XhrLoader from './utils/xhr-loader';
 import type { MediaKeySessionContext } from './controller/eme-controller';
 import type Hls from './hls';
@@ -688,7 +689,7 @@ export function mergeConfig(
       logger.warn(
         `hls.js config: "${report.join(
           '", "',
-        )}" setting(s) are deprecated, use "${policyName}": ${JSON.stringify(
+        )}" setting(s) are deprecated, use "${policyName}": ${stringify(
           userConfig[policyName],
         )}`,
       );

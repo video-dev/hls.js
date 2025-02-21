@@ -15,6 +15,7 @@ import {
   isCompatibleTrackChange,
   isManagedMediaSource,
 } from '../utils/mediasource-helper';
+import { stringify } from '../utils/safe-json-stringify';
 import type { FragmentTracker } from './fragment-tracker';
 import type { HlsConfig } from '../config';
 import type Hls from '../hls';
@@ -353,8 +354,8 @@ export default class BufferController extends Logger implements ComponentAPI {
       }
       this
         .log(`attachTransferred: (bufferCodecEventsTotal ${this.bufferCodecEventsTotal})
-required tracks: ${JSON.stringify(requiredTracks, (key, value) => (key === 'initSegment' ? undefined : value))};
-transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'initSegment' ? undefined : value))}}`);
+required tracks: ${stringify(requiredTracks, (key, value) => (key === 'initSegment' ? undefined : value))};
+transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSegment' ? undefined : value))}}`);
       if (!isCompatibleTrackChange(transferredTracks, requiredTracks)) {
         // destroy attaching media source
         data.mediaSource = null;
@@ -1322,7 +1323,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
   private checkPendingTracks() {
     const { bufferCodecEventsTotal, pendingTrackCount, tracks } = this;
     this.log(
-      `checkPendingTracks (pending: ${pendingTrackCount} codec events expected: ${bufferCodecEventsTotal}) ${JSON.stringify(tracks)}`,
+      `checkPendingTracks (pending: ${pendingTrackCount} codec events expected: ${bufferCodecEventsTotal}) ${stringify(tracks)}`,
     );
     // Check if we've received all of the expected bufferCodec events. When none remain, create all the sourceBuffers at once.
     // This is important because the MSE spec allows implementations to throw QuotaExceededErrors if creating new sourceBuffers after
@@ -1391,7 +1392,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
         const mimeType = `${track.container};codecs=${codec}`;
         track.codec = codec;
         this.log(
-          `creating sourceBuffer(${mimeType})${this.currentOp(type) ? ' Queued' : ''} ${JSON.stringify(track)}`,
+          `creating sourceBuffer(${mimeType})${this.currentOp(type) ? ' Queued' : ''} ${stringify(track)}`,
         );
         try {
           const sb = mediaSource.addSourceBuffer(

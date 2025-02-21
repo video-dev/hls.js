@@ -12,6 +12,7 @@ import {
   videoCodecPreferenceValue,
 } from '../utils/codecs';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
+import { stringify } from '../utils/safe-json-stringify';
 import type ContentSteeringController from './content-steering-controller';
 import type Hls from '../hls';
 import type {
@@ -248,7 +249,7 @@ export default class LevelController extends BasePlaylistController {
         if (this.hls) {
           if (data.levels.length) {
             this.warn(
-              `One or more CODECS in variant not supported: ${JSON.stringify(
+              `One or more CODECS in variant not supported: ${stringify(
                 data.levels[0].attrs,
               )}`,
             );

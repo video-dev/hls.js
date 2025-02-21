@@ -27,6 +27,7 @@ import {
   type PsshInvalidResult,
 } from '../utils/mp4-tools';
 import { base64Decode } from '../utils/numeric-encoding-utils';
+import { stringify } from '../utils/safe-json-stringify';
 import { strToUtf8array } from '../utils/utf8-utils';
 import type { EMEControllerConfig, HlsConfig, LoadPolicy } from '../config';
 import type Hls from '../hls';
@@ -254,7 +255,7 @@ class EMEController extends Logger implements ComponentAPI {
     let keySystemAccess = keySystemAccessPromises?.keySystemAccess;
     if (!keySystemAccess) {
       this.log(
-        `Requesting encrypted media "${keySystem}" key-system access with config: ${JSON.stringify(
+        `Requesting encrypted media "${keySystem}" key-system access with config: ${stringify(
           mediaKeySystemConfigs,
         )}`,
       );
@@ -519,7 +520,7 @@ class EMEController extends Logger implements ComponentAPI {
           details: ErrorDetails.KEY_SYSTEM_NO_CONFIGURED_LICENSE,
           fatal: true,
         },
-        `Missing key-system license configuration options ${JSON.stringify({
+        `Missing key-system license configuration options ${stringify({
           drmSystems: this.config.drmSystems,
         })}`,
       );

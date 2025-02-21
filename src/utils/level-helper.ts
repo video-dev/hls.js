@@ -3,6 +3,7 @@
  */
 
 import { logger } from './logger';
+import { stringify } from './safe-json-stringify';
 import { DateRange } from '../loader/date-range';
 import { assignProgramDateTime, mapDateRanges } from '../loader/m3u8-parser';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
@@ -344,7 +345,7 @@ function mergeDateRanges(
         }
       } else {
         logger.warn(
-          `Ignoring invalid Playlist Delta Update DATERANGE tag: "${JSON.stringify(
+          `Ignoring invalid Playlist Delta Update DATERANGE tag: "${stringify(
             deltaDateRanges[id].attr,
           )}"`,
         );
