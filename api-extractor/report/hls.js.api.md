@@ -30,6 +30,8 @@ export class AbrController extends Logger implements AbrComponentAPI {
     // (undocumented)
     clearTimer(): void;
     // (undocumented)
+    protected deriveNextAutoLevel(nextLevel: number): number;
+    // (undocumented)
     destroy(): void;
     // (undocumented)
     get firstAutoLevel(): number;
