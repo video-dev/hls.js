@@ -454,7 +454,7 @@ export default class BaseStreamController
   ) {
     const config = this.hls.config;
     if (
-      __USE_INTERSTITALS__ &&
+      __USE_INTERSTITIALS__ &&
       config.interstitialsController &&
       config.enableInterstitialPlayback !== false &&
       frag.type !== PlaylistLevelType.SUBTITLE
@@ -488,7 +488,7 @@ export default class BaseStreamController
           }
         }
       }
-      // Skip loading of fragments that overlap completely with appendInPlace interstitals
+      // Skip loading of fragments that overlap completely with appendInPlace interstitials
       const playerQueue = interstitials?.playerQueue;
       if (playerQueue) {
         for (let i = playerQueue.length; i--; ) {
