@@ -73,7 +73,7 @@ const buildConstants = (type, additional = {}) => ({
     __USE_MEDIA_CAPABILITIES__: JSON.stringify(
       type === BUILD_TYPE.full || addMediaCapabilitiesSupport,
     ),
-    __USE_INTERSTITALS__: JSON.stringify(
+    __USE_INTERSTITIALS__: JSON.stringify(
       type === BUILD_TYPE.full || addInterstitialSupport,
     ),
 

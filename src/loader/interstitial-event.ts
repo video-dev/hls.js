@@ -38,8 +38,8 @@ export type InterstitialAssetItem = {
   parentIdentifier: InterstitialId;
   identifier: InterstitialAssetId;
   duration: number | null;
-  startOffset: number;
-  timelineStart: number;
+  startOffset: number; // asset start offset from start of interstitial event
+  timelineStart: number; // asset start on media element timeline
   uri: string;
   error?: Error;
 };

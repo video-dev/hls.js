@@ -2019,34 +2019,79 @@ HLS.js supports playback of X-ASSET-URI and X-ASSET-LIST m3u8 playlists schedule
 
 The data includes the list of Interstitial events with their asset lists, the schedule of event and primary segment items, information about which items and assets are buffering and playing, the player instance currently buffering media, and the queue of players responsible for the streaming of assets.
 
-Use `skip()` to skip the current interstitial. Use `primary`, `playout`, and `integrated` to get `currentTime`, `duration` and to seek along the respective timeline.
+Use `skip()` to skip the current interstitial.
+Use `primary` and `integrated` playhead objects to get `currentTime`, `duration` and to seek along the respective timeline.
+Use `interstitialPlayer` to get active intersititial info (playing or upcoming buffering break) like `currentTime`, `duration`, and `playingIndex` within an Interstital break.
 
 ```ts
 interface InterstitialsManager {
-  events: InterstitialEvent[]; // An array of Interstitials (events) parsed from the latest media playlist update
   schedule: InterstitialScheduleItem[]; // An array of primary and event items with start and end times representing the scheduled program
-  playerQueue: HlsAssetPlayer[]; // And array of child Hls instances created to preload and stream Interstitial asset content
-  bufferingPlayer: HlsAssetPlayer | null; // The child Hls instance assigned to streaming media at the edge of the forward buffer
+  integrated: PlayheadTimes; // playhead mapping and control that applies the X-TIMELINE-OCCUPIES attribute to each event item
+  primary: PlayheadTimes; // playhead mapping and control based on the primary content
+
+  interstitialPlayer: InterstitialPlayer | null; // interface for interstitial playback state
+
   bufferingAsset: InterstitialAssetItem | null; // The Interstitial asset currently being streamed
   bufferingItem: InterstitialScheduleItem | null; // The primary item or event item currently being streamed
   bufferingIndex: number; // The index of `bufferingItem` in the `schedule` array
+
   playingAsset: InterstitialAssetItem | null; // The Interstitial asset currently being streamed
   playingItem: InterstitialScheduleItem | null; // The primary item or event item currently being played
   playingIndex: number; // The index of `playingItem` in the `schedule` array
-  waitingIndex: number; // The index of the item whose asset list is being loaded in the `schedule` array
-  primary: PlayheadTimes; // playhead mapping and seekTo method based on the primary content
-  playout: PlayheadTimes; // playhead mapping and seekTo method based on playout of all items in the `schedule` array
-  integrated: PlayheadTimes; // playhead mapping and seekTo method that applies the X-TIMELINE-OCCUPIES attribute to each event item
+
+  events: InterstitialEvent[]; // An array of Interstitials (events) parsed from the latest media playlist update
+  playerQueue: HlsAssetPlayer[]; // And array of child Hls instances created to preload and stream Interstitial asset content
+
   skip: () => void; // A method for skipping the currently playing event item, provided it is not jump restricted
 }
 
 type PlayheadTimes = {
   bufferedEnd: number; // The buffer end time relative to the playhead in the scheduled program
-  currentTime: number; // The current playhead time in the scheduled program
+  currentTime: number; // (get/set) The current playhead time in the scheduled program
   duration: number; // The time at the end of the scheduled program
   seekableStart: number; // The earliest available time where media is available (maps to the start of the first segment in primary media playlists)
-  seekTo: (time: number) => void; // A method for seeking to the designated time the scheduled program
 };
+
+interface InterstitialPlayer {
+  currentTime: number; // (get/set) The current playhead time within the interstitial break (no-op prior to playback)
+  duration: number; // the playout duration of the interstitial break
+  assetPlayers: (HlsAssetPlayer | null)[]; // The asset players assigned to the break asset list
+  playingIndex: number; // The index of the currently playing asset (or -1 prior to playback)
+  scheduleItem: InterstitialScheduleEventItem | null; // The interstitial schedule item for the break
+}
+```
+
+The interstials manager can be used to get various apects of interstitial playback.
+
+Time remaining in interstial event break:
+
+```js
+const interstitialPlayer = hls.interstitialsManager.interstitialPlayer;
+// Is the interstitialPlayer playing an asset?
+if (interstitialPlayer && interstitialPlayer.playingIndex > -1) {
+  const timeRemaining = Math.ceil(
+    interstitialPlayer.duration - interstitialPlayer.currentTime,
+  );
+}
+```
+
+The last watched position of primary content:
+
+```js
+const primaryLastWatched = hls.interstitialsManager.primary.currentTime;
+```
+
+Integrated timeline position and time ranges:
+
+```js
+const currentTime = hls.interstitialsManager.integrated.currentTime;
+const timelineRanges = hls.interstitialsManager.schedule.map((item) => {
+  return {
+    interstitial: item.event,
+    start: item.integrated.start,
+    end: item.integrated.end,
+  };
+});
 ```
 
 ### Interstitial Events
