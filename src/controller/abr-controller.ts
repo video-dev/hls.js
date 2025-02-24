@@ -15,6 +15,7 @@ import {
   getCodecTiers,
   getStartCodecTier,
 } from '../utils/rendition-helper';
+import { stringify } from '../utils/safe-json-stringify';
 import type Hls from '../hls';
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
@@ -764,7 +765,7 @@ class AbrController extends Logger implements AbrComponentAPI {
         : videoRanges[0];
       currentFrameRate = minFramerate;
       currentBw = Math.max(currentBw, minBitrate);
-      this.log(`picked start tier ${JSON.stringify(startTier)}`);
+      this.log(`picked start tier ${stringify(startTier)}`);
     } else {
       currentCodecSet = level?.codecSet;
       currentVideoRange = level?.videoRange;
@@ -821,11 +822,11 @@ class AbrController extends Logger implements AbrComponentAPI {
               this.warn(
                 `MediaCapabilities decodingInfo error: "${
                   decodingInfo.error
-                }" for level ${index} ${JSON.stringify(decodingInfo)}`,
+                }" for level ${index} ${stringify(decodingInfo)}`,
               );
             } else if (!decodingInfo.supported) {
               this.warn(
-                `Unsupported MediaCapabilities decodingInfo result for level ${index} ${JSON.stringify(
+                `Unsupported MediaCapabilities decodingInfo result for level ${index} ${stringify(
                   decodingInfo,
                 )}`,
               );

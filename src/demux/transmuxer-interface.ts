@@ -14,6 +14,7 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { PlaylistLevelType } from '../types/loader';
 import { getM2TSSupportedAudioTypes } from '../utils/codecs';
+import { stringify } from '../utils/safe-json-stringify';
 import type { WorkerContext } from './inject-worker';
 import type { HlsEventEmitter, HlsListeners } from '../events';
 import type Hls from '../hls';
@@ -95,7 +96,7 @@ export default class TransmuxerInterface {
             cmd: 'init',
             typeSupported: m2tsTypeSupported,
             id,
-            config: JSON.stringify(config),
+            config: stringify(config),
           });
         } catch (err) {
           logger.warn(
@@ -143,7 +144,7 @@ export default class TransmuxerInterface {
         resetNo: instanceNo,
         typeSupported: m2tsTypeSupported,
         id: this.id,
-        config: JSON.stringify(config),
+        config: stringify(config),
       });
     }
   }
