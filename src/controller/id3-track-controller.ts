@@ -6,6 +6,7 @@ import {
   isSCTE35Attribute,
 } from '../loader/date-range';
 import { MetadataSchema } from '../types/demuxer';
+import { stringify } from '../utils/safe-json-stringify';
 import {
   clearCurrentCues,
   removeCuesInRange,
@@ -54,7 +55,7 @@ function createCueWithDataFields(
     cue = new Cue(
       startTime,
       endTime,
-      JSON.stringify(type ? { type, ...data } : data),
+      stringify(type ? { type, ...data } : data),
     );
   }
   return cue;

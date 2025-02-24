@@ -8,6 +8,7 @@ import {
   addEventListener,
   removeEventListener,
 } from '../utils/event-listener-helper';
+import { stringify } from '../utils/safe-json-stringify';
 import type { InFlightData } from './base-stream-controller';
 import type { InFlightFragments } from '../hls';
 import type Hls from '../hls';
@@ -486,7 +487,7 @@ export default class GapController extends TaskLoop {
       const error = new Error(
         `Playback stalling at @${
           media.currentTime
-        } due to low buffer (${JSON.stringify(bufferInfo)})`,
+        } due to low buffer (${stringify(bufferInfo)})`,
       );
       this.warn(error.message);
       hls.trigger(Events.ERROR, {

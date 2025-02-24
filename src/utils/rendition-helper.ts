@@ -1,6 +1,7 @@
 import { codecsSetSelectionPreferenceValue } from './codecs';
 import { getVideoSelectionOptions } from './hdr';
 import { logger } from './logger';
+import { stringify } from './safe-json-stringify';
 import type Hls from '../hls';
 import type { Level, VideoRange } from '../types/level';
 import type {
@@ -165,9 +166,7 @@ export function getStartCodecTier(
         ) {
           logStartCodecCandidateIgnored(
             candidate,
-            `no variants with VIDEO-RANGE of ${JSON.stringify(
-              videoRanges,
-            )} found`,
+            `no variants with VIDEO-RANGE of ${stringify(videoRanges)} found`,
           );
           return selected;
         }

@@ -1,3 +1,4 @@
+import { stringify } from './safe-json-stringify';
 import { logger } from '../utils/logger';
 import type OutputFilter from './output-filter';
 
@@ -593,10 +594,7 @@ export class CaptionScreen {
   }
 
   setPAC(pacData: PACData) {
-    this.logger.log(
-      VerboseLevel.INFO,
-      () => 'pacData = ' + JSON.stringify(pacData),
-    );
+    this.logger.log(VerboseLevel.INFO, () => 'pacData = ' + stringify(pacData));
     let newRow = pacData.row - 1;
     if (this.nrRollUpRows && newRow < this.nrRollUpRows - 1) {
       newRow = this.nrRollUpRows - 1;
@@ -650,10 +648,7 @@ export class CaptionScreen {
    * Set background/extra foreground, but first do back_space, and then insert space (backwards compatibility).
    */
   setBkgData(bkgData: Partial<PenStyles>) {
-    this.logger.log(
-      VerboseLevel.INFO,
-      () => 'bkgData = ' + JSON.stringify(bkgData),
-    );
+    this.logger.log(VerboseLevel.INFO, () => 'bkgData = ' + stringify(bkgData));
     this.backSpace();
     this.setPen(bkgData);
     this.insertChar(0x20); // Space
@@ -951,7 +946,7 @@ class Cea608Channel {
     } else {
       styles.foreground = 'white';
     }
-    this.logger.log(VerboseLevel.INFO, 'MIDROW: ' + JSON.stringify(styles));
+    this.logger.log(VerboseLevel.INFO, 'MIDROW: ' + stringify(styles));
     this.writeScreen.setPen(styles);
   }
 

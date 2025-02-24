@@ -1,6 +1,11 @@
-const replacer = () => {
+const omitCircularRefsReplacer = (
+  replacer: ((this: any, key: string, value: any) => any) | undefined,
+) => {
   const known = new WeakSet();
   return (_, value) => {
+    if (replacer) {
+      value = replacer(_, value);
+    }
     if (typeof value === 'object' && value !== null) {
       if (known.has(value)) {
         return;
@@ -11,5 +16,7 @@ const replacer = () => {
   };
 };
 
-export const stringify = <T>(object: T): string =>
-  JSON.stringify(object, replacer());
+export const stringify = <T>(
+  object: T,
+  replacer?: (this: any, key: string, value: any) => any,
+): string => JSON.stringify(object, omitCircularRefsReplacer(replacer));
