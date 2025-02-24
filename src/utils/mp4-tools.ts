@@ -1012,12 +1012,11 @@ export function parseSamples(
   return seiSamples;
 }
 
-function isHEVC(codec: string) {
+export function isHEVC(codec: string | undefined) {
   if (!codec) {
     return false;
   }
-  const delimit = codec.indexOf('.');
-  const baseCodec = delimit < 0 ? codec : codec.substring(0, delimit);
+  const baseCodec = codec.substring(0, 4);
   return (
     baseCodec === 'hvc1' ||
     baseCodec === 'hev1' ||

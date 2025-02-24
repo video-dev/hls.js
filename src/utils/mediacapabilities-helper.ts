@@ -1,4 +1,5 @@
 import { fillInMissingAV01Params, mimeTypeForCodec } from './codecs';
+import { isHEVC } from './mp4-tools';
 import type { AudioTracksByGroup } from './rendition-helper';
 import type { Level, VideoRange } from '../types/level';
 import type { AudioSelectionOption } from '../types/media-playlist';
@@ -115,10 +116,31 @@ export function getMediaDecodingInfoPromise(
       baseVideoConfiguration.transferFunction =
         videoRange.toLowerCase() as TransferFunction;
     }
-
+    const videoCodecsArray = videoCodecs.split(',');
+    // Override Windows Firefox HEVC MediaCapabilities result (https://github.com/video-dev/hls.js/issues/7046)
+    const ua = navigator.userAgent;
+    if (
+      /\(windows;.+firefox/i.test(ua) &&
+      videoCodecsArray.some((videoCodec) => isHEVC(videoCodec))
+    ) {
+      return Promise.resolve({
+        supported: false,
+        configurations,
+        decodingInfoResults: [
+          {
+            supported: false,
+            smooth: false,
+            powerEfficient: false,
+          },
+        ],
+        error: new Error(
+          `Overriding Windows Firefox HEVC MediaCapabilities result based on user-agent sting: (${ua})`,
+        ),
+      });
+    }
     configurations.push.apply(
       configurations,
-      videoCodecs.split(',').map((videoCodec) => ({
+      videoCodecsArray.map((videoCodec) => ({
         type: 'media-source',
         video: {
           ...baseVideoConfiguration,
@@ -187,7 +209,10 @@ function getMediaDecodingInfoKey(config: MediaDecodingConfiguration): string {
   const { audio, video } = config;
   const mediaConfig = video || audio;
   if (mediaConfig) {
-    const codec = mediaConfig.contentType.split('"')[1];
+    const codec = mediaConfig.contentType.replace(
+      /^.+codecs=["']?([^"']+).*$/,
+      '$1',
+    );
     if (video) {
       return `r${video.height}x${video.width}f${Math.ceil(video.framerate)}${
         video.transferFunction || 'sd'
