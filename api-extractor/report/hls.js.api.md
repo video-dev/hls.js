@@ -2145,6 +2145,8 @@ export class HlsAssetPlayer {
     // (undocumented)
     resumeBuffering(): void;
     // (undocumented)
+    get startOffset(): number;
+    // (undocumented)
     get timelineOffset(): number;
     set timelineOffset(value: number);
     // (undocumented)
@@ -2711,6 +2713,22 @@ export interface InterstitialEventWithAssetList extends InterstitialEvent {
 // @public (undocumented)
 export type InterstitialId = string;
 
+// Warning: (ae-missing-release-tag) "InterstitialPlayer" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface InterstitialPlayer {
+    // (undocumented)
+    assetPlayers: (HlsAssetPlayer | null)[];
+    // (undocumented)
+    currentTime: number;
+    // (undocumented)
+    duration: number;
+    // (undocumented)
+    playingIndex: number;
+    // (undocumented)
+    scheduleItem: InterstitialScheduleEventItem | null;
+}
+
 // Warning: (ae-missing-release-tag) "InterstitialsBufferedToBoundaryData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2805,11 +2823,11 @@ export interface InterstitialsManager {
     // (undocumented)
     bufferingItem: InterstitialScheduleItem | null;
     // (undocumented)
-    bufferingPlayer: HlsAssetPlayer | null;
-    // (undocumented)
     events: InterstitialEvent[];
     // (undocumented)
     integrated: PlayheadTimes;
+    // (undocumented)
+    interstitialPlayer: InterstitialPlayer | null;
     // (undocumented)
     playerQueue: HlsAssetPlayer[];
     // (undocumented)
@@ -2819,15 +2837,11 @@ export interface InterstitialsManager {
     // (undocumented)
     playingItem: InterstitialScheduleItem | null;
     // (undocumented)
-    playout: PlayheadTimes;
-    // (undocumented)
     primary: PlayheadTimes;
     // (undocumented)
     schedule: InterstitialScheduleItem[];
     // (undocumented)
     skip: () => void;
-    // (undocumented)
-    waitingIndex: number;
 }
 
 // Warning: (ae-missing-release-tag) "InterstitialsPrimaryResumed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -4131,7 +4145,6 @@ export type PlayheadTimes = {
     currentTime: number;
     duration: number;
     seekableStart: number;
-    seekTo: (time: number) => void;
 };
 
 // Warning: (ae-missing-release-tag) "PlaylistContextType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
