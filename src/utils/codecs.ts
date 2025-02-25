@@ -2,7 +2,7 @@ import { getMediaSource } from './mediasource-helper';
 import { isHEVC } from './mp4-tools';
 
 export const userAgentHevcSupportIsInaccurate = () => {
-  return /\(windows;.+firefox/i.test(navigator.userAgent);
+  return /\(Windows.+Firefox\//i.test(navigator.userAgent);
 };
 
 // from http://mp4ra.org/codecs.html
