@@ -8,6 +8,7 @@ import {
   requiresMediaCapabilitiesDecodingInfo,
   SUPPORTED_INFO_DEFAULT,
 } from '../utils/mediacapabilities-helper';
+import { isHEVC } from '../utils/mp4-tools';
 import {
   type AudioTracksByGroup,
   type CodecSetTier,
@@ -804,7 +805,7 @@ class AbrController extends Logger implements AbrComponentAPI {
             currentBw,
             audioPreference,
           ) ||
-            levelInfo.videoCodec?.substring(0, 4) === 'hvc1') // Force media capabilities check for HEVC to avoid failure on Windows
+            isHEVC(levelInfo.videoCodec)) // Force media capabilities check for HEVC to avoid failure on Windows
         ) {
           levelInfo.supportedPromise = getMediaDecodingInfoPromise(
             levelInfo,
