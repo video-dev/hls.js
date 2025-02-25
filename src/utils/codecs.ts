@@ -1,5 +1,8 @@
 import { getMediaSource } from './mediasource-helper';
 
+const ua = navigator.userAgent;
+export const UA_HEVC_SUPPORT_INCORRECT = /\(windows;.+firefox/i.test(ua);
+
 // from http://mp4ra.org/codecs.html
 // values indicate codec selection preference (lower is higher priority)
 export const sampleEntryCodesISO = {
@@ -54,8 +57,8 @@ export const sampleEntryCodesISO = {
     dvh1: 0.7,
     dvhe: 0.7,
     encv: 1,
-    hev1: 0.75,
-    hvc1: 0.75,
+    hev1: UA_HEVC_SUPPORT_INCORRECT ? 9 : 0.75,
+    hvc1: UA_HEVC_SUPPORT_INCORRECT ? 9 : 0.75,
     mjp2: 1,
     mp4v: 1,
     mvc1: 1,
@@ -271,4 +274,8 @@ export function getM2TSSupportedAudioTypes(
       ? MediaSource.isTypeSupported('audio/mp4; codecs="ac-3"')
       : false,
   };
+}
+
+export function getCodecsForMimeType(mimeType: string): string {
+  return mimeType.replace(/^.+codecs=["']?([^"']+).*$/, '$1');
 }

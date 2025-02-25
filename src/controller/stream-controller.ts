@@ -1016,15 +1016,14 @@ export default class StreamController
         }
         break;
       case ErrorDetails.BUFFER_ADD_CODEC_ERROR:
-        this.resetLoadingState();
-        break;
       case ErrorDetails.BUFFER_APPEND_ERROR:
-      case ErrorDetails.BUFFER_FULL_ERROR:
-        if (!data.parent || data.parent !== 'main') {
+        if (data.parent !== 'main') {
           return;
         }
-        if (data.details === ErrorDetails.BUFFER_APPEND_ERROR) {
-          this.resetLoadingState();
+        this.resetLoadingState();
+        break;
+      case ErrorDetails.BUFFER_FULL_ERROR:
+        if (data.parent !== 'main') {
           return;
         }
         if (this.reduceLengthAndFlushBuffer(data)) {
@@ -1419,7 +1418,7 @@ export default class StreamController
         );
       }
       audio.levelCodec = audioCodec;
-      audio.id = 'main';
+      audio.id = PlaylistLevelType.MAIN;
       this.log(
         `Init audio buffer, container:${
           audio.container
@@ -1431,7 +1430,7 @@ export default class StreamController
     }
     if (video) {
       video.levelCodec = currentLevel.videoCodec;
-      video.id = 'main';
+      video.id = PlaylistLevelType.MAIN;
       const parsedVideoCodec = video.codec;
       if (parsedVideoCodec?.length === 4) {
         // Make up for passthrough-remuxer not being able to parse full codec

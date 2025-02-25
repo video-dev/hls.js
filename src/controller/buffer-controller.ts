@@ -1409,6 +1409,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
           );
           // remove init segment from queue and delete track info
           this.shiftAndExecuteNext(type);
+          this.operationQueue?.removeBlockers();
           delete this.tracks[type];
           this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
@@ -1417,6 +1418,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
             error,
             sourceBufferName: type,
             mimeType: mimeType,
+            parent: track.id as PlaylistLevelType,
           });
           return;
         }
