@@ -1335,7 +1335,6 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
       } else {
         // ok, let's create them now !
         this.createSourceBuffers();
-        this.bufferCreated();
       }
     }
   }
@@ -1408,6 +1407,9 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
           this.error(
             `error while trying to add sourceBuffer: ${error.message}`,
           );
+          // remove init segment from queue and delete track info
+          this.shiftAndExecuteNext(type);
+          delete this.tracks[type];
           this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_ADD_CODEC_ERROR,
@@ -1416,11 +1418,12 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
             sourceBufferName: type,
             mimeType: mimeType,
           });
-          break;
+          return;
         }
         this.trackSourceBuffer(type, track);
       }
     }
+    this.bufferCreated();
   }
 
   private getTrackCodec(track: BaseTrack, trackName: SourceBufferName): string {
@@ -1449,7 +1452,7 @@ transfer tracks: ${JSON.stringify(transferredTracks, (key, value) => (key === 'i
       id: track.id,
       listeners: [],
     };
-
+    this.removeBufferListeners(type);
     this.addBufferListener(type, 'updatestart', this.onSBUpdateStart);
     this.addBufferListener(type, 'updateend', this.onSBUpdateEnd);
     this.addBufferListener(type, 'error', this.onSBUpdateError);

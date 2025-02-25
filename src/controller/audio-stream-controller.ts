@@ -797,6 +797,9 @@ class AudioStreamController
           this.state = State.IDLE;
         }
         break;
+      case ErrorDetails.BUFFER_ADD_CODEC_ERROR:
+        this.resetLoadingState();
+        break;
       case ErrorDetails.BUFFER_APPEND_ERROR:
       case ErrorDetails.BUFFER_FULL_ERROR:
         if (!data.parent || data.parent !== 'audio') {
