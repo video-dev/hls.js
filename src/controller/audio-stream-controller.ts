@@ -797,13 +797,15 @@ class AudioStreamController
           this.state = State.IDLE;
         }
         break;
+      case ErrorDetails.BUFFER_ADD_CODEC_ERROR:
       case ErrorDetails.BUFFER_APPEND_ERROR:
-      case ErrorDetails.BUFFER_FULL_ERROR:
-        if (!data.parent || data.parent !== 'audio') {
+        if (data.parent !== 'audio') {
           return;
         }
-        if (data.details === ErrorDetails.BUFFER_APPEND_ERROR) {
-          this.resetLoadingState();
+        this.resetLoadingState();
+        break;
+      case ErrorDetails.BUFFER_FULL_ERROR:
+        if (data.parent !== 'audio') {
           return;
         }
         if (this.reduceLengthAndFlushBuffer(data)) {
@@ -954,7 +956,7 @@ class AudioStreamController
     }
     const track = tracks.audio;
 
-    track.id = 'audio';
+    track.id = PlaylistLevelType.AUDIO;
 
     const variantAudioCodecs = currentLevel.audioCodec;
     this.log(
