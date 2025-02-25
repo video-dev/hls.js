@@ -1,7 +1,9 @@
 import { getMediaSource } from './mediasource-helper';
+import { isHEVC } from './mp4-tools';
 
-const ua = navigator.userAgent;
-export const UA_HEVC_SUPPORT_INCORRECT = /\(windows;.+firefox/i.test(ua);
+export const userAgentHevcSupportIsInaccurate = () => {
+  return /\(windows;.+firefox/i.test(navigator.userAgent);
+};
 
 // from http://mp4ra.org/codecs.html
 // values indicate codec selection preference (lower is higher priority)
@@ -57,8 +59,8 @@ export const sampleEntryCodesISO = {
     dvh1: 0.7,
     dvhe: 0.7,
     encv: 1,
-    hev1: UA_HEVC_SUPPORT_INCORRECT ? 9 : 0.75,
-    hvc1: UA_HEVC_SUPPORT_INCORRECT ? 9 : 0.75,
+    hev1: 0.75,
+    hvc1: 0.75,
     mjp2: 1,
     mp4v: 1,
     mvc1: 1,
@@ -124,8 +126,12 @@ export function videoCodecPreferenceValue(
 }
 
 export function codecsSetSelectionPreferenceValue(codecSet: string): number {
+  const limitedHevcSupport = userAgentHevcSupportIsInaccurate();
   return codecSet.split(',').reduce((num, fourCC) => {
-    const preferenceValue = sampleEntryCodesISO.video[fourCC];
+    const lowerPriority = limitedHevcSupport && isHEVC(fourCC);
+    const preferenceValue = lowerPriority
+      ? 9
+      : sampleEntryCodesISO.video[fourCC];
     if (preferenceValue) {
       return (preferenceValue * 2 + num) / (num ? 3 : 2);
     }

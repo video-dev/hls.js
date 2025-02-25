@@ -2,7 +2,7 @@ import {
   fillInMissingAV01Params,
   getCodecsForMimeType,
   mimeTypeForCodec,
-  UA_HEVC_SUPPORT_INCORRECT,
+  userAgentHevcSupportIsInaccurate,
 } from './codecs';
 import { isHEVC } from './mp4-tools';
 import type { AudioTracksByGroup } from './rendition-helper';
@@ -125,8 +125,8 @@ export function getMediaDecodingInfoPromise(
     // Override Windows Firefox HEVC MediaCapabilities result (https://github.com/video-dev/hls.js/issues/7046)
     const ua = navigator.userAgent;
     if (
-      UA_HEVC_SUPPORT_INCORRECT &&
-      videoCodecsArray.some((videoCodec) => isHEVC(videoCodec))
+      videoCodecsArray.some((videoCodec) => isHEVC(videoCodec)) &&
+      userAgentHevcSupportIsInaccurate()
     ) {
       return Promise.resolve({
         supported: false,
