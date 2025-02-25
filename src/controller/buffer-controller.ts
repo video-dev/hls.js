@@ -1336,7 +1336,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       } else {
         // ok, let's create them now !
         this.createSourceBuffers();
-        this.bufferCreated();
       }
     }
   }
@@ -1409,6 +1408,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           this.error(
             `error while trying to add sourceBuffer: ${error.message}`,
           );
+          // remove init segment from queue and delete track info
+          this.shiftAndExecuteNext(type);
+          this.operationQueue?.removeBlockers();
+          delete this.tracks[type];
           this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_ADD_CODEC_ERROR,
@@ -1416,12 +1419,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             error,
             sourceBufferName: type,
             mimeType: mimeType,
+            parent: track.id as PlaylistLevelType,
           });
-          break;
+          return;
         }
         this.trackSourceBuffer(type, track);
       }
     }
+    this.bufferCreated();
   }
 
   private getTrackCodec(track: BaseTrack, trackName: SourceBufferName): string {
@@ -1450,7 +1455,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       id: track.id,
       listeners: [],
     };
-
+    this.removeBufferListeners(type);
     this.addBufferListener(type, 'updatestart', this.onSBUpdateStart);
     this.addBufferListener(type, 'updateend', this.onSBUpdateEnd);
     this.addBufferListener(type, 'error', this.onSBUpdateError);

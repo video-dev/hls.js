@@ -1,4 +1,9 @@
 import { getMediaSource } from './mediasource-helper';
+import { isHEVC } from './mp4-tools';
+
+export const userAgentHevcSupportIsInaccurate = () => {
+  return /\(Windows.+Firefox\//i.test(navigator.userAgent);
+};
 
 // from http://mp4ra.org/codecs.html
 // values indicate codec selection preference (lower is higher priority)
@@ -121,8 +126,12 @@ export function videoCodecPreferenceValue(
 }
 
 export function codecsSetSelectionPreferenceValue(codecSet: string): number {
+  const limitedHevcSupport = userAgentHevcSupportIsInaccurate();
   return codecSet.split(',').reduce((num, fourCC) => {
-    const preferenceValue = sampleEntryCodesISO.video[fourCC];
+    const lowerPriority = limitedHevcSupport && isHEVC(fourCC);
+    const preferenceValue = lowerPriority
+      ? 9
+      : sampleEntryCodesISO.video[fourCC];
     if (preferenceValue) {
       return (preferenceValue * 2 + num) / (num ? 3 : 2);
     }
@@ -271,4 +280,8 @@ export function getM2TSSupportedAudioTypes(
       ? MediaSource.isTypeSupported('audio/mp4; codecs="ac-3"')
       : false,
   };
+}
+
+export function getCodecsForMimeType(mimeType: string): string {
+  return mimeType.replace(/^.+codecs=["']?([^"']+).*$/, '$1');
 }
