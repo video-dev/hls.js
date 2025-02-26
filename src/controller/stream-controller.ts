@@ -160,7 +160,7 @@ export default class StreamController
         // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
         hls.nextLoadLevel = startLevel;
         this.level = hls.loadLevel;
-        this._hasEnoughToStart = false;
+        this._hasEnoughToStart = !!skipSeekToStartPosition;
       }
       // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
       if (
@@ -975,7 +975,7 @@ export default class StreamController
     if (!media) {
       return;
     }
-    if (!this._hasEnoughToStart && media.buffered.length) {
+    if (!this._hasEnoughToStart && BufferHelper.getBuffered(media).length) {
       this._hasEnoughToStart = true;
       this.seekToStartPos();
     }
@@ -1492,10 +1492,12 @@ export default class StreamController
   }
 
   public getMainFwdBufferInfo(): BufferInfo | null {
-    return this.getFwdBufferInfo(
-      this.mediaBuffer ? this.mediaBuffer : this.media,
-      PlaylistLevelType.MAIN,
-    );
+    // Observe video SourceBuffer (this.mediaBuffer) only when alt-audio is used, otherwise observe combined media buffer
+    const bufferOutput =
+      this.mediaBuffer && this.altAudio === AlternateAudio.SWITCHED
+        ? this.mediaBuffer
+        : this.media;
+    return this.getFwdBufferInfo(bufferOutput, PlaylistLevelType.MAIN);
   }
 
   public get maxBufferLength(): number {
