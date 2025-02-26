@@ -106,6 +106,9 @@ export class InterstitialEvent {
   public reset() {
     this.assetListLoader?.destroy();
     this.assetListLoader = this.error = undefined;
+    this.assetListResponse = null;
+    this.assetList.length = 0;
+    this._duration = null;
   }
 
   public isAssetPastPlayoutLimit(assetIndex: number): boolean {
