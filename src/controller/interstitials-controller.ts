@@ -932,13 +932,6 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
     // Check if playback has entered the next asset
     const playingAsset = this.playingAsset;
     if (!playingAsset) {
-      if (
-        !this.isInterstitial(playingItem) &&
-        this.media &&
-        !this.media.seeking
-      ) {
-        //interstitial.reset()
-      }
       return;
     }
     const end = playingAsset.timelineStart + (playingAsset.duration || 0);
@@ -2212,8 +2205,6 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     interstitial.assetList.forEach((asset) => {
       this.clearAssetPlayer(asset.identifier, toSegment);
     });
-    interstitial.appendInPlaceStarted = false;
-    interstitial.assetListResponse = null;
     // Remove asset list and resolved duration
     interstitial.reset();
   }
