@@ -166,6 +166,16 @@ function createMediaKeySystemConfigurations(
   return [baseConfig];
 }
 
+export function isPersistentSessionType(
+  drmSystemOptions: DRMSystemOptions,
+): boolean {
+  return (
+    JSON.stringify(drmSystemOptions.sessionType).includes(
+      'persistent-license',
+    ) || drmSystemOptions.sessionType === 'persistent-license'
+  );
+}
+
 export function parsePlayReadyWRM(keyBytes: Uint8Array): Uint8Array | null {
   const keyBytesUtf16 = new Uint16Array(
     keyBytes.buffer,
