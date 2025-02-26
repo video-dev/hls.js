@@ -1324,7 +1324,10 @@ export type {
   ErrorActionFlags,
   IErrorAction,
 } from './controller/error-controller';
-export type { HlsAssetPlayer } from './controller/interstitial-player';
+export type {
+  HlsAssetPlayer,
+  InterstitialPlayer,
+} from './controller/interstitial-player';
 export type { PlayheadTimes } from './controller/interstitials-controller';
 export type {
   InterstitialScheduleDurations,

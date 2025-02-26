@@ -20,11 +20,6 @@ export class MockMediaSource extends EventTarget {
       this._sourceBuffers.splice(index, 1);
     }
   }
-
-  addEventListener() {}
-
-  removeEventListener() {}
-
   endOfStream() {}
 }
 
@@ -104,11 +99,27 @@ export class MockSourceBuffer extends EventTarget {
     this.buffered.add({ start, end });
   }
 }
-
-export class MockMediaElement {
+export class MockMediaElement extends EventTarget {
+  private __src: string = '';
   public currentTime: number = 0;
   public duration: number = Infinity;
   public textTracks: any[] = [];
-  addEventListener() {}
-  removeEventListener() {}
+  get src(): string {
+    return this.__src;
+  }
+  set src(value: string) {
+    this.__src = value;
+    this.currentTime = 0;
+  }
+  load() {
+    this.currentTime = 0;
+  }
+  play() {
+    return Promise.resolve();
+  }
+  removeAttribute(qualifiedName: string) {
+    if (qualifiedName === 'src') {
+      this.src = '';
+    }
+  }
 }

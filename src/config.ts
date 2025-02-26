@@ -308,7 +308,7 @@ export type HlsConfig = {
   interstitialsController?: typeof InterstitialsController;
   // Option to disable internal playback handling of Interstitials (set to false to disable Interstitials playback without disabling parsing and schedule events)
   enableInterstitialPlayback: boolean;
-  // Option to disable appending Interstitals inline on same timeline and MediaSource as Primary media
+  // Option to disable appending Interstitials inline on same timeline and MediaSource as Primary media
   interstitialAppendInPlace: boolean;
   // How many seconds past the end of a live playlist to preload Interstitial assets
   interstitialLiveLookAhead: number;
@@ -440,7 +440,7 @@ export const hlsDefaultConfig: HlsConfig = {
   enableEmsgMetadataCues: true,
   enableEmsgKLVMetadata: false,
   enableID3MetadataCues: true,
-  enableInterstitialPlayback: __USE_INTERSTITALS__,
+  enableInterstitialPlayback: __USE_INTERSTITIALS__,
   interstitialAppendInPlace: true,
   interstitialLiveLookAhead: 10,
   useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
@@ -533,7 +533,7 @@ export const hlsDefaultConfig: HlsConfig = {
       : defaultLoadPolicy,
   },
   interstitialAssetListLoadPolicy: {
-    default: __USE_INTERSTITALS__
+    default: __USE_INTERSTITIALS__
       ? {
           maxTimeToFirstByteMs: 10000,
           maxLoadTimeMs: 30000,
@@ -582,7 +582,7 @@ export const hlsDefaultConfig: HlsConfig = {
   contentSteeringController: __USE_CONTENT_STEERING__
     ? ContentSteeringController
     : undefined,
-  interstitialsController: __USE_INTERSTITALS__
+  interstitialsController: __USE_INTERSTITIALS__
     ? InterstitialsController
     : undefined,
 };

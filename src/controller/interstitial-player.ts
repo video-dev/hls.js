@@ -9,9 +9,17 @@ import {
 } from '../loader/interstitial-event';
 import { BufferHelper } from '../utils/buffer-helper';
 import type { HlsConfig } from '../config';
+import type { InterstitialScheduleEventItem } from '../controller/interstitials-schedule';
 import type Hls from '../hls';
 import type { BufferCodecsData, MediaAttachingData } from '../types/events';
 
+export interface InterstitialPlayer {
+  currentTime: number;
+  duration: number;
+  assetPlayers: (HlsAssetPlayer | null)[];
+  playingIndex: number;
+  scheduleItem: InterstitialScheduleEventItem | null;
+}
 export class HlsAssetPlayer {
   public readonly hls: Hls;
   public readonly interstitial: InterstitialEvent;
@@ -19,7 +27,6 @@ export class HlsAssetPlayer {
   public tracks: Partial<BufferCodecsData> | null = null;
   private hasDetails: boolean = false;
   private mediaAttached: HTMLMediaElement | null = null;
-  private playoutOffset: number = 0;
 
   constructor(
     HlsPlayerClass: typeof Hls,
@@ -49,8 +56,6 @@ export class HlsAssetPlayer {
       this.mediaAttached = media;
       const event = this.interstitial;
       if (event.playoutLimit) {
-        this.playoutOffset =
-          event.assetList[event.assetList.indexOf(assetItem)]?.startOffset || 0;
         media.addEventListener('timeupdate', this.checkPlayout);
       }
     });
@@ -59,7 +64,8 @@ export class HlsAssetPlayer {
   private checkPlayout = () => {
     const interstitial = this.interstitial;
     const playoutLimit = interstitial.playoutLimit;
-    if (this.playoutOffset + this.currentTime >= playoutLimit) {
+    const currentTime = this.currentTime;
+    if (this.startOffset + currentTime >= playoutLimit) {
       this.hls.trigger(Events.PLAYOUT_LIMIT_REACHED, {});
     }
   };
@@ -98,7 +104,7 @@ export class HlsAssetPlayer {
   }
 
   get duration(): number {
-    const duration = this.assetItem?.duration;
+    const duration = this.assetItem.duration;
     if (!duration) {
       return 0;
     }
@@ -111,6 +117,10 @@ export class HlsAssetPlayer {
       return 0;
     }
     return Math.max(0, duration - this.currentTime);
+  }
+
+  get startOffset(): number {
+    return this.assetItem.startOffset;
   }
 
   get timelineOffset(): number {

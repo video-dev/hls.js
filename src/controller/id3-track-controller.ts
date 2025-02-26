@@ -461,7 +461,7 @@ class ID3TrackController implements ComponentAPI {
             this.id3Track.addCue(cue);
             cues[key] = cue;
             if (
-              __USE_INTERSTITALS__ &&
+              __USE_INTERSTITIALS__ &&
               this.hls.config.interstitialsController
             ) {
               if (key === 'X-ASSET-LIST' || key === 'X-ASSET-URL') {
