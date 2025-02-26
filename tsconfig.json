@@ -9,6 +9,7 @@
     "demo/**/*",
     /* needed for eslint to work for some reason ¯\_(ツ)_/¯ */
     "tests/**/.eslintrc.js",
+    "release.config.mjs",
     "rollup.config.js",
     "build-config.js",
     "lint-staged.config.js",
