@@ -396,8 +396,9 @@ export default class InterstitialsController
         const playingItem = c.effectivePlayingItem;
         const targetIndex = c.schedule.findItemIndexAtTime(time, timelineType);
         const targetItem = c.schedule.items?.[targetIndex];
-        const playingInterstitial = playingItem?.event;
-        const appendInPlace = playingInterstitial?.appendInPlace;
+        const bufferingPlayer = c.getBufferingPlayer();
+        const bufferingInterstitial = bufferingPlayer?.interstitial;
+        const appendInPlace = bufferingInterstitial?.appendInPlace;
         const seekInItem = playingItem && c.itemsMatch(playingItem, targetItem);
         if (playingItem && (appendInPlace || seekInItem)) {
           // seek in asset player or primary media (appendInPlace)
@@ -441,7 +442,8 @@ export default class InterstitialsController
             !c.isInterstitial(playingItem) &&
             (targetIsPrimary || targetItem.event.appendInPlace)
           ) {
-            const media = c.hls.media;
+            const media =
+              c.hls.media || (appendInPlace ? bufferingPlayer?.media : null);
             if (media) {
               media.currentTime = seekToTime;
             }
@@ -1070,7 +1072,6 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
           scheduleIndex: index,
         });
         // Exiting an Interstitial
-        this.clearInterstitial(interstitial, scheduledItem);
         if (interstitial.cue.once) {
           // Remove interstitial with CUE attribute value of ONCE after it has played
           this.updateSchedule();
@@ -1897,7 +1898,6 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
           liveStartPosition = this.hls.liveSyncPosition || 0;
         }
       }
-      interstitial.assetListResponse = null;
       const assetListLoader = this.assetListLoader.loadAssetList(
         interstitial as InterstitialEventWithAssetList,
         liveStartPosition,
@@ -2205,7 +2205,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     interstitial.assetList.forEach((asset) => {
       this.clearAssetPlayer(asset.identifier, toSegment);
     });
-    interstitial.appendInPlaceStarted = false;
+    // Remove asset list and resolved duration
+    interstitial.reset();
   }
 
   private clearAssetPlayer(

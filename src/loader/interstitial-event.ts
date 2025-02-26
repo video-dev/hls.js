@@ -104,8 +104,14 @@ export class InterstitialEvent {
   }
 
   public reset() {
+    this.appendInPlaceStarted = false;
     this.assetListLoader?.destroy();
     this.assetListLoader = this.error = undefined;
+    if (!this.supplementsPrimary) {
+      this.assetListResponse = null;
+      this.assetList = [];
+      this._duration = null;
+    }
   }
 
   public isAssetPastPlayoutLimit(assetIndex: number): boolean {

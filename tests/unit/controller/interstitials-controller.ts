@@ -1570,7 +1570,7 @@ fileSequence6.mp4
         ).to.be.an('object');
       };
       const logIm = (context: string) =>
-        console.log(
+        hls.logger.info(
           `primary.currentTime ${im.primary.currentTime | 0} intg.currentTime ${im.integrated.currentTime | 0} pi: ${im.playingIndex} bi: ${im.bufferingIndex} @${context}`,
         );
 
