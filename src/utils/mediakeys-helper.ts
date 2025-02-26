@@ -170,7 +170,7 @@ export function isPersistentSessionType(
   drmSystemOptions: DRMSystemOptions,
 ): boolean {
   return (
-    JSON.stringify(drmSystemOptions.sessionType).includes(
+    JSON.stringify(drmSystemOptions.sessionType || []).includes(
       'persistent-license',
     ) || drmSystemOptions.sessionType === 'persistent-license'
   );
