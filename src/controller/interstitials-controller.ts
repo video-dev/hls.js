@@ -439,11 +439,12 @@ export default class InterstitialsController
           }
           const targetIsPrimary = !c.isInterstitial(targetItem);
           if (
-            !c.isInterstitial(playingItem) &&
+            (!c.isInterstitial(playingItem) ||
+              playingItem.event.appendInPlace) &&
             (targetIsPrimary || targetItem.event.appendInPlace)
           ) {
             const media =
-              c.hls.media || (appendInPlace ? bufferingPlayer?.media : null);
+              c.media || (appendInPlace ? bufferingPlayer?.media : null);
             if (media) {
               media.currentTime = seekToTime;
             }
@@ -464,6 +465,7 @@ export default class InterstitialsController
             let assetIndex = 0;
             if (targetIsPrimary) {
               c.timelinePos = seekToTime;
+              c.checkBuffer();
             } else {
               const assetList = targetItem?.event?.assetList;
               if (assetList) {
@@ -842,13 +844,23 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
     const backwardSeek = diff <= -0.01;
     this.timelinePos = currentTime;
     this.bufferedPos = currentTime;
-    this.checkBuffer();
 
     // Check if seeking out of an item
     const playingItem = this.playingItem;
     if (!playingItem) {
+      this.checkBuffer();
       return;
     }
+    if (backwardSeek) {
+      const resetCount = this.schedule.resetErrorsInRange(
+        currentTime,
+        currentTime - diff,
+      );
+      if (resetCount) {
+        this.updateSchedule();
+      }
+    }
+    this.checkBuffer();
     if (
       (backwardSeek && currentTime < playingItem.start) ||
       currentTime >= playingItem.end
@@ -911,10 +923,10 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
     // Only allow timeupdate to advance primary position, seeking is used for jumping back
     // this prevents primaryPos from being reset to 0 after re-attach
     if (currentTime > this.timelinePos) {
+      this.timelinePos = currentTime;
       if (currentTime > this.bufferedPos) {
         this.checkBuffer();
       }
-      this.timelinePos = currentTime;
     } else {
       return;
     }
@@ -998,6 +1010,7 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
         const resumptionTime = interstitial.resumeTime;
         if (this.timelinePos < resumptionTime) {
           this.timelinePos = resumptionTime;
+          this.checkBuffer();
         }
         this.setSchedulePosition(nextIndex);
       }
@@ -1329,7 +1342,7 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
     if (item) {
       this.setBufferingItem(item);
     } else {
-      this.bufferingItem = null;
+      this.bufferingItem = this.playingItem;
     }
     this.bufferingAsset = null;
 
@@ -1592,7 +1605,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
         this.bufferingItem = updatedBufferingItem;
       } else if (bufferingItem.event) {
         // Interstitial removed from schedule (Live -> VOD or other scenario where Start Date is outside the range of VOD Playlist)
-        this.bufferingItem = null;
+        this.bufferingItem = this.playingItem;
         this.clearInterstitial(bufferingItem.event, null);
       }
     }
@@ -1781,7 +1794,10 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
           (bufferingLast ? ` (${timeRemaining.toFixed(2)} remaining)` : ''),
       );
       this.bufferingItem = item;
-      this.bufferedPos = item.start;
+      this.bufferedPos = Math.max(
+        item.start,
+        Math.min(item.end, this.timelinePos),
+      );
       if (!this.playbackDisabled) {
         if (isInterstitial) {
           // primary fragment loading will exit early in base-stream-controller while `bufferingItem` is set to an Interstitial block

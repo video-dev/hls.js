@@ -1394,9 +1394,9 @@ fileSequence6.mp4`;
       insterstitials.skip();
       const eventsAfterSkip = getTriggerCalls();
       const expectedSkipEvents = [
+        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.INTERSTITIAL_ASSET_ENDED,
         Events.INTERSTITIAL_ENDED,
-        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.MEDIA_ATTACHING,
         Events.INTERSTITIALS_PRIMARY_RESUMED,
       ];
@@ -1506,10 +1506,10 @@ fileSequence6.mp4`;
       insterstitials.skip();
       const eventsAfterSkip = getTriggerCalls();
       const expectedSkipEvents = [
+        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.INTERSTITIAL_ASSET_ENDED,
         Events.INTERSTITIAL_ENDED,
         Events.INTERSTITIALS_UPDATED, // removed Interstitial with CUE="ONCE"
-        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.MEDIA_ATTACHING,
         Events.INTERSTITIALS_PRIMARY_RESUMED,
       ];
@@ -1576,8 +1576,8 @@ fileSequence6.mp4
 
       hls.on(Events.INTERSTITIALS_UPDATED, (t) => {
         logIm(t);
-        expectIm(primary, t).to.include({ currentTime: 0 });
-        expectIm(integrated, t).to.include({ currentTime: 0 });
+        expectIm(primary, t).to.include({ currentTime: 0, bufferedEnd: 0 });
+        expectIm(integrated, t).to.include({ currentTime: 0, bufferedEnd: 0 });
         expectIm(interstitialPlayer, t).to.be.null;
       });
       hls.on(Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY, (t, data) => {
@@ -1585,23 +1585,46 @@ fileSequence6.mp4
         const e = `${t}_${bufferingIndex}`;
         logIm(e);
         if (bufferingIndex === 0) {
-          expectIm(primary, e).to.include({ currentTime: 0 });
-          expectIm(integrated, e).to.include({ currentTime: 0 });
-          expectIm(interstitialPlayer, t).to.be.null;
+          // buffered to primary
+          expectIm(primary, e).to.include({ currentTime: 0, bufferedEnd: 0 });
+          expectIm(integrated, e).to.include({
+            currentTime: 0,
+            bufferedEnd: 0,
+          });
+          expectIm(interstitialPlayer, e).to.be.null;
         } else if (bufferingIndex === 1) {
-          expectIm(primary, e).to.include({ currentTime: 30 });
-          expectIm(integrated, e).to.include({ currentTime: 30 });
-          expectIm(interstitialPlayer, t).to.not.be.null;
+          // buffered to interstitial
+          expectIm(primary, e).to.include({ currentTime: 30, bufferedEnd: 30 });
+          expectIm(integrated, e).to.include({
+            currentTime: 30,
+            bufferedEnd: 30,
+          });
+          expectIm(interstitialPlayer, e).to.include({
+            playingIndex: -1,
+            currentTime: 0,
+            duration: 15,
+          });
         } else if (bufferingIndex === 2) {
-          expectIm(primary, e).to.include({ currentTime: 40 });
-          expectIm(integrated, e).to.include({ currentTime: 45 });
-          expectIm(interstitialPlayer, t).to.be.null;
+          // buffered to primary (end of interstitial)
+          expectIm(primary, e).to.include({ currentTime: 40, bufferedEnd: 40 });
+          expectIm(integrated, e).to.include({
+            currentTime: 45,
+            bufferedEnd: 45,
+          });
+          expectIm(interstitialPlayer, e).to.include({
+            playingIndex: 2,
+            currentTime: 15,
+            duration: 15,
+          });
         }
       });
       hls.on(Events.INTERSTITIAL_STARTED, (t) => {
         logIm(t);
-        expectIm(primary, t).to.include({ currentTime: 30 });
-        expectIm(integrated, t).to.include({ currentTime: 30 });
+        expectIm(primary, t).to.include({ currentTime: 30, bufferedEnd: 30 });
+        expectIm(integrated, t).to.include({
+          currentTime: 30,
+          bufferedEnd: 30,
+        });
         expectIm(interstitialPlayer, t).to.not.be.null;
         expect(im.interstitialPlayer?.assetPlayers).to.have.lengthOf(0);
         expectIm(interstitialPlayer, t).to.include({
@@ -1612,8 +1635,11 @@ fileSequence6.mp4
       });
       hls.on(Events.ASSET_LIST_LOADED, (t) => {
         logIm(t);
-        expectIm(primary, t).to.include({ currentTime: 30 });
-        expectIm(integrated, t).to.include({ currentTime: 30 });
+        expectIm(primary, t).to.include({ currentTime: 30, bufferedEnd: 30 });
+        expectIm(integrated, t).to.include({
+          currentTime: 30,
+          bufferedEnd: 30,
+        });
         expectIm(interstitialPlayer, t).to.not.be.null;
         expect(im.interstitialPlayer?.assetPlayers).to.have.lengthOf(3);
         expectIm(interstitialPlayer, t).to.include({
@@ -1631,6 +1657,7 @@ fileSequence6.mp4
         expectIm(interstitialPlayer, e).to.not.be.null;
         expectAssetPlayer(assetListIndex, e).to.include({
           currentTime: 0,
+          bufferedEnd: 0,
           duration: 5,
           interstitialId: 'mid-10',
           startOffset: assetListIndex * 5,
@@ -1642,23 +1669,33 @@ fileSequence6.mp4
         const e = `${t}_${assetListIndex}`;
         logIm(e);
         if (assetListIndex === 0) {
-          expectIm(primary, e).to.include({ currentTime: 30 });
-          expectIm(integrated, e).to.include({ currentTime: 30 });
+          expectIm(primary, e).to.include({ currentTime: 30, bufferedEnd: 30 });
+          expectIm(integrated, e).to.include({
+            currentTime: 30,
+            bufferedEnd: 30,
+          });
         } else if (assetListIndex === 1) {
-          expectIm(primary, e).to.include({ currentTime: 30 });
-          expectIm(integrated, e).to.include({ currentTime: 35 });
+          expectIm(primary, e).to.include({ currentTime: 30, bufferedEnd: 30 });
+          expectIm(integrated, e).to.include({
+            currentTime: 35,
+            bufferedEnd: 35,
+          });
         } else if (assetListIndex === 2) {
-          expectIm(primary, e).to.include({ currentTime: 30 });
-          expectIm(integrated, e).to.include({ currentTime: 40 });
+          expectIm(primary, e).to.include({ currentTime: 30, bufferedEnd: 30 });
+          expectIm(integrated, e).to.include({
+            currentTime: 40,
+            bufferedEnd: 40,
+          });
         }
-        expectIm(interstitialPlayer, t).to.not.be.null;
-        expectIm(interstitialPlayer, t).to.include({
+        expectIm(interstitialPlayer, e).to.not.be.null;
+        expectIm(interstitialPlayer, e).to.include({
           playingIndex: assetListIndex,
           currentTime: assetListIndex * 5,
           duration: 15,
         });
-        expectAssetPlayer(assetListIndex, t).to.include({
+        expectAssetPlayer(assetListIndex, e).to.include({
           currentTime: 0,
+          bufferedEnd: 0,
           duration: 5,
           interstitialId: 'mid-10',
           startOffset: assetListIndex * 5,
@@ -1670,14 +1707,23 @@ fileSequence6.mp4
         const e = `${t}_${assetListIndex}`;
         logIm(e);
         if (assetListIndex === 0) {
-          expectIm(primary, e).to.include({ currentTime: 30 });
-          expectIm(integrated, e).to.include({ currentTime: 35 });
+          expectIm(primary, e).to.include({ currentTime: 30, bufferedEnd: 30 });
+          expectIm(integrated, e).to.include({
+            currentTime: 35,
+            bufferedEnd: 35,
+          });
         } else if (assetListIndex === 1) {
-          expectIm(primary, e).to.include({ currentTime: 30 });
-          expectIm(integrated, e).to.include({ currentTime: 40 });
+          expectIm(primary, e).to.include({ currentTime: 30, bufferedEnd: 30 });
+          expectIm(integrated, e).to.include({
+            currentTime: 40,
+            bufferedEnd: 40,
+          });
         } else if (assetListIndex === 2) {
-          expectIm(primary, e).to.include({ currentTime: 40 });
-          expectIm(integrated, e).to.include({ currentTime: 45 });
+          expectIm(primary, e).to.include({ currentTime: 40, bufferedEnd: 40 });
+          expectIm(integrated, e).to.include({
+            currentTime: 45,
+            bufferedEnd: 45,
+          });
         }
         expectIm(interstitialPlayer, t).to.not.be.null;
         expectIm(interstitialPlayer, t).to.include({
@@ -1687,6 +1733,7 @@ fileSequence6.mp4
         });
         expectAssetPlayer(assetListIndex, t).to.include({
           currentTime: 5,
+          bufferedEnd: 5,
           duration: 5,
           interstitialId: 'mid-10',
           startOffset: assetListIndex * 5,
@@ -1695,39 +1742,54 @@ fileSequence6.mp4
       });
       hls.on(Events.INTERSTITIAL_ENDED, (t) => {
         logIm(t);
-        expectIm(primary, t).to.include({ currentTime: 40 });
-        expectIm(integrated, t).to.include({ currentTime: 45 });
+        expectIm(primary, t).to.include({ currentTime: 40, bufferedEnd: 40 });
+        expectIm(integrated, t).to.include({
+          currentTime: 45,
+          bufferedEnd: 45,
+        });
         expectIm(interstitialPlayer, t).to.not.be.null;
       });
       hls.on(Events.INTERSTITIALS_PRIMARY_RESUMED, (t) => {
         logIm(t);
-        expectIm(primary, t).to.include({ currentTime: 40 });
-        expectIm(integrated, t).to.include({ currentTime: 45 });
+        expectIm(primary, t).to.include({ currentTime: 40, bufferedEnd: 40 });
+        expectIm(integrated, t).to.include({
+          currentTime: 45,
+          bufferedEnd: 45,
+        });
         expectIm(interstitialPlayer, t).to.be.null;
       });
       hls.on(Events.MEDIA_ATTACHING, (t) => {
         const playingIndex = im.playingIndex;
         logIm(`${t} playingIndex ${playingIndex}`);
         if (playingIndex < 2) {
-          expectIm(primary, t).to.include({ currentTime: 0 });
-          expectIm(integrated, t).to.include({ currentTime: 0 });
+          expectIm(primary, t).to.include({ currentTime: 0, bufferedEnd: 0 });
+          expectIm(integrated, t).to.include({
+            currentTime: 0,
+            bufferedEnd: 0,
+          });
           expectIm(interstitialPlayer, t).to.be.null;
         } else {
-          expectIm(primary, t).to.include({ currentTime: 40 });
-          expectIm(integrated, t).to.include({ currentTime: 45 });
+          expectIm(primary, t).to.include({ currentTime: 40, bufferedEnd: 40 });
+          expectIm(integrated, t).to.include({
+            currentTime: 45,
+            bufferedEnd: 45,
+          });
           expectIm(interstitialPlayer, t).to.be.null;
         }
       });
       hls.on(Events.MEDIA_ATTACHED, (t) => {
         logIm(t);
-        expectIm(primary, t).to.include({ currentTime: 0 });
-        expectIm(integrated, t).to.include({ currentTime: 0 });
+        expectIm(primary, t).to.include({ currentTime: 0, bufferedEnd: 0 });
+        expectIm(integrated, t).to.include({ currentTime: 0, bufferedEnd: 0 });
         expectIm(interstitialPlayer, t).to.be.null;
       });
       hls.once(Events.MEDIA_DETACHING, (t) => {
         logIm(t);
-        expectIm(primary, t).to.include({ currentTime: 30 });
-        expectIm(integrated, t).to.include({ currentTime: 30 });
+        expectIm(primary, t).to.include({ currentTime: 30, bufferedEnd: 30 });
+        expectIm(integrated, t).to.include({
+          currentTime: 30,
+          bufferedEnd: 30,
+        });
       });
 
       // Loaded playlist (before attaching media)
@@ -1745,16 +1807,28 @@ fileSequence6.mp4
       );
       expect(im.bufferingIndex).to.equal(-1, 'bufferingIndex');
       expect(im.playingIndex).to.equal(-1, 'playingIndex');
-      expectIm(primary, 'before attach').to.include({ currentTime: 0 });
-      expectIm(integrated, 'before attach').to.include({ currentTime: 0 });
+      expectIm(primary, 'before attach').to.include({
+        currentTime: 0,
+        bufferedEnd: 0,
+      });
+      expectIm(integrated, 'before attach').to.include({
+        currentTime: 0,
+        bufferedEnd: 0,
+      });
 
       // Attach media
       hls.trigger.resetHistory();
       const media = attachMediaToHls();
       updateTime(media, 10);
       logIm('timeupdate-10');
-      expectIm(primary, 'media@10').to.include({ currentTime: 10 });
-      expectIm(integrated, 'media@10').to.include({ currentTime: 10 });
+      expectIm(primary, 'media@10').to.include({
+        currentTime: 10,
+        bufferedEnd: 10,
+      });
+      expectIm(integrated, 'media@10').to.include({
+        currentTime: 10,
+        bufferedEnd: 10,
+      });
       const eventsAfterAttach = getTriggerCalls();
       const expectedEvents = [
         Events.MEDIA_ATTACHING,
@@ -1880,9 +1954,9 @@ fileSequence6.mp4
       });
       const eventsAfterLastAsset = getTriggerCalls();
       const expectedEndLastAssetEvents = [
+        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.INTERSTITIAL_ASSET_ENDED,
         Events.INTERSTITIAL_ENDED,
-        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.MEDIA_ATTACHING,
         Events.INTERSTITIALS_PRIMARY_RESUMED,
       ];
