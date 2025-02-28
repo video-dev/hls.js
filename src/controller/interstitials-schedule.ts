@@ -91,6 +91,22 @@ export class InterstitialsSchedule extends Logger {
     this.events = this.items = null;
   }
 
+  public resetErrorsInRange(start: number, end: number): number {
+    if (this.events) {
+      return this.events.reduce((count, interstitial) => {
+        if (
+          start <= interstitial.startOffset &&
+          end > interstitial.startOffset
+        ) {
+          delete interstitial.error;
+          return count + 1;
+        }
+        return count;
+      }, 0);
+    }
+    return 0;
+  }
+
   get duration(): number {
     const items = this.items;
     return items ? items[items.length - 1].end : 0;
