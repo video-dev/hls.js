@@ -733,7 +733,11 @@ export default class StreamController
       return;
     }
     const liveSyncPosition = this.hls.liveSyncPosition;
-    const currentTime = media.currentTime;
+    const mediaCurrentTime = media.currentTime;
+    const currentTime =
+      this.hasEnoughToStart || mediaCurrentTime > 0
+        ? mediaCurrentTime
+        : this.startPosition;
     const start = levelDetails.fragmentStart;
     const end = levelDetails.edge;
     const withinSlidingWindow =
