@@ -223,13 +223,16 @@ class AbrController extends Logger implements AbrComponentAPI {
     } else {
       this.bwEstimator.update(config.abrEwmaSlowVoD, config.abrEwmaFastVoD);
     }
+    if (this.timer > -1) {
+      this._abandonRulesCheck(true);
+    }
   }
 
   /*
       This method monitors the download rate of the current fragment, and will downswitch if that fragment will not load
       quickly enough to prevent underbuffering
     */
-  private _abandonRulesCheck = () => {
+  private _abandonRulesCheck = (levelLoaded?: boolean) => {
     const { fragCurrent: frag, partCurrent: part, hls } = this;
     const { autoLevelEnabled, media } = hls;
     if (!frag || !media) {
@@ -256,15 +259,14 @@ class AbrController extends Logger implements AbrComponentAPI {
     // This check only runs if we're in ABR mode and actually playing
     if (
       !autoLevelEnabled ||
-      media.paused ||
       !media.playbackRate ||
-      !media.readyState
+      (!levelLoaded && (media.paused || !media.readyState))
     ) {
       return;
     }
 
     const bufferInfo = hls.mainForwardBufferInfo;
-    if (bufferInfo === null) {
+    if (!levelLoaded && bufferInfo === null) {
       return;
     }
 
@@ -279,7 +281,9 @@ class AbrController extends Logger implements AbrComponentAPI {
     }
 
     // bufferStarvationDelay is an estimate of the amount time (in seconds) it will take to exhaust the buffer
-    const bufferStarvationDelay = bufferInfo.len / playbackRate;
+    const bufferStarvationDelay = bufferInfo
+      ? bufferInfo.len / playbackRate
+      : 0;
     const ttfb = stats.loading.first
       ? stats.loading.first - stats.loading.start
       : -1;
