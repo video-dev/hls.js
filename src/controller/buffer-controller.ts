@@ -1486,15 +1486,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (!media || !mediaSource) {
       return;
     }
+    // once received, don't listen anymore to sourceopen event
+    mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);
     media.removeEventListener('emptied', this._onMediaEmptied);
     this.updateDuration();
     this.hls.trigger(Events.MEDIA_ATTACHED, {
       media,
       mediaSource: mediaSource as MediaSource,
     });
-
-    // once received, don't listen anymore to sourceopen event
-    mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);
 
     if (this.mediaSource !== null) {
       this.checkPendingTracks();

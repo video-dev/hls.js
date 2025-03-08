@@ -295,6 +295,7 @@ export default class BaseStreamController
     this.media = this.mediaBuffer = null;
     this.loopSn = undefined;
     if (transferringMedia) {
+      this.resetLoadingState();
       this.resetTransmuxer();
       return;
     }
@@ -448,67 +449,16 @@ export default class BaseStreamController
   }
 
   protected loadFragment(
-    frag: Fragment,
+    frag: MediaFragment,
     level: Level,
     targetBufferTime: number,
   ) {
-    const config = this.hls.config;
-    if (
-      __USE_INTERSTITIALS__ &&
-      config.interstitialsController &&
-      config.enableInterstitialPlayback !== false &&
-      frag.type !== PlaylistLevelType.SUBTITLE
-    ) {
-      // Do not load fragments outside the buffering schedule segment
-      const interstitials = this.hls.interstitialsManager;
-      const bufferingItem = interstitials?.bufferingItem;
-      if (bufferingItem) {
-        const bufferingInterstitial = bufferingItem.event;
-        if (bufferingInterstitial) {
-          // Do not stream fragments while buffering Interstitial Events (except for overlap at the start)
-          if (
-            bufferingInterstitial.appendInPlace ||
-            Math.abs(frag.start - bufferingItem.start) > 1 ||
-            bufferingItem.start === 0
-          ) {
-            return;
-          }
-        } else {
-          // Limit fragment loading to media in schedule item
-          if (
-            frag.end <= bufferingItem.start &&
-            level.details?.live === false
-          ) {
-            // fragment ends by schedule item start
-            return;
-          }
-          if (frag.start > bufferingItem.end && bufferingItem.nextEvent) {
-            // fragment is past schedule item end
-            return;
-          }
-        }
-      }
-      // Skip loading of fragments that overlap completely with appendInPlace interstitials
-      const playerQueue = interstitials?.playerQueue;
-      if (playerQueue) {
-        for (let i = playerQueue.length; i--; ) {
-          const interstitial = playerQueue[i].interstitial;
-          if (
-            interstitial.appendInPlace &&
-            frag.start >= interstitial.startTime &&
-            frag.end <= interstitial.resumeTime
-          ) {
-            return;
-          }
-        }
-      }
-    }
     this.startFragRequested = true;
     this._loadFragForPlayback(frag, level, targetBufferTime);
   }
 
   private _loadFragForPlayback(
-    fragment: Fragment,
+    fragment: MediaFragment,
     level: Level,
     targetBufferTime: number,
   ) {
@@ -1352,6 +1302,7 @@ export default class BaseStreamController
       frag = this.getFragmentAtPosition(pos, end, levelDetails);
     }
 
+    frag = this.filterReplacedPrimary(frag, levelDetails);
     return this.mapToInitFragWhenRequired(frag);
   }
 
@@ -1400,6 +1351,65 @@ export default class BaseStreamController
     }
     this.loopSn = undefined;
     return nextFragment;
+  }
+
+  filterReplacedPrimary(
+    frag: MediaFragment | null,
+    details: LevelDetails | undefined,
+  ): MediaFragment | null {
+    if (!frag) {
+      return frag;
+    }
+    const config = this.hls.config;
+    if (
+      __USE_INTERSTITIALS__ &&
+      config.interstitialsController &&
+      config.enableInterstitialPlayback !== false &&
+      frag.type !== PlaylistLevelType.SUBTITLE
+    ) {
+      // Do not load fragments outside the buffering schedule segment
+      const interstitials = this.hls.interstitialsManager;
+      const bufferingItem = interstitials?.bufferingItem;
+      if (bufferingItem) {
+        const bufferingInterstitial = bufferingItem.event;
+        if (bufferingInterstitial) {
+          // Do not stream fragments while buffering Interstitial Events (except for overlap at the start)
+          if (
+            bufferingInterstitial.appendInPlace ||
+            Math.abs(frag.start - bufferingItem.start) > 1 ||
+            bufferingItem.start === 0
+          ) {
+            return null;
+          }
+        } else {
+          // Limit fragment loading to media in schedule item
+          if (frag.end <= bufferingItem.start && details?.live === false) {
+            // fragment ends by schedule item start
+            // this.fragmentTracker.fragBuffered(frag, true);
+            return null;
+          }
+          if (frag.start > bufferingItem.end && bufferingItem.nextEvent) {
+            // fragment is past schedule item end
+            return null;
+          }
+        }
+      }
+      // Skip loading of fragments that overlap completely with appendInPlace interstitials
+      const playerQueue = interstitials?.playerQueue;
+      if (playerQueue) {
+        for (let i = playerQueue.length; i--; ) {
+          const interstitial = playerQueue[i].interstitial;
+          if (
+            interstitial.appendInPlace &&
+            frag.start >= interstitial.startTime &&
+            frag.end <= interstitial.resumeTime
+          ) {
+            return null;
+          }
+        }
+      }
+    }
+    return frag;
   }
 
   mapToInitFragWhenRequired(frag: Fragment | null): typeof frag {
