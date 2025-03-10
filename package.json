@@ -93,7 +93,7 @@
     "babel-loader": "10.0.0",
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.5.0",
-    "chart.js": "2.9.4",
+    "chart.js": "4.4.8",
     "chromedriver": "131.0.5",
     "doctoc": "2.2.1",
     "es-check": "7.2.1",
