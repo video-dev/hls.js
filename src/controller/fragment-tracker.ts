@@ -503,7 +503,6 @@ export class FragmentTracker implements ComponentAPI {
 
   public removeFragment(fragment: Fragment) {
     const fragKey = getFragmentKey(fragment);
-    fragment.stats.loaded = 0;
     fragment.clearElementaryStreamInfo();
     const activeParts = this.activePartLists[fragment.type];
     if (activeParts) {

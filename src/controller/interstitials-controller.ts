@@ -1374,7 +1374,10 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
     if (
       !hls.loadingEnabled ||
       !hls.media ||
-      Math.abs(hls.media.currentTime - timelinePos) > 0.5
+      Math.abs(
+        (hls.mainForwardBufferInfo?.start || hls.media.currentTime) -
+          timelinePos,
+      ) > 0.5
     ) {
       hls.startLoad(timelinePos, skipSeekToStartPosition);
     } else if (!hls.bufferingEnabled) {
@@ -1784,21 +1787,21 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       }
       const isInterstitial = this.isInterstitial(item);
       const bufferingPlayer = this.getBufferingPlayer();
-      const timeRemaining = bufferingPlayer
-        ? bufferingPlayer.remaining
-        : bufferingLast
-          ? bufferingLast.end - this.timelinePos
-          : 0;
-      this.log(
-        `buffered to boundary ${segmentToString(item)}` +
-          (bufferingLast ? ` (${timeRemaining.toFixed(2)} remaining)` : ''),
-      );
       this.bufferingItem = item;
       this.bufferedPos = Math.max(
         item.start,
         Math.min(item.end, this.timelinePos),
       );
       if (!this.playbackDisabled) {
+        const timeRemaining = bufferingPlayer
+          ? bufferingPlayer.remaining
+          : bufferingLast
+            ? bufferingLast.end - this.timelinePos
+            : 0;
+        this.log(
+          `buffered to boundary ${segmentToString(item)}` +
+            (bufferingLast ? ` (${timeRemaining.toFixed(2)} remaining)` : ''),
+        );
         if (isInterstitial) {
           // primary fragment loading will exit early in base-stream-controller while `bufferingItem` is set to an Interstitial block
           item.event.assetList.forEach((asset) => {
