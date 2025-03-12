@@ -1,15 +1,15 @@
 export default class ChunkCache {
-  private chunks: Array<Uint8Array> = [];
+  private chunks: Array<Uint8Array<ArrayBuffer>> = [];
   public dataLength: number = 0;
 
-  push(chunk: Uint8Array) {
+  push(chunk: Uint8Array<ArrayBuffer>) {
     this.chunks.push(chunk);
     this.dataLength += chunk.length;
   }
 
-  flush(): Uint8Array {
+  flush(): Uint8Array<ArrayBuffer> {
     const { chunks, dataLength } = this;
-    let result: Uint8Array;
+    let result: Uint8Array<ArrayBuffer>;
     if (!chunks.length) {
       return new Uint8Array(0);
     } else if (chunks.length === 1) {
@@ -28,9 +28,9 @@ export default class ChunkCache {
 }
 
 function concatUint8Arrays(
-  chunks: Array<Uint8Array>,
+  chunks: Array<Uint8Array<ArrayBuffer>>,
   dataLength: number,
-): Uint8Array {
+): Uint8Array<ArrayBuffer> {
   const result = new Uint8Array(dataLength);
   let offset = 0;
   for (let i = 0; i < chunks.length; i++) {
