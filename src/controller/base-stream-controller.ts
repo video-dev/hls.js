@@ -1335,7 +1335,7 @@ export default class BaseStreamController
               : liveSyncPosition) || frag.start
           : pos;
         this.log(
-          `Setting startPosition to ${startPosition} to match initial live edge. mainStart: ${mainStart} liveSyncPosition: ${liveSyncPosition} frag.start: ${frag?.start}`,
+          `Setting startPosition to ${startPosition} to match start frag at live edge. mainStart: ${mainStart} liveSyncPosition: ${liveSyncPosition} frag.start: ${frag?.start}`,
         );
         this.startPosition = this.nextLoadPosition = startPosition;
       }
@@ -1677,6 +1677,9 @@ export default class BaseStreamController
         // Leave this.startPosition at -1, so that we can use `getInitialLiveFragment` logic when startPosition has
         // not been specified via the config or an as an argument to startLoad (#3736).
         startPosition = this.hls.liveSyncPosition || sliding;
+        this.log(
+          `Setting startPosition to -1 to start at live edge ${startPosition}`,
+        );
         this.startPosition = -1;
       } else {
         this.log(`setting startPosition to 0 by default`);
