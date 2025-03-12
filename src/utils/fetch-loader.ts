@@ -213,12 +213,8 @@ class FetchLoader implements Loader<LoaderContext> {
   }
 
   getCacheAge(): number | null {
-    let result: number | null = null;
-    if (this.response) {
-      const ageHeader = this.response.headers.get('age');
-      result = ageHeader ? parseFloat(ageHeader) : null;
-    }
-    return result;
+    const ageHeader = this.getResponseHeader('Age');
+    return ageHeader ? parseFloat(ageHeader) : null;
   }
 
   getResponseHeader(name: string): string | null {

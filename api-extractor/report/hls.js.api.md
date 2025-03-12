@@ -3180,6 +3180,8 @@ export class LevelDetails {
     // (undocumented)
     get expired(): boolean;
     // (undocumented)
+    expires?: string | null;
+    // (undocumented)
     get fragmentEnd(): number;
     // (undocumented)
     fragmentHint?: MediaFragment;

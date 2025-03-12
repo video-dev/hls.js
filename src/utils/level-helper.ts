@@ -143,7 +143,7 @@ export function mergeDetails(
   oldDetails: LevelDetails,
   newDetails: LevelDetails,
 ) {
-  if (oldDetails === newDetails) {
+  if (oldDetails === newDetails || !newDetails.fragments.length) {
     return;
   }
   // Track the last initSegment processed. Initialize it to the last one on the timeline.

@@ -736,6 +736,9 @@ class PlaylistLoader implements NetworkComponentAPI {
         levelDetails.ageHeader = 0;
       }
     }
+    if (!levelDetails.type && loader?.getResponseHeader) {
+      levelDetails.expires = loader.getResponseHeader('Expires');
+    }
 
     switch (type) {
       case PlaylistContextType.MANIFEST:

@@ -56,6 +56,7 @@ export class LevelDetails {
   public variableList: VariableMap | null = null;
   public hasVariableRefs = false;
   public appliedTimelineOffset?: number;
+  public expires?: string | null;
 
   constructor(baseUrl: string) {
     this.fragments = [];

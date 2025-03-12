@@ -151,10 +151,11 @@ export default class BasePlaylistController
 
     // Set last updated date-time
     const now = self.performance.now();
+    const dateNow = Date.now();
     const elapsed = stats.loading.first
       ? Math.max(0, now - stats.loading.first)
       : 0;
-    details.advancedDateTime = Date.now() - elapsed;
+    details.advancedDateTime = dateNow - elapsed;
 
     // shift fragment starts with timelineOffset
     const timelineOffset = this.hls.config.timelineOffset;
@@ -167,11 +168,13 @@ export default class BasePlaylistController
     }
 
     // if current playlist is a live playlist, arm a timer to reload it
-    if (details.live || previousDetails?.live) {
+
+    const startIsMutable = !details.type && details.expires;
+    if (details.live || previousDetails?.live || startIsMutable) {
       const levelOrTrack = 'levelInfo' in data ? data.levelInfo : data.track;
       details.reloaded(previousDetails);
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
-      if (previousDetails && details.fragments.length > 0) {
+      if (previousDetails) {
         mergeDetails(previousDetails, details);
       }
       if (details.requestScheduled === -1) {
@@ -199,6 +202,19 @@ export default class BasePlaylistController
         }`,
       );
       if (!this.canLoad || !details.live) {
+        if (startIsMutable && details.expires) {
+          const expiresTimeMs = new Date(details.expires).getTime();
+          if (
+            expiresTimeMs &&
+            Number.isFinite(expiresTimeMs) &&
+            expiresTimeMs - dateNow > 0
+          ) {
+            // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Expires
+            //  Note: If there is a Cache-Control header with the max-age or s-maxage directive in the response, the Expires header is ignored.
+            details.requestScheduled = now + (expiresTimeMs - dateNow);
+            this.scheduleLoading(levelOrTrack, undefined, details);
+          }
+        }
         return;
       }
       let deliveryDirectives: HlsUrlParameters | undefined;

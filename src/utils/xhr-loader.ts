@@ -12,8 +12,6 @@ import type {
   LoaderStats,
 } from '../types/loader';
 
-const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/im;
-
 class XhrLoader implements Loader<LoaderContext> {
   private xhrSetup:
     | ((xhr: XMLHttpRequest, url: string) => Promise<void> | void)
@@ -310,15 +308,8 @@ class XhrLoader implements Loader<LoaderContext> {
   }
 
   getCacheAge(): number | null {
-    let result: number | null = null;
-    if (
-      this.loader &&
-      AGE_HEADER_LINE_REGEX.test(this.loader.getAllResponseHeaders())
-    ) {
-      const ageHeader = this.loader.getResponseHeader('age');
-      result = ageHeader ? parseFloat(ageHeader) : null;
-    }
-    return result;
+    const ageHeader = this.getResponseHeader('Age');
+    return ageHeader ? parseFloat(ageHeader) : null;
   }
 
   getResponseHeader(name: string): string | null {
