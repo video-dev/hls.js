@@ -29,7 +29,7 @@ export class LevelKey implements DecryptData {
   public iv: Uint8Array | null = null;
   public key: Uint8Array | null = null;
   public keyId: Uint8Array | null = null;
-  public pssh: Uint8Array | null = null;
+  public pssh: Uint8Array<ArrayBuffer> | null = null;
 
   static clearKeyUriToKeyIdMap() {
     keyUriToKeyIdMap = {};

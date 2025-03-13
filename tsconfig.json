@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig-lib.json",
   "compilerOptions": {
+    "allowJs": true,
     "emitDeclarationOnly": false
   },
   "include": [
@@ -8,6 +9,7 @@
     "tests/**/*",
     "demo/**/*",
     /* needed for eslint to work for some reason ¯\_(ツ)_/¯ */
+    ".eslintrc.js",
     "tests/**/.eslintrc.js",
     "rollup.config.js",
     "build-config.js",

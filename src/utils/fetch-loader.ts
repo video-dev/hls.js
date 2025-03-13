@@ -246,7 +246,7 @@ class FetchLoader implements Loader<LoaderContext> {
 
             return Promise.resolve(new ArrayBuffer(0));
           }
-          const chunk: Uint8Array = data.value;
+          const chunk: Uint8Array<ArrayBuffer> = data.value;
           const len = chunk.length;
           stats.loaded += len;
           if (len < highWaterMark || chunkCache.dataLength) {

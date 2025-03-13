@@ -3283,7 +3283,7 @@ export class LevelKey implements DecryptData {
     // (undocumented)
     readonly method: string;
     // (undocumented)
-    pssh: Uint8Array | null;
+    pssh: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
     readonly uri: string;
 }

@@ -13,7 +13,7 @@ import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
-import { mockFragments } from '../../mocks/data';
+import { mockFragments as mockFragmentArray } from '../../mocks/data';
 import type { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import type StreamController from '../../../src/controller/stream-controller';
 import type { MediaFragment } from '../../../src/loader/fragment';
@@ -29,6 +29,7 @@ describe('StreamController', function () {
   let fragmentTracker: FragmentTracker;
   let streamController: StreamController;
   const attrs: LevelAttributes = new AttrList({});
+  const mockFragments = mockFragmentArray as MediaFragment[];
 
   beforeEach(function () {
     fake = sinon.useFakeXMLHttpRequest();
