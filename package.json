@@ -82,7 +82,7 @@
     "@rollup/plugin-node-resolve": "16.0.0",
     "@rollup/plugin-replace": "5.0.7",
     "@rollup/plugin-terser": "0.4.4",
-    "@rollup/plugin-typescript": "11.1.6",
+    "@rollup/plugin-typescript": "12.1.2",
     "@svta/common-media-library": "0.9.0",
     "@types/chai": "4.3.20",
     "@types/chart.js": "2.9.41",
