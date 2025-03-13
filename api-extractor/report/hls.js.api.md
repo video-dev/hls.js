@@ -402,6 +402,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected doTick(): void;
     // (undocumented)
+    filterReplacedPrimary(frag: MediaFragment | null, details: LevelDetails | undefined): MediaFragment | null;
+    // (undocumented)
     protected flushBufferGap(frag: Fragment): void;
     // (undocumented)
     protected flushMainBuffer(startOffset: number, endOffset: number, type?: SourceBufferName | null): void;
@@ -468,7 +470,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected levels: Array<Level> | null;
     // (undocumented)
-    protected loadFragment(frag: Fragment, level: Level, targetBufferTime: number): void;
+    protected loadFragment(frag: MediaFragment, level: Level, targetBufferTime: number): void;
     // (undocumented)
     protected loadingParts: boolean;
     // (undocumented)
