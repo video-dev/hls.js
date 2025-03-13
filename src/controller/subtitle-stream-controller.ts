@@ -447,7 +447,7 @@ export class SubtitleStreamController
       const fragLen = fragments.length;
       const end = trackDetails.edge;
 
-      let foundFrag: Fragment | null = null;
+      let foundFrag: MediaFragment | null = null;
       const fragPrevious = this.fragPrevious;
       if (targetBufferTime < end) {
         const tolerance = config.maxFragLookUpTolerance;
@@ -469,27 +469,28 @@ export class SubtitleStreamController
       } else {
         foundFrag = fragments[fragLen - 1];
       }
+      foundFrag = this.filterReplacedPrimary(foundFrag, track.details);
       if (!foundFrag) {
         return;
       }
-      foundFrag = this.mapToInitFragWhenRequired(foundFrag) as Fragment;
-      if (isMediaFragment(foundFrag)) {
-        // Load earlier fragment in same discontinuity to make up for misaligned playlists and cues that extend beyond end of segment
-        const curSNIdx = foundFrag.sn - trackDetails.startSN;
-        const prevFrag = fragments[curSNIdx - 1];
-        if (
-          prevFrag &&
-          prevFrag.cc === foundFrag.cc &&
-          this.fragmentTracker.getState(prevFrag) === FragmentState.NOT_LOADED
-        ) {
-          foundFrag = prevFrag;
-        }
+      // Load earlier fragment in same discontinuity to make up for misaligned playlists and cues that extend beyond end of segment
+      const curSNIdx = foundFrag.sn - trackDetails.startSN;
+      const prevFrag = fragments[curSNIdx - 1];
+      if (
+        prevFrag &&
+        prevFrag.cc === foundFrag.cc &&
+        this.fragmentTracker.getState(prevFrag) === FragmentState.NOT_LOADED
+      ) {
+        foundFrag = prevFrag;
       }
       if (
         this.fragmentTracker.getState(foundFrag) === FragmentState.NOT_LOADED
       ) {
         // only load if fragment is not loaded
-        this.loadFragment(foundFrag, track, targetBufferTime);
+        const fragToLoad = this.mapToInitFragWhenRequired(foundFrag);
+        if (fragToLoad) {
+          this.loadFragment(fragToLoad, track, targetBufferTime);
+        }
       }
     }
   }

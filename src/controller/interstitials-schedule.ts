@@ -239,13 +239,20 @@ export class InterstitialsSchedule extends Logger {
     return null;
   }
 
-  public parseInterstitialDateRanges(mediaSelection: MediaSelection) {
+  public parseInterstitialDateRanges(
+    mediaSelection: MediaSelection,
+    enableAppendInPlace: boolean,
+  ) {
     const details = mediaSelection.main.details!;
     const { dateRanges } = details;
     const previousInterstitialEvents = this.events;
-    const interstitialEvents = this.parseDateRanges(dateRanges, {
-      url: details.url,
-    });
+    const interstitialEvents = this.parseDateRanges(
+      dateRanges,
+      {
+        url: details.url,
+      },
+      enableAppendInPlace,
+    );
     const ids = Object.keys(dateRanges);
     const removedInterstitials = previousInterstitialEvents
       ? previousInterstitialEvents.filter(
@@ -321,6 +328,7 @@ export class InterstitialsSchedule extends Logger {
   private parseDateRanges(
     dateRanges: Record<string, DateRange>,
     baseData: BaseData,
+    enableAppendInPlace: boolean,
   ): InterstitialEvent[] {
     const interstitialEvents: InterstitialEvent[] = [];
     const ids = Object.keys(dateRanges);
@@ -336,6 +344,9 @@ export class InterstitialsSchedule extends Logger {
         } else {
           interstitial = new InterstitialEvent(dateRange, baseData);
           this.eventMap[id] = interstitial;
+          if (enableAppendInPlace === false) {
+            interstitial.appendInPlace = enableAppendInPlace;
+          }
         }
         interstitialEvents.push(interstitial);
       }
@@ -570,15 +581,13 @@ export class InterstitialsSchedule extends Logger {
           interstitial.appendInPlace = false;
         }
       }
-      if (!interstitial.appendInPlace) {
+      if (!interstitial.appendInPlace && i + 1 < interstitialEvents.length) {
         // abutting Interstitials must use the same MediaSource strategy, this applies to all whether or not they are back to back:
-        for (let j = i - 1; i--; ) {
-          const timeBetween =
-            interstitialEvents[j + 1].startTime -
-            interstitialEvents[j].resumeTime;
-          if (timeBetween < ABUTTING_THRESHOLD_SECONDS) {
-            interstitialEvents[j].appendInPlace = false;
-          }
+        const timeBetween =
+          interstitialEvents[i + 1].startTime -
+          interstitialEvents[i].resumeTime;
+        if (timeBetween < ABUTTING_THRESHOLD_SECONDS) {
+          interstitialEvents[i + 1].appendInPlace = false;
         }
       }
       // Update cumulativeDuration for next abutting interstitial with the same start date

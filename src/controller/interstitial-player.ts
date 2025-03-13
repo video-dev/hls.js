@@ -27,6 +27,7 @@ export class HlsAssetPlayer {
   public tracks: Partial<BufferCodecsData> | null = null;
   private hasDetails: boolean = false;
   private mediaAttached: HTMLMediaElement | null = null;
+  private _currentTime?: number;
 
   constructor(
     HlsPlayerClass: typeof Hls,
@@ -89,7 +90,7 @@ export class HlsAssetPlayer {
   get bufferedEnd(): number {
     const media = this.media || this.mediaAttached;
     if (!media) {
-      return 0;
+      return this.currentTime;
     }
     const bufferInfo = BufferHelper.bufferInfo(media, media.currentTime, 0.001);
     return this.getAssetTime(bufferInfo.end);
@@ -98,7 +99,7 @@ export class HlsAssetPlayer {
   get currentTime(): number {
     const media = this.media || this.mediaAttached;
     if (!media) {
-      return 0;
+      return this._currentTime || 0;
     }
     return this.getAssetTime(media.currentTime);
   }
@@ -151,6 +152,7 @@ export class HlsAssetPlayer {
   private removeMediaListeners() {
     const media = this.mediaAttached;
     if (media) {
+      this._currentTime = media.currentTime;
       media.removeEventListener('timeupdate', this.checkPlayout);
     }
   }
@@ -170,6 +172,7 @@ export class HlsAssetPlayer {
 
   detachMedia() {
     this.removeMediaListeners();
+    this.mediaAttached = null;
     this.hls.detachMedia();
   }
 
@@ -210,6 +213,6 @@ export class HlsAssetPlayer {
   }
 
   toString(): string {
-    return `HlsAssetPlayer: ${eventAssetToString(this.assetItem)} ${this.hls.sessionId} ${this.interstitial.appendInPlace ? 'append-in-place' : ''}`;
+    return `HlsAssetPlayer: ${eventAssetToString(this.assetItem)} ${this.hls?.sessionId} ${this.interstitial?.appendInPlace ? 'append-in-place' : ''}`;
   }
 }
