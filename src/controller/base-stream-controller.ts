@@ -1971,27 +1971,29 @@ export default class BaseStreamController
       },
       false,
     );
-    if (!parsed && this.transmuxer?.error === null) {
-      const error = new Error(
-        `Found no media in fragment ${frag.sn} of ${this.playlistLabel()} ${frag.level} resetting transmuxer to fallback to playlist timing`,
-      );
+    if (!parsed) {
       if (level.fragmentError === 0) {
         // Mark and track the odd empty segment as a gap to avoid reloading
         this.treatAsGap(frag, level);
       }
-      this.warn(error.message);
-      this.hls.trigger(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.FRAG_PARSING_ERROR,
-        fatal: false,
-        error,
-        frag,
-        reason: `Found no media in msn ${frag.sn} of ${this.playlistLabel()} "${level.url}"`,
-      });
-      if (!this.hls) {
-        return;
+      if (this.transmuxer?.error === null) {
+        const error = new Error(
+          `Found no media in fragment ${frag.sn} of ${this.playlistLabel()} ${frag.level} resetting transmuxer to fallback to playlist timing`,
+        );
+        this.warn(error.message);
+        this.hls.trigger(Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.FRAG_PARSING_ERROR,
+          fatal: false,
+          error,
+          frag,
+          reason: `Found no media in msn ${frag.sn} of ${this.playlistLabel()} "${level.url}"`,
+        });
+        if (!this.hls) {
+          return;
+        }
+        this.resetTransmuxer();
       }
-      this.resetTransmuxer();
       // For this error fallthrough. Marking parsed will allow advancing to next fragment.
     }
     this.state = State.PARSED;
