@@ -118,6 +118,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
   - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
+  - [`handleMpegTsVideoIntegrityErrors`](#handlempegtsvideointegrityerrors)
   - [`abrEwmaFastLive`](#abrewmafastlive)
   - [`abrEwmaSlowLive`](#abrewmaslowlive)
   - [`abrEwmaFastVoD`](#abrewmafastvod)
@@ -514,6 +515,7 @@ var config = {
   stretchShortVideoTrack: false,
   maxAudioFramesDrift: 1,
   forceKeyFrameOnDiscontinuity: true,
+  handleMpegTsVideoIntegrityErrors: 'process',
   abrEwmaFastLive: 3.0,
   abrEwmaSlowLive: 9.0,
   abrEwmaFastVoD: 3.0,
@@ -1601,6 +1603,17 @@ If set to false, all AVC samples will be kept, which can help avoid holes in the
 Setting this parameter to false can also generate decoding weirdness when switching level or seeking.
 
 parameter should be a boolean
+
+### `handleMpegTsVideoIntegrityErrors`
+
+(default: `'process'`)
+
+Controls how corrupted video data is handled based on MPEG-TS integrity checks.
+
+- `'process'` (default): Continues processing corrupted data, which may lead to decoding errors.
+- `'skip'`: Discards corrupted video data to prevent potential playback issues.
+
+This parameter accepts a string with possible values: `'process'` | `'skip'`.
 
 ### `abrEwmaFastLive`
 
