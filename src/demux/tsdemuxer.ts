@@ -73,6 +73,7 @@ class TSDemuxer implements Demuxer {
   private aacOverFlow: AudioFrame | null = null;
   private remainderData: Uint8Array | null = null;
   private videoParser: BaseVideoParser | null;
+  private videoIntegrityChecker: PacketsIntegrityChecker | null = null;
 
   constructor(
     observer: HlsEventEmitter,
@@ -183,6 +184,10 @@ class TSDemuxer implements Demuxer {
 
     this._videoTrack = TSDemuxer.createTrack('video') as DemuxedVideoTrack;
     this._videoTrack.duration = trackDuration;
+    this.videoIntegrityChecker =
+      this.config.handleMpegTsVideoIntegrityErrors === 'skip'
+        ? new PacketsIntegrityChecker(this.logger)
+        : null;
     this._audioTrack = TSDemuxer.createTrack(
       'audio',
       trackDuration,
@@ -229,6 +234,7 @@ class TSDemuxer implements Demuxer {
     let pes: PES | null;
 
     const videoTrack = this._videoTrack as DemuxedVideoTrack;
+    const videoIntegrityChecker = this.videoIntegrityChecker;
     const audioTrack = this._audioTrack as DemuxedAudioTrack;
     const id3Track = this._id3Track as DemuxedMetadataTrack;
     const textTrack = this._txtTrack as DemuxedUserdataTrack;
@@ -294,7 +300,11 @@ class TSDemuxer implements Demuxer {
         switch (pid) {
           case videoPid:
             if (stt) {
-              if (videoData && (pes = parsePES(videoData, this.logger))) {
+              if (
+                videoData &&
+                !videoIntegrityChecker?.isCorrupted &&
+                (pes = parsePES(videoData, this.logger))
+              ) {
                 this.readyVideoParser(videoTrack.segmentCodec);
                 if (this.videoParser !== null) {
                   this.videoParser.parsePES(videoTrack, textTrack, pes, false);
@@ -302,7 +312,9 @@ class TSDemuxer implements Demuxer {
               }
 
               videoData = { data: [], size: 0 };
+              videoIntegrityChecker?.reset(videoPid);
             }
+            videoIntegrityChecker?.handlePacket(data.subarray(start));
             if (videoData) {
               videoData.data.push(data.subarray(offset, start + PACKET_LENGTH));
               videoData.size += start + PACKET_LENGTH - offset;
@@ -485,9 +497,14 @@ class TSDemuxer implements Demuxer {
     const videoData = videoTrack.pesData;
     const audioData = audioTrack.pesData;
     const id3Data = id3Track.pesData;
+    const videoIntegrityChecker = this.videoIntegrityChecker;
     // try to parse last PES packets
     let pes: PES | null;
-    if (videoData && (pes = parsePES(videoData, this.logger))) {
+    if (
+      videoData &&
+      !videoIntegrityChecker?.isCorrupted &&
+      (pes = parsePES(videoData, this.logger))
+    ) {
       this.readyVideoParser(videoTrack.segmentCodec);
       if (this.videoParser !== null) {
         this.videoParser.parsePES(
@@ -611,6 +628,8 @@ class TSDemuxer implements Demuxer {
       this._id3Track =
       this._txtTrack =
         undefined;
+
+    this.videoIntegrityChecker = null;
   }
 
   private parseAACPES(track: DemuxedAudioTrack, pes: PES) {
@@ -1159,6 +1178,79 @@ function parsePES(stream: ElementaryStreamData, logger: ILogger): PES | null {
     return { data: pesData, pts: pesPts, dts: pesDts, len: pesLen };
   }
   return null;
+}
+
+// See FFMpeg for reference: https://github.com/FFmpeg/FFmpeg/blob/e4c8e80a2efee275f2a10fcf0424c9fc1d86e309/libavformat/mpegts.c#L2811-L2834
+class PacketsIntegrityChecker {
+  private readonly logger: ILogger;
+
+  private pid: number = 0;
+  private lastContinuityCounter = -1;
+  private integrityState: 'ok' | 'tei-bit' | 'cc-failed' = 'ok';
+
+  constructor(logger: ILogger) {
+    this.logger = logger;
+  }
+
+  public get isCorrupted(): boolean {
+    return this.integrityState !== 'ok';
+  }
+
+  public reset(pid: number) {
+    this.pid = pid;
+    this.lastContinuityCounter = -1;
+    this.integrityState = 'ok';
+  }
+
+  public handlePacket(data: Uint8Array) {
+    if (data.byteLength < 4) {
+      return;
+    }
+
+    const pid = parsePID(data, 0);
+    if (pid !== this.pid) {
+      this.logger.debug(`Packet PID mismatch, expected ${this.pid} got ${pid}`);
+      return;
+    }
+
+    const adaptationFieldControl = (data[3] & 0x30) >> 4;
+    if (adaptationFieldControl === 0) {
+      return;
+    }
+    const continuityCounter = data[3] & 0xf;
+
+    const lastContinuityCounter = this.lastContinuityCounter;
+    this.lastContinuityCounter = continuityCounter;
+
+    const hasPayload = (adaptationFieldControl & 0b01) != 0;
+    const hasAdaptation = (adaptationFieldControl & 0b10) != 0;
+    const isDiscontinuity =
+      hasAdaptation && data[4] != 0 && (data[5] & 0x80) != 0;
+
+    if (isDiscontinuity) {
+      return;
+    }
+    if (lastContinuityCounter < 0) {
+      return;
+    }
+
+    const expectedContinuityCounter = hasPayload
+      ? (lastContinuityCounter + 1) & 0x0f
+      : lastContinuityCounter;
+    if (continuityCounter !== expectedContinuityCounter) {
+      this.logger.warn(
+        `MPEG-TS Continuity Counter check failed for PID='${pid}', CC=${continuityCounter}, Expected-CC=${expectedContinuityCounter} Last-CC=${lastContinuityCounter}`,
+      );
+      this.integrityState = 'cc-failed';
+      return;
+    }
+
+    if ((data[1] & 0x80) !== 0) {
+      this.logger.warn(`MPEG-TS Packet had TEI flag set for PID='${pid}'`);
+      this.integrityState = 'tei-bit';
+      return;
+    }
+  }
 }
 
 export default TSDemuxer;
