@@ -12,6 +12,7 @@ import {
   videoCodecPreferenceValue,
 } from '../utils/codecs';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
+import { getUnsupportedResult } from '../utils/mediacapabilities-helper';
 import { stringify } from '../utils/safe-json-stringify';
 import type ContentSteeringController from './content-steering-controller';
 import type Hls from '../hls';
@@ -163,6 +164,7 @@ export default class LevelController extends BasePlaylistController {
         (audioCodec && !this.isAudioSupported(audioCodec)) ||
         (videoCodec && !this.isVideoSupported(videoCodec))
       ) {
+        this.log(`Some or all CODECS not supported "${attributes.CODECS}"`);
         return;
       }
 
@@ -178,7 +180,7 @@ export default class LevelController extends BasePlaylistController {
       const levelKey = `${contentSteeringPrefix}${levelParsed.bitrate}-${RESOLUTION}-${FRAMERATE}-${CODECS}-${VIDEO_RANGE}-${HDCP}`;
 
       if (!redundantSet[levelKey]) {
-        const level = new Level(levelParsed);
+        const level = this.createLevel(levelParsed);
         redundantSet[levelKey] = level;
         generatePathwaySet[levelKey] = 1;
         levels.push(level);
@@ -190,7 +192,7 @@ export default class LevelController extends BasePlaylistController {
         // Content Steering controller to handles Pathway fallback on error
         const pathwayCount = (generatePathwaySet[levelKey] += 1);
         levelParsed.attrs['PATHWAY-ID'] = new Array(pathwayCount + 1).join('.');
-        const level = new Level(levelParsed);
+        const level = this.createLevel(levelParsed);
         redundantSet[levelKey] = level;
         levels.push(level);
       } else {
@@ -206,6 +208,22 @@ export default class LevelController extends BasePlaylistController {
       videoCodecFound,
       audioCodecFound,
     );
+  }
+
+  private createLevel(levelParsed: LevelParsed): Level {
+    const level = new Level(levelParsed);
+    const supplemental = levelParsed.supplemental;
+    if (
+      supplemental?.videoCodec &&
+      !this.isVideoSupported(supplemental.videoCodec)
+    ) {
+      const error = new Error(
+        `SUPPLEMENTAL-CODECS not supported "${supplemental.videoCodec}"`,
+      );
+      this.log(error.message);
+      level.supportedResult = getUnsupportedResult(error, []);
+    }
+    return level;
   }
 
   private isAudioSupported(codec: string): boolean {
