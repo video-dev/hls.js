@@ -30,6 +30,24 @@ export const SUPPORTED_INFO_DEFAULT: MediaDecodingInfo = {
   ],
 } as const;
 
+export function getUnsupportedResult(
+  error: Error,
+  configurations: MediaDecodingConfiguration[],
+): MediaDecodingInfo {
+  return {
+    supported: false,
+    configurations,
+    decodingInfoResults: [
+      {
+        supported: false,
+        smooth: false,
+        powerEfficient: false,
+      },
+    ],
+    error,
+  };
+}
+
 export const SUPPORTED_INFO_CACHE: Record<
   string,
   Promise<MediaCapabilitiesDecodingInfo>
@@ -128,20 +146,14 @@ export function getMediaDecodingInfoPromise(
       videoCodecsArray.some((videoCodec) => isHEVC(videoCodec)) &&
       userAgentHevcSupportIsInaccurate()
     ) {
-      return Promise.resolve({
-        supported: false,
-        configurations,
-        decodingInfoResults: [
-          {
-            supported: false,
-            smooth: false,
-            powerEfficient: false,
-          },
-        ],
-        error: new Error(
-          `Overriding Windows Firefox HEVC MediaCapabilities result based on user-agent sting: (${ua})`,
+      return Promise.resolve(
+        getUnsupportedResult(
+          new Error(
+            `Overriding Windows Firefox HEVC MediaCapabilities result based on user-agent sting: (${ua})`,
+          ),
+          configurations,
         ),
-      });
+      );
     }
     configurations.push.apply(
       configurations,
