@@ -83,7 +83,7 @@
     "@rollup/plugin-replace": "5.0.7",
     "@rollup/plugin-terser": "0.4.4",
     "@rollup/plugin-typescript": "12.1.2",
-    "@svta/common-media-library": "0.9.0",
+    "@svta/common-media-library": "0.10.0",
     "@types/chai": "4.3.20",
     "@types/chart.js": "2.9.41",
     "@types/mocha": "10.0.10",
