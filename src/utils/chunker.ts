@@ -1,5 +1,4 @@
 import { appendUint8Array } from './mp4-tools';
-import { sliceUint8 } from './typed-array';
 
 export default class Chunker {
   private chunkSize: number;
@@ -29,10 +28,10 @@ export default class Chunker {
       let offset = 0;
       const len = temp.length;
       while (offset < len - chunkSize) {
-        result.push(sliceUint8(temp, offset, offset + chunkSize));
+        result.push(temp.slice(offset, offset + chunkSize));
         offset += chunkSize;
       }
-      this.cache = sliceUint8(temp, offset);
+      this.cache = temp.slice(offset);
     } else {
       result.push(temp);
     }
