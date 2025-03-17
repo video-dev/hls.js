@@ -16,7 +16,7 @@ export default class Decrypter {
   private softwareDecrypter: AESDecryptor | null = null;
   private key: ArrayBuffer | null = null;
   private fastAesKey: FastAESKey | null = null;
-  private remainderData: Uint8Array | null = null;
+  private remainderData: Uint8Array<ArrayBuffer> | null = null;
   private currentIV: ArrayBuffer | null = null;
   private currentResult: ArrayBuffer | null = null;
   private useSoftware: boolean;
@@ -55,7 +55,7 @@ export default class Decrypter {
     return this.useSoftware;
   }
 
-  public flush(): Uint8Array | null {
+  public flush(): Uint8Array<ArrayBuffer> | null {
     const { currentResult, remainderData } = this;
     if (!currentResult || remainderData) {
       this.reset();
@@ -151,7 +151,7 @@ export default class Decrypter {
   }
 
   public webCryptoDecrypt(
-    data: Uint8Array,
+    data: Uint8Array<ArrayBuffer>,
     key: ArrayBuffer,
     iv: ArrayBuffer,
     aesMode: DecrypterAesMode,

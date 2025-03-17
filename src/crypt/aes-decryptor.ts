@@ -1,7 +1,7 @@
 import { sliceUint8 } from '../utils/typed-array';
 
 // PKCS7
-export function removePadding(array: Uint8Array): Uint8Array {
+export function removePadding(array: Uint8Array<ArrayBuffer>) {
   const outputBytes = array.byteLength;
   const paddingBytes =
     outputBytes && new DataView(array.buffer).getUint8(outputBytes - 1);
@@ -216,7 +216,11 @@ export default class AESDecryptor {
     );
   }
 
-  decrypt(inputArrayBuffer: ArrayBuffer, offset: number, aesIV: ArrayBuffer) {
+  decrypt(
+    inputArrayBuffer: ArrayBufferLike,
+    offset: number,
+    aesIV: ArrayBuffer,
+  ) {
     const nRounds = this.keySize + 6;
     const invKeySchedule = this.invKeySchedule;
     const invSBOX = this.invSBox;
