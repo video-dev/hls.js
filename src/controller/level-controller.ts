@@ -265,23 +265,27 @@ export default class LevelController extends BasePlaylistController {
       // Dispatch error after MANIFEST_LOADED is done propagating
       Promise.resolve().then(() => {
         if (this.hls) {
+          let message = 'no level with compatible codecs found in manifest';
+          let reason = message;
           if (data.levels.length) {
-            this.warn(
-              `One or more CODECS in variant not supported: ${stringify(
-                data.levels[0].attrs,
-              )}`,
-            );
+            reason = `one or more CODECS in variant not supported: ${stringify(
+              data.levels
+                .map((level) => level.attrs.CODECS)
+                .filter(
+                  (value, index, array) => array.indexOf(value) === index,
+                ),
+            )}`;
+            this.warn(reason);
+            message += ` (${reason})`;
           }
-          const error = new Error(
-            'no level with compatible codecs found in manifest',
-          );
+          const error = new Error(message);
           this.hls.trigger(Events.ERROR, {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
             fatal: true,
             url: data.url,
             error,
-            reason: error.message,
+            reason,
           });
         }
       });

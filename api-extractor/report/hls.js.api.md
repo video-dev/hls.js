@@ -586,6 +586,8 @@ export interface BaseTrack {
     };
     // (undocumented)
     pendingCodec?: string;
+    // (undocumented)
+    supplemental?: string;
 }
 
 // Warning: (ae-missing-release-tag) "BaseTrackSet" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
