@@ -195,14 +195,15 @@ describe('CapLevelController', function () {
     });
 
     describe('start and stop', function () {
-      it('immediately caps and sets a timer for monitoring size size', function () {
+      it('immediately caps and begins monitoring size', function () {
         const detectPlayerSizeSpy = sinon.spy(
           capLevelController,
           'detectPlayerSize',
         );
         capLevelController.startCapping();
 
-        expect(capLevelController.timer).to.exist;
+        expect(capLevelController.timer || capLevelController.observer).to
+          .exist;
         expect(detectPlayerSizeSpy.callCount).to.equal(1);
       });
 
@@ -215,7 +216,6 @@ describe('CapLevelController', function () {
           Number.POSITIVE_INFINITY,
         );
         expect(capLevelController.restrictedLevels).to.be.empty;
-        expect(capLevelController.firstLevel).to.equal(-1);
         expect(capLevelController.timer).to.not.exist;
       });
     });
@@ -246,15 +246,11 @@ describe('CapLevelController', function () {
       expect(startCappingSpy.calledOnce).to.be.true;
     });
 
-    it('receives level information from the MANIFEST_PARSED event', function () {
+    it('resets restrictedLevels on MANIFEST_PARSED', function () {
       capLevelController.restrictedLevels = [1];
-      const data = {
+      capLevelController.onManifestParsed(Events.MANIFEST_PARSED, {
         levels: [{ foo: 'bar' }],
-        firstLevel: 0,
-      };
-
-      capLevelController.onManifestParsed(Events.MANIFEST_PARSED, data);
-      expect(capLevelController.firstLevel).to.equal(data.firstLevel);
+      });
       expect(capLevelController.restrictedLevels).to.be.empty;
     });
 
