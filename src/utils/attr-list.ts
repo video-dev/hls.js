@@ -36,7 +36,7 @@ export class AttrList {
     return intValue;
   }
 
-  hexadecimalInteger(attrName: string) {
+  hexadecimalInteger(attrName: string): Uint8Array | null {
     if (this[attrName]) {
       let stringValue = (this[attrName] || '0x').slice(2);
       stringValue = (stringValue.length & 1 ? '0' : '') + stringValue;
@@ -47,9 +47,8 @@ export class AttrList {
       }
 
       return value;
-    } else {
-      return null;
     }
+    return null;
   }
 
   hexadecimalIntegerAsNumber(attrName: string): number {

@@ -177,7 +177,7 @@ export function isPersistentSessionType(
   );
 }
 
-export function parsePlayReadyWRM(keyBytes: Uint8Array): Uint8Array | null {
+export function parsePlayReadyWRM(keyBytes: Uint8Array) {
   const keyBytesUtf16 = new Uint16Array(
     keyBytes.buffer,
     keyBytes.byteOffset,

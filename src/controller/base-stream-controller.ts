@@ -157,7 +157,6 @@ export default class BaseStreamController
 
   protected onTickEnd() {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public startLoad(startPosition: number): void {}
 
   public stopLoad() {
@@ -295,6 +294,7 @@ export default class BaseStreamController
     this.media = this.mediaBuffer = null;
     this.loopSn = undefined;
     if (transferringMedia) {
+      this.resetLoadingState();
       this.resetTransmuxer();
       return;
     }
@@ -448,67 +448,16 @@ export default class BaseStreamController
   }
 
   protected loadFragment(
-    frag: Fragment,
+    frag: MediaFragment,
     level: Level,
     targetBufferTime: number,
   ) {
-    const config = this.hls.config;
-    if (
-      __USE_INTERSTITIALS__ &&
-      config.interstitialsController &&
-      config.enableInterstitialPlayback !== false &&
-      frag.type !== PlaylistLevelType.SUBTITLE
-    ) {
-      // Do not load fragments outside the buffering schedule segment
-      const interstitials = this.hls.interstitialsManager;
-      const bufferingItem = interstitials?.bufferingItem;
-      if (bufferingItem) {
-        const bufferingInterstitial = bufferingItem.event;
-        if (bufferingInterstitial) {
-          // Do not stream fragments while buffering Interstitial Events (except for overlap at the start)
-          if (
-            bufferingInterstitial.appendInPlace ||
-            Math.abs(frag.start - bufferingItem.start) > 1 ||
-            bufferingItem.start === 0
-          ) {
-            return;
-          }
-        } else {
-          // Limit fragment loading to media in schedule item
-          if (
-            frag.end <= bufferingItem.start &&
-            level.details?.live === false
-          ) {
-            // fragment ends by schedule item start
-            return;
-          }
-          if (frag.start > bufferingItem.end && bufferingItem.nextEvent) {
-            // fragment is past schedule item end
-            return;
-          }
-        }
-      }
-      // Skip loading of fragments that overlap completely with appendInPlace interstitials
-      const playerQueue = interstitials?.playerQueue;
-      if (playerQueue) {
-        for (let i = playerQueue.length; i--; ) {
-          const interstitial = playerQueue[i].interstitial;
-          if (
-            interstitial.appendInPlace &&
-            frag.start >= interstitial.startTime &&
-            frag.end <= interstitial.resumeTime
-          ) {
-            return;
-          }
-        }
-      }
-    }
     this.startFragRequested = true;
     this._loadFragForPlayback(frag, level, targetBufferTime);
   }
 
   private _loadFragForPlayback(
-    fragment: Fragment,
+    fragment: MediaFragment,
     level: Level,
     targetBufferTime: number,
   ) {
@@ -796,7 +745,6 @@ export default class BaseStreamController
     transmuxer.flush(chunkMeta);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected _handleFragmentLoadProgress(
     frag: PartsLoadedData | FragLoadedData,
   ) {}
@@ -1335,7 +1283,7 @@ export default class BaseStreamController
               : liveSyncPosition) || frag.start
           : pos;
         this.log(
-          `Setting startPosition to ${startPosition} to match initial live edge. mainStart: ${mainStart} liveSyncPosition: ${liveSyncPosition} frag.start: ${frag?.start}`,
+          `Setting startPosition to ${startPosition} to match start frag at live edge. mainStart: ${mainStart} liveSyncPosition: ${liveSyncPosition} frag.start: ${frag?.start}`,
         );
         this.startPosition = this.nextLoadPosition = startPosition;
       }
@@ -1352,6 +1300,7 @@ export default class BaseStreamController
       frag = this.getFragmentAtPosition(pos, end, levelDetails);
     }
 
+    frag = this.filterReplacedPrimary(frag, levelDetails);
     return this.mapToInitFragWhenRequired(frag);
   }
 
@@ -1400,6 +1349,65 @@ export default class BaseStreamController
     }
     this.loopSn = undefined;
     return nextFragment;
+  }
+
+  filterReplacedPrimary(
+    frag: MediaFragment | null,
+    details: LevelDetails | undefined,
+  ): MediaFragment | null {
+    if (!frag) {
+      return frag;
+    }
+    const config = this.hls.config;
+    if (
+      __USE_INTERSTITIALS__ &&
+      config.interstitialsController &&
+      config.enableInterstitialPlayback !== false &&
+      frag.type !== PlaylistLevelType.SUBTITLE
+    ) {
+      // Do not load fragments outside the buffering schedule segment
+      const interstitials = this.hls.interstitialsManager;
+      const bufferingItem = interstitials?.bufferingItem;
+      if (bufferingItem) {
+        const bufferingInterstitial = bufferingItem.event;
+        if (bufferingInterstitial) {
+          // Do not stream fragments while buffering Interstitial Events (except for overlap at the start)
+          if (
+            bufferingInterstitial.appendInPlace ||
+            Math.abs(frag.start - bufferingItem.start) > 1 ||
+            bufferingItem.start === 0
+          ) {
+            return null;
+          }
+        } else {
+          // Limit fragment loading to media in schedule item
+          if (frag.end <= bufferingItem.start && details?.live === false) {
+            // fragment ends by schedule item start
+            // this.fragmentTracker.fragBuffered(frag, true);
+            return null;
+          }
+          if (frag.start > bufferingItem.end && bufferingItem.nextEvent) {
+            // fragment is past schedule item end
+            return null;
+          }
+        }
+      }
+      // Skip loading of fragments that overlap completely with appendInPlace interstitials
+      const playerQueue = interstitials?.playerQueue;
+      if (playerQueue) {
+        for (let i = playerQueue.length; i--; ) {
+          const interstitial = playerQueue[i].interstitial;
+          if (
+            interstitial.appendInPlace &&
+            frag.start >= interstitial.startTime &&
+            frag.end <= interstitial.resumeTime
+          ) {
+            return null;
+          }
+        }
+      }
+    }
+    return frag;
   }
 
   mapToInitFragWhenRequired(frag: Fragment | null): typeof frag {
@@ -1677,6 +1685,9 @@ export default class BaseStreamController
         // Leave this.startPosition at -1, so that we can use `getInitialLiveFragment` logic when startPosition has
         // not been specified via the config or an as an argument to startLoad (#3736).
         startPosition = this.hls.liveSyncPosition || sliding;
+        this.log(
+          `Setting startPosition to -1 to start at live edge ${startPosition}`,
+        );
         this.startPosition = -1;
       } else {
         this.log(`setting startPosition to 0 by default`);
@@ -1968,27 +1979,29 @@ export default class BaseStreamController
       },
       false,
     );
-    if (!parsed && this.transmuxer?.error === null) {
-      const error = new Error(
-        `Found no media in fragment ${frag.sn} of ${this.playlistLabel()} ${frag.level} resetting transmuxer to fallback to playlist timing`,
-      );
+    if (!parsed) {
       if (level.fragmentError === 0) {
         // Mark and track the odd empty segment as a gap to avoid reloading
         this.treatAsGap(frag, level);
       }
-      this.warn(error.message);
-      this.hls.trigger(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.FRAG_PARSING_ERROR,
-        fatal: false,
-        error,
-        frag,
-        reason: `Found no media in msn ${frag.sn} of ${this.playlistLabel()} "${level.url}"`,
-      });
-      if (!this.hls) {
-        return;
+      if (this.transmuxer?.error === null) {
+        const error = new Error(
+          `Found no media in fragment ${frag.sn} of ${this.playlistLabel()} ${frag.level} resetting transmuxer to fallback to playlist timing`,
+        );
+        this.warn(error.message);
+        this.hls.trigger(Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.FRAG_PARSING_ERROR,
+          fatal: false,
+          error,
+          frag,
+          reason: `Found no media in msn ${frag.sn} of ${this.playlistLabel()} "${level.url}"`,
+        });
+        if (!this.hls) {
+          return;
+        }
+        this.resetTransmuxer();
       }
-      this.resetTransmuxer();
       // For this error fallthrough. Marking parsed will allow advancing to next fragment.
     }
     this.state = State.PARSED;

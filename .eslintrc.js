@@ -117,6 +117,7 @@ module.exports = {
           'warn',
           {
             args: 'none',
+            caughtErrors: 'none',
           },
         ],
         '@typescript-eslint/prefer-optional-chain': 2,

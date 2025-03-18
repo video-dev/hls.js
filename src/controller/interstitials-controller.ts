@@ -195,11 +195,11 @@ export default class InterstitialsController
   }
 
   resumeBuffering() {
-    this.playerQueue.forEach((player) => player.resumeBuffering());
+    this.getBufferingPlayer()?.resumeBuffering();
   }
 
   pauseBuffering() {
-    this.playerQueue.forEach((player) => player.pauseBuffering());
+    this.getBufferingPlayer()?.pauseBuffering();
   }
 
   destroy() {
@@ -760,6 +760,9 @@ export default class InterstitialsController
     player: Hls | HlsAssetPlayer,
     media: HTMLMediaElement,
   ) {
+    if (player.media === media) {
+      return;
+    }
     let attachMediaSourceData: MediaAttachingData | null = null;
     const primaryPlayer = this.hls;
     const isAssetPlayer = player !== primaryPlayer;
@@ -768,32 +771,44 @@ export default class InterstitialsController
     const detachedMediaSource = this.detachedData?.mediaSource;
 
     let logFromSource: string;
-    if (primaryPlayer.media && appendInPlace) {
-      attachMediaSourceData = primaryPlayer.transferMedia();
-      this.detachedData = attachMediaSourceData;
+    if (primaryPlayer.media) {
+      if (appendInPlace) {
+        attachMediaSourceData = primaryPlayer.transferMedia();
+        this.detachedData = attachMediaSourceData;
+      }
       logFromSource = `Primary`;
     } else if (detachedMediaSource) {
       const bufferingPlayer = this.getBufferingPlayer();
       if (bufferingPlayer) {
         attachMediaSourceData = bufferingPlayer.transferMedia();
+        logFromSource = `${bufferingPlayer}`;
+      } else {
+        logFromSource = `detached MediaSource`;
       }
-      logFromSource = `${bufferingPlayer}`;
     } else {
-      logFromSource = `<unknown>`;
+      logFromSource = `detached media`;
     }
-    this.log(
-      `transferring to ${isAssetPlayer ? player : 'Primary'}
-MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
-    );
-
     if (!attachMediaSourceData) {
       if (detachedMediaSource) {
         attachMediaSourceData = this.detachedData;
         this.log(
           `using detachedData: MediaSource ${stringify(attachMediaSourceData)}`,
         );
-      } else if (!this.detachedData || this.hls.media === media) {
-        // Media is attaching when `detachedData` and `hls.media` are populated. Detach to clear the MediaSource.
+      } else if (!this.detachedData || primaryPlayer.media === media) {
+        // Keep interstitial media transition consistent
+        const playerQueue = this.playerQueue;
+        if (playerQueue.length > 1) {
+          playerQueue.forEach((queuedPlayer) => {
+            if (
+              isAssetPlayer &&
+              queuedPlayer.interstitial.appendInPlace !== appendInPlace
+            ) {
+              const interstitial = queuedPlayer.interstitial;
+              this.clearInterstitial(queuedPlayer.interstitial, null);
+              interstitial.appendInPlace = false;
+            }
+          });
+        }
         this.hls.detachMedia();
         this.detachedData = { media };
       }
@@ -807,7 +822,7 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
     this.log(
       `${transferring ? 'transfering MediaSource' : 'attaching media'} to ${
         isAssetPlayer ? player : 'Primary'
-      }`,
+      } from ${logFromSource}`,
     );
     if (dataToAttach === attachMediaSourceData) {
       const isAssetAtEndOfSchedule =
@@ -1068,7 +1083,7 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
           player,
         });
         this.retreiveMediaSource(assetId, scheduledItem);
-        if (player.media && !this.detachedData) {
+        if (player.media && !this.detachedData?.mediaSource) {
           player.detachMedia();
         }
       }
@@ -1374,7 +1389,10 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
     if (
       !hls.loadingEnabled ||
       !hls.media ||
-      Math.abs(hls.media.currentTime - timelinePos) > 0.5
+      Math.abs(
+        (hls.mainForwardBufferInfo?.start || hls.media.currentTime) -
+          timelinePos,
+      ) > 0.5
     ) {
       hls.startLoad(timelinePos, skipSeekToStartPosition);
     } else if (!hls.bufferingEnabled) {
@@ -1411,7 +1429,10 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
       main,
     };
     this.mediaSelection = currentSelection;
-    this.schedule.parseInterstitialDateRanges(currentSelection);
+    this.schedule.parseInterstitialDateRanges(
+      currentSelection,
+      this.hls.config.interstitialAppendInPlace,
+    );
 
     if (!this.effectivePlayingItem && this.schedule.items) {
       this.checkStart();
@@ -1529,6 +1550,8 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
     if (!this.playingLastItem && playingItem) {
       const playingIndex = this.findItemIndex(playingItem);
       this.setSchedulePosition(playingIndex + 1);
+    } else {
+      this.shouldPlay = false;
     }
   }
 
@@ -1549,9 +1572,6 @@ MediaSource ${stringify(attachMediaSourceData)} from ${logFromSource}`,
       interstitialEvents.length || removedIds.length
     );
     if (interstitialsUpdated) {
-      if (this.hls.config.interstitialAppendInPlace === false) {
-        interstitialEvents.forEach((event) => (event.appendInPlace = false));
-      }
       this.log(
         `INTERSTITIALS_UPDATED (${
           interstitialEvents.length
@@ -1784,21 +1804,21 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       }
       const isInterstitial = this.isInterstitial(item);
       const bufferingPlayer = this.getBufferingPlayer();
-      const timeRemaining = bufferingPlayer
-        ? bufferingPlayer.remaining
-        : bufferingLast
-          ? bufferingLast.end - this.timelinePos
-          : 0;
-      this.log(
-        `buffered to boundary ${segmentToString(item)}` +
-          (bufferingLast ? ` (${timeRemaining.toFixed(2)} remaining)` : ''),
-      );
       this.bufferingItem = item;
       this.bufferedPos = Math.max(
         item.start,
         Math.min(item.end, this.timelinePos),
       );
       if (!this.playbackDisabled) {
+        const timeRemaining = bufferingPlayer
+          ? bufferingPlayer.remaining
+          : bufferingLast
+            ? bufferingLast.end - this.timelinePos
+            : 0;
+        this.log(
+          `buffered to boundary ${segmentToString(item)}` +
+            (bufferingLast ? ` (${timeRemaining.toFixed(2)} remaining)` : ''),
+        );
         if (isInterstitial) {
           // primary fragment loading will exit early in base-stream-controller while `bufferingItem` is set to an Interstitial block
           item.event.assetList.forEach((asset) => {
@@ -1885,18 +1905,18 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     interstitial: InterstitialEvent,
     assetListIndex: number,
   ): HlsAssetPlayer | null {
+    const uri = interstitial.assetUrl;
     const assetListLength = interstitial.assetList.length;
     const neverLoaded = assetListLength === 0 && !interstitial.assetListLoader;
     const playOnce = interstitial.cue.once;
     if (neverLoaded) {
       this.log(
-        `Load interstitial asset ${assetListIndex + 1}/${assetListLength} ${interstitial}`,
+        `Load interstitial asset ${assetListIndex + 1}/${uri ? 1 : assetListLength} ${interstitial}`,
       );
       const timelineStart = interstitial.timelineStart;
       if (interstitial.appendInPlace) {
         this.flushFrontBuffer(timelineStart + 0.25);
       }
-      const uri = interstitial.assetUrl;
       if (uri) {
         return this.createAsset(
           interstitial,
@@ -2285,9 +2305,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     }
 
     // detach media and attach to interstitial player if it does not have another element attached
-    if (!player.media) {
-      this.bufferAssetPlayer(player, media);
-    }
+    this.bufferAssetPlayer(player, media);
   }
 
   private bufferAssetPlayer(player: HlsAssetPlayer, media: HTMLMediaElement) {
@@ -2303,11 +2321,19 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     if (bufferingPlayer === player) {
       return;
     }
+    const appendInPlaceNext = interstitial.appendInPlace;
+    if (
+      appendInPlaceNext &&
+      bufferingPlayer?.interstitial.appendInPlace === false
+    ) {
+      // Media is detached and not available to append in place
+      return;
+    }
     const activeTracks =
       bufferingPlayer?.tracks ||
       this.detachedData?.tracks ||
       this.requiredTracks;
-    if (interstitial.appendInPlace && assetItem !== this.playingAsset) {
+    if (appendInPlaceNext && assetItem !== this.playingAsset) {
       // Do not buffer another item if tracks are unknown or incompatible
       if (!player.tracks) {
         return;
@@ -2408,7 +2434,6 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
         } error: ${interstitial.error}`,
       );
       if (interstitial.appendInPlace) {
-        interstitial.appendInPlace = false;
         this.attachPrimary(flushStart, null);
         this.flushFrontBuffer(flushStart);
       }
@@ -2420,6 +2445,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       if (!this.itemsMatch(playingItem, newPlayingItem)) {
         const scheduleIndex = this.schedule.findItemIndexAtTime(timelinePos);
         this.setSchedulePosition(scheduleIndex);
+      } else {
+        this.clearInterstitial(interstitial, null);
       }
     } else {
       this.checkStart();

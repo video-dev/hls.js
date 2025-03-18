@@ -21,6 +21,6 @@ export function base64UrlEncode(input: Uint8Array): string {
   return base64ToBase64Url(base64Encode(input));
 }
 
-export function base64Decode(base64encodedStr: string): Uint8Array {
+export function base64Decode(base64encodedStr: string) {
   return Uint8Array.from(atob(base64encodedStr), (c) => c.charCodeAt(0));
 }
