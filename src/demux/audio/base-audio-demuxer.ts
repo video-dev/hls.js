@@ -13,7 +13,6 @@ import {
   MetadataSchema,
 } from '../../types/demuxer';
 import { appendUint8Array } from '../../utils/mp4-tools';
-import { sliceUint8 } from '../../utils/typed-array';
 import { dummyTrack } from '../dummy-demuxed-track';
 import type { RationalTimestamp } from '../../utils/timescale-conversion';
 
@@ -129,7 +128,7 @@ class BaseAudioDemuxer implements Demuxer {
         offset++;
       }
       if (offset === length && lastDataIndex !== length) {
-        const partialData = sliceUint8(data, lastDataIndex);
+        const partialData = data.slice(lastDataIndex);
         if (this.cachedData) {
           this.cachedData = appendUint8Array(this.cachedData, partialData);
         } else {

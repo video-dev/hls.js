@@ -4,7 +4,6 @@ import { DecrypterAesMode } from './decrypter-aes-mode';
 import FastAESKey from './fast-aes-key';
 import { logger } from '../utils/logger';
 import { appendUint8Array } from '../utils/mp4-tools';
-import { sliceUint8 } from '../utils/typed-array';
 import type { HlsConfig } from '../config';
 
 const CHUNK_SIZE = 16; // 16 bytes, 128 bits
@@ -16,7 +15,7 @@ export default class Decrypter {
   private softwareDecrypter: AESDecryptor | null = null;
   private key: ArrayBuffer | null = null;
   private fastAesKey: FastAESKey | null = null;
-  private remainderData: Uint8Array | null = null;
+  private remainderData: Uint8Array<ArrayBuffer> | null = null;
   private currentIV: ArrayBuffer | null = null;
   private currentResult: ArrayBuffer | null = null;
   private useSoftware: boolean;
@@ -55,7 +54,7 @@ export default class Decrypter {
     return this.useSoftware;
   }
 
-  public flush(): Uint8Array | null {
+  public flush(): Uint8Array<ArrayBuffer> | null {
     const { currentResult, remainderData } = this;
     if (!currentResult || remainderData) {
       this.reset();
@@ -142,7 +141,7 @@ export default class Decrypter {
     const result = currentResult;
 
     this.currentResult = softwareDecrypter.decrypt(currentChunk.buffer, 0, iv);
-    this.currentIV = sliceUint8(currentChunk, -16).buffer;
+    this.currentIV = currentChunk.slice(-16).buffer;
 
     if (!result) {
       return null;
@@ -151,7 +150,7 @@ export default class Decrypter {
   }
 
   public webCryptoDecrypt(
-    data: Uint8Array,
+    data: Uint8Array<ArrayBuffer>,
     key: ArrayBuffer,
     iv: ArrayBuffer,
     aesMode: DecrypterAesMode,
@@ -210,8 +209,8 @@ export default class Decrypter {
     let currentChunk = data;
     const splitPoint = data.length - (data.length % CHUNK_SIZE);
     if (splitPoint !== data.length) {
-      currentChunk = sliceUint8(data, 0, splitPoint);
-      this.remainderData = sliceUint8(data, splitPoint);
+      currentChunk = data.slice(0, splitPoint);
+      this.remainderData = data.slice(splitPoint);
     }
     return currentChunk;
   }

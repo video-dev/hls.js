@@ -5,7 +5,6 @@
 import VTTCue from './vttcue';
 
 class StringDecoder {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   decode(data: string | any, options?: Object): string | never {
     if (!data) {
       return '';
