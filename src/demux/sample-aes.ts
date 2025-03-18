@@ -8,7 +8,7 @@ import { discardEPB } from '../utils/mp4-tools';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type {
-  AudioSample,
+  AACAudioSample,
   DemuxedVideoTrackBase,
   KeyData,
   VideoSample,
@@ -37,7 +37,7 @@ class SampleAesDecrypter {
 
   // AAC - encrypt all full 16 bytes blocks starting from offset 16
   private decryptAacSample(
-    samples: AudioSample[],
+    samples: AACAudioSample[],
     sampleIndex: number,
     callback: () => void,
   ) {
@@ -67,7 +67,7 @@ class SampleAesDecrypter {
   }
 
   decryptAacSamples(
-    samples: AudioSample[],
+    samples: AACAudioSample[],
     sampleIndex: number,
     callback: () => void,
   ) {
@@ -109,10 +109,7 @@ class SampleAesDecrypter {
     return encryptedData;
   }
 
-  getAvcDecryptedUnit(
-    decodedData: Uint8Array,
-    decryptedData: ArrayLike<number> | ArrayBuffer | SharedArrayBuffer,
-  ) {
+  getAvcDecryptedUnit(decodedData: Uint8Array, decryptedData: ArrayBufferLike) {
     const uint8DecryptedData = new Uint8Array(decryptedData);
     let inputPos = 0;
     for (
@@ -139,15 +136,13 @@ class SampleAesDecrypter {
     const decodedData = discardEPB(curUnit.data);
     const encryptedData = this.getAvcEncryptedData(decodedData);
 
-    this.decryptBuffer(encryptedData.buffer).then(
-      (decryptedBuffer: ArrayBuffer) => {
-        curUnit.data = this.getAvcDecryptedUnit(decodedData, decryptedBuffer);
+    this.decryptBuffer(encryptedData.buffer).then((decryptedBuffer) => {
+      curUnit.data = this.getAvcDecryptedUnit(decodedData, decryptedBuffer);
 
-        if (!this.decrypter.isSync()) {
-          this.decryptAvcSamples(samples, sampleIndex, unitIndex + 1, callback);
-        }
-      },
-    );
+      if (!this.decrypter.isSync()) {
+        this.decryptAvcSamples(samples, sampleIndex, unitIndex + 1, callback);
+      }
+    });
   }
 
   decryptAvcSamples(

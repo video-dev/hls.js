@@ -1,6 +1,5 @@
 import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
 import Hex from './hex';
-import { sliceUint8 } from './typed-array';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { logger } from '../utils/logger';
 import type { KeySystemIds } from './mediakeys-helper';
@@ -834,8 +833,8 @@ export function segmentValidRange(data: Uint8Array): SegmentedRange {
   }
   const last = moofs[moofs.length - 1];
   // Offset by 8 bytes; findBox offsets the start by as much
-  segmentedRange.valid = sliceUint8(data, 0, last.byteOffset - 8);
-  segmentedRange.remainder = sliceUint8(data, last.byteOffset - 8);
+  segmentedRange.valid = data.slice(0, last.byteOffset - 8);
+  segmentedRange.remainder = data.slice(last.byteOffset - 8);
   return segmentedRange;
 }
 
@@ -844,14 +843,10 @@ export interface SegmentedRange {
   remainder: Uint8Array | null;
 }
 
-export function appendUint8Array(
-  data1: Uint8Array,
-  data2: Uint8Array,
-): Uint8Array {
+export function appendUint8Array(data1: Uint8Array, data2: Uint8Array) {
   const temp = new Uint8Array(data1.length + data2.length);
   temp.set(data1);
   temp.set(data2, data1.length);
-
   return temp;
 }
 

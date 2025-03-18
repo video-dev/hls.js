@@ -95,7 +95,7 @@ export default class Transmuxer {
     const stats = chunkMeta.transmuxing;
     stats.executeStart = now();
 
-    let uintData: Uint8Array = new Uint8Array(data);
+    let uintData: Uint8Array<ArrayBuffer> = new Uint8Array(data);
     const { currentTransmuxState, transmuxConfig } = this;
     if (state) {
       this.currentTransmuxState = state;

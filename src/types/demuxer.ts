@@ -69,6 +69,11 @@ export interface DemuxedAudioTrack extends DemuxedTrack {
   samples: AudioSample[];
 }
 
+export type DemuxedAAC = DemuxedAudioTrack & {
+  segmentCodec: 'aac';
+  samples: AACAudioSample[];
+};
+
 export type DemuxedAC3 = DemuxedAudioTrack & {
   segmentCodec: 'ac3';
   config: Uint8Array;
@@ -180,6 +185,10 @@ export type AudioSample = {
   pts: number;
 };
 
+export type AACAudioSample = {
+  unit: Uint8Array<ArrayBuffer>;
+};
+
 export type AudioFrame = {
   sample: AudioSample;
   length: number;
@@ -193,6 +202,6 @@ export interface ElementaryStreamData {
 
 export interface KeyData {
   method: string;
-  key: Uint8Array;
-  iv: Uint8Array;
+  key: Uint8Array<ArrayBuffer>;
+  iv: Uint8Array<ArrayBuffer>;
 }

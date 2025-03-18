@@ -157,7 +157,6 @@ export default class BaseStreamController
 
   protected onTickEnd() {}
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   public startLoad(startPosition: number): void {}
 
   public stopLoad() {
@@ -746,7 +745,6 @@ export default class BaseStreamController
     transmuxer.flush(chunkMeta);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   protected _handleFragmentLoadProgress(
     frag: PartsLoadedData | FragLoadedData,
   ) {}

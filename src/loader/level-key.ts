@@ -4,17 +4,17 @@ import { logger } from '../utils/logger';
 import { KeySystemFormats, parsePlayReadyWRM } from '../utils/mediakeys-helper';
 import { mp4pssh } from '../utils/mp4-tools';
 
-let keyUriToKeyIdMap: { [uri: string]: Uint8Array } = {};
+let keyUriToKeyIdMap: { [uri: string]: Uint8Array<ArrayBuffer> } = {};
 
 export interface DecryptData {
   uri: string;
   method: string;
   keyFormat: string;
   keyFormatVersions: number[];
-  iv: Uint8Array | null;
-  key: Uint8Array | null;
-  keyId: Uint8Array | null;
-  pssh: Uint8Array | null;
+  iv: Uint8Array<ArrayBuffer> | null;
+  key: Uint8Array<ArrayBuffer> | null;
+  keyId: Uint8Array<ArrayBuffer> | null;
+  pssh: Uint8Array<ArrayBuffer> | null;
   encrypted: boolean;
   isCommonEncryption: boolean;
 }
@@ -26,9 +26,9 @@ export class LevelKey implements DecryptData {
   public readonly keyFormatVersions: number[];
   public readonly encrypted: boolean;
   public readonly isCommonEncryption: boolean;
-  public iv: Uint8Array | null = null;
-  public key: Uint8Array | null = null;
-  public keyId: Uint8Array | null = null;
+  public iv: Uint8Array<ArrayBuffer> | null = null;
+  public key: Uint8Array<ArrayBuffer> | null = null;
+  public keyId: Uint8Array<ArrayBuffer> | null = null;
   public pssh: Uint8Array<ArrayBuffer> | null = null;
 
   static clearKeyUriToKeyIdMap() {
@@ -40,7 +40,7 @@ export class LevelKey implements DecryptData {
     uri: string,
     format: string,
     formatversions: number[] = [1],
-    iv: Uint8Array | null = null,
+    iv: Uint8Array<ArrayBuffer> | null = null,
   ) {
     this.method = method;
     this.uri = uri;
@@ -174,7 +174,7 @@ export class LevelKey implements DecryptData {
   }
 }
 
-function createInitializationVector(segmentNumber: number): Uint8Array {
+function createInitializationVector(segmentNumber: number) {
   const uint8View = new Uint8Array(16);
   for (let i = 12; i < 16; i++) {
     uint8View[i] = (segmentNumber >> (8 * (15 - i))) & 0xff;

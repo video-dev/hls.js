@@ -1015,19 +1015,19 @@ export interface DecryptData {
     // (undocumented)
     isCommonEncryption: boolean;
     // (undocumented)
-    iv: Uint8Array | null;
+    iv: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
-    key: Uint8Array | null;
+    key: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
     keyFormat: string;
     // (undocumented)
     keyFormatVersions: number[];
     // (undocumented)
-    keyId: Uint8Array | null;
+    keyId: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
     method: string;
     // (undocumented)
-    pssh: Uint8Array | null;
+    pssh: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
     uri: string;
 }
@@ -1044,7 +1044,7 @@ export class Decrypter {
     // (undocumented)
     destroy(): void;
     // (undocumented)
-    flush(): Uint8Array | null;
+    flush(): Uint8Array<ArrayBuffer> | null;
     // (undocumented)
     isSync(): boolean;
     // (undocumented)
@@ -1052,7 +1052,7 @@ export class Decrypter {
     // (undocumented)
     softwareDecrypt(data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer, aesMode: DecrypterAesMode): ArrayBuffer | null;
     // (undocumented)
-    webCryptoDecrypt(data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer, aesMode: DecrypterAesMode): Promise<ArrayBuffer>;
+    webCryptoDecrypt(data: Uint8Array<ArrayBuffer>, key: ArrayBuffer, iv: ArrayBuffer, aesMode: DecrypterAesMode): Promise<ArrayBuffer>;
 }
 
 // Warning: (ae-missing-release-tag) "DecrypterAesMode" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -3261,7 +3261,7 @@ export class LevelDetails {
 //
 // @public (undocumented)
 export class LevelKey implements DecryptData {
-    constructor(method: string, uri: string, format: string, formatversions?: number[], iv?: Uint8Array | null);
+    constructor(method: string, uri: string, format: string, formatversions?: number[], iv?: Uint8Array<ArrayBuffer> | null);
     // (undocumented)
     static clearKeyUriToKeyIdMap(): void;
     // (undocumented)
@@ -3273,15 +3273,15 @@ export class LevelKey implements DecryptData {
     // (undocumented)
     isSupported(): boolean;
     // (undocumented)
-    iv: Uint8Array | null;
+    iv: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
-    key: Uint8Array | null;
+    key: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
     readonly keyFormat: string;
     // (undocumented)
     readonly keyFormatVersions: number[];
     // (undocumented)
-    keyId: Uint8Array | null;
+    keyId: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
     readonly method: string;
     // (undocumented)
