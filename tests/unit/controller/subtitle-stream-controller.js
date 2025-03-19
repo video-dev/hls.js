@@ -3,7 +3,7 @@ import sinon from 'sinon';
 import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
-import { Fragment } from '../../../src/loader/fragment';
+import { createFragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import KeyLoader from '../../../src/loader/key-loader';
@@ -147,13 +147,13 @@ describe('SubtitleStreamController', function () {
 
   describe('onMediaSeeking', function () {
     it('nulls fragPrevious when seeking away from fragCurrent', function () {
-      subtitleStreamController.fragCurrent = new Fragment(
+      subtitleStreamController.fragCurrent = createFragment(
         PlaylistLevelType.MAIN,
         '',
       );
       subtitleStreamController.fragCurrent.start = 1000;
       subtitleStreamController.fragCurrent.duration = 10;
-      subtitleStreamController.fragPrevious = new Fragment(
+      subtitleStreamController.fragPrevious = createFragment(
         PlaylistLevelType.MAIN,
         '',
       );

@@ -6,10 +6,14 @@ import {
 } from '../../../src/controller/fragment-tracker';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
+import {
+  createFragment,
+  ElementaryStreamTypes,
+} from '../../../src/loader/fragment';
 import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
+import type { Fragment } from '../../../src/loader/fragment';
 import type {
   BufferAppendedData,
   FragBufferedData,
@@ -605,7 +609,7 @@ function createBufferAppendedData(
 ): BufferAppendedData {
   return {
     chunkMeta: new ChunkMetadata(0, 0, 0, 0),
-    frag: new Fragment(PlaylistLevelType.MAIN, ''),
+    frag: createFragment(PlaylistLevelType.MAIN),
     part: null,
     parent: PlaylistLevelType.MAIN,
     type: audio && video ? 'audiovideo' : video ? 'video' : 'audio',
@@ -653,7 +657,7 @@ function createMockFragment(
   data: MockFragmentParams,
   types: ElementaryStreamTypes[],
 ): Fragment {
-  const frag = new Fragment(data.type, '');
+  const frag = createFragment(data.type);
   Object.assign(frag, data);
   frag.start = data.startPTS;
   frag.duration = data.endPTS - data.startPTS;

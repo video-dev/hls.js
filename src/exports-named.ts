@@ -56,7 +56,6 @@ export { MetadataSchema } from './types/demuxer';
 export { HlsSkip, HlsUrlParameters } from './types/level';
 export { PlaylistLevelType } from './types/loader';
 export { ChunkMetadata } from './types/transmuxer';
-export { BaseSegment, Fragment, Part } from './loader/fragment';
 export {
   NetworkErrorAction,
   ErrorActionFlags,

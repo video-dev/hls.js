@@ -6,7 +6,7 @@ import { State } from '../../../src/controller/base-stream-controller';
 import { FragmentState } from '../../../src/controller/fragment-tracker';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { Fragment } from '../../../src/loader/fragment';
+import { createFragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
@@ -203,9 +203,8 @@ describe('StreamController', function () {
   });
 
   describe('SN Searching', function () {
-    const fragPrevious = new Fragment(
+    const fragPrevious = createFragment(
       PlaylistLevelType.MAIN,
-      '',
     ) as MediaFragment;
     fragPrevious.programDateTime = 1505502671523;
     fragPrevious.duration = 5.0;
@@ -268,7 +267,7 @@ describe('StreamController', function () {
       let fragPrevious;
 
       beforeEach(function () {
-        fragPrevious = new Fragment(PlaylistLevelType.MAIN, '');
+        fragPrevious = createFragment(PlaylistLevelType.MAIN);
         // Fragment with PDT 1505502681523 in level 1 does not have the same sn as in level 2 where cc is 1
         fragPrevious.cc = 0;
         fragPrevious.programDateTime = 1505502681523;
@@ -300,7 +299,7 @@ describe('StreamController', function () {
 
       describe('without program-date-time', function () {
         const fragmentsWithoutPdt = mockFragments.map((frag) => {
-          const newFragment = new Fragment(PlaylistLevelType.MAIN, '');
+          const newFragment = createFragment(PlaylistLevelType.MAIN);
           return Object.assign(newFragment, frag, {
             programDateTime: null,
           });
@@ -406,7 +405,7 @@ describe('StreamController', function () {
         }),
       ];
       triggerSpy = sinon.spy(hls, 'trigger');
-      frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag = createFragment(PlaylistLevelType.MAIN);
       frag.level = 0;
       frag.url = 'file';
       level = new Level({
@@ -481,10 +480,7 @@ describe('StreamController', function () {
     });
 
     it('should seek to start pos when data is first loaded', function () {
-      const firstFrag = new Fragment(
-        PlaylistLevelType.MAIN,
-        '',
-      ) as MediaFragment;
+      const firstFrag = createFragment(PlaylistLevelType.MAIN) as MediaFragment;
       firstFrag.duration = 5.0;
       firstFrag.level = 1;
       firstFrag.start = 0;

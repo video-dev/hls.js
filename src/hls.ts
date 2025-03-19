@@ -1341,6 +1341,7 @@ export type { DateRange, DateRangeCue } from './loader/date-range';
 export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
 export type {
+  Base,
   BaseSegment,
   Fragment,
   MediaFragment,

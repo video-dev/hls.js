@@ -6,7 +6,10 @@ import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
+import {
+  createFragment,
+  ElementaryStreamTypes,
+} from '../../../src/loader/fragment';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
@@ -59,7 +62,7 @@ function setSourceBufferBufferedRange(
 }
 
 function evokeTrimBuffers(hls: HlsTestable) {
-  const frag = new Fragment(PlaylistLevelType.MAIN, '');
+  const frag = createFragment(PlaylistLevelType.MAIN);
   hls.trigger(Events.FRAG_CHANGED, { frag });
 }
 
@@ -217,7 +220,7 @@ describe('BufferController with attached media', function () {
           return;
         }
         const segmentData = new Uint8Array();
-        const frag = new Fragment(PlaylistLevelType.MAIN, '');
+        const frag = createFragment(PlaylistLevelType.MAIN);
         const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
         const data: BufferAppendingData = {
           parent: PlaylistLevelType.MAIN,
@@ -268,7 +271,7 @@ describe('BufferController with attached media', function () {
 
     it('should cycle the SourceBuffer operation queue if the sourceBuffer does not exist while appending', function () {
       const queueAppendSpy = sandbox.spy(operationQueue, 'append');
-      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      const frag = createFragment(PlaylistLevelType.MAIN);
       const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
       (bufferController as any).resetBuffer('audio');
       (bufferController as any).resetBuffer('video');
@@ -314,7 +317,7 @@ describe('BufferController with attached media', function () {
 
   describe('onFragParsed', function () {
     it('should trigger FRAG_BUFFERED when all audio/video data has been buffered', function () {
-      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      const frag = createFragment(PlaylistLevelType.MAIN);
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, 0, 0, 0, 0);
       frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 0, 0, 0);
 

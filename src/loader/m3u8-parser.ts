@@ -1,6 +1,6 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 import { DateRange } from './date-range';
-import { Fragment, Part } from './fragment';
+import { createFragment, createPart } from './fragment';
 import { LevelDetails } from './level-details';
 import { LevelKey } from './level-key';
 import { AttrList } from '../utils/attr-list';
@@ -12,7 +12,7 @@ import {
   importVariableDefinition,
   substituteVariables,
 } from '../utils/variable-substitution';
-import type { MediaFragment } from './fragment';
+import type { Fragment, MediaFragment } from './fragment';
 import type { ContentSteeringOptions } from '../types/events';
 import type { LevelAttributes, LevelParsed, VariableMap } from '../types/level';
 import type { PlaylistLevelType } from '../types/loader';
@@ -316,7 +316,7 @@ export default class M3U8Parser {
     let discontinuityCounter = 0;
     let currentBitrate = 0;
     let prevFrag: Fragment | null = null;
-    let frag: Fragment = new Fragment(type, base);
+    let frag: Fragment = createFragment(type, base);
     let result: RegExpExecArray | RegExpMatchArray | null;
     let i: number;
     let levelkeys: { [key: string]: LevelKey } | undefined;
@@ -333,7 +333,7 @@ export default class M3U8Parser {
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       if (createNextFrag) {
         createNextFrag = false;
-        frag = new Fragment(type, base);
+        frag = createFragment(type, base);
         // setup the next fragment for part loading
         frag.playlistOffset = totalduration;
         frag.start = totalduration;
@@ -556,7 +556,7 @@ export default class M3U8Parser {
               // Initial segment tag is after segment duration tag.
               //   #EXTINF: 6.0
               //   #EXT-X-MAP:URI="init.mp4
-              const init = new Fragment(type, base);
+              const init = createFragment(type, base);
               setInitSegment(init, mapAttrs, id, levelkeys);
               currentInitSegment = init;
               frag.initSegment = currentInitSegment;
@@ -614,11 +614,11 @@ export default class M3U8Parser {
               currentPart > 0 ? partList[partList.length - 1] : undefined;
             const index = currentPart++;
             const partAttrs = new AttrList(value1, level);
-            const part = new Part(
+            const part = createPart(
               partAttrs,
               frag as MediaFragment,
-              base,
               index,
+              base,
               previousFragmentPart,
             );
             partList.push(part);

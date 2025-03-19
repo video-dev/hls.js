@@ -1,8 +1,9 @@
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
-import { Fragment } from '../../../src/loader/fragment';
+import { createFragment } from '../../../src/loader/fragment';
 import { LevelKey } from '../../../src/loader/level-key';
 import { PlaylistLevelType } from '../../../src/types/loader';
+import type { Fragment } from '../../../src/loader/fragment';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -10,7 +11,7 @@ const expect = chai.expect;
 describe('Fragment class tests', function () {
   let frag: Fragment;
   beforeEach(function () {
-    frag = new Fragment(PlaylistLevelType.MAIN, '');
+    frag = createFragment(PlaylistLevelType.MAIN);
   });
 
   describe('encrypted', function () {
@@ -86,7 +87,7 @@ describe('Fragment class tests', function () {
     });
 
     it('set byte range with no offset and uses 0 as offset', function () {
-      const prevFrag = new Fragment(PlaylistLevelType.MAIN, '');
+      const prevFrag = createFragment(PlaylistLevelType.MAIN);
       prevFrag.setByteRange('1000@10000');
       frag.setByteRange('5000', prevFrag);
       expect(frag.byteRangeStartOffset).to.equal(11000);

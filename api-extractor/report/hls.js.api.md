@@ -149,7 +149,7 @@ export class AttrList {
         [key in keyof T]: boolean;
     };
     // (undocumented)
-    hexadecimalInteger(attrName: string): Uint8Array | null;
+    hexadecimalInteger(attrName: string): Uint8Array<ArrayBuffer> | null;
     // (undocumented)
     hexadecimalIntegerAsNumber(attrName: string): number;
     // (undocumented)
@@ -294,6 +294,13 @@ export interface BackBufferData {
     bufferEnd: number;
 }
 
+// Warning: (ae-missing-release-tag) "Base" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type Base = {
+    url: string;
+};
+
 // Warning: (ae-missing-release-tag) "BaseData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -337,40 +344,25 @@ export class BasePlaylistController extends Logger implements NetworkComponentAP
 // Warning: (ae-missing-release-tag) "BaseSegment" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export class BaseSegment {
-    constructor(base: Base | string);
-    // Warning: (ae-forgotten-export) The symbol "Base" needs to be exported by the entry point hls.d.ts
-    //
-    // (undocumented)
+export type BaseSegment = {
     readonly base: Base;
-    // (undocumented)
-    get baseurl(): string;
-    // (undocumented)
-    get byteRange(): [number, number] | [];
-    // (undocumented)
-    get byteRangeEndOffset(): number | undefined;
-    // (undocumented)
-    get byteRangeStartOffset(): number | undefined;
-    // (undocumented)
-    clearElementaryStreamInfo(): void;
-    // (undocumented)
-    get elementaryStreams(): ElementaryStreams;
-    set elementaryStreams(value: ElementaryStreams);
-    // (undocumented)
-    get hasStats(): boolean;
-    // (undocumented)
-    get hasStreams(): boolean;
-    // (undocumented)
     relurl?: string;
-    // (undocumented)
-    setByteRange(value: string, previous?: BaseSegment): void;
-    // (undocumented)
-    get stats(): LoadStats;
-    set stats(value: LoadStats);
-    // (undocumented)
-    get url(): string;
-    set url(value: string);
-}
+    setByteRange(value: string, previous?: BaseSegment): any;
+    clearElementaryStreamInfo(): any;
+    readonly baseurl: any;
+    readonly byteRange: any;
+    readonly byteRangeStartOffset: any;
+    readonly byteRangeEndOffset: any;
+    readonly hasStats: any;
+    readonly hasStreams: any;
+    elementaryStreams: ElementaryStreams;
+    stats: LoadStats;
+    url: string;
+    _byteRange: [number, number] | null;
+    _url: string | null;
+    _stats: LoadStats | null;
+    _streams: ElementaryStreams | null;
+};
 
 // Warning: (ae-missing-release-tag) "BaseStreamController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1704,94 +1696,55 @@ export interface FragLoadingData {
 
 // Warning: (ae-missing-release-tag) "Fragment" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public
-export class Fragment extends BaseSegment {
-    constructor(type: PlaylistLevelType, base: Base | string);
-    // (undocumented)
-    abortRequests(): void;
-    // (undocumented)
-    addStart(value: number): void;
-    // (undocumented)
-    get bitrate(): number | null;
-    set bitrate(value: number);
-    // (undocumented)
-    bitrateTest: boolean;
-    // (undocumented)
-    get byteLength(): number | null;
-    // (undocumented)
-    cc: number;
-    // (undocumented)
-    data?: Uint8Array;
-    // (undocumented)
-    get decryptdata(): LevelKey | null;
-    // (undocumented)
-    deltaPTS?: number;
-    // (undocumented)
+// @public (undocumented)
+export type Fragment = BaseSegment & {
+    readonly type: PlaylistLevelType;
     duration: number;
-    // (undocumented)
-    get encrypted(): boolean;
-    // (undocumented)
-    get end(): number;
-    // (undocumented)
-    endDTS?: number;
-    // (undocumented)
-    endList?: boolean;
-    // (undocumented)
-    get endProgramDateTime(): number | null;
-    // (undocumented)
-    endPTS?: number;
-    // (undocumented)
-    gap?: boolean;
-    // (undocumented)
-    initSegment: Fragment | null;
-    // (undocumented)
-    keyLoader: Loader<KeyLoaderContext> | null;
-    // (undocumented)
-    level: number;
-    // (undocumented)
+    sn: number | 'initSegment';
     levelkeys?: {
         [key: string]: LevelKey;
     };
-    // (undocumented)
     loader: Loader<FragmentLoaderContext> | null;
-    // (undocumented)
-    maxStartPTS?: number;
-    // (undocumented)
-    minEndPTS?: number;
-    // (undocumented)
-    playlistOffset: number;
-    // (undocumented)
-    get programDateTime(): number | null;
-    set programDateTime(value: number | null);
-    // (undocumented)
-    rawProgramDateTime: string | null;
-    // (undocumented)
-    get ref(): MediaFragmentRef | null;
-    // (undocumented)
-    setDuration(value: number): void;
-    // (undocumented)
-    setElementaryStreamInfo(type: ElementaryStreamTypes, startPTS: number, endPTS: number, startDTS: number, endDTS: number, partial?: boolean): void;
-    // (undocumented)
-    setKeyFormat(keyFormat: KeySystemFormats): void;
-    // (undocumented)
-    setStart(value: number): void;
-    // (undocumented)
-    sn: number | 'initSegment';
-    // (undocumented)
-    start: number;
-    // (undocumented)
-    startDTS?: number;
-    // (undocumented)
+    keyLoader: Loader<KeyLoaderContext> | null;
+    level: number;
+    cc: number;
     startPTS?: number;
-    // (undocumented)
-    tagList: Array<string[]>;
-    // (undocumented)
+    endPTS?: number;
+    startDTS?: number;
+    endDTS?: number;
+    start: number;
+    playlistOffset: number;
+    deltaPTS?: number;
+    maxStartPTS?: number;
+    minEndPTS?: number;
+    data?: Uint8Array;
+    bitrateTest: boolean;
     title: string | null;
-    // (undocumented)
-    readonly type: PlaylistLevelType;
-    // (undocumented)
+    initSegment: Fragment | null;
+    endList?: boolean;
+    gap?: boolean;
     urlId: number;
-}
+    rawProgramDateTime: string | null;
+    programDateTime: number | null;
+    tagList: Array<string[]>;
+    bitrate: number | null;
+    readonly byteLength: number | null;
+    readonly decryptdata: any;
+    readonly end: any;
+    readonly endProgramDateTime: any;
+    readonly encrypted: any;
+    readonly ref: MediaFragmentRef | null;
+    addStart(value: number): any;
+    setStart(value: number): any;
+    setDuration(value: number): any;
+    setKeyFormat(keyFormat: KeySystemFormats): any;
+    abortRequests(): any;
+    setElementaryStreamInfo(type: ElementaryStreamTypes, startPTS: number, endPTS: number, startDTS: number, endDTS: number, partial?: boolean): any;
+    _decryptdata: LevelKey | null;
+    _programDateTime: number | null;
+    _ref?: MediaFragmentRef;
+    _bitrate?: number;
+};
 
 // Warning: (ae-missing-release-tag) "FragmentLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -4085,30 +4038,19 @@ export interface ParsedTrack extends BaseTrack {
 
 // Warning: (ae-missing-release-tag) "Part" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
-// @public
-export class Part extends BaseSegment {
-    constructor(partAttrs: AttrList, frag: MediaFragment, base: Base | string, index: number, previous?: Part);
-    // (undocumented)
-    readonly duration: number;
-    // (undocumented)
-    get end(): number;
-    // (undocumented)
-    readonly fragment: MediaFragment;
-    // (undocumented)
+// @public (undocumented)
+export type Part = BaseSegment & {
     readonly fragOffset: number;
-    // (undocumented)
+    readonly duration: number;
     readonly gap: boolean;
-    // (undocumented)
     readonly independent: boolean;
-    // (undocumented)
-    readonly index: number;
-    // (undocumented)
-    get loaded(): boolean;
-    // (undocumented)
     readonly relurl: string;
-    // (undocumented)
-    get start(): number;
-}
+    readonly fragment: MediaFragment;
+    readonly index: number;
+    readonly start: number;
+    readonly end: number;
+    readonly loaded: boolean;
+};
 
 // Warning: (ae-missing-release-tag) "PartsLoadedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //

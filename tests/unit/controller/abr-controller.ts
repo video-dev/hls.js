@@ -3,7 +3,7 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { Fragment } from '../../../src/loader/fragment';
+import { createFragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
 import { Level } from '../../../src/types/level';
@@ -23,7 +23,7 @@ const expect = chai.expect;
 function levelDetailsWithDuration(duration: number) {
   const details = new LevelDetails('');
   details.totalduration = duration;
-  const frag = new Fragment(PlaylistLevelType.MAIN, '');
+  const frag = createFragment(PlaylistLevelType.MAIN);
   frag.url = 'foo';
   details.fragments.push();
   return details;
@@ -219,7 +219,7 @@ function loadAndBufferFragment(
   timeToFirstByte: number = 0,
   timeToParse: number = 0,
 ) {
-  const frag = new Fragment(PlaylistLevelType.MAIN, '');
+  const frag = createFragment(PlaylistLevelType.MAIN);
   frag.level = levelIndex;
   frag.stats = new LoadStats();
   frag.stats.loaded = sizeInBytes;

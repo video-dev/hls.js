@@ -1,8 +1,8 @@
-import { Fragment } from '../../src/loader/fragment';
+import { createFragment } from '../../src/loader/fragment';
 import { PlaylistLevelType } from '../../src/types/loader';
 
 function fragment(options) {
-  const frag = new Fragment(PlaylistLevelType.MAIN, '');
+  const frag = createFragment(PlaylistLevelType.MAIN, '');
   Object.assign(frag, options);
   return frag;
 }

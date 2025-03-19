@@ -4,7 +4,7 @@ import sinonChai from 'sinon-chai';
 import AudioStreamController from '../../../src/controller/audio-stream-controller';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { Fragment, Part } from '../../../src/loader/fragment';
+import { createFragment, createPart } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
@@ -19,7 +19,7 @@ import {
   mapPartIntersection,
   mergeDetails,
 } from '../../../src/utils/level-helper';
-import type { MediaFragment } from '../../../src/loader/fragment';
+import type { MediaFragment, Part } from '../../../src/loader/fragment';
 import type {
   ComponentAPI,
   NetworkComponentAPI,
@@ -45,7 +45,7 @@ const generatePlaylist = (sequenceNumbers, offset = 0, duration = 5) => {
   playlist.targetduration = duration + 1;
   playlist.averagetargetduration = duration;
   playlist.fragments = sequenceNumbers.map((n, i) => {
-    const frag = new Fragment(PlaylistLevelType.MAIN, '');
+    const frag = createFragment(PlaylistLevelType.MAIN);
     frag.sn = n;
     frag.start = i * 5 + offset;
     frag.duration = duration;
@@ -118,20 +118,20 @@ describe('LevelHelper Tests', function () {
       const newFrags = generatePlaylist([2, 3, 4]).fragments;
       const attr = new AttrList('DURATION=1');
       const oldParts: Part[] = [
-        new Part(attr, oldFrags[1], '', 0),
-        new Part(attr, oldFrags[1], '', 1),
-        new Part(attr, oldFrags[1], '', 2),
-        new Part(attr, oldFrags[2], '', 0),
-        new Part(attr, oldFrags[2], '', 1),
-        new Part(attr, oldFrags[2], '', 2),
+        createPart(attr, oldFrags[1], 0),
+        createPart(attr, oldFrags[1], 1),
+        createPart(attr, oldFrags[1], 2),
+        createPart(attr, oldFrags[2], 0),
+        createPart(attr, oldFrags[2], 1),
+        createPart(attr, oldFrags[2], 2),
       ];
       const newParts: Part[] = [
-        new Part(attr, newFrags[1], '', 0),
-        new Part(attr, newFrags[1], '', 1),
-        new Part(attr, newFrags[1], '', 2),
-        new Part(attr, newFrags[2], '', 0),
-        new Part(attr, newFrags[2], '', 1),
-        new Part(attr, newFrags[2], '', 2),
+        createPart(attr, newFrags[1], 0),
+        createPart(attr, newFrags[1], 1),
+        createPart(attr, newFrags[1], 2),
+        createPart(attr, newFrags[2], 0),
+        createPart(attr, newFrags[2], 1),
+        createPart(attr, newFrags[2], 2),
       ];
       const intersectionFn = sinon.spy();
       mapPartIntersection(oldParts, newParts, intersectionFn);
@@ -254,29 +254,27 @@ expect: ${JSON.stringify(merged.fragments[i])}`,
 
     it('merges initSegments', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
-      const oldInitSegment = new Fragment(PlaylistLevelType.MAIN, '');
+      const oldInitSegment = createFragment(PlaylistLevelType.MAIN);
       oldInitSegment.sn = 'initSegment';
       oldInitSegment.relurl = 'init.mp4';
       oldPlaylist.fragments.forEach((frag) => {
         frag.initSegment = oldInitSegment;
       });
-      oldPlaylist.fragmentHint = new Fragment(
+      oldPlaylist.fragmentHint = createFragment(
         PlaylistLevelType.MAIN,
-        '',
       ) as MediaFragment;
       oldPlaylist.fragmentHint.sn = 4;
       oldPlaylist.fragmentHint.initSegment = oldInitSegment;
 
       const newPlaylist = generatePlaylist([2, 3, 4]);
-      const newInitSegment = new Fragment(PlaylistLevelType.MAIN, '');
+      const newInitSegment = createFragment(PlaylistLevelType.MAIN);
       newInitSegment.sn = 'initSegment';
       newInitSegment.relurl = 'init.mp4';
       newPlaylist.fragments.forEach((frag) => {
         frag.initSegment = newInitSegment;
       });
-      newPlaylist.fragmentHint = new Fragment(
+      newPlaylist.fragmentHint = createFragment(
         PlaylistLevelType.MAIN,
-        '',
       ) as MediaFragment;
       newPlaylist.fragmentHint.sn = 5;
       newPlaylist.fragmentHint.initSegment = newInitSegment;

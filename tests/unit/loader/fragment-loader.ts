@@ -3,7 +3,7 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig, mergeConfig } from '../../../src/config';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
-import { Fragment } from '../../../src/loader/fragment';
+import { createFragment } from '../../../src/loader/fragment';
 import FragmentLoader, { LoadError } from '../../../src/loader/fragment-loader';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
@@ -27,7 +27,7 @@ describe('FragmentLoader tests', function () {
     fragmentLoader = new FragmentLoader(
       mergeConfig(hlsDefaultConfig, { loader: MockXhr }, logger),
     );
-    frag = new Fragment(PlaylistLevelType.MAIN, '');
+    frag = createFragment(PlaylistLevelType.MAIN);
     frag.url = 'foo';
     levelDetails = new LevelDetails('');
     levelDetails.fragments.push(frag);

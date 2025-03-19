@@ -3,7 +3,7 @@ import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
 import BaseStreamController from '../../../src/controller/stream-controller';
 import Hls from '../../../src/hls';
-import { Fragment } from '../../../src/loader/fragment';
+import { createFragment } from '../../../src/loader/fragment';
 import KeyLoader from '../../../src/loader/key-loader';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { PlaylistLevelType } from '../../../src/types/loader';
@@ -65,7 +65,7 @@ describe('BaseStreamController', function () {
   ) {
     const details = new LevelDetails('');
     for (let i = 0; i < endSN; i++) {
-      const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      const frag = createFragment(PlaylistLevelType.MAIN) as MediaFragment;
       frag.duration = 5;
       frag.sn = i;
       frag.start = i * 5;

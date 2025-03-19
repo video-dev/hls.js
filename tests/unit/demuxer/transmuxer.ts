@@ -4,7 +4,7 @@ import sinonChai from 'sinon-chai';
 import { TransmuxConfig, TransmuxState } from '../../../src/demux/transmuxer';
 import TransmuxerInterface from '../../../src/demux/transmuxer-interface';
 import Hls from '../../../src/hls';
-import { Fragment } from '../../../src/loader/fragment';
+import { createFragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
 import type { MediaFragment } from '../../../src/loader/fragment';
@@ -116,7 +116,7 @@ describe('TransmuxerInterface tests', function () {
       transmuxerInterfacePrivates.workerContext.worker,
       'postMessage',
     );
-    const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    const currentFrag = createFragment(PlaylistLevelType.MAIN);
     currentFrag.cc = 100;
     currentFrag.sn = 5;
     currentFrag.level = 1;
@@ -157,7 +157,7 @@ describe('TransmuxerInterface tests', function () {
       state,
     });
 
-    const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    const newFrag = createFragment(PlaylistLevelType.MAIN);
     newFrag.cc = 100;
     newFrag.sn = 6;
     newFrag.level = 1;
@@ -204,7 +204,7 @@ describe('TransmuxerInterface tests', function () {
     );
     const transmuxerInterfacePrivates = transmuxerInterface as any;
 
-    const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    const currentFrag = createFragment(PlaylistLevelType.MAIN);
     currentFrag.cc = 100;
     currentFrag.sn = 5;
     currentFrag.level = 1;
@@ -212,7 +212,7 @@ describe('TransmuxerInterface tests', function () {
     // Config for push
     transmuxerInterfacePrivates.frag = currentFrag;
 
-    const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    const newFrag = createFragment(PlaylistLevelType.MAIN);
     newFrag.cc = 200;
     newFrag.sn = 5;
     newFrag.level = 2;

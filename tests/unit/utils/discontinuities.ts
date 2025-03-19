@@ -1,6 +1,6 @@
 import chai from 'chai';
 import sinonChai from 'sinon-chai';
-import { Fragment } from '../../../src/loader/fragment';
+import { createFragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
@@ -11,7 +11,7 @@ import {
   alignMediaPlaylistByPDT,
   shouldAlignOnDiscontinuities,
 } from '../../../src/utils/discontinuities';
-import type { MediaFragment } from '../../../src/loader/fragment';
+import type { Fragment, MediaFragment } from '../../../src/loader/fragment';
 
 chai.use(sinonChai);
 const expect = chai.expect;
@@ -578,7 +578,7 @@ function objToFragment(
   object: Partial<Fragment>,
   i: number = 0,
 ): MediaFragment {
-  const fragment = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+  const fragment = createFragment(PlaylistLevelType.MAIN) as MediaFragment;
   fragment.sn = i;
   for (const prop in object) {
     fragment[prop] = object[prop];
