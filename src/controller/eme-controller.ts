@@ -1405,7 +1405,13 @@ class EMEController extends Logger implements ComponentAPI {
       }
       const { drmSystemOptions } = this.config;
       const removePromise = isPersistentSessionType(drmSystemOptions)
-        ? mediaKeysSession.remove()
+        ? new Promise((resolve, reject) => {
+            self.setTimeout(
+              () => reject(new Error(`MediaKeySession.remove() timeout`)),
+              8000,
+            );
+            mediaKeysSession.remove().then(resolve);
+          })
         : Promise.resolve();
       return removePromise
         .catch((error) => {
