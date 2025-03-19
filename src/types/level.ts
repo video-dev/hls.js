@@ -151,6 +151,10 @@ export class Level {
       .join(',');
     if ('supplemental' in data) {
       this.supplemental = data.supplemental;
+      const supplementalVideo = data.supplemental?.videoCodec;
+      if (supplementalVideo) {
+        this.codecSet += `,${supplementalVideo.substring(0, 7)}`;
+      }
     }
     this.addGroupId('audio', data.attrs.AUDIO);
     this.addGroupId('text', data.attrs.SUBTITLES);
