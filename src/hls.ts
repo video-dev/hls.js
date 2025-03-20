@@ -1477,6 +1477,7 @@ export type { Bufferable } from './utils/buffer-helper';
 export type { CaptionScreen } from './utils/cea-608-parser';
 export type { CuesInterface } from './utils/cues';
 export type {
+  CodecsParsed,
   HdcpLevels,
   HlsSkip,
   HlsUrlParameters,

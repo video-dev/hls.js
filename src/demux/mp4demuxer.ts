@@ -71,10 +71,11 @@ class MP4Demuxer implements Demuxer {
     const initData = parseInitSegment(initSegment);
 
     if (initData.video) {
-      const { id, timescale, codec } = initData.video;
+      const { id, timescale, codec, supplemental } = initData.video;
       videoTrack.id = id;
       videoTrack.timescale = captionTrack.timescale = timescale;
       videoTrack.codec = codec;
+      videoTrack.supplemental = supplemental;
     }
 
     if (initData.audio) {

@@ -34,7 +34,7 @@ import './unit/loader/date-range';
 import './unit/loader/fragment-loader';
 import './unit/loader/fragment';
 import './unit/loader/level';
-import './unit/loader/playlist-loader';
+import './unit/loader/m3u8-parser';
 import './unit/remux/mp4-remuxer';
 import './unit/utils/attr-list';
 import './unit/utils/binary-search';
