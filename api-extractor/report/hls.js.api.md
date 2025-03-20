@@ -860,11 +860,13 @@ export class CaptionScreen {
 //
 // @public (undocumented)
 export class ChunkMetadata {
-    constructor(level: number, sn: number, id: number, size?: number, part?: number, partial?: boolean);
+    constructor(level: number, sn: number, id: number, size?: number, part?: number, partial?: boolean, duration?: number | null);
     // (undocumented)
     readonly buffering: {
         [key in SourceBufferName]: HlsChunkPerformanceTiming;
     };
+    // (undocumented)
+    readonly duration: number | null;
     // (undocumented)
     readonly id: number;
     // (undocumented)

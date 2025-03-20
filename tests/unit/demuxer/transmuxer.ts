@@ -130,7 +130,12 @@ describe('TransmuxerInterface tests', function () {
     const videoCodec = '';
     const duration = 0;
     const accurateTimeOffset = true;
-    let chunkMeta = new ChunkMetadata(currentFrag.level, currentFrag.sn + 1, 0);
+    let chunkMeta = new ChunkMetadata(
+      currentFrag.level,
+      currentFrag.sn + 1,
+      0,
+      currentFrag.duration,
+    );
     let state = new TransmuxState(false, true, true, false, 0, false);
     transmuxerInterface.push(
       data,
@@ -224,7 +229,12 @@ describe('TransmuxerInterface tests', function () {
     const videoCodec = '';
     const duration = 0;
     const accurateTimeOffset = true;
-    const chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
+    const chunkMeta = new ChunkMetadata(
+      newFrag.level,
+      newFrag.sn,
+      0,
+      newFrag.duration,
+    );
 
     const configureStub = sinon.stub(
       transmuxerInterfacePrivates.transmuxer,

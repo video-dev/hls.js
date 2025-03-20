@@ -303,6 +303,7 @@ export default class Transmuxer {
       accurateTimeOffset,
       true,
       this.id,
+      chunkMeta.duration,
     );
     transmuxResults.push({
       remuxResult,
@@ -411,6 +412,7 @@ export default class Transmuxer {
       accurateTimeOffset,
       false,
       this.id,
+      chunkMeta.duration,
     );
     return {
       remuxResult,
@@ -437,6 +439,7 @@ export default class Transmuxer {
           accurateTimeOffset,
           false,
           this.id,
+          chunkMeta.duration,
         );
         return {
           remuxResult,

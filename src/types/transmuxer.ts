@@ -14,6 +14,7 @@ export class ChunkMetadata {
   public readonly id: number;
   public readonly size: number;
   public readonly partial: boolean;
+  public readonly duration: number | null;
   public readonly transmuxing: HlsChunkPerformanceTiming =
     getNewPerformanceTiming();
   public readonly buffering: {
@@ -31,6 +32,7 @@ export class ChunkMetadata {
     size = 0,
     part = -1,
     partial = false,
+    duration: number | null = null,
   ) {
     this.level = level;
     this.sn = sn;
@@ -38,6 +40,7 @@ export class ChunkMetadata {
     this.size = size;
     this.part = part;
     this.partial = partial;
+    this.duration = duration;
   }
 }
 
