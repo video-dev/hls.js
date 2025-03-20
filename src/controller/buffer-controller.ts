@@ -6,6 +6,7 @@ import { ElementaryStreamTypes } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
 import {
+  areCodecsMediaSourceSupported,
   getCodecCompatibleName,
   pickMostCompleteCodecName,
 } from '../utils/codecs';
@@ -607,7 +608,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
     trackNames.forEach((trackName: SourceBufferName) => {
       const parsedTrack = data[trackName] as ParsedTrack;
-      const { id, codec, levelCodec, container, metadata } = parsedTrack;
+      const { id, codec, levelCodec, container, metadata, supplemental } =
+        parsedTrack;
       let track = tracks[trackName];
       const transferredTrack = this.transferData?.tracks?.[trackName];
       const sbTrack = transferredTrack?.buffer ? transferredTrack : track;
@@ -618,6 +620,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           buffer: undefined,
           listeners: [],
           codec,
+          supplemental,
           container,
           levelCodec,
           metadata,
@@ -1350,6 +1353,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             buffer,
             container: track.container,
             codec: track.codec,
+            supplemental: track.supplemental,
             levelCodec: track.levelCodec,
             id: track.id,
             metadata: track.metadata,
@@ -1430,6 +1434,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private getTrackCodec(track: BaseTrack, trackName: SourceBufferName): string {
+    // Use supplemental video codec when supported when adding SourceBuffer (#5558)
+    const supplementalCodec = track.supplemental;
+    if (
+      supplementalCodec &&
+      trackName === 'video' &&
+      areCodecsMediaSourceSupported(supplementalCodec, trackName)
+    ) {
+      return supplementalCodec;
+    }
     const codec = pickMostCompleteCodecName(track.codec, track.levelCodec);
     if (codec) {
       if (trackName.slice(0, 5) === 'audio') {
@@ -1451,6 +1464,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       codec,
       container: track.container,
       levelCodec: track.levelCodec,
+      supplemental: track.supplemental,
       metadata: track.metadata,
       id: track.id,
       listeners: [],

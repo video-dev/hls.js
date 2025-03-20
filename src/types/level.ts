@@ -152,8 +152,8 @@ export class Level {
     if ('supplemental' in data) {
       this.supplemental = data.supplemental;
       const supplementalVideo = data.supplemental?.videoCodec;
-      if (supplementalVideo) {
-        this.codecSet += `,${supplementalVideo.substring(0, 7)}`;
+      if (supplementalVideo && supplementalVideo !== data.videoCodec) {
+        this.codecSet += `,${supplementalVideo.substring(0, 4)}`;
       }
     }
     this.addGroupId('audio', data.attrs.AUDIO);
