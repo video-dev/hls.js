@@ -125,7 +125,7 @@ describe('ErrorController Integration Tests', function () {
         expectFatalErrorEventToStopPlayer(
           hls,
           ErrorDetails.MANIFEST_INCOMPATIBLE_CODECS_ERROR,
-          'no level with compatible codecs found in manifest',
+          'no level with compatible codecs found in manifest (one or more CODECS in variant not supported: ["avc9.000000,mp5a.40.2,av99.000000"])',
         ),
       );
     });

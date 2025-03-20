@@ -14,7 +14,12 @@ import {
 } from '../utils/variable-substitution';
 import type { MediaFragment } from './fragment';
 import type { ContentSteeringOptions } from '../types/events';
-import type { LevelAttributes, LevelParsed, VariableMap } from '../types/level';
+import type {
+  CodecsParsed,
+  LevelAttributes,
+  LevelParsed,
+  VariableMap,
+} from '../types/level';
 import type { PlaylistLevelType } from '../types/loader';
 import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
 import type { CodecType } from '../utils/codecs';
@@ -138,6 +143,11 @@ export default class M3U8Parser {
         }
 
         setCodecs(attrs.CODECS, level);
+        const supplementalCodecs = attrs['SUPPLEMENTAL-CODECS'];
+        if (supplementalCodecs) {
+          level.supplemental = {};
+          setCodecs(supplementalCodecs, level.supplemental);
+        }
 
         if (!level.unknownCodecs?.length) {
           levelsWithKnownCodecs.push(level);
@@ -822,14 +832,14 @@ function parseStartTimeOffset(startAttributes: string): number | null {
 
 function setCodecs(
   codecsAttributeValue: string | undefined,
-  level: LevelParsed,
+  level: CodecsParsed,
 ) {
   let codecs = (codecsAttributeValue || '').split(/[ ,]+/).filter((c) => c);
   ['video', 'audio', 'text'].forEach((type: CodecType) => {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
     if (filtered.length) {
       // Comma separated list of all codecs for type
-      level[`${type}Codec`] = filtered.join(',');
+      level[`${type}Codec`] = filtered.map((c) => c.split('/')[0]).join(',');
       // Remove known codecs so that only unknownCodecs are left after iterating through each type
       codecs = codecs.filter((codec) => filtered.indexOf(codec) === -1);
     }

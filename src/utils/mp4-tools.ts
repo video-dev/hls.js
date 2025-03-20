@@ -223,6 +223,7 @@ export interface InitDataTrack {
   timescale: number;
   id: number;
   codec: string;
+  supplemental: string | undefined;
 }
 
 type HdlrType = ElementaryStreamTypes.AUDIO | ElementaryStreamTypes.VIDEO;
@@ -290,11 +291,16 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
   return result;
 }
 
-function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
+function parseStsd(stsd: Uint8Array): {
+  codec: string;
+  encrypted: boolean;
+  supplemental: string | undefined;
+} {
   const sampleEntries = stsd.subarray(8);
   const sampleEntriesEnd = sampleEntries.subarray(8 + 78);
   const fourCC = bin2str(sampleEntries.subarray(4, 8));
   let codec = fourCC;
+  let supplemental;
   const encrypted = fourCC === 'enca' || fourCC === 'encv';
   if (encrypted) {
     const encBox = findBox(sampleEntries, [fourCC])[0];
@@ -314,6 +320,7 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
       }
     });
   }
+  const codecFourCC = codec;
   switch (codec) {
     case 'avc1':
     case 'avc2':
@@ -322,6 +329,10 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
       // extract profile + compatibility + level out of avcC box
       const avcCBox = findBox(sampleEntriesEnd, ['avcC'])[0];
       codec += '.' + toHex(avcCBox[1]) + toHex(avcCBox[2]) + toHex(avcCBox[3]);
+      supplemental = parseSupplementalDoViCodec(
+        codecFourCC === 'avc1' ? 'dva1' : 'dvav',
+        sampleEntriesEnd,
+      );
       break;
     }
     case 'mp4a': {
@@ -371,34 +382,41 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
     }
     case 'hvc1':
     case 'hev1': {
-      const hvcCBox = findBox(sampleEntriesEnd, ['hvcC'])[0];
-      const profileByte = hvcCBox[1];
-      const profileSpace = ['', 'A', 'B', 'C'][profileByte >> 6];
-      const generalProfileIdc = profileByte & 0x1f;
-      const profileCompat = readUint32(hvcCBox, 2);
-      const tierFlag = (profileByte & 0x20) >> 5 ? 'H' : 'L';
-      const levelIDC = hvcCBox[12];
-      const constraintIndicator = hvcCBox.subarray(6, 12);
-      codec += '.' + profileSpace + generalProfileIdc;
-      codec += '.' + profileCompat.toString(16).toUpperCase();
-      codec += '.' + tierFlag + levelIDC;
-      let constraintString = '';
-      for (let i = constraintIndicator.length; i--; ) {
-        const byte = constraintIndicator[i];
-        if (byte || constraintString) {
-          const encodedByte = byte.toString(16).toUpperCase();
-          constraintString = '.' + encodedByte + constraintString;
+      const hvcCBoxes = findBox(sampleEntriesEnd, ['hvcC']);
+      if (hvcCBoxes) {
+        const hvcCBox = hvcCBoxes[0];
+        const profileByte = hvcCBox[1];
+        const profileSpace = ['', 'A', 'B', 'C'][profileByte >> 6];
+        const generalProfileIdc = profileByte & 0x1f;
+        const profileCompat = readUint32(hvcCBox, 2);
+        const tierFlag = (profileByte & 0x20) >> 5 ? 'H' : 'L';
+        const levelIDC = hvcCBox[12];
+        const constraintIndicator = hvcCBox.subarray(6, 12);
+        codec += '.' + profileSpace + generalProfileIdc;
+        codec += '.' + profileCompat.toString(16).toUpperCase();
+        codec += '.' + tierFlag + levelIDC;
+        let constraintString = '';
+        for (let i = constraintIndicator.length; i--; ) {
+          const byte = constraintIndicator[i];
+          if (byte || constraintString) {
+            const encodedByte = byte.toString(16).toUpperCase();
+            constraintString = '.' + encodedByte + constraintString;
+          }
         }
+        codec += constraintString;
       }
-      codec += constraintString;
+      supplemental = parseSupplementalDoViCodec(
+        codecFourCC == 'hev1' ? 'dvhe' : 'dvh1',
+        sampleEntriesEnd,
+      );
       break;
     }
     case 'dvh1':
-    case 'dvhe': {
-      const dvcCBox = findBox(sampleEntriesEnd, ['dvcC'])[0];
-      const profile = (dvcCBox[2] >> 1) & 0x7f;
-      const level = ((dvcCBox[2] << 5) & 0x20) | ((dvcCBox[3] >> 3) & 0x1f);
-      codec += '.' + addLeadingZero(profile) + '.' + addLeadingZero(level);
+    case 'dvhe':
+    case 'dvav':
+    case 'dva1':
+    case 'dav1': {
+      codec = parseSupplementalDoViCodec(codec, sampleEntriesEnd) || codec;
       break;
     }
     case 'vp09': {
@@ -463,6 +481,7 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
         addLeadingZero(matrixCoefficients) +
         '.' +
         videoFullRangeFlag;
+      supplemental = parseSupplementalDoViCodec('dav1', sampleEntriesEnd);
       break;
     }
     case 'ac-3':
@@ -473,7 +492,28 @@ function parseStsd(stsd: Uint8Array): { codec: string; encrypted: boolean } {
     default:
       break;
   }
-  return { codec, encrypted };
+  return { codec, encrypted, supplemental };
+}
+
+function parseSupplementalDoViCodec(
+  fourCC: string,
+  sampleEntriesEnd: Uint8Array,
+): string | undefined {
+  const dvvCResult = findBox(sampleEntriesEnd, ['dvvC']); // used by DoVi Profile 8 to 10
+  const dvXCBox = dvvCResult.length
+    ? dvvCResult[0]
+    : findBox(sampleEntriesEnd, ['dvcC'])[0]; // used by DoVi Profiles up to 7 and 20
+  if (dvXCBox) {
+    const doViProfile = (dvXCBox[2] >> 1) & 0x7f;
+    const doViLevel = ((dvXCBox[2] << 5) & 0x20) | ((dvXCBox[3] >> 3) & 0x1f);
+    return (
+      fourCC +
+      '.' +
+      addLeadingZero(doViProfile) +
+      '.' +
+      addLeadingZero(doViLevel)
+    );
+  }
 }
 
 function skipBERInteger(bytes: Uint8Array, i: number): number {

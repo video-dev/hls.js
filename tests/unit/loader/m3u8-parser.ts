@@ -10,7 +10,7 @@ import type { LevelKey } from '../../../src/loader/level-key';
 chai.use(sinonChai);
 const expect = chai.expect;
 
-describe('PlaylistLoader', function () {
+describe('M3U8Parser', function () {
   it('parses empty manifest returns empty array', function () {
     const result = M3U8Parser.parseMasterPlaylist(
       '',
@@ -251,6 +251,104 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
     };
     expect(result.sessionData).to.deep.equal(expected);
     expect(result.levels.length).to.equal(10);
+  });
+
+  it('parses CODECS and SUPPLEMENTAL-CODECS', function () {
+    const manifest = `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=3000000,VIDEO-RANGE=PQ,CODECS="hvc1.2.4.L93.b0,ec-3",SUPPLEMENTAL-CODECS="dvh1.08.01/db1p",RESOLUTION=1920x1080,FRAME-RATE=30.000
+db1p.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=3602443,VIDEO-RANGE=HLG,CODECS="hvc1.2.4.L150,ec-3",SUPPLEMENTAL-CODECS="dvh1.08.07/db4h",RESOLUTION=1920x1080,FRAME-RATE=30.000
+db4h.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=3000000,VIDEO-RANGE=HLG,CODECS="av01.0.13M.10.0.112,ec-3",SUPPLEMENTAL-CODECS="dav1.10.09/db4h",RESOLUTION=1920x1080,FRAME-RATE=30.000
+dav1.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=3602443,VIDEO-RANGE=PQ,CODECS="av01.0.05M.10.0.112,ec-3",SUPPLEMENTAL-CODECS="av01.0.05M.10.0.112/cdm4",RESOLUTION=1920x1080,FRAME-RATE=30.000
+cdm4.m3u8`;
+    const result = M3U8Parser.parseMasterPlaylist(
+      manifest,
+      'http://example.com',
+    );
+    expect(result, JSON.stringify(result, null, 2)).to.deep.include({
+      contentSteering: null,
+      playlistParsingError: null,
+      sessionData: null,
+      sessionKeys: null,
+      startTimeOffset: null,
+      variableList: null,
+      hasVariableRefs: false,
+    });
+    expect(result.levels).to.be.an('array').with.lengthOf(4);
+    // Note that while brand ("db1p", "db4h", "cdm4") is not available in `Level.supplemental` is is available on parsed attributes:
+    expect(result.levels[0].attrs).to.deep.include({
+      'SUPPLEMENTAL-CODECS': 'dvh1.08.01/db1p',
+    });
+    expect(result.levels[1].attrs).to.deep.include({
+      'SUPPLEMENTAL-CODECS': 'dvh1.08.07/db4h',
+    });
+    expect(result.levels[2].attrs).to.deep.include({
+      'SUPPLEMENTAL-CODECS': 'dav1.10.09/db4h',
+    });
+    expect(result.levels[3].attrs).to.deep.include({
+      'SUPPLEMENTAL-CODECS': 'av01.0.05M.10.0.112/cdm4',
+    });
+    const levelsExpectedToInclude = [
+      {
+        bitrate: 3000000,
+        url: 'http://example.com/db1p.m3u8',
+        width: 1920,
+        height: 1080,
+        videoCodec: 'hvc1.2.4.L93.b0',
+        audioCodec: 'ec-3',
+        unknownCodecs: [],
+        supplemental: {
+          videoCodec: 'dvh1.08.01',
+          unknownCodecs: [],
+        },
+      },
+      {
+        bitrate: 3602443,
+        url: 'http://example.com/db4h.m3u8',
+        width: 1920,
+        height: 1080,
+        videoCodec: 'hvc1.2.4.L150',
+        audioCodec: 'ec-3',
+        unknownCodecs: [],
+        supplemental: {
+          videoCodec: 'dvh1.08.07',
+          unknownCodecs: [],
+        },
+      },
+      {
+        bitrate: 3000000,
+        url: 'http://example.com/dav1.m3u8',
+        width: 1920,
+        height: 1080,
+        videoCodec: 'av01.0.13M.10.0.112',
+        audioCodec: 'ec-3',
+        unknownCodecs: [],
+        supplemental: {
+          videoCodec: 'dav1.10.09',
+          unknownCodecs: [],
+        },
+      },
+      {
+        bitrate: 3602443,
+        url: 'http://example.com/cdm4.m3u8',
+        width: 1920,
+        height: 1080,
+        videoCodec: 'av01.0.05M.10.0.112',
+        audioCodec: 'ec-3',
+        unknownCodecs: [],
+        supplemental: {
+          videoCodec: 'av01.0.05M.10.0.112',
+          unknownCodecs: [],
+        },
+      },
+    ];
+    result.levels.forEach((level, i) => {
+      expect(level, `level ${i + 1}/${result.levels.length}`).to.deep.include(
+        levelsExpectedToInclude[i],
+      );
+    });
   });
 
   it('parses manifest with multiple EXT-X-SESSION-DATA', function () {

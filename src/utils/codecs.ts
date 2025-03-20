@@ -53,6 +53,7 @@ export const sampleEntryCodesISO = {
     avc4: 1,
     avcp: 1,
     av01: 0.8,
+    dav1: 0.8,
     drac: 1,
     dva1: 1,
     dvav: 1,

@@ -1453,7 +1453,7 @@ export default class StreamController
           video.container
         }, codecs[level/parsed]=[${currentLevel.videoCodec || ''}/${
           parsedVideoCodec
-        }${video.codec !== parsedVideoCodec ? ' parsed-corrected=' + video.codec : ''}}]`,
+        }]${video.codec !== parsedVideoCodec ? ' parsed-corrected=' + video.codec : ''}${video.supplemental ? ' supplemental=' + video.supplemental : ''}`,
       );
       delete tracks.audiovideo;
     }

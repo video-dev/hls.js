@@ -117,6 +117,7 @@ class PassThroughRemuxer implements Remuxer {
       tracks.video = {
         container: 'video/mp4',
         codec: videoCodec,
+        supplemental: initData.video.supplemental,
         initSegment,
         id: 'main',
       };
