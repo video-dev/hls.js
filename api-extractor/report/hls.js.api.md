@@ -149,7 +149,7 @@ export class AttrList {
         [key in keyof T]: boolean;
     };
     // (undocumented)
-    hexadecimalInteger(attrName: string): Uint8Array | null;
+    hexadecimalInteger(attrName: string): Uint8Array<ArrayBuffer> | null;
     // (undocumented)
     hexadecimalIntegerAsNumber(attrName: string): number;
     // (undocumented)
@@ -586,6 +586,8 @@ export interface BaseTrack {
     };
     // (undocumented)
     pendingCodec?: string;
+    // (undocumented)
+    supplemental?: string;
 }
 
 // Warning: (ae-missing-release-tag) "BaseTrackSet" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -899,6 +901,20 @@ export type CMCDControllerConfig = {
     useHeaders?: boolean;
     includeKeys?: string[];
 };
+
+// Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface CodecsParsed {
+    // (undocumented)
+    audioCodec?: string;
+    // (undocumented)
+    textCodec?: string;
+    // (undocumented)
+    unknownCodecs?: string[];
+    // (undocumented)
+    videoCodec?: string;
+}
 
 // Warning: (ae-missing-release-tag) "ComponentAPI" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -3063,6 +3079,8 @@ export class Level {
     // (undocumented)
     get subtitleGroups(): (string | undefined)[] | undefined;
     // (undocumented)
+    readonly supplemental: CodecsParsed | undefined;
+    // (undocumented)
     supportedPromise?: Promise<MediaDecodingInfo>;
     // (undocumented)
     supportedResult?: MediaDecodingInfo;
@@ -3333,11 +3351,9 @@ export interface LevelLoadingData {
 // Warning: (ae-missing-release-tag) "LevelParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface LevelParsed {
+export interface LevelParsed extends CodecsParsed {
     // (undocumented)
     attrs: LevelAttributes;
-    // (undocumented)
-    audioCodec?: string;
     // (undocumented)
     bitrate: number;
     // (undocumented)
@@ -3349,13 +3365,9 @@ export interface LevelParsed {
     // (undocumented)
     name: string;
     // (undocumented)
-    textCodec?: string;
-    // (undocumented)
-    unknownCodecs?: string[];
+    supplemental?: CodecsParsed;
     // (undocumented)
     url: string;
-    // (undocumented)
-    videoCodec?: string;
     // (undocumented)
     width?: number;
 }
