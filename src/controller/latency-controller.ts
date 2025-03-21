@@ -256,11 +256,25 @@ export default class LatencyController implements ComponentAPI {
           (2 / (1 + Math.exp(-0.75 * distanceFromTarget - this.edgeStalled))) *
             20,
         ) / 20;
-      media.playbackRate = Math.min(max, Math.max(1, rate));
+      const playbackRate = Math.min(max, Math.max(1, rate));
+      this.changeMediaPlaybackRate(media, playbackRate);
     } else if (media.playbackRate !== 1 && media.playbackRate !== 0) {
-      media.playbackRate = 1;
+      this.changeMediaPlaybackRate(media, 1);
     }
   };
+
+  private changeMediaPlaybackRate(
+    media: HTMLMediaElement,
+    playbackRate: number,
+  ) {
+    if (media.playbackRate === playbackRate) {
+      return;
+    }
+    this.hls?.logger.debug(
+      `[latency-controller]: latency=${this.latency.toFixed(3)}, targetLatency=${this.targetLatency?.toFixed(3)}, forwardBufferLength=${this.forwardBufferLength.toFixed(3)}: adjusting playback rate from ${media.playbackRate} to ${playbackRate}`,
+    );
+    media.playbackRate = playbackRate;
+  }
 
   private estimateLiveEdge(): number | null {
     const levelDetails = this.levelDetails;
