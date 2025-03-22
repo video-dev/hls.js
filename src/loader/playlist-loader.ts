@@ -711,21 +711,25 @@ class PlaylistLoader implements NetworkComponentAPI {
     }
     const error = levelDetails.playlistParsingError;
     if (error) {
-      hls.trigger(Events.ERROR, {
-        type: ErrorTypes.NETWORK_ERROR,
-        details: ErrorDetails.LEVEL_PARSING_ERROR,
-        fatal: false,
-        url,
-        error,
-        reason: error.message,
-        response,
-        context,
-        level: levelIndex,
-        parent,
-        networkDetails,
-        stats,
-      });
-      return;
+      this.hls.logger.warn(error);
+      if (!hls.config.ignorePlaylistParsingErrors) {
+        hls.trigger(Events.ERROR, {
+          type: ErrorTypes.NETWORK_ERROR,
+          details: ErrorDetails.LEVEL_PARSING_ERROR,
+          fatal: false,
+          url,
+          error,
+          reason: error.message,
+          response,
+          context,
+          level: levelIndex,
+          parent,
+          networkDetails,
+          stats,
+        });
+        return;
+      }
+      levelDetails.playlistParsingError = null;
     }
 
     if (levelDetails.live && loader) {

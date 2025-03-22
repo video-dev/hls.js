@@ -383,7 +383,7 @@ export function mapFragmentIntersection(
   oldDetails: LevelDetails,
   newDetails: LevelDetails,
   intersectionFn: FragmentIntersection,
-): void {
+) {
   const skippedSegments = newDetails.skippedSegments;
   const start =
     Math.max(oldDetails.startSN, newDetails.startSN) - newDetails.startSN;
@@ -410,8 +410,44 @@ export function mapFragmentIntersection(
     }
     if (oldFrag && newFrag) {
       intersectionFn(oldFrag, newFrag, i, newFrags);
+      if (oldFrag.url && oldFrag.url !== newFrag.url) {
+        newDetails.playlistParsingError = getSequenceError(
+          `media sequence mismatch ${newFrag.sn}:`,
+          oldDetails,
+          newDetails,
+          oldFrag,
+          newFrag,
+        );
+        return;
+      } else if (oldFrag.cc !== newFrag.cc) {
+        newDetails.playlistParsingError = getSequenceError(
+          `discontinuity sequence mismatch (${oldFrag.cc}!=${newFrag.cc})`,
+          oldDetails,
+          newDetails,
+          oldFrag,
+          newFrag,
+        );
+        return;
+      }
     }
   }
+}
+
+function getSequenceError(
+  message: string,
+  oldDetails: LevelDetails,
+  newDetails: LevelDetails,
+  oldFrag: MediaFragment,
+  newFrag: MediaFragment,
+): Error {
+  return new Error(
+    `${message} ${newFrag.url}
+Playlist starting @${oldDetails.startSN}
+${oldDetails.m3u8}
+
+Playlist starting @${newDetails.startSN}
+${newDetails.m3u8}`,
+  );
 }
 
 export function adjustSliding(

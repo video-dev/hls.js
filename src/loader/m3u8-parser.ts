@@ -60,7 +60,6 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
 
 const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
   [
-    /#(EXTM3U)/.source,
     /#EXT-X-(PROGRAM-DATE-TIME|BYTERANGE|DATERANGE|DEFINE|KEY|MAP|PART|PART-INF|PLAYLIST-TYPE|PRELOAD-HINT|RENDITION-REPORT|SERVER-CONTROL|SKIP|START):(.+)/
       .source,
     /#EXT-X-(BITRATE|DISCONTINUITY-SEQUENCE|MEDIA-SEQUENCE|TARGETDURATION|VERSION): *(\d+)/
@@ -333,13 +332,19 @@ export default class M3U8Parser {
     let firstPdtIndex = -1;
     let createNextFrag = false;
     let nextByteRange: string | null = null;
+    let serverControlAttrs: AttrList | undefined;
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
     level.m3u8 = string;
     level.hasVariableRefs = __USE_VARIABLE_SUBSTITUTION__
       ? hasVariableReferences(string)
       : false;
-
+    if (LEVEL_PLAYLIST_REGEX_FAST.exec(string)?.[0] !== '#EXTM3U') {
+      level.playlistParsingError = new Error(
+        'Missing format identifier #EXTM3U',
+      );
+      return level;
+    }
     while ((result = LEVEL_PLAYLIST_REGEX_FAST.exec(string)) !== null) {
       if (createNextFrag) {
         createNextFrag = false;
@@ -436,16 +441,22 @@ export default class M3U8Parser {
             }
             break;
           case 'PLAYLIST-TYPE':
+            if (level.type) {
+              assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
+            }
             level.type = value1.toUpperCase();
             break;
           case 'MEDIA-SEQUENCE':
+            if (level.startSN !== 0) {
+              assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
+            } else if (fragments.length > 0) {
+              assignMustAppearBeforeSegmentsError(level, tag, result);
+            }
             currentSN = level.startSN = parseInt(value1);
             break;
           case 'SKIP': {
             if (level.skippedSegments) {
-              level.playlistParsingError = new Error(
-                `#EXT-X-SKIP MUST NOT appear more than once in a Playlist`,
-              );
+              assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
             }
             const skipAttrs = new AttrList(value1, level);
             const skippedSegments =
@@ -469,15 +480,23 @@ export default class M3U8Parser {
             break;
           }
           case 'TARGETDURATION':
+            if (level.targetduration !== 0) {
+              assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
+            }
             level.targetduration = Math.max(parseInt(value1), 1);
             break;
           case 'VERSION':
+            if (level.version !== null) {
+              assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
+            }
             level.version = parseInt(value1);
             break;
           case 'INDEPENDENT-SEGMENTS':
-          case 'EXTM3U':
             break;
           case 'ENDLIST':
+            if (!level.live) {
+              assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
+            }
             level.live = false;
             break;
           case '#':
@@ -536,6 +555,11 @@ export default class M3U8Parser {
           }
 
           case 'DISCONTINUITY-SEQUENCE':
+            if (level.startCC !== 0) {
+              assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
+            } else if (fragments.length > 0) {
+              assignMustAppearBeforeSegmentsError(level, tag, result);
+            }
             level.startCC = discontinuityCounter = parseInt(value1);
             break;
           case 'KEY': {
@@ -594,7 +618,10 @@ export default class M3U8Parser {
             break;
           }
           case 'SERVER-CONTROL': {
-            const serverControlAttrs = new AttrList(value1);
+            if (serverControlAttrs) {
+              assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
+            }
+            serverControlAttrs = new AttrList(value1);
             level.canBlockReload = serverControlAttrs.bool('CAN-BLOCK-RELOAD');
             level.canSkipUntil = serverControlAttrs.optionalFloat(
               'CAN-SKIP-UNTIL',
@@ -611,6 +638,9 @@ export default class M3U8Parser {
             break;
           }
           case 'PART-INF': {
+            if (level.partTarget) {
+              assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
+            }
             const partInfAttrs = new AttrList(value1);
             level.partTarget = partInfAttrs.decimalFloatingPoint('PART-TARGET');
             break;
@@ -669,6 +699,11 @@ export default class M3U8Parser {
       if (levelkeys) {
         setFragLevelKeys(frag, levelkeys, level);
       }
+    }
+    if (!level.targetduration) {
+      level.playlistParsingError = new Error(
+        `#EXT-X-TARGETDURATION is required`,
+      );
     }
     const fragmentLength = fragments.length;
     const firstFragment = fragments[0];
@@ -922,4 +957,24 @@ function setFragLevelKeys(
   ) {
     encryptedFragments.push(frag);
   }
+}
+
+function assignMultipleMediaPlaylistTagOccuranceError(
+  level: LevelDetails,
+  tag: string,
+  result: string[],
+) {
+  level.playlistParsingError = new Error(
+    `#EXT-X-${tag} must not appear more than once (${result[0]})`,
+  );
+}
+
+function assignMustAppearBeforeSegmentsError(
+  level: LevelDetails,
+  tag: string,
+  result: string[],
+) {
+  level.playlistParsingError = new Error(
+    `#EXT-X-${tag} must appear before the first Media Segment (${result[0]})`,
+  );
 }
