@@ -1,4 +1,6 @@
 import { NetworkErrorAction } from './error-controller';
+import { ErrorDetails, ErrorTypes } from '../errors';
+import { Events } from '../events';
 import {
   getSkipValue,
   HlsSkip,
@@ -173,6 +175,28 @@ export default class BasePlaylistController
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
         mergeDetails(previousDetails, details);
+        const error = details.playlistParsingError;
+        if (error) {
+          this.warn(error);
+          const hls = this.hls;
+          if (!hls.config.ignorePlaylistParsingErrors) {
+            const { networkDetails } = data;
+            hls.trigger(Events.ERROR, {
+              type: ErrorTypes.NETWORK_ERROR,
+              details: ErrorDetails.LEVEL_PARSING_ERROR,
+              fatal: false,
+              url: details.url,
+              error,
+              reason: error.message,
+              level: (data as any).level || undefined,
+              parent: details.fragments[0]?.type,
+              networkDetails,
+              stats,
+            });
+            return;
+          }
+          details.playlistParsingError = null;
+        }
       }
       if (details.requestScheduled === -1) {
         details.requestScheduled = stats.loading.start;
