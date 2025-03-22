@@ -8,6 +8,7 @@ import type { Fragment, Part } from '../../../src/loader/fragment';
 import type { LevelKey } from '../../../src/loader/level-key';
 
 chai.use(sinonChai);
+chai.config.truncateThreshold = 0;
 const expect = chai.expect;
 
 describe('M3U8Parser', function () {
@@ -18,6 +19,7 @@ describe('M3U8Parser', function () {
     );
     expect(result.levels).to.deep.equal([]);
     expect(result.sessionData).to.equal(null);
+    expectPlaylistParsingError(result, 'no levels found in manifest');
   });
 
   it('manifest with broken syntax returns empty array', function () {
@@ -29,6 +31,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
     );
     expect(result.levels).to.deep.equal([]);
     expect(result.sessionData).to.equal(null);
+    expectPlaylistParsingError(result, 'no levels found in manifest');
   });
 
   it('parses manifest with one level', function () {
@@ -40,6 +43,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       manifest,
       'http://www.dailymotion.com',
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.levels).to.have.lengthOf(1);
     expect(result.levels[0].bitrate).to.equal(836280);
     expect(result.levels[0].audioCodec).to.equal('mp4a.40.2');
@@ -63,6 +67,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       manifest,
       'http://www.dailymotion.com',
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.levels).to.have.lengthOf(1);
     expect(result.levels[0].url).to.equal(
       'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core',
@@ -78,6 +83,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       manifest,
       'http://www.dailymotion.com',
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.levels.length).to.equal(1);
     expect(result.levels[0].bitrate).to.equal(836280);
     expect(result.levels[0].audioCodec).to.not.exist;
@@ -100,6 +106,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       manifest,
       'http://www.dailymotion.com',
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.levels.length).to.equal(1);
     expect(result.levels[0].bitrate).to.equal(836280);
     expect(result.levels[0].audioCodec).to.equal('mp4a.40.2');
@@ -121,6 +128,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       manifest,
       'http://www.dailymotion.com',
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.levels.length).to.equal(1);
     expect(result.levels[0].bitrate).to.equal(836280);
     expect(result.levels[0].audioCodec).to.equal('mp4a.40.2');
@@ -141,6 +149,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       manifest,
       'http://www.dailymotion.com',
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.levels).to.have.lengthOf(1);
     expect(result.levels[0].bitrate).to.equal(836280);
     expect(result.levels[0].audioCodec).to.equal('mp4a.40.2');
@@ -181,6 +190,7 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
       manifest,
       'http://www.dailymotion.com',
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.levels.length).to.equal(10);
     expect(result.levels[0].bitrate).to.equal(836280);
     expect(result.levels[1].bitrate).to.equal(836280);
@@ -205,6 +215,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       manifest,
       'http://www.dailymotion.com',
     );
+    expect(result.playlistParsingError).to.be.null;
     const expected = {
       'com.dailymotion.sessiondata.test': new AttrList({
         'DATA-ID': 'com.dailymotion.sessiondata.test',
@@ -243,6 +254,7 @@ http://proxy-21.dailymotion.com/sec(2a991e17f08fcd94f95637a6dd718ddd)/video/107/
       manifest,
       'http://www.dailymotion.com',
     );
+    expect(result.playlistParsingError).to.be.null;
     const expected = {
       'com.dailymotion.sessiondata.test': new AttrList({
         'DATA-ID': 'com.dailymotion.sessiondata.test',
@@ -359,10 +371,12 @@ cdm4.m3u8`;
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
-    const { sessionData } = M3U8Parser.parseMasterPlaylist(
+    const result = M3U8Parser.parseMasterPlaylist(
       manifest,
       'http://www.dailymotion.com',
     );
+    expect(result.playlistParsingError).to.be.null;
+    const { sessionData } = result;
     const expected = {
       'com.dailymotion.sessiondata.test': new AttrList({
         'DATA-ID': 'com.dailymotion.sessiondata.test',
@@ -394,6 +408,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
     expect(result.fragments).to.have.lengthOf(0);
     expect(result.totalduration).to.equal(0);
     expect(result.variableList).to.equal(null);
+    expectPlaylistParsingError(result, 'Missing format identifier #EXTM3U');
   });
 
   it('level with 0 frag returns empty fragment array', function () {
@@ -409,6 +424,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments).to.have.lengthOf(0);
     expect(result.totalduration).to.equal(0);
   });
@@ -426,6 +442,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.targetduration).to.equal(2);
   });
 
@@ -442,6 +459,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.targetduration).to.equal(1);
   });
 
@@ -470,6 +488,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.variableList).to.equal(null);
     expect(result.totalduration).to.equal(51.24);
     expect(result.startSN).to.equal(0);
@@ -510,6 +529,7 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.totalduration).to.equal(4);
     expect(result.startSN).to.equal(0);
     expect(result.targetduration).to.equal(2);
@@ -544,6 +564,7 @@ ${uriWithIrregularWs1}
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments).to.have.lengthOf(2);
     expect(result.fragments[0].relurl).to.equal(uriWithIrregularWs0);
     expect(result.fragments[1].relurl).to.equal(uriWithIrregularWs1);
@@ -575,6 +596,7 @@ chop/segment-5.ts
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.totalduration).to.equal(30);
     expect(result.startSN).to.equal(0);
     expect(result.version).to.equal(3);
@@ -619,6 +641,7 @@ chop/segment-5.ts
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.totalduration).to.equal(51.24);
     expect(result.startSN).to.equal(0);
     expect(result.targetduration).to.equal(14);
@@ -649,6 +672,7 @@ oceans_aes-audio=65000-video=236000-3.ts
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.totalduration).to.equal(25);
     expect(result.startSN).to.equal(1);
     expect(result.targetduration).to.equal(11);
@@ -698,6 +722,7 @@ oceans_aes-audio=65000-video=236000-3.ts
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.totalduration).to.equal(25);
     expect(result.startSN).to.equal(1);
     expect(result.targetduration).to.equal(11);
@@ -719,17 +744,14 @@ oceans_aes-audio=65000-video=236000-3.ts
     for (let i = 12; i < 16; i++) {
       uint8View[i] = (sn >> (8 * (15 - i))) & 0xff;
     }
-
     expect(result.fragments[0].decryptdata?.iv?.buffer).to.deep.equal(
       uint8View.buffer,
     );
-
     sn = 3;
     uint8View = new Uint8Array(16);
     for (let i = 12; i < 16; i++) {
       uint8View[i] = (sn >> (8 * (15 - i))) & 0xff;
     }
-
     expect(result.fragments[2].decryptdata?.iv?.buffer).to.deep.equal(
       uint8View.buffer,
     );
@@ -757,10 +779,9 @@ bob_2.m4s
       0,
       null,
     );
-
     const ivExpected = new Uint8Array(16);
     ivExpected[0] = 0x10;
-
+    expect(result.playlistParsingError).to.be.null;
     expect(result.totalduration).to.equal(22);
     expect(result.startSN).to.equal(1);
     expect(result.targetduration).to.equal(11);
@@ -831,6 +852,7 @@ lo008ts`;
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments.length).to.equal(10);
     expect(result.fragments[0].url).to.equal('http://dummy.com/lo007ts');
     expect(result.fragments[0].byteRangeStartOffset).to.equal(803136);
@@ -887,6 +909,7 @@ lo008ts`;
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments).to.have.lengthOf(10);
     expect(result.fragments[0].url).to.equal('http://dummy.com/lo007ts');
     expect(result.fragments[0].byteRangeStartOffset).to.equal(803136);
@@ -924,6 +947,7 @@ lo007.m4v
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments.length).to.equal(3);
     expect(result.fragments[0].initSegment?.url).to.equal(
       'http://dummy.com/initsegment.m4v',
@@ -968,6 +992,7 @@ lo007ts`;
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments.length).to.equal(3);
     expect(result.fragments[0].url).to.equal('http://dummy.com/lo007ts');
     expect(result.fragments[0].byteRangeStartOffset).to.equal(803136);
@@ -1005,6 +1030,7 @@ lo007ts`;
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments).to.have.lengthOf(5);
     expect(result.totalduration).to.equal(45);
     expect(result.fragments[2].cc).to.equal(0);
@@ -1039,6 +1065,7 @@ lo007ts`;
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments).to.have.lengthOf(5);
     expect(result.totalduration).to.equal(45);
     expect(result.fragments[0].cc).to.equal(20);
@@ -1049,7 +1076,7 @@ lo007ts`;
   it('parses manifest with one audio track', function () {
     const manifest = `#EXTM3U
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="600k",LANGUAGE="eng",NAME="Audio",AUTOSELECT=YES,DEFAULT=YES,URI="/videos/ZakEbrahim_2014/audio/600k.m3u8?qr=true&preroll=Blank",BANDWIDTH=614400`;
-    const { AUDIO: result = [] } = M3U8Parser.parseMasterPlaylistMedia(
+    const result = M3U8Parser.parseMasterPlaylistMedia(
       manifest,
       'https://hls.ted.com/',
       {
@@ -1063,14 +1090,15 @@ lo007ts`;
         hasVariableRefs: false,
       },
     );
-    expect(result.length).to.equal(1);
-    expect(result[0].autoselect).to.be.true;
-    expect(result[0].default).to.be.true;
-    expect(result[0].forced).to.be.false;
-    expect(result[0].groupId).to.equal('600k');
-    expect(result[0].lang).to.equal('eng');
-    expect(result[0].name).to.equal('Audio');
-    expect(result[0].url).to.equal(
+    const { AUDIO = [] } = result;
+    expect(AUDIO.length).to.equal(1);
+    expect(AUDIO[0].autoselect).to.be.true;
+    expect(AUDIO[0].default).to.be.true;
+    expect(AUDIO[0].forced).to.be.false;
+    expect(AUDIO[0].groupId).to.equal('600k');
+    expect(AUDIO[0].lang).to.equal('eng');
+    expect(AUDIO[0].name).to.equal('Audio');
+    expect(AUDIO[0].url).to.equal(
       'https://hls.ted.com/videos/ZakEbrahim_2014/audio/600k.m3u8?qr=true&preroll=Blank',
     );
   });
@@ -1106,6 +1134,7 @@ lo007ts`;
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments).to.have.lengthOf(8);
     expect(result.totalduration).to.equal(80);
 
@@ -1171,6 +1200,7 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719935.ts`;
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments).to.have.lengthOf(10);
     expect(result.totalduration).to.equal(84.94);
     expect(result.targetduration).to.equal(10);
@@ -1214,6 +1244,7 @@ Rollover38803/20160525T064049-01-69844069.ts
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments).to.have.lengthOf(3);
     expect(result.hasProgramDateTime).to.be.true;
     expect(result.totalduration).to.equal(30);
@@ -1247,6 +1278,7 @@ Rollover38803/20160525T064049-01-69844069.ts
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments).to.have.lengthOf(1);
     expect(result.fragments[0].duration).to.equal(0.36);
   });
@@ -1270,6 +1302,7 @@ main.mp4`;
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     const initSegment = result.fragments[0].initSegment;
     expect(initSegment?.url).to.equal(
       'http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/main.mp4',
@@ -1302,6 +1335,7 @@ frag2.mp4
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments[0].initSegment?.url).to.equal(
       'http://video.example.com/main.mp4',
     );
@@ -1336,6 +1370,7 @@ Rollover38803/20160525T064049-01-69844069.ts
         0,
         null,
       );
+      expect(result.playlistParsingError).to.be.null;
       expect(result.hasProgramDateTime).to.be.true;
       expect(result.fragments[0].rawProgramDateTime).to.equal(
         '2016-05-27T16:34:44Z',
@@ -1352,7 +1387,9 @@ Rollover38803/20160525T064049-01-69844069.ts
     });
 
     it('backfills PDT values if the first segment does not start with PDT', function () {
-      const level = `
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:10
 #EXTINF:10
 frag0.ts
 #EXTINF:10
@@ -1370,6 +1407,7 @@ frag2.ts
         0,
         null,
       );
+      expect(result.playlistParsingError).to.be.null;
       expect(result.hasProgramDateTime).to.be.true;
       expect(result.fragments[2].rawProgramDateTime).to.equal(
         '2016-05-27T16:35:04Z',
@@ -1379,7 +1417,9 @@ frag2.ts
     });
 
     it('extrapolates PDT forward when subsequent fragments do not have a raw programDateTime', function () {
-      const level = `
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:10
 #EXTINF:10
 #EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
 frag0.ts
@@ -1397,6 +1437,7 @@ frag2.ts
         0,
         null,
       );
+      expect(result.playlistParsingError).to.be.null;
       expect(result.hasProgramDateTime).to.be.true;
       expect(result.fragments[0].rawProgramDateTime).to.equal(
         '2016-05-27T16:35:04Z',
@@ -1406,8 +1447,9 @@ frag2.ts
     });
 
     it('recomputes PDT extrapolation whenever a new raw programDateTime is hit', function () {
-      const level = `
-#EXTM3U
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:10
 #EXT-X-DISCONTINUITY
 #EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
 #EXTINF:10
@@ -1436,6 +1478,7 @@ frag5.ts
         0,
         null,
       );
+      expect(result.playlistParsingError).to.be.null;
       expect(result.hasProgramDateTime).to.be.true;
       expect(result.fragments[0].programDateTime).to.equal(1464366904000);
       expect(result.fragments[0].rawProgramDateTime).to.equal(
@@ -1455,7 +1498,9 @@ frag5.ts
     });
 
     it('propagates the raw programDateTime to the fragment following the init segment', function () {
-      const level = `
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:10
 #EXTINF:10
 #EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:35:04Z
 #EXT-X-MAP
@@ -1471,6 +1516,7 @@ frag1.ts
         0,
         null,
       );
+      expect(result.playlistParsingError).to.be.null;
       expect(result.hasProgramDateTime).to.be.true;
       expect(result.fragments[0].rawProgramDateTime).to.equal(
         '2016-05-27T16:35:04Z',
@@ -1479,7 +1525,9 @@ frag1.ts
     });
 
     it('ignores bad PDT values', function () {
-      const level = `
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:10
 #EXTINF:10
 #EXT-X-PROGRAM-DATE-TIME:foo
 frag0.ts
@@ -1494,6 +1542,7 @@ frag1.ts
         0,
         null,
       );
+      expect(result.playlistParsingError).to.be.null;
       expect(result.hasProgramDateTime).to.be.false;
       expect(result.fragments[0].rawProgramDateTime).to.not.exist;
       expect(result.fragments[0].programDateTime).to.not.exist;
@@ -1546,6 +1595,7 @@ fileSequence1151233.ts
         0,
         null,
       );
+      expect(details.playlistParsingError).to.be.null;
       expect(details.canBlockReload).to.be.true;
       expect(details.canSkipUntil).to.equal(24);
       expect(details.partHoldBack).to.equal(3.012);
@@ -1568,6 +1618,7 @@ fileSequence1151226.ts`,
         0,
         null,
       );
+      expect(details.playlistParsingError).to.be.null;
       expect(details.canSkipUntil).to.equal(20);
       expect(details.holdBack).to.equal(15.1);
       expect(details.canSkipDateRanges).to.be.true;
@@ -1598,6 +1649,7 @@ fileSequence1151226.ts`,
         0,
         null,
       );
+      expect(details.playlistParsingError).to.be.null;
       // TODO: Partial Segments for a yet to be appended EXT-INF entry will be added to the fragments list
       //  once PartLoader is implemented to abstract away part loading complexity using progressive loader events
       expect(details.fragments).to.have.lengthOf(8);
@@ -1678,6 +1730,7 @@ fileSequence1151226.ts`,
         0,
         null,
       );
+      expect(details.playlistParsingError).to.be.null;
       expect(details.preloadHint).to.be.an('object');
       expect(details.preloadHint).to.deep.include({
         TYPE: 'PART',
@@ -1694,6 +1747,7 @@ fileSequence1151226.ts`,
         0,
         null,
       );
+      expect(details.playlistParsingError).to.be.null;
       const renditionReports = details.renditionReports as AttrList[];
       expect(renditionReports).to.be.an('array').which.has.lengthOf(2);
       expect(renditionReports[0]).to.deep.include({
@@ -1746,6 +1800,7 @@ fileSequence81641.m4s
         0,
         null,
       );
+      expect(details.playlistParsingError).to.be.null;
       expect(details.skippedSegments).to.equal(9);
       expect(details.recentlyRemovedDateranges).to.deep.equal(['DrTag', 'tdl']);
       expect(details.fragments[0]).to.be.null;
@@ -1786,6 +1841,7 @@ fileSequence2.ts
       0,
       null,
     );
+    expect(details.playlistParsingError).to.be.null;
     const fragments = details.fragments as Fragment[];
     expect(fragments[0].bitrate).to.equal(5083000);
     expectWithJSONMessage(fragments[0].tagList).to.deep.equal([
@@ -1829,6 +1885,7 @@ fileSequence2.ts
       0,
       null,
     );
+    expect(details.playlistParsingError).to.be.null;
     const fragments = details.fragments as Fragment[];
     expect(fragments[0].byteLength).to.equal(null);
     expect(fragments[0].bitrate).to.equal(1000000);
@@ -1879,6 +1936,7 @@ fileSequence2.ts
       0,
       null,
     );
+    expect(details.playlistParsingError).to.be.null;
     const fragments = details.fragments as Fragment[];
     expectWithJSONMessage(fragments[0].tagList).to.deep.equal([
       ['INF', '5', 'title'],
@@ -1936,6 +1994,7 @@ segment.m4s
         0,
         null,
       );
+      expect(details.playlistParsingError).to.be.null;
       expect(details.dateRangeTagCount).to.equal(4);
       expect(details.dateRanges.pre.isInterstitial).to.be.true;
       expect(details.dateRanges.mid1.isInterstitial).to.be.true;
@@ -1967,6 +2026,7 @@ segment.m4s
     it('ensures DateRanges are mapped to a segment whose TimeRange covers the start date of the DATERANGE tag', function () {
       const playlist = `#EXTM3U
 #EXT-X-VERSION:4
+#EXT-X-TARGETDURATION:10
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-PROGRAM-DATE-TIME:1970-01-01T00:00:00.000Z
 #EXT-X-DATERANGE:ID="sooner",START-DATE="1970-01-01T00:00:20.000Z"
@@ -1986,6 +2046,7 @@ segment.m4s
         0,
         null,
       );
+      expect(details.playlistParsingError).to.be.null;
       expect(details.dateRanges.sooner.isValid).to.equal(
         true,
         'is valid DateRange',
@@ -1999,6 +2060,7 @@ segment.m4s
     it('ensures DateRanges that start before the program are mapped to the first PDT tag', function () {
       const playlist = `#EXTM3U
 #EXT-X-VERSION:4
+#EXT-X-TARGETDURATION:10
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-PROGRAM-DATE-TIME:2000-01-01T00:00:00.000Z
 #EXT-X-DATERANGE:ID="earlier",START-DATE="1999-12-31T23:59:50.000Z"
@@ -2018,6 +2080,7 @@ segment.m4s
         0,
         null,
       );
+      expect(details.playlistParsingError).to.be.null;
       expect(details.dateRanges.earlier.isValid).to.equal(
         true,
         'is valid DateRange',
@@ -2056,6 +2119,7 @@ main4.aac
         0,
         null,
       );
+      expect(details.playlistParsingError).to.be.null;
       expectWithJSONMessage(details.fragments[0].tagList).to.deep.equal([
         ['PROGRAM-DATE-TIME', '2018-09-28T16:50:26Z'],
         ['INF', '10'],
@@ -2105,6 +2169,7 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments[2].tagList[0][0]).to.equal('EXT-X-CUSTOM-DATE');
     expect(result.fragments[2].tagList[0][1]).to.equal('2016-05-27T16:34:44Z');
     expect(result.fragments[2].tagList[1][0]).to.equal('EXT-X-CUSTOM-JSON');
@@ -2135,6 +2200,7 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments.length).to.equal(2);
     expect(result.totalduration).to.equal(12.012);
     expect(result.targetduration).to.equal(7);
@@ -2167,6 +2233,7 @@ http://dummy.url.com/hls/live/segment/segment_022916_164500865_719928.ts
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments.length).to.equal(2);
     expect(result.totalduration).to.equal(12.012);
     expect(result.targetduration).to.equal(7);
@@ -2247,6 +2314,7 @@ media_1638278.m4s`;
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments.length).to.equal(22);
     let pdt = 1636514824000;
     for (let i = 17; i < result.fragments.length; i++) {
@@ -2301,6 +2369,7 @@ media_1638278.m4s`;
       0,
       null,
     );
+    expect(result.playlistParsingError).to.be.null;
     expect(result.fragments.length).to.equal(8);
     expect(result.fragments[0].levelkeys, 'first segment has no keys').to.equal(
       undefined,
@@ -2395,61 +2464,72 @@ http://proxy-21.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282
       .which.equals('urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed');
     expect(result.levels.length).to.equal(2);
   });
-});
 
-describe('#EXT-X-START', function () {
-  it('parses EXT-X-START in Multivariant Playlists', function () {
-    const manifest = `#EXTM3U
+  describe('#EXT-X-START', function () {
+    it('parses EXT-X-START in Multivariant Playlists', function () {
+      const manifest = `#EXTM3U
 #EXT-X-START:TIME-OFFSET=300.0,PRECISE=YES
 
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
-    const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
-    expect(result.startTimeOffset).to.equal(300);
-  });
+      const result = M3U8Parser.parseMasterPlaylist(
+        manifest,
+        'http://www.x.com',
+      );
+      expect(result.startTimeOffset).to.equal(300);
+    });
 
-  it('parses negative EXT-X-START values in Multivariant Playlists', function () {
-    const manifest = `#EXTM3U
+    it('parses negative EXT-X-START values in Multivariant Playlists', function () {
+      const manifest = `#EXTM3U
 #EXT-X-START:TIME-OFFSET=-30.0
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
-    const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
-    expect(result.startTimeOffset).to.equal(-30);
-  });
+      const result = M3U8Parser.parseMasterPlaylist(
+        manifest,
+        'http://www.x.com',
+      );
+      expect(result.startTimeOffset).to.equal(-30);
+    });
 
-  it('result is null when EXT-X-START is not present', function () {
-    const manifest = `#EXTM3U
+    it('result is null when EXT-X-START is not present', function () {
+      const manifest = `#EXTM3U
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
-    const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
-    expect(result.startTimeOffset).to.equal(null);
+      const result = M3U8Parser.parseMasterPlaylist(
+        manifest,
+        'http://www.x.com',
+      );
+      expect(result.startTimeOffset).to.equal(null);
+    });
   });
-});
 
-describe('#EXT-X-DEFINE', function () {
-  it('parses EXT-X-DEFINE Variables in Multivariant Playlists', function () {
-    const manifest = `#EXTM3U
+  describe('#EXT-X-DEFINE', function () {
+    it('parses EXT-X-DEFINE Variables in Multivariant Playlists', function () {
+      const manifest = `#EXTM3U
 #EXT-X-DEFINE:NAME="x",VALUE="1"
 #EXT-X-DEFINE:NAME="y",VALUE="2"
 #EXT-X-DEFINE:NAME="hello-var",VALUE="Hello there!"
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
-    const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
-    if (result.variableList === null) {
-      expect(result.variableList, 'variableList').to.not.equal(null);
-      return;
-    }
-    expect(result.variableList.x).to.equal('1');
-    expect(result.variableList.y).to.equal('2');
-    expect(result.variableList['hello-var']).to.equal('Hello there!');
-  });
+      const result = M3U8Parser.parseMasterPlaylist(
+        manifest,
+        'http://www.x.com',
+      );
+      if (result.variableList === null) {
+        expect(result.variableList, 'variableList').to.not.equal(null);
+        return;
+      }
+      expect(result.variableList.x).to.equal('1');
+      expect(result.variableList.y).to.equal('2');
+      expect(result.variableList['hello-var']).to.equal('Hello there!');
+    });
 
-  it('returns an error when duplicate Variables are found in Multivariant Playlists', function () {
-    const manifest = `#EXTM3U
+    it('returns an error when duplicate Variables are found in Multivariant Playlists', function () {
+      const manifest = `#EXTM3U
 #EXT-X-DEFINE:NAME="foo",VALUE="ok"
 #EXT-X-DEFINE:NAME="bar",VALUE="ok"
 #EXT-X-DEFINE:NAME="foo",VALUE="duped"
@@ -2457,25 +2537,24 @@ http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
 
-    const result = M3U8Parser.parseMasterPlaylist(manifest, 'http://www.x.com');
-    if (result.variableList === null) {
-      expect(result.variableList, 'variableList').to.not.equal(null);
-      return;
-    }
-    expect(result.variableList.foo).to.equal('ok');
-    expect(result.variableList.bar).to.equal('ok');
-    expect(result)
-      .to.have.property('playlistParsingError')
-      .which.is.an('Error')
-      .with.property('message')
-      .which.equals(
-        'EXT-X-DEFINE duplicate Variable Name declarations: "foo"',
-        result.playlistParsingError?.message,
+      const result = M3U8Parser.parseMasterPlaylist(
+        manifest,
+        'http://www.x.com',
       );
-  });
+      if (result.variableList === null) {
+        expect(result.variableList, 'variableList').to.not.equal(null);
+        return;
+      }
+      expect(result.variableList.foo).to.equal('ok');
+      expect(result.variableList.bar).to.equal('ok');
+      expectPlaylistParsingError(
+        result,
+        'EXT-X-DEFINE duplicate Variable Name declarations: "foo"',
+      );
+    });
 
-  it('substitutes variable references in quoted strings, URI lines, and hexidecimal attributes, following EXT-X-DEFINE tags in Multivariant Playlists', function () {
-    const manifest = `#EXTM3U
+    it('substitutes variable references in quoted strings, URI lines, and hexidecimal attributes, following EXT-X-DEFINE tags in Multivariant Playlists', function () {
+      const manifest = `#EXTM3U
 #EXT-X-DEFINE:NAME="host",VALUE="example.com"
 #EXT-X-DEFINE:NAME="foo",VALUE="ok"
 #EXT-X-DEFINE:NAME="bar",VALUE="{$foo}"
@@ -2500,76 +2579,76 @@ https://{$host}/sec/video/1.m3u8
 #EXT-X-STREAM-INF:BANDWIDTH=1836280,CODECS="mp4a.40.2,{$vcodec}",RESOLUTION=848x360,NAME="{$bar}{$two}"
 https://{$host}/sec/{$vcodec}/{$two}.m3u8`;
 
-    const result = M3U8Parser.parseMasterPlaylist(
-      manifest,
-      'https://www.x.com',
-    );
+      const result = M3U8Parser.parseMasterPlaylist(
+        manifest,
+        'https://www.x.com',
+      );
 
-    if (result.variableList === null) {
-      expect(result.variableList, 'variableList').to.not.equal(null);
-      return;
-    }
-    expect(result.variableList.bar).to.equal('ok');
+      if (result.variableList === null) {
+        expect(result.variableList, 'variableList').to.not.equal(null);
+        return;
+      }
+      expect(result.variableList.bar).to.equal('ok');
 
-    if (result.sessionData === null) {
-      expect(result.sessionData, 'sessionData').to.not.equal(null);
-      return;
-    }
-    expect(result.sessionData['var-applied'].VALUE).to.equal('hmm');
+      if (result.sessionData === null) {
+        expect(result.sessionData, 'sessionData').to.not.equal(null);
+        return;
+      }
+      expect(result.sessionData['var-applied'].VALUE).to.equal('hmm');
 
-    if (result.sessionKeys === null) {
-      expect(result.sessionKeys).to.not.equal(null);
-      return;
-    }
-    expect(result.sessionKeys[0].keyFormat).to.equal(
-      'com.apple.streamingkeydelivery',
-    );
-    expect(result.sessionKeys[0].keyFormatVersions).to.deep.equal([1, 2]);
-    expect(result.sessionKeys[0].iv).to.deep.equal(
-      new Uint8Array([0, 0, 0, 2]),
-    );
+      if (result.sessionKeys === null) {
+        expect(result.sessionKeys).to.not.equal(null);
+        return;
+      }
+      expect(result.sessionKeys[0].keyFormat).to.equal(
+        'com.apple.streamingkeydelivery',
+      );
+      expect(result.sessionKeys[0].keyFormatVersions).to.deep.equal([1, 2]);
+      expect(result.sessionKeys[0].iv).to.deep.equal(
+        new Uint8Array([0, 0, 0, 2]),
+      );
 
-    expect(result.contentSteering).to.deep.include({
-      uri: 'https://example.com/steering-manifest.json',
-      pathwayId: 'ok-CDN',
+      expect(result.contentSteering).to.deep.include({
+        uri: 'https://example.com/steering-manifest.json',
+        pathwayId: 'ok-CDN',
+      });
+
+      expect(result.levels[0]).to.deep.include(
+        {
+          name: 'ok1',
+          url: 'https://example.com/sec/video/1.m3u8',
+          videoCodec: 'avc1.64001f',
+        },
+        JSON.stringify(result.levels[0], null, 2),
+      );
+
+      expect(result.levels[1]).to.deep.include(
+        {
+          name: 'ok2',
+          url: 'https://example.com/sec/avc1.64001f/2.m3u8',
+          videoCodec: 'avc1.64001f',
+        },
+        JSON.stringify(result.levels[0], null, 2),
+      );
+
+      const { AUDIO: audioTracks = [] } = M3U8Parser.parseMasterPlaylistMedia(
+        manifest,
+        'https://www.x.com',
+        result,
+      );
+
+      expect(audioTracks[0]).to.deep.include(
+        {
+          groupId: '200k',
+          lang: 'eng',
+          url: 'https://example.com/200k.m3u8',
+        },
+        JSON.stringify(audioTracks[0], null, 2),
+      );
     });
 
-    expect(result.levels[0]).to.deep.include(
-      {
-        name: 'ok1',
-        url: 'https://example.com/sec/video/1.m3u8',
-        videoCodec: 'avc1.64001f',
-      },
-      JSON.stringify(result.levels[0], null, 2),
-    );
-
-    expect(result.levels[1]).to.deep.include(
-      {
-        name: 'ok2',
-        url: 'https://example.com/sec/avc1.64001f/2.m3u8',
-        videoCodec: 'avc1.64001f',
-      },
-      JSON.stringify(result.levels[0], null, 2),
-    );
-
-    const { AUDIO: audioTracks = [] } = M3U8Parser.parseMasterPlaylistMedia(
-      manifest,
-      'https://www.x.com',
-      result,
-    );
-
-    expect(audioTracks[0]).to.deep.include(
-      {
-        groupId: '200k',
-        lang: 'eng',
-        url: 'https://example.com/200k.m3u8',
-      },
-      JSON.stringify(audioTracks[0], null, 2),
-    );
-  });
-
-  it('imports and substitutes variable references in quoted strings, URI lines, and hexidecimal attributes, following EXT-X-DEFINE tags in Media Playlists', function () {
-    const level = `#EXTM3U
+    it('imports and substitutes variable references in quoted strings, URI lines, and hexidecimal attributes, following EXT-X-DEFINE tags in Media Playlists', function () {
+      const level = `#EXTM3U
 #EXT-X-VERSION:1
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-ALLOW-CACHE:NO
@@ -2604,100 +2683,102 @@ a{$mvpVariable}.mp4
 #EXT-X-PRELOAD-HINT:TYPE=PART,URI="{$p}5.1.mp4"
 #EXT-X-RENDITION-REPORT:URI="/media0/{$mvpVariable}.m3u8",LAST-MSN=4,LAST-PART=3
 #EXT-X-RENDITION-REPORT:URI="/media2/{$mvpVariable}.m3u8"`;
-    const details = M3U8Parser.parseLevelPlaylist(
-      level,
-      'http://example.com/hls/index.m3u8',
-      0,
-      PlaylistLevelType.MAIN,
-      0,
-      { mvpVariable: 'ok' },
-    );
-    if (details.variableList === null) {
-      expect(details.variableList, 'variableList').to.not.equal(null);
-      return;
-    }
-    expect(details.variableList.mvpVariable).to.equal('ok');
-    expect(details.variableList.p).to.equal('part-');
-    expect(details.totalduration).to.equal(31);
-    expect(details.startSN).to.equal(1);
-    expect(details.targetduration).to.equal(5);
-    expect(details.live).to.be.true;
-    expect(details.skippedSegments).to.equal(3);
-    expect(details.recentlyRemovedDateranges).to.deep.equal([
-      'DrTag',
-      'tdl',
-      'drMeta',
-      'foo',
-    ]);
-    expect(details.fragments).to.have.lengthOf(7);
-    expect(details.fragments[3].title).to.equal(
-      'no desc {$mvpVariable}',
-      'does not substitute vars in segment "title"',
-    );
-    expect(details.fragments[3]).to.deep.include({
-      relurl: 'aok.mp4',
-      url: 'http://example.com/hls/aok.mp4',
-    });
-    expect(details.fragments[3].initSegment).to.deep.include({
-      relurl: 'ok.mp4',
-      url: 'http://example.com/hls/ok.mp4',
-      byteRange: [0, 718],
-    });
-    if (details.partList === null) {
-      expect(details.partList, 'partList').to.not.equal(null);
-      return;
-    }
-    expect(details.partList[0]).to.deep.include({
-      relurl: 'part-4-1.mp4',
-      url: 'http://example.com/hls/part-4-1.mp4',
-      byteRange: [0, 718],
-    });
-    expect(details.dateRanges)
-      .to.have.property('drMeta')
-      .which.has.property('attr')
-      .which.deep.includes({
-        ID: 'drMeta',
-        'START-DATE': '2018-09-28T16:50:48Z',
-        'END-DATE': '2018-09-28T16:50:48Z',
-        'X-CUSTOM': 'ok!',
-        'SCTE35-OUT': '0x20000000',
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        { mvpVariable: 'ok' },
+      );
+      expect(details.playlistParsingError).to.be.null;
+      if (details.variableList === null) {
+        expect(details.variableList, 'variableList').to.not.equal(null);
+        return;
+      }
+      expect(details.variableList.mvpVariable).to.equal('ok');
+      expect(details.variableList.p).to.equal('part-');
+      expect(details.totalduration).to.equal(31);
+      expect(details.startSN).to.equal(1);
+      expect(details.targetduration).to.equal(5);
+      expect(details.live).to.be.true;
+      expect(details.skippedSegments).to.equal(3);
+      expect(details.recentlyRemovedDateranges).to.deep.equal([
+        'DrTag',
+        'tdl',
+        'drMeta',
+        'foo',
+      ]);
+      expect(details.fragments).to.have.lengthOf(7);
+      expect(details.fragments[3].title).to.equal(
+        'no desc {$mvpVariable}',
+        'does not substitute vars in segment "title"',
+      );
+      expect(details.fragments[3]).to.deep.include({
+        relurl: 'aok.mp4',
+        url: 'http://example.com/hls/aok.mp4',
       });
-    expectWithJSONMessage(
-      details.fragments[3].levelkeys?.['com.apple.streamingkeydelivery'],
-      'levelkeys',
-    ).to.deep.include({
-      uri: 'skd://key-data',
-      method: 'SAMPLE-AES',
-      keyFormat: 'com.apple.streamingkeydelivery',
-      keyFormatVersions: [1, 2],
-      iv: new Uint8Array([0, 0, 0, 2]),
-      key: null,
-      keyId: null,
+      expect(details.fragments[3].initSegment).to.deep.include({
+        relurl: 'ok.mp4',
+        url: 'http://example.com/hls/ok.mp4',
+        byteRange: [0, 718],
+      });
+      if (details.partList === null) {
+        expect(details.partList, 'partList').to.not.equal(null);
+        return;
+      }
+      expect(details.partList[0]).to.deep.include({
+        relurl: 'part-4-1.mp4',
+        url: 'http://example.com/hls/part-4-1.mp4',
+        byteRange: [0, 718],
+      });
+      expect(details.dateRanges)
+        .to.have.property('drMeta')
+        .which.has.property('attr')
+        .which.deep.includes({
+          ID: 'drMeta',
+          'START-DATE': '2018-09-28T16:50:48Z',
+          'END-DATE': '2018-09-28T16:50:48Z',
+          'X-CUSTOM': 'ok!',
+          'SCTE35-OUT': '0x20000000',
+        });
+      expectWithJSONMessage(
+        details.fragments[3].levelkeys?.['com.apple.streamingkeydelivery'],
+        'levelkeys',
+      ).to.deep.include({
+        uri: 'skd://key-data',
+        method: 'SAMPLE-AES',
+        keyFormat: 'com.apple.streamingkeydelivery',
+        keyFormatVersions: [1, 2],
+        iv: new Uint8Array([0, 0, 0, 2]),
+        key: null,
+        keyId: null,
+      });
+      expect(details.preloadHint).to.deep.include({
+        TYPE: 'PART',
+        URI: 'part-5.1.mp4',
+      });
+      if (details.partList === null) {
+        expect(details.partList, 'partList').to.not.equal(null);
+        return;
+      }
+      if (!details.renditionReports) {
+        expect(details.renditionReports, 'renditionReports').to.not.be
+          .undefined;
+        return;
+      }
+      expect(details.renditionReports[0]).to.deep.include({
+        URI: '/media0/ok.m3u8',
+        'LAST-MSN': '4',
+        'LAST-PART': '3',
+      });
+      expect(details.renditionReports[1]).to.deep.include({
+        URI: '/media2/ok.m3u8',
+      });
     });
-    expect(details.preloadHint).to.deep.include({
-      TYPE: 'PART',
-      URI: 'part-5.1.mp4',
-    });
-    if (details.partList === null) {
-      expect(details.partList, 'partList').to.not.equal(null);
-      return;
-    }
-    if (!details.renditionReports) {
-      expect(details.renditionReports, 'renditionReports').to.not.be.undefined;
-      return;
-    }
-    expect(details.renditionReports[0]).to.deep.include({
-      URI: '/media0/ok.m3u8',
-      'LAST-MSN': '4',
-      'LAST-PART': '3',
-    });
-    expect(details.renditionReports[1]).to.deep.include({
-      URI: '/media2/ok.m3u8',
-    });
-  });
 
-  it('defines variables using QUERYPARAM name/value pairs in parent Playlist URIs and substites variable references', function () {
-    const manifest = `#EXTM3U
+    it('defines variables using QUERYPARAM name/value pairs in parent Playlist URIs and substites variable references', function () {
+      const manifest = `#EXTM3U
 #EXT-X-DEFINE:QUERYPARAM="token"
 #EXT-X-DEFINE:QUERYPARAM="foo"
 #EXT-X-SESSION-DATA:DATA-ID="var-applied",VALUE="{$foo}"
@@ -2706,37 +2787,37 @@ https://www.x.com/sec/video/1.m3u8?parent-token={$token}
 #EXT-X-STREAM-INF:BANDWIDTH=1836280,RESOLUTION=848x360
 https://www.x.com/sec/video/2.m3u8?parent-token={$token}`;
 
-    const result = M3U8Parser.parseMasterPlaylist(
-      manifest,
-      'https://www.x.com?foo=bar&a=ok&token=1234',
-    );
+      const result = M3U8Parser.parseMasterPlaylist(
+        manifest,
+        'https://www.x.com?foo=bar&a=ok&token=1234',
+      );
 
-    if (result.variableList === null) {
-      expect(result.variableList, 'variableList').to.not.equal(null);
-      return;
-    }
-    expect(result.variableList.foo).to.equal('bar');
-    expect(result.variableList.token).to.equal('1234');
-    expect(result.variableList).to.not.have.property('a');
+      if (result.variableList === null) {
+        expect(result.variableList, 'variableList').to.not.equal(null);
+        return;
+      }
+      expect(result.variableList.foo).to.equal('bar');
+      expect(result.variableList.token).to.equal('1234');
+      expect(result.variableList).to.not.have.property('a');
 
-    if (result.sessionData === null) {
-      expect(result.sessionData, 'sessionData').to.not.equal(null);
-      return;
-    }
-    expect(result.sessionData['var-applied'].VALUE).to.equal('bar');
-    expect(result.levels[0]).to.deep.include(
-      {
-        url: 'https://www.x.com/sec/video/1.m3u8?parent-token=1234',
-      },
-      JSON.stringify(result.levels[0], null, 2),
-    );
-    expect(result.levels[1]).to.deep.include(
-      {
-        url: 'https://www.x.com/sec/video/2.m3u8?parent-token=1234',
-      },
-      JSON.stringify(result.levels[0], null, 2),
-    );
-    const level = `#EXTM3U
+      if (result.sessionData === null) {
+        expect(result.sessionData, 'sessionData').to.not.equal(null);
+        return;
+      }
+      expect(result.sessionData['var-applied'].VALUE).to.equal('bar');
+      expect(result.levels[0]).to.deep.include(
+        {
+          url: 'https://www.x.com/sec/video/1.m3u8?parent-token=1234',
+        },
+        JSON.stringify(result.levels[0], null, 2),
+      );
+      expect(result.levels[1]).to.deep.include(
+        {
+          url: 'https://www.x.com/sec/video/2.m3u8?parent-token=1234',
+        },
+        JSON.stringify(result.levels[0], null, 2),
+      );
+      const level = `#EXTM3U
 #EXT-X-VERSION:1
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-TARGETDURATION:5
@@ -2749,38 +2830,39 @@ segment-1.mp4?pt={$parent-token}&t={$token}&x={$extra}
 segment-2.mp4?t={$token}
 #EXTINF:4
 segment-3.mp4?t={$token}`;
-    const details = M3U8Parser.parseLevelPlaylist(
-      level,
-      'https://www.x.com/sec/video/1.m3u8?parent-token=1234',
-      0,
-      PlaylistLevelType.MAIN,
-      0,
-      result.variableList,
-    );
-    if (details.variableList === null) {
-      expect(details.variableList, 'variableList').to.not.equal(null);
-      return;
-    }
-    expect(details.variableList.token).to.equal('1234');
-    expect(details.variableList['parent-token']).to.equal('1234');
-    expect(details.variableList).to.not.have.property('foo');
-    expect(details.fragments).to.have.lengthOf(3);
-    expect(details.fragments[0]).to.deep.include({
-      relurl: 'segment-1.mp4?pt=1234&t=1234&x=yes',
-      url: 'https://www.x.com/sec/video/segment-1.mp4?pt=1234&t=1234&x=yes',
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'https://www.x.com/sec/video/1.m3u8?parent-token=1234',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        result.variableList,
+      );
+      expect(details.playlistParsingError).to.be.null;
+      if (details.variableList === null) {
+        expect(details.variableList, 'variableList').to.not.equal(null);
+        return;
+      }
+      expect(details.variableList.token).to.equal('1234');
+      expect(details.variableList['parent-token']).to.equal('1234');
+      expect(details.variableList).to.not.have.property('foo');
+      expect(details.fragments).to.have.lengthOf(3);
+      expect(details.fragments[0]).to.deep.include({
+        relurl: 'segment-1.mp4?pt=1234&t=1234&x=yes',
+        url: 'https://www.x.com/sec/video/segment-1.mp4?pt=1234&t=1234&x=yes',
+      });
+      expect(details.fragments[1]).to.deep.include({
+        relurl: 'segment-2.mp4?t=1234',
+        url: 'https://www.x.com/sec/video/segment-2.mp4?t=1234',
+      });
+      expect(details.fragments[2]).to.deep.include({
+        relurl: 'segment-3.mp4?t=1234',
+        url: 'https://www.x.com/sec/video/segment-3.mp4?t=1234',
+      });
     });
-    expect(details.fragments[1]).to.deep.include({
-      relurl: 'segment-2.mp4?t=1234',
-      url: 'https://www.x.com/sec/video/segment-2.mp4?t=1234',
-    });
-    expect(details.fragments[2]).to.deep.include({
-      relurl: 'segment-3.mp4?t=1234',
-      url: 'https://www.x.com/sec/video/segment-3.mp4?t=1234',
-    });
-  });
 
-  it('fails to parse Media Playlist when IMPORT variable is not present', function () {
-    const level = `#EXTM3U
+    it('fails to parse Media Playlist when IMPORT variable is not present', function () {
+      const level = `#EXTM3U
 #EXT-X-VERSION:1
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-TARGETDURATION:5
@@ -2791,28 +2873,24 @@ a{$mvpVar}.mp4
 2.mp4
 #EXTINF:4
 3.mp4`;
-    const details = M3U8Parser.parseLevelPlaylist(
-      level,
-      'http://example.com/hls/index.m3u8',
-      0,
-      PlaylistLevelType.MAIN,
-      0,
-      null,
-    );
-    expect(details.variableList).to.equal(null);
-    expect(details)
-      .to.have.property('playlistParsingError')
-      .which.is.an('Error')
-      .which.has.property('message')
-      .which.equals(
-        'EXT-X-DEFINE IMPORT attribute not found in Multivariant Playlist: "mvpVar"',
-        details.playlistParsingError?.message,
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
       );
-    expect(details.fragments[0].relurl).to.equal('a{$mvpVar}.mp4');
-  });
+      expect(details.variableList).to.equal(null);
+      expectPlaylistParsingError(
+        details,
+        'EXT-X-DEFINE IMPORT attribute not found in Multivariant Playlist: "mvpVar"',
+      );
+      expect(details.fragments[0].relurl).to.equal('a{$mvpVar}.mp4');
+    });
 
-  it('fails to parse Media Playlist when variable reference has no definition', function () {
-    const level = `#EXTM3U
+    it('fails to parse Media Playlist when variable reference has no definition', function () {
+      const level = `#EXTM3U
 #EXT-X-VERSION:1
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-TARGETDURATION:5
@@ -2822,28 +2900,24 @@ a{$bar}.mp4
 2.mp4
 #EXTINF:4
 3.mp4`;
-    const details = M3U8Parser.parseLevelPlaylist(
-      level,
-      'http://example.com/hls/index.m3u8',
-      0,
-      PlaylistLevelType.MAIN,
-      0,
-      null,
-    );
-    expect(details.variableList, 'variableList').to.equal(null);
-    expect(details)
-      .to.have.property('playlistParsingError')
-      .which.is.an('Error')
-      .which.has.property('message')
-      .which.equals(
-        'Missing preceding EXT-X-DEFINE tag for Variable Reference: "bar"',
-        details.playlistParsingError?.message,
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
       );
-    expect(details.fragments?.[0].relurl).to.equal('a{$bar}.mp4');
-  });
+      expect(details.variableList, 'variableList').to.equal(null);
+      expectPlaylistParsingError(
+        details,
+        'Missing preceding EXT-X-DEFINE tag for Variable Reference: "bar"',
+      );
+      expect(details.fragments?.[0].relurl).to.equal('a{$bar}.mp4');
+    });
 
-  it('fails to parse Media Playlist when variable reference precedes definition', function () {
-    const level = `#EXTM3U
+    it('fails to parse Media Playlist when variable reference precedes definition', function () {
+      const level = `#EXTM3U
 #EXT-X-VERSION:1
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-TARGETDURATION:5
@@ -2854,27 +2928,300 @@ a{$bar}.mp4
 2.mp4
 #EXTINF:4
 3.mp4`;
-    const details = M3U8Parser.parseLevelPlaylist(
-      level,
-      'http://example.com/hls/index.m3u8',
-      0,
-      PlaylistLevelType.MAIN,
-      0,
-      null,
-    );
-    expect(details.variableList, 'variableList').to.deep.equal({ bar: '1' });
-    expect(details)
-      .to.have.property('playlistParsingError')
-      .which.is.an('Error')
-      .which.has.property('message')
-      .which.equals(
-        'Missing preceding EXT-X-DEFINE tag for Variable Reference: "bar"',
-        details.playlistParsingError?.message,
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
       );
-    expect(details.fragments[0].relurl).to.equal('a{$bar}.mp4');
+      expect(details.variableList, 'variableList').to.deep.equal({ bar: '1' });
+      expectPlaylistParsingError(
+        details,
+        'Missing preceding EXT-X-DEFINE tag for Variable Reference: "bar"',
+      );
+      expect(details.fragments[0].relurl).to.equal('a{$bar}.mp4');
+    });
+  });
+
+  describe('Media Playlist Tag single occurance validation', function () {
+    it('#EXT-X-TARGETDURATION must not appear more than once', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-TARGETDURATION:4
+#EXTINF:4
+1.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-TARGETDURATION must not appear more than once (#EXT-X-TARGETDURATION:4)',
+      );
+    });
+
+    it('#EXT-X-ENDLIST must not appear more than once', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXTINF:4
+1.mp4
+#EXT-X-ENDLIST
+#EXT-X-ENDLIST`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-ENDLIST must not appear more than once (#EXT-X-ENDLIST)',
+      );
+    });
+
+    it('#EXT-X-DISCONTINUITY-SEQUENCE must not appear more than once', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-DISCONTINUITY-SEQUENCE:2
+#EXTINF:4
+1.mp4
+#EXT-X-DISCONTINUITY-SEQUENCE:3
+#EXTINF:4
+2.mp4
+#EXTINF:4
+3.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-DISCONTINUITY-SEQUENCE must not appear more than once (#EXT-X-DISCONTINUITY-SEQUENCE:3)',
+      );
+    });
+
+    it('#EXT-X-MEDIA-SEQUENCE must not appear more than once', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-MEDIA-SEQUENCE:1
+#EXTINF:4
+1.mp4
+#EXT-X-MEDIA-SEQUENCE:2
+#EXTINF:4
+2.mp4
+#EXTINF:4
+3.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-MEDIA-SEQUENCE must not appear more than once (#EXT-X-MEDIA-SEQUENCE:2)',
+      );
+    });
+
+    it('#EXT-X-PLAYLIST-TYPE must not appear more than once', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-PLAYLIST-TYPE:EVENT
+#EXTINF:4
+1.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-PLAYLIST-TYPE must not appear more than once (#EXT-X-PLAYLIST-TYPE:EVENT)',
+      );
+    });
+
+    it('#EXT-X-PART-INF must not appear more than once', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-PART-INF:PART-TARGET=1.000
+#EXT-X-PART-INF:PART-TARGET=0.500
+#EXTINF:4
+1.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-PART-INF must not appear more than once (#EXT-X-PART-INF:PART-TARGET=0.500)',
+      );
+    });
+
+    it('#EXT-X-SERVER-CONTROL must not appear more than once', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=3.0
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=24
+#EXTINF:4
+1.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-SERVER-CONTROL must not appear more than once (#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=24)',
+      );
+    });
+
+    // #EXT-X-SKIP is a Media Metadata Tag, not a Media Playlist Tag, but the same "only one" rule applies
+    it('#EXT-X-SKIP must not appear more than once', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-SKIP:SKIPPED-SEGMENTS=1
+#EXTINF:4
+2.mp4
+#EXT-X-SKIP:SKIPPED-SEGMENTS=3
+#EXTINF:4
+6.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-SKIP must not appear more than once (#EXT-X-SKIP:SKIPPED-SEGMENTS=3)',
+      );
+    });
+
+    // #EXT-X-VERSION is allowed in Media Playlists and Multivariant Playlists, but the same "only one" rule applies
+    it('#EXT-X-VERSION must not appear more than once', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:5
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXTINF:4
+2.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-VERSION must not appear more than once (#EXT-X-VERSION:6)',
+      );
+    });
+  });
+
+  describe('Media Playlist sequence tag validation', function () {
+    it('#EXT-X-DISCONTINUITY-SEQUENCE must appear before the first Media Segment', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-MEDIA-SEQUENCE:1
+#EXTINF:4
+1.mp4
+#EXT-X-DISCONTINUITY-SEQUENCE:3
+#EXTINF:4
+2.mp4
+#EXTINF:4
+3.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-DISCONTINUITY-SEQUENCE must appear before the first Media Segment (#EXT-X-DISCONTINUITY-SEQUENCE:3)',
+      );
+    });
+
+    it('#EXT-X-MEDIA-SEQUENCE must appear before the first Media Segment', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXTINF:4
+1.mp4
+#EXT-X-MEDIA-SEQUENCE:2
+#EXTINF:4
+2.mp4
+#EXTINF:4
+3.mp4`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-MEDIA-SEQUENCE must appear before the first Media Segment (#EXT-X-MEDIA-SEQUENCE:2)',
+      );
+    });
   });
 });
 
 function expectWithJSONMessage(value: any, msg?: string) {
   return expect(value, `${msg || 'actual:'} ${JSON.stringify(value, null, 2)}`);
+}
+
+function expectPlaylistParsingError(object: any, message: string) {
+  expect(
+    object,
+    object?.playlistParsingError ? undefined : 'playlistParsingError',
+  )
+    .to.have.property('playlistParsingError')
+    .which.is.an('Error')
+    .which.has.property('message')
+    .which.equals(message);
 }

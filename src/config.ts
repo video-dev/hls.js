@@ -281,6 +281,7 @@ export type HlsConfig = {
   maxDevicePixelRatio: number;
   preferManagedMediaSource: boolean;
   timelineOffset?: number;
+  ignorePlaylistParsingErrors: boolean;
   loader: { new (confg: HlsConfig): Loader<LoaderContext> };
   fLoader?: FragmentLoaderConstructor;
   pLoader?: PlaylistLoaderConstructor;
@@ -398,6 +399,7 @@ export const hlsDefaultConfig: HlsConfig = {
   fpsDroppedMonitoringPeriod: 5000, // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2, // used by fps-controller
   appendErrorMaxRetry: 3, // used by buffer-controller
+  ignorePlaylistParsingErrors: false,
   loader: XhrLoader,
   // loader: FetchLoader,
   fLoader: undefined, // used by fragment-loader

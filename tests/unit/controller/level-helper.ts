@@ -31,6 +31,7 @@ import type {
 } from '../../../src/types/media-playlist';
 
 chai.use(sinonChai);
+chai.config.truncateThreshold = 0;
 const expect = chai.expect;
 
 type HlsTestable = Omit<Hls, 'networkControllers' | 'coreComponents'> & {
@@ -188,6 +189,7 @@ describe('LevelHelper Tests', function () {
       mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([5, 10, 15, 20]);
+      expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
     it('applies expected sliding when there is no segment overlap', function () {
@@ -196,6 +198,7 @@ describe('LevelHelper Tests', function () {
       mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([20, 25, 30]);
+      expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
     it('matches start when the new playlist starts before the old', function () {
@@ -207,6 +210,7 @@ describe('LevelHelper Tests', function () {
       mergeDetails(oldPlaylist, newPlaylist);
       const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([10, 15, 20]);
+      expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
     it('merges delta playlist updates', function () {
@@ -228,6 +232,7 @@ actual: ${JSON.stringify(frag)}
 expect: ${JSON.stringify(merged.fragments[i])}`,
         ).to.deep.equal(merged.fragments[i]);
       });
+      expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
     it('marks failed delta playlist updates', function () {
@@ -250,6 +255,7 @@ actual: ${JSON.stringify(frag)}
 expect: ${JSON.stringify(merged.fragments[i])}`,
         ).to.deep.equal(merged.fragments[i]);
       });
+      expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
     it('merges initSegments', function () {
@@ -293,6 +299,7 @@ expect: ${JSON.stringify(merged.fragments[i])}`,
         newPlaylist.fragmentHint.initSegment,
         'fragmentHint does not have correct initSegment',
       ).to.equal(oldInitSegment);
+      expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
     it('handles delta Playlist updates with merged program date time and skipped date ranges', function () {
@@ -344,22 +351,8 @@ fileSequence10.ts
 #EXTINF:6,
 fileSequence11.ts
 #EXT-X-DATERANGE:ID="four",START-DATE="2024-02-29T12:02:04.000Z"`;
-      const details = M3U8Parser.parseLevelPlaylist(
-        playlist,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
-      const detailsUpdated = M3U8Parser.parseLevelPlaylist(
-        playlistUpdate,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
+      const details = parseLevelPlaylist(playlist);
+      const detailsUpdated = parseLevelPlaylist(playlistUpdate);
       mergeDetails(details, detailsUpdated);
       expect(details.hasProgramDateTime, 'details.hasProgramDateTime').to.be
         .true;
@@ -433,6 +426,7 @@ fileSequence11.ts
       expect(detailsUpdated.dateRanges.four.tagOrder, 'four.tagOrder').to.equal(
         3,
       );
+      expect(detailsUpdated.playlistParsingError).to.be.null;
     });
 
     it('handles delta Playlist updates with discontinuities', function () {
@@ -527,38 +521,10 @@ fileSequence11.ts
 #EXT-X-DISCONTINUITY
 #EXTINF:6,
 fileSequence12.ts`;
-      const details1 = M3U8Parser.parseLevelPlaylist(
-        playlist,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
-      const details2 = M3U8Parser.parseLevelPlaylist(
-        deltaUpdate1,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
-      const details3 = M3U8Parser.parseLevelPlaylist(
-        deltaUpdate2,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
-      const details4 = M3U8Parser.parseLevelPlaylist(
-        deltaUpdate3,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
+      const details1 = parseLevelPlaylist(playlist);
+      const details2 = parseLevelPlaylist(deltaUpdate1);
+      const details3 = parseLevelPlaylist(deltaUpdate2);
+      const details4 = parseLevelPlaylist(deltaUpdate3);
 
       expect(details1, 'details1').to.include({
         live: true,
@@ -647,6 +613,7 @@ fileSequence12.ts`;
       expect(mergedSequence1).to.equal(
         '0-0,1-0,2-1,3-1,4-1,5-1,6-1,7-1,8-1,9-1',
       );
+      expect(details2.playlistParsingError).to.be.null;
 
       // This delta update added and removed one segment
       details3.reloaded(details2);
@@ -673,6 +640,7 @@ fileSequence12.ts`;
       expect(mergedSequence2).to.equal(
         '1-0,2-1,3-1,4-1,5-1,6-1,7-1,8-1,9-1,10-1',
       );
+      expect(details3.playlistParsingError).to.be.null;
 
       // This delta update added and removed two segments with a discontinuity at the last segment
       details4.reloaded(details3);
@@ -699,6 +667,7 @@ fileSequence12.ts`;
       expect(mergedSequence3).to.equal(
         '3-1,4-1,5-1,6-1,7-1,8-1,9-1,10-1,11-1,12-2',
       );
+      expect(details4.playlistParsingError).to.be.null;
     });
 
     it('handles delta Playlist updates with discontinuities and parts', function () {
@@ -771,30 +740,9 @@ fileSequence7.m4s
 fileSequence8.m4s
 #EXT-X-DISCONTINUITY
 #EXT-X-PART:DURATION=2,URI="ll.m4s?segment=fileSequence9.1.m4s"`;
-      const details1 = M3U8Parser.parseLevelPlaylist(
-        playlist,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
-      const details2 = M3U8Parser.parseLevelPlaylist(
-        deltaUpdate,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
-      const details3 = M3U8Parser.parseLevelPlaylist(
-        deltaUpdateIncrementDisco,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
+      const details1 = parseLevelPlaylist(playlist);
+      const details2 = parseLevelPlaylist(deltaUpdate);
+      const details3 = parseLevelPlaylist(deltaUpdateIncrementDisco);
       expect(details1, 'details1').to.include({
         live: true,
         canSkipUntil: 24,
@@ -873,6 +821,7 @@ fileSequence8.m4s
       expect(mergedSequence1).to.equal(
         '102-11,103-11,104-11,105-11,106-11,107-11,108-11',
       );
+      expect(details2.playlistParsingError).to.be.null;
 
       // This delta update does not increment discontinuity-sequence (discontinuity tag would appear before first segment)
       details3.reloaded(details1);
@@ -899,6 +848,7 @@ fileSequence8.m4s
       expect(mergedSequence2).to.equal(
         '102-11,103-11,104-11,105-11,106-11,107-11,108-11',
       );
+      expect(details3.playlistParsingError).to.be.null;
     });
 
     it('handles delta Playlist updates with multiple skip tags and removed date ranges', function () {
@@ -977,22 +927,8 @@ fileSequence16.ts
 fileSequence17.ts
 #EXTINF:6,
 fileSequence18.ts`;
-      const details = M3U8Parser.parseLevelPlaylist(
-        playlist,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
-      const detailsUpdated = M3U8Parser.parseLevelPlaylist(
-        playlistUpdate,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
+      const details = parseLevelPlaylist(playlist);
+      const detailsUpdated = parseLevelPlaylist(playlistUpdate);
       mergeDetails(details, detailsUpdated);
       expect(details.hasProgramDateTime, 'details.hasProgramDateTime').to.be
         .true;
@@ -1022,6 +958,10 @@ fileSequence18.ts`;
         .which.equals(3);
       expect(detailsUpdated.dateRanges.d2.startTime).to.equal(2.94);
       expect(detailsUpdated.dateRanges.d3.startTime).to.equal(3.94);
+      // Multiple #EXT-X-SKIP tags are not allowed
+      expect(detailsUpdated.playlistParsingError).to.include({
+        message: `#EXT-X-SKIP must not appear more than once (#EXT-X-SKIP:SKIPPED-SEGMENTS=2,RECENTLY-REMOVED-DATERANGES="d0")`,
+      });
     });
 
     it('does not add more sliding when LevelDetails arguments are the same object', function () {
@@ -1033,14 +973,7 @@ fileSequence18.ts`;
 fileSequence5.ts
 #EXTINF:6,
 fileSequence6.ts`;
-      const details = M3U8Parser.parseLevelPlaylist(
-        playlist,
-        'http://dummy.url.com/playlist.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
+      const details = parseLevelPlaylist(playlist);
       addSliding(details, 10);
       expect(details.fragmentStart).to.equal(10);
       mergeDetails(details, details);
@@ -1211,37 +1144,23 @@ audio_5441.m4s`;
       );
       hls.coreComponents.length = 0;
 
-      mainDetails1 = M3U8Parser.parseLevelPlaylist(
+      mainDetails1 = parseLevelPlaylist(
         mainPlaylist_01,
-        'http://dummy.url.com/playlist-v.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
+        'http://example.com/playlist-v.m3u8',
       );
-      mainDetails2 = M3U8Parser.parseLevelPlaylist(
+      mainDetails2 = parseLevelPlaylist(
         mainPlaylist_02,
-        'http://dummy.url.com/playlist-v.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
+        'http://example.com/playlist-v.m3u8',
       );
-      audioDetails1 = M3U8Parser.parseLevelPlaylist(
+      audioDetails1 = parseLevelPlaylist(
         audioPlaylist_01,
-        'http://dummy.url.com/playlist-a.m3u8',
-        0,
+        'http://example.com/playlist-a.m3u8',
         PlaylistLevelType.AUDIO,
-        0,
-        null,
       );
-      audioDetails2 = M3U8Parser.parseLevelPlaylist(
+      audioDetails2 = parseLevelPlaylist(
         audioPlaylist_02,
-        'http://dummy.url.com/playlist-a.m3u8',
-        0,
+        'http://example.com/playlist-a.m3u8',
         PlaylistLevelType.AUDIO,
-        0,
-        null,
       );
 
       levelInfo = new Level({
@@ -1335,6 +1254,9 @@ audio_5441.m4s`;
       expect(audioDetails2.alignedSliding).to.be.true;
       expect(mainDetails2.fragmentStart).to.equal(20.0825);
       expect(audioDetails2.fragmentStart).to.equal(20.0825);
+
+      expect(mainDetails2.playlistParsingError).to.be.null;
+      expect(audioDetails2.playlistParsingError).to.be.null;
     });
 
     it('aligns playlist on track update', function () {
@@ -1360,6 +1282,119 @@ audio_5441.m4s`;
       expect(audioDetails2.alignedSliding).to.be.true;
       expect(mainDetails2.fragmentStart).to.equal(20.0825);
       expect(audioDetails2.fragmentStart).to.equal(20.0825);
+
+      expect(mainDetails2.playlistParsingError).to.be.null;
+      expect(audioDetails2.playlistParsingError).to.be.null;
+    });
+  });
+
+  describe('Live playlist update errors', function () {
+    it('changes the discontinuity sequence of segment between updates', function () {
+      const playlist1 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5428
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5428.m4s
+#EXTINF:2.000,
+video_5429.m4s
+#EXTINF:2.000,
+video_5430.m4s
+#EXTINF:2.000,
+video_5431.m4s`;
+      const playlist2 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5429
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5429.m4s
+#EXTINF:2.000,
+video_5430.m4s
+#EXT-X-DISCONTINUITY
+#EXTINF:2.000,
+video_5431.m4s
+#EXTINF:2.000,
+video_5432.m4s`;
+      const details1 = parseLevelPlaylist(playlist1);
+      const details2 = parseLevelPlaylist(playlist2);
+      mergeDetails(details1, details2);
+      expectPlaylistParsingError(
+        details2,
+        'discontinuity sequence mismatch (31!=32)',
+      );
+    });
+
+    it('changes the media sequence of segment between updates', function () {
+      const playlist1 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5428
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5428.m4s
+#EXTINF:2.000,
+video_5429.m4s
+#EXTINF:2.000,
+video_5430.m4s
+#EXTINF:2.000,
+video_5431.m4s`;
+      // Media sequence increased by one but two segments removed.
+      const playlist2 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5429
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5430.m4s
+#EXTINF:2.000,
+video_5431.m4s
+#EXTINF:2.000,
+video_5431.m4s
+#EXTINF:2.000,
+video_5432.m4s`;
+      const details1 = parseLevelPlaylist(playlist1);
+      const details2 = parseLevelPlaylist(playlist2);
+      mergeDetails(details1, details2);
+      expectPlaylistParsingError(
+        details2,
+        'media sequence mismatch 5429: http://example.com/video_5430.m4s',
+      );
     });
   });
 });
+
+function parseLevelPlaylist(
+  m3u8: string,
+  url?: string,
+  type?: PlaylistLevelType,
+) {
+  return M3U8Parser.parseLevelPlaylist(
+    m3u8,
+    url || 'http://example.com/playlist.m3u8',
+    0,
+    type || PlaylistLevelType.MAIN,
+    0,
+    null,
+  );
+}
+
+function expectPlaylistParsingError(object: any, message: string) {
+  expect(
+    object,
+    object?.playlistParsingError ? undefined : 'playlistParsingError',
+  )
+    .to.have.property('playlistParsingError')
+    .which.is.an('Error')
+    .which.has.property('message')
+    .which.is.a('string')
+    .which.satisfy(
+      (msg: string) => msg.startsWith(message),
+      `Expected error message to start with "${message}"`,
+    );
+}
