@@ -144,6 +144,7 @@ describe('InterstitialsController', function () {
       0,
       null,
     );
+    expect(details?.playlistParsingError).to.equal(null);
     const attrs = new AttrList({});
     const level = new Level({
       name: '',
