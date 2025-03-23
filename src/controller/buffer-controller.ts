@@ -8,8 +8,8 @@ import { BufferHelper } from '../utils/buffer-helper';
 import {
   areCodecsMediaSourceSupported,
   getCodecCompatibleName,
-  replaceVideoCodec,
   pickMostCompleteCodecName,
+  replaceVideoCodec,
 } from '../utils/codecs';
 import { Logger } from '../utils/logger';
 import {

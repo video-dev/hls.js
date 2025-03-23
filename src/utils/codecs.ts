@@ -204,9 +204,9 @@ export function getCodecCompatibleName(
 
 export function replaceVideoCodec(
   originalCodecs: string | undefined,
-  newVideoCodec: string | undefined
+  newVideoCodec: string | undefined,
 ): string | undefined {
-  let codecs: string[] = [];
+  const codecs: string[] = [];
   if (originalCodecs) {
     const allCodecs = originalCodecs.split(',');
     for (let i = 0; i < allCodecs.length; i++) {
