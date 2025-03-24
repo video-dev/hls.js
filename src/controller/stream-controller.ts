@@ -251,7 +251,9 @@ export default class StreamController
     // exit loop, as we either need more info (level not parsed) or we need media to be attached to load new fragment
     if (
       levelLastLoaded === null ||
-      (!media && (this.startFragRequested || !hls.config.startFragPrefetch))
+      (!media &&
+        !this.primaryPrefetch &&
+        (this.startFragRequested || !hls.config.startFragPrefetch))
     ) {
       return;
     }

@@ -417,7 +417,8 @@ export default class InterstitialsController
                   );
 
             const diff = time - currentTime;
-            const seekToTime = media.currentTime + diff;
+            const seekToTime =
+              (appendInPlace ? currentTime : media.currentTime) + diff;
             if (
               seekToTime >= 0 &&
               (!assetPlayer ||
@@ -592,10 +593,6 @@ export default class InterstitialsController
           },
           get currentTime() {
             const timelinePos = c.timelinePos;
-            const playingItem = c.effectivePlayingItem;
-            if (playingItem?.event?.appendInPlace) {
-              return playingItem.start;
-            }
             return timelinePos > 0 ? timelinePos : 0;
           },
           set currentTime(time: number) {
@@ -806,6 +803,11 @@ export default class InterstitialsController
               const interstitial = queuedPlayer.interstitial;
               this.clearInterstitial(queuedPlayer.interstitial, null);
               interstitial.appendInPlace = false;
+              if (interstitial.appendInPlace) {
+                this.warn(
+                  `Could not change append strategy for queued assets ${interstitial}`,
+                );
+              }
             }
           });
         }
@@ -1165,7 +1167,9 @@ export default class InterstitialsController
       }
       // Ensure Interstitial is enqueued
       const waitingItem = this.waitingItem;
-      this.setBufferingItem(scheduledItem);
+      if (!this.assetsBuffered(scheduledItem, media)) {
+        this.setBufferingItem(scheduledItem);
+      }
       let player = this.preloadAssets(interstitial, assetListIndex);
       if (!this.eventItemsMatch(scheduledItem, waitingItem || currentItem)) {
         this.waitingItem = scheduledItem;
@@ -1791,6 +1795,20 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     }
   }
 
+  private assetsBuffered(
+    item: InterstitialScheduleEventItem,
+    media: HTMLMediaElement | null,
+  ): boolean {
+    const assetList = item.event.assetList;
+    if (assetList.length === 0) {
+      return false;
+    }
+    return !item.event.assetList.some((asset) => {
+      const player = this.getAssetPlayer(asset.identifier);
+      return !player?.bufferedInPlaceToEnd(media);
+    });
+  }
+
   private setBufferingItem(
     item: InterstitialScheduleItem,
   ): InterstitialScheduleItem | null {
@@ -2304,8 +2322,10 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       });
     }
 
-    // detach media and attach to interstitial player if it does not have another element attached
-    this.bufferAssetPlayer(player, media);
+    if (!player.bufferedInPlaceToEnd(media)) {
+      // detach media and attach to interstitial player if it does not have another element attached
+      this.bufferAssetPlayer(player, media);
+    }
   }
 
   private bufferAssetPlayer(player: HlsAssetPlayer, media: HTMLMediaElement) {

@@ -325,7 +325,9 @@ class AudioStreamController
     // => if media not attached but start frag prefetch is enabled and start frag not requested yet, we will not exit loop
     if (
       !this.buffering ||
-      (!media && (this.startFragRequested || !config.startFragPrefetch)) ||
+      (!media &&
+        !this.primaryPrefetch &&
+        (this.startFragRequested || !config.startFragPrefetch)) ||
       !levels?.[trackId]
     ) {
       return;

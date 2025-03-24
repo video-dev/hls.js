@@ -402,7 +402,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected doTick(): void;
     // (undocumented)
-    filterReplacedPrimary(frag: MediaFragment | null, details: LevelDetails | undefined): MediaFragment | null;
+    protected filterReplacedPrimary(frag: MediaFragment | null, details: LevelDetails | undefined): MediaFragment | null;
     // (undocumented)
     protected flushBufferGap(frag: Fragment): void;
     // (undocumented)
@@ -509,6 +509,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     pauseBuffering(): void;
     // (undocumented)
     protected playlistType: PlaylistLevelType;
+    // (undocumented)
+    protected get primaryPrefetch(): boolean;
     // (undocumented)
     protected recoverWorkerError(data: ErrorData): void;
     // (undocumented)
@@ -2133,6 +2135,8 @@ export class HlsAssetPlayer {
     // (undocumented)
     get bufferedEnd(): number;
     // (undocumented)
+    bufferedInPlaceToEnd(media?: HTMLMediaElement | null): boolean;
+    // (undocumented)
     get currentTime(): number;
     // (undocumented)
     destroy(): void;
@@ -2689,6 +2693,8 @@ export class InterstitialEvent {
     // (undocumented)
     reset(): void;
     // (undocumented)
+    resetOnResume?: boolean;
+    // (undocumented)
     restrictions: PlaybackRestrictions;
     // (undocumented)
     resumeAnchor?: MediaFragmentRef;
@@ -2704,6 +2710,8 @@ export class InterstitialEvent {
     snapOptions: SnapOptions;
     // (undocumented)
     get startDate(): Date;
+    // (undocumented)
+    get startIsAligned(): boolean;
     // (undocumented)
     get startOffset(): number;
     // (undocumented)

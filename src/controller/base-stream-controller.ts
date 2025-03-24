@@ -1299,9 +1299,8 @@ export default class BaseStreamController
         : levelDetails.fragmentEnd;
       frag = this.getFragmentAtPosition(pos, end, levelDetails);
     }
-
-    frag = this.filterReplacedPrimary(frag, levelDetails);
-    return this.mapToInitFragWhenRequired(frag);
+    const programFrag = this.filterReplacedPrimary(frag, levelDetails);
+    return this.mapToInitFragWhenRequired(programFrag);
   }
 
   protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean {
@@ -1351,18 +1350,26 @@ export default class BaseStreamController
     return nextFragment;
   }
 
-  filterReplacedPrimary(
+  protected get primaryPrefetch(): boolean {
+    if (interstitialsEnabled(this.hls.config)) {
+      const playingInterstitial =
+        this.hls.interstitialsManager?.playingItem?.event;
+      if (playingInterstitial) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  protected filterReplacedPrimary(
     frag: MediaFragment | null,
     details: LevelDetails | undefined,
   ): MediaFragment | null {
     if (!frag) {
       return frag;
     }
-    const config = this.hls.config;
     if (
-      __USE_INTERSTITIALS__ &&
-      config.interstitialsController &&
-      config.enableInterstitialPlayback !== false &&
+      interstitialsEnabled(this.hls.config) &&
       frag.type !== PlaylistLevelType.SUBTITLE
     ) {
       // Do not load fragments outside the buffering schedule segment
@@ -1388,7 +1395,13 @@ export default class BaseStreamController
           }
           if (frag.start > bufferingItem.end && bufferingItem.nextEvent) {
             // fragment is past schedule item end
-            return null;
+            // allow some overflow when not appending in place to prevent stalls
+            if (
+              bufferingItem.nextEvent.appendInPlace ||
+              frag.start - bufferingItem.end > 1
+            ) {
+              return null;
+            }
           }
         }
       }
@@ -2065,4 +2078,12 @@ export default class BaseStreamController
   get state(): (typeof State)[keyof typeof State] {
     return this._state;
   }
+}
+
+function interstitialsEnabled(config: HlsConfig): boolean {
+  return (
+    __USE_INTERSTITIALS__ &&
+    !!config.interstitialsController &&
+    config.enableInterstitialPlayback !== false
+  );
 }
