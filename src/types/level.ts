@@ -3,19 +3,23 @@ import type { LevelDetails } from '../loader/level-details';
 import type { AttrList } from '../utils/attr-list';
 import type { MediaDecodingInfo } from '../utils/mediacapabilities-helper';
 
-export interface LevelParsed {
+export interface LevelParsed extends CodecsParsed {
   attrs: LevelAttributes;
-  audioCodec?: string;
   bitrate: number;
   details?: LevelDetails;
   height?: number;
   id?: number;
   name: string;
+  supplemental?: CodecsParsed;
+  url: string;
+  width?: number;
+}
+
+export interface CodecsParsed {
+  audioCodec?: string;
+  videoCodec?: string;
   textCodec?: string;
   unknownCodecs?: string[];
-  url: string;
-  videoCodec?: string;
-  width?: number;
 }
 
 export interface LevelAttributes extends AttrList {
@@ -110,6 +114,7 @@ export class Level {
   public readonly height: number;
   public readonly id: number;
   public readonly name: string;
+  public readonly supplemental: CodecsParsed | undefined;
   public readonly videoCodec: string | undefined;
   public readonly width: number;
   public details?: LevelDetails;
@@ -144,6 +149,13 @@ export class Level {
       .filter((c) => !!c)
       .map((s: string) => s.substring(0, 4))
       .join(',');
+    if ('supplemental' in data) {
+      this.supplemental = data.supplemental;
+      const supplementalVideo = data.supplemental?.videoCodec;
+      if (supplementalVideo && supplementalVideo !== data.videoCodec) {
+        this.codecSet += `,${supplementalVideo.substring(0, 4)}`;
+      }
+    }
     this.addGroupId('audio', data.attrs.AUDIO);
     this.addGroupId('text', data.attrs.SUBTITLES);
   }

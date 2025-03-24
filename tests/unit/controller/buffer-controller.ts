@@ -184,12 +184,13 @@ describe('BufferController', function () {
             .which.deep.equals(
               {
                 buffer: undefined,
-                levelCodec: undefined,
-                metadata: undefined,
                 id: 'main',
                 container: 'video/mp4',
                 codec: 'avc1.42e01e',
+                levelCodec: undefined,
+                supplemental: undefined,
                 listeners: bufferController.tracks.video?.listeners,
+                metadata: undefined,
               },
               JSON.stringify(bufferController.tracks.video),
             );

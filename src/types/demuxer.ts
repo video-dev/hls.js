@@ -57,6 +57,7 @@ export interface PassthroughTrack extends DemuxedTrack {
   timescale: number;
   duration: number;
   codec: string;
+  supplemental: string | undefined;
 }
 export interface DemuxedAudioTrack extends DemuxedTrack {
   type: 'audio';
