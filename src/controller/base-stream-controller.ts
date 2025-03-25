@@ -255,6 +255,17 @@ export default class BaseStreamController
     }
   }
 
+  protected get timelineOffset(): number {
+    const configuredTimelineOffset = this.config.timelineOffset;
+    if (configuredTimelineOffset) {
+      return (
+        this.getLevelDetails()?.appliedTimelineOffset ||
+        configuredTimelineOffset
+      );
+    }
+    return 0;
+  }
+
   protected onMediaAttached(
     event: Events.MEDIA_ATTACHED,
     data: MediaAttachedData,
@@ -1672,6 +1683,7 @@ export default class BaseStreamController
     if (startPosition < sliding) {
       startPosition = -1;
     }
+    const timelineOffset = this.timelineOffset;
     if (startPosition === -1) {
       // Use Playlist EXT-X-START:TIME-OFFSET when set
       // Prioritize Multivariant Playlist offset so that main, audio, and subtitle stream-controller start times match
@@ -1706,9 +1718,9 @@ export default class BaseStreamController
         this.log(`setting startPosition to 0 by default`);
         this.startPosition = startPosition = 0;
       }
-      this.lastCurrentTime = startPosition;
+      this.lastCurrentTime = startPosition + timelineOffset;
     }
-    this.nextLoadPosition = startPosition;
+    this.nextLoadPosition = startPosition + timelineOffset;
   }
 
   protected getLoadPosition(): number {

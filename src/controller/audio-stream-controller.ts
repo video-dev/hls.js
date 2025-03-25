@@ -189,7 +189,7 @@ class AudioStreamController
     );
   }
 
-  startLoad(startPosition: number) {
+  startLoad(startPosition: number, skipSeekToStartPosition?: boolean) {
     if (!this.levels) {
       this.startPosition = startPosition;
       this.state = State.STOPPED;
@@ -209,11 +209,9 @@ class AudioStreamController
     } else {
       this.state = State.WAITING_TRACK;
     }
-    this.nextLoadPosition =
-      this.startPosition =
-      this.lastCurrentTime =
-        startPosition;
-
+    this.nextLoadPosition = this.lastCurrentTime =
+      startPosition + this.timelineOffset;
+    this.startPosition = skipSeekToStartPosition ? -1 : startPosition;
     this.tick();
   }
 

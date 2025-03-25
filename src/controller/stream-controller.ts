@@ -176,7 +176,8 @@ export default class StreamController
         startPosition = lastCurrentTime;
       }
       this.state = State.IDLE;
-      this.nextLoadPosition = this.lastCurrentTime = startPosition;
+      this.nextLoadPosition = this.lastCurrentTime =
+        startPosition + this.timelineOffset;
       this.startPosition = skipSeekToStartPosition ? -1 : startPosition;
       this.tick();
     } else {
@@ -1105,13 +1106,11 @@ export default class StreamController
       }
 
       // Offset start position by timeline offset
-      const details = this.getLevelDetails();
-      const configuredTimelineOffset = this.config.timelineOffset;
-      if (configuredTimelineOffset && startPosition) {
-        startPosition +=
-          details?.appliedTimelineOffset || configuredTimelineOffset;
+      const timelineOffset = this.timelineOffset;
+      if (timelineOffset && startPosition) {
+        startPosition += timelineOffset;
       }
-
+      const details = this.getLevelDetails();
       const buffered = BufferHelper.getBuffered(media);
       const bufferStart = buffered.length ? buffered.start(0) : 0;
       const delta = bufferStart - startPosition;

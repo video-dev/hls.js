@@ -1928,13 +1928,34 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     const neverLoaded = assetListLength === 0 && !interstitial.assetListLoader;
     const playOnce = interstitial.cue.once;
     if (neverLoaded) {
-      this.log(
-        `Load interstitial asset ${assetListIndex + 1}/${uri ? 1 : assetListLength} ${interstitial}`,
-      );
       const timelineStart = interstitial.timelineStart;
       if (interstitial.appendInPlace) {
         this.flushFrontBuffer(timelineStart + 0.25);
       }
+      let hlsStartOffset;
+      let liveStartPosition = 0;
+      if (!this.playingItem && this.primaryLive) {
+        liveStartPosition = this.hls.startPosition;
+        if (liveStartPosition === -1) {
+          liveStartPosition = this.hls.liveSyncPosition || 0;
+        }
+      }
+      if (
+        liveStartPosition &&
+        !(interstitial.cue.pre || interstitial.cue.post)
+      ) {
+        const startOffset = liveStartPosition - timelineStart;
+        if (startOffset > 0) {
+          hlsStartOffset = Math.round(startOffset * 1000) / 1000;
+        }
+      }
+      this.log(
+        `Load interstitial asset ${assetListIndex + 1}/${uri ? 1 : assetListLength} ${interstitial}${
+          hlsStartOffset
+            ? ` live-start: ${liveStartPosition} start-offset: ${hlsStartOffset}`
+            : ''
+        }`,
+      );
       if (uri) {
         return this.createAsset(
           interstitial,
@@ -1945,16 +1966,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
           uri,
         );
       }
-      let liveStartPosition = 0;
-      if (!this.playingItem && this.primaryLive) {
-        liveStartPosition = this.hls.startPosition;
-        if (liveStartPosition === -1) {
-          liveStartPosition = this.hls.liveSyncPosition || 0;
-        }
-      }
       const assetListLoader = this.assetListLoader.loadAssetList(
         interstitial as InterstitialEventWithAssetList,
-        liveStartPosition,
+        hlsStartOffset,
       );
       if (assetListLoader) {
         interstitial.assetListLoader = assetListLoader;
@@ -2486,6 +2500,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       return;
     }
     const eventStart = interstitial.timelineStart;
+    const previousDuration = interstitial.duration;
     let sumDuration = 0;
     assets.forEach((asset, assetListIndex) => {
       const duration = parseFloat(asset.DURATION);
@@ -2500,7 +2515,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       sumDuration += duration;
     });
     interstitial.duration = sumDuration;
-
+    this.log(
+      `Loaded asset-list with duration: ${sumDuration} (was: ${previousDuration}) ${interstitial}`,
+    );
     const waitingItem = this.waitingItem;
     const waitingForItem = waitingItem?.event.identifier === interstitialId;
 
@@ -2515,6 +2532,17 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       const scheduleIndex = this.schedule.findEventIndex(interstitialId);
       const item = this.schedule.items?.[scheduleIndex];
       if (item) {
+        if (!this.playingItem && this.timelinePos > item.end) {
+          // Abandon if new duration is reduced enough to land playback in primary start
+          const index = this.schedule.findItemIndexAtTime(this.timelinePos);
+          if (index !== scheduleIndex) {
+            interstitial.error = new Error(
+              `Interstitial no longer within playback range ${this.timelinePos} ${interstitial}`,
+            );
+            this.primaryFallback(interstitial);
+            return;
+          }
+        }
         this.setBufferingItem(item);
       }
       this.setSchedulePosition(scheduleIndex);

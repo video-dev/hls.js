@@ -209,7 +209,7 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     protected resetLoadingState(): void;
     // (undocumented)
-    startLoad(startPosition: number): void;
+    startLoad(startPosition: number, skipSeekToStartPosition?: boolean): void;
     // (undocumented)
     protected unregisterListeners(): void;
 }
@@ -558,6 +558,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     stopLoad(): void;
     // (undocumented)
     protected _streamEnded(bufferInfo: BufferInfo, levelDetails: LevelDetails): boolean;
+    // (undocumented)
+    protected get timelineOffset(): number;
     // (undocumented)
     protected transmuxer: TransmuxerInterface | null;
     // (undocumented)
@@ -4552,7 +4554,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     // (undocumented)
     protected registerListeners(): void;
     // (undocumented)
-    startLoad(startPosition: number): void;
+    startLoad(startPosition: number, skipSeekToStartPosition?: boolean): void;
     // (undocumented)
     protected unregisterListeners(): void;
 }
