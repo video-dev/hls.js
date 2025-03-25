@@ -226,13 +226,24 @@ export interface InitDataTrack {
   supplemental: string | undefined;
 }
 
-type HdlrType = ElementaryStreamTypes.AUDIO | ElementaryStreamTypes.VIDEO;
+type HdlrMetadata = 'meta';
+type HdlrType =
+  | ElementaryStreamTypes.AUDIO
+  | ElementaryStreamTypes.VIDEO
+  | HdlrMetadata;
+
+type StsdData = {
+  codec: string;
+  encrypted: boolean;
+  supplemental: string | undefined;
+};
 
 export interface InitData extends Array<any> {
   [index: number]:
     | {
         timescale: number;
         type: HdlrType;
+        stsd: StsdData;
         default?: {
           duration: number;
           flags: number;
@@ -266,10 +277,20 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
           }[hdlrType];
           if (type) {
             // Parse codec details
-            const stsd = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd'])[0];
-            const stsdData = parseStsd(stsd);
-            result[trackId] = { timescale, type };
-            result[type] = { timescale, id: trackId, ...stsdData };
+            const stsdBox = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd'])[0];
+            const stsd = parseStsd(stsdBox);
+            if (type) {
+              // Add 'audio', 'video', and 'audiovideo' track records that will map to SourceBuffers
+              result[trackId] = { timescale, type, stsd };
+              result[type] = { timescale, id: trackId, ...stsd };
+            } else {
+              // Add 'meta' and other track records required by `offsetStartDTS`
+              result[trackId] = {
+                timescale,
+                type: hdlrType as HdlrType,
+                stsd,
+              };
+            }
           }
         }
       }
@@ -291,11 +312,7 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
   return result;
 }
 
-function parseStsd(stsd: Uint8Array): {
-  codec: string;
-  encrypted: boolean;
-  supplemental: string | undefined;
-} {
+function parseStsd(stsd: Uint8Array): StsdData {
   const sampleEntries = stsd.subarray(8);
   const sampleEntriesEnd = sampleEntries.subarray(8 + 78);
   const fourCC = bin2str(sampleEntries.subarray(4, 8));
@@ -818,6 +835,7 @@ export function computeRawDurationFromSamples(trun): number {
   return duration;
 }
 
+// TODO: Remove `offsetStartDTS` in favor of using `timestampOffset` (issue #5715)
 export function offsetStartDTS(
   initData: InitData,
   fmp4: Uint8Array,
