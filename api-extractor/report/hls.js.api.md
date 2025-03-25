@@ -2198,6 +2198,7 @@ export type HlsConfig = {
     maxDevicePixelRatio: number;
     preferManagedMediaSource: boolean;
     timelineOffset?: number;
+    ignorePlaylistParsingErrors: boolean;
     loader: {
         new (confg: HlsConfig): Loader<LoaderContext>;
     };
