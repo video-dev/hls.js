@@ -202,6 +202,25 @@ export function getCodecCompatibleName(
   );
 }
 
+export function replaceVideoCodec(
+  originalCodecs: string | undefined,
+  newVideoCodec: string | undefined,
+): string | undefined {
+  const codecs: string[] = [];
+  if (originalCodecs) {
+    const allCodecs = originalCodecs.split(',');
+    for (let i = 0; i < allCodecs.length; i++) {
+      if (!isCodecType(allCodecs[i], 'video')) {
+        codecs.push(allCodecs[i]);
+      }
+    }
+  }
+  if (newVideoCodec) {
+    codecs.push(newVideoCodec);
+  }
+  return codecs.join(',');
+}
+
 export function pickMostCompleteCodecName(
   parsedCodec: string | undefined,
   levelCodec: string | undefined,

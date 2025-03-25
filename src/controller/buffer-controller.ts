@@ -9,6 +9,7 @@ import {
   areCodecsMediaSourceSupported,
   getCodecCompatibleName,
   pickMostCompleteCodecName,
+  replaceVideoCodec,
 } from '../utils/codecs';
 import { Logger } from '../utils/logger';
 import {
@@ -1436,14 +1437,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   private getTrackCodec(track: BaseTrack, trackName: SourceBufferName): string {
     // Use supplemental video codec when supported when adding SourceBuffer (#5558)
     const supplementalCodec = track.supplemental;
+    let trackCodec = track.codec;
     if (
       supplementalCodec &&
-      trackName === 'video' &&
-      areCodecsMediaSourceSupported(supplementalCodec, trackName)
+      (trackName === 'video' || trackName === 'audiovideo') &&
+      areCodecsMediaSourceSupported(supplementalCodec, 'video')
     ) {
-      return supplementalCodec;
+      trackCodec = replaceVideoCodec(trackCodec, supplementalCodec);
     }
-    const codec = pickMostCompleteCodecName(track.codec, track.levelCodec);
+    const codec = pickMostCompleteCodecName(trackCodec, track.levelCodec);
     if (codec) {
       if (trackName.slice(0, 5) === 'audio') {
         return getCodecCompatibleName(codec, this.appendSource);
