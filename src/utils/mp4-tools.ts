@@ -275,22 +275,20 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
             soun: ElementaryStreamTypes.AUDIO as const,
             vide: ElementaryStreamTypes.VIDEO as const,
           }[hdlrType];
+          // Parse codec details
+          const stsdBox = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd'])[0];
+          const stsd = parseStsd(stsdBox);
           if (type) {
-            // Parse codec details
-            const stsdBox = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd'])[0];
-            const stsd = parseStsd(stsdBox);
-            if (type) {
-              // Add 'audio', 'video', and 'audiovideo' track records that will map to SourceBuffers
-              result[trackId] = { timescale, type, stsd };
-              result[type] = { timescale, id: trackId, ...stsd };
-            } else {
-              // Add 'meta' and other track records required by `offsetStartDTS`
-              result[trackId] = {
-                timescale,
-                type: hdlrType as HdlrType,
-                stsd,
-              };
-            }
+            // Add 'audio', 'video', and 'audiovideo' track records that will map to SourceBuffers
+            result[trackId] = { timescale, type, stsd };
+            result[type] = { timescale, id: trackId, ...stsd };
+          } else {
+            // Add 'meta' and other track records required by `offsetStartDTS`
+            result[trackId] = {
+              timescale,
+              type: hdlrType as HdlrType,
+              stsd,
+            };
           }
         }
       }
