@@ -18,6 +18,7 @@ import type {
 } from '../../../src/types/component-api';
 
 chai.use(sinonChai);
+chai.config.truncateThreshold = 0;
 const expect = chai.expect;
 
 type HlsTestable = Omit<Hls, 'networkControllers' | 'coreComponents'> & {
@@ -128,11 +129,6 @@ describe('InterstitialsController', function () {
       mediaSource: {} as any,
     });
     return media;
-  }
-
-  function updateTime(media: MockMediaElement, currentTime: number) {
-    media.currentTime = currentTime;
-    media.dispatchEvent(new Event('timeupdate'));
   }
 
   function setLoadedLevelDetails(playlist: string) {
@@ -264,7 +260,7 @@ fileSequence4.ts
           Events.INTERSTITIALS_UPDATED,
           Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         ],
-        `Actual events after asset-list: ${eventsTriggered.join(', ')}`,
+        `Actual events after asset-list`,
       );
     });
 
@@ -1128,7 +1124,7 @@ fileSequence5.mp4`;
       const callsWithPrerollBeforeAttach = getTriggerCalls();
       expect(callsWithPrerollBeforeAttach).to.deep.equal(
         [Events.LEVEL_UPDATED, Events.INTERSTITIALS_UPDATED],
-        `Actual events before attach: ${callsWithPrerollBeforeAttach.join(', ')}`,
+        `Actual events before attach`,
       );
       hls.trigger.resetHistory();
       expect(insterstitials.bufferingIndex).to.equal(-1, 'bufferingIndex');
@@ -1146,7 +1142,7 @@ fileSequence5.mp4`;
       ];
       expect(callsWithPrerollAfterAttach).to.deep.equal(
         expectedEvents,
-        `Actual events after attach: ${callsWithPrerollAfterAttach.join(', ')}`,
+        `Actual events after attach`,
       );
       expect(insterstitials.bufferingIndex).to.equal(0, 'bufferingIndex');
       expect(insterstitials.playingIndex).to.equal(0, 'playingIndex');
@@ -1203,7 +1199,7 @@ fileSequence3.mp4
           Events.ASSET_LIST_LOADING,
           Events.INTERSTITIAL_STARTED,
         ],
-        `Actual events before asset-list: ${callsBeforeAttach.join(', ')}`,
+        `Actual events before asset-list`,
       );
       hls.trigger.resetHistory();
       expect(insterstitials.bufferingIndex).to.equal(0, 'bufferingIndex a');
@@ -1227,7 +1223,7 @@ fileSequence3.mp4
           Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
           Events.INTERSTITIALS_PRIMARY_RESUMED,
         ],
-        `Actual events after asset-list: ${callsAfterAttach.join(', ')}`,
+        `Actual events after asset-list`,
       );
       expect(insterstitials.bufferingIndex).to.equal(1, 'bufferingIndex b');
       expect(insterstitials.playingIndex).to.equal(1, 'playingIndex b');
@@ -1273,7 +1269,7 @@ fileSequence3.mp4
           Events.ASSET_LIST_LOADING,
           Events.INTERSTITIAL_STARTED,
         ],
-        `Actual events before asset-list: ${callsBeforeAttach.join(', ')}`,
+        `Actual events before asset-list`,
       );
       hls.trigger.resetHistory();
       expect(insterstitials.bufferingIndex).to.equal(0, 'bufferingIndex a');
@@ -1297,7 +1293,7 @@ fileSequence3.mp4
           Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
           Events.INTERSTITIALS_PRIMARY_RESUMED,
         ],
-        `Actual events after asset-list: ${callsAfterAttach.join(', ')}`,
+        `Actual events after asset-list`,
       );
       expect(insterstitials.bufferingIndex).to.equal(1, 'bufferingIndex b');
       expect(insterstitials.playingIndex).to.equal(1, 'playingIndex b');
@@ -1343,7 +1339,7 @@ fileSequence6.mp4`;
       const eventsBeforeAttach = getTriggerCalls();
       expect(eventsBeforeAttach).to.deep.equal(
         [Events.LEVEL_UPDATED, Events.INTERSTITIALS_UPDATED],
-        `Actual events before attach: ${eventsBeforeAttach.join(', ')}`,
+        `Actual events before attach`,
       );
       expect(insterstitials.bufferingIndex).to.equal(-1, 'bufferingIndex');
       expect(insterstitials.playingIndex).to.equal(-1, 'playingIndex');
@@ -1362,7 +1358,7 @@ fileSequence6.mp4`;
       ];
       expect(eventsAfterAttach).to.deep.equal(
         expectedEvents,
-        `Actual events after attach: ${eventsAfterAttach.join(', ')}`,
+        `Actual events after attach`,
       );
       expect(insterstitials.bufferingIndex).to.equal(1, 'bufferingIndex a');
       expect(insterstitials.playingIndex).to.equal(1, 'playingIndex a');
@@ -1387,7 +1383,7 @@ fileSequence6.mp4`;
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
         ],
-        `Actual events after asset-list: ${callsAfterAttach.join(', ')}`,
+        `Actual events after asset-list`,
       );
 
       // skip to end of interstitial
@@ -1395,19 +1391,24 @@ fileSequence6.mp4`;
       insterstitials.skip();
       const eventsAfterSkip = getTriggerCalls();
       const expectedSkipEvents = [
-        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.INTERSTITIAL_ASSET_ENDED,
         Events.INTERSTITIAL_ENDED,
-        Events.MEDIA_ATTACHING,
-        Events.INTERSTITIALS_PRIMARY_RESUMED,
-      ];
+        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
+      ].concat(
+        interstitial.appendInPlace
+          ? [Events.INTERSTITIALS_PRIMARY_RESUMED]
+          : [Events.MEDIA_ATTACHING, Events.INTERSTITIALS_PRIMARY_RESUMED],
+      );
       expect(eventsAfterSkip).to.deep.equal(
         expectedSkipEvents,
-        `Actual events after skip: ${eventsAfterSkip.join(', ')}`,
+        `Actual events after skip`,
       );
       expect(insterstitials.bufferingIndex).to.equal(2, 'bufferingIndex b');
       expect(insterstitials.playingIndex).to.equal(2, 'playingIndex b');
-      expect(insterstitials.primary.currentTime).to.equal(40, 'timelinePos b');
+      expect(insterstitials.primary.currentTime).to.equal(
+        interstitial.appendInPlace ? 40.001 : 40,
+        'timelinePos b',
+      );
     });
 
     it('should resume at start plus resumption-offset (start + duration w/ CUE="ONCE" and attach on start)', function () {
@@ -1449,7 +1450,7 @@ fileSequence6.mp4`;
       const expectedEvents = [Events.MEDIA_ATTACHING, Events.MEDIA_ATTACHED];
       expect(eventsAfterAttach).to.deep.equal(
         expectedEvents,
-        `Actual events after attach: ${eventsAfterAttach.join(', ')}`,
+        `Actual events after attach`,
       );
 
       // Loaded playlist
@@ -1474,7 +1475,7 @@ fileSequence6.mp4`;
           Events.ASSET_LIST_LOADING,
           Events.INTERSTITIAL_STARTED,
         ],
-        `Actual events before attach: ${eventsAfterPlaylist.join(', ')}`,
+        `Actual events before attach`,
       );
       expect(insterstitials.bufferingIndex).to.equal(1, 'bufferingIndex a');
       expect(insterstitials.playingIndex).to.equal(1, 'playingIndex a');
@@ -1499,7 +1500,7 @@ fileSequence6.mp4`;
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
         ],
-        `Actual events after asset-list: ${callsAfterAttach.join(', ')}`,
+        `Actual events after asset-list`,
       );
 
       // skip to end of interstitial
@@ -1516,7 +1517,7 @@ fileSequence6.mp4`;
       ];
       expect(eventsAfterSkip).to.deep.equal(
         expectedSkipEvents,
-        `Actual events after skip: ${eventsAfterSkip.join(', ')}`,
+        `Actual events after skip`,
       );
       // Removing the CUE="ONCE" interstitial changes the `schedule` items, but does not remove it from `events`
       expect(insterstitials.events).is.an('array').which.has.lengthOf(1);
@@ -1804,7 +1805,7 @@ fileSequence6.mp4
       const eventsBeforeAttach = getTriggerCalls();
       expect(eventsBeforeAttach).to.deep.equal(
         [Events.LEVEL_UPDATED, Events.INTERSTITIALS_UPDATED],
-        `Actual events before attach: ${eventsBeforeAttach.join(', ')}`,
+        `Actual events before attach`,
       );
       expect(im.bufferingIndex).to.equal(-1, 'bufferingIndex');
       expect(im.playingIndex).to.equal(-1, 'playingIndex');
@@ -1820,7 +1821,7 @@ fileSequence6.mp4
       // Attach media
       hls.trigger.resetHistory();
       const media = attachMediaToHls();
-      updateTime(media, 10);
+      media.__timeUpdate(10);
       logIm('timeupdate-10');
       expectIm(primary, 'media@10').to.include({
         currentTime: 10,
@@ -1838,11 +1839,11 @@ fileSequence6.mp4
       ];
       expect(eventsAfterAttach).to.deep.equal(
         expectedEvents,
-        `Actual events after attach: ${eventsAfterAttach.join(', ')}`,
+        `Actual events after attach`,
       );
       // Advance to interstitial
       hls.trigger.resetHistory();
-      updateTime(media, 30);
+      media.__timeUpdate(30);
       logIm('timeupdate-30');
 
       const eventsAfterPlayback = getTriggerCalls();
@@ -1853,7 +1854,7 @@ fileSequence6.mp4
       ];
       expect(eventsAfterPlayback).to.deep.equal(
         expectedEventsAfterPlayback,
-        `Actual events after playback to interstitial: ${eventsAfterPlayback.join(', ')}`,
+        `Actual events after playback to interstitial`,
       );
       expect(im.bufferingIndex).to.equal(1, 'bufferingIndex a');
       expect(im.playingIndex).to.equal(1, 'playingIndex a');
@@ -1885,7 +1886,7 @@ fileSequence6.mp4
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
         ],
-        `Actual events after asset-list: ${callsAfterAssetsLoaded.join(', ')}`,
+        `Actual events after asset-list`,
       );
       expect(im.interstitialPlayer, `interstitialPlayer`).to.not.be.null;
 
@@ -1897,7 +1898,7 @@ fileSequence6.mp4
       ) => {
         hls.trigger.resetHistory();
 
-        updateTime(media, media.currentTime + 3);
+        media.__timeUpdate(media.currentTime + 3);
         logIm(`${sequence} asset@3`);
         expectIm(primary, `${sequence} asset@3`).to.include({
           currentTime: 30,
@@ -1913,7 +1914,7 @@ fileSequence6.mp4
           currentTime: integratedTimePlusThree - 30,
           duration: 15,
         });
-        updateTime(media, media.currentTime + 2);
+        media.__timeUpdate(media.currentTime + 2);
         const assetPlayerHls =
           im.interstitialPlayer?.assetPlayers[assetIndex]?.hls;
         expect(assetPlayerHls, 'asset player is defined').to.not.be.null;
@@ -1928,7 +1929,7 @@ fileSequence6.mp4
         ];
         expect(eventsBetweenAssets).to.deep.equal(
           expectedEventsBetweensAssets,
-          `Actual events after ${sequence} asset: ${eventsBetweenAssets.join(', ')}`,
+          `Actual events after ${sequence} asset`,
         );
       };
       // To second asset
@@ -1939,7 +1940,7 @@ fileSequence6.mp4
       // Advance to primary
       hls.trigger.resetHistory();
 
-      updateTime(media, media.currentTime + 5);
+      media.__timeUpdate(media.currentTime + 5);
       expectIm(primary, `third asset@5`).to.include({ currentTime: 30 });
       expectIm(integrated, `third asset@5`).to.include({ currentTime: 45 });
       expectIm(
@@ -1963,13 +1964,13 @@ fileSequence6.mp4
       ];
       expect(eventsAfterLastAsset).to.deep.equal(
         expectedEndLastAssetEvents,
-        `Actual events after last asset: ${eventsAfterLastAsset.join(', ')}`,
+        `Actual events after last asset`,
       );
       expect(im.bufferingIndex).to.equal(2, 'bufferingIndex after skip');
       expect(im.playingIndex).to.equal(2, 'playingIndex after skip');
       expectIm(primary, `after break`).to.include({ currentTime: 40 });
       expectIm(integrated, `after break`).to.include({ currentTime: 45 });
-      updateTime(media, 50);
+      media.__timeUpdate(50);
       expectIm(primary, `media@50`).to.include({ currentTime: 50 });
       expectIm(integrated, `media@50`).to.include({ currentTime: 55 });
       logIm('timeupdate-50');
@@ -2035,7 +2036,7 @@ fileSequence6.mp4`;
       );
       expect(eventsAfterAttach).to.deep.equal(
         expectedEvents,
-        `Actual events after attach: ${eventsAfterAttach.join(', ')}`,
+        `Actual events after attach`,
       );
       expect(insterstitials.bufferingIndex).to.equal(1, 'bufferingIndex a');
       expect(insterstitials.playingIndex).to.equal(1, 'playingIndex a');
@@ -2052,17 +2053,16 @@ fileSequence6.mp4`;
         assetListResponse: interstitial.assetListResponse,
         networkDetails: {},
       });
-      const callsAfterAttach = getTriggerCalls();
-      expect(callsAfterAttach).to.deep.equal(
+      const eventsAfterAssetListLoaded = getTriggerCalls();
+      expect(eventsAfterAssetListLoaded).to.deep.equal(
         [
           Events.ASSET_LIST_LOADED,
           Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
         ],
-        `Actual events after asset-list: ${callsAfterAttach.join(', ')}`,
+        `Actual events after asset-list`,
       );
-
       expect(insterstitials.bufferingIndex).to.equal(1, 'bufferingIndex b');
       expect(insterstitials.playingIndex).to.equal(1, 'playingIndex b');
       expect(insterstitials.primary.currentTime).to.equal(30, 'timelinePos b');

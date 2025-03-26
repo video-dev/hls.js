@@ -1051,17 +1051,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       !this.sourceBuffers.some(([type]) => type && !this.tracks[type]?.ended);
 
     if (allTracksEnding) {
-      this.log(`Queueing EOS`);
-      this.blockUntilOpen(() => {
-        this.sourceBuffers.forEach(([type]) => {
-          if (type !== null) {
-            const track = this.tracks[type];
-            if (track) {
-              track.ending = false;
-            }
-          }
-        });
-        if (allowEndOfStream) {
+      if (allowEndOfStream) {
+        this.log(`Queueing EOS`);
+        this.blockUntilOpen(() => {
+          this.tracksEnded();
           const { mediaSource } = this;
           if (!mediaSource || mediaSource.readyState !== 'open') {
             if (mediaSource) {
@@ -1074,10 +1067,25 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           this.log(`Calling mediaSource.endOfStream()`);
           // Allow this to throw and be caught by the enqueueing function
           mediaSource.endOfStream();
-        }
+
+          this.hls.trigger(Events.BUFFERED_TO_END, undefined);
+        });
+      } else {
+        this.tracksEnded();
         this.hls.trigger(Events.BUFFERED_TO_END, undefined);
-      });
+      }
     }
+  }
+
+  private tracksEnded() {
+    this.sourceBuffers.forEach(([type]) => {
+      if (type !== null) {
+        const track = this.tracks[type];
+        if (track) {
+          track.ending = false;
+        }
+      }
+    });
   }
 
   private onLevelUpdated(

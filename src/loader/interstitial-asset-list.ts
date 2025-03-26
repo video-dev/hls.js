@@ -31,7 +31,7 @@ export class AssetListLoader {
 
   loadAssetList(
     interstitial: InterstitialEventWithAssetList,
-    liveStartPosition: number,
+    hlsStartOffset: number | undefined,
   ): Loader<LoaderContext> | undefined {
     const assetListUrl = interstitial.assetListUrl;
     let url: URL;
@@ -51,18 +51,8 @@ export class AssetListLoader {
       this.hls.trigger(Events.ERROR, errorData);
       return;
     }
-    if (
-      liveStartPosition &&
-      !(interstitial.cue.pre || interstitial.cue.post) &&
-      url.protocol !== 'data:'
-    ) {
-      const startOffset = liveStartPosition - interstitial.startTime;
-      if (startOffset > 0) {
-        url.searchParams.set(
-          '_HLS_start_offset',
-          '' + Math.round(startOffset * 1000) / 1000,
-        );
-      }
+    if (hlsStartOffset && url.protocol !== 'data:') {
+      url.searchParams.set('_HLS_start_offset', '' + hlsStartOffset);
     }
     const config = this.hls.config;
     const Loader = config.loader;

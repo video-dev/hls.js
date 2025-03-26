@@ -28,6 +28,7 @@ export class HlsAssetPlayer {
   private hasDetails: boolean = false;
   private mediaAttached: HTMLMediaElement | null = null;
   private _currentTime?: number;
+  private _bufferedEosTime?: number;
 
   constructor(
     HlsPlayerClass: typeof Hls,
@@ -62,6 +63,22 @@ export class HlsAssetPlayer {
     });
   }
 
+  bufferedInPlaceToEnd(media?: HTMLMediaElement | null) {
+    if (!this.interstitial.appendInPlace) {
+      return false;
+    }
+    if (this.hls?.bufferedToEnd) {
+      return true;
+    }
+    if (!media || !this._bufferedEosTime) {
+      return false;
+    }
+    const start = this.timelineOffset;
+    const bufferInfo = BufferHelper.bufferInfo(media, start, 0);
+    const bufferedEnd = this.getAssetTime(bufferInfo.end);
+    return bufferedEnd >= this._bufferedEosTime - 0.02;
+  }
+
   private checkPlayout = () => {
     const interstitial = this.interstitial;
     const playoutLimit = interstitial.playoutLimit;
@@ -90,6 +107,9 @@ export class HlsAssetPlayer {
   get bufferedEnd(): number {
     const media = this.media || this.mediaAttached;
     if (!media) {
+      if (this._bufferedEosTime) {
+        return this._bufferedEosTime;
+      }
       return this.currentTime;
     }
     const bufferInfo = BufferHelper.bufferInfo(media, media.currentTime, 0.001);
@@ -153,7 +173,16 @@ export class HlsAssetPlayer {
     const media = this.mediaAttached;
     if (media) {
       this._currentTime = media.currentTime;
+      this.bufferSnapShot();
       media.removeEventListener('timeupdate', this.checkPlayout);
+    }
+  }
+
+  private bufferSnapShot() {
+    if (this.mediaAttached) {
+      if (this.hls?.bufferedToEnd) {
+        this._bufferedEosTime = this.bufferedEnd;
+      }
     }
   }
 
@@ -185,6 +214,7 @@ export class HlsAssetPlayer {
   }
 
   transferMedia() {
+    this.bufferSnapShot();
     return this.hls.transferMedia();
   }
 

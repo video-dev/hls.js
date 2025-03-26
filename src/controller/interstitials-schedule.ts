@@ -588,6 +588,11 @@ export class InterstitialsSchedule extends Logger {
           interstitialEvents[i].resumeTime;
         if (timeBetween < ABUTTING_THRESHOLD_SECONDS) {
           interstitialEvents[i + 1].appendInPlace = false;
+          if (interstitialEvents[i + 1].appendInPlace) {
+            this.warn(
+              `Could not change append strategy for abutting event ${interstitial}`,
+            );
+          }
         }
       }
       // Update cumulativeDuration for next abutting interstitial with the same start date
@@ -624,12 +629,11 @@ export class InterstitialsSchedule extends Logger {
       const details = mediaSelection[playlistType].details;
       const playlistEnd = details.edge;
       if (resumeTime > playlistEnd) {
-        if (playlists.length > 1) {
-          this.log(
-            `"${interstitial.identifier}" resumption ${resumeTime} past ${playlistType} playlist end ${playlistEnd}`,
-          );
-          return true;
-        }
+        // Live playback - resumption segments are not yet available
+        this.log(
+          `"${interstitial.identifier}" resumption ${resumeTime} past ${playlistType} playlist end ${playlistEnd}`,
+        );
+        // Assume alignment is possible (or reset can take place)
         return false;
       }
       const startFragment = findFragmentByPTS(
@@ -639,16 +643,16 @@ export class InterstitialsSchedule extends Logger {
       );
       if (!startFragment) {
         this.log(
-          `"${interstitial.identifier}" resumption ${resumeTime} does not align with any fragments in ${playlistType} playlist`,
+          `"${interstitial.identifier}" resumption ${resumeTime} does not align with any fragments in ${playlistType} playlist (${details.fragStart}-${details.fragmentEnd})`,
         );
         return true;
       }
-      const endAllowance = playlistType === 'audio' ? 0.175 : 0;
+      const allowance = playlistType === 'audio' ? 0.175 : 0;
       const alignedWithSegment =
         Math.abs(startFragment.start - resumeTime) <
-          ALIGNED_END_THRESHOLD_SECONDS ||
+          ALIGNED_END_THRESHOLD_SECONDS + allowance ||
         Math.abs(startFragment.end - resumeTime) <
-          ALIGNED_END_THRESHOLD_SECONDS + endAllowance;
+          ALIGNED_END_THRESHOLD_SECONDS + allowance;
       if (!alignedWithSegment) {
         this.log(
           `"${interstitial.identifier}" resumption ${resumeTime} not aligned with ${playlistType} fragment bounds (${startFragment.start}-${startFragment.end} sn: ${startFragment.sn} cc: ${startFragment.cc})`,

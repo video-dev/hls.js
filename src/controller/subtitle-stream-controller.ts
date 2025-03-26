@@ -94,16 +94,15 @@ export class SubtitleStreamController
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
   }
 
-  startLoad(startPosition: number) {
+  startLoad(startPosition: number, skipSeekToStartPosition?: boolean) {
     this.stopLoad();
     this.state = State.IDLE;
 
     this.setInterval(TICK_INTERVAL);
 
-    this.nextLoadPosition =
-      this.startPosition =
-      this.lastCurrentTime =
-        startPosition;
+    this.nextLoadPosition = this.lastCurrentTime =
+      startPosition + this.timelineOffset;
+    this.startPosition = skipSeekToStartPosition ? -1 : startPosition;
 
     this.tick();
   }
