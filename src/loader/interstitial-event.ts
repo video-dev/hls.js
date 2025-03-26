@@ -3,7 +3,7 @@ import type { DateRange, DateRangeCue } from './date-range';
 import type { MediaFragmentRef } from './fragment';
 import type { Loader, LoaderContext } from '../types/loader';
 
-export const ALIGNED_END_THRESHOLD_SECONDS = 0.02;
+export const ALIGNED_END_THRESHOLD_SECONDS = 0.025;
 
 export type PlaybackRestrictions = {
   skip: boolean;
@@ -76,6 +76,7 @@ export class InterstitialEvent {
   public assetListResponse: AssetListJSON | null = null;
   public resumeAnchor?: MediaFragmentRef;
   public error?: Error;
+  public resetOnResume?: boolean;
 
   constructor(dateRange: DateRange, base: BaseData) {
     this.base = base;
@@ -157,6 +158,19 @@ export class InterstitialEvent {
     return this.cue.pre ? 0 : this.startTime;
   }
 
+  get startIsAligned(): boolean {
+    if (this.startTime === 0 || this.snapOptions.out) {
+      return true;
+    }
+    const frag = this.dateRange.tagAnchor;
+    if (frag) {
+      const startTime = this.dateRange.startTime;
+      const snappedStart = getSnapToFragmentTime(startTime, frag);
+      return startTime - snappedStart < 0.1;
+    }
+    return false;
+  }
+
   get resumptionOffset(): number {
     const resumeOffset = this.resumeOffset;
     const offset = Number.isFinite(resumeOffset) ? resumeOffset : this.duration;
@@ -176,13 +190,16 @@ export class InterstitialEvent {
   }
 
   get appendInPlace(): boolean {
+    if (this.appendInPlaceStarted) {
+      return true;
+    }
     if (this.appendInPlaceDisabled) {
       return false;
     }
     if (
       !this.cue.once &&
       !this.cue.pre && // preroll starts at startPosition before startPosition is known (live)
-      (this.startTime === 0 || this.snapOptions.out) &&
+      this.startIsAligned &&
       ((isNaN(this.playoutLimit) && isNaN(this.resumeOffset)) ||
         (this.resumeOffset &&
           this.duration &&
@@ -196,6 +213,7 @@ export class InterstitialEvent {
 
   set appendInPlace(value: boolean) {
     if (this.appendInPlaceStarted) {
+      this.resetOnResume = !value;
       return;
     }
     this.appendInPlaceDisabled = !value;
