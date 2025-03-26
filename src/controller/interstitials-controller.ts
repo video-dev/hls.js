@@ -2078,7 +2078,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     const selectedAudio = primary.audioTracks[primary.audioTrack];
     const selectedSubtitle = primary.subtitleTracks[primary.subtitleTrack];
     let startPosition = 0;
-    if (this.primaryLive) {
+    if (this.primaryLive || interstitial.appendInPlace) {
       const timePastStart = this.timelinePos - assetItem.timelineStart;
       if (timePastStart > 1) {
         const duration = assetItem.duration;
