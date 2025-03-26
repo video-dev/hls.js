@@ -9,6 +9,7 @@ import {
   areCodecsMediaSourceSupported,
   getCodecCompatibleName,
   pickMostCompleteCodecName,
+  replaceVideoCodec,
 } from '../utils/codecs';
 import { Logger } from '../utils/logger';
 import {
@@ -1050,17 +1051,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       !this.sourceBuffers.some(([type]) => type && !this.tracks[type]?.ended);
 
     if (allTracksEnding) {
-      this.log(`Queueing EOS`);
-      this.blockUntilOpen(() => {
-        this.sourceBuffers.forEach(([type]) => {
-          if (type !== null) {
-            const track = this.tracks[type];
-            if (track) {
-              track.ending = false;
-            }
-          }
-        });
-        if (allowEndOfStream) {
+      if (allowEndOfStream) {
+        this.log(`Queueing EOS`);
+        this.blockUntilOpen(() => {
+          this.tracksEnded();
           const { mediaSource } = this;
           if (!mediaSource || mediaSource.readyState !== 'open') {
             if (mediaSource) {
@@ -1073,10 +1067,25 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           this.log(`Calling mediaSource.endOfStream()`);
           // Allow this to throw and be caught by the enqueueing function
           mediaSource.endOfStream();
-        }
+
+          this.hls.trigger(Events.BUFFERED_TO_END, undefined);
+        });
+      } else {
+        this.tracksEnded();
         this.hls.trigger(Events.BUFFERED_TO_END, undefined);
-      });
+      }
     }
+  }
+
+  private tracksEnded() {
+    this.sourceBuffers.forEach(([type]) => {
+      if (type !== null) {
+        const track = this.tracks[type];
+        if (track) {
+          track.ending = false;
+        }
+      }
+    });
   }
 
   private onLevelUpdated(
@@ -1436,14 +1445,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   private getTrackCodec(track: BaseTrack, trackName: SourceBufferName): string {
     // Use supplemental video codec when supported when adding SourceBuffer (#5558)
     const supplementalCodec = track.supplemental;
+    let trackCodec = track.codec;
     if (
       supplementalCodec &&
-      trackName === 'video' &&
-      areCodecsMediaSourceSupported(supplementalCodec, trackName)
+      (trackName === 'video' || trackName === 'audiovideo') &&
+      areCodecsMediaSourceSupported(supplementalCodec, 'video')
     ) {
-      return supplementalCodec;
+      trackCodec = replaceVideoCodec(trackCodec, supplementalCodec);
     }
-    const codec = pickMostCompleteCodecName(track.codec, track.levelCodec);
+    const codec = pickMostCompleteCodecName(trackCodec, track.levelCodec);
     if (codec) {
       if (trackName.slice(0, 5) === 'audio') {
         return getCodecCompatibleName(codec, this.appendSource);

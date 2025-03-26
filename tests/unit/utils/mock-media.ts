@@ -101,18 +101,31 @@ export class MockSourceBuffer extends EventTarget {
 }
 export class MockMediaElement extends EventTarget {
   private __src: string = '';
-  public currentTime: number = 0;
+  private __currentTime: number = 0;
   public duration: number = Infinity;
   public textTracks: any[] = [];
+
+  __timeUpdate(value: number) {
+    this.__currentTime = value;
+    this.dispatchEvent(new Event('timeupdate'));
+  }
+
+  get currentTime(): number {
+    return this.__currentTime;
+  }
+  set currentTime(value: number) {
+    this.__currentTime = value;
+    this.dispatchEvent(new Event('seeking'));
+  }
   get src(): string {
     return this.__src;
   }
   set src(value: string) {
     this.__src = value;
-    this.currentTime = 0;
+    this.__currentTime = 0;
   }
   load() {
-    this.currentTime = 0;
+    this.__currentTime = 0;
   }
   play() {
     return Promise.resolve();
