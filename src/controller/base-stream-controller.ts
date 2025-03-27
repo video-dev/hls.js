@@ -1310,7 +1310,14 @@ export default class BaseStreamController
         : levelDetails.fragmentEnd;
       frag = this.getFragmentAtPosition(pos, end, levelDetails);
     }
-    const programFrag = this.filterReplacedPrimary(frag, levelDetails);
+    let programFrag = this.filterReplacedPrimary(frag, levelDetails);
+    if (!programFrag && frag) {
+      const curSNIdx = frag.sn - levelDetails.startSN;
+      programFrag = this.filterReplacedPrimary(
+        fragments[curSNIdx + 1] || null,
+        levelDetails,
+      );
+    }
     return this.mapToInitFragWhenRequired(programFrag);
   }
 

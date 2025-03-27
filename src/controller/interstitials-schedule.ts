@@ -628,7 +628,7 @@ export class InterstitialsSchedule extends Logger {
     return !playlists.some((playlistType) => {
       const details = mediaSelection[playlistType].details;
       const playlistEnd = details.edge;
-      if (resumeTime > playlistEnd) {
+      if (resumeTime >= playlistEnd) {
         // Live playback - resumption segments are not yet available
         this.log(
           `"${interstitial.identifier}" resumption ${resumeTime} past ${playlistType} playlist end ${playlistEnd}`,
