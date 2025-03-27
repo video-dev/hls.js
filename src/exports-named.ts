@@ -12,6 +12,7 @@ import ErrorController from './controller/error-controller';
 import FPSController from './controller/fps-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import Hls from './hls';
+import M3U8Parser from './loader/m3u8-parser';
 import Cues from './utils/cues';
 import FetchLoader from './utils/fetch-loader';
 import XhrLoader from './utils/xhr-loader';
@@ -36,6 +37,7 @@ export {
   XhrLoader,
   FetchLoader,
   Cues,
+  M3U8Parser,
 };
 
 export { Events } from './events';
