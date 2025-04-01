@@ -1014,7 +1014,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       );
     }
 
-    this.blockBuffers(onUnblocked, buffersAppendedTo);
+    this.blockBuffers(onUnblocked, buffersAppendedTo).catch((error) => {
+      this.warn(`Fragment buffered callback ${error}`);
+      this.stepOperationQueue(this.sourceBufferTypes);
+    });
   }
 
   private onFragChanged(event: Events.FRAG_CHANGED, data: FragChangedData) {
@@ -1642,9 +1645,18 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
   private blockUntilOpen(callback: () => void) {
     if (this.isUpdating() || this.isQueued()) {
-      this.blockBuffers(callback);
+      this.blockBuffers(callback).catch((error) => {
+        this.warn(`SourceBuffer blocked callback ${error}`);
+        this.stepOperationQueue(this.sourceBufferTypes);
+      });
     } else {
-      callback();
+      try {
+        callback();
+      } catch (error) {
+        this.warn(
+          `Callback run without blocking ${this.operationQueue} ${error}`,
+        );
+      }
     }
   }
 
@@ -1668,11 +1680,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   private blockBuffers(
     onUnblocked: () => void,
     bufferNames: SourceBufferName[] = this.sourceBufferTypes,
-  ) {
+  ): Promise<void> {
     if (!bufferNames.length) {
       this.log('Blocking operation requested, but no SourceBuffers exist');
-      Promise.resolve().then(onUnblocked);
-      return;
+      return Promise.resolve().then(onUnblocked);
     }
     const { operationQueue } = this;
 
@@ -1684,13 +1695,13 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (audioBlocked) {
       this.unblockAudio();
     }
-    Promise.all(blockingOperations).then((result) => {
+    return Promise.all(blockingOperations).then((result) => {
       if (operationQueue !== this.operationQueue) {
         return;
       }
       // logger.debug(`[buffer-controller]: Blocking operation resolved; unblocking ${buffers} SourceBuffer`);
       onUnblocked();
-      this.stepOperationQueue(bufferNames);
+      this.stepOperationQueue(this.sourceBufferTypes);
     });
   }
 
