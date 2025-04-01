@@ -343,11 +343,14 @@ function parseStsd(stsd: Uint8Array): StsdData {
     case 'avc4': {
       // extract profile + compatibility + level out of avcC box
       const avcCBox = findBox(sampleEntriesEnd, ['avcC'])[0];
-      codec += '.' + toHex(avcCBox[1]) + toHex(avcCBox[2]) + toHex(avcCBox[3]);
-      supplemental = parseSupplementalDoViCodec(
-        codecFourCC === 'avc1' ? 'dva1' : 'dvav',
-        sampleEntriesEnd,
-      );
+      if (avcCBox && avcCBox.length > 3) {
+        codec +=
+          '.' + toHex(avcCBox[1]) + toHex(avcCBox[2]) + toHex(avcCBox[3]);
+        supplemental = parseSupplementalDoViCodec(
+          codecFourCC === 'avc1' ? 'dva1' : 'dvav',
+          sampleEntriesEnd,
+        );
+      }
       break;
     }
     case 'mp4a': {
@@ -397,9 +400,8 @@ function parseStsd(stsd: Uint8Array): StsdData {
     }
     case 'hvc1':
     case 'hev1': {
-      const hvcCBoxes = findBox(sampleEntriesEnd, ['hvcC']);
-      if (hvcCBoxes) {
-        const hvcCBox = hvcCBoxes[0];
+      const hvcCBox = findBox(sampleEntriesEnd, ['hvcC'])[0];
+      if (hvcCBox && hvcCBox.length > 12) {
         const profileByte = hvcCBox[1];
         const profileSpace = ['', 'A', 'B', 'C'][profileByte >> 6];
         const generalProfileIdc = profileByte & 0x1f;
@@ -436,67 +438,71 @@ function parseStsd(stsd: Uint8Array): StsdData {
     }
     case 'vp09': {
       const vpcCBox = findBox(sampleEntriesEnd, ['vpcC'])[0];
-      const profile = vpcCBox[4];
-      const level = vpcCBox[5];
-      const bitDepth = (vpcCBox[6] >> 4) & 0x0f;
-      codec +=
-        '.' +
-        addLeadingZero(profile) +
-        '.' +
-        addLeadingZero(level) +
-        '.' +
-        addLeadingZero(bitDepth);
+      if (vpcCBox && vpcCBox.length > 6) {
+        const profile = vpcCBox[4];
+        const level = vpcCBox[5];
+        const bitDepth = (vpcCBox[6] >> 4) & 0x0f;
+        codec +=
+          '.' +
+          addLeadingZero(profile) +
+          '.' +
+          addLeadingZero(level) +
+          '.' +
+          addLeadingZero(bitDepth);
+      }
       break;
     }
     case 'av01': {
       const av1CBox = findBox(sampleEntriesEnd, ['av1C'])[0];
-      const profile = av1CBox[1] >>> 5;
-      const level = av1CBox[1] & 0x1f;
-      const tierFlag = av1CBox[2] >>> 7 ? 'H' : 'M';
-      const highBitDepth = (av1CBox[2] & 0x40) >> 6;
-      const twelveBit = (av1CBox[2] & 0x20) >> 5;
-      const bitDepth =
-        profile === 2 && highBitDepth
-          ? twelveBit
-            ? 12
-            : 10
-          : highBitDepth
-            ? 10
-            : 8;
-      const monochrome = (av1CBox[2] & 0x10) >> 4;
-      const chromaSubsamplingX = (av1CBox[2] & 0x08) >> 3;
-      const chromaSubsamplingY = (av1CBox[2] & 0x04) >> 2;
-      const chromaSamplePosition = av1CBox[2] & 0x03;
-      // TODO: parse color_description_present_flag
-      // default it to BT.709/limited range for now
-      // more info https://aomediacodec.github.io/av1-isobmff/#av1codecconfigurationbox-syntax
-      const colorPrimaries = 1;
-      const transferCharacteristics = 1;
-      const matrixCoefficients = 1;
-      const videoFullRangeFlag = 0;
-      codec +=
-        '.' +
-        profile +
-        '.' +
-        addLeadingZero(level) +
-        tierFlag +
-        '.' +
-        addLeadingZero(bitDepth) +
-        '.' +
-        monochrome +
-        '.' +
-        chromaSubsamplingX +
-        chromaSubsamplingY +
-        chromaSamplePosition +
-        '.' +
-        addLeadingZero(colorPrimaries) +
-        '.' +
-        addLeadingZero(transferCharacteristics) +
-        '.' +
-        addLeadingZero(matrixCoefficients) +
-        '.' +
-        videoFullRangeFlag;
-      supplemental = parseSupplementalDoViCodec('dav1', sampleEntriesEnd);
+      if (av1CBox && av1CBox.length > 2) {
+        const profile = av1CBox[1] >>> 5;
+        const level = av1CBox[1] & 0x1f;
+        const tierFlag = av1CBox[2] >>> 7 ? 'H' : 'M';
+        const highBitDepth = (av1CBox[2] & 0x40) >> 6;
+        const twelveBit = (av1CBox[2] & 0x20) >> 5;
+        const bitDepth =
+          profile === 2 && highBitDepth
+            ? twelveBit
+              ? 12
+              : 10
+            : highBitDepth
+              ? 10
+              : 8;
+        const monochrome = (av1CBox[2] & 0x10) >> 4;
+        const chromaSubsamplingX = (av1CBox[2] & 0x08) >> 3;
+        const chromaSubsamplingY = (av1CBox[2] & 0x04) >> 2;
+        const chromaSamplePosition = av1CBox[2] & 0x03;
+        // TODO: parse color_description_present_flag
+        // default it to BT.709/limited range for now
+        // more info https://aomediacodec.github.io/av1-isobmff/#av1codecconfigurationbox-syntax
+        const colorPrimaries = 1;
+        const transferCharacteristics = 1;
+        const matrixCoefficients = 1;
+        const videoFullRangeFlag = 0;
+        codec +=
+          '.' +
+          profile +
+          '.' +
+          addLeadingZero(level) +
+          tierFlag +
+          '.' +
+          addLeadingZero(bitDepth) +
+          '.' +
+          monochrome +
+          '.' +
+          chromaSubsamplingX +
+          chromaSubsamplingY +
+          chromaSamplePosition +
+          '.' +
+          addLeadingZero(colorPrimaries) +
+          '.' +
+          addLeadingZero(transferCharacteristics) +
+          '.' +
+          addLeadingZero(matrixCoefficients) +
+          '.' +
+          videoFullRangeFlag;
+        supplemental = parseSupplementalDoViCodec('dav1', sampleEntriesEnd);
+      }
       break;
     }
     case 'ac-3':
