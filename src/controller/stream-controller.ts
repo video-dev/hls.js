@@ -1226,6 +1226,9 @@ export default class StreamController
 
     // Avoid buffering if backtracking this fragment
     if (video && details) {
+      if (!audio && video.type === 'audiovideo') {
+        this.logMuxedErr(frag);
+      }
       const prevFrag = details.fragments[frag.sn - 1 - details.startSN];
       const isFirstFragment = frag.sn === details.startSN;
       const isFirstInDiscontinuity = !prevFrag || frag.cc > prevFrag.cc;
@@ -1351,6 +1354,12 @@ export default class StreamController
     }
   }
 
+  private logMuxedErr(frag: Fragment) {
+    this.warn(
+      `${isMediaFragment(frag) ? 'Media' : 'Init'} segment with muxed audiovideo where only video expected: ${frag.url}`,
+    );
+  }
+
   private _bufferInitSegment(
     currentLevel: Level,
     tracks: TrackSet,
@@ -1366,6 +1375,9 @@ export default class StreamController
     // if audio track is expected to come from audio stream controller, discard any coming from main
     if (this.altAudio && !this.audioOnly) {
       delete tracks.audio;
+      if (tracks.audiovideo) {
+        this.logMuxedErr(frag);
+      }
     }
     // include levelCodec in audio and video tracks
     const { audio, video, audiovideo } = tracks;
