@@ -46,6 +46,7 @@ class AbrController extends Logger implements AbrComponentAPI {
   private fragCurrent: Fragment | null = null;
   private partCurrent: Part | null = null;
   private bitrateTestDelay: number = 0;
+  private rebufferNotice: number = -1;
 
   public bwEstimator: EwmaBandWidthEstimator;
 
@@ -647,6 +648,7 @@ class AbrController extends Logger implements AbrComponentAPI {
         bwUpFactor,
       );
       if (bestLevel >= 0) {
+        this.rebufferNotice = -1;
         return bestLevel;
       }
     }
@@ -688,11 +690,14 @@ class AbrController extends Logger implements AbrComponentAPI {
       bwFactor,
       bwUpFactor,
     );
-    this.info(
-      `${
-        bufferStarvationDelay ? 'rebuffering expected' : 'buffer is empty'
-      }, optimal quality level ${bestLevel}`,
-    );
+    if (this.rebufferNotice !== bestLevel) {
+      this.rebufferNotice = bestLevel;
+      this.info(
+        `${
+          bufferStarvationDelay ? 'rebuffering expected' : 'buffer is empty'
+        }, optimal quality level ${bestLevel}`,
+      );
+    }
     if (bestLevel > -1) {
       return bestLevel;
     }

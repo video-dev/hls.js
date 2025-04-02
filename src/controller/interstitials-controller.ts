@@ -1715,7 +1715,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
   }
 
   // Schedule buffer control
-  private checkBuffer() {
+  private checkBuffer(starved?: boolean) {
     const items = this.schedule.items;
     if (!items) {
       return;
@@ -1726,8 +1726,11 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       this.timelinePos,
       0,
     );
-
-    this.updateBufferedPos(bufferInfo.end, items, bufferInfo.len === 0);
+    if (starved) {
+      this.bufferedPos = this.timelinePos;
+    }
+    starved ||= bufferInfo.len < 1;
+    this.updateBufferedPos(bufferInfo.end, items, starved);
   }
 
   private updateBufferedPos(
@@ -1788,10 +1791,13 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     } else if (
       bufferIsEmpty &&
       playingItem &&
-      !this.itemsMatch(playingItem, bufferingItem) &&
-      bufferEndIndex === playingIndex
+      !this.itemsMatch(playingItem, bufferingItem)
     ) {
-      this.bufferedToItem(playingItem);
+      if (bufferEndIndex === playingIndex) {
+        this.bufferedToItem(playingItem);
+      } else if (bufferEndIndex === playingIndex + 1) {
+        this.bufferedToItem(items[bufferEndIndex]);
+      }
     }
   }
 
@@ -1930,7 +1936,13 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     if (neverLoaded) {
       const timelineStart = interstitial.timelineStart;
       if (interstitial.appendInPlace) {
-        this.flushFrontBuffer(timelineStart + 0.25);
+        const playingItem = this.playingItem;
+        if (
+          !this.isInterstitial(playingItem) &&
+          playingItem?.nextEvent?.identifier === interstitial.identifier
+        ) {
+          this.flushFrontBuffer(timelineStart + 0.25);
+        }
       }
       let hlsStartOffset;
       let liveStartPosition = 0;
@@ -1998,6 +2010,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     if (!requiredTracks) {
       return;
     }
+    this.log(`Removing front buffer starting at ${startOffset}`);
     const sourceBufferNames = Object.keys(requiredTracks);
     sourceBufferNames.forEach((type: SourceBufferName) => {
       this.hls.trigger(Events.BUFFER_FLUSHING, {
@@ -2087,12 +2100,13 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
         }
       }
     }
+    const assetId = assetItem.identifier;
     const playerConfig: Partial<HlsConfig> = {
       ...userConfig,
       autoStartLoad: true,
       startFragPrefetch: true,
       primarySessionId: primary.sessionId,
-      assetPlayerId: assetItem.identifier,
+      assetPlayerId: assetId,
       abrEwmaDefaultEstimate: primary.bandwidthEstimate,
       interstitialsController: undefined,
       startPosition,
@@ -2114,6 +2128,11 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
         contentId: hash(assetItem.uri),
       });
     }
+    if (this.getAssetPlayer(assetId)) {
+      this.warn(
+        `Duplicate date range identifier ${interstitial} and asset ${assetId}`,
+      );
+    }
     const player = new HlsAssetPlayer(
       this.HlsPlayerClass,
       playerConfig,
@@ -2122,7 +2141,6 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     );
     this.playerQueue.push(player);
     interstitial.assetList[assetListIndex] = assetItem;
-    const assetId = assetItem.identifier;
     // Listen for LevelDetails and PTS change to update duration
     const updateAssetPlayerDetails = (details: LevelDetails) => {
       if (details.live) {
@@ -2181,14 +2199,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       }
     };
     player.on(Events.BUFFER_CODECS, onBufferCodecs);
-    const bufferedToEnd = (name: Events.BUFFERED_TO_END) => {
+    const bufferedToEnd = () => {
       const inQueuPlayer = this.getAssetPlayer(assetId);
       this.log(`buffered to end of asset ${inQueuPlayer}`);
       if (!inQueuPlayer) {
         return;
       }
-      inQueuPlayer.off(Events.BUFFERED_TO_END, bufferedToEnd);
-
       // Preload at end of asset
       const scheduleIndex = this.schedule.findEventIndex(
         interstitial.identifier,
@@ -2202,7 +2218,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
           !interstitial.isAssetPastPlayoutLimit(nextAssetIndex) &&
           !interstitial.assetList[nextAssetIndex].error
         ) {
-          this.bufferedToItem(item, assetListIndex + 1);
+          this.bufferedToItem(item, nextAssetIndex);
         } else {
           const nextItem = this.schedule.items?.[scheduleIndex + 1];
           if (nextItem) {
@@ -2228,6 +2244,30 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
     player.once(Events.MEDIA_ENDED, endedWithAssetIndex(assetListIndex));
     player.once(Events.PLAYOUT_LIMIT_REACHED, endedWithAssetIndex(Infinity));
     player.on(Events.ERROR, (event: Events.ERROR, data: ErrorData) => {
+      const inQueuPlayer = this.getAssetPlayer(assetId);
+      if (data.details === ErrorDetails.BUFFER_STALLED_ERROR) {
+        if (inQueuPlayer?.media) {
+          const assetCurrentTime = inQueuPlayer.currentTime;
+          const distanceFromEnd = inQueuPlayer.duration - assetCurrentTime;
+          if (
+            assetCurrentTime &&
+            interstitial.appendInPlace &&
+            distanceFromEnd / inQueuPlayer.media.playbackRate < 0.5
+          ) {
+            this.log(
+              `Advancing buffer past end of asset ${assetId} ${interstitial} at ${inQueuPlayer.media.currentTime}`,
+            );
+            bufferedToEnd();
+          } else {
+            this.warn(
+              `Stalled at ${assetCurrentTime} of ${assetCurrentTime + distanceFromEnd} in asset ${assetId} ${interstitial}`,
+            );
+            this.onTimeupdate();
+            this.checkBuffer(true);
+          }
+        }
+        return;
+      }
       this.handleAssetItemError(
         data,
         interstitial,
@@ -2336,10 +2376,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       });
     }
 
-    if (!player.bufferedInPlaceToEnd(media)) {
-      // detach media and attach to interstitial player if it does not have another element attached
-      this.bufferAssetPlayer(player, media);
-    }
+    // detach media and attach to interstitial player if it does not have another element attached
+    this.bufferAssetPlayer(player, media);
   }
 
   private bufferAssetPlayer(player: HlsAssetPlayer, media: HTMLMediaElement) {
@@ -2569,6 +2607,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
         if (interstitial) {
           this.primaryFallback(interstitial);
         }
+        break;
+      }
+      case ErrorDetails.BUFFER_STALLED_ERROR: {
+        this.onTimeupdate();
+        this.checkBuffer(true);
+        break;
       }
     }
   }

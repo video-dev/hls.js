@@ -894,7 +894,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           err: error,
           fatal: false,
         };
-
+        const mediaError = this.media?.error;
         if ((error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR) {
           // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
           // let's stop appending any segments, and report BUFFER_FULL_ERROR error
@@ -902,26 +902,28 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         } else if (
           (error as DOMException).code === DOMException.INVALID_STATE_ERR &&
           this.mediaSourceOpenOrEnded &&
-          !this.media?.error
+          !mediaError
         ) {
           // Allow retry for "Failed to execute 'appendBuffer' on 'SourceBuffer': This SourceBuffer is still processing" errors
           event.errorAction = createDoNothingErrorAction(true);
-        } else if (error.name === TRACK_REMOVED_ERROR_NAME) {
+        } else if (
+          error.name === TRACK_REMOVED_ERROR_NAME &&
+          this.sourceBufferCount === 0
+        ) {
           // Do nothing if sourceBuffers were removed (media is detached and append was not aborted)
-          if (this.sourceBufferCount === 0) {
-            event.errorAction = createDoNothingErrorAction(true);
-          } else {
-            ++this.appendErrors[type];
-          }
+          event.errorAction = createDoNothingErrorAction(true);
         } else {
           const appendErrorCount = ++this.appendErrors[type];
           /* with UHD content, we could get loop of quota exceeded error until
             browser is able to evict some data from sourcebuffer. Retrying can help recover.
           */
           this.warn(
-            `Failed ${appendErrorCount}/${this.hls.config.appendErrorMaxRetry} times to append segment in "${type}" sourceBuffer`,
+            `Failed ${appendErrorCount}/${this.hls.config.appendErrorMaxRetry} times to append segment in "${type}" sourceBuffer (${mediaError ? mediaError : 'no media error'})`,
           );
-          if (appendErrorCount >= this.hls.config.appendErrorMaxRetry) {
+          if (
+            appendErrorCount >= this.hls.config.appendErrorMaxRetry ||
+            !!mediaError
+          ) {
             event.fatal = true;
           }
         }
