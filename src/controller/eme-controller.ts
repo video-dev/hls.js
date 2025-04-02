@@ -921,6 +921,13 @@ class EMEController extends Logger implements ComponentAPI {
   private onKeyStatusChange(mediaKeySessionContext: MediaKeySessionContext) {
     mediaKeySessionContext.mediaKeysSession.keyStatuses.forEach(
       (status: MediaKeyStatus, keyId: BufferSource) => {
+        // keyStatuses.forEach is not standard API so the callback value looks weird on xboxone
+        // xboxone callback(keyId, status) so we need to exchange them
+        if (typeof keyId === 'string' && typeof status === 'object') {
+          const temp = keyId;
+          keyId = status;
+          status = temp;
+        }
         this.log(
           `key status change "${status}" for keyStatuses keyId: ${Hex.hexDump(
             'buffer' in keyId
