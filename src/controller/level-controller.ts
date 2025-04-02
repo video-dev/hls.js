@@ -390,6 +390,10 @@ export default class LevelController extends BasePlaylistController {
     // Audio is only alternate if manifest include a URI along with the audio group tag,
     // and this is not an audio-only stream where levels contain audio-only
     const audioOnly = audioCodecFound && !videoCodecFound;
+    const config = this.hls.config;
+    const altAudioEnabled = !!(
+      config.audioStreamController && config.audioTrackController
+    );
     const edata: ManifestParsedData = {
       levels,
       audioTracks,
@@ -400,7 +404,8 @@ export default class LevelController extends BasePlaylistController {
       stats: data.stats,
       audio: audioCodecFound,
       video: videoCodecFound,
-      altAudio: !audioOnly && audioTracks.some((t) => !!t.url),
+      altAudio:
+        altAudioEnabled && !audioOnly && audioTracks.some((t) => !!t.url),
     };
     this.hls.trigger(Events.MANIFEST_PARSED, edata);
   }
