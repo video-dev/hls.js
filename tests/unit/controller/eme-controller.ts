@@ -28,6 +28,7 @@ type EMEControllerTestable = Omit<
   ) => void;
   onMediaDetached: () => void;
   media: HTMLMediaElement | null;
+  onKeyStatusChange: (mediaKeySessionContext: MediaKeySessionContext) => void;
 };
 
 class MediaMock extends EventEmitter {
@@ -316,6 +317,44 @@ describe('EMEController', function () {
           '`keyIdToKeySessionPromise` should be an empty dictionary when no key IDs are found',
         );
       });
+  });
+
+  it('should exchange keyID and status if keyStatuses forEach callback error', function () {
+    class MediaKeySessionMock2 extends MediaKeySessionMock {
+      constructor() {
+        super();
+        this.keyStatuses.set(new Uint8Array(16), 'usable');
+      }
+    }
+
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: sinon.spy(),
+      drmSystems: {
+        'com.apple.fps': {
+          serverCertificateUrl: 'https://example.com/certificate.cer',
+        },
+      },
+    });
+
+    const keySession = new MediaKeySessionMock2();
+    const mockMediaKeySessionContext = {
+      mediaKeysSession: keySession,
+      decryptdata: {
+        encrypted: true,
+        method: 'SAMPLE-AES',
+        keyFormat: 'com.apple.streamingkeydelivery',
+        uri: 'data://key-uri',
+        keyId: new Uint8Array(16),
+        pssh: new Uint8Array(16),
+      },
+      keyStatus: 'status-pending',
+    };
+
+    emeController.onKeyStatusChange(
+      mockMediaKeySessionContext as unknown as MediaKeySessionContext,
+    );
+    expect(mockMediaKeySessionContext.keyStatus).to.be.equal('usable');
   });
 
   it('should fetch the server certificate and set it into the session', function () {
