@@ -12,6 +12,7 @@ import { Logger } from '../utils/logger';
 import {
   getKeySystemsForConfig,
   getSupportedMediaKeySystemConfigurations,
+  isPersistentSessionType,
   keySystemFormatToKeySystemDomain,
   keySystemIdToKeySystemDomain,
   KeySystems,
@@ -1409,8 +1410,17 @@ class EMEController extends Logger implements ComponentAPI {
       if (index > -1) {
         this.mediaKeySessions.splice(index, 1);
       }
-      return mediaKeysSession
-        .remove()
+      const { drmSystemOptions } = this.config;
+      const removePromise = isPersistentSessionType(drmSystemOptions)
+        ? new Promise((resolve, reject) => {
+            self.setTimeout(
+              () => reject(new Error(`MediaKeySession.remove() timeout`)),
+              8000,
+            );
+            mediaKeysSession.remove().then(resolve);
+          })
+        : Promise.resolve();
+      return removePromise
         .catch((error) => {
           this.log(`Could not remove session: ${error}`);
           this.hls?.trigger(Events.ERROR, {
