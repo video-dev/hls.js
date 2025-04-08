@@ -1226,7 +1226,7 @@ export default class StreamController
 
     // Avoid buffering if backtracking this fragment
     if (video && details) {
-      if (!audio && video.type === 'audiovideo') {
+      if (audio && video.type === 'audiovideo') {
         this.logMuxedErr(frag);
       }
       const prevFrag = details.fragments[frag.sn - 1 - details.startSN];
