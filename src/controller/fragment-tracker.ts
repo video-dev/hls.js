@@ -247,7 +247,8 @@ export class FragmentTracker implements ComponentAPI {
     if (!activeParts) {
       return;
     }
-    this.activePartLists[levelType] = activeParts.filter(
+    this.activePartLists[levelType] = filterParts(
+      activeParts,
       (part) => part.fragment.sn >= snToKeep,
     );
   }
@@ -507,7 +508,8 @@ export class FragmentTracker implements ComponentAPI {
     const activeParts = this.activePartLists[fragment.type];
     if (activeParts) {
       const snToRemove = fragment.sn;
-      this.activePartLists[fragment.type] = activeParts.filter(
+      this.activePartLists[fragment.type] = filterParts(
+        activeParts,
         (part) => part.fragment.sn !== snToRemove,
       );
     }
@@ -541,4 +543,14 @@ function isPartial(fragmentEntity: FragmentEntity): boolean {
 
 function getFragmentKey(fragment: Fragment): string {
   return `${fragment.type}_${fragment.level}_${fragment.sn}`;
+}
+
+function filterParts(partList: Part[], predicate: (part: Part) => boolean) {
+  return partList.filter((part) => {
+    const keep = predicate(part);
+    if (!keep) {
+      part.clearElementaryStreamInfo();
+    }
+    return keep;
+  });
 }
