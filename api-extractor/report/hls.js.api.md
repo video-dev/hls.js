@@ -635,6 +635,8 @@ export interface BufferAppendingData {
     // (undocumented)
     frag: Fragment;
     // (undocumented)
+    offset?: number | undefined;
+    // (undocumented)
     parent: PlaylistLevelType;
     // (undocumented)
     part: Part | null;

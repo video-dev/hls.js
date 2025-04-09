@@ -5,11 +5,7 @@ import {
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { getCodecCompatibleName } from '../utils/codecs';
 import { patchEncyptionData } from '../utils/mp4-tools';
-import {
-  getSampleData,
-  offsetStartDTS,
-  parseInitSegment,
-} from '../utils/mp4-tools';
+import { getSampleData, parseInitSegment } from '../utils/mp4-tools';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { DecryptData } from '../loader/level-key';
@@ -250,8 +246,8 @@ class PassThroughRemuxer implements Remuxer {
     const startTime = audioTrack
       ? decodeTime - initPTS.baseTime / initPTS.timescale
       : (lastEndTime as number);
-    offsetStartDTS(initData, data, initPTS.baseTime / initPTS.timescale);
     const endTime = startTime + duration;
+
     if (duration > 0) {
       this.lastEndTime = endTime;
     } else {

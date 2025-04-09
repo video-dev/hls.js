@@ -755,7 +755,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     eventData: BufferAppendingData,
   ) {
     const { tracks } = this;
-    const { data, type, parent, frag, part, chunkMeta } = eventData;
+    const { data, type, parent, frag, part, chunkMeta, offset } = eventData;
     const chunkStats = chunkMeta.buffering[type];
     const sn = frag.sn;
     const bufferAppendingStart = self.performance.now();
@@ -827,18 +827,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       label: `append-${type}`,
       execute: () => {
         chunkStats.executeStart = self.performance.now();
-        if (checkTimestampOffset) {
-          const track = this.tracks[type];
-          if (track) {
-            const sb = track.buffer;
-            if (sb) {
-              const delta = fragStart - sb.timestampOffset;
-              if (Math.abs(delta) >= 0.1) {
-                this.log(
-                  `Updating audio SourceBuffer timestampOffset to ${fragStart} (delta: ${delta}) sn: ${sn})`,
-                );
-                sb.timestampOffset = fragStart;
-              }
+
+        const track = this.tracks[type];
+        if (track) {
+          const sb = track.buffer;
+          if (sb) {
+            if (checkTimestampOffset) {
+              this.updateTimestampOffset(sb, fragStart, 0.1, type, sn);
+            } else if (offset !== undefined && Number.isFinite(offset)) {
+              this.updateTimestampOffset(sb, offset, 0.000001, type, sn);
             }
           }
         }
@@ -1590,6 +1587,22 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const operation = this.currentOp(type);
     if (operation) {
       operation.onError(error);
+    }
+  }
+
+  private updateTimestampOffset(
+    sb: ExtendedSourceBuffer,
+    timestampOffset: number,
+    tolerance: number,
+    type: SourceBufferName,
+    sn: number | 'initSegment',
+  ) {
+    const delta = timestampOffset - sb.timestampOffset;
+    if (Math.abs(delta) >= tolerance) {
+      this.log(
+        `Updating ${type} SourceBuffer timestampOffset to ${timestampOffset} (delta: ${delta}) sn: ${sn})`,
+      );
+      sb.timestampOffset = timestampOffset;
     }
   }
 
