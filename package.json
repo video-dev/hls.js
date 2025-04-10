@@ -132,6 +132,6 @@
     "sinon-chai": "3.7.0",
     "typescript": "5.8.2",
     "url-toolkit": "2.2.5",
-    "wrangler": "3.114.3"
+    "wrangler": "3.114.4"
   }
 }
