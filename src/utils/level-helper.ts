@@ -168,13 +168,15 @@ export function mergeDetails(
     oldDetails,
     newDetails,
     (oldFrag, newFrag, newFragIndex, newFragments) => {
-      if (newDetails.skippedSegments) {
-        if (newFrag.cc !== oldFrag.cc) {
-          const ccOffset = oldFrag.cc - newFrag.cc;
-          for (let i = newFragIndex; i < newFragments.length; i++) {
-            newFragments[i].cc += ccOffset;
-          }
+      if (!newDetails.startCC && newFrag.cc !== oldFrag.cc) {
+        const ccOffset = oldFrag.cc - newFrag.cc;
+        for (let i = newFragIndex; i < newFragments.length; i++) {
+          newFragments[i].cc += ccOffset;
         }
+        newDetails.startCC =
+          getFragmentWithSN(oldDetails, newDetails.startSN - 1)?.cc ??
+          newFragments[0].cc;
+        newDetails.endCC = newFragments[newFragments.length - 1].cc;
       }
       if (
         Number.isFinite(oldFrag.startPTS) &&
@@ -523,7 +525,7 @@ export function computeReloadInterval(
 export function getFragmentWithSN(
   details: LevelDetails | undefined,
   sn: number,
-  fragCurrent: Fragment | null,
+  fragCurrent?: Fragment | null,
 ): MediaFragment | null {
   if (!details) {
     return null;
