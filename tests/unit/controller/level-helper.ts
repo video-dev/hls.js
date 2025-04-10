@@ -66,6 +66,9 @@ const getIteratedSequence = (oldPlaylist, newPlaylist) => {
   return actual;
 };
 
+const getFragmentSequenceNumbers = (details: LevelDetails) =>
+  details.fragments.map((f) => `${f?.sn}-${f?.cc}`).join(',');
+
 describe('LevelHelper Tests', function () {
   let sandbox;
   beforeEach(function () {
@@ -180,9 +183,6 @@ describe('LevelHelper Tests', function () {
   });
 
   describe('mergeDetails', function () {
-    const getFragmentSequenceNumbers = (details: LevelDetails) =>
-      details.fragments.map((f) => `${f?.sn}-${f?.cc}`).join(',');
-
     it('transfers start times where segments overlap, and extrapolates the start of any new segment', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3, 4]); // start times: 0, 5, 10, 15
       const newPlaylist = generatePlaylist([2, 3, 4, 5]);
@@ -704,6 +704,7 @@ fileSequence7.m4s
 #EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,CAN-SKIP-UNTIL=24,PART-HOLD-BACK=3.0
 #EXT-X-MEDIA-SEQUENCE:102
 #EXT-X-DISCONTINUITY-SEQUENCE:10
+#EXT-X-DISCONTINUITY
 #EXT-X-SKIP:SKIPPED-SEGMENTS=4
 #EXTINF:6,
 fileSequence6.m4s
@@ -768,8 +769,8 @@ fileSequence8.m4s
         endSN: 108,
         lastPartSn: 109,
         lastPartIndex: 0,
-        startCC: 10, // w/o disco-sequence incremented
-        endCC: 11, // end CC reflects delta details until merged with previous
+        startCC: 10,
+        endCC: 12,
       });
       expect(
         details2.fragments,
@@ -978,6 +979,151 @@ fileSequence6.ts`;
       expect(details.fragmentStart).to.equal(10);
       mergeDetails(details, details);
       expect(details.fragmentStart).to.equal(10);
+    });
+
+    it('aligns discontinuities based on media sequence number', function () {
+      const playlist1 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:2
+#EXT-X-MEDIA-SEQUENCE:26
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_26.m4s
+#EXT-X-DISCONTINUITY
+#EXTINF:2.000,
+video_27.m4s
+#EXT-X-DISCONTINUITY
+#EXTINF:2.000,
+video_28.m4s
+#EXT-X-DISCONTINUITY
+#EXTINF:2.000,
+video_29.m4s
+#EXTINF:2.000,
+video_30.m4s
+#EXT-X-DISCONTINUITY
+#EXTINF:2.000,
+video_31.m4s`;
+      const playlist2 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:2
+#EXT-X-MEDIA-SEQUENCE:28
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_28.m4s
+#EXT-X-DISCONTINUITY
+#EXTINF:2.000,
+video_29.m4s
+#EXTINF:2.000,
+video_30.m4s
+#EXT-X-DISCONTINUITY
+#EXTINF:2.000,
+video_31.m4s
+#EXT-X-DISCONTINUITY
+#EXTINF:2.000,
+video_32.m4s`;
+      const oldPlaylist = parseLevelPlaylist(playlist1);
+      const newPlaylist = parseLevelPlaylist(playlist2);
+
+      expect(oldPlaylist).to.include({
+        startSN: 26,
+        startCC: 0,
+        endCC: 4,
+      });
+      expect(newPlaylist).to.include({
+        startSN: 28,
+        startCC: 0,
+        endCC: 3,
+      });
+
+      mergeDetails(oldPlaylist, newPlaylist);
+
+      expect(newPlaylist.playlistParsingError).to.be.null;
+      expect(newPlaylist).to.include({
+        startSN: 28,
+        startCC: 1,
+        endCC: 5,
+      });
+
+      const mergedSequence = getFragmentSequenceNumbers(newPlaylist);
+      expect(mergedSequence).to.equal('28-2,29-3,30-3,31-4,32-5');
+    });
+
+    it('aligns discontinuities based on media sequence number (#7163)', function () {
+      const playlist1 = `#EXTM3U
+#EXT-X-VERSION:7
+#EXT-X-TARGETDURATION:2
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-DISCONTINUITY
+#EXT-X-MAP:URI="getMP4InitFragment.mp4"
+#EXT-X-PROGRAM-DATE-TIME:2025-04-08T14:20:25.166Z
+#EXTINF:1.875,
+getMP4MediaFragment.mp4?FragmentNumber=91343852333398821492057832144523283530704043374
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2025-04-08T14:20:27.155Z
+#EXTINF:1.73,
+getMP4MediaFragment.mp4?FragmentNumber=91343852333398821497009592301664805164162363767
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2025-04-08T14:20:28.696Z
+#EXTINF:1.698,
+getMP4MediaFragment.mp4?FragmentNumber=91343852333398821501961352458806326677392019605
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2025-04-08T14:20:30.387Z
+#EXTINF:1.742,
+getMP4MediaFragment.mp4?FragmentNumber=91343852333398821506913112615947848230969811191
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2025-04-08T14:20:32.335Z
+#EXTINF:1.685,
+getMP4MediaFragment.mp4?FragmentNumber=91343852333398821511864872773089369853347903342`;
+      const playlist2 = `#EXTM3U
+#EXT-X-VERSION:7
+#EXT-X-TARGETDURATION:2
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-DISCONTINUITY
+#EXT-X-MAP:URI="getMP4InitFragment.mp4"
+#EXT-X-PROGRAM-DATE-TIME:2025-04-08T14:20:27.155Z
+#EXTINF:1.73,
+getMP4MediaFragment.mp4?FragmentNumber=91343852333398821497009592301664805164162363767
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2025-04-08T14:20:28.696Z
+#EXTINF:1.698,
+getMP4MediaFragment.mp4?FragmentNumber=91343852333398821501961352458806326677392019605
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2025-04-08T14:20:30.387Z
+#EXTINF:1.742,
+getMP4MediaFragment.mp4?FragmentNumber=91343852333398821506913112615947848230969811191
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2025-04-08T14:20:32.335Z
+#EXTINF:1.685,
+getMP4MediaFragment.mp4?FragmentNumber=91343852333398821511864872773089369853347903342
+#EXT-X-DISCONTINUITY
+#EXT-X-PROGRAM-DATE-TIME:2025-04-08T14:20:33.806Z
+#EXTINF:1.677,
+getMP4MediaFragment.mp4?FragmentNumber=91343852333398821516816632930230891347979802607`;
+      const oldPlaylist = parseLevelPlaylist(playlist1);
+      const newPlaylist = parseLevelPlaylist(playlist2);
+
+      expect(oldPlaylist).to.include({
+        startSN: 0,
+        startCC: 0,
+        endCC: 5,
+      });
+      expect(newPlaylist).to.include({
+        startSN: 1,
+        startCC: 0,
+        endCC: 5,
+      });
+
+      mergeDetails(oldPlaylist, newPlaylist);
+
+      expect(newPlaylist.playlistParsingError).to.be.null;
+      expect(newPlaylist).to.include({
+        startSN: 1,
+        startCC: 1,
+        endCC: 6,
+      });
+
+      const mergedSequence = getFragmentSequenceNumbers(newPlaylist);
+      expect(mergedSequence).to.equal('1-2,2-3,3-4,4-5,5-6');
     });
   });
 
