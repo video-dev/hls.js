@@ -410,7 +410,8 @@ function parseStsd(stsd: Uint8Array): StsdData {
         const levelIDC = hvcCBox[12];
         const constraintIndicator = hvcCBox.subarray(6, 12);
         codec += '.' + profileSpace + generalProfileIdc;
-        codec += '.' + profileCompat.toString(16).toUpperCase();
+        codec +=
+          '.' + reverse32BitInt(profileCompat).toString(16).toUpperCase();
         codec += '.' + tierFlag + levelIDC;
         let constraintString = '';
         for (let i = constraintIndicator.length; i--; ) {
@@ -535,6 +536,14 @@ function parseSupplementalDoViCodec(
       addLeadingZero(doViLevel)
     );
   }
+}
+
+function reverse32BitInt(val: number) {
+  let result = 0;
+  for (let i = 0; i < 32; i++) {
+    result |= ((val >> i) & 1) << (32 - 1 - i);
+  }
+  return result >>> 0;
 }
 
 function skipBERInteger(bytes: Uint8Array, i: number): number {
