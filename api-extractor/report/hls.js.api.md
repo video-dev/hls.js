@@ -2129,6 +2129,8 @@ export default Hls;
 export class HlsAssetPlayer {
     constructor(HlsPlayerClass: typeof Hls, userConfig: Partial<HlsConfig>, interstitial: InterstitialEvent, assetItem: InterstitialAssetItem);
     // (undocumented)
+    get appendInPlace(): boolean;
+    // (undocumented)
     get assetId(): InterstitialAssetId;
     // (undocumented)
     readonly assetItem: InterstitialAssetItem;
