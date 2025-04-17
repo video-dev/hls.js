@@ -74,7 +74,6 @@ export type SourceBuffersTuple = [
 export type MediaOverrides = {
   duration?: number;
   endOfStream?: boolean;
-  cueRemoval?: boolean;
 };
 
 export interface BufferOperationQueues {
