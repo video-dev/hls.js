@@ -1,16 +1,45 @@
 import { logger } from './logger';
 
-export function sendAddTrackEvent(track: TextTrack, videoEl: HTMLMediaElement) {
-  let event: Event;
-  try {
-    event = new Event('addtrack');
-  } catch (err) {
-    // for IE11
-    event = document.createEvent('Event');
-    event.initEvent('addtrack', false, false);
+// This is a replacement of the native addTextTrack method.
+// TextTracks created by the native method are unremovable since their livecycles
+// are neither related to the current media nor managed by user code.
+export function createTrackNode(
+  videoEl: HTMLMediaElement,
+  kind: TextTrackKind,
+  label: string,
+  lang?: string,
+  append: boolean = false,
+): HTMLTrackElement {
+  const el = videoEl.ownerDocument.createElement('track');
+  el.kind = kind;
+  el.label = label;
+  if (lang) {
+    el.srclang = lang;
   }
-  (event as any).track = track;
-  videoEl.dispatchEvent(event);
+  // To avoid an issue of the built-in captions menu in Chrome
+  if (navigator.userAgent.includes('Chrome/')) {
+    el.src = 'data:,WEBVTT';
+  }
+  el.track.mode = 'disabled';
+  if (append) {
+    videoEl.appendChild(el);
+  }
+  return el;
+}
+
+export function captionsOrSubtitlesFromCharacteristics(
+  characteristics?: string,
+): TextTrackKind {
+  if (characteristics) {
+    if (
+      /transcribes-spoken-dialog/gi.test(characteristics) &&
+      /describes-music-and-sound/gi.test(characteristics)
+    ) {
+      return 'captions';
+    }
+  }
+
+  return 'subtitles';
 }
 
 export function addCueToTrack(track: TextTrack, cue: VTTCue) {
@@ -42,27 +71,6 @@ export function addCueToTrack(track: TextTrack, cue: VTTCue) {
           `[texttrack-utils]: Legacy TextTrackCue fallback failed: ${err2}`,
         );
       }
-    }
-  }
-  if (mode === 'disabled') {
-    track.mode = mode;
-  }
-}
-
-export function clearCurrentCues(track: TextTrack, enterHandler?: () => void) {
-  // When track.mode is disabled, track.cues will be null.
-  // To guarantee the removal of cues, we need to temporarily
-  // change the mode to hidden
-  const mode = track.mode;
-  if (mode === 'disabled') {
-    track.mode = 'hidden';
-  }
-  if (track.cues) {
-    for (let i = track.cues.length; i--; ) {
-      if (enterHandler) {
-        track.cues[i].removeEventListener('enter', enterHandler);
-      }
-      track.removeCue(track.cues[i]);
     }
   }
   if (mode === 'disabled') {
@@ -150,21 +158,4 @@ export function getCuesInRange(
     }
   }
   return cuesFound;
-}
-
-export function filterSubtitleTracks(
-  textTrackList: TextTrackList,
-): TextTrack[] {
-  const tracks: TextTrack[] = [];
-  for (let i = 0; i < textTrackList.length; i++) {
-    const track = textTrackList[i];
-    // Edge adds a track without a label; we don't want to use it
-    if (
-      (track.kind === 'subtitles' || track.kind === 'captions') &&
-      track.label
-    ) {
-      tracks.push(textTrackList[i]);
-    }
-  }
-  return tracks;
 }

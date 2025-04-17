@@ -1139,6 +1139,7 @@ fileSequence5.mp4`;
         Events.INTERSTITIAL_STARTED,
         Events.INTERSTITIAL_ASSET_STARTED,
         Events.MEDIA_DETACHING,
+        Events.MEDIA_DETACHED,
       ];
       expect(callsWithPrerollAfterAttach).to.deep.equal(
         expectedEvents,
@@ -1382,6 +1383,7 @@ fileSequence6.mp4`;
           Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
+          Events.MEDIA_DETACHED,
         ],
         `Actual events after asset-list`,
       );
@@ -1499,6 +1501,7 @@ fileSequence6.mp4`;
           Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
+          Events.MEDIA_DETACHED,
         ],
         `Actual events after asset-list`,
       );
@@ -1885,6 +1888,7 @@ fileSequence6.mp4
           Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
+          Events.MEDIA_DETACHED,
         ],
         `Actual events after asset-list`,
       );
@@ -2060,6 +2064,7 @@ fileSequence6.mp4`;
           Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
+          Events.MEDIA_DETACHED,
         ],
         `Actual events after asset-list`,
       );

@@ -3918,7 +3918,6 @@ export interface MediaKeySessionContext {
 export type MediaOverrides = {
     duration?: number;
     endOfStream?: boolean;
-    cueRemoval?: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "MediaPlaylist" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -3959,6 +3958,8 @@ export interface MediaPlaylist {
     name: string;
     // (undocumented)
     textCodec?: string;
+    // (undocumented)
+    trackNode?: HTMLTrackElement;
     // (undocumented)
     type: MediaPlaylistType | 'main';
     // (undocumented)
@@ -4583,9 +4584,9 @@ export class SubtitleTrackController extends BasePlaylistController {
     // (undocumented)
     protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void;
     // (undocumented)
-    protected onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachedData): void;
+    protected onMediaAttaching(event: Events.MEDIA_ATTACHING, data: MediaAttachedData): void;
     // (undocumented)
-    protected onMediaDetaching(event: Events.MEDIA_DETACHING, data: MediaDetachingData): void;
+    protected onMediaDetached(event: Events.MEDIA_DETACHED, data: MediaDetachingData): void;
     // (undocumented)
     protected onSubtitleTrackLoaded(event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData): void;
     // (undocumented)
