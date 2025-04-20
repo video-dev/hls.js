@@ -2,13 +2,13 @@ import { logger } from './logger';
 
 // This is a replacement of the native addTextTrack method.
 // TextTracks created by the native method are unremovable since their livecycles
-// are neither related to the current media nor managed by user code.
+// are neither associated with the current media nor managed by user code.
 export function createTrackNode(
   videoEl: HTMLMediaElement,
   kind: TextTrackKind,
   label: string,
-  lang?: string,
-  append: boolean = false,
+  lang: string = '',
+  mode: TextTrackMode = 'disabled',
 ): HTMLTrackElement {
   const el = videoEl.ownerDocument.createElement('track');
   el.kind = kind;
@@ -20,23 +20,20 @@ export function createTrackNode(
   if (navigator.userAgent.includes('Chrome/')) {
     el.src = 'data:,WEBVTT';
   }
-  el.track.mode = 'disabled';
-  if (append) {
-    videoEl.appendChild(el);
-  }
+  el.track.mode = mode;
+  videoEl.appendChild(el);
   return el;
 }
 
 export function captionsOrSubtitlesFromCharacteristics(
   characteristics?: string,
 ): TextTrackKind {
-  if (characteristics) {
-    if (
-      /transcribes-spoken-dialog/gi.test(characteristics) &&
-      /describes-music-and-sound/gi.test(characteristics)
-    ) {
-      return 'captions';
-    }
+  if (
+    characteristics &&
+    /transcribes-spoken-dialog/gi.test(characteristics) &&
+    /describes-music-and-sound/gi.test(characteristics)
+  ) {
+    return 'captions';
   }
 
   return 'subtitles';

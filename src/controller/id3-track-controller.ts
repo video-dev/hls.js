@@ -155,14 +155,13 @@ class ID3TrackController implements ComponentAPI {
     event: Events.MEDIA_DETACHING,
     data: MediaDetachingData,
   ) {
-    const media = this.media!;
     this.media = null;
     const transferringMedia = !!data.transferMedia;
     if (transferringMedia) {
       return;
     }
     if (this.id3Track) {
-      media.removeChild(this.id3Track);
+      this.id3Track.remove();
       this.id3Track = null;
     }
     this.dateRangeCuesAppended = {};
@@ -173,15 +172,7 @@ class ID3TrackController implements ComponentAPI {
   }
 
   private createTrack(media: HTMLMediaElement): HTMLTrackElement {
-    const trackNode = createTrackNode(
-      media,
-      'metadata',
-      'id3',
-      undefined,
-      true,
-    );
-    trackNode.track.mode = 'hidden';
-    return trackNode;
+    return createTrackNode(media, 'metadata', 'id3', '', 'hidden');
   }
 
   private onFragParsingMetadata(
