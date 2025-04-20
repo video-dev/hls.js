@@ -4685,9 +4685,9 @@ export class SubtitleTrackController extends BasePlaylistController {
     // (undocumented)
     protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void;
     // (undocumented)
-    protected onMediaAttaching(event: Events.MEDIA_ATTACHING, data: MediaAttachedData): void;
+    protected onMediaAttached(event: Events.MEDIA_ATTACHED, data: MediaAttachedData): void;
     // (undocumented)
-    protected onMediaDetached(event: Events.MEDIA_DETACHED, data: MediaDetachingData): void;
+    protected onMediaDetaching(event: Events.MEDIA_DETACHING, data: MediaDetachingData): void;
     // (undocumented)
     protected onSubtitleTrackLoaded(event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData): void;
     // (undocumented)
