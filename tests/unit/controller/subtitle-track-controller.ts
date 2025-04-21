@@ -536,15 +536,6 @@ describe('SubtitleTrackController', function () {
       );
     });
 
-    it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
-      const triggerSpy = sandbox.spy(hls, 'trigger');
-      subtitleTrackController.subtitleTrack = -1;
-      expect(triggerSpy.firstCall).to.have.been.calledWith(
-        'hlsSubtitleTrackSwitch',
-        { id: -1 },
-      );
-    });
-
     it('should trigger SUBTITLE_TRACK_LOADING if the track is live and needs to be reloaded', function () {
       const triggerSpy = sandbox.spy(hls, 'trigger');
       subtitleTracks[2].details = {

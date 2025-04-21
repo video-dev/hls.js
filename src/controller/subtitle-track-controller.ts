@@ -2,7 +2,10 @@ import BasePlaylistController from './base-playlist-controller';
 import { Events } from '../events';
 import { PlaylistContextType } from '../types/loader';
 import { IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
-import { mediaAttributesIdentical } from '../utils/media-option-attributes';
+import {
+  mediaAttributesIdentical,
+  subtitleOptionsIdentical,
+} from '../utils/media-option-attributes';
 import { findMatchingOption, matchesOption } from '../utils/rendition-helper';
 import {
   captionsOrSubtitlesFromCharacteristics,
@@ -543,8 +546,10 @@ class SubtitleTrackController extends BasePlaylistController {
       this.toggleTrackModes();
     }
     if (!track) {
-      // switch to -1
-      this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
+      if (lastTrack) {
+        // switch to -1
+        this.hls.trigger(Events.SUBTITLE_TRACK_SWITCH, { id: newId });
+      }
       return;
     }
     const trackLoaded = !!track.details && !track.details.live;
