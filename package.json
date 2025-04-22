@@ -88,8 +88,8 @@
     "@types/chart.js": "2.9.41",
     "@types/mocha": "10.0.10",
     "@types/sinon-chai": "3.2.12",
-    "@typescript-eslint/eslint-plugin": "8.29.1",
-    "@typescript-eslint/parser": "8.29.1",
+    "@typescript-eslint/eslint-plugin": "8.31.0",
+    "@typescript-eslint/parser": "8.31.0",
     "babel-loader": "10.0.0",
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.5.0",
@@ -132,6 +132,6 @@
     "sinon-chai": "3.7.0",
     "typescript": "5.8.3",
     "url-toolkit": "2.2.5",
-    "wrangler": "3.114.5"
+    "wrangler": "3.114.6"
   }
 }
