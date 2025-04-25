@@ -842,33 +842,28 @@ export default class BaseStreamController
         );
       }
     } else if (!frag.encrypted) {
-      const keySystemsInConfig = getKeySystemsForConfig(this.config);
-      if (keySystemsInConfig.length) {
-        this.log(
-          `Loading keys from config ${JSON.stringify(keySystemsInConfig)}`,
-        );
+      this.log(
+        `Loading clear ${frag.sn} of [${details.startSN}-${details.endSN}] ${details.encryptedFragments.length ? 'with' : 'without'} encrypted segments in the manifest`,
+      );
+      const keyLoadPromise = this.keyLoader.loadClear(
+        frag,
+        details.encryptedFragments,
+      );
+      if (keyLoadPromise) {
         this.state = State.KEY_LOADING;
         this.fragCurrent = frag;
-        keyLoadingPromise = this.keyLoader
-          .test_loadKeysBeforeFragLoad(frag, keySystemsInConfig)
-          .then((keyLoadedData) => {
-            if (!this.fragContextChanged(keyLoadedData.frag)) {
-              this.hls.trigger(Events.KEY_LOADED, keyLoadedData);
-              if (this.state === State.KEY_LOADING) {
-                this.state = State.IDLE;
-              }
-              return keyLoadedData;
+        // Note: Omitted KEY_LOADING event here as we didn't have that for loadClear
+        keyLoadingPromise = keyLoadPromise.then(() => {
+          // TODO: Not sure about this. Do we need to check if the current fragment changed?
+          // For clear segments even if we get the first encrypted fragment back, that won't
+          // match the current fragment of the stream controller.
+          if (!this.fragContextChanged(frag)) {
+            // Note: Omitted KEY_LOADED event here as we didn't have that for loadClear
+            if (this.state === State.KEY_LOADING) {
+              this.state = State.IDLE;
             }
-          });
-        this.hls.trigger(Events.KEY_LOADING, { frag });
-        if (this.fragCurrent === null) {
-          keyLoadingPromise = Promise.reject(
-            new Error(`frag load aborted, context changed in KEY_LOADING`),
-          );
-        }
-      } else if (details.encryptedFragments.length) {
-        // TODO: this should also move the state to KEY_LOADING, as we can't buffer unencrypted segments before media keys are set
-        this.keyLoader.loadClear(frag, details.encryptedFragments);
+          }
+        });
       }
     }
 

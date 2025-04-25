@@ -1,5 +1,6 @@
 import { LoadError } from './fragment-loader';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { getKeySystemsForConfig } from '../utils/mediakeys-helper';
 import type { HlsConfig } from '../config';
 import type { LevelKey } from './level-key';
 import type EMEController from '../controller/eme-controller';
@@ -16,7 +17,7 @@ import type {
   LoaderStats,
   PlaylistLevelType,
 } from '../types/loader';
-import type { KeySystemFormats, KeySystems } from '../utils/mediakeys-helper';
+import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
 export interface KeyLoaderInfo {
   decryptdata: LevelKey;
@@ -92,20 +93,30 @@ export default class KeyLoader implements ComponentAPI {
     encryptedFragments: Fragment[],
   ): void | Promise<void> {
     if (this.emeController && this.config.emeEnabled) {
-      // access key-system with nearest key on start (loaidng frag is unencrypted)
-      const { sn, cc } = loadingFrag;
-      for (let i = 0; i < encryptedFragments.length; i++) {
-        const frag = encryptedFragments[i];
-        if (
-          cc <= frag.cc &&
-          (sn === 'initSegment' || frag.sn === 'initSegment' || sn < frag.sn)
-        ) {
-          this.emeController
-            .selectKeySystemFormat(frag)
-            .then((keySystemFormat) => {
-              frag.setKeyFormat(keySystemFormat);
+      // access key-system with nearest key on start (loading frag is unencrypted)
+      if (encryptedFragments.length) {
+        const { sn, cc } = loadingFrag;
+        for (let i = 0; i < encryptedFragments.length; i++) {
+          const frag = encryptedFragments[i];
+          if (
+            cc <= frag.cc &&
+            (sn === 'initSegment' || frag.sn === 'initSegment' || sn < frag.sn)
+          ) {
+            return this.emeController
+              .selectKeySystemFormat(frag)
+              .then((keySystemFormat) => {
+                frag.setKeyFormat(keySystemFormat);
+              });
+          }
+        }
+      } else if (this.config.experimentalKeySystemAccessForClearContent) {
+        const keySystemsInConfig = getKeySystemsForConfig(this.config);
+        if (keySystemsInConfig.length) {
+          return this.emeController
+            .selectKeySystem(keySystemsInConfig)
+            .then(() => {
+              /* void */
             });
-          break;
         }
       }
     }
@@ -127,18 +138,6 @@ export default class KeyLoader implements ComponentAPI {
     }
 
     return this.loadInternal(frag);
-  }
-
-  test_loadKeysBeforeFragLoad(
-    frag: Fragment,
-    keySystems: KeySystems[],
-  ): Promise<KeyLoadedData> {
-    if (this.emeController) {
-      return this.emeController
-        ?.test_selectKeySystemFromConfig(keySystems)
-        .then(() => ({ frag, keyInfo: null as any }));
-    }
-    return Promise.resolve({ frag, keyInfo: null as any });
   }
 
   loadInternal(

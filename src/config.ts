@@ -122,6 +122,7 @@ export type EMEControllerConfig = {
   drmSystems: DRMSystemsConfiguration;
   drmSystemOptions: DRMSystemOptions;
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
+  experimentalKeySystemAccessForClearContent?: boolean;
 };
 
 export interface FragmentLoaderConstructor {
