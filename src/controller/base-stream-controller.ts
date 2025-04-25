@@ -867,11 +867,10 @@ export default class BaseStreamController
           );
         }
       } else if (details.encryptedFragments.length) {
+        // TODO: this should also move the state to KEY_LOADING, as we can't buffer unencrypted segments before media keys are set
         this.keyLoader.loadClear(frag, details.encryptedFragments);
       }
     }
-    // else if (!frag.encrypted && details.encryptedFragments.length) {
-    // }
 
     const fragPrevious = this.fragPrevious;
     if (
