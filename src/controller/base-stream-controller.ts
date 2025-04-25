@@ -825,9 +825,6 @@ export default class BaseStreamController
       this.fragCurrent = frag;
       keyLoadingPromise = this.keyLoader.load(frag).then((keyLoadedData) => {
         if (!this.fragContextChanged(keyLoadedData.frag)) {
-          this.log(
-            'Emitting KEY_LOADED event without key info - blame this if something goes wrong',
-          );
           this.hls.trigger(Events.KEY_LOADED, keyLoadedData);
           if (this.state === State.KEY_LOADING) {
             this.state = State.IDLE;
