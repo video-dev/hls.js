@@ -396,6 +396,25 @@ class EMEController extends Logger implements ComponentAPI {
     return this.keyFormatPromise;
   }
 
+  public test_selectKeySystemFromConfig(
+    keySystemsToAttempt: KeySystems[],
+  ): Promise<KeySystemFormats> {
+    return new Promise((resolve, reject) => {
+      return this.getKeySystemSelectionPromise(keySystemsToAttempt)
+        .then(({ keySystem }) => {
+          const keySystemFormat = keySystemToKeySystemFormat(keySystem);
+          if (keySystemFormat) {
+            resolve(keySystemFormat);
+          } else {
+            reject(
+              new Error(`Unable to find format for key-system "${keySystem}"`),
+            );
+          }
+        })
+        .catch(reject);
+    });
+  }
+
   private getKeyFormatPromise(
     keyFormats: KeySystemFormats[],
   ): Promise<KeySystemFormats> {

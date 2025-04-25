@@ -16,7 +16,7 @@ import type {
   LoaderStats,
   PlaylistLevelType,
 } from '../types/loader';
-import type { KeySystemFormats } from '../utils/mediakeys-helper';
+import type { KeySystemFormats, KeySystems } from '../utils/mediakeys-helper';
 
 export interface KeyLoaderInfo {
   decryptdata: LevelKey;
@@ -127,6 +127,18 @@ export default class KeyLoader implements ComponentAPI {
     }
 
     return this.loadInternal(frag);
+  }
+
+  test_loadKeysBeforeFragLoad(
+    frag: Fragment,
+    keySystems: KeySystems[],
+  ): Promise<KeyLoadedData> {
+    if (this.emeController) {
+      return this.emeController
+        ?.test_selectKeySystemFromConfig(keySystems)
+        .then(() => ({ frag, keyInfo: null as any }));
+    }
+    return Promise.resolve({ frag, keyInfo: null as any });
   }
 
   loadInternal(

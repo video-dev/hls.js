@@ -1140,6 +1140,8 @@ export class EMEController extends Logger implements ComponentAPI {
     loadKey(data: KeyLoadedData): Promise<MediaKeySessionContext>;
     // (undocumented)
     selectKeySystemFormat(frag: Fragment): Promise<KeySystemFormats>;
+    // (undocumented)
+    test_selectKeySystemFromConfig(keySystemsToAttempt: KeySystems[]): Promise<KeySystemFormats>;
 }
 
 // Warning: (ae-missing-release-tag) "EMEControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
