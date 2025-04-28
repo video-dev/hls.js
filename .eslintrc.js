@@ -1,9 +1,5 @@
 module.exports = {
-  env: {
-    browser: true,
-    commonjs: true,
-    es6: true,
-  },
+  env: { browser: true, commonjs: true, es6: true },
   globals: {
     // Allowed globals
     console: true,
@@ -24,11 +20,8 @@ module.exports = {
   // 'prettier' (https://github.com/prettier/eslint-config-prettier) must be last
   extends: ['eslint:recommended', 'prettier'],
   parser: '@typescript-eslint/parser',
-  parserOptions: {
-    sourceType: 'module',
-    project: './tsconfig.json',
-  },
-  plugins: ['@typescript-eslint', 'import'],
+  parserOptions: { sourceType: 'module', project: './tsconfig.json' },
+  plugins: ['@typescript-eslint', 'import', 'no-for-of-loops'],
   rules: {
     'no-restricted-globals': [
       2,
@@ -37,18 +30,9 @@ module.exports = {
         message:
           'Use `self` instead of `window` to access the global context everywhere (including workers).',
       },
-      {
-        name: 'SourceBuffer',
-        message: 'Use `self.SourceBuffer`',
-      },
-      {
-        name: 'setTimeout',
-        message: 'Use `self.setTimeout`',
-      },
-      {
-        name: 'setInterval',
-        message: 'Use `self.setInterval`',
-      },
+      { name: 'SourceBuffer', message: 'Use `self.SourceBuffer`' },
+      { name: 'setTimeout', message: 'Use `self.setTimeout`' },
+      { name: 'setInterval', message: 'Use `self.setInterval`' },
     ],
 
     'no-restricted-properties': [
@@ -61,12 +45,7 @@ module.exports = {
     'no-var': 1,
     'no-empty': 1,
     'no-unused-vars': 'warn',
-    'no-console': [
-      1,
-      {
-        allow: ['assert'],
-      },
-    ],
+    'no-console': [1, { allow: ['assert'] }],
     'no-fallthrough': 1,
     'no-case-declarations': 2,
     'no-self-assign': 1,
@@ -78,12 +57,11 @@ module.exports = {
     'no-void': 2,
     'no-useless-catch': 2,
     'no-prototype-builtins': 0,
+    'no-for-of-loops/no-for-of-loops': 2,
   },
   overrides: [
     {
-      parserOptions: {
-        project: ['./tsconfig.json'],
-      },
+      parserOptions: { project: ['./tsconfig.json'] },
       files: ['*.ts'],
       rules: {
         'no-unused-vars': 0,
@@ -92,9 +70,7 @@ module.exports = {
         'import/order': [
           'warn',
           {
-            alphabetize: {
-              order: 'asc',
-            },
+            alphabetize: { order: 'asc' },
             groups: [
               'builtin',
               'external',
@@ -108,25 +84,16 @@ module.exports = {
         ],
         'sort-imports': [
           'error',
-          {
-            ignoreCase: true,
-            ignoreDeclarationSort: true,
-          },
+          { ignoreCase: true, ignoreDeclarationSort: true },
         ],
         '@typescript-eslint/no-unused-vars': [
           'warn',
-          {
-            args: 'none',
-            caughtErrors: 'none',
-          },
+          { args: 'none', caughtErrors: 'none' },
         ],
         '@typescript-eslint/prefer-optional-chain': 2,
         '@typescript-eslint/consistent-type-assertions': [
           2,
-          {
-            assertionStyle: 'as',
-            objectLiteralTypeAssertions: 'never',
-          },
+          { assertionStyle: 'as', objectLiteralTypeAssertions: 'never' },
         ],
         '@typescript-eslint/consistent-type-imports': 'error',
         '@typescript-eslint/no-import-type-side-effects': 'error',

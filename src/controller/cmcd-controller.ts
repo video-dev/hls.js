@@ -175,9 +175,7 @@ export default class CMCDController implements ComponentAPI {
       }, {});
     }
 
-    const options: CmcdEncodeOptions = {
-      baseUrl: context.url,
-    };
+    const options: CmcdEncodeOptions = { baseUrl: context.url };
 
     if (this.useHeaders) {
       if (!context.headers) {
@@ -212,10 +210,7 @@ export default class CMCDController implements ComponentAPI {
       const { frag, part } = context;
       const level = this.hls.levels[frag.level];
       const ot = this.getObjectType(frag);
-      const data: Cmcd = {
-        d: (part || frag).duration * 1000,
-        ot,
-      };
+      const data: Cmcd = { d: (part || frag).duration * 1000, ot };
 
       if (
         ot === CmcdObjectType.VIDEO ||
@@ -311,11 +306,11 @@ export default class CMCDController implements ComponentAPI {
       levels = hls.levels.slice(0, len);
     }
 
-    for (const level of levels) {
+    levels.forEach((level) => {
       if (level.bitrate > bitrate) {
         bitrate = level.bitrate;
       }
-    }
+    });
 
     return bitrate > 0 ? bitrate : NaN;
   }

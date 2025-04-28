@@ -1,10 +1,5 @@
 module.exports = {
-  env: {
-    node: true,
-    commonjs: true,
-    es6: false,
-    mocha: true,
-  },
+  env: { node: true, commonjs: true, es6: false, mocha: true },
   plugins: ['mocha', 'n'],
   globals: {
     // Test globals
