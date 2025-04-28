@@ -127,7 +127,7 @@ export default class LevelController extends BasePlaylistController {
           undefined;
       }
 
-      if (videoCodec?.indexOf('avc1') === 0) {
+      if (videoCodec) {
         videoCodec = levelParsed.videoCodec = convertAVC1ToAVCOTI(videoCodec);
       }
 

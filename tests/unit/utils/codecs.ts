@@ -25,6 +25,15 @@ describe('codecs', function () {
         'avc1.64001E,avc1.64001f',
       );
     });
+
+    it('only converts avc1 codec strings in mixed video codecs', function () {
+      expect(convertAVC1ToAVCOTI('avc1.66.30,dvh1.05.07')).to.equal(
+        'avc1.42001e,dvh1.05.07',
+      );
+      expect(convertAVC1ToAVCOTI('dvh1.05.07,avc1.77.30')).to.equal(
+        'dvh1.05.07,avc1.4d001e',
+      );
+    });
   });
 
   describe('fillInMissingAV01Params', function () {
