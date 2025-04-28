@@ -256,13 +256,11 @@ export function convertAVC1ToAVCOTI(videoCodecs: string): string {
   const codecs = videoCodecs.split(',');
   for (let i = 0; i < codecs.length; i++) {
     const avcdata = codecs[i].split('.');
-    if (avcdata.length > 2) {
-      let result = avcdata.shift() + '.';
-      result += parseInt(avcdata.shift() as string).toString(16);
-      result += (
-        '000' + parseInt(avcdata.shift() as string).toString(16)
-      ).slice(-4);
-      codecs[i] = result;
+    // only convert codec strings starting with avc1 (Examples: avc1.64001f,dvh1.05.07)
+    if (avcdata.length > 2 && avcdata[0] === 'avc1') {
+      codecs[i] = `avc1.${parseInt(avcdata[1]).toString(16)}${(
+        '000' + parseInt(avcdata[2]).toString(16)
+      ).slice(-4)}`;
     }
   }
   return codecs.join(',');
