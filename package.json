@@ -133,5 +133,8 @@
     "typescript": "5.8.3",
     "url-toolkit": "2.2.5",
     "wrangler": "3.114.6"
+  },
+  "dependencies": {
+    "eslint-plugin-no-for-of-loops": "^1.0.1"
   }
 }
