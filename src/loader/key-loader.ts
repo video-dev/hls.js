@@ -91,7 +91,7 @@ export default class KeyLoader implements ComponentAPI {
   loadClear(
     loadingFrag: Fragment,
     encryptedFragments: Fragment[],
-  ): void | Promise<void> {
+  ): null | Promise<void> {
     if (this.emeController && this.config.emeEnabled) {
       // access key-system with nearest key on start (loading frag is unencrypted)
       if (encryptedFragments.length) {
@@ -109,7 +109,7 @@ export default class KeyLoader implements ComponentAPI {
               });
           }
         }
-      } else if (this.config.experimentalKeySystemAccessForClearContent) {
+      } else if (this.config.requireKeySystemAccessOnStart) {
         const keySystemsInConfig = getKeySystemsForConfig(this.config);
         if (keySystemsInConfig.length) {
           return this.emeController
@@ -120,6 +120,7 @@ export default class KeyLoader implements ComponentAPI {
         }
       }
     }
+    return null;
   }
 
   load(frag: Fragment): Promise<KeyLoadedData> {
