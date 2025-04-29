@@ -839,28 +839,12 @@ export default class BaseStreamController
         );
       }
     } else if (!frag.encrypted) {
-      this.log(
-        `Loading clear ${frag.sn} of [${details.startSN}-${details.endSN}] ${details.encryptedFragments.length ? 'with' : 'without'} encrypted segments in the manifest`,
-      );
-      const keyLoadPromise = this.keyLoader.loadClear(
+      keyLoadingPromise = this.keyLoader.loadClear(
         frag,
         details.encryptedFragments,
       );
-      if (keyLoadPromise) {
-        this.state = State.KEY_LOADING;
-        this.fragCurrent = frag;
-        // Note: Omitted KEY_LOADING event here as we didn't have that for loadClear
-        keyLoadingPromise = keyLoadPromise.then(() => {
-          // TODO: Not sure about this. Do we need to check if the current fragment changed?
-          // For clear segments even if we get the first encrypted fragment back, that won't
-          // match the current fragment of the stream controller.
-          if (!this.fragContextChanged(frag)) {
-            // Note: Omitted KEY_LOADED event here as we didn't have that for loadClear
-            if (this.state === State.KEY_LOADING) {
-              this.state = State.IDLE;
-            }
-          }
-        });
+      if (keyLoadingPromise) {
+        this.log(`[eme] blocking frag load until media-keys acquired`);
       }
     }
 
