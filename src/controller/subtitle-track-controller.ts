@@ -2,15 +2,9 @@ import BasePlaylistController from './base-playlist-controller';
 import { Events } from '../events';
 import { PlaylistContextType } from '../types/loader';
 import { IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
-import {
-  mediaAttributesIdentical,
-  subtitleOptionsIdentical,
-} from '../utils/media-option-attributes';
+import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import { findMatchingOption, matchesOption } from '../utils/rendition-helper';
-import {
-  captionsOrSubtitlesFromCharacteristics,
-  createTrackNode,
-} from '../utils/texttrack-utils';
+import { createTrackNode, getTrackKind } from '../utils/texttrack-utils';
 import type Hls from '../hls';
 import type {
   ErrorData,
@@ -97,21 +91,21 @@ class SubtitleTrackController extends BasePlaylistController {
     if (!this.media || !this.hls.config.renderTextTracksNatively) {
       return;
     }
-    this.tracksInGroup.forEach((track, i) => {
+    this.tracksInGroup.forEach((track) => {
       if (!track.trackNode) {
         track.trackNode = createTrackNode(
           this.media!,
-          captionsOrSubtitlesFromCharacteristics(track.characteristics),
+          getTrackKind(track),
           track.name,
           track.lang,
-          this.trackId === i
-            ? this.subtitleDisplay
-              ? 'showing'
-              : 'hidden'
-            : 'disabled',
         );
       }
     });
+    const track = this.currentTrack?.trackNode?.track;
+    // new tracks are disable before appending
+    if (track?.mode === 'disabled') {
+      track.mode = this._subtitleDisplay ? 'showing' : 'hidden';
+    }
   }
 
   // Listen for subtitle track change, then extract the current track ID.
@@ -407,6 +401,7 @@ class SubtitleTrackController extends BasePlaylistController {
   }
 
   set subtitleTrack(newId: number) {
+    this.selectDefaultTrack = false;
     this.setSubtitleTrack(newId, true);
   }
 
@@ -503,7 +498,7 @@ class SubtitleTrackController extends BasePlaylistController {
       if (track.trackNode) {
         const mode =
           track === nextTrack
-            ? this.subtitleDisplay
+            ? this._subtitleDisplay
               ? 'showing'
               : 'hidden'
             : 'disabled';
@@ -519,7 +514,7 @@ class SubtitleTrackController extends BasePlaylistController {
    * This method is responsible for validating the subtitle index and periodically reloading if live.
    * Dispatches the SUBTITLE_TRACK_SWITCH event, which instructs the subtitle-stream-controller to load the selected track.
    */
-  private setSubtitleTrack(newId: number, byUser: boolean = false): void {
+  private setSubtitleTrack(newId: number, toggleModes: boolean = false): void {
     const tracks = this.tracksInGroup;
 
     // setting this.subtitleTrack will trigger internal logic
@@ -541,8 +536,7 @@ class SubtitleTrackController extends BasePlaylistController {
     const track: MediaPlaylist | null = tracks[newId] || null;
     this.trackId = newId;
     this.currentTrack = track;
-    if (byUser) {
-      this.selectDefaultTrack = false;
+    if (toggleModes) {
       this.toggleTrackModes();
     }
     if (!track) {
@@ -587,18 +581,35 @@ class SubtitleTrackController extends BasePlaylistController {
       return;
     }
     let trackId = -1;
-    for (let i = 0; i < this.tracksInGroup.length; i++) {
-      const track = this.tracksInGroup[i];
-      if (track.trackNode?.track.mode === 'showing') {
-        trackId = i;
-        break;
-      } else if (trackId === -1 && track.trackNode?.track.mode === 'hidden') {
-        trackId = i;
+    // Prefer previously selected track
+    if (this.currentTrack) {
+      const mode = this.currentTrack.trackNode?.track.mode;
+      if (mode === 'showing') {
+        trackId = this.trackId;
+      } else if (mode === 'hidden') {
+        for (let i = 0; i < this.tracksInGroup.length; i++) {
+          if (this.tracksInGroup[i].trackNode?.track.mode === 'showing') {
+            trackId = i;
+            break;
+          }
+        }
+        if (trackId < 0) {
+          trackId = this.trackId;
+        }
       }
     }
-    if (this.trackId !== trackId) {
-      this.setSubtitleTrack(trackId, true);
+    if (trackId < 0) {
+      for (let i = 0; i < this.tracksInGroup.length; i++) {
+        const mode = this.tracksInGroup[i].trackNode?.track.mode;
+        if (mode === 'showing') {
+          trackId = i;
+          break;
+        } else if (trackId < 0 && mode === 'hidden') {
+          trackId = i;
+        }
+      }
     }
+    this.setSubtitleTrack(trackId, true);
   };
 }
 

@@ -1,11 +1,12 @@
 import { logger } from './logger';
+import type { MediaPlaylist } from '../hls';
 
 // This is a replacement of the native addTextTrack method.
 // TextTracks created by the native method are unremovable since their livecycles
 // are neither associated with the current media nor managed by user code.
 export function createTrackNode(
   videoEl: HTMLMediaElement,
-  kind: TextTrackKind,
+  kind: TextTrackKind | 'forced',
   label: string,
   lang: string = '',
   mode: TextTrackMode = 'disabled',
@@ -17,6 +18,7 @@ export function createTrackNode(
     el.srclang = lang;
   }
   // To avoid an issue of the built-in captions menu in Chrome
+  // https://github.com/video-dev/hls.js/issues/2198#issuecomment-761614248
   if (navigator.userAgent.includes('Chrome/')) {
     el.src = 'data:,WEBVTT';
   }
@@ -25,13 +27,17 @@ export function createTrackNode(
   return el;
 }
 
-export function captionsOrSubtitlesFromCharacteristics(
-  characteristics?: string,
-): TextTrackKind {
+export function getTrackKind(track: MediaPlaylist): TextTrackKind | 'forced' {
   if (
-    characteristics &&
-    /transcribes-spoken-dialog/gi.test(characteristics) &&
-    /describes-music-and-sound/gi.test(characteristics)
+    track.forced &&
+    (navigator.vendor.includes('Apple') ||
+      /iPhone|iPad|iPod/.test(navigator.userAgent))
+  ) {
+    return 'forced';
+  } else if (
+    track.characteristics &&
+    /transcribes-spoken-dialog/gi.test(track.characteristics) &&
+    /describes-music-and-sound/gi.test(track.characteristics)
   ) {
     return 'captions';
   }

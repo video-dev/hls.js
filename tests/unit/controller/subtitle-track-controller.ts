@@ -214,15 +214,16 @@ describe('SubtitleTrackController', function () {
     it('should not respond to unmanaged tracks', function () {
       return new Promise((resolve) => {
         self.setTimeout(() => {
-          const setSubtitleTrack = sinon.spy(
-            subtitleTrackController,
-            'setSubtitleTrack' as any,
-          );
+          const triggerSpy = sandbox.spy(hls, 'trigger');
 
           expect(subtitleTrackController.subtitleTrack).to.equal(-1);
-          videoElement.addTextTrack('subtitles', 'foo', 'en').mode = 'showing';
+          const track = videoElement.addTextTrack('subtitles', 'foo', 'en');
+          track.mode = 'showing';
           self.setTimeout(() => {
-            expect(setSubtitleTrack).to.have.not.been.called;
+            expect(triggerSpy).to.have.not.been.calledWith(
+              'hlsSubtitleTrackSwitch',
+            );
+            expect(track.mode).to.equal('showing');
             resolve(true);
           }, 500);
         }, 0);
