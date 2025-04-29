@@ -844,6 +844,8 @@ export default class BaseStreamController
         details.encryptedFragments,
       );
       if (keyLoadingPromise) {
+        // TODO: This gets logged on every clear segment load regardless of having key system initialized.
+        // keyLoader.loadClear should be optimized to not return a promise if we don't need to wait for key system access.
         this.log(`[eme] blocking frag load until media-keys acquired`);
       }
     }
