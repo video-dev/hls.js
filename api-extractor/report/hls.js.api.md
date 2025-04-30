@@ -4497,8 +4497,8 @@ export type StreamControllerConfig = {
     maxMaxBufferLength: number;
     startFragPrefetch: boolean;
     testBandwidth: boolean;
-    syncLiveStartPositionWithAVSegmentBoundaries: boolean;
-    syncLiveStartPositionWithMainSegmentBoundary: boolean;
+    startOnAVSegmentBoundary: boolean;
+    startOnSegmentBoundary: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "SubtitleFragProcessedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

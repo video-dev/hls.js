@@ -1114,15 +1114,9 @@ export default class StreamController
         );
         return true;
       }
-      const {
-        syncLiveStartPositionWithMainSegmentBoundary,
-        syncLiveStartPositionWithAVSegmentBoundaries,
-      } = this.config;
+      const { startOnSegmentBoundary, startOnAVSegmentBoundary } = this.config;
       const seekToSegmentBoundary =
-        syncLiveStartPositionWithMainSegmentBoundary ||
-        syncLiveStartPositionWithAVSegmentBoundaries;
-      const seekToAudioSegmentBoundary =
-        syncLiveStartPositionWithAVSegmentBoundaries;
+        startOnSegmentBoundary || startOnAVSegmentBoundary;
 
       // Offset start position by timeline offset
       const timelineOffset = this.timelineOffset;
@@ -1143,8 +1137,8 @@ export default class StreamController
         false,
       );
       if (
-        (!audioFrag && seekToAudioSegmentBoundary) ||
-        (!mainFrag && seekToSegmentBoundary)
+        (!mainFrag && seekToSegmentBoundary) ||
+        (!audioFrag && startOnAVSegmentBoundary)
       ) {
         return false;
       }
