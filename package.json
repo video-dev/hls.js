@@ -75,7 +75,7 @@
     "@babel/preset-typescript": "7.27.0",
     "@babel/register": "7.25.9",
     "@microsoft/api-documenter": "7.26.23",
-    "@microsoft/api-extractor": "7.52.3",
+    "@microsoft/api-extractor": "7.52.5",
     "@rollup/plugin-alias": "5.1.1",
     "@rollup/plugin-babel": "6.0.4",
     "@rollup/plugin-commonjs": "28.0.3",
@@ -94,7 +94,7 @@
     "babel-plugin-transform-remove-console": "6.9.4",
     "chai": "4.5.0",
     "chart.js": "2.9.4",
-    "chromedriver": "135.0.1",
+    "chromedriver": "135.0.3",
     "doctoc": "2.2.1",
     "es-check": "8.0.2",
     "eslint": "8.57.1",
@@ -102,6 +102,7 @@
     "eslint-plugin-import": "2.31.0",
     "eslint-plugin-mocha": "10.5.0",
     "eslint-plugin-n": "17.17.0",
+    "eslint-plugin-no-for-of-loops": "1.0.1",
     "eslint-plugin-promise": "7.2.1",
     "eventemitter3": "5.0.1",
     "http-server": "14.1.1",
@@ -132,6 +133,6 @@
     "sinon-chai": "3.7.0",
     "typescript": "5.8.3",
     "url-toolkit": "2.2.5",
-    "wrangler": "3.114.6"
+    "wrangler": "3.114.7"
   }
 }
