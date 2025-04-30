@@ -49,7 +49,7 @@ import type {
 import type { Level } from '../types/level';
 import type { Track, TrackSet } from '../types/track';
 import type { TransmuxerResult } from '../types/transmuxer';
-import type { BufferInfo } from '../utils/buffer-helper';
+import type { BufferInfo, BufferTimeRange } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -769,7 +769,45 @@ export default class StreamController
               3,
             )}`,
           );
-          media.currentTime = liveSyncPosition;
+
+          const bufferInfo = this.getMainFwdBufferInfo();
+
+          if (!bufferInfo) {
+            return;
+          }
+
+          const isLiveSyncInBuffer =
+            liveSyncPosition >= bufferInfo.start &&
+            liveSyncPosition <= bufferInfo.end;
+
+          if (isLiveSyncInBuffer) {
+            media.currentTime = liveSyncPosition;
+            return;
+          }
+
+          if (!bufferInfo.buffered) {
+            return;
+          }
+
+          let nextBufferedRange: BufferTimeRange | null = null;
+
+          for (let i = 0; i < bufferInfo.buffered.length; i++) {
+            const range = bufferInfo.buffered[i];
+            if (range.start > currentTime) {
+              nextBufferedRange = range;
+              break;
+            }
+          }
+
+          if (!nextBufferedRange) {
+            return;
+          }
+
+          media.currentTime = nextBufferedRange.start;
+
+          if (media.buffered.length > 0) {
+            this.flushMainBuffer(0, nextBufferedRange.start);
+          }
         }
       }
     }
