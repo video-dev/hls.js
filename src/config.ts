@@ -219,6 +219,8 @@ export type StreamControllerConfig = {
   maxMaxBufferLength: number;
   startFragPrefetch: boolean;
   testBandwidth: boolean;
+  syncLiveStartPositionWithAVSegmentBoundaries: boolean;
+  syncLiveStartPositionWithMainSegmentBoundary: boolean;
 };
 
 export type GapControllerConfig = {
@@ -371,6 +373,8 @@ export const hlsDefaultConfig: HlsConfig = {
   maxBufferLength: 30, // used by stream-controller
   backBufferLength: Infinity, // used by buffer-controller
   frontBufferFlushThreshold: Infinity,
+  syncLiveStartPositionWithAVSegmentBoundaries: false, // used by stream-controller
+  syncLiveStartPositionWithMainSegmentBoundary: false, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxFragLookUpTolerance: 0.25, // used by stream-controller
   maxBufferHole: 0.1, // used by stream-controller and gap-controller

@@ -1889,7 +1889,7 @@ export class FragmentTracker implements ComponentAPI {
     // (undocumented)
     fragBuffered(frag: MediaFragment, force?: true): void;
     getAppendedFrag(position: number, levelType: PlaylistLevelType): Fragment | Part | null;
-    getBufferedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | null;
+    getBufferedFrag(position: number, levelType: PlaylistLevelType, buffered?: boolean): MediaFragment | null;
     // (undocumented)
     getFragAtPos(position: number, levelType: PlaylistLevelType, buffered?: boolean): MediaFragment | null;
     getPartialFragment(time: number): MediaFragment | null;
@@ -4471,7 +4471,7 @@ export class StreamController extends BaseStreamController implements NetworkCom
     protected onTickEnd(): void;
     // (undocumented)
     protected registerListeners(): void;
-    protected seekToStartPos(): void;
+    protected seekToStartPos(): boolean;
     // (undocumented)
     startLoad(startPosition: number, skipSeekToStartPosition?: boolean): void;
     // (undocumented)
@@ -4497,6 +4497,8 @@ export type StreamControllerConfig = {
     maxMaxBufferLength: number;
     startFragPrefetch: boolean;
     testBandwidth: boolean;
+    syncLiveStartPositionWithAVSegmentBoundaries: boolean;
+    syncLiveStartPositionWithMainSegmentBoundary: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "SubtitleFragProcessedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

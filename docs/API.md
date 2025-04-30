@@ -30,6 +30,8 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`maxBufferLength`](#maxbufferlength)
   - [`backBufferLength`](#backbufferlength)
   - [`frontBufferFlushThreshold`](#frontbufferflushthreshold)
+  - [`syncLiveStartPositionWithMainSegmentBoundary`](#synclivestartpositionwithmainsegmentboundary)
+  - [`syncLiveStartPositionWithAVSegmentBoundaries`](#synclivestartpositionwithavsegmentboundaries)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
@@ -589,6 +591,20 @@ The maximum duration of buffered media to keep once it has been played, in secon
 (default: `Infinity`)
 
 The maximum duration of buffered media, in seconds, from the play position to keep before evicting non-contiguous forward ranges. A value of `Infinity` means no active eviction will take place; This value will always be at least the `maxBufferLength`.
+
+### `syncLiveStartPositionWithMainSegmentBoundary`
+
+(default: `false`)
+
+When set to `true`, the player will align the live start position with the closest video segment boundary when preparing playback. This ensures playback starts at a clean segment boundary rather than potentially in the middle of a segment, which can prevent some segment skipping. This is helpful for when liveSyncDurationCount or liveSyncDuration, do not calculate start position to be the start position of a segment.
+Setting this to `true` may increase initial live playback latency slightly, but can provide more stable playback start. When set to `false`, playback will start at the exact position determined by the player's live sync calculations, which could be in the middle of a segment.
+
+### `syncLiveStartPositionWithAVSegmentBoundaries`
+
+(default: `false`)
+
+When set to `true`, the player will align the live start position with the greatest value of the closest audio & video segments boundaries when preparing playback. This ensures playback starts at a clean segment boundary rather than potentially in the middle of a segment, which can prevent some segment skipping. This is helpful for when liveSyncDurationCount or liveSyncDuration, do not calculate start position to be the start position of a segment and this is especially helpful for demuxed streams where audio and video segments do not perfectly align.
+Setting this to `true` may increase initial live playback latency slightly, but can provide more stable playback start. When set to `false`, playback will start at the exact position determined by the player's live sync calculations, which could be in the middle of a segment.
 
 ### `maxBufferSize`
 

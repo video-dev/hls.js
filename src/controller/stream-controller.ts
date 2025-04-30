@@ -67,6 +67,7 @@ export default class StreamController
   private level: number = -1;
   private _forceStartLoad: boolean = false;
   private _hasEnoughToStart: boolean = false;
+  private seekedToStartPos: boolean = false;
   private altAudio: AlternateAudio = AlternateAudio.DISABLED;
   private audioOnly: boolean = false;
   private fragPlaying: Fragment | null = null;
@@ -160,7 +161,8 @@ export default class StreamController
         // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
         hls.nextLoadLevel = startLevel;
         this.level = hls.loadLevel;
-        this._hasEnoughToStart = !!skipSeekToStartPosition;
+        this.seekedToStartPos = this._hasEnoughToStart =
+          !!skipSeekToStartPosition;
       }
       // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
       if (
@@ -413,10 +415,15 @@ export default class StreamController
     }
   }
 
-  private getBufferedFrag(position: number) {
+  private getBufferedFrag(
+    position: number,
+    playlistLevelType: PlaylistLevelType = PlaylistLevelType.MAIN,
+    buffered: boolean = true,
+  ) {
     return this.fragmentTracker.getBufferedFrag(
       position,
-      PlaylistLevelType.MAIN,
+      playlistLevelType,
+      buffered,
     );
   }
 
@@ -565,7 +572,7 @@ export default class StreamController
     if (transferringMedia) {
       return;
     }
-    this._hasEnoughToStart = false;
+    this.seekedToStartPos = this._hasEnoughToStart = false;
   }
 
   private onMediaPlaying = () => {
@@ -978,9 +985,12 @@ export default class StreamController
     if (!media) {
       return;
     }
-    if (!this._hasEnoughToStart && BufferHelper.getBuffered(media).length) {
-      this._hasEnoughToStart = true;
-      this.seekToStartPos();
+    if (!this._hasEnoughToStart || !this.seekedToStartPos) {
+      const buffered = BufferHelper.getBuffered(media);
+      if (buffered.length) {
+        this._hasEnoughToStart = true;
+        this.seekedToStartPos = this.seekToStartPos();
+      }
     }
     if (bufferedMainFragment) {
       this.tick();
@@ -1088,10 +1098,10 @@ export default class StreamController
   /**
    * Seeks to the set startPosition if not equal to the mediaElement's current time.
    */
-  protected seekToStartPos() {
+  protected seekToStartPos(): boolean {
     const { media } = this;
     if (!media) {
-      return;
+      return false;
     }
     const currentTime = media.currentTime;
     let startPosition = this.startPosition;
@@ -1102,8 +1112,17 @@ export default class StreamController
         this.log(
           `could not seek to ${startPosition}, already seeking at ${currentTime}`,
         );
-        return;
+        return true;
       }
+      const {
+        syncLiveStartPositionWithMainSegmentBoundary,
+        syncLiveStartPositionWithAVSegmentBoundaries,
+      } = this.config;
+      const seekToSegmentBoundary =
+        syncLiveStartPositionWithMainSegmentBoundary ||
+        syncLiveStartPositionWithAVSegmentBoundaries;
+      const seekToAudioSegmentBoundary =
+        syncLiveStartPositionWithAVSegmentBoundaries;
 
       // Offset start position by timeline offset
       const timelineOffset = this.timelineOffset;
@@ -1113,15 +1132,37 @@ export default class StreamController
       const details = this.getLevelDetails();
       const buffered = BufferHelper.getBuffered(media);
       const bufferStart = buffered.length ? buffered.start(0) : 0;
-      const delta = bufferStart - startPosition;
+      const mainFrag = this.getBufferedFrag(
+        bufferStart + this.config.maxFragLookUpTolerance,
+        PlaylistLevelType.MAIN,
+        false,
+      );
+      const audioFrag = this.getBufferedFrag(
+        bufferStart + this.config.maxFragLookUpTolerance,
+        PlaylistLevelType.AUDIO,
+        false,
+      );
+      if (
+        (!audioFrag && seekToAudioSegmentBoundary) ||
+        (!mainFrag && seekToSegmentBoundary)
+      ) {
+        return false;
+      }
+      const newStartPosition = Math.max(
+        bufferStart,
+        mainFrag?.start ?? 0,
+        audioFrag?.start ?? 0,
+      );
+      const delta = newStartPosition - startPosition;
       const skipTolerance = Math.max(
         this.config.maxBufferHole,
         this.config.maxFragLookUpTolerance,
       );
       if (
-        delta > 0 &&
-        (delta < skipTolerance ||
-          (this.loadingParts && delta < 2 * (details?.partTarget || 0)))
+        (seekToSegmentBoundary && newStartPosition < startPosition) ||
+        (delta > 0 &&
+          (delta < skipTolerance ||
+            (this.loadingParts && delta < 2 * (details?.partTarget || 0))))
       ) {
         this.log(`adjusting start position by ${delta} to match buffer start`);
         startPosition += delta;
@@ -1134,6 +1175,7 @@ export default class StreamController
         media.currentTime = startPosition;
       }
     }
+    return true;
   }
 
   private _getAudioCodec(currentLevel) {
@@ -1356,7 +1398,9 @@ export default class StreamController
 
   private logMuxedErr(frag: Fragment) {
     this.warn(
-      `${isMediaFragment(frag) ? 'Media' : 'Init'} segment with muxed audiovideo where only video expected: ${frag.url}`,
+      `${
+        isMediaFragment(frag) ? 'Media' : 'Init'
+      } segment with muxed audiovideo where only video expected: ${frag.url}`,
     );
   }
 
@@ -1464,9 +1508,13 @@ export default class StreamController
       this.log(
         `Init video buffer, container:${
           video.container
-        }, codecs[level/parsed]=[${currentLevel.videoCodec || ''}/${
-          parsedVideoCodec
-        }]${video.codec !== parsedVideoCodec ? ' parsed-corrected=' + video.codec : ''}${video.supplemental ? ' supplemental=' + video.supplemental : ''}`,
+        }, codecs[level/parsed]=[${
+          currentLevel.videoCodec || ''
+        }/${parsedVideoCodec}]${
+          video.codec !== parsedVideoCodec
+            ? ' parsed-corrected=' + video.codec
+            : ''
+        }${video.supplemental ? ' supplemental=' + video.supplemental : ''}`,
       );
       delete tracks.audiovideo;
     }
