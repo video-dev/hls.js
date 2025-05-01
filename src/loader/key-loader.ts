@@ -109,7 +109,10 @@ export default class KeyLoader implements ComponentAPI {
               });
           }
         }
-      } else if (this.config.requireKeySystemAccessOnStart) {
+      } else if (
+        this.config.requireKeySystemAccessOnStart &&
+        !this.emeController.getSelectedKeySystemFormats().length
+      ) {
         const keySystemsInConfig = getKeySystemsForConfig(this.config);
         if (keySystemsInConfig.length) {
           return this.emeController

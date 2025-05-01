@@ -51,6 +51,7 @@ interface KeySystemAccessPromises {
   keySystemAccess: Promise<MediaKeySystemAccess>;
   mediaKeys?: Promise<MediaKeys>;
   certificate?: Promise<BufferSource | void>;
+  hasMediaKeys?: boolean;
 }
 
 export interface MediaKeySessionContext {
@@ -284,6 +285,7 @@ class EMEController extends Logger implements ComponentAPI {
           .createMediaKeys()
           .then((mediaKeys) => {
             this.log(`Media-keys created for "${keySystem}"`);
+            keySystemAccessPromises.hasMediaKeys = true;
             return certificateRequest.then((certificate) => {
               if (certificate) {
                 return this.setMediaKeysServerCertificate(
@@ -381,6 +383,17 @@ class EMEController extends Logger implements ComponentAPI {
       } (data length: ${data ? data.byteLength : data})`,
     );
     return keySession.update(data);
+  }
+
+  public getSelectedKeySystemFormats(): KeySystemFormats[] {
+    return (Object.keys(this.keySystemAccessPromises) as KeySystems[])
+      .map((keySystem) => ({
+        keySystem,
+        hasMediaKeys: this.keySystemAccessPromises[keySystem].hasMediaKeys,
+      }))
+      .filter(({ hasMediaKeys }) => !!hasMediaKeys)
+      .map(({ keySystem }) => keySystemToKeySystemFormat(keySystem))
+      .filter((keySystem): keySystem is KeySystemFormats => !!keySystem);
   }
 
   public selectKeySystem(

@@ -1137,6 +1137,8 @@ export class EMEController extends Logger implements ComponentAPI {
     // (undocumented)
     destroy(): void;
     // (undocumented)
+    getSelectedKeySystemFormats(): KeySystemFormats[];
+    // (undocumented)
     loadKey(data: KeyLoadedData): Promise<MediaKeySessionContext>;
     // (undocumented)
     selectKeySystem(keySystemsToAttempt: KeySystems[]): Promise<KeySystemFormats>;
@@ -2920,7 +2922,7 @@ export class KeyLoader implements ComponentAPI {
     // (undocumented)
     load(frag: Fragment): Promise<KeyLoadedData>;
     // (undocumented)
-    loadClear(loadingFrag: Fragment, encryptedFragments: Fragment[]): void | Promise<void>;
+    loadClear(loadingFrag: Fragment, encryptedFragments: Fragment[]): null | Promise<void>;
     // (undocumented)
     loadInternal(frag: Fragment, keySystemFormat?: KeySystemFormats): Promise<KeyLoadedData>;
     // (undocumented)
