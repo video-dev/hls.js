@@ -67,7 +67,6 @@ export default class StreamController
   private level: number = -1;
   private _forceStartLoad: boolean = false;
   private _hasEnoughToStart: boolean = false;
-  private seekedToStartPos: boolean = false;
   private altAudio: AlternateAudio = AlternateAudio.DISABLED;
   private audioOnly: boolean = false;
   private fragPlaying: Fragment | null = null;
@@ -161,8 +160,7 @@ export default class StreamController
         // hls.nextLoadLevel remains until it is set to a new value or until a new frag is successfully loaded
         hls.nextLoadLevel = startLevel;
         this.level = hls.loadLevel;
-        this.seekedToStartPos = this._hasEnoughToStart =
-          !!skipSeekToStartPosition;
+        this._hasEnoughToStart = !!skipSeekToStartPosition;
       }
       // if startPosition undefined but lastCurrentTime set, set startPosition to last currentTime
       if (
@@ -415,15 +413,10 @@ export default class StreamController
     }
   }
 
-  private getBufferedFrag(
-    position: number,
-    playlistLevelType: PlaylistLevelType = PlaylistLevelType.MAIN,
-    buffered: boolean = true,
-  ) {
+  private getBufferedFrag(position: number) {
     return this.fragmentTracker.getBufferedFrag(
       position,
-      playlistLevelType,
-      buffered,
+      PlaylistLevelType.MAIN,
     );
   }
 
@@ -572,7 +565,7 @@ export default class StreamController
     if (transferringMedia) {
       return;
     }
-    this.seekedToStartPos = this._hasEnoughToStart = false;
+    this._hasEnoughToStart = false;
   }
 
   private onMediaPlaying = () => {
@@ -985,12 +978,9 @@ export default class StreamController
     if (!media) {
       return;
     }
-    if (!this._hasEnoughToStart || !this.seekedToStartPos) {
-      const buffered = BufferHelper.getBuffered(media);
-      if (buffered.length) {
-        this._hasEnoughToStart = true;
-        this.seekedToStartPos = this.seekToStartPos();
-      }
+    if (!this._hasEnoughToStart && BufferHelper.getBuffered(media).length) {
+      this._hasEnoughToStart = true;
+      this.seekToStartPos();
     }
     if (bufferedMainFragment) {
       this.tick();
@@ -1098,10 +1088,10 @@ export default class StreamController
   /**
    * Seeks to the set startPosition if not equal to the mediaElement's current time.
    */
-  protected seekToStartPos(): boolean {
+  protected seekToStartPos() {
     const { media } = this;
     if (!media) {
-      return false;
+      return;
     }
     const currentTime = media.currentTime;
     let startPosition = this.startPosition;
@@ -1112,11 +1102,8 @@ export default class StreamController
         this.log(
           `could not seek to ${startPosition}, already seeking at ${currentTime}`,
         );
-        return true;
+        return;
       }
-      const { startOnSegmentBoundary, startOnAVSegmentBoundary } = this.config;
-      const seekToSegmentBoundary =
-        startOnSegmentBoundary || startOnAVSegmentBoundary;
 
       // Offset start position by timeline offset
       const timelineOffset = this.timelineOffset;
@@ -1126,34 +1113,13 @@ export default class StreamController
       const details = this.getLevelDetails();
       const buffered = BufferHelper.getBuffered(media);
       const bufferStart = buffered.length ? buffered.start(0) : 0;
-      const mainFrag = this.getBufferedFrag(
-        bufferStart + this.config.maxFragLookUpTolerance,
-        PlaylistLevelType.MAIN,
-        false,
-      );
-      const audioFrag = this.getBufferedFrag(
-        bufferStart + this.config.maxFragLookUpTolerance,
-        PlaylistLevelType.AUDIO,
-        false,
-      );
-      if (
-        (!mainFrag && seekToSegmentBoundary) ||
-        (!audioFrag && startOnAVSegmentBoundary)
-      ) {
-        return false;
-      }
-      const newStartPosition = Math.max(
-        bufferStart,
-        mainFrag?.start ?? 0,
-        audioFrag?.start ?? 0,
-      );
-      const delta = newStartPosition - startPosition;
+      const delta = bufferStart - startPosition;
       const skipTolerance = Math.max(
         this.config.maxBufferHole,
         this.config.maxFragLookUpTolerance,
       );
       if (
-        (seekToSegmentBoundary && newStartPosition < startPosition) ||
+        this.config.startOnSegmentBoundary ||
         (delta > 0 &&
           (delta < skipTolerance ||
             (this.loadingParts && delta < 2 * (details?.partTarget || 0))))
@@ -1169,7 +1135,6 @@ export default class StreamController
         media.currentTime = startPosition;
       }
     }
-    return true;
   }
 
   private _getAudioCodec(currentLevel) {
@@ -1392,9 +1357,7 @@ export default class StreamController
 
   private logMuxedErr(frag: Fragment) {
     this.warn(
-      `${
-        isMediaFragment(frag) ? 'Media' : 'Init'
-      } segment with muxed audiovideo where only video expected: ${frag.url}`,
+      `${isMediaFragment(frag) ? 'Media' : 'Init'} segment with muxed audiovideo where only video expected: ${frag.url}`,
     );
   }
 
@@ -1502,13 +1465,9 @@ export default class StreamController
       this.log(
         `Init video buffer, container:${
           video.container
-        }, codecs[level/parsed]=[${
-          currentLevel.videoCodec || ''
-        }/${parsedVideoCodec}]${
-          video.codec !== parsedVideoCodec
-            ? ' parsed-corrected=' + video.codec
-            : ''
-        }${video.supplemental ? ' supplemental=' + video.supplemental : ''}`,
+        }, codecs[level/parsed]=[${currentLevel.videoCodec || ''}/${
+          parsedVideoCodec
+        }]${video.codec !== parsedVideoCodec ? ' parsed-corrected=' + video.codec : ''}${video.supplemental ? ' supplemental=' + video.supplemental : ''}`,
       );
       delete tracks.audiovideo;
     }

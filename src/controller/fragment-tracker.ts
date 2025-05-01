@@ -109,9 +109,8 @@ export class FragmentTracker implements ComponentAPI {
   public getBufferedFrag(
     position: number,
     levelType: PlaylistLevelType,
-    buffered: boolean = true,
   ): MediaFragment | null {
-    return this.getFragAtPos(position, levelType, buffered);
+    return this.getFragAtPos(position, levelType, true);
   }
 
   public getFragAtPos(

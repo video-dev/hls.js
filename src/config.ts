@@ -219,7 +219,6 @@ export type StreamControllerConfig = {
   maxMaxBufferLength: number;
   startFragPrefetch: boolean;
   testBandwidth: boolean;
-  startOnAVSegmentBoundary: boolean;
   startOnSegmentBoundary: boolean;
 };
 
@@ -373,7 +372,6 @@ export const hlsDefaultConfig: HlsConfig = {
   maxBufferLength: 30, // used by stream-controller
   backBufferLength: Infinity, // used by buffer-controller
   frontBufferFlushThreshold: Infinity,
-  startOnAVSegmentBoundary: false, // used by stream-controller
   startOnSegmentBoundary: false, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxFragLookUpTolerance: 0.25, // used by stream-controller
