@@ -581,33 +581,32 @@ class SubtitleTrackController extends BasePlaylistController {
       return;
     }
     let trackId = -1;
+    let found = false;
     // Prefer previously selected track
     if (this.currentTrack) {
       const mode = this.currentTrack.trackNode?.track.mode;
       if (mode === 'showing') {
         trackId = this.trackId;
+        found = true;
       } else if (mode === 'hidden') {
-        for (let i = 0; i < this.tracksInGroup.length; i++) {
-          if (this.tracksInGroup[i].trackNode?.track.mode === 'showing') {
-            trackId = i;
-            break;
-          }
-        }
-        if (trackId < 0) {
-          trackId = this.trackId;
-        }
+        trackId = this.trackId;
       }
     }
-    if (trackId < 0) {
+    if (!found) {
       for (let i = 0; i < this.tracksInGroup.length; i++) {
         const mode = this.tracksInGroup[i].trackNode?.track.mode;
         if (mode === 'showing') {
           trackId = i;
           break;
         } else if (trackId < 0 && mode === 'hidden') {
+          // If there is no showing track, we can use the hidden track
           trackId = i;
         }
       }
+    }
+    if (trackId > -1) {
+      this._subtitleDisplay =
+        this.tracksInGroup[trackId].trackNode?.track.mode === 'showing';
     }
     this.setSubtitleTrack(trackId, true);
   };
