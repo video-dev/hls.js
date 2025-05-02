@@ -770,43 +770,35 @@ export default class StreamController
             )}`,
           );
 
-          const bufferInfo = this.getMainFwdBufferInfo();
+          if (this.config.liveSyncMode === 'buffered') {
+            const bufferInfo = BufferHelper.bufferInfo(
+              this.media,
+              liveSyncPosition,
+              0,
+            );
 
-          if (!bufferInfo) {
-            return;
-          }
-
-          const isLiveSyncInBuffer =
-            liveSyncPosition >= bufferInfo.start &&
-            liveSyncPosition <= bufferInfo.end;
-
-          if (isLiveSyncInBuffer) {
-            media.currentTime = liveSyncPosition;
-            return;
-          }
-
-          if (!bufferInfo.buffered) {
-            return;
-          }
-
-          let nextBufferedRange: BufferTimeRange | null = null;
-
-          for (let i = 0; i < bufferInfo.buffered.length; i++) {
-            const range = bufferInfo.buffered[i];
-            if (range.start > currentTime) {
-              nextBufferedRange = range;
-              break;
+            if (!bufferInfo || bufferInfo.buffered?.length === 0) {
+              media.currentTime = liveSyncPosition;
+              return;
             }
-          }
 
-          if (!nextBufferedRange) {
-            return;
-          }
+            const isLiveSyncInBuffer = bufferInfo.start <= currentTime;
 
-          media.currentTime = nextBufferedRange.start;
+            if (isLiveSyncInBuffer) {
+              media.currentTime = liveSyncPosition;
+              return;
+            }
 
-          if (media.buffered.length > 0) {
-            this.flushMainBuffer(0, nextBufferedRange.start);
+            const { nextStart } = BufferHelper.bufferInfo(
+              media,
+              currentTime,
+              0,
+            );
+            if (nextStart) {
+              media.currentTime = nextStart;
+            }
+          } else {
+            media.currentTime = liveSyncPosition;
           }
         }
       }
