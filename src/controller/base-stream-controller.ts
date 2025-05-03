@@ -217,6 +217,19 @@ export default class BaseStreamController
       return false;
     }
     // Stream is not "ended" when there is a second buffered range starting before the end of the playlist
+    const bufferedRanges = bufferInfo.buffered;
+    if (
+      this.config.maxBufferHole &&
+      bufferedRanges &&
+      bufferedRanges.length > 1
+    ) {
+      // make sure bufferInfo accounts for any gaps
+      bufferInfo = BufferHelper.bufferedInfo(
+        bufferedRanges,
+        bufferInfo.start,
+        0,
+      );
+    }
     const nextStart = bufferInfo.nextStart;
     const hasSecondBufferedRange =
       nextStart && nextStart > timelineStart && nextStart < levelDetails.edge;

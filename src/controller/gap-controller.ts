@@ -158,7 +158,7 @@ export default class GapController extends TaskLoop {
     if (!config) {
       return;
     }
-    const { media, stalled } = this;
+    const media = this.media;
     if (!media) {
       return;
     }
@@ -280,14 +280,15 @@ export default class GapController extends TaskLoop {
     const detectStallWithCurrentTimeMs = config.detectStallWithCurrentTimeMs;
     const tnow = self.performance.now();
     const tWaiting = this.waiting;
+    let stalled = this.stalled;
     if (stalled === null) {
       // Use time of recent "waiting" event
       if (tWaiting > 0 && tnow - tWaiting < detectStallWithCurrentTimeMs) {
-        this.stalled = tWaiting;
+        stalled = this.stalled = tWaiting;
       } else {
         this.stalled = tnow;
+        return;
       }
-      return;
     }
 
     const stalledDuration = tnow - stalled;
@@ -323,7 +324,7 @@ export default class GapController extends TaskLoop {
       currentTime,
       config.maxBufferHole,
     );
-    this._tryFixBufferStall(bufferedWithHoles, stalledDuration);
+    this._tryFixBufferStall(bufferedWithHoles, stalledDuration, currentTime);
   }
 
   private stallResolved(currentTime: number) {
@@ -429,6 +430,7 @@ export default class GapController extends TaskLoop {
   private _tryFixBufferStall(
     bufferInfo: BufferInfo,
     stalledDurationMs: number,
+    currentTime: number,
   ) {
     const { fragmentTracker, media } = this;
     const config = this.hls?.config;
@@ -436,7 +438,6 @@ export default class GapController extends TaskLoop {
       return;
     }
 
-    const currentTime = media.currentTime;
     const levelDetails = this.hls?.latestLevelDetails;
     const partial = fragmentTracker.getPartialFragment(currentTime);
     if (
@@ -458,12 +459,14 @@ export default class GapController extends TaskLoop {
     // needs to cross some sort of threshold covering all source-buffers content
     // to start playing properly.
     const bufferedRanges = bufferInfo.buffered;
+    const adjacentTraversal = this.adjacentTraversal(bufferInfo, currentTime);
     if (
       ((bufferedRanges &&
         bufferedRanges.length > 1 &&
         bufferInfo.len > config.maxBufferHole) ||
         (bufferInfo.nextStart &&
-          bufferInfo.nextStart - currentTime < config.maxBufferHole)) &&
+          (bufferInfo.nextStart - currentTime < config.maxBufferHole ||
+            adjacentTraversal))) &&
       (stalledDurationMs > config.highBufferWatchdogPeriod * 1000 ||
         this.waiting)
     ) {
@@ -472,6 +475,25 @@ export default class GapController extends TaskLoop {
       // We only try to jump the hole if it's under the configured size
       this._tryNudgeBuffer(bufferInfo);
     }
+  }
+
+  private adjacentTraversal(bufferInfo: BufferInfo, currentTime: number) {
+    const fragmentTracker = this.fragmentTracker;
+    const nextStart = bufferInfo.nextStart;
+    if (fragmentTracker && nextStart) {
+      const current = fragmentTracker.getFragAtPos(
+        currentTime,
+        PlaylistLevelType.MAIN,
+      );
+      const next = fragmentTracker.getFragAtPos(
+        nextStart,
+        PlaylistLevelType.MAIN,
+      );
+      if (current && next) {
+        return next.sn - current.sn < 2;
+      }
+    }
+    return false;
   }
 
   /**
