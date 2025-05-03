@@ -99,4 +99,5 @@ export interface InitSegmentData {
   tracks?: TrackSet;
   initPTS: number | undefined;
   timescale: number | undefined;
+  trackId: number | undefined;
 }
