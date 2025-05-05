@@ -509,6 +509,42 @@ describe('StreamController', function () {
       expect(seekStub).to.have.been.calledOnce;
     });
 
+    it('should seek to start pos when media is buffered and seek to segment boundary', function () {
+      streamController['config'].startOnSegmentBoundary = true;
+      streamController['startPosition'] = 7;
+      streamController['media']?.buffered;
+      streamController['media'] = {
+        buffered: {
+          start() {
+            return 5;
+          },
+          length: 1,
+        },
+        currentTime: 0,
+      } as any as HTMLMediaElement;
+
+      streamController['seekToStartPos']();
+      expect(streamController['media']!.currentTime).to.equal(5);
+    });
+
+    it('should seek to start pos when media is buffered and not seek to segment boundary', function () {
+      streamController['config'].startOnSegmentBoundary = false;
+      streamController['startPosition'] = 7;
+      streamController['media']?.buffered;
+      streamController['media'] = {
+        buffered: {
+          start() {
+            return 5;
+          },
+          length: 1,
+        },
+        currentTime: 0,
+      } as any as HTMLMediaElement;
+
+      streamController['seekToStartPos']();
+      expect(streamController['media']!.currentTime).to.equal(7);
+    });
+
     describe('seekToStartPos', function () {
       it('should seek to startPosition when startPosition is not buffered & the media is not seeking', function () {
         streamController['startPosition'] = 5;
