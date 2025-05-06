@@ -44,6 +44,7 @@ import type TransmuxerInterface from './demux/transmuxer-interface';
 import type { HlsEventEmitter, HlsListeners } from './events';
 import type FragmentLoader from './loader/fragment-loader';
 import type { LevelDetails } from './loader/level-details';
+import type M3U8Parser from './loader/m3u8-parser';
 import type TaskLoop from './task-loop';
 import type { AttachMediaSourceData } from './types/buffer';
 import type {
@@ -59,8 +60,11 @@ import type {
   VideoSelectionOption,
 } from './types/media-playlist';
 import type { BufferInfo, BufferTimeRange } from './utils/buffer-helper';
+import type Cues from './utils/cues';
 import type EwmaBandWidthEstimator from './utils/ewma-bandwidth-estimator';
+import type FetchLoader from './utils/fetch-loader';
 import type { MediaDecodingInfo } from './utils/mediacapabilities-helper';
+import type XhrLoader from './utils/xhr-loader';
 
 /**
  * The `Hls` class is the core of the HLS.js library used to instantiate player instances.
@@ -1280,6 +1284,10 @@ export type {
   TransmuxerInterface,
   InFlightData,
   State,
+  XhrLoader,
+  FetchLoader,
+  Cues,
+  M3U8Parser,
 };
 export type {
   ABRControllerConfig,
