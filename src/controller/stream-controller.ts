@@ -789,8 +789,8 @@ export default class StreamController
               return;
             }
 
-            const { nextStart } = BufferHelper.bufferInfo(
-              media,
+            const { nextStart } = BufferHelper.bufferedInfo(
+              bufferInfo.buffered,
               currentTime,
               0,
             );
