@@ -49,7 +49,7 @@ import type {
 import type { Level } from '../types/level';
 import type { Track, TrackSet } from '../types/track';
 import type { TransmuxerResult } from '../types/transmuxer';
-import type { BufferInfo, BufferTimeRange } from '../utils/buffer-helper';
+import type { BufferInfo } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
