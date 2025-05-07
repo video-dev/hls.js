@@ -777,7 +777,7 @@ export default class StreamController
               0,
             );
 
-            if (!bufferInfo || bufferInfo.buffered?.length === 0) {
+            if (!bufferInfo || !bufferInfo.buffered?.length) {
               media.currentTime = liveSyncPosition;
               return;
             }
