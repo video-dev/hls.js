@@ -772,7 +772,7 @@ export default class StreamController
 
           if (this.config.liveSyncMode === 'buffered') {
             const bufferInfo = BufferHelper.bufferInfo(
-              this.media,
+              media,
               liveSyncPosition,
               0,
             );
