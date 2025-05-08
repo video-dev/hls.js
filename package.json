@@ -71,7 +71,7 @@
     "@babel/plugin-proposal-object-rest-spread": "7.20.7",
     "@babel/plugin-proposal-optional-chaining": "7.21.0",
     "@babel/plugin-transform-object-assign": "7.27.1",
-    "@babel/preset-env": "7.27.1",
+    "@babel/preset-env": "7.27.2",
     "@babel/preset-typescript": "7.27.1",
     "@babel/register": "7.27.1",
     "@microsoft/api-documenter": "7.26.26",
