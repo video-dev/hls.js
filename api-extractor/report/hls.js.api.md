@@ -4561,6 +4561,7 @@ export type StreamControllerConfig = {
     maxMaxBufferLength: number;
     startFragPrefetch: boolean;
     testBandwidth: boolean;
+    liveSyncMode?: 'edge' | 'buffered';
     startOnSegmentBoundary: boolean;
 };
 

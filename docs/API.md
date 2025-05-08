@@ -43,7 +43,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`nudgeOnVideoHole`](#nudgeonvideohole)
   - [`maxFragLookUpTolerance`](#maxfraglookuptolerance)
   - [`maxMaxBufferLength`](#maxmaxbufferlength)
-  - [`liveSyncMode`](#liveSyncMode)
+  - [`liveSyncMode`](#livesyncmode)
   - [`liveSyncDurationCount`](#livesyncdurationcount)
   - [`liveSyncOnStallIncrease`](#livesynconstallincrease)
   - [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount)
@@ -707,6 +707,7 @@ this is to mimic the browser behaviour (the buffer eviction algorithm is startin
 (default: `'edge'`)
 
 Controls how playback synchronizes to the live edge:
+
 - `'edge'`: When the playhead moves outside the prescribed distance from the live edge, immediately jump to `liveSyncPosition`.
 - `'buffered'`: When the playhead moves outside the prescribed distance from the live edge, if `liveSyncPosition` is buffered, seek there; otherwise, continue playback from the start of the next buffered segment.
 
