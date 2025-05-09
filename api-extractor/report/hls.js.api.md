@@ -1137,6 +1137,8 @@ export class EMEController extends Logger implements ComponentAPI {
     // (undocumented)
     destroy(): void;
     // (undocumented)
+    getKeySystemAccess(keySystemsToAttempt: KeySystems[]): Promise<void>;
+    // (undocumented)
     getSelectedKeySystemFormats(): KeySystemFormats[];
     // (undocumented)
     loadKey(data: KeyLoadedData): Promise<MediaKeySessionContext>;

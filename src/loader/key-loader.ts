@@ -1,8 +1,11 @@
 import { LoadError } from './fragment-loader';
 import { ErrorDetails, ErrorTypes } from '../errors';
-import { getKeySystemsForConfig } from '../utils/mediakeys-helper';
-import type { HlsConfig } from '../config';
+import {
+  getKeySystemsForConfig,
+  keySystemFormatToKeySystemDomain,
+} from '../utils/mediakeys-helper';
 import type { LevelKey } from './level-key';
+import type { HlsConfig } from '../config';
 import type EMEController from '../controller/eme-controller';
 import type { MediaKeySessionContext } from '../controller/eme-controller';
 import type { Fragment } from '../loader/fragment';
@@ -92,7 +95,11 @@ export default class KeyLoader implements ComponentAPI {
     loadingFrag: Fragment,
     encryptedFragments: Fragment[],
   ): null | Promise<void> {
-    if (this.emeController && this.config.emeEnabled) {
+    if (
+      this.emeController &&
+      this.config.emeEnabled &&
+      !this.emeController.getSelectedKeySystemFormats().length
+    ) {
       // access key-system with nearest key on start (loading frag is unencrypted)
       if (encryptedFragments.length) {
         const { sn, cc } = loadingFrag;
@@ -106,20 +113,23 @@ export default class KeyLoader implements ComponentAPI {
               .selectKeySystemFormat(frag)
               .then((keySystemFormat) => {
                 frag.setKeyFormat(keySystemFormat);
+                if (
+                  this.emeController &&
+                  this.config.requireKeySystemAccessOnStart
+                ) {
+                  const keySystem =
+                    keySystemFormatToKeySystemDomain(keySystemFormat);
+                  if (keySystem) {
+                    return this.emeController.getKeySystemAccess([keySystem]);
+                  }
+                }
               });
           }
         }
-      } else if (
-        this.config.requireKeySystemAccessOnStart &&
-        !this.emeController.getSelectedKeySystemFormats().length
-      ) {
+      } else if (this.config.requireKeySystemAccessOnStart) {
         const keySystemsInConfig = getKeySystemsForConfig(this.config);
         if (keySystemsInConfig.length) {
-          return this.emeController
-            .selectKeySystem(keySystemsInConfig)
-            .then(() => {
-              /* void */
-            });
+          return this.emeController.getKeySystemAccess(keySystemsInConfig);
         }
       }
     }

@@ -294,7 +294,6 @@ class EMEController extends Logger implements ComponentAPI {
                   certificate,
                 );
               }
-              this.attemptSetMediaKeys(keySystem, mediaKeys);
               return mediaKeys;
             });
           });
@@ -395,6 +394,14 @@ class EMEController extends Logger implements ComponentAPI {
       .filter(({ hasMediaKeys }) => !!hasMediaKeys)
       .map(({ keySystem }) => keySystemToKeySystemFormat(keySystem))
       .filter((keySystem): keySystem is KeySystemFormats => !!keySystem);
+  }
+
+  public getKeySystemAccess(keySystemsToAttempt: KeySystems[]): Promise<void> {
+    return this.getKeySystemSelectionPromise(keySystemsToAttempt).then(
+      ({ keySystem, mediaKeys }) => {
+        return this.attemptSetMediaKeys(keySystem, mediaKeys);
+      },
+    );
   }
 
   public selectKeySystem(
