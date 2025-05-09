@@ -70,6 +70,8 @@ export interface MediaPlaylist {
   url: string;
   videoCodec?: string;
   width?: number;
+  // keep a reference to the track node that is associated with this MediaPlaylist
+  trackNode?: HTMLTrackElement;
 }
 
 export interface MediaAttributes extends AttrList {

@@ -43,7 +43,7 @@ let stopOnStall = getDemoConfigPropOrDefault('stopOnStall', false);
 let bufferingIdx = -1;
 let selectedTestStream = null;
 
-let video = document.querySelector('#video');
+const video = document.querySelector('#video');
 const startTime = Date.now();
 
 let lastSeekingIdx;
@@ -222,6 +222,7 @@ $(document).ready(function () {
   $('#metricsButtonWindow').toggle(self.windowSliding);
   $('#metricsButtonFixed').toggle(!self.windowSliding);
 
+  addVideoEventListeners(video);
   loadSelectedStream();
 
   let tabIndexesCSV = localStorage.getItem(STORAGE_KEYS.demo_tabs);
@@ -353,32 +354,7 @@ function loadSelectedStream() {
 
   logStatus('Loading manifest and attaching video element...');
 
-  const expiredTracks = [].filter.call(
-    video.textTracks,
-    (track) => track.kind !== 'metadata'
-  );
-  if (expiredTracks.length) {
-    const kinds = expiredTracks
-      .map((track) => track.kind)
-      .filter((kind, index, self) => self.indexOf(kind) === index);
-    logStatus(
-      `Replacing video element to remove ${kinds.join(' and ')} text tracks`
-    );
-    const videoWithExpiredTextTracks = video;
-    video = videoWithExpiredTextTracks.cloneNode(false);
-    video.removeAttribute('src');
-    video.volume = videoWithExpiredTextTracks.volume;
-    video.muted = videoWithExpiredTextTracks.muted;
-    videoWithExpiredTextTracks.parentNode.insertBefore(
-      video,
-      videoWithExpiredTextTracks
-    );
-    videoWithExpiredTextTracks.parentNode.removeChild(
-      videoWithExpiredTextTracks
-    );
-  }
   addChartEventListeners(hls);
-  addVideoEventListeners(video);
 
   hls.loadSource(url);
   hls.autoLevelCapping = levelCapping;
