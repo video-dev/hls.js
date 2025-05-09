@@ -31,6 +31,7 @@ import {
   getPartWith,
   updateFragPTSDTS,
 } from '../utils/level-helper';
+import { getKeySystemsForConfig } from '../utils/mediakeys-helper';
 import { appendUint8Array } from '../utils/mp4-tools';
 import TimeRanges from '../utils/time-ranges';
 import type { FragmentTracker } from './fragment-tracker';
@@ -809,8 +810,14 @@ export default class BaseStreamController
           new Error(`frag load aborted, context changed in KEY_LOADING`),
         );
       }
-    } else if (!frag.encrypted && details.encryptedFragments.length) {
-      this.keyLoader.loadClear(frag, details.encryptedFragments);
+    } else if (!frag.encrypted) {
+      keyLoadingPromise = this.keyLoader.loadClear(
+        frag,
+        details.encryptedFragments,
+      );
+      if (keyLoadingPromise) {
+        this.log(`[eme] blocking frag load until media-keys acquired`);
+      }
     }
 
     const fragPrevious = this.fragPrevious;
