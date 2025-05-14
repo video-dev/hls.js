@@ -7,6 +7,7 @@ import Hls from '../../../src/hls';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
 import { AttrList } from '../../../src/utils/attr-list';
+import { IMSC1_CODEC } from '../../../src/utils/imsc1-ttml-parser';
 import type {
   ComponentAPI,
   NetworkComponentAPI,
@@ -40,7 +41,10 @@ describe('SubtitleTrackController', function () {
   let sandbox;
 
   beforeEach(function () {
-    hls = new Hls() as unknown as HlsTestable;
+    hls = new Hls({
+      enableWebVTT: true,
+      enableIMSC1: false,
+    }) as unknown as HlsTestable;
     hls.networkControllers.forEach((component) => component.destroy());
     hls.networkControllers.length = 0;
     hls.coreComponents.forEach((component) => component.destroy());
@@ -73,6 +77,8 @@ describe('SubtitleTrackController', function () {
         name: 'English',
         type: 'SUBTITLES',
         url: 'baz',
+        textCodec: 'webvtt',
+        characteristics: 'public.accessibility.transcribes-spoken-dialog',
         // details: { live: false },
       },
       {
@@ -87,6 +93,7 @@ describe('SubtitleTrackController', function () {
         name: 'Swedish',
         type: 'SUBTITLES',
         url: 'bar',
+        textCodec: 'webvtt',
       },
       {
         attrs: new AttrList({}) as MediaAttributes,
@@ -100,9 +107,47 @@ describe('SubtitleTrackController', function () {
         name: 'Untitled CC',
         type: 'SUBTITLES',
         url: 'foo',
+        characteristics:
+          'public.accessibility.transcribes-spoken-dialog,public.accessibility.describes-music-and-sound',
+        textCodec: 'webvtt',
+        // details: { live: true },
+      },
+      {
+        attrs: new AttrList({}) as MediaAttributes,
+        autoselect: true,
+        bitrate: 0,
+        default: false,
+        forced: false,
+        id: 3,
+        groupId: 'other-text-group', // different groupId
+        lang: 'en-US',
+        name: 'Untitled CC',
+        type: 'SUBTITLES',
+        url: 'foo',
+        characteristics:
+          'public.accessibility.transcribes-spoken-dialog,public.accessibility.describes-music-and-sound',
+        textCodec: 'webvtt',
+        // details: { live: true },
+      },
+      {
+        attrs: new AttrList({}) as MediaAttributes,
+        autoselect: true,
+        bitrate: 0,
+        default: false,
+        forced: false,
+        id: 4,
+        groupId: 'default-text-group',
+        lang: 'en-US',
+        name: 'Untitled CC',
+        type: 'SUBTITLES',
+        url: 'foo',
+        characteristics:
+          'public.accessibility.transcribes-spoken-dialog,public.accessibility.describes-music-and-sound',
+        textCodec: IMSC1_CODEC, // IMSC1 is disabled in this test
         // details: { live: true },
       },
     ];
+
     const levels = [
       {
         subtitleGroups: ['default-text-group'],
@@ -132,25 +177,6 @@ describe('SubtitleTrackController', function () {
       });
     };
 
-    const textTrack1 = videoElement.addTextTrack(
-      'subtitles',
-      'English',
-      'en-US',
-    );
-    const textTrack2 = videoElement.addTextTrack('subtitles', 'Swedish', 'sv');
-    const textTrack3 = videoElement.addTextTrack(
-      'captions',
-      'Untitled CC',
-      'en-US',
-    );
-
-    textTrack1.groupId = 'default-text-group';
-    textTrack2.groupId = 'default-text-group';
-    textTrack3.groupId = 'default-text-group';
-
-    textTrack1.mode = 'disabled';
-    textTrack2.mode = 'disabled';
-    textTrack3.mode = 'disabled';
     sandbox = sinon.createSandbox();
   });
 
@@ -158,71 +184,170 @@ describe('SubtitleTrackController', function () {
     sandbox.restore();
   });
 
+  describe('text track kind', function () {
+    it('the kind of TextTrack should depends on characteristics', function () {
+      switchLevel();
+      expect(videoElement.textTracks[0].kind).to.equal('subtitles');
+      expect(videoElement.textTracks[1].kind).to.equal('subtitles');
+      expect(videoElement.textTracks[2].kind).to.equal('captions');
+    });
+  });
+
+  describe('removable TextTracks', function () {
+    it('should remove TextTracks in onMediaDetaching and add them again in onMediaAttached', function () {
+      switchLevel();
+      expect(videoElement.textTracks.length).to.equal(3);
+      hls.trigger(Events.MEDIA_DETACHING, {});
+      expect(videoElement.textTracks.length).to.equal(0);
+      hls.trigger(Events.MEDIA_ATTACHED, {
+        media: videoElement,
+      });
+      expect(videoElement.textTracks.length).to.equal(3);
+    });
+  });
+
   describe('onTextTracksChanged', function () {
     beforeEach(function () {
       switchLevel();
     });
-    it('should set subtitleTrack to -1 if disabled', function () {
-      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
 
-      const onTextTracksChanged = sinon.spy(
-        subtitleTrackController,
-        'onTextTracksChanged' as any,
-      );
-
-      videoElement.textTracks[0].mode = 'showing';
-
+    it('should not respond to unmanaged tracks', function () {
       return new Promise((resolve) => {
         self.setTimeout(() => {
-          expect(subtitleTrackController.subtitleTrack).to.equal(0);
-          expect(onTextTracksChanged).to.have.been.calledOnce;
-          videoElement.textTracks[0].mode = 'disabled';
+          const triggerSpy = sandbox.spy(hls, 'trigger');
+
+          expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+          const track = videoElement.addTextTrack('subtitles', 'foo', 'en');
+          track.mode = 'showing';
           self.setTimeout(() => {
-            expect(subtitleTrackController.subtitleTrack).to.equal(-1);
-            expect(onTextTracksChanged).to.have.been.calledTwice;
+            expect(triggerSpy).to.have.not.been.calledWith(
+              'hlsSubtitleTrackSwitch',
+            );
+            expect(track.mode).to.equal('showing');
             resolve(true);
           }, 500);
-        }, 500);
+        }, 0);
+      });
+    });
+
+    it('should not touch unmanaged tracks', function () {
+      return new Promise((resolve) => {
+        self.setTimeout(() => {
+          expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+
+          const unmanagedTrack = videoElement.addTextTrack(
+            'subtitles',
+            'foo',
+            'en',
+          );
+          unmanagedTrack.mode = 'showing';
+
+          self.setTimeout(() => {
+            hls.once(Events.SUBTITLE_TRACK_SWITCH, () => {
+              expect(videoElement.textTracks[1].mode).to.equal('showing');
+              expect(unmanagedTrack.mode).to.equal('showing');
+              resolve(true);
+            });
+            subtitleTrackController.subtitleTrack = 1;
+          }, 500);
+        }, 0);
+      });
+    });
+
+    it('should set subtitleTrack to -1 and keep unmanagedTrack showing', function () {
+      return new Promise((resolve) => {
+        self.setTimeout(() => {
+          expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+          subtitleTrackController.subtitleTrack = 1;
+
+          self.setTimeout(() => {
+            expect(subtitleTrackController.subtitleTrack).to.equal(1);
+
+            const unmanagedTrack = videoElement.addTextTrack(
+              'subtitles',
+              'foo',
+              'en',
+            );
+            unmanagedTrack.mode = 'showing';
+            videoElement.textTracks[0].mode = 'disabled';
+            videoElement.textTracks[1].mode = 'disabled';
+            videoElement.textTracks[2].mode = 'disabled';
+
+            hls.once(Events.SUBTITLE_TRACK_SWITCH, () => {
+              expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+              expect(unmanagedTrack.mode).to.equal('showing');
+              resolve(true);
+            });
+          }, 500);
+        }, 0);
+      });
+    });
+
+    it('should set subtitleTrack to -1 if disabled', function () {
+      return new Promise((resolve) => {
+        self.setTimeout(() => {
+          expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+
+          const onTextTracksChanged = sinon.spy(
+            subtitleTrackController,
+            'onTextTracksChanged' as any,
+          );
+
+          videoElement.textTracks[0].mode = 'showing';
+          self.setTimeout(() => {
+            expect(subtitleTrackController.subtitleTrack).to.equal(0);
+            expect(onTextTracksChanged).to.have.been.calledOnce;
+            videoElement.textTracks[0].mode = 'disabled';
+            self.setTimeout(() => {
+              expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+              expect(onTextTracksChanged).to.have.been.calledTwice;
+              resolve(true);
+            }, 500);
+          }, 500);
+        }, 0);
       });
     });
 
     it('should set subtitleTrack to 0 if hidden', function () {
-      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
-
-      videoElement.textTracks[0].mode = 'hidden';
-
       return new Promise((resolve) => {
-        hls.on(Events.SUBTITLE_TRACK_SWITCH, () => {
-          expect(subtitleTrackController.subtitleTrack).to.equal(0);
-          resolve(true);
-        });
+        self.setTimeout(() => {
+          expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+
+          videoElement.textTracks[0].mode = 'hidden';
+          hls.on(Events.SUBTITLE_TRACK_SWITCH, () => {
+            expect(subtitleTrackController.subtitleTrack).to.equal(0);
+            resolve(true);
+          });
+        }, 0);
       });
     });
 
     it('should set subtitleTrack to 0 if showing', function () {
-      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
-
-      videoElement.textTracks[0].mode = 'showing';
-
       return new Promise((resolve) => {
-        hls.on(Events.SUBTITLE_TRACK_SWITCH, () => {
-          expect(subtitleTrackController.subtitleTrack).to.equal(0);
-          resolve(true);
-        });
+        expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+
+        videoElement.textTracks[0].mode = 'showing';
+        self.setTimeout(() => {
+          hls.on(Events.SUBTITLE_TRACK_SWITCH, () => {
+            expect(subtitleTrackController.subtitleTrack).to.equal(0);
+            resolve(true);
+          });
+        }, 0);
       });
     });
 
     it('should set subtitleTrack id captions track is showing', function () {
-      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
-
-      videoElement.textTracks[2].mode = 'showing';
-
       return new Promise((resolve) => {
-        hls.on(Events.SUBTITLE_TRACK_SWITCH, () => {
-          expect(videoElement.textTracks[2].kind).to.equal('captions');
-          expect(subtitleTrackController.subtitleTrack).to.equal(2);
-          resolve(true);
-        });
+        self.setTimeout(() => {
+          expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+
+          videoElement.textTracks[2].mode = 'showing';
+
+          hls.on(Events.SUBTITLE_TRACK_SWITCH, () => {
+            expect(subtitleTrackController.subtitleTrack).to.equal(2);
+            resolve(true);
+          });
+        }, 0);
       });
     });
   });
@@ -320,28 +445,29 @@ describe('SubtitleTrackController', function () {
     });
 
     it('should disable previous track', function () {
-      expect(subtitleTrackController.subtitleTrack).to.equal(-1);
-
-      const onTextTracksChanged = sinon.spy(
-        subtitleTrackController,
-        'onTextTracksChanged' as any,
-      );
-
-      videoElement.textTracks[0].mode = 'showing';
-
       return new Promise((resolve) => {
         self.setTimeout(() => {
-          expect(subtitleTrackController.subtitleTrack).to.equal(0);
-          expect(videoElement.textTracks[0].mode).to.equal('showing');
-          expect(onTextTracksChanged).to.have.been.calledOnce;
-          subtitleTrackController.subtitleTrack = 1;
+          expect(subtitleTrackController.subtitleTrack).to.equal(-1);
+
+          const onTextTracksChanged = sinon.spy(
+            subtitleTrackController,
+            'onTextTracksChanged' as any,
+          );
+
+          videoElement.textTracks[0].mode = 'showing';
           self.setTimeout(() => {
-            expect(videoElement.textTracks[0].mode).to.equal('disabled');
-            expect(videoElement.textTracks[1].mode).to.equal('showing');
-            expect(onTextTracksChanged).to.have.been.calledTwice;
-            resolve(true);
+            expect(subtitleTrackController.subtitleTrack).to.equal(0);
+            expect(videoElement.textTracks[0].mode).to.equal('showing');
+            expect(onTextTracksChanged).to.have.been.calledOnce;
+            subtitleTrackController.subtitleTrack = 1;
+            self.setTimeout(() => {
+              expect(videoElement.textTracks[0].mode).to.equal('disabled');
+              expect(videoElement.textTracks[1].mode).to.equal('showing');
+              expect(onTextTracksChanged).to.have.been.calledTwice;
+              resolve(true);
+            }, 500);
           }, 500);
-        }, 500);
+        }, 0);
       });
     });
 
@@ -408,15 +534,6 @@ describe('SubtitleTrackController', function () {
           type: 'SUBTITLES',
           url: 'baz',
         },
-      );
-    });
-
-    it('should trigger SUBTITLE_TRACK_SWITCH if passed -1', function () {
-      const triggerSpy = sandbox.spy(hls, 'trigger');
-      subtitleTrackController.subtitleTrack = -1;
-      expect(triggerSpy.firstCall).to.have.been.calledWith(
-        'hlsSubtitleTrackSwitch',
-        { id: -1 },
       );
     });
 
