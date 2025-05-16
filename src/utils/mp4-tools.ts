@@ -664,8 +664,6 @@ export function getSampleData(
     if (!track) {
       continue;
     }
-    let sampleCount: number | undefined;
-    let firstKeyFrame: number | undefined;
     const trackTimes: TrackTimes =
       tracks[id] ||
       (tracks[id] = {
@@ -722,12 +720,10 @@ export function getSampleData(
     let sampleDuration = defaultSampleDuration;
     for (let j = 0; j < truns.length; j++) {
       const trun = truns[j];
-      sampleCount = readUint32(trun, 4);
+      const sampleCount = readUint32(trun, 4);
+      const sampleIndex = trackTimes.sampleCount;
       trackTimes.sampleCount += sampleCount;
       if (track.type === ElementaryStreamTypes.VIDEO) {
-        if (firstKeyFrame === undefined) {
-          firstKeyFrame = -1;
-        }
         const dataOffsetPresent = trun[3] & 0x01;
         const firstSampleFlagsPresent = trun[3] & 0x04;
         const sampleDurationPresent = trun[2] & 0x01;
@@ -741,8 +737,8 @@ export function getSampleData(
         }
         if (firstSampleFlagsPresent && sampleCount) {
           const isNonSyncSample = trun[offset + 1] & 0x01;
-          if (!isNonSyncSample) {
-            firstKeyFrame = 0;
+          if (!isNonSyncSample && trackTimes.keyFrameIndex === undefined) {
+            trackTimes.keyFrameIndex = sampleIndex;
           }
           offset += 4;
           if (sampleDurationPresent) {
@@ -774,8 +770,9 @@ export function getSampleData(
           if (sampleFlagsPresent) {
             const isNonSyncSample = trun[offset + 1] & 0x01;
             if (!isNonSyncSample) {
-              if (firstKeyFrame === -1) {
-                firstKeyFrame = sampleCount - (remaining + 1);
+              if (trackTimes.keyFrameIndex === undefined) {
+                trackTimes.keyFrameIndex =
+                  trackTimes.sampleCount - (remaining + 1);
                 trackTimes.keyFrameStart = sampleDTS;
               }
             }
@@ -787,7 +784,6 @@ export function getSampleData(
           sampleDTS += sampleDuration;
           rawDuration += sampleDuration;
         }
-        trackTimes.keyFrameIndex = firstKeyFrame;
       } else {
         rawDuration += defaultSampleDuration * sampleCount;
       }
