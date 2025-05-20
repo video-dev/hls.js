@@ -1580,7 +1580,7 @@ export default class InterstitialsController
         `INTERSTITIALS_UPDATED (${
           interstitialEvents.length
         }): ${interstitialEvents}
-Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
+Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timelinePos}`,
       );
     }
     if (removedIds.length) {
@@ -1607,11 +1607,14 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
 
     // Update schedule item references
     // Do not replace Interstitial playingItem without a match - used for INTERSTITIAL_ASSET_ENDED and INTERSTITIAL_ENDED
+    let trimInPlaceForPlayout: null | (() => void) = null;
     if (playingItem) {
       const updatedPlayingItem = this.updateItem(playingItem, this.timelinePos);
       if (this.itemsMatch(playingItem, updatedPlayingItem)) {
         this.playingItem = updatedPlayingItem;
         this.waitingItem = this.endedItem = null;
+        trimInPlaceForPlayout = () =>
+          this.trimInPlace(updatedPlayingItem, playingItem);
       }
     } else {
       // Clear waitingItem if it has been removed from the schedule
@@ -1627,6 +1630,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       );
       if (this.itemsMatch(bufferingItem, updatedBufferingItem)) {
         this.bufferingItem = updatedBufferingItem;
+        trimInPlaceForPlayout ||= () =>
+          this.trimInPlace(updatedBufferingItem, bufferingItem);
       } else if (bufferingItem.event) {
         // Interstitial removed from schedule (Live -> VOD or other scenario where Start Date is outside the range of VOD Playlist)
         this.bufferingItem = this.playingItem;
@@ -1659,6 +1664,10 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
         return;
       }
 
+      if (trimInPlaceForPlayout) {
+        trimInPlaceForPlayout();
+      }
+
       // Check is buffered to new Interstitial event boundary
       // (Live update publishes Interstitial with new segment)
       this.checkBuffer();
@@ -1676,6 +1685,36 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
       return (items[index] as T) || null;
     }
     return null;
+  }
+
+  private trimInPlace(
+    updatedItem: InterstitialScheduleItem | null,
+    itemBeforeUpdate: InterstitialScheduleItem,
+  ) {
+    if (
+      this.isInterstitial(updatedItem) &&
+      updatedItem.event.appendInPlace &&
+      itemBeforeUpdate.end - updatedItem.end > 0.25
+    ) {
+      updatedItem.event.assetList.forEach((asset, index) => {
+        if (updatedItem.event.isAssetPastPlayoutLimit(index)) {
+          this.clearAssetPlayer(asset.identifier, null);
+        }
+      });
+      const flushStart = updatedItem.end + 0.25;
+      const bufferInfo = BufferHelper.bufferInfo(
+        this.primaryMedia,
+        flushStart,
+        0,
+      );
+      if (
+        bufferInfo.end > flushStart ||
+        (bufferInfo.nextStart || 0) > flushStart
+      ) {
+        this.attachPrimary(flushStart, null);
+        this.flushFrontBuffer(flushStart);
+      }
+    }
   }
 
   private itemsMatch(
@@ -2505,10 +2544,6 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
           playingItem ? segmentToString(playingItem) : '<none>'
         } error: ${interstitial.error}`,
       );
-      if (interstitial.appendInPlace) {
-        this.attachPrimary(flushStart, null);
-        this.flushFrontBuffer(flushStart);
-      }
       let timelinePos = this.timelinePos;
       if (timelinePos === -1) {
         timelinePos = this.hls.startPosition;
@@ -2519,6 +2554,10 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))}`,
         this.setSchedulePosition(scheduleIndex);
       } else {
         this.clearInterstitial(interstitial, null);
+      }
+      if (interstitial.appendInPlace) {
+        this.attachPrimary(flushStart, null);
+        this.flushFrontBuffer(flushStart);
       }
     } else {
       this.checkStart();
