@@ -2014,6 +2014,7 @@ fileSequence6.mp4`;
 
       // Capture asset-list request
       const loadSpy = sandbox.spy(hls.config.loader.prototype, 'load');
+      const primaryId = hls.sessionId;
 
       // Attach media
       hls.trigger.resetHistory();
@@ -2032,7 +2033,7 @@ fileSequence6.mp4`;
         assetListUrl,
         '_HLS_primary_id and _HLS_start_offset match',
       ).to.equal(
-        `https://example.com/mid.json?_HLS_primary_id=${hls.sessionId}&_HLS_start_offset=10`,
+        `https://example.com/mid.json?_HLS_primary_id=${primaryId}&_HLS_start_offset=10`,
       );
       expect(eventsAfterAttach).to.deep.equal(
         expectedEvents,
@@ -2046,7 +2047,7 @@ fileSequence6.mp4`;
       hls.trigger.resetHistory();
       const interstitial = insterstitials.events[0];
       interstitial.assetListResponse = {
-        ASSETS: [{ URI: '', DURATION: '30' }],
+        ASSETS: [{ URI: 'https://example.com/midroll.m3u8', DURATION: '30' }],
       };
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
@@ -2078,6 +2079,16 @@ fileSequence6.mp4`;
         insterstitials.interstitialPlayer?.scheduleItem?.event,
         `interstitialPlayer.scheduleItem`,
       ).to.include({ identifier: 'mid-live' });
+      expect(
+        insterstitials.interstitialPlayer?.assetPlayers,
+        `interstitialPlayer.assetPlayers[]`,
+      ).to.have.lengthOf(1);
+      expect(
+        insterstitials.interstitialPlayer?.assetPlayers[0]?.hls?.url,
+        `interstitialPlayer.assetPlayers[0].hls.url`,
+      ).to.equal(
+        `https://example.com/midroll.m3u8?_HLS_primary_id=${primaryId}`,
+      );
     });
   });
 });
