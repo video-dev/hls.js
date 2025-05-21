@@ -31,8 +31,10 @@ import { Logger } from '../utils/logger';
 import { isCompatibleTrackChange } from '../utils/mediasource-helper';
 import { getBasicSelectionOption } from '../utils/rendition-helper';
 import { stringify } from '../utils/safe-json-stringify';
-import type { InterstitialPlayer } from './interstitial-player';
-import type { HlsConfig } from '../config';
+import type {
+  HlsAssetPlayerConfig,
+  InterstitialPlayer,
+} from './interstitial-player';
 import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
 import type { SourceBufferName } from '../types/buffer';
@@ -2140,7 +2142,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       }
     }
     const assetId = assetItem.identifier;
-    const playerConfig: Partial<HlsConfig> = {
+    const playerConfig: HlsAssetPlayerConfig = {
       ...userConfig,
       autoStartLoad: true,
       startFragPrefetch: true,

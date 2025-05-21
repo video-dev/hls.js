@@ -2155,7 +2155,7 @@ export default Hls;
 //
 // @public (undocumented)
 export class HlsAssetPlayer {
-    constructor(HlsPlayerClass: typeof Hls, userConfig: Partial<HlsConfig>, interstitial: InterstitialEvent, assetItem: InterstitialAssetItem);
+    constructor(HlsPlayerClass: typeof Hls, userConfig: HlsAssetPlayerConfig, interstitial: InterstitialEvent, assetItem: InterstitialAssetItem);
     // (undocumented)
     get appendInPlace(): boolean;
     // (undocumented)
@@ -2210,6 +2210,11 @@ export class HlsAssetPlayer {
     // (undocumented)
     transferMedia(): AttachMediaSourceData | null;
 }
+
+// Warning: (ae-missing-release-tag) "HlsAssetPlayerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type HlsAssetPlayerConfig = Partial<HlsConfig> & Required<Pick<HlsConfig, 'assetPlayerId' | 'primarySessionId'>>;
 
 // Warning: (ae-missing-release-tag) "HlsChunkPerformanceTiming" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
