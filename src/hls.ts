@@ -1334,6 +1334,7 @@ export type {
 } from './controller/error-controller';
 export type {
   HlsAssetPlayer,
+  HlsAssetPlayerConfig,
   InterstitialPlayer,
 } from './controller/interstitial-player';
 export type { PlayheadTimes } from './controller/interstitials-controller';
