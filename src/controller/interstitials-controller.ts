@@ -2525,7 +2525,6 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       const playerIndex = this.getAssetPlayerQueueIndex(assetItem.identifier);
       player = this.playerQueue[playerIndex] || null;
     }
-    const playerAttached = player?.media === this.primaryMedia;
     const items = this.schedule.items;
     const interstitialAssetError = Object.assign({}, data, {
       fatal: false,
@@ -2546,9 +2545,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     const playingAsset = this.playingAsset;
     const error = new Error(errorMessage);
     if (assetItem) {
-      if (playingAsset !== assetItem) {
-        this.clearAssetPlayer(assetItem.identifier, null);
-      }
+      this.clearAssetPlayer(assetItem.identifier, null);
       assetItem.error = error;
     }
 
@@ -2563,9 +2560,10 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       }
       this.updateSchedule();
     }
-
-    if (playerAttached || playingAsset || interstitial.error) {
+    if (interstitial.error) {
       this.primaryFallback(interstitial);
+    } else if (playingAsset) {
+      this.advanceAfterAssetEnded(interstitial, scheduleIndex, assetListIndex);
     }
   }
 
@@ -2591,12 +2589,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       if (this.itemsMatch(playingItem, newPlayingItem)) {
         this.clearInterstitial(interstitial, null);
       }
-      const scheduleIndex = this.schedule.findItemIndexAtTime(timelinePos);
-      this.setSchedulePosition(scheduleIndex);
       if (interstitial.appendInPlace) {
         this.attachPrimary(flushStart, null);
         this.flushFrontBuffer(flushStart);
       }
+      const scheduleIndex = this.schedule.findItemIndexAtTime(timelinePos);
+      this.setSchedulePosition(scheduleIndex);
     } else {
       this.checkStart();
     }
