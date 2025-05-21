@@ -313,6 +313,22 @@ export function getInterstitialUrl(
   return url;
 }
 
+export function getNextAssetIndex(
+  interstitial: InterstitialEvent,
+  assetListIndex: number,
+  inBounds?: boolean,
+): number {
+  while (interstitial.assetList[++assetListIndex]?.error) {
+    /* no-op */
+  }
+  if (inBounds && assetListIndex) {
+    if (assetListIndex >= interstitial.assetList.length) {
+      return -1;
+    }
+  }
+  return assetListIndex;
+}
+
 function eventToString(interstitial: InterstitialEvent): string {
   return `["${interstitial.identifier}" ${interstitial.cue.pre ? '<pre>' : interstitial.cue.post ? '<post>' : ''}${interstitial.timelineStart.toFixed(2)}-${interstitial.resumeTime.toFixed(2)}]`;
 }

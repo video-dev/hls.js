@@ -15,6 +15,7 @@ import {
   ALIGNED_END_THRESHOLD_SECONDS,
   eventAssetToString,
   generateAssetIdentifier,
+  getNextAssetIndex,
   type InterstitialAssetId,
   type InterstitialAssetItem,
   type InterstitialEvent,
@@ -1008,11 +1009,8 @@ export default class InterstitialsController
     index: number,
     assetListIndex: number,
   ) {
-    const nextAssetIndex = assetListIndex + 1;
-    if (
-      !interstitial.isAssetPastPlayoutLimit(nextAssetIndex) &&
-      !interstitial.assetList[nextAssetIndex].error
-    ) {
+    const nextAssetIndex = getNextAssetIndex(interstitial, assetListIndex);
+    if (!interstitial.isAssetPastPlayoutLimit(nextAssetIndex)) {
       // Advance to next asset list item
       this.setSchedulePosition(index, nextAssetIndex);
     } else {
@@ -1046,7 +1044,17 @@ export default class InterstitialsController
     if (interstitial) {
       const itemIndex = schedule.findEventIndex(parentIdentifier);
       const assetListIndex = schedule.findAssetIndex(interstitial, time);
-      this.setSchedulePosition(itemIndex, assetListIndex);
+      const validAssetIndex = getNextAssetIndex(
+        interstitial,
+        assetListIndex - 1,
+        true,
+      );
+      if (validAssetIndex === -1) {
+        // If -1 then there is no valid asset to play
+        this.advanceAfterAssetEnded(interstitial, itemIndex, assetListIndex);
+        return;
+      }
+      this.setSchedulePosition(itemIndex, validAssetIndex);
     }
   }
 
@@ -1072,15 +1080,15 @@ export default class InterstitialsController
           (assetListIndex !== undefined &&
             assetId !== interstitial.assetList?.[assetListIndex].identifier))
       ) {
-        const assetListIndex = interstitial.findAssetIndex(playingAsset);
+        const playingAssetListIndex = interstitial.findAssetIndex(playingAsset);
         this.log(
-          `INTERSTITIAL_ASSET_ENDED ${assetListIndex + 1}/${interstitial.assetList.length} ${eventAssetToString(playingAsset)}`,
+          `INTERSTITIAL_ASSET_ENDED ${playingAssetListIndex + 1}/${interstitial.assetList.length} ${eventAssetToString(playingAsset)}`,
         );
         this.endedAsset = playingAsset;
         this.playingAsset = null;
         this.hls.trigger(Events.INTERSTITIAL_ASSET_ENDED, {
           asset: playingAsset,
-          assetListIndex,
+          assetListIndex: playingAssetListIndex,
           event: interstitial,
           schedule: scheduleItems.slice(0),
           scheduleIndex: index,
@@ -1166,6 +1174,17 @@ export default class InterstitialsController
           interstitial,
           this.timelinePos,
         );
+        const validAssetListIndex = getNextAssetIndex(
+          interstitial,
+          assetListIndex - 1,
+          true,
+        );
+        if (validAssetListIndex === -1) {
+          // If -1 then there is no valid asset to play
+          this.advanceAfterAssetEnded(interstitial, index, assetListIndex);
+          return;
+        }
+        assetListIndex = validAssetListIndex;
       }
       // Ensure Interstitial is enqueued
       const waitingItem = this.waitingItem;
@@ -2251,13 +2270,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         interstitial.identifier,
       );
       const assetListIndex = interstitial.findAssetIndex(assetItem);
-      const nextAssetIndex = assetListIndex + 1;
+      const nextAssetIndex = getNextAssetIndex(interstitial, assetListIndex);
       const item = this.schedule.items?.[scheduleIndex];
       if (this.isInterstitial(item)) {
         if (
           assetListIndex !== -1 &&
-          !interstitial.isAssetPastPlayoutLimit(nextAssetIndex) &&
-          !interstitial.assetList[nextAssetIndex].error
+          !interstitial.isAssetPastPlayoutLimit(nextAssetIndex)
         ) {
           this.bufferedToItem(item, nextAssetIndex);
         } else {
@@ -2358,6 +2376,17 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     interstitial.reset();
   }
 
+  private resetAssetPlayer(assetId: InterstitialAssetId) {
+    // Reset asset player so that it's timeline can be adjusted without reloading the MVP
+    const playerIndex = this.getAssetPlayerQueueIndex(assetId);
+    if (playerIndex !== -1) {
+      this.log(`reset asset player "${assetId}" after error`);
+      const player = this.playerQueue[playerIndex];
+      this.transferMediaFromPlayer(player, null);
+      player.resetDetails();
+    }
+  }
+
   private clearAssetPlayer(
     assetId: InterstitialAssetId,
     toSegment: InterstitialScheduleItem | null,
@@ -2365,7 +2394,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     const playerIndex = this.getAssetPlayerQueueIndex(assetId);
     if (playerIndex !== -1) {
       this.log(
-        `clearAssetPlayer "${assetId}" toSegment: ${toSegment ? segmentToString(toSegment) : toSegment}`,
+        `clear asset player "${assetId}" toSegment: ${toSegment ? segmentToString(toSegment) : toSegment}`,
       );
       const player = this.playerQueue[playerIndex];
       this.transferMediaFromPlayer(player, toSegment);
@@ -2496,6 +2525,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       const playerIndex = this.getAssetPlayerQueueIndex(assetItem.identifier);
       player = this.playerQueue[playerIndex] || null;
     }
+    const playerAttached = player?.media === this.primaryMedia;
     const items = this.schedule.items;
     const interstitialAssetError = Object.assign({}, data, {
       fatal: false,
@@ -2513,9 +2543,10 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       return;
     }
 
+    const playingAsset = this.playingAsset;
     const error = new Error(errorMessage);
     if (assetItem) {
-      if (this.playingAsset !== assetItem) {
+      if (playingAsset !== assetItem) {
         this.clearAssetPlayer(assetItem.identifier, null);
       }
       assetItem.error = error;
@@ -2525,11 +2556,17 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     if (!interstitial.assetList.some((asset) => !asset.error)) {
       interstitial.error = error;
     } else if (interstitial.appendInPlace) {
-      // Skip entire interstitial since moving up subsequent assets is error prone
-      interstitial.error = error;
+      // Reset level details and reload/parse media playlists to align with updated schedule
+      for (let i = assetListIndex; i < interstitial.assetList.length; i++) {
+        const assetId = interstitial.assetList[i].identifier;
+        this.resetAssetPlayer(assetId);
+      }
+      this.updateSchedule();
     }
 
-    this.primaryFallback(interstitial);
+    if (playerAttached || playingAsset || interstitial.error) {
+      this.primaryFallback(interstitial);
+    }
   }
 
   private primaryFallback(interstitial: InterstitialEvent) {
@@ -2551,12 +2588,11 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         timelinePos = this.hls.startPosition;
       }
       const newPlayingItem = this.updateItem(playingItem, timelinePos);
-      if (!this.itemsMatch(playingItem, newPlayingItem)) {
-        const scheduleIndex = this.schedule.findItemIndexAtTime(timelinePos);
-        this.setSchedulePosition(scheduleIndex);
-      } else {
+      if (this.itemsMatch(playingItem, newPlayingItem)) {
         this.clearInterstitial(interstitial, null);
       }
+      const scheduleIndex = this.schedule.findItemIndexAtTime(timelinePos);
+      this.setSchedulePosition(scheduleIndex);
       if (interstitial.appendInPlace) {
         this.attachPrimary(flushStart, null);
         this.flushFrontBuffer(flushStart);
