@@ -118,14 +118,17 @@ export class InterstitialEvent {
   }
 
   public isAssetPastPlayoutLimit(assetIndex: number): boolean {
-    if (assetIndex >= this.assetList.length) {
+    if (assetIndex > 0 && assetIndex >= this.assetList.length) {
       return true;
     }
     const playoutLimit = this.playoutLimit;
     if (assetIndex <= 0 || isNaN(playoutLimit)) {
       return false;
     }
-    const assetOffset = this.assetList[assetIndex].startOffset;
+    if (playoutLimit === 0) {
+      return true;
+    }
+    const assetOffset = this.assetList[assetIndex]?.startOffset || 0;
     return assetOffset > playoutLimit;
   }
 
@@ -316,15 +319,9 @@ export function getInterstitialUrl(
 export function getNextAssetIndex(
   interstitial: InterstitialEvent,
   assetListIndex: number,
-  inBounds?: boolean,
 ): number {
   while (interstitial.assetList[++assetListIndex]?.error) {
     /* no-op */
-  }
-  if (inBounds && assetListIndex) {
-    if (assetListIndex >= interstitial.assetList.length) {
-      return -1;
-    }
   }
   return assetListIndex;
 }
