@@ -769,7 +769,37 @@ export default class StreamController
               3,
             )}`,
           );
-          media.currentTime = liveSyncPosition;
+
+          if (this.config.liveSyncMode === 'buffered') {
+            const bufferInfo = BufferHelper.bufferInfo(
+              media,
+              liveSyncPosition,
+              0,
+            );
+
+            if (!bufferInfo?.buffered?.length) {
+              media.currentTime = liveSyncPosition;
+              return;
+            }
+
+            const isLiveSyncInBuffer = bufferInfo.start <= currentTime;
+
+            if (isLiveSyncInBuffer) {
+              media.currentTime = liveSyncPosition;
+              return;
+            }
+
+            const { nextStart } = BufferHelper.bufferedInfo(
+              bufferInfo.buffered,
+              currentTime,
+              0,
+            );
+            if (nextStart) {
+              media.currentTime = nextStart;
+            }
+          } else {
+            media.currentTime = liveSyncPosition;
+          }
         }
       }
     }
@@ -1119,9 +1149,10 @@ export default class StreamController
         this.config.maxFragLookUpTolerance,
       );
       if (
-        delta > 0 &&
-        (delta < skipTolerance ||
-          (this.loadingParts && delta < 2 * (details?.partTarget || 0)))
+        this.config.startOnSegmentBoundary ||
+        (delta > 0 &&
+          (delta < skipTolerance ||
+            (this.loadingParts && delta < 2 * (details?.partTarget || 0))))
       ) {
         this.log(`adjusting start position by ${delta} to match buffer start`);
         startPosition += delta;

@@ -30,6 +30,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`maxBufferLength`](#maxbufferlength)
   - [`backBufferLength`](#backbufferlength)
   - [`frontBufferFlushThreshold`](#frontbufferflushthreshold)
+  - [`startOnSegmentBoundary`](#startonsegmentboundary)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
@@ -42,6 +43,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`nudgeOnVideoHole`](#nudgeonvideohole)
   - [`maxFragLookUpTolerance`](#maxfraglookuptolerance)
   - [`maxMaxBufferLength`](#maxmaxbufferlength)
+  - [`liveSyncMode`](#livesyncmode)
   - [`liveSyncDurationCount`](#livesyncdurationcount)
   - [`liveSyncOnStallIncrease`](#livesynconstallincrease)
   - [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount)
@@ -590,6 +592,13 @@ The maximum duration of buffered media to keep once it has been played, in secon
 
 The maximum duration of buffered media, in seconds, from the play position to keep before evicting non-contiguous forward ranges. A value of `Infinity` means no active eviction will take place; This value will always be at least the `maxBufferLength`.
 
+### `startOnSegmentBoundary`
+
+(default: `false`)
+
+When set to `true`, the player will align the live start position with the closest video segment boundary when preparing playback. This ensures playback starts at a clean segment boundary rather than potentially in the middle of a segment, which can prevent some segment skipping. This is helpful for when liveSyncDurationCount or liveSyncDuration, do not calculate start position to be the start position of a segment.
+Setting this to `true` may increase initial live playback latency slightly, but can provide more stable playback start. When set to `false`, playback will start at the exact position determined by the player's live sync calculations, which could be in the middle of a segment.
+
 ### `maxBufferSize`
 
 (default: 60 MB)
@@ -692,6 +701,15 @@ this is to mimic the browser behaviour (the buffer eviction algorithm is startin
 
 `maxBufferLength` is the minimum guaranteed buffer length that HLS.js will try to achieve, even if that value exceeds the amount of bytes 60 MB of memory.
 `maxMaxBufferLength` acts as a capping value, as if bitrate is really low, you could need more than one hour of buffer to fill 60 MB.
+
+### `liveSyncMode`
+
+(default: `'edge'`)
+
+Controls how playback synchronizes to the live edge:
+
+- `'edge'`: When the playhead moves outside the prescribed distance from the live edge, immediately jump to `liveSyncPosition`.
+- `'buffered'`: When the playhead moves outside the prescribed distance from the live edge, if `liveSyncPosition` is buffered, seek there; otherwise, continue playback from the start of the next buffered segment.
 
 ### `liveSyncDurationCount`
 

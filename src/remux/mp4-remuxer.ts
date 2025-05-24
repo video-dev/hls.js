@@ -354,6 +354,7 @@ export default class MP4Remuxer implements Remuxer {
     let initPTS: number | undefined;
     let initDTS: number | undefined;
     let timescale: number | undefined;
+    let trackId: number | undefined;
 
     if (computePTSDTS) {
       initPTS = initDTS = Infinity;
@@ -394,6 +395,7 @@ export default class MP4Remuxer implements Remuxer {
         },
       };
       if (computePTSDTS) {
+        trackId = audioTrack.id;
         timescale = audioTrack.inputTimeScale;
         if (!_initPTS || timescale !== _initPTS.timescale) {
           // remember first PTS of this demuxing context. for audio, PTS = DTS
@@ -420,6 +422,7 @@ export default class MP4Remuxer implements Remuxer {
         },
       };
       if (computePTSDTS) {
+        trackId = videoTrack.id;
         timescale = videoTrack.inputTimeScale;
         if (!_initPTS || timescale !== _initPTS.timescale) {
           const startPTS = this.getVideoStartPts(videoSamples);
@@ -459,6 +462,7 @@ export default class MP4Remuxer implements Remuxer {
         tracks,
         initPTS,
         timescale,
+        trackId,
       };
     }
   }

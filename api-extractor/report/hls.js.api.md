@@ -960,6 +960,11 @@ export type ContentSteeringOptions = {
     pathwayId: string;
 };
 
+// Warning: (ae-missing-release-tag) "Cues" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export const Cues: CuesInterface;
+
 // Warning: (ae-missing-release-tag) "CuesInterface" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1576,6 +1581,29 @@ export type ExtendedSourceBuffer = SourceBuffer & {
     onbufferedchange?: ((this: SourceBuffer, ev: Event) => any) | null;
 };
 
+// Warning: (ae-missing-release-tag) "FetchLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class FetchLoader implements Loader<LoaderContext> {
+    constructor(config: HlsConfig);
+    // (undocumented)
+    abort(): void;
+    // (undocumented)
+    abortInternal(): void;
+    // (undocumented)
+    context: LoaderContext | null;
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    getCacheAge(): number | null;
+    // (undocumented)
+    getResponseHeader(name: string): string | null;
+    // (undocumented)
+    load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void;
+    // (undocumented)
+    stats: LoaderStats;
+}
+
 // Warning: (ae-missing-release-tag) "FPSController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2127,7 +2155,9 @@ export default Hls;
 //
 // @public (undocumented)
 export class HlsAssetPlayer {
-    constructor(HlsPlayerClass: typeof Hls, userConfig: Partial<HlsConfig>, interstitial: InterstitialEvent, assetItem: InterstitialAssetItem);
+    constructor(HlsPlayerClass: typeof Hls, userConfig: HlsAssetPlayerConfig, interstitial: InterstitialEvent, assetItem: InterstitialAssetItem);
+    // (undocumented)
+    get appendInPlace(): boolean;
     // (undocumented)
     get assetId(): InterstitialAssetId;
     // (undocumented)
@@ -2180,6 +2210,11 @@ export class HlsAssetPlayer {
     // (undocumented)
     transferMedia(): AttachMediaSourceData | null;
 }
+
+// Warning: (ae-missing-release-tag) "HlsAssetPlayerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type HlsAssetPlayerConfig = Partial<HlsConfig> & Required<Pick<HlsConfig, 'assetPlayerId' | 'primarySessionId'>>;
 
 // Warning: (ae-missing-release-tag) "HlsChunkPerformanceTiming" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2547,6 +2582,8 @@ export interface InitSegmentData {
     initPTS: number | undefined;
     // (undocumented)
     timescale: number | undefined;
+    // (undocumented)
+    trackId: number | undefined;
     // (undocumented)
     tracks?: TrackSet;
 }
@@ -3698,6 +3735,38 @@ export class Logger implements ILogger {
     warn: ILogFunction;
 }
 
+// Warning: (ae-missing-release-tag) "M3U8Parser" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class M3U8Parser {
+    // (undocumented)
+    static findGroup(groups: ({
+        id?: string;
+        audioCodec?: string;
+    } | {
+        id?: string;
+        textCodec?: string;
+    })[], mediaGroupId: string): {
+        id?: string;
+        audioCodec?: string;
+    } | {
+        id?: string;
+        textCodec?: string;
+    } | undefined;
+    // (undocumented)
+    static isMediaPlaylist(str: string): boolean;
+    // (undocumented)
+    static parseLevelPlaylist(string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number, multivariantVariableList: VariableMap | null): LevelDetails;
+    // (undocumented)
+    static parseMasterPlaylist(string: string, baseurl: string): ParsedMultivariantPlaylist;
+    // Warning: (ae-forgotten-export) The symbol "ParsedMultivariantMediaOptions" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    static parseMasterPlaylistMedia(string: string, baseurl: string, parsed: ParsedMultivariantPlaylist): ParsedMultivariantMediaOptions;
+    // (undocumented)
+    static resolve(url: any, baseUrl: any): string;
+}
+
 // Warning: (ae-missing-release-tag) "MainPlaylistType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -4497,6 +4566,8 @@ export type StreamControllerConfig = {
     maxMaxBufferLength: number;
     startFragPrefetch: boolean;
     testBandwidth: boolean;
+    liveSyncMode?: 'edge' | 'buffered';
+    startOnSegmentBoundary: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "SubtitleFragProcessedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -4862,6 +4933,41 @@ export type VideoSelectionOption = {
     allowedVideoRanges?: Array<VideoRange>;
     videoCodec?: string;
 };
+
+// Warning: (ae-missing-release-tag) "XhrLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export class XhrLoader implements Loader<LoaderContext> {
+    constructor(config: HlsConfig);
+    // (undocumented)
+    abort(): void;
+    // (undocumented)
+    abortInternal(): void;
+    // (undocumented)
+    context: LoaderContext | null;
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    getCacheAge(): number | null;
+    // (undocumented)
+    getResponseHeader(name: string): string | null;
+    // (undocumented)
+    load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void;
+    // (undocumented)
+    loadInternal(): void;
+    // (undocumented)
+    loadprogress(event: ProgressEvent): void;
+    // (undocumented)
+    loadtimeout(): void;
+    // (undocumented)
+    openAndSendXhr(xhr: XMLHttpRequest, context: LoaderContext, config: LoaderConfiguration): void;
+    // (undocumented)
+    readystatechange(): void;
+    // (undocumented)
+    retry(retryConfig: RetryConfig): void;
+    // (undocumented)
+    stats: LoaderStats;
+}
 
 // (No @packageDocumentation comment for this package)
 

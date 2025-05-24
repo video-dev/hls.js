@@ -20,6 +20,10 @@ export interface InterstitialPlayer {
   playingIndex: number;
   scheduleItem: InterstitialScheduleEventItem | null;
 }
+
+export type HlsAssetPlayerConfig = Partial<HlsConfig> &
+  Required<Pick<HlsConfig, 'assetPlayerId' | 'primarySessionId'>>;
+
 export class HlsAssetPlayer {
   public readonly hls: Hls;
   public readonly interstitial: InterstitialEvent;
@@ -32,7 +36,7 @@ export class HlsAssetPlayer {
 
   constructor(
     HlsPlayerClass: typeof Hls,
-    userConfig: Partial<HlsConfig>,
+    userConfig: HlsAssetPlayerConfig,
     interstitial: InterstitialEvent,
     assetItem: InterstitialAssetItem,
   ) {
@@ -41,7 +45,7 @@ export class HlsAssetPlayer {
     this.assetItem = assetItem;
     let uri: string = assetItem.uri;
     try {
-      uri = getInterstitialUrl(uri, hls.sessionId).href;
+      uri = getInterstitialUrl(uri, userConfig.primarySessionId).href;
     } catch (error) {
       // Ignore error parsing ASSET_URI or adding _HLS_primary_id to it. The
       // issue should surface as an INTERSTITIAL_ASSET_ERROR loading the asset.
@@ -59,12 +63,25 @@ export class HlsAssetPlayer {
       const event = this.interstitial;
       if (event.playoutLimit) {
         media.addEventListener('timeupdate', this.checkPlayout);
+        if (this.appendInPlace) {
+          hls.on(Events.BUFFER_APPENDED, () => {
+            const bufferedEnd = this.bufferedEnd;
+            if (this.reachedPlayout(bufferedEnd)) {
+              this._bufferedEosTime = bufferedEnd;
+              hls.trigger(Events.BUFFERED_TO_END, undefined);
+            }
+          });
+        }
       }
     });
   }
 
+  get appendInPlace(): boolean {
+    return this.interstitial?.appendInPlace || false;
+  }
+
   bufferedInPlaceToEnd(media?: HTMLMediaElement | null) {
-    if (!this.interstitial.appendInPlace) {
+    if (!this.appendInPlace) {
       return false;
     }
     if (this.hls?.bufferedToEnd) {
@@ -80,13 +97,16 @@ export class HlsAssetPlayer {
   }
 
   private checkPlayout = () => {
-    const interstitial = this.interstitial;
-    const playoutLimit = interstitial.playoutLimit;
-    const currentTime = this.currentTime;
-    if (this.startOffset + currentTime >= playoutLimit) {
+    if (this.reachedPlayout(this.currentTime)) {
       this.hls.trigger(Events.PLAYOUT_LIMIT_REACHED, {});
     }
   };
+
+  private reachedPlayout(time: number): boolean {
+    const interstitial = this.interstitial;
+    const playoutLimit = interstitial.playoutLimit;
+    return this.startOffset + time >= playoutLimit;
+  }
 
   get destroyed(): boolean {
     return !this.hls?.userConfig;
@@ -243,6 +263,6 @@ export class HlsAssetPlayer {
   }
 
   toString(): string {
-    return `HlsAssetPlayer: ${eventAssetToString(this.assetItem)} ${this.hls?.sessionId} ${this.interstitial?.appendInPlace ? 'append-in-place' : ''}`;
+    return `HlsAssetPlayer: ${eventAssetToString(this.assetItem)} ${this.hls?.sessionId} ${this.appendInPlace ? 'append-in-place' : ''}`;
   }
 }
