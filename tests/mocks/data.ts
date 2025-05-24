@@ -1,10 +1,21 @@
 import { Fragment } from '../../src/loader/fragment';
 import { PlaylistLevelType } from '../../src/types/loader';
+import type { MediaFragment } from '../../src/loader/fragment';
 
-function fragment(options) {
+type MockMediaFragmentData = {
+  level: number;
+  programDateTime: number;
+  duration: number;
+  start: number;
+  sn: number;
+  cc: number;
+  deltaPTS?: number;
+} & Partial<MediaFragment>;
+
+export function fragment(options: MockMediaFragmentData): MediaFragment {
   const frag = new Fragment(PlaylistLevelType.MAIN, '');
-  Object.assign(frag, options);
-  return frag;
+  Object.assign(frag, { level: 0 }, options);
+  return frag as MediaFragment;
 }
 
 export const mockFragments = [
@@ -50,3 +61,30 @@ export const mockFragments = [
     cc: 1,
   }),
 ];
+
+export const mockFragmentsWithDiscos = mockFragments.concat([
+  fragment({
+    programDateTime: 1505502691523,
+    level: 2,
+    duration: 5.0,
+    start: 25.0,
+    sn: 5,
+    cc: 2,
+  }),
+  fragment({
+    programDateTime: 1505502696523,
+    level: 2,
+    duration: 5.0,
+    start: 30.0,
+    sn: 6,
+    cc: 2,
+  }),
+  fragment({
+    programDateTime: 1505502701523,
+    level: 2,
+    duration: 5.0,
+    start: 35.0,
+    sn: 7,
+    cc: 2,
+  }),
+]);

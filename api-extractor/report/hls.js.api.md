@@ -183,9 +183,9 @@ export type AudioSelectionOption = {
 export class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader);
     // (undocumented)
-    clearWaitingFragment(): void;
-    // (undocumented)
     doTick(): void;
+    // (undocumented)
+    protected getLoadPosition(): number;
     // (undocumented)
     protected _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
     // (undocumented)
@@ -434,7 +434,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected getFwdBufferInfoAtPos(bufferable: Bufferable | null, pos: number, type: PlaylistLevelType, maxBufferHole: number): BufferInfo | null;
     // (undocumented)
-    protected getInitialLiveFragment(levelDetails: LevelDetails, fragments: MediaFragment[]): MediaFragment | null;
+    protected getInitialLiveFragment(levelDetails: LevelDetails): MediaFragment | null;
     // (undocumented)
     getLevelDetails(): LevelDetails | undefined;
     // (undocumented)
