@@ -303,7 +303,6 @@ class AudioStreamController
   protected resetLoadingState() {
     const waitingData = this.waitingData;
     if (waitingData) {
-      // Load overlapping fragment on start when discontinuity start times are not aligned
       this.fragmentTracker.removeFragment(waitingData.frag);
       this.waitingData = null;
     }
