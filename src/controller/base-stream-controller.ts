@@ -2,7 +2,7 @@ import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
 import {
   findFragmentByPDT,
   findFragmentByPTS,
-  findFragWithCC,
+  findNearestWithCC,
 } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 import Decrypter from '../crypt/decrypter';
@@ -1298,7 +1298,7 @@ export default class BaseStreamController
           this.log(`LL-Part loading ON for initial live fragment`);
           this.loadingParts = true;
         }
-        frag = this.getInitialLiveFragment(levelDetails, fragments);
+        frag = this.getInitialLiveFragment(levelDetails);
         const mainStart = this.hls.startPosition;
         const liveSyncPosition = this.hls.liveSyncPosition;
         const startPosition = frag
@@ -1506,8 +1506,8 @@ export default class BaseStreamController
   */
   protected getInitialLiveFragment(
     levelDetails: LevelDetails,
-    fragments: MediaFragment[],
   ): MediaFragment | null {
+    const fragments = levelDetails.fragments;
     const fragPrevious = this.fragPrevious;
     let frag: MediaFragment | null = null;
     if (fragPrevious) {
@@ -1543,7 +1543,11 @@ export default class BaseStreamController
         // It's important to stay within the continuity range if available; otherwise the fragments in the playlist
         // will have the wrong start times
         if (!frag) {
-          frag = findFragWithCC(fragments, fragPrevious.cc);
+          frag = findNearestWithCC(
+            levelDetails,
+            fragPrevious.cc,
+            fragPrevious.end,
+          );
           if (frag) {
             this.log(
               `Live playlist, switching playlist, load frag with same CC: ${frag.sn}`,

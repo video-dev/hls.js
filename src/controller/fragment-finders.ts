@@ -33,7 +33,6 @@ export function findFragmentByPDT(
     return null;
   }
 
-  maxFragLookUpTolerance = maxFragLookUpTolerance || 0;
   for (let seg = 0; seg < fragments.length; ++seg) {
     const frag = fragments[seg];
     if (pdtWithinToleranceTest(PDTValue, maxFragLookUpTolerance, frag)) {
@@ -225,28 +224,33 @@ export function findFragWithCC(
 export function findNearestWithCC(
   details: LevelDetails | undefined,
   cc: number,
-  fragment: MediaFragment,
+  pos: number,
 ): MediaFragment | null {
   if (details) {
     if (details.startCC <= cc && details.endCC >= cc) {
-      const start = fragment.start;
-      const end = fragment.end;
       let fragments = details.fragments;
-      if (!fragment.relurl) {
-        const { fragmentHint } = details;
-        if (fragmentHint) {
-          fragments = fragments.concat(fragmentHint);
-        }
+      const { fragmentHint } = details;
+      if (fragmentHint) {
+        fragments = fragments.concat(fragmentHint);
       }
-      return BinarySearch.search(fragments, (candidate) => {
-        if (candidate.cc < cc || candidate.end <= start) {
+      let closest: MediaFragment | undefined;
+      BinarySearch.search(fragments, (candidate) => {
+        if (candidate.cc < cc) {
           return 1;
-        } else if (candidate.cc > cc || candidate.start >= end) {
-          return -1;
-        } else {
-          return 0;
         }
+        if (candidate.cc > cc) {
+          return -1;
+        }
+        closest = candidate;
+        if (candidate.end <= pos) {
+          return 1;
+        }
+        if (candidate.start > pos) {
+          return -1;
+        }
+        return 0;
       });
+      return closest || null;
     }
   }
   return null;
