@@ -2437,7 +2437,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
   }
 
   private bufferAssetPlayer(player: HlsAssetPlayer, media: HTMLMediaElement) {
-    const { interstitial, assetItem, assetId } = player;
+    const { interstitial, assetItem } = player;
     const scheduleIndex = this.schedule.findEventIndex(interstitial.identifier);
     const item = this.schedule.items?.[scheduleIndex];
     if (!item) {
