@@ -1546,7 +1546,7 @@ export default class BaseStreamController
           frag = findNearestWithCC(
             levelDetails,
             fragPrevious.cc,
-            fragPrevious.start,
+            fragPrevious.end,
           );
           if (frag) {
             this.log(
