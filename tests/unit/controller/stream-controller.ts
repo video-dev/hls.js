@@ -285,10 +285,8 @@ describe('StreamController', function () {
 
       describe('with program-date-time', function () {
         it('does PDT search, choosing fragment after level loaded', function () {
-          const foundFragment = streamController['getInitialLiveFragment'](
-            levelDetails,
-            mockFragments,
-          );
+          const foundFragment =
+            streamController['getInitialLiveFragment'](levelDetails);
           expect(foundFragment).to.equal(
             mockFragments[4],
             `Expected sn 4, found sn segment ${
@@ -323,10 +321,8 @@ describe('StreamController', function () {
 
         it('finds the next fragment to load based on the last fragment buffered', function () {
           fragPrevious.sn = 0;
-          let foundFragment = streamController['getInitialLiveFragment'](
-            levelDetails,
-            fragmentsWithoutPdt,
-          );
+          let foundFragment =
+            streamController['getInitialLiveFragment'](levelDetails);
           expect(foundFragment).to.equal(
             fragmentsWithoutPdt[1],
             `Expected sn 1, found sn segment ${
@@ -335,10 +331,8 @@ describe('StreamController', function () {
           );
 
           fragPrevious.sn = 3;
-          foundFragment = streamController['getInitialLiveFragment'](
-            levelDetails,
-            fragmentsWithoutPdt,
-          );
+          foundFragment =
+            streamController['getInitialLiveFragment'](levelDetails);
           expect(foundFragment).to.equal(
             fragmentsWithoutPdt[4],
             `Expected sn 4, found sn segment ${
@@ -350,10 +344,8 @@ describe('StreamController', function () {
         it('finds the first fragment to load when starting or re-syncing with a live stream', function () {
           streamController['fragPrevious'] = null;
 
-          const foundFragment = streamController['getInitialLiveFragment'](
-            levelDetails,
-            fragmentsWithoutPdt,
-          );
+          const foundFragment =
+            streamController['getInitialLiveFragment'](levelDetails);
           expect(foundFragment).to.equal(
             fragmentsWithoutPdt[2],
             `Expected sn 2, found sn segment ${
@@ -364,10 +356,8 @@ describe('StreamController', function () {
 
         it('finds the fragment with the same cc when there is no sn match', function () {
           fragPrevious.cc = 0;
-          const foundFragment = streamController['getInitialLiveFragment'](
-            levelDetails,
-            fragmentsWithoutPdt,
-          );
+          const foundFragment =
+            streamController['getInitialLiveFragment'](levelDetails);
           expect(foundFragment).to.equal(
             fragmentsWithoutPdt[0],
             `Expected sn 0, found sn segment ${
@@ -378,10 +368,8 @@ describe('StreamController', function () {
 
         it('returns null when there is no cc match with the previous segment', function () {
           fragPrevious.cc = 2;
-          const foundFragment = streamController['getInitialLiveFragment'](
-            levelDetails,
-            fragmentsWithoutPdt,
-          );
+          const foundFragment =
+            streamController['getInitialLiveFragment'](levelDetails);
           expect(foundFragment).to.equal(null);
         });
       });
