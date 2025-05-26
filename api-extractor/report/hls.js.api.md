@@ -2197,6 +2197,8 @@ export class HlsAssetPlayer {
     // (undocumented)
     get remaining(): number;
     // (undocumented)
+    resetDetails(): void;
+    // (undocumented)
     resumeBuffering(): void;
     // (undocumented)
     get startOffset(): number;

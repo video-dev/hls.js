@@ -118,14 +118,17 @@ export class InterstitialEvent {
   }
 
   public isAssetPastPlayoutLimit(assetIndex: number): boolean {
-    if (assetIndex >= this.assetList.length) {
+    if (assetIndex > 0 && assetIndex >= this.assetList.length) {
       return true;
     }
     const playoutLimit = this.playoutLimit;
     if (assetIndex <= 0 || isNaN(playoutLimit)) {
       return false;
     }
-    const assetOffset = this.assetList[assetIndex].startOffset;
+    if (playoutLimit === 0) {
+      return true;
+    }
+    const assetOffset = this.assetList[assetIndex]?.startOffset || 0;
     return assetOffset > playoutLimit;
   }
 
@@ -311,6 +314,16 @@ export function getInterstitialUrl(
     url.searchParams.set('_HLS_primary_id', sessionId);
   }
   return url;
+}
+
+export function getNextAssetIndex(
+  interstitial: InterstitialEvent,
+  assetListIndex: number,
+): number {
+  while (interstitial.assetList[++assetListIndex]?.error) {
+    /* no-op */
+  }
+  return assetListIndex;
 }
 
 function eventToString(interstitial: InterstitialEvent): string {

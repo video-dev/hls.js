@@ -238,6 +238,18 @@ export class HlsAssetPlayer {
     return this.hls.transferMedia();
   }
 
+  resetDetails() {
+    const hls = this.hls;
+    if (this.hasDetails) {
+      hls.stopLoad();
+      const deleteDetails = (obj) => delete obj.details;
+      hls.levels.forEach(deleteDetails);
+      hls.allAudioTracks.forEach(deleteDetails);
+      hls.allSubtitleTracks.forEach(deleteDetails);
+      this.hasDetails = false;
+    }
+  }
+
   on<E extends keyof HlsListeners, Context = undefined>(
     event: E,
     listener: HlsListeners[E],
