@@ -2238,6 +2238,7 @@ export type HlsConfig = {
     ignoreDevicePixelRatio: boolean;
     maxDevicePixelRatio: number;
     preferManagedMediaSource: boolean;
+    preserveManualLevelOnError: boolean;
     timelineOffset?: number;
     ignorePlaylistParsingErrors: boolean;
     loader: {
