@@ -452,7 +452,6 @@ export const hlsDefaultConfig: HlsConfig = {
   interstitialLiveLookAhead: 10,
   useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
   preserveManualLevelOnError: false,
-  timelineOffset: undefined,
 
   certLoadPolicy: {
     default: defaultLoadPolicy,
