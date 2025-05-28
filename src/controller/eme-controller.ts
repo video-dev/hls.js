@@ -52,6 +52,7 @@ interface KeySystemAccessPromises {
   keySystemAccess: Promise<MediaKeySystemAccess>;
   mediaKeys?: Promise<MediaKeys>;
   certificate?: Promise<BufferSource | void>;
+  hasMediaKeys?: boolean;
 }
 
 export interface MediaKeySessionContext {
@@ -285,6 +286,7 @@ class EMEController extends Logger implements ComponentAPI {
           .createMediaKeys()
           .then((mediaKeys) => {
             this.log(`Media-keys created for "${keySystem}"`);
+            keySystemAccessPromises.hasMediaKeys = true;
             return certificateRequest.then((certificate) => {
               if (certificate) {
                 return this.setMediaKeysServerCertificate(
@@ -384,6 +386,44 @@ class EMEController extends Logger implements ComponentAPI {
     return keySession.update(data);
   }
 
+  public getSelectedKeySystemFormats(): KeySystemFormats[] {
+    return (Object.keys(this.keySystemAccessPromises) as KeySystems[])
+      .map((keySystem) => ({
+        keySystem,
+        hasMediaKeys: this.keySystemAccessPromises[keySystem].hasMediaKeys,
+      }))
+      .filter(({ hasMediaKeys }) => !!hasMediaKeys)
+      .map(({ keySystem }) => keySystemToKeySystemFormat(keySystem))
+      .filter((keySystem): keySystem is KeySystemFormats => !!keySystem);
+  }
+
+  public getKeySystemAccess(keySystemsToAttempt: KeySystems[]): Promise<void> {
+    return this.getKeySystemSelectionPromise(keySystemsToAttempt).then(
+      ({ keySystem, mediaKeys }) => {
+        return this.attemptSetMediaKeys(keySystem, mediaKeys);
+      },
+    );
+  }
+
+  public selectKeySystem(
+    keySystemsToAttempt: KeySystems[],
+  ): Promise<KeySystemFormats> {
+    return new Promise((resolve, reject) => {
+      return this.getKeySystemSelectionPromise(keySystemsToAttempt)
+        .then(({ keySystem }) => {
+          const keySystemFormat = keySystemToKeySystemFormat(keySystem);
+          if (keySystemFormat) {
+            resolve(keySystemFormat);
+          } else {
+            reject(
+              new Error(`Unable to find format for key-system "${keySystem}"`),
+            );
+          }
+        })
+        .catch(reject);
+    });
+  }
+
   public selectKeySystemFormat(frag: Fragment): Promise<KeySystemFormats> {
     const keyFormats = Object.keys(frag.levelkeys || {}) as KeySystemFormats[];
     if (!this.keyFormatPromise) {
@@ -400,26 +440,14 @@ class EMEController extends Logger implements ComponentAPI {
   private getKeyFormatPromise(
     keyFormats: KeySystemFormats[],
   ): Promise<KeySystemFormats> {
-    return new Promise((resolve, reject) => {
-      const keySystemsInConfig = getKeySystemsForConfig(this.config);
-      const keySystemsToAttempt = keyFormats
-        .map(keySystemFormatToKeySystemDomain)
-        .filter(
-          (value) => !!value && keySystemsInConfig.indexOf(value) !== -1,
-        ) as any as KeySystems[];
-      return this.getKeySystemSelectionPromise(keySystemsToAttempt)
-        .then(({ keySystem }) => {
-          const keySystemFormat = keySystemToKeySystemFormat(keySystem);
-          if (keySystemFormat) {
-            resolve(keySystemFormat);
-          } else {
-            reject(
-              new Error(`Unable to find format for key-system "${keySystem}"`),
-            );
-          }
-        })
-        .catch(reject);
-    });
+    const keySystemsInConfig = getKeySystemsForConfig(this.config);
+    const keySystemsToAttempt = keyFormats
+      .map(keySystemFormatToKeySystemDomain)
+      .filter(
+        (value) => !!value && keySystemsInConfig.indexOf(value) !== -1,
+      ) as any as KeySystems[];
+
+    return this.selectKeySystem(keySystemsToAttempt);
   }
 
   public loadKey(data: KeyLoadedData): Promise<MediaKeySessionContext> {
