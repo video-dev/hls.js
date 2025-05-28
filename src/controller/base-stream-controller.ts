@@ -31,7 +31,6 @@ import {
   getPartWith,
   updateFragPTSDTS,
 } from '../utils/level-helper';
-import { getKeySystemsForConfig } from '../utils/mediakeys-helper';
 import { appendUint8Array } from '../utils/mp4-tools';
 import TimeRanges from '../utils/time-ranges';
 import type { FragmentTracker } from './fragment-tracker';

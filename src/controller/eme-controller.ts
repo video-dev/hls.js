@@ -92,6 +92,7 @@ class EMEController extends Logger implements ComponentAPI {
   private keyIdToKeySessionPromise: {
     [keyId: string]: Promise<MediaKeySessionContext>;
   } = {};
+  private mediaKeys: MediaKeys | null = null;
   private setMediaKeysQueue: Promise<void>[] = EMEController.CDMCleanupPromise
     ? [EMEController.CDMCleanupPromise]
     : [];
@@ -756,6 +757,9 @@ class EMEController extends Logger implements ComponentAPI {
     keySystem: KeySystems,
     mediaKeys: MediaKeys,
   ): Promise<void> {
+    if (this.mediaKeys === mediaKeys) {
+      return Promise.resolve();
+    }
     const queue = this.setMediaKeysQueue.slice();
 
     this.log(`Setting media-keys for "${keySystem}"`);
@@ -763,12 +767,14 @@ class EMEController extends Logger implements ComponentAPI {
     // can be queued for execution for multiple key sessions.
     const setMediaKeysPromise = Promise.all(queue).then(() => {
       if (!this.media) {
+        this.mediaKeys = null;
         throw new Error(
           'Attempted to set mediaKeys without media element attached',
         );
       }
       return this.media.setMediaKeys(mediaKeys);
     });
+    this.mediaKeys = mediaKeys;
     this.setMediaKeysQueue.push(setMediaKeysPromise);
     return setMediaKeysPromise.then(() => {
       this.log(`Media-keys set for "${keySystem}"`);
@@ -1325,12 +1331,14 @@ class EMEController extends Logger implements ComponentAPI {
       media.removeEventListener('encrypted', this.onMediaEncrypted);
       media.removeEventListener('waitingforkey', this.onWaitingForKey);
       this.media = null;
+      this.mediaKeys = null;
     }
   }
 
   private _clear(media) {
     const mediaKeysList = this.mediaKeySessions;
     this._requestLicenseFailureCount = 0;
+    this.mediaKeys = null;
     this.setMediaKeysQueue = [];
     this.mediaKeySessions = [];
     this.keyIdToKeySessionPromise = {};
