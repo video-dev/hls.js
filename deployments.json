@@ -15121,6 +15121,11 @@
       "version": "1.6.3-0.canary.11253",
       "commit": "07fcc6d7de0164907f7b845452fd7b094439d3e4",
       "url": "https://b8d1b53c.hls-js-dev.pages.dev/"
+    },
+    {
+      "version": "1.6.3-0.canary.11254",
+      "commit": "a2d6b48ef238850e5e20e934a06c29dbd5fa2fb1",
+      "url": "https://c2408cde.hls-js-dev.pages.dev/"
     }
   ]
 }
