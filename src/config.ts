@@ -282,6 +282,7 @@ export type HlsConfig = {
   ignoreDevicePixelRatio: boolean;
   maxDevicePixelRatio: number;
   preferManagedMediaSource: boolean;
+  preserveManualLevelOnError: boolean;
   timelineOffset?: number;
   ignorePlaylistParsingErrors: boolean;
   loader: { new (confg: HlsConfig): Loader<LoaderContext> };
@@ -450,6 +451,7 @@ export const hlsDefaultConfig: HlsConfig = {
   interstitialAppendInPlace: true,
   interstitialLiveLookAhead: 10,
   useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
+  preserveManualLevelOnError: false,
 
   certLoadPolicy: {
     default: defaultLoadPolicy,
