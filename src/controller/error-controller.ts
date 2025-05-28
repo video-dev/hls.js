@@ -341,7 +341,7 @@ export default class ErrorController
       // Search for next level to retry
       let nextLevel = -1;
       const { levels, loadLevel, minAutoLevel, maxAutoLevel } = hls;
-      if (!hls.autoLevelEnabled) {
+      if (!hls.autoLevelEnabled && !hls.config.preserveManualLevelOnError) {
         hls.loadLevel = -1;
       }
       const fragErrorType = data.frag?.type;
