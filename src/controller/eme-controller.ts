@@ -7,6 +7,10 @@ import { EventEmitter } from 'eventemitter3';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { LevelKey } from '../loader/level-key';
+import {
+  addEventListener,
+  removeEventListener,
+} from '../utils/event-listener-helper';
 import Hex from '../utils/hex';
 import { Logger } from '../utils/logger';
 import {
@@ -105,10 +109,8 @@ class EMEController extends Logger implements ComponentAPI {
   }
 
   public destroy() {
-    const media = this.media;
-    this.unregisterListeners();
+    this.onDestroying();
     this.onMediaDetached();
-    this._clear(media);
     // Remove any references that could be held in config options or callbacks
     const config = this.config;
     config.requestMediaKeySystemAccessFunc = null;
@@ -125,6 +127,7 @@ class EMEController extends Logger implements ComponentAPI {
     this.hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     this.hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     this.hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    this.hls.on(Events.DESTROYING, this.onDestroying, this);
   }
 
   private unregisterListeners() {
@@ -132,6 +135,7 @@ class EMEController extends Logger implements ComponentAPI {
     this.hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     this.hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     this.hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    this.hls.off(Events.DESTROYING, this.onDestroying, this);
   }
 
   private getLicenseServerUrl(keySystem: KeySystems): string | undefined {
@@ -375,7 +379,7 @@ class EMEController extends Logger implements ComponentAPI {
 
   private updateKeySession(
     mediaKeySessionContext: MediaKeySessionContext,
-    data: Uint8Array,
+    data: Uint8Array<ArrayBuffer>,
   ): Promise<void> {
     const keySession = mediaKeySessionContext.mediaKeysSession;
     this.log(
@@ -879,8 +883,9 @@ class EMEController extends Logger implements ComponentAPI {
       }
     });
 
-    context.mediaKeysSession.addEventListener('message', onmessage);
-    context.mediaKeysSession.addEventListener(
+    addEventListener(context.mediaKeysSession, 'message', onmessage);
+    addEventListener(
+      context.mediaKeysSession,
       'keystatuseschange',
       onkeystatuseschange,
     );
@@ -1108,8 +1113,8 @@ class EMEController extends Logger implements ComponentAPI {
 
   private unpackPlayReadyKeyMessage(
     xhr: XMLHttpRequest,
-    licenseChallenge: Uint8Array,
-  ): Uint8Array {
+    licenseChallenge: Uint8Array<ArrayBuffer>,
+  ): Uint8Array<ArrayBuffer> {
     // On Edge, the raw license message is UTF-16-encoded XML.  We need
     // to unpack the Challenge element (base64-encoded string containing the
     // actual license request) and any HttpHeader elements (sent as request
@@ -1156,8 +1161,11 @@ class EMEController extends Logger implements ComponentAPI {
     xhr: XMLHttpRequest,
     url: string,
     keysListItem: MediaKeySessionContext,
-    licenseChallenge: Uint8Array,
-  ): Promise<{ xhr: XMLHttpRequest; licenseChallenge: Uint8Array }> {
+    licenseChallenge: Uint8Array<ArrayBuffer>,
+  ): Promise<{
+    xhr: XMLHttpRequest;
+    licenseChallenge: Uint8Array<ArrayBuffer>;
+  }> {
     const licenseXhrSetup = this.config.licenseXhrSetup;
 
     if (!licenseXhrSetup) {
@@ -1209,7 +1217,7 @@ class EMEController extends Logger implements ComponentAPI {
 
   private requestLicense(
     keySessionContext: MediaKeySessionContext,
-    licenseChallenge: Uint8Array,
+    licenseChallenge: Uint8Array<ArrayBuffer>,
   ): Promise<ArrayBuffer> {
     const keyLoadPolicy = this.config.keyLoadPolicy.default;
     return new Promise((resolve, reject) => {
@@ -1305,6 +1313,11 @@ class EMEController extends Logger implements ComponentAPI {
     });
   }
 
+  private onDestroying() {
+    this.unregisterListeners();
+    this._clear();
+  }
+
   private onMediaAttached(
     event: Events.MEDIA_ATTACHED,
     data: MediaAttachedData,
@@ -1318,30 +1331,32 @@ class EMEController extends Logger implements ComponentAPI {
     // keep reference of media
     this.media = media;
 
-    media.removeEventListener('encrypted', this.onMediaEncrypted);
-    media.removeEventListener('waitingforkey', this.onWaitingForKey);
-    media.addEventListener('encrypted', this.onMediaEncrypted);
-    media.addEventListener('waitingforkey', this.onWaitingForKey);
+    addEventListener(media, 'encrypted', this.onMediaEncrypted);
+    addEventListener(media, 'waitingforkey', this.onWaitingForKey);
   }
 
   private onMediaDetached() {
     const media = this.media;
 
     if (media) {
-      media.removeEventListener('encrypted', this.onMediaEncrypted);
-      media.removeEventListener('waitingforkey', this.onWaitingForKey);
+      removeEventListener(media, 'encrypted', this.onMediaEncrypted);
+      removeEventListener(media, 'waitingforkey', this.onWaitingForKey);
       this.media = null;
       this.mediaKeys = null;
     }
   }
 
-  private _clear(media) {
-    const mediaKeysList = this.mediaKeySessions;
+  private _clear() {
     this._requestLicenseFailureCount = 0;
-    this.mediaKeys = null;
-    this.setMediaKeysQueue = [];
-    this.mediaKeySessions = [];
     this.keyIdToKeySessionPromise = {};
+    if (!this.mediaKeys && !this.mediaKeySessions.length) {
+      return;
+    }
+    const media = this.media;
+    const mediaKeysList = this.mediaKeySessions.slice();
+    this.mediaKeySessions = [];
+    this.mediaKeys = null;
+
     LevelKey.clearKeyUriToKeyIdMap();
 
     // Close all sessions and remove media keys from the video element.
@@ -1363,12 +1378,6 @@ class EMEController extends Logger implements ComponentAPI {
           }),
         ),
     )
-      .then(() => {
-        if (keySessionCount) {
-          this.log('finished closing key sessions and clearing media keys');
-          mediaKeysList.length = 0;
-        }
-      })
       .catch((error) => {
         this.log(`Could not close sessions and clear media keys: ${error}`);
         this.hls?.trigger(Events.ERROR, {
@@ -1379,6 +1388,12 @@ class EMEController extends Logger implements ComponentAPI {
             `Could not close sessions and clear media keys: ${error}`,
           ),
         });
+      })
+
+      .then(() => {
+        if (keySessionCount) {
+          this.log('finished closing key sessions and clearing media keys');
+        }
       });
   }
 

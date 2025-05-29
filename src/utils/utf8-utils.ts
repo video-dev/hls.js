@@ -11,7 +11,7 @@ export type Frame = DecodedFrame<ArrayBuffer | string>;
  * This library is free.  You can redistribute it and/or modify it.
  */
 
-export function strToUtf8array(str: string): Uint8Array {
+export function strToUtf8array(str: string) {
   return Uint8Array.from(unescape(encodeURIComponent(str)), (c) =>
     c.charCodeAt(0),
   );
