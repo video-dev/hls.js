@@ -1,5 +1,5 @@
 export function addEventListener(
-  el: HTMLElement,
+  el: EventTarget,
   type: string,
   listener: EventListenerOrEventListenerObject,
 ) {
@@ -8,7 +8,7 @@ export function addEventListener(
 }
 
 export function removeEventListener(
-  el: HTMLElement,
+  el: EventTarget,
   type: string,
   listener: EventListenerOrEventListenerObject,
 ) {
