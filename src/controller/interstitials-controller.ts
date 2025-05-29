@@ -837,7 +837,6 @@ export default class InterstitialsController
       dataToAttach.overrides = {
         duration: this.schedule.duration,
         endOfStream: !isAssetPlayer || isAssetAtEndOfSchedule,
-        cueRemoval: !isAssetPlayer,
       };
     }
     player.attachMedia(dataToAttach);
