@@ -818,6 +818,7 @@ fileSequence8.m4s
         startCC: 10, // w/o disco-sequence incremented
         endCC: 11,
       });
+      expect(details2.fragments[0]).to.include({ sn: 102, cc: 11 });
       expect(details2.fragmentHint).to.include({ sn: 109, cc: 12 });
       expect(mergedSequence1).to.equal(
         '102-11,103-11,104-11,105-11,106-11,107-11,108-11',
@@ -845,11 +846,169 @@ fileSequence8.m4s
         startCC: 11, // w/ disco-sequence incremented
         endCC: 11,
       });
-      expect(details2.fragmentHint).to.include({ sn: 109, cc: 12 });
+      expect(details3.fragments[0]).to.include({ sn: 102, cc: 11 });
+      expect(details3.fragmentHint).to.include({ sn: 109, cc: 12 });
       expect(mergedSequence2).to.equal(
         '102-11,103-11,104-11,105-11,106-11,107-11,108-11',
       );
       expect(details3.playlistParsingError).to.be.null;
+    });
+
+    it('handles delta Playlist updates with discontinuities and parts and no sequence change (missing PDT)', function () {
+      const playlist = `#EXTM3U
+#EXT-X-VERSION:10
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-TARGETDURATION:3
+#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=3.126000,CAN-SKIP-UNTIL=20.0
+#EXT-X-PART-INF:PART-TARGET=1.000000
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-DISCONTINUITY-SEQUENCE:0
+#EXT-X-DATERANGE:ID="nmss-daterange",START-DATE="2025-05-22T07:59:38.809Z"
+
+#EXT-X-MAP:URI="720p_0_0.m4s"
+#EXTINF:2.500000,
+720p_0.m4v
+#EXTINF:2.500000,
+720p_1.m4v
+#EXTINF:2.500000,
+720p_2.m4v
+#EXTINF:2.184667,
+#EXT-X-DISCONTINUITY
+#EXT-X-MAP:URI="720p_0_1.m4s
+#EXTINF:2.500000,
+720p_3.m4v 
+#EXTINF:2.500000,
+720p_4.m4v
+#EXTINF:2.500000,
+720p_5.m4v
+#EXTINF:2.500000,
+720p_6.m4v
+#EXTINF:2.500000,
+720p_7.m4v
+#EXTINF:2.500000,
+720p_8.m4v
+#EXT-X-PART:DURATION=1.000000,URI="720p_9_0.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="720p_9_1.m4v"
+#EXT-X-PART:DURATION=0.500000,URI="720p_9_2.m4v"
+#EXTINF:2.500000,
+720p_9.m4v
+#EXT-X-PART:DURATION=1.000000,URI="720p_10_0.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="720p_10_1.m4v"
+#EXT-X-PART:DURATION=0.500000,URI="720p_10_2.m4v"
+#EXTINF:2.500000,
+720p_10.m4v
+#EXT-X-PART:DURATION=1.000000,URI="720p_11_0.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="720p_11_1.m4v"
+#EXT-X-PART:DURATION=0.500000,URI="720p_11_2.m4v"
+#EXTINF:2.500000,
+720p_11.m4v
+#EXT-X-PART:DURATION=1.000000,URI="720p_12_0.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="720p_12_0.m4v"
+#EXT-X-PRELOAD-HINT:TYPE=PART,URI="720p_12_2.m4v"`;
+      const deltaUpdate = `#EXTM3U
+#EXT-X-VERSION:10
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-TARGETDURATION:3
+#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=3.126000,CAN-SKIP-UNTIL=20.0
+#EXT-X-PART-INF:PART-TARGET=1.000000
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-DISCONTINUITY-SEQUENCE:0
+#EXT-X-DATERANGE:ID="nmss-daterange",START-DATE="2025-05-22T07:59:38.809Z"
+#EXT-X-SKIP:SKIPPED-SEGMENTS=4
+
+#EXT-X-MAP:URI="720p_0_1.m4s"
+720p_4.m4v
+#EXTINF:2.500000,
+720p_5.m4v
+#EXTINF:2.500000,
+720p_6.m4v
+#EXTINF:2.500000,
+720p_7.m4v
+#EXTINF:2.500000,
+720p_8.m4v
+#EXT-X-PART:DURATION=1.000000,URI="720p_9_0.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="720p_9_1.m4v"
+#EXT-X-PART:DURATION=0.500000,URI="720p_9_2.m4v"
+#EXTINF:2.500000,
+720p_9.m4v
+#EXT-X-PART:DURATION=1.000000,URI="720p_10_0.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="720p_10_1.m4v"
+#EXT-X-PART:DURATION=0.500000,URI="720p_10_2.m4v"
+#EXTINF:2.500000,
+720p_10.m4v
+#EXT-X-PART:DURATION=1.000000,URI="720p_11_0.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="720p_11_1.m4v"
+#EXT-X-PART:DURATION=0.500000,URI="720p_11_2.m4v"
+#EXTINF:2.500000,
+720p_11.m4v
+#EXT-X-PART:DURATION=1.000000,URI="720p_12_0.m4v",INDEPENDENT=YES
+#EXT-X-PART:DURATION=1.000000,URI="720p_12_0.m4v"
+#EXT-X-PART:DURATION=1.000000,URI="720p_12_0.m4v"
+#EXTINF:2.500000,
+720p_12.m4v
+#EXT-X-PRELOAD-HINT:TYPE=PART,URI="720p_13_0.m4`;
+
+      const details1 = parseLevelPlaylist(playlist);
+      const details2 = parseLevelPlaylist(deltaUpdate);
+      expect(details1, 'details1').to.include({
+        live: true,
+        canSkipUntil: 20,
+        totalduration: 32,
+        startSN: 0,
+        endSN: 11,
+        fragmentStart: 0,
+        lastPartSn: 12,
+        lastPartIndex: 1,
+        startCC: 0,
+        endCC: 1,
+      });
+
+      expect(
+        details2,
+        'delta w/o disco seq incremented before merging',
+      ).to.include({
+        live: true,
+        skippedSegments: 4,
+        canSkipUntil: 20,
+        totalduration: 32,
+        startSN: 0,
+        endSN: 12,
+        lastPartSn: 12,
+        lastPartIndex: 2,
+        startCC: 0,
+        endCC: 0, // endCC of delta playlist will not be incremented until merged
+      });
+      expect(
+        details2.fragments,
+        'delta w/o disco seq incremented fragments',
+      ).to.have.lengthOf(13);
+
+      // This delta update does not increment discontinuity-sequence (discontinuity tag would appear before first segment)
+      details2.reloaded(details1);
+      expect(details2, 'delta w/o disco seq incremented reloaded').to.include({
+        misses: 0,
+        advanced: true,
+        updated: true,
+      });
+      // discontinuity sequence numbers (frag.cc) should be carried over
+      mergeDetails(details1, details2);
+      const mergedSequence1 = getFragmentSequenceNumbers(details2);
+      expect(
+        details2,
+        `delta w/o disco seq incremented merged (${mergedSequence1})`,
+      ).to.include({
+        skippedSegments: 4,
+        deltaUpdateFailed: false,
+        startSN: 0,
+        endSN: 12,
+        startCC: 0,
+        endCC: 1, // incremented after merging
+      });
+      expect(details2.fragmentHint).to.include({ sn: 13, cc: 1 });
+      expect(mergedSequence1).to.equal(
+        '0-0,1-0,2-0,3-1,4-1,5-1,6-1,7-1,8-1,9-1,10-1,11-1,12-1',
+      );
+      expect(details2.playlistParsingError).to.be.null;
     });
 
     it('handles delta Playlist updates with multiple skip tags and removed date ranges', function () {

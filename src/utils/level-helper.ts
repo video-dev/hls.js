@@ -168,14 +168,14 @@ export function mergeDetails(
     oldDetails,
     newDetails,
     (oldFrag, newFrag, newFragIndex, newFragments) => {
-      if (!newDetails.startCC && newFrag.cc !== oldFrag.cc) {
+      if (
+        (!newDetails.startCC || newDetails.skippedSegments) &&
+        newFrag.cc !== oldFrag.cc
+      ) {
         const ccOffset = oldFrag.cc - newFrag.cc;
         for (let i = newFragIndex; i < newFragments.length; i++) {
           newFragments[i].cc += ccOffset;
         }
-        newDetails.startCC =
-          getFragmentWithSN(oldDetails, newDetails.startSN - 1)?.cc ??
-          newFragments[0].cc;
         newDetails.endCC = newFragments[newFragments.length - 1].cc;
       }
       if (
@@ -243,7 +243,6 @@ export function mergeDetails(
       }
       newDetails.startSN = newFragments[0].sn;
     } else {
-      newDetails.endCC = newFragments[newFragments.length - 1].cc;
       if (newDetails.canSkipDateRanges) {
         newDetails.dateRanges = mergeDateRanges(
           oldDetails.dateRanges,
@@ -266,6 +265,14 @@ export function mergeDetails(
       }
       mapDateRanges(programDateTimes, newDetails);
     }
+    newDetails.endCC = newFragments[newFragments.length - 1].cc;
+  }
+  if (!newDetails.startCC) {
+    const fragPriorToNewStart = getFragmentWithSN(
+      oldDetails,
+      newDetails.startSN - 1,
+    );
+    newDetails.startCC = fragPriorToNewStart?.cc ?? newFragments[0].cc;
   }
 
   // Merge parts
