@@ -723,68 +723,68 @@ export function getSampleData(
       const sampleCount = readUint32(trun, 4);
       const sampleIndex = trackTimes.sampleCount;
       trackTimes.sampleCount += sampleCount;
-      if (track.type === ElementaryStreamTypes.VIDEO) {
-        const dataOffsetPresent = trun[3] & 0x01;
-        const firstSampleFlagsPresent = trun[3] & 0x04;
-        const sampleDurationPresent = trun[2] & 0x01;
-        const sampleSizePresent = trun[2] & 0x02;
-        const sampleFlagsPresent = trun[2] & 0x04;
-        const sampleCompositionTimeOffsetPresent = trun[2] & 0x08;
-        let offset = 8;
-        let remaining = sampleCount;
-        if (dataOffsetPresent) {
+      // Get duration from samples
+      const dataOffsetPresent = trun[3] & 0x01;
+      const firstSampleFlagsPresent = trun[3] & 0x04;
+      const sampleDurationPresent = trun[2] & 0x01;
+      const sampleSizePresent = trun[2] & 0x02;
+      const sampleFlagsPresent = trun[2] & 0x04;
+      const sampleCompositionTimeOffsetPresent = trun[2] & 0x08;
+      let offset = 8;
+      let remaining = sampleCount;
+      if (dataOffsetPresent) {
+        offset += 4;
+      }
+      if (firstSampleFlagsPresent && sampleCount) {
+        const isNonSyncSample = trun[offset + 1] & 0x01;
+        if (!isNonSyncSample && trackTimes.keyFrameIndex === undefined) {
+          trackTimes.keyFrameIndex = sampleIndex;
+        }
+        offset += 4;
+        if (sampleDurationPresent) {
+          sampleDuration = readUint32(trun, offset);
+          offset += 4;
+        } else {
+          sampleDuration = defaultSampleDuration;
+        }
+        if (sampleSizePresent) {
           offset += 4;
         }
-        if (firstSampleFlagsPresent && sampleCount) {
+        if (sampleCompositionTimeOffsetPresent) {
+          offset += 4;
+        }
+        sampleDTS += sampleDuration;
+        rawDuration += sampleDuration;
+        remaining--;
+      }
+      while (remaining--) {
+        if (sampleDurationPresent) {
+          sampleDuration = readUint32(trun, offset);
+          offset += 4;
+        } else {
+          sampleDuration = defaultSampleDuration;
+        }
+        if (sampleSizePresent) {
+          offset += 4;
+        }
+        if (sampleFlagsPresent) {
           const isNonSyncSample = trun[offset + 1] & 0x01;
-          if (!isNonSyncSample && trackTimes.keyFrameIndex === undefined) {
-            trackTimes.keyFrameIndex = sampleIndex;
+          if (!isNonSyncSample) {
+            if (trackTimes.keyFrameIndex === undefined) {
+              trackTimes.keyFrameIndex =
+                trackTimes.sampleCount - (remaining + 1);
+              trackTimes.keyFrameStart = sampleDTS;
+            }
           }
           offset += 4;
-          if (sampleDurationPresent) {
-            sampleDuration = readUint32(trun, offset);
-            offset += 4;
-          } else {
-            sampleDuration = defaultSampleDuration;
-          }
-          if (sampleSizePresent) {
-            offset += 4;
-          }
-          if (sampleCompositionTimeOffsetPresent) {
-            offset += 4;
-          }
-          sampleDTS += sampleDuration;
-          rawDuration += sampleDuration;
-          remaining--;
         }
-        while (remaining--) {
-          if (sampleDurationPresent) {
-            sampleDuration = readUint32(trun, offset);
-            offset += 4;
-          } else {
-            sampleDuration = defaultSampleDuration;
-          }
-          if (sampleSizePresent) {
-            offset += 4;
-          }
-          if (sampleFlagsPresent) {
-            const isNonSyncSample = trun[offset + 1] & 0x01;
-            if (!isNonSyncSample) {
-              if (trackTimes.keyFrameIndex === undefined) {
-                trackTimes.keyFrameIndex =
-                  trackTimes.sampleCount - (remaining + 1);
-                trackTimes.keyFrameStart = sampleDTS;
-              }
-            }
-            offset += 4;
-          }
-          if (sampleCompositionTimeOffsetPresent) {
-            offset += 4;
-          }
-          sampleDTS += sampleDuration;
-          rawDuration += sampleDuration;
+        if (sampleCompositionTimeOffsetPresent) {
+          offset += 4;
         }
-      } else {
+        sampleDTS += sampleDuration;
+        rawDuration += sampleDuration;
+      }
+      if (!rawDuration && defaultSampleDuration) {
         rawDuration += defaultSampleDuration * sampleCount;
       }
     }
