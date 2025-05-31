@@ -758,6 +758,9 @@ export function mapDateRanges(
 ) {
   // Make sure DateRanges are mapped to a ProgramDateTime tag that applies a date to a segment that overlaps with its start date
   const programDateTimeCount = programDateTimes.length;
+  if (!programDateTimeCount) {
+    return;
+  }
   const lastProgramDateTime = programDateTimes[programDateTimeCount - 1];
   const playlistEnd = details.live ? Infinity : details.totalduration;
   const dateRangeIds = Object.keys(details.dateRanges);
