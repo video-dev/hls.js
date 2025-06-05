@@ -1424,11 +1424,9 @@ export default class StreamController
     // include levelCodec in audio and video tracks
     const { audio, video, audiovideo } = tracks;
     if (audio) {
-      let audioCodec = pickMostCompleteCodecName(
-        audio.codec,
-        currentLevel.audioCodec,
-      );
-      // Add level and profile to make up for passthrough-remuxer not being able to parse full codec
+      const levelCodec = currentLevel.audioCodec;
+      let audioCodec = pickMostCompleteCodecName(audio.codec, levelCodec);
+      // Add level and profile to make up for remuxer not being able to parse full codec
       // (logger warning "Unhandled audio codec...")
       if (audioCodec === 'mp4a') {
         audioCodec = 'mp4a.40.5';
@@ -1467,9 +1465,9 @@ export default class StreamController
         audioCodec = 'mp4a.40.2';
         this.log(`Android: force audio codec to ${audioCodec}`);
       }
-      if (currentLevel.audioCodec && currentLevel.audioCodec !== audioCodec) {
+      if (levelCodec && levelCodec !== audioCodec) {
         this.log(
-          `Swapping manifest audio codec "${currentLevel.audioCodec}" for "${audioCodec}"`,
+          `Swapping manifest audio codec "${levelCodec}" for "${audioCodec}"`,
         );
       }
       audio.levelCodec = audioCodec;
@@ -1478,7 +1476,7 @@ export default class StreamController
         `Init audio buffer, container:${
           audio.container
         }, codecs[selected/level/parsed]=[${audioCodec || ''}/${
-          currentLevel.audioCodec || ''
+          levelCodec || ''
         }/${audio.codec}]`,
       );
       delete tracks.audiovideo;
