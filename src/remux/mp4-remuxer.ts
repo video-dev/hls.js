@@ -898,11 +898,10 @@ export default class MP4Remuxer implements Remuxer {
         return;
       }
 
-      // if (videoTimeOffset === 0) {
-      //   // Set the start to 0 to match video so that start gaps larger than inputSampleDuration are filled with silence
-      //   nextAudioPts = 0;
-      // } else
-      if (accurateTimeOffset && !alignedWithVideo) {
+      if (videoTimeOffset === 0) {
+        // Set the start to match video so that start gaps larger than inputSampleDuration are filled with silence
+        nextAudioPts = initTime;
+      } else if (accurateTimeOffset && !alignedWithVideo) {
         // When not seeking, not live, and LevelDetails.PTSKnown, use fragment start as predicted next audio PTS
         nextAudioPts = Math.max(0, timeOffsetMpegTS);
       } else {
