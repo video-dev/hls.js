@@ -757,7 +757,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const { tracks } = this;
     const { data, type, parent, frag, part, chunkMeta, offset } = eventData;
     const chunkStats = chunkMeta.buffering[type];
-    const sn = frag.sn;
+    const { sn, cc } = frag;
     const bufferAppendingStart = self.performance.now();
     chunkStats.start = bufferAppendingStart;
     const fragBuffering = frag.stats.buffering;
@@ -833,9 +833,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           const sb = track.buffer;
           if (sb) {
             if (checkTimestampOffset) {
-              this.updateTimestampOffset(sb, fragStart, 0.1, type, sn);
+              this.updateTimestampOffset(sb, fragStart, 0.1, type, sn, cc);
             } else if (offset !== undefined && Number.isFinite(offset)) {
-              this.updateTimestampOffset(sb, offset, 0.000001, type, sn);
+              this.updateTimestampOffset(sb, offset, 0.000001, type, sn, cc);
             }
           }
         }
@@ -1596,11 +1596,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     tolerance: number,
     type: SourceBufferName,
     sn: number | 'initSegment',
+    cc: number,
   ) {
     const delta = timestampOffset - sb.timestampOffset;
     if (Math.abs(delta) >= tolerance) {
       this.log(
-        `Updating ${type} SourceBuffer timestampOffset to ${timestampOffset} (delta: ${delta}) sn: ${sn})`,
+        `Updating ${type} SourceBuffer timestampOffset to ${timestampOffset} (sn: ${sn} cc: ${cc})`,
       );
       sb.timestampOffset = timestampOffset;
     }
