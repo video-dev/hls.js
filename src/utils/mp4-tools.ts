@@ -284,7 +284,7 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
             result[trackId] = { timescale, type, stsd };
             result[type] = { timescale, id: trackId, ...stsd };
           } else {
-            // Add 'meta' and other track records required by `offsetStartDTS`
+            // Add 'meta' and other track records
             result[trackId] = {
               timescale,
               type: hdlrType as HdlrType,
@@ -822,48 +822,6 @@ export function getSampleData(
     }
   }
   return tracks;
-}
-
-// TODO: Remove `offsetStartDTS` in favor of using `timestampOffset` (issue #5715)
-export function offsetStartDTS(
-  initData: InitData,
-  fmp4: Uint8Array,
-  timeOffset: number,
-) {
-  findBox(fmp4, ['moof', 'traf']).forEach((traf) => {
-    findBox(traf, ['tfhd']).forEach((tfhd) => {
-      // get the track id from the tfhd
-      const id = readUint32(tfhd, 4);
-      const track = initData[id];
-      if (!track) {
-        return;
-      }
-      // assume a 90kHz clock if no timescale was specified
-      const timescale = track.timescale || 90e3;
-      // get the base media decode time from the tfdt
-      findBox(traf, ['tfdt']).forEach((tfdt) => {
-        const version = tfdt[0];
-        const offset = timeOffset * timescale;
-        if (offset) {
-          let baseMediaDecodeTime = readUint32(tfdt, 4);
-          if (version === 0) {
-            baseMediaDecodeTime -= offset;
-            baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
-            writeUint32(tfdt, 4, baseMediaDecodeTime);
-          } else {
-            baseMediaDecodeTime *= Math.pow(2, 32);
-            baseMediaDecodeTime += readUint32(tfdt, 8);
-            baseMediaDecodeTime -= offset;
-            baseMediaDecodeTime = Math.max(baseMediaDecodeTime, 0);
-            const upper = Math.floor(baseMediaDecodeTime / (UINT32_MAX + 1));
-            const lower = Math.floor(baseMediaDecodeTime % (UINT32_MAX + 1));
-            writeUint32(tfdt, 4, upper);
-            writeUint32(tfdt, 8, lower);
-          }
-        }
-      });
-    });
-  });
 }
 
 // TODO: Check if the last moof+mdat pair is part of the valid range

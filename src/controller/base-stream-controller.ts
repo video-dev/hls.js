@@ -1132,12 +1132,16 @@ export default class BaseStreamController
     if (!buffer?.length) {
       return;
     }
-
+    const offsetTimestamp = this.initPTS[frag.cc];
+    const offset = offsetTimestamp
+      ? -offsetTimestamp.baseTime / offsetTimestamp.timescale
+      : undefined;
     const segment: BufferAppendingData = {
       type: data.type,
       frag,
       part,
       chunkMeta,
+      offset,
       parent: frag.type,
       data: buffer,
     };

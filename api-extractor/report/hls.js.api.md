@@ -635,6 +635,8 @@ export interface BufferAppendingData {
     // (undocumented)
     frag: Fragment;
     // (undocumented)
+    offset?: number | undefined;
+    // (undocumented)
     parent: PlaylistLevelType;
     // (undocumented)
     part: Part | null;
@@ -4342,9 +4344,9 @@ export interface RemuxedMetadata {
 // @public (undocumented)
 export interface RemuxedTrack {
     // (undocumented)
-    data1: Uint8Array;
+    data1: Uint8Array<ArrayBuffer>;
     // (undocumented)
-    data2?: Uint8Array;
+    data2?: Uint8Array<ArrayBuffer>;
     // (undocumented)
     dropped?: number;
     // (undocumented)
