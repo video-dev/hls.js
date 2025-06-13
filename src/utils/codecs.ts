@@ -232,7 +232,12 @@ export function pickMostCompleteCodecName(
     (parsedCodec.length > 4 ||
       ['ac-3', 'ec-3', 'alac', 'fLaC', 'Opus'].indexOf(parsedCodec) !== -1)
   ) {
-    return parsedCodec;
+    if (
+      isCodecSupportedAsType(parsedCodec, 'audio') ||
+      isCodecSupportedAsType(parsedCodec, 'video')
+    ) {
+      return parsedCodec;
+    }
   }
   if (levelCodec) {
     const levelCodecs = levelCodec.split(',');
@@ -248,6 +253,10 @@ export function pickMostCompleteCodecName(
     }
   }
   return levelCodec || parsedCodec;
+}
+
+function isCodecSupportedAsType(codec: string, type: CodecType): boolean {
+  return isCodecType(codec, type) && isCodecMediaSourceSupported(codec, type);
 }
 
 export function convertAVC1ToAVCOTI(videoCodecs: string): string {
