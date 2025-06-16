@@ -1446,26 +1446,38 @@ function parsePssh(view: DataView): PsshData | PsshInvalidResult {
   const systemId = Hex.hexDump(
     new Uint8Array(buffer, offset + 12, 16),
   ) as KeySystemIds;
-  const dataSizeOrKidCount = view.getUint32(28);
+
   let kids: null | Uint8Array[] = null;
   let data: null | Uint8Array = null;
+  let dataSizeOffset = 0;
+
   if (version === 0) {
-    if (size - 32 < dataSizeOrKidCount || dataSizeOrKidCount < 22) {
-      return { offset, size };
-    }
-    data = new Uint8Array(buffer, offset + 32, dataSizeOrKidCount);
+    dataSizeOffset = 28;
   } else if (version === 1) {
-    if (
-      !dataSizeOrKidCount ||
-      length < offset + 32 + dataSizeOrKidCount * 16 + 16
-    ) {
+    const kidCounts = view.getUint32(28);
+    if (!kidCounts || length < 32 + kidCounts * 16) {
       return { offset, size };
     }
     kids = [];
-    for (let i = 0; i < dataSizeOrKidCount; i++) {
+    for (let i = 0; i < kidCounts; i++) {
       kids.push(new Uint8Array(buffer, offset + 32 + i * 16, 16));
     }
+    dataSizeOffset = 32 + kidCounts * 16;
   }
+
+  if (!dataSizeOffset) {
+    return { offset, size };
+  }
+
+  const dataSizeOrKidCount = view.getUint32(dataSizeOffset);
+  if (size - 32 < dataSizeOrKidCount) {
+    return { offset, size };
+  }
+  data = new Uint8Array(
+    buffer,
+    offset + dataSizeOffset + 4,
+    dataSizeOrKidCount,
+  );
   return {
     version,
     systemId,
