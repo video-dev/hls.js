@@ -1003,8 +1003,7 @@ function parsePES(stream: ElementaryStreamData, logger: ILogger): PES | null {
         (frag[10] & 0xff) * 4194304 + // 1 << 22
         (frag[11] & 0xfe) * 16384 + // 1 << 14
         (frag[12] & 0xff) * 128 + // 1 << 7
-        (frag[13] & 0xfe) / 2 +
-        900000; // padding for silent audio insertion
+        (frag[13] & 0xfe) / 2;
 
       if (pesFlags & 0x40) {
         pesDts =
@@ -1012,8 +1011,7 @@ function parsePES(stream: ElementaryStreamData, logger: ILogger): PES | null {
           (frag[15] & 0xff) * 4194304 + // 1 << 22
           (frag[16] & 0xfe) * 16384 + // 1 << 14
           (frag[17] & 0xff) * 128 + // 1 << 7
-          (frag[18] & 0xfe) / 2 +
-          900000; // padding for silent audio insertion
+          (frag[18] & 0xfe) / 2;
 
         if (pesPts - pesDts > 60 * 90000) {
           logger.warn(

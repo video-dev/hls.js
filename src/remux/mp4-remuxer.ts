@@ -934,7 +934,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
             this.warn(
               `Audio frame @ ${(pts / inputTimeScale).toFixed(
                 3,
-              )}s overlaps nextAudioPts by ${Math.round(
+              )}s overlaps marker by ${Math.round(
                 (1000 * delta) / inputTimeScale,
               )} ms.`,
             );
@@ -957,7 +957,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           // Adjust nextPts so that silent samples are aligned with media pts. This will prevent media samples from
           // later being shifted if nextPts is based on timeOffset and delta is not a multiple of inputSampleDuration.
           nextPts = pts - missing * inputSampleDuration;
-          if (nextPts - initTime < 0) {
+          while (nextPts < 0 && missing && inputSampleDuration) {
             missing--;
             nextPts += inputSampleDuration;
           }
