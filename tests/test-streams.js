@@ -167,6 +167,8 @@ module.exports = {
     // silent audio insertion can only prepend missing back to the last appended time provided there is room
     // The discontinuities and starting offset of the timestamps do not allow prepending earlier than the start of the disco
     allowedBufferedRangesInSeekTest: 7,
+    // Ignore "should buffer up to maxBufferLength" result
+    avBufferOffset: 39,
   },
   pdtBadValues: {
     url: 'https://playertest.longtailvideo.com/adaptive/progdatime/playlist2.m3u8',

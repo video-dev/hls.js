@@ -583,7 +583,11 @@ export default class GapController extends TaskLoop {
               let moreToLoad = false;
               let pos = startProvisioned.end;
               while (pos < startTime) {
-                const provisioned = fragmentTracker.getPartialFragment(pos);
+                const provisioned =
+                  fragmentTracker.getAppendedFrag(
+                    pos,
+                    PlaylistLevelType.MAIN,
+                  ) || fragmentTracker.getPartialFragment(pos);
                 if (provisioned) {
                   pos += provisioned.duration;
                 } else {
