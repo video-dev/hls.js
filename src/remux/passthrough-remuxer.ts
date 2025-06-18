@@ -50,8 +50,17 @@ class PassThroughRemuxer implements Remuxer {
   public destroy() {}
 
   public resetTimeStamp(defaultInitPTS: RationalTimestamp | null) {
-    this.initPTS = defaultInitPTS;
     this.lastEndTime = null;
+    const initPTS = this.initPTS;
+    if (initPTS && defaultInitPTS) {
+      if (
+        initPTS.baseTime === defaultInitPTS.baseTime &&
+        initPTS.timescale === defaultInitPTS.timescale
+      ) {
+        return;
+      }
+    }
+    this.initPTS = defaultInitPTS;
   }
 
   public resetNextTimestamp() {
@@ -215,9 +224,9 @@ class PassThroughRemuxer implements Remuxer {
     if (baseOffsetSamples) {
       const timescale = baseOffsetSamples.timescale;
       decodeTime = baseOffsetSamples.start / timescale;
+      initSegment.initPTS = baseOffsetSamples.start - timeOffset * timescale;
       initSegment.timescale = timescale;
       if (!initPTS) {
-        initSegment.initPTS = baseOffsetSamples.start - timeOffset * timescale;
         this.initPTS = initPTS = {
           baseTime: initSegment.initPTS,
           timescale,
@@ -232,6 +241,7 @@ class PassThroughRemuxer implements Remuxer {
         initSegment.timescale !== initPTS.timescale)
     ) {
       initSegment.initPTS = decodeTime - timeOffset;
+      initSegment.timescale = 1;
       if (initPTS && initPTS.timescale === 1) {
         this.logger.warn(
           `Adjusting initPTS @${timeOffset} from ${initPTS.baseTime / initPTS.timescale} to ${initSegment.initPTS}`,
