@@ -4882,6 +4882,7 @@ export interface TransmuxerResult {
 // @public (undocumented)
 export type TSDemuxerConfig = {
     forceKeyFrameOnDiscontinuity: boolean;
+    handleMpegTsVideoIntegrityErrors: 'process' | 'skip';
 };
 
 // Warning: (ae-missing-release-tag) "UriReplacement" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
