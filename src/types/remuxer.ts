@@ -36,8 +36,8 @@ export interface Remuxer {
 }
 
 export interface RemuxedTrack {
-  data1: Uint8Array;
-  data2?: Uint8Array;
+  data1: Uint8Array<ArrayBuffer>;
+  data2?: Uint8Array<ArrayBuffer>;
   startPTS: number;
   endPTS: number;
   startDTS: number;

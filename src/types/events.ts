@@ -89,6 +89,7 @@ export interface BufferAppendingData {
   frag: Fragment;
   part: Part | null;
   chunkMeta: ChunkMetadata;
+  offset?: number | undefined;
   parent: PlaylistLevelType;
   data: Uint8Array;
 }

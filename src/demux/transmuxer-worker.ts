@@ -196,7 +196,8 @@ function forwardMessage(event, data, instanceNo) {
 
 function forwardWorkerLogs(logger: ILogger, instanceNo: number) {
   for (const logFn in logger) {
-    const func: ILogFunction = (message?) => {
+    logger[logFn] = function () {
+      const message = Array.prototype.join.call(arguments, ' ');
       forwardMessage(
         'workerLog',
         {
@@ -206,7 +207,6 @@ function forwardWorkerLogs(logger: ILogger, instanceNo: number) {
         instanceNo,
       );
     };
-    logger[logFn] = func;
   }
 }
 

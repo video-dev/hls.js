@@ -4,12 +4,9 @@ import {
 } from './mp4-remuxer';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { getCodecCompatibleName } from '../utils/codecs';
+import { type ILogger, Logger } from '../utils/logger';
 import { patchEncyptionData } from '../utils/mp4-tools';
-import {
-  getSampleData,
-  offsetStartDTS,
-  parseInitSegment,
-} from '../utils/mp4-tools';
+import { getSampleData, parseInitSegment } from '../utils/mp4-tools';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { DecryptData } from '../loader/level-key';
@@ -27,12 +24,10 @@ import type {
 } from '../types/remuxer';
 import type { TrackSet } from '../types/track';
 import type { TypeSupported } from '../utils/codecs';
-import type { ILogger } from '../utils/logger';
 import type { InitData, InitDataTrack, TrackTimes } from '../utils/mp4-tools';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
-class PassThroughRemuxer implements Remuxer {
-  private readonly logger: ILogger;
+class PassThroughRemuxer extends Logger implements Remuxer {
   private emitInitSegment: boolean = false;
   private audioCodec?: string;
   private videoCodec?: string;
@@ -48,14 +43,23 @@ class PassThroughRemuxer implements Remuxer {
     typeSupported: TypeSupported,
     logger: ILogger,
   ) {
-    this.logger = logger;
+    super('passthrough-remuxer', logger);
   }
 
   public destroy() {}
 
   public resetTimeStamp(defaultInitPTS: RationalTimestamp | null) {
-    this.initPTS = defaultInitPTS;
     this.lastEndTime = null;
+    const initPTS = this.initPTS;
+    if (initPTS && defaultInitPTS) {
+      if (
+        initPTS.baseTime === defaultInitPTS.baseTime &&
+        initPTS.timescale === defaultInitPTS.timescale
+      ) {
+        return;
+      }
+    }
+    this.initPTS = defaultInitPTS;
   }
 
   public resetNextTimestamp() {
@@ -89,7 +93,7 @@ class PassThroughRemuxer implements Remuxer {
       audioCodec = getParsedTrackCodec(
         initData.audio,
         ElementaryStreamTypes.AUDIO,
-        this.logger,
+        this,
       );
     }
 
@@ -97,7 +101,7 @@ class PassThroughRemuxer implements Remuxer {
       videoCodec = getParsedTrackCodec(
         initData.video,
         ElementaryStreamTypes.VIDEO,
-        this.logger,
+        this,
       );
     }
 
@@ -126,9 +130,7 @@ class PassThroughRemuxer implements Remuxer {
         id: 'main',
       };
     } else {
-      this.logger.warn(
-        '[passthrough-remuxer.ts]: initSegment does not contain moov or trak boxes.',
-      );
+      this.warn('initSegment does not contain moov or trak boxes.');
     }
     this.initTracks = tracks;
   }
@@ -159,7 +161,7 @@ class PassThroughRemuxer implements Remuxer {
 
     // The binary segment data is added to the videoTrack in the mp4demuxer. We don't check to see if the data is only
     // audio or video (or both); adding it to video was an arbitrary choice.
-    const data = videoTrack.samples;
+    const data = videoTrack.samples as Uint8Array<ArrayBuffer>;
     if (!data?.length) {
       return result;
     }
@@ -176,9 +178,7 @@ class PassThroughRemuxer implements Remuxer {
     }
     if (!initData?.length) {
       // We can't remux if the initSegment could not be generated
-      this.logger.warn(
-        '[passthrough-remuxer.ts]: Failed to generate initSegment.',
-      );
+      this.warn('Failed to generate initSegment.');
       return result;
     }
     if (this.emitInitSegment) {
@@ -186,7 +186,7 @@ class PassThroughRemuxer implements Remuxer {
       this.emitInitSegment = false;
     }
 
-    const trackSampleData = getSampleData(data, initData, this.logger);
+    const trackSampleData = getSampleData(data, initData, this);
     const audioSampleTimestamps = initData.audio
       ? trackSampleData[initData.audio.id]
       : null;
@@ -219,9 +219,9 @@ class PassThroughRemuxer implements Remuxer {
     if (baseOffsetSamples) {
       const timescale = baseOffsetSamples.timescale;
       decodeTime = baseOffsetSamples.start / timescale;
+      initSegment.initPTS = baseOffsetSamples.start - timeOffset * timescale;
       initSegment.timescale = timescale;
       if (!initPTS) {
-        initSegment.initPTS = baseOffsetSamples.start - timeOffset * timescale;
         this.initPTS = initPTS = {
           baseTime: initSegment.initPTS,
           timescale,
@@ -236,8 +236,9 @@ class PassThroughRemuxer implements Remuxer {
         initSegment.timescale !== initPTS.timescale)
     ) {
       initSegment.initPTS = decodeTime - timeOffset;
+      initSegment.timescale = 1;
       if (initPTS && initPTS.timescale === 1) {
-        this.logger.warn(
+        this.warn(
           `Adjusting initPTS @${timeOffset} from ${initPTS.baseTime / initPTS.timescale} to ${initSegment.initPTS}`,
         );
       }
@@ -250,12 +251,12 @@ class PassThroughRemuxer implements Remuxer {
     const startTime = audioTrack
       ? decodeTime - initPTS.baseTime / initPTS.timescale
       : (lastEndTime as number);
-    offsetStartDTS(initData, data, initPTS.baseTime / initPTS.timescale);
     const endTime = startTime + duration;
+
     if (duration > 0) {
       this.lastEndTime = endTime;
     } else {
-      this.logger.warn('Duration parsed from mp4 should be greater than zero');
+      this.warn('Duration parsed from mp4 should be greater than zero');
       this.resetNextTimestamp();
     }
 
@@ -301,16 +302,16 @@ class PassThroughRemuxer implements Remuxer {
       track.firstKeyFrame = firstKeyFrame;
       if (independent && videoSampleTimestamps.keyFrameStart) {
         track.firstKeyFramePTS =
-          videoSampleTimestamps.keyFrameStart -
-          initPTS.baseTime / initPTS.timescale;
+          (videoSampleTimestamps.keyFrameStart - initPTS.baseTime) /
+          initPTS.timescale;
       }
       if (!this.isVideoContiguous) {
         result.independent = independent;
       }
       this.isVideoContiguous ||= independent;
       if (track.dropped) {
-        this.logger.warn(
-          `fmp4 does not start with IDR: firstIDR ${firstKeyFrame}/${videoSampleCount} dropped: ${track.dropped} pts: ${track.firstKeyFramePTS || 'NA'}`,
+        this.warn(
+          `fmp4 does not start with IDR: firstIDR ${firstKeyFrame}/${videoSampleCount} dropped: ${track.dropped} start: ${track.firstKeyFramePTS || 'NA'}`,
         );
       }
     }

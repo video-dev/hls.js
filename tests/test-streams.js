@@ -159,11 +159,21 @@ module.exports = {
     description: 'Duplicate sequential PDT values',
     abr: false,
   },
-  pdtLargeGap: {
-    url: 'https://playertest.longtailvideo.com/adaptive/boxee/playlist.m3u8',
-    description: 'PDTs with large gaps following discontinuities',
-    abr: false,
-  },
+  pdtLargeGap: createTestStreamWithConfig(
+    {
+      url: 'https://playertest.longtailvideo.com/adaptive/boxee/playlist.m3u8',
+      description: 'PDTs with large gaps following discontinuities',
+      abr: false,
+    },
+    {
+      // gaps are introduced by missing audio samples in the TS segments
+      // silent audio insertion can only prepend missing back to the last appended time provided there is room
+      // The discontinuities and starting offset of the timestamps do not allow prepending earlier than the start of the disco
+      allowedBufferedRangesInSeekTest: 7,
+      // Ignore "should buffer up to maxBufferLength" result
+      avBufferOffset: 39,
+    },
+  ),
   pdtBadValues: {
     url: 'https://playertest.longtailvideo.com/adaptive/progdatime/playlist2.m3u8',
     description: 'PDTs with bad values',
