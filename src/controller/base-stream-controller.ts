@@ -344,11 +344,12 @@ export default class BaseStreamController
       currentTime,
       config.maxBufferHole,
     );
+    const noFowardBuffer = !bufferInfo.len;
 
     this.log(
-      `media seeking to ${
+      `Media seeking to ${
         Number.isFinite(currentTime) ? currentTime.toFixed(3) : currentTime
-      }, state: ${state}`,
+      }, state: ${state}, ${noFowardBuffer ? 'out of' : 'in'} buffer`,
     );
 
     if (this.state === State.ENDED) {
@@ -361,7 +362,7 @@ export default class BaseStreamController
         fragCurrent.start + fragCurrent.duration + tolerance;
       // if seeking out of buffered range or into new one
       if (
-        !bufferInfo.len ||
+        noFowardBuffer ||
         fragEndOffset < bufferInfo.start ||
         fragStartOffset > bufferInfo.end
       ) {
@@ -370,7 +371,7 @@ export default class BaseStreamController
         if (currentTime < fragStartOffset || pastFragment) {
           if (pastFragment && fragCurrent.loader) {
             this.log(
-              'seeking outside of buffer while fragment load in progress, cancel fragment load',
+              `Cancelling fragment load for seek (sn: ${fragCurrent.sn})`,
             );
             fragCurrent.abortRequests();
             this.resetLoadingState();
@@ -413,11 +414,14 @@ export default class BaseStreamController
     }
 
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
-    if (!this.hls.hasEnoughToStart && !bufferInfo.len) {
+    if (!this.hls.hasEnoughToStart) {
       this.log(
-        `setting startPosition to ${currentTime} because of seek before start`,
+        `Setting ${noFowardBuffer ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to start`,
       );
-      this.nextLoadPosition = this.startPosition = currentTime;
+      this.nextLoadPosition = currentTime;
+      if (noFowardBuffer) {
+        this.startPosition = currentTime;
+      }
     }
 
     // Async tick to speed up processing
@@ -1777,7 +1781,7 @@ export default class BaseStreamController
       isMediaFragment(frag) &&
       frag.stats.aborted
     ) {
-      this.warn(
+      this.log(
         `Fragment ${frag.sn}${part ? ' part ' + part.index : ''} of ${this.playlistLabel()} ${
           frag.level
         } was aborted`,
