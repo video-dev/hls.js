@@ -202,8 +202,18 @@ export class TimelineController implements ComponentAPI {
     // Parse any unparsed fragments upon receiving the initial PTS.
     if (unparsedVttFrags.length) {
       this.unparsedVttFrags = [];
-      unparsedVttFrags.forEach((frag) => {
-        this.onFragLoaded(Events.FRAG_LOADED, frag as FragLoadedData);
+      unparsedVttFrags.forEach((data) => {
+        if (this.initPTS[data.frag.cc]) {
+          this.onFragLoaded(Events.FRAG_LOADED, data as FragLoadedData);
+        } else {
+          this.hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
+            success: false,
+            frag: data.frag,
+            error: new Error(
+              'Subtitle discontinuity domain does not match main',
+            ),
+          });
+        }
       });
     }
   }
