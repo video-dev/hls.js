@@ -1,14 +1,18 @@
+import chai from 'chai';
 import sinon from 'sinon';
-
-import Hls from '../../../src/hls';
-import { Events } from '../../../src/events';
+import sinonChai from 'sinon-chai';
+import { State } from '../../../src/controller/base-stream-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
+import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
+import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
+import KeyLoader from '../../../src/loader/key-loader';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
-import KeyLoader from '../../../src/loader/key-loader';
-import { State } from '../../../src/controller/base-stream-controller';
-import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
+
+chai.use(sinonChai);
+const expect = chai.expect;
 
 const mediaMock = {
   currentTime: 0,
@@ -20,11 +24,11 @@ const tracksMock = [
   {
     id: 0,
     details: { url: '', fragments: [] },
-    attrs: new AttrList(),
+    attrs: new AttrList({}),
   },
   {
     id: 1,
-    attrs: new AttrList(),
+    attrs: new AttrList({}),
   },
 ];
 
@@ -38,7 +42,7 @@ describe('SubtitleStreamController', function () {
     hls = new Hls({});
     mediaMock.currentTime = 0;
     fragmentTracker = new FragmentTracker(hls);
-    keyLoader = new KeyLoader({});
+    keyLoader = new KeyLoader(hls.config);
 
     subtitleStreamController = new SubtitleStreamController(
       hls,

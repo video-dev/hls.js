@@ -1,6 +1,11 @@
+import chai from 'chai';
+import sinonChai from 'sinon-chai';
 import { TimelineController } from '../../../src/controller/timeline-controller';
-import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
+
+chai.use(sinonChai);
+const expect = chai.expect;
 
 describe('TimelineController', function () {
   let timelineController;
