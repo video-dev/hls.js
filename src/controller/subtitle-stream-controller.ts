@@ -129,10 +129,12 @@ export class SubtitleStreamController
     data: SubtitleFragProcessed,
   ) {
     const { frag, success } = data;
-    if (isMediaFragment(frag)) {
-      this.fragPrevious = frag;
+    if (!this.fragContextChanged(frag)) {
+      if (isMediaFragment(frag)) {
+        this.fragPrevious = frag;
+      }
+      this.state = State.IDLE;
     }
-    this.state = State.IDLE;
     if (!success) {
       return;
     }
@@ -295,8 +297,12 @@ export class SubtitleStreamController
     this.mediaBuffer = this.mediaBufferTimeRanges;
     let sliding = 0;
     if (newDetails.live || track.details?.live) {
+      if (newDetails.deltaUpdateFailed) {
+        return;
+      }
       const mainDetails = this.mainDetails;
-      if (newDetails.deltaUpdateFailed || !mainDetails) {
+      if (!mainDetails) {
+        this.startFragRequested = false;
         return;
       }
       const mainSlidingStartFragment = mainDetails.fragments[0];
@@ -320,6 +326,10 @@ export class SubtitleStreamController
           sliding = mainSlidingStartFragment.start;
           addSliding(newDetails, sliding);
         }
+      }
+      // compute start position if we are aligned with the main playlist
+      if (mainDetails && !this.startFragRequested) {
+        this.setStartPosition(mainDetails, sliding);
       }
     }
     track.details = newDetails;
