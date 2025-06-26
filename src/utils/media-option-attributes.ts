@@ -47,15 +47,3 @@ export function mediaAttributesIdentical(
       attrs1[subtitleAttribute] !== attrs2[subtitleAttribute],
   );
 }
-
-export function subtitleTrackMatchesTextTrack(
-  subtitleTrack: Pick<MediaPlaylist, 'name' | 'lang' | 'attrs'>,
-  textTrack: TextTrack,
-) {
-  return (
-    textTrack.label.toLowerCase() === subtitleTrack.name.toLowerCase() &&
-    (!textTrack.language ||
-      textTrack.language.toLowerCase() ===
-        (subtitleTrack.lang || '').toLowerCase())
-  );
-}

@@ -3997,7 +3997,6 @@ export interface MediaKeySessionContext {
 export type MediaOverrides = {
     duration?: number;
     endOfStream?: boolean;
-    cueRemoval?: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "MediaPlaylist" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -4038,6 +4037,8 @@ export interface MediaPlaylist {
     name: string;
     // (undocumented)
     textCodec?: string;
+    // (undocumented)
+    trackNode?: HTMLTrackElement;
     // (undocumented)
     type: MediaPlaylistType | 'main';
     // (undocumented)
