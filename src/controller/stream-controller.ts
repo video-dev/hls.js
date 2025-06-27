@@ -1247,11 +1247,22 @@ export default class StreamController
       }
 
       // This would be nice if Number.isFinite acted as a typeguard, but it doesn't. See: https://github.com/Microsoft/TypeScript/issues/10038
-      const initPTS = initSegment.initPTS as number;
+      const baseTime = initSegment.initPTS as number;
       const timescale = initSegment.timescale as number;
-      if (Number.isFinite(initPTS)) {
-        this.initPTS[frag.cc] = { baseTime: initPTS, timescale };
-        hls.trigger(Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale });
+      const initPTS = this.initPTS[frag.cc];
+      if (
+        Number.isFinite(baseTime) &&
+        (!initPTS ||
+          initPTS.baseTime !== baseTime ||
+          initPTS.timescale !== timescale)
+      ) {
+        this.initPTS[frag.cc] = { baseTime, timescale };
+        hls.trigger(Events.INIT_PTS_FOUND, {
+          frag,
+          id,
+          initPTS: baseTime,
+          timescale,
+        });
       }
     }
 
