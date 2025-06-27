@@ -8,7 +8,6 @@ import {
   requiresMediaCapabilitiesDecodingInfo,
   SUPPORTED_INFO_DEFAULT,
 } from '../utils/mediacapabilities-helper';
-import { isHEVC } from '../utils/mp4-tools';
 import {
   type AudioTracksByGroup,
   type CodecSetTier,
@@ -47,6 +46,10 @@ class AbrController extends Logger implements AbrComponentAPI {
   private partCurrent: Part | null = null;
   private bitrateTestDelay: number = 0;
   private rebufferNotice: number = -1;
+  private supportedCache: Record<
+    string,
+    Promise<MediaCapabilitiesDecodingInfo>
+  > = {};
 
   public bwEstimator: EwmaBandWidthEstimator;
 
@@ -108,7 +111,7 @@ class AbrController extends Logger implements AbrComponentAPI {
     this.unregisterListeners();
     this.clearTimer();
     // @ts-ignore
-    this.hls = this._abandonRulesCheck = null;
+    this.hls = this._abandonRulesCheck = this.supportedCache = null;
     this.fragCurrent = this.partCurrent = null;
   }
 
@@ -119,6 +122,7 @@ class AbrController extends Logger implements AbrComponentAPI {
     this.lastLoadedFragLevel = -1;
     this.firstSelection = -1;
     this.lastLevelLoadSec = 0;
+    this.supportedCache = {};
     this.fragCurrent = this.partCurrent = null;
     this.onLevelsUpdated();
     this.clearTimer();
@@ -826,20 +830,20 @@ class AbrController extends Logger implements AbrComponentAPI {
           | undefined;
         if (
           typeof mediaCapabilities?.decodingInfo === 'function' &&
-          (requiresMediaCapabilitiesDecodingInfo(
+          requiresMediaCapabilitiesDecodingInfo(
             levelInfo,
             audioTracksByGroup,
             currentVideoRange,
             currentFrameRate,
             currentBw,
             audioPreference,
-          ) ||
-            isHEVC(levelInfo.videoCodec)) // Force media capabilities check for HEVC to avoid failure on Windows
+          )
         ) {
           levelInfo.supportedPromise = getMediaDecodingInfoPromise(
             levelInfo,
             audioTracksByGroup,
             mediaCapabilities,
+            this.supportedCache,
           );
           levelInfo.supportedPromise.then((decodingInfo) => {
             if (!this.hls) {
@@ -883,8 +887,9 @@ class AbrController extends Logger implements AbrComponentAPI {
         (!upSwitch &&
           currentFrameRate > 0 &&
           currentFrameRate < levelInfo.frameRate) ||
-        (levelInfo.supportedResult &&
-          !levelInfo.supportedResult.decodingInfoResults?.[0].smooth)
+        levelInfo.supportedResult?.decodingInfoResults?.some(
+          (info) => info.smooth === false,
+        )
       ) {
         if (!firstSelection || i !== minStartIndex) {
           levelsSkipped.push(i);
