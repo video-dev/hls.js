@@ -99,7 +99,7 @@
     "es-check": "9.1.4",
     "eslint": "8.57.1",
     "eslint-config-prettier": "10.1.5",
-    "eslint-plugin-import": "2.31.0",
+    "eslint-plugin-import": "2.32.0",
     "eslint-plugin-mocha": "10.5.0",
     "eslint-plugin-n": "17.20.0",
     "eslint-plugin-no-for-of-loops": "1.0.1",
