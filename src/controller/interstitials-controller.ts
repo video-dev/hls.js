@@ -1084,6 +1084,10 @@ export default class InterstitialsController
           scheduleIndex: index,
           player,
         });
+        if (currentItem !== this.playingItem) {
+          // Navigation occured on INTERSTITIAL_ASSET_ENDED
+          return;
+        }
         this.retreiveMediaSource(assetId, scheduledItem);
         if (player.media && !this.detachedData?.mediaSource) {
           player.detachMedia();
