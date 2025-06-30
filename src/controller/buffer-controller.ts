@@ -1102,11 +1102,13 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private updateDuration() {
-    const durationAndRange = this.getDurationAndRange();
-    if (!durationAndRange) {
-      return;
-    }
-    this.blockUntilOpen(() => this.updateMediaSource(durationAndRange));
+    this.blockUntilOpen(() => {
+      const durationAndRange = this.getDurationAndRange();
+      if (!durationAndRange) {
+        return;
+      }
+      this.updateMediaSource(durationAndRange);
+    });
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
