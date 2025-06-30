@@ -126,11 +126,15 @@ describe('getMediaDecodingInfoPromise', function () {
           contentType: 'video/mp4;codecs=hvc1.2.6.L93.B0',
           width: 1920,
           height: 1080,
-          bitrate: 5000000,
+          bitrate: 4232000,
           framerate: 30,
           transferFunction: 'pq',
         },
-        audio: { contentType: 'audio/mp4;codecs=ec-3', channels: '16' },
+        audio: {
+          contentType: 'audio/mp4;codecs=ec-3',
+          channels: '16',
+          bitrate: 768000,
+        },
       });
     });
   });

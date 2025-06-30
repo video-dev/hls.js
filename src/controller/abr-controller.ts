@@ -871,6 +871,15 @@ class AbrController extends Logger implements AbrComponentAPI {
                   this.hls.nextLoadLevel = 0;
                 }
               }
+            } else if (
+              decodingInfo.decodingInfoResults.some(
+                (info) =>
+                  info.smooth === false || info.powerEfficient === false,
+              )
+            ) {
+              this.log(
+                `MediaCapabilities decodingInfo for level ${index} not smooth or powerEfficient: ${stringify(decodingInfo)}`,
+              );
             }
           });
         } else {

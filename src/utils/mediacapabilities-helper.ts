@@ -123,8 +123,12 @@ export function getMediaDecodingInfoPromise(
   const configurations: MediaDecodingConfiguration[] = [];
 
   const videoDecodeList = makeVideoConfigurations(level);
-  const audioDecodeList = makeAudioConfigurations(level, audioTracksByGroup);
   const videoCount = videoDecodeList.length;
+  const audioDecodeList = makeAudioConfigurations(
+    level,
+    audioTracksByGroup,
+    videoCount > 0,
+  );
   const audioCount = audioDecodeList.length;
   for (let i = videoCount || 1 * audioCount || 1; i--; ) {
     const configuration: MediaDecodingConfiguration = {
@@ -135,6 +139,10 @@ export function getMediaDecodingInfoPromise(
     }
     if (audioCount) {
       configuration.audio = audioDecodeList[i % audioCount];
+      const audioBitrate = configuration.audio.bitrate;
+      if (configuration.video && audioBitrate) {
+        configuration.video.bitrate -= audioBitrate;
+      }
     }
     configurations.push(configuration);
   }
@@ -182,6 +190,12 @@ export function getMediaDecodingInfoPromise(
 
 function makeVideoConfigurations(level: Level): VideoConfiguration[] {
   const videoCodecs = level.videoCodec?.split(',');
+  const bitrate = getVariantDecodingBitrate(level);
+  const width = level.width || 640;
+  const height = level.height || 480;
+  // Assume a framerate of 30fps since MediaCapabilities will not accept Level default of 0.
+  const framerate = level.frameRate || 30;
+  const videoRange = level.videoRange.toLowerCase() as 'sdr' | 'pq' | 'hlg';
   return videoCodecs
     ? videoCodecs.map((videoCodec: string) => {
         const videoConfiguration: VideoConfiguration = {
@@ -189,18 +203,13 @@ function makeVideoConfigurations(level: Level): VideoConfiguration[] {
             fillInMissingAV01Params(videoCodec),
             'video',
           ),
-          width: level.width,
-          height: level.height,
-          bitrate: Math.ceil(
-            Math.max(level.bitrate * 0.9, level.averageBitrate),
-          ),
-          // Assume a framerate of 30fps since MediaCapabilities will not accept Level default of 0.
-          framerate: level.frameRate || 30,
+          width,
+          height,
+          bitrate,
+          framerate,
         };
-        const videoRange = level.videoRange;
-        if (videoRange !== 'SDR') {
-          videoConfiguration.transferFunction =
-            videoRange.toLowerCase() as TransferFunction;
+        if (videoRange !== 'sdr') {
+          videoConfiguration.transferFunction = videoRange as TransferFunction;
         }
         return videoConfiguration;
       })
@@ -210,8 +219,10 @@ function makeVideoConfigurations(level: Level): VideoConfiguration[] {
 function makeAudioConfigurations(
   level: Level,
   audioTracksByGroup: AudioTracksByGroup,
+  hasVideo: boolean,
 ): AudioConfiguration[] {
   const audioCodecs = level.audioCodec?.split(',');
+  const combinedBitrate = getVariantDecodingBitrate(level);
   if (audioCodecs && level.audioGroups) {
     return level.audioGroups.reduce((configurations, audioGroupId) => {
       const tracks = audioGroupId
@@ -220,13 +231,18 @@ function makeAudioConfigurations(
       if (tracks) {
         return tracks.reduce((configs, audioTrack) => {
           if (audioTrack.groupId === audioGroupId) {
-            const channels = audioTrack.channels || '';
-            const channelsNumber = parseFloat(channels) || 2;
+            const channelsNumber = parseFloat(audioTrack.channels || '');
             audioCodecs.forEach((audioCodec) => {
-              configs.push({
+              const audioConfiguration: AudioConfiguration = {
                 contentType: mimeTypeForCodec(audioCodec, 'audio'),
-                channels: '' + channelsNumber,
-              });
+                bitrate: hasVideo
+                  ? estimatedAudioBitrate(audioCodec, combinedBitrate)
+                  : combinedBitrate,
+              };
+              if (channelsNumber) {
+                audioConfiguration.channels = '' + channelsNumber;
+              }
+              configs.push(audioConfiguration);
             });
           }
           return configs;
@@ -236,6 +252,29 @@ function makeAudioConfigurations(
     }, [] as AudioConfiguration[]);
   }
   return [];
+}
+
+function estimatedAudioBitrate(
+  audioCodec: string,
+  levelBitrate: number,
+): number {
+  if (levelBitrate <= 1) {
+    return 1;
+  }
+  let audioBitrate = 128000;
+  if (audioCodec === 'ec-3') {
+    audioBitrate = 768000;
+  } else if (audioCodec === 'ac-3') {
+    audioBitrate = 640000;
+  }
+  return Math.min(levelBitrate / 2, audioBitrate); // Don't exceed some % of level bitrate
+}
+
+function getVariantDecodingBitrate(level: Level): number {
+  return (
+    Math.ceil(Math.max(level.bitrate * 0.9, level.averageBitrate) / 1000) *
+      1000 || 1
+  );
 }
 
 function getMediaDecodingInfoKey(config: MediaDecodingConfiguration): string {
