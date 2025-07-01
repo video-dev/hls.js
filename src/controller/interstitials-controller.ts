@@ -1084,6 +1084,21 @@ export default class InterstitialsController
           scheduleIndex: index,
           player,
         });
+        if (currentItem !== this.playingItem) {
+          // Schedule change occured on INTERSTITIAL_ASSET_ENDED
+          if (
+            this.itemsMatch(currentItem, this.playingItem) &&
+            !this.playingAsset
+          ) {
+            this.advanceAfterAssetEnded(
+              interstitial,
+              this.findItemIndex(this.playingItem),
+              playingAssetListIndex,
+            );
+          }
+          // Navigation occured on INTERSTITIAL_ASSET_ENDED
+          return;
+        }
         this.retreiveMediaSource(assetId, scheduledItem);
         if (player.media && !this.detachedData?.mediaSource) {
           player.detachMedia();
@@ -1107,7 +1122,7 @@ export default class InterstitialsController
           this.updateSchedule();
           const items = this.schedule.items;
           if (scheduledItem && items) {
-            const updatedIndex = this.schedule.findItemIndex(scheduledItem);
+            const updatedIndex = this.findItemIndex(scheduledItem);
             this.advanceSchedule(
               updatedIndex,
               items,
@@ -2537,7 +2552,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     // If all assets in interstitial fail, mark the interstitial with an error
     if (!interstitial.assetList.some((asset) => !asset.error)) {
       interstitial.error = error;
-    } else if (interstitial.appendInPlace) {
+    } else {
       // Reset level details and reload/parse media playlists to align with updated schedule
       for (let i = assetListIndex; i < interstitial.assetList.length; i++) {
         this.resetAssetPlayer(interstitial.assetList[i].identifier);

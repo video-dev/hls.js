@@ -2,7 +2,7 @@ import { EventEmitter } from 'eventemitter3';
 import Transmuxer, { isPromise } from '../demux/transmuxer';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { enableLogs, type ILogFunction, type ILogger } from '../utils/logger';
+import { enableLogs, type ILogger } from '../utils/logger';
 import type { RemuxedTrack, RemuxerResult } from '../types/remuxer';
 import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 
