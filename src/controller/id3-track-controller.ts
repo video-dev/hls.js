@@ -95,6 +95,7 @@ class ID3TrackController implements ComponentAPI {
     }
   > = {};
   private removeCues: boolean = true;
+  private assetCue?: VTTCue | TextTrackCue;
 
   constructor(hls) {
     this.hls = hls;
@@ -343,13 +344,49 @@ class ID3TrackController implements ComponentAPI {
   }
 
   private updateDateRangeCues(details: LevelDetails, removeOldCues?: true) {
+    const {
+      assetPlayerId,
+      timelineOffset,
+      enableDateRangeMetadataCues,
+      interstitialsController,
+    } = this.hls.config;
     if (
       !this.media ||
       !details.hasProgramDateTime ||
-      !this.hls.config.enableDateRangeMetadataCues
+      !enableDateRangeMetadataCues
     ) {
       return;
     }
+
+    const Cue = getCueClass();
+    if (
+      __USE_INTERSTITIALS__ &&
+      assetPlayerId &&
+      timelineOffset &&
+      enableDateRangeMetadataCues &&
+      !interstitialsController
+    ) {
+      const { fragmentStart, fragmentEnd } = details;
+      let cue = this.assetCue;
+      if (cue) {
+        cue.startTime = fragmentStart;
+        cue.endTime = fragmentEnd;
+      } else if (Cue) {
+        cue = this.assetCue = createCueWithDataFields(
+          Cue,
+          fragmentStart,
+          fragmentEnd,
+          {},
+        );
+        if (cue) {
+          cue.id = assetPlayerId;
+          this.id3Track ||= this.createTrack(this.media);
+          this.id3Track.addCue(cue);
+          cue.addEventListener('enter', this.onEventCueEnter);
+        }
+      }
+    }
+
     const { id3Track } = this;
     const { dateRanges } = details;
     const ids = Object.keys(dateRanges);
@@ -384,11 +421,8 @@ class ID3TrackController implements ComponentAPI {
       return;
     }
 
-    if (!this.id3Track) {
-      this.id3Track = this.createTrack(this.media);
-    }
+    this.id3Track ||= this.createTrack(this.media);
 
-    const Cue = getCueClass();
     for (let i = 0; i < ids.length; i++) {
       const id = ids[i];
       const dateRange = dateRanges[id];
@@ -460,10 +494,7 @@ class ID3TrackController implements ComponentAPI {
             cue.id = id;
             this.id3Track.addCue(cue);
             cues[key] = cue;
-            if (
-              __USE_INTERSTITIALS__ &&
-              this.hls.config.interstitialsController
-            ) {
+            if (__USE_INTERSTITIALS__ && interstitialsController) {
               if (key === 'X-ASSET-LIST' || key === 'X-ASSET-URL') {
                 cue.addEventListener('enter', this.onEventCueEnter);
               }
