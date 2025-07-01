@@ -218,7 +218,7 @@ export default class ErrorController
       case ErrorDetails.REMUX_ALLOC_ERROR:
       case ErrorDetails.BUFFER_APPEND_ERROR:
         // Buffer-controller can set errorAction when append errors can be ignored or resolved locally
-        if (!data.errorAction) {
+        if (!data.errorAction && hls.levels.length > 1) {
           data.errorAction = this.getLevelSwitchAction(
             data,
             data.level ?? hls.loadLevel,

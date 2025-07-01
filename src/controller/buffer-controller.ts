@@ -785,7 +785,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
 
     // Block audio append until overlapping video append
-    const videoTrack = this.tracks.video;
+    const videoTrack = tracks.video;
     const videoSb = videoTrack?.buffer;
     if (videoSb && sn !== 'initSegment') {
       const partOrFrag = part || (frag as MediaFragment);
@@ -828,15 +828,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       execute: () => {
         chunkStats.executeStart = self.performance.now();
 
-        const track = this.tracks[type];
-        if (track) {
-          const sb = track.buffer;
-          if (sb) {
-            if (checkTimestampOffset) {
-              this.updateTimestampOffset(sb, fragStart, 0.1, type, sn, cc);
-            } else if (offset !== undefined && Number.isFinite(offset)) {
-              this.updateTimestampOffset(sb, offset, 0.000001, type, sn, cc);
-            }
+        const sb = this.tracks[type]?.buffer;
+        if (sb) {
+          if (checkTimestampOffset) {
+            this.updateTimestampOffset(sb, fragStart, 0.1, type, sn, cc);
+          } else if (offset !== undefined && Number.isFinite(offset)) {
+            this.updateTimestampOffset(sb, offset, 0.000001, type, sn, cc);
           }
         }
         this.appendExecutor(data, type);
@@ -892,7 +889,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           fatal: false,
         };
         const mediaError = this.media?.error;
-        if ((error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR) {
+        if (
+          (error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR ||
+          error.name == 'QuotaExceededError'
+        ) {
           // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
           // let's stop appending any segments, and report BUFFER_FULL_ERROR error
           event.details = ErrorDetails.BUFFER_FULL_ERROR;
