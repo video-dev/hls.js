@@ -891,7 +891,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         const mediaError = this.media?.error;
         if (
           (error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR ||
-          error.name == 'QuotaExceededError'
+          error.name == 'QuotaExceededError' ||
+          `quota` in error
         ) {
           // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
           // let's stop appending any segments, and report BUFFER_FULL_ERROR error
