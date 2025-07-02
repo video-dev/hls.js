@@ -1,4 +1,5 @@
 import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
+import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { Level } from '../types/level';
 import {
@@ -216,7 +217,11 @@ export default class ContentSteeringController
         this.updatePathwayPriority(pathwayPriority);
         errorAction.resolved = this.pathwayId !== errorPathway;
       }
-      if (!errorAction.resolved) {
+      if (data.details === ErrorDetails.BUFFER_APPEND_ERROR && !data.fatal) {
+        // Error will become fatal in buffer-controller when reaching `appendErrorMaxRetry`
+        // Stream-controllers are expected to reduce buffer length even if this is not deemed a QuotaExceededError
+        errorAction.resolved = true;
+      } else if (!errorAction.resolved) {
         this.warn(
           `Could not resolve ${data.details} ("${
             data.error.message

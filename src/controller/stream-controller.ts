@@ -1053,7 +1053,9 @@ export default class StreamController
         if (data.parent !== 'main') {
           return;
         }
-        this.resetLoadingState();
+        if (this.reduceLengthAndFlushBuffer(data)) {
+          this.resetLoadingState();
+        }
         break;
       case ErrorDetails.BUFFER_FULL_ERROR:
         if (data.parent !== 'main') {
