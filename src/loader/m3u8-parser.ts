@@ -572,10 +572,14 @@ export default class M3U8Parser {
               if (!levelkeys) {
                 levelkeys = {};
               }
-              if (levelkeys[levelKey.keyFormat]) {
-                levelkeys = Object.assign({}, levelkeys);
+              const currentKey = levelkeys[levelKey.keyFormat];
+              // Ignore duplicate playlist KEY tags
+              if (!currentKey?.matches(levelKey)) {
+                if (currentKey) {
+                  levelkeys = Object.assign({}, levelkeys);
+                }
+                levelkeys[levelKey.keyFormat] = levelKey;
               }
-              levelkeys[levelKey.keyFormat] = levelKey;
             } else {
               logger.warn(`[Keys] Ignoring invalid EXT-X-KEY tag: "${value1}"`);
             }

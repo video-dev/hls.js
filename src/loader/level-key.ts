@@ -52,6 +52,17 @@ export class LevelKey implements DecryptData {
       this.encrypted && !isFullSegmentEncryption(method);
   }
 
+  public matches(key: LevelKey): boolean {
+    return (
+      key.uri === this.uri &&
+      key.method === this.method &&
+      key.encrypted === this.encrypted &&
+      key.keyFormat === this.keyFormat &&
+      key.keyFormatVersions.join(',') === this.keyFormatVersions.join(',') &&
+      key.iv?.join(',') === this.iv?.join(',')
+    );
+  }
+
   public isSupported(): boolean {
     // If it's Segment encryption or No encryption, just select that key system
     if (this.method) {

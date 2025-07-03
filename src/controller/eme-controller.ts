@@ -31,7 +31,7 @@ import {
   type PsshData,
   type PsshInvalidResult,
 } from '../utils/mp4-tools';
-import { base64Decode } from '../utils/numeric-encoding-utils';
+import { base64Decode, base64Encode } from '../utils/numeric-encoding-utils';
 import { stringify } from '../utils/safe-json-stringify';
 import { strToUtf8array } from '../utils/utf8-utils';
 import type { EMEControllerConfig, HlsConfig, LoadPolicy } from '../config';
@@ -94,7 +94,7 @@ class EMEController extends Logger implements ComponentAPI {
   private _requestLicenseFailureCount: number = 0;
   private mediaKeySessions: MediaKeySessionContext[] = [];
   private keyIdToKeySessionPromise: {
-    [keyId: string]: Promise<MediaKeySessionContext>;
+    [keyUri: string]: Promise<MediaKeySessionContext>;
   } = {};
   private mediaKeys: MediaKeys | null = null;
   private setMediaKeysQueue: Promise<void>[] = EMEController.CDMCleanupPromise
@@ -352,9 +352,8 @@ class EMEController extends Logger implements ComponentAPI {
       const keySessionContext = this.createMediaKeySessionContext(
         mediaKeySessionContext,
       );
-      const keyId = this.getKeyIdString(decryptdata);
       const scheme = 'cenc';
-      this.keyIdToKeySessionPromise[keyId] =
+      this.keyIdToKeySessionPromise[decryptdata.uri] =
         this.generateRequestWithPreferredKeySession(
           keySessionContext,
           scheme,
@@ -458,12 +457,11 @@ class EMEController extends Logger implements ComponentAPI {
   public loadKey(data: KeyLoadedData): Promise<MediaKeySessionContext> {
     const decryptdata = data.keyInfo.decryptdata;
 
-    const keyId = this.getKeyIdString(decryptdata);
-    const keyDetails = `(keyId: ${keyId} format: "${decryptdata.keyFormat}" method: ${decryptdata.method} uri: ${decryptdata.uri})`;
+    const keyDetails = `(keyId: ${this.getKeyIdString(decryptdata)} format: "${decryptdata.keyFormat}" method: ${decryptdata.method} uri: ${decryptdata.uri})`;
 
     this.log(`Starting session for key ${keyDetails}`);
 
-    let keyContextPromise = this.keyIdToKeySessionPromise[keyId];
+    let keyContextPromise = this.keyIdToKeySessionPromise[decryptdata.uri];
     if (!keyContextPromise) {
       keyContextPromise = this.getKeySystemForKeyPromise(decryptdata).then(
         ({ keySystem, mediaKeys }) => {
@@ -483,17 +481,18 @@ class EMEController extends Logger implements ComponentAPI {
         },
       );
 
-      const keySessionContextPromise = (this.keyIdToKeySessionPromise[keyId] =
-        keyContextPromise.then((keySessionContext) => {
-          const scheme = 'cenc';
-          const initData = decryptdata.pssh ? decryptdata.pssh.buffer : null;
-          return this.generateRequestWithPreferredKeySession(
-            keySessionContext,
-            scheme,
-            initData,
-            'playlist-key',
-          );
-        }));
+      const keySessionContextPromise = (this.keyIdToKeySessionPromise[
+        decryptdata.uri
+      ] = keyContextPromise.then((keySessionContext) => {
+        const scheme = 'cenc';
+        const initData = decryptdata.pssh ? decryptdata.pssh.buffer : null;
+        return this.generateRequestWithPreferredKeySession(
+          keySessionContext,
+          scheme,
+          initData,
+          'playlist-key',
+        );
+      }));
 
       keySessionContextPromise.catch((error) => this.handleError(error));
     }
@@ -527,8 +526,8 @@ class EMEController extends Logger implements ComponentAPI {
   private getKeySystemForKeyPromise(
     decryptdata: LevelKey,
   ): Promise<{ keySystem: KeySystems; mediaKeys: MediaKeys }> {
-    const keyId = this.getKeyIdString(decryptdata);
-    const mediaKeySessionContext = this.keyIdToKeySessionPromise[keyId];
+    const mediaKeySessionContext =
+      this.keyIdToKeySessionPromise[decryptdata.uri];
     if (!mediaKeySessionContext) {
       const keySystem = keySystemFormatToKeySystemDomain(
         decryptdata.keyFormat as KeySystemFormats,
@@ -675,9 +674,10 @@ class EMEController extends Logger implements ComponentAPI {
       }
 
       const keyIdHex = Hex.hexDump(keyId);
+      const psshUri = `data:text/plain;base64,${base64Encode(new Uint8Array(initData))}`;
       const { keyIdToKeySessionPromise, mediaKeySessions } = this;
 
-      let keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex];
+      let keySessionContextPromise = keyIdToKeySessionPromise[psshUri];
       for (let i = 0; i < mediaKeySessions.length; i++) {
         // Match playlist key
         const keyContext = mediaKeySessions[i];
@@ -685,19 +685,18 @@ class EMEController extends Logger implements ComponentAPI {
         if (!decryptdata.keyId) {
           continue;
         }
-        const oldKeyIdHex = Hex.hexDump(decryptdata.keyId);
         if (
-          keyIdHex === oldKeyIdHex ||
+          psshUri === decryptdata.uri ||
           decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1
         ) {
-          keySessionContextPromise = keyIdToKeySessionPromise[oldKeyIdHex];
+          keySessionContextPromise = keyIdToKeySessionPromise[decryptdata.uri];
           if (decryptdata.pssh) {
             break;
           }
-          delete keyIdToKeySessionPromise[oldKeyIdHex];
+          delete keyIdToKeySessionPromise[decryptdata.uri];
           decryptdata.pssh = new Uint8Array(initData);
           decryptdata.keyId = keyId;
-          keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
+          keySessionContextPromise = keyIdToKeySessionPromise[psshUri] =
             keySessionContextPromise.then(() => {
               return this.generateRequestWithPreferredKeySession(
                 keyContext,
@@ -719,7 +718,7 @@ class EMEController extends Logger implements ComponentAPI {
           return;
         }
         // "Clear-lead" (misc key not encountered in playlist)
-        keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
+        keySessionContextPromise = keyIdToKeySessionPromise[psshUri] =
           this.getKeySystemSelectionPromise([keySystemDomain]).then(
             ({ keySystem, mediaKeys }) => {
               this.throwIfDestroyed();
