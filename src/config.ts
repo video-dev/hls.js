@@ -272,6 +272,7 @@ export type TimelineControllerConfig = {
 
 export type TSDemuxerConfig = {
   forceKeyFrameOnDiscontinuity: boolean;
+  handleMpegTsVideoIntegrityErrors: 'process' | 'skip';
 };
 
 export type HlsConfig = {
@@ -421,6 +422,7 @@ export const hlsDefaultConfig: HlsConfig = {
   stretchShortVideoTrack: false, // used by mp4-remuxer
   maxAudioFramesDrift: 1, // used by mp4-remuxer
   forceKeyFrameOnDiscontinuity: true, // used by ts-demuxer
+  handleMpegTsVideoIntegrityErrors: 'process', // used by ts-demuxer
   abrEwmaFastLive: 3, // used by abr-controller
   abrEwmaSlowLive: 9, // used by abr-controller
   abrEwmaFastVoD: 3, // used by abr-controller
