@@ -93,7 +93,7 @@ class EMEController extends Logger implements ComponentAPI {
   } = {};
   private _requestLicenseFailureCount: number = 0;
   private mediaKeySessions: MediaKeySessionContext[] = [];
-  private keyIdToKeySessionPromise: {
+  private keySessionPromises: {
     [keyUri: string]: Promise<MediaKeySessionContext>;
   } = {};
   private mediaKeys: MediaKeys | null = null;
@@ -117,7 +117,7 @@ class EMEController extends Logger implements ComponentAPI {
     config.licenseXhrSetup = config.licenseResponseCallback = undefined;
     config.drmSystems = config.drmSystemOptions = {};
     // @ts-ignore
-    this.hls = this.config = this.keyIdToKeySessionPromise = null;
+    this.hls = this.config = this.keySessionPromises = null;
     // @ts-ignore
     this.onMediaEncrypted = this.onWaitingForKey = null;
   }
@@ -353,7 +353,7 @@ class EMEController extends Logger implements ComponentAPI {
         mediaKeySessionContext,
       );
       const scheme = 'cenc';
-      this.keyIdToKeySessionPromise[decryptdata.uri] =
+      this.keySessionPromises[decryptdata.uri] =
         this.generateRequestWithPreferredKeySession(
           keySessionContext,
           scheme,
@@ -461,7 +461,7 @@ class EMEController extends Logger implements ComponentAPI {
 
     this.log(`Starting session for key ${keyDetails}`);
 
-    let keyContextPromise = this.keyIdToKeySessionPromise[decryptdata.uri];
+    let keyContextPromise = this.keySessionPromises[decryptdata.uri];
     if (!keyContextPromise) {
       keyContextPromise = this.getKeySystemForKeyPromise(decryptdata).then(
         ({ keySystem, mediaKeys }) => {
@@ -481,7 +481,7 @@ class EMEController extends Logger implements ComponentAPI {
         },
       );
 
-      const keySessionContextPromise = (this.keyIdToKeySessionPromise[
+      const keySessionContextPromise = (this.keySessionPromises[
         decryptdata.uri
       ] = keyContextPromise.then((keySessionContext) => {
         const scheme = 'cenc';
@@ -526,8 +526,7 @@ class EMEController extends Logger implements ComponentAPI {
   private getKeySystemForKeyPromise(
     decryptdata: LevelKey,
   ): Promise<{ keySystem: KeySystems; mediaKeys: MediaKeys }> {
-    const mediaKeySessionContext =
-      this.keyIdToKeySessionPromise[decryptdata.uri];
+    const mediaKeySessionContext = this.keySessionPromises[decryptdata.uri];
     if (!mediaKeySessionContext) {
       const keySystem = keySystemFormatToKeySystemDomain(
         decryptdata.keyFormat as KeySystemFormats,
@@ -675,9 +674,9 @@ class EMEController extends Logger implements ComponentAPI {
 
       const keyIdHex = Hex.hexDump(keyId);
       const psshUri = `data:text/plain;base64,${base64Encode(new Uint8Array(initData))}`;
-      const { keyIdToKeySessionPromise, mediaKeySessions } = this;
+      const { keySessionPromises, mediaKeySessions } = this;
 
-      let keySessionContextPromise = keyIdToKeySessionPromise[psshUri];
+      let keySessionContextPromise = keySessionPromises[psshUri];
       for (let i = 0; i < mediaKeySessions.length; i++) {
         // Match playlist key
         const keyContext = mediaKeySessions[i];
@@ -689,14 +688,14 @@ class EMEController extends Logger implements ComponentAPI {
           psshUri === decryptdata.uri ||
           decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1
         ) {
-          keySessionContextPromise = keyIdToKeySessionPromise[decryptdata.uri];
+          keySessionContextPromise = keySessionPromises[decryptdata.uri];
           if (decryptdata.pssh) {
             break;
           }
-          delete keyIdToKeySessionPromise[decryptdata.uri];
+          delete keySessionPromises[decryptdata.uri];
           decryptdata.pssh = new Uint8Array(initData);
           decryptdata.keyId = keyId;
-          keySessionContextPromise = keyIdToKeySessionPromise[psshUri] =
+          keySessionContextPromise = keySessionPromises[psshUri] =
             keySessionContextPromise.then(() => {
               return this.generateRequestWithPreferredKeySession(
                 keyContext,
@@ -718,7 +717,7 @@ class EMEController extends Logger implements ComponentAPI {
           return;
         }
         // "Clear-lead" (misc key not encountered in playlist)
-        keySessionContextPromise = keyIdToKeySessionPromise[psshUri] =
+        keySessionContextPromise = keySessionPromises[psshUri] =
           this.getKeySystemSelectionPromise([keySystemDomain]).then(
             ({ keySystem, mediaKeys }) => {
               this.throwIfDestroyed();
@@ -1347,7 +1346,7 @@ class EMEController extends Logger implements ComponentAPI {
 
   private _clear() {
     this._requestLicenseFailureCount = 0;
-    this.keyIdToKeySessionPromise = {};
+    this.keySessionPromises = {};
     if (!this.mediaKeys && !this.mediaKeySessions.length) {
       return;
     }

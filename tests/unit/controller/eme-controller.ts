@@ -15,10 +15,10 @@ const expect = chai.expect;
 
 type EMEControllerTestable = Omit<
   EMEController,
-  'hls' | 'keyIdToKeySessionPromise' | 'mediaKeySessions'
+  'hls' | 'keySessionPromises' | 'mediaKeySessions'
 > & {
   hls: HlsMock;
-  keyIdToKeySessionPromise: {
+  keySessionPromises: {
     [keyUri: string]: Promise<MediaKeySessionContext>;
   };
   mediaKeySessions: MediaKeySessionContext[];
@@ -312,9 +312,9 @@ describe('EMEController', function () {
         type: 'main',
       } as any)
       .then(() => {
-        expect(emeController.keyIdToKeySessionPromise).to.deep.equal(
+        expect(emeController.keySessionPromises).to.deep.equal(
           {},
-          '`keyIdToKeySessionPromise` should be an empty dictionary when no keys are found',
+          '`keySessionPromises` should be an empty dictionary when no keys are found',
         );
       });
   });
@@ -411,20 +411,18 @@ describe('EMEController', function () {
       },
     } as any);
 
-    expect(emeController.keyIdToKeySessionPromise['data://key-uri']).to.be.a(
+    expect(emeController.keySessionPromises['data://key-uri']).to.be.a(
       'Promise',
     );
-    if (!emeController.keyIdToKeySessionPromise['data://key-uri']) {
+    if (!emeController.keySessionPromises['data://key-uri']) {
       return;
     }
-    return emeController.keyIdToKeySessionPromise['data://key-uri'].finally(
-      () => {
-        expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
-        expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
-          xhrInstance.response,
-        );
-      },
-    );
+    return emeController.keySessionPromises['data://key-uri'].finally(() => {
+      expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
+      expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
+        xhrInstance.response,
+      );
+    });
   });
 
   it('should fetch the server certificate and trigger update failed error', function () {
@@ -488,13 +486,13 @@ describe('EMEController', function () {
       },
     } as any);
 
-    expect(emeController.keyIdToKeySessionPromise['data://key-uri']).to.be.a(
+    expect(emeController.keySessionPromises['data://key-uri']).to.be.a(
       'Promise',
     );
-    if (!emeController.keyIdToKeySessionPromise['data://key-uri']) {
+    if (!emeController.keySessionPromises['data://key-uri']) {
       return;
     }
-    return emeController.keyIdToKeySessionPromise['data://key-uri']
+    return emeController.keySessionPromises['data://key-uri']
       .catch(() => {})
       .finally(() => {
         expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
@@ -563,13 +561,13 @@ describe('EMEController', function () {
       },
     } as any);
 
-    expect(emeController.keyIdToKeySessionPromise['data://key-uri']).to.be.a(
+    expect(emeController.keySessionPromises['data://key-uri']).to.be.a(
       'Promise',
     );
-    if (!emeController.keyIdToKeySessionPromise['data://key-uri']) {
+    if (!emeController.keySessionPromises['data://key-uri']) {
       return;
     }
-    return emeController.keyIdToKeySessionPromise['data://key-uri']
+    return emeController.keySessionPromises['data://key-uri']
       .catch(() => {})
       .finally(() => {
         expect(emeController.hls.trigger).to.have.been.calledOnce;
