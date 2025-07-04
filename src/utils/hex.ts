@@ -3,7 +3,7 @@
  */
 
 const Hex = {
-  hexDump: function (array: Uint8Array) {
+  hexDump: function (array: Uint8Array<ArrayBuffer>) {
     let str = '';
     for (let i = 0; i < array.length; i++) {
       let h = array[i].toString(16);
@@ -16,5 +16,15 @@ const Hex = {
     return str;
   },
 };
+
+export function hexToArrayBuffer(str: string): ArrayBuffer {
+  return Uint8Array.from(
+    str
+      .replace(/^0x/, '')
+      .replace(/([\da-fA-F]{2}) ?/g, '0x$1 ')
+      .replace(/ +$/, '')
+      .split(' '),
+  ).buffer;
+}
 
 export default Hex;
