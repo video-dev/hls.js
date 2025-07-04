@@ -6,6 +6,7 @@ import {
   isSCTE35Attribute,
 } from '../loader/date-range';
 import { MetadataSchema } from '../types/demuxer';
+import { hexToArrayBuffer } from '../utils/hex';
 import { stringify } from '../utils/safe-json-stringify';
 import {
   clearCurrentCues,
@@ -73,15 +74,6 @@ const MAX_CUE_ENDTIME = (() => {
   return Number.POSITIVE_INFINITY;
 })();
 
-function hexToArrayBuffer(str): ArrayBuffer {
-  return Uint8Array.from(
-    str
-      .replace(/^0x/, '')
-      .replace(/([\da-fA-F]{2}) ?/g, '0x$1 ')
-      .replace(/ +$/, '')
-      .split(' '),
-  ).buffer;
-}
 class ID3TrackController implements ComponentAPI {
   private hls: Hls;
   private id3Track: TextTrack | null = null;
