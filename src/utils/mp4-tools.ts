@@ -590,7 +590,7 @@ export function patchEncyptionData(
           const tenc = parseSinf(sinf);
           if (tenc) {
             // Look for default key id (keyID offset is always 8 within the tenc box):
-            const tencKeyId = tenc.subarray(8, 24);
+            const tencKeyId = tenc.subarray(8, 24) as Uint8Array<ArrayBuffer>;
             if (!tencKeyId.some((b) => b !== 0)) {
               logger.log(
                 `[eme] Patching keyId in 'enc${
@@ -1353,8 +1353,8 @@ export function mp4pssh(
 export type PsshData = {
   version: 0 | 1;
   systemId: KeySystemIds;
-  kids: null | Uint8Array[];
-  data: null | Uint8Array;
+  kids: null | Uint8Array<ArrayBuffer>[];
+  data: null | Uint8Array<ArrayBuffer>;
   offset: number;
   size: number;
 };
@@ -1382,7 +1382,7 @@ export function parseMultiPssh(
   return results;
 }
 
-function parsePssh(view: DataView): PsshData | PsshInvalidResult {
+function parsePssh(view: DataView<ArrayBuffer>): PsshData | PsshInvalidResult {
   const size = view.getUint32(0);
   const offset = view.byteOffset;
   const length = view.byteLength;
@@ -1405,8 +1405,8 @@ function parsePssh(view: DataView): PsshData | PsshInvalidResult {
     new Uint8Array(buffer, offset + 12, 16),
   ) as KeySystemIds;
 
-  let kids: null | Uint8Array[] = null;
-  let data: null | Uint8Array = null;
+  let kids: null | Uint8Array<ArrayBuffer>[] = null;
+  let data: null | Uint8Array<ArrayBuffer> = null;
   let dataSizeOffset = 0;
 
   if (version === 0) {

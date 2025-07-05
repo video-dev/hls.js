@@ -3339,7 +3339,7 @@ export class LevelDetails {
 //
 // @public (undocumented)
 export class LevelKey implements DecryptData {
-    constructor(method: string, uri: string, format: string, formatversions?: number[], iv?: Uint8Array<ArrayBuffer> | null);
+    constructor(method: string, uri: string, format: string, formatversions?: number[], iv?: Uint8Array<ArrayBuffer> | null, keyId?: string);
     // (undocumented)
     static clearKeyUriToKeyIdMap(): void;
     // (undocumented)
@@ -3360,6 +3360,8 @@ export class LevelKey implements DecryptData {
     readonly keyFormatVersions: number[];
     // (undocumented)
     keyId: Uint8Array<ArrayBuffer> | null;
+    // (undocumented)
+    matches(key: LevelKey): boolean;
     // (undocumented)
     readonly method: string;
     // (undocumented)
