@@ -1,5 +1,6 @@
 import { LoadError } from './fragment-loader';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { type Fragment, isMediaFragment } from '../loader/fragment';
 import {
   getKeySystemsForConfig,
   keySystemFormatToKeySystemDomain,
@@ -8,7 +9,6 @@ import type { LevelKey } from './level-key';
 import type { HlsConfig } from '../config';
 import type EMEController from '../controller/eme-controller';
 import type { MediaKeySessionContext } from '../controller/eme-controller';
-import type { Fragment } from '../loader/fragment';
 import type { ComponentAPI } from '../types/component-api';
 import type { KeyLoadedData } from '../types/events';
 import type {
@@ -94,34 +94,36 @@ export default class KeyLoader implements ComponentAPI {
   loadClear(
     loadingFrag: Fragment,
     encryptedFragments: Fragment[],
+    startFragRequested: boolean,
   ): null | Promise<void> {
     if (
       this.emeController &&
       this.config.emeEnabled &&
       !this.emeController.getSelectedKeySystemFormats().length
     ) {
-      // access key-system with nearest key on start (loading frag is unencrypted)
+      // Access key-system with nearest key on start (loading frag is unencrypted)
       if (encryptedFragments.length) {
-        const { sn, cc } = loadingFrag;
-        for (let i = 0; i < encryptedFragments.length; i++) {
+        for (let i = 0, l = encryptedFragments.length; i < l; i++) {
           const frag = encryptedFragments[i];
+          // Loading at or before segment with EXT-X-KEY, or first frag loading and last EXT-X-KEY
           if (
-            cc <= frag.cc &&
-            (sn === 'initSegment' || frag.sn === 'initSegment' || sn < frag.sn)
+            (loadingFrag.cc <= frag.cc &&
+              (!isMediaFragment(loadingFrag) ||
+                !isMediaFragment(frag) ||
+                loadingFrag.sn < frag.sn)) ||
+            (!startFragRequested && i == l - 1)
           ) {
             return this.emeController
               .selectKeySystemFormat(frag)
               .then((keySystemFormat) => {
+                if (!this.emeController) {
+                  return;
+                }
                 frag.setKeyFormat(keySystemFormat);
-                if (
-                  this.emeController &&
-                  this.config.requireKeySystemAccessOnStart
-                ) {
-                  const keySystem =
-                    keySystemFormatToKeySystemDomain(keySystemFormat);
-                  if (keySystem) {
-                    return this.emeController.getKeySystemAccess([keySystem]);
-                  }
+                const keySystem =
+                  keySystemFormatToKeySystemDomain(keySystemFormat);
+                if (keySystem) {
+                  return this.emeController.getKeySystemAccess([keySystem]);
                 }
               });
           }

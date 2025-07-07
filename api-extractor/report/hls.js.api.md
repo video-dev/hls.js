@@ -2995,7 +2995,7 @@ export class KeyLoader implements ComponentAPI {
     // (undocumented)
     load(frag: Fragment): Promise<KeyLoadedData>;
     // (undocumented)
-    loadClear(loadingFrag: Fragment, encryptedFragments: Fragment[]): null | Promise<void>;
+    loadClear(loadingFrag: Fragment, encryptedFragments: Fragment[], startFragRequested: boolean): null | Promise<void>;
     // (undocumented)
     loadInternal(frag: Fragment, keySystemFormat?: KeySystemFormats): Promise<KeyLoadedData>;
     // (undocumented)

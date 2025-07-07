@@ -817,6 +817,7 @@ export default class BaseStreamController
       keyLoadingPromise = this.keyLoader.loadClear(
         frag,
         details.encryptedFragments,
+        this.startFragRequested,
       );
       if (keyLoadingPromise) {
         this.log(`[eme] blocking frag load until media-keys acquired`);
