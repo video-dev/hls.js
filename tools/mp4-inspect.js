@@ -663,7 +663,8 @@ var mp4toJSON = function (data) {
 
   while (i < data.byteLength) {
     // parse box data
-    (size = view.getUint32(i)), (type = parseType(data.subarray(i + 4, i + 8)));
+    ((size = view.getUint32(i)),
+      (type = parseType(data.subarray(i + 4, i + 8))));
     end = size > 1 ? i + size : data.byteLength;
 
     // parse type-specific data
