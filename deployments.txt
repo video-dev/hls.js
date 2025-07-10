@@ -6,6 +6,7 @@ Deployments
 
 Below you can find the URL's to deployments for individual commits:
 
+- d876e51a (1.6.8-0.canary.11388): https://2364b9a9.hls-js-dev.pages.dev/
 - ac64589e (1.6.8-0.canary.11386): https://4c84527b.hls-js-dev.pages.dev/
 - c3e053e9 (1.6.8-0.canary.11384): https://59f56493.hls-js-dev.pages.dev/
 - fa531177 (1.6.8-0.canary.11382): https://7a007039.hls-js-dev.pages.dev/
