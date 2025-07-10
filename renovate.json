@@ -1,5 +1,5 @@
 {
-  "extends": ["config:base"],
+  "extends": ["config:recommended"],
   "labels": ["dependencies", "skip-change-log"],
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
@@ -14,8 +14,8 @@
   },
   "packageRules": [
     {
-      "matchPackagePatterns": ["*"],
-      "rangeStrategy": "bump"
+      "rangeStrategy": "bump",
+      "matchPackageNames": ["*"]
     },
     {
       "matchDepTypes": ["devDependencies"],
