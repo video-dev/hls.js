@@ -12,7 +12,12 @@
   "major": {
     "addLabels": ["semver-major"]
   },
+  "ignoreDeps": ["FileSaver.js", "@types/chart.js"],
   "packageRules": [
+    {
+      "matchDatasources": ["html"],
+      "enabled": false
+    },
     {
       "rangeStrategy": "bump",
       "matchPackageNames": ["*"]
