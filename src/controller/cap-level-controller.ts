@@ -19,20 +19,18 @@ type RestrictedLevel = { width: number; height: number; bitrate: number };
 class CapLevelController implements ComponentAPI {
   private hls: Hls;
   private autoLevelCapping: number;
-  private firstLevel: number;
   private media: HTMLVideoElement | null;
   private restrictedLevels: RestrictedLevel[];
-  private timer: number | undefined;
+  private timer?: number;
+  private observer?: ResizeObserver;
   private clientRect: { width: number; height: number } | null;
   private streamController?: StreamController;
 
   constructor(hls: Hls) {
     this.hls = hls;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
-    this.firstLevel = -1;
     this.media = null;
     this.restrictedLevels = [];
-    this.timer = undefined;
     this.clientRect = null;
 
     this.registerListeners();
@@ -46,7 +44,7 @@ class CapLevelController implements ComponentAPI {
     if (this.hls) {
       this.unregisterListener();
     }
-    if (this.timer) {
+    if (this.timer || this.observer) {
       this.stopCapping();
     }
     this.media = null;
@@ -94,9 +92,17 @@ class CapLevelController implements ComponentAPI {
     event: Events.MEDIA_ATTACHING,
     data: MediaAttachingData,
   ) {
-    this.media = data.media instanceof HTMLVideoElement ? data.media : null;
+    const media = data.media;
     this.clientRect = null;
-    if (this.timer && this.hls.levels.length) {
+    if (media instanceof HTMLVideoElement) {
+      this.media = media;
+      if (this.hls.config.capLevelToPlayerSize) {
+        this.observe();
+      }
+    } else {
+      this.media = null;
+    }
+    if ((this.timer || this.observer) && this.hls.levels.length) {
       this.detectPlayerSize();
     }
   }
@@ -107,7 +113,6 @@ class CapLevelController implements ComponentAPI {
   ) {
     const hls = this.hls;
     this.restrictedLevels = [];
-    this.firstLevel = data.firstLevel;
     if (hls.config.capLevelToPlayerSize && data.video) {
       // Start capping immediately if the manifest has signaled video codecs
       this.startCapping();
@@ -118,7 +123,10 @@ class CapLevelController implements ComponentAPI {
     event: Events.LEVELS_UPDATED,
     data: LevelsUpdatedData,
   ) {
-    if (this.timer && Number.isFinite(this.autoLevelCapping)) {
+    if (
+      (this.timer || this.observer) &&
+      Number.isFinite(this.autoLevelCapping)
+    ) {
       this.detectPlayerSize();
     }
   }
@@ -183,8 +191,9 @@ class CapLevelController implements ComponentAPI {
     const validLevels = levels.filter(
       (level, index) => this.isLevelAllowed(level) && index <= capLevelIndex,
     );
-
-    this.clientRect = null;
+    if (!this.observer) {
+      this.clientRect = null;
+    }
     return CapLevelController.getMaxLevelByMediaSize(
       validLevels,
       this.mediaWidth,
@@ -192,24 +201,47 @@ class CapLevelController implements ComponentAPI {
     );
   }
 
+  private observe() {
+    const ResizeObserver = self.ResizeObserver;
+    if (ResizeObserver) {
+      this.observer = new ResizeObserver((entries) => {
+        const bounds = entries[0]?.contentRect;
+        if (bounds) {
+          this.clientRect = bounds;
+          this.detectPlayerSize();
+        }
+      });
+    }
+    if (this.observer && this.media) {
+      this.observer.observe(this.media);
+    }
+  }
+
   startCapping() {
-    if (this.timer) {
+    if (this.timer || this.observer) {
       // Don't reset capping if started twice; this can happen if the manifest signals a video codec
       return;
     }
-    this.autoLevelCapping = Number.POSITIVE_INFINITY;
     self.clearInterval(this.timer);
-    this.timer = self.setInterval(this.detectPlayerSize.bind(this), 1000);
+    this.timer = undefined;
+    this.autoLevelCapping = Number.POSITIVE_INFINITY;
+    this.observe();
+    if (!this.observer) {
+      this.timer = self.setInterval(this.detectPlayerSize.bind(this), 1000);
+    }
     this.detectPlayerSize();
   }
 
   stopCapping() {
     this.restrictedLevels = [];
-    this.firstLevel = -1;
     this.autoLevelCapping = Number.POSITIVE_INFINITY;
     if (this.timer) {
       self.clearInterval(this.timer);
       this.timer = undefined;
+    }
+    if (this.observer) {
+      this.observer.disconnect();
+      this.observer = undefined;
     }
   }
 
