@@ -70,7 +70,6 @@ export default class StreamController
   private altAudio: AlternateAudio = AlternateAudio.DISABLED;
   private audioOnly: boolean = false;
   private fragPlaying: Fragment | null = null;
-  private fragLastKbps: number = 0;
   private couldBacktrack: boolean = false;
   private backtrackFragment: Fragment | null = null;
   private audioCodecSwitch: boolean = false;
@@ -436,43 +435,46 @@ export default class StreamController
    * we should take into account new segment fetch time
    */
   public nextLevelSwitch() {
-    const { levels, media } = this;
+    const { levels, media, hls, config } = this;
     // ensure that media is defined and that metadata are available (to retrieve currentTime)
-    if (media?.readyState) {
-      let fetchdelay;
-      const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
-      if (fragPlayingCurrent && fragPlayingCurrent.start > 1) {
-        // flush buffer preceding current fragment (flush until current fragment start offset)
-        // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-        this.flushMainBuffer(0, fragPlayingCurrent.start - 1);
+    if (media?.readyState && levels && hls && config) {
+      const bufferInfo = this.getMainFwdBufferInfo();
+      if (!bufferInfo) {
+        return;
       }
       const levelDetails = this.getLevelDetails();
-      if (levelDetails?.live) {
-        const bufferInfo = this.getMainFwdBufferInfo();
-        // Do not flush in live stream with low buffer
-        if (!bufferInfo || bufferInfo.len < levelDetails.targetduration * 2) {
-          return;
-        }
-      }
-      if (!media.paused && levels) {
+
+      let fetchdelay = 0;
+      if (!media.paused) {
         // add a safety delay of 1s
-        const nextLevelId = this.hls.nextLoadLevel;
+        const ttfbSec = 1 + hls.ttfbEstimate / 1000;
+        const bandwidth = hls.bandwidthEstimate * config.abrBandWidthUpFactor;
+        const nextLevelId = hls.nextLoadLevel;
         const nextLevel = levels[nextLevelId];
-        const fragLastKbps = this.fragLastKbps;
-        if (fragLastKbps && this.fragCurrent) {
-          fetchdelay =
-            (this.fragCurrent.duration * nextLevel.maxBitrate) /
-              (1000 * fragLastKbps) +
-            1;
-        } else {
-          fetchdelay = 0;
+        const fragDuration =
+          (levelDetails &&
+            (this.loadingParts
+              ? levelDetails.partTarget
+              : levelDetails.averagetargetduration)) ||
+          this.fragCurrent?.duration ||
+          6;
+        fetchdelay =
+          ttfbSec + (nextLevel.maxBitrate * fragDuration) / bandwidth;
+        if (!nextLevel.details) {
+          fetchdelay += ttfbSec;
         }
-      } else {
-        fetchdelay = 0;
       }
-      // this.log('fetchdelay:'+fetchdelay);
+
+      // Do not flush in live stream with low buffer
+
+      const okToFlushForwardBuffer =
+        !levelDetails?.live ||
+        (bufferInfo.len || 0) > levelDetails.targetduration * 2;
+
       // find buffer range that will be reached once new fragment will be fetched
-      const bufferedFrag = this.getBufferedFrag(media.currentTime + fetchdelay);
+      const bufferedFrag = okToFlushForwardBuffer
+        ? this.getBufferedFrag(media.currentTime + fetchdelay)
+        : null;
       if (bufferedFrag) {
         // we can flush buffer range following this one without stalling playback
         const nextBufferedFrag = this.followingBufferedFrag(bufferedFrag);
@@ -498,7 +500,15 @@ export default class StreamController
           this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY);
         }
       }
+      // remove back-buffer
+      const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
+      if (fragPlayingCurrent && fragPlayingCurrent.start > 1) {
+        // flush buffer preceding current fragment (flush until current fragment start offset)
+        // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
+        this.flushMainBuffer(0, fragPlayingCurrent.start - 1);
+      }
     }
+    this.tickImmediate();
   }
 
   private abortCurrentFrag() {
@@ -601,7 +611,6 @@ export default class StreamController
     this.log('Trigger BUFFER_RESET');
     this.hls.trigger(Events.BUFFER_RESET, undefined);
     this.couldBacktrack = false;
-    this.fragLastKbps = 0;
     this.fragPlaying = this.backtrackFragment = null;
     this.altAudio = AlternateAudio.DISABLED;
     this.audioOnly = false;
@@ -987,10 +996,6 @@ export default class StreamController
         }
         return;
       }
-      const stats = part ? part.stats : frag.stats;
-      this.fragLastKbps = Math.round(
-        (8 * stats.total) / (stats.buffering.end - stats.loading.first),
-      );
       if (isMediaFragment(frag)) {
         this.fragPrevious = frag;
       }
