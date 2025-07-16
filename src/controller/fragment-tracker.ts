@@ -88,11 +88,10 @@ export class FragmentTracker implements ComponentAPI {
         if (!activePart) {
           break;
         }
-        const appendedPTS = activePart.end;
         if (
           activePart.start <= position &&
-          appendedPTS !== null &&
-          position <= appendedPTS
+          position <= activePart.end &&
+          activePart.loaded
         ) {
           return activePart;
         }
