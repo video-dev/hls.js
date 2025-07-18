@@ -680,6 +680,11 @@ class EMEController extends Logger implements ComponentAPI {
         this.warn(`${context.keySystem} expired for key ${keyId}`);
         this.renewKeySession(context);
       }
+
+      this.hls.trigger(Events.KEY_STATUSES_CHANGED, {
+        keySystem: context.decryptdata.keyFormat,
+        keyStatuses: keySession.keyStatuses,
+      });
     });
 
     addEventListener(context.mediaKeysSession, 'message', onmessage);
@@ -708,16 +713,9 @@ class EMEController extends Logger implements ComponentAPI {
               ),
             );
           } else if (keyStatus === 'internal-error') {
-            reject(
-              new EMEKeyError(
-                {
-                  type: ErrorTypes.KEY_SYSTEM_ERROR,
-                  details: ErrorDetails.KEY_SYSTEM_STATUS_INTERNAL_ERROR,
-                  fatal: true,
-                },
-                `key status changed to "${keyStatus}"`,
-              ),
-            );
+            // resolve for Hardware DRM
+            this.warn('keyStatus: internal-error');
+            resolve();
           } else if (keyStatus === 'expired') {
             reject(new Error('key expired while generating request'));
           } else {

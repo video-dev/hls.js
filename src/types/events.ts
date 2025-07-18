@@ -252,6 +252,11 @@ export interface LevelPTSUpdatedData {
   end: number;
 }
 
+export interface KeyStatusesChangedData {
+  keySystem: string;
+  keyStatuses: MediaKeyStatusMap;
+}
+
 export interface AudioTrackSwitchingData extends MediaPlaylist {}
 
 export interface AudioTrackSwitchedData extends MediaPlaylist {}
