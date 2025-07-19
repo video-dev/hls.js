@@ -516,10 +516,10 @@ class HevcVideoParser extends BaseVideoParser {
       eg.readBoolean(); // frame_field_info_present_flag
       default_display_window_flag = eg.readBoolean();
       if (default_display_window_flag) {
-        pic_left_offset += eg.readUEG();
-        pic_right_offset += eg.readUEG();
-        pic_top_offset += eg.readUEG();
-        pic_bottom_offset += eg.readUEG();
+        eg.skipUEG();
+        eg.skipUEG();
+        eg.skipUEG();
+        eg.skipUEG();
       }
       const vui_timing_info_present_flag = eg.readBoolean();
       if (vui_timing_info_present_flag) {
@@ -604,7 +604,7 @@ class HevcVideoParser extends BaseVideoParser {
 
     let width = pic_width_in_luma_samples,
       height = pic_height_in_luma_samples;
-    if (conformance_window_flag || default_display_window_flag) {
+    if (conformance_window_flag) {
       let chroma_scale_w = 1,
         chroma_scale_h = 1;
       if (chroma_format_idc === 1) {
