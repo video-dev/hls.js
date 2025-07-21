@@ -142,14 +142,16 @@ export class LevelKey implements DecryptData {
           // the playlist-key before the "encrypted" event. (Comment out to only use "encrypted" path.)
           this.pssh = keyBytes;
           // In case of Widevine, if KEYID is not in the playlist, assume only two fields in the pssh KEY tag URI.
-          if (!this.keyId && keyBytes) {
-            const results = parseMultiPssh(keyBytes.buffer);
-            if (results[0] && 'version' in results[0]) {
-              const psshData = results[0];
-              if (psshData?.kids?.[0]) {
-                this.keyId = psshData.kids[0];
-              }
-            }
+          if (!this.keyId) {
+            const [psshData] = parseMultiPssh(keyBytes.buffer);
+            this.keyId =
+              psshData && 'kids' in psshData && psshData.kids?.[0]
+                ? psshData.kids[0]
+                : null;
+          }
+          if (!this.keyId) {
+            const offset = keyBytes.length - 22;
+            this.keyId = keyBytes.subarray(offset, offset + 16);
           }
           break;
         case KeySystemFormats.PLAYREADY: {
