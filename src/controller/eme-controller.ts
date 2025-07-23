@@ -696,7 +696,7 @@ class EMEController extends Logger implements ComponentAPI {
         licenseStatus.on('keyStatus', (keyStatus) => {
           if (keyStatus.startsWith('usable')) {
             resolve();
-          } else if (keyStatus === 'output-restricted') {
+          } else if (keyStatus === 'output-restricted' || keyStatus === 'output-downscaled') {
             reject(
               new EMEKeyError(
                 {
