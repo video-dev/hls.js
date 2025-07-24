@@ -158,9 +158,6 @@ describe('EMEController', function () {
     } as any);
 
     expect(emePromise).to.be.a('Promise');
-    if (!emePromise) {
-      return;
-    }
     return emePromise.finally(() => {
       expect(media.setMediaKeys).callCount(1);
       expect(reqMediaKsAccessSpy).callCount(1);
@@ -226,9 +223,6 @@ describe('EMEController', function () {
     } as any);
 
     expect(emePromise).to.be.a('Promise');
-    if (!emePromise) {
-      return;
-    }
     return emePromise.finally(() => {
       expect(reqMediaKsAccessSpy).callCount(1);
       const args = reqMediaKsAccessSpy.getCall(0)
@@ -416,13 +410,6 @@ describe('EMEController', function () {
         '00000000000000000000000000000000'
       ],
     ).to.be.a('Promise');
-    if (
-      !emeController.keyIdToKeySessionPromise[
-        '00000000000000000000000000000000'
-      ]
-    ) {
-      return;
-    }
     return emeController.keyIdToKeySessionPromise[
       '00000000000000000000000000000000'
     ].finally(() => {
@@ -499,13 +486,6 @@ describe('EMEController', function () {
         '00000000000000000000000000000000'
       ],
     ).to.be.a('Promise');
-    if (
-      !emeController.keyIdToKeySessionPromise[
-        '00000000000000000000000000000000'
-      ]
-    ) {
-      return;
-    }
     return emeController.keyIdToKeySessionPromise[
       '00000000000000000000000000000000'
     ]
@@ -582,13 +562,6 @@ describe('EMEController', function () {
         '00000000000000000000000000000000'
       ],
     ).to.be.a('Promise');
-    if (
-      !emeController.keyIdToKeySessionPromise[
-        '00000000000000000000000000000000'
-      ]
-    ) {
-      return;
-    }
     return emeController.keyIdToKeySessionPromise[
       '00000000000000000000000000000000'
     ]
