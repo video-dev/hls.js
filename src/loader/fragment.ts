@@ -233,7 +233,7 @@ export class Fragment extends BaseSegment {
         return total;
       }
     }
-    if (this.byteRange) {
+    if (this.byteRange.length) {
       const start = this.byteRange[0];
       const end = this.byteRange[1];
       if (Number.isFinite(start) && Number.isFinite(end)) {
