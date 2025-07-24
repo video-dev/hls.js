@@ -2726,17 +2726,18 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         this.setBufferingItem(item);
       }
       this.setSchedulePosition(scheduleIndex);
-    } else if (
-      bufferingEvent?.identifier === interstitialId &&
-      bufferingEvent.appendInPlace
-    ) {
-      // If buffering (but not playback) has reached this item transfer media-source
+    } else if (bufferingEvent?.identifier === interstitialId) {
       const assetItem = interstitial.assetList[0];
       if (assetItem as any) {
         const player = this.getAssetPlayer(assetItem.identifier);
-        const media = this.primaryMedia;
-        if (player && media) {
-          this.bufferAssetPlayer(player, media);
+        if (bufferingEvent.appendInPlace) {
+          // If buffering (but not playback) has reached this item transfer media-source
+          const media = this.primaryMedia;
+          if (player && media) {
+            this.bufferAssetPlayer(player, media);
+          }
+        } else if (player) {
+          player.loadSource();
         }
       }
     }
