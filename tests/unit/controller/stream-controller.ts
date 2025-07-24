@@ -210,7 +210,7 @@ describe('StreamController', function () {
     fragPrevious.programDateTime = 1505502671523;
     fragPrevious.duration = 5.0;
     fragPrevious.level = 1;
-    fragPrevious.start = 10.0;
+    fragPrevious.setStart(10.0);
     fragPrevious.sn = 2; // Fragment with PDT 1505502671523 in level 1 does not have the same sn as in level 2 where cc is 1
     fragPrevious.cc = 0;
 
@@ -274,7 +274,7 @@ describe('StreamController', function () {
         fragPrevious.programDateTime = 1505502681523;
         fragPrevious.duration = 5.0;
         fragPrevious.level = 1;
-        fragPrevious.start = 15.0;
+        fragPrevious.setStart(15.0);
         fragPrevious.sn = 3;
         streamController['fragPrevious'] = fragPrevious;
 
@@ -475,7 +475,7 @@ describe('StreamController', function () {
       ) as MediaFragment;
       firstFrag.duration = 5.0;
       firstFrag.level = 1;
-      firstFrag.start = 0;
+      firstFrag.setStart(0);
       firstFrag.sn = 1;
       firstFrag.cc = 0;
       firstFrag.elementaryStreams.video = {

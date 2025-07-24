@@ -57,7 +57,7 @@ describe('Hls', function () {
       const hls = new Hls({ capLevelOnFPSDrop: true });
       expect(hls.media).to.equal(null);
       const media = document.createElement('video');
-      expect(media || null).to.not.equal(null);
+      expect(media).to.be.an('HTMLVideoElement');
       hls.attachMedia(media);
       expect(hls.media).to.equal(media);
       detachTest(hls, media, 6);
@@ -72,7 +72,7 @@ describe('Hls', function () {
       });
       expect(hls.media).to.equal(null);
       const media = document.createElement('video');
-      expect(media || null).to.not.equal(null);
+      expect(media).to.be.an('HTMLVideoElement');
       hls.attachMedia(media);
       expect(hls.media).to.equal(media);
       hls.trigger(Events.MEDIA_ATTACHED, { media });

@@ -137,7 +137,6 @@ describe('BufferController', function () {
         .stub(bufferController, 'createSourceBuffers')
         .callsFake(() => {
           Object.keys(bufferController.tracks).forEach((type) => {
-            bufferController.tracks ||= {};
             bufferController.tracks[type] = {
               appendBuffer: () => {},
               remove: () => {},

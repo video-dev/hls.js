@@ -48,7 +48,7 @@ const generatePlaylist = (sequenceNumbers, offset = 0, duration = 5) => {
   playlist.fragments = sequenceNumbers.map((n, i) => {
     const frag = new Fragment(PlaylistLevelType.MAIN, '');
     frag.sn = n;
-    frag.start = i * 5 + offset;
+    frag.setStart(i * 5 + offset);
     frag.duration = duration;
     return frag;
   });
@@ -67,7 +67,9 @@ const getIteratedSequence = (oldPlaylist, newPlaylist) => {
 };
 
 const getFragmentSequenceNumbers = (details: LevelDetails) =>
-  details.fragments.map((f) => `${f?.sn}-${f?.cc}`).join(',');
+  details.fragments
+    .map((f: MediaFragment | null) => `${f?.sn}-${f?.cc}`)
+    .join(',');
 
 describe('LevelHelper Tests', function () {
   let sandbox;
@@ -204,7 +206,7 @@ describe('LevelHelper Tests', function () {
     it('matches start when the new playlist starts before the old', function () {
       const oldPlaylist = generatePlaylist([3, 4, 5]);
       oldPlaylist.fragments.forEach((f) => {
-        f.start += 10;
+        f.addStart(10);
       });
       const newPlaylist = generatePlaylist([1, 2, 3]);
       mergeDetails(oldPlaylist, newPlaylist);
@@ -374,12 +376,12 @@ fileSequence11.ts
         .which.equals(details.fragments[2].ref)
         .which.has.property('sn')
         .which.equals(5);
-      expect(details.dateRanges.one.startTime).to.equal(4);
-      expect(details.dateRanges.two.startTime).to.equal(10);
-      expect(details.dateRanges.three.startTime).to.equal(16);
-      expect(details.dateRanges.one.tagOrder, 'one.tagOrder').to.equal(0);
-      expect(details.dateRanges.two.tagOrder, 'two.tagOrder').to.equal(1);
-      expect(details.dateRanges.three.tagOrder, 'three.tagOrder').to.equal(2);
+      expect(details.dateRanges.one!.startTime).to.equal(4);
+      expect(details.dateRanges.two!.startTime).to.equal(10);
+      expect(details.dateRanges.three!.startTime).to.equal(16);
+      expect(details.dateRanges.one!.tagOrder, 'one.tagOrder').to.equal(0);
+      expect(details.dateRanges.two!.tagOrder, 'two.tagOrder').to.equal(1);
+      expect(details.dateRanges.three!.tagOrder, 'three.tagOrder').to.equal(2);
       expect(
         detailsUpdated.hasProgramDateTime,
         'detailsUpdated.hasProgramDateTime',
@@ -407,25 +409,26 @@ fileSequence11.ts
         .which.has.property('tagAnchor')
         .which.has.property('sn')
         .which.equals(5);
-      expect(detailsUpdated.dateRanges.one.startTime).to.equal(4);
-      expect(detailsUpdated.dateRanges.two.startTime).to.equal(10);
-      expect(detailsUpdated.dateRanges.three.startTime).to.equal(16);
-      expect(detailsUpdated.dateRanges.four.startTime).to.equal(76);
+      expect(detailsUpdated.dateRanges.one!.startTime).to.equal(4);
+      expect(detailsUpdated.dateRanges.two!.startTime).to.equal(10);
+      expect(detailsUpdated.dateRanges.three!.startTime).to.equal(16);
+      expect(detailsUpdated.dateRanges.four!.startTime).to.equal(76);
       expect(
-        detailsUpdated.dateRanges.one.tagOrder,
+        detailsUpdated.dateRanges.one!.tagOrder,
         'one.tagOrder updated',
       ).to.equal(0);
       expect(
-        detailsUpdated.dateRanges.two.tagOrder,
+        detailsUpdated.dateRanges.two!.tagOrder,
         'two.tagOrder updated',
       ).to.equal(1);
       expect(
-        detailsUpdated.dateRanges.three.tagOrder,
+        detailsUpdated.dateRanges.three!.tagOrder,
         'three.tagOrder updated',
       ).to.equal(2);
-      expect(detailsUpdated.dateRanges.four.tagOrder, 'four.tagOrder').to.equal(
-        3,
-      );
+      expect(
+        detailsUpdated.dateRanges.four!.tagOrder,
+        'four.tagOrder',
+      ).to.equal(3);
       expect(detailsUpdated.playlistParsingError).to.be.null;
     });
 
@@ -1096,8 +1099,8 @@ fileSequence18.ts`;
         Object.keys(details.dateRanges),
         'first playlist daterange ids',
       ).to.have.deep.equal(['d0', 'd1', 'd2', 'd3', 'd4']);
-      expect(details.dateRanges.d2.startTime).to.equal(2.94);
-      expect(details.dateRanges.d3.startTime).to.equal(3.94);
+      expect(details.dateRanges.d2!.startTime).to.equal(2.94);
+      expect(details.dateRanges.d3!.startTime).to.equal(3.94);
       expect(
         detailsUpdated.hasProgramDateTime,
         'detailsUpdated.hasProgramDateTime',
@@ -1116,8 +1119,8 @@ fileSequence18.ts`;
         .which.equals(detailsUpdated.fragments[0].ref)
         .which.has.property('sn')
         .which.equals(3);
-      expect(detailsUpdated.dateRanges.d2.startTime).to.equal(2.94);
-      expect(detailsUpdated.dateRanges.d3.startTime).to.equal(3.94);
+      expect(detailsUpdated.dateRanges.d2!.startTime).to.equal(2.94);
+      expect(detailsUpdated.dateRanges.d3!.startTime).to.equal(3.94);
       // Multiple #EXT-X-SKIP tags are not allowed
       expect(detailsUpdated.playlistParsingError).to.include({
         message: `#EXT-X-SKIP must not appear more than once (#EXT-X-SKIP:SKIPPED-SEGMENTS=2,RECENTLY-REMOVED-DATERANGES="d0")`,
