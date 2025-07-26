@@ -91,7 +91,7 @@ export interface BufferAppendingData {
   chunkMeta: ChunkMetadata;
   offset?: number | undefined;
   parent: PlaylistLevelType;
-  data: Uint8Array;
+  data: Uint8Array<ArrayBuffer>;
 }
 
 export interface BufferAppendedData {
