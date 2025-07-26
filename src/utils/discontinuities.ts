@@ -154,6 +154,12 @@ export function alignMediaPlaylistByPDT(
     return;
   }
 
-  const delta = (targetPDT - refPDT) / 1000 - (frag.start - refFrag.start);
+  const dateDifference = (targetPDT - refPDT) / 1000;
+  if (Math.abs(dateDifference) > Math.max(60, details.totalduration)) {
+    // Do not align on PDT if ranges differ significantly
+    return;
+  }
+
+  const delta = dateDifference - (frag.start - refFrag.start);
   adjustSlidingStart(delta, details);
 }

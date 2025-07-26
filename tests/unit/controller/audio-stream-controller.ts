@@ -11,12 +11,13 @@ import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
 import KeyLoader from '../../../src/loader/key-loader';
+import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
 import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import { adjustSlidingStart } from '../../../src/utils/discontinuities';
-import type { LevelDetails } from '../../../src/loader/level-details';
+import type { MediaFragment } from '../../../src/loader/fragment';
 import type {
   AudioTrackLoadedData,
   AudioTrackSwitchingData,
@@ -137,6 +138,12 @@ describe('AudioStreamController', function () {
   let audioStreamController: AudioStreamControllerTestable;
   let tracks: Level[];
 
+  function cloneLevelDetails(options: Partial<LevelDetails> & { url: string }) {
+    return Object.assign(new LevelDetails(options.url), {
+      ...options,
+    });
+  }
+
   beforeEach(function () {
     sandbox = sinon.createSandbox();
     hls = new Hls();
@@ -187,32 +194,33 @@ describe('AudioStreamController', function () {
       live: boolean,
     ) {
       const targetduration = 10;
-      const fragments: Fragment[] = Array.from(new Array(endSN - startSN)).map(
-        (u, i) => {
-          const frag = new Fragment(type, '');
-          frag.sn = i + startSN;
-          frag.cc = Math.floor((i + startSN) / 10);
-          frag.setStart(i * targetduration);
-          frag.duration = targetduration;
-          return frag;
-        },
-      );
+      const fragments: MediaFragment[] = Array.from(
+        new Array(endSN - startSN),
+      ).map((u, i) => {
+        const frag = new Fragment(type, '') as MediaFragment;
+        frag.sn = i + startSN;
+        frag.cc = Math.floor((i + startSN) / 10);
+        frag.setStart(i * targetduration);
+        frag.duration = targetduration;
+        return frag;
+      });
+      const details: LevelDetails = new LevelDetails('');
+      details.live = live;
+      details.advanced = true;
+      details.updated = true;
+      details.fragments = fragments;
+      details.targetduration = targetduration;
+      details.totalduration = targetduration * fragments.length;
+      details.startSN = startSN;
+      details.endSN = endSN;
+      Object.defineProperty(details, 'startCC', {
+        get: () => fragments[0].cc,
+      });
+      Object.defineProperty(details, 'endCC', {
+        get: () => fragments[fragments.length - 1].cc,
+      });
       return {
-        details: {
-          live,
-          advanced: true,
-          updated: true,
-          fragments,
-          get endCC(): number {
-            return fragments[fragments.length - 1].cc;
-          },
-          get startCC(): number {
-            return fragments[0].cc;
-          },
-          targetduration,
-          startSN,
-          endSN,
-        } as unknown as LevelDetails,
+        details,
         id: 0,
         networkDetails: new Response('ok'),
         stats: new LoadStats(),
@@ -265,7 +273,9 @@ describe('AudioStreamController', function () {
 
     it('should update the audio track LevelDetails from the track loaded data', function () {
       audioStreamController.levels = tracks;
-      audioStreamController.mainDetails = mainLoadedData.details;
+      audioStreamController.mainDetails = cloneLevelDetails(
+        mainLoadedData.details,
+      );
 
       audioStreamController.onAudioTrackLoaded(
         Events.AUDIO_TRACK_LOADED,
@@ -319,9 +329,9 @@ describe('AudioStreamController', function () {
       // Audio track ends on DISCONTINUITY-SEQUENCE 1 (main ends at 0)
       trackLoadedData = getTrackLoadedData(7, 12, true);
       mainLoadedData = getLevelLoadedData(1, 6, true);
-      audioStreamController.mainDetails = {
-        ...mainLoadedData.details,
-      } as unknown as LevelDetails;
+      audioStreamController.mainDetails = cloneLevelDetails(
+        mainLoadedData.details,
+      );
 
       expect(trackLoadedData.details.endCC).to.equal(1);
       expect(audioStreamController.mainDetails.endCC).to.equal(0);
@@ -360,10 +370,10 @@ describe('AudioStreamController', function () {
       trackLoadedData.details.live = mainLoadedData.details.live = true;
       trackLoadedData.details.updated = mainLoadedData.details.updated = true;
       // Main live details are present but expired (see LevelDetails `get expired()` and `get age()`)
-      audioStreamController.mainDetails = {
+      audioStreamController.mainDetails = cloneLevelDetails({
         ...mainLoadedData.details,
-        expired: true,
-      } as unknown as LevelDetails;
+        advancedDateTime: 1, // expired date time (must be > 0)
+      });
 
       audioStreamController.onAudioTrackLoaded(
         Events.AUDIO_TRACK_LOADED,
@@ -397,9 +407,7 @@ describe('AudioStreamController', function () {
       trackLoadedData = getTrackLoadedData(7, 12, true);
       mainLoadedData = getLevelLoadedData(1, 6, true);
 
-      audioStreamController.mainDetails = {
-        ...mainLoadedData.details,
-      } as unknown as LevelDetails;
+      audioStreamController.mainDetails = mainLoadedData.details;
 
       expect(trackLoadedData.details.endCC).to.equal(1);
       expect(audioStreamController.mainDetails.endCC).to.equal(0);

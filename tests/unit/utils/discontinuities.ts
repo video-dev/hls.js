@@ -316,7 +316,7 @@ describe('discontinuities', function () {
     expect(details).to.deep.equal(detailsExpected);
   });
 
-  it('adjusts level fragments without overlapping CC range but with programDateTime info', function () {
+  it('adjusts level fragments without overlapping CC range but with programDateTime info no more than one minute or the playlist duration apart', function () {
     const lastLevel = {
       details: objToLevelDetails({
         PTSKnown: true,
@@ -421,7 +421,11 @@ describe('discontinuities', function () {
       endCC: 3,
     });
     alignMediaPlaylistByPDT(details, lastLevel.details);
-    expect(detailsExpected).to.deep.equal(details, JSON.stringify(details));
+
+    expect(detailsExpected).to.deep.equal(
+      details,
+      JSON.stringify(details, null, 2),
+    );
   });
 
   describe('alignDiscontinuities', function () {
@@ -596,6 +600,10 @@ function objToLevelDetails(object: Partial<LevelDetails>): LevelDetails {
     details.startCC = details.fragments[0].cc;
     details.endCC = details.fragments[fragCount - 1].cc;
   }
+  details.totalduration = details.fragments.reduce(
+    (acc, { duration }) => acc + duration,
+    0,
+  );
   return details;
 }
 
