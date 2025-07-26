@@ -1654,15 +1654,15 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       const updatedPlayingItem = this.updateItem(playingItem, this.timelinePos);
       if (this.itemsMatch(playingItem, updatedPlayingItem)) {
         this.playingItem = updatedPlayingItem;
-        this.waitingItem = this.endedItem = null;
         trimInPlaceForPlayout = () =>
           this.trimInPlace(updatedPlayingItem, playingItem);
+      } else {
+        this.waitingItem = this.endedItem = null;
       }
-    } else {
-      // Clear waitingItem if it has been removed from the schedule
-      this.waitingItem = this.updateItem(this.waitingItem);
-      this.endedItem = this.updateItem(this.endedItem);
     }
+    // Clear waitingItem if it has been removed from the schedule
+    this.waitingItem = this.updateItem(this.waitingItem);
+    this.endedItem = this.updateItem(this.endedItem);
     // Do not replace Interstitial bufferingItem without a match - used for transfering media element or source
     const bufferingItem = this.bufferingItem;
     if (bufferingItem) {
@@ -1863,12 +1863,22 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       ) {
         bufferEndIndex = nextToBufferIndex;
       }
-      if (
-        nextToBufferIndex - playingIndex > 1 &&
-        bufferingItem?.event?.appendInPlace === false
-      ) {
-        // do not advance buffering item past Interstitial that requires source reset
-        return;
+      if (this.isInterstitial(bufferingItem)) {
+        const interstitial = bufferingItem.event;
+        if (
+          nextToBufferIndex - playingIndex > 1 &&
+          interstitial.appendInPlace === false
+        ) {
+          // do not advance buffering item past Interstitial that requires source reset
+          return;
+        }
+        if (
+          interstitial.assetList.length === 0 &&
+          interstitial.assetListLoader
+        ) {
+          // do not advance buffering item past Interstitial loading asset-list
+          return;
+        }
       }
       this.bufferedPos = bufferEnd;
       if (bufferEndIndex > bufferingIndex && bufferEndIndex > playingIndex) {
