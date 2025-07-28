@@ -1036,6 +1036,14 @@ export default class InterstitialsController
     const nextAssetIndex = getNextAssetIndex(interstitial, assetListIndex);
     if (!interstitial.isAssetPastPlayoutLimit(nextAssetIndex)) {
       // Advance to next asset list item
+      if (interstitial.appendInPlace) {
+        const assetItem = interstitial.assetList[nextAssetIndex] as
+          | InterstitialAssetItem
+          | undefined;
+        if (assetItem) {
+          this.advanceInPlace(assetItem.timelineStart);
+        }
+      }
       this.setSchedulePosition(index, nextAssetIndex);
     } else if (this.schedule) {
       // Advance to next schedule segment
@@ -1051,7 +1059,10 @@ export default class InterstitialsController
         const resumptionTime = interstitial.resumeTime;
         if (this.timelinePos < resumptionTime) {
           this.timelinePos = resumptionTime;
-          this.checkBuffer();
+          if (interstitial.appendInPlace) {
+            this.advanceInPlace(resumptionTime);
+          }
+          this.checkBuffer(this.bufferedPos < resumptionTime);
         }
         this.setSchedulePosition(nextIndex);
       }
@@ -1083,7 +1094,7 @@ export default class InterstitialsController
     this.log(`setSchedulePosition ${index}, ${assetListIndex}`);
     const scheduledItem = index >= 0 ? scheduleItems[index] : null;
     // Cleanup current item / asset
-    const currentItem = this.playingItem;
+    const currentItem = this.waitingItem || this.playingItem;
     const playingLastItem = this.playingLastItem;
     if (this.isInterstitial(currentItem)) {
       const interstitial = currentItem.event;
@@ -1212,7 +1223,10 @@ export default class InterstitialsController
           interstitial,
           assetListIndex - 1,
         );
-        if (interstitial.isAssetPastPlayoutLimit(assetIndexCandidate)) {
+        if (
+          interstitial.isAssetPastPlayoutLimit(assetIndexCandidate) ||
+          (interstitial.appendInPlace && this.timelinePos === scheduledItem.end)
+        ) {
           this.advanceAfterAssetEnded(interstitial, index, assetListIndex);
           return;
         }
@@ -1256,18 +1270,10 @@ export default class InterstitialsController
       this.playingItem = scheduledItem;
 
       // If asset-list is empty or missing asset index, advance to next item
-      const assetItem = interstitial.assetList[assetListIndex];
-      if (!assetItem as any) {
-        const nextItem = scheduleItems[index + 1];
-        const media = this.media;
-        if (
-          (nextItem as any) &&
-          media &&
-          !this.isInterstitial(nextItem) &&
-          media.currentTime < nextItem.start
-        ) {
-          media.currentTime = this.timelinePos = nextItem.start;
-        }
+      const assetItem = interstitial.assetList[assetListIndex] as
+        | InterstitialAssetItem
+        | undefined;
+      if (!assetItem) {
         this.advanceAfterAssetEnded(interstitial, index, assetListIndex || 0);
         return;
       }
@@ -2370,27 +2376,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       }
       const inQueuPlayer = this.getAssetPlayer(assetId);
       if (data.details === ErrorDetails.BUFFER_STALLED_ERROR) {
-        if (inQueuPlayer?.media) {
-          const assetCurrentTime = inQueuPlayer.currentTime;
-          const distanceFromEnd = inQueuPlayer.duration - assetCurrentTime;
-          if (
-            assetCurrentTime &&
-            interstitial.appendInPlace &&
-            distanceFromEnd / inQueuPlayer.media.playbackRate < 0.5
-          ) {
-            this.log(
-              `Advancing playhead ${distanceFromEnd}s to end of asset ${assetId} ${interstitial} at ${inQueuPlayer.media.currentTime}`,
-            );
-            inQueuPlayer.media.currentTime += distanceFromEnd;
-            bufferedToEnd();
-          } else {
-            this.warn(
-              `Stalled at ${assetCurrentTime} of ${assetCurrentTime + distanceFromEnd} in asset ${assetId} ${interstitial}`,
-            );
-            this.onTimeupdate();
-            this.checkBuffer(true);
-          }
+        if (inQueuPlayer?.appendInPlace) {
+          this.handleInPlaceStall(interstitial);
+          return;
         }
+        this.onTimeupdate();
+        this.checkBuffer(true);
         return;
       }
       this.handleAssetItemError(
@@ -2580,6 +2571,50 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     this.transferMediaTo(player, media);
   }
 
+  private handleInPlaceStall(interstitial: InterstitialEvent) {
+    const schedule = this.schedule;
+    const media = this.primaryMedia;
+    if (!schedule || !media) {
+      return;
+    }
+    const currentTime = media.currentTime;
+    const foundAssetIndex = schedule.findAssetIndex(interstitial, currentTime);
+    const stallingAsset = interstitial.assetList[foundAssetIndex] as
+      | InterstitialAssetItem
+      | undefined;
+    if (stallingAsset) {
+      const player = this.getAssetPlayer(stallingAsset.identifier);
+      if (player) {
+        const assetCurrentTime = player.currentTime;
+        const distanceFromEnd = player.duration - assetCurrentTime;
+        this.warn(
+          `Stalled at ${assetCurrentTime} of ${assetCurrentTime + distanceFromEnd} in ${player} ${interstitial}`,
+        );
+        if (
+          assetCurrentTime &&
+          distanceFromEnd / media.playbackRate < 0.5 &&
+          player.hls
+        ) {
+          const scheduleIndex = schedule.findEventIndex(
+            interstitial.identifier,
+          );
+          this.advanceAfterAssetEnded(
+            interstitial,
+            scheduleIndex,
+            foundAssetIndex,
+          );
+        }
+      }
+    }
+  }
+
+  private advanceInPlace(time: number) {
+    const media = this.primaryMedia;
+    if (media && media.currentTime < time) {
+      media.currentTime = time;
+    }
+  }
+
   private handleAssetItemError(
     data: ErrorData,
     interstitial: InterstitialEvent,
@@ -2754,6 +2789,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
+    if (!this.schedule) {
+      return;
+    }
     switch (data.details) {
       case ErrorDetails.ASSET_LIST_PARSING_ERROR:
       case ErrorDetails.ASSET_LIST_LOAD_ERROR:
@@ -2765,6 +2803,16 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         break;
       }
       case ErrorDetails.BUFFER_STALLED_ERROR: {
+        const stallingItem =
+          this.endedItem || this.waitingItem || this.playingItem;
+        if (
+          this.isInterstitial(stallingItem) &&
+          stallingItem.event.appendInPlace
+        ) {
+          this.handleInPlaceStall(stallingItem.event);
+          return;
+        }
+
         this.onTimeupdate();
         this.checkBuffer(true);
         break;

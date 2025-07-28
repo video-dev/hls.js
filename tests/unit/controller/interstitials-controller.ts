@@ -1469,10 +1469,10 @@ fileSequence6.mp4`;
       insterstitials.skip();
       const eventsAfterSkip = getTriggerCalls();
       const expectedSkipEvents = [
-        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.INTERSTITIAL_ASSET_ENDED,
         Events.INTERSTITIAL_ENDED,
         Events.INTERSTITIALS_UPDATED, // removed Interstitial with CUE="ONCE"
+        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.MEDIA_ATTACHING,
         Events.INTERSTITIALS_PRIMARY_RESUMED,
       ];
@@ -1568,17 +1568,13 @@ fileSequence6.mp4
             duration: 15,
           });
         } else if (bufferingIndex === 2) {
-          // buffered to primary (end of interstitial)
+          // buffered to primary (interstitial ended)
           expectIm(primary, e).to.include({ currentTime: 40, bufferedEnd: 40 });
           expectIm(integrated, e).to.include({
             currentTime: 45,
             bufferedEnd: 45,
           });
-          expectIm(interstitialPlayer, e).to.include({
-            playingIndex: 2,
-            currentTime: 15,
-            duration: 15,
-          });
+          expectIm(interstitialPlayer, e).to.be.null;
         }
       });
       hls.on(Events.INTERSTITIAL_STARTED, (t) => {
@@ -1914,9 +1910,9 @@ fileSequence6.mp4
       });
       const eventsAfterLastAsset = getTriggerCalls();
       const expectedEndLastAssetEvents = [
-        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.INTERSTITIAL_ASSET_ENDED,
         Events.INTERSTITIAL_ENDED,
+        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.MEDIA_ATTACHING,
         Events.INTERSTITIALS_PRIMARY_RESUMED,
       ];
