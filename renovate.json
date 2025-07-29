@@ -1,6 +1,7 @@
 {
   "extends": ["config:recommended"],
   "labels": ["dependencies", "skip-change-log"],
+  "schedule": ["* 0 28 * *"],
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "prCreation": "immediate",
