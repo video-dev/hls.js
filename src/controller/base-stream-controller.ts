@@ -59,7 +59,7 @@ import type {
 import type { Level } from '../types/level';
 import type { RemuxedTrack } from '../types/remuxer';
 import type { Bufferable, BufferInfo } from '../utils/buffer-helper';
-import type { RationalTimestamp } from '../utils/timescale-conversion';
+import type { TimestampOffset } from '../utils/timescale-conversion';
 
 type ResolveFragLoaded = (FragLoadedEndData) => void;
 type RejectFragLoaded = (LoadError) => void;
@@ -111,7 +111,7 @@ export default class BaseStreamController
   protected levelLastLoaded: Level | null = null;
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
-  protected initPTS: RationalTimestamp[] = [];
+  protected initPTS: TimestampOffset[] = [];
   protected buffering: boolean = true;
   protected loadingParts: boolean = false;
   private loopSn?: string | number;

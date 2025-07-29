@@ -142,16 +142,16 @@ class AudioStreamController
   // INIT_PTS_FOUND is triggered when the video track parsed in the stream-controller has a new PTS value
   onInitPtsFound(
     event: Events.INIT_PTS_FOUND,
-    { frag, id, initPTS, timescale }: InitPTSFoundData,
+    { frag, id, initPTS, timescale, trackId }: InitPTSFoundData,
   ) {
     // Always update the new INIT PTS
     // Can change due level switch
     if (id === PlaylistLevelType.MAIN) {
       const cc = frag.cc;
       const inFlightFrag = this.fragCurrent;
-      this.initPTS[cc] = { baseTime: initPTS, timescale };
+      this.initPTS[cc] = { baseTime: initPTS, timescale, trackId };
       this.log(
-        `InitPTS for cc: ${cc} found from main: ${initPTS}/${timescale}`,
+        `InitPTS for cc: ${cc} found from main: ${initPTS / timescale} (${initPTS}/${timescale}) trackId: ${trackId}`,
       );
       this.mainAnchor = frag;
       // If we are waiting, tick immediately to unblock audio fragment transmuxing
