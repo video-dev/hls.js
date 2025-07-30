@@ -22,6 +22,8 @@ import {
   KeySystems,
   requestMediaKeySystemAccess,
 } from '../utils/mediakeys-helper';
+import { bin2str, parseSinf } from '../utils/mp4-tools';
+import { base64Decode } from '../utils/numeric-encoding-utils';
 import { stringify } from '../utils/safe-json-stringify';
 import { strToUtf8array } from '../utils/utf8-utils';
 import type { EMEControllerConfig, HlsConfig, LoadPolicy } from '../config';
@@ -551,6 +553,105 @@ class EMEController extends Logger implements ComponentAPI {
     }
     return this.attemptKeySystemAccess(keySystemsToAttempt);
   }
+
+  private onMediaEncrypted = (event: MediaEncryptedEvent) => {
+    const { initDataType, initData } = event;
+    const logMessage = `"${event.type}" event: init data type: "${initDataType}"`;
+    this.debug(logMessage);
+
+    // Ignore event when initData is null
+    if (initData === null) {
+      return;
+    }
+
+    if (!this.keyFormatPromise) {
+      let keySystems = Object.keys(
+        this.keySystemAccessPromises,
+      ) as KeySystems[];
+      if (!keySystems.length) {
+        keySystems = getKeySystemsForConfig(this.config);
+      }
+      const keyFormats = keySystems
+        .map(keySystemDomainToKeySystemFormat)
+        .filter((k) => !!k) as KeySystemFormats[];
+      this.keyFormatPromise = this.getKeyFormatPromise(keyFormats);
+    }
+
+    this.keyFormatPromise.then((keySystemFormat) => {
+      const keySystem = keySystemFormatToKeySystemDomain(keySystemFormat);
+      if (initDataType !== 'sinf' || keySystem !== KeySystems.FAIRPLAY) {
+        this.log(
+          `Ignoring "${event.type}" event with init data type: "${initDataType}" for selected key-system ${keySystem}`,
+        );
+        return;
+      }
+
+      // Match sinf keyId to playlist skd://keyId=
+      let keyId: Uint8Array<ArrayBuffer> | undefined;
+      try {
+        const json = bin2str(new Uint8Array(initData));
+        const sinf = base64Decode(JSON.parse(json).sinf);
+        const tenc = parseSinf(sinf);
+        if (!tenc) {
+          throw new Error(
+            `'schm' box missing or not cbcs/cenc with schi > tenc`,
+          );
+        }
+        keyId = new Uint8Array(tenc.subarray(8, 24));
+      } catch (error) {
+        this.warn(`${logMessage} Failed to parse sinf: ${error}`);
+        return;
+      }
+
+      const keyIdHex = Hex.hexDump(keyId);
+      const { keyIdToKeySessionPromise, mediaKeySessions } = this;
+      let keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex];
+
+      for (let i = 0; i < mediaKeySessions.length; i++) {
+        // Match playlist key
+        const keyContext = mediaKeySessions[i];
+        const decryptdata = keyContext.decryptdata;
+        if (!decryptdata.keyId) {
+          continue;
+        }
+        const oldKeyIdHex = Hex.hexDump(decryptdata.keyId);
+        if (
+          keyIdHex === oldKeyIdHex ||
+          decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1
+        ) {
+          keySessionContextPromise = keyIdToKeySessionPromise[oldKeyIdHex];
+          if (!keySessionContextPromise) {
+            continue;
+          }
+          if (decryptdata.pssh) {
+            break;
+          }
+          delete keyIdToKeySessionPromise[oldKeyIdHex];
+          decryptdata.pssh = new Uint8Array(initData);
+          decryptdata.keyId = keyId;
+          keySessionContextPromise = keyIdToKeySessionPromise[keyIdHex] =
+            keySessionContextPromise.then(() => {
+              return this.generateRequestWithPreferredKeySession(
+                keyContext,
+                initDataType,
+                initData,
+                'encrypted-event-key-match',
+              );
+            });
+          keySessionContextPromise.catch((error) => this.handleError(error));
+          break;
+        }
+      }
+
+      if (!keySessionContextPromise) {
+        this.handleError(
+          new Error(
+            `Key ID ${keyIdHex} not encountered in playlist. Key-system sessions ${mediaKeySessions.length}.`,
+          ),
+        );
+      }
+    });
+  };
 
   private onWaitingForKey = (event: Event) => {
     this.log(`"${event.type}" event`);
@@ -1130,6 +1231,7 @@ class EMEController extends Logger implements ComponentAPI {
     // keep reference of media
     this.media = media;
 
+    addEventListener(media, 'encrypted', this.onMediaEncrypted);
     addEventListener(media, 'waitingforkey', this.onWaitingForKey);
   }
 
@@ -1137,6 +1239,7 @@ class EMEController extends Logger implements ComponentAPI {
     const media = this.media;
 
     if (media) {
+      removeEventListener(media, 'encrypted', this.onMediaEncrypted);
       removeEventListener(media, 'waitingforkey', this.onWaitingForKey);
       this.media = null;
       this.mediaKeys = null;
