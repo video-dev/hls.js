@@ -790,7 +790,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (videoSb && sn !== 'initSegment') {
       const partOrFrag = part || (frag as MediaFragment);
       const blockedAudioAppend = this.blockedAudioAppend;
-      if (type === 'audio' && parent !== 'main' && !this.blockedAudioAppend) {
+      if (
+        type === 'audio' &&
+        parent !== 'main' &&
+        !this.blockedAudioAppend &&
+        !(videoTrack.ending || videoTrack.ended)
+      ) {
         const pStart = partOrFrag.start;
         const pTime = pStart + partOrFrag.duration * 0.05;
         const vbuffered = videoSb.buffered;
@@ -1077,6 +1082,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.tracksEnded();
         this.hls.trigger(Events.BUFFERED_TO_END, undefined);
       }
+    } else if (data.type === 'video') {
+      // Make sure pending audio appends are unblocked when video reaches end
+      this.unblockAudio();
     }
   }
 
