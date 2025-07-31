@@ -3,7 +3,7 @@ import { hash } from './hash';
 import { toMpegTsClockFromTimescale } from './timescale-conversion';
 import { VTTParser } from './vttparser';
 import { normalizePts } from '../remux/mp4-remuxer';
-import type { RationalTimestamp } from './timescale-conversion';
+import type { TimestampOffset } from './timescale-conversion';
 import type { VTTCCs } from '../types/vtt';
 
 const LINEBREAKS = /\r\n|\n\r|\n|\r/g;
@@ -80,7 +80,7 @@ const calculateOffset = function (vttCCs: VTTCCs, cc, presentationTime) {
 
 export function parseWebVTT(
   vttByteArray: ArrayBuffer,
-  initPTS: RationalTimestamp | undefined,
+  initPTS: TimestampOffset | undefined,
   vttCCs: VTTCCs,
   cc: number,
   timeOffset: number,

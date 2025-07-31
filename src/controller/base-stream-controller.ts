@@ -59,7 +59,7 @@ import type {
 import type { Level } from '../types/level';
 import type { RemuxedTrack } from '../types/remuxer';
 import type { Bufferable, BufferInfo } from '../utils/buffer-helper';
-import type { RationalTimestamp } from '../utils/timescale-conversion';
+import type { TimestampOffset } from '../utils/timescale-conversion';
 
 type ResolveFragLoaded = (FragLoadedEndData) => void;
 type RejectFragLoaded = (LoadError) => void;
@@ -111,7 +111,7 @@ export default class BaseStreamController
   protected levelLastLoaded: Level | null = null;
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
-  protected initPTS: RationalTimestamp[] = [];
+  protected initPTS: TimestampOffset[] = [];
   protected buffering: boolean = true;
   protected loadingParts: boolean = false;
   private loopSn?: string | number;
@@ -912,7 +912,7 @@ export default class BaseStreamController
       this.log(
         `LL-Part loading OFF after next part miss @${targetBufferTime.toFixed(
           2,
-        )}`,
+        )} Check buffer at sn: ${frag.sn} loaded parts: ${details.partList?.filter((p) => p.loaded).map((p) => `[${p.start}-${p.end}]`)}`,
       );
       this.loadingParts = false;
     } else if (!frag.url) {
@@ -1496,9 +1496,14 @@ export default class BaseStreamController
       if (loaded) {
         nextPart = -1;
       } else if (
-        (contiguous || part.independent || independentAttrOmitted) &&
-        part.fragment === frag
+        contiguous ||
+        ((part.independent || independentAttrOmitted) && part.fragment === frag)
       ) {
+        if (part.fragment !== frag) {
+          this.warn(
+            `Need buffer at ${targetBufferTime} but next unloaded part starts at ${part.start}`,
+          );
+        }
         nextPart = i;
       }
       contiguous = loaded;
@@ -1510,8 +1515,17 @@ export default class BaseStreamController
     partList: Part[],
     targetBufferTime: number,
   ): boolean {
-    const lastPart = partList[partList.length - 1];
-    return lastPart && targetBufferTime > lastPart.start && lastPart.loaded;
+    let part: Part;
+    for (let i = partList.length; i--; ) {
+      part = partList[i];
+      if (!part.loaded) {
+        return false;
+      }
+      if (targetBufferTime > part.start) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /*
