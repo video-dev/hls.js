@@ -260,10 +260,11 @@ class PassThroughRemuxer extends Logger implements Remuxer {
         timescale: initSegment.timescale,
         trackId: initSegment.trackId,
       };
+    } else {
+      initSegment.initPTS = initPTS.baseTime;
+      initSegment.timescale = initPTS.timescale;
+      initSegment.trackId = initPTS.trackId;
     }
-    initSegment.initPTS = initPTS.baseTime;
-    initSegment.timescale = initPTS.timescale;
-    initSegment.trackId = initPTS.trackId;
 
     const startTime = audioTrack
       ? decodeTime - initPTS.baseTime / initPTS.timescale
