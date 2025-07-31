@@ -1501,7 +1501,7 @@ export default class BaseStreamController
       ) {
         if (part.fragment !== frag) {
           this.warn(
-            `Need buffer at ${targetBufferTime} but next part to buffer starts at ${part.start}`,
+            `Need buffer at ${targetBufferTime} but next unloaded part starts at ${part.start}`,
           );
         }
         nextPart = i;
