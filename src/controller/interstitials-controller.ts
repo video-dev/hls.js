@@ -1028,6 +1028,23 @@ export default class InterstitialsController
     }
   }
 
+  private advanceAssetBuffering(
+    item: InterstitialScheduleEventItem,
+    assetItem: InterstitialAssetItem,
+  ) {
+    const interstitial = item.event;
+    const assetListIndex = interstitial.findAssetIndex(assetItem);
+    const nextAssetIndex = getNextAssetIndex(interstitial, assetListIndex);
+    if (!interstitial.isAssetPastPlayoutLimit(nextAssetIndex)) {
+      this.bufferedToEvent(item, nextAssetIndex);
+    } else if (this.schedule) {
+      const nextItem = this.schedule.items?.[this.findItemIndex(item) + 1];
+      if (nextItem) {
+        this.bufferedToItem(nextItem);
+      }
+    }
+  }
+
   private advanceAfterAssetEnded(
     interstitial: InterstitialEvent,
     index: number,
@@ -1655,13 +1672,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
 
     // Update schedule item references
     // Do not replace Interstitial playingItem without a match - used for INTERSTITIAL_ASSET_ENDED and INTERSTITIAL_ENDED
-    let trimInPlaceForPlayout: null | (() => void) = null;
+    let updatedPlayingItem: InterstitialScheduleItem | null = null;
+    let updatedBufferingItem: InterstitialScheduleItem | null = null;
     if (playingItem) {
-      const updatedPlayingItem = this.updateItem(playingItem, this.timelinePos);
+      updatedPlayingItem = this.updateItem(playingItem, this.timelinePos);
       if (this.itemsMatch(playingItem, updatedPlayingItem)) {
         this.playingItem = updatedPlayingItem;
-        trimInPlaceForPlayout = () =>
-          this.trimInPlace(updatedPlayingItem, playingItem);
       } else {
         this.waitingItem = this.endedItem = null;
       }
@@ -1672,14 +1688,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     // Do not replace Interstitial bufferingItem without a match - used for transfering media element or source
     const bufferingItem = this.bufferingItem;
     if (bufferingItem) {
-      const updatedBufferingItem = this.updateItem(
-        bufferingItem,
-        this.bufferedPos,
-      );
+      updatedBufferingItem = this.updateItem(bufferingItem, this.bufferedPos);
       if (this.itemsMatch(bufferingItem, updatedBufferingItem)) {
         this.bufferingItem = updatedBufferingItem;
-        trimInPlaceForPlayout ||= () =>
-          this.trimInPlace(updatedBufferingItem, bufferingItem);
       } else if (bufferingItem.event) {
         // Interstitial removed from schedule (Live -> VOD or other scenario where Start Date is outside the range of VOD Playlist)
         this.bufferingItem = this.playingItem;
@@ -1730,8 +1741,11 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         return;
       }
 
-      if (trimInPlaceForPlayout) {
-        trimInPlaceForPlayout();
+      if (playingItem) {
+        this.trimInPlace(updatedPlayingItem, playingItem);
+      }
+      if (bufferingItem) {
+        this.trimInPlace(updatedBufferingItem, bufferingItem);
       }
 
       // Check is buffered to new Interstitial event boundary
@@ -2342,16 +2356,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       );
       const item = this.schedule.items?.[scheduleIndex];
       if (this.isInterstitial(item)) {
-        const assetListIndex = interstitial.findAssetIndex(assetItem);
-        const nextAssetIndex = getNextAssetIndex(interstitial, assetListIndex);
-        if (!interstitial.isAssetPastPlayoutLimit(nextAssetIndex)) {
-          this.bufferedToItem(item, nextAssetIndex);
-        } else {
-          const nextItem = this.schedule.items?.[scheduleIndex + 1];
-          if (nextItem) {
-            this.bufferedToItem(nextItem);
-          }
-        }
+        this.advanceAssetBuffering(item, assetItem);
       }
     };
     player.on(Events.BUFFERED_TO_END, bufferedToEnd);
@@ -2541,6 +2546,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     if (appendInPlaceNext && assetItem !== this.playingAsset) {
       // Do not buffer another item if tracks are unknown or incompatible
       if (!player.tracks) {
+        this.log(`Waiting for track info before buffering ${player}`);
         return;
       }
       if (
@@ -2653,6 +2659,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     }
 
     const playingAsset = this.playingAsset;
+    const bufferingAsset = this.bufferingAsset;
     const error = new Error(errorMessage);
     if (assetItem) {
       this.clearAssetPlayer(assetId, null);
@@ -2673,6 +2680,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       this.primaryFallback(interstitial);
     } else if (playingAsset && playingAsset.identifier === assetId) {
       this.advanceAfterAssetEnded(interstitial, scheduleIndex, assetListIndex);
+    } else if (
+      bufferingAsset &&
+      bufferingAsset.identifier === assetId &&
+      this.isInterstitial(this.bufferingItem)
+    ) {
+      this.advanceAssetBuffering(this.bufferingItem, bufferingAsset);
     }
   }
 
