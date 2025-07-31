@@ -1533,4 +1533,7 @@ export type {
   KeySystems,
   KeySystemFormats,
 } from './utils/mediakeys-helper';
-export type { RationalTimestamp } from './utils/timescale-conversion';
+export type {
+  RationalTimestamp,
+  TimestampOffset,
+} from './utils/timescale-conversion';

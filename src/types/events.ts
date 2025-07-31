@@ -374,6 +374,7 @@ export interface InitPTSFoundData {
   frag: MediaFragment;
   initPTS: number;
   timescale: number;
+  trackId: number;
 }
 
 export interface FragLoadingData {

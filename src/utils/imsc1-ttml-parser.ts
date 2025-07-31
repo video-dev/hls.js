@@ -4,7 +4,7 @@ import { toTimescaleFromScale } from './timescale-conversion';
 import VTTCue from './vttcue';
 import { parseTimeStamp } from './vttparser';
 import { generateCueId } from './webvtt-parser';
-import type { RationalTimestamp } from './timescale-conversion';
+import type { TimestampOffset } from './timescale-conversion';
 
 export const IMSC1_CODEC = 'stpp.ttml.im1t';
 
@@ -24,7 +24,7 @@ const textAlignToLineAlign: Partial<Record<string, LineAlignSetting>> = {
 
 export function parseIMSC1(
   payload: ArrayBuffer,
-  initPTS: RationalTimestamp,
+  initPTS: TimestampOffset,
   callBack: (cues: Array<VTTCue>) => any,
   errorCallBack: (error: Error) => any,
 ) {

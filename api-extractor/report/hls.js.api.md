@@ -197,7 +197,7 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     protected onHandlerDestroying(): void;
     // (undocumented)
-    onInitPtsFound(event: Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale }: InitPTSFoundData): void;
+    onInitPtsFound(event: Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale, trackId }: InitPTSFoundData): void;
     // (undocumented)
     protected onManifestLoading(): void;
     // (undocumented)
@@ -458,7 +458,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     get inFlightFrag(): InFlightData;
     // (undocumented)
-    protected initPTS: RationalTimestamp[];
+    protected initPTS: TimestampOffset[];
     // (undocumented)
     protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean;
     // (undocumented)
@@ -2584,6 +2584,8 @@ export interface InitPTSFoundData {
     initPTS: number;
     // (undocumented)
     timescale: number;
+    // (undocumented)
+    trackId: number;
 }
 
 // Warning: (ae-missing-release-tag) "InitSegmentData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -4796,6 +4798,13 @@ export enum TimelineOccupancy {
     Range = 1
 }
 
+// Warning: (ae-missing-release-tag) "TimestampOffset" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type TimestampOffset = RationalTimestamp & {
+    trackId: number;
+};
+
 // Warning: (ae-missing-release-tag) "Track" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -4866,7 +4875,7 @@ export class TransmuxerInterface {
     // (undocumented)
     flush(chunkMeta: ChunkMetadata): void;
     // (undocumented)
-    push(data: ArrayBuffer, initSegmentData: Uint8Array | undefined, audioCodec: string | undefined, videoCodec: string | undefined, frag: MediaFragment, part: Part | null, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: RationalTimestamp): void;
+    push(data: ArrayBuffer, initSegmentData: Uint8Array | undefined, audioCodec: string | undefined, videoCodec: string | undefined, frag: MediaFragment, part: Part | null, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: TimestampOffset): void;
     // (undocumented)
     reset(): void;
 }

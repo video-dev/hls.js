@@ -36,7 +36,7 @@ import type { MediaPlaylist } from '../types/media-playlist';
 import type { VTTCCs } from '../types/vtt';
 import type { CaptionScreen } from '../utils/cea-608-parser';
 import type { CuesInterface } from '../utils/cues';
-import type { RationalTimestamp } from '../utils/timescale-conversion';
+import type { TimestampOffset } from '../utils/timescale-conversion';
 
 type TrackProperties = {
   label: string;
@@ -61,7 +61,7 @@ export class TimelineController implements ComponentAPI {
   private Cues: CuesInterface;
   private textTracks: Array<TextTrack> = [];
   private tracks: Array<MediaPlaylist> = [];
-  private initPTS: RationalTimestamp[] = [];
+  private initPTS: TimestampOffset[] = [];
   private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private captionsTracks: Record<string, TextTrack> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
@@ -191,11 +191,11 @@ export class TimelineController implements ComponentAPI {
   // Triggered when an initial PTS is found; used for synchronisation of WebVTT.
   private onInitPtsFound(
     event: Events.INIT_PTS_FOUND,
-    { frag, id, initPTS, timescale }: InitPTSFoundData,
+    { frag, id, initPTS, timescale, trackId }: InitPTSFoundData,
   ) {
     const { unparsedVttFrags } = this;
     if (id === PlaylistLevelType.MAIN) {
-      this.initPTS[frag.cc] = { baseTime: initPTS, timescale };
+      this.initPTS[frag.cc] = { baseTime: initPTS, timescale, trackId };
     }
 
     // Due to asynchronous processing, initial PTS may arrive later than the first VTT fragments are loaded.

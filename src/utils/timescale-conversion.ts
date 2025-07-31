@@ -5,6 +5,8 @@ export type RationalTimestamp = {
   timescale: number; // ticks per second
 };
 
+export type TimestampOffset = RationalTimestamp & { trackId: number };
+
 export function toTimescaleFromBase(
   baseTime: number,
   destScale: number,
