@@ -97,13 +97,14 @@ export class HlsAssetPlayer {
     if (this.hls?.bufferedToEnd) {
       return true;
     }
-    if (!media || !this._bufferedEosTime) {
+    if (!media) {
       return false;
     }
+    const duration = this._bufferedEosTime || this.duration;
     const start = this.timelineOffset;
     const bufferInfo = BufferHelper.bufferInfo(media, start, 0);
     const bufferedEnd = this.getAssetTime(bufferInfo.end);
-    return bufferedEnd >= this._bufferedEosTime - 0.02;
+    return bufferedEnd >= duration - 0.02;
   }
 
   private checkPlayout = () => {

@@ -2599,7 +2599,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     if (stallingAsset) {
       const player = this.getAssetPlayer(stallingAsset.identifier);
       if (player) {
-        const assetCurrentTime = player.currentTime;
+        const assetCurrentTime =
+          player.currentTime || currentTime - stallingAsset.timelineStart;
         const distanceFromEnd = player.duration - assetCurrentTime;
         this.warn(
           `Stalled at ${assetCurrentTime} of ${assetCurrentTime + distanceFromEnd} in ${player} ${interstitial} (media.currentTime: ${currentTime})`,
@@ -2619,9 +2620,6 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
             foundAssetIndex,
           );
         }
-      } else {
-        console.log(`UNHANDLED STALL @${currentTime}`);
-        // this.checkBuffer(true);
       }
     }
   }
@@ -2837,7 +2835,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
           this.handleInPlaceStall(stallingItem.event);
           return;
         }
-
+        this.log(
+          `Primary player stall @${this.timelinePos} bufferedPos: ${this.bufferedPos}`,
+        );
         this.onTimeupdate();
         this.checkBuffer(true);
         break;
