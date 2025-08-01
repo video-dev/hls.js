@@ -1397,7 +1397,7 @@ export default class BaseStreamController
   }
 
   protected get primaryPrefetch(): boolean {
-    if (interstitialsEnabled(this.hls.config)) {
+    if (interstitialsEnabled(this.config)) {
       const playingInterstitial =
         this.hls.interstitialsManager?.playingItem?.event;
       if (playingInterstitial) {
@@ -1415,7 +1415,7 @@ export default class BaseStreamController
       return frag;
     }
     if (
-      interstitialsEnabled(this.hls.config) &&
+      interstitialsEnabled(this.config) &&
       frag.type !== PlaylistLevelType.SUBTITLE
     ) {
       // Do not load fragments outside the buffering schedule segment

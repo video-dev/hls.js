@@ -143,7 +143,8 @@ export default class InterstitialsController
 
   private registerListeners() {
     const hls = this.hls;
-    if (hls as any) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (hls) {
       hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
       hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
       hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
@@ -166,7 +167,8 @@ export default class InterstitialsController
 
   private unregisterListeners() {
     const hls = this.hls;
-    if (hls as any) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (hls) {
       hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
       hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
       hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
@@ -209,7 +211,8 @@ export default class InterstitialsController
   destroy() {
     this.unregisterListeners();
     this.stopLoad();
-    if (this.assetListLoader as any) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (this.assetListLoader) {
       this.assetListLoader.destroy();
     }
     this.emptyPlayerQueue();
@@ -319,7 +322,8 @@ export default class InterstitialsController
   }
 
   public get interstitialsManager(): InterstitialsManager | null {
-    if (!this.hls as any) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (!this.hls) {
       return null;
     }
     if (this.manager) {
@@ -936,7 +940,8 @@ export default class InterstitialsController
       // restart Interstitial at end
       if (this.playingLastItem && this.isInterstitial(playingItem)) {
         const restartAsset = playingItem.event.assetList[0];
-        if (restartAsset as any) {
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (restartAsset) {
           this.endedItem = this.playingItem;
           this.playingItem = null;
           this.setScheduleToAssetAtTime(currentTime, restartAsset);
@@ -1143,7 +1148,8 @@ export default class InterstitialsController
           // Schedule change occured on INTERSTITIAL_ASSET_ENDED
           if (
             this.itemsMatch(currentItem, this.playingItem) &&
-            (!this.playingAsset as any) // INTERSTITIAL_ASSET_ENDED side-effect
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            !this.playingAsset // INTERSTITIAL_ASSET_ENDED side-effect
           ) {
             this.advanceAfterAssetEnded(
               interstitial,
@@ -2132,7 +2138,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         }
       }
       const asset = interstitial.assetList[assetListIndex];
-      if (asset as any) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (asset) {
         const player = this.getAssetPlayer(asset.identifier);
         if (player) {
           player.loadSource();
@@ -2217,12 +2224,14 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     let videoPreference = userConfig.videoPreference;
     const currentLevel =
       primary.loadLevelObj || primary.levels[primary.currentLevel];
-    if (videoPreference || (currentLevel as any)) {
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+    if (videoPreference || currentLevel) {
       videoPreference = Object.assign({}, videoPreference);
       if (currentLevel.videoCodec) {
         videoPreference.videoCodec = currentLevel.videoCodec;
       }
-      if ((currentLevel as any).videoRange) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (currentLevel.videoRange) {
         videoPreference.allowedVideoRanges = [currentLevel.videoRange];
       }
     }
@@ -2796,7 +2805,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       this.setSchedulePosition(scheduleIndex);
     } else if (bufferingEvent?.identifier === interstitialId) {
       const assetItem = interstitial.assetList[0];
-      if (assetItem as any) {
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+      if (assetItem) {
         const player = this.getAssetPlayer(assetItem.identifier);
         if (bufferingEvent.appendInPlace) {
           // If buffering (but not playback) has reached this item transfer media-source
