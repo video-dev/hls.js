@@ -1912,7 +1912,7 @@ export default class BaseStreamController
         // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
         // in that case flush the whole audio buffer to recover
         this.warn(
-          `Buffer full error while media.currentTime is not buffered, flush ${playlistType} buffer`,
+          `Buffer full error while media.currentTime (${this.getLoadPosition()}) is not buffered, flush ${playlistType} buffer`,
         );
       }
       if (frag) {

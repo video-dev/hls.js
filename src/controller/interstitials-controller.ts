@@ -850,7 +850,7 @@ export default class InterstitialsController
     this.log(
       `${transferring ? 'transfering MediaSource' : 'attaching media'} to ${
         isAssetPlayer ? player : 'Primary'
-      } from ${logFromSource}`,
+      } from ${logFromSource} (media.currentTime: ${media.currentTime})`,
     );
     const schedule = this.schedule;
     if (dataToAttach === attachMediaSourceData && schedule) {
@@ -2241,6 +2241,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     const assetId = assetItem.identifier;
     const playerConfig: HlsAssetPlayerConfig = {
       ...userConfig,
+      maxMaxBufferLength: Math.min(180, primary.config.maxMaxBufferLength),
       autoStartLoad: true,
       startFragPrefetch: true,
       primarySessionId: primary.sessionId,
@@ -2258,6 +2259,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         (selectedSubtitle as MediaPlaylist | undefined) ||
         userConfig.subtitlePreference,
     };
+    // TODO: limit maxMaxBufferLength in asset players to prevent QEE
     if (interstitial.appendInPlace) {
       interstitial.appendInPlaceStarted = true;
       if (assetItem.timelineStart) {
@@ -2284,6 +2286,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     this.playerQueue.push(player);
     interstitial.assetList[assetListIndex] = assetItem;
     // Listen for LevelDetails and PTS change to update duration
+    let initialDuration = true;
     const updateAssetPlayerDetails = (details: LevelDetails) => {
       if (details.live) {
         const error = new Error(
@@ -2309,7 +2312,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       // Get time at end of last fragment
       const duration = details.edge - details.fragmentStart;
       const currentAssetDuration = assetItem.duration;
-      if (currentAssetDuration === null || duration > currentAssetDuration) {
+      if (
+        initialDuration ||
+        currentAssetDuration === null ||
+        duration > currentAssetDuration
+      ) {
+        initialDuration = false;
         this.log(
           `Interstitial asset "${assetId}" duration change ${currentAssetDuration} > ${duration}`,
         );
@@ -2594,11 +2602,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         const assetCurrentTime = player.currentTime;
         const distanceFromEnd = player.duration - assetCurrentTime;
         this.warn(
-          `Stalled at ${assetCurrentTime} of ${assetCurrentTime + distanceFromEnd} in ${player} ${interstitial}`,
+          `Stalled at ${assetCurrentTime} of ${assetCurrentTime + distanceFromEnd} in ${player} ${interstitial} (media.currentTime: ${currentTime})`,
         );
         if (
           assetCurrentTime &&
-          distanceFromEnd / media.playbackRate < 0.5 &&
+          (distanceFromEnd / media.playbackRate < 0.5 ||
+            player.bufferedInPlaceToEnd(media)) &&
           player.hls
         ) {
           const scheduleIndex = schedule.findEventIndex(
@@ -2610,6 +2619,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
             foundAssetIndex,
           );
         }
+      } else {
+        console.log(`UNHANDLED STALL @${currentTime}`);
+        // this.checkBuffer(true);
       }
     }
   }
