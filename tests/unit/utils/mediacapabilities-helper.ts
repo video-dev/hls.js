@@ -7,6 +7,11 @@ import type {
   MediaPlaylist,
 } from '../../../src/types/media-playlist';
 
+declare const navigator: {
+  prototype: Navigator;
+  mediaCapabilities?: MediaCapabilities;
+};
+
 describe('getMediaDecodingInfoPromise', function () {
   it('adds queries to cache', function () {
     if (!navigator.mediaCapabilities) {

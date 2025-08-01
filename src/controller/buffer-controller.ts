@@ -278,9 +278,9 @@ export default class BufferController extends Logger implements ComponentAPI {
     data: MediaAttachingData,
   ) {
     const media = (this.media = data.media);
-    const MediaSource = getMediaSource(this.appendSource);
     this.transferData = this.overrides = undefined;
-    if (media && MediaSource) {
+    const MediaSource = getMediaSource(this.appendSource);
+    if (MediaSource) {
       const transferringMedia = !!data.mediaSource;
       if (transferringMedia || data.overrides) {
         this.transferData = data;
@@ -318,7 +318,7 @@ export default class BufferController extends Logger implements ComponentAPI {
 
   private assignMediaSource(ms: MediaSource) {
     this.log(
-      `${this.transferData?.mediaSource === ms ? 'transferred' : 'created'} media source: ${ms.constructor?.name}`,
+      `${this.transferData?.mediaSource === ms ? 'transferred' : 'created'} media source: ${(ms.constructor as any)?.name}`,
     );
     // MediaSource listeners are arrow functions with a lexical scope, and do not need to be bound
     ms.addEventListener('sourceopen', this._onMediaSourceOpen);
@@ -343,9 +343,11 @@ export default class BufferController extends Logger implements ComponentAPI {
       : null;
     const trackCount = trackNames ? trackNames.length : 0;
     const mediaSourceOpenCallback = () => {
-      if (this.media && this.mediaSourceOpenOrEnded) {
-        this._onMediaSourceOpen();
-      }
+      Promise.resolve().then(() => {
+        if (this.media && this.mediaSourceOpenOrEnded) {
+          this._onMediaSourceOpen();
+        }
+      });
     };
     if (transferredTracks && trackNames && trackCount) {
       if (!this.tracksReady) {
@@ -435,7 +437,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private _onEndStreaming = (event) => {
-    if (!this.hls) {
+    if (!this.hls as any) {
       return;
     }
     if (this.mediaSource?.readyState !== 'open') {
@@ -445,7 +447,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   };
 
   private _onStartStreaming = (event) => {
-    if (!this.hls) {
+    if (!this.hls as any) {
       return;
     }
     this.hls.resumeBuffering();
@@ -1030,10 +1032,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   public get bufferedToEnd(): boolean {
     return (
       this.sourceBufferCount > 0 &&
-      !this.sourceBuffers.some(
-        ([type]) =>
-          type && (!this.tracks[type]?.ended || this.tracks[type]?.ending),
-      )
+      !this.sourceBuffers.some(([type]) => {
+        if (type) {
+          const track = this.tracks[type];
+          if (track) {
+            return !track.ended || track.ending;
+          }
+        }
+        return false;
+      })
     );
   }
 
@@ -1170,13 +1177,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       );
     }
 
+    const frontBufferFlushThreshold = config.frontBufferFlushThreshold;
     if (
-      Number.isFinite(config.frontBufferFlushThreshold) &&
-      config.frontBufferFlushThreshold > 0
+      Number.isFinite(frontBufferFlushThreshold) &&
+      frontBufferFlushThreshold > 0
     ) {
       const frontBufferLength = Math.max(
         config.maxBufferLength,
-        config.frontBufferFlushThreshold,
+        frontBufferFlushThreshold,
       );
 
       const maxFrontBufferLength = Math.max(frontBufferLength, targetDuration);
@@ -1281,7 +1289,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const playlistEnd = details.edge;
     if (details.live && this.hls.config.liveDurationInfinity) {
       const len = details.fragments.length;
-      if (len && details.live && !!mediaSource.setLiveSeekableRange) {
+      if (len && !!(mediaSource as any).setLiveSeekableRange) {
         const start = Math.max(0, details.fragmentStart);
         const end = Math.max(start, playlistEnd);
 
@@ -1555,7 +1563,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   };
 
   private get mediaSrc(): string | undefined {
-    const media = this.media?.querySelector?.('source') || this.media;
+    const media = (this.media?.querySelector as any)?.('source') || this.media;
     return media?.src;
   }
 
@@ -1655,7 +1663,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   // This method must result in an updateend event; if append is not called, onSBUpdateEnd must be called manually
-  private appendExecutor(data: Uint8Array, type: SourceBufferName) {
+  private appendExecutor(
+    data: Uint8Array<ArrayBuffer>,
+    type: SourceBufferName,
+  ) {
     const track = this.tracks[type];
     const sb = track?.buffer;
     if (!sb) {

@@ -36,10 +36,7 @@ class HLSTestPlayer extends Hls {
     hlsTestable.coreComponents.forEach((component) => component.destroy());
     hlsTestable.coreComponents.length = 0;
     hlsTestable.on(Events.MEDIA_ATTACHING, (t, data) => {
-      const media = data.media;
-      if (media) {
-        media.src = '';
-      }
+      data.media.src = '';
     });
     hlsTestable.on(Events.MEDIA_DETACHING, () => {
       const media = hlsTestable.media;
@@ -140,7 +137,7 @@ describe('InterstitialsController', function () {
       0,
       null,
     );
-    expect(details?.playlistParsingError).to.equal(null);
+    expect(details.playlistParsingError).to.equal(null);
     const attrs = new AttrList({});
     const level = new Level({
       name: '',
@@ -210,9 +207,6 @@ fileSequence4.ts
       expect(insterstitials.playingIndex).to.equal(0, 'playingIndex');
       expect(insterstitials.events).is.an('array').which.has.lengthOf(1);
       expect(schedule).is.an('array').which.has.lengthOf(2);
-      if (!insterstitials.events || !schedule) {
-        return;
-      }
       const interstitialEvent = insterstitials.events[0];
       expect(interstitialEvent.identifier).to.equal('0');
       expect(interstitialEvent.restrictions.jump).to.equal(true);
@@ -296,11 +290,8 @@ fileSequence4.ts
         .is.an('array')
         .which.has.lengthOf(
           7,
-          `Schedule items: ${schedule?.map((item) => `${item.start}-${item.end}`).join(', ')}`,
+          `Schedule items: ${schedule.map((item) => `${item.start}-${item.end}`).join(', ')}`,
         );
-      if (!events || !schedule) {
-        return;
-      }
       const eventAssertions = [
         {
           startTime: 0,
@@ -478,13 +469,10 @@ fileSequence3.ts
       const events = insterstitials.events;
       const schedule = insterstitials.schedule;
       expect(events).is.an('array').which.has.lengthOf(5);
-      const scheduleDebugString = `Schedule items: ${schedule?.map((item) => `[${item.event ? 'I' : 'P'}:${item.start}-${item.end}]`).join(', ')}`;
+      const scheduleDebugString = `Schedule items: ${schedule.map((item) => `[${item.event ? 'I' : 'P'}:${item.start}-${item.end}]`).join(', ')}`;
       expect(schedule)
         .is.an('array')
         .which.has.lengthOf(9, scheduleDebugString);
-      if (!events || !schedule) {
-        return;
-      }
       [
         'primary',
         '1',
@@ -498,12 +486,12 @@ fileSequence3.ts
       ].forEach((typeOrIdentifier, i) => {
         if (typeOrIdentifier === 'primary') {
           expect(
-            schedule?.[i],
+            schedule[i],
             `Expected to find a primary segment at index ${i}: ${scheduleDebugString}`,
           ).to.have.property('nextEvent');
         } else {
           expect(
-            schedule?.[i],
+            schedule[i],
             `Expected to find an Interstitial at index ${i}: ${scheduleDebugString}`,
           )
             .to.have.property('event')
@@ -725,9 +713,6 @@ fileSequence3.mp4
       expect(insterstitials.playingIndex).to.equal(0, 'playingIndex');
       expect(insterstitials.events).is.an('array').which.has.lengthOf(2);
       expect(schedule).is.an('array').which.has.lengthOf(4);
-      if (!insterstitials.events || !schedule) {
-        return;
-      }
       expect(insterstitials.events[0].identifier).to.equal('ad1');
       expect(insterstitials.events[1].identifier).to.equal('ad2');
       expect(insterstitials.events[0]).to.equal(schedule[0].event);
@@ -827,9 +812,6 @@ fileSequence3.mp4
       const schedule = insterstitials.schedule;
       expect(insterstitials.events).is.an('array').which.has.lengthOf(2);
       expect(schedule).is.an('array').which.has.lengthOf(2);
-      if (!insterstitials.events || !schedule) {
-        return;
-      }
       expect(insterstitials.events[0].identifier).to.equal('ad1');
       expect(insterstitials.events[1].identifier).to.equal('ad2');
       expect(insterstitials.events[0]).to.equal(schedule[0].event);
@@ -891,9 +873,6 @@ fileSequence4.ts
         const events = insterstitials.events;
         expect(events).is.an('array').which.has.lengthOf(1);
         expect(schedule).is.an('array').which.has.lengthOf(2);
-        if (!events || !schedule) {
-          return;
-        }
         expect(events[0]).to.deep.include({
           identifier: '0',
           timelineOccupancy: TimelineOccupancy.Point,
@@ -986,9 +965,6 @@ fileSequence4.ts
         const events = insterstitials.events;
         expect(events).is.an('array').which.has.lengthOf(4);
         expect(schedule).is.an('array').which.has.lengthOf(5);
-        if (!events || !schedule) {
-          return;
-        }
         eventAssertions.forEach((assertions, i) => {
           expect(events[i].identifier).to.equal('' + i);
           expect(events[i], `Interstitial Event "${i}"`).to.deep.include(
@@ -1118,9 +1094,6 @@ fileSequence5.mp4`;
       }
       expect(insterstitials.events).is.an('array').which.has.lengthOf(2);
       expect(insterstitials.schedule).is.an('array').which.has.lengthOf(4);
-      if (!insterstitials.events || !insterstitials.schedule) {
-        return;
-      }
       const callsWithPrerollBeforeAttach = getTriggerCalls();
       expect(callsWithPrerollBeforeAttach).to.deep.equal(
         [Events.LEVEL_UPDATED, Events.INTERSTITIALS_UPDATED],
@@ -1185,9 +1158,6 @@ fileSequence3.mp4
       }
       expect(insterstitials.events).is.an('array').which.has.lengthOf(1);
       expect(insterstitials.schedule).is.an('array').which.has.lengthOf(2);
-      if (!insterstitials.events || !insterstitials.schedule) {
-        return;
-      }
       const callsBeforeAttach = getTriggerCalls();
       expect(callsBeforeAttach).to.deep.equal(
         [
@@ -1255,9 +1225,6 @@ fileSequence3.mp4
       }
       expect(insterstitials.events).is.an('array').which.has.lengthOf(1);
       expect(insterstitials.schedule).is.an('array').which.has.lengthOf(2);
-      if (!insterstitials.events || !insterstitials.schedule) {
-        return;
-      }
       const callsBeforeAttach = getTriggerCalls();
       expect(callsBeforeAttach).to.deep.equal(
         [
@@ -1333,9 +1300,6 @@ fileSequence6.mp4`;
       }
       expect(insterstitials.events).is.an('array').which.has.lengthOf(1);
       expect(insterstitials.schedule).is.an('array').which.has.lengthOf(3);
-      if (!insterstitials.events || !insterstitials.schedule) {
-        return;
-      }
       const eventsBeforeAttach = getTriggerCalls();
       expect(eventsBeforeAttach).to.deep.equal(
         [Events.LEVEL_UPDATED, Events.INTERSTITIALS_UPDATED],
@@ -1463,9 +1427,6 @@ fileSequence6.mp4`;
       }
       expect(insterstitials.events).is.an('array').which.has.lengthOf(1);
       expect(insterstitials.schedule).is.an('array').which.has.lengthOf(3);
-      if (!insterstitials.events || !insterstitials.schedule) {
-        return;
-      }
       const eventsAfterPlaylist = getTriggerCalls();
       expect(eventsAfterPlaylist).to.deep.equal(
         [
@@ -1508,10 +1469,10 @@ fileSequence6.mp4`;
       insterstitials.skip();
       const eventsAfterSkip = getTriggerCalls();
       const expectedSkipEvents = [
-        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.INTERSTITIAL_ASSET_ENDED,
         Events.INTERSTITIAL_ENDED,
         Events.INTERSTITIALS_UPDATED, // removed Interstitial with CUE="ONCE"
+        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.MEDIA_ATTACHING,
         Events.INTERSTITIALS_PRIMARY_RESUMED,
       ];
@@ -1607,17 +1568,13 @@ fileSequence6.mp4
             duration: 15,
           });
         } else if (bufferingIndex === 2) {
-          // buffered to primary (end of interstitial)
+          // buffered to primary (interstitial ended)
           expectIm(primary, e).to.include({ currentTime: 40, bufferedEnd: 40 });
           expectIm(integrated, e).to.include({
             currentTime: 45,
             bufferedEnd: 45,
           });
-          expectIm(interstitialPlayer, e).to.include({
-            playingIndex: 2,
-            currentTime: 15,
-            duration: 15,
-          });
+          expectIm(interstitialPlayer, e).to.be.null;
         }
       });
       hls.on(Events.INTERSTITIAL_STARTED, (t) => {
@@ -1799,9 +1756,6 @@ fileSequence6.mp4
 
       expect(im.events).is.an('array').which.has.lengthOf(1);
       expect(im.schedule).is.an('array').which.has.lengthOf(3);
-      if (!im.events || !im.schedule) {
-        return;
-      }
       const eventsBeforeAttach = getTriggerCalls();
       expect(eventsBeforeAttach).to.deep.equal(
         [Events.LEVEL_UPDATED, Events.INTERSTITIALS_UPDATED],
@@ -1956,9 +1910,9 @@ fileSequence6.mp4
       });
       const eventsAfterLastAsset = getTriggerCalls();
       const expectedEndLastAssetEvents = [
-        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.INTERSTITIAL_ASSET_ENDED,
         Events.INTERSTITIAL_ENDED,
+        Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
         Events.MEDIA_ATTACHING,
         Events.INTERSTITIALS_PRIMARY_RESUMED,
       ];
@@ -2008,9 +1962,6 @@ fileSequence6.mp4`;
       }
       expect(insterstitials.events).is.an('array').which.has.lengthOf(1);
       expect(insterstitials.schedule).is.an('array').which.has.lengthOf(3);
-      if (!insterstitials.events || !insterstitials.schedule) {
-        return;
-      }
 
       // Capture asset-list request
       const loadSpy = sandbox.spy(hls.config.loader.prototype, 'load');

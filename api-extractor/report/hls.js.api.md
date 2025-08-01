@@ -631,7 +631,7 @@ export interface BufferAppendingData {
     // (undocumented)
     chunkMeta: ChunkMetadata;
     // (undocumented)
-    data: Uint8Array;
+    data: Uint8Array<ArrayBuffer>;
     // (undocumented)
     frag: Fragment;
     // (undocumented)
@@ -1807,7 +1807,7 @@ export class Fragment extends BaseSegment {
     level: number;
     // (undocumented)
     levelkeys?: {
-        [key: string]: LevelKey;
+        [key: string]: LevelKey | undefined;
     };
     // (undocumented)
     loader: Loader<FragmentLoaderContext> | null;
@@ -1925,7 +1925,7 @@ export class FragmentTracker implements ComponentAPI {
     detectPartialFragments(data: FragBufferedData): void;
     // (undocumented)
     fragBuffered(frag: MediaFragment, force?: true): void;
-    getAppendedFrag(position: number, levelType: PlaylistLevelType): Fragment | Part | null;
+    getAppendedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | Part | null;
     getBufferedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | null;
     // (undocumented)
     getFragAtPos(position: number, levelType: PlaylistLevelType, buffered?: boolean): MediaFragment | null;
@@ -2188,11 +2188,13 @@ export class HlsAssetPlayer {
     // (undocumented)
     get duration(): number;
     // (undocumented)
-    readonly hls: Hls;
+    hls: Hls | null;
     // (undocumented)
-    readonly interstitial: InterstitialEvent;
+    interstitial: InterstitialEvent;
     // (undocumented)
     get interstitialId(): InterstitialId;
+    // (undocumented)
+    loadSource(): void;
     // (undocumented)
     get media(): HTMLMediaElement | null;
     // (undocumented)
@@ -2799,6 +2801,8 @@ export type InterstitialId = string;
 export interface InterstitialPlayer {
     // (undocumented)
     assetPlayers: (HlsAssetPlayer | null)[];
+    // (undocumented)
+    bufferedEnd: number;
     // (undocumented)
     currentTime: number;
     // (undocumented)

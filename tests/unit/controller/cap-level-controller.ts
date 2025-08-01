@@ -1,30 +1,38 @@
+import chai from 'chai';
 import sinon from 'sinon';
-import Hls from '../../../src/hls';
+import sinonChai from 'sinon-chai';
 import CapLevelController from '../../../src/controller/cap-level-controller';
 import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
+import { Level } from '../../../src/types/level';
+import { parsedLevel } from '../utils/mock-level';
 
-const levels = [
-  {
+chai.use(sinonChai);
+const expect = chai.expect;
+
+const parsedLevels = [
+  parsedLevel({
     width: 360,
     height: 360,
-    bandwidth: 1000,
-  },
-  {
+    bitrate: 1000,
+  }),
+  parsedLevel({
     width: 540,
     height: 540,
-    bandwidth: 2000,
-  },
-  {
+    bitrate: 2000,
+  }),
+  parsedLevel({
     width: 540,
     height: 540,
-    bandwidth: 3000,
-  },
-  {
+    bitrate: 3000,
+  }),
+  parsedLevel({
     width: 720,
     height: 720,
-    bandwidth: 4000,
-  },
+    bitrate: 4000,
+  }),
 ];
+const levels = parsedLevels.map((parsedLevel) => new Level(parsedLevel));
 
 describe('CapLevelController', function () {
   describe('getMaxLevelByMediaSize', function () {
@@ -63,16 +71,6 @@ describe('CapLevelController', function () {
       const actual = CapLevelController.getMaxLevelByMediaSize([], 5000, 5000);
       expect(expected).to.equal(actual);
     });
-
-    it('Should return -1 if there levels is undefined', function () {
-      const expected = -1;
-      const actual = CapLevelController.getMaxLevelByMediaSize(
-        undefined,
-        5000,
-        5000,
-      );
-      expect(expected).to.equal(actual);
-    });
   });
 
   describe('getDimensions', function () {
@@ -100,7 +98,10 @@ describe('CapLevelController', function () {
       if (media.parentNode) {
         media.parentNode.removeChild(media);
       }
-      document.body.removeChild(document.querySelector('#test-fixture'));
+      const fixture = document.querySelector('#test-fixture');
+      if (fixture) {
+        document.body.removeChild(fixture);
+      }
       hls.destroy();
     });
 
@@ -126,7 +127,14 @@ describe('CapLevelController', function () {
     it('gets client bounds width and height when media element is in the DOM', function () {
       media.style.width = '1280px';
       media.style.height = '720px';
-      document.querySelector('#test-fixture').appendChild(media);
+
+      const fixture = document.querySelector('#test-fixture');
+      if (!fixture) {
+        expect(fixture).is.not.null;
+        return;
+      }
+      fixture.appendChild(media);
+
       const pixelRatio = capLevelController.contentScaleFactor;
       const bounds = capLevelController.getDimensions();
       expect(bounds.width).to.equal(1280);
@@ -150,11 +158,17 @@ describe('CapLevelController', function () {
 
       media.style.width = '1280px';
       media.style.height = '720px';
-      document.querySelector('#test-fixture').appendChild(media);
+
+      const fixture = document.querySelector('#test-fixture');
+      if (!fixture) {
+        expect(fixture).is.not.null;
+        return;
+      }
+      fixture.appendChild(media);
+
       capLevelController.onMediaAttaching(Events.MEDIA_ATTACHING, {
         media,
       });
-
       const pixelRatio = capLevelController.contentScaleFactor;
       bounds = capLevelController.getDimensions();
       expect(bounds.width).to.equal(1280);

@@ -711,7 +711,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     }
     const error = levelDetails.playlistParsingError;
     if (error) {
-      this.hls.logger.warn(error);
+      this.hls.logger.warn(`${error} ${levelDetails.url}`);
       if (!hls.config.ignorePlaylistParsingErrors) {
         hls.trigger(Events.ERROR, {
           type: ErrorTypes.NETWORK_ERROR,
