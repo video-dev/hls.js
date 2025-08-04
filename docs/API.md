@@ -350,22 +350,44 @@ hls.on(Hls.Events.ERROR, function (event, data) {
 
 #### Fatal Error Recovery
 
-HLS.js provides several methods for attempting playback recover in the event of a decoding error in the HTMLMediaElement:
+HLS.js provides methods for attempting playback recover in the event of a decoding error in the HTMLMediaElement:
 
 ##### `hls.recoverMediaError()`
 
-Resets the MediaSource and restarts streaming from the last known playhead position.
+Resets the MediaSource and restarts streaming from the last known playhead position. This should only be used when the media element is in an error state.
+It should not be used in response to non-fatal hls.js error events.
 
 ###### Error recovery sample code
 
 ```js
-hls.on(Hls.Events.ERROR, function (event, data) {
+let attemptedErrorRecovery = null;
+
+video.addEventListener('error', (event) {
+  const mediaError = event.currentTarget.error;
+  if (mediaError.code === mediaError.MEDIA_ERR_DECODE) {
+    const now = Date.now();
+    if (!attemptedErrorRecovery || now - attemptedErrorRecovery > 5000) {
+      attemptedErrorRecovery = now;
+      hls.recoverMediaError();
+    }
+  }
+});
+
+hls.on(Hls.Events.ERROR, function (name, data) {
+  // Special handling is only needed to errors flagged as `fatal`.
   if (data.fatal) {
     switch (data.type) {
-      case Hls.ErrorTypes.MEDIA_ERROR:
-        console.log('fatal media error encountered, try to recover');
-        hls.recoverMediaError();
+      case Hls.ErrorTypes.MEDIA_ERROR: {
+        const now = Date.now();
+        if (!attemptedErrorRecovery || now - attemptedErrorRecovery > 5000) {
+          console.log('Fatal media error encountered (' + video.error + + '), attempting to recover');
+          attemptedErrorRecovery = now;
+          hls.recoverMediaError();
+        } else {
+          console.log('Skipping media error recovery (only ' + (now - attemptedErrorRecovery) + 'ms since last error)');
+        }
         break;
+      }
       case Hls.ErrorTypes.NETWORK_ERROR:
         console.error('fatal network error encountered', data);
         // All retries and media options have been exhausted.
