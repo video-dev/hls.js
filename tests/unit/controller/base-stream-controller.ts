@@ -68,7 +68,7 @@ describe('BaseStreamController', function () {
       const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
       frag.duration = 5;
       frag.sn = i;
-      frag.start = i * 5;
+      frag.setStart(i * 5);
       details.fragments.push(frag);
     }
     details.live = live;

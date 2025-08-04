@@ -217,7 +217,8 @@ export class InterstitialsSchedule extends Logger {
           if (
             timelinePos === timelineStart ||
             (timelinePos > timelineStart &&
-              timelinePos < timelineStart + (asset.duration || 0))
+              (timelinePos < timelineStart + (asset.duration || 0) ||
+                i === length - 1))
           ) {
             return i;
           }
