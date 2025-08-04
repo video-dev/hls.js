@@ -177,7 +177,7 @@ export class Fragment extends BaseSegment {
   // levelkeys are the EXT-X-KEY tags that apply to this segment for decryption
   // core difference from the private field _decryptdata is the lack of the initialized IV
   // _decryptdata will set the IV for this segment based on the segment number in the fragment
-  public levelkeys?: { [key: string]: LevelKey };
+  public levelkeys?: { [key: string]: LevelKey | undefined };
   // A string representing the fragment type
   public readonly type: PlaylistLevelType;
   // A reference to the loader. Set while the fragment is loading, and removed afterwards. Used to abort fragment loading
@@ -233,7 +233,7 @@ export class Fragment extends BaseSegment {
         return total;
       }
     }
-    if (this.byteRange) {
+    if (this.byteRange.length) {
       const start = this.byteRange[0];
       const end = this.byteRange[1];
       if (Number.isFinite(start) && Number.isFinite(end)) {
@@ -270,9 +270,11 @@ export class Fragment extends BaseSegment {
       } else {
         const keyFormats = Object.keys(this.levelkeys);
         if (keyFormats.length === 1) {
-          return (this._decryptdata = this.levelkeys[
-            keyFormats[0]
-          ].getDecryptData(this.sn));
+          const levelKey = (this._decryptdata =
+            this.levelkeys[keyFormats[0]] || null);
+          if (levelKey) {
+            return levelKey.getDecryptData(this.sn);
+          }
         } else {
           // Multiple keys. key-loader to call Fragment.setKeyFormat based on selected key-system.
         }
@@ -305,7 +307,7 @@ export class Fragment extends BaseSegment {
     } else if (this.levelkeys) {
       const keyFormats = Object.keys(this.levelkeys);
       const len = keyFormats.length;
-      if (len > 1 || (len === 1 && this.levelkeys[keyFormats[0]].encrypted)) {
+      if (len > 1 || (len === 1 && this.levelkeys[keyFormats[0]]?.encrypted)) {
         return true;
       }
     }

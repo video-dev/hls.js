@@ -10,6 +10,7 @@ import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import { getMediaSource } from '../../../src/utils/mediasource-helper';
 import HlsMock from '../../mocks/hls.mock';
+import { parsedLevel } from '../utils/mock-level';
 import type { Fragment } from '../../../src/loader/fragment';
 import type { LevelDetails } from '../../../src/loader/level-details';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
@@ -17,7 +18,6 @@ import type {
   ManifestLoadedData,
   ManifestParsedData,
 } from '../../../src/types/events';
-import type { LevelParsed } from '../../../src/types/level';
 import type { PlaylistLoaderContext } from '../../../src/types/loader';
 import type {
   MediaAttributes,
@@ -48,18 +48,6 @@ type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
   ) => void;
   redundantFailover: (levelIndex: number) => void;
 };
-
-function parsedLevel(
-  options: Partial<LevelParsed> & { bitrate: number },
-): LevelParsed {
-  const level: LevelParsed = {
-    attrs: new AttrList({ BANDWIDTH: options.bitrate }),
-    bitrate: options.bitrate,
-    name: '',
-    url: `${options.bitrate}.m3u8`,
-  };
-  return Object.assign(level, options);
-}
 
 function mediaPlaylist(options: Partial<MediaPlaylist>): MediaPlaylist {
   const track: MediaPlaylist = {

@@ -49,7 +49,10 @@ export function addCueToTrack(track: TextTrack, cue: VTTCue) {
   }
 }
 
-export function clearCurrentCues(track: TextTrack, enterHandler?: () => void) {
+export function clearCurrentCues(
+  track: TextTrack,
+  enterHandler?: (e?: Event) => void,
+) {
   // When track.mode is disabled, track.cues will be null.
   // To guarantee the removal of cues, we need to temporarily
   // change the mode to hidden

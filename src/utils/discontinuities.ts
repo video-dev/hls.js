@@ -31,11 +31,10 @@ export function shouldAlignOnDiscontinuities(
 }
 
 function adjustFragmentStart(frag: Fragment, sliding: number) {
-  if (frag) {
-    const start = frag.start + sliding;
-    frag.start = frag.startPTS = start;
-    frag.endPTS = start + frag.duration;
-  }
+  const start = frag.start + sliding;
+  frag.startPTS = start;
+  frag.setStart(start);
+  frag.endPTS = start + frag.duration;
 }
 
 export function adjustSlidingStart(sliding: number, details: LevelDetails) {
@@ -68,13 +67,13 @@ export function alignStream(
     return;
   }
   alignDiscontinuities(details, switchDetails);
-  if (!details.alignedSliding && switchDetails) {
+  if (!details.alignedSliding) {
     // If the PTS wasn't figured out via discontinuity sequence that means there was no CC increase within the level.
     // Aligning via Program Date Time should therefore be reliable, since PDT should be the same within the same
     // discontinuity sequence.
     alignMediaPlaylistByPDT(details, switchDetails);
   }
-  if (!details.alignedSliding && switchDetails && !details.skippedSegments) {
+  if (!details.alignedSliding && !details.skippedSegments) {
     // Try to align on sn so that we pick a better start fragment.
     // Do not perform this on playlists with delta updates as this is only to align levels on switch
     // and adjustSliding only adjusts fragments after skippedSegments.

@@ -1996,10 +1996,10 @@ segment.m4s
       );
       expect(details.playlistParsingError).to.be.null;
       expect(details.dateRangeTagCount).to.equal(4);
-      expect(details.dateRanges.pre.isInterstitial).to.be.true;
-      expect(details.dateRanges.mid1.isInterstitial).to.be.true;
-      expect(details.dateRanges.mid2.isInterstitial).to.be.true;
-      expect(details.dateRanges.post.isInterstitial).to.be.true;
+      expect(details.dateRanges.pre!.isInterstitial).to.be.true;
+      expect(details.dateRanges.mid1!.isInterstitial).to.be.true;
+      expect(details.dateRanges.mid2!.isInterstitial).to.be.true;
+      expect(details.dateRanges.post!.isInterstitial).to.be.true;
       expect(details.dateRanges).to.have.property('pre').which.deep.includes({
         tagOrder: 0,
       });
@@ -2012,15 +2012,15 @@ segment.m4s
       expect(details.dateRanges).to.have.property('post').which.deep.includes({
         tagOrder: 3,
       });
-      expect(details.dateRanges.pre.cue.pre).to.be.true;
-      expect(details.dateRanges.mid1.cue.once).to.be.true;
-      expect(details.dateRanges.post.cue.post).to.be.true;
-      expect(details.dateRanges.post.cue.once).to.be.true;
+      expect(details.dateRanges.pre!.cue.pre).to.be.true;
+      expect(details.dateRanges.mid1!.cue.once).to.be.true;
+      expect(details.dateRanges.post!.cue.post).to.be.true;
+      expect(details.dateRanges.post!.cue.once).to.be.true;
       // DateRange start times are mapped to the primary timeline and not changed by CUE Interstitial DURATION
-      expect(details.dateRanges.pre.startTime).to.equal(-7200);
-      expect(details.dateRanges.mid1.startTime).to.equal(10);
-      expect(details.dateRanges.mid2.startTime).to.equal(25);
-      expect(details.dateRanges.post.startTime).to.equal(0);
+      expect(details.dateRanges.pre!.startTime).to.equal(-7200);
+      expect(details.dateRanges.mid1!.startTime).to.equal(10);
+      expect(details.dateRanges.mid2!.startTime).to.equal(25);
+      expect(details.dateRanges.post!.startTime).to.equal(0);
     });
 
     it('ensures DateRanges are mapped to a segment whose TimeRange covers the start date of the DATERANGE tag', function () {
@@ -2047,14 +2047,14 @@ segment.m4s
         null,
       );
       expect(details.playlistParsingError).to.be.null;
-      expect(details.dateRanges.sooner.isValid).to.equal(
+      expect(details.dateRanges.sooner!.isValid).to.equal(
         true,
         'is valid DateRange',
       );
-      expect(details.dateRanges.sooner.tagAnchor)
+      expect(details.dateRanges.sooner!.tagAnchor)
         .to.have.property('sn')
         .which.equals(2);
-      expect(details.dateRanges.sooner.startTime).to.equal(10);
+      expect(details.dateRanges.sooner!.startTime).to.equal(10);
     });
 
     it('ensures DateRanges that start before the program are mapped to the first PDT tag', function () {
@@ -2081,14 +2081,14 @@ segment.m4s
         null,
       );
       expect(details.playlistParsingError).to.be.null;
-      expect(details.dateRanges.earlier.isValid).to.equal(
+      expect(details.dateRanges.earlier!.isValid).to.equal(
         true,
         'is valid DateRange',
       );
-      expect(details.dateRanges.earlier.tagAnchor)
+      expect(details.dateRanges.earlier!.tagAnchor)
         .to.have.property('sn')
         .which.equals(1);
-      expect(details.dateRanges.earlier.startTime).to.equal(-10);
+      expect(details.dateRanges.earlier!.startTime).to.equal(-10);
     });
 
     it('adds PROGRAM-DATE-TIME and DATERANGE tag text to fragment[].tagList for backwards compatibility', function () {
@@ -2758,10 +2758,6 @@ a{$mvpVariable}.mp4
         TYPE: 'PART',
         URI: 'part-5.1.mp4',
       });
-      if (details.partList === null) {
-        expect(details.partList, 'partList').to.not.equal(null);
-        return;
-      }
       if (!details.renditionReports) {
         expect(details.renditionReports, 'renditionReports').to.not.be
           .undefined;
@@ -2913,7 +2909,7 @@ a{$bar}.mp4
         details,
         'Missing preceding EXT-X-DEFINE tag for Variable Reference: "bar"',
       );
-      expect(details.fragments?.[0].relurl).to.equal('a{$bar}.mp4');
+      expect(details.fragments[0].relurl).to.equal('a{$bar}.mp4');
     });
 
     it('fails to parse Media Playlist when variable reference precedes definition', function () {

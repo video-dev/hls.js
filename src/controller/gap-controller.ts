@@ -13,13 +13,14 @@ import type { InFlightData } from './base-stream-controller';
 import type { InFlightFragments } from '../hls';
 import type Hls from '../hls';
 import type { FragmentTracker } from './fragment-tracker';
-import type { Fragment, MediaFragment } from '../loader/fragment';
+import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { SourceBufferName } from '../types/buffer';
 import type {
   BufferAppendedData,
   MediaAttachedData,
   MediaDetachingData,
 } from '../types/events';
+import type { ErrorData } from '../types/events';
 import type { BufferInfo } from '../utils/buffer-helper';
 
 export const MAX_START_GAP_JUMP = 2.0;
@@ -28,8 +29,8 @@ export const SKIP_BUFFER_RANGE_START = 0.05;
 const TICK_INTERVAL = 100;
 
 export default class GapController extends TaskLoop {
-  private hls: Hls | null = null;
-  private fragmentTracker: FragmentTracker | null = null;
+  private hls: Hls | null;
+  private fragmentTracker: FragmentTracker | null;
   private media: HTMLMediaElement | null = null;
   private mediaSource?: MediaSource;
 
@@ -267,10 +268,10 @@ export default class GapController extends TaskLoop {
       const maxStartGapJump = isLive
         ? levelDetails!.targetduration * 2
         : MAX_START_GAP_JUMP;
-      const partialOrGap = fragmentTracker.getPartialFragment(currentTime);
-      if (startJump > 0 && (startJump <= maxStartGapJump || partialOrGap)) {
+      const appended = appendedFragAtPosition(currentTime, fragmentTracker);
+      if (startJump > 0 && (startJump <= maxStartGapJump || appended)) {
         if (!media.paused) {
-          this._trySkipBufferHole(partialOrGap);
+          this._trySkipBufferHole(appended);
         }
         return;
       }
@@ -314,7 +315,7 @@ export default class GapController extends TaskLoop {
       }
       // Report stalling after trying to fix
       this._reportStall(bufferInfo);
-      if (!this.media || !this.hls) {
+      if (!this.media || (!this.hls as any)) {
         return;
       }
     }
@@ -398,8 +399,13 @@ export default class GapController extends TaskLoop {
             this.warn(error.message);
             // Magic number to flush the pipeline without interuption to audio playback:
             this.media.currentTime += 0.000001;
-            const frag =
-              this.fragmentTracker.getPartialFragment(currentTime) || undefined;
+            let frag: MediaFragment | Part | null | undefined =
+              appendedFragAtPosition(currentTime, this.fragmentTracker);
+            if (frag && 'fragment' in frag) {
+              frag = frag.fragment;
+            } else if (!frag) {
+              frag = undefined;
+            }
             const bufferInfo = BufferHelper.bufferInfo(
               this.media,
               currentTime,
@@ -439,14 +445,14 @@ export default class GapController extends TaskLoop {
     }
 
     const levelDetails = this.hls?.latestLevelDetails;
-    const partial = fragmentTracker.getPartialFragment(currentTime);
+    const appended = appendedFragAtPosition(currentTime, fragmentTracker);
     if (
-      partial ||
+      appended ||
       (levelDetails?.live && currentTime < levelDetails.fragmentStart)
     ) {
       // Try to skip over the buffer hole caused by a partial fragment
       // This method isn't limited by the size of the gap between buffered ranges
-      const targetTime = this._trySkipBufferHole(partial);
+      const targetTime = this._trySkipBufferHole(appended);
       // we return here in this case, meaning
       // the branch below only executes when we haven't seeked to a new position
       if (targetTime || !this.media) {
@@ -526,10 +532,10 @@ export default class GapController extends TaskLoop {
 
   /**
    * Attempts to fix buffer stalls by jumping over known gaps caused by partial fragments
-   * @param partial - The partial fragment found at the current time (where playback is stalling).
+   * @param appended - The fragment or part found at the current time (where playback is stalling).
    * @private
    */
-  private _trySkipBufferHole(partial: MediaFragment | null): number {
+  private _trySkipBufferHole(appended: MediaFragment | Part | null): number {
     const { fragmentTracker, media } = this;
     const config = this.hls?.config;
     if (!media || !fragmentTracker || !config) {
@@ -559,45 +565,33 @@ export default class GapController extends TaskLoop {
               startGap = true;
             }
           }
-          if (!startGap) {
-            const startProvisioned =
-              partial ||
-              fragmentTracker.getAppendedFrag(
-                currentTime,
-                PlaylistLevelType.MAIN,
-              );
-            if (startProvisioned) {
-              // Do not seek when selected variant playlist is unloaded
-              if (!this.hls.loadLevelObj?.details) {
-                return 0;
+          if (!startGap && appended) {
+            // Do not seek when selected variant playlist is unloaded
+            if (!this.hls.loadLevelObj?.details) {
+              return 0;
+            }
+            // Do not seek when required fragments are inflight or appending
+            const inFlightDependency = getInFlightDependency(
+              this.hls.inFlightFragments,
+              startTime,
+            );
+            if (inFlightDependency) {
+              return 0;
+            }
+            // Do not seek if we can't walk tracked fragments to end of gap
+            let moreToLoad = false;
+            let pos = appended.end;
+            while (pos < startTime) {
+              const provisioned = appendedFragAtPosition(pos, fragmentTracker);
+              if (provisioned) {
+                pos += provisioned.duration;
+              } else {
+                moreToLoad = true;
+                break;
               }
-              // Do not seek when required fragments are inflight or appending
-              const inFlightDependency = getInFlightDependency(
-                this.hls.inFlightFragments,
-                startTime,
-              );
-              if (inFlightDependency) {
-                return 0;
-              }
-              // Do not seek if we can't walk tracked fragments to end of gap
-              let moreToLoad = false;
-              let pos = startProvisioned.end;
-              while (pos < startTime) {
-                const provisioned =
-                  fragmentTracker.getAppendedFrag(
-                    pos,
-                    PlaylistLevelType.MAIN,
-                  ) || fragmentTracker.getPartialFragment(pos);
-                if (provisioned) {
-                  pos += provisioned.duration;
-                } else {
-                  moreToLoad = true;
-                  break;
-                }
-              }
-              if (moreToLoad) {
-                return 0;
-              }
+            }
+            if (moreToLoad) {
+              return 0;
             }
           }
         }
@@ -610,20 +604,27 @@ export default class GapController extends TaskLoop {
         );
         this.moved = true;
         media.currentTime = targetTime;
-        if (!partial?.gap) {
+        if (!appended?.gap) {
           const error = new Error(
             `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`,
           );
-          this.hls.trigger(Events.ERROR, {
+          const errorData: ErrorData = {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
             fatal: false,
             error,
             reason: error.message,
-            frag: partial || undefined,
             buffer: bufferInfo.len,
             bufferInfo,
-          });
+          };
+          if (appended) {
+            if ('fragment' in appended) {
+              errorData.part = appended;
+            } else {
+              errorData.frag = appended;
+            }
+          }
+          this.hls.trigger(Events.ERROR, errorData);
         }
         return targetTime;
       }
@@ -704,4 +705,11 @@ function inFlight(inFlightData: InFlightData | undefined): Fragment | null {
       return null;
   }
   return inFlightData.frag;
+}
+
+function appendedFragAtPosition(pos: number, fragmentTracker: FragmentTracker) {
+  return (
+    fragmentTracker.getAppendedFrag(pos, PlaylistLevelType.MAIN) ||
+    fragmentTracker.getPartialFragment(pos)
+  );
 }

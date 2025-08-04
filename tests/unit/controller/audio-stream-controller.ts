@@ -7,12 +7,13 @@ import { State } from '../../../src/controller/base-stream-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
+import { Fragment } from '../../../src/loader/fragment';
 import KeyLoader from '../../../src/loader/key-loader';
 import { LoadStats } from '../../../src/loader/load-stats';
 import { Level } from '../../../src/types/level';
+import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import { adjustSlidingStart } from '../../../src/utils/discontinuities';
-import type { Fragment } from '../../../src/loader/fragment';
 import type { LevelDetails } from '../../../src/loader/level-details';
 import type {
   AudioTrackLoadedData,
@@ -180,19 +181,19 @@ describe('AudioStreamController', function () {
     const getPlaylistData = function (
       startSN: number,
       endSN: number,
-      type: 'audio' | 'main',
+      type: PlaylistLevelType,
       live: boolean,
     ) {
       const targetduration = 10;
       const fragments: Fragment[] = Array.from(new Array(endSN - startSN)).map(
-        (u, i) =>
-          ({
-            sn: i + startSN,
-            cc: Math.floor((i + startSN) / 10),
-            start: i * targetduration,
-            duration: targetduration,
-            type,
-          }) as unknown as Fragment,
+        (u, i) => {
+          const frag = new Fragment(type, '');
+          frag.sn = i + startSN;
+          frag.cc = Math.floor((i + startSN) / 10);
+          frag.setStart(i * targetduration);
+          frag.duration = targetduration;
+          return frag;
+        },
       );
       return {
         details: {
@@ -221,7 +222,12 @@ describe('AudioStreamController', function () {
       endSN: number,
       live: boolean = false,
     ): LevelLoadedData {
-      const data = getPlaylistData(startSN, endSN, 'main', live);
+      const data = getPlaylistData(
+        startSN,
+        endSN,
+        PlaylistLevelType.MAIN,
+        live,
+      );
       const levelData: LevelLoadedData = {
         ...data,
         level: 0,
@@ -234,7 +240,12 @@ describe('AudioStreamController', function () {
       endSN: number,
       live: boolean = false,
     ): AudioTrackLoadedData {
-      const data = getPlaylistData(startSN, endSN, 'audio', live);
+      const data = getPlaylistData(
+        startSN,
+        endSN,
+        PlaylistLevelType.AUDIO,
+        live,
+      );
       const audioTrackData: AudioTrackLoadedData = {
         ...data,
         groupId: 'audio',

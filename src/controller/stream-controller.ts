@@ -1062,7 +1062,14 @@ export default class StreamController
           return;
         }
         if (this.reduceLengthAndFlushBuffer(data)) {
-          this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
+          const isAssetPlayer =
+            !this.config.interstitialsController && this.config.assetPlayerId;
+          if (isAssetPlayer) {
+            // Use currentTime in buffer estimate to prevent loading more until playback advances
+            this._hasEnoughToStart = true;
+          } else {
+            this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
+          }
         }
         break;
       case ErrorDetails.INTERNAL_EXCEPTION:
