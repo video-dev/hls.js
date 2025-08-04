@@ -913,13 +913,19 @@ export default class InterstitialsController
       (backwardSeek && currentTime < playingItem.start) ||
       currentTime >= playingItem.end
     ) {
-      const scheduleIndex = this.schedule.findItemIndexAtTime(this.timelinePos);
+      const playingIndex = this.findItemIndex(playingItem);
+      let scheduleIndex = this.schedule.findItemIndexAtTime(currentTime);
+      if (scheduleIndex === -1) {
+        scheduleIndex = playingIndex + (backwardSeek ? -1 : 1);
+        this.log(
+          `seeked ${backwardSeek ? 'back ' : ''}to position not covered by schedule ${currentTime} (resolving from ${playingIndex} to ${scheduleIndex})`,
+        );
+      }
       if (!this.isInterstitial(playingItem) && this.media?.paused) {
         this.shouldPlay = false;
       }
       if (!backwardSeek) {
         // check if an Interstitial between the current item and target item has an X-RESTRICT JUMP restriction
-        const playingIndex = this.findItemIndex(playingItem);
         if (scheduleIndex > playingIndex) {
           const jumpIndex = this.schedule.findJumpRestrictedIndex(
             playingIndex + 1,
