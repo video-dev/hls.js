@@ -666,6 +666,7 @@ class AudioStreamController
         payload.byteLength,
         partIndex,
         partial,
+        !partial ? frag.duration : null,
       );
       transmuxer.push(
         payload,

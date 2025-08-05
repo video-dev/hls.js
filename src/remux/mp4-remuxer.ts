@@ -156,6 +156,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     accurateTimeOffset: boolean,
     flush: boolean,
     playlistType: PlaylistLevelType,
+    fragmentDuration: number,
   ): RemuxerResult {
     let video: RemuxedTrack | undefined;
     let audio: RemuxedTrack | undefined;
@@ -286,6 +287,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
               videoTimeOffset,
               isVideoContiguous,
               audioTrackLength,
+              fragmentDuration,
             );
           }
         } else if (enoughVideoSamples) {
@@ -294,6 +296,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
             videoTimeOffset,
             isVideoContiguous,
             0,
+            fragmentDuration,
           );
         }
         if (video) {
@@ -478,6 +481,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     timeOffset: number,
     contiguous: boolean,
     audioTrackLength: number,
+    fragmentDuration: number,
   ): RemuxedTrack | undefined {
     const timeScale: number = track.inputTimeScale;
     const inputSamples: Array<VideoSample> = track.samples;
@@ -541,9 +545,15 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     // Sample duration (as expected by trun MP4 boxes), should be the delta between sample DTS
     // set this constant duration as being the avg delta between consecutive DTS.
     const inputDuration = lastDTS - firstDTS;
+    const audioLengthBasedSampleDuration = audioTrackLength
+      ? Math.round(audioTrackLength * track.inputTimeScale)
+      : track.inputTimeScale;
+    const fragmentLengthOrAudioLengthBasedSampleDuration = fragmentDuration
+      ? Math.round(fragmentDuration * track.inputTimeScale)
+      : audioLengthBasedSampleDuration;
     const averageSampleDuration = inputDuration
       ? Math.round(inputDuration / (nbSamples - 1))
-      : mp4SampleDuration || track.inputTimeScale / 30;
+      : fragmentLengthOrAudioLengthBasedSampleDuration;
 
     // if fragment are contiguous, detect hole/overlapping between fragments
     if (contiguous) {
@@ -748,6 +758,9 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       maxDtsDelta = Math.max(maxDtsDelta, mp4SampleDuration);
       minPtsDelta = Math.min(minPtsDelta, ptsDelta);
       maxPtsDelta = Math.max(maxPtsDelta, ptsDelta);
+      this.logger.trace(
+        `[mp4-remuxer]: audioTrackLength = ${audioTrackLength}, fragmentDuration=${fragmentDuration}, fragmentLengthBasedSampleDuration=${fragmentLengthOrAudioLengthBasedSampleDuration}, audioLengthBasedSampleDuration=${audioLengthBasedSampleDuration}, averageSampleDuration=${averageSampleDuration}, mp4SampleDuration=${mp4SampleDuration}`,
+      );
 
       outputSamples.push(
         createMp4Sample(
