@@ -1675,6 +1675,119 @@ video_5432.m4s`;
       );
     });
   });
+
+  it('maps dateranges based on latest EXT-X-PROGRAM-DATE-TIME', function () {
+    const playlist1 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=9,CAN-SKIP-DATERANGES=YES
+#EXT-X-DATERANGE:ID="D0",START-DATE="2025-08-06T15:59:59Z",DURATION=1
+#EXT-X-DATERANGE:ID="D1",START-DATE="2025-08-06T16:00:00Z",DURATION=12,SCTE35-CMD=0x00000000
+#EXT-X-MAP:URI="hls/20821722-video=2499968.m4s"
+#EXT-X-PROGRAM-DATE-TIME:2025-08-06T16:00:00Z
+#EXTINF:4.0, no desc
+1.m4s
+#EXTINF:4.0, no desc
+2.m4s
+#EXT-X-PROGRAM-DATE-TIME:2025-08-06T16:08:00Z
+#EXTINF:4.0, no desc
+3.m4s
+#EXT-X-DATERANGE:ID="D2",START-DATE="2025-08-06T16:00:15Z",PLANNED-DURATION=12,SCTE35-OUT=0x00000000
+#EXTINF:4.0, no desc
+4.m4s
+#EXTINF:4.0, no desc
+5.m4s
+#EXT-X-PROGRAM-DATE-TIME:2025-08-06T16:00:20Z
+#EXTINF:4.0, no desc
+6.m4s
+#EXTINF:4.0, no desc
+7.m4s
+#EXTINF:4.0, no desc
+8.m4s
+#EXTINF:4.0, no desc
+9.m4s`;
+    // Media sequence increased by one but two segments removed.
+    const playlist2 = `#EXTM3U
+#EXT-X-VERSION:10
+#EXT-X-MEDIA-SEQUENCE:5
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=9,CAN-SKIP-DATERANGES=YES
+#EXT-X-SKIP:SKIPPED-SEGMENTS=4,RECENTLY-REMOVED-DATERANGES="D0"
+#EXTINF:4, no desc
+9.m4s
+#EXTINF:4, no desc
+10.m4s
+#EXT-X-DATERANGE:ID="D3",START-DATE="2025-08-06T16:00:59.100Z",DURATION=12,SCTE35-CMD=0x00000000`;
+    const details1 = parseLevelPlaylist(playlist1);
+    const details2 = parseLevelPlaylist(playlist2);
+
+    expect(details1.playlistParsingError).to.be.null;
+    expect(details2.playlistParsingError).to.be.null;
+
+    // First playilst details
+    expect(details1).to.include({
+      startSN: 1,
+      endSN: 9,
+      totalduration: 36,
+      dateRangeTagCount: 3,
+    });
+    expect(details1.dateRanges).to.have.keys(['D0', 'D1', 'D2']);
+    expect(details1.dateRanges.D0).to.include({
+      startTime: -1,
+      tagOrder: 0,
+    });
+    expect(details1.dateRanges.D0?.tagAnchor).to.include({
+      sn: 1,
+    });
+    expect(details1.dateRanges.D1).to.include({
+      startTime: 0,
+      tagOrder: 1,
+    });
+    expect(details1.dateRanges.D1?.tagAnchor).to.include({
+      sn: 1, // expected to change in details2 after `mergeDetails` when sn: 1 is removed
+    });
+    expect(details1.dateRanges.D2).to.include({
+      startTime: 15,
+      tagOrder: 2,
+    });
+    expect(details1.dateRanges.D2?.tagAnchor).to.include({
+      sn: 6,
+    });
+
+    // Merged delta playlist with EXT-X-PROGRAM-DATE-TIME removed and DateRange tagAnchors updated
+    mergeDetails(details1, details2);
+
+    expect(details2).to.include({
+      startSN: 5,
+      endSN: 10,
+      totalduration: 24,
+      dateRangeTagCount: 1,
+    });
+    expect(details2.dateRanges).to.have.keys(['D1', 'D2', 'D3']);
+    expect(details2.dateRanges.D1).to.include({
+      startTime: 0,
+      tagOrder: 1,
+    });
+    expect(details2.dateRanges.D1?.tagAnchor).to.include({
+      sn: 6,
+    });
+    expect(details2.dateRanges.D2).to.include({
+      startTime: 15,
+      tagOrder: 2,
+    });
+    expect(details2.dateRanges.D2?.tagAnchor).to.include({
+      sn: 6,
+    });
+    expect(details2.dateRanges.D3).to.include({
+      startTime: 59.1,
+      tagOrder: 2, // Note: tagOrder: 3 is expected (following previous/skipped date-ranges), but not critical.
+    });
+    expect(details2.dateRanges.D3?.tagAnchor).to.include({
+      sn: 6,
+    });
+  });
 });
 
 function parseLevelPlaylist(
