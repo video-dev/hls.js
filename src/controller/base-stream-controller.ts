@@ -57,7 +57,7 @@ import type {
   PartsLoadedData,
 } from '../types/events';
 import type { Level } from '../types/level';
-import type { RemuxedTrack } from '../types/remuxer';
+import type { InitSegmentData, RemuxedTrack } from '../types/remuxer';
 import type { Bufferable, BufferInfo } from '../utils/buffer-helper';
 import type { TimestampOffset } from '../utils/timescale-conversion';
 
@@ -708,6 +708,39 @@ export default class BaseStreamController
     stats.parsing.start = stats.buffering.start = self.performance.now();
     stats.parsing.end = stats.buffering.end = self.performance.now();
     this.tick();
+  }
+
+  protected unhandledEncryptionError(
+    initSegment: InitSegmentData,
+    frag: Fragment,
+  ): boolean {
+    const tracks = initSegment.tracks;
+    if (
+      tracks &&
+      !frag.encrypted &&
+      (tracks.audio?.encrypted || tracks.video?.encrypted) &&
+      (!this.config.emeEnabled || !this.keyLoader.emeController)
+    ) {
+      const media = this.media;
+      const error = new Error(
+        `Encrypted track with no key in ${this.fragInfo(frag)} (media ${media ? 'attached mediaKeys: ' + media.mediaKeys : 'detached'})`,
+      );
+      this.warn(error.message);
+      // Ignore if media is detached or mediaKeys are set
+      if (!media || media.mediaKeys) {
+        return false;
+      }
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
+        fatal: false,
+        error,
+        frag,
+      });
+      this.resetTransmuxer();
+      return true;
+    }
+    return false;
   }
 
   protected fragContextChanged(frag: Fragment | null) {

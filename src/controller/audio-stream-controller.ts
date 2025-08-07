@@ -884,6 +884,9 @@ class AudioStreamController
 
     if (initSegment?.tracks) {
       const mapFragment = frag.initSegment || frag;
+      if (this.unhandledEncryptionError(initSegment, frag)) {
+        return;
+      }
       this._bufferInitSegment(
         level,
         initSegment.tracks,

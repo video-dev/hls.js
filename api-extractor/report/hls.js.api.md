@@ -563,6 +563,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected transmuxer: TransmuxerInterface | null;
     // (undocumented)
+    protected unhandledEncryptionError(initSegment: InitSegmentData, frag: Fragment): boolean;
+    // (undocumented)
     protected unregisterListeners(): void;
     // (undocumented)
     protected waitForCdnTuneIn(details: LevelDetails): boolean | 0;
@@ -578,6 +580,8 @@ export interface BaseTrack {
     codec?: string;
     // (undocumented)
     container: string;
+    // (undocumented)
+    encrypted?: boolean;
     // (undocumented)
     id: 'audio' | 'main';
     // (undocumented)
@@ -4357,6 +4361,8 @@ export interface RemuxedTrack {
     data2?: Uint8Array<ArrayBuffer>;
     // (undocumented)
     dropped?: number;
+    // (undocumented)
+    encrypted?: boolean;
     // (undocumented)
     endDTS: number;
     // (undocumented)
