@@ -770,6 +770,9 @@ export function mapDateRanges(
     const startDateTime = dateRange.startDate.getTime();
     dateRange.tagAnchor = lastProgramDateTime.ref;
     for (let j = programDateTimeCount; j--; ) {
+      if (programDateTimes[j]?.sn < details.startSN) {
+        break;
+      }
       const fragIndex = findFragmentWithStartDate(
         details,
         startDateTime,
@@ -802,6 +805,9 @@ function findFragmentWithStartDate(
       if (startDateTime <= pdtStart + durationBetweenPdt * 1000) {
         // map to fragment with date-time range
         const startIndex = programDateTimes[index].sn - details.startSN;
+        if (startIndex < 0) {
+          return -1;
+        }
         const fragments = details.fragments;
         if (fragments.length > programDateTimes.length) {
           const endSegment =
