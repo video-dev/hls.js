@@ -961,6 +961,10 @@ export default class InterstitialsController
       (backwardSeek && currentTime < start) ||
       currentTime >= start + duration
     ) {
+      if (playingItem.event?.appendInPlace) {
+        this.clearInterstitial(playingItem.event, playingItem);
+        this.flushFrontBuffer(currentTime);
+      }
       this.setScheduleToAssetAtTime(currentTime, playingAsset);
     }
   };
