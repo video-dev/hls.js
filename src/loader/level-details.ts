@@ -17,7 +17,7 @@ export class LevelDetails {
   public fragments: MediaFragment[];
   public fragmentHint?: MediaFragment;
   public partList: Part[] | null = null;
-  public dateRanges: Record<string, DateRange>;
+  public dateRanges: Record<string, DateRange | undefined>;
   public dateRangeTagCount: number = 0;
   public live: boolean = true;
   public requestScheduled: number = -1;
@@ -91,7 +91,7 @@ export class LevelDetails {
   get hasProgramDateTime(): boolean {
     if (this.fragments.length) {
       return Number.isFinite(
-        this.fragments[this.fragments.length - 1].programDateTime as number,
+        this.fragments[this.fragments.length - 1].programDateTime,
       );
     }
     return false;
@@ -126,14 +126,14 @@ export class LevelDetails {
   }
 
   get fragmentEnd(): number {
-    if (this.fragments?.length) {
+    if (this.fragments.length) {
       return this.fragments[this.fragments.length - 1].end;
     }
     return 0;
   }
 
   get fragmentStart(): number {
-    if (this.fragments?.length) {
+    if (this.fragments.length) {
       return this.fragments[0].start;
     }
     return 0;

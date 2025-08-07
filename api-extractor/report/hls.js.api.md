@@ -3244,7 +3244,7 @@ export class LevelDetails {
     // (undocumented)
     canSkipUntil: number;
     // (undocumented)
-    dateRanges: Record<string, DateRange>;
+    dateRanges: Record<string, DateRange | undefined>;
     // (undocumented)
     dateRangeTagCount: number;
     // (undocumented)
