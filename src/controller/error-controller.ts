@@ -413,10 +413,10 @@ export default class ErrorController
               )) ||
             (findAudioCodecAlternate &&
               level.audioCodec === levelCandidate.audioCodec) ||
-            (!findAudioCodecAlternate &&
-              level.audioCodec !== levelCandidate.audioCodec) ||
             (findVideoCodecAlternate &&
-              level.codecSet === levelCandidate.codecSet)
+              level.codecSet === levelCandidate.codecSet) ||
+            (!findAudioCodecAlternate &&
+              level.codecSet !== levelCandidate.codecSet)
           ) {
             // For video/audio/subs frag errors find another group ID or fallthrough to redundant fail-over
             continue;
