@@ -62,7 +62,7 @@ type ScheduleUpdateCallback = (
 
 export class InterstitialsSchedule extends Logger {
   private onScheduleUpdate: ScheduleUpdateCallback;
-  private eventMap: Record<string, InterstitialEvent> = {};
+  private eventMap: Record<string, InterstitialEvent | undefined> = {};
   public events: InterstitialEvent[] | null = null;
   public items: InterstitialScheduleItem[] | null = null;
   public durations: InterstitialScheduleDurations = {
@@ -327,7 +327,7 @@ export class InterstitialsSchedule extends Logger {
   }
 
   private parseDateRanges(
-    dateRanges: Record<string, DateRange>,
+    dateRanges: Record<string, DateRange | undefined>,
     baseData: BaseData,
     enableAppendInPlace: boolean,
   ): InterstitialEvent[] {
@@ -335,7 +335,7 @@ export class InterstitialsSchedule extends Logger {
     const ids = Object.keys(dateRanges);
     for (let i = 0; i < ids.length; i++) {
       const id = ids[i];
-      const dateRange = dateRanges[id];
+      const dateRange = dateRanges[id]!;
       if (dateRange.isInterstitial) {
         let interstitial = this.eventMap[id];
         if (interstitial) {
@@ -378,7 +378,8 @@ export class InterstitialsSchedule extends Logger {
       interstitialEvents.forEach((interstitial, i) => {
         const preroll = interstitial.cue.pre;
         const postroll = interstitial.cue.post;
-        const previousEvent = interstitialEvents[i - 1] || null;
+        const previousEvent =
+          (interstitialEvents[i - 1] as InterstitialEvent | undefined) || null;
         const appendInPlace = interstitial.appendInPlace;
         const eventStart = postroll
           ? primaryDuration
@@ -619,12 +620,6 @@ export class InterstitialsSchedule extends Logger {
       );
       return false;
     }
-    if (!mediaSelection) {
-      this.log(
-        `"${interstitial.identifier}" resumption ${resumeTime} can not be aligned with media (none selected)`,
-      );
-      return false;
-    }
     const playlists = Object.keys(mediaSelection);
     return !playlists.some((playlistType) => {
       const details = mediaSelection[playlistType].details;
@@ -672,7 +667,8 @@ export class InterstitialsSchedule extends Logger {
     let sumDuration = 0;
     let hasUnknownDuration = false;
     let hasErrors = false;
-    interstitial.assetList.forEach((asset, i) => {
+    for (let i = 0; i < interstitial.assetList.length; i++) {
+      const asset = interstitial.assetList[i];
       const timelineStart = eventStart + sumDuration;
       asset.startOffset = sumDuration;
       asset.timelineStart = timelineStart;
@@ -680,7 +676,7 @@ export class InterstitialsSchedule extends Logger {
       hasErrors ||= !!asset.error;
       const duration = asset.error ? 0 : (asset.duration as number) || 0;
       sumDuration += duration;
-    });
+    }
     // Use the sum of known durations when it is greater than the stated duration
     if (hasUnknownDuration && !hasErrors) {
       interstitial.duration = Math.max(sumDuration, interstitial.duration);
