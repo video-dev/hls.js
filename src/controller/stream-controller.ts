@@ -345,7 +345,7 @@ export default class StreamController
       const backtrackSn = (this.backtrackFragment ?? frag).sn as number;
       const fragIdx = backtrackSn - levelDetails.startSN;
       const backtrackFrag = levelDetails.fragments[fragIdx - 1];
-      if (backtrackFrag && frag.cc === backtrackFrag.cc) {
+      if ((backtrackFrag as any) && frag.cc === backtrackFrag.cc) {
         frag = backtrackFrag;
         this.fragmentTracker.removeFragment(backtrackFrag);
       }
@@ -624,13 +624,13 @@ export default class StreamController
     // detect if we have different kind of audio codecs used amongst playlists
     let aac = false;
     let heaac = false;
-    data.levels.forEach((level) => {
-      const codec = level.audioCodec;
+    for (let i = 0; i < data.levels.length; i++) {
+      const codec = data.levels[i].audioCodec;
       if (codec) {
         aac = aac || codec.indexOf('mp4a.40.2') !== -1;
         heaac = heaac || codec.indexOf('mp4a.40.5') !== -1;
       }
-    });
+    }
     this.audioCodecSwitch = aac && heaac && !changeTypeSupported();
     if (this.audioCodecSwitch) {
       this.log(
@@ -777,7 +777,7 @@ export default class StreamController
               0,
             );
 
-            if (!bufferInfo?.buffered?.length) {
+            if (!bufferInfo.buffered?.length) {
               media.currentTime = liveSyncPosition;
               return;
             }
@@ -816,7 +816,7 @@ export default class StreamController
       return;
     }
     const currentLevel = levels[frag.level];
-    if (!currentLevel) {
+    if (!currentLevel as any) {
       this.warn(`Level ${frag.level} not found on progress`);
       return;
     }
@@ -907,7 +907,10 @@ export default class StreamController
       if (fromAltAudio) {
         this.fragmentTracker.removeAllFragments();
         hls.once(Events.BUFFER_FLUSHED, () => {
-          this.hls?.trigger(Events.AUDIO_TRACK_SWITCHED, data);
+          if (!this.hls as any) {
+            return;
+          }
+          this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, data);
         });
         hls.trigger(Events.BUFFER_FLUSHING, {
           startOffset: 0,
@@ -1240,18 +1243,17 @@ export default class StreamController
     this.state = State.PARSING;
 
     if (initSegment) {
-      if (initSegment?.tracks) {
+      const tracks = initSegment.tracks;
+      if (tracks) {
         const mapFragment = frag.initSegment || frag;
-        this._bufferInitSegment(
-          level,
-          initSegment.tracks,
-          mapFragment,
-          chunkMeta,
-        );
+        if (this.unhandledEncryptionError(initSegment, frag)) {
+          return;
+        }
+        this._bufferInitSegment(level, tracks, mapFragment, chunkMeta);
         hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, {
           frag: mapFragment,
           id,
-          tracks: initSegment.tracks,
+          tracks,
         });
       }
 
@@ -1260,7 +1262,7 @@ export default class StreamController
       const initPTS = this.initPTS[frag.cc];
       if (
         Number.isFinite(baseTime) &&
-        (!initPTS ||
+        ((!initPTS as any) ||
           initPTS.baseTime !== baseTime ||
           initPTS.timescale !== timescale)
       ) {
@@ -1287,7 +1289,8 @@ export default class StreamController
       }
       const prevFrag = details.fragments[frag.sn - 1 - details.startSN];
       const isFirstFragment = frag.sn === details.startSN;
-      const isFirstInDiscontinuity = !prevFrag || frag.cc > prevFrag.cc;
+      const isFirstInDiscontinuity =
+        (!prevFrag as any) || frag.cc > prevFrag.cc;
       if (remuxResult.independent !== false) {
         const { startPTS, endPTS, startDTS, endDTS } = video;
         if (part) {
@@ -1390,7 +1393,7 @@ export default class StreamController
       this.bufferFragmentData(audio, frag, part, chunkMeta);
     }
 
-    if (details && id3?.samples?.length) {
+    if (details && id3?.samples.length) {
       const emittedID3: FragParsingMetadataData = {
         id,
         frag,
@@ -1534,7 +1537,7 @@ export default class StreamController
     const trackTypes = Object.keys(tracks);
     if (trackTypes.length) {
       this.hls.trigger(Events.BUFFER_CODECS, tracks as BufferCodecsData);
-      if (!this.hls) {
+      if (!this.hls as any) {
         // Exit after fatal tracks error
         return;
       }

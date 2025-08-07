@@ -68,64 +68,81 @@ class PassThroughRemuxer extends Logger implements Remuxer {
   }
 
   public resetInitSegment(
-    initSegment: Uint8Array | undefined,
+    initSegment: Uint8Array<ArrayBuffer> | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
     decryptdata: DecryptData | null,
   ) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
-    this.generateInitSegment(patchEncyptionData(initSegment, decryptdata));
+    this.generateInitSegment(initSegment, decryptdata);
     this.emitInitSegment = true;
   }
 
-  private generateInitSegment(initSegment: Uint8Array | undefined): void {
+  private generateInitSegment(
+    initSegment: Uint8Array<ArrayBuffer> | undefined,
+    decryptdata?: DecryptData | null,
+  ) {
     let { audioCodec, videoCodec } = this;
     if (!initSegment?.byteLength) {
       this.initTracks = undefined;
       this.initData = undefined;
       return;
     }
-    const initData = (this.initData = parseInitSegment(initSegment));
+    const { audio, video } = (this.initData = parseInitSegment(initSegment));
+
+    if (decryptdata) {
+      patchEncyptionData(initSegment, decryptdata);
+    } else {
+      const eitherTrack = audio || video;
+      if (eitherTrack?.encrypted) {
+        this.warn(
+          `Init segment with encrypted track with has no key ("${eitherTrack.codec}")!`,
+        );
+      }
+    }
 
     // Get codec from initSegment
-    if (initData.audio) {
+    if (audio) {
       audioCodec = getParsedTrackCodec(
-        initData.audio,
+        audio,
         ElementaryStreamTypes.AUDIO,
         this,
       );
     }
 
-    if (initData.video) {
+    if (video) {
       videoCodec = getParsedTrackCodec(
-        initData.video,
+        video,
         ElementaryStreamTypes.VIDEO,
         this,
       );
     }
 
     const tracks: TrackSet = {};
-    if (initData.audio && initData.video) {
+    if (audio && video) {
       tracks.audiovideo = {
         container: 'video/mp4',
         codec: audioCodec + ',' + videoCodec,
-        supplemental: initData.video.supplemental,
+        supplemental: video.supplemental,
+        encrypted: video.encrypted,
         initSegment,
         id: 'main',
       };
-    } else if (initData.audio) {
+    } else if (audio) {
       tracks.audio = {
         container: 'audio/mp4',
         codec: audioCodec,
+        encrypted: audio.encrypted,
         initSegment,
         id: 'audio',
       };
-    } else if (initData.video) {
+    } else if (video) {
       tracks.video = {
         container: 'video/mp4',
         codec: videoCodec,
-        supplemental: initData.video.supplemental,
+        supplemental: video.supplemental,
+        encrypted: video.encrypted,
         initSegment,
         id: 'main',
       };
@@ -161,8 +178,8 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     // The binary segment data is added to the videoTrack in the mp4demuxer. We don't check to see if the data is only
     // audio or video (or both); adding it to video was an arbitrary choice.
-    const data = videoTrack.samples as Uint8Array<ArrayBuffer>;
-    if (!data?.length) {
+    const data = videoTrack.samples;
+    if (!data.length) {
       return result;
     }
 
@@ -266,9 +283,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       initSegment.trackId = initPTS.trackId;
     }
 
-    const startTime = audioTrack
-      ? decodeTime - initPTS.baseTime / initPTS.timescale
-      : (lastEndTime as number);
+    const startTime = decodeTime - initPTS.baseTime / initPTS.timescale;
     const endTime = startTime + duration;
 
     if (duration > 0) {
@@ -290,6 +305,10 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       type += 'video';
     }
 
+    const encrypted =
+      (initData.audio ? initData.audio.encrypted : false) ||
+      (initData.video ? initData.video.encrypted : false);
+
     const track: RemuxedTrack = {
       data1: data,
       startPTS: startTime,
@@ -301,6 +320,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       hasVideo,
       nb: 1,
       dropped: 0,
+      encrypted,
     };
 
     result.audio = hasAudio && !hasVideo ? track : undefined;
@@ -385,7 +405,7 @@ function getParsedTrackCodec(
   type: ElementaryStreamTypes.AUDIO | ElementaryStreamTypes.VIDEO,
   logger: ILogger,
 ): string {
-  const parsedCodec = track?.codec;
+  const parsedCodec = track.codec;
   if (parsedCodec && parsedCodec.length > 4) {
     return parsedCodec;
   }
