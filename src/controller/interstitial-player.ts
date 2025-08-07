@@ -87,6 +87,8 @@ export class HlsAssetPlayer {
         // issue should surface as an INTERSTITIAL_ASSET_ERROR loading the asset.
       }
       hls.loadSource(uri);
+    } else if (hls.levels.length && !(hls as any).started) {
+      hls.startLoad(-1, true);
     }
   }
 
@@ -100,7 +102,7 @@ export class HlsAssetPlayer {
     if (!media) {
       return false;
     }
-    const duration = this._bufferedEosTime || this.duration;
+    const duration = Math.min(this._bufferedEosTime || Infinity, this.duration);
     const start = this.timelineOffset;
     const bufferInfo = BufferHelper.bufferInfo(media, start, 0);
     const bufferedEnd = this.getAssetTime(bufferInfo.end);
@@ -159,6 +161,13 @@ export class HlsAssetPlayer {
     const duration = this.assetItem.duration;
     if (!duration) {
       return 0;
+    }
+    const playoutLimit = this.interstitial.playoutLimit;
+    if (playoutLimit) {
+      const assetPlayout = playoutLimit - this.startOffset;
+      if (assetPlayout > 0 && assetPlayout < duration) {
+        return assetPlayout;
+      }
     }
     return duration;
   }

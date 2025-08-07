@@ -303,12 +303,14 @@ export class InterstitialsSchedule extends Logger {
   public updateSchedule(
     mediaSelection: MediaSelection,
     removedInterstitials: InterstitialEvent[] = [],
+    forceUpdate: boolean = false,
   ) {
     const events = this.events || [];
     if (events.length || removedInterstitials.length || this.length < 2) {
       const currentItems = this.items;
       const updatedItems = this.parseSchedule(events, mediaSelection);
       const updated =
+        forceUpdate ||
         removedInterstitials.length ||
         currentItems?.length !== updatedItems.length ||
         updatedItems.some((item, i) => {
