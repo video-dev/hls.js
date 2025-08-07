@@ -264,7 +264,7 @@ export default class BaseStreamController
 
   public getLevelDetails(): LevelDetails | undefined {
     if (this.levels && this.levelLastLoaded !== null) {
-      return this.levelLastLoaded?.details;
+      return this.levelLastLoaded.details;
     }
   }
 
@@ -817,7 +817,7 @@ export default class BaseStreamController
     progressCallback?: FragmentLoadProgressCallback,
   ): Promise<PartsLoadedData | FragLoadedData | null> {
     this.fragCurrent = frag;
-    const details = level?.details;
+    const details = level.details;
     if (!this.levels || !details) {
       throw new Error(
         `frag load aborted, missing level${details ? '' : ' detail'}s`,
@@ -955,7 +955,7 @@ export default class BaseStreamController
 
     this.log(
       `Loading ${frag.type} sn: ${frag.sn} of ${this.fragInfo(frag, false)}) cc: ${frag.cc} ${
-        details ? '[' + details.startSN + '-' + details.endSN + ']' : ''
+        '[' + details.startSN + '-' + details.endSN + ']'
       }, target: ${parseFloat(targetBufferTime.toFixed(3))}`,
     );
     // Don't update nextLoadPosition for fragments which are not buffered
@@ -970,7 +970,7 @@ export default class BaseStreamController
     if (dataOnProgress && keyLoadingPromise) {
       result = keyLoadingPromise
         .then((keyLoadedData) => {
-          if (!keyLoadedData || this.fragContextChanged(keyLoadedData?.frag)) {
+          if (!keyLoadedData || this.fragContextChanged(keyLoadedData.frag)) {
             return null;
           }
           return this.fragmentLoader.load(frag, progressCallback);
@@ -987,7 +987,7 @@ export default class BaseStreamController
         keyLoadingPromise,
       ])
         .then(([fragLoadedData]) => {
-          if (!dataOnProgress && fragLoadedData && progressCallback) {
+          if (!dataOnProgress && progressCallback) {
             progressCallback(fragLoadedData);
           }
           return fragLoadedData;
@@ -1043,7 +1043,7 @@ export default class BaseStreamController
   private handleFragLoadError(error: LoadError | Error) {
     if ('data' in error) {
       const data = error.data;
-      if (error.data && data.details === ErrorDetails.INTERNAL_ABORTED) {
+      if ((data as any) && data.details === ErrorDetails.INTERNAL_ABORTED) {
         this.handleFragLoadAborted(data.frag, data.part);
       } else {
         this.hls.trigger(Events.ERROR, data as ErrorData);
@@ -1102,7 +1102,7 @@ export default class BaseStreamController
       if (!details) {
         return this.loadingParts;
       }
-      if (details?.partList) {
+      if (details.partList) {
         // Buffer must be ahead of first part + duration of parts after last segment
         // and playback must be at or past segment adjacent to part list
         const firstPart = details.partList[0];
@@ -1156,21 +1156,23 @@ export default class BaseStreamController
     chunkMeta: ChunkMetadata,
     noBacktracking?: boolean,
   ) {
-    if (!data || this.state !== State.PARSING) {
+    if (this.state !== State.PARSING) {
       return;
     }
 
     const { data1, data2 } = data;
     let buffer = data1;
-    if (data1 && data2) {
+    if (data2) {
       // Combine the moof + mdat so that we buffer with a single append
       buffer = appendUint8Array(data1, data2);
     }
 
-    if (!buffer?.length) {
+    if (!buffer.length) {
       return;
     }
-    const offsetTimestamp = this.initPTS[frag.cc];
+    const offsetTimestamp = this.initPTS[frag.cc] as
+      | TimestampOffset
+      | undefined;
     const offset = offsetTimestamp
       ? -offsetTimestamp.baseTime / offsetTimestamp.timescale
       : undefined;
@@ -1297,10 +1299,9 @@ export default class BaseStreamController
     position: number,
     playlistType: PlaylistLevelType = PlaylistLevelType.MAIN,
   ): Fragment | null {
-    const fragOrPart = this.fragmentTracker?.getAppendedFrag(
-      position,
-      playlistType,
-    );
+    const fragOrPart = (this.fragmentTracker as any)
+      ? this.fragmentTracker.getAppendedFrag(position, playlistType)
+      : null;
     if (fragOrPart && 'fragment' in fragOrPart) {
       return fragOrPart.fragment;
     }
@@ -1504,7 +1505,7 @@ export default class BaseStreamController
 
   mapToInitFragWhenRequired(frag: Fragment | null): typeof frag {
     // If an initSegment is present, it must be buffered first
-    if (frag?.initSegment && !frag?.initSegment.data && !this.bitrateTest) {
+    if (frag?.initSegment && !frag.initSegment.data && !this.bitrateTest) {
       return frag.initSegment;
     }
 
@@ -1654,7 +1655,6 @@ export default class BaseStreamController
     );
     if (
       loadingParts &&
-      fragmentHint &&
       !this.bitrateTest &&
       partList[partList.length - 1].fragment.sn === fragmentHint.sn
     ) {
@@ -1702,11 +1702,11 @@ export default class BaseStreamController
         frag.sn === fragPrevious.sn &&
         (!loadingParts ||
           partList[0].fragment.sn > frag.sn ||
-          (!levelDetails.live && !loadingParts))
+          !levelDetails.live)
       ) {
         // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
         // non-uniform fragment durations
-        const sameLevel = fragPrevious && frag.level === fragPrevious.level;
+        const sameLevel = frag.level === fragPrevious.level;
         if (sameLevel) {
           const nextFrag = fragments[curSNIdx + 1];
           if (
@@ -2074,6 +2074,7 @@ export default class BaseStreamController
                 info.endPTS,
                 info.startDTS,
                 info.endDTS,
+                this,
               );
           this.hls.trigger(Events.LEVEL_PTS_UPDATED, {
             details,

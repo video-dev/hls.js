@@ -174,7 +174,7 @@ export default class BasePlaylistController
       details.reloaded(previousDetails);
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
-        mergeDetails(previousDetails, details);
+        mergeDetails(previousDetails, details, this);
         const error = details.playlistParsingError;
         if (error) {
           this.warn(error);

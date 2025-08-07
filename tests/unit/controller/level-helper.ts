@@ -19,6 +19,7 @@ import {
   mapPartIntersection,
   mergeDetails,
 } from '../../../src/utils/level-helper';
+import { logger } from '../../../src/utils/logger';
 import type { MediaFragment } from '../../../src/loader/fragment';
 import type {
   ComponentAPI,
@@ -188,7 +189,7 @@ describe('LevelHelper Tests', function () {
     it('transfers start times where segments overlap, and extrapolates the start of any new segment', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3, 4]); // start times: 0, 5, 10, 15
       const newPlaylist = generatePlaylist([2, 3, 4, 5]);
-      mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist, logger);
       const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([5, 10, 15, 20]);
       expect(newPlaylist.playlistParsingError).to.be.null;
@@ -197,7 +198,7 @@ describe('LevelHelper Tests', function () {
     it('applies expected sliding when there is no segment overlap', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
-      mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist, logger);
       const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([20, 25, 30]);
       expect(newPlaylist.playlistParsingError).to.be.null;
@@ -209,7 +210,7 @@ describe('LevelHelper Tests', function () {
         f.addStart(10);
       });
       const newPlaylist = generatePlaylist([1, 2, 3]);
-      mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist, logger);
       const actual = newPlaylist.fragments.map((f) => f.start);
       expect(actual).to.deep.equal([10, 15, 20]);
       expect(newPlaylist.playlistParsingError).to.be.null;
@@ -223,7 +224,7 @@ describe('LevelHelper Tests', function () {
       // @ts-ignore
       newPlaylist.fragments.unshift(null, null, null, null, null, null, null);
       const merged = generatePlaylist([3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 10);
-      mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist, logger);
       expect(newPlaylist.deltaUpdateFailed).to.equal(false);
       expect(newPlaylist.fragments.length).to.equal(merged.fragments.length);
       newPlaylist.fragments.forEach((frag, i) => {
@@ -246,7 +247,7 @@ expect: ${JSON.stringify(merged.fragments[i])}`,
       newPlaylist.fragments.unshift(null, null, null, null, null);
       // FIXME: An expected offset of 50 would be preferred, but there is nothing to sync playlist start with
       const merged = generatePlaylist([10, 11, 12], 0);
-      mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist, logger);
       expect(newPlaylist.deltaUpdateFailed).to.equal(true);
       expect(newPlaylist.fragments.length).to.equal(3);
       newPlaylist.fragments.forEach((frag, i) => {
@@ -289,7 +290,7 @@ expect: ${JSON.stringify(merged.fragments[i])}`,
       newPlaylist.fragmentHint.sn = 5;
       newPlaylist.fragmentHint.initSegment = newInitSegment;
 
-      mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist, logger);
 
       newPlaylist.fragments.forEach((frag, i) => {
         expect(
@@ -355,7 +356,7 @@ fileSequence11.ts
 #EXT-X-DATERANGE:ID="four",START-DATE="2024-02-29T12:02:04.000Z"`;
       const details = parseLevelPlaylist(playlist);
       const detailsUpdated = parseLevelPlaylist(playlistUpdate);
-      mergeDetails(details, detailsUpdated);
+      mergeDetails(details, detailsUpdated, logger);
       expect(details.hasProgramDateTime, 'details.hasProgramDateTime').to.be
         .true;
       expect(details.dateRanges, 'one')
@@ -600,7 +601,7 @@ fileSequence12.ts`;
         updated: false,
       });
       // discontinuity sequence numbers (frag.cc) should be carried over
-      mergeDetails(details1, details2);
+      mergeDetails(details1, details2, logger);
       const mergedSequence1 = getFragmentSequenceNumbers(details2);
       expect(
         details2,
@@ -627,7 +628,7 @@ fileSequence12.ts`;
       });
 
       // discontinuity sequence numbers (frag.cc) should be carried over
-      mergeDetails(details2, details3);
+      mergeDetails(details2, details3, logger);
       const mergedSequence2 = getFragmentSequenceNumbers(details3);
       expect(
         details3,
@@ -654,7 +655,7 @@ fileSequence12.ts`;
       });
 
       // discontinuity sequence numbers (frag.cc) should be carried over
-      mergeDetails(details3, details4);
+      mergeDetails(details3, details4, logger);
       const mergedSequence3 = getFragmentSequenceNumbers(details4);
       expect(
         details4,
@@ -808,7 +809,7 @@ fileSequence8.m4s
         updated: true,
       });
       // discontinuity sequence numbers (frag.cc) should be carried over
-      mergeDetails(details1, details2);
+      mergeDetails(details1, details2, logger);
       const mergedSequence1 = getFragmentSequenceNumbers(details2);
       expect(
         details2,
@@ -836,7 +837,7 @@ fileSequence8.m4s
         updated: true,
       });
       // discontinuity sequence numbers (frag.cc) should be carried over
-      mergeDetails(details1, details3);
+      mergeDetails(details1, details3, logger);
       const mergedSequence2 = getFragmentSequenceNumbers(details3);
       expect(
         details3,
@@ -994,7 +995,7 @@ fileSequence8.m4s
         updated: true,
       });
       // discontinuity sequence numbers (frag.cc) should be carried over
-      mergeDetails(details1, details2);
+      mergeDetails(details1, details2, logger);
       const mergedSequence1 = getFragmentSequenceNumbers(details2);
       expect(
         details2,
@@ -1092,7 +1093,7 @@ fileSequence17.ts
 fileSequence18.ts`;
       const details = parseLevelPlaylist(playlist);
       const detailsUpdated = parseLevelPlaylist(playlistUpdate);
-      mergeDetails(details, detailsUpdated);
+      mergeDetails(details, detailsUpdated, logger);
       expect(details.hasProgramDateTime, 'details.hasProgramDateTime').to.be
         .true;
       expect(
@@ -1139,7 +1140,7 @@ fileSequence6.ts`;
       const details = parseLevelPlaylist(playlist);
       addSliding(details, 10);
       expect(details.fragmentStart).to.equal(10);
-      mergeDetails(details, details);
+      mergeDetails(details, details, logger);
       expect(details.fragmentStart).to.equal(10);
     });
 
@@ -1197,7 +1198,7 @@ video_32.m4s`;
         endCC: 3,
       });
 
-      mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist, logger);
 
       expect(newPlaylist.playlistParsingError).to.be.null;
       expect(newPlaylist).to.include({
@@ -1275,7 +1276,7 @@ getMP4MediaFragment.mp4?FragmentNumber=91343852333398821516816632930230891347979
         endCC: 5,
       });
 
-      mergeDetails(oldPlaylist, newPlaylist);
+      mergeDetails(oldPlaylist, newPlaylist, logger);
 
       expect(newPlaylist.playlistParsingError).to.be.null;
       expect(newPlaylist).to.include({
@@ -1545,8 +1546,8 @@ audio_5441.m4s`;
       expect(audioDetails1.totalduration).to.equal(16.019);
 
       // Seconds main and audio playlist responses
-      mergeDetails(mainDetails1, mainDetails2);
-      mergeDetails(audioDetails1, audioDetails2);
+      mergeDetails(mainDetails1, mainDetails2, logger);
+      mergeDetails(audioDetails1, audioDetails2, logger);
       expect(audioDetails2.alignedSliding).to.be.false;
       expect(mainDetails2.fragmentStart).to.equal(20.0825);
       expect(audioDetails2.fragmentStart).to.equal(16.0325);
@@ -1578,8 +1579,8 @@ audio_5441.m4s`;
       expect(audioDetails1.totalduration).to.equal(16.019);
 
       // Seconds main and audio playlist responses
-      mergeDetails(mainDetails1, mainDetails2);
-      mergeDetails(audioDetails1, audioDetails2);
+      mergeDetails(mainDetails1, mainDetails2, logger);
+      mergeDetails(audioDetails1, audioDetails2, logger);
       expect(audioDetails2.alignedSliding).to.be.false;
       expect(mainDetails2.fragmentStart).to.equal(20.0825);
       expect(audioDetails2.fragmentStart).to.equal(16.0325);
@@ -1629,7 +1630,7 @@ video_5431.m4s
 video_5432.m4s`;
       const details1 = parseLevelPlaylist(playlist1);
       const details2 = parseLevelPlaylist(playlist2);
-      mergeDetails(details1, details2);
+      mergeDetails(details1, details2, logger);
       expectPlaylistParsingError(
         details2,
         'discontinuity sequence mismatch (31!=32)',
@@ -1668,7 +1669,7 @@ video_5431.m4s
 video_5432.m4s`;
       const details1 = parseLevelPlaylist(playlist1);
       const details2 = parseLevelPlaylist(playlist2);
-      mergeDetails(details1, details2);
+      mergeDetails(details1, details2, logger);
       expectPlaylistParsingError(
         details2,
         'media sequence mismatch 5429: http://example.com/video_5430.m4s',
@@ -1757,7 +1758,7 @@ video_5432.m4s`;
     });
 
     // Merged delta playlist with EXT-X-PROGRAM-DATE-TIME removed and DateRange tagAnchors updated
-    mergeDetails(details1, details2);
+    mergeDetails(details1, details2, logger);
 
     expect(details2).to.include({
       startSN: 5,
