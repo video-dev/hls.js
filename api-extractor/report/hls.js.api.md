@@ -1239,6 +1239,8 @@ export interface ErrorData {
     // (undocumented)
     context?: PlaylistLoaderContext;
     // (undocumented)
+    decryptdata?: LevelKey;
+    // (undocumented)
     details: ErrorDetails;
     // @deprecated (undocumented)
     err?: {
