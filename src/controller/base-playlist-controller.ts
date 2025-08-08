@@ -207,6 +207,7 @@ export default class BasePlaylistController
       const reloadInterval = computeReloadInterval(
         details,
         distanceToLiveEdgeMs,
+		this.hls.config.lowLatencyMode,
       );
       if (details.requestScheduled + reloadInterval < now) {
         details.requestScheduled = now;

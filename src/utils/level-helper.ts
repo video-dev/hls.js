@@ -513,14 +513,29 @@ export function addSliding(details: LevelDetails, sliding: number) {
 export function computeReloadInterval(
   newDetails: LevelDetails,
   distanceToLiveEdgeMs: number = Infinity,
+  lowLatencyMode: boolean = false,
 ): number {
-  let reloadInterval = 1000 * newDetails.targetduration;
+  const isLowLatency = lowLatencyMode && newDetails.partTarget;
+  let reloadInterval = 1000 * (isLowLatency ? newDetails.partTarget : newDetails.targetduration);
 
   if (newDetails.updated) {
-    // Use last segment duration when shorter than target duration and near live edge
+    // When shorter than target duration and near live edge
+    // - In normal mode, use last segment duration
+    // - In low latency mode, use last part duration
     const fragments = newDetails.fragments;
+    const parts = newDetails.partList;
     const liveEdgeMaxTargetDurations = 4;
     if (
+      isLowLatency &&
+      parts.length &&
+      newDetails.partHoldBack > distanceToLiveEdgeMs
+    ) {
+      const lastPartDuration = parts[parts.length - 1].duration * 1000;
+      if (lastPartDuration < reloadInterval) {
+        reloadInterval = lastPartDuration;
+      }
+    }
+    else if (
       fragments.length &&
       reloadInterval * liveEdgeMaxTargetDurations > distanceToLiveEdgeMs
     ) {
