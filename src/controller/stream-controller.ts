@@ -854,6 +854,7 @@ export default class StreamController
       payload.byteLength,
       partIndex,
       partial,
+      !partial ? frag.duration : null,
     );
     const initPTS = this.initPTS[frag.cc];
 
