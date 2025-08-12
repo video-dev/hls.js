@@ -48,6 +48,7 @@ import type { LevelKey } from '../loader/level-key';
 import type { LoadStats } from '../loader/load-stats';
 import type { AttrList } from '../utils/attr-list';
 import type { BufferInfo } from '../utils/buffer-helper';
+import type { NullableNetworkDetails } from './network-details';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
@@ -132,7 +133,7 @@ export interface ManifestLoadedData {
   captions?: MediaPlaylist[];
   contentSteering: ContentSteeringOptions | null;
   levels: LevelParsed[];
-  networkDetails: any;
+  networkDetails: NullableNetworkDetails;
   sessionData: Record<string, AttrList> | null;
   sessionKeys: LevelKey[] | null;
   startTimeOffset: number | null;
@@ -208,7 +209,7 @@ export interface TrackLoadedData {
   details: LevelDetails;
   id: number;
   groupId: string;
-  networkDetails: any;
+  networkDetails: NullableNetworkDetails;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
   track: MediaPlaylist;
@@ -219,7 +220,7 @@ export interface LevelLoadedData {
   id: number;
   level: number;
   levelInfo: Level;
-  networkDetails: any;
+  networkDetails: NullableNetworkDetails;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
   withoutMultiVariant?: boolean;
@@ -325,7 +326,7 @@ export interface ErrorData {
   level?: number | undefined;
   levelRetry?: boolean;
   loader?: Loader<LoaderContext>;
-  networkDetails?: any;
+  networkDetails?: NullableNetworkDetails;
   stalled?: { start: number };
   stats?: LoaderStats;
   mimeType?: string;
@@ -393,7 +394,7 @@ export interface FragLoadedData {
   frag: Fragment;
   part: Part | null;
   payload: ArrayBuffer;
-  networkDetails: unknown;
+  networkDetails: NullableNetworkDetails;
 }
 
 export interface PartsLoadedData {
@@ -473,7 +474,7 @@ export interface AssetListLoadingData {
 export interface AssetListLoadedData {
   event: InterstitialEventWithAssetList;
   assetListResponse: AssetListJSON;
-  networkDetails: any;
+  networkDetails: NullableNetworkDetails;
 }
 
 export interface InterstitialsUpdatedData {

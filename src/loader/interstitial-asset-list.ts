@@ -16,6 +16,7 @@ import type {
   LoaderResponse,
   LoaderStats,
 } from '../types/loader';
+import type { NullableNetworkDetails } from '../types/network-details';
 
 export class AssetListLoader {
   private hls: Hls;
@@ -74,7 +75,7 @@ export class AssetListLoader {
         response: LoaderResponse,
         stats: LoaderStats,
         context: LoaderContext,
-        networkDetails: any,
+        networkDetails: NullableNetworkDetails,
       ) => {
         const assetListResponse = response.data as AssetListJSON;
         const assets = assetListResponse?.ASSETS;
@@ -100,7 +101,7 @@ export class AssetListLoader {
       onError: (
         error: { code: number; text: string },
         context: LoaderContext,
-        networkDetails: any,
+        networkDetails: NullableNetworkDetails,
         stats: LoaderStats,
       ) => {
         const errorData = this.assignAssetListError(
@@ -118,7 +119,7 @@ export class AssetListLoader {
       onTimeout: (
         stats: LoaderStats,
         context: LoaderContext,
-        networkDetails: any,
+        networkDetails: NullableNetworkDetails,
       ) => {
         const errorData = this.assignAssetListError(
           interstitial,
@@ -144,7 +145,7 @@ export class AssetListLoader {
     error: Error,
     url: string,
     stats?: LoaderStats,
-    networkDetails?: any,
+    networkDetails?: NullableNetworkDetails,
   ): ErrorData {
     interstitial.error = error;
     return {

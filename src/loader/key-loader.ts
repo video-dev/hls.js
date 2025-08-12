@@ -21,6 +21,7 @@ import type {
   PlaylistLevelType,
 } from '../types/loader';
 import type { KeySystemFormats } from '../utils/mediakeys-helper';
+import type { NullableNetworkDetails } from '../types/network-details';
 
 export interface KeyLoaderInfo {
   decryptdata: LevelKey;
@@ -77,7 +78,7 @@ export default class KeyLoader implements ComponentAPI {
     frag: Fragment,
     details: ErrorDetails = ErrorDetails.KEY_LOAD_ERROR,
     error: Error,
-    networkDetails?: any,
+    networkDetails?: NullableNetworkDetails,
     response?: { url: string; data: undefined; code: number; text: string },
   ): LoadError {
     return new LoadError({
@@ -87,7 +88,7 @@ export default class KeyLoader implements ComponentAPI {
       frag,
       response,
       error,
-      networkDetails,
+      networkDetails: networkDetails || null,
     });
   }
 
@@ -295,7 +296,7 @@ export default class KeyLoader implements ComponentAPI {
           response: LoaderResponse,
           stats: LoaderStats,
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
         ) => {
           const { frag, keyInfo, url: uri } = context;
           if (!frag.decryptdata || keyInfo !== this.keyUriToKeyInfo[uri]) {
@@ -322,7 +323,7 @@ export default class KeyLoader implements ComponentAPI {
         onError: (
           response: { code: number; text: string },
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
           stats: LoaderStats,
         ) => {
           this.resetLoader(context);
@@ -342,7 +343,7 @@ export default class KeyLoader implements ComponentAPI {
         onTimeout: (
           stats: LoaderStats,
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
         ) => {
           this.resetLoader(context);
           reject(
@@ -358,7 +359,7 @@ export default class KeyLoader implements ComponentAPI {
         onAbort: (
           stats: LoaderStats,
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
         ) => {
           this.resetLoader(context);
           reject(

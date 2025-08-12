@@ -5,6 +5,7 @@ import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
+import type { NullableNetworkDetails } from './network-details';
 
 export interface LoaderContext {
   // target URL
@@ -100,14 +101,14 @@ export type LoaderOnSuccess<T extends LoaderContext> = (
   response: LoaderResponse,
   stats: LoaderStats,
   context: T,
-  networkDetails: any,
+  networkDetails: NullableNetworkDetails,
 ) => void;
 
 export type LoaderOnProgress<T extends LoaderContext> = (
   stats: LoaderStats,
   context: T,
   data: string | ArrayBuffer,
-  networkDetails: any,
+  networkDetails: NullableNetworkDetails,
 ) => void;
 
 export type LoaderOnError<T extends LoaderContext> = (
@@ -118,20 +119,20 @@ export type LoaderOnError<T extends LoaderContext> = (
     text: string;
   },
   context: T,
-  networkDetails: any,
+  networkDetails: NullableNetworkDetails,
   stats: LoaderStats,
 ) => void;
 
 export type LoaderOnTimeout<T extends LoaderContext> = (
   stats: LoaderStats,
   context: T,
-  networkDetails: any,
+  networkDetails: NullableNetworkDetails,
 ) => void;
 
 export type LoaderOnAbort<T extends LoaderContext> = (
   stats: LoaderStats,
   context: T,
-  networkDetails: any,
+  networkDetails: NullableNetworkDetails,
 ) => void;
 
 export interface LoaderCallbacks<T extends LoaderContext> {
