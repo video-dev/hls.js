@@ -20,8 +20,8 @@ import type {
   LoaderStats,
   PlaylistLevelType,
 } from '../types/loader';
-import type { KeySystemFormats } from '../utils/mediakeys-helper';
 import type { NullableNetworkDetails } from '../types/network-details';
+import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
 export interface KeyLoaderInfo {
   decryptdata: LevelKey;

@@ -1,11 +1,11 @@
 import type { LoaderConfig } from '../config';
 import type { HlsUrlParameters, Level } from './level';
 import type { MediaPlaylist } from './media-playlist';
+import type { NullableNetworkDetails } from './network-details';
 import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
-import type { NullableNetworkDetails } from './network-details';
 
 export interface LoaderContext {
   // target URL

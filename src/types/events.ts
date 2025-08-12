@@ -35,6 +35,7 @@ import type {
 } from '../controller/interstitials-schedule';
 import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { HlsListeners } from '../events';
+import type { NullableNetworkDetails } from './network-details';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type {
   AssetListJSON,
@@ -48,7 +49,6 @@ import type { LevelKey } from '../loader/level-key';
 import type { LoadStats } from '../loader/load-stats';
 import type { AttrList } from '../utils/attr-list';
 import type { BufferInfo } from '../utils/buffer-helper';
-import type { NullableNetworkDetails } from './network-details';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
