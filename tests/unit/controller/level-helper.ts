@@ -880,7 +880,7 @@ fileSequence8.m4s
 #EXT-X-DISCONTINUITY
 #EXT-X-MAP:URI="720p_0_1.m4s
 #EXTINF:2.500000,
-720p_3.m4v 
+720p_3.m4v
 #EXTINF:2.500000,
 720p_4.m4v
 #EXTINF:2.500000,
@@ -1518,7 +1518,7 @@ audio_5441.m4s`;
         level: 0,
         id: 0,
         stats: new LoadStats(),
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         deliveryDirectives: null,
       });
     }
@@ -1530,7 +1530,7 @@ audio_5441.m4s`;
         id: 0,
         groupId: '',
         stats: new LoadStats(),
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         deliveryDirectives: null,
       });
     }

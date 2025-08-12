@@ -1068,20 +1068,20 @@ fileSequence4.ts
 #EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
 #EXT-X-DATERANGE:ID="pre",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:00.000Z",DURATION=37,X-ASSET-URI="https://example.com/pre.m3u8",X-RESUME-OFFSET=0,CUE="PRE"
 #EXT-X-MAP:URI="fileSequence0.mp4"
-#EXTINF:9.20920,	
+#EXTINF:9.20920,
 #EXT-X-BITRATE:1701
 fileSequence1.mp4
-#EXTINF:8.37503,	
+#EXTINF:8.37503,
 #EXT-X-BITRATE:1810
 fileSequence2.mp4
-#EXTINF:8.80880,	
+#EXTINF:8.80880,
 #EXT-X-BITRATE:1824
 fileSequence3.mp4
 #EXT-X-DATERANGE:ID="mid-30",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:30.000Z",DURATION=16,X-ASSET-LIST="https://example.com/mid-list.json"
-#EXTINF:9.70970,	
+#EXTINF:9.70970,
 #EXT-X-BITRATE:1768
 fileSequence4.mp4
-#EXTINF:9.10910,	
+#EXTINF:9.10910,
 #EXT-X-BITRATE:621
 fileSequence5.mp4`;
 
@@ -1141,11 +1141,11 @@ fileSequence5.mp4`;
 #EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
 #EXT-X-DATERANGE:ID="start",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:00.000Z",DURATION=5,X-ASSET-LIST="https://example.com/empty.json",X-RESUME-OFFSET=5
 #EXT-X-MAP:URI="fileSequence0.mp4"
-#EXTINF:5,	
+#EXTINF:5,
 fileSequence1.mp4
-#EXTINF:5,	
+#EXTINF:5,
 fileSequence2.mp4
-#EXTINF:5,	
+#EXTINF:5,
 fileSequence3.mp4
 #EXT-X-ENDLIST`;
       attachMediaToHls();
@@ -1182,7 +1182,7 @@ fileSequence3.mp4
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1249,7 +1249,7 @@ fileSequence3.mp4
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1277,18 +1277,18 @@ fileSequence3.mp4
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
 #EXT-X-MAP:URI="fileSequence0.mp4"
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence1.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence2.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence3.mp4
 #EXT-X-DATERANGE:ID="mid-10",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:30.000Z",DURATION=10,X-ASSET-LIST="https://example.com/mid.json"
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence4.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence5.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence6.mp4`;
 
       // Loaded playlist (before attaching media)
@@ -1337,7 +1337,7 @@ fileSequence6.mp4`;
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1382,18 +1382,18 @@ fileSequence6.mp4`;
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
 #EXT-X-MAP:URI="fileSequence0.mp4"
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence1.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence2.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence3.mp4
 #EXT-X-DATERANGE:ID="mid-10",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:30.000Z",DURATION=10,X-ASSET-LIST="https://example.com/mid.json",CUE="ONCE"
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence4.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence5.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence6.mp4`;
 
       // Attach media
@@ -1451,7 +1451,7 @@ fileSequence6.mp4`;
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1495,18 +1495,18 @@ fileSequence6.mp4`;
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
 #EXT-X-MAP:URI="fileSequence0.mp4"
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence1.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence2.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence3.mp4
 #EXT-X-DATERANGE:ID="mid-10",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:30.000Z",DURATION=15,X-RESUME-OFFSET=10,X-TIMELINE-OCCUPIES=RANGE,X-ASSET-LIST="https://example.com/mid.json"
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence4.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence5.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence6.mp4
 #EXT-X-ENDLIST`;
 
@@ -1828,7 +1828,7 @@ fileSequence6.mp4
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAssetsLoaded = getTriggerCalls();
       expect(callsAfterAssetsLoaded).to.deep.equal(
@@ -1939,18 +1939,18 @@ fileSequence6.mp4
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
 #EXT-X-MAP:URI="fileSequence0.mp4"
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence1.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence2.mp4
 #EXT-X-DATERANGE:ID="mid-live",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:20.000Z",DURATION=30,X-ASSET-LIST="https://example.com/mid.json"
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence3.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence4.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence5.mp4
-#EXTINF:10,	
+#EXTINF:10,
 fileSequence6.mp4`;
 
       // Loaded playlist (before attaching media)
@@ -2003,7 +2003,7 @@ fileSequence6.mp4`;
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const eventsAfterAssetListLoaded = getTriggerCalls();
       expect(eventsAfterAssetListLoaded).to.deep.equal(
