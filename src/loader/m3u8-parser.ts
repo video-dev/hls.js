@@ -758,9 +758,16 @@ export function mapDateRanges(
   details: LevelDetails,
 ) {
   // Make sure DateRanges are mapped to a ProgramDateTime tag that applies a date to a segment that overlaps with its start date
-  const programDateTimeCount = programDateTimes.length;
+  let programDateTimeCount = programDateTimes.length;
   if (!programDateTimeCount) {
-    return;
+    if (details.hasProgramDateTime) {
+      const lastFragment = details.fragments[details.fragments.length - 1];
+      programDateTimes.push(lastFragment);
+      programDateTimeCount++;
+    } else {
+      // no segments with EXT-X-PROGRAM-DATE-TIME references in playlist history
+      return;
+    }
   }
   const lastProgramDateTime = programDateTimes[programDateTimeCount - 1];
   const playlistEnd = details.live ? Infinity : details.totalduration;
