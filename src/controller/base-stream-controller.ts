@@ -1886,7 +1886,14 @@ export default class BaseStreamController
       couldRetry &&
       !errorAction.resolved &&
       flags === ErrorActionFlags.MoveAllAlternatesMatchingHost;
-    if (!retry && noAlternate && isMediaFragment(frag) && !frag.endList) {
+    const httpStatus = data.response?.code || 0;
+    if (
+      !retry &&
+      noAlternate &&
+      isMediaFragment(frag) &&
+      !frag.endList &&
+      httpStatus !== 0
+    ) {
       this.resetFragmentErrors(filterType);
       this.treatAsGap(frag);
       errorAction.resolved = true;
