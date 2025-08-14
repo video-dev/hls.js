@@ -429,7 +429,9 @@ export function mapFragmentIntersection(
     }
     if ((oldFrag as any) && (newFrag as any)) {
       intersectionFn(oldFrag, newFrag, i, newFrags);
-      if (oldFrag.url && oldFrag.url !== newFrag.url) {
+      const uriBefore = oldFrag.relurl;
+      const uriAfter = newFrag.relurl;
+      if (uriBefore && notEqualAfterStrippingQueries(uriBefore, uriAfter)) {
         newDetails.playlistParsingError = getSequenceError(
           `media sequence mismatch ${newFrag.sn}:`,
           oldDetails,
@@ -599,4 +601,18 @@ export function reassignFragmentLevelIndexes(levels: Level[]) {
       }
     });
   });
+}
+
+function notEqualAfterStrippingQueries(
+  uriBefore: string,
+  uriAfter: string | undefined,
+): boolean {
+  if (uriBefore !== uriAfter && uriAfter) {
+    return stripQuery(uriBefore) !== stripQuery(uriAfter);
+  }
+  return false;
+}
+
+function stripQuery(uri: string): string {
+  return uri.replace(/\?[^?]*$/, '');
 }

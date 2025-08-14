@@ -1677,6 +1677,43 @@ video_5432.m4s`;
     });
   });
 
+  it('does not error between updates when only the query part of the URI changes', function () {
+    const playlist1 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5428
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5428.m4s?t=1
+#EXTINF:2.000,
+video_5429.m4s?t=1
+#EXTINF:2.000,
+video_5430.m4s?t=1
+#EXTINF:2.000,
+video_5431.m4s?t=1`;
+    // Media sequence increased by one but two segments removed.
+    const playlist2 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5429
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5429.m4s?t=2
+#EXTINF:2.000,
+video_5430.m4s?t=2
+#EXTINF:2.000,
+video_5431.m4s?t=2
+#EXTINF:2.000,
+video_5432.m4s?t=2`;
+    const details1 = parseLevelPlaylist(playlist1);
+    const details2 = parseLevelPlaylist(playlist2);
+    details2.fragments[0].base.url += '?base=changed';
+    mergeDetails(details1, details2, logger);
+    expect(details2.playlistParsingError).to.be.null;
+  });
+
   it('maps dateranges based on latest EXT-X-PROGRAM-DATE-TIME', function () {
     const playlist1 = `#EXTM3U
 #EXT-X-VERSION:6
