@@ -876,7 +876,7 @@ export default class BaseStreamController
     if (this.loadingParts && isMediaFragment(frag)) {
       const partList = details.partList;
       if (partList && progressCallback) {
-        if (targetBufferTime > frag.end && details.fragmentHint) {
+        if (targetBufferTime > details.fragmentEnd && details.fragmentHint) {
           frag = details.fragmentHint;
         }
         const partIndex = this.getNextPart(partList, frag, targetBufferTime);
@@ -1106,6 +1106,10 @@ export default class BaseStreamController
         // Buffer must be ahead of first part + duration of parts after last segment
         // and playback must be at or past segment adjacent to part list
         const firstPart = details.partList[0];
+        // Loading of VTT subtitle parts is not implemented in subtitle-stream-controller (#7460)
+        if (firstPart.fragment.type === PlaylistLevelType.SUBTITLE) {
+          return false;
+        }
         const safePartStart =
           firstPart.end + (details.fragmentHint?.duration || 0);
         if (bufferEnd >= safePartStart) {
