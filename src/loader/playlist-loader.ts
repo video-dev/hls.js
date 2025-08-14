@@ -665,7 +665,7 @@ class PlaylistLoader implements NetworkComponentAPI {
 
     if (response) {
       let url = context.url;
-      if (networkDetails instanceof Response) {
+      if (networkDetails && 'url' in networkDetails) {
         url = networkDetails.url;
       }
       errorData.response = { url, data: undefined as any, ...response };
