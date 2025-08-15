@@ -778,7 +778,7 @@ class EMEController extends Logger implements ComponentAPI {
       }
       this.onKeyStatusChange(context);
       const keyStatus = context.keyStatus;
-      licenseStatus.emit('keyStatus', keyStatus);
+      licenseStatus.emit('keyStatus', keyStatus, context);
       if (keyStatus === 'expired') {
         this.warn(`${context.keySystem} expired for key ${keyId}`);
         this.renewKeySession(context);
@@ -796,7 +796,7 @@ class EMEController extends Logger implements ComponentAPI {
       (resolve: (value?: void) => void, reject) => {
         licenseStatus.on('error', reject);
 
-        licenseStatus.on('keyStatus', (keyStatus) => {
+        licenseStatus.on('keyStatus', (keyStatus, { decryptdata }) => {
           if (keyStatus.startsWith('usable')) {
             resolve();
           } else if (keyStatus === 'output-restricted') {
@@ -806,6 +806,7 @@ class EMEController extends Logger implements ComponentAPI {
                   type: ErrorTypes.KEY_SYSTEM_ERROR,
                   details: ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED,
                   fatal: false,
+                  decryptdata,
                 },
                 'HDCP level output restricted',
               ),
@@ -816,15 +817,22 @@ class EMEController extends Logger implements ComponentAPI {
                 {
                   type: ErrorTypes.KEY_SYSTEM_ERROR,
                   details: ErrorDetails.KEY_SYSTEM_STATUS_INTERNAL_ERROR,
-                  fatal: true,
+                  fatal: false,
+                  decryptdata,
                 },
-                `key status changed to "${keyStatus}"`,
+                `key status changed to "${keyStatus}" (keyId: ${keyId})`,
               ),
             );
           } else if (keyStatus === 'expired') {
-            reject(new Error('key expired while generating request'));
+            reject(
+              new Error(
+                `key expired while generating request (keyId: ${keyId})`,
+              ),
+            );
           } else {
-            this.warn(`unhandled key status change "${keyStatus}"`);
+            this.warn(
+              `unhandled key status change "${keyStatus}" (keyId: ${keyId})`,
+            );
           }
         });
       },
@@ -843,6 +851,7 @@ class EMEController extends Logger implements ComponentAPI {
             type: ErrorTypes.KEY_SYSTEM_ERROR,
             details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
             error,
+            decryptdata: context.decryptdata,
             fatal: false,
           },
           `Error generating key-session request: ${error}`,
@@ -1002,6 +1011,7 @@ class EMEController extends Logger implements ComponentAPI {
               {
                 type: ErrorTypes.KEY_SYSTEM_ERROR,
                 details: ErrorDetails.KEY_SYSTEM_SESSION_UPDATE_FAILED,
+                decryptdata: context.decryptdata,
                 error,
                 fatal: true,
               },
@@ -1167,6 +1177,7 @@ class EMEController extends Logger implements ComponentAPI {
                   {
                     type: ErrorTypes.KEY_SYSTEM_ERROR,
                     details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+                    decryptdata: keySessionContext.decryptdata,
                     fatal: true,
                     networkDetails: xhr,
                     response: {

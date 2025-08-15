@@ -319,6 +319,7 @@ export interface ErrorData {
   bytes?: number;
   chunkMeta?: ChunkMetadata;
   context?: PlaylistLoaderContext;
+  decryptdata?: LevelKey;
   event?: keyof HlsListeners | 'demuxerWorker';
   frag?: Fragment;
   part?: Part | null;

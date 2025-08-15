@@ -11,6 +11,7 @@ import {
 } from '../utils/error-helper';
 import { Logger } from '../utils/logger';
 import type { RetryConfig } from '../config';
+import type { LevelKey } from '../hls';
 import type Hls from '../hls';
 import type { Fragment, MediaFragment } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
@@ -98,9 +99,43 @@ export default class ErrorController
   }
 
   private getVariantLevelIndex(frag: Fragment | undefined): number {
-    return frag?.type === PlaylistLevelType.MAIN
-      ? frag.level
-      : this.hls.loadLevel;
+    if (frag?.type === PlaylistLevelType.MAIN) {
+      return frag.level;
+    }
+    return this.getVariantIndex();
+  }
+
+  private getVariantIndex(): number {
+    const hls = this.hls;
+    const currentLevel = hls.currentLevel;
+    if (hls.loadLevelObj?.details || currentLevel === -1) {
+      return hls.loadLevel;
+    }
+    return currentLevel;
+  }
+
+  private getVariantIndexForKey(decryptdata: LevelKey): number {
+    const levels = this.hls.levels;
+    const loadOrCurrentLevel = this.getVariantIndex();
+    // Find variant with LevelKey
+    const level = levels[loadOrCurrentLevel];
+    const details = (level as typeof level | undefined)?.details;
+    if (!details || !this.levelHasKey(details, decryptdata)) {
+      for (let i = levels.length; i--; ) {
+        const details = levels[i].details;
+        if (details && this.levelHasKey(details, decryptdata)) {
+          return i;
+        }
+      }
+      // If not found, LevelKey may be for alternate-audio
+    }
+    return loadOrCurrentLevel;
+  }
+
+  private levelHasKey(details: LevelDetails, decryptdata: LevelKey): boolean {
+    return details.fragments.some(
+      (frag) => frag.decryptdata && decryptdata.matches(frag.decryptdata),
+    );
   }
 
   private onManifestLoading() {
@@ -242,7 +277,10 @@ export default class ErrorController
   }
 
   private keySystemError(data: ErrorData) {
-    const levelIndex = this.getVariantLevelIndex(data.frag);
+    const levelKey = data.decryptdata;
+    const levelIndex = levelKey
+      ? this.getVariantIndexForKey(levelKey)
+      : this.getVariantLevelIndex(data.frag);
     // Do not retry level. Escalate to fatal if switching levels fails.
     data.levelRetry = false;
     data.errorAction = this.getLevelSwitchAction(data, levelIndex);
