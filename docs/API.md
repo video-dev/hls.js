@@ -362,7 +362,7 @@ It should not be used in response to non-fatal hls.js error events.
 ```js
 let attemptedErrorRecovery = null;
 
-video.addEventListener('error', (event) {
+video.addEventListener('error', (event) => {
   const mediaError = event.currentTarget.error;
   if (mediaError.code === mediaError.MEDIA_ERR_DECODE) {
     const now = Date.now();
@@ -380,11 +380,19 @@ hls.on(Hls.Events.ERROR, function (name, data) {
       case Hls.ErrorTypes.MEDIA_ERROR: {
         const now = Date.now();
         if (!attemptedErrorRecovery || now - attemptedErrorRecovery > 5000) {
-          console.log('Fatal media error encountered (' + video.error + + '), attempting to recover');
+          console.log(
+            'Fatal media error encountered (' +
+              video.error +
+              +'), attempting to recover',
+          );
           attemptedErrorRecovery = now;
           hls.recoverMediaError();
         } else {
-          console.log('Skipping media error recovery (only ' + (now - attemptedErrorRecovery) + 'ms since last error)');
+          console.log(
+            'Skipping media error recovery (only ' +
+              (now - attemptedErrorRecovery) +
+              'ms since last error)',
+          );
         }
         break;
       }
