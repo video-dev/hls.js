@@ -248,18 +248,19 @@ export default class KeyLoader implements ComponentAPI {
     if (this.emeController && this.config.emeEnabled) {
       const keySessionContextPromise =
         this.emeController.loadKey(keyLoadedData);
-      if (keySessionContextPromise) {
-        return (keyInfo.keyLoadPromise = keySessionContextPromise.then(
-          (keySessionContext) => {
-            keyInfo.mediaKeySessionContext = keySessionContext;
-            return keyLoadedData;
-          },
-        )).catch((error) => {
-          // Remove promise for license renewal or retry
-          keyInfo.keyLoadPromise = null;
-          throw error;
-        });
-      }
+      return (keyInfo.keyLoadPromise = keySessionContextPromise.then(
+        (keySessionContext) => {
+          keyInfo.mediaKeySessionContext = keySessionContext;
+          return keyLoadedData;
+        },
+      )).catch((error) => {
+        // Remove promise for license renewal or retry
+        keyInfo.keyLoadPromise = null;
+        if (error.data) {
+          error.data.frag = frag;
+        }
+        throw error;
+      });
     }
     return Promise.resolve(keyLoadedData);
   }

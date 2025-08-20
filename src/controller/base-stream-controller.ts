@@ -1040,11 +1040,16 @@ export default class BaseStreamController
     );
   }
 
-  private handleFragLoadError(error: LoadError | Error) {
+  private handleFragLoadError(
+    error: LoadError | Error | (Error & { data: ErrorData }),
+  ) {
     if ('data' in error) {
       const data = error.data;
-      if ((data as any) && data.details === ErrorDetails.INTERNAL_ABORTED) {
+      if (data.frag && data.details === ErrorDetails.INTERNAL_ABORTED) {
         this.handleFragLoadAborted(data.frag, data.part);
+      } else if (data.frag && data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
+        data.frag.abortRequests();
+        this.resetFragmentLoading(data.frag);
       } else {
         this.hls.trigger(Events.ERROR, data as ErrorData);
       }
@@ -1826,7 +1831,7 @@ export default class BaseStreamController
     return pos;
   }
 
-  private handleFragLoadAborted(frag: Fragment, part: Part | undefined) {
+  private handleFragLoadAborted(frag: Fragment, part: Part | null | undefined) {
     if (
       this.transmuxer &&
       frag.type === this.playlistType &&

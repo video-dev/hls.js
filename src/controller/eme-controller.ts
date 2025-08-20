@@ -92,6 +92,7 @@ class EMEController extends Logger implements ComponentAPI {
   private setMediaKeysQueue: Promise<void>[] = EMEController.CDMCleanupPromise
     ? [EMEController.CDMCleanupPromise]
     : [];
+  private bannedKeyIds: { [keyId: string]: MediaKeyStatus | undefined } = {};
 
   constructor(hls: Hls) {
     super('eme', hls.logger);
@@ -132,7 +133,7 @@ class EMEController extends Logger implements ComponentAPI {
 
   private getLicenseServerUrl(keySystem: KeySystems): string | undefined {
     const { drmSystems, widevineLicenseUrl } = this.config;
-    const keySystemConfiguration = drmSystems[keySystem];
+    const keySystemConfiguration = drmSystems?.[keySystem];
 
     if (keySystemConfiguration) {
       return keySystemConfiguration.licenseUrl;
@@ -156,7 +157,7 @@ class EMEController extends Logger implements ComponentAPI {
 
   private getServerCertificateUrl(keySystem: KeySystems): string | void {
     const { drmSystems } = this.config;
-    const keySystemConfiguration = drmSystems[keySystem];
+    const keySystemConfiguration = drmSystems?.[keySystem];
 
     if (keySystemConfiguration) {
       return keySystemConfiguration.serverCertificateUrl;
@@ -247,7 +248,7 @@ class EMEController extends Logger implements ComponentAPI {
       keySystem,
       audioCodecs,
       videoCodecs,
-      this.config.drmSystemOptions,
+      this.config.drmSystemOptions || {},
     );
     const keySystemAccessPromises: KeySystemAccessPromises =
       this.keySystemAccessPromises[keySystem];
@@ -451,14 +452,22 @@ class EMEController extends Logger implements ComponentAPI {
     const decryptdata = data.keyInfo.decryptdata;
 
     const keyId = this.getKeyIdString(decryptdata);
+    const badStatus = this.bannedKeyIds[keyId];
+    if (badStatus) {
+      const error = getKeyStatusError(badStatus, decryptdata);
+      this.handleError(error);
+      return Promise.reject(error);
+    }
     const keyDetails = `(keyId: ${keyId} format: "${decryptdata.keyFormat}" method: ${decryptdata.method} uri: ${decryptdata.uri})`;
 
     this.log(`Starting session for key ${keyDetails}`);
 
-    let keyContextPromise = this.keyIdToKeySessionPromise[keyId];
+    const keyContextPromise = this.keyIdToKeySessionPromise[keyId];
     if (!keyContextPromise) {
-      keyContextPromise = this.getKeySystemForKeyPromise(decryptdata).then(
-        ({ keySystem, mediaKeys }) => {
+      const keySessionContextPromise = this.getKeySystemForKeyPromise(
+        decryptdata,
+      )
+        .then(({ keySystem, mediaKeys }) => {
           this.throwIfDestroyed();
           this.log(
             `Handle encrypted media sn: ${data.frag.sn} ${data.frag.type}: ${data.frag.level} using key ${keyDetails}`,
@@ -472,11 +481,8 @@ class EMEController extends Logger implements ComponentAPI {
               decryptdata,
             });
           });
-        },
-      );
-
-      const keySessionContextPromise = (this.keyIdToKeySessionPromise[keyId] =
-        keyContextPromise.then((keySessionContext) => {
+        })
+        .then((keySessionContext) => {
           const scheme = 'cenc';
           const initData = decryptdata.pssh ? decryptdata.pssh.buffer : null;
           return this.generateRequestWithPreferredKeySession(
@@ -485,9 +491,12 @@ class EMEController extends Logger implements ComponentAPI {
             initData,
             'playlist-key',
           );
-        }));
+        });
 
       keySessionContextPromise.catch((error) => this.handleError(error));
+      this.keyIdToKeySessionPromise[keyId] = keySessionContextPromise;
+
+      return keySessionContextPromise;
     }
 
     return keyContextPromise;
@@ -776,12 +785,15 @@ class EMEController extends Logger implements ComponentAPI {
         licenseStatus.emit('error', new Error('invalid state'));
         return;
       }
-      this.onKeyStatusChange(context);
-      const keyStatus = context.keyStatus;
-      licenseStatus.emit('keyStatus', keyStatus);
-      if (keyStatus === 'expired') {
-        this.warn(`${context.keySystem} expired for key ${keyId}`);
-        this.renewKeySession(context);
+      const initialStatus = context.keyStatus;
+      this.onKeyStatusChange(context, licenseStatus);
+      const status = context.keyStatus;
+      if (status !== initialStatus) {
+        licenseStatus.emit('keyStatus', status, context);
+        if (status === 'expired') {
+          this.log(`${context.keySystem} expired for key ${keyId}`);
+          this.renewKeySession(context);
+        }
       }
     });
 
@@ -796,37 +808,32 @@ class EMEController extends Logger implements ComponentAPI {
       (resolve: (value?: void) => void, reject) => {
         licenseStatus.on('error', reject);
 
-        licenseStatus.on('keyStatus', (keyStatus) => {
-          if (keyStatus.startsWith('usable')) {
-            resolve();
-          } else if (keyStatus === 'output-restricted') {
-            reject(
-              new EMEKeyError(
-                {
-                  type: ErrorTypes.KEY_SYSTEM_ERROR,
-                  details: ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED,
-                  fatal: false,
-                },
-                'HDCP level output restricted',
-              ),
-            );
-          } else if (keyStatus === 'internal-error') {
-            reject(
-              new EMEKeyError(
-                {
-                  type: ErrorTypes.KEY_SYSTEM_ERROR,
-                  details: ErrorDetails.KEY_SYSTEM_STATUS_INTERNAL_ERROR,
-                  fatal: true,
-                },
-                `key status changed to "${keyStatus}"`,
-              ),
-            );
-          } else if (keyStatus === 'expired') {
-            reject(new Error('key expired while generating request'));
-          } else {
-            this.warn(`unhandled key status change "${keyStatus}"`);
-          }
-        });
+        licenseStatus.on(
+          'keyStatus',
+          (
+            keyStatus: MediaKeyStatus,
+            { decryptdata }: MediaKeySessionContext,
+          ) => {
+            if (keyStatus.startsWith('usable')) {
+              resolve();
+            } else if (
+              keyStatus === 'internal-error' ||
+              keyStatus === 'output-restricted'
+            ) {
+              reject(getKeyStatusError(keyStatus, decryptdata));
+            } else if (keyStatus === 'expired') {
+              reject(
+                new Error(
+                  `key expired while generating request (keyId: ${keyId})`,
+                ),
+              );
+            } else {
+              this.warn(
+                `unhandled key status change "${keyStatus}" (keyId: ${keyId})`,
+              );
+            }
+          },
+        );
       },
     );
 
@@ -843,6 +850,7 @@ class EMEController extends Logger implements ComponentAPI {
             type: ErrorTypes.KEY_SYSTEM_ERROR,
             details: ErrorDetails.KEY_SYSTEM_NO_SESSION,
             error,
+            decryptdata: context.decryptdata,
             fatal: false,
           },
           `Error generating key-session request: ${error}`,
@@ -860,7 +868,13 @@ class EMEController extends Logger implements ComponentAPI {
       });
   }
 
-  private onKeyStatusChange(mediaKeySessionContext: MediaKeySessionContext) {
+  private onKeyStatusChange(
+    mediaKeySessionContext: MediaKeySessionContext,
+    licenseStatus: EventEmitter<string | symbol, any>,
+  ) {
+    const sessionLevelKeyId = Hex.hexDump(
+      new Uint8Array(mediaKeySessionContext.decryptdata.keyId || []),
+    );
     mediaKeySessionContext.mediaKeysSession.keyStatuses.forEach(
       (status: MediaKeyStatus, keyId: BufferSource) => {
         // keyStatuses.forEach is not standard API so the callback value looks weird on xboxone
@@ -870,16 +884,25 @@ class EMEController extends Logger implements ComponentAPI {
           keyId = status;
           status = temp;
         }
-        this.log(
-          `key status change "${status}" for keyStatuses keyId: ${Hex.hexDump(
-            'buffer' in keyId
-              ? new Uint8Array(keyId.buffer, keyId.byteOffset, keyId.byteLength)
-              : new Uint8Array(keyId),
-          )} session keyId: ${Hex.hexDump(
-            new Uint8Array(mediaKeySessionContext.decryptdata.keyId || []),
-          )} uri: ${mediaKeySessionContext.decryptdata.uri}`,
+        const keyIdWithStatusChange = Hex.hexDump(
+          'buffer' in keyId
+            ? new Uint8Array(keyId.buffer, keyId.byteOffset, keyId.byteLength)
+            : new Uint8Array(keyId),
         );
-        mediaKeySessionContext.keyStatus = status;
+
+        // Error immediately when encountering a key ID with this status again
+        if (status === 'internal-error') {
+          this.bannedKeyIds[keyIdWithStatusChange] = status;
+        }
+
+        // Only acknowledge status changes for level-key ID
+        const matched = keyIdWithStatusChange === sessionLevelKeyId;
+        this.log(
+          `${matched ? '' : 'un'}matched key status change "${status}" for keyStatuses keyId: ${keyIdWithStatusChange} session keyId: ${sessionLevelKeyId} uri: ${mediaKeySessionContext.decryptdata.uri}`,
+        );
+        if (matched) {
+          mediaKeySessionContext.keyStatus = status;
+        }
       },
     );
   }
@@ -1002,8 +1025,9 @@ class EMEController extends Logger implements ComponentAPI {
               {
                 type: ErrorTypes.KEY_SYSTEM_ERROR,
                 details: ErrorDetails.KEY_SYSTEM_SESSION_UPDATE_FAILED,
+                decryptdata: context.decryptdata,
                 error,
-                fatal: true,
+                fatal: false,
               },
               error.message,
             );
@@ -1167,6 +1191,7 @@ class EMEController extends Logger implements ComponentAPI {
                   {
                     type: ErrorTypes.KEY_SYSTEM_ERROR,
                     details: ErrorDetails.KEY_SYSTEM_LICENSE_REQUEST_FAILED,
+                    decryptdata: keySessionContext.decryptdata,
                     fatal: true,
                     networkDetails: xhr,
                     response: {
@@ -1251,6 +1276,7 @@ class EMEController extends Logger implements ComponentAPI {
   private _clear() {
     this._requestLicenseFailureCount = 0;
     this.keyIdToKeySessionPromise = {};
+    this.bannedKeyIds = {};
     if (!this.mediaKeys && !this.mediaKeySessions.length) {
       return;
     }
@@ -1301,6 +1327,7 @@ class EMEController extends Logger implements ComponentAPI {
 
   private onManifestLoading() {
     this.keyFormatPromise = null;
+    this.bannedKeyIds = {};
   }
 
   private onManifestLoaded(
@@ -1410,6 +1437,27 @@ class EMEKeyError extends Error {
     this.data = data as ErrorData;
     data.err = data.error;
   }
+}
+
+function getKeyStatusError(
+  keyStatus: MediaKeyStatus,
+  decryptdata: LevelKey,
+): EMEKeyError {
+  const outputRestricted = keyStatus === 'output-restricted';
+  const details = outputRestricted
+    ? ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED
+    : ErrorDetails.KEY_SYSTEM_STATUS_INTERNAL_ERROR;
+  return new EMEKeyError(
+    {
+      type: ErrorTypes.KEY_SYSTEM_ERROR,
+      details,
+      fatal: false,
+      decryptdata,
+    },
+    outputRestricted
+      ? 'HDCP level output restricted'
+      : `key status changed to "${keyStatus}"`,
+  );
 }
 
 export default EMEController;
