@@ -526,6 +526,7 @@ export default class ErrorController
           // Penalize all levels with key
           const levels = this.hls.levels;
           let levelIndex = hls.loadLevel;
+          const removeLevels: number[] = [];
           for (let i = levels.length; i--; ) {
             if (this.variantHasKey(levels[i], levelKey)) {
               this.log(
@@ -534,10 +535,17 @@ export default class ErrorController
               levels[i].fragmentError++;
               levels[i].loadError++;
               levelIndex = i;
+              removeLevels.unshift(i);
             }
           }
           const switchAction = this.getLevelSwitchAction(data, levelIndex);
           nextAutoLevel = switchAction.nextAutoLevel;
+          for (let i = removeLevels.length; i--; ) {
+            if (nextAutoLevel !== i) {
+              this.log(`Removing level ${i} with key error (${data.error})`);
+              this.hls.removeLevel(i);
+            }
+          }
         }
         break;
       }
@@ -564,6 +572,9 @@ export default class ErrorController
         const levels = this.hls.levels;
         for (let i = levels.length; i--; ) {
           if (levels[i][`${data.sourceBufferName}Codec`] === codec) {
+            this.log(
+              `Removing level ${i} for ${data.details} ("${codec}" not supported)`,
+            );
             this.hls.removeLevel(i);
           }
         }

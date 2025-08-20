@@ -30,7 +30,7 @@ export interface KeyLoaderInfo {
 }
 export default class KeyLoader implements ComponentAPI {
   private readonly config: HlsConfig;
-  public keyUriToKeyInfo: { [keyuri: string]: KeyLoaderInfo } = {};
+  public keyUriToKeyInfo: { [keyuri: string]: KeyLoaderInfo | undefined } = {};
   public emeController: EMEController | null = null;
 
   constructor(config: HlsConfig) {
@@ -39,7 +39,7 @@ export default class KeyLoader implements ComponentAPI {
 
   abort(type?: PlaylistLevelType) {
     for (const uri in this.keyUriToKeyInfo) {
-      const loader = this.keyUriToKeyInfo[uri].loader;
+      const loader = this.keyUriToKeyInfo[uri]!.loader;
       if (loader) {
         if (type && type !== loader.context?.frag.type) {
           return;
@@ -51,7 +51,7 @@ export default class KeyLoader implements ComponentAPI {
 
   detach() {
     for (const uri in this.keyUriToKeyInfo) {
-      const keyInfo = this.keyUriToKeyInfo[uri];
+      const keyInfo = this.keyUriToKeyInfo[uri]!;
       // Remove cached EME keys on detach
       if (
         keyInfo.mediaKeySessionContext ||
@@ -65,7 +65,7 @@ export default class KeyLoader implements ComponentAPI {
   destroy() {
     this.detach();
     for (const uri in this.keyUriToKeyInfo) {
-      const loader = this.keyUriToKeyInfo[uri].loader;
+      const loader = this.keyUriToKeyInfo[uri]!.loader;
       if (loader) {
         loader.destroy();
       }
@@ -200,7 +200,8 @@ export default class KeyLoader implements ComponentAPI {
         case 'usable-in-future':
           return keyInfo.keyLoadPromise.then((keyLoadedData) => {
             // Return the correct fragment with updated decryptdata key and loaded keyInfo
-            decryptdata.key = keyLoadedData.keyInfo.decryptdata.key;
+            const { keyInfo } = keyLoadedData;
+            decryptdata.key = keyInfo.decryptdata.key;
             return { frag, keyInfo };
           });
       }

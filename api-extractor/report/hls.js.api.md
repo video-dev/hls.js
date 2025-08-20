@@ -3004,7 +3004,7 @@ export class KeyLoader implements ComponentAPI {
     emeController: EMEController | null;
     // (undocumented)
     keyUriToKeyInfo: {
-        [keyuri: string]: KeyLoaderInfo;
+        [keyuri: string]: KeyLoaderInfo | undefined;
     };
     // (undocumented)
     load(frag: Fragment): Promise<KeyLoadedData>;
