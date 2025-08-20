@@ -569,7 +569,9 @@ This configuration will be applied by default to all instances.
 
 (default: `false`)
 
-Setting `config.debug = true;` will turn on debug logs on JS console.
+Setting `config.debug = true` enables JavaScript debug console logs. Debug mode also disables catching exceptions in even handler callbacks.
+In debug mode, when an event listener throws, the exception is not caught. This allows uncaught exeptions to trigger the JavaScript debugger.
+In production mode (`config.debug = false`), exceptions that are caught in event handlers are redispatched as errors with `type: OTHER_ERROR, details: INTERNAL_EXCEPTION, error: <caught exception>`.
 
 A logger object could also be provided for custom logging: `config.debug = customLogger;`.
 
