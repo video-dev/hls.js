@@ -86,6 +86,10 @@ function playWithCatch(media: HTMLMediaElement | null) {
   });
 }
 
+function timelineMessage(label: string, time: number) {
+  return `[${label}] Advancing timeline position to ${time}`;
+}
+
 export default class InterstitialsController
   extends Logger
   implements NetworkComponentAPI
@@ -1029,7 +1033,7 @@ export default class InterstitialsController
     const effectivePlayingItem = this.effectivePlayingItem;
     if (timelinePos === -1) {
       const startPosition = this.hls.startPosition;
-      this.log(`[checkStart] Advancing timeline position to ${startPosition}`);
+      this.log(timelineMessage('checkStart', startPosition));
       this.timelinePos = startPosition;
       if (interstitialEvents.length && interstitialEvents[0].cue.pre) {
         const index = schedule.findEventIndex(interstitialEvents[0].identifier);
@@ -1093,9 +1097,7 @@ export default class InterstitialsController
         }
         const resumptionTime = interstitial.resumeTime;
         if (this.timelinePos < resumptionTime) {
-          this.log(
-            `[advanceAfterAssetEnded] Advancing timeline position to ${resumptionTime}`,
-          );
+          this.log(timelineMessage('advanceAfterAssetEnded', resumptionTime));
           this.timelinePos = resumptionTime;
           if (interstitial.appendInPlace) {
             this.advanceInPlace(resumptionTime);
@@ -1401,9 +1403,7 @@ export default class InterstitialsController
         timelinePos >= scheduledItem.end
       ) {
         timelinePos = this.getPrimaryResumption(scheduledItem, index);
-        this.log(
-          `[resumePrimary] Advancing timeline position to ${timelinePos}`,
-        );
+        this.log(timelineMessage('resumePrimary', timelinePos));
         this.timelinePos = timelinePos;
       }
       this.attachPrimary(timelinePos, scheduledItem);
@@ -1484,7 +1484,7 @@ export default class InterstitialsController
     }
     if (!skipSeekToStartPosition) {
       // Set primary position to resume time
-      this.log(`[attachPrimary] Advancing timeline position to ${timelinePos}`);
+      this.log(timelineMessage('attachPrimary', timelinePos));
       this.timelinePos = timelinePos;
       this.startLoadingPrimaryAt(timelinePos, skipSeekToStartPosition);
     }
