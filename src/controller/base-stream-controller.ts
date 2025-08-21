@@ -841,10 +841,9 @@ export default class BaseStreamController
         }
       });
       this.hls.trigger(Events.KEY_LOADING, { frag });
-      if (this.fragCurrent === null) {
-        keyLoadingPromise = Promise.reject(
-          new Error(`frag load aborted, context changed in KEY_LOADING`),
-        );
+      if ((this.fragCurrent as Fragment | null) === null) {
+        this.log(`context changed in KEY_LOADING`);
+        return Promise.resolve(null);
       }
     } else if (!frag.encrypted) {
       keyLoadingPromise = this.keyLoader.loadClear(
