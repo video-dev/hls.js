@@ -9,6 +9,7 @@ import {
   isTimeoutError,
   shouldRetry,
 } from '../utils/error-helper';
+import { arrayToHex } from '../utils/hex';
 import { Logger } from '../utils/logger';
 import type { RetryConfig } from '../config';
 import type { LevelKey } from '../hls';
@@ -530,7 +531,7 @@ export default class ErrorController
           for (let i = levels.length; i--; ) {
             if (this.variantHasKey(levels[i], levelKey)) {
               this.log(
-                `Banned key found in level ${i} or a track in audio group "${levels[i].audioGroups?.join(',')}"`,
+                `Banned key found in level ${i} or audio group "${levels[i].audioGroups?.join(',')}" (${data.frag?.type} fragment) ${arrayToHex(levelKey.keyId || [])}`,
               );
               levels[i].fragmentError++;
               levels[i].loadError++;

@@ -1,6 +1,8 @@
 import { LoadError } from './fragment-loader';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { type Fragment, isMediaFragment } from '../loader/fragment';
+import { arrayToHex } from '../utils/hex';
+import { Logger } from '../utils/logger';
 import {
   getKeySystemsForConfig,
   keySystemFormatToKeySystemDomain,
@@ -20,6 +22,7 @@ import type {
   LoaderStats,
   PlaylistLevelType,
 } from '../types/loader';
+import type { ILogger } from '../utils/logger';
 import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
 export interface KeyLoaderInfo {
@@ -28,18 +31,19 @@ export interface KeyLoaderInfo {
   loader: Loader<KeyLoaderContext> | null;
   mediaKeySessionContext: MediaKeySessionContext | null;
 }
-export default class KeyLoader implements ComponentAPI {
+export default class KeyLoader extends Logger implements ComponentAPI {
   private readonly config: HlsConfig;
-  public keyUriToKeyInfo: { [keyuri: string]: KeyLoaderInfo | undefined } = {};
+  private keyIdToKeyInfo: { [keyId: string]: KeyLoaderInfo | undefined } = {};
   public emeController: EMEController | null = null;
 
-  constructor(config: HlsConfig) {
+  constructor(config: HlsConfig, logger: ILogger) {
+    super('key-loader', logger);
     this.config = config;
   }
 
   abort(type?: PlaylistLevelType) {
-    for (const uri in this.keyUriToKeyInfo) {
-      const loader = this.keyUriToKeyInfo[uri]!.loader;
+    for (const id in this.keyIdToKeyInfo) {
+      const loader = this.keyIdToKeyInfo[id]!.loader;
       if (loader) {
         if (type && type !== loader.context?.frag.type) {
           return;
@@ -50,27 +54,27 @@ export default class KeyLoader implements ComponentAPI {
   }
 
   detach() {
-    for (const uri in this.keyUriToKeyInfo) {
-      const keyInfo = this.keyUriToKeyInfo[uri]!;
+    for (const id in this.keyIdToKeyInfo) {
+      const keyInfo = this.keyIdToKeyInfo[id]!;
       // Remove cached EME keys on detach
       if (
         keyInfo.mediaKeySessionContext ||
         keyInfo.decryptdata.isCommonEncryption
       ) {
-        delete this.keyUriToKeyInfo[uri];
+        delete this.keyIdToKeyInfo[id];
       }
     }
   }
 
   destroy() {
     this.detach();
-    for (const uri in this.keyUriToKeyInfo) {
-      const loader = this.keyUriToKeyInfo[uri]!.loader;
+    for (const id in this.keyIdToKeyInfo) {
+      const loader = this.keyIdToKeyInfo[id]!.loader;
       if (loader) {
         loader.destroy();
       }
     }
-    this.keyUriToKeyInfo = {};
+    this.keyIdToKeyInfo = {};
   }
 
   createKeyLoadError(
@@ -185,23 +189,27 @@ export default class KeyLoader implements ComponentAPI {
         ),
       );
     }
-    let keyInfo = this.keyUriToKeyInfo[uri];
+    const id = getKeyId(decryptdata);
+    let keyInfo = this.keyIdToKeyInfo[id];
 
     if (keyInfo?.decryptdata.key) {
       decryptdata.key = keyInfo.decryptdata.key;
       return Promise.resolve({ frag, keyInfo });
     }
-    // Return key load promise as long as it does not have a mediakey session with an unusable key status
+    // Return key load promise once it has a mediakey session with an usable key status
     if (keyInfo?.keyLoadPromise) {
-      switch (keyInfo.mediaKeySessionContext?.keyStatus) {
-        case undefined:
-        case 'status-pending':
+      const keyStatus = keyInfo.mediaKeySessionContext?.keyStatus;
+      switch (keyStatus) {
         case 'usable':
         case 'usable-in-future':
           return keyInfo.keyLoadPromise.then((keyLoadedData) => {
             // Return the correct fragment with updated decryptdata key and loaded keyInfo
             const { keyInfo } = keyLoadedData;
             decryptdata.key = keyInfo.decryptdata.key;
+            // log key-status unblocking change for debugging only
+            // this.log(
+            //   `${frag.type} ${frag.level} key ${arrayToHex(decryptdata.keyId || [])} "${keyStatus}" session key ${keyInfo.decryptdata.keyId ? arrayToHex(keyInfo.decryptdata.keyId) : null}`,
+            // );
             return { frag, keyInfo };
           });
       }
@@ -210,7 +218,11 @@ export default class KeyLoader implements ComponentAPI {
     }
 
     // Load the key or return the loading promise
-    keyInfo = this.keyUriToKeyInfo[uri] = {
+    this.log(
+      `Loading key ${arrayToHex(decryptdata.keyId || [])} from ${frag.type} ${frag.level}`,
+    );
+
+    keyInfo = this.keyIdToKeyInfo[id] = {
       decryptdata,
       keyLoadPromise: null,
       loader: null,
@@ -218,7 +230,6 @@ export default class KeyLoader implements ComponentAPI {
     };
 
     switch (decryptdata.method) {
-      case 'ISO-23001-7':
       case 'SAMPLE-AES':
       case 'SAMPLE-AES-CENC':
       case 'SAMPLE-AES-CTR':
@@ -300,7 +311,8 @@ export default class KeyLoader implements ComponentAPI {
           networkDetails: any,
         ) => {
           const { frag, keyInfo, url: uri } = context;
-          if (!frag.decryptdata || keyInfo !== this.keyUriToKeyInfo[uri]) {
+          const id = getKeyId(keyInfo.decryptdata) || uri;
+          if (!frag.decryptdata || keyInfo !== this.keyIdToKeyInfo[id]) {
             return reject(
               this.createKeyLoadError(
                 frag,
@@ -385,9 +397,18 @@ export default class KeyLoader implements ComponentAPI {
       frag.keyLoader = null;
       keyInfo.loader = null;
     }
-    delete this.keyUriToKeyInfo[uri];
+    const id = getKeyId(keyInfo.decryptdata) || uri;
+    delete this.keyIdToKeyInfo[id];
     if (loader) {
       loader.destroy();
     }
   }
+}
+
+function getKeyId(decryptdata: LevelKey) {
+  const keyId = decryptdata.keyId;
+  if (keyId) {
+    return arrayToHex(keyId);
+  }
+  return decryptdata.uri;
 }

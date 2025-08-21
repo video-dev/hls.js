@@ -64,7 +64,8 @@ export class LevelKey implements DecryptData {
       key.encrypted === this.encrypted &&
       key.keyFormat === this.keyFormat &&
       key.keyFormatVersions.join(',') === this.keyFormatVersions.join(',') &&
-      key.iv?.join(',') === this.iv?.join(',')
+      key.iv?.join(',') === this.iv?.join(',') &&
+      key.keyId?.join(',') === this.keyId?.join(',')
     );
   }
 
@@ -84,12 +85,9 @@ export class LevelKey implements DecryptData {
           case KeySystemFormats.PLAYREADY:
           case KeySystemFormats.CLEARKEY:
             return (
-              [
-                'ISO-23001-7',
-                'SAMPLE-AES',
-                'SAMPLE-AES-CENC',
-                'SAMPLE-AES-CTR',
-              ].indexOf(this.method) !== -1
+              ['SAMPLE-AES', 'SAMPLE-AES-CENC', 'SAMPLE-AES-CTR'].indexOf(
+                this.method,
+              ) !== -1
             );
         }
       }

@@ -2985,8 +2985,8 @@ export interface KeyLoadedData {
 // Warning: (ae-missing-release-tag) "KeyLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export class KeyLoader implements ComponentAPI {
-    constructor(config: HlsConfig);
+export class KeyLoader extends Logger implements ComponentAPI {
+    constructor(config: HlsConfig, logger: ILogger);
     // (undocumented)
     abort(type?: PlaylistLevelType): void;
     // (undocumented)
@@ -3002,10 +3002,6 @@ export class KeyLoader implements ComponentAPI {
     detach(): void;
     // (undocumented)
     emeController: EMEController | null;
-    // (undocumented)
-    keyUriToKeyInfo: {
-        [keyuri: string]: KeyLoaderInfo | undefined;
-    };
     // (undocumented)
     load(frag: Fragment): Promise<KeyLoadedData>;
     // (undocumented)
