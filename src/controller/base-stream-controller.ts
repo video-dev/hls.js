@@ -24,7 +24,12 @@ import {
   getAesModeFromFullSegmentMethod,
   isFullSegmentEncryption,
 } from '../utils/encryption-methods-util';
-import { getRetryDelay } from '../utils/error-helper';
+import { getRetryDelay, offlineHttpStatus } from '../utils/error-helper';
+import {
+  addEventListener,
+  removeEventListener,
+} from '../utils/event-listener-helper';
+import { optionalSelf } from '../utils/global';
 import {
   findPart,
   getFragmentWithSN,
@@ -1879,27 +1884,44 @@ export default class BaseStreamController
     }
     // keep retrying until the limit will be reached
     const errorAction = data.errorAction;
-    const { action, flags, retryCount = 0, retryConfig } = errorAction || {};
-    const couldRetry = !!errorAction && !!retryConfig;
+    if (!errorAction) {
+      this.state = State.ERROR;
+      return;
+    }
+    const { action, flags, retryCount = 0, retryConfig } = errorAction;
+    const couldRetry = !!retryConfig;
     const retry = couldRetry && action === NetworkErrorAction.RetryRequest;
     const noAlternate =
       couldRetry &&
       !errorAction.resolved &&
       flags === ErrorActionFlags.MoveAllAlternatesMatchingHost;
-    const httpStatus = data.response?.code || 0;
+    const live = this.hls.latestLevelDetails?.live;
     if (
       !retry &&
       noAlternate &&
       isMediaFragment(frag) &&
       !frag.endList &&
-      httpStatus !== 0
+      live
     ) {
       this.resetFragmentErrors(filterType);
       this.treatAsGap(frag);
       errorAction.resolved = true;
     } else if ((retry || noAlternate) && retryCount < retryConfig.maxNumRetry) {
+      const offlineStatus = offlineHttpStatus(data.response?.code);
       this.resetStartWhenNotLoaded(this.levelLastLoaded);
       const delay = getRetryDelay(retryConfig, retryCount);
+      errorAction.resolved = true;
+      this.retryDate = self.performance.now() + delay;
+      this.state = State.FRAG_LOADING_WAITING_RETRY;
+      if (offlineStatus) {
+        this.log(`Waiting for connection (offline)`);
+        this.retryDate = Infinity;
+        data.reason = 'offline';
+        if (optionalSelf) {
+          addEventListener(optionalSelf, 'online', this.retry);
+        }
+        return;
+      }
       this.warn(
         `Fragment ${frag.sn} of ${filterType} ${frag.level} errored with ${
           data.details
@@ -1907,10 +1929,7 @@ export default class BaseStreamController
           retryConfig.maxNumRetry
         } in ${delay}ms`,
       );
-      errorAction.resolved = true;
-      this.retryDate = self.performance.now() + delay;
-      this.state = State.FRAG_LOADING_WAITING_RETRY;
-    } else if (retryConfig && errorAction) {
+    } else if (retryConfig) {
       this.resetFragmentErrors(filterType);
       if (retryCount < retryConfig.maxNumRetry) {
         // Network retry is skipped when level switch is preferred
@@ -1934,6 +1953,15 @@ export default class BaseStreamController
     // Perform next async tick sooner to speed up error action resolution
     this.tickImmediate();
   }
+
+  private retry = () => {
+    this.log(`Connection restored (online)`);
+    if (optionalSelf) {
+      removeEventListener(optionalSelf, 'online', this.retry);
+    }
+    this.retryDate = self.performance.now();
+    this.tick();
+  };
 
   protected reduceLengthAndFlushBuffer(data: ErrorData): boolean {
     // if in appending state
