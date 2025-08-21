@@ -206,10 +206,6 @@ export default class KeyLoader extends Logger implements ComponentAPI {
             // Return the correct fragment with updated decryptdata key and loaded keyInfo
             const { keyInfo } = keyLoadedData;
             decryptdata.key = keyInfo.decryptdata.key;
-            // log key-status unblocking change for debugging only
-            // this.log(
-            //   `${frag.type} ${frag.level} key ${arrayToHex(decryptdata.keyId || [])} "${keyStatus}" session key ${keyInfo.decryptdata.keyId ? arrayToHex(keyInfo.decryptdata.keyId) : null}`,
-            // );
             return { frag, keyInfo };
           });
       }

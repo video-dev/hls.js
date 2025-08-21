@@ -496,7 +496,7 @@ export default class ErrorController
       return;
     }
     const { flags } = errorAction;
-    let nextAutoLevel = errorAction.nextAutoLevel;
+    const nextAutoLevel = errorAction.nextAutoLevel;
 
     switch (flags) {
       case ErrorActionFlags.None:
@@ -526,26 +526,19 @@ export default class ErrorController
         if (levelKey) {
           // Penalize all levels with key
           const levels = this.hls.levels;
-          let levelIndex = hls.loadLevel;
-          const removeLevels: number[] = [];
           for (let i = levels.length; i--; ) {
             if (this.variantHasKey(levels[i], levelKey)) {
               this.log(
-                `Banned key found in level ${i} or audio group "${levels[i].audioGroups?.join(',')}" (${data.frag?.type} fragment) ${arrayToHex(levelKey.keyId || [])}`,
+                `Banned key found in level ${i} (${levels[i].bitrate}bps) or audio group "${levels[i].audioGroups?.join(',')}" (${data.frag?.type} fragment) ${arrayToHex(levelKey.keyId || [])}`,
               );
               levels[i].fragmentError++;
               levels[i].loadError++;
-              levelIndex = i;
-              removeLevels.unshift(i);
-            }
-          }
-          const switchAction = this.getLevelSwitchAction(data, levelIndex);
-          nextAutoLevel = switchAction.nextAutoLevel;
-          for (let i = removeLevels.length; i--; ) {
-            if (nextAutoLevel !== i) {
               this.log(`Removing level ${i} with key error (${data.error})`);
               this.hls.removeLevel(i);
             }
+          }
+          if (levels.length) {
+            errorAction.resolved = true;
           }
         }
         break;

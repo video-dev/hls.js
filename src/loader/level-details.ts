@@ -97,7 +97,7 @@ export class LevelDetails {
         frag.setKeyFormat(levelKey.keyFormat as KeySystemFormats);
         decryptdata = frag.decryptdata;
       }
-      return decryptdata && levelKey.matches(decryptdata);
+      return !!decryptdata && levelKey.matches(decryptdata);
     });
   }
 

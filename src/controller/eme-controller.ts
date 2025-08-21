@@ -55,9 +55,9 @@ interface KeySystemAccessPromises {
 export interface MediaKeySessionContext {
   keySystem: KeySystems;
   mediaKeys: MediaKeys;
-  decryptdata: LevelKey;
+  decryptdata: LevelKey; // FIXME: LevelKey has a URI which should be bound to the session, but is dependent one KeyId specifically. Session context should be allowed to adopt multiple level keys.
   mediaKeysSession: MediaKeySession;
-  keyStatus: MediaKeyStatus;
+  keyStatus: MediaKeyStatus; // FIXME: MediaKeySession can manage multiple keys with each with its own status
   licenseXhr?: XMLHttpRequest;
   _onmessage?: (this: MediaKeySession, ev: MediaKeyMessageEvent) => any;
   _onkeystatuseschange?: (this: MediaKeySession, ev: Event) => any;
@@ -376,7 +376,7 @@ class EMEController extends Logger implements ComponentAPI {
   ): Promise<void> {
     const keySession = mediaKeySessionContext.mediaKeysSession;
     this.log(
-      `Updating key-session "${keySession.sessionId}" for keyID ${arrayToHex(
+      `Updating key-session "${keySession.sessionId}" for keyId ${arrayToHex(
         mediaKeySessionContext.decryptdata.keyId || [],
       )}
       } (data length: ${data.byteLength})`,
@@ -791,7 +791,7 @@ class EMEController extends Logger implements ComponentAPI {
         return;
       }
       const initialStatus = context.keyStatus;
-      this.onKeyStatusChange(context, licenseStatus);
+      this.onKeyStatusChange(context);
       const status = context.keyStatus;
       if (status !== initialStatus) {
         licenseStatus.emit('keyStatus', status, context);
@@ -873,10 +873,7 @@ class EMEController extends Logger implements ComponentAPI {
       });
   }
 
-  private onKeyStatusChange(
-    mediaKeySessionContext: MediaKeySessionContext,
-    licenseStatus: EventEmitter<string | symbol, any>,
-  ) {
+  private onKeyStatusChange(mediaKeySessionContext: MediaKeySessionContext) {
     const sessionLevelKeyId = arrayToHex(
       new Uint8Array(mediaKeySessionContext.decryptdata.keyId || []),
     );
@@ -1371,10 +1368,11 @@ class EMEController extends Logger implements ComponentAPI {
   private removeSession(
     mediaKeySessionContext: MediaKeySessionContext,
   ): Promise<void> | void {
-    const { mediaKeysSession, licenseXhr } = mediaKeySessionContext;
-    if (mediaKeysSession as any) {
+    const { mediaKeysSession, licenseXhr, decryptdata } =
+      mediaKeySessionContext;
+    if (mediaKeysSession as MediaKeySession | undefined) {
       this.log(
-        `Remove licenses and keys and close session ${mediaKeysSession.sessionId}`,
+        `Remove licenses and keys and close session "${mediaKeysSession.sessionId}" keyId: ${arrayToHex((decryptdata as LevelKey | undefined)?.keyId || [])}`,
       );
       if (mediaKeySessionContext._onmessage) {
         mediaKeysSession.removeEventListener(

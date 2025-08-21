@@ -2038,8 +2038,8 @@ export default class BaseStreamController
   }
 
   protected resetWhenMissingContext(chunkMeta: ChunkMetadata | Fragment) {
-    this.warn(
-      `The loading context changed while buffering fragment ${chunkMeta.sn} of ${this.playlistLabel()} ${chunkMeta.level}. This chunk will not be buffered.`,
+    this.log(
+      `Loading context changed while buffering sn ${chunkMeta.sn} of ${this.playlistLabel()} ${chunkMeta.level === -1 ? '<removed>' : chunkMeta.level}. This chunk will not be buffered.`,
     );
     this.removeUnbufferedFrags();
     this.resetStartWhenNotLoaded(this.levelLastLoaded);
