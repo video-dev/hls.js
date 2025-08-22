@@ -19,19 +19,22 @@ const testStreams = require('../tests/test-streams');
 const defaultTestStreamUrl = testStreams[Object.keys(testStreams)[0]].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
 
-let demoConfig = getURLParam('demoConfig', null);
-if (demoConfig) {
-  demoConfig = JSON.parse(atob(demoConfig));
-} else {
-  demoConfig = {};
-}
-
 const hlsjsDefaults = {
   debug: true,
   enableWorker: true,
   lowLatencyMode: true,
   backBufferLength: 60 * 1.5,
 };
+
+let demoConfig = hlsjsDefaults;
+const demoConfigParam = getURLParam('demoConfig', null);
+if (demoConfigParam) {
+  try {
+    demoConfig = JSON.parse(atob(demoConfigParam));
+  } catch (error) {
+    console.warn('Failed to parse demoConfig:', error);
+  }
+}
 
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
 let autoRecoverError = getDemoConfigPropOrDefault('autoRecoverError', true);
@@ -1484,14 +1487,14 @@ function getURLParam(sParam, defaultValue) {
 }
 
 function onDemoConfigChanged(firstLoad) {
-  demoConfig = {
+  demoConfig = $.extend(demoConfig, {
     enableStreaming,
     autoRecoverError,
     stopOnStall,
     dumpfMP4,
     levelCapping,
     limitMetrics,
-  };
+  });
 
   if (configPersistenceEnabled) {
     persistEditorValue();
@@ -1508,6 +1511,7 @@ function onDemoConfigChanged(firstLoad) {
   if (!firstLoad && self.location.href !== permalinkURL) {
     self.history.pushState(null, null, permalinkURL);
   }
+  updateConfigEditorValue(demoConfig);
 }
 
 function onConfigPersistenceChanged(event) {
@@ -1565,7 +1569,7 @@ function setupConfigEditor() {
   configEditor.setTheme('ace/theme/github');
   configEditor.session.setMode('ace/mode/json');
 
-  const contents = hlsjsDefaults;
+  const contents = demoConfig;
   const shouldRestorePersisted =
     JSON.parse(localStorage.getItem(STORAGE_KEYS.Editor_Persistence)) === true;
 
@@ -1736,6 +1740,7 @@ function updateConfigEditorValue(obj) {
 }
 
 function applyConfigEditorValue() {
+  demoConfig = getEditorValue({ parse: true });
   onDemoConfigChanged();
   loadSelectedStream();
 }
