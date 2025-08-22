@@ -1907,11 +1907,11 @@ export default class BaseStreamController
       errorAction.resolved = true;
     } else if ((retry || noAlternate) && retryCount < retryConfig.maxNumRetry) {
       const offlineStatus = offlineHttpStatus(data.response?.code);
-      this.resetStartWhenNotLoaded();
       const delay = getRetryDelay(retryConfig, retryCount);
-      errorAction.resolved = true;
+      this.resetStartWhenNotLoaded();
       this.retryDate = self.performance.now() + delay;
       this.state = State.FRAG_LOADING_WAITING_RETRY;
+      errorAction.resolved = true;
       if (offlineStatus) {
         this.log(`Waiting for connection (offline)`);
         this.retryDate = Infinity;
