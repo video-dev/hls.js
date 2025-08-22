@@ -215,17 +215,7 @@ export default class StreamController
         break;
       }
       case State.FRAG_LOADING_WAITING_RETRY:
-        {
-          const now = self.performance.now();
-          const retryDate = this.retryDate;
-          // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
-          if (!retryDate || now >= retryDate || this.media?.seeking) {
-            const { levels, level } = this;
-            const currentLevel = levels?.[level];
-            this.resetStartWhenNotLoaded(currentLevel || null);
-            this.state = State.IDLE;
-          }
-        }
+        this.checkRetryDate();
         break;
       default:
         break;
