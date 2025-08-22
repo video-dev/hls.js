@@ -42,7 +42,7 @@ describe('SubtitleStreamController', function () {
     hls = new Hls({});
     mediaMock.currentTime = 0;
     fragmentTracker = new FragmentTracker(hls);
-    keyLoader = new KeyLoader(hls.config);
+    keyLoader = new KeyLoader(hls.config, hls.logger);
 
     subtitleStreamController = new SubtitleStreamController(
       hls,

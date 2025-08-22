@@ -1189,8 +1189,8 @@ export type EMEControllerConfig = {
     licenseResponseCallback?: (this: Hls, xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext) => ArrayBuffer;
     emeEnabled: boolean;
     widevineLicenseUrl?: string;
-    drmSystems: DRMSystemsConfiguration;
-    drmSystemOptions: DRMSystemOptions;
+    drmSystems: DRMSystemsConfiguration | undefined;
+    drmSystemOptions: DRMSystemOptions | undefined;
     requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
     requireKeySystemAccessOnStart: boolean;
 };
@@ -1204,9 +1204,11 @@ export const enum ErrorActionFlags {
     // (undocumented)
     MoveAllAlternatesMatchingHost = 1,
     // (undocumented)
+    MoveAllAlternatesMatchingKey = 4,
+    // (undocumented)
     None = 0,
     // (undocumented)
-    SwitchToSDR = 4
+    SwitchToSDR = 8
 }
 
 // Warning: (ae-missing-release-tag) "ErrorController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1238,6 +1240,8 @@ export interface ErrorData {
     chunkMeta?: ChunkMetadata;
     // (undocumented)
     context?: PlaylistLoaderContext;
+    // (undocumented)
+    decryptdata?: LevelKey;
     // (undocumented)
     details: ErrorDetails;
     // @deprecated (undocumented)
@@ -2981,8 +2985,8 @@ export interface KeyLoadedData {
 // Warning: (ae-missing-release-tag) "KeyLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export class KeyLoader implements ComponentAPI {
-    constructor(config: HlsConfig);
+export class KeyLoader extends Logger implements ComponentAPI {
+    constructor(config: HlsConfig, logger: ILogger);
     // (undocumented)
     abort(type?: PlaylistLevelType): void;
     // (undocumented)
@@ -2998,10 +3002,6 @@ export class KeyLoader implements ComponentAPI {
     detach(): void;
     // (undocumented)
     emeController: EMEController | null;
-    // (undocumented)
-    keyUriToKeyInfo: {
-        [keyuri: string]: KeyLoaderInfo;
-    };
     // (undocumented)
     load(frag: Fragment): Promise<KeyLoadedData>;
     // (undocumented)
@@ -3277,6 +3277,8 @@ export class LevelDetails {
     fragments: MediaFragment[];
     // (undocumented)
     get fragmentStart(): number;
+    // (undocumented)
+    hasKey(levelKey: LevelKey): boolean;
     // (undocumented)
     get hasProgramDateTime(): boolean;
     // (undocumented)
