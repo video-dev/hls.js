@@ -453,7 +453,7 @@ export default class BaseStreamController
     }
     super.onHandlerDestroying();
     // @ts-ignore
-    this.hls = this.onMediaSeeking = this.onMediaEnded = this.onOnline = null;
+    this.hls = this.onMediaSeeking = this.onMediaEnded = null;
   }
 
   protected onHandlerDestroyed() {
