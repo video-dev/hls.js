@@ -1235,7 +1235,7 @@ export default class InterstitialsController
     if (!schedule) {
       return;
     }
-    const scheduledItem = index >= 0 ? scheduleItems[index] : null;
+    const scheduledItem = scheduleItems[index] || null;
     const media = this.primaryMedia;
     // Cleanup out of range Interstitials
     const playerQueue = this.playerQueue;
@@ -1354,7 +1354,7 @@ export default class InterstitialsController
       if (this.shouldPlay) {
         playWithCatch(player.media);
       }
-    } else if (scheduledItem !== null) {
+    } else if (scheduledItem) {
       this.resumePrimary(scheduledItem, index, currentItem);
       if (this.shouldPlay) {
         playWithCatch(this.hls.media);
