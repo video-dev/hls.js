@@ -29,7 +29,6 @@ import {
   addEventListener,
   removeEventListener,
 } from '../utils/event-listener-helper';
-import { optionalSelf } from '../utils/global';
 import {
   findPart,
   getFragmentWithSN,
@@ -314,9 +313,6 @@ export default class BaseStreamController
     // remove video listeners
     removeEventListener(media, 'seeking', this.onMediaSeeking);
     removeEventListener(media, 'ended', this.onMediaEnded);
-    if (optionalSelf) {
-      removeEventListener(optionalSelf, 'online', this.onOnline);
-    }
 
     if (this.keyLoader && !transferringMedia) {
       this.keyLoader.detach();
@@ -430,9 +426,7 @@ export default class BaseStreamController
       }
     }
 
-    if (this.state === State.FRAG_LOADING_WAITING_RETRY) {
-      this.retryDate = self.performance.now();
-    } else if (noFowardBuffer && this.state === State.IDLE) {
+    if (noFowardBuffer && this.state === State.IDLE) {
       // Async tick to speed up processing
       this.tickImmediate();
     }
@@ -1913,7 +1907,7 @@ export default class BaseStreamController
       errorAction.resolved = true;
     } else if ((retry || noAlternate) && retryCount < retryConfig.maxNumRetry) {
       const offlineStatus = offlineHttpStatus(data.response?.code);
-      this.resetStartWhenNotLoaded(this.levelLastLoaded);
+      this.resetStartWhenNotLoaded();
       const delay = getRetryDelay(retryConfig, retryCount);
       errorAction.resolved = true;
       this.retryDate = self.performance.now() + delay;
@@ -1922,9 +1916,6 @@ export default class BaseStreamController
         this.log(`Waiting for connection (offline)`);
         this.retryDate = Infinity;
         data.reason = 'offline';
-        if (optionalSelf) {
-          addEventListener(optionalSelf, 'online', this.onOnline);
-        }
         return;
       }
       this.warn(
@@ -1959,14 +1950,23 @@ export default class BaseStreamController
     this.tickImmediate();
   }
 
-  private onOnline = () => {
-    this.log(`Connection restored (online)`);
-    if (optionalSelf) {
-      removeEventListener(optionalSelf, 'online', this.onOnline);
+  protected checkRetryDate() {
+    const now = self.performance.now();
+    const retryDate = this.retryDate;
+    // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
+    const waitingForConnection = retryDate === Infinity;
+    if (
+      !retryDate ||
+      now >= retryDate ||
+      (waitingForConnection && !offlineHttpStatus(0))
+    ) {
+      if (waitingForConnection) {
+        this.log(`Connection restored (online)`);
+      }
+      this.resetStartWhenNotLoaded();
+      this.state = State.IDLE;
     }
-    this.retryDate = self.performance.now();
-    this.tickImmediate();
-  };
+  }
 
   protected reduceLengthAndFlushBuffer(data: ErrorData): boolean {
     // if in appending state
@@ -2047,11 +2047,12 @@ export default class BaseStreamController
     }
   }
 
-  protected resetStartWhenNotLoaded(level: Level | null): void {
+  private resetStartWhenNotLoaded() {
     // if loadedmetadata is not set, it means that first frag request failed
     // in that case, reset startFragRequested flag
     if (!this.hls.hasEnoughToStart) {
       this.startFragRequested = false;
+      const level = this.levelLastLoaded;
       const details = level ? level.details : null;
       if (details?.live) {
         // Update the start position and return to IDLE to recover live start
@@ -2070,7 +2071,7 @@ export default class BaseStreamController
       `The loading context changed while buffering fragment ${chunkMeta.sn} of ${this.playlistLabel()} ${chunkMeta.level}. This chunk will not be buffered.`,
     );
     this.removeUnbufferedFrags();
-    this.resetStartWhenNotLoaded(this.levelLastLoaded);
+    this.resetStartWhenNotLoaded();
     this.resetLoadingState();
   }
 
@@ -2205,7 +2206,7 @@ export default class BaseStreamController
         this.transmuxer.destroy();
         this.transmuxer = null;
       }
-      this.resetStartWhenNotLoaded(this.levelLastLoaded);
+      this.resetStartWhenNotLoaded();
       this.resetLoadingState();
     }
   }
