@@ -289,10 +289,8 @@ export default class BaseStreamController
     data: MediaAttachedData,
   ) {
     const media = (this.media = this.mediaBuffer = data.media);
-    media.removeEventListener('seeking', this.onMediaSeeking);
-    media.removeEventListener('ended', this.onMediaEnded);
-    media.addEventListener('seeking', this.onMediaSeeking);
-    media.addEventListener('ended', this.onMediaEnded);
+    addEventListener(media, 'seeking', this.onMediaSeeking);
+    addEventListener(media, 'ended', this.onMediaEnded);
     const config = this.config;
     if (this.levels && config.autoStartLoad && this.state === State.STOPPED) {
       this.startLoad(config.startPosition);
@@ -314,8 +312,11 @@ export default class BaseStreamController
     }
 
     // remove video listeners
-    media.removeEventListener('seeking', this.onMediaSeeking);
-    media.removeEventListener('ended', this.onMediaEnded);
+    removeEventListener(media, 'seeking', this.onMediaSeeking);
+    removeEventListener(media, 'ended', this.onMediaEnded);
+    if (optionalSelf) {
+      removeEventListener(optionalSelf, 'online', this.onOnline);
+    }
 
     if (this.keyLoader && !transferringMedia) {
       this.keyLoader.detach();
@@ -429,8 +430,12 @@ export default class BaseStreamController
       }
     }
 
-    // Async tick to speed up processing
-    this.tickImmediate();
+    if (this.state === State.FRAG_LOADING_WAITING_RETRY) {
+      this.retryDate = self.performance.now();
+    } else if (noFowardBuffer && this.state === State.IDLE) {
+      // Async tick to speed up processing
+      this.tickImmediate();
+    }
   };
 
   protected onMediaEnded = () => {
@@ -454,7 +459,7 @@ export default class BaseStreamController
     }
     super.onHandlerDestroying();
     // @ts-ignore
-    this.hls = this.onMediaSeeking = this.onMediaEnded = null;
+    this.hls = this.onMediaSeeking = this.onMediaEnded = this.onOnline = null;
   }
 
   protected onHandlerDestroyed() {
@@ -1918,7 +1923,7 @@ export default class BaseStreamController
         this.retryDate = Infinity;
         data.reason = 'offline';
         if (optionalSelf) {
-          addEventListener(optionalSelf, 'online', this.retry);
+          addEventListener(optionalSelf, 'online', this.onOnline);
         }
         return;
       }
@@ -1954,13 +1959,13 @@ export default class BaseStreamController
     this.tickImmediate();
   }
 
-  private retry = () => {
+  private onOnline = () => {
     this.log(`Connection restored (online)`);
     if (optionalSelf) {
-      removeEventListener(optionalSelf, 'online', this.retry);
+      removeEventListener(optionalSelf, 'online', this.onOnline);
     }
     this.retryDate = self.performance.now();
-    this.tick();
+    this.tickImmediate();
   };
 
   protected reduceLengthAndFlushBuffer(data: ErrorData): boolean {

@@ -258,11 +258,7 @@ class AudioStreamController
         const now = performance.now();
         const retryDate = this.retryDate;
         // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
-        if (
-          !retryDate ||
-          now >= retryDate ||
-          (this.media?.seeking && retryDate !== Infinity)
-        ) {
+        if (!retryDate || now >= retryDate) {
           const { levels, trackId } = this;
           this.log('RetryDate reached, switch back to IDLE state');
           this.resetStartWhenNotLoaded(levels?.[trackId] || null);
