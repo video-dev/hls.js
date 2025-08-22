@@ -392,6 +392,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
+    protected checkRetryDate(): void;
+    // (undocumented)
     protected clearTrackerIfNeeded(frag: Fragment): void;
     // (undocumented)
     protected config: HlsConfig;
@@ -527,8 +529,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected resetFragmentLoading(frag: Fragment): void;
     // (undocumented)
     protected resetLoadingState(): void;
-    // (undocumented)
-    protected resetStartWhenNotLoaded(level: Level | null): void;
     // (undocumented)
     protected resetTransmuxer(): void;
     // (undocumented)

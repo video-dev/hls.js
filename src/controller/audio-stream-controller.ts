@@ -255,15 +255,7 @@ class AudioStreamController
         break;
       }
       case State.FRAG_LOADING_WAITING_RETRY: {
-        const now = performance.now();
-        const retryDate = this.retryDate;
-        // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
-        if (!retryDate || now >= retryDate || this.media?.seeking) {
-          const { levels, trackId } = this;
-          this.log('RetryDate reached, switch back to IDLE state');
-          this.resetStartWhenNotLoaded(levels?.[trackId] || null);
-          this.state = State.IDLE;
-        }
+        this.checkRetryDate();
         break;
       }
       case State.WAITING_INIT_PTS: {
