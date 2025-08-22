@@ -61,7 +61,7 @@ class MediaKeySessionMock extends EventEmitter {
         messageType: 'license-request',
         message: new Uint8Array(0),
       });
-      this.keyStatuses.set(new Uint8Array(0), 'usable');
+      this.keyStatuses.set(new Uint8Array(16), 'usable');
       this.emit('keystatuseschange', {});
     });
   }
@@ -373,51 +373,51 @@ describe('EMEController', function () {
       drmSystems: {
         'com.apple.fps': {
           serverCertificateUrl: 'https://example.com/certificate.cer',
+          licenseUrl: 'https://example.com/license',
         },
       },
     });
 
-    let xhrInstance;
     sinonFakeXMLHttpRequestStatic.onCreate = (
       xhr: sinon.SinonFakeXMLHttpRequest,
     ) => {
-      xhrInstance = xhr;
-      Promise.resolve().then(() => {
-        (xhr as any).response = new Uint8Array();
-        xhr.respond(200, {}, '');
-      });
+      self.setTimeout(() => {
+        xhr.respond(200, {}, 'abcdef');
+      }, 0);
     };
 
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
       media: media as any as HTMLMediaElement,
     });
-    emeController.loadKey({
-      frag: {},
-      keyInfo: {
-        decryptdata: {
-          encrypted: true,
-          method: 'SAMPLE-AES',
-          uri: 'data://key-uri',
-          keyFormatVersions: [1],
-          keyId: new Uint8Array(16),
-          pssh: new Uint8Array(16),
+    return emeController
+      .loadKey({
+        frag: {},
+        keyInfo: {
+          decryptdata: {
+            encrypted: true,
+            method: 'SAMPLE-AES',
+            uri: 'data://key-uri',
+            keyFormatVersions: [1],
+            keyId: new Uint8Array(16),
+            pssh: new Uint8Array(16),
+          },
         },
-      },
-    } as any);
-
-    expect(
-      emeController.keyIdToKeySessionPromise[
-        '00000000000000000000000000000000'
-      ],
-    ).to.be.a('Promise');
-    return emeController.keyIdToKeySessionPromise[
-      '00000000000000000000000000000000'
-    ].finally(() => {
-      expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
-      expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
-        xhrInstance.response,
-      );
-    });
+      } as any)
+      .then(() => {
+        expect(
+          emeController.keyIdToKeySessionPromise[
+            '00000000000000000000000000000000'
+          ],
+        ).to.be.a('Promise');
+        return emeController.keyIdToKeySessionPromise[
+          '00000000000000000000000000000000'
+        ].finally(() => {
+          expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
+          expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
+            sinon.match({ byteLength: 6 }),
+          );
+        });
+      });
   });
 
   it('should fetch the server certificate and trigger update failed error', function () {

@@ -167,13 +167,14 @@ function createMediaKeySystemConfigurations(
 }
 
 export function isPersistentSessionType(
-  drmSystemOptions: DRMSystemOptions,
+  drmSystemOptions: DRMSystemOptions | undefined,
 ): boolean {
   return (
-    drmSystemOptions.sessionType === 'persistent-license' ||
-    !!drmSystemOptions.sessionTypes?.some(
-      (type) => type === 'persistent-license',
-    )
+    !!drmSystemOptions &&
+    (drmSystemOptions.sessionType === 'persistent-license' ||
+      !!drmSystemOptions.sessionTypes?.some(
+        (type) => type === 'persistent-license',
+      ))
   );
 }
 

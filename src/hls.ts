@@ -233,7 +233,7 @@ export default class Hls implements HlsEventEmitter {
     ));
 
     const id3TrackController = new ID3TrackController(this);
-    const keyLoader = new KeyLoader(this.config);
+    const keyLoader = new KeyLoader(this.config, this.logger);
     const streamController = (this.streamController = new StreamController(
       this,
       fragmentTracker,

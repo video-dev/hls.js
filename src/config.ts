@@ -119,8 +119,8 @@ export type EMEControllerConfig = {
   ) => ArrayBuffer;
   emeEnabled: boolean;
   widevineLicenseUrl?: string;
-  drmSystems: DRMSystemsConfiguration;
-  drmSystemOptions: DRMSystemOptions;
+  drmSystems: DRMSystemsConfiguration | undefined;
+  drmSystemOptions: DRMSystemOptions | undefined;
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
   requireKeySystemAccessOnStart: boolean;
 };

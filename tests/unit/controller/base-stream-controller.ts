@@ -42,7 +42,7 @@ describe('BaseStreamController', function () {
     baseStreamController = new BaseStreamController(
       hls,
       fragmentTracker,
-      new KeyLoader(hlsDefaultConfig),
+      new KeyLoader(hlsDefaultConfig, hls.logger),
     ) as unknown as BaseStreamControllerTestable;
     bufferInfo = {
       len: 1,

@@ -1,5 +1,5 @@
 import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
-import Hex from './hex';
+import { arrayToHex } from './hex';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { logger } from '../utils/logger';
 import type { KeySystemIds } from './mediakeys-helper';
@@ -596,7 +596,7 @@ export function patchEncyptionData(
               logger.log(
                 `[eme] Patching keyId in 'enc${
                   isAudio ? 'a' : 'v'
-                }>sinf>>tenc' box: ${Hex.hexDump(tencKeyId)} -> ${Hex.hexDump(
+                }>sinf>>tenc' box: ${arrayToHex(tencKeyId)} -> ${arrayToHex(
                   keyId,
                 )}`,
               );
@@ -1401,7 +1401,7 @@ function parsePssh(view: DataView<ArrayBuffer>): PsshData | PsshInvalidResult {
     return { offset, size };
   }
   const buffer = view.buffer;
-  const systemId = Hex.hexDump(
+  const systemId = arrayToHex(
     new Uint8Array(buffer, offset + 12, 16),
   ) as KeySystemIds;
 

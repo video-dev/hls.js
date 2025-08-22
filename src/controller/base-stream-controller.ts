@@ -841,10 +841,9 @@ export default class BaseStreamController
         }
       });
       this.hls.trigger(Events.KEY_LOADING, { frag });
-      if (this.fragCurrent === null) {
-        keyLoadingPromise = Promise.reject(
-          new Error(`frag load aborted, context changed in KEY_LOADING`),
-        );
+      if ((this.fragCurrent as Fragment | null) === null) {
+        this.log(`context changed in KEY_LOADING`);
+        return Promise.resolve(null);
       }
     } else if (!frag.encrypted) {
       keyLoadingPromise = this.keyLoader.loadClear(
@@ -1040,11 +1039,16 @@ export default class BaseStreamController
     );
   }
 
-  private handleFragLoadError(error: LoadError | Error) {
+  private handleFragLoadError(
+    error: LoadError | Error | (Error & { data: ErrorData }),
+  ) {
     if ('data' in error) {
       const data = error.data;
-      if ((data as any) && data.details === ErrorDetails.INTERNAL_ABORTED) {
+      if (data.frag && data.details === ErrorDetails.INTERNAL_ABORTED) {
         this.handleFragLoadAborted(data.frag, data.part);
+      } else if (data.frag && data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
+        data.frag.abortRequests();
+        this.resetFragmentLoading(data.frag);
       } else {
         this.hls.trigger(Events.ERROR, data as ErrorData);
       }
@@ -1826,7 +1830,7 @@ export default class BaseStreamController
     return pos;
   }
 
-  private handleFragLoadAborted(frag: Fragment, part: Part | undefined) {
+  private handleFragLoadAborted(frag: Fragment, part: Part | null | undefined) {
     if (
       this.transmuxer &&
       frag.type === this.playlistType &&
@@ -2033,8 +2037,8 @@ export default class BaseStreamController
   }
 
   protected resetWhenMissingContext(chunkMeta: ChunkMetadata | Fragment) {
-    this.warn(
-      `The loading context changed while buffering fragment ${chunkMeta.sn} of ${this.playlistLabel()} ${chunkMeta.level}. This chunk will not be buffered.`,
+    this.log(
+      `Loading context changed while buffering sn ${chunkMeta.sn} of ${this.playlistLabel()} ${chunkMeta.level === -1 ? '<removed>' : chunkMeta.level}. This chunk will not be buffered.`,
     );
     this.removeUnbufferedFrags();
     this.resetStartWhenNotLoaded(this.levelLastLoaded);
