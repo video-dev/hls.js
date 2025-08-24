@@ -1185,26 +1185,34 @@ export default class StreamController
 
   private _loadBitrateTestFrag(fragment: Fragment, level: Level) {
     fragment.bitrateTest = true;
-    this._doFragLoad(fragment, level).then((data) => {
-      const { hls } = this;
-      const frag = data?.frag;
-      if (!frag || this.fragContextChanged(frag)) {
-        return;
-      }
-      level.fragmentError = 0;
-      this.state = State.IDLE;
-      this.startFragRequested = false;
-      this.bitrateTest = false;
-      const stats = frag.stats;
-      // Bitrate tests fragments are neither parsed nor buffered
-      stats.parsing.start =
-        stats.parsing.end =
-        stats.buffering.start =
-        stats.buffering.end =
-          self.performance.now();
-      hls.trigger(Events.FRAG_LOADED, data as FragLoadedData);
-      frag.bitrateTest = false;
-    });
+    this._doFragLoad(fragment, level)
+      .then((data) => {
+        const { hls } = this;
+        const frag = data?.frag;
+        if (!frag || this.fragContextChanged(frag)) {
+          return;
+        }
+        level.fragmentError = 0;
+        this.state = State.IDLE;
+        this.startFragRequested = false;
+        this.bitrateTest = false;
+        const stats = frag.stats;
+        // Bitrate tests fragments are neither parsed nor buffered
+        stats.parsing.start =
+          stats.parsing.end =
+          stats.buffering.start =
+          stats.buffering.end =
+            self.performance.now();
+        hls.trigger(Events.FRAG_LOADED, data as FragLoadedData);
+        frag.bitrateTest = false;
+      })
+      .catch((reason) => {
+        if (this.state === State.STOPPED || this.state === State.ERROR) {
+          return;
+        }
+        this.warn(reason);
+        this.resetFragmentLoading(fragment);
+      });
   }
 
   private _handleTransmuxComplete(transmuxResult: TransmuxerResult) {

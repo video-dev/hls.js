@@ -263,6 +263,7 @@ export default class LevelController extends BasePlaylistController {
 
     if (levels.length === 0) {
       // Dispatch error after MANIFEST_LOADED is done propagating
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       Promise.resolve().then(() => {
         if (this.hls) {
           let message = 'no level with compatible codecs found in manifest';
