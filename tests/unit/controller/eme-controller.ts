@@ -469,17 +469,21 @@ describe('EMEController', function () {
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
       media: media as any as HTMLMediaElement,
     });
-    emeController.loadKey({
-      frag: {},
-      keyInfo: {
-        decryptdata: {
-          encrypted: true,
-          method: 'SAMPLE-AES',
-          uri: 'data://key-uri',
-          keyId: new Uint8Array(16),
+    emeController
+      .loadKey({
+        frag: {},
+        keyInfo: {
+          decryptdata: {
+            encrypted: true,
+            method: 'SAMPLE-AES',
+            uri: 'data://key-uri',
+            keyId: new Uint8Array(16),
+          },
         },
-      },
-    } as any);
+      } as any)
+      .catch((error) => {
+        // expected?
+      });
 
     expect(
       emeController.keyIdToKeySessionPromise[
@@ -545,17 +549,21 @@ describe('EMEController', function () {
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
       media: media as any as HTMLMediaElement,
     });
-    emeController.loadKey({
-      frag: {},
-      keyInfo: {
-        decryptdata: {
-          encrypted: true,
-          method: 'SAMPLE-AES',
-          uri: 'data://key-uri',
-          keyId: new Uint8Array(16),
+    emeController
+      .loadKey({
+        frag: {},
+        keyInfo: {
+          decryptdata: {
+            encrypted: true,
+            method: 'SAMPLE-AES',
+            uri: 'data://key-uri',
+            keyId: new Uint8Array(16),
+          },
         },
-      },
-    } as any);
+      } as any)
+      .catch((error) => {
+        // expected?
+      });
 
     expect(
       emeController.keyIdToKeySessionPromise[

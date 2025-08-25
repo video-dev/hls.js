@@ -357,6 +357,7 @@ class EMEController extends Logger implements ComponentAPI {
     } else {
       this.warn(`Could not renew expired session. Missing pssh initData.`);
     }
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     this.removeSession(mediaKeySessionContext);
   }
 
@@ -407,7 +408,7 @@ class EMEController extends Logger implements ComponentAPI {
     keySystemsToAttempt: KeySystems[],
   ): Promise<KeySystemFormats> {
     return new Promise((resolve, reject) => {
-      return this.getKeySystemSelectionPromise(keySystemsToAttempt)
+      this.getKeySystemSelectionPromise(keySystemsToAttempt)
         .then(({ keySystem }) => {
           const keySystemFormat = keySystemDomainToKeySystemFormat(keySystem);
           if (keySystemFormat) {
@@ -774,7 +775,9 @@ class EMEController extends Logger implements ComponentAPI {
         });
       } else if (messageType === 'license-release') {
         if (context.keySystem === KeySystems.FAIRPLAY) {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.updateKeySession(context, strToUtf8array('acknowledged'));
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
           this.removeSession(context);
         }
       } else {
@@ -864,6 +867,7 @@ class EMEController extends Logger implements ComponentAPI {
       .then(() => keyUsablePromise)
       .catch((error) => {
         licenseStatus.removeAllListeners();
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         this.removeSession(context);
         throw error;
       })
@@ -1231,8 +1235,8 @@ class EMEController extends Logger implements ComponentAPI {
       }
       keySessionContext.licenseXhr = xhr;
 
-      this.setupLicenseXHR(xhr, url, keySessionContext, licenseChallenge).then(
-        ({ xhr, licenseChallenge }) => {
+      this.setupLicenseXHR(xhr, url, keySessionContext, licenseChallenge)
+        .then(({ xhr, licenseChallenge }) => {
           if (keySessionContext.keySystem == KeySystems.PLAYREADY) {
             licenseChallenge = this.unpackPlayReadyKeyMessage(
               xhr,
@@ -1240,8 +1244,8 @@ class EMEController extends Logger implements ComponentAPI {
             );
           }
           xhr.send(licenseChallenge);
-        },
-      );
+        })
+        .catch(reject);
     });
   }
 
@@ -1407,7 +1411,7 @@ class EMEController extends Logger implements ComponentAPI {
               () => reject(new Error(`MediaKeySession.remove() timeout`)),
               8000,
             );
-            mediaKeysSession.remove().then(resolve);
+            mediaKeysSession.remove().then(resolve).catch(reject);
           })
         : Promise.resolve();
       return removePromise

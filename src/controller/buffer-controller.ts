@@ -343,6 +343,7 @@ export default class BufferController extends Logger implements ComponentAPI {
       : null;
     const trackCount = trackNames ? trackNames.length : 0;
     const mediaSourceOpenCallback = () => {
+      // eslint-disable-next-line @typescript-eslint/no-floating-promises
       Promise.resolve().then(() => {
         if (this.media && this.mediaSourceOpenOrEnded) {
           this._onMediaSourceOpen();
@@ -417,6 +418,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             >;
             this.sourceBuffers[sbIndex] = sbTuple as any;
             if (sb.updating && this.operationQueue) {
+              // eslint-disable-next-line @typescript-eslint/no-floating-promises
               this.operationQueue.prependBlocker(type);
             }
             this.trackSourceBuffer(type, track);

@@ -1,3 +1,12 @@
+const asyncKeywordConstraintMsg =
+  'The async keyword adds a `regenerator` dependency in the hls.js ES5 output not allowed in v1 due to bundle size constraints.';
+const selfVsWindowGlobalMsg =
+  'Use `self` instead of `window` to access the global context everywhere (including workers).';
+const arrayFindCompatibilityMsg =
+  'Usage of Array find methods is restricted for compatibility.';
+const arrayFindIndexCompatibilityMsg =
+  'Usage of Array findIndex methods is restricted for compatibility.';
+
 module.exports = {
   env: { browser: true, commonjs: true, es6: true },
   globals: {
@@ -27,18 +36,11 @@ module.exports = {
       2,
       {
         name: 'window',
-        message:
-          'Use `self` instead of `window` to access the global context everywhere (including workers).',
+        message: selfVsWindowGlobalMsg,
       },
       { name: 'SourceBuffer', message: 'Use `self.SourceBuffer`' },
       { name: 'setTimeout', message: 'Use `self.setTimeout`' },
       { name: 'setInterval', message: 'Use `self.setInterval`' },
-    ],
-
-    'no-restricted-properties': [
-      2,
-      { property: 'findIndex' }, // Intended to block usage of Array.prototype.findIndex
-      { property: 'find' }, // Intended to block usage of Array.prototype.find
     ],
 
     'import/first': 1,
@@ -67,6 +69,31 @@ module.exports = {
         'no-unused-vars': 0,
         'no-undef': 0,
         'no-use-before-define': 'off',
+        'no-restricted-syntax': [
+          'error',
+          {
+            selector: 'FunctionDeclaration[async=true]',
+            message: asyncKeywordConstraintMsg,
+          },
+          {
+            selector: 'ArrowFunctionExpression[async=true]',
+            message: asyncKeywordConstraintMsg,
+          },
+          {
+            selector: 'MethodDefinition[value.async=true]',
+            message: asyncKeywordConstraintMsg,
+          },
+          {
+            selector:
+              'MemberExpression[property.name="find"][object.type="Identifier"]',
+            message: arrayFindCompatibilityMsg,
+          },
+          {
+            selector:
+              'MemberExpression[property.name="findIndex"][object.type="Identifier"]',
+            message: arrayFindIndexCompatibilityMsg,
+          },
+        ],
         'import/order': [
           'warn',
           {
@@ -98,6 +125,8 @@ module.exports = {
         '@typescript-eslint/consistent-type-imports': 'error',
         '@typescript-eslint/no-import-type-side-effects': 'error',
         '@typescript-eslint/no-restricted-imports': 'error',
+        '@typescript-eslint/no-floating-promises': 'error',
+        '@typescript-eslint/no-misused-promises': 'error',
       },
     },
   ],

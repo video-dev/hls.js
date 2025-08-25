@@ -845,43 +845,49 @@ class AbrController extends Logger implements AbrComponentAPI {
             mediaCapabilities,
             this.supportedCache,
           );
-          levelInfo.supportedPromise.then((decodingInfo) => {
-            if (!this.hls) {
-              return;
-            }
-            levelInfo.supportedResult = decodingInfo;
-            const levels = this.hls.levels;
-            const index = levels.indexOf(levelInfo);
-            if (decodingInfo.error) {
-              this.warn(
-                `MediaCapabilities decodingInfo error: "${
-                  decodingInfo.error
-                }" for level ${index} ${stringify(decodingInfo)}`,
-              );
-            } else if (!decodingInfo.supported) {
-              this.warn(
-                `Unsupported MediaCapabilities decodingInfo result for level ${index} ${stringify(
-                  decodingInfo,
-                )}`,
-              );
-              if (index > -1 && levels.length > 1) {
-                this.log(`Removing unsupported level ${index}`);
-                this.hls.removeLevel(index);
-                if (this.hls.loadLevel === -1) {
-                  this.hls.nextLoadLevel = 0;
-                }
+          levelInfo.supportedPromise
+            .then((decodingInfo) => {
+              if (!this.hls) {
+                return;
               }
-            } else if (
-              decodingInfo.decodingInfoResults.some(
-                (info) =>
-                  info.smooth === false || info.powerEfficient === false,
-              )
-            ) {
-              this.log(
-                `MediaCapabilities decodingInfo for level ${index} not smooth or powerEfficient: ${stringify(decodingInfo)}`,
+              levelInfo.supportedResult = decodingInfo;
+              const levels = this.hls.levels;
+              const index = levels.indexOf(levelInfo);
+              if (decodingInfo.error) {
+                this.warn(
+                  `MediaCapabilities decodingInfo error: "${
+                    decodingInfo.error
+                  }" for level ${index} ${stringify(decodingInfo)}`,
+                );
+              } else if (!decodingInfo.supported) {
+                this.warn(
+                  `Unsupported MediaCapabilities decodingInfo result for level ${index} ${stringify(
+                    decodingInfo,
+                  )}`,
+                );
+                if (index > -1 && levels.length > 1) {
+                  this.log(`Removing unsupported level ${index}`);
+                  this.hls.removeLevel(index);
+                  if (this.hls.loadLevel === -1) {
+                    this.hls.nextLoadLevel = 0;
+                  }
+                }
+              } else if (
+                decodingInfo.decodingInfoResults.some(
+                  (info) =>
+                    info.smooth === false || info.powerEfficient === false,
+                )
+              ) {
+                this.log(
+                  `MediaCapabilities decodingInfo for level ${index} not smooth or powerEfficient: ${stringify(decodingInfo)}`,
+                );
+              }
+            })
+            .catch((error) => {
+              this.warn(
+                `Error handling MediaCapabilities decodingInfo: ${error}`,
               );
-            }
-          });
+            });
         } else {
           levelInfo.supportedResult = SUPPORTED_INFO_DEFAULT;
         }
