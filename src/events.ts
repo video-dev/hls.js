@@ -40,7 +40,6 @@ import type {
   InterstitialsUpdatedData,
   KeyLoadedData,
   KeyLoadingData,
-  KeyStatusesChangedData,
   LevelLoadedData,
   LevelLoadingData,
   LevelPTSUpdatedData,
@@ -221,8 +220,6 @@ export enum Events {
   PLAYOUT_LIMIT_REACHED = 'hlsPlayoutLimitReached',
   // Event DateRange cue "enter" event dispatched
   EVENT_CUE_ENTER = 'hlsEventCueEnter',
-  // HD DRM
-  KEY_STATUSES_CHANGED = 'hlsKeyStatusesChanged',
 }
 
 /**
@@ -499,10 +496,6 @@ export interface HlsListeners {
     data: {},
   ) => void;
   [Events.EVENT_CUE_ENTER]: (event: Events.EVENT_CUE_ENTER, data: {}) => void;
-  [Events.KEY_STATUSES_CHANGED]: (
-    event: Events.KEY_STATUSES_CHANGED,
-    data: KeyStatusesChangedData,
-  ) => void;
 }
 export interface HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined>(
