@@ -13,6 +13,25 @@ export function sendAddTrackEvent(track: TextTrack, videoEl: HTMLMediaElement) {
   videoEl.dispatchEvent(event);
 }
 
+function containsCue(track: TextTrack, cue: VTTCue) {
+  if (!track.cues) {
+    return false;
+  }
+
+  for (let i = 0; i < track.cues.length; i++) {
+    const cueInTextTrack = track.cues[i] as VTTCue;
+    if (
+      cueInTextTrack.startTime === cue.startTime &&
+      cueInTextTrack.endTime === cue.endTime &&
+      cueInTextTrack.text === cue.text
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export function addCueToTrack(track: TextTrack, cue: VTTCue) {
   // Sometimes there are cue overlaps on segmented vtts so the same
   // cue can appear more than once in different vtt files.
@@ -21,7 +40,8 @@ export function addCueToTrack(track: TextTrack, cue: VTTCue) {
   if (mode === 'disabled') {
     track.mode = 'hidden';
   }
-  if (track.cues && !track.cues.getCueById(cue.id)) {
+
+  if (track.cues && !containsCue(track, cue)) {
     try {
       track.addCue(cue);
       if (!track.cues.getCueById(cue.id)) {

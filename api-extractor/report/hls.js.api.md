@@ -1511,6 +1511,8 @@ export enum Events {
     // (undocumented)
     KEY_LOADING = "hlsKeyLoading",
     // (undocumented)
+    KEY_STATUSES_CHANGED = "hlsKeyStatusesChanged",
+    // (undocumented)
     LEVEL_LOADED = "hlsLevelLoaded",
     // (undocumented)
     LEVEL_LOADING = "hlsLevelLoading",
@@ -2411,6 +2413,8 @@ export interface HlsListeners {
     // (undocumented)
     [Events.KEY_LOADING]: (event: Events.KEY_LOADING, data: KeyLoadingData) => void;
     // (undocumented)
+    [Events.KEY_STATUSES_CHANGED]: (event: Events.KEY_STATUSES_CHANGED, data: KeyStatusesChangedData) => void;
+    // (undocumented)
     [Events.LEVEL_LOADED]: (event: Events.LEVEL_LOADED, data: LevelLoadedData) => void;
     // (undocumented)
     [Events.LEVEL_LOADING]: (event: Events.LEVEL_LOADING, data: LevelLoadingData) => void;
@@ -3044,6 +3048,16 @@ export interface KeyLoaderInfo {
 export interface KeyLoadingData {
     // (undocumented)
     frag: Fragment;
+}
+
+// Warning: (ae-missing-release-tag) "KeyStatusesChangedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface KeyStatusesChangedData {
+    // (undocumented)
+    keyStatuses: MediaKeyStatusMap;
+    // (undocumented)
+    keySystem: string;
 }
 
 // Warning: (ae-missing-release-tag) "KeySystemFormats" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

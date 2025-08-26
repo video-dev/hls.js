@@ -803,6 +803,11 @@ class EMEController extends Logger implements ComponentAPI {
           this.renewKeySession(context);
         }
       }
+
+      this.hls.trigger(Events.KEY_STATUSES_CHANGED, {
+        keySystem: context.decryptdata.keyFormat,
+        keyStatuses: keySession.keyStatuses,
+      });
     });
 
     addEventListener(context.mediaKeysSession, 'message', onmessage);
