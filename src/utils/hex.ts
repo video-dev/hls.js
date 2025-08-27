@@ -2,20 +2,18 @@
  *  hex dump helper class
  */
 
-const Hex = {
-  hexDump: function (array: Uint8Array<ArrayBuffer>) {
-    let str = '';
-    for (let i = 0; i < array.length; i++) {
-      let h = array[i].toString(16);
-      if (h.length < 2) {
-        h = '0' + h;
-      }
-
-      str += h;
+export function arrayToHex(array: Uint8Array<ArrayBuffer> | number[]) {
+  let str = '';
+  for (let i = 0; i < array.length; i++) {
+    let h = array[i].toString(16);
+    if (h.length < 2) {
+      h = '0' + h;
     }
-    return str;
-  },
-};
+
+    str += h;
+  }
+  return str;
+}
 
 export function hexToArrayBuffer(str: string): ArrayBuffer {
   return Uint8Array.from(
@@ -26,5 +24,9 @@ export function hexToArrayBuffer(str: string): ArrayBuffer {
       .split(' '),
   ).buffer;
 }
+
+const Hex = {
+  hexDump: arrayToHex,
+};
 
 export default Hex;

@@ -266,9 +266,10 @@ describe('ErrorController Integration Tests', function () {
       hls.loadSource('noSegmentsVod.m3u8');
       hls.stopLoad.should.have.been.calledOnce;
       return new Promise((resolve, reject) => {
-        hls.on(Events.ERROR, (event, data) =>
-          Promise.resolve().then(() => resolve(data)),
-        );
+        hls.on(Events.ERROR, (event, data) => {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          Promise.resolve().then(() => resolve(data));
+        });
         hls.on(Events.LEVEL_LOADED, () =>
           reject(
             new Error(
@@ -713,6 +714,7 @@ segment.mp4
       hls.on(Events.FRAG_LOADING, loadingEventCallback(server, timers));
       hls.on(Events.ERROR, (event, data) => {
         errors.push(data);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         Promise.resolve().then(() => timers.tick(2000));
       });
       return new Promise((resolve, reject) => {
@@ -823,6 +825,7 @@ segment.mp4
       hls.on(Events.FRAG_LOADING, loadingEventCallback(server, timers));
       hls.on(Events.ERROR, (event, data) => {
         errors.push(data);
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
         Promise.resolve().then(() => timers.tick(2000));
       });
       return new Promise((resolve, reject) => {
@@ -968,6 +971,7 @@ function setupMockServerResponses(server: sinon.SinonFakeServer) {
 
 function loadingEventCallback(server, timers) {
   return (event, data) => {
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     Promise.resolve().then(() => {
       server.respond();
     });

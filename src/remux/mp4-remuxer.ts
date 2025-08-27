@@ -27,7 +27,10 @@ import type {
 } from '../types/remuxer';
 import type { TrackSet } from '../types/track';
 import type { TypeSupported } from '../utils/codecs';
-import type { RationalTimestamp } from '../utils/timescale-conversion';
+import type {
+  RationalTimestamp,
+  TimestampOffset,
+} from '../utils/timescale-conversion';
 
 const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;
@@ -62,8 +65,8 @@ export default class MP4Remuxer extends Logger implements Remuxer {
   private readonly config: HlsConfig;
   private readonly typeSupported: TypeSupported;
   private ISGenerated: boolean = false;
-  private _initPTS: RationalTimestamp | null = null;
-  private _initDTS: RationalTimestamp | null = null;
+  private _initPTS: TimestampOffset | null = null;
+  private _initDTS: TimestampOffset | null = null;
   private nextVideoTs: number | null = null;
   private nextAudioTs: number | null = null;
   private videoSampleDuration: number | null = null;
@@ -103,7 +106,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     this.config = this.videoTrackConfig = this._initPTS = this._initDTS = null;
   }
 
-  resetTimeStamp(defaultTimeStamp: RationalTimestamp | null) {
+  resetTimeStamp(defaultTimeStamp: TimestampOffset | null) {
     this.log('initPTS & initDTS reset');
     this._initPTS = this._initDTS = defaultTimeStamp;
   }
@@ -347,7 +350,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     let initPTS: number | undefined;
     let initDTS: number | undefined;
     let timescale: number | undefined;
-    let trackId: number | undefined;
+    let trackId: number = -1;
 
     if (computePTSDTS) {
       initPTS = initDTS = Infinity;
@@ -439,13 +442,23 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     if (Object.keys(tracks).length) {
       this.ISGenerated = true;
       if (computePTSDTS) {
+        if (_initPTS) {
+          this.warn(
+            `Timestamps at playlist time: ${accurateTimeOffset ? '' : '~'}${timeOffset} ${initPTS! / timescale!} != initPTS: ${_initPTS.baseTime / _initPTS.timescale} (${_initPTS.baseTime}/${_initPTS.timescale}) trackId: ${_initPTS.trackId}`,
+          );
+        }
+        this.log(
+          `Found initPTS at playlist time: ${timeOffset} offset: ${initPTS! / timescale!} (${initPTS}/${timescale}) trackId: ${trackId}`,
+        );
         this._initPTS = {
           baseTime: initPTS as number,
           timescale: timescale as number,
+          trackId: trackId as number,
         };
         this._initDTS = {
           baseTime: initDTS as number,
           timescale: timescale as number,
+          trackId: trackId as number,
         };
       } else {
         initPTS = timescale = undefined;
@@ -1134,8 +1147,8 @@ function findKeyframeIndex(samples: Array<VideoSample>): number {
 export function flushTextTrackMetadataCueSamples(
   track: DemuxedMetadataTrack,
   timeOffset: number,
-  initPTS: RationalTimestamp,
-  initDTS: RationalTimestamp,
+  initPTS: TimestampOffset,
+  initDTS: TimestampOffset,
 ): RemuxedMetadata | undefined {
   const length = track.samples.length;
   if (!length) {

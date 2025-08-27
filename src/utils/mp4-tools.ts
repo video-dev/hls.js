@@ -1,5 +1,5 @@
 import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
-import Hex from './hex';
+import { arrayToHex } from './hex';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { logger } from '../utils/logger';
 import type { KeySystemIds } from './mediakeys-helper';
@@ -224,6 +224,7 @@ export interface InitDataTrack {
   timescale: number;
   id: number;
   codec: string;
+  encrypted: boolean;
   supplemental: string | undefined;
 }
 
@@ -262,15 +263,15 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
   for (let i = 0; i < traks.length; i++) {
     const trak = traks[i];
     const tkhd = findBox(trak, ['tkhd'])[0];
-    if (tkhd) {
+    if (tkhd as any) {
       let version = tkhd[0];
       const trackId = readUint32(tkhd, version === 0 ? 12 : 20);
       const mdhd = findBox(trak, ['mdia', 'mdhd'])[0];
-      if (mdhd) {
+      if (mdhd as any) {
         version = mdhd[0];
         const timescale = readUint32(mdhd, version === 0 ? 12 : 20);
         const hdlr = findBox(trak, ['mdia', 'hdlr'])[0];
-        if (hdlr) {
+        if (hdlr as any) {
           const hdlrType = bin2str(hdlr.subarray(8, 12));
           const type: HdlrType | undefined = {
             soun: ElementaryStreamTypes.AUDIO as const,
@@ -324,11 +325,11 @@ function parseStsd(stsd: Uint8Array): StsdData {
     const sinfs = findBox(encBoxChildren, ['sinf']);
     sinfs.forEach((sinf) => {
       const schm = findBox(sinf, ['schm'])[0];
-      if (schm) {
+      if (schm as any) {
         const scheme = bin2str(schm.subarray(4, 8));
         if (scheme === 'cbcs' || scheme === 'cenc') {
           const frma = findBox(sinf, ['frma'])[0];
-          if (frma) {
+          if (frma as any) {
             // for encrypted content codec fourCC will be in frma
             codec = bin2str(frma);
           }
@@ -344,7 +345,7 @@ function parseStsd(stsd: Uint8Array): StsdData {
     case 'avc4': {
       // extract profile + compatibility + level out of avcC box
       const avcCBox = findBox(sampleEntriesEnd, ['avcC'])[0];
-      if (avcCBox && avcCBox.length > 3) {
+      if ((avcCBox as any) && avcCBox.length > 3) {
         codec +=
           '.' + toHex(avcCBox[1]) + toHex(avcCBox[2]) + toHex(avcCBox[3]);
         supplemental = parseSupplementalDoViCodec(
@@ -357,7 +358,7 @@ function parseStsd(stsd: Uint8Array): StsdData {
     case 'mp4a': {
       const codecBox = findBox(sampleEntries, [fourCC])[0];
       const esdsBox = findBox(codecBox.subarray(28), ['esds'])[0];
-      if (esdsBox && esdsBox.length > 7) {
+      if ((esdsBox as any) && esdsBox.length > 7) {
         let i = 4;
         // ES Descriptor tag
         if (esdsBox[i++] !== 0x03) {
@@ -402,7 +403,7 @@ function parseStsd(stsd: Uint8Array): StsdData {
     case 'hvc1':
     case 'hev1': {
       const hvcCBox = findBox(sampleEntriesEnd, ['hvcC'])[0];
-      if (hvcCBox && hvcCBox.length > 12) {
+      if ((hvcCBox as any) && hvcCBox.length > 12) {
         const profileByte = hvcCBox[1];
         const profileSpace = ['', 'A', 'B', 'C'][profileByte >> 6];
         const generalProfileIdc = profileByte & 0x1f;
@@ -440,7 +441,7 @@ function parseStsd(stsd: Uint8Array): StsdData {
     }
     case 'vp09': {
       const vpcCBox = findBox(sampleEntriesEnd, ['vpcC'])[0];
-      if (vpcCBox && vpcCBox.length > 6) {
+      if ((vpcCBox as any) && vpcCBox.length > 6) {
         const profile = vpcCBox[4];
         const level = vpcCBox[5];
         const bitDepth = (vpcCBox[6] >> 4) & 0x0f;
@@ -456,7 +457,7 @@ function parseStsd(stsd: Uint8Array): StsdData {
     }
     case 'av01': {
       const av1CBox = findBox(sampleEntriesEnd, ['av1C'])[0];
-      if (av1CBox && av1CBox.length > 2) {
+      if ((av1CBox as any) && av1CBox.length > 2) {
         const profile = av1CBox[1] >>> 5;
         const level = av1CBox[1] & 0x1f;
         const tierFlag = av1CBox[2] >>> 7 ? 'H' : 'M';
@@ -526,7 +527,7 @@ function parseSupplementalDoViCodec(
   const dvXCBox = dvvCResult.length
     ? dvvCResult[0]
     : findBox(sampleEntriesEnd, ['dvcC'])[0]; // used by DoVi Profiles up to 7 and 20
-  if (dvXCBox) {
+  if (dvXCBox as any) {
     const doViProfile = (dvXCBox[2] >> 1) & 0x7f;
     const doViLevel = ((dvXCBox[2] << 5) & 0x20) | ((dvXCBox[3] >> 3) & 0x1f);
     return (
@@ -564,11 +565,11 @@ function addLeadingZero(num: number): string {
 }
 
 export function patchEncyptionData(
-  initSegment: Uint8Array | undefined,
+  initSegment: Uint8Array<ArrayBuffer> | undefined,
   decryptdata: DecryptData | null,
-): Uint8Array | undefined {
+) {
   if (!initSegment || !decryptdata) {
-    return initSegment;
+    return;
   }
   const keyId = decryptdata.keyId;
   if (keyId && decryptdata.isCommonEncryption) {
@@ -595,7 +596,7 @@ export function patchEncyptionData(
               logger.log(
                 `[eme] Patching keyId in 'enc${
                   isAudio ? 'a' : 'v'
-                }>sinf>>tenc' box: ${Hex.hexDump(tencKeyId)} -> ${Hex.hexDump(
+                }>sinf>>tenc' box: ${arrayToHex(tencKeyId)} -> ${arrayToHex(
                   keyId,
                 )}`,
               );
@@ -606,13 +607,11 @@ export function patchEncyptionData(
       });
     });
   }
-
-  return initSegment;
 }
 
 export function parseSinf(sinf: Uint8Array): Uint8Array | null {
   const schm = findBox(sinf, ['schm'])[0];
-  if (schm) {
+  if (schm as any) {
     const scheme = bin2str(schm.subarray(4, 8));
     if (scheme === 'cbcs' || scheme === 'cenc') {
       return findBox(sinf, ['schi', 'tenc'])[0];
@@ -664,19 +663,18 @@ export function getSampleData(
     if (!track) {
       continue;
     }
-    const trackTimes: TrackTimes =
-      tracks[id] ||
-      (tracks[id] = {
-        start: NaN,
-        duration: 0,
-        sampleCount: 0,
-        timescale: track.timescale,
-        type: track.type,
-      });
+    (tracks[id] as any) ||= {
+      start: NaN,
+      duration: 0,
+      sampleCount: 0,
+      timescale: track.timescale,
+      type: track.type,
+    };
+    const trackTimes: TrackTimes = tracks[id];
     // get start DTS
     const tfdt = findBox(traf, ['tfdt'])[0];
 
-    if (tfdt) {
+    if (tfdt as any) {
       const version = tfdt[0];
       let baseTime = readUint32(tfdt, 4);
       if (version === 1) {
@@ -825,7 +823,9 @@ export function getSampleData(
 }
 
 // TODO: Check if the last moof+mdat pair is part of the valid range
-export function segmentValidRange(data: Uint8Array): SegmentedRange {
+export function segmentValidRange(
+  data: Uint8Array<ArrayBuffer>,
+): SegmentedRange {
   const segmentedRange: SegmentedRange = {
     valid: null,
     remainder: null,
@@ -844,8 +844,8 @@ export function segmentValidRange(data: Uint8Array): SegmentedRange {
 }
 
 export interface SegmentedRange {
-  valid: Uint8Array | null;
-  remainder: Uint8Array | null;
+  valid: Uint8Array<ArrayBuffer> | null;
+  remainder: Uint8Array<ArrayBuffer> | null;
 }
 
 export function appendUint8Array(data1: Uint8Array, data2: Uint8Array) {
@@ -892,7 +892,7 @@ export function parseSamples(
         return result / timescale;
       })[0];
 
-      if (baseTime !== undefined) {
+      if ((baseTime as any) !== undefined) {
         timeOffset = baseTime;
       }
 
@@ -1331,7 +1331,7 @@ export function mp4pssh(
     kidCount = new Uint8Array();
   }
   const dataSize = new Uint8Array(4);
-  if (data && data.byteLength > 0) {
+  if (data.byteLength > 0) {
     new DataView(dataSize.buffer).setUint32(0, data.byteLength, false);
   }
   return mp4Box(
@@ -1346,7 +1346,7 @@ export function mp4pssh(
     kidCount,
     kids,
     dataSize,
-    data || new Uint8Array(),
+    data,
   );
 }
 
@@ -1401,7 +1401,7 @@ function parsePssh(view: DataView<ArrayBuffer>): PsshData | PsshInvalidResult {
     return { offset, size };
   }
   const buffer = view.buffer;
-  const systemId = Hex.hexDump(
+  const systemId = arrayToHex(
     new Uint8Array(buffer, offset + 12, 16),
   ) as KeySystemIds;
 
@@ -1411,7 +1411,7 @@ function parsePssh(view: DataView<ArrayBuffer>): PsshData | PsshInvalidResult {
 
   if (version === 0) {
     dataSizeOffset = 28;
-  } else if (version === 1) {
+  } else {
     const kidCounts = view.getUint32(28);
     if (!kidCounts || length < 32 + kidCounts * 16) {
       return { offset, size };

@@ -24,7 +24,11 @@ import {
   getAesModeFromFullSegmentMethod,
   isFullSegmentEncryption,
 } from '../utils/encryption-methods-util';
-import { getRetryDelay } from '../utils/error-helper';
+import { getRetryDelay, offlineHttpStatus } from '../utils/error-helper';
+import {
+  addEventListener,
+  removeEventListener,
+} from '../utils/event-listener-helper';
 import {
   findPart,
   getFragmentWithSN,
@@ -57,9 +61,9 @@ import type {
   PartsLoadedData,
 } from '../types/events';
 import type { Level } from '../types/level';
-import type { RemuxedTrack } from '../types/remuxer';
+import type { InitSegmentData, RemuxedTrack } from '../types/remuxer';
 import type { Bufferable, BufferInfo } from '../utils/buffer-helper';
-import type { RationalTimestamp } from '../utils/timescale-conversion';
+import type { TimestampOffset } from '../utils/timescale-conversion';
 
 type ResolveFragLoaded = (FragLoadedEndData) => void;
 type RejectFragLoaded = (LoadError) => void;
@@ -111,7 +115,7 @@ export default class BaseStreamController
   protected levelLastLoaded: Level | null = null;
   protected startFragRequested: boolean = false;
   protected decrypter: Decrypter;
-  protected initPTS: RationalTimestamp[] = [];
+  protected initPTS: TimestampOffset[] = [];
   protected buffering: boolean = true;
   protected loadingParts: boolean = false;
   private loopSn?: string | number;
@@ -264,7 +268,7 @@ export default class BaseStreamController
 
   public getLevelDetails(): LevelDetails | undefined {
     if (this.levels && this.levelLastLoaded !== null) {
-      return this.levelLastLoaded?.details;
+      return this.levelLastLoaded.details;
     }
   }
 
@@ -284,10 +288,8 @@ export default class BaseStreamController
     data: MediaAttachedData,
   ) {
     const media = (this.media = this.mediaBuffer = data.media);
-    media.removeEventListener('seeking', this.onMediaSeeking);
-    media.removeEventListener('ended', this.onMediaEnded);
-    media.addEventListener('seeking', this.onMediaSeeking);
-    media.addEventListener('ended', this.onMediaEnded);
+    addEventListener(media, 'seeking', this.onMediaSeeking);
+    addEventListener(media, 'ended', this.onMediaEnded);
     const config = this.config;
     if (this.levels && config.autoStartLoad && this.state === State.STOPPED) {
       this.startLoad(config.startPosition);
@@ -309,8 +311,8 @@ export default class BaseStreamController
     }
 
     // remove video listeners
-    media.removeEventListener('seeking', this.onMediaSeeking);
-    media.removeEventListener('ended', this.onMediaEnded);
+    removeEventListener(media, 'seeking', this.onMediaSeeking);
+    removeEventListener(media, 'ended', this.onMediaEnded);
 
     if (this.keyLoader && !transferringMedia) {
       this.keyLoader.detach();
@@ -424,8 +426,10 @@ export default class BaseStreamController
       }
     }
 
-    // Async tick to speed up processing
-    this.tickImmediate();
+    if (noFowardBuffer && this.state === State.IDLE) {
+      // Async tick to speed up processing
+      this.tickImmediate();
+    }
   };
 
   protected onMediaEnded = () => {
@@ -710,6 +714,39 @@ export default class BaseStreamController
     this.tick();
   }
 
+  protected unhandledEncryptionError(
+    initSegment: InitSegmentData,
+    frag: Fragment,
+  ): boolean {
+    const tracks = initSegment.tracks;
+    if (
+      tracks &&
+      !frag.encrypted &&
+      (tracks.audio?.encrypted || tracks.video?.encrypted) &&
+      (!this.config.emeEnabled || !this.keyLoader.emeController)
+    ) {
+      const media = this.media;
+      const error = new Error(
+        `Encrypted track with no key in ${this.fragInfo(frag)} (media ${media ? 'attached mediaKeys: ' + media.mediaKeys : 'detached'})`,
+      );
+      this.warn(error.message);
+      // Ignore if media is detached or mediaKeys are set
+      if (!media || media.mediaKeys) {
+        return false;
+      }
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.KEY_SYSTEM_ERROR,
+        details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
+        fatal: false,
+        error,
+        frag,
+      });
+      this.resetTransmuxer();
+      return true;
+    }
+    return false;
+  }
+
   protected fragContextChanged(frag: Fragment | null) {
     const { fragCurrent } = this;
     return (
@@ -784,7 +821,7 @@ export default class BaseStreamController
     progressCallback?: FragmentLoadProgressCallback,
   ): Promise<PartsLoadedData | FragLoadedData | null> {
     this.fragCurrent = frag;
-    const details = level?.details;
+    const details = level.details;
     if (!this.levels || !details) {
       throw new Error(
         `frag load aborted, missing level${details ? '' : ' detail'}s`,
@@ -808,10 +845,9 @@ export default class BaseStreamController
         }
       });
       this.hls.trigger(Events.KEY_LOADING, { frag });
-      if (this.fragCurrent === null) {
-        keyLoadingPromise = Promise.reject(
-          new Error(`frag load aborted, context changed in KEY_LOADING`),
-        );
+      if ((this.fragCurrent as Fragment | null) === null) {
+        this.log(`context changed in KEY_LOADING`);
+        return Promise.resolve(null);
       }
     } else if (!frag.encrypted) {
       keyLoadingPromise = this.keyLoader.loadClear(
@@ -843,7 +879,7 @@ export default class BaseStreamController
     if (this.loadingParts && isMediaFragment(frag)) {
       const partList = details.partList;
       if (partList && progressCallback) {
-        if (targetBufferTime > frag.end && details.fragmentHint) {
+        if (targetBufferTime > details.fragmentEnd && details.fragmentHint) {
           frag = details.fragmentHint;
         }
         const partIndex = this.getNextPart(partList, frag, targetBufferTime);
@@ -912,7 +948,7 @@ export default class BaseStreamController
       this.log(
         `LL-Part loading OFF after next part miss @${targetBufferTime.toFixed(
           2,
-        )}`,
+        )} Check buffer at sn: ${frag.sn} loaded parts: ${details.partList?.filter((p) => p.loaded).map((p) => `[${p.start}-${p.end}]`)}`,
       );
       this.loadingParts = false;
     } else if (!frag.url) {
@@ -922,7 +958,7 @@ export default class BaseStreamController
 
     this.log(
       `Loading ${frag.type} sn: ${frag.sn} of ${this.fragInfo(frag, false)}) cc: ${frag.cc} ${
-        details ? '[' + details.startSN + '-' + details.endSN + ']' : ''
+        '[' + details.startSN + '-' + details.endSN + ']'
       }, target: ${parseFloat(targetBufferTime.toFixed(3))}`,
     );
     // Don't update nextLoadPosition for fragments which are not buffered
@@ -937,7 +973,7 @@ export default class BaseStreamController
     if (dataOnProgress && keyLoadingPromise) {
       result = keyLoadingPromise
         .then((keyLoadedData) => {
-          if (!keyLoadedData || this.fragContextChanged(keyLoadedData?.frag)) {
+          if (!keyLoadedData || this.fragContextChanged(keyLoadedData.frag)) {
             return null;
           }
           return this.fragmentLoader.load(frag, progressCallback);
@@ -954,7 +990,7 @@ export default class BaseStreamController
         keyLoadingPromise,
       ])
         .then(([fragLoadedData]) => {
-          if (!dataOnProgress && fragLoadedData && progressCallback) {
+          if (!dataOnProgress && progressCallback) {
             progressCallback(fragLoadedData);
           }
           return fragLoadedData;
@@ -1007,11 +1043,16 @@ export default class BaseStreamController
     );
   }
 
-  private handleFragLoadError(error: LoadError | Error) {
+  private handleFragLoadError(
+    error: LoadError | Error | (Error & { data: ErrorData }),
+  ) {
     if ('data' in error) {
       const data = error.data;
-      if (error.data && data.details === ErrorDetails.INTERNAL_ABORTED) {
+      if (data.frag && data.details === ErrorDetails.INTERNAL_ABORTED) {
         this.handleFragLoadAborted(data.frag, data.part);
+      } else if (data.frag && data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
+        data.frag.abortRequests();
+        this.resetFragmentLoading(data.frag);
       } else {
         this.hls.trigger(Events.ERROR, data as ErrorData);
       }
@@ -1069,10 +1110,14 @@ export default class BaseStreamController
       if (!details) {
         return this.loadingParts;
       }
-      if (details?.partList) {
+      if (details.partList) {
         // Buffer must be ahead of first part + duration of parts after last segment
         // and playback must be at or past segment adjacent to part list
         const firstPart = details.partList[0];
+        // Loading of VTT subtitle parts is not implemented in subtitle-stream-controller (#7460)
+        if (firstPart.fragment.type === PlaylistLevelType.SUBTITLE) {
+          return false;
+        }
         const safePartStart =
           firstPart.end + (details.fragmentHint?.duration || 0);
         if (bufferEnd >= safePartStart) {
@@ -1123,21 +1168,23 @@ export default class BaseStreamController
     chunkMeta: ChunkMetadata,
     noBacktracking?: boolean,
   ) {
-    if (!data || this.state !== State.PARSING) {
+    if (this.state !== State.PARSING) {
       return;
     }
 
     const { data1, data2 } = data;
     let buffer = data1;
-    if (data1 && data2) {
+    if (data2) {
       // Combine the moof + mdat so that we buffer with a single append
       buffer = appendUint8Array(data1, data2);
     }
 
-    if (!buffer?.length) {
+    if (!buffer.length) {
       return;
     }
-    const offsetTimestamp = this.initPTS[frag.cc];
+    const offsetTimestamp = this.initPTS[frag.cc] as
+      | TimestampOffset
+      | undefined;
     const offset = offsetTimestamp
       ? -offsetTimestamp.baseTime / offsetTimestamp.timescale
       : undefined;
@@ -1264,10 +1311,9 @@ export default class BaseStreamController
     position: number,
     playlistType: PlaylistLevelType = PlaylistLevelType.MAIN,
   ): Fragment | null {
-    const fragOrPart = this.fragmentTracker?.getAppendedFrag(
-      position,
-      playlistType,
-    );
+    const fragOrPart = (this.fragmentTracker as any)
+      ? this.fragmentTracker.getAppendedFrag(position, playlistType)
+      : null;
     if (fragOrPart && 'fragment' in fragOrPart) {
       return fragOrPart.fragment;
     }
@@ -1397,7 +1443,7 @@ export default class BaseStreamController
   }
 
   protected get primaryPrefetch(): boolean {
-    if (interstitialsEnabled(this.hls.config)) {
+    if (interstitialsEnabled(this.config)) {
       const playingInterstitial =
         this.hls.interstitialsManager?.playingItem?.event;
       if (playingInterstitial) {
@@ -1415,7 +1461,7 @@ export default class BaseStreamController
       return frag;
     }
     if (
-      interstitialsEnabled(this.hls.config) &&
+      interstitialsEnabled(this.config) &&
       frag.type !== PlaylistLevelType.SUBTITLE
     ) {
       // Do not load fragments outside the buffering schedule segment
@@ -1471,7 +1517,7 @@ export default class BaseStreamController
 
   mapToInitFragWhenRequired(frag: Fragment | null): typeof frag {
     // If an initSegment is present, it must be buffered first
-    if (frag?.initSegment && !frag?.initSegment.data && !this.bitrateTest) {
+    if (frag?.initSegment && !frag.initSegment.data && !this.bitrateTest) {
       return frag.initSegment;
     }
 
@@ -1496,9 +1542,14 @@ export default class BaseStreamController
       if (loaded) {
         nextPart = -1;
       } else if (
-        (contiguous || part.independent || independentAttrOmitted) &&
-        part.fragment === frag
+        contiguous ||
+        ((part.independent || independentAttrOmitted) && part.fragment === frag)
       ) {
+        if (part.fragment !== frag) {
+          this.warn(
+            `Need buffer at ${targetBufferTime} but next unloaded part starts at ${part.start}`,
+          );
+        }
         nextPart = i;
       }
       contiguous = loaded;
@@ -1510,8 +1561,17 @@ export default class BaseStreamController
     partList: Part[],
     targetBufferTime: number,
   ): boolean {
-    const lastPart = partList[partList.length - 1];
-    return lastPart && targetBufferTime > lastPart.start && lastPart.loaded;
+    let part: Part;
+    for (let i = partList.length; i--; ) {
+      part = partList[i];
+      if (!part.loaded) {
+        return false;
+      }
+      if (targetBufferTime > part.start) {
+        return true;
+      }
+    }
+    return false;
   }
 
   /*
@@ -1607,7 +1667,6 @@ export default class BaseStreamController
     );
     if (
       loadingParts &&
-      fragmentHint &&
       !this.bitrateTest &&
       partList[partList.length - 1].fragment.sn === fragmentHint.sn
     ) {
@@ -1655,11 +1714,11 @@ export default class BaseStreamController
         frag.sn === fragPrevious.sn &&
         (!loadingParts ||
           partList[0].fragment.sn > frag.sn ||
-          (!levelDetails.live && !loadingParts))
+          !levelDetails.live)
       ) {
         // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
         // non-uniform fragment durations
-        const sameLevel = fragPrevious && frag.level === fragPrevious.level;
+        const sameLevel = frag.level === fragPrevious.level;
         if (sameLevel) {
           const nextFrag = fragments[curSNIdx + 1];
           if (
@@ -1775,7 +1834,7 @@ export default class BaseStreamController
     return pos;
   }
 
-  private handleFragLoadAborted(frag: Fragment, part: Part | undefined) {
+  private handleFragLoadAborted(frag: Fragment, part: Part | null | undefined) {
     if (
       this.transmuxer &&
       frag.type === this.playlistType &&
@@ -1828,20 +1887,41 @@ export default class BaseStreamController
     }
     // keep retrying until the limit will be reached
     const errorAction = data.errorAction;
-    const { action, flags, retryCount = 0, retryConfig } = errorAction || {};
-    const couldRetry = !!errorAction && !!retryConfig;
+    if (!errorAction) {
+      this.state = State.ERROR;
+      return;
+    }
+    const { action, flags, retryCount = 0, retryConfig } = errorAction;
+    const couldRetry = !!retryConfig;
     const retry = couldRetry && action === NetworkErrorAction.RetryRequest;
     const noAlternate =
       couldRetry &&
       !errorAction.resolved &&
       flags === ErrorActionFlags.MoveAllAlternatesMatchingHost;
-    if (!retry && noAlternate && isMediaFragment(frag) && !frag.endList) {
+    const live = this.hls.latestLevelDetails?.live;
+    if (
+      !retry &&
+      noAlternate &&
+      isMediaFragment(frag) &&
+      !frag.endList &&
+      live
+    ) {
       this.resetFragmentErrors(filterType);
       this.treatAsGap(frag);
       errorAction.resolved = true;
     } else if ((retry || noAlternate) && retryCount < retryConfig.maxNumRetry) {
-      this.resetStartWhenNotLoaded(this.levelLastLoaded);
+      const offlineStatus = offlineHttpStatus(data.response?.code);
       const delay = getRetryDelay(retryConfig, retryCount);
+      this.resetStartWhenNotLoaded();
+      this.retryDate = self.performance.now() + delay;
+      this.state = State.FRAG_LOADING_WAITING_RETRY;
+      errorAction.resolved = true;
+      if (offlineStatus) {
+        this.log(`Waiting for connection (offline)`);
+        this.retryDate = Infinity;
+        data.reason = 'offline';
+        return;
+      }
       this.warn(
         `Fragment ${frag.sn} of ${filterType} ${frag.level} errored with ${
           data.details
@@ -1849,10 +1929,7 @@ export default class BaseStreamController
           retryConfig.maxNumRetry
         } in ${delay}ms`,
       );
-      errorAction.resolved = true;
-      this.retryDate = self.performance.now() + delay;
-      this.state = State.FRAG_LOADING_WAITING_RETRY;
-    } else if (retryConfig && errorAction) {
+    } else if (retryConfig) {
       this.resetFragmentErrors(filterType);
       if (retryCount < retryConfig.maxNumRetry) {
         // Network retry is skipped when level switch is preferred
@@ -1877,6 +1954,24 @@ export default class BaseStreamController
     this.tickImmediate();
   }
 
+  protected checkRetryDate() {
+    const now = self.performance.now();
+    const retryDate = this.retryDate;
+    // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
+    const waitingForConnection = retryDate === Infinity;
+    if (
+      !retryDate ||
+      now >= retryDate ||
+      (waitingForConnection && !offlineHttpStatus(0))
+    ) {
+      if (waitingForConnection) {
+        this.log(`Connection restored (online)`);
+      }
+      this.resetStartWhenNotLoaded();
+      this.state = State.IDLE;
+    }
+  }
+
   protected reduceLengthAndFlushBuffer(data: ErrorData): boolean {
     // if in appending state
     if (this.state === State.PARSING || this.state === State.PARSED) {
@@ -1898,7 +1993,7 @@ export default class BaseStreamController
         // this happens on IE/Edge, refer to https://github.com/video-dev/hls.js/pull/708
         // in that case flush the whole audio buffer to recover
         this.warn(
-          `Buffer full error while media.currentTime is not buffered, flush ${playlistType} buffer`,
+          `Buffer full error while media.currentTime (${this.getLoadPosition()}) is not buffered, flush ${playlistType} buffer`,
         );
       }
       if (frag) {
@@ -1956,11 +2051,12 @@ export default class BaseStreamController
     }
   }
 
-  protected resetStartWhenNotLoaded(level: Level | null): void {
+  private resetStartWhenNotLoaded() {
     // if loadedmetadata is not set, it means that first frag request failed
     // in that case, reset startFragRequested flag
     if (!this.hls.hasEnoughToStart) {
       this.startFragRequested = false;
+      const level = this.levelLastLoaded;
       const details = level ? level.details : null;
       if (details?.live) {
         // Update the start position and return to IDLE to recover live start
@@ -1975,11 +2071,11 @@ export default class BaseStreamController
   }
 
   protected resetWhenMissingContext(chunkMeta: ChunkMetadata | Fragment) {
-    this.warn(
-      `The loading context changed while buffering fragment ${chunkMeta.sn} of ${this.playlistLabel()} ${chunkMeta.level}. This chunk will not be buffered.`,
+    this.log(
+      `Loading context changed while buffering sn ${chunkMeta.sn} of ${this.playlistLabel()} ${chunkMeta.level === -1 ? '<removed>' : chunkMeta.level}. This chunk will not be buffered.`,
     );
     this.removeUnbufferedFrags();
-    this.resetStartWhenNotLoaded(this.levelLastLoaded);
+    this.resetStartWhenNotLoaded();
     this.resetLoadingState();
   }
 
@@ -2027,6 +2123,7 @@ export default class BaseStreamController
                 info.endPTS,
                 info.startDTS,
                 info.endDTS,
+                this,
               );
           this.hls.trigger(Events.LEVEL_PTS_UPDATED, {
             details,
@@ -2113,7 +2210,7 @@ export default class BaseStreamController
         this.transmuxer.destroy();
         this.transmuxer = null;
       }
-      this.resetStartWhenNotLoaded(this.levelLastLoaded);
+      this.resetStartWhenNotLoaded();
       this.resetLoadingState();
     }
   }

@@ -14,6 +14,7 @@ import type Hls from '../hls';
 import type { BufferCodecsData, MediaAttachingData } from '../types/events';
 
 export interface InterstitialPlayer {
+  bufferedEnd: number;
   currentTime: number;
   duration: number;
   assetPlayers: (HlsAssetPlayer | null)[];
@@ -25,8 +26,8 @@ export type HlsAssetPlayerConfig = Partial<HlsConfig> &
   Required<Pick<HlsConfig, 'assetPlayerId' | 'primarySessionId'>>;
 
 export class HlsAssetPlayer {
-  public readonly hls: Hls;
-  public readonly interstitial: InterstitialEvent;
+  public hls: Hls | null;
+  public interstitial: InterstitialEvent;
   public readonly assetItem: InterstitialAssetItem;
   public tracks: Partial<BufferCodecsData> | null = null;
   private hasDetails: boolean = false;
@@ -43,14 +44,6 @@ export class HlsAssetPlayer {
     const hls = (this.hls = new HlsPlayerClass(userConfig));
     this.interstitial = interstitial;
     this.assetItem = assetItem;
-    let uri: string = assetItem.uri;
-    try {
-      uri = getInterstitialUrl(uri, userConfig.primarySessionId).href;
-    } catch (error) {
-      // Ignore error parsing ASSET_URI or adding _HLS_primary_id to it. The
-      // issue should surface as an INTERSTITIAL_ASSET_ERROR loading the asset.
-    }
-    hls.loadSource(uri);
     const detailsLoaded = () => {
       this.hasDetails = true;
     };
@@ -77,7 +70,26 @@ export class HlsAssetPlayer {
   }
 
   get appendInPlace(): boolean {
-    return this.interstitial?.appendInPlace || false;
+    return this.interstitial.appendInPlace;
+  }
+
+  loadSource() {
+    const hls = this.hls;
+    if (!hls) {
+      return;
+    }
+    if (!hls.url) {
+      let uri: string = this.assetItem.uri;
+      try {
+        uri = getInterstitialUrl(uri, hls.config.primarySessionId || '').href;
+      } catch (error) {
+        // Ignore error parsing ASSET_URI or adding _HLS_primary_id to it. The
+        // issue should surface as an INTERSTITIAL_ASSET_ERROR loading the asset.
+      }
+      hls.loadSource(uri);
+    } else if (hls.levels.length && !(hls as any).started) {
+      hls.startLoad(-1, true);
+    }
   }
 
   bufferedInPlaceToEnd(media?: HTMLMediaElement | null) {
@@ -87,17 +99,18 @@ export class HlsAssetPlayer {
     if (this.hls?.bufferedToEnd) {
       return true;
     }
-    if (!media || !this._bufferedEosTime) {
+    if (!media) {
       return false;
     }
+    const duration = Math.min(this._bufferedEosTime || Infinity, this.duration);
     const start = this.timelineOffset;
     const bufferInfo = BufferHelper.bufferInfo(media, start, 0);
     const bufferedEnd = this.getAssetTime(bufferInfo.end);
-    return bufferedEnd >= this._bufferedEosTime - 0.02;
+    return bufferedEnd >= duration - 0.02;
   }
 
   private checkPlayout = () => {
-    if (this.reachedPlayout(this.currentTime)) {
+    if (this.reachedPlayout(this.currentTime) && this.hls) {
       this.hls.trigger(Events.PLAYOUT_LIMIT_REACHED, {});
     }
   };
@@ -149,6 +162,13 @@ export class HlsAssetPlayer {
     if (!duration) {
       return 0;
     }
+    const playoutLimit = this.interstitial.playoutLimit;
+    if (playoutLimit) {
+      const assetPlayout = playoutLimit - this.startOffset;
+      if (assetPlayout > 0 && assetPlayout < duration) {
+        return assetPlayout;
+      }
+    }
     return duration;
   }
 
@@ -172,7 +192,7 @@ export class HlsAssetPlayer {
     const timelineOffset = this.timelineOffset;
     if (value !== timelineOffset) {
       const diff = value - timelineOffset;
-      if (Math.abs(diff) > 1 / 90000) {
+      if (Math.abs(diff) > 1 / 90000 && this.hls) {
         if (this.hasDetails) {
           throw new Error(
             `Cannot set timelineOffset after playlists are loaded`,
@@ -208,39 +228,41 @@ export class HlsAssetPlayer {
 
   destroy() {
     this.removeMediaListeners();
-    this.hls.destroy();
-    // @ts-ignore
-    this.hls = this.interstitial = null;
+    if (this.hls) {
+      this.hls.destroy();
+    }
+    this.hls = null;
     // @ts-ignore
     this.tracks = this.mediaAttached = this.checkPlayout = null;
   }
 
   attachMedia(data: HTMLMediaElement | MediaAttachingData) {
-    this.hls.attachMedia(data);
+    this.loadSource();
+    this.hls?.attachMedia(data);
   }
 
   detachMedia() {
     this.removeMediaListeners();
     this.mediaAttached = null;
-    this.hls.detachMedia();
+    this.hls?.detachMedia();
   }
 
   resumeBuffering() {
-    this.hls.resumeBuffering();
+    this.hls?.resumeBuffering();
   }
 
   pauseBuffering() {
-    this.hls.pauseBuffering();
+    this.hls?.pauseBuffering();
   }
 
   transferMedia() {
     this.bufferSnapShot();
-    return this.hls.transferMedia();
+    return this.hls?.transferMedia() || null;
   }
 
   resetDetails() {
     const hls = this.hls;
-    if (this.hasDetails) {
+    if (hls && this.hasDetails) {
       hls.stopLoad();
       const deleteDetails = (obj) => delete obj.details;
       hls.levels.forEach(deleteDetails);
@@ -255,7 +277,7 @@ export class HlsAssetPlayer {
     listener: HlsListeners[E],
     context?: Context,
   ) {
-    this.hls.on(event, listener);
+    this.hls?.on(event, listener);
   }
 
   once<E extends keyof HlsListeners, Context = undefined>(
@@ -263,7 +285,7 @@ export class HlsAssetPlayer {
     listener: HlsListeners[E],
     context?: Context,
   ) {
-    this.hls.once(event, listener);
+    this.hls?.once(event, listener);
   }
 
   off<E extends keyof HlsListeners, Context = undefined>(
@@ -271,7 +293,7 @@ export class HlsAssetPlayer {
     listener: HlsListeners[E],
     context?: Context,
   ) {
-    this.hls.off(event, listener);
+    this.hls?.off(event, listener);
   }
 
   toString(): string {

@@ -64,7 +64,6 @@ design idea is pretty simple :
 - [src/controller/id3-track-controller.ts][]
   - in charge of creating the id3 metadata text track and adding cues to that track in response to the FRAG_PARSING_METADATA event. the raw id3 data is base64 encoded and stored in the cue's text property.
 - [src/controller/level-controller.ts][]
-
   - handling quality level set/get ((re)loading stream manifest/switching levels)
   - in charge of scheduling playlist (re)loading
   - monitors fragment and key loading errors. Performs fragment hunt by switching between primary and backup streams and down-shifting a level till `fragLoadingMaxRetry` limit is reached.
@@ -83,7 +82,6 @@ design idea is pretty simple :
   **Retry Recommendations**
 
   By not having multiple renditions, recovery logic will not be able to add extra value to your platform. In order to have good results for dual constraint media hunt, specify big enough limits for fragments and levels retries.
-
   - Level: don't use total retry less than `3 - 4`
   - Fragment: don't use total retry less than `4 - 6`
   - Implement short burst retries (i.e. small retry delay `0.5 - 4` seconds), and when library returns fatal error switch to a different CDN

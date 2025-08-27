@@ -43,6 +43,8 @@ type ParsedMultivariantMediaOptions = {
   'CLOSED-CAPTIONS'?: MediaPlaylist[];
 };
 
+type LevelKeys = { [key: string]: LevelKey | undefined };
+
 const MASTER_PLAYLIST_REGEX =
   /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-(SESSION-DATA|SESSION-KEY|DEFINE|CONTENT-STEERING|START):([^\r\n]*)[\r\n]+/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
@@ -254,8 +256,9 @@ export default class M3U8Parser {
       const attrs = new AttrList(result[1], parsed) as MediaAttributes;
       const type = attrs.TYPE;
       if (type) {
-        const groups: (typeof groupsByType)[keyof typeof groupsByType] =
-          groupsByType[type];
+        const groups:
+          | (typeof groupsByType)[keyof typeof groupsByType]
+          | undefined = groupsByType[type];
         const medias: MediaPlaylist[] = results[type] || [];
         results[type] = medias;
         const lang = attrs.LANGUAGE;
@@ -328,7 +331,7 @@ export default class M3U8Parser {
     let frag: Fragment = new Fragment(type, base);
     let result: RegExpExecArray | RegExpMatchArray | null;
     let i: number;
-    let levelkeys: { [key: string]: LevelKey } | undefined;
+    let levelkeys: LevelKeys | undefined;
     let firstPdtIndex = -1;
     let createNextFrag = false;
     let nextByteRange: string | null = null;
@@ -351,7 +354,7 @@ export default class M3U8Parser {
         frag = new Fragment(type, base);
         // setup the next fragment for part loading
         frag.playlistOffset = totalduration;
-        frag.start = totalduration;
+        frag.setStart(totalduration);
         frag.sn = currentSN;
         frag.cc = discontinuityCounter;
         if (currentBitrate) {
@@ -383,7 +386,7 @@ export default class M3U8Parser {
         // url
         if (Number.isFinite(frag.duration)) {
           frag.playlistOffset = totalduration;
-          frag.start = totalduration;
+          frag.setStart(totalduration);
           if (levelkeys) {
             setFragLevelKeys(frag, levelkeys, level);
           }
@@ -414,7 +417,7 @@ export default class M3U8Parser {
           continue;
         }
         for (i = 1; i < result.length; i++) {
-          if (result[i] !== undefined) {
+          if ((result[i] as any) !== undefined) {
             break;
           }
         }
@@ -720,9 +723,6 @@ export default class M3U8Parser {
       if (!level.live) {
         lastFragment.endList = true;
       }
-      if (firstFragment && level.startCC === undefined) {
-        level.startCC = firstFragment.cc;
-      }
       /**
        * Backfill any missing PDT values
        * "If the first EXT-X-PROGRAM-DATE-TIME tag in a Playlist appears after
@@ -738,9 +738,6 @@ export default class M3U8Parser {
           programDateTimes.unshift(firstFragment as MediaFragment);
         }
       }
-    } else {
-      level.endSN = 0;
-      level.startCC = 0;
     }
     if (level.fragmentHint) {
       totalduration += level.fragmentHint.duration;
@@ -761,18 +758,28 @@ export function mapDateRanges(
   details: LevelDetails,
 ) {
   // Make sure DateRanges are mapped to a ProgramDateTime tag that applies a date to a segment that overlaps with its start date
-  const programDateTimeCount = programDateTimes.length;
+  let programDateTimeCount = programDateTimes.length;
   if (!programDateTimeCount) {
-    return;
+    if (details.hasProgramDateTime) {
+      const lastFragment = details.fragments[details.fragments.length - 1];
+      programDateTimes.push(lastFragment);
+      programDateTimeCount++;
+    } else {
+      // no segments with EXT-X-PROGRAM-DATE-TIME references in playlist history
+      return;
+    }
   }
   const lastProgramDateTime = programDateTimes[programDateTimeCount - 1];
   const playlistEnd = details.live ? Infinity : details.totalduration;
   const dateRangeIds = Object.keys(details.dateRanges);
   for (let i = dateRangeIds.length; i--; ) {
-    const dateRange = details.dateRanges[dateRangeIds[i]];
+    const dateRange = details.dateRanges[dateRangeIds[i]]!;
     const startDateTime = dateRange.startDate.getTime();
     dateRange.tagAnchor = lastProgramDateTime.ref;
     for (let j = programDateTimeCount; j--; ) {
+      if (programDateTimes[j]?.sn < details.startSN) {
+        break;
+      }
       const fragIndex = findFragmentWithStartDate(
         details,
         startDateTime,
@@ -795,7 +802,7 @@ function findFragmentWithStartDate(
   index: number,
   endTime: number,
 ): number {
-  const pdtFragment = programDateTimes[index];
+  const pdtFragment = programDateTimes[index] as MediaFragment | undefined;
   if (pdtFragment) {
     // find matching range between PDT tags
     const pdtStart = pdtFragment.programDateTime as number;
@@ -805,6 +812,9 @@ function findFragmentWithStartDate(
       if (startDateTime <= pdtStart + durationBetweenPdt * 1000) {
         // map to fragment with date-time range
         const startIndex = programDateTimes[index].sn - details.startSN;
+        if (startIndex < 0) {
+          return -1;
+        }
         const fragments = details.fragments;
         if (fragments.length > programDateTimes.length) {
           const endSegment =
@@ -934,7 +944,7 @@ function setInitSegment(
   frag: Fragment,
   mapAttrs: AttrList,
   id: number,
-  levelkeys: { [key: string]: LevelKey } | undefined,
+  levelkeys: LevelKeys | undefined,
 ) {
   frag.relurl = mapAttrs.URI;
   if (mapAttrs.BYTERANGE) {
@@ -950,7 +960,7 @@ function setInitSegment(
 
 function setFragLevelKeys(
   frag: Fragment,
-  levelkeys: { [key: string]: LevelKey },
+  levelkeys: LevelKeys,
   level: LevelDetails,
 ) {
   frag.levelkeys = levelkeys;
@@ -960,7 +970,7 @@ function setFragLevelKeys(
       encryptedFragments[encryptedFragments.length - 1].levelkeys !==
         levelkeys) &&
     Object.keys(levelkeys).some(
-      (format) => levelkeys![format].isCommonEncryption,
+      (format) => levelkeys[format]!.isCommonEncryption,
     )
   ) {
     encryptedFragments.push(frag);

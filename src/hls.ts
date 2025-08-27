@@ -233,7 +233,7 @@ export default class Hls implements HlsEventEmitter {
     ));
 
     const id3TrackController = new ID3TrackController(this);
-    const keyLoader = new KeyLoader(this.config);
+    const keyLoader = new KeyLoader(this.config, this.logger);
     const streamController = (this.streamController = new StreamController(
       this,
       fragmentTracker,
@@ -1417,7 +1417,6 @@ export type {
   BufferFlushingData,
   CuesParsedData,
   ErrorData,
-  KeyStatusesChangedData,
   FPSDropData,
   FPSDropLevelCappingData,
   FragBufferedData,
@@ -1534,4 +1533,7 @@ export type {
   KeySystems,
   KeySystemFormats,
 } from './utils/mediakeys-helper';
-export type { RationalTimestamp } from './utils/timescale-conversion';
+export type {
+  RationalTimestamp,
+  TimestampOffset,
+} from './utils/timescale-conversion';

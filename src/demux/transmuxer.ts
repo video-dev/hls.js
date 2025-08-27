@@ -21,7 +21,7 @@ import type { Remuxer } from '../types/remuxer';
 import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type { TypeSupported } from '../utils/codecs';
 import type { ILogger } from '../utils/logger';
-import type { RationalTimestamp } from '../utils/timescale-conversion';
+import type { TimestampOffset } from '../utils/timescale-conversion';
 
 let now: () => number;
 // performance.now() not available on WebWorker, at least on Safari Desktop
@@ -312,7 +312,7 @@ export default class Transmuxer {
     chunkMeta.transmuxing.executeEnd = now();
   }
 
-  resetInitialTimestamp(defaultInitPts: RationalTimestamp | null) {
+  resetInitialTimestamp(defaultInitPts: TimestampOffset | null) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
@@ -517,14 +517,14 @@ export class TransmuxConfig {
   public videoCodec?: string;
   public initSegmentData?: Uint8Array;
   public duration: number;
-  public defaultInitPts: RationalTimestamp | null;
+  public defaultInitPts: TimestampOffset | null;
 
   constructor(
     audioCodec: string | undefined,
     videoCodec: string | undefined,
     initSegmentData: Uint8Array | undefined,
     duration: number,
-    defaultInitPts?: RationalTimestamp,
+    defaultInitPts?: TimestampOffset,
   ) {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;

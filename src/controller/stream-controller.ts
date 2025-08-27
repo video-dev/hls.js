@@ -215,17 +215,7 @@ export default class StreamController
         break;
       }
       case State.FRAG_LOADING_WAITING_RETRY:
-        {
-          const now = self.performance.now();
-          const retryDate = this.retryDate;
-          // if current time is gt than retryDate, or if media seeking let's switch to IDLE state to retry loading
-          if (!retryDate || now >= retryDate || this.media?.seeking) {
-            const { levels, level } = this;
-            const currentLevel = levels?.[level];
-            this.resetStartWhenNotLoaded(currentLevel || null);
-            this.state = State.IDLE;
-          }
-        }
+        this.checkRetryDate();
         break;
       default:
         break;
@@ -345,7 +335,7 @@ export default class StreamController
       const backtrackSn = (this.backtrackFragment ?? frag).sn as number;
       const fragIdx = backtrackSn - levelDetails.startSN;
       const backtrackFrag = levelDetails.fragments[fragIdx - 1];
-      if (backtrackFrag && frag.cc === backtrackFrag.cc) {
+      if ((backtrackFrag as any) && frag.cc === backtrackFrag.cc) {
         frag = backtrackFrag;
         this.fragmentTracker.removeFragment(backtrackFrag);
       }
@@ -624,13 +614,13 @@ export default class StreamController
     // detect if we have different kind of audio codecs used amongst playlists
     let aac = false;
     let heaac = false;
-    data.levels.forEach((level) => {
-      const codec = level.audioCodec;
+    for (let i = 0; i < data.levels.length; i++) {
+      const codec = data.levels[i].audioCodec;
       if (codec) {
         aac = aac || codec.indexOf('mp4a.40.2') !== -1;
         heaac = heaac || codec.indexOf('mp4a.40.5') !== -1;
       }
-    });
+    }
     this.audioCodecSwitch = aac && heaac && !changeTypeSupported();
     if (this.audioCodecSwitch) {
       this.log(
@@ -777,7 +767,7 @@ export default class StreamController
               0,
             );
 
-            if (!bufferInfo?.buffered?.length) {
+            if (!bufferInfo.buffered?.length) {
               media.currentTime = liveSyncPosition;
               return;
             }
@@ -816,7 +806,7 @@ export default class StreamController
       return;
     }
     const currentLevel = levels[frag.level];
-    if (!currentLevel) {
+    if (!currentLevel as any) {
       this.warn(`Level ${frag.level} not found on progress`);
       return;
     }
@@ -907,7 +897,10 @@ export default class StreamController
       if (fromAltAudio) {
         this.fragmentTracker.removeAllFragments();
         hls.once(Events.BUFFER_FLUSHED, () => {
-          this.hls?.trigger(Events.AUDIO_TRACK_SWITCHED, data);
+          if (!this.hls as any) {
+            return;
+          }
+          this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, data);
         });
         hls.trigger(Events.BUFFER_FLUSHING, {
           startOffset: 0,
@@ -1062,7 +1055,14 @@ export default class StreamController
           return;
         }
         if (this.reduceLengthAndFlushBuffer(data)) {
-          this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
+          const isAssetPlayer =
+            !this.config.interstitialsController && this.config.assetPlayerId;
+          if (isAssetPlayer) {
+            // Use currentTime in buffer estimate to prevent loading more until playback advances
+            this._hasEnoughToStart = true;
+          } else {
+            this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
+          }
         }
         break;
       case ErrorDetails.INTERNAL_EXCEPTION:
@@ -1185,26 +1185,34 @@ export default class StreamController
 
   private _loadBitrateTestFrag(fragment: Fragment, level: Level) {
     fragment.bitrateTest = true;
-    this._doFragLoad(fragment, level).then((data) => {
-      const { hls } = this;
-      const frag = data?.frag;
-      if (!frag || this.fragContextChanged(frag)) {
-        return;
-      }
-      level.fragmentError = 0;
-      this.state = State.IDLE;
-      this.startFragRequested = false;
-      this.bitrateTest = false;
-      const stats = frag.stats;
-      // Bitrate tests fragments are neither parsed nor buffered
-      stats.parsing.start =
-        stats.parsing.end =
-        stats.buffering.start =
-        stats.buffering.end =
-          self.performance.now();
-      hls.trigger(Events.FRAG_LOADED, data as FragLoadedData);
-      frag.bitrateTest = false;
-    });
+    this._doFragLoad(fragment, level)
+      .then((data) => {
+        const { hls } = this;
+        const frag = data?.frag;
+        if (!frag || this.fragContextChanged(frag)) {
+          return;
+        }
+        level.fragmentError = 0;
+        this.state = State.IDLE;
+        this.startFragRequested = false;
+        this.bitrateTest = false;
+        const stats = frag.stats;
+        // Bitrate tests fragments are neither parsed nor buffered
+        stats.parsing.start =
+          stats.parsing.end =
+          stats.buffering.start =
+          stats.buffering.end =
+            self.performance.now();
+        hls.trigger(Events.FRAG_LOADED, data as FragLoadedData);
+        frag.bitrateTest = false;
+      })
+      .catch((reason) => {
+        if (this.state === State.STOPPED || this.state === State.ERROR) {
+          return;
+        }
+        this.warn(reason);
+        this.resetFragmentLoading(fragment);
+      });
   }
 
   private _handleTransmuxComplete(transmuxResult: TransmuxerResult) {
@@ -1233,37 +1241,41 @@ export default class StreamController
     this.state = State.PARSING;
 
     if (initSegment) {
-      if (initSegment?.tracks) {
+      const tracks = initSegment.tracks;
+      if (tracks) {
         const mapFragment = frag.initSegment || frag;
-        this._bufferInitSegment(
-          level,
-          initSegment.tracks,
-          mapFragment,
-          chunkMeta,
-        );
+        if (this.unhandledEncryptionError(initSegment, frag)) {
+          return;
+        }
+        this._bufferInitSegment(level, tracks, mapFragment, chunkMeta);
         hls.trigger(Events.FRAG_PARSING_INIT_SEGMENT, {
           frag: mapFragment,
           id,
-          tracks: initSegment.tracks,
+          tracks,
         });
       }
 
-      // This would be nice if Number.isFinite acted as a typeguard, but it doesn't. See: https://github.com/Microsoft/TypeScript/issues/10038
       const baseTime = initSegment.initPTS as number;
       const timescale = initSegment.timescale as number;
       const initPTS = this.initPTS[frag.cc];
       if (
         Number.isFinite(baseTime) &&
-        (!initPTS ||
+        ((!initPTS as any) ||
           initPTS.baseTime !== baseTime ||
           initPTS.timescale !== timescale)
       ) {
-        this.initPTS[frag.cc] = { baseTime, timescale };
+        const trackId = initSegment.trackId as number;
+        this.initPTS[frag.cc] = {
+          baseTime,
+          timescale,
+          trackId,
+        };
         hls.trigger(Events.INIT_PTS_FOUND, {
           frag,
           id,
           initPTS: baseTime,
           timescale,
+          trackId,
         });
       }
     }
@@ -1275,7 +1287,8 @@ export default class StreamController
       }
       const prevFrag = details.fragments[frag.sn - 1 - details.startSN];
       const isFirstFragment = frag.sn === details.startSN;
-      const isFirstInDiscontinuity = !prevFrag || frag.cc > prevFrag.cc;
+      const isFirstInDiscontinuity =
+        (!prevFrag as any) || frag.cc > prevFrag.cc;
       if (remuxResult.independent !== false) {
         const { startPTS, endPTS, startDTS, endDTS } = video;
         if (part) {
@@ -1378,7 +1391,7 @@ export default class StreamController
       this.bufferFragmentData(audio, frag, part, chunkMeta);
     }
 
-    if (details && id3?.samples?.length) {
+    if (details && id3?.samples.length) {
       const emittedID3: FragParsingMetadataData = {
         id,
         frag,
@@ -1522,7 +1535,7 @@ export default class StreamController
     const trackTypes = Object.keys(tracks);
     if (trackTypes.length) {
       this.hls.trigger(Events.BUFFER_CODECS, tracks as BufferCodecsData);
-      if (!this.hls) {
+      if (!this.hls as any) {
         // Exit after fatal tracks error
         return;
       }

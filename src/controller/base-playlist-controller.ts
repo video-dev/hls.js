@@ -87,8 +87,8 @@ export default class BasePlaylistController
       }
       if (foundIndex !== -1) {
         const attr = renditionReports[foundIndex];
-        const msn = parseInt(attr['LAST-MSN']) || previous?.lastPartSn;
-        let part = parseInt(attr['LAST-PART']) || previous?.lastPartIndex;
+        const msn = parseInt(attr['LAST-MSN']) || previous.lastPartSn;
+        let part = parseInt(attr['LAST-PART']) || previous.lastPartIndex;
         if (this.hls.config.lowLatencyMode) {
           const currentGoal = Math.min(
             previous.age - previous.partTarget,
@@ -164,7 +164,7 @@ export default class BasePlaylistController
       const offset = Math.max(timelineOffset || 0, 0);
       details.appliedTimelineOffset = offset;
       details.fragments.forEach((frag) => {
-        frag.start = frag.playlistOffset + offset;
+        frag.setStart(frag.playlistOffset + offset);
       });
     }
 
@@ -174,7 +174,7 @@ export default class BasePlaylistController
       details.reloaded(previousDetails);
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
-        mergeDetails(previousDetails, details);
+        mergeDetails(previousDetails, details, this);
         const error = details.playlistParsingError;
         if (error) {
           this.warn(error);

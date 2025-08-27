@@ -608,7 +608,7 @@ function createBufferAppendedData(
     frag: new Fragment(PlaylistLevelType.MAIN, ''),
     part: null,
     parent: PlaylistLevelType.MAIN,
-    type: audio && video ? 'audiovideo' : video ? 'video' : 'audio',
+    type: audio ? 'audiovideo' : 'video',
     timeRanges: {
       video: createMockBuffer(video),
       audio: createMockBuffer(audio || video),
@@ -655,7 +655,7 @@ function createMockFragment(
 ): Fragment {
   const frag = new Fragment(data.type, '');
   Object.assign(frag, data);
-  frag.start = data.startPTS;
+  frag.setStart(data.startPTS);
   frag.duration = data.endPTS - data.startPTS;
   types.forEach((t) => {
     frag.setElementaryStreamInfo(

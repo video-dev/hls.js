@@ -1,6 +1,7 @@
 {
-  "extends": ["config:base"],
+  "extends": ["config:recommended"],
   "labels": ["dependencies", "skip-change-log"],
+  "schedule": ["* 0 28 * *"],
   "prHourlyLimit": 0,
   "prConcurrentLimit": 0,
   "prCreation": "immediate",
@@ -12,10 +13,15 @@
   "major": {
     "addLabels": ["semver-major"]
   },
+  "ignoreDeps": ["FileSaver.js", "@types/chart.js"],
   "packageRules": [
     {
-      "matchPackagePatterns": ["*"],
-      "rangeStrategy": "bump"
+      "matchDatasources": ["html"],
+      "enabled": false
+    },
+    {
+      "rangeStrategy": "bump",
+      "matchPackageNames": ["*"]
     },
     {
       "matchDepTypes": ["devDependencies"],

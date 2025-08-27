@@ -91,7 +91,7 @@ export interface BufferAppendingData {
   chunkMeta: ChunkMetadata;
   offset?: number | undefined;
   parent: PlaylistLevelType;
-  data: Uint8Array;
+  data: Uint8Array<ArrayBuffer>;
 }
 
 export interface BufferAppendedData {
@@ -252,11 +252,6 @@ export interface LevelPTSUpdatedData {
   end: number;
 }
 
-export interface KeyStatusesChangedData {
-  keySystem: string;
-  keyStatuses: MediaKeyStatusMap;
-}
-
 export interface AudioTrackSwitchingData extends MediaPlaylist {}
 
 export interface AudioTrackSwitchedData extends MediaPlaylist {}
@@ -324,6 +319,7 @@ export interface ErrorData {
   bytes?: number;
   chunkMeta?: ChunkMetadata;
   context?: PlaylistLoaderContext;
+  decryptdata?: LevelKey;
   event?: keyof HlsListeners | 'demuxerWorker';
   frag?: Fragment;
   part?: Part | null;
@@ -379,6 +375,7 @@ export interface InitPTSFoundData {
   frag: MediaFragment;
   initPTS: number;
   timescale: number;
+  trackId: number;
 }
 
 export interface FragLoadingData {

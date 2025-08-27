@@ -1,3 +1,4 @@
+import { arrayValuesMatch, optionalArrayValuesMatch } from '../utils/arrays';
 import { isFullSegmentEncryption } from '../utils/encryption-methods-util';
 import { hexToArrayBuffer } from '../utils/hex';
 import { convertDataUriToArrayBytes } from '../utils/keysystem-util';
@@ -63,8 +64,9 @@ export class LevelKey implements DecryptData {
       key.method === this.method &&
       key.encrypted === this.encrypted &&
       key.keyFormat === this.keyFormat &&
-      key.keyFormatVersions.join(',') === this.keyFormatVersions.join(',') &&
-      key.iv?.join(',') === this.iv?.join(',')
+      arrayValuesMatch(key.keyFormatVersions, this.keyFormatVersions) &&
+      optionalArrayValuesMatch(key.iv, this.iv) &&
+      optionalArrayValuesMatch(key.keyId, this.keyId)
     );
   }
 
@@ -84,12 +86,9 @@ export class LevelKey implements DecryptData {
           case KeySystemFormats.PLAYREADY:
           case KeySystemFormats.CLEARKEY:
             return (
-              [
-                'ISO-23001-7',
-                'SAMPLE-AES',
-                'SAMPLE-AES-CENC',
-                'SAMPLE-AES-CTR',
-              ].indexOf(this.method) !== -1
+              ['SAMPLE-AES', 'SAMPLE-AES-CENC', 'SAMPLE-AES-CTR'].indexOf(
+                this.method,
+              ) !== -1
             );
         }
       }

@@ -197,7 +197,7 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     protected onHandlerDestroying(): void;
     // (undocumented)
-    onInitPtsFound(event: Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale }: InitPTSFoundData): void;
+    onInitPtsFound(event: Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale, trackId }: InitPTSFoundData): void;
     // (undocumented)
     protected onManifestLoading(): void;
     // (undocumented)
@@ -392,6 +392,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
+    protected checkRetryDate(): void;
+    // (undocumented)
     protected clearTrackerIfNeeded(frag: Fragment): void;
     // (undocumented)
     protected config: HlsConfig;
@@ -458,7 +460,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     get inFlightFrag(): InFlightData;
     // (undocumented)
-    protected initPTS: RationalTimestamp[];
+    protected initPTS: TimestampOffset[];
     // (undocumented)
     protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean;
     // (undocumented)
@@ -528,8 +530,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected resetLoadingState(): void;
     // (undocumented)
-    protected resetStartWhenNotLoaded(level: Level | null): void;
-    // (undocumented)
     protected resetTransmuxer(): void;
     // (undocumented)
     protected resetWhenMissingContext(chunkMeta: ChunkMetadata | Fragment): void;
@@ -563,6 +563,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected transmuxer: TransmuxerInterface | null;
     // (undocumented)
+    protected unhandledEncryptionError(initSegment: InitSegmentData, frag: Fragment): boolean;
+    // (undocumented)
     protected unregisterListeners(): void;
     // (undocumented)
     protected waitForCdnTuneIn(details: LevelDetails): boolean | 0;
@@ -578,6 +580,8 @@ export interface BaseTrack {
     codec?: string;
     // (undocumented)
     container: string;
+    // (undocumented)
+    encrypted?: boolean;
     // (undocumented)
     id: 'audio' | 'main';
     // (undocumented)
@@ -631,7 +635,7 @@ export interface BufferAppendingData {
     // (undocumented)
     chunkMeta: ChunkMetadata;
     // (undocumented)
-    data: Uint8Array;
+    data: Uint8Array<ArrayBuffer>;
     // (undocumented)
     frag: Fragment;
     // (undocumented)
@@ -1185,8 +1189,8 @@ export type EMEControllerConfig = {
     licenseResponseCallback?: (this: Hls, xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext) => ArrayBuffer;
     emeEnabled: boolean;
     widevineLicenseUrl?: string;
-    drmSystems: DRMSystemsConfiguration;
-    drmSystemOptions: DRMSystemOptions;
+    drmSystems: DRMSystemsConfiguration | undefined;
+    drmSystemOptions: DRMSystemOptions | undefined;
     requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
     requireKeySystemAccessOnStart: boolean;
 };
@@ -1200,9 +1204,11 @@ export const enum ErrorActionFlags {
     // (undocumented)
     MoveAllAlternatesMatchingHost = 1,
     // (undocumented)
+    MoveAllAlternatesMatchingKey = 4,
+    // (undocumented)
     None = 0,
     // (undocumented)
-    SwitchToSDR = 4
+    SwitchToSDR = 8
 }
 
 // Warning: (ae-missing-release-tag) "ErrorController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1234,6 +1240,8 @@ export interface ErrorData {
     chunkMeta?: ChunkMetadata;
     // (undocumented)
     context?: PlaylistLoaderContext;
+    // (undocumented)
+    decryptdata?: LevelKey;
     // (undocumented)
     details: ErrorDetails;
     // @deprecated (undocumented)
@@ -1502,8 +1510,6 @@ export enum Events {
     KEY_LOADED = "hlsKeyLoaded",
     // (undocumented)
     KEY_LOADING = "hlsKeyLoading",
-    // (undocumented)
-    KEY_STATUSES_CHANGED = "hlsKeyStatusesChanged",
     // (undocumented)
     LEVEL_LOADED = "hlsLevelLoaded",
     // (undocumented)
@@ -1809,7 +1815,7 @@ export class Fragment extends BaseSegment {
     level: number;
     // (undocumented)
     levelkeys?: {
-        [key: string]: LevelKey;
+        [key: string]: LevelKey | undefined;
     };
     // (undocumented)
     loader: Loader<FragmentLoaderContext> | null;
@@ -1927,7 +1933,7 @@ export class FragmentTracker implements ComponentAPI {
     detectPartialFragments(data: FragBufferedData): void;
     // (undocumented)
     fragBuffered(frag: MediaFragment, force?: true): void;
-    getAppendedFrag(position: number, levelType: PlaylistLevelType): Fragment | Part | null;
+    getAppendedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | Part | null;
     getBufferedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | null;
     // (undocumented)
     getFragAtPos(position: number, levelType: PlaylistLevelType, buffered?: boolean): MediaFragment | null;
@@ -2190,11 +2196,13 @@ export class HlsAssetPlayer {
     // (undocumented)
     get duration(): number;
     // (undocumented)
-    readonly hls: Hls;
+    hls: Hls | null;
     // (undocumented)
-    readonly interstitial: InterstitialEvent;
+    interstitial: InterstitialEvent;
     // (undocumented)
     get interstitialId(): InterstitialId;
+    // (undocumented)
+    loadSource(): void;
     // (undocumented)
     get media(): HTMLMediaElement | null;
     // (undocumented)
@@ -2403,8 +2411,6 @@ export interface HlsListeners {
     // (undocumented)
     [Events.KEY_LOADING]: (event: Events.KEY_LOADING, data: KeyLoadingData) => void;
     // (undocumented)
-    [Events.KEY_STATUSES_CHANGED]: (event: Events.KEY_STATUSES_CHANGED, data: KeyStatusesChangedData) => void;
-    // (undocumented)
     [Events.LEVEL_LOADED]: (event: Events.LEVEL_LOADED, data: LevelLoadedData) => void;
     // (undocumented)
     [Events.LEVEL_LOADING]: (event: Events.LEVEL_LOADING, data: LevelLoadingData) => void;
@@ -2588,6 +2594,8 @@ export interface InitPTSFoundData {
     initPTS: number;
     // (undocumented)
     timescale: number;
+    // (undocumented)
+    trackId: number;
 }
 
 // Warning: (ae-missing-release-tag) "InitSegmentData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2802,6 +2810,8 @@ export interface InterstitialPlayer {
     // (undocumented)
     assetPlayers: (HlsAssetPlayer | null)[];
     // (undocumented)
+    bufferedEnd: number;
+    // (undocumented)
     currentTime: number;
     // (undocumented)
     duration: number;
@@ -2975,8 +2985,8 @@ export interface KeyLoadedData {
 // Warning: (ae-missing-release-tag) "KeyLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export class KeyLoader implements ComponentAPI {
-    constructor(config: HlsConfig);
+export class KeyLoader extends Logger implements ComponentAPI {
+    constructor(config: HlsConfig, logger: ILogger);
     // (undocumented)
     abort(type?: PlaylistLevelType): void;
     // (undocumented)
@@ -2992,10 +3002,6 @@ export class KeyLoader implements ComponentAPI {
     detach(): void;
     // (undocumented)
     emeController: EMEController | null;
-    // (undocumented)
-    keyUriToKeyInfo: {
-        [keyuri: string]: KeyLoaderInfo;
-    };
     // (undocumented)
     load(frag: Fragment): Promise<KeyLoadedData>;
     // (undocumented)
@@ -3038,16 +3044,6 @@ export interface KeyLoaderInfo {
 export interface KeyLoadingData {
     // (undocumented)
     frag: Fragment;
-}
-
-// Warning: (ae-missing-release-tag) "KeyStatusesChangedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
-//
-// @public (undocumented)
-export interface KeyStatusesChangedData {
-    // (undocumented)
-    keyStatuses: MediaKeyStatusMap;
-    // (undocumented)
-    keySystem: string;
 }
 
 // Warning: (ae-missing-release-tag) "KeySystemFormats" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -3248,7 +3244,7 @@ export class LevelDetails {
     // (undocumented)
     canSkipUntil: number;
     // (undocumented)
-    dateRanges: Record<string, DateRange>;
+    dateRanges: Record<string, DateRange | undefined>;
     // (undocumented)
     dateRangeTagCount: number;
     // (undocumented)
@@ -3281,6 +3277,8 @@ export class LevelDetails {
     fragments: MediaFragment[];
     // (undocumented)
     get fragmentStart(): number;
+    // (undocumented)
+    hasKey(levelKey: LevelKey): boolean;
     // (undocumented)
     get hasProgramDateTime(): boolean;
     // (undocumented)
@@ -4366,6 +4364,8 @@ export interface RemuxedTrack {
     // (undocumented)
     dropped?: number;
     // (undocumented)
+    encrypted?: boolean;
+    // (undocumented)
     endDTS: number;
     // (undocumented)
     endPTS: number;
@@ -4810,6 +4810,13 @@ export enum TimelineOccupancy {
     Range = 1
 }
 
+// Warning: (ae-missing-release-tag) "TimestampOffset" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type TimestampOffset = RationalTimestamp & {
+    trackId: number;
+};
+
 // Warning: (ae-missing-release-tag) "Track" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -4880,7 +4887,7 @@ export class TransmuxerInterface {
     // (undocumented)
     flush(chunkMeta: ChunkMetadata): void;
     // (undocumented)
-    push(data: ArrayBuffer, initSegmentData: Uint8Array | undefined, audioCodec: string | undefined, videoCodec: string | undefined, frag: MediaFragment, part: Part | null, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: RationalTimestamp): void;
+    push(data: ArrayBuffer, initSegmentData: Uint8Array | undefined, audioCodec: string | undefined, videoCodec: string | undefined, frag: MediaFragment, part: Part | null, duration: number, accurateTimeOffset: boolean, chunkMeta: ChunkMetadata, defaultInitPTS?: TimestampOffset): void;
     // (undocumented)
     reset(): void;
 }

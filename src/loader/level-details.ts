@@ -1,7 +1,9 @@
 import type { DateRange } from './date-range';
 import type { Fragment, MediaFragment, Part } from './fragment';
+import type { LevelKey } from './level-key';
 import type { VariableMap } from '../types/level';
 import type { AttrList } from '../utils/attr-list';
+import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
 const DEFAULT_TARGET_DURATION = 10;
 
@@ -17,7 +19,7 @@ export class LevelDetails {
   public fragments: MediaFragment[];
   public fragmentHint?: MediaFragment;
   public partList: Part[] | null = null;
-  public dateRanges: Record<string, DateRange>;
+  public dateRanges: Record<string, DateRange | undefined>;
   public dateRangeTagCount: number = 0;
   public live: boolean = true;
   public requestScheduled: number = -1;
@@ -88,10 +90,21 @@ export class LevelDetails {
     }
   }
 
+  hasKey(levelKey: LevelKey): boolean {
+    return this.encryptedFragments.some((frag) => {
+      let decryptdata = frag.decryptdata;
+      if (!decryptdata) {
+        frag.setKeyFormat(levelKey.keyFormat as KeySystemFormats);
+        decryptdata = frag.decryptdata;
+      }
+      return !!decryptdata && levelKey.matches(decryptdata);
+    });
+  }
+
   get hasProgramDateTime(): boolean {
     if (this.fragments.length) {
       return Number.isFinite(
-        this.fragments[this.fragments.length - 1].programDateTime as number,
+        this.fragments[this.fragments.length - 1].programDateTime,
       );
     }
     return false;
@@ -126,14 +139,14 @@ export class LevelDetails {
   }
 
   get fragmentEnd(): number {
-    if (this.fragments?.length) {
+    if (this.fragments.length) {
       return this.fragments[this.fragments.length - 1].end;
     }
     return 0;
   }
 
   get fragmentStart(): number {
-    if (this.fragments?.length) {
+    if (this.fragments.length) {
       return this.fragments[0].start;
     }
     return 0;
