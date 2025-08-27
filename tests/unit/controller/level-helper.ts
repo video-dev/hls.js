@@ -1677,6 +1677,43 @@ video_5432.m4s`;
     });
   });
 
+  it('does not error between updates when only the query part of the URI changes', function () {
+    const playlist1 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5428
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5428.m4s?t=1
+#EXTINF:2.000,
+video_5429.m4s?t=1
+#EXTINF:2.000,
+video_5430.m4s?t=1
+#EXTINF:2.000,
+video_5431.m4s?t=1`;
+    // Media sequence increased by one but two segments removed.
+    const playlist2 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5429
+#EXT-X-DISCONTINUITY-SEQUENCE:31
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5429.m4s?t=2
+#EXTINF:2.000,
+video_5430.m4s?t=2
+#EXTINF:2.000,
+video_5431.m4s?t=2
+#EXTINF:2.000,
+video_5432.m4s?t=2`;
+    const details1 = parseLevelPlaylist(playlist1);
+    const details2 = parseLevelPlaylist(playlist2);
+    details2.fragments[0].base.url += '?base=changed';
+    mergeDetails(details1, details2, logger);
+    expect(details2.playlistParsingError).to.be.null;
+  });
+
   it('maps dateranges based on latest EXT-X-PROGRAM-DATE-TIME', function () {
     const playlist1 = `#EXTM3U
 #EXT-X-VERSION:6
@@ -1787,6 +1824,225 @@ video_5432.m4s`;
     });
     expect(details2.dateRanges.D3?.tagAnchor).to.include({
       sn: 6,
+    });
+  });
+
+  it('merges new dateranges in delta updates with previous details containing no dateranges', function () {
+    const playlist1 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=9,CAN-SKIP-DATERANGES=YES
+#EXT-X-MAP:URI="hls/20821722-video=2499968.m4s"
+#EXT-X-PROGRAM-DATE-TIME:2025-08-06T16:00:00Z
+#EXTINF:4.0, no desc
+1.m4s
+#EXTINF:4.0, no desc
+2.m4s
+#EXT-X-PROGRAM-DATE-TIME:2025-08-06T16:08:00Z
+#EXTINF:4.0, no desc
+3.m4s
+#EXTINF:4.0, no desc
+4.m4s
+#EXTINF:4.0, no desc
+5.m4s
+#EXT-X-PROGRAM-DATE-TIME:2025-08-06T16:00:20Z
+#EXTINF:4.0, no desc
+6.m4s
+#EXTINF:4.0, no desc
+7.m4s
+#EXTINF:4.0, no desc
+8.m4s
+#EXTINF:4.0, no desc
+9.m4s`;
+    // Media sequence increased by one but two segments removed.
+    const playlist2 = `#EXTM3U
+#EXT-X-VERSION:10
+#EXT-X-MEDIA-SEQUENCE:5
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=9,CAN-SKIP-DATERANGES=YES
+#EXT-X-SKIP:SKIPPED-SEGMENTS=4,RECENTLY-REMOVED-DATERANGES="D0"
+#EXTINF:4, no desc
+9.m4s
+#EXTINF:4, no desc
+10.m4s
+#EXT-X-DATERANGE:ID="D3",START-DATE="2025-08-06T16:00:59.100Z",DURATION=12,SCTE35-CMD=0x00000000`;
+
+    const details1 = parseLevelPlaylist(playlist1);
+    const details2 = parseLevelPlaylist(playlist2);
+
+    expect(details1.playlistParsingError).to.be.null;
+    expect(details2.playlistParsingError).to.be.null;
+
+    // First playilst details
+    expect(details1).to.include({
+      startSN: 1,
+      endSN: 9,
+      totalduration: 36,
+      dateRangeTagCount: 0,
+    });
+    expect(details1.dateRanges).to.be.empty;
+
+    // Merged delta playlist
+    mergeDetails(details1, details2, logger);
+
+    expect(details2).to.include({
+      startSN: 5,
+      endSN: 10,
+      totalduration: 24,
+      dateRangeTagCount: 1,
+    });
+    expect(details2.dateRanges).to.have.keys(['D3']);
+    expect(details2.dateRanges.D3).to.include({
+      startTime: 59.1,
+      tagOrder: 0,
+    });
+    expect(details2.dateRanges.D3?.tagAnchor, 'D3?.tagAnchor').to.include({
+      sn: 6,
+    });
+  });
+
+  it('adds and removed dateranges in delta updates with previous details when all previous dateranges are removed', function () {
+    const playlist1 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=9,CAN-SKIP-DATERANGES=YES
+#EXT-X-MAP:URI="hls/20821722-video=2499968.m4s"
+#EXT-X-PROGRAM-DATE-TIME:2025-08-06T16:00:00Z
+#EXTINF:4.0, no desc
+1.m4s
+#EXTINF:4.0, no desc
+2.m4s
+#EXTINF:4.0, no desc
+3.m4s
+#EXTINF:4.0, no desc
+4.m4s
+#EXTINF:4.0, no desc
+5.m4s
+#EXTINF:4.0, no desc
+6.m4s
+#EXTINF:4.0, no desc
+7.m4s
+#EXTINF:4.0, no desc
+8.m4s
+#EXTINF:4.0, no desc
+9.m4s
+#EXT-X-DATERANGE:ID="D2",START-DATE="2025-08-06T16:00:15Z",PLANNED-DURATION=12,SCTE35-OUT=0x00000000`;
+    // Media sequence increased by one but two segments removed.
+    const playlist2 = `#EXTM3U
+#EXT-X-VERSION:10
+#EXT-X-MEDIA-SEQUENCE:5
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=9,CAN-SKIP-DATERANGES=YES
+#EXT-X-SKIP:SKIPPED-SEGMENTS=4,RECENTLY-REMOVED-DATERANGES="D2"
+#EXTINF:4, no desc
+9.m4s
+#EXTINF:4, no desc
+10.m4s
+#EXT-X-DATERANGE:ID="D3",START-DATE="2025-08-06T16:00:59.100Z",DURATION=12,SCTE35-CMD=0x00000000`;
+
+    const playlist3 = `#EXTM3U
+#EXT-X-VERSION:10
+#EXT-X-MEDIA-SEQUENCE:6
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=9,CAN-SKIP-DATERANGES=YES
+#EXT-X-SKIP:SKIPPED-SEGMENTS=4,RECENTLY-REMOVED-DATERANGES="D2"
+#EXTINF:4, no desc
+10.m4s
+#EXTINF:4, no desc
+11.m4s
+#EXT-X-DATERANGE:ID="D3",START-DATE="2025-08-06T16:00:59.100Z",DURATION=12,SCTE35-CMD=0x00000000`;
+
+    const playlist4 = `#EXTM3U
+#EXT-X-VERSION:10
+#EXT-X-MEDIA-SEQUENCE:7
+#EXT-X-INDEPENDENT-SEGMENTS
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=9,CAN-SKIP-DATERANGES=YES
+#EXT-X-SKIP:SKIPPED-SEGMENTS=4,RECENTLY-REMOVED-DATERANGES="D2	D3"
+#EXTINF:4, no desc
+11.m4s
+#EXTINF:4, no desc
+12.m4s
+#EXT-X-DATERANGE:ID="D4",START-DATE="2025-08-06T16:01:09.100Z",DURATION=12,SCTE35-CMD=0x00000000`;
+
+    const details1 = parseLevelPlaylist(playlist1);
+    const details2 = parseLevelPlaylist(playlist2);
+    const details3 = parseLevelPlaylist(playlist3);
+    const details4 = parseLevelPlaylist(playlist4);
+
+    expect(details1.playlistParsingError).to.be.null;
+    expect(details2.playlistParsingError).to.be.null;
+    expect(details3.playlistParsingError).to.be.null;
+    expect(details4.playlistParsingError).to.be.null;
+
+    // First playilst details
+    expect(details1).to.include({
+      startSN: 1,
+      endSN: 9,
+      totalduration: 36,
+      dateRangeTagCount: 1,
+    });
+    expect(details1.dateRanges).to.have.keys(['D2']);
+
+    // Merge delta playlist
+    mergeDetails(details1, details2, logger);
+
+    expect(details2).to.include({
+      startSN: 5,
+      endSN: 10,
+      totalduration: 24,
+      dateRangeTagCount: 1,
+    });
+    expect(details2.dateRanges).to.have.keys(['D3']);
+    expect(details2.dateRanges.D3).to.include({
+      startTime: 59.1,
+      tagOrder: 0,
+    });
+    expect(details2.dateRanges.D3?.tagAnchor, 'D3?.tagAnchor').to.include({
+      sn: 1,
+    });
+
+    // Merge next delta playlist
+    mergeDetails(details2, details3, logger);
+
+    expect(details3).to.include({
+      startSN: 6,
+      endSN: 11,
+      totalduration: 24,
+      dateRangeTagCount: 1,
+    });
+    expect(details3.dateRanges).to.have.keys(['D3']);
+    expect(details3.dateRanges.D3).to.include({
+      startTime: 59.1,
+      tagOrder: 0,
+    });
+    // `tagAnchor` moved to last segment when no segments with `rawProgramDateTime` (#EXT-X-PROGRAM-DATE-TIME) remain
+    expect(details3.dateRanges.D3?.tagAnchor, 'D3?.tagAnchor').to.include({
+      sn: 11,
+    });
+
+    // Merge next delta playlist
+    mergeDetails(details3, details4, logger);
+
+    expect(details4).to.include({
+      startSN: 7,
+      endSN: 12,
+      totalduration: 24,
+      dateRangeTagCount: 1,
+    });
+    expect(details4.dateRanges).to.have.keys(['D4']);
+    // `tagAnchor` not inherited in new daterange when no segments with `rawProgramDateTime` (#EXT-X-PROGRAM-DATE-TIME) remain
+    expect(details4.dateRanges.D4?.tagAnchor, 'D4?.tagAnchor').to.include({
+      sn: 12,
+    });
+    expect(details4.dateRanges.D4).to.include({
+      startTime: 69.1,
+      tagOrder: 0,
     });
   });
 });

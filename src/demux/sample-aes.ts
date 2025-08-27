@@ -56,14 +56,16 @@ class SampleAesDecrypter {
       encryptedData.byteOffset + encryptedData.length,
     );
 
-    this.decryptBuffer(encryptedBuffer).then((decryptedBuffer: ArrayBuffer) => {
-      const decryptedData = new Uint8Array(decryptedBuffer);
-      curUnit.set(decryptedData, 16);
+    this.decryptBuffer(encryptedBuffer)
+      .then((decryptedBuffer: ArrayBuffer) => {
+        const decryptedData = new Uint8Array(decryptedBuffer);
+        curUnit.set(decryptedData, 16);
 
-      if (!this.decrypter.isSync()) {
-        this.decryptAacSamples(samples, sampleIndex + 1, callback);
-      }
-    });
+        if (!this.decrypter.isSync()) {
+          this.decryptAacSamples(samples, sampleIndex + 1, callback);
+        }
+      })
+      .catch(callback);
   }
 
   decryptAacSamples(
@@ -136,13 +138,15 @@ class SampleAesDecrypter {
     const decodedData = discardEPB(curUnit.data);
     const encryptedData = this.getAvcEncryptedData(decodedData);
 
-    this.decryptBuffer(encryptedData.buffer).then((decryptedBuffer) => {
-      curUnit.data = this.getAvcDecryptedUnit(decodedData, decryptedBuffer);
+    this.decryptBuffer(encryptedData.buffer)
+      .then((decryptedBuffer) => {
+        curUnit.data = this.getAvcDecryptedUnit(decodedData, decryptedBuffer);
 
-      if (!this.decrypter.isSync()) {
-        this.decryptAvcSamples(samples, sampleIndex, unitIndex + 1, callback);
-      }
-    });
+        if (!this.decrypter.isSync()) {
+          this.decryptAvcSamples(samples, sampleIndex, unitIndex + 1, callback);
+        }
+      })
+      .catch(callback);
   }
 
   decryptAvcSamples(

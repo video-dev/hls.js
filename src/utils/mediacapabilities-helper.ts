@@ -16,16 +16,26 @@ export type MediaDecodingInfo = {
   error?: Error;
 };
 
+// @ts-ignore
+const supportedResult: MediaCapabilitiesDecodingInfo = {
+  supported: true,
+  powerEfficient: true,
+  smooth: true,
+  // keySystemAccess: null,
+};
+
+// @ts-ignore
+const unsupportedResult: MediaCapabilitiesDecodingInfo = {
+  supported: false,
+  smooth: false,
+  powerEfficient: false,
+  // keySystemAccess: null,
+};
+
 export const SUPPORTED_INFO_DEFAULT: MediaDecodingInfo = {
   supported: true,
   configurations: [] as MediaDecodingConfiguration[],
-  decodingInfoResults: [
-    {
-      supported: true,
-      powerEfficient: true,
-      smooth: true,
-    },
-  ],
+  decodingInfoResults: [supportedResult],
 } as const;
 
 export function getUnsupportedResult(
@@ -35,13 +45,7 @@ export function getUnsupportedResult(
   return {
     supported: false,
     configurations,
-    decodingInfoResults: [
-      {
-        supported: false,
-        smooth: false,
-        powerEfficient: false,
-      },
-    ],
+    decodingInfoResults: [unsupportedResult],
     error,
   };
 }
@@ -113,7 +117,10 @@ export function getMediaDecodingInfoPromise(
   level: Level,
   audioTracksByGroup: AudioTracksByGroup,
   mediaCapabilities: MediaCapabilities | undefined,
-  cache: Record<string, Promise<MediaCapabilitiesDecodingInfo>> = {},
+  cache: Record<
+    string,
+    Promise<MediaCapabilitiesDecodingInfo> | undefined
+  > = {},
 ): Promise<MediaDecodingInfo> {
   const videoCodecs = level.videoCodec;
   if ((!videoCodecs && !level.audioCodec) || !mediaCapabilities) {

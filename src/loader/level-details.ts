@@ -1,7 +1,9 @@
 import type { DateRange } from './date-range';
 import type { Fragment, MediaFragment, Part } from './fragment';
+import type { LevelKey } from './level-key';
 import type { VariableMap } from '../types/level';
 import type { AttrList } from '../utils/attr-list';
+import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
 const DEFAULT_TARGET_DURATION = 10;
 
@@ -86,6 +88,17 @@ export class LevelDetails {
     } else {
       this.misses = previous.misses + 1;
     }
+  }
+
+  hasKey(levelKey: LevelKey): boolean {
+    return this.encryptedFragments.some((frag) => {
+      let decryptdata = frag.decryptdata;
+      if (!decryptdata) {
+        frag.setKeyFormat(levelKey.keyFormat as KeySystemFormats);
+        decryptdata = frag.decryptdata;
+      }
+      return !!decryptdata && levelKey.matches(decryptdata);
+    });
   }
 
   get hasProgramDateTime(): boolean {

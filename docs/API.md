@@ -362,7 +362,7 @@ It should not be used in response to non-fatal hls.js error events.
 ```js
 let attemptedErrorRecovery = null;
 
-video.addEventListener('error', (event) {
+video.addEventListener('error', (event) => {
   const mediaError = event.currentTarget.error;
   if (mediaError.code === mediaError.MEDIA_ERR_DECODE) {
     const now = Date.now();
@@ -380,11 +380,19 @@ hls.on(Hls.Events.ERROR, function (name, data) {
       case Hls.ErrorTypes.MEDIA_ERROR: {
         const now = Date.now();
         if (!attemptedErrorRecovery || now - attemptedErrorRecovery > 5000) {
-          console.log('Fatal media error encountered (' + video.error + + '), attempting to recover');
+          console.log(
+            'Fatal media error encountered (' +
+              video.error +
+              +'), attempting to recover',
+          );
           attemptedErrorRecovery = now;
           hls.recoverMediaError();
         } else {
-          console.log('Skipping media error recovery (only ' + (now - attemptedErrorRecovery) + 'ms since last error)');
+          console.log(
+            'Skipping media error recovery (only ' +
+              (now - attemptedErrorRecovery) +
+              'ms since last error)',
+          );
         }
         break;
       }
@@ -561,7 +569,9 @@ This configuration will be applied by default to all instances.
 
 (default: `false`)
 
-Setting `config.debug = true;` will turn on debug logs on JS console.
+Setting `config.debug = true` enables JavaScript debug console logs. Debug mode also disables catching exceptions in even handler callbacks.
+In debug mode, when an event listener throws, the exception is not caught. This allows uncaught exeptions to trigger the JavaScript debugger.
+In production mode (`config.debug = false`), exceptions that are caught in event handlers are redispatched as errors with `type: OTHER_ERROR, details: INTERNAL_EXCEPTION, error: <caught exception>`.
 
 A logger object could also be provided for custom logging: `config.debug = customLogger;`.
 
@@ -756,10 +766,10 @@ Decreasing this value will mean that each stall will have less affect on `hls.ta
 
 (default: `Infinity`)
 
-maximum delay allowed from edge of live, expressed in multiple of `EXT-X-TARGETDURATION`.
-if set to 10, the player will seek back to `liveSyncDurationCount` whenever the next fragment to be loaded is older than N-10, N being the last fragment of the live playlist.
-If set, this value must be stricly superior to `liveSyncDurationCount`
-a value too close from `liveSyncDurationCount` is likely to cause playback stalls.
+Maximum delay allowed from edge of live, expressed in multiple of `EXT-X-TARGETDURATION`.
+If set to 10, the player will seek back to `liveSyncDurationCount` whenever the next fragment to be loaded is older than N-10, N being the last fragment of the live playlist.
+If set, this value must be strictly superior to `liveSyncDurationCount`.
+A value too close from `liveSyncDurationCount` is likely to cause playback stalls.
 
 ### `liveSyncDuration`
 
@@ -776,7 +786,7 @@ A value too low (inferior to ~3 segment durations) is likely to cause playback s
 
 Alternative parameter to `liveMaxLatencyDurationCount`, expressed in seconds vs number of segments.
 If defined in the configuration object, `liveMaxLatencyDuration` will take precedence over the default `liveMaxLatencyDurationCount`.
-If set, this value must be stricly superior to `liveSyncDuration` which must be defined as well.
+If set, this value must be strictly superior to `liveSyncDuration` which must be defined as well.
 You can't define this parameter and either `liveSyncDurationCount` or `liveMaxLatencyDurationCount` in your configuration object at the same time.
 A value too close from `liveSyncDuration` is likely to cause playback stalls.
 

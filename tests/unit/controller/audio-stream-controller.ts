@@ -139,7 +139,7 @@ describe('AudioStreamController', function () {
     sandbox = sinon.createSandbox();
     hls = new Hls();
     fragmentTracker = new FragmentTracker(hls);
-    keyLoader = new KeyLoader(hlsDefaultConfig);
+    keyLoader = new KeyLoader(hlsDefaultConfig, hls.logger);
     audioStreamController = new AudioStreamController(
       hls,
       fragmentTracker,
