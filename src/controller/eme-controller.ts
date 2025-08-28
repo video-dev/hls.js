@@ -903,7 +903,6 @@ class EMEController extends Logger implements ComponentAPI {
         // Handle PlayReady little-endian key ID conversion for status comparison only
         // Don't modify the original key ID from playlist parsing
         if (mediaKeySessionContext.keySystem === KeySystems.PLAYREADY && keyIdArray.length === 16) {
-          keyIdArray = new Uint8Array(keyIdArray);
           changeEndianness(keyIdArray);
         }
         
@@ -937,7 +936,7 @@ class EMEController extends Logger implements ComponentAPI {
     // This can happen with PlayReady when key IDs don't align properly
     if (!hasMatchedKey && keyStatuses.length > 0) {
       const firstStatus = keyStatuses[0].status;
-      const allSameStatus = keyStatuses.every(({ status }) => status === firstStatus);
+      const allSameStatus = !keyStatuses.some(({ status }) => status !== firstStatus);
       
       if (allSameStatus && (firstStatus === 'usable' || firstStatus.startsWith('usable'))) {
         this.log(
