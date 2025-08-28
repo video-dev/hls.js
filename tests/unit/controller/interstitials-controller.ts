@@ -1182,7 +1182,7 @@ fileSequence3.mp4
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1249,7 +1249,7 @@ fileSequence3.mp4
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1337,7 +1337,7 @@ fileSequence6.mp4`;
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1451,7 +1451,7 @@ fileSequence6.mp4`;
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1828,7 +1828,7 @@ fileSequence6.mp4
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAssetsLoaded = getTriggerCalls();
       expect(callsAfterAssetsLoaded).to.deep.equal(
@@ -2003,7 +2003,7 @@ fileSequence6.mp4`;
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const eventsAfterAssetListLoaded = getTriggerCalls();
       expect(eventsAfterAssetListLoaded).to.deep.equal(

@@ -212,7 +212,7 @@ describe('AudioStreamController', function () {
           endSN,
         } as unknown as LevelDetails,
         id: 0,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         stats: new LoadStats(),
         deliveryDirectives: null,
       };

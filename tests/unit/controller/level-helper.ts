@@ -1518,7 +1518,7 @@ audio_5441.m4s`;
         level: 0,
         id: 0,
         stats: new LoadStats(),
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         deliveryDirectives: null,
       });
     }
@@ -1530,7 +1530,7 @@ audio_5441.m4s`;
         id: 0,
         groupId: '',
         stats: new LoadStats(),
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         deliveryDirectives: null,
       });
     }

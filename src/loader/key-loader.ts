@@ -22,6 +22,7 @@ import type {
   LoaderStats,
   PlaylistLevelType,
 } from '../types/loader';
+import type { NullableNetworkDetails } from '../types/network-details';
 import type { ILogger } from '../utils/logger';
 import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
@@ -81,7 +82,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
     frag: Fragment,
     details: ErrorDetails = ErrorDetails.KEY_LOAD_ERROR,
     error: Error,
-    networkDetails?: any,
+    networkDetails?: NullableNetworkDetails,
     response?: { url: string; data: undefined; code: number; text: string },
   ): LoadError {
     return new LoadError({
@@ -91,7 +92,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
       frag,
       response,
       error,
-      networkDetails,
+      networkDetails: networkDetails || null,
     });
   }
 
@@ -304,7 +305,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
           response: LoaderResponse,
           stats: LoaderStats,
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
         ) => {
           const { frag, keyInfo, url: uri } = context;
           const id = getKeyId(keyInfo.decryptdata) || uri;
@@ -332,7 +333,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
         onError: (
           response: { code: number; text: string },
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
           stats: LoaderStats,
         ) => {
           this.resetLoader(context);
@@ -352,7 +353,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
         onTimeout: (
           stats: LoaderStats,
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
         ) => {
           this.resetLoader(context);
           reject(
@@ -368,7 +369,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
         onAbort: (
           stats: LoaderStats,
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
         ) => {
           this.resetLoader(context);
           reject(
