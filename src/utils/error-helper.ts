@@ -9,6 +9,9 @@ export function isTimeoutError(error: ErrorData): boolean {
     case ErrorDetails.KEY_LOAD_TIMEOUT:
     case ErrorDetails.LEVEL_LOAD_TIMEOUT:
     case ErrorDetails.MANIFEST_LOAD_TIMEOUT:
+    case ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT:
+    case ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT:
+    case ErrorDetails.ASSET_LIST_LOAD_TIMEOUT:
       return true;
   }
   return false;
