@@ -890,11 +890,18 @@ class EMEController extends Logger implements ComponentAPI {
           keyId = status;
           status = temp;
         }
-        const keyIdWithStatusChange = arrayToHex(
-          'buffer' in keyId
-            ? new Uint8Array(keyId.buffer, keyId.byteOffset, keyId.byteLength)
-            : new Uint8Array(keyId),
-        );
+        
+        let keyIdArray: Uint8Array = 'buffer' in keyId
+          ? new Uint8Array(keyId.buffer, keyId.byteOffset, keyId.byteLength)
+          : new Uint8Array(keyId);
+        
+        // Handle PlayReady little-endian key ID conversion
+        if (mediaKeySessionContext.keySystem === KeySystems.PLAYREADY && keyIdArray.length === 16) {
+          keyIdArray = this.convertPlayReadyKeyIdEndianness(keyIdArray);
+        }
+        
+        const keyIdWithStatusChange = arrayToHex(new Uint8Array(keyIdArray));
+        
 
         // Error immediately when encountering a key ID with this status again
         if (status === 'internal-error') {
@@ -911,6 +918,37 @@ class EMEController extends Logger implements ComponentAPI {
         }
       },
     );
+  }
+
+  private convertPlayReadyKeyIdEndianness(keyId: Uint8Array): Uint8Array {
+    if (keyId.length !== 16) {
+      return keyId;
+    }
+    
+    // PlayReady GUID format: convert from little-endian to big-endian
+    // GUID structure: {DWORD-WORD-WORD-WORD-BYTE[6]}
+    const converted = new Uint8Array(16);
+    
+    // First 4 bytes (32-bit DWORD): reverse byte order
+    converted[0] = keyId[3];
+    converted[1] = keyId[2];
+    converted[2] = keyId[1];
+    converted[3] = keyId[0];
+    
+    // Next 2 bytes (16-bit WORD): reverse byte order
+    converted[4] = keyId[5];
+    converted[5] = keyId[4];
+    
+    // Next 2 bytes (16-bit WORD): reverse byte order
+    converted[6] = keyId[7];
+    converted[7] = keyId[6];
+    
+    // Last 8 bytes remain in the same order (big-endian)
+    for (let i = 8; i < 16; i++) {
+      converted[i] = keyId[i];
+    }
+    
+    return converted;
   }
 
   private fetchServerCertificate(
