@@ -50,7 +50,7 @@ jobs:
       group: 'build:build:${{ github.ref }}'
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -133,7 +133,7 @@ jobs:
       group: 'build:test_unit:${{ github.ref }}'
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: cache node_modules
         uses: actions/cache@v4
@@ -177,7 +177,7 @@ jobs:
       group: 'build:cloudflare_pages:${{ github.ref }}'
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: cache node_modules
         uses: actions/cache@v4
@@ -252,7 +252,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: use Node.js
         uses: actions/setup-node@v4
@@ -288,7 +288,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: cache node_modules
         uses: actions/cache@v4
@@ -352,7 +352,7 @@ jobs:
             uaVersion: '75.0'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: cache node_modules
         uses: actions/cache@v4
@@ -424,7 +424,7 @@ jobs:
             os: Windows 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: cache node_modules
         uses: actions/cache@v4
