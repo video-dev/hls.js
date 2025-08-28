@@ -12,6 +12,7 @@ import {
   removeEventListener,
 } from '../utils/event-listener-helper';
 import { arrayToHex } from '../utils/hex';
+import { changeEndianness } from '../utils/keysystem-util';
 import { Logger } from '../utils/logger';
 import {
   getKeySystemsForConfig,
@@ -897,7 +898,8 @@ class EMEController extends Logger implements ComponentAPI {
         
         // Handle PlayReady little-endian key ID conversion
         if (mediaKeySessionContext.keySystem === KeySystems.PLAYREADY && keyIdArray.length === 16) {
-          keyIdArray = this.convertPlayReadyKeyIdEndianness(keyIdArray);
+          keyIdArray = new Uint8Array(keyIdArray);
+          changeEndianness(keyIdArray);
         }
         
         const keyIdWithStatusChange = arrayToHex(new Uint8Array(keyIdArray));
@@ -918,37 +920,6 @@ class EMEController extends Logger implements ComponentAPI {
         }
       },
     );
-  }
-
-  private convertPlayReadyKeyIdEndianness(keyId: Uint8Array): Uint8Array {
-    if (keyId.length !== 16) {
-      return keyId;
-    }
-    
-    // PlayReady GUID format: convert from little-endian to big-endian
-    // GUID structure: {DWORD-WORD-WORD-WORD-BYTE[6]}
-    const converted = new Uint8Array(16);
-    
-    // First 4 bytes (32-bit DWORD): reverse byte order
-    converted[0] = keyId[3];
-    converted[1] = keyId[2];
-    converted[2] = keyId[1];
-    converted[3] = keyId[0];
-    
-    // Next 2 bytes (16-bit WORD): reverse byte order
-    converted[4] = keyId[5];
-    converted[5] = keyId[4];
-    
-    // Next 2 bytes (16-bit WORD): reverse byte order
-    converted[6] = keyId[7];
-    converted[7] = keyId[6];
-    
-    // Last 8 bytes remain in the same order (big-endian)
-    for (let i = 8; i < 16; i++) {
-      converted[i] = keyId[i];
-    }
-    
-    return converted;
   }
 
   private fetchServerCertificate(
