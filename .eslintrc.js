@@ -3,9 +3,11 @@ const asyncKeywordConstraintMsg =
 const selfVsWindowGlobalMsg =
   'Use `self` instead of `window` to access the global context everywhere (including workers).';
 const arrayFindCompatibilityMsg =
-  'Usage of Array find methods is restricted for compatibility.';
+  'Usage of Array find method is restricted for compatibility.';
 const arrayFindIndexCompatibilityMsg =
-  'Usage of Array findIndex methods is restricted for compatibility.';
+  'Usage of Array findIndex method is restricted for compatibility.';
+const arrayEveryCompatibilityMsg =
+  'Usage of Array every method is restricted for compatibility. Use a negative Array some check instead.';
 
 module.exports = {
   env: { browser: true, commonjs: true, es6: true },
@@ -92,6 +94,11 @@ module.exports = {
             selector:
               'MemberExpression[property.name="findIndex"][object.type="Identifier"]',
             message: arrayFindIndexCompatibilityMsg,
+          },
+          {
+            selector:
+              'MemberExpression[property.name="every"][object.type="Identifier"]',
+            message: arrayEveryCompatibilityMsg,
           },
         ],
         'import/order': [
