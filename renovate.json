@@ -2,8 +2,8 @@
   "extends": ["config:recommended"],
   "labels": ["dependencies", "skip-change-log"],
   "schedule": ["* 0 28 * *"],
-  "prHourlyLimit": 0,
-  "prConcurrentLimit": 0,
+  "prHourlyLimit": 3,
+  "prConcurrentLimit": 3,
   "prCreation": "immediate",
   "minimumReleaseAge": "7 days",
   "internalChecksFilter": "strict",
@@ -13,7 +13,7 @@
   "major": {
     "addLabels": ["semver-major"]
   },
-  "ignoreDeps": ["FileSaver.js", "@types/chart.js"],
+  "ignoreDeps": ["ace", "chart.js", "FileSaver.js"],
   "packageRules": [
     {
       "matchDatasources": ["html"],
