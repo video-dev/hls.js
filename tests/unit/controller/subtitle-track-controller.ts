@@ -494,7 +494,7 @@ describe('SubtitleTrackController', function () {
         groupId: 'default-text-group',
         details: { foo: 'bar' } as any,
         stats: new LoadStats(),
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         deliveryDirectives: null,
         track: {} as any,
       };
@@ -527,7 +527,7 @@ describe('SubtitleTrackController', function () {
         groupId: 'default-text-group',
         details: { foo: 'bar' } as any,
         stats: new LoadStats(),
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         deliveryDirectives: null,
         track: {} as any,
       };
@@ -551,7 +551,7 @@ describe('SubtitleTrackController', function () {
         groupId: 'default-text-group',
         details,
         stats: new LoadStats(),
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         deliveryDirectives: null,
         track: {} as any,
       });
@@ -568,7 +568,7 @@ describe('SubtitleTrackController', function () {
         groupId: 'default-text-group',
         details,
         stats: new LoadStats(),
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         deliveryDirectives: null,
         track: {} as any,
       });
@@ -586,7 +586,7 @@ describe('SubtitleTrackController', function () {
         groupId: 'default-text-group',
         details,
         stats: new LoadStats(),
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         deliveryDirectives: null,
         track: {} as any,
       });
