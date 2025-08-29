@@ -97,7 +97,7 @@ export class TimelineController implements ComponentAPI {
       },
     };
 
-    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
@@ -113,7 +113,7 @@ export class TimelineController implements ComponentAPI {
 
   public destroy(): void {
     const { hls } = this;
-    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
@@ -224,16 +224,14 @@ export class TimelineController implements ComponentAPI {
     if (this.captionsTracks[trackName]) {
       return;
     }
-    const { captionsProperties, captionsTracks } = this;
+    const { captionsProperties, captionsTracks, media } = this;
     const { label, languageCode } = captionsProperties[trackName];
-    const media = this.media;
     if (media) {
       captionsTracks[trackName] = createTrackNode(
         media,
         'captions',
         label,
         languageCode,
-        true,
       );
     }
   }
@@ -259,40 +257,27 @@ export class TimelineController implements ComponentAPI {
     this.hls.trigger(Events.NON_NATIVE_TEXT_TRACKS_FOUND, { tracks: [track] });
   }
 
-  // should be called after SubtitleTrackController.onMediaAttaching
-  private onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
+  private onMediaAttaching(
+    event: Events.MEDIA_ATTACHING,
     data: MediaAttachingData,
   ) {
-    const media = data.media;
-    this.media = media;
-    if (this.config.renderTextTracksNatively) {
-      for (const track of this.tracks) {
-        media.appendChild(track.trackNode!);
-      }
-    }
+    this.media = data.media;
   }
 
-  // should be called before SubtitleTrackController.onMediaDetached
   private onMediaDetaching(
     event: Events.MEDIA_DETACHING,
     data: MediaDetachingData,
   ) {
     const transferringMedia = !!data.transferMedia;
-    const media = this.media;
     this.media = null;
     if (transferringMedia) {
       return;
     }
 
-    if (media && this.config.renderTextTracksNatively) {
-      for (const track of this.tracks) {
-        media.removeChild(track.trackNode!);
-      }
+    if (this.config.renderTextTracksNatively) {
       const { captionsTracks } = this;
       for (const trackName in captionsTracks) {
-        const trackNode = captionsTracks[trackName];
-        media.removeChild(trackNode);
+        captionsTracks[trackName].remove();
       }
     }
     this.captionsTracks = {};
@@ -323,44 +308,25 @@ export class TimelineController implements ComponentAPI {
     data: SubtitleTracksUpdatedData,
   ) {
     const tracks: Array<MediaPlaylist> = data.subtitleTracks || [];
-    const hasIMSC1 = tracks.some((track) => track.textCodec === IMSC1_CODEC);
-    if (this.config.enableWebVTT || (hasIMSC1 && this.config.enableIMSC1)) {
-      const listIsIdentical = subtitleOptionsIdentical(this.tracks, tracks);
-      if (listIsIdentical) {
-        this.tracks = tracks;
-        return;
-      }
-
-      if (this.config.renderTextTracksNatively) {
-        const media = this.media;
-        if (media) {
-          for (const track of this.tracks) {
-            if (!tracks.includes(track)) {
-              media.removeChild(track.trackNode!);
-            }
-          }
-          for (const track of tracks) {
-            if (track.trackNode!.parentNode !== media) {
-              media.appendChild(track.trackNode!);
-            }
-          }
-        }
-      } else if (tracks.length) {
-        // Create a list of tracks for the provider to consume
-        const tracksList = tracks.map((track) => {
-          return {
-            label: track.name,
-            kind: track.type.toLowerCase(),
-            default: track.default,
-            subtitleTrack: track,
-          };
-        });
-        this.hls.trigger(Events.NON_NATIVE_TEXT_TRACKS_FOUND, {
-          tracks: tracksList,
-        });
-      }
-      this.tracks = tracks;
+    if (
+      tracks.length &&
+      !this.config.renderTextTracksNatively &&
+      !subtitleOptionsIdentical(this.tracks, tracks)
+    ) {
+      // Create a list of tracks for the provider to consume
+      const tracksList = tracks.map((track) => {
+        return {
+          label: track.name,
+          kind: track.type.toLowerCase(),
+          default: track.default,
+          subtitleTrack: track,
+        };
+      });
+      this.hls.trigger(Events.NON_NATIVE_TEXT_TRACKS_FOUND, {
+        tracks: tracksList,
+      });
     }
+    this.tracks = tracks;
   }
 
   private onManifestLoaded(
@@ -423,7 +389,10 @@ export class TimelineController implements ComponentAPI {
     data: FragDecryptedData | FragLoadedData,
   ) {
     const { frag, payload } = data;
-    if (frag.type === PlaylistLevelType.SUBTITLE) {
+    if (
+      frag.level < this.tracks.length &&
+      frag.type === PlaylistLevelType.SUBTITLE
+    ) {
       // If fragment is subtitle type, parse as WebVTT.
       if (payload.byteLength) {
         const decryptData = frag.decryptdata;
@@ -441,10 +410,7 @@ export class TimelineController implements ComponentAPI {
             };
             this.prevCC = frag.cc;
           }
-          if (
-            trackPlaylistMedia &&
-            trackPlaylistMedia.textCodec === IMSC1_CODEC
-          ) {
+          if (trackPlaylistMedia.textCodec === IMSC1_CODEC) {
             this._parseIMSC1(frag, payload);
           } else {
             this._parseVTTs(data);
@@ -517,7 +483,7 @@ export class TimelineController implements ComponentAPI {
           error.message === 'Missing initPTS for VTT MPEGTS';
         if (missingInitPTS) {
           unparsedVttFrags.push(data);
-        } else {
+        } else if (this.config.enableIMSC1) {
           this._fallbackToIMSC1(frag, payload);
         }
         // Something went wrong while parsing. Trigger event with success false.
@@ -641,12 +607,12 @@ export class TimelineController implements ComponentAPI {
     if (this.config.renderTextTracksNatively) {
       // Clear VTT/IMSC1 subtitle cues from the subtitle TextTracks when the back buffer is flushed
       if (startOffset === 0 && endOffsetSubtitles !== undefined) {
-        for (const track of this.tracks) {
+        this.tracks.forEach((track) => {
           const textTrack = track.trackNode?.track;
           if (textTrack) {
             removeCuesInRange(textTrack, startOffset, endOffsetSubtitles);
           }
-        }
+        });
       }
     }
   }
