@@ -882,10 +882,10 @@ class EMEController extends Logger implements ComponentAPI {
     const sessionLevelKeyId = arrayToHex(
       new Uint8Array(mediaKeySessionContext.decryptdata.keyId || []),
     );
-    
+
     let hasMatchedKey = false;
     const keyStatuses: { status: MediaKeyStatus; keyId: string }[] = [];
-    
+
     mediaKeySessionContext.mediaKeysSession.keyStatuses.forEach(
       (status: MediaKeyStatus, keyId: BufferSource) => {
         // keyStatuses.forEach is not standard API so the callback value looks weird on xboxone
@@ -895,22 +895,28 @@ class EMEController extends Logger implements ComponentAPI {
           keyId = status;
           status = temp;
         }
-        
-        const keyIdArray: Uint8Array = 'buffer' in keyId
-          ? new Uint8Array(keyId.buffer, keyId.byteOffset, keyId.byteLength)
-          : new Uint8Array(keyId);
-        
+
+        const keyIdArray: Uint8Array =
+          'buffer' in keyId
+            ? new Uint8Array(keyId.buffer, keyId.byteOffset, keyId.byteLength)
+            : new Uint8Array(keyId);
+
         // Handle PlayReady little-endian key ID conversion for status comparison only
         // Don't modify the original key ID from playlist parsing
-        if (mediaKeySessionContext.keySystem === KeySystems.PLAYREADY && keyIdArray.length === 16) {
+        if (
+          mediaKeySessionContext.keySystem === KeySystems.PLAYREADY &&
+          keyIdArray.length === 16
+        ) {
           changeEndianness(keyIdArray);
         }
-        
-        const keyIdWithStatusChange = arrayToHex(keyIdArray as Uint8Array<ArrayBuffer>);
-        
+
+        const keyIdWithStatusChange = arrayToHex(
+          keyIdArray as Uint8Array<ArrayBuffer>,
+        );
+
         // Store all key statuses for processing
         keyStatuses.push({ status, keyId: keyIdWithStatusChange });
-        
+
         // Error immediately when encountering a key ID with this status again
         if (status === 'internal-error') {
           this.bannedKeyIds[keyIdWithStatusChange] = status;
@@ -931,19 +937,27 @@ class EMEController extends Logger implements ComponentAPI {
         }
       },
     );
-    
+
     // Handle case where no keys matched but all have the same status
     // This can happen with PlayReady when key IDs don't align properly
     if (!hasMatchedKey && keyStatuses.length > 0) {
       const firstStatus = keyStatuses[0].status;
-      const allSameStatus = !keyStatuses.some(({ status }) => status !== firstStatus);
-      
-      if (allSameStatus && (firstStatus === 'usable' || firstStatus.startsWith('usable'))) {
+      const allSameStatus = !keyStatuses.some(
+        ({ status }) => status !== firstStatus,
+      );
+
+      if (
+        allSameStatus &&
+        (firstStatus === 'usable' || firstStatus.startsWith('usable'))
+      ) {
         this.log(
           `No key matched session keyId ${sessionLevelKeyId}, but all keys have usable status "${firstStatus}". Treating as usable.`,
         );
         mediaKeySessionContext.keyStatus = firstStatus;
-      } else if (allSameStatus && (firstStatus === 'internal-error' || firstStatus === 'expired')) {
+      } else if (
+        allSameStatus &&
+        (firstStatus === 'internal-error' || firstStatus === 'expired')
+      ) {
         this.log(
           `No key matched session keyId ${sessionLevelKeyId}, but all keys have error status "${firstStatus}". Applying to session.`,
         );
