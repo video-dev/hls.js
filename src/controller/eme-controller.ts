@@ -896,7 +896,7 @@ class EMEController extends Logger implements ComponentAPI {
           status = temp;
         }
         
-        let keyIdArray: Uint8Array = 'buffer' in keyId
+        const keyIdArray: Uint8Array = 'buffer' in keyId
           ? new Uint8Array(keyId.buffer, keyId.byteOffset, keyId.byteLength)
           : new Uint8Array(keyId);
         
