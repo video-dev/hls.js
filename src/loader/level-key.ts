@@ -37,6 +37,10 @@ export class LevelKey implements DecryptData {
     keyUriToKeyIdMap = {};
   }
 
+  static setKeyIdForUri(uri: string, keyId: Uint8Array<ArrayBuffer>) {
+    keyUriToKeyIdMap[uri] = keyId;
+  }
+
   constructor(
     method: string,
     uri: string,
@@ -142,11 +146,11 @@ export class LevelKey implements DecryptData {
           this.pssh = keyBytes;
           // In case of Widevine, if KEYID is not in the playlist, assume only two fields in the pssh KEY tag URI.
           if (!this.keyId) {
-            const [psshData] = parseMultiPssh(keyBytes.buffer);
-            this.keyId =
-              psshData && 'kids' in psshData && psshData.kids?.[0]
-                ? psshData.kids[0]
-                : null;
+            const results = parseMultiPssh(keyBytes.buffer);
+            if (results.length) {
+              const psshData = results[0];
+              this.keyId = psshData.kids?.length ? psshData.kids[0] : null;
+            }
           }
           if (!this.keyId) {
             const offset = keyBytes.length - 22;
@@ -189,7 +193,7 @@ export class LevelKey implements DecryptData {
         keyId = new Uint8Array(16);
         const dv = new DataView(keyId.buffer, 12, 4); // Just set the last 4 bytes
         dv.setUint32(0, val);
-        keyUriToKeyIdMap[this.uri] = keyId;
+        LevelKey.setKeyIdForUri(this.uri, keyId);
       }
       this.keyId = keyId;
     }

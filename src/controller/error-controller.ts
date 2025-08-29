@@ -509,7 +509,9 @@ export default class ErrorController
           'HDCP-LEVEL'
         ];
         errorAction.hdcpLevel = restrictedHdcpLevel;
-        if (restrictedHdcpLevel) {
+        if (restrictedHdcpLevel === 'NONE') {
+          this.warn(`HDCP policy resticted output with HDCP-LEVEL=NONE`);
+        } else if (restrictedHdcpLevel) {
           hls.maxHdcpLevel =
             HdcpLevels[HdcpLevels.indexOf(restrictedHdcpLevel) - 1];
           errorAction.resolved = true;
