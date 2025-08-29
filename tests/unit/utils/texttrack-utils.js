@@ -1,8 +1,4 @@
-import {
-  sendAddTrackEvent,
-  clearCurrentCues,
-} from '../../../src/utils/texttrack-utils';
-import sinon from 'sinon';
+import { removeCuesInRange } from '../../../src/utils/texttrack-utils';
 
 describe('text track utils', function () {
   const cues = [
@@ -29,42 +25,14 @@ describe('text track utils', function () {
     });
   });
 
-  describe('synthetic addtrack event', function () {
-    it('should have the provided track as data', function (done) {
-      const dispatchSpy = sinon.spy(video, 'dispatchEvent');
-      video.addEventListener('addtrack', function (e) {
-        expect(e.track).to.equal(track);
-        done();
-      });
-
-      sendAddTrackEvent(track, video);
-      expect(dispatchSpy.calledOnce).to.be.true;
-    });
-
-    it('should fallback to document.createEvent if window.Event constructor throws', function (done) {
-      const stub = sinon.stub(self, 'Event');
-      stub.throws();
-
-      const spy = sinon.spy(document, 'createEvent');
-
-      video.addEventListener('addtrack', function (e) {
-        expect(e.track).to.equal(track);
-        done();
-      });
-
-      sendAddTrackEvent(track, video);
-      expect(spy.calledOnce).to.be.true;
-    });
-  });
-
   describe('clear current cues', function () {
     it('should not fail with empty cue list', function () {
       const emptyTrack = video.addTextTrack('subtitles', 'empty');
-      expect(clearCurrentCues(emptyTrack)).to.not.throw;
+      expect(removeCuesInRange(emptyTrack, 0, 10)).to.not.throw;
     });
 
     it('should clear the cues from track', function () {
-      clearCurrentCues(track);
+      removeCuesInRange(track, 0, 10);
       expect(track.cues.length).to.equal(0);
     });
   });
