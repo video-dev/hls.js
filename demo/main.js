@@ -38,9 +38,11 @@ const hlsjsDefaults = {
 
 const hlsjsConfigParam = getURLParam('hlsjsConfig', null);
 let hlsjsConfig = hlsjsDefaults;
+let hlsjsConfigLoadedFromUrl = false;
 if (hlsjsConfigParam) {
   try {
     hlsjsConfig = JSON.parse(atob(hlsjsConfigParam));
+    hlsjsConfigLoadedFromUrl = true;
   } catch (error) {
     console.warn('Failed to parse hlsjsConfig:', error);
   }
@@ -1585,6 +1587,7 @@ function setupConfigEditor() {
 
   const contents = hlsjsConfig;
   const shouldRestorePersisted =
+    !hlsjsConfigLoadedFromUrl &&
     JSON.parse(localStorage.getItem(STORAGE_KEYS.Editor_Persistence)) === true;
 
   if (shouldRestorePersisted) {
