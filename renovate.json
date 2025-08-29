@@ -13,7 +13,7 @@
   "major": {
     "addLabels": ["semver-major"]
   },
-  "ignoreDeps": ["ace", "chart.js", "FileSaver.js"],
+  "ignoreDeps": ["@types/chart.js", "ace", "chart.js", "FileSaver.js"],
   "packageRules": [
     {
       "matchDatasources": ["html"],
