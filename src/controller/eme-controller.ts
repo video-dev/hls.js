@@ -64,9 +64,8 @@ export interface MediaKeySessionContext {
   _onkeystatuseschange?: (this: MediaKeySession, ev: Event) => any;
 }
 
-// TODO: move to config?
 export type MediaKeySessionContextAndLevelKey = {
-  decryptdata: LevelKey; // soft-deprecated
+  decryptdata: LevelKey; // soft-deprecated (replaced by levelKeys)
   keySystem: KeySystems;
   levelKeys: LevelKey[];
   mediaKeys: MediaKeys;
@@ -554,6 +553,16 @@ class EMEController extends Logger implements ComponentAPI {
 
       return keySessionContextPromise;
     }
+
+    // Re-emit error for playlist key loading
+    keyContextPromise.catch((error) => {
+      if (error instanceof EMEKeyError) {
+        const errorData = { ...error.data };
+        errorData.decryptdata = levelKey;
+        const clonedError = new EMEKeyError(errorData, error.message);
+        this.handleError(clonedError, data.frag);
+      }
+    });
 
     return keyContextPromise;
   }

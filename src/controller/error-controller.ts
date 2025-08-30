@@ -528,7 +528,8 @@ export default class ErrorController
         if (levelKey) {
           // Penalize all levels with key
           const levels = this.hls.levels;
-          for (let i = levels.length; i--; ) {
+          const levelCountWithError = levels.length;
+          for (let i = levelCountWithError; i--; ) {
             if (this.variantHasKey(levels[i], levelKey)) {
               this.log(
                 `Banned key found in level ${i} (${levels[i].bitrate}bps) or audio group "${levels[i].audioGroups?.join(',')}" (${data.frag?.type} fragment) ${arrayToHex(levelKey.keyId || [])}`,
@@ -539,7 +540,7 @@ export default class ErrorController
               this.hls.removeLevel(i);
             }
           }
-          if (levels.length) {
+          if (this.hls.levels.length < levelCountWithError) {
             errorAction.resolved = true;
           }
         }
