@@ -105,6 +105,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
     startFragRequested: boolean,
   ): null | Promise<void> {
     if (
+      __USE_EME_DRM__ &&
       this.emeController &&
       this.config.emeEnabled &&
       !this.emeController.getSelectedKeySystemFormats().length
@@ -169,7 +170,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
     frag: Fragment,
     keySystemFormat?: KeySystemFormats,
   ): Promise<KeyLoadedData> {
-    if (keySystemFormat) {
+    if (__USE_EME_DRM__ && keySystemFormat) {
       frag.setKeyFormat(keySystemFormat);
     }
     const decryptdata = frag.decryptdata;
@@ -406,7 +407,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
 }
 
 function getKeyId(decryptdata: LevelKey) {
-  if (decryptdata.keyFormat !== KeySystemFormats.FAIRPLAY) {
+  if (__USE_EME_DRM__ && decryptdata.keyFormat !== KeySystemFormats.FAIRPLAY) {
     const keyId = decryptdata.keyId;
     if (keyId) {
       return arrayToHex(keyId);
