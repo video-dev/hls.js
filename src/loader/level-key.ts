@@ -105,19 +105,22 @@ export class LevelKey implements DecryptData {
       return null;
     }
 
-    if (isFullSegmentEncryption(this.method) && this.uri && !this.iv) {
-      if (typeof sn !== 'number') {
-        // We are fetching decryption data for a initialization segment
-        // If the segment was encrypted with AES-128/256
-        // It must have an IV defined. We cannot substitute the Segment Number in.
-        logger.warn(
-          `missing IV for initialization segment with method="${this.method}" - compliance issue`,
-        );
+    if (isFullSegmentEncryption(this.method)) {
+      let iv = this.iv;
+      if (!iv) {
+        if (typeof sn !== 'number') {
+          // We are fetching decryption data for a initialization segment
+          // If the segment was encrypted with AES-128/256
+          // It must have an IV defined. We cannot substitute the Segment Number in.
+          logger.warn(
+            `missing IV for initialization segment with method="${this.method}" - compliance issue`,
+          );
 
-        // Explicitly set sn to resulting value from implicit conversions 'initSegment' values for IV generation.
-        sn = 0;
+          // Explicitly set sn to resulting value from implicit conversions 'initSegment' values for IV generation.
+          sn = 0;
+        }
+        iv = createInitializationVector(sn);
       }
-      const iv = createInitializationVector(sn);
       const decryptdata = new LevelKey(
         this.method,
         this.uri,

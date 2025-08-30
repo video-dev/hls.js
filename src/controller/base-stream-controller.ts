@@ -24,7 +24,11 @@ import {
   getAesModeFromFullSegmentMethod,
   isFullSegmentEncryption,
 } from '../utils/encryption-methods-util';
-import { getRetryDelay, offlineHttpStatus } from '../utils/error-helper';
+import {
+  getRetryDelay,
+  isUnusableKeyError,
+  offlineHttpStatus,
+} from '../utils/error-helper';
 import {
   addEventListener,
   removeEventListener,
@@ -1904,7 +1908,8 @@ export default class BaseStreamController
       noAlternate &&
       isMediaFragment(frag) &&
       !frag.endList &&
-      live
+      live &&
+      !isUnusableKeyError(data)
     ) {
       this.resetFragmentErrors(filterType);
       this.treatAsGap(frag);

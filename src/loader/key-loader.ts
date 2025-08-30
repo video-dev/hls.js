@@ -177,7 +177,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
       const error = new Error(
         keySystemFormat
           ? `Expected frag.decryptdata to be defined after setting format ${keySystemFormat}`
-          : 'Missing decryption data on fragment in onKeyLoading',
+          : `Missing decryption data on fragment in onKeyLoading (emeEnabled with controller: ${this.emeController && this.config.emeEnabled})`,
       );
       return Promise.reject(
         this.createKeyLoadError(frag, ErrorDetails.KEY_LOAD_ERROR, error),
@@ -219,7 +219,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
 
     // Load the key or return the loading promise
     this.log(
-      `${this.keyIdToKeyInfo[id] ? 'Rel' : 'L'}oading keyId: ${arrayToHex(decryptdata.keyId || [])} URI: ${decryptdata.uri} from ${frag.type} ${frag.level}`,
+      `${this.keyIdToKeyInfo[id] ? 'Rel' : 'L'}oading${decryptdata.keyId ? ' keyId: ' + arrayToHex(decryptdata.keyId) : ''} URI: ${decryptdata.uri} from ${frag.type} ${frag.level}`,
     );
 
     keyInfo = this.keyIdToKeyInfo[id] = {
