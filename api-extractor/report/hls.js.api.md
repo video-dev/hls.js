@@ -4015,6 +4015,21 @@ export interface MediaKeySessionContext {
     _onmessage?: (this: MediaKeySession, ev: MediaKeyMessageEvent) => any;
 }
 
+// Warning: (ae-missing-release-tag) "MediaKeySessionContextAndLevelKey" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type MediaKeySessionContextAndLevelKey = {
+    decryptdata: LevelKey;
+    keySystem: KeySystems;
+    levelKeys: LevelKey[];
+    mediaKeys: MediaKeys;
+    mediaKeysSession: MediaKeySession;
+    keyStatuses: {
+        [keyId: string]: MediaKeyStatus;
+    };
+    licenseXhr?: XMLHttpRequest;
+};
+
 // Warning: (ae-missing-release-tag) "MediaOverrides" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -5011,10 +5026,6 @@ export class XhrLoader implements Loader<LoaderContext> {
     // (undocumented)
     stats: LoaderStats;
 }
-
-// Warnings were encountered during analysis:
-//
-// src/config.ts:91:3 - (ae-forgotten-export) The symbol "MediaKeySessionContextAndLevelKey" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 
