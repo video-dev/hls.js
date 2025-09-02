@@ -929,11 +929,11 @@ class EMEController extends Logger implements ComponentAPI {
 
       // handle status of current key
       let keyStatus = context.keyStatuses[keyId] as MediaKeyStatus | undefined;
-
       if (!keyStatus) {
         keyStatus = 'status-pending';
         const keyIds = Object.keys(context.keyStatuses);
         if (keyIds.length) {
+          // Timeout key-status
           const timeout = (this.hls as any)?.config.keyLoadPolicy.default
             .maxTimeToFirstByteMs;
           context.keyStatusTimeouts ||= {};
@@ -945,15 +945,28 @@ class EMEController extends Logger implements ComponentAPI {
             if (keyId in context.keyStatuses) {
               keyStatus = context.keyStatuses[keyId];
             } else {
+              // Find key status in another session if missing (PlayReady #7519 no key-status "single-key" setup with shared key)
+              const { mediaKeySessions } = this;
+              for (let i = 0; i < mediaKeySessions.length; i++) {
+                const keyStatuses = mediaKeySessions[i].keyStatuses;
+                if (keyId in keyStatuses) {
+                  this.log(
+                    `No status for keyId ${keyId} in session ${context.mediaKeysSession.sessionId}. Using session key-status ${keyStatuses[keyId]} from session ${mediaKeySessions[i].mediaKeysSession.sessionId}.`,
+                  );
+                  return handleKeyStatus(keyStatuses[keyId]);
+                }
+              }
+              // Timeout key with internal-error
               this.log(
-                `key status for ${keyId} in session ${context.mediaKeysSession.sessionId} timed out after 5s.`,
+                `key status for ${keyId} in session ${context.mediaKeysSession.sessionId} timed out after ${timeout}ms`,
               );
               keyStatus = 'internal-error';
             }
+
             handleKeyStatus(keyStatus);
           }, timeout);
           this.log(
-            `No status for keyId ${keyId}. Using session key-status ${keyStatus} (${stringify(context.keyStatuses)}).`,
+            `No status for keyId ${keyId}. Using key-status ${keyStatus} (${stringify(context.keyStatuses)}).`,
           );
         }
       }
