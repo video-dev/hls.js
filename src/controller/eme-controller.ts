@@ -476,7 +476,8 @@ class EMEController extends Logger implements ComponentAPI {
     const { mediaKeySessions } = this;
     for (let i = 0; i < mediaKeySessions.length; i++) {
       if (mediaKeySessions[i].levelKeys[0].uri === decryptdata.uri) {
-        return decryptdata.keyId
+        return decryptdata.keyId &&
+          mediaKeySessions[i].keySystem !== KeySystems.PLAYREADY
           ? mediaKeySessions[i].mediaKeysSession.keyStatuses.get(
               decryptdata.keyId,
             )
