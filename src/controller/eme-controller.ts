@@ -59,6 +59,7 @@ export interface MediaKeySessionContext {
   mediaKeys: MediaKeys;
   mediaKeysSession: MediaKeySession;
   keyStatuses: { [keyId: string]: MediaKeyStatus };
+  keyStatusTimeouts?: { [keyId: string]: number };
   licenseXhr?: XMLHttpRequest;
   _onmessage?: (this: MediaKeySession, ev: MediaKeyMessageEvent) => any;
   _onkeystatuseschange?: (this: MediaKeySession, ev: Event) => any;
@@ -71,6 +72,7 @@ export type MediaKeySessionContextAndLevelKey = {
   mediaKeys: MediaKeys;
   mediaKeysSession: MediaKeySession;
   keyStatuses: { [keyId: string]: MediaKeyStatus };
+  keyStatusTimeouts?: { [keyId: string]: number };
   licenseXhr?: XMLHttpRequest;
 };
 
@@ -873,54 +875,8 @@ class EMEController extends Logger implements ComponentAPI {
       }
     });
 
-    const onkeystatuseschange = (context._onkeystatuseschange = (
-      event: Event,
-    ) => {
-      const keySession = context.mediaKeysSession;
-      if (!keySession as any) {
-        licenseStatus.emit('error', new Error('invalid state'));
-        return;
-      }
-
-      // populate/update context.keyStatuses
-      this.onKeyStatusChange(context);
-
-      // renew when a key status comes back expired
-      const keyIds = Object.keys(context.keyStatuses);
-      if (keyIds.some((id) => context.keyStatuses[id] === 'expired')) {
-        this.log(
-          `${context.keySystem} expired for key ${stringify(context.keyStatuses)}`,
-        );
-        this.renewKeySession(context, levelKey);
-      }
-
-      // handle status of current key
-      let keyStatus = context.keyStatuses[keyId] as MediaKeyStatus | undefined;
+    const handleKeyStatus = (keyStatus: MediaKeyStatus) => {
       let keyError: EMEKeyError | Error | undefined;
-      if (!keyStatus) {
-        // Handle case where no keyIds matched but all have the same status
-        const keyIds = Object.keys(context.keyStatuses);
-        if (keyIds.length) {
-          const keyStatuses = keyIds.map((id) => context.keyStatuses[id]);
-          const firstStatus = keyStatuses[0];
-          const allSameStatus = !keyStatuses.some(
-            (status) => status.substring(0, 6) !== firstStatus.substring(0, 6),
-          );
-          if (allSameStatus) {
-            keyStatus = firstStatus;
-          } else if (keyStatuses.some((status) => status === 'expired')) {
-            keyStatus = 'expired';
-          } else if (keyStatuses.some((status) => status === 'released')) {
-            keyStatus = 'released';
-          }
-        }
-        if (!keyStatus) {
-          keyStatus = 'internal-error';
-        }
-        this.log(
-          `No status for keyId ${keyId}. Using session key-status ${keyStatus} (${stringify(context.keyStatuses)}).`,
-        );
-      }
       if (keyStatus.startsWith('usable')) {
         licenseStatus.emit('resolved');
       } else if (
@@ -949,6 +905,59 @@ class EMEController extends Logger implements ComponentAPI {
           this.handleError(keyError);
         }
       }
+    };
+    const onkeystatuseschange = (context._onkeystatuseschange = (
+      event: Event,
+    ) => {
+      const keySession = context.mediaKeysSession;
+      if (!keySession as any) {
+        licenseStatus.emit('error', new Error('invalid state'));
+        return;
+      }
+
+      // populate/update context.keyStatuses
+      this.onKeyStatusChange(context);
+
+      // renew when a key status comes back expired
+      const keyIds = Object.keys(context.keyStatuses);
+      if (keyIds.some((id) => context.keyStatuses[id] === 'expired')) {
+        this.log(
+          `${context.keySystem} expired for key ${stringify(context.keyStatuses)}`,
+        );
+        this.renewKeySession(context, levelKey);
+      }
+
+      // handle status of current key
+      let keyStatus = context.keyStatuses[keyId] as MediaKeyStatus | undefined;
+
+      if (!keyStatus) {
+        keyStatus = 'status-pending';
+        const keyIds = Object.keys(context.keyStatuses);
+        if (keyIds.length) {
+          const timeout = (this.hls as any)?.config.keyLoadPolicy.default
+            .maxTimeToFirstByteMs;
+          context.keyStatusTimeouts ||= {};
+          context.keyStatusTimeouts[keyId] ||= self.setTimeout(() => {
+            if (!context.levelKeys.length || !this.mediaKeys) {
+              return;
+            }
+
+            if (keyId in context.keyStatuses) {
+              keyStatus = context.keyStatuses[keyId];
+            } else {
+              this.log(
+                `key status for ${keyId} in session ${context.mediaKeysSession.sessionId} timed out after 5s.`,
+              );
+              keyStatus = 'internal-error';
+            }
+            handleKeyStatus(keyStatus);
+          }, timeout);
+          this.log(
+            `No status for keyId ${keyId}. Using session key-status ${keyStatus} (${stringify(context.keyStatuses)}).`,
+          );
+        }
+      }
+      handleKeyStatus(keyStatus);
     });
 
     addEventListener(context.mediaKeysSession, 'message', onmessage);
@@ -1525,6 +1534,12 @@ class EMEController extends Logger implements ComponentAPI {
       const index = this.mediaKeySessions.indexOf(mediaKeySessionContext);
       if (index > -1) {
         this.mediaKeySessions.splice(index, 1);
+      }
+      const { keyStatusTimeouts } = mediaKeySessionContext;
+      if (keyStatusTimeouts) {
+        Object.keys(keyStatusTimeouts).forEach((keyId) =>
+          self.clearTimeout(keyStatusTimeouts[keyId]),
+        );
       }
       const { drmSystemOptions } = this.config;
       const removePromise = isPersistentSessionType(drmSystemOptions)

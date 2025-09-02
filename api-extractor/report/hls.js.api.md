@@ -4000,6 +4000,10 @@ export interface MediaKeySessionContext {
         [keyId: string]: MediaKeyStatus;
     };
     // (undocumented)
+    keyStatusTimeouts?: {
+        [keyId: string]: number;
+    };
+    // (undocumented)
     keySystem: KeySystems;
     // (undocumented)
     levelKeys: LevelKey[];
@@ -4026,6 +4030,9 @@ export type MediaKeySessionContextAndLevelKey = {
     mediaKeysSession: MediaKeySession;
     keyStatuses: {
         [keyId: string]: MediaKeyStatus;
+    };
+    keyStatusTimeouts?: {
+        [keyId: string]: number;
     };
     licenseXhr?: XMLHttpRequest;
 };
