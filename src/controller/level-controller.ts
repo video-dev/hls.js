@@ -230,6 +230,7 @@ export default class LevelController extends BasePlaylistController {
     let audioTracks: MediaPlaylist[] = [];
     let subtitleTracks: MediaPlaylist[] = [];
     let levels = filteredLevels;
+    const statsParsing = data.stats?.parsing || {};
 
     // remove audio-only and invalid video-range levels if we also have levels with video codecs or RESOLUTION signalled
     if ((resolutionFound || videoCodecFound) && audioCodecFound) {
@@ -268,6 +269,7 @@ export default class LevelController extends BasePlaylistController {
           });
         }
       });
+      statsParsing.end = performance.now();
       return;
     }
 
@@ -386,6 +388,7 @@ export default class LevelController extends BasePlaylistController {
       altAudio:
         altAudioEnabled && !audioOnly && audioTracks.some((t) => !!t.url),
     };
+    statsParsing.end = performance.now();
     this.hls.trigger(Events.MANIFEST_PARSED, edata);
   }
 

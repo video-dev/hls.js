@@ -428,6 +428,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     const parsedResult = M3U8Parser.parseMasterPlaylist(string, url);
 
     if (parsedResult.playlistParsingError) {
+      stats.parsing.end = performance.now();
       this.handleManifestParsingError(
         response,
         context,
