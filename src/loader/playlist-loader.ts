@@ -11,6 +11,10 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { AttrList } from '../utils/attr-list';
+import {
+  areCodecsMediaSourceSupported,
+  sampleEntryCodesISO,
+} from '../utils/codecs';
 import { computeReloadInterval } from '../utils/level-helper';
 import type { LevelDetails } from './level-details';
 import type { LoaderConfig, RetryConfig } from '../config';
@@ -444,6 +448,44 @@ class PlaylistLoader implements NetworkComponentAPI {
     } = parsedResult;
 
     this.variableList = variableList;
+
+    // Treat unknown codec as audio or video codec based on passing `isTypeSupported` check
+    // (allows for playback of any supported codec even if not indexed in utils/codecs)
+    levels.forEach((levelParsed: LevelParsed) => {
+      const { unknownCodecs } = levelParsed;
+      if (unknownCodecs) {
+        const { preferManagedMediaSource } = this.hls.config;
+        let { audioCodec, videoCodec } = levelParsed;
+        for (let i = unknownCodecs.length; i--; ) {
+          const unknownCodec = unknownCodecs[i];
+          if (
+            areCodecsMediaSourceSupported(
+              unknownCodec,
+              'audio',
+              preferManagedMediaSource,
+            )
+          ) {
+            levelParsed.audioCodec = audioCodec = audioCodec
+              ? `${audioCodec},${unknownCodec}`
+              : unknownCodec;
+            sampleEntryCodesISO.audio[audioCodec.substring(0, 4)] = 2;
+            unknownCodecs.splice(i, 1);
+          } else if (
+            areCodecsMediaSourceSupported(
+              unknownCodec,
+              'video',
+              preferManagedMediaSource,
+            )
+          ) {
+            levelParsed.videoCodec = videoCodec = videoCodec
+              ? `${videoCodec},${unknownCodec}`
+              : unknownCodec;
+            sampleEntryCodesISO.video[videoCodec.substring(0, 4)] = 2;
+            unknownCodecs.splice(i, 1);
+          }
+        }
+      }
+    });
 
     const {
       AUDIO: audioTracks = [],

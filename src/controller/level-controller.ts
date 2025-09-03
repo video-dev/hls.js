@@ -8,7 +8,6 @@ import {
   codecsSetSelectionPreferenceValue,
   convertAVC1ToAVCOTI,
   getCodecCompatibleName,
-  sampleEntryCodesISO,
   videoCodecPreferenceValue,
 } from '../utils/codecs';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
@@ -133,29 +132,8 @@ export default class LevelController extends BasePlaylistController {
 
       // only keep levels with supported audio/video codecs
       const { width, height, unknownCodecs } = levelParsed;
-      let unknownUnsupportedCodecCount = unknownCodecs
-        ? unknownCodecs.length
-        : 0;
-      if (unknownCodecs) {
-        // Treat unknown codec as audio or video codec based on passing `isTypeSupported` check
-        // (allows for playback of any supported codec even if not indexed in utils/codecs)
-        for (let i = unknownUnsupportedCodecCount; i--; ) {
-          const unknownCodec = unknownCodecs[i];
-          if (this.isAudioSupported(unknownCodec)) {
-            levelParsed.audioCodec = audioCodec = audioCodec
-              ? `${audioCodec},${unknownCodec}`
-              : unknownCodec;
-            unknownUnsupportedCodecCount--;
-            sampleEntryCodesISO.audio[audioCodec.substring(0, 4)] = 2;
-          } else if (this.isVideoSupported(unknownCodec)) {
-            levelParsed.videoCodec = videoCodec = videoCodec
-              ? `${videoCodec},${unknownCodec}`
-              : unknownCodec;
-            unknownUnsupportedCodecCount--;
-            sampleEntryCodesISO.video[videoCodec.substring(0, 4)] = 2;
-          }
-        }
-      }
+      const unknownUnsupportedCodecCount = unknownCodecs?.length || 0;
+
       resolutionFound ||= !!(width && height);
       videoCodecFound ||= !!videoCodec;
       audioCodecFound ||= !!audioCodec;
