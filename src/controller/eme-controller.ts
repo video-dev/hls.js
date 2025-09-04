@@ -827,10 +827,6 @@ class EMEController extends Logger implements ComponentAPI {
         keyStatus === 'output-restricted' ||
         keyStatus === 'output-downscaled'
       ) {
-        // Error immediately when encountering a key ID with this status again
-        if (keyStatus === 'internal-error' && context.decryptdata.keyId) {
-          this.bannedKeyIds[arrayToHex(context.decryptdata.keyId)] = keyStatus;
-        }
         keyError = getKeyStatusError(keyStatus, context.decryptdata);
       } else if (keyStatus === 'expired') {
         keyError = new Error(`key expired (keyId: ${keyId})`);
@@ -982,6 +978,10 @@ class EMEController extends Logger implements ComponentAPI {
           changeEndianness(keyIdArray);
         }
         const keyIdWithStatusChange = arrayToHex(keyIdArray);
+        // Add to banned keys to prevent playlist usage and license requests
+        if (status === 'internal-error') {
+          this.bannedKeyIds[keyIdWithStatusChange] = status;
+        }
         this.log(
           `key status change "${status}" for keyStatuses keyId: ${keyIdWithStatusChange} key-session "${mediaKeySessionContext.mediaKeysSession.sessionId}"`,
         );
