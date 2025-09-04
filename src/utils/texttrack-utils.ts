@@ -19,9 +19,9 @@ export function createTrackNode(
   }
   // To avoid an issue of the built-in captions menu in Chrome
   // https://github.com/video-dev/hls.js/issues/2198#issuecomment-761614248
-  if (navigator.userAgent.includes('Chrome/')) {
-    el.src = 'data:,WEBVTT';
-  }
+  // It also prevents Safari from removing cues after setting track.mode to `hidden` or `disabled`
+  // https://github.com/video-dev/hls.js/pull/7515#issuecomment-3251091932
+  el.src = 'data:,WEBVTT';
   el.track.mode = mode;
   videoEl.appendChild(el);
   return el;
