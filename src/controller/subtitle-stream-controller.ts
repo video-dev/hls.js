@@ -449,7 +449,7 @@ export class SubtitleStreamController
       const maxBufLen =
         this.hls.maxBufferLength + trackDetails.levelTargetDuration;
 
-      if (bufferLen > maxBufLen) {
+      if (bufferLen > maxBufLen || (bufferLen && !this.buffering)) {
         return;
       }
       const fragments = trackDetails.fragments;
