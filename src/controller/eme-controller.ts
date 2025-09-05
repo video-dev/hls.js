@@ -343,27 +343,29 @@ class EMEController extends Logger implements ComponentAPI {
   }
 
   private renewKeySession(mediaKeySessionContext: MediaKeySessionContext) {
-    const decryptdata = mediaKeySessionContext.decryptdata;
-    if (decryptdata.pssh) {
-      const keySessionContext = this.createMediaKeySessionContext(
-        mediaKeySessionContext,
-      );
-      const keyId = getKeyIdString(decryptdata);
-      const scheme = 'cenc';
-      this.keyIdToKeySessionPromise[keyId] =
-        this.generateRequestWithPreferredKeySession(
-          keySessionContext,
-          scheme,
-          decryptdata.pssh.buffer,
-          'expired',
-        );
-    } else {
-      this.warn(
-        `Could not renew expired key-session "${mediaKeySessionContext.mediaKeysSession.sessionId}". Missing pssh initData.`,
-      );
-    }
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    this.removeSession(mediaKeySessionContext);
+    this.removeSession(mediaKeySessionContext)
+      .then(() => {
+        const decryptdata = mediaKeySessionContext.decryptdata;
+        if (decryptdata.pssh) {
+          const keySessionContext = this.createMediaKeySessionContext(
+            mediaKeySessionContext,
+          );
+          const keyId = getKeyIdString(decryptdata);
+          const scheme = 'cenc';
+          this.keyIdToKeySessionPromise[keyId] =
+            this.generateRequestWithPreferredKeySession(
+              keySessionContext,
+              scheme,
+              decryptdata.pssh.buffer,
+              'expired',
+            );
+        } else {
+          this.warn(
+            `Could not renew expired key-session "${mediaKeySessionContext.mediaKeysSession.sessionId}". Missing pssh initData.`,
+          );
+        }
+      })
+      .catch((error) => this.handleError(error));
   }
 
   private updateKeySession(
@@ -804,10 +806,9 @@ class EMEController extends Logger implements ComponentAPI {
         });
       } else if (messageType === 'license-release') {
         if (context.keySystem === KeySystems.FAIRPLAY) {
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          this.updateKeySession(context, strToUtf8array('acknowledged'));
-          // eslint-disable-next-line @typescript-eslint/no-floating-promises
-          this.removeSession(context);
+          this.updateKeySession(context, strToUtf8array('acknowledged'))
+            .then(() => this.removeSession(context))
+            .catch((error) => this.handleError(error));
         }
       } else {
         this.warn(`unhandled media key message type "${messageType}"`);
@@ -944,9 +945,9 @@ class EMEController extends Logger implements ComponentAPI {
       .then(() => keyUsablePromise)
       .catch((error) => {
         licenseStatus.removeAllListeners();
-        // eslint-disable-next-line @typescript-eslint/no-floating-promises
-        this.removeSession(context);
-        throw error;
+        return this.removeSession(context).then(() => {
+          throw error;
+        });
       })
       .then(() => {
         licenseStatus.removeAllListeners();
@@ -1393,7 +1394,7 @@ class EMEController extends Logger implements ComponentAPI {
                 error: new Error(`Could not clear media keys: ${error}`),
               });
             },
-          ),
+          ) || Promise.resolve(),
         ),
     )
       .catch((error) => {
@@ -1449,7 +1450,7 @@ class EMEController extends Logger implements ComponentAPI {
 
   private removeSession(
     mediaKeySessionContext: MediaKeySessionContext,
-  ): Promise<void> | void {
+  ): Promise<void> {
     const { mediaKeysSession, licenseXhr, decryptdata } =
       mediaKeySessionContext;
     if (mediaKeysSession as MediaKeySession | undefined) {
@@ -1523,6 +1524,7 @@ class EMEController extends Logger implements ComponentAPI {
           });
         });
     }
+    return Promise.resolve();
   }
 }
 
