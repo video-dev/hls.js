@@ -1170,6 +1170,8 @@ export class EMEController extends Logger implements ComponentAPI {
     // (undocumented)
     destroy(): void;
     // (undocumented)
+    getKeyStatus(decryptdata: LevelKey): MediaKeyStatus | undefined;
+    // (undocumented)
     getKeySystemAccess(keySystemsToAttempt: KeySystems[]): Promise<void>;
     // (undocumented)
     getSelectedKeySystemFormats(): KeySystemFormats[];
@@ -3379,6 +3381,8 @@ export class LevelKey implements DecryptData {
     // (undocumented)
     pssh: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
+    static setKeyIdForUri(uri: string, keyId: Uint8Array<ArrayBuffer>): void;
+    // (undocumented)
     readonly uri: string;
 }
 
@@ -3992,7 +3996,11 @@ export interface MediaKeySessionContext {
     // (undocumented)
     decryptdata: LevelKey;
     // (undocumented)
-    keyStatus: MediaKeyStatus;
+    keyStatus?: MediaKeyStatus;
+    // (undocumented)
+    keyStatusTimeouts?: {
+        [keyId: string]: number;
+    };
     // (undocumented)
     keySystem: KeySystems;
     // (undocumented)

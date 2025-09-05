@@ -14,6 +14,14 @@ export function isTimeoutError(error: ErrorData): boolean {
   return false;
 }
 
+export function isKeyError(error: ErrorData): boolean {
+  return error.details.startsWith('key');
+}
+
+export function isUnusableKeyError(error: ErrorData): boolean {
+  return isKeyError(error) && !!error.frag && !error.frag.decryptdata;
+}
+
 export function getRetryConfig(
   loadPolicy: LoadPolicy,
   error: ErrorData,
