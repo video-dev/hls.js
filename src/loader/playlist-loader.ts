@@ -726,10 +726,11 @@ class PlaylistLoader implements NetworkComponentAPI {
     loader: Loader<PlaylistLoaderContext> | undefined,
   ): void {
     const hls = this.hls;
-    const { type, level, id, groupId, deliveryDirectives } = context;
+    const { type, level, levelOrTrack, id, groupId, deliveryDirectives } =
+      context;
     const url = getResponseUrl(response, context);
     const parent = mapContextToLevelType(context);
-    const levelIndex =
+    let levelIndex =
       typeof context.level === 'number' && parent === PlaylistLevelType.MAIN
         ? (level as number)
         : undefined;
@@ -791,9 +792,23 @@ class PlaylistLoader implements NetworkComponentAPI {
     switch (type) {
       case PlaylistContextType.MANIFEST:
       case PlaylistContextType.LEVEL:
+        if (levelIndex) {
+          if (!levelOrTrack) {
+            // fall-through to hls.levels[0]
+            levelIndex = 0;
+          } else {
+            if (levelOrTrack !== hls.levels[levelIndex]) {
+              // correct levelIndex when lower levels were removed from hls.levels
+              const updatedIndex = hls.levels.indexOf(levelOrTrack as Level);
+              if (updatedIndex > -1) {
+                levelIndex = updatedIndex;
+              }
+            }
+          }
+        }
         hls.trigger(Events.LEVEL_LOADED, {
           details: levelDetails,
-          levelInfo: (context.levelOrTrack as Level) || hls.levels[0],
+          levelInfo: (levelOrTrack as Level | null) || hls.levels[0],
           level: levelIndex || 0,
           id: id || 0,
           stats,
@@ -805,7 +820,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       case PlaylistContextType.AUDIO_TRACK:
         hls.trigger(Events.AUDIO_TRACK_LOADED, {
           details: levelDetails,
-          track: context.levelOrTrack as MediaPlaylist,
+          track: levelOrTrack as MediaPlaylist,
           id: id || 0,
           groupId: groupId || '',
           stats,
@@ -816,7 +831,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       case PlaylistContextType.SUBTITLE_TRACK:
         hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
           details: levelDetails,
-          track: context.levelOrTrack as MediaPlaylist,
+          track: levelOrTrack as MediaPlaylist,
           id: id || 0,
           groupId: groupId || '',
           stats,
