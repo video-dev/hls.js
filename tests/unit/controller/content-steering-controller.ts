@@ -54,7 +54,7 @@ type ConentSteeringControllerTestable = Omit<
   audioTracks: MediaPlaylist[] | null;
   subtitleTracks: MediaPlaylist[] | null;
   onManifestLoading: () => void;
-  onManifestLoaded: (event: string, data: Partial<ManifestLoadedData>) => void;
+  onManifestLoaded: (event: string, data: ManifestLoadedData) => void;
 };
 
 describe('ContentSteeringController', function () {
@@ -100,6 +100,16 @@ describe('ContentSteeringController', function () {
           uri: 'http://example.com/manifest.json',
           pathwayId: 'pathway-2',
         },
+        levels: [],
+        audioTracks: [],
+        subtitles: [],
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        startTimeOffset: null,
+        variableList: null,
       });
       expect(contentSteeringController.uri).to.equal(
         'http://example.com/manifest.json',
@@ -114,6 +124,16 @@ describe('ContentSteeringController', function () {
           uri: 'http://example.com/manifest.json',
           pathwayId: 'pathway-2',
         },
+        levels: [],
+        audioTracks: [],
+        subtitles: [],
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        startTimeOffset: null,
+        variableList: null,
       });
       contentSteeringController.stopLoad();
       expect(contentSteeringController).to.have.property('loader').that.is.null;
@@ -128,6 +148,16 @@ describe('ContentSteeringController', function () {
           uri: 'http://example.com/manifest.json',
           pathwayId: 'pathway-2',
         },
+        levels: [],
+        audioTracks: [],
+        subtitles: [],
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        startTimeOffset: null,
+        variableList: null,
       });
       expect(contentSteeringController.stopLoad).to.be.a('function');
       contentSteeringController.stopLoad();
@@ -149,6 +179,16 @@ describe('ContentSteeringController', function () {
           uri: 'http://example.com/manifest.json',
           pathwayId: 'pathway-2',
         },
+        levels: [],
+        audioTracks: [],
+        subtitles: [],
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        startTimeOffset: null,
+        variableList: null,
       });
       expect(contentSteeringController.loader)
         .to.have.property('context')
@@ -166,6 +206,16 @@ describe('ContentSteeringController', function () {
           uri: 'http://example.com/manifest.json',
           pathwayId: 'pathway-2',
         },
+        levels: [],
+        audioTracks: [],
+        subtitles: [],
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        startTimeOffset: null,
+        variableList: null,
       });
       expect(contentSteeringController.uri).to.equal(
         'http://example.com/manifest.json',
@@ -209,11 +259,18 @@ http://a.example.com/md/prog_index.m3u8`;
         'http://example.com/main.m3u8',
         parsedMultivariant,
       );
-      const manifestLoadedData = {
+      const manifestLoadedData: ManifestLoadedData = {
         contentSteering: parsedMultivariant.contentSteering,
         levels: parsedMultivariant.levels,
-        audioTracks: parsedMediaOptions.AUDIO,
+        audioTracks: parsedMediaOptions.AUDIO!,
         subtitles: parsedMediaOptions.SUBTITLES,
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        startTimeOffset: null,
+        variableList: null,
       };
       const levelController: any = (hls.levelController = new LevelController(
         hls as any,
@@ -310,11 +367,18 @@ http://a.example.com/md/prog_index.m3u8`;
         'http://example.com/main.m3u8',
         parsedMultivariant,
       );
-      const manifestLoadedData = {
+      const manifestLoadedData: ManifestLoadedData = {
         contentSteering: parsedMultivariant.contentSteering,
         levels: parsedMultivariant.levels,
-        audioTracks: parsedMediaOptions.AUDIO,
+        audioTracks: parsedMediaOptions.AUDIO!,
         subtitles: parsedMediaOptions.SUBTITLES,
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        startTimeOffset: null,
+        variableList: null,
       };
       levelController = hls.levelController = new LevelController(
         hls as any,
