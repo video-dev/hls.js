@@ -480,8 +480,10 @@ export default class Hls implements HlsEventEmitter {
    */
   detachMedia() {
     this.logger.log('detachMedia');
-    this.trigger(Events.MEDIA_DETACHING, {});
+    const data = {};
+    this.trigger(Events.MEDIA_DETACHING, data);
     this._media = null;
+    this.trigger(Events.MEDIA_DETACHED, data);
   }
 
   /**
@@ -490,7 +492,9 @@ export default class Hls implements HlsEventEmitter {
   transferMedia(): AttachMediaSourceData | null {
     this._media = null;
     const transferMedia = this.bufferController.transferMedia();
-    this.trigger(Events.MEDIA_DETACHING, { transferMedia });
+    const data = { transferMedia };
+    this.trigger(Events.MEDIA_DETACHING, data);
+    this.trigger(Events.MEDIA_DETACHED, data);
     return transferMedia;
   }
 

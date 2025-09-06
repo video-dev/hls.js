@@ -544,8 +544,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       }
       this.media = null;
     }
-
-    this.hls.trigger(Events.MEDIA_DETACHED, data);
   }
 
   private onBufferReset() {

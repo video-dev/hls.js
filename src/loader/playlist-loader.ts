@@ -38,6 +38,7 @@ import type {
   PlaylistLoaderContext,
 } from '../types/loader';
 import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
+import type { NullableNetworkDetails } from '../types/network-details';
 
 function mapContextToLevelType(
   context: PlaylistLoaderContext,
@@ -417,7 +418,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     response: LoaderResponse,
     stats: LoaderStats,
     context: PlaylistLoaderContext,
-    networkDetails: any,
+    networkDetails: NullableNetworkDetails,
   ): void {
     const hls = this.hls;
     const string = response.data as string;
@@ -546,7 +547,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     response: LoaderResponse,
     stats: LoaderStats,
     context: PlaylistLoaderContext,
-    networkDetails: any,
+    networkDetails: NullableNetworkDetails,
     loader: Loader<PlaylistLoaderContext> | undefined,
   ): void {
     const hls = this.hls;
@@ -617,7 +618,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     response: LoaderResponse,
     context: PlaylistLoaderContext,
     error: Error,
-    networkDetails: any,
+    networkDetails: NullableNetworkDetails,
     stats: LoaderStats,
   ): void {
     this.hls.trigger(Events.ERROR, {
@@ -637,7 +638,7 @@ class PlaylistLoader implements NetworkComponentAPI {
 
   private handleNetworkError(
     context: PlaylistLoaderContext,
-    networkDetails: any,
+    networkDetails: NullableNetworkDetails,
     timeout = false,
     response: { code: number; text: string } | undefined,
     stats: LoaderStats,
@@ -706,7 +707,10 @@ class PlaylistLoader implements NetworkComponentAPI {
     };
 
     if (response) {
-      const url = networkDetails?.url || context.url;
+      let url = context.url;
+      if (networkDetails && 'url' in networkDetails) {
+        url = networkDetails.url;
+      }
       errorData.response = { url, data: undefined as any, ...response };
     }
 
@@ -718,7 +722,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     response: LoaderResponse,
     stats: LoaderStats,
     context: PlaylistLoaderContext,
-    networkDetails: any,
+    networkDetails: NullableNetworkDetails,
     loader: Loader<PlaylistLoaderContext> | undefined,
   ): void {
     const hls = this.hls;
