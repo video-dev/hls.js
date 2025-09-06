@@ -1361,6 +1361,7 @@ export type PsshData = {
 
 export type PsshInvalidResult = {
   systemId?: undefined;
+  kids?: undefined;
   offset: number;
   size: number;
 };

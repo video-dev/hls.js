@@ -24,7 +24,11 @@ import {
   getAesModeFromFullSegmentMethod,
   isFullSegmentEncryption,
 } from '../utils/encryption-methods-util';
-import { getRetryDelay, offlineHttpStatus } from '../utils/error-helper';
+import {
+  getRetryDelay,
+  isUnusableKeyError,
+  offlineHttpStatus,
+} from '../utils/error-helper';
 import {
   addEventListener,
   removeEventListener,
@@ -727,7 +731,9 @@ export default class BaseStreamController
     ) {
       const media = this.media;
       const error = new Error(
-        `Encrypted track with no key in ${this.fragInfo(frag)} (media ${media ? 'attached mediaKeys: ' + media.mediaKeys : 'detached'})`,
+        __USE_EME_DRM__
+          ? `Encrypted track with no key in ${this.fragInfo(frag)} (media ${media ? 'attached mediaKeys: ' + media.mediaKeys : 'detached'})`
+          : 'EME not supported (light build)',
       );
       this.warn(error.message);
       // Ignore if media is detached or mediaKeys are set
@@ -737,7 +743,7 @@ export default class BaseStreamController
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.KEY_SYSTEM_ERROR,
         details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
-        fatal: false,
+        fatal: !__USE_EME_DRM__,
         error,
         frag,
       });
@@ -1052,6 +1058,7 @@ export default class BaseStreamController
         this.handleFragLoadAborted(data.frag, data.part);
       } else if (data.frag && data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
         data.frag.abortRequests();
+        this.resetStartWhenNotLoaded();
         this.resetFragmentLoading(data.frag);
       } else {
         this.hls.trigger(Events.ERROR, data as ErrorData);
@@ -1904,7 +1911,8 @@ export default class BaseStreamController
       noAlternate &&
       isMediaFragment(frag) &&
       !frag.endList &&
-      live
+      live &&
+      !isUnusableKeyError(data)
     ) {
       this.resetFragmentErrors(filterType);
       this.treatAsGap(frag);
