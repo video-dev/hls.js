@@ -19,11 +19,14 @@ const testStreams = require('../tests/test-streams');
 const defaultTestStreamUrl = testStreams[Object.keys(testStreams)[0]].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
 
-let demoConfig = getURLParam('demoConfig', null);
-if (demoConfig) {
-  demoConfig = JSON.parse(atob(demoConfig));
-} else {
-  demoConfig = {};
+let demoConfig = {};
+const demoConfigParam = getURLParam('demoConfig', null);
+if (demoConfigParam) {
+  try {
+    demoConfig = JSON.parse(atob(demoConfigParam));
+  } catch (error) {
+    console.warn('Failed to parse demoConfig:', error);
+  }
 }
 
 const hlsjsDefaults = {
@@ -32,6 +35,18 @@ const hlsjsDefaults = {
   lowLatencyMode: true,
   backBufferLength: 60 * 1.5,
 };
+
+const hlsjsConfigParam = getURLParam('hlsjsConfig', null);
+let hlsjsConfig = hlsjsDefaults;
+let hlsjsConfigLoadedFromUrl = false;
+if (hlsjsConfigParam) {
+  try {
+    hlsjsConfig = JSON.parse(atob(hlsjsConfigParam));
+    hlsjsConfigLoadedFromUrl = true;
+  } catch (error) {
+    console.warn('Failed to parse hlsjsConfig:', error);
+  }
+}
 
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
 let autoRecoverError = getDemoConfigPropOrDefault('autoRecoverError', true);
@@ -1473,12 +1488,17 @@ function onDemoConfigChanged(firstLoad) {
     persistEditorValue();
   }
 
+  updatePermalink(firstLoad);
+}
+
+function updatePermalink(firstLoad) {
   const serializedDemoConfig = btoa(JSON.stringify(demoConfig));
+  const serializedHlsjsConfig = btoa(JSON.stringify(hlsjsConfig));
   const baseURL = document.URL.split('?')[0];
   const streamURL = $('#streamURL').val();
   const permalinkURL = `${baseURL}?src=${encodeURIComponent(
     streamURL
-  )}&demoConfig=${serializedDemoConfig}`;
+  )}&demoConfig=${serializedDemoConfig}&hlsjsConfig=${serializedHlsjsConfig}`;
 
   $('#StreamPermalink').html(`<a href="${permalinkURL}">${permalinkURL}</a>`);
   if (!firstLoad && self.location.href !== permalinkURL) {
@@ -1541,8 +1561,9 @@ function setupConfigEditor() {
   configEditor.setTheme('ace/theme/github');
   configEditor.session.setMode('ace/mode/json');
 
-  const contents = hlsjsDefaults;
+  const contents = hlsjsConfig;
   const shouldRestorePersisted =
+    !hlsjsConfigLoadedFromUrl &&
     JSON.parse(localStorage.getItem(STORAGE_KEYS.Editor_Persistence)) === true;
 
   if (shouldRestorePersisted) {
@@ -1713,6 +1734,8 @@ function updateConfigEditorValue(obj) {
 
 function applyConfigEditorValue() {
   onDemoConfigChanged();
+  hlsjsConfig = getEditorValue({ parse: true });
+  updatePermalink(false);
   loadSelectedStream();
 }
 
