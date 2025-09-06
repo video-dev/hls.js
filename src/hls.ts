@@ -1349,7 +1349,10 @@ export type {
   TimelineControllerConfig,
   TSDemuxerConfig,
 } from './config';
-export type { MediaKeySessionContext } from './controller/eme-controller';
+export type {
+  MediaKeySessionContext,
+  MediaKeySessionContextAndLevelKey,
+} from './controller/eme-controller';
 export type {
   FragmentState,
   FragmentTracker,

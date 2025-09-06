@@ -2,6 +2,10 @@ body {
   background-color: #cccccc;
 }
 
+#video {
+  width: 100%;
+}
+
 #log {
   position: fixed;
   top: 0;
