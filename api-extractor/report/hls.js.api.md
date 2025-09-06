@@ -99,8 +99,10 @@ export interface AssetListLoadedData {
     assetListResponse: AssetListJSON;
     // (undocumented)
     event: InterstitialEventWithAssetList;
+    // Warning: (ae-forgotten-export) The symbol "NullableNetworkDetails" needs to be exported by the entry point hls.d.ts
+    //
     // (undocumented)
-    networkDetails: any;
+    networkDetails: NullableNetworkDetails;
 }
 
 // Warning: (ae-missing-release-tag) "AssetListLoadingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1271,7 +1273,7 @@ export interface ErrorData {
     // (undocumented)
     mimeType?: string;
     // (undocumented)
-    networkDetails?: any;
+    networkDetails?: NullableNetworkDetails;
     // (undocumented)
     parent?: PlaylistLevelType;
     // (undocumented)
@@ -1719,7 +1721,7 @@ export interface FragLoadedData {
     // (undocumented)
     frag: Fragment;
     // (undocumented)
-    networkDetails: unknown;
+    networkDetails: NullableNetworkDetails;
     // (undocumented)
     part: Part | null;
     // (undocumented)
@@ -1745,7 +1747,7 @@ export interface FragLoadFailResult extends ErrorData {
     // (undocumented)
     frag: Fragment;
     // (undocumented)
-    networkDetails: any;
+    networkDetails: NullableNetworkDetails;
     // (undocumented)
     part?: Part;
     // (undocumented)
@@ -2992,7 +2994,7 @@ export class KeyLoader extends Logger implements ComponentAPI {
     // (undocumented)
     abort(type?: PlaylistLevelType): void;
     // (undocumented)
-    createKeyLoadError(frag: Fragment, details: ErrorDetails | undefined, error: Error, networkDetails?: any, response?: {
+    createKeyLoadError(frag: Fragment, details: ErrorDetails | undefined, error: Error, networkDetails?: NullableNetworkDetails, response?: {
         url: string;
         data: undefined;
         code: number;
@@ -3401,7 +3403,7 @@ export interface LevelLoadedData {
     // (undocumented)
     levelInfo: Level;
     // (undocumented)
-    networkDetails: any;
+    networkDetails: NullableNetworkDetails;
     // (undocumented)
     stats: LoaderStats;
     // (undocumented)
@@ -3643,7 +3645,7 @@ export interface LoaderContext {
 // Warning: (ae-missing-release-tag) "LoaderOnAbort" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export type LoaderOnAbort<T extends LoaderContext> = (stats: LoaderStats, context: T, networkDetails: any) => void;
+export type LoaderOnAbort<T extends LoaderContext> = (stats: LoaderStats, context: T, networkDetails: NullableNetworkDetails) => void;
 
 // Warning: (ae-missing-release-tag) "LoaderOnError" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -3651,22 +3653,22 @@ export type LoaderOnAbort<T extends LoaderContext> = (stats: LoaderStats, contex
 export type LoaderOnError<T extends LoaderContext> = (error: {
     code: number;
     text: string;
-}, context: T, networkDetails: any, stats: LoaderStats) => void;
+}, context: T, networkDetails: NullableNetworkDetails, stats: LoaderStats) => void;
 
 // Warning: (ae-missing-release-tag) "LoaderOnProgress" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export type LoaderOnProgress<T extends LoaderContext> = (stats: LoaderStats, context: T, data: string | ArrayBuffer, networkDetails: any) => void;
+export type LoaderOnProgress<T extends LoaderContext> = (stats: LoaderStats, context: T, data: string | ArrayBuffer, networkDetails: NullableNetworkDetails) => void;
 
 // Warning: (ae-missing-release-tag) "LoaderOnSuccess" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export type LoaderOnSuccess<T extends LoaderContext> = (response: LoaderResponse, stats: LoaderStats, context: T, networkDetails: any) => void;
+export type LoaderOnSuccess<T extends LoaderContext> = (response: LoaderResponse, stats: LoaderStats, context: T, networkDetails: NullableNetworkDetails) => void;
 
 // Warning: (ae-missing-release-tag) "LoaderOnTimeout" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export type LoaderOnTimeout<T extends LoaderContext> = (stats: LoaderStats, context: T, networkDetails: any) => void;
+export type LoaderOnTimeout<T extends LoaderContext> = (stats: LoaderStats, context: T, networkDetails: NullableNetworkDetails) => void;
 
 // Warning: (ae-missing-release-tag) "LoaderResponse" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -3815,7 +3817,7 @@ export interface ManifestLoadedData {
     // (undocumented)
     levels: LevelParsed[];
     // (undocumented)
-    networkDetails: any;
+    networkDetails: NullableNetworkDetails;
     // (undocumented)
     sessionData: Record<string, AttrList> | null;
     // (undocumented)
@@ -4021,7 +4023,6 @@ export interface MediaKeySessionContext {
 export type MediaOverrides = {
     duration?: number;
     endOfStream?: boolean;
-    cueRemoval?: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "MediaPlaylist" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -4062,6 +4063,8 @@ export interface MediaPlaylist {
     name: string;
     // (undocumented)
     textCodec?: string;
+    // (undocumented)
+    trackNode?: HTMLTrackElement;
     // (undocumented)
     type: MediaPlaylistType | 'main';
     // (undocumented)
@@ -4848,7 +4851,7 @@ export interface TrackLoadedData {
     // (undocumented)
     id: number;
     // (undocumented)
-    networkDetails: any;
+    networkDetails: NullableNetworkDetails;
     // (undocumented)
     stats: LoaderStats;
     // (undocumented)

@@ -13,6 +13,7 @@ import type {
   LoaderCallbacks,
   LoaderConfiguration,
 } from '../types/loader';
+import type { NullableNetworkDetails } from '../types/network-details';
 
 const MIN_CHUNK_SIZE = Math.pow(2, 17); // 128kb
 
@@ -394,7 +395,7 @@ export interface FragLoadFailResult extends ErrorData {
     text: string;
     url: string;
   };
-  networkDetails: any;
+  networkDetails: NullableNetworkDetails;
 }
 
 export type FragmentLoadProgressCallback = (
