@@ -37,6 +37,10 @@ export class LevelKey implements DecryptData {
     keyUriToKeyIdMap = {};
   }
 
+  static setKeyIdForUri(uri: string, keyId: Uint8Array<ArrayBuffer>) {
+    keyUriToKeyIdMap[uri] = keyId;
+  }
+
   constructor(
     method: string,
     uri: string,
@@ -101,19 +105,22 @@ export class LevelKey implements DecryptData {
       return null;
     }
 
-    if (isFullSegmentEncryption(this.method) && this.uri && !this.iv) {
-      if (typeof sn !== 'number') {
-        // We are fetching decryption data for a initialization segment
-        // If the segment was encrypted with AES-128/256
-        // It must have an IV defined. We cannot substitute the Segment Number in.
-        logger.warn(
-          `missing IV for initialization segment with method="${this.method}" - compliance issue`,
-        );
+    if (isFullSegmentEncryption(this.method)) {
+      let iv = this.iv;
+      if (!iv) {
+        if (typeof sn !== 'number') {
+          // We are fetching decryption data for a initialization segment
+          // If the segment was encrypted with AES-128/256
+          // It must have an IV defined. We cannot substitute the Segment Number in.
+          logger.warn(
+            `missing IV for initialization segment with method="${this.method}" - compliance issue`,
+          );
 
-        // Explicitly set sn to resulting value from implicit conversions 'initSegment' values for IV generation.
-        sn = 0;
+          // Explicitly set sn to resulting value from implicit conversions 'initSegment' values for IV generation.
+          sn = 0;
+        }
+        iv = createInitializationVector(sn);
       }
-      const iv = createInitializationVector(sn);
       const decryptdata = new LevelKey(
         this.method,
         this.uri,
@@ -142,11 +149,11 @@ export class LevelKey implements DecryptData {
           this.pssh = keyBytes;
           // In case of Widevine, if KEYID is not in the playlist, assume only two fields in the pssh KEY tag URI.
           if (!this.keyId) {
-            const [psshData] = parseMultiPssh(keyBytes.buffer);
-            this.keyId =
-              psshData && 'kids' in psshData && psshData.kids?.[0]
-                ? psshData.kids[0]
-                : null;
+            const results = parseMultiPssh(keyBytes.buffer);
+            if (results.length) {
+              const psshData = results[0];
+              this.keyId = psshData.kids?.length ? psshData.kids[0] : null;
+            }
           }
           if (!this.keyId) {
             const offset = keyBytes.length - 22;
@@ -189,7 +196,7 @@ export class LevelKey implements DecryptData {
         keyId = new Uint8Array(16);
         const dv = new DataView(keyId.buffer, 12, 4); // Just set the last 4 bytes
         dv.setUint32(0, val);
-        keyUriToKeyIdMap[this.uri] = keyId;
+        LevelKey.setKeyIdForUri(this.uri, keyId);
       }
       this.keyId = keyId;
     }

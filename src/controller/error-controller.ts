@@ -6,7 +6,9 @@ import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { getCodecsForMimeType } from '../utils/codecs';
 import {
   getRetryConfig,
+  isKeyError,
   isTimeoutError,
+  isUnusableKeyError,
   shouldRetry,
 } from '../utils/error-helper';
 import { arrayToHex } from '../utils/hex';
@@ -302,7 +304,7 @@ export default class ErrorController
     const level = hls.levels[variantLevelIndex];
     const { fragLoadPolicy, keyLoadPolicy } = hls.config;
     const retryConfig = getRetryConfig(
-      data.details.startsWith('key') ? keyLoadPolicy : fragLoadPolicy,
+      isKeyError(data) ? keyLoadPolicy : fragLoadPolicy,
       data,
     );
     const fragmentErrors = hls.levels.reduce(
@@ -314,19 +316,21 @@ export default class ErrorController
       if (data.details !== ErrorDetails.FRAG_GAP) {
         level.fragmentError++;
       }
-      const retry = shouldRetry(
-        retryConfig,
-        fragmentErrors,
-        isTimeoutError(data),
-        data.response,
-      );
-      if (retry) {
-        return {
-          action: NetworkErrorAction.RetryRequest,
-          flags: ErrorActionFlags.None,
+      if (!isUnusableKeyError(data)) {
+        const retry = shouldRetry(
           retryConfig,
-          retryCount: fragmentErrors,
-        };
+          fragmentErrors,
+          isTimeoutError(data),
+          data.response,
+        );
+        if (retry) {
+          return {
+            action: NetworkErrorAction.RetryRequest,
+            flags: ErrorActionFlags.None,
+            retryConfig,
+            retryCount: fragmentErrors,
+          };
+        }
       }
     }
     // Reach max retry count, or Missing level reference
@@ -509,7 +513,9 @@ export default class ErrorController
           'HDCP-LEVEL'
         ];
         errorAction.hdcpLevel = restrictedHdcpLevel;
-        if (restrictedHdcpLevel) {
+        if (restrictedHdcpLevel === 'NONE') {
+          this.warn(`HDCP policy resticted output with HDCP-LEVEL=NONE`);
+        } else if (restrictedHdcpLevel) {
           hls.maxHdcpLevel =
             HdcpLevels[HdcpLevels.indexOf(restrictedHdcpLevel) - 1];
           errorAction.resolved = true;
@@ -526,7 +532,8 @@ export default class ErrorController
         if (levelKey) {
           // Penalize all levels with key
           const levels = this.hls.levels;
-          for (let i = levels.length; i--; ) {
+          const levelCountWithError = levels.length;
+          for (let i = levelCountWithError; i--; ) {
             if (this.variantHasKey(levels[i], levelKey)) {
               this.log(
                 `Banned key found in level ${i} (${levels[i].bitrate}bps) or audio group "${levels[i].audioGroups?.join(',')}" (${data.frag?.type} fragment) ${arrayToHex(levelKey.keyId || [])}`,
@@ -537,8 +544,15 @@ export default class ErrorController
               this.hls.removeLevel(i);
             }
           }
-          if (levels.length) {
+          const frag = data.frag;
+          if (this.hls.levels.length < levelCountWithError) {
             errorAction.resolved = true;
+          } else if (frag && frag.type !== PlaylistLevelType.MAIN) {
+            // Ignore key error for audio track with unmatched key (main session error)
+            const fragLevelKey = frag.decryptdata;
+            if (fragLevelKey && !levelKey.matches(fragLevelKey)) {
+              errorAction.resolved = true;
+            }
           }
         }
         break;
