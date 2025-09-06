@@ -935,6 +935,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.hls.trigger(Events.ERROR, event);
       },
     };
+    this.log(
+      `queuing "${type}" append sn: ${sn}${part ? ' p: ' + part.index : ''} of ${frag.type === PlaylistLevelType.MAIN ? 'level' : 'track'} ${frag.level} cc: ${cc}`,
+    );
     this.append(operation, type, this.isPending(this.tracks[type]));
   }
 
