@@ -1533,6 +1533,9 @@ export default class InterstitialsController
       return;
     }
     const main = this.hls.levels[data.level];
+    if (!main.details) {
+      return;
+    }
     const currentSelection = {
       ...(this.mediaSelection || this.altSelection),
       main,
