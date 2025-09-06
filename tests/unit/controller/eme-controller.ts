@@ -23,8 +23,11 @@ type EMEControllerTestable = Omit<
 > & {
   hls: HlsMock;
   mediaKeySessions: MediaKeySessionContext[];
-  keyIdToKeySessionPromise: {
-    [keyId: string]: Promise<MediaKeySessionContext> | undefined;
+  keyUriToSessionPromise: {
+    [keyUri: string]: Promise<MediaKeySessionContext> | undefined;
+  };
+  keyUriToLevelKeys: {
+    [keyUri: string]: LevelKey[] | undefined;
   };
   onMediaAttached: (
     event: Events.MEDIA_ATTACHED,
@@ -367,9 +370,9 @@ describe('EMEController', function () {
         type: 'main',
       } as any)
       .then(() => {
-        expect(emeController.keyIdToKeySessionPromise).to.deep.equal(
+        expect(emeController.keyUriToSessionPromise).to.deep.equal(
           {},
-          '`keyIdToKeySessionPromise` should be an empty dictionary when no key IDs are found',
+          '`keyUriToSessionPromise` should be an empty dictionary when no key IDs are found',
         );
       });
   });
@@ -395,10 +398,11 @@ describe('EMEController', function () {
     const levelKey = getParsedLevelKey();
     const keySession = new MediaKeySessionMock2();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
-      decryptdata: levelKey,
       keySystem: KeySystems.FAIRPLAY,
+      levelKeys: [levelKey],
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
+      keyStatuses: {},
     };
 
     const keyStatuses = emeController.getKeyStatuses(
@@ -462,19 +466,17 @@ describe('EMEController', function () {
         },
       } as any)
       .then(() => {
-        expect(
-          emeController.keyIdToKeySessionPromise[
-            '00000000000000000000000000000000'
-          ],
-        ).to.be.a('Promise');
-        return emeController.keyIdToKeySessionPromise[
-          '00000000000000000000000000000000'
-        ]!.finally(() => {
-          expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
-          expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
-            sinon.match({ byteLength: 6 }),
-          );
-        });
+        expect(emeController.keyUriToSessionPromise['data://key-uri']).to.be.a(
+          'Promise',
+        );
+        return emeController.keyUriToSessionPromise['data://key-uri']!.finally(
+          () => {
+            expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
+            expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
+              sinon.match({ byteLength: 6 }),
+            );
+          },
+        );
       });
   });
 
@@ -543,14 +545,12 @@ describe('EMEController', function () {
         // expected?
       });
 
-    expect(
-      emeController.keyIdToKeySessionPromise[
-        '00000000000000000000000000000000'
-      ],
-    ).to.be.a('Promise');
-    return emeController.keyIdToKeySessionPromise[
-      '00000000000000000000000000000000'
-    ]!.catch(() => {}).finally(() => {
+    expect(emeController.keyUriToSessionPromise['data://key-uri']).to.be.a(
+      'Promise',
+    );
+    return emeController.keyUriToSessionPromise['data://key-uri']!.catch(
+      () => {},
+    ).finally(() => {
       expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
       expect((mediaKeysSetServerCertificateSpy.args[0] as any)[0]).to.equal(
         xhrInstance.response,
@@ -621,14 +621,12 @@ describe('EMEController', function () {
         // expected?
       });
 
-    expect(
-      emeController.keyIdToKeySessionPromise[
-        '00000000000000000000000000000000'
-      ],
-    ).to.be.a('Promise');
-    return emeController.keyIdToKeySessionPromise[
-      '00000000000000000000000000000000'
-    ]!.catch(() => {}).finally(() => {
+    expect(emeController.keyUriToSessionPromise['data://key-uri']).to.be.a(
+      'Promise',
+    );
+    return emeController.keyUriToSessionPromise['data://key-uri']!.catch(
+      () => {},
+    ).finally(() => {
       expect(emeController.hls.trigger).to.have.been.calledOnce;
       expect(emeController.hls.trigger.args[0][1].details).to.equal(
         ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED,
@@ -669,10 +667,11 @@ describe('EMEController', function () {
     const levelKey = getParsedLevelKey();
     const keySession = new MediaKeySessionMock();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
-      decryptdata: levelKey,
       keySystem: KeySystems.FAIRPLAY,
+      levelKeys: [levelKey],
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
+      keyStatuses: {},
     };
     sinon.stub(keySession, 'remove');
     sinon.stub(keySession, 'close');
@@ -716,10 +715,11 @@ describe('EMEController', function () {
     const levelKey = getParsedLevelKey();
     const keySession = new MediaKeySessionMock();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
-      decryptdata: levelKey,
       keySystem: KeySystems.FAIRPLAY,
+      levelKeys: [levelKey],
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
+      keyStatuses: {},
     };
     sinon.stub(keySession, 'remove');
     const keySessionCloseSpy = sinon.stub(keySession, 'close');
@@ -774,10 +774,11 @@ describe('EMEController', function () {
     const levelKey = getParsedLevelKey();
     const keySession = new MediaKeySessionMock();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
-      decryptdata: levelKey,
       keySystem: KeySystems.FAIRPLAY,
+      levelKeys: [levelKey],
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
+      keyStatuses: {},
     };
     sinon.stub(keySession, 'remove');
     const keySessionCloseSpy = sinon.stub(keySession, 'close');
