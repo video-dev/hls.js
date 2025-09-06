@@ -1104,7 +1104,7 @@ export const enum DecrypterAesMode {
 export type DRMSystemConfiguration = {
     licenseUrl: string;
     serverCertificateUrl?: string;
-    generateRequest?: (this: Hls, initDataType: string, initData: ArrayBuffer | null, keyContext: MediaKeySessionContext) => {
+    generateRequest?: (this: Hls, initDataType: string, initData: ArrayBuffer | null, keyContext: MediaKeySessionContextAndLevelKey) => {
         initDataType: string;
         initData: ArrayBuffer | null;
     } | undefined | never;
@@ -1172,6 +1172,8 @@ export class EMEController extends Logger implements ComponentAPI {
     // (undocumented)
     destroy(): void;
     // (undocumented)
+    getKeyStatus(decryptdata: LevelKey): MediaKeyStatus | undefined;
+    // (undocumented)
     getKeySystemAccess(keySystemsToAttempt: KeySystems[]): Promise<void>;
     // (undocumented)
     getSelectedKeySystemFormats(): KeySystemFormats[];
@@ -1187,8 +1189,8 @@ export class EMEController extends Logger implements ComponentAPI {
 //
 // @public (undocumented)
 export type EMEControllerConfig = {
-    licenseXhrSetup?: (this: Hls, xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext, licenseChallenge: Uint8Array) => void | Uint8Array | Promise<Uint8Array | void>;
-    licenseResponseCallback?: (this: Hls, xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext) => ArrayBuffer;
+    licenseXhrSetup?: (this: Hls, xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContextAndLevelKey, licenseChallenge: Uint8Array) => void | Uint8Array | Promise<Uint8Array | void>;
+    licenseResponseCallback?: (this: Hls, xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContextAndLevelKey) => ArrayBuffer;
     emeEnabled: boolean;
     widevineLicenseUrl?: string;
     drmSystems: DRMSystemsConfiguration | undefined;
@@ -3381,6 +3383,8 @@ export class LevelKey implements DecryptData {
     // (undocumented)
     pssh: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
+    static setKeyIdForUri(uri: string, keyId: Uint8Array<ArrayBuffer>): void;
+    // (undocumented)
     readonly uri: string;
 }
 
@@ -3992,11 +3996,17 @@ export type MediaKeyFunc = (keySystem: KeySystems, supportedConfigurations: Medi
 // @public (undocumented)
 export interface MediaKeySessionContext {
     // (undocumented)
-    decryptdata: LevelKey;
+    keyStatuses: {
+        [keyId: string]: MediaKeyStatus;
+    };
     // (undocumented)
-    keyStatus: MediaKeyStatus;
+    keyStatusTimeouts?: {
+        [keyId: string]: number;
+    };
     // (undocumented)
     keySystem: KeySystems;
+    // (undocumented)
+    levelKeys: LevelKey[];
     // (undocumented)
     licenseXhr?: XMLHttpRequest;
     // (undocumented)
@@ -4008,6 +4018,24 @@ export interface MediaKeySessionContext {
     // (undocumented)
     _onmessage?: (this: MediaKeySession, ev: MediaKeyMessageEvent) => any;
 }
+
+// Warning: (ae-missing-release-tag) "MediaKeySessionContextAndLevelKey" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type MediaKeySessionContextAndLevelKey = {
+    decryptdata: LevelKey;
+    keySystem: KeySystems;
+    levelKeys: LevelKey[];
+    mediaKeys: MediaKeys;
+    mediaKeysSession: MediaKeySession;
+    keyStatuses: {
+        [keyId: string]: MediaKeyStatus;
+    };
+    keyStatusTimeouts?: {
+        [keyId: string]: number;
+    };
+    licenseXhr?: XMLHttpRequest;
+};
 
 // Warning: (ae-missing-release-tag) "MediaOverrides" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
