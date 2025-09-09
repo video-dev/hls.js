@@ -119,7 +119,10 @@ export default class M3U8Parser {
     const levelsWithKnownCodecs: LevelParsed[] = [];
 
     MASTER_PLAYLIST_REGEX.lastIndex = 0;
-
+    if (!string.startsWith('#EXTM3U')) {
+      parsed.playlistParsingError = new Error('no EXTM3U delimiter');
+      return parsed;
+    }
     let result: RegExpExecArray | null;
     while ((result = MASTER_PLAYLIST_REGEX.exec(string)) != null) {
       if (result[1]) {
@@ -710,9 +713,7 @@ export default class M3U8Parser {
       }
     }
     if (!level.targetduration) {
-      level.playlistParsingError = new Error(
-        `#EXT-X-TARGETDURATION is required`,
-      );
+      level.playlistParsingError = new Error(`Missing Target Duration`);
     }
     const fragmentLength = fragments.length;
     const firstFragment = fragments[0];
