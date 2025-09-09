@@ -662,6 +662,18 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (this.sourceBufferCount) {
       return;
     }
+
+    if (
+      this.bufferCodecEventsTotal > 1 &&
+      !this.tracks.video &&
+      !data.video &&
+      data.audio?.id === 'main'
+    ) {
+      // MVP is missing CODECS and only audio was found in main segment (#7524)
+      this.log(`Main audio-only`);
+      this.bufferCodecEventsTotal = 1;
+    }
+
     if (this.mediaSourceOpenOrEnded) {
       this.checkPendingTracks();
     }
