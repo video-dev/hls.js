@@ -19,11 +19,11 @@ describe('M3U8Parser', function () {
     );
     expect(result.levels).to.deep.equal([]);
     expect(result.sessionData).to.equal(null);
-    expectPlaylistParsingError(result, 'no levels found in manifest');
+    expectPlaylistParsingError(result, 'no EXTM3U delimiter');
   });
 
   it('manifest with broken syntax returns empty array', function () {
-    const manifest = `#EXTXSTREAMINF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
+    const manifest = `#EXTM3U#EXTXSTREAMINF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
 http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282701_mp4_h264_aac_hq.m3u8#cell=core`;
     const result = M3U8Parser.parseMasterPlaylist(
       manifest,
