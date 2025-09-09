@@ -344,18 +344,6 @@ class PlaylistLoader implements NetworkComponentAPI {
 
         const string = response.data as string;
 
-        // Validate if it is an M3U8 at all
-        if (string.indexOf('#EXTM3U') !== 0) {
-          this.handleManifestParsingError(
-            response,
-            context,
-            new Error('no EXTM3U delimiter'),
-            networkDetails || null,
-            stats,
-          );
-          return;
-        }
-
         stats.parsing.start = performance.now();
         if (
           M3U8Parser.isMediaPlaylist(string) ||
@@ -730,29 +718,6 @@ class PlaylistLoader implements NetworkComponentAPI {
       typeof context.level === 'number' && parent === PlaylistLevelType.MAIN
         ? (level as number)
         : undefined;
-    if (!levelDetails.fragments.length) {
-      const error = (levelDetails.playlistParsingError = new Error(
-        'No Segments found in Playlist',
-      ));
-      hls.trigger(Events.ERROR, {
-        type: ErrorTypes.NETWORK_ERROR,
-        details: ErrorDetails.LEVEL_EMPTY_ERROR,
-        fatal: false,
-        url,
-        error,
-        reason: error.message,
-        response,
-        context,
-        level: levelIndex,
-        parent,
-        networkDetails,
-        stats,
-      });
-      return;
-    }
-    if (!levelDetails.targetduration) {
-      levelDetails.playlistParsingError = new Error('Missing Target Duration');
-    }
     const error = levelDetails.playlistParsingError;
     if (error) {
       this.hls.logger.warn(`${error} ${levelDetails.url}`);
@@ -774,6 +739,26 @@ class PlaylistLoader implements NetworkComponentAPI {
         return;
       }
       levelDetails.playlistParsingError = null;
+    }
+    if (!levelDetails.fragments.length) {
+      const error = (levelDetails.playlistParsingError = new Error(
+        'No Segments found in Playlist',
+      ));
+      hls.trigger(Events.ERROR, {
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.LEVEL_EMPTY_ERROR,
+        fatal: false,
+        url,
+        error,
+        reason: error.message,
+        response,
+        context,
+        level: levelIndex,
+        parent,
+        networkDetails,
+        stats,
+      });
+      return;
     }
 
     if (levelDetails.live && loader) {
