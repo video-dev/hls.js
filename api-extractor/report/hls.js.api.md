@@ -4835,7 +4835,7 @@ export interface Track extends BaseTrack {
     // (undocumented)
     buffer?: SourceBuffer;
     // (undocumented)
-    initSegment?: Uint8Array;
+    initSegment?: Uint8Array<ArrayBuffer>;
 }
 
 // Warning: (ae-missing-release-tag) "TrackLoadedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
