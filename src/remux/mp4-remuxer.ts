@@ -4,7 +4,10 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { PlaylistLevelType } from '../types/loader';
 import { type ILogger, Logger } from '../utils/logger';
-import { toMsFromMpegTsClock } from '../utils/timescale-conversion';
+import {
+  timestampToString,
+  toMsFromMpegTsClock,
+} from '../utils/timescale-conversion';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { SourceBufferName } from '../types/buffer';
@@ -107,7 +110,19 @@ export default class MP4Remuxer extends Logger implements Remuxer {
   }
 
   resetTimeStamp(defaultTimeStamp: TimestampOffset | null) {
-    this.log('initPTS & initDTS reset');
+    const initPTS = this._initPTS;
+    if (
+      !initPTS ||
+      !defaultTimeStamp ||
+      defaultTimeStamp.trackId !== initPTS.trackId ||
+      defaultTimeStamp.baseTime !== initPTS.baseTime ||
+      defaultTimeStamp.timescale !== initPTS.timescale
+    ) {
+      this.log(
+        `Reset initPTS: ${initPTS ? timestampToString(initPTS) : initPTS} > ${defaultTimeStamp ? timestampToString(defaultTimeStamp) : defaultTimeStamp}`,
+      );
+    }
+
     this._initPTS = this._initDTS = defaultTimeStamp;
   }
 
@@ -334,6 +349,25 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     };
   }
 
+  computeInitPts(
+    basetime: number,
+    timescale: number,
+    presentationTime: number,
+    type: 'audio' | 'video',
+  ): number {
+    const offset = Math.round(presentationTime * timescale);
+    let timestamp = normalizePts(basetime, offset);
+    if (timestamp < offset + timescale) {
+      this.log(
+        `Adjusting PTS for rollover in timeline near ${(offset - timestamp) / timescale} ${type}`,
+      );
+      while (timestamp < offset + timescale) {
+        timestamp += 8589934592;
+      }
+    }
+    return timestamp - offset;
+  }
+
   generateIS(
     audioTrack: DemuxedAudioTrack,
     videoTrack: DemuxedVideoTrack,
@@ -395,8 +429,12 @@ export default class MP4Remuxer extends Logger implements Remuxer {
         timescale = audioTrack.inputTimeScale;
         if (!_initPTS || timescale !== _initPTS.timescale) {
           // remember first PTS of this demuxing context. for audio, PTS = DTS
-          initPTS = initDTS =
-            audioSamples[0].pts - Math.round(timescale * timeOffset);
+          initPTS = initDTS = this.computeInitPts(
+            audioSamples[0].pts,
+            timescale,
+            timeOffset,
+            'audio',
+          );
         } else {
           computePTSDTS = false;
         }
@@ -421,13 +459,22 @@ export default class MP4Remuxer extends Logger implements Remuxer {
         trackId = videoTrack.id;
         timescale = videoTrack.inputTimeScale;
         if (!_initPTS || timescale !== _initPTS.timescale) {
-          const startPTS = this.getVideoStartPts(videoSamples);
-          const startOffset = Math.round(timescale * timeOffset);
-          initDTS = Math.min(
-            initDTS as number,
-            normalizePts(videoSamples[0].dts, startPTS) - startOffset,
+          const basePTS = this.getVideoStartPts(videoSamples);
+          const baseDTS = normalizePts(videoSamples[0].dts, basePTS);
+          const videoInitDTS = this.computeInitPts(
+            baseDTS,
+            timescale,
+            timeOffset,
+            'video',
           );
-          initPTS = Math.min(initPTS as number, startPTS - startOffset);
+          const videoInitPTS = this.computeInitPts(
+            basePTS,
+            timescale,
+            timeOffset,
+            'video',
+          );
+          initDTS = Math.min(initDTS as number, videoInitDTS);
+          initPTS = Math.min(initPTS as number, videoInitPTS);
         } else {
           computePTSDTS = false;
         }
@@ -897,10 +944,17 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     });
 
     if (!contiguous || nextAudioTs < 0) {
+      const sampleCount = inputSamples.length;
       // filter out sample with negative PTS that are not playable anyway
       // if we don't remove these negative samples, they will shift all audio samples forward.
       // leading to audio overlap between current / next fragment
       inputSamples = inputSamples.filter((sample) => sample.pts >= 0);
+
+      if (sampleCount !== inputSamples.length) {
+        this.warn(
+          `Removed ${inputSamples.length - sampleCount} of ${sampleCount} samples (initPTS ${initTime} / ${inputTimeScale})`,
+        );
+      }
 
       // in case all samples have negative PTS, and have been filtered out, return now
       if (!inputSamples.length) {
