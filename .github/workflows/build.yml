@@ -279,6 +279,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release_npm:
+    # npm oidc is configured for this environment
+    # https://docs.npmjs.com/trusted-publishers#for-github-actions
+    environment: release
     needs: [config, test_unit]
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
@@ -323,7 +326,6 @@ jobs:
           ./scripts/publish-npm.sh
         env:
           CI: true
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           TAG: ${{ needs.config.outputs.tag }}
 
   test_functional_required:
