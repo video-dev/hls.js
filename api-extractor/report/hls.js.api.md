@@ -3359,7 +3359,9 @@ export class LevelKey implements DecryptData {
     // (undocumented)
     readonly encrypted: boolean;
     // (undocumented)
-    getDecryptData(sn: number | 'initSegment'): LevelKey | null;
+    getDecryptData(sn: number | 'initSegment', levelKeys?: {
+        [key: string]: LevelKey | undefined;
+    }): LevelKey | null;
     // (undocumented)
     readonly isCommonEncryption: boolean;
     // (undocumented)
