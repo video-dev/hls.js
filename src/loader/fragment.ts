@@ -273,7 +273,7 @@ export class Fragment extends BaseSegment {
           const levelKey = (this._decryptdata =
             this.levelkeys[keyFormats[0]] || null);
           if (levelKey) {
-            return levelKey.getDecryptData(this.sn);
+            return levelKey.getDecryptData(this.sn, this.levelkeys);
           }
         } else {
           // Multiple keys. key-loader to call Fragment.setKeyFormat based on selected key-system.
@@ -364,10 +364,11 @@ export class Fragment extends BaseSegment {
   }
 
   setKeyFormat(keyFormat: KeySystemFormats) {
-    if (this.levelkeys) {
-      const key = this.levelkeys[keyFormat];
+    const levelkeys = this.levelkeys;
+    if (levelkeys) {
+      const key = levelkeys[keyFormat];
       if (key && !this._decryptdata) {
-        this._decryptdata = key.getDecryptData(this.sn);
+        this._decryptdata = key.getDecryptData(this.sn, this.levelkeys);
       }
     }
   }
