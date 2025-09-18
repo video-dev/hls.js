@@ -4,6 +4,8 @@ import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
+import { arrayToHex } from '../../../src/utils/hex';
+import { KeySystemFormats } from '../../../src/utils/mediakeys-helper';
 import type { Fragment, Part } from '../../../src/loader/fragment';
 import type { LevelKey } from '../../../src/loader/level-key';
 
@@ -2412,6 +2414,59 @@ media_1638278.m4s`;
       .to.have.property('encryptedFragments')
       .which.is.an('array')
       .which.has.members([result.fragments[2], result.fragments[6]]);
+  });
+
+  it('parse KEYID other keys when available', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:6
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="skd://any",KEYFORMAT="com.apple.streamingkeydelivery",KEYFORMATVERSIONS="1"
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;base64,AAAA",KEYID=0x50906c6be9179460c3d1a59f16ee9804,KEYFORMAT="urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed",KEYFORMATVERSIONS="1"
+#EXT-X-KEY:METHOD=SAMPLE-AES,URI="data:text/plain;charset=UTF-16;base64,UAIA",KEYFORMATVERSIONS="1",KEYFORMAT="com.microsoft.playready"
+#EXT-X-MAP:URI="init.mp4"
+#EXTINF:5.0,
+1.mp4`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://foo.com/adaptive/test.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+    expect(result.playlistParsingError).to.be.null;
+    expect(result.fragments.length).to.equal(1);
+    expect(result.fragments[0].levelkeys, 'first segment has three keys')
+      .to.be.an('object')
+      .with.keys([
+        'com.apple.streamingkeydelivery',
+        'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+        'com.microsoft.playready',
+      ]);
+    const fragment = result.fragments[0];
+    expect(result)
+      .to.have.property('encryptedFragments')
+      .which.is.an('array')
+      .which.has.members([fragment]);
+    expect(
+      fragment.decryptdata,
+      'decryptdata should by null until format is selected',
+    ).to.be.null;
+    fragment.setKeyFormat(KeySystemFormats.FAIRPLAY);
+    expect(fragment.decryptdata)
+      .to.include({
+        uri: 'skd://any',
+        method: 'SAMPLE-AES',
+        keyFormat: 'com.apple.streamingkeydelivery',
+        encrypted: true,
+        isCommonEncryption: true,
+        pssh: null,
+      })
+      .and.have.property('keyId')
+      .which.is.a('Uint8Array');
+    expect(arrayToHex(fragment.decryptdata!.keyId!)).to.equal(
+      '50906c6be9179460c3d1a59f16ee9804',
+    );
   });
 
   it('parses manifest with EXT-X-SESSION-KEYs', function () {
