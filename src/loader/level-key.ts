@@ -178,6 +178,10 @@ export class LevelKey implements DecryptData {
           }
           if (!this.keyId) {
             this.keyId = getKeyIdFromPlayReadyKey(levelKeys);
+            if (!this.keyId) {
+              const offset = keyBytes.length - 22;
+              this.keyId = keyBytes.subarray(offset, offset + 16);
+            }
           }
           break;
         case KeySystemFormats.PLAYREADY: {
@@ -207,18 +211,22 @@ export class LevelKey implements DecryptData {
       }
     }
 
-    // Default behavior: get keyId from other KEY tag or URI lookup
-    if (this.keyId?.byteLength !== 16) {
-      let keyId: Uint8Array<ArrayBuffer> | null | undefined;
-      keyId = getKeyIdFromWidevineKey(levelKeys);
+    // Default behavior: assign a new keyId for each uri
+    if (!this.keyId || this.keyId.byteLength !== 16) {
+      let keyId: Uint8Array<ArrayBuffer> | null | undefined =
+        keyUriToKeyIdMap[this.uri];
       if (!keyId) {
-        keyId = getKeyIdFromPlayReadyKey(levelKeys);
+        keyId = getKeyIdFromWidevineKey(levelKeys);
         if (!keyId) {
-          keyId = keyUriToKeyIdMap[this.uri];
+          keyId = getKeyIdFromPlayReadyKey(levelKeys);
+          if (!keyId) {
+            const val =
+              Object.keys(keyUriToKeyIdMap).length % Number.MAX_SAFE_INTEGER;
+            keyId = new Uint8Array(16);
+            const dv = new DataView(keyId.buffer, 12, 4); // Just set the last 4 bytes
+            dv.setUint32(0, val);
+          }
         }
-      }
-      if (keyId) {
-        this.keyId = keyId;
         LevelKey.setKeyIdForUri(this.uri, keyId);
       }
     }
