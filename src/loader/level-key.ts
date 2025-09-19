@@ -100,7 +100,10 @@ export class LevelKey implements DecryptData {
     return false;
   }
 
-  public getDecryptData(sn: number | 'initSegment'): LevelKey | null {
+  public getDecryptData(
+    sn: number | 'initSegment',
+    levelKeys?: { [key: string]: LevelKey | undefined },
+  ): LevelKey | null {
     if (!this.encrypted || !this.uri) {
       return null;
     }
@@ -135,10 +138,19 @@ export class LevelKey implements DecryptData {
       return this;
     }
 
-    if (this.pssh && this.keyId) {
-      return this;
+    if (this.keyId) {
+      // Handle case where key id is changed in KEY_LOADING event handler #7542#issuecomment-3305203929
+      const assignedKeyId = keyUriToKeyIdMap[this.uri];
+      if (assignedKeyId && !arrayValuesMatch(this.keyId, assignedKeyId)) {
+        LevelKey.setKeyIdForUri(this.uri, this.keyId);
+      }
+
+      if (this.pssh) {
+        return this;
+      }
     }
 
+    // Key bytes are signalled the KEYID attribute, typically only found on WideVine KEY tags
     // Initialize keyId if possible
     const keyBytes = convertDataUriToArrayBytes(this.uri);
     if (keyBytes) {
@@ -156,8 +168,7 @@ export class LevelKey implements DecryptData {
             }
           }
           if (!this.keyId) {
-            const offset = keyBytes.length - 22;
-            this.keyId = keyBytes.subarray(offset, offset + 16);
+            this.keyId = getKeyIdFromPlayReadyKey(levelKeys);
           }
           break;
         case KeySystemFormats.PLAYREADY: {
@@ -187,22 +198,47 @@ export class LevelKey implements DecryptData {
       }
     }
 
-    // Default behavior: assign a new keyId for each uri
+    // Default behavior: get keyId from other KEY tag or URI lookup
     if (!this.keyId || this.keyId.byteLength !== 16) {
-      let keyId = keyUriToKeyIdMap[this.uri];
+      let keyId: Uint8Array<ArrayBuffer> | null | undefined;
+      keyId = getKeyIdFromWidevineKey(levelKeys);
       if (!keyId) {
-        const val =
-          Object.keys(keyUriToKeyIdMap).length % Number.MAX_SAFE_INTEGER;
-        keyId = new Uint8Array(16);
-        const dv = new DataView(keyId.buffer, 12, 4); // Just set the last 4 bytes
-        dv.setUint32(0, val);
+        keyId = getKeyIdFromPlayReadyKey(levelKeys);
+        if (!keyId) {
+          keyId = keyUriToKeyIdMap[this.uri];
+        }
+      }
+      if (keyId) {
+        this.keyId = keyId;
         LevelKey.setKeyIdForUri(this.uri, keyId);
       }
-      this.keyId = keyId;
     }
 
     return this;
   }
+}
+
+function getKeyIdFromWidevineKey(
+  levelKeys: { [key: string]: LevelKey | undefined } | undefined,
+) {
+  const widevineKey = levelKeys?.[KeySystemFormats.WIDEVINE];
+  if (widevineKey) {
+    return widevineKey.keyId;
+  }
+  return null;
+}
+
+function getKeyIdFromPlayReadyKey(
+  levelKeys: { [key: string]: LevelKey | undefined } | undefined,
+) {
+  const playReadyKey = levelKeys?.[KeySystemFormats.PLAYREADY];
+  if (playReadyKey) {
+    const playReadyKeyBytes = convertDataUriToArrayBytes(playReadyKey.uri);
+    if (playReadyKeyBytes) {
+      return parsePlayReadyWRM(playReadyKeyBytes);
+    }
+  }
+  return null;
 }
 
 function createInitializationVector(segmentNumber: number) {
