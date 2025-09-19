@@ -1,4 +1,5 @@
 import { LoadError } from './fragment-loader';
+import { LevelKey } from './level-key';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { type Fragment, isMediaFragment } from '../loader/fragment';
 import { arrayToHex } from '../utils/hex';
@@ -8,7 +9,7 @@ import {
   keySystemFormatToKeySystemDomain,
 } from '../utils/mediakeys-helper';
 import { KeySystemFormats } from '../utils/mediakeys-helper';
-import type { LevelKey } from './level-key';
+import { parseKeyIdsFromTenc } from '../utils/mp4-tools';
 import type { HlsConfig } from '../config';
 import type EMEController from '../controller/eme-controller';
 import type {
@@ -258,6 +259,19 @@ export default class KeyLoader extends Logger implements ComponentAPI {
   loadKeyEME(keyInfo: KeyLoaderInfo, frag: Fragment): Promise<KeyLoadedData> {
     const keyLoadedData: KeyLoadedData = { frag, keyInfo };
     if (this.emeController && this.config.emeEnabled) {
+      if (!keyInfo.decryptdata.keyId && frag.initSegment?.data) {
+        const keyIds = parseKeyIdsFromTenc(
+          frag.initSegment.data as Uint8Array<ArrayBuffer>,
+        );
+        if (keyIds.length) {
+          const keyId = keyIds[0];
+          if (keyId.some((b) => b !== 0)) {
+            this.log(`Using keyId found in init segment ${arrayToHex(keyId)}`);
+            keyInfo.decryptdata.keyId = keyId;
+            LevelKey.setKeyIdForUri(keyInfo.decryptdata.uri, keyId);
+          }
+        }
+      }
       const keySessionContextPromise =
         this.emeController.loadKey(keyLoadedData);
       return (keyInfo.keyLoadPromise = keySessionContextPromise.then(
