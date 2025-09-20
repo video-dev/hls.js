@@ -1,5 +1,6 @@
 /* eslint-disable dot-notation */
 import chai from 'chai';
+import { fakeXhr } from 'nise';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
@@ -32,7 +33,7 @@ describe('StreamController', function () {
   const mockFragments = mockFragmentArray as MediaFragment[];
 
   beforeEach(function () {
-    fake = sinon.useFakeXMLHttpRequest();
+    fake = fakeXhr.useFakeXMLHttpRequest();
     hls = new Hls({
       // Enable debug to catch callback errors and enable logging in these tests:
       // debug: true,
