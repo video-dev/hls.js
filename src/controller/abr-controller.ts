@@ -942,7 +942,7 @@ class AbrController extends Logger implements AbrComponentAPI {
         ttfbEstimateSec,
         adjustedbw,
         bitrate * avgDuration,
-        levelDetails === undefined,
+        !levelDetails || levelDetails.live,
       );
 
       const canSwitchWithinTolerance =
