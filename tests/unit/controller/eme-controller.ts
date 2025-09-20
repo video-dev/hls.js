@@ -1,5 +1,6 @@
 import chai from 'chai';
 import { EventEmitter } from 'eventemitter3';
+import { fakeXhr } from 'nise';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import EMEController from '../../../src/controller/eme-controller';
@@ -149,7 +150,7 @@ const setupEach = function (config) {
   };
   media = new MediaMock();
   emeController = new EMEController(hls as any) as any as EMEControllerTestable;
-  sinonFakeXMLHttpRequestStatic = sinon.useFakeXMLHttpRequest();
+  sinonFakeXMLHttpRequestStatic = fakeXhr.useFakeXMLHttpRequest();
 };
 
 const getParsedLevelKey = (
