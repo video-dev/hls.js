@@ -877,7 +877,7 @@ class EMEController extends Logger implements ComponentAPI {
         handleKeyStatus(keyStatus, context);
       } else {
         // Timeout key-status
-        const timeout = 0;
+        const timeout = 1000;
         context.keyStatusTimeouts ||= {};
         context.keyStatusTimeouts[keyId] ||= self.setTimeout(() => {
           if ((!context.mediaKeysSession as any) || !this.mediaKeys) {

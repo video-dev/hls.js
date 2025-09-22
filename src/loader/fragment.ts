@@ -259,25 +259,24 @@ export class Fragment extends BaseSegment {
 
   get decryptdata(): LevelKey | null {
     const { levelkeys } = this;
-    if (!levelkeys && !this._decryptdata) {
+
+    if (!levelkeys || levelkeys.NONE) {
       return null;
     }
 
-    if (!this._decryptdata && this.levelkeys && !this.levelkeys.NONE) {
-      const key = this.levelkeys.identity;
-      if (key) {
-        this._decryptdata = key.getDecryptData(this.sn);
-      } else {
-        const keyFormats = Object.keys(this.levelkeys);
-        if (keyFormats.length === 1) {
-          const levelKey = (this._decryptdata =
-            this.levelkeys[keyFormats[0]] || null);
-          if (levelKey) {
-            return levelKey.getDecryptData(this.sn);
-          }
-        } else {
-          // Multiple keys. key-loader to call Fragment.setKeyFormat based on selected key-system.
+    if (levelkeys.identity) {
+      if (!this._decryptdata) {
+        this._decryptdata = levelkeys.identity.getDecryptData(this.sn);
+      }
+    } else if (!this._decryptdata?.keyId) {
+      const keyFormats = Object.keys(levelkeys);
+      if (keyFormats.length === 1) {
+        const levelKey = (this._decryptdata = levelkeys[keyFormats[0]] || null);
+        if (levelKey) {
+          this._decryptdata = levelKey.getDecryptData(this.sn, levelkeys);
         }
+      } else {
+        // Multiple keys. key-loader to call Fragment.setKeyFormat based on selected key-system.
       }
     }
 
@@ -364,10 +363,11 @@ export class Fragment extends BaseSegment {
   }
 
   setKeyFormat(keyFormat: KeySystemFormats) {
-    if (this.levelkeys) {
-      const key = this.levelkeys[keyFormat];
-      if (key && !this._decryptdata) {
-        this._decryptdata = key.getDecryptData(this.sn);
+    const levelkeys = this.levelkeys;
+    if (levelkeys) {
+      const key = levelkeys[keyFormat];
+      if (key && !this._decryptdata?.keyId) {
+        this._decryptdata = key.getDecryptData(this.sn, levelkeys);
       }
     }
   }
