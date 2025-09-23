@@ -578,6 +578,65 @@ describe('FragmentTracker', function () {
       });
     });
   });
+
+  describe('getFragmentsInRange', function () {
+    let hls: Hls;
+    let fragmentTracker: FragmentTracker;
+
+    beforeEach(function () {
+      hls = new Hls({});
+      fragmentTracker = new FragmentTracker(hls);
+    });
+
+    it('should return empty array when no fragments exist', function () {
+      const fragments = fragmentTracker.getFragmentsInRange(0, 10, PlaylistLevelType.AUDIO);
+      expect(fragments).to.be.empty;
+    });
+
+    it('should return empty array when fragments exist but are out of range', function () {
+      // Add a fragment that is outside the search range
+      const fragment = createMockFragment(
+        {
+          startPTS: 20,
+          endPTS: 25,
+          sn: 1,
+          level: 0,
+          type: PlaylistLevelType.AUDIO,
+        },
+        [ElementaryStreamTypes.AUDIO],
+      );
+      fragment.start = 20;
+      fragment.duration = 5;
+
+      triggerFragLoadedAndFragBuffered(hls, fragment);
+
+      // Search in range 0-10 when fragment is at 20-25
+      const fragments = fragmentTracker.getFragmentsInRange(0, 10, PlaylistLevelType.AUDIO);
+      expect(fragments).to.be.empty;
+    });
+
+    it('should handle different playlist types', function () {
+      // Add an audio fragment
+      const audioFragment = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 5,
+          sn: 1,
+          level: 0,
+          type: PlaylistLevelType.AUDIO,
+        },
+        [ElementaryStreamTypes.AUDIO],
+      );
+      audioFragment.start = 0;
+      audioFragment.duration = 5;
+
+      triggerFragLoadedAndFragBuffered(hls, audioFragment);
+
+      // Should return empty when searching for main fragments
+      const mainFragments = fragmentTracker.getFragmentsInRange(0, 10, PlaylistLevelType.MAIN);
+      expect(mainFragments).to.be.empty;
+    });
+  });
 });
 
 function triggerFragLoaded(hls: Hls, fragment: Fragment) {

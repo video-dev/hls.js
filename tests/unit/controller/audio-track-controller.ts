@@ -41,6 +41,8 @@ type AudioTrackControllerTestable = Omit<
   | 'tracksInGroup'
   | 'groupId'
   | 'trackId'
+  | 'nextTrackId'
+  | 'selectDefaultTrack'
   | 'canLoad'
   | 'shouldLoadPlaylist'
   | 'timer'
@@ -54,6 +56,8 @@ type AudioTrackControllerTestable = Omit<
   tracksInGroup: MediaPlaylist[];
   groupIds: (string | undefined)[] | null;
   trackId: number;
+  nextTrackId: number;
+  selectDefaultTrack: boolean;
   canLoad: boolean;
   timer: number;
   shouldLoadPlaylist: (track: Object) => boolean;
@@ -485,6 +489,134 @@ describe('AudioTrackController', function () {
         'track index/id is not changed as there is no redundant track to choose from',
       ).to.equal(4);
       expect(checkRetry).to.have.been.calledOnce;
+    });
+  });
+
+  describe('nextAudioTrack API', function () {
+    beforeEach(function () {
+      audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
+        audioTracks: tracks,
+      });
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
+        level: 0,
+      });
+    });
+
+    it('should get the nextAudioTrack id', function () {
+      // After onLevelLoading, a default track should be selected (id=0)
+      expect(audioTrackController.nextAudioTrack).to.equal(0);
+      audioTrackController.nextTrackId = 1;
+      expect(audioTrackController.nextAudioTrack).to.equal(1);
+    });
+
+    it('should set nextAudioTrack and trigger AUDIO_TRACK_SWITCHING with flushBuffer=false', function () {
+      const audioTrackSwitchingCallback = sinon.spy();
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, audioTrackSwitchingCallback);
+
+      audioTrackController.nextAudioTrack = 1;
+
+      expect(audioTrackController.nextAudioTrack).to.equal(1);
+      expect(audioTrackController.trackId).to.equal(1);
+      expect(audioTrackSwitchingCallback).to.have.been.calledOnce;
+
+      const callArgs = audioTrackSwitchingCallback.firstCall.args[1];
+      expect(callArgs).to.have.property('flushBuffer', false);
+      expect(callArgs).to.have.property('id', 1);
+      expect(callArgs).to.have.property('name', 'B');
+    });
+
+    it('should set nextAudioTrack to different track than current audioTrack', function () {
+      const audioTrackSwitchingCallback = sinon.spy();
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, audioTrackSwitchingCallback);
+
+      audioTrackController.audioTrack = 0;
+      audioTrackSwitchingCallback.resetHistory();
+
+      audioTrackController.nextAudioTrack = 2;
+
+      expect(audioTrackController.nextAudioTrack).to.equal(2);
+      expect(audioTrackController.audioTrack).to.equal(2);
+      expect(audioTrackSwitchingCallback).to.have.been.calledOnce;
+
+      const callArgs = audioTrackSwitchingCallback.firstCall.args[1];
+      expect(callArgs).to.have.property('flushBuffer', false);
+      expect(callArgs).to.have.property('name', 'C');
+    });
+
+    it('should disable selectDefaultTrack when nextAudioTrack is set', function () {
+      // Reset selectDefaultTrack to true to test the API behavior
+      audioTrackController.selectDefaultTrack = true;
+      expect(audioTrackController.selectDefaultTrack).to.be.true;
+      audioTrackController.nextAudioTrack = 1;
+      expect(audioTrackController.selectDefaultTrack).to.be.false;
+    });
+
+    it('should handle invalid nextAudioTrack index gracefully', function () {
+      const warnSpy = sinon.spy(audioTrackController, 'warn');
+      const audioTrackSwitchingCallback = sinon.spy();
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, audioTrackSwitchingCallback);
+
+      audioTrackController.nextAudioTrack = 99; // Invalid index
+
+      expect(warnSpy).to.have.been.calledWith('Invalid audio track id: 99');
+      expect(audioTrackSwitchingCallback).to.not.have.been.called;
+    });
+
+    it('should sync nextTrackId with audioTrack when audioTrack is set', function () {
+      audioTrackController.audioTrack = 1;
+      expect(audioTrackController.nextAudioTrack).to.equal(1);
+      expect(audioTrackController.trackId).to.equal(1);
+    });
+  });
+
+  describe('flushBuffer parameter in audio track switching', function () {
+    beforeEach(function () {
+      audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
+        audioTracks: tracks,
+      });
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
+        level: 0,
+      });
+    });
+
+    it('should set flushBuffer=true when using audioTrack setter', function () {
+      const audioTrackSwitchingCallback = sinon.spy();
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, audioTrackSwitchingCallback);
+
+      audioTrackController.audioTrack = 1;
+
+      expect(audioTrackSwitchingCallback).to.have.been.calledOnce;
+      const callArgs = audioTrackSwitchingCallback.firstCall.args[1];
+      expect(callArgs).to.have.property('flushBuffer', true);
+    });
+
+    it('should set flushBuffer=false when using nextAudioTrack setter', function () {
+      const audioTrackSwitchingCallback = sinon.spy();
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, audioTrackSwitchingCallback);
+
+      audioTrackController.nextAudioTrack = 1;
+
+      expect(audioTrackSwitchingCallback).to.have.been.calledOnce;
+      const callArgs = audioTrackSwitchingCallback.firstCall.args[1];
+      expect(callArgs).to.have.property('flushBuffer', false);
+    });
+
+    it('should include flushBuffer in AUDIO_TRACK_SWITCHING event data', function () {
+      const audioTrackSwitchingCallback = sinon.spy();
+      hls.on(Hls.Events.AUDIO_TRACK_SWITCHING, audioTrackSwitchingCallback);
+
+      audioTrackController.audioTrack = 2;
+
+      expect(audioTrackSwitchingCallback).to.have.been.calledOnce;
+      const eventData = audioTrackSwitchingCallback.firstCall.args[1];
+
+      // Verify all expected properties are present
+      expect(eventData).to.have.property('flushBuffer');
+      expect(eventData).to.have.property('id');
+      expect(eventData).to.have.property('name');
+      expect(eventData).to.have.property('groupId');
+      expect(eventData).to.have.property('type');
+      expect(eventData.flushBuffer).to.be.a('boolean');
     });
   });
 });

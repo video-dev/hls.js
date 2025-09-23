@@ -139,6 +139,65 @@ describe('Hls', function () {
     });
   });
 
+  describe('configuration', function () {
+    describe('safetyBufferFactor', function () {
+      it('should have default value of 1.5', function () {
+        const hls = new Hls();
+        expect(hls.config.safetyBufferFactor).to.equal(1.5);
+      });
+
+      it('should accept custom safetyBufferFactor value', function () {
+        const customConfig = { safetyBufferFactor: 2.0 };
+        const hls = new Hls(customConfig);
+        expect(hls.config.safetyBufferFactor).to.equal(2.0);
+      });
+
+      it('should be used by audioStreamController for safety buffer calculation', function () {
+        const customConfig = { safetyBufferFactor: 3.0 };
+        const hls = new Hls(customConfig);
+
+        // Get the audio stream controller from internal components
+        const audioStreamController = (hls as any).networkControllers.filter(
+          (controller: any) => controller.constructor.name === 'AudioStreamController'
+        )[0];
+
+        expect(audioStreamController).to.exist;
+        expect(audioStreamController.config.safetyBufferFactor).to.equal(3.0);
+      });
+
+      it('should be included in hlsDefaultConfig', function () {
+        expect(hlsDefaultConfig).to.have.property('safetyBufferFactor');
+        expect(hlsDefaultConfig.safetyBufferFactor).to.be.a('number');
+        expect(hlsDefaultConfig.safetyBufferFactor).to.equal(1.5);
+      });
+
+      it('should merge with default config when partially specified', function () {
+        const partialConfig = {
+          safetyBufferFactor: 4.0,
+          maxBufferLength: 60
+        };
+        const hls = new Hls(partialConfig);
+
+        expect(hls.config.safetyBufferFactor).to.equal(4.0);
+        expect(hls.config.maxBufferLength).to.equal(60);
+        // Other default values should still be present
+        expect(hls.config.abrBandWidthFactor).to.equal(hlsDefaultConfig.abrBandWidthFactor);
+      });
+
+      it('should handle edge case values', function () {
+        // Test minimum viable value
+        const minConfig = { safetyBufferFactor: 0.1 };
+        const hlsMin = new Hls(minConfig);
+        expect(hlsMin.config.safetyBufferFactor).to.equal(0.1);
+
+        // Test larger values
+        const maxConfig = { safetyBufferFactor: 10.0 };
+        const hlsMax = new Hls(maxConfig);
+        expect(hlsMax.config.safetyBufferFactor).to.equal(10.0);
+      });
+    });
+  });
+
   describe('destroy', function () {
     it('should not crash on stopLoad() after destroy()', function () {
       const hls = new Hls();

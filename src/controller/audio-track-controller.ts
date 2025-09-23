@@ -340,7 +340,7 @@ class AudioTrackController extends BasePlaylistController {
       `Switching to audio-track ${newId} "${track.name}" lang:${track.lang} group:${track.groupId} channels:${track.channels}`,
     );
     this.trackId = newId;
-    this.nextAudioTrack = newId;
+    this.nextTrackId = newId;
     this.currentTrack = track;
     this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { ...track, flushBuffer });
     // Do not reload track unless live
