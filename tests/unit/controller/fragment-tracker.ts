@@ -589,7 +589,11 @@ describe('FragmentTracker', function () {
     });
 
     it('should return empty array when no fragments exist', function () {
-      const fragments = fragmentTracker.getFragmentsInRange(0, 10, PlaylistLevelType.AUDIO);
+      const fragments = fragmentTracker.getFragmentsInRange(
+        0,
+        10,
+        PlaylistLevelType.AUDIO,
+      );
       expect(fragments).to.be.empty;
     });
 
@@ -611,7 +615,11 @@ describe('FragmentTracker', function () {
       triggerFragLoadedAndFragBuffered(hls, fragment);
 
       // Search in range 0-10 when fragment is at 20-25
-      const fragments = fragmentTracker.getFragmentsInRange(0, 10, PlaylistLevelType.AUDIO);
+      const fragments = fragmentTracker.getFragmentsInRange(
+        0,
+        10,
+        PlaylistLevelType.AUDIO,
+      );
       expect(fragments).to.be.empty;
     });
 
@@ -633,7 +641,11 @@ describe('FragmentTracker', function () {
       triggerFragLoadedAndFragBuffered(hls, audioFragment);
 
       // Should return empty when searching for main fragments
-      const mainFragments = fragmentTracker.getFragmentsInRange(0, 10, PlaylistLevelType.MAIN);
+      const mainFragments = fragmentTracker.getFragmentsInRange(
+        0,
+        10,
+        PlaylistLevelType.MAIN,
+      );
       expect(mainFragments).to.be.empty;
     });
   });

@@ -158,7 +158,8 @@ describe('Hls', function () {
 
         // Get the audio stream controller from internal components
         const audioStreamController = (hls as any).networkControllers.filter(
-          (controller: any) => controller.constructor.name === 'AudioStreamController'
+          (controller: any) =>
+            controller.constructor.name === 'AudioStreamController',
         )[0];
 
         expect(audioStreamController).to.exist;
@@ -174,14 +175,16 @@ describe('Hls', function () {
       it('should merge with default config when partially specified', function () {
         const partialConfig = {
           safetyBufferFactor: 4.0,
-          maxBufferLength: 60
+          maxBufferLength: 60,
         };
         const hls = new Hls(partialConfig);
 
         expect(hls.config.safetyBufferFactor).to.equal(4.0);
         expect(hls.config.maxBufferLength).to.equal(60);
         // Other default values should still be present
-        expect(hls.config.abrBandWidthFactor).to.equal(hlsDefaultConfig.abrBandWidthFactor);
+        expect(hls.config.abrBandWidthFactor).to.equal(
+          hlsDefaultConfig.abrBandWidthFactor,
+        );
       });
 
       it('should handle edge case values', function () {
