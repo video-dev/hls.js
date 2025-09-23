@@ -457,7 +457,7 @@ describe('AudioStreamController', function () {
           info: sinon.spy(),
           debug: sinon.spy(),
           error: sinon.spy(),
-          bind: function(name: string) {
+          bind: function (name: string) {
             return {
               warn: sinon.spy(),
               log: sinon.spy(),
@@ -480,7 +480,7 @@ describe('AudioStreamController', function () {
       audioStreamController = new AudioStreamController(
         hls,
         fragmentTracker as FragmentTracker,
-        keyLoader as KeyLoader
+        keyLoader as KeyLoader,
       );
       (audioStreamController as any).media = media;
       (audioStreamController as any).config = hls.config;
@@ -494,14 +494,18 @@ describe('AudioStreamController', function () {
       });
 
       it('should return bufferInfoEnd when not switching tracks', function () {
-        const targetTime = (audioStreamController as any).calculateTargetBufferTime(15.0, 20.0);
+        const targetTime = (
+          audioStreamController as any
+        ).calculateTargetBufferTime(15.0, 20.0);
         expect(targetTime).to.equal(20.0);
       });
 
       it('should return loadPosition when flushing', function () {
         (audioStreamController as any).flushing = true;
 
-        const targetTime = (audioStreamController as any).calculateTargetBufferTime(15.0, 20.0);
+        const targetTime = (
+          audioStreamController as any
+        ).calculateTargetBufferTime(15.0, 20.0);
         expect(targetTime).to.equal(15.0);
       });
 
@@ -531,9 +535,13 @@ describe('AudioStreamController', function () {
           },
         ];
 
-        sinon.stub(audioStreamController as any, 'getRecentBufferedFrags').returns(mockFragments);
+        sinon
+          .stub(audioStreamController as any, 'getRecentBufferedFrags')
+          .returns(mockFragments);
 
-        const targetTime = (audioStreamController as any).calculateTargetBufferTime(15.0, 20.0);
+        const targetTime = (
+          audioStreamController as any
+        ).calculateTargetBufferTime(15.0, 20.0);
 
         // Expected: avg processing time = (150ms + 300ms) / 2 = 225ms = 0.225s
         // Safety buffer = 0.225 * 1.5 = 0.3375s
@@ -549,9 +557,13 @@ describe('AudioStreamController', function () {
           name: 'Test Track',
         };
 
-        sinon.stub(audioStreamController as any, 'getRecentBufferedFrags').returns([]);
+        sinon
+          .stub(audioStreamController as any, 'getRecentBufferedFrags')
+          .returns([]);
 
-        const targetTime = (audioStreamController as any).calculateTargetBufferTime(15.0, 20.0);
+        const targetTime = (
+          audioStreamController as any
+        ).calculateTargetBufferTime(15.0, 20.0);
         expect(targetTime).to.equal(20.0);
       });
 
@@ -562,7 +574,9 @@ describe('AudioStreamController', function () {
           name: 'Test Track',
         };
 
-        const targetTime = (audioStreamController as any).calculateTargetBufferTime(15.0, 20.0);
+        const targetTime = (
+          audioStreamController as any
+        ).calculateTargetBufferTime(15.0, 20.0);
         expect(targetTime).to.equal(20.0);
       });
     });
@@ -582,7 +596,10 @@ describe('AudioStreamController', function () {
         };
         (audioStreamController as any).fragmentTracker = fragmentTracker;
 
-        const result = (audioStreamController as any).getRecentBufferedFrags(10.0, 3);
+        const result = (audioStreamController as any).getRecentBufferedFrags(
+          10.0,
+          3,
+        );
 
         expect(fragmentTracker.getFragmentsInRange).to.have.been.calledWith(
           0,
@@ -599,7 +616,9 @@ describe('AudioStreamController', function () {
 
     describe('calculateAverageProcessingTimeSec', function () {
       it('should return 0 for empty fragments array', function () {
-        const avgTime = (audioStreamController as any).calculateAverageProcessingTimeSec([]);
+        const avgTime = (
+          audioStreamController as any
+        ).calculateAverageProcessingTimeSec([]);
         expect(avgTime).to.equal(0);
       });
 
@@ -621,7 +640,9 @@ describe('AudioStreamController', function () {
           },
         ];
 
-        const avgTime = (audioStreamController as any).calculateAverageProcessingTimeSec(fragments);
+        const avgTime = (
+          audioStreamController as any
+        ).calculateAverageProcessingTimeSec(fragments);
 
         // Fragment 1: 100 + 20 + 30 = 150ms
         // Fragment 2: 300 + 50 + 50 = 400ms
@@ -641,7 +662,9 @@ describe('AudioStreamController', function () {
           {}, // Fragment without stats
         ];
 
-        const avgTime = (audioStreamController as any).calculateAverageProcessingTimeSec(fragments);
+        const avgTime = (
+          audioStreamController as any
+        ).calculateAverageProcessingTimeSec(fragments);
 
         // Only first fragment: 200 + 20 + 30 = 250ms, but divided by 2 fragments = 125ms = 0.125s
         expect(avgTime).to.equal(0.125);
@@ -650,11 +673,6 @@ describe('AudioStreamController', function () {
 
     describe('integration with track switching', function () {
       it('should use safety buffer when switchingTrack.flushBuffer is false', function () {
-        const trackDetails = {
-          fragments: [{ start: 0 }],
-          PTSKnown: true,
-        };
-
         (audioStreamController as any).switchingTrack = {
           flushBuffer: false,
           id: 1,
@@ -670,10 +688,14 @@ describe('AudioStreamController', function () {
             },
           },
         ];
-        sinon.stub(audioStreamController as any, 'getRecentBufferedFrags').returns(mockFragments);
+        sinon
+          .stub(audioStreamController as any, 'getRecentBufferedFrags')
+          .returns(mockFragments);
 
         // Call calculateTargetBufferTime directly to test safety buffer integration
-        const targetTime = (audioStreamController as any).calculateTargetBufferTime(15.0, 20.0);
+        const targetTime = (
+          audioStreamController as any
+        ).calculateTargetBufferTime(15.0, 20.0);
 
         // Should apply safety buffer: avg time = 200ms = 0.2s, safety = 0.2 * 1.5 = 0.3s
         // Min target time = 10.0 + 0.3 = 10.3s, result = min(20.0, 10.3) = 10.3s
