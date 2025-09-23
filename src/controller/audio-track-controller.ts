@@ -30,6 +30,7 @@ class AudioTrackController extends BasePlaylistController {
   private groupIds: (string | undefined)[] | null = null;
   private tracksInGroup: MediaPlaylist[] = [];
   private trackId: number = -1;
+  private nextTrackId: number = -1;
   private currentTrack: MediaPlaylist | null = null;
   private selectDefaultTrack: boolean = true;
 
@@ -72,6 +73,7 @@ class AudioTrackController extends BasePlaylistController {
     this.groupIds = null;
     this.currentTrack = null;
     this.trackId = -1;
+    this.nextTrackId = -1;
     this.selectDefaultTrack = true;
   }
 
@@ -136,6 +138,7 @@ class AudioTrackController extends BasePlaylistController {
     ) {
       this.groupIds = audioGroups;
       this.trackId = -1;
+      this.nextTrackId = -1;
       this.currentTrack = null;
 
       const audioTracks = this.tracks.filter(
@@ -244,6 +247,16 @@ class AudioTrackController extends BasePlaylistController {
     this.setAudioTrack(newId);
   }
 
+  get nextAudioTrack(): number {
+    return this.nextTrackId;
+  }
+
+  set nextAudioTrack(newId: number) {
+    // If audio track is selected from API then don't choose from the manifest default track
+    this.selectDefaultTrack = false;
+    this.setAudioTrack(newId, false);
+  }
+
   public setAudioOption(
     audioOption: MediaPlaylist | AudioSelectionOption | undefined,
   ): MediaPlaylist | null {
@@ -307,7 +320,7 @@ class AudioTrackController extends BasePlaylistController {
     return null;
   }
 
-  private setAudioTrack(newId: number): void {
+  private setAudioTrack(newId: number, flushBuffer: boolean = true): void {
     const tracks = this.tracksInGroup;
 
     // check if level idx is valid
@@ -327,8 +340,9 @@ class AudioTrackController extends BasePlaylistController {
       `Switching to audio-track ${newId} "${track.name}" lang:${track.lang} group:${track.groupId} channels:${track.channels}`,
     );
     this.trackId = newId;
+    this.nextAudioTrack = newId;
     this.currentTrack = track;
-    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { ...track });
+    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { ...track, flushBuffer });
     // Do not reload track unless live
     if (trackLoaded) {
       return;

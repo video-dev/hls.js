@@ -121,6 +121,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`abrBandWidthFactor`](#abrbandwidthfactor)
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
+  - [`safetyBufferFactor`](#safetybufferfactor)
   - [`minAutoBitrate`](#minautobitrate)
   - [`emeEnabled`](#emeenabled)
   - [`widevineLicenseUrl` (deprecated)](#widevinelicenseurl-deprecated)
@@ -171,6 +172,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.allAudioTracks`](#hlsallaudiotracks)
   - [`hls.audioTracks`](#hlsaudiotracks)
   - [`hls.audioTrack`](#hlsaudiotrack)
+  - [`hls.nextAudioTrack`](#hlsnextaudiotrack)
 - [Subtitle Tracks Control API](#subtitle-tracks-control-api)
   - [`hls.setSubtitleOption(subtitleOption)`](#hlssetsubtitleoptionsubtitleoption)
   - [`hls.allSubtitleTracks`](#hlsallsubtitletracks)
@@ -511,6 +513,7 @@ var config = {
   abrBandWidthFactor: 0.95,
   abrBandWidthUpFactor: 0.7,
   abrMaxWithRealBitrate: false,
+  safetyBufferFactor: 1.5,
   maxStarvationDelay: 4,
   maxLoadingDelay: 4,
   minAutoBitrate: 0,
@@ -1595,6 +1598,12 @@ max bitrate used in ABR by avg measured bitrate
 i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s,
 then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality level.
 
+### `safetyBufferFactor`
+
+(default: `1.5`)
+
+Safety buffer factor is utilized by audio stream controller during audio track switching. This multiplier is applied to schedule the download of the next audio track fragment based on the average processing time of recent audio fragments to create a safety buffer that prevents buffering due to switching audio tracks. This enables seamless audio track switching. Higher values decrease the likely-hood of buffering during audio track switching, but may increase latency.
+
 ### `minAutoBitrate`
 
 (default: `0`)
@@ -1985,6 +1994,10 @@ get : array of supported audio tracks in the active audio group ID
 
 get/set : index of selected audio track in `hls.audioTracks`
 
+### `hls.nextAudioTrack`
+
+get/set : index of the next audio track that will be selected, allowing for more seamless audio track switching
+
 ## Subtitle Tracks Control API
 
 ### `hls.setSubtitleOption(subtitleOption)`
@@ -2321,7 +2334,7 @@ Full list of Events is available below:
 - `Hls.Events.AUDIO_TRACKS_UPDATED` - fired to notify that audio track lists has been updated
   - data: { audioTracks : audioTracks }
 - `Hls.Events.AUDIO_TRACK_SWITCHING` - fired when an audio track switching is requested
-  - data: { id : audio track id, type : playlist type ('AUDIO' | 'main'), url : audio track URL }
+  - data: { id : audio track id, type : playlist type ('AUDIO' | 'main'), url : audio track URL, flushBuffer: boolean indicating whether audio buffer should be flushed during switching }
 - `Hls.Events.AUDIO_TRACK_SWITCHED` - fired when an audio track switch actually occurs
   - data: { id : audio track id }
 - `Hls.Events.AUDIO_TRACK_LOADING` - fired when an audio track loading starts
