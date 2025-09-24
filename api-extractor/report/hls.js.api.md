@@ -2123,6 +2123,9 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     static get MetadataSchema(): typeof MetadataSchema;
     get minAutoLevel(): number;
+    get nextAudioTrack(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "nextAudioTrack" must appear on the getter, not the setter.
+    set nextAudioTrack(audioTrackId: number);
     get nextAutoLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "nextAutoLevel" must appear on the getter, not the setter.
     set nextAutoLevel(nextLevel: number);
