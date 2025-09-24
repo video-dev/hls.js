@@ -237,7 +237,9 @@ class ID3TrackController implements ComponentAPI {
         continue;
       }
 
-      const frames = getId3Frames(samples[i].data);
+      const sampleData = samples[i].data;
+      const frames = getId3Frames(sampleData);
+      normalizePrivFrames(sampleData, frames);
       const startTime = samples[i].pts;
       let endTime: number = startTime + samples[i].duration;
 
@@ -511,6 +513,197 @@ class ID3TrackController implements ComponentAPI {
       };
     }
   }
+}
+
+function normalizePrivFrames(
+  rawData: Uint8Array,
+  frames: ReturnType<typeof getId3Frames>,
+) {
+  if (!rawData?.length || !frames.length) {
+    return;
+  }
+
+  const version = rawData[3];
+  if (!Number.isInteger(version) || version >= 4) {
+    return;
+  }
+
+  const payloads = extractPrivPayloads(rawData, version);
+  if (!payloads.size) {
+    return;
+  }
+
+  for (let i = 0; i < frames.length; i++) {
+    const frame = frames[i];
+    const info = frame?.info;
+    if (!frame || frame.key !== 'PRIV' || typeof info !== 'string') {
+      continue;
+    }
+
+    const payload = payloads.get(info);
+    if (!payload) {
+      continue;
+    }
+
+    if (frame.data instanceof ArrayBuffer) {
+      if (payload.byteLength > frame.data.byteLength) {
+        frame.data = payload;
+      }
+    } else {
+      frame.data = payload;
+    }
+  }
+}
+
+function extractPrivPayloads(
+  data: Uint8Array,
+  version: number,
+): Map<string, ArrayBuffer> {
+  const map = new Map<string, ArrayBuffer>();
+  let offset = 0;
+
+  while (isId3Header(data, offset)) {
+    if (offset + 10 > data.length) {
+      break;
+    }
+
+    const tagFlags = data[offset + 5];
+    let tagSize = readSynchsafeSize(data, offset + 6);
+    let cursor = offset + 10;
+
+    if (tagFlags & 0x40) {
+      if (cursor + 4 > data.length) {
+        break;
+      }
+      const extendedHeaderSize = readBigEndian(data, cursor, 4) + 4;
+      cursor += extendedHeaderSize;
+      tagSize -= extendedHeaderSize;
+    }
+
+    const tagEnd = Math.min(cursor + tagSize, data.length);
+
+    while (cursor + 10 <= tagEnd) {
+      const frameType = readFrameType(data, cursor);
+      if (!frameType?.trim()) {
+        break;
+      }
+
+      const frameSize =
+        version === 3
+          ? readBigEndian(data, cursor + 4, 4)
+          : readSynchsafeSize(data, cursor + 4);
+      const bodyStart = cursor + 10;
+      const bodyEnd = bodyStart + frameSize;
+
+      if (frameSize <= 0 || bodyEnd > data.length) {
+        break;
+      }
+
+      if (frameType === 'PRIV') {
+        const frameBody = data.subarray(bodyStart, bodyEnd);
+        const separatorIndex = findNullIndex(frameBody);
+        const ownerBytes =
+          separatorIndex === -1
+            ? frameBody
+            : frameBody.subarray(0, separatorIndex);
+        const payloadStart =
+          separatorIndex === -1 ? frameBody.length : separatorIndex + 1;
+        const payloadBytes = frameBody.subarray(payloadStart);
+        if (ownerBytes.length && payloadBytes.length) {
+          const owner = decodeOwner(ownerBytes);
+          if (owner) {
+            const copy = new Uint8Array(payloadBytes.length);
+            copy.set(payloadBytes);
+            map.set(owner, copy.buffer);
+          }
+        }
+      }
+
+      cursor = bodyEnd;
+    }
+
+    offset = tagEnd;
+  }
+
+  return map;
+}
+
+function isId3Header(data: Uint8Array, offset: number): boolean {
+  if (offset + 10 > data.length) {
+    return false;
+  }
+  return (
+    data[offset] === 0x49 &&
+    data[offset + 1] === 0x44 &&
+    data[offset + 2] === 0x33 &&
+    data[offset + 3] < 0xff &&
+    data[offset + 4] < 0xff &&
+    data[offset + 6] < 0x80 &&
+    data[offset + 7] < 0x80 &&
+    data[offset + 8] < 0x80 &&
+    data[offset + 9] < 0x80
+  );
+}
+
+function readSynchsafeSize(data: Uint8Array, offset: number): number {
+  return (
+    ((data[offset] & 0x7f) << 21) |
+    ((data[offset + 1] & 0x7f) << 14) |
+    ((data[offset + 2] & 0x7f) << 7) |
+    (data[offset + 3] & 0x7f)
+  );
+}
+
+function readBigEndian(
+  data: Uint8Array,
+  offset: number,
+  length: number = 4,
+): number {
+  let value = 0;
+  for (let i = 0; i < length; i++) {
+    value = (value << 8) | data[offset + i];
+  }
+  return value;
+}
+
+function readFrameType(data: Uint8Array, offset: number): string {
+  return String.fromCharCode(
+    data[offset],
+    data[offset + 1],
+    data[offset + 2],
+    data[offset + 3],
+  );
+}
+
+function findNullIndex(data: Uint8Array): number {
+  for (let i = 0; i < data.length; i++) {
+    if (data[i] === 0) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+let ownerDecoder: TextDecoder | undefined;
+
+function decodeOwner(bytes: Uint8Array): string {
+  if (!ownerDecoder && typeof TextDecoder !== 'undefined') {
+    ownerDecoder = new TextDecoder('utf-8');
+  }
+
+  if (ownerDecoder) {
+    return ownerDecoder.decode(bytes);
+  }
+
+  let value = '';
+  for (let i = 0; i < bytes.length; i++) {
+    const code = bytes[i];
+    if (code === 0) {
+      break;
+    }
+    value += String.fromCharCode(code);
+  }
+  return value;
 }
 
 export default ID3TrackController;
