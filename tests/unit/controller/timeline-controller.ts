@@ -1,10 +1,11 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinonChai from 'sinon-chai';
 import { TimelineController } from '../../../src/controller/timeline-controller';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 describe('TimelineController', function () {
   let timelineController;
@@ -17,7 +18,7 @@ describe('TimelineController', function () {
     hls.config.enableWebVTT = true;
     hls.config.renderTextTracksNatively = true;
     timelineController = new TimelineController(hls);
-    timelineController.config.renderTextTracksNatively = true;
+    timelineController.chai.config.renderTextTracksNatively = true;
     timelineController.media = videoElement;
   });
 

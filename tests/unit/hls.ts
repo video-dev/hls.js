@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../src/config';
@@ -6,7 +6,8 @@ import { ErrorDetails, ErrorTypes } from '../../src/errors';
 import { Events } from '../../src/events';
 import Hls from '../../src/hls';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 describe('Hls', function () {
   describe('bandwidthEstimate', function () {

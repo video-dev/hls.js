@@ -1,8 +1,9 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinonChai from 'sinon-chai';
 import { parseTimeStamp } from '../../../src/utils/vttparser';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 describe('VTTParser', function () {
   describe('parseTimeStamp', function () {

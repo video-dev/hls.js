@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
@@ -11,7 +11,8 @@ import KeyLoader from '../../../src/loader/key-loader';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 const mediaMock = {
   currentTime: 0,

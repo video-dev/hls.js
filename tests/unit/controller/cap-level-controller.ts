@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import CapLevelController from '../../../src/controller/cap-level-controller';
@@ -7,7 +7,8 @@ import Hls from '../../../src/hls';
 import { Level } from '../../../src/types/level';
 import { parsedLevel } from '../utils/mock-level';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 const parsedLevels = [
   parsedLevel({

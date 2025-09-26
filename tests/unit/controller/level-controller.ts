@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import LevelController from '../../../src/controller/level-controller';
@@ -26,7 +26,8 @@ import type {
   MediaPlaylistType,
 } from '../../../src/types/media-playlist';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
   onManifestLoaded: (event: string, data: ManifestLoadedData) => void;

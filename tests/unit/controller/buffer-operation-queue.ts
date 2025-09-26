@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
@@ -7,7 +7,8 @@ import type {
   SourceBufferTrackSet,
 } from '../../../src/types/buffer';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 const queueNames = ['audio', 'video'];
 
 describe('BufferOperationQueue tests', function () {

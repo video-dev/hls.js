@@ -1,4 +1,4 @@
-import { expect, use, config } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import AudioStreamController from '../../../src/controller/audio-stream-controller';
@@ -31,8 +31,9 @@ import type {
   MediaPlaylist,
 } from '../../../src/types/media-playlist';
 
-use(sinonChai);
-config.truncateThreshold = 0;
+chai.use(sinonChai);
+const expect = chai.expect;
+chai.config.truncateThreshold = 0;
 
 type HlsTestable = Omit<Hls, 'networkControllers' | 'coreComponents'> & {
   coreComponents: ComponentAPI[];

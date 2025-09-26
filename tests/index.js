@@ -1,9 +1,4 @@
 import 'promise-polyfill/src/polyfill';
-
-// Setup chai for karma-sinon-chai compatibility
-import * as chaiLib from 'chai';
-window.chai = chaiLib;
-
 import './unit/hls';
 import './unit/events';
 import './unit/controller/abr-controller';

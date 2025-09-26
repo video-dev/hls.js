@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
@@ -18,7 +18,8 @@ import type { HlsConfig } from '../../../src/config';
 import type StreamController from '../../../src/controller/stream-controller';
 import type { Fragment, MediaFragment } from '../../../src/loader/fragment';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 type GapControllerTestable = Omit<GapController, ''> & {
   fragmentTracker: FragmentTracker;
@@ -81,10 +82,10 @@ describe('GapController', function () {
   describe('_tryNudgeBuffer', function () {
     const bufferInfo = BufferHelper.bufferedInfo([{ start: 0, end: 10 }], 0, 0);
     it('should increment the currentTime by a multiple of nudgeRetry and the configured nudge amount', function () {
-      for (let i = 0; i < config.nudgeMaxRetry; i++) {
+      for (let i = 0; i < chai.config.nudgeMaxRetry; i++) {
         triggerSpy.resetHistory();
 
-        const expected = media.currentTime + (i + 1) * config.nudgeOffset;
+        const expected = media.currentTime + (i + 1) * chai.config.nudgeOffset;
         gapController._tryNudgeBuffer(bufferInfo);
         expect(media.currentTime).to.equal(expected);
 
@@ -109,7 +110,7 @@ describe('GapController', function () {
     });
 
     it('should not increment the currentTime if the max amount of nudges has been attempted', function () {
-      config.nudgeMaxRetry = 0;
+      chai.config.nudgeMaxRetry = 0;
       gapController._tryNudgeBuffer(bufferInfo);
       expect(media.currentTime).to.equal(0);
       expect(triggerSpy).to.have.been.called;
@@ -167,7 +168,7 @@ describe('GapController', function () {
         0,
         0,
       );
-      const mockStallDuration = (config.highBufferWatchdogPeriod + 1) * 1000;
+      const mockStallDuration = (chai.config.highBufferWatchdogPeriod + 1) * 1000;
       const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
       gapController._tryFixBufferStall(bufferInfo, mockStallDuration);
       expect(nudgeStub).to.have.been.calledOnce;
@@ -179,7 +180,7 @@ describe('GapController', function () {
         0,
         0,
       );
-      const mockStallDuration = (config.highBufferWatchdogPeriod / 2) * 1000;
+      const mockStallDuration = (chai.config.highBufferWatchdogPeriod / 2) * 1000;
       const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
       gapController._tryFixBufferStall(bufferInfo, mockStallDuration);
       expect(nudgeStub).to.have.not.been.called;
@@ -191,7 +192,7 @@ describe('GapController', function () {
         0,
         0,
       );
-      const mockStallDuration = (config.highBufferWatchdogPeriod + 1) * 1000;
+      const mockStallDuration = (chai.config.highBufferWatchdogPeriod + 1) * 1000;
       const nudgeStub = sandbox.stub(gapController, '_tryNudgeBuffer');
       gapController._tryFixBufferStall(bufferInfo, mockStallDuration);
       expect(nudgeStub).to.have.not.been.called;
@@ -388,7 +389,7 @@ describe('GapController', function () {
       gapController.stalled = 1;
       gapController.poll(lastCurrentTime, mockMedia.currentTime);
       expect(reportStallSpy).to.not.have.been.called;
-      wallClock.tick(config.detectStallWithCurrentTimeMs + 1);
+      wallClock.tick(chai.config.detectStallWithCurrentTimeMs + 1);
       gapController.poll(lastCurrentTime, mockMedia.currentTime);
       expect(reportStallSpy).to.have.been.calledOnce;
     });

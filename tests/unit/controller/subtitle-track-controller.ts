@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import SubtitleTrackController from '../../../src/controller/subtitle-track-controller';
@@ -18,7 +18,8 @@ import type {
   MediaPlaylist,
 } from '../../../src/types/media-playlist';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 type HlsTestable = Omit<
   Hls,

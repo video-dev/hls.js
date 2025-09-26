@@ -1,4 +1,4 @@
-import { expect, use, config } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import InterstitialsController from '../../../src/controller/interstitials-controller';
@@ -17,8 +17,9 @@ import type {
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
 
-use(sinonChai);
-config.truncateThreshold = 0;
+chai.use(sinonChai);
+const expect = chai.expect;
+chai.config.truncateThreshold = 0;
 
 type HlsTestable = Omit<Hls, 'networkControllers' | 'coreComponents'> & {
   coreComponents: ComponentAPI[];

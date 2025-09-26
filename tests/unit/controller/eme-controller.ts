@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import { EventEmitter } from 'eventemitter3';
 import { fakeXhr } from 'nise';
 import sinon from 'sinon';
@@ -15,7 +15,8 @@ import HlsMock from '../../mocks/hls.mock';
 import type { MediaKeySessionContext } from '../../../src/controller/eme-controller';
 import type { MediaAttachedData } from '../../../src/types/events';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 type EMEControllerTestable = Omit<
   EMEController,

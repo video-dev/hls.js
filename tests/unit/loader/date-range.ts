@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import { DateRange } from '../../../src/loader/date-range';
 import { AttrList } from '../../../src/utils/attr-list';
 

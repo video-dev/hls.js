@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import {
@@ -17,7 +17,8 @@ import {
 } from '../../mocks/data';
 import type { MediaFragment } from '../../../src/loader/fragment';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 function makeMockFragment(options): MediaFragment {
   return fragment(Object.assign({ start: 0, sn: 0, cc: 0, level: 0 }, options));

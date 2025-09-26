@@ -1,4 +1,4 @@
-import { expect, use, config } from 'chai';
+import chai from 'chai';
 import sinonChai from 'sinon-chai';
 import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
@@ -9,8 +9,9 @@ import { KeySystemFormats } from '../../../src/utils/mediakeys-helper';
 import type { Fragment, Part } from '../../../src/loader/fragment';
 import type { LevelKey } from '../../../src/loader/level-key';
 
-use(sinonChai);
-config.truncateThreshold = 0;
+chai.use(sinonChai);
+const expect = chai.expect;
+chai.config.truncateThreshold = 0;
 
 describe('M3U8Parser', function () {
   it('parses empty manifest returns empty array', function () {

@@ -1,5 +1,5 @@
 /* eslint-disable dot-notation */
-import { expect, use } from 'chai';
+import chai from 'chai';
 import { fakeXhr } from 'nise';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
@@ -21,7 +21,8 @@ import type { MediaFragment } from '../../../src/loader/fragment';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
 import type { LevelAttributes } from '../../../src/types/level';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 describe('StreamController', function () {
   let fake;
@@ -622,7 +623,7 @@ describe('StreamController', function () {
         expect(streamController['bitrateTest']).to.be.true;
       });
 
-      it('should not signal a bandwidth test if config.testBandwidth is false', function () {
+      it('should not signal a bandwidth test if chai.config.testBandwidth is false', function () {
         streamController['startFragRequested'] = false;
         hls.startLevel = -1;
         hls.nextAutoLevel = 2;

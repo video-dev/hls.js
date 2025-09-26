@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
 import BaseStreamController from '../../../src/controller/stream-controller';
@@ -11,7 +11,8 @@ import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type { MediaFragment, Part } from '../../../src/loader/fragment';
 import type { BufferInfo } from '../../../src/utils/buffer-helper';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 type BaseStreamControllerTestable = Omit<
   BaseStreamController,

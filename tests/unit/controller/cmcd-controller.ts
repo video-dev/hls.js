@@ -1,5 +1,5 @@
 import { CmcdHeaderField } from '@svta/common-media-library/cmcd/CmcdHeaderField';
-import { expect, use } from 'chai';
+import chai from 'chai';
 import CMCDController from '../../../src/controller/cmcd-controller';
 import Hls from '../../../src/hls';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
@@ -103,8 +103,8 @@ describe('CMCDController', function () {
         setupEach();
 
         const { config } = cmcdController.hls;
-        expect(config.pLoader).to.equal(undefined);
-        expect(config.fLoader).to.equal(undefined);
+        expect(chai.config.pLoader).to.equal(undefined);
+        expect(chai.config.fLoader).to.equal(undefined);
       });
 
       it('uses the session id if provided', function () {

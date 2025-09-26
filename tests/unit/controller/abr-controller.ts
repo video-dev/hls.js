@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { Events } from '../../../src/events';
@@ -17,7 +17,8 @@ import type {
   MediaPlaylist,
 } from '../../../src/types/media-playlist';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 function levelDetailsWithDuration(duration: number) {
   const details = new LevelDetails('');
@@ -112,7 +113,7 @@ describe('AbrController', function () {
       );
     });
 
-    it('ignores starting level with config.audioPreference.channels when not within bandwidth estimate', function () {
+    it('ignores starting level with chai.config.audioPreference.channels when not within bandwidth estimate', function () {
       const { levels, audioTracks } = getMultiChannelAudioLevels();
       (hls as any).levelController._levels = levels;
       (hls as any).audioTrackController.tracks = audioTracks;
@@ -129,7 +130,7 @@ describe('AbrController', function () {
       expect(firstAutoLevel).to.equal(5);
     });
 
-    it('returns starting level with config.audioPreference.channels when within bandwidth estimate', function () {
+    it('returns starting level with chai.config.audioPreference.channels when within bandwidth estimate', function () {
       const { levels, audioTracks } = getMultiChannelAudioLevels();
       (hls as any).levelController._levels = levels;
       (hls as any).audioTrackController.tracks = audioTracks;
@@ -144,7 +145,7 @@ describe('AbrController', function () {
       expect(firstAutoLevel).to.equal(3);
     });
 
-    it('returns starting level with config.audioPreference.audioCodec when within bandwidth estimate', function () {
+    it('returns starting level with chai.config.audioPreference.audioCodec when within bandwidth estimate', function () {
       const { levels, audioTracks } = getMultiChannelAudioLevels();
       (hls as any).levelController._levels = levels;
       (hls as any).audioTrackController.tracks = audioTracks;

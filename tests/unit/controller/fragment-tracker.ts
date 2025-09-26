@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinonChai from 'sinon-chai';
 import {
   FragmentState,
@@ -16,7 +16,8 @@ import type {
   FragLoadedData,
 } from '../../../src/types/events';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 describe('FragmentTracker', function () {
   describe('getPartialFragment', function () {

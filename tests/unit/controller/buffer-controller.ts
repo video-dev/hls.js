@@ -1,4 +1,4 @@
-import { expect, use } from 'chai';
+import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import BufferController from '../../../src/controller/buffer-controller';
@@ -18,7 +18,8 @@ import type {
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
 
-use(sinonChai);
+chai.use(sinonChai);
+const expect = chai.expect;
 
 type HlsTestable = Omit<Hls, 'networkControllers' | 'coreComponents'> & {
   coreComponents: ComponentAPI[];
