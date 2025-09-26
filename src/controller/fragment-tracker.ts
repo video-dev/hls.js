@@ -507,6 +507,25 @@ export class FragmentTracker implements ComponentAPI {
     });
   }
 
+  public getFragmentsInRange(
+    start: number,
+    end: number,
+    playlistType: PlaylistLevelType,
+  ): Fragment[] {
+    const fragments: Fragment[] = [];
+    Object.keys(this.fragments).forEach((key) => {
+      const fragmentEntity = this.fragments[key];
+      if (
+        fragmentEntity?.body.type === playlistType &&
+        fragmentEntity.body.start >= start &&
+        fragmentEntity.body.end <= end
+      ) {
+        fragments.push(fragmentEntity.body);
+      }
+    });
+    return fragments;
+  }
+
   public removeFragment(fragment: Fragment) {
     const fragKey = getFragmentKey(fragment);
     fragment.clearElementaryStreamInfo();
