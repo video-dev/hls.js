@@ -1,9 +1,8 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
 import EwmaBandWidthEstimator from '../../../src/utils/ewma-bandwidth-estimator';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 describe('EwmaBandWidthEstimator', function () {
   it('returns default estimate if bw estimator not available yet', function () {
