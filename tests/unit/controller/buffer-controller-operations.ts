@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import BufferController from '../../../src/controller/buffer-controller';
@@ -25,8 +25,7 @@ import type {
 import type { BufferAppendingData } from '../../../src/types/events';
 import type { MockSourceBuffer } from '../utils/mock-media';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 const sandbox = sinon.createSandbox();
 
 type HlsTestable = Omit<Hls, 'networkControllers' | 'coreComponents'> & {

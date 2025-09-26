@@ -33,6 +33,11 @@
   "publishConfig": {
     "access": "public"
   },
+  "overrides": {
+    "sinon-chai": {
+      "chai": "$chai"
+    }
+  },
   "scripts": {
     "build": "rollup --config && npm run build:types",
     "build:ci": "rollup --config && tsc --build tsconfig-lib.json && api-extractor run && npm run build:copy-types && es-check",
@@ -92,7 +97,7 @@
     "@typescript-eslint/parser": "8.38.0",
     "babel-loader": "10.0.0",
     "babel-plugin-transform-remove-console": "6.9.4",
-    "chai": "4.5.0",
+    "chai": "6.0.1",
     "chart.js": "2.9.4",
     "chromedriver": "140.0.2",
     "doctoc": "2.2.1",
