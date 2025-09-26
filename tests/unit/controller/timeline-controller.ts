@@ -18,7 +18,7 @@ describe('TimelineController', function () {
     hls.config.enableWebVTT = true;
     hls.config.renderTextTracksNatively = true;
     timelineController = new TimelineController(hls);
-    timelineController.chai.config.renderTextTracksNatively = true;
+    timelineController.config.renderTextTracksNatively = true;
     timelineController.media = videoElement;
   });
 
