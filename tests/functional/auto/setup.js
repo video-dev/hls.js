@@ -10,8 +10,7 @@ const HttpServer = require('http-server');
 const streams = require('../../test-streams');
 const useSauce = !!process.env.SAUCE || !!process.env.SAUCE_TUNNEL_ID;
 const HlsjsLightBuild = !!process.env.HLSJS_LIGHT;
-const chai = require('chai');
-const expect = chai.expect;
+const { expect } = require('chai');
 
 const UA = process.env.UA || 'chrome';
 const UA_VERSION = process.env.UA_VERSION || 'latest';

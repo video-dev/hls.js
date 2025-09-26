@@ -1,11 +1,10 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
 import { Fragment } from '../../../src/loader/fragment';
 import { LevelKey } from '../../../src/loader/level-key';
 import { PlaylistLevelType } from '../../../src/types/loader';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 describe('Fragment class tests', function () {
   let frag: Fragment;

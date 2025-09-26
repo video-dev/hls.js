@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { TransmuxConfig, TransmuxState } from '../../../src/demux/transmuxer';
@@ -10,8 +10,7 @@ import { ChunkMetadata } from '../../../src/types/transmuxer';
 import type { MediaFragment } from '../../../src/loader/fragment';
 import type { TransmuxerResult } from '../../../src/types/transmuxer';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 describe('TransmuxerInterface tests', function () {
   let hls;
 
