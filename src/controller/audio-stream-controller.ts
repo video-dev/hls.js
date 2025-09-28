@@ -9,10 +9,7 @@ import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { Level } from '../types/level';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
-import {
-  alignDiscontinuities,
-  alignMediaPlaylistByPDT,
-} from '../utils/discontinuities';
+import { alignStream } from '../utils/discontinuities';
 import {
   audioMatchPredicate,
   matchesOption,
@@ -573,10 +570,7 @@ class AudioStreamController
       if (!newDetails.alignedSliding) {
         // Align audio rendition with the "main" playlist on discontinuity change
         // or program-date-time (PDT)
-        alignDiscontinuities(newDetails, mainDetails);
-        if (!newDetails.alignedSliding) {
-          alignMediaPlaylistByPDT(newDetails, mainDetails);
-        }
+        alignStream(mainDetails, newDetails);
         sliding = newDetails.fragmentStart;
       }
     }
@@ -1012,7 +1006,7 @@ class AudioStreamController
           mainDetails &&
           mainDetails.fragmentStart !== track.details.fragmentStart
         ) {
-          alignMediaPlaylistByPDT(track.details, mainDetails);
+          alignStream(mainDetails, track.details);
         }
       } else {
         super.loadFragment(frag, track, targetBufferTime);
