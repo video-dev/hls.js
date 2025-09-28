@@ -224,6 +224,10 @@ export type StreamControllerConfig = {
   startOnSegmentBoundary: boolean;
 };
 
+export type AudioStreamControllerConfig = {
+  safetyBufferFactor: number;
+};
+
 export type GapControllerConfig = {
   detectStallWithCurrentTimeMs: number;
   highBufferWatchdogPeriod: number;
@@ -338,6 +342,7 @@ export type HlsConfig = {
   GapControllerConfig &
   LevelControllerConfig &
   MP4RemuxerConfig &
+  AudioStreamControllerConfig &
   StreamControllerConfig &
   SelectionPreferences &
   LatencyControllerConfig &
@@ -430,6 +435,7 @@ export const hlsDefaultConfig: HlsConfig = {
   abrBandWidthFactor: 0.95, // used by abr-controller
   abrBandWidthUpFactor: 0.7, // used by abr-controller
   abrMaxWithRealBitrate: false, // used by abr-controller
+  safetyBufferFactor: 1.5, // used by audio-stream-controller
   maxStarvationDelay: 4, // used by abr-controller
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls

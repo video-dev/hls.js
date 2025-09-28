@@ -1393,9 +1393,12 @@ function updateAudioTrackInfo() {
   const buttonEnabled = 'btn-primary" ';
   const buttonDisabled = 'btn-success" ';
   let html1 = '';
+  let html2 = '';
   const audioTrackId = hls.audioTrack;
+  const nextAudioTrackId = hls.nextAudioTrack;
   const len = hls.audioTracks.length;
   const track = hls.audioTracks[audioTrackId];
+  const nextTrack = hls.audioTracks[nextAudioTrackId];
 
   for (let i = 0; i < len; i++) {
     html1 += buttonTemplate;
@@ -1412,11 +1415,30 @@ function updateAudioTrackInfo() {
       hls.audioTracks[i].name +
       '</button>';
   }
+  for (let i = 0; i < len; i++) {
+    html2 += buttonTemplate;
+    if (nextAudioTrackId === i) {
+      html2 += buttonEnabled;
+    } else {
+      html2 += buttonDisabled;
+    }
+
+    html2 +=
+      'onclick="hls.nextAudioTrack=' +
+      i +
+      '">' +
+      hls.audioTracks[i].name +
+      '</button>';
+  }
 
   $('#audioTrackLabel').text(
     track ? track.lang || track.name : 'None selected'
   );
   $('#audioTrackControl').html(html1);
+  $('#audioTrackLabel').text(
+    nextTrack ? nextTrack.lang || nextTrack.name : 'None selected'
+  );
+  $('#nextAudioTrackControl').html(html2);
 }
 
 function codecs2label(levelCodecs) {

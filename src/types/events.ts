@@ -253,7 +253,9 @@ export interface LevelPTSUpdatedData {
   end: number;
 }
 
-export interface AudioTrackSwitchingData extends MediaPlaylist {}
+export interface AudioTrackSwitchingData extends MediaPlaylist {
+  flushBuffer: boolean;
+}
 
 export interface AudioTrackSwitchedData extends MediaPlaylist {}
 

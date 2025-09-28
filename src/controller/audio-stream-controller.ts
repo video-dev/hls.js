@@ -64,7 +64,7 @@ class AudioStreamController
   private mainFragLoading: FragLoadingData | null = null;
   private audioOnly: boolean = false;
   private bufferedTrack: MediaPlaylist | null = null;
-  private switchingTrack: MediaPlaylist | null = null;
+  private switchingTrack: AudioTrackSwitchingData | null = null;
   private trackId: number = -1;
   private waitingData: WaitingForPTSData | null = null;
   private mainDetails: LevelDetails | null = null;
@@ -372,7 +372,10 @@ class AudioStreamController
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
     const loadPosition = this.getLoadPosition();
-    const targetBufferTime = this.flushing ? loadPosition : bufferInfo.end;
+    const targetBufferTime = this.calculateTargetBufferTime(
+      loadPosition,
+      bufferInfo.end,
+    );
 
     if (this.switchingTrack && media) {
       const pos = loadPosition;
@@ -452,6 +455,51 @@ class AudioStreamController
     this.loadFragment(frag, levelInfo, targetBufferTime);
   }
 
+  private calculateTargetBufferTime(
+    loadPosition: number,
+    bufferInfoEnd: number,
+  ) {
+    if (this.switchingTrack && !this.switchingTrack.flushBuffer && this.media) {
+      const bufferedFrags = this.getRecentBufferedFrags(bufferInfoEnd, 3);
+      if (bufferedFrags.length > 0) {
+        const avgProcessingTimeSec =
+          this.calculateAverageProcessingTimeSec(bufferedFrags);
+        const safetyBuffer =
+          avgProcessingTimeSec * this.config.safetyBufferFactor;
+
+        const minTargetTime = this.media.currentTime + safetyBuffer;
+        return Math.min(bufferInfoEnd, minTargetTime);
+      }
+    }
+    return this.flushing ? loadPosition : bufferInfoEnd;
+  }
+
+  private getRecentBufferedFrags(bufferEnd: number, count: number): Fragment[] {
+    const fragments: Fragment[] = this.fragmentTracker.getFragmentsInRange(
+      0,
+      bufferEnd,
+      PlaylistLevelType.AUDIO,
+    );
+    return fragments.slice(-count);
+  }
+
+  private calculateAverageProcessingTimeSec(fragments: Fragment[]): number {
+    if (fragments.length === 0) return 0;
+
+    const totalProcessingTimeMs = fragments.reduce((sum, frag) => {
+      if (!frag.stats) return sum;
+
+      const downloadTimeMs = frag.stats.loading.end - frag.stats.loading.start;
+      const parsingTimeMs = frag.stats.parsing.end - frag.stats.parsing.start;
+      const bufferingTimeMs =
+        frag.stats.buffering.end - frag.stats.buffering.start;
+
+      return sum + downloadTimeMs + parsingTimeMs + bufferingTimeMs;
+    }, 0);
+
+    return totalProcessingTimeMs / fragments.length / 1000;
+  }
+
   protected onMediaDetaching(
     event: Events.MEDIA_DETACHING,
     data: MediaDetachingData,
@@ -487,8 +535,10 @@ class AudioStreamController
     // should we switch tracks ?
     if (altAudio) {
       this.switchingTrack = data;
-      // main audio track are handled by stream-controller, just do something if switching to alt audio track
-      this.flushAudioIfNeeded(data);
+      if (data.flushBuffer) {
+        // main audio track are handled by stream-controller, just do something if switching to alt audio track
+        this.flushAudioIfNeeded(data);
+      }
       if (this.state !== State.STOPPED) {
         // switching to audio track, start timer if not already started
         this.setInterval(TICK_INTERVAL);

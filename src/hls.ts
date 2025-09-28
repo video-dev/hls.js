@@ -1069,6 +1069,24 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
+   * index of the next selected audio track (index in audio track lists)
+   */
+  get nextAudioTrack(): number {
+    const audioTrackController = this.audioTrackController;
+    return audioTrackController ? audioTrackController.nextAudioTrack : -1;
+  }
+
+  /**
+   * selects next audio track, based on its index in audio track lists
+   */
+  set nextAudioTrack(audioTrackId: number) {
+    const audioTrackController = this.audioTrackController;
+    if (audioTrackController) {
+      audioTrackController.nextAudioTrack = audioTrackId;
+    }
+  }
+
+  /**
    * get the complete list of subtitle tracks across all media groups
    */
   get allSubtitleTracks(): MediaPlaylist[] {
