@@ -1,13 +1,11 @@
 import { CmcdHeaderField } from '@svta/common-media-library/cmcd/CmcdHeaderField';
-import chai from 'chai';
+import { expect } from 'chai';
 import CMCDController from '../../../src/controller/cmcd-controller';
 import Hls from '../../../src/hls';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import type { CMCDControllerConfig } from '../../../src/config';
 import type { Fragment, Part } from '../../../src/loader/fragment';
-
-const expect = chai.expect;
 
 let cmcdController;
 
