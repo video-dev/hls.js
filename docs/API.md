@@ -171,6 +171,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.allAudioTracks`](#hlsallaudiotracks)
   - [`hls.audioTracks`](#hlsaudiotracks)
   - [`hls.audioTrack`](#hlsaudiotrack)
+  - [`hls.nextAudioTrack`](#hlsnextaudiotrack)
 - [Subtitle Tracks Control API](#subtitle-tracks-control-api)
   - [`hls.setSubtitleOption(subtitleOption)`](#hlssetsubtitleoptionsubtitleoption)
   - [`hls.allSubtitleTracks`](#hlsallsubtitletracks)
@@ -1985,6 +1986,10 @@ get : array of supported audio tracks in the active audio group ID
 
 get/set : index of selected audio track in `hls.audioTracks`
 
+### `hls.nextAudioTrack`
+
+get/set : index of the next audio track that will be selected, allowing for seamless audio track switching
+
 ## Subtitle Tracks Control API
 
 ### `hls.setSubtitleOption(subtitleOption)`
@@ -2321,7 +2326,7 @@ Full list of Events is available below:
 - `Hls.Events.AUDIO_TRACKS_UPDATED` - fired to notify that audio track lists has been updated
   - data: { audioTracks : audioTracks }
 - `Hls.Events.AUDIO_TRACK_SWITCHING` - fired when an audio track switching is requested
-  - data: { id : audio track id, type : playlist type ('AUDIO' | 'main'), url : audio track URL }
+  - data: { id : audio track id, type : playlist type ('AUDIO' | 'main'), url : audio track URL, flushImmediate: boolean indicating whether audio buffer should be flushed immediately when switching }
 - `Hls.Events.AUDIO_TRACK_SWITCHED` - fired when an audio track switch actually occurs
   - data: { id : audio track id }
 - `Hls.Events.AUDIO_TRACK_LOADING` - fired when an audio track loading starts
