@@ -92,6 +92,12 @@ export type InFlightData = {
   state: (typeof State)[keyof typeof State];
 };
 
+export const enum AlternateAudio {
+  DISABLED = 0,
+  SWITCHING,
+  SWITCHED,
+}
+
 export default class BaseStreamController
   extends TaskLoop
   implements NetworkComponentAPI
@@ -100,7 +106,11 @@ export default class BaseStreamController
 
   protected fragPrevious: MediaFragment | null = null;
   protected fragCurrent: Fragment | null = null;
+  protected fragPlaying: Fragment | null = null;
+  protected backtrackFragment: Fragment | null = null;
+  protected altAudio: AlternateAudio = AlternateAudio.DISABLED;
   protected fragmentTracker: FragmentTracker;
+  protected couldBacktrack: boolean = false;
   protected transmuxer: TransmuxerInterface | null = null;
   protected _state: (typeof State)[keyof typeof State] = State.STOPPED;
   protected playlistType: PlaylistLevelType;
@@ -304,6 +314,7 @@ export default class BaseStreamController
     event: Events.MEDIA_DETACHING,
     data: MediaDetachingData,
   ) {
+    this.fragPlaying = null;
     const transferringMedia = !!data.transferMedia;
     const media = this.media;
     if (media === null) {
@@ -338,6 +349,7 @@ export default class BaseStreamController
     this.levels = this.levelLastLoaded = this.fragCurrent = null;
     this.lastCurrentTime = this.startPosition = 0;
     this.startFragRequested = false;
+    this.fragPlaying = this.backtrackFragment = null;
   }
 
   protected onError(event: Events.ERROR, data: ErrorData) {}
@@ -567,9 +579,7 @@ export default class BaseStreamController
         bufferedInfo ? bufferedInfo.len : this.config.maxBufferLength,
       );
       // If backtracking, always remove from the tracker without reducing max buffer length
-      const backtrackFragment = (this as any).backtrackFragment as
-        | Fragment
-        | undefined;
+      const backtrackFragment = this.backtrackFragment as Fragment | undefined;
       const backtracked = backtrackFragment
         ? (frag.sn as number) - (backtrackFragment.sn as number)
         : 0;
@@ -2233,6 +2243,267 @@ export default class BaseStreamController
 
   get state(): (typeof State)[keyof typeof State] {
     return this._state;
+  }
+
+  /**
+   * Calculate optimal switch point by considering fetch delays and buffer info
+   * to avoid causing playback interruption
+   */
+  protected calculateOptimalSwitchPoint(
+    nextLevel: Level,
+    bufferInfo: BufferInfo,
+    levelDetails: LevelDetails | undefined,
+    type: PlaylistLevelType,
+  ): { fetchdelay: number; okToFlushForwardBuffer: boolean } {
+    let fetchdelay = 0;
+    const { hls, media, config, levels } = this;
+
+    if (media && !media.paused && levels) {
+      // add a safety delay of 1s for OR nextAudioTrackSwitchingSafetyDelay depending on playlist type
+      const safetyDelay =
+        type === PlaylistLevelType.AUDIO
+          ? (hls.config.audioPreference?.nextAudioTrackSwitchingSafetyDelay ??
+            1)
+          : 1;
+      const ttfbSec = safetyDelay + hls.ttfbEstimate / 1000;
+      const bandwidth = hls.bandwidthEstimate * config.abrBandWidthUpFactor;
+      const fragDuration =
+        (levelDetails &&
+          (this.loadingParts
+            ? levelDetails.partTarget
+            : levelDetails.averagetargetduration)) ||
+        this.fragCurrent?.duration ||
+        6;
+      fetchdelay = ttfbSec + (nextLevel.maxBitrate * fragDuration) / bandwidth;
+      if (!nextLevel.details) {
+        fetchdelay += ttfbSec;
+      }
+    }
+
+    // Do not flush in live stream with low buffer
+
+    const okToFlushForwardBuffer =
+      !levelDetails?.live ||
+      (bufferInfo.len || 0) > levelDetails.targetduration * 2;
+
+    return { fetchdelay, okToFlushForwardBuffer };
+  }
+
+  /**
+   * Generic track switching scheduler that prevents buffering interruptions
+   * by finding optimal flush points in the buffer
+   * This method can be overridden by subclasses with specific implementation details
+   */
+  protected scheduleTrackSwitch(
+    bufferInfo: BufferInfo,
+    fetchdelay: number,
+    okToFlushForwardBuffer: boolean,
+    type: PlaylistLevelType,
+  ): void {
+    const { media } = this;
+    if (!media || !bufferInfo) {
+      return;
+    }
+
+    // find buffer range that will be reached once new fragment will be fetched
+    const bufferedFrag = okToFlushForwardBuffer
+      ? this.getBufferedFrag(this.getLoadPosition() + fetchdelay)
+      : null;
+
+    if (bufferedFrag) {
+      // we can flush buffer range following this one without stalling playback
+      const nextBufferedFrag = this.followingBufferedFrag(bufferedFrag);
+      if (nextBufferedFrag) {
+        // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
+        this.abortCurrentFrag();
+        // start flush position is in next buffered frag. Leave some padding for non-independent segments and smoother playback.
+        const maxStart = nextBufferedFrag.maxStartPTS
+          ? nextBufferedFrag.maxStartPTS
+          : nextBufferedFrag.start;
+        const fragDuration = nextBufferedFrag.duration;
+        const startPts = Math.max(
+          bufferedFrag.end,
+          maxStart +
+            Math.min(
+              Math.max(
+                fragDuration - this.config.maxFragLookUpTolerance,
+                fragDuration * (this.couldBacktrack ? 0.5 : 0.125),
+              ),
+              fragDuration * (this.couldBacktrack ? 0.75 : 0.25),
+            ),
+        );
+        const bufferType = type === PlaylistLevelType.MAIN ? null : 'audio';
+        // Flush forward buffer from next buffered frag start to infinity
+        this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY, bufferType);
+        // Flush back buffer (excluding current fragment)
+        this.cleanupBackBuffer();
+      }
+    }
+  }
+
+  /**
+   * Handle back-buffer cleanup during track switching
+   */
+  protected cleanupBackBuffer(): void {
+    const { media } = this;
+    if (!media) {
+      return;
+    }
+
+    // remove back-buffer
+    const fragPlayingCurrent = this.getAppendedFrag(this.getLoadPosition());
+    if (fragPlayingCurrent && fragPlayingCurrent.start > 1) {
+      // flush buffer preceding current fragment (flush until current fragment start offset)
+      // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
+      this.flushMainBuffer(0, fragPlayingCurrent.start - 1);
+    }
+  }
+
+  /**
+   * Base method for track switching that uses common logic
+   * to prevent buffering interruptions
+   */
+  public nextTrackSwitch(): void {
+    // Base implementation - to be overridden by subclasses
+    // This provides the common pattern that both audio and video controllers can use
+  }
+
+  /**
+   * Gets buffered fragment at the specified position
+   */
+  protected getBufferedFrag(
+    position: number,
+    type: PlaylistLevelType = PlaylistLevelType.MAIN,
+  ): Fragment | null {
+    return this.fragmentTracker.getBufferedFrag(position, type);
+  }
+
+  /**
+   * Gets the next buffered fragment following the given fragment
+   */
+  protected followingBufferedFrag(
+    frag: Fragment | null,
+    type: PlaylistLevelType = PlaylistLevelType.MAIN,
+  ): Fragment | null {
+    if (frag) {
+      // try to get range of next fragment (500ms after this range)
+      return this.getBufferedFrag(frag.end + 0.5, type);
+    }
+    return null;
+  }
+
+  /**
+   * Aborts the current fragment loading and resets state
+   * Can be overridden by subclasses for specific behavior
+   */
+  protected abortCurrentFrag(): void {
+    const fragCurrent = this.fragCurrent;
+    this.fragCurrent = null;
+    if (fragCurrent) {
+      fragCurrent.abortRequests();
+      this.fragmentTracker.removeFragment(fragCurrent);
+    }
+    switch (this.state) {
+      case State.KEY_LOADING:
+      case State.FRAG_LOADING:
+      case State.FRAG_LOADING_WAITING_RETRY:
+      case State.PARSING:
+      case State.PARSED:
+        this.state = State.IDLE;
+        break;
+    }
+    this.nextLoadPosition = this.getLoadPosition();
+  }
+
+  protected checkFragmentChanged(
+    type: PlaylistLevelType = PlaylistLevelType.MAIN,
+  ) {
+    const video = this.media;
+    let fragPlayingCurrent: Fragment | null = null;
+    if (video && video.readyState > 1 && video.seeking === false) {
+      const currentTime = this.getLoadPosition();
+      /* if video element is in seeked state, currentTime can only increase.
+        (assuming that playback rate is positive ...)
+        As sometimes currentTime jumps back to zero after a
+        media decode error, check this, to avoid seeking back to
+        wrong position after a media decode error
+      */
+
+      if (BufferHelper.isBuffered(video, currentTime)) {
+        fragPlayingCurrent = this.getAppendedFrag(currentTime, type);
+      } else if (BufferHelper.isBuffered(video, currentTime + 0.1)) {
+        /* ensure that FRAG_CHANGED event is triggered at startup,
+          when first video frame is displayed and playback is paused.
+          add a tolerance of 100ms, in case current position is not buffered,
+          check if current pos+100ms is buffered and use that buffer range
+          for FRAG_CHANGED event reporting */
+        fragPlayingCurrent = this.getAppendedFrag(currentTime + 0.1, type);
+      }
+      if (fragPlayingCurrent) {
+        this.backtrackFragment = null;
+        const fragPlaying = this.fragPlaying;
+        const fragCurrentLevel = fragPlayingCurrent.level;
+        if (
+          !fragPlaying ||
+          fragPlayingCurrent.sn !== fragPlaying.sn ||
+          fragPlaying.level !== fragCurrentLevel
+        ) {
+          this.fragPlaying = fragPlayingCurrent;
+          this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });
+          if (!fragPlaying || fragPlaying.level !== fragCurrentLevel) {
+            this.hls.trigger(Events.LEVEL_SWITCHED, {
+              level: fragCurrentLevel,
+            });
+          }
+        }
+      }
+    }
+  }
+
+  public getMainFwdBufferInfo(): BufferInfo | null {
+    // Observe video SourceBuffer (this.mediaBuffer) only when alt-audio is used, otherwise observe combined media buffer
+    const bufferOutput =
+      this.mediaBuffer && this.altAudio === AlternateAudio.SWITCHED
+        ? this.mediaBuffer
+        : this.media;
+    return this.getFwdBufferInfo(bufferOutput, PlaylistLevelType.MAIN);
+  }
+
+  public nextLevelSwitch(type: PlaylistLevelType) {
+    const { levels, media, hls, config } = this;
+    // ensure that media is defined and that metadata are available (to retrieve currentTime)
+    if (media?.readyState && levels && hls && config) {
+      const bufferOutput =
+        this.mediaBuffer &&
+        (this.altAudio === AlternateAudio.SWITCHED ||
+          type === PlaylistLevelType.AUDIO)
+          ? this.mediaBuffer
+          : this.media;
+      const bufferInfo = this.getFwdBufferInfo(bufferOutput, type);
+      if (!bufferInfo) {
+        return;
+      }
+      const levelDetails = this.getLevelDetails();
+
+      const nextLevelId = hls.nextLoadLevel;
+      const nextLevel = levels[nextLevelId];
+
+      const { fetchdelay, okToFlushForwardBuffer } =
+        this.calculateOptimalSwitchPoint(
+          nextLevel,
+          bufferInfo,
+          levelDetails,
+          PlaylistLevelType.MAIN,
+        );
+
+      this.scheduleTrackSwitch(
+        bufferInfo,
+        fetchdelay,
+        okToFlushForwardBuffer,
+        PlaylistLevelType.MAIN,
+      );
+    }
+    this.tickImmediate();
   }
 }
 
