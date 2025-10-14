@@ -123,6 +123,7 @@ export default class BaseStreamController
   protected buffering: boolean = true;
   protected loadingParts: boolean = false;
   private loopSn?: string | number;
+  protected backwardSeek: boolean = false;
 
   constructor(
     hls: Hls,
@@ -345,10 +346,11 @@ export default class BaseStreamController
   protected onMediaSeeking = () => {
     const { config, fragCurrent, media, mediaBuffer, state } = this;
     const currentTime: number = media ? media.currentTime : 0;
+    this.backwardSeek = currentTime < this.lastCurrentTime;
     const bufferInfo = BufferHelper.bufferInfo(
       mediaBuffer ? mediaBuffer : media,
       currentTime,
-      config.maxBufferHole,
+      this.backwardSeek ? 0 : config.maxBufferHole,
     );
     const noFowardBuffer = !bufferInfo.len;
 
@@ -372,12 +374,17 @@ export default class BaseStreamController
         fragEndOffset < bufferInfo.start ||
         fragStartOffset > bufferInfo.end
       ) {
+        const beforeFragment = currentTime < fragStartOffset;
         const pastFragment = currentTime > fragEndOffset;
         // if the seek position is outside the current fragment range
-        if (currentTime < fragStartOffset || pastFragment) {
-          if (pastFragment && fragCurrent.loader) {
+        if (beforeFragment || pastFragment) {
+          const shouldAbort =
+            (pastFragment && fragCurrent.loader) || // Forward seek past fragment
+            (beforeFragment && fragCurrent.loader); // Backward seek before fragment
+
+          if (shouldAbort) {
             this.log(
-              `Cancelling fragment load for seek (sn: ${fragCurrent.sn})`,
+              `Cancelling fragment load for seek (sn: ${fragCurrent.sn}) - ${beforeFragment ? 'backward seek' : 'forward seek'}`,
             );
             fragCurrent.abortRequests();
             this.resetLoadingState();
@@ -1250,9 +1257,8 @@ export default class BaseStreamController
     if (!Number.isFinite(pos)) {
       return null;
     }
-    const backwardSeek = this.lastCurrentTime > pos;
     const maxBufferHole =
-      backwardSeek || this.media?.paused ? 0 : this.config.maxBufferHole;
+      this.backwardSeek || this.media?.paused ? 0 : this.config.maxBufferHole;
     return this.getFwdBufferInfoAtPos(bufferable, pos, type, maxBufferHole);
   }
 
@@ -1684,9 +1690,8 @@ export default class BaseStreamController
 
     let frag: MediaFragment | null;
     if (bufferEnd < end) {
-      const backwardSeek = bufferEnd < this.lastCurrentTime;
       const lookupTolerance =
-        backwardSeek ||
+        this.backwardSeek ||
         bufferEnd > end - maxFragLookUpTolerance ||
         this.media?.paused ||
         !this.startFragRequested
@@ -2054,6 +2059,7 @@ export default class BaseStreamController
     this.log('Reset loading state');
     this.fragCurrent = null;
     this.fragPrevious = null;
+    this.backwardSeek = false;
     if (this.state !== State.STOPPED) {
       this.state = State.IDLE;
     }
