@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+  <head>
+    <title>HLS.js Backward Seek Test - Fix #7576</title>
+    <script src="./dist/hls.js"></script>
+  </head>
+  <body>
+    <h2>Testing Backward Seek Fix #7576</h2>
+    <video id="video" controls width="640" height="360"></video>
+    <div>
+      <button onclick="seekToUnbuffered()">Seek to Unbuffered (110s)</button>
+      <button onclick="seekBackwardUnbuffered()">
+        Seek Back to Unbuffered (20s)
+      </button>
+      <button onclick="pauseBuffering()">Pause Buffering</button>
+      <button onclick="resumeBuffering()">Resume Buffering</button>
+      <button onclick="enableSlowNetwork()">Enable Slow Network</button>
+    </div>
+    <div id="status">Ready to test</div>
+
+    <script>
+      const video = document.getElementById('video');
+      const status = document.getElementById('status');
+      const hls = new Hls({
+        debug: true,
+        enableWorker: true,
+        backBufferLength: 90,
+        maxBufferHole: 4,
+        maxMaxBufferLength: 8,
+        maxBufferLength: 8,
+      });
+
+      // Test stream from the GitHub issue
+      const testStream = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
+
+      hls.loadSource(testStream);
+      hls.attachMedia(video);
+
+      // Log events to see our fix in action
+      hls.on(Hls.Events.MEDIA_SEEKING, function (event, data) {
+        console.log('MEDIA_SEEKING', data);
+      });
+
+      hls.on(Hls.Events.FRAG_LOADED, function (event, data) {
+        console.log('FRAG_LOADED', data.frag.sn);
+      });
+
+      hls.on(Hls.Events.ERROR, function (event, data) {
+        console.log('ERROR', data.details, data);
+      });
+
+      hls.on(Hls.Events.MANIFEST_PARSED, function () {
+        status.textContent = 'Ready - test backward seeking now';
+        console.log('MANIFEST_PARSED - ready for testing');
+      });
+
+      function seekToUnbuffered() {
+        status.textContent = 'Seeking to 110 seconds (unbuffered)...';
+        video.currentTime = 110;
+      }
+
+      function seekBackwardUnbuffered() {
+        const currentTime = video.currentTime;
+        status.textContent = `Seeking backward from ${currentTime.toFixed(2)} to 20 seconds (unbuffered)`;
+        console.log(`Testing backward seek: ${currentTime.toFixed(2)} -> 20`);
+        video.currentTime = 20;
+      }
+
+      function pauseBuffering() {
+        if (hls.streamController) {
+          hls.streamController.pauseBuffering();
+          status.textContent =
+            'Buffering PAUSED - fragments will not load automatically';
+          console.log('Buffering PAUSED');
+        }
+      }
+
+      function resumeBuffering() {
+        if (hls.streamController) {
+          hls.streamController.resumeBuffering();
+          status.textContent = 'Buffering RESUMED';
+          console.log('Buffering RESUMED');
+        }
+      }
+
+      function enableSlowNetwork() {
+        status.textContent =
+          'Slow network simulation enabled (use browser dev tools)';
+        console.log(
+          'Enable "Slow 4G" in browser network throttling for proper testing',
+        );
+      }
+
+      // Auto-play when ready for easier testing
+      video.addEventListener('loadeddata', function () {
+        video.play().catch((e) => console.log('Auto-play prevented:', e));
+      });
+    </script>
+  </body>
+</html>

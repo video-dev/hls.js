@@ -227,6 +227,12 @@ export default class GapController extends TaskLoop {
     const fragmentTracker = this.fragmentTracker;
 
     if (seeking && fragmentTracker && this.hls) {
+      // Detect backward seeks and don't interfere
+      const backwardSeek = currentTime < this.lastCurrentTime;
+      if (backwardSeek) {
+        // Don't interfere with backward seeks - let base-stream-controller handle them
+        return;
+      }
       // Is there a fragment loading/parsing/appending before currentTime?
       const inFlightDependency = getInFlightDependency(
         this.hls.inFlightFragments,
@@ -544,6 +550,10 @@ export default class GapController extends TaskLoop {
 
     // Check if currentTime is between unbuffered regions of partial fragments
     const currentTime = media.currentTime;
+    const backwardSeek = currentTime < this.lastCurrentTime;
+    if (backwardSeek) {
+      return 0; // Let base-stream-controller handle backward seeks
+    }
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
     const startTime =
       currentTime < bufferInfo.start ? bufferInfo.start : bufferInfo.nextStart;

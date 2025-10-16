@@ -366,18 +366,21 @@ export default class BaseStreamController
       const fragStartOffset = fragCurrent.start - tolerance;
       const fragEndOffset =
         fragCurrent.start + fragCurrent.duration + tolerance;
-      // if seeking out of buffered range or into new one
-      if (
+
+      // Improved logic: cancel fragment if seeking backwards OR if seeking outside current fragment range
+      const seekingBackward = currentTime < this.lastCurrentTime;
+      const outsideFragmentRange =
         noFowardBuffer ||
         fragEndOffset < bufferInfo.start ||
-        fragStartOffset > bufferInfo.end
-      ) {
+        fragStartOffset > bufferInfo.end;
+
+      if (seekingBackward || outsideFragmentRange) {
         const pastFragment = currentTime > fragEndOffset;
-        // if the seek position is outside the current fragment range
-        if (currentTime < fragStartOffset || pastFragment) {
-          if (pastFragment && fragCurrent.loader) {
+        // Cancel fragment if seeking to a different position
+        if (seekingBackward || currentTime < fragStartOffset || pastFragment) {
+          if (fragCurrent.loader) {
             this.log(
-              `Cancelling fragment load for seek (sn: ${fragCurrent.sn})`,
+              `Cancelling fragment load for ${seekingBackward ? 'backward' : ''} seek (sn: ${fragCurrent.sn})`,
             );
             fragCurrent.abortRequests();
             this.resetLoadingState();
@@ -1250,7 +1253,9 @@ export default class BaseStreamController
     if (!Number.isFinite(pos)) {
       return null;
     }
-    const backwardSeek = this.lastCurrentTime > pos;
+    // Improved backward seek detection
+    const currentTime = this.media?.currentTime || pos;
+    const backwardSeek = this.lastCurrentTime > currentTime;
     const maxBufferHole =
       backwardSeek || this.media?.paused ? 0 : this.config.maxBufferHole;
     return this.getFwdBufferInfoAtPos(bufferable, pos, type, maxBufferHole);
