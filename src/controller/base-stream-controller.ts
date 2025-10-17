@@ -123,7 +123,6 @@ export default class BaseStreamController
   protected buffering: boolean = true;
   protected loadingParts: boolean = false;
   private loopSn?: string | number;
-  protected backwardSeek: boolean = false;
 
   constructor(
     hls: Hls,
@@ -346,11 +345,11 @@ export default class BaseStreamController
   protected onMediaSeeking = () => {
     const { config, fragCurrent, media, mediaBuffer, state } = this;
     const currentTime: number = media ? media.currentTime : 0;
-    this.backwardSeek = currentTime < this.lastCurrentTime;
+    const backwardSeek = currentTime < this.lastCurrentTime;
     const bufferInfo = BufferHelper.bufferInfo(
       mediaBuffer ? mediaBuffer : media,
       currentTime,
-      this.backwardSeek ? 0 : config.maxBufferHole,
+      backwardSeek ? 0 : config.maxBufferHole,
     );
     const noFowardBuffer = !bufferInfo.len;
 
@@ -378,11 +377,11 @@ export default class BaseStreamController
         const pastFragment = currentTime > fragEndOffset;
         // if the seek position is outside the current fragment range
         if (beforeFragment || pastFragment) {
-          const shouldAbort =
-            (pastFragment && fragCurrent.loader) || // Forward seek past fragment
-            (beforeFragment && fragCurrent.loader); // Backward seek before fragment
-
-          if (shouldAbort) {
+          // Only abort an active fragment load if the seek is past the fragment or the fragment isn't nearly downloaded
+          if (
+            fragCurrent.loader &&
+            (pastFragment || !this.isFragmentNearlyDownloaded(fragCurrent))
+          ) {
             this.log(
               `Cancelling fragment load for seek (sn: ${fragCurrent.sn}) - ${beforeFragment ? 'backward seek' : 'forward seek'}`,
             );
@@ -1257,8 +1256,10 @@ export default class BaseStreamController
     if (!Number.isFinite(pos)) {
       return null;
     }
+    const backwardSeek =
+      this.lastCurrentTime > (this.media?.currentTime || pos);
     const maxBufferHole =
-      this.backwardSeek || this.media?.paused ? 0 : this.config.maxBufferHole;
+      backwardSeek || this.media?.paused ? 0 : this.config.maxBufferHole;
     return this.getFwdBufferInfoAtPos(bufferable, pos, type, maxBufferHole);
   }
 
@@ -1690,8 +1691,9 @@ export default class BaseStreamController
 
     let frag: MediaFragment | null;
     if (bufferEnd < end) {
+      const backwardSeek = bufferEnd < this.lastCurrentTime;
       const lookupTolerance =
-        this.backwardSeek ||
+        backwardSeek ||
         bufferEnd > end - maxFragLookUpTolerance ||
         this.media?.paused ||
         !this.startFragRequested
@@ -2059,7 +2061,6 @@ export default class BaseStreamController
     this.log('Reset loading state');
     this.fragCurrent = null;
     this.fragPrevious = null;
-    this.backwardSeek = false;
     if (this.state !== State.STOPPED) {
       this.state = State.IDLE;
     }
@@ -2215,6 +2216,24 @@ export default class BaseStreamController
 
   protected resetTransmuxer() {
     this.transmuxer?.reset();
+  }
+
+  private isFragmentNearlyDownloaded(fragment: Fragment): boolean {
+    const stats = fragment.loader?.stats;
+    if (!stats) {
+      return false;
+    }
+
+    const hasFirstByte = stats.loading.first > 0;
+    const bitsRemaining = stats.total - stats.loaded;
+    const timeToCompleteFragDownload =
+      bitsRemaining /
+      (isFinite(this.hls.bandwidthEstimate)
+        ? this.hls.bandwidthEstimate
+        : this.hls.config.abrEwmaDefaultEstimate);
+
+    // Fragment is nearly complete if we have first byte and will complete within 150ms
+    return hasFirstByte && timeToCompleteFragDownload <= 0.15;
   }
 
   protected recoverWorkerError(data: ErrorData) {

@@ -19,7 +19,6 @@ type BaseStreamControllerTestable = Omit<
   BaseStreamController,
   | 'media'
   | '_streamEnded'
-  | 'backwardSeek'
   | 'lastCurrentTime'
   | 'fragCurrent'
   | 'onMediaSeeking'
@@ -27,10 +26,10 @@ type BaseStreamControllerTestable = Omit<
   | 'resetLoadingState'
   | 'config'
   | 'getFwdBufferInfoAtPos'
+  | 'isFragmentNearlyDownloaded'
 > & {
   media: HTMLMediaElement | null;
   _streamEnded: (bufferInfo: BufferInfo, levelDetails: LevelDetails) => boolean;
-  backwardSeek: boolean;
   lastCurrentTime: number;
   fragCurrent: MediaFragment | null;
   onMediaSeeking: () => void;
@@ -43,6 +42,7 @@ type BaseStreamControllerTestable = Omit<
     type: string,
     maxBufferHole: number,
   ) => BufferInfo | null;
+  isFragmentNearlyDownloaded: (fragment: MediaFragment) => boolean;
 };
 
 describe('BaseStreamController', function () {
@@ -146,42 +146,42 @@ describe('BaseStreamController', function () {
     });
   });
 
-  describe('Backward Seek Logic', function () {
+  describe('Seeking Logic', function () {
     describe('onMediaSeeking', function () {
-      it('should detect backward seek when currentTime < lastCurrentTime', function () {
-        // Setup initial state
+      it('should handle backward seek behavior correctly', function () {
+        // Setup initial state for backward seek
         baseStreamController.lastCurrentTime = 10.5;
         media.currentTime = 5.2;
 
-        // Call onMediaSeeking
-        baseStreamController.onMediaSeeking();
+        // Call onMediaSeeking - should execute without error
+        expect(() => baseStreamController.onMediaSeeking()).to.not.throw();
 
-        // Verify backward seek is detected
-        expect(baseStreamController.backwardSeek).to.be.true;
+        // Verify lastCurrentTime is not updated on backward seek
+        expect(baseStreamController.lastCurrentTime).to.equal(10.5);
       });
 
-      it('should not detect backward seek when currentTime >= lastCurrentTime', function () {
-        // Setup initial state - forward seek
+      it('should handle forward seek behavior correctly', function () {
+        // Setup initial state for forward seek
         baseStreamController.lastCurrentTime = 5.2;
         media.currentTime = 10.5;
 
-        // Call onMediaSeeking
-        baseStreamController.onMediaSeeking();
+        // Call onMediaSeeking - should execute without error
+        expect(() => baseStreamController.onMediaSeeking()).to.not.throw();
 
-        // Verify backward seek is not detected
-        expect(baseStreamController.backwardSeek).to.be.false;
+        // Verify lastCurrentTime is updated on forward seek
+        expect(baseStreamController.lastCurrentTime).to.equal(10.5);
       });
 
-      it('should not detect backward seek when currentTime equals lastCurrentTime', function () {
+      it('should handle same position seek correctly', function () {
         // Setup initial state - no seek
         baseStreamController.lastCurrentTime = 10.5;
         media.currentTime = 10.5;
 
-        // Call onMediaSeeking
-        baseStreamController.onMediaSeeking();
+        // Call onMediaSeeking - should execute without error
+        expect(() => baseStreamController.onMediaSeeking()).to.not.throw();
 
-        // Verify backward seek is not detected
-        expect(baseStreamController.backwardSeek).to.be.false;
+        // Verify lastCurrentTime remains the same
+        expect(baseStreamController.lastCurrentTime).to.equal(10.5);
       });
     });
 
@@ -216,18 +216,25 @@ describe('BaseStreamController', function () {
         expect(baseStreamController.fragCurrent?.sn).to.equal(1);
       });
 
-      it('should handle backward seek properly', function () {
-        // Just verify that the onMediaSeeking method can be called without error
-        // and that we have access to the backwardSeek property
+      it('should handle fragment cancellation logic properly', function () {
+        // Verify that the onMediaSeeking method can be called without error
         expect(typeof baseStreamController.onMediaSeeking).to.equal('function');
-        expect(typeof baseStreamController.backwardSeek).to.equal('boolean');
+        expect(typeof baseStreamController.isFragmentNearlyDownloaded).to.equal(
+          'function',
+        );
 
-        // Test that we can set and read the backwardSeek flag
-        baseStreamController.backwardSeek = true;
-        expect(baseStreamController.backwardSeek).to.be.true;
+        // Setup fragment with loader
+        mockFragment.loader = {
+          abort: sinon.spy(),
+          stats: {
+            loading: { first: 100 },
+            total: 1000,
+            loaded: 900,
+          },
+        } as any;
 
-        baseStreamController.backwardSeek = false;
-        expect(baseStreamController.backwardSeek).to.be.false;
+        // Call onMediaSeeking - should not throw
+        expect(() => baseStreamController.onMediaSeeking()).to.not.throw();
       });
 
       it('should handle forward seek properly', function () {
@@ -235,18 +242,19 @@ describe('BaseStreamController', function () {
         baseStreamController.lastCurrentTime = 12.0;
         media.currentTime = 18.0; // After fragment end (15)
 
-        // Call onMediaSeeking
-        baseStreamController.onMediaSeeking();
+        // Call onMediaSeeking - should execute without error
+        expect(() => baseStreamController.onMediaSeeking()).to.not.throw();
 
-        // Verify backward seek is not detected
-        expect(baseStreamController.backwardSeek).to.be.false;
+        // Verify lastCurrentTime is updated for forward seek
+        expect(baseStreamController.lastCurrentTime).to.equal(18.0);
       });
     });
 
     describe('getFwdBufferInfo method behavior', function () {
-      it('should use backwardSeek flag in buffer calculation', function () {
-        // Setup backward seek flag
-        baseStreamController.backwardSeek = true;
+      it('should calculate buffer info correctly for backward seek scenarios', function () {
+        // Setup backward seek scenario (lastCurrentTime > current position)
+        baseStreamController.lastCurrentTime = 15.0;
+        media.currentTime = 10.5;
 
         // Setup media state
         Object.defineProperty(media, 'paused', { value: false });
@@ -256,7 +264,7 @@ describe('BaseStreamController', function () {
           'function',
         );
 
-        // Call the method to ensure it works with backwardSeek=true
+        // Call the method - should handle backward seek logic internally
         const result = baseStreamController.getFwdBufferInfoAtPos(
           media.buffered,
           10.5,
@@ -269,8 +277,9 @@ describe('BaseStreamController', function () {
       });
 
       it('should work with different maxBufferHole values', function () {
-        // Setup normal playback
-        baseStreamController.backwardSeek = false;
+        // Setup normal forward playback scenario
+        baseStreamController.lastCurrentTime = 5.0;
+        media.currentTime = 10.5;
 
         // Setup media state
         Object.defineProperty(media, 'paused', { value: false });
@@ -297,9 +306,8 @@ describe('BaseStreamController', function () {
     });
 
     describe('resetLoadingState method', function () {
-      it('should reset backwardSeek flag to false', function () {
-        // Setup backward seek state
-        baseStreamController.backwardSeek = true;
+      it('should reset fragment state correctly', function () {
+        // Setup state with current fragment
         const mockFrag = new Fragment(
           PlaylistLevelType.MAIN,
           'http://example.com/segment.ts',
@@ -309,21 +317,105 @@ describe('BaseStreamController', function () {
         // Call resetLoadingState
         baseStreamController.resetLoadingState();
 
-        // Verify backwardSeek flag is reset
-        expect(baseStreamController.backwardSeek).to.be.false;
+        // Verify fragment state is reset
         expect(baseStreamController.fragCurrent).to.be.null;
       });
 
-      it('should reset backwardSeek flag even when fragCurrent is null', function () {
-        // Setup backward seek state with no current fragment
-        baseStreamController.backwardSeek = true;
+      it('should handle reset when fragCurrent is already null', function () {
+        // Setup state with no current fragment
         baseStreamController.fragCurrent = null;
 
-        // Call resetLoadingState
-        baseStreamController.resetLoadingState();
+        // Call resetLoadingState - should not throw
+        expect(() => baseStreamController.resetLoadingState()).to.not.throw();
 
-        // Verify backwardSeek flag is reset
-        expect(baseStreamController.backwardSeek).to.be.false;
+        // Verify fragCurrent remains null
+        expect(baseStreamController.fragCurrent).to.be.null;
+      });
+    });
+
+    describe('isFragmentNearlyDownloaded method', function () {
+      it('should return false when fragment has no loader', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        mockFrag.loader = null;
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        expect(result).to.be.false;
+      });
+
+      it('should return false when fragment loader has no stats', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        mockFrag.loader = { stats: null } as any;
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        expect(result).to.be.false;
+      });
+
+      it('should return false when fragment has not started loading', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        mockFrag.loader = {
+          stats: {
+            loading: { first: 0 }, // No first byte yet
+            total: 1000,
+            loaded: 0,
+          },
+        } as any;
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        expect(result).to.be.false;
+      });
+
+      it('should return true when fragment is nearly complete', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        mockFrag.loader = {
+          stats: {
+            loading: { first: 100 }, // Has first byte
+            total: 1000,
+            loaded: 950, // Almost complete
+          },
+        } as any;
+
+        // Mock bandwidth estimate for calculation
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000; // 1Mbps
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        expect(result).to.be.true;
+      });
+
+      it('should return false when fragment will take too long to complete', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        mockFrag.loader = {
+          stats: {
+            loading: { first: 100 }, // Has first byte
+            total: 1000000, // Large file
+            loaded: 100, // Just started
+          },
+        } as any;
+
+        // Mock low bandwidth estimate
+        baseStreamController.config.abrEwmaDefaultEstimate = 100000; // 100Kbps
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        expect(result).to.be.false;
       });
     });
   });
