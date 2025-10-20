@@ -2280,11 +2280,10 @@ export default class BaseStreamController
       }
     }
 
+    const currentTime = this.media?.currentTime || this.getLoadPosition();
     // Do not flush in live stream with low buffer
-
     const okToFlushForwardBuffer =
-      !levelDetails?.live ||
-      (bufferInfo.len || 0) > levelDetails.targetduration * 2;
+      !levelDetails?.live || bufferInfo.end - currentTime > fetchdelay * 1.5;
 
     return { fetchdelay, okToFlushForwardBuffer };
   }
@@ -2493,14 +2492,14 @@ export default class BaseStreamController
           nextLevel,
           bufferInfo,
           levelDetails,
-          PlaylistLevelType.MAIN,
+          type,
         );
 
       this.scheduleTrackSwitch(
         bufferInfo,
         fetchdelay,
         okToFlushForwardBuffer,
-        PlaylistLevelType.MAIN,
+        type,
       );
     }
     this.tickImmediate();
