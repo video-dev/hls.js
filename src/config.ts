@@ -50,6 +50,8 @@ export type ABRControllerConfig = {
   abrMaxWithRealBitrate: boolean;
   maxStarvationDelay: number;
   maxLoadingDelay: number;
+  abrUpSwitchToLowerFrameRateMode: 'block' | 'allow';
+  abrDownSwitchToHigherFrameRateMode: 'block' | 'allow';
 };
 
 export type BufferControllerConfig = {
@@ -432,6 +434,8 @@ export const hlsDefaultConfig: HlsConfig = {
   abrMaxWithRealBitrate: false, // used by abr-controller
   maxStarvationDelay: 4, // used by abr-controller
   maxLoadingDelay: 4, // used by abr-controller
+  abrUpSwitchToLowerFrameRateMode: 'block', // used by abr-controller
+  abrDownSwitchToHigherFrameRateMode: 'block', // used by abr-controller
   minAutoBitrate: 0, // used by hls
   emeEnabled: false, // used by eme-controller
   widevineLicenseUrl: undefined, // used by eme-controller
