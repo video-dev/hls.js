@@ -81,7 +81,7 @@ export type PlayheadTimes = {
 };
 
 function playWithCatch(media: HTMLMediaElement | null) {
-  media?.play().catch(() => {
+  (media?.play() as Promise<void> | undefined)?.catch(() => {
     /* no-op */
   });
 }
