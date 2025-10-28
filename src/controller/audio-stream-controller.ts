@@ -66,11 +66,13 @@ class AudioStreamController
   private bufferedTrack: MediaPlaylist | null = null;
   private switchingTrack: MediaPlaylist | null = null;
   private trackId: number = -1;
+  private nextTrackId: number = -1;
   private waitingData: WaitingForPTSData | null = null;
   private mainDetails: LevelDetails | null = null;
   private flushing: boolean = false;
   private bufferFlushed: boolean = false;
   private cachedTrackLoadedData: TrackLoadedData | null = null;
+  private pendingAudioTrackSwitch: boolean = false;
 
   constructor(
     hls: Hls,
@@ -307,6 +309,7 @@ class AudioStreamController
     }
 
     this.lastCurrentTime = media.currentTime;
+    this.checkFragmentChanged(PlaylistLevelType.AUDIO);
   }
 
   private doTickIdle() {
@@ -327,6 +330,18 @@ class AudioStreamController
       !levels?.[trackId]
     ) {
       return;
+    }
+    if (
+      this.pendingAudioTrackSwitch &&
+      this.fragPlaying &&
+      this.switchingTrack
+    ) {
+      if (this.fragPlaying.level === this.nextTrackId) {
+        this.pendingAudioTrackSwitch = false;
+        this.cleanupBackBuffer();
+        this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, this.switchingTrack);
+        this.switchingTrack = null;
+      }
     }
 
     const levelInfo = levels[trackId];
@@ -360,7 +375,11 @@ class AudioStreamController
       return;
     }
 
-    if (!this.switchingTrack && this._streamEnded(bufferInfo, trackDetails)) {
+    if (
+      !this.switchingTrack &&
+      !this.pendingAudioTrackSwitch &&
+      this._streamEnded(bufferInfo, trackDetails)
+    ) {
       hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
       this.state = State.ENDED;
       return;
@@ -758,8 +777,10 @@ class AudioStreamController
       const track = this.switchingTrack;
       if (track) {
         this.bufferedTrack = track;
-        this.switchingTrack = null;
-        this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...track });
+        if (!this.pendingAudioTrackSwitch) {
+          this.switchingTrack = null;
+          this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...track });
+        }
       }
     }
     this.fragBufferedComplete(frag, part);
@@ -1022,7 +1043,7 @@ class AudioStreamController
     }
   }
 
-  private flushAudioIfNeeded(switchingTrack: MediaPlaylist) {
+  private flushAudioIfNeeded(switchingTrack: AudioTrackSwitchingData) {
     if (this.media && this.bufferedTrack) {
       const { name, lang, assocLang, characteristics, audioCodec, channels } =
         this.bufferedTrack;
@@ -1033,7 +1054,10 @@ class AudioStreamController
           audioMatchPredicate,
         )
       ) {
-        if (useAlternateAudio(switchingTrack.url, this.hls)) {
+        if (
+          (useAlternateAudio(switchingTrack.url, this.hls),
+          switchingTrack.flushImmediate)
+        ) {
           this.log('Switching audio track : flushing all audio');
           super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
           this.bufferedTrack = null;
@@ -1045,12 +1069,40 @@ class AudioStreamController
     }
   }
 
-  private completeAudioSwitch(switchingTrack: MediaPlaylist) {
+  private completeAudioSwitch(switchingTrack: AudioTrackSwitchingData) {
     const { hls } = this;
     this.flushAudioIfNeeded(switchingTrack);
     this.bufferedTrack = switchingTrack;
-    this.switchingTrack = null;
-    hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...switchingTrack });
+    this.pendingAudioTrackSwitch = !switchingTrack.flushImmediate;
+    if (switchingTrack.flushImmediate) {
+      this.switchingTrack = null;
+      hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...switchingTrack });
+    }
+  }
+
+  /**
+   * Index of next audio track loaded as scheduled by audio stream controller.
+   */
+  get nextAudioTrack(): number {
+    return this.nextTrackId;
+  }
+
+  /**
+   * Set next audio track index for seamless audio track switching.
+   * This schedules audio track switching without interrupting playback.
+   */
+  set nextAudioTrack(audioTrackId: number) {
+    this.nextTrackId = audioTrackId;
+  }
+
+  /**
+   * try to switch ASAP without breaking audio playback:
+   * in order to ensure smooth but quick audio track switching,
+   * we need to find the next flushable buffer range
+   * we should take into account new segment fetch time
+   */
+  public nextAudioTrackSwitch(): void {
+    super.nextLevelSwitch(PlaylistLevelType.AUDIO);
   }
 }
 export default AudioStreamController;

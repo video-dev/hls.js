@@ -177,6 +177,7 @@ export type AudioSelectionOption = {
     audioCodec?: string;
     groupId?: string;
     default?: boolean;
+    nextAudioTrackSwitchingSafetyDelay?: number;
 };
 
 // Warning: (ae-missing-release-tag) "AudioStreamController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -194,6 +195,10 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     _handleFragmentLoadProgress(data: FragLoadedData): void;
     // (undocumented)
     protected loadFragment(frag: Fragment, track: Level, targetBufferTime: number): void;
+    get nextAudioTrack(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "nextAudioTrack" must appear on the getter, not the setter.
+    set nextAudioTrack(audioTrackId: number);
+    nextAudioTrackSwitch(): void;
     // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
     // (undocumented)
@@ -235,6 +240,9 @@ export class AudioTrackController extends BasePlaylistController {
     // (undocumented)
     protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void;
     // (undocumented)
+    get nextAudioTrack(): number;
+    set nextAudioTrack(newId: number);
+    // (undocumented)
     protected onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void;
     // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
@@ -274,6 +282,8 @@ export interface AudioTrackSwitchedData extends MediaPlaylist {
 //
 // @public (undocumented)
 export interface AudioTrackSwitchingData extends MediaPlaylist {
+    // (undocumented)
+    flushImmediate?: boolean;
 }
 
 // Warning: (ae-missing-release-tag) "AudioTrackUpdatedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -379,10 +389,17 @@ export class BaseSegment {
 // @public (undocumented)
 export class BaseStreamController extends TaskLoop implements NetworkComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader, logPrefix: string, playlistType: PlaylistLevelType);
+    protected abortCurrentFrag(): void;
     // (undocumented)
     protected afterBufferFlushed(media: Bufferable, bufferType: SourceBufferName, playlistType: PlaylistLevelType): void;
     // (undocumented)
     protected alignPlaylists(details: LevelDetails, previousDetails: LevelDetails | undefined, switchDetails: LevelDetails | undefined): number;
+    // Warning: (ae-forgotten-export) The symbol "AlternateAudio" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    protected altAudio: AlternateAudio;
+    // (undocumented)
+    protected backtrackFragment: Fragment | null;
     // (undocumented)
     protected bitrateTest: boolean;
     // (undocumented)
@@ -391,14 +408,23 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected buffering: boolean;
     // (undocumented)
     get bufferingEnabled(): boolean;
+    protected calculateOptimalSwitchPoint(nextLevel: Level, bufferInfo: BufferInfo, levelDetails: LevelDetails | undefined, type: PlaylistLevelType): {
+        fetchdelay: number;
+        okToFlushForwardBuffer: boolean;
+    };
+    // (undocumented)
+    protected checkFragmentChanged(type?: PlaylistLevelType): void;
     // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
     protected checkRetryDate(): void;
+    protected cleanupBackBuffer(): void;
     // (undocumented)
     protected clearTrackerIfNeeded(frag: Fragment): void;
     // (undocumented)
     protected config: HlsConfig;
+    // (undocumented)
+    protected couldBacktrack: boolean;
     // (undocumented)
     protected decrypter: Decrypter;
     // (undocumented)
@@ -411,6 +437,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected flushBufferGap(frag: Fragment): void;
     // (undocumented)
     protected flushMainBuffer(startOffset: number, endOffset: number, type?: SourceBufferName | null): void;
+    protected followingBufferedFrag(frag: Fragment | null, type?: PlaylistLevelType): Fragment | null;
     // (undocumented)
     protected fragBufferedComplete(frag: Fragment, part: Part | null): void;
     // (undocumented)
@@ -422,9 +449,12 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected fragmentTracker: FragmentTracker;
     // (undocumented)
+    protected fragPlaying: Fragment | null;
+    // (undocumented)
     protected fragPrevious: MediaFragment | null;
     // (undocumented)
     protected getAppendedFrag(position: number, playlistType?: PlaylistLevelType): Fragment | null;
+    protected getBufferedFrag(position: number, type?: PlaylistLevelType): Fragment | null;
     // (undocumented)
     protected getCurrentContext(chunkMeta: ChunkMetadata): {
         frag: MediaFragment;
@@ -443,6 +473,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     getLevelDetails(): LevelDetails | undefined;
     // (undocumented)
     protected getLoadPosition(): number;
+    // (undocumented)
+    getMainFwdBufferInfo(): BufferInfo | null;
     // (undocumented)
     protected getMaxBufferLength(levelBitrate?: number): number;
     // (undocumented)
@@ -486,7 +518,10 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected mediaBuffer: Bufferable | null;
     // (undocumented)
+    nextLevelSwitch(type: PlaylistLevelType): void;
+    // (undocumented)
     protected nextLoadPosition: number;
+    nextTrackSwitch(): void;
     // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
     // (undocumented)
@@ -539,6 +574,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     resumeBuffering(): void;
     // (undocumented)
     protected retryDate: number;
+    protected scheduleTrackSwitch(bufferInfo: BufferInfo, fetchdelay: number, okToFlushForwardBuffer: boolean, type: PlaylistLevelType): void;
     // (undocumented)
     protected setStartPosition(details: LevelDetails, sliding: number): void;
     // (undocumented)
@@ -2116,6 +2152,9 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     static get MetadataSchema(): typeof MetadataSchema;
     get minAutoLevel(): number;
+    get nextAudioTrack(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "nextAudioTrack" must appear on the getter, not the setter.
+    set nextAudioTrack(audioTrackId: number);
     get nextAutoLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "nextAutoLevel" must appear on the getter, not the setter.
     set nextAutoLevel(nextLevel: number);
@@ -4539,6 +4578,8 @@ export interface SteeringManifestLoadedData {
 export class StreamController extends BaseStreamController implements NetworkComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader);
     // (undocumented)
+    protected abortCurrentFrag(): void;
+    // (undocumented)
     get currentFrag(): Fragment | null;
     // (undocumented)
     get currentLevel(): number;
@@ -4551,8 +4592,6 @@ export class StreamController extends BaseStreamController implements NetworkCom
     // (undocumented)
     get forceStartLoad(): boolean;
     // (undocumented)
-    getMainFwdBufferInfo(): BufferInfo | null;
-    // (undocumented)
     protected _handleFragmentLoadProgress(data: FragLoadedData): void;
     // (undocumented)
     get hasEnoughToStart(): boolean;
@@ -4563,7 +4602,7 @@ export class StreamController extends BaseStreamController implements NetworkCom
     // (undocumented)
     get maxBufferLength(): number;
     // (undocumented)
-    get nextBufferedFrag(): MediaFragment | null;
+    get nextBufferedFrag(): Fragment | null;
     // (undocumented)
     get nextLevel(): number;
     nextLevelSwitch(): void;
