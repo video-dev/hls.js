@@ -91,7 +91,6 @@ export function parseWebVTT(
   // Convert byteArray into string, replacing any somewhat exotic linefeeds with "\n", then split on that character.
   // Uint8Array.prototype.reduce is not implemented in IE11
   const vttLines = utf8ArrayToStr(new Uint8Array(vttByteArray))
-    .trim()
     .replace(LINEBREAKS, '\n')
     .split('\n');
   const cues: VTTCue[] = [];
@@ -140,14 +139,14 @@ export function parseWebVTT(
     cue.endTime = Math.max(startTime + duration, 0);
 
     //trim trailing webvtt block whitespaces
-    const text = cue.text.trim();
+    const text = cue.text;
 
     // Fix encoding of special characters
     cue.text = decodeURIComponent(encodeURIComponent(text));
 
     // If the cue was not assigned an id from the VTT file (line above the content), create one.
     if (!cue.id) {
-      cue.id = generateCueId(cue.startTime, cue.endTime, text);
+      cue.id = generateCueId(cue.startTime, cue.endTime, text.trim());
     }
 
     if (cue.endTime > 0) {
