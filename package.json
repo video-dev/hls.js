@@ -77,7 +77,7 @@
     "@microsoft/api-documenter": "7.26.32",
     "@microsoft/api-extractor": "7.52.11",
     "@rollup/plugin-alias": "5.1.1",
-    "@rollup/plugin-babel": "6.0.4",
+    "@rollup/plugin-babel": "6.1.0",
     "@rollup/plugin-commonjs": "28.0.8",
     "@rollup/plugin-node-resolve": "16.0.3",
     "@rollup/plugin-replace": "6.0.2",
