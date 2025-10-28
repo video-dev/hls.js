@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { Events } from '../../../src/events';
@@ -17,8 +17,7 @@ import type {
   MediaPlaylist,
 } from '../../../src/types/media-playlist';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 function levelDetailsWithDuration(duration: number) {
   const details = new LevelDetails('');

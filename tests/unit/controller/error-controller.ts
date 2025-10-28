@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import { fakeServer } from 'nise';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
@@ -12,8 +12,7 @@ import type {
   LevelSwitchingData,
 } from '../../../src/types/events';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 describe('ErrorController Integration Tests', function () {
   let server: sinon.SinonFakeServer;

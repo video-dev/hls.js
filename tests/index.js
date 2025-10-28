@@ -1,4 +1,6 @@
 import 'promise-polyfill/src/polyfill';
+// Setup global chai for karma-sinon-chai compatibility
+import * as chai from 'chai';
 import './unit/hls';
 import './unit/events';
 import './unit/controller/abr-controller';
@@ -53,3 +55,5 @@ import './unit/utils/texttrack-utils';
 import './unit/utils/vttparser';
 import './unit/utils/utf8';
 import './unit/demuxer/transmuxer';
+// eslint-disable-next-line no-restricted-globals
+window.chai = chai;

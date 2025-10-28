@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import LevelController from '../../../src/controller/level-controller';
@@ -14,8 +14,7 @@ import type {
   PlaylistLoaderContext,
 } from '../../../src/types/loader';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 describe('PlaylistLoader tests', function () {
   const sandbox = sinon.createSandbox();

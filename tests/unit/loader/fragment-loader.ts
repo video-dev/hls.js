@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig, mergeConfig } from '../../../src/config';
@@ -11,8 +11,7 @@ import { PlaylistLevelType } from '../../../src/types/loader';
 import { logger } from '../../../src/utils/logger';
 import { MockXhr } from '../../mocks/loader.mock';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 describe('FragmentLoader tests', function () {
   let fragmentLoader: FragmentLoader;
