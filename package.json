@@ -75,7 +75,7 @@
     "@babel/preset-typescript": "7.27.1",
     "@babel/register": "7.28.3",
     "@microsoft/api-documenter": "7.26.32",
-    "@microsoft/api-extractor": "7.52.11",
+    "@microsoft/api-extractor": "7.53.1",
     "@rollup/plugin-alias": "5.1.1",
     "@rollup/plugin-babel": "6.1.0",
     "@rollup/plugin-commonjs": "28.0.8",
