@@ -812,6 +812,7 @@ export default class BaseStreamController
       0,
       part ? part.index : -1,
       !complete,
+      complete ? fragLoadedEndData.frag.duration : null,
     );
     transmuxer.flush(chunkMeta);
   }
