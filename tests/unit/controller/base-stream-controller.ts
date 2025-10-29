@@ -2,13 +2,16 @@ import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
-import BaseStreamController from '../../../src/controller/stream-controller';
+import { State } from '../../../src/controller/base-stream-controller';
+import BaseStreamControllerImpl from '../../../src/controller/stream-controller';
 import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
 import KeyLoader from '../../../src/loader/key-loader';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { PlaylistLevelType } from '../../../src/types/loader';
+import { BufferHelper } from '../../../src/utils/buffer-helper';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
+import type BaseStreamController from '../../../src/controller/base-stream-controller';
 import type { MediaFragment, Part } from '../../../src/loader/fragment';
 import type { BufferInfo } from '../../../src/utils/buffer-helper';
 
@@ -27,6 +30,12 @@ type BaseStreamControllerTestable = Omit<
   | 'config'
   | 'getFwdBufferInfoAtPos'
   | 'isFragmentNearlyDownloaded'
+  | 'state'
+  | 'nextLoadPosition'
+  | 'startPosition'
+  | 'fragPrevious'
+  | 'tickImmediate'
+  | 'hls'
 > & {
   media: HTMLMediaElement | null;
   _streamEnded: (bufferInfo: BufferInfo, levelDetails: LevelDetails) => boolean;
@@ -43,6 +52,12 @@ type BaseStreamControllerTestable = Omit<
     maxBufferHole: number,
   ) => BufferInfo | null;
   isFragmentNearlyDownloaded: (fragment: MediaFragment) => boolean;
+  state: (typeof State)[keyof typeof State];
+  nextLoadPosition: number;
+  startPosition: number;
+  fragPrevious: MediaFragment | null;
+  tickImmediate: () => void;
+  hls: Hls;
 };
 
 describe('BaseStreamController', function () {
@@ -61,11 +76,9 @@ describe('BaseStreamController', function () {
       isEndListAppended() {
         return true;
       },
-      removeFragmentsInRange() {
-        // Mock implementation for removeFragmentsInRange
-      },
+      removeFragmentsInRange: sinon.spy(),
     };
-    baseStreamController = new BaseStreamController(
+    baseStreamController = new BaseStreamControllerImpl(
       hls,
       fragmentTracker,
       new KeyLoader(hlsDefaultConfig, hls.logger),
@@ -183,11 +196,141 @@ describe('BaseStreamController', function () {
         // Verify lastCurrentTime remains the same
         expect(baseStreamController.lastCurrentTime).to.equal(10.5);
       });
+
+      it('should reset loading state when in ENDED state', function () {
+        const resetSpy = sinon.spy(
+          baseStreamController,
+          'resetLoadingState' as any,
+        );
+        baseStreamController.state = State.ENDED;
+        baseStreamController.lastCurrentTime = 10.0;
+        media.currentTime = 15.0;
+
+        baseStreamController.onMediaSeeking();
+
+        expect(resetSpy).to.have.been.calledOnce;
+        resetSpy.restore();
+      });
+
+      it('should call fragmentTracker.removeFragmentsInRange when media exists', function () {
+        baseStreamController.lastCurrentTime = 5.0;
+        media.currentTime = 10.0;
+
+        baseStreamController.onMediaSeeking();
+
+        expect(fragmentTracker.removeFragmentsInRange).to.have.been.calledWith(
+          10.0,
+          Infinity,
+          PlaylistLevelType.MAIN,
+          true,
+        );
+      });
+
+      it('should set nextLoadPosition and startPosition when no buffer exists and hasEnoughToStart is false', function () {
+        // Mock hasEnoughToStart to return false and isBuffered to return false
+        const hasEnoughToStartStub = sinon.stub(
+          baseStreamController.hls,
+          'hasEnoughToStart',
+        );
+        hasEnoughToStartStub.get(() => false);
+        const isBufferedStub = sinon
+          .stub(BufferHelper, 'isBuffered')
+          .returns(false);
+        baseStreamController.lastCurrentTime = 0;
+        media.currentTime = 20.0;
+        media.buffered = new TimeRangesMock(); // Empty buffer
+
+        baseStreamController.onMediaSeeking();
+
+        expect(baseStreamController.nextLoadPosition).to.equal(20.0);
+        expect(baseStreamController.startPosition).to.equal(20.0);
+
+        hasEnoughToStartStub.restore();
+        isBufferedStub.restore();
+      });
+
+      it('should only set nextLoadPosition when forward buffer exists but position not buffered', function () {
+        const hasEnoughToStartStub = sinon.stub(
+          baseStreamController.hls,
+          'hasEnoughToStart',
+        );
+        hasEnoughToStartStub.get(() => false);
+        const isBufferedStub = sinon
+          .stub(BufferHelper, 'isBuffered')
+          .returns(false);
+        // Setup buffer that extends forward from a position before currentTime
+        // currentTime at 15.0, buffer from 0-10 means there's forward buffer info calculated
+        // but we need bufferInfo.len > 0 which means there's forward buffer from currentTime
+        // Actually, if currentTime=15 and buffer is [0,10], bufferInfo at 15 would have len=0
+        // Let me position currentTime at 5 where there IS forward buffer (buffer extends to 10)
+        const originalStartPos = baseStreamController.startPosition;
+        media.buffered = new TimeRangesMock([0, 10]);
+        baseStreamController.lastCurrentTime = 0;
+        media.currentTime = 5.0; // Positioned within buffer range, but seeking forward
+
+        baseStreamController.onMediaSeeking();
+
+        expect(baseStreamController.nextLoadPosition).to.equal(5.0);
+        // startPosition should remain at original value since noFowardBuffer is false
+        expect(baseStreamController.startPosition).to.equal(originalStartPos);
+
+        hasEnoughToStartStub.restore();
+        isBufferedStub.restore();
+      });
+
+      it('should call tickImmediate when no forward buffer and state is IDLE', function () {
+        const tickImmediateSpy = sinon.spy(
+          baseStreamController,
+          'tickImmediate' as any,
+        );
+        baseStreamController.state = State.IDLE;
+        media.buffered = new TimeRangesMock(); // Empty buffer
+        baseStreamController.lastCurrentTime = 0;
+        media.currentTime = 5.0;
+
+        baseStreamController.onMediaSeeking();
+
+        expect(tickImmediateSpy).to.have.been.calledOnce;
+        tickImmediateSpy.restore();
+      });
+
+      it('should not call tickImmediate when forward buffer exists even if state is IDLE', function () {
+        const tickImmediateSpy = sinon.spy(
+          baseStreamController,
+          'tickImmediate' as any,
+        );
+        baseStreamController.state = State.IDLE;
+        // Setup buffer with forward range
+        media.buffered = new TimeRangesMock([0, 10]);
+        baseStreamController.lastCurrentTime = 0;
+        media.currentTime = 5.0;
+
+        baseStreamController.onMediaSeeking();
+
+        expect(tickImmediateSpy).to.not.have.been.called;
+        tickImmediateSpy.restore();
+      });
+
+      it('should not call tickImmediate when no forward buffer but state is not IDLE', function () {
+        const tickImmediateSpy = sinon.spy(
+          baseStreamController,
+          'tickImmediate' as any,
+        );
+        baseStreamController.state = State.FRAG_LOADING;
+        media.buffered = new TimeRangesMock(); // Empty buffer
+        baseStreamController.lastCurrentTime = 0;
+        media.currentTime = 5.0;
+
+        baseStreamController.onMediaSeeking();
+
+        expect(tickImmediateSpy).to.not.have.been.called;
+        tickImmediateSpy.restore();
+      });
     });
 
     describe('Fragment Cancellation Logic', function () {
       let mockFragment: MediaFragment;
-      let abortSpy: sinon.SinonSpy;
+      let resetSpy: sinon.SinonSpy;
 
       beforeEach(function () {
         mockFragment = new Fragment(
@@ -195,6 +338,7 @@ describe('BaseStreamController', function () {
           'http://example.com/segment.ts',
         ) as MediaFragment;
         mockFragment.sn = 1;
+        mockFragment.duration = 5;
         Object.defineProperty(mockFragment, 'start', {
           value: 10,
           writable: true,
@@ -204,49 +348,192 @@ describe('BaseStreamController', function () {
           writable: true,
         });
 
-        abortSpy = sinon.spy();
-        mockFragment.abortRequests = abortSpy;
+        // Create fresh abort function each time
+        mockFragment.abortRequests = sinon.spy();
         mockFragment.loader = { abort: sinon.spy() } as any;
 
         baseStreamController.fragCurrent = mockFragment;
+        baseStreamController.config.maxFragLookUpTolerance = 0.1;
+
+        resetSpy = sinon.spy(baseStreamController, 'resetLoadingState' as any);
       });
 
-      it('should have a fragment available for testing', function () {
-        expect(baseStreamController.fragCurrent).to.not.be.null;
-        expect(baseStreamController.fragCurrent?.sn).to.equal(1);
+      afterEach(function () {
+        resetSpy.restore();
       });
 
-      it('should handle fragment cancellation logic properly', function () {
-        // Verify that the onMediaSeeking method can be called without error
-        expect(typeof baseStreamController.onMediaSeeking).to.equal('function');
-        expect(typeof baseStreamController.isFragmentNearlyDownloaded).to.equal(
-          'function',
-        );
-
-        // Setup fragment with loader
+      it('should abort fragment when seeking forward past fragment and fragment is not nearly downloaded', function () {
+        baseStreamController.lastCurrentTime = 12.0;
+        media.currentTime = 18.0; // Past fragment end (15 + tolerance)
+        // Setup fragment with loader but not nearly downloaded
+        // For 1Mbps, need > 150k bits remaining to exceed 0.15s threshold
         mockFragment.loader = {
-          abort: sinon.spy(),
+          stats: {
+            loading: { first: 100 },
+            total: 1000000,
+            loaded: 100000, // 900k bits remaining, will take 0.9s > 0.15s
+          },
+        } as any;
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000; // 1Mbps
+        baseStreamController.hls.bandwidthEstimate = NaN; // Use default
+        // Setup buffer info to indicate seeking out of range
+        media.buffered = new TimeRangesMock([0, 5]); // Buffer before fragment
+
+        baseStreamController.onMediaSeeking();
+
+        expect(mockFragment.abortRequests).to.have.been.calledOnce;
+        expect(resetSpy).to.have.been.calledOnce;
+      });
+
+      it('should abort fragment when seeking forward past fragment even if fragment is nearly downloaded', function () {
+        baseStreamController.lastCurrentTime = 12.0;
+        media.currentTime = 18.0; // Past fragment end
+        // Setup fragment with loader that IS nearly downloaded
+        // However, according to current logic, forward seeks past fragment always abort
+        // because the condition is: (pastFragment || !isFragmentNearlyDownloaded)
+        // When pastFragment is true, it always aborts regardless of nearlyDownloaded
+        mockFragment.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000, // 1MB
+            loaded: 998000, // 2000 bytes remaining - nearly downloaded
+          },
+        } as any;
+        baseStreamController.config.abrEwmaDefaultEstimate = 10000000; // 10Mbps
+        baseStreamController.hls.bandwidthEstimate = NaN;
+        // Setup buffer info to indicate seeking out of range
+        media.buffered = new TimeRangesMock([0, 5]); // Buffer before fragment
+
+        baseStreamController.onMediaSeeking();
+
+        // Forward seek past fragment always aborts, even if nearly downloaded
+        expect(mockFragment.abortRequests).to.have.been.calledOnce;
+        expect(resetSpy).to.have.been.calledOnce;
+      });
+
+      it('should NOT abort fragment when seeking backward before fragment if nearly downloaded', function () {
+        baseStreamController.lastCurrentTime = 20.0;
+        media.currentTime = 5.0; // Before fragment start (10 - tolerance)
+        // Setup fragment with loader that IS nearly downloaded
+        // For backward seeks, the condition is (pastFragment || !isFragmentNearlyDownloaded)
+        // Since pastFragment = false for backward seeks, it only aborts if !isFragmentNearlyDownloaded
+        // So if nearly downloaded, it should NOT abort
+        mockFragment.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000,
+            loaded: 900000, // Nearly complete (100k bits remaining = 0.1s < 0.15s)
+          },
+        } as any;
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000;
+        baseStreamController.hls.bandwidthEstimate = NaN;
+        // Setup buffer info
+        media.buffered = new TimeRangesMock([0, 3]); // Buffer before fragment
+
+        baseStreamController.onMediaSeeking();
+
+        // For backward seeks with nearly downloaded fragment, should NOT abort
+        expect(mockFragment.abortRequests).to.not.have.been.called;
+        expect(resetSpy).to.not.have.been.called;
+      });
+
+      it('should abort fragment when seeking backward before fragment and not nearly downloaded', function () {
+        baseStreamController.lastCurrentTime = 20.0;
+        media.currentTime = 5.0; // Before fragment start
+        // Setup fragment with loader but not nearly downloaded
+        mockFragment.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000,
+            loaded: 100000, // Not nearly downloaded
+          },
+        } as any;
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000;
+        baseStreamController.hls.bandwidthEstimate = NaN;
+        media.buffered = new TimeRangesMock([0, 3]);
+
+        baseStreamController.onMediaSeeking();
+
+        expect(mockFragment.abortRequests).to.have.been.calledOnce;
+        expect(resetSpy).to.have.been.calledOnce;
+      });
+
+      it('should clear fragPrevious when seeking outside fragment range', function () {
+        const previousFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/prev.ts',
+        ) as MediaFragment;
+        baseStreamController.fragPrevious = previousFrag;
+        baseStreamController.lastCurrentTime = 12.0;
+        media.currentTime = 18.0; // Past fragment end
+        mockFragment.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000,
+            loaded: 500000,
+          },
+        } as any;
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000;
+        baseStreamController.hls.bandwidthEstimate = NaN;
+        media.buffered = new TimeRangesMock([0, 5]);
+
+        baseStreamController.onMediaSeeking();
+
+        expect(baseStreamController.fragPrevious).to.be.null;
+      });
+
+      it('should not abort fragment when seeking within fragment range', function () {
+        baseStreamController.lastCurrentTime = 10.0;
+        media.currentTime = 12.0; // Within fragment range (10-15)
+        // Setup buffer info showing we're in buffer
+        media.buffered = new TimeRangesMock([10, 15]);
+        mockFragment.loader = {
           stats: {
             loading: { first: 100 },
             total: 1000,
-            loaded: 900,
+            loaded: 500,
           },
         } as any;
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000;
+        baseStreamController.hls.bandwidthEstimate = NaN;
 
-        // Call onMediaSeeking - should not throw
-        expect(() => baseStreamController.onMediaSeeking()).to.not.throw();
+        baseStreamController.onMediaSeeking();
+
+        expect(mockFragment.abortRequests).to.not.have.been.called;
+        expect(resetSpy).to.not.have.been.called;
       });
 
-      it('should handle forward seek properly', function () {
-        // Setup forward seek
+      it('should not abort fragment when fragment has no loader', function () {
         baseStreamController.lastCurrentTime = 12.0;
-        media.currentTime = 18.0; // After fragment end (15)
+        media.currentTime = 18.0; // Past fragment end
+        mockFragment.loader = null;
+        media.buffered = new TimeRangesMock([0, 5]);
 
-        // Call onMediaSeeking - should execute without error
-        expect(() => baseStreamController.onMediaSeeking()).to.not.throw();
+        baseStreamController.onMediaSeeking();
 
-        // Verify lastCurrentTime is updated for forward seek
-        expect(baseStreamController.lastCurrentTime).to.equal(18.0);
+        expect(mockFragment.abortRequests).to.not.have.been.called;
+        expect(resetSpy).to.not.have.been.called;
+      });
+
+      it('should not abort when fragment is in buffered range', function () {
+        baseStreamController.lastCurrentTime = 8.0;
+        media.currentTime = 13.0; // Within fragment but out of buffered range initially
+        // But buffer extends into fragment range
+        media.buffered = new TimeRangesMock([10, 14]); // Overlaps with fragment
+        mockFragment.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000,
+            loaded: 500000,
+          },
+        } as any;
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000;
+        baseStreamController.hls.bandwidthEstimate = NaN;
+
+        baseStreamController.onMediaSeeking();
+
+        // Should not abort because fragment is in buffered range
+        expect(mockFragment.abortRequests).to.not.have.been.called;
       });
     });
 
@@ -412,6 +699,178 @@ describe('BaseStreamController', function () {
 
         // Mock low bandwidth estimate
         baseStreamController.config.abrEwmaDefaultEstimate = 100000; // 100Kbps
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        expect(result).to.be.false;
+      });
+
+      it('should return true when time to complete is exactly 0.15 seconds', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        // The code treats bandwidth as bytes/sec for this calculation (despite being labeled as bps in config)
+        // For 1Mbps = 1,000,000 bits/s = 125,000 bytes/s
+        // To complete in 0.15s: need 0.15 * 125,000 = 18,750 bytes
+        // So: total = 1,000,000 bytes, loaded = 981,250 bytes, remaining = 18,750 bytes
+        mockFrag.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000, // 1MB in bytes
+            loaded: 981250, // 18,750 bytes remaining
+          },
+        } as any;
+
+        // Set bandwidth to bytes/sec: 1Mbps = 125,000 bytes/s
+        baseStreamController.config.abrEwmaDefaultEstimate = 125000; // 1Mbps in bytes/sec
+        baseStreamController.hls.bandwidthEstimate = NaN; // Use default
+        // Time = 18,750 / 125,000 = 0.15s
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        expect(result).to.be.true;
+      });
+
+      it('should return false when time to complete is just above 0.15 seconds', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        // The code treats bandwidth as bytes/sec for this calculation (despite being labeled as bps in config)
+        // For 1Mbps = 1,000,000 bits/s = 125,000 bytes/s
+        // To exceed 0.15s: need > 0.15 * 125,000 = > 18,750 bytes
+        // So: total = 1,000,000 bytes, loaded = 981,249 bytes, remaining = 18,751 bytes
+        mockFrag.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000, // 1MB in bytes
+            loaded: 981249, // 18,751 bytes remaining
+          },
+        } as any;
+
+        // Set bandwidth to bytes/sec: 1Mbps = 125,000 bytes/s
+        baseStreamController.config.abrEwmaDefaultEstimate = 125000; // 1Mbps in bytes/sec
+        baseStreamController.hls.bandwidthEstimate = NaN; // Use default
+        // Time = 18,751 / 125,000 = 0.150008s (> 0.15)
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        expect(result).to.be.false;
+      });
+
+      it('should use hls.bandwidthEstimate when finite', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        // Set up to complete in 0.10 seconds with bandwidthEstimate
+        // The code treats bandwidth as bytes/sec: 2Mbps = 250,000 bytes/s
+        // To complete in 0.10s: need 0.10 * 250,000 = 25,000 bytes
+        mockFrag.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000, // 1MB in bytes
+            loaded: 975000, // 25,000 bytes remaining = 0.10s at 2Mbps (250k bytes/s)
+          },
+        } as any;
+
+        baseStreamController.hls.bandwidthEstimate = 250000; // 2Mbps in bytes/sec
+        baseStreamController.config.abrEwmaDefaultEstimate = 125000; // 1Mbps in bytes/sec (should not be used)
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        // With 2Mbps: 25,000 / 250,000 = 0.10s (< 0.15) -> true
+        expect(result).to.be.true;
+      });
+
+      it('should use config.abrEwmaDefaultEstimate when bandwidthEstimate is not finite', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        // Set up to complete in 0.10 seconds with default estimate
+        // The code treats bandwidth as bytes/sec: 1Mbps = 125,000 bytes/s
+        // To complete in 0.10s: need 0.10 * 125,000 = 12,500 bytes
+        mockFrag.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000, // 1MB in bytes
+            loaded: 987500, // 12,500 bytes remaining = 0.10s at 1Mbps (125k bytes/s)
+          },
+        } as any;
+
+        baseStreamController.hls.bandwidthEstimate = Infinity; // Not finite
+        baseStreamController.config.abrEwmaDefaultEstimate = 125000; // 1Mbps in bytes/sec (should be used)
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        // With 1Mbps default: 12,500 / 125,000 = 0.10s (< 0.15) -> true
+        expect(result).to.be.true;
+      });
+
+      it('should return true when fragment is already complete (bitsRemaining is 0)', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        mockFrag.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000,
+            loaded: 1000, // Completely downloaded
+          },
+        } as any;
+
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000;
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        // Time = 0 / bandwidth = 0 seconds (< 0.15) -> true
+        expect(result).to.be.true;
+      });
+
+      it('should handle NaN bandwidthEstimate by using default', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        // Set up to complete in 0.10 seconds with default estimate
+        // The code treats bandwidth as bytes/sec: 1Mbps = 125,000 bytes/s
+        // To complete in 0.10s: need 0.10 * 125,000 = 12,500 bytes
+        mockFrag.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000, // 1MB in bytes
+            loaded: 987500, // 12,500 bytes remaining = 0.10s at 1Mbps (125k bytes/s)
+          },
+        } as any;
+
+        baseStreamController.hls.bandwidthEstimate = NaN; // Not finite
+        baseStreamController.config.abrEwmaDefaultEstimate = 125000; // 1Mbps in bytes/sec (should be used)
+
+        const result =
+          baseStreamController.isFragmentNearlyDownloaded(mockFrag);
+        // With 1Mbps default: 12,500 / 125,000 = 0.10s (< 0.15) -> true
+        expect(result).to.be.true;
+      });
+
+      it('should return false when hasFirstByte but time exceeds 0.15 seconds', function () {
+        const mockFrag = new Fragment(
+          PlaylistLevelType.MAIN,
+          'http://example.com/segment.ts',
+        ) as MediaFragment;
+        // Very low bandwidth, large remaining
+        mockFrag.loader = {
+          stats: {
+            loading: { first: 100 },
+            total: 1000000,
+            loaded: 10000, // 990000 bits remaining
+          },
+        } as any;
+
+        baseStreamController.config.abrEwmaDefaultEstimate = 100000; // 100Kbps (low)
+        // Time = 990000 / 100000 = 9.9 seconds (> 0.15)
 
         const result =
           baseStreamController.isFragmentNearlyDownloaded(mockFrag);
