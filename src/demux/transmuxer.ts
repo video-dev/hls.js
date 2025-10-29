@@ -374,7 +374,7 @@ export default class Transmuxer {
     chunkMeta: ChunkMetadata,
   ): TransmuxerResult | Promise<TransmuxerResult> {
     let result: TransmuxerResult | Promise<TransmuxerResult>;
-    if (keyData && keyData.method === 'SAMPLE-AES') {
+    if (keyData?.method === 'SAMPLE-AES') {
       result = this.transmuxSampleAes(
         data,
         keyData,

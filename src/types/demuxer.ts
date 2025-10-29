@@ -53,7 +53,7 @@ export interface DemuxedTrack {
 
 export interface PassthroughTrack extends DemuxedTrack {
   sampleDuration: number;
-  samples: Uint8Array;
+  samples: Uint8Array<ArrayBuffer>;
   timescale: number;
   duration: number;
   codec: string;

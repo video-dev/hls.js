@@ -204,7 +204,10 @@ class SubtitleTrackController extends BasePlaylistController {
     const { id, groupId, details } = data;
     const trackInActiveGroup = this.tracksInGroup[id];
 
-    if (!trackInActiveGroup || trackInActiveGroup.groupId !== groupId) {
+    if (
+      !trackInActiveGroup ||
+      trackInActiveGroup.groupId !== (groupId as string | undefined)
+    ) {
       this.warn(
         `Subtitle track with id:${id} and group:${groupId} not found in active group ${trackInActiveGroup?.groupId}`,
       );

@@ -556,10 +556,10 @@ export function getFragmentWithSN(
     return fragment;
   }
   fragment = details.fragmentHint;
-  if (fragment && fragment.sn === sn) {
+  if (fragment?.sn === sn) {
     return fragment;
   }
-  if (sn < details.startSN && fragCurrent && fragCurrent.sn === sn) {
+  if (fragCurrent && sn < details.startSN && fragCurrent.sn === sn) {
     return fragCurrent as MediaFragment;
   }
   return null;

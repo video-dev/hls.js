@@ -8,5 +8,5 @@ export interface TrackSet {
 
 export interface Track extends BaseTrack {
   buffer?: SourceBuffer; // eslint-disable-line no-restricted-globals
-  initSegment?: Uint8Array;
+  initSegment?: Uint8Array<ArrayBuffer>;
 }

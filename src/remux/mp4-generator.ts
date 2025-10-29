@@ -416,7 +416,7 @@ class MP4 {
 
   static moov(tracks: MediaTrackType[]) {
     let i = tracks.length;
-    const boxes: Uint8Array[] = [];
+    const boxes: Uint8Array<ArrayBuffer>[] = [];
 
     while (i--) {
       boxes[i] = MP4.trak(tracks[i]);

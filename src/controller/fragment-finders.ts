@@ -113,8 +113,7 @@ function fragmentWithinFastStartSwitch(
   nextFragLookupTolerance: number,
 ): boolean {
   if (
-    fragPrevious &&
-    fragPrevious.start === 0 &&
+    fragPrevious?.start === 0 &&
     fragPrevious.level < fragNext.level &&
     (fragPrevious.endPTS || 0) > 0
   ) {

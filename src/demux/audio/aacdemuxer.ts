@@ -87,7 +87,7 @@ class AACDemuxer extends BaseAudioDemuxer {
       this.basePTS as number,
       this.frameIndex,
     );
-    if (frame && frame.missing === 0) {
+    if (frame?.missing === 0) {
       return frame;
     }
   }

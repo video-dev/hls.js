@@ -2,10 +2,14 @@ import { DecrypterAesMode } from './decrypter-aes-mode';
 
 export default class AESCrypto {
   private subtle: SubtleCrypto;
-  private aesIV: Uint8Array;
+  private aesIV: Uint8Array<ArrayBuffer>;
   private aesMode: DecrypterAesMode;
 
-  constructor(subtle: SubtleCrypto, iv: Uint8Array, aesMode: DecrypterAesMode) {
+  constructor(
+    subtle: SubtleCrypto,
+    iv: Uint8Array<ArrayBuffer>,
+    aesMode: DecrypterAesMode,
+  ) {
     this.subtle = subtle;
     this.aesIV = iv;
     this.aesMode = aesMode;
