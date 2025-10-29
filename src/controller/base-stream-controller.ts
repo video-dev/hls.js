@@ -347,7 +347,7 @@ export default class BaseStreamController
     const currentTime: number = media ? media.currentTime : 0;
     const backwardSeek = currentTime < this.lastCurrentTime;
     const bufferInfo = BufferHelper.bufferInfo(
-      mediaBuffer ? mediaBuffer : media,
+      backwardSeek ? media : (mediaBuffer ?? media),
       currentTime,
       backwardSeek ? 0 : config.maxBufferHole,
     );
@@ -426,9 +426,12 @@ export default class BaseStreamController
     }
 
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
-    if (!this.hls.hasEnoughToStart) {
+    if (!this.hls.hasEnoughToStart || noFowardBuffer) {
       this.log(
-        `Setting ${noFowardBuffer ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to start`,
+        `Setting ${noFowardBuffer ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to ` +
+          !noFowardBuffer
+          ? 'start'
+          : 'continue',
       );
       this.nextLoadPosition = currentTime;
       if (noFowardBuffer) {
