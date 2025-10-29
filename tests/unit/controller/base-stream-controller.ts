@@ -249,33 +249,31 @@ describe('BaseStreamController', function () {
         isBufferedStub.restore();
       });
 
-      it('should only set nextLoadPosition when forward buffer exists but position not buffered', function () {
+      it('should only set nextLoadPosition when position is buffered but hasEnoughToStart is false', function () {
         const hasEnoughToStartStub = sinon.stub(
           baseStreamController.hls,
           'hasEnoughToStart',
         );
         hasEnoughToStartStub.get(() => false);
-        const isBufferedStub = sinon
-          .stub(BufferHelper, 'isBuffered')
-          .returns(false);
+        // Don't stub isBuffered - let it return true since position 5.0 is within [0, 10]
         // Setup buffer that extends forward from a position before currentTime
         // currentTime at 15.0, buffer from 0-10 means there's forward buffer info calculated
         // but we need bufferInfo.len > 0 which means there's forward buffer from currentTime
         // Actually, if currentTime=15 and buffer is [0,10], bufferInfo at 15 would have len=0
         // Let me position currentTime at 5 where there IS forward buffer (buffer extends to 10)
+        // and position IS buffered, so bufferEmpty is false
         const originalStartPos = baseStreamController.startPosition;
         media.buffered = new TimeRangesMock([0, 10]);
         baseStreamController.lastCurrentTime = 0;
-        media.currentTime = 5.0; // Positioned within buffer range, but seeking forward
+        media.currentTime = 5.0; // Positioned within buffer range
 
         baseStreamController.onMediaSeeking();
 
         expect(baseStreamController.nextLoadPosition).to.equal(5.0);
-        // startPosition should remain at original value since noFowardBuffer is false
+        // startPosition should remain at original value since bufferEmpty is false
         expect(baseStreamController.startPosition).to.equal(originalStartPos);
 
         hasEnoughToStartStub.restore();
-        isBufferedStub.restore();
       });
 
       it('should call tickImmediate when no forward buffer and state is IDLE', function () {

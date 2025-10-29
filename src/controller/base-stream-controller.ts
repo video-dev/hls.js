@@ -425,15 +425,13 @@ export default class BaseStreamController
     }
 
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
-    if (
-      !this.hls.hasEnoughToStart ||
-      !BufferHelper.isBuffered(media, currentTime)
-    ) {
+    const bufferEmpty = !BufferHelper.isBuffered(media, currentTime);
+    if (!this.hls.hasEnoughToStart || bufferEmpty) {
       this.log(
-        `Setting ${noFowardBuffer ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to start`,
+        `Setting ${bufferEmpty ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to start`,
       );
       this.nextLoadPosition = currentTime;
-      if (noFowardBuffer) {
+      if (bufferEmpty) {
         this.startPosition = currentTime;
       }
     }
