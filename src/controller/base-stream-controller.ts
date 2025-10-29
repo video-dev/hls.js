@@ -382,7 +382,7 @@ export default class BaseStreamController
             (pastFragment || !this.isFragmentNearlyDownloaded(fragCurrent))
           ) {
             this.log(
-              `Cancelling fragment load for seek (sn: ${fragCurrent.sn}) - ${beforeFragment ? 'backward seek' : 'forward seek'}`,
+              `Cancelling fragment load for seek (sn: ${fragCurrent.sn}) - ${beforeFragment ? 'backward' : 'forward'} seek`,
             );
             fragCurrent.abortRequests();
             this.resetLoadingState();
