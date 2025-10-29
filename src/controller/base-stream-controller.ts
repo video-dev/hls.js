@@ -2229,9 +2229,7 @@ export default class BaseStreamController
     const bitsRemaining = stats.total - stats.loaded;
     const timeToCompleteFragDownload =
       bitsRemaining /
-      (isFinite(this.hls.bandwidthEstimate)
-        ? this.hls.bandwidthEstimate
-        : this.hls.config.abrEwmaDefaultEstimate);
+      (this.hls.bandwidthEstimate || this.hls.config.abrEwmaDefaultEstimate);
 
     // Fragment is nearly complete if we have first byte and will complete within 150ms
     return hasFirstByte && timeToCompleteFragDownload <= 0.15;
