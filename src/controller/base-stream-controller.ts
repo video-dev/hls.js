@@ -372,12 +372,17 @@ export default class BaseStreamController
         fragEndOffset < bufferInfo.start ||
         fragStartOffset > bufferInfo.end
       ) {
+        const beforeFragment = currentTime < fragStartOffset;
         const pastFragment = currentTime > fragEndOffset;
         // if the seek position is outside the current fragment range
-        if (currentTime < fragStartOffset || pastFragment) {
-          if (pastFragment && fragCurrent.loader) {
+        if (beforeFragment || pastFragment) {
+          // Only abort an active fragment load if the seek is past the fragment or the fragment isn't nearly downloaded
+          if (
+            fragCurrent.loader &&
+            (pastFragment || !this.isFragmentNearlyDownloaded(fragCurrent))
+          ) {
             this.log(
-              `Cancelling fragment load for seek (sn: ${fragCurrent.sn})`,
+              `Cancelling fragment load for seek (sn: ${fragCurrent.sn}) - ${beforeFragment ? 'backward' : 'forward'} seek`,
             );
             fragCurrent.abortRequests();
             this.resetLoadingState();
@@ -420,12 +425,13 @@ export default class BaseStreamController
     }
 
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
-    if (!this.hls.hasEnoughToStart) {
+    const bufferEmpty = !BufferHelper.isBuffered(media, currentTime);
+    if (!this.hls.hasEnoughToStart || bufferEmpty) {
       this.log(
-        `Setting ${noFowardBuffer ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to start`,
+        `Setting ${bufferEmpty ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to start`,
       );
       this.nextLoadPosition = currentTime;
-      if (noFowardBuffer) {
+      if (bufferEmpty) {
         this.startPosition = currentTime;
       }
     }
@@ -2209,6 +2215,22 @@ export default class BaseStreamController
 
   protected resetTransmuxer() {
     this.transmuxer?.reset();
+  }
+
+  private isFragmentNearlyDownloaded(fragment: Fragment): boolean {
+    const stats = fragment.loader?.stats;
+    if (!stats) {
+      return false;
+    }
+
+    const hasFirstByte = stats.loading.first > 0;
+    const bitsRemaining = stats.total - stats.loaded;
+    const timeToCompleteFragDownload =
+      bitsRemaining /
+      (this.hls.bandwidthEstimate || this.hls.config.abrEwmaDefaultEstimate);
+
+    // Fragment is nearly complete if we have first byte and will complete within 150ms
+    return hasFirstByte && timeToCompleteFragDownload <= 0.15;
   }
 
   protected recoverWorkerError(data: ErrorData) {
