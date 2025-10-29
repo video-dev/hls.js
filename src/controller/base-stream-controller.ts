@@ -345,11 +345,10 @@ export default class BaseStreamController
   protected onMediaSeeking = () => {
     const { config, fragCurrent, media, mediaBuffer, state } = this;
     const currentTime: number = media ? media.currentTime : 0;
-    const backwardSeek = currentTime < this.lastCurrentTime;
     const bufferInfo = BufferHelper.bufferInfo(
-      backwardSeek ? media : (mediaBuffer ?? media),
+      mediaBuffer ? mediaBuffer : media,
       currentTime,
-      backwardSeek ? 0 : config.maxBufferHole,
+      config.maxBufferHole,
     );
     const noFowardBuffer = !bufferInfo.len;
 
@@ -426,12 +425,12 @@ export default class BaseStreamController
     }
 
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
-    if (!this.hls.hasEnoughToStart || noFowardBuffer) {
+    if (
+      !this.hls.hasEnoughToStart ||
+      !BufferHelper.isBuffered(media, currentTime)
+    ) {
       this.log(
-        `Setting ${noFowardBuffer ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to ` +
-          !noFowardBuffer
-          ? 'start'
-          : 'continue',
+        `Setting ${noFowardBuffer ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to start`,
       );
       this.nextLoadPosition = currentTime;
       if (noFowardBuffer) {
@@ -1259,8 +1258,7 @@ export default class BaseStreamController
     if (!Number.isFinite(pos)) {
       return null;
     }
-    const backwardSeek =
-      this.lastCurrentTime > (this.media?.currentTime || pos);
+    const backwardSeek = this.lastCurrentTime > pos;
     const maxBufferHole =
       backwardSeek || this.media?.paused ? 0 : this.config.maxBufferHole;
     return this.getFwdBufferInfoAtPos(bufferable, pos, type, maxBufferHole);
