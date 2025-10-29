@@ -966,7 +966,7 @@ class AudioStreamController
       `Init audio buffer, container:${track.container}, codecs[level/parsed]=[${variantAudioCodecs}/${track.codec}]`,
     );
     // SourceBuffer will use track.levelCodec if defined
-    if (variantAudioCodecs && variantAudioCodecs.split(',').length === 1) {
+    if (variantAudioCodecs?.split(',').length === 1) {
       track.levelCodec = variantAudioCodecs;
     }
     this.hls.trigger(Events.BUFFER_CODECS, tracks as BufferCodecsData);

@@ -210,8 +210,8 @@ export default class BufferController extends Logger implements ComponentAPI {
     }
     const transferData = this.transferData;
     if (
-      !this.sourceBufferCount &&
       transferData &&
+      !this.sourceBufferCount &&
       transferData.mediaSource === mediaSource
     ) {
       Object.assign(tracks, transferData.tracks);
@@ -779,7 +779,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (fragBuffering.start === 0) {
       fragBuffering.start = bufferAppendingStart;
     }
-    if (partBuffering && partBuffering.start === 0) {
+    if (partBuffering?.start === 0) {
       partBuffering.start = bufferAppendingStart;
     }
 
@@ -867,7 +867,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         if (fragBuffering.first === 0) {
           fragBuffering.first = end;
         }
-        if (partBuffering && partBuffering.first === 0) {
+        if (partBuffering?.first === 0) {
           partBuffering.first = end;
         }
 
@@ -1086,7 +1086,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.blockUntilOpen(() => {
           this.tracksEnded();
           const { mediaSource } = this;
-          if (!mediaSource || mediaSource.readyState !== 'open') {
+          if (mediaSource?.readyState !== 'open') {
             if (mediaSource) {
               this.log(
                 `Could not call mediaSource.endOfStream(). mediaSource.readyState: ${mediaSource.readyState}`,
@@ -1342,7 +1342,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     end?: number;
   }) {
     const mediaSource = this.mediaSource;
-    if (!this.media || !mediaSource || mediaSource.readyState !== 'open') {
+    if (!mediaSource || !this.media || mediaSource.readyState !== 'open') {
       return;
     }
     if (mediaSource.duration !== duration) {

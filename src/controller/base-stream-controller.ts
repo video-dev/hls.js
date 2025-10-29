@@ -1879,7 +1879,7 @@ export default class BaseStreamController
     }
     const frag = data.frag;
     // Handle frag error related to caller's filterType
-    if (!frag || frag.type !== filterType || !this.levels) {
+    if (!frag || !this.levels || frag.type !== filterType) {
       return;
     }
     if (this.fragContextChanged(frag)) {
