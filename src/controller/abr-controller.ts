@@ -813,6 +813,12 @@ class AbrController extends Logger implements AbrComponentAPI {
 
     const ttfbEstimateSec = this.bwEstimator.getEstimateTTFB() / 1000;
     const levelsSkipped: number[] = [];
+
+    const isUpSwitchToLowerFrameRate =
+      this.hls.config.abrUpSwitchToLowerFrameRateMode === 'allow';
+    const isDownSwitchToHigherFrameRate =
+      this.hls.config.abrDownSwitchToHigherFrameRateMode === 'allow';
+
     for (let i = maxAutoLevel; i >= minAutoLevel; i--) {
       const levelInfo = levels[i];
       const upSwitch = i > selectionBaseLevel;
@@ -898,10 +904,13 @@ class AbrController extends Logger implements AbrComponentAPI {
       if (
         (currentCodecSet && levelInfo.codecSet !== currentCodecSet) ||
         (currentVideoRange && levelInfo.videoRange !== currentVideoRange) ||
-        (upSwitch && currentFrameRate > levelInfo.frameRate) ||
+        (upSwitch &&
+          currentFrameRate > levelInfo.frameRate &&
+          !isUpSwitchToLowerFrameRate) ||
         (!upSwitch &&
           currentFrameRate > 0 &&
-          currentFrameRate < levelInfo.frameRate) ||
+          currentFrameRate < levelInfo.frameRate &&
+          !isDownSwitchToHigherFrameRate) ||
         levelInfo.supportedResult?.decodingInfoResults?.some(
           (info) => info.smooth === false,
         )

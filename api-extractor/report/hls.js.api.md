@@ -79,6 +79,8 @@ export type ABRControllerConfig = {
     abrMaxWithRealBitrate: boolean;
     maxStarvationDelay: number;
     maxLoadingDelay: number;
+    abrUpSwitchToLowerFrameRateMode: 'block' | 'allow';
+    abrDownSwitchToHigherFrameRateMode: 'block' | 'allow';
 };
 
 // Warning: (ae-missing-release-tag) "AssetListJSON" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
