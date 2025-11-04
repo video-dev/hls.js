@@ -1350,8 +1350,12 @@ export type {
   TSDemuxerConfig,
 } from './config';
 export type {
+  GenerateRequestFilterResult,
+  KeyRequests,
+  KeyStatuses,
+  KeyTimeouts,
+  LicenseAndKeysRequest,
   MediaKeySessionContext,
-  MediaKeySessionContextAndLevelKey,
 } from './controller/eme-controller';
 export type {
   FragmentState,
