@@ -6,13 +6,16 @@ import sinonChai from 'sinon-chai';
 import EMEController from '../../../src/controller/eme-controller';
 import { ErrorDetails } from '../../../src/errors';
 import { Events } from '../../../src/events';
+import { Fragment } from '../../../src/loader/fragment';
 import { LevelKey } from '../../../src/loader/level-key';
+import { PlaylistLevelType } from '../../../src/types/loader';
 import {
   KeySystemFormats,
   KeySystems,
 } from '../../../src/utils/mediakeys-helper';
 import HlsMock from '../../mocks/hls.mock';
 import type { MediaKeySessionContext } from '../../../src/controller/eme-controller';
+import type { EncryptedFragment } from '../../../src/loader/fragment';
 import type { MediaAttachedData } from '../../../src/types/events';
 
 chai.use(sinonChai);
@@ -20,15 +23,17 @@ const expect = chai.expect;
 
 type EMEControllerTestable = Omit<
   EMEController,
-  'hls' | 'keyUriToSessionPromise' | 'mediaKeySessions' | 'keyUriToLevelKeys'
+  'hls' | 'keyUsablePromises' | 'mediaKeySessions'
 > & {
   hls: HlsMock;
   mediaKeySessions: MediaKeySessionContext[];
-  keyUriToSessionPromise: {
-    [keyUri: string]: Promise<MediaKeySessionContext> | undefined;
+  keyUsablePromises: {
+    [keyUri: string]: Promise<LevelKey> | undefined;
   };
-  keyUriToLevelKeys: {
-    [keyUri: string]: LevelKey[] | undefined;
+  activeKeys: {
+    main?: EncryptedFragment;
+    audio?: EncryptedFragment;
+    previous?: EncryptedFragment[];
   };
   onMediaAttached: (
     event: Events.MEDIA_ATTACHED,
@@ -105,7 +110,7 @@ class MediaKeySessionMock extends EventEmitter implements MediaKeySession {
       forEach(callbackfn, thisArg?) {
         return keyStatuses.forEach(callbackfn, thisArg);
       },
-    };
+    } as any as MediaKeyStatusMap; // missing entries, keys, and values of Iterable
   }
   dispatchEvent() {
     return true;
@@ -166,6 +171,15 @@ const getParsedLevelKey = (
   return levelKey;
 };
 
+const getEncryptedFrag = (levelKey: LevelKey) => {
+  const encryptedFrag = new Fragment(PlaylistLevelType.MAIN, '');
+  encryptedFrag.levelkeys = {
+    [levelKey.keyFormat]: levelKey,
+  };
+  encryptedFrag.setKeyFormat(levelKey.keyFormat as KeySystemFormats);
+  return encryptedFrag as EncryptedFragment;
+};
+
 describe('EMEController', function () {
   beforeEach(function () {
     setupEach({});
@@ -212,15 +226,8 @@ describe('EMEController', function () {
     expect(reqMediaKsAccessSpy).callCount(0);
 
     const levelKey = getParsedLevelKey();
-    const emePromise = emeController.loadKey({
-      frag: {} as any,
-      keyInfo: {
-        decryptdata: levelKey,
-        keyLoadPromise: null,
-        loader: null,
-        mediaKeySessionContext: null,
-      },
-    });
+    const encryptedFrag = getEncryptedFrag(levelKey);
+    const emePromise = emeController.loadKey(encryptedFrag);
 
     expect(emePromise).to.be.a('Promise');
     return emePromise.finally(() => {
@@ -273,19 +280,9 @@ describe('EMEController', function () {
     expect(media.setMediaKeys).callCount(0);
     expect(reqMediaKsAccessSpy).callCount(0);
 
-    const emePromise = emeController.loadKey({
-      frag: {},
-      keyInfo: {
-        decryptdata: {
-          encrypted: true,
-          method: 'SAMPLE-AES',
-          keyFormat: 'com.apple.streamingkeydelivery',
-          uri: 'data://key-uri',
-          keyId: new Uint8Array(16),
-          pssh: new Uint8Array(16),
-        },
-      },
-    } as any);
+    const levelKey = getParsedLevelKey();
+    const encryptedFrag = getEncryptedFrag(levelKey);
+    const emePromise = emeController.loadKey(encryptedFrag);
 
     expect(emePromise).to.be.a('Promise');
     return emePromise.finally(() => {
@@ -371,9 +368,13 @@ describe('EMEController', function () {
         type: 'main',
       } as any)
       .then(() => {
-        expect(emeController.keyUriToSessionPromise).to.deep.equal(
+        expect(emeController.keyUsablePromises).to.deep.equal(
           {},
-          '`keyUriToSessionPromise` should be an empty dictionary when no key IDs are found',
+          '`keyUsablePromises` should be an empty dictionary when no key IDs are found',
+        );
+        expect(emeController.activeKeys).to.deep.equal(
+          {},
+          '`activeKeys` should be an empty dictionary when no playlisty-keys are found',
         );
       });
   });
@@ -396,13 +397,12 @@ describe('EMEController', function () {
       },
     });
 
-    const levelKey = getParsedLevelKey();
     const keySession = new MediaKeySessionMock2();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
       keySystem: KeySystems.FAIRPLAY,
-      levelKeys: [levelKey],
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
+      keyRequests: {},
       keyStatuses: {},
     };
 
@@ -452,33 +452,20 @@ describe('EMEController', function () {
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
       media: media as any as HTMLMediaElement,
     });
-    return emeController
-      .loadKey({
-        frag: {},
-        keyInfo: {
-          decryptdata: {
-            encrypted: true,
-            method: 'SAMPLE-AES',
-            uri: 'data://key-uri',
-            keyFormatVersions: [1],
-            keyId: new Uint8Array(16),
-            pssh: new Uint8Array(16),
-          },
-        },
-      } as any)
-      .then(() => {
-        expect(emeController.keyUriToSessionPromise['data://key-uri']).to.be.a(
-          'Promise',
-        );
-        return emeController.keyUriToSessionPromise['data://key-uri']!.finally(
-          () => {
-            expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
-            expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
-              sinon.match({ byteLength: 6 }),
-            );
-          },
+
+    const levelKey = getParsedLevelKey();
+    const encryptedFrag = getEncryptedFrag(levelKey);
+    return emeController.loadKey(encryptedFrag).then(() => {
+      expect(emeController.keyUsablePromises['data://key-uri']).to.be.a(
+        'Promise',
+      );
+      return emeController.keyUsablePromises['data://key-uri']!.finally(() => {
+        expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
+        expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
+          sinon.match({ byteLength: 6 }),
         );
       });
+    });
   });
 
   it('should fetch the server certificate and trigger update failed error', function () {
@@ -527,29 +514,22 @@ describe('EMEController', function () {
       }, 0);
     };
 
+    const levelKey = getParsedLevelKey();
+    levelKey.pssh = null;
+    const encryptedFrag = getEncryptedFrag(levelKey);
+
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
       media: media as any as HTMLMediaElement,
     });
-    emeController
-      .loadKey({
-        frag: {},
-        keyInfo: {
-          decryptdata: {
-            encrypted: true,
-            method: 'SAMPLE-AES',
-            uri: 'data://key-uri',
-            keyId: new Uint8Array(16),
-          },
-        },
-      } as any)
-      .catch((error) => {
-        // expected?
-      });
 
-    expect(emeController.keyUriToSessionPromise['data://key-uri']).to.be.a(
+    emeController.loadKey(encryptedFrag).catch((error) => {
+      // expected?
+    });
+
+    expect(emeController.keyUsablePromises['data://key-uri']).to.be.a(
       'Promise',
     );
-    return emeController.keyUriToSessionPromise['data://key-uri']!.catch(
+    return emeController.keyUsablePromises['data://key-uri']!.catch(
       () => {},
     ).finally(() => {
       expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
@@ -603,29 +583,21 @@ describe('EMEController', function () {
       }, 0);
     };
 
+    const levelKey = getParsedLevelKey();
+    levelKey.pssh = null;
+    const encryptedFrag = getEncryptedFrag(levelKey);
+
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
       media: media as any as HTMLMediaElement,
     });
-    emeController
-      .loadKey({
-        frag: {},
-        keyInfo: {
-          decryptdata: {
-            encrypted: true,
-            method: 'SAMPLE-AES',
-            uri: 'data://key-uri',
-            keyId: new Uint8Array(16),
-          },
-        },
-      } as any)
-      .catch((error) => {
-        // expected?
-      });
+    emeController.loadKey(encryptedFrag).catch((error) => {
+      // expected?
+    });
 
-    expect(emeController.keyUriToSessionPromise['data://key-uri']).to.be.a(
+    expect(emeController.keyUsablePromises['data://key-uri']).to.be.a(
       'Promise',
     );
-    return emeController.keyUriToSessionPromise['data://key-uri']!.catch(
+    return emeController.keyUsablePromises['data://key-uri']!.catch(
       () => {},
     ).finally(() => {
       expect(emeController.hls.trigger).to.have.been.calledOnce;
@@ -665,17 +637,14 @@ describe('EMEController', function () {
       media: media as any as HTMLMediaElement,
     });
 
-    const levelKey = getParsedLevelKey();
     const keySession = new MediaKeySessionMock();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
       keySystem: KeySystems.FAIRPLAY,
-      levelKeys: [levelKey],
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
+      keyRequests: {},
       keyStatuses: {},
     };
-    sinon.stub(keySession, 'remove');
-    sinon.stub(keySession, 'close');
 
     emeController.mediaKeySessions = [mockMediaKeySessionContext];
     emeController.destroy();
@@ -713,17 +682,15 @@ describe('EMEController', function () {
       media: media as any as HTMLMediaElement,
     });
 
-    const levelKey = getParsedLevelKey();
     const keySession = new MediaKeySessionMock();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
       keySystem: KeySystems.FAIRPLAY,
-      levelKeys: [levelKey],
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
+      keyRequests: {},
       keyStatuses: {},
     };
-    sinon.stub(keySession, 'remove');
-    const keySessionCloseSpy = sinon.stub(keySession, 'close');
+    const keySessionCloseSpy = sinon.spy(keySession, 'close');
 
     emeController.mediaKeySessions = [mockMediaKeySessionContext];
     emeController.destroy();
@@ -772,17 +739,15 @@ describe('EMEController', function () {
       media: media as any as HTMLMediaElement,
     });
 
-    const levelKey = getParsedLevelKey();
     const keySession = new MediaKeySessionMock();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
       keySystem: KeySystems.FAIRPLAY,
-      levelKeys: [levelKey],
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
+      keyRequests: {},
       keyStatuses: {},
     };
-    sinon.stub(keySession, 'remove');
-    const keySessionCloseSpy = sinon.stub(keySession, 'close');
+    const keySessionCloseSpy = sinon.spy(keySession, 'close');
 
     emeController.mediaKeySessions = [mockMediaKeySessionContext];
     emeController.destroy();

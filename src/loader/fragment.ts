@@ -140,6 +140,9 @@ export class BaseSegment {
   }
 }
 
+export type EncryptedFragment = Fragment & {
+  decryptdata: LevelKey;
+};
 export interface MediaFragment extends Fragment {
   sn: number;
   ref: MediaFragmentRef;

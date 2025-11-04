@@ -18,8 +18,12 @@ import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
 import { clamp } from './utils/number';
 import { stringify } from './utils/safe-json-stringify';
 import XhrLoader from './utils/xhr-loader';
-import type { MediaKeySessionContextAndLevelKey } from './controller/eme-controller';
+import type {
+  GenerateRequestFilterResult,
+  MediaKeySessionContext,
+} from './controller/eme-controller';
 import type Hls from './hls';
+import type { LevelKey } from './loader/level-key';
 import type {
   FragmentLoaderContext,
   Loader,
@@ -95,11 +99,8 @@ export type DRMSystemConfiguration = {
     this: Hls,
     initDataType: string,
     initData: ArrayBuffer | null,
-    keyContext: MediaKeySessionContextAndLevelKey,
-  ) =>
-    | { initDataType: string; initData: ArrayBuffer | null }
-    | undefined
-    | never;
+    keyContext: MediaKeySessionContext & { decryptdata: LevelKey },
+  ) => GenerateRequestFilterResult;
 };
 
 export type DRMSystemsConfiguration = Partial<
@@ -111,14 +112,14 @@ export type EMEControllerConfig = {
     this: Hls,
     xhr: XMLHttpRequest,
     url: string,
-    keyContext: MediaKeySessionContextAndLevelKey,
+    keyContext: MediaKeySessionContext & { decryptdata: LevelKey },
     licenseChallenge: Uint8Array,
   ) => void | Uint8Array | Promise<Uint8Array | void>;
   licenseResponseCallback?: (
     this: Hls,
     xhr: XMLHttpRequest,
     url: string,
-    keyContext: MediaKeySessionContextAndLevelKey,
+    keyContext: MediaKeySessionContext & { decryptdata: LevelKey },
   ) => ArrayBuffer;
   emeEnabled: boolean;
   widevineLicenseUrl?: string;
