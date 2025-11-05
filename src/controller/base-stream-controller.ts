@@ -1161,10 +1161,6 @@ export default class BaseStreamController
         // Buffer must be ahead of first part + duration of parts after last segment
         // and playback must be at or past segment adjacent to part list
         const firstPart = details.partList[0];
-        // Loading of VTT subtitle parts is not implemented in subtitle-stream-controller (#7460)
-        if (firstPart.fragment.type === PlaylistLevelType.SUBTITLE) {
-          return false;
-        }
         const safePartStart =
           firstPart.end + (details.fragmentHint?.duration || 0);
         if (bufferEnd >= safePartStart) {

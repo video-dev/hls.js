@@ -286,6 +286,7 @@ export interface TrackSwitchedData {
 export interface SubtitleFragProcessed {
   success: boolean;
   frag: Fragment;
+  part: Part | null;
 }
 
 export interface FragChangedData {
@@ -351,6 +352,7 @@ export interface ErrorData {
 export interface SubtitleFragProcessedData {
   success: boolean;
   frag: Fragment;
+  part: Part | null;
   error?: Error;
 }
 
