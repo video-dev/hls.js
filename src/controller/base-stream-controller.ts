@@ -384,12 +384,17 @@ export default class BaseStreamController
         fragEndOffset < bufferInfo.start ||
         fragStartOffset > bufferInfo.end
       ) {
+        const beforeFragment = currentTime < fragStartOffset;
         const pastFragment = currentTime > fragEndOffset;
         // if the seek position is outside the current fragment range
-        if (currentTime < fragStartOffset || pastFragment) {
-          if (pastFragment && fragCurrent.loader) {
+        if (beforeFragment || pastFragment) {
+          // Only abort an active fragment load if the seek is past the fragment or the fragment isn't nearly downloaded
+          if (
+            fragCurrent.loader &&
+            (pastFragment || !this.isFragmentNearlyDownloaded(fragCurrent))
+          ) {
             this.log(
-              `Cancelling fragment load for seek (sn: ${fragCurrent.sn})`,
+              `Cancelling fragment load for seek (sn: ${fragCurrent.sn}) - ${beforeFragment ? 'backward' : 'forward'} seek`,
             );
             fragCurrent.abortRequests();
             this.resetLoadingState();
@@ -432,12 +437,13 @@ export default class BaseStreamController
     }
 
     // in case seeking occurs although no media buffered, adjust startPosition and nextLoadPosition to seek target
-    if (!this.hls.hasEnoughToStart) {
+    const bufferEmpty = !BufferHelper.isBuffered(media, currentTime);
+    if (!this.hls.hasEnoughToStart || bufferEmpty) {
       this.log(
-        `Setting ${noFowardBuffer ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to start`,
+        `Setting ${bufferEmpty ? 'startPosition' : 'nextLoadPosition'} to ${currentTime} for seek without enough to start`,
       );
       this.nextLoadPosition = currentTime;
-      if (noFowardBuffer) {
+      if (bufferEmpty) {
         this.startPosition = currentTime;
       }
     }
@@ -1889,7 +1895,7 @@ export default class BaseStreamController
     }
     const frag = data.frag;
     // Handle frag error related to caller's filterType
-    if (!frag || frag.type !== filterType || !this.levels) {
+    if (!frag || !this.levels || frag.type !== filterType) {
       return;
     }
     if (this.fragContextChanged(frag)) {
@@ -2159,11 +2165,15 @@ export default class BaseStreamController
       false,
     );
     if (!parsed) {
-      if (level.fragmentError === 0) {
-        // Mark and track the odd empty segment as a gap to avoid reloading
+      const mediaNotFound = this.transmuxer?.error === null;
+      if (
+        level.fragmentError === 0 ||
+        (mediaNotFound && (level.fragmentError < 2 || frag.endList))
+      ) {
+        // Mark and track the odd (or last) empty segment as a gap to avoid reloading
         this.treatAsGap(frag, level);
       }
-      if (this.transmuxer?.error === null) {
+      if (mediaNotFound) {
         const error = new Error(
           `Found no media in fragment ${frag.sn} of ${this.playlistLabel()} ${frag.level} resetting transmuxer to fallback to playlist timing`,
         );
@@ -2219,6 +2229,22 @@ export default class BaseStreamController
 
   protected resetTransmuxer() {
     this.transmuxer?.reset();
+  }
+
+  private isFragmentNearlyDownloaded(fragment: Fragment): boolean {
+    const stats = fragment.loader?.stats;
+    if (!stats) {
+      return false;
+    }
+
+    const hasFirstByte = stats.loading.first > 0;
+    const bitsRemaining = stats.total - stats.loaded;
+    const timeToCompleteFragDownload =
+      bitsRemaining /
+      (this.hls.bandwidthEstimate || this.hls.config.abrEwmaDefaultEstimate);
+
+    // Fragment is nearly complete if we have first byte and will complete within 150ms
+    return hasFirstByte && timeToCompleteFragDownload <= 0.15;
   }
 
   protected recoverWorkerError(data: ErrorData) {
@@ -2420,22 +2446,22 @@ export default class BaseStreamController
     const video = this.media;
     let fragPlayingCurrent: Fragment | null = null;
     if (video && video.readyState > 1 && video.seeking === false) {
-      const currentTime = this.getLoadPosition();
+      const currentTime = video.currentTime;
       /* if video element is in seeked state, currentTime can only increase.
-        (assuming that playback rate is positive ...)
-        As sometimes currentTime jumps back to zero after a
-        media decode error, check this, to avoid seeking back to
-        wrong position after a media decode error
-      */
+          (assuming that playback rate is positive ...)
+          As sometimes currentTime jumps back to zero after a
+          media decode error, check this, to avoid seeking back to
+          wrong position after a media decode error
+        */
 
       if (BufferHelper.isBuffered(video, currentTime)) {
         fragPlayingCurrent = this.getAppendedFrag(currentTime, type);
       } else if (BufferHelper.isBuffered(video, currentTime + 0.1)) {
         /* ensure that FRAG_CHANGED event is triggered at startup,
-          when first video frame is displayed and playback is paused.
-          add a tolerance of 100ms, in case current position is not buffered,
-          check if current pos+100ms is buffered and use that buffer range
-          for FRAG_CHANGED event reporting */
+            when first video frame is displayed and playback is paused.
+            add a tolerance of 100ms, in case current position is not buffered,
+            check if current pos+100ms is buffered and use that buffer range
+            for FRAG_CHANGED event reporting */
         fragPlayingCurrent = this.getAppendedFrag(currentTime + 0.1, type);
       }
       if (fragPlayingCurrent) {
@@ -2448,11 +2474,16 @@ export default class BaseStreamController
           fragPlaying.level !== fragCurrentLevel
         ) {
           this.fragPlaying = fragPlayingCurrent;
-          this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });
-          if (!fragPlaying || fragPlaying.level !== fragCurrentLevel) {
-            this.hls.trigger(Events.LEVEL_SWITCHED, {
-              level: fragCurrentLevel,
-            });
+          if (type !== PlaylistLevelType.AUDIO) {
+            this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });
+            if (
+              !fragPlaying ||
+              fragPlaying.level !== (fragCurrentLevel as number | undefined)
+            ) {
+              this.hls.trigger(Events.LEVEL_SWITCHED, {
+                level: fragCurrentLevel,
+              });
+            }
           }
         }
       }

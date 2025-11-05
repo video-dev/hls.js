@@ -1,9 +1,9 @@
 {
   "extends": ["config:recommended"],
   "labels": ["dependencies", "skip-change-log"],
-  "schedule": ["* 0 28 * *"],
+  "schedule": ["* 6-12 * * 1-4"],
   "prHourlyLimit": 3,
-  "prConcurrentLimit": 3,
+  "prConcurrentLimit": 1,
   "prCreation": "immediate",
   "minimumReleaseAge": "7 days",
   "internalChecksFilter": "strict",

@@ -231,12 +231,7 @@ export class FragmentTracker implements ComponentAPI {
     });
     fragmentEntity.loaded = null;
     if (Object.keys(fragmentEntity.range).length) {
-      fragmentEntity.buffered = true;
-      const endList = (fragmentEntity.body.endList =
-        frag.endList || fragmentEntity.body.endList);
-      if (endList) {
-        this.endListFragments[fragmentEntity.body.type] = fragmentEntity;
-      }
+      this.bufferedEnd(fragmentEntity, frag);
       if (!isPartial(fragmentEntity)) {
         // Remove older fragment parts from lookup after frag is tracked as buffered
         this.removeParts(frag.sn - 1, frag.type);
@@ -244,6 +239,15 @@ export class FragmentTracker implements ComponentAPI {
     } else {
       // remove fragment if nothing was appended
       this.removeFragment(fragmentEntity.body);
+    }
+  }
+
+  private bufferedEnd(fragmentEntity: FragmentEntity, frag: MediaFragment) {
+    fragmentEntity.buffered = true;
+    const endList = (fragmentEntity.body.endList =
+      frag.endList || fragmentEntity.body.endList);
+    if (endList) {
+      this.endListFragments[fragmentEntity.body.type] = fragmentEntity;
     }
   }
 
@@ -275,7 +279,7 @@ export class FragmentTracker implements ComponentAPI {
     }
     if (fragmentEntity) {
       fragmentEntity.loaded = null;
-      fragmentEntity.buffered = true;
+      this.bufferedEnd(fragmentEntity, frag);
     }
   }
 

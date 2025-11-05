@@ -235,7 +235,7 @@ jobs:
     steps:
       - name: draft release notes
         id: draft_release
-        uses: tjenkinson/release-drafter@48835fbc42b1c062a828995f9cb8301e6bdae677
+        uses: tjenkinson/release-drafter@349214e6b3b889d8b333c012cc61a1f1753baf40
         with:
           tag: ${{ needs.config.outputs.tag }}
           name: ${{ needs.config.outputs.tag }}
@@ -352,9 +352,9 @@ jobs:
             ua: chrome
             os: OS X 10.11
             uaVersion: '79.0'
-          - config: chrome-win_7-75.0
+          - config: chrome-win_8-75.0
             ua: chrome
-            os: Windows 7
+            os: Windows 8
             uaVersion: '75.0'
 
     steps:

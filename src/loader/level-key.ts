@@ -199,7 +199,7 @@ export class LevelKey implements DecryptData {
     }
 
     // Default behavior: get keyId from other KEY tag or URI lookup
-    if (!this.keyId || this.keyId.byteLength !== 16) {
+    if (this.keyId?.byteLength !== 16) {
       let keyId: Uint8Array<ArrayBuffer> | null | undefined;
       keyId = getKeyIdFromWidevineKey(levelKeys);
       if (!keyId) {

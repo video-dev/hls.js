@@ -81,7 +81,7 @@ export type PlayheadTimes = {
 };
 
 function playWithCatch(media: HTMLMediaElement | null) {
-  media?.play().catch(() => {
+  (media?.play() as Promise<void> | undefined)?.catch(() => {
     /* no-op */
   });
 }
@@ -2533,7 +2533,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     const playingAsset = this.playingAsset;
     this.endedAsset = null;
     this.playingAsset = assetItem;
-    if (!playingAsset || playingAsset.identifier !== assetId) {
+    if (playingAsset?.identifier !== assetId) {
       if (playingAsset) {
         // Exiting another Interstitial asset
         this.clearAssetPlayer(
@@ -2725,11 +2725,10 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     this.updateSchedule(true);
     if (interstitial.error) {
       this.primaryFallback(interstitial);
-    } else if (playingAsset && playingAsset.identifier === assetId) {
+    } else if (playingAsset?.identifier === assetId) {
       this.advanceAfterAssetEnded(interstitial, scheduleIndex, assetListIndex);
     } else if (
-      bufferingAsset &&
-      bufferingAsset.identifier === assetId &&
+      bufferingAsset?.identifier === assetId &&
       this.isInterstitial(this.bufferingItem)
     ) {
       this.advanceAssetBuffering(this.bufferingItem, bufferingAsset);
