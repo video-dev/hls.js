@@ -8,17 +8,6 @@ import type { VTTCCs } from '../types/vtt';
 
 const LINEBREAKS = /\r\n|\n\r|\n|\r/g;
 
-// String.prototype.startsWith is not supported in IE11
-const startsWith = function (
-  inputString: string,
-  searchString: string,
-  position: number = 0,
-) {
-  return (
-    inputString.slice(position, position + searchString.length) === searchString
-  );
-};
-
 const cueString2millis = function (timeString: string) {
   let ts = parseInt(timeString.slice(-3));
   const secs = parseInt(timeString.slice(-6, -4));
@@ -54,30 +43,6 @@ export function generateCueId(
   return hash(startTime.toString()) + hash(endTime.toString()) + hash(text);
 }
 
-const calculateOffset = function (vttCCs: VTTCCs, cc, presentationTime) {
-  let currCC = vttCCs[cc];
-  let prevCC = vttCCs[currCC.prevCC];
-
-  // This is the first discontinuity or cues have been processed since the last discontinuity
-  // Offset = current discontinuity time
-  if (!prevCC || (!prevCC.new && currCC.new)) {
-    vttCCs.ccOffset = vttCCs.presentationOffset = currCC.start;
-    currCC.new = false;
-    return;
-  }
-
-  // There have been discontinuities since cues were last parsed.
-  // Offset = time elapsed
-  while (prevCC?.new) {
-    vttCCs.ccOffset += currCC.start - prevCC.start;
-    currCC.new = false;
-    currCC = prevCC;
-    prevCC = vttCCs[currCC.prevCC];
-  }
-
-  vttCCs.presentationOffset = presentationTime;
-};
-
 export function parseWebVTT(
   vttByteArray: ArrayBuffer,
   initPTS: TimestampOffset | undefined,
@@ -101,7 +66,7 @@ export function parseWebVTT(
   let cueTime = '00:00.000';
   let timestampMapMPEGTS = 0;
   let timestampMapLOCAL = 0;
-  let parsingError: Error;
+  let parsingError: Error | undefined;
   let inHeader = true;
 
   parser.oncue = function (cue: VTTCue) {
@@ -114,12 +79,8 @@ export function parseWebVTT(
 
     // Update offsets for new discontinuities
     if (currCC?.new) {
-      if (timestampMapLOCAL !== undefined) {
-        // When local time is provided, offset = discontinuity start time - local time
-        cueOffset = vttCCs.ccOffset = currCC.start;
-      } else {
-        calculateOffset(vttCCs, cc, webVttMpegTsMapOffset);
-      }
+      // When local time is provided, offset = discontinuity start time - local time
+      cueOffset = vttCCs.ccOffset = currCC.start;
     }
     if (webVttMpegTsMapOffset) {
       if (!initPTS) {
@@ -171,7 +132,7 @@ export function parseWebVTT(
   vttLines.forEach((line) => {
     if (inHeader) {
       // Look for X-TIMESTAMP-MAP in header.
-      if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
+      if (line.startsWith('X-TIMESTAMP-MAP=')) {
         // Once found, no more are allowed anyway, so stop searching.
         inHeader = false;
         // Extract LOCAL and MPEGTS.
@@ -179,9 +140,9 @@ export function parseWebVTT(
           .slice(16)
           .split(',')
           .forEach((timestamp) => {
-            if (startsWith(timestamp, 'LOCAL:')) {
+            if (timestamp.startsWith('LOCAL:')) {
               cueTime = timestamp.slice(6);
-            } else if (startsWith(timestamp, 'MPEGTS:')) {
+            } else if (timestamp.startsWith('MPEGTS:')) {
               timestampMapMPEGTS = parseInt(timestamp.slice(7));
             }
           });

@@ -662,7 +662,7 @@ export default class M3U8Parser {
             if (!partList) {
               partList = level.partList = [];
             }
-            const previousFragmentPart =
+            const previousPart =
               currentPart > 0 ? partList[partList.length - 1] : undefined;
             const index = currentPart++;
             const partAttrs = new AttrList(value1, level);
@@ -671,7 +671,7 @@ export default class M3U8Parser {
               frag as MediaFragment,
               base,
               index,
-              previousFragmentPart,
+              previousPart,
             );
             partList.push(part);
             frag.duration += part.duration;
