@@ -2309,7 +2309,8 @@ export default class BaseStreamController
     const currentTime = this.media?.currentTime || this.getLoadPosition();
     // Do not flush in live stream with low buffer
     const okToFlushForwardBuffer =
-      !levelDetails?.live || bufferInfo.end - currentTime > fetchdelay * 1.5;
+      type !== PlaylistLevelType.AUDIO &&
+      (!levelDetails?.live || bufferInfo.end - currentTime > fetchdelay * 1.5);
 
     return { fetchdelay, okToFlushForwardBuffer };
   }
@@ -2361,7 +2362,7 @@ export default class BaseStreamController
         // Flush forward buffer from next buffered frag start to infinity
         this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY, bufferType);
         // Flush back buffer (excluding current fragment)
-        this.cleanupBackBuffer();
+        this.cleanupBackBuffer(type);
       }
     }
   }
@@ -2369,18 +2370,25 @@ export default class BaseStreamController
   /**
    * Handle back-buffer cleanup during track switching
    */
-  protected cleanupBackBuffer(): void {
+  protected cleanupBackBuffer(type: PlaylistLevelType): void {
     const { media } = this;
     if (!media) {
       return;
     }
 
     // remove back-buffer
-    const fragPlayingCurrent = this.getAppendedFrag(this.getLoadPosition());
+    const fragPlayingCurrent = this.getAppendedFrag(
+      this.getLoadPosition(),
+      type,
+    );
     if (fragPlayingCurrent && fragPlayingCurrent.start > 1) {
       // flush buffer preceding current fragment (flush until current fragment start offset)
       // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-      this.flushMainBuffer(0, fragPlayingCurrent.start - 1);
+      this.flushMainBuffer(
+        0,
+        fragPlayingCurrent.start - 1,
+        type === PlaylistLevelType.AUDIO ? 'audio' : null,
+      );
     }
   }
 
@@ -2473,8 +2481,17 @@ export default class BaseStreamController
           fragPlayingCurrent.sn !== fragPlaying.sn ||
           fragPlaying.level !== fragCurrentLevel
         ) {
+          if (type === PlaylistLevelType.AUDIO) {
+            if (fragPlaying?.level !== fragPlayingCurrent.level) {
+              this.flushMainBuffer(
+                0,
+                this.getLoadPosition(),
+                PlaylistLevelType.AUDIO,
+              );
+            }
+          }
           this.fragPlaying = fragPlayingCurrent;
-          if (type !== PlaylistLevelType.AUDIO) {
+          if (type === PlaylistLevelType.MAIN) {
             this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });
             if (
               !fragPlaying ||
@@ -2515,7 +2532,10 @@ export default class BaseStreamController
       }
       const levelDetails = this.getLevelDetails();
 
-      const nextLevelId = hls.nextLoadLevel;
+      const nextLevelId =
+        type === PlaylistLevelType.AUDIO
+          ? hls.nextAudioTrack
+          : hls.nextLoadLevel;
       const nextLevel = levels[nextLevelId];
 
       const { fetchdelay, okToFlushForwardBuffer } =

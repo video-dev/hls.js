@@ -331,18 +331,6 @@ class AudioStreamController
     ) {
       return;
     }
-    if (
-      this.pendingAudioTrackSwitch &&
-      this.fragPlaying &&
-      this.switchingTrack
-    ) {
-      if (this.fragPlaying.level === this.nextTrackId) {
-        this.pendingAudioTrackSwitch = false;
-        this.cleanupBackBuffer();
-        this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, this.switchingTrack);
-        this.switchingTrack = null;
-      }
-    }
 
     const levelInfo = levels[trackId];
 
@@ -375,11 +363,7 @@ class AudioStreamController
       return;
     }
 
-    if (
-      !this.switchingTrack &&
-      !this.pendingAudioTrackSwitch &&
-      this._streamEnded(bufferInfo, trackDetails)
-    ) {
+    if (!this.switchingTrack && this._streamEnded(bufferInfo, trackDetails)) {
       hls.trigger(Events.BUFFER_EOS, { type: 'audio' });
       this.state = State.ENDED;
       return;
@@ -391,7 +375,10 @@ class AudioStreamController
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
     const loadPosition = this.getLoadPosition();
-    const targetBufferTime = this.flushing ? loadPosition : bufferInfo.end;
+    const targetBufferTime =
+      this.flushing || this.pendingAudioTrackSwitch
+        ? loadPosition
+        : bufferInfo.end;
 
     if (this.switchingTrack && media) {
       const pos = loadPosition;
@@ -512,6 +499,7 @@ class AudioStreamController
         // switching to audio track, start timer if not already started
         this.setInterval(TICK_INTERVAL);
         this.state = State.IDLE;
+        this.pendingAudioTrackSwitch = !data.flushImmediate;
         this.tick();
       }
     } else {
@@ -777,10 +765,8 @@ class AudioStreamController
       const track = this.switchingTrack;
       if (track) {
         this.bufferedTrack = track;
-        if (!this.pendingAudioTrackSwitch) {
-          this.switchingTrack = null;
-          this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...track });
-        }
+        this.switchingTrack = null;
+        this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...track });
       }
     }
     this.fragBufferedComplete(frag, part);
@@ -1044,7 +1030,7 @@ class AudioStreamController
   }
 
   private flushAudioIfNeeded(switchingTrack: AudioTrackSwitchingData) {
-    if (this.media && this.bufferedTrack) {
+    if (this.media && this.bufferedTrack && switchingTrack.flushImmediate) {
       const { name, lang, assocLang, characteristics, audioCodec, channels } =
         this.bufferedTrack;
       if (
@@ -1062,8 +1048,20 @@ class AudioStreamController
           super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
           this.bufferedTrack = null;
         } else {
+          const { config } = this;
           // Main is being buffered. Set bufferedTrack so that it is flushed when switching back to alt-audio
           this.bufferedTrack = switchingTrack;
+          const bufferFlushDelay =
+            config.audioPreference?.nextAudioTrackBufferFlushDelay || 0.25;
+          const startOffset = Math.max(
+            this.getLoadPosition() + bufferFlushDelay,
+            this.fragPrevious?.start || 0,
+          );
+          super.flushMainBuffer(
+            startOffset,
+            Number.POSITIVE_INFINITY,
+            PlaylistLevelType.AUDIO,
+          );
         }
       }
     }
@@ -1071,12 +1069,12 @@ class AudioStreamController
 
   private completeAudioSwitch(switchingTrack: AudioTrackSwitchingData) {
     const { hls } = this;
-    this.flushAudioIfNeeded(switchingTrack);
+    this.flushAudioIfNeeded({ ...switchingTrack, flushImmediate: true });
     this.bufferedTrack = switchingTrack;
-    this.pendingAudioTrackSwitch = !switchingTrack.flushImmediate;
+    this.pendingAudioTrackSwitch = false;
     if (switchingTrack.flushImmediate) {
       this.switchingTrack = null;
-      hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...switchingTrack });
+      hls.trigger(Events.AUDIO_TRACK_SWITCHED, switchingTrack);
     }
   }
 

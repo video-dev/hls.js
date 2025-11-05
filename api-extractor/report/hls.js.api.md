@@ -178,6 +178,7 @@ export type AudioSelectionOption = {
     groupId?: string;
     default?: boolean;
     nextAudioTrackSwitchingSafetyDelay?: number;
+    nextAudioTrackBufferFlushDelay?: number;
 };
 
 // Warning: (ae-missing-release-tag) "AudioStreamController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -418,7 +419,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
     protected checkRetryDate(): void;
-    protected cleanupBackBuffer(): void;
+    protected cleanupBackBuffer(type: PlaylistLevelType): void;
     // (undocumented)
     protected clearTrackerIfNeeded(frag: Fragment): void;
     // (undocumented)
