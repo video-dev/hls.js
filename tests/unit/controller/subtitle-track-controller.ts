@@ -52,6 +52,7 @@ describe('SubtitleTrackController', function () {
     subtitleTrackController = new SubtitleTrackController(
       hls as unknown as Hls,
     );
+    (hls as any).subtitleTrackController = subtitleTrackController;
     hls.networkControllers.push(subtitleTrackController);
     hls.levelController = {
       levels: [
@@ -654,8 +655,13 @@ describe('SubtitleTrackController', function () {
 
       expect(subtitleTracks[1].details).not.to.be.undefined;
       expect((subtitleTrackController as any).timer).to.equal(-1);
-      // We will still emit playlist loaded since we did load and store the details
-      expect(playlistLoadedSpy).to.have.been.called;
+      // hls.js will not emit playlist loaded since the trackId does not match the loaded event id
+      expect(playlistLoadedSpy).to.have.not.been.called;
+
+      expect((subtitleTrackController as any).tracksInGroup[1]).not.to.be
+        .undefined;
+      expect((subtitleTrackController as any).tracksInGroup[1].details).not.to
+        .be.undefined;
     });
 
     it('does not set the reload timer if loading has not started', function () {
