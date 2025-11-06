@@ -463,10 +463,17 @@ export class SubtitleStreamController
     level: Level,
     targetBufferTime: number,
   ) {
-    if (!isMediaFragment(frag)) {
-      this._loadInitSegment(frag, level);
-    } else {
-      super.loadFragment(frag, level, targetBufferTime);
+    // Check if fragment is not loaded
+    const fragState = this.fragmentTracker.getState(frag);
+    if (
+      fragState === FragmentState.NOT_LOADED ||
+      fragState === FragmentState.PARTIAL
+    ) {
+      if (!isMediaFragment(frag)) {
+        this._loadInitSegment(frag, level);
+      } else {
+        super.loadFragment(frag, level, targetBufferTime);
+      }
     }
   }
 
