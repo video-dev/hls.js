@@ -1048,20 +1048,8 @@ class AudioStreamController
           super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
           this.bufferedTrack = null;
         } else {
-          const { config } = this;
           // Main is being buffered. Set bufferedTrack so that it is flushed when switching back to alt-audio
           this.bufferedTrack = switchingTrack;
-          const bufferFlushDelay =
-            config.audioPreference?.nextAudioTrackBufferFlushDelay || 0.25;
-          const startOffset = Math.max(
-            this.getLoadPosition() + bufferFlushDelay,
-            this.fragPrevious?.start || 0,
-          );
-          super.flushMainBuffer(
-            startOffset,
-            Number.POSITIVE_INFINITY,
-            PlaylistLevelType.AUDIO,
-          );
         }
       }
     }
@@ -1069,10 +1057,25 @@ class AudioStreamController
 
   private completeAudioSwitch(switchingTrack: AudioTrackSwitchingData) {
     const { hls } = this;
-    this.flushAudioIfNeeded({ ...switchingTrack, flushImmediate: true });
+    const { flushImmediate } = switchingTrack;
+    if (!flushImmediate) {
+      const { config } = this;
+      const bufferFlushDelay =
+        config.audioPreference?.nextAudioTrackBufferFlushDelay || 0.25;
+      const startOffset = Math.max(
+        this.getLoadPosition() + bufferFlushDelay,
+        this.fragPrevious?.start || 0,
+      );
+      super.flushMainBuffer(
+        startOffset,
+        Number.POSITIVE_INFINITY,
+        PlaylistLevelType.AUDIO,
+      );
+    }
+
     this.bufferedTrack = switchingTrack;
     this.pendingAudioTrackSwitch = false;
-    if (switchingTrack.flushImmediate) {
+    if (flushImmediate) {
       this.switchingTrack = null;
       hls.trigger(Events.AUDIO_TRACK_SWITCHED, switchingTrack);
     }
