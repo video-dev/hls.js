@@ -980,6 +980,10 @@ class EMEController extends Logger implements ComponentAPI {
           'buffer' in keyId
             ? new Uint8Array(keyId.buffer, keyId.byteOffset, keyId.byteLength)
             : new Uint8Array(keyId);
+
+        // On some devices, the key ID has already been converted for endianness.
+        // In such cases, this key ID is the one we need to cache.
+        const originKeyIdWithStatusChange = arrayToHex(keyIdArray);
         if (
           mediaKeySessionContext.keySystem === KeySystems.PLAYREADY &&
           keyIdArray.length === 16
@@ -994,7 +998,10 @@ class EMEController extends Logger implements ComponentAPI {
         this.log(
           `key status change "${status}" for keyStatuses keyId: ${keyIdWithStatusChange} key-session "${mediaKeySessionContext.mediaKeysSession.sessionId}"`,
         );
+
+        // Cache both the original and endianness-converted key IDs to ensure compatibility across all cases.
         keyStatuses[keyIdWithStatusChange] = status;
+        keyStatuses[originKeyIdWithStatusChange] = status;
       },
     );
     return keyStatuses;
