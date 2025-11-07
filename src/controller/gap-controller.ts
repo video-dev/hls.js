@@ -35,6 +35,7 @@ export default class GapController extends TaskLoop {
   private mediaSource?: MediaSource;
 
   private nudgeRetry: number = 0;
+  private skipRetry: number = 0;
   private stallReported: boolean = false;
   private stalled: number | null = null;
   private moved: boolean = false;
@@ -178,7 +179,7 @@ export default class GapController extends TaskLoop {
       }
       this.moved = true;
       if (!seeking) {
-        this.nudgeRetry = 0;
+        this.skipRetry = this.nudgeRetry = 0;
         // When crossing between buffered video time ranges, but not audio, flush pipeline with seek (Chrome)
         if (
           config.nudgeOnVideoHole &&
@@ -204,7 +205,7 @@ export default class GapController extends TaskLoop {
 
     // The playhead should not be moving
     if (pausedEndedOrHalted) {
-      this.nudgeRetry = 0;
+      this.skipRetry = this.nudgeRetry = 0;
       this.stallResolved(currentTime);
       // Fire MEDIA_ENDED to workaround event not being dispatched by browser
       if (!this.ended && media.ended && this.hls) {
@@ -217,7 +218,7 @@ export default class GapController extends TaskLoop {
     }
 
     if (!BufferHelper.getBuffered(media).length) {
-      this.nudgeRetry = 0;
+      this.skipRetry = this.nudgeRetry = 0;
       return;
     }
 
@@ -595,18 +596,41 @@ export default class GapController extends TaskLoop {
             }
           }
         }
+        const { alwaysUseSkipPadding, bufferHoleSkipPaddingSec } = config;
+        const isFirstSkipAttempt = this.skipRetry === 0;
+        const skipPaddingSec =
+          alwaysUseSkipPadding || !isFirstSkipAttempt
+            ? bufferHoleSkipPaddingSec
+            : SKIP_BUFFER_HOLE_STEP_SECONDS;
         const targetTime = Math.max(
           startTime + SKIP_BUFFER_RANGE_START,
-          currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS,
+          currentTime + skipPaddingSec,
         );
-        this.warn(
-          `skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`,
-        );
-        this.moved = true;
-        media.currentTime = targetTime;
         if (!appended?.gap) {
+          if (this.skipRetry++ > config.skipOnVideoHoleMaxRetry) {
+            const error = new Error(
+              `Playhead still not moving after seeking over buffer hole from ${currentTime} to ${targetTime} after ${config.skipOnVideoHoleMaxRetry} attempts. ` +
+                'Consider setting Hls.config.alwaysUseSkipPadding to true & configuring Hls.config.bufferHoleSkipPaddingSec to a larger value.',
+            );
+            this.error(error.message);
+            this.hls.trigger(Events.ERROR, {
+              type: ErrorTypes.MEDIA_ERROR,
+              details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+              error,
+              fatal: true,
+              buffer: bufferInfo.len,
+              bufferInfo,
+            });
+            return 0;
+          }
+
+          this.warn(
+            `skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`,
+          );
+          this.moved = true;
+          media.currentTime = targetTime;
           const error = new Error(
-            `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`,
+            `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}.`,
           );
           const errorData: ErrorData = {
             type: ErrorTypes.MEDIA_ERROR,
@@ -646,7 +670,15 @@ export default class GapController extends TaskLoop {
     this.nudgeRetry++;
 
     if (nudgeRetry < config.nudgeMaxRetry) {
-      const targetTime = currentTime + (nudgeRetry + 1) * config.nudgeOffset;
+      const { alwaysUseSkipPadding, nudgeOffsetSkipPaddingSec } = config;
+      const isFirstNudgeAttempt = nudgeRetry === 0;
+      const skipPaddingSec =
+        alwaysUseSkipPadding || !isFirstNudgeAttempt
+          ? nudgeOffsetSkipPaddingSec
+          : 0;
+
+      const targetTime =
+        currentTime + skipPaddingSec + (nudgeRetry + 1) * config.nudgeOffset;
       // playback stalled in buffered area ... let's nudge currentTime to try to overcome this
       const error = new Error(
         `Nudging 'currentTime' from ${currentTime} to ${targetTime}`,
@@ -663,7 +695,8 @@ export default class GapController extends TaskLoop {
       });
     } else {
       const error = new Error(
-        `Playhead still not moving while enough data buffered @${currentTime} after ${config.nudgeMaxRetry} nudges`,
+        `Playhead still not moving while enough data buffered @${currentTime} after ${config.nudgeMaxRetry} nudges. ` +
+          'Consider setting Hls.config.alwaysUseSkipPadding to true & configuring Hls.config.nudgeOffsetSkipPaddingSec or Hls.config.nudgeOffset to a larger values.',
       );
       this.error(error.message);
       hls.trigger(Events.ERROR, {

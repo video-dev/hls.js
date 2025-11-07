@@ -41,6 +41,10 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`nudgeOffset`](#nudgeoffset)
   - [`nudgeMaxRetry`](#nudgemaxretry)
   - [`nudgeOnVideoHole`](#nudgeonvideohole)
+  - [`skipOnVideoHoleMaxRetry`](#skipOnVideoHoleMaxRetry)
+  - [`alwaysUseSkipPadding`](#alwaysUseSkipPadding)
+  - [`nudgeOffsetSkipPaddingSec`](#nudgeOffsetSkipPaddingSec)
+  - [`bufferHoleSkipPaddingSec`](#bufferHoleSkipPaddingSec)
   - [`maxFragLookUpTolerance`](#maxfraglookuptolerance)
   - [`maxMaxBufferLength`](#maxmaxbufferlength)
   - [`liveSyncMode`](#livesyncmode)
@@ -695,6 +699,30 @@ Max number of playhead (`currentTime`) nudges before HLS.js raise a fatal BUFFER
 (default: `true`)
 
 Whether or not HLS.js should perform a seek nudge to flush the rendering pipeline upon traversing a gap or hole in video SourceBuffer buffered time ranges. This is only performed when audio is buffered at the point where the hole is detected. For more information see `nudgeOnVideoHole` in gap-controller and issues https://issues.chromium.org/issues/40280613#comment10 and https://github.com/video-dev/hls.js/issues/5631.
+
+### `skipOnVideoHoleMaxRetry`
+
+(default: `3`)
+
+Maximum number of attempts to seek over a buffer hole before HLS.js raises a fatal `BUFFER_SEEK_OVER_HOLE` error. When playback stalls due to a buffer hole, HLS.js will attempt to seek past the hole. If the playhead still doesn't move after this many attempts, playback will fail.
+
+### `alwaysUseSkipPadding`
+
+(default: `false`)
+
+Controls when padding is applied when seeking to resolve playback stalls or buffer holes. When `false`, padding (`nudgeOffsetSkipPaddingSec` or `bufferHoleSkipPaddingSec`) is only applied on retry attempts after the first seek attempt fails. When `true`, padding is always applied from the first attempt, which can help certain devices (SmartTVs, game consoles) that have issues with small seek values or seeking too close to buffered range boundaries.
+
+### `nudgeOffsetSkipPaddingSec`
+
+(default: `0`)
+
+The amount of padding in seconds added to the target seek position when nudging the playhead to resolve playback stalls (when the playhead is stuck in a buffered area). This padding is added to `nudgeOffset` when `alwaysUseSkipPadding` is `true` or on retry attempts. Certain SmartTVs, game consoles, and other devices may have issues seeking forward for small values or when seeking too closely to the start time of a buffered media range.
+
+### `bufferHoleSkipPaddingSec`
+
+(default: `2`)
+
+The amount of padding in seconds added to the target seek position when seeking over a buffer hole (an unbuffered gap between buffered ranges). This padding is applied when `alwaysUseSkipPadding` is `true` or on retry attempts after the first seek attempt fails. Certain SmartTVs, game consoles, and other devices may have issues seeking forward for small values or when seeking too closely to the start time of a buffered media range.
 
 ### `maxFragLookUpTolerance`
 
