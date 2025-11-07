@@ -140,6 +140,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`interstitialLiveLookAhead`](#interstitiallivelookahead)
   - [`assetPlayerId`](#assetplayerid)
   - [`primarySessionId`](#primarysessionid)
+  - [`useMediaCapabilities`](#usemediacapabilities)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(HTMLMediaElement | MediaAttachingData)`](#hlsattachmediahtmlmediaelement--mediaattachingdata)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -158,7 +159,6 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.autoLevelCapping`](#hlsautolevelcapping)
   - [`hls.maxHdcpLevel`](#hlsmaxhdcplevel)
   - [`hls.capLevelToPlayerSize`](#hlscapleveltoplayersize)
-  - [`hls.useMediaCapabilities`](#hlsusemediacapabilities)
   - [`hls.bandwidthEstimate`](#hlsbandwidthestimate)
   - [`hls.removeLevel(levelIndex)`](#hlsremovelevellevelindex)
 - [Version Control](#version-control)
@@ -1836,6 +1836,12 @@ An optional identifier string used to identify the primary HLS session when work
 
 This is primarily used internally by HLS.js when creating interstitial asset players, but can be set manually if you need to coordinate multiple HLS instances.
 
+### `useMediaCapabilities`
+
+(default value is `true` except in the light build or custom builds with setting the **USE_MEDIA_CAPABILITIES** flag to `false`.)
+
+- get/set: Whether the MediaCapabilities API is used for level, track, and switch filtering. When enabled, HLS.js uses `navigator.mediaCapabilities.decodingInfo()` to determine if a level or track is supported before selection. Some devices may incorrectly report MediaCapabilities, leading to levels/tracks being filtered out that the device actually supports. Whether or not tracks are filtered automatically using this feature, you can manually remove unsupported levels using `hls.removeLevel(levelIndex)` after the manifest is parsed.
+
 ## Video Binding/Unbinding API
 
 ### `hls.attachMedia(HTMLMediaElement | MediaAttachingData)`
@@ -1936,10 +1942,6 @@ Default value is null (no level capping based on HDCP-LEVEL)
 - set: Whether level capping is enabled.
 
 Default value is set via [`capLevelToPlayerSize`](#capleveltoplayersize) in config.
-
-### `hls.useMediaCapabilities`
-
-- get/set: Whether the MediaCapabilities API is used for level, track, and switch filtering. When enabled, HLS.js uses `navigator.mediaCapabilities.decodingInfo()` to determine if a level or track is supported before selection. Some devices may incorrectly report MediaCapabilities, leading to levels/tracks being filtered out that the device actually supports. Whether or not tracks are filtered automatically using this feature, you can manually remove unsupported levels using `hls.removeLevel(levelIndex)` after the manifest is parsed.
 
 ### `hls.bandwidthEstimate`
 
