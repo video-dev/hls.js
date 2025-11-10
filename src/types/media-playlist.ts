@@ -32,8 +32,6 @@ export type AudioSelectionOption = {
   audioCodec?: string;
   groupId?: string;
   default?: boolean;
-  nextAudioTrackSwitchingSafetyDelay?: number;
-  nextAudioTrackBufferFlushDelay?: number;
 };
 
 export type SubtitleSelectionOption = {

@@ -177,8 +177,6 @@ export type AudioSelectionOption = {
     audioCodec?: string;
     groupId?: string;
     default?: boolean;
-    nextAudioTrackSwitchingSafetyDelay?: number;
-    nextAudioTrackBufferFlushDelay?: number;
 };
 
 // Warning: (ae-missing-release-tag) "AudioStreamController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -409,7 +407,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected buffering: boolean;
     // (undocumented)
     get bufferingEnabled(): boolean;
-    protected calculateOptimalSwitchPoint(nextLevel: Level, bufferInfo: BufferInfo, levelDetails: LevelDetails | undefined, type: PlaylistLevelType): {
+    protected calculateOptimalSwitchPoint(nextLevel: Level, bufferInfo: BufferInfo, type: PlaylistLevelType): {
         fetchdelay: number;
         okToFlushForwardBuffer: boolean;
     };
@@ -4649,6 +4647,7 @@ export type StreamControllerConfig = {
     testBandwidth: boolean;
     liveSyncMode?: 'edge' | 'buffered';
     startOnSegmentBoundary: boolean;
+    nextAudioTrackBufferFlushForwardOffset: number;
 };
 
 // Warning: (ae-missing-release-tag) "SubtitleFragProcessedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

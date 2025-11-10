@@ -39,6 +39,7 @@ import {
   getPartWith,
   updateFragPTSDTS,
 } from '../utils/level-helper';
+import { estimatedAudioBitrate } from '../utils/mediacapabilities-helper';
 import { appendUint8Array } from '../utils/mp4-tools';
 import TimeRanges from '../utils/time-ranges';
 import type { FragmentTracker } from './fragment-tracker';
@@ -2278,20 +2279,18 @@ export default class BaseStreamController
   protected calculateOptimalSwitchPoint(
     nextLevel: Level,
     bufferInfo: BufferInfo,
-    levelDetails: LevelDetails | undefined,
     type: PlaylistLevelType,
   ): { fetchdelay: number; okToFlushForwardBuffer: boolean } {
     let fetchdelay = 0;
     const { hls, media, config, levels } = this;
-
+    const levelDetails = this.getLevelDetails();
     if (media && !media.paused && levels) {
-      // add a safety delay of 1s for OR nextAudioTrackSwitchingSafetyDelay depending on playlist type
-      const safetyDelay =
+      const maxBitrate =
         type === PlaylistLevelType.AUDIO
-          ? (hls.config.audioPreference?.nextAudioTrackSwitchingSafetyDelay ??
-            1)
-          : 1;
-      const ttfbSec = safetyDelay + hls.ttfbEstimate / 1000;
+          ? estimatedAudioBitrate(nextLevel.audioCodec, 128000)
+          : nextLevel.maxBitrate;
+      // add a safety delay of 1s
+      const ttfbSec = 1 + hls.ttfbEstimate / 1000;
       const bandwidth = hls.bandwidthEstimate * config.abrBandWidthUpFactor;
       const fragDuration =
         (levelDetails &&
@@ -2300,7 +2299,7 @@ export default class BaseStreamController
             : levelDetails.averagetargetduration)) ||
         this.fragCurrent?.duration ||
         6;
-      fetchdelay = ttfbSec + (nextLevel.maxBitrate * fragDuration) / bandwidth;
+      fetchdelay = ttfbSec + (maxBitrate * fragDuration) / bandwidth;
       if (!nextLevel.details) {
         fetchdelay += ttfbSec;
       }
@@ -2309,8 +2308,7 @@ export default class BaseStreamController
     const currentTime = this.media?.currentTime || this.getLoadPosition();
     // Do not flush in live stream with low buffer
     const okToFlushForwardBuffer =
-      type !== PlaylistLevelType.AUDIO &&
-      (!levelDetails?.live || bufferInfo.end - currentTime > fetchdelay * 1.5);
+      !levelDetails?.live || bufferInfo.end - currentTime > fetchdelay * 1.5;
 
     return { fetchdelay, okToFlushForwardBuffer };
   }
@@ -2333,12 +2331,12 @@ export default class BaseStreamController
 
     // find buffer range that will be reached once new fragment will be fetched
     const bufferedFrag = okToFlushForwardBuffer
-      ? this.getBufferedFrag(this.getLoadPosition() + fetchdelay)
+      ? this.getBufferedFrag(this.getLoadPosition() + fetchdelay, type)
       : null;
 
     if (bufferedFrag) {
       // we can flush buffer range following this one without stalling playback
-      const nextBufferedFrag = this.followingBufferedFrag(bufferedFrag);
+      const nextBufferedFrag = this.followingBufferedFrag(bufferedFrag, type);
       if (nextBufferedFrag) {
         // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
         this.abortCurrentFrag();
@@ -2530,7 +2528,6 @@ export default class BaseStreamController
       if (!bufferInfo) {
         return;
       }
-      const levelDetails = this.getLevelDetails();
 
       const nextLevelId =
         type === PlaylistLevelType.AUDIO
@@ -2539,12 +2536,7 @@ export default class BaseStreamController
       const nextLevel = levels[nextLevelId];
 
       const { fetchdelay, okToFlushForwardBuffer } =
-        this.calculateOptimalSwitchPoint(
-          nextLevel,
-          bufferInfo,
-          levelDetails,
-          type,
-        );
+        this.calculateOptimalSwitchPoint(nextLevel, bufferInfo, type);
 
       this.scheduleTrackSwitch(
         bufferInfo,

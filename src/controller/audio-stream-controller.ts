@@ -64,7 +64,7 @@ class AudioStreamController
   private mainFragLoading: FragLoadingData | null = null;
   private audioOnly: boolean = false;
   private bufferedTrack: MediaPlaylist | null = null;
-  private switchingTrack: MediaPlaylist | null = null;
+  private switchingTrack: AudioTrackSwitchingData | null = null;
   private trackId: number = -1;
   private nextTrackId: number = -1;
   private waitingData: WaitingForPTSData | null = null;
@@ -72,7 +72,6 @@ class AudioStreamController
   private flushing: boolean = false;
   private bufferFlushed: boolean = false;
   private cachedTrackLoadedData: TrackLoadedData | null = null;
-  private pendingAudioTrackSwitch: boolean = false;
 
   constructor(
     hls: Hls,
@@ -376,7 +375,8 @@ class AudioStreamController
     const start = fragments[0].start;
     const loadPosition = this.getLoadPosition();
     const targetBufferTime =
-      this.flushing || this.pendingAudioTrackSwitch
+      this.flushing ||
+      (this.switchingTrack && !this.switchingTrack.flushImmediate)
         ? loadPosition
         : bufferInfo.end;
 
@@ -499,7 +499,6 @@ class AudioStreamController
         // switching to audio track, start timer if not already started
         this.setInterval(TICK_INTERVAL);
         this.state = State.IDLE;
-        this.pendingAudioTrackSwitch = !data.flushImmediate;
         this.tick();
       }
     } else {
@@ -1060,8 +1059,7 @@ class AudioStreamController
     const { flushImmediate } = switchingTrack;
     if (!flushImmediate) {
       const { config } = this;
-      const bufferFlushDelay =
-        config.audioPreference?.nextAudioTrackBufferFlushDelay || 0.25;
+      const bufferFlushDelay = config.nextAudioTrackBufferFlushForwardOffset;
       const startOffset = Math.max(
         this.getLoadPosition() + bufferFlushDelay,
         this.fragPrevious?.start || 0,
@@ -1074,7 +1072,6 @@ class AudioStreamController
     }
 
     this.bufferedTrack = switchingTrack;
-    this.pendingAudioTrackSwitch = false;
     if (flushImmediate) {
       this.switchingTrack = null;
       hls.trigger(Events.AUDIO_TRACK_SWITCHED, switchingTrack);
