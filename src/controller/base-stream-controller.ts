@@ -93,12 +93,6 @@ export type InFlightData = {
   state: (typeof State)[keyof typeof State];
 };
 
-export const enum AlternateAudio {
-  DISABLED = 0,
-  SWITCHING,
-  SWITCHED,
-}
-
 export default class BaseStreamController
   extends TaskLoop
   implements NetworkComponentAPI
@@ -108,10 +102,7 @@ export default class BaseStreamController
   protected fragPrevious: MediaFragment | null = null;
   protected fragCurrent: Fragment | null = null;
   protected fragPlaying: Fragment | null = null;
-  protected backtrackFragment: Fragment | null = null;
-  protected altAudio: AlternateAudio = AlternateAudio.DISABLED;
   protected fragmentTracker: FragmentTracker;
-  protected couldBacktrack: boolean = false;
   protected transmuxer: TransmuxerInterface | null = null;
   protected _state: (typeof State)[keyof typeof State] = State.STOPPED;
   protected playlistType: PlaylistLevelType;
@@ -208,6 +199,34 @@ export default class BaseStreamController
   public get bufferingEnabled(): boolean {
     return this.buffering;
   }
+
+  /**
+   * Get backtrack fragment. Returns null in base class.
+   * Override in stream-controller to return actual backtrack fragment.
+   */
+  protected get backtrackFragment(): Fragment | null {
+    return null;
+  }
+
+  /**
+   * Set backtrack fragment. No-op in base class.
+   * Override in stream-controller to set actual backtrack fragment.
+   */
+  protected set backtrackFragment(_value: Fragment | null) {}
+
+  /**
+   * Get could backtrack flag. Returns false in base class.
+   * Override in stream-controller to return actual value.
+   */
+  protected get couldBacktrack(): boolean {
+    return false;
+  }
+
+  /**
+   * Set could backtrack flag. No-op in base class.
+   * Override in stream-controller to set actual value.
+   */
+  protected set couldBacktrack(_value: boolean) {}
 
   public pauseBuffering() {
     this.buffering = false;
@@ -2391,15 +2410,6 @@ export default class BaseStreamController
   }
 
   /**
-   * Base method for track switching that uses common logic
-   * to prevent buffering interruptions
-   */
-  public nextTrackSwitch(): void {
-    // Base implementation - to be overridden by subclasses
-    // This provides the common pattern that both audio and video controllers can use
-  }
-
-  /**
    * Gets buffered fragment at the specified position
    */
   protected getBufferedFrag(
@@ -2479,14 +2489,12 @@ export default class BaseStreamController
           fragPlayingCurrent.sn !== fragPlaying.sn ||
           fragPlaying.level !== fragCurrentLevel
         ) {
-          if (type === PlaylistLevelType.AUDIO) {
-            if (fragPlaying?.level !== fragPlayingCurrent.level) {
-              this.flushMainBuffer(
-                0,
-                this.getLoadPosition(),
-                PlaylistLevelType.AUDIO,
-              );
-            }
+          if (
+            type === PlaylistLevelType.AUDIO &&
+            fragPlaying &&
+            fragPlaying.level !== fragPlayingCurrent.level
+          ) {
+            this.flushMainBuffer(0, fragPlaying.end, PlaylistLevelType.AUDIO);
           }
           this.fragPlaying = fragPlayingCurrent;
           if (type === PlaylistLevelType.MAIN) {
@@ -2505,25 +2513,15 @@ export default class BaseStreamController
     }
   }
 
-  public getMainFwdBufferInfo(): BufferInfo | null {
-    // Observe video SourceBuffer (this.mediaBuffer) only when alt-audio is used, otherwise observe combined media buffer
-    const bufferOutput =
-      this.mediaBuffer && this.altAudio === AlternateAudio.SWITCHED
-        ? this.mediaBuffer
-        : this.media;
-    return this.getFwdBufferInfo(bufferOutput, PlaylistLevelType.MAIN);
+  protected getBufferOutput(): Bufferable | null {
+    return null;
   }
 
   public nextLevelSwitch(type: PlaylistLevelType) {
     const { levels, media, hls, config } = this;
     // ensure that media is defined and that metadata are available (to retrieve currentTime)
     if (media?.readyState && levels && hls && config) {
-      const bufferOutput =
-        this.mediaBuffer &&
-        (this.altAudio === AlternateAudio.SWITCHED ||
-          type === PlaylistLevelType.AUDIO)
-          ? this.mediaBuffer
-          : this.media;
+      const bufferOutput = this.getBufferOutput();
       const bufferInfo = this.getFwdBufferInfo(bufferOutput, type);
       if (!bufferInfo) {
         return;

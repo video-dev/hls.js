@@ -1,7 +1,4 @@
-import BaseStreamController, {
-  AlternateAudio,
-  State,
-} from './base-stream-controller';
+import BaseStreamController, { State } from './base-stream-controller';
 import { findFragmentByPTS } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 import { MAX_START_GAP_JUMP } from './gap-controller';
@@ -52,6 +49,13 @@ import type {
 import type { Level } from '../types/level';
 import type { Track, TrackSet } from '../types/track';
 import type { TransmuxerResult } from '../types/transmuxer';
+import type { Bufferable, BufferInfo } from '../utils/buffer-helper';
+
+export const enum AlternateAudio {
+  DISABLED = 0,
+  SWITCHING,
+  SWITCHED,
+}
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -63,7 +67,10 @@ export default class StreamController
   private level: number = -1;
   private _forceStartLoad: boolean = false;
   private _hasEnoughToStart: boolean = false;
+  private altAudio: AlternateAudio = AlternateAudio.DISABLED;
   private audioOnly: boolean = false;
+  private _couldBacktrack: boolean = false;
+  private _backtrackFragment: Fragment | null = null;
   private audioCodecSwitch: boolean = false;
   private videoBuffer: ExtendedSourceBuffer | null = null;
 
@@ -403,6 +410,45 @@ export default class StreamController
   public immediateLevelSwitch() {
     this.abortCurrentFrag();
     this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
+  }
+
+  /**
+   * Get the buffer output to use for buffer calculations.
+   * Override to use altAudio logic in stream-controller.
+   */
+  protected getBufferOutput(): Bufferable | null {
+    if (this.mediaBuffer && this.altAudio === AlternateAudio.SWITCHED) {
+      return this.mediaBuffer;
+    }
+    return this.media;
+  }
+
+  /**
+   * Get backtrack fragment. Override to return actual backtrack fragment.
+   */
+  protected get backtrackFragment(): Fragment | null {
+    return this._backtrackFragment;
+  }
+
+  /**
+   * Set backtrack fragment. Override to set actual backtrack fragment.
+   */
+  protected set backtrackFragment(value: Fragment | null) {
+    this._backtrackFragment = value;
+  }
+
+  /**
+   * Get could backtrack flag. Override to return actual value.
+   */
+  protected get couldBacktrack(): boolean {
+    return this._couldBacktrack;
+  }
+
+  /**
+   * Set could backtrack flag. Override to set actual value.
+   */
+  protected set couldBacktrack(value: boolean) {
+    this._couldBacktrack = value;
   }
 
   /**
@@ -1449,6 +1495,12 @@ export default class StreamController
     }
     // trigger handler right now
     this.tickImmediate();
+  }
+
+  public getMainFwdBufferInfo(): BufferInfo | null {
+    // Observe video SourceBuffer (this.mediaBuffer) only when alt-audio is used, otherwise observe combined media buffer
+    const bufferOutput = this.getBufferOutput();
+    return this.getFwdBufferInfo(bufferOutput, PlaylistLevelType.MAIN);
   }
 
   public get maxBufferLength(): number {

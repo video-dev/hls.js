@@ -185,7 +185,11 @@ export type AudioSelectionOption = {
 export class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader);
     // (undocumented)
+    protected checkFragmentChanged(type?: PlaylistLevelType): void;
+    // (undocumented)
     doTick(): void;
+    // (undocumented)
+    protected getBufferOutput(): Bufferable | null;
     // (undocumented)
     protected getLoadPosition(): number;
     // (undocumented)
@@ -393,12 +397,9 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected afterBufferFlushed(media: Bufferable, bufferType: SourceBufferName, playlistType: PlaylistLevelType): void;
     // (undocumented)
     protected alignPlaylists(details: LevelDetails, previousDetails: LevelDetails | undefined, switchDetails: LevelDetails | undefined): number;
-    // Warning: (ae-forgotten-export) The symbol "AlternateAudio" needs to be exported by the entry point hls.d.ts
-    //
-    // (undocumented)
-    protected altAudio: AlternateAudio;
-    // (undocumented)
-    protected backtrackFragment: Fragment | null;
+    protected get backtrackFragment(): Fragment | null;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "backtrackFragment" must appear on the getter, not the setter.
+    protected set backtrackFragment(_value: Fragment | null);
     // (undocumented)
     protected bitrateTest: boolean;
     // (undocumented)
@@ -422,8 +423,9 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected clearTrackerIfNeeded(frag: Fragment): void;
     // (undocumented)
     protected config: HlsConfig;
-    // (undocumented)
-    protected couldBacktrack: boolean;
+    protected get couldBacktrack(): boolean;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "couldBacktrack" must appear on the getter, not the setter.
+    protected set couldBacktrack(_value: boolean);
     // (undocumented)
     protected decrypter: Decrypter;
     // (undocumented)
@@ -455,6 +457,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected getAppendedFrag(position: number, playlistType?: PlaylistLevelType): Fragment | null;
     protected getBufferedFrag(position: number, type?: PlaylistLevelType): Fragment | null;
     // (undocumented)
+    protected getBufferOutput(): Bufferable | null;
+    // (undocumented)
     protected getCurrentContext(chunkMeta: ChunkMetadata): {
         frag: MediaFragment;
         part: Part | null;
@@ -472,8 +476,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     getLevelDetails(): LevelDetails | undefined;
     // (undocumented)
     protected getLoadPosition(): number;
-    // (undocumented)
-    getMainFwdBufferInfo(): BufferInfo | null;
     // (undocumented)
     protected getMaxBufferLength(levelBitrate?: number): number;
     // (undocumented)
@@ -520,7 +522,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     nextLevelSwitch(type: PlaylistLevelType): void;
     // (undocumented)
     protected nextLoadPosition: number;
-    nextTrackSwitch(): void;
     // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
     // (undocumented)
@@ -4578,6 +4579,12 @@ export class StreamController extends BaseStreamController implements NetworkCom
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader);
     // (undocumented)
     protected abortCurrentFrag(): void;
+    protected get backtrackFragment(): Fragment | null;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "backtrackFragment" must appear on the getter, not the setter.
+    protected set backtrackFragment(value: Fragment | null);
+    protected get couldBacktrack(): boolean;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "couldBacktrack" must appear on the getter, not the setter.
+    protected set couldBacktrack(value: boolean);
     // (undocumented)
     get currentFrag(): Fragment | null;
     // (undocumented)
@@ -4590,6 +4597,9 @@ export class StreamController extends BaseStreamController implements NetworkCom
     protected flushMainBuffer(startOffset: number, endOffset: number): void;
     // (undocumented)
     get forceStartLoad(): boolean;
+    protected getBufferOutput(): Bufferable | null;
+    // (undocumented)
+    getMainFwdBufferInfo(): BufferInfo | null;
     // (undocumented)
     protected _handleFragmentLoadProgress(data: FragLoadedData): void;
     // (undocumented)

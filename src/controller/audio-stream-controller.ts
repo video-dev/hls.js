@@ -19,6 +19,7 @@ import {
   useAlternateAudio,
 } from '../utils/rendition-helper';
 import type { FragmentTracker } from './fragment-tracker';
+import type { Bufferable } from '../hls';
 import type Hls from '../hls';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type KeyLoader from '../loader/key-loader';
@@ -772,6 +773,10 @@ class AudioStreamController
     if (this.media) {
       this.tick();
     }
+  }
+
+  protected getBufferOutput(): Bufferable | null {
+    return this.mediaBuffer ? this.mediaBuffer : this.media;
   }
 
   protected checkFragmentChanged(
