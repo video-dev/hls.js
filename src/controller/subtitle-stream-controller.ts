@@ -127,10 +127,7 @@ export class SubtitleStreamController
     event: Events.SUBTITLE_FRAG_PROCESSED,
     data: SubtitleFragProcessed,
   ) {
-    const { frag, part, success } = data;
-    if (!success) {
-      return;
-    }
+    const { frag, part } = data;
 
     const buffered = this.tracksBuffered[this.currentTrackId];
     if (!buffered) {
@@ -155,14 +152,18 @@ export class SubtitleStreamController
       timeRange = { start, end };
       buffered.push(timeRange);
     }
-    if (!part || end >= frag.end) {
-      this.fragmentTracker.fragBuffered(frag as MediaFragment);
+
+    const isFragHint = !frag.relurl;
+    const endOfSegmentLoaded =
+      !part || !isMediaFragment(frag) || (end >= frag.end && !isFragHint);
+    this.fragBufferedComplete(frag, part);
+    if (endOfSegmentLoaded) {
       if (!this.fragContextChanged(frag)) {
         if (isMediaFragment(frag)) {
+          this.fragmentTracker.fragBuffered(frag);
           this.fragPrevious = frag;
         }
       }
-      this.fragBufferedComplete(frag, part);
       if (this.media) {
         this.tickImmediate();
       }
@@ -435,7 +436,8 @@ export class SubtitleStreamController
       if (bufferLen > maxBufLen || (bufferLen && !this.buffering)) {
         return;
       }
-      let frag = this.getNextFragment(currentTime, trackDetails);
+      let frag = this.getNextFragment(targetBufferTime, trackDetails);
+
       if (!frag) {
         return;
       }
@@ -467,7 +469,7 @@ export class SubtitleStreamController
     const fragState = this.fragmentTracker.getState(frag);
     if (
       fragState === FragmentState.NOT_LOADED ||
-      fragState === FragmentState.PARTIAL
+      (this.loadingParts && isMediaFragment(frag))
     ) {
       if (!isMediaFragment(frag)) {
         this._loadInitSegment(frag, level);
