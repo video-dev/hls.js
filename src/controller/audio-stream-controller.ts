@@ -495,9 +495,11 @@ class AudioStreamController
     if (altAudio) {
       this.switchingTrack = data;
       // main audio track are handled by stream-controller, just do something if switching to alt audio track
-      if (data.flushImmediate) {
-        this.flushAudioIfNeeded(data);
+      if (!data.flushImmediate) {
+        this.nextTrackId = data.id;
+        this.nextAudioTrackSwitch();
       }
+      this.flushAudioIfNeeded(data);
       if (this.state !== State.STOPPED) {
         // switching to audio track, start timer if not already started
         this.setInterval(TICK_INTERVAL);
@@ -783,16 +785,20 @@ class AudioStreamController
     type: PlaylistLevelType = PlaylistLevelType.AUDIO,
   ) {
     const previousFrag = this.fragPlaying;
-
-    super.checkFragmentChanged(type);
+    const fragChanged = super.checkFragmentChanged(type);
+    if (!fragChanged) {
+      return false;
+    }
 
     const fragPlaying = this.fragPlaying;
     const fragPreviousLevel = previousFrag?.level;
     if (!fragPlaying || fragPlaying.level !== fragPreviousLevel) {
+      this.cleanupBackBuffer(PlaylistLevelType.AUDIO);
       if (this.switchingTrack) {
         this.completeAudioSwitch(this.switchingTrack);
       }
     }
+    return true;
   }
 
   protected onError(event: Events.ERROR, data: ErrorData) {
@@ -902,7 +908,7 @@ class AudioStreamController
       const bufferFlushDelay = config.nextAudioTrackBufferFlushForwardOffset;
       const startOffset = Math.max(
         this.getLoadPosition() + bufferFlushDelay,
-        this.fragPrevious?.start || 0,
+        frag.start,
       );
       super.flushMainBuffer(
         startOffset,
@@ -1060,7 +1066,7 @@ class AudioStreamController
   }
 
   private flushAudioIfNeeded(switchingTrack: AudioTrackSwitchingData) {
-    if (this.media && this.bufferedTrack) {
+    if (this.media && this.bufferedTrack && switchingTrack.flushImmediate) {
       const { name, lang, assocLang, characteristics, audioCodec, channels } =
         this.bufferedTrack;
       if (
@@ -1086,7 +1092,7 @@ class AudioStreamController
     const { hls } = this;
     this.bufferedTrack = switchingTrack;
     this.switchingTrack = null;
-    hls.trigger(Events.AUDIO_TRACK_SWITCHED, switchingTrack);
+    hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...switchingTrack });
   }
 
   /**
@@ -1097,20 +1103,12 @@ class AudioStreamController
   }
 
   /**
-   * Set next audio track index for seamless audio track switching.
-   * This schedules audio track switching without interrupting playback.
-   */
-  set nextAudioTrack(audioTrackId: number) {
-    this.nextTrackId = audioTrackId;
-  }
-
-  /**
    * try to switch ASAP without breaking audio playback:
    * in order to ensure smooth but quick audio track switching,
    * we need to find the next flushable buffer range
    * we should take into account new segment fetch time
    */
-  public nextAudioTrackSwitch(): void {
+  private nextAudioTrackSwitch(): void {
     super.nextLevelSwitch(PlaylistLevelType.AUDIO);
   }
 }

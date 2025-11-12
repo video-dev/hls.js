@@ -185,7 +185,7 @@ export type AudioSelectionOption = {
 export class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader);
     // (undocumented)
-    protected checkFragmentChanged(type?: PlaylistLevelType): void;
+    protected checkFragmentChanged(type?: PlaylistLevelType): boolean;
     // (undocumented)
     doTick(): void;
     // (undocumented)
@@ -199,9 +199,6 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     protected loadFragment(frag: Fragment, track: Level, targetBufferTime: number): void;
     get nextAudioTrack(): number;
-    // Warning: (ae-setter-with-docs) The doc comment for the property "nextAudioTrack" must appear on the getter, not the setter.
-    set nextAudioTrack(audioTrackId: number);
-    nextAudioTrackSwitch(): void;
     // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
     // (undocumented)
@@ -397,9 +394,9 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected afterBufferFlushed(media: Bufferable, bufferType: SourceBufferName, playlistType: PlaylistLevelType): void;
     // (undocumented)
     protected alignPlaylists(details: LevelDetails, previousDetails: LevelDetails | undefined, switchDetails: LevelDetails | undefined): number;
-    protected get backtrackFragment(): Fragment | null;
+    protected get backtrackFragment(): Fragment | undefined;
     // Warning: (ae-setter-with-docs) The doc comment for the property "backtrackFragment" must appear on the getter, not the setter.
-    protected set backtrackFragment(_value: Fragment | null);
+    protected set backtrackFragment(_value: Fragment | undefined);
     // (undocumented)
     protected bitrateTest: boolean;
     // (undocumented)
@@ -413,7 +410,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
         okToFlushForwardBuffer: boolean;
     };
     // (undocumented)
-    protected checkFragmentChanged(type?: PlaylistLevelType): void;
+    protected checkFragmentChanged(type?: PlaylistLevelType): boolean;
     // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
@@ -4579,9 +4576,11 @@ export class StreamController extends BaseStreamController implements NetworkCom
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader);
     // (undocumented)
     protected abortCurrentFrag(): void;
-    protected get backtrackFragment(): Fragment | null;
+    protected get backtrackFragment(): Fragment | undefined;
     // Warning: (ae-setter-with-docs) The doc comment for the property "backtrackFragment" must appear on the getter, not the setter.
-    protected set backtrackFragment(value: Fragment | null);
+    protected set backtrackFragment(value: Fragment | undefined);
+    // (undocumented)
+    protected checkFragmentChanged(type?: PlaylistLevelType): boolean;
     protected get couldBacktrack(): boolean;
     // Warning: (ae-setter-with-docs) The doc comment for the property "couldBacktrack" must appear on the getter, not the setter.
     protected set couldBacktrack(value: boolean);

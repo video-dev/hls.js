@@ -204,15 +204,15 @@ export default class BaseStreamController
    * Get backtrack fragment. Returns null in base class.
    * Override in stream-controller to return actual backtrack fragment.
    */
-  protected get backtrackFragment(): Fragment | null {
-    return null;
+  protected get backtrackFragment(): Fragment | undefined {
+    return undefined;
   }
 
   /**
    * Set backtrack fragment. No-op in base class.
    * Override in stream-controller to set actual backtrack fragment.
    */
-  protected set backtrackFragment(_value: Fragment | null) {}
+  protected set backtrackFragment(_value: Fragment | undefined) {}
 
   /**
    * Get could backtrack flag. Returns false in base class.
@@ -366,10 +366,13 @@ export default class BaseStreamController
 
   protected onManifestLoading() {
     this.initPTS = [];
-    this.levels = this.levelLastLoaded = this.fragCurrent = null;
+    this.fragPlaying =
+      this.levels =
+      this.levelLastLoaded =
+      this.fragCurrent =
+        null;
     this.lastCurrentTime = this.startPosition = 0;
     this.startFragRequested = false;
-    this.fragPlaying = this.backtrackFragment = null;
   }
 
   protected onError(event: Events.ERROR, data: ErrorData) {}
@@ -2399,12 +2402,13 @@ export default class BaseStreamController
       type,
     );
     if (fragPlayingCurrent && fragPlayingCurrent.start > 1) {
+      const isAudio = type === PlaylistLevelType.AUDIO;
       // flush buffer preceding current fragment (flush until current fragment start offset)
       // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
       this.flushMainBuffer(
         0,
-        fragPlayingCurrent.start - 1,
-        type === PlaylistLevelType.AUDIO ? 'audio' : null,
+        fragPlayingCurrent.start - (isAudio ? 0 : 1),
+        isAudio ? 'audio' : null,
       );
     }
   }
@@ -2458,7 +2462,7 @@ export default class BaseStreamController
 
   protected checkFragmentChanged(
     type: PlaylistLevelType = PlaylistLevelType.MAIN,
-  ) {
+  ): boolean {
     const video = this.media;
     let fragPlayingCurrent: Fragment | null = null;
     if (video && video.readyState > 1 && video.seeking === false) {
@@ -2481,7 +2485,7 @@ export default class BaseStreamController
         fragPlayingCurrent = this.getAppendedFrag(currentTime + 0.1, type);
       }
       if (fragPlayingCurrent) {
-        this.backtrackFragment = null;
+        this.backtrackFragment = undefined;
         const fragPlaying = this.fragPlaying;
         const fragCurrentLevel = fragPlayingCurrent.level;
         if (
@@ -2489,28 +2493,12 @@ export default class BaseStreamController
           fragPlayingCurrent.sn !== fragPlaying.sn ||
           fragPlaying.level !== fragCurrentLevel
         ) {
-          if (
-            type === PlaylistLevelType.AUDIO &&
-            fragPlaying &&
-            fragPlaying.level !== fragPlayingCurrent.level
-          ) {
-            this.flushMainBuffer(0, fragPlaying.end, PlaylistLevelType.AUDIO);
-          }
           this.fragPlaying = fragPlayingCurrent;
-          if (type === PlaylistLevelType.MAIN) {
-            this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });
-            if (
-              !fragPlaying ||
-              fragPlaying.level !== (fragCurrentLevel as number | undefined)
-            ) {
-              this.hls.trigger(Events.LEVEL_SWITCHED, {
-                level: fragCurrentLevel,
-              });
-            }
-          }
+          return true;
         }
       }
     }
+    return false;
   }
 
   protected getBufferOutput(): Bufferable | null {

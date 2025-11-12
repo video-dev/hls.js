@@ -1084,12 +1084,9 @@ export default class Hls implements HlsEventEmitter {
    * @param audioTrackId - Pass -1 for automatic level selection
    */
   set nextAudioTrack(audioTrackId: number) {
-    this.logger.log(`set nextAudioTrack:${audioTrackId}`);
-    const { audioTrackController, audioStreamController } = this;
-    if (audioTrackController && audioStreamController) {
-      audioTrackController.nextAudioTrack =
-        audioStreamController.nextAudioTrack = audioTrackId;
-      audioStreamController.nextAudioTrackSwitch();
+    const { audioTrackController } = this;
+    if (audioTrackController) {
+      audioTrackController.nextAudioTrack = audioTrackId;
     }
   }
 

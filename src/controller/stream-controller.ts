@@ -70,7 +70,7 @@ export default class StreamController
   private altAudio: AlternateAudio = AlternateAudio.DISABLED;
   private audioOnly: boolean = false;
   private _couldBacktrack: boolean = false;
-  private _backtrackFragment: Fragment | null = null;
+  private _backtrackFragment: Fragment | undefined = undefined;
   private audioCodecSwitch: boolean = false;
   private videoBuffer: ExtendedSourceBuffer | null = null;
 
@@ -316,7 +316,7 @@ export default class StreamController
       this.backtrackFragment &&
       this.backtrackFragment.start > bufferInfo.end
     ) {
-      this.backtrackFragment = null;
+      this.backtrackFragment = undefined;
     }
     const targetBufferTime = this.backtrackFragment
       ? this.backtrackFragment.start
@@ -338,7 +338,7 @@ export default class StreamController
         this.fragmentTracker.removeFragment(backtrackFrag);
       }
     } else if (this.backtrackFragment && bufferInfo.len) {
-      this.backtrackFragment = null;
+      this.backtrackFragment = undefined;
     }
     // Avoid loop loading by using nextLoadPosition set for backtracking and skipping consecutive GAP tags
     if (frag && this.isLoopLoading(frag, targetBufferTime)) {
@@ -423,17 +423,42 @@ export default class StreamController
     return this.media;
   }
 
+  protected checkFragmentChanged(
+    type: PlaylistLevelType = PlaylistLevelType.AUDIO,
+  ): boolean {
+    const previousFrag = this.fragPlaying;
+    const fragChanged = super.checkFragmentChanged(type);
+    if (!fragChanged) {
+      return false;
+    }
+
+    const fragPlaying = this.fragPlaying;
+    if (fragPlaying && previousFrag) {
+      const fragCurrentLevel = fragPlaying.level;
+      this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlaying });
+      if (
+        !fragPlaying ||
+        fragPlaying.level !== (fragCurrentLevel as number | undefined)
+      ) {
+        this.hls.trigger(Events.LEVEL_SWITCHED, {
+          level: fragCurrentLevel,
+        });
+      }
+    }
+    return true;
+  }
+
   /**
    * Get backtrack fragment. Override to return actual backtrack fragment.
    */
-  protected get backtrackFragment(): Fragment | null {
+  protected get backtrackFragment(): Fragment | undefined {
     return this._backtrackFragment;
   }
 
   /**
    * Set backtrack fragment. Override to set actual backtrack fragment.
    */
-  protected set backtrackFragment(value: Fragment | null) {
+  protected set backtrackFragment(value: Fragment | undefined) {
     this._backtrackFragment = value;
   }
 
@@ -462,8 +487,8 @@ export default class StreamController
   }
 
   protected abortCurrentFrag(): void {
+    this.backtrackFragment = undefined;
     super.abortCurrentFrag();
-    this.backtrackFragment = null;
   }
 
   protected flushMainBuffer(startOffset: number, endOffset: number) {
@@ -545,6 +570,7 @@ export default class StreamController
     this.log('Trigger BUFFER_RESET');
     this.hls.trigger(Events.BUFFER_RESET, undefined);
     this.couldBacktrack = false;
+    this.backtrackFragment = undefined;
     this.altAudio = AlternateAudio.DISABLED;
     this.audioOnly = false;
   }
