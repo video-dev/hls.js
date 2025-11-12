@@ -1353,12 +1353,9 @@ export default class BaseStreamController
     return false;
   }
 
-  protected getAppendedFrag(
-    position: number,
-    playlistType: PlaylistLevelType = PlaylistLevelType.MAIN,
-  ): Fragment | null {
+  protected getAppendedFrag(position: number): Fragment | null {
     const fragOrPart = (this.fragmentTracker as any)
-      ? this.fragmentTracker.getAppendedFrag(position, playlistType)
+      ? this.fragmentTracker.getAppendedFrag(position, this.playlistType)
       : null;
     if (fragOrPart && 'fragment' in fragOrPart) {
       return fragOrPart.fragment;
@@ -2071,7 +2068,6 @@ export default class BaseStreamController
   protected afterBufferFlushed(
     media: Bufferable,
     bufferType: SourceBufferName,
-    playlistType: PlaylistLevelType,
   ) {
     if (!media) {
       return;
@@ -2082,7 +2078,7 @@ export default class BaseStreamController
     this.fragmentTracker.detectEvictedFragments(
       bufferType,
       bufferedTimeRanges,
-      playlistType,
+      this.playlistType,
     );
     if (this.state === State.ENDED) {
       this.resetLoadingState();
@@ -2301,14 +2297,13 @@ export default class BaseStreamController
   protected calculateOptimalSwitchPoint(
     nextLevel: Level,
     bufferInfo: BufferInfo,
-    type: PlaylistLevelType,
   ): { fetchdelay: number; okToFlushForwardBuffer: boolean } {
     let fetchdelay = 0;
-    const { hls, media, config, levels } = this;
+    const { hls, media, config, levels, playlistType } = this;
     const levelDetails = this.getLevelDetails();
     if (media && !media.paused && levels) {
       const maxBitrate =
-        type === PlaylistLevelType.AUDIO
+        playlistType === PlaylistLevelType.AUDIO
           ? estimatedAudioBitrate(nextLevel.audioCodec, 128000)
           : nextLevel.maxBitrate;
       // add a safety delay of 1s
@@ -2344,21 +2339,20 @@ export default class BaseStreamController
     bufferInfo: BufferInfo,
     fetchdelay: number,
     okToFlushForwardBuffer: boolean,
-    type: PlaylistLevelType,
   ): void {
-    const { media } = this;
+    const { media, playlistType } = this;
     if (!media || !bufferInfo) {
       return;
     }
 
     // find buffer range that will be reached once new fragment will be fetched
     const bufferedFrag = okToFlushForwardBuffer
-      ? this.getBufferedFrag(this.getLoadPosition() + fetchdelay, type)
+      ? this.getBufferedFrag(this.getLoadPosition() + fetchdelay)
       : null;
 
     if (bufferedFrag) {
       // we can flush buffer range following this one without stalling playback
-      const nextBufferedFrag = this.followingBufferedFrag(bufferedFrag, type);
+      const nextBufferedFrag = this.followingBufferedFrag(bufferedFrag);
       if (nextBufferedFrag) {
         // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
         this.abortCurrentFrag();
@@ -2378,11 +2372,12 @@ export default class BaseStreamController
               fragDuration * (this.couldBacktrack ? 0.75 : 0.25),
             ),
         );
-        const bufferType = type === PlaylistLevelType.MAIN ? null : 'audio';
+        const bufferType =
+          playlistType === PlaylistLevelType.MAIN ? null : 'audio';
         // Flush forward buffer from next buffered frag start to infinity
         this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY, bufferType);
         // Flush back buffer (excluding current fragment)
-        this.cleanupBackBuffer(type);
+        this.cleanupBackBuffer();
       }
     }
   }
@@ -2390,19 +2385,16 @@ export default class BaseStreamController
   /**
    * Handle back-buffer cleanup during track switching
    */
-  protected cleanupBackBuffer(type: PlaylistLevelType): void {
-    const { media } = this;
+  protected cleanupBackBuffer(): void {
+    const { media, playlistType } = this;
     if (!media) {
       return;
     }
 
     // remove back-buffer
-    const fragPlayingCurrent = this.getAppendedFrag(
-      this.getLoadPosition(),
-      type,
-    );
+    const fragPlayingCurrent = this.getAppendedFrag(this.getLoadPosition());
     if (fragPlayingCurrent && fragPlayingCurrent.start > 1) {
-      const isAudio = type === PlaylistLevelType.AUDIO;
+      const isAudio = playlistType === PlaylistLevelType.AUDIO;
       // flush buffer preceding current fragment (flush until current fragment start offset)
       // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
       this.flushMainBuffer(
@@ -2416,23 +2408,17 @@ export default class BaseStreamController
   /**
    * Gets buffered fragment at the specified position
    */
-  protected getBufferedFrag(
-    position: number,
-    type: PlaylistLevelType = PlaylistLevelType.MAIN,
-  ): Fragment | null {
-    return this.fragmentTracker.getBufferedFrag(position, type);
+  protected getBufferedFrag(position: number): Fragment | null {
+    return this.fragmentTracker.getBufferedFrag(position, this.playlistType);
   }
 
   /**
    * Gets the next buffered fragment following the given fragment
    */
-  protected followingBufferedFrag(
-    frag: Fragment | null,
-    type: PlaylistLevelType = PlaylistLevelType.MAIN,
-  ): Fragment | null {
+  protected followingBufferedFrag(frag: Fragment | null): Fragment | null {
     if (frag) {
       // try to get range of next fragment (500ms after this range)
-      return this.getBufferedFrag(frag.end + 0.5, type);
+      return this.getBufferedFrag(frag.end + 0.5);
     }
     return null;
   }
@@ -2460,9 +2446,7 @@ export default class BaseStreamController
     this.nextLoadPosition = this.getLoadPosition();
   }
 
-  protected checkFragmentChanged(
-    type: PlaylistLevelType = PlaylistLevelType.MAIN,
-  ): boolean {
+  protected checkFragmentChanged(): boolean {
     const video = this.media;
     let fragPlayingCurrent: Fragment | null = null;
     if (video && video.readyState > 1 && video.seeking === false) {
@@ -2475,14 +2459,14 @@ export default class BaseStreamController
         */
 
       if (BufferHelper.isBuffered(video, currentTime)) {
-        fragPlayingCurrent = this.getAppendedFrag(currentTime, type);
+        fragPlayingCurrent = this.getAppendedFrag(currentTime);
       } else if (BufferHelper.isBuffered(video, currentTime + 0.1)) {
         /* ensure that FRAG_CHANGED event is triggered at startup,
             when first video frame is displayed and playback is paused.
             add a tolerance of 100ms, in case current position is not buffered,
             check if current pos+100ms is buffered and use that buffer range
             for FRAG_CHANGED event reporting */
-        fragPlayingCurrent = this.getAppendedFrag(currentTime + 0.1, type);
+        fragPlayingCurrent = this.getAppendedFrag(currentTime + 0.1);
       }
       if (fragPlayingCurrent) {
         this.backtrackFragment = undefined;
@@ -2505,31 +2489,32 @@ export default class BaseStreamController
     return null;
   }
 
-  public nextLevelSwitch(type: PlaylistLevelType) {
-    const { levels, media, hls, config } = this;
+  /**
+   * try to switch ASAP without breaking video playback:
+   * in order to ensure smooth but quick level switching,
+   * we need to find the next flushable buffer range
+   * we should take into account new segment fetch time
+   */
+  public nextLevelSwitch() {
+    const { levels, media, hls, config, playlistType } = this;
     // ensure that media is defined and that metadata are available (to retrieve currentTime)
     if (media?.readyState && levels && hls && config) {
       const bufferOutput = this.getBufferOutput();
-      const bufferInfo = this.getFwdBufferInfo(bufferOutput, type);
+      const bufferInfo = this.getFwdBufferInfo(bufferOutput, playlistType);
       if (!bufferInfo) {
         return;
       }
 
       const nextLevelId =
-        type === PlaylistLevelType.AUDIO
+        playlistType === PlaylistLevelType.AUDIO
           ? hls.nextAudioTrack
           : hls.nextLoadLevel;
       const nextLevel = levels[nextLevelId];
 
       const { fetchdelay, okToFlushForwardBuffer } =
-        this.calculateOptimalSwitchPoint(nextLevel, bufferInfo, type);
+        this.calculateOptimalSwitchPoint(nextLevel, bufferInfo);
 
-      this.scheduleTrackSwitch(
-        bufferInfo,
-        fetchdelay,
-        okToFlushForwardBuffer,
-        type,
-      );
+      this.scheduleTrackSwitch(bufferInfo, fetchdelay, okToFlushForwardBuffer);
     }
     this.tickImmediate();
   }

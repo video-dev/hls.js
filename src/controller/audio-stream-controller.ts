@@ -309,7 +309,7 @@ class AudioStreamController
     }
 
     this.lastCurrentTime = media.currentTime;
-    this.checkFragmentChanged(PlaylistLevelType.AUDIO);
+    this.checkFragmentChanged();
   }
 
   private doTickIdle() {
@@ -348,11 +348,7 @@ class AudioStreamController
     const bufferable = this.mediaBuffer ? this.mediaBuffer : this.media;
     if (this.bufferFlushed && bufferable) {
       this.bufferFlushed = false;
-      this.afterBufferFlushed(
-        bufferable,
-        ElementaryStreamTypes.AUDIO,
-        PlaylistLevelType.AUDIO,
-      );
+      this.afterBufferFlushed(bufferable, ElementaryStreamTypes.AUDIO);
     }
 
     const bufferInfo = this.getFwdBufferInfo(
@@ -497,7 +493,7 @@ class AudioStreamController
       // main audio track are handled by stream-controller, just do something if switching to alt audio track
       if (!data.flushImmediate) {
         this.nextTrackId = data.id;
-        this.nextAudioTrackSwitch();
+        this.nextLevelSwitch();
       }
       this.flushAudioIfNeeded(data);
       if (this.state !== State.STOPPED) {
@@ -781,11 +777,9 @@ class AudioStreamController
     return this.mediaBuffer ? this.mediaBuffer : this.media;
   }
 
-  protected checkFragmentChanged(
-    type: PlaylistLevelType = PlaylistLevelType.AUDIO,
-  ) {
+  protected checkFragmentChanged() {
     const previousFrag = this.fragPlaying;
-    const fragChanged = super.checkFragmentChanged(type);
+    const fragChanged = super.checkFragmentChanged();
     if (!fragChanged) {
       return false;
     }
@@ -793,7 +787,7 @@ class AudioStreamController
     const fragPlaying = this.fragPlaying;
     const fragPreviousLevel = previousFrag?.level;
     if (!fragPlaying || fragPlaying.level !== fragPreviousLevel) {
-      this.cleanupBackBuffer(PlaylistLevelType.AUDIO);
+      this.cleanupBackBuffer();
       if (this.switchingTrack) {
         this.completeAudioSwitch(this.switchingTrack);
       }
@@ -875,7 +869,7 @@ class AudioStreamController
       }
       const mediaBuffer = this.mediaBuffer || this.media;
       if (mediaBuffer) {
-        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.AUDIO);
+        this.afterBufferFlushed(mediaBuffer, type);
         this.tick();
       }
     }
@@ -1100,16 +1094,6 @@ class AudioStreamController
    */
   get nextAudioTrack(): number {
     return this.nextTrackId;
-  }
-
-  /**
-   * try to switch ASAP without breaking audio playback:
-   * in order to ensure smooth but quick audio track switching,
-   * we need to find the next flushable buffer range
-   * we should take into account new segment fetch time
-   */
-  private nextAudioTrackSwitch(): void {
-    super.nextLevelSwitch(PlaylistLevelType.AUDIO);
   }
 }
 export default AudioStreamController;

@@ -354,7 +354,7 @@ export default class StreamController
             ? this.videoBuffer
             : this.mediaBuffer) || this.media;
         if (mediaBuffer) {
-          this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
+          this.afterBufferFlushed(mediaBuffer, type);
         }
       }
       frag = this.getNextFragmentLoopLoading(
@@ -423,11 +423,9 @@ export default class StreamController
     return this.media;
   }
 
-  protected checkFragmentChanged(
-    type: PlaylistLevelType = PlaylistLevelType.AUDIO,
-  ): boolean {
+  protected checkFragmentChanged(): boolean {
     const previousFrag = this.fragPlaying;
-    const fragChanged = super.checkFragmentChanged(type);
+    const fragChanged = super.checkFragmentChanged();
     if (!fragChanged) {
       return false;
     }
@@ -474,16 +472,6 @@ export default class StreamController
    */
   protected set couldBacktrack(value: boolean) {
     this._couldBacktrack = value;
-  }
-
-  /**
-   * try to switch ASAP without breaking video playback:
-   * in order to ensure smooth but quick level switching,
-   * we need to find the next flushable buffer range
-   * we should take into account new segment fetch time
-   */
-  public nextLevelSwitch() {
-    super.nextLevelSwitch(PlaylistLevelType.MAIN);
   }
 
   protected abortCurrentFrag(): void {
@@ -1058,7 +1046,7 @@ export default class StreamController
           ? this.videoBuffer
           : this.mediaBuffer) || this.media;
       if (mediaBuffer) {
-        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
+        this.afterBufferFlushed(mediaBuffer, type);
         this.tick();
       }
     }

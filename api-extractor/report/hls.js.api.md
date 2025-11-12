@@ -185,7 +185,7 @@ export type AudioSelectionOption = {
 export class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader);
     // (undocumented)
-    protected checkFragmentChanged(type?: PlaylistLevelType): boolean;
+    protected checkFragmentChanged(): boolean;
     // (undocumented)
     doTick(): void;
     // (undocumented)
@@ -391,7 +391,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader, logPrefix: string, playlistType: PlaylistLevelType);
     protected abortCurrentFrag(): void;
     // (undocumented)
-    protected afterBufferFlushed(media: Bufferable, bufferType: SourceBufferName, playlistType: PlaylistLevelType): void;
+    protected afterBufferFlushed(media: Bufferable, bufferType: SourceBufferName): void;
     // (undocumented)
     protected alignPlaylists(details: LevelDetails, previousDetails: LevelDetails | undefined, switchDetails: LevelDetails | undefined): number;
     protected get backtrackFragment(): Fragment | undefined;
@@ -405,17 +405,17 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected buffering: boolean;
     // (undocumented)
     get bufferingEnabled(): boolean;
-    protected calculateOptimalSwitchPoint(nextLevel: Level, bufferInfo: BufferInfo, type: PlaylistLevelType): {
+    protected calculateOptimalSwitchPoint(nextLevel: Level, bufferInfo: BufferInfo): {
         fetchdelay: number;
         okToFlushForwardBuffer: boolean;
     };
     // (undocumented)
-    protected checkFragmentChanged(type?: PlaylistLevelType): boolean;
+    protected checkFragmentChanged(): boolean;
     // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
     protected checkRetryDate(): void;
-    protected cleanupBackBuffer(type: PlaylistLevelType): void;
+    protected cleanupBackBuffer(): void;
     // (undocumented)
     protected clearTrackerIfNeeded(frag: Fragment): void;
     // (undocumented)
@@ -435,7 +435,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected flushBufferGap(frag: Fragment): void;
     // (undocumented)
     protected flushMainBuffer(startOffset: number, endOffset: number, type?: SourceBufferName | null): void;
-    protected followingBufferedFrag(frag: Fragment | null, type?: PlaylistLevelType): Fragment | null;
+    protected followingBufferedFrag(frag: Fragment | null): Fragment | null;
     // (undocumented)
     protected fragBufferedComplete(frag: Fragment, part: Part | null): void;
     // (undocumented)
@@ -451,8 +451,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected fragPrevious: MediaFragment | null;
     // (undocumented)
-    protected getAppendedFrag(position: number, playlistType?: PlaylistLevelType): Fragment | null;
-    protected getBufferedFrag(position: number, type?: PlaylistLevelType): Fragment | null;
+    protected getAppendedFrag(position: number): Fragment | null;
+    protected getBufferedFrag(position: number): Fragment | null;
     // (undocumented)
     protected getBufferOutput(): Bufferable | null;
     // (undocumented)
@@ -515,8 +515,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected media: HTMLMediaElement | null;
     // (undocumented)
     protected mediaBuffer: Bufferable | null;
-    // (undocumented)
-    nextLevelSwitch(type: PlaylistLevelType): void;
+    nextLevelSwitch(): void;
     // (undocumented)
     protected nextLoadPosition: number;
     // (undocumented)
@@ -571,7 +570,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     resumeBuffering(): void;
     // (undocumented)
     protected retryDate: number;
-    protected scheduleTrackSwitch(bufferInfo: BufferInfo, fetchdelay: number, okToFlushForwardBuffer: boolean, type: PlaylistLevelType): void;
+    protected scheduleTrackSwitch(bufferInfo: BufferInfo, fetchdelay: number, okToFlushForwardBuffer: boolean): void;
     // (undocumented)
     protected setStartPosition(details: LevelDetails, sliding: number): void;
     // (undocumented)
@@ -4580,7 +4579,7 @@ export class StreamController extends BaseStreamController implements NetworkCom
     // Warning: (ae-setter-with-docs) The doc comment for the property "backtrackFragment" must appear on the getter, not the setter.
     protected set backtrackFragment(value: Fragment | undefined);
     // (undocumented)
-    protected checkFragmentChanged(type?: PlaylistLevelType): boolean;
+    protected checkFragmentChanged(): boolean;
     protected get couldBacktrack(): boolean;
     // Warning: (ae-setter-with-docs) The doc comment for the property "couldBacktrack" must appear on the getter, not the setter.
     protected set couldBacktrack(value: boolean);
@@ -4613,7 +4612,6 @@ export class StreamController extends BaseStreamController implements NetworkCom
     get nextBufferedFrag(): Fragment | null;
     // (undocumented)
     get nextLevel(): number;
-    nextLevelSwitch(): void;
     // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
     // (undocumented)
