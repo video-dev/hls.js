@@ -41,6 +41,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`nudgeOffset`](#nudgeoffset)
   - [`nudgeMaxRetry`](#nudgemaxretry)
   - [`nudgeOnVideoHole`](#nudgeonvideohole)
+  - [`skipBufferHolePadding`](#skipbufferholepadding)
   - [`maxFragLookUpTolerance`](#maxfraglookuptolerance)
   - [`maxMaxBufferLength`](#maxmaxbufferlength)
   - [`liveSyncMode`](#livesyncmode)
@@ -681,26 +682,8 @@ if media element is expected to play and if currentTime has not moved for more t
 
 (default: `0.1` seconds)
 
-Offset value used for both buffer hole skipping and playhead nudging to recover playback:
-
-- **Skip retries** (jumping over buffer holes):
-
-```
-skipOffset = Math.max(0.05, nudgeOffset * (skipRetry + 1))
-targetTime = Math.max(startTime + skipOffset, currentTime + skipOffset)
-media.currentTime = targetTime
-```
-
-Ensures a minimum skip of 0.05 seconds, with increasing offsets on each retry.
-
-- **Nudge retries** (nudging in buffered areas):
-
-```
-targetTime = currentTime + (nudgeRetry + 1) * nudgeOffset
-media.currentTime = targetTime
-```
-
-Progressively nudges the playhead forward by increasing amounts on each retry.
+In case playback continues to stall after first playhead nudging, currentTime will be nudged evenmore following nudgeOffset to try to restore playback.
+`media.currentTime += <number of nudge retries> * nudgeOffset`
 
 ### `nudgeMaxRetry`
 
@@ -716,6 +699,18 @@ Maximum retry threshold used for both buffer hole skipping and playhead nudging:
 (default: `true`)
 
 Whether or not HLS.js should perform a seek nudge to flush the rendering pipeline upon traversing a gap or hole in video SourceBuffer buffered time ranges. This is only performed when audio is buffered at the point where the hole is detected. For more information see `nudgeOnVideoHole` in gap-controller and issues https://issues.chromium.org/issues/40280613#comment10 and https://github.com/video-dev/hls.js/issues/5631.
+
+### `skipBufferHolePadding`
+
+(default: `0.1` seconds)
+
+Workaround for some platforms where the video element often rounds the value we want to set as `currentTime`, preventing the player from jumping over buffer gaps.
+
+Setting this to a higher value adds additional time to the skip buffer hole target time, which skips more media but mitigates infinite attempts to skip the same buffer hole.
+
+Known to be helpful for platforms such as Xbox, Legacy Edge, and Tizen. Based on research on Tizen, the `skipBufferHolePadding` value should be greater than your GOP (Group of Pictures) length.
+
+`media.currentTime = Math.max(nextBufferedRangeStartTime, media.currentTime) + skipBufferHolePadding`
 
 ### `maxFragLookUpTolerance`
 

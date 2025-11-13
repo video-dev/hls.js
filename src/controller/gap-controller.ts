@@ -24,7 +24,6 @@ import type { ErrorData } from '../types/events';
 import type { BufferInfo } from '../utils/buffer-helper';
 
 export const MAX_START_GAP_JUMP = 2.0;
-export const SKIP_BUFFER_RANGE_START = 0.05;
 const TICK_INTERVAL = 100;
 
 export default class GapController extends TaskLoop {
@@ -595,20 +594,22 @@ export default class GapController extends TaskLoop {
             }
           }
         }
-        const { nudgeOffset, nudgeMaxRetry } = config;
-        const targetTime = Math.max(
-          startTime + SKIP_BUFFER_RANGE_START,
-          currentTime + nudgeOffset * (this.skipRetry + 1),
-        );
-        this.warn(
-          `skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`,
-        );
-        this.moved = true;
-        media.currentTime = targetTime;
-        if (!appended?.gap) {
-          const fatal = ++this.skipRetry > nudgeMaxRetry;
+        const { nudgeMaxRetry, skipBufferHolePadding } = config;
+        const fatal = ++this.skipRetry > nudgeMaxRetry;
+        const targetTime =
+          Math.max(startTime, currentTime) + skipBufferHolePadding;
+        if (!fatal) {
+          this.warn(
+            `skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`,
+          );
+          this.moved = true;
+          media.currentTime = targetTime;
+        }
+        if (!appended?.gap || fatal) {
           const error = new Error(
-            `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`,
+            fatal
+              ? `Playhead still not moving after seeking over buffer hole from ${currentTime} to ${targetTime} after ${config.nudgeMaxRetry} attempts.`
+              : `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`,
           );
           const errorData: ErrorData = {
             type: ErrorTypes.MEDIA_ERROR,
