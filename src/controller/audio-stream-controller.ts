@@ -179,7 +179,11 @@ class AudioStreamController
   }
 
   protected getLoadPosition(): number {
-    if (!this.startFragRequested && this.nextLoadPosition >= 0) {
+    if (
+      !this.startFragRequested &&
+      this.nextLoadPosition >= 0 &&
+      this.switchingTrack?.flushImmediate !== false
+    ) {
       return this.nextLoadPosition;
     }
     return super.getLoadPosition();
