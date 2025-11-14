@@ -867,7 +867,7 @@ export default class StreamController
   ) {
     const hls = this.hls;
     // if any URL found on new audio track, it is an alternate audio track
-    const fromAltAudio = this.altAudio === AlternateAudio.SWITCHED;
+    const fromAltAudio = this.altAudio !== AlternateAudio.DISABLED;
     const altAudio = useAlternateAudio(data.url, hls);
     // if we switch on main audio, ensure that main fragment scheduling is synced with media.buffered
     // don't do anything if we switch to alt audio: audio stream controller is handling it.
@@ -895,6 +895,7 @@ export default class StreamController
       }
       // If switching from alt to main audio, flush all audio and trigger track switched
       if (fromAltAudio) {
+        this.altAudio = AlternateAudio.DISABLED;
         this.fragmentTracker.removeAllFragments();
         hls.once(Events.BUFFER_FLUSHED, () => {
           if (!this.hls as any) {
