@@ -3,9 +3,7 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
-import GapController, {
-  SKIP_BUFFER_RANGE_START,
-} from '../../../src/controller/gap-controller';
+import GapController from '../../../src/controller/gap-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
@@ -445,7 +443,9 @@ describe('GapController', function () {
 
       expect(gapController.moved).to.equal(true);
       expect(gapController.stalled).to.equal(1234);
-      expect(mockMedia.currentTime).to.equal(0.1 + SKIP_BUFFER_RANGE_START);
+      expect(mockMedia.currentTime).to.equal(
+        0.1 + config.skipBufferHolePadding,
+      );
     });
 
     it('should skip any initial gap when not having played yet on second poll', function () {
@@ -453,7 +453,9 @@ describe('GapController', function () {
       mockTimeRangesData = [[0.9, 10]];
       gapController.poll(0, mockMedia.currentTime);
       gapController.poll(0, mockMedia.currentTime);
-      expect(mockMedia.currentTime).to.equal(0.9 + SKIP_BUFFER_RANGE_START);
+      expect(mockMedia.currentTime).to.equal(
+        0.9 + config.skipBufferHolePadding,
+      );
     });
   });
 });
