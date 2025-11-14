@@ -3,6 +3,7 @@ import { createDoNothingErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { ElementaryStreamTypes } from '../loader/fragment';
+import { DEFAULT_TARGET_DURATION } from '../loader/level-details';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
 import {
@@ -575,6 +576,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     this.sourceBuffers[sourceBufferNameToIndex(type)] = [null, null];
     const track = this.tracks[type];
     if (track) {
+      this.clearBufferAppendTimeoutId(track);
       track.buffer = undefined;
     }
   }
@@ -861,6 +863,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         // logger.debug(`[buffer-controller]: ${type} SourceBuffer updatestart`);
       },
       onComplete: () => {
+        this.clearBufferAppendTimeoutId(this.tracks[type]);
         // logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
         const end = self.performance.now();
         chunkStats.executeEnd = chunkStats.end = end;
@@ -894,6 +897,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         });
       },
       onError: (error: Error) => {
+        this.clearBufferAppendTimeoutId(this.tracks[type]);
         // in case any error occured while appending, put back segment in segments table
         const event: ErrorData = {
           type: ErrorTypes.MEDIA_ERROR,
@@ -1453,6 +1457,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           >;
           sourceBuffers[sbIndex] = sbTuple as any;
           track.buffer = sb;
+          track.bufferAppendTimeoutId = null;
         } catch (error) {
           this.error(
             `error while trying to add sourceBuffer: ${error.message}`,
@@ -1476,6 +1481,17 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       }
     }
     this.bufferCreated();
+  }
+
+  private clearBufferAppendTimeoutId(track?: SourceBufferTrack): void {
+    if (!track) {
+      return;
+    }
+
+    if (track.bufferAppendTimeoutId !== null) {
+      self.clearTimeout(track.bufferAppendTimeoutId);
+    }
+    track.bufferAppendTimeoutId = null;
   }
 
   private getTrackCodec(track: BaseTrack, trackName: SourceBufferName): string {
@@ -1691,7 +1707,58 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
     track.ending = false;
     track.ended = false;
+
+    const appendTimeoutTime = this.calculateAppendTimeoutTime(sb);
+
+    this.log(
+      `Performing append on ${type} source buffer. Setting append timeout value as ${appendTimeoutTime}ms.`,
+    );
+
+    track.bufferAppendTimeoutId = self.setTimeout(
+      () => this.appendTimeoutHandler(type, sb),
+      appendTimeoutTime,
+    );
+
     sb.appendBuffer(data);
+  }
+
+  private appendTimeoutHandler(
+    type: SourceBufferName,
+    sb: ExtendedSourceBuffer,
+  ) {
+    this.log(
+      `Received timeout for append on ${type} source buffer. Aborting and triggering error.`,
+    );
+    sb.abort();
+    const operation = this.currentOp(type);
+    if (operation) {
+      operation.onError(new Error(`${type}-append-timeout`));
+    }
+  }
+
+  private calculateAppendTimeoutTime(sb: ExtendedSourceBuffer): number {
+    if (this.hls.config.appendTimeout !== null) {
+      return this.hls.config.appendTimeout;
+    }
+
+    let targetDuration = DEFAULT_TARGET_DURATION;
+
+    if (this.details) {
+      targetDuration = this.details.levelTargetDuration;
+    }
+
+    if (this.media === null) {
+      return targetDuration * 1000;
+    }
+
+    if (sb.buffered.length === 0) {
+      return targetDuration * 1000;
+    }
+
+    const bufferedEnd = sb.buffered.end(sb.buffered.length - 1);
+    const delta = bufferedEnd - this.media.currentTime;
+
+    return Math.max(delta, targetDuration) * 1000;
   }
 
   private blockUntilOpen(callback: () => void) {
