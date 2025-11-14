@@ -41,6 +41,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`nudgeOffset`](#nudgeoffset)
   - [`nudgeMaxRetry`](#nudgemaxretry)
   - [`nudgeOnVideoHole`](#nudgeonvideohole)
+  - [`skipBufferHolePadding`](#skipbufferholepadding)
   - [`maxFragLookUpTolerance`](#maxfraglookuptolerance)
   - [`maxMaxBufferLength`](#maxmaxbufferlength)
   - [`liveSyncMode`](#livesyncmode)
@@ -695,13 +696,28 @@ In case playback continues to stall after first playhead nudging, currentTime wi
 
 (default: `3`)
 
-Max number of playhead (`currentTime`) nudges before HLS.js raise a fatal BUFFER_STALLED_ERROR
+Maximum retry threshold used for both buffer hole skipping and playhead nudging:
+
+- **Skip retries**: When jumping over buffer holes, if `skipRetry > nudgeMaxRetry`, a fatal `BUFFER_SEEK_OVER_HOLE` error is raised
+- **Nudge retries**: When nudging the playhead in buffered areas, if `nudgeRetry >= nudgeMaxRetry`, a fatal `BUFFER_STALLED_ERROR` is raised
 
 ### `nudgeOnVideoHole`
 
 (default: `true`)
 
 Whether or not HLS.js should perform a seek nudge to flush the rendering pipeline upon traversing a gap or hole in video SourceBuffer buffered time ranges. This is only performed when audio is buffered at the point where the hole is detected. For more information see `nudgeOnVideoHole` in gap-controller and issues https://issues.chromium.org/issues/40280613#comment10 and https://github.com/video-dev/hls.js/issues/5631.
+
+### `skipBufferHolePadding`
+
+(default: `0.1` seconds)
+
+Workaround for some platforms where the video element often rounds the value we want to set as `currentTime`, preventing the player from jumping over buffer gaps.
+
+Setting this to a higher value adds additional time to the skip buffer hole target time, which skips more media but mitigates infinite attempts to skip the same buffer hole.
+
+Known to be helpful for platforms such as Xbox, Legacy Edge, and Tizen. Based on research on Tizen, the `skipBufferHolePadding` value should be greater than your GOP (Group of Pictures) length.
+
+`media.currentTime = Math.max(nextBufferedRangeStartTime, media.currentTime) + skipBufferHolePadding`
 
 ### `maxFragLookUpTolerance`
 

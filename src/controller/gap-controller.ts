@@ -24,8 +24,6 @@ import type { ErrorData } from '../types/events';
 import type { BufferInfo } from '../utils/buffer-helper';
 
 export const MAX_START_GAP_JUMP = 2.0;
-export const SKIP_BUFFER_HOLE_STEP_SECONDS = 0.1;
-export const SKIP_BUFFER_RANGE_START = 0.05;
 const TICK_INTERVAL = 100;
 
 export default class GapController extends TaskLoop {
@@ -35,6 +33,7 @@ export default class GapController extends TaskLoop {
   private mediaSource?: MediaSource;
 
   private nudgeRetry: number = 0;
+  private skipRetry: number = 0;
   private stallReported: boolean = false;
   private stalled: number | null = null;
   private moved: boolean = false;
@@ -178,7 +177,7 @@ export default class GapController extends TaskLoop {
       }
       this.moved = true;
       if (!seeking) {
-        this.nudgeRetry = 0;
+        this.skipRetry = this.nudgeRetry = 0;
         // When crossing between buffered video time ranges, but not audio, flush pipeline with seek (Chrome)
         if (
           config.nudgeOnVideoHole &&
@@ -204,7 +203,7 @@ export default class GapController extends TaskLoop {
 
     // The playhead should not be moving
     if (pausedEndedOrHalted) {
-      this.nudgeRetry = 0;
+      this.skipRetry = this.nudgeRetry = 0;
       this.stallResolved(currentTime);
       // Fire MEDIA_ENDED to workaround event not being dispatched by browser
       if (!this.ended && media.ended && this.hls) {
@@ -217,7 +216,7 @@ export default class GapController extends TaskLoop {
     }
 
     if (!BufferHelper.getBuffered(media).length) {
-      this.nudgeRetry = 0;
+      this.skipRetry = this.nudgeRetry = 0;
       return;
     }
 
@@ -595,23 +594,27 @@ export default class GapController extends TaskLoop {
             }
           }
         }
-        const targetTime = Math.max(
-          startTime + SKIP_BUFFER_RANGE_START,
-          currentTime + SKIP_BUFFER_HOLE_STEP_SECONDS,
-        );
-        this.warn(
-          `skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`,
-        );
-        this.moved = true;
-        media.currentTime = targetTime;
-        if (!appended?.gap) {
+        const { nudgeMaxRetry, skipBufferHolePadding } = config;
+        const fatal = ++this.skipRetry > nudgeMaxRetry;
+        const targetTime =
+          Math.max(startTime, currentTime) + skipBufferHolePadding;
+        if (!fatal) {
+          this.warn(
+            `skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`,
+          );
+          this.moved = true;
+          media.currentTime = targetTime;
+        }
+        if (!appended?.gap || fatal) {
           const error = new Error(
-            `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`,
+            fatal
+              ? `Playhead still not moving after seeking over buffer hole from ${currentTime} to ${targetTime} after ${config.nudgeMaxRetry} attempts.`
+              : `fragment loaded with buffer holes, seeking from ${currentTime} to ${targetTime}`,
           );
           const errorData: ErrorData = {
             type: ErrorTypes.MEDIA_ERROR,
             details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
-            fatal: false,
+            fatal,
             error,
             reason: error.message,
             buffer: bufferInfo.len,

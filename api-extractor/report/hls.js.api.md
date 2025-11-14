@@ -2011,6 +2011,7 @@ export type GapControllerConfig = {
     nudgeOffset: number;
     nudgeMaxRetry: number;
     nudgeOnVideoHole: boolean;
+    skipBufferHolePadding: number;
 };
 
 // Warning: (ae-missing-release-tag) "HdcpLevel" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
