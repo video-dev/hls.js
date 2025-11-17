@@ -974,7 +974,8 @@ export default class BaseStreamController
     this.state = State.FRAG_LOADING;
 
     // Load key before streaming fragment data
-    const dataOnProgress = this.config.progressive;
+    const dataOnProgress =
+      this.config.progressive && frag.type !== PlaylistLevelType.SUBTITLE;
     let result: Promise<PartsLoadedData | FragLoadedData | null>;
     if (dataOnProgress && keyLoadingPromise) {
       result = keyLoadingPromise
