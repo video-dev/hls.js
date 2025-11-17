@@ -80,6 +80,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`fpsDroppedMonitoringPeriod`](#fpsdroppedmonitoringperiod)
   - [`fpsDroppedMonitoringThreshold`](#fpsdroppedmonitoringthreshold)
   - [`appendErrorMaxRetry`](#appenderrormaxretry)
+  - [`isAppendTimeoutEnabled`](#isappendtimeoutenabled)
   - [`appendTimeout`](#appendtimeout)
   - [`loader`](#loader)
   - [`fLoader`](#floader)
@@ -1100,17 +1101,22 @@ The ratio of frames dropped to frames elapsed within `fpsDroppedMonitoringPeriod
 Max number of `sourceBuffer.appendBuffer()` retry upon error.
 Such error could happen in loop with UHD streams, when internal buffer is full. (Quota Exceeding Error will be triggered). In that case we need to wait for the browser to evict some data before being able to append buffer correctly.
 
+### `isAppendTimeoutEnabled`
+
+(default: `true`)
+
+Enable timeout for buffer append operation.
+
 ### `appendTimeout`
 
-(default: `null`)
+(default: `-1`)
 
 Timeout value in milliseconds to timeout `sourceBuffer.appendBuffer()` operation.
-If value is not set, the player will fallback to `Delta`, where
+The value will be validated against Number.isFinite and Math.max(value, delta).
 
-```shell
-Delta is Max(Distance, LevelTargetDuration)
-Distance is buffered.end - currentTime
-```
+Where `delta` is `Math.Max(distance, 2 * levelTargetDuration)`.
+
+Where `distance` is `activeBufferedRangeEnd - currentTime`.
 
 ### `loader`
 
