@@ -1457,7 +1457,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           >;
           sourceBuffers[sbIndex] = sbTuple as any;
           track.buffer = sb;
-          track.bufferAppendTimeoutId = null;
         } catch (error) {
           this.error(
             `error while trying to add sourceBuffer: ${error.message}`,
@@ -1488,10 +1487,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return;
     }
 
-    if (track.bufferAppendTimeoutId !== null) {
-      self.clearTimeout(track.bufferAppendTimeoutId);
-    }
-    track.bufferAppendTimeoutId = null;
+    self.clearTimeout(track.bufferAppendTimeoutId);
+    track.bufferAppendTimeoutId = undefined;
   }
 
   private getTrackCodec(track: BaseTrack, trackName: SourceBufferName): string {
@@ -1708,16 +1705,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     track.ending = false;
     track.ended = false;
 
-    const appendTimeoutTime = this.calculateAppendTimeoutTime(sb);
+    if (this.hls.config.isAppendTimeoutEnabled) {
+      const appendTimeoutTime = this.calculateAppendTimeoutTime(sb);
 
-    this.log(
-      `Performing append on ${type} source buffer. Setting append timeout value as ${appendTimeoutTime}ms.`,
-    );
-
-    track.bufferAppendTimeoutId = self.setTimeout(
-      () => this.appendTimeoutHandler(type, sb),
-      appendTimeoutTime,
-    );
+      track.bufferAppendTimeoutId = self.setTimeout(
+        () => this.appendTimeoutHandler(type, sb, appendTimeoutTime),
+        appendTimeoutTime,
+      );
+    }
 
     sb.appendBuffer(data);
   }
@@ -1725,40 +1720,56 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   private appendTimeoutHandler(
     type: SourceBufferName,
     sb: ExtendedSourceBuffer,
+    appendTimeoutTime: number,
   ) {
     this.log(
-      `Received timeout for append on ${type} source buffer. Aborting and triggering error.`,
+      `Received timeout after ${appendTimeoutTime}ms for append on ${type} source buffer. Aborting and triggering error.`,
     );
-    sb.abort();
-    const operation = this.currentOp(type);
-    if (operation) {
-      operation.onError(new Error(`${type}-append-timeout`));
+
+    try {
+      sb.abort();
+      const operation = this.currentOp(type);
+      if (operation) {
+        operation.onError(new Error(`${type}-append-timeout`));
+      }
+    } catch (e) {
+      this.log(`Failed to abort append on ${type} source buffer after timeout.`)
     }
   }
 
   private calculateAppendTimeoutTime(sb: ExtendedSourceBuffer): number {
-    if (this.hls.config.appendTimeout !== null) {
-      return this.hls.config.appendTimeout;
-    }
-
     let targetDuration = DEFAULT_TARGET_DURATION;
 
     if (this.details) {
       targetDuration = this.details.levelTargetDuration;
     }
 
+    // 2 Target durations
+    let desiredDefaultTimeoutValue = (2 * targetDuration) * 1000;
+
     if (this.media === null) {
-      return targetDuration * 1000;
+      return desiredDefaultTimeoutValue;
     }
 
     if (sb.buffered.length === 0) {
-      return targetDuration * 1000;
+      return desiredDefaultTimeoutValue;
     }
 
-    const bufferedEnd = sb.buffered.end(sb.buffered.length - 1);
-    const delta = bufferedEnd - this.media.currentTime;
+    const activeBufferedRange = BufferHelper.activeBufferedRangeForTime(sb, this.media.currentTime);
 
-    return Math.max(delta, targetDuration) * 1000;
+    if (!activeBufferedRange) {
+      return desiredDefaultTimeoutValue;
+    }
+
+    const delta = activeBufferedRange.end - this.media.currentTime;
+
+    desiredDefaultTimeoutValue = Math.max(delta, desiredDefaultTimeoutValue);
+
+    if (!Number.isFinite(this.hls.config.appendTimeout)) {
+      return desiredDefaultTimeoutValue;
+    }
+
+    return Math.max(this.hls.config.appendTimeout, desiredDefaultTimeoutValue);
   }
 
   private blockUntilOpen(callback: () => void) {

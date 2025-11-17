@@ -36,7 +36,7 @@ export interface ParsedTrack extends BaseTrack {
 }
 export interface SourceBufferTrack extends BaseTrack {
   buffer?: ExtendedSourceBuffer;
-  bufferAppendTimeoutId?: number | null;
+  bufferAppendTimeoutId?: number;
   listeners: SourceBufferListener[];
   ending?: boolean;
   ended?: boolean;

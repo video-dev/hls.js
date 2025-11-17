@@ -170,4 +170,26 @@ export class BufferHelper {
       return noopBuffered;
     }
   }
+
+  /**
+   * Return active buffered range for a given time
+   * active is time in [start, end)
+   * @param media
+   * @param time
+   */
+  static activeBufferedRangeForTime(
+    media: Bufferable,
+    time: number,
+  ): BufferTimeRange | null {
+    for (let i = 0; i < media.buffered.length; i++) {
+      const start = media.buffered.start(i);
+      const end = media.buffered.end(i);
+
+      if (time >= start && time < end) {
+        return { start, end };
+      }
+    }
+
+    return null;
+  }
 }
