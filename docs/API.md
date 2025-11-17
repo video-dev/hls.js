@@ -1103,7 +1103,7 @@ Such error could happen in loop with UHD streams, when internal buffer is full. 
 
 ### `isAppendTimeoutEnabled`
 
-(default: `true`)
+(default: `false`)
 
 Enable timeout for buffer append operation.
 

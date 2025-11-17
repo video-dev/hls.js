@@ -407,7 +407,7 @@ export const hlsDefaultConfig: HlsConfig = {
   fpsDroppedMonitoringPeriod: 5000, // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2, // used by fps-controller
   appendErrorMaxRetry: 3, // used by buffer-controller
-  isAppendTimeoutEnabled: true, // used by buffer-controller
+  isAppendTimeoutEnabled: false, // used by buffer-controller
   appendTimeout: -1, // used by buffer-controller
   ignorePlaylistParsingErrors: false,
   loader: XhrLoader,
