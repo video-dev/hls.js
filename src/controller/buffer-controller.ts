@@ -1763,7 +1763,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
     const delta = activeBufferedRange.end - this.media.currentTime;
 
-    desiredDefaultTimeoutValue = Math.max(delta, desiredDefaultTimeoutValue);
+    desiredDefaultTimeoutValue = Math.max(delta * 1000, desiredDefaultTimeoutValue);
 
     if (!Number.isFinite(this.hls.config.appendTimeout)) {
       return desiredDefaultTimeoutValue;
