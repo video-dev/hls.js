@@ -1753,10 +1753,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return desiredDefaultTimeoutValue;
     }
 
-    if (sb.buffered.length === 0) {
-      return desiredDefaultTimeoutValue;
-    }
-
     const activeBufferedRange = BufferHelper.bufferInfo(
       sb,
       this.media.currentTime,
