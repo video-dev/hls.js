@@ -181,9 +181,11 @@ export class BufferHelper {
     media: Bufferable,
     time: number,
   ): BufferTimeRange | null {
-    for (let i = 0; i < media.buffered.length; i++) {
-      const start = media.buffered.start(i);
-      const end = media.buffered.end(i);
+    const buffered = BufferHelper.getBuffered(media);
+
+    for (let i = 0; i < buffered.length; i++) {
+      const start = buffered.start(i);
+      const end = buffered.end(i);
 
       if (time >= start && time < end) {
         return { start, end };
