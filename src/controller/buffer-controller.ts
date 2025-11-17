@@ -1733,7 +1733,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         operation.onError(new Error(`${type}-append-timeout`));
       }
     } catch (e) {
-      this.log(`Failed to abort append on ${type} source buffer after timeout.`)
+      this.log(
+        `Failed to abort append on ${type} source buffer after timeout.`,
+      );
     }
   }
 
@@ -1745,7 +1747,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
 
     // 2 Target durations
-    let desiredDefaultTimeoutValue = (2 * targetDuration) * 1000;
+    let desiredDefaultTimeoutValue = 2 * targetDuration * 1000;
 
     if (this.media === null) {
       return desiredDefaultTimeoutValue;
@@ -1755,15 +1757,20 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return desiredDefaultTimeoutValue;
     }
 
-    const activeBufferedRange = BufferHelper.activeBufferedRangeForTime(sb, this.media.currentTime);
+    const activeBufferedRange = BufferHelper.bufferInfo(
+      sb,
+      this.media.currentTime,
+      0,
+    );
 
-    if (!activeBufferedRange) {
+    if (!activeBufferedRange.len) {
       return desiredDefaultTimeoutValue;
     }
 
-    const delta = activeBufferedRange.end - this.media.currentTime;
-
-    desiredDefaultTimeoutValue = Math.max(delta * 1000, desiredDefaultTimeoutValue);
+    desiredDefaultTimeoutValue = Math.max(
+      activeBufferedRange.len * 1000,
+      desiredDefaultTimeoutValue,
+    );
 
     if (!Number.isFinite(this.hls.config.appendTimeout)) {
       return desiredDefaultTimeoutValue;
