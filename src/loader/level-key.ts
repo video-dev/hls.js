@@ -41,6 +41,15 @@ export class LevelKey implements DecryptData {
     keyUriToKeyIdMap[uri] = keyId;
   }
 
+  static addKeyIdForUri(uri: string): Uint8Array<ArrayBuffer> {
+    const val = Object.keys(keyUriToKeyIdMap).length % Number.MAX_SAFE_INTEGER;
+    const keyId = new Uint8Array(16);
+    const dv = new DataView(keyId.buffer, 12, 4); // Just set the last 4 bytes
+    dv.setUint32(0, val);
+    keyUriToKeyIdMap[uri] = keyId;
+    return keyId;
+  }
+
   constructor(
     method: string,
     uri: string,
