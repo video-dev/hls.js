@@ -1439,7 +1439,7 @@ export default class BaseStreamController
           nextbufferInfo !== null &&
           bufferInfo.len + nextbufferInfo.len >= maxBufLen
         ) {
-          // Returning here might result in not finding an audio and video candiate to skip to
+          // Returning here might result in not finding an audio and video candidate to skip to
           const sn = nextFragment.sn;
           if (this.loopSn !== sn) {
             this.log(
