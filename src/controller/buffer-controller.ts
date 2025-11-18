@@ -1705,7 +1705,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     track.ending = false;
     track.ended = false;
 
-    if (this.hls.config.isAppendTimeoutEnabled) {
+    if (this.hls.config.appendTimeout !== Infinity) {
       const appendTimeoutTime = this.calculateAppendTimeoutTime(sb);
 
       track.bufferAppendTimeoutId = self.setTimeout(
@@ -1768,10 +1768,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       activeBufferedRange.len * 1000,
       desiredDefaultTimeoutValue,
     );
-
-    if (!Number.isFinite(this.hls.config.appendTimeout)) {
-      return desiredDefaultTimeoutValue;
-    }
 
     return Math.max(this.hls.config.appendTimeout, desiredDefaultTimeoutValue);
   }
