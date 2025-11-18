@@ -2749,16 +2749,16 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     // Fallback to Primary by on current or future events by updating schedule to skip errored interstitials/assets
     const flushStart = interstitial.timelineStart;
     const playingItem = this.effectivePlayingItem;
+    let timelinePos = this.timelinePos;
     // Update schedule now that interstitial/assets are flagged with `error` for fallback
     if (playingItem) {
       this.log(
         `Fallback to primary from event "${interstitial.identifier}" start: ${
           flushStart
-        } pos: ${this.timelinePos} playing: ${segmentToString(
+        } pos: ${timelinePos} playing: ${segmentToString(
           playingItem,
         )} error: ${interstitial.error}`,
       );
-      let timelinePos = this.timelinePos;
       if (timelinePos === -1) {
         timelinePos = this.hls.startPosition;
       }
@@ -2770,14 +2770,15 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         this.attachPrimary(flushStart, null);
         this.flushFrontBuffer(flushStart);
       }
-      if (!this.schedule) {
-        return;
-      }
-      const scheduleIndex = this.schedule.findItemIndexAtTime(timelinePos);
-      this.setSchedulePosition(scheduleIndex);
-    } else {
+    } else if (timelinePos === -1) {
       this.checkStart();
+      return;
     }
+    if (!this.schedule) {
+      return;
+    }
+    const scheduleIndex = this.schedule.findItemIndexAtTime(timelinePos);
+    this.setSchedulePosition(scheduleIndex);
   }
 
   // Asset List loading
@@ -2830,8 +2831,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
           const index = this.schedule.findItemIndexAtTime(this.timelinePos);
           if (index !== scheduleIndex) {
             interstitial.error = new Error(
-              `Interstitial no longer within playback range ${this.timelinePos} ${interstitial}`,
+              `Interstitial ${assets.length ? 'no longer within playback range' : 'asset-list is empty'} ${this.timelinePos} ${interstitial}`,
             );
+            this.log(interstitial.error.message);
             this.updateSchedule(true);
             this.primaryFallback(interstitial);
             return;
