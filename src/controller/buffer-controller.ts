@@ -1728,14 +1728,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
     try {
       sb.abort();
-      const operation = this.currentOp(type);
-      if (operation) {
-        operation.onError(new Error(`${type}-append-timeout`));
-      }
     } catch (e) {
       this.log(
         `Failed to abort append on ${type} source buffer after timeout.`,
       );
+    }
+
+    const operation = this.currentOp(type);
+    if (operation) {
+      operation.onError(new Error(`${type}-append-timeout`));
     }
   }
 
