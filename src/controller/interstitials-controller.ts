@@ -968,7 +968,8 @@ export default class InterstitialsController
       currentTime >= start + duration
     ) {
       if (playingItem.event?.appendInPlace) {
-        this.clearInterstitial(playingItem.event, playingItem);
+        // Return SourceBuffer(s) to primary player and flush
+        this.clearAssetPlayers(playingItem.event, playingItem);
         this.flushFrontBuffer(currentTime);
       }
       this.setScheduleToAssetAtTime(currentTime, playingAsset);
@@ -2479,11 +2480,18 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     interstitial: InterstitialEvent,
     toSegment: InterstitialScheduleItem | null,
   ) {
+    this.clearAssetPlayers(interstitial, toSegment);
+    // Remove asset list and resolved duration
+    interstitial.reset();
+  }
+
+  private clearAssetPlayers(
+    interstitial: InterstitialEvent,
+    toSegment: InterstitialScheduleItem | null,
+  ) {
     interstitial.assetList.forEach((asset) => {
       this.clearAssetPlayer(asset.identifier, toSegment);
     });
-    // Remove asset list and resolved duration
-    interstitial.reset();
   }
 
   private resetAssetPlayer(assetId: InterstitialAssetId) {
