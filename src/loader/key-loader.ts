@@ -264,13 +264,21 @@ export default class KeyLoader extends Logger implements ComponentAPI {
           frag.initSegment.data as Uint8Array<ArrayBuffer>,
         );
         if (keyIds.length) {
-          const keyId = keyIds[0];
+          let keyId = keyIds[0];
           if (keyId.some((b) => b !== 0)) {
             this.log(`Using keyId found in init segment ${arrayToHex(keyId)}`);
-            keyInfo.decryptdata.keyId = keyId;
             LevelKey.setKeyIdForUri(keyInfo.decryptdata.uri, keyId);
+          } else {
+            keyId = LevelKey.addKeyIdForUri(keyInfo.decryptdata.uri);
+            this.log(`Generating keyId to patch media ${arrayToHex(keyId)}`);
           }
+          keyInfo.decryptdata.keyId = keyId;
         }
+      }
+      if (!keyInfo.decryptdata.keyId && !isMediaFragment(frag)) {
+        // Resolve so that unencrypted init segment is loaded
+        // key id is extracted from tenc box when processing key for next segment above
+        return Promise.resolve(keyLoadedData);
       }
       const keySessionContextPromise =
         this.emeController.loadKey(keyLoadedData);
