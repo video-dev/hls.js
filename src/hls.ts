@@ -1299,6 +1299,7 @@ export type {
   CapLevelControllerConfig,
   CMCDControllerConfig,
   EMEControllerConfig,
+  ErrorControllerConfig,
   DRMSystemConfiguration,
   DRMSystemsConfiguration,
   DRMSystemOptions,
