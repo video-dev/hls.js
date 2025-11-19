@@ -134,10 +134,11 @@ export default class ErrorController
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {
-    if (data.fatal) {
+    const hls = this.hls;
+    // If the error is handled by onErrorHandler or is fatal, do not proceed with error recovery
+    if (hls.config.onErrorHandler?.(data) || data.fatal) {
       return;
     }
-    const hls = this.hls;
     const context = data.context;
 
     switch (data.details) {
@@ -465,6 +466,11 @@ export default class ErrorController
   }
 
   public onErrorOut(event: Events.ERROR, data: ErrorData) {
+    const hls = this.hls;
+    // If the error is handled by onErrorOutHandler, do not proceed with the default error handling
+    if (hls.config.onErrorOutHandler?.(data)) {
+      return;
+    }
     switch (data.errorAction?.action) {
       case NetworkErrorAction.DoNothing:
         break;

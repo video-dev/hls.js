@@ -96,6 +96,8 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`capLevelController`](#caplevelcontroller)
   - [`fpsController`](#fpscontroller)
   - [`errorController`](#errorcontroller)
+  - [`onErrorHandler`](#onerrorhandler)
+  - [`onErrorOutHandler`](#onerrorouthandler)
   - [`timelineController`](#timelinecontroller)
   - [`enableDateRangeMetadataCues`](#enabledaterangemetadatacues)
   - [`enableEmsgMetadataCues`](#enableemsgmetadatacues)
@@ -1392,6 +1394,70 @@ Enable the default fps controller by setting `capLevelOnFPSDrop` to `true`.
 Customized error controller.
 
 A class in charge of handling errors and error recovery logic. The error controller processes error events and implements recovery strategies such as level switching and fragment retry logic.
+
+### `onErrorHandler`
+
+(default: `undefined`, type: `(data: ErrorData) => boolean`)
+
+Early error handler callback invoked **before** HLS.js attempts any error recovery.
+
+This callback is called immediately when an error occurs, giving you the earliest opportunity to inspect and handle errors. When you return `true`, HLS.js will **not attempt any error recovery** and you are responsible for handling the error manually. Return `false` or `undefined` to allow HLS.js to proceed with its normal error recovery logic.
+
+**Important:** Returning `true` prevents all error recovery attempts including fragment retries, level switching, and other recovery strategies.
+
+```js
+var config = {
+  onErrorHandler: function (data) {
+    console.log(
+      'Error handler called before recovery:',
+      data.type,
+      data.details,
+    );
+
+    // Example: Handle specific errors manually
+    if (data.details === Hls.ErrorDetails.FRAG_LOAD_ERROR) {
+      // Custom handling logic here
+      console.log('Manually handling fragment load error');
+      return true; // Prevent HLS.js from attempting recovery
+    }
+
+    // Let HLS.js handle other errors
+    return false;
+  },
+};
+```
+
+### `onErrorOutHandler`
+
+(default: `undefined`, type: `(data: ErrorData) => boolean`)
+
+Error handler callback invoked **after** HLS.js has completed its error recovery attempts.
+
+This callback is called after HLS.js has exhausted its recovery strategies (such as retries and level switching). When you return `true`, HLS.js will **not execute its default error handling** and you are responsible for handling the error manually. Return `false` or `undefined` to allow HLS.js to proceed with its default error handling (which may include destroying the player or switching streams).
+
+**Important:** Returning `true` prevents default error handling after recovery has been attempted. This is useful for implementing custom fallback logic when HLS.js cannot recover from an error.
+
+```js
+var config = {
+  onErrorOutHandler: function (data) {
+    console.log(
+      'Error handler called after recovery:',
+      data.type,
+      data.details,
+    );
+
+    // Example: Custom fallback for unrecoverable errors
+    if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+      // Custom handling logic here
+      console.log('Manually handling fragment load error');
+      return true; // Prevent HLS.js default handling
+    }
+
+    // Let HLS.js handle other errors with its default behavior
+    return false;
+  },
+};
+```
 
 ### `timelineController`
 

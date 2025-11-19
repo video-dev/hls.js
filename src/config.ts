@@ -19,6 +19,7 @@ import { stringify } from './utils/safe-json-stringify';
 import XhrLoader from './utils/xhr-loader';
 import type { MediaKeySessionContext } from './controller/eme-controller';
 import type Hls from './hls';
+import type { ErrorData } from './hls';
 import type {
   FragmentLoaderContext,
   Loader,
@@ -123,6 +124,11 @@ export type EMEControllerConfig = {
   drmSystemOptions: DRMSystemOptions | undefined;
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
   requireKeySystemAccessOnStart: boolean;
+};
+
+export type ErrorControllerConfig = {
+  onErrorHandler?: (data: ErrorData) => boolean;
+  onErrorOutHandler?: (data: ErrorData) => boolean;
 };
 
 export interface FragmentLoaderConstructor {
@@ -335,6 +341,7 @@ export type HlsConfig = {
   BufferControllerConfig &
   CapLevelControllerConfig &
   EMEControllerConfig &
+  ErrorControllerConfig &
   FPSControllerConfig &
   GapControllerConfig &
   LevelControllerConfig &
