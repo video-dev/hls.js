@@ -137,6 +137,9 @@ export default class ErrorController
     const hls = this.hls;
     // If the error is handled by onErrorHandler or is fatal, do not proceed with error recovery
     if (hls.config.onErrorHandler?.(data) || data.fatal) {
+      if (data.errorAction) {
+        data.errorAction.resolved = true;
+      }
       return;
     }
     const context = data.context;
@@ -469,6 +472,9 @@ export default class ErrorController
     const hls = this.hls;
     // If the error is handled by onErrorOutHandler, do not proceed with the default error handling
     if (hls.config.onErrorOutHandler?.(data)) {
+      if (data.errorAction) {
+        data.errorAction.resolved = true;
+      }
       return;
     }
     switch (data.errorAction?.action) {
