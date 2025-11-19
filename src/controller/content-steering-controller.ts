@@ -607,7 +607,7 @@ function performUriReplacement(
   }
   const url = new self.URL(uri);
   if (host && !perVariantUri) {
-    url.host = host;
+    url.hostname = host;
   }
   if (params) {
     Object.keys(params)
