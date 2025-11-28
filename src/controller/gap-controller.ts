@@ -582,8 +582,9 @@ export default class GapController extends TaskLoop {
             let pos = appended.end;
             while (pos < startTime) {
               const provisioned = appendedFragAtPosition(pos, fragmentTracker);
-              if (provisioned) {
-                pos += provisioned.duration;
+              const duration = provisioned ? provisioned.duration : 0;
+              if (duration > 0) {
+                pos += duration;
               } else {
                 moreToLoad = true;
                 break;
