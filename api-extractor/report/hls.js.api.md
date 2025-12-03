@@ -1230,6 +1230,14 @@ export class ErrorController extends Logger implements NetworkComponentAPI {
     stopLoad(): void;
 }
 
+// Warning: (ae-missing-release-tag) "ErrorControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type ErrorControllerConfig = {
+    onErrorHandler?: (data: ErrorData) => boolean;
+    onErrorOutHandler?: (data: ErrorData) => boolean;
+};
+
 // Warning: (ae-missing-release-tag) "ErrorData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2297,7 +2305,7 @@ export type HlsConfig = {
     progressive: boolean;
     lowLatencyMode: boolean;
     primarySessionId?: string;
-} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & FragmentLoaderConfig & PlaylistLoaderConfig;
+} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & ErrorControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & FragmentLoaderConfig & PlaylistLoaderConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
