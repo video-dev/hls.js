@@ -682,7 +682,6 @@ export default class LevelController extends BasePlaylistController {
   set nextLoadLevel(nextLevel) {
     const currentLevel = this.currentLevelIndex;
     const isABRSwitch = this.manualLevelIndex === -1;
-
     if (isABRSwitch && nextLevel !== currentLevel && nextLevel !== -1) {
       const abrSwitchInterval = this.hls.config.abrSwitchInterval;
       if (abrSwitchInterval > 0) {
