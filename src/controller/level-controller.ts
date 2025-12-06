@@ -37,6 +37,7 @@ export default class LevelController extends BasePlaylistController {
   private currentLevelIndex: number = -1;
   private manualLevelIndex: number = -1;
   private steering: ContentSteeringController | null;
+  private lastABRSwitchTime: number = -1;
 
   public onParsedComplete!: Function;
 
@@ -679,6 +680,29 @@ export default class LevelController extends BasePlaylistController {
   }
 
   set nextLoadLevel(nextLevel) {
+    const currentLevel = this.currentLevelIndex;
+    const isABRSwitch = this.manualLevelIndex === -1;
+
+    if (isABRSwitch && nextLevel !== currentLevel && nextLevel !== -1) {
+      const abrSwitchInterval = this.hls.config.abrSwitchInterval;
+      if (abrSwitchInterval > 0) {
+        const now = performance.now();
+        const delta = now - this.lastABRSwitchTime;
+        const intervalMs = abrSwitchInterval * 1000;
+        if (this.lastABRSwitchTime > -1 && delta < intervalMs) {
+          this.warn(
+            `Preventing ABR level switch: ${currentLevel} -> ${nextLevel} (${Math.round(delta)}ms < ${intervalMs}ms / ${abrSwitchInterval}s)`,
+          );
+          return;
+        }
+
+        this.lastABRSwitchTime = now;
+        this.log(
+          `Allowing ABR level switch: ${currentLevel} -> ${nextLevel} (${Math.round(delta)}ms >= ${intervalMs}ms / ${abrSwitchInterval}s)`,
+        );
+      }
+    }
+
     this.level = nextLevel;
     if (this.manualLevelIndex === -1) {
       this.hls.nextAutoLevel = nextLevel;
