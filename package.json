@@ -1,15 +1,16 @@
 {
-  "name": "hls.js",
+  "name": "@striveworks/hls.js",
   "license": "Apache-2.0",
+  "version": "1.6.16-0.canary.3",
   "description": "JavaScript HLS client using MediaSourceExtension",
-  "homepage": "https://github.com/video-dev/hls.js",
+  "homepage": "https://github.com/striveworks/hls.js",
   "authors": "Guillaume du Pontavice <g.du.pontavice@gmail.com>",
   "repository": {
     "type": "git",
-    "url": "https://github.com/video-dev/hls.js"
+    "url": "https://github.com/striveworks/hls.js"
   },
   "bugs": {
-    "url": "https://github.com/video-dev/hls.js/issues"
+    "url": "https://github.com/striveworks/hls.js/issues"
   },
   "main": "./dist/hls.js",
   "module": "./dist/hls.mjs",
@@ -31,7 +32,7 @@
     "src/**/*"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "restricted"
   },
   "scripts": {
     "build": "rollup --config && npm run build:types",
@@ -62,7 +63,8 @@
     "test:func:sauce": "SAUCE=1 UA=safari OS='OS X 10.15' BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch",
-    "prepare": "husky"
+    "prepare": "husky && npm run co:login",
+    "co:login": "aws codeartifact login --tool npm --repository striveworks --domain striveworks"
   },
   "devDependencies": {
     "@babel/core": "7.28.5",
