@@ -126,6 +126,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`abrBandWidthFactor`](#abrbandwidthfactor)
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
+  - [`abrSwitchInterval`](#abrswitchinterval)
   - [`minAutoBitrate`](#minautobitrate)
   - [`preserveManualLevelOnError`](#preservemanuallevelonerror)
   - [`emeEnabled`](#emeenabled)
@@ -520,6 +521,7 @@ var config = {
   abrBandWidthFactor: 0.95,
   abrBandWidthUpFactor: 0.7,
   abrMaxWithRealBitrate: false,
+  abrSwitchInterval: 0,
   maxStarvationDelay: 4,
   maxLoadingDelay: 4,
   minAutoBitrate: 0,
@@ -1656,6 +1658,12 @@ If `abrBandWidthUpFactor * bandwidth average > level.bitrate` then ABR can switc
 max bitrate used in ABR by avg measured bitrate
 i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s,
 then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality level.
+
+### `abrSwitchInterval`
+
+(default: `0`)
+
+Minimum time in seconds between ABR switches. When set to `0`, throttling is disabled. Manual quality switches are never throttled.
 
 ### `minAutoBitrate`
 
