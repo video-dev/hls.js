@@ -55,6 +55,7 @@ export type ABRControllerConfig = {
 
 export type BufferControllerConfig = {
   appendErrorMaxRetry: number;
+  appendTimeout: number;
   backBufferLength: number;
   frontBufferFlushThreshold: number;
   liveDurationInfinity: boolean;
@@ -408,6 +409,7 @@ export const hlsDefaultConfig: HlsConfig = {
   fpsDroppedMonitoringPeriod: 5000, // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2, // used by fps-controller
   appendErrorMaxRetry: 3, // used by buffer-controller
+  appendTimeout: Infinity, // used by buffer-controller
   ignorePlaylistParsingErrors: false,
   loader: XhrLoader,
   // loader: FetchLoader,
