@@ -93,6 +93,7 @@ export class MockSourceBuffer extends EventTarget {
   public updating: boolean = false;
   public appendBuffer = sinon.stub();
   public remove = sinon.stub();
+  public abort = sinon.stub();
   public buffered: MockBufferedRanges = new MockBufferedRanges();
 
   setBuffered(start: number, end: number) {

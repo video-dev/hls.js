@@ -5,7 +5,7 @@ import type { VariableMap } from '../types/level';
 import type { AttrList } from '../utils/attr-list';
 import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
-const DEFAULT_TARGET_DURATION = 10;
+export const DEFAULT_TARGET_DURATION = 10;
 
 /**
  * Object representing parsed data from an HLS Media Playlist. Found in {@link hls.js#Level.details}.
