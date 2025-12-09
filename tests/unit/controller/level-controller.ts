@@ -1088,6 +1088,128 @@ http://bar.example.com/md/prog_index.m3u8`;
   });
 });
 
+describe('LevelController - nextLoadLevel', function () {
+  let hls: HlsMock;
+  let levelController: LevelControllerTestable;
+  let warnSpy: sinon.SinonSpy;
+  let nowStub: sinon.SinonStub;
+  let now: number;
+
+  beforeEach(function () {
+    now = 0;
+    nowStub = sinon.stub(performance, 'now').callsFake(() => now);
+
+    hls = new HlsMock({});
+    levelController = new LevelController(
+      hls as any,
+      null,
+    ) as unknown as LevelControllerTestable;
+
+    const data: ManifestLoadedData = {
+      audioTracks: [],
+      levels: [
+        parsedLevel({ bitrate: 105000, name: '144' }),
+        parsedLevel({ bitrate: 246440, name: '240' }),
+        parsedLevel({ bitrate: 460560, name: '380' }),
+        parsedLevel({ bitrate: 836280, name: '480' }),
+        parsedLevel({ bitrate: 2149280, name: '720' }),
+        parsedLevel({ bitrate: 6221600, name: '1080' }),
+      ],
+      networkDetails: new Response('ok'),
+      sessionData: null,
+      sessionKeys: null,
+      contentSteering: null,
+      startTimeOffset: null,
+      variableList: null,
+      stats: new LoadStats(),
+      subtitles: [],
+      url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    };
+
+    levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
+    warnSpy = sinon.spy(levelController, 'warn');
+  });
+
+  afterEach(function () {
+    nowStub.restore();
+  });
+
+  describe('ABR switching', function () {
+    it('should not throttle when abrSwitchInterval is 0', function () {
+      hls.config.abrSwitchInterval = 0;
+
+      levelController.nextLoadLevel = 1;
+      levelController.nextLoadLevel = 2;
+      levelController.nextLoadLevel = 1;
+
+      expect(levelController.level).to.equal(1);
+      expect(warnSpy).not.to.have.been.called;
+    });
+
+    it('should allow first ABR switch immediately', function () {
+      hls.config.abrSwitchInterval = 2;
+
+      levelController.nextLoadLevel = 1;
+
+      expect(levelController.level).to.equal(1);
+      expect(warnSpy).not.to.have.been.called;
+    });
+
+    it('should prevent rapid ABR upswitches within interval', function () {
+      hls.config.abrSwitchInterval = 2;
+
+      levelController.nextLoadLevel = 1;
+      expect(levelController.level).to.equal(1);
+
+      now += 100;
+
+      levelController.nextLoadLevel = 2;
+
+      expect(levelController.level).to.equal(1);
+      expect(warnSpy).to.have.been.calledOnce;
+    });
+
+    it('should allow ABR switch after interval', function () {
+      hls.config.abrSwitchInterval = 1;
+
+      levelController.nextLoadLevel = 1;
+      expect(levelController.level).to.equal(1);
+
+      now += 1100;
+
+      levelController.nextLoadLevel = 2;
+
+      expect(levelController.level).to.equal(2);
+      expect(warnSpy).not.to.have.been.called;
+    });
+  });
+
+  describe('Manual switching', function () {
+    it('should not throttle manual level changes', function () {
+      hls.config.abrSwitchInterval = 2;
+
+      levelController.manualLevel = 1;
+      expect(levelController.level).to.equal(1);
+
+      levelController.manualLevel = 2;
+      expect(levelController.level).to.equal(2);
+      expect(warnSpy).not.to.have.been.called;
+    });
+
+    it('should respect manual level when switching to ABR mode', function () {
+      hls.config.abrSwitchInterval = 2;
+
+      levelController.manualLevel = 1;
+      expect(levelController.level).to.equal(1);
+
+      levelController.manualLevel = -1;
+
+      levelController.nextLoadLevel = 2;
+      expect(levelController.level).to.equal(2);
+    });
+  });
+});
+
 export const multivariantPlaylistWithPathways = `#EXTM3U
 #EXT-X-CONTENT-STEERING:SERVER-URI="http://example.com/manifest.json",PATHWAY-ID="Bar"
 #EXT-X-MEDIA:TYPE=SUBTITLES,PATHWAY-ID="Foo",STABLE-RENDITION-ID="subs-en",GROUP-ID="subs-foo",LANGUAGE="en",NAME="English ",AUTOSELECT=YES,URI="http://www.foo.com/subs-en.m3u8"

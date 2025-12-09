@@ -77,6 +77,7 @@ export type ABRControllerConfig = {
     abrBandWidthFactor: number;
     abrBandWidthUpFactor: number;
     abrMaxWithRealBitrate: boolean;
+    abrSwitchInterval: number;
     maxStarvationDelay: number;
     maxLoadingDelay: number;
 };
