@@ -967,7 +967,7 @@ function parsePMT(
 
             switch (descriptorId) {
               case 0x6a: // DVB Descriptor for AC-3
-                if (result.audioPid === -1 && __USE_M2TS_ADVANCED_CODECS__) {
+                if (__USE_M2TS_ADVANCED_CODECS__) {
                   if (typeSupported.ac3 !== true) {
                     logger.log(
                       'AC-3 audio found, not supported in this browser for now',
@@ -976,7 +976,7 @@ function parsePMT(
                     result.audioPid = pid;
                     result.segmentAudioCodec = 'ac3';
                   }
-                } else if (!__USE_M2TS_ADVANCED_CODECS__) {
+                } else {
                   logger.warn('AC-3 in M2TS support not included in build');
                 }
                 break;
