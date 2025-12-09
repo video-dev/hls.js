@@ -180,7 +180,7 @@ class MP4Demuxer implements Demuxer {
             });
           } else if (this.config.enableEmsgKLVMetadata) {
             const klvSchemaUri =
-              this.config.emsgKLVSchemaUri || 'urn:misb:KLV:bin:1910.1';
+              this.config.emsgKLVSchemaUri || MetadataSchema.misbklv;
             if (emsgInfo.schemeIdUri.startsWith(klvSchemaUri)) {
               const pts = getEmsgStartTime(emsgInfo, timeOffset);
               id3Track.samples.push({
