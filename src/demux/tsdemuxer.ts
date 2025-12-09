@@ -958,7 +958,7 @@ function parsePMT(
         // We need to look at the descriptors. Right now, we're only interested
         // in AC-3 audio, so we do the descriptor parsing only when we don't have
         // an audio PID yet.
-        if (esInfoLength > 0) {
+        if (result.audioPid === -1 && esInfoLength > 0) {
           let parsePos = offset + 5;
           let remaining = esInfoLength;
 
