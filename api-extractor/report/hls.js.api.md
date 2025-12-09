@@ -686,6 +686,7 @@ export class BufferController extends Logger implements ComponentAPI {
 // @public (undocumented)
 export type BufferControllerConfig = {
     appendErrorMaxRetry: number;
+    appendTimeout: number;
     backBufferLength: number;
     frontBufferFlushThreshold: number;
     liveDurationInfinity: boolean;
@@ -4484,6 +4485,8 @@ export type SourceBufferName = 'video' | 'audio' | 'audiovideo';
 export interface SourceBufferTrack extends BaseTrack {
     // (undocumented)
     buffer?: ExtendedSourceBuffer;
+    // (undocumented)
+    bufferAppendTimeoutId?: number;
     // (undocumented)
     ended?: boolean;
     // (undocumented)
