@@ -231,6 +231,7 @@ export type GapControllerConfig = {
   nudgeOffset: number;
   nudgeMaxRetry: number;
   nudgeOnVideoHole: boolean;
+  skipBufferHolePadding: number;
 };
 
 export type SelectionPreferences = {
@@ -385,6 +386,7 @@ export const hlsDefaultConfig: HlsConfig = {
   nudgeOffset: 0.1, // used by gap-controller
   nudgeMaxRetry: 3, // used by gap-controller
   nudgeOnVideoHole: true, // used by gap-controller
+  skipBufferHolePadding: 0.1, // used by gap-controller
   liveSyncMode: 'edge', // used by stream-controller
   liveSyncDurationCount: 3, // used by latency-controller
   liveSyncOnStallIncrease: 1, // used by latency-controller

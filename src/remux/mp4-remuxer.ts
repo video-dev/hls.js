@@ -1146,7 +1146,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     // Clear the track samples. This also clears the samples array in the demuxer, since the reference is shared
     track.samples = [];
     const start = (firstPTS! - initTime) / inputTimeScale;
-    const end = nextAudioTs / inputTimeScale;
+    const end = this.nextAudioTs / inputTimeScale;
     const type: SourceBufferName = 'audio';
     const audioData = {
       data1: moof,

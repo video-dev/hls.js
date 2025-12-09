@@ -83,6 +83,7 @@ class EMEController extends Logger implements ComponentAPI {
     keyLoadPolicy: LoadPolicy;
   };
   private media: HTMLMediaElement | null = null;
+  private mediaResolved?: () => void;
   private keyFormatPromise: Promise<KeySystemFormats> | null = null;
   private keySystemAccessPromises: {
     [keysystem: string]: KeySystemAccessPromises | undefined;
@@ -704,6 +705,7 @@ class EMEController extends Logger implements ComponentAPI {
     keySystem: KeySystems,
     mediaKeys: MediaKeys,
   ): Promise<void> {
+    this.mediaResolved = undefined;
     if (this.mediaKeys === mediaKeys) {
       return Promise.resolve();
     }
@@ -714,10 +716,20 @@ class EMEController extends Logger implements ComponentAPI {
     // can be queued for execution for multiple key sessions.
     const setMediaKeysPromise = Promise.all(queue).then(() => {
       if (!this.media) {
-        this.mediaKeys = null;
-        throw new Error(
-          'Attempted to set mediaKeys without media element attached',
-        );
+        return new Promise((resolve: (value?: void) => void, reject) => {
+          this.mediaResolved = () => {
+            this.mediaResolved = undefined;
+            if (!this.media) {
+              return reject(
+                new Error(
+                  'Attempted to set mediaKeys without media element attached',
+                ),
+              );
+            }
+            this.mediaKeys = mediaKeys;
+            this.media.setMediaKeys(mediaKeys).then(resolve).catch(reject);
+          };
+        });
       }
       return this.media.setMediaKeys(mediaKeys);
     });
@@ -968,10 +980,17 @@ class EMEController extends Logger implements ComponentAPI {
           'buffer' in keyId
             ? new Uint8Array(keyId.buffer, keyId.byteOffset, keyId.byteLength)
             : new Uint8Array(keyId);
+
         if (
           mediaKeySessionContext.keySystem === KeySystems.PLAYREADY &&
           keyIdArray.length === 16
         ) {
+          // On some devices, the key ID has already been converted for endianness.
+          // In such cases, this key ID is the one we need to cache.
+          const originKeyIdWithStatusChange = arrayToHex(keyIdArray);
+          // Cache the original key IDs to ensure compatibility across all cases.
+          keyStatuses[originKeyIdWithStatusChange] = status;
+
           changeEndianness(keyIdArray);
         }
         const keyIdWithStatusChange = arrayToHex(keyIdArray);
@@ -982,6 +1001,7 @@ class EMEController extends Logger implements ComponentAPI {
         this.log(
           `key status change "${status}" for keyStatuses keyId: ${keyIdWithStatusChange} key-session "${mediaKeySessionContext.mediaKeysSession.sessionId}"`,
         );
+
         keyStatuses[keyIdWithStatusChange] = status;
       },
     );
@@ -1344,6 +1364,13 @@ class EMEController extends Logger implements ComponentAPI {
 
     addEventListener(media, 'encrypted', this.onMediaEncrypted);
     addEventListener(media, 'waitingforkey', this.onWaitingForKey);
+
+    const mediaResolved = this.mediaResolved;
+    if (mediaResolved) {
+      mediaResolved();
+    } else {
+      this.mediaKeys = media.mediaKeys;
+    }
   }
 
   private onMediaDetached() {
@@ -1361,6 +1388,10 @@ class EMEController extends Logger implements ComponentAPI {
     this._requestLicenseFailureCount = 0;
     this.keyIdToKeySessionPromise = {};
     this.bannedKeyIds = {};
+    const mediaResolved = this.mediaResolved;
+    if (mediaResolved) {
+      mediaResolved();
+    }
     if (!this.mediaKeys && !this.mediaKeySessions.length) {
       return;
     }
@@ -1414,8 +1445,7 @@ class EMEController extends Logger implements ComponentAPI {
   }
 
   private onManifestLoading() {
-    this.keyFormatPromise = null;
-    this.bannedKeyIds = {};
+    this._clear();
   }
 
   private onManifestLoaded(
