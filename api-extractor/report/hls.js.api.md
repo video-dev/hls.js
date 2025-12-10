@@ -4097,6 +4097,7 @@ export type MetadataControllerConfig = {
     enableEmsgMetadataCues: boolean;
     enableEmsgKLVMetadata: boolean;
     enableID3MetadataCues: boolean;
+    emsgKLVSchemaUri?: string;
 };
 
 // Warning: (ae-missing-release-tag) "MetadataSample" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

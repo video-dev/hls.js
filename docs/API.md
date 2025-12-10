@@ -101,6 +101,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`enableDateRangeMetadataCues`](#enabledaterangemetadatacues)
   - [`enableEmsgMetadataCues`](#enableemsgmetadatacues)
   - [`enableEmsgKLVMetadata`](#enableemsgklvmetadata)
+  - [`emsgKLVSchemaUri`](#emsgklvschemauri)
   - [`enableID3MetadataCues`](#enableid3metadatacues)
   - [`enableWebVTT`](#enablewebvtt)
   - [`enableIMSC1`](#enableimsc1)
@@ -1443,6 +1444,21 @@ parameter should be a boolean
 whether or not to extract KLV Timed Metadata found in CMAF Event Message (emsg) boxes and deliver via `FRAG_PARSING_METADATA`
 
 parameter should be a boolean
+
+### `emsgKLVSchemaUri`
+
+(default: `undefined`)
+
+URN for MISB KLV metadata schema to match when extracting KLV metadata from CMAF Event Message (emsg) boxes. If not specified, defaults to `'urn:misb:KLV:bin:1910.1'` for backwards compatibility.
+
+Examples:
+
+- `'urn:misb:KLV:bin:1910.1'` for MISB ST 0601.1
+- `'urn:misb:KLV:bin:1910.19'` for MISB ST 0601.19
+
+The demuxer uses `startsWith()` to match the URN, so it will match any URN that begins with the configured value.
+
+parameter should be a string
 
 ### `enableID3MetadataCues`
 
