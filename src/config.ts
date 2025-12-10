@@ -255,6 +255,7 @@ export type MetadataControllerConfig = {
   enableEmsgMetadataCues: boolean;
   enableEmsgKLVMetadata: boolean;
   enableID3MetadataCues: boolean;
+  emsgKLVSchemaUri?: string;
 };
 
 export type TimelineControllerConfig = {
@@ -455,6 +456,7 @@ export const hlsDefaultConfig: HlsConfig = {
   enableEmsgMetadataCues: true,
   enableEmsgKLVMetadata: false,
   enableID3MetadataCues: true,
+  emsgKLVSchemaUri: undefined, // Defaults to 'urn:misb:KLV:bin:1910.1' in demuxer for backwards compatibility
   enableInterstitialPlayback: __USE_INTERSTITIALS__,
   interstitialAppendInPlace: true,
   interstitialLiveLookAhead: 10,

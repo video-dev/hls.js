@@ -178,19 +178,20 @@ class MP4Demuxer implements Demuxer {
               type: MetadataSchema.emsg,
               duration: duration,
             });
-          } else if (
-            this.config.enableEmsgKLVMetadata &&
-            emsgInfo.schemeIdUri.startsWith('urn:misb:KLV:bin:1910.1')
-          ) {
-            const pts = getEmsgStartTime(emsgInfo, timeOffset);
-            id3Track.samples.push({
-              data: emsgInfo.payload,
-              len: emsgInfo.payload.byteLength,
-              dts: pts,
-              pts: pts,
-              type: MetadataSchema.misbklv,
-              duration: Number.POSITIVE_INFINITY,
-            });
+          } else if (this.config.enableEmsgKLVMetadata) {
+            const klvSchemaUri =
+              this.config.emsgKLVSchemaUri || MetadataSchema.misbklv;
+            if (emsgInfo.schemeIdUri.startsWith(klvSchemaUri)) {
+              const pts = getEmsgStartTime(emsgInfo, timeOffset);
+              id3Track.samples.push({
+                data: emsgInfo.payload,
+                len: emsgInfo.payload.byteLength,
+                dts: pts,
+                pts: pts,
+                type: MetadataSchema.misbklv,
+                duration: Number.POSITIVE_INFINITY,
+              });
+            }
           }
         });
       }
