@@ -203,6 +203,7 @@ export class TimelineController implements ComponentAPI {
           this.hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
             success: false,
             frag: data.frag,
+            part: null,
             error: new Error(
               'Subtitle discontinuity domain does not match main',
             ),
@@ -400,7 +401,9 @@ export class TimelineController implements ComponentAPI {
         const decrypted = 'stats' in data;
         // If the subtitles are not encrypted, parse VTTs now. Otherwise, we need to wait.
         if (decryptData == null || !decryptData.encrypted || decrypted) {
-          const trackPlaylistMedia = this.tracks[frag.level];
+          const trackPlaylistMedia = this.tracks[frag.level] as
+            | MediaPlaylist
+            | undefined;
           const vttCCs = this.vttCCs;
           if (!vttCCs[frag.cc]) {
             vttCCs[frag.cc] = {
@@ -410,24 +413,28 @@ export class TimelineController implements ComponentAPI {
             };
             this.prevCC = frag.cc;
           }
-          if (trackPlaylistMedia.textCodec === IMSC1_CODEC) {
-            this._parseIMSC1(frag, payload);
+          if (trackPlaylistMedia?.textCodec === IMSC1_CODEC) {
+            this._parseIMSC1(data);
           } else {
             this._parseVTTs(data);
           }
         }
       } else {
         // In case there is no payload, finish unsuccessfully.
+        const part = 'part' in data ? data.part : null;
         this.hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
           success: false,
           frag,
+          part,
           error: new Error('Empty subtitle payload'),
         });
       }
     }
   }
 
-  private _parseIMSC1(frag: Fragment, payload: ArrayBuffer) {
+  private _parseIMSC1(data: FragDecryptedData | FragLoadedData) {
+    const { frag, payload } = data;
+    const part = 'part' in data ? data.part : null;
     const hls = this.hls;
     parseIMSC1(
       payload,
@@ -436,14 +443,16 @@ export class TimelineController implements ComponentAPI {
         this._appendCues(cues, frag.level);
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
           success: true,
-          frag: frag,
+          frag,
+          part,
         });
       },
       (error) => {
         hls.logger.log(`Failed to parse IMSC1: ${error}`);
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
           success: false,
-          frag: frag,
+          frag,
+          part,
           error,
         });
       },
@@ -452,6 +461,7 @@ export class TimelineController implements ComponentAPI {
 
   private _parseVTTs(data: FragDecryptedData | FragLoadedData) {
     const { frag, payload } = data;
+    const part = 'part' in data ? data.part : null;
     // We need an initial synchronisation PTS. Store fragments as long as none has arrived
     const { initPTS, unparsedVttFrags } = this;
     const maxAvCC = initPTS.length - 1;
@@ -462,20 +472,22 @@ export class TimelineController implements ComponentAPI {
 
     const hls = this.hls;
     // Parse the WebVTT file contents.
-    const payloadWebVTT = frag.initSegment?.data
-      ? appendUint8Array(frag.initSegment.data, new Uint8Array(payload)).buffer
+    const vttHeader = frag.initSegment?.data;
+    const payloadWebVTT = vttHeader
+      ? appendUint8Array(vttHeader, new Uint8Array(payload)).buffer
       : payload;
     parseWebVTT(
       payloadWebVTT,
       this.initPTS[frag.cc],
       this.vttCCs,
       frag.cc,
-      frag.start,
+      (part && !vttHeader ? part : frag).start,
       (cues) => {
         this._appendCues(cues, frag.level);
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
           success: true,
-          frag: frag,
+          frag,
+          part,
         });
       },
       (error) => {
@@ -484,7 +496,7 @@ export class TimelineController implements ComponentAPI {
         if (missingInitPTS) {
           unparsedVttFrags.push(data);
         } else if (this.config.enableIMSC1) {
-          this._fallbackToIMSC1(frag, payload);
+          this._fallbackToIMSC1(data);
         }
         // Something went wrong while parsing. Trigger event with success false.
         hls.logger.log(`Failed to parse VTT cue: ${error}`);
@@ -493,14 +505,16 @@ export class TimelineController implements ComponentAPI {
         }
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
           success: false,
-          frag: frag,
+          frag,
+          part,
           error,
         });
       },
     );
   }
 
-  private _fallbackToIMSC1(frag: Fragment, payload: ArrayBuffer) {
+  private _fallbackToIMSC1(data: FragDecryptedData | FragLoadedData) {
+    const { frag, payload } = data;
     // If textCodec is unknown, try parsing as IMSC1. Set textCodec based on the result
     const trackPlaylistMedia = this.tracks[frag.level];
     if (!trackPlaylistMedia.textCodec) {
@@ -509,7 +523,7 @@ export class TimelineController implements ComponentAPI {
         this.initPTS[frag.cc],
         () => {
           trackPlaylistMedia.textCodec = IMSC1_CODEC;
-          this._parseIMSC1(frag, payload);
+          this._parseIMSC1(data);
         },
         () => {
           trackPlaylistMedia.textCodec = 'wvtt';

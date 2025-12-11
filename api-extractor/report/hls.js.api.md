@@ -4628,6 +4628,8 @@ export interface SubtitleFragProcessedData {
     // (undocumented)
     frag: Fragment;
     // (undocumented)
+    part: Part | null;
+    // (undocumented)
     success: boolean;
 }
 
