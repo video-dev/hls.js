@@ -41,6 +41,7 @@ import './unit/remux/mp4-remuxer';
 import './unit/utils/attr-list';
 import './unit/utils/binary-search';
 import './unit/utils/buffer-helper';
+import './unit/utils/cea-608-parser';
 import './unit/utils/codecs';
 import './unit/utils/error-helper';
 import './unit/utils/discontinuities';
