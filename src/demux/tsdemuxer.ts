@@ -766,8 +766,9 @@ class TSDemuxer implements Demuxer {
   }
 
   private parseKlvPES(id3Track: DemuxedMetadataTrack, pes: PES) {
-    if (pes.pts === undefined) {
-      this.logger.warn('[tsdemuxer]: KLV PES unknown PTS');
+    const pts = pes.pts ?? pes.dts;
+    if (pts === undefined) {
+      this.logger.warn('[tsdemuxer]: KLV PES unknown PTS and DTS');
       return;
     }
     // Parse KLV data from PES payload
@@ -833,8 +834,8 @@ class TSDemuxer implements Demuxer {
       const klvSample = {
         data: klvPacket,
         len: klvPacket.byteLength,
-        pts: pes.pts,
-        dts: pes.dts || pes.pts,
+        pts: pts,
+        dts: pes.dts ?? pts,
         type: MetadataSchema.misbklv,
         duration: Number.POSITIVE_INFINITY,
       };
@@ -958,7 +959,7 @@ function parsePMT(
         // We need to look at the descriptors. Right now, we're only interested
         // in AC-3 audio, so we do the descriptor parsing only when we don't have
         // an audio PID yet.
-        if (result.audioPid === -1 && esInfoLength > 0) {
+        if (esInfoLength > 0) {
           let parsePos = offset + 5;
           let remaining = esInfoLength;
 
@@ -967,17 +968,19 @@ function parsePMT(
 
             switch (descriptorId) {
               case 0x6a: // DVB Descriptor for AC-3
-                if (__USE_M2TS_ADVANCED_CODECS__) {
-                  if (typeSupported.ac3 !== true) {
-                    logger.log(
-                      'AC-3 audio found, not supported in this browser for now',
-                    );
+                if (result.audioPid === -1) {
+                  if (__USE_M2TS_ADVANCED_CODECS__) {
+                    if (typeSupported.ac3 !== true) {
+                      logger.log(
+                        'AC-3 audio found, not supported in this browser for now',
+                      );
+                    } else {
+                      result.audioPid = pid;
+                      result.segmentAudioCodec = 'ac3';
+                    }
                   } else {
-                    result.audioPid = pid;
-                    result.segmentAudioCodec = 'ac3';
+                    logger.warn('AC-3 in M2TS support not included in build');
                   }
-                } else {
-                  logger.warn('AC-3 in M2TS support not included in build');
                 }
                 break;
               case 0x05: // MISB KLV descriptor
