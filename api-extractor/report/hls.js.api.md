@@ -1387,6 +1387,8 @@ export enum ErrorDetails {
     // (undocumented)
     LEVEL_SWITCH_ERROR = "levelSwitchError",
     // (undocumented)
+    LEVEL_UNCHANGED_ERROR = "levelUnchangedError",
+    // (undocumented)
     MANIFEST_INCOMPATIBLE_CODECS_ERROR = "manifestIncompatibleCodecsError",
     // (undocumented)
     MANIFEST_LOAD_ERROR = "manifestLoadError",
@@ -2299,7 +2301,7 @@ export type HlsConfig = {
     progressive: boolean;
     lowLatencyMode: boolean;
     primarySessionId?: string;
-} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & FragmentLoaderConfig & PlaylistLoaderConfig;
+} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & PlaylistControllerConfig & FragmentLoaderConfig & PlaylistLoaderConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -4298,6 +4300,13 @@ export const enum PlaylistContextType {
     // (undocumented)
     SUBTITLE_TRACK = "subtitleTrack"
 }
+
+// Warning: (ae-missing-release-tag) "PlaylistControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type PlaylistControllerConfig = {
+    liveMaxUnchangedPlaylistRefresh: number;
+};
 
 // Warning: (ae-missing-release-tag) "PlaylistLevelType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //

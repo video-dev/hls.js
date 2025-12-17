@@ -172,6 +172,34 @@ export default class BasePlaylistController
     if (details.live || previousDetails?.live) {
       const levelOrTrack = 'levelInfo' in data ? data.levelInfo : data.track;
       details.reloaded(previousDetails);
+
+      if (details.misses > 0) {
+        this.warn(
+          `levelOrTrack (${levelOrTrack.id}) is unchanged after reload. Unchanged reloads: ${details.misses}`,
+        );
+      }
+
+      if (details.misses >= this.hls.config.liveMaxUnchangedPlaylistRefresh) {
+        const error = new Error(
+          `levelOrTrack (${levelOrTrack.id}) hits max allowed unchanged reloads.`,
+        );
+        this.warn(error);
+        const { networkDetails } = data;
+        this.hls.trigger(Events.ERROR, {
+          type: ErrorTypes.NETWORK_ERROR,
+          details: ErrorDetails.LEVEL_UNCHANGED_ERROR,
+          fatal: false,
+          url: details.url,
+          error,
+          reason: error.message,
+          level: (data as any).level || undefined,
+          parent: details.fragments[0]?.type,
+          networkDetails,
+          stats,
+        });
+        return;
+      }
+
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
       if (previousDetails && details.fragments.length > 0) {
         mergeDetails(previousDetails, details, this);

@@ -51,6 +51,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
   - [`maxLiveSyncPlaybackRate`](#maxlivesyncplaybackrate)
+  - [`liveMaxUnchangedPlaylistRefresh`](#livemaxunchangedplaylistrefresh)
   - [`timelineOffset`](#timelineoffset)
   - [`liveDurationInfinity`](#livedurationinfinity)
   - [`liveBackBufferLength` (deprecated)](#livebackbufferlength-deprecated)
@@ -823,6 +824,12 @@ A value too close from `liveSyncDuration` is likely to cause playback stalls.
 When set to a value greater than `1`, the latency-controller will adjust `video.playbackRate` up to `maxLiveSyncPlaybackRate` to catch up to target latency in a live stream. `hls.targetLatency` is based on `liveSyncDuration|Count` or manifest PART-|HOLD-BACK.
 
 The default value is `1`, which disables playback rate adjustment. Set `maxLiveSyncPlaybackRate` to a value greater than `1` to enable playback rate adjustment at the live edge.
+
+### `liveMaxUnchangedPlaylistRefresh`
+
+(default: `3`)
+
+Override max allowed live unchanged refreshes until playlist is considered stale.
 
 ### `timelineOffset`
 

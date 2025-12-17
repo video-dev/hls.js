@@ -250,6 +250,10 @@ export type LatencyControllerConfig = {
   liveSyncOnStallIncrease: number;
 };
 
+export type PlaylistControllerConfig = {
+  liveMaxUnchangedPlaylistRefresh: number;
+};
+
 export type MetadataControllerConfig = {
   enableDateRangeMetadataCues: boolean;
   enableEmsgMetadataCues: boolean;
@@ -348,6 +352,7 @@ export type HlsConfig = {
   TimelineControllerConfig &
   TSDemuxerConfig &
   HlsLoadPolicies &
+  PlaylistControllerConfig &
   FragmentLoaderConfig &
   PlaylistLoaderConfig;
 
@@ -392,6 +397,7 @@ export const hlsDefaultConfig: HlsConfig = {
   liveSyncDurationCount: 3, // used by latency-controller
   liveSyncOnStallIncrease: 1, // used by latency-controller
   liveMaxLatencyDurationCount: Infinity, // used by latency-controller
+  liveMaxUnchangedPlaylistRefresh: 3, // used by base-playlist-controller
   liveSyncDuration: undefined, // used by latency-controller
   liveMaxLatencyDuration: undefined, // used by latency-controller
   maxLiveSyncPlaybackRate: 1, // used by latency-controller
