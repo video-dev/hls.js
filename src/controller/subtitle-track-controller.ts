@@ -526,7 +526,6 @@ class SubtitleTrackController extends BasePlaylistController {
     // and we'll set subtitleTrack when onMediaAttached is triggered
     if (!this.media) {
       this.queuedDefaultTrack = newId;
-      return;
     }
 
     // exit if track id as already set or invalid
