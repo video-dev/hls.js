@@ -1,11 +1,11 @@
 import { buildAbsoluteURL } from 'url-toolkit';
 import { LoadStats } from './load-stats';
+import { PlaylistLevelType } from '../types/loader';
 import type { LevelKey } from './level-key';
 import type {
   FragmentLoaderContext,
   KeyLoaderContext,
   Loader,
-  PlaylistLevelType,
 } from '../types/loader';
 import type { AttrList } from '../utils/attr-list';
 import type { KeySystemFormats } from '../utils/mediakeys-helper';
@@ -453,7 +453,8 @@ export class Part extends BaseSegment {
     return !!(
       elementaryStreams.audio ||
       elementaryStreams.video ||
-      elementaryStreams.audiovideo
+      elementaryStreams.audiovideo ||
+      (this.fragment.type === PlaylistLevelType.SUBTITLE && this.stats.loaded)
     );
   }
 }
