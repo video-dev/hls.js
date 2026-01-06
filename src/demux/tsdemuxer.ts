@@ -69,6 +69,7 @@ class TSDemuxer implements Demuxer {
   private _audioTrack?: DemuxedAudioTrack;
   private _id3Track?: DemuxedMetadataTrack;
   private _txtTrack?: DemuxedUserdataTrack;
+  private _klvPid: number = -1;
   private aacOverFlow: AudioFrame | null = null;
   private remainderData: Uint8Array | null = null;
   private videoParser: BaseVideoParser | null;
@@ -236,8 +237,10 @@ class TSDemuxer implements Demuxer {
     let videoData = videoTrack.pesData;
     let audioPid = audioTrack.pid;
     let id3Pid = id3Track.pid;
+    let klvPid = this._klvPid;
     let audioData = audioTrack.pesData;
     let id3Data = id3Track.pesData;
+    let klvData: ElementaryStreamData | null = null;
     let unknownPID: number | null = null;
     let pmtParsed = this.pmtParsed;
     let pmtId = this._pmtId;
@@ -342,6 +345,19 @@ class TSDemuxer implements Demuxer {
               id3Data.size += start + PACKET_LENGTH - offset;
             }
             break;
+          case klvPid:
+            if (stt) {
+              if (klvData && (pes = parsePES(klvData, this.logger))) {
+                this.parseKlvPES(id3Track, pes);
+              }
+
+              klvData = { data: [], size: 0 };
+            }
+            if (klvData) {
+              klvData.data.push(data.subarray(offset, start + PACKET_LENGTH));
+              klvData.size += start + PACKET_LENGTH - offset;
+            }
+            break;
           case 0:
             if (stt) {
               offset += data[offset] + 1;
@@ -362,6 +378,7 @@ class TSDemuxer implements Demuxer {
               isSampleAes,
               this.observer,
               this.logger,
+              this.config,
             );
 
             // only update track id if track PID found while parsing PMT
@@ -384,6 +401,10 @@ class TSDemuxer implements Demuxer {
             id3Pid = parsedPIDs.id3Pid;
             if (id3Pid > 0) {
               id3Track.pid = id3Pid;
+            }
+            klvPid = parsedPIDs.klvPid;
+            if (klvPid > 0) {
+              this._klvPid = klvPid;
             }
 
             if (unknownPID !== null && !pmtParsed) {
@@ -743,6 +764,86 @@ class TSDemuxer implements Demuxer {
     });
     id3Track.samples.push(id3Sample);
   }
+
+  private parseKlvPES(id3Track: DemuxedMetadataTrack, pes: PES) {
+    const pts = pes.pts ?? pes.dts;
+    if (pts === undefined) {
+      this.logger.warn('[tsdemuxer]: KLV PES unknown PTS and DTS');
+      return;
+    }
+    // Parse KLV data from PES payload
+    // KLV format: Key (16 bytes) + Length (BER encoded) + Value (variable)
+    const klvData = pes.data;
+    if (klvData.length < 16) {
+      this.logger.warn('[tsdemuxer]: KLV PES payload too short');
+      return;
+    }
+
+    // Extract KLV packets from the PES payload
+    // Multiple KLV packets can be in a single PES packet
+    let offset = 0;
+    while (offset < klvData.length) {
+      if (offset + 16 > klvData.length) {
+        break; // Not enough data for a KLV key
+      }
+
+      const klvStart = offset;
+
+      // Extract Key (16 bytes for MISB ST 0601)
+      offset += 16;
+
+      if (offset >= klvData.length) {
+        break; // No length field
+      }
+
+      // Parse BER-encoded Length
+      const firstByte = klvData[offset];
+      offset += 1;
+
+      let length = 0;
+
+      if (firstByte & 0x80) {
+        // Long form BER encoding
+        const lengthBytes = firstByte & 0x7f;
+        if (
+          lengthBytes === 0 ||
+          lengthBytes > 4 ||
+          offset + lengthBytes > klvData.length
+        ) {
+          this.logger.warn('[tsdemuxer]: Invalid KLV length encoding');
+          break;
+        }
+        for (let i = 0; i < lengthBytes; i++) {
+          length = (length << 8) | klvData[offset + i];
+        }
+        offset += lengthBytes;
+      } else {
+        // Short form BER encoding
+        length = firstByte;
+      }
+
+      if (offset + length > klvData.length) {
+        this.logger.warn('[tsdemuxer]: KLV value extends beyond PES payload');
+        break;
+      }
+
+      // Extract the complete KLV packet (Key + Length + Value)
+      const klvEnd = offset + length;
+      const klvPacket = klvData.subarray(klvStart, klvEnd);
+
+      const klvSample = {
+        data: klvPacket,
+        len: klvPacket.byteLength,
+        pts: pts,
+        dts: pes.dts ?? pts,
+        type: MetadataSchema.misbklv,
+        duration: Number.POSITIVE_INFINITY,
+      };
+      id3Track.samples.push(klvSample);
+
+      offset = klvEnd;
+    }
+  }
 }
 
 function parsePID(data: Uint8Array, offset: number): number {
@@ -762,11 +863,13 @@ function parsePMT(
   isSampleAes: boolean,
   observer: HlsEventEmitter,
   logger: ILogger,
+  config: HlsConfig,
 ) {
   const result = {
     audioPid: -1,
     videoPid: -1,
     id3Pid: -1,
+    klvPid: -1,
     segmentVideoCodec: 'avc' as 'avc' | 'hevc',
     segmentAudioCodec: 'aac' as 'aac' | 'ac3' | 'mp3',
   };
@@ -856,7 +959,7 @@ function parsePMT(
         // We need to look at the descriptors. Right now, we're only interested
         // in AC-3 audio, so we do the descriptor parsing only when we don't have
         // an audio PID yet.
-        if (result.audioPid === -1 && esInfoLength > 0) {
+        if (esInfoLength > 0) {
           let parsePos = offset + 5;
           let remaining = esInfoLength;
 
@@ -865,17 +968,25 @@ function parsePMT(
 
             switch (descriptorId) {
               case 0x6a: // DVB Descriptor for AC-3
-                if (__USE_M2TS_ADVANCED_CODECS__) {
-                  if (typeSupported.ac3 !== true) {
-                    logger.log(
-                      'AC-3 audio found, not supported in this browser for now',
-                    );
+                if (result.audioPid === -1) {
+                  if (__USE_M2TS_ADVANCED_CODECS__) {
+                    if (typeSupported.ac3 !== true) {
+                      logger.log(
+                        'AC-3 audio found, not supported in this browser for now',
+                      );
+                    } else {
+                      result.audioPid = pid;
+                      result.segmentAudioCodec = 'ac3';
+                    }
                   } else {
-                    result.audioPid = pid;
-                    result.segmentAudioCodec = 'ac3';
+                    logger.warn('AC-3 in M2TS support not included in build');
                   }
-                } else {
-                  logger.warn('AC-3 in M2TS support not included in build');
+                }
+                break;
+              case 0x05: // MISB KLV descriptor
+                if (result.klvPid === -1 && config.enableEmsgKLVMetadata) {
+                  result.klvPid = pid;
+                  logger.log(`KLV metadata PID found: ${pid}`);
                 }
                 break;
             }

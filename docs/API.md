@@ -82,6 +82,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`fpsDroppedMonitoringPeriod`](#fpsdroppedmonitoringperiod)
   - [`fpsDroppedMonitoringThreshold`](#fpsdroppedmonitoringthreshold)
   - [`appendErrorMaxRetry`](#appenderrormaxretry)
+  - [`appendTimeout`](#appendtimeout)
   - [`ignorePlaylistParsingErrors`](#ignoreplaylistparsingerrors)
   - [`loader`](#loader)
   - [`fLoader`](#floader)
@@ -102,6 +103,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`enableDateRangeMetadataCues`](#enabledaterangemetadatacues)
   - [`enableEmsgMetadataCues`](#enableemsgmetadatacues)
   - [`enableEmsgKLVMetadata`](#enableemsgklvmetadata)
+  - [`emsgKLVSchemaUri`](#emsgklvschemauri)
   - [`enableID3MetadataCues`](#enableid3metadatacues)
   - [`enableWebVTT`](#enablewebvtt)
   - [`enableIMSC1`](#enableimsc1)
@@ -127,6 +129,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`abrBandWidthFactor`](#abrbandwidthfactor)
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
+  - [`abrSwitchInterval`](#abrswitchinterval)
   - [`minAutoBitrate`](#minautobitrate)
   - [`preserveManualLevelOnError`](#preservemanuallevelonerror)
   - [`emeEnabled`](#emeenabled)
@@ -521,6 +524,7 @@ var config = {
   abrBandWidthFactor: 0.95,
   abrBandWidthUpFactor: 0.7,
   abrMaxWithRealBitrate: false,
+  abrSwitchInterval: 0,
   maxStarvationDelay: 4,
   maxLoadingDelay: 4,
   minAutoBitrate: 0,
@@ -1132,6 +1136,20 @@ The ratio of frames dropped to frames elapsed within `fpsDroppedMonitoringPeriod
 Max number of `sourceBuffer.appendBuffer()` retry upon error.
 Such error could happen in loop with UHD streams, when internal buffer is full. (Quota Exceeding Error will be triggered). In that case we need to wait for the browser to evict some data before being able to append buffer correctly.
 
+### `appendTimeout`
+
+(default: `Infinity`)
+
+Timeout value in milliseconds to timeout `sourceBuffer.appendBuffer()` operation.
+
+`Infinity` means timeout will not be for source-buffer append operation.
+
+The value will be validated against Math.max(value, delta).
+
+Where `delta` is `Math.Max(distance, 2 * levelTargetDuration)`.
+
+Where `distance` is `activeBufferedRangeEnd - currentTime`.
+
 ### `ignorePlaylistParsingErrors`
 
 (default: `false`)
@@ -1493,6 +1511,21 @@ whether or not to extract KLV Timed Metadata found in CMAF Event Message (emsg) 
 
 parameter should be a boolean
 
+### `emsgKLVSchemaUri`
+
+(default: `undefined`)
+
+URN for MISB KLV metadata schema to match when extracting KLV metadata from CMAF Event Message (emsg) boxes. If not specified, defaults to `'urn:misb:KLV:bin:1910.1'` for backwards compatibility.
+
+Examples:
+
+- `'urn:misb:KLV:bin:1910.1'` for MISB ST 0601.1
+- `'urn:misb:KLV:bin:1910.19'` for MISB ST 0601.19
+
+The demuxer uses `startsWith()` to match the URN, so it will match any URN that begins with the configured value.
+
+parameter should be a string
+
 ### `enableID3MetadataCues`
 
 (default: `true`)
@@ -1707,6 +1740,12 @@ If `abrBandWidthUpFactor * bandwidth average > level.bitrate` then ABR can switc
 max bitrate used in ABR by avg measured bitrate
 i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s,
 then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality level.
+
+### `abrSwitchInterval`
+
+(default: `0`)
+
+Minimum time in seconds between ABR switches. When set to `0`, throttling is disabled. Manual quality switches are never throttled.
 
 ### `minAutoBitrate`
 
