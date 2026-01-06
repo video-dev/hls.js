@@ -57,6 +57,8 @@ type BufferControllerTestable = Omit<
   sourceBuffers: SourceBuffersTuple;
   tracks: SourceBufferTrackSet;
   tracksReady: boolean;
+  _handleSafariMediaSourceClose: () => void;
+  safariSourceCloseHandler: () => void;
 };
 
 describe('BufferController', function () {
@@ -555,6 +557,29 @@ describe('BufferController', function () {
       expect(bufferController.pendingTrackCount).to.equal(0);
       expect(bufferController.sourceBufferCount).to.equal(1);
       expect(bufferController.bufferedToEnd).to.be.true;
+    });
+  });
+
+  describe('Safari MediaSource bfcache close recovery', function () {
+    it('triggers recoverMediaError when MediaSource closes with media attached', function () {
+      const media = new MockMediaElement() as unknown as HTMLMediaElement;
+      const mediaSource = new MockMediaSource() as unknown as MediaSource;
+      const recoverMediaErrorSpy = sandbox.spy(hls, 'recoverMediaError');
+      bufferController.media = media;
+      bufferController.mediaSource = mediaSource;
+      bufferController._handleSafariMediaSourceClose();
+      expect(recoverMediaErrorSpy).to.have.been.calledOnce;
+    });
+
+    it('removes handler on media detaching', function () {
+      const mediaSource = new MockMediaSource() as unknown as MediaSource;
+      const spy = sandbox.spy(mediaSource, 'removeEventListener');
+      const handler = () => {};
+      bufferController.mediaSource = mediaSource;
+      bufferController.safariSourceCloseHandler = handler;
+      hls.trigger(Events.MEDIA_DETACHING, {});
+      expect(spy).to.have.been.calledWith('sourceclose', handler);
+      expect(bufferController.safariSourceCloseHandler).to.be.null;
     });
   });
 });

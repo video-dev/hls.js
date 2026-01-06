@@ -471,21 +471,6 @@ export default class Hls implements HlsEventEmitter {
     const attachMediaSource = 'media' in data;
     const media = attachMediaSource ? data.media : data;
     const attachingData = attachMediaSource ? data : { media };
-    const handlePageShow = (e: PageTransitionEvent) => {
-      if (e.persisted && this._media) {
-        this.logger.log('Page restored from bfcache - reattaching media');
-        const { _media: media, _url: url } = this;
-
-        this.detachMedia();
-        this.attachMedia(media);
-
-        if (url) {
-          this.loadSource(url);
-        }
-      }
-      self.addEventListener('pageshow', handlePageShow, { once: true });
-    };
-    self.addEventListener('pageshow', handlePageShow, { once: true });
     this._media = media;
     this.trigger(Events.MEDIA_ATTACHING, attachingData);
   }
