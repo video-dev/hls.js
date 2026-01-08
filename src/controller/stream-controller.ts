@@ -434,10 +434,7 @@ export default class StreamController
     if (fragPlaying && previousFrag) {
       const fragCurrentLevel = fragPlaying.level;
       this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlaying });
-      if (
-        !fragPlaying ||
-        fragPlaying.level !== (fragCurrentLevel as number | undefined)
-      ) {
+      if (previousFrag.level !== fragCurrentLevel) {
         this.hls.trigger(Events.LEVEL_SWITCHED, {
           level: fragCurrentLevel,
         });
