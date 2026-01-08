@@ -3,6 +3,7 @@ import { createDoNothingErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { ElementaryStreamTypes } from '../loader/fragment';
+import { DEFAULT_TARGET_DURATION } from '../loader/level-details';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
 import {
@@ -575,6 +576,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     this.sourceBuffers[sourceBufferNameToIndex(type)] = [null, null];
     const track = this.tracks[type];
     if (track) {
+      this.clearBufferAppendTimeoutId(track);
       track.buffer = undefined;
     }
   }
@@ -861,6 +863,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         // logger.debug(`[buffer-controller]: ${type} SourceBuffer updatestart`);
       },
       onComplete: () => {
+        this.clearBufferAppendTimeoutId(this.tracks[type]);
         // logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
         const end = self.performance.now();
         chunkStats.executeEnd = chunkStats.end = end;
@@ -894,6 +897,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         });
       },
       onError: (error: Error) => {
+        this.clearBufferAppendTimeoutId(this.tracks[type]);
         // in case any error occured while appending, put back segment in segments table
         const event: ErrorData = {
           type: ErrorTypes.MEDIA_ERROR,
@@ -1478,6 +1482,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     this.bufferCreated();
   }
 
+  private clearBufferAppendTimeoutId(track?: SourceBufferTrack): void {
+    if (!track) {
+      return;
+    }
+
+    self.clearTimeout(track.bufferAppendTimeoutId);
+    track.bufferAppendTimeoutId = undefined;
+  }
+
   private getTrackCodec(track: BaseTrack, trackName: SourceBufferName): string {
     // Use supplemental video codec when supported when adding SourceBuffer (#5558)
     const supplementalCodec = track.supplemental;
@@ -1691,7 +1704,72 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
     track.ending = false;
     track.ended = false;
+
+    if (this.hls.config.appendTimeout !== Infinity) {
+      const appendTimeoutTime = this.calculateAppendTimeoutTime(sb);
+
+      track.bufferAppendTimeoutId = self.setTimeout(
+        () => this.appendTimeoutHandler(type, sb, appendTimeoutTime),
+        appendTimeoutTime,
+      );
+    }
+
     sb.appendBuffer(data);
+  }
+
+  private appendTimeoutHandler(
+    type: SourceBufferName,
+    sb: ExtendedSourceBuffer,
+    appendTimeoutTime: number,
+  ) {
+    this.log(
+      `Received timeout after ${appendTimeoutTime}ms for append on ${type} source buffer. Aborting and triggering error.`,
+    );
+
+    try {
+      sb.abort();
+    } catch (e) {
+      this.log(
+        `Failed to abort append on ${type} source buffer after timeout.`,
+      );
+    }
+
+    const operation = this.currentOp(type);
+    if (operation) {
+      operation.onError(new Error(`${type}-append-timeout`));
+    }
+  }
+
+  private calculateAppendTimeoutTime(sb: ExtendedSourceBuffer): number {
+    let targetDuration = DEFAULT_TARGET_DURATION;
+
+    if (this.details) {
+      targetDuration = this.details.levelTargetDuration;
+    }
+
+    // 2 Target durations
+    let desiredDefaultTimeoutValue = 2 * targetDuration * 1000;
+
+    if (this.media === null) {
+      return desiredDefaultTimeoutValue;
+    }
+
+    const activeBufferedRange = BufferHelper.bufferInfo(
+      sb,
+      this.media.currentTime,
+      0,
+    );
+
+    if (!activeBufferedRange.len) {
+      return desiredDefaultTimeoutValue;
+    }
+
+    desiredDefaultTimeoutValue = Math.max(
+      activeBufferedRange.len * 1000,
+      desiredDefaultTimeoutValue,
+    );
+
+    return Math.max(this.hls.config.appendTimeout, desiredDefaultTimeoutValue);
   }
 
   private blockUntilOpen(callback: () => void) {

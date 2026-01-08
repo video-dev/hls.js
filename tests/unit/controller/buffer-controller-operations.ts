@@ -64,16 +64,20 @@ function evokeTrimBuffers(hls: HlsTestable) {
 }
 
 describe('BufferController with attached media', function () {
+  let timers: sinon.SinonFakeTimers;
   let hls: HlsTestable;
   let fragmentTracker: FragmentTracker;
   let bufferController: BufferController;
   let operationQueue: BufferOperationQueue;
   let triggerSpy: sinon.SinonSpy;
+  let setTimeoutSpy: sinon.SinonSpy;
+  let clearTimeoutSpy: sinon.SinonSpy;
   let shiftAndExecuteNextSpy: sinon.SinonSpy;
   let queueAppendBlockerSpy: sinon.SinonSpy;
   let mockMedia: MockMediaElement;
   let mockMediaSource: MockMediaSource;
   beforeEach(function () {
+    timers = sinon.useFakeTimers({ shouldClearNativeTimers: true } as any);
     hls = new Hls({
       // debug: true,
     }) as unknown as HlsTestable;
@@ -103,12 +107,15 @@ describe('BufferController with attached media', function () {
       },
     });
     triggerSpy = sandbox.spy(hls, 'trigger');
+    setTimeoutSpy = sandbox.spy(self, 'setTimeout');
+    clearTimeoutSpy = sandbox.spy(self, 'clearTimeout');
     shiftAndExecuteNextSpy = sandbox.spy(operationQueue, 'shiftAndExecuteNext');
     queueAppendBlockerSpy = sandbox.spy(operationQueue, 'appendBlocker');
   });
 
   afterEach(function () {
     sandbox.restore();
+    timers.restore();
     hls.destroy();
   });
 
@@ -264,6 +271,355 @@ describe('BufferController with attached media', function () {
           'The queue should have been cycled',
         ).to.have.callCount(i + 1);
       });
+    });
+
+    it('should not set timeout during buffer append operation when appendTimeout is Infinity', function () {
+      queueNames.forEach((name, i) => {
+        const track = getSourceBufferTrack(bufferController, name);
+        const buffer = track?.buffer;
+        expect(buffer).to.not.be.undefined;
+        if (!buffer) {
+          return;
+        }
+        const segmentData = new Uint8Array();
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
+        const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
+        const data: BufferAppendingData = {
+          parent: PlaylistLevelType.MAIN,
+          type: name,
+          data: segmentData,
+          frag,
+          part: null,
+          chunkMeta,
+        };
+
+        hls.trigger(Events.BUFFER_APPENDING, data);
+        expect(setTimeoutSpy).to.not.have.been.called;
+      });
+    });
+
+    it('should set timeout during buffer append operation when appendTimeout is finite', function () {
+      hls.config.appendTimeout = 5000;
+
+      queueNames.forEach((name, i) => {
+        const track = getSourceBufferTrack(bufferController, name);
+        const buffer = track?.buffer;
+        expect(buffer).to.not.be.undefined;
+        if (!buffer) {
+          return;
+        }
+        const segmentData = new Uint8Array();
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
+        const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
+        const data: BufferAppendingData = {
+          parent: PlaylistLevelType.MAIN,
+          type: name,
+          data: segmentData,
+          frag,
+          part: null,
+          chunkMeta,
+        };
+
+        hls.trigger(Events.BUFFER_APPENDING, data);
+        expect(setTimeoutSpy).to.have.callCount(i + 1);
+      });
+    });
+
+    it('should clear timeout on successful buffer append completion', function () {
+      hls.config.appendTimeout = 5000;
+
+      queueNames.forEach((name, i) => {
+        const track = getSourceBufferTrack(bufferController, name);
+        const buffer = track?.buffer;
+        expect(buffer).to.not.be.undefined;
+        if (!buffer) {
+          return;
+        }
+        const segmentData = new Uint8Array();
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
+        const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
+        const data: BufferAppendingData = {
+          parent: PlaylistLevelType.MAIN,
+          type: name,
+          data: segmentData,
+          frag,
+          part: null,
+          chunkMeta,
+        };
+
+        hls.trigger(Events.BUFFER_APPENDING, data);
+
+        const timeoutId = track?.bufferAppendTimeoutId;
+
+        expect(timeoutId).to.be.a('number');
+        expect(setTimeoutSpy).to.have.callCount(i + 1);
+
+        buffer.dispatchEvent(new Event('updateend'));
+
+        expect(clearTimeoutSpy).to.have.been.calledWith(timeoutId);
+        expect(track?.bufferAppendTimeoutId).to.be.undefined;
+      });
+    });
+
+    it('should clear timeout on buffer append error', function () {
+      hls.config.appendTimeout = 5000;
+
+      queueNames.forEach((name, i) => {
+        const track = getSourceBufferTrack(bufferController, name);
+        const buffer = track?.buffer;
+        expect(buffer).to.not.be.undefined;
+        if (!buffer) {
+          return;
+        }
+        const segmentData = new Uint8Array();
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
+        const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
+        const data: BufferAppendingData = {
+          parent: PlaylistLevelType.MAIN,
+          type: name,
+          data: segmentData,
+          frag,
+          part: null,
+          chunkMeta,
+        };
+
+        hls.trigger(Events.BUFFER_APPENDING, data);
+
+        const timeoutId = track?.bufferAppendTimeoutId;
+
+        expect(timeoutId).to.be.a('number');
+        expect(setTimeoutSpy).to.have.callCount(i + 1);
+
+        buffer.dispatchEvent(new Event('error'));
+
+        expect(clearTimeoutSpy).to.have.been.calledWith(timeoutId);
+        expect(track?.bufferAppendTimeoutId).to.be.undefined;
+      });
+    });
+
+    it('should handle timeout during buffer append operation', function () {
+      hls.config.appendTimeout = 1000;
+
+      queueNames.forEach((name, i) => {
+        const track = getSourceBufferTrack(bufferController, name);
+        const buffer = track?.buffer;
+        expect(buffer).to.not.be.undefined;
+        if (!buffer) {
+          return;
+        }
+        const segmentData = new Uint8Array();
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
+        const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
+        const data: BufferAppendingData = {
+          parent: PlaylistLevelType.MAIN,
+          type: name,
+          data: segmentData,
+          frag,
+          part: null,
+          chunkMeta,
+        };
+
+        hls.trigger(Events.BUFFER_APPENDING, data);
+
+        expect(setTimeoutSpy).to.have.callCount(i + 1);
+        // expect 2*default*target-duration
+        expect(setTimeoutSpy).to.have.been.calledWith(sinon.match.func, 20000);
+
+        // forward timer
+        timers.tick(20000);
+
+        expect(buffer.abort).to.have.callCount(1);
+        expect(clearTimeoutSpy).to.have.callCount(i + 1);
+
+        const [, errorEvent] = triggerSpy.lastCall.args;
+
+        expect(errorEvent.error.message).to.equal(`${name}-append-timeout`);
+      });
+    });
+
+    it('should calculate timeout based on level target duration', function () {
+      hls.config.appendTimeout = 1000;
+
+      const level = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:6
+#EXTINF:6
+1.seg
+#EXTINF:6
+2.seg
+#EXT-X-ENDLIST
+`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://domain/test.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+
+      mockMediaSource.duration = Infinity;
+
+      //update details
+      hls.trigger(Events.LEVEL_UPDATED, { details, level: 1 });
+
+      queueNames.forEach((name, i) => {
+        const track = getSourceBufferTrack(bufferController, name);
+        const buffer = track?.buffer;
+        expect(buffer).to.not.be.undefined;
+        if (!buffer) {
+          return;
+        }
+        const segmentData = new Uint8Array();
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
+        const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
+        const data: BufferAppendingData = {
+          parent: PlaylistLevelType.MAIN,
+          type: name,
+          data: segmentData,
+          frag,
+          part: null,
+          chunkMeta,
+        };
+
+        hls.trigger(Events.BUFFER_APPENDING, data);
+        expect(setTimeoutSpy).to.have.callCount(i + 1);
+        // expect 2*level-target-duration from playlist
+        expect(setTimeoutSpy).to.have.been.calledWith(sinon.match.func, 12000);
+      });
+    });
+
+    it('should calculate timeout based on buffered time', function () {
+      hls.config.appendTimeout = 1000;
+
+      const level = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:6
+#EXTINF:6
+1.seg
+#EXTINF:6
+2.seg
+#EXT-X-ENDLIST
+`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://domain/test.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+
+      mockMediaSource.duration = Infinity;
+
+      //update details
+      hls.trigger(Events.LEVEL_UPDATED, { details, level: 1 });
+
+      queueNames.forEach((name, i) => {
+        const track = getSourceBufferTrack(bufferController, name);
+        const buffer = track?.buffer;
+        expect(buffer).to.not.be.undefined;
+        if (!buffer) {
+          return;
+        }
+        const segmentData = new Uint8Array();
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
+        const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
+        const data: BufferAppendingData = {
+          parent: PlaylistLevelType.MAIN,
+          type: name,
+          data: segmentData,
+          frag,
+          part: null,
+          chunkMeta,
+        };
+
+        setSourceBufferBufferedRange(bufferController, name, 0, 30);
+        hls.trigger(Events.BUFFER_APPENDING, data);
+        expect(setTimeoutSpy).to.have.callCount(i + 1);
+        // buffered is [0, 30], so we expect it to be 30000ms
+        expect(setTimeoutSpy).to.have.been.calledWith(sinon.match.func, 30000);
+      });
+    });
+
+    it('should calculate timeout based on provided configuration', function () {
+      hls.config.appendTimeout = 40000;
+
+      const level = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:6
+#EXTINF:6
+1.seg
+#EXTINF:6
+2.seg
+#EXT-X-ENDLIST
+`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://domain/test.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+
+      mockMediaSource.duration = Infinity;
+
+      //update details
+      hls.trigger(Events.LEVEL_UPDATED, { details, level: 1 });
+
+      queueNames.forEach((name, i) => {
+        const track = getSourceBufferTrack(bufferController, name);
+        const buffer = track?.buffer;
+        expect(buffer).to.not.be.undefined;
+        if (!buffer) {
+          return;
+        }
+        const segmentData = new Uint8Array();
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
+        const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
+        const data: BufferAppendingData = {
+          parent: PlaylistLevelType.MAIN,
+          type: name,
+          data: segmentData,
+          frag,
+          part: null,
+          chunkMeta,
+        };
+
+        setSourceBufferBufferedRange(bufferController, name, 0, 30);
+        hls.trigger(Events.BUFFER_APPENDING, data);
+        expect(setTimeoutSpy).to.have.callCount(i + 1);
+        // 2*level-target-duration is 12, buffered is [0, 30], but configured value is 40, so use 40
+        expect(setTimeoutSpy).to.have.been.calledWith(sinon.match.func, 40000);
+      });
+    });
+
+    it('should clear timeout when track is reset', function () {
+      hls.config.appendTimeout = 5000;
+
+      const segmentData = new Uint8Array([1, 2, 3, 4]);
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      const chunkMeta = new ChunkMetadata(0, 0, 0, 0);
+      const data: BufferAppendingData = {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: segmentData,
+        frag,
+        part: null,
+        chunkMeta,
+      };
+
+      hls.trigger(Events.BUFFER_APPENDING, data);
+
+      const videoTrack = getSourceBufferTrack(bufferController, 'video');
+      const timeoutId = videoTrack?.bufferAppendTimeoutId;
+      expect(timeoutId).to.be.a('number');
+
+      // Reset buffer
+      hls.trigger(Events.BUFFER_RESET, undefined);
+
+      expect(clearTimeoutSpy).to.have.been.calledWith(timeoutId);
     });
 
     it('should cycle the SourceBuffer operation queue if the sourceBuffer does not exist while appending', function () {
