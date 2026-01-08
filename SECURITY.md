@@ -14,8 +14,4 @@ currently being supported with security updates.
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
-
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Report vulnerabilities [using this link](https://github.com/video-dev/hls.js/issues/new?assignees=&labels=Bug%2CNeeds+Triage%2CSecurity&template=bug.yaml). Project maintainers usually respond within a week. Pull requests are also welcome and will scheduled via a milestone once accepted.```
