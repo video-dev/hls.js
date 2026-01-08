@@ -1,7 +1,10 @@
 import { expect } from 'chai';
 import { Level } from '../../../src/types/level';
 import { AttrList } from '../../../src/utils/attr-list';
-import { getMediaDecodingInfoPromise } from '../../../src/utils/mediacapabilities-helper';
+import {
+  estimatedAudioBitrate,
+  getMediaDecodingInfoPromise,
+} from '../../../src/utils/mediacapabilities-helper';
 import type {
   MediaAttributes,
   MediaPlaylist,
@@ -142,5 +145,57 @@ describe('getMediaDecodingInfoPromise', function () {
         },
       });
     });
+  });
+});
+
+describe('estimatedAudioBitrate', function () {
+  it('should return min of levelBitrate/2 and 128000 when audioCodec is undefined', function () {
+    const result = estimatedAudioBitrate(undefined, 1000000);
+    expect(result).to.equal(128000);
+  });
+
+  it('should return min of levelBitrate/2 and 128000 when audioCodec is empty string', function () {
+    const result = estimatedAudioBitrate('', 1000000);
+    expect(result).to.equal(128000); // min(500000, 128000)
+  });
+
+  it('should estimate AAC bitrate as min of levelBitrate/2 and 128000', function () {
+    const result = estimatedAudioBitrate('mp4a.40.2', 1000000);
+    expect(result).to.equal(128000); // min(500000, 128000)
+  });
+
+  it('should estimate HE-AAC bitrate as min of levelBitrate/2 and 128000', function () {
+    const result = estimatedAudioBitrate('mp4a.40.5', 1000000);
+    expect(result).to.equal(128000); // min(500000, 128000)
+  });
+
+  it('should estimate AC-3 bitrate as min of levelBitrate/2 and 640000', function () {
+    const result = estimatedAudioBitrate('ac-3', 1000000);
+    expect(result).to.equal(500000); // min(500000, 640000)
+  });
+
+  it('should estimate E-AC-3 bitrate as min of levelBitrate/2 and 768000', function () {
+    const result = estimatedAudioBitrate('ec-3', 1000000);
+    expect(result).to.equal(500000); // min(500000, 768000)
+  });
+
+  it('should handle very low bitrates', function () {
+    const result = estimatedAudioBitrate('mp4a.40.2', 1);
+    expect(result).to.equal(1);
+  });
+
+  it('should handle very high bitrates with default codec', function () {
+    const result = estimatedAudioBitrate('mp4a.40.2', 10000000);
+    expect(result).to.equal(128000); // min(5000000, 128000)
+  });
+
+  it('should handle very high bitrates with ec-3 codec', function () {
+    const result = estimatedAudioBitrate('ec-3', 10000000);
+    expect(result).to.equal(768000); // min(5000000, 768000)
+  });
+
+  it('should use default estimate (128000) for unknown codecs', function () {
+    const result = estimatedAudioBitrate('unknown-codec', 1000000);
+    expect(result).to.equal(128000); // min(500000, 128000)
   });
 });
