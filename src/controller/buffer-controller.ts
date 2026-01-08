@@ -120,10 +120,6 @@ export default class BufferController extends Logger implements ComponentAPI {
     [null, null],
     [null, null],
   ];
-  // Handler for Safari/WebKit MediaSource workaround
-  private safariSourceCloseHandler: (() => void) | null = null;
-  // Flag indicating whether this browser needs MediaSource close recovery from bfcache (Safari/WebKit)
-  private needsMediaSourceCloseRecovery: boolean = false;
 
   constructor(hls: Hls, fragmentTracker: FragmentTracker) {
     super('buffer-controller', hls.logger);
@@ -142,15 +138,6 @@ export default class BufferController extends Logger implements ComponentAPI {
   }
 
   public destroy() {
-    // Clean up Safari/WebKit workaround listener before destroying
-    if (this.mediaSource && this.safariSourceCloseHandler) {
-      this.mediaSource.removeEventListener(
-        'sourceclose',
-        this.safariSourceCloseHandler,
-      );
-      this.safariSourceCloseHandler = null;
-    }
-
     this.unregisterListeners();
     this.details = null;
     this.lastMpegAudioChunk = this.blockedAudioAppend = null;
@@ -292,7 +279,6 @@ export default class BufferController extends Logger implements ComponentAPI {
     data: MediaAttachingData,
   ) {
     const media = (this.media = data.media);
-    this.needsMediaSourceCloseRecovery = this.detectMediaSourceCloseIssue();
     this.transferData = this.overrides = undefined;
     const MediaSource = getMediaSource(this.appendSource);
     if (MediaSource) {
@@ -342,12 +328,6 @@ export default class BufferController extends Logger implements ComponentAPI {
     if (this.appendSource) {
       ms.addEventListener('startstreaming', this._onStartStreaming);
       ms.addEventListener('endstreaming', this._onEndStreaming);
-    }
-    // Safari/WebKit workaround: Add additional listener for recovery
-    if (this.needsMediaSourceCloseRecovery) {
-      const handler = this._handleSafariMediaSourceClose.bind(this);
-      this.safariSourceCloseHandler = handler;
-      ms.addEventListener('sourceclose', handler);
     }
   }
 
@@ -536,14 +516,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         mediaSource.removeEventListener('endstreaming', this._onEndStreaming);
       }
 
-      // Remove Safari/WebKit workaround listener if present
-      if (this.safariSourceCloseHandler) {
-        mediaSource.removeEventListener(
-          'sourceclose',
-          this.safariSourceCloseHandler,
-        );
-        this.safariSourceCloseHandler = null;
-      }
       this.mediaSource = null;
       this._objectUrl = null;
     }
@@ -1603,6 +1575,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
   private _onMediaSourceClose = () => {
     this.log('Media source closed');
+    // Safari/WebKit bug: MediaSource becomes invalid after bfcache restoration.
+    // When the user navigates back, the MediaSource is in a 'closed' state and cannot be used.
+    // If sourceclose fires while media is still attached, trigger recovery to reattach media.
+    if (this.media) {
+      this.warn(
+        'MediaSource closed while media attached - triggering recovery',
+      );
+      this.hls.recoverMediaError();
+    }
   };
 
   private _onMediaSourceEnded = () => {
@@ -1963,31 +1944,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     });
     track.listeners.length = 0;
   }
-
-  private detectMediaSourceCloseIssue(): boolean {
-    const ua = navigator.userAgent.toLowerCase();
-    const isSafari = /safari/.test(ua) && !/chrome/.test(ua);
-    const isWebKit = /webkit/.test(ua);
-    return isSafari || isWebKit;
-  }
-
-  /**
-   * Handles MediaSource 'sourceclose' event on Safari/WebKit.
-   * Safari/WebKit have a bug where MediaSource becomes invalid after bfcache restoration.
-   * When the user navigates back, the MediaSource is in a 'closed' state and cannot be used.
-   * The 'sourceclose' event fires to notify of this, but by then sourceBuffers are already
-   * cleaned up (length = 0).
-   * If sourceclose fires while media is still attached, we trigger recovery via
-   * recoverMediaError() to reattach media.
-   */
-  private _handleSafariMediaSourceClose = () => {
-    const { media, mediaSource } = this;
-    if (!media || !mediaSource) {
-      return;
-    }
-    this.warn('MediaSource closed while media attached - triggering recovery');
-    this.hls.recoverMediaError();
-  };
 }
 
 function removeSourceChildren(node: HTMLElement) {

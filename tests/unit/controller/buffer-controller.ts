@@ -57,8 +57,7 @@ type BufferControllerTestable = Omit<
   sourceBuffers: SourceBuffersTuple;
   tracks: SourceBufferTrackSet;
   tracksReady: boolean;
-  _handleSafariMediaSourceClose: () => void;
-  safariSourceCloseHandler: () => void;
+  _onMediaSourceClose: () => void;
 };
 
 describe('BufferController', function () {
@@ -561,25 +560,23 @@ describe('BufferController', function () {
   });
 
   describe('Safari MediaSource bfcache close recovery', function () {
-    it('triggers recoverMediaError when MediaSource closes with media attached', function () {
+    it('triggers recoverMediaError when sourceclose fires with media attached', function () {
       const media = new MockMediaElement() as unknown as HTMLMediaElement;
       const mediaSource = new MockMediaSource() as unknown as MediaSource;
       const recoverMediaErrorSpy = sandbox.spy(hls, 'recoverMediaError');
       bufferController.media = media;
       bufferController.mediaSource = mediaSource;
-      bufferController._handleSafariMediaSourceClose();
+      bufferController._onMediaSourceClose();
       expect(recoverMediaErrorSpy).to.have.been.calledOnce;
     });
 
-    it('removes handler on media detaching', function () {
+    it('does not trigger recovery when sourceclose fires without media attached', function () {
       const mediaSource = new MockMediaSource() as unknown as MediaSource;
-      const spy = sandbox.spy(mediaSource, 'removeEventListener');
-      const handler = () => {};
+      const recoverMediaErrorSpy = sandbox.spy(hls, 'recoverMediaError');
+      bufferController.media = null;
       bufferController.mediaSource = mediaSource;
-      bufferController.safariSourceCloseHandler = handler;
-      hls.trigger(Events.MEDIA_DETACHING, {});
-      expect(spy).to.have.been.calledWith('sourceclose', handler);
-      expect(bufferController.safariSourceCloseHandler).to.be.null;
+      bufferController._onMediaSourceClose();
+      expect(recoverMediaErrorSpy).to.not.have.been.called;
     });
   });
 });
