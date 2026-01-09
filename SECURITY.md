@@ -10,4 +10,4 @@
 
 ## Reporting a Vulnerability
 
-Report vulnerabilities [using this link](https://github.com/video-dev/hls.js/issues/new?assignees=&labels=Bug%2CNeeds+Triage%2CSecurity&template=bug.yaml). Project maintainers usually respond within a week. Pull requests are also welcome and will scheduled via a milestone once accepted.```
+Report vulnerabilities [using this link](https://github.com/video-dev/hls.js/issues/new?assignees=&labels=Bug%2CNeeds+Triage%2CSecurity&template=bug.yaml). Project maintainers usually respond within a week. Contributions via pull request are welcome and scheduled with a milestone once accepted.
