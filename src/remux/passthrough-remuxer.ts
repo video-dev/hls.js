@@ -164,7 +164,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     const result: RemuxerResult = {
       audio: undefined,
       video: undefined,
-      text: textTrack,
+      text: undefined,
       id3: id3Track,
       initSegment: undefined,
     };
