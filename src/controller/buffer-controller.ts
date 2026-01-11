@@ -1575,6 +1575,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
   private _onMediaSourceClose = () => {
     this.log('Media source closed');
+    // Safari/WebKit bug: MediaSource becomes invalid after bfcache restoration.
+    // When the user navigates back, the MediaSource is in a 'closed' state and cannot be used.
+    // If sourceclose fires while media is still attached, trigger recovery to reattach media.
+    if (this.media) {
+      this.warn(
+        'MediaSource closed while media attached - triggering recovery',
+      );
+      this.hls.recoverMediaError();
+    }
   };
 
   private _onMediaSourceEnded = () => {

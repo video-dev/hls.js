@@ -57,6 +57,7 @@ type BufferControllerTestable = Omit<
   sourceBuffers: SourceBuffersTuple;
   tracks: SourceBufferTrackSet;
   tracksReady: boolean;
+  _onMediaSourceClose: () => void;
 };
 
 describe('BufferController', function () {
@@ -555,6 +556,27 @@ describe('BufferController', function () {
       expect(bufferController.pendingTrackCount).to.equal(0);
       expect(bufferController.sourceBufferCount).to.equal(1);
       expect(bufferController.bufferedToEnd).to.be.true;
+    });
+  });
+
+  describe('Safari MediaSource bfcache close recovery', function () {
+    it('triggers recoverMediaError when sourceclose fires with media attached', function () {
+      const media = new MockMediaElement() as unknown as HTMLMediaElement;
+      const mediaSource = new MockMediaSource() as unknown as MediaSource;
+      const recoverMediaErrorSpy = sandbox.spy(hls, 'recoverMediaError');
+      bufferController.media = media;
+      bufferController.mediaSource = mediaSource;
+      bufferController._onMediaSourceClose();
+      expect(recoverMediaErrorSpy).to.have.been.calledOnce;
+    });
+
+    it('does not trigger recovery when sourceclose fires without media attached', function () {
+      const mediaSource = new MockMediaSource() as unknown as MediaSource;
+      const recoverMediaErrorSpy = sandbox.spy(hls, 'recoverMediaError');
+      bufferController.media = null;
+      bufferController.mediaSource = mediaSource;
+      bufferController._onMediaSourceClose();
+      expect(recoverMediaErrorSpy).to.not.have.been.called;
     });
   });
 });
