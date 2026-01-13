@@ -133,6 +133,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
       case 'AES-128':
       case 'AES-256':
       case 'AES-256-CTR':
+      case 'AES-256-GCM':
         return this.loadKeyHTTP(encryptedFrag);
       default:
         return Promise.reject(
