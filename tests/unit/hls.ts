@@ -158,4 +158,44 @@ describe('Hls', function () {
       expect(() => JSON.stringify(hls)).to.not.throw();
     });
   });
+
+  describe('nextAudioTrack', function () {
+    it('should return -1 when audioStreamController is not available', function () {
+      const hls = new Hls();
+      (hls as any).audioStreamController = null;
+      expect(hls.nextAudioTrack).to.equal(-1);
+      hls.destroy();
+    });
+
+    it('should not crash when audioTrackController is not available', function () {
+      const hls = new Hls();
+      (hls as any).audioTrackController = null;
+
+      expect(() => {
+        hls.nextAudioTrack = 2;
+      }).to.not.throw();
+
+      hls.destroy();
+    });
+
+    it('should set nextAudioTrack on audioTrackController', function () {
+      const hls = new Hls();
+      const mockAudioTrackController = {
+        nextAudioTrack: 0,
+      };
+      (hls as any).audioTrackController = mockAudioTrackController;
+
+      hls.nextAudioTrack = 2;
+
+      expect(mockAudioTrackController.nextAudioTrack).to.equal(2);
+      hls.destroy();
+    });
+
+    it('should return -1 when audioStreamController is undefined', function () {
+      const hls = new Hls();
+      (hls as any).audioStreamController = undefined;
+      expect(hls.nextAudioTrack).to.equal(-1);
+      hls.destroy();
+    });
+  });
 });
