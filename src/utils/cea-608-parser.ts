@@ -410,12 +410,12 @@ export class Row {
         'Negative cursor position ' + this.pos,
       );
       this.pos = 0;
-    } else if (this.pos > NR_COLS) {
+    } else if (this.pos >= NR_COLS) {
       this.logger.log(
         VerboseLevel.DEBUG,
         'Too large cursor position ' + this.pos,
       );
-      this.pos = NR_COLS;
+      this.pos = NR_COLS - 1;
     }
   }
 
@@ -423,9 +423,9 @@ export class Row {
    * Move the cursor relative to current position.
    */
   moveCursor(relPos: number) {
-    const newPos = this.pos + relPos;
+    const newPos = Math.min(this.pos + relPos, NR_COLS);
     if (relPos > 1) {
-      for (let i = this.pos + 1; i < newPos + 1; i++) {
+      for (let i = this.pos + 1; i < newPos; i++) {
         this.chars[i].setPenState(this.currPenState);
       }
     }
