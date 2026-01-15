@@ -49,15 +49,15 @@ import type {
 import type { Level } from '../types/level';
 import type { Track, TrackSet } from '../types/track';
 import type { TransmuxerResult } from '../types/transmuxer';
-import type { BufferInfo } from '../utils/buffer-helper';
+import type { Bufferable, BufferInfo } from '../utils/buffer-helper';
 
-const TICK_INTERVAL = 100; // how often to tick in ms
-
-const enum AlternateAudio {
+export const enum AlternateAudio {
   DISABLED = 0,
   SWITCHING,
   SWITCHED,
 }
+
+const TICK_INTERVAL = 100; // how often to tick in ms
 
 export default class StreamController
   extends BaseStreamController
@@ -69,9 +69,8 @@ export default class StreamController
   private _hasEnoughToStart: boolean = false;
   private altAudio: AlternateAudio = AlternateAudio.DISABLED;
   private audioOnly: boolean = false;
-  private fragPlaying: Fragment | null = null;
-  private couldBacktrack: boolean = false;
-  private backtrackFragment: Fragment | null = null;
+  private _couldBacktrack: boolean = false;
+  private _backtrackFragment: Fragment | undefined = undefined;
   private audioCodecSwitch: boolean = false;
   private videoBuffer: ExtendedSourceBuffer | null = null;
 
@@ -317,7 +316,7 @@ export default class StreamController
       this.backtrackFragment &&
       this.backtrackFragment.start > bufferInfo.end
     ) {
-      this.backtrackFragment = null;
+      this.backtrackFragment = undefined;
     }
     const targetBufferTime = this.backtrackFragment
       ? this.backtrackFragment.start
@@ -339,7 +338,7 @@ export default class StreamController
         this.fragmentTracker.removeFragment(backtrackFrag);
       }
     } else if (this.backtrackFragment && bufferInfo.len) {
-      this.backtrackFragment = null;
+      this.backtrackFragment = undefined;
     }
     // Avoid loop loading by using nextLoadPosition set for backtracking and skipping consecutive GAP tags
     if (frag && this.isLoopLoading(frag, targetBufferTime)) {
@@ -355,7 +354,7 @@ export default class StreamController
             ? this.videoBuffer
             : this.mediaBuffer) || this.media;
         if (mediaBuffer) {
-          this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
+          this.afterBufferFlushed(mediaBuffer, type);
         }
       }
       frag = this.getNextFragmentLoopLoading(
@@ -402,21 +401,6 @@ export default class StreamController
     }
   }
 
-  private getBufferedFrag(position: number) {
-    return this.fragmentTracker.getBufferedFrag(
-      position,
-      PlaylistLevelType.MAIN,
-    );
-  }
-
-  private followingBufferedFrag(frag: Fragment | null) {
-    if (frag) {
-      // try to get range of next fragment (500ms after this range)
-      return this.getBufferedFrag(frag.end + 0.5);
-    }
-    return null;
-  }
-
   /*
     on immediate level switch :
      - pause playback if playing
@@ -429,106 +413,67 @@ export default class StreamController
   }
 
   /**
-   * try to switch ASAP without breaking video playback:
-   * in order to ensure smooth but quick level switching,
-   * we need to find the next flushable buffer range
-   * we should take into account new segment fetch time
+   * Get the buffer output to use for buffer calculations.
+   * Override to use altAudio logic in stream-controller.
    */
-  public nextLevelSwitch() {
-    const { levels, media, hls, config } = this;
-    // ensure that media is defined and that metadata are available (to retrieve currentTime)
-    if (media?.readyState && levels && hls && config) {
-      const bufferInfo = this.getMainFwdBufferInfo();
-      if (!bufferInfo) {
-        return;
-      }
-      const levelDetails = this.getLevelDetails();
-
-      let fetchdelay = 0;
-      if (!media.paused) {
-        // add a safety delay of 1s
-        const ttfbSec = 1 + hls.ttfbEstimate / 1000;
-        const bandwidth = hls.bandwidthEstimate * config.abrBandWidthUpFactor;
-        const nextLevelId = hls.nextLoadLevel;
-        const nextLevel = levels[nextLevelId];
-        const fragDuration =
-          (levelDetails &&
-            (this.loadingParts
-              ? levelDetails.partTarget
-              : levelDetails.averagetargetduration)) ||
-          this.fragCurrent?.duration ||
-          6;
-        fetchdelay =
-          ttfbSec + (nextLevel.maxBitrate * fragDuration) / bandwidth;
-        if (!nextLevel.details) {
-          fetchdelay += ttfbSec;
-        }
-      }
-
-      // Do not flush in live stream with low buffer
-
-      const okToFlushForwardBuffer =
-        !levelDetails?.live ||
-        (bufferInfo.len || 0) > levelDetails.targetduration * 2;
-
-      // find buffer range that will be reached once new fragment will be fetched
-      const bufferedFrag = okToFlushForwardBuffer
-        ? this.getBufferedFrag(media.currentTime + fetchdelay)
-        : null;
-      if (bufferedFrag) {
-        // we can flush buffer range following this one without stalling playback
-        const nextBufferedFrag = this.followingBufferedFrag(bufferedFrag);
-        if (nextBufferedFrag) {
-          // if we are here, we can also cancel any loading/demuxing in progress, as they are useless
-          this.abortCurrentFrag();
-          // start flush position is in next buffered frag. Leave some padding for non-independent segments and smoother playback.
-          const maxStart = nextBufferedFrag.maxStartPTS
-            ? nextBufferedFrag.maxStartPTS
-            : nextBufferedFrag.start;
-          const fragDuration = nextBufferedFrag.duration;
-          const startPts = Math.max(
-            bufferedFrag.end,
-            maxStart +
-              Math.min(
-                Math.max(
-                  fragDuration - this.config.maxFragLookUpTolerance,
-                  fragDuration * (this.couldBacktrack ? 0.5 : 0.125),
-                ),
-                fragDuration * (this.couldBacktrack ? 0.75 : 0.25),
-              ),
-          );
-          this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY);
-        }
-      }
-      // remove back-buffer
-      const fragPlayingCurrent = this.getAppendedFrag(media.currentTime);
-      if (fragPlayingCurrent && fragPlayingCurrent.start > 1) {
-        // flush buffer preceding current fragment (flush until current fragment start offset)
-        // minus 1s to avoid video freezing, that could happen if we flush keyframe of current video ...
-        this.flushMainBuffer(0, fragPlayingCurrent.start - 1);
-      }
+  protected getBufferOutput(): Bufferable | null {
+    if (this.mediaBuffer && this.altAudio === AlternateAudio.SWITCHED) {
+      return this.mediaBuffer;
     }
-    this.tickImmediate();
+    return this.media;
   }
 
-  private abortCurrentFrag() {
-    const fragCurrent = this.fragCurrent;
-    this.fragCurrent = null;
-    this.backtrackFragment = null;
-    if (fragCurrent) {
-      fragCurrent.abortRequests();
-      this.fragmentTracker.removeFragment(fragCurrent);
+  protected checkFragmentChanged(): boolean {
+    const previousFrag = this.fragPlaying;
+    const fragChanged = super.checkFragmentChanged();
+    if (!fragChanged) {
+      return false;
     }
-    switch (this.state) {
-      case State.KEY_LOADING:
-      case State.FRAG_LOADING:
-      case State.FRAG_LOADING_WAITING_RETRY:
-      case State.PARSING:
-      case State.PARSED:
-        this.state = State.IDLE;
-        break;
+
+    const fragPlaying = this.fragPlaying;
+    if (fragPlaying && previousFrag) {
+      const fragCurrentLevel = fragPlaying.level;
+      this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlaying });
+      if (previousFrag.level !== fragCurrentLevel) {
+        this.hls.trigger(Events.LEVEL_SWITCHED, {
+          level: fragCurrentLevel,
+        });
+      }
     }
-    this.nextLoadPosition = this.getLoadPosition();
+    return true;
+  }
+
+  /**
+   * Get backtrack fragment. Override to return actual backtrack fragment.
+   */
+  protected get backtrackFragment(): Fragment | undefined {
+    return this._backtrackFragment;
+  }
+
+  /**
+   * Set backtrack fragment. Override to set actual backtrack fragment.
+   */
+  protected set backtrackFragment(value: Fragment | undefined) {
+    this._backtrackFragment = value;
+  }
+
+  /**
+   * Get could backtrack flag. Override to return actual value.
+   */
+  protected get couldBacktrack(): boolean {
+    return this._couldBacktrack;
+  }
+
+  /**
+   * Set could backtrack flag. Override to set actual value.
+   */
+  protected set couldBacktrack(value: boolean) {
+    this._couldBacktrack = value;
+  }
+
+  protected abortCurrentFrag(): void {
+    this.backtrackFragment = undefined;
+    super.abortCurrentFrag();
   }
 
   protected flushMainBuffer(startOffset: number, endOffset: number) {
@@ -559,7 +504,6 @@ export default class StreamController
       removeEventListener(media, 'seeked', this.onMediaSeeked);
     }
     this.videoBuffer = null;
-    this.fragPlaying = null;
     super.onMediaDetaching(event, data);
     const transferringMedia = !!data.transferMedia;
     if (transferringMedia) {
@@ -611,7 +555,7 @@ export default class StreamController
     this.log('Trigger BUFFER_RESET');
     this.hls.trigger(Events.BUFFER_RESET, undefined);
     this.couldBacktrack = false;
-    this.fragPlaying = this.backtrackFragment = null;
+    this.backtrackFragment = undefined;
     this.altAudio = AlternateAudio.DISABLED;
     this.audioOnly = false;
   }
@@ -1100,7 +1044,7 @@ export default class StreamController
           ? this.videoBuffer
           : this.mediaBuffer) || this.media;
       if (mediaBuffer) {
-        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.MAIN);
+        this.afterBufferFlushed(mediaBuffer, type);
         this.tick();
       }
     }
@@ -1567,10 +1511,7 @@ export default class StreamController
 
   public getMainFwdBufferInfo(): BufferInfo | null {
     // Observe video SourceBuffer (this.mediaBuffer) only when alt-audio is used, otherwise observe combined media buffer
-    const bufferOutput =
-      this.mediaBuffer && this.altAudio === AlternateAudio.SWITCHED
-        ? this.mediaBuffer
-        : this.media;
+    const bufferOutput = this.getBufferOutput();
     return this.getFwdBufferInfo(bufferOutput, PlaylistLevelType.MAIN);
   }
 
@@ -1593,52 +1534,6 @@ export default class StreamController
     this.fragPrevious = null;
     this.nextLoadPosition = frag.start;
     this.state = State.IDLE;
-  }
-
-  private checkFragmentChanged() {
-    const video = this.media;
-    let fragPlayingCurrent: Fragment | null = null;
-    if (video && video.readyState > 1 && video.seeking === false) {
-      const currentTime = video.currentTime;
-      /* if video element is in seeked state, currentTime can only increase.
-        (assuming that playback rate is positive ...)
-        As sometimes currentTime jumps back to zero after a
-        media decode error, check this, to avoid seeking back to
-        wrong position after a media decode error
-      */
-
-      if (BufferHelper.isBuffered(video, currentTime)) {
-        fragPlayingCurrent = this.getAppendedFrag(currentTime);
-      } else if (BufferHelper.isBuffered(video, currentTime + 0.1)) {
-        /* ensure that FRAG_CHANGED event is triggered at startup,
-          when first video frame is displayed and playback is paused.
-          add a tolerance of 100ms, in case current position is not buffered,
-          check if current pos+100ms is buffered and use that buffer range
-          for FRAG_CHANGED event reporting */
-        fragPlayingCurrent = this.getAppendedFrag(currentTime + 0.1);
-      }
-      if (fragPlayingCurrent) {
-        this.backtrackFragment = null;
-        const fragPlaying = this.fragPlaying;
-        const fragCurrentLevel = fragPlayingCurrent.level;
-        if (
-          !fragPlaying ||
-          fragPlayingCurrent.sn !== fragPlaying.sn ||
-          fragPlaying.level !== fragCurrentLevel
-        ) {
-          this.fragPlaying = fragPlayingCurrent;
-          this.hls.trigger(Events.FRAG_CHANGED, { frag: fragPlayingCurrent });
-          if (
-            !fragPlaying ||
-            fragPlaying.level !== (fragCurrentLevel as number | undefined)
-          ) {
-            this.hls.trigger(Events.LEVEL_SWITCHED, {
-              level: fragCurrentLevel,
-            });
-          }
-        }
-      }
-    }
   }
 
   get nextLevel(): number {

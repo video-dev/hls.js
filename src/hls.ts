@@ -1069,6 +1069,28 @@ export default class Hls implements HlsEventEmitter {
   }
 
   /**
+   * Index of next audio track as scheduled by audio stream controller.
+   */
+  get nextAudioTrack(): number {
+    return this.audioStreamController?.nextAudioTrack ?? -1;
+  }
+
+  /**
+   * Set audio track index for next loaded data.
+   * This will switch the audio track asap, without interrupting playback.
+   * May abort current loading of data, and flush parts of buffer(outside
+   * currently played fragment region). Audio Track Switched event will be
+   * delayed until the currently playing fragment is of the next audio track.
+   * @param audioTrackId - Pass -1 for automatic level selection
+   */
+  set nextAudioTrack(audioTrackId: number) {
+    const { audioTrackController } = this;
+    if (audioTrackController) {
+      audioTrackController.nextAudioTrack = audioTrackId;
+    }
+  }
+
+  /**
    * get the complete list of subtitle tracks across all media groups
    */
   get allSubtitleTracks(): MediaPlaylist[] {

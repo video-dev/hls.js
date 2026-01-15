@@ -261,8 +261,8 @@ function makeAudioConfigurations(
   return [];
 }
 
-function estimatedAudioBitrate(
-  audioCodec: string,
+export function estimatedAudioBitrate(
+  audioCodec: string | undefined,
   levelBitrate: number,
 ): number {
   if (levelBitrate <= 1) {
