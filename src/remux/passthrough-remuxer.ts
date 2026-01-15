@@ -164,7 +164,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     const result: RemuxerResult = {
       audio: undefined,
       video: undefined,
-      text: textTrack,
+      text: undefined,
       id3: id3Track,
       initSegment: undefined,
     };
@@ -394,10 +394,10 @@ function isInvalidInitPts(
   if (initPTS === null) {
     return true;
   }
-  // InitPTS is invalid when distance from program would be more than segment duration or a minimum of one second
+  // InitPTS is invalid when distance from program would be more than or equal to segment duration or a minimum of one second
   const minDuration = Math.max(duration, 1);
   const startTime = startDTS - initPTS.baseTime / initPTS.timescale;
-  return Math.abs(startTime - timeOffset) > minDuration;
+  return Math.abs(startTime - timeOffset) >= minDuration;
 }
 
 function getParsedTrackCodec(
