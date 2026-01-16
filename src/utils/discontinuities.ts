@@ -1,5 +1,5 @@
 import { adjustSliding } from './level-helper';
-import { logger } from './logger';
+import type { ILogger } from './logger';
 import type { Fragment } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 
@@ -62,22 +62,23 @@ export function adjustSlidingStart(sliding: number, details: LevelDetails) {
 export function alignStream(
   switchDetails: LevelDetails | undefined,
   details: LevelDetails,
+  logger: ILogger,
 ) {
   if (!switchDetails) {
     return;
   }
-  alignDiscontinuities(details, switchDetails);
+  alignDiscontinuities(details, switchDetails, logger);
   if (!details.alignedSliding) {
     // If the PTS wasn't figured out via discontinuity sequence that means there was no CC increase within the level.
     // Aligning via Program Date Time should therefore be reliable, since PDT should be the same within the same
     // discontinuity sequence.
-    alignMediaPlaylistByPDT(details, switchDetails);
+    alignMediaPlaylistByPDT(details, switchDetails, logger);
   }
   if (!details.alignedSliding && !details.skippedSegments) {
     // Try to align on sn so that we pick a better start fragment.
     // Do not perform this on playlists with delta updates as this is only to align levels on switch
     // and adjustSliding only adjusts fragments after skippedSegments.
-    adjustSliding(switchDetails, details, false);
+    adjustSliding(switchDetails, details, false, logger);
   }
 }
 
@@ -90,6 +91,7 @@ export function alignStream(
 export function alignDiscontinuities(
   details: LevelDetails,
   refDetails: LevelDetails | undefined,
+  logger: ILogger,
 ) {
   if (!shouldAlignOnDiscontinuities(refDetails, details)) {
     return;
@@ -100,8 +102,10 @@ export function alignDiscontinuities(
   if (!refFrag || !frag) {
     return;
   }
-  logger.log(`Aligning playlist at start of dicontinuity sequence ${targetCC}`);
   const delta = refFrag.start - frag.start;
+  logger.log(
+    `Aligning playlists using dicontinuity sequence ${targetCC} (diff: ${delta})`,
+  );
   adjustSlidingStart(delta, details);
 }
 
@@ -121,6 +125,7 @@ export function alignDiscontinuities(
 export function alignMediaPlaylistByPDT(
   details: LevelDetails,
   refDetails: LevelDetails,
+  logger: ILogger,
 ) {
   if (!details.hasProgramDateTime || !refDetails.hasProgramDateTime) {
     return;
@@ -157,9 +162,13 @@ export function alignMediaPlaylistByPDT(
   const dateDifference = (targetPDT - refPDT) / 1000;
   if (Math.abs(dateDifference) > Math.max(60, details.totalduration)) {
     // Do not align on PDT if ranges differ significantly
+    logger.log(
+      `Cannot align playlists using PDT without overlap (${Math.abs(dateDifference)} > ${details.totalduration})`,
+    );
     return;
   }
 
   const delta = dateDifference - (frag.start - refFrag.start);
+  logger.log(`Aligning playlists using PDT (diff: ${delta})`);
   adjustSlidingStart(delta, details);
 }

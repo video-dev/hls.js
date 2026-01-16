@@ -16,7 +16,6 @@ import {
   getAesModeFromFullSegmentMethod,
   isFullSegmentEncryption,
 } from '../utils/encryption-methods-util';
-import { addSliding } from '../utils/level-helper';
 import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
 import type { FragmentTracker } from './fragment-tracker';
 import type Hls from '../hls';
@@ -315,7 +314,7 @@ export class SubtitleStreamController
       }
       if (!newDetails.alignedSliding) {
         // line up live playlist with main so that fragments in range are loaded
-        alignStream(mainDetails, newDetails);
+        alignStream(mainDetails, newDetails, this);
         sliding = newDetails.fragmentStart;
       }
     }

@@ -581,7 +581,7 @@ class AudioStreamController
       if (!newDetails.alignedSliding) {
         // Align audio rendition with the "main" playlist on discontinuity change
         // or program-date-time (PDT)
-        alignStream(mainDetails, newDetails);
+        alignStream(mainDetails, newDetails, this);
         sliding = newDetails.fragmentStart;
       }
     }
@@ -1049,7 +1049,7 @@ class AudioStreamController
           mainDetails &&
           mainDetails.fragmentStart !== track.details.fragmentStart
         ) {
-          alignStream(mainDetails, track.details);
+          alignStream(mainDetails, track.details, this);
         }
       } else {
         super.loadFragment(frag, track, targetBufferTime);
