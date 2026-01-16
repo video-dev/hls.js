@@ -665,12 +665,17 @@ export default class Hls implements HlsEventEmitter {
   recoverMediaError() {
     this.logger.log('recoverMediaError');
     const media = this._media;
+    const started = this.started;
     const time = media?.currentTime;
     this.detachMedia();
     if (media) {
       this.attachMedia(media);
-      if (time) {
-        this.startLoad(time);
+      if (started) {
+        if (time) {
+          this.startLoad(time);
+        } else if (!this.config.autoStartLoad) {
+          this.startLoad();
+        }
       }
     }
   }
