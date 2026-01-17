@@ -3,6 +3,10 @@ import { fakeServer } from 'nise';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { multivariantPlaylistWithRedundantFallbacks } from './level-controller';
+import {
+  ErrorActionFlags,
+  NetworkErrorAction,
+} from '../../../src/controller/error-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
@@ -542,6 +546,26 @@ segment.mp4
           'Offset is outside the bounds of the DataView',
         ),
       );
+    });
+  });
+
+  describe('Media Error Handling', function () {
+    it('treats MEDIA_SOURCE_REQUIRES_RESET as recoverable and calls recoverMediaError', function () {
+      const recoverSpy = sinon.spy(hls, 'recoverMediaError');
+      const data: any = {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+        fatal: false,
+        error: new Error(
+          'MediaSource requires reset while media is still attached',
+        ),
+        errorAction: {
+          action: NetworkErrorAction.ResetMediaSource,
+          flags: ErrorActionFlags.None,
+        },
+      };
+      hls.trigger(Events.ERROR, data);
+      expect(recoverSpy).to.have.been.calledOnce;
     });
   });
 

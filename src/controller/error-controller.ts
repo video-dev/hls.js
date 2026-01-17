@@ -28,6 +28,7 @@ export const enum NetworkErrorAction {
   RemoveAlternatePermanently = 3, // Reserved for future use
   InsertDiscontinuity = 4, // Reserved for future use
   RetryRequest = 5,
+  ResetMediaSource = 6,
 }
 
 export const enum ErrorActionFlags {
@@ -479,6 +480,9 @@ export default class ErrorController
         break;
       case NetworkErrorAction.RetryRequest:
         // handled by stream and playlist/level controllers
+        break;
+      case NetworkErrorAction.ResetMediaSource:
+        this.hls.recoverMediaError();
         break;
     }
 
