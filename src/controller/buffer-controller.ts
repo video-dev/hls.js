@@ -1,5 +1,9 @@
 import BufferOperationQueue from './buffer-operation-queue';
-import { createDoNothingErrorAction } from './error-controller';
+import {
+  createDoNothingErrorAction,
+  ErrorActionFlags,
+  NetworkErrorAction,
+} from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { ElementaryStreamTypes } from '../loader/fragment';
@@ -1584,7 +1588,16 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       this.warn(
         'MediaSource closed while media attached - triggering recovery',
       );
-      this.hls.recoverMediaError();
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+        fatal: false,
+        error: new Error('MediaSource closed while media is still attached'),
+        errorAction: {
+          action: NetworkErrorAction.ResetMediaSource,
+          flags: ErrorActionFlags.None,
+        },
+      });
     }
   };
 
@@ -1636,7 +1649,19 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       this.warn(
         `MediaSource readyState "ended" during SourceBuffer error - triggering recovery`,
       );
-      this.hls.recoverMediaError();
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+        fatal: false,
+        sourceBufferName: type,
+        error: new Error(
+          `${type} SourceBuffer error. MediaSource readyState: ended`,
+        ),
+        errorAction: {
+          action: NetworkErrorAction.ResetMediaSource,
+          flags: ErrorActionFlags.None,
+        },
+      });
       return;
     }
 

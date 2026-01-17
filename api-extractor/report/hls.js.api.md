@@ -1427,6 +1427,8 @@ export enum ErrorDetails {
     // (undocumented)
     MANIFEST_PARSING_ERROR = "manifestParsingError",
     // (undocumented)
+    MEDIA_SOURCE_REQUIRES_RESET = "mediaSourceRequiresReset",
+    // (undocumented)
     REMUX_ALLOC_ERROR = "remuxAllocError",
     // (undocumented)
     SUBTITLE_LOAD_ERROR = "subtitleTrackLoadError",
@@ -4200,9 +4202,11 @@ export const enum NetworkErrorAction {
     // (undocumented)
     RemoveAlternatePermanently = 3,
     // (undocumented)
+    ResetMediaSource = 6,// Reserved for future use
+    // (undocumented)
     RetryRequest = 5,// Reserved for future use
     // (undocumented)
-    SendAlternateToPenaltyBox = 2,// Reserved for future use
+    SendAlternateToPenaltyBox = 2,
     // (undocumented)
     SendEndCallback = 1
 }
