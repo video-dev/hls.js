@@ -3,7 +3,9 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
 import AudioStreamController from '../../../src/controller/audio-stream-controller';
-import { State } from '../../../src/controller/base-stream-controller';
+import BaseStreamController, {
+  State,
+} from '../../../src/controller/base-stream-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
@@ -212,7 +214,7 @@ describe('AudioStreamController', function () {
           endSN,
         } as unknown as LevelDetails,
         id: 0,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         stats: new LoadStats(),
         deliveryDirectives: null,
       };
@@ -436,6 +438,133 @@ describe('AudioStreamController', function () {
         },
       );
       expect(audioStreamController.tick).to.have.been.calledOnce;
+    });
+  });
+
+  describe('checkFragmentChanged', function () {
+    beforeEach(function () {
+      sandbox.stub(
+        Object.getPrototypeOf(audioStreamController),
+        'cleanupBackBuffer',
+      );
+    });
+
+    it('should return false when super.checkFragmentChanged returns false', function () {
+      sandbox
+        .stub(BaseStreamController.prototype as any, 'checkFragmentChanged')
+        .returns(false);
+      expect((audioStreamController as any).checkFragmentChanged()).to.be.false;
+    });
+
+    it('should cleanup back buffer and complete audio switch when level changes', function () {
+      const mockFrag = { level: 1, sn: 1 } as any;
+      const previousFrag = { level: 0, sn: 0 } as any;
+      const mockSwitchingTrack = { id: 1, name: 'Test' } as any;
+
+      (audioStreamController as any).fragPlaying = previousFrag;
+      (audioStreamController as any).switchingTrack = mockSwitchingTrack;
+
+      sandbox
+        .stub(BaseStreamController.prototype as any, 'checkFragmentChanged')
+        .callsFake(function (this: any) {
+          this.fragPlaying = mockFrag;
+          return true;
+        });
+
+      sandbox.stub(audioStreamController.hls, 'trigger');
+
+      const result = (audioStreamController as any).checkFragmentChanged();
+
+      expect(result).to.be.true;
+      expect((audioStreamController as any).cleanupBackBuffer).to.have.been
+        .called;
+      expect(audioStreamController.hls.trigger).to.have.been.calledWith(
+        Events.AUDIO_TRACK_SWITCHED,
+      );
+    });
+
+    it('should not complete audio switch when level has not changed', function () {
+      const mockFrag = { level: 0, sn: 1 } as any;
+      const previousFrag = { level: 0, sn: 0 } as any;
+      const mockSwitchingTrack = { id: 0, name: 'Test' } as any;
+
+      (audioStreamController as any).fragPlaying = previousFrag;
+      (audioStreamController as any).switchingTrack = mockSwitchingTrack;
+
+      sandbox
+        .stub(BaseStreamController.prototype as any, 'checkFragmentChanged')
+        .callsFake(function (this: any) {
+          this.fragPlaying = mockFrag;
+          return true;
+        });
+
+      sandbox.stub(audioStreamController.hls, 'trigger');
+
+      const result = (audioStreamController as any).checkFragmentChanged();
+
+      expect(result).to.be.true;
+      expect(audioStreamController.hls.trigger).to.not.have.been.called;
+    });
+  });
+
+  describe('audio track switching with flushImmediate flag', function () {
+    beforeEach(function () {
+      audioStreamController.levels = tracks;
+      sandbox.stub(audioStreamController, 'nextLevelSwitch');
+    });
+
+    it('should call nextLevelSwitch when flushImmediate is false', function () {
+      const trackData = {
+        ...audioTracks[0],
+        flushImmediate: false,
+      };
+      (audioStreamController as any).nextTrackId = -1;
+
+      audioStreamController.onAudioTrackSwitching(
+        Events.AUDIO_TRACK_SWITCHING,
+        trackData,
+      );
+
+      expect((audioStreamController as any).nextTrackId).to.equal(0);
+      expect(audioStreamController.nextLevelSwitch).to.have.been.called;
+    });
+
+    it('should not call nextLevelSwitch when flushImmediate is true', function () {
+      const trackData = {
+        ...audioTracks[0],
+        flushImmediate: true,
+      };
+
+      audioStreamController.onAudioTrackSwitching(
+        Events.AUDIO_TRACK_SWITCHING,
+        trackData,
+      );
+
+      expect(audioStreamController.nextLevelSwitch).to.not.have.been.called;
+    });
+  });
+
+  describe('getLoadPosition with flushImmediate', function () {
+    beforeEach(function () {
+      (audioStreamController as any).startFragRequested = false;
+      (audioStreamController as any).nextLoadPosition = 10;
+    });
+
+    it('should return nextLoadPosition when flushImmediate is not false', function () {
+      (audioStreamController as any).switchingTrack = {
+        flushImmediate: true,
+      };
+      expect((audioStreamController as any).getLoadPosition()).to.equal(10);
+    });
+
+    it('should call super.getLoadPosition when flushImmediate is false', function () {
+      (audioStreamController as any).switchingTrack = {
+        flushImmediate: false,
+      };
+      sandbox
+        .stub(Object.getPrototypeOf(audioStreamController), 'getLoadPosition')
+        .returns(5);
+      expect((audioStreamController as any).getLoadPosition()).to.equal(5);
     });
   });
 });

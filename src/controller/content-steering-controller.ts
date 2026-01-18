@@ -25,6 +25,7 @@ import type {
   SteeringManifestLoadedData,
 } from '../types/events';
 import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
+import type { NullableNetworkDetails } from '../types/network-details';
 
 export type SteeringManifest = {
   VERSION: 1;
@@ -456,7 +457,7 @@ export default class ContentSteeringController
         response: LoaderResponse,
         stats: LoaderStats,
         context: LoaderContext,
-        networkDetails: any,
+        networkDetails: NullableNetworkDetails,
       ) => {
         this.log(`Loaded steering manifest: "${url}"`);
         const steeringData = response.data as SteeringManifest;
@@ -501,7 +502,7 @@ export default class ContentSteeringController
       onError: (
         error: { code: number; text: string },
         context: LoaderContext,
-        networkDetails: any,
+        networkDetails: NullableNetworkDetails,
         stats: LoaderStats,
       ) => {
         this.log(
@@ -531,7 +532,7 @@ export default class ContentSteeringController
       onTimeout: (
         stats: LoaderStats,
         context: LoaderContext,
-        networkDetails: any,
+        networkDetails: NullableNetworkDetails,
       ) => {
         this.log(`Timeout loading steering manifest (${context.url})`);
         this.scheduleRefresh(this.uri || context.url);
@@ -606,7 +607,7 @@ function performUriReplacement(
   }
   const url = new self.URL(uri);
   if (host && !perVariantUri) {
-    url.host = host;
+    url.hostname = host;
   }
   if (params) {
     Object.keys(params)

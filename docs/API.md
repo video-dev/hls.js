@@ -41,6 +41,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`nudgeOffset`](#nudgeoffset)
   - [`nudgeMaxRetry`](#nudgemaxretry)
   - [`nudgeOnVideoHole`](#nudgeonvideohole)
+  - [`skipBufferHolePadding`](#skipbufferholepadding)
   - [`maxFragLookUpTolerance`](#maxfraglookuptolerance)
   - [`maxMaxBufferLength`](#maxmaxbufferlength)
   - [`liveSyncMode`](#livesyncmode)
@@ -50,6 +51,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
   - [`maxLiveSyncPlaybackRate`](#maxlivesyncplaybackrate)
+  - [`timelineOffset`](#timelineoffset)
   - [`liveDurationInfinity`](#livedurationinfinity)
   - [`liveBackBufferLength` (deprecated)](#livebackbufferlength-deprecated)
   - [`preferManagedMediaSource`](#prefermanagedmediasource)
@@ -80,6 +82,8 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`fpsDroppedMonitoringPeriod`](#fpsdroppedmonitoringperiod)
   - [`fpsDroppedMonitoringThreshold`](#fpsdroppedmonitoringthreshold)
   - [`appendErrorMaxRetry`](#appenderrormaxretry)
+  - [`appendTimeout`](#appendtimeout)
+  - [`ignorePlaylistParsingErrors`](#ignoreplaylistparsingerrors)
   - [`loader`](#loader)
   - [`fLoader`](#floader)
   - [`pLoader`](#ploader)
@@ -92,10 +96,12 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`bufferController`](#buffercontroller)
   - [`capLevelController`](#caplevelcontroller)
   - [`fpsController`](#fpscontroller)
+  - [`errorController`](#errorcontroller)
   - [`timelineController`](#timelinecontroller)
   - [`enableDateRangeMetadataCues`](#enabledaterangemetadatacues)
   - [`enableEmsgMetadataCues`](#enableemsgmetadatacues)
   - [`enableEmsgKLVMetadata`](#enableemsgklvmetadata)
+  - [`emsgKLVSchemaUri`](#emsgklvschemauri)
   - [`enableID3MetadataCues`](#enableid3metadatacues)
   - [`enableWebVTT`](#enablewebvtt)
   - [`enableIMSC1`](#enableimsc1)
@@ -112,6 +118,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
   - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
+  - [`handleMpegTsVideoIntegrityErrors`](#handlempegtsvideointegrityerrors)
   - [`abrEwmaFastLive`](#abrewmafastlive)
   - [`abrEwmaSlowLive`](#abrewmaslowlive)
   - [`abrEwmaFastVoD`](#abrewmafastvod)
@@ -121,7 +128,9 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`abrBandWidthFactor`](#abrbandwidthfactor)
   - [`abrBandWidthUpFactor`](#abrbandwidthupfactor)
   - [`abrMaxWithRealBitrate`](#abrmaxwithrealbitrate)
+  - [`abrSwitchInterval`](#abrswitchinterval)
   - [`minAutoBitrate`](#minautobitrate)
+  - [`preserveManualLevelOnError`](#preservemanuallevelonerror)
   - [`emeEnabled`](#emeenabled)
   - [`widevineLicenseUrl` (deprecated)](#widevinelicenseurl-deprecated)
   - [`licenseXhrSetup`](#licensexhrsetup)
@@ -134,6 +143,9 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`enableInterstitialPlayback`](#enableinterstitialplayback)
   - [`interstitialAppendInPlace`](#interstitialappendinplace)
   - [`interstitialLiveLookAhead`](#interstitiallivelookahead)
+  - [`assetPlayerId`](#assetplayerid)
+  - [`primarySessionId`](#primarysessionid)
+  - [`useMediaCapabilities`](#usemediacapabilities)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(HTMLMediaElement | MediaAttachingData)`](#hlsattachmediahtmlmediaelement--mediaattachingdata)
   - [`hls.detachMedia()`](#hlsdetachmedia)
@@ -171,6 +183,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.allAudioTracks`](#hlsallaudiotracks)
   - [`hls.audioTracks`](#hlsaudiotracks)
   - [`hls.audioTrack`](#hlsaudiotrack)
+  - [`hls.nextAudioTrack`](#hlsnextaudiotrack)
 - [Subtitle Tracks Control API](#subtitle-tracks-control-api)
   - [`hls.setSubtitleOption(subtitleOption)`](#hlssetsubtitleoptionsubtitleoption)
   - [`hls.allSubtitleTracks`](#hlsallsubtitletracks)
@@ -502,6 +515,7 @@ var config = {
   stretchShortVideoTrack: false,
   maxAudioFramesDrift: 1,
   forceKeyFrameOnDiscontinuity: true,
+  handleMpegTsVideoIntegrityErrors: 'process',
   abrEwmaFastLive: 3.0,
   abrEwmaSlowLive: 9.0,
   abrEwmaFastVoD: 3.0,
@@ -511,6 +525,7 @@ var config = {
   abrBandWidthFactor: 0.95,
   abrBandWidthUpFactor: 0.7,
   abrMaxWithRealBitrate: false,
+  abrSwitchInterval: 0,
   maxStarvationDelay: 4,
   maxLoadingDelay: 4,
   minAutoBitrate: 0,
@@ -688,13 +703,28 @@ In case playback continues to stall after first playhead nudging, currentTime wi
 
 (default: `3`)
 
-Max number of playhead (`currentTime`) nudges before HLS.js raise a fatal BUFFER_STALLED_ERROR
+Maximum retry threshold used for both buffer hole skipping and playhead nudging:
+
+- **Skip retries**: When jumping over buffer holes, if `skipRetry > nudgeMaxRetry`, a fatal `BUFFER_SEEK_OVER_HOLE` error is raised
+- **Nudge retries**: When nudging the playhead in buffered areas, if `nudgeRetry >= nudgeMaxRetry`, a fatal `BUFFER_STALLED_ERROR` is raised
 
 ### `nudgeOnVideoHole`
 
 (default: `true`)
 
 Whether or not HLS.js should perform a seek nudge to flush the rendering pipeline upon traversing a gap or hole in video SourceBuffer buffered time ranges. This is only performed when audio is buffered at the point where the hole is detected. For more information see `nudgeOnVideoHole` in gap-controller and issues https://issues.chromium.org/issues/40280613#comment10 and https://github.com/video-dev/hls.js/issues/5631.
+
+### `skipBufferHolePadding`
+
+(default: `0.1` seconds)
+
+Workaround for some platforms where the video element often rounds the value we want to set as `currentTime`, preventing the player from jumping over buffer gaps.
+
+Setting this to a higher value adds additional time to the skip buffer hole target time, which skips more media but mitigates infinite attempts to skip the same buffer hole.
+
+Known to be helpful for platforms such as Xbox, Legacy Edge, and Tizen. Based on research on Tizen, the `skipBufferHolePadding` value should be greater than your GOP (Group of Pictures) length.
+
+`media.currentTime = Math.max(nextBufferedRangeStartTime, media.currentTime) + skipBufferHolePadding`
 
 ### `maxFragLookUpTolerance`
 
@@ -797,6 +827,14 @@ A value too close from `liveSyncDuration` is likely to cause playback stalls.
 When set to a value greater than `1`, the latency-controller will adjust `video.playbackRate` up to `maxLiveSyncPlaybackRate` to catch up to target latency in a live stream. `hls.targetLatency` is based on `liveSyncDuration|Count` or manifest PART-|HOLD-BACK.
 
 The default value is `1`, which disables playback rate adjustment. Set `maxLiveSyncPlaybackRate` to a value greater than `1` to enable playback rate adjustment at the live edge.
+
+### `timelineOffset`
+
+(default: `undefined`)
+
+An optional time offset in seconds applied to fragment start times and timeline calculations. This is useful for synchronizing timelines across multiple HLS instances, such as when using Interstitials or when coordinating playback with external systems.
+
+When set, the offset is applied to fragment start positions, seek operations, and timeline calculations. The offset is stored in level details as `appliedTimelineOffset` and can be modified dynamically through the `InterstitialPlayer.timelineOffset` property for interstitial asset players.
 
 ### `liveDurationInfinity`
 
@@ -1099,6 +1137,28 @@ The ratio of frames dropped to frames elapsed within `fpsDroppedMonitoringPeriod
 Max number of `sourceBuffer.appendBuffer()` retry upon error.
 Such error could happen in loop with UHD streams, when internal buffer is full. (Quota Exceeding Error will be triggered). In that case we need to wait for the browser to evict some data before being able to append buffer correctly.
 
+### `appendTimeout`
+
+(default: `Infinity`)
+
+Timeout value in milliseconds to timeout `sourceBuffer.appendBuffer()` operation.
+
+`Infinity` means timeout will not be for source-buffer append operation.
+
+The value will be validated against Math.max(value, delta).
+
+Where `delta` is `Math.Max(distance, 2 * levelTargetDuration)`.
+
+Where `distance` is `activeBufferedRangeEnd - currentTime`.
+
+### `ignorePlaylistParsingErrors`
+
+(default: `false`)
+
+When set to `false`, playlist parsing errors will trigger `ERROR` events with `ErrorDetails.LEVEL_PARSING_ERROR`, allowing your application to handle them.
+
+When set to `true`, playlist parsing errors will be ignored and playback will continue. The errors will still be logged but will not trigger error events.
+
 ### `loader`
 
 (default: standard `XMLHttpRequest`-based URL loader)
@@ -1346,6 +1406,14 @@ Customized fps controller.
 A class in charge of monitoring frame rate, that emits `FPS_DROP` events when frames dropped exceeds configured threshold.
 Enable the default fps controller by setting `capLevelOnFPSDrop` to `true`.
 
+### `errorController`
+
+(default: internal error controller)
+
+Customized error controller.
+
+A class in charge of handling errors and error recovery logic. The error controller processes error events and implements recovery strategies such as level switching and fragment retry logic.
+
 ### `timelineController`
 
 (default: internal track timeline controller)
@@ -1379,6 +1447,21 @@ parameter should be a boolean
 whether or not to extract KLV Timed Metadata found in CMAF Event Message (emsg) boxes and deliver via `FRAG_PARSING_METADATA`
 
 parameter should be a boolean
+
+### `emsgKLVSchemaUri`
+
+(default: `undefined`)
+
+URN for MISB KLV metadata schema to match when extracting KLV metadata from CMAF Event Message (emsg) boxes. If not specified, defaults to `'urn:misb:KLV:bin:1910.1'` for backwards compatibility.
+
+Examples:
+
+- `'urn:misb:KLV:bin:1910.1'` for MISB ST 0601.1
+- `'urn:misb:KLV:bin:1910.19'` for MISB ST 0601.19
+
+The demuxer uses `startsWith()` to match the URN, so it will match any URN that begins with the configured value.
+
+parameter should be a string
 
 ### `enableID3MetadataCues`
 
@@ -1521,6 +1604,17 @@ Setting this parameter to false can also generate decoding weirdness when switch
 
 parameter should be a boolean
 
+### `handleMpegTsVideoIntegrityErrors`
+
+(default: `'process'`)
+
+Controls how corrupted video data is handled based on MPEG-TS integrity checks.
+
+- `'process'` (default): Continues processing corrupted data, which may lead to decoding errors.
+- `'skip'`: Discards corrupted video data to prevent potential playback issues.
+
+This parameter accepts a string with possible values: `'process'` | `'skip'`.
+
 ### `abrEwmaFastLive`
 
 (default: `3.0`)
@@ -1595,12 +1689,26 @@ max bitrate used in ABR by avg measured bitrate
 i.e. if bitrate signaled in variant manifest for a given level is 2Mb/s but average bitrate measured on this level is 2.5Mb/s,
 then if config value is set to `true`, ABR will use 2.5 Mb/s for this quality level.
 
+### `abrSwitchInterval`
+
+(default: `0`)
+
+Minimum time in seconds between ABR switches. When set to `0`, throttling is disabled. Manual quality switches are never throttled.
+
 ### `minAutoBitrate`
 
 (default: `0`)
 
 Return the capping/min bandwidth value that could be used by automatic level selection algorithm.
 Useful when browser or tab of the browser is not in the focus and bandwidth drops
+
+### `preserveManualLevelOnError`
+
+(default: `false`)
+
+When set to `false`, if auto-level selection is disabled and a fragment error occurs, HLS.js will reset the manual level selection (`hls.loadLevel` will be set to `-1`), allowing automatic level selection to take over.
+
+When set to `true`, the manual level selection will be preserved even when fragment errors occur, preventing automatic fallback to ABR.
 
 ### `emeEnabled`
 
@@ -1780,6 +1888,28 @@ Even when `true`, HLS.js may reset the MediaSource and timeline for interstitial
 The time (in seconds) ahead of the end of a live playlist to request scheduled Interstitials when playing at the live edge.
 
 The default value is `10`, meaning that HLS.js will begin requesting interstitial ASSET-LIST and ASSET-URIs whose START-DATE is within 10 seconds of the program-date-time at the end of the primary variant playlist while the forward buffer is within a target duration of the same range.
+
+### `assetPlayerId`
+
+(default: `undefined`)
+
+An optional identifier string that is prefixed to debug logs for this HLS instance. This is particularly useful when multiple HLS instances are running simultaneously (such as when using Interstitials with asset players) to distinguish log messages from different players.
+
+When set, the `assetPlayerId` is included in log messages and can be used to identify which HLS instance generated a particular log entry.
+
+### `primarySessionId`
+
+(default: `undefined`)
+
+An optional identifier string used to identify the primary HLS session when working with Interstitials. This value is passed to interstitial asset URLs via the `_HLS_primary_id` query parameter, allowing the server to associate interstitial requests with the primary session.
+
+This is primarily used internally by HLS.js when creating interstitial asset players, but can be set manually if you need to coordinate multiple HLS instances.
+
+### `useMediaCapabilities`
+
+(default value is `true` except in the light build or custom builds with setting the **USE_MEDIA_CAPABILITIES** flag to `false`.)
+
+- get/set: Whether the MediaCapabilities API is used for level, track, and switch filtering. When enabled, HLS.js uses `navigator.mediaCapabilities.decodingInfo()` to determine if a level or track is supported before selection. Some devices may incorrectly report MediaCapabilities, leading to levels/tracks being filtered out that the device actually supports. Whether or not tracks are filtered automatically using this feature, you can manually remove unsupported levels using `hls.removeLevel(levelIndex)` after the manifest is parsed.
 
 ## Video Binding/Unbinding API
 
@@ -1984,6 +2114,10 @@ get : array of supported audio tracks in the active audio group ID
 ### `hls.audioTrack`
 
 get/set : index of selected audio track in `hls.audioTracks`
+
+### `hls.nextAudioTrack`
+
+get/set : index of the next audio track that will be selected, allowing for seamless audio track switching
 
 ## Subtitle Tracks Control API
 
@@ -2321,7 +2455,7 @@ Full list of Events is available below:
 - `Hls.Events.AUDIO_TRACKS_UPDATED` - fired to notify that audio track lists has been updated
   - data: { audioTracks : audioTracks }
 - `Hls.Events.AUDIO_TRACK_SWITCHING` - fired when an audio track switching is requested
-  - data: { id : audio track id, type : playlist type ('AUDIO' | 'main'), url : audio track URL }
+  - data: { id : audio track id, type : playlist type ('AUDIO' | 'main'), url : audio track URL, flushImmediate: boolean indicating whether audio buffer should be flushed immediately when switching }
 - `Hls.Events.AUDIO_TRACK_SWITCHED` - fired when an audio track switch actually occurs
   - data: { id : audio track id }
 - `Hls.Events.AUDIO_TRACK_LOADING` - fired when an audio track loading starts

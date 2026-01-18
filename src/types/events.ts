@@ -35,6 +35,7 @@ import type {
 } from '../controller/interstitials-schedule';
 import type { ErrorDetails, ErrorTypes } from '../errors';
 import type { HlsListeners } from '../events';
+import type { NullableNetworkDetails } from './network-details';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type {
   AssetListJSON,
@@ -132,7 +133,7 @@ export interface ManifestLoadedData {
   captions?: MediaPlaylist[];
   contentSteering: ContentSteeringOptions | null;
   levels: LevelParsed[];
-  networkDetails: any;
+  networkDetails: NullableNetworkDetails;
   sessionData: Record<string, AttrList> | null;
   sessionKeys: LevelKey[] | null;
   startTimeOffset: number | null;
@@ -208,7 +209,7 @@ export interface TrackLoadedData {
   details: LevelDetails;
   id: number;
   groupId: string;
-  networkDetails: any;
+  networkDetails: NullableNetworkDetails;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
   track: MediaPlaylist;
@@ -219,7 +220,7 @@ export interface LevelLoadedData {
   id: number;
   level: number;
   levelInfo: Level;
-  networkDetails: any;
+  networkDetails: NullableNetworkDetails;
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
   withoutMultiVariant?: boolean;
@@ -252,7 +253,9 @@ export interface LevelPTSUpdatedData {
   end: number;
 }
 
-export interface AudioTrackSwitchingData extends MediaPlaylist {}
+export interface AudioTrackSwitchingData extends MediaPlaylist {
+  flushImmediate?: boolean;
+}
 
 export interface AudioTrackSwitchedData extends MediaPlaylist {}
 
@@ -326,7 +329,7 @@ export interface ErrorData {
   level?: number | undefined;
   levelRetry?: boolean;
   loader?: Loader<LoaderContext>;
-  networkDetails?: any;
+  networkDetails?: NullableNetworkDetails;
   stalled?: { start: number };
   stats?: LoaderStats;
   mimeType?: string;
@@ -394,7 +397,7 @@ export interface FragLoadedData {
   frag: Fragment;
   part: Part | null;
   payload: ArrayBuffer;
-  networkDetails: unknown;
+  networkDetails: NullableNetworkDetails;
 }
 
 export interface PartsLoadedData {
@@ -474,7 +477,7 @@ export interface AssetListLoadingData {
 export interface AssetListLoadedData {
   event: InterstitialEventWithAssetList;
   assetListResponse: AssetListJSON;
-  networkDetails: any;
+  networkDetails: NullableNetworkDetails;
 }
 
 export interface InterstitialsUpdatedData {

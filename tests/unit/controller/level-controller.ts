@@ -4,6 +4,7 @@ import sinonChai from 'sinon-chai';
 import LevelController from '../../../src/controller/level-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
+import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
@@ -29,7 +30,7 @@ chai.use(sinonChai);
 const expect = chai.expect;
 
 type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
-  onManifestLoaded: (event: string, data: Partial<ManifestLoadedData>) => void;
+  onManifestLoaded: (event: string, data: ManifestLoadedData) => void;
   onAudioTrackSwitched: (event: string, data: { id: number }) => void;
   onError: (
     event: string,
@@ -117,13 +118,13 @@ describe('LevelController', function () {
           name: '1080',
         }),
       ],
-      networkDetails: '',
+      networkDetails: new Response('ok'),
       sessionData: null,
       sessionKeys: null,
       contentSteering: null,
       startTimeOffset: null,
       variableList: null,
-      stats: {} as any,
+      stats: new LoadStats(),
       subtitles: [],
       url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
     };
@@ -186,9 +187,15 @@ describe('LevelController', function () {
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         audioTracks: [],
         levels: [],
-        networkDetails: '',
+        networkDetails: new Response('ok'),
         subtitles: [],
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
       });
 
       return Promise.resolve().then(() => {
@@ -204,6 +211,7 @@ describe('LevelController', function () {
     });
 
     it('emits MANIFEST_PARSED when levels are found in the manifest', function () {
+      const stats = new LoadStats();
       const data: ManifestLoadedData = {
         audioTracks: [],
         levels: [
@@ -232,14 +240,14 @@ describe('LevelController', function () {
             name: '1080',
           }),
         ],
-        networkDetails: '',
+        networkDetails: new Response('ok'),
         subtitles: [],
         sessionData: null,
         sessionKeys: null,
         contentSteering: null,
         startTimeOffset: null,
         variableList: null,
-        stats: {} as any,
+        stats,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
@@ -252,7 +260,7 @@ describe('LevelController', function () {
         sessionData: null,
         sessionKeys: null,
         firstLevel: 0,
-        stats: {},
+        stats,
         audio: false,
         video: false,
         altAudio: false,
@@ -280,6 +288,15 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
         audioTracks: [],
+        subtitles: [],
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
       });
       const {
         name,
@@ -304,6 +321,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
 
   describe('Manifest Parsed Alt-Audio', function () {
     it('emits MANIFEST_PARSED with `altAudio = true` when there are no codec attributes in MANIFEST_LOADED', function () {
+      const stats = new LoadStats();
       const data: ManifestLoadedData = {
         audioTracks: [
           mediaPlaylist({
@@ -317,14 +335,14 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
             name: '144',
           }),
         ],
-        networkDetails: '',
+        networkDetails: new Response('ok'),
         subtitles: [],
         sessionData: null,
         sessionKeys: null,
         contentSteering: null,
         startTimeOffset: null,
         variableList: null,
-        stats: {} as any,
+        stats,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
@@ -335,7 +353,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
         sessionData: null,
         sessionKeys: null,
         firstLevel: 0,
-        stats: {} as any,
+        stats,
         audio: false,
         video: false,
         altAudio: true,
@@ -349,6 +367,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
     });
 
     it('emits MANIFEST_PARSED with `altAudio = true` when there are codec attributes in MANIFEST_LOADED', function () {
+      const stats = new LoadStats();
       const data: ManifestLoadedData = {
         audioTracks: [
           mediaPlaylist({ audioCodec: 'mp4a.40.5', url: 'audio-track.m3u8' }),
@@ -361,14 +380,14 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
             audioCodec: 'mp4a.40.2',
           }),
         ],
-        networkDetails: '',
+        networkDetails: new Response('ok'),
         subtitles: [],
         sessionData: null,
         sessionKeys: null,
         contentSteering: null,
         startTimeOffset: null,
         variableList: null,
-        stats: {} as any,
+        stats,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
@@ -380,7 +399,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
         sessionData: null,
         sessionKeys: null,
         firstLevel: 0,
-        stats: {},
+        stats,
         audio: true,
         video: true,
         altAudio: true,
@@ -388,6 +407,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
     });
 
     it('emits MANIFEST_PARSED with `altAudio = false` when Variant(s) are audio-only with audio Media Playlists in MANIFEST_LOADED', function () {
+      const stats = new LoadStats();
       const data: ManifestLoadedData = {
         audioTracks: [
           mediaPlaylist({ audioCodec: 'mp4a.40.5', name: 'main' }),
@@ -400,14 +420,14 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
             audioCodec: 'mp4a.40.2',
           }),
         ],
-        networkDetails: '',
+        networkDetails: new Response('ok'),
         subtitles: [],
         sessionData: null,
         sessionKeys: null,
         contentSteering: null,
         startTimeOffset: null,
         variableList: null,
-        stats: {} as any,
+        stats,
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
       };
 
@@ -419,7 +439,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
         sessionData: null,
         sessionKeys: null,
         firstLevel: 0,
-        stats: {},
+        stats,
         audio: true,
         video: false,
         altAudio: false,
@@ -438,14 +458,14 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
             name: '144',
           }),
         ],
-        networkDetails: '',
+        networkDetails: new Response('ok'),
         subtitles: [],
         sessionData: null,
         sessionKeys: null,
         contentSteering: null,
         startTimeOffset: null,
         variableList: null,
-        stats: {} as any,
+        stats: new LoadStats(),
         url: 'foo',
       };
     });
@@ -664,6 +684,15 @@ http://bar.example.com/md/prog_index.m3u8`,
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
         audioTracks: [],
+        subtitles: [],
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
       });
       const {
         name,
@@ -718,7 +747,16 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(parsedSubs).to.be.undefined;
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
-        audioTracks: parsedAudio,
+        audioTracks: parsedAudio!,
+        subtitles: [],
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
       });
       const {
         name,
@@ -774,6 +812,14 @@ http://bar.example.com/md/prog_index.m3u8`;
           levels: parsedLevels,
           audioTracks: parsedAudio,
           subtitles: parsedSubs,
+          networkDetails: new Response('ok'),
+          url: 'https://example.com/prog.m3u8',
+          stats: new LoadStats(),
+          sessionData: null,
+          sessionKeys: null,
+          contentSteering: null,
+          startTimeOffset: null,
+          variableList: null,
         });
         const { name, payload } = hls.getEventData(0) as {
           name: string;
@@ -909,6 +955,14 @@ http://bar.example.com/md/prog_index.m3u8`;
         levels: parsedLevels,
         audioTracks: parsedAudio,
         subtitles: parsedSubs,
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
       });
       const { name, payload } = hls.getEventData(0) as {
         name: string;
@@ -995,6 +1049,14 @@ http://bar.example.com/md/prog_index.m3u8`;
         levels: parsedLevels,
         audioTracks: parsedAudio,
         subtitles: parsedSubs,
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/prog.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
       });
       const { name, payload } = hls.getEventData(0) as {
         name: string;
@@ -1022,6 +1084,128 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(levels[29].audioGroups).to.deep.equal(['EC3-baz']);
       expect(levels[29].subtitleGroups).to.deep.equal(['subs-baz']);
       expect(levels[29].uri).to.equal('http://www.baz.com/tier18.m3u8');
+    });
+  });
+});
+
+describe('LevelController - nextLoadLevel', function () {
+  let hls: HlsMock;
+  let levelController: LevelControllerTestable;
+  let warnSpy: sinon.SinonSpy;
+  let nowStub: sinon.SinonStub;
+  let now: number;
+
+  beforeEach(function () {
+    now = 0;
+    nowStub = sinon.stub(performance, 'now').callsFake(() => now);
+
+    hls = new HlsMock({});
+    levelController = new LevelController(
+      hls as any,
+      null,
+    ) as unknown as LevelControllerTestable;
+
+    const data: ManifestLoadedData = {
+      audioTracks: [],
+      levels: [
+        parsedLevel({ bitrate: 105000, name: '144' }),
+        parsedLevel({ bitrate: 246440, name: '240' }),
+        parsedLevel({ bitrate: 460560, name: '380' }),
+        parsedLevel({ bitrate: 836280, name: '480' }),
+        parsedLevel({ bitrate: 2149280, name: '720' }),
+        parsedLevel({ bitrate: 6221600, name: '1080' }),
+      ],
+      networkDetails: new Response('ok'),
+      sessionData: null,
+      sessionKeys: null,
+      contentSteering: null,
+      startTimeOffset: null,
+      variableList: null,
+      stats: new LoadStats(),
+      subtitles: [],
+      url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
+    };
+
+    levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
+    warnSpy = sinon.spy(levelController, 'warn');
+  });
+
+  afterEach(function () {
+    nowStub.restore();
+  });
+
+  describe('ABR switching', function () {
+    it('should not throttle when abrSwitchInterval is 0', function () {
+      hls.config.abrSwitchInterval = 0;
+
+      levelController.nextLoadLevel = 1;
+      levelController.nextLoadLevel = 2;
+      levelController.nextLoadLevel = 1;
+
+      expect(levelController.level).to.equal(1);
+      expect(warnSpy).not.to.have.been.called;
+    });
+
+    it('should allow first ABR switch immediately', function () {
+      hls.config.abrSwitchInterval = 2;
+
+      levelController.nextLoadLevel = 1;
+
+      expect(levelController.level).to.equal(1);
+      expect(warnSpy).not.to.have.been.called;
+    });
+
+    it('should prevent rapid ABR upswitches within interval', function () {
+      hls.config.abrSwitchInterval = 2;
+
+      levelController.nextLoadLevel = 1;
+      expect(levelController.level).to.equal(1);
+
+      now += 100;
+
+      levelController.nextLoadLevel = 2;
+
+      expect(levelController.level).to.equal(1);
+      expect(warnSpy).to.have.been.calledOnce;
+    });
+
+    it('should allow ABR switch after interval', function () {
+      hls.config.abrSwitchInterval = 1;
+
+      levelController.nextLoadLevel = 1;
+      expect(levelController.level).to.equal(1);
+
+      now += 1100;
+
+      levelController.nextLoadLevel = 2;
+
+      expect(levelController.level).to.equal(2);
+      expect(warnSpy).not.to.have.been.called;
+    });
+  });
+
+  describe('Manual switching', function () {
+    it('should not throttle manual level changes', function () {
+      hls.config.abrSwitchInterval = 2;
+
+      levelController.manualLevel = 1;
+      expect(levelController.level).to.equal(1);
+
+      levelController.manualLevel = 2;
+      expect(levelController.level).to.equal(2);
+      expect(warnSpy).not.to.have.been.called;
+    });
+
+    it('should respect manual level when switching to ABR mode', function () {
+      hls.config.abrSwitchInterval = 2;
+
+      levelController.manualLevel = 1;
+      expect(levelController.level).to.equal(1);
+
+      levelController.manualLevel = -1;
+
+      levelController.nextLoadLevel = 2;
+      expect(levelController.level).to.equal(2);
     });
   });
 });

@@ -3,6 +3,7 @@ import { createDoNothingErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { ElementaryStreamTypes } from '../loader/fragment';
+import { DEFAULT_TARGET_DURATION } from '../loader/level-details';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
 import {
@@ -210,8 +211,8 @@ export default class BufferController extends Logger implements ComponentAPI {
     }
     const transferData = this.transferData;
     if (
-      !this.sourceBufferCount &&
       transferData &&
+      !this.sourceBufferCount &&
       transferData.mediaSource === mediaSource
     ) {
       Object.assign(tracks, transferData.tracks);
@@ -544,8 +545,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       }
       this.media = null;
     }
-
-    this.hls.trigger(Events.MEDIA_DETACHED, data);
   }
 
   private onBufferReset() {
@@ -577,6 +576,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     this.sourceBuffers[sourceBufferNameToIndex(type)] = [null, null];
     const track = this.tracks[type];
     if (track) {
+      this.clearBufferAppendTimeoutId(track);
       track.buffer = undefined;
     }
   }
@@ -664,6 +664,18 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (this.sourceBufferCount) {
       return;
     }
+
+    if (
+      this.bufferCodecEventsTotal > 1 &&
+      !this.tracks.video &&
+      !data.video &&
+      data.audio?.id === 'main'
+    ) {
+      // MVP is missing CODECS and only audio was found in main segment (#7524)
+      this.log(`Main audio-only`);
+      this.bufferCodecEventsTotal = 1;
+    }
+
     if (this.mediaSourceOpenOrEnded) {
       this.checkPendingTracks();
     }
@@ -769,7 +781,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (fragBuffering.start === 0) {
       fragBuffering.start = bufferAppendingStart;
     }
-    if (partBuffering && partBuffering.start === 0) {
+    if (partBuffering?.start === 0) {
       partBuffering.start = bufferAppendingStart;
     }
 
@@ -851,13 +863,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         // logger.debug(`[buffer-controller]: ${type} SourceBuffer updatestart`);
       },
       onComplete: () => {
+        this.clearBufferAppendTimeoutId(this.tracks[type]);
         // logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
         const end = self.performance.now();
         chunkStats.executeEnd = chunkStats.end = end;
         if (fragBuffering.first === 0) {
           fragBuffering.first = end;
         }
-        if (partBuffering && partBuffering.first === 0) {
+        if (partBuffering?.first === 0) {
           partBuffering.first = end;
         }
 
@@ -884,6 +897,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         });
       },
       onError: (error: Error) => {
+        this.clearBufferAppendTimeoutId(this.tracks[type]);
         // in case any error occured while appending, put back segment in segments table
         const event: ErrorData = {
           type: ErrorTypes.MEDIA_ERROR,
@@ -937,6 +951,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.hls.trigger(Events.ERROR, event);
       },
     };
+    this.log(
+      `queuing "${type}" append sn: ${sn}${part ? ' p: ' + part.index : ''} of ${frag.type === PlaylistLevelType.MAIN ? 'level' : 'track'} ${frag.level} cc: ${cc}`,
+    );
     this.append(operation, type, this.isPending(this.tracks[type]));
   }
 
@@ -1073,7 +1090,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.blockUntilOpen(() => {
           this.tracksEnded();
           const { mediaSource } = this;
-          if (!mediaSource || mediaSource.readyState !== 'open') {
+          if (mediaSource?.readyState !== 'open') {
             if (mediaSource) {
               this.log(
                 `Could not call mediaSource.endOfStream(). mediaSource.readyState: ${mediaSource.readyState}`,
@@ -1329,7 +1346,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     end?: number;
   }) {
     const mediaSource = this.mediaSource;
-    if (!this.media || !mediaSource || mediaSource.readyState !== 'open') {
+    if (!mediaSource || !this.media || mediaSource.readyState !== 'open') {
       return;
     }
     if (mediaSource.duration !== duration) {
@@ -1465,6 +1482,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     this.bufferCreated();
   }
 
+  private clearBufferAppendTimeoutId(track?: SourceBufferTrack): void {
+    if (!track) {
+      return;
+    }
+
+    self.clearTimeout(track.bufferAppendTimeoutId);
+    track.bufferAppendTimeoutId = undefined;
+  }
+
   private getTrackCodec(track: BaseTrack, trackName: SourceBufferName): string {
     // Use supplemental video codec when supported when adding SourceBuffer (#5558)
     const supplementalCodec = track.supplemental;
@@ -1549,6 +1575,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
   private _onMediaSourceClose = () => {
     this.log('Media source closed');
+    // Safari/WebKit bug: MediaSource becomes invalid after bfcache restoration.
+    // When the user navigates back, the MediaSource is in a 'closed' state and cannot be used.
+    // If sourceclose fires while media is still attached, trigger recovery to reattach media.
+    if (this.media) {
+      this.warn(
+        'MediaSource closed while media attached - triggering recovery',
+      );
+      this.hls.recoverMediaError();
+    }
   };
 
   private _onMediaSourceEnded = () => {
@@ -1678,7 +1713,72 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
     track.ending = false;
     track.ended = false;
+
+    if (this.hls.config.appendTimeout !== Infinity) {
+      const appendTimeoutTime = this.calculateAppendTimeoutTime(sb);
+
+      track.bufferAppendTimeoutId = self.setTimeout(
+        () => this.appendTimeoutHandler(type, sb, appendTimeoutTime),
+        appendTimeoutTime,
+      );
+    }
+
     sb.appendBuffer(data);
+  }
+
+  private appendTimeoutHandler(
+    type: SourceBufferName,
+    sb: ExtendedSourceBuffer,
+    appendTimeoutTime: number,
+  ) {
+    this.log(
+      `Received timeout after ${appendTimeoutTime}ms for append on ${type} source buffer. Aborting and triggering error.`,
+    );
+
+    try {
+      sb.abort();
+    } catch (e) {
+      this.log(
+        `Failed to abort append on ${type} source buffer after timeout.`,
+      );
+    }
+
+    const operation = this.currentOp(type);
+    if (operation) {
+      operation.onError(new Error(`${type}-append-timeout`));
+    }
+  }
+
+  private calculateAppendTimeoutTime(sb: ExtendedSourceBuffer): number {
+    let targetDuration = DEFAULT_TARGET_DURATION;
+
+    if (this.details) {
+      targetDuration = this.details.levelTargetDuration;
+    }
+
+    // 2 Target durations
+    let desiredDefaultTimeoutValue = 2 * targetDuration * 1000;
+
+    if (this.media === null) {
+      return desiredDefaultTimeoutValue;
+    }
+
+    const activeBufferedRange = BufferHelper.bufferInfo(
+      sb,
+      this.media.currentTime,
+      0,
+    );
+
+    if (!activeBufferedRange.len) {
+      return desiredDefaultTimeoutValue;
+    }
+
+    desiredDefaultTimeoutValue = Math.max(
+      activeBufferedRange.len * 1000,
+      desiredDefaultTimeoutValue,
+    );
+
+    return Math.max(this.hls.config.appendTimeout, desiredDefaultTimeoutValue);
   }
 
   private blockUntilOpen(callback: () => void) {

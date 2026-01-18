@@ -1,4 +1,5 @@
 import { LoadError } from './fragment-loader';
+import { LevelKey } from './level-key';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { type Fragment, isMediaFragment } from '../loader/fragment';
 import { arrayToHex } from '../utils/hex';
@@ -7,10 +8,14 @@ import {
   getKeySystemsForConfig,
   keySystemFormatToKeySystemDomain,
 } from '../utils/mediakeys-helper';
-import type { LevelKey } from './level-key';
+import { KeySystemFormats } from '../utils/mediakeys-helper';
+import { parseKeyIdsFromTenc } from '../utils/mp4-tools';
 import type { HlsConfig } from '../config';
 import type EMEController from '../controller/eme-controller';
-import type { MediaKeySessionContext } from '../controller/eme-controller';
+import type {
+  EMEKeyError,
+  MediaKeySessionContext,
+} from '../controller/eme-controller';
 import type { ComponentAPI } from '../types/component-api';
 import type { KeyLoadedData } from '../types/events';
 import type {
@@ -22,8 +27,8 @@ import type {
   LoaderStats,
   PlaylistLevelType,
 } from '../types/loader';
+import type { NullableNetworkDetails } from '../types/network-details';
 import type { ILogger } from '../utils/logger';
-import type { KeySystemFormats } from '../utils/mediakeys-helper';
 
 export interface KeyLoaderInfo {
   decryptdata: LevelKey;
@@ -81,7 +86,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
     frag: Fragment,
     details: ErrorDetails = ErrorDetails.KEY_LOAD_ERROR,
     error: Error,
-    networkDetails?: any,
+    networkDetails?: NullableNetworkDetails,
     response?: { url: string; data: undefined; code: number; text: string },
   ): LoadError {
     return new LoadError({
@@ -91,7 +96,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
       frag,
       response,
       error,
-      networkDetails,
+      networkDetails: networkDetails || null,
     });
   }
 
@@ -101,6 +106,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
     startFragRequested: boolean,
   ): null | Promise<void> {
     if (
+      __USE_EME_DRM__ &&
       this.emeController &&
       this.config.emeEnabled &&
       !this.emeController.getSelectedKeySystemFormats().length
@@ -165,7 +171,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
     frag: Fragment,
     keySystemFormat?: KeySystemFormats,
   ): Promise<KeyLoadedData> {
-    if (keySystemFormat) {
+    if (__USE_EME_DRM__ && keySystemFormat) {
       frag.setKeyFormat(keySystemFormat);
     }
     const decryptdata = frag.decryptdata;
@@ -173,7 +179,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
       const error = new Error(
         keySystemFormat
           ? `Expected frag.decryptdata to be defined after setting format ${keySystemFormat}`
-          : 'Missing decryption data on fragment in onKeyLoading',
+          : `Missing decryption data on fragment in onKeyLoading (emeEnabled with controller: ${this.emeController && this.config.emeEnabled})`,
       );
       return Promise.reject(
         this.createKeyLoadError(frag, ErrorDetails.KEY_LOAD_ERROR, error),
@@ -197,8 +203,8 @@ export default class KeyLoader extends Logger implements ComponentAPI {
       return Promise.resolve({ frag, keyInfo });
     }
     // Return key load promise once it has a mediakey session with an usable key status
-    if (keyInfo?.keyLoadPromise) {
-      const keyStatus = keyInfo.mediaKeySessionContext?.keyStatus;
+    if (this.emeController && keyInfo?.keyLoadPromise) {
+      const keyStatus = this.emeController.getKeyStatus(keyInfo.decryptdata);
       switch (keyStatus) {
         case 'usable':
         case 'usable-in-future':
@@ -215,7 +221,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
 
     // Load the key or return the loading promise
     this.log(
-      `Loading key ${arrayToHex(decryptdata.keyId || [])} from ${frag.type} ${frag.level}`,
+      `${this.keyIdToKeyInfo[id] ? 'Rel' : 'L'}oading${decryptdata.keyId ? ' keyId: ' + arrayToHex(decryptdata.keyId) : ''} URI: ${decryptdata.uri} from ${frag.type} ${frag.level}`,
     );
 
     keyInfo = this.keyIdToKeyInfo[id] = {
@@ -254,6 +260,27 @@ export default class KeyLoader extends Logger implements ComponentAPI {
   loadKeyEME(keyInfo: KeyLoaderInfo, frag: Fragment): Promise<KeyLoadedData> {
     const keyLoadedData: KeyLoadedData = { frag, keyInfo };
     if (this.emeController && this.config.emeEnabled) {
+      if (!keyInfo.decryptdata.keyId && frag.initSegment?.data) {
+        const keyIds = parseKeyIdsFromTenc(
+          frag.initSegment.data as Uint8Array<ArrayBuffer>,
+        );
+        if (keyIds.length) {
+          let keyId = keyIds[0];
+          if (keyId.some((b) => b !== 0)) {
+            this.log(`Using keyId found in init segment ${arrayToHex(keyId)}`);
+            LevelKey.setKeyIdForUri(keyInfo.decryptdata.uri, keyId);
+          } else {
+            keyId = LevelKey.addKeyIdForUri(keyInfo.decryptdata.uri);
+            this.log(`Generating keyId to patch media ${arrayToHex(keyId)}`);
+          }
+          keyInfo.decryptdata.keyId = keyId;
+        }
+      }
+      if (!keyInfo.decryptdata.keyId && !isMediaFragment(frag)) {
+        // Resolve so that unencrypted init segment is loaded
+        // key id is extracted from tenc box when processing key for next segment above
+        return Promise.resolve(keyLoadedData);
+      }
       const keySessionContextPromise =
         this.emeController.loadKey(keyLoadedData);
       return (keyInfo.keyLoadPromise = keySessionContextPromise.then(
@@ -261,10 +288,10 @@ export default class KeyLoader extends Logger implements ComponentAPI {
           keyInfo.mediaKeySessionContext = keySessionContext;
           return keyLoadedData;
         },
-      )).catch((error) => {
+      )).catch((error: EMEKeyError | Error) => {
         // Remove promise for license renewal or retry
         keyInfo.keyLoadPromise = null;
-        if (error.data) {
+        if ('data' in error) {
           error.data.frag = frag;
         }
         throw error;
@@ -304,10 +331,10 @@ export default class KeyLoader extends Logger implements ComponentAPI {
           response: LoaderResponse,
           stats: LoaderStats,
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
         ) => {
-          const { frag, keyInfo, url: uri } = context;
-          const id = getKeyId(keyInfo.decryptdata) || uri;
+          const { frag, keyInfo } = context;
+          const id = getKeyId(keyInfo.decryptdata);
           if (!frag.decryptdata || keyInfo !== this.keyIdToKeyInfo[id]) {
             return reject(
               this.createKeyLoadError(
@@ -332,7 +359,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
         onError: (
           response: { code: number; text: string },
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
           stats: LoaderStats,
         ) => {
           this.resetLoader(context);
@@ -352,7 +379,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
         onTimeout: (
           stats: LoaderStats,
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
         ) => {
           this.resetLoader(context);
           reject(
@@ -368,7 +395,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
         onAbort: (
           stats: LoaderStats,
           context: KeyLoaderContext,
-          networkDetails: any,
+          networkDetails: NullableNetworkDetails,
         ) => {
           this.resetLoader(context);
           reject(
@@ -402,9 +429,11 @@ export default class KeyLoader extends Logger implements ComponentAPI {
 }
 
 function getKeyId(decryptdata: LevelKey) {
-  const keyId = decryptdata.keyId;
-  if (keyId) {
-    return arrayToHex(keyId);
+  if (__USE_EME_DRM__ && decryptdata.keyFormat !== KeySystemFormats.FAIRPLAY) {
+    const keyId = decryptdata.keyId;
+    if (keyId) {
+      return arrayToHex(keyId);
+    }
   }
   return decryptdata.uri;
 }

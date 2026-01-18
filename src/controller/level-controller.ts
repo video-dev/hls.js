@@ -8,7 +8,6 @@ import {
   codecsSetSelectionPreferenceValue,
   convertAVC1ToAVCOTI,
   getCodecCompatibleName,
-  sampleEntryCodesISO,
   videoCodecPreferenceValue,
 } from '../utils/codecs';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
@@ -38,6 +37,7 @@ export default class LevelController extends BasePlaylistController {
   private currentLevelIndex: number = -1;
   private manualLevelIndex: number = -1;
   private steering: ContentSteeringController | null;
+  private lastABRSwitchTime: number = -1;
 
   public onParsedComplete!: Function;
 
@@ -133,29 +133,8 @@ export default class LevelController extends BasePlaylistController {
 
       // only keep levels with supported audio/video codecs
       const { width, height, unknownCodecs } = levelParsed;
-      let unknownUnsupportedCodecCount = unknownCodecs
-        ? unknownCodecs.length
-        : 0;
-      if (unknownCodecs) {
-        // Treat unknown codec as audio or video codec based on passing `isTypeSupported` check
-        // (allows for playback of any supported codec even if not indexed in utils/codecs)
-        for (let i = unknownUnsupportedCodecCount; i--; ) {
-          const unknownCodec = unknownCodecs[i];
-          if (this.isAudioSupported(unknownCodec)) {
-            levelParsed.audioCodec = audioCodec = audioCodec
-              ? `${audioCodec},${unknownCodec}`
-              : unknownCodec;
-            unknownUnsupportedCodecCount--;
-            sampleEntryCodesISO.audio[audioCodec.substring(0, 4)] = 2;
-          } else if (this.isVideoSupported(unknownCodec)) {
-            levelParsed.videoCodec = videoCodec = videoCodec
-              ? `${videoCodec},${unknownCodec}`
-              : unknownCodec;
-            unknownUnsupportedCodecCount--;
-            sampleEntryCodesISO.video[videoCodec.substring(0, 4)] = 2;
-          }
-        }
-      }
+      const unknownUnsupportedCodecCount = unknownCodecs?.length || 0;
+
       resolutionFound ||= !!(width && height);
       videoCodecFound ||= !!videoCodec;
       audioCodecFound ||= !!audioCodec;
@@ -252,6 +231,7 @@ export default class LevelController extends BasePlaylistController {
     let audioTracks: MediaPlaylist[] = [];
     let subtitleTracks: MediaPlaylist[] = [];
     let levels = filteredLevels;
+    const statsParsing = data.stats?.parsing || {};
 
     // remove audio-only and invalid video-range levels if we also have levels with video codecs or RESOLUTION signalled
     if ((resolutionFound || videoCodecFound) && audioCodecFound) {
@@ -290,6 +270,7 @@ export default class LevelController extends BasePlaylistController {
           });
         }
       });
+      statsParsing.end = performance.now();
       return;
     }
 
@@ -408,6 +389,7 @@ export default class LevelController extends BasePlaylistController {
       altAudio:
         altAudioEnabled && !audioOnly && audioTracks.some((t) => !!t.url),
     };
+    statsParsing.end = performance.now();
     this.hls.trigger(Events.MANIFEST_PARSED, edata);
   }
 
@@ -698,6 +680,28 @@ export default class LevelController extends BasePlaylistController {
   }
 
   set nextLoadLevel(nextLevel) {
+    const currentLevel = this.currentLevelIndex;
+    const isABRSwitch = this.manualLevelIndex === -1;
+    if (isABRSwitch && nextLevel !== currentLevel && nextLevel !== -1) {
+      const abrSwitchInterval = this.hls.config.abrSwitchInterval;
+      if (abrSwitchInterval > 0) {
+        const now = performance.now();
+        const delta = now - this.lastABRSwitchTime;
+        const intervalMs = abrSwitchInterval * 1000;
+        if (this.lastABRSwitchTime > -1 && delta < intervalMs) {
+          this.warn(
+            `Preventing ABR level switch: ${currentLevel} -> ${nextLevel} (${Math.round(delta)}ms < ${intervalMs}ms / ${abrSwitchInterval}s)`,
+          );
+          return;
+        }
+
+        this.lastABRSwitchTime = now;
+        this.log(
+          `Allowing ABR level switch: ${currentLevel} -> ${nextLevel} (${Math.round(delta)}ms >= ${intervalMs}ms / ${abrSwitchInterval}s)`,
+        );
+      }
+    }
+
     this.level = nextLevel;
     if (this.manualLevelIndex === -1) {
       this.hls.nextAutoLevel = nextLevel;

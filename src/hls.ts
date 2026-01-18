@@ -480,8 +480,10 @@ export default class Hls implements HlsEventEmitter {
    */
   detachMedia() {
     this.logger.log('detachMedia');
-    this.trigger(Events.MEDIA_DETACHING, {});
+    const data = {};
+    this.trigger(Events.MEDIA_DETACHING, data);
     this._media = null;
+    this.trigger(Events.MEDIA_DETACHED, data);
   }
 
   /**
@@ -490,7 +492,9 @@ export default class Hls implements HlsEventEmitter {
   transferMedia(): AttachMediaSourceData | null {
     this._media = null;
     const transferMedia = this.bufferController.transferMedia();
-    this.trigger(Events.MEDIA_DETACHING, { transferMedia });
+    const data = { transferMedia };
+    this.trigger(Events.MEDIA_DETACHING, data);
+    this.trigger(Events.MEDIA_DETACHED, data);
     return transferMedia;
   }
 
@@ -1061,6 +1065,28 @@ export default class Hls implements HlsEventEmitter {
     const audioTrackController = this.audioTrackController;
     if (audioTrackController) {
       audioTrackController.audioTrack = audioTrackId;
+    }
+  }
+
+  /**
+   * Index of next audio track as scheduled by audio stream controller.
+   */
+  get nextAudioTrack(): number {
+    return this.audioStreamController?.nextAudioTrack ?? -1;
+  }
+
+  /**
+   * Set audio track index for next loaded data.
+   * This will switch the audio track asap, without interrupting playback.
+   * May abort current loading of data, and flush parts of buffer(outside
+   * currently played fragment region). Audio Track Switched event will be
+   * delayed until the currently playing fragment is of the next audio track.
+   * @param audioTrackId - Pass -1 for automatic level selection
+   */
+  set nextAudioTrack(audioTrackId: number) {
+    const { audioTrackController } = this;
+    if (audioTrackController) {
+      audioTrackController.nextAudioTrack = audioTrackId;
     }
   }
 

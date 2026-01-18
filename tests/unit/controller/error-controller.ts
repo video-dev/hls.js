@@ -1,4 +1,5 @@
 import chai from 'chai';
+import { fakeServer } from 'nise';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { multivariantPlaylistWithRedundantFallbacks } from './level-controller';
@@ -20,7 +21,7 @@ describe('ErrorController Integration Tests', function () {
   let hls: Hls;
 
   beforeEach(function () {
-    server = sinon.fakeServer.create();
+    server = fakeServer.create();
     setupMockServerResponses(server);
     timers = sinon.useFakeTimers({ shouldClearNativeTimers: true } as any);
 

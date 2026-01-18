@@ -35,7 +35,7 @@ jobs:
           SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
       - name: extract tag
         id: extract_tag
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const prefix = 'refs/tags/';
@@ -50,12 +50,12 @@ jobs:
       group: 'build:build:${{ github.ref }}'
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
       - name: check package-lock.json version
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const fs = require('fs');
@@ -81,7 +81,7 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
 
@@ -133,7 +133,7 @@ jobs:
       group: 'build:test_unit:${{ github.ref }}'
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: cache node_modules
         uses: actions/cache@v4
@@ -148,12 +148,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: build
 
@@ -177,7 +177,7 @@ jobs:
       group: 'build:cloudflare_pages:${{ github.ref }}'
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: cache node_modules
         uses: actions/cache@v4
@@ -192,12 +192,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: build
 
@@ -235,7 +235,7 @@ jobs:
     steps:
       - name: draft release notes
         id: draft_release
-        uses: tjenkinson/release-drafter@48835fbc42b1c062a828995f9cb8301e6bdae677
+        uses: tjenkinson/release-drafter@349214e6b3b889d8b333c012cc61a1f1753baf40
         with:
           tag: ${{ needs.config.outputs.tag }}
           name: ${{ needs.config.outputs.tag }}
@@ -252,15 +252,15 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: build
 
@@ -279,6 +279,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   release_npm:
+    # npm oidc is configured for this environment
+    # https://docs.npmjs.com/trusted-publishers#for-github-actions
+    environment: release
     needs: [config, test_unit]
     if: needs.config.outputs.tag || needs.config.outputs.isMainBranch == 'true'
     runs-on: ubuntu-latest
@@ -288,7 +291,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: cache node_modules
         uses: actions/cache@v4
@@ -303,12 +306,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: build
 
@@ -318,12 +321,15 @@ jobs:
         env:
           CI: true
 
+      # Publishing with OICD needs >= 11.5.1
+      - name: Update npm to v11
+        run: npm install -g npm@11
+
       - name: publish to npm
         run: |
           ./scripts/publish-npm.sh
         env:
           CI: true
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           TAG: ${{ needs.config.outputs.tag }}
 
   test_functional_required:
@@ -346,13 +352,13 @@ jobs:
             ua: chrome
             os: OS X 10.11
             uaVersion: '79.0'
-          - config: chrome-win_7-75.0
+          - config: chrome-win_8-75.0
             ua: chrome
-            os: Windows 7
+            os: Windows 8
             uaVersion: '75.0'
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: cache node_modules
         uses: actions/cache@v4
@@ -367,12 +373,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: build
 
@@ -424,7 +430,7 @@ jobs:
             os: Windows 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: cache node_modules
         uses: actions/cache@v4
@@ -439,12 +445,12 @@ jobs:
             ${{ runner.os }}-
 
       - name: use Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version-file: '.node-version'
 
       - name: download build
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: build
 

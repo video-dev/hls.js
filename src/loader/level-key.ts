@@ -4,7 +4,7 @@ import { hexToArrayBuffer } from '../utils/hex';
 import { convertDataUriToArrayBytes } from '../utils/keysystem-util';
 import { logger } from '../utils/logger';
 import { KeySystemFormats, parsePlayReadyWRM } from '../utils/mediakeys-helper';
-import { mp4pssh } from '../utils/mp4-tools';
+import { mp4pssh, parseMultiPssh } from '../utils/mp4-tools';
 
 let keyUriToKeyIdMap: { [uri: string]: Uint8Array<ArrayBuffer> } = {};
 
@@ -35,6 +35,19 @@ export class LevelKey implements DecryptData {
 
   static clearKeyUriToKeyIdMap() {
     keyUriToKeyIdMap = {};
+  }
+
+  static setKeyIdForUri(uri: string, keyId: Uint8Array<ArrayBuffer>) {
+    keyUriToKeyIdMap[uri] = keyId;
+  }
+
+  static addKeyIdForUri(uri: string): Uint8Array<ArrayBuffer> {
+    const val = Object.keys(keyUriToKeyIdMap).length % Number.MAX_SAFE_INTEGER;
+    const keyId = new Uint8Array(16);
+    const dv = new DataView(keyId.buffer, 12, 4); // Just set the last 4 bytes
+    dv.setUint32(0, val);
+    keyUriToKeyIdMap[uri] = keyId;
+    return keyId;
   }
 
   constructor(
@@ -96,24 +109,30 @@ export class LevelKey implements DecryptData {
     return false;
   }
 
-  public getDecryptData(sn: number | 'initSegment'): LevelKey | null {
+  public getDecryptData(
+    sn: number | 'initSegment',
+    levelKeys?: { [key: string]: LevelKey | undefined },
+  ): LevelKey | null {
     if (!this.encrypted || !this.uri) {
       return null;
     }
 
-    if (isFullSegmentEncryption(this.method) && this.uri && !this.iv) {
-      if (typeof sn !== 'number') {
-        // We are fetching decryption data for a initialization segment
-        // If the segment was encrypted with AES-128/256
-        // It must have an IV defined. We cannot substitute the Segment Number in.
-        logger.warn(
-          `missing IV for initialization segment with method="${this.method}" - compliance issue`,
-        );
+    if (isFullSegmentEncryption(this.method)) {
+      let iv = this.iv;
+      if (!iv) {
+        if (typeof sn !== 'number') {
+          // We are fetching decryption data for a initialization segment
+          // If the segment was encrypted with AES-128/256
+          // It must have an IV defined. We cannot substitute the Segment Number in.
+          logger.warn(
+            `missing IV for initialization segment with method="${this.method}" - compliance issue`,
+          );
 
-        // Explicitly set sn to resulting value from implicit conversions 'initSegment' values for IV generation.
-        sn = 0;
+          // Explicitly set sn to resulting value from implicit conversions 'initSegment' values for IV generation.
+          sn = 0;
+        }
+        iv = createInitializationVector(sn);
       }
-      const iv = createInitializationVector(sn);
       const decryptdata = new LevelKey(
         this.method,
         this.uri,
@@ -128,10 +147,19 @@ export class LevelKey implements DecryptData {
       return this;
     }
 
-    if (this.pssh && this.keyId) {
-      return this;
+    if (this.keyId) {
+      // Handle case where key id is changed in KEY_LOADING event handler #7542#issuecomment-3305203929
+      const assignedKeyId = keyUriToKeyIdMap[this.uri];
+      if (assignedKeyId && !arrayValuesMatch(this.keyId, assignedKeyId)) {
+        LevelKey.setKeyIdForUri(this.uri, this.keyId);
+      }
+
+      if (this.pssh) {
+        return this;
+      }
     }
 
+    // Key bytes are signalled the KEYID attribute, typically only found on WideVine KEY tags
     // Initialize keyId if possible
     const keyBytes = convertDataUriToArrayBytes(this.uri);
     if (keyBytes) {
@@ -141,9 +169,15 @@ export class LevelKey implements DecryptData {
           // the playlist-key before the "encrypted" event. (Comment out to only use "encrypted" path.)
           this.pssh = keyBytes;
           // In case of Widevine, if KEYID is not in the playlist, assume only two fields in the pssh KEY tag URI.
-          if (!this.keyId && keyBytes.length >= 22) {
-            const offset = keyBytes.length - 22;
-            this.keyId = keyBytes.subarray(offset, offset + 16);
+          if (!this.keyId) {
+            const results = parseMultiPssh(keyBytes.buffer);
+            if (results.length) {
+              const psshData = results[0];
+              this.keyId = psshData.kids?.length ? psshData.kids[0] : null;
+            }
+          }
+          if (!this.keyId) {
+            this.keyId = getKeyIdFromPlayReadyKey(levelKeys);
           }
           break;
         case KeySystemFormats.PLAYREADY: {
@@ -173,22 +207,47 @@ export class LevelKey implements DecryptData {
       }
     }
 
-    // Default behavior: assign a new keyId for each uri
-    if (!this.keyId || this.keyId.byteLength !== 16) {
-      let keyId = keyUriToKeyIdMap[this.uri];
+    // Default behavior: get keyId from other KEY tag or URI lookup
+    if (this.keyId?.byteLength !== 16) {
+      let keyId: Uint8Array<ArrayBuffer> | null | undefined;
+      keyId = getKeyIdFromWidevineKey(levelKeys);
       if (!keyId) {
-        const val =
-          Object.keys(keyUriToKeyIdMap).length % Number.MAX_SAFE_INTEGER;
-        keyId = new Uint8Array(16);
-        const dv = new DataView(keyId.buffer, 12, 4); // Just set the last 4 bytes
-        dv.setUint32(0, val);
-        keyUriToKeyIdMap[this.uri] = keyId;
+        keyId = getKeyIdFromPlayReadyKey(levelKeys);
+        if (!keyId) {
+          keyId = keyUriToKeyIdMap[this.uri];
+        }
       }
-      this.keyId = keyId;
+      if (keyId) {
+        this.keyId = keyId;
+        LevelKey.setKeyIdForUri(this.uri, keyId);
+      }
     }
 
     return this;
   }
+}
+
+function getKeyIdFromWidevineKey(
+  levelKeys: { [key: string]: LevelKey | undefined } | undefined,
+) {
+  const widevineKey = levelKeys?.[KeySystemFormats.WIDEVINE];
+  if (widevineKey) {
+    return widevineKey.keyId;
+  }
+  return null;
+}
+
+function getKeyIdFromPlayReadyKey(
+  levelKeys: { [key: string]: LevelKey | undefined } | undefined,
+) {
+  const playReadyKey = levelKeys?.[KeySystemFormats.PLAYREADY];
+  if (playReadyKey) {
+    const playReadyKeyBytes = convertDataUriToArrayBytes(playReadyKey.uri);
+    if (playReadyKeyBytes) {
+      return parsePlayReadyWRM(playReadyKeyBytes);
+    }
+  }
+  return null;
 }
 
 function createInitializationVector(segmentNumber: number) {

@@ -19,11 +19,14 @@ const testStreams = require('../tests/test-streams');
 const defaultTestStreamUrl = testStreams[Object.keys(testStreams)[0]].url;
 const sourceURL = decodeURIComponent(getURLParam('src', defaultTestStreamUrl));
 
-let demoConfig = getURLParam('demoConfig', null);
-if (demoConfig) {
-  demoConfig = JSON.parse(atob(demoConfig));
-} else {
-  demoConfig = {};
+let demoConfig = {};
+const demoConfigParam = getURLParam('demoConfig', null);
+if (demoConfigParam) {
+  try {
+    demoConfig = JSON.parse(atob(demoConfigParam));
+  } catch (error) {
+    console.warn('Failed to parse demoConfig:', error);
+  }
 }
 
 const hlsjsDefaults = {
@@ -32,6 +35,18 @@ const hlsjsDefaults = {
   lowLatencyMode: true,
   backBufferLength: 60 * 1.5,
 };
+
+const hlsjsConfigParam = getURLParam('hlsjsConfig', null);
+let hlsjsConfig = hlsjsDefaults;
+let hlsjsConfigLoadedFromUrl = false;
+if (hlsjsConfigParam) {
+  try {
+    hlsjsConfig = JSON.parse(atob(hlsjsConfigParam));
+    hlsjsConfigLoadedFromUrl = true;
+  } catch (error) {
+    console.warn('Failed to parse hlsjsConfig:', error);
+  }
+}
 
 let enableStreaming = getDemoConfigPropOrDefault('enableStreaming', true);
 let autoRecoverError = getDemoConfigPropOrDefault('autoRecoverError', true);
@@ -43,7 +58,7 @@ let stopOnStall = getDemoConfigPropOrDefault('stopOnStall', false);
 let bufferingIdx = -1;
 let selectedTestStream = null;
 
-let video = document.querySelector('#video');
+const video = document.querySelector('#video');
 const startTime = Date.now();
 
 let lastSeekingIdx;
@@ -222,6 +237,7 @@ $(document).ready(function () {
   $('#metricsButtonWindow').toggle(self.windowSliding);
   $('#metricsButtonFixed').toggle(!self.windowSliding);
 
+  addVideoEventListeners(video);
   loadSelectedStream();
 
   let tabIndexesCSV = localStorage.getItem(STORAGE_KEYS.demo_tabs);
@@ -353,32 +369,7 @@ function loadSelectedStream() {
 
   logStatus('Loading manifest and attaching video element...');
 
-  const expiredTracks = [].filter.call(
-    video.textTracks,
-    (track) => track.kind !== 'metadata'
-  );
-  if (expiredTracks.length) {
-    const kinds = expiredTracks
-      .map((track) => track.kind)
-      .filter((kind, index, self) => self.indexOf(kind) === index);
-    logStatus(
-      `Replacing video element to remove ${kinds.join(' and ')} text tracks`
-    );
-    const videoWithExpiredTextTracks = video;
-    video = videoWithExpiredTextTracks.cloneNode(false);
-    video.removeAttribute('src');
-    video.volume = videoWithExpiredTextTracks.volume;
-    video.muted = videoWithExpiredTextTracks.muted;
-    videoWithExpiredTextTracks.parentNode.insertBefore(
-      video,
-      videoWithExpiredTextTracks
-    );
-    videoWithExpiredTextTracks.parentNode.removeChild(
-      videoWithExpiredTextTracks
-    );
-  }
   addChartEventListeners(hls);
-  addVideoEventListeners(video);
 
   hls.loadSource(url);
   hls.autoLevelCapping = levelCapping;
@@ -1402,9 +1393,12 @@ function updateAudioTrackInfo() {
   const buttonEnabled = 'btn-primary" ';
   const buttonDisabled = 'btn-success" ';
   let html1 = '';
+  let html2 = '';
   const audioTrackId = hls.audioTrack;
+  const nextAudioTrackId = hls.nextAudioTrack;
   const len = hls.audioTracks.length;
   const track = hls.audioTracks[audioTrackId];
+  const nextTrack = hls.audioTracks[nextAudioTrackId];
 
   for (let i = 0; i < len; i++) {
     html1 += buttonTemplate;
@@ -1422,10 +1416,30 @@ function updateAudioTrackInfo() {
       '</button>';
   }
 
+  for (let i = 0; i < len; i++) {
+    html2 += buttonTemplate;
+    if (nextAudioTrackId === i) {
+      html2 += buttonEnabled;
+    } else {
+      html2 += buttonDisabled;
+    }
+
+    html2 +=
+      'onclick="hls.nextAudioTrack=' +
+      i +
+      '">' +
+      hls.audioTracks[i].name +
+      '</button>';
+  }
+
   $('#audioTrackLabel').text(
     track ? track.lang || track.name : 'None selected'
   );
   $('#audioTrackControl').html(html1);
+  $('#audioTrackLabel').text(
+    nextTrack ? nextTrack.lang || nextTrack.name : 'None selected'
+  );
+  $('#nextAudioTrackControl').html(html2);
 }
 
 function codecs2label(levelCodecs) {
@@ -1497,12 +1511,17 @@ function onDemoConfigChanged(firstLoad) {
     persistEditorValue();
   }
 
+  updatePermalink(firstLoad);
+}
+
+function updatePermalink(firstLoad) {
   const serializedDemoConfig = btoa(JSON.stringify(demoConfig));
+  const serializedHlsjsConfig = btoa(JSON.stringify(hlsjsConfig));
   const baseURL = document.URL.split('?')[0];
   const streamURL = $('#streamURL').val();
   const permalinkURL = `${baseURL}?src=${encodeURIComponent(
     streamURL
-  )}&demoConfig=${serializedDemoConfig}`;
+  )}&demoConfig=${serializedDemoConfig}&hlsjsConfig=${serializedHlsjsConfig}`;
 
   $('#StreamPermalink').html(`<a href="${permalinkURL}">${permalinkURL}</a>`);
   if (!firstLoad && self.location.href !== permalinkURL) {
@@ -1565,8 +1584,9 @@ function setupConfigEditor() {
   configEditor.setTheme('ace/theme/github');
   configEditor.session.setMode('ace/mode/json');
 
-  const contents = hlsjsDefaults;
+  const contents = hlsjsConfig;
   const shouldRestorePersisted =
+    !hlsjsConfigLoadedFromUrl &&
     JSON.parse(localStorage.getItem(STORAGE_KEYS.Editor_Persistence)) === true;
 
   if (shouldRestorePersisted) {
@@ -1737,6 +1757,8 @@ function updateConfigEditorValue(obj) {
 
 function applyConfigEditorValue() {
   onDemoConfigChanged();
+  hlsjsConfig = getEditorValue({ parse: true });
+  updatePermalink(false);
   loadSelectedStream();
 }
 

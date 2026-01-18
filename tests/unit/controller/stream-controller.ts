@@ -1,5 +1,6 @@
 /* eslint-disable dot-notation */
 import chai from 'chai';
+import { fakeXhr } from 'nise';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
@@ -14,6 +15,7 @@ import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import { mockFragments as mockFragmentArray } from '../../mocks/data';
+import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import type StreamController from '../../../src/controller/stream-controller';
 import type { MediaFragment } from '../../../src/loader/fragment';
@@ -32,7 +34,7 @@ describe('StreamController', function () {
   const mockFragments = mockFragmentArray as MediaFragment[];
 
   beforeEach(function () {
-    fake = sinon.useFakeXMLHttpRequest();
+    fake = fakeXhr.useFakeXMLHttpRequest();
     hls = new Hls({
       // Enable debug to catch callback errors and enable logging in these tests:
       // debug: true,
@@ -90,7 +92,7 @@ describe('StreamController', function () {
       contentSteering,
       url: 'http://www.example.com',
       stats: new LoadStats(),
-      networkDetails: {},
+      networkDetails: new Response('ok'),
       sessionData,
       sessionKeys,
       startTimeOffset,
@@ -135,7 +137,7 @@ describe('StreamController', function () {
         details,
         id: 0,
         level: 0,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         stats: new LoadStats(),
         deliveryDirectives: null,
         levelInfo: new Level({
@@ -169,7 +171,7 @@ describe('StreamController', function () {
         contentSteering,
         url: 'http://www.example.com',
         stats: new LoadStats(),
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         sessionData,
         sessionKeys,
         startTimeOffset,
@@ -186,7 +188,7 @@ describe('StreamController', function () {
         details,
         id: 0,
         level: 0,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
         stats: new LoadStats(),
         deliveryDirectives: null,
         levelInfo: new Level({
@@ -651,6 +653,136 @@ describe('StreamController', function () {
         expect(streamController['level']).to.equal(hls.nextAutoLevel);
         expect(streamController['bitrateTest']).to.be.false;
       });
+    });
+  });
+
+  describe('getBufferOutput', function () {
+    let media: any;
+    let mediaBuffer: any;
+
+    beforeEach(function () {
+      media = { buffered: new TimeRangesMock() };
+      mediaBuffer = { buffered: new TimeRangesMock() };
+      streamController['media'] = media;
+    });
+
+    it('should return media when altAudio is DISABLED', function () {
+      streamController['altAudio'] = 0; // AlternateAudio.DISABLED
+      streamController['mediaBuffer'] = mediaBuffer;
+      expect(streamController['getBufferOutput']()).to.equal(media);
+    });
+
+    it('should return media when altAudio is SWITCHING', function () {
+      streamController['altAudio'] = 1; // AlternateAudio.SWITCHING
+      streamController['mediaBuffer'] = mediaBuffer;
+      expect(streamController['getBufferOutput']()).to.equal(media);
+    });
+
+    it('should return mediaBuffer when altAudio is SWITCHED', function () {
+      streamController['altAudio'] = 2; // AlternateAudio.SWITCHED
+      streamController['mediaBuffer'] = mediaBuffer;
+      expect(streamController['getBufferOutput']()).to.equal(mediaBuffer);
+    });
+
+    it('should return media when mediaBuffer is null even if altAudio is SWITCHED', function () {
+      streamController['altAudio'] = 2; // AlternateAudio.SWITCHED
+      streamController['mediaBuffer'] = null;
+      expect(streamController['getBufferOutput']()).to.equal(media);
+    });
+  });
+
+  describe('checkFragmentChanged override', function () {
+    let media: any;
+    let mockFrag: Fragment;
+
+    beforeEach(function () {
+      mockFrag = new Fragment(PlaylistLevelType.MAIN, 'test.ts');
+      mockFrag.sn = 1;
+      mockFrag.level = 0;
+      mockFrag.setStart(5);
+      mockFrag.duration = 10;
+
+      media = {
+        readyState: 4,
+        seeking: false,
+        currentTime: 7,
+        buffered: new TimeRangesMock([5, 15]),
+      };
+      streamController['media'] = media;
+      streamController['fragmentTracker'].getAppendedFrag = sinon
+        .stub()
+        .returns(mockFrag);
+    });
+
+    it('should trigger FRAG_CHANGED event when fragment changes', function () {
+      const triggerSpy = sinon.spy(hls, 'trigger');
+      const oldFrag = new Fragment(PlaylistLevelType.MAIN, 'old.ts');
+      oldFrag.sn = 0;
+      oldFrag.level = 0;
+      streamController['fragPlaying'] = oldFrag;
+
+      const result = streamController['checkFragmentChanged']();
+
+      expect(result).to.be.true;
+      const calls = triggerSpy.getCalls();
+      let fragChangedCall;
+      for (let i = 0; i < calls.length; i++) {
+        if (calls[i].args[0] === Events.FRAG_CHANGED) {
+          fragChangedCall = calls[i];
+          break;
+        }
+      }
+      expect(fragChangedCall).to.exist;
+      expect(fragChangedCall?.args[1]).to.have.property('frag', mockFrag);
+    });
+
+    it('should trigger LEVEL_SWITCHED event when level changes', function () {
+      const triggerSpy = sinon.spy(hls, 'trigger');
+      const oldFrag = new Fragment(PlaylistLevelType.MAIN, 'old.ts');
+      oldFrag.sn = 0;
+      oldFrag.level = 1;
+
+      streamController['fragPlaying'] = oldFrag;
+
+      streamController['checkFragmentChanged']();
+
+      const calls = triggerSpy.getCalls();
+      let levelSwitchedCall;
+      for (let i = 0; i < calls.length; i++) {
+        if (calls[i].args[0] === Events.LEVEL_SWITCHED) {
+          levelSwitchedCall = calls[i];
+          break;
+        }
+      }
+      expect(levelSwitchedCall).to.exist;
+      expect(levelSwitchedCall?.args[1]).to.have.property('level', 0);
+    });
+
+    it('should return false when fragment has not changed', function () {
+      streamController['fragPlaying'] = mockFrag;
+
+      const result = streamController['checkFragmentChanged']();
+
+      expect(result).to.be.false;
+    });
+  });
+
+  describe('abortCurrentFrag override', function () {
+    it('should clear backtrackFragment and call super', function () {
+      const mockFrag = new Fragment(PlaylistLevelType.MAIN, 'test.ts');
+      mockFrag.abortRequests = sinon.stub();
+      streamController['fragCurrent'] = mockFrag;
+      streamController['backtrackFragment'] = new Fragment(
+        PlaylistLevelType.MAIN,
+        'backtrack.ts',
+      );
+      streamController['state'] = State.FRAG_LOADING;
+
+      streamController['abortCurrentFrag']();
+
+      expect(streamController['backtrackFragment']).to.be.undefined;
+      expect(streamController['fragCurrent']).to.be.null;
+      expect(streamController['state']).to.equal(State.IDLE);
     });
   });
 });

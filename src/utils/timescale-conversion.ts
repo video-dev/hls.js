@@ -39,3 +39,8 @@ export function toMpegTsClockFromTimescale(
 ): number {
   return toTimescaleFromBase(baseTime, MPEG_TS_CLOCK_FREQ_HZ, 1 / srcScale);
 }
+
+export function timestampToString(timestamp: TimestampOffset): string {
+  const { baseTime, timescale, trackId } = timestamp;
+  return `${baseTime / timescale} (${baseTime}/${timescale}) trackId: ${trackId}`;
+}

@@ -1112,6 +1112,7 @@ fileSequence5.mp4`;
         Events.INTERSTITIAL_STARTED,
         Events.INTERSTITIAL_ASSET_STARTED,
         Events.MEDIA_DETACHING,
+        Events.MEDIA_DETACHED,
       ];
       expect(callsWithPrerollAfterAttach).to.deep.equal(
         expectedEvents,
@@ -1182,7 +1183,7 @@ fileSequence3.mp4
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1249,7 +1250,7 @@ fileSequence3.mp4
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1337,7 +1338,7 @@ fileSequence6.mp4`;
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1346,6 +1347,7 @@ fileSequence6.mp4`;
           Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
+          Events.MEDIA_DETACHED,
         ],
         `Actual events after asset-list`,
       );
@@ -1451,7 +1453,7 @@ fileSequence6.mp4`;
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAttach = getTriggerCalls();
       expect(callsAfterAttach).to.deep.equal(
@@ -1460,6 +1462,7 @@ fileSequence6.mp4`;
           Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
+          Events.MEDIA_DETACHED,
         ],
         `Actual events after asset-list`,
       );
@@ -1828,7 +1831,7 @@ fileSequence6.mp4
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const callsAfterAssetsLoaded = getTriggerCalls();
       expect(callsAfterAssetsLoaded).to.deep.equal(
@@ -1839,6 +1842,7 @@ fileSequence6.mp4
           Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
+          Events.MEDIA_DETACHED,
         ],
         `Actual events after asset-list`,
       );
@@ -2003,7 +2007,7 @@ fileSequence6.mp4`;
       hls.trigger(Events.ASSET_LIST_LOADED, {
         event: interstitial,
         assetListResponse: interstitial.assetListResponse,
-        networkDetails: {},
+        networkDetails: new Response('ok'),
       });
       const eventsAfterAssetListLoaded = getTriggerCalls();
       expect(eventsAfterAssetListLoaded).to.deep.equal(
@@ -2012,6 +2016,7 @@ fileSequence6.mp4`;
           Events.INTERSTITIAL_ASSET_PLAYER_CREATED,
           Events.INTERSTITIAL_ASSET_STARTED,
           Events.MEDIA_DETACHING,
+          Events.MEDIA_DETACHED,
         ],
         `Actual events after asset-list`,
       );

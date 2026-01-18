@@ -48,12 +48,14 @@ export type ABRControllerConfig = {
   abrBandWidthFactor: number;
   abrBandWidthUpFactor: number;
   abrMaxWithRealBitrate: boolean;
+  abrSwitchInterval: number;
   maxStarvationDelay: number;
   maxLoadingDelay: number;
 };
 
 export type BufferControllerConfig = {
   appendErrorMaxRetry: number;
+  appendTimeout: number;
   backBufferLength: number;
   frontBufferFlushThreshold: number;
   liveDurationInfinity: boolean;
@@ -222,6 +224,7 @@ export type StreamControllerConfig = {
   testBandwidth: boolean;
   liveSyncMode?: 'edge' | 'buffered';
   startOnSegmentBoundary: boolean;
+  nextAudioTrackBufferFlushForwardOffset: number;
 };
 
 export type GapControllerConfig = {
@@ -230,6 +233,7 @@ export type GapControllerConfig = {
   nudgeOffset: number;
   nudgeMaxRetry: number;
   nudgeOnVideoHole: boolean;
+  skipBufferHolePadding: number;
 };
 
 export type SelectionPreferences = {
@@ -252,6 +256,7 @@ export type MetadataControllerConfig = {
   enableEmsgMetadataCues: boolean;
   enableEmsgKLVMetadata: boolean;
   enableID3MetadataCues: boolean;
+  emsgKLVSchemaUri?: string;
 };
 
 export type TimelineControllerConfig = {
@@ -272,6 +277,7 @@ export type TimelineControllerConfig = {
 
 export type TSDemuxerConfig = {
   forceKeyFrameOnDiscontinuity: boolean;
+  handleMpegTsVideoIntegrityErrors: 'process' | 'skip';
 };
 
 export type HlsConfig = {
@@ -376,6 +382,7 @@ export const hlsDefaultConfig: HlsConfig = {
   backBufferLength: Infinity, // used by buffer-controller
   frontBufferFlushThreshold: Infinity,
   startOnSegmentBoundary: false, // used by stream-controller
+  nextAudioTrackBufferFlushForwardOffset: 0.25, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxFragLookUpTolerance: 0.25, // used by stream-controller
   maxBufferHole: 0.1, // used by stream-controller and gap-controller
@@ -384,6 +391,7 @@ export const hlsDefaultConfig: HlsConfig = {
   nudgeOffset: 0.1, // used by gap-controller
   nudgeMaxRetry: 3, // used by gap-controller
   nudgeOnVideoHole: true, // used by gap-controller
+  skipBufferHolePadding: 0.1, // used by gap-controller
   liveSyncMode: 'edge', // used by stream-controller
   liveSyncDurationCount: 3, // used by latency-controller
   liveSyncOnStallIncrease: 1, // used by latency-controller
@@ -405,6 +413,7 @@ export const hlsDefaultConfig: HlsConfig = {
   fpsDroppedMonitoringPeriod: 5000, // used by fps-controller
   fpsDroppedMonitoringThreshold: 0.2, // used by fps-controller
   appendErrorMaxRetry: 3, // used by buffer-controller
+  appendTimeout: Infinity, // used by buffer-controller
   ignorePlaylistParsingErrors: false,
   loader: XhrLoader,
   // loader: FetchLoader,
@@ -421,6 +430,7 @@ export const hlsDefaultConfig: HlsConfig = {
   stretchShortVideoTrack: false, // used by mp4-remuxer
   maxAudioFramesDrift: 1, // used by mp4-remuxer
   forceKeyFrameOnDiscontinuity: true, // used by ts-demuxer
+  handleMpegTsVideoIntegrityErrors: 'process', // used by ts-demuxer
   abrEwmaFastLive: 3, // used by abr-controller
   abrEwmaSlowLive: 9, // used by abr-controller
   abrEwmaFastVoD: 3, // used by abr-controller
@@ -430,6 +440,7 @@ export const hlsDefaultConfig: HlsConfig = {
   abrBandWidthFactor: 0.95, // used by abr-controller
   abrBandWidthUpFactor: 0.7, // used by abr-controller
   abrMaxWithRealBitrate: false, // used by abr-controller
+  abrSwitchInterval: 0, // used by level-controller
   maxStarvationDelay: 4, // used by abr-controller
   maxLoadingDelay: 4, // used by abr-controller
   minAutoBitrate: 0, // used by hls
@@ -449,6 +460,7 @@ export const hlsDefaultConfig: HlsConfig = {
   enableEmsgMetadataCues: true,
   enableEmsgKLVMetadata: false,
   enableID3MetadataCues: true,
+  emsgKLVSchemaUri: undefined, // Defaults to 'urn:misb:KLV:bin:1910.1' in demuxer for backwards compatibility
   enableInterstitialPlayback: __USE_INTERSTITIALS__,
   interstitialAppendInPlace: true,
   interstitialLiveLookAhead: 10,

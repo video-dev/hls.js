@@ -36,6 +36,7 @@ export interface ParsedTrack extends BaseTrack {
 }
 export interface SourceBufferTrack extends BaseTrack {
   buffer?: ExtendedSourceBuffer;
+  bufferAppendTimeoutId?: number;
   listeners: SourceBufferListener[];
   ending?: boolean;
   ended?: boolean;
@@ -74,7 +75,6 @@ export type SourceBuffersTuple = [
 export type MediaOverrides = {
   duration?: number;
   endOfStream?: boolean;
-  cueRemoval?: boolean;
 };
 
 export interface BufferOperationQueues {

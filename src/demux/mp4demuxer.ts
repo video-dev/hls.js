@@ -29,7 +29,7 @@ import type { IEmsgParsingData } from '../utils/mp4-tools';
 const emsgSchemePattern = /\/emsg[-/]ID3/i;
 
 class MP4Demuxer implements Demuxer {
-  private remainderData: Uint8Array | null = null;
+  private remainderData: Uint8Array<ArrayBuffer> | null = null;
   private timeOffset: number = 0;
   private config: HlsConfig;
   private videoTrack?: PassthroughTrack;
@@ -98,7 +98,10 @@ class MP4Demuxer implements Demuxer {
     return hasMoofData(data);
   }
 
-  public demux(data: Uint8Array, timeOffset: number): DemuxerResult {
+  public demux(
+    data: Uint8Array<ArrayBuffer>,
+    timeOffset: number,
+  ): DemuxerResult {
     this.timeOffset = timeOffset;
     // Load all data into the avc track. The CMAF remuxer will look for the data in the samples object; the rest of the fields do not matter
     let videoSamples = data;
@@ -175,19 +178,20 @@ class MP4Demuxer implements Demuxer {
               type: MetadataSchema.emsg,
               duration: duration,
             });
-          } else if (
-            this.config.enableEmsgKLVMetadata &&
-            emsgInfo.schemeIdUri.startsWith('urn:misb:KLV:bin:1910.1')
-          ) {
-            const pts = getEmsgStartTime(emsgInfo, timeOffset);
-            id3Track.samples.push({
-              data: emsgInfo.payload,
-              len: emsgInfo.payload.byteLength,
-              dts: pts,
-              pts: pts,
-              type: MetadataSchema.misbklv,
-              duration: Number.POSITIVE_INFINITY,
-            });
+          } else if (this.config.enableEmsgKLVMetadata) {
+            const klvSchemaUri =
+              this.config.emsgKLVSchemaUri || MetadataSchema.misbklv;
+            if (emsgInfo.schemeIdUri.startsWith(klvSchemaUri)) {
+              const pts = getEmsgStartTime(emsgInfo, timeOffset);
+              id3Track.samples.push({
+                data: emsgInfo.payload,
+                len: emsgInfo.payload.byteLength,
+                dts: pts,
+                pts: pts,
+                type: MetadataSchema.misbklv,
+                duration: Number.POSITIVE_INFINITY,
+              });
+            }
           }
         });
       }
