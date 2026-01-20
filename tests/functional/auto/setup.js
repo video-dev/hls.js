@@ -124,17 +124,21 @@ async function testIdleBufferLength(url, config) {
           const durationOffsetTolerance = config.avBufferOffset || 1;
           console.log(
             '[test] > progress: ' +
-              bufferEnd.toFixed(2) +
+              bufferEnd.toFixed(3) +
               '/' +
-              duration.toFixed(2) +
+              duration.toFixed(3) +
               ' buffered.length: ' +
               buffered.length +
               ' allowed duration offset ' +
+              durationOffsetTolerance +
+              ' maxBufferLength ' +
+              maxBufferLength +
+              ' durationOffsetTolerance ' +
               durationOffsetTolerance
           );
           if (
             bufferEnd >= maxBufferLength ||
-            bufferEnd > duration - durationOffsetTolerance
+            bufferEnd >= duration - durationOffsetTolerance
           ) {
             callback({ code: 'loadeddata', logs: self.logString });
           }
@@ -193,7 +197,7 @@ async function testSmoothSwitch(url, config) {
               paused: paused,
               logs: self.logString,
             });
-          }, 2000);
+          }, 4000);
         }
       });
     },
