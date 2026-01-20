@@ -803,7 +803,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     // Block audio append until overlapping video append
     const videoTrack = tracks.video;
     const videoSb = videoTrack?.buffer;
-    if (videoSb && sn !== 'initSegment') {
+    if (videoSb && sn !== 'initSegment' && offset !== undefined) {
       const partOrFrag = part || (frag as MediaFragment);
       const blockedAudioAppend = this.blockedAudioAppend;
       if (
@@ -892,7 +892,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           frag,
           part,
           chunkMeta,
-          parent: frag.type,
+          parent,
           timeRanges,
         });
       },
@@ -901,7 +901,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         // in case any error occured while appending, put back segment in segments table
         const event: ErrorData = {
           type: ErrorTypes.MEDIA_ERROR,
-          parent: frag.type,
+          parent,
           details: ErrorDetails.BUFFER_APPEND_ERROR,
           sourceBufferName: type,
           frag,
@@ -952,7 +952,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       },
     };
     this.log(
-      `queuing "${type}" append sn: ${sn}${part ? ' p: ' + part.index : ''} of ${frag.type === PlaylistLevelType.MAIN ? 'level' : 'track'} ${frag.level} cc: ${cc}`,
+      `queuing "${type}" append sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
+        parent === PlaylistLevelType.MAIN ? 'level' : 'track'
+      } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
     );
     this.append(operation, type, this.isPending(this.tracks[type]));
   }
