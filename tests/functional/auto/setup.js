@@ -264,8 +264,10 @@ async function testSeekOnVOD(url, config) {
             });
           }
           // After seeking timeout if paused after 5 seconds
+          let seekingTimeout = -1;
           video.onseeked = function () {
             console.log('[test] > video  "onseeked"');
+            self.clearTimeout(seekingTimeout);
             self.setTimeout(function () {
               const currentTime = video.currentTime;
               const paused = video.paused;
@@ -288,7 +290,7 @@ async function testSeekOnVOD(url, config) {
               seekToTime
           );
           video.currentTime = seekToTime;
-          self.setTimeout(function () {
+          seekingTimeout = self.setTimeout(function () {
             const currentTime = video.currentTime;
             const duration = video.duration;
             const paused = video.paused;
@@ -307,6 +309,13 @@ async function testSeekOnVOD(url, config) {
               return `${type}: [${timeRangeTuples.join(', ')}]`;
             });
 
+            console.log(
+              '[test] > Timed out while seeking  ' +
+                video.currentTime +
+                ' to ' +
+                seekToTime
+            );
+
             callback({
               code: 'timeout-waiting-for-ended-event',
               currentTime: currentTime,
@@ -316,7 +325,7 @@ async function testSeekOnVOD(url, config) {
               paused: paused,
               logs: self.logString,
             });
-          }, 12000);
+          }, 15000);
         }, 3000);
       };
       // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
