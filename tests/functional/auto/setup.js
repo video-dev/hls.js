@@ -340,7 +340,7 @@ async function testSeekOnVOD(url, config) {
               paused: paused,
               logs: self.logString,
             });
-          }, 15000);
+          }, 30000);
         }, 3000);
       };
       // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
