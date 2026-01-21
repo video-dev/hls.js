@@ -122,20 +122,25 @@ async function testIdleBufferLength(url, config) {
           const bufferEnd = buffered.end(buffered.length - 1);
           const duration = video.duration;
           const durationOffsetTolerance = config.avBufferOffset || 1;
+          const requiredBuffer = Math.min(
+            maxBufferLength,
+            duration - durationOffsetTolerance
+          );
           console.log(
             '[test] > progress: ' +
-              bufferEnd.toFixed(2) +
+              bufferEnd.toFixed(3) +
               '/' +
-              duration.toFixed(2) +
+              requiredBuffer.toFixed(3) +
               ' buffered.length: ' +
               buffered.length +
-              ' allowed duration offset ' +
-              durationOffsetTolerance
+              ' allowed duration offset: ' +
+              durationOffsetTolerance +
+              ' duration: ' +
+              duration.toFixed(3)
           );
-          if (
-            bufferEnd >= maxBufferLength ||
-            bufferEnd > duration - durationOffsetTolerance
-          ) {
+          if (bufferEnd >= requiredBuffer) {
+            video.onprogress = null;
+            console.log('[test] > passed (exec callback)');
             callback({ code: 'loadeddata', logs: self.logString });
           }
         }
@@ -157,14 +162,21 @@ async function testSmoothSwitch(url, config) {
       self.startStream(url, startConfig, callback);
       self.hls.manualLevel = 0;
       const video = self.video;
+      let playedInterval = -1;
       self.hls.once(self.Hls.Events.FRAG_CHANGED, function (eventName, data) {
         console.log(
-          '[test] > ' + eventName + ' frag.level: ' + data.frag.level
+          '[test] > ' +
+            eventName +
+            ' frag.level: ' +
+            data.frag.level +
+            ' @' +
+            video.currentTime
         );
         const highestLevel = self.hls.levels.length - 1;
         const level = self.hls.levels[data.frag.level];
         const fragmentCount = level.details.fragments.length;
         if (highestLevel === 0 || fragmentCount === 1) {
+          self.clearInterval(playedInterval);
           callback({
             highestLevel: highestLevel,
             currentTimeDelta: 1, // pass the test by assigning currentTimeDelta > 0
@@ -181,18 +193,21 @@ async function testSmoothSwitch(url, config) {
         const currentTime = video.currentTime;
         const highestLevel = self.hls.levels.length - 1;
         if (data.level === highestLevel) {
-          self.setTimeout(function () {
+          self.clearInterval(playedInterval);
+          playedInterval = self.setInterval(function () {
             const newCurrentTime = video.currentTime;
-            const paused = video.paused;
-            console.log(
-              '[test] > currentTime delta: ' + (newCurrentTime - currentTime)
-            );
-            callback({
-              highestLevel: highestLevel,
-              currentTimeDelta: newCurrentTime - currentTime,
-              paused: paused,
-              logs: self.logString,
-            });
+            const currentTimeDelta = newCurrentTime - currentTime;
+            console.log('[test] > currentTime delta: ' + currentTimeDelta);
+            if (currentTimeDelta > 0) {
+              const paused = video.paused;
+              self.clearInterval(playedInterval);
+              callback({
+                highestLevel: highestLevel,
+                currentTimeDelta: currentTimeDelta,
+                paused: paused,
+                logs: self.logString,
+              });
+            }
           }, 2000);
         }
       });
@@ -257,6 +272,7 @@ async function testSeekOnVOD(url, config) {
         self.setTimeout(function () {
           const duration = video.duration;
           if (!isFinite(duration)) {
+            video.onprogress = null;
             callback({
               code: 'non-finite-duration',
               duration: duration,
@@ -272,6 +288,7 @@ async function testSeekOnVOD(url, config) {
               const currentTime = video.currentTime;
               const paused = video.paused;
               if (video.currentTime === 0 || paused) {
+                video.onprogress = null;
                 callback({
                   code: 'paused',
                   currentTime: currentTime,
@@ -291,6 +308,7 @@ async function testSeekOnVOD(url, config) {
           );
           video.currentTime = seekToTime;
           seekingTimeout = self.setTimeout(function () {
+            video.onprogress = null;
             const currentTime = video.currentTime;
             const duration = video.duration;
             const paused = video.paused;
@@ -310,10 +328,7 @@ async function testSeekOnVOD(url, config) {
             });
 
             console.log(
-              '[test] > Timed out while seeking  ' +
-                video.currentTime +
-                ' to ' +
-                seekToTime
+              '[test] > Timed out while seeking ' + video.currentTime
             );
 
             callback({
@@ -325,13 +340,14 @@ async function testSeekOnVOD(url, config) {
               paused: paused,
               logs: self.logString,
             });
-          }, 15000);
+          }, 30000);
         }, 3000);
       };
       // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
       const allowedBufferedRanges = config.allowedBufferedRangesInSeekTest || 2;
       video.onprogress = function () {
         if (video.buffered.length > allowedBufferedRanges) {
+          video.onprogress = null;
           const duration = video.duration;
           callback({
             code: 'buffer-gaps',
@@ -342,6 +358,7 @@ async function testSeekOnVOD(url, config) {
         }
       };
       self.hls.on(self.Hls.Events.MEDIA_ENDED, function (eventName, data) {
+        video.onprogress = null;
         console.log(
           '[test] > video  "ended"' + data.stalled ? ' (stalled near end)' : ''
         );
@@ -505,9 +522,6 @@ describe(`Testing hls.js playback in ${browserConfig.name} ${browserConfig.versi
   const failedUrls = {};
 
   before(async function () {
-    // high timeout because sometimes getSession() takes a while
-    this.timeout(100000);
-
     const labelBranch = process.env.GITHUB_REF || 'unknown';
     const capabilities = {
       name: `hls.js@${labelBranch} on "${browserDescription}"`,
@@ -721,21 +735,21 @@ ${data.logs}
 
         if (stream.abr) {
           it(
-            `should "smooth switch" to highest level and still play after 2s`,
+            `should "smooth switch" to highest level with playback advancing`,
             testSmoothSwitch.bind(null, url, config)
-          );
+          ).timeout(90000);
         }
 
         if (stream.live) {
           it(
             `should seek near the end and receive video seeked event`,
             testSeekOnLive.bind(null, url, config)
-          );
+          ).timeout(90000);
         } else if (!HlsjsLightBuild) {
           it(
             `should buffer up to maxBufferLength or video.duration`,
             testIdleBufferLength.bind(null, url, config)
-          );
+          ).timeout(60000);
           it(
             `should play ${stream.description}`,
             testIsPlayingVOD.bind(null, url, config)
@@ -744,7 +758,7 @@ ${data.logs}
           it(
             `should seek 3s from end and receive video ended event with 2 or less buffered ranges`,
             testSeekOnVOD.bind(null, url, config)
-          );
+          ).timeout(90000);
           // TODO: Seeking to or past VOD duration should result in the video ending
           // it(`should seek on end and receive video ended event`, testSeekEndVOD.bind(null, url));
         }

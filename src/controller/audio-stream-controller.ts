@@ -791,7 +791,9 @@ class AudioStreamController
     const fragPlaying = this.fragPlaying;
     const fragPreviousLevel = previousFrag?.level;
     if (!fragPlaying || fragPlaying.level !== fragPreviousLevel) {
-      this.cleanupBackBuffer();
+      if (previousFrag) {
+        this.cleanupBackBuffer();
+      }
       if (this.switchingTrack) {
         this.completeAudioSwitch(this.switchingTrack);
       }
