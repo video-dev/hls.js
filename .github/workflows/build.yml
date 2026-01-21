@@ -348,9 +348,9 @@ jobs:
           - config: chrome-win_10
             ua: chrome
             os: Windows 10
-          - config: chrome-osx_10.11-79.0
+          - config: chrome-mac_13-79.0
             ua: chrome
-            os: OS X 10.11
+            os: Mac 13
             uaVersion: '79.0'
           - config: chrome-win_8-75.0
             ua: chrome
