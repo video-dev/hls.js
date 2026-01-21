@@ -348,10 +348,6 @@ jobs:
           - config: chrome-win_10
             ua: chrome
             os: Windows 10
-          - config: chrome-osx_10.11-79.0
-            ua: chrome
-            os: OS X 10.11
-            uaVersion: '79.0'
           - config: chrome-win_8-75.0
             ua: chrome
             os: Windows 8
@@ -428,6 +424,10 @@ jobs:
           - config: firefox-win_10
             ua: firefox
             os: Windows 10
+          - config: chrome-mac_13-79.0
+            ua: chrome
+            os: macOS 12
+            uaVersion: '79.0'
 
     steps:
       - uses: actions/checkout@v5

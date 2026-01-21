@@ -13,11 +13,13 @@ function setupConsoleLogRedirection() {
   function append(methodName, msg) {
     var a =
       new Date().toISOString().replace('T', ' ').replace('Z', '') + ': ' + msg;
-    var text = document.createTextNode(a);
-    var line = document.createElement('pre');
-    line.className = 'line line-' + methodName;
-    line.appendChild(text);
-    inner.appendChild(line);
+    if ((msg || '').slice(1, 7) === '[test]') {
+      var text = document.createTextNode(a);
+      var line = document.createElement('pre');
+      line.className = 'line line-' + methodName;
+      line.appendChild(text);
+      inner.appendChild(line);
+    }
 
     // The empty log line at the beginning comes from a test in `enableLogs`.
     self.logString = logString += a + '\n';
@@ -96,16 +98,19 @@ function startStream(streamUrl, config, callback, autoplay) {
   self.video = video = document.getElementById('video');
   try {
     self.hls = hls = new Hls(
-      objectAssign({}, config, {
-        // debug: true
-        debug: {
-          debug: function () {},
-          log: console.log.bind(console),
-          info: console.info.bind(console, '[info]'),
-          warn: console.warn.bind(console, '[warn]'),
-          error: console.error.bind(console, '[error]'),
+      objectAssign(
+        {
+          // Override `debug` with process.env.DEBUG string -> boolean
+          debug: {
+            debug: function () {},
+            log: console.log.bind(console),
+            info: console.info.bind(console, '[info]'),
+            warn: console.warn.bind(console, '[warn]'),
+            error: console.error.bind(console, '[error]'),
+          },
         },
-      })
+        config
+      )
     );
     console.log('[test] > userAgent:', navigator.userAgent);
     if (autoplay !== false) {
@@ -131,7 +136,7 @@ function startStream(streamUrl, config, callback, autoplay) {
     }
     hls.on(Hls.Events.ERROR, function (event, data) {
       if (data.fatal) {
-        console.log('[test] > hlsjs fatal error :' + data.details);
+        console.log('[test] > FAIL: hlsjs fatal error :' + data.details);
         if (data.details === Hls.ErrorDetails.INTERNAL_EXCEPTION) {
           console.log('[test] > exception in :' + data.event);
           console.log(
@@ -144,7 +149,7 @@ function startStream(streamUrl, config, callback, autoplay) {
       }
     });
     video.onerror = function () {
-      console.log('[test] > video error, code :' + video.error.code);
+      console.log('[test] > FAIL: video error, code :' + video.error.code);
       callback({ code: 'video_error_' + video.error.code, logs: logString });
     };
     hls.loadSource(streamUrl);
