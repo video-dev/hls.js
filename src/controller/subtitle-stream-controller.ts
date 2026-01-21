@@ -11,12 +11,11 @@ import {
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
-import { alignMediaPlaylistByPDT } from '../utils/discontinuities';
+import { alignStream } from '../utils/discontinuities';
 import {
   getAesModeFromFullSegmentMethod,
   isFullSegmentEncryption,
 } from '../utils/encryption-methods-util';
-import { addSliding } from '../utils/level-helper';
 import { subtitleOptionsIdentical } from '../utils/media-option-attributes';
 import type { FragmentTracker } from './fragment-tracker';
 import type Hls from '../hls';
@@ -295,45 +294,38 @@ export class SubtitleStreamController
       },duration:${newDetails.totalduration}`,
     );
     this.mediaBuffer = this.mediaBufferTimeRanges;
+
+    const mainDetails = this.mainDetails;
     let sliding = 0;
     if (newDetails.live || track.details?.live) {
       if (newDetails.deltaUpdateFailed) {
         return;
       }
-      const mainDetails = this.mainDetails;
       if (!mainDetails) {
         this.startFragRequested = false;
         return;
       }
-      const mainSlidingStartFragment = mainDetails.fragments[0];
-      if (!track.details) {
-        if (newDetails.hasProgramDateTime && mainDetails.hasProgramDateTime) {
-          alignMediaPlaylistByPDT(newDetails, mainDetails);
-          sliding = newDetails.fragmentStart;
-        } else if (mainSlidingStartFragment) {
-          // line up live playlist with main so that fragments in range are loaded
-          sliding = mainSlidingStartFragment.start;
-          addSliding(newDetails, sliding);
-        }
-      } else {
+      if (track.details) {
         sliding = this.alignPlaylists(
           newDetails,
           track.details,
           this.levelLastLoaded?.details,
         );
-        if (sliding === 0 && mainSlidingStartFragment) {
-          // realign with main when there is no overlap with last refresh
-          sliding = mainSlidingStartFragment.start;
-          addSliding(newDetails, sliding);
-        }
       }
-      // compute start position if we are aligned with the main playlist
-      if (mainDetails && !this.startFragRequested) {
-        this.setStartPosition(mainDetails, sliding);
+      if (!newDetails.alignedSliding) {
+        // line up live playlist with main so that fragments in range are loaded
+        alignStream(mainDetails, newDetails, this);
+        sliding = newDetails.fragmentStart;
       }
     }
+
     track.details = newDetails;
     this.levelLastLoaded = track;
+
+    // compute start position if we are aligned with the main playlist
+    if (mainDetails && !this.startFragRequested) {
+      this.setStartPosition(mainDetails, sliding);
+    }
 
     if (trackId !== currentTrackId) {
       return;

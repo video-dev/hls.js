@@ -11,6 +11,7 @@ import {
   alignMediaPlaylistByPDT,
   shouldAlignOnDiscontinuities,
 } from '../../../src/utils/discontinuities';
+import { logger } from '../../../src/utils/logger';
 import type { MediaFragment } from '../../../src/loader/fragment';
 
 chai.use(sinonChai);
@@ -176,7 +177,7 @@ describe('discontinuities', function () {
       startCC: 0,
       endCC: 0,
     });
-    alignMediaPlaylistByPDT(lastLevel.details, refDetails);
+    alignMediaPlaylistByPDT(lastLevel.details, refDetails, logger);
     expect(
       lastLevel.details,
       `actual:\n\n${JSON.stringify(
@@ -312,11 +313,11 @@ describe('discontinuities', function () {
       startCC: 2,
       endCC: 4,
     });
-    alignMediaPlaylistByPDT(details, lastLevel.details as LevelDetails);
+    alignMediaPlaylistByPDT(details, lastLevel.details as LevelDetails, logger);
     expect(details).to.deep.equal(detailsExpected);
   });
 
-  it('adjusts level fragments without overlapping CC range but with programDateTime info', function () {
+  it('adjusts level fragments without overlapping CC range but with programDateTime info no more than one minute or the playlist duration apart', function () {
     const lastLevel = {
       details: objToLevelDetails({
         PTSKnown: true,
@@ -420,8 +421,12 @@ describe('discontinuities', function () {
       startCC: 2,
       endCC: 3,
     });
-    alignMediaPlaylistByPDT(details, lastLevel.details);
-    expect(detailsExpected).to.deep.equal(details, JSON.stringify(details));
+    alignMediaPlaylistByPDT(details, lastLevel.details, logger);
+
+    expect(detailsExpected).to.deep.equal(
+      details,
+      JSON.stringify(details, null, 2),
+    );
   });
 
   describe('alignDiscontinuities', function () {
@@ -435,7 +440,7 @@ describe('discontinuities', function () {
       const curDetails = objToLevelDetails({
         fragments: mockFrags.map(objToFragment),
       });
-      alignDiscontinuities(curDetails, prevDetails);
+      alignDiscontinuities(curDetails, prevDetails, logger);
       expect(curDetails).to.have.property('alignedSliding').which.is.true;
       expect(curDetails.fragments[0].start).to.equal(20);
     });
@@ -451,7 +456,7 @@ describe('discontinuities', function () {
       const curDetails = objToLevelDetails({
         fragments: mockFrags.map(objToFragment),
       });
-      alignDiscontinuities(curDetails, prevDetails);
+      alignDiscontinuities(curDetails, prevDetails, logger);
       expect(curDetails).to.have.property('alignedSliding').which.is.true;
       expect(curDetails.fragments[0].start).to.equal(20);
     });
@@ -471,7 +476,7 @@ describe('discontinuities', function () {
           { start: 8.5, startPTS: 4.5, endPTS: 12.5, duration: 4, cc: 3 },
         ].map(objToFragment),
       });
-      alignDiscontinuities(curDetails, prevDetails);
+      alignDiscontinuities(curDetails, prevDetails, logger);
       expect(curDetails).to.have.property('alignedSliding').which.is.true;
       expect(curDetails.fragments[0].start).to.equal(24);
     });
@@ -480,7 +485,11 @@ describe('discontinuities', function () {
       const curDetails = objToLevelDetails({
         fragments: mockFrags.map(objToFragment),
       });
-      alignDiscontinuities(curDetails, objToLevelDetails({ fragments: [] }));
+      alignDiscontinuities(
+        curDetails,
+        objToLevelDetails({ fragments: [] }),
+        logger,
+      );
       expect(curDetails).to.have.property('alignedSliding').which.is.false;
       expect(curDetails.fragments[0].start).to.equal(0);
     });
@@ -492,6 +501,7 @@ describe('discontinuities', function () {
       alignDiscontinuities(
         curDetails,
         objToLevelDetails({ fragments: [{ cc: 10 }].map(objToFragment) }),
+        logger,
       );
       expect(curDetails).to.have.property('alignedSliding').which.is.false;
       expect(curDetails.fragments[0].start).to.equal(0);
@@ -504,6 +514,7 @@ describe('discontinuities', function () {
       alignDiscontinuities(
         curDetails,
         objToLevelDetails({ fragments: [{ cc: 0 }].map(objToFragment) }),
+        logger,
       );
       expect(curDetails).to.have.property('alignedSliding').which.is.false;
     });
@@ -596,6 +607,10 @@ function objToLevelDetails(object: Partial<LevelDetails>): LevelDetails {
     details.startCC = details.fragments[0].cc;
     details.endCC = details.fragments[fragCount - 1].cc;
   }
+  details.totalduration = details.fragments.reduce(
+    (acc, { duration }) => acc + duration,
+    0,
+  );
   return details;
 }
 
