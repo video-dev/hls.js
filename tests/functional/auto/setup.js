@@ -165,7 +165,12 @@ async function testSmoothSwitch(url, config) {
       let playedInterval = -1;
       self.hls.once(self.Hls.Events.FRAG_CHANGED, function (eventName, data) {
         console.log(
-          '[test] > ' + eventName + ' frag.level: ' + data.frag.level
+          '[test] > ' +
+            eventName +
+            ' frag.level: ' +
+            data.frag.level +
+            ' @' +
+            video.currentTime
         );
         const highestLevel = self.hls.levels.length - 1;
         const level = self.hls.levels[data.frag.level];
