@@ -1795,7 +1795,7 @@ export default class BaseStreamController
     const firstLevelLoad = !previousDetails;
     const aligned = details.alignedSliding && Number.isFinite(slidingStart);
     if (firstLevelLoad || (!aligned && !slidingStart)) {
-      alignStream(switchDetails, details);
+      alignStream(switchDetails, details, this);
       const alignedSlidingStart = details.fragmentStart;
       this.log(
         `Live playlist sliding: ${alignedSlidingStart.toFixed(2)} start-sn: ${
