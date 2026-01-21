@@ -103,6 +103,8 @@ export default class BufferController extends Logger implements ComponentAPI {
   private lastVideoAppendEnd: number = 0;
   // Whether or not to use ManagedMediaSource API and append source element to media element.
   private appendSource: boolean;
+  // Track if sourceended event has fired
+  private sourceEnded: boolean = false;
   // Transferred MediaSource information used to detmerine if duration end endstream may be appended
   private transferData?: MediaAttachingData;
   // Directives used to override default MediaSource handling
@@ -1555,6 +1557,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   // Keep as arrow functions so that we can directly reference these functions directly as event listeners
   private _onMediaSourceOpen = (e?: Event) => {
     const { media, mediaSource } = this;
+    this.sourceEnded = false;
     if (e) {
       this.log('Media source opened');
     }
@@ -1590,6 +1593,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
   private _onMediaSourceEnded = () => {
     this.log('Media source ended');
+    this.sourceEnded = true;
   };
 
   private _onMediaEmptied = () => {
@@ -1628,8 +1632,20 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private onSBUpdateError(type: SourceBufferName, event: Event) {
+    const readyState = this.mediaSource?.readyState;
+
+    // https://bugs.webkit.org/show_bug.cgi?id=305712
+    // ManagedMediaSource bug: readyState shows "ended" but sourceended event never fired.
+    if (this.appendSource && readyState === 'ended' && !this.sourceEnded) {
+      this.warn(
+        `ManagedMediaSource readyState "ended" without sourceended event - triggering recovery`,
+      );
+      this.hls.recoverMediaError();
+      return;
+    }
+
     const error = new Error(
-      `${type} SourceBuffer error. MediaSource readyState: ${this.mediaSource?.readyState}`,
+      `${type} SourceBuffer error. MediaSource readyState: ${readyState}`,
     );
     this.error(`${error}`, event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
