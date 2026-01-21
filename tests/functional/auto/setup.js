@@ -522,9 +522,6 @@ describe(`Testing hls.js playback in ${browserConfig.name} ${browserConfig.versi
   const failedUrls = {};
 
   before(async function () {
-    // high timeout because sometimes getSession() takes a while
-    this.timeout(100000);
-
     const labelBranch = process.env.GITHUB_REF || 'unknown';
     const capabilities = {
       name: `hls.js@${labelBranch} on "${browserDescription}"`,
@@ -740,19 +737,19 @@ ${data.logs}
           it(
             `should "smooth switch" to highest level with playback advancing`,
             testSmoothSwitch.bind(null, url, config)
-          );
+          ).timeout(90000);
         }
 
         if (stream.live) {
           it(
             `should seek near the end and receive video seeked event`,
             testSeekOnLive.bind(null, url, config)
-          );
+          ).timeout(90000);
         } else if (!HlsjsLightBuild) {
           it(
             `should buffer up to maxBufferLength or video.duration`,
             testIdleBufferLength.bind(null, url, config)
-          );
+          ).timeout(60000);
           it(
             `should play ${stream.description}`,
             testIsPlayingVOD.bind(null, url, config)
@@ -761,7 +758,7 @@ ${data.logs}
           it(
             `should seek 3s from end and receive video ended event with 2 or less buffered ranges`,
             testSeekOnVOD.bind(null, url, config)
-          );
+          ).timeout(90000);
           // TODO: Seeking to or past VOD duration should result in the video ending
           // it(`should seek on end and receive video ended event`, testSeekEndVOD.bind(null, url));
         }
