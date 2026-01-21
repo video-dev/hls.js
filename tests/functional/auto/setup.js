@@ -16,6 +16,9 @@ const expect = chai.expect;
 const UA = process.env.UA || 'chrome';
 const UA_VERSION = process.env.UA_VERSION || 'latest';
 const HLSJS_TEST_BASE = process.env.HLSJS_TEST_BASE;
+const DEBUG = process.env.DEBUG
+  ? process.env.DEBUG !== 'false' && process.env.DEBUG !== '0'
+  : undefined;
 
 const browserConfig = {
   version: UA_VERSION,
@@ -288,6 +291,10 @@ async function testSeekOnVOD(url, config) {
               const currentTime = video.currentTime;
               const paused = video.paused;
               if (video.currentTime === 0 || paused) {
+                console.log(
+                  '[test] > FAIL ' +
+                    (paused ? 'paused' : 'currentTime = ' + video.currentTime)
+                );
                 video.onprogress = null;
                 callback({
                   code: 'paused',
@@ -328,7 +335,7 @@ async function testSeekOnVOD(url, config) {
             });
 
             console.log(
-              '[test] > Timed out while seeking ' + video.currentTime
+              '[test] > FAIL: Timed out while seeking ' + video.currentTime
             );
 
             callback({
@@ -415,17 +422,20 @@ async function testIsPlayingVOD(url, config) {
         const currentTime = video.currentTime;
         if (expectedPlaying) {
           self.setTimeout(function () {
+            const playing = currentTime !== video.currentTime;
             console.log(
-              '[test] > video expected playing. last currentTime/new currentTime=' +
+              '[test] > ' +
+                (playing ? '' : 'FAIL: video expected playing. ') +
+                'last currentTime/new currentTime=' +
                 currentTime +
                 '/' +
                 video.currentTime
             );
-            callback({ playing: currentTime !== video.currentTime });
+            callback({ playing: playing });
           }, 5000);
         } else {
           console.log(
-            '[test] > video not playing. paused/ended/buffered.length=' +
+            '[test] > FAIL: video not playing. paused/ended/buffered.length=' +
               video.paused +
               '/' +
               video.ended +
@@ -703,6 +713,9 @@ ${data.logs}
     .forEach(([name, stream], index) => {
       const url = stream.url;
       const config = stream.config || {};
+      if (DEBUG !== undefined) {
+        config.debug = DEBUG;
+      }
 
       config.preferManagedMediaSource = false;
       if (
