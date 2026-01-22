@@ -103,8 +103,6 @@ export default class BufferController extends Logger implements ComponentAPI {
   private lastVideoAppendEnd: number = 0;
   // Whether or not to use ManagedMediaSource API and append source element to media element.
   private appendSource: boolean;
-  // Track MediaSource ready state from events
-  private sourceReadyState: ReadyState | null = null;
   // Transferred MediaSource information used to detmerine if duration end endstream may be appended
   private transferData?: MediaAttachingData;
   // Directives used to override default MediaSource handling
@@ -290,7 +288,6 @@ export default class BufferController extends Logger implements ComponentAPI {
         this.overrides = data.overrides;
       }
       const ms = (this.mediaSource = data.mediaSource || new MediaSource());
-      this.sourceReadyState = ms.readyState;
       this.assignMediaSource(ms);
       if (transferringMedia) {
         this._objectUrl = media.src;
@@ -521,7 +518,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
       this.mediaSource = null;
       this._objectUrl = null;
-      this.sourceReadyState = null;
     }
 
     // Detach properly the MediaSource from the HTMLMediaElement as
@@ -1559,7 +1555,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   // Keep as arrow functions so that we can directly reference these functions directly as event listeners
   private _onMediaSourceOpen = (e?: Event) => {
     const { media, mediaSource } = this;
-    this.sourceReadyState = 'open';
     if (e) {
       this.log('Media source opened');
     }
@@ -1582,7 +1577,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
   private _onMediaSourceClose = () => {
     this.log('Media source closed');
-    this.sourceReadyState = 'closed';
     // Safari/WebKit bug: MediaSource becomes invalid after bfcache restoration.
     // When the user navigates back, the MediaSource is in a 'closed' state and cannot be used.
     // If sourceclose fires while media is still attached, trigger recovery to reattach media.
@@ -1596,7 +1590,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
   private _onMediaSourceEnded = () => {
     this.log('Media source ended');
-    this.sourceReadyState = 'ended';
   };
 
   private _onMediaEmptied = () => {
@@ -1638,14 +1631,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const readyState = this.mediaSource?.readyState;
 
     // https://bugs.webkit.org/show_bug.cgi?id=305712
-    // ManagedMediaSource bug: readyState shows "ended" but sourceended event never fired.
-    if (
-      this.appendSource &&
-      readyState === 'ended' &&
-      this.sourceReadyState !== 'ended'
-    ) {
+    // MediaSource readyState ended during SourceBuffer error - recover early.
+    if (readyState === 'ended') {
       this.warn(
-        `ManagedMediaSource readyState "ended" without sourceended event - triggering recovery`,
+        `MediaSource readyState "ended" during SourceBuffer error - triggering recovery`,
       );
       this.hls.recoverMediaError();
       return;
