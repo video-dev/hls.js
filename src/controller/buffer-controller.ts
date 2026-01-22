@@ -1628,8 +1628,20 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private onSBUpdateError(type: SourceBufferName, event: Event) {
+    const readyState = this.mediaSource?.readyState;
+
+    // https://bugs.webkit.org/show_bug.cgi?id=305712
+    // MediaSource readyState ended during SourceBuffer error - recover early.
+    if (readyState === 'ended') {
+      this.warn(
+        `MediaSource readyState "ended" during SourceBuffer error - triggering recovery`,
+      );
+      this.hls.recoverMediaError();
+      return;
+    }
+
     const error = new Error(
-      `${type} SourceBuffer error. MediaSource readyState: ${this.mediaSource?.readyState}`,
+      `${type} SourceBuffer error. MediaSource readyState: ${readyState}`,
     );
     this.error(`${error}`, event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
