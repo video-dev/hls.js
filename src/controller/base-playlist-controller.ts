@@ -173,12 +173,6 @@ export default class BasePlaylistController
       const levelOrTrack = 'levelInfo' in data ? data.levelInfo : data.track;
       details.reloaded(previousDetails);
 
-      if (details.misses > 0) {
-        this.warn(
-          `levelOrTrack (${levelOrTrack.id}) is unchanged after reload. Unchanged reloads: ${details.misses}`,
-        );
-      }
-
       if (details.misses >= this.hls.config.liveMaxUnchangedPlaylistRefresh) {
         const error = new Error(
           `levelOrTrack (${levelOrTrack.id}) hits max allowed unchanged reloads.`,
