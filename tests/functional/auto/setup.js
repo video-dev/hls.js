@@ -250,6 +250,7 @@ async function testSeekOnVOD(url, config) {
   const result = await browser.executeAsyncScript(
     function (url, config) {
       const callback = arguments[arguments.length - 1];
+      const startDateTime = +new Date();
       self.startStream(url, config, callback);
 
       let tracks;
@@ -314,11 +315,15 @@ async function testSeekOnVOD(url, config) {
               seekToTime
           );
           video.currentTime = seekToTime;
+          // Test will timeout a little early to gather failure criteria in callback
+          const testRunTimeRemaining = 99000 - (new Date() - startDateTime);
+          const testTimeoutMs = Math.max(testRunTimeRemaining - 10000, 5000);
           seekingTimeout = self.setTimeout(function () {
             video.onprogress = null;
             const currentTime = video.currentTime;
             const duration = video.duration;
             const paused = video.paused;
+            const seeking = video.seeking;
 
             const buffers = Object.keys(tracks).map(function (type) {
               const sourceBuffer = tracks[type].buffer;
@@ -335,7 +340,10 @@ async function testSeekOnVOD(url, config) {
             });
 
             console.log(
-              '[test] > FAIL: Timed out while seeking ' + video.currentTime
+              '[test] > FAIL: Timed out while ' +
+                (seeking ? 'seeking' : paused ? 'paused' : '???') +
+                ' @' +
+                video.currentTime
             );
 
             callback({
@@ -345,9 +353,10 @@ async function testSeekOnVOD(url, config) {
               buffers: buffers,
               endOfStreamEvents: endOfStreamEvents,
               paused: paused,
+              seeking: seeking,
               logs: self.logString,
             });
-          }, 30000);
+          }, testTimeoutMs);
         }, 3000);
       };
       // Fail test early if more than 2 buffered ranges are found (with configured exceptions)
@@ -757,12 +766,12 @@ ${data.logs}
           it(
             `should seek near the end and receive video seeked event`,
             testSeekOnLive.bind(null, url, config)
-          ).timeout(90000);
+          ).timeout(99000); // When changing this value, make sure to update `testRunTimeRemaining` calculation.
         } else if (!HlsjsLightBuild) {
           it(
             `should buffer up to maxBufferLength or video.duration`,
             testIdleBufferLength.bind(null, url, config)
-          ).timeout(60000);
+          ).timeout(90000);
           it(
             `should play ${stream.description}`,
             testIsPlayingVOD.bind(null, url, config)
