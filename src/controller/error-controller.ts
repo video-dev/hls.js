@@ -23,10 +23,10 @@ import type { HdcpLevel, Level } from '../types/level';
 
 export const enum NetworkErrorAction {
   DoNothing = 0,
-  SendEndCallback = 1, // Reserved for future use
+  SendEndCallback = 1,
   SendAlternateToPenaltyBox = 2,
-  RemoveAlternatePermanently = 3, // Reserved for future use
-  InsertDiscontinuity = 4, // Reserved for future use
+  RemoveAlternatePermanently = 3,
+  InsertDiscontinuity = 4,
   RetryRequest = 5,
 }
 

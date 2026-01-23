@@ -4200,13 +4200,13 @@ export const enum NetworkErrorAction {
     // (undocumented)
     DoNothing = 0,
     // (undocumented)
-    InsertDiscontinuity = 4,// Reserved for future use
+    InsertDiscontinuity = 4,
     // (undocumented)
     RemoveAlternatePermanently = 3,
     // (undocumented)
-    RetryRequest = 5,// Reserved for future use
+    RetryRequest = 5,
     // (undocumented)
-    SendAlternateToPenaltyBox = 2,// Reserved for future use
+    SendAlternateToPenaltyBox = 2,
     // (undocumented)
     SendEndCallback = 1
 }
