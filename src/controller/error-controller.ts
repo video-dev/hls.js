@@ -161,7 +161,7 @@ export default class ErrorController
         data.errorAction.action = NetworkErrorAction.SendAlternateToPenaltyBox;
         return;
       }
-      case ErrorDetails.LEVEL_UNCHANGED_ERROR:
+      case ErrorDetails.PLAYLIST_UNCHANGED_ERROR:
       case ErrorDetails.LEVEL_EMPTY_ERROR:
       case ErrorDetails.LEVEL_PARSING_ERROR:
         {

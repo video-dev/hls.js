@@ -187,7 +187,7 @@ export default class BasePlaylistController
         const { networkDetails } = data;
         this.hls.trigger(Events.ERROR, {
           type: ErrorTypes.NETWORK_ERROR,
-          details: ErrorDetails.LEVEL_UNCHANGED_ERROR,
+          details: ErrorDetails.PLAYLIST_UNCHANGED_ERROR,
           fatal: false,
           url: details.url,
           error,
