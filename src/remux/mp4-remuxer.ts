@@ -427,7 +427,11 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       if (computePTSDTS) {
         trackId = audioTrack.id;
         timescale = audioTrack.inputTimeScale;
-        if (!_initPTS || timescale !== _initPTS.timescale) {
+        if (
+          !_initPTS ||
+          timescale !== _initPTS.timescale ||
+          audioSamples[0].pts < _initPTS.baseTime
+        ) {
           // remember first PTS of this demuxing context. for audio, PTS = DTS
           initPTS = initDTS = this.computeInitPts(
             audioSamples[0].pts,
@@ -458,8 +462,13 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       if (computePTSDTS) {
         trackId = videoTrack.id;
         timescale = videoTrack.inputTimeScale;
-        if (!_initPTS || timescale !== _initPTS.timescale) {
-          const basePTS = this.getVideoStartPts(videoSamples);
+        const basePTS = this.getVideoStartPts(videoSamples);
+        if (
+          !_initPTS ||
+          timescale !== _initPTS.timescale ||
+          Number.isFinite(initPTS) ||
+          basePTS < _initPTS.baseTime
+        ) {
           const baseDTS = normalizePts(videoSamples[0].dts, basePTS);
           const videoInitDTS = this.computeInitPts(
             baseDTS,
