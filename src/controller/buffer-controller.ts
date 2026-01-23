@@ -1,9 +1,5 @@
 import BufferOperationQueue from './buffer-operation-queue';
-import {
-  createDoNothingErrorAction,
-  ErrorActionFlags,
-  NetworkErrorAction,
-} from './error-controller';
+import { createDoNothingErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { ElementaryStreamTypes } from '../loader/fragment';
@@ -245,7 +241,6 @@ export default class BufferController extends Logger implements ComponentAPI {
     ];
     this.tracks = tracks;
     this.resetQueue();
-    this.resetAppendErrors();
     this.lastMpegAudioChunk = this.blockedAudioAppend = null;
     this.lastVideoAppendEnd = 0;
   }
@@ -253,6 +248,7 @@ export default class BufferController extends Logger implements ComponentAPI {
   private onManifestLoading() {
     this.bufferCodecEventsTotal = 0;
     this.details = null;
+    this.resetAppendErrors();
   }
 
   private onManifestParsed(
@@ -951,6 +947,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           ) {
             event.fatal = true;
           }
+          const readyState = this.mediaSource?.readyState;
+          if (readyState === 'ended' || readyState === 'closed') {
+            // "ended" readyState on cold start https://bugs.webkit.org/show_bug.cgi?id=305712
+            this.warn(
+              `MediaSource readyState "${readyState}" during SourceBuffer error${event.fatal ? '' : ' - triggering recovery'}`,
+            );
+            event.details = ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET;
+          }
         }
         this.hls.trigger(Events.ERROR, event);
       },
@@ -1593,10 +1597,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
         fatal: false,
         error: new Error('MediaSource closed while media is still attached'),
-        errorAction: {
-          action: NetworkErrorAction.ResetMediaSource,
-          flags: ErrorActionFlags.None,
-        },
       });
     }
   };
@@ -1642,29 +1642,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
   private onSBUpdateError(type: SourceBufferName, event: Event) {
     const readyState = this.mediaSource?.readyState;
-
-    // https://bugs.webkit.org/show_bug.cgi?id=305712
-    // MediaSource readyState ended during SourceBuffer error - recover early.
-    if (readyState === 'ended') {
-      this.warn(
-        `MediaSource readyState "ended" during SourceBuffer error - triggering recovery`,
-      );
-      this.hls.trigger(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
-        fatal: false,
-        sourceBufferName: type,
-        error: new Error(
-          `${type} SourceBuffer error. MediaSource readyState: ended`,
-        ),
-        errorAction: {
-          action: NetworkErrorAction.ResetMediaSource,
-          flags: ErrorActionFlags.None,
-        },
-      });
-      return;
-    }
-
     const error = new Error(
       `${type} SourceBuffer error. MediaSource readyState: ${readyState}`,
     );

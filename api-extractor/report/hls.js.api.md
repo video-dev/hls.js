@@ -1246,6 +1246,8 @@ export const enum ErrorActionFlags {
     // (undocumented)
     None = 0,
     // (undocumented)
+    ResetMediaSource = 16,
+    // (undocumented)
     SwitchToSDR = 8
 }
 
@@ -4202,11 +4204,9 @@ export const enum NetworkErrorAction {
     // (undocumented)
     RemoveAlternatePermanently = 3,
     // (undocumented)
-    ResetMediaSource = 6,// Reserved for future use
-    // (undocumented)
     RetryRequest = 5,// Reserved for future use
     // (undocumented)
-    SendAlternateToPenaltyBox = 2,
+    SendAlternateToPenaltyBox = 2,// Reserved for future use
     // (undocumented)
     SendEndCallback = 1
 }
