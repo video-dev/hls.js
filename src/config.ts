@@ -671,7 +671,7 @@ export function mergeConfig(
     userConfig.liveMaxUnchangedPlaylistRefresh < 1
   ) {
     throw new Error(
-      'Illegal hls.js config: "liveMaxUnchangedPlaylistRefresh" must be at least 1 or Infinity',
+      'Illegal hls.js config: "liveMaxUnchangedPlaylistRefresh" must be > 0',
     );
   }
 

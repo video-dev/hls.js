@@ -9,13 +9,13 @@ describe('Config Validation', function () {
       expect(() => {
         new Hls({ liveMaxUnchangedPlaylistRefresh: 0 });
       }).to.throw(
-        'Illegal hls.js config: "liveMaxUnchangedPlaylistRefresh" must be at least 1 or Infinity',
+        'Illegal hls.js config: "liveMaxUnchangedPlaylistRefresh" must be > 0',
       );
 
       expect(() => {
         new Hls({ liveMaxUnchangedPlaylistRefresh: -1 });
       }).to.throw(
-        'Illegal hls.js config: "liveMaxUnchangedPlaylistRefresh" must be at least 1 or Infinity',
+        'Illegal hls.js config: "liveMaxUnchangedPlaylistRefresh" must be > 0',
       );
     });
 
