@@ -666,6 +666,15 @@ export function mergeConfig(
     );
   }
 
+  if (
+    userConfig.liveMaxUnchangedPlaylistRefresh !== undefined &&
+    userConfig.liveMaxUnchangedPlaylistRefresh < 1
+  ) {
+    throw new Error(
+      'Illegal hls.js config: "liveMaxUnchangedPlaylistRefresh" must be at least 1 or Infinity',
+    );
+  }
+
   const defaultsCopy = deepCpy(defaultConfig);
 
   // Backwards compatibility with deprecated config values
