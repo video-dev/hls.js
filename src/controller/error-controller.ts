@@ -399,16 +399,6 @@ export default class ErrorController
           levels[candidate].loadError === 0
         ) {
           const levelCandidate = levels[candidate];
-          const levelDetails = levelCandidate.details;
-
-          // Skip level switch if it is stale and hit max unchanged refreshes
-          if (
-            levelDetails &&
-            levelDetails.misses >=
-              this.hls.config.liveMaxUnchangedPlaylistRefresh
-          ) {
-            continue;
-          }
 
           // Skip level switch if GAP tag is found in next level at same position
           if (
