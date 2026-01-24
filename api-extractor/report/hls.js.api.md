@@ -1387,8 +1387,6 @@ export enum ErrorDetails {
     // (undocumented)
     LEVEL_SWITCH_ERROR = "levelSwitchError",
     // (undocumented)
-    LEVEL_UNCHANGED_ERROR = "levelUnchangedError",
-    // (undocumented)
     MANIFEST_INCOMPATIBLE_CODECS_ERROR = "manifestIncompatibleCodecsError",
     // (undocumented)
     MANIFEST_LOAD_ERROR = "manifestLoadError",
@@ -1396,6 +1394,8 @@ export enum ErrorDetails {
     MANIFEST_LOAD_TIMEOUT = "manifestLoadTimeOut",
     // (undocumented)
     MANIFEST_PARSING_ERROR = "manifestParsingError",
+    // (undocumented)
+    PLAYLIST_UNCHANGED_ERROR = "playlistUnchangedError",
     // (undocumented)
     REMUX_ALLOC_ERROR = "remuxAllocError",
     // (undocumented)
@@ -3402,6 +3402,8 @@ export class LevelKey implements DecryptData {
 // @public (undocumented)
 export interface LevelLoadedData {
     // (undocumented)
+    context?: PlaylistLoaderContext;
+    // (undocumented)
     deliveryDirectives: HlsUrlParameters | null;
     // (undocumented)
     details: LevelDetails;
@@ -4860,6 +4862,8 @@ export interface Track extends BaseTrack {
 //
 // @public (undocumented)
 export interface TrackLoadedData {
+    // (undocumented)
+    context?: PlaylistLoaderContext;
     // (undocumented)
     deliveryDirectives: HlsUrlParameters | null;
     // (undocumented)
