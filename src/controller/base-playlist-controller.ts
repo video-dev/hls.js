@@ -178,7 +178,7 @@ export default class BasePlaylistController
           `levelOrTrack (${levelOrTrack.id}) hits max allowed unchanged reloads.`,
         );
         this.warn(error);
-        const { networkDetails } = data;
+        const { networkDetails, context } = data;
         this.hls.trigger(Events.ERROR, {
           type: ErrorTypes.NETWORK_ERROR,
           details: ErrorDetails.PLAYLIST_UNCHANGED_ERROR,
@@ -186,8 +186,9 @@ export default class BasePlaylistController
           url: details.url,
           error,
           reason: error.message,
-          level: (data as any).level || undefined,
+          level: (data as LevelLoadedData).level ?? undefined,
           parent: details.fragments[0]?.type,
+          context,
           networkDetails,
           stats,
         });
