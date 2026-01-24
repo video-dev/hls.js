@@ -827,9 +827,15 @@ The default value is `1`, which disables playback rate adjustment. Set `maxLiveS
 
 ### `liveMaxUnchangedPlaylistRefresh`
 
-(default: `3`)
+(default: `Infinity`)
 
-Override max allowed live unchanged refreshes until playlist is considered stale.
+Maximum number of consecutive unchanged playlist reloads before triggering a `PLAYLIST_UNCHANGED_ERROR`. Must be a positive integer (>= 1) or `Infinity` (disabled).
+
+When a live playlist (main level, audio track, or subtitle track) fails to update for this many consecutive reloads, a non-fatal error is triggered and hls.js attempts to switch to an alternate level. If no alternate level is available, the error becomes fatal.
+
+For audio and subtitle track errors, hls.js will attempt to switch to a level with a different audio/subtitle group to find a working alternative.
+
+Set to `Infinity` to disable this behavior (default).
 
 ### `timelineOffset`
 
