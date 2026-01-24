@@ -2,7 +2,7 @@ import BufferOperationQueue from './buffer-operation-queue';
 import { createDoNothingErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { DEFAULT_TARGET_DURATION } from '../loader/level-details';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -113,6 +113,7 @@ export default class BufferController extends Logger implements ComponentAPI {
     video: 0,
     audiovideo: 0,
   };
+  private appendError?: ErrorData;
   // Record of required or created buffers by type. SourceBuffer is stored in Track.buffer once created.
   private tracks: SourceBufferTrackSet = {};
   // Array of SourceBuffer type and SourceBuffer (or null). One entry per TrackSet in this.tracks.
@@ -880,12 +881,26 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             timeRanges[type] = BufferHelper.getBuffered(sb);
           }
         });
-        this.appendErrors[type] = 0;
-        if (type === 'audio' || type === 'video') {
-          this.appendErrors.audiovideo = 0;
-        } else {
-          this.appendErrors.audio = 0;
-          this.appendErrors.video = 0;
+        const { appendErrors } = this;
+        const appendErrorType = this.appendError?.sourceBufferName;
+        if (isMediaFragment(frag)) {
+          // Only clear error on successful media fragment append. Init segments may complete without error for unsupported media.
+          appendErrors[type] = 0;
+          if (type === appendErrorType) {
+            this.appendError = undefined;
+          }
+          if (type === 'audio' || type === 'video') {
+            appendErrors.audiovideo = 0;
+            if (appendErrorType === 'audiovideo') {
+              this.appendError = undefined;
+            }
+          } else {
+            appendErrors.audio = 0;
+            appendErrors.video = 0;
+            if (appendErrorType !== 'audiovideo') {
+              this.appendError = undefined;
+            }
+          }
         }
         this.hls.trigger(Events.BUFFER_APPENDED, {
           type,
@@ -956,6 +971,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             event.details = ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET;
           }
         }
+        this.appendError = event;
         this.hls.trigger(Events.ERROR, event);
       },
     };
@@ -1171,6 +1187,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       video: 0,
       audiovideo: 0,
     };
+    this.appendError = undefined;
   }
 
   private trimBuffers() {
@@ -1592,12 +1609,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       this.warn(
         'MediaSource closed while media attached - triggering recovery',
       );
-      this.hls.trigger(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
-        fatal: false,
-        error: new Error('MediaSource closed while media is still attached'),
-      });
+      this.hls.trigger(
+        Events.ERROR,
+        Object.assign({ fatal: false }, this.appendError, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+          error: new Error('MediaSource closed while media is still attached'),
+        }),
+      );
     }
   };
 
