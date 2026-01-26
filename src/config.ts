@@ -668,15 +668,16 @@ export function mergeConfig(
   }
 
   if (userConfig.liveMaxUnchangedPlaylistRefresh !== undefined) {
+    const liveMaxUnchangedPlaylistRefresh = userConfig.liveMaxUnchangedPlaylistRefresh;
     const clampedValue = clamp(
-      userConfig.liveMaxUnchangedPlaylistRefresh,
+      liveMaxUnchangedPlaylistRefresh,
       2,
       Infinity,
     );
 
-    if (clampedValue !== userConfig.liveMaxUnchangedPlaylistRefresh) {
+    if (clampedValue !== liveMaxUnchangedPlaylistRefresh) {
       logger.warn(
-        `hls.js config: "liveMaxUnchangedPlaylistRefresh" clamped from ${userConfig.liveMaxUnchangedPlaylistRefresh} to ${clampedValue}.`
+        `hls.js config: "liveMaxUnchangedPlaylistRefresh" clamped from ${liveMaxUnchangedPlaylistRefresh} to ${clampedValue}.`
       );
     }
     userConfig.liveMaxUnchangedPlaylistRefresh = clampedValue;
