@@ -676,8 +676,7 @@ export function mergeConfig(
 
     if (clampedValue !== userConfig.liveMaxUnchangedPlaylistRefresh) {
       logger.warn(
-        `hls.js config: "liveMaxUnchangedPlaylistRefresh" clamped from ${userConfig.liveMaxUnchangedPlaylistRefresh} to ${clampedValue}. ` +
-          'Valid value should be in range [2, Infinity]. See https://github.com/video-dev/hls.js/blob/master/docs/API.md#livemaxunchangedplaylistrefresh',
+        `hls.js config: "liveMaxUnchangedPlaylistRefresh" clamped from ${userConfig.liveMaxUnchangedPlaylistRefresh} to ${clampedValue}.`
       );
     }
     userConfig.liveMaxUnchangedPlaylistRefresh = clampedValue;
