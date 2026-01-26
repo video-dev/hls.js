@@ -829,13 +829,17 @@ The default value is `1`, which disables playback rate adjustment. Set `maxLiveS
 
 (default: `Infinity`)
 
-Maximum number of consecutive unchanged playlist reloads before triggering a `PLAYLIST_UNCHANGED_ERROR`. Must be a positive integer (>= 1) or `Infinity` (disabled).
+Maximum number of consecutive unchanged playlist reloads before triggering a `PLAYLIST_UNCHANGED_ERROR`.
+
+**Valid value must be in range:** `[2, Infinity]`
+
+Values less than 2 will be automatically clamped to 2 with a warning message. Setting the value to `Infinity` disables this feature (default behavior).
 
 When a live playlist (main level, audio track, or subtitle track) fails to update for this many consecutive reloads, a non-fatal error is triggered and hls.js attempts to switch to an alternate level. If no alternate level is available, the error becomes fatal.
 
 For audio and subtitle track errors, hls.js will attempt to switch to a level with a different audio/subtitle group to find a working alternative.
 
-Set to `Infinity` to disable this behavior (default).
+**Note:** The minimum value of 2 ensures at least one retry within 1/2 target duration before triggering the error, providing reasonable tolerance for temporary playlist update delays.
 
 ### `timelineOffset`
 

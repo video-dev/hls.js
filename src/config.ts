@@ -15,6 +15,7 @@ import { TimelineController } from './controller/timeline-controller';
 import Cues from './utils/cues';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
+import { clamp } from './utils/number';
 import { stringify } from './utils/safe-json-stringify';
 import XhrLoader from './utils/xhr-loader';
 import type { MediaKeySessionContext } from './controller/eme-controller';
@@ -666,13 +667,20 @@ export function mergeConfig(
     );
   }
 
-  if (
-    userConfig.liveMaxUnchangedPlaylistRefresh !== undefined &&
-    userConfig.liveMaxUnchangedPlaylistRefresh < 1
-  ) {
-    throw new Error(
-      'Illegal hls.js config: "liveMaxUnchangedPlaylistRefresh" must be > 0',
+  if (userConfig.liveMaxUnchangedPlaylistRefresh !== undefined) {
+    const clampedValue = clamp(
+      userConfig.liveMaxUnchangedPlaylistRefresh,
+      2,
+      Infinity,
     );
+
+    if (clampedValue !== userConfig.liveMaxUnchangedPlaylistRefresh) {
+      logger.warn(
+        `hls.js config: "liveMaxUnchangedPlaylistRefresh" clamped from ${userConfig.liveMaxUnchangedPlaylistRefresh} to ${clampedValue}. ` +
+          'Valid value should be in range [2, Infinity]. See https://github.com/video-dev/hls.js/blob/master/docs/API.md#livemaxunchangedplaylistrefresh',
+      );
+    }
+    userConfig.liveMaxUnchangedPlaylistRefresh = clampedValue;
   }
 
   const defaultsCopy = deepCpy(defaultConfig);
