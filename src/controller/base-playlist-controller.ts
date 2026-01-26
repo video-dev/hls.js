@@ -173,7 +173,7 @@ export default class BasePlaylistController
       const levelOrTrack = 'levelInfo' in data ? data.levelInfo : data.track;
       details.reloaded(previousDetails);
 
-      // TODO: consider a separate flow for low-latency mode
+      // TODO: consider a separate flow for low-latency blocking reload requests with delivery directives
       if (details.misses >= this.hls.config.liveMaxUnchangedPlaylistRefresh) {
         const error = new Error(
           `levelOrTrack (${levelOrTrack.id}) hits max allowed unchanged reloads.`,
