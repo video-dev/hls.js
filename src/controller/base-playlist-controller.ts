@@ -173,6 +173,7 @@ export default class BasePlaylistController
       const levelOrTrack = 'levelInfo' in data ? data.levelInfo : data.track;
       details.reloaded(previousDetails);
 
+      // TODO: This should be treated mainly for normal mode. We should create a separate configuration for low-latency mode and define a criteria when we want to downgrade to normal mode and use this configuration instead
       if (details.misses >= this.hls.config.liveMaxUnchangedPlaylistRefresh) {
         const error = new Error(
           `levelOrTrack (${levelOrTrack.id}) hits max allowed unchanged reloads.`,
