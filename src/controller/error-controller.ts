@@ -525,15 +525,19 @@ export default class ErrorController
         'HDCP-LEVEL'
       ];
       errorAction.hdcpLevel = restrictedHdcpLevel;
-      if (restrictedHdcpLevel === 'NONE') {
-        this.warn(`HDCP policy resticted output with HDCP-LEVEL=NONE`);
-      } else if (restrictedHdcpLevel) {
+      const restrictedOutputErrorWhileNoneDeclared =
+        restrictedHdcpLevel === 'NONE';
+      if (restrictedHdcpLevel && !restrictedOutputErrorWhileNoneDeclared) {
         hls.maxHdcpLevel =
           HdcpLevels[HdcpLevels.indexOf(restrictedHdcpLevel) - 1];
         errorAction.resolved = true;
         this.warn(
           `Restricting playback to HDCP-LEVEL of "${hls.maxHdcpLevel}" or lower`,
         );
+      } else {
+        if (restrictedOutputErrorWhileNoneDeclared) {
+          this.warn(`HDCP policy resticted output with HDCP-LEVEL=NONE`);
+        }
         // Move alternates matching key when no HDCP-LEVEL attribute is found
         errorAction.flags |= ErrorActionFlags.MoveAllAlternatesMatchingKey;
       }
