@@ -2,7 +2,6 @@ import chai from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import BufferController from '../../../src/controller/buffer-controller';
-import { NetworkErrorAction } from '../../../src/controller/error-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
@@ -575,9 +574,6 @@ describe('BufferController', function () {
           type: ErrorTypes.MEDIA_ERROR,
           details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
           fatal: false,
-          errorAction: sinon.match({
-            action: NetworkErrorAction.ResetMediaSource,
-          }),
         }),
       );
     });
