@@ -213,6 +213,7 @@ export interface TrackLoadedData {
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
   track: MediaPlaylist;
+  context?: PlaylistLoaderContext;
 }
 
 export interface LevelLoadedData {
@@ -224,6 +225,7 @@ export interface LevelLoadedData {
   stats: LoaderStats;
   deliveryDirectives: HlsUrlParameters | null;
   withoutMultiVariant?: boolean;
+  context?: PlaylistLoaderContext;
 }
 
 export interface LevelUpdatedData {

@@ -84,7 +84,7 @@ export class LevelDetails {
       partSnDiff > 0 ||
       (partSnDiff === 0 && partIndexDiff > 0);
     if (this.updated || this.advanced) {
-      this.misses = Math.floor(previous.misses * 0.6);
+      this.misses = 0;
     } else {
       this.misses = previous.misses + 1;
     }

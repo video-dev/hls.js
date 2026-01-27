@@ -35,6 +35,8 @@ export enum ErrorDetails {
   MANIFEST_INCOMPATIBLE_CODECS_ERROR = 'manifestIncompatibleCodecsError',
   // Identifier for a level which contains no fragments - data: { url: faulty URL, reason: "no fragments found in level", level: index of the bad level }
   LEVEL_EMPTY_ERROR = 'levelEmptyError',
+  // Identifier for a live level which hits N (configured value) unchanged refreshes - data: { url : faulty URL, response : { code: error code, text: error text }}
+  PLAYLIST_UNCHANGED_ERROR = 'playlistUnchangedError',
   // Identifier for a level load error - data: { url : faulty URL, response : { code: error code, text: error text }}
   LEVEL_LOAD_ERROR = 'levelLoadError',
   // Identifier for a level load timeout - data: { url : faulty URL, response : { code: error code, text: error text }}

@@ -800,6 +800,7 @@ class PlaylistLoader implements NetworkComponentAPI {
           networkDetails,
           deliveryDirectives,
           withoutMultiVariant: type === PlaylistContextType.MANIFEST,
+          context,
         });
         break;
       case PlaylistContextType.AUDIO_TRACK:
@@ -811,6 +812,7 @@ class PlaylistLoader implements NetworkComponentAPI {
           stats,
           networkDetails,
           deliveryDirectives,
+          context,
         });
         break;
       case PlaylistContextType.SUBTITLE_TRACK:
@@ -822,6 +824,7 @@ class PlaylistLoader implements NetworkComponentAPI {
           stats,
           networkDetails,
           deliveryDirectives,
+          context,
         });
         break;
     }

@@ -412,6 +412,173 @@ describe('ErrorController Integration Tests', function () {
     });
   });
 
+  describe('Live Playlist Unchanged Error Handling', function () {
+    it('PLAYLIST_UNCHANGED_ERROR is triggered after max unchanged reloads and switches level', function () {
+      (hls.config as any).liveMaxUnchangedPlaylistRefresh = 2;
+
+      server.respondWith('liveMultivariant.m3u8', [
+        200,
+        {},
+        `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=200000,RESOLUTION=1280x720
+live-mid.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=100000,RESOLUTION=480x270
+live-low.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=300000,RESOLUTION=1920x1080
+live-high.m3u8`,
+      ]);
+
+      // Live playlist that won't change (same EXT-X-MEDIA-SEQUENCE)
+      const livePlaylist = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:100
+#EXTINF:6,
+segment100.ts
+#EXTINF:6,
+segment101.ts`;
+
+      server.respondWith(/live-.*\.m3u8/, [200, {}, livePlaylist]);
+
+      hls.loadSource('liveMultivariant.m3u8');
+
+      return new Promise<ErrorData>((resolve) => {
+        hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
+        hls.on(Events.ERROR, (event, data) => {
+          if (data.details === ErrorDetails.PLAYLIST_UNCHANGED_ERROR) {
+            resolve(data);
+          }
+        });
+        hls.on(Events.LEVEL_LOADED, () => {
+          // Advance time to trigger playlist refresh (targetduration * 1000)
+          timers.tick(6000);
+        });
+        server.respond();
+      }).then((data: ErrorData) => {
+        expect(data.details).to.equal(ErrorDetails.PLAYLIST_UNCHANGED_ERROR);
+        expect(data.fatal).to.equal(false, 'Error should not be fatal');
+        expect(data.error.message).to.include(
+          'hits max allowed unchanged reloads',
+        );
+      });
+    });
+
+    it('PLAYLIST_UNCHANGED_ERROR becomes fatal when no alternate levels are available', function () {
+      (hls.config as any).liveMaxUnchangedPlaylistRefresh = 2;
+
+      server.respondWith('singleLevelMultivariant.m3u8', [
+        200,
+        {},
+        `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=200000,RESOLUTION=1280x720
+single-live.m3u8`,
+      ]);
+
+      // Live playlist that won't change (same EXT-X-MEDIA-SEQUENCE)
+      const livePlaylist = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:100
+#EXTINF:6,
+segment100.ts
+#EXTINF:6,
+segment101.ts`;
+
+      server.respondWith(/single-live\.m3u8/, [200, {}, livePlaylist]);
+
+      hls.loadSource('singleLevelMultivariant.m3u8');
+
+      return new Promise<ErrorData>((resolve) => {
+        hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
+        hls.on(Events.ERROR, (event, data) => {
+          if (data.details === ErrorDetails.PLAYLIST_UNCHANGED_ERROR) {
+            resolve(data);
+          }
+        });
+        hls.on(Events.LEVEL_LOADED, () => {
+          // Advance time to trigger playlist refresh
+          timers.tick(6000);
+        });
+        server.respond();
+      }).then((data: ErrorData) => {
+        expect(data.details).to.equal(ErrorDetails.PLAYLIST_UNCHANGED_ERROR);
+        expect(data.fatal).to.equal(
+          true,
+          'Error should be fatal with no alternates',
+        );
+        expect(data.error.message).to.include(
+          'hits max allowed unchanged reloads',
+        );
+        hls.stopLoad.should.have.been.called;
+      });
+    });
+
+    it('PLAYLIST_UNCHANGED_ERROR for audio track triggers level switch', function () {
+      (hls.config as any).liveMaxUnchangedPlaylistRefresh = 2;
+
+      server.respondWith('liveWithAudio.m3u8', [
+        200,
+        {},
+        `#EXTM3U
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio-en",NAME="English",URI="audio-en.m3u8"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio-es",NAME="Spanish",URI="audio-es.m3u8"
+#EXT-X-STREAM-INF:BANDWIDTH=200000,RESOLUTION=1280x720,AUDIO="audio-en"
+video-mid.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=100000,RESOLUTION=480x270,AUDIO="audio-es"
+video-low.m3u8`,
+      ]);
+
+      // Live video playlist that advances normally
+      const liveVideoPlaylist = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:100
+#EXTINF:6,
+video100.ts
+#EXTINF:6,
+video101.ts`;
+
+      // Live playlist that won't change (same EXT-X-MEDIA-SEQUENCE)
+      const liveAudioPlaylist = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:100
+#EXTINF:6,
+audio100.ts
+#EXTINF:6,
+audio101.ts`;
+
+      server.respondWith(/video-.*\.m3u8/, [200, {}, liveVideoPlaylist]);
+      server.respondWith(/audio-.*\.m3u8/, [200, {}, liveAudioPlaylist]);
+
+      hls.loadSource('liveWithAudio.m3u8');
+
+      return new Promise<ErrorData>((resolve) => {
+        hls.on(Events.LEVEL_LOADING, loadingEventCallback(server, timers));
+        hls.on(
+          Events.AUDIO_TRACK_LOADING,
+          loadingEventCallback(server, timers),
+        );
+        hls.on(Events.ERROR, (event, data) => {
+          if (data.details === ErrorDetails.PLAYLIST_UNCHANGED_ERROR) {
+            resolve(data);
+          }
+        });
+        hls.on(Events.AUDIO_TRACK_LOADED, () => {
+          // Advance time to trigger audio playlist refresh
+          timers.tick(6000);
+        });
+        server.respond();
+      }).then((data: ErrorData) => {
+        expect(data.details).to.equal(ErrorDetails.PLAYLIST_UNCHANGED_ERROR);
+        expect(data.fatal).to.equal(false, 'Error should not be fatal');
+        expect(data.error.message).to.include(
+          'hits max allowed unchanged reloads',
+        );
+      });
+    });
+  });
+
   describe('Segment Error Handling', function () {
     it('Fragment HTTP Load Errors retry fragLoadPolicy `errorRetry.maxNumRetry` times before switching down and continues until no lower levels are available', function () {
       server.respondWith('multivariantPlaylist.m3u8/segment.mp4', [
