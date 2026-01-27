@@ -876,4 +876,456 @@ describe('BaseStreamController', function () {
       });
     });
   });
+
+  describe('backtrackFragment and couldBacktrack properties', function () {
+    it('should return undefined for backtrackFragment by default', function () {
+      expect((baseStreamController as any).backtrackFragment).to.be.undefined;
+    });
+
+    it('should return false for couldBacktrack by default', function () {
+      expect((baseStreamController as any).couldBacktrack).to.be.false;
+    });
+  });
+
+  describe('calculateOptimalSwitchPoint', function () {
+    let mockLevel;
+    let mockBufferInfo;
+    let bandwidthStub;
+    let ttfbStub;
+
+    beforeEach(function () {
+      mockLevel = {
+        maxBitrate: 1000000,
+        audioCodec: 'mp4a.40.2',
+        details: null,
+      };
+      mockBufferInfo = {
+        len: 5,
+        end: 10,
+        start: 5,
+      };
+
+      bandwidthStub = sinon
+        .stub(baseStreamController.hls, 'bandwidthEstimate')
+        .get(() => 2000000);
+      ttfbStub = sinon
+        .stub(baseStreamController.hls, 'ttfbEstimate')
+        .get(() => 100);
+      baseStreamController.config.abrBandWidthUpFactor = 0.7;
+
+      (baseStreamController as any).levels = [mockLevel];
+      media.paused = false;
+      media.currentTime = 8;
+    });
+
+    afterEach(function () {
+      bandwidthStub?.restore();
+      ttfbStub?.restore();
+    });
+
+    it('should calculate fetchdelay when media is playing', function () {
+      const result = (baseStreamController as any).calculateOptimalSwitchPoint(
+        mockLevel,
+        mockBufferInfo,
+      );
+      expect(result.fetchdelay).to.be.greaterThan(0);
+      expect(result.okToFlushForwardBuffer).to.be.a('boolean');
+    });
+
+    it('should return fetchdelay=0 when media is paused', function () {
+      media.paused = true;
+      const result = (baseStreamController as any).calculateOptimalSwitchPoint(
+        mockLevel,
+        mockBufferInfo,
+      );
+      expect(result.fetchdelay).to.equal(0);
+    });
+
+    it('should add extra delay when level details are not available', function () {
+      const result1 = (baseStreamController as any).calculateOptimalSwitchPoint(
+        mockLevel,
+        mockBufferInfo,
+      );
+
+      mockLevel.details = {};
+      const result2 = (baseStreamController as any).calculateOptimalSwitchPoint(
+        mockLevel,
+        mockBufferInfo,
+      );
+
+      expect(result2.fetchdelay).to.be.lessThan(result1.fetchdelay);
+    });
+
+    it('should set okToFlushForwardBuffer to true for VOD with enough buffer', function () {
+      (baseStreamController as any).getLevelDetails = () => ({ live: false });
+      mockBufferInfo.end = 20;
+      media.currentTime = 5;
+
+      const result = (baseStreamController as any).calculateOptimalSwitchPoint(
+        mockLevel,
+        mockBufferInfo,
+      );
+
+      expect(result.okToFlushForwardBuffer).to.be.true;
+    });
+
+    it('should set okToFlushForwardBuffer to false for live with low buffer', function () {
+      (baseStreamController as any).getLevelDetails = () => ({ live: true });
+      mockBufferInfo.end = 10;
+      media.currentTime = 9.5;
+
+      const result = (baseStreamController as any).calculateOptimalSwitchPoint(
+        mockLevel,
+        mockBufferInfo,
+      );
+
+      expect(result.okToFlushForwardBuffer).to.be.false;
+    });
+  });
+
+  describe('getBufferedFrag', function () {
+    it('should call fragmentTracker.getBufferedFrag with correct parameters', function () {
+      const mockFrag = new Fragment(PlaylistLevelType.MAIN, 'test.ts');
+      fragmentTracker.getBufferedFrag = sinon.stub().returns(mockFrag);
+
+      const result = (baseStreamController as any).getBufferedFrag(10);
+
+      expect(fragmentTracker.getBufferedFrag).to.have.been.calledWith(
+        10,
+        PlaylistLevelType.MAIN,
+      );
+      expect(result).to.equal(mockFrag);
+    });
+  });
+
+  describe('followingBufferedFrag', function () {
+    beforeEach(function () {
+      fragmentTracker.getBufferedFrag = sinon.stub();
+    });
+
+    it('should return next buffered fragment', function () {
+      const frag1 = new Fragment(PlaylistLevelType.MAIN, 'test1.ts');
+      frag1.setStart(0);
+      frag1.duration = 10;
+      const frag2 = new Fragment(PlaylistLevelType.MAIN, 'test2.ts');
+
+      fragmentTracker.getBufferedFrag.returns(frag2);
+
+      const result = (baseStreamController as any).followingBufferedFrag(frag1);
+
+      expect(fragmentTracker.getBufferedFrag).to.have.been.calledWith(
+        10.5,
+        PlaylistLevelType.MAIN,
+      );
+      expect(result).to.equal(frag2);
+    });
+
+    it('should return null when frag is null', function () {
+      const result = (baseStreamController as any).followingBufferedFrag(null);
+      expect(result).to.be.null;
+      expect(fragmentTracker.getBufferedFrag).to.not.have.been.called;
+    });
+  });
+
+  describe('abortCurrentFrag', function () {
+    let mockFrag;
+
+    beforeEach(function () {
+      mockFrag = new Fragment(
+        PlaylistLevelType.MAIN,
+        'test.ts',
+      ) as MediaFragment;
+      mockFrag.abortRequests = sinon.stub();
+      fragmentTracker.removeFragment = sinon.spy();
+    });
+
+    it('should abort current fragment and reset state to IDLE', function () {
+      baseStreamController.fragCurrent = mockFrag;
+      baseStreamController.state = State.FRAG_LOADING;
+
+      (baseStreamController as any).abortCurrentFrag();
+
+      expect(mockFrag.abortRequests).to.have.been.called;
+      expect(fragmentTracker.removeFragment).to.have.been.calledWith(mockFrag);
+      expect(baseStreamController.fragCurrent).to.be.null;
+      expect(baseStreamController.state).to.equal(State.IDLE);
+    });
+
+    it('should handle PARSING state', function () {
+      baseStreamController.fragCurrent = mockFrag;
+      baseStreamController.state = State.PARSING;
+
+      (baseStreamController as any).abortCurrentFrag();
+
+      expect(baseStreamController.state).to.equal(State.IDLE);
+    });
+
+    it('should not change state when already STOPPED', function () {
+      baseStreamController.fragCurrent = mockFrag;
+      baseStreamController.state = State.STOPPED;
+
+      (baseStreamController as any).abortCurrentFrag();
+
+      expect(baseStreamController.state).to.equal(State.STOPPED);
+    });
+
+    it('should update nextLoadPosition to current load position', function () {
+      baseStreamController.fragCurrent = mockFrag;
+      media.currentTime = 15;
+      baseStreamController.nextLoadPosition = 10;
+
+      (baseStreamController as any).abortCurrentFrag();
+
+      expect(baseStreamController.nextLoadPosition).to.equal(10);
+    });
+  });
+
+  describe('checkFragmentChanged', function () {
+    let mockFrag;
+
+    beforeEach(function () {
+      mockFrag = new Fragment(
+        PlaylistLevelType.MAIN,
+        'test.ts',
+      ) as MediaFragment;
+      mockFrag.sn = 1;
+      mockFrag.level = 0;
+      mockFrag.setStart(5);
+      mockFrag.duration = 10;
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(mockFrag);
+      media.readyState = 4;
+      media.seeking = false;
+      media.currentTime = 7;
+      media.buffered = new TimeRangesMock([5, 15]);
+    });
+
+    it('should return true when fragment changes', function () {
+      (baseStreamController as any).fragPlaying = null;
+
+      const result = (baseStreamController as any).checkFragmentChanged();
+
+      expect(result).to.be.true;
+      expect((baseStreamController as any).fragPlaying).to.equal(mockFrag);
+    });
+
+    it('should return false when fragment has not changed', function () {
+      (baseStreamController as any).fragPlaying = mockFrag;
+
+      const result = (baseStreamController as any).checkFragmentChanged();
+
+      expect(result).to.be.false;
+    });
+
+    it('should return false when media readyState is low', function () {
+      media.readyState = 1;
+
+      const result = (baseStreamController as any).checkFragmentChanged();
+
+      expect(result).to.be.false;
+    });
+
+    it('should clear backtrackFragment when fragment changes', function () {
+      (baseStreamController as any).backtrackFragment = new Fragment(
+        PlaylistLevelType.MAIN,
+        'old.ts',
+      );
+      (baseStreamController as any).fragPlaying = null;
+
+      (baseStreamController as any).checkFragmentChanged();
+
+      expect((baseStreamController as any).backtrackFragment).to.be.undefined;
+    });
+  });
+
+  describe('cleanupBackBuffer', function () {
+    let mockFrag;
+
+    beforeEach(function () {
+      mockFrag = new Fragment(PlaylistLevelType.MAIN, 'test.ts');
+      mockFrag.setStart(10);
+      mockFrag.duration = 10;
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(mockFrag);
+      media.currentTime = 15;
+      sinon.stub(baseStreamController as any, 'flushMainBuffer');
+    });
+
+    it('should flush back buffer', function () {
+      (baseStreamController as any).cleanupBackBuffer();
+
+      expect(
+        (baseStreamController as any).flushMainBuffer,
+      ).to.have.been.calledWith(0, sinon.match.number);
+    });
+
+    it('should not flush when fragment start is less than 1 second', function () {
+      mockFrag.setStart(0.5);
+
+      (baseStreamController as any).cleanupBackBuffer();
+
+      expect((baseStreamController as any).flushMainBuffer).to.not.have.been
+        .called;
+    });
+
+    it('should not flush when media is not available', function () {
+      baseStreamController.media = null;
+
+      (baseStreamController as any).cleanupBackBuffer();
+
+      expect((baseStreamController as any).flushMainBuffer).to.not.have.been
+        .called;
+    });
+  });
+
+  describe('scheduleTrackSwitch', function () {
+    let mockBufferInfo;
+    let mockBufferedFrag;
+    let mockNextFrag;
+
+    beforeEach(function () {
+      mockBufferInfo = {
+        len: 5,
+        end: 10,
+        start: 5,
+      };
+      mockBufferedFrag = new Fragment(PlaylistLevelType.MAIN, 'test1.ts');
+      mockBufferedFrag.setStart(5);
+      mockBufferedFrag.duration = 5;
+      mockNextFrag = new Fragment(PlaylistLevelType.MAIN, 'test2.ts');
+      mockNextFrag.setStart(10);
+      mockNextFrag.duration = 5;
+
+      fragmentTracker.getBufferedFrag = sinon.stub();
+      fragmentTracker.getBufferedFrag.onCall(0).returns(mockBufferedFrag);
+      fragmentTracker.getBufferedFrag.onCall(1).returns(mockNextFrag);
+
+      sinon.stub(baseStreamController as any, 'abortCurrentFrag');
+      sinon.stub(baseStreamController as any, 'flushMainBuffer');
+      sinon.stub(baseStreamController as any, 'cleanupBackBuffer');
+
+      media.currentTime = 8;
+    });
+
+    it('should schedule track switch when next fragment is available', function () {
+      (baseStreamController as any).scheduleTrackSwitch(
+        mockBufferInfo,
+        2,
+        true,
+      );
+
+      expect((baseStreamController as any).abortCurrentFrag).to.have.been
+        .called;
+      expect((baseStreamController as any).flushMainBuffer).to.have.been.called;
+      expect((baseStreamController as any).cleanupBackBuffer).to.have.been
+        .called;
+    });
+
+    it('should not flush when okToFlushForwardBuffer is false', function () {
+      (baseStreamController as any).scheduleTrackSwitch(
+        mockBufferInfo,
+        2,
+        false,
+      );
+
+      expect((baseStreamController as any).abortCurrentFrag).to.not.have.been
+        .called;
+      expect((baseStreamController as any).flushMainBuffer).to.not.have.been
+        .called;
+    });
+
+    it('should not flush when next fragment is not available', function () {
+      fragmentTracker.getBufferedFrag.onCall(1).returns(null);
+
+      (baseStreamController as any).scheduleTrackSwitch(
+        mockBufferInfo,
+        2,
+        true,
+      );
+
+      expect((baseStreamController as any).flushMainBuffer).to.not.have.been
+        .called;
+    });
+
+    it('should not flush when media is not available', function () {
+      baseStreamController.media = null;
+
+      (baseStreamController as any).scheduleTrackSwitch(
+        mockBufferInfo,
+        2,
+        true,
+      );
+
+      expect((baseStreamController as any).flushMainBuffer).to.not.have.been
+        .called;
+    });
+  });
+
+  describe('getBufferOutput', function () {
+    it('should return media from StreamController override', function () {
+      const result = (baseStreamController as any).getBufferOutput();
+      expect(result).to.not.be.null;
+    });
+  });
+
+  describe('nextLevelSwitch', function () {
+    let mockLevel;
+    let mockBufferInfo;
+
+    beforeEach(function () {
+      mockLevel = {
+        maxBitrate: 1000000,
+        audioCodec: 'mp4a.40.2',
+        details: null,
+      };
+      mockBufferInfo = {
+        len: 5,
+        end: 10,
+        start: 5,
+      };
+
+      (baseStreamController as any).levels = [mockLevel];
+      media.readyState = 4;
+      media.currentTime = 8;
+
+      sinon.stub(baseStreamController as any, 'getBufferOutput').returns(media);
+      sinon
+        .stub(baseStreamController as any, 'getFwdBufferInfo')
+        .returns(mockBufferInfo);
+      sinon
+        .stub(baseStreamController as any, 'calculateOptimalSwitchPoint')
+        .returns({
+          fetchdelay: 2,
+          okToFlushForwardBuffer: true,
+        });
+      sinon.stub(baseStreamController as any, 'scheduleTrackSwitch');
+      sinon.stub(baseStreamController as any, 'tickImmediate');
+
+      baseStreamController.hls.nextLoadLevel = 0;
+    });
+
+    it('should call scheduleTrackSwitch for MAIN playlist type', function () {
+      (baseStreamController as any).nextLevelSwitch();
+
+      expect((baseStreamController as any).scheduleTrackSwitch).to.have.been
+        .called;
+      expect(baseStreamController.tickImmediate).to.have.been.called;
+    });
+
+    it('should not call scheduleTrackSwitch when media is not ready', function () {
+      media.readyState = 0;
+
+      (baseStreamController as any).nextLevelSwitch();
+
+      expect((baseStreamController as any).scheduleTrackSwitch).to.not.have.been
+        .called;
+    });
+
+    it('should not call scheduleTrackSwitch when bufferInfo is null', function () {
+      (baseStreamController as any).getFwdBufferInfo.returns(null);
+
+      (baseStreamController as any).nextLevelSwitch();
+
+      expect((baseStreamController as any).scheduleTrackSwitch).to.not.have.been
+        .called;
+    });
+  });
 });

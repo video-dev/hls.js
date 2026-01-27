@@ -225,6 +225,7 @@ export type StreamControllerConfig = {
   testBandwidth: boolean;
   liveSyncMode?: 'edge' | 'buffered';
   startOnSegmentBoundary: boolean;
+  nextAudioTrackBufferFlushForwardOffset: number;
 };
 
 export type GapControllerConfig = {
@@ -260,6 +261,7 @@ export type MetadataControllerConfig = {
   enableEmsgMetadataCues: boolean;
   enableEmsgKLVMetadata: boolean;
   enableID3MetadataCues: boolean;
+  emsgKLVSchemaUri?: string;
 };
 
 export type TimelineControllerConfig = {
@@ -280,6 +282,7 @@ export type TimelineControllerConfig = {
 
 export type TSDemuxerConfig = {
   forceKeyFrameOnDiscontinuity: boolean;
+  handleMpegTsVideoIntegrityErrors: 'process' | 'skip';
 };
 
 export type HlsConfig = {
@@ -385,6 +388,7 @@ export const hlsDefaultConfig: HlsConfig = {
   backBufferLength: Infinity, // used by buffer-controller
   frontBufferFlushThreshold: Infinity,
   startOnSegmentBoundary: false, // used by stream-controller
+  nextAudioTrackBufferFlushForwardOffset: 0.25, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxFragLookUpTolerance: 0.25, // used by stream-controller
   maxBufferHole: 0.1, // used by stream-controller and gap-controller
@@ -433,6 +437,7 @@ export const hlsDefaultConfig: HlsConfig = {
   stretchShortVideoTrack: false, // used by mp4-remuxer
   maxAudioFramesDrift: 1, // used by mp4-remuxer
   forceKeyFrameOnDiscontinuity: true, // used by ts-demuxer
+  handleMpegTsVideoIntegrityErrors: 'process', // used by ts-demuxer
   abrEwmaFastLive: 3, // used by abr-controller
   abrEwmaSlowLive: 9, // used by abr-controller
   abrEwmaFastVoD: 3, // used by abr-controller
@@ -462,6 +467,7 @@ export const hlsDefaultConfig: HlsConfig = {
   enableEmsgMetadataCues: true,
   enableEmsgKLVMetadata: false,
   enableID3MetadataCues: true,
+  emsgKLVSchemaUri: undefined, // Defaults to 'urn:misb:KLV:bin:1910.1' in demuxer for backwards compatibility
   enableInterstitialPlayback: __USE_INTERSTITIALS__,
   interstitialAppendInPlace: true,
   interstitialLiveLookAhead: 10,
@@ -668,16 +674,13 @@ export function mergeConfig(
   }
 
   if (userConfig.liveMaxUnchangedPlaylistRefresh !== undefined) {
-    const liveMaxUnchangedPlaylistRefresh = userConfig.liveMaxUnchangedPlaylistRefresh;
-    const clampedValue = clamp(
-      liveMaxUnchangedPlaylistRefresh,
-      2,
-      Infinity,
-    );
+    const liveMaxUnchangedPlaylistRefresh =
+      userConfig.liveMaxUnchangedPlaylistRefresh;
+    const clampedValue = clamp(liveMaxUnchangedPlaylistRefresh, 2, Infinity);
 
     if (clampedValue !== liveMaxUnchangedPlaylistRefresh) {
       logger.warn(
-        `hls.js config: "liveMaxUnchangedPlaylistRefresh" clamped from ${liveMaxUnchangedPlaylistRefresh} to ${clampedValue}.`
+        `hls.js config: "liveMaxUnchangedPlaylistRefresh" clamped from ${liveMaxUnchangedPlaylistRefresh} to ${clampedValue}.`,
       );
     }
     userConfig.liveMaxUnchangedPlaylistRefresh = clampedValue;

@@ -255,7 +255,9 @@ export interface LevelPTSUpdatedData {
   end: number;
 }
 
-export interface AudioTrackSwitchingData extends MediaPlaylist {}
+export interface AudioTrackSwitchingData extends MediaPlaylist {
+  flushImmediate?: boolean;
+}
 
 export interface AudioTrackSwitchedData extends MediaPlaylist {}
 
@@ -286,6 +288,7 @@ export interface TrackSwitchedData {
 export interface SubtitleFragProcessed {
   success: boolean;
   frag: Fragment;
+  part: Part | null;
 }
 
 export interface FragChangedData {
@@ -351,6 +354,7 @@ export interface ErrorData {
 export interface SubtitleFragProcessedData {
   success: boolean;
   frag: Fragment;
+  part: Part | null;
   error?: Error;
 }
 

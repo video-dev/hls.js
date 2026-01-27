@@ -1,5 +1,9 @@
 import BufferOperationQueue from './buffer-operation-queue';
-import { createDoNothingErrorAction } from './error-controller';
+import {
+  createDoNothingErrorAction,
+  ErrorActionFlags,
+  NetworkErrorAction,
+} from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { ElementaryStreamTypes } from '../loader/fragment';
@@ -803,7 +807,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     // Block audio append until overlapping video append
     const videoTrack = tracks.video;
     const videoSb = videoTrack?.buffer;
-    if (videoSb && sn !== 'initSegment') {
+    if (videoSb && sn !== 'initSegment' && offset !== undefined) {
       const partOrFrag = part || (frag as MediaFragment);
       const blockedAudioAppend = this.blockedAudioAppend;
       if (
@@ -892,7 +896,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           frag,
           part,
           chunkMeta,
-          parent: frag.type,
+          parent,
           timeRanges,
         });
       },
@@ -901,7 +905,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         // in case any error occured while appending, put back segment in segments table
         const event: ErrorData = {
           type: ErrorTypes.MEDIA_ERROR,
-          parent: frag.type,
+          parent,
           details: ErrorDetails.BUFFER_APPEND_ERROR,
           sourceBufferName: type,
           frag,
@@ -952,7 +956,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       },
     };
     this.log(
-      `queuing "${type}" append sn: ${sn}${part ? ' p: ' + part.index : ''} of ${frag.type === PlaylistLevelType.MAIN ? 'level' : 'track'} ${frag.level} cc: ${cc}`,
+      `queuing "${type}" append sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
+        parent === PlaylistLevelType.MAIN ? 'level' : 'track'
+      } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
     );
     this.append(operation, type, this.isPending(this.tracks[type]));
   }
@@ -1575,6 +1581,24 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
   private _onMediaSourceClose = () => {
     this.log('Media source closed');
+    // Safari/WebKit bug: MediaSource becomes invalid after bfcache restoration.
+    // When the user navigates back, the MediaSource is in a 'closed' state and cannot be used.
+    // If sourceclose fires while media is still attached, trigger recovery to reattach media.
+    if (this.media) {
+      this.warn(
+        'MediaSource closed while media attached - triggering recovery',
+      );
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+        fatal: false,
+        error: new Error('MediaSource closed while media is still attached'),
+        errorAction: {
+          action: NetworkErrorAction.ResetMediaSource,
+          flags: ErrorActionFlags.None,
+        },
+      });
+    }
   };
 
   private _onMediaSourceEnded = () => {
@@ -1617,8 +1641,32 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private onSBUpdateError(type: SourceBufferName, event: Event) {
+    const readyState = this.mediaSource?.readyState;
+
+    // https://bugs.webkit.org/show_bug.cgi?id=305712
+    // MediaSource readyState ended during SourceBuffer error - recover early.
+    if (readyState === 'ended') {
+      this.warn(
+        `MediaSource readyState "ended" during SourceBuffer error - triggering recovery`,
+      );
+      this.hls.trigger(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+        fatal: false,
+        sourceBufferName: type,
+        error: new Error(
+          `${type} SourceBuffer error. MediaSource readyState: ended`,
+        ),
+        errorAction: {
+          action: NetworkErrorAction.ResetMediaSource,
+          flags: ErrorActionFlags.None,
+        },
+      });
+      return;
+    }
+
     const error = new Error(
-      `${type} SourceBuffer error. MediaSource readyState: ${this.mediaSource?.readyState}`,
+      `${type} SourceBuffer error. MediaSource readyState: ${readyState}`,
     );
     this.error(`${error}`, event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error

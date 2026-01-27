@@ -9,16 +9,14 @@ import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { Level } from '../types/level';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
-import {
-  alignDiscontinuities,
-  alignMediaPlaylistByPDT,
-} from '../utils/discontinuities';
+import { alignStream } from '../utils/discontinuities';
 import {
   audioMatchPredicate,
   matchesOption,
   useAlternateAudio,
 } from '../utils/rendition-helper';
 import type { FragmentTracker } from './fragment-tracker';
+import type { Bufferable } from '../hls';
 import type Hls from '../hls';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type KeyLoader from '../loader/key-loader';
@@ -64,8 +62,9 @@ class AudioStreamController
   private mainFragLoading: FragLoadingData | null = null;
   private audioOnly: boolean = false;
   private bufferedTrack: MediaPlaylist | null = null;
-  private switchingTrack: MediaPlaylist | null = null;
+  private switchingTrack: AudioTrackSwitchingData | null = null;
   private trackId: number = -1;
+  private nextTrackId: number = -1;
   private waitingData: WaitingForPTSData | null = null;
   private mainDetails: LevelDetails | null = null;
   private flushing: boolean = false;
@@ -177,7 +176,11 @@ class AudioStreamController
   }
 
   protected getLoadPosition(): number {
-    if (!this.startFragRequested && this.nextLoadPosition >= 0) {
+    if (
+      !this.startFragRequested &&
+      this.nextLoadPosition >= 0 &&
+      this.switchingTrack?.flushImmediate !== false
+    ) {
       return this.nextLoadPosition;
     }
     return super.getLoadPosition();
@@ -307,6 +310,7 @@ class AudioStreamController
     }
 
     this.lastCurrentTime = media.currentTime;
+    this.checkFragmentChanged();
   }
 
   private doTickIdle() {
@@ -345,11 +349,7 @@ class AudioStreamController
     const bufferable = this.mediaBuffer ? this.mediaBuffer : this.media;
     if (this.bufferFlushed && bufferable) {
       this.bufferFlushed = false;
-      this.afterBufferFlushed(
-        bufferable,
-        ElementaryStreamTypes.AUDIO,
-        PlaylistLevelType.AUDIO,
-      );
+      this.afterBufferFlushed(bufferable, ElementaryStreamTypes.AUDIO);
     }
 
     const bufferInfo = this.getFwdBufferInfo(
@@ -372,7 +372,11 @@ class AudioStreamController
     const fragments = trackDetails.fragments;
     const start = fragments[0].start;
     const loadPosition = this.getLoadPosition();
-    const targetBufferTime = this.flushing ? loadPosition : bufferInfo.end;
+    const targetBufferTime =
+      this.flushing ||
+      (this.switchingTrack && !this.switchingTrack.flushImmediate)
+        ? loadPosition
+        : bufferInfo.end;
 
     if (this.switchingTrack && media) {
       const pos = loadPosition;
@@ -488,6 +492,10 @@ class AudioStreamController
     if (altAudio) {
       this.switchingTrack = data;
       // main audio track are handled by stream-controller, just do something if switching to alt audio track
+      if (!data.flushImmediate) {
+        this.nextTrackId = data.id;
+        this.nextLevelSwitch();
+      }
       this.flushAudioIfNeeded(data);
       if (this.state !== State.STOPPED) {
         // switching to audio track, start timer if not already started
@@ -573,10 +581,7 @@ class AudioStreamController
       if (!newDetails.alignedSliding) {
         // Align audio rendition with the "main" playlist on discontinuity change
         // or program-date-time (PDT)
-        alignDiscontinuities(newDetails, mainDetails);
-        if (!newDetails.alignedSliding) {
-          alignMediaPlaylistByPDT(newDetails, mainDetails);
-        }
+        alignStream(mainDetails, newDetails, this);
         sliding = newDetails.fragmentStart;
       }
     }
@@ -758,14 +763,36 @@ class AudioStreamController
       const track = this.switchingTrack;
       if (track) {
         this.bufferedTrack = track;
-        this.switchingTrack = null;
-        this.hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...track });
       }
     }
     this.fragBufferedComplete(frag, part);
     if (this.media) {
       this.tick();
     }
+  }
+
+  protected getBufferOutput(): Bufferable | null {
+    return this.mediaBuffer ? this.mediaBuffer : this.media;
+  }
+
+  protected checkFragmentChanged() {
+    const previousFrag = this.fragPlaying;
+    const fragChanged = super.checkFragmentChanged();
+    if (!fragChanged) {
+      return false;
+    }
+
+    const fragPlaying = this.fragPlaying;
+    const fragPreviousLevel = previousFrag?.level;
+    if (!fragPlaying || fragPlaying.level !== fragPreviousLevel) {
+      if (previousFrag) {
+        this.cleanupBackBuffer();
+      }
+      if (this.switchingTrack) {
+        this.completeAudioSwitch(this.switchingTrack);
+      }
+    }
+    return true;
   }
 
   protected onError(event: Events.ERROR, data: ErrorData) {
@@ -842,7 +869,7 @@ class AudioStreamController
       }
       const mediaBuffer = this.mediaBuffer || this.media;
       if (mediaBuffer) {
-        this.afterBufferFlushed(mediaBuffer, type, PlaylistLevelType.AUDIO);
+        this.afterBufferFlushed(mediaBuffer, type);
         this.tick();
       }
     }
@@ -870,8 +897,18 @@ class AudioStreamController
     }
 
     this.state = State.PARSING;
-    if (this.switchingTrack && audio) {
-      this.completeAudioSwitch(this.switchingTrack);
+    if (audio && this.switchingTrack && !this.switchingTrack.flushImmediate) {
+      const { config } = this;
+      const bufferFlushDelay = config.nextAudioTrackBufferFlushForwardOffset;
+      const startOffset = Math.max(
+        this.getLoadPosition() + bufferFlushDelay,
+        frag.start,
+      );
+      super.flushMainBuffer(
+        startOffset,
+        Number.POSITIVE_INFINITY,
+        PlaylistLevelType.AUDIO,
+      );
     }
 
     if (initSegment?.tracks) {
@@ -1012,7 +1049,7 @@ class AudioStreamController
           mainDetails &&
           mainDetails.fragmentStart !== track.details.fragmentStart
         ) {
-          alignMediaPlaylistByPDT(track.details, mainDetails);
+          alignStream(mainDetails, track.details, this);
         }
       } else {
         super.loadFragment(frag, track, targetBufferTime);
@@ -1022,8 +1059,8 @@ class AudioStreamController
     }
   }
 
-  private flushAudioIfNeeded(switchingTrack: MediaPlaylist) {
-    if (this.media && this.bufferedTrack) {
+  private flushAudioIfNeeded(switchingTrack: AudioTrackSwitchingData) {
+    if (this.media && this.bufferedTrack && switchingTrack.flushImmediate) {
       const { name, lang, assocLang, characteristics, audioCodec, channels } =
         this.bufferedTrack;
       if (
@@ -1045,12 +1082,18 @@ class AudioStreamController
     }
   }
 
-  private completeAudioSwitch(switchingTrack: MediaPlaylist) {
+  private completeAudioSwitch(switchingTrack: AudioTrackSwitchingData) {
     const { hls } = this;
-    this.flushAudioIfNeeded(switchingTrack);
     this.bufferedTrack = switchingTrack;
     this.switchingTrack = null;
     hls.trigger(Events.AUDIO_TRACK_SWITCHED, { ...switchingTrack });
+  }
+
+  /**
+   * Index of next audio track loaded as scheduled by audio stream controller.
+   */
+  get nextAudioTrack(): number {
+    return this.nextTrackId;
   }
 }
 export default AudioStreamController;

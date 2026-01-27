@@ -247,6 +247,16 @@ class AudioTrackController extends BasePlaylistController {
     this.setAudioTrack(newId);
   }
 
+  get nextAudioTrack(): number {
+    return this.trackId;
+  }
+
+  set nextAudioTrack(newId: number) {
+    // If audio track is selected from API then don't choose from the manifest default track
+    this.selectDefaultTrack = false;
+    this.setAudioTrack(newId, false);
+  }
+
   public setAudioOption(
     audioOption: MediaPlaylist | AudioSelectionOption | undefined,
   ): MediaPlaylist | null {
@@ -310,7 +320,7 @@ class AudioTrackController extends BasePlaylistController {
     return null;
   }
 
-  private setAudioTrack(newId: number): void {
+  private setAudioTrack(newId: number, flushImmediate: boolean = true): void {
     const tracks = this.tracksInGroup;
 
     // check if level idx is valid
@@ -331,7 +341,10 @@ class AudioTrackController extends BasePlaylistController {
     );
     this.trackId = newId;
     this.currentTrack = track;
-    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, { ...track });
+    this.hls.trigger(Events.AUDIO_TRACK_SWITCHING, {
+      ...track,
+      flushImmediate,
+    });
     // Do not reload track unless live
     if (trackLoaded) {
       return;

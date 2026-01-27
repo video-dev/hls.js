@@ -186,7 +186,11 @@ export type AudioSelectionOption = {
 export class AudioStreamController extends BaseStreamController implements NetworkComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader);
     // (undocumented)
+    protected checkFragmentChanged(): boolean;
+    // (undocumented)
     doTick(): void;
+    // (undocumented)
+    protected getBufferOutput(): Bufferable | null;
     // (undocumented)
     protected getLoadPosition(): number;
     // (undocumented)
@@ -195,6 +199,7 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     _handleFragmentLoadProgress(data: FragLoadedData): void;
     // (undocumented)
     protected loadFragment(frag: Fragment, track: Level, targetBufferTime: number): void;
+    get nextAudioTrack(): number;
     // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
     // (undocumented)
@@ -236,6 +241,9 @@ export class AudioTrackController extends BasePlaylistController {
     // (undocumented)
     protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void;
     // (undocumented)
+    get nextAudioTrack(): number;
+    set nextAudioTrack(newId: number);
+    // (undocumented)
     protected onAudioTrackLoaded(event: Events.AUDIO_TRACK_LOADED, data: AudioTrackLoadedData): void;
     // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
@@ -275,6 +283,8 @@ export interface AudioTrackSwitchedData extends MediaPlaylist {
 //
 // @public (undocumented)
 export interface AudioTrackSwitchingData extends MediaPlaylist {
+    // (undocumented)
+    flushImmediate?: boolean;
 }
 
 // Warning: (ae-missing-release-tag) "AudioTrackUpdatedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -380,10 +390,14 @@ export class BaseSegment {
 // @public (undocumented)
 export class BaseStreamController extends TaskLoop implements NetworkComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader, logPrefix: string, playlistType: PlaylistLevelType);
+    protected abortCurrentFrag(): void;
     // (undocumented)
-    protected afterBufferFlushed(media: Bufferable, bufferType: SourceBufferName, playlistType: PlaylistLevelType): void;
+    protected afterBufferFlushed(media: Bufferable, bufferType: SourceBufferName): void;
     // (undocumented)
     protected alignPlaylists(details: LevelDetails, previousDetails: LevelDetails | undefined, switchDetails: LevelDetails | undefined): number;
+    protected get backtrackFragment(): Fragment | undefined;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "backtrackFragment" must appear on the getter, not the setter.
+    protected set backtrackFragment(_value: Fragment | undefined);
     // (undocumented)
     protected bitrateTest: boolean;
     // (undocumented)
@@ -392,14 +406,24 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected buffering: boolean;
     // (undocumented)
     get bufferingEnabled(): boolean;
+    protected calculateOptimalSwitchPoint(nextLevel: Level, bufferInfo: BufferInfo): {
+        fetchdelay: number;
+        okToFlushForwardBuffer: boolean;
+    };
+    // (undocumented)
+    protected checkFragmentChanged(): boolean;
     // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
     protected checkRetryDate(): void;
+    protected cleanupBackBuffer(): void;
     // (undocumented)
     protected clearTrackerIfNeeded(frag: Fragment): void;
     // (undocumented)
     protected config: HlsConfig;
+    protected get couldBacktrack(): boolean;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "couldBacktrack" must appear on the getter, not the setter.
+    protected set couldBacktrack(_value: boolean);
     // (undocumented)
     protected decrypter: Decrypter;
     // (undocumented)
@@ -412,6 +436,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected flushBufferGap(frag: Fragment): void;
     // (undocumented)
     protected flushMainBuffer(startOffset: number, endOffset: number, type?: SourceBufferName | null): void;
+    protected followingBufferedFrag(frag: Fragment | null): Fragment | null;
     // (undocumented)
     protected fragBufferedComplete(frag: Fragment, part: Part | null): void;
     // (undocumented)
@@ -423,9 +448,14 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected fragmentTracker: FragmentTracker;
     // (undocumented)
+    protected fragPlaying: Fragment | null;
+    // (undocumented)
     protected fragPrevious: MediaFragment | null;
     // (undocumented)
-    protected getAppendedFrag(position: number, playlistType?: PlaylistLevelType): Fragment | null;
+    protected getAppendedFrag(position: number): Fragment | null;
+    protected getBufferedFrag(position: number): Fragment | null;
+    // (undocumented)
+    protected getBufferOutput(): Bufferable | null;
     // (undocumented)
     protected getCurrentContext(chunkMeta: ChunkMetadata): {
         frag: MediaFragment;
@@ -486,6 +516,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected media: HTMLMediaElement | null;
     // (undocumented)
     protected mediaBuffer: Bufferable | null;
+    nextLevelSwitch(): void;
     // (undocumented)
     protected nextLoadPosition: number;
     // (undocumented)
@@ -540,6 +571,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     resumeBuffering(): void;
     // (undocumented)
     protected retryDate: number;
+    protected scheduleTrackSwitch(bufferInfo: BufferInfo, fetchdelay: number, okToFlushForwardBuffer: boolean): void;
     // (undocumented)
     protected setStartPosition(details: LevelDetails, sliding: number): void;
     // (undocumented)
@@ -1395,6 +1427,8 @@ export enum ErrorDetails {
     // (undocumented)
     MANIFEST_PARSING_ERROR = "manifestParsingError",
     // (undocumented)
+    MEDIA_SOURCE_REQUIRES_RESET = "mediaSourceRequiresReset",
+    // (undocumented)
     PLAYLIST_UNCHANGED_ERROR = "playlistUnchangedError",
     // (undocumented)
     REMUX_ALLOC_ERROR = "remuxAllocError",
@@ -2121,6 +2155,9 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     static get MetadataSchema(): typeof MetadataSchema;
     get minAutoLevel(): number;
+    get nextAudioTrack(): number;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "nextAudioTrack" must appear on the getter, not the setter.
+    set nextAudioTrack(audioTrackId: number);
     get nextAutoLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "nextAutoLevel" must appear on the getter, not the setter.
     set nextAutoLevel(nextLevel: number);
@@ -4101,6 +4138,7 @@ export type MetadataControllerConfig = {
     enableEmsgMetadataCues: boolean;
     enableEmsgKLVMetadata: boolean;
     enableID3MetadataCues: boolean;
+    emsgKLVSchemaUri?: string;
 };
 
 // Warning: (ae-missing-release-tag) "MetadataSample" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -4168,9 +4206,11 @@ export const enum NetworkErrorAction {
     // (undocumented)
     RemoveAlternatePermanently = 3,
     // (undocumented)
+    ResetMediaSource = 6,// Reserved for future use
+    // (undocumented)
     RetryRequest = 5,// Reserved for future use
     // (undocumented)
-    SendAlternateToPenaltyBox = 2,// Reserved for future use
+    SendAlternateToPenaltyBox = 2,
     // (undocumented)
     SendEndCallback = 1
 }
@@ -4557,6 +4597,16 @@ export interface SteeringManifestLoadedData {
 export class StreamController extends BaseStreamController implements NetworkComponentAPI {
     constructor(hls: Hls, fragmentTracker: FragmentTracker, keyLoader: KeyLoader);
     // (undocumented)
+    protected abortCurrentFrag(): void;
+    protected get backtrackFragment(): Fragment | undefined;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "backtrackFragment" must appear on the getter, not the setter.
+    protected set backtrackFragment(value: Fragment | undefined);
+    // (undocumented)
+    protected checkFragmentChanged(): boolean;
+    protected get couldBacktrack(): boolean;
+    // Warning: (ae-setter-with-docs) The doc comment for the property "couldBacktrack" must appear on the getter, not the setter.
+    protected set couldBacktrack(value: boolean);
+    // (undocumented)
     get currentFrag(): Fragment | null;
     // (undocumented)
     get currentLevel(): number;
@@ -4568,6 +4618,7 @@ export class StreamController extends BaseStreamController implements NetworkCom
     protected flushMainBuffer(startOffset: number, endOffset: number): void;
     // (undocumented)
     get forceStartLoad(): boolean;
+    protected getBufferOutput(): Bufferable | null;
     // (undocumented)
     getMainFwdBufferInfo(): BufferInfo | null;
     // (undocumented)
@@ -4581,10 +4632,9 @@ export class StreamController extends BaseStreamController implements NetworkCom
     // (undocumented)
     get maxBufferLength(): number;
     // (undocumented)
-    get nextBufferedFrag(): MediaFragment | null;
+    get nextBufferedFrag(): Fragment | null;
     // (undocumented)
     get nextLevel(): number;
-    nextLevelSwitch(): void;
     // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
     // (undocumented)
@@ -4627,6 +4677,7 @@ export type StreamControllerConfig = {
     testBandwidth: boolean;
     liveSyncMode?: 'edge' | 'buffered';
     startOnSegmentBoundary: boolean;
+    nextAudioTrackBufferFlushForwardOffset: number;
 };
 
 // Warning: (ae-missing-release-tag) "SubtitleFragProcessedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -4637,6 +4688,8 @@ export interface SubtitleFragProcessedData {
     error?: Error;
     // (undocumented)
     frag: Fragment;
+    // (undocumented)
+    part: Part | null;
     // (undocumented)
     success: boolean;
 }
@@ -4940,6 +4993,7 @@ export interface TransmuxerResult {
 // @public (undocumented)
 export type TSDemuxerConfig = {
     forceKeyFrameOnDiscontinuity: boolean;
+    handleMpegTsVideoIntegrityErrors: 'process' | 'skip';
 };
 
 // Warning: (ae-missing-release-tag) "UriReplacement" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

@@ -102,6 +102,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`enableDateRangeMetadataCues`](#enabledaterangemetadatacues)
   - [`enableEmsgMetadataCues`](#enableemsgmetadatacues)
   - [`enableEmsgKLVMetadata`](#enableemsgklvmetadata)
+  - [`emsgKLVSchemaUri`](#emsgklvschemauri)
   - [`enableID3MetadataCues`](#enableid3metadatacues)
   - [`enableWebVTT`](#enablewebvtt)
   - [`enableIMSC1`](#enableimsc1)
@@ -118,6 +119,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
   - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
+  - [`handleMpegTsVideoIntegrityErrors`](#handlempegtsvideointegrityerrors)
   - [`abrEwmaFastLive`](#abrewmafastlive)
   - [`abrEwmaSlowLive`](#abrewmaslowlive)
   - [`abrEwmaFastVoD`](#abrewmafastvod)
@@ -182,6 +184,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.allAudioTracks`](#hlsallaudiotracks)
   - [`hls.audioTracks`](#hlsaudiotracks)
   - [`hls.audioTrack`](#hlsaudiotrack)
+  - [`hls.nextAudioTrack`](#hlsnextaudiotrack)
 - [Subtitle Tracks Control API](#subtitle-tracks-control-api)
   - [`hls.setSubtitleOption(subtitleOption)`](#hlssetsubtitleoptionsubtitleoption)
   - [`hls.allSubtitleTracks`](#hlsallsubtitletracks)
@@ -513,6 +516,7 @@ var config = {
   stretchShortVideoTrack: false,
   maxAudioFramesDrift: 1,
   forceKeyFrameOnDiscontinuity: true,
+  handleMpegTsVideoIntegrityErrors: 'process',
   abrEwmaFastLive: 3.0,
   abrEwmaSlowLive: 9.0,
   abrEwmaFastVoD: 3.0,
@@ -1461,6 +1465,21 @@ whether or not to extract KLV Timed Metadata found in CMAF Event Message (emsg) 
 
 parameter should be a boolean
 
+### `emsgKLVSchemaUri`
+
+(default: `undefined`)
+
+URN for MISB KLV metadata schema to match when extracting KLV metadata from CMAF Event Message (emsg) boxes. If not specified, defaults to `'urn:misb:KLV:bin:1910.1'` for backwards compatibility.
+
+Examples:
+
+- `'urn:misb:KLV:bin:1910.1'` for MISB ST 0601.1
+- `'urn:misb:KLV:bin:1910.19'` for MISB ST 0601.19
+
+The demuxer uses `startsWith()` to match the URN, so it will match any URN that begins with the configured value.
+
+parameter should be a string
+
 ### `enableID3MetadataCues`
 
 (default: `true`)
@@ -1601,6 +1620,17 @@ If set to false, all AVC samples will be kept, which can help avoid holes in the
 Setting this parameter to false can also generate decoding weirdness when switching level or seeking.
 
 parameter should be a boolean
+
+### `handleMpegTsVideoIntegrityErrors`
+
+(default: `'process'`)
+
+Controls how corrupted video data is handled based on MPEG-TS integrity checks.
+
+- `'process'` (default): Continues processing corrupted data, which may lead to decoding errors.
+- `'skip'`: Discards corrupted video data to prevent potential playback issues.
+
+This parameter accepts a string with possible values: `'process'` | `'skip'`.
 
 ### `abrEwmaFastLive`
 
@@ -2102,6 +2132,10 @@ get : array of supported audio tracks in the active audio group ID
 
 get/set : index of selected audio track in `hls.audioTracks`
 
+### `hls.nextAudioTrack`
+
+get/set : index of the next audio track that will be selected, allowing for seamless audio track switching
+
 ## Subtitle Tracks Control API
 
 ### `hls.setSubtitleOption(subtitleOption)`
@@ -2438,7 +2472,7 @@ Full list of Events is available below:
 - `Hls.Events.AUDIO_TRACKS_UPDATED` - fired to notify that audio track lists has been updated
   - data: { audioTracks : audioTracks }
 - `Hls.Events.AUDIO_TRACK_SWITCHING` - fired when an audio track switching is requested
-  - data: { id : audio track id, type : playlist type ('AUDIO' | 'main'), url : audio track URL }
+  - data: { id : audio track id, type : playlist type ('AUDIO' | 'main'), url : audio track URL, flushImmediate: boolean indicating whether audio buffer should be flushed immediately when switching }
 - `Hls.Events.AUDIO_TRACK_SWITCHED` - fired when an audio track switch actually occurs
   - data: { id : audio track id }
 - `Hls.Events.AUDIO_TRACK_LOADING` - fired when an audio track loading starts

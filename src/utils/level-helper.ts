@@ -475,7 +475,8 @@ export function adjustSliding(
   oldDetails: LevelDetails,
   newDetails: LevelDetails,
   matchingStableVariantOrRendition: boolean = true,
-): void {
+  logger?: ILogger,
+): number {
   const delta =
     newDetails.startSN + newDetails.skippedSegments - oldDetails.startSN;
   const oldFragments = oldDetails.fragments;
@@ -483,19 +484,29 @@ export function adjustSliding(
   let sliding = 0;
   if (advancedOrStable && delta < oldFragments.length) {
     sliding = oldFragments[delta].start;
+    logger?.log(
+      `Aligning playlists based on SN ${newDetails.startSN} (diff: ${sliding})`,
+    );
   } else if (advancedOrStable && newDetails.startSN === oldDetails.endSN + 1) {
     sliding = oldDetails.fragmentEnd;
+    logger?.log(
+      `Aligning playlists based on first/last SN ${newDetails.startSN} (diff: ${sliding})`,
+    );
   } else if (advancedOrStable && matchingStableVariantOrRendition) {
     // align with expected position (updated playlist start sequence is past end sequence of last update)
     sliding = oldDetails.fragmentStart + delta * newDetails.levelTargetDuration;
   } else if (!newDetails.skippedSegments && newDetails.fragmentStart === 0) {
     // align new start with old (playlist switch has a sequence with no overlap and should not be used for alignment)
     sliding = oldDetails.fragmentStart;
+    logger?.log(
+      `Aligning playlists based on first SN ${newDetails.startSN} (diff: ${sliding})`,
+    );
   } else {
     // new details already has a sliding offset or has skipped segments
-    return;
+    return sliding; // 0
   }
   addSliding(newDetails, sliding);
+  return sliding;
 }
 
 export function addSliding(details: LevelDetails, sliding: number) {
