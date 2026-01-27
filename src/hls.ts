@@ -1322,6 +1322,7 @@ export type {
 };
 export type {
   ABRControllerConfig,
+  PlaylistControllerConfig,
   BufferControllerConfig,
   CapLevelControllerConfig,
   CMCDControllerConfig,

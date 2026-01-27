@@ -51,6 +51,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`liveSyncDuration`](#livesyncduration)
   - [`liveMaxLatencyDuration`](#livemaxlatencyduration)
   - [`maxLiveSyncPlaybackRate`](#maxlivesyncplaybackrate)
+  - [`liveMaxUnchangedPlaylistRefresh`](#livemaxunchangedplaylistrefresh)
   - [`timelineOffset`](#timelineoffset)
   - [`liveDurationInfinity`](#livedurationinfinity)
   - [`liveBackBufferLength` (deprecated)](#livebackbufferlength-deprecated)
@@ -827,6 +828,22 @@ A value too close from `liveSyncDuration` is likely to cause playback stalls.
 When set to a value greater than `1`, the latency-controller will adjust `video.playbackRate` up to `maxLiveSyncPlaybackRate` to catch up to target latency in a live stream. `hls.targetLatency` is based on `liveSyncDuration|Count` or manifest PART-|HOLD-BACK.
 
 The default value is `1`, which disables playback rate adjustment. Set `maxLiveSyncPlaybackRate` to a value greater than `1` to enable playback rate adjustment at the live edge.
+
+### `liveMaxUnchangedPlaylistRefresh`
+
+(default: `Infinity`)
+
+Maximum number of consecutive unchanged playlist reloads before triggering a `PLAYLIST_UNCHANGED_ERROR`.
+
+**Valid value must be in range:** `[2, Infinity]`
+
+Values less than 2 will be automatically clamped to 2 with a warning message. Setting the value to `Infinity` disables this feature (default behavior).
+
+When a live playlist (main level, audio track, or subtitle track) fails to update for this many consecutive reloads, a non-fatal error is triggered and hls.js attempts to switch to an alternate level. If no alternate level is available, the error becomes fatal.
+
+For audio and subtitle track errors, hls.js will attempt to switch to a level with a different audio/subtitle group to find a working alternative.
+
+**Note:** The minimum value of 2 ensures at least one retry within 1/2 target duration before triggering the error, providing reasonable tolerance for temporary playlist update delays.
 
 ### `timelineOffset`
 

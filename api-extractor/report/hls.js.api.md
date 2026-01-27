@@ -1429,6 +1429,8 @@ export enum ErrorDetails {
     // (undocumented)
     MEDIA_SOURCE_REQUIRES_RESET = "mediaSourceRequiresReset",
     // (undocumented)
+    PLAYLIST_UNCHANGED_ERROR = "playlistUnchangedError",
+    // (undocumented)
     REMUX_ALLOC_ERROR = "remuxAllocError",
     // (undocumented)
     SUBTITLE_LOAD_ERROR = "subtitleTrackLoadError",
@@ -2336,7 +2338,7 @@ export type HlsConfig = {
     progressive: boolean;
     lowLatencyMode: boolean;
     primarySessionId?: string;
-} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & FragmentLoaderConfig & PlaylistLoaderConfig;
+} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & PlaylistControllerConfig & FragmentLoaderConfig & PlaylistLoaderConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -3437,6 +3439,8 @@ export class LevelKey implements DecryptData {
 // @public (undocumented)
 export interface LevelLoadedData {
     // (undocumented)
+    context?: PlaylistLoaderContext;
+    // (undocumented)
     deliveryDirectives: HlsUrlParameters | null;
     // (undocumented)
     details: LevelDetails;
@@ -4339,6 +4343,13 @@ export const enum PlaylistContextType {
     SUBTITLE_TRACK = "subtitleTrack"
 }
 
+// Warning: (ae-missing-release-tag) "PlaylistControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type PlaylistControllerConfig = {
+    liveMaxUnchangedPlaylistRefresh: number;
+};
+
 // Warning: (ae-missing-release-tag) "PlaylistLevelType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -4904,6 +4915,8 @@ export interface Track extends BaseTrack {
 //
 // @public (undocumented)
 export interface TrackLoadedData {
+    // (undocumented)
+    context?: PlaylistLoaderContext;
     // (undocumented)
     deliveryDirectives: HlsUrlParameters | null;
     // (undocumented)

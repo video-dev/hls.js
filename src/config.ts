@@ -15,6 +15,7 @@ import { TimelineController } from './controller/timeline-controller';
 import Cues from './utils/cues';
 import FetchLoader, { fetchSupported } from './utils/fetch-loader';
 import { requestMediaKeySystemAccess } from './utils/mediakeys-helper';
+import { clamp } from './utils/number';
 import { stringify } from './utils/safe-json-stringify';
 import XhrLoader from './utils/xhr-loader';
 import type { MediaKeySessionContext } from './controller/eme-controller';
@@ -251,6 +252,10 @@ export type LatencyControllerConfig = {
   liveSyncOnStallIncrease: number;
 };
 
+export type PlaylistControllerConfig = {
+  liveMaxUnchangedPlaylistRefresh: number;
+};
+
 export type MetadataControllerConfig = {
   enableDateRangeMetadataCues: boolean;
   enableEmsgMetadataCues: boolean;
@@ -351,6 +356,7 @@ export type HlsConfig = {
   TimelineControllerConfig &
   TSDemuxerConfig &
   HlsLoadPolicies &
+  PlaylistControllerConfig &
   FragmentLoaderConfig &
   PlaylistLoaderConfig;
 
@@ -396,6 +402,7 @@ export const hlsDefaultConfig: HlsConfig = {
   liveSyncDurationCount: 3, // used by latency-controller
   liveSyncOnStallIncrease: 1, // used by latency-controller
   liveMaxLatencyDurationCount: Infinity, // used by latency-controller
+  liveMaxUnchangedPlaylistRefresh: Infinity, // used by base-playlist-controller
   liveSyncDuration: undefined, // used by latency-controller
   liveMaxLatencyDuration: undefined, // used by latency-controller
   maxLiveSyncPlaybackRate: 1, // used by latency-controller
@@ -664,6 +671,19 @@ export function mergeConfig(
     throw new Error(
       'Illegal hls.js config: "liveMaxLatencyDuration" must be greater than "liveSyncDuration"',
     );
+  }
+
+  if (userConfig.liveMaxUnchangedPlaylistRefresh !== undefined) {
+    const liveMaxUnchangedPlaylistRefresh =
+      userConfig.liveMaxUnchangedPlaylistRefresh;
+    const clampedValue = clamp(liveMaxUnchangedPlaylistRefresh, 2, Infinity);
+
+    if (clampedValue !== liveMaxUnchangedPlaylistRefresh) {
+      logger.warn(
+        `hls.js config: "liveMaxUnchangedPlaylistRefresh" clamped from ${liveMaxUnchangedPlaylistRefresh} to ${clampedValue}.`,
+      );
+    }
+    userConfig.liveMaxUnchangedPlaylistRefresh = clampedValue;
   }
 
   const defaultsCopy = deepCpy(defaultConfig);
