@@ -194,7 +194,7 @@ export default class ContentSteeringController
     const { errorAction } = data;
     if (
       errorAction?.action === NetworkErrorAction.SendAlternateToPenaltyBox &&
-      errorAction.flags === ErrorActionFlags.MoveAllAlternatesMatchingHost
+      errorAction.flags & ErrorActionFlags.MoveAllAlternatesMatchingHost
     ) {
       const levels = this.levels;
       let pathwayPriority = this._pathwayPriority;
@@ -217,21 +217,21 @@ export default class ContentSteeringController
       if (pathwayPriority && pathwayPriority.length > 1) {
         this.updatePathwayPriority(pathwayPriority);
         errorAction.resolved = this.pathwayId !== errorPathway;
-      }
-      if (data.details === ErrorDetails.BUFFER_APPEND_ERROR && !data.fatal) {
-        // Error will become fatal in buffer-controller when reaching `appendErrorMaxRetry`
-        // Stream-controllers are expected to reduce buffer length even if this is not deemed a QuotaExceededError
-        errorAction.resolved = true;
-      } else if (!errorAction.resolved) {
-        this.warn(
-          `Could not resolve ${data.details} ("${
-            data.error.message
-          }") with content-steering for Pathway: ${errorPathway} levels: ${
-            levels ? levels.length : levels
-          } priorities: ${stringify(
-            pathwayPriority,
-          )} penalized: ${stringify(this.penalizedPathways)}`,
-        );
+
+        if (
+          !errorAction.resolved &&
+          (data.details !== ErrorDetails.BUFFER_APPEND_ERROR || data.fatal)
+        ) {
+          this.warn(
+            `Could not resolve ${data.details} ("${
+              data.error.message
+            }") with content-steering for Pathway: ${errorPathway} levels: ${
+              levels ? levels.length : levels
+            } priorities: ${stringify(
+              pathwayPriority,
+            )} penalized: ${stringify(this.penalizedPathways)}`,
+          );
+        }
       }
     }
   }

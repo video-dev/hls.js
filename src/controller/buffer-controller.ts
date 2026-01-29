@@ -889,27 +889,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             timeRanges[type] = BufferHelper.getBuffered(sb);
           }
         });
-        const { appendErrors } = this;
-        const appendErrorType = this.appendError?.sourceBufferName;
-        if (isMediaFragment(frag)) {
-          // Only clear error on successful media fragment append. Init segments may complete without error for unsupported media.
-          appendErrors[type] = 0;
-          if (type === appendErrorType) {
-            this.appendError = undefined;
-          }
-          if (type === 'audio' || type === 'video') {
-            appendErrors.audiovideo = 0;
-            if (appendErrorType === 'audiovideo') {
-              this.appendError = undefined;
-            }
-          } else {
-            appendErrors.audio = 0;
-            appendErrors.video = 0;
-            if (appendErrorType !== 'audiovideo') {
-              this.appendError = undefined;
-            }
-          }
-        }
         this.hls.trigger(Events.BUFFER_APPENDED, {
           type,
           frag,
@@ -962,19 +941,20 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             browser is able to evict some data from sourcebuffer. Retrying can help recover.
           */
           this.warn(
-            `Failed ${appendErrorCount}/${this.hls.config.appendErrorMaxRetry} times to append segment in "${type}" sourceBuffer (${mediaError ? mediaError : 'no media error'})`,
+            `Failed ${appendErrorCount}/${this.hls.config.appendErrorMaxRetry} times to append segment in "${type}" sourceBuffer with error: ${error.message}`,
           );
-          if (
-            appendErrorCount >= this.hls.config.appendErrorMaxRetry ||
-            !!mediaError
-          ) {
+          if (appendErrorCount >= this.hls.config.appendErrorMaxRetry) {
             event.fatal = true;
           }
           const readyState = this.mediaSource?.readyState;
-          if (readyState === 'ended' || readyState === 'closed') {
+          if (
+            readyState === 'ended' ||
+            readyState === 'closed' ||
+            !!mediaError
+          ) {
             // "ended" readyState on cold start https://bugs.webkit.org/show_bug.cgi?id=305712
             this.warn(
-              `MediaSource readyState "${readyState}" during SourceBuffer error${event.fatal ? '' : ' - triggering recovery'}`,
+              `MediaSource readyState "${readyState}" during SourceBuffer${mediaErrorRecoveryMessage(event.fatal, mediaError)}`,
             );
             event.details = ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET;
           }
@@ -1073,13 +1053,42 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
 
     this.blockBuffers(onUnblocked, buffersAppendedTo).catch((error) => {
-      this.warn(`Fragment buffered callback ${error}`);
+      this.warn(`Fragment buffered callback ${error.message}`);
       this.stepOperationQueue(this.sourceBufferTypes);
     });
   }
 
   private onFragChanged(event: Events.FRAG_CHANGED, data: FragChangedData) {
     this.trimBuffers();
+
+    // Only clear append errors on successful encounter of buffered media. Init segments may complete without error for unsupported media.
+    if (isMediaFragment(data.frag)) {
+      const elementaryStreams = data.frag.elementaryStreams;
+      const { appendErrors } = this;
+      const appendErrorType = this.appendError?.sourceBufferName;
+
+      Object.keys(elementaryStreams).forEach((type) => {
+        if (!elementaryStreams[type]) {
+          return;
+        }
+        appendErrors[type] = 0;
+        if (type === appendErrorType) {
+          this.appendError = undefined;
+        }
+        if (type === 'audio' || type === 'video') {
+          appendErrors.audiovideo = 0;
+          if (appendErrorType === 'audiovideo') {
+            this.appendError = undefined;
+          }
+        } else {
+          appendErrors.audio = 0;
+          appendErrors.video = 0;
+          if (appendErrorType !== 'audiovideo') {
+            this.appendError = undefined;
+          }
+        }
+      });
+    }
   }
 
   public get bufferedToEnd(): boolean {
@@ -1614,15 +1623,28 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     // When the user navigates back, the MediaSource is in a 'closed' state and cannot be used.
     // If sourceclose fires while media is still attached, trigger recovery to reattach media.
     if (this.media) {
-      this.warn(
-        'MediaSource closed while media attached - triggering recovery',
+      const mediaError = this.media.error;
+      const { appendError, appendErrors } = this;
+      let fatal = false;
+      if (!appendError && mediaError) {
+        // decode error with no append error
+        const appendErrorCount = Math.max(
+          ++appendErrors.audio,
+          ++appendErrors.video,
+          ++appendErrors.audiovideo,
+        );
+        fatal = appendErrorCount >= this.hls.config.appendErrorMaxRetry;
+      }
+      const error = new Error(
+        `MediaSource closed while media attached${mediaErrorRecoveryMessage(fatal, mediaError)}`,
       );
+      this.warn(error);
       this.hls.trigger(
         Events.ERROR,
-        Object.assign({ fatal: false }, this.appendError, {
+        Object.assign({ fatal }, appendError, {
           type: ErrorTypes.MEDIA_ERROR,
           details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
-          error: new Error('MediaSource closed while media is still attached'),
+          error,
         }),
       );
     }
@@ -1644,7 +1666,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   private _onMediaError = () => {
     const { media } = this;
     if (media) {
-      this.log(`Media error (code: ${media.error?.code}): ${media.error}`);
+      this.log(
+        `Media error (code: ${media.error?.code}): ${media.error?.message}`,
+      );
     }
   };
 
@@ -1679,7 +1703,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const error = new Error(
       `${type} SourceBuffer error. MediaSource readyState: ${readyState}`,
     );
-    this.error(`${error}`, event);
+    this.error(`${error.message}`, event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // SourceBuffer errors are not necessarily fatal; if so, the HTMLMediaElement will fire an error event
     this.hls.trigger(Events.ERROR, {
@@ -2012,4 +2036,11 @@ function addSource(media: HTMLMediaElement, url: string) {
 
 function sourceBufferNameToIndex(type: SourceBufferName) {
   return type === 'audio' ? 1 : 0;
+}
+
+function mediaErrorRecoveryMessage(
+  fatal: boolean,
+  mediaError: MediaError | null | undefined,
+) {
+  return `${fatal ? '' : ' - triggering recovery'}${mediaError ? ' with HTMLMediaElement Error: ' + mediaError.message : ''}`;
 }
