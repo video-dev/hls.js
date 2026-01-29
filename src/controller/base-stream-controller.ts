@@ -2341,7 +2341,7 @@ export default class BaseStreamController
   }
 
   private playlistLabel() {
-    return this.playlistType === PlaylistLevelType.MAIN ? 'level' : 'track';
+    return `${this.playlistType} playlist`;
   }
 
   private fragInfo(
