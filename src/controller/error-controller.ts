@@ -23,12 +23,11 @@ import type { HdcpLevel, Level } from '../types/level';
 
 export const enum NetworkErrorAction {
   DoNothing = 0,
-  SendEndCallback = 1, // Reserved for future use
+  SendEndCallback = 1,
   SendAlternateToPenaltyBox = 2,
-  RemoveAlternatePermanently = 3, // Reserved for future use
-  InsertDiscontinuity = 4, // Reserved for future use
+  RemoveAlternatePermanently = 3,
+  InsertDiscontinuity = 4,
   RetryRequest = 5,
-  ResetMediaSource = 6,
 }
 
 export const enum ErrorActionFlags {
@@ -37,6 +36,7 @@ export const enum ErrorActionFlags {
   MoveAllAlternatesMatchingHDCP = 2,
   MoveAllAlternatesMatchingKey = 4,
   SwitchToSDR = 8,
+  ResetMediaSource = 16,
 }
 
 export type IErrorAction = {
@@ -245,11 +245,15 @@ export default class ErrorController
       case ErrorDetails.BUFFER_APPEND_ERROR:
         // Buffer-controller can set errorAction when append errors can be ignored or resolved locally
         if (!data.errorAction) {
-          data.errorAction = this.getLevelSwitchAction(
-            data,
-            data.level ?? hls.loadLevel,
-          );
+          data.errorAction = this.getLevelSwitchAction(data, data.level);
         }
+        return;
+      case ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET:
+        if (!data.errorAction) {
+          data.errorAction = this.getLevelSwitchAction(data, data.level);
+        }
+        data.errorAction.flags |=
+          ErrorActionFlags.ResetMediaSource | ErrorActionFlags.SwitchToSDR;
         return;
       case ErrorDetails.INTERNAL_EXCEPTION:
       case ErrorDetails.BUFFER_APPENDING_ERROR:
@@ -372,17 +376,13 @@ export default class ErrorController
       const isAudioCodecError =
         (fragErrorType === PlaylistLevelType.AUDIO &&
           errorDetails === ErrorDetails.FRAG_PARSING_ERROR) ||
-        (data.sourceBufferName === 'audio' &&
-          (errorDetails === ErrorDetails.BUFFER_ADD_CODEC_ERROR ||
-            errorDetails === ErrorDetails.BUFFER_APPEND_ERROR));
+        (data.sourceBufferName === 'audio' && isCodecRelated(errorDetails));
       const findAudioCodecAlternate =
         isAudioCodecError &&
         levels.some(({ audioCodec }) => level.audioCodec !== audioCodec);
       // Find alternate video codec if available on video codec error
       const isVideoCodecError =
-        data.sourceBufferName === 'video' &&
-        (errorDetails === ErrorDetails.BUFFER_ADD_CODEC_ERROR ||
-          errorDetails === ErrorDetails.BUFFER_APPEND_ERROR);
+        data.sourceBufferName === 'video' && isCodecRelated(errorDetails);
       const findVideoCodecAlternate =
         isVideoCodecError &&
         levels.some(
@@ -440,7 +440,7 @@ export default class ErrorController
             (findVideoCodecAlternate &&
               level.codecSet === levelCandidate.codecSet) ||
             (!findAudioCodecAlternate &&
-              level.codecSet !== levelCandidate.codecSet)
+              level.audioCodec !== levelCandidate.audioCodec)
           ) {
             // For video/audio/subs frag errors find another group ID or fallthrough to redundant fail-over
             continue;
@@ -483,9 +483,11 @@ export default class ErrorController
       case NetworkErrorAction.RetryRequest:
         // handled by stream and playlist/level controllers
         break;
-      case NetworkErrorAction.ResetMediaSource:
-        this.hls.recoverMediaError();
-        break;
+    }
+
+    const flags = data.errorAction?.flags || 0;
+    if (flags & ErrorActionFlags.ResetMediaSource) {
+      this.hls.recoverMediaError();
     }
 
     if (data.fatal) {
@@ -500,65 +502,78 @@ export default class ErrorController
     if (!errorAction) {
       return;
     }
-    const { flags } = errorAction;
-    const nextAutoLevel = errorAction.nextAutoLevel;
+    let nextAutoLevel = errorAction.nextAutoLevel;
 
-    switch (flags) {
-      case ErrorActionFlags.None:
-        this.switchLevel(data, nextAutoLevel);
-        break;
-      case ErrorActionFlags.MoveAllAlternatesMatchingHDCP: {
-        const levelIndex = this.getVariantLevelIndex(data.frag);
-        const level = hls.levels[levelIndex];
-        const restrictedHdcpLevel = (level as Level | undefined)?.attrs[
-          'HDCP-LEVEL'
-        ];
-        errorAction.hdcpLevel = restrictedHdcpLevel;
-        if (restrictedHdcpLevel === 'NONE') {
-          this.warn(`HDCP policy resticted output with HDCP-LEVEL=NONE`);
-        } else if (restrictedHdcpLevel) {
-          hls.maxHdcpLevel =
-            HdcpLevels[HdcpLevels.indexOf(restrictedHdcpLevel) - 1];
-          errorAction.resolved = true;
-          this.warn(
-            `Restricting playback to HDCP-LEVEL of "${hls.maxHdcpLevel}" or lower`,
-          );
-          break;
+    if (errorAction.flags === ErrorActionFlags.None) {
+      this.switchLevel(data, nextAutoLevel);
+    } else if (errorAction.flags & ErrorActionFlags.SwitchToSDR) {
+      // Penalize all levels with current video-range
+      const levels = this.hls.levels;
+      const levelCountWithError = levels.length;
+      for (let i = levelCountWithError; i--; ) {
+        if (levels[i].videoRange !== 'SDR') {
+          levels[i].fragmentError++;
+          levels[i].loadError++;
+        } else if (nextAutoLevel === undefined) {
+          nextAutoLevel = i;
         }
-        // Fallthrough when no HDCP-LEVEL attribute is found
       }
-      // eslint-disable-next-line no-fallthrough
-      case ErrorActionFlags.MoveAllAlternatesMatchingKey: {
-        const levelKey = data.decryptdata;
-        if (levelKey) {
-          // Penalize all levels with key
-          const levels = this.hls.levels;
-          const levelCountWithError = levels.length;
-          for (let i = levelCountWithError; i--; ) {
-            if (this.variantHasKey(levels[i], levelKey)) {
-              this.log(
-                `Banned key found in level ${i} (${levels[i].bitrate}bps) or audio group "${levels[i].audioGroups?.join(',')}" (${data.frag?.type} fragment) ${arrayToHex(levelKey.keyId || [])}`,
-              );
-              levels[i].fragmentError++;
-              levels[i].loadError++;
-              this.log(`Removing level ${i} with key error (${data.error})`);
-              this.hls.removeLevel(i);
-            }
-          }
-          const frag = data.frag;
-          if (this.hls.levels.length < levelCountWithError) {
-            errorAction.resolved = true;
-          } else if (frag && frag.type !== PlaylistLevelType.MAIN) {
-            // Ignore key error for audio track with unmatched key (main session error)
-            const fragLevelKey = frag.decryptdata;
-            if (fragLevelKey && !levelKey.matches(fragLevelKey)) {
-              errorAction.resolved = true;
-            }
-          }
+    } else if (
+      errorAction.flags & ErrorActionFlags.MoveAllAlternatesMatchingHDCP
+    ) {
+      const levelIndex = this.getVariantLevelIndex(data.frag);
+      const level = hls.levels[levelIndex];
+      const restrictedHdcpLevel = (level as Level | undefined)?.attrs[
+        'HDCP-LEVEL'
+      ];
+      errorAction.hdcpLevel = restrictedHdcpLevel;
+      const restrictedOutputErrorWhileNoneDeclared =
+        restrictedHdcpLevel === 'NONE';
+      if (restrictedHdcpLevel && !restrictedOutputErrorWhileNoneDeclared) {
+        hls.maxHdcpLevel =
+          HdcpLevels[HdcpLevels.indexOf(restrictedHdcpLevel) - 1];
+        errorAction.resolved = true;
+        this.warn(
+          `Restricting playback to HDCP-LEVEL of "${hls.maxHdcpLevel}" or lower`,
+        );
+      } else {
+        if (restrictedOutputErrorWhileNoneDeclared) {
+          this.warn(`HDCP policy resticted output with HDCP-LEVEL=NONE`);
         }
-        break;
+        // Move alternates matching key when no HDCP-LEVEL attribute is found
+        errorAction.flags |= ErrorActionFlags.MoveAllAlternatesMatchingKey;
       }
     }
+    if (errorAction.flags & ErrorActionFlags.MoveAllAlternatesMatchingKey) {
+      const levelKey = data.decryptdata;
+      if (levelKey) {
+        // Penalize all levels with key
+        const levels = this.hls.levels;
+        const levelCountWithError = levels.length;
+        for (let i = levelCountWithError; i--; ) {
+          if (this.variantHasKey(levels[i], levelKey)) {
+            this.log(
+              `Banned key found in level ${i} (${levels[i].bitrate}bps) or audio group "${levels[i].audioGroups?.join(',')}" (${data.frag?.type} fragment) ${arrayToHex(levelKey.keyId || [])}`,
+            );
+            levels[i].fragmentError++;
+            levels[i].loadError++;
+            this.log(`Removing level ${i} with key error (${data.error})`);
+            this.hls.removeLevel(i);
+          }
+        }
+        const frag = data.frag;
+        if (this.hls.levels.length < levelCountWithError) {
+          errorAction.resolved = true;
+        } else if (frag && frag.type !== PlaylistLevelType.MAIN) {
+          // Ignore key error for audio track with unmatched key (main session error)
+          const fragLevelKey = frag.decryptdata;
+          if (fragLevelKey && !levelKey.matches(fragLevelKey)) {
+            errorAction.resolved = true;
+          }
+        }
+      }
+    }
+
     // If not resolved by previous actions try to switch to next level
     if (!errorAction.resolved) {
       this.switchLevel(data, nextAutoLevel);
@@ -590,6 +605,14 @@ export default class ErrorController
       }
     }
   }
+}
+
+function isCodecRelated(errorDetails: ErrorDetails): boolean {
+  return (
+    errorDetails === ErrorDetails.BUFFER_ADD_CODEC_ERROR ||
+    errorDetails === ErrorDetails.BUFFER_APPEND_ERROR ||
+    errorDetails === ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET
+  );
 }
 
 export function createDoNothingErrorAction(resolved?: boolean): IErrorAction {
