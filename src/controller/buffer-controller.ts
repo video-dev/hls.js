@@ -1,12 +1,8 @@
 import BufferOperationQueue from './buffer-operation-queue';
-import {
-  createDoNothingErrorAction,
-  ErrorActionFlags,
-  NetworkErrorAction,
-} from './error-controller';
+import { createDoNothingErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { DEFAULT_TARGET_DURATION } from '../loader/level-details';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -16,6 +12,10 @@ import {
   pickMostCompleteCodecName,
   replaceVideoCodec,
 } from '../utils/codecs';
+import {
+  addEventListener,
+  removeEventListener,
+} from '../utils/event-listener-helper';
 import { Logger } from '../utils/logger';
 import {
   getMediaSource,
@@ -117,6 +117,7 @@ export default class BufferController extends Logger implements ComponentAPI {
     video: 0,
     audiovideo: 0,
   };
+  private appendError?: ErrorData;
   // Record of required or created buffers by type. SourceBuffer is stored in Track.buffer once created.
   private tracks: SourceBufferTrackSet = {};
   // Array of SourceBuffer type and SourceBuffer (or null). One entry per TrackSet in this.tracks.
@@ -245,7 +246,6 @@ export default class BufferController extends Logger implements ComponentAPI {
     ];
     this.tracks = tracks;
     this.resetQueue();
-    this.resetAppendErrors();
     this.lastMpegAudioChunk = this.blockedAudioAppend = null;
     this.lastVideoAppendEnd = 0;
   }
@@ -253,6 +253,7 @@ export default class BufferController extends Logger implements ComponentAPI {
   private onManifestLoading() {
     this.bufferCodecEventsTotal = 0;
     this.details = null;
+    this.resetAppendErrors();
   }
 
   private onManifestParsed(
@@ -317,7 +318,8 @@ export default class BufferController extends Logger implements ComponentAPI {
           media.src = objectUrl;
         }
       }
-      media.addEventListener('emptied', this._onMediaEmptied);
+      addEventListener(media, 'emptied', this._onMediaEmptied);
+      addEventListener(media, 'error', this._onMediaError);
     }
   }
 
@@ -326,12 +328,13 @@ export default class BufferController extends Logger implements ComponentAPI {
       `${this.transferData?.mediaSource === ms ? 'transferred' : 'created'} media source: ${(ms.constructor as any)?.name}`,
     );
     // MediaSource listeners are arrow functions with a lexical scope, and do not need to be bound
-    ms.addEventListener('sourceopen', this._onMediaSourceOpen);
-    ms.addEventListener('sourceended', this._onMediaSourceEnded);
-    ms.addEventListener('sourceclose', this._onMediaSourceClose);
+    addEventListener(ms, 'sourceopen', this._onMediaSourceOpen);
+    addEventListener(ms, 'sourceended', this._onMediaSourceEnded);
+    addEventListener(ms, 'sourceclose', this._onMediaSourceClose);
+
     if (this.appendSource) {
-      ms.addEventListener('startstreaming', this._onStartStreaming);
-      ms.addEventListener('endstreaming', this._onEndStreaming);
+      addEventListener(ms, 'startstreaming', this._onStartStreaming);
+      addEventListener(ms, 'endstreaming', this._onEndStreaming);
     }
   }
 
@@ -509,15 +512,16 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           this.onBufferReset();
         }
       }
-      mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);
-      mediaSource.removeEventListener('sourceended', this._onMediaSourceEnded);
-      mediaSource.removeEventListener('sourceclose', this._onMediaSourceClose);
+      removeEventListener(mediaSource, 'sourceopen', this._onMediaSourceOpen);
+      removeEventListener(mediaSource, 'sourceended', this._onMediaSourceEnded);
+      removeEventListener(mediaSource, 'sourceclose', this._onMediaSourceClose);
       if (this.appendSource) {
-        mediaSource.removeEventListener(
+        removeEventListener(
+          mediaSource,
           'startstreaming',
           this._onStartStreaming,
         );
-        mediaSource.removeEventListener('endstreaming', this._onEndStreaming);
+        removeEventListener(mediaSource, 'endstreaming', this._onEndStreaming);
       }
 
       this.mediaSource = null;
@@ -527,7 +531,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     // Detach properly the MediaSource from the HTMLMediaElement as
     // suggested in https://github.com/w3c/media-source/issues/53.
     if (media) {
-      media.removeEventListener('emptied', this._onMediaEmptied);
+      removeEventListener(media, 'emptied', this._onMediaEmptied);
+      removeEventListener(media, 'error', this._onMediaError);
       if (!transferringMedia) {
         if (_objectUrl) {
           self.URL.revokeObjectURL(_objectUrl);
@@ -884,12 +889,26 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             timeRanges[type] = BufferHelper.getBuffered(sb);
           }
         });
-        this.appendErrors[type] = 0;
-        if (type === 'audio' || type === 'video') {
-          this.appendErrors.audiovideo = 0;
-        } else {
-          this.appendErrors.audio = 0;
-          this.appendErrors.video = 0;
+        const { appendErrors } = this;
+        const appendErrorType = this.appendError?.sourceBufferName;
+        if (isMediaFragment(frag)) {
+          // Only clear error on successful media fragment append. Init segments may complete without error for unsupported media.
+          appendErrors[type] = 0;
+          if (type === appendErrorType) {
+            this.appendError = undefined;
+          }
+          if (type === 'audio' || type === 'video') {
+            appendErrors.audiovideo = 0;
+            if (appendErrorType === 'audiovideo') {
+              this.appendError = undefined;
+            }
+          } else {
+            appendErrors.audio = 0;
+            appendErrors.video = 0;
+            if (appendErrorType !== 'audiovideo') {
+              this.appendError = undefined;
+            }
+          }
         }
         this.hls.trigger(Events.BUFFER_APPENDED, {
           type,
@@ -951,7 +970,16 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           ) {
             event.fatal = true;
           }
+          const readyState = this.mediaSource?.readyState;
+          if (readyState === 'ended' || readyState === 'closed') {
+            // "ended" readyState on cold start https://bugs.webkit.org/show_bug.cgi?id=305712
+            this.warn(
+              `MediaSource readyState "${readyState}" during SourceBuffer error${event.fatal ? '' : ' - triggering recovery'}`,
+            );
+            event.details = ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET;
+          }
         }
+        this.appendError = event;
         this.hls.trigger(Events.ERROR, event);
       },
     };
@@ -1167,6 +1195,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       video: 0,
       audiovideo: 0,
     };
+    this.appendError = undefined;
   }
 
   private trimBuffers() {
@@ -1566,8 +1595,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return;
     }
     // once received, don't listen anymore to sourceopen event
-    mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);
-    media.removeEventListener('emptied', this._onMediaEmptied);
+    removeEventListener(mediaSource, 'sourceopen', this._onMediaSourceOpen);
+    removeEventListener(media, 'emptied', this._onMediaEmptied);
     this.updateDuration();
     this.hls.trigger(Events.MEDIA_ATTACHED, {
       media,
@@ -1588,16 +1617,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       this.warn(
         'MediaSource closed while media attached - triggering recovery',
       );
-      this.hls.trigger(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
-        fatal: false,
-        error: new Error('MediaSource closed while media is still attached'),
-        errorAction: {
-          action: NetworkErrorAction.ResetMediaSource,
-          flags: ErrorActionFlags.None,
-        },
-      });
+      this.hls.trigger(
+        Events.ERROR,
+        Object.assign({ fatal: false }, this.appendError, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+          error: new Error('MediaSource closed while media is still attached'),
+        }),
+      );
     }
   };
 
@@ -1611,6 +1638,13 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       this.error(
         `Media element src was set while attaching MediaSource (${_objectUrl} > ${mediaSrc})`,
       );
+    }
+  };
+
+  private _onMediaError = () => {
+    const { media } = this;
+    if (media) {
+      this.log(`Media error (code: ${media.error?.code}): ${media.error}`);
     }
   };
 
@@ -1642,29 +1676,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
   private onSBUpdateError(type: SourceBufferName, event: Event) {
     const readyState = this.mediaSource?.readyState;
-
-    // https://bugs.webkit.org/show_bug.cgi?id=305712
-    // MediaSource readyState ended during SourceBuffer error - recover early.
-    if (readyState === 'ended') {
-      this.warn(
-        `MediaSource readyState "ended" during SourceBuffer error - triggering recovery`,
-      );
-      this.hls.trigger(Events.ERROR, {
-        type: ErrorTypes.MEDIA_ERROR,
-        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
-        fatal: false,
-        sourceBufferName: type,
-        error: new Error(
-          `${type} SourceBuffer error. MediaSource readyState: ended`,
-        ),
-        errorAction: {
-          action: NetworkErrorAction.ResetMediaSource,
-          flags: ErrorActionFlags.None,
-        },
-      });
-      return;
-    }
-
     const error = new Error(
       `${type} SourceBuffer error. MediaSource readyState: ${readyState}`,
     );
@@ -1966,7 +1977,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
     const listener = fn.bind(this, type);
     track.listeners.push({ event, listener });
-    buffer.addEventListener(event, listener);
+    addEventListener(buffer, event, listener);
   }
 
   private removeBufferListeners(type: SourceBufferName) {
@@ -1979,7 +1990,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return;
     }
     track.listeners.forEach((l) => {
-      buffer.removeEventListener(l.event, l.listener);
+      removeEventListener(buffer, l.event, l.listener);
     });
     track.listeners.length = 0;
   }
