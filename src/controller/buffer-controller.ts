@@ -1013,8 +1013,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     };
     this.log(
       `queuing "${type}" append sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
-        parent === PlaylistLevelType.MAIN ? 'level' : 'track'
-      } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
+        parent
+      } playlist ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
     );
     this.append(operation, type, this.isPending(this.tracks[type]));
   }

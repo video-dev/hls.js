@@ -150,6 +150,7 @@ export default class BasePlaylistController
     previousDetails?: LevelDetails,
   ) {
     const { details, stats } = data;
+    const fragments = details.fragments;
 
     // Set last updated date-time
     const now = self.performance.now();
@@ -163,8 +164,8 @@ export default class BasePlaylistController
     if (timelineOffset !== details.appliedTimelineOffset) {
       const offset = Math.max(timelineOffset || 0, 0);
       details.appliedTimelineOffset = offset;
-      details.fragments.forEach((frag) => {
-        frag.setStart(frag.playlistOffset + offset);
+      fragments.forEach((frag) => {
+        frag?.setStart(frag.playlistOffset + offset);
       });
     }
 
@@ -172,11 +173,12 @@ export default class BasePlaylistController
     if (details.live || previousDetails?.live) {
       const levelOrTrack = 'levelInfo' in data ? data.levelInfo : data.track;
       details.reloaded(previousDetails);
+      const parent = fragments[fragments.length - 1]?.type;
 
       // TODO: consider a separate flow for low-latency blocking reload requests with delivery directives
       if (details.misses >= this.hls.config.liveMaxUnchangedPlaylistRefresh) {
         const error = new Error(
-          `levelOrTrack (${levelOrTrack.id}) hits max allowed unchanged reloads.`,
+          `${parent} playlist ${levelOrTrack.id} hit max allowed unchanged reloads.`,
         );
         this.warn(error);
         const { networkDetails, context } = data;
@@ -187,8 +189,8 @@ export default class BasePlaylistController
           url: details.url,
           error,
           reason: error.message,
-          level: (data as LevelLoadedData).level ?? undefined,
-          parent: details.fragments[0]?.type,
+          level: (data as LevelLoadedData).level,
+          parent,
           context,
           networkDetails,
           stats,
@@ -197,7 +199,7 @@ export default class BasePlaylistController
       }
 
       // Merge live playlists to adjust fragment starts and fill in delta playlist skipped segments
-      if (previousDetails && details.fragments.length > 0) {
+      if (previousDetails) {
         mergeDetails(previousDetails, details, this);
         const error = details.playlistParsingError;
         if (error) {
@@ -212,8 +214,8 @@ export default class BasePlaylistController
               url: details.url,
               error,
               reason: error.message,
-              level: (data as any).level || undefined,
-              parent: details.fragments[0]?.type,
+              level: (data as LevelLoadedData).level,
+              parent,
               networkDetails,
               stats,
             });
