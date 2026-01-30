@@ -157,6 +157,24 @@ function startStream(streamUrl, config, callback, autoplay) {
   } catch (err) {
     callback({ code: 'exception', logs: logString });
   }
+
+  if (self === self.window) {
+    self.onerror = function (message, source, lineno, colno, error) {
+      console.error(
+        '[test] > ERROR: ' +
+          message +
+          '\n' +
+          source +
+          '\n ln:' +
+          lineno +
+          ' cn: ' +
+          colno +
+          '\n' +
+          error
+      );
+      callback({ code: 'global exception', logs: logString });
+    };
+  }
 }
 
 function switchToLowestLevel(mode) {
