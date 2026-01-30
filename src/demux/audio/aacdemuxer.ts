@@ -5,14 +5,21 @@ import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
 import * as ADTS from './adts';
 import BaseAudioDemuxer from './base-audio-demuxer';
 import * as MpegAudio from './mpegaudio';
+import SampleAesDecrypter from '../sample-aes';
 import type { HlsConfig } from '../../config';
 import type { HlsEventEmitter } from '../../events';
-import type { DemuxedAudioTrack } from '../../types/demuxer';
+import type {
+  AACAudioSample,
+  DemuxedAudioTrack,
+  DemuxerResult,
+  KeyData,
+} from '../../types/demuxer';
 import type { ILogger } from '../../utils/logger';
 
 class AACDemuxer extends BaseAudioDemuxer {
   private readonly observer: HlsEventEmitter;
   private readonly config: HlsConfig;
+  private sampleAes: SampleAesDecrypter | null = null;
 
   constructor(observer: HlsEventEmitter, config) {
     super();
@@ -90,6 +97,29 @@ class AACDemuxer extends BaseAudioDemuxer {
     if (frame?.missing === 0) {
       return frame;
     }
+  }
+
+  demuxSampleAes(
+    data: Uint8Array,
+    keyData: KeyData,
+    timeOffset: number,
+  ): Promise<DemuxerResult> {
+    const demuxResult = this.demux(data, timeOffset);
+    const sampleAes = (this.sampleAes = new SampleAesDecrypter(
+      this.observer,
+      this.config,
+      keyData,
+    ));
+
+    return new Promise((resolve) => {
+      sampleAes.decryptAacSamples(
+        demuxResult.audioTrack.samples as AACAudioSample[],
+        0,
+        () => {
+          resolve(demuxResult);
+        },
+      );
+    });
   }
 }
 
