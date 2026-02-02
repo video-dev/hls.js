@@ -108,6 +108,23 @@ function startStream(streamUrl, config, callback, autoplay) {
             warn: console.warn.bind(console, '[warn]'),
             error: console.error.bind(console, '[error]'),
           },
+          // Increase TTFB timeout for functional test runs
+          fragLoadPolicy: {
+            default: {
+              maxTimeToFirstByteMs: 20000,
+              maxLoadTimeMs: 90000,
+              timeoutRetry: {
+                maxNumRetry: 2,
+                retryDelayMs: 0,
+                maxRetryDelayMs: 0,
+              },
+              errorRetry: {
+                maxNumRetry: 1,
+                retryDelayMs: 1000,
+                maxRetryDelayMs: 8000,
+              },
+            },
+          },
         },
         config
       )
@@ -156,6 +173,24 @@ function startStream(streamUrl, config, callback, autoplay) {
     hls.attachMedia(video);
   } catch (err) {
     callback({ code: 'exception', logs: logString });
+  }
+
+  if (self === self.window) {
+    self.onerror = function (message, source, lineno, colno, error) {
+      console.error(
+        '[test] > ERROR: ' +
+          message +
+          '\n' +
+          source +
+          '\n ln:' +
+          lineno +
+          ' cn: ' +
+          colno +
+          '\n' +
+          error
+      );
+      callback({ code: 'global exception', logs: logString });
+    };
   }
 }
 

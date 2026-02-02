@@ -1937,7 +1937,7 @@ export default class BaseStreamController
     const noAlternate =
       couldRetry &&
       !errorAction.resolved &&
-      flags === ErrorActionFlags.MoveAllAlternatesMatchingHost;
+      flags & ErrorActionFlags.MoveAllAlternatesMatchingHost;
     const live = this.hls.latestLevelDetails?.live;
     if (
       !retry &&
