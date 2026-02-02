@@ -37,6 +37,7 @@ class AbrController extends Logger implements AbrComponentAPI {
   private lastLevelLoadSec: number = 0;
   private lastLoadedFragLevel: number = -1;
   private firstSelection: number = -1;
+  private firstAutoFloor: number = -1;
   private _nextAutoLevel: number = -1;
   private nextAutoLevelKey: string = '';
   private audioTracksByGroup: AudioTracksByGroup | null = null;
@@ -121,6 +122,7 @@ class AbrController extends Logger implements AbrComponentAPI {
   ) {
     this.lastLoadedFragLevel = -1;
     this.firstSelection = -1;
+    this.firstAutoFloor = -1;
     this.lastLevelLoadSec = 0;
     this.supportedCache = {};
     this.fragCurrent = this.partCurrent = null;
@@ -330,8 +332,8 @@ class AbrController extends Logger implements AbrComponentAPI {
 
     const bwe = loadRate ? loadRate * 8 : bwEstimate;
     const live =
-      (levelLoaded?.details || this.hls.latestLevelDetails)?.live === true;
-    const abrBandWidthUpFactor = this.hls.config.abrBandWidthUpFactor;
+      (levelLoaded?.details || hls.latestLevelDetails)?.live === true;
+    const abrBandWidthUpFactor = hls.config.abrBandWidthUpFactor;
     let fragLevelNextLoadedDelay: number = Number.POSITIVE_INFINITY;
     let nextLoadLevel: number;
     // Iterate through lower level and try to find the largest one that avoids rebuffering
@@ -379,6 +381,7 @@ class AbrController extends Logger implements AbrComponentAPI {
     }
     const nextLoadLevelBitrate = levels[nextLoadLevel].maxBitrate;
     if (this.getBwEstimate() * abrBandWidthUpFactor > nextLoadLevelBitrate) {
+      this.firstAutoFloor = Math.min(nextLoadLevel, hls.firstLevel);
       this.resetEstimator(nextLoadLevelBitrate);
     }
     const bestSwitchLevel = this.findBestLevel(
@@ -442,6 +445,10 @@ class AbrController extends Logger implements AbrComponentAPI {
             lowestSwitchLevel = minAutoLevel;
           }
           this.hls.nextLoadLevel = this.hls.nextAutoLevel = lowestSwitchLevel;
+          this.firstAutoFloor = Math.min(
+            lowestSwitchLevel,
+            this.hls.firstLevel,
+          );
           this.resetEstimator(this.hls.levels[lowestSwitchLevel].bitrate);
         }
       }
@@ -532,6 +539,9 @@ class AbrController extends Logger implements AbrComponentAPI {
       this.bitrateTestDelay = processingMs / 1000;
     } else {
       this.bitrateTestDelay = 0;
+      if (this.firstAutoFloor > -1 && this.bwEstimator.canEstimate()) {
+        this.firstAutoFloor = -1;
+      }
     }
   }
 
@@ -564,7 +574,13 @@ class AbrController extends Logger implements AbrComponentAPI {
       return abrAutoLevel;
     }
     const firstLevel = this.hls.firstLevel;
-    const clamped = Math.min(Math.max(firstLevel, minAutoLevel), maxAutoLevel);
+    const firstAutoFloor =
+      this.firstAutoFloor === -1 ? Infinity : this.firstAutoFloor;
+    const clamped = Math.min(
+      Math.max(firstLevel, minAutoLevel),
+      maxAutoLevel,
+      firstAutoFloor,
+    );
     this.warn(
       `Could not find best starting auto level. Defaulting to first in playlist ${firstLevel} clamped to ${clamped}`,
     );
