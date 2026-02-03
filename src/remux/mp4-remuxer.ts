@@ -379,7 +379,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     const typeSupported = this.typeSupported;
     const tracks: TrackSet = {};
     const _initPTS = this._initPTS;
-    let computePTSDTS = !_initPTS || accurateTimeOffset;
+    const computePTSDTS = !_initPTS || accurateTimeOffset;
     let container = 'audio/mp4';
     let initPTS: number | undefined;
     let initDTS: number | undefined;
@@ -427,16 +427,19 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       if (computePTSDTS) {
         trackId = audioTrack.id;
         timescale = audioTrack.inputTimeScale;
-        if (!_initPTS || timescale !== _initPTS.timescale) {
+        const initBaseTimestamp = this.computeInitPts(
+          audioSamples[0].pts,
+          timescale,
+          timeOffset,
+          'audio',
+        );
+        if (
+          !_initPTS ||
+          timescale !== _initPTS.timescale ||
+          (timeOffset === 0 && initBaseTimestamp < _initPTS.baseTime)
+        ) {
           // remember first PTS of this demuxing context. for audio, PTS = DTS
-          initPTS = initDTS = this.computeInitPts(
-            audioSamples[0].pts,
-            timescale,
-            timeOffset,
-            'audio',
-          );
-        } else {
-          computePTSDTS = false;
+          initPTS = initDTS = initBaseTimestamp;
         }
       }
     }
@@ -458,25 +461,28 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       if (computePTSDTS) {
         trackId = videoTrack.id;
         timescale = videoTrack.inputTimeScale;
-        if (!_initPTS || timescale !== _initPTS.timescale) {
-          const basePTS = this.getVideoStartPts(videoSamples);
-          const baseDTS = normalizePts(videoSamples[0].dts, basePTS);
-          const videoInitDTS = this.computeInitPts(
-            baseDTS,
-            timescale,
-            timeOffset,
-            'video',
-          );
-          const videoInitPTS = this.computeInitPts(
-            basePTS,
-            timescale,
-            timeOffset,
-            'video',
-          );
+        const basePTS = this.getVideoStartPts(videoSamples);
+        const baseDTS = normalizePts(videoSamples[0].dts, basePTS);
+        const videoInitDTS = this.computeInitPts(
+          baseDTS,
+          timescale,
+          timeOffset,
+          'video',
+        );
+        const videoInitPTS = this.computeInitPts(
+          basePTS,
+          timescale,
+          timeOffset,
+          'video',
+        );
+        if (
+          !_initPTS ||
+          timescale !== _initPTS.timescale ||
+          Number.isFinite(initPTS) ||
+          (timeOffset === 0 && videoInitPTS < _initPTS.baseTime)
+        ) {
           initDTS = Math.min(initDTS as number, videoInitDTS);
           initPTS = Math.min(initPTS as number, videoInitPTS);
-        } else {
-          computePTSDTS = false;
         }
       }
       this.videoTrackConfig = {
@@ -488,7 +494,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
 
     if (Object.keys(tracks).length) {
       this.ISGenerated = true;
-      if (computePTSDTS) {
+      if (computePTSDTS && Number.isFinite(initPTS)) {
         if (_initPTS) {
           this.warn(
             `Timestamps at playlist time: ${accurateTimeOffset ? '' : '~'}${timeOffset} ${initPTS! / timescale!} != initPTS: ${_initPTS.baseTime / _initPTS.timescale} (${_initPTS.baseTime}/${_initPTS.timescale}) trackId: ${_initPTS.trackId}`,
