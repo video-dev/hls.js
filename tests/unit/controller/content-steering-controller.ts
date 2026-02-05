@@ -350,7 +350,171 @@ http://a.example.com/md/prog_index.m3u8`;
     });
   });
 
-  describe('Pathway Gouping', function () {
+  describe('Content Steering Playlist and Manifest', function () {
+    const multivariantPlaylist = `#EXTM3U
+#EXT-X-CONTENT-STEERING:SERVER-URI="/steering?video=00012",PATHWAY-ID="CDN-A"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="A",NAME="English",DEFAULT=YES,URI="eng.m3u8",LANGUAGE="en",STABLE-RENDITION-ID="Audio-37262"
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="B",NAME="ENGLISH",DEFAULT=YES,URI="https://backup.example.com/video12/audio/eng.m3u8",LANGUAGE="en",STABLE-RENDITION-ID="Audio-37262"
+#EXT-X-STREAM-INF:BANDWIDTH=1280000,AUDIO="A",PATHWAY-ID="CDN-A",STABLE-VARIANT-ID="Video-128"
+low/video.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=7680000,AUDIO="A",PATHWAY-ID="CDN-A",STABLE-VARIANT-ID="Video-768"
+hi/video.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=1280000,AUDIO="B",PATHWAY-ID="CDN-B",STABLE-VARIANT-ID="Video-128"
+https://backup.example.com/video12/low/video.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=7680000,AUDIO="B",PATHWAY-ID="CDN-B",STABLE-VARIANT-ID="Video-768"
+https://backup.example.com/video12/hi/video.m3u8`;
+    it('performs Pathway Cloning based on PER-VARIANT-URIS and PER-RENDITION-URIS, which supersede HOST and PARAMS replacement', function () {
+      const parsedMultivariant = M3U8Parser.parseMasterPlaylist(
+        multivariantPlaylist,
+        'https://example.com/video12/main.m3u8',
+      );
+      const parsedMediaOptions = M3U8Parser.parseMasterPlaylistMedia(
+        multivariantPlaylist,
+        'https://example.com/video12/main.m3u8',
+        parsedMultivariant,
+      );
+      const manifestLoadedData: ManifestLoadedData = {
+        contentSteering: parsedMultivariant.contentSteering,
+        levels: parsedMultivariant.levels,
+        audioTracks: parsedMediaOptions.AUDIO!,
+        subtitles: parsedMediaOptions.SUBTITLES,
+        networkDetails: new Response('ok'),
+        url: 'https://example.com/video12/main.m3u8',
+        stats: new LoadStats(),
+        sessionData: null,
+        sessionKeys: null,
+        startTimeOffset: null,
+        variableList: null,
+      };
+      const levelController: any = (hls.levelController = new LevelController(
+        hls as any,
+        contentSteeringController as any,
+      ));
+
+      hls.nextAutoLevel = 0;
+      contentSteeringController.onManifestLoaded(
+        Events.MANIFEST_LOADED,
+        manifestLoadedData,
+      );
+      levelController.onManifestLoaded(
+        Events.MANIFEST_LOADED,
+        manifestLoadedData,
+      );
+
+      expect(
+        contentSteeringController.levels,
+        'Content Steering variants',
+      ).to.have.lengthOf(4);
+
+      loadSteeringManifest(
+        {
+          VERSION: 1,
+          TTL: 300,
+          'PATHWAY-PRIORITY': ['CDN-A-CLONE', 'CDN-A'],
+          'PATHWAY-CLONES': [
+            {
+              'BASE-ID': 'CDN-A',
+              ID: 'CDN-A-CLONE',
+              'URI-REPLACEMENT': {
+                HOST: 'backup2.example.com',
+                PARAMS: {
+                  token: 'dkfs1239414',
+                },
+                'PER-VARIANT-URIS': {
+                  'Video-768':
+                    'https://backup3.example.com/video12/hi/video.m3u8?custom=768',
+                },
+                'PER-RENDITION-URIS': {
+                  'Audio-37262':
+                    'https://backup3.example.com/video12/audio/eng.m3u8?custom=37262',
+                },
+              },
+            },
+          ],
+        },
+        contentSteeringController,
+      );
+
+      const expectMatch = (
+        mediaOption: Level | MediaPlaylist,
+        matchKeys: Object,
+      ) => {
+        Object.keys(matchKeys).forEach((key: string) => {
+          expect(mediaOption[key]).to.equal(matchKeys[key], key);
+        });
+      };
+
+      // Steering Variants (Levels)
+      expect(
+        contentSteeringController.levels,
+        'Content Steering variants',
+      ).to.have.lengthOf(6);
+      if (!contentSteeringController.levels) {
+        return;
+      }
+      expectMatch(contentSteeringController.levels[0], {
+        pathwayId: 'CDN-A',
+        uri: 'https://example.com/video12/low/video.m3u8',
+      });
+      expectMatch(contentSteeringController.levels[1], {
+        pathwayId: 'CDN-B',
+        uri: 'https://backup.example.com/video12/low/video.m3u8',
+      });
+      expectMatch(contentSteeringController.levels[2], {
+        pathwayId: 'CDN-A',
+        uri: 'https://example.com/video12/hi/video.m3u8',
+      });
+      expectMatch(contentSteeringController.levels[3], {
+        pathwayId: 'CDN-B',
+        uri: 'https://backup.example.com/video12/hi/video.m3u8',
+      });
+      expectMatch(contentSteeringController.levels[4], {
+        pathwayId: 'CDN-A-CLONE',
+        uri: 'https://backup2.example.com/video12/low/video.m3u8?token=dkfs1239414',
+      });
+      expectMatch(contentSteeringController.levels[5], {
+        pathwayId: 'CDN-A-CLONE',
+        uri: 'https://backup3.example.com/video12/hi/video.m3u8?custom=768',
+      });
+
+      // Steering Renditions (AudioTracks)
+      expect(
+        contentSteeringController.audioTracks,
+        'Content Steering renditinos',
+      ).to.have.lengthOf(3);
+      if (!contentSteeringController.audioTracks) {
+        return;
+      }
+      expectMatch(contentSteeringController.audioTracks[0], {
+        groupId: 'A',
+        url: 'https://example.com/video12/eng.m3u8',
+      });
+      expectMatch(contentSteeringController.audioTracks[1], {
+        groupId: 'B',
+        url: 'https://backup.example.com/video12/audio/eng.m3u8',
+      });
+      expectMatch(contentSteeringController.audioTracks[2], {
+        groupId: 'A_clone_CDN-A-CLONE',
+        url: 'https://backup3.example.com/video12/audio/eng.m3u8?custom=37262',
+      });
+
+      // Active Pathway Variants and Renditions
+      expect(levelController.levels, 'LevelController levels').to.have.lengthOf(
+        2,
+      );
+      expect(levelController.levels[0].uri).to.equal(
+        'https://backup2.example.com/video12/low/video.m3u8?token=dkfs1239414',
+      );
+      expect(levelController.levels[1].uri).to.equal(
+        'https://backup3.example.com/video12/hi/video.m3u8?custom=768',
+      );
+      expect(levelController.levels[1].audioGroupId).to.equal(
+        'A_clone_CDN-A-CLONE',
+      );
+    });
+  });
+
+  describe('Pathway Grouping', function () {
     let levelController;
     let audioTrackController;
     let subtitleTrackController;
@@ -853,7 +1017,7 @@ http://a.example.com/md/prog_index.m3u8`;
           'tier10',
         );
         expect(eventData.levels[2].uri).to.equal(
-          'http://www.bear.com/tier10.m3u8?fallback=true&cloned=buzz',
+          'http://www.bear.com/tier10.m3u8?fallback=true',
         );
 
         expect(hls.getEventData(4).name).to.equal(Events.AUDIO_TRACKS_UPDATED);
