@@ -593,20 +593,18 @@ function performUriReplacement(
   perOptionKey: 'PER-VARIANT-URIS' | 'PER-RENDITION-URIS',
   uriReplacement: UriReplacement,
 ): string {
-  const {
-    HOST: host,
-    PARAMS: params,
-    [perOptionKey]: perOptionUris,
-  } = uriReplacement;
-  let perVariantUri;
   if (stableId) {
-    perVariantUri = perOptionUris?.[stableId];
-    if (perVariantUri) {
-      uri = perVariantUri;
+    const { [perOptionKey]: perOptionUris } = uriReplacement;
+    if (perOptionUris) {
+      const perVariantUri = perOptionUris[stableId];
+      if (perVariantUri) {
+        return perVariantUri;
+      }
     }
   }
+  const { HOST: host, PARAMS: params } = uriReplacement;
   const url = new self.URL(uri);
-  if (host && !perVariantUri) {
+  if (host) {
     url.hostname = host;
   }
   if (params) {
