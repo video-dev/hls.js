@@ -590,7 +590,7 @@ export default class LevelController extends BasePlaylistController {
     event: Events.FRAG_BUFFERED,
     { frag }: FragBufferedData,
   ) {
-    if (frag !== undefined && frag.type === PlaylistLevelType.MAIN) {
+    if (frag.type === PlaylistLevelType.MAIN) {
       const el = frag.elementaryStreams;
       if (!Object.keys(el).some((type) => !!el[type])) {
         return;

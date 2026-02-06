@@ -250,8 +250,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       const logger = this.hls.logger;
       const loaderContext = loader.context as PlaylistLoaderContext;
       if (
-        loaderContext &&
-        loaderContext.levelOrTrack === context.levelOrTrack &&
+        loaderContext?.levelOrTrack === context.levelOrTrack &&
         (loaderContext.url === context.url ||
           (loaderContext.deliveryDirectives && !context.deliveryDirectives))
       ) {
