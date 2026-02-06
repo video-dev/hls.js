@@ -1,5 +1,6 @@
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
+import { type Fragment, fragmentsAreEqual } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import { Logger } from '../utils/logger';
@@ -17,7 +18,6 @@ import {
 } from '../utils/rendition-helper';
 import { stringify } from '../utils/safe-json-stringify';
 import type Hls from '../hls';
-import type { Fragment } from '../loader/fragment';
 import type { Part } from '../loader/fragment';
 import type { AbrComponentAPI } from '../types/component-api';
 import type {
@@ -179,12 +179,7 @@ class AbrController extends Logger implements AbrComponentAPI {
       case ErrorDetails.FRAG_LOAD_TIMEOUT: {
         const frag = data.frag;
         const { fragCurrent, partCurrent: part } = this;
-        if (
-          frag &&
-          fragCurrent &&
-          frag.sn === fragCurrent.sn &&
-          frag.level === fragCurrent.level
-        ) {
+        if (frag && fragmentsAreEqual(frag, fragCurrent)) {
           const now = performance.now();
           const stats: LoaderStats = part ? part.stats : frag.stats;
           const timeLoading = now - stats.loading.start;

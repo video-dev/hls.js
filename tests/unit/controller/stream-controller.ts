@@ -716,7 +716,10 @@ describe('StreamController', function () {
 
     it('should trigger FRAG_CHANGED event when fragment changes', function () {
       const triggerSpy = sinon.spy(hls, 'trigger');
-      const oldFrag = new Fragment(PlaylistLevelType.MAIN, 'old.ts');
+      const oldFrag = new Fragment(
+        PlaylistLevelType.MAIN,
+        'old.ts',
+      ) as MediaFragment;
       oldFrag.sn = 0;
       oldFrag.level = 0;
       streamController['fragPlaying'] = oldFrag;
@@ -738,7 +741,10 @@ describe('StreamController', function () {
 
     it('should trigger LEVEL_SWITCHED event when level changes', function () {
       const triggerSpy = sinon.spy(hls, 'trigger');
-      const oldFrag = new Fragment(PlaylistLevelType.MAIN, 'old.ts');
+      const oldFrag = new Fragment(
+        PlaylistLevelType.MAIN,
+        'old.ts',
+      ) as MediaFragment;
       oldFrag.sn = 0;
       oldFrag.level = 1;
 
@@ -759,7 +765,7 @@ describe('StreamController', function () {
     });
 
     it('should return false when fragment has not changed', function () {
-      streamController['fragPlaying'] = mockFrag;
+      streamController['fragPlaying'] = mockFrag as MediaFragment;
 
       const result = streamController['checkFragmentChanged']();
 

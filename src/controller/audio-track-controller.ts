@@ -7,6 +7,7 @@ import {
   audioMatchPredicate,
   findClosestLevelWithAudioGroup,
   findMatchingOption,
+  inGroupOrNone,
   matchesOption,
   useAlternateAudio,
 } from '../utils/rendition-helper';
@@ -141,9 +142,8 @@ class AudioTrackController extends BasePlaylistController {
       this.trackId = -1;
       this.currentTrack = null;
 
-      const audioTracks = this.tracks.filter(
-        (track): boolean =>
-          !audioGroups || audioGroups.indexOf(track.groupId) !== -1,
+      const audioTracks = this.tracks.filter((track): boolean =>
+        inGroupOrNone(track.groupId, audioGroups),
       );
       if (audioTracks.length) {
         // Disable selectDefaultTrack if there are no default tracks
@@ -223,7 +223,7 @@ class AudioTrackController extends BasePlaylistController {
     if (
       data.context.type === PlaylistContextType.AUDIO_TRACK &&
       data.context.id === this.trackId &&
-      (!this.groupIds || this.groupIds.indexOf(data.context.groupId) !== -1)
+      inGroupOrNone(data.context.groupId, this.groupIds)
     ) {
       this.checkRetry(data);
     }
