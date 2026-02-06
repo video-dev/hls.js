@@ -459,9 +459,8 @@ export function findClosestLevelWithAudioGroup(
         return false;
       }
       const audioGroups = level.audioGroups;
-      const tracks = allAudioTracks.filter(
-        (track): boolean =>
-          !audioGroups || audioGroups.indexOf(track.groupId) !== -1,
+      const tracks = allAudioTracks.filter((track): boolean =>
+        inGroupOrNone(track.groupId, audioGroups),
       );
       return findMatchingOption(option, tracks, matchPredicate) > -1;
     },
@@ -471,9 +470,8 @@ export function findClosestLevelWithAudioGroup(
   }
   return searchDownAndUpList(levels, searchIndex, (level: Level) => {
     const audioGroups = level.audioGroups;
-    const tracks = allAudioTracks.filter(
-      (track): boolean =>
-        !audioGroups || audioGroups.indexOf(track.groupId) !== -1,
+    const tracks = allAudioTracks.filter((track): boolean =>
+      inGroupOrNone(track.groupId, audioGroups),
     );
     return findMatchingOption(option, tracks, matchPredicate) > -1;
   });
@@ -502,4 +500,14 @@ export function useAlternateAudio(
   hls: Hls,
 ): boolean {
   return !!audioTrackUrl && audioTrackUrl !== hls.loadLevelObj?.uri;
+}
+
+export function inGroupOrNone(
+  groupId: string | undefined,
+  groupIds: (string | undefined)[] | null | undefined,
+): boolean {
+  if (!groupIds) {
+    return true;
+  }
+  return groupIds.indexOf(groupId) !== -1;
 }

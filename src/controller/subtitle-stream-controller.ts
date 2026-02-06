@@ -438,8 +438,7 @@ export class SubtitleStreamController
           | MediaFragment
           | undefined;
         if (
-          prevFrag &&
-          prevFrag.cc === frag.cc &&
+          frag.cc === prevFrag?.cc &&
           !trackDetails.partList?.length &&
           this.fragmentTracker.getState(prevFrag) === FragmentState.NOT_LOADED
         ) {

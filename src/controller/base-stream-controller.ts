@@ -10,8 +10,10 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import {
   type Fragment,
+  fragmentsAreEqual,
   isMediaFragment,
   type MediaFragment,
+  mediaFragmentsAreEqual,
   type Part,
 } from '../loader/fragment';
 import FragmentLoader from '../loader/fragment-loader';
@@ -101,7 +103,7 @@ export default class BaseStreamController
 
   protected fragPrevious: MediaFragment | null = null;
   protected fragCurrent: Fragment | null = null;
-  protected fragPlaying: Fragment | null = null;
+  protected fragPlaying: MediaFragment | null = null;
   protected fragmentTracker: FragmentTracker;
   protected transmuxer: TransmuxerInterface | null = null;
   protected _state: (typeof State)[keyof typeof State] = State.STOPPED;
@@ -794,12 +796,7 @@ export default class BaseStreamController
 
   protected fragContextChanged(frag: Fragment | null) {
     const { fragCurrent } = this;
-    return (
-      !frag ||
-      !fragCurrent ||
-      frag.sn !== fragCurrent.sn ||
-      frag.level !== fragCurrent.level
-    );
+    return !frag || !fragmentsAreEqual(frag, fragCurrent);
   }
 
   protected fragBufferedComplete(frag: Fragment, part: Part | null) {
@@ -906,10 +903,7 @@ export default class BaseStreamController
     }
 
     const fragPrevious = this.fragPrevious;
-    if (
-      isMediaFragment(frag) &&
-      (!fragPrevious || frag.sn !== fragPrevious.sn)
-    ) {
+    if (isMediaFragment(frag) && !mediaFragmentsAreEqual(frag, fragPrevious)) {
       const shouldLoadParts = this.shouldLoadParts(level.details, frag.end);
       if (shouldLoadParts !== this.loadingParts) {
         this.log(
@@ -1354,7 +1348,7 @@ export default class BaseStreamController
     return false;
   }
 
-  protected getAppendedFrag(position: number): Fragment | null {
+  protected getAppendedFrag(position: number): MediaFragment | null {
     const fragOrPart = (this.fragmentTracker as any)
       ? this.fragmentTracker.getAppendedFrag(position, this.playlistType)
       : null;
@@ -1754,25 +1748,19 @@ export default class BaseStreamController
         fragPrevious = frag;
       }
       if (
-        fragPrevious &&
-        frag.sn === fragPrevious.sn &&
+        mediaFragmentsAreEqual(frag, fragPrevious) &&
         (!loadingParts ||
           partList[0].fragment.sn > frag.sn ||
           !levelDetails.live)
       ) {
-        // Force the next fragment to load if the previous one was already selected. This can occasionally happen with
-        // non-uniform fragment durations
-        const sameLevel = frag.level === fragPrevious.level;
-        if (sameLevel) {
-          const nextFrag = fragments[curSNIdx + 1];
-          if (
-            frag.sn < endSN &&
-            this.fragmentTracker.getState(nextFrag) !== FragmentState.OK
-          ) {
-            frag = nextFrag;
-          } else {
-            frag = null;
-          }
+        const nextFrag = fragments[curSNIdx + 1];
+        if (
+          frag.sn < endSN &&
+          this.fragmentTracker.getState(nextFrag) !== FragmentState.OK
+        ) {
+          frag = nextFrag;
+        } else {
+          frag = null;
         }
       }
     }
@@ -2449,7 +2437,7 @@ export default class BaseStreamController
 
   protected checkFragmentChanged(): boolean {
     const video = this.media;
-    let fragPlayingCurrent: Fragment | null = null;
+    let fragPlayingCurrent: MediaFragment | null = null;
     if (video && video.readyState > 1 && video.seeking === false) {
       const currentTime = video.currentTime;
       /* if video element is in seeked state, currentTime can only increase.
@@ -2471,13 +2459,7 @@ export default class BaseStreamController
       }
       if (fragPlayingCurrent) {
         this.backtrackFragment = undefined;
-        const fragPlaying = this.fragPlaying;
-        const fragCurrentLevel = fragPlayingCurrent.level;
-        if (
-          !fragPlaying ||
-          fragPlayingCurrent.sn !== fragPlaying.sn ||
-          fragPlaying.level !== fragCurrentLevel
-        ) {
+        if (!mediaFragmentsAreEqual(fragPlayingCurrent, this.fragPlaying)) {
           this.fragPlaying = fragPlayingCurrent;
           return true;
         }

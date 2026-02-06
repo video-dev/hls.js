@@ -157,6 +157,24 @@ export function isMediaFragment(frag: Fragment): frag is MediaFragment {
   return frag.sn !== 'initSegment';
 }
 
+export function mediaFragmentsAreEqual(
+  frag: Fragment,
+  mediaFragment: MediaFragment | null | undefined,
+): boolean {
+  return frag.sn === mediaFragment?.sn && frag.level === mediaFragment.level;
+}
+
+export function fragmentsAreEqual(
+  frag: Fragment,
+  otherFrag: Fragment | null | undefined,
+): boolean {
+  return (
+    frag.sn === otherFrag?.sn &&
+    frag.level === otherFrag.level &&
+    frag.cc === otherFrag.cc // Both `sn` may equal "initSegment" in different disconituities (`cc`)
+  );
+}
+
 /**
  * Object representing parsed data from an HLS Segment. Found in {@link hls.js#LevelDetails.fragments}.
  */
