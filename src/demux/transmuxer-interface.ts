@@ -202,8 +202,8 @@ export default class TransmuxerInterface {
     const decryptdata = frag.decryptdata;
     const lastFrag = this.frag;
 
-    const discontinuity = !(lastFrag && frag.cc === lastFrag.cc);
-    const trackSwitch = !(lastFrag && chunkMeta.level === lastFrag.level);
+    const discontinuity = lastFrag ? frag.cc !== lastFrag.cc : true;
+    const trackSwitch = lastFrag ? chunkMeta.level !== lastFrag.level : true;
     const snDiff = lastFrag ? chunkMeta.sn - lastFrag.sn : -1;
     const partDiff = this.part ? chunkMeta.part - this.part.index : -1;
     const progressive =
