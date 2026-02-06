@@ -222,7 +222,7 @@ class HevcVideoParser extends BaseVideoParser {
     data: Uint8Array,
     vps: Uint8Array[] | undefined,
   ) {
-    if ((vps && vps[0] === this.initVPS) || (!vps && !parameterSets.length)) {
+    if ((!!vps && vps[0] === this.initVPS) || (!vps && !parameterSets.length)) {
       parameterSets.push(data);
     }
   }
