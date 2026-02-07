@@ -10,6 +10,7 @@
     "demo/**/*",
     /* needed for eslint to work for some reason ¯\_(ツ)_/¯ */
     ".eslintrc.js",
+    "karma.conf.js",
     "tests/**/.eslintrc.js",
     "rollup.config.js",
     "build-config.js",

@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import AudioTrackController from '../../../src/controller/audio-track-controller';
@@ -21,8 +21,7 @@ import type {
   MediaPlaylist,
 } from '../../../src/types/media-playlist';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 type HlsTestable = Omit<
   Hls,

@@ -1,3 +1,5 @@
+import { expect } from 'chai';
+import sinon from 'sinon';
 import OutputFilter from '../../../src/utils/output-filter';
 
 describe('OutputFilter', function () {

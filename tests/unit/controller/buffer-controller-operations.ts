@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import BufferController from '../../../src/controller/buffer-controller';
@@ -10,7 +10,11 @@ import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
-import { MockMediaElement, MockMediaSource } from '../utils/mock-media';
+import {
+  MockMediaElement,
+  MockMediaSource,
+  type MockSourceBuffer,
+} from '../../mocks/mock-media';
 import type BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import type {
   BufferOperation,
@@ -23,10 +27,8 @@ import type {
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
 import type { BufferAppendingData } from '../../../src/types/events';
-import type { MockSourceBuffer } from '../utils/mock-media';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 const sandbox = sinon.createSandbox();
 
 type HlsTestable = Omit<Hls, 'networkControllers' | 'coreComponents'> & {

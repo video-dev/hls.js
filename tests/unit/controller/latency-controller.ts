@@ -1,5 +1,5 @@
 /* eslint-disable dot-notation */
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import LatencyController from '../../../src/controller/latency-controller';
@@ -8,8 +8,7 @@ import Hls from '../../../src/hls';
 import { LevelDetails } from '../../../src/loader/level-details';
 import type { LevelUpdatedData } from '../../../src/types/events';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 // Write to .age and .edge getter stubs for testing LevelDetails in LatencyController
 interface TestLevelDetails extends LevelDetails {

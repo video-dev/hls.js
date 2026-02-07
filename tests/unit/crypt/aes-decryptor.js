@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import { removePadding } from '../../../src/crypt/aes-decryptor';
 
 describe('AESDecryptor', function () {

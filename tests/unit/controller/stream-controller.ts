@@ -1,5 +1,5 @@
 /* eslint-disable dot-notation */
-import chai from 'chai';
+import { expect, use } from 'chai';
 import { fakeXhr } from 'nise';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
@@ -22,8 +22,7 @@ import type { MediaFragment } from '../../../src/loader/fragment';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
 import type { LevelAttributes } from '../../../src/types/level';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 describe('StreamController', function () {
   let fake;

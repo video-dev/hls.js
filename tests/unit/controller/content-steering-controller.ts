@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { multivariantPlaylistWithPathways } from './level-controller';
@@ -25,8 +25,7 @@ import type { Level } from '../../../src/types/level';
 import type { LoaderResponse } from '../../../src/types/loader';
 import type { MediaPlaylist } from '../../../src/types/media-playlist';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 type ConentSteeringControllerTestable = Omit<
   ContentSteeringController,

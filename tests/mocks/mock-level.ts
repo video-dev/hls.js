@@ -1,5 +1,5 @@
-import { AttrList } from '../../../src/utils/attr-list';
-import type { LevelParsed } from '../../../src/types/level';
+import { AttrList } from '../../src/utils/attr-list';
+import type { LevelParsed } from '../../src/types/level';
 
 export function parsedLevel(
   options: Partial<LevelParsed> & { bitrate: number },

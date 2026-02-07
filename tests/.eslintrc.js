@@ -14,8 +14,7 @@ module.exports = {
     before: false,
     beforeEach: false,
     describe: false,
-    expect: true,
-    sinon: false,
+    it: false,
     xit: false,
   },
   rules: {

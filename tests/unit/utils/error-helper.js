@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import { shouldRetry } from '../../../src/utils/error-helper';
 
 describe('ErrorHelper', function () {

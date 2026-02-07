@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
@@ -11,13 +11,12 @@ import {
   BufferHelper,
   type BufferInfo,
 } from '../../../src/utils/buffer-helper';
-import { MockMediaElement, MockMediaSource } from '../utils/mock-media';
+import { MockMediaElement, MockMediaSource } from '../../mocks/mock-media';
 import type { HlsConfig } from '../../../src/config';
 import type StreamController from '../../../src/controller/stream-controller';
 import type { Fragment, MediaFragment } from '../../../src/loader/fragment';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 type GapControllerTestable = Omit<GapController, ''> & {
   fragmentTracker: FragmentTracker;

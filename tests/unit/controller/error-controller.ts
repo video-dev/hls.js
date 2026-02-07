@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import { fakeServer } from 'nise';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
@@ -12,8 +12,7 @@ import type {
   LevelSwitchingData,
 } from '../../../src/types/events';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 describe('ErrorController Integration Tests', function () {
   let server: sinon.SinonFakeServer;
@@ -45,7 +44,7 @@ describe('ErrorController Integration Tests', function () {
   describe('Multivariant Playlist Error Handling', function () {
     it('Manifest Parsing Errors are fatal and stop all network operations', function () {
       hls.loadSource('noEXTM3U.m3u8');
-      hls.stopLoad.should.have.been.calledOnce;
+      expect(hls.stopLoad).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         hls.on(Events.MANIFEST_LOADED, (event, data) =>
@@ -67,7 +66,7 @@ describe('ErrorController Integration Tests', function () {
 
     it('Manifest Parsing Errors (no variants) are fatal and stop all network operations', function () {
       hls.loadSource('noLevels.m3u8');
-      hls.stopLoad.should.have.been.calledOnce;
+      expect(hls.stopLoad).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         hls.on(Events.MANIFEST_LOADED, (event, data) =>
@@ -89,7 +88,7 @@ describe('ErrorController Integration Tests', function () {
 
     it('Manifest Parsing Errors (Variable Substitution) are fatal and stop all network operations', function () {
       hls.loadSource('varSubErrorMultivariantPlaylist.m3u8');
-      hls.stopLoad.should.have.been.calledOnce;
+      expect(hls.stopLoad).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         hls.on(Events.MANIFEST_LOADED, (event, data) =>
@@ -111,7 +110,7 @@ describe('ErrorController Integration Tests', function () {
 
     it('Manifest Incompatible Codecs Errors are fatal and stop all network operations', function () {
       hls.loadSource('noCompatCodecs.m3u8');
-      hls.stopLoad.should.have.been.calledOnce;
+      expect(hls.stopLoad).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         hls.on(Events.MANIFEST_PARSED, (event, data) =>
@@ -134,7 +133,7 @@ describe('ErrorController Integration Tests', function () {
     it('Manifest HTTP 4XX Load Errors are fatal and stop all network operations', function () {
       server.respondWith('http400.m3u8', [400, {}, ``]);
       hls.loadSource('http400.m3u8');
-      hls.stopLoad.should.have.been.calledOnce;
+      expect(hls.stopLoad).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         hls.on(Events.MANIFEST_PARSED, (event, data) =>
@@ -157,7 +156,7 @@ describe('ErrorController Integration Tests', function () {
     it('Manifest HTTP status 501 and >= 505 Errors fail silently until exhausting all retries then are fatal', function () {
       server.respondWith('http500.m3u8', [501, {}, ``]);
       hls.loadSource('http500.m3u8');
-      hls.stopLoad.should.have.been.calledOnce;
+      expect(hls.stopLoad).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         hls.on(Events.MANIFEST_PARSED, (event, data) =>
@@ -173,14 +172,18 @@ describe('ErrorController Integration Tests', function () {
       })
         .then((data) => {
           expect(server.requests.length).to.equal(2);
-          server.requests[0].should.have
-            .property('url')
+          expect(server.requests[0])
+            .to.have.property('url')
             .which.equals('http500.m3u8');
-          server.requests[0].should.have.property('status').which.equals(501);
-          server.requests[1].should.have
-            .property('url')
+          expect(server.requests[0])
+            .to.have.property('status')
+            .which.equals(501);
+          expect(server.requests[1])
+            .to.have.property('url')
             .which.equals('http500.m3u8');
-          server.requests[1].should.have.property('status').which.equals(501);
+          expect(server.requests[1])
+            .to.have.property('status')
+            .which.equals(501);
           return data;
         })
         .then(
@@ -194,7 +197,7 @@ describe('ErrorController Integration Tests', function () {
 
     it('Manifest Load Timeout Errors are fatal and stop all network operations', function () {
       hls.loadSource('timeout.m3u8');
-      hls.stopLoad.should.have.been.calledOnce;
+      expect(hls.stopLoad).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         hls.on(Events.MANIFEST_PARSED, (event, data) =>
@@ -221,7 +224,7 @@ describe('ErrorController Integration Tests', function () {
   describe('Variant Media Playlist (no Multivariant Loaded) Error Handling', function () {
     it('Level Parsing Errors (Variable Substitution) are escalated to fatal when no switch options are present', function () {
       hls.loadSource('varSubErrorMediaPlaylist.m3u8');
-      hls.stopLoad.should.have.been.calledOnce;
+      expect(hls.stopLoad).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         hls.on(Events.LEVEL_LOADED, () =>
@@ -243,7 +246,7 @@ describe('ErrorController Integration Tests', function () {
 
     it('Level Parsing Errors (Missing Target Duration) are escalated to fatal when no switch options are present', function () {
       hls.loadSource('noTargetDuration.m3u8');
-      hls.stopLoad.should.have.been.calledOnce;
+      expect(hls.stopLoad).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => resolve(data));
         hls.on(Events.LEVEL_LOADED, () =>
@@ -265,7 +268,7 @@ describe('ErrorController Integration Tests', function () {
 
     it('Level Empty Errors (No Segments) are escalated to fatal when no switch options are present and Playlist is VOD', function () {
       hls.loadSource('noSegmentsVod.m3u8');
-      hls.stopLoad.should.have.been.calledOnce;
+      expect(hls.stopLoad).to.have.been.calledOnce;
       return new Promise((resolve, reject) => {
         hls.on(Events.ERROR, (event, data) => {
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -307,15 +310,15 @@ describe('ErrorController Integration Tests', function () {
           'No Segments found in Playlist',
           data.error.message,
         );
-        hls.stopLoad.should.have.been.calledOnce;
-        hls.trigger.should.not.have.been.calledWith(Events.LEVEL_LOADED);
+        expect(hls.stopLoad).to.have.been.calledOnce;
+        expect(hls.trigger).to.not.have.been.calledWith(Events.LEVEL_LOADED);
         server.respondWith(
           'noSegmentsLive.m3u8',
           testResponses['oneSegmentLive.m3u8'],
         );
         timers.tick(6000);
         server.respond();
-        hls.trigger.should.have.been.calledWith(Events.LEVEL_LOADED);
+        expect(hls.trigger).to.have.been.calledWith(Events.LEVEL_LOADED);
       });
     });
   });
@@ -340,12 +343,12 @@ describe('ErrorController Integration Tests', function () {
             'Missing Target Duration',
             data.error.message,
           );
-          hls.stopLoad.should.have.been.calledOnce;
+          expect(hls.stopLoad).to.have.been.calledOnce;
           timers.tick(100);
           return Promise.resolve();
         })
         .then(() => {
-          hls.trigger.should.have.been.calledWith(Events.LEVEL_LOADED);
+          expect(hls.trigger).to.have.been.calledWith(Events.LEVEL_LOADED);
           expect(hls.currentLevel).to.not.equal(
             errorIndex,
             'Should not be on errored level',
@@ -371,8 +374,8 @@ describe('ErrorController Integration Tests', function () {
           'A network error (status 400) occurred while loading level: 2 id: 0',
           data.error.message,
         );
-        hls.stopLoad.should.have.been.calledOnce;
-        hls.trigger.should.have.been.calledWith(Events.LEVEL_LOADED);
+        expect(hls.stopLoad).to.have.been.calledOnce;
+        expect(hls.trigger).to.have.been.calledWith(Events.LEVEL_LOADED);
         expect(hls.currentLevel).to.not.equal(
           errorIndex,
           'Should not be on errored level',
@@ -398,8 +401,8 @@ describe('ErrorController Integration Tests', function () {
           data.error.message,
         );
         server.respond();
-        hls.stopLoad.should.have.been.calledOnce;
-        hls.trigger.should.have.been.calledWith(Events.LEVEL_LOADED);
+        expect(hls.stopLoad).to.have.been.calledOnce;
+        expect(hls.trigger).to.have.been.calledWith(Events.LEVEL_LOADED);
         expect(hls.currentLevel).to.not.equal(
           errorIndex,
           'Should not be on errored level',
@@ -505,7 +508,7 @@ segment101.ts`;
         expect(data.error.message).to.include(
           'hits max allowed unchanged reloads',
         );
-        hls.stopLoad.should.have.been.called;
+        expect(hls.stopLoad).to.have.been.called;
       });
     });
 
@@ -791,8 +794,8 @@ segment.mp4
         expect(data.fatal).to.equal(false, 'Error should not be fatal');
         expect(data.error.message).to.equal('OOM Error');
         server.respond();
-        hls.stopLoad.should.have.been.calledOnce;
-        hls.trigger.should.have.been.calledWith(Events.LEVEL_LOADED);
+        expect(hls.stopLoad).to.have.been.calledOnce;
+        expect(hls.trigger).to.have.been.calledWith(Events.LEVEL_LOADED);
         expect(hls.currentLevel).to.not.equal(
           errorIndex,
           'Should not be on errored level',
@@ -829,8 +832,8 @@ segment.mp4
         );
         expect(data.fatal).to.equal(false, 'Error should not be fatal');
         expect(data.error.message).to.equal('HDCP level output restricted');
-        hls.stopLoad.should.have.been.calledOnce;
-        hls.trigger.should.have.been.calledWith(Events.LEVEL_LOADED);
+        expect(hls.stopLoad).to.have.been.calledOnce;
+        expect(hls.trigger).to.have.been.calledWith(Events.LEVEL_LOADED);
         expect(hls.maxHdcpLevel).to.equal('TYPE-0');
         expect(hls.currentLevel).to.not.equal(
           errorIndex,
@@ -1172,7 +1175,7 @@ function expectFatalErrorEventToStopPlayer(
     expect(data.fatal).to.equal(true, 'Error should be fatal');
     expect(data.error.message).to.equal(withErrorMessage, data.error.message);
     expectPlayerStopped(hls);
-    hls.stopLoad.should.have.been.calledTwice;
+    expect(hls.stopLoad).to.have.been.calledTwice;
   };
 }
 

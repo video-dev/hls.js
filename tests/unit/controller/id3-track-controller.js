@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import ID3TrackController from '../../../src/controller/id3-track-controller';
 import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';

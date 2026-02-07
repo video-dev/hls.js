@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import Decrypter from '../../../src/crypt/decrypter';
 
 describe('Decrypter', function () {

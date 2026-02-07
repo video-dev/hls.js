@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import LevelController from '../../../src/controller/level-controller';
@@ -11,7 +11,7 @@ import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import { getMediaSource } from '../../../src/utils/mediasource-helper';
 import HlsMock from '../../mocks/hls.mock';
-import { parsedLevel } from '../utils/mock-level';
+import { parsedLevel } from '../../mocks/mock-level';
 import type { Fragment } from '../../../src/loader/fragment';
 import type { LevelDetails } from '../../../src/loader/level-details';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
@@ -26,8 +26,7 @@ import type {
   MediaPlaylistType,
 } from '../../../src/types/media-playlist';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
   onManifestLoaded: (event: string, data: ManifestLoadedData) => void;

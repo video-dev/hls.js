@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { config as chaiConfig, expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import InterstitialsController from '../../../src/controller/interstitials-controller';
@@ -9,7 +9,7 @@ import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
-import { MockMediaElement } from '../utils/mock-media';
+import { MockMediaElement } from '../../mocks/mock-media';
 import type { HlsConfig } from '../../../src/config';
 import type { InterstitialScheduleItem } from '../../../src/controller/interstitials-schedule';
 import type {
@@ -17,9 +17,8 @@ import type {
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
 
-chai.use(sinonChai);
-chai.config.truncateThreshold = 0;
-const expect = chai.expect;
+use(sinonChai);
+chaiConfig.truncateThreshold = 0;
 
 type HlsTestable = Omit<Hls, 'networkControllers' | 'coreComponents'> & {
   coreComponents: ComponentAPI[];

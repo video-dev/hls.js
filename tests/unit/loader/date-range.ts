@@ -1,8 +1,6 @@
-import chai from 'chai';
+import { expect } from 'chai';
 import { DateRange } from '../../../src/loader/date-range';
 import { AttrList } from '../../../src/utils/attr-list';
-
-const expect = chai.expect;
 
 describe('DateRange class', function () {
   const startDateAndDuration = new AttrList(

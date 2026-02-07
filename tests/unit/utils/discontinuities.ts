@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
 import { Fragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
@@ -14,8 +14,7 @@ import {
 import { logger } from '../../../src/utils/logger';
 import type { MediaFragment } from '../../../src/loader/fragment';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 const mockReferenceFrag = objToFragment({
   start: 20,
