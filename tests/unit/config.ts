@@ -1,7 +1,5 @@
-import chai from 'chai';
+import { expect } from 'chai';
 import Hls from '../../src/hls';
-
-const expect = chai.expect;
 
 describe('Config Validation', function () {
   describe('liveMaxUnchangedPlaylistRefresh', function () {

@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import EventEmitter from 'eventemitter3';
 import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
@@ -8,8 +8,7 @@ import type { HlsEventEmitter } from '../../../src/events';
 import type { VideoSample } from '../../../src/types/demuxer';
 import type { TypeSupported } from '../../../src/utils/codecs';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 describe('mp4-remuxer', function () {
   let mp4Remuxer: MP4Remuxer;

@@ -1,4 +1,4 @@
-import chai from 'chai';
+import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import BufferController from '../../../src/controller/buffer-controller';
@@ -6,7 +6,7 @@ import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { MockMediaElement, MockMediaSource } from '../utils/mock-media';
+import { MockMediaElement, MockMediaSource } from '../../mocks/mock-media';
 import type BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import type {
   ExtendedSourceBuffer,
@@ -19,8 +19,7 @@ import type {
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
 
-chai.use(sinonChai);
-const expect = chai.expect;
+use(sinonChai);
 
 type HlsTestable = Omit<Hls, 'networkControllers' | 'coreComponents'> & {
   coreComponents: ComponentAPI[];
