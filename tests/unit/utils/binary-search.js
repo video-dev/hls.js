@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import BinarySearch from '../../../src/utils/binary-search';
 
 describe('binary search util', function () {

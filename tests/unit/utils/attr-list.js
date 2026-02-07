@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import { AttrList } from '../../../src/utils/attr-list';
 
 describe('AttrList', function () {
