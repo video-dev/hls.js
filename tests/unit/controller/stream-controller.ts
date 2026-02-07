@@ -790,4 +790,140 @@ describe('StreamController', function () {
       expect(streamController['state']).to.equal(State.IDLE);
     });
   });
+
+  describe('Media Fragment Support', function () {
+    let media: HTMLVideoElement;
+
+    beforeEach(function () {
+      media = document.createElement('video');
+      streamController['media'] = media;
+    });
+
+    function setMediaPlaying() {
+      Object.defineProperty(media, 'paused', {
+        value: false,
+        configurable: true,
+      });
+      Object.defineProperty(media, 'ended', {
+        value: false,
+        configurable: true,
+      });
+    }
+
+    function setMediaPaused() {
+      Object.defineProperty(media, 'paused', {
+        value: true,
+        configurable: true,
+      });
+    }
+
+    describe('_checkMediaFragmentEnd', function () {
+      it('should pause video when reaching fragment end time during playback', function () {
+        const pauseStub = sinon.stub(media, 'pause');
+        hls.loadSource('https://example.com/video.m3u8#t=100,110');
+        setMediaPlaying();
+        media.currentTime = 109.9;
+        streamController['_checkMediaFragmentEnd']();
+        expect(pauseStub).to.not.have.been.called;
+        media.currentTime = 110;
+        streamController['_checkMediaFragmentEnd']();
+        expect(pauseStub).to.have.been.calledOnce;
+      });
+
+      it('should pause when seeking past fragment end', function () {
+        const pauseStub = sinon.stub(media, 'pause');
+        hls.loadSource('https://example.com/video.m3u8#t=100,110');
+        streamController['_checkMediaFragmentEnd'](115);
+        expect(pauseStub).to.have.been.calledOnce;
+      });
+
+      it('should trigger MEDIA_FRAGMENT_END event when pausing', function () {
+        const triggerSpy = sinon.spy(hls, 'trigger');
+        hls.loadSource('https://example.com/video.m3u8#t=100,110');
+        setMediaPlaying();
+        media.currentTime = 110;
+        streamController['_checkMediaFragmentEnd']();
+        expect(triggerSpy).to.have.been.calledWith(
+          Events.MEDIA_FRAGMENT_END,
+          sinon.match({}),
+        );
+      });
+
+      it('should not pause if already paused during playback', function () {
+        const pauseStub = sinon.stub(media, 'pause');
+        hls.loadSource('https://example.com/video.m3u8#t=100,110');
+        setMediaPaused();
+        media.currentTime = 110;
+        streamController['_checkMediaFragmentEnd']();
+        expect(pauseStub).to.not.have.been.called;
+      });
+
+      it('should only pause once at fragment end', function () {
+        const pauseStub = sinon.stub(media, 'pause');
+        hls.loadSource('https://example.com/video.m3u8#t=100,110');
+        setMediaPlaying();
+        media.currentTime = 110;
+        streamController['_checkMediaFragmentEnd']();
+        expect(pauseStub).to.have.been.calledOnce;
+        media.currentTime = 111;
+        streamController['_checkMediaFragmentEnd']();
+        expect(pauseStub).to.have.been.calledOnce;
+      });
+
+      it('should mark fragment end as reached when seeking past it', function () {
+        hls.loadSource('https://example.com/video.m3u8#t=100,110');
+        const pauseStub = sinon.stub(media, 'pause');
+        streamController['_checkMediaFragmentEnd'](115);
+        pauseStub.restore();
+        const pauseStub2 = sinon.stub(media, 'pause');
+        setMediaPlaying();
+        media.currentTime = 120;
+        streamController['_checkMediaFragmentEnd']();
+        expect(pauseStub2).to.not.have.been.called;
+      });
+
+      it('should not pause when seeking to time before fragment end', function () {
+        const pauseStub = sinon.stub(media, 'pause');
+        hls.loadSource('https://example.com/video.m3u8#t=100,110');
+        streamController['_checkMediaFragmentEnd'](105);
+        expect(pauseStub).to.not.have.been.called;
+      });
+
+      it('should not pause if no fragment end time specified', function () {
+        const pauseStub = sinon.stub(media, 'pause');
+        hls.loadSource('https://example.com/video.m3u8#t=100');
+        setMediaPlaying();
+        media.currentTime = 200;
+        streamController['_checkMediaFragmentEnd']();
+        expect(pauseStub).to.not.have.been.called;
+      });
+
+      it('should not pause if no media fragment specified', function () {
+        const pauseStub = sinon.stub(media, 'pause');
+        hls.loadSource('https://example.com/video.m3u8');
+        setMediaPlaying();
+        media.currentTime = 200;
+        streamController['_checkMediaFragmentEnd']();
+        expect(pauseStub).to.not.have.been.called;
+      });
+    });
+
+    describe('onManifestLoading', function () {
+      it('should reset fragment end reached flag', function () {
+        hls.loadSource('https://example.com/video.m3u8#t=100,110');
+        const pauseStub = sinon.stub(media, 'pause');
+        setMediaPlaying();
+        media.currentTime = 110;
+        streamController['_checkMediaFragmentEnd']();
+        streamController['onManifestLoading']();
+        pauseStub.restore();
+        hls.loadSource('https://example.com/video.m3u8#t=200,210');
+        const pauseStub2 = sinon.stub(media, 'pause');
+        setMediaPlaying();
+        media.currentTime = 210;
+        streamController['_checkMediaFragmentEnd']();
+        expect(pauseStub2).to.have.been.calledOnce;
+      });
+    });
+  });
 });

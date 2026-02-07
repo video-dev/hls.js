@@ -57,6 +57,7 @@ import type {
   MediaDetachedData,
   MediaDetachingData,
   MediaEndedData,
+  MediaFragmentParsedData,
   NonNativeTextTracksData,
   SteeringManifestLoadedData,
   SubtitleFragProcessedData,
@@ -220,6 +221,10 @@ export enum Events {
   PLAYOUT_LIMIT_REACHED = 'hlsPlayoutLimitReached',
   // Event DateRange cue "enter" event dispatched
   EVENT_CUE_ENTER = 'hlsEventCueEnter',
+  // Media fragment end event dispatched
+  MEDIA_FRAGMENT_END = 'hlsMediaFragmentEnd',
+  // Media fragment parsed event dispatched
+  MEDIA_FRAGMENT_PARSED = 'hlsMediaFragmentParsed',
 }
 
 /**
@@ -496,6 +501,14 @@ export interface HlsListeners {
     data: {},
   ) => void;
   [Events.EVENT_CUE_ENTER]: (event: Events.EVENT_CUE_ENTER, data: {}) => void;
+  [Events.MEDIA_FRAGMENT_END]: (
+    event: Events.MEDIA_FRAGMENT_END,
+    data: {},
+  ) => void;
+  [Events.MEDIA_FRAGMENT_PARSED]: (
+    event: Events.MEDIA_FRAGMENT_PARSED,
+    data: MediaFragmentParsedData,
+  ) => void;
 }
 export interface HlsEventEmitter {
   on<E extends keyof HlsListeners, Context = undefined>(

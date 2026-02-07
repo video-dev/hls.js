@@ -73,6 +73,7 @@ export default class StreamController
   private _backtrackFragment: Fragment | undefined = undefined;
   private audioCodecSwitch: boolean = false;
   private videoBuffer: ExtendedSourceBuffer | null = null;
+  private _mediaFragmentEndReached: boolean = false;
 
   constructor(
     hls: Hls,
@@ -230,6 +231,7 @@ export default class StreamController
       this.lastCurrentTime = this.media.currentTime;
     }
     this.checkFragmentChanged();
+    this._checkMediaFragmentEnd();
   }
 
   private doTickIdle() {
@@ -443,6 +445,28 @@ export default class StreamController
     return true;
   }
 
+  private _checkMediaFragmentEnd(currentTime?: number): void {
+    const { media, hls } = this;
+    const fragment = hls.mediaFragment;
+    if (!media || !fragment?.end) {
+      return;
+    }
+    const time = currentTime ?? media.currentTime;
+    // Only pause if:
+    // 1. Playing (or seeking past end)
+    // 2. Haven't reached end yet
+    // 3. Currently at or past the end time
+    if (
+      !this._mediaFragmentEndReached &&
+      time >= fragment.end &&
+      (!media.paused || currentTime !== undefined)
+    ) {
+      this._mediaFragmentEndReached = true;
+      media.pause();
+      hls.trigger(Events.MEDIA_FRAGMENT_END, {});
+    }
+  }
+
   /**
    * Get backtrack fragment. Override to return actual backtrack fragment.
    */
@@ -526,6 +550,8 @@ export default class StreamController
 
     this.log(`Media seeked to ${currentTime.toFixed(3)}`);
 
+    this._checkMediaFragmentEnd(currentTime);
+
     // If seeked was issued before buffer was appended do not tick immediately
     if (!this.getBufferedFrag(currentTime)) {
       return;
@@ -558,6 +584,7 @@ export default class StreamController
     this.backtrackFragment = undefined;
     this.altAudio = AlternateAudio.DISABLED;
     this.audioOnly = false;
+    this._mediaFragmentEndReached = false;
   }
 
   private onManifestParsed(

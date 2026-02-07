@@ -136,6 +136,69 @@ describe('Hls', function () {
       );
       hls.destroy();
     });
+
+    it('should parse temporal fragment from URL', function () {
+      const hls = new Hls();
+      const triggerSpy = sinon.spy(hls, 'trigger');
+      hls.loadSource('https://example.com/video.m3u8#t=100,110');
+      expect(hls.url).to.equal('https://example.com/video.m3u8');
+      expect(hls.mediaFragment).to.deep.equal({ start: 100, end: 110 });
+      expect(triggerSpy).to.be.calledWith(
+        Events.MEDIA_FRAGMENT_PARSED,
+        sinon.match({ start: 100, end: 110 }),
+      );
+      triggerSpy.restore();
+      hls.destroy();
+    });
+
+    it('should set startPosition from fragment start time', function () {
+      const hls = new Hls();
+      hls.loadSource('https://example.com/video.m3u8#t=100,110');
+      expect(hls.config.startPosition).to.equal(100);
+      hls.destroy();
+    });
+
+    it('should clear previous fragment when loading new source without fragment', function () {
+      const hls = new Hls();
+      hls.loadSource('https://example.com/video1.m3u8#t=100,110');
+      expect(hls.mediaFragment).to.deep.equal({ start: 100, end: 110 });
+      hls.loadSource('https://example.com/video2.m3u8');
+      expect(hls.mediaFragment).to.be.undefined;
+      hls.destroy();
+    });
+
+    it('should update fragment when loading new source with different fragment', function () {
+      const hls = new Hls();
+      hls.loadSource('https://example.com/video1.m3u8#t=100,110');
+      expect(hls.mediaFragment).to.deep.equal({ start: 100, end: 110 });
+      hls.loadSource('https://example.com/video2.m3u8#t=200,210');
+      expect(hls.mediaFragment).to.deep.equal({ start: 200, end: 210 });
+      hls.destroy();
+    });
+
+    it('should handle fragment with start time only', function () {
+      const hls = new Hls();
+      hls.loadSource('https://example.com/video.m3u8#t=50');
+      expect(hls.mediaFragment).to.deep.equal({ start: 50 });
+      expect(hls.config.startPosition).to.equal(50);
+      hls.destroy();
+    });
+
+    it('should handle fragment with end time only', function () {
+      const hls = new Hls();
+      hls.loadSource('https://example.com/video.m3u8#t=,30');
+      expect(hls.mediaFragment).to.deep.equal({ end: 30 });
+      expect(hls.config.startPosition).to.equal(-1);
+      hls.destroy();
+    });
+
+    it('should preserve query parameters when parsing fragment', function () {
+      const hls = new Hls();
+      hls.loadSource('https://example.com/video.m3u8?token=abc#t=10,20');
+      expect(hls.url).to.equal('https://example.com/video.m3u8?token=abc');
+      expect(hls.mediaFragment).to.deep.equal({ start: 10, end: 20 });
+      hls.destroy();
+    });
   });
 
   describe('destroy', function () {

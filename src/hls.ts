@@ -17,6 +17,10 @@ import { MetadataSchema } from './types/demuxer';
 import { type HdcpLevel, isHdcpLevel, type Level } from './types/level';
 import { PlaylistLevelType } from './types/loader';
 import { enableLogs, type ILogger } from './utils/logger';
+import {
+  parseMediaFragment,
+  type TemporalFragment,
+} from './utils/media-fragment-parser';
 import { getMediaDecodingInfoPromise } from './utils/mediacapabilities-helper';
 import { getMediaSource } from './utils/mediasource-helper';
 import { getAudioTracksByGroup } from './utils/rendition-helper';
@@ -112,6 +116,7 @@ export default class Hls implements HlsEventEmitter {
   private _sessionId?: string;
   private triggeringException?: boolean;
   private started: boolean = false;
+  private _mediaFragment?: TemporalFragment;
 
   /**
    * Get the video-dev/hls.js package version.
@@ -505,16 +510,35 @@ export default class Hls implements HlsEventEmitter {
     this.stopLoad();
     const media = this.media;
     const loadedSource = this._url;
+
+    const { url: cleanUrl, temporal } = parseMediaFragment(url);
+
+    if (temporal) {
+      this._mediaFragment = temporal;
+      // Media fragment start time takes precedence over config
+      if (temporal.start !== undefined) {
+        this.config.startPosition = temporal.start;
+      }
+      this.trigger(Events.MEDIA_FRAGMENT_PARSED, {
+        start: temporal.start,
+        end: temporal.end,
+      });
+    } else {
+      this._mediaFragment = undefined;
+    }
+
     const loadingSource = (this._url = buildAbsoluteURL(
       self.location.href,
-      url,
+      cleanUrl,
       {
         alwaysNormalize: true,
       },
     ));
+
     this._autoLevelCapping = -1;
     this._maxHdcpLevel = null;
     this.logger.log(`loadSource:${loadingSource}`);
+
     if (
       media &&
       loadedSource &&
@@ -525,7 +549,7 @@ export default class Hls implements HlsEventEmitter {
       this.attachMedia(media);
     }
     // when attaching to a source URL, trigger a playlist load
-    this.trigger(Events.MANIFEST_LOADING, { url: url });
+    this.trigger(Events.MANIFEST_LOADING, { url: cleanUrl });
   }
 
   /**
@@ -1016,6 +1040,10 @@ export default class Hls implements HlsEventEmitter {
 
   public get maxBufferLength(): number {
     return this.streamController.maxBufferLength;
+  }
+
+  public get mediaFragment(): TemporalFragment | undefined {
+    return this._mediaFragment;
   }
 
   /**
@@ -1569,3 +1597,4 @@ export type {
   RationalTimestamp,
   TimestampOffset,
 } from './utils/timescale-conversion';
+export type { TemporalFragment } from './utils/media-fragment-parser';
