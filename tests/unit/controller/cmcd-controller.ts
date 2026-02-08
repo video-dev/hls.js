@@ -177,5 +177,73 @@ describe('CMCDController', function () {
         expectField(url, `ot%3Dav`);
       });
     });
+
+    describe('v2 configuration', function () {
+      it('defaults to version 1', function () {
+        setupEach({});
+
+        const { url } = applyPlaylistData();
+        expectField(url, `v%3D1`);
+        // v1 should NOT include st or sta
+        expect(url).to.not.include('st%3D');
+        expect(url).to.not.include('sta%3D');
+      });
+
+      it('uses version 2 when configured', function () {
+        setupEach({ version: 2 });
+
+        const { url } = applyPlaylistData();
+        expectField(url, `v%3D2`);
+      });
+
+      it('includes player state (sta) for v2', function () {
+        setupEach({ version: 2 });
+
+        const { url } = applyPlaylistData();
+        // Initial state is STARTING ("s")
+        expectField(url, `sta%3Ds`);
+      });
+
+      it('includes stream type (st) for v2 when level details are available', function () {
+        const details = setupEach({ version: 2 });
+        // The test playlist has EXT-X-SERVER-CONTROL which makes it live with LL features
+        // but details.live defaults to true from parsing
+
+        const { url } = applyPlaylistData();
+        // Should include st field (live since playlist has no ENDLIST)
+        expectField(url, `st%3D`);
+      });
+
+      it('detects VOD stream type', function () {
+        const details = setupEach({ version: 2 });
+        // Mark level details as VOD
+        details.live = false;
+
+        const { url } = applyPlaylistData();
+        // VOD = "v"
+        expectField(url, `st%3Dv`);
+      });
+
+      it('detects low-latency stream type', function () {
+        const details = setupEach({ version: 2 });
+        details.live = true;
+        details.canBlockReload = true;
+
+        const { url } = applyPlaylistData();
+        // LOW_LATENCY = "ll"
+        expectField(url, `st%3Dll`);
+      });
+
+      it('detects live stream type', function () {
+        const details = setupEach({ version: 2 });
+        details.live = true;
+        details.canBlockReload = false;
+        details.canSkipUntil = 0;
+
+        const { url } = applyPlaylistData();
+        // LIVE = "l" (negative lookahead to avoid matching "ll")
+        expectField(url, `st%3Dl(?!l)`);
+      });
+    });
   });
 });

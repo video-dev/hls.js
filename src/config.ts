@@ -35,6 +35,7 @@ import type {
 import type { CuesInterface } from './utils/cues';
 import type { ILogger } from './utils/logger';
 import type { KeySystems, MediaKeyFunc } from './utils/mediakeys-helper';
+import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
 
 export type ABRControllerConfig = {
   abrEwmaFastLive: number;
@@ -80,6 +81,12 @@ export type CMCDControllerConfig = {
    * Set to 2 to enable CMCD v2 Structured Field Value encoding.
    */
   version?: 1 | 2;
+  /**
+   * CMCD v2 event reporting targets. Each entry configures an endpoint
+   * to receive CMCD event reports (play state changes, errors, etc.).
+   * Requires version: 2.
+   */
+  eventTargets?: CmcdEventReportConfig[];
 };
 
 export type DRMSystemOptions = {
