@@ -946,6 +946,8 @@ export type CMCDControllerConfig = {
     contentId?: string;
     useHeaders?: boolean;
     includeKeys?: string[];
+    version?: 1 | 2;
+    eventTargets?: CmcdEventReportConfig[];
 };
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -5090,6 +5092,10 @@ export class XhrLoader implements Loader<LoaderContext> {
     // (undocumented)
     stats: LoaderStats;
 }
+
+// Warnings were encountered during analysis:
+//
+// src/config.ts:89:3 - (ae-forgotten-export) The symbol "CmcdEventReportConfig" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 

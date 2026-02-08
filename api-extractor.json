@@ -1,7 +1,11 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
   "mainEntryPointFilePath": "<projectFolder>/lib/hls.d.ts",
-  "bundledPackages": [],
+  "bundledPackages": [
+    "@svta/cml-cmcd",
+    "@svta/cml-utils",
+    "@svta/cml-structured-field-values"
+  ],
   "compiler": {
     "tsconfigFilePath": "<projectFolder>/tsconfig-lib.json"
   },

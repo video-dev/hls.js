@@ -1,7 +1,9 @@
 import { CmcdHeaderField } from '@svta/cml-cmcd';
 import chai from 'chai';
+import sinon from 'sinon';
 import CMCDController from '../../../src/controller/cmcd-controller';
 import Hls from '../../../src/hls';
+import { Events } from '../../../src/events';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import type { CMCDControllerConfig } from '../../../src/config';
@@ -243,6 +245,136 @@ describe('CMCDController', function () {
         const { url } = applyPlaylistData();
         // LIVE = "l" (negative lookahead to avoid matching "ll")
         expectField(url, `st%3Dl(?!l)`);
+      });
+
+      it('includes v2 fields in fragment data', function () {
+        const details = setupEach({ version: 2 });
+        details.live = false;
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        // Should contain v2 version, stream type, and player state
+        expectField(url, `v%3D2`);
+        expectField(url, `st%3Dv`);
+        expectField(url, `sta%3Ds`);
+        // Standard fragment fields still present
+        expectField(url, `br%3D1`);
+        expectField(url, `ot%3Dav`);
+      });
+
+      it('includes v2 fields in headers mode', function () {
+        const details = setupEach({ version: 2, useHeaders: true });
+        details.live = false;
+
+        const { url, headers = {} } = applyPlaylistData();
+        expect(url).to.equal(base.url);
+        // v2 fields should appear in appropriate CMCD headers
+        const allHeaders = Object.values(headers).join(',');
+        expect(allHeaders).to.include('v=2');
+        expect(allHeaders).to.include('st=v');
+        expect(allHeaders).to.include('sta=s');
+      });
+    });
+
+    describe('v2 event reporting', function () {
+      afterEach(function () {
+        sinon.restore();
+      });
+
+      it('does not create reporter without eventTargets', function () {
+        setupEach({ version: 2 });
+        expect((cmcdController as any).reporter).to.equal(undefined);
+      });
+
+      it('does not create reporter for v1', function () {
+        setupEach({
+          version: 1,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        } as CMCDControllerConfig);
+        expect((cmcdController as any).reporter).to.equal(undefined);
+      });
+
+      it('creates reporter with v2 and eventTargets', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+        expect((cmcdController as any).reporter).to.not.equal(undefined);
+      });
+
+      it('stops reporter on destroy', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+        const reporter = (cmcdController as any).reporter;
+        const stopSpy = sinon.spy(reporter, 'stop');
+
+        cmcdController.destroy();
+
+        expect(stopSpy.calledOnce).to.equal(true);
+        expect(stopSpy.calledWith(true)).to.equal(true);
+        expect((cmcdController as any).reporter).to.equal(undefined);
+      });
+
+      it('records play state events on state transitions', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+        const reporter = (cmcdController as any).reporter;
+        const updateSpy = sinon.spy(reporter, 'update');
+        const recordSpy = sinon.spy(reporter, 'recordEvent');
+
+        // Simulate playing event via the arrow function
+        (cmcdController as any).onPlaying();
+
+        expect(updateSpy.calledOnce).to.equal(true);
+        expect(updateSpy.firstCall.args[0]).to.deep.include({ sta: 'p' });
+        expect(recordSpy.calledOnce).to.equal(true);
+        expect(recordSpy.firstCall.args[0]).to.equal('ps');
+
+        cmcdController.destroy();
+      });
+
+      it('records error events on fatal errors', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+        const reporter = (cmcdController as any).reporter;
+        const recordSpy = sinon.spy(reporter, 'recordEvent');
+
+        // Trigger fatal error via hls event
+        (cmcdController as any).hls.trigger(Events.ERROR, {
+          type: 'networkError',
+          details: 'fragLoadError',
+          fatal: true,
+          error: new Error('test'),
+        });
+
+        // Should record both PLAY_STATE (FATAL_ERROR) and ERROR events
+        expect(recordSpy.calledTwice).to.equal(true);
+        expect(recordSpy.firstCall.args[0]).to.equal('ps');
+        expect(recordSpy.secondCall.args[0]).to.equal('e');
+
+        cmcdController.destroy();
+      });
+
+      it('does not record duplicate play state events', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+        const reporter = (cmcdController as any).reporter;
+        const recordSpy = sinon.spy(reporter, 'recordEvent');
+
+        // Call onPlaying twice — second call should be deduplicated
+        (cmcdController as any).onPlaying();
+        (cmcdController as any).onPlaying();
+
+        expect(recordSpy.calledOnce).to.equal(true);
+
+        cmcdController.destroy();
       });
     });
   });
