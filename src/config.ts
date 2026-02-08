@@ -75,6 +75,11 @@ export type CMCDControllerConfig = {
   contentId?: string;
   useHeaders?: boolean;
   includeKeys?: string[];
+  /**
+   * CMCD version to use for encoding. Defaults to 1 for backwards compatibility.
+   * Set to 2 to enable CMCD v2 Structured Field Value encoding.
+   */
+  version?: 1 | 2;
 };
 
 export type DRMSystemOptions = {

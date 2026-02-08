@@ -1,7 +1,11 @@
-import { CmcdObjectType } from '@svta/common-media-library/cmcd/CmcdObjectType';
-import { CmcdStreamingFormat } from '@svta/common-media-library/cmcd/CmcdStreamingFormat';
-import { appendCmcdHeaders } from '@svta/common-media-library/cmcd/appendCmcdHeaders';
-import { appendCmcdQuery } from '@svta/common-media-library/cmcd/appendCmcdQuery';
+import {
+  CMCD_V1,
+  CmcdObjectType,
+  CmcdStreamingFormat,
+  appendCmcdHeaders,
+  appendCmcdQuery,
+} from '@svta/cml-cmcd';
+import type { CmcdVersion } from '@svta/cml-cmcd';
 import { Events } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
 import type {
@@ -22,8 +26,7 @@ import type {
   LoaderContext,
   PlaylistLoaderContext,
 } from '../types/loader';
-import type { Cmcd } from '@svta/common-media-library/cmcd/Cmcd';
-import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEncodeOptions';
+import type { Cmcd, CmcdEncodeOptions } from '@svta/cml-cmcd';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -37,6 +40,7 @@ export default class CMCDController implements ComponentAPI {
   private cid?: string;
   private useHeaders: boolean = false;
   private includeKeys?: string[];
+  private version: CmcdVersion = CMCD_V1;
   private initialized: boolean = false;
   private starved: boolean = false;
   private buffering: boolean = true;
@@ -56,6 +60,7 @@ export default class CMCDController implements ComponentAPI {
       this.cid = cmcd.contentId;
       this.useHeaders = cmcd.useHeaders === true;
       this.includeKeys = cmcd.includeKeys;
+      this.version = cmcd.version || CMCD_V1;
       this.registerListeners();
     }
   }
@@ -134,12 +139,12 @@ export default class CMCDController implements ComponentAPI {
    */
   private createData(): Cmcd {
     return {
-      v: 1,
+      v: this.version,
       sf: CmcdStreamingFormat.HLS,
       sid: this.sid,
       cid: this.cid,
       pr: this.media?.playbackRate,
-      mtp: this.hls.bandwidthEstimate / 1000,
+      mtp: [this.hls.bandwidthEstimate / 1000],
     };
   }
 
@@ -175,7 +180,10 @@ export default class CMCDController implements ComponentAPI {
       }, {});
     }
 
-    const options: CmcdEncodeOptions = { baseUrl: context.url };
+    const options: CmcdEncodeOptions = {
+      baseUrl: context.url,
+      version: this.version,
+    };
 
     if (this.useHeaders) {
       if (!context.headers) {
@@ -217,15 +225,15 @@ export default class CMCDController implements ComponentAPI {
         ot === CmcdObjectType.AUDIO ||
         ot == CmcdObjectType.MUXED
       ) {
-        data.br = level.bitrate / 1000;
-        data.tb = this.getTopBandwidth(ot) / 1000;
-        data.bl = this.getBufferLength(ot);
+        data.br = [level.bitrate / 1000];
+        data.tb = [this.getTopBandwidth(ot) / 1000];
+        data.bl = [this.getBufferLength(ot)];
       }
 
       const next = part ? this.getNextPart(part) : this.getNextFrag(frag);
 
       if (next?.url && next.url !== frag.url) {
-        data.nor = next.url;
+        data.nor = [next.url];
       }
 
       this.apply(context, data);

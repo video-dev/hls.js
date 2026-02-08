@@ -1,4 +1,4 @@
-import { CmcdHeaderField } from '@svta/common-media-library/cmcd/CmcdHeaderField';
+import { CmcdHeaderField } from '@svta/cml-cmcd';
 import chai from 'chai';
 import CMCDController from '../../../src/controller/cmcd-controller';
 import Hls from '../../../src/hls';
