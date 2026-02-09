@@ -5,4 +5,5 @@
 /demo/libs
 /dist
 /lib
+*.html
 package-lock.json
