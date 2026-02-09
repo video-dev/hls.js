@@ -104,7 +104,7 @@
     "eslint-plugin-n": "17.23.2",
     "eslint-plugin-no-for-of-loops": "1.0.1",
     "eslint-plugin-promise": "7.2.1",
-    "eventemitter3": "5.0.1",
+    "eventemitter3": "5.0.4",
     "http-server": "14.1.1",
     "husky": "9.1.7",
     "jsonpack": "1.1.5",
