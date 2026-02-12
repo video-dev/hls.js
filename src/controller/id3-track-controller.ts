@@ -1,5 +1,4 @@
-import { getId3Frames } from '@svta/common-media-library/id3/getId3Frames';
-import { isId3TimestampFrame } from '@svta/common-media-library/id3/isId3TimestampFrame';
+import { getId3Frames, isId3TimestampFrame } from '@svta/cml-id3';
 import { Events } from '../events';
 import {
   isDateRangeCueAttribute,
@@ -209,7 +208,7 @@ class ID3TrackController implements ComponentAPI {
         continue;
       }
 
-      const frames = getId3Frames(samples[i].data);
+      const frames = getId3Frames(samples[i].data as Uint8Array<ArrayBuffer>);
       const startTime = samples[i].pts;
       let endTime: number = startTime + samples[i].duration;
 

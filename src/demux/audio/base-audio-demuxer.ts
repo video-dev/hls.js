@@ -1,6 +1,4 @@
-import { canParseId3 } from '@svta/common-media-library/id3/canParseId3';
-import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
-import { getId3Timestamp } from '@svta/common-media-library/id3/getId3Timestamp';
+import { canParseId3, getId3Data, getId3Timestamp } from '@svta/cml-id3';
 import {
   type AudioFrame,
   type DemuxedAudioTrack,
@@ -78,7 +76,9 @@ class BaseAudioDemuxer implements Demuxer {
     let lastDataIndex;
     const track = this._audioTrack as DemuxedAudioTrack;
     const id3Track = this._id3Track as DemuxedMetadataTrack;
-    const timestamp = id3Data ? getId3Timestamp(id3Data) : undefined;
+    const timestamp = id3Data
+      ? getId3Timestamp(id3Data as Uint8Array<ArrayBuffer>)
+      : undefined;
     const length = data.length;
 
     if (

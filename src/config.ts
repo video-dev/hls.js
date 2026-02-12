@@ -35,7 +35,11 @@ import type {
 import type { CuesInterface } from './utils/cues';
 import type { ILogger } from './utils/logger';
 import type { KeySystems, MediaKeyFunc } from './utils/mediakeys-helper';
-import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
+import type {
+  CmcdEventReportConfig,
+  CmcdKey,
+  CmcdVersion,
+} from '@svta/cml-cmcd';
 
 export type ABRControllerConfig = {
   abrEwmaFastLive: number;
@@ -75,12 +79,24 @@ export type CMCDControllerConfig = {
   sessionId?: string;
   contentId?: string;
   useHeaders?: boolean;
+
+  /**
+   * @deprecated use enabledKeys
+   */
   includeKeys?: string[];
+
+  /**
+   * An optional array of CMCD keys. When present, only these CMCD fields will
+   * be included with each each request.
+   */
+  enabledKeys?: CmcdKey[];
+
   /**
    * CMCD version to use for encoding. Defaults to 1 for backwards compatibility.
    * Set to 2 to enable CMCD v2 Structured Field Value encoding.
    */
-  version?: 1 | 2;
+  version?: CmcdVersion;
+
   /**
    * CMCD v2 event reporting targets. Each entry configures an endpoint
    * to receive CMCD event reports (play state changes, errors, etc.).
