@@ -67,19 +67,3 @@ export { AttrList } from './utils/attr-list';
 export { fetchSupported } from './utils/fetch-loader';
 export { isSupported, isMSESupported } from './is-supported';
 export { getMediaSource } from './utils/mediasource-helper';
-export {
-  CmcdObjectType,
-  CmcdStreamType,
-  CmcdStreamingFormat,
-  CmcdPlayerState,
-  CmcdEventType,
-  CmcdHeaderField,
-  CMCD_V1,
-  CMCD_V2,
-} from '@svta/cml-cmcd';
-export type {
-  Cmcd,
-  CmcdEncodeOptions,
-  CmcdEventReportConfig,
-  CmcdVersion,
-} from '@svta/cml-cmcd';

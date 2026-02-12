@@ -4,6 +4,49 @@
 
 ```ts
 
+import { Cmcd } from '@svta/cml-cmcd';
+import { CMCD_DEFAULT_TIME_INTERVAL } from '@svta/cml-cmcd';
+import { CMCD_EVENT_AD_BREAK_END } from '@svta/cml-cmcd';
+import { CMCD_EVENT_AD_BREAK_START } from '@svta/cml-cmcd';
+import { CMCD_EVENT_AD_END } from '@svta/cml-cmcd';
+import { CMCD_EVENT_AD_START } from '@svta/cml-cmcd';
+import { CMCD_EVENT_BACKGROUNDED_MODE } from '@svta/cml-cmcd';
+import { CMCD_EVENT_BITRATE_CHANGE } from '@svta/cml-cmcd';
+import { CMCD_EVENT_CONTENT_ID } from '@svta/cml-cmcd';
+import { CMCD_EVENT_CUSTOM_EVENT } from '@svta/cml-cmcd';
+import { CMCD_EVENT_ERROR } from '@svta/cml-cmcd';
+import { CMCD_EVENT_MUTE } from '@svta/cml-cmcd';
+import { CMCD_EVENT_PLAY_STATE } from '@svta/cml-cmcd';
+import { CMCD_EVENT_PLAYER_COLLAPSE } from '@svta/cml-cmcd';
+import { CMCD_EVENT_PLAYER_EXPAND } from '@svta/cml-cmcd';
+import { CMCD_EVENT_RESPONSE_RECEIVED } from '@svta/cml-cmcd';
+import { CMCD_EVENT_SKIP } from '@svta/cml-cmcd';
+import { CMCD_EVENT_TIME_INTERVAL } from '@svta/cml-cmcd';
+import { CMCD_EVENT_UNMUTE } from '@svta/cml-cmcd';
+import { CMCD_V1 } from '@svta/cml-cmcd';
+import { CMCD_V2 } from '@svta/cml-cmcd';
+import { CmcdCustomKey } from '@svta/cml-cmcd';
+import { CmcdCustomValue } from '@svta/cml-cmcd';
+import { CmcdEvent } from '@svta/cml-cmcd';
+import { CmcdEventReportConfig } from '@svta/cml-cmcd';
+import { CmcdEventType } from '@svta/cml-cmcd';
+import { CmcdKey } from '@svta/cml-cmcd';
+import { CmcdObjectType } from '@svta/cml-cmcd';
+import { CmcdObjectTypeList } from '@svta/cml-cmcd';
+import { CmcdPlayerState } from '@svta/cml-cmcd';
+import { CmcdReportConfig } from '@svta/cml-cmcd';
+import { CmcdRequest } from '@svta/cml-cmcd';
+import { CmcdResponse } from '@svta/cml-cmcd';
+import { CmcdStreamingFormat } from '@svta/cml-cmcd';
+import { CmcdStreamType } from '@svta/cml-cmcd';
+import { CmcdV1 } from '@svta/cml-cmcd';
+import { CmcdVersion } from '@svta/cml-cmcd';
+import { ExclusiveRecord } from '@svta/cml-utils';
+import { SfBareItem } from '@svta/cml-structured-field-values';
+import { SfItem } from '@svta/cml-structured-field-values';
+import { SfToken } from '@svta/cml-structured-field-values';
+import { ValueOf } from '@svta/cml-utils';
+
 // Warning: (ae-missing-release-tag) "AbrComponentAPI" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -929,6 +972,48 @@ export class ChunkMetadata {
     readonly transmuxing: HlsChunkPerformanceTiming;
 }
 
+export { Cmcd }
+
+export { CMCD_DEFAULT_TIME_INTERVAL }
+
+export { CMCD_EVENT_AD_BREAK_END }
+
+export { CMCD_EVENT_AD_BREAK_START }
+
+export { CMCD_EVENT_AD_END }
+
+export { CMCD_EVENT_AD_START }
+
+export { CMCD_EVENT_BACKGROUNDED_MODE }
+
+export { CMCD_EVENT_BITRATE_CHANGE }
+
+export { CMCD_EVENT_CONTENT_ID }
+
+export { CMCD_EVENT_CUSTOM_EVENT }
+
+export { CMCD_EVENT_ERROR }
+
+export { CMCD_EVENT_MUTE }
+
+export { CMCD_EVENT_PLAY_STATE }
+
+export { CMCD_EVENT_PLAYER_COLLAPSE }
+
+export { CMCD_EVENT_PLAYER_EXPAND }
+
+export { CMCD_EVENT_RESPONSE_RECEIVED }
+
+export { CMCD_EVENT_SKIP }
+
+export { CMCD_EVENT_TIME_INTERVAL }
+
+export { CMCD_EVENT_UNMUTE }
+
+export { CMCD_V1 }
+
+export { CMCD_V2 }
+
 // Warning: (ae-missing-release-tag) "CMCDController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public
@@ -949,6 +1034,38 @@ export type CMCDControllerConfig = {
     version?: CmcdVersion;
     eventTargets?: CmcdEventTarget[];
 };
+
+export { CmcdCustomKey }
+
+export { CmcdCustomValue }
+
+export { CmcdEvent }
+
+export { CmcdEventReportConfig }
+
+export { CmcdEventType }
+
+export { CmcdKey }
+
+export { CmcdObjectType }
+
+export { CmcdObjectTypeList }
+
+export { CmcdPlayerState }
+
+export { CmcdReportConfig }
+
+export { CmcdRequest }
+
+export { CmcdResponse }
+
+export { CmcdStreamingFormat }
+
+export { CmcdStreamType }
+
+export { CmcdV1 }
+
+export { CmcdVersion }
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1636,6 +1753,8 @@ export class EwmaBandWidthEstimator {
     // (undocumented)
     update(slow: number, fast: number): void;
 }
+
+export { ExclusiveRecord }
 
 // Warning: (ae-missing-release-tag) "ExtendedSourceBuffer" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -4510,6 +4629,12 @@ export type SelectionPreferences = {
     subtitlePreference?: SubtitleSelectionOption;
 };
 
+export { SfBareItem }
+
+export { SfItem }
+
+export { SfToken }
+
 // Warning: (ae-missing-release-tag) "SnapOptions" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -5034,6 +5159,8 @@ export interface UserdataSample {
     uuid?: string;
 }
 
+export { ValueOf }
+
 // Warning: (ae-missing-release-tag) "VariableMap" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -5095,8 +5222,6 @@ export class XhrLoader implements Loader<LoaderContext> {
 
 // Warnings were encountered during analysis:
 //
-// src/config.ts:86:3 - (ae-forgotten-export) The symbol "CmcdKey" needs to be exported by the entry point hls.d.ts
-// src/config.ts:87:3 - (ae-forgotten-export) The symbol "CmcdVersion" needs to be exported by the entry point hls.d.ts
 // src/config.ts:88:3 - (ae-forgotten-export) The symbol "CmcdEventTarget" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
