@@ -75,34 +75,17 @@ export type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean;
 };
 
+export type CmcdEventTarget = Omit<CmcdEventReportConfig, 'enabledKeys'> & {
+  includeKeys?: CmcdKey[];
+};
+
 export type CMCDControllerConfig = {
   sessionId?: string;
   contentId?: string;
   useHeaders?: boolean;
-
-  /**
-   * @deprecated use enabledKeys
-   */
-  includeKeys?: string[];
-
-  /**
-   * An optional array of CMCD keys. When present, only these CMCD fields will
-   * be included with each each request.
-   */
-  enabledKeys?: CmcdKey[];
-
-  /**
-   * CMCD version to use for encoding. Defaults to 1 for backwards compatibility.
-   * Set to 2 to enable CMCD v2 Structured Field Value encoding.
-   */
+  includeKeys?: CmcdKey[];
   version?: CmcdVersion;
-
-  /**
-   * CMCD v2 event reporting targets. Each entry configures an endpoint
-   * to receive CMCD event reports (play state changes, errors, etc.).
-   * Requires version: 2.
-   */
-  eventTargets?: CmcdEventReportConfig[];
+  eventTargets?: CmcdEventTarget[];
 };
 
 export type DRMSystemOptions = {

@@ -2,8 +2,8 @@ import { CmcdHeaderField } from '@svta/cml-cmcd';
 import chai from 'chai';
 import sinon from 'sinon';
 import CMCDController from '../../../src/controller/cmcd-controller';
-import Hls from '../../../src/hls';
 import { Events } from '../../../src/events';
+import Hls from '../../../src/hls';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import type { CMCDControllerConfig } from '../../../src/config';
@@ -185,7 +185,8 @@ describe('CMCDController', function () {
         setupEach({});
 
         const { url } = applyPlaylistData();
-        expectField(url, `v%3D1`);
+        // v=1 is the default and is omitted per CMCD spec
+        expect(url).to.not.include('v%3D');
         // v1 should NOT include st or sta
         expect(url).to.not.include('st%3D');
         expect(url).to.not.include('sta%3D');
@@ -207,7 +208,7 @@ describe('CMCDController', function () {
       });
 
       it('includes stream type (st) for v2 when level details are available', function () {
-        const details = setupEach({ version: 2 });
+        setupEach({ version: 2 });
         // The test playlist has EXT-X-SERVER-CONTROL which makes it live with LL features
         // but details.live defaults to true from parsing
 
@@ -256,8 +257,8 @@ describe('CMCDController', function () {
         expectField(url, `v%3D2`);
         expectField(url, `st%3Dv`);
         expectField(url, `sta%3Ds`);
-        // Standard fragment fields still present
-        expectField(url, `br%3D1`);
+        // Standard fragment fields still present (inner list format in v2)
+        expectField(url, `br%3D%281%29`);
         expectField(url, `ot%3Dav`);
       });
 
@@ -280,17 +281,17 @@ describe('CMCDController', function () {
         sinon.restore();
       });
 
-      it('does not create reporter without eventTargets', function () {
+      it('creates reporter without eventTargets (no event reporting)', function () {
         setupEach({ version: 2 });
-        expect((cmcdController as any).reporter).to.equal(undefined);
+        expect((cmcdController as any).reporter).to.not.equal(undefined);
       });
 
-      it('does not create reporter for v1', function () {
+      it('creates reporter for v1 (without event targets)', function () {
         setupEach({
           version: 1,
           eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
-        } as CMCDControllerConfig);
-        expect((cmcdController as any).reporter).to.equal(undefined);
+        });
+        expect((cmcdController as any).reporter).to.not.equal(undefined);
       });
 
       it('creates reporter with v2 and eventTargets', function () {

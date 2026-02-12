@@ -1,18 +1,18 @@
 import {
-  CMCD_V1,
-  CMCD_V2,
   CMCD_HEADERS,
+  CMCD_KEYS,
   CMCD_QUERY,
+  CMCD_V1,
+  CMCD_V1_KEYS,
+  CMCD_V2,
   CmcdEventType,
   CmcdObjectType,
   CmcdPlayerState,
   CmcdReporter,
-  CmcdStreamType,
   CmcdStreamingFormat,
-  appendCmcdHeaders,
-  appendCmcdQuery,
+  CmcdStreamType,
+  toCmcdValue,
 } from '@svta/cml-cmcd';
-import type { CmcdVersion } from '@svta/cml-cmcd';
 import { Events } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
 import type {
@@ -21,7 +21,7 @@ import type {
   PlaylistLoaderConstructor,
 } from '../config';
 import type Hls from '../hls';
-import type { Fragment, Part } from '../loader/fragment';
+import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { ExtendedSourceBuffer } from '../types/buffer';
 import type { ComponentAPI } from '../types/component-api';
 import type {
@@ -38,7 +38,7 @@ import type {
   LoaderContext,
   PlaylistLoaderContext,
 } from '../types/loader';
-import type { Cmcd, CmcdEncodeOptions, CmcdKey } from '@svta/cml-cmcd';
+import type { Cmcd } from '@svta/cml-cmcd';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -48,11 +48,6 @@ export default class CMCDController implements ComponentAPI {
   private hls: Hls;
   private config: HlsConfig;
   private media?: HTMLMediaElement;
-  private sid?: string;
-  private cid?: string;
-  private useHeaders: boolean = false;
-  private includeKeys?: string[];
-  private version: CmcdVersion = CMCD_V1;
   private initialized: boolean = false;
   private starved: boolean = false;
   private buffering: boolean = true;
@@ -70,24 +65,22 @@ export default class CMCDController implements ComponentAPI {
       config.pLoader = this.createPlaylistLoader();
       config.fLoader = this.createFragmentLoader();
 
-      this.sid = cmcd.sessionId || hls.sessionId;
-      this.cid = cmcd.contentId;
-      this.useHeaders = cmcd.useHeaders === true;
-      this.includeKeys = cmcd.includeKeys;
-      this.version = cmcd.version || CMCD_V1;
-      this.registerListeners();
+      const version = cmcd.version || CMCD_V1;
 
-      if (this.version >= CMCD_V2 && cmcd.eventTargets?.length) {
-        this.reporter = new CmcdReporter({
-          sid: this.sid,
-          cid: this.cid,
-          version: CMCD_V2,
-          transmissionMode: this.useHeaders ? CMCD_HEADERS : CMCD_QUERY,
-          enabledKeys: this.includeKeys as CmcdKey[] | undefined,
-          eventTargets: cmcd.eventTargets,
-        });
-        this.reporter.start();
-      }
+      this.reporter = new CmcdReporter({
+        sid: cmcd.sessionId || hls.sessionId,
+        cid: cmcd.contentId,
+        version,
+        transmissionMode: cmcd.useHeaders === true ? CMCD_HEADERS : CMCD_QUERY,
+        enabledKeys: cmcd.includeKeys ?? [
+          ...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS),
+        ],
+        eventTargets: cmcd.eventTargets ?? [],
+      });
+
+      this.reporter.update({ sf: CmcdStreamingFormat.HLS });
+      this.reporter.start();
+      this.registerListeners();
     }
   }
 
@@ -96,10 +89,8 @@ export default class CMCDController implements ComponentAPI {
     hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
-    if (this.version >= CMCD_V2) {
-      hls.on(Events.ERROR, this.onError, this);
-      hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
-    }
+    hls.on(Events.ERROR, this.onError, this);
+    hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
   }
 
   private unregisterListeners() {
@@ -107,10 +98,8 @@ export default class CMCDController implements ComponentAPI {
     hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
-    if (this.version >= CMCD_V2) {
-      hls.off(Events.ERROR, this.onError, this);
-      hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
-    }
+    hls.off(Events.ERROR, this.onError, this);
+    hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
   }
 
   destroy() {
@@ -137,11 +126,9 @@ export default class CMCDController implements ComponentAPI {
     this.media = data.media;
     this.media.addEventListener('waiting', this.onWaiting);
     this.media.addEventListener('playing', this.onPlaying);
-    if (this.version >= CMCD_V2) {
-      this.media.addEventListener('pause', this.onPause);
-      this.media.addEventListener('seeking', this.onSeeking);
-      this.media.addEventListener('ended', this.onEnded);
-    }
+    this.media.addEventListener('pause', this.onPause);
+    this.media.addEventListener('seeking', this.onSeeking);
+    this.media.addEventListener('ended', this.onEnded);
   }
 
   private onMediaDetached() {
@@ -151,11 +138,9 @@ export default class CMCDController implements ComponentAPI {
 
     this.media.removeEventListener('waiting', this.onWaiting);
     this.media.removeEventListener('playing', this.onPlaying);
-    if (this.version >= CMCD_V2) {
-      this.media.removeEventListener('pause', this.onPause);
-      this.media.removeEventListener('seeking', this.onSeeking);
-      this.media.removeEventListener('ended', this.onEnded);
-    }
+    this.media.removeEventListener('pause', this.onPause);
+    this.media.removeEventListener('seeking', this.onSeeking);
+    this.media.removeEventListener('ended', this.onEnded);
 
     // @ts-ignore
     this.media = null;
@@ -204,7 +189,7 @@ export default class CMCDController implements ComponentAPI {
   private onError(event: Events.ERROR, data: ErrorData) {
     if (data.fatal) {
       this.setPlayerState(CmcdPlayerState.FATAL_ERROR);
-      this.reporter?.recordEvent(CmcdEventType.ERROR);
+      this.reporter!.recordEvent(CmcdEventType.ERROR);
     }
   }
 
@@ -212,8 +197,14 @@ export default class CMCDController implements ComponentAPI {
     event: Events.LEVEL_SWITCHING,
     data: LevelSwitchingData,
   ) {
-    this.reporter?.update({ br: [data.bitrate / 1000] });
-    this.reporter?.recordEvent(CmcdEventType.BITRATE_CHANGE);
+    this.reporter!.update({ br: [data.bitrate / 1000] });
+
+    const eventData: Cmcd = {};
+    const frag = data.details?.fragments[0];
+    if (frag) {
+      eventData.ot = this.getObjectType(frag);
+    }
+    this.reporter!.recordEvent(CmcdEventType.BITRATE_CHANGE, eventData);
   }
 
   private setPlayerState(state: CmcdPlayerState) {
@@ -222,34 +213,8 @@ export default class CMCDController implements ComponentAPI {
     }
 
     this.playerState = state;
-    if (this.reporter) {
-      this.reporter.update({ sta: state });
-      this.reporter.recordEvent(CmcdEventType.PLAY_STATE);
-    }
-  }
-
-  /**
-   * Create baseline CMCD data
-   */
-  private createData(): Cmcd {
-    const data: Cmcd = {
-      v: this.version,
-      sf: CmcdStreamingFormat.HLS,
-      sid: this.sid,
-      cid: this.cid,
-      pr: this.media?.playbackRate,
-      mtp: [this.hls.bandwidthEstimate / 1000],
-    };
-
-    if (this.version >= CMCD_V2) {
-      const st = this.getStreamType();
-      if (st) {
-        data.st = st;
-      }
-      data.sta = this.playerState;
-    }
-
-    return data;
+    this.reporter!.update({ sta: state });
+    this.reporter!.recordEvent(CmcdEventType.PLAY_STATE);
   }
 
   /**
@@ -259,24 +224,33 @@ export default class CMCDController implements ComponentAPI {
     const loadLevel = this.hls.loadLevel;
     const details =
       loadLevel >= 0 ? this.hls.levels[loadLevel]?.details : undefined;
+
     if (!details) {
       return undefined;
     }
+
     if (!details.live) {
       return CmcdStreamType.VOD;
     }
+
+    // TODO: Is this the best way to determine the low-latency stream type?
     if (details.canBlockReload || details.canSkipUntil) {
       return CmcdStreamType.LOW_LATENCY;
     }
+
     return CmcdStreamType.LIVE;
   }
 
   /**
-   * Apply CMCD data to a request.
+   * Apply CMCD data to a request using the reporter.
    */
   private apply(context: LoaderContext, data: Cmcd = {}) {
-    // apply baseline data
-    Object.assign(data, this.createData());
+    // Update persistent data
+    this.reporter!.update({
+      mtp: [this.hls.bandwidthEstimate / 1000],
+      pr: this.media?.playbackRate,
+      st: this.getStreamType(),
+    });
 
     const isVideo =
       data.ot === CmcdObjectType.INIT ||
@@ -293,30 +267,15 @@ export default class CMCDController implements ComponentAPI {
       data.su = this.buffering;
     }
 
-    // TODO: Implement rtp, nrr, dl
+    // TODO: Implement rtp, dl
 
-    const { includeKeys } = this;
-    if (includeKeys) {
-      data = Object.keys(data).reduce((acc, key) => {
-        includeKeys.includes(key) && (acc[key] = data[key]);
-        return acc;
-      }, {});
-    }
+    const report = this.reporter!.createRequestReport(
+      { url: context.url, headers: context.headers },
+      data,
+    );
 
-    const options: CmcdEncodeOptions = {
-      baseUrl: context.url,
-      version: this.version,
-    };
-
-    if (this.useHeaders) {
-      if (!context.headers) {
-        context.headers = {};
-      }
-
-      appendCmcdHeaders(context.headers, data, options);
-    } else {
-      context.url = appendCmcdQuery(context.url, data, options);
-    }
+    context.url = report.url;
+    context.headers = report.headers;
   }
 
   /**
@@ -349,14 +308,28 @@ export default class CMCDController implements ComponentAPI {
         ot == CmcdObjectType.MUXED
       ) {
         data.br = [level.bitrate / 1000];
-        data.tb = [this.getTopBandwidth(ot) / 1000];
-        data.bl = [this.getBufferLength(ot)];
+        const tb = this.getTopBandwidth(ot) / 1000;
+        if (Number.isFinite(tb)) {
+          data.tb = [tb];
+        }
+        const bl = this.getBufferLength(ot);
+        if (Number.isFinite(bl)) {
+          data.bl = [bl];
+        }
       }
 
       const next = part ? this.getNextPart(part) : this.getNextFrag(frag);
 
       if (next?.url && next.url !== frag.url) {
-        data.nor = [next.url];
+        if (next.byteRange.length > 0) {
+          data.nor = [
+            toCmcdValue(next.url, {
+              r: `${next.byteRange[0]}-${next.byteRange[1]}`,
+            }),
+          ];
+        } else {
+          data.nor = [next.url];
+        }
       }
 
       this.apply(context, data);
@@ -395,7 +368,9 @@ export default class CMCDController implements ComponentAPI {
   /**
    * The CMCD object type.
    */
-  private getObjectType(fragment: Fragment): CmcdObjectType | undefined {
+  private getObjectType(
+    fragment: Fragment | MediaFragment,
+  ): CmcdObjectType | undefined {
     const { type } = fragment;
 
     if (type === 'subtitle') {
@@ -458,6 +433,7 @@ export default class CMCDController implements ComponentAPI {
       return NaN;
     }
 
+    // TODO: Implement parameterized buffer length array
     const info = BufferHelper.bufferInfo(
       buffer,
       media.currentTime,
@@ -510,7 +486,7 @@ export default class CMCDController implements ComponentAPI {
   }
 
   /**
-   * Create a playlist loader
+   * Create a fragment loader
    */
   private createFragmentLoader(): FragmentLoaderConstructor | undefined {
     const { fLoader } = this.config;
