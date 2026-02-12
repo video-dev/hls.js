@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import { stringify } from '../../../src/utils/safe-json-stringify';
 
 describe('Stringify', function () {

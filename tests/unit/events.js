@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import { Events } from '../../src/events';
 
 function getAllCapsSnakeCaseToCamelCase(eventType) {

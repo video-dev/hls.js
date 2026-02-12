@@ -1,6 +1,7 @@
+import { expect } from 'chai';
+import sinon from 'sinon';
 import { TimelineController } from '../../../src/controller/timeline-controller';
 import Hls from '../../../src/hls';
-import sinon from 'sinon';
 
 describe('Non-Native TimelineController functions', function () {
   let timelineController;

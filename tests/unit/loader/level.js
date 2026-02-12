@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import { LevelDetails } from '../../../src/loader/level-details';
 
 describe('Level Class tests', function () {

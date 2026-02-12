@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import { removeCuesInRange } from '../../../src/utils/texttrack-utils';
 
 describe('text track utils', function () {

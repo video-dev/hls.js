@@ -1,3 +1,5 @@
+import { expect } from 'chai';
+import sinon from 'sinon';
 import EventEmitter from 'eventemitter3';
 import {
   getAudioConfig,
@@ -12,7 +14,6 @@ import {
   appendFrame,
 } from '../../../src/demux/audio/adts';
 import { ErrorTypes } from '../../../src/errors';
-import sinon from 'sinon';
 
 describe('getAudioConfig', function () {
   it('should emit a MEDIA_ERROR event if sample index is invalid', function () {

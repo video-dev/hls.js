@@ -1,3 +1,4 @@
+import { expect } from 'chai';
 import { BufferHelper } from '../../../src/utils/buffer-helper';
 
 function createMockBuffer(buffered) {
