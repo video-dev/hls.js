@@ -762,7 +762,10 @@ class MP4 {
   }
 
   static esds(track: DemuxedAudioTrack) {
-    const config = track.config as [number, number];
+    const config = track.config as
+      | [number, number]
+      | [number, number, number, number];
+    const len = config.length;
     return new Uint8Array([
       0x00, // version 0
       0x00,
@@ -770,7 +773,7 @@ class MP4 {
       0x00, // flags
 
       0x03, // descriptor_type
-      0x19, // length
+      0x17 + len, // length
 
       0x00,
       0x01, // es_id
@@ -778,7 +781,7 @@ class MP4 {
       0x00, // stream_priority
 
       0x04, // descriptor_type
-      0x11, // length
+      0x0f + len, // length
       0x40, // codec : mpeg4_audio
       0x15, // stream_type
       0x00,
@@ -794,7 +797,7 @@ class MP4 {
       0x00, // avgBitrate
 
       0x05, // descriptor_type
-      0x02, // length
+      len, // length
       ...config,
       0x06,
       0x01,

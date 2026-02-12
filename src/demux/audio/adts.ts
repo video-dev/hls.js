@@ -13,7 +13,7 @@ import type {
 } from '../../types/demuxer';
 
 type AudioConfig = {
-  config: [number, number];
+  config: [number, number] | [number, number, number, number];
   samplerate: number;
   channelCount: number;
   codec: string;
@@ -52,7 +52,6 @@ export function getAudioConfig(
   // MPEG-4 Audio Object Type (profile_ObjectType+1)
   const adtsObjectType = ((byte2 >> 6) & 0x3) + 1;
   const channelCount = ((data[offset + 3] >> 6) & 0x3) | ((byte2 & 1) << 2);
-  const codec = 'mp4a.40.' + adtsObjectType;
   /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
       ISO/IEC 14496-3 - Table 1.13 — Syntax of AudioSpecificConfig()
     Audio Profile / Audio Object Type
@@ -95,12 +94,25 @@ export function getAudioConfig(
     // multiply frequency by 2 (see table above, equivalent to substract 3)
     aacSampleIndex -= 3;
   }
-  const config: [number, number] = [
+  let config: [number, number] | [number, number, number, number] = [
     (adtsObjectType << 3) | ((aacSampleIndex & 0x0e) >> 1),
     ((aacSampleIndex & 0x01) << 7) | (channelCount << 3),
   ];
+  let adtsOverride = 0;
+  if (adtsObjectType === 1 && adtsSamplingIndex >= 6) {
+    adtsOverride = 5;
+    const adtsExtensionSamplingIndex = adtsSamplingIndex - 3;
+    config = [
+      (adtsOverride << 3) | ((aacSampleIndex & 0x0e) >> 1),
+      config[1] | ((adtsExtensionSamplingIndex & 0x0e) >> 1),
+      ((adtsExtensionSamplingIndex & 0x01) << 7) | (2 << 2),
+      0,
+    ];
+  }
+  const codec = 'mp4a.40.' + (adtsOverride || adtsObjectType);
+
   logger.log(
-    `manifest codec:${manifestCodec}, parsed codec:${codec}, channels:${channelCount}, rate:${samplerate} (ADTS object type:${adtsObjectType} sampling index:${adtsSamplingIndex})`,
+    `manifest codec:${manifestCodec}, parsed codec:${codec}, channels:${channelCount}, rate:${samplerate} (ADTS object type:${adtsObjectType} sampling index:${adtsSamplingIndex} esds config:[${config.join(',')}])`,
   );
   return {
     config,
