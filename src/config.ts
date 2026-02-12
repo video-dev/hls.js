@@ -75,17 +75,15 @@ export type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean;
 };
 
-export type CmcdEventTarget = Omit<CmcdEventReportConfig, 'enabledKeys'> & {
-  includeKeys?: CmcdKey[];
-};
-
 export type CMCDControllerConfig = {
   sessionId?: string;
   contentId?: string;
   useHeaders?: boolean;
   includeKeys?: CmcdKey[];
   version?: CmcdVersion;
-  eventTargets?: CmcdEventTarget[];
+  eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
+    includeKeys?: CmcdKey[];
+  })[];
 };
 
 export type DRMSystemOptions = {
