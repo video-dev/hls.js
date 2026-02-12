@@ -45,7 +45,12 @@ const addM2TSAdvancedCodecSupport =
   !!env.M2TS_ADVANCED_CODECS || !!env.USE_M2TS_ADVANCED_CODECS;
 const addMediaCapabilitiesSupport =
   !!env.MEDIA_CAPABILITIES || !!env.USE_MEDIA_CAPABILITIES;
-const addInterstitialSupport = !!env.INTERSTITALS || !!env.USE_INTERSTITALS;
+const addInterstitialSupport =
+  !!env.INTERSTITIALS ||
+  !!env.USE_INTERSTITIALS ||
+  // Backward-compatible support for legacy misspelled env vars
+  !!env.INTERSTITALS ||
+  !!env.USE_INTERSTITALS;
 
 const shouldBundleWorker = (format) => format !== FORMAT.esm;
 
@@ -62,7 +67,9 @@ const buildConstants = (type, additional = {}) => ({
     __USE_EME_DRM__: JSON.stringify(type === BUILD_TYPE.full || addEMESupport),
     __USE_CMCD__: JSON.stringify(type === BUILD_TYPE.full || addCMCDSupport),
     __USE_CONTENT_STEERING__: JSON.stringify(
-      type === BUILD_TYPE.full || BUILD_TYPE.light || addContentSteeringSupport,
+      type === BUILD_TYPE.full ||
+        type === BUILD_TYPE.light ||
+        addContentSteeringSupport,
     ),
     __USE_VARIABLE_SUBSTITUTION__: JSON.stringify(
       type === BUILD_TYPE.full || addVariableSubstitutionSupport,
