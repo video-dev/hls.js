@@ -76,9 +76,7 @@ class BaseAudioDemuxer implements Demuxer {
     let lastDataIndex;
     const track = this._audioTrack as DemuxedAudioTrack;
     const id3Track = this._id3Track as DemuxedMetadataTrack;
-    const timestamp = id3Data
-      ? getId3Timestamp(id3Data as Uint8Array<ArrayBuffer>)
-      : undefined;
+    const timestamp = id3Data ? getId3Timestamp(id3Data) : undefined;
     const length = data.length;
 
     if (

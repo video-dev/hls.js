@@ -208,7 +208,7 @@ class ID3TrackController implements ComponentAPI {
         continue;
       }
 
-      const frames = getId3Frames(samples[i].data as Uint8Array<ArrayBuffer>);
+      const frames = getId3Frames(samples[i].data);
       const startTime = samples[i].pts;
       let endTime: number = startTime + samples[i].duration;
 

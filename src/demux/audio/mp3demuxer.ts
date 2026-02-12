@@ -47,7 +47,7 @@ class MP3Demuxer extends BaseAudioDemuxer {
       id3Data &&
       data[offset] === 0x0b &&
       data[offset + 1] === 0x77 &&
-      getId3Timestamp(id3Data as Uint8Array<ArrayBuffer>) !== undefined &&
+      getId3Timestamp(id3Data) !== undefined &&
       // check the bsid to confirm ac-3 or ec-3 (not mp3)
       getAudioBSID(data, offset) <= 16
     ) {

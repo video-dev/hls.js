@@ -78,7 +78,10 @@ export default class CMCDController implements ComponentAPI {
         eventTargets: cmcd.eventTargets ?? [],
       });
 
-      this.reporter.update({ sf: CmcdStreamingFormat.HLS });
+      this.reporter.update({
+        sf: CmcdStreamingFormat.HLS,
+        sta: this.playerState,
+      });
       this.reporter.start();
       this.registerListeners();
     }

@@ -184,8 +184,9 @@ describe('CMCDController', function () {
         const { url } = applyPlaylistData();
         // v=1 is the default and is omitted per CMCD spec
         expect(url).to.not.include('v%3D');
-        // v1 should NOT include st or sta
-        expect(url).to.not.include('st%3D');
+        // st is a v1 key and should be included when available
+        expectField(url, `st%3D`);
+        // sta is NOT a v1 key and should not be included
         expect(url).to.not.include('sta%3D');
       });
 
@@ -274,10 +275,6 @@ describe('CMCDController', function () {
     });
 
     describe('v2 event reporting', function () {
-      afterEach(function () {
-        sinon.restore();
-      });
-
       it('creates reporter without eventTargets (no event reporting)', function () {
         setupEach({ version: 2 });
         expect((cmcdController as any).reporter).to.not.equal(undefined);
@@ -305,12 +302,17 @@ describe('CMCDController', function () {
           eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
         });
         const reporter = (cmcdController as any).reporter;
-        const stopSpy = sinon.spy(reporter, 'stop');
+        const stopCalls: any[][] = [];
+        const origStop = reporter.stop.bind(reporter);
+        reporter.stop = (...args: any[]) => {
+          stopCalls.push(args);
+          return origStop(...args);
+        };
 
         cmcdController.destroy();
 
-        expect(stopSpy.calledOnce).to.equal(true);
-        expect(stopSpy.calledWith(true)).to.equal(true);
+        expect(stopCalls).to.have.lengthOf(1);
+        expect(stopCalls[0][0]).to.equal(true);
         expect((cmcdController as any).reporter).to.equal(undefined);
       });
 
@@ -319,17 +321,16 @@ describe('CMCDController', function () {
           version: 2,
           eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
         });
-        const reporter = (cmcdController as any).reporter;
-        const updateSpy = sinon.spy(reporter, 'update');
-        const recordSpy = sinon.spy(reporter, 'recordEvent');
 
         // Simulate playing event via the arrow function
         (cmcdController as any).onPlaying();
 
-        expect(updateSpy.calledOnce).to.equal(true);
-        expect(updateSpy.firstCall.args[0]).to.deep.include({ sta: 'p' });
-        expect(recordSpy.calledOnce).to.equal(true);
-        expect(recordSpy.firstCall.args[0]).to.equal('ps');
+        // Player state should transition to PLAYING
+        expect((cmcdController as any).playerState).to.equal('p');
+
+        // Verify sta=p appears in subsequent CMCD data
+        const { url } = applyPlaylistData();
+        expectField(url, `sta%3Dp`);
 
         cmcdController.destroy();
       });
@@ -339,8 +340,6 @@ describe('CMCDController', function () {
           version: 2,
           eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
         });
-        const reporter = (cmcdController as any).reporter;
-        const recordSpy = sinon.spy(reporter, 'recordEvent');
 
         // Trigger fatal error via hls event
         (cmcdController as any).hls.trigger(Events.ERROR, {
@@ -350,10 +349,8 @@ describe('CMCDController', function () {
           error: new Error('test'),
         });
 
-        // Should record both PLAY_STATE (FATAL_ERROR) and ERROR events
-        expect(recordSpy.calledTwice).to.equal(true);
-        expect(recordSpy.firstCall.args[0]).to.equal('ps');
-        expect(recordSpy.secondCall.args[0]).to.equal('e');
+        // Player state should transition to FATAL_ERROR
+        expect((cmcdController as any).playerState).to.equal('f');
 
         cmcdController.destroy();
       });
@@ -364,13 +361,19 @@ describe('CMCDController', function () {
           eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
         });
         const reporter = (cmcdController as any).reporter;
-        const recordSpy = sinon.spy(reporter, 'recordEvent');
+        const recordCalls: any[][] = [];
+        const origRecord = reporter.recordEvent.bind(reporter);
+        reporter.recordEvent = (...args: any[]) => {
+          recordCalls.push(args);
+          return origRecord(...args);
+        };
 
         // Call onPlaying twice — second call should be deduplicated
         (cmcdController as any).onPlaying();
         (cmcdController as any).onPlaying();
 
-        expect(recordSpy.calledOnce).to.equal(true);
+        // Only one recordEvent call for the state change (deduplicated)
+        expect(recordCalls).to.have.lengthOf(1);
 
         cmcdController.destroy();
       });

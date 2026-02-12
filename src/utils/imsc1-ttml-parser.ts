@@ -34,9 +34,7 @@ export function parseIMSC1(
     return;
   }
 
-  const ttmlList = results.map((mdat) =>
-    utf8ArrayToStr(mdat as Uint8Array<ArrayBuffer>),
-  );
+  const ttmlList = results.map((mdat) => utf8ArrayToStr(mdat));
 
   const syncTime = toTimescaleFromScale(initPTS.baseTime, 1, initPTS.timescale);
 
