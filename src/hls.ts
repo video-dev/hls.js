@@ -1349,7 +1349,14 @@ export type {
   TimelineControllerConfig,
   TSDemuxerConfig,
 } from './config';
-export type { MediaKeySessionContext } from './controller/eme-controller';
+export type {
+  GenerateRequestFilterResult,
+  KeyRequests,
+  KeyStatuses,
+  KeyTimeouts,
+  LicenseAndKeysRequest,
+  MediaKeySessionContext,
+} from './controller/eme-controller';
 export type {
   FragmentState,
   FragmentTracker,

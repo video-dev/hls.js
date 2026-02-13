@@ -6,7 +6,8 @@ import { logger } from '../utils/logger';
 import { KeySystemFormats, parsePlayReadyWRM } from '../utils/mediakeys-helper';
 import { mp4pssh, parseMultiPssh } from '../utils/mp4-tools';
 
-let keyUriToKeyIdMap: { [uri: string]: Uint8Array<ArrayBuffer> } = {};
+let keyUriToKeyIdMap: { [uri: string]: Uint8Array<ArrayBuffer> | undefined } =
+  {};
 
 export interface DecryptData {
   uri: string;
