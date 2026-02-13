@@ -54,6 +54,7 @@ export default class CMCDController implements ComponentAPI {
   private playerState: CmcdPlayerState = CmcdPlayerState.STARTING;
   private audioBuffer?: ExtendedSourceBuffer;
   private videoBuffer?: ExtendedSourceBuffer;
+  private audiovideoBuffer?: ExtendedSourceBuffer;
   private reporter?: CmcdReporter;
 
   constructor(hls: Hls) {
@@ -155,6 +156,7 @@ export default class CMCDController implements ComponentAPI {
   ) {
     this.audioBuffer = data.tracks.audio?.buffer;
     this.videoBuffer = data.tracks.video?.buffer;
+    this.audiovideoBuffer = data.tracks.audiovideo?.buffer;
   }
 
   private onWaiting = () => {
@@ -430,7 +432,11 @@ export default class CMCDController implements ComponentAPI {
   private getBufferLength(type: CmcdObjectType) {
     const media = this.media;
     const buffer =
-      type === CmcdObjectType.AUDIO ? this.audioBuffer : this.videoBuffer;
+      type === CmcdObjectType.AUDIO
+        ? this.audioBuffer
+        : type === CmcdObjectType.VIDEO
+          ? this.videoBuffer
+          : this.audiovideoBuffer;
 
     if (!buffer || !media) {
       return NaN;
