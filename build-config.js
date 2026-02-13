@@ -32,50 +32,79 @@ const buildTypeToOutputName = {
 /* Allow to customize builds through env-vars */
 // eslint-disable-next-line no-undef
 const env = process.env;
+const DISABLED_ENV_VALUES = ['', '0', 'false', 'off', 'no'];
 
-const addSubtitleSupport = !!env.SUBTITLE || !!env.USE_SUBTITLES;
-const addAltAudioSupport = !!env.ALT_AUDIO || !!env.USE_ALT_AUDIO;
-const addEMESupport = !!env.EME_DRM || !!env.USE_EME_DRM;
-const addCMCDSupport = !!env.CMCD || !!env.USE_CMCD;
-const addContentSteeringSupport =
-  !!env.CONTENT_STEERING || !!env.USE_CONTENT_STEERING;
-const addVariableSubstitutionSupport =
-  !!env.VARIABLE_SUBSTITUTION || !!env.USE_VARIABLE_SUBSTITUTION;
-const addM2TSAdvancedCodecSupport =
-  !!env.M2TS_ADVANCED_CODECS || !!env.USE_M2TS_ADVANCED_CODECS;
-const addMediaCapabilitiesSupport =
-  !!env.MEDIA_CAPABILITIES || !!env.USE_MEDIA_CAPABILITIES;
-const addInterstitialSupport = !!env.INTERSTITALS || !!env.USE_INTERSTITALS;
+function parseEnvToggle(value) {
+  if (value === undefined) return undefined;
+  const normalized = String(value).trim().toLowerCase();
+  // Preserve prior behavior where any non-empty, non-false-like value enables a feature.
+  return !DISABLED_ENV_VALUES.includes(normalized);
+}
+
+function readFeatureFlag(name, ...aliases) {
+  const envName = [`USE_${name}`, name, ...aliases].find(
+    (candidate) => env[candidate] !== undefined,
+  );
+
+  return envName ? parseEnvToggle(env[envName]) : undefined;
+}
+
+function isFeatureEnabled(type, explicit, enableInLight = false) {
+  return explicit ?? (type === BUILD_TYPE.full || enableInLight);
+}
+
+const flags = {
+  subtitles: readFeatureFlag('SUBTITLES', 'SUBTITLE'),
+  altAudio: readFeatureFlag('ALT_AUDIO'),
+  emeDrm: readFeatureFlag('EME_DRM'),
+  cmcd: readFeatureFlag('CMCD'),
+  contentSteering: readFeatureFlag('CONTENT_STEERING'),
+  variableSubstitution: readFeatureFlag('VARIABLE_SUBSTITUTION'),
+  m2tsAdvancedCodecs: readFeatureFlag('M2TS_ADVANCED_CODECS'),
+  mediaCapabilities: readFeatureFlag('MEDIA_CAPABILITIES'),
+  interstitials: readFeatureFlag(
+    'INTERSTITIALS',
+    // Backward-compatible support for legacy misspelled env vars
+    'USE_INTERSTITALS',
+    'INTERSTITALS',
+  ),
+};
+
+function getFeatureSupport(type) {
+  return {
+    subtitles: isFeatureEnabled(type, flags.subtitles),
+    altAudio: isFeatureEnabled(type, flags.altAudio),
+    emeDrm: isFeatureEnabled(type, flags.emeDrm),
+    cmcd: isFeatureEnabled(type, flags.cmcd),
+    contentSteering: isFeatureEnabled(type, flags.contentSteering, true),
+    variableSubstitution: isFeatureEnabled(type, flags.variableSubstitution),
+    m2tsAdvancedCodecs: isFeatureEnabled(type, flags.m2tsAdvancedCodecs),
+    mediaCapabilities: isFeatureEnabled(type, flags.mediaCapabilities),
+    interstitials: isFeatureEnabled(type, flags.interstitials),
+  };
+}
 
 const shouldBundleWorker = (format) => format !== FORMAT.esm;
 
-const buildConstants = (type, additional = {}) => ({
+const buildConstants = (
+  type,
+  additional = {},
+  features = getFeatureSupport(type),
+) => ({
   preventAssignment: true,
   values: {
     __VERSION__: JSON.stringify(pkgJson.version),
-    __USE_SUBTITLES__: JSON.stringify(
-      type === BUILD_TYPE.full || addSubtitleSupport,
-    ),
-    __USE_ALT_AUDIO__: JSON.stringify(
-      type === BUILD_TYPE.full || addAltAudioSupport,
-    ),
-    __USE_EME_DRM__: JSON.stringify(type === BUILD_TYPE.full || addEMESupport),
-    __USE_CMCD__: JSON.stringify(type === BUILD_TYPE.full || addCMCDSupport),
-    __USE_CONTENT_STEERING__: JSON.stringify(
-      type === BUILD_TYPE.full || BUILD_TYPE.light || addContentSteeringSupport,
-    ),
+    __USE_SUBTITLES__: JSON.stringify(features.subtitles),
+    __USE_ALT_AUDIO__: JSON.stringify(features.altAudio),
+    __USE_EME_DRM__: JSON.stringify(features.emeDrm),
+    __USE_CMCD__: JSON.stringify(features.cmcd),
+    __USE_CONTENT_STEERING__: JSON.stringify(features.contentSteering),
     __USE_VARIABLE_SUBSTITUTION__: JSON.stringify(
-      type === BUILD_TYPE.full || addVariableSubstitutionSupport,
+      features.variableSubstitution,
     ),
-    __USE_M2TS_ADVANCED_CODECS__: JSON.stringify(
-      type === BUILD_TYPE.full || addM2TSAdvancedCodecSupport,
-    ),
-    __USE_MEDIA_CAPABILITIES__: JSON.stringify(
-      type === BUILD_TYPE.full || addMediaCapabilitiesSupport,
-    ),
-    __USE_INTERSTITIALS__: JSON.stringify(
-      type === BUILD_TYPE.full || addInterstitialSupport,
-    ),
+    __USE_M2TS_ADVANCED_CODECS__: JSON.stringify(features.m2tsAdvancedCodecs),
+    __USE_MEDIA_CAPABILITIES__: JSON.stringify(features.mediaCapabilities),
+    __USE_INTERSTITIALS__: JSON.stringify(features.interstitials),
 
     ...additional,
   },
@@ -206,12 +235,12 @@ const basePlugins = [
   commonjs({ transformMixedEsModules: true }),
 ];
 
-function getAliasesForLightDist(format) {
+function getAliasesForDist(format, features) {
   const emptyFile = format === 'esm' ? 'empty-es.js' : 'empty.js';
 
   let aliases = {};
 
-  if (!addEMESupport) {
+  if (!features.emeDrm) {
     aliases = {
       ...aliases,
       './controller/eme-controller': `./${emptyFile}`,
@@ -220,11 +249,11 @@ function getAliasesForLightDist(format) {
     };
   }
 
-  if (!addCMCDSupport) {
+  if (!features.cmcd) {
     aliases = { ...aliases, './controller/cmcd-controller': `./${emptyFile}` };
   }
 
-  if (!addSubtitleSupport) {
+  if (!features.subtitles) {
     aliases = {
       ...aliases,
       './utils/cues': `./${emptyFile}`,
@@ -234,7 +263,7 @@ function getAliasesForLightDist(format) {
     };
   }
 
-  if (!addAltAudioSupport) {
+  if (!features.altAudio) {
     aliases = {
       ...aliases,
       './controller/audio-track-controller': `./${emptyFile}`,
@@ -242,7 +271,7 @@ function getAliasesForLightDist(format) {
     };
   }
 
-  if (!addVariableSubstitutionSupport) {
+  if (!features.variableSubstitution) {
     aliases = {
       ...aliases,
       './utils/variable-substitution': `./${emptyFile}`,
@@ -250,7 +279,7 @@ function getAliasesForLightDist(format) {
     };
   }
 
-  if (!addM2TSAdvancedCodecSupport) {
+  if (!features.m2tsAdvancedCodecs) {
     aliases = {
       ...aliases,
       './ac3-demuxer': `../${emptyFile}`,
@@ -258,26 +287,35 @@ function getAliasesForLightDist(format) {
     };
   }
 
-  if (!addMediaCapabilitiesSupport) {
+  if (!features.mediaCapabilities) {
     aliases = {
       ...aliases,
+      './utils/mediacapabilities-helper': `./${emptyFile}`,
       '../utils/mediacapabilities-helper': `../${emptyFile}`,
     };
   }
 
-  if (!addInterstitialSupport) {
+  if (!features.contentSteering) {
     aliases = {
       ...aliases,
-      './controller/interstitials-controller': './empty.js',
-      './controller/interstitial-player': './empty.js',
-      './controller/interstitials-schedule': './empty.js',
-      './interstitial-player': './empty.js',
-      './interstitials-schedule': './empty.js',
-      './interstitial-event': './empty.js',
-      '../controller/interstitial-player': './empty.js',
-      '../controller/interstitials-schedule': './empty.js',
-      '../loader/interstitial-event': './empty.js',
-      '../loader/interstitial-asset-list': './empty.js',
+      './controller/content-steering-controller': `./${emptyFile}`,
+      '../controller/content-steering-controller': `../${emptyFile}`,
+    };
+  }
+
+  if (!features.interstitials) {
+    aliases = {
+      ...aliases,
+      './controller/interstitials-controller': `./${emptyFile}`,
+      './controller/interstitial-player': `./${emptyFile}`,
+      './controller/interstitials-schedule': `./${emptyFile}`,
+      './interstitial-player': `./${emptyFile}`,
+      './interstitials-schedule': `./${emptyFile}`,
+      './interstitial-event': `./${emptyFile}`,
+      '../controller/interstitial-player': `../${emptyFile}`,
+      '../controller/interstitials-schedule': `../${emptyFile}`,
+      '../loader/interstitial-event': `../${emptyFile}`,
+      '../loader/interstitial-asset-list': `../${emptyFile}`,
     };
   }
 
@@ -296,6 +334,8 @@ const buildRollupConfig = ({
 }) => {
   const outputName = buildTypeToOutputName[type];
   const extension = format === FORMAT.esm ? 'mjs' : 'js';
+  const featureSupport = getFeatureSupport(type);
+  const distAliases = getAliasesForDist(format, featureSupport);
 
   return {
     input,
@@ -317,12 +357,12 @@ const buildRollupConfig = ({
     },
     plugins: [
       ...basePlugins,
-      replace(buildConstants(type)),
+      replace(buildConstants(type, {}, featureSupport)),
       ...(!shouldBundleWorker(format)
         ? [alias({ entries: { './transmuxer-worker': '../empty.js' } })]
         : []),
-      ...(type === BUILD_TYPE.light
-        ? [alias({ entries: getAliasesForLightDist(format) })]
+      ...(Object.keys(distAliases).length
+        ? [alias({ entries: distAliases })]
         : []),
       ...(format === 'esm'
         ? [buildBabelEsm({ stripConsole: true })]
