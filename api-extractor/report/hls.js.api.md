@@ -4,6 +4,10 @@
 
 ```ts
 
+import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
+import type { CmcdKey } from '@svta/cml-cmcd';
+import type { CmcdVersion } from '@svta/cml-cmcd';
+
 // Warning: (ae-missing-release-tag) "AbrComponentAPI" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -945,7 +949,11 @@ export type CMCDControllerConfig = {
     sessionId?: string;
     contentId?: string;
     useHeaders?: boolean;
-    includeKeys?: string[];
+    includeKeys?: CmcdKey[];
+    version?: CmcdVersion;
+    eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
+        includeKeys?: CmcdKey[];
+    })[];
 };
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

@@ -35,6 +35,11 @@ import type {
 import type { CuesInterface } from './utils/cues';
 import type { ILogger } from './utils/logger';
 import type { KeySystems, MediaKeyFunc } from './utils/mediakeys-helper';
+import type {
+  CmcdEventReportConfig,
+  CmcdKey,
+  CmcdVersion,
+} from '@svta/cml-cmcd';
 
 export type ABRControllerConfig = {
   abrEwmaFastLive: number;
@@ -74,7 +79,11 @@ export type CMCDControllerConfig = {
   sessionId?: string;
   contentId?: string;
   useHeaders?: boolean;
-  includeKeys?: string[];
+  includeKeys?: CmcdKey[];
+  version?: CmcdVersion;
+  eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
+    includeKeys?: CmcdKey[];
+  })[];
 };
 
 export type DRMSystemOptions = {

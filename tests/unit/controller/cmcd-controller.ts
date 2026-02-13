@@ -1,6 +1,7 @@
-import { CmcdHeaderField } from '@svta/common-media-library/cmcd/CmcdHeaderField';
+import { CmcdHeaderField } from '@svta/cml-cmcd';
 import { expect } from 'chai';
 import CMCDController from '../../../src/controller/cmcd-controller';
+import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
@@ -173,6 +174,208 @@ describe('CMCDController', function () {
         expectField(url, `br%3D1`);
         expectField(url, `d%3D1000`);
         expectField(url, `ot%3Dav`);
+      });
+    });
+
+    describe('v2 configuration', function () {
+      it('defaults to version 1', function () {
+        setupEach({});
+
+        const { url } = applyPlaylistData();
+        // v=1 is the default and is omitted per CMCD spec
+        expect(url).to.not.include('v%3D');
+        // st is a v1 key and should be included when available
+        expectField(url, `st%3D`);
+        // sta is NOT a v1 key and should not be included
+        expect(url).to.not.include('sta%3D');
+      });
+
+      it('uses version 2 when configured', function () {
+        setupEach({ version: 2 });
+
+        const { url } = applyPlaylistData();
+        expectField(url, `v%3D2`);
+      });
+
+      it('includes player state (sta) for v2', function () {
+        setupEach({ version: 2 });
+
+        const { url } = applyPlaylistData();
+        // Initial state is STARTING ("s")
+        expectField(url, `sta%3Ds`);
+      });
+
+      it('includes stream type (st) for v2 when level details are available', function () {
+        setupEach({ version: 2 });
+        // The test playlist has EXT-X-SERVER-CONTROL which makes it live with LL features
+        // but details.live defaults to true from parsing
+
+        const { url } = applyPlaylistData();
+        // Should include st field (live since playlist has no ENDLIST)
+        expectField(url, `st%3D`);
+      });
+
+      it('detects VOD stream type', function () {
+        const details = setupEach({ version: 2 });
+        // Mark level details as VOD
+        details.live = false;
+
+        const { url } = applyPlaylistData();
+        // VOD = "v"
+        expectField(url, `st%3Dv`);
+      });
+
+      it('detects low-latency stream type', function () {
+        const details = setupEach({ version: 2 });
+        details.live = true;
+        details.canBlockReload = true;
+
+        const { url } = applyPlaylistData();
+        // LOW_LATENCY = "ll"
+        expectField(url, `st%3Dll`);
+      });
+
+      it('detects live stream type', function () {
+        const details = setupEach({ version: 2 });
+        details.live = true;
+        details.canBlockReload = false;
+        details.canSkipUntil = 0;
+
+        const { url } = applyPlaylistData();
+        // LIVE = "l" (negative lookahead to avoid matching "ll")
+        expectField(url, `st%3Dl(?!l)`);
+      });
+
+      it('includes v2 fields in fragment data', function () {
+        const details = setupEach({ version: 2 });
+        details.live = false;
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        // Should contain v2 version, stream type, and player state
+        expectField(url, `v%3D2`);
+        expectField(url, `st%3Dv`);
+        expectField(url, `sta%3Ds`);
+        // Standard fragment fields still present (inner list format in v2)
+        expectField(url, `br%3D%281%29`);
+        expectField(url, `ot%3Dav`);
+      });
+
+      it('includes v2 fields in headers mode', function () {
+        const details = setupEach({ version: 2, useHeaders: true });
+        details.live = false;
+
+        const { url, headers = {} } = applyPlaylistData();
+        expect(url).to.equal(base.url);
+        // v2 fields should appear in appropriate CMCD headers
+        const allHeaders = Object.values(headers).join(',');
+        expect(allHeaders).to.include('v=2');
+        expect(allHeaders).to.include('st=v');
+        expect(allHeaders).to.include('sta=s');
+      });
+    });
+
+    describe('v2 event reporting', function () {
+      it('creates reporter without eventTargets (no event reporting)', function () {
+        setupEach({ version: 2 });
+        expect((cmcdController as any).reporter).to.not.equal(undefined);
+      });
+
+      it('creates reporter for v1 (without event targets)', function () {
+        setupEach({
+          version: 1,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+        expect((cmcdController as any).reporter).to.not.equal(undefined);
+      });
+
+      it('creates reporter with v2 and eventTargets', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+        expect((cmcdController as any).reporter).to.not.equal(undefined);
+      });
+
+      it('stops reporter on destroy', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+        const reporter = (cmcdController as any).reporter;
+        const stopCalls: any[][] = [];
+        const origStop = reporter.stop.bind(reporter);
+        reporter.stop = (...args: any[]) => {
+          stopCalls.push(args);
+          return origStop(...args);
+        };
+
+        cmcdController.destroy();
+
+        expect(stopCalls).to.have.lengthOf(1);
+        expect(stopCalls[0][0]).to.equal(true);
+        expect((cmcdController as any).reporter).to.equal(undefined);
+      });
+
+      it('records play state events on state transitions', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+
+        // Simulate playing event via the arrow function
+        (cmcdController as any).onPlaying();
+
+        // Player state should transition to PLAYING
+        expect((cmcdController as any).playerState).to.equal('p');
+
+        // Verify sta=p appears in subsequent CMCD data
+        const { url } = applyPlaylistData();
+        expectField(url, `sta%3Dp`);
+
+        cmcdController.destroy();
+      });
+
+      it('records error events on fatal errors', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+
+        // Trigger fatal error via hls event
+        (cmcdController as any).hls.trigger(Events.ERROR, {
+          type: 'networkError',
+          details: 'fragLoadError',
+          fatal: true,
+          error: new Error('test'),
+        });
+
+        // Player state should transition to FATAL_ERROR
+        expect((cmcdController as any).playerState).to.equal('f');
+
+        cmcdController.destroy();
+      });
+
+      it('does not record duplicate play state events', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+        });
+        const reporter = (cmcdController as any).reporter;
+        const recordCalls: any[][] = [];
+        const origRecord = reporter.recordEvent.bind(reporter);
+        reporter.recordEvent = (...args: any[]) => {
+          recordCalls.push(args);
+          return origRecord(...args);
+        };
+
+        // Call onPlaying twice — second call should be deduplicated
+        (cmcdController as any).onPlaying();
+        (cmcdController as any).onPlaying();
+
+        // Only one recordEvent call for the state change (deduplicated)
+        expect(recordCalls).to.have.lengthOf(1);
+
+        cmcdController.destroy();
       });
     });
   });

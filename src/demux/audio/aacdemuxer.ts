@@ -1,7 +1,7 @@
 /**
  * AAC demuxer
  */
-import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
+import { getId3Data } from '@svta/cml-id3';
 import * as ADTS from './adts';
 import BaseAudioDemuxer from './base-audio-demuxer';
 import * as MpegAudio from './mpegaudio';

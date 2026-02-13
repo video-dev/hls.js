@@ -1,5 +1,4 @@
-import { getId3Data } from '@svta/common-media-library/id3/getId3Data';
-import { getId3Timestamp } from '@svta/common-media-library/id3/getId3Timestamp';
+import { getId3Data, getId3Timestamp } from '@svta/cml-id3';
 import BaseAudioDemuxer from './base-audio-demuxer';
 import { getAudioBSID } from './dolby';
 import type { HlsEventEmitter } from '../../events';

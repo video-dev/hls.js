@@ -1,4 +1,4 @@
-import { uuid } from '@svta/common-media-library/utils/uuid';
+import { uuid } from '@svta/cml-utils';
 import { EventEmitter } from 'eventemitter3';
 import { buildAbsoluteURL } from 'url-toolkit';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
