@@ -549,3 +549,8 @@ export interface InterstitialsPrimaryResumed {
   schedule: InterstitialScheduleItem[];
   scheduleIndex: number;
 }
+
+export interface MediaFragmentParsedData {
+  start?: number;
+  end?: number;
+}

@@ -9,6 +9,7 @@ import EMEController from './controller/eme-controller';
 import ErrorController from './controller/error-controller';
 import FPSController from './controller/fps-controller';
 import InterstitialsController from './controller/interstitials-controller';
+import MediaFragmentController from './controller/media-fragment-controller';
 import { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import { TimelineController } from './controller/timeline-controller';
@@ -338,6 +339,7 @@ export type HlsConfig = {
   capLevelController: typeof CapLevelController;
   errorController: typeof ErrorController;
   fpsController: typeof FPSController;
+  mediaFragmentController: typeof MediaFragmentController;
   progressive: boolean;
   lowLatencyMode: boolean;
   primarySessionId?: string;
@@ -434,6 +436,7 @@ export const hlsDefaultConfig: HlsConfig = {
   capLevelController: CapLevelController,
   errorController: ErrorController,
   fpsController: FPSController,
+  mediaFragmentController: MediaFragmentController,
   stretchShortVideoTrack: false, // used by mp4-remuxer
   maxAudioFramesDrift: 1, // used by mp4-remuxer
   forceKeyFrameOnDiscontinuity: true, // used by ts-demuxer
