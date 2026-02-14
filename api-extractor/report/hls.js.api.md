@@ -2159,8 +2159,6 @@ class Hls implements HlsEventEmitter {
     // (undocumented)
     get media(): HTMLMediaElement | null;
     // (undocumented)
-    get mediaFragment(): TemporalFragment | undefined;
-    // (undocumented)
     static get MetadataSchema(): typeof MetadataSchema;
     get minAutoLevel(): number;
     get nextAudioTrack(): number;
@@ -2343,6 +2341,7 @@ export type HlsConfig = {
     capLevelController: typeof CapLevelController;
     errorController: typeof ErrorController;
     fpsController: typeof FPSController;
+    mediaFragmentController: typeof MediaFragmentController;
     progressive: boolean;
     lowLatencyMode: boolean;
     primarySessionId?: string;
@@ -4046,6 +4045,15 @@ export interface MediaFragment extends Fragment {
     ref: MediaFragmentRef;
     // (undocumented)
     sn: number;
+}
+
+// Warning: (ae-missing-release-tag) "MediaFragmentController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public
+export class MediaFragmentController extends Logger implements ComponentAPI {
+    constructor(hls: Hls);
+    // (undocumented)
+    destroy(): void;
 }
 
 // Warning: (ae-missing-release-tag) "MediaKeyFunc" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

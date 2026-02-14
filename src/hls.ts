@@ -17,10 +17,6 @@ import { MetadataSchema } from './types/demuxer';
 import { type HdcpLevel, isHdcpLevel, type Level } from './types/level';
 import { PlaylistLevelType } from './types/loader';
 import { enableLogs, type ILogger } from './utils/logger';
-import {
-  parseMediaFragment,
-  type TemporalFragment,
-} from './utils/media-fragment-parser';
 import { getMediaDecodingInfoPromise } from './utils/mediacapabilities-helper';
 import { getMediaSource } from './utils/mediasource-helper';
 import { getAudioTracksByGroup } from './utils/rendition-helper';
@@ -41,6 +37,7 @@ import type ErrorController from './controller/error-controller';
 import type FPSController from './controller/fps-controller';
 import type InterstitialsController from './controller/interstitials-controller';
 import type { InterstitialsManager } from './controller/interstitials-controller';
+import type MediaFragmentController from './controller/media-fragment-controller';
 import type { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import type SubtitleTrackController from './controller/subtitle-track-controller';
 import type Decrypter from './crypt/decrypter';
@@ -108,6 +105,7 @@ export default class Hls implements HlsEventEmitter {
   private audioTrackController?: AudioTrackController;
   private subtitleTrackController?: SubtitleTrackController;
   private interstitialsController?: InterstitialsController;
+  private mediaFragmentController?: MediaFragmentController;
   private gapController: GapController;
   private emeController?: EMEController;
   private cmcdController?: CMCDController;
@@ -116,7 +114,6 @@ export default class Hls implements HlsEventEmitter {
   private _sessionId?: string;
   private triggeringException?: boolean;
   private started: boolean = false;
-  private _mediaFragment?: TemporalFragment;
 
   /**
    * Get the video-dev/hls.js package version.
@@ -321,6 +318,11 @@ export default class Hls implements HlsEventEmitter {
       coreComponents,
     );
 
+    this.mediaFragmentController = this.createController(
+      config.mediaFragmentController,
+      coreComponents,
+    );
+
     this.coreComponents = coreComponents;
 
     // Error controller handles errors before and after all other controllers
@@ -510,35 +512,16 @@ export default class Hls implements HlsEventEmitter {
     this.stopLoad();
     const media = this.media;
     const loadedSource = this._url;
-
-    const { url: cleanUrl, temporal } = parseMediaFragment(url);
-
-    if (temporal) {
-      this._mediaFragment = temporal;
-      // Media fragment start time takes precedence over config
-      if (temporal.start !== undefined) {
-        this.config.startPosition = temporal.start;
-      }
-      this.trigger(Events.MEDIA_FRAGMENT_PARSED, {
-        start: temporal.start,
-        end: temporal.end,
-      });
-    } else {
-      this._mediaFragment = undefined;
-    }
-
     const loadingSource = (this._url = buildAbsoluteURL(
       self.location.href,
-      cleanUrl,
+      url,
       {
         alwaysNormalize: true,
       },
     ));
-
     this._autoLevelCapping = -1;
     this._maxHdcpLevel = null;
     this.logger.log(`loadSource:${loadingSource}`);
-
     if (
       media &&
       loadedSource &&
@@ -549,7 +532,7 @@ export default class Hls implements HlsEventEmitter {
       this.attachMedia(media);
     }
     // when attaching to a source URL, trigger a playlist load
-    this.trigger(Events.MANIFEST_LOADING, { url: cleanUrl });
+    this.trigger(Events.MANIFEST_LOADING, { url });
   }
 
   /**
@@ -1042,10 +1025,6 @@ export default class Hls implements HlsEventEmitter {
     return this.streamController.maxBufferLength;
   }
 
-  public get mediaFragment(): TemporalFragment | undefined {
-    return this._mediaFragment;
-  }
-
   /**
    * Find and select the best matching audio track, making a level switch when a Group change is necessary.
    * Updates `hls.config.audioPreference`. Returns the selected track, or null when no matching track is found.
@@ -1331,6 +1310,7 @@ export type {
   ErrorController,
   FPSController,
   InterstitialsController,
+  MediaFragmentController,
   StreamController,
   SubtitleStreamController,
   SubtitleTrackController,

@@ -4,8 +4,7 @@ export interface TemporalFragment {
 }
 
 export interface MediaFragmentParseResult {
-  url: string;
-  temporal?: TemporalFragment;
+  temporalFragment?: TemporalFragment;
 }
 
 /**
@@ -23,59 +22,56 @@ export function parseMediaFragment(
   sourceUrl: string,
 ): MediaFragmentParseResult {
   const hashIndex = sourceUrl.indexOf('#');
-
   if (hashIndex === -1) {
-    return { url: sourceUrl };
+    return { temporalFragment: undefined };
   }
-
-  const url = sourceUrl.substring(0, hashIndex);
   const fragment = sourceUrl.substring(hashIndex + 1);
-
   // Parse temporal dimension: t=start,end or t=npt:start,end
   // Matches: t=10 or t=10,20 or t=npt:10,20 or t=,20
   const temporalMatch = fragment.match(
     /(?:^|&)t=(?:npt:)?([^,&]+)?(?:,([^&]+))?(?:&|$)/,
   );
-
   if (!temporalMatch) {
-    return { url };
+    return { temporalFragment: undefined };
   }
-
-  const temporal: TemporalFragment = {};
+  const temporalFragment: TemporalFragment = {};
   const startTime = temporalMatch[1]?.trim();
   const endTime = temporalMatch[2]?.trim();
-
   if (startTime) {
     const startTimeValue = parseNptTime(startTime);
-    if (startTimeValue !== undefined && startTimeValue >= 0) {
-      temporal.start = startTimeValue;
+    if (startTimeValue === undefined) {
+      return { temporalFragment: undefined };
+    }
+    if (startTimeValue >= 0) {
+      temporalFragment.start = startTimeValue;
     }
   }
-
   if (endTime) {
     const endTimeValue = parseNptTime(endTime);
-    if (endTimeValue !== undefined && endTimeValue >= 0) {
-      temporal.end = endTimeValue;
+    if (endTimeValue === undefined) {
+      return { temporalFragment: undefined };
+    }
+    if (endTimeValue >= 0) {
+      temporalFragment.end = endTimeValue;
     }
   }
-
   if (
-    temporal.start !== undefined &&
-    temporal.end !== undefined &&
-    temporal.start >= temporal.end
+    temporalFragment.start !== undefined &&
+    temporalFragment.end !== undefined &&
+    temporalFragment.start >= temporalFragment.end
   ) {
-    return { url };
+    return { temporalFragment: undefined };
   }
-
-  if (temporal.start === undefined && temporal.end === 0) {
-    return { url };
+  if (temporalFragment.start === undefined && temporalFragment.end === 0) {
+    return { temporalFragment: undefined };
   }
-
-  if (temporal.start === undefined && temporal.end === undefined) {
-    return { url };
+  if (
+    temporalFragment.start === undefined &&
+    temporalFragment.end === undefined
+  ) {
+    return { temporalFragment: undefined };
   }
-
-  return { url, temporal };
+  return { temporalFragment };
 }
 
 /**
@@ -87,43 +83,33 @@ export function parseMediaFragment(
  */
 function parseNptTime(timeStr: string): number | undefined {
   timeStr = timeStr.trim();
-
   if (!timeStr) {
     return undefined;
   }
-
   // Handle npt-sec format: "10" or "10.5"
   if (/^\d+(\.\d+)?$/.test(timeStr)) {
     return parseFloat(timeStr);
   }
-
   // Handle npt-hhmmss format: "1:02:30.5"
   const hhmmss = timeStr.match(/^(\d+):(\d{2}):(\d{2})(\.\d+)?$/);
   if (hhmmss) {
     const hours = parseInt(hhmmss[1], 10);
     const minutes = parseInt(hhmmss[2], 10);
     const seconds = parseFloat(hhmmss[3] + (hhmmss[4] || ''));
-
-    // Validate ranges
     if (minutes >= 60 || seconds >= 60) {
       return undefined;
     }
-
     return hours * 3600 + minutes * 60 + seconds;
   }
-
   // Handle npt-mmss format: "02:30.5"
   const mmss = timeStr.match(/^(\d{2}):(\d{2})(\.\d+)?$/);
   if (mmss) {
     const minutes = parseInt(mmss[1], 10);
     const seconds = parseFloat(mmss[2] + (mmss[3] || ''));
-
     if (minutes >= 60 || seconds >= 60) {
       return undefined;
     }
-
     return minutes * 60 + seconds;
   }
-
   return undefined;
 }
