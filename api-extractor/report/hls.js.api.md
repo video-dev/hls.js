@@ -382,7 +382,7 @@ export class BaseSegment {
     set stats(value: LoadStats);
     // (undocumented)
     get url(): string;
-    set url(value: string);
+    set url(value: string | null);
 }
 
 // Warning: (ae-missing-release-tag) "BaseStreamController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
