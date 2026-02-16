@@ -120,7 +120,7 @@ export class BaseSegment {
   }
 
   get url(): string {
-    if (!this._url && this.baseurl && this.relurl) {
+    if (!this._url && this.relurl) {
       this._url = buildAbsoluteURL(this.baseurl, this.relurl, {
         alwaysNormalize: true,
       });
@@ -128,7 +128,7 @@ export class BaseSegment {
     return this._url || '';
   }
 
-  set url(value: string) {
+  set url(value: string | null) {
     this._url = value;
   }
 
@@ -137,6 +137,7 @@ export class BaseSegment {
     elementaryStreams[ElementaryStreamTypes.AUDIO] = null;
     elementaryStreams[ElementaryStreamTypes.VIDEO] = null;
     elementaryStreams[ElementaryStreamTypes.AUDIOVIDEO] = null;
+    this.url = null;
   }
 }
 
