@@ -130,13 +130,13 @@ class EMEController extends Logger implements ComponentAPI {
     [keysystem: string]: KeySystemAccessPromises | undefined;
   } = {};
 
-  // TODO: 1. One session with updates, or session queue for playlist (disco, timerange, etc...) and key rotation context?
+  // MediaKey session contexts created for each Key URI needed to make license requests that produce key status maps
   private mediaKeySessions: MediaKeySessionContext[] = [];
 
-  // TODO: 2. "main" and "audio" (playlistType) active keys -> there are two LevelKeys that are important to track the status of
+  // Tracks active `main`, `audio` (playlistType), and `previous[]` (array) of encrypted fragments and LevelKey objects
   private activeKeys: ActiveKeys = {};
 
-  // TODO: 3. keyUsablePromises (per KeyId, resolves on (startsWith) "usable", deleted when changed to expired or released)
+  // Resolves when key status starts with "usable", deleted when changed to expired or released
   private keyUsablePromises: {
     [keyId: string]: Promise<LevelKey> | undefined;
   } = {};
@@ -537,20 +537,7 @@ class EMEController extends Logger implements ComponentAPI {
       this.log(
         `Waiting for usable key (playlist: ${playlistType} keyId: ${keyId} URI: ${levelKey.uri} format: "${levelKey.keyFormat}" method: ${levelKey.method})`,
       );
-      const keySessionContextPromise = this.getSessionForKey(
-        levelKey,
-        'playlist-key',
-      );
-      keySessionContextPromise.catch((error) => this.handleError(error, frag));
-
-      const usablePromise = (this.keyUsablePromises[keyId] =
-        keySessionContextPromise.then((context) => {
-          // TODO: return a promise when this key is usable
-
-          return levelKey;
-        }));
-
-      return usablePromise;
+      return this.updateUsablePromise(levelKey, 'playlist-key', frag);
     }
 
     return keyUsablePromise;
@@ -564,18 +551,7 @@ class EMEController extends Logger implements ComponentAPI {
       delete this.keyUsablePromises[keyId];
 
       // same as loadKey, mediaKeys will be set with new session
-      const keySessionContextPromise = this.getSessionForKey(
-        levelKey,
-        'expired',
-      );
-      keySessionContextPromise.catch((error) => this.handleError(error));
-
-      const renewalPromise = (this.keyUsablePromises[keyId] =
-        keySessionContextPromise.then((context) => {
-          // TODO: return a promise when this key is usable
-
-          return levelKey;
-        }));
+      const renewalPromise = this.updateUsablePromise(levelKey, 'expired');
       renewalPromise
         .then(() => {
           // remove old session after new one is established
@@ -585,6 +561,19 @@ class EMEController extends Logger implements ComponentAPI {
     } else {
       this.warn(`Could not renew expired key ${keyId}. Missing pssh initData.`);
     }
+  }
+
+  private updateUsablePromise(
+    levelKey: LevelKey,
+    reason: LicenseRequestReason,
+    frag?: EncryptedFragment,
+  ): Promise<LevelKey> {
+    const keyId = getKeyIdString(levelKey);
+    const keySessionContextPromise = this.getSessionForKey(levelKey, reason);
+    keySessionContextPromise.catch((error) => this.handleError(error, frag));
+    const usablePromise = (this.keyUsablePromises[keyId] =
+      keySessionContextPromise.then((context) => levelKey));
+    return usablePromise;
   }
 
   // add Key to new or existing session
@@ -597,11 +586,16 @@ class EMEController extends Logger implements ComponentAPI {
         this.throwIfDestroyed();
         // Use existing session if status is available
         for (let i = this.mediaKeySessions.length; i--; ) {
-          if (
-            getKeyStatus(levelKey, this.mediaKeySessions[i]) ||
-            this.mediaKeySessions[i].keyRequests[levelKey.uri]
-          ) {
-            return this.mediaKeySessions[i];
+          const context = this.mediaKeySessions[i];
+          if (getKeyStatus(levelKey, context)) {
+            return context;
+          }
+          // If request is in progress wait for it to resolve
+          const requestEmitter = context.keyRequests[levelKey.uri];
+          if (requestEmitter) {
+            return getRequestToKeyUsablePromise(requestEmitter).then(
+              () => context,
+            );
           }
         }
         // Otherwise, create set mediaKeys and create new session
@@ -775,39 +769,19 @@ class EMEController extends Logger implements ComponentAPI {
             arrayValuesMatch(keyId, decryptdata.keyId) ||
             sessionKeyUri.replace(/-/g, '').indexOf(keyIdHex) !== -1
           ) {
-            if (decryptdata.pssh) {
-              // FIXME: return session with levelKeys
-              return mediaKeySessions[mediaKeySessions.length - 1];
+            if (!decryptdata.pssh) {
+              decryptdata.pssh = new Uint8Array(initData);
+              decryptdata.keyId = keyId;
+              LevelKey.setKeyIdForUri(sessionKeyUri, keyId);
             }
-            decryptdata.pssh = new Uint8Array(initData);
-            decryptdata.keyId = keyId;
-            LevelKey.setKeyIdForUri(sessionKeyUri, keyId);
-            const reason = 'encrypted-event-key-match';
             keySessionContextPromise = this.getSessionForKey(
               decryptdata,
-              reason,
-            ).then((context) => {
-              const keyRequest = context.keyRequests[sessionKeyUri];
-              if (keyRequest?.status === 'initialized') {
-                return this.generateRequest(
-                  context,
-                  decryptdata,
-                  initDataType,
-                  initData,
-                  reason,
-                  true,
-                );
-              }
-              return context;
-            });
+              'encrypted-event-key-match',
+            );
             break;
           }
         }
         if (!keySessionContextPromise) {
-          // TODO: encrypted-event-no-match: https://github.com/video-dev/hls.js/issues/7542
-          // decryptdata.pssh = new Uint8Array(initData);
-          // decryptdata.keyId = keyId;
-          // ...
           throw new Error(
             `Key ID ${keyIdHex} not encountered in playlist. Key-system sessions ${mediaKeySessions.length}.`,
           );
@@ -917,7 +891,6 @@ class EMEController extends Logger implements ComponentAPI {
     }
 
     const keyUri = levelKey.uri;
-    // const keyId = getKeyIdString(levelKey);
 
     const requestEmitter = new EventEmitter() as LicenseAndKeysRequest;
     requestEmitter.status = 'initialized';
@@ -1016,7 +989,7 @@ class EMEController extends Logger implements ComponentAPI {
         keyStatus === 'output-restricted' ||
         keyStatus === 'output-downscaled'
       ) {
-        keyError = getKeyStatusError(keyStatus, levelKey); // TODO: levelKeys (which one?)
+        keyError = getKeyStatusError(keyStatus, levelKey);
       } else if (keyStatus === 'expired') {
         keyError = new Error(`key expired (keyId: ${keyId})`);
       } else if (keyStatus === 'released') {
@@ -1104,12 +1077,7 @@ class EMEController extends Logger implements ComponentAPI {
       onkeystatuseschange,
     );
 
-    const keyUsablePromise = new Promise(
-      (resolve: (value?: void) => void, reject) => {
-        requestEmitter.on('error', reject);
-        requestEmitter.on('resolved', resolve);
-      },
-    );
+    const keyUsablePromise = getRequestToKeyUsablePromise(requestEmitter);
 
     this.log(
       `Generating key-session request for "${reason}" keyId: ${keyId} URI: ${keyUri} (init data type: ${initDataType} length: ${
@@ -1843,6 +1811,13 @@ function getKeyStatusError(
       ? 'HDCP level output restricted'
       : `key status changed to "${keyStatus}"`,
   );
+}
+
+function getRequestToKeyUsablePromise(requestEmitter: LicenseAndKeysRequest) {
+  return new Promise((resolve: (value?: void) => void, reject) => {
+    requestEmitter.on('error', reject);
+    requestEmitter.on('resolved', resolve);
+  });
 }
 
 export default EMEController;

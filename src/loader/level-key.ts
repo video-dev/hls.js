@@ -221,6 +221,8 @@ export class LevelKey implements DecryptData {
       if (keyId) {
         this.keyId = keyId;
         LevelKey.setKeyIdForUri(this.uri, keyId);
+      } else {
+        this.keyId = LevelKey.addKeyIdForUri(this.uri);
       }
     }
 
