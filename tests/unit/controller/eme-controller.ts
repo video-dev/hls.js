@@ -20,15 +20,9 @@ import type { MediaAttachedData } from '../../../src/types/events';
 
 use(sinonChai);
 
-type EMEControllerTestable = Omit<
-  EMEController,
-  'hls' | 'keyUsablePromises' | 'mediaKeySessions'
-> & {
+type EMEControllerTestable = Omit<EMEController, 'hls' | 'mediaKeySessions'> & {
   hls: HlsMock;
   mediaKeySessions: MediaKeySessionContext[];
-  keyUsablePromises: {
-    [keyUri: string]: Promise<LevelKey> | undefined;
-  };
   activeKeys: {
     main?: EncryptedFragment;
     audio?: EncryptedFragment;
@@ -367,10 +361,6 @@ describe('EMEController', function () {
         type: 'main',
       } as any)
       .then(() => {
-        expect(emeController.keyUsablePromises).to.deep.equal(
-          {},
-          '`keyUsablePromises` should be an empty dictionary when no key IDs are found',
-        );
         expect(emeController.activeKeys).to.deep.equal(
           {},
           '`activeKeys` should be an empty dictionary when no playlisty-keys are found',
@@ -455,15 +445,10 @@ describe('EMEController', function () {
     const levelKey = getParsedLevelKey();
     const encryptedFrag = getEncryptedFrag(levelKey);
     return emeController.loadKey(encryptedFrag).then(() => {
-      expect(emeController.keyUsablePromises['data://key-uri']).to.be.a(
-        'Promise',
+      expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
+      expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
+        sinon.match({ byteLength: 6 }),
       );
-      return emeController.keyUsablePromises['data://key-uri']!.finally(() => {
-        expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
-        expect(mediaKeysSetServerCertificateSpy).to.have.been.calledWith(
-          sinon.match({ byteLength: 6 }),
-        );
-      });
     });
   });
 
@@ -521,26 +506,20 @@ describe('EMEController', function () {
       media: media as any as HTMLMediaElement,
     });
 
-    emeController.loadKey(encryptedFrag).catch((error) => {
-      // expected?
-    });
+    emeController
+      .loadKey(encryptedFrag)
+      .catch(() => {})
+      .finally(() => {
+        expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
+        expect((mediaKeysSetServerCertificateSpy.args[0] as any)[0]).to.equal(
+          xhrInstance.response,
+        );
 
-    expect(emeController.keyUsablePromises['data://key-uri']).to.be.a(
-      'Promise',
-    );
-    return emeController.keyUsablePromises['data://key-uri']!.catch(
-      () => {},
-    ).finally(() => {
-      expect(mediaKeysSetServerCertificateSpy).to.have.been.calledOnce;
-      expect((mediaKeysSetServerCertificateSpy.args[0] as any)[0]).to.equal(
-        xhrInstance.response,
-      );
-
-      expect(emeController.hls.trigger).to.have.been.calledOnce;
-      expect(emeController.hls.trigger.args[0][1].details).to.equal(
-        ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_UPDATE_FAILED,
-      );
-    });
+        expect(emeController.hls.trigger).to.have.been.calledOnce;
+        expect(emeController.hls.trigger.args[0][1].details).to.equal(
+          ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_UPDATE_FAILED,
+        );
+      });
   });
 
   it('should fetch the server certificate and trigger request failed error', function () {
@@ -589,21 +568,15 @@ describe('EMEController', function () {
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
       media: media as any as HTMLMediaElement,
     });
-    emeController.loadKey(encryptedFrag).catch((error) => {
-      // expected?
-    });
-
-    expect(emeController.keyUsablePromises['data://key-uri']).to.be.a(
-      'Promise',
-    );
-    return emeController.keyUsablePromises['data://key-uri']!.catch(
-      () => {},
-    ).finally(() => {
-      expect(emeController.hls.trigger).to.have.been.calledOnce;
-      expect(emeController.hls.trigger.args[0][1].details).to.equal(
-        ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED,
-      );
-    });
+    emeController
+      .loadKey(encryptedFrag)
+      .catch(() => {})
+      .finally(() => {
+        expect(emeController.hls.trigger).to.have.been.calledOnce;
+        expect(emeController.hls.trigger.args[0][1].details).to.equal(
+          ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED,
+        );
+      });
   });
 
   it('should remove media property  when media is detached', function () {

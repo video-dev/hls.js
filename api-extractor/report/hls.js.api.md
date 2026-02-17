@@ -1213,7 +1213,7 @@ export class EMEController extends Logger implements ComponentAPI {
     // (undocumented)
     loadKey(frag: EncryptedFragment): Promise<LevelKey>;
     // (undocumented)
-    renewKeySession(levelKey: LevelKey): void;
+    renewKeySession(levelKey: LevelKey, context: MediaKeySessionContext): Promise<LevelKey>;
     // (undocumented)
     selectKeySystemFormat(frag: Fragment): Promise<KeySystemFormats>;
 }

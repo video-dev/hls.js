@@ -136,11 +136,6 @@ class EMEController extends Logger implements ComponentAPI {
   // Tracks active `main`, `audio` (playlistType), and `previous[]` (array) of encrypted fragments and LevelKey objects
   private activeKeys: ActiveKeys = {};
 
-  // Resolves when key status starts with "usable", deleted when changed to expired or released
-  private keyUsablePromises: {
-    [keyId: string]: Promise<LevelKey> | undefined;
-  } = {};
-
   private mediaKeys: MediaKeys | null = null;
   private setMediaKeysQueue: Promise<void>[] = EMEController.CDMCleanupPromise
     ? [EMEController.CDMCleanupPromise]
@@ -517,8 +512,6 @@ class EMEController extends Logger implements ComponentAPI {
       return Promise.reject(error);
     }
 
-    const keyId = getKeyIdString(levelKey);
-
     // track active playlist fragments
     const playlistType = frag.type as
       | PlaylistLevelType.MAIN
@@ -528,39 +521,35 @@ class EMEController extends Logger implements ComponentAPI {
     if (encryptedFrag && !levelKey.matches(encryptedFrag.decryptdata)) {
       activeKeys.previous ||= [];
       activeKeys.previous.push(encryptedFrag);
+      delete activeKeys[playlistType];
     }
-    activeKeys[playlistType] = frag;
+    activeKeys[playlistType] ||= frag;
+
+    // check for external expiration
+    for (let i = this.mediaKeySessions.length; i--; ) {
+      const context = this.mediaKeySessions[i];
+      if (
+        levelKey.keyId &&
+        context.keyStatuses[arrayToHex(levelKey.keyId)] === 'expired'
+      ) {
+        return this.renewKeySession(levelKey, context);
+      }
+    }
 
     // Get key-session context async
-    const keyUsablePromise = this.keyUsablePromises[keyId];
-    if (!keyUsablePromise) {
-      this.log(
-        `Waiting for usable key (playlist: ${playlistType} keyId: ${keyId} URI: ${levelKey.uri} format: "${levelKey.keyFormat}" method: ${levelKey.method})`,
-      );
-      return this.updateUsablePromise(levelKey, 'playlist-key', frag);
-    }
-
-    return keyUsablePromise;
+    return this.updateUsablePromise(levelKey, 'playlist-key', frag);
   }
 
-  public renewKeySession(levelKey: LevelKey) {
-    const keyId = getKeyIdString(levelKey);
-    if (levelKey.pssh) {
-      // Reset cached mediaKeys, access promise, and usable key promise so that new session and request are generated
-      this.resetMediaKeys();
-      delete this.keyUsablePromises[keyId];
-
-      // same as loadKey, mediaKeys will be set with new session
-      const renewalPromise = this.updateUsablePromise(levelKey, 'expired');
-      renewalPromise
-        .then(() => {
-          // remove old session after new one is established
-          // return this.removeSession(mediaKeySessionContext);
-        })
-        .catch((error) => this.handleError(error));
-    } else {
-      this.warn(`Could not renew expired key ${keyId}. Missing pssh initData.`);
-    }
+  public renewKeySession(
+    levelKey: LevelKey,
+    context: MediaKeySessionContext,
+  ): Promise<LevelKey> {
+    // Reset cached mediaKeys, access promise, and usable key promise so that new session and request are generated
+    this.resetMediaKeys();
+    return this.removeSession(context).then(() => {
+      this.throwIfDestroyed();
+      return this.updateUsablePromise(levelKey, 'expired');
+    });
   }
 
   private updateUsablePromise(
@@ -568,12 +557,9 @@ class EMEController extends Logger implements ComponentAPI {
     reason: LicenseRequestReason,
     frag?: EncryptedFragment,
   ): Promise<LevelKey> {
-    const keyId = getKeyIdString(levelKey);
     const keySessionContextPromise = this.getSessionForKey(levelKey, reason);
     keySessionContextPromise.catch((error) => this.handleError(error, frag));
-    const usablePromise = (this.keyUsablePromises[keyId] =
-      keySessionContextPromise.then((context) => levelKey));
-    return usablePromise;
+    return keySessionContextPromise.then((context) => levelKey);
   }
 
   // add Key to new or existing session
@@ -593,6 +579,9 @@ class EMEController extends Logger implements ComponentAPI {
           // If request is in progress wait for it to resolve
           const requestEmitter = context.keyRequests[levelKey.uri];
           if (requestEmitter) {
+            this.log(
+              `Waiting for usable key (${reason} keyId: ${getKeyIdString(levelKey)} format: "${levelKey.keyFormat}" URI: ${levelKey.uri})`,
+            );
             return getRequestToKeyUsablePromise(requestEmitter).then(
               () => context,
             );
@@ -1034,7 +1023,9 @@ class EMEController extends Logger implements ComponentAPI {
           this.log(
             `Expired key ${stringify(keyStatuses)} in key-session "${context.mediaKeysSession.sessionId}"`,
           );
-          this.renewKeySession(levelKey);
+          this.renewKeySession(levelKey, context).catch((error) =>
+            this.handleError(error),
+          );
           break;
         }
       }
@@ -1560,7 +1551,6 @@ class EMEController extends Logger implements ComponentAPI {
   private _clear() {
     this.keyFormatPromise = null;
     this.keySystemAccessPromises = {};
-    this.keyUsablePromises = {};
     this.activeKeys = {};
     const mediaResolved = this.mediaResolved;
     if (mediaResolved) {
