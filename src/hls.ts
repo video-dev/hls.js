@@ -1390,6 +1390,7 @@ export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
 export type {
   BaseSegment,
+  EncryptedFragment,
   Fragment,
   MediaFragment,
   Part,

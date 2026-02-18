@@ -1208,8 +1208,6 @@ export class EMEController extends Logger implements ComponentAPI {
     destroy(): void;
     // (undocumented)
     loadClear(loadingFrag: Fragment, encryptedFragments: Fragment[], startFragRequested: boolean): Promise<void> | null;
-    // Warning: (ae-forgotten-export) The symbol "EncryptedFragment" needs to be exported by the entry point hls.d.ts
-    //
     // (undocumented)
     loadKey(frag: EncryptedFragment): Promise<LevelKey>;
     // (undocumented)
@@ -1234,6 +1232,13 @@ export type EMEControllerConfig = {
     drmSystemOptions: DRMSystemOptions | undefined;
     requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
     requireKeySystemAccessOnStart: boolean;
+};
+
+// Warning: (ae-missing-release-tag) "EncryptedFragment" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type EncryptedFragment = Fragment & {
+    decryptdata: LevelKey;
 };
 
 // Warning: (ae-missing-release-tag) "ErrorActionFlags" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
