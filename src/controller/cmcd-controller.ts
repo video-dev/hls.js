@@ -15,6 +15,7 @@ import {
 } from '@svta/cml-cmcd';
 import { Events } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
+import FetchLoader from '../utils/fetch-loader';
 import type {
   FragmentLoaderConstructor,
   HlsConfig,
@@ -39,6 +40,76 @@ import type {
   PlaylistLoaderContext,
 } from '../types/loader';
 import type { Cmcd } from '@svta/cml-cmcd';
+
+export function createCmcdRequester(
+  config: HlsConfig,
+): (request: {
+  url: string;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: BodyInit;
+}) => Promise<{ status: number }> {
+  if (config.loader === FetchLoader) {
+    return (request) => {
+      const initParams: RequestInit = {
+        method: request.method || 'POST',
+        headers: request.headers,
+        body: request.body,
+        mode: 'cors',
+        credentials: 'same-origin',
+      };
+      const fetchSetup = config.fetchSetup;
+      const context: LoaderContext = {
+        url: request.url,
+        responseType: 'text',
+      };
+      const requestOrPromise = fetchSetup
+        ? fetchSetup(context, initParams)
+        : new Request(request.url, initParams);
+      return Promise.resolve(requestOrPromise)
+        .then((req) => self.fetch(req))
+        .then((response) => ({ status: response.status }));
+    };
+  }
+
+  return (request) => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const xhrSetup = config.xhrSetup;
+      const url = request.url;
+
+      const openSendAndResolve = () => {
+        if (!xhr.readyState) {
+          xhr.open(request.method || 'POST', url, true);
+        }
+        if (request.headers) {
+          for (const name in request.headers) {
+            xhr.setRequestHeader(name, request.headers[name]);
+          }
+        }
+        xhr.onreadystatechange = () => {
+          if (xhr.readyState === 4) {
+            resolve({ status: xhr.status });
+          }
+        };
+        xhr.send(request.body as XMLHttpRequestBodyInit);
+      };
+
+      if (xhrSetup) {
+        Promise.resolve()
+          .then(() => xhrSetup(xhr, url))
+          .catch(() => {
+            xhr.open(request.method || 'POST', url, true);
+            return xhrSetup(xhr, url);
+          })
+          .then(() => openSendAndResolve())
+          .catch((error) => reject(error));
+      } else {
+        openSendAndResolve();
+      }
+    });
+  };
+}
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -68,16 +139,20 @@ export default class CMCDController implements ComponentAPI {
 
       const version = cmcd.version || CMCD_V1;
 
-      this.reporter = new CmcdReporter({
-        sid: cmcd.sessionId || hls.sessionId,
-        cid: cmcd.contentId,
-        version,
-        transmissionMode: cmcd.useHeaders === true ? CMCD_HEADERS : CMCD_QUERY,
-        enabledKeys: cmcd.includeKeys ?? [
-          ...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS),
-        ],
-        eventTargets: cmcd.eventTargets ?? [],
-      });
+      this.reporter = new CmcdReporter(
+        {
+          sid: cmcd.sessionId || hls.sessionId,
+          cid: cmcd.contentId,
+          version,
+          transmissionMode:
+            cmcd.useHeaders === true ? CMCD_HEADERS : CMCD_QUERY,
+          enabledKeys: cmcd.includeKeys ?? [
+            ...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS),
+          ],
+          eventTargets: cmcd.eventTargets ?? [],
+        },
+        createCmcdRequester(config),
+      );
 
       this.reporter.update({
         sf: CmcdStreamingFormat.HLS,
