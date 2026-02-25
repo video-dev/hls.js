@@ -306,6 +306,7 @@ export default class FragmentLoader {
 
   private resetLoader(frag: Fragment, loader: Loader<FragmentLoaderContext>) {
     frag.loader = null;
+    frag.url = null;
     if (this.loader === loader) {
       self.clearTimeout(this.partLoadTimeout);
       this.loader = null;
