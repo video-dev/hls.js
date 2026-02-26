@@ -149,7 +149,14 @@ export default class CMCDController implements ComponentAPI {
           enabledKeys: cmcd.includeKeys ?? [
             ...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS),
           ],
-          eventTargets: cmcd.eventTargets ?? [],
+          eventTargets: (cmcd.eventTargets ?? []).map(
+            ({ includeKeys, ...rest }) => ({
+              ...rest,
+              enabledKeys: includeKeys ?? [
+                ...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS),
+              ],
+            }),
+          ),
         },
         createCmcdRequester(config),
       );
