@@ -101,7 +101,7 @@ export class CmcdRequestCollector {
 
       // Intercept event target POSTs — return synthetic 200 response
       if (this.isEventTargetRequest(request)) {
-        return Promise.resolve(new Response('', { status: 200 }));
+        return Promise.resolve(new Response('', { status: 204 }));
       }
 
       return origFetch.call(self, input, init);
