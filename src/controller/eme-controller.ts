@@ -336,11 +336,12 @@ class EMEController extends Logger implements ComponentAPI {
     keySystem: KeySystems,
     mediaKeys: MediaKeys,
     levelKey: LevelKey,
+    reason: LicenseRequestReason,
   ): MediaKeySessionContext {
     this.log(
       `Creating key-system session "${keySystem}" keyId: ${arrayToHex(
         levelKey.keyId || ([] as number[]),
-      )} keyUri: ${levelKey.uri}`,
+      )} keyUri: ${levelKey.uri} for "${reason}"`,
     );
 
     const mediaKeysSession = mediaKeys.createSession();
@@ -595,6 +596,7 @@ class EMEController extends Logger implements ComponentAPI {
               keySystem,
               mediaKeys,
               levelKey,
+              reason,
             );
           })
           .then((keySessionContext) => {
@@ -879,6 +881,21 @@ class EMEController extends Logger implements ComponentAPI {
       initDataType = mappedInitData.initDataType;
     }
 
+    if (initData === null) {
+      if (
+        reason === 'encrypted-event-key-match' ||
+        context.keySystem !== KeySystems.FAIRPLAY
+      ) {
+        return Promise.reject(
+          new Error(`missing initialization data for "${reason}"`),
+        );
+      } else {
+        this.log(`Skipping key-session request for "${reason}" (no initData)`);
+        // resolve key so that media is appended and initData is received in "encrypted" event
+        return Promise.resolve(context);
+      }
+    }
+
     const keyUri = levelKey.uri;
 
     const requestEmitter = new EventEmitter() as LicenseAndKeysRequest;
@@ -926,12 +943,6 @@ class EMEController extends Logger implements ComponentAPI {
     };
     requestEmitter.onmessage = onmessage;
     addEventListener(context.mediaKeysSession, 'message', onmessage);
-
-    if (initData === null) {
-      this.log(`Skipping key-session request for "${reason}" (no initData)`);
-      // resolve key so that media is appended and initData is received in "encrypted" event
-      return Promise.resolve(context);
-    }
 
     const filterInitData = false;
     return this.generateRequest(
