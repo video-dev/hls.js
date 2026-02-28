@@ -1355,6 +1355,7 @@ export type {
   KeyStatuses,
   KeyTimeouts,
   LicenseAndKeysRequest,
+  LicenseRequestReason,
   MediaKeySessionContext,
 } from './controller/eme-controller';
 export type {

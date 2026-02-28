@@ -1142,6 +1142,7 @@ export type DRMSystemConfiguration = {
     serverCertificateUrl?: string;
     generateRequest?: (this: Hls, initDataType: string, initData: ArrayBuffer | null, keyContext: MediaKeySessionContext & {
         decryptdata: LevelKey;
+        reason: LicenseRequestReason;
     }) => GenerateRequestFilterResult;
 };
 
@@ -3638,6 +3639,11 @@ export type LicenseAndKeysRequest = EventEmitter & {
     onmessage?: (this: MediaKeySession, ev: MediaKeyMessageEvent) => any;
     onkeystatuseschange?: (this: MediaKeySession, ev: Event) => any;
 };
+
+// Warning: (ae-missing-release-tag) "LicenseRequestReason" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type LicenseRequestReason = 'playlist-key' | 'encrypted-event-key-match' | 'encrypted-event-no-match' | 'expired';
 
 // Warning: (ae-missing-release-tag) "LiveBackBufferData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //

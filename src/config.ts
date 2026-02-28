@@ -20,6 +20,7 @@ import { stringify } from './utils/safe-json-stringify';
 import XhrLoader from './utils/xhr-loader';
 import type {
   GenerateRequestFilterResult,
+  LicenseRequestReason,
   MediaKeySessionContext,
 } from './controller/eme-controller';
 import type Hls from './hls';
@@ -99,7 +100,10 @@ export type DRMSystemConfiguration = {
     this: Hls,
     initDataType: string,
     initData: ArrayBuffer | null,
-    keyContext: MediaKeySessionContext & { decryptdata: LevelKey },
+    keyContext: MediaKeySessionContext & {
+      decryptdata: LevelKey;
+      reason: LicenseRequestReason;
+    },
   ) => GenerateRequestFilterResult;
 };
 
