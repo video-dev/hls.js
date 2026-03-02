@@ -3452,6 +3452,8 @@ export class LevelKey implements DecryptData {
     // (undocumented)
     pssh: Uint8Array<ArrayBuffer> | null;
     // (undocumented)
+    scheme?: string;
+    // (undocumented)
     static setKeyIdForUri(uri: string, keyId: Uint8Array<ArrayBuffer>): void;
     // (undocumented)
     readonly uri: string;
@@ -4091,6 +4093,11 @@ export type MediaKeySessionContext = {
     keyRequests: KeyRequests;
     keyStatuses: KeyStatuses;
     keyStatusTimeouts?: KeyTimeouts;
+    createdFor: {
+        levelKey: LevelKey;
+        reason: LicenseRequestReason;
+    };
+    initialized: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "MediaOverrides" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

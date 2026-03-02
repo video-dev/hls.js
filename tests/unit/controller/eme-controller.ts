@@ -387,12 +387,15 @@ describe('EMEController', function () {
     });
 
     const keySession = new MediaKeySessionMock2();
+    const levelKey = getParsedLevelKey();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
       keySystem: KeySystems.FAIRPLAY,
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
       keyRequests: {},
       keyStatuses: {},
+      createdFor: { levelKey, reason: 'playlist-key' },
+      initialized: false,
     };
 
     const keyStatuses = emeController.getKeyStatuses(
@@ -610,12 +613,15 @@ describe('EMEController', function () {
     });
 
     const keySession = new MediaKeySessionMock();
+    const levelKey = getParsedLevelKey();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
       keySystem: KeySystems.FAIRPLAY,
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
       keyRequests: {},
       keyStatuses: {},
+      createdFor: { levelKey, reason: 'playlist-key' },
+      initialized: false,
     };
 
     emeController.mediaKeySessions = [mockMediaKeySessionContext];
@@ -655,12 +661,15 @@ describe('EMEController', function () {
     });
 
     const keySession = new MediaKeySessionMock();
+    const levelKey = getParsedLevelKey();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
       keySystem: KeySystems.FAIRPLAY,
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
       keyRequests: {},
       keyStatuses: {},
+      createdFor: { levelKey, reason: 'playlist-key' },
+      initialized: false,
     };
     const keySessionCloseSpy = sinon.spy(keySession, 'close');
 
@@ -712,12 +721,15 @@ describe('EMEController', function () {
     });
 
     const keySession = new MediaKeySessionMock();
+    const levelKey = getParsedLevelKey();
     const mockMediaKeySessionContext: MediaKeySessionContext = {
       keySystem: KeySystems.FAIRPLAY,
       mediaKeys: new MediaKeysMock(),
       mediaKeysSession: keySession,
       keyRequests: {},
       keyStatuses: {},
+      createdFor: { levelKey, reason: 'playlist-key' },
+      initialized: false,
     };
     const keySessionCloseSpy = sinon.spy(keySession, 'close');
 

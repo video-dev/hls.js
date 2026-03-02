@@ -94,6 +94,8 @@ export type MediaKeySessionContext = {
   keyRequests: KeyRequests;
   keyStatuses: KeyStatuses;
   keyStatusTimeouts?: KeyTimeouts;
+  createdFor: { levelKey: LevelKey; reason: LicenseRequestReason };
+  initialized: boolean;
 };
 
 export class EMEKeyError extends Error {
@@ -340,11 +342,21 @@ class EMEController extends Logger implements ComponentAPI {
     levelKey: LevelKey,
     reason: LicenseRequestReason,
   ): MediaKeySessionContext {
-    this.log(
-      `Creating key-system session "${keySystem}" keyId: ${arrayToHex(
-        levelKey.keyId || ([] as number[]),
-      )} keyUri: ${levelKey.uri} for "${reason}"`,
-    );
+    const { mediaKeySessions } = this;
+    const message = ` key-system session "${keySystem}" keyId: ${arrayToHex(
+      levelKey.keyId || ([] as number[]),
+    )} keyUri: ${levelKey.uri} for "${reason}"`;
+    for (let i = 0; i < mediaKeySessions.length; i++) {
+      const context = mediaKeySessions[i];
+      if (
+        !context.initialized &&
+        context.createdFor.levelKey.uri === levelKey.uri
+      ) {
+        this.log(`Retrieved${message}`);
+        return context;
+      }
+    }
+    this.log(`Creating${message}`);
     const mediaKeysSession = mediaKeys.createSession();
     const mediaKeySessionContext: MediaKeySessionContext = {
       keySystem,
@@ -352,8 +364,10 @@ class EMEController extends Logger implements ComponentAPI {
       mediaKeysSession,
       keyRequests: {},
       keyStatuses: {},
+      createdFor: { levelKey, reason },
+      initialized: false,
     };
-    this.mediaKeySessions.push(mediaKeySessionContext);
+    mediaKeySessions.push(mediaKeySessionContext);
     return mediaKeySessionContext;
   }
 
@@ -600,7 +614,7 @@ class EMEController extends Logger implements ComponentAPI {
           .then((keySessionContext) => {
             this.throwIfDestroyed();
             // Create key-request, session message event listener, key-status listeners
-            const scheme = 'cenc';
+            const scheme = levelKey.scheme || 'cenc';
             const initData = levelKey.pssh ? levelKey.pssh.buffer : null;
             return this.generateRequestWithPreferredKeySession(
               keySessionContext,
@@ -757,6 +771,7 @@ class EMEController extends Logger implements ComponentAPI {
                 decryptdata.uri.replace(/-/g, '').indexOf(keyIdHex) !== -1)
             ) {
               if (!decryptdata.pssh) {
+                decryptdata.scheme = initDataType;
                 decryptdata.pssh = new Uint8Array(initData);
                 decryptdata.keyId = keyId;
                 LevelKey.setKeyIdForUri(decryptdata.uri, keyId);
@@ -771,6 +786,7 @@ class EMEController extends Logger implements ComponentAPI {
         }
         if (!keySessionContextPromise) {
           if (levelKeys.length) {
+            levelKeys[0].scheme ||= initDataType;
             levelKeys[0].pssh ||= new Uint8Array(initData);
             return this.getSessionForKey(
               levelKeys[0],
@@ -863,6 +879,9 @@ class EMEController extends Logger implements ComponentAPI {
             'Invalid response from configured generateRequest filter',
           );
         }
+        levelKey.scheme = mappedInitData.initDataType
+          ? mappedInitData.initDataType
+          : 'cenc';
         const pssh = mappedInitData.initData ? mappedInitData.initData : null;
         levelKey.pssh = pssh ? new Uint8Array(pssh) : null;
         return mappedInitData;
@@ -1099,6 +1118,7 @@ class EMEController extends Logger implements ComponentAPI {
     );
 
     requestEmitter.status = 'started';
+    context.initialized = true;
     return context.mediaKeysSession
       .generateRequest(initDataType, initData)
       .then(() => {

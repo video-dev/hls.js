@@ -33,6 +33,7 @@ export class LevelKey implements DecryptData {
   public key: Uint8Array<ArrayBuffer> | null = null;
   public keyId: Uint8Array<ArrayBuffer> | null = null;
   public pssh: Uint8Array<ArrayBuffer> | null = null;
+  public scheme?: string;
 
   static clearKeyUriToKeyIdMap() {
     keyUriToKeyIdMap = {};
@@ -221,9 +222,8 @@ export class LevelKey implements DecryptData {
       if (keyId) {
         this.keyId = keyId;
         LevelKey.setKeyIdForUri(this.uri, keyId);
-      } else {
-        this.keyId = LevelKey.addKeyIdForUri(this.uri);
       }
+      // else if the key id could not be identified from the playlist, wait for the init segment
     }
 
     return this;
