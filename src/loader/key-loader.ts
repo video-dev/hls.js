@@ -146,12 +146,20 @@ export default class KeyLoader extends Logger implements ComponentAPI {
           frag.initSegment.data as Uint8Array<ArrayBuffer>,
         );
         if (keyIds.length) {
-          const keyId = keyIds[0];
+          let keyId = keyIds[0];
+          const keyUri = frag.decryptdata.uri;
           if (keyId.some((b) => b !== 0)) {
-            this.log(`Using keyId found in init segment ${arrayToHex(keyId)}`);
-            frag.decryptdata.keyId = keyId;
-            LevelKey.setKeyIdForUri(frag.decryptdata.uri, keyId);
+            this.log(
+              `Using keyId found in init segment ${arrayToHex(keyId)} keyUri: ${keyUri}`,
+            );
+            LevelKey.setKeyIdForUri(keyUri, keyId);
+          } else {
+            this.log(
+              `Patching empty keyId with ${arrayToHex(keyId)} keyUri: ${keyUri}`,
+            );
+            keyId = LevelKey.addKeyIdForUri(keyUri);
           }
+          frag.decryptdata.keyId = keyId;
         }
       }
       return this.emeController.loadKey(frag).then(() => ({

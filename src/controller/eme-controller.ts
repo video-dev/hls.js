@@ -352,7 +352,7 @@ class EMEController extends Logger implements ComponentAPI {
         !context.initialized &&
         context.createdFor.levelKey.uri === levelKey.uri
       ) {
-        this.log(`Retrieved${message}`);
+        this.log(`Reusing${message}`);
         return context;
       }
     }
@@ -590,14 +590,13 @@ class EMEController extends Logger implements ComponentAPI {
             return context;
           }
           // If request is in progress wait for it to resolve
-          const requestEmitter = context.keyRequests[levelKey.uri];
-          if (requestEmitter) {
-            this.log(
-              `Waiting for usable key (${reason} keyId: ${getKeyIdString(levelKey)} format: "${levelKey.keyFormat}" URI: ${levelKey.uri})`,
-            );
-            return getRequestToKeyUsablePromise(requestEmitter).then(
-              () => context,
-            );
+          const usablePromise = this.getUsableKeyPromise(
+            context,
+            levelKey,
+            reason,
+          );
+          if (usablePromise) {
+            return usablePromise;
           }
         }
         // Otherwise, create set mediaKeys and create new session
@@ -626,6 +625,20 @@ class EMEController extends Logger implements ComponentAPI {
           });
       },
     );
+  }
+
+  private getUsableKeyPromise(
+    context: MediaKeySessionContext,
+    levelKey: LevelKey,
+    reason: LicenseRequestReason,
+  ): Promise<MediaKeySessionContext> | undefined {
+    const requestEmitter = context.keyRequests[levelKey.uri];
+    if (requestEmitter) {
+      this.log(
+        `Waiting for usable key (${reason} keyId: ${getKeyIdString(levelKey)} format: "${levelKey.keyFormat}" URI: ${levelKey.uri})`,
+      );
+      return getRequestToKeyUsablePromise(requestEmitter).then(() => context);
+    }
   }
 
   private throwIfDestroyed(message = 'Invalid state'): void | never {
@@ -892,6 +905,7 @@ class EMEController extends Logger implements ComponentAPI {
         }
       }
     }
+    return { initDataType, initData };
   }
 
   private generateRequestWithPreferredKeySession(
@@ -901,6 +915,11 @@ class EMEController extends Logger implements ComponentAPI {
     initData: ArrayBuffer | null,
     reason: LicenseRequestReason,
   ): Promise<MediaKeySessionContext> | never {
+    // If request is in progress wait for it to resolve
+    const usablePromise = this.getUsableKeyPromise(context, levelKey, reason);
+    if (usablePromise) {
+      return usablePromise;
+    }
     const mappedInitData = this.filterInitData(
       context,
       levelKey,
