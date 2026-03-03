@@ -954,6 +954,14 @@ export type CMCDControllerConfig = {
     eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
         includeKeys?: CmcdKey[];
     })[];
+    loader?: (request: {
+        url: string;
+        method?: string;
+        headers?: Record<string, string>;
+        body?: BodyInit;
+    }) => Promise<{
+        status: number;
+    }>;
 };
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
