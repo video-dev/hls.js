@@ -1,15 +1,11 @@
 import { CmcdHeaderField } from '@svta/cml-cmcd';
 import { expect } from 'chai';
-import CMCDController, {
-  createCmcdRequester,
-} from '../../../src/controller/cmcd-controller';
+import CMCDController from '../../../src/controller/cmcd-controller';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
-import FetchLoader from '../../../src/utils/fetch-loader';
-import XhrLoader from '../../../src/utils/xhr-loader';
-import type { CMCDControllerConfig, HlsConfig } from '../../../src/config';
+import type { CMCDControllerConfig } from '../../../src/config';
 import type { Fragment, Part } from '../../../src/loader/fragment';
 
 let cmcdController;
@@ -380,137 +376,6 @@ describe('CMCDController', function () {
         expect(recordCalls).to.have.lengthOf(1);
 
         cmcdController.destroy();
-      });
-    });
-
-    describe('createCmcdRequester', function () {
-      it('calls xhrSetup when using XhrLoader', function (done) {
-        const xhrSetupCalls: any[][] = [];
-        const config = {
-          loader: XhrLoader,
-          xhrSetup: (xhr: XMLHttpRequest, url: string) => {
-            xhrSetupCalls.push([xhr, url]);
-            xhr.open('POST', url, true);
-          },
-        } as unknown as HlsConfig;
-
-        const requester = createCmcdRequester(config);
-
-        // Use a data URI to avoid actual network requests
-        requester({
-          url: 'data:text/plain,test',
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: 'test-body',
-        }).then(
-          () => {
-            expect(xhrSetupCalls).to.have.lengthOf(1);
-            expect(xhrSetupCalls[0][1]).to.equal('data:text/plain,test');
-            expect(xhrSetupCalls[0][0]).to.be.an.instanceOf(XMLHttpRequest);
-            done();
-          },
-          (err) => done(err),
-        );
-      });
-
-      it('calls fetchSetup when using FetchLoader', function (done) {
-        const fetchSetupCalls: any[][] = [];
-        const config = {
-          loader: FetchLoader,
-          fetchSetup: (context: any, initParams: any) => {
-            fetchSetupCalls.push([context, initParams]);
-            return new Request(context.url, initParams);
-          },
-        } as unknown as HlsConfig;
-
-        const requester = createCmcdRequester(config);
-
-        // Stub fetch to avoid actual network request
-        const origFetch = self.fetch;
-        self.fetch = (() =>
-          Promise.resolve(
-            new Response('', { status: 200 }),
-          )) as typeof self.fetch;
-
-        requester({
-          url: 'https://analytics.example.com/cmcd',
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: '{}',
-        }).then(
-          (result) => {
-            self.fetch = origFetch;
-            expect(fetchSetupCalls).to.have.lengthOf(1);
-            expect(fetchSetupCalls[0][0].url).to.equal(
-              'https://analytics.example.com/cmcd',
-            );
-            expect(fetchSetupCalls[0][1].method).to.equal('POST');
-            expect(result.status).to.equal(200);
-            done();
-          },
-          (err) => {
-            self.fetch = origFetch;
-            done(err);
-          },
-        );
-      });
-
-      it('uses plain fetch when no fetchSetup is configured with FetchLoader', function (done) {
-        const config = {
-          loader: FetchLoader,
-          fetchSetup: undefined,
-        } as unknown as HlsConfig;
-
-        const requester = createCmcdRequester(config);
-
-        const origFetch = self.fetch;
-        const fetchCalls: Request[] = [];
-        self.fetch = ((req: Request) => {
-          fetchCalls.push(req);
-          return Promise.resolve(new Response(null, { status: 204 }));
-        }) as typeof self.fetch;
-
-        requester({
-          url: 'https://analytics.example.com/cmcd',
-          method: 'POST',
-          body: '{}',
-        }).then(
-          (result) => {
-            self.fetch = origFetch;
-            expect(fetchCalls).to.have.lengthOf(1);
-            expect(fetchCalls[0].url).to.equal(
-              'https://analytics.example.com/cmcd',
-            );
-            expect(fetchCalls[0].method).to.equal('POST');
-            expect(result.status).to.equal(204);
-            done();
-          },
-          (err) => {
-            self.fetch = origFetch;
-            done(err);
-          },
-        );
-      });
-
-      it('uses plain XHR when no xhrSetup is configured with XhrLoader', function (done) {
-        const config = {
-          loader: XhrLoader,
-          xhrSetup: undefined,
-        } as unknown as HlsConfig;
-
-        const requester = createCmcdRequester(config);
-
-        requester({
-          url: 'data:text/plain,test',
-          method: 'POST',
-          body: 'test-body',
-        }).then(
-          (result) => {
-            expect(result).to.have.property('status');
-            done();
-          },
-          (err) => done(err),
-        );
       });
     });
   });

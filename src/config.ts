@@ -84,6 +84,12 @@ export type CMCDControllerConfig = {
   eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
     includeKeys?: CmcdKey[];
   })[];
+  loader?: (request: {
+    url: string;
+    method?: string;
+    headers?: Record<string, string>;
+    body?: BodyInit;
+  }) => Promise<{ status: number }>;
 };
 
 export type DRMSystemOptions = {
