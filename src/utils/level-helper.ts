@@ -541,6 +541,14 @@ export function computeReloadInterval(
         reloadInterval = lastSegmentDuration;
       }
     }
+
+    // If only 1 fragment, make sure to reload well before it ends to avoid race condition stall
+    if (fragments.length == 1) {
+      reloadInterval = (fragments[0].duration * 1000) / 2;
+      logger.log(
+        'computeReloadInterval found only 1 fragment, using duration / 2',
+      );
+    }
   } else {
     // estimate = 'miss half average';
     // follow HLS Spec, If the client reloads a Playlist file and finds that it has not
