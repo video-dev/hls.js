@@ -51,7 +51,7 @@ export function getAudioConfig(
   }
   // MPEG-4 Audio Object Type (profile_ObjectType+1)
   const adtsObjectType = ((byte2 >> 6) & 0x3) + 1;
-  const channelCount = ((data[offset + 3] >> 6) & 0x3) | ((byte2 & 1) << 2);
+  const channelCount = (data[offset + 3] >> 3) & 0x07;
   const codec = 'mp4a.40.' + adtsObjectType;
   /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
       ISO/IEC 14496-3 - Table 1.13 — Syntax of AudioSpecificConfig()

@@ -74,7 +74,7 @@ describe('getAudioConfig', function () {
     data[0] = 0xff;
     data[1] = 0xf1; // ID = 0 (MPEG-4), layer = 00
     data[2] = 0x5c; // sampling_frequency_index = 7
-    data[3] = 0x80; // stereo channels
+    data[3] = 0x10; // stereo channels (channel config = 2)
 
     const result = getAudioConfig(observer, data, 0, undefined);
     expect(result, JSON.stringify(result)).to.deep.equal({
@@ -93,7 +93,7 @@ describe('getAudioConfig', function () {
     data[0] = 0xff;
     data[1] = 0xf1; // ID = 0 (MPEG-4), layer = 00
     data[2] = 0x50; // sampling_frequency_index = 4
-    data[3] = 0x40; // mono channels
+    data[3] = 0x08; // mono channels (channel config = 1)
 
     const result = getAudioConfig(observer, data, 0, undefined);
     expect(result, JSON.stringify(result)).to.deep.equal({
