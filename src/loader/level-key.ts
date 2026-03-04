@@ -6,7 +6,8 @@ import { logger } from '../utils/logger';
 import { KeySystemFormats, parsePlayReadyWRM } from '../utils/mediakeys-helper';
 import { mp4pssh, parseMultiPssh } from '../utils/mp4-tools';
 
-let keyUriToKeyIdMap: { [uri: string]: Uint8Array<ArrayBuffer> } = {};
+let keyUriToKeyIdMap: { [uri: string]: Uint8Array<ArrayBuffer> | undefined } =
+  {};
 
 export interface DecryptData {
   uri: string;
@@ -32,6 +33,7 @@ export class LevelKey implements DecryptData {
   public key: Uint8Array<ArrayBuffer> | null = null;
   public keyId: Uint8Array<ArrayBuffer> | null = null;
   public pssh: Uint8Array<ArrayBuffer> | null = null;
+  public scheme?: string;
 
   static clearKeyUriToKeyIdMap() {
     keyUriToKeyIdMap = {};
@@ -221,6 +223,7 @@ export class LevelKey implements DecryptData {
         this.keyId = keyId;
         LevelKey.setKeyIdForUri(this.uri, keyId);
       }
+      // else if the key id could not be identified from the playlist, wait for the init segment
     }
 
     return this;

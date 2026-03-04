@@ -351,9 +351,6 @@ export default class BaseStreamController
     removeEventListener(media, 'seeking', this.onMediaSeeking);
     removeEventListener(media, 'ended', this.onMediaEnded);
 
-    if (this.keyLoader && !transferringMedia) {
-      this.keyLoader.detach();
-    }
     this.media = this.mediaBuffer = null;
     this.loopSn = undefined;
     if (transferringMedia) {
