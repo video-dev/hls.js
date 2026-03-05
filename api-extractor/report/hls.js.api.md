@@ -1598,6 +1598,10 @@ export enum Events {
     // (undocumented)
     MEDIA_ENDED = "hlsMediaEnded",
     // (undocumented)
+    MEDIA_FRAGMENT_END = "hlsMediaFragmentEnd",
+    // (undocumented)
+    MEDIA_FRAGMENT_PARSED = "hlsMediaFragmentParsed",
+    // (undocumented)
     NON_NATIVE_TEXT_TRACKS_FOUND = "hlsNonNativeTextTracksFound",
     // (undocumented)
     PLAYOUT_LIMIT_REACHED = "hlsPlayoutLimitReached",
@@ -2354,6 +2358,7 @@ export type HlsConfig = {
     capLevelController: typeof CapLevelController;
     errorController: typeof ErrorController;
     fpsController: typeof FPSController;
+    mediaFragmentController: typeof MediaFragmentController;
     progressive: boolean;
     lowLatencyMode: boolean;
     primarySessionId?: string;
@@ -2509,6 +2514,12 @@ export interface HlsListeners {
     [Events.MEDIA_DETACHING]: (event: Events.MEDIA_DETACHING, data: MediaDetachingData) => void;
     // (undocumented)
     [Events.MEDIA_ENDED]: (event: Events.MEDIA_ENDED, data: MediaEndedData) => void;
+    // (undocumented)
+    [Events.MEDIA_FRAGMENT_END]: (event: Events.MEDIA_FRAGMENT_END, data: {}) => void;
+    // Warning: (ae-forgotten-export) The symbol "MediaFragmentParsedData" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    [Events.MEDIA_FRAGMENT_PARSED]: (event: Events.MEDIA_FRAGMENT_PARSED, data: MediaFragmentParsedData) => void;
     // (undocumented)
     [Events.NON_NATIVE_TEXT_TRACKS_FOUND]: (event: Events.NON_NATIVE_TEXT_TRACKS_FOUND, data: NonNativeTextTracksData) => void;
     // (undocumented)
@@ -4078,6 +4089,15 @@ export interface MediaFragment extends Fragment {
     sn: number;
 }
 
+// Warning: (ae-missing-release-tag) "MediaFragmentController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public
+export class MediaFragmentController extends Logger implements ComponentAPI {
+    constructor(hls: Hls);
+    // (undocumented)
+    destroy(): void;
+}
+
 // Warning: (ae-missing-release-tag) "MediaKeyFunc" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -4881,6 +4901,16 @@ export class TaskLoop extends Logger {
     tick(): void;
     // (undocumented)
     tickImmediate(): void;
+}
+
+// Warning: (ae-missing-release-tag) "TemporalFragment" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface TemporalFragment {
+    // (undocumented)
+    end?: number;
+    // (undocumented)
+    start?: number;
 }
 
 // Warning: (ae-missing-release-tag) "TimelineController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
