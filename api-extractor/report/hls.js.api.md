@@ -178,6 +178,7 @@ export type AudioSelectionOption = {
     audioCodec?: string;
     groupId?: string;
     default?: boolean;
+    flushImmediate?: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "AudioStreamController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

@@ -244,7 +244,7 @@ class AudioTrackController extends BasePlaylistController {
   set audioTrack(newId: number) {
     // If audio track is selected from API then don't choose from the manifest default track
     this.selectDefaultTrack = false;
-    this.setAudioTrack(newId);
+    this.setAudioTrack(newId, this.hls.config.audioPreference?.flushImmediate);
   }
 
   get nextAudioTrack(): number {
