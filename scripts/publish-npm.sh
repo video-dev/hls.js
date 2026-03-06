@@ -2,9 +2,6 @@
 set -e
 
 if [[ $(node ./scripts/check-already-published.js) = "not published" ]]; then
-  # write the token to config
-  # see https://docs.npmjs.com/private-modules/ci-server-config
-  echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> .npmrc
   if [[  -z "$TAG" ]]; then
     npm publish --provenance --tag canary
     echo "Published canary."

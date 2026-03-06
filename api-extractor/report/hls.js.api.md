@@ -3355,11 +3355,15 @@ export class LevelDetails {
 export class LevelKey implements DecryptData {
     constructor(method: string, uri: string, format: string, formatversions?: number[], iv?: Uint8Array<ArrayBuffer> | null, keyId?: string);
     // (undocumented)
+    static addKeyIdForUri(uri: string): Uint8Array<ArrayBuffer>;
+    // (undocumented)
     static clearKeyUriToKeyIdMap(): void;
     // (undocumented)
     readonly encrypted: boolean;
     // (undocumented)
-    getDecryptData(sn: number | 'initSegment'): LevelKey | null;
+    getDecryptData(sn: number | 'initSegment', levelKeys?: {
+        [key: string]: LevelKey | undefined;
+    }): LevelKey | null;
     // (undocumented)
     readonly isCommonEncryption: boolean;
     // (undocumented)

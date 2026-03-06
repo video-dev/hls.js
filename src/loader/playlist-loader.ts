@@ -11,6 +11,10 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
 import { AttrList } from '../utils/attr-list';
+import {
+  areCodecsMediaSourceSupported,
+  sampleEntryCodesISO,
+} from '../utils/codecs';
 import { computeReloadInterval } from '../utils/level-helper';
 import type { LevelDetails } from './level-details';
 import type { LoaderConfig, RetryConfig } from '../config';
@@ -340,18 +344,6 @@ class PlaylistLoader implements NetworkComponentAPI {
 
         const string = response.data as string;
 
-        // Validate if it is an M3U8 at all
-        if (string.indexOf('#EXTM3U') !== 0) {
-          this.handleManifestParsingError(
-            response,
-            context,
-            new Error('no EXTM3U delimiter'),
-            networkDetails || null,
-            stats,
-          );
-          return;
-        }
-
         stats.parsing.start = performance.now();
         if (
           M3U8Parser.isMediaPlaylist(string) ||
@@ -423,6 +415,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     const parsedResult = M3U8Parser.parseMasterPlaylist(string, url);
 
     if (parsedResult.playlistParsingError) {
+      stats.parsing.end = performance.now();
       this.handleManifestParsingError(
         response,
         context,
@@ -443,6 +436,44 @@ class PlaylistLoader implements NetworkComponentAPI {
     } = parsedResult;
 
     this.variableList = variableList;
+
+    // Treat unknown codec as audio or video codec based on passing `isTypeSupported` check
+    // (allows for playback of any supported codec even if not indexed in utils/codecs)
+    levels.forEach((levelParsed: LevelParsed) => {
+      const { unknownCodecs } = levelParsed;
+      if (unknownCodecs) {
+        const { preferManagedMediaSource } = this.hls.config;
+        let { audioCodec, videoCodec } = levelParsed;
+        for (let i = unknownCodecs.length; i--; ) {
+          const unknownCodec = unknownCodecs[i];
+          if (
+            areCodecsMediaSourceSupported(
+              unknownCodec,
+              'audio',
+              preferManagedMediaSource,
+            )
+          ) {
+            levelParsed.audioCodec = audioCodec = audioCodec
+              ? `${audioCodec},${unknownCodec}`
+              : unknownCodec;
+            sampleEntryCodesISO.audio[audioCodec.substring(0, 4)] = 2;
+            unknownCodecs.splice(i, 1);
+          } else if (
+            areCodecsMediaSourceSupported(
+              unknownCodec,
+              'video',
+              preferManagedMediaSource,
+            )
+          ) {
+            levelParsed.videoCodec = videoCodec = videoCodec
+              ? `${videoCodec},${unknownCodec}`
+              : unknownCodec;
+            sampleEntryCodesISO.video[videoCodec.substring(0, 4)] = 2;
+            unknownCodecs.splice(i, 1);
+          }
+        }
+      }
+    });
 
     const {
       AUDIO: audioTracks = [],
@@ -679,36 +710,14 @@ class PlaylistLoader implements NetworkComponentAPI {
     loader: Loader<PlaylistLoaderContext> | undefined,
   ): void {
     const hls = this.hls;
-    const { type, level, id, groupId, deliveryDirectives } = context;
+    const { type, level, levelOrTrack, id, groupId, deliveryDirectives } =
+      context;
     const url = getResponseUrl(response, context);
     const parent = mapContextToLevelType(context);
-    const levelIndex =
+    let levelIndex =
       typeof context.level === 'number' && parent === PlaylistLevelType.MAIN
         ? (level as number)
         : undefined;
-    if (!levelDetails.fragments.length) {
-      const error = (levelDetails.playlistParsingError = new Error(
-        'No Segments found in Playlist',
-      ));
-      hls.trigger(Events.ERROR, {
-        type: ErrorTypes.NETWORK_ERROR,
-        details: ErrorDetails.LEVEL_EMPTY_ERROR,
-        fatal: false,
-        url,
-        error,
-        reason: error.message,
-        response,
-        context,
-        level: levelIndex,
-        parent,
-        networkDetails,
-        stats,
-      });
-      return;
-    }
-    if (!levelDetails.targetduration) {
-      levelDetails.playlistParsingError = new Error('Missing Target Duration');
-    }
     const error = levelDetails.playlistParsingError;
     if (error) {
       this.hls.logger.warn(`${error} ${levelDetails.url}`);
@@ -731,6 +740,26 @@ class PlaylistLoader implements NetworkComponentAPI {
       }
       levelDetails.playlistParsingError = null;
     }
+    if (!levelDetails.fragments.length) {
+      const error = (levelDetails.playlistParsingError = new Error(
+        'No Segments found in Playlist',
+      ));
+      hls.trigger(Events.ERROR, {
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.LEVEL_EMPTY_ERROR,
+        fatal: false,
+        url,
+        error,
+        reason: error.message,
+        response,
+        context,
+        level: levelIndex,
+        parent,
+        networkDetails,
+        stats,
+      });
+      return;
+    }
 
     if (levelDetails.live && loader) {
       if (loader.getCacheAge) {
@@ -744,9 +773,23 @@ class PlaylistLoader implements NetworkComponentAPI {
     switch (type) {
       case PlaylistContextType.MANIFEST:
       case PlaylistContextType.LEVEL:
+        if (levelIndex) {
+          if (!levelOrTrack) {
+            // fall-through to hls.levels[0]
+            levelIndex = 0;
+          } else {
+            if (levelOrTrack !== hls.levels[levelIndex]) {
+              // correct levelIndex when lower levels were removed from hls.levels
+              const updatedIndex = hls.levels.indexOf(levelOrTrack as Level);
+              if (updatedIndex > -1) {
+                levelIndex = updatedIndex;
+              }
+            }
+          }
+        }
         hls.trigger(Events.LEVEL_LOADED, {
           details: levelDetails,
-          levelInfo: (context.levelOrTrack as Level) || hls.levels[0],
+          levelInfo: (levelOrTrack as Level | null) || hls.levels[0],
           level: levelIndex || 0,
           id: id || 0,
           stats,
@@ -758,7 +801,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       case PlaylistContextType.AUDIO_TRACK:
         hls.trigger(Events.AUDIO_TRACK_LOADED, {
           details: levelDetails,
-          track: context.levelOrTrack as MediaPlaylist,
+          track: levelOrTrack as MediaPlaylist,
           id: id || 0,
           groupId: groupId || '',
           stats,
@@ -769,7 +812,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       case PlaylistContextType.SUBTITLE_TRACK:
         hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
           details: levelDetails,
-          track: context.levelOrTrack as MediaPlaylist,
+          track: levelOrTrack as MediaPlaylist,
           id: id || 0,
           groupId: groupId || '',
           stats,

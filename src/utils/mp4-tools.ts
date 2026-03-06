@@ -7,6 +7,8 @@ import type { DecryptData } from '../loader/level-key';
 import type { PassthroughTrack, UserdataSample } from '../types/demuxer';
 import type { ILogger } from '../utils/logger';
 
+type BoxDataOrUndefined = Uint8Array<ArrayBuffer> | undefined;
+
 const UINT32_MAX = Math.pow(2, 32) - 1;
 const push = [].push;
 
@@ -573,51 +575,74 @@ export function patchEncyptionData(
   }
   const keyId = decryptdata.keyId;
   if (keyId && decryptdata.isCommonEncryption) {
-    const traks = findBox(initSegment, ['moov', 'trak']);
-    traks.forEach((trak) => {
-      const stsd = findBox(trak, ['mdia', 'minf', 'stbl', 'stsd'])[0];
-
-      // skip the sample entry count
-      const sampleEntries = stsd.subarray(8);
-      let encBoxes = findBox(sampleEntries, ['enca']);
-      const isAudio = encBoxes.length > 0;
-      if (!isAudio) {
-        encBoxes = findBox(sampleEntries, ['encv']);
+    applyToTencBoxes(initSegment, (tenc, isAudio) => {
+      // Look for default key id (keyID offset is always 8 within the tenc box):
+      const tencKeyId = tenc.subarray(8, 24);
+      if (!tencKeyId.some((b) => b !== 0)) {
+        logger.log(
+          `[eme] Patching keyId in 'enc${
+            isAudio ? 'a' : 'v'
+          }>sinf>>tenc' box: ${arrayToHex(tencKeyId)} -> ${arrayToHex(keyId)}`,
+        );
+        tenc.set(keyId, 8);
       }
-      encBoxes.forEach((enc) => {
-        const encBoxChildren = isAudio ? enc.subarray(28) : enc.subarray(78);
-        const sinfBoxes = findBox(encBoxChildren, ['sinf']);
-        sinfBoxes.forEach((sinf) => {
-          const tenc = parseSinf(sinf);
-          if (tenc) {
-            // Look for default key id (keyID offset is always 8 within the tenc box):
-            const tencKeyId = tenc.subarray(8, 24) as Uint8Array<ArrayBuffer>;
-            if (!tencKeyId.some((b) => b !== 0)) {
-              logger.log(
-                `[eme] Patching keyId in 'enc${
-                  isAudio ? 'a' : 'v'
-                }>sinf>>tenc' box: ${arrayToHex(tencKeyId)} -> ${arrayToHex(
-                  keyId,
-                )}`,
-              );
-              tenc.set(keyId, 8);
-            }
-          }
-        });
-      });
     });
   }
 }
 
-export function parseSinf(sinf: Uint8Array): Uint8Array | null {
-  const schm = findBox(sinf, ['schm'])[0];
-  if (schm as any) {
+export function parseKeyIdsFromTenc(
+  initSegment: Uint8Array<ArrayBuffer>,
+): Uint8Array<ArrayBuffer>[] {
+  const keyIds: Uint8Array<ArrayBuffer>[] = [];
+  applyToTencBoxes(initSegment, (tenc) => keyIds.push(tenc.subarray(8, 24)));
+  return keyIds;
+}
+
+function applyToTencBoxes(
+  initSegment: Uint8Array<ArrayBuffer>,
+  predicate: (tenc: Uint8Array<ArrayBuffer>, isAudio: boolean) => void,
+) {
+  const traks = findBox(initSegment, ['moov', 'trak']);
+  traks.forEach((trak) => {
+    const stsd = findBox(trak, [
+      'mdia',
+      'minf',
+      'stbl',
+      'stsd',
+    ])[0] as BoxDataOrUndefined;
+    if (!stsd) return;
+    const sampleEntries = stsd.subarray(8);
+    let encBoxes = findBox(sampleEntries, ['enca']);
+    const isAudio = encBoxes.length > 0;
+    if (!isAudio) {
+      encBoxes = findBox(sampleEntries, ['encv']);
+    }
+    encBoxes.forEach((enc) => {
+      const encBoxChildren = isAudio ? enc.subarray(28) : enc.subarray(78);
+      const sinfBoxes = findBox(encBoxChildren, ['sinf']);
+      sinfBoxes.forEach((sinf) => {
+        const tenc = parseSinf(sinf);
+        if (tenc) {
+          predicate(tenc, isAudio);
+        }
+      });
+    });
+  });
+}
+
+export function parseSinf(sinf: Uint8Array): BoxDataOrUndefined {
+  const schm = findBox(sinf, ['schm'])[0] as BoxDataOrUndefined;
+  if (schm) {
     const scheme = bin2str(schm.subarray(4, 8));
     if (scheme === 'cbcs' || scheme === 'cenc') {
-      return findBox(sinf, ['schi', 'tenc'])[0];
+      const tenc = findBox(sinf, ['schi', 'tenc'])[0] as BoxDataOrUndefined;
+      if (tenc) {
+        return tenc;
+      }
+    } else if (scheme === 'cbc2') {
+      /* no-op */
     }
   }
-  return null;
 }
 
 /*

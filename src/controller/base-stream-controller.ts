@@ -974,7 +974,8 @@ export default class BaseStreamController
     this.state = State.FRAG_LOADING;
 
     // Load key before streaming fragment data
-    const dataOnProgress = this.config.progressive;
+    const dataOnProgress =
+      this.config.progressive && frag.type !== PlaylistLevelType.SUBTITLE;
     let result: Promise<PartsLoadedData | FragLoadedData | null>;
     if (dataOnProgress && keyLoadingPromise) {
       result = keyLoadingPromise
@@ -2149,11 +2150,15 @@ export default class BaseStreamController
       false,
     );
     if (!parsed) {
-      if (level.fragmentError === 0) {
-        // Mark and track the odd empty segment as a gap to avoid reloading
+      const mediaNotFound = this.transmuxer?.error === null;
+      if (
+        level.fragmentError === 0 ||
+        (mediaNotFound && (level.fragmentError < 2 || frag.endList))
+      ) {
+        // Mark and track the odd (or last) empty segment as a gap to avoid reloading
         this.treatAsGap(frag, level);
       }
-      if (this.transmuxer?.error === null) {
+      if (mediaNotFound) {
         const error = new Error(
           `Found no media in fragment ${frag.sn} of ${this.playlistLabel()} ${frag.level} resetting transmuxer to fallback to playlist timing`,
         );
