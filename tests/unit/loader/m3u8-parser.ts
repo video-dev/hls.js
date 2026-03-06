@@ -2420,7 +2420,7 @@ media_1638278.m4s`;
       .which.has.members([result.fragments[2], result.fragments[6]]);
   });
 
-  it('parse KEYID other keys when available', function () {
+  it('parses FairPlay KEYID from Widevine or PlayReady EXT-X-KEY tags when available', function () {
     const level = `#EXTM3U
 #EXT-X-VERSION:6
 #EXT-X-TARGETDURATION:6

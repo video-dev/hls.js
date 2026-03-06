@@ -131,23 +131,42 @@ function startStream(streamUrl, config, callback, autoplay) {
     );
     console.log('[test] > userAgent:', navigator.userAgent);
     if (autoplay !== false) {
-      hls.on(Hls.Events.MANIFEST_PARSED, function () {
-        console.log('[test] > Manifest parsed. Calling video.play()');
+      // attempt to ready playback in case test start is treated as a user interaction
+      video.src = null;
+      video.load();
+
+      hls.on(Hls.Events.MEDIA_ATTACHED, function () {
+        console.log('[test] > Media attached. Calling video.play()');
         var playPromise = video.play();
         if (playPromise) {
-          playPromise.catch(function (error) {
-            console.log(
-              '[test] > video.play() failed with error: ' +
-                error.name +
-                ' ' +
-                error.message
-            );
-            if (error.name === 'NotAllowedError') {
-              console.log('[test] > Attempting to play with video muted');
-              video.muted = true;
-              return video.play();
-            }
-          });
+          playPromise
+            .catch(function (error) {
+              if (error.name === 'NotAllowedError') {
+                console.log('[test] > Attempting to play with video muted');
+                video.muted = true;
+                return video.play();
+              }
+              throw error;
+            })
+            .then(function () {
+              video.controls = true;
+              console.log(
+                '[test] > video.play() resolved' +
+                  (video.muted ? ' (muted)' : '') +
+                  ' currentTime: ' +
+                  video.currentTime
+              );
+            })
+            .catch(function (error) {
+              console.log(
+                '[test] > video.play()' +
+                  (video.muted ? ' (muted)' : '') +
+                  ' failed with error: ' +
+                  error.name +
+                  ' ' +
+                  error.message
+              );
+            });
         }
       });
     }
