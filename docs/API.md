@@ -2535,6 +2535,12 @@ Full list of Events is available below:
 
 You can use the internal loader definition for your own implementation via the static getter `Hls.DefaultConfig.loader`.
 
+There are three configuration options that define which loader class(es) HLS.js will use. Set one or more of these to a custom loader to enable custom network handling:
+
+- `pLoader` when defined, handles HLS playlist.
+- `fLoader` when defined, handles fragments (segments and parts).
+- `loader` handles everything by default becuase `pLoader` and `fLoader` are undefined. It always handles CMCD, Content-Steering, clear AES key loading, and HLS interstitial asset lists.
+
 Example:
 
 ```js
@@ -2582,6 +2588,30 @@ let myHls = new Hls({
     }
   },
 });
+```
+
+
+### Response filtering
+
+This example leaves the request and loading stats to HLS.js, and replaces the response data for a particular type:
+
+```js
+class ResponseFilterLoader extends Hls.DefaultConfig.loader {
+  load(context, config, callbacks) {
+    const { type, url } = context;
+    // if this type of request requires response filtering then do it in `onSuccess`:
+    if (type === typeToFilter) {
+      const complete = callbacks.onSuccess; // capture original callback
+      callbacks.onSuccess = (loaderResponse, stats, successContext, networkDetails) => {
+        // Do something with loaderResponse.data:
+        loaderResponse.data = doFilter(loaderResponse.data);
+        // Pass the new result to the original onSuccess callback:
+        complete(loaderResponse, stats, successContext, networkDetails);
+      };
+    }
+    super.load(context, config, callbacks);
+  }
+}
 ```
 
 ## Errors
