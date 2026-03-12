@@ -482,6 +482,68 @@ export class FragmentTracker implements ComponentAPI {
     return !!this.activePartLists[type]?.length;
   }
 
+  /**
+   * Returns the eviction end position needed to free at least `bytesNeeded`
+   * from the back buffer, or 0 if not enough data is available.
+   * Walks buffered fragments oldest-first, accumulating actual byte sizes.
+   *
+   * Uses stats.loaded (actual bytes received) as the primary byte measure
+   * since it is always set after fragment completion, unlike stats.total
+   * which depends on Content-Length and may be 0 with chunked transfer.
+   */
+  public getBackBufferEvictionEnd(
+    beforePosition: number,
+    levelType: PlaylistLevelType,
+    bytesNeeded: number,
+  ): number {
+    const { fragments } = this;
+
+    // Collect back buffer fragments with known byte sizes
+    let count = 0;
+    const candidates: FragmentEntity[] = [];
+    const keys = Object.keys(fragments);
+    for (let i = 0; i < keys.length; i++) {
+      const entity = fragments[keys[i]];
+      if (!entity || !entity.buffered || entity.body.type !== levelType) {
+        continue;
+      }
+      const frag = entity.body;
+      // Use stats.loaded (always set after load) with byteLength as fallback
+      const bytes = (frag.hasStats && frag.stats.loaded) || frag.byteLength;
+      if (frag.end <= beforePosition && bytes) {
+        candidates[count++] = entity;
+      }
+    }
+
+    if (count === 0) {
+      return 0;
+    }
+
+    // Sort by sn (oldest first) — small array of references, no data copying.
+    // Candidates are unsorted because this.fragments is a hash map keyed by
+    // "type_level_sn", and Object.keys() returns insertion order which depends
+    // on when each fragment was loaded, not its position in the timeline.
+    // ABR level switches and seeks can cause fragments to load out of order.
+    candidates.length = count;
+    candidates.sort((a, b) => (a.body.sn as number) - (b.body.sn as number));
+
+    // Walk oldest-first, accumulating bytes until we have enough
+    let bytesFreed = 0;
+    let evictEnd = 0;
+    for (let i = 0; i < count; i++) {
+      const frag = candidates[i].body;
+      const bytes = (frag.hasStats && frag.stats.loaded) || frag.byteLength;
+      bytesFreed += bytes!;
+      evictEnd = frag.end;
+      if (bytesFreed >= bytesNeeded) {
+        return evictEnd;
+      }
+    }
+
+    // Not enough to fully cover bytesNeeded, return what we have
+    return evictEnd > 0 ? evictEnd : 0;
+  }
+
   public removeFragmentsInRange(
     start: number,
     end: number,
