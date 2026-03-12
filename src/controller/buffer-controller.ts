@@ -118,6 +118,13 @@ export default class BufferController extends Logger implements ComponentAPI {
     audiovideo: 0,
   };
   private appendError?: ErrorData;
+  // Tracks whether a QuotaExceededError back-buffer eviction is in progress
+  // for a given SourceBuffer type. While true, subsequent QuotaExceededErrors
+  // on the same type piggyback on the pending eviction instead of triggering
+  // their own or emitting BUFFER_FULL_ERROR.
+  private _quotaEvictionPending: Partial<
+    Record<SourceBufferName, boolean>
+  > = {};
   // Record of required or created buffers by type. SourceBuffer is stored in Track.buffer once created.
   private tracks: SourceBufferTrackSet = {};
   // Array of SourceBuffer type and SourceBuffer (or null). One entry per TrackSet in this.tracks.
@@ -853,6 +860,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
 
     const fragStart = (part || frag).start;
+    let quotaEvictionAttempted = false;
     const operation: BufferOperation = {
       label: `append-${type}`,
       execute: () => {
@@ -900,6 +908,46 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       },
       onError: (error: Error) => {
         this.clearBufferAppendTimeoutId(this.tracks[type]);
+
+        const isQuotaError =
+          (error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR ||
+          error.name == 'QuotaExceededError' ||
+          `quota` in error;
+
+        if (isQuotaError) {
+          // An eviction is already in flight for this type — piggyback on it
+          // by queuing a retry after the pending remove, no new eviction needed.
+          if (this._quotaEvictionPending[type]) {
+            this.log(
+              `QuotaExceededError on "${type}" sn: ${sn} — eviction already pending, queuing retry`,
+            );
+            this.insertNext([operation], type);
+            return;
+          }
+
+          // First QuotaExceededError for this type: evict minimum back buffer
+          if (!quotaEvictionAttempted) {
+            const evictEnd = this.getBackBufferEvictionTarget(
+              type,
+              data.byteLength,
+              frag.type,
+            );
+            if (evictEnd > 0) {
+              quotaEvictionAttempted = true;
+              this._quotaEvictionPending[type] = true;
+              this.log(
+                `QuotaExceededError on "${type}" append sn: ${sn} — evicting back buffer to ${evictEnd.toFixed(3)}s and retrying`,
+              );
+              const removeOp = this.getQuotaEvictionFlushOp(type, 0, evictEnd);
+              this.insertNext([removeOp, operation], type);
+              return;
+            }
+            this.warn(
+              `QuotaExceededError on "${type}" sn: ${sn} — no back buffer available to evict`,
+            );
+          }
+        }
+
         // in case any error occured while appending, put back segment in segments table
         const event: ErrorData = {
           type: ErrorTypes.MEDIA_ERROR,
@@ -914,13 +962,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           fatal: false,
         };
         const mediaError = this.media?.error;
-        if (
-          (error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR ||
-          error.name == 'QuotaExceededError' ||
-          `quota` in error
-        ) {
+        if (isQuotaError) {
           // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
-          // let's stop appending any segments, and report BUFFER_FULL_ERROR error
+          // Eviction was already attempted or not possible — report BUFFER_FULL_ERROR
           event.details = ErrorDetails.BUFFER_FULL_ERROR;
         } else if (
           (error as DOMException).code === DOMException.INVALID_STATE_ERR &&
@@ -969,6 +1013,33 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
     );
     this.append(operation, type, this.isPending(this.tracks[type]));
+  }
+
+  // Like getFlushOp but clears _quotaEvictionPending on complete/error
+  private getQuotaEvictionFlushOp(
+    type: SourceBufferName,
+    start: number,
+    end: number,
+  ): BufferOperation {
+    this.log(`queuing quota-eviction "${type}" remove ${start}-${end}`);
+    return {
+      label: 'remove',
+      execute: () => {
+        this.removeExecutor(type, start, end);
+      },
+      onStart: () => {},
+      onComplete: () => {
+        this._quotaEvictionPending[type] = false;
+        this.hls.trigger(Events.BUFFER_FLUSHED, { type });
+      },
+      onError: (error: Error) => {
+        this._quotaEvictionPending[type] = false;
+        this.warn(
+          `Failed to remove ${start}-${end} from "${type}" SourceBuffer (quota eviction)`,
+          error,
+        );
+      },
+    };
   }
 
   private getFlushOp(
@@ -1196,6 +1267,26 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.resetAppendErrors();
       }
     }
+  }
+
+  // Returns the end position to evict back buffer to on QuotaExceededError,
+  // or 0 if there is nothing to evict. Delegates to the fragment tracker which
+  // walks buffered fragments oldest-first using actual byte sizes to find the
+  // minimum eviction needed to fit the new segment.
+  private getBackBufferEvictionTarget(
+    type: SourceBufferName,
+    segmentBytes: number,
+    playlistType: PlaylistLevelType,
+  ): number {
+    const { media } = this;
+    if (!media) {
+      return 0;
+    }
+    return this.fragmentTracker.getBackBufferEvictionEnd(
+      media.currentTime,
+      playlistType,
+      segmentBytes,
+    );
   }
 
   private resetAppendErrors() {
@@ -1937,6 +2028,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   ) {
     if (this.operationQueue) {
       this.operationQueue.append(operation, type, pending);
+    }
+  }
+
+  private insertNext(operations: BufferOperation[], type: SourceBufferName) {
+    if (this.operationQueue) {
+      this.operationQueue.insertNext(operations, type);
     }
   }
 
