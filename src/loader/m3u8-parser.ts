@@ -563,10 +563,11 @@ export default class M3U8Parser {
           case 'DISCONTINUITY-SEQUENCE':
             if (level.startCC !== 0) {
               assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
-            } else if (fragments.length > 0) {
-              assignMustAppearBeforeSegmentsError(level, tag, result);
             }
             level.startCC = discontinuityCounter = parseInt(value1);
+            fragments.forEach(
+              (frag) => frag && (frag.cc = discontinuityCounter),
+            );
             break;
           case 'KEY': {
             const levelKey = parseKey(value1, baseurl, level);
