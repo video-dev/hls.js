@@ -519,13 +519,11 @@ export class FragmentTracker implements ComponentAPI {
       return 0;
     }
 
-    // Sort by sn (oldest first) — small array of references, no data copying.
-    // Candidates are unsorted because this.fragments is a hash map keyed by
-    // "type_level_sn", and Object.keys() returns insertion order which depends
-    // on when each fragment was loaded, not its position in the timeline.
-    // ABR level switches and seeks can cause fragments to load out of order.
+    // Sort by end time (earliest first). Using frag.end rather than sn because
+    // the tracker may contain fragments from different HLS variants where
+    // media sequence numbers are not guaranteed to align across levels.
     candidates.length = count;
-    candidates.sort((a, b) => (a.body.sn as number) - (b.body.sn as number));
+    candidates.sort((a, b) => a.body.end - b.body.end);
 
     // Walk oldest-first, accumulating bytes until we have enough
     let bytesFreed = 0;
