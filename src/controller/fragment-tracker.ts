@@ -483,13 +483,10 @@ export class FragmentTracker implements ComponentAPI {
   }
 
   /**
-   * Returns the eviction end position needed to free at least `bytesNeeded`
-   * from the back buffer, or 0 if not enough data is available.
-   * Walks buffered fragments oldest-first, accumulating actual byte sizes.
-   *
-   * Uses stats.loaded (actual bytes received) as the primary byte measure
-   * since it is always set after fragment completion, unlike stats.total
-   * which depends on Content-Length and may be 0 with chunked transfer.
+   * Returns the end position needed to free at least `bytesNeeded` from the
+   * back buffer, or 0 if not enough data is available. Walks buffered
+   * fragments in key order, accumulating byte sizes using stats.loaded,
+   * byteLength, or a bitrate estimate as fallback.
    */
   public getBackBufferEvictionEnd(
     beforePosition: number,
@@ -499,8 +496,8 @@ export class FragmentTracker implements ComponentAPI {
     const { fragments } = this;
 
     // Collect back buffer fragments with known byte sizes
-    let count = 0;
-    const candidates: FragmentEntity[] = [];
+    let bytesFreed = 0;
+    let evictEnd = 0;
     const keys = Object.keys(fragments);
     for (let i = 0; i < keys.length; i++) {
       const entity = fragments[keys[i]];
@@ -509,32 +506,16 @@ export class FragmentTracker implements ComponentAPI {
       }
       const frag = entity.body;
       // Use stats.loaded (always set after load) with byteLength as fallback
-      const bytes = (frag.hasStats && frag.stats.loaded) || frag.byteLength;
+      const bytes =
+        (frag.hasStats && frag.stats.loaded) ||
+        frag.byteLength ||
+        (frag.bitrate && frag.bitrate * 8 * frag.duration);
       if (frag.end <= beforePosition && bytes) {
-        candidates[count++] = entity;
-      }
-    }
-
-    if (count === 0) {
-      return 0;
-    }
-
-    // Sort by end time (earliest first). Using frag.end rather than sn because
-    // the tracker may contain fragments from different HLS variants where
-    // media sequence numbers are not guaranteed to align across levels.
-    candidates.length = count;
-    candidates.sort((a, b) => a.body.end - b.body.end);
-
-    // Walk oldest-first, accumulating bytes until we have enough
-    let bytesFreed = 0;
-    let evictEnd = 0;
-    for (let i = 0; i < count; i++) {
-      const frag = candidates[i].body;
-      const bytes = (frag.hasStats && frag.stats.loaded) || frag.byteLength;
-      bytesFreed += bytes!;
-      evictEnd = frag.end;
-      if (bytesFreed >= bytesNeeded) {
-        return evictEnd;
+        bytesFreed += bytes;
+        evictEnd = Math.max(evictEnd, frag.end);
+        if (bytesFreed >= bytesNeeded) {
+          return evictEnd;
+        }
       }
     }
 
