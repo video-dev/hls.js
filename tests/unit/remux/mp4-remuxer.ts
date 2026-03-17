@@ -73,6 +73,22 @@ describe('mp4-remuxer', function () {
     const minPts = mp4Remuxer.getVideoStartPts(videoSamples);
     expect(minPts).to.eq(8589928347);
   });
+
+  it('computeInitPts() returns 0 for basetime 0 at presentationTime 0', function () {
+    expect(mp4Remuxer.computeInitPts(0, 90000, 0, 'video')).to.eq(0);
+  });
+
+  it('computeInitPts() rolls forward when basetime has wrapped past 2^33', function () {
+    const basetime = 8589000000; // near 2^33, pre-rollover segment
+    const timeOffset = 583.595; // seek target after rollover
+    const result = mp4Remuxer.computeInitPts(
+      basetime,
+      90000,
+      timeOffset,
+      'audio',
+    );
+    expect(result).to.be.gt(0);
+  });
 });
 
 function ptsDts(pts: number, dts: number): VideoSample {
