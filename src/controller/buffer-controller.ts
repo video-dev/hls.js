@@ -6,6 +6,7 @@ import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { DEFAULT_TARGET_DURATION } from '../loader/level-details';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
+import { readUint32 } from '../utils/mp4-tools';
 import {
   areCodecsMediaSourceSupported,
   getCodecCompatibleName,
@@ -74,6 +75,120 @@ class HlsJsTrackRemovedError extends Error {
     super(message);
     this.name = TRACK_REMOVED_ERROR_NAME;
   }
+}
+
+// Maximum bytes per appendBuffer() call. Chromium's per-SourceBuffer quota is
+// ~150MB; keeping each append well under this prevents QuotaExceededError when
+// a single fMP4 segment is very large (common with high-bitrate remuxed streams).
+const MAX_APPEND_SIZE = 16 * 1024 * 1024; // 16MB
+
+/**
+ * Read an unsigned 32-bit big-endian integer from a Uint8Array.
+ */
+function readBoxSize(data: Uint8Array, offset: number): number {
+  return readUint32(data, offset);
+}
+
+/**
+ * Create a view into `data` from `start` to `start + length`.
+ */
+function sliceView(
+  data: Uint8Array<ArrayBuffer>,
+  start: number,
+  length: number,
+): Uint8Array<ArrayBuffer> {
+  return new Uint8Array(data.buffer, data.byteOffset + start, length);
+}
+
+/**
+ * Read the size of an fMP4 box at the given offset, handling both standard
+ * and 64-bit extended sizes. Returns the box size in bytes, or 0 if the
+ * box header is invalid or truncated.
+ */
+function readMp4BoxSize(data: Uint8Array, pos: number, end: number): number {
+  if (pos + 8 > end) {
+    return 0;
+  }
+  const size = readBoxSize(data, pos);
+  if (size === 0) {
+    return end - pos;
+  }
+  if (size === 1 && pos + 16 <= end) {
+    const hi = readBoxSize(data, pos + 8);
+    return hi > 0 ? end - pos : readBoxSize(data, pos + 12);
+  }
+  if (size < 8 || pos + size > end) {
+    return 0;
+  }
+  return size;
+}
+
+/**
+ * Try to split data at fMP4 top-level box boundaries into chunks of at
+ * most maxBytes. Returns null if box-boundary splitting cannot produce
+ * chunks that all fit within maxBytes (e.g. a single giant mdat box).
+ */
+function splitAtBoxBoundaries(
+  data: Uint8Array<ArrayBuffer>,
+  maxBytes: number,
+): Uint8Array<ArrayBuffer>[] | null {
+  if (data.byteLength < 8) {
+    return null;
+  }
+  const chunks: Uint8Array<ArrayBuffer>[] = [];
+  const end = data.byteLength;
+  let chunkStart = 0;
+  let pos = 0;
+
+  while (pos < end) {
+    const boxSize = readMp4BoxSize(data, pos, end);
+    if (boxSize === 0) {
+      break;
+    }
+    if (pos > chunkStart && pos - chunkStart + boxSize > maxBytes) {
+      chunks.push(sliceView(data, chunkStart, pos - chunkStart));
+      chunkStart = pos;
+    }
+    pos += boxSize;
+  }
+
+  if (chunkStart < end) {
+    chunks.push(sliceView(data, chunkStart, end - chunkStart));
+  }
+
+  const allFit =
+    chunks.length > 1 && chunks.every((c) => c.byteLength <= maxBytes);
+  return allFit ? chunks : null;
+}
+
+/**
+ * Split a large buffer into chunks of at most maxBytes.
+ * Tries to split at fMP4 top-level box boundaries first. If the data
+ * contains a single box larger than maxBytes (e.g. a giant mdat), falls
+ * back to naive byte splitting — MSE SourceBuffer handles reassembly of
+ * partial boxes internally.
+ */
+function splitAppendData(
+  data: Uint8Array<ArrayBuffer>,
+  maxBytes: number,
+): Uint8Array<ArrayBuffer>[] {
+  if (data.byteLength <= maxBytes) {
+    return [data];
+  }
+
+  const boxChunks = splitAtBoxBoundaries(data, maxBytes);
+  if (boxChunks) {
+    return boxChunks;
+  }
+
+  // Fallback: naive byte splitting. MSE SourceBuffer handles partial box
+  // reassembly across sequential appendBuffer() calls.
+  const chunks: Uint8Array<ArrayBuffer>[] = [];
+  const end = data.byteLength;
+  for (let offset = 0; offset < end; offset += maxBytes) {
+    chunks.push(sliceView(data, offset, Math.min(maxBytes, end - offset)));
+  }
+  return chunks;
 }
 
 export default class BufferController extends Logger implements ComponentAPI {
@@ -779,8 +894,29 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     event: Events.BUFFER_APPENDING,
     eventData: BufferAppendingData,
   ) {
+    const { data, type } = eventData;
+
+    // Split large fMP4 segments into smaller chunks to avoid QuotaExceededError.
+    // Each chunk becomes a separate operation with full error handling.
+    if (data.byteLength > MAX_APPEND_SIZE) {
+      const chunks = splitAppendData(data, MAX_APPEND_SIZE);
+      if (chunks.length > 1) {
+        this.log(
+          `Splitting large ${type} append (sn:${eventData.frag.sn}, ` +
+            `${(data.byteLength / 1e6).toFixed(1)}MB) into ${chunks.length} chunks`,
+        );
+        for (let i = 0; i < chunks.length; i++) {
+          this.onBufferAppending(event, {
+            ...eventData,
+            data: chunks[i],
+          });
+        }
+        return;
+      }
+    }
+
     const { tracks } = this;
-    const { data, type, parent, frag, part, chunkMeta, offset } = eventData;
+    const { parent, frag, part, chunkMeta, offset } = eventData;
     const chunkStats = chunkMeta.buffering[type];
     const { sn, cc } = frag;
     const bufferAppendingStart = self.performance.now();
