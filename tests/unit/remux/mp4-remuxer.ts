@@ -89,6 +89,19 @@ describe('mp4-remuxer', function () {
     );
     expect(result).to.be.gt(0);
   });
+
+  it('computeInitPts() rolls forward when offset exceeds 2^33 and normalizePts does not wrap to negative', function () {
+    const basetime = 100000;
+    const timeOffset = 95600; // ~26.5 hours, offset = ~8604000000 > 2^33
+    const timescale = 90000;
+    const result = mp4Remuxer.computeInitPts(
+      basetime,
+      timescale,
+      timeOffset,
+      'audio',
+    );
+    expect(result).to.be.gt(0);
+  });
 });
 
 function ptsDts(pts: number, dts: number): VideoSample {

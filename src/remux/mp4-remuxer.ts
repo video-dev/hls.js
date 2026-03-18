@@ -358,11 +358,11 @@ export default class MP4Remuxer extends Logger implements Remuxer {
   ): number {
     const offset = Math.round(presentationTime * timescale);
     let timestamp = normalizePts(basetime, offset);
-    if (timestamp < 0) {
+    if (timestamp < offset) {
       this.log(
         `Adjusting PTS for rollover in timeline near ${(offset - timestamp) / timescale} ${type}`,
       );
-      while (timestamp < 0) {
+      while (timestamp < offset) {
         timestamp += MPEG_TS_PTS_ROLLOVER;
       }
     }
