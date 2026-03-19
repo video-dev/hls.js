@@ -79,6 +79,14 @@ export default class BufferOperationQueue {
     );
   }
 
+  public insertNext(operations: BufferOperation[], type: SourceBufferName) {
+    if (this.queues === null) {
+      return;
+    }
+    // Insert after the current (index 0) operation so they execute next
+    this.queues[type].splice(1, 0, ...operations);
+  }
+
   public unblockAudio(op: BufferOperation) {
     if (this.queues === null) {
       return;
