@@ -1987,6 +1987,7 @@ export class FragmentTracker implements ComponentAPI {
     // (undocumented)
     fragBuffered(frag: MediaFragment, force?: true): void;
     getAppendedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | Part | null;
+    getBackBufferEvictionEnd(beforePosition: number, levelType: PlaylistLevelType, bytesNeeded: number): number;
     getBufferedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | null;
     // (undocumented)
     getFragAtPos(position: number, levelType: PlaylistLevelType, buffered?: boolean): MediaFragment | null;

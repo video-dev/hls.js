@@ -482,6 +482,47 @@ export class FragmentTracker implements ComponentAPI {
     return !!this.activePartLists[type]?.length;
   }
 
+  /**
+   * Returns the end position needed to free at least `bytesNeeded` from the
+   * back buffer, or 0 if not enough data is available. Walks buffered
+   * fragments in key order, accumulating byte sizes using stats.loaded,
+   * byteLength, or a bitrate estimate as fallback.
+   */
+  public getBackBufferEvictionEnd(
+    beforePosition: number,
+    levelType: PlaylistLevelType,
+    bytesNeeded: number,
+  ): number {
+    const { fragments } = this;
+
+    // Collect back buffer fragments with known byte sizes
+    let bytesFreed = 0;
+    let evictEnd = 0;
+    const keys = Object.keys(fragments);
+    for (let i = 0; i < keys.length; i++) {
+      const entity = fragments[keys[i]];
+      if (!entity || !entity.buffered || entity.body.type !== levelType) {
+        continue;
+      }
+      const frag = entity.body;
+      // Use stats.loaded (always set after load) with byteLength as fallback
+      const bytes =
+        (frag.hasStats && frag.stats.loaded) ||
+        frag.byteLength ||
+        (frag.bitrate && frag.bitrate * 8 * frag.duration);
+      if (frag.end <= beforePosition && bytes) {
+        bytesFreed += bytes;
+        evictEnd = Math.max(evictEnd, frag.end);
+        if (bytesFreed >= bytesNeeded) {
+          return evictEnd;
+        }
+      }
+    }
+
+    // Not enough to fully cover bytesNeeded, return what we have
+    return evictEnd > 0 ? evictEnd : 0;
+  }
+
   public removeFragmentsInRange(
     start: number,
     end: number,
