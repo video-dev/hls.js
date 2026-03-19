@@ -44,6 +44,7 @@ import './unit/utils/buffer-helper';
 import './unit/utils/cea-608-parser';
 import './unit/utils/codecs';
 import './unit/utils/error-helper';
+import './unit/utils/fetch-loader';
 import './unit/utils/discontinuities';
 import './unit/utils/exp-golomb';
 import './unit/utils/mediacapabilities-helper';

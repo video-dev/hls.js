@@ -59,6 +59,7 @@ import type {
   SubtitleSelectionOption,
   VideoSelectionOption,
 } from './types/media-playlist';
+import type BaseLoader from './utils/base-loader';
 import type { BufferInfo, BufferTimeRange } from './utils/buffer-helper';
 import type Cues from './utils/cues';
 import type EwmaBandWidthEstimator from './utils/ewma-bandwidth-estimator';
@@ -1315,6 +1316,7 @@ export type {
   TransmuxerInterface,
   InFlightData,
   State,
+  BaseLoader,
   XhrLoader,
   FetchLoader,
   Cues,

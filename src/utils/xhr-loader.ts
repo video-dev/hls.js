@@ -1,49 +1,33 @@
-import { getRetryDelay, shouldRetry } from './error-helper';
-import { LoadStats } from '../loader/load-stats';
-import { logger } from '../utils/logger';
+import BaseLoader from './base-loader';
+import { shouldRetry } from './error-helper';
+import { logger } from './logger';
 import type { HlsConfig } from '../config';
-import type { RetryConfig } from '../config';
 import type {
-  Loader,
-  LoaderCallbacks,
   LoaderConfiguration,
   LoaderContext,
   LoaderResponse,
-  LoaderStats,
 } from '../types/loader';
 
 const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/im;
 
-class XhrLoader implements Loader<LoaderContext> {
+class XhrLoader extends BaseLoader {
   private xhrSetup:
     | ((xhr: XMLHttpRequest, url: string) => Promise<void> | void)
     | null;
-  private requestTimeout?: number;
-  private retryTimeout?: number;
-  private retryDelay: number;
-  private config: LoaderConfiguration | null = null;
-  private callbacks: LoaderCallbacks<LoaderContext> | null = null;
-  public context: LoaderContext | null = null;
-
   private loader: XMLHttpRequest | null = null;
-  public stats: LoaderStats;
 
   constructor(config: HlsConfig) {
+    super();
     this.xhrSetup = config ? config.xhrSetup || null : null;
-    this.stats = new LoadStats();
-    this.retryDelay = 0;
   }
 
-  destroy() {
-    this.callbacks = null;
-    this.abortInternal();
+  destroy(): void {
+    super.destroy();
     this.loader = null;
-    this.config = null;
-    this.context = null;
     this.xhrSetup = null;
   }
 
-  abortInternal() {
+  protected abortInternal(): void {
     const loader = this.loader;
     self.clearTimeout(this.requestTimeout);
     self.clearTimeout(this.retryTimeout);
@@ -57,33 +41,15 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  abort() {
-    this.abortInternal();
-    if (this.callbacks?.onAbort) {
-      this.callbacks.onAbort(
-        this.stats,
-        this.context as LoaderContext,
-        this.loader,
-      );
-    }
+  protected getNetworkDetails(): XMLHttpRequest | null {
+    return this.loader;
   }
 
-  load(
-    context: LoaderContext,
-    config: LoaderConfiguration,
-    callbacks: LoaderCallbacks<LoaderContext>,
-  ) {
-    if (this.stats.loading.start) {
-      throw new Error('Loader can only be used once.');
-    }
-    this.stats.loading.start = self.performance.now();
-    this.context = context;
-    this.config = config;
-    this.callbacks = callbacks;
-    this.loadInternal();
+  protected resetInternalLoader(): void {
+    this.loader = null;
   }
 
-  loadInternal() {
+  protected loadInternal(): void {
     const { config, context } = this;
     if (!config || !context) {
       return;
@@ -126,11 +92,11 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  openAndSendXhr(
+  private openAndSendXhr(
     xhr: XMLHttpRequest,
     context: LoaderContext,
     config: LoaderConfiguration,
-  ) {
+  ): void {
     if (!xhr.readyState) {
       xhr.open('GET', context.url, true);
     }
@@ -166,7 +132,7 @@ class XhrLoader implements Loader<LoaderContext> {
     xhr.send();
   }
 
-  readystatechange() {
+  private readystatechange(): void {
     const { context, loader: xhr, stats } = this;
     if (!context || !xhr) {
       return;
@@ -266,49 +232,7 @@ class XhrLoader implements Loader<LoaderContext> {
     }
   }
 
-  loadtimeout() {
-    if (!this.config) return;
-    const retryConfig = this.config.loadPolicy.timeoutRetry;
-    const retryCount = this.stats.retry;
-    if (shouldRetry(retryConfig, retryCount, true)) {
-      this.retry(retryConfig);
-    } else {
-      logger.warn(`timeout while loading ${this.context?.url}`);
-      const callbacks = this.callbacks;
-      if (callbacks) {
-        this.abortInternal();
-        callbacks.onTimeout(
-          this.stats,
-          this.context as LoaderContext,
-          this.loader,
-        );
-      }
-    }
-  }
-
-  retry(retryConfig: RetryConfig) {
-    const { context, stats } = this;
-    this.retryDelay = getRetryDelay(retryConfig, stats.retry);
-    stats.retry++;
-    logger.warn(
-      `${
-        status ? 'HTTP Status ' + status : 'Timeout'
-      } while loading ${context?.url}, retrying ${stats.retry}/${
-        retryConfig.maxNumRetry
-      } in ${this.retryDelay}ms`,
-    );
-    // abort and reset internal state
-    this.abortInternal();
-    this.loader = null;
-    // schedule retry
-    self.clearTimeout(this.retryTimeout);
-    this.retryTimeout = self.setTimeout(
-      this.loadInternal.bind(this),
-      this.retryDelay,
-    );
-  }
-
-  loadprogress(event: ProgressEvent) {
+  private loadprogress(event: ProgressEvent): void {
     const stats = this.stats;
 
     stats.loaded = event.loaded;
