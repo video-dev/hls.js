@@ -320,7 +320,6 @@ export type BaseData = {
 //
 // @public (undocumented)
 export abstract class BaseLoader implements Loader<LoaderContext> {
-    constructor();
     // (undocumented)
     abort(): void;
     // (undocumented)
@@ -356,7 +355,7 @@ export abstract class BaseLoader implements Loader<LoaderContext> {
     // (undocumented)
     protected retryTimeout?: number;
     // (undocumented)
-    stats: LoaderStats;
+    stats: LoadStats;
 }
 
 // Warning: (ae-missing-release-tag) "BasePlaylistController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
