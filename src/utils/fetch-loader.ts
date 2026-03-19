@@ -1,11 +1,10 @@
+import BaseLoader from './base-loader';
+import { shouldRetry } from './error-helper';
+import { logger } from './logger';
 import ChunkCache from '../demux/chunk-cache';
 import { isPromise } from '../demux/transmuxer';
-import { LoadStats } from '../loader/load-stats';
 import type { HlsConfig } from '../config';
 import type {
-  Loader,
-  LoaderCallbacks,
-  LoaderConfiguration,
   LoaderContext,
   LoaderOnProgress,
   LoaderResponse,
@@ -32,74 +31,61 @@ export function fetchSupported() {
 
 const BYTERANGE = /(\d+)-(\d+)\/(\d+)/;
 
-class FetchLoader implements Loader<LoaderContext> {
+class FetchLoader extends BaseLoader {
   private fetchSetup: NonNullable<HlsConfig['fetchSetup']>;
-  private requestTimeout?: number;
   private request: Promise<Request> | Request | null = null;
   private response: Response | null = null;
-  private controller: AbortController;
-  public context: LoaderContext | null = null;
-  private config: LoaderConfiguration | null = null;
-  private callbacks: LoaderCallbacks<LoaderContext> | null = null;
-  public stats: LoaderStats;
-  private loader: Response | null = null;
+  private controller: AbortController | null = null;
 
   constructor(config: HlsConfig) {
+    super();
     this.fetchSetup = config.fetchSetup || getRequest;
-    this.controller = new self.AbortController();
-    this.stats = new LoadStats();
   }
 
   destroy(): void {
-    this.loader =
-      this.callbacks =
-      this.context =
-      this.config =
-      this.request =
-        null;
-    this.abortInternal();
+    this.request = null;
+    super.destroy();
     this.response = null;
+    this.controller = null;
     // @ts-ignore
-    this.fetchSetup = this.controller = this.stats = null;
+    this.fetchSetup = null;
   }
 
-  abortInternal(): void {
+  protected abortInternal(): void {
+    self.clearTimeout(this.retryTimeout);
     if (this.controller && !this.stats.loading.end) {
       this.stats.aborted = true;
       this.controller.abort();
     }
   }
 
-  abort(): void {
-    this.abortInternal();
-    if (this.callbacks?.onAbort) {
-      this.callbacks.onAbort(
-        this.stats,
-        this.context as LoaderContext,
-        this.response,
-      );
-    }
+  protected getNetworkDetails(): Response | null {
+    return this.response;
   }
 
-  load(
-    context: LoaderContext,
-    config: LoaderConfiguration,
-    callbacks: LoaderCallbacks<LoaderContext>,
-  ): void {
-    const stats = this.stats;
-    if (stats.loading.start) {
-      throw new Error('Loader can only be used once.');
+  protected resetInternalLoader(): void {
+    this.response = null;
+  }
+
+  protected loadInternal(): void {
+    const { config, context, stats } = this;
+    if (!config || !context) {
+      return;
     }
-    stats.loading.start = self.performance.now();
+
+    // Reset per-attempt stats
+    stats.loading.first = 0;
+    stats.loaded = 0;
+    stats.aborted = false;
+
+    // Create new AbortController for this attempt
+    this.controller = new self.AbortController();
 
     const initParams = getRequestParameters(context, this.controller.signal);
     const isArrayBuffer = context.responseType === 'arraybuffer';
     const LENGTH = isArrayBuffer ? 'byteLength' : 'length';
     const { maxTimeToFirstByteMs, maxLoadTimeMs } = config.loadPolicy;
 
-    this.context = context;
-    this.config = config;
-    this.callbacks = callbacks;
     this.request = this.fetchSetup(context, initParams);
     self.clearTimeout(this.requestTimeout);
     config.timeout =
@@ -107,10 +93,7 @@ class FetchLoader implements Loader<LoaderContext> {
         ? maxTimeToFirstByteMs
         : maxLoadTimeMs;
     this.requestTimeout = self.setTimeout(() => {
-      if (this.callbacks) {
-        this.abortInternal();
-        this.callbacks.onTimeout(stats, context, this.response);
-      }
+      this.loadtimeout();
     }, config.timeout);
 
     const fetchPromise = isPromise(this.request)
@@ -119,7 +102,7 @@ class FetchLoader implements Loader<LoaderContext> {
 
     fetchPromise
       .then((response: Response): Promise<string | ArrayBuffer> => {
-        this.response = this.loader = response;
+        this.response = response;
 
         const first = Math.max(self.performance.now(), stats.loading.start);
 
@@ -127,10 +110,7 @@ class FetchLoader implements Loader<LoaderContext> {
         config.timeout = maxLoadTimeMs;
         this.requestTimeout = self.setTimeout(
           () => {
-            if (this.callbacks) {
-              this.abortInternal();
-              this.callbacks.onTimeout(stats, context, this.response);
-            }
+            this.loadtimeout();
           },
           maxLoadTimeMs - (first - stats.loading.start),
         );
@@ -203,12 +183,26 @@ class FetchLoader implements Loader<LoaderContext> {
         // when destroying, 'error' itself can be undefined
         const code: number = !error ? 0 : error.code || 0;
         const text: string = !error ? null : error.message;
-        this.callbacks?.onError(
-          { code, text },
-          context,
-          error ? error.details : null,
-          stats,
-        );
+
+        // Check errorRetry policy
+        const retryConfig = config.loadPolicy.errorRetry;
+        const retryCount = stats.retry;
+        const response: LoaderResponse = {
+          url: context.url,
+          data: undefined,
+          code,
+        };
+        if (shouldRetry(retryConfig, retryCount, false, response)) {
+          this.retry(retryConfig);
+        } else {
+          logger.error(`${code} while loading ${context.url}`);
+          this.callbacks?.onError(
+            { code, text },
+            context,
+            error ? error.details : null,
+            stats,
+          );
+        }
       });
   }
 

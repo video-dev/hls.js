@@ -316,6 +316,48 @@ export type BaseData = {
     url: string;
 };
 
+// Warning: (ae-missing-release-tag) "BaseLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export abstract class BaseLoader implements Loader<LoaderContext> {
+    // (undocumented)
+    abort(): void;
+    // (undocumented)
+    protected abstract abortInternal(): void;
+    // (undocumented)
+    protected callbacks: LoaderCallbacks<LoaderContext> | null;
+    // (undocumented)
+    protected config: LoaderConfiguration | null;
+    // (undocumented)
+    context: LoaderContext | null;
+    // (undocumented)
+    destroy(): void;
+    // (undocumented)
+    abstract getCacheAge(): number | null;
+    // (undocumented)
+    protected abstract getNetworkDetails(): NullableNetworkDetails;
+    // (undocumented)
+    abstract getResponseHeader(name: string): string | null;
+    // (undocumented)
+    load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void;
+    // (undocumented)
+    protected abstract loadInternal(): void;
+    // (undocumented)
+    protected loadtimeout(): void;
+    // (undocumented)
+    protected requestTimeout?: number;
+    // (undocumented)
+    protected abstract resetInternalLoader(): void;
+    // (undocumented)
+    protected retry(retryConfig: RetryConfig): void;
+    // (undocumented)
+    protected retryDelay: number;
+    // (undocumented)
+    protected retryTimeout?: number;
+    // (undocumented)
+    stats: LoadStats;
+}
+
 // Warning: (ae-missing-release-tag) "BasePlaylistController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1654,24 +1696,22 @@ export type ExtendedSourceBuffer = SourceBuffer & {
 // Warning: (ae-missing-release-tag) "FetchLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export class FetchLoader implements Loader<LoaderContext> {
+export class FetchLoader extends BaseLoader {
     constructor(config: HlsConfig);
     // (undocumented)
-    abort(): void;
-    // (undocumented)
-    abortInternal(): void;
-    // (undocumented)
-    context: LoaderContext | null;
+    protected abortInternal(): void;
     // (undocumented)
     destroy(): void;
     // (undocumented)
     getCacheAge(): number | null;
     // (undocumented)
+    protected getNetworkDetails(): Response | null;
+    // (undocumented)
     getResponseHeader(name: string): string | null;
     // (undocumented)
-    load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void;
+    protected loadInternal(): void;
     // (undocumented)
-    stats: LoaderStats;
+    protected resetInternalLoader(): void;
 }
 
 // Warning: (ae-missing-release-tag) "FPSController" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -5093,36 +5133,22 @@ export type VideoSelectionOption = {
 // Warning: (ae-missing-release-tag) "XhrLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export class XhrLoader implements Loader<LoaderContext> {
+export class XhrLoader extends BaseLoader {
     constructor(config: HlsConfig);
     // (undocumented)
-    abort(): void;
-    // (undocumented)
-    abortInternal(): void;
-    // (undocumented)
-    context: LoaderContext | null;
+    protected abortInternal(): void;
     // (undocumented)
     destroy(): void;
     // (undocumented)
     getCacheAge(): number | null;
     // (undocumented)
+    protected getNetworkDetails(): XMLHttpRequest | null;
+    // (undocumented)
     getResponseHeader(name: string): string | null;
     // (undocumented)
-    load(context: LoaderContext, config: LoaderConfiguration, callbacks: LoaderCallbacks<LoaderContext>): void;
+    protected loadInternal(): void;
     // (undocumented)
-    loadInternal(): void;
-    // (undocumented)
-    loadprogress(event: ProgressEvent): void;
-    // (undocumented)
-    loadtimeout(): void;
-    // (undocumented)
-    openAndSendXhr(xhr: XMLHttpRequest, context: LoaderContext, config: LoaderConfiguration): void;
-    // (undocumented)
-    readystatechange(): void;
-    // (undocumented)
-    retry(retryConfig: RetryConfig): void;
-    // (undocumented)
-    stats: LoaderStats;
+    protected resetInternalLoader(): void;
 }
 
 // (No @packageDocumentation comment for this package)
