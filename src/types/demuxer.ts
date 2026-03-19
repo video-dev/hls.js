@@ -1,9 +1,12 @@
+import type { ChunkMetadata } from './transmuxer';
+import type { DecryptData } from '../loader/level-key';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 export interface Demuxer {
   demux(
     data: Uint8Array,
     timeOffset: number,
+    chunkMeta: ChunkMetadata,
     isSampleAes?: boolean,
     flush?: boolean,
   ): DemuxerResult;
@@ -11,14 +14,20 @@ export interface Demuxer {
     data: Uint8Array,
     keyData: KeyData,
     timeOffset: number,
+    chunkMeta: ChunkMetadata,
   ): Promise<DemuxerResult>;
-  flush(timeOffset?: number): DemuxerResult | Promise<DemuxerResult>;
+  flush(
+    timeOffset: number,
+    chunkMeta: ChunkMetadata,
+  ): DemuxerResult | Promise<DemuxerResult>;
   destroy(): void;
   resetInitSegment(
     initSegment: Uint8Array | undefined,
     audioCodec: string | undefined,
     videoCodec: string | undefined,
     trackDuration: number,
+    decryptdata: DecryptData | null,
+    chunkMeta: ChunkMetadata,
   );
   resetTimeStamp(defaultInitPTS?: RationalTimestamp | null): void;
   resetContiguity(): void;

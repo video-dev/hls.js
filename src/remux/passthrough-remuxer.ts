@@ -1,3 +1,4 @@
+import MP4 from './mp4-generator';
 import {
   flushTextTrackMetadataCueSamples,
   flushTextTrackUserdataCueSamples,
@@ -5,7 +6,7 @@ import {
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { getCodecCompatibleName } from '../utils/codecs';
 import { type ILogger, Logger } from '../utils/logger';
-import { patchEncyptionData } from '../utils/mp4-tools';
+import { patchEncyptionData, writeUint32 } from '../utils/mp4-tools';
 import { getSampleData, parseInitSegment } from '../utils/mp4-tools';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
@@ -16,6 +17,7 @@ import type {
   DemuxedUserdataTrack,
   PassthroughTrack,
 } from '../types/demuxer';
+import type { PlaylistLevelType } from '../types/loader';
 import type {
   InitSegmentData,
   RemuxedTrack,
@@ -23,6 +25,7 @@ import type {
   RemuxerResult,
 } from '../types/remuxer';
 import type { TrackSet } from '../types/track';
+import type { ChunkMetadata } from '../types/transmuxer';
 import type { TypeSupported } from '../utils/codecs';
 import type { InitData, InitDataTrack, TrackTimes } from '../utils/mp4-tools';
 import type { TimestampOffset } from '../utils/timescale-conversion';
@@ -159,6 +162,9 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     textTrack: DemuxedUserdataTrack,
     timeOffset: number,
     accurateTimeOffset: boolean,
+    flush: boolean,
+    playlistType: PlaylistLevelType,
+    chunkMeta: ChunkMetadata,
   ): RemuxerResult {
     let { initPTS, lastEndTime } = this;
     const result: RemuxerResult = {
@@ -203,13 +209,59 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       this.emitInitSegment = false;
     }
 
-    const trackSampleData = getSampleData(data, initData, this);
+    const trackSampleData = getSampleData(data, initData, chunkMeta, this);
     const audioSampleTimestamps = initData.audio
       ? trackSampleData[initData.audio.id]
       : null;
     const videoSampleTimestamps = initData.video
       ? trackSampleData[initData.video.id]
       : null;
+
+    let data1 = data;
+    let data2: Uint8Array<ArrayBuffer> | undefined;
+    if (__USE_IFRAMES__) {
+      if (
+        videoSampleTimestamps &&
+        videoSampleTimestamps.sampleCount > 1 &&
+        chunkMeta.iframe
+      ) {
+        const { trun, start, duration } = videoSampleTimestamps;
+        if (trun.length === 1 && trun[0].samples.length) {
+          const sampleOffset = trun[0].sampleOffset;
+          const sample = trun[0].samples[0];
+          const { cts, size } = sample;
+          const sampleEndByte = sampleOffset + size;
+
+          // Remux Iframe segments reporting more than one sample (mp4 byte-range contains moof for playback segment)
+          data1 = MP4.moof(chunkMeta.sn, start, {
+            type: 'video',
+            id: videoTrack.id,
+            samples: [
+              {
+                cts: cts || 0,
+                duration: duration,
+                size,
+                flags: {
+                  isLeading: 0,
+                  isDependedOn: 0,
+                  hasRedundancy: 0,
+                  degradPrio: 0,
+                  dependsOn: 2, // assume independent iframe
+                  isNonSync: 0,
+                  paddingValue: 0,
+                },
+              },
+            ],
+          });
+          data2 = data.subarray(sampleOffset - 8, sampleEndByte);
+          writeUint32(data2, 0, size + 8);
+        } else {
+          this.warn(
+            `Could not remux IFrame track fragment (trun count ${trun.length})`,
+          );
+        }
+      }
+    }
 
     const videoStartTime = toStartEndOrDefault(videoSampleTimestamps, Infinity);
     const audioStartTime = toStartEndOrDefault(audioSampleTimestamps, Infinity);
@@ -310,7 +362,8 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       (initData.video ? initData.video.encrypted : false);
 
     const track: RemuxedTrack = {
-      data1: data,
+      data1,
+      data2,
       startPTS: startTime,
       startDTS: startTime,
       endPTS: endTime,

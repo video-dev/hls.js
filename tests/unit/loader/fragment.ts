@@ -86,7 +86,7 @@ describe('Fragment class tests', function () {
       expect(frag.byteRange).to.deep.equal([0, 5000]);
     });
 
-    it('set byte range with no offset and uses 0 as offset', function () {
+    it('set byte range with no offset and uses previous segment end as offset', function () {
       const prevFrag = new Fragment(PlaylistLevelType.MAIN, '');
       prevFrag.setByteRange('1000@10000');
       frag.setByteRange('5000', prevFrag);

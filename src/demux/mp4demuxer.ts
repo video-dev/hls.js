@@ -15,7 +15,7 @@ import {
 import {
   appendUint8Array,
   findBox,
-  hasMoofData,
+  hasBoxData,
   parseEmsg,
   parseInitSegment,
   parseSamples,
@@ -95,7 +95,7 @@ class MP4Demuxer implements Demuxer {
   }
 
   static probe(data: Uint8Array) {
-    return hasMoofData(data);
+    return hasBoxData(data, 'moof');
   }
 
   public demux(
