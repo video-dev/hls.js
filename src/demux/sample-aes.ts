@@ -21,9 +21,7 @@ class SampleAesDecrypter {
 
   constructor(observer: HlsEventEmitter, config: HlsConfig, keyData: KeyData) {
     this.keyData = keyData;
-    this.decrypter = new Decrypter(config, {
-      removePKCS7Padding: false,
-    });
+    this.decrypter = new Decrypter(config, true);
   }
 
   decryptBuffer(encryptedData: Uint8Array | ArrayBuffer): Promise<ArrayBuffer> {

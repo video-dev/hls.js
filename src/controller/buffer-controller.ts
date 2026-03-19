@@ -864,7 +864,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       label: `append-${type}`,
       execute: () => {
         chunkStats.executeStart = self.performance.now();
-
+        // this.log(
+        //   `appending "${type}" sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
+        //     parent === PlaylistLevelType.MAIN ? 'level' : 'track'
+        //   } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
+        // );
         const sb = this.tracks[type]?.buffer;
         if (sb) {
           if (checkTimestampOffset) {
@@ -876,11 +880,19 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.appendExecutor(data, type);
       },
       onStart: () => {
-        // logger.debug(`[buffer-controller]: ${type} SourceBuffer updatestart`);
+        // this.log(
+        //   `updatestart "${type}" sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
+        //     parent === PlaylistLevelType.MAIN ? 'level' : 'track'
+        //   } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
+        // );
       },
       onComplete: () => {
         this.clearBufferAppendTimeoutId(this.tracks[type]);
-        // logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
+        // this.log(
+        //   `appended "${type}" sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
+        //     parent === PlaylistLevelType.MAIN ? 'level' : 'track'
+        //   } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
+        // );
         const end = self.performance.now();
         chunkStats.executeEnd = chunkStats.end = end;
         if (fragBuffering.first === 0) {
@@ -907,6 +919,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       },
       onError: (error: Error) => {
         this.clearBufferAppendTimeoutId(this.tracks[type]);
+
+        // this.log(
+        //   `append-error "${type}" sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
+        //     parent === PlaylistLevelType.MAIN ? 'level' : 'track'
+        //   } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
+        // );
 
         const isQuotaError =
           (error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR ||
@@ -966,13 +984,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           // Eviction was already attempted or not possible — report BUFFER_FULL_ERROR
           event.details = ErrorDetails.BUFFER_FULL_ERROR;
         } else if (
-          (error as DOMException).code === DOMException.INVALID_STATE_ERR &&
-          this.mediaSourceOpenOrEnded &&
-          !mediaError
-        ) {
-          // Allow retry for "Failed to execute 'appendBuffer' on 'SourceBuffer': This SourceBuffer is still processing" errors
-          event.errorAction = createDoNothingErrorAction(true);
-        } else if (
           error.name === TRACK_REMOVED_ERROR_NAME &&
           this.sourceBufferCount === 0
         ) {
@@ -983,10 +994,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           /* with UHD content, we could get loop of quota exceeded error until
             browser is able to evict some data from sourcebuffer. Retrying can help recover.
           */
+          const appendErrorMaxRetry = this.hls.config.appendErrorMaxRetry;
           this.warn(
-            `Failed ${appendErrorCount}/${this.hls.config.appendErrorMaxRetry} times to append segment in "${type}" sourceBuffer with error: ${error.message}`,
+            `Failed ${appendErrorCount}/${appendErrorMaxRetry + 1} times to append segment in "${type}" sourceBuffer with error: ${error.message}`,
           );
-          if (appendErrorCount >= this.hls.config.appendErrorMaxRetry) {
+          if (appendErrorCount >= appendErrorMaxRetry) {
             event.fatal = true;
           }
           const readyState = this.mediaSource?.readyState;

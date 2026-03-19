@@ -10,7 +10,7 @@ const CHUNK_SIZE = 16; // 16 bytes, 128 bits
 
 export default class Decrypter {
   private logEnabled: boolean = true;
-  private removePKCS7Padding: boolean;
+  private plainTextLength: number = 0;
   private subtle: SubtleCrypto | null = null;
   private softwareDecrypter: AESDecryptor | null = null;
   private key: ArrayBuffer | null = null;
@@ -21,11 +21,9 @@ export default class Decrypter {
   private useSoftware: boolean;
   private enableSoftwareAES: boolean;
 
-  constructor(config: HlsConfig, { removePKCS7Padding = true } = {}) {
+  constructor(config: HlsConfig, useSoftware?: boolean) {
     this.enableSoftwareAES = config.enableSoftwareAES;
-    this.removePKCS7Padding = removePKCS7Padding;
-    // built in decryptor expects PKCS7 padding
-    if (removePKCS7Padding) {
+    if (useSoftware !== true) {
       try {
         const browserCrypto = self.crypto;
         if (browserCrypto) {
@@ -62,10 +60,10 @@ export default class Decrypter {
     }
     const data = new Uint8Array(currentResult);
     this.reset();
-    if (this.removePKCS7Padding) {
-      return removePadding(data);
+    if (this.plainTextLength) {
+      return data.slice(0, this.plainTextLength);
     }
-    return data;
+    return removePadding(data);
   }
 
   public reset() {
@@ -82,8 +80,10 @@ export default class Decrypter {
     key: ArrayBuffer,
     iv: ArrayBuffer,
     aesMode: DecrypterAesMode,
+    plainTextLength: number = 0,
   ): Promise<ArrayBuffer> {
-    if (this.useSoftware) {
+    this.plainTextLength = plainTextLength;
+    if (this.useSoftware || plainTextLength) {
       return new Promise((resolve, reject) => {
         const dataView = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
         this.softwareDecrypt(dataView, key, iv, aesMode);
@@ -100,7 +100,7 @@ export default class Decrypter {
 
   // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
   // data is handled in the flush() call
-  public softwareDecrypt(
+  private softwareDecrypt(
     data: Uint8Array,
     key: ArrayBuffer,
     iv: ArrayBuffer,
@@ -149,7 +149,7 @@ export default class Decrypter {
     return result;
   }
 
-  public webCryptoDecrypt(
+  private webCryptoDecrypt(
     data: Uint8Array<ArrayBuffer>,
     key: ArrayBuffer,
     iv: ArrayBuffer,

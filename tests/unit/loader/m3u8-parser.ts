@@ -1147,6 +1147,7 @@ https://sample-host/segment1.m4a`;
       {
         contentSteering: null,
         levels: [],
+        iframeVariants: [],
         playlistParsingError: null,
         sessionData: null,
         sessionKeys: null,

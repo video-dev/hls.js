@@ -191,6 +191,10 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.subtitleTracks`](#hlssubtitletracks)
   - [`hls.subtitleTrack`](#hlssubtitletrack)
   - [`hls.subtitleDisplay`](#hlssubtitledisplay)
+- [I-Frame Variants API](#i-frame-variants-api)
+  - [`hls.iframeVariants`](#hlsiframevariants)
+  - [`hls.createIFramePlayer()`](#hlscreateiframeplayer)
+    - [Example usage](#example-usage)
 - [Live stream API](#live-stream-api)
   - [`hls.liveSyncPosition`](#hlslivesyncposition)
   - [`hls.latency`](#hlslatency)
@@ -2159,6 +2163,55 @@ get/set : index of selected subtitle track in `hls.subtitleTracks`. Returns -1 i
 (default: `true`)
 
 get/set : if set to true the active subtitle track mode will be set to `showing` and the browser will display the active subtitles. If set to false, the mode will be set to `hidden`.
+
+## I-Frame Variants API
+
+### `hls.iframeVariants`
+
+get : array of parsed I-Frame variants. `iframeVariants` are not selectable in the primary instance (use `hls.createIFramePlayer()`).
+
+### `hls.createIFramePlayer()`
+
+`createIFramePlayer` returns a new HlsIFramesOnly instance that uses the current instance's `iframeVariants` as it's `levels`. Returns `null` when `iframeVariants` is empty. The IFramePlayer instance is configured automatically based on the current instance. This method accepts optional config overrides argument.
+
+#### Example usage
+
+IFrame instances are used to load HLS `#EXT-X-I-FRAME-STREAM-INF` variants (HLS media playlists with `#EXT-X-I-FRAMES-ONLY` segments) that best fit a secondary HTMLVideoElement. I-Frames are buffered and then seeked to (one at a time) using `hlsIframesOnly.loadMediaAt(time)`. There is no need to call `loadSource` on the IFrame instances. The media attached to an IFrame instance will only buffer video I-Frames. Any audio in muxed segments is dropped. Calling `loadMediaAt` while one loading operations is active and another is pending will cancel the latter.
+
+`hlsIframesOnly` instances do not respond to external seeking or setting for `currentTime` on the attached HTMLVideoElement. Use `loadMediaAt` to buffer frames before they are seeked to. This ensures the last rendered frame is displayed until the next requested one is ready.
+
+Note that each time `hls.createIFramePlayer()` is called, it will return a new instance or null. While you may instantiate more than one instance it is not recommended.
+
+```ts
+const mainVideo = document.getElementById('video_1');
+const hls = new Hls();
+hls.loadSource('http://example.com/primary.m3u8');
+hls.attachMedia(mainVideo);
+hls.on(Events.MANIFEST_LOADED, createhlsIframesOnlyIfNeeded);
+
+const iframeVideo = document.getElementById('video_2');
+let hlsIframesOnly: HlsIFramesOnly | undefined;
+
+function createhlsIframesOnlyIfNeeded() {
+  if (hls.url !== hlsIframesOnly.url) {
+    // If player was destroyed or asset url changed, remove reference.
+    // (IFrames instance is destroyed when another source is loaded by parent Hls instance.)
+    hlsIframesOnly = undefined;
+  }
+  if (!hlsIframesOnly && hls.iframeVariants.length) {
+    hlsIframesOnly = hls.createIFramePlayer();
+    if (hlsIframesOnly) {
+      hlsIframesOnly.attachMedia(iframeVideo);
+    }
+  }
+}
+function renderIFrame(currentTime) {
+  hlsIframesOnly?.loadMediaAt(currentTime);
+}
+function preloadIFrame(time) {
+  hlsIframesOnly?.loadMediaAt(time, { seekOnAppend: false });
+}
+```
 
 ## Live stream API
 

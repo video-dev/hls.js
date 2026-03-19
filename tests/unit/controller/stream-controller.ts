@@ -87,6 +87,7 @@ describe('StreamController', function () {
     } = result;
     hls.trigger(Events.MANIFEST_LOADED, {
       levels,
+      iframeVariants: [],
       audioTracks: [],
       contentSteering,
       url: 'http://www.example.com',
@@ -166,6 +167,7 @@ describe('StreamController', function () {
       } = result;
       hls.trigger(Events.MANIFEST_LOADED, {
         levels,
+        iframeVariants: [],
         audioTracks: [],
         contentSteering,
         url: 'http://www.example.com',

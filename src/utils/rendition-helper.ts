@@ -511,3 +511,21 @@ export function inGroupOrNone(
   }
   return groupIds.indexOf(groupId) !== -1;
 }
+
+export function getVideoPreference(
+  level: Level | null | undefined,
+  basePreference?: VideoSelectionOption,
+): VideoSelectionOption | undefined {
+  if (basePreference || level) {
+    const videoPreference = Object.assign({}, basePreference);
+    if (level) {
+      if (level.videoCodec) {
+        videoPreference.videoCodec = level.videoCodec;
+      }
+      if (level.videoRange) {
+        videoPreference.allowedVideoRanges = [level.videoRange];
+      }
+    }
+    return videoPreference;
+  }
+}

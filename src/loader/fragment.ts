@@ -229,7 +229,7 @@ export class Fragment extends BaseSegment {
   // The minimum ending Presentation Time Stamp (audio/video PTS) of the fragment. Set after transmux complete.
   public minEndPTS?: number;
   // Init Segment bytes (unset for media segments)
-  public data?: Uint8Array;
+  public data?: Uint8Array<ArrayBuffer>;
   // A flag indicating whether the segment was downloaded in order to test bitrate, and was not buffered
   public bitrateTest: boolean = false;
   // #EXTINF  segment title

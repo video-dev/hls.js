@@ -71,7 +71,7 @@ const MAX_CUE_ENDTIME = (() => {
   return Number.POSITIVE_INFINITY;
 })();
 
-class ID3TrackController implements ComponentAPI {
+export class ID3TrackController implements ComponentAPI {
   private hls: Hls | null;
   private id3Track: HTMLTrackElement | null = null;
   private media: HTMLMediaElement | null = null;

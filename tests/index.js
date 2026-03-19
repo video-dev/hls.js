@@ -18,6 +18,7 @@ import './unit/controller/fragment-finders';
 import './unit/controller/fragment-tracker';
 import './unit/controller/gap-controller';
 import './unit/controller/id3-track-controller';
+import './unit/controller/iframe-controller';
 import './unit/controller/interstitials-controller';
 import './unit/controller/latency-controller';
 import './unit/controller/level-controller';

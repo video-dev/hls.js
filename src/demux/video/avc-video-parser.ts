@@ -1,6 +1,7 @@
 import BaseVideoParser from './base-video-parser';
 import ExpGolomb from './exp-golomb';
 import { parseSEIMessageFromNALu } from '../../utils/mp4-tools';
+import type { ChunkMetadata } from '../../hls';
 import type {
   DemuxedUserdataTrack,
   DemuxedVideoTrack,
@@ -13,7 +14,9 @@ class AvcVideoParser extends BaseVideoParser {
     textTrack: DemuxedUserdataTrack,
     pes: PES,
     endOfSegment: boolean,
+    chunkMeta: ChunkMetadata,
   ) {
+    const iframesOnly = chunkMeta.iframe;
     const units = this.parseNALu(track, pes.data, endOfSegment);
     let VideoSample = this.VideoSample;
     let push: boolean;
@@ -36,6 +39,9 @@ class AvcVideoParser extends BaseVideoParser {
       switch (unit.type) {
         // NDR
         case 1: {
+          if (iframesOnly) {
+            break;
+          }
           let iskey = false;
           push = true;
           const data = unit.data;
@@ -77,8 +83,8 @@ class AvcVideoParser extends BaseVideoParser {
           VideoSample.key = iskey;
 
           break;
-          // IDR
         }
+        // IDR
         case 5:
           push = true;
           // handle PES not starting with AUD
@@ -100,6 +106,9 @@ class AvcVideoParser extends BaseVideoParser {
           break;
         // SEI
         case 6: {
+          if (iframesOnly) {
+            break;
+          }
           push = true;
           parseSEIMessageFromNALu(
             unit.data,
