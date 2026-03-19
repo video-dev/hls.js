@@ -10,6 +10,7 @@ import ContentSteeringController from './controller/content-steering-controller'
 import EMEController from './controller/eme-controller';
 import ErrorController from './controller/error-controller';
 import FPSController from './controller/fps-controller';
+import MediaFragmentController from './controller/media-fragment-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import Hls from './hls';
 import M3U8Parser from './loader/m3u8-parser';
@@ -33,6 +34,7 @@ export {
   EMEController,
   ErrorController,
   FPSController,
+  MediaFragmentController,
   SubtitleTrackController,
   XhrLoader,
   FetchLoader,
