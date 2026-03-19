@@ -30,7 +30,10 @@ import {
 import { hash } from '../utils/hash';
 import { Logger } from '../utils/logger';
 import { isCompatibleTrackChange } from '../utils/mediasource-helper';
-import { getBasicSelectionOption } from '../utils/rendition-helper';
+import {
+  getBasicSelectionOption,
+  getVideoPreference,
+} from '../utils/rendition-helper';
 import { stringify } from '../utils/safe-json-stringify';
 import type {
   HlsAssetPlayerConfig,
@@ -2250,20 +2253,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
   ): HlsAssetPlayer {
     const primary = this.hls;
     const userConfig = primary.userConfig;
-    let videoPreference = userConfig.videoPreference;
-    const currentLevel =
+    const activeLevel =
       primary.loadLevelObj || primary.levels[primary.currentLevel];
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (videoPreference || currentLevel) {
-      videoPreference = Object.assign({}, videoPreference);
-      if (currentLevel.videoCodec) {
-        videoPreference.videoCodec = currentLevel.videoCodec;
-      }
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-      if (currentLevel.videoRange) {
-        videoPreference.allowedVideoRanges = [currentLevel.videoRange];
-      }
-    }
+    const videoPreference = getVideoPreference(
+      activeLevel,
+      userConfig.videoPreference,
+    );
     const selectedAudio = primary.audioTracks[primary.audioTrack];
     const selectedSubtitle = primary.subtitleTracks[primary.subtitleTrack];
     let startPosition = 0;

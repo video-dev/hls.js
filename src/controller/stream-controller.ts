@@ -669,6 +669,15 @@ export default class StreamController
       this.synchronizeToLiveEdge(newDetails);
     }
 
+    // Remove timestamp mapping from sparse array for discontinuities no longer present
+    for (const i in this.initPTS) {
+      if (parseInt(i) < newDetails.startCC) {
+        delete this.initPTS[i];
+      } else {
+        break;
+      }
+    }
+
     // trigger handler right now
     this.tick();
   }
@@ -679,7 +688,7 @@ export default class StreamController
       return;
     }
     const liveSyncPosition = this.hls.liveSyncPosition;
-    const currentTime = this.getLoadPosition();
+    const currentTime = this.playhead;
     const start = levelDetails.fragmentStart;
     const end = levelDetails.edge;
     const withinSlidingWindow =
@@ -790,13 +799,16 @@ export default class StreamController
       ));
     const partIndex = part ? part.index : -1;
     const partial = partIndex !== -1;
+    const byteRange = frag.byteRange;
     const chunkMeta = new ChunkMetadata(
       frag.level,
       frag.sn,
       frag.stats.chunkCount,
-      payload.byteLength,
+      byteRange.length ? byteRange[1] - byteRange[0] : payload.byteLength,
       partIndex,
       partial,
+      frag.duration,
+      this.iframesOnly,
     );
     const initPTS = this.initPTS[frag.cc];
 
@@ -1220,7 +1232,9 @@ export default class StreamController
           timescale,
           trackId,
         };
+        const timestampOffsets = this.initPTS.slice(0);
         hls.trigger(Events.INIT_PTS_FOUND, {
+          timestampOffsets,
           frag,
           id,
           initPTS: baseTime,
@@ -1476,6 +1490,9 @@ export default class StreamController
       delete tracks.audiovideo;
     }
     if (audiovideo) {
+      if (this.iframesOnly) {
+        this.logMuxedErr(frag);
+      }
       this.log(
         `Init audiovideo buffer, container:${audiovideo.container}, codecs[level/parsed]=[${currentLevel.codecs}/${audiovideo.codec}]`,
       );

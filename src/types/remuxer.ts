@@ -10,6 +10,7 @@ import type {
 } from './demuxer';
 import type { PlaylistLevelType } from './loader';
 import type { TrackSet } from './track';
+import type { ChunkMetadata } from './transmuxer';
 import type { DecryptData } from '../loader/level-key';
 import type { TimestampOffset } from '../utils/timescale-conversion';
 
@@ -23,6 +24,7 @@ export interface Remuxer {
     accurateTimeOffset: boolean,
     flush: boolean,
     playlistType: PlaylistLevelType,
+    chunkMeta: ChunkMetadata,
   ): RemuxerResult;
   resetInitSegment(
     initSegment: Uint8Array | undefined,
@@ -70,6 +72,7 @@ export type Mp4SampleFlags = {
   degradPrio: 0;
   dependsOn: 1 | 2;
   isNonSync: 0 | 1;
+  paddingValue: 0;
 };
 
 export type Mp4Sample = {
