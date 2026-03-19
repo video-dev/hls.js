@@ -39,6 +39,7 @@ const MAX_SILENT_FRAME_DURATION = 10 * 1000; // 10 seconds
 const AAC_SAMPLES_PER_FRAME = 1024;
 const MPEG_AUDIO_SAMPLE_PER_FRAME = 1152;
 const AC3_SAMPLES_PER_FRAME = 1536;
+const MPEG_TS_PTS_ROLLOVER = 8589934592; // 2^33
 
 let chromeVersion: number | null = null;
 let safariWebkitVersion: number | null = null;
@@ -357,12 +358,12 @@ export default class MP4Remuxer extends Logger implements Remuxer {
   ): number {
     const offset = Math.round(presentationTime * timescale);
     let timestamp = normalizePts(basetime, offset);
-    if (timestamp < offset + timescale) {
+    if (timestamp < offset) {
       this.log(
         `Adjusting PTS for rollover in timeline near ${(offset - timestamp) / timescale} ${type}`,
       );
-      while (timestamp < offset + timescale) {
-        timestamp += 8589934592;
+      while (timestamp < offset) {
+        timestamp += MPEG_TS_PTS_ROLLOVER;
       }
     }
     return timestamp - offset;
@@ -1180,10 +1181,10 @@ export function normalizePts(value: number, reference: number | null): number {
 
   if (reference < value) {
     // - 2^33
-    offset = -8589934592;
+    offset = -MPEG_TS_PTS_ROLLOVER;
   } else {
     // + 2^33
-    offset = 8589934592;
+    offset = MPEG_TS_PTS_ROLLOVER;
   }
   /* PTS is 33bit (from 0 to 2^33 -1)
     if diff between value and reference is bigger than half of the amplitude (2^32) then it means that
