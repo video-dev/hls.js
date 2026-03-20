@@ -29,6 +29,105 @@ describe('Hls', function () {
     });
   });
 
+  describe('static frame helpers', function () {
+    afterEach(function () {
+      sinon.restore();
+    });
+
+    it('captureFrame should reject non-video elements', async function () {
+      const media = document.createElement('audio');
+
+      try {
+        await Hls.captureFrame(media);
+        expect.fail('Expected captureFrame() to reject');
+      } catch (error) {
+        expect((error as Error).message).to.equal(
+          'captureFrame() requires an HTMLVideoElement',
+        );
+      }
+    });
+
+    it('captureFrame should render a video frame to canvas', async function () {
+      const media = document.createElement('video');
+      Object.defineProperty(media, 'videoWidth', { value: 640 });
+      Object.defineProperty(media, 'videoHeight', { value: 360 });
+
+      const frame = new Blob(['frame'], { type: 'image/png' });
+      const drawImage = sinon.stub();
+      const toBlob = sinon
+        .stub()
+        .callsFake((callback: BlobCallback) => callback(frame));
+      const fakeCanvas = {
+        width: 0,
+        height: 0,
+        getContext: sinon.stub().withArgs('2d').returns({ drawImage }),
+        toBlob,
+      } as unknown as HTMLCanvasElement;
+      const createElement = document.createElement.bind(document);
+
+      sinon
+        .stub(document, 'createElement')
+        .callsFake((tagName: string): HTMLElement => {
+          if (tagName === 'canvas') {
+            return fakeCanvas as unknown as HTMLElement;
+          }
+          return createElement(tagName);
+        });
+
+      const blob = await Hls.captureFrame(media);
+      expect(blob).to.equal(frame);
+      expect(drawImage).to.have.been.calledOnceWithExactly(media, 0, 0, 640, 360);
+    });
+
+    it('copyFrameToClipboard should write the captured frame to clipboard', async function () {
+      const media = document.createElement('video');
+      const frame = new Blob(['frame'], { type: 'image/png' });
+
+      const captureFrame = sinon.stub(Hls, 'captureFrame').resolves(frame);
+      const write = sinon.stub().resolves();
+      const clipboardItem = sinon
+        .stub()
+        .callsFake(function (this: { data: Record<string, Blob> }, data) {
+          this.data = data;
+        });
+
+      const previousClipboard = Object.getOwnPropertyDescriptor(
+        navigator,
+        'clipboard',
+      );
+      const previousClipboardItem = (globalThis as any).ClipboardItem;
+
+      Object.defineProperty(navigator, 'clipboard', {
+        value: { write },
+        configurable: true,
+      });
+      (globalThis as any).ClipboardItem = clipboardItem;
+
+      try {
+        await Hls.copyFrameToClipboard(media);
+      } finally {
+        if (previousClipboard) {
+          Object.defineProperty(navigator, 'clipboard', previousClipboard);
+        }
+        if (typeof previousClipboardItem === 'undefined') {
+          delete (globalThis as any).ClipboardItem;
+        } else {
+          (globalThis as any).ClipboardItem = previousClipboardItem;
+        }
+      }
+
+      expect(captureFrame).to.have.been.calledOnceWithExactly(
+        media,
+        'image/png',
+        undefined,
+      );
+      expect(clipboardItem).to.have.been.calledOnceWithExactly({
+        'image/png': frame,
+      });
+      expect(write).to.have.been.calledOnce;
+    });
+  });
+
   describe('attachMedia and detachMedia', function () {
     function detachTest(hls: Hls, media: HTMLMediaElement, refCount: number) {
       const components = (hls as any).coreComponents

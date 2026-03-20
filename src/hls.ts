@@ -142,6 +142,76 @@ export default class Hls implements HlsEventEmitter {
     return getMediaSource();
   }
 
+  /**
+   * Capture the currently rendered frame from an `HTMLVideoElement` as an encoded image `Blob`.
+   * This is useful for custom player UIs that support actions such as "copy frame as image".
+   */
+  static captureFrame(
+    media: HTMLMediaElement,
+    type: string = 'image/png',
+    quality?: number,
+  ): Promise<Blob> {
+    if (!(media instanceof HTMLVideoElement)) {
+      return Promise.reject(
+        new Error('captureFrame() requires an HTMLVideoElement'),
+      );
+    }
+
+    if (!media.videoWidth || !media.videoHeight) {
+      return Promise.reject(new Error('No rendered frame is available yet'));
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = media.videoWidth;
+    canvas.height = media.videoHeight;
+
+    const context = canvas.getContext('2d');
+    if (!context) {
+      return Promise.reject(new Error('Failed to acquire 2D canvas context'));
+    }
+
+    context.drawImage(media, 0, 0, canvas.width, canvas.height);
+
+    return new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          reject(new Error('Failed to encode frame image'));
+          return;
+        }
+        resolve(blob);
+      }, type, quality);
+    });
+  }
+
+  /**
+   * Capture the currently rendered frame and write it to the Clipboard as an image.
+   */
+  static copyFrameToClipboard(
+    media: HTMLMediaElement,
+    type: string = 'image/png',
+    quality?: number,
+  ): Promise<void> {
+    if (
+      typeof ClipboardItem === 'undefined' ||
+      !navigator.clipboard ||
+      typeof navigator.clipboard.write !== 'function'
+    ) {
+      return Promise.reject(
+        new Error(
+          'Clipboard image writing is not supported in this environment',
+        ),
+      );
+    }
+
+    return Hls.captureFrame(media, type, quality).then((frame) =>
+      navigator.clipboard.write([
+        new ClipboardItem({
+          [type]: frame,
+        }),
+      ]),
+    );
+  }
+
   static get Events(): typeof Events {
     return Events;
   }
