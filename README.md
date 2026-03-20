@@ -79,6 +79,7 @@ For details on the HLS format and these tags' meanings, see https://datatracker.
 
 - `#EXT-X-STREAM-INF:<attribute-list>`
   `<URI>`
+- `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
 - `#EXT-X-MEDIA:<attribute-list>`
 - `#EXT-X-SESSION-DATA:<attribute-list>`
 - `#EXT-X-SESSION-KEY:<attribute-list>` EME Key-System selection and preloading
@@ -89,8 +90,9 @@ For details on the HLS format and these tags' meanings, see https://datatracker.
 #### Media Playlist tags
 
 - `#EXTM3U` (ignored)
-- `#EXT-X-INDEPENDENT-SEGMENTS` (ignored)
 - `#EXT-X-VERSION=<n>` (value is ignored)
+- `#EXT-X-INDEPENDENT-SEGMENTS` (ignored)
+- `#EXT-X-I-FRAMES-ONLY`
 - `#EXTINF:<duration>,[<title>]`
 - `#EXT-X-ENDLIST`
 - `#EXT-X-MEDIA-SEQUENCE=<n>`
@@ -122,7 +124,7 @@ Parsed but missing feature support:
 
 For a complete list of issues, see ["Top priorities" in the Release Planning and Backlog project tab](https://github.com/video-dev/hls.js/projects/6). Codec support is dependent on the runtime environment (for example, not all browsers on the same OS support HEVC).
 
-- `#EXT-X-I-FRAME-STREAM-INF` I-frame Media Playlist files
+- #EXT-X-PLAYLIST-TYPE is not used to determine if media playlists should be reloaded based on "Expires" header value (#7082)
 - `REQ-VIDEO-LAYOUT` is not used in variant filtering or selection
 - "identity" format `SAMPLE-AES` method keys with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
 - MPEG-2 TS segments with FairPlay Streaming, PlayReady, or Widevine encryption

@@ -959,6 +959,7 @@ describe('BaseStreamController', function () {
       (baseStreamController as any).getLevelDetails = () => ({ live: false });
       mockBufferInfo.end = 20;
       media.currentTime = 5;
+      ((hls as any).streamController as any)._hasEnoughToStart = true;
 
       const result = (baseStreamController as any).calculateOptimalSwitchPoint(
         mockLevel,
@@ -972,6 +973,7 @@ describe('BaseStreamController', function () {
       (baseStreamController as any).getLevelDetails = () => ({ live: true });
       mockBufferInfo.end = 10;
       media.currentTime = 9.5;
+      ((hls as any).streamController as any)._hasEnoughToStart = true;
 
       const result = (baseStreamController as any).calculateOptimalSwitchPoint(
         mockLevel,
