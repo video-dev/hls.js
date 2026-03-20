@@ -46,3 +46,6 @@ _ReSharper*/
 
 # VSCode custom workspace settings
 .vscode/settings.json
+
+# Claude local settings
+.claude/settings.local.json
