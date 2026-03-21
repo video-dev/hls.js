@@ -1,0 +1,3 @@
+[tools]
+# if updating update in .node-version too
+node = "24.14.0"

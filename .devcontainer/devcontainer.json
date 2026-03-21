@@ -1,0 +1,16 @@
+{
+  "name": "HLS.JS Dev Container",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+
+  "customizations": {
+    "vscode": {
+      "extensions": ["esbenp.prettier-vscode"]
+    }
+  },
+
+  "remoteUser": "root",
+  "postCreateCommand": "mise trust -- --non-interactive && mise install --yes"
+}
