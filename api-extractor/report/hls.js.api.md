@@ -726,6 +726,7 @@ export type BufferControllerConfig = {
     frontBufferFlushThreshold: number;
     liveDurationInfinity: boolean;
     liveBackBufferLength: number | null;
+    maxAppendSize: number;
 };
 
 // Warning: (ae-missing-release-tag) "BufferCreatedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
