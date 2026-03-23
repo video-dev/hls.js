@@ -2172,26 +2172,28 @@ get : array of parsed I-Frame variants. `iframeVariants` are not selectable in t
 
 ### `hls.createIFramePlayer()`
 
-`createIFramePlayer` returns a new HlsIFramesOnly instance that uses the current instance's `iframeVariants` as it's `levels`. Returns `null` when `iframeVariants` is empty. The IFramePlayer instance is configured automatically based on the current instance. This method accepts optional config overrides argument.
+`createIFramePlayer` returns a new HlsIFramesOnly instance that uses the current instance's `iframeVariants` as its `levels`. Returns `null` when `iframeVariants` is empty. The IFramePlayer instance is configured automatically based on the current instance. This method accepts optional config overrides argument.
 
 #### Example usage
 
-IFrame instances are used to load HLS `#EXT-X-I-FRAME-STREAM-INF` variants (HLS media playlists with `#EXT-X-I-FRAMES-ONLY` segments) that best fit a secondary HTMLVideoElement. I-Frames are buffered and then seeked to (one at a time) using `hlsIframesOnly.loadMediaAt(time)`. There is no need to call `loadSource` on the IFrame instances. The media attached to an IFrame instance will only buffer video I-Frames. Any audio in muxed segments is dropped. Calling `loadMediaAt` while one loading operations is active and another is pending will cancel the latter.
+IFrame instances are used to load HLS `#EXT-X-I-FRAME-STREAM-INF` variants (HLS media playlists with `#EXT-X-I-FRAMES-ONLY` segments) that best fit a secondary HTMLVideoElement. I-Frames are buffered and then seeked to (one at a time) using `hlsIframesOnly.loadMediaAt(time)`. There is no need to call `loadSource` on the IFrame instances. The media attached to an IFrame instance will only buffer video I-Frames. Any audio in muxed segments is dropped. Calling `loadMediaAt` while one loading operation is active and another is pending will cancel the latter.
 
-`hlsIframesOnly` instances do not respond to external seeking or setting for `currentTime` on the attached HTMLVideoElement. Use `loadMediaAt` to buffer frames before they are seeked to. This ensures the last rendered frame is displayed until the next requested one is ready.
+`hlsIframesOnly` instances do not respond to external seeking or setting for `currentTime` on the attached HTMLVideoElement. Use `loadMediaAt` to buffer frames before they are seeked to. This ensures the last rendered frame is displayed until the next requested one is ready. An I-Frame can be considered appended on FRAG_BUFFERED and rendered on HTMLVideoElement "seeked".
+
+The I-Frame playlist selection is driven by the video element's dimensions with `capLevelToPlayerSize: true` set in the config. Ensure that the element is styled and sized before calling `startLoad` or `loadMediaAt` to avoid loading additional playlists.
 
 Note that each time `hls.createIFramePlayer()` is called, it will return a new instance or null. While you may instantiate more than one instance it is not recommended.
 
 ```ts
 const mainVideo = document.getElementById('video_1');
 const iframeVideo = document.getElementById('video_2');
-
 const hls = new Hls();
+
+let hlsIframesOnly: HlsIFramesOnly | null = null;
+
 hls.loadSource('http://example.com/primary.m3u8');
 hls.attachMedia(mainVideo);
 hls.on(Events.MANIFEST_LOADED, createHlsIframesOnlyIfNeeded);
-
-let hlsIframesOnly: HlsIFramesOnly | null = null;
 
 function createHlsIframesOnlyIfNeeded() {
   if (hls.url !== hlsIframesOnly?.url) {
@@ -2203,10 +2205,28 @@ function createHlsIframesOnlyIfNeeded() {
     hlsIframesOnly = hls.createIFramePlayer();
     if (hlsIframesOnly) {
       hlsIframesOnly.attachMedia(iframeVideo);
+      // load the level that matches the current video element dimensions
+      hlsIframesOnly.startLoad();
+      hlsIframesOnly.once(
+        Events.LEVEL_UPDATED,
+        (name, { details: { fragments } }) => {
+          /* fragments contains all iframe start times and durations */
+        },
+      );
+      hlsIframesOnly.on(Events.FRAG_BUFFERED, (name, { frag }) => {
+        /* iframe buffered */
+      });
+      hlsIframesOnly.on(Events.ERROR, (name, { error }) => {
+        if (error.name == 'QuotaExceededError') {
+          /* MSE buffer is full */
+        }
+      });
     }
   }
 }
 function renderIFrame(currentTime) {
+  iframeVideo.onseeked = () =>
+    null /* iframe rendered > show iframe video element and remove seeked listener */;
   hlsIframesOnly?.loadMediaAt(currentTime);
 }
 function preloadIFrame(time) {

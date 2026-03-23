@@ -2457,10 +2457,10 @@ export interface HlsEventEmitter {
 //
 // @public (undocumented)
 export interface HlsIFramesOnly extends Hls {
-    // Warning: (ae-forgotten-export) The symbol "loadMediaAtOptions" needs to be exported by the entry point hls.d.ts
+    // Warning: (ae-forgotten-export) The symbol "LoadMediaAtOptions" needs to be exported by the entry point hls.d.ts
     //
     // (undocumented)
-    loadMediaAt(time: number, options?: Partial<loadMediaAtOptions>): void;
+    loadMediaAt(time: number, options?: Partial<LoadMediaAtOptions>): void;
 }
 
 // Warning: (ae-missing-release-tag) "HlsListeners" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

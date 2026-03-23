@@ -21,18 +21,18 @@ type Constructor<T = object, A extends any[] = any[], Static = {}> = (new (
 ) => T) &
   Static;
 
-export type loadMediaAtOptions = { seekOnAppend: boolean };
+export type LoadMediaAtOptions = { seekOnAppend: boolean };
 
-const loadMediaAtOptionsDefault: loadMediaAtOptions = {
+const loadMediaAtOptionsDefault: LoadMediaAtOptions = {
   seekOnAppend: true,
 };
 
 export interface HlsIFramesOnly extends Hls {
-  loadMediaAt(time: number, options?: Partial<loadMediaAtOptions>): void;
+  loadMediaAt(time: number, options?: Partial<LoadMediaAtOptions>): void;
 }
 interface IFrameStreamController extends StreamController {
   setInitPts(initPTS: TimestampOffset[]): void;
-  loadMediaAt(time: number, options: loadMediaAtOptions): void;
+  loadMediaAt(time: number, options: LoadMediaAtOptions): void;
 }
 
 let HlsIFramesOnlyClass: ReturnType<typeof createHlsIFramesOnly>;
@@ -257,7 +257,7 @@ function createHlsIFramesOnly(Base: Constructor<Hls>) {
 
     loadMediaAt(
       time: number,
-      options: Partial<loadMediaAtOptions> = loadMediaAtOptionsDefault,
+      options: Partial<LoadMediaAtOptions> = loadMediaAtOptionsDefault,
     ) {
       if (time < 0) {
         return;
@@ -284,15 +284,15 @@ function createIFrameStreamController(Base: Constructor<StreamController>) {
     extends Base
     implements IFrameStreamControllerAlias
   {
-    private currentOp?: [time: number, options: loadMediaAtOptions];
-    private nextOp?: [time: number, options: loadMediaAtOptions];
+    private currentOp?: [time: number, options: LoadMediaAtOptions];
+    private nextOp?: [time: number, options: LoadMediaAtOptions];
     private gotNext: boolean = false;
 
     setInitPts(initPTS: TimestampOffset[]) {
       this.initPTS = initPTS;
     }
 
-    loadMediaAt(time: number, options: loadMediaAtOptions) {
+    loadMediaAt(time: number, options: LoadMediaAtOptions) {
       const { seekOnAppend } = options;
       const adjustedTime = time + this.timelineOffset;
       this.nextLoadPosition = this.lastCurrentTime = adjustedTime;
