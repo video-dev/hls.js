@@ -2184,19 +2184,20 @@ Note that each time `hls.createIFramePlayer()` is called, it will return a new i
 
 ```ts
 const mainVideo = document.getElementById('video_1');
+const iframeVideo = document.getElementById('video_2');
+
 const hls = new Hls();
 hls.loadSource('http://example.com/primary.m3u8');
 hls.attachMedia(mainVideo);
-hls.on(Events.MANIFEST_LOADED, createhlsIframesOnlyIfNeeded);
+hls.on(Events.MANIFEST_LOADED, createHlsIframesOnlyIfNeeded);
 
-const iframeVideo = document.getElementById('video_2');
-let hlsIframesOnly: HlsIFramesOnly | undefined;
+let hlsIframesOnly: HlsIFramesOnly | null = null;
 
-function createhlsIframesOnlyIfNeeded() {
-  if (hls.url !== hlsIframesOnly.url) {
+function createHlsIframesOnlyIfNeeded() {
+  if (hls.url !== hlsIframesOnly?.url) {
     // If player was destroyed or asset url changed, remove reference.
     // (IFrames instance is destroyed when another source is loaded by parent Hls instance.)
-    hlsIframesOnly = undefined;
+    hlsIframesOnly = null;
   }
   if (!hlsIframesOnly && hls.iframeVariants.length) {
     hlsIframesOnly = hls.createIFramePlayer();
