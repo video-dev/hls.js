@@ -286,6 +286,7 @@ function createIFrameStreamController(Base: Constructor<StreamController>) {
   {
     private currentOp?: [time: number, options: loadMediaAtOptions];
     private nextOp?: [time: number, options: loadMediaAtOptions];
+    private gotNext: boolean = false;
 
     setInitPts(initPTS: TimestampOffset[]) {
       this.initPTS = initPTS;
@@ -354,8 +355,9 @@ function createIFrameStreamController(Base: Constructor<StreamController>) {
       this.state = State.STOPPED;
       if (currentOp?.[1].seekOnAppend) {
         this.seekTo(currentOp[0]);
-        if (!nextOp && !this.hls.hasEnoughToStart) {
+        if (!nextOp && !this.gotNext) {
           // repeat op to get next segment (Chrome may require two HEVC frame appends, or one with EoS, before rendering)
+          this.gotNext = true;
           this.loadMediaAt.apply(this, currentOp);
         }
       }
@@ -378,7 +380,9 @@ function createIFrameStreamController(Base: Constructor<StreamController>) {
 
     protected seekToStartPos() {}
     protected setStartPosition() {}
-    protected onMediaSeeking = () => {};
+    protected onMediaSeeking = () => {
+      this.gotNext = false;
+    };
 
     getMainFwdBufferInfo() {
       const t = this.playhead;
