@@ -43,7 +43,7 @@ import {
 } from '../utils/level-helper';
 import { estimatedAudioBitrate } from '../utils/mediacapabilities-helper';
 import { appendUint8Array } from '../utils/mp4-tools';
-import TimeRanges from '../utils/time-ranges';
+import { timeRangesToString } from '../utils/time-ranges';
 import type { FragmentTracker } from './fragment-tracker';
 import type { HlsConfig } from '../config';
 import type TransmuxerInterface from '../demux/transmuxer-interface';
@@ -826,7 +826,7 @@ export default class BaseStreamController
         part ? ' part: ' + part.index : ''
       } of ${this.fragInfo(frag, false, part)} > buffer:${
         media
-          ? TimeRanges.toString(BufferHelper.getBuffered(media))
+          ? timeRangesToString(BufferHelper.getBuffered(media))
           : '(detached)'
       })`,
     );
