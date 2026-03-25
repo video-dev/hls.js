@@ -23,6 +23,7 @@ import {
   isManagedMediaSource,
 } from '../utils/mediasource-helper';
 import { stringify } from '../utils/safe-json-stringify';
+import { timeRangesToString } from '../utils/time-ranges';
 import type { FragmentTracker } from './fragment-tracker';
 import type { HlsConfig } from '../config';
 import type Hls from '../hls';
@@ -1687,6 +1688,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           // If media was ejected check for a change. Added ranges are redundant with changes on 'updateend' event.
           const removedRanges = event.removedRanges;
           if (removedRanges?.length) {
+            this.log(
+              `${type} buffer removed ${timeRangesToString(removedRanges)}`,
+            );
             this.hls.trigger(Events.BUFFER_FLUSHED, {
               type: type,
             });
