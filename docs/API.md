@@ -2172,7 +2172,7 @@ get : array of parsed I-Frame variants. `iframeVariants` are not selectable in t
 
 ### `hls.createIFramePlayer()`
 
-`createIFramePlayer` returns a new HlsIFramesOnly instance that uses the current instance's `iframeVariants` as its `levels`. Returns `null` when `iframeVariants` is empty. The IFramePlayer instance is configured automatically based on the current instance. This method accepts optional config overrides argument.
+`createIFramePlayer` returns a new HlsIFramesOnly instance that uses the current instance's `iframeVariants` as its `levels`. Returns `null` when `iframeVariants` is empty and before any levels have loaded. The IFramePlayer instance is configured automatically based on the current instance. This method accepts optional config overrides argument.
 
 #### Example usage
 
@@ -2193,7 +2193,8 @@ let hlsIframesOnly: HlsIFramesOnly | null = null;
 
 hls.loadSource('http://example.com/primary.m3u8');
 hls.attachMedia(mainVideo);
-hls.on(Events.MANIFEST_LOADED, createHlsIframesOnlyIfNeeded);
+// IFrame players can be created as early as MANIFEST_LOADED, but it is best to wait until after media is loaded to make sure frames are synched.
+hls.once(Events.INIT_PTS_FOUND, createHlsIframesOnlyIfNeeded);
 
 function createHlsIframesOnlyIfNeeded() {
   if (hls.url !== hlsIframesOnly?.url) {
@@ -2205,7 +2206,7 @@ function createHlsIframesOnlyIfNeeded() {
     hlsIframesOnly = hls.createIFramePlayer();
     if (hlsIframesOnly) {
       hlsIframesOnly.attachMedia(iframeVideo);
-      // load the level that matches the current video element dimensions
+      // Load the level that matches the current video element dimensions.
       hlsIframesOnly.startLoad();
       hlsIframesOnly.once(
         Events.LEVEL_UPDATED,
