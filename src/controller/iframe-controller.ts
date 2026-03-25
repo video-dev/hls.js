@@ -8,6 +8,7 @@ import type { HlsConfig } from '../config';
 import type Hls from '../hls';
 import type StreamController from './stream-controller';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
+import type { LevelDetails } from '../loader/level-details';
 import type {
   InitPTSFoundData,
   LevelsUpdatedData,
@@ -31,6 +32,7 @@ export interface HlsIFramesOnly extends Hls {
   loadMediaAt(time: number, options?: Partial<LoadMediaAtOptions>): void;
 }
 interface IFrameStreamController extends StreamController {
+  initDetails?: LevelDetails | null;
   setInitPts(initPTS: TimestampOffset[]): void;
   loadMediaAt(time: number, options: LoadMediaAtOptions): void;
 }
@@ -134,6 +136,7 @@ export class IFrameController extends Logger {
       iframeVariants,
       url,
       userConfig,
+      latestLevelDetails,
       loadLevelObj,
       loadLevel,
       bandwidthEstimate,
@@ -164,6 +167,7 @@ export class IFrameController extends Logger {
       configOverride,
       url,
       this.initPTS,
+      latestLevelDetails,
     );
 
     // Remove destroyed instanced from list before adding new ones
@@ -202,6 +206,7 @@ function createHlsIFramesOnly(Base: Constructor<Hls>) {
       configOverride: Partial<HlsConfig> | undefined,
       url: string,
       initPTS: TimestampOffset[],
+      latestLevelDetails: LevelDetails | null,
     ) {
       const playerConfig: Partial<HlsConfig> = {
         ...userConfig,
@@ -224,8 +229,6 @@ function createHlsIFramesOnly(Base: Constructor<Hls>) {
         cmcd: undefined,
         // FIXME: Interstitials must not be loaded independently of parent platyer. Schedule should come from parent. (disabled for now)
         interstitialsController: undefined,
-        // FIXME: some elements of live streaming depend on these metrics
-        latencyController: undefined,
 
         // Only load and unload as needed
         // maxMaxBufferLength: 8,
@@ -251,6 +254,8 @@ function createHlsIFramesOnly(Base: Constructor<Hls>) {
 
       // Align timestamps based on parent initPts (accounts for audio prime offset and parent variant decode time difference)
       (this.streamController as IFrameStreamController).setInitPts(initPTS);
+      (this.streamController as IFrameStreamController).initDetails =
+        latestLevelDetails;
     }
 
     loadSource(url: string) {}
@@ -287,6 +292,7 @@ function createIFrameStreamController(Base: Constructor<StreamController>) {
     private currentOp?: [time: number, options: LoadMediaAtOptions];
     private nextOp?: [time: number, options: LoadMediaAtOptions];
     private gotNext: boolean = false;
+    initDetails?: LevelDetails | null;
 
     setInitPts(initPTS: TimestampOffset[]) {
       this.initPTS = initPTS;
@@ -377,12 +383,24 @@ function createIFrameStreamController(Base: Constructor<StreamController>) {
           hlsIFrames.startLevel === -1 ? 0 : hlsIFrames.firstAutoLevel;
       }
     }
-
+    // public getLevelDetails
     protected seekToStartPos() {}
     protected setStartPosition() {}
     protected onMediaSeeking = () => {
       this.gotNext = false;
     };
+
+    protected alignPlaylists(
+      details: LevelDetails,
+      previousDetails: LevelDetails | undefined,
+      switchDetails: LevelDetails | undefined,
+    ): number {
+      return super.alignPlaylists(
+        details,
+        previousDetails,
+        switchDetails || this.initDetails || undefined,
+      );
+    }
 
     getMainFwdBufferInfo() {
       const t = this.playhead;
