@@ -297,9 +297,22 @@ export default class BaseStreamController
       return lastPartBuffered;
     }
 
-    const playlistType =
-      levelDetails.fragments[levelDetails.fragments.length - 1].type;
-    return this.fragmentTracker.isEndListAppended(playlistType);
+    const lastFragment =
+      levelDetails.fragments[levelDetails.fragments.length - 1];
+    const playlistType = lastFragment.type;
+    if (this.fragmentTracker.isEndListAppended(playlistType)) {
+      return true;
+    }
+    // When a live playlist transitions to VOD (ENDLIST added), the last
+    // fragment in the updated playlist has endList=true but the fragment
+    // tracker entity was created before ENDLIST was known. Check if the
+    // last fragment is actually buffered even though endListFragments
+    // was never populated for it.
+    if (lastFragment.endList) {
+      const state = this.fragmentTracker.getState(lastFragment);
+      return state === FragmentState.OK || state === FragmentState.PARTIAL;
+    }
+    return false;
   }
 
   public getLevelDetails(): LevelDetails | undefined {
