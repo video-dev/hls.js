@@ -117,6 +117,7 @@ describe('LevelController', function () {
           name: '1080',
         }),
       ],
+      iframeVariants: [],
       networkDetails: new Response('ok'),
       sessionData: null,
       sessionKeys: null,
@@ -186,6 +187,7 @@ describe('LevelController', function () {
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         audioTracks: [],
         levels: [],
+        iframeVariants: [],
         networkDetails: new Response('ok'),
         subtitles: [],
         url: 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8',
@@ -239,6 +241,7 @@ describe('LevelController', function () {
             name: '1080',
           }),
         ],
+        iframeVariants: [],
         networkDetails: new Response('ok'),
         subtitles: [],
         sessionData: null,
@@ -254,6 +257,7 @@ describe('LevelController', function () {
 
       expect(hls.trigger).to.have.been.calledWith(Events.MANIFEST_PARSED, {
         levels: data.levels.map((levelParsed) => new Level(levelParsed)),
+        iframeVariants: [],
         audioTracks: [],
         subtitleTracks: [],
         sessionData: null,
@@ -286,6 +290,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
       expect(parsedLevels).to.have.lengthOf(6, 'MANIFEST_LOADED levels');
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
+        iframeVariants: [],
         audioTracks: [],
         subtitles: [],
         networkDetails: new Response('ok'),
@@ -334,6 +339,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
             name: '144',
           }),
         ],
+        iframeVariants: [],
         networkDetails: new Response('ok'),
         subtitles: [],
         sessionData: null,
@@ -347,6 +353,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
 
       const parsedData: ManifestParsedData = {
         levels: data.levels.map((levelParsed) => new Level(levelParsed)),
+        iframeVariants: [],
         audioTracks: data.audioTracks,
         subtitleTracks: [],
         sessionData: null,
@@ -379,6 +386,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
             audioCodec: 'mp4a.40.2',
           }),
         ],
+        iframeVariants: [],
         networkDetails: new Response('ok'),
         subtitles: [],
         sessionData: null,
@@ -393,6 +401,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
       expect(hls.trigger).to.have.been.calledWith(Events.MANIFEST_PARSED, {
         levels: data.levels.map((levelParsed) => new Level(levelParsed)),
+        iframeVariants: [],
         audioTracks: data.audioTracks,
         subtitleTracks: [],
         sessionData: null,
@@ -419,6 +428,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
             audioCodec: 'mp4a.40.2',
           }),
         ],
+        iframeVariants: [],
         networkDetails: new Response('ok'),
         subtitles: [],
         sessionData: null,
@@ -433,6 +443,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
       expect(hls.trigger).to.have.been.calledWith(Events.MANIFEST_PARSED, {
         levels: data.levels.map((levelParsed) => new Level(levelParsed)),
+        iframeVariants: [],
         audioTracks: data.audioTracks,
         subtitleTracks: [],
         sessionData: null,
@@ -457,6 +468,7 @@ http://bar.example.com/audio-only/prog_index.m3u8`,
             name: '144',
           }),
         ],
+        iframeVariants: [],
         networkDetails: new Response('ok'),
         subtitles: [],
         sessionData: null,
@@ -682,6 +694,7 @@ http://bar.example.com/md/prog_index.m3u8`,
       expect(parsedLevels).to.have.lengthOf(4, 'MANIFEST_LOADED levels');
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
+        iframeVariants: [],
         audioTracks: [],
         subtitles: [],
         networkDetails: new Response('ok'),
@@ -746,6 +759,7 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(parsedSubs).to.be.undefined;
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
+        iframeVariants: [],
         audioTracks: parsedAudio!,
         subtitles: [],
         networkDetails: new Response('ok'),
@@ -809,6 +823,7 @@ http://bar.example.com/md/prog_index.m3u8`;
         expect(parsedSubs).to.have.lengthOf(9, 'MANIFEST_LOADED subtitles');
         levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
           levels: parsedLevels,
+          iframeVariants: [],
           audioTracks: parsedAudio,
           subtitles: parsedSubs,
           networkDetails: new Response('ok'),
@@ -952,6 +967,7 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(parsedSubs).to.have.lengthOf(3, 'MANIFEST_LOADED subtitles');
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
+        iframeVariants: [],
         audioTracks: parsedAudio,
         subtitles: parsedSubs,
         networkDetails: new Response('ok'),
@@ -1046,6 +1062,7 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(parsedSubs).to.have.lengthOf(6, 'MANIFEST_LOADED subtitles');
       levelController.onManifestLoaded(Events.MANIFEST_LOADED, {
         levels: parsedLevels,
+        iframeVariants: [],
         audioTracks: parsedAudio,
         subtitles: parsedSubs,
         networkDetails: new Response('ok'),
@@ -1114,6 +1131,7 @@ describe('LevelController - nextLoadLevel', function () {
         parsedLevel({ bitrate: 2149280, name: '720' }),
         parsedLevel({ bitrate: 6221600, name: '1080' }),
       ],
+      iframeVariants: [],
       networkDetails: new Response('ok'),
       sessionData: null,
       sessionKeys: null,

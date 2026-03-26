@@ -43,6 +43,7 @@ export default class FragmentLoader {
 
   load(
     frag: Fragment,
+    isIFrame?: boolean,
     onProgress?: FragmentLoadProgressCallback,
   ): Promise<FragLoadedData> {
     const url = frag.url;
@@ -82,7 +83,7 @@ export default class FragmentLoader {
       const loader = (this.loader = FragmentILoader
         ? new FragmentILoader(config)
         : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
-      const loaderContext = createLoaderContext(frag);
+      const loaderContext = createLoaderContext(frag, null, isIFrame);
       frag.loader = loader;
       const loadPolicy = getLoaderConfigWithoutReties(
         config.fragLoadPolicy.default,
@@ -319,6 +320,7 @@ export default class FragmentLoader {
 function createLoaderContext(
   frag: Fragment,
   part: Part | null = null,
+  isIFrame?: boolean,
 ): FragmentLoaderContext {
   const segment: BaseSegment = part || frag;
   const loaderContext: FragmentLoaderContext = {
@@ -337,7 +339,7 @@ function createLoaderContext(
     let byteRangeStart = start;
     let byteRangeEnd = end;
     if (
-      frag.sn === 'initSegment' &&
+      (frag.sn === 'initSegment' || isIFrame) &&
       isMethodFullSegmentAesCbc(frag.decryptdata?.method)
     ) {
       // MAP segment encrypted with method 'AES-128' or 'AES-256' (cbc), when served with HTTP Range,

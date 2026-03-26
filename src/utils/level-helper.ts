@@ -5,6 +5,7 @@
 import { stringify } from './safe-json-stringify';
 import { DateRange } from '../loader/date-range';
 import { assignProgramDateTime, mapDateRanges } from '../loader/m3u8-parser';
+import { PlaylistLevelType } from '../types/loader';
 import type { ILogger } from './logger';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
@@ -67,6 +68,7 @@ export function updateFragPTSDTS(
   endPTS: number,
   startDTS: number,
   endDTS: number,
+  iframesOnly: boolean | undefined,
   logger: ILogger,
 ): number {
   const parsedMediaDuration = endPTS - startPTS;
@@ -105,10 +107,12 @@ export function updateFragPTSDTS(
   }
 
   const drift = startPTS - frag.start;
-  if (frag.start !== 0) {
-    frag.setStart(startPTS);
+  if (!iframesOnly) {
+    if (frag.start !== 0) {
+      frag.setStart(startPTS);
+    }
+    frag.setDuration(endPTS - frag.start);
   }
-  frag.setDuration(endPTS - frag.start);
   frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
   frag.startDTS = startDTS;
@@ -121,26 +125,28 @@ export function updateFragPTSDTS(
   if (!details || sn < details.startSN || sn > details.endSN) {
     return 0;
   }
-  let i: number;
-  const fragIdx = sn - details.startSN;
-  const fragments = details.fragments;
-  // update frag reference in fragments array
-  // rationale is that fragments array might not contain this frag object.
-  // this will happen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
-  // if we don't update frag, we won't be able to propagate PTS info on the playlist
-  // resulting in invalid sliding computation
-  fragments[fragIdx] = frag;
-  // adjust fragment PTS/duration from seqnum-1 to frag 0
-  for (i = fragIdx; i > 0; i--) {
-    updateFromToPTS(fragments[i], fragments[i - 1]);
-  }
+  if (!iframesOnly) {
+    let i: number;
+    const fragIdx = sn - details.startSN;
+    const fragments = details.fragments;
+    // update frag reference in fragments array
+    // rationale is that fragments array might not contain this frag object.
+    // this will happen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
+    // if we don't update frag, we won't be able to propagate PTS info on the playlist
+    // resulting in invalid sliding computation
+    fragments[fragIdx] = frag;
+    // adjust fragment PTS/duration from seqnum-1 to frag 0
+    for (i = fragIdx; i > 0; i--) {
+      updateFromToPTS(fragments[i], fragments[i - 1]);
+    }
 
-  // adjust fragment PTS/duration from seqnum to last frag
-  for (i = fragIdx; i < fragments.length - 1; i++) {
-    updateFromToPTS(fragments[i], fragments[i + 1]);
-  }
-  if (details.fragmentHint) {
-    updateFromToPTS(fragments[fragments.length - 1], details.fragmentHint);
+    // adjust fragment PTS/duration from seqnum to last frag
+    for (i = fragIdx; i < fragments.length - 1; i++) {
+      updateFromToPTS(fragments[i], fragments[i + 1]);
+    }
+    if (details.fragmentHint) {
+      updateFromToPTS(fragments[fragments.length - 1], details.fragmentHint);
+    }
   }
 
   details.PTSKnown = details.alignedSliding = true;
@@ -297,6 +303,8 @@ export function mergeDetails(
 
   // if at least one fragment contains PTS info, recompute PTS information for all fragments
   if (PTSFrag) {
+    const iframesOnly =
+      newDetails.iframesOnly && PTSFrag.type === PlaylistLevelType.MAIN;
     updateFragPTSDTS(
       newDetails,
       PTSFrag,
@@ -304,6 +312,7 @@ export function mergeDetails(
       PTSFrag.endPTS as number,
       PTSFrag.startDTS as number,
       PTSFrag.endDTS as number,
+      iframesOnly,
       logger,
     );
   } else {

@@ -4,12 +4,14 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { PlaylistLevelType } from '../types/loader';
 import { type ILogger, Logger } from '../utils/logger';
+import { types, writeUint32 } from '../utils/mp4-tools';
 import {
   timestampToString,
   toMsFromMpegTsClock,
 } from '../utils/timescale-conversion';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
+import type { ChunkMetadata } from '../hls';
 import type { SourceBufferName } from '../types/buffer';
 import type {
   AudioSample,
@@ -61,6 +63,7 @@ function createMp4Sample(
       degradPrio: 0,
       dependsOn: isKeyframe ? 2 : 1,
       isNonSync: isKeyframe ? 0 : 1,
+      paddingValue: 0,
     },
   };
 }
@@ -172,6 +175,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     accurateTimeOffset: boolean,
     flush: boolean,
     playlistType: PlaylistLevelType,
+    chunkMeta: ChunkMetadata,
   ): RemuxerResult {
     let video: RemuxedTrack | undefined;
     let audio: RemuxedTrack | undefined;
@@ -187,7 +191,8 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     // parameter is greater than -1. The pid is set when the PMT is parsed, which contains the tracks list.
     // However, if the initSegment has already been generated, or we've reached the end of a segment (flush),
     // then we can remux one track without waiting for the other.
-    const hasAudio = audioTrack.pid > -1;
+    const iframesOnly = chunkMeta.iframe;
+    const hasAudio = !iframesOnly && audioTrack.pid > -1;
     const hasVideo = videoTrack.pid > -1;
     const length = videoTrack.samples.length;
     const enoughAudioSamples = audioTrack.samples.length > 0;
@@ -302,6 +307,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
               videoTimeOffset,
               isVideoContiguous,
               audioTrackLength,
+              chunkMeta,
             );
           }
         } else if (enoughVideoSamples) {
@@ -310,6 +316,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
             videoTimeOffset,
             isVideoContiguous,
             0,
+            chunkMeta,
           );
         }
         if (video) {
@@ -532,6 +539,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     timeOffset: number,
     contiguous: boolean,
     audioTrackLength: number,
+    chunkMeta: ChunkMetadata,
   ): RemuxedTrack | undefined {
     const timeScale: number = track.inputTimeScale;
     const inputSamples: Array<VideoSample> = track.samples;
@@ -542,8 +550,8 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     let nextVideoTs = this.nextVideoTs;
     let offset = 8;
     let mp4SampleDuration = this.videoSampleDuration;
-    let firstDTS;
-    let lastDTS;
+    let firstDTS: number;
+    let lastDTS: number;
     let minPTS: number = Number.POSITIVE_INFINITY;
     let maxPTS: number = Number.NEGATIVE_INFINITY;
     let sortSamples = false;
@@ -566,7 +574,6 @@ export default class MP4Remuxer extends Logger implements Remuxer {
         nextVideoTs = pts - cts - initTime;
       }
     }
-
     // PTS is coded on 33bits, and can loop from -2^32 to 2^32
     // PTSNormalize will make PTS/DTS value monotonic, we use last known DTS value as reference value
     const nextVideoPts = nextVideoTs + initTime;
@@ -707,7 +714,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     /* concatenate the video data and construct the mdat in place
       (need 8 more bytes to fill length and mpdat type) */
     const mdatSize = naluLen + 4 * nbNalu + 8;
-    let mdat;
+    let mdat: Uint8Array<ArrayBuffer>;
     try {
       mdat = new Uint8Array(mdatSize);
     } catch (err) {
@@ -721,9 +728,8 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       });
       return;
     }
-    const view = new DataView(mdat.buffer);
-    view.setUint32(0, mdatSize);
-    mdat.set(MP4.types.mdat, 4);
+    writeUint32(mdat, 0, mdatSize);
+    writeUint32(mdat, 4, types.mdat);
 
     let stretchedLastFrame = false;
     let minDtsDelta = Number.POSITIVE_INFINITY;
@@ -739,7 +745,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
         const unit = VideoSampleUnits[j];
         const unitData = unit.data;
         const unitDataLen = unit.data.byteLength;
-        view.setUint32(offset, unitDataLen);
+        writeUint32(mdat, offset, unitDataLen);
         offset += 4;
         mdat.set(unitData, offset);
         offset += unitDataLen;
@@ -860,8 +866,20 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     this.nextVideoTs = nextVideoTs = endDTS - initTime;
     this.videoSampleDuration = mp4SampleDuration;
     this.isVideoContiguous = true;
+    if (__USE_IFRAMES__) {
+      if (chunkMeta.iframe && outputSamples.length === 1) {
+        outputSamples[0].duration = mp4SampleDuration =
+          chunkMeta.duration * timeScale;
+        this.nextVideoTs = nextVideoTs =
+          firstDTS + mp4SampleDuration - initTime;
+      } else {
+        this.warn(
+          `Not adjusting IFrame duration (sample count ${outputSamples.length})`,
+        );
+      }
+    }
     const moof = MP4.moof(
-      track.sequenceNumber++,
+      chunkMeta.sn,
       firstDTS,
       Object.assign(track, {
         samples: outputSamples,
@@ -1071,7 +1089,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     }
     let firstPTS: number | null = null;
     let lastPTS: number | null = null;
-    let mdat: any;
+    let mdat: Uint8Array<ArrayBuffer> | undefined;
     let mdatSize: number = 0;
     let sampleLength: number = inputSamples.length;
     while (sampleLength--) {
@@ -1111,16 +1129,17 @@ export default class MP4Remuxer extends Logger implements Remuxer {
             return;
           }
           if (!rawMPEG) {
-            const view = new DataView(mdat.buffer);
-            view.setUint32(0, mdatSize);
-            mdat.set(MP4.types.mdat, 4);
+            writeUint32(mdat, 0, mdatSize);
+            writeUint32(mdat, 4, types.mdat);
           }
         } else {
           // no audio samples
           return;
         }
       }
-      mdat.set(unit, offset);
+      if (mdat) {
+        mdat.set(unit, offset);
+      }
       const unitLen = unit.byteLength;
       offset += unitLen;
       // Default the sample's duration to the computed mp4SampleDuration, which will either be 1024 for AAC or 1152 for MPEG

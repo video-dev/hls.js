@@ -293,8 +293,12 @@ export default class GapController extends TaskLoop {
 
     const stalledDuration = tnow - stalled;
     if (
+      // not seeking
       !seeking &&
-      (stalledDuration >= detectStallWithCurrentTimeMs || tWaiting) &&
+      // currentTime has not advanced after threshold or "waiting" event after start
+      (stalledDuration >= detectStallWithCurrentTimeMs ||
+        (tWaiting && this.moved)) &&
+      // not destroyed
       this.hls
     ) {
       // Dispatch MEDIA_ENDED when media.ended/ended event is not signalled at end of stream
