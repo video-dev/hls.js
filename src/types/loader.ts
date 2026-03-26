@@ -7,11 +7,25 @@ import type { Part } from '../loader/fragment';
 import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
 
+export const enum LoaderContextType {
+  MANIFEST = 'manifest',
+  LEVEL = 'level',
+  AUDIO_TRACK = 'audioTrack',
+  SUBTITLE_TRACK = 'subtitleTrack',
+  MEDIA_FRAGMENT = 'media-fragment',
+  KEY = 'key',
+  STEERING_MANIFEST = 'steering-manifest',
+  SERVER_CERTIFICATE = 'server-certificate',
+  INTERSTITIAL_ASSET_LIST = 'interstitial-asset-list',
+}
+
 export interface LoaderContext {
   // target URL
   url: string;
   // loader response type (arraybuffer or default response type for playlist)
   responseType: string;
+  // context type identifier for custom loaders
+  type: LoaderContextType;
   // headers
   headers?: Record<string, string>;
   // start byte range offset
@@ -23,12 +37,14 @@ export interface LoaderContext {
 }
 
 export interface FragmentLoaderContext extends LoaderContext {
+  type: LoaderContextType.MEDIA_FRAGMENT;
   frag: Fragment;
   part: Part | null;
   resetIV?: boolean;
 }
 
 export interface KeyLoaderContext extends LoaderContext {
+  type: LoaderContextType.KEY;
   keyInfo: KeyLoaderInfo;
   frag: Fragment;
 }
@@ -166,12 +182,11 @@ export interface Loader<T extends LoaderContext> {
   stats: LoaderStats;
 }
 
-export const enum PlaylistContextType {
-  MANIFEST = 'manifest',
-  LEVEL = 'level',
-  AUDIO_TRACK = 'audioTrack',
-  SUBTITLE_TRACK = 'subtitleTrack',
-}
+export type PlaylistContextType =
+  | LoaderContextType.MANIFEST
+  | LoaderContextType.LEVEL
+  | LoaderContextType.AUDIO_TRACK
+  | LoaderContextType.SUBTITLE_TRACK;
 
 export const enum PlaylistLevelType {
   MAIN = 'main',

@@ -1994,6 +1994,8 @@ export interface FragmentLoaderContext extends LoaderContext {
     part: Part | null;
     // (undocumented)
     resetIV?: boolean;
+    // (undocumented)
+    type: LoaderContextType.MEDIA_FRAGMENT;
 }
 
 // Warning: (ae-missing-release-tag) "FragmentLoadProgressCallback" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -3113,6 +3115,8 @@ export interface KeyLoaderContext extends LoaderContext {
     frag: Fragment;
     // (undocumented)
     keyInfo: KeyLoaderInfo;
+    // (undocumented)
+    type: LoaderContextType.KEY;
 }
 
 // Warning: (ae-missing-release-tag) "KeyLoaderInfo" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -3772,7 +3776,33 @@ export interface LoaderContext {
     // (undocumented)
     responseType: string;
     // (undocumented)
+    type: LoaderContextType;
+    // (undocumented)
     url: string;
+}
+
+// Warning: (ae-missing-release-tag) "LoaderContextType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export const enum LoaderContextType {
+    // (undocumented)
+    AUDIO_TRACK = "audioTrack",
+    // (undocumented)
+    INTERSTITIAL_ASSET_LIST = "interstitial-asset-list",
+    // (undocumented)
+    KEY = "key",
+    // (undocumented)
+    LEVEL = "level",
+    // (undocumented)
+    MANIFEST = "manifest",
+    // (undocumented)
+    MEDIA_FRAGMENT = "media-fragment",
+    // (undocumented)
+    SERVER_CERTIFICATE = "server-certificate",
+    // (undocumented)
+    STEERING_MANIFEST = "steering-manifest",
+    // (undocumented)
+    SUBTITLE_TRACK = "subtitleTrack"
 }
 
 // Warning: (ae-missing-release-tag) "LoaderOnAbort" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -4406,16 +4436,7 @@ export type PlayheadTimes = {
 // Warning: (ae-missing-release-tag) "PlaylistContextType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export const enum PlaylistContextType {
-    // (undocumented)
-    AUDIO_TRACK = "audioTrack",
-    // (undocumented)
-    LEVEL = "level",
-    // (undocumented)
-    MANIFEST = "manifest",
-    // (undocumented)
-    SUBTITLE_TRACK = "subtitleTrack"
-}
+export type PlaylistContextType = LoaderContextType.MANIFEST | LoaderContextType.LEVEL | LoaderContextType.AUDIO_TRACK | LoaderContextType.SUBTITLE_TRACK;
 
 // Warning: (ae-missing-release-tag) "PlaylistControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
