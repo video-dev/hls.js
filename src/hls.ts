@@ -1541,6 +1541,7 @@ export type {
 } from './types/level';
 export type {
   PlaylistLevelType,
+  LoaderContextType,
   HlsChunkPerformanceTiming,
   HlsPerformanceTiming,
   HlsProgressivePerformanceTiming,

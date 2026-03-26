@@ -7,6 +7,14 @@ import {
   isMediaFragment,
 } from '../loader/fragment';
 import { LevelKey } from '../loader/level-key';
+import {
+  type Loader,
+  type LoaderCallbacks,
+  type LoaderConfiguration,
+  type LoaderContext,
+  LoaderContextType,
+  type PlaylistLevelType,
+} from '../types/loader';
 import { arrayValuesMatch } from '../utils/arrays';
 import {
   addEventListener,
@@ -39,13 +47,6 @@ import type {
   ManifestLoadedData,
   MediaAttachedData,
 } from '../types/events';
-import type {
-  Loader,
-  LoaderCallbacks,
-  LoaderConfiguration,
-  LoaderContext,
-  PlaylistLevelType,
-} from '../types/loader';
 
 type KeySystemAccessPromises = {
   keySystemAccess: Promise<MediaKeySystemAccess>;
@@ -1226,6 +1227,7 @@ class EMEController extends Logger implements ComponentAPI {
     this.log(`Fetching server certificate for "${keySystem}"`);
     return new Promise((resolve, reject) => {
       const loaderContext: LoaderContext = {
+        type: LoaderContextType.SERVER_CERTIFICATE,
         responseType: 'arraybuffer',
         url,
       };

@@ -5,6 +5,7 @@ import {
 } from './interstitial-event';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
+import { LoaderContextType } from '../types/loader';
 import type { InterstitialEvent } from './interstitial-event';
 import type Hls from '../hls';
 import type { ErrorData } from '../types/events';
@@ -59,6 +60,7 @@ export class AssetListLoader {
     const Loader = config.loader;
     const loader = new Loader(config) as Loader<LoaderContext>;
     const context: LoaderContext = {
+      type: LoaderContextType.INTERSTITIAL_ASSET_LIST,
       responseType: 'json',
       url: url.href,
     };

@@ -1,6 +1,7 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
 import { hlsDefaultConfig } from '../../../src/config';
+import { LoaderContextType } from '../../../src/types/loader';
 import FetchLoader from '../../../src/utils/fetch-loader';
 import type { LoaderConfig } from '../../../src/config';
 import type {
@@ -48,6 +49,7 @@ describe('FetchLoader', function () {
     context = {
       url: 'https://example.com/test.m3u8',
       responseType: 'text',
+      type: LoaderContextType.MANIFEST,
     };
     config = createLoaderConfig();
     callbacks = {

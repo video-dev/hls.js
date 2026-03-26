@@ -7,9 +7,10 @@ import {
   type LoaderCallbacks,
   type LoaderConfiguration,
   type LoaderContext,
+  LoaderContextType,
   type LoaderResponse,
   type LoaderStats,
-  PlaylistContextType,
+  type PlaylistContextType,
 } from '../types/loader';
 import { AttrList } from '../utils/attr-list';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
@@ -320,9 +321,9 @@ export default class ContentSteeringController
     );
     for (let i = 0; i < levels.length; i++) {
       if (
-        (type === PlaylistContextType.AUDIO_TRACK &&
+        (type === LoaderContextType.AUDIO_TRACK &&
           levels[i].hasAudioGroup(groupId)) ||
-        (type === PlaylistContextType.SUBTITLE_TRACK &&
+        (type === LoaderContextType.SUBTITLE_TRACK &&
           levels[i].hasSubtitleGroup(groupId))
       ) {
         return levels[i].pathwayId;
@@ -437,6 +438,7 @@ export default class ContentSteeringController
       url.searchParams.set('_HLS_throughput', '' + throughput);
     }
     const context: LoaderContext = {
+      type: LoaderContextType.STEERING_MANIFEST,
       responseType: 'json',
       url: url.href,
     };

@@ -7,7 +7,7 @@ import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { Level } from '../types/level';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import { LoaderContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { alignStream } from '../utils/discontinuities';
 import {
@@ -817,7 +817,7 @@ class AudioStreamController
         if (
           !data.levelRetry &&
           this.state === State.WAITING_TRACK &&
-          data.context?.type === PlaylistContextType.AUDIO_TRACK
+          data.context?.type === LoaderContextType.AUDIO_TRACK
         ) {
           this.state = State.IDLE;
         }

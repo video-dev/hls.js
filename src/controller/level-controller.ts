@@ -2,7 +2,7 @@ import BasePlaylistController from './base-playlist-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { isVideoRange, Level, VideoRangeValues } from '../types/level';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import { LoaderContextType, PlaylistLevelType } from '../types/loader';
 import {
   areCodecsMediaSourceSupported,
   codecsSetSelectionPreferenceValue,
@@ -578,7 +578,7 @@ export default class LevelController extends BasePlaylistController {
     }
 
     if (
-      data.context.type === PlaylistContextType.LEVEL &&
+      data.context.type === LoaderContextType.LEVEL &&
       data.context.level === this.level
     ) {
       this.checkRetry(data);
