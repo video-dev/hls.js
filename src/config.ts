@@ -69,6 +69,7 @@ export type BufferControllerConfig = {
    * @deprecated use backBufferLength
    */
   liveBackBufferLength: number | null;
+  maxAppendSize: number;
 };
 
 export type CapLevelControllerConfig = {
@@ -392,6 +393,7 @@ export const hlsDefaultConfig: HlsConfig = {
   maxBufferLength: 30, // used by stream-controller
   backBufferLength: Infinity, // used by buffer-controller
   frontBufferFlushThreshold: Infinity,
+  maxAppendSize: Infinity, // used by buffer-controller
   startOnSegmentBoundary: false, // used by stream-controller
   nextAudioTrackBufferFlushForwardOffset: 0.25, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller

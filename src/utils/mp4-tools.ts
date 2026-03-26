@@ -41,6 +41,119 @@ export function readUint32(buffer: Uint8Array, offset: number): number {
   return val < 0 ? 4294967296 + val : val;
 }
 
+/**
+ * Read the size of an fMP4 box at the given offset, handling both standard
+ * and 64-bit extended sizes. Returns the box size in bytes, or 0 if the
+ * box header is invalid or truncated.
+ */
+export function readMp4BoxSize(
+  data: Uint8Array,
+  pos: number,
+  end: number,
+): number {
+  if (pos + 8 > end) {
+    return 0;
+  }
+  const size = readUint32(data, pos);
+  if (size === 0) {
+    return end - pos;
+  }
+  if (size === 1 && pos + 16 <= end) {
+    const hi = readUint32(data, pos + 8);
+    return hi > 0 ? end - pos : readUint32(data, pos + 12);
+  }
+  if (size < 8 || pos + size > end) {
+    return 0;
+  }
+  return size;
+}
+
+/**
+ * Try to split data at fMP4 top-level box boundaries into chunks of at
+ * most maxBytes. Returns null if box-boundary splitting cannot produce
+ * chunks that all fit within maxBytes (e.g. a single giant mdat box).
+ */
+export function splitAtBoxBoundaries(
+  data: Uint8Array<ArrayBuffer>,
+  maxBytes: number,
+): Uint8Array<ArrayBuffer>[] | null {
+  if (data.byteLength < 8) {
+    return null;
+  }
+  const chunks: Uint8Array<ArrayBuffer>[] = [];
+  const end = data.byteLength;
+  let chunkStart = 0;
+  let pos = 0;
+
+  while (pos < end) {
+    const boxSize = readMp4BoxSize(data, pos, end);
+    if (boxSize === 0) {
+      break;
+    }
+    if (pos > chunkStart && pos - chunkStart + boxSize > maxBytes) {
+      chunks.push(
+        new Uint8Array(
+          data.buffer,
+          data.byteOffset + chunkStart,
+          pos - chunkStart,
+        ),
+      );
+      chunkStart = pos;
+    }
+    pos += boxSize;
+  }
+
+  if (chunkStart < end) {
+    chunks.push(
+      new Uint8Array(
+        data.buffer,
+        data.byteOffset + chunkStart,
+        end - chunkStart,
+      ),
+    );
+  }
+
+  const allFit =
+    chunks.length > 1 && !chunks.some((c) => c.byteLength > maxBytes);
+  return allFit ? chunks : null;
+}
+
+/**
+ * Split a large buffer into chunks of at most maxBytes.
+ * Tries to split at fMP4 top-level box boundaries first. If the data
+ * contains a single box larger than maxBytes (e.g. a giant mdat), falls
+ * back to naive byte splitting — MSE SourceBuffer handles reassembly of
+ * partial boxes internally.
+ */
+export function splitAppendData(
+  data: Uint8Array<ArrayBuffer>,
+  maxBytes: number,
+): Uint8Array<ArrayBuffer>[] {
+  if (data.byteLength <= maxBytes) {
+    return [data];
+  }
+
+  const boxChunks = splitAtBoxBoundaries(data, maxBytes);
+  if (boxChunks) {
+    return boxChunks;
+  }
+
+  // Fallback: naive byte splitting. MSE SourceBuffer handles partial box
+  // reassembly across sequential appendBuffer() calls.
+  const chunks: Uint8Array<ArrayBuffer>[] = [];
+  const end = data.byteLength;
+  for (let offset = 0; offset < end; offset += maxBytes) {
+    chunks.push(
+      new Uint8Array(
+        data.buffer,
+        data.byteOffset + offset,
+        Math.min(maxBytes, end - offset),
+      ),
+    );
+  }
+  return chunks;
+}
+
 export function readUint64(buffer: Uint8Array, offset: number) {
   let result = readUint32(buffer, offset);
   result *= Math.pow(2, 32);

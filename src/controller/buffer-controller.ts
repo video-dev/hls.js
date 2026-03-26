@@ -22,6 +22,7 @@ import {
   isCompatibleTrackChange,
   isManagedMediaSource,
 } from '../utils/mediasource-helper';
+import { splitAppendData } from '../utils/mp4-tools';
 import { stringify } from '../utils/safe-json-stringify';
 import type { FragmentTracker } from './fragment-tracker';
 import type { HlsConfig } from '../config';
@@ -785,8 +786,30 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     event: Events.BUFFER_APPENDING,
     eventData: BufferAppendingData,
   ) {
+    const { data, type } = eventData;
+    const { maxAppendSize } = this.hls.config;
+
+    // Split large fMP4 segments into smaller chunks to avoid QuotaExceededError.
+    // Each chunk becomes a separate operation with full error handling.
+    if (isFinite(maxAppendSize) && data.byteLength > maxAppendSize) {
+      const chunks = splitAppendData(data, maxAppendSize);
+      if (chunks.length > 1) {
+        this.log(
+          `Splitting large ${type} append (sn:${eventData.frag.sn}, ` +
+            `${(data.byteLength / 1e6).toFixed(1)}MB) into ${chunks.length} chunks`,
+        );
+        for (let i = 0; i < chunks.length; i++) {
+          this.onBufferAppending(event, {
+            ...eventData,
+            data: chunks[i],
+          });
+        }
+        return;
+      }
+    }
+
     const { tracks } = this;
-    const { data, type, parent, frag, part, chunkMeta, offset } = eventData;
+    const { parent, frag, part, chunkMeta, offset } = eventData;
     const chunkStats = chunkMeta.buffering[type];
     const { sn, cc } = frag;
     const bufferAppendingStart = self.performance.now();
