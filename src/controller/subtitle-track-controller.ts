@@ -1,6 +1,6 @@
 import BasePlaylistController from './base-playlist-controller';
 import { Events } from '../events';
-import { PlaylistContextType } from '../types/loader';
+import { LoaderContextType } from '../types/loader';
 import { IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import {
@@ -385,7 +385,7 @@ class SubtitleTrackController extends BasePlaylistController {
     }
 
     if (
-      data.context.type === PlaylistContextType.SUBTITLE_TRACK &&
+      data.context.type === LoaderContextType.SUBTITLE_TRACK &&
       data.context.id === this.trackId &&
       inGroupOrNone(data.context.groupId, this.groupIds)
     ) {

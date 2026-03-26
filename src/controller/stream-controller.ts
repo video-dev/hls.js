@@ -7,7 +7,7 @@ import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { changeTypeSupported } from '../is-supported';
 import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import { LoaderContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { BufferHelper } from '../utils/buffer-helper';
 import { pickMostCompleteCodecName } from '../utils/codecs';
@@ -986,7 +986,7 @@ export default class StreamController
         if (
           !data.levelRetry &&
           this.state === State.WAITING_LEVEL &&
-          data.context?.type === PlaylistContextType.LEVEL
+          data.context?.type === LoaderContextType.LEVEL
         ) {
           this.state = State.IDLE;
         }
