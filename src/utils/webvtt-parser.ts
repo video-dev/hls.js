@@ -1,4 +1,4 @@
-import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
+import { utf8ArrayToStr } from '@svta/cml-id3';
 import { hash } from './hash';
 import { toMpegTsClockFromTimescale } from './timescale-conversion';
 import { VTTParser } from './vttparser';
