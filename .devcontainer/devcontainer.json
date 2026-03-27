@@ -1,16 +1,14 @@
 {
   "name": "HLS.JS Dev Container",
-  "build": {
-    "dockerfile": "Dockerfile",
-    "context": ".."
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "containerEnv": {
+    "IN_DEV_CONTAINER": "true",
+    "CHROME_BIN": "/usr/bin/chromium"
   },
-
   "customizations": {
     "vscode": {
       "extensions": ["esbenp.prettier-vscode"]
     }
   },
-
-  "remoteUser": "root",
-  "postCreateCommand": "mise trust -- --non-interactive && mise install --yes"
+  "postCreateCommand": "bash .devcontainer/post-create.sh"
 }
