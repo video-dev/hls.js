@@ -8,7 +8,7 @@ export NVM_DIR="$HOME/.nvm"
 \. "$NVM_DIR/nvm.sh"
 
 echo "Installing node..."
-nvm install $(cat .node-version)
+nvm install "$(< .node-version)"
 
 echo "Installing chromium..."
 sudo apt-get update -y
