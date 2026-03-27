@@ -538,7 +538,7 @@ describe('AudioTrackController', function () {
       });
     });
 
-    it('should set audio track with flushImmediate=true by default', function () {
+    it('should set audio track with flushImmediate=true by default (no audioPreference set)', function () {
       const triggerSpy = sinon.spy(hls, 'trigger');
       audioTrackController.audioTrack = 1;
 
@@ -550,6 +550,44 @@ describe('AudioTrackController', function () {
           flushImmediate: true,
         }),
       );
+    });
+
+    it('should set audio track with flushImmediate=true when audioPreference.flushImmediate is true', function () {
+      (hls as unknown as Hls).config.audioPreference = { flushImmediate: true };
+      const triggerSpy = sinon.spy(hls, 'trigger');
+      audioTrackController.audioTrack = 1;
+
+      expect(audioTrackController.trackId).to.equal(1);
+      expect(triggerSpy).to.have.been.calledWith(
+        Events.AUDIO_TRACK_SWITCHING,
+        sinon.match({
+          id: 1,
+          flushImmediate: true,
+        }),
+      );
+    });
+
+    it('should set audio track with flushImmediate=false when audioPreference.flushImmediate is false', function () {
+      (hls as unknown as Hls).config.audioPreference = {
+        flushImmediate: false,
+      };
+      const triggerSpy = sinon.spy(hls, 'trigger');
+      audioTrackController.audioTrack = 1;
+
+      expect(audioTrackController.trackId).to.equal(1);
+      expect(triggerSpy).to.have.been.calledWith(
+        Events.AUDIO_TRACK_SWITCHING,
+        sinon.match({
+          id: 1,
+          flushImmediate: false,
+        }),
+      );
+    });
+
+    it('should set selectDefaultTrack to false when audioTrack is set from API', function () {
+      (audioTrackController as any).selectDefaultTrack = true;
+      audioTrackController.audioTrack = 1;
+      expect((audioTrackController as any).selectDefaultTrack).to.be.false;
     });
   });
 });
