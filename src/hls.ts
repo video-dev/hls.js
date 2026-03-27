@@ -37,6 +37,7 @@ import type ErrorController from './controller/error-controller';
 import type FPSController from './controller/fps-controller';
 import type InterstitialsController from './controller/interstitials-controller';
 import type { InterstitialsManager } from './controller/interstitials-controller';
+import type MediaFragmentController from './controller/media-fragment-controller';
 import type { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import type SubtitleTrackController from './controller/subtitle-track-controller';
 import type Decrypter from './crypt/decrypter';
@@ -105,6 +106,7 @@ export default class Hls implements HlsEventEmitter {
   private audioTrackController?: AudioTrackController;
   private subtitleTrackController?: SubtitleTrackController;
   private interstitialsController?: InterstitialsController;
+  private mediaFragmentController?: MediaFragmentController;
   private gapController: GapController;
   private emeController?: EMEController;
   private cmcdController?: CMCDController;
@@ -317,6 +319,11 @@ export default class Hls implements HlsEventEmitter {
       coreComponents,
     );
 
+    this.mediaFragmentController = this.createController(
+      config.mediaFragmentController,
+      coreComponents,
+    );
+
     this.coreComponents = coreComponents;
 
     // Error controller handles errors before and after all other controllers
@@ -526,7 +533,7 @@ export default class Hls implements HlsEventEmitter {
       this.attachMedia(media);
     }
     // when attaching to a source URL, trigger a playlist load
-    this.trigger(Events.MANIFEST_LOADING, { url: url });
+    this.trigger(Events.MANIFEST_LOADING, { url });
   }
 
   /**
@@ -1304,6 +1311,7 @@ export type {
   ErrorController,
   FPSController,
   InterstitialsController,
+  MediaFragmentController,
   StreamController,
   SubtitleStreamController,
   SubtitleTrackController,
@@ -1581,3 +1589,4 @@ export type {
   RationalTimestamp,
   TimestampOffset,
 } from './utils/timescale-conversion';
+export type { TemporalFragment } from './utils/media-fragment-parser';
