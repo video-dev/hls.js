@@ -3,6 +3,7 @@ const { buildRollupConfig, BUILD_TYPE, FORMAT } = require('./build-config');
 // Do not add coverage for JavaScript debugging when running `test:unit:debug`
 // eslint-disable-next-line no-undef
 const includeCoverage = !process.env.DEBUG_UNIT_TESTS && !process.env.CI;
+const isDevContainer = process.env.IN_DEV_CONTAINER === 'true';
 
 const rollupPreprocessor = buildRollupConfig({
   type: BUILD_TYPE.full,
@@ -70,7 +71,14 @@ module.exports = function (config) {
 
     // start these browsers
     // available browser launchers: https://npmjs.org/browse/keyword/karma-launcher
-    browsers: ['ChromeHeadless'],
+    browsers: [isDevContainer ? 'ChromeHeadlessNoSandbox' : 'ChromeHeadless'],
+
+    customLaunchers: {
+      ChromeHeadlessNoSandbox: {
+        base: 'ChromeHeadless',
+        flags: ['--no-sandbox'],
+      },
+    },
 
     // Continuous Integration mode
     // if true, Karma captures browsers, runs the tests and exits

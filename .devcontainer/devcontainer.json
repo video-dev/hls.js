@@ -1,0 +1,14 @@
+{
+  "name": "HLS.JS Dev Container",
+  "image": "mcr.microsoft.com/devcontainers/base:bookworm",
+  "containerEnv": {
+    "IN_DEV_CONTAINER": "true",
+    "CHROME_BIN": "/usr/bin/chromium"
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": ["esbenp.prettier-vscode"]
+    }
+  },
+  "postCreateCommand": "bash .devcontainer/post-create.sh"
+}
