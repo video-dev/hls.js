@@ -153,6 +153,14 @@ export type FPSControllerConfig = {
   fpsDroppedMonitoringThreshold: number;
 };
 
+export type ErrorControllerConfig = {
+  /**
+   * Duration in milliseconds after which a penalized level (loadError > 0) becomes
+   * eligible for re-election. Set to 0 (default) to disable penalty expiry.
+   */
+  errorPenaltyExpireMs: number;
+};
+
 export type LevelControllerConfig = {
   startLevel?: number;
 };
@@ -350,6 +358,7 @@ export type HlsConfig = {
   BufferControllerConfig &
   CapLevelControllerConfig &
   EMEControllerConfig &
+  ErrorControllerConfig &
   FPSControllerConfig &
   GapControllerConfig &
   LevelControllerConfig &
@@ -478,6 +487,7 @@ export const hlsDefaultConfig: HlsConfig = {
   interstitialLiveLookAhead: 10,
   useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
   preserveManualLevelOnError: false,
+  errorPenaltyExpireMs: 0, // used by error-controller and abr-controller
 
   certLoadPolicy: {
     default: defaultLoadPolicy,
