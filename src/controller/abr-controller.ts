@@ -1,4 +1,5 @@
 import { ErrorDetails } from '../errors';
+import { isPenaltyExpired } from '../utils/error-helper';
 import { Events } from '../events';
 import { type Fragment, fragmentsAreEqual } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
@@ -959,8 +960,9 @@ class AbrController extends Logger implements AbrComponentAPI {
       const canSwitchWithinTolerance =
         // if adjusted bw is greater than level bitrate AND
         adjustedbw >= bitrate &&
-        // no level change, or new level has no error history
+        // no level change, penalty expired, or new level has no error history
         (i === lastLoadedFragLevel ||
+          isPenaltyExpired(levelInfo, this.hls.config.errorPenaltyExpireMs) ||
           (levelInfo.loadError === 0 && levelInfo.fragmentError === 0)) &&
         // fragment fetchDuration unknown OR live stream OR fragment fetchDuration less than max allowed fetch duration, then this level matches
         // we don't account for max Fetch Duration for live streams, this is to avoid switching down when near the edge of live sliding window ...

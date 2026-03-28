@@ -6,6 +6,7 @@ import { LoaderContextType, PlaylistLevelType } from '../types/loader';
 import { getCodecsForMimeType } from '../utils/codecs';
 import {
   getRetryConfig,
+  isPenaltyExpired,
   isKeyError,
   isTimeoutError,
   isUnusableKeyError,
@@ -362,6 +363,7 @@ export default class ErrorController
     if (level) {
       const errorDetails = data.details;
       level.loadError++;
+      level.loadErrorTime = self.performance.now();
       if (errorDetails === ErrorDetails.BUFFER_APPEND_ERROR) {
         level.fragmentError++;
       }
@@ -397,7 +399,8 @@ export default class ErrorController
           candidate !== loadLevel &&
           candidate >= minAutoLevel &&
           candidate <= maxAutoLevel &&
-          levels[candidate].loadError === 0
+          (levels[candidate].loadError === 0 ||
+            isPenaltyExpired(levels[candidate], hls.config.errorPenaltyExpireMs))
         ) {
           const levelCandidate = levels[candidate];
 
@@ -514,6 +517,7 @@ export default class ErrorController
         if (levels[i].videoRange !== 'SDR') {
           levels[i].fragmentError++;
           levels[i].loadError++;
+          levels[i].loadErrorTime = self.performance.now();
         } else if (nextAutoLevel === undefined) {
           nextAutoLevel = i;
         }
