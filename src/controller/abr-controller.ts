@@ -1,8 +1,8 @@
 import { ErrorDetails } from '../errors';
-import { isPenaltyExpired } from '../utils/error-helper';
 import { Events } from '../events';
 import { type Fragment, fragmentsAreEqual } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
+import { isPenaltyExpired } from '../utils/error-helper';
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import { Logger } from '../utils/logger';
 import {

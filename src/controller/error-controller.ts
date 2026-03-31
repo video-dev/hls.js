@@ -6,8 +6,8 @@ import { LoaderContextType, PlaylistLevelType } from '../types/loader';
 import { getCodecsForMimeType } from '../utils/codecs';
 import {
   getRetryConfig,
-  isPenaltyExpired,
   isKeyError,
+  isPenaltyExpired,
   isTimeoutError,
   isUnusableKeyError,
   shouldRetry,
