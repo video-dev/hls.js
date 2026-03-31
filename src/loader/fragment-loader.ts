@@ -1,4 +1,5 @@
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { LoaderContextType } from '../types/loader';
 import { getLoaderConfigWithoutReties } from '../utils/error-helper';
 import type { BaseSegment, Fragment, Part } from './fragment';
 import type { HlsConfig } from '../config';
@@ -321,6 +322,7 @@ function createLoaderContext(
 ): FragmentLoaderContext {
   const segment: BaseSegment = part || frag;
   const loaderContext: FragmentLoaderContext = {
+    type: LoaderContextType.MEDIA_FRAGMENT,
     frag,
     part,
     responseType: 'arraybuffer',
