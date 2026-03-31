@@ -96,7 +96,7 @@
     "chart.js": "2.9.4",
     "chromedriver": "145.0.6",
     "doctoc": "2.3.0",
-    "es-check": "9.6.2",
+    "es-check": "9.6.3",
     "eslint": "8.57.1",
     "eslint-config-prettier": "10.1.8",
     "eslint-plugin-import": "2.32.0",
