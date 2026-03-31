@@ -104,7 +104,7 @@ export function isPenaltyExpired(level: Level, expireMs: number): boolean {
   return (
     expireMs > 0 &&
     level.loadError > 0 &&
-    level.loadErrorTime > 0 &&
+    level.loadErrorTime !== 0 &&
     self.performance.now() - level.loadErrorTime > expireMs
   );
 }
