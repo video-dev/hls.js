@@ -517,7 +517,6 @@ export default class ErrorController
         if (levels[i].videoRange !== 'SDR') {
           levels[i].fragmentError++;
           levels[i].loadError++;
-          levels[i].loadErrorTime = self.performance.now();
         } else if (nextAutoLevel === undefined) {
           nextAutoLevel = i;
         }
