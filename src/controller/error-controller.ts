@@ -400,7 +400,10 @@ export default class ErrorController
           candidate >= minAutoLevel &&
           candidate <= maxAutoLevel &&
           (levels[candidate].loadError === 0 ||
-            isPenaltyExpired(levels[candidate], hls.config.errorPenaltyExpireMs))
+            isPenaltyExpired(
+              levels[candidate],
+              hls.config.errorPenaltyExpireMs,
+            ))
         ) {
           const levelCandidate = levels[candidate];
 
