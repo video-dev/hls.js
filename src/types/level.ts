@@ -120,6 +120,7 @@ export class Level {
   public details?: LevelDetails;
   public fragmentError: number = 0;
   public loadError: number = 0;
+  public loadErrorTime: number = 0;
   public loaded?: { bytes: number; duration: number };
   public realBitrate: number = 0;
   public supportedPromise?: Promise<MediaDecodingInfo>;

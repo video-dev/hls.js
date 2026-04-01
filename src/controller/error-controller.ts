@@ -7,6 +7,7 @@ import { getCodecsForMimeType } from '../utils/codecs';
 import {
   getRetryConfig,
   isKeyError,
+  isPenaltyExpired,
   isTimeoutError,
   isUnusableKeyError,
   shouldRetry,
@@ -362,6 +363,7 @@ export default class ErrorController
     if (level) {
       const errorDetails = data.details;
       level.loadError++;
+      level.loadErrorTime = self.performance.now();
       if (errorDetails === ErrorDetails.BUFFER_APPEND_ERROR) {
         level.fragmentError++;
       }
@@ -397,7 +399,11 @@ export default class ErrorController
           candidate !== loadLevel &&
           candidate >= minAutoLevel &&
           candidate <= maxAutoLevel &&
-          levels[candidate].loadError === 0
+          (levels[candidate].loadError === 0 ||
+            isPenaltyExpired(
+              levels[candidate],
+              hls.config.errorPenaltyExpireMs,
+            ))
         ) {
           const levelCandidate = levels[candidate];
 

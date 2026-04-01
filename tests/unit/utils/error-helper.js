@@ -1,7 +1,22 @@
 import { expect } from 'chai';
-import { shouldRetry } from '../../../src/utils/error-helper';
+import { isPenaltyExpired, shouldRetry } from '../../../src/utils/error-helper';
 
 describe('ErrorHelper', function () {
+  describe('isPenaltyExpired', function () {
+    it('level with loadError but no loadErrorTime is not elected', function () {
+      const level = { loadError: 1, loadErrorTime: 0 };
+      expect(isPenaltyExpired(level, 60_000)).to.be.false;
+    });
+
+    it('level with loadError and elapsed loadErrorTime is elected', function () {
+      const level = {
+        loadError: 1,
+        loadErrorTime: self.performance.now() - 60_001,
+      };
+      expect(isPenaltyExpired(level, 60_000)).to.be.true;
+    });
+  });
+
   it('shouldRetry', function () {
     const retryConfig = {
       maxNumRetry: 3,

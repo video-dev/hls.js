@@ -2,6 +2,7 @@ import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { type Fragment, fragmentsAreEqual } from '../loader/fragment';
 import { PlaylistLevelType } from '../types/loader';
+import { isPenaltyExpired } from '../utils/error-helper';
 import EwmaBandWidthEstimator from '../utils/ewma-bandwidth-estimator';
 import { Logger } from '../utils/logger';
 import {
@@ -959,9 +960,10 @@ class AbrController extends Logger implements AbrComponentAPI {
       const canSwitchWithinTolerance =
         // if adjusted bw is greater than level bitrate AND
         adjustedbw >= bitrate &&
-        // no level change, or new level has no error history
+        // no level change, new level has no error history or penalty expired because error happened a while ago
         (i === lastLoadedFragLevel ||
-          (levelInfo.loadError === 0 && levelInfo.fragmentError === 0)) &&
+          (levelInfo.loadError === 0 && levelInfo.fragmentError === 0) ||
+          isPenaltyExpired(levelInfo, this.hls.config.errorPenaltyExpireMs)) &&
         // fragment fetchDuration unknown OR live stream OR fragment fetchDuration less than max allowed fetch duration, then this level matches
         // we don't account for max Fetch Duration for live streams, this is to avoid switching down when near the edge of live sliding window ...
         // special case to support startLevel = -1 (bitrateTest) on live streams : in that case we should not exit loop so that findBestLevel will return -1
