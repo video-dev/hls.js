@@ -1408,6 +1408,49 @@ export function parseMultiPssh(
   return results;
 }
 
+function parseWidevinePsshKids(
+  data: Uint8Array<ArrayBuffer>,
+): Uint8Array<ArrayBuffer>[] {
+  const kids: Uint8Array<ArrayBuffer>[] = [];
+  for (let i = 0; i < data.length; ) {
+    const tag = data[i++];
+    const wireType = tag & 7;
+    if (wireType === 0) {
+      // Varint
+      while (data[i++] & 0x80) {
+        /* empty */
+      }
+      continue;
+    }
+    if (wireType !== 2) {
+      // 1	64-bit fixed // 5	32-bit fixed
+      i += wireType === 1 ? 8 : 4;
+      continue;
+    }
+    let len = 0;
+    for (let shift = 0, b = 0x80; b & 0x80; shift += 7) {
+      len |= ((b = data[i++]) & 0x7f) << shift;
+    }
+    if (tag >> 3 === 2) {
+      // key_id - 16 raw bytes or 32-byte ASCII hex string
+      if (len === 32) {
+        const kid = new Uint8Array(16) as Uint8Array<ArrayBuffer>;
+        for (let j = 0; j < 16; j++) {
+          kid[j] = parseInt(
+            String.fromCharCode(data[i + j * 2], data[i + j * 2 + 1]),
+            16,
+          );
+        }
+        kids.push(kid);
+      } else if (len === 16) {
+        kids.push(data.subarray(i, i + 16));
+      }
+    }
+    i += len;
+  }
+  return kids;
+}
+
 function parsePssh(view: DataView<ArrayBuffer>): PsshData | PsshInvalidResult {
   const size = view.getUint32(0);
   const offset = view.byteOffset;
@@ -1462,6 +1505,9 @@ function parsePssh(view: DataView<ArrayBuffer>): PsshData | PsshInvalidResult {
     offset + dataSizeOffset + 4,
     dataSizeOrKidCount,
   );
+  if (version === 0) {
+    kids = parseWidevinePsshKids(data);
+  }
   return {
     version,
     systemId,

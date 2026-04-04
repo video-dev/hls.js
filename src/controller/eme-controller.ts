@@ -29,6 +29,7 @@ import {
   isPersistentSessionType,
   keySystemDomainToKeySystemFormat,
   keySystemFormatToKeySystemDomain,
+  KeySystemIds,
   KeySystems,
   parsePlayReadyWRM,
   requestMediaKeySystemAccess,
@@ -765,7 +766,9 @@ class EMEController extends Logger implements ComponentAPI {
         } else if (keySystem === KeySystems.PLAYREADY) {
           keyId = parsePlayReadyWRM(new Uint8Array(initData));
         } else if (keySystem === KeySystems.WIDEVINE) {
-          const psshResults = parseMultiPssh(initData);
+          const psshResults = parseMultiPssh(initData).filter(
+            (result) => result.systemId === KeySystemIds.WIDEVINE,
+          );
           if (psshResults.length) {
             const psshData = psshResults[0];
             keyId = psshData.kids?.length ? psshData.kids[0] : null;
