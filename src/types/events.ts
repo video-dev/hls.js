@@ -117,6 +117,9 @@ export interface BufferFlushingData {
 
 export interface BufferFlushedData {
   type: SourceBufferName;
+  start: number;
+  end: number;
+  error?: Error;
 }
 
 export interface ManifestLoadingData {

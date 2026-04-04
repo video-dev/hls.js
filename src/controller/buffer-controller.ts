@@ -118,10 +118,7 @@ export default class BufferController extends Logger implements ComponentAPI {
     audiovideo: 0,
   };
   private appendError?: ErrorData;
-  // Tracks whether a QuotaExceededError back-buffer eviction is in progress
-  // for a given SourceBuffer type. While true, subsequent QuotaExceededErrors
-  // on the same type piggyback on the pending eviction instead of triggering
-  // their own or emitting BUFFER_FULL_ERROR.
+  // Tracks whether a QuotaExceededError back-buffer eviction is in progress for a given SourceBuffer type.
   private _quotaEvictionPending: Partial<Record<SourceBufferName, boolean>> =
     {};
   // Record of required or created buffers by type. SourceBuffer is stored in Track.buffer once created.
@@ -859,7 +856,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
 
     const fragStart = (part || frag).start;
-    let quotaEvictionAttempted = false;
     const operation: BufferOperation = {
       label: `append-${type}`,
       execute: () => {
@@ -914,31 +910,22 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           `quota` in error;
 
         if (isQuotaError) {
-          // An eviction is already in flight for this type — piggyback on it
-          // by queuing a retry after the pending remove, no new eviction needed.
-          if (this._quotaEvictionPending[type]) {
-            this.log(
-              `QuotaExceededError on "${type}" sn: ${sn} — eviction already pending, queuing retry`,
-            );
-            this.insertNext([operation], type);
-            return;
-          }
-
           // First QuotaExceededError for this type: evict minimum back buffer
-          if (!quotaEvictionAttempted) {
+          if (!this._quotaEvictionPending[type]) {
             const evictEnd = this.getBackBufferEvictionTarget(
               type,
               data.byteLength,
               frag.type,
             );
             if (evictEnd > 0) {
-              quotaEvictionAttempted = true;
               this._quotaEvictionPending[type] = true;
               this.log(
                 `QuotaExceededError on "${type}" append sn: ${sn} — evicting back buffer to ${evictEnd.toFixed(3)}s and retrying`,
               );
-              const removeOp = this.getQuotaEvictionFlushOp(type, 0, evictEnd);
-              this.insertNext([removeOp, operation], type);
+              const removeOp = this.getFlushOp(type, 0, evictEnd);
+              const clearOp = this.getClearEvictionPendingOp(type);
+
+              this.insertNext([removeOp, operation, clearOp], type);
               return;
             }
             this.warn(
@@ -1014,30 +1001,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     this.append(operation, type, this.isPending(this.tracks[type]));
   }
 
-  // Like getFlushOp but clears _quotaEvictionPending on complete/error
-  private getQuotaEvictionFlushOp(
-    type: SourceBufferName,
-    start: number,
-    end: number,
-  ): BufferOperation {
-    this.log(`queuing quota-eviction "${type}" remove ${start}-${end}`);
+  private getClearEvictionPendingOp(type: string): BufferOperation {
     return {
-      label: 'remove',
+      label: 'clear',
       execute: () => {
-        this.removeExecutor(type, start, end);
+        this._quotaEvictionPending[type] = false;
       },
       onStart: () => {},
-      onComplete: () => {
-        this._quotaEvictionPending[type] = false;
-        this.hls.trigger(Events.BUFFER_FLUSHED, { type });
-      },
-      onError: (error: Error) => {
-        this._quotaEvictionPending[type] = false;
-        this.warn(
-          `Failed to remove ${start}-${end} from "${type}" SourceBuffer (quota eviction)`,
-          error,
-        );
-      },
+      onComplete: () => {},
+      onError: () => {},
     };
   }
 
@@ -1057,13 +1029,19 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       },
       onComplete: () => {
         // logger.debug(`[buffer-controller]: Finished flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
-        this.hls.trigger(Events.BUFFER_FLUSHED, { type });
+        this.hls.trigger(Events.BUFFER_FLUSHED, { type, start, end });
       },
       onError: (error: Error) => {
         this.warn(
           `Failed to remove ${start}-${end} from "${type}" SourceBuffer`,
           error,
         );
+        this.hls.trigger(Events.BUFFER_FLUSHED, {
+          type,
+          start: 0,
+          end: 0,
+          error,
+        });
       },
     };
   }
@@ -1677,6 +1655,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           if (removedRanges?.length) {
             this.hls.trigger(Events.BUFFER_FLUSHED, {
               type: type,
+              start: removedRanges.start(0),
+              end: removedRanges.end(removedRanges.length - 1),
             });
           }
         },
@@ -1837,11 +1817,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const track = this.tracks[type];
     const sb = track?.buffer;
     if (!media || !mediaSource || !sb) {
-      this.warn(
+      throw new Error(
         `Attempting to remove from the ${type} SourceBuffer, but it does not exist`,
       );
-      this.shiftAndExecuteNext(type);
-      return;
     }
     const mediaDuration = Number.isFinite(media.duration)
       ? media.duration
@@ -1858,8 +1836,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       );
       sb.remove(removeStart, removeEnd);
     } else {
-      // Cycle the queue
-      this.shiftAndExecuteNext(type);
+      throw new Error(
+        `Cannot remove ${removeEnd <= removeStart ? `invalid range (${removeStart} >= ${removeEnd}) ` : ''}from the ${type} SourceBuffer${track.ending ? ' while track ending' : ''}`,
+      );
     }
   }
 
