@@ -1342,7 +1342,7 @@ export default class BaseStreamController
     const config = this.config;
     const minLength = Math.max(
       Math.min(threshold - fragDuration, config.maxBufferLength),
-      fragDuration,
+      fragDuration / 2,
     );
     const reducedLength = Math.max(
       threshold - fragDuration * 3,
@@ -2037,6 +2037,16 @@ export default class BaseStreamController
         // in that case flush the whole audio buffer to recover
         this.warn(
           `Buffer full error while media.currentTime (${this.getLoadPosition()}) is not buffered, flush ${playlistType} buffer`,
+        );
+      } else if (
+        bufferedInfo.nextStart &&
+        frag &&
+        bufferedInfo.nextStart > frag.start
+      ) {
+        this.flushMainBuffer(
+          bufferedInfo.nextStart,
+          Number.POSITIVE_INFINITY,
+          playlistType === PlaylistLevelType.AUDIO ? playlistType : undefined,
         );
       }
       if (frag) {

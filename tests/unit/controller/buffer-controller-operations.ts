@@ -780,8 +780,7 @@ describe('BufferController with attached media', function () {
       ).to.have.been.calledOnce;
     });
 
-    it('dequeues the remove operation if the requested remove range is not valid', function () {
-      // Does not flush if start greater than end
+    it('Errors and signals flushed with error when the requested remove range is not valid', function () {
       hls.trigger(Events.BUFFER_FLUSHING, {
         startOffset: 9001,
         endOffset: 9000,
@@ -811,7 +810,27 @@ describe('BufferController with attached media', function () {
       expect(
         triggerSpy,
         'Only Events.BUFFER_FLUSHING should have been triggered',
-      ).to.have.been.calledOnce;
+      ).to.have.been.calledThrice;
+      const err1 = triggerSpy.getCall(1).lastArg.error;
+      const err2 = triggerSpy.getCall(2).lastArg.error;
+      expect(triggerSpy).to.have.been.calledWith(Events.BUFFER_FLUSHED, {
+        start: 0,
+        end: 0,
+        type: 'video',
+        error: err1,
+      });
+      expect(err1.message).to.eq(
+        'Cannot remove invalid range (9001 >= 9000) from the video SourceBuffer',
+      );
+      expect(triggerSpy).to.have.been.calledWith(Events.BUFFER_FLUSHED, {
+        start: 0,
+        end: 0,
+        type: 'audio',
+        error: err2,
+      });
+      expect(err2.message).to.eq(
+        'Cannot remove invalid range (9001 >= 9000) from the audio SourceBuffer',
+      );
     });
   });
 

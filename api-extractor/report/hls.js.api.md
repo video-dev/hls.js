@@ -804,6 +804,12 @@ export interface BufferEOSData {
 // @public (undocumented)
 export interface BufferFlushedData {
     // (undocumented)
+    end: number;
+    // (undocumented)
+    error?: Error;
+    // (undocumented)
+    start: number;
+    // (undocumented)
     type: SourceBufferName;
 }
 
