@@ -39,6 +39,8 @@ export default class LevelController extends BasePlaylistController {
   private steering: ContentSteeringController | null;
   private lastABRSwitchTime: number = -1;
 
+  private _iframeVariants: LevelParsed[] = [];
+
   public onParsedComplete!: Function;
 
   constructor(
@@ -96,6 +98,8 @@ export default class LevelController extends BasePlaylistController {
     this.currentLevel = null;
     this._levels = [];
     this._maxAutoLevel = -1;
+
+    this._iframeVariants = [];
   }
 
   private onManifestLoading(
@@ -119,33 +123,18 @@ export default class LevelController extends BasePlaylistController {
 
     data.levels.forEach((levelParsed: LevelParsed) => {
       const attributes = levelParsed.attrs;
-      let { audioCodec, videoCodec } = levelParsed;
-      if (audioCodec) {
-        // Returns empty and set to undefined for 'mp4a.40.34' with fallback to 'audio/mpeg' SourceBuffer
-        levelParsed.audioCodec = audioCodec =
-          getCodecCompatibleName(audioCodec, preferManagedMediaSource) ||
-          undefined;
-      }
-
-      if (videoCodec) {
-        videoCodec = levelParsed.videoCodec = convertAVC1ToAVCOTI(videoCodec);
-      }
-
-      // only keep levels with supported audio/video codecs
-      const { width, height, unknownCodecs } = levelParsed;
-      const unknownUnsupportedCodecCount = unknownCodecs?.length || 0;
-
-      resolutionFound ||= !!(width && height);
-      videoCodecFound ||= !!videoCodec;
-      audioCodecFound ||= !!audioCodec;
-      if (
-        unknownUnsupportedCodecCount ||
-        (audioCodec && !this.isAudioSupported(audioCodec)) ||
-        (videoCodec && !this.isVideoSupported(videoCodec))
-      ) {
+      const supported = setTrackCodecsAndReturnSupported(
+        levelParsed,
+        preferManagedMediaSource,
+      );
+      const { audioCodec, videoCodec, width, height } = levelParsed;
+      if (!supported) {
         this.log(`Some or all CODECS not supported "${attributes.CODECS}"`);
         return;
       }
+      resolutionFound ||= !!(width && height);
+      videoCodecFound ||= !!videoCodec;
+      audioCodecFound ||= !!audioCodec;
 
       const {
         CODECS,
@@ -174,7 +163,7 @@ export default class LevelController extends BasePlaylistController {
         const level = this.createLevel(levelParsed);
         redundantSet[levelKey] = level;
         levels.push(level);
-      } else {
+      } else if (!levelParsed.iframes) {
         redundantSet[levelKey].addGroupId('audio', attributes.AUDIO);
         redundantSet[levelKey].addGroupId('text', attributes.SUBTITLES);
       }
@@ -194,7 +183,10 @@ export default class LevelController extends BasePlaylistController {
     const supplemental = levelParsed.supplemental;
     if (
       supplemental?.videoCodec &&
-      !this.isVideoSupported(supplemental.videoCodec)
+      !isVideoSupported(
+        supplemental.videoCodec,
+        this.hls.config.preferManagedMediaSource,
+      )
     ) {
       const error = new Error(
         `SUPPLEMENTAL-CODECS not supported "${supplemental.videoCodec}"`,
@@ -203,22 +195,6 @@ export default class LevelController extends BasePlaylistController {
       level.supportedResult = getUnsupportedResult(error, []);
     }
     return level;
-  }
-
-  private isAudioSupported(codec: string): boolean {
-    return areCodecsMediaSourceSupported(
-      codec,
-      'audio',
-      this.hls.config.preferManagedMediaSource,
-    );
-  }
-
-  private isVideoSupported(codec: string): boolean {
-    return areCodecsMediaSourceSupported(
-      codec,
-      'video',
-      this.hls.config.preferManagedMediaSource,
-    );
   }
 
   private filterAndSortMediaOptions(
@@ -232,6 +208,7 @@ export default class LevelController extends BasePlaylistController {
     let subtitleTracks: MediaPlaylist[] = [];
     let levels = filteredLevels;
     const statsParsing = data.stats?.parsing || {};
+    const preferManagedMediaSource = this.hls.config.preferManagedMediaSource;
 
     // remove audio-only and invalid video-range levels if we also have levels with video codecs or RESOLUTION signalled
     if ((resolutionFound || videoCodecFound) && audioCodecFound) {
@@ -276,7 +253,9 @@ export default class LevelController extends BasePlaylistController {
 
     if (data.audioTracks) {
       audioTracks = data.audioTracks.filter(
-        (track) => !track.audioCodec || this.isAudioSupported(track.audioCodec),
+        (track) =>
+          !track.audioCodec ||
+          isAudioSupported(track.audioCodec, preferManagedMediaSource),
       );
       // Assign ids after filtering as array indices by group-id
       assignTrackIdsByGroup(audioTracks);
@@ -369,6 +348,11 @@ export default class LevelController extends BasePlaylistController {
       }
     }
 
+    const iframeVariants = data.iframeVariants.filter((parsedVariant) =>
+      setTrackCodecsAndReturnSupported(parsedVariant, preferManagedMediaSource),
+    );
+    this._iframeVariants = iframeVariants;
+
     // Audio is only alternate if manifest include a URI along with the audio group tag,
     // and this is not an audio-only stream where levels contain audio-only
     const audioOnly = audioCodecFound && !videoCodecFound;
@@ -380,6 +364,7 @@ export default class LevelController extends BasePlaylistController {
       levels,
       audioTracks,
       subtitleTracks,
+      iframeVariants,
       sessionData: data.sessionData,
       sessionKeys: data.sessionKeys,
       firstLevel: this._firstLevel,
@@ -391,6 +376,13 @@ export default class LevelController extends BasePlaylistController {
     };
     statsParsing.end = performance.now();
     this.hls.trigger(Events.MANIFEST_PARSED, edata);
+  }
+
+  get iframeVariants(): LevelParsed[] | null {
+    if (this._iframeVariants.length === 0) {
+      return null;
+    }
+    return this._iframeVariants;
   }
 
   get levels(): Level[] | null {
@@ -764,6 +756,54 @@ export default class LevelController extends BasePlaylistController {
       });
     }
   }
+}
+
+function isAudioSupported(
+  codec: string,
+  preferManagedMediaSource: boolean,
+): boolean {
+  return areCodecsMediaSourceSupported(
+    codec,
+    'audio',
+    preferManagedMediaSource,
+  );
+}
+
+function isVideoSupported(
+  codec: string,
+  preferManagedMediaSource: boolean,
+): boolean {
+  return areCodecsMediaSourceSupported(
+    codec,
+    'video',
+    preferManagedMediaSource,
+  );
+}
+
+function setTrackCodecsAndReturnSupported(
+  levelParsed: LevelParsed,
+  preferManagedMediaSource: boolean,
+): boolean {
+  let { audioCodec, videoCodec } = levelParsed;
+  if (audioCodec) {
+    // Returns empty and set to undefined for 'mp4a.40.34' with fallback to 'audio/mpeg' SourceBuffer
+    levelParsed.audioCodec = audioCodec =
+      getCodecCompatibleName(audioCodec, preferManagedMediaSource) || undefined;
+  }
+  if (videoCodec) {
+    videoCodec = levelParsed.videoCodec = convertAVC1ToAVCOTI(videoCodec);
+  }
+  // only keep levels with supported audio/video codecs
+  const { unknownCodecs } = levelParsed;
+  const unknownUnsupportedCodecCount = unknownCodecs?.length || 0;
+  if (
+    unknownUnsupportedCodecCount ||
+    (audioCodec && !isAudioSupported(audioCodec, preferManagedMediaSource)) ||
+    (videoCodec && !isVideoSupported(videoCodec, preferManagedMediaSource))
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function assignTrackIdsByGroup(tracks: MediaPlaylist[]): void {

@@ -427,6 +427,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     const {
       contentSteering,
       levels,
+      iframeVariants,
       sessionData,
       sessionKeys,
       startTimeOffset,
@@ -511,11 +512,11 @@ class PlaylistLoader implements NetworkComponentAPI {
         });
       }
     }
-
     hls.trigger(Events.MANIFEST_LOADED, {
       levels,
       audioTracks,
       subtitles,
+      iframeVariants,
       captions,
       contentSteering,
       url,
@@ -572,6 +573,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       hls.trigger(Events.MANIFEST_LOADED, {
         levels: [singleLevel],
         audioTracks: [],
+        iframeVariants: [],
         url,
         stats,
         networkDetails,
@@ -719,6 +721,18 @@ class PlaylistLoader implements NetworkComponentAPI {
       typeof context.level === 'number' && parent === PlaylistLevelType.MAIN
         ? (level as number)
         : undefined;
+    if (
+      __USE_IFRAMES__ &&
+      levelOrTrack &&
+      'iframes' in levelOrTrack &&
+      levelOrTrack.iframes &&
+      !levelDetails.iframesOnly
+    ) {
+      levelDetails.playlistParsingError = new Error(
+        `EXT-X-I-FRAME-STREAM-INF media playlist MUST contain an EXT-X-I-FRAMES-ONLY tag`,
+      );
+      levelDetails.iframesOnly = true;
+    }
     const error = levelDetails.playlistParsingError;
     if (error) {
       this.hls.logger.warn(`${error} ${levelDetails.url}`);

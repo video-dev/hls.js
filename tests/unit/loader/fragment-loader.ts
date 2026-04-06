@@ -47,7 +47,7 @@ describe('FragmentLoader tests', function () {
       const onProgress = sinon.spy();
       const fragmentLoaderPrivates = fragmentLoader as any;
       fragmentLoader
-        .load(frag, onProgress)
+        .load(frag, false, onProgress)
         .then((data) => {
           expect(data).to.deep.equal({
             frag,

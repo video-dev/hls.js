@@ -1494,6 +1494,7 @@ audio_5441.m4s`;
       hls.trigger(Events.MANIFEST_PARSED, {
         levels: [levelInfo],
         audioTracks: [trackInfo],
+        iframeVariants: [],
         subtitleTracks: [],
         sessionData: null,
         sessionKeys: null,

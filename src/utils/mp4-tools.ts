@@ -2,6 +2,7 @@ import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr'
 import { arrayToHex } from './hex';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { logger } from '../utils/logger';
+import type { ChunkMetadata } from '../hls';
 import type { KeySystemIds } from './mediakeys-helper';
 import type { DecryptData } from '../loader/level-key';
 import type { PassthroughTrack, UserdataSample } from '../types/demuxer';
@@ -9,8 +10,52 @@ import type { ILogger } from '../utils/logger';
 
 type BoxDataOrUndefined = Uint8Array<ArrayBuffer> | undefined;
 
-const UINT32_MAX = Math.pow(2, 32) - 1;
-const push = [].push;
+export const UINT32_MAX = Math.pow(2, 32) - 1;
+
+export const types = {
+  avc1: 0x61766331,
+  avcC: 0x61766343,
+  hvc1: 0x68766331,
+  hvcC: 0x68766343,
+  btrt: 0x62747274,
+  dinf: 0x64696e66,
+  dref: 0x64726566,
+  esds: 0x65736473,
+  ftyp: 0x66747970,
+  hdlr: 0x68646c72,
+  mdat: 0x6d646174,
+  mdhd: 0x6d646864,
+  mdia: 0x6d646961,
+  mfhd: 0x6d666864,
+  minf: 0x6d696e66,
+  moof: 0x6d6f6f66,
+  moov: 0x6d6f6f76,
+  mp4a: 0x6d703461,
+  '.mp3': 0x2e6d7033,
+  dac3: 0x64616333,
+  'ac-3': 0x61632d33,
+  mvex: 0x6d766578,
+  mvhd: 0x6d766864,
+  pasp: 0x70617370,
+  sdtp: 0x73647470,
+  stbl: 0x7374626c,
+  stco: 0x7374636f,
+  stsc: 0x73747363,
+  stsd: 0x73747364,
+  stsz: 0x7374737a,
+  stts: 0x73747473,
+  tfdt: 0x74666474,
+  tfhd: 0x74666864,
+  traf: 0x74726166,
+  trak: 0x7472616b,
+  trun: 0x7472756e,
+  trex: 0x74726578,
+  tkhd: 0x746b6864,
+  vmhd: 0x766d6864,
+  smhd: 0x736d6864,
+} as const;
+
+type BoxType = keyof typeof types;
 
 // We are using fixed track IDs for driving the MP4 remuxer
 // instead of following the TS PIDs.
@@ -64,18 +109,11 @@ export function writeUint32(buffer: Uint8Array, offset: number, value: number) {
   buffer[offset + 3] = value & 0xff;
 }
 
-// Find "moof" box
-export function hasMoofData(data: Uint8Array): boolean {
+export function hasBoxData(data: Uint8Array, type: BoxType): boolean {
   const end = data.byteLength;
   for (let i = 0; i < end; ) {
     const size = readUint32(data, i);
-    if (
-      size > 8 &&
-      data[i + 4] === 0x6d &&
-      data[i + 5] === 0x6f &&
-      data[i + 6] === 0x6f &&
-      data[i + 7] === 0x66
-    ) {
+    if (size > 8 && readUint32(data, i + 4) === types[type]) {
       return true;
     }
     i = size > 1 ? i + size : end;
@@ -105,7 +143,7 @@ export function findBox(data: Uint8Array, path: string[]): Uint8Array[] {
         // recursively search for the next box along the path
         const subresults = findBox(data.subarray(i + 8, endbox), path.slice(1));
         if (subresults.length) {
-          push.apply(results, subresults);
+          results.push.apply(results, subresults);
         }
       }
     }
@@ -250,6 +288,7 @@ export interface InitData extends Array<any> {
         stsd: StsdData;
         default?: {
           duration: number;
+          sampleSize: number;
           flags: number;
         };
       }
@@ -306,6 +345,7 @@ export function parseInitSegment(initSegment: Uint8Array): InitData {
     if (track) {
       track.default = {
         duration: readUint32(trex, 12),
+        sampleSize: readUint32(trex, 16),
         flags: readUint32(trex, 20),
       };
     }
@@ -658,12 +698,23 @@ export function parseSinf(sinf: Uint8Array): BoxDataOrUndefined {
      unsigned int(32)  default_sample_flags
   }
  */
+
+type TrackFragmentRunSample = {
+  cts?: number;
+  size: number;
+};
+type TrackFragmentRun = {
+  sampleOffset: number;
+  samples: TrackFragmentRunSample[];
+};
 export type TrackTimes = {
+  cts?: number;
   duration: number;
   keyFrameIndex?: number;
   keyFrameStart?: number;
   start: number;
   sampleCount: number;
+  trun: TrackFragmentRun[];
   timescale: number;
   type: HdlrType;
 };
@@ -671,147 +722,178 @@ export type TrackTimes = {
 export function getSampleData(
   data: Uint8Array,
   initData: InitData,
+  chunkMeta: ChunkMetadata,
   logger: ILogger,
 ): Record<number, TrackTimes> {
   const tracks: Record<number, TrackTimes> = {};
-  const trafs = findBox(data, ['moof', 'traf']);
-  for (let i = 0; i < trafs.length; i++) {
-    const traf = trafs[i];
-    // There is only one tfhd & trun per traf
-    // This is true for CMAF style content, and we should perhaps check the ftyp
-    // and only look for a single trun then, but for ISOBMFF we should check
-    // for multiple track runs.
-    const tfhd = findBox(traf, ['tfhd'])[0];
-    // get the track id from the tfhd
-    const id = readUint32(tfhd, 4);
-    const track = initData[id];
-    if (!track) {
-      continue;
-    }
-    (tracks[id] as any) ||= {
-      start: NaN,
-      duration: 0,
-      sampleCount: 0,
-      timescale: track.timescale,
-      type: track.type,
-    };
-    const trackTimes: TrackTimes = tracks[id];
-    // get start DTS
-    const tfdt = findBox(traf, ['tfdt'])[0];
+  const moofs = findBox(data, ['moof']);
+  const eof = data.byteLength;
+  for (let mi = 0; mi < moofs.length; mi++) {
+    const moof = moofs[mi];
+    const moofOffset = moof.byteOffset - 8;
+    const trafs = findBox(moof, ['traf']);
+    for (let i = 0; i < trafs.length; i++) {
+      const traf = trafs[i];
+      // There is only one tfhd & trun per traf
+      // This is true for CMAF style content, and we should perhaps check the ftyp
+      // and only look for a single trun then, but for ISOBMFF we should check
+      // for multiple track runs.
+      const tfhd = findBox(traf, ['tfhd'])[0];
+      // get the track id from the tfhd
+      const id = readUint32(tfhd, 4);
+      const track = initData[id];
+      if (!track) {
+        continue;
+      }
+      const trackTimes = (tracks[id] ||= {
+        start: NaN,
+        duration: 0,
+        sampleCount: 0,
+        trun: [],
+        timescale: track.timescale,
+        type: track.type,
+      });
+      // get start DTS
+      const tfdt = findBox(traf, ['tfdt'])[0];
 
-    if (tfdt as any) {
-      const version = tfdt[0];
-      let baseTime = readUint32(tfdt, 4);
-      if (version === 1) {
-        // If value is too large, assume signed 64-bit. Negative track fragment decode times are invalid, but they exist in the wild.
-        // This prevents large values from being used for initPTS, which can cause playlist sync issues.
-        // https://github.com/video-dev/hls.js/issues/5303
-        if (baseTime === UINT32_MAX) {
-          logger.warn(
-            `[mp4-demuxer]: Ignoring assumed invalid signed 64-bit track fragment decode time`,
-          );
-        } else {
-          baseTime *= UINT32_MAX + 1;
-          baseTime += readUint32(tfdt, 8);
+      if (tfdt as any) {
+        const version = tfdt[0];
+        let baseTime = readUint32(tfdt, 4);
+        if (version === 1) {
+          // If value is too large, assume signed 64-bit. Negative track fragment decode times are invalid, but they exist in the wild.
+          // This prevents large values from being used for initPTS, which can cause playlist sync issues.
+          // https://github.com/video-dev/hls.js/issues/5303
+          if (baseTime === UINT32_MAX) {
+            logger.warn(
+              `[mp4-demuxer]: Ignoring assumed invalid signed 64-bit track fragment decode time`,
+            );
+          } else {
+            baseTime *= UINT32_MAX + 1;
+            baseTime += readUint32(tfdt, 8);
+          }
+        }
+        if (
+          Number.isFinite(baseTime) &&
+          (!Number.isFinite(trackTimes.start) || baseTime < trackTimes.start)
+        ) {
+          trackTimes.start = baseTime;
         }
       }
-      if (
-        Number.isFinite(baseTime) &&
-        (!Number.isFinite(trackTimes.start) || baseTime < trackTimes.start)
-      ) {
-        trackTimes.start = baseTime;
-      }
-    }
 
-    const trackDefault = track.default;
-    const tfhdFlags = readUint32(tfhd, 0) | trackDefault?.flags!;
-    let defaultSampleDuration: number = trackDefault?.duration || 0;
-    if (tfhdFlags & 0x000008) {
-      // 0x000008 indicates the presence of the default_sample_duration field
-      if (tfhdFlags & 0x000002) {
-        // 0x000002 indicates the presence of the sample_description_index field, which precedes default_sample_duration
-        // If present, the default_sample_duration exists at byte offset 12
-        defaultSampleDuration = readUint32(tfhd, 12);
-      } else {
-        // Otherwise, the duration is at byte offset 8
-        defaultSampleDuration = readUint32(tfhd, 8);
-      }
-    }
-    const truns = findBox(traf, ['trun']);
-    let sampleDTS = trackTimes.start || 0;
-    let rawDuration = 0;
-    let sampleDuration = defaultSampleDuration;
-    for (let j = 0; j < truns.length; j++) {
-      const trun = truns[j];
-      const sampleCount = readUint32(trun, 4);
-      const sampleIndex = trackTimes.sampleCount;
-      trackTimes.sampleCount += sampleCount;
-      // Get duration from samples
-      const dataOffsetPresent = trun[3] & 0x01;
-      const firstSampleFlagsPresent = trun[3] & 0x04;
-      const sampleDurationPresent = trun[2] & 0x01;
-      const sampleSizePresent = trun[2] & 0x02;
-      const sampleFlagsPresent = trun[2] & 0x04;
-      const sampleCompositionTimeOffsetPresent = trun[2] & 0x08;
-      let offset = 8;
-      let remaining = sampleCount;
-      if (dataOffsetPresent) {
-        offset += 4;
-      }
-      if (firstSampleFlagsPresent && sampleCount) {
-        const isNonSyncSample = trun[offset + 1] & 0x01;
-        if (!isNonSyncSample && trackTimes.keyFrameIndex === undefined) {
-          trackTimes.keyFrameIndex = sampleIndex;
-        }
-        offset += 4;
-        if (sampleDurationPresent) {
-          sampleDuration = readUint32(trun, offset);
-          offset += 4;
+      const trackDefault = track.default;
+      const tfhdFlags = readUint32(tfhd, 0) | trackDefault?.flags!;
+      let defaultSampleDuration = trackDefault?.duration || 0;
+      const defaultSampleSize = trackDefault?.sampleSize || 0;
+      if (tfhdFlags & 0x000008) {
+        // 0x000008 indicates the presence of the default_sample_duration field
+        if (tfhdFlags & 0x000002) {
+          // 0x000002 indicates the presence of the sample_description_index field, which precedes default_sample_duration
+          // If present, the default_sample_duration exists at byte offset 12
+          defaultSampleDuration = readUint32(tfhd, 12);
         } else {
-          sampleDuration = defaultSampleDuration;
+          // Otherwise, the duration is at byte offset 8
+          defaultSampleDuration = readUint32(tfhd, 8);
         }
-        if (sampleSizePresent) {
-          offset += 4;
-        }
-        if (sampleCompositionTimeOffsetPresent) {
-          offset += 4;
-        }
-        sampleDTS += sampleDuration;
-        rawDuration += sampleDuration;
-        remaining--;
       }
-      while (remaining--) {
-        if (sampleDurationPresent) {
-          sampleDuration = readUint32(trun, offset);
+      let baseDataOffset = 0;
+      const baseDataOffsetPresent = (tfhdFlags & 0x000001) !== 0;
+      const defaultBaseIsMoof =
+        !baseDataOffsetPresent && (tfhdFlags & 0x020000) !== 0;
+      if (baseDataOffsetPresent) {
+        // Should be 64 bit as per 14496-12 standard.
+        // check for possible overflow, and log for now.
+        baseDataOffset = readUint32(tfhd, 8);
+        baseDataOffset *= Math.pow(2, 32);
+        baseDataOffset += readUint32(tfhd, 12);
+      } else if (defaultBaseIsMoof) {
+        baseDataOffset = moofOffset;
+      }
+
+      const truns = findBox(traf, ['trun']);
+      let sampleDTS = trackTimes.start || 0;
+      let rawDuration = 0;
+      let sampleDuration = defaultSampleDuration;
+      for (let j = 0; j < truns.length; j++) {
+        const trun = truns[j];
+        // const version = trun[0];
+        const sampleCount = readUint32(trun, 4);
+        const sampleIndex = trackTimes.sampleCount;
+        trackTimes.sampleCount += sampleCount;
+        // Get duration from samples
+        const dataOffsetPresent = trun[3] & 0x01;
+        let dataOffset = 0;
+        const firstSampleFlagsPresent = trun[3] & 0x04;
+        const sampleDurationPresent = trun[2] & 0x01;
+        const sampleSizePresent = trun[2] & 0x02;
+        const sampleFlagsPresent = trun[2] & 0x04;
+        const sampleCompositionTimeOffsetPresent = trun[2] & 0x08;
+        let offset = 8;
+        if (dataOffsetPresent) {
+          dataOffset = readSint32(trun, offset);
           offset += 4;
-        } else {
-          sampleDuration = defaultSampleDuration;
         }
-        if (sampleSizePresent) {
-          offset += 4;
-        }
-        if (sampleFlagsPresent) {
+        if (firstSampleFlagsPresent) {
           const isNonSyncSample = trun[offset + 1] & 0x01;
-          if (!isNonSyncSample) {
-            if (trackTimes.keyFrameIndex === undefined) {
-              trackTimes.keyFrameIndex =
-                trackTimes.sampleCount - (remaining + 1);
-              trackTimes.keyFrameStart = sampleDTS;
-            }
+          if (!isNonSyncSample && trackTimes.keyFrameIndex === undefined) {
+            trackTimes.keyFrameIndex = sampleIndex;
           }
           offset += 4;
         }
-        if (sampleCompositionTimeOffsetPresent) {
-          offset += 4;
+        let sampleOffset = baseDataOffset + dataOffset;
+        const samples: TrackFragmentRunSample[] = [];
+        if (sampleOffset <= eof) {
+          const fragRun: TrackFragmentRun = {
+            sampleOffset,
+            samples,
+          };
+          trackTimes.trun.push(fragRun);
         }
-        sampleDTS += sampleDuration;
-        rawDuration += sampleDuration;
+        for (let ix = 0; ix < sampleCount; ix++) {
+          const sample: TrackFragmentRunSample = { size: 0 };
+          if (sampleDurationPresent) {
+            sampleDuration = readUint32(trun, offset);
+            offset += 4;
+          } else {
+            sampleDuration = defaultSampleDuration;
+          }
+          if (sampleSizePresent) {
+            sample.size = readUint32(trun, offset);
+            offset += 4;
+          } else {
+            sample.size = defaultSampleSize;
+          }
+          if (sampleOffset <= eof) {
+            samples[ix] = sample;
+          }
+          sampleOffset += sample.size;
+          if (sampleFlagsPresent) {
+            const isNonSyncSample = trun[offset + 1] & 0x01;
+            if (!isNonSyncSample) {
+              if (trackTimes.keyFrameIndex === undefined) {
+                trackTimes.keyFrameIndex = ix;
+                trackTimes.keyFrameStart = sampleDTS;
+              }
+            }
+            offset += 4;
+          }
+          if (sampleCompositionTimeOffsetPresent) {
+            const version = trun[0];
+            if (version === 0) {
+              sample.cts = readUint32(trun, offset);
+            } else {
+              sample.cts = readSint32(trun, offset);
+            }
+            offset += 4;
+          }
+          sampleDTS += sampleDuration;
+          rawDuration += sampleDuration;
+        }
+        if (!rawDuration && defaultSampleDuration) {
+          rawDuration += defaultSampleDuration * sampleCount;
+        }
       }
-      if (!rawDuration && defaultSampleDuration) {
-        rawDuration += defaultSampleDuration * sampleCount;
-      }
+      trackTimes.duration += rawDuration;
     }
-    trackTimes.duration += rawDuration;
   }
   if (!Object.keys(tracks).some((trackId) => tracks[trackId].duration)) {
     // If duration samples are not available in the traf use sidx subsegment_duration
@@ -925,17 +1007,26 @@ export function parseSamples(
         const id = readUint32(tfhd, 4);
         const tfhdFlags = readUint32(tfhd, 0) & 0xffffff;
         const baseDataOffsetPresent = (tfhdFlags & 0x000001) !== 0;
+        let baseDataOffset = 0;
         const sampleDescriptionIndexPresent = (tfhdFlags & 0x000002) !== 0;
         const defaultSampleDurationPresent = (tfhdFlags & 0x000008) !== 0;
         let defaultSampleDuration = 0;
         const defaultSampleSizePresent = (tfhdFlags & 0x000010) !== 0;
         let defaultSampleSize = 0;
         const defaultSampleFlagsPresent = (tfhdFlags & 0x000020) !== 0;
+        const defaultBaseIsMoof =
+          !baseDataOffsetPresent && (tfhdFlags & 0x020000) !== 0;
         let tfhdOffset = 8;
 
         if (id === trackId) {
           if (baseDataOffsetPresent) {
-            tfhdOffset += 8;
+            baseDataOffset = readUint32(tfhd, tfhdOffset);
+            tfhdOffset += 4;
+            baseDataOffset *= Math.pow(2, 32);
+            baseDataOffset += readUint32(tfhd, tfhdOffset);
+            tfhdOffset += 4;
+          } else if (defaultBaseIsMoof) {
+            baseDataOffset = moofOffset;
           }
           if (sampleDescriptionIndexPresent) {
             tfhdOffset += 4;
@@ -978,9 +1069,7 @@ export function parseSamples(
             if (firstSampleFlagsPresent) {
               trunOffset += 4;
             }
-
-            let sampleOffset = dataOffset + moofOffset;
-
+            let sampleOffset = baseDataOffset + dataOffset;
             for (let ix = 0; ix < sampleCount; ix++) {
               if (sampleDurationPresent) {
                 sampleDuration = readUint32(trun, trunOffset);

@@ -33,6 +33,8 @@ import {
 import { appendUint8Array, RemuxerTrackIdConfig } from '../utils/mp4-tools';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
+import type { ChunkMetadata } from '../hls';
+import type { DecryptData } from '../loader/level-key';
 import type BaseVideoParser from './video/base-video-parser';
 import type { AudioFrame, DemuxedAAC } from '../types/demuxer';
 import type { TypeSupported } from '../utils/codecs';
@@ -178,6 +180,8 @@ class TSDemuxer implements Demuxer {
     audioCodec: string,
     videoCodec: string,
     trackDuration: number,
+    decryptdata: DecryptData | null,
+    chunkMeta: ChunkMetadata,
   ) {
     this.pmtParsed = false;
     this._pmtId = -1;
@@ -202,6 +206,15 @@ class TSDemuxer implements Demuxer {
     this.remainderData = null;
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
+
+    if (initSegment) {
+      this.demux(
+        initSegment,
+        0,
+        chunkMeta,
+        decryptdata?.method === 'SAMPLE-AES',
+      );
+    }
   }
 
   public resetTimeStamp() {}
@@ -224,6 +237,7 @@ class TSDemuxer implements Demuxer {
   public demux(
     data: Uint8Array,
     timeOffset: number,
+    chunkMeta: ChunkMetadata,
     isSampleAes = false,
     flush = false,
   ): DemuxerResult {
@@ -238,6 +252,7 @@ class TSDemuxer implements Demuxer {
     const audioTrack = this._audioTrack as DemuxedAudioTrack;
     const id3Track = this._id3Track as DemuxedMetadataTrack;
     const textTrack = this._txtTrack as DemuxedUserdataTrack;
+    const iframe = chunkMeta.iframe;
 
     let videoPid = videoTrack.pid;
     let videoData = videoTrack.pesData;
@@ -307,7 +322,13 @@ class TSDemuxer implements Demuxer {
               ) {
                 this.readyVideoParser(videoTrack.segmentCodec);
                 if (this.videoParser !== null) {
-                  this.videoParser.parsePES(videoTrack, textTrack, pes, false);
+                  this.videoParser.parsePES(
+                    videoTrack,
+                    textTrack,
+                    pes,
+                    false,
+                    chunkMeta,
+                  );
                 }
               }
 
@@ -321,6 +342,9 @@ class TSDemuxer implements Demuxer {
             }
             break;
           case audioPid:
+            if (iframe) {
+              break;
+            }
             if (stt) {
               if (audioData && (pes = parsePES(audioData, this.logger))) {
                 switch (audioTrack.segmentCodec) {
@@ -345,6 +369,9 @@ class TSDemuxer implements Demuxer {
             }
             break;
           case id3Pid:
+            if (iframe) {
+              break;
+            }
             if (stt) {
               if (id3Data && (pes = parsePES(id3Data, this.logger))) {
                 this.parseID3PES(id3Track, pes);
@@ -358,6 +385,9 @@ class TSDemuxer implements Demuxer {
             }
             break;
           case klvPid:
+            if (iframe) {
+              break;
+            }
             if (stt) {
               if (klvData && (pes = parsePES(klvData, this.logger))) {
                 this.parseKlvPES(id3Track, pes);
@@ -465,18 +495,21 @@ class TSDemuxer implements Demuxer {
     };
 
     if (flush) {
-      this.extractRemainingSamples(demuxResult);
+      this.extractRemainingSamples(demuxResult, chunkMeta);
     }
 
     return demuxResult;
   }
 
-  public flush(): DemuxerResult | Promise<DemuxerResult> {
+  public flush(
+    timeOffset: number,
+    chunkMeta: ChunkMetadata,
+  ): DemuxerResult | Promise<DemuxerResult> {
     const { remainderData } = this;
     this.remainderData = null;
     let result: DemuxerResult;
     if (remainderData) {
-      result = this.demux(remainderData, -1, false, true);
+      result = this.demux(remainderData, 0, chunkMeta, false, true);
     } else {
       result = {
         videoTrack: this._videoTrack as DemuxedVideoTrack,
@@ -485,14 +518,17 @@ class TSDemuxer implements Demuxer {
         textTrack: this._txtTrack as DemuxedUserdataTrack,
       };
     }
-    this.extractRemainingSamples(result);
+    this.extractRemainingSamples(result, chunkMeta);
     if (this.sampleAes) {
       return this.decrypt(result, this.sampleAes);
     }
     return result;
   }
 
-  private extractRemainingSamples(demuxResult: DemuxerResult) {
+  private extractRemainingSamples(
+    demuxResult: DemuxerResult,
+    chunkMeta: ChunkMetadata,
+  ) {
     const { audioTrack, videoTrack, id3Track, textTrack } = demuxResult;
     const videoData = videoTrack.pesData;
     const audioData = audioTrack.pesData;
@@ -512,6 +548,7 @@ class TSDemuxer implements Demuxer {
           textTrack as DemuxedUserdataTrack,
           pes,
           true,
+          chunkMeta,
         );
         videoTrack.pesData = null;
       }
@@ -559,10 +596,12 @@ class TSDemuxer implements Demuxer {
     data: Uint8Array,
     keyData: KeyData,
     timeOffset: number,
+    chunkMeta: ChunkMetadata,
   ): Promise<DemuxerResult> {
     const demuxResult = this.demux(
       data,
       timeOffset,
+      chunkMeta,
       true,
       !this.config.progressive,
     );

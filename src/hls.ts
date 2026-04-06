@@ -3,11 +3,7 @@ import { EventEmitter } from 'eventemitter3';
 import { buildAbsoluteURL } from 'url-toolkit';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
 import { FragmentTracker } from './controller/fragment-tracker';
-import GapController from './controller/gap-controller';
-import ID3TrackController from './controller/id3-track-controller';
-import LatencyController from './controller/latency-controller';
 import LevelController from './controller/level-controller';
-import StreamController from './controller/stream-controller';
 import { ErrorDetails, ErrorTypes } from './errors';
 import { Events } from './events';
 import { isMSESupported, isSupported } from './is-supported';
@@ -35,8 +31,15 @@ import type ContentSteeringController from './controller/content-steering-contro
 import type EMEController from './controller/eme-controller';
 import type ErrorController from './controller/error-controller';
 import type FPSController from './controller/fps-controller';
+import type GapController from './controller/gap-controller';
+import type {
+  HlsIFramesOnly,
+  IFrameController,
+} from './controller/iframe-controller';
 import type InterstitialsController from './controller/interstitials-controller';
 import type { InterstitialsManager } from './controller/interstitials-controller';
+import type LatencyController from './controller/latency-controller';
+import type StreamController from './controller/stream-controller';
 import type { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import type SubtitleTrackController from './controller/subtitle-track-controller';
 import type Decrypter from './crypt/decrypter';
@@ -53,6 +56,7 @@ import type {
   NetworkComponentAPI,
 } from './types/component-api';
 import type { MediaAttachingData } from './types/events';
+import type { LevelParsed } from './types/level';
 import type {
   AudioSelectionOption,
   MediaPlaylist,
@@ -89,6 +93,8 @@ export default class Hls implements HlsEventEmitter {
    */
   public readonly logger: ILogger;
 
+  protected _url: string | null = null;
+  protected streamController: StreamController;
   private coreComponents: ComponentAPI[];
   private networkControllers: NetworkComponentAPI[];
   private _emitter: HlsEventEmitter = new EventEmitter();
@@ -97,19 +103,18 @@ export default class Hls implements HlsEventEmitter {
   private abrController: AbrComponentAPI;
   private bufferController: BufferController;
   private capLevelController: CapLevelController;
-  private latencyController: LatencyController;
+  private latencyController?: LatencyController;
   private levelController: LevelController;
-  private streamController: StreamController;
   private audioStreamController?: AudioStreamController;
   private subtititleStreamController?: SubtitleStreamController;
   private audioTrackController?: AudioTrackController;
   private subtitleTrackController?: SubtitleTrackController;
   private interstitialsController?: InterstitialsController;
-  private gapController: GapController;
+  private iframeController?: IFrameController;
+  private gapController?: GapController;
   private emeController?: EMEController;
   private cmcdController?: CMCDController;
   private _media: HTMLMediaElement | null = null;
-  private _url: string | null = null;
   private _sessionId?: string;
   private triggeringException?: boolean;
   private started: boolean = false;
@@ -184,7 +189,7 @@ export default class Hls implements HlsEventEmitter {
     const logger = (this.logger = enableLogs(
       userConfig.debug || false,
       'Hls instance',
-      userConfig.assetPlayerId,
+      userConfig.loggerId || userConfig.assetPlayerId,
     ));
     const config = (this.config = mergeConfig(
       Hls.DefaultConfig,
@@ -199,11 +204,15 @@ export default class Hls implements HlsEventEmitter {
 
     // core controllers and network loaders
     const {
+      streamController: _StreamController,
       abrController: _AbrController,
       bufferController: _BufferController,
       capLevelController: _CapLevelController,
       errorController: _ErrorController,
       fpsController: _FpsController,
+      id3TrackController: _ID3TrackController,
+      iframeController: _IFrameController,
+      gapController: _GapController,
     } = config;
     const errorController = new _ErrorController(this);
     const abrController = (this.abrController = new _AbrController(this));
@@ -220,7 +229,7 @@ export default class Hls implements HlsEventEmitter {
     const capLevelController = (this.capLevelController =
       new _CapLevelController(this));
 
-    const fpsController = new _FpsController(this);
+    const fpsController = _FpsController ? new _FpsController(this) : null;
     const playListLoader = new PlaylistLoader(this);
 
     const _ContentSteeringController = config.contentSteeringController;
@@ -233,23 +242,23 @@ export default class Hls implements HlsEventEmitter {
       contentSteering,
     ));
 
-    const id3TrackController = new ID3TrackController(this);
+    const id3TrackController = _ID3TrackController
+      ? new _ID3TrackController(this)
+      : undefined;
+
     const keyLoader = new KeyLoader(this.config, this.logger);
-    const streamController = (this.streamController = new StreamController(
+    const streamController = (this.streamController = new _StreamController(
       this,
       fragmentTracker,
       keyLoader,
     ));
 
-    const gapController = (this.gapController = new GapController(
-      this,
-      fragmentTracker,
-    ));
+    const gapController = (this.gapController = _GapController
+      ? new _GapController(this, fragmentTracker)
+      : undefined);
 
     // Cap level controller uses streamController to flush the buffer
     capLevelController.setStreamController(streamController);
-    // fpsController uses streamController to switch when frames are being dropped
-    fpsController.setStreamController(streamController);
 
     const networkControllers: NetworkComponentAPI[] = [
       playListLoader,
@@ -264,15 +273,20 @@ export default class Hls implements HlsEventEmitter {
     }
 
     this.networkControllers = networkControllers;
-    const coreComponents: ComponentAPI[] = [
-      abrController,
-      bufferController,
-      gapController,
-      capLevelController,
-      fpsController,
-      id3TrackController,
-      fragmentTracker,
-    ];
+    const coreComponents: ComponentAPI[] = [abrController, bufferController];
+    if (gapController) {
+      coreComponents.push(gapController);
+    }
+    coreComponents.push(capLevelController);
+    if (fpsController) {
+      // fpsController uses streamController to switch when frames are being dropped
+      fpsController.setStreamController(streamController);
+      coreComponents.push(fpsController);
+    }
+    if (id3TrackController) {
+      coreComponents.push(id3TrackController);
+    }
+    coreComponents.push(fragmentTracker);
 
     this.audioTrackController = this.createController(
       config.audioTrackController,
@@ -313,11 +327,14 @@ export default class Hls implements HlsEventEmitter {
       coreComponents,
     );
     this.latencyController = this.createController(
-      LatencyController,
+      config.latencyController,
       coreComponents,
     );
-
     this.coreComponents = coreComponents;
+
+    this.iframeController = _IFrameController
+      ? new _IFrameController(this, Hls)
+      : undefined;
 
     // Error controller handles errors before and after all other controllers
     // This listener will be invoked after all other controllers error listeners
@@ -334,7 +351,7 @@ export default class Hls implements HlsEventEmitter {
     );
   }
 
-  createController(ControllerClass, components) {
+  private createController(ControllerClass, components: ComponentAPI[]) {
     if (ControllerClass) {
       const controllerInstance = new ControllerClass(this);
       if (components) {
@@ -443,6 +460,9 @@ export default class Hls implements HlsEventEmitter {
 
     this.coreComponents.forEach((component) => component.destroy());
     this.coreComponents.length = 0;
+
+    this.iframeController = undefined;
+
     // Remove any references that could be held in config options or callbacks
     const config = this.config;
     config.xhrSetup = config.fetchSetup = undefined;
@@ -1177,7 +1197,7 @@ export default class Hls implements HlsEventEmitter {
    * @returns null prior to loading live Playlist
    */
   get liveSyncPosition(): number | null {
-    return this.latencyController.liveSyncPosition;
+    return this.latencyController?.liveSyncPosition || null;
   }
 
   /**
@@ -1185,7 +1205,7 @@ export default class Hls implements HlsEventEmitter {
    * @returns 0 before first playlist is loaded
    */
   get latency(): number {
-    return this.latencyController.latency;
+    return this.latencyController?.latency || 0;
   }
 
   /**
@@ -1194,17 +1214,18 @@ export default class Hls implements HlsEventEmitter {
    * @returns 0 before first playlist is loaded
    */
   get maxLatency(): number {
-    return this.latencyController.maxLatency;
+    return this.latencyController?.maxLatency || 0;
   }
 
   /**
    * target distance from the edge as calculated by the latency controller
    */
   get targetLatency(): number | null {
-    return this.latencyController.targetLatency;
+    return this.latencyController?.targetLatency || null;
   }
 
   set targetLatency(latency: number) {
+    if (!this.latencyController) return;
     this.latencyController.targetLatency = latency;
   }
 
@@ -1212,7 +1233,7 @@ export default class Hls implements HlsEventEmitter {
    * the rate at which the edge of the current live playlist is advancing or 1 if there is none
    */
   get drift(): number | null {
-    return this.latencyController.drift;
+    return this.latencyController?.drift || null;
   }
 
   /**
@@ -1251,7 +1272,32 @@ export default class Hls implements HlsEventEmitter {
    * returns Interstitials Program Manager
    */
   get interstitialsManager(): InterstitialsManager | null {
-    return this.interstitialsController?.interstitialsManager || null;
+    if (__USE_INTERSTITIALS__ && this.interstitialsController) {
+      return this.interstitialsController.interstitialsManager;
+    }
+    return null;
+  }
+
+  /**
+   * returns an array of parsed iframe variants
+   */
+  get iframeVariants(): LevelParsed[] {
+    const iframeVariants = this.levelController.iframeVariants;
+    return iframeVariants ? iframeVariants : [];
+  }
+
+  /**
+   * Returns an new iframe focused Hls (HlsIFramesOnly) instance based on `iframeVariants` found in the current asset,
+   * or null when none are available. An iframe instance uses iframe variants as its `levels`.
+   * Use HlsIFramesOnly.loadMediaAt(time) to render video IFrames in an attached video element.
+   */
+  createIFramePlayer(
+    configOverride?: Partial<HlsConfig>,
+  ): HlsIFramesOnly | null {
+    if (__USE_IFRAMES__ && this._url && this.iframeController) {
+      return this.iframeController.createIFramePlayer(configOverride);
+    }
+    return null;
   }
 
   /**
@@ -1303,7 +1349,11 @@ export type {
   EMEController,
   ErrorController,
   FPSController,
+  GapController,
+  IFrameController,
+  HlsIFramesOnly,
   InterstitialsController,
+  LatencyController,
   StreamController,
   SubtitleStreamController,
   SubtitleTrackController,
@@ -1374,6 +1424,7 @@ export type {
   ErrorActionFlags,
   IErrorAction,
 } from './controller/error-controller';
+export type { ID3TrackController } from './controller/id3-track-controller';
 export type {
   HlsAssetPlayer,
   HlsAssetPlayerConfig,
@@ -1392,11 +1443,13 @@ export type { DateRange, DateRangeCue } from './loader/date-range';
 export type { LoadStats } from './loader/load-stats';
 export type { LevelKey } from './loader/level-key';
 export type {
+  Base,
   BaseSegment,
   EncryptedFragment,
   Fragment,
   MediaFragment,
   Part,
+  MediaFragmentRef,
   ElementaryStreams,
   ElementaryStreamTypes,
   ElementaryStreamInfo,
@@ -1420,7 +1473,10 @@ export type {
   SnapOptions,
   TimelineOccupancy,
 } from './loader/interstitial-event';
-export type { ParsedMultivariantPlaylist } from './loader/m3u8-parser';
+export type {
+  ParsedMultivariantPlaylist,
+  ParsedMultivariantMediaOptions,
+} from './loader/m3u8-parser';
 export type {
   AttachMediaSourceData,
   BaseTrack,
@@ -1524,6 +1580,10 @@ export type {
   RemuxedUserdata,
   RemuxerResult,
 } from './types/remuxer';
+export type {
+  NetworkDetails,
+  NullableNetworkDetails,
+} from './types/network-details';
 export type { AttrList } from './utils/attr-list';
 export type { Bufferable } from './utils/buffer-helper';
 export type { CaptionScreen } from './utils/cea-608-parser';

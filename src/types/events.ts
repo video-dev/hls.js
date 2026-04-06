@@ -49,6 +49,7 @@ import type { LevelKey } from '../loader/level-key';
 import type { LoadStats } from '../loader/load-stats';
 import type { AttrList } from '../utils/attr-list';
 import type { BufferInfo } from '../utils/buffer-helper';
+import type { TimestampOffset } from '../utils/timescale-conversion';
 
 export interface MediaAttachingData {
   media: HTMLMediaElement;
@@ -135,6 +136,7 @@ export interface ManifestLoadedData {
   audioTracks: MediaPlaylist[];
   captions?: MediaPlaylist[];
   contentSteering: ContentSteeringOptions | null;
+  iframeVariants: LevelParsed[];
   levels: LevelParsed[];
   networkDetails: NullableNetworkDetails;
   sessionData: Record<string, AttrList> | null;
@@ -150,6 +152,7 @@ export interface ManifestParsedData {
   levels: Level[];
   audioTracks: MediaPlaylist[];
   subtitleTracks: MediaPlaylist[];
+  iframeVariants: LevelParsed[];
   sessionData: Record<string, AttrList> | null;
   sessionKeys: LevelKey[] | null;
   firstLevel: number;
@@ -381,6 +384,7 @@ export interface NonNativeTextTracksData {
 }
 
 export interface InitPTSFoundData {
+  timestampOffsets: TimestampOffset[];
   id: PlaylistLevelType;
   frag: MediaFragment;
   initPTS: number;

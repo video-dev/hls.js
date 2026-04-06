@@ -22,6 +22,7 @@ export class LevelDetails {
   public dateRanges: Record<string, DateRange | undefined>;
   public dateRangeTagCount: number = 0;
   public live: boolean = true;
+  public iframesOnly: boolean = false;
   public requestScheduled: number = -1;
   public ageHeader: number = 0;
   public advancedDateTime?: number;

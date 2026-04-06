@@ -156,6 +156,7 @@ describe('SubtitleTrackController', function () {
     hls.trigger(Events.MANIFEST_PARSED, {
       subtitleTracks,
       levels,
+      iframeVariants: [],
       audioTracks: [],
       sessionData: null,
       sessionKeys: null,

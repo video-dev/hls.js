@@ -62,12 +62,8 @@ const flags = {
   variableSubstitution: readFeatureFlag('VARIABLE_SUBSTITUTION'),
   m2tsAdvancedCodecs: readFeatureFlag('M2TS_ADVANCED_CODECS'),
   mediaCapabilities: readFeatureFlag('MEDIA_CAPABILITIES'),
-  interstitials: readFeatureFlag(
-    'INTERSTITIALS',
-    // Backward-compatible support for legacy misspelled env vars
-    'USE_INTERSTITALS',
-    'INTERSTITALS',
-  ),
+  interstitials: readFeatureFlag('INTERSTITIALS'),
+  iframes: readFeatureFlag('IFRAMES'),
 };
 
 function getFeatureSupport(type) {
@@ -81,6 +77,7 @@ function getFeatureSupport(type) {
     m2tsAdvancedCodecs: isFeatureEnabled(type, flags.m2tsAdvancedCodecs),
     mediaCapabilities: isFeatureEnabled(type, flags.mediaCapabilities),
     interstitials: isFeatureEnabled(type, flags.interstitials),
+    iframes: isFeatureEnabled(type, flags.iframes),
   };
 }
 
@@ -105,6 +102,7 @@ const buildConstants = (
     __USE_M2TS_ADVANCED_CODECS__: JSON.stringify(features.m2tsAdvancedCodecs),
     __USE_MEDIA_CAPABILITIES__: JSON.stringify(features.mediaCapabilities),
     __USE_INTERSTITIALS__: JSON.stringify(features.interstitials),
+    __USE_IFRAMES__: JSON.stringify(features.iframes),
 
     ...additional,
   },
@@ -316,6 +314,13 @@ function getAliasesForDist(format, features) {
       '../controller/interstitials-schedule': `../${emptyFile}`,
       '../loader/interstitial-event': `../${emptyFile}`,
       '../loader/interstitial-asset-list': `../${emptyFile}`,
+    };
+  }
+
+  if (!features.iframes) {
+    aliases = {
+      ...aliases,
+      './controller/iframe-controller': `./${emptyFile}`,
     };
   }
 
