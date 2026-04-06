@@ -287,6 +287,9 @@ Find the commit on [https://github.com/video-dev/hls.js/tree/deployments](https:
 
 [![](https://opensource.saucelabs.com/images/opensauce/powered-by-saucelabs-badge-gray.png?sanitize=true)](https://saucelabs.com)
 
+This project is tested with BrowserStack.
+This project is tested with SauceLabs.
+
 ## Compatibility
 
 HLS.js is only compatible with browsers supporting MediaSource extensions (MSE) API with 'video/MP4' mime-type inputs.
