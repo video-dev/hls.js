@@ -478,6 +478,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected doTick(): void;
     // (undocumented)
+    protected exceedsMaxBuffer(bufferInfo: BufferInfo, maxBufLen: number, selected: Fragment): boolean;
+    // (undocumented)
     protected filterReplacedPrimary(frag: MediaFragment | null, details: LevelDetails | undefined): MediaFragment | null;
     // (undocumented)
     protected flushBufferGap(frag: Fragment): void;

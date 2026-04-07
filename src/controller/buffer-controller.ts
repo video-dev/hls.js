@@ -967,17 +967,18 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           fatal: false,
         };
         const mediaError = this.media?.error;
-        if (isQuotaError) {
-          // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
-          // Eviction was already attempted or not possible — report BUFFER_FULL_ERROR
-          event.details = ErrorDetails.BUFFER_FULL_ERROR;
-        } else if (
+        if (
           error.name === TRACK_REMOVED_ERROR_NAME &&
           this.sourceBufferCount === 0
         ) {
           // Do nothing if sourceBuffers were removed (media is detached and append was not aborted)
           event.errorAction = createDoNothingErrorAction(true);
         } else {
+          if (isQuotaError) {
+            // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
+            // Eviction was already attempted or not possible — report BUFFER_FULL_ERROR
+            event.details = ErrorDetails.BUFFER_FULL_ERROR;
+          }
           const appendErrorCount = ++this.appendErrors[type];
           /* with UHD content, we could get loop of quota exceeded error until
             browser is able to evict some data from sourcebuffer. Retrying can help recover.
@@ -987,7 +988,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             `Failed ${appendErrorCount}/${appendErrorMaxRetry + 1} times to append segment in "${type}" sourceBuffer with error: ${error.message}`,
           );
           if (appendErrorCount >= appendErrorMaxRetry) {
-            event.fatal = true;
+            event.fatal = !isQuotaError;
           }
           const readyState = this.mediaSource?.readyState;
           if (
@@ -1004,6 +1005,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         }
         this.appendError = event;
         this.hls.trigger(Events.ERROR, event);
+        if (isQuotaError && this.hls) {
+          this.trimBuffers(frag.start, 1);
+        }
       },
     };
     this.log(
@@ -1120,7 +1124,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private onFragChanged(event: Events.FRAG_CHANGED, data: FragChangedData) {
-    this.trimBuffers();
+    const config: Readonly<HlsConfig> = this.hls?.config;
+    if (!config) {
+      return;
+    }
+    const { backBufferLength, frontBufferFlushThreshold } = config;
+    this.trimBuffers(frontBufferFlushThreshold, backBufferLength);
 
     // Only clear append errors on successful encounter of buffered media. Init segments may complete without error for unsupported media.
     if (isMediaFragment(data.frag)) {
@@ -1288,7 +1297,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     this.appendError = undefined;
   }
 
-  private trimBuffers() {
+  private trimBuffers(
+    frontBufferFlushThreshold: number,
+    backBufferLength: number,
+  ) {
     const { hls, details, media } = this;
     if (!media || details === null) {
       return;
@@ -1303,10 +1315,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const targetDuration = details.levelTargetDuration;
 
     // Support for deprecated liveBackBufferLength
-    const backBufferLength =
+    backBufferLength =
       details.live && config.liveBackBufferLength !== null
         ? config.liveBackBufferLength
-        : config.backBufferLength;
+        : backBufferLength;
 
     if (Number.isFinite(backBufferLength) && backBufferLength >= 0) {
       const maxBackBufferLength = Math.max(backBufferLength, targetDuration);
@@ -1321,7 +1333,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       );
     }
 
-    const frontBufferFlushThreshold = config.frontBufferFlushThreshold;
     if (
       Number.isFinite(frontBufferFlushThreshold) &&
       frontBufferFlushThreshold > 0
