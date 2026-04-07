@@ -416,10 +416,10 @@ export default class StreamController
     this.abortCurrentFrag();
     this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
     if (this.altAudio !== AlternateAudio.DISABLED) {
-      // If behind the live window, do not remove buffered media
+      // If behind the live window, remove audio too to keep buffered media aligned
       const liveWindowStart = this.getLevelDetails()?.fragmentStart || 0;
       if (liveWindowStart > this.lastCurrentTime) {
-        super.flushMainBuffer(0, liveWindowStart, 'audio');
+        super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
       }
     }
   }
