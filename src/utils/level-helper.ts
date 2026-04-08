@@ -107,12 +107,10 @@ export function updateFragPTSDTS(
   }
 
   const drift = startPTS - frag.start;
-  if (!iframesOnly) {
-    if (frag.start !== 0) {
-      frag.setStart(startPTS);
-    }
-    frag.setDuration(endPTS - frag.start);
+  if (frag.start !== 0) {
+    frag.setStart(startPTS);
   }
+  frag.setDuration(endPTS - frag.start);
   frag.startPTS = startPTS;
   frag.maxStartPTS = maxStartPTS;
   frag.startDTS = startDTS;
@@ -125,28 +123,26 @@ export function updateFragPTSDTS(
   if (!details || sn < details.startSN || sn > details.endSN) {
     return 0;
   }
-  if (!iframesOnly) {
-    let i: number;
-    const fragIdx = sn - details.startSN;
-    const fragments = details.fragments;
-    // update frag reference in fragments array
-    // rationale is that fragments array might not contain this frag object.
-    // this will happen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
-    // if we don't update frag, we won't be able to propagate PTS info on the playlist
-    // resulting in invalid sliding computation
-    fragments[fragIdx] = frag;
-    // adjust fragment PTS/duration from seqnum-1 to frag 0
-    for (i = fragIdx; i > 0; i--) {
-      updateFromToPTS(fragments[i], fragments[i - 1]);
-    }
+  let i: number;
+  const fragIdx = sn - details.startSN;
+  const fragments = details.fragments;
+  // update frag reference in fragments array
+  // rationale is that fragments array might not contain this frag object.
+  // this will happen if playlist has been refreshed between frag loading and call to updateFragPTSDTS()
+  // if we don't update frag, we won't be able to propagate PTS info on the playlist
+  // resulting in invalid sliding computation
+  fragments[fragIdx] = frag;
+  // adjust fragment PTS/duration from seqnum-1 to frag 0
+  for (i = fragIdx; i > 0; i--) {
+    updateFromToPTS(fragments[i], fragments[i - 1]);
+  }
 
-    // adjust fragment PTS/duration from seqnum to last frag
-    for (i = fragIdx; i < fragments.length - 1; i++) {
-      updateFromToPTS(fragments[i], fragments[i + 1]);
-    }
-    if (details.fragmentHint) {
-      updateFromToPTS(fragments[fragments.length - 1], details.fragmentHint);
-    }
+  // adjust fragment PTS/duration from seqnum to last frag
+  for (i = fragIdx; i < fragments.length - 1; i++) {
+    updateFromToPTS(fragments[i], fragments[i + 1]);
+  }
+  if (details.fragmentHint) {
+    updateFromToPTS(fragments[fragments.length - 1], details.fragmentHint);
   }
 
   details.PTSKnown = details.alignedSliding = true;

@@ -1658,14 +1658,15 @@ export default class BaseStreamController
         contiguous ||
         ((part.independent || independentAttrOmitted) && part.fragment === frag)
       ) {
-        if (part.fragment !== frag) {
-          this.warn(
-            `Need buffer at ${targetBufferTime} but next unloaded part starts at ${part.start}`,
-          );
-        }
         nextPart = i;
       }
       contiguous = loaded;
+    }
+    const part = partList[nextPart];
+    if (part && part.fragment !== frag) {
+      this.log(
+        `Need buffer at ${targetBufferTime} but next unloaded part starts at ${part.start} (sn: ${frag.sn} -> ${part.fragment.sn})`,
+      );
     }
     return nextPart;
   }

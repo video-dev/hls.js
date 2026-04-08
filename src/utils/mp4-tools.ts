@@ -702,6 +702,10 @@ export function parseSinf(sinf: Uint8Array): BoxDataOrUndefined {
 type TrackFragmentRunSample = {
   cts?: number;
   size: number;
+  flags: {
+    dependsOn: 1 | 2;
+    isNonSync: 0 | 1;
+  };
 };
 type TrackFragmentRun = {
   sampleOffset: number;
@@ -849,7 +853,10 @@ export function getSampleData(
           trackTimes.trun.push(fragRun);
         }
         for (let ix = 0; ix < sampleCount; ix++) {
-          const sample: TrackFragmentRunSample = { size: 0 };
+          const sample: TrackFragmentRunSample = {
+            size: 0,
+            flags: { isNonSync: 0, dependsOn: 2 },
+          };
           if (sampleDurationPresent) {
             sampleDuration = readUint32(trun, offset);
             offset += 4;
@@ -868,6 +875,8 @@ export function getSampleData(
           sampleOffset += sample.size;
           if (sampleFlagsPresent) {
             const isNonSyncSample = trun[offset + 1] & 0x01;
+            sample.flags.dependsOn = (trun[offset] & 0x03) === 1 ? 1 : 2;
+            sample.flags.isNonSync = isNonSyncSample ? 1 : 0;
             if (!isNonSyncSample) {
               if (trackTimes.keyFrameIndex === undefined) {
                 trackTimes.keyFrameIndex = ix;
