@@ -413,6 +413,10 @@ class AudioStreamController
       return;
     }
 
+    if (this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag)) {
+      return;
+    }
+
     // Request audio segments up to one fragment ahead of main stream-controller
     let mainFragLoading = this.mainFragLoading?.frag || null;
     if (
