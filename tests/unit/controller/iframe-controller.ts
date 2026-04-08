@@ -169,7 +169,7 @@ describe('IFrameController', function () {
     expect(iframePlayer.levels[0].pathwayId).to.eq('..');
   });
 
-  it('passes current initPTS to a newly created IFramePlayer', function () {
+  it('passes copy of initPTS to a newly created IFramePlayer', function () {
     loadManifest(playlistWithIFrameVariants);
     const timestamps: TimestampOffset[] = [
       { baseTime: 900000, timescale: 90000, trackId: 0 },
@@ -183,6 +183,7 @@ describe('IFrameController', function () {
     });
     const iframePlayer = iframeController.createIFramePlayer();
     const iframeStreamController = (iframePlayer as any).streamController;
-    expect(iframeStreamController.initPTS).to.equal(timestamps);
+    expect(iframeStreamController.initPTS).to.not.equal(timestamps);
+    expect(iframeStreamController.initPTS).to.deep.equal(timestamps);
   });
 });

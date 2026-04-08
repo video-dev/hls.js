@@ -1042,10 +1042,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.removeExecutor(type, start, end);
       },
       onStart: () => {
-        // logger.debug(`[buffer-controller]: Started flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
+        // logger.debug(`[buffer-controller]: Started flushing ${start} -> ${end} for ${type} Source Buffer`);
       },
       onComplete: () => {
-        // logger.debug(`[buffer-controller]: Finished flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
+        const sb = this.tracks[type]?.buffer;
+        this.log(
+          `Remove request ${start}-${end} from ${type} Source Buffer complete > buffer: ${
+            sb ? timeRangesToString(BufferHelper.getBuffered(sb)) : '(detached)'
+          }`,
+        );
         this.hls.trigger(Events.BUFFER_FLUSHED, { type, start, end });
       },
       onError: (error: Error) => {

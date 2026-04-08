@@ -143,7 +143,7 @@ export class IFrameController extends Logger {
       sessionId,
     } = hls;
     const { stats, variableList } = this;
-    if (!iframeVariants || !stats || !url) {
+    if (!iframeVariants?.length || !stats || !url) {
       return null;
     }
     const loggerId = `iframe-player-${this.instanceCounter++}`;
@@ -295,7 +295,7 @@ function createIFrameStreamController(Base: Constructor<StreamController>) {
     initDetails?: LevelDetails | null;
 
     setInitPts(initPTS: TimestampOffset[]) {
-      this.initPTS = initPTS;
+      this.initPTS = initPTS.slice();
     }
 
     loadMediaAt(time: number, options: LoadMediaAtOptions) {
@@ -335,6 +335,9 @@ function createIFrameStreamController(Base: Constructor<StreamController>) {
     private seekTo(time: number): boolean {
       const media = this.media;
       if (media) {
+        if (time > media.duration) {
+          time = media.duration - 0.01;
+        }
         const bufferInfo = BufferHelper.bufferInfo(media, time, 0);
         const hasEnough = bufferInfo.len > 0 && this.getBufferedAt(time);
         if (hasEnough) {
@@ -395,10 +398,12 @@ function createIFrameStreamController(Base: Constructor<StreamController>) {
       previousDetails: LevelDetails | undefined,
       switchDetails: LevelDetails | undefined,
     ): number {
+      const initDetails = this.initDetails;
+      this.initDetails = null;
       return super.alignPlaylists(
         details,
         previousDetails,
-        switchDetails || this.initDetails || undefined,
+        switchDetails || initDetails || undefined,
       );
     }
 

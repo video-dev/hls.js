@@ -8,6 +8,7 @@ import { getCodecCompatibleName } from '../utils/codecs';
 import { type ILogger, Logger } from '../utils/logger';
 import { patchEncyptionData, writeUint32 } from '../utils/mp4-tools';
 import { getSampleData, parseInitSegment } from '../utils/mp4-tools';
+import type { TrackFragmentSample } from './mp4-generator';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { DecryptData } from '../loader/level-key';
@@ -217,50 +218,16 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       ? trackSampleData[initData.video.id]
       : null;
 
-    let data1 = data;
-    let data2: Uint8Array<ArrayBuffer> | undefined;
-    if (__USE_IFRAMES__) {
-      if (
-        videoSampleTimestamps &&
-        videoSampleTimestamps.sampleCount > 1 &&
-        chunkMeta.iframe
-      ) {
-        const { trun, start, duration } = videoSampleTimestamps;
-        if (trun.length === 1 && trun[0].samples.length) {
-          const sampleOffset = trun[0].sampleOffset;
-          const sample = trun[0].samples[0];
-          const { cts, size } = sample;
-          const sampleEndByte = sampleOffset + size;
+    const hasAudio = !!initData.audio;
+    const hasVideo = !!initData.video;
 
-          // Remux Iframe segments reporting more than one sample (mp4 byte-range contains moof for playback segment)
-          data1 = MP4.moof(chunkMeta.sn, start, {
-            type: 'video',
-            id: videoTrack.id,
-            samples: [
-              {
-                cts: cts || 0,
-                duration: duration,
-                size,
-                flags: {
-                  isLeading: 0,
-                  isDependedOn: 0,
-                  hasRedundancy: 0,
-                  degradPrio: 0,
-                  dependsOn: 2, // assume independent iframe
-                  isNonSync: 0,
-                  paddingValue: 0,
-                },
-              },
-            ],
-          });
-          data2 = data.subarray(sampleOffset - 8, sampleEndByte);
-          writeUint32(data2, 0, size + 8);
-        } else {
-          this.warn(
-            `Could not remux IFrame track fragment (trun count ${trun.length})`,
-          );
-        }
-      }
+    let type: any = '';
+    if (hasAudio) {
+      type += 'audio';
+    }
+
+    if (hasVideo) {
+      type += 'video';
     }
 
     const videoStartTime = toStartEndOrDefault(videoSampleTimestamps, Infinity);
@@ -271,6 +238,19 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     let decodeTime = timeOffset;
     let duration = 0;
 
+    if (
+      videoSampleTimestamps &&
+      audioSampleTimestamps &&
+      initData.audio &&
+      (audioStartTime > videoEndTime || videoStartTime > audioEndTime)
+    ) {
+      this.warn(
+        `audio and video track sample timestamps do not overlap. v: ${videoStartTime}-${videoEndTime} a: ${audioStartTime}-${audioEndTime}}`,
+        videoSampleTimestamps,
+        audioSampleTimestamps,
+      );
+    }
+
     const syncOnAudio =
       audioSampleTimestamps &&
       (!videoSampleTimestamps ||
@@ -280,15 +260,86 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       ? audioSampleTimestamps
       : videoSampleTimestamps;
 
+    let data1 = data;
+    let data2: Uint8Array<ArrayBuffer> | undefined;
+    if (
+      __USE_IFRAMES__ &&
+      videoSampleTimestamps &&
+      videoSampleTimestamps.sampleCount > 1 &&
+      initData.video &&
+      chunkMeta.iframe
+    ) {
+      duration = chunkMeta.duration;
+      const { trun, start, duration: sampleDuration } = videoSampleTimestamps;
+      if (trun.length === 1 && trun[0].samples.length) {
+        const sampleOffset = trun[0].sampleOffset;
+        let totalSize = 0;
+        const samples = trun[0].samples
+          .map((sample): TrackFragmentSample | null => {
+            const {
+              cts,
+              size,
+              flags: { dependsOn, isNonSync },
+            } = sample;
+            if (sampleOffset + totalSize + size > data.length) {
+              return null;
+            }
+
+            totalSize += size;
+            return {
+              cts: cts || 0,
+              duration: sampleDuration,
+              size,
+              flags: {
+                isLeading: 0,
+                isDependedOn: 0,
+                hasRedundancy: 0,
+                degradPrio: 0,
+                dependsOn,
+                isNonSync,
+                paddingValue: 0,
+              },
+            };
+          })
+          .filter((sampleOrNull) => !!sampleOrNull);
+        if (samples.length) {
+          const lastSample = samples[samples.length - 1];
+          let lastSampleDuration = duration * initData.video.timescale;
+          for (let i = samples.length - 1; i--; ) {
+            lastSampleDuration -= samples[i].duration;
+          }
+          lastSample.duration = lastSampleDuration;
+
+          // Remux Iframe segments reporting more than one sample (mp4 byte-range contains moof for playback segment)
+          data1 = MP4.moof(chunkMeta.sn, start, {
+            type: 'video',
+            id: videoTrack.id,
+            samples, //: [samples[0]],
+          });
+          data2 = data.subarray(sampleOffset - 8, sampleOffset + totalSize);
+          writeUint32(data2, 0, totalSize + 8);
+        } else {
+          this.warn(
+            `Could not remux IFrame track fragment (sampleOffset ${sampleOffset}: totalSize: ${totalSize} bytes: ${data})`,
+          );
+        }
+      } else {
+        this.warn(
+          `Could not remux IFrame track fragment (trun count ${trun.length})`,
+        );
+      }
+    } else {
+      duration = syncOnAudio
+        ? audioEndTime - audioStartTime
+        : videoEndTime - videoStartTime;
+    }
+
     if (baseOffsetSamples) {
       const timescale = baseOffsetSamples.timescale;
       const baseTime = baseOffsetSamples.start - timeOffset * timescale;
       const trackId = syncOnAudio ? initData.audio!.id : initData.video!.id;
 
       decodeTime = baseOffsetSamples.start / timescale;
-      duration = syncOnAudio
-        ? audioEndTime - audioStartTime
-        : videoEndTime - videoStartTime;
 
       if (
         (accurateTimeOffset || !initPTS) &&
@@ -297,7 +348,12 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       ) {
         if (initPTS) {
           this.warn(
-            `Timestamps at playlist time: ${accurateTimeOffset ? '' : '~'}${timeOffset} ${baseTime / timescale} != initPTS: ${initPTS.baseTime / initPTS.timescale} (${initPTS.baseTime}/${initPTS.timescale}) trackId: ${initPTS.trackId}`,
+            `Timestamps at playlist time: ${accurateTimeOffset ? '' : '~'}${timeOffset} ${baseTime / timescale} != initPTS: ${initPTS.baseTime / initPTS.timescale} (${
+              baseTime / timescale - initPTS.baseTime / initPTS.timescale
+            }s diff) (${type}) trackId: ${initPTS.trackId}`,
+            initData,
+            videoSampleTimestamps,
+            audioSampleTimestamps,
           );
         }
         this.log(
@@ -343,18 +399,6 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     } else {
       this.warn('Duration parsed from mp4 should be greater than zero');
       this.resetNextTimestamp();
-    }
-
-    const hasAudio = !!initData.audio;
-    const hasVideo = !!initData.video;
-
-    let type: any = '';
-    if (hasAudio) {
-      type += 'audio';
-    }
-
-    if (hasVideo) {
-      type += 'video';
     }
 
     const encrypted =
