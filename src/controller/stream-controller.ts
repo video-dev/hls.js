@@ -368,6 +368,11 @@ export default class StreamController
     if (!frag) {
       return;
     }
+
+    if (this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag)) {
+      return;
+    }
+
     if (frag.initSegment && !frag.initSegment.data && !this.bitrateTest) {
       frag = frag.initSegment;
     }
@@ -410,6 +415,13 @@ export default class StreamController
   public immediateLevelSwitch() {
     this.abortCurrentFrag();
     this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
+    if (this.altAudio !== AlternateAudio.DISABLED) {
+      // If behind the live window, remove audio too to keep buffered media aligned
+      const liveWindowStart = this.getLevelDetails()?.fragmentStart || 0;
+      if (liveWindowStart > this.lastCurrentTime) {
+        super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
+      }
+    }
   }
 
   /**

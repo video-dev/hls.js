@@ -1356,6 +1356,28 @@ export default class BaseStreamController
     return Math.min(maxBufLen, config.maxMaxBufferLength);
   }
 
+  protected exceedsMaxBuffer(
+    bufferInfo: BufferInfo,
+    maxBufLen: number,
+    selected: Fragment,
+  ): boolean {
+    const nextStart = bufferInfo.nextStart;
+    if (nextStart && selected.start > nextStart) {
+      const bufferedRanges = bufferInfo.buffered;
+      if (bufferedRanges) {
+        let fullBufferLength = bufferInfo.len;
+        const bufferedIndex = bufferInfo.bufferedIndex;
+        for (let i = bufferedRanges.length - 1; i > bufferedIndex; i--) {
+          if (bufferedRanges[i].start < selected.start) {
+            fullBufferLength += bufferedRanges[i].end - bufferedRanges[i].start;
+          }
+        }
+        return fullBufferLength >= maxBufLen;
+      }
+    }
+    return false;
+  }
+
   protected reduceMaxBufferLength(threshold: number, fragDuration: number) {
     const config = this.config;
     const minLength = Math.max(
@@ -1451,10 +1473,15 @@ export default class BaseStreamController
           startPosition = playlistStart;
           reason = 'playlist start';
         }
-        this.log(
-          `Setting startPosition to ${startPosition.toFixed(3)} ${mainStart === -1 ? '' : `(from ${configValue}) `}based on ${reason}. live edge: ${liveSyncPosition} live frag start: ${fragStart.toFixed(3)} playlist start: ${playlistStart.toFixed(3)} buffer pos: ${pos}`,
-        );
-        this.startPosition = this.nextLoadPosition = startPosition;
+        if (
+          this.startPosition != startPosition ||
+          this.nextLoadPosition != startPosition
+        ) {
+          this.log(
+            `Setting startPosition to ${startPosition.toFixed(3)} ${mainStart === -1 ? '' : `(from ${configValue}) `}based on ${reason}. live edge: ${liveSyncPosition} live frag start: ${fragStart.toFixed(3)} playlist start: ${playlistStart.toFixed(3)} buffer pos: ${pos}`,
+          );
+          this.startPosition = this.nextLoadPosition = startPosition;
+        }
       }
     } else if (pos <= playlistStart) {
       // VoD playlist: if loadPosition before start of playlist, load first fragment
@@ -1480,11 +1507,13 @@ export default class BaseStreamController
   }
 
   protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean {
+    if (this.nextLoadPosition <= targetBufferTime) {
+      return false;
+    }
     const trackerState = this.fragmentTracker.getState(frag);
     return (
-      (trackerState === FragmentState.OK ||
-        (trackerState === FragmentState.PARTIAL && !!frag.gap)) &&
-      this.nextLoadPosition > targetBufferTime
+      trackerState === FragmentState.OK ||
+      (trackerState === FragmentState.PARTIAL && !!frag.gap)
     );
   }
 
@@ -1672,14 +1701,16 @@ export default class BaseStreamController
     if (fragPrevious) {
       if (levelDetails.hasProgramDateTime) {
         // Prefer using PDT, because it can be accurate enough to choose the correct fragment without knowing the level sliding
-        this.log(
-          `Live playlist, switching playlist, load frag with same PDT: ${fragPrevious.programDateTime}`,
-        );
         frag = findFragmentByPDT(
           fragments,
           fragPrevious.endProgramDateTime,
           this.config.maxFragLookUpTolerance,
         );
+        if (frag) {
+          this.log(
+            `Live playlist, switching playlist, load frag with same PDT: ${fragPrevious.programDateTime}`,
+          );
+        }
       }
       if (!frag) {
         // SN does not need to be accurate between renditions, but depending on the packaging it may be so.
@@ -2430,7 +2461,7 @@ export default class BaseStreamController
           ? nextBufferedFrag.maxStartPTS
           : nextBufferedFrag.start;
         const fragDuration = nextBufferedFrag.duration;
-        const startPts = Math.max(
+        const startOffset = Math.max(
           bufferedFrag.end,
           maxStart +
             Math.min(
@@ -2441,10 +2472,18 @@ export default class BaseStreamController
               fragDuration * (this.couldBacktrack ? 0.75 : 0.25),
             ),
         );
+
+        // If behind the live window, do not remove buffered media
+        const liveWindowStart = this.getLevelDetails()?.fragmentStart || 0;
+        if (liveWindowStart > startOffset) {
+          return;
+        }
+
         const bufferType =
           playlistType === PlaylistLevelType.MAIN ? null : 'audio';
         // Flush forward buffer from next buffered frag start to infinity
-        this.flushMainBuffer(startPts, Number.POSITIVE_INFINITY, bufferType);
+        this.flushMainBuffer(startOffset, Number.POSITIVE_INFINITY, bufferType);
+
         // Flush back buffer (excluding current fragment)
         this.cleanupBackBuffer();
       }
