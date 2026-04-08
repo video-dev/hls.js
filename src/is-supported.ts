@@ -2,8 +2,13 @@ import { mimeTypeForCodec } from './utils/codecs';
 import { getMediaSource } from './utils/mediasource-helper';
 import type { ExtendedSourceBuffer } from './types/buffer';
 
-function getSourceBuffer(): typeof self.SourceBuffer {
-  return self.SourceBuffer || (self as any).WebKitSourceBuffer;
+function getSourceBuffer(
+  preferManagedSourceBuffer = true,
+): typeof self.SourceBuffer {
+  const msb =
+    (preferManagedSourceBuffer || !self.SourceBuffer) &&
+    ((self as any).ManagedSourceBuffer as undefined | typeof self.SourceBuffer);
+  return msb || self.SourceBuffer || (self as any).WebKitSourceBuffer;
 }
 
 export function isMSESupported(): boolean {
