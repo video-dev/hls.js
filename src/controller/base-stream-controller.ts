@@ -1946,9 +1946,14 @@ export default class BaseStreamController
   }
 
   protected get playhead(): number {
-    return this.hls?.hasEnoughToStart
-      ? this.media?.currentTime || this.lastCurrentTime
-      : this.getLoadPosition();
+    if (this.hls?.hasEnoughToStart) {
+      const currentTime = this.media?.currentTime as number;
+      if (Number.isFinite(currentTime)) {
+        return currentTime;
+      }
+      return this.lastCurrentTime;
+    }
+    return this.getLoadPosition();
   }
 
   protected get iframesOnly(): boolean | undefined {
