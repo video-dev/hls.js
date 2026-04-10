@@ -867,15 +867,17 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     this.videoSampleDuration = mp4SampleDuration;
     this.isVideoContiguous = true;
     if (__USE_IFRAMES__) {
-      if (chunkMeta.iframe && outputSamples.length === 1) {
-        outputSamples[0].duration = mp4SampleDuration =
-          chunkMeta.duration * timeScale;
-        this.nextVideoTs = nextVideoTs =
-          firstDTS + mp4SampleDuration - initTime;
-      } else {
-        this.warn(
-          `Not adjusting IFrame duration (sample count ${outputSamples.length})`,
-        );
+      if (chunkMeta.iframe) {
+        if (outputSamples.length === 1) {
+          outputSamples[0].duration = mp4SampleDuration =
+            chunkMeta.duration * timeScale;
+          this.nextVideoTs = nextVideoTs =
+            firstDTS + mp4SampleDuration - initTime;
+        } else {
+          this.warn(
+            `Not adjusting IFrame duration (sample count ${outputSamples.length})`,
+          );
+        }
       }
     }
     const moof = MP4.moof(
