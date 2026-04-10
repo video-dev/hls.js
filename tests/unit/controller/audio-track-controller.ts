@@ -523,6 +523,38 @@ describe('AudioTrackController', function () {
     });
   });
 
+  describe('setAudioOption with flushImmediate', function () {
+    beforeEach(function () {
+      hls.levelController = {
+        levels: [
+          {
+            audioGroups: ['1'],
+          },
+        ],
+      };
+      audioTrackController.tracks = tracks;
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
+        level: 0,
+      });
+    });
+
+    it('should pass flushImmediate=true to AUDIO_TRACK_SWITCHING when specified in AudioSelectionOption', function () {
+      const triggerSpy = sinon.spy(hls, 'trigger');
+      (audioTrackController as any).setAudioOption({
+        name: 'B',
+        flushImmediate: true,
+      });
+
+      expect(triggerSpy).to.have.been.calledWith(
+        Events.AUDIO_TRACK_SWITCHING,
+        sinon.match({
+          id: 1,
+          flushImmediate: true,
+        }),
+      );
+    });
+  });
+
   describe('audioTrack with flushImmediate', function () {
     beforeEach(function () {
       hls.levelController = {
