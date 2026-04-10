@@ -282,7 +282,10 @@ class AudioTrackController extends BasePlaylistController {
         );
         if (groupIndex > -1) {
           const track = this.tracksInGroup[groupIndex];
-          this.setAudioTrack(groupIndex);
+          this.setAudioTrack(
+            groupIndex,
+            'flushImmediate' in audioOption && audioOption.flushImmediate,
+          );
           return track;
         } else if (currentTrack) {
           // Find option in nearest level audio group
