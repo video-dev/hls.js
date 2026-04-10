@@ -274,34 +274,28 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       if (trun.length === 1 && trun[0].samples.length) {
         const sampleOffset = trun[0].sampleOffset;
         let totalSize = 0;
-        const samples = trun[0].samples
-          .map((sample): TrackFragmentSample | null => {
-            const {
-              cts,
-              size,
-              flags: { dependsOn, isNonSync },
-            } = sample;
-            if (sampleOffset + totalSize + size > data.length) {
-              return null;
-            }
-
-            totalSize += size;
-            return {
-              cts: cts || 0,
-              duration: sampleDuration,
-              size,
-              flags: {
-                isLeading: 0,
-                isDependedOn: 0,
-                hasRedundancy: 0,
-                degradPrio: 0,
-                dependsOn,
-                isNonSync,
-                paddingValue: 0,
-              },
-            };
-          })
-          .filter((sampleOrNull) => !!sampleOrNull);
+        const samples = trun[0].samples.map((sample): TrackFragmentSample => {
+          const { cts, size, flags } = sample;
+          const { dependsOn, isNonSync } = Object.assign(
+            { dependsOn: 2, isNonSync: 0 },
+            flags,
+          );
+          totalSize += size;
+          return {
+            cts: cts || 0,
+            duration: sampleDuration,
+            size,
+            flags: {
+              isLeading: 0,
+              isDependedOn: 0,
+              hasRedundancy: 0,
+              degradPrio: 0,
+              dependsOn,
+              isNonSync,
+              paddingValue: 0,
+            },
+          };
+        });
         if (samples.length) {
           const lastSample = samples[samples.length - 1];
           let lastSampleDuration = duration * initData.video.timescale;
