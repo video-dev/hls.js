@@ -252,14 +252,15 @@ export class FragmentTracker implements ComponentAPI {
         const minPartialAppend = Math.min(0.004, frag.duration);
         trackNames.some((elementaryStream) => {
           const times = fragmentEntity.range[elementaryStream]?.time;
-          if (
+          const bufferedGap =
             times.length === 0 ||
             (times.length === 1 &&
-              times[0].endPTS - times[0].startPTS < minPartialAppend)
-          ) {
-            // Segment was appended but it did not change buffer. Mark as gap to prevent loop loaidng.
+              times[0].endPTS - times[0].startPTS < minPartialAppend);
+          if (bufferedGap) {
+            // Segment was appended but it did not change buffer. Mark as gap to prevent loop loading.
             this.addAsGap(frag);
           }
+          return bufferedGap;
         });
       }
     } else {
