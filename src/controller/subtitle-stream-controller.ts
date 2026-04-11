@@ -207,7 +207,7 @@ export class SubtitleStreamController
 
     if (frag?.type === PlaylistLevelType.SUBTITLE) {
       if (data.details === ErrorDetails.FRAG_GAP) {
-        this.fragmentTracker.fragBuffered(frag as MediaFragment, true);
+        this.fragmentTracker.addAsGap(frag as MediaFragment);
       }
       if (this.fragCurrent) {
         this.fragCurrent.abortRequests();

@@ -451,7 +451,7 @@ export interface FragBufferedData {
   stats: LoadStats;
   frag: Fragment;
   part: Part | null;
-  id: string;
+  id: PlaylistLevelType;
 }
 
 export interface LevelsUpdatedData {

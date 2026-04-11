@@ -1785,7 +1785,7 @@ export interface FragBufferedData {
     // (undocumented)
     frag: Fragment;
     // (undocumented)
-    id: string;
+    id: PlaylistLevelType;
     // (undocumented)
     part: Part | null;
     // (undocumented)
@@ -2034,6 +2034,8 @@ export const enum FragmentState {
 // @public (undocumented)
 export class FragmentTracker implements ComponentAPI {
     constructor(hls: Hls);
+    // (undocumented)
+    addAsGap(frag: MediaFragment): void;
     // (undocumented)
     destroy(): void;
     detectEvictedFragments(elementaryStream: SourceBufferName, timeRange: TimeRanges, playlistType: PlaylistLevelType, appendedPart?: Part | null, removeAppending?: boolean): void;
