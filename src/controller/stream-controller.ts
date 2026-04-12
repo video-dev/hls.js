@@ -167,9 +167,7 @@ export default class StreamController
         !skipSeekToStartPosition
       ) {
         this.log(
-          `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
-            3,
-          )}`,
+          `Override startPosition with lastCurrentTime @${lastCurrentTime}`,
         );
         startPosition = lastCurrentTime;
       }
@@ -536,7 +534,7 @@ export default class StreamController
       return;
     }
 
-    this.log(`Media seeked to ${currentTime.toFixed(3)}`);
+    this.log(`Media seeked to ${currentTime}`);
 
     // If seeked was issued before buffer was appended do not tick immediately
     if (!this.getBufferedFrag(currentTime)) {
@@ -726,11 +724,9 @@ export default class StreamController
         // Only seek if ready and there is not a significant forward buffer available for playback
         if (media.readyState) {
           this.warn(
-            `Playback: ${currentTime.toFixed(
-              3,
-            )} is located too far from the end of live sliding playlist: ${end}, reset currentTime to : ${liveSyncPosition.toFixed(
-              3,
-            )}`,
+            `Playback: ${
+              currentTime
+            } is located too far from the end of live sliding playlist: ${end}, reset currentTime to : ${liveSyncPosition}`,
           );
 
           if (this.config.liveSyncMode === 'buffered') {

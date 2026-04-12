@@ -1044,7 +1044,9 @@ export default class InterstitialsController
     if (timelinePos === -1) {
       const startPosition = this.hls.startPosition;
       this.timelinePos = startPosition;
-      if (interstitialEvents.length && interstitialEvents[0].cue.pre) {
+      if (interstitialEvents.length === 0) {
+        this.setSchedulePosition(0);
+      } else if (interstitialEvents[0].cue.pre) {
         this.log(timelineMessage('checkStart (preroll)', startPosition));
         const index = schedule.findEventIndex(interstitialEvents[0].identifier);
         this.setSchedulePosition(index);
@@ -1054,6 +1056,8 @@ export default class InterstitialsController
           startPosition > 0 ? startPosition : 0);
         const index = schedule.findItemIndexAtTime(start);
         this.setSchedulePosition(index);
+      } else if (this.hls.liveSyncPosition === 0) {
+        this.setSchedulePosition(0);
       } else {
         this.log('[checkStart] waiting for live start');
       }
