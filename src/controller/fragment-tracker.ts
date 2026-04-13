@@ -1,6 +1,11 @@
 import { Events } from '../events';
+import {
+  type Fragment,
+  isMediaFragment,
+  type MediaFragment,
+  type Part,
+} from '../loader/fragment';
 import type Hls from '../hls';
-import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { SourceBufferName } from '../types/buffer';
 import type { ComponentAPI } from '../types/component-api';
 import type {
@@ -204,11 +209,10 @@ export class FragmentTracker implements ComponentAPI {
    */
   public detectPartialFragments(data: FragBufferedData) {
     const timeRanges = this.timeRanges;
-    if (!timeRanges || data.frag.sn === 'initSegment') {
+    const { frag, part, id: playlistType } = data;
+    if (!timeRanges || !isMediaFragment(frag)) {
       return;
     }
-
-    const frag = data.frag as MediaFragment;
     const fragKey = getFragmentKey(frag);
     const fragmentEntity = this.fragments[fragKey];
     if (!fragmentEntity || (fragmentEntity.buffered && frag.gap)) {
@@ -228,18 +232,47 @@ export class FragmentTracker implements ComponentAPI {
         partial,
         timeRange,
       );
+      this.detectEvictedFragments(
+        elementaryStream,
+        timeRange,
+        playlistType,
+        part,
+      );
     });
     fragmentEntity.loaded = null;
-    if (Object.keys(fragmentEntity.range).length) {
+    const trackNames = Object.keys(fragmentEntity.range) as SourceBufferName[];
+    if (trackNames.length) {
       this.bufferedEnd(fragmentEntity, frag);
       if (!isPartial(fragmentEntity)) {
         // Remove older fragment parts from lookup after frag is tracked as buffered
         this.removeParts(frag.sn - 1, frag.type);
       }
+      // Detect nothing buffered for segment append (open-GOP issue #7774)
+      if (!part) {
+        const minPartialAppend = Math.min(0.004, frag.duration);
+        trackNames.some((elementaryStream) => {
+          const times = fragmentEntity.range[elementaryStream]?.time;
+          const bufferedGap =
+            times.length === 0 ||
+            (times.length === 1 &&
+              times[0].endPTS - times[0].startPTS < minPartialAppend);
+          if (bufferedGap) {
+            // Segment was appended but it did not change buffer. Mark as gap to prevent loop loading.
+            this.addAsGap(frag);
+          }
+          return bufferedGap;
+        });
+      }
     } else {
       // remove fragment if nothing was appended
-      this.removeFragment(fragmentEntity.body);
+      this.removeFragment(frag);
     }
+  }
+
+  public addAsGap(frag: MediaFragment) {
+    frag.gap = true;
+    this.removeFragment(frag);
+    this.fragBuffered(frag, true);
   }
 
   private bufferedEnd(fragmentEntity: FragmentEntity, frag: MediaFragment) {
@@ -414,7 +447,7 @@ export class FragmentTracker implements ComponentAPI {
   private onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
     // don't track initsegment (for which sn is not a number)
     // don't track frags used for bitrateTest, they're irrelevant.
-    if (data.frag.sn === 'initSegment' || data.frag.bitrateTest) {
+    if (!isMediaFragment(data.frag) || data.frag.bitrateTest) {
       return;
     }
 
@@ -436,8 +469,8 @@ export class FragmentTracker implements ComponentAPI {
     event: Events.BUFFER_APPENDED,
     data: BufferAppendedData,
   ) {
-    const { frag, part, timeRanges, type } = data;
-    if (frag.sn === 'initSegment') {
+    const { frag, part, timeRanges } = data;
+    if (!isMediaFragment(frag)) {
       return;
     }
     const playlistType = frag.type;
@@ -450,8 +483,6 @@ export class FragmentTracker implements ComponentAPI {
     }
     // Store the latest timeRanges loaded in the buffer
     this.timeRanges = timeRanges;
-    const timeRange = timeRanges[type] as TimeRanges;
-    this.detectEvictedFragments(type, timeRange, playlistType, part);
   }
 
   private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
@@ -505,6 +536,10 @@ export class FragmentTracker implements ComponentAPI {
         continue;
       }
       const frag = entity.body;
+      if (frag.gap) {
+        // do not evict media when gaps are detected
+        return 0;
+      }
       // Use stats.loaded (always set after load) with byteLength as fallback
       const bytes =
         (frag.hasStats && frag.stats.loaded) ||

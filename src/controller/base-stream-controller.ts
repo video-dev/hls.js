@@ -299,20 +299,7 @@ export default class BaseStreamController
 
     const lastFragment =
       levelDetails.fragments[levelDetails.fragments.length - 1];
-    const playlistType = lastFragment.type;
-    if (this.fragmentTracker.isEndListAppended(playlistType)) {
-      return true;
-    }
-    // When a live playlist transitions to VOD (ENDLIST added), the last
-    // fragment in the updated playlist has endList=true but the fragment
-    // tracker entity was created before ENDLIST was known. Check if the
-    // last fragment is actually buffered even though endListFragments
-    // was never populated for it.
-    if (lastFragment.endList) {
-      const state = this.fragmentTracker.getState(lastFragment);
-      return state === FragmentState.OK || state === FragmentState.PARTIAL;
-    }
-    return false;
+    return this.fragmentTracker.isEndListAppended(lastFragment.type);
   }
 
   public getLevelDetails(): LevelDetails | undefined {
@@ -654,8 +641,26 @@ export default class BaseStreamController
   protected checkLiveUpdate(details: LevelDetails) {
     if (details.updated && !details.live) {
       // Live stream ended, update fragment tracker
+      const fragmentTracker = this.fragmentTracker;
       const lastFragment = details.fragments[details.fragments.length - 1];
-      this.fragmentTracker.detectPartialFragments({
+      if (
+        lastFragment.endList &&
+        !fragmentTracker.isEndListAppended(this.playlistType)
+      ) {
+        // When a live playlist transitions to VOD (ENDLIST added), the last
+        // fragment in the updated playlist has endList=true but the fragment
+        // tracker entity was created before ENDLIST was known. Check if the
+        // last fragment is actually buffered even though endListFragments
+        // was never populated for it. (#7770)
+        const fragmentAtEnd = fragmentTracker.getPartialFragment(
+          lastFragment.end,
+        );
+        if (fragmentAtEnd) {
+          fragmentTracker.removeFragment(fragmentAtEnd);
+          fragmentTracker.fragBuffered(lastFragment, true);
+        }
+      }
+      fragmentTracker.detectPartialFragments({
         frag: lastFragment,
         part: null,
         stats: lastFragment.stats,
@@ -839,11 +844,15 @@ export default class BaseStreamController
         }
       }
       const level = this.levels?.[frag.level];
-      if (level?.fragmentError) {
+      if (
+        level?.fragmentError &&
+        (part || this.fragmentTracker.getState(frag) !== FragmentState.PARTIAL)
+      ) {
         this.log(
           `Resetting level fragment error count of ${level.fragmentError} on frag buffered`,
         );
         level.fragmentError = 0;
+        frag.stats.retry = 0;
       }
     }
     this.state = State.IDLE;
@@ -1506,10 +1515,19 @@ export default class BaseStreamController
       return false;
     }
     const trackerState = this.fragmentTracker.getState(frag);
-    return (
-      trackerState === FragmentState.OK ||
-      (trackerState === FragmentState.PARTIAL && !!frag.gap)
-    );
+    if (trackerState === FragmentState.OK) {
+      return true;
+    }
+    if (trackerState === FragmentState.PARTIAL) {
+      if (frag.gap) {
+        return true;
+      }
+      if (frag.stats.retry > 1) {
+        return true;
+      }
+      frag.stats.retry++;
+    }
+    return false;
   }
 
   protected getNextFragmentLoopLoading(
@@ -2011,7 +2029,7 @@ export default class BaseStreamController
     }
     const gapTagEncountered = data.details === ErrorDetails.FRAG_GAP;
     if (gapTagEncountered) {
-      this.fragmentTracker.fragBuffered(frag as MediaFragment, true);
+      this.fragmentTracker.addAsGap(frag as MediaFragment);
     }
     // keep retrying until the limit will be reached
     const errorAction = data.errorAction;
@@ -2340,9 +2358,7 @@ export default class BaseStreamController
     if (level) {
       level.fragmentError++;
     }
-    frag.gap = true;
-    this.fragmentTracker.removeFragment(frag);
-    this.fragmentTracker.fragBuffered(frag, true);
+    this.fragmentTracker.addAsGap(frag);
   }
 
   protected resetTransmuxer() {
@@ -2621,7 +2637,7 @@ export default class BaseStreamController
   }
 }
 
-function interstitialsEnabled(config: HlsConfig): boolean {
+function interstitialsEnabled(config: Readonly<HlsConfig>): boolean {
   return (
     __USE_INTERSTITIALS__ &&
     !!config.interstitialsController &&

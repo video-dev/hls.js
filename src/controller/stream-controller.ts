@@ -960,10 +960,20 @@ export default class StreamController
         }
         return;
       }
+      let fragError = false;
       if (isMediaFragment(frag)) {
         this.fragPrevious = frag;
+        fragError =
+          !!frag.gap && !frag.tagList.some((tags) => tags[0] === 'GAP');
       }
       this.fragBufferedComplete(frag, part);
+      if (fragError) {
+        frag.stats.retry++;
+        const level = this.levels?.[frag.level];
+        if (level) {
+          level.fragmentError++;
+        }
+      }
     }
 
     const media = this.media;

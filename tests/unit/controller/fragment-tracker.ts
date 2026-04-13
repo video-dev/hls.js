@@ -149,11 +149,19 @@ describe('FragmentTracker', function () {
         Events.BUFFER_APPENDED,
         createBufferAppendedData([
           {
-            startPTS: 0.75,
+            startPTS: 1,
             endPTS: 2,
           },
         ]),
       );
+
+      const fragment2 = addFragment();
+      hls.trigger(
+        Events.FRAG_BUFFERED,
+        createFragBufferedData(fragment2, true),
+      );
+
+      expect(fragment.gap).to.equal(undefined);
 
       expect(fragmentTracker.getState(fragment)).to.equal(
         FragmentState.NOT_LOADED,
