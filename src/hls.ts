@@ -1197,7 +1197,7 @@ export default class Hls implements HlsEventEmitter {
    * @returns null prior to loading live Playlist
    */
   get liveSyncPosition(): number | null {
-    return this.latencyController?.liveSyncPosition || null;
+    return this.latencyController?.liveSyncPosition ?? null;
   }
 
   /**

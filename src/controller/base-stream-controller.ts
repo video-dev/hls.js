@@ -114,7 +114,7 @@ export default class BaseStreamController
   protected bitrateTest: boolean = false;
   protected lastCurrentTime: number = 0;
   protected nextLoadPosition: number = 0;
-  protected startPosition: number = 0;
+  protected startPosition: number = -1;
   protected startTimeOffset: number | null = null;
   protected retryDate: number = 0;
   protected levels: Array<Level> | null = null;
@@ -383,7 +383,8 @@ export default class BaseStreamController
       this.levelLastLoaded =
       this.fragCurrent =
         null;
-    this.lastCurrentTime = this.startPosition = 0;
+    this.lastCurrentTime = 0;
+    this.startPosition = -1;
     this.startFragRequested = false;
   }
 
@@ -401,7 +402,7 @@ export default class BaseStreamController
 
     this.log(
       `Media seeking to ${
-        Number.isFinite(currentTime) ? currentTime.toFixed(3) : currentTime
+        currentTime
       }, state: ${state}, ${!fowardBuffer ? 'out of' : 'in'} buffer`,
     );
 
@@ -462,9 +463,7 @@ export default class BaseStreamController
         );
         if (shouldLoadParts) {
           this.log(
-            `LL-Part loading ON after seeking to ${currentTime.toFixed(
-              3,
-            )} with buffer @${bufferEnd.toFixed(3)}`,
+            `LL-Part loading ON after seeking to ${currentTime} with buffer @${bufferEnd}`,
           );
           this.loadingParts = shouldLoadParts;
         }
@@ -956,9 +955,7 @@ export default class BaseStreamController
           this.log(
             `Loading ${frag.type} sn: ${frag.sn} part: ${part.index} (${partIndex}/${partList.length - 1}) of ${this.fragInfo(frag, false, part)} cc: ${
               frag.cc
-            } [${details.startSN}-${details.endSN}], target: ${parseFloat(
-              targetBufferTime.toFixed(3),
-            )}${
+            } [${details.startSN}-${details.endSN}], target: ${targetBufferTime}${
               part.byteRange.length ? ` range:${part.byteRange.join('-')}` : ''
             }`,
           );
@@ -1015,9 +1012,7 @@ export default class BaseStreamController
 
     if (isMediaFragment(frag) && this.loadingParts) {
       this.log(
-        `LL-Part loading OFF after next part miss @${targetBufferTime.toFixed(
-          3,
-        )} Check buffer at sn: ${frag.sn} loaded parts: ${details.partList?.filter((p) => p.loaded).map((p) => `[${p.start}-${p.end}]`)}`,
+        `LL-Part loading OFF after next part miss @${targetBufferTime} Check buffer at sn: ${frag.sn} loaded parts: ${details.partList?.filter((p) => p.loaded).map((p) => `[${p.start}-${p.end}]`)}`,
       );
       this.loadingParts = false;
     } else if (!frag.url) {
@@ -1028,7 +1023,7 @@ export default class BaseStreamController
     this.log(
       `Loading ${frag.type} sn: ${frag.sn} of ${this.fragInfo(frag, false)} cc: ${frag.cc} ${
         '[' + details.startSN + '-' + details.endSN + ']'
-      }, target: ${parseFloat(targetBufferTime.toFixed(3))}${
+      }, target: ${targetBufferTime}${
         frag.byteRange.length ? ` range:${frag.byteRange.join('-')}` : ''
       }`,
     );
@@ -1173,7 +1168,7 @@ export default class BaseStreamController
       this.log(
         `LL-Part loading ${
           shouldLoadParts ? 'ON' : 'OFF'
-        } after parsing segment ending @${frag.end.toFixed(3)}`,
+        } after parsing segment ending @${frag.end}`,
       );
       this.loadingParts = shouldLoadParts;
     }
@@ -1478,7 +1473,7 @@ export default class BaseStreamController
           this.nextLoadPosition != startPosition
         ) {
           this.log(
-            `Setting startPosition to ${startPosition.toFixed(3)} ${mainStart === -1 ? '' : `(from ${configValue}) `}based on ${reason}. live edge: ${liveSyncPosition} live frag start: ${fragStart.toFixed(3)} playlist start: ${playlistStart.toFixed(3)} buffer pos: ${pos}`,
+            `Setting startPosition to ${startPosition} ${mainStart === -1 ? '' : `(from ${configValue}) `}based on ${reason}. live edge: ${liveSyncPosition} live frag start: ${fragStart} playlist start: ${playlistStart} buffer pos: ${pos}`,
           );
           this.startPosition = this.nextLoadPosition = startPosition;
         }
@@ -1864,7 +1859,7 @@ export default class BaseStreamController
       alignStream(switchDetails, details, this);
       const alignedSlidingStart = details.fragmentStart;
       this.log(
-        `Live playlist sliding: ${alignedSlidingStart.toFixed(3)} start-sn: ${
+        `Live playlist sliding: ${alignedSlidingStart} start-sn: ${
           previousDetails ? previousDetails.startSN : 'na'
         }->${details.startSN} fragments: ${length}`,
       );
@@ -1920,7 +1915,7 @@ export default class BaseStreamController
         const liveSyncPosition = this.hls.liveSyncPosition;
         startPosition = liveSyncPosition || sliding;
         this.log(
-          `Setting startPosition to -1 to start at ${liveSyncPosition ? 'live edge' : 'playlist start'} ${startPosition.toFixed(3)}`,
+          `Setting startPosition to -1 to start at ${liveSyncPosition ? 'live edge' : 'playlist start'} ${startPosition}`,
         );
         this.startPosition = -1;
       } else {
@@ -2336,11 +2331,9 @@ export default class BaseStreamController
     pts: boolean = true,
     part?: Part | null,
   ): string {
-    return `${this.playlistLabel()} ${frag.level} (${part ? 'part' : 'frag'}:[${((pts && !part ? frag.startPTS : (part || frag).start) ?? NaN).toFixed(3)}-${(
+    return `${this.playlistLabel()} ${frag.level} (${part ? 'part' : 'frag'}:[${(pts && !part ? frag.startPTS : (part || frag).start) ?? NaN}-${
       (pts && !part ? frag.endPTS : (part || frag).end) ?? NaN
-    ).toFixed(
-      3,
-    )}]${part && frag.type === 'main' ? 'INDEPENDENT=' + (part.independent ? 'YES' : 'NO') : ''})`;
+    }]${part && frag.type === 'main' ? 'INDEPENDENT=' + (part.independent ? 'YES' : 'NO') : ''})`;
   }
 
   private treatAsGap(frag: MediaFragment, level?: Level) {
