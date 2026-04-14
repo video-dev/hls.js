@@ -5,6 +5,7 @@ import type {
   VideoSample,
   VideoSampleUnit,
 } from '../../types/demuxer';
+import type { ChunkMetadata } from '../../types/transmuxer';
 import type { ParsedVideoSample } from '../tsdemuxer';
 import type { PES } from '../tsdemuxer';
 
@@ -70,6 +71,7 @@ abstract class BaseVideoParser {
     textTrack: DemuxedUserdataTrack,
     pes: PES,
     last: boolean,
+    chunkMeta?: ChunkMetadata,
   );
 
   protected abstract getNALuType(data: Uint8Array, offset: number): number;

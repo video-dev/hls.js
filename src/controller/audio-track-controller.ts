@@ -1,7 +1,7 @@
 import BasePlaylistController from './base-playlist-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { PlaylistContextType } from '../types/loader';
+import { LoaderContextType } from '../types/loader';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import {
   audioMatchPredicate,
@@ -221,7 +221,7 @@ class AudioTrackController extends BasePlaylistController {
     }
 
     if (
-      data.context.type === PlaylistContextType.AUDIO_TRACK &&
+      data.context.type === LoaderContextType.AUDIO_TRACK &&
       data.context.id === this.trackId &&
       inGroupOrNone(data.context.groupId, this.groupIds)
     ) {
@@ -282,7 +282,10 @@ class AudioTrackController extends BasePlaylistController {
         );
         if (groupIndex > -1) {
           const track = this.tracksInGroup[groupIndex];
-          this.setAudioTrack(groupIndex);
+          this.setAudioTrack(
+            groupIndex,
+            'flushImmediate' in audioOption && audioOption.flushImmediate,
+          );
           return track;
         } else if (currentTrack) {
           // Find option in nearest level audio group

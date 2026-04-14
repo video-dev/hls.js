@@ -1,6 +1,7 @@
 import { ErrorDetails } from '../errors';
 import type { LoaderConfig, LoadPolicy, RetryConfig } from '../config';
 import type { ErrorData } from '../types/events';
+import type { Level } from '../types/level';
 import type { LoaderResponse } from '../types/loader';
 
 export function isTimeoutError(error: ErrorData): boolean {
@@ -92,4 +93,18 @@ export function retryForHttpStatus(httpStatus: number | undefined): boolean {
 
 export function offlineHttpStatus(httpStatus: number | undefined): boolean {
   return httpStatus === 0 && navigator.onLine === false;
+}
+
+export function isPenaltyExpired(level: Level, expireMs: number): boolean {
+  // A penalized level (loadError > 0) is excluded from ABR upswitch and error
+  // recovery candidate selection. Its errors only clear when it successfully
+  // buffers — but it can't buffer because it won't be selected — leaving the
+  // player stuck at a lower quality until stopLoad. This allows a penalized
+  // level to be re-elected once its penalty has expired.
+  return (
+    expireMs > 0 &&
+    level.loadError > 0 &&
+    level.loadErrorTime !== 0 &&
+    self.performance.now() - level.loadErrorTime > expireMs
+  );
 }

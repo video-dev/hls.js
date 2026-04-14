@@ -5,6 +5,7 @@
 import { stringify } from './safe-json-stringify';
 import { DateRange } from '../loader/date-range';
 import { assignProgramDateTime, mapDateRanges } from '../loader/m3u8-parser';
+import { PlaylistLevelType } from '../types/loader';
 import type { ILogger } from './logger';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
@@ -67,6 +68,7 @@ export function updateFragPTSDTS(
   endPTS: number,
   startDTS: number,
   endDTS: number,
+  iframesOnly: boolean | undefined,
   logger: ILogger,
 ): number {
   const parsedMediaDuration = endPTS - startPTS;
@@ -297,6 +299,8 @@ export function mergeDetails(
 
   // if at least one fragment contains PTS info, recompute PTS information for all fragments
   if (PTSFrag) {
+    const iframesOnly =
+      newDetails.iframesOnly && PTSFrag.type === PlaylistLevelType.MAIN;
     updateFragPTSDTS(
       newDetails,
       PTSFrag,
@@ -304,6 +308,7 @@ export function mergeDetails(
       PTSFrag.endPTS as number,
       PTSFrag.startDTS as number,
       PTSFrag.endDTS as number,
+      iframesOnly,
       logger,
     );
   } else {

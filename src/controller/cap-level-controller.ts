@@ -111,7 +111,7 @@ class CapLevelController implements ComponentAPI {
     } else {
       this.media = null;
     }
-    if ((this.timer || this.observer) && this.hls.levels.length) {
+    if ((this.timer || this.observer) && this.hls.levels.length > 1) {
       this.detectPlayerSize();
     }
   }
@@ -120,9 +120,8 @@ class CapLevelController implements ComponentAPI {
     event: Events.MANIFEST_PARSED,
     data: ManifestParsedData,
   ) {
-    const hls = this.hls;
     this.restrictedLevels = [];
-    if (hls?.config.capLevelToPlayerSize && data.video) {
+    if (data.video) {
       // Start capping immediately if the manifest has signaled video codecs
       this.startCapping();
     }
@@ -130,13 +129,19 @@ class CapLevelController implements ComponentAPI {
 
   private onLevelsUpdated(
     event: Events.LEVELS_UPDATED,
-    data: LevelsUpdatedData,
+    { levels }: LevelsUpdatedData,
   ) {
     if (
       (this.timer || this.observer) &&
       Number.isFinite(this.autoLevelCapping)
     ) {
+      // Update capped level index when levels change (or stop observing if length is 1)
       this.detectPlayerSize();
+    } else if (this.observer === undefined && this.timer === undefined) {
+      // Restart observing if length increases
+      if (levels.length > 1 && levels.some((level) => !!level.videoCodec)) {
+        this.startCapping();
+      }
     }
   }
 
@@ -146,8 +151,7 @@ class CapLevelController implements ComponentAPI {
     event: Events.BUFFER_CODECS,
     data: BufferCodecsData,
   ) {
-    const hls = this.hls;
-    if (hls?.config.capLevelToPlayerSize && data.video) {
+    if (data.video) {
       // If the manifest did not signal a video codec capping has been deferred until we're certain video is present
       this.startCapping();
     }
@@ -165,7 +169,7 @@ class CapLevelController implements ComponentAPI {
         return;
       }
       const levels = this.hls.levels;
-      if (levels.length) {
+      if (levels.length > 1) {
         const hls = this.hls;
         const maxLevel = this.getMaxLevel(levels.length - 1);
         if (maxLevel !== this.autoLevelCapping) {
@@ -184,6 +188,8 @@ class CapLevelController implements ComponentAPI {
           this.streamController.nextLevelSwitch();
         }
         this.autoLevelCapping = hls.autoLevelCapping;
+      } else if (levels.length === 1) {
+        this.stopCapping();
       }
     }
   }
@@ -230,7 +236,7 @@ class CapLevelController implements ComponentAPI {
   }
 
   startCapping() {
-    if (this.timer || this.observer) {
+    if (this.timer || this.observer || !this.hls?.config.capLevelToPlayerSize) {
       // Don't reset capping if started twice; this can happen if the manifest signals a video codec
       return;
     }

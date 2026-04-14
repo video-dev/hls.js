@@ -87,6 +87,7 @@ describe('StreamController', function () {
     } = result;
     hls.trigger(Events.MANIFEST_LOADED, {
       levels,
+      iframeVariants: [],
       audioTracks: [],
       contentSteering,
       url: 'http://www.example.com',
@@ -166,6 +167,7 @@ describe('StreamController', function () {
       } = result;
       hls.trigger(Events.MANIFEST_LOADED, {
         levels,
+        iframeVariants: [],
         audioTracks: [],
         contentSteering,
         url: 'http://www.example.com',
@@ -493,7 +495,7 @@ describe('StreamController', function () {
         stats: new LoadStats(),
         frag: firstFrag,
         part: null,
-        id: 'main',
+        id: firstFrag.type,
       });
       expect(seekStub).to.have.been.calledOnce;
     });

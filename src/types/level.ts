@@ -13,6 +13,7 @@ export interface LevelParsed extends CodecsParsed {
   supplemental?: CodecsParsed;
   url: string;
   width?: number;
+  iframes?: boolean;
 }
 
 export interface CodecsParsed {
@@ -40,6 +41,8 @@ export interface LevelAttributes extends AttrList {
   VIDEO?: string;
   'VIDEO-RANGE'?: VideoRange;
 }
+
+export type IFrameAttributes = LevelAttributes & { URI: string };
 
 export const HdcpLevels = ['NONE', 'TYPE-0', 'TYPE-1', null] as const;
 export type HdcpLevel = (typeof HdcpLevels)[number];
@@ -117,9 +120,11 @@ export class Level {
   public readonly supplemental: CodecsParsed | undefined;
   public readonly videoCodec: string | undefined;
   public readonly width: number;
+  public readonly iframes?: boolean;
   public details?: LevelDetails;
   public fragmentError: number = 0;
   public loadError: number = 0;
+  public loadErrorTime: number = 0;
   public loaded?: { bytes: number; duration: number };
   public realBitrate: number = 0;
   public supportedPromise?: Promise<MediaDecodingInfo>;
@@ -156,8 +161,12 @@ export class Level {
         this.codecSet += `,${supplementalVideo.substring(0, 4)}`;
       }
     }
-    this.addGroupId('audio', data.attrs.AUDIO);
-    this.addGroupId('text', data.attrs.SUBTITLES);
+    if ('iframes' in data && data.iframes) {
+      this.iframes = true;
+    } else {
+      this.addGroupId('audio', data.attrs.AUDIO);
+      this.addGroupId('text', data.attrs.SUBTITLES);
+    }
   }
 
   get maxBitrate(): number {

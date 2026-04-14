@@ -207,7 +207,7 @@ export class SubtitleStreamController
 
     if (frag?.type === PlaylistLevelType.SUBTITLE) {
       if (data.details === ErrorDetails.FRAG_GAP) {
-        this.fragmentTracker.fragBuffered(frag as MediaFragment, true);
+        this.fragmentTracker.addAsGap(frag as MediaFragment);
       }
       if (this.fragCurrent) {
         this.fragCurrent.abortRequests();
@@ -394,7 +394,7 @@ export class SubtitleStreamController
   }
 
   doTick() {
-    if (this.state === State.IDLE) {
+    if (this.state === State.IDLE && this.levels) {
       if (
         !this.media &&
         !this.primaryPrefetch &&
@@ -403,7 +403,7 @@ export class SubtitleStreamController
         return;
       }
       const { currentTrackId, levels } = this;
-      const track = levels?.[currentTrackId];
+      const track = levels[currentTrackId];
       const trackDetails = track?.details;
       if (
         !trackDetails ||
@@ -414,7 +414,7 @@ export class SubtitleStreamController
         return;
       }
       const { config } = this;
-      const currentTime = this.getLoadPosition();
+      const currentTime = this.playhead;
       const bufferedInfo = BufferHelper.bufferedInfo(
         this.tracksBuffered[this.currentTrackId] || [],
         currentTime,

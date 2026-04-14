@@ -5,7 +5,7 @@ import AudioTrackController from '../../../src/controller/audio-track-controller
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 import { LevelDetails } from '../../../src/loader/level-details';
-import { PlaylistContextType } from '../../../src/types/loader';
+import { LoaderContextType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import type {
   ComponentAPI,
@@ -474,7 +474,7 @@ describe('AudioTrackController', function () {
         details: Hls.ErrorDetails.AUDIO_TRACK_LOAD_ERROR,
         fatal: false,
         context: {
-          type: PlaylistContextType.AUDIO_TRACK,
+          type: LoaderContextType.AUDIO_TRACK,
           id: currentTrackId,
           groupId: currentGroupId,
         } as any,
@@ -520,6 +520,38 @@ describe('AudioTrackController', function () {
       (audioTrackController as any).selectDefaultTrack = true;
       audioTrackController.nextAudioTrack = 1;
       expect((audioTrackController as any).selectDefaultTrack).to.be.false;
+    });
+  });
+
+  describe('setAudioOption with flushImmediate', function () {
+    beforeEach(function () {
+      hls.levelController = {
+        levels: [
+          {
+            audioGroups: ['1'],
+          },
+        ],
+      };
+      audioTrackController.tracks = tracks;
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, {
+        level: 0,
+      });
+    });
+
+    it('should pass flushImmediate=true to AUDIO_TRACK_SWITCHING when specified in AudioSelectionOption', function () {
+      const triggerSpy = sinon.spy(hls, 'trigger');
+      (audioTrackController as any).setAudioOption({
+        name: 'B',
+        flushImmediate: true,
+      });
+
+      expect(triggerSpy).to.have.been.calledWith(
+        Events.AUDIO_TRACK_SWITCHING,
+        sinon.match({
+          id: 1,
+          flushImmediate: true,
+        }),
+      );
     });
   });
 

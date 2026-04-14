@@ -1,6 +1,7 @@
 import { LoadError } from './fragment-loader';
 import { LevelKey } from './level-key';
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { LoaderContextType } from '../types/loader';
 import { arrayToHex } from '../utils/hex';
 import { Logger } from '../utils/logger';
 import { parseKeyIdsFromTenc } from '../utils/mp4-tools';
@@ -227,6 +228,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
 
     return (keyInfo.keyLoadPromise = new Promise((resolve, reject) => {
       const loaderContext: KeyLoaderContext = {
+        type: LoaderContextType.KEY,
         keyInfo,
         frag,
         responseType: 'arraybuffer',

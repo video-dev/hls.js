@@ -8,7 +8,12 @@ import ContentSteeringController from './controller/content-steering-controller'
 import EMEController from './controller/eme-controller';
 import ErrorController from './controller/error-controller';
 import FPSController from './controller/fps-controller';
+import GapController from './controller/gap-controller';
+import ID3TrackController from './controller/id3-track-controller';
+import { IFrameController } from './controller/iframe-controller';
 import InterstitialsController from './controller/interstitials-controller';
+import LatencyController from './controller/latency-controller';
+import StreamController from './controller/stream-controller';
 import { SubtitleStreamController } from './controller/subtitle-stream-controller';
 import SubtitleTrackController from './controller/subtitle-track-controller';
 import { TimelineController } from './controller/timeline-controller';
@@ -166,6 +171,14 @@ export type FPSControllerConfig = {
   capLevelOnFPSDrop: boolean;
   fpsDroppedMonitoringPeriod: number;
   fpsDroppedMonitoringThreshold: number;
+};
+
+export type ErrorControllerConfig = {
+  /**
+   * Duration in milliseconds after which a penalized level (loadError > 0) becomes
+   * eligible for re-election. Set to 0 (default) to disable penalty expiry.
+   */
+  errorPenaltyExpireMs: number;
 };
 
 export type LevelControllerConfig = {
@@ -340,6 +353,14 @@ export type HlsConfig = {
   cmcdController?: typeof CMCDController;
   // Content Steering
   contentSteeringController?: typeof ContentSteeringController;
+  // IFrame Controller (setting to null disables I-Frame instance support)
+  iframeController?: typeof IFrameController;
+  // ID3 Track Controller
+  id3TrackController?: typeof ID3TrackController;
+  // Gap Controller
+  gapController?: typeof GapController;
+  // Latency Controller
+  latencyController?: typeof LatencyController;
   // Interstitial Controller (setting to null disables Interstitials parsing and playback)
   interstitialsController?: typeof InterstitialsController;
   // Option to disable internal playback handling of Interstitials (set to false to disable Interstitials playback without disabling parsing and schedule events)
@@ -349,15 +370,18 @@ export type HlsConfig = {
   // How many seconds past the end of a live playlist to preload Interstitial assets
   interstitialLiveLookAhead: number;
   // An optional `Hls` instance ID prefixed to debug logs
+  loggerId?: string;
+  // Identifies the `Hls` instance as an Interstitial asset player (also fills in for `loggerId`)
   assetPlayerId?: string;
   // MediaCapabilies API for level, track, and switch filtering
   useMediaCapabilities: boolean;
 
+  streamController: typeof StreamController;
   abrController: typeof AbrController;
   bufferController: typeof BufferController;
   capLevelController: typeof CapLevelController;
   errorController: typeof ErrorController;
-  fpsController: typeof FPSController;
+  fpsController?: typeof FPSController;
   progressive: boolean;
   lowLatencyMode: boolean;
   primarySessionId?: string;
@@ -365,6 +389,7 @@ export type HlsConfig = {
   BufferControllerConfig &
   CapLevelControllerConfig &
   EMEControllerConfig &
+  ErrorControllerConfig &
   FPSControllerConfig &
   GapControllerConfig &
   LevelControllerConfig &
@@ -449,11 +474,6 @@ export const hlsDefaultConfig: HlsConfig = {
   xhrSetup: undefined, // used by xhr-loader
   licenseXhrSetup: undefined, // used by eme-controller
   licenseResponseCallback: undefined, // used by eme-controller
-  abrController: AbrController,
-  bufferController: BufferController,
-  capLevelController: CapLevelController,
-  errorController: ErrorController,
-  fpsController: FPSController,
   stretchShortVideoTrack: false, // used by mp4-remuxer
   maxAudioFramesDrift: 1, // used by mp4-remuxer
   forceKeyFrameOnDiscontinuity: true, // used by ts-demuxer
@@ -493,6 +513,7 @@ export const hlsDefaultConfig: HlsConfig = {
   interstitialLiveLookAhead: 10,
   useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
   preserveManualLevelOnError: false,
+  errorPenaltyExpireMs: 0, // used by error-controller and abr-controller
 
   certLoadPolicy: {
     default: defaultLoadPolicy,
@@ -615,6 +636,16 @@ export const hlsDefaultConfig: HlsConfig = {
   fragLoadingRetryDelay: 1000,
   fragLoadingMaxRetryTimeout: 64000,
 
+  streamController: StreamController,
+  abrController: AbrController,
+  bufferController: BufferController,
+  capLevelController: CapLevelController,
+  errorController: ErrorController,
+  fpsController: FPSController,
+  id3TrackController: ID3TrackController,
+  gapController: GapController,
+  latencyController: LatencyController,
+
   // Dynamic Modules
   ...timelineConfig(),
   subtitleStreamController: __USE_SUBTITLES__
@@ -631,6 +662,7 @@ export const hlsDefaultConfig: HlsConfig = {
   contentSteeringController: __USE_CONTENT_STEERING__
     ? ContentSteeringController
     : undefined,
+  iframeController: __USE_IFRAMES__ ? IFrameController : undefined,
   interstitialsController: __USE_INTERSTITIALS__
     ? InterstitialsController
     : undefined,

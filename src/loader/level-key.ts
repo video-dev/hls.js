@@ -3,7 +3,11 @@ import { isFullSegmentEncryption } from '../utils/encryption-methods-util';
 import { hexToArrayBuffer } from '../utils/hex';
 import { convertDataUriToArrayBytes } from '../utils/keysystem-util';
 import { logger } from '../utils/logger';
-import { KeySystemFormats, parsePlayReadyWRM } from '../utils/mediakeys-helper';
+import {
+  KeySystemFormats,
+  KeySystemIds,
+  parsePlayReadyWRM,
+} from '../utils/mediakeys-helper';
 import { mp4pssh, parseMultiPssh } from '../utils/mp4-tools';
 
 let keyUriToKeyIdMap: { [uri: string]: Uint8Array<ArrayBuffer> | undefined } =
@@ -172,7 +176,9 @@ export class LevelKey implements DecryptData {
           this.pssh = keyBytes;
           // In case of Widevine, if KEYID is not in the playlist, assume only two fields in the pssh KEY tag URI.
           if (!this.keyId) {
-            const results = parseMultiPssh(keyBytes.buffer);
+            const results = parseMultiPssh(keyBytes.buffer).filter(
+              (result) => result.systemId === KeySystemIds.WIDEVINE,
+            );
             if (results.length) {
               const psshData = results[0];
               this.keyId = psshData.kids?.length ? psshData.kids[0] : null;

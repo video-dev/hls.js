@@ -7,7 +7,7 @@ import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { Level } from '../types/level';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import { LoaderContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { alignStream } from '../utils/discontinuities';
 import {
@@ -141,14 +141,21 @@ class AudioStreamController
   // INIT_PTS_FOUND is triggered when the video track parsed in the stream-controller has a new PTS value
   onInitPtsFound(
     event: Events.INIT_PTS_FOUND,
-    { frag, id, initPTS, timescale, trackId }: InitPTSFoundData,
+    {
+      frag,
+      id,
+      initPTS,
+      timescale,
+      trackId,
+      timestampOffsets,
+    }: InitPTSFoundData,
   ) {
     // Always update the new INIT PTS
     // Can change due level switch
     if (id === PlaylistLevelType.MAIN) {
       const cc = frag.cc;
       const inFlightFrag = this.fragCurrent;
-      this.initPTS[cc] = { baseTime: initPTS, timescale, trackId };
+      this.initPTS = timestampOffsets;
       this.log(
         `InitPTS for cc: ${cc} found from main: ${initPTS / timescale} (${initPTS}/${timescale}) trackId: ${trackId}`,
       );
@@ -417,6 +424,10 @@ class AudioStreamController
       return;
     }
 
+    if (this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag)) {
+      return;
+    }
+
     // Request audio segments up to one fragment ahead of main stream-controller
     let mainFragLoading = this.mainFragLoading?.frag || null;
     if (
@@ -663,6 +674,7 @@ class AudioStreamController
         payload.byteLength,
         partIndex,
         partial,
+        frag.duration,
       );
       transmuxer.push(
         payload,
@@ -817,7 +829,7 @@ class AudioStreamController
         if (
           !data.levelRetry &&
           this.state === State.WAITING_TRACK &&
-          data.context?.type === PlaylistContextType.AUDIO_TRACK
+          data.context?.type === LoaderContextType.AUDIO_TRACK
         ) {
           this.state = State.IDLE;
         }

@@ -6,7 +6,7 @@ describe('Decrypter', function () {
     const data = get128cbcData();
 
     const config = { enableSoftwareAES: true };
-    const decrypter = new Decrypter(config, { removePKCS7Padding: true });
+    const decrypter = new Decrypter(config);
     const cbcMode = 0;
 
     decrypter.softwareDecrypt(data.encrypted, data.key, data.iv, cbcMode);

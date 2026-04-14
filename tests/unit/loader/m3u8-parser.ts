@@ -1078,6 +1078,66 @@ lo007ts`;
     expect(result.fragments[3].cc).to.equal(21); // continuity counter should increase around discontinuity
   });
 
+  it('applies EXT-X-DISCONTINUITY-SEQUENCE to all Media Segments event when not declared up top', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:5
+#EXT-X-MEDIA-SEQUENCE:1
+#EXTINF:4
+1.mp4
+#EXT-X-DISCONTINUITY-SEQUENCE:3
+#EXTINF:4
+2.mp4
+#EXTINF:4
+3.mp4`;
+    const details = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://example.com/hls/index.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+    expect(details.playlistParsingError).to.be.null;
+    details.fragments.forEach((frag) => {
+      expect(frag.cc, `Fragment "${frag.relurl}" discontinuity sequence`).to.eq(
+        3,
+      );
+    });
+  });
+
+  it('does not error when EXT-X-DISCONTINUITY-SEQUENCE appears after EXT-X-SKIP', function () {
+    const level = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36.0
+#EXT-X-MEDIA-SEQUENCE:661
+#EXT-X-SKIP:SKIPPED-SEGMENTS=5054
+#EXT-X-DISCONTINUITY-SEQUENCE:99
+#EXT-X-VERSION:9
+#EXT-X-KEY:METHOD=NONE
+#EXT-X-MAP:URI="https://sample-host/init.m4i"
+#EXT-X-PROGRAM-DATE-TIME:2025-09-23T23:10:56.316Z
+#EXTINF:4.0110,
+https://sample-host/segment1.m4a`;
+    const details = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://example.com/hls/index.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+    expect(details.playlistParsingError).to.be.null;
+    details.fragments.forEach((frag) => {
+      if (frag) {
+        expect(
+          frag.cc,
+          `Fragment "${frag.relurl}" discontinuity sequence`,
+        ).to.eq(99);
+      }
+    });
+  });
+
   it('parses manifest with one audio track', function () {
     const manifest = `#EXTM3U
 #EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="600k",LANGUAGE="eng",NAME="Audio",AUTOSELECT=YES,DEFAULT=YES,URI="/videos/ZakEbrahim_2014/audio/600k.m3u8?qr=true&preroll=Blank",BANDWIDTH=614400`;
@@ -1087,6 +1147,7 @@ lo007ts`;
       {
         contentSteering: null,
         levels: [],
+        iframeVariants: [],
         playlistParsingError: null,
         sessionData: null,
         sessionKeys: null,
@@ -3213,32 +3274,6 @@ a{$bar}.mp4
   });
 
   describe('Media Playlist sequence tag validation', function () {
-    it('#EXT-X-DISCONTINUITY-SEQUENCE must appear before the first Media Segment', function () {
-      const level = `#EXTM3U
-#EXT-X-VERSION:6
-#EXT-X-TARGETDURATION:5
-#EXT-X-MEDIA-SEQUENCE:1
-#EXTINF:4
-1.mp4
-#EXT-X-DISCONTINUITY-SEQUENCE:3
-#EXTINF:4
-2.mp4
-#EXTINF:4
-3.mp4`;
-      const details = M3U8Parser.parseLevelPlaylist(
-        level,
-        'http://example.com/hls/index.m3u8',
-        0,
-        PlaylistLevelType.MAIN,
-        0,
-        null,
-      );
-      expectPlaylistParsingError(
-        details,
-        '#EXT-X-DISCONTINUITY-SEQUENCE must appear before the first Media Segment (#EXT-X-DISCONTINUITY-SEQUENCE:3)',
-      );
-    });
-
     it('#EXT-X-MEDIA-SEQUENCE must appear before the first Media Segment', function () {
       const level = `#EXTM3U
 #EXT-X-VERSION:6

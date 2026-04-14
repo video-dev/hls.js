@@ -1,4 +1,5 @@
 import { ErrorDetails, ErrorTypes } from '../errors';
+import { LoaderContextType } from '../types/loader';
 import { getLoaderConfigWithoutReties } from '../utils/error-helper';
 import type { BaseSegment, Fragment, Part } from './fragment';
 import type { HlsConfig } from '../config';
@@ -42,6 +43,7 @@ export default class FragmentLoader {
 
   load(
     frag: Fragment,
+    isIFrame?: boolean,
     onProgress?: FragmentLoadProgressCallback,
   ): Promise<FragLoadedData> {
     const url = frag.url;
@@ -81,7 +83,7 @@ export default class FragmentLoader {
       const loader = (this.loader = FragmentILoader
         ? new FragmentILoader(config)
         : (new DefaultILoader(config) as Loader<FragmentLoaderContext>));
-      const loaderContext = createLoaderContext(frag);
+      const loaderContext = createLoaderContext(frag, null, isIFrame);
       frag.loader = loader;
       const loadPolicy = getLoaderConfigWithoutReties(
         config.fragLoadPolicy.default,
@@ -95,6 +97,7 @@ export default class FragmentLoader {
         highWaterMark: frag.sn === 'initSegment' ? Infinity : MIN_CHUNK_SIZE,
       };
       // Assign frag stats to the loader's stats reference
+      loader.stats.retry = frag.stats.retry;
       frag.stats = loader.stats;
       const callbacks: LoaderCallbacks<FragmentLoaderContext> = {
         onSuccess: (response, stats, context, networkDetails) => {
@@ -318,9 +321,11 @@ export default class FragmentLoader {
 function createLoaderContext(
   frag: Fragment,
   part: Part | null = null,
+  isIFrame?: boolean,
 ): FragmentLoaderContext {
   const segment: BaseSegment = part || frag;
   const loaderContext: FragmentLoaderContext = {
+    type: LoaderContextType.MEDIA_FRAGMENT,
     frag,
     part,
     responseType: 'arraybuffer',
@@ -335,7 +340,7 @@ function createLoaderContext(
     let byteRangeStart = start;
     let byteRangeEnd = end;
     if (
-      frag.sn === 'initSegment' &&
+      (frag.sn === 'initSegment' || isIFrame) &&
       isMethodFullSegmentAesCbc(frag.decryptdata?.method)
     ) {
       // MAP segment encrypted with method 'AES-128' or 'AES-256' (cbc), when served with HTTP Range,

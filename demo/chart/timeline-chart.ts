@@ -1,15 +1,15 @@
 import Chart from 'chart.js';
 import { applyChartInstanceOverrides, hhmmss } from './chartjs-horizontal-bar';
-import { Fragment } from '../../src/loader/fragment';
-import type { Level } from '../../src/types/level';
-import type { TrackSet } from '../../src/types/track';
-import type { MediaPlaylist } from '../../src/types/media-playlist';
+import type { Fragment } from '../../src/loader/fragment';
 import type { LevelDetails } from '../../src/loader/level-details';
-import {
+import type {
   FragChangedData,
   FragLoadedData,
   FragParsedData,
 } from '../../src/types/events';
+import type { Level } from '../../src/types/level';
+import type { MediaPlaylist } from '../../src/types/media-playlist';
+import type { TrackSet } from '../../src/types/track';
 
 declare global {
   interface Window {
@@ -413,49 +413,35 @@ export class TimelineChart {
     if (!levelDataSet) {
       return;
     }
-    const data = levelDataSet.data;
-    data.length = 0;
-    if (details.fragments) {
-      details.fragments.forEach((fragment) => {
-        // TODO: keep track of initial playlist start and duration so that we can show drift and pts offset
-        // (Make that a feature of hls.js v1.0.0 fragments)
-        const chartFragment = Object.assign(
-          {
-            dataType: 'fragment',
-          },
-          fragment,
-          // Remove loader references for GC
-          { loader: null }
-        );
-        data.push(chartFragment);
-      });
-    }
-    if (details.partList) {
-      details.partList.forEach((part) => {
-        const chartPart = Object.assign(
-          {
+    // TODO: keep track of initial playlist start and duration so that we can show drift and pts offset
+    // (Make that a feature of hls.js v1.0.0 fragments)
+    const fragments = (details.fragments || []).map((fragment) => ({
+      dataType: 'fragment',
+      ...fragment,
+      loader: null,
+    }));
+
+    const parts = details.partList
+      ? [
+          ...details.partList.map((part) => ({
             dataType: 'part',
+            ...part,
             start: part.fragment.start + part.fragOffset,
-          },
-          part,
-          {
-            fragment: Object.assign({}, part.fragment, { loader: null }),
-          }
-        );
-        data.push(chartPart);
-      });
-      if (details.fragmentHint) {
-        const chartFragment = Object.assign(
-          {
-            dataType: 'fragmentHint',
-          },
-          details.fragmentHint,
-          // Remove loader references for GC
-          { loader: null }
-        );
-        data.push(chartFragment);
-      }
-    }
+            fragment: { ...part.fragment, loader: null },
+          })),
+          ...(details.fragmentHint
+            ? [
+                {
+                  dataType: 'fragmentHint',
+                  ...details.fragmentHint,
+                  loader: null,
+                },
+              ]
+            : []),
+        ]
+      : [];
+
+    levelDataSet.data = [...fragments, ...parts];
     const start = getPlaylistStart(details);
     this.maxZoom = this.zoom100 = Math.max(
       start + totalduration + targetduration * 3,
@@ -718,7 +704,7 @@ export class TimelineChart {
       const currentTime = self.hls.media.currentTime;
       const scale = this.chartScales[X_AXIS_SECONDS];
       const ctx = chart.ctx;
-      if (this.hidden || !ctx || !ctx.canvas.width) {
+      if (this.hidden || !ctx?.canvas.width) {
         return;
       }
       const chartArea: { left; top; right; bottom } = chart.chartArea;

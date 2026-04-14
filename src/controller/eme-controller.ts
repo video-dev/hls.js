@@ -7,6 +7,14 @@ import {
   isMediaFragment,
 } from '../loader/fragment';
 import { LevelKey } from '../loader/level-key';
+import {
+  type Loader,
+  type LoaderCallbacks,
+  type LoaderConfiguration,
+  type LoaderContext,
+  LoaderContextType,
+  type PlaylistLevelType,
+} from '../types/loader';
 import { arrayValuesMatch } from '../utils/arrays';
 import {
   addEventListener,
@@ -21,6 +29,7 @@ import {
   isPersistentSessionType,
   keySystemDomainToKeySystemFormat,
   keySystemFormatToKeySystemDomain,
+  KeySystemIds,
   KeySystems,
   parsePlayReadyWRM,
   requestMediaKeySystemAccess,
@@ -39,13 +48,6 @@ import type {
   ManifestLoadedData,
   MediaAttachedData,
 } from '../types/events';
-import type {
-  Loader,
-  LoaderCallbacks,
-  LoaderConfiguration,
-  LoaderContext,
-  PlaylistLevelType,
-} from '../types/loader';
 
 type KeySystemAccessPromises = {
   keySystemAccess: Promise<MediaKeySystemAccess>;
@@ -764,7 +766,9 @@ class EMEController extends Logger implements ComponentAPI {
         } else if (keySystem === KeySystems.PLAYREADY) {
           keyId = parsePlayReadyWRM(new Uint8Array(initData));
         } else if (keySystem === KeySystems.WIDEVINE) {
-          const psshResults = parseMultiPssh(initData);
+          const psshResults = parseMultiPssh(initData).filter(
+            (result) => result.systemId === KeySystemIds.WIDEVINE,
+          );
           if (psshResults.length) {
             const psshData = psshResults[0];
             keyId = psshData.kids?.length ? psshData.kids[0] : null;
@@ -1226,6 +1230,7 @@ class EMEController extends Logger implements ComponentAPI {
     this.log(`Fetching server certificate for "${keySystem}"`);
     return new Promise((resolve, reject) => {
       const loaderContext: LoaderContext = {
+        type: LoaderContextType.SERVER_CERTIFICATE,
         responseType: 'arraybuffer',
         url,
       };

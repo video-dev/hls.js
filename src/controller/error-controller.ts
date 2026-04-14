@@ -2,11 +2,12 @@ import { findFragmentByPTS } from './fragment-finders';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { HdcpLevels } from '../types/level';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import { LoaderContextType, PlaylistLevelType } from '../types/loader';
 import { getCodecsForMimeType } from '../utils/codecs';
 import {
   getRetryConfig,
   isKeyError,
+  isPenaltyExpired,
   isTimeoutError,
   isUnusableKeyError,
   shouldRetry,
@@ -203,9 +204,9 @@ export default class ErrorController
           const level = hls.loadLevelObj;
           if (
             level &&
-            ((context.type === PlaylistContextType.AUDIO_TRACK &&
+            ((context.type === LoaderContextType.AUDIO_TRACK &&
               level.hasAudioGroup(context.groupId)) ||
-              (context.type === PlaylistContextType.SUBTITLE_TRACK &&
+              (context.type === LoaderContextType.SUBTITLE_TRACK &&
                 level.hasSubtitleGroup(context.groupId)))
           ) {
             // Perform Pathway switch or Redundant failover if possible for fastest recovery
@@ -362,6 +363,7 @@ export default class ErrorController
     if (level) {
       const errorDetails = data.details;
       level.loadError++;
+      level.loadErrorTime = self.performance.now();
       if (errorDetails === ErrorDetails.BUFFER_APPEND_ERROR) {
         level.fragmentError++;
       }
@@ -397,7 +399,11 @@ export default class ErrorController
           candidate !== loadLevel &&
           candidate >= minAutoLevel &&
           candidate <= maxAutoLevel &&
-          levels[candidate].loadError === 0
+          (levels[candidate].loadError === 0 ||
+            isPenaltyExpired(
+              levels[candidate],
+              hls.config.errorPenaltyExpireMs,
+            ))
         ) {
           const levelCandidate = levels[candidate];
 
@@ -419,9 +425,9 @@ export default class ErrorController
               }
             }
           } else if (
-            (playlistErrorType === PlaylistContextType.AUDIO_TRACK &&
+            (playlistErrorType === LoaderContextType.AUDIO_TRACK &&
               levelCandidate.hasAudioGroup(playlistErrorGroupId)) ||
-            (playlistErrorType === PlaylistContextType.SUBTITLE_TRACK &&
+            (playlistErrorType === LoaderContextType.SUBTITLE_TRACK &&
               levelCandidate.hasSubtitleGroup(playlistErrorGroupId))
           ) {
             // For audio/subs playlist errors find another group ID or fallthrough to redundant fail-over

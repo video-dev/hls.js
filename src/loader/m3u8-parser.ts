@@ -16,6 +16,7 @@ import type { MediaFragment } from './fragment';
 import type { ContentSteeringOptions } from '../types/events';
 import type {
   CodecsParsed,
+  IFrameAttributes,
   LevelAttributes,
   LevelParsed,
   VariableMap,
@@ -29,6 +30,7 @@ type M3U8ParserFragments = Array<Fragment | null>;
 export type ParsedMultivariantPlaylist = {
   contentSteering: ContentSteeringOptions | null;
   levels: LevelParsed[];
+  iframeVariants: LevelParsed[];
   playlistParsingError: Error | null;
   sessionData: Record<string, AttrList> | null;
   sessionKeys: LevelKey[] | null;
@@ -37,7 +39,7 @@ export type ParsedMultivariantPlaylist = {
   hasVariableRefs: boolean;
 };
 
-type ParsedMultivariantMediaOptions = {
+export type ParsedMultivariantMediaOptions = {
   AUDIO?: MediaPlaylist[];
   SUBTITLES?: MediaPlaylist[];
   'CLOSED-CAPTIONS'?: MediaPlaylist[];
@@ -46,7 +48,7 @@ type ParsedMultivariantMediaOptions = {
 type LevelKeys = { [key: string]: LevelKey | undefined };
 
 const MASTER_PLAYLIST_REGEX =
-  /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-(SESSION-DATA|SESSION-KEY|DEFINE|CONTENT-STEERING|START):([^\r\n]*)[\r\n]+/g;
+  /#EXT-X-STREAM-INF:([^\r\n]*)(?:[\r\n](?:#[^\r\n]*)?)*([^\r\n]+)|#EXT-X-(I-FRAME-STREAM-INF|SESSION-DATA|SESSION-KEY|DEFINE|CONTENT-STEERING|START):([^\r\n]*)[\r\n]+/g;
 const MASTER_PLAYLIST_MEDIA_REGEX = /#EXT-X-MEDIA:(.*)/g;
 
 const IS_MEDIA_PLAYLIST = /^#EXT(?:INF|-X-TARGETDURATION):/m; // Handle empty Media Playlist (first EXTINF not signaled, but TARGETDURATION present)
@@ -66,7 +68,8 @@ const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
       .source,
     /#EXT-X-(BITRATE|DISCONTINUITY-SEQUENCE|MEDIA-SEQUENCE|TARGETDURATION|VERSION): *(\d+)/
       .source,
-    /#EXT-X-(DISCONTINUITY|ENDLIST|GAP|INDEPENDENT-SEGMENTS)/.source,
+    /#EXT-X-(DISCONTINUITY|ENDLIST|GAP|INDEPENDENT-SEGMENTS|I-FRAMES-ONLY)/
+      .source,
     /(#)([^:]*):(.*)/.source,
     /(#)(.*)(?:.*)\r?\n?/.source,
   ].join('|'),
@@ -109,6 +112,7 @@ export default class M3U8Parser {
     const parsed: ParsedMultivariantPlaylist = {
       contentSteering: null,
       levels: [],
+      iframeVariants: [],
       playlistParsingError: null,
       sessionData: null,
       sessionKeys: null,
@@ -128,40 +132,39 @@ export default class M3U8Parser {
       if (result[1]) {
         // '#EXT-X-STREAM-INF' is found, parse level tag  in group 1
         const attrs = new AttrList(result[1], parsed) as LevelAttributes;
-        const uri = __USE_VARIABLE_SUBSTITUTION__
-          ? substituteVariables(parsed, result[2])
-          : result[2];
-        const level: LevelParsed = {
+        const level = createVariant(
           attrs,
-          bitrate:
-            attrs.decimalInteger('BANDWIDTH') ||
-            attrs.decimalInteger('AVERAGE-BANDWIDTH'),
-          name: attrs.NAME,
-          url: M3U8Parser.resolve(uri, baseurl),
-        };
-
-        const resolution = attrs.decimalResolution('RESOLUTION');
-        if (resolution) {
-          level.width = resolution.width;
-          level.height = resolution.height;
+          result[2],
+          baseurl,
+          parsed,
+          levelsWithKnownCodecs,
+        );
+        if (level) {
+          parsed.levels.push(level);
         }
-
-        setCodecs(attrs.CODECS, level);
-        const supplementalCodecs = attrs['SUPPLEMENTAL-CODECS'];
-        if (supplementalCodecs) {
-          level.supplemental = {};
-          setCodecs(supplementalCodecs, level.supplemental);
-        }
-
-        if (!level.unknownCodecs?.length) {
-          levelsWithKnownCodecs.push(level);
-        }
-
-        parsed.levels.push(level);
       } else if (result[3]) {
         const tag = result[3];
         const attributes = result[4];
         switch (tag) {
+          case 'I-FRAME-STREAM-INF':
+            {
+              const attrs = new AttrList(
+                attributes,
+                parsed,
+              ) as IFrameAttributes;
+              const iframeVariant = createVariant(
+                attrs,
+                attrs.URI,
+                baseurl,
+                parsed,
+                levelsWithKnownCodecs,
+                true,
+              );
+              if (iframeVariant) {
+                parsed.iframeVariants.push(iframeVariant);
+              }
+            }
+            break;
           case 'SESSION-DATA': {
             // #EXT-X-SESSION-DATA
             const sessionAttrs = new AttrList(attributes, parsed);
@@ -396,7 +399,6 @@ export default class M3U8Parser {
           frag.sn = currentSN;
           frag.level = id;
           frag.cc = discontinuityCounter;
-          fragments.push(frag);
           // avoid sliced strings    https://github.com/video-dev/hls.js/issues/939
           const uri = (' ' + result[3]).slice(1);
           frag.relurl = __USE_VARIABLE_SUBSTITUTION__
@@ -411,6 +413,36 @@ export default class M3U8Parser {
           totalduration += frag.duration;
           currentSN++;
           currentPart = 0;
+
+          const byteRange = frag.byteRange;
+          if (byteRange.length === 2) {
+            frag.bitrate =
+              (((byteRange[1] - byteRange[0]) * 8) / frag.duration) | 0;
+          }
+
+          // Create implicit init segment for ByteRange addressed MPEG2-TS I-FRAME segments (PMT bytes)
+          if (
+            level.iframesOnly &&
+            byteRange[0] &&
+            currentInitSegment?.cc !== discontinuityCounter
+          ) {
+            const init = new Fragment(type, base);
+            init.relurl = frag.relurl;
+            init.setByteRange(`${Math.min(byteRange[0], 7 * 188)}@0`);
+            init.level = id;
+            init.sn = 'initSegment';
+            if (levelkeys) {
+              init.levelkeys = levelkeys;
+              if (levelkeys.identity) {
+                (init as any)._decryptdata =
+                  levelkeys.identity.getDecryptData(0);
+              }
+            }
+            currentInitSegment = init;
+            frag.initSegment = currentInitSegment;
+          }
+          fragments.push(frag);
+
           createNextFrag = true;
         }
       } else {
@@ -499,6 +531,9 @@ export default class M3U8Parser {
             break;
           case 'INDEPENDENT-SEGMENTS':
             break;
+          case 'I-FRAMES-ONLY':
+            level.iframesOnly = true;
+            break;
           case 'ENDLIST':
             if (!level.live) {
               assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
@@ -563,10 +598,11 @@ export default class M3U8Parser {
           case 'DISCONTINUITY-SEQUENCE':
             if (level.startCC !== 0) {
               assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
-            } else if (fragments.length > 0) {
-              assignMustAppearBeforeSegmentsError(level, tag, result);
             }
             level.startCC = discontinuityCounter = parseInt(value1);
+            fragments.forEach(
+              (frag) => frag && (frag.cc = discontinuityCounter),
+            );
             break;
           case 'KEY': {
             const levelKey = parseKey(value1, baseurl, level);
@@ -754,6 +790,49 @@ export default class M3U8Parser {
 
     return level;
   }
+}
+
+function createVariant(
+  attrs: LevelAttributes | IFrameAttributes,
+  tUri: string | undefined,
+  baseurl: string,
+  parsed: ParsedMultivariantPlaylist,
+  levelsWithKnownCodecs: LevelParsed[],
+  iframes?: boolean,
+): LevelParsed | null {
+  if (tUri === undefined) {
+    // URI line or attribute is required. Ignore entry if missing.
+    return null;
+  }
+  const uri = __USE_VARIABLE_SUBSTITUTION__
+    ? substituteVariables(parsed, tUri)
+    : tUri;
+  const level: LevelParsed = {
+    attrs,
+    bitrate:
+      attrs.decimalInteger('BANDWIDTH') ||
+      attrs.decimalInteger('AVERAGE-BANDWIDTH'),
+    name: attrs.NAME,
+    url: M3U8Parser.resolve(uri, baseurl),
+  };
+  const resolution = attrs.decimalResolution('RESOLUTION');
+  if (resolution) {
+    level.width = resolution.width;
+    level.height = resolution.height;
+  }
+  setCodecs(attrs.CODECS, level);
+  const supplementalCodecs = attrs['SUPPLEMENTAL-CODECS'];
+  if (supplementalCodecs) {
+    level.supplemental = {};
+    setCodecs(supplementalCodecs, level.supplemental);
+  }
+  if (!level.unknownCodecs?.length) {
+    levelsWithKnownCodecs.push(level);
+  }
+  if (iframes) {
+    level.iframes = true;
+  }
+  return level;
 }
 
 export function mapDateRanges(

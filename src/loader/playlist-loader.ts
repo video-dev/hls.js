@@ -9,7 +9,7 @@
 import M3U8Parser from './m3u8-parser';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import { LoaderContextType, PlaylistLevelType } from '../types/loader';
 import { AttrList } from '../utils/attr-list';
 import {
   areCodecsMediaSourceSupported,
@@ -35,6 +35,7 @@ import type {
   LoaderContext,
   LoaderResponse,
   LoaderStats,
+  PlaylistContextType,
   PlaylistLoaderContext,
 } from '../types/loader';
 import type { MediaAttributes, MediaPlaylist } from '../types/media-playlist';
@@ -46,9 +47,9 @@ function mapContextToLevelType(
   const { type } = context;
 
   switch (type) {
-    case PlaylistContextType.AUDIO_TRACK:
+    case LoaderContextType.AUDIO_TRACK:
       return PlaylistLevelType.AUDIO;
-    case PlaylistContextType.SUBTITLE_TRACK:
+    case LoaderContextType.SUBTITLE_TRACK:
       return PlaylistLevelType.SUBTITLE;
     default:
       return PlaylistLevelType.MAIN;
@@ -164,7 +165,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       id: null,
       level: 0,
       responseType: 'text',
-      type: PlaylistContextType.MANIFEST,
+      type: LoaderContextType.MANIFEST,
       url,
       deliveryDirectives: null,
       levelOrTrack: null,
@@ -178,7 +179,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       level,
       pathwayId,
       responseType: 'text',
-      type: PlaylistContextType.LEVEL,
+      type: LoaderContextType.LEVEL,
       url,
       deliveryDirectives,
       levelOrTrack: levelInfo,
@@ -195,7 +196,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       groupId,
       level: null,
       responseType: 'text',
-      type: PlaylistContextType.AUDIO_TRACK,
+      type: LoaderContextType.AUDIO_TRACK,
       url,
       deliveryDirectives,
       levelOrTrack: track,
@@ -212,7 +213,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       groupId,
       level: null,
       responseType: 'text',
-      type: PlaylistContextType.SUBTITLE_TRACK,
+      type: LoaderContextType.SUBTITLE_TRACK,
       url,
       deliveryDirectives,
       levelOrTrack: track,
@@ -224,7 +225,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     data: LevelsUpdatedData,
   ) {
     // abort and delete loader of removed levels
-    const loader = this.loaders[PlaylistContextType.LEVEL];
+    const loader = this.loaders[LoaderContextType.LEVEL];
     if (loader) {
       const context = loader.context;
       if (
@@ -234,7 +235,7 @@ class PlaylistLoader implements NetworkComponentAPI {
         )
       ) {
         loader.abort();
-        delete this.loaders[PlaylistContextType.LEVEL];
+        delete this.loaders[LoaderContextType.LEVEL];
       }
     }
   }
@@ -275,7 +276,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     // apply different configs for retries depending on
     // context (manifest, level, audio/subs playlist)
     let loadPolicy: LoaderConfig;
-    if (context.type === PlaylistContextType.MANIFEST) {
+    if (context.type === LoaderContextType.MANIFEST) {
       loadPolicy = config.manifestLoadPolicy.default;
     } else {
       loadPolicy = Object.assign({}, config.playlistLoadPolicy.default, {
@@ -289,18 +290,15 @@ class PlaylistLoader implements NetworkComponentAPI {
     // (the default of 10000ms is counter productive to blocking playlist reload requests)
     if (Number.isFinite(context.deliveryDirectives?.part)) {
       let levelDetails: LevelDetails | undefined;
-      if (
-        context.type === PlaylistContextType.LEVEL &&
-        context.level !== null
-      ) {
+      if (context.type === LoaderContextType.LEVEL && context.level !== null) {
         levelDetails = this.hls.levels[context.level].details;
       } else if (
-        context.type === PlaylistContextType.AUDIO_TRACK &&
+        context.type === LoaderContextType.AUDIO_TRACK &&
         context.id !== null
       ) {
         levelDetails = this.hls.audioTracks[context.id].details;
       } else if (
-        context.type === PlaylistContextType.SUBTITLE_TRACK &&
+        context.type === LoaderContextType.SUBTITLE_TRACK &&
         context.id !== null
       ) {
         levelDetails = this.hls.subtitleTracks[context.id].details;
@@ -347,7 +345,7 @@ class PlaylistLoader implements NetworkComponentAPI {
         stats.parsing.start = performance.now();
         if (
           M3U8Parser.isMediaPlaylist(string) ||
-          context.type !== PlaylistContextType.MANIFEST
+          context.type !== LoaderContextType.MANIFEST
         ) {
           this.handleTrackOrLevelPlaylist(
             response,
@@ -429,6 +427,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     const {
       contentSteering,
       levels,
+      iframeVariants,
       sessionData,
       sessionKeys,
       startTimeOffset,
@@ -513,11 +512,11 @@ class PlaylistLoader implements NetworkComponentAPI {
         });
       }
     }
-
     hls.trigger(Events.MANIFEST_LOADED, {
       levels,
       audioTracks,
       subtitles,
+      iframeVariants,
       captions,
       contentSteering,
       url,
@@ -560,7 +559,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     // not a master playlist but a chunk-list (track/level)
     // We fire the manifest-loaded event anyway with the parsed level-details
     // by creating a single-level structure for it.
-    if (type === PlaylistContextType.MANIFEST) {
+    if (type === LoaderContextType.MANIFEST) {
       const singleLevel: LevelParsed = {
         attrs: new AttrList({}),
         bitrate: 0,
@@ -574,6 +573,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       hls.trigger(Events.MANIFEST_LOADED, {
         levels: [singleLevel],
         audioTracks: [],
+        iframeVariants: [],
         url,
         stats,
         networkDetails,
@@ -611,7 +611,7 @@ class PlaylistLoader implements NetworkComponentAPI {
     this.hls.trigger(Events.ERROR, {
       type: ErrorTypes.NETWORK_ERROR,
       details: ErrorDetails.MANIFEST_PARSING_ERROR,
-      fatal: context.type === PlaylistContextType.MANIFEST,
+      fatal: context.type === LoaderContextType.MANIFEST,
       url: response.url,
       err: error,
       error,
@@ -635,11 +635,11 @@ class PlaylistLoader implements NetworkComponentAPI {
         ? 'timeout'
         : 'error' + (response ? ' (status ' + response.code + ')' : '')
     } occurred while loading ${context.type}`;
-    if (context.type === PlaylistContextType.LEVEL) {
+    if (context.type === LoaderContextType.LEVEL) {
       message += `: ${context.level} id: ${context.id}`;
     } else if (
-      context.type === PlaylistContextType.AUDIO_TRACK ||
-      context.type === PlaylistContextType.SUBTITLE_TRACK
+      context.type === LoaderContextType.AUDIO_TRACK ||
+      context.type === LoaderContextType.SUBTITLE_TRACK
     ) {
       message += ` id: ${context.id} group-id: "${context.groupId}"`;
     }
@@ -651,25 +651,25 @@ class PlaylistLoader implements NetworkComponentAPI {
     const loader = this.getInternalLoader(context);
 
     switch (context.type) {
-      case PlaylistContextType.MANIFEST:
+      case LoaderContextType.MANIFEST:
         details = timeout
           ? ErrorDetails.MANIFEST_LOAD_TIMEOUT
           : ErrorDetails.MANIFEST_LOAD_ERROR;
         fatal = true;
         break;
-      case PlaylistContextType.LEVEL:
+      case LoaderContextType.LEVEL:
         details = timeout
           ? ErrorDetails.LEVEL_LOAD_TIMEOUT
           : ErrorDetails.LEVEL_LOAD_ERROR;
         fatal = false;
         break;
-      case PlaylistContextType.AUDIO_TRACK:
+      case LoaderContextType.AUDIO_TRACK:
         details = timeout
           ? ErrorDetails.AUDIO_TRACK_LOAD_TIMEOUT
           : ErrorDetails.AUDIO_TRACK_LOAD_ERROR;
         fatal = false;
         break;
-      case PlaylistContextType.SUBTITLE_TRACK:
+      case LoaderContextType.SUBTITLE_TRACK:
         details = timeout
           ? ErrorDetails.SUBTITLE_TRACK_LOAD_TIMEOUT
           : ErrorDetails.SUBTITLE_LOAD_ERROR;
@@ -721,6 +721,18 @@ class PlaylistLoader implements NetworkComponentAPI {
       typeof context.level === 'number' && parent === PlaylistLevelType.MAIN
         ? (level as number)
         : undefined;
+    if (
+      __USE_IFRAMES__ &&
+      levelOrTrack &&
+      'iframes' in levelOrTrack &&
+      levelOrTrack.iframes &&
+      !levelDetails.iframesOnly
+    ) {
+      levelDetails.playlistParsingError = new Error(
+        `EXT-X-I-FRAME-STREAM-INF media playlist MUST contain an EXT-X-I-FRAMES-ONLY tag`,
+      );
+      levelDetails.iframesOnly = true;
+    }
     const error = levelDetails.playlistParsingError;
     if (error) {
       this.hls.logger.warn(`${error} ${levelDetails.url}`);
@@ -774,8 +786,8 @@ class PlaylistLoader implements NetworkComponentAPI {
     }
 
     switch (type) {
-      case PlaylistContextType.MANIFEST:
-      case PlaylistContextType.LEVEL:
+      case LoaderContextType.MANIFEST:
+      case LoaderContextType.LEVEL:
         if (levelIndex) {
           if (!levelOrTrack) {
             // fall-through to hls.levels[0]
@@ -798,11 +810,11 @@ class PlaylistLoader implements NetworkComponentAPI {
           stats,
           networkDetails,
           deliveryDirectives,
-          withoutMultiVariant: type === PlaylistContextType.MANIFEST,
+          withoutMultiVariant: type === LoaderContextType.MANIFEST,
           context,
         });
         break;
-      case PlaylistContextType.AUDIO_TRACK:
+      case LoaderContextType.AUDIO_TRACK:
         hls.trigger(Events.AUDIO_TRACK_LOADED, {
           details: levelDetails,
           track: levelOrTrack as MediaPlaylist,
@@ -814,7 +826,7 @@ class PlaylistLoader implements NetworkComponentAPI {
           context,
         });
         break;
-      case PlaylistContextType.SUBTITLE_TRACK:
+      case LoaderContextType.SUBTITLE_TRACK:
         hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
           details: levelDetails,
           track: levelOrTrack as MediaPlaylist,

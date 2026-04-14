@@ -7,7 +7,7 @@ import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { changeTypeSupported } from '../is-supported';
 import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
-import { PlaylistContextType, PlaylistLevelType } from '../types/loader';
+import { LoaderContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { BufferHelper } from '../utils/buffer-helper';
 import { pickMostCompleteCodecName } from '../utils/codecs';
@@ -167,9 +167,7 @@ export default class StreamController
         !skipSeekToStartPosition
       ) {
         this.log(
-          `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
-            3,
-          )}`,
+          `Override startPosition with lastCurrentTime @${lastCurrentTime}`,
         );
         startPosition = lastCurrentTime;
       }
@@ -368,6 +366,11 @@ export default class StreamController
     if (!frag) {
       return;
     }
+
+    if (this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag)) {
+      return;
+    }
+
     if (frag.initSegment && !frag.initSegment.data && !this.bitrateTest) {
       frag = frag.initSegment;
     }
@@ -410,6 +413,13 @@ export default class StreamController
   public immediateLevelSwitch() {
     this.abortCurrentFrag();
     this.flushMainBuffer(0, Number.POSITIVE_INFINITY);
+    if (this.altAudio !== AlternateAudio.DISABLED) {
+      // If behind the live window, remove audio too to keep buffered media aligned
+      const liveWindowStart = this.getLevelDetails()?.fragmentStart || 0;
+      if (liveWindowStart > this.lastCurrentTime) {
+        super.flushMainBuffer(0, Number.POSITIVE_INFINITY, 'audio');
+      }
+    }
   }
 
   /**
@@ -524,7 +534,7 @@ export default class StreamController
       return;
     }
 
-    this.log(`Media seeked to ${currentTime.toFixed(3)}`);
+    this.log(`Media seeked to ${currentTime}`);
 
     // If seeked was issued before buffer was appended do not tick immediately
     if (!this.getBufferedFrag(currentTime)) {
@@ -669,6 +679,14 @@ export default class StreamController
       this.synchronizeToLiveEdge(newDetails);
     }
 
+    // Remove timestamp mapping from sparse array for discontinuities no longer present
+    this.initPTS.some((t, i) => {
+      if (i >= newDetails.startCC) {
+        return true;
+      }
+      delete this.initPTS[i];
+    });
+
     // trigger handler right now
     this.tick();
   }
@@ -679,7 +697,7 @@ export default class StreamController
       return;
     }
     const liveSyncPosition = this.hls.liveSyncPosition;
-    const currentTime = this.getLoadPosition();
+    const currentTime = this.playhead;
     const start = levelDetails.fragmentStart;
     const end = levelDetails.edge;
     const withinSlidingWindow =
@@ -706,11 +724,9 @@ export default class StreamController
         // Only seek if ready and there is not a significant forward buffer available for playback
         if (media.readyState) {
           this.warn(
-            `Playback: ${currentTime.toFixed(
-              3,
-            )} is located too far from the end of live sliding playlist: ${end}, reset currentTime to : ${liveSyncPosition.toFixed(
-              3,
-            )}`,
+            `Playback: ${
+              currentTime
+            } is located too far from the end of live sliding playlist: ${end}, reset currentTime to : ${liveSyncPosition}`,
           );
 
           if (this.config.liveSyncMode === 'buffered') {
@@ -790,13 +806,16 @@ export default class StreamController
       ));
     const partIndex = part ? part.index : -1;
     const partial = partIndex !== -1;
+    const byteRange = frag.byteRange;
     const chunkMeta = new ChunkMetadata(
       frag.level,
       frag.sn,
       frag.stats.chunkCount,
-      payload.byteLength,
+      byteRange.length ? byteRange[1] - byteRange[0] : payload.byteLength,
       partIndex,
       partial,
+      frag.duration,
+      this.iframesOnly,
     );
     const initPTS = this.initPTS[frag.cc];
 
@@ -941,10 +960,20 @@ export default class StreamController
         }
         return;
       }
+      let fragError = false;
       if (isMediaFragment(frag)) {
         this.fragPrevious = frag;
+        fragError =
+          !!frag.gap && !frag.tagList.some((tags) => tags[0] === 'GAP');
       }
       this.fragBufferedComplete(frag, part);
+      if (fragError) {
+        frag.stats.retry++;
+        const level = this.levels?.[frag.level];
+        if (level) {
+          level.fragmentError++;
+        }
+      }
     }
 
     const media = this.media;
@@ -986,7 +1015,7 @@ export default class StreamController
         if (
           !data.levelRetry &&
           this.state === State.WAITING_LEVEL &&
-          data.context?.type === PlaylistContextType.LEVEL
+          data.context?.type === LoaderContextType.LEVEL
         ) {
           this.state = State.IDLE;
         }
@@ -1220,7 +1249,9 @@ export default class StreamController
           timescale,
           trackId,
         };
+        const timestampOffsets = this.initPTS.slice(0);
         hls.trigger(Events.INIT_PTS_FOUND, {
+          timestampOffsets,
           frag,
           id,
           initPTS: baseTime,
@@ -1476,6 +1507,9 @@ export default class StreamController
       delete tracks.audiovideo;
     }
     if (audiovideo) {
+      if (this.iframesOnly) {
+        this.logMuxedErr(frag);
+      }
       this.log(
         `Init audiovideo buffer, container:${audiovideo.container}, codecs[level/parsed]=[${currentLevel.codecs}/${audiovideo.codec}]`,
       );

@@ -23,6 +23,7 @@ import {
   isManagedMediaSource,
 } from '../utils/mediasource-helper';
 import { stringify } from '../utils/safe-json-stringify';
+import { timeRangesToString } from '../utils/time-ranges';
 import type { FragmentTracker } from './fragment-tracker';
 import type { HlsConfig } from '../config';
 import type Hls from '../hls';
@@ -118,6 +119,9 @@ export default class BufferController extends Logger implements ComponentAPI {
     audiovideo: 0,
   };
   private appendError?: ErrorData;
+  // Tracks whether a QuotaExceededError back-buffer eviction is in progress for a given SourceBuffer type.
+  private _quotaEvictionPending: Partial<Record<SourceBufferName, boolean>> =
+    {};
   // Record of required or created buffers by type. SourceBuffer is stored in Track.buffer once created.
   private tracks: SourceBufferTrackSet = {};
   // Array of SourceBuffer type and SourceBuffer (or null). One entry per TrackSet in this.tracks.
@@ -857,7 +861,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       label: `append-${type}`,
       execute: () => {
         chunkStats.executeStart = self.performance.now();
-
+        // this.log(
+        //   `appending "${type}" sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
+        //     parent === PlaylistLevelType.MAIN ? 'level' : 'track'
+        //   } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
+        // );
         const sb = this.tracks[type]?.buffer;
         if (sb) {
           if (checkTimestampOffset) {
@@ -869,11 +877,19 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.appendExecutor(data, type);
       },
       onStart: () => {
-        // logger.debug(`[buffer-controller]: ${type} SourceBuffer updatestart`);
+        // this.log(
+        //   `updatestart "${type}" sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
+        //     parent === PlaylistLevelType.MAIN ? 'level' : 'track'
+        //   } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
+        // );
       },
       onComplete: () => {
         this.clearBufferAppendTimeoutId(this.tracks[type]);
-        // logger.debug(`[buffer-controller]: ${type} SourceBuffer updateend`);
+        // this.log(
+        //   `appended "${type}" sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
+        //     parent === PlaylistLevelType.MAIN ? 'level' : 'track'
+        //   } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
+        // );
         const end = self.performance.now();
         chunkStats.executeEnd = chunkStats.end = end;
         if (fragBuffering.first === 0) {
@@ -900,6 +916,43 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       },
       onError: (error: Error) => {
         this.clearBufferAppendTimeoutId(this.tracks[type]);
+
+        // this.log(
+        //   `append-error "${type}" sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
+        //     parent === PlaylistLevelType.MAIN ? 'level' : 'track'
+        //   } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
+        // );
+
+        const isQuotaError =
+          (error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR ||
+          error.name == 'QuotaExceededError' ||
+          `quota` in error;
+
+        if (isQuotaError) {
+          // First QuotaExceededError for this type: evict minimum back buffer
+          if (!this._quotaEvictionPending[type]) {
+            const evictEnd = this.getBackBufferEvictionTarget(
+              type,
+              data.byteLength,
+              frag.type,
+            );
+            if (evictEnd > 0) {
+              this._quotaEvictionPending[type] = true;
+              this.log(
+                `QuotaExceededError on "${type}" append sn: ${sn} — evicting back buffer to ${evictEnd.toFixed(3)}s and retrying`,
+              );
+              const removeOp = this.getFlushOp(type, 0, evictEnd);
+              const clearOp = this.getClearEvictionPendingOp(type);
+
+              this.insertNext([removeOp, operation, clearOp], type);
+              return;
+            }
+            this.warn(
+              `QuotaExceededError on "${type}" sn: ${sn} — no back buffer available to evict`,
+            );
+          }
+        }
+
         // in case any error occured while appending, put back segment in segments table
         const event: ErrorData = {
           type: ErrorTypes.MEDIA_ERROR,
@@ -915,36 +968,27 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         };
         const mediaError = this.media?.error;
         if (
-          (error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR ||
-          error.name == 'QuotaExceededError' ||
-          `quota` in error
-        ) {
-          // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
-          // let's stop appending any segments, and report BUFFER_FULL_ERROR error
-          event.details = ErrorDetails.BUFFER_FULL_ERROR;
-        } else if (
-          (error as DOMException).code === DOMException.INVALID_STATE_ERR &&
-          this.mediaSourceOpenOrEnded &&
-          !mediaError
-        ) {
-          // Allow retry for "Failed to execute 'appendBuffer' on 'SourceBuffer': This SourceBuffer is still processing" errors
-          event.errorAction = createDoNothingErrorAction(true);
-        } else if (
           error.name === TRACK_REMOVED_ERROR_NAME &&
           this.sourceBufferCount === 0
         ) {
           // Do nothing if sourceBuffers were removed (media is detached and append was not aborted)
           event.errorAction = createDoNothingErrorAction(true);
         } else {
+          if (isQuotaError) {
+            // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
+            // Eviction was already attempted or not possible — report BUFFER_FULL_ERROR
+            event.details = ErrorDetails.BUFFER_FULL_ERROR;
+          }
           const appendErrorCount = ++this.appendErrors[type];
           /* with UHD content, we could get loop of quota exceeded error until
             browser is able to evict some data from sourcebuffer. Retrying can help recover.
           */
+          const appendErrorMaxRetry = this.hls.config.appendErrorMaxRetry;
           this.warn(
-            `Failed ${appendErrorCount}/${this.hls.config.appendErrorMaxRetry} times to append segment in "${type}" sourceBuffer with error: ${error.message}`,
+            `Failed ${appendErrorCount}/${appendErrorMaxRetry + 1} times to append segment in "${type}" sourceBuffer with error: ${error.message}`,
           );
-          if (appendErrorCount >= this.hls.config.appendErrorMaxRetry) {
-            event.fatal = true;
+          if (appendErrorCount >= appendErrorMaxRetry) {
+            event.fatal = !isQuotaError;
           }
           const readyState = this.mediaSource?.readyState;
           if (
@@ -961,6 +1005,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         }
         this.appendError = event;
         this.hls.trigger(Events.ERROR, event);
+        if (isQuotaError && this.hls) {
+          this.trimBuffers(frag.start, 1);
+        }
       },
     };
     this.log(
@@ -969,6 +1016,19 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
     );
     this.append(operation, type, this.isPending(this.tracks[type]));
+  }
+
+  private getClearEvictionPendingOp(type: SourceBufferName): BufferOperation {
+    return {
+      label: 'clear',
+      execute: () => {
+        this._quotaEvictionPending[type] = false;
+        this.shiftAndExecuteNext(type);
+      },
+      onStart: () => {},
+      onComplete: () => {},
+      onError: () => {},
+    };
   }
 
   private getFlushOp(
@@ -983,17 +1043,28 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.removeExecutor(type, start, end);
       },
       onStart: () => {
-        // logger.debug(`[buffer-controller]: Started flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
+        // logger.debug(`[buffer-controller]: Started flushing ${start} -> ${end} for ${type} Source Buffer`);
       },
       onComplete: () => {
-        // logger.debug(`[buffer-controller]: Finished flushing ${data.startOffset} -> ${data.endOffset} for ${type} Source Buffer`);
-        this.hls.trigger(Events.BUFFER_FLUSHED, { type });
+        const sb = this.tracks[type]?.buffer;
+        this.log(
+          `Remove request ${start}-${end} from ${type} Source Buffer complete > buffer: ${
+            sb ? timeRangesToString(BufferHelper.getBuffered(sb)) : '(detached)'
+          }`,
+        );
+        this.hls.trigger(Events.BUFFER_FLUSHED, { type, start, end });
       },
       onError: (error: Error) => {
         this.warn(
           `Failed to remove ${start}-${end} from "${type}" SourceBuffer`,
           error,
         );
+        this.hls.trigger(Events.BUFFER_FLUSHED, {
+          type,
+          start: 0,
+          end: 0,
+          error,
+        });
       },
     };
   }
@@ -1044,6 +1115,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         stats,
         id: frag.type,
       });
+      if (!part && frag.gap && stats.retry) {
+        this.log(
+          `Nothing buffered for ${frag.type} level: ${frag.level} sn: ${frag.sn} retries ${stats.retry}`,
+        );
+      }
     };
 
     if (buffersAppendedTo.length === 0) {
@@ -1059,7 +1135,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private onFragChanged(event: Events.FRAG_CHANGED, data: FragChangedData) {
-    this.trimBuffers();
+    const config: Readonly<HlsConfig> = this.hls?.config;
+    if (!config) {
+      return;
+    }
+    const { backBufferLength, frontBufferFlushThreshold } = config;
+    this.trimBuffers(frontBufferFlushThreshold, backBufferLength);
 
     // Only clear append errors on successful encounter of buffered media. Init segments may complete without error for unsupported media.
     if (isMediaFragment(data.frag)) {
@@ -1198,6 +1279,26 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
   }
 
+  // Returns the end position to evict back buffer to on QuotaExceededError,
+  // or 0 if there is nothing to evict. Delegates to the fragment tracker which
+  // walks buffered fragments oldest-first using actual byte sizes to find the
+  // minimum eviction needed to fit the new segment.
+  private getBackBufferEvictionTarget(
+    type: SourceBufferName,
+    segmentBytes: number,
+    playlistType: PlaylistLevelType,
+  ): number {
+    const { media } = this;
+    if (!media) {
+      return 0;
+    }
+    return this.fragmentTracker.getBackBufferEvictionEnd(
+      media.currentTime,
+      playlistType,
+      segmentBytes,
+    );
+  }
+
   private resetAppendErrors() {
     this.appendErrors = {
       audio: 0,
@@ -1207,7 +1308,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     this.appendError = undefined;
   }
 
-  private trimBuffers() {
+  private trimBuffers(
+    frontBufferFlushThreshold: number,
+    backBufferLength: number,
+  ) {
     const { hls, details, media } = this;
     if (!media || details === null) {
       return;
@@ -1222,10 +1326,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const targetDuration = details.levelTargetDuration;
 
     // Support for deprecated liveBackBufferLength
-    const backBufferLength =
+    backBufferLength =
       details.live && config.liveBackBufferLength !== null
         ? config.liveBackBufferLength
-        : config.backBufferLength;
+        : backBufferLength;
 
     if (Number.isFinite(backBufferLength) && backBufferLength >= 0) {
       const maxBackBufferLength = Math.max(backBufferLength, targetDuration);
@@ -1240,7 +1344,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       );
     }
 
-    const frontBufferFlushThreshold = config.frontBufferFlushThreshold;
     if (
       Number.isFinite(frontBufferFlushThreshold) &&
       frontBufferFlushThreshold > 0
@@ -1585,8 +1688,13 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           // If media was ejected check for a change. Added ranges are redundant with changes on 'updateend' event.
           const removedRanges = event.removedRanges;
           if (removedRanges?.length) {
+            this.log(
+              `${type} buffer removed ${timeRangesToString(removedRanges)}`,
+            );
             this.hls.trigger(Events.BUFFER_FLUSHED, {
               type: type,
+              start: removedRanges.start(0),
+              end: removedRanges.end(removedRanges.length - 1),
             });
           }
         },
@@ -1747,11 +1855,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const track = this.tracks[type];
     const sb = track?.buffer;
     if (!media || !mediaSource || !sb) {
-      this.warn(
+      throw new Error(
         `Attempting to remove from the ${type} SourceBuffer, but it does not exist`,
       );
-      this.shiftAndExecuteNext(type);
-      return;
     }
     const mediaDuration = Number.isFinite(media.duration)
       ? media.duration
@@ -1768,8 +1874,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       );
       sb.remove(removeStart, removeEnd);
     } else {
-      // Cycle the queue
-      this.shiftAndExecuteNext(type);
+      throw new Error(
+        `Cannot remove ${removeEnd <= removeStart ? `invalid range (${removeStart} >= ${removeEnd}) ` : ''}from the ${type} SourceBuffer${track.ending ? ' while track ending' : ''}`,
+      );
     }
   }
 
@@ -1937,6 +2044,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   ) {
     if (this.operationQueue) {
       this.operationQueue.append(operation, type, pending);
+    }
+  }
+
+  private insertNext(operations: BufferOperation[], type: SourceBufferName) {
+    if (this.operationQueue) {
+      this.operationQueue.insertNext(operations, type);
     }
   }
 
