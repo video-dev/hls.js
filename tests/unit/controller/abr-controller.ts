@@ -246,7 +246,7 @@ function loadAndBufferFragment(
       frag,
       part: null,
       stats: frag.stats,
-      id: 'video',
+      id: frag.type,
     },
   );
 }

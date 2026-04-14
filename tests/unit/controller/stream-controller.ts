@@ -495,7 +495,7 @@ describe('StreamController', function () {
         stats: new LoadStats(),
         frag: firstFrag,
         part: null,
-        id: 'main',
+        id: firstFrag.type,
       });
       expect(seekStub).to.have.been.calledOnce;
     });

@@ -97,6 +97,7 @@ export default class FragmentLoader {
         highWaterMark: frag.sn === 'initSegment' ? Infinity : MIN_CHUNK_SIZE,
       };
       // Assign frag stats to the loader's stats reference
+      loader.stats.retry = frag.stats.retry;
       frag.stats = loader.stats;
       const callbacks: LoaderCallbacks<FragmentLoaderContext> = {
         onSuccess: (response, stats, context, networkDetails) => {

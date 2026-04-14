@@ -1018,11 +1018,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     this.append(operation, type, this.isPending(this.tracks[type]));
   }
 
-  private getClearEvictionPendingOp(type: string): BufferOperation {
+  private getClearEvictionPendingOp(type: SourceBufferName): BufferOperation {
     return {
       label: 'clear',
       execute: () => {
         this._quotaEvictionPending[type] = false;
+        this.shiftAndExecuteNext(type);
       },
       onStart: () => {},
       onComplete: () => {},
@@ -1114,6 +1115,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         stats,
         id: frag.type,
       });
+      if (!part && frag.gap && stats.retry) {
+        this.log(
+          `Nothing buffered for ${frag.type} level: ${frag.level} sn: ${frag.sn} retries ${stats.retry}`,
+        );
+      }
     };
 
     if (buffersAppendedTo.length === 0) {

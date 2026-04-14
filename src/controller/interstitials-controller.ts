@@ -898,6 +898,9 @@ export default class InterstitialsController
       return;
     }
     const backwardSeek = diff <= -0.01;
+    if (this.timelinePos === -1 && !this.effectivePlayingItem) {
+      this.checkStart();
+    }
     this.timelinePos = currentTime;
     this.bufferedPos = currentTime;
 
@@ -988,6 +991,10 @@ export default class InterstitialsController
       return;
     }
 
+    if (this.timelinePos === -1 && !this.effectivePlayingItem) {
+      this.checkStart();
+    }
+
     // Only allow timeupdate to advance primary position, seeking is used for jumping back
     // this prevents primaryPos from being reset to 0 after re-attach
     if (currentTime > this.timelinePos) {
@@ -1036,18 +1043,31 @@ export default class InterstitialsController
     const effectivePlayingItem = this.effectivePlayingItem;
     if (timelinePos === -1) {
       const startPosition = this.hls.startPosition;
-      this.log(timelineMessage('checkStart', startPosition));
       this.timelinePos = startPosition;
-      if (interstitialEvents.length && interstitialEvents[0].cue.pre) {
+      if (interstitialEvents.length === 0) {
+        this.setSchedulePosition(0);
+      } else if (interstitialEvents[0].cue.pre) {
+        this.log(timelineMessage('checkStart (preroll)', startPosition));
         const index = schedule.findEventIndex(interstitialEvents[0].identifier);
         this.setSchedulePosition(index);
       } else if (startPosition >= 0 || !this.primaryLive) {
+        this.log(timelineMessage('checkStart', startPosition));
         const start = (this.timelinePos =
           startPosition > 0 ? startPosition : 0);
         const index = schedule.findItemIndexAtTime(start);
         this.setSchedulePosition(index);
+      } else if (this.hls.liveSyncPosition === 0) {
+        this.setSchedulePosition(0);
+      } else {
+        this.log('[checkStart] waiting for live start');
       }
     } else if (effectivePlayingItem && !this.playingItem) {
+      this.log(
+        timelineMessage(
+          'checkStart (playing item)',
+          effectivePlayingItem.start,
+        ),
+      );
       const index = schedule.findItemIndex(effectivePlayingItem);
       this.setSchedulePosition(index);
     }
