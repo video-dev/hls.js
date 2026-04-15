@@ -1195,6 +1195,7 @@ export type EMEControllerConfig = {
     drmSystemOptions: DRMSystemOptions | undefined;
     requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
     requireKeySystemAccessOnStart: boolean;
+    requiresEncryptionInfoInAllInitSegments: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "ErrorActionFlags" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
