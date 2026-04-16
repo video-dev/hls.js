@@ -801,13 +801,25 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           mp4SampleDuration = lastFrameDuration;
         }
       }
-      const compositionTimeOffset = Math.round(
-        VideoSample.pts - VideoSample.dts,
-      );
+      let compositionTimeOffset = Math.round(VideoSample.pts - VideoSample.dts);
       minDtsDelta = Math.min(minDtsDelta, mp4SampleDuration);
       maxDtsDelta = Math.max(maxDtsDelta, mp4SampleDuration);
       minPtsDelta = Math.min(minPtsDelta, ptsDelta);
       maxPtsDelta = Math.max(maxPtsDelta, ptsDelta);
+
+      // Increase composition time by one frame tick to avoid pts overlap frame eviction in Chrome
+      // Fixes https://github.com/video-dev/hls.js/issues/6374 (https://issues.chromium.org/u/1/issues/336839131)
+      if (!contiguous && i === 0 && compositionTimeOffset > mp4SampleDuration) {
+        const tickPaddedCompositionTime =
+          Math.round(compositionTimeOffset / averageSampleDuration) *
+          averageSampleDuration;
+        if (tickPaddedCompositionTime - compositionTimeOffset === 1) {
+          this.log(
+            `pad first CTS ${compositionTimeOffset} -> ${tickPaddedCompositionTime} of sn: ${chunkMeta.sn}`,
+          );
+          compositionTimeOffset = tickPaddedCompositionTime;
+        }
+      }
 
       outputSamples.push(
         createMp4Sample(
