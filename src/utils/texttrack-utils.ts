@@ -1,4 +1,5 @@
 import { logger } from './logger';
+import { userAgentIsIOSLike } from './user-agent';
 import type { MediaPlaylist } from '../hls';
 
 // This is a replacement of the native addTextTrack method.
@@ -28,11 +29,7 @@ export function createTrackNode(
 }
 
 export function getTrackKind(track: MediaPlaylist): TextTrackKind | 'forced' {
-  if (
-    track.forced &&
-    (navigator.vendor.includes('Apple') ||
-      /iPhone|iPad|iPod/.test(navigator.userAgent))
-  ) {
+  if (track.forced && userAgentIsIOSLike()) {
     return 'forced';
   } else if (
     track.characteristics &&

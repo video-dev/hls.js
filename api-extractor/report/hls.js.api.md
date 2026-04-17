@@ -2038,7 +2038,7 @@ export class FragmentTracker implements ComponentAPI {
     addAsGap(frag: MediaFragment): void;
     // (undocumented)
     destroy(): void;
-    detectEvictedFragments(elementaryStream: SourceBufferName, timeRange: TimeRanges, playlistType: PlaylistLevelType, appendedPart?: Part | null, removeAppending?: boolean): void;
+    detectEvictedFragments(elementaryStream: SourceBufferName, timeRange: TimeRanges, playlistType: PlaylistLevelType, appendedFrag?: MediaFragment | null, appendedPart?: Part | null, removeAppending?: boolean): void;
     detectPartialFragments(data: FragBufferedData): void;
     // (undocumented)
     fragBuffered(frag: MediaFragment, force?: true): void;

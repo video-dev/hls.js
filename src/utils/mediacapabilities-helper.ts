@@ -2,9 +2,9 @@ import {
   fillInMissingAV01Params,
   getCodecsForMimeType,
   mimeTypeForCodec,
-  userAgentHevcSupportIsInaccurate,
 } from './codecs';
 import { isHEVC } from './mp4-tools';
+import { userAgentHevcSupportIsInaccurate } from './user-agent';
 import type { AudioTracksByGroup } from './rendition-helper';
 import type { Level, VideoRange } from '../types/level';
 import type { AudioSelectionOption } from '../types/media-playlist';

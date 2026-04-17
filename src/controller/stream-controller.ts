@@ -16,6 +16,10 @@ import {
   removeEventListener,
 } from '../utils/event-listener-helper';
 import { useAlternateAudio } from '../utils/rendition-helper';
+import {
+  userAgentFirefoxVersion,
+  userAgentIsAndroidLike,
+} from '../utils/user-agent';
 import type { FragmentTracker } from './fragment-tracker';
 import type Hls from '../hls';
 import type { Fragment, MediaFragment } from '../loader/fragment';
@@ -1428,7 +1432,6 @@ export default class StreamController
         audioCodec = 'mp4a.40.5';
       }
       // Handle `audioCodecSwitch`
-      const ua = navigator.userAgent.toLowerCase();
       if (this.audioCodecSwitch) {
         if (audioCodec) {
           if (audioCodec.indexOf('mp4a.40.5') !== -1) {
@@ -1445,7 +1448,7 @@ export default class StreamController
           audioMetadata &&
           'channelCount' in audioMetadata &&
           (audioMetadata.channelCount || 1) !== 1 &&
-          ua.indexOf('firefox') === -1
+          !userAgentFirefoxVersion()
         ) {
           audioCodec = 'mp4a.40.5';
         }
@@ -1454,7 +1457,7 @@ export default class StreamController
       if (
         audioCodec &&
         audioCodec.indexOf('mp4a.40.5') !== -1 &&
-        ua.indexOf('android') !== -1 &&
+        userAgentIsAndroidLike() &&
         audio.container !== 'audio/mpeg'
       ) {
         // Exclude mpeg audio

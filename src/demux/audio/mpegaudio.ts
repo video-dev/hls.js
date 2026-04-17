@@ -1,9 +1,8 @@
 /**
  *  MPEG parser helper
  */
+import { userAgentChromeVersion } from '../../utils/user-agent';
 import type { DemuxedAudioTrack } from '../../types/demuxer';
-
-let chromeVersion: number | null = null;
 
 const BitratesMap = [
   32, 64, 96, 128, 160, 192, 224, 256, 288, 320, 352, 384, 416, 448, 32, 48, 56,
@@ -115,11 +114,7 @@ export function parseHeader(data: Uint8Array, offset: number) {
       Math.floor((sampleCoefficient * bitRate) / sampleRate + paddingBit) *
       bytesInSlot;
 
-    if (chromeVersion === null) {
-      const userAgent = navigator.userAgent || '';
-      const result = userAgent.match(/Chrome\/(\d+)/i);
-      chromeVersion = result ? parseInt(result[1]) : 0;
-    }
+    const chromeVersion = userAgentChromeVersion();
     const needChromeFix = !!chromeVersion && chromeVersion <= 87;
 
     if (
