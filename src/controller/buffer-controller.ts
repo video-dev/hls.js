@@ -419,6 +419,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
                 bufferedTimeRanges,
                 playlistType,
                 null,
+                null,
                 true,
               );
             }

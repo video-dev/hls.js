@@ -712,10 +712,11 @@ type TrackFragmentRun = {
   samples: TrackFragmentRunSample[];
 };
 export type TrackTimes = {
-  cts?: number;
   duration: number;
   keyFrameIndex?: number;
   keyFrameStart?: number;
+  ptsMin?: number;
+  ptsMax?: number;
   start: number;
   sampleCount: number;
   trun: TrackFragmentRun[];
@@ -852,10 +853,8 @@ export function getSampleData(
           };
           trackTimes.trun.push(fragRun);
         }
+        let size;
         for (let ix = 0; ix < sampleCount; ix++) {
-          const sample: TrackFragmentRunSample = {
-            size: 0,
-          };
           if (sampleDurationPresent) {
             sampleDuration = readUint32(trun, offset);
             offset += 4;
@@ -863,17 +862,18 @@ export function getSampleData(
             sampleDuration = defaultSampleDuration;
           }
           if (sampleSizePresent) {
-            sample.size = readUint32(trun, offset);
+            size = readUint32(trun, offset);
             offset += 4;
           } else {
-            sample.size = defaultSampleSize;
+            size = defaultSampleSize;
           }
-          sampleOffset += sample.size;
+          sampleOffset += size;
           if (sampleOffset <= eof) {
-            samples[ix] = sample;
+            let flags;
+            let cts = 0;
             if (sampleFlagsPresent) {
               const isNonSyncSample = trun[offset + 1] & 0x01;
-              sample.flags = {
+              flags = {
                 isNonSync: isNonSyncSample ? 1 : 0,
                 dependsOn: (trun[offset] & 0x03) === 1 ? 1 : 2,
               };
@@ -887,13 +887,30 @@ export function getSampleData(
             }
             if (sampleCompositionTimeOffsetPresent) {
               const version = trun[0];
-              if (version === 0) {
-                sample.cts = readUint32(trun, offset);
-              } else {
-                sample.cts = readSint32(trun, offset);
-              }
+              cts =
+                version === 0
+                  ? readUint32(trun, offset)
+                  : readSint32(trun, offset);
               offset += 4;
             }
+            const pts = sampleDTS + cts;
+            if (
+              !Number.isFinite(trackTimes.ptsMin) ||
+              pts < trackTimes.ptsMin!
+            ) {
+              trackTimes.ptsMin = pts;
+            }
+            if (
+              !Number.isFinite(trackTimes.ptsMax) ||
+              pts + sampleDuration > trackTimes.ptsMax!
+            ) {
+              trackTimes.ptsMax = pts + sampleDuration;
+            }
+            samples[ix] = {
+              cts,
+              flags,
+              size,
+            };
           }
           sampleDTS += sampleDuration;
           rawDuration += sampleDuration;
