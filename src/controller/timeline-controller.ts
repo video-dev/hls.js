@@ -16,6 +16,7 @@ import type Hls from '../hls';
 import type { Fragment } from '../loader/fragment';
 import type { ComponentAPI } from '../types/component-api';
 import type {
+  BufferAppendedData,
   BufferFlushingData,
   FragDecryptedData,
   FragLoadedData,
@@ -58,6 +59,7 @@ export class TimelineController implements ComponentAPI {
   private initPTS: TimestampOffset[] = [];
   private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private captionsTracks: Record<string, HTMLTrackElement> = {};
+  private cueCache: Record<string, VTTCue[]> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
   private cea608Parser1?: Cea608Parser;
   private cea608Parser2?: Cea608Parser;
@@ -77,6 +79,7 @@ export class TimelineController implements ComponentAPI {
     this.hls = hls;
     this.config = hls.config;
     this.Cues = hls.config.cueHandler;
+    this.cueCache = {};
 
     this.captionsProperties = {
       textTrack1: {
@@ -108,6 +111,7 @@ export class TimelineController implements ComponentAPI {
     hls.on(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
     hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
     hls.on(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
+    hls.on(Events.BUFFER_APPENDED, this.onBufferAppended, this);
     hls.on(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
   }
 
@@ -124,6 +128,7 @@ export class TimelineController implements ComponentAPI {
     hls.off(Events.FRAG_DECRYPTED, this.onFragDecrypted, this);
     hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
     hls.off(Events.SUBTITLE_TRACKS_CLEARED, this.onSubtitleTracksCleared, this);
+    hls.off(Events.BUFFER_APPENDED, this.onBufferAppended, this);
     hls.off(Events.BUFFER_FLUSHING, this.onBufferFlushing, this);
     // @ts-ignore
     this.hls = this.config = this.media = null;
@@ -170,8 +175,16 @@ export class TimelineController implements ComponentAPI {
     }
 
     if (this.config.renderTextTracksNatively) {
-      const track = this.captionsTracks[trackName].track;
-      this.Cues.newCue(track, startTime, endTime, screen);
+      const cache = this.cueCache[trackName];
+      if (cache) {
+        const cues = this.Cues.newCue(null, startTime, endTime, screen);
+        if (cues.length) {
+          cache.push.apply(cache, cues);
+        }
+      } else {
+        const track = this.captionsTracks[trackName].track;
+        this.Cues.newCue(track, startTime, endTime, screen);
+      }
     } else {
       const cues = this.Cues.newCue(null, startTime, endTime, screen);
       this.hls.trigger(Events.CUES_PARSED, {
@@ -225,14 +238,16 @@ export class TimelineController implements ComponentAPI {
     if (this.captionsTracks[trackName]) {
       return;
     }
-    const { captionsProperties, captionsTracks, media } = this;
+    const { captionsProperties, captionsTracks, cueCache, media } = this;
     const { label, languageCode } = captionsProperties[trackName];
     if (media) {
+      cueCache[trackName] = [];
       captionsTracks[trackName] = createTrackNode(
         media,
         'captions',
         label,
         languageCode,
+        'hidden',
       );
     }
   }
@@ -276,11 +291,13 @@ export class TimelineController implements ComponentAPI {
     }
 
     if (this.config.renderTextTracksNatively) {
-      const { captionsTracks } = this;
+      const { captionsTracks, cueCache } = this;
       for (const trackName in captionsTracks) {
         captionsTracks[trackName].remove();
+        delete cueCache[trackName];
       }
     }
+    this.cueCache = {};
     this.captionsTracks = {};
     this.nonNativeCaptionsTracks = {};
   }
@@ -598,6 +615,28 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
+  private onBufferAppended(
+    event: Events.BUFFER_APPENDED,
+    data: BufferAppendedData,
+  ) {
+    if (this.config.renderTextTracksNatively) {
+      const { type, timeRanges } = data;
+      if (type === 'video' && timeRanges[type]?.length) {
+        const { captionsTracks, cueCache } = this;
+        Object.keys(cueCache).forEach((trackName) => {
+          const track = captionsTracks[trackName]?.track;
+          if (track) {
+            const cues = cueCache[trackName];
+            for (let i = 0; i < cues.length; i++) {
+              addCueToTrack(track, cues[i]);
+            }
+          }
+          delete cueCache[trackName];
+        });
+      }
+    }
+  }
+
   onBufferFlushing(
     event: Events.BUFFER_FLUSHING,
     { startOffset, endOffset, endOffsetSubtitles, type }: BufferFlushingData,
@@ -609,7 +648,7 @@ export class TimelineController implements ComponentAPI {
     // Clear 608 caption cues from the captions TextTracks when the video back buffer is flushed
     // Forward cues are never removed because we can loose streamed 608 content from recent fragments
     if (!type || type === 'video') {
-      const { captionsTracks } = this;
+      const { captionsTracks, cueCache } = this;
       Object.keys(captionsTracks).forEach((trackName) =>
         removeCuesInRange(
           captionsTracks[trackName].track,
@@ -617,6 +656,15 @@ export class TimelineController implements ComponentAPI {
           endOffset,
         ),
       );
+      Object.keys(cueCache).forEach((trackName) => {
+        const cues = cueCache[trackName];
+        for (let i = cues.length; i--; ) {
+          const cue = cues[i];
+          if (cue.startTime >= startOffset && cue.endTime <= endOffset) {
+            cues.splice(i, 1);
+          }
+        }
+      });
     }
     if (this.config.renderTextTracksNatively) {
       // Clear VTT/IMSC1 subtitle cues from the subtitle TextTracks when the back buffer is flushed

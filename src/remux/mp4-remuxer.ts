@@ -9,6 +9,10 @@ import {
   timestampToString,
   toMsFromMpegTsClock,
 } from '../utils/timescale-conversion';
+import {
+  userAgentChromeVersion,
+  userAgentSafariVersion,
+} from '../utils/user-agent';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { ChunkMetadata } from '../hls';
@@ -42,9 +46,6 @@ const AAC_SAMPLES_PER_FRAME = 1024;
 const MPEG_AUDIO_SAMPLE_PER_FRAME = 1152;
 const AC3_SAMPLES_PER_FRAME = 1536;
 const MPEG_TS_PTS_ROLLOVER = 8589934592; // 2^33
-
-let chromeVersion: number | null = null;
-let safariWebkitVersion: number | null = null;
 
 function createMp4Sample(
   isKeyframe: boolean,
@@ -96,16 +97,6 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     this.config = config;
     this.typeSupported = typeSupported;
     this.ISGenerated = false;
-
-    if (chromeVersion === null) {
-      const userAgent = navigator.userAgent || '';
-      const result = userAgent.match(/Chrome\/(\d+)/i);
-      chromeVersion = result ? parseInt(result[1]) : 0;
-    }
-    if (safariWebkitVersion === null) {
-      const result = navigator.userAgent.match(/Safari\/(\d+)/i);
-      safariWebkitVersion = result ? parseInt(result[1]) : 0;
-    }
   }
 
   destroy() {
@@ -563,7 +554,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
         inputSamples[0].pts -
         normalizePts(inputSamples[0].dts, inputSamples[0].pts);
       if (
-        chromeVersion &&
+        userAgentChromeVersion() &&
         nextVideoTs !== null &&
         Math.abs(pts - cts - (nextVideoTs + initTime)) < 15000
       ) {
@@ -635,7 +626,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
         if (
           !foundOverlap ||
           nextVideoPts >= inputSamples[0].pts ||
-          chromeVersion
+          userAgentChromeVersion()
         ) {
           firstDTS = nextVideoPts;
           const firstPTS = inputSamples[0].pts - delta;
@@ -801,13 +792,25 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           mp4SampleDuration = lastFrameDuration;
         }
       }
-      const compositionTimeOffset = Math.round(
-        VideoSample.pts - VideoSample.dts,
-      );
+      let compositionTimeOffset = Math.round(VideoSample.pts - VideoSample.dts);
       minDtsDelta = Math.min(minDtsDelta, mp4SampleDuration);
       maxDtsDelta = Math.max(maxDtsDelta, mp4SampleDuration);
       minPtsDelta = Math.min(minPtsDelta, ptsDelta);
       maxPtsDelta = Math.max(maxPtsDelta, ptsDelta);
+
+      // Increase composition time by one frame tick to avoid pts overlap frame eviction in Chrome
+      // Fixes https://github.com/video-dev/hls.js/issues/6374 (https://issues.chromium.org/u/1/issues/336839131)
+      if (!contiguous && i === 0 && compositionTimeOffset > mp4SampleDuration) {
+        const tickPaddedCompositionTime =
+          Math.round(compositionTimeOffset / averageSampleDuration) *
+          averageSampleDuration;
+        if (tickPaddedCompositionTime - compositionTimeOffset === 1) {
+          this.log(
+            `pad first CTS ${compositionTimeOffset} -> ${tickPaddedCompositionTime} of sn: ${chunkMeta.sn}`,
+          );
+          compositionTimeOffset = tickPaddedCompositionTime;
+        }
+      }
 
       outputSamples.push(
         createMp4Sample(
@@ -820,6 +823,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     }
 
     if (outputSamples.length) {
+      const chromeVersion = userAgentChromeVersion();
       if (chromeVersion) {
         if (chromeVersion < 70) {
           // Chrome workaround, mark first sample as being a Random Access Point (keyframe) to avoid sourcebuffer append issue
@@ -828,7 +832,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           flags.dependsOn = 2;
           flags.isNonSync = 0;
         }
-      } else if (safariWebkitVersion) {
+      } else if (userAgentSafariVersion()) {
         // Fix for "CNN special report, with CC" in test-streams (Safari browser only)
         // Ignore DTS when frame durations are irregular. Safari MSE does not handle this leading to gaps.
         if (
@@ -901,6 +905,12 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       nb: outputSamples.length,
       dropped: track.dropped,
     };
+    // For troubleshooting duplicates of https://github.com/video-dev/hls.js/issues/6374
+    // console.log(
+    //   `#6374 segment ${chunkMeta.sn} timeOffset: ${timeOffset} dts: ${firstDTS}-${endDTS} pts: ${minPTS}-${maxPTS} cts[0]=${
+    //     outputSamples[0].cts
+    //   } cts[${outputSamples.length - 1}]=${outputSamples[outputSamples.length - 1].cts} sample-duration: ${mp4SampleDuration} timescale: ${timeScale}`,
+    // );
     track.samples = [];
     track.dropped = 0;
     return data;

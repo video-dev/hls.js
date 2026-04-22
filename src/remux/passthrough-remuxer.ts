@@ -390,11 +390,29 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       initSegment.trackId = initPTS.trackId;
     }
 
-    const startTime = decodeTime - initPTS.baseTime / initPTS.timescale;
-    const endTime = startTime + duration;
+    const startDTS = decodeTime - initPTS.baseTime / initPTS.timescale;
+    const endDTS = startDTS + duration;
+    const startPTS =
+      baseOffsetSamples?.ptsMin !== undefined
+        ? baseOffsetSamples.ptsMin / baseOffsetSamples.timescale -
+          initPTS.baseTime / initPTS.timescale
+        : startDTS;
+    const endPTS = baseOffsetSamples?.ptsMax
+      ? baseOffsetSamples.ptsMax / baseOffsetSamples.timescale -
+        initPTS.baseTime / initPTS.timescale
+      : endDTS;
+
+    // For troubleshooting duplicates of https://github.com/video-dev/hls.js/issues/6777
+    // if (videoSampleTimestamps) {
+    //   console.log(
+    //     `#6777 segment ${chunkMeta.sn}: dts: ${videoSampleTimestamps.start}-${videoSampleTimestamps.start + videoSampleTimestamps.duration} pts: ${videoSampleTimestamps.ptsMin}-${
+    //       videoSampleTimestamps.ptsMax
+    //     }`,
+    //   );
+    // }
 
     if (duration > 0) {
-      this.lastEndTime = endTime;
+      this.lastEndTime = endDTS;
     } else {
       this.warn('Duration parsed from mp4 should be greater than zero');
       this.resetNextTimestamp();
@@ -407,10 +425,10 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     const track: RemuxedTrack = {
       data1,
       data2,
-      startPTS: startTime,
-      startDTS: startTime,
-      endPTS: endTime,
-      endDTS: endTime,
+      startPTS,
+      startDTS,
+      endPTS,
+      endDTS,
       type,
       hasAudio,
       hasVideo,
@@ -421,13 +439,14 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     result.audio = hasAudio && !hasVideo ? track : undefined;
     result.video = hasVideo ? track : undefined;
+    const isVideoContiguous = this.isVideoContiguous;
     const videoSampleCount = videoSampleTimestamps?.sampleCount;
     if (videoSampleCount) {
       const firstKeyFrame = videoSampleTimestamps.keyFrameIndex;
       const independent = firstKeyFrame !== -1;
       track.nb = videoSampleCount;
       track.dropped =
-        firstKeyFrame === 0 || this.isVideoContiguous
+        firstKeyFrame === 0 || isVideoContiguous
           ? 0
           : independent
             ? firstKeyFrame
@@ -439,7 +458,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
           (videoSampleTimestamps.keyFrameStart - initPTS.baseTime) /
           initPTS.timescale;
       }
-      if (!this.isVideoContiguous) {
+      if (!isVideoContiguous) {
         result.independent = independent;
       }
       this.isVideoContiguous ||= independent;

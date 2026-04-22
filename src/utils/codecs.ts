@@ -1,9 +1,6 @@
 import { getMediaSource } from './mediasource-helper';
 import { isHEVC } from './mp4-tools';
-
-export const userAgentHevcSupportIsInaccurate = () => {
-  return /\(Windows.+Firefox\//i.test(navigator.userAgent);
-};
+import { userAgentHevcSupportIsInaccurate } from './user-agent';
 
 // from http://mp4ra.org/codecs.html
 // values indicate codec selection preference (lower is higher priority)

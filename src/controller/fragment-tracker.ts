@@ -5,6 +5,7 @@ import {
   type MediaFragment,
   type Part,
 } from '../loader/fragment';
+import { userAgentChromeVersion } from '../utils/user-agent';
 import type Hls from '../hls';
 import type { SourceBufferName } from '../types/buffer';
 import type { ComponentAPI } from '../types/component-api';
@@ -154,6 +155,7 @@ export class FragmentTracker implements ComponentAPI {
     elementaryStream: SourceBufferName,
     timeRange: TimeRanges,
     playlistType: PlaylistLevelType,
+    appendedFrag?: MediaFragment | null,
     appendedPart?: Part | null,
     removeAppending?: boolean,
   ) {
@@ -165,18 +167,19 @@ export class FragmentTracker implements ComponentAPI {
     const appendedPartSn = appendedPart?.fragment.sn || -1;
     Object.keys(this.fragments).forEach((key) => {
       const fragmentEntity = this.fragments[key];
-      if (!fragmentEntity) {
+      if (!fragmentEntity || !this.hls) {
         return;
       }
-      if (appendedPartSn >= fragmentEntity.body.sn) {
+      const frag = fragmentEntity.body;
+      if (appendedPartSn >= frag.sn) {
         return;
       }
       if (
         !fragmentEntity.buffered &&
         (!fragmentEntity.loaded || removeAppending)
       ) {
-        if (fragmentEntity.body.type === playlistType) {
-          this.removeFragment(fragmentEntity.body);
+        if (frag.type === playlistType) {
+          this.removeFragment(frag);
         }
         return;
       }
@@ -185,7 +188,7 @@ export class FragmentTracker implements ComponentAPI {
         return;
       }
       if (esData.time.length === 0) {
-        this.removeFragment(fragmentEntity.body);
+        this.removeFragment(frag);
         return;
       }
       esData.time.some((time: FragmentTimeRange) => {
@@ -196,10 +199,29 @@ export class FragmentTracker implements ComponentAPI {
         );
         if (isNotBuffered) {
           // Unregister partial fragment as it needs to load again to be reused
-          this.removeFragment(fragmentEntity.body);
+          this.removeFragment(frag);
         }
         return isNotBuffered;
       });
+      // Flush forward buffer in Chrome when PTS overlap detected
+      // Workaround https://github.com/video-dev/hls.js/issues/6777 (https://issues.chromium.org/u/1/issues/336839131)
+      if (appendedFrag && appendedFrag !== frag && userAgentChromeVersion()) {
+        const endPTS = appendedFrag.endPTS;
+        const otherStartPTS = frag.startPTS;
+        if (endPTS && otherStartPTS && fragmentEntity.range.video) {
+          const diff = otherStartPTS - endPTS;
+          // overlap is no more than 1/10s
+          if (diff < 0 && diff > -0.1) {
+            this.removeFragment(frag);
+            this.hls.trigger(Events.BUFFER_FLUSHING, {
+              // pad removal start to avoid accedental removal of appendedFrag
+              startOffset: endPTS + 0.004,
+              endOffset: Infinity,
+              type: 'video',
+            });
+          }
+        }
+      }
     });
   }
 
@@ -236,6 +258,7 @@ export class FragmentTracker implements ComponentAPI {
         elementaryStream,
         timeRange,
         playlistType,
+        frag,
         part,
       );
     });
