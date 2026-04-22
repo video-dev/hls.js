@@ -67,6 +67,9 @@ const setupEach = (cmcd?: CMCDControllerConfig) => {
     levels: [level],
     level: 0,
   };
+  hls.streamController = {
+    getLevelDetails: () => details,
+  };
   // hls.audioTracks = [];
 
   cmcdController = new CMCDController(hls);
