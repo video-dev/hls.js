@@ -168,6 +168,13 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     chunkMeta: ChunkMetadata,
   ): RemuxerResult {
     let { initPTS, lastEndTime } = this;
+    // Snapshot mutable session state so the #7811 rollback below can
+    // restore it if the computed startDTS ends up implausibly far from
+    // timeOffset (a sign that a corrupt tfdt or stale anchor would
+    // otherwise poison the session).
+    const priorInitPTS = this.initPTS;
+    const priorEmitInitSegment = this.emitInitSegment;
+    const priorLastEndTime = this.lastEndTime;
     const result: RemuxerResult = {
       audio: undefined,
       video: undefined,
@@ -401,6 +408,44 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       ? baseOffsetSamples.ptsMax / baseOffsetSamples.timescale -
         initPTS.baseTime / initPTS.timescale
       : endDTS;
+
+    // #7811: reject implausible initPTS changes before they poison the
+    // session. Under normal playback the computed startDTS should be
+    // approximately equal to the playlist-declared `timeOffset`. A
+    // corrupt tfdt — or a stale anchor that `isInvalidInitPts` did not
+    // catch — can leave us with a wildly off startDTS. Propagating that
+    // downstream corrupts `fragment.start` via updateFragPTSDTS, which
+    // then feeds back as a negative timeOffset on the next remux() and
+    // produces an initPTS ping-pong between two mutually-invalid
+    // anchors.
+    //
+    // The tolerance accommodates legitimate drift (e.g. #5452 audio-
+    // leads-video ~3s) while still catching the many-seconds shifts
+    // observed in #7811. When the check trips we roll back the mutable
+    // session state this remux() has already touched (this.initPTS /
+    // this.emitInitSegment / this.lastEndTime) and return parseError so
+    // the caller can mark the segment or part as a gap.
+    const startDTSDeviation = Math.abs(startDTS - timeOffset);
+    const startDTSTolerance = Math.max(2 * duration, 5);
+    if (Number.isFinite(startDTS) && startDTSDeviation > startDTSTolerance) {
+      const reason =
+        `remux startDTS ${startDTS.toFixed(3)}s deviates ` +
+        `${startDTSDeviation.toFixed(3)}s from timeOffset ` +
+        `${timeOffset.toFixed(3)}s ` +
+        `(tolerance ${startDTSTolerance.toFixed(3)}s)`;
+      this.warn(
+        `Rejecting implausible initPTS — ${reason}. ` +
+          `initPTS ${initPTS.baseTime}/${initPTS.timescale} ` +
+          `(≈${(initPTS.baseTime / initPTS.timescale).toFixed(3)}s), ` +
+          `decodeTime ${decodeTime.toFixed(3)}s. ` +
+          `Restoring prior session anchor to prevent ping-pong.`,
+      );
+      this.initPTS = priorInitPTS;
+      this.emitInitSegment = priorEmitInitSegment;
+      this.lastEndTime = priorLastEndTime;
+      result.parseError = reason;
+      return result;
+    }
 
     // For troubleshooting duplicates of https://github.com/video-dev/hls.js/issues/6777
     // if (videoSampleTimestamps) {

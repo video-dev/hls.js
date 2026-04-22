@@ -1221,6 +1221,29 @@ export default class StreamController
       return;
     }
 
+    // #7811: the remuxer may reject a segment or part whose timestamps
+    // are implausibly far from the playlist-declared time. When that
+    // happens it returns with `parseError` and no audio/video/initSegment
+    // payload. Mark the target as a gap and drop back to IDLE rather
+    // than running the rest of this handler, which would try to buffer
+    // empty tracks and re-load indefinitely.
+    if (remuxResult.parseError) {
+      this.warn(
+        `Transmux of ${
+          part ? `part ${part.index} of ` : ''
+        }sn: ${frag.sn} cc: ${frag.cc} level: ${
+          frag.level
+        } rejected: ${remuxResult.parseError}. Marking as gap and skipping.`,
+      );
+      if (part) {
+        this.fragmentTracker.addPartAsGap(frag as MediaFragment, part);
+      } else {
+        this.fragmentTracker.addAsGap(frag as MediaFragment);
+      }
+      this.resetLoadingState();
+      return;
+    }
+
     this.state = State.PARSING;
 
     if (initSegment) {

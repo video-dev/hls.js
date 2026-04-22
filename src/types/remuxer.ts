@@ -97,6 +97,12 @@ export interface RemuxerResult {
   id3?: RemuxedMetadata;
   initSegment?: InitSegmentData;
   independent?: boolean;
+  // Set by a remuxer when it detects a segment or part whose timestamps
+  // are implausible enough to be treated as corrupt (issue #7811).
+  // Downstream consumers (stream-controller, fragment-tracker) mark the
+  // fragment or part as a gap and skip buffering rather than propagating
+  // the poisoned timing.
+  parseError?: string;
 }
 
 export interface InitSegmentData {

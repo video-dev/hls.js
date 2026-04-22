@@ -908,6 +908,27 @@ class AudioStreamController
       return;
     }
 
+    // #7811: mirror the main stream-controller handling. When the
+    // audio remuxer rejects a segment or part on implausible initPTS,
+    // mark it as a gap and drop back to IDLE instead of feeding
+    // poisoned timings into the audio SourceBuffer.
+    if (remuxResult.parseError) {
+      this.warn(
+        `Audio transmux of ${
+          part ? `part ${part.index} of ` : ''
+        }sn: ${frag.sn} cc: ${frag.cc} level: ${
+          frag.level
+        } rejected: ${remuxResult.parseError}. Marking as gap and skipping.`,
+      );
+      if (part) {
+        this.fragmentTracker.addPartAsGap(frag as MediaFragment, part);
+      } else {
+        this.fragmentTracker.addAsGap(frag as MediaFragment);
+      }
+      this.resetLoadingState();
+      return;
+    }
+
     this.state = State.PARSING;
     if (audio && this.switchingTrack && !this.switchingTrack.flushImmediate) {
       const { config } = this;

@@ -271,6 +271,10 @@ export class FragmentTracker implements ComponentAPI {
         this.removeParts(frag.sn - 1, frag.type);
       }
       // Detect nothing buffered for segment append (open-GOP issue #7774)
+      // and for part append (#7811 part-aware extension). For a part we
+      // inspect only the part's own playlist-declared time window — a
+      // later corrupt part would otherwise be masked by earlier healthy
+      // parts of the same SN.
       if (!part) {
         const minPartialAppend = Math.min(0.004, frag.duration);
         trackNames.some((elementaryStream) => {
@@ -285,6 +289,31 @@ export class FragmentTracker implements ComponentAPI {
           }
           return bufferedGap;
         });
+      } else {
+        const minPartialAppend = Math.min(0.004, part.duration);
+        const partStart = part.start;
+        const partEnd = part.end;
+        trackNames.some((elementaryStream) => {
+          const times = fragmentEntity.range[elementaryStream]?.time ?? [];
+          let coveredInPart = 0;
+          for (let i = 0; i < times.length; i++) {
+            const overlapStart = Math.max(times[i].startPTS, partStart);
+            const overlapEnd = Math.min(times[i].endPTS, partEnd);
+            if (overlapEnd > overlapStart) {
+              coveredInPart += overlapEnd - overlapStart;
+            }
+          }
+          const partBufferedGap = coveredInPart < minPartialAppend;
+          if (partBufferedGap) {
+            // Part append produced no usable buffer contribution within
+            // its own time window. Mark only this part as a gap so that
+            // fragment-loader's `part.gap` check short-circuits future
+            // re-requests, without invalidating other healthy parts of
+            // the same SN.
+            this.addPartAsGap(frag, part);
+          }
+          return partBufferedGap;
+        });
       }
     } else {
       // remove fragment if nothing was appended
@@ -296,6 +325,18 @@ export class FragmentTracker implements ComponentAPI {
     frag.gap = true;
     this.removeFragment(frag);
     this.fragBuffered(frag, true);
+  }
+
+  /**
+   * Part-aware variant of {@link addAsGap}. Marks a single part of a
+   * fragment as a gap without invalidating the fragment's other parts
+   * or its tracking entry. Used when the remuxer rejects a part with a
+   * parse error (issue #7811) or when a part's append is silently
+   * dropped by the SourceBuffer.
+   */
+  public addPartAsGap(frag: MediaFragment, part: Part) {
+    part.gap = true;
+    this.hasGaps = true;
   }
 
   private bufferedEnd(fragmentEntity: FragmentEntity, frag: MediaFragment) {
