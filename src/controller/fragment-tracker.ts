@@ -327,13 +327,11 @@ export class FragmentTracker implements ComponentAPI {
     this.fragBuffered(frag, true);
   }
 
-  /**
-   * Part-aware variant of {@link addAsGap}. Marks a single part of a
-   * fragment as a gap without invalidating the fragment's other parts
-   * or its tracking entry. Used when the remuxer rejects a part with a
-   * parse error (issue #7811) or when a part's append is silently
-   * dropped by the SourceBuffer.
-   */
+  // Part-aware variant of addAsGap. Marks a single part of a fragment as
+  // a gap without invalidating the fragment's other parts or its tracking
+  // entry. Used when the remuxer rejects a part with a parse error
+  // (issue #7811) or when a part's append is silently dropped by the
+  // SourceBuffer.
   public addPartAsGap(frag: MediaFragment, part: Part) {
     part.gap = true;
     this.hasGaps = true;

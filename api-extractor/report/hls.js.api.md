@@ -2037,6 +2037,8 @@ export class FragmentTracker implements ComponentAPI {
     // (undocumented)
     addAsGap(frag: MediaFragment): void;
     // (undocumented)
+    addPartAsGap(frag: MediaFragment, part: Part): void;
+    // (undocumented)
     destroy(): void;
     detectEvictedFragments(elementaryStream: SourceBufferName, timeRange: TimeRanges, playlistType: PlaylistLevelType, appendedFrag?: MediaFragment | null, appendedPart?: Part | null, removeAppending?: boolean): void;
     detectPartialFragments(data: FragBufferedData): void;
@@ -4517,7 +4519,7 @@ export class Part extends BaseSegment {
     // (undocumented)
     readonly fragOffset: number;
     // (undocumented)
-    readonly gap: boolean;
+    gap: boolean;
     // (undocumented)
     readonly independent: boolean;
     // (undocumented)
@@ -4713,6 +4715,8 @@ export interface RemuxerResult {
     independent?: boolean;
     // (undocumented)
     initSegment?: InitSegmentData;
+    // (undocumented)
+    parseError?: string;
     // (undocumented)
     text?: RemuxedUserdata;
     // (undocumented)
