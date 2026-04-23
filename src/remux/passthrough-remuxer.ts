@@ -8,9 +8,9 @@ import { getCodecCompatibleName } from '../utils/codecs';
 import { type ILogger, Logger } from '../utils/logger';
 import { patchEncyptionData, writeUint32 } from '../utils/mp4-tools';
 import { getSampleData, parseInitSegment } from '../utils/mp4-tools';
+import type { HlsEventEmitter } from '../events';
 import type { TrackFragmentSample } from './mp4-generator';
 import type { HlsConfig } from '../config';
-import type { HlsEventEmitter } from '../events';
 import type { DecryptData } from '../loader/level-key';
 import type {
   DemuxedAudioTrack,
@@ -32,6 +32,7 @@ import type { InitData, InitDataTrack, TrackTimes } from '../utils/mp4-tools';
 import type { TimestampOffset } from '../utils/timescale-conversion';
 
 class PassThroughRemuxer extends Logger implements Remuxer {
+  private readonly observer: HlsEventEmitter;
   private emitInitSegment: boolean = false;
   private audioCodec?: string;
   private videoCodec?: string;
@@ -48,9 +49,16 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     logger: ILogger,
   ) {
     super('passthrough-remuxer', logger);
+    this.observer = observer;
   }
 
-  public destroy() {}
+  public destroy() {
+    if (this.observer) {
+      this.observer.removeAllListeners();
+    }
+    // @ts-ignore
+    this.observer = null;
+  }
 
   public resetTimeStamp(defaultInitPTS: TimestampOffset | null) {
     this.lastEndTime = null;
@@ -393,14 +401,15 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     const startDTS = decodeTime - initPTS.baseTime / initPTS.timescale;
     const endDTS = startDTS + duration;
     const startPTS =
-      baseOffsetSamples?.ptsMin !== undefined
+      hasVideo && baseOffsetSamples?.ptsMin !== undefined
         ? baseOffsetSamples.ptsMin / baseOffsetSamples.timescale -
           initPTS.baseTime / initPTS.timescale
         : startDTS;
-    const endPTS = baseOffsetSamples?.ptsMax
-      ? baseOffsetSamples.ptsMax / baseOffsetSamples.timescale -
-        initPTS.baseTime / initPTS.timescale
-      : endDTS;
+    const endPTS =
+      hasVideo && baseOffsetSamples?.ptsMax
+        ? baseOffsetSamples.ptsMax / baseOffsetSamples.timescale -
+          initPTS.baseTime / initPTS.timescale
+        : endDTS;
 
     // For troubleshooting duplicates of https://github.com/video-dev/hls.js/issues/6777
     // if (videoSampleTimestamps) {

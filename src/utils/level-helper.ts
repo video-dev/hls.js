@@ -294,6 +294,8 @@ export function mergeDetails(
     (oldPart: Part, newPart: Part) => {
       newPart.elementaryStreams = oldPart.elementaryStreams;
       newPart.stats = oldPart.stats;
+      // Use locally set gap or GAP attribute introduced in playlist
+      newPart.gap = oldPart.gap || newPart.gap;
     },
   );
 

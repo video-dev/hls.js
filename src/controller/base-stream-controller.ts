@@ -1525,7 +1525,6 @@ export default class BaseStreamController
       if (frag.stats.retry > 1) {
         return true;
       }
-      frag.stats.retry++;
     }
     return false;
   }
@@ -1664,7 +1663,7 @@ export default class BaseStreamController
       if (nextPart > -1 && targetBufferTime < part.start) {
         break;
       }
-      const loaded = part.loaded;
+      const loaded = part.loaded || part.gap;
       if (loaded) {
         nextPart = -1;
       } else if (
@@ -1673,7 +1672,7 @@ export default class BaseStreamController
       ) {
         nextPart = i;
       }
-      contiguous = loaded;
+      contiguous = loaded && !part.gap;
     }
     const part = partList[nextPart];
     if (part && part.fragment !== frag) {
@@ -2016,7 +2015,7 @@ export default class BaseStreamController
         data.frag = context.frag;
       }
     }
-    const frag = data.frag;
+    const { frag, part } = data;
     // Handle frag error related to caller's filterType
     if (!frag || !this.levels || frag.type !== filterType) {
       return;
@@ -2054,7 +2053,11 @@ export default class BaseStreamController
       !isUnusableKeyError(data)
     ) {
       this.resetFragmentErrors(filterType);
-      this.treatAsGap(frag);
+      if (part) {
+        part.gap = true;
+      } else {
+        this.treatAsGap(frag);
+      }
       errorAction.resolved = true;
     } else if ((retry || noAlternate) && retryCount < retryConfig.maxNumRetry) {
       const offlineStatus = offlineHttpStatus(data.response?.code);

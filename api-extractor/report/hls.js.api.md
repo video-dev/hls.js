@@ -4517,7 +4517,7 @@ export class Part extends BaseSegment {
     // (undocumented)
     readonly fragOffset: number;
     // (undocumented)
-    readonly gap: boolean;
+    gap: boolean;
     // (undocumented)
     readonly independent: boolean;
     // (undocumented)

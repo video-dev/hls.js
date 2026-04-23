@@ -280,6 +280,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
               playlistType === PlaylistLevelType.AUDIO
               ? videoTimeOffset
               : undefined,
+            chunkMeta,
           );
           if (enoughVideoSamples) {
             const audioTrackLength = audio ? audio.endPTS - audio.startPTS : 0;
@@ -713,6 +714,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
         type: ErrorTypes.MUX_ERROR,
         details: ErrorDetails.REMUX_ALLOC_ERROR,
         fatal: false,
+        chunkMeta,
         error: err,
         bytes: mdatSize,
         reason: `fail allocating video mdat ${mdatSize}`,
@@ -932,7 +934,8 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     timeOffset: number,
     contiguous: boolean,
     accurateTimeOffset: boolean,
-    videoTimeOffset?: number,
+    videoTimeOffset: number | undefined,
+    chunkMeta: ChunkMetadata,
   ): RemuxedTrack | undefined {
     const inputTimeScale: number = track.inputTimeScale;
     const mp4timeScale: number = track.samplerate
@@ -1134,6 +1137,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
               type: ErrorTypes.MUX_ERROR,
               details: ErrorDetails.REMUX_ALLOC_ERROR,
               fatal: false,
+              chunkMeta,
               error: err,
               bytes: mdatSize,
               reason: `fail allocating audio mdat ${mdatSize}`,

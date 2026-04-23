@@ -349,7 +349,7 @@ class TSDemuxer implements Demuxer {
               if (audioData && (pes = parsePES(audioData, this.logger))) {
                 switch (audioTrack.segmentCodec) {
                   case 'aac':
-                    this.parseAACPES(audioTrack, pes);
+                    this.parseAACPES(audioTrack, pes, chunkMeta);
                     break;
                   case 'mp3':
                     this.parseMPEGPES(audioTrack, pes);
@@ -421,6 +421,7 @@ class TSDemuxer implements Demuxer {
               this.observer,
               this.logger,
               this.config,
+              chunkMeta,
             );
 
             // only update track id if track PID found while parsing PMT
@@ -478,6 +479,7 @@ class TSDemuxer implements Demuxer {
         new Error(
           `Found ${tsPacketErrors} TS packet/s that do not start with 0x47`,
         ),
+        chunkMeta,
         undefined,
         this.logger,
       );
@@ -560,7 +562,7 @@ class TSDemuxer implements Demuxer {
     if (audioData && (pes = parsePES(audioData, this.logger))) {
       switch (audioTrack.segmentCodec) {
         case 'aac':
-          this.parseAACPES(audioTrack, pes);
+          this.parseAACPES(audioTrack, pes, chunkMeta);
           break;
         case 'mp3':
           this.parseMPEGPES(audioTrack, pes);
@@ -671,7 +673,11 @@ class TSDemuxer implements Demuxer {
     this.videoIntegrityChecker = null;
   }
 
-  private parseAACPES(track: DemuxedAudioTrack, pes: PES) {
+  private parseAACPES(
+    track: DemuxedAudioTrack,
+    pes: PES,
+    chunkMeta: ChunkMetadata,
+  ) {
     let startOffset = 0;
     const aacOverFlow = this.aacOverFlow;
     let data = pes.data;
@@ -712,6 +718,7 @@ class TSDemuxer implements Demuxer {
       emitParsingError(
         this.observer,
         new Error(reason),
+        chunkMeta,
         recoverable,
         this.logger,
       );
@@ -922,6 +929,7 @@ function parsePMT(
   observer: HlsEventEmitter,
   logger: ILogger,
   config: HlsConfig,
+  chunkMeta: ChunkMetadata,
 ) {
   const result = {
     audioPid: -1,
@@ -1062,6 +1070,7 @@ function parsePMT(
         emitParsingError(
           observer,
           new Error('Unsupported EC-3 in M2TS found'),
+          chunkMeta,
           undefined,
           logger,
         );
@@ -1078,6 +1087,7 @@ function parsePMT(
           emitParsingError(
             observer,
             new Error('Unsupported HEVC in M2TS found'),
+            chunkMeta,
             undefined,
             logger,
           );
@@ -1099,6 +1109,7 @@ function parsePMT(
 function emitParsingError(
   observer: HlsEventEmitter,
   error: Error,
+  chunkMeta: ChunkMetadata,
   levelRetry: boolean | undefined,
   logger: ILogger,
 ) {
@@ -1108,6 +1119,7 @@ function emitParsingError(
     details: ErrorDetails.FRAG_PARSING_ERROR,
     fatal: false,
     levelRetry,
+    chunkMeta,
     error,
     reason: error.message,
   });

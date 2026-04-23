@@ -759,11 +759,12 @@ export function getSampleData(
         type: track.type,
       });
       // get start DTS
+      let baseTime: number | undefined;
       const tfdt = findBox(traf, ['tfdt'])[0];
 
       if (tfdt as any) {
         const version = tfdt[0];
-        let baseTime = readUint32(tfdt, 4);
+        baseTime = readUint32(tfdt, 4);
         if (version === 1) {
           // If value is too large, assume signed 64-bit. Negative track fragment decode times are invalid, but they exist in the wild.
           // This prevents large values from being used for initPTS, which can cause playlist sync issues.
@@ -815,7 +816,7 @@ export function getSampleData(
       }
 
       const truns = findBox(traf, ['trun']);
-      let sampleDTS = trackTimes.start || 0;
+      let sampleDTS = baseTime || 0;
       let rawDuration = 0;
       let sampleDuration = defaultSampleDuration;
       for (let j = 0; j < truns.length; j++) {

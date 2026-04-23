@@ -905,6 +905,9 @@ class AudioStreamController
     // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
     if (this.fragContextChanged(frag) || !details) {
       this.fragmentTracker.removeFragment(frag);
+      if (initSegment?.tracks) {
+        this.resetTransmuxer();
+      }
       return;
     }
 

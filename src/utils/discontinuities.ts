@@ -32,9 +32,7 @@ export function shouldAlignOnDiscontinuities(
 
 function adjustFragmentStart(frag: Fragment, sliding: number) {
   const start = frag.start + sliding;
-  frag.startPTS = start;
   frag.setStart(start);
-  frag.endPTS = start + frag.duration;
 }
 
 export function adjustSlidingStart(sliding: number, details: LevelDetails) {
@@ -148,7 +146,9 @@ export function alignMediaPlaylistByPDT(
     frag = findFirstFragWithCC(fragments, targetCC);
   }
   if (!refFrag || !frag) {
-    refFrag = refFragments[Math.floor(refFragments.length / 2)];
+    refFrag =
+      refFragments[Math.floor(refFragments.length / 2)] ||
+      refFragments.filter((f) => !!f)[0];
     frag =
       findFirstFragWithCC(fragments, refFrag.cc) ||
       fragments[Math.floor(fragments.length / 2)];
