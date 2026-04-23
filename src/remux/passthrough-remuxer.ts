@@ -215,6 +215,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     }
     if (this.emitInitSegment) {
       initSegment.tracks = this.initTracks;
+      result.initSegment = initSegment;
       this.emitInitSegment = false;
     }
 
@@ -267,6 +268,15 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     const baseOffsetSamples = syncOnAudio
       ? audioSampleTimestamps
       : videoSampleTimestamps;
+
+    if (!baseOffsetSamples) {
+      this.log(
+        `No media samples found in ${playlistType} ${chunkMeta.level} ${
+          chunkMeta.part === -1 ? '' : `part: ${chunkMeta.part} of`
+        } sn: ${chunkMeta.sn} at playlist time: ${timeOffset}`,
+      );
+      return result;
+    }
 
     let data1 = data;
     let data2: Uint8Array<ArrayBuffer> | undefined;
@@ -336,46 +346,40 @@ class PassThroughRemuxer extends Logger implements Remuxer {
         : videoEndTime - videoStartTime;
     }
 
-    if (baseOffsetSamples) {
-      const timescale = baseOffsetSamples.timescale;
-      const baseTime = baseOffsetSamples.start - timeOffset * timescale;
-      const trackId = syncOnAudio ? initData.audio!.id : initData.video!.id;
+    const timescale = baseOffsetSamples.timescale;
+    const baseTime = baseOffsetSamples.start - timeOffset * timescale;
+    const trackId = syncOnAudio ? initData.audio!.id : initData.video!.id;
 
-      decodeTime = baseOffsetSamples.start / timescale;
+    decodeTime = baseOffsetSamples.start / timescale;
 
-      if (
-        (accurateTimeOffset || !initPTS) &&
-        (isInvalidInitPts(initPTS, decodeTime, timeOffset, duration) ||
-          timescale !== initPTS.timescale)
-      ) {
-        let detectedDrift = false;
-        const trackType = syncOnAudio ? 'audio' : 'video';
-        if (initPTS) {
-          const driftEstimate =
-            timeOffset !== 0 ? decodeTime / timeOffset : 1 + decodeTime / 1;
-          detectedDrift =
-            decodeTime >= 0 && Math.abs(1 - driftEstimate) < 0.001;
-          this.log(
-            `${trackType} timestamps in track ${trackId} at playlist time: ${accurateTimeOffset ? '' : '~'}${timeOffset} maps to ${decodeTime} with initPTS: ${initPTS.baseTime / initPTS.timescale} (${
-              baseTime / timescale - initPTS.baseTime / initPTS.timescale
-            }s diff) (${type}) drift estimate: ${driftEstimate} ${detectedDrift ? '(ignoring drift)' : 'remapping timestamps (initPTS)'}`,
-          );
-        }
-        if (!detectedDrift) {
-          this.log(
-            `Found initPTS in ${trackType} track ${trackId} at playlist time: ${timeOffset} offset: ${decodeTime - timeOffset} (${baseTime}/${timescale})`,
-          );
-          initPTS = null;
-          initSegment.initPTS = baseTime;
-          initSegment.timescale = timescale;
-          initSegment.trackId = trackId;
-        }
+    if (
+      (accurateTimeOffset || !initPTS) &&
+      (isInvalidInitPts(initPTS, decodeTime, timeOffset, duration) ||
+        timescale !== initPTS.timescale)
+    ) {
+      let detectedDrift = false;
+      const trackType = syncOnAudio ? 'audio' : 'video';
+      if (initPTS) {
+        const driftEstimate =
+          timeOffset !== 0 ? decodeTime / timeOffset : 1 + decodeTime / 1;
+        detectedDrift = decodeTime >= 0 && Math.abs(1 - driftEstimate) < 0.001;
+        this.log(
+          `${trackType} timestamps in track ${trackId} at playlist time: ${accurateTimeOffset ? '' : '~'}${timeOffset} maps to ${decodeTime} with initPTS: ${initPTS.baseTime / initPTS.timescale} (${
+            baseTime / timescale - initPTS.baseTime / initPTS.timescale
+          }s diff) (${type}) drift estimate: ${driftEstimate} ${detectedDrift ? '(ignoring drift)' : 'remapping timestamps (initPTS)'}`,
+        );
       }
-    } else {
-      this.warn(
-        `No audio or video samples found for initPTS at playlist time: ${timeOffset}`,
-      );
+      if (!detectedDrift) {
+        this.log(
+          `Found initPTS in ${trackType} track ${trackId} at playlist time: ${timeOffset} offset: ${decodeTime - timeOffset} (${baseTime}/${timescale})`,
+        );
+        initPTS = null;
+        initSegment.initPTS = baseTime;
+        initSegment.timescale = timescale;
+        initSegment.trackId = trackId;
+      }
     }
+
     if (!initPTS) {
       if (
         !initSegment.timescale ||

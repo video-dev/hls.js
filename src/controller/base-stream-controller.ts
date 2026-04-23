@@ -2316,7 +2316,9 @@ export default class BaseStreamController
       }
       if (mediaNotFound) {
         const error = new Error(
-          `Found no media in fragment ${frag.sn} of ${this.playlistLabel()} ${frag.level} resetting transmuxer to fallback to playlist timing`,
+          `Found no media in ${this.playlistLabel()} ${frag.level} ${
+            part ? `part: ${part.index} of ` : ''
+          }sn: ${frag.sn} at playlist time: ${frag.start}. Resetting transmuxer to fallback to playlist timing`,
         );
         this.warn(error.message);
         this.hls.trigger(Events.ERROR, {

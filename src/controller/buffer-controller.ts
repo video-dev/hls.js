@@ -1124,8 +1124,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     };
 
     if (buffersAppendedTo.length === 0) {
-      this.warn(
-        `Fragments must have at least one ElementaryStreamType set. type: ${frag.type} level: ${frag.level} sn: ${frag.sn}`,
+      this.log(
+        `Fragments must have at least one ElementaryStreamType set. ${frag.type} ${frag.level} ${
+          part ? `part: ${part.index} of ` : ''
+        }sn: ${frag.sn}`,
       );
     }
 
