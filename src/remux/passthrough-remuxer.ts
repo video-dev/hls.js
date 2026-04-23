@@ -270,8 +270,10 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       : videoSampleTimestamps;
 
     if (!baseOffsetSamples) {
-      this.warn(
-        `No audio or video samples found for initPTS at playlist time: ${timeOffset}`,
+      this.log(
+        `No media samples found in ${playlistType} ${chunkMeta.level} ${
+          chunkMeta.part === -1 ? '' : `part: ${chunkMeta.part} of`
+        } sn: ${chunkMeta.sn} at playlist time: ${timeOffset}`,
       );
       return result;
     }
