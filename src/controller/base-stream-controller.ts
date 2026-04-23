@@ -1663,7 +1663,7 @@ export default class BaseStreamController
       if (nextPart > -1 && targetBufferTime < part.start) {
         break;
       }
-      const loaded = part.loaded;
+      const loaded = part.loaded || part.gap;
       if (loaded) {
         nextPart = -1;
       } else if (
@@ -1672,7 +1672,7 @@ export default class BaseStreamController
       ) {
         nextPart = i;
       }
-      contiguous = loaded;
+      contiguous = loaded && !part.gap;
     }
     const part = partList[nextPart];
     if (part && part.fragment !== frag) {
@@ -2055,7 +2055,6 @@ export default class BaseStreamController
       this.resetFragmentErrors(filterType);
       if (part) {
         part.gap = true;
-        frag.clearElementaryStreamInfo();
       } else {
         this.treatAsGap(frag);
       }

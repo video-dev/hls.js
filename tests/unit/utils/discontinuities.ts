@@ -18,8 +18,6 @@ use(sinonChai);
 
 const mockReferenceFrag = objToFragment({
   start: 20,
-  startPTS: 20,
-  endPTS: 24,
   duration: 4,
   cc: 0,
 });
@@ -27,22 +25,16 @@ const mockReferenceFrag = objToFragment({
 const mockFrags = [
   {
     start: 0,
-    startPTS: 0,
-    endPTS: 4,
     duration: 4,
     cc: 0,
   },
   {
     start: 4,
-    startPTS: 4,
-    endPTS: 8,
     duration: 4,
     cc: 1,
   },
   {
     start: 8,
-    startPTS: 8,
-    endPTS: 16,
     duration: 8,
     cc: 1,
   },
@@ -58,29 +50,23 @@ describe('discontinuities', function () {
     const expected = [
       {
         start: 20,
-        startPTS: 20,
-        endPTS: 24,
         duration: 4,
         cc: 0,
       },
       {
         start: 24,
-        startPTS: 24,
-        endPTS: 28,
         duration: 4,
         cc: 1,
       },
       {
         start: 28,
-        startPTS: 28,
-        endPTS: 36,
         duration: 8,
         cc: 1,
       },
     ].map(objToFragment);
 
     adjustSlidingStart(mockReferenceFrag.start, details);
-    expect(expected).to.deep.equal(details.fragments);
+    expect(details.fragments).to.deep.equal(expected);
     expect(details.alignedSliding).to.be.true;
   });
 
@@ -94,30 +80,22 @@ describe('discontinuities', function () {
         fragments: [
           {
             start: 18,
-            startPTS: undefined,
-            endPTS: undefined,
             duration: 2,
             programDateTime: 1629821766107,
           },
           {
             start: 20,
-            startPTS: undefined,
-            endPTS: 22,
             duration: 2,
             programDateTime: 1629821768107,
           },
           {
             start: 22,
-            startPTS: 22,
-            endPTS: 30,
             duration: 8,
             programDateTime: 1629821770107,
           },
         ].map(objToFragment),
         fragmentHint: objToFragment({
           start: 30,
-          startPTS: 30,
-          endPTS: 32,
           duration: 2,
           programDateTime: 1629821778107,
         }),
@@ -128,8 +106,6 @@ describe('discontinuities', function () {
       fragments: [
         {
           start: 18,
-          startPTS: undefined,
-          endPTS: undefined,
           duration: 2,
           programDateTime: 1629821768107,
         },
@@ -144,30 +120,22 @@ describe('discontinuities', function () {
       fragments: [
         {
           start: 16,
-          startPTS: 16,
-          endPTS: 18,
           duration: 2,
           programDateTime: 1629821766107,
         },
         {
           start: 18,
-          startPTS: 18,
-          endPTS: 20,
           duration: 2,
           programDateTime: 1629821768107,
         },
         {
           start: 20,
-          startPTS: 20,
-          endPTS: 28,
           duration: 8,
           programDateTime: 1629821770107,
         },
       ].map(objToFragment),
       fragmentHint: objToFragment({
         start: 28,
-        startPTS: 28,
-        endPTS: 30,
         duration: 2,
         programDateTime: 1629821778107,
       }),
@@ -197,32 +165,24 @@ describe('discontinuities', function () {
         fragments: [
           {
             start: 20,
-            startPTS: 20,
-            endPTS: 24,
             duration: 4,
             cc: 1,
             programDateTime: 1503892800000,
           },
           {
             start: 24,
-            startPTS: 24,
-            endPTS: 28,
             duration: 4,
             cc: 2,
             programDateTime: 1503892850000,
           },
           {
             start: 28,
-            startPTS: 28,
-            endPTS: 36,
             duration: 8,
             cc: 3,
             programDateTime: 1501111110000,
           },
           {
             start: 28,
-            startPTS: 28,
-            endPTS: 36,
             duration: 8,
             cc: 3,
             programDateTime: 1501111118000,
@@ -235,32 +195,24 @@ describe('discontinuities', function () {
       fragments: [
         {
           start: 0,
-          startPTS: 0,
-          endPTS: 4,
           duration: 4,
           cc: 2,
           programDateTime: 1503892850000,
         },
         {
           start: 4,
-          startPTS: 4,
-          endPTS: 8,
           duration: 4,
           cc: 3,
           programDateTime: 1501111110000,
         },
         {
           start: 8,
-          startPTS: 8,
-          endPTS: 12,
           duration: 4,
           cc: 3,
           programDateTime: 1501111114000,
         },
         {
           start: 12,
-          startPTS: 12,
-          endPTS: 16,
           duration: 4,
           cc: 4,
           programDateTime: 1503892854000,
@@ -276,32 +228,24 @@ describe('discontinuities', function () {
       fragments: [
         {
           start: 24,
-          startPTS: 24,
-          endPTS: 28,
           duration: 4,
           cc: 2,
           programDateTime: 1503892850000,
         },
         {
           start: 28,
-          startPTS: 28,
-          endPTS: 32,
           duration: 4,
           cc: 3,
           programDateTime: 1501111110000,
         },
         {
           start: 32,
-          startPTS: 32,
-          endPTS: 36,
           duration: 4,
           cc: 3,
           programDateTime: 1501111114000,
         },
         {
           start: 36,
-          startPTS: 36,
-          endPTS: 40,
           duration: 4,
           cc: 4,
           programDateTime: 1503892854000,
@@ -326,24 +270,18 @@ describe('discontinuities', function () {
         fragments: [
           {
             start: 20,
-            startPTS: 20,
-            endPTS: 24,
             duration: 4,
             cc: 0,
             programDateTime: 1503892800000,
           },
           {
             start: 24,
-            startPTS: 24,
-            endPTS: 28,
             duration: 4,
             cc: 1,
             programDateTime: 1503892804000,
           },
           {
             start: 28,
-            startPTS: 28,
-            endPTS: 36,
             duration: 8,
             cc: 1,
             programDateTime: 1503892808000,
@@ -356,24 +294,18 @@ describe('discontinuities', function () {
       fragments: [
         {
           start: 0,
-          startPTS: 0,
-          endPTS: 4,
           duration: 4,
           cc: 2,
           programDateTime: 1503892850000,
         },
         {
           start: 4,
-          startPTS: 4,
-          endPTS: 8,
           duration: 4,
           cc: 2,
           programDateTime: 1503892854000,
         },
         {
           start: 8,
-          startPTS: 8,
-          endPTS: 16,
           duration: 8,
           cc: 3,
           programDateTime: 1503892858000,
@@ -389,8 +321,6 @@ describe('discontinuities', function () {
       fragments: [
         {
           start: 70,
-          startPTS: 70,
-          endPTS: 74,
           duration: 4,
           cc: 2,
           programDateTime: 1503892850000,
@@ -398,8 +328,6 @@ describe('discontinuities', function () {
         },
         {
           start: 74,
-          startPTS: 74,
-          endPTS: 78,
           duration: 4,
           cc: 2,
           programDateTime: 1503892854000,
@@ -407,8 +335,6 @@ describe('discontinuities', function () {
         },
         {
           start: 78,
-          startPTS: 78,
-          endPTS: 86,
           duration: 8,
           cc: 3,
           programDateTime: 1503892858000,
@@ -431,10 +357,9 @@ describe('discontinuities', function () {
   describe('alignDiscontinuities', function () {
     it('aligns playlists (LevelDetails fragments starts) based on overlapping discontinuity sequence change', function () {
       const prevDetails = objToLevelDetails({
-        fragments: [
-          mockReferenceFrag,
-          { start: 24, startPTS: 24, endPTS: 28, duration: 4, cc: 1 },
-        ].map(objToFragment),
+        fragments: [mockReferenceFrag, { start: 24, duration: 4, cc: 1 }].map(
+          objToFragment,
+        ),
       });
       const curDetails = objToLevelDetails({
         fragments: mockFrags.map(objToFragment),
@@ -448,8 +373,8 @@ describe('discontinuities', function () {
       const prevDetails = objToLevelDetails({
         fragments: [
           mockReferenceFrag,
-          { start: 24, startPTS: 24, endPTS: 28, duration: 4, cc: 1 },
-          { start: 28, startPTS: 28, endPTS: 32, duration: 4, cc: 2 },
+          { start: 24, duration: 4, cc: 1 },
+          { start: 28, duration: 4, cc: 2 },
         ].map(objToFragment),
       });
       const curDetails = objToLevelDetails({
@@ -464,15 +389,15 @@ describe('discontinuities', function () {
       const prevDetails = objToLevelDetails({
         fragments: [
           mockReferenceFrag,
-          { start: 24, startPTS: 24, endPTS: 28, duration: 4.5, cc: 1 },
-          { start: 28.5, startPTS: 28, endPTS: 32, duration: 4, cc: 2 },
+          { start: 24, duration: 4.5, cc: 1 },
+          { start: 28.5, duration: 4, cc: 2 },
         ].map(objToFragment),
       });
       const curDetails = objToLevelDetails({
         fragments: [
-          { start: 0, startPTS: 0, endPTS: 4, duration: 4.5, cc: 1 },
-          { start: 4.5, startPTS: 4.5, endPTS: 8.5, duration: 4, cc: 2 },
-          { start: 8.5, startPTS: 4.5, endPTS: 12.5, duration: 4, cc: 3 },
+          { start: 0, duration: 4.5, cc: 1 },
+          { start: 4.5, duration: 4, cc: 2 },
+          { start: 8.5, duration: 4, cc: 3 },
         ].map(objToFragment),
       });
       alignDiscontinuities(curDetails, prevDetails, logger);
