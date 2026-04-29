@@ -637,10 +637,8 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
-  onBufferFlushing(
-    event: Events.BUFFER_FLUSHING,
-    { startOffset, endOffset, endOffsetSubtitles, type }: BufferFlushingData,
-  ) {
+  onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData) {
+    const { startOffset, endOffset, endOffsetSubtitles, type } = data;
     const { media } = this;
     if (!media || media.currentTime < endOffset) {
       return;

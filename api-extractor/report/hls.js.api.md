@@ -49,7 +49,7 @@ export class AbrController extends Logger implements AbrComponentAPI {
     // (undocumented)
     protected onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData): void;
     // (undocumented)
-    protected onFragLoaded(event: Events.FRAG_LOADED, { frag, part }: FragLoadedData): void;
+    protected onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData): void;
     // (undocumented)
     protected onFragLoading(event: Events.FRAG_LOADING, data: FragLoadingData): void;
     // (undocumented)
@@ -206,7 +206,7 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     protected onHandlerDestroying(): void;
     // (undocumented)
-    onInitPtsFound(event: Events.INIT_PTS_FOUND, { frag, id, initPTS, timescale, trackId, timestampOffsets, }: InitPTSFoundData): void;
+    onInitPtsFound(event: Events.INIT_PTS_FOUND, data: InitPTSFoundData): void;
     // (undocumented)
     protected onManifestLoading(): void;
     // (undocumented)
@@ -5093,7 +5093,7 @@ export class TimelineController implements ComponentAPI {
     // (undocumented)
     destroy(): void;
     // (undocumented)
-    onBufferFlushing(event: Events.BUFFER_FLUSHING, { startOffset, endOffset, endOffsetSubtitles, type }: BufferFlushingData): void;
+    onBufferFlushing(event: Events.BUFFER_FLUSHING, data: BufferFlushingData): void;
 }
 
 // Warning: (ae-missing-release-tag) "TimelineControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
