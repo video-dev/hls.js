@@ -139,17 +139,8 @@ class AudioStreamController
   }
 
   // INIT_PTS_FOUND is triggered when the video track parsed in the stream-controller has a new PTS value
-  onInitPtsFound(
-    event: Events.INIT_PTS_FOUND,
-    {
-      frag,
-      id,
-      initPTS,
-      timescale,
-      trackId,
-      timestampOffsets,
-    }: InitPTSFoundData,
-  ) {
+  onInitPtsFound(event: Events.INIT_PTS_FOUND, data: InitPTSFoundData) {
+    const { frag, id, initPTS, timescale, trackId, timestampOffsets } = data;
     // Always update the new INIT PTS
     // Can change due level switch
     if (id === PlaylistLevelType.MAIN) {
