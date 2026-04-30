@@ -461,10 +461,8 @@ class AbrController extends Logger implements AbrComponentAPI {
     hls.trigger(Events.FRAG_LOAD_EMERGENCY_ABORTED, { frag, part, stats });
   };
 
-  protected onFragLoaded(
-    event: Events.FRAG_LOADED,
-    { frag, part }: FragLoadedData,
-  ) {
+  protected onFragLoaded(event: Events.FRAG_LOADED, data: FragLoadedData) {
+    const { frag, part } = data;
     const stats = part ? part.stats : frag.stats;
     if (frag.type === PlaylistLevelType.MAIN) {
       this.bwEstimator.sampleTTFB(stats.loading.first - stats.loading.start);
