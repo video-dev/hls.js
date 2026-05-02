@@ -608,6 +608,8 @@ class FailbackLoader implements Loader<FragmentLoaderContext> {
     }
 
     this.stats.aborted = false;
+    this.stats.loading.first = 0;
+    this.stats.loaded = 0;
 
     this.failbackConfig.onFailback?.(
       this.originalUrl,

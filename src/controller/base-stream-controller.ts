@@ -844,10 +844,7 @@ export default class BaseStreamController
         }
       }
       const level = this.levels?.[frag.level];
-      if (
-        level?.fragmentError &&
-        (part || this.fragmentTracker.getState(frag) !== FragmentState.PARTIAL)
-      ) {
+      if (level?.fragmentError) {
         this.log(
           `Resetting level fragment error count of ${level.fragmentError} on frag buffered`,
         );
@@ -1522,7 +1519,9 @@ export default class BaseStreamController
       if (frag.gap) {
         return true;
       }
-      if (frag.stats.retry > 1) {
+      const maxLoopRetry =
+        this.config.fragLoadPolicy.default.errorRetry?.maxNumRetry ?? 3;
+      if (frag.stats.retry > maxLoopRetry) {
         return true;
       }
       frag.stats.retry++;
