@@ -250,7 +250,7 @@ export class FragmentTracker implements ComponentAPI {
       const partial = isFragHint || streamInfo.partial === true;
       fragmentEntity.range[elementaryStream] = this.getBufferedTimes(
         frag,
-        data.part,
+        part,
         partial,
         timeRange,
       );

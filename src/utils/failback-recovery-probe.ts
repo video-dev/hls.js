@@ -1,5 +1,7 @@
 import { logger } from './logger';
+import { LoaderContextType } from '../types/loader';
 import type { HlsConfig } from '../config';
+import type { LoaderContext } from '../types/loader';
 
 function probeOriginalCDNWithFetch(
   url: string,
@@ -120,13 +122,25 @@ export function probeOriginalCDN(
     logger.log(`[FailbackLoader] Probe xhr starting: ${url}`);
 
     Promise.resolve()
-      .then(() => xhrSetup(xhr, url))
+      .then(() => {
+        const probeContext: LoaderContext = {
+          url,
+          responseType: 'arraybuffer',
+          type: LoaderContextType.MEDIA_FRAGMENT,
+        };
+        return xhrSetup(xhr, url, probeContext);
+      })
       .catch(() => {
         if (settled) {
           return;
         }
         xhr.open('GET', url, true);
-        return xhrSetup(xhr, url);
+        const probeContext: LoaderContext = {
+          url,
+          responseType: 'arraybuffer',
+          type: LoaderContextType.MEDIA_FRAGMENT,
+        };
+        return xhrSetup(xhr, url, probeContext);
       })
       .then(() => {
         if (settled) {

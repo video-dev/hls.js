@@ -684,12 +684,12 @@ class FailbackLoader implements Loader<FragmentLoaderContext> {
       Promise.resolve()
         .then(() => {
           if (this.loader !== xhr || this.stats.aborted) return;
-          return xhrSetup(xhr, url);
+          return xhrSetup(xhr, url, context);
         })
         .catch(() => {
           if (this.loader !== xhr || this.stats.aborted) return;
           xhr.open('GET', url, true);
-          return xhrSetup(xhr, url);
+          return xhrSetup(xhr, url, context);
         })
         .then(() => {
           if (this.loader !== xhr || this.stats.aborted) return;

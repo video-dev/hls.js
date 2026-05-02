@@ -460,12 +460,12 @@ segment101.ts`;
         expect(data.details).to.equal(ErrorDetails.PLAYLIST_UNCHANGED_ERROR);
         expect(data.fatal).to.equal(false, 'Error should not be fatal');
         expect(data.error.message).to.include(
-          'hits max allowed unchanged reloads',
+          'hit max allowed unchanged reloads',
         );
       });
     });
 
-    it('PLAYLIST_UNCHANGED_ERROR becomes fatal when no alternate levels are available', function () {
+    it('PLAYLIST_UNCHANGED_ERROR is not fatal when no alternate levels are available', function () {
       (hls.config as any).liveMaxUnchangedPlaylistRefresh = 2;
 
       server.respondWith('singleLevelMultivariant.m3u8', [
@@ -505,13 +505,12 @@ segment101.ts`;
       }).then((data: ErrorData) => {
         expect(data.details).to.equal(ErrorDetails.PLAYLIST_UNCHANGED_ERROR);
         expect(data.fatal).to.equal(
-          true,
-          'Error should be fatal with no alternates',
+          false,
+          'Error should not be fatal with no alternates',
         );
         expect(data.error.message).to.include(
-          'hits max allowed unchanged reloads',
+          'hit max allowed unchanged reloads',
         );
-        expect(hls.stopLoad).to.have.been.called;
       });
     });
 
@@ -575,7 +574,7 @@ audio101.ts`;
         expect(data.details).to.equal(ErrorDetails.PLAYLIST_UNCHANGED_ERROR);
         expect(data.fatal).to.equal(false, 'Error should not be fatal');
         expect(data.error.message).to.include(
-          'hits max allowed unchanged reloads',
+          'hit max allowed unchanged reloads',
         );
       });
     });

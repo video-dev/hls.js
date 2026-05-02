@@ -433,11 +433,11 @@ export class Fragment extends BaseSegment {
 export class Part extends BaseSegment {
   public readonly fragOffset: number = 0;
   public readonly duration: number = 0;
-  public readonly gap: boolean = false;
   public readonly independent: boolean = false;
   public readonly relurl: string;
   public readonly fragment: MediaFragment;
   public readonly index: number;
+  public gap: boolean = false;
 
   constructor(
     partAttrs: AttrList,

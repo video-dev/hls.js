@@ -8,7 +8,6 @@ import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import MP4Remuxer from '../remux/mp4-remuxer';
 import PassThroughRemuxer from '../remux/passthrough-remuxer';
-import { PlaylistLevelType } from '../types/loader';
 import {
   getAesModeFromFullSegmentMethod,
   isFullSegmentEncryption,
@@ -17,6 +16,7 @@ import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { DecryptData } from '../loader/level-key';
 import type { Demuxer, DemuxerResult, KeyData } from '../types/demuxer';
+import type { PlaylistLevelType } from '../types/loader';
 import type { Remuxer } from '../types/remuxer';
 import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
 import type { TypeSupported } from '../utils/codecs';
@@ -287,7 +287,7 @@ export default class Transmuxer {
     this.logger.log(
       `[transmuxer.ts]: Flushed ${this.id} sn: ${chunkMeta.sn}${
         chunkMeta.part > -1 ? ' part: ' + chunkMeta.part : ''
-      } of ${this.id === PlaylistLevelType.MAIN ? 'level' : 'track'} ${chunkMeta.level}`,
+      } of ${this.id} playlist ${chunkMeta.level}`,
     );
     const remuxResult = this.remuxer!.remux(
       audioTrack,

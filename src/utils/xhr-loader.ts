@@ -12,13 +12,17 @@ const AGE_HEADER_LINE_REGEX = /^age:\s*[\d.]+\s*$/im;
 
 class XhrLoader extends BaseLoader {
   private xhrSetup:
-    | ((xhr: XMLHttpRequest, url: string) => Promise<void> | void)
+    | ((
+        xhr: XMLHttpRequest,
+        url: string,
+        context: LoaderContext,
+      ) => Promise<void> | void)
     | null;
   private loader: XMLHttpRequest | null = null;
 
   constructor(config: HlsConfig) {
     super();
-    this.xhrSetup = config ? config.xhrSetup || null : null;
+    this.xhrSetup = config.xhrSetup || null;
   }
 
   destroy(): void {
@@ -66,12 +70,12 @@ class XhrLoader extends BaseLoader {
       Promise.resolve()
         .then(() => {
           if (this.loader !== xhr || this.stats.aborted) return;
-          return xhrSetup(xhr, context.url);
+          return xhrSetup.call(this, xhr, context.url, context);
         })
         .catch((error: Error) => {
           if (this.loader !== xhr || this.stats.aborted) return;
           xhr.open('GET', context.url, true);
-          return xhrSetup(xhr, context.url);
+          return xhrSetup.call(this, xhr, context.url, context);
         })
         .then(() => {
           if (this.loader !== xhr || this.stats.aborted) return;
