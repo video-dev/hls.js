@@ -35,6 +35,7 @@ import './unit/demuxer/base-audio-demuxer';
 import './unit/loader/date-range';
 import './unit/loader/fragment-loader';
 import './unit/loader/fragment';
+import './unit/loader/key-loader';
 import './unit/loader/level';
 import './unit/loader/m3u8-parser';
 import './unit/loader/playlist-loader';
