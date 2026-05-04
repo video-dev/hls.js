@@ -205,6 +205,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
       // LevelKey loading for other fragment
       if (cachedKeyInfo.keyLoadPromise) {
         return cachedKeyInfo.keyLoadPromise.then((keyLoadedData) => {
+          decryptdata.key = cachedKeyInfo.decryptdata.key;
           return { ...keyLoadedData, frag };
         });
       }
