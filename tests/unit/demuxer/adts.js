@@ -50,21 +50,40 @@ describe('getAudioConfig', function () {
     });
   });
 
-  it('should return audio config for 11025Hz', function () {
+  it('should treat AAC Main (object type 1) with low sample rate as implicit HE-AAC (SBR)', function () {
     const observer = new EventEmitter();
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
     data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
-    data[2] = 0x28; // sampling_frequency_index = 10
+    data[2] = 0x28; // profile = 0 (AAC Main), sampling_frequency_index = 10 (11025Hz)
 
     const result = getAudioConfig(observer, data, 0, 'mp4a.40.29');
     expect(result, JSON.stringify(result)).to.deep.equal({
-      config: [13, 0],
+      config: [45, 3, 136, 0],
       samplerate: 11025,
       channelCount: 0,
-      codec: 'mp4a.40.1',
-      parsedCodec: 'mp4a.40.1',
+      codec: 'mp4a.40.5',
+      parsedCodec: 'mp4a.40.5',
       manifestCodec: 'mp4a.40.29',
+    });
+  });
+
+  it('should treat AAC Main at sampling index 6 (24kHz) as implicit HE-AAC', function () {
+    const observer = new EventEmitter();
+    const data = new Uint8Array(new ArrayBuffer(4));
+    data[0] = 0xff;
+    data[1] = 0xf0; // ID = 0 (MPEG-4), layer = 00, protection_absent = 0
+    data[2] = 0x18; // profile = 0 (AAC Main), sampling_frequency_index = 6 (24000Hz)
+    data[3] = 0x80; // channel_configuration = 2 (stereo)
+
+    const result = getAudioConfig(observer, data, 0, undefined);
+    expect(result, JSON.stringify(result)).to.deep.equal({
+      config: [43, 17, 136, 0],
+      samplerate: 24000,
+      channelCount: 2,
+      codec: 'mp4a.40.5',
+      parsedCodec: 'mp4a.40.5',
+      manifestCodec: undefined,
     });
   });
 
@@ -106,7 +125,7 @@ describe('getAudioConfig', function () {
     });
   });
 
-  it('should return audio config if there is no audio codec and freq is high enough', function () {
+  it('should keep AAC Main (object type 1) with high sample rate as mp4a.40.1', function () {
     const observer = new EventEmitter();
     const data = new Uint8Array(new ArrayBuffer(4));
     data[0] = 0xff;
@@ -272,7 +291,7 @@ describe('initTrackConfig', function () {
     });
   });
 
-  it('should call `getAudioConfig` and change track if track.samplerate is undefined', function () {
+  it('should set track config with implicit HE-AAC for AAC Main with low sample rate', function () {
     const track = {};
     const observer = {
       trigger: sinon.spy(),
@@ -285,11 +304,11 @@ describe('initTrackConfig', function () {
     initTrackConfig(track, observer, data, 0, 'mp4a.40.29');
 
     expect(track).to.deep.equal({
-      config: [13, 0],
+      config: [45, 3, 136, 0],
       samplerate: 11025,
       channelCount: 0,
-      codec: 'mp4a.40.1',
-      parsedCodec: 'mp4a.40.1',
+      codec: 'mp4a.40.5',
+      parsedCodec: 'mp4a.40.5',
       manifestCodec: 'mp4a.40.29',
     });
   });
