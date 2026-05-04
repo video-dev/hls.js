@@ -60,6 +60,7 @@
     "test:func": "BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "test:func:light": "BABEL_ENV=development HLSJS_LIGHT=1 mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "test:func:sauce": "SAUCE=1 UA=safari OS='OS X 10.15' BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
+    "test:func:browserstack": "BROWSERSTACK=1 UA=safari OS='macOS 15' BABEL_ENV=development mocha --require @babel/register tests/functional/auto/setup.js --timeout 40000 --exit",
     "type-check": "tsc --noEmit",
     "type-check:watch": "npm run type-check -- --watch",
     "prepare": "husky"
@@ -92,6 +93,7 @@
     "@typescript-eslint/parser": "8.54.0",
     "babel-loader": "10.1.1",
     "babel-plugin-transform-remove-console": "6.9.4",
+    "browserstack-local": "1.5.13",
     "chai": "6.2.2",
     "chart.js": "2.9.4",
     "chromedriver": "146.0.6",

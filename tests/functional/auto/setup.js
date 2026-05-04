@@ -8,7 +8,10 @@ const until = webdriver.until;
 require('chromedriver');
 const HttpServer = require('http-server');
 const streams = require('../../test-streams');
-const useSauce = !!process.env.SAUCE || !!process.env.SAUCE_TUNNEL_ID;
+const useBrowserStack = !!process.env.BROWSERSTACK;
+const useSauce =
+  !useBrowserStack && (!!process.env.SAUCE || !!process.env.SAUCE_TUNNEL_ID);
+const useRemote = useSauce || useBrowserStack;
 const HlsjsLightBuild = !!process.env.HLSJS_LIGHT;
 const { expect } = require('chai');
 
@@ -31,7 +34,27 @@ let browser;
 const printDebugLogs = false;
 
 // Setup browser config data from env vars
-if (useSauce) {
+if (useBrowserStack) {
+  const UA = process.env.UA;
+  if (!UA) {
+    throw new Error('No test browser name.');
+  }
+
+  const OS = process.env.OS;
+  if (!OS) {
+    throw new Error('No test browser platform.');
+  }
+
+  if (
+    !process.env.BROWSERSTACK_USERNAME ||
+    !process.env.BROWSERSTACK_ACCESS_KEY
+  ) {
+    throw new Error('Missing BrowserStack auth.');
+  }
+
+  browserConfig.name = UA;
+  browserConfig.platform = OS;
+} else if (useSauce) {
   const UA = process.env.UA;
   if (!UA) {
     throw new Error('No test browser name.');
@@ -61,12 +84,12 @@ if (browserConfig.platform) {
 }
 
 // Launch static server
-if (useSauce || !HLSJS_TEST_BASE) {
+if (useRemote || !HLSJS_TEST_BASE) {
   HttpServer.createServer({
     showDir: false,
     autoIndex: false,
     root: './',
-  }).listen(8000, useSauce ? '0.0.0.0' : '127.0.0.1');
+  }).listen(8000, useRemote ? '0.0.0.0' : '127.0.0.1');
 }
 
 const wait = (ms) => new Promise((resolve) => global.setTimeout(resolve, ms));
@@ -536,10 +559,58 @@ async function sauceDisconnect() {
   });
 }
 
+function mapOSToBrowserStack(os) {
+  const mapping = {
+    'macOS 12': { os: 'OS X', osVersion: 'Monterey' },
+    'macOS 13': { os: 'OS X', osVersion: 'Ventura' },
+    'macOS 14': { os: 'OS X', osVersion: 'Sonoma' },
+    'macOS 15': { os: 'OS X', osVersion: 'Sequoia' },
+    'Windows 10': { os: 'Windows', osVersion: '10' },
+    'Windows 11': { os: 'Windows', osVersion: '11' },
+  };
+  return mapping[os] || { os: os, osVersion: '' };
+}
+
+let browserstackLocalInstance;
+async function startBrowserStackLocal(localIdentifier) {
+  const browserStackLocal = require('browserstack-local');
+  return new Promise(function (resolve, reject) {
+    console.log(`Starting BrowserStack Local. Identifier: ${localIdentifier}`);
+    browserstackLocalInstance = new browserStackLocal.Local();
+    const opts = {
+      key: process.env.BROWSERSTACK_ACCESS_KEY,
+      localIdentifier: localIdentifier,
+      forceLocal: true,
+    };
+    browserstackLocalInstance.start(opts, function (err) {
+      if (err) {
+        console.error('BrowserStack Local error:', err.message);
+        reject(err);
+        return;
+      }
+      console.log('BrowserStack Local connected');
+      resolve(browserstackLocalInstance);
+    });
+  });
+}
+
+async function stopBrowserStackLocal() {
+  return new Promise(function (resolve) {
+    if (!browserstackLocalInstance) {
+      resolve();
+      return;
+    }
+    browserstackLocalInstance.stop(function () {
+      console.log('BrowserStack Local disconnected');
+      resolve();
+    });
+  });
+}
+
 function getPageURLComponents() {
   return {
     base:
-      useSauce || !HLSJS_TEST_BASE ? 'http://localhost:8000' : HLSJS_TEST_BASE,
+      useRemote || !HLSJS_TEST_BASE ? 'http://localhost:8000' : HLSJS_TEST_BASE,
     path: '/tests/functional/auto/',
     file: `index${HlsjsLightBuild ? '-light' : ''}.html`,
   };
@@ -567,7 +638,7 @@ describe(`Testing hls.js playback in ${browserConfig.name} ${browserConfig.versi
       };
     }
 
-    if (!useSauce) {
+    if (!useRemote) {
       // Configure webdriver for local testing
       if (browserConfig.name === 'safari') {
         browser = new webdriver.Builder()
@@ -587,6 +658,31 @@ describe(`Testing hls.js playback in ${browserConfig.name} ${browserConfig.versi
           .withCapabilities(capabilities)
           .build();
       }
+    } else if (useBrowserStack) {
+      const bsLocalIdentifier =
+        process.env.BROWSERSTACK_LOCAL_IDENTIFIER || `local-${Date.now()}`;
+      const osMapping = mapOSToBrowserStack(browserConfig.platform);
+      // BrowserStack does not use platformName; OS is set via bstack:options
+      delete capabilities.platformName;
+      capabilities['bstack:options'] = {
+        os: osMapping.os,
+        osVersion: osMapping.osVersion,
+        buildName:
+          'HLSJS-' +
+          (process.env.BROWSERSTACK_BUILD_ID || `local-${Date.now()}`),
+        sessionName: capabilities.name,
+        local: 'true',
+        localIdentifier: bsLocalIdentifier,
+        userName: process.env.BROWSERSTACK_USERNAME,
+        accessKey: process.env.BROWSERSTACK_ACCESS_KEY,
+      };
+      if (!process.env.BROWSERSTACK_LOCAL_IDENTIFIER) {
+        await startBrowserStackLocal(bsLocalIdentifier);
+      }
+      browser = new webdriver.Builder()
+        .usingServer('https://hub.browserstack.com/wd/hub')
+        .withCapabilities(capabilities)
+        .build();
     } else {
       if (process.env.SAUCE_TUNNEL_ID) {
         capabilities['sauce:options'] = {
@@ -624,13 +720,20 @@ describe(`Testing hls.js playback in ${browserConfig.name} ${browserConfig.versi
           browser.getSession(),
         ]);
         console.log(`Retrieved session in ${Date.now() - start}ms`);
-        if (useSauce) {
+        if (useBrowserStack) {
+          console.log(
+            `BrowserStack session: https://automate.browserstack.com/sessions/${session.getId()}`
+          );
+        } else if (useSauce) {
           console.log(`Job URL: https://saucelabs.com/jobs/${session.getId()}`);
         } else {
           console.log(`WebDriver SessionID: ${session.getId()}`);
         }
       });
     } catch (err) {
+      if (useBrowserStack) {
+        await stopBrowserStackLocal();
+      }
       await sauceDisconnect();
       throw new Error(`failed setting up session: ${err}`);
     }
@@ -694,17 +797,27 @@ ${data.logs}
 `);
       failedUrls[url] = url in failedUrls ? failedUrls[url] + 1 : 1;
 
-      if (failed && useSauce) {
+      if (failed && useBrowserStack) {
+        browser.executeScript(
+          'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status": "failed", "reason": "Test failed"}}'
+        );
+      } else if (failed && useSauce) {
         browser.executeScript('sauce:job-result=failed');
       }
     }
   });
 
   after(async function () {
-    if (useSauce && this.currentTest && this.currentTest.parent) {
+    if (this.currentTest && this.currentTest.parent) {
       const tests = this.currentTest.parent.tests;
       if (tests && tests.length && tests.every((test) => test.isPassed())) {
-        browser.executeScript('sauce:job-result=passed');
+        if (useBrowserStack) {
+          browser.executeScript(
+            'browserstack_executor: {"action": "setSessionStatus", "arguments": {"status": "passed"}}'
+          );
+        } else if (useSauce) {
+          browser.executeScript('sauce:job-result=passed');
+        }
       }
     }
     console.log('Quitting browser...');
@@ -712,6 +825,9 @@ ${data.logs}
     console.log('Browser quit.');
     if (Object.keys(failedUrls).length > 0) {
       console.log(JSON.stringify(failedUrls, null, 2));
+    }
+    if (useBrowserStack) {
+      await stopBrowserStackLocal();
     }
     if (useSauce) {
       await sauceDisconnect();
