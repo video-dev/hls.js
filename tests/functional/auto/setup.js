@@ -661,12 +661,10 @@ describe(`Testing hls.js playback in ${browserConfig.name} ${browserConfig.versi
     } else if (useBrowserStack) {
       const bsLocalIdentifier =
         process.env.BROWSERSTACK_LOCAL_IDENTIFIER || `local-${Date.now()}`;
-      const osMapping = mapOSToBrowserStack(browserConfig.platform);
+      const deviceName = process.env.DEVICE;
       // BrowserStack does not use platformName; OS is set via bstack:options
       delete capabilities.platformName;
-      capabilities['bstack:options'] = {
-        os: osMapping.os,
-        osVersion: osMapping.osVersion,
+      const bstackOptions = {
         buildName:
           'HLSJS-' +
           (process.env.BROWSERSTACK_BUILD_ID || `local-${Date.now()}`),
@@ -676,6 +674,25 @@ describe(`Testing hls.js playback in ${browserConfig.name} ${browserConfig.versi
         userName: process.env.BROWSERSTACK_USERNAME,
         accessKey: process.env.BROWSERSTACK_ACCESS_KEY,
       };
+      if (deviceName) {
+        // Mobile device testing
+        const osVersion = browserConfig.platform.replace(
+          /^(Android|iOS)\s*/,
+          ''
+        );
+        bstackOptions.deviceName = deviceName;
+        bstackOptions.os = browserConfig.platform.startsWith('iOS')
+          ? 'ios'
+          : 'android';
+        bstackOptions.osVersion = osVersion;
+        delete capabilities.browserVersion;
+      } else {
+        // Desktop testing
+        const osMapping = mapOSToBrowserStack(browserConfig.platform);
+        bstackOptions.os = osMapping.os;
+        bstackOptions.osVersion = osMapping.osVersion;
+      }
+      capabilities['bstack:options'] = bstackOptions;
       if (!process.env.BROWSERSTACK_LOCAL_IDENTIFIER) {
         await startBrowserStackLocal(bsLocalIdentifier);
       }
@@ -749,7 +766,9 @@ describe(`Testing hls.js playback in ${browserConfig.name} ${browserConfig.versi
         }
         try {
           await browser.get(testPageUrl);
-          await browser.manage().window().setRect(0, 0, 1200, 850);
+          if (!process.env.DEVICE) {
+            await browser.manage().window().setRect(0, 0, 1200, 850);
+          }
         } catch (e) {
           throw new Error('failed to open test page');
         }
