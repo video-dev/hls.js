@@ -5,6 +5,7 @@
 
 Below you can find the URL's to deployments for individual commits:
 
+- [`b5472a52 (1.7.0-alpha.1.0.canary.11783)`](https://github.com/video-dev/hls.js/commit/b5472a52b430a31c4668f24a56d9f277dc22a2ff): [https://f54c9724.hls-js-dev.pages.dev/](https://f54c9724.hls-js-dev.pages.dev/)
 - [`0e0e5de1 (1.7.0-alpha.1.0.canary.11782)`](https://github.com/video-dev/hls.js/commit/0e0e5de1c1f12044be8b88fbaf6dc22a9c3b3276): [https://6c88c888.hls-js-dev.pages.dev/](https://6c88c888.hls-js-dev.pages.dev/)
 - [`a9c3e379 (1.7.0-alpha.1.0.canary.11781)`](https://github.com/video-dev/hls.js/commit/a9c3e3795ac20756d341fe539b8a70b4a8241ee0): [https://5ccc5dcf.hls-js-dev.pages.dev/](https://5ccc5dcf.hls-js-dev.pages.dev/)
 - [`69cc003b (1.7.0-alpha.1.0.canary.11780)`](https://github.com/video-dev/hls.js/commit/69cc003b2edf4db8b4da9afe46da7ed735e6dee2): [https://53b04cb6.hls-js-dev.pages.dev/](https://53b04cb6.hls-js-dev.pages.dev/)
@@ -104,6 +105,5 @@ Below you can find the URL's to deployments for individual commits:
 - [`54304594 (1.6.16-0.canary.11639)`](https://github.com/video-dev/hls.js/commit/543045942ce83f26075f5282e0ced25910798639): [https://4944fc6a.hls-js-dev.pages.dev/](https://4944fc6a.hls-js-dev.pages.dev/)
 - [`78292959 (1.6.16-0.canary.11638)`](https://github.com/video-dev/hls.js/commit/78292959987287e5119104f35be9afead0911b4c): [https://a24f9939.hls-js-dev.pages.dev/](https://a24f9939.hls-js-dev.pages.dev/)
 - [`d9b30b14 (1.6.16-0.canary.11637)`](https://github.com/video-dev/hls.js/commit/d9b30b1425b7a767166aadb322d75c6279214162): [https://b55b8a59.hls-js-dev.pages.dev/](https://b55b8a59.hls-js-dev.pages.dev/)
-- [`9eb6957d (1.6.16-0.canary.11636)`](https://github.com/video-dev/hls.js/commit/9eb6957d14235e0ca534d86f79290d92049582b7): [https://796523e8.hls-js-dev.pages.dev/](https://796523e8.hls-js-dev.pages.dev/)
 
 _Note for older deployments please check [deployments.txt](./deployments.txt)._
