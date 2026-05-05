@@ -95,7 +95,7 @@
     "chai": "6.2.2",
     "chart.js": "2.9.4",
     "chromedriver": "146.0.6",
-    "doctoc": "2.3.0",
+    "doctoc": "2.4.1",
     "es-check": "9.6.4",
     "eslint": "8.57.1",
     "eslint-config-prettier": "10.1.8",
