@@ -93,8 +93,7 @@ export default class BufferOperationQueue {
     if (this.queues === null) {
       return;
     }
-    const queue = this.queues.audio;
-    if (queue[0].label === 'block-audio') {
+    if (this.current('audio')?.label === 'block-audio') {
       this.shiftAndExecuteNext('audio');
     }
   }

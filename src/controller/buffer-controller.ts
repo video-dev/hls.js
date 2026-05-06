@@ -1983,7 +1983,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private isAudioBlocked() {
-    return this.operationQueue?.current('audio')?.label === 'block-audio';
+    return this.currentOp('audio')?.label === 'block-audio';
   }
 
   // Enqueues an operation to each SourceBuffer queue which, upon execution, resolves a promise. When all promises

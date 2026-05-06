@@ -114,6 +114,11 @@ export default class TaskLoop extends Logger {
         this.tickImmediate();
       }
       this._tickCallCount = 0;
+    } else {
+      this.log(
+        `possible exception thrown in task-loop (${this.constructor.name}.doTick)`,
+      );
+      this._tickCallCount = 0;
     }
   }
 
