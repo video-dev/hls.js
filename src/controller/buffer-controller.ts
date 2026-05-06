@@ -745,11 +745,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const op: BufferOperation = {
       label: 'block-audio',
       execute: () => {
-        const videoTrack = this.tracks.video;
+        const videoEnd = this.lastVideoAppendEnd;
+        const videoSb = this.tracks.video?.buffer;
         if (
-          this.lastVideoAppendEnd > pTime ||
-          (videoTrack?.buffer &&
-            BufferHelper.isBuffered(videoTrack.buffer, pTime)) ||
+          videoEnd > pTime ||
+          (videoSb && BufferHelper.isBuffered(videoSb, pTime)) ||
           this.fragmentTracker.getAppendedFrag(pTime, PlaylistLevelType.MAIN)
             ?.gap === true
         ) {
@@ -831,8 +831,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         }
       } else if (type === 'video') {
         const videoAppendEnd = partOrFrag.end;
+        const diff = this.lastVideoAppendEnd - videoAppendEnd;
         if (this.isAudioBlocked()) {
-          if (videoAppendEnd < this.lastVideoAppendEnd) {
+          if (diff < 0 || diff > partOrFrag.duration) {
             this.unblockAudio();
           } else {
             this.lastVideoAppendEnd = videoAppendEnd;
