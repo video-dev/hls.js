@@ -2000,7 +2000,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
     const { operationQueue } = this;
 
-    const audioBlocked = bufferNames.includes('audio') && this.isAudioBlocked();
+    const audioBlocked = bufferNames.length === 2 && this.isAudioBlocked();
     // logger.debug(`[buffer-controller]: Blocking ${buffers} SourceBuffer`);
     const blockingOperations = audioBlocked
       ? [this.appendBlocker('video')]
