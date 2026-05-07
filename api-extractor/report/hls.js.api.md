@@ -1084,7 +1084,11 @@ export interface CuesInterface {
 // @public (undocumented)
 export interface CuesParsedData {
     // (undocumented)
+    closedCaptions?: MediaPlaylist | undefined;
+    // (undocumented)
     cues: any;
+    // (undocumented)
+    subtitleTrack?: MediaPlaylist;
     // (undocumented)
     track: string;
     // (undocumented)
@@ -4443,20 +4447,14 @@ export const enum NetworkErrorAction {
 // Warning: (ae-missing-release-tag) "NonNativeTextTrack" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface NonNativeTextTrack {
-    // (undocumented)
-    closedCaptions?: MediaPlaylist;
-    // (undocumented)
-    default: boolean;
-    // (undocumented)
+export type NonNativeTextTrack = {
     _id?: string;
-    // (undocumented)
+    label: string;
     kind: string;
-    // (undocumented)
-    label: any;
-    // (undocumented)
+    default: boolean;
+    closedCaptions?: MediaPlaylist;
     subtitleTrack?: MediaPlaylist;
-}
+};
 
 // Warning: (ae-missing-release-tag) "NonNativeTextTracksData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //

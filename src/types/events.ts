@@ -368,16 +368,18 @@ export interface CuesParsedData {
   type: 'captions' | 'subtitles';
   cues: any;
   track: string;
+  closedCaptions?: MediaPlaylist | undefined;
+  subtitleTrack?: MediaPlaylist;
 }
 
-export interface NonNativeTextTrack {
+export type NonNativeTextTrack = {
   _id?: string;
-  label: any;
+  label: string;
   kind: string;
   default: boolean;
   closedCaptions?: MediaPlaylist;
   subtitleTrack?: MediaPlaylist;
-}
+};
 
 export interface NonNativeTextTracksData {
   tracks: Array<NonNativeTextTrack>;
