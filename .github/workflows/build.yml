@@ -20,6 +20,7 @@ jobs:
       cancel-in-progress: true
     outputs:
       canUseSauce: ${{ steps.check_sauce_access.outputs.result == 'true' }}
+      canUseBrowserStack: ${{ steps.check_browserstack_access.outputs.result == 'true' }}
       tag: ${{ steps.extract_tag.outputs.result }}
       isMainBranch: ${{ github.ref == 'refs/heads/master' }}
     steps:
@@ -33,6 +34,16 @@ jobs:
           CI: true
           SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
           SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+      - name: check browserstack access
+        id: check_browserstack_access
+        run: |
+          if ! [[ -z "$BROWSERSTACK_USERNAME" ]] && ! [[ -z "$BROWSERSTACK_ACCESS_KEY" ]]; then
+            echo "result=true" >> $GITHUB_OUTPUT
+          fi
+        env:
+          CI: true
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
       - name: extract tag
         id: extract_tag
         uses: actions/github-script@v8
@@ -406,7 +417,8 @@ jobs:
           OS: ${{ matrix.os }}
 
   test_functional_optional:
-    needs: test_functional_required
+    needs: [config, test_functional_required]
+    if: needs.config.outputs.canUseBrowserStack == 'true'
     runs-on: ubuntu-latest
     concurrency:
       group: 'build:test_functional_optional:${{ matrix.config }}:${{ github.ref }}'
@@ -415,19 +427,18 @@ jobs:
     name: test_functional_optional (${{ matrix.config }})
     strategy:
       fail-fast: false
-      max-parallel: 8
+      max-parallel: 4
       matrix:
         include:
-          - config: safari-macOS_13
+          - config: safari-macOS_15
             ua: safari
-            os: macOS 13
-          - config: firefox-win_10
-            ua: firefox
-            os: Windows 10
-          - config: chrome-mac_13-79.0
+            os: macOS 15
+          - config: chrome-macOS_14
             ua: chrome
-            os: macOS 12
-            uaVersion: '79.0'
+            os: macOS 14
+          - config: firefox-macOS_15
+            ua: firefox
+            os: macOS 15
 
     steps:
       - uses: actions/checkout@v5
@@ -454,13 +465,17 @@ jobs:
         with:
           name: build
 
-      - name: start SauceConnect tunnel
-        uses: saucelabs/sauce-connect-action@0ca0e6ce3a5513d6bec2a54044a536c3da3a53fb # v2
+      - name: setup BrowserStack env
+        uses: browserstack/github-actions/setup-env@93aebce225b754566349151c0676b26b005e591b # v1.0.4
         with:
-          username: ${{ secrets.SAUCE_USERNAME }}
-          accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
-          tunnelIdentifier: ${{ github.run_id }}-${{ matrix.config }}
-          retryTimeout: 300
+          username: ${{ secrets.BROWSERSTACK_USERNAME }}
+          access-key: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+
+      - name: start BrowserStack Local
+        uses: browserstack/github-actions/setup-local@93aebce225b754566349151c0676b26b005e591b # v1.0.4
+        with:
+          local-testing: start
+          local-identifier: ${{ github.run_id }}-${{ matrix.config }}
 
       - name: install
         run: |
@@ -473,9 +488,17 @@ jobs:
           npm run test:func
         env:
           CI: true
-          SAUCE_TUNNEL_ID: ${{ github.run_id }}-${{ matrix.config }}
-          SAUCE_USERNAME: ${{ secrets.SAUCE_USERNAME }}
-          SAUCE_ACCESS_KEY: ${{ secrets.SAUCE_ACCESS_KEY }}
+          BROWSERSTACK: 1
+          BROWSERSTACK_USERNAME: ${{ secrets.BROWSERSTACK_USERNAME }}
+          BROWSERSTACK_ACCESS_KEY: ${{ secrets.BROWSERSTACK_ACCESS_KEY }}
+          BROWSERSTACK_LOCAL_IDENTIFIER: ${{ github.run_id }}-${{ matrix.config }}
+          BROWSERSTACK_BUILD_ID: ${{ github.run_id }}-${{ matrix.config }}
           UA: ${{ matrix.ua }}
           UA_VERSION: ${{ matrix.uaVersion }}
           OS: ${{ matrix.os }}
+
+      - name: stop BrowserStack Local
+        if: always()
+        uses: browserstack/github-actions/setup-local@93aebce225b754566349151c0676b26b005e591b # v1.0.4
+        with:
+          local-testing: stop

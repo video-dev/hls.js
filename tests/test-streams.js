@@ -118,6 +118,7 @@ module.exports = {
     url: 'https://bitdash-a.akamaihd.net/content/MI201109210084_1/m3u8s-fmp4/f08e80da-bf1d-4e3d-8899-f0f6155f6efa.m3u8',
     description: 'HLS fMP4 by Bitmovin',
     abr: true,
+    skip_ua: ['safari'],
   },
   fmp4BitmovinHevc: {
     url: 'https://bitmovin-a.akamaihd.net/content/dataset/multi-codec/hevc/stream_fmp4.m3u8',
@@ -277,6 +278,7 @@ module.exports = {
     url: 'https://jvaryhlstests.blob.core.windows.net/hlstestdata/playlist_encrypted.m3u8',
     description: 'aes-256 and aes-256-ctr full segment encryption',
     abr: false,
+    skip_ua: ['safari'],
   },
   mpegTsHevcHls: {
     url: 'https://devoldemar.github.io/streams/hls/bipbop/hevc.m3u8',
