@@ -243,7 +243,7 @@ export class InterstitialsSchedule extends Logger {
   public parseInterstitialDateRanges(
     mediaSelection: MediaSelection,
     enableAppendInPlace: boolean,
-    liveSyncPosition: number = 0,
+    startPosition: number = 0,
   ) {
     const details = mediaSelection.main.details!;
     const { dateRanges } = details;
@@ -298,13 +298,13 @@ export class InterstitialsSchedule extends Logger {
       this.removeEvent(interstitial);
     });
 
-    this.updateSchedule(mediaSelection, removedInterstitials, liveSyncPosition);
+    this.updateSchedule(mediaSelection, removedInterstitials, startPosition);
   }
 
   public updateSchedule(
     mediaSelection: MediaSelection,
     removedInterstitials: InterstitialEvent[] = [],
-    liveSyncPosition: number = 0,
+    startPosition: number = 0,
     forceUpdate: boolean = false,
   ) {
     const events = this.events || [];
@@ -313,7 +313,7 @@ export class InterstitialsSchedule extends Logger {
       const updatedItems = this.parseSchedule(
         events,
         mediaSelection,
-        liveSyncPosition,
+        startPosition,
       );
       const updated =
         forceUpdate ||
@@ -366,7 +366,7 @@ export class InterstitialsSchedule extends Logger {
   private parseSchedule(
     interstitialEvents: InterstitialEvent[],
     mediaSelection: MediaSelection,
-    liveSyncPosition: number = 0,
+    startPosition: number = 0,
   ): InterstitialScheduleItem[] {
     const schedule: InterstitialScheduleItem[] = [];
     const details = mediaSelection.main.details!;
@@ -399,8 +399,8 @@ export class InterstitialsSchedule extends Logger {
             ? interstitialDuration
             : 0;
         const livePrerollResumption =
-          preroll && details.live && !Number.isFinite(interstitial.resumeOffset)
-            ? liveSyncPosition
+          preroll && details.live
+            ? startPosition + (interstitial.resumeOffset || 0)
             : 0;
         const resumptionOffset =
           livePrerollResumption || interstitial.resumptionOffset;

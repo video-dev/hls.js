@@ -1564,11 +1564,12 @@ export default class InterstitialsController
       main,
     };
     this.mediaSelection = currentSelection;
-    const liveSyncPosition = this.hls.liveSyncPosition || 0;
+
+    const startPosition = this.hls.startPosition;
     this.schedule.parseInterstitialDateRanges(
       currentSelection,
       this.hls.config.interstitialAppendInPlace,
-      liveSyncPosition,
+      startPosition === -1 ? 0 : startPosition,
     );
 
     if (!this.effectivePlayingItem && this.schedule.items) {

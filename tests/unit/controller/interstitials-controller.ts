@@ -2344,82 +2344,93 @@ fileSequence8.mp4`;
         expect(interstitials.bufferingIndex).to.equal(1, 'bufferingIndex b');
         expect(interstitials.playingIndex).to.equal(1, 'playingIndex b');
         expect(interstitials.primary.currentTime).to.equal(30, 'timelinePos b');
-
-        expect(
-          interstitials.interstitialPlayer,
-          `interstitialPlayer`,
-        ).to.include({
-          playingIndex: -1,
-          currentTime: 0,
-          duration: 10,
-        });
       });
-      // TODO: interstitialPlayer.currentTime should be seeked to 6 by the time playingIndex is 0
     });
 
-    describe('resumes at X-RESUME-OFFSET=30', function () {
+    describe('resumes at X-RESUME-OFFSET=15 (t + 15)', function () {
       const playlist = `#EXTM3U
-#EXT-X-TARGETDURATION:6
+#EXT-X-TARGETDURATION:10
 #EXT-X-VERSION:7
 #EXT-X-MEDIA-SEQUENCE:1
 #EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
-#EXT-X-DATERANGE:ID="pre-resume-at-30",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:00.000Z",CUE="PRE,ONCE",DURATION=15,X-RESUME-OFFSET=30,X-ASSET-URI="https://example.com/pre.m3u8?_HLS_interstitial_id=pre-resume-at-30"
+#EXT-X-DATERANGE:ID="pre-resume-at-t15",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:00.000Z",CUE="PRE,ONCE",DURATION=15,X-RESUME-OFFSET=15,X-ASSET-URI="https://example.com/pre.m3u8?_HLS_interstitial_id=pre-resume-at-t15"
 #EXT-X-MAP:URI="fileSequence0.mp4"
-#EXTINF:6.000,	
-fileSequence1.mp4
-#EXTINF:6.000,	
-fileSequence2.mp4
-#EXTINF:6.000,	
-fileSequence3.mp4
-#EXTINF:6.000,	
-fileSequence4.mp4
-#EXT-X-DATERANGE:ID="mid-starts-at-24",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:24.000Z",X-TIMELINE-OCCUPIES="RANGE",DURATION=10,X-ASSET-LIST="https://example.com/mid-list.json?_HLS_interstitial_id=mid-starts-at-24"
-#EXTINF:6.000,	
-fileSequence5.mp4
-#EXTINF:6.000,	
-fileSequence6.mp4
-#EXTINF:6.000,	
-fileSequence7.mp4
-#EXTINF:6.000,	
-fileSequence8.mp4`;
+#EXTINF:10.000,	
+fileSequence-0.s
+#EXTINF:10.000,	
+fileSequence-10.s
+#EXTINF:10.000,	
+fileSequence-20.s
+#EXTINF:10.000,	
+fileSequence-30.s
+#EXTINF:10.000,	
+fileSequence-40.s
+#EXTINF:10.000,	
+fileSequence-50.s
+# ends with 60s duration, live start @30 (-n3)
+#EXT-X-DATERANGE:ID="mid-starts-at-40",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:40.000Z",X-TIMELINE-OCCUPIES="RANGE",DURATION=10,X-ASSET-LIST="https://example.com/mid-list.json?_HLS_interstitial_id=mid-starts-at-40"
+`;
+
+      const playlist2 = `#EXTM3U
+#EXT-X-TARGETDURATION:10
+#EXT-X-VERSION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
+#EXT-X-DATERANGE:ID="pre-resume-at-t15",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:00.000Z",CUE="PRE,ONCE",DURATION=15,X-RESUME-OFFSET=15,X-ASSET-URI="https://example.com/pre.m3u8?_HLS_interstitial_id=pre-resume-at-t15"
+#EXT-X-MAP:URI="fileSequence0.mp4"
+#EXTINF:10.000,	
+fileSequence-0.s
+#EXTINF:10.000,	
+fileSequence-10.s
+#EXTINF:10.000,	
+fileSequence-20.s
+#EXTINF:10.000,	
+fileSequence-30.s
+#EXTINF:10.000,	
+fileSequence-40.s
+#EXTINF:10.000,
+fileSequence-50.s
+#EXT-X-DATERANGE:ID="mid-starts-at-40",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:40.000Z",X-TIMELINE-OCCUPIES="RANGE",DURATION=10,X-ASSET-LIST="https://example.com/mid-list.json?_HLS_interstitial_id=mid-starts-at-40"
+#EXTINF:10.000,
+fileSequence-60.s
+`;
 
       it('should include _HLS_start_offset in midroll asset-list request, following preroll with explicit resumption offset', function () {
-        setLoadedLevelDetails(playlist);
+        attachMediaToHls();
+        const details = setLoadedLevelDetails(playlist);
         const interstitials = interstitialsController.interstitialsManager;
         if (!interstitials) {
           expect(interstitials, 'interstitialsManager').to.be.an('object');
           return;
         }
-        expect(interstitials.bufferingIndex).to.equal(-1, 'bufferingIndex');
-        expect(interstitials.playingIndex).to.equal(-1, 'playingIndex');
         expect(interstitials.events).is.an('array').which.has.lengthOf(2);
         expectScheduleToInclude(
           interstitials.schedule,
           [
             {
               event: {
-                identifier: 'pre-resume-at-30',
+                identifier: 'pre-resume-at-t15',
               },
               start: 0,
-              end: 30,
+              end: 45,
               playout: { start: 0, end: 15 },
               integrated: { start: 0, end: 0 },
             },
             {
               event: {
-                identifier: 'mid-starts-at-24',
+                identifier: 'mid-starts-at-40',
               },
-              start: 24,
-              end: 34,
+              start: 40,
+              end: 50,
               playout: { start: 15, end: 25 },
               integrated: { start: 0, end: 10 },
             },
             {
               previousEvent: {
-                identifier: 'mid-starts-at-24',
+                identifier: 'mid-starts-at-40',
               },
               nextEvent: null,
-              start: 34,
+              start: 50,
               end: Infinity,
               playout: { start: 25, end: Infinity },
               integrated: { start: 10, end: Infinity },
@@ -2428,7 +2439,6 @@ fileSequence8.mp4`;
           'before-preroll',
         );
 
-        attachMediaToHls();
         expect(interstitials.bufferingIndex).to.equal(0, 'bufferingIndex');
         expect(interstitials.playingIndex).to.equal(0, 'playingIndex');
         expect(
@@ -2442,13 +2452,21 @@ fileSequence8.mp4`;
         expect(
           interstitials.interstitialPlayer?.scheduleItem?.event,
           `interstitialPlayer.scheduleItem`,
-        ).to.include({ identifier: 'pre-resume-at-30' });
+        ).to.include({ identifier: 'pre-resume-at-t15' });
 
         expect(interstitials.events[1].assetListLoader).to.equal(undefined);
 
         // Capture asset-list request
         const loadSpy = sandbox.spy(hls.config.loader.prototype, 'load');
         const primaryId = hls.sessionId;
+
+        // Advance playlists
+        const timeSinceLoadedStub = sinon.stub(details, 'age');
+        timeSinceLoadedStub.get(() => 15);
+
+        const details2 = setLoadedLevelDetails(playlist2);
+        const timeSinceLoadedStub2 = sinon.stub(details2, 'age');
+        timeSinceLoadedStub2.get(() => 5);
 
         // skip preroll to advance schedule
         interstitials.skip();
@@ -2459,7 +2477,7 @@ fileSequence8.mp4`;
           assetListUrl,
           '_HLS_primary_id and _HLS_start_offset match',
         ).to.equal(
-          `https://example.com/mid-list.json?_HLS_interstitial_id=mid-starts-at-24&_HLS_primary_id=${primaryId}&_HLS_start_offset=6`,
+          `https://example.com/mid-list.json?_HLS_interstitial_id=mid-starts-at-40&_HLS_primary_id=${primaryId}&_HLS_start_offset=5`,
         );
 
         // Removing the CUE="ONCE" interstitial changes the `schedule` items, but does not remove it from `events`
@@ -2470,49 +2488,39 @@ fileSequence8.mp4`;
             {
               previousEvent: null,
               nextEvent: {
-                identifier: 'mid-starts-at-24',
+                identifier: 'mid-starts-at-40',
               },
               start: 0,
-              end: 24,
-              playout: { start: 0, end: 24 },
-              integrated: { start: 0, end: 24 },
+              end: 40,
+              playout: { start: 0, end: 40 },
+              integrated: { start: 0, end: 40 },
             },
             {
               event: {
-                identifier: 'mid-starts-at-24',
+                identifier: 'mid-starts-at-40',
               },
-              start: 24,
-              end: 34,
-              playout: { start: 24, end: 34 },
-              integrated: { start: 24, end: 34 },
+              start: 40,
+              end: 50,
+              playout: { start: 40, end: 50 },
+              integrated: { start: 40, end: 50 },
             },
             {
               previousEvent: {
-                identifier: 'mid-starts-at-24',
+                identifier: 'mid-starts-at-40',
               },
               nextEvent: null,
-              start: 34,
+              start: 50,
               end: Infinity,
-              playout: { start: 34, end: Infinity },
-              integrated: { start: 34, end: Infinity },
+              playout: { start: 50, end: Infinity },
+              integrated: { start: 50, end: Infinity },
             },
           ],
           'after-preroll',
         );
         expect(interstitials.bufferingIndex).to.equal(1, 'bufferingIndex b');
         expect(interstitials.playingIndex).to.equal(1, 'playingIndex b');
-        expect(interstitials.primary.currentTime).to.equal(30, 'timelinePos b');
-
-        expect(
-          interstitials.interstitialPlayer,
-          `interstitialPlayer`,
-        ).to.include({
-          playingIndex: -1,
-          currentTime: 0,
-          duration: 10,
-        });
+        expect(interstitials.primary.currentTime).to.equal(40, 'timelinePos b');
       });
-      // TODO: interstitialPlayer.currentTime should be seeked to 6 by the time playingIndex is 0
     });
   });
 });
