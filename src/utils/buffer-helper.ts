@@ -36,7 +36,10 @@ export class BufferHelper {
   /**
    * Return true if `media`'s buffered include `position`
    */
-  static isBuffered(media: Bufferable | null, position: number): boolean {
+  static isBuffered(
+    media: Bufferable | null | undefined,
+    position: number,
+  ): boolean {
     if (media) {
       const buffered = BufferHelper.getBuffered(media);
       for (let i = buffered.length; i--; ) {

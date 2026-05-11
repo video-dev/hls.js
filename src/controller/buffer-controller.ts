@@ -746,10 +746,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       label: 'block-audio',
       execute: () => {
         const videoEnd = this.lastVideoAppendEnd;
-        const videoSb = this.tracks.video?.buffer;
         if (
           videoEnd > pTime ||
-          (videoSb && BufferHelper.isBuffered(videoSb, pTime)) ||
+          BufferHelper.isBuffered(this.tracks.video?.buffer, pTime) ||
           this.fragmentTracker.getAppendedFrag(pTime, PlaylistLevelType.MAIN)
             ?.gap === true
         ) {
@@ -832,15 +831,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       } else if (type === 'video') {
         const videoAppendEnd = partOrFrag.end;
         const diff = this.lastVideoAppendEnd - videoAppendEnd;
+        this.lastVideoAppendEnd = videoAppendEnd;
         if (this.isAudioBlocked()) {
           if (diff < 0 || diff > partOrFrag.duration) {
             this.unblockAudio();
           } else {
-            this.lastVideoAppendEnd = videoAppendEnd;
             this.executeNext('audio');
           }
         }
-        this.lastVideoAppendEnd = videoAppendEnd;
       }
     }
 
@@ -2000,9 +1998,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
     const { operationQueue } = this;
 
-    const audioBlocked = bufferNames.length === 2 && this.isAudioBlocked();
+    const audioAlreadyBlocked =
+      bufferNames.length === 2 && this.isAudioBlocked();
     // logger.debug(`[buffer-controller]: Blocking ${buffers} SourceBuffer`);
-    const blockingOperations = audioBlocked
+    const blockingOperations = audioAlreadyBlocked
       ? [this.appendBlocker('video')]
       : bufferNames.map((type) => this.appendBlocker(type));
     return Promise.all(blockingOperations).then((result) => {
