@@ -1328,6 +1328,54 @@ Rollover38803/20160525T064049-01-69844069.ts
     expect(result.fragments[2].programDateTime).to.equal(1464366904000);
   });
 
+  it('parses delta playlists with one #EXT-X-PROGRAM-DATE-TIME after segments', function () {
+    const level = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-MAP:URI="fileSequence1.mp4"
+#EXT-X-SKIP:SKIPPED-SEGMENTS=17
+#EXTINF:6.00000,	
+fileSequence18.m4s
+#EXTINF:6.00000,	
+fileSequence19.m4s
+#EXTINF:6.00000,	
+fileSequence20.m4s
+#EXTINF:6.00000,	
+fileSequence21.m4s
+#EXTINF:6.00000,	
+fileSequence22.m4s
+#EXTINF:6.00000,	
+fileSequence23.m4s
+#EXTINF:6.00000,	
+fileSequence24.m4s
+#EXT-X-PROGRAM-DATE-TIME:2026-05-11T19:03:26.000Z
+`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://video.example.com/disc.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+    expect(result.playlistParsingError).to.be.null;
+    expect(result.fragments).to.have.lengthOf(24);
+    expect(result.hasProgramDateTime).to.be.true;
+    expect(result.totalduration).to.equal(144);
+    expect(result.fragments[23].url).to.equal(
+      'http://video.example.com/fileSequence24.m4s',
+    );
+    expect(
+      new Date(result.fragments[23].programDateTime as number).toISOString(),
+    ).to.equal('2026-05-11T19:03:20.000Z');
+    expect(
+      new Date(result.fragments[22].programDateTime as number).toISOString(),
+    ).to.equal('2026-05-11T19:03:14.000Z');
+    expect(
+      new Date(result.fragments[21].programDateTime as number).toISOString(),
+    ).to.equal('2026-05-11T19:03:08.000Z');
+  });
+
   it('parses #EXTINF without a leading digit', function () {
     const level = `#EXTM3U
 #EXT-X-VERSION:3

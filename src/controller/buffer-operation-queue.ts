@@ -74,6 +74,8 @@ export default class BufferOperationQueue {
         if (label === 'async-blocker' || label === 'async-blocker-prepend') {
           queue[0].execute();
           queue.splice(0, 1);
+        } else if (label === 'block-audio') {
+          queue.splice(0, 1);
         }
       },
     );
@@ -87,14 +89,20 @@ export default class BufferOperationQueue {
     this.queues[type].splice(1, 0, ...operations);
   }
 
-  public unblockAudio(op: BufferOperation) {
+  public unblockAudio() {
     if (this.queues === null) {
       return;
     }
-    const queue = this.queues.audio;
-    if (queue[0] === op) {
+    if (this.current('audio')?.label === 'block-audio') {
       this.shiftAndExecuteNext('audio');
     }
+  }
+
+  public audioBlocking(): boolean {
+    if (this.queues === null) {
+      return false;
+    }
+    return this.queues.audio.some((op) => op.label === 'block-audio');
   }
 
   public executeNext(type: SourceBufferName) {

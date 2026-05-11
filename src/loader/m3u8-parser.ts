@@ -772,7 +772,11 @@ export default class M3U8Parser {
        * computed.
        */
       if (firstPdtIndex > 0) {
-        backfillProgramDateTimes(fragments, firstPdtIndex);
+        backfillProgramDateTimes(
+          fragments,
+          firstPdtIndex,
+          firstPdtIndex > fragmentLength - 1 ? frag : null,
+        );
         if (firstFragment) {
           programDateTimes.unshift(firstFragment as MediaFragment);
         }
@@ -996,8 +1000,12 @@ function assignCodec(
 function backfillProgramDateTimes(
   fragments: M3U8ParserFragments,
   firstPdtIndex: number,
+  fragPrev: Fragment | null,
 ) {
-  let fragPrev = fragments[firstPdtIndex] as Fragment;
+  fragPrev ||= fragments[firstPdtIndex];
+  if (!fragPrev) {
+    return;
+  }
   for (let i = firstPdtIndex; i--; ) {
     const frag = fragments[i];
     // Exit on delta-playlist skipped segments

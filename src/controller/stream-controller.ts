@@ -966,7 +966,6 @@ export default class StreamController
       }
       let fragError = false;
       if (isMediaFragment(frag)) {
-        this.fragPrevious = frag;
         fragError =
           !!frag.gap && !frag.tagList.some((tags) => tags[0] === 'GAP');
       }
