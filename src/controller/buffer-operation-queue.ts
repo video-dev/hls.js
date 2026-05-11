@@ -98,6 +98,13 @@ export default class BufferOperationQueue {
     }
   }
 
+  public audioBlocking(): boolean {
+    if (this.queues === null) {
+      return false;
+    }
+    return this.queues.audio.some((op) => op.label === 'block-audio');
+  }
+
   public executeNext(type: SourceBufferName) {
     if (this.queues === null || this.tracks === null) {
       return;

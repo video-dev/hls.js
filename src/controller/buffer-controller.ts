@@ -1060,6 +1060,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     data: BufferFlushingData,
   ) {
     const { type, startOffset, endOffset } = data;
+    if (!type || type === 'audio') {
+      this.unblockAudio();
+    }
     if (type) {
       this.append(this.getFlushOp(type, startOffset, endOffset), type);
     } else {
@@ -1197,6 +1200,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       !this.sourceBuffers.some(([type]) => type && !this.tracks[type]?.ended);
 
     if (allTracksEnding) {
+      this.unblockAudio();
       if (allowEndOfStream) {
         this.log(`Queueing EOS`);
         this.blockUntilOpen(() => {
@@ -1981,8 +1985,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     return !!track && !track.buffer;
   }
 
-  private isAudioBlocked() {
+  private isAudioBlocked(): boolean {
     return this.currentOp('audio')?.label === 'block-audio';
+  }
+
+  private isAudioBlocking(): boolean {
+    if (this.operationQueue) {
+      return this.operationQueue.audioBlocking();
+    }
+    return false;
   }
 
   // Enqueues an operation to each SourceBuffer queue which, upon execution, resolves a promise. When all promises
@@ -1999,7 +2010,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const { operationQueue } = this;
 
     const audioAlreadyBlocked =
-      bufferNames.length === 2 && this.isAudioBlocked();
+      bufferNames.length === 2 && this.isAudioBlocking();
     // logger.debug(`[buffer-controller]: Blocking ${buffers} SourceBuffer`);
     const blockingOperations = audioAlreadyBlocked
       ? [this.appendBlocker('video')]
