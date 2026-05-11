@@ -762,7 +762,6 @@ class AudioStreamController
       return;
     }
     if (isMediaFragment(frag)) {
-      this.fragPrevious = frag;
       const track = this.switchingTrack;
       if (track) {
         this.bufferedTrack = track;
