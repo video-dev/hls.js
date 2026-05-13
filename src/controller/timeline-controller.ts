@@ -26,6 +26,7 @@ import type {
   ManifestLoadedData,
   MediaAttachingData,
   MediaDetachingData,
+  NonNativeTextTrack,
   SubtitleTracksUpdatedData,
 } from '../types/events';
 import type { MediaPlaylist } from '../types/media-playlist';
@@ -40,15 +41,6 @@ type TrackProperties = {
   media?: MediaPlaylist;
 };
 
-type NonNativeCaptionsTrack = {
-  _id?: string;
-  label: string;
-  kind: string;
-  default: boolean;
-  closedCaptions?: MediaPlaylist;
-  subtitleTrack?: MediaPlaylist;
-};
-
 export class TimelineController implements ComponentAPI {
   private hls: Hls;
   private media: HTMLMediaElement | null = null;
@@ -60,7 +52,7 @@ export class TimelineController implements ComponentAPI {
   private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private captionsTracks: Record<string, HTMLTrackElement> = {};
   private cueCache: Record<string, VTTCue[]> = {};
-  private nonNativeCaptionsTracks: Record<string, NonNativeCaptionsTrack> = {};
+  private nonNativeCaptionsTracks: Record<string, NonNativeTextTrack> = {};
   private cea608Parser1?: Cea608Parser;
   private cea608Parser2?: Cea608Parser;
   private lastCc: number = -1; // Last video (CEA-608) fragment CC
@@ -187,10 +179,12 @@ export class TimelineController implements ComponentAPI {
       }
     } else {
       const cues = this.Cues.newCue(null, startTime, endTime, screen);
+      const closedCaptions = this.captionsProperties[trackName]?.media;
       this.hls.trigger(Events.CUES_PARSED, {
         type: 'captions',
         cues,
         track: trackName,
+        closedCaptions,
       });
     }
   }
@@ -567,7 +561,12 @@ export class TimelineController implements ComponentAPI {
         return;
       }
       const track = currentTrack.default ? 'default' : 'subtitles' + fragLevel;
-      hls.trigger(Events.CUES_PARSED, { type: 'subtitles', cues, track });
+      hls.trigger(Events.CUES_PARSED, {
+        type: 'subtitles',
+        cues,
+        track,
+        subtitleTrack: currentTrack,
+      });
     }
   }
 

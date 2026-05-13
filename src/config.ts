@@ -337,7 +337,11 @@ export type HlsConfig = {
     context: LoaderContext,
     initParams: any,
   ) => Promise<Request> | Request;
-  xhrSetup?: (xhr: XMLHttpRequest, url: string) => Promise<void> | void;
+  xhrSetup?: (
+    xhr: XMLHttpRequest,
+    url: string,
+    context: LoaderContext,
+  ) => Promise<void> | void;
 
   // Alt Audio
   audioStreamController?: typeof AudioStreamController;

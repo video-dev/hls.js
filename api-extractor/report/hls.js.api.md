@@ -1099,7 +1099,11 @@ export interface CuesInterface {
 // @public (undocumented)
 export interface CuesParsedData {
     // (undocumented)
+    closedCaptions?: MediaPlaylist | undefined;
+    // (undocumented)
     cues: any;
+    // (undocumented)
+    subtitleTrack?: MediaPlaylist;
     // (undocumented)
     track: string;
     // (undocumented)
@@ -2428,7 +2432,7 @@ export type HlsConfig = {
     fLoader?: FragmentLoaderConstructor;
     pLoader?: PlaylistLoaderConstructor;
     fetchSetup?: (context: LoaderContext, initParams: any) => Promise<Request> | Request;
-    xhrSetup?: (xhr: XMLHttpRequest, url: string) => Promise<void> | void;
+    xhrSetup?: (xhr: XMLHttpRequest, url: string, context: LoaderContext) => Promise<void> | void;
     audioStreamController?: typeof AudioStreamController;
     audioTrackController?: typeof AudioTrackController;
     subtitleStreamController?: typeof SubtitleStreamController;
@@ -4458,20 +4462,14 @@ export const enum NetworkErrorAction {
 // Warning: (ae-missing-release-tag) "NonNativeTextTrack" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface NonNativeTextTrack {
-    // (undocumented)
-    closedCaptions?: MediaPlaylist;
-    // (undocumented)
-    default: boolean;
-    // (undocumented)
+export type NonNativeTextTrack = {
     _id?: string;
-    // (undocumented)
+    label: string;
     kind: string;
-    // (undocumented)
-    label: any;
-    // (undocumented)
+    default: boolean;
+    closedCaptions?: MediaPlaylist;
     subtitleTrack?: MediaPlaylist;
-}
+};
 
 // Warning: (ae-missing-release-tag) "NonNativeTextTracksData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //

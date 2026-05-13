@@ -421,8 +421,9 @@ export default class BaseStreamController
             );
             fragCurrent.abortRequests();
             this.resetLoadingState();
+          } else {
+            this.fragPrevious = null;
           }
-          this.fragPrevious = null;
         }
       }
     }
@@ -912,7 +913,6 @@ export default class BaseStreamController
         `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${this.playlistLabel()} ${frag.level}`,
       );
       this.state = State.KEY_LOADING;
-      this.fragCurrent = frag;
       keyLoadingPromise = this.keyLoader.load(frag).then((keyLoadedData) => {
         if (!this.fragContextChanged(keyLoadedData.frag)) {
           this.hls.trigger(Events.KEY_LOADED, keyLoadedData);
@@ -961,6 +961,16 @@ export default class BaseStreamController
         if (partIndex > -1) {
           const part = partList[partIndex];
           frag = this.fragCurrent = part.fragment;
+          if (
+            !mediaFragmentsAreEqual(frag, fragPrevious) &&
+            !this.shouldLoadParts(level.details, frag.end)
+          ) {
+            this.log(
+              `LL-Part loading OFF @${this.playhead} next part: ${this.fragInfo(frag, false, part)}`,
+            );
+            this.loadingParts = false;
+            return Promise.resolve(null);
+          }
           this.log(
             `Loading ${frag.type} sn: ${frag.sn} part: ${part.index} (${partIndex}/${partList.length - 1}) of ${this.fragInfo(frag, false, part)} cc: ${
               frag.cc
@@ -1246,6 +1256,10 @@ export default class BaseStreamController
   ) {
     if (this.state !== State.PARSING) {
       return;
+    }
+
+    if (isMediaFragment(frag) && !this.fragContextChanged(frag)) {
+      this.fragPrevious = frag;
     }
 
     const { data1, data2 } = data;

@@ -167,4 +167,77 @@ describe('BufferOperationQueue tests', function () {
       });
     });
   });
+
+  describe('unblockAudio', function () {
+    it('removes block-audio op from head and executes next', function () {
+      const nextExecute = sandbox.spy();
+      const blockOp: BufferOperation = {
+        label: 'block-audio',
+        execute: () => {},
+        onStart: () => {},
+        onComplete: () => {},
+        onError: () => {},
+      };
+      const nextOp: BufferOperation = {
+        label: 'append',
+        execute: nextExecute,
+        onStart: () => {},
+        onComplete: () => {},
+        onError: () => {},
+      };
+      operationQueue.queues.audio.push(blockOp, nextOp);
+
+      operationQueue.unblockAudio();
+
+      expect(operationQueue.queues.audio).to.have.length(1);
+      expect(operationQueue.queues.audio[0]).to.equal(nextOp);
+      expect(nextExecute).to.have.been.calledOnce;
+    });
+
+    it('does not remove head op if it is not block-audio', function () {
+      const headOp: BufferOperation = {
+        label: 'append',
+        execute: () => {},
+        onStart: () => {},
+        onComplete: () => {},
+        onError: () => {},
+      };
+      operationQueue.queues.audio.push(headOp);
+
+      operationQueue.unblockAudio();
+
+      expect(operationQueue.queues.audio).to.have.length(1);
+      expect(operationQueue.queues.audio[0]).to.equal(headOp);
+    });
+
+    it('does nothing if queue is destroyed', function () {
+      operationQueue.destroy();
+      expect(() => operationQueue.unblockAudio()).to.not.throw();
+    });
+  });
+
+  describe('removeBlockers', function () {
+    it('removes block-audio ops from audio queue head', function () {
+      const blockOp: BufferOperation = {
+        label: 'block-audio',
+        execute: () => {},
+        onStart: () => {},
+        onComplete: () => {},
+        onError: () => {},
+      };
+      const nextOp: BufferOperation = {
+        label: 'append',
+        execute: () => {},
+        onStart: () => {},
+        onComplete: () => {},
+        onError: () => {},
+      };
+      operationQueue.queues.audio.push(blockOp, nextOp);
+
+      operationQueue.removeBlockers();
+
+      expect(operationQueue.queues.audio).to.have.length(1);
+      expect(operationQueue.queues.audio[0]).to.equal(nextOp);
+    });
+  });
 });
