@@ -243,6 +243,7 @@ export class InterstitialsSchedule extends Logger {
   public parseInterstitialDateRanges(
     mediaSelection: MediaSelection,
     enableAppendInPlace: boolean,
+    startPosition: number = 0,
   ) {
     const details = mediaSelection.main.details!;
     const { dateRanges } = details;
@@ -297,18 +298,23 @@ export class InterstitialsSchedule extends Logger {
       this.removeEvent(interstitial);
     });
 
-    this.updateSchedule(mediaSelection, removedInterstitials);
+    this.updateSchedule(mediaSelection, removedInterstitials, startPosition);
   }
 
   public updateSchedule(
     mediaSelection: MediaSelection,
     removedInterstitials: InterstitialEvent[] = [],
+    startPosition: number = 0,
     forceUpdate: boolean = false,
   ) {
     const events = this.events || [];
     if (events.length || removedInterstitials.length || this.length < 2) {
       const currentItems = this.items;
-      const updatedItems = this.parseSchedule(events, mediaSelection);
+      const updatedItems = this.parseSchedule(
+        events,
+        mediaSelection,
+        startPosition,
+      );
       const updated =
         forceUpdate ||
         removedInterstitials.length ||
@@ -360,6 +366,7 @@ export class InterstitialsSchedule extends Logger {
   private parseSchedule(
     interstitialEvents: InterstitialEvent[],
     mediaSelection: MediaSelection,
+    startPosition: number = 0,
   ): InterstitialScheduleItem[] {
     const schedule: InterstitialScheduleItem[] = [];
     const details = mediaSelection.main.details!;
@@ -391,7 +398,12 @@ export class InterstitialsSchedule extends Logger {
           interstitial.timelineOccupancy === TimelineOccupancy.Range
             ? interstitialDuration
             : 0;
-        const resumptionOffset = interstitial.resumptionOffset;
+        const livePrerollResumption =
+          preroll && details.live
+            ? startPosition + (interstitial.resumeOffset || 0)
+            : 0;
+        const resumptionOffset =
+          livePrerollResumption || interstitial.resumptionOffset;
         const inSameStartTimeSequence = previousEvent?.startTime === eventStart;
         const start = eventStart + interstitial.cumulativeDuration;
         let end = appendInPlace
@@ -475,7 +487,7 @@ export class InterstitialsSchedule extends Logger {
           // Interstitial starts after end of primary VOD - not included in schedule
           return;
         }
-        const resumeTime = interstitial.resumeTime;
+        const resumeTime = livePrerollResumption || interstitial.resumeTime;
         if (postroll || resumeTime > primaryDuration) {
           primaryPosition = primaryDuration;
         } else {
