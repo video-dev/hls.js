@@ -502,8 +502,7 @@ export class TimelineController implements ComponentAPI {
         });
       },
       (error) => {
-        const missingInitPTS =
-          error.message === 'Missing initPTS for VTT MPEGTS';
+        const missingInitPTS = error.message.startsWith('Missing initPTS');
         if (missingInitPTS) {
           unparsedVttFrags.push(data);
         } else if (this.config.enableIMSC1) {
