@@ -58,6 +58,27 @@ http://proxy-62.dailymotion.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/
     expect(result.sessionData).to.equal(null);
   });
 
+  it('parses #EXT-X-I-FRAME-STREAM-INF on the last line without a trailing newline', function () {
+    const manifest = `#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=7700000,RESOLUTION=1920x1080,CODECS="avc1.64002a"
+video.m3u8
+#EXT-X-I-FRAME-STREAM-INF:BANDWIDTH=300000,CODECS="avc1.64002a",RESOLUTION=1920x1080,URI="iframe.m3u8"`;
+    const result = M3U8Parser.parseMasterPlaylist(
+      manifest,
+      'http://example.com/master.m3u8',
+    );
+    expect(result.playlistParsingError).to.be.null;
+    expect(result.levels).to.have.lengthOf(1);
+    expect(result.iframeVariants).to.have.lengthOf(1);
+    expect(result.iframeVariants[0].bitrate).to.equal(300000);
+    expect(result.iframeVariants[0].width).to.equal(1920);
+    expect(result.iframeVariants[0].height).to.equal(1080);
+    expect(result.iframeVariants[0].videoCodec).to.equal('avc1.64002a');
+    expect(result.iframeVariants[0].url).to.equal(
+      'http://example.com/iframe.m3u8',
+    );
+  });
+
   it('parses manifest containing comment', function () {
     const manifest = `#EXTM3U
 #EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=836280,CODECS="mp4a.40.2,avc1.64001f",RESOLUTION=848x360,NAME="480"
