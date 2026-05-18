@@ -15,6 +15,10 @@ import {
 } from '@svta/cml-cmcd';
 import { Events } from '../events';
 import { BufferHelper } from '../utils/buffer-helper';
+import {
+  addEventListener,
+  removeEventListener,
+} from '../utils/event-listener-helper';
 import type {
   FragmentLoaderConstructor,
   HlsConfig,
@@ -152,22 +156,24 @@ export default class CMCDController implements ComponentAPI {
     event: Events.MEDIA_ATTACHED,
     data: MediaAttachedData,
   ) {
-    this.media = data.media;
-    this.media.addEventListener('waiting', this.onWaiting);
-    this.media.addEventListener('playing', this.onPlaying);
-    this.media.addEventListener('pause', this.onPause);
-    this.media.addEventListener('seeking', this.onSeeking);
+    const media = (this.media = data.media);
+    addEventListener(media, 'waiting', this.onWaiting);
+    addEventListener(media, 'playing', this.onPlaying);
+    addEventListener(media, 'pause', this.onPause);
+    addEventListener(media, 'seeking', this.onSeeking);
   }
 
   private onMediaDetached() {
-    if (!this.media) {
+    const media = this.media;
+
+    if (!media) {
       return;
     }
 
-    this.media.removeEventListener('waiting', this.onWaiting);
-    this.media.removeEventListener('playing', this.onPlaying);
-    this.media.removeEventListener('pause', this.onPause);
-    this.media.removeEventListener('seeking', this.onSeeking);
+    removeEventListener(media, 'waiting', this.onWaiting);
+    removeEventListener(media, 'playing', this.onPlaying);
+    removeEventListener(media, 'pause', this.onPause);
+    removeEventListener(media, 'seeking', this.onSeeking);
 
     // @ts-ignore
     this.media = null;
