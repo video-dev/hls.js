@@ -193,6 +193,12 @@ export default class BaseStreamController
   public get startPositionValue(): number {
     const { nextLoadPosition, startPosition } = this;
     if (startPosition === -1 && nextLoadPosition) {
+      const details = this.getLevelDetails();
+      if (details?.live) {
+        const liveSyncPosition = this.hls.liveSyncPosition;
+        const liveStart = liveSyncPosition || details.fragmentStart;
+        return liveStart + this.timelineOffset;
+      }
       return nextLoadPosition;
     }
     return startPosition;
@@ -2229,8 +2235,7 @@ export default class BaseStreamController
     // in that case, reset startFragRequested flag
     if (!this.hls.hasEnoughToStart) {
       this.startFragRequested = false;
-      const level = this.levelLastLoaded;
-      const details = level ? level.details : null;
+      const details = this.getLevelDetails();
       if (details?.live) {
         // Update the start position and return to IDLE to recover live start
         this.log(`resetting startPosition for live start`);
