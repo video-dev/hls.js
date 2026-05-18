@@ -3,6 +3,7 @@ const { buildRollupConfig, BUILD_TYPE, FORMAT } = require('./build-config');
 // Do not add coverage for JavaScript debugging when running `test:unit:debug`
 // eslint-disable-next-line no-undef
 const includeCoverage = !process.env.DEBUG_UNIT_TESTS && !process.env.CI;
+// eslint-disable-next-line no-undef
 const isDevContainer = process.env.IN_DEV_CONTAINER === 'true';
 
 const rollupPreprocessor = buildRollupConfig({
@@ -87,14 +88,5 @@ module.exports = function (config) {
     // Concurrency level
     // how many browser should be started simultaneous
     concurrency: 1,
-
-    // Timeout for e2e tests that perform real network I/O
-    browserNoActivityTimeout: 120000,
-
-    client: {
-      mocha: {
-        timeout: 60000,
-      },
-    },
   });
 };
