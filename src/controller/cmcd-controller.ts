@@ -149,7 +149,7 @@ export default class CMCDController implements ComponentAPI {
     // @ts-ignore
     this.onWaiting = this.onPlaying = this.onPause = null;
     // @ts-ignore
-    this.onSeeking = this.media = null;
+    this.onSeeking = this.onSeeked = this.media = null;
   }
 
   private onMediaAttached(
@@ -161,6 +161,7 @@ export default class CMCDController implements ComponentAPI {
     addEventListener(media, 'playing', this.onPlaying);
     addEventListener(media, 'pause', this.onPause);
     addEventListener(media, 'seeking', this.onSeeking);
+    addEventListener(media, 'seeked', this.onSeeked);
   }
 
   private onMediaDetached() {
@@ -174,6 +175,7 @@ export default class CMCDController implements ComponentAPI {
     removeEventListener(media, 'playing', this.onPlaying);
     removeEventListener(media, 'pause', this.onPause);
     removeEventListener(media, 'seeking', this.onSeeking);
+    removeEventListener(media, 'seeked', this.onSeeked);
 
     // @ts-ignore
     this.media = null;
@@ -214,6 +216,12 @@ export default class CMCDController implements ComponentAPI {
 
   private onSeeking = () => {
     this.setPlayerState(CmcdPlayerState.SEEKING);
+  };
+
+  private onSeeked = () => {
+    if (this.media?.paused) {
+      this.setPlayerState(CmcdPlayerState.PAUSED);
+    }
   };
 
   private onMediaEnded(event: Events.MEDIA_ENDED, data: MediaEndedData) {

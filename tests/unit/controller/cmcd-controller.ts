@@ -358,6 +358,38 @@ describe('CMCDController', function () {
         cmcdController.destroy();
       });
 
+      it('resolves SEEKING to PAUSED via onSeeked when paused', function () {
+        setupEach({ version: 2 });
+
+        (cmcdController as any).media = {
+          paused: true,
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
+        (cmcdController as any).onSeeking();
+        expect((cmcdController as any).playerState).to.equal('k');
+
+        (cmcdController as any).onSeeked();
+        expect((cmcdController as any).playerState).to.equal('a');
+
+        cmcdController.destroy();
+      });
+
+      it('keeps SEEKING via onSeeked when not paused', function () {
+        setupEach({ version: 2 });
+
+        (cmcdController as any).media = {
+          paused: false,
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
+        (cmcdController as any).onSeeking();
+        expect((cmcdController as any).playerState).to.equal('k');
+
+        (cmcdController as any).onSeeked();
+        expect((cmcdController as any).playerState).to.equal('k');
+
+        cmcdController.destroy();
+      });
+
       it('does not record duplicate play state events', function () {
         setupEach({
           version: 2,
