@@ -24,18 +24,24 @@ class HevcVideoParser extends BaseVideoParser {
     // free pes.data to save up some memory
     (pes as any).data = null;
 
-    // if new NAL units found and last sample still there, let's push ...
-    // this helps parsing streams with missing AUD (only do this if AUD never found)
-    if (VideoSample && units.length && !track.audFound) {
-      this.pushAccessUnit(VideoSample, track);
+    const createVideoSample = (key: boolean): ParsedVideoSample => {
       VideoSample = this.VideoSample = this.createVideoSample(
-        false,
+        key,
         pes.pts,
         pes.dts,
       );
-    }
+      return VideoSample;
+    };
 
-    units.forEach((unit) => {
+    units.forEach((unit, index) => {
+      if (this.startsNewAccessUnit(VideoSample, track, unit, index)) {
+        this.pushAccessUnit(VideoSample as ParsedVideoSample, track);
+        // 16..23 are IRAP (IDR/CRA/BLA) NAL types per H.265 Table 7-1.
+        const isIrap = unit.type >= 16 && unit.type <= 23;
+        VideoSample = createVideoSample(isIrap);
+        spsfound = false;
+      }
+
       switch (unit.type) {
         // NON-IDR, NON RANDOM ACCESS SLICE
         case 0:
@@ -49,11 +55,7 @@ class HevcVideoParser extends BaseVideoParser {
         case 8:
         case 9:
           if (!VideoSample) {
-            VideoSample = this.VideoSample = this.createVideoSample(
-              false,
-              pes.pts,
-              pes.dts,
-            );
+            VideoSample = createVideoSample(false);
           }
           VideoSample.frame = true;
           push = true;
@@ -74,11 +76,7 @@ class HevcVideoParser extends BaseVideoParser {
             }
           }
           if (!VideoSample) {
-            VideoSample = this.VideoSample = this.createVideoSample(
-              true,
-              pes.pts,
-              pes.dts,
-            );
+            VideoSample = createVideoSample(true);
           }
 
           VideoSample.key = true;
@@ -96,11 +94,7 @@ class HevcVideoParser extends BaseVideoParser {
             VideoSample = this.VideoSample = null;
           }
           if (!VideoSample) {
-            VideoSample = this.VideoSample = this.createVideoSample(
-              true,
-              pes.pts,
-              pes.dts,
-            );
+            VideoSample = createVideoSample(true);
           }
 
           VideoSample.key = true;
@@ -160,11 +154,7 @@ class HevcVideoParser extends BaseVideoParser {
           }
           this.pushParameterSet(track.sps, unit.data, track.vps);
           if (!VideoSample) {
-            VideoSample = this.VideoSample = this.createVideoSample(
-              true,
-              pes.pts,
-              pes.dts,
-            );
+            VideoSample = createVideoSample(true);
           }
           VideoSample.key = true;
           break;
@@ -193,11 +183,7 @@ class HevcVideoParser extends BaseVideoParser {
             VideoSample = null;
           }
           if (!VideoSample) {
-            VideoSample = this.VideoSample = this.createVideoSample(
-              false,
-              pes.pts,
-              pes.dts,
-            );
+            VideoSample = createVideoSample(false);
           }
           break;
 
@@ -225,6 +211,55 @@ class HevcVideoParser extends BaseVideoParser {
     if ((!!vps && vps[0] === this.initVPS) || (!vps && !parameterSets.length)) {
       parameterSets.push(data);
     }
+  }
+
+  private startsNewAccessUnit(
+    VideoSample: ParsedVideoSample | null,
+    track: DemuxedVideoTrack,
+    unit: { type: number; data: Uint8Array },
+    nalIndex: number,
+  ): boolean {
+    if (!VideoSample) {
+      return false;
+    }
+
+    // if new NAL units found and last sample still there, let's push ...
+    // this helps parsing streams with missing AUD (only do this if AUD never found)
+    if (!track.audFound && nalIndex === 0) {
+      return true;
+    }
+
+    // A sample can be opened by AU prefix NALs such as AUD/VPS/SPS/PPS/SEI
+    // before any VCL slice is appended. Keep those prefix NALs in the same
+    // pending sample; only split once the current sample already contains a
+    // picture and the next NAL indicates another access unit.
+    if (!VideoSample.frame) {
+      return false;
+    }
+
+    const { type, data } = unit;
+    // Per H.265 spec 7.4.2.4.4 the following NAL types must appear before
+    // the first VCL of an access unit; seeing one after a complete picture
+    // means a new AU is starting:
+    //   32..35  VPS / SPS / PPS / AUD
+    //   39      prefix SEI
+    //   41..44  reserved non-VCL prefix
+    //   48..55  unspecified prefix
+    // (36/37 EOS/EOB belong to the previous AU; 38 FD and 40 suffix SEI
+    //  belong to the current AU; both stay attached to the open sample.)
+    const isAuPrefix =
+      (type >= 32 && type <= 35) ||
+      type === 39 ||
+      (type >= 41 && type <= 44) ||
+      (type >= 48 && type <= 55);
+    if (isAuPrefix) {
+      return true;
+    }
+
+    // A VCL slice (NAL types 0..31) whose first_slice_segment_in_pic_flag is
+    // set starts a new coded picture, and therefore a new AU. The flag is
+    // the MSB of the byte after the 2-byte HEVC NAL header (spec 7.3.6.1).
+    return type <= 31 && data.length > 2 && (data[2] & 0x80) !== 0;
   }
 
   protected getNALuType(data: Uint8Array, offset: number): number {
