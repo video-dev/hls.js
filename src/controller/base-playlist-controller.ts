@@ -37,7 +37,7 @@ export default class BasePlaylistController
   public destroy() {
     this.clearTimer();
     // @ts-ignore
-    this.hls = this.log = this.warn = null;
+    this.hls = null;
   }
 
   private clearTimer() {
