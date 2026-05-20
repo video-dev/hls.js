@@ -59,8 +59,6 @@ export default class CMCDController implements ComponentAPI {
   private buffering: boolean = true;
   private playerState: CmcdPlayerState = CmcdPlayerState.STARTING;
   private audioBuffer?: ExtendedSourceBuffer;
-  private videoBuffer?: ExtendedSourceBuffer;
-  private audiovideoBuffer?: ExtendedSourceBuffer;
   private reporter?: CmcdReporter;
 
   constructor(hls: Hls) {
@@ -145,7 +143,7 @@ export default class CMCDController implements ComponentAPI {
     }
 
     // @ts-ignore
-    this.hls = this.config = this.audioBuffer = this.videoBuffer = null;
+    this.hls = this.config = this.audioBuffer = null;
     // @ts-ignore
     this.onWaiting = this.onPlaying = this.onPause = null;
     // @ts-ignore
@@ -186,8 +184,6 @@ export default class CMCDController implements ComponentAPI {
     data: BufferCreatedData,
   ) {
     this.audioBuffer = data.tracks.audio?.buffer;
-    this.videoBuffer = data.tracks.video?.buffer;
-    this.audiovideoBuffer = data.tracks.audiovideo?.buffer;
   }
 
   private onWaiting = () => {
@@ -495,25 +491,26 @@ export default class CMCDController implements ComponentAPI {
    */
   private getBufferLength(type: CmcdObjectType) {
     const media = this.media;
-    const buffer =
-      type === CmcdObjectType.AUDIO
-        ? this.audioBuffer
-        : type === CmcdObjectType.VIDEO
-          ? this.videoBuffer
-          : this.audiovideoBuffer;
-
-    if (!buffer || !media) {
+    if (!media) {
       return NaN;
     }
 
-    // TODO: Implement parameterized buffer length array
-    const info = BufferHelper.bufferInfo(
-      buffer,
-      media.currentTime,
-      this.config.maxBufferHole,
-    );
+    // TODO: Replace with hls.audioForwardBufferInfo once exposed. https://github.com/video-dev/hls.js/issues/7858
+    if (type === CmcdObjectType.AUDIO) {
+      const buffer = this.audioBuffer;
+      if (!buffer) {
+        return NaN;
+      }
+      const info = BufferHelper.bufferInfo(
+        buffer,
+        media.currentTime,
+        media.paused ? 0 : this.config.maxBufferHole,
+      );
+      return info.len * 1000;
+    }
 
-    return info.len * 1000;
+    const info = this.hls.mainForwardBufferInfo;
+    return info ? info.len * 1000 : NaN;
   }
 
   /**
