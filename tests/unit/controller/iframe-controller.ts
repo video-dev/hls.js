@@ -1,8 +1,10 @@
 import { config as chaiConfig, expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
+import { ImageIFrameStreamController } from '../../../src/controller/image-iframe-stream-controller';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
+import { Fragment } from '../../../src/loader/fragment';
 import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import type { HlsConfig } from '../../../src/config';
@@ -11,6 +13,7 @@ import type {
   HlsImageIFramesOnly,
   IFrameController,
 } from '../../../src/controller/iframe-controller';
+import type { MediaFragment } from '../../../src/loader/fragment';
 import type PlaylistLoader from '../../../src/loader/playlist-loader';
 import type {
   ComponentAPI,
@@ -245,5 +248,85 @@ describe('IFrameController', function () {
       hls.destroy();
       expect(imagePlayer.url).to.eql(null);
     }
+  });
+});
+
+describe('ImageIFrameStreamController', function () {
+  function createFrag(sn: number, dataSize: number): MediaFragment {
+    const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+    frag.sn = sn;
+    frag.data = new Uint8Array(dataSize);
+    return frag;
+  }
+
+  describe('cacheSet', function () {
+    let controller: any;
+    let cacheSet: (frag: MediaFragment, data: Uint8Array) => void;
+
+    beforeEach(function () {
+      controller = {
+        hls: { config: { iframeCacheLimit: 1024 } },
+        cached: [] as MediaFragment[],
+        cachedSize: 0,
+      };
+      cacheSet = (ImageIFrameStreamController.prototype as any).cacheSet.bind(
+        controller,
+      );
+    });
+
+    it('adds fragment data to cache and tracks size', function () {
+      const frag = createFrag(0, 100);
+      cacheSet(frag, frag.data!);
+      expect(controller.cached).to.have.lengthOf(1);
+      expect(controller.cachedSize).to.equal(100);
+      expect(frag.data).to.not.be.undefined;
+    });
+
+    it('evicts oldest entries when cache exceeds iframeCacheLimit', function () {
+      controller.hls.config.iframeCacheLimit = 300;
+      const frag1 = createFrag(4, 150);
+      const frag2 = createFrag(5, 100);
+      const frag3 = createFrag(6, 201);
+      cacheSet(frag1, frag1.data!);
+      cacheSet(frag2, frag2.data!);
+      expect(controller.cached).to.have.lengthOf(2);
+      expect(controller.cachedSize).to.equal(250);
+
+      // Adding frag3 pushes total to 451, exceeding 300 limit
+      cacheSet(frag3, frag3.data!);
+
+      // frag1 (150) and frag2 (100) evicted => total = 201
+      expect(controller.cached).to.have.lengthOf(1);
+      expect(controller.cached[0].sn).to.equal(6);
+      expect(controller.cachedSize).to.equal(201);
+      expect(frag1.data).to.be.undefined;
+    });
+
+    it('keeps at least one entry even if it exceeds the limit', function () {
+      controller.hls.config.iframeCacheLimit = 50;
+      const frag = createFrag(0, 100);
+      cacheSet(frag, frag.data!);
+      expect(controller.cached).to.have.lengthOf(1);
+      expect(controller.cachedSize).to.equal(100);
+      expect(frag.data).to.not.be.undefined;
+    });
+
+    it('recalculates size when evicted fragment data was already cleared', function () {
+      controller.hls.config.iframeCacheLimit = 250;
+      const frag1 = createFrag(1, 100);
+      const frag2 = createFrag(2, 100);
+      const frag3 = createFrag(3, 200);
+      cacheSet(frag1, frag1.data!);
+      cacheSet(frag2, frag2.data!);
+      // Externally clear frag1.data (simulates fragment tracker removal)
+      frag1.data = undefined;
+
+      // Adding frag3 pushes cachedSize to 400, exceeding 250
+      // Evicting frag1 finds data already cleared, triggers recalculation and break
+      cacheSet(frag3, frag3.data!);
+      expect(controller.cached).to.have.lengthOf(2);
+      expect(controller.cached[0].sn).to.equal(2);
+      expect(controller.cached[1].sn).to.equal(3);
+    });
   });
 });

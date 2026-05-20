@@ -146,6 +146,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`interstitialLiveLookAhead`](#interstitiallivelookahead)
   - [`assetPlayerId`](#assetplayerid)
   - [`primarySessionId`](#primarysessionid)
+  - [`iframeCacheLimit`](#iframecachelimit)
   - [`useMediaCapabilities`](#usemediacapabilities)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(HTMLMediaElement | MediaAttachingData)`](#hlsattachmediahtmlmediaelement--mediaattachingdata)
@@ -1928,6 +1929,14 @@ When set, the `assetPlayerId` is included in log messages and can be used to ide
 An optional identifier string used to identify the primary HLS session when working with Interstitials. This value is passed to interstitial asset URLs via the `_HLS_primary_id` query parameter, allowing the server to associate interstitial requests with the primary session.
 
 This is primarily used internally by HLS.js when creating interstitial asset players, but can be set manually if you need to coordinate multiple HLS instances.
+
+### `iframeCacheLimit`
+
+(default: `2097152` (2 MB))
+
+The maximum total byte size of cached image I-Frame data retained by the `ImageIFrameStreamController`. When the cache exceeds this limit, the oldest entries are evicted and their `Fragment.data` is cleared to free memory.
+
+This option only applies to image I-Frame player instances created via `hls.createImageIFramePlayer()`. Video I-Frame data (from `hls.createIFramePlayer()`) is managed by the MSE video SourceBuffer and is not affected by this setting.
 
 ### `useMediaCapabilities`
 

@@ -1411,11 +1411,13 @@ export type {
   DRMSystemConfiguration,
   DRMSystemsConfiguration,
   DRMSystemOptions,
+  ErrorControllerConfig,
   FPSControllerConfig,
   FragmentLoaderConfig,
   FragmentLoaderConstructor,
   GapControllerConfig,
   HlsLoadPolicies,
+  IFrameControllerConfig,
   LevelControllerConfig,
   LoaderConfig,
   LoadPolicy,
@@ -1454,6 +1456,7 @@ export type {
   IErrorAction,
 } from './controller/error-controller';
 export type { ID3TrackController } from './controller/id3-track-controller';
+export type { LoadMediaAtOptions } from './controller/iframe-stream-controller';
 export type {
   HlsAssetPlayer,
   HlsAssetPlayerConfig,

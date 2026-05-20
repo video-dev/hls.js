@@ -1335,6 +1335,13 @@ export class ErrorController extends Logger implements NetworkComponentAPI {
     stopLoad(): void;
 }
 
+// Warning: (ae-missing-release-tag) "ErrorControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type ErrorControllerConfig = {
+    errorPenaltyExpireMs: number;
+};
+
 // Warning: (ae-missing-release-tag) "ErrorData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2398,7 +2405,6 @@ export interface HlsChunkPerformanceTiming extends HlsPerformanceTiming {
     executeStart: number;
 }
 
-// Warning: (ae-forgotten-export) The symbol "ErrorControllerConfig" needs to be exported by the entry point hls.d.ts
 // Warning: (ae-missing-release-tag) "HlsConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2450,7 +2456,7 @@ export type HlsConfig = {
     progressive: boolean;
     lowLatencyMode: boolean;
     primarySessionId?: string;
-} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & ErrorControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & PlaylistControllerConfig & FragmentLoaderConfig & PlaylistLoaderConfig;
+} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & ErrorControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & IFrameControllerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & PlaylistControllerConfig & FragmentLoaderConfig & PlaylistLoaderConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2476,8 +2482,6 @@ export interface HlsEventEmitter {
 //
 // @public (undocumented)
 export interface HlsIFramesOnly extends Omit<Hls, 'createIFramePlayer' | 'createImageIFramePlayer' | 'iframeVariants' | 'swapAudioCodec' | 'setAudioOption' | 'allAudioTracks' | 'audioTracks' | 'audioTrack' | 'nextAudioTrack' | 'setSubtitleOption' | 'allSubtitleTracks' | 'subtitleTracks' | 'subtitleTrack' | 'subtitleDisplay'> {
-    // Warning: (ae-forgotten-export) The symbol "LoadMediaAtOptions" needs to be exported by the entry point hls.d.ts
-    //
     // (undocumented)
     loadMediaAt(time: number, options?: Partial<LoadMediaAtOptions>): void;
 }
@@ -2738,6 +2742,13 @@ export class IFrameController extends Logger {
     // (undocumented)
     createImageIFramePlayer(configOverride?: Partial<HlsConfig> | undefined): HlsImageIFramesOnly | null;
 }
+
+// Warning: (ae-missing-release-tag) "IFrameControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type IFrameControllerConfig = {
+    iframeCacheLimit: number;
+};
 
 // Warning: (ae-missing-release-tag) "ILogFunction" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -4005,6 +4016,13 @@ export interface LoaderStats {
     // (undocumented)
     total: number;
 }
+
+// Warning: (ae-missing-release-tag) "LoadMediaAtOptions" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type LoadMediaAtOptions = {
+    seekOnAppend: boolean;
+};
 
 // Warning: (ae-missing-release-tag) "LoadPolicy" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
