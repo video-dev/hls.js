@@ -176,8 +176,12 @@ class SubtitleTrackController extends BasePlaylistController {
 
     if (this.hls.config.renderTextTracksNatively) {
       this.tracksInGroup.forEach((track) => {
-        if (track.trackNode) {
-          track.trackNode.remove();
+        const trackNode = track.trackNode;
+        if (trackNode) {
+          // Chrome displays cached track state after re-adding tracks.
+          // Hide track to avoid re-rendering captions from this session.
+          trackNode.track.mode = 'hidden';
+          trackNode.remove();
           track.trackNode = undefined;
         }
       });
