@@ -153,28 +153,26 @@ export default class Transmuxer {
     const resetMuxers = this.needsProbing(discontinuity, trackSwitch);
 
     if (resetMuxers) {
-      if (!this.demuxer) {
-        // Configure the demuxer using an init segment when I-FRAME MPEG2-TS (I-FRAME media segments have no PMT).
-        // MP4 probing only works on media segments (which have moof data).
-        const segmentFormatData =
-          chunkMeta.iframe &&
-          initSegmentData &&
-          TSDemuxer.probe(initSegmentData, this.logger)
-            ? initSegmentData
-            : uintData;
-        const error = this.configureTransmuxer(segmentFormatData);
-        if (error) {
-          this.logger.warn(`[transmuxer] ${error.message}`);
-          this.observer.emit(Events.ERROR, Events.ERROR, {
-            type: ErrorTypes.MEDIA_ERROR,
-            details: ErrorDetails.FRAG_PARSING_ERROR,
-            fatal: false,
-            error,
-            reason: error.message,
-          });
-          stats.executeEnd = now();
-          return emptyResult(chunkMeta);
-        }
+      // Configure the demuxer using an init segment when I-FRAME MPEG2-TS (I-FRAME media segments have no PMT).
+      // MP4 probing only works on media segments (which have moof data).
+      const segmentFormatData =
+        chunkMeta.iframe &&
+        initSegmentData &&
+        TSDemuxer.probe(initSegmentData, this.logger)
+          ? initSegmentData
+          : uintData;
+      const error = this.configureTransmuxer(segmentFormatData);
+      if (error) {
+        this.logger.warn(`[transmuxer] ${error.message}`);
+        this.observer.emit(Events.ERROR, Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.FRAG_PARSING_ERROR,
+          fatal: false,
+          error,
+          reason: error.message,
+        });
+        stats.executeEnd = now();
+        return emptyResult(chunkMeta);
       }
     }
 
