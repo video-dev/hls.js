@@ -2238,11 +2238,20 @@ function preloadIFrame(time) {
 }
 ```
 
+| Method                               | Description                                                       |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| `hls.createIFramePlayer(config?)`    | Creates an I-Frame player, or `null` if no I-Frame variants exist |
+| `player.attachMedia(video)`          | Attach an `HTMLVideoElement` for frame rendering                  |
+| `player.detachMedia()`               | Detach the video element                                          |
+| `player.loadMediaAt(time, options?)` | Load, append and then seek to the I-Frame at the given time       |
+| `player.stopLoad()`                  | Cancel active loading of segment data                             |
+| `player.destroy()`                   | Clean up resources                                                |
+
 ### `hls.createImageIFramePlayer()`
 
 `createImageIFramePlayer` returns a new `HlsImageIFramesOnly` instance that uses the current instance's `iframeVariants` filtered to only those with an image codec (e.g. `CODECS="mjpg"`) as its `levels`. Returns `null` when no image I-Frame variants are available or before levels have loaded. This method accepts an optional config overrides argument.
 
-Image I-Frame instances load JPEG keyframes from fMP4 I-Frame segments without requiring MSE or a `<video>` element. This is useful for thumbnail previews or trick-play, especially on devices with limited to a single video decoder
+Image I-Frame instances load JPEG keyframes from fMP4 I-Frame segments without requiring MSE or a `<video>` element. This is useful for thumbnail previews or trick-play, especially on devices limited to a single video decoder.
 
 #### Example usage
 
@@ -2280,6 +2289,7 @@ function showThumbnailAtTime(time: number) {
 | `player.attachImage(img)`              | Attach an `HTMLImageElement` for frame rendering                     |
 | `player.detachImage()`                 | Detach the image element                                             |
 | `player.loadMediaAt(time)`             | Load and display the I-Frame at the given time                       |
+| `player.stopLoad()`                    | Cancel active loading of segment data                                |
 | `player.destroy()`                     | Clean up resources                                                   |
 
 #### Handling image data without an HTMLImageElement
