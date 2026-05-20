@@ -61,11 +61,13 @@ class HevcVideoParser extends BaseVideoParser {
           push = true;
           break;
 
-        // CRA, BLA (random access picture)
+        // IRAP - CRA, BLA, reserved IRAP (random access picture)
         case 16:
         case 17:
         case 18:
         case 21:
+        case 22:
+        case 23:
           push = true;
           if (spsfound) {
             // handle PES not starting with AUD
@@ -83,7 +85,7 @@ class HevcVideoParser extends BaseVideoParser {
           VideoSample.frame = true;
           break;
 
-        // IDR
+        // IRAP - IDR
         case 19:
         case 20:
           push = true;
@@ -154,9 +156,10 @@ class HevcVideoParser extends BaseVideoParser {
           }
           this.pushParameterSet(track.sps, unit.data, track.vps);
           if (!VideoSample) {
-            VideoSample = createVideoSample(true);
+            // Parameter sets may prefix either IRAP or non-IRAP pictures.
+            // Only IRAP VCL NALs should mark an HEVC sample as sync/key.
+            VideoSample = createVideoSample(false);
           }
-          VideoSample.key = true;
           break;
 
         // PPS
