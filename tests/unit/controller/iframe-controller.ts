@@ -8,6 +8,7 @@ import { PlaylistLevelType } from '../../../src/types/loader';
 import type { HlsConfig } from '../../../src/config';
 import type {
   HlsIFramesOnly,
+  HlsImageIFramesOnly,
   IFrameController,
 } from '../../../src/controller/iframe-controller';
 import type PlaylistLoader from '../../../src/loader/playlist-loader';
@@ -60,6 +61,16 @@ video/avc1/1/media.m3u8
 https://b.com/video/avc1/1/media.m3u8
 #EXT-X-I-FRAME-STREAM-INF:PATHWAY-ID=".",BANDWIDTH=481062,CODECS="avc1.64002A",RESOLUTION=1920x1080,URI="video/avc1/1/iframes.m3u8"
 #EXT-X-I-FRAME-STREAM-INF:PATHWAY-ID="..",BANDWIDTH=481062,CODECS="avc1.64002A",RESOLUTION=1920x1080,URI="https://b.com/video/avc1/1/media.m3u8"
+`;
+
+const playlistWithImageIFrameVariants = `#EXTM3U
+#EXT-X-MEDIA:TYPE=AUDIO,GROUP-ID="audio",LANGUAGE="en",NAME="English",AUTOSELECT=YES,DEFAULT=YES,CHANNELS="2",URI="audio/en/mp4a.40.2/media.m3u8"
+#EXT-X-STREAM-INF:AUDIO="audio",AVERAGE-BANDWIDTH=6383725,BANDWIDTH=7495785,CODECS="avc1.64002A,mp4a.40.2",RESOLUTION=1920x1080
+video/avc1/1/media.m3u8
+#EXT-X-I-FRAME-STREAM-INF:AVERAGE-BANDWIDTH=309502,BANDWIDTH=481062,CODECS="avc1.64002A",RESOLUTION=1920x1080,URI="video/avc1/1/iframes.m3u8"
+#EXT-X-I-FRAME-STREAM-INF:AVERAGE-BANDWIDTH=65770,BANDWIDTH=110693,CODECS="avc1.64002A",RESOLUTION=960x540,URI="video/avc1/3/iframes.m3u8"
+#EXT-X-I-FRAME-STREAM-INF:AVERAGE-BANDWIDTH=50000,BANDWIDTH=50000,CODECS="mjpg",RESOLUTION=960x540,URI="video/mjpg/iframes.m3u8"
+#EXT-X-I-FRAME-STREAM-INF:AVERAGE-BANDWIDTH=30000,BANDWIDTH=30000,CODECS="mjpg",RESOLUTION=480x270,URI="video/mjpg/2/iframes.m3u8"
 `;
 
 describe('IFrameController', function () {
@@ -187,5 +198,52 @@ describe('IFrameController', function () {
     const iframeStreamController = (iframePlayer as any).streamController;
     expect(iframeStreamController.initPTS).to.not.equal(timestamps);
     expect(iframeStreamController.initPTS).to.deep.equal(timestamps);
+  });
+
+  it('createImageIFramePlayer returns null when no image iframe variants exist', function () {
+    loadManifest(playlistWithIFrameVariants);
+    expect(hls.iframeVariants).to.have.lengthOf(3);
+    const imagePlayer = iframeController.createImageIFramePlayer();
+    expect(imagePlayer).to.be.null;
+  });
+
+  it('createImageIFramePlayer returns instance when mjpg variants exist', function () {
+    loadManifest(playlistWithImageIFrameVariants);
+    const imagePlayer = iframeController.createImageIFramePlayer();
+    expect(imagePlayer).to.be.an.instanceOf(Hls);
+  });
+
+  it('createImageIFramePlayer filters to only image codec variants', function () {
+    loadManifest(playlistWithImageIFrameVariants);
+    expect(hls.iframeVariants).to.have.lengthOf(4);
+    const imagePlayer = iframeController.createImageIFramePlayer();
+    expect(imagePlayer).to.be.an.instanceOf(Hls);
+    if (imagePlayer) {
+      expect(imagePlayer.levels).to.have.lengthOf(2);
+      imagePlayer.levels.forEach((level) => {
+        expect(level).to.have.property('imageCodec', 'mjpg');
+      });
+    }
+  });
+
+  it('Image IFrame player throws on attachMedia', function () {
+    loadManifest(playlistWithImageIFrameVariants);
+    const imagePlayer =
+      iframeController.createImageIFramePlayer() as HlsImageIFramesOnly;
+    expect(imagePlayer).to.be.an.instanceOf(Hls);
+    expect(() => (imagePlayer as any).attachMedia({} as any)).to.throw(
+      'Image I-Frame player does not accept HTMLMediaElements',
+    );
+  });
+
+  it('Image IFrame player is destroyed with parent', function () {
+    loadManifest(playlistWithImageIFrameVariants);
+    const imagePlayer = iframeController.createImageIFramePlayer();
+    expect(imagePlayer).to.be.an.instanceOf(Hls);
+    if (imagePlayer) {
+      expect(imagePlayer.url).to.eql('main.m3u8');
+      hls.destroy();
+      expect(imagePlayer.url).to.eql(null);
+    }
   });
 });
