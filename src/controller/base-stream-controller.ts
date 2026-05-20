@@ -1660,7 +1660,9 @@ export default class BaseStreamController
     return frag;
   }
 
-  mapToInitFragWhenRequired(frag: Fragment | null): typeof frag {
+  protected mapToInitFragWhenRequired<T extends Fragment | null>(
+    frag: T,
+  ): T | Fragment {
     // If an initSegment is present, it must be buffered first
     if (frag?.initSegment && !frag.initSegment.data && !this.bitrateTest) {
       return frag.initSegment;
@@ -2593,7 +2595,7 @@ export default class BaseStreamController
     this.nextLoadPosition = this.playhead;
   }
 
-  protected checkFragmentChanged(): boolean {
+  protected checkFragPlaying(): boolean {
     const video = this.media;
     let fragPlayingCurrent: MediaFragment | null = null;
     if (video && video.readyState > 1 && video.seeking === false) {

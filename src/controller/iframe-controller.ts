@@ -1,43 +1,71 @@
-import { State } from './base-stream-controller';
+import {
+  IFrameStreamController,
+  type LoadMediaAtOptions,
+} from './iframe-stream-controller';
+import { ImageIFrameStreamController } from './image-iframe-stream-controller';
 import { Events } from '../events';
 import { type LoaderStats, PlaylistLevelType } from '../types/loader';
-import { BufferHelper } from '../utils/buffer-helper';
 import { Logger } from '../utils/logger';
 import { getVideoPreference } from '../utils/rendition-helper';
 import type { HlsConfig } from '../config';
 import type Hls from '../hls';
-import type StreamController from './stream-controller';
-import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type {
+  FragBufferedData,
   InitPTSFoundData,
   LevelsUpdatedData,
   ManifestLoadedData,
 } from '../types/events';
-import type { Level, VariableMap } from '../types/level';
+import type { Level, LevelParsed, VariableMap } from '../types/level';
 import type { TimestampOffset } from '../utils/timescale-conversion';
+
+const PRELOAD_IFRAME_PLAYLISTS_AFTER_BUFFER_SECONDS = 10;
+const IMAGE_IFRAME_ATTACH_ERROR =
+  'Image I-Frame player does not accept HTMLMediaElements';
 
 type Constructor<T = object, A extends any[] = any[], Static = {}> = (new (
   ...a: A
 ) => T) &
   Static;
 
-export type LoadMediaAtOptions = { seekOnAppend: boolean };
-
 const loadMediaAtOptionsDefault: LoadMediaAtOptions = {
   seekOnAppend: true,
 };
-
-export interface HlsIFramesOnly extends Hls {
+export interface HlsIFramesOnly extends Omit<
+  Hls,
+  | 'createIFramePlayer'
+  | 'createImageIFramePlayer'
+  | 'iframeVariants'
+  | 'swapAudioCodec'
+  | 'setAudioOption'
+  | 'allAudioTracks'
+  | 'audioTracks'
+  | 'audioTrack'
+  | 'nextAudioTrack'
+  | 'setSubtitleOption'
+  | 'allSubtitleTracks'
+  | 'subtitleTracks'
+  | 'subtitleTrack'
+  | 'subtitleDisplay'
+> {
   loadMediaAt(time: number, options?: Partial<LoadMediaAtOptions>): void;
 }
-interface IFrameStreamController extends StreamController {
-  initDetails?: LevelDetails | null;
-  setInitPts(initPTS: TimestampOffset[]): void;
-  loadMediaAt(time: number, options: LoadMediaAtOptions): void;
+
+export interface HlsImageIFramesOnly extends Omit<
+  HlsIFramesOnly,
+  | 'attachMedia'
+  | 'detachMedia'
+  | 'transferMedia'
+  | 'recoverMediaError'
+  | 'media'
+> {
+  loadMediaAt(time: number): void;
+  attachImage(image: HTMLImageElement): void;
+  detachImage(): void;
 }
 
 let HlsIFramesOnlyClass: ReturnType<typeof createHlsIFramesOnly>;
+let HlsImageIFramesOnlyClass: ReturnType<typeof createHlsImageIFramesOnly>;
 
 export class IFrameController extends Logger {
   private hls: Hls | undefined;
@@ -48,12 +76,13 @@ export class IFrameController extends Logger {
 
   private initPTS: TimestampOffset[] = [];
 
-  private iframeInstances: HlsIFramesOnly[];
+  private iframeInstances: (HlsIFramesOnly | HlsImageIFramesOnly)[];
   private instanceCounter: number = 0;
 
   constructor(hls: Hls, HlsPlayerClass: typeof Hls) {
     super('iframes', hls.logger);
     HlsIFramesOnlyClass ||= createHlsIFramesOnly(HlsPlayerClass);
+    HlsImageIFramesOnlyClass ||= createHlsImageIFramesOnly(HlsIFramesOnlyClass);
     this.hls = hls;
     this.iframeInstances = [];
     this.registerListeners();
@@ -66,6 +95,7 @@ export class IFrameController extends Logger {
       hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
       hls.on(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
       hls.on(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
+      hls.on(Events.FRAG_BUFFERED, this.onFragBuffered, this);
       hls.on(Events.DESTROYING, this.onDestroying, this);
     }
   }
@@ -77,6 +107,7 @@ export class IFrameController extends Logger {
       hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
       hls.off(Events.LEVELS_UPDATED, this.onLevelsUpdated, this);
       hls.off(Events.INIT_PTS_FOUND, this.onInitPtsFound, this);
+      hls.off(Events.FRAG_BUFFERED, this.onFragBuffered, this);
       hls.off(Events.DESTROYING, this.onDestroying, this);
     }
   }
@@ -125,15 +156,59 @@ export class IFrameController extends Logger {
     }
   }
 
+  private onFragBuffered(event: Events.FRAG_BUFFERED, data: FragBufferedData) {
+    const hls = this.hls;
+    if (!hls) {
+      return;
+    }
+    if (
+      hls.hasEnoughToStart &&
+      (hls.mainForwardBufferInfo?.len || 0) >
+        PRELOAD_IFRAME_PLAYLISTS_AFTER_BUFFER_SECONDS
+    ) {
+      this.iframeInstances.forEach((instance) => {
+        if (!instance.loadingEnabled) {
+          instance.startLoad(this.hls?.media?.currentTime || 0);
+        }
+      });
+    }
+  }
+
   public createIFramePlayer(
     configOverride?: Partial<HlsConfig> | undefined,
   ): HlsIFramesOnly | null {
+    return this.createInstance(
+      HlsIFramesOnlyClass,
+      this.hls?.iframeVariants,
+      configOverride,
+    );
+  }
+
+  public createImageIFramePlayer(
+    configOverride?: Partial<HlsConfig> | undefined,
+  ): HlsImageIFramesOnly | null {
+    const imageIframeVariants = this.hls?.iframeVariants.filter(
+      (parsed) => parsed.imageCodec,
+    );
+    return this.createInstance(
+      HlsImageIFramesOnlyClass,
+      imageIframeVariants,
+      configOverride,
+      'image-',
+    );
+  }
+
+  private createInstance<H extends HlsIFramesOnly | HlsImageIFramesOnly>(
+    HlsIframeClass: Constructor<H>,
+    iframeVariants: LevelParsed[] | undefined,
+    configOverride: Partial<HlsConfig> | undefined,
+    loggerLabelPrefix?: string,
+  ): H | null {
     const { hls } = this;
     if (!hls) {
       return null;
     }
     const {
-      iframeVariants,
       url,
       userConfig,
       latestLevelDetails,
@@ -146,7 +221,7 @@ export class IFrameController extends Logger {
     if (!iframeVariants?.length || !stats || !url) {
       return null;
     }
-    const loggerId = `iframe-player-${this.instanceCounter++}`;
+    const loggerId = `${loggerLabelPrefix || ''}iframe-player-${this.instanceCounter++}`;
     const levels = hls.levels as (Level | undefined)[];
     const activeLevel = loadLevelObj || levels[loadLevel];
     const videoPreference = getVideoPreference(
@@ -155,16 +230,46 @@ export class IFrameController extends Logger {
     );
     const pathwayId = activeLevel?.pathwayId || '.';
 
-    const iframeInstance = new HlsIFramesOnlyClass(
-      userConfig,
-      {
-        loggerId,
-        primarySessionId: sessionId,
-        videoPreference,
-        abrEwmaDefaultEstimate: bandwidthEstimate,
-        streamController: hls.config.streamController,
-      },
-      configOverride,
+    // I-Frame player config specialized behavior for I-frame only streaming
+    const playerConfig: Partial<HlsConfig> = {
+      ...userConfig,
+      loggerId,
+      primarySessionId: sessionId,
+      videoPreference,
+      abrEwmaDefaultEstimate: bandwidthEstimate,
+      // StreamController will be replaced in constructor (HlsIFramesOnlyClass | HlsImageIFramesOnlyClass)
+      streamController: undefined,
+      // Disable features not essential to streaming video I-Frames
+      audioStreamController: undefined,
+      audioTrackController: undefined,
+      subtitleStreamController: undefined,
+      subtitleTrackController: undefined,
+      timelineController: undefined,
+      id3TrackController: undefined,
+      fpsController: undefined,
+      gapController: undefined,
+      iframeController: undefined,
+      cmcd: undefined,
+      // FIXME: Interstitials must not be loaded independently of parent player. Schedule should come from parent. (disabled for now)
+      interstitialsController: undefined,
+
+      // Only load and unload as needed
+      backBufferLength: Infinity,
+      // Adapt to attached HTMLVideoElement dimension
+      capLevelToPlayerSize: true,
+
+      // Streamline loading
+      enableWorker: false,
+      autoStartLoad: false,
+      startFragPrefetch: false,
+      testBandwidth: false,
+      progressive: false,
+      ...configOverride,
+    };
+
+    // Instance of HlsIFramesOnlyClass | HlsImageIFramesOnlyClass
+    const iframeInstance = new HlsIframeClass(
+      playerConfig,
       url,
       this.initPTS,
       latestLevelDetails,
@@ -194,58 +299,16 @@ export class IFrameController extends Logger {
   }
 }
 
-interface HlsIFramesOnlyAlias extends HlsIFramesOnly {}
-
 function createHlsIFramesOnly(Base: Constructor<Hls>) {
-  return class HlsIFramesOnly extends Base implements HlsIFramesOnlyAlias {
+  return class HlsIFramesOnly extends Base {
     constructor(
-      userConfig: Partial<HlsConfig>,
-      parentConfig: Partial<HlsConfig> & {
-        streamController: typeof StreamController;
-      },
-      configOverride: Partial<HlsConfig> | undefined,
+      playerConfig: Partial<HlsConfig>,
       url: string,
       initPTS: TimestampOffset[],
       latestLevelDetails: LevelDetails | null,
     ) {
-      const playerConfig: Partial<HlsConfig> = {
-        ...userConfig,
-        ...parentConfig,
-
-        streamController: createIFrameStreamController(
-          parentConfig.streamController,
-        ),
-
-        // Disable features not essential to streaming video I-Frames
-        audioStreamController: undefined,
-        audioTrackController: undefined,
-        subtitleStreamController: undefined,
-        subtitleTrackController: undefined,
-        timelineController: undefined,
-        id3TrackController: undefined,
-        fpsController: undefined,
-        gapController: undefined,
-        iframeController: undefined,
-        cmcd: undefined,
-        // FIXME: Interstitials must not be loaded independently of parent platyer. Schedule should come from parent. (disabled for now)
-        interstitialsController: undefined,
-
-        // Only load and unload as needed
-        // maxMaxBufferLength: 8,
-        backBufferLength: Infinity,
-        // Adapt to attached HTMLVideoElement dimension
-        capLevelToPlayerSize: true,
-
-        // Streamline loading
-        enableWorker: false,
-        autoStartLoad: false,
-        startFragPrefetch: false,
-        testBandwidth: false,
-        progressive: false,
-        // startOnSegmentBoundary: true,
-        ...configOverride,
-      };
-
+      // Video I-Frame stream-controller load segments before seeking to them to render frames in desired order
+      playerConfig.streamController ||= IFrameStreamController;
       super(playerConfig);
 
       // Hls.url matches the parent player session source url.
@@ -258,7 +321,7 @@ function createHlsIFramesOnly(Base: Constructor<Hls>) {
         latestLevelDetails;
     }
 
-    loadSource(url: string) {}
+    loadSource() {}
 
     loadMediaAt(
       time: number,
@@ -282,148 +345,59 @@ function createHlsIFramesOnly(Base: Constructor<Hls>) {
   };
 }
 
-interface IFrameStreamControllerAlias extends IFrameStreamController {}
+function createHlsImageIFramesOnly(Base: typeof HlsIFramesOnlyClass) {
+  return class HlsImageIFramesOnly extends Base {
+    constructor(
+      playerConfig: Partial<HlsConfig>,
+      url: string,
+      initPTS: TimestampOffset[],
+      latestLevelDetails: LevelDetails | null,
+    ) {
+      // Image I-Frame stream-controller does not use media element
+      playerConfig.cmcdController = undefined;
+      playerConfig.emeController = undefined;
 
-function createIFrameStreamController(Base: Constructor<StreamController>) {
-  return class IFrameStreamController
-    extends Base
-    implements IFrameStreamControllerAlias
-  {
-    private currentOp?: [time: number, options: LoadMediaAtOptions];
-    private nextOp?: [time: number, options: LoadMediaAtOptions];
-    private gotNext: boolean = false;
-    initDetails?: LevelDetails | null;
+      playerConfig.streamController ||= ImageIFrameStreamController;
 
-    setInitPts(initPTS: TimestampOffset[]) {
-      this.initPTS = initPTS.slice();
+      // Nice to have, need to replace `media` and attach/detach constraints
+      playerConfig.capLevelController = undefined;
+
+      // Omit BufferController since MSE is not involved in image processing
+      playerConfig.bufferController = undefined;
+
+      super(playerConfig, url, initPTS, latestLevelDetails);
     }
 
-    loadMediaAt(time: number, options: LoadMediaAtOptions) {
-      const { seekOnAppend } = options;
-      const adjustedTime = time + this.timelineOffset;
-      this.nextLoadPosition = this.lastCurrentTime = adjustedTime;
-      this.startPosition = time;
-      switch (this.state) {
-        case State.STOPPED:
-        case State.ENDED:
-        case State.ERROR:
-          this.state = State.IDLE;
+    attachImage(image: HTMLImageElement) {
+      (this.streamController as ImageIFrameStreamController).image = image;
+    }
+
+    detachImage() {
+      (this.streamController as ImageIFrameStreamController).image = undefined;
+    }
+
+    loadSource() {}
+
+    attachMedia() {
+      throw new Error(IMAGE_IFRAME_ATTACH_ERROR);
+    }
+
+    detachMedia() {}
+
+    recoverMediaError() {}
+
+    transferMedia() {
+      return null;
+    }
+
+    loadMediaAt(time: number) {
+      if (time < 0) {
+        return null;
       }
-      if (this.state === State.IDLE) {
-        this.hls.resumeBuffering();
-        this.tick();
-        this.currentOp = [adjustedTime, options];
-      } else {
-        const fragCurrent = this.fragCurrent;
-        if (
-          !fragCurrent ||
-          (time >= fragCurrent.start && time < fragCurrent.end)
-        ) {
-          this.nextOp = [adjustedTime, options];
-        }
+      if (!this.loadingEnabled) {
+        this.startLoad(time);
       }
-      const media = this.media;
-      if (seekOnAppend && media) {
-        const seeking = this.seekTo(adjustedTime);
-        if (seeking) {
-          this.currentOp = [adjustedTime, options];
-          this.nextOp = undefined;
-        }
-      }
-    }
-
-    private seekTo(time: number): boolean {
-      const media = this.media;
-      if (media) {
-        if (time > media.duration) {
-          time = media.duration - 0.01;
-        }
-        const bufferInfo = BufferHelper.bufferInfo(media, time, 0);
-        const hasEnough = bufferInfo.len > 0 && this.getBufferedAt(time);
-        if (hasEnough) {
-          media.currentTime = time;
-          if (this.state === State.IDLE) {
-            this.tick();
-          }
-          return true;
-        }
-      }
-      return false;
-    }
-
-    private getBufferedAt(time: number): MediaFragment | null {
-      return this.fragmentTracker.getBufferedFrag(time, PlaylistLevelType.MAIN);
-    }
-
-    // overrides
-    protected fragBufferedComplete(frag: Fragment, part: Part | null) {
-      super.fragBufferedComplete(frag, part);
-
-      const { currentOp, nextOp } = this;
-      this.currentOp = this.nextOp = undefined;
-      this.state = State.STOPPED;
-      if (currentOp?.[1].seekOnAppend) {
-        this.seekTo(currentOp[0]);
-        if (!nextOp && !this.gotNext) {
-          // repeat op to get next segment (Chrome may require two HEVC frame appends, or one with EoS, before rendering)
-          this.gotNext = true;
-          this.loadMediaAt.apply(this, currentOp);
-        }
-      }
-      if (nextOp) {
-        this.loadMediaAt.apply(this, nextOp);
-      }
-    }
-
-    get playhead(): number {
-      return this.nextLoadPosition;
-    }
-
-    startLoad() {
-      if (!this.startFragRequested) {
-        const hlsIFrames = this.hls;
-        hlsIFrames.nextLoadLevel =
-          hlsIFrames.startLevel === -1 ? 0 : hlsIFrames.firstAutoLevel;
-      }
-    }
-    // public getLevelDetails
-    protected seekToStartPos() {}
-    protected setStartPosition() {}
-    protected onMediaSeeking = () => {
-      this.gotNext = false;
-    };
-
-    protected alignPlaylists(
-      details: LevelDetails,
-      previousDetails: LevelDetails | undefined,
-      switchDetails: LevelDetails | undefined,
-    ): number {
-      const initDetails = this.initDetails;
-      this.initDetails = null;
-      return super.alignPlaylists(
-        details,
-        previousDetails,
-        switchDetails || initDetails || undefined,
-      );
-    }
-
-    getMainFwdBufferInfo() {
-      const t = this.playhead;
-      const bufferedFragAtPos = this.getBufferedAt(t);
-      if (bufferedFragAtPos) {
-        const len = bufferedFragAtPos.duration;
-        return { len, start: t, end: t + len, bufferedIndex: -1 };
-      }
-      return { len: 0, start: t, end: t, bufferedIndex: -1 };
-    }
-
-    protected _streamEnded() {
-      const t = this.playhead;
-      const bufferedFragAtPos = this.fragmentTracker.getBufferedFrag(
-        t,
-        PlaylistLevelType.MAIN,
-      );
-      return !!bufferedFragAtPos?.endList;
+      (this.streamController as ImageIFrameStreamController).loadMediaAt(time);
     }
   };
 }

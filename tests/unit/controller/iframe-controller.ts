@@ -121,7 +121,9 @@ describe('IFrameController', function () {
   it('configures IFramePlayer instances to only handle iframe video variants', function () {
     const iframePlayer = loadedIFramePlayer(playlistWithIFrameVariants);
     expect(iframePlayer.levels).to.have.to.have.lengthOf(3);
-    expect(iframePlayer.iframeVariants).to.have.lengthOf(0);
+    expect(iframePlayer)
+      .to.have.property('iframeVariants')
+      .which.has.lengthOf(0);
   });
 
   it('destroys child IFramePlayer instances when destroyed', function () {

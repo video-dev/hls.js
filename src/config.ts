@@ -367,8 +367,8 @@ export type HlsConfig = {
 
   streamController: typeof StreamController;
   abrController: typeof AbrController;
-  bufferController: typeof BufferController;
-  capLevelController: typeof CapLevelController;
+  bufferController?: typeof BufferController;
+  capLevelController?: typeof CapLevelController;
   errorController: typeof ErrorController;
   fpsController?: typeof FPSController;
   progressive: boolean;

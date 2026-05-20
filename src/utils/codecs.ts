@@ -78,9 +78,12 @@ export const sampleEntryCodesISO = {
     stpp: 1,
     wvtt: 1,
   },
+  image: {
+    mjpg: 1,
+  },
 } as const;
 
-export type CodecType = 'audio' | 'video';
+export type CodecType = 'audio' | 'video' | 'text' | 'image';
 
 export function isCodecType(codec: string, type: CodecType): boolean {
   const typeCodes = sampleEntryCodesISO[type];

@@ -779,7 +779,7 @@ class AudioStreamController
 
   protected checkFragmentChanged() {
     const previousFrag = this.fragPlaying;
-    const fragChanged = super.checkFragmentChanged();
+    const fragChanged = this.checkFragPlaying();
     if (!fragChanged) {
       return false;
     }
