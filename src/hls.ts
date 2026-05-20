@@ -1035,6 +1035,10 @@ export default class Hls implements HlsEventEmitter {
     return this.streamController.getMainFwdBufferInfo();
   }
 
+  public get audioForwardBufferInfo(): BufferInfo | null {
+    return this.audioStreamController?.getFwdBufferInfo() || null;
+  }
+
   public get maxBufferLength(): number {
     return this.streamController.maxBufferLength;
   }

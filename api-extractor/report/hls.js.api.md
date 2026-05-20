@@ -193,6 +193,8 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     protected getBufferOutput(): Bufferable | null;
     // (undocumented)
+    getFwdBufferInfo(): BufferInfo | null;
+    // (undocumented)
     protected getLoadPosition(): number;
     // (undocumented)
     protected _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
@@ -2168,6 +2170,8 @@ class Hls implements HlsEventEmitter {
     get allAudioTracks(): MediaPlaylist[];
     get allSubtitleTracks(): MediaPlaylist[];
     attachMedia(data: HTMLMediaElement | MediaAttachingData): void;
+    // (undocumented)
+    get audioForwardBufferInfo(): BufferInfo | null;
     get audioTrack(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "audioTrack" must appear on the getter, not the setter.
     set audioTrack(audioTrackId: number);
