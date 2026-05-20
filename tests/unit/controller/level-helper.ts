@@ -155,6 +155,28 @@ describe('LevelHelper Tests', function () {
         newParts[2],
       );
     });
+
+    it('does not read beyond the old parts array', function () {
+      const oldFrags = generatePlaylist([1]).fragments;
+      const attr = new AttrList('DURATION=1');
+      const oldParts: Part[] = [new Part(attr, oldFrags[0], '', 0)];
+      const newParts: Part[] = [new Part(attr, oldFrags[0], '', 0)];
+
+      const guardedOldParts = new Proxy(oldParts, {
+        get(target, property, receiver) {
+          if (property === String(target.length)) {
+            throw new Error('Out-of-bounds part access');
+          }
+          return Reflect.get(target, property, receiver);
+        },
+      });
+
+      const intersectionFn = sinon.spy();
+      expect(() =>
+        mapPartIntersection(guardedOldParts, newParts, intersectionFn),
+      ).not.to.throw();
+      expect(intersectionFn).to.have.been.calledOnce;
+    });
   });
 
   describe('adjustSliding', function () {
