@@ -603,18 +603,17 @@ export class TimelineController implements ComponentAPI {
         });
       },
       (error) => {
-        const missingInitPTS =
-          error.message === 'Missing initPTS for VTT MPEGTS';
+        const missingInitPTS = error.message.startsWith('Missing initPTS');
+        hls.logger.log(
+          `${missingInitPTS ? 'Deferred parsing of' : 'Cannot parse'} VTT cue (sn: ${frag.sn} @${frag.start}): ${error}`,
+        );
         if (missingInitPTS) {
           unparsedVttFrags.push(data);
+          return;
         } else {
           this._fallbackToIMSC1(frag, payload);
         }
         // Something went wrong while parsing. Trigger event with success false.
-        hls.logger.log(`Failed to parse VTT cue: ${error}`);
-        if (missingInitPTS && maxAvCC > frag.cc) {
-          return;
-        }
         hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
           success: false,
           frag: frag,

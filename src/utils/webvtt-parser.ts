@@ -7,6 +7,7 @@ import type { TimestampOffset } from './timescale-conversion';
 import type { VTTCCs } from '../types/vtt';
 
 const LINEBREAKS = /\r\n|\n\r|\n|\r/g;
+const missingInitPTSErrorStartsWith = 'Missing initPTS for VTT ';
 
 // String.prototype.startsWith is not supported in IE11
 const startsWith = function (
@@ -101,7 +102,8 @@ export function parseWebVTT(
   let cueTime = '00:00.000';
   let timestampMapMPEGTS = 0;
   let timestampMapLOCAL = 0;
-  let parsingError: Error;
+  let hasTimestampMap = false;
+  let parsingError: Error | undefined;
   let inHeader = true;
 
   parser.oncue = function (cue: VTTCue) {
@@ -112,22 +114,32 @@ export function parseWebVTT(
     // Calculate subtitle PTS offset
     const webVttMpegTsMapOffset = (timestampMapMPEGTS - init90kHz) / 90000;
 
-    // Update offsets for new discontinuities
-    if (currCC?.new) {
-      if (timestampMapLOCAL !== undefined) {
-        // When local time is provided, offset = discontinuity start time - local time
-        cueOffset = vttCCs.ccOffset = currCC.start;
-      } else {
-        calculateOffset(vttCCs, cc, webVttMpegTsMapOffset);
+    if (hasTimestampMap) {
+      // Update offsets for new discontinuities
+      if (currCC?.new) {
+        if (timestampMapLOCAL !== undefined) {
+          // When local time is provided, offset = discontinuity start time - local time
+          cueOffset = vttCCs.ccOffset = currCC.start;
+        } else {
+          calculateOffset(vttCCs, cc, webVttMpegTsMapOffset);
+        }
       }
-    }
-    if (webVttMpegTsMapOffset) {
-      if (!initPTS) {
-        parsingError = new Error('Missing initPTS for VTT MPEGTS');
-        return;
+      if (webVttMpegTsMapOffset) {
+        if (!initPTS) {
+          parsingError = new Error(missingInitPTSErrorStartsWith + 'MPEGTS');
+          return;
+        }
+        // If we have MPEGTS, offset = presentation time + discontinuity offset
+        cueOffset = webVttMpegTsMapOffset - vttCCs.presentationOffset;
       }
-      // If we have MPEGTS, offset = presentation time + discontinuity offset
-      cueOffset = webVttMpegTsMapOffset - vttCCs.presentationOffset;
+    } else if (!initPTS) {
+      // Without X-TIMESTAMP-MAP, cue time 0 maps to MPEGTS 0 per HLS spec
+      parsingError = new Error(
+        missingInitPTSErrorStartsWith + 'without X-TIMESTAMP-MAP',
+      );
+      return;
+    } else {
+      cueOffset = -initPTS.baseTime / initPTS.timescale;
     }
 
     const duration = cue.endTime - cue.startTime;
@@ -148,6 +160,9 @@ export function parseWebVTT(
     // If the cue was not assigned an id from the VTT file (line above the content), create one.
     if (!cue.id) {
       cue.id = generateCueId(cue.startTime, cue.endTime, text);
+    } else if (cc) {
+      // Prevent same id in cues across different discontinuities
+      cue.id = `hlsjscc${cc}_${cue.id}`;
     }
 
     if (cue.endTime > 0) {
@@ -174,6 +189,7 @@ export function parseWebVTT(
       if (startsWith(line, 'X-TIMESTAMP-MAP=')) {
         // Once found, no more are allowed anyway, so stop searching.
         inHeader = false;
+        hasTimestampMap = true;
         // Extract LOCAL and MPEGTS.
         line
           .slice(16)
