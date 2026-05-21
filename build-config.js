@@ -321,6 +321,8 @@ function getAliasesForDist(format, features) {
     aliases = {
       ...aliases,
       './controller/iframe-controller': `./${emptyFile}`,
+      './iframe-stream-controller': `./${emptyFile}`,
+      './image-iframe-stream-controller': `./${emptyFile}`,
     };
   }
 

@@ -375,9 +375,7 @@ export default class StreamController
       return;
     }
 
-    if (frag.initSegment && !frag.initSegment.data && !this.bitrateTest) {
-      frag = frag.initSegment;
-    }
+    frag = this.mapToInitFragWhenRequired(frag);
 
     this.loadFragment(frag, levelInfo, targetBufferTime);
   }
@@ -439,7 +437,7 @@ export default class StreamController
 
   protected checkFragmentChanged(): boolean {
     const previousFrag = this.fragPlaying;
-    const fragChanged = super.checkFragmentChanged();
+    const fragChanged = this.checkFragPlaying();
     if (!fragChanged) {
       return false;
     }
@@ -1197,7 +1195,7 @@ export default class StreamController
       });
   }
 
-  private _handleTransmuxComplete(transmuxResult: TransmuxerResult) {
+  protected _handleTransmuxComplete(transmuxResult: TransmuxerResult) {
     const id = this.playlistType;
     const { hls } = this;
     const { remuxResult, chunkMeta } = transmuxResult;
@@ -1401,7 +1399,7 @@ export default class StreamController
     );
   }
 
-  private _bufferInitSegment(
+  protected _bufferInitSegment(
     currentLevel: Level,
     tracks: TrackSet,
     frag: Fragment,

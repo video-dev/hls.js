@@ -120,6 +120,7 @@ export default class LevelController extends BasePlaylistController {
     let resolutionFound = false;
     let videoCodecFound = false;
     let audioCodecFound = false;
+    let imageCodecFound = false;
 
     data.levels.forEach((levelParsed: LevelParsed) => {
       const attributes = levelParsed.attrs;
@@ -127,7 +128,7 @@ export default class LevelController extends BasePlaylistController {
         levelParsed,
         preferManagedMediaSource,
       );
-      const { audioCodec, videoCodec, width, height } = levelParsed;
+      const { audioCodec, videoCodec, imageCodec, width, height } = levelParsed;
       if (!supported) {
         this.log(`Some or all CODECS not supported "${attributes.CODECS}"`);
         return;
@@ -135,6 +136,7 @@ export default class LevelController extends BasePlaylistController {
       resolutionFound ||= !!(width && height);
       videoCodecFound ||= !!videoCodec;
       audioCodecFound ||= !!audioCodec;
+      imageCodecFound ||= !!imageCodec;
 
       const {
         CODECS,
@@ -175,6 +177,7 @@ export default class LevelController extends BasePlaylistController {
       resolutionFound,
       videoCodecFound,
       audioCodecFound,
+      imageCodecFound,
     );
   }
 
@@ -203,6 +206,7 @@ export default class LevelController extends BasePlaylistController {
     resolutionFound: boolean,
     videoCodecFound: boolean,
     audioCodecFound: boolean,
+    imageCodecFound: boolean,
   ) {
     let audioTracks: MediaPlaylist[] = [];
     let subtitleTracks: MediaPlaylist[] = [];
@@ -216,6 +220,11 @@ export default class LevelController extends BasePlaylistController {
         ({ videoCodec, videoRange, width, height }) =>
           (!!videoCodec || !!(width && height)) && isVideoRange(videoRange),
       );
+    }
+
+    // image codec handling requires image-only iframe player fed only image iframe variants
+    if (videoCodecFound && imageCodecFound) {
+      levels = levels.filter((lvl) => !lvl.imageCodec);
     }
 
     if (levels.length === 0) {

@@ -458,7 +458,7 @@ describe('AudioStreamController', function () {
 
     it('should return false when super.checkFragmentChanged returns false', function () {
       sandbox
-        .stub(BaseStreamController.prototype as any, 'checkFragmentChanged')
+        .stub(BaseStreamController.prototype as any, 'checkFragPlaying')
         .returns(false);
       expect((audioStreamController as any).checkFragmentChanged()).to.be.false;
     });
@@ -472,7 +472,7 @@ describe('AudioStreamController', function () {
       (audioStreamController as any).switchingTrack = mockSwitchingTrack;
 
       sandbox
-        .stub(BaseStreamController.prototype as any, 'checkFragmentChanged')
+        .stub(BaseStreamController.prototype as any, 'checkFragPlaying')
         .callsFake(function (this: any) {
           this.fragPlaying = mockFrag;
           return true;
@@ -499,7 +499,7 @@ describe('AudioStreamController', function () {
       (audioStreamController as any).switchingTrack = mockSwitchingTrack;
 
       sandbox
-        .stub(BaseStreamController.prototype as any, 'checkFragmentChanged')
+        .stub(BaseStreamController.prototype as any, 'checkFragPlaying')
         .callsFake(function (this: any) {
           this.fragPlaying = mockFrag;
           return true;
