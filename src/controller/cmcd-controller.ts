@@ -358,7 +358,8 @@ export default class CMCDController implements ComponentAPI {
       if (
         ot === CmcdObjectType.VIDEO ||
         ot === CmcdObjectType.AUDIO ||
-        ot == CmcdObjectType.MUXED
+        ot === CmcdObjectType.MUXED ||
+        (ot == null && (frag.type === 'main' || frag.type === 'audio'))
       ) {
         data.br = [level.bitrate / 1000];
         const tb = this.getTopBandwidth(frag) / 1000;

@@ -180,6 +180,41 @@ describe('CMCDController', function () {
         expectField(url, `d%3D1000`);
         expectField(url, `ot%3Dav`);
       });
+
+      it('emits br/tb/bl for single-rendition main fragments where ot is undefined', function () {
+        // Regression: single-rendition streams (e.g. muxed-fmp4 or mp3 audio-only with
+        // no master playlist) carry no codec metadata on the variant, and the fragment
+        // hasn't been parsed by the time the request fires — so getObjectType returns
+        // undefined. The br/tb/bl block must still emit, since the buffer for the
+        // segment exists regardless of whether ot resolved.
+        const details = setupEach({});
+        const hls = cmcdController.hls;
+        hls.levelController.levels[0].audioCodec = undefined;
+        hls.levelController.levels[0].videoCodec = undefined;
+        (cmcdController as any).media = {} as unknown as HTMLMediaElement;
+        Object.defineProperty(hls, 'mainForwardBufferInfo', {
+          configurable: true,
+          get: () => ({ len: 8.0 }),
+        });
+
+        const frag = details.fragments[0];
+        // Sanity: ot really is undefined for this fragment.
+        expect(
+          (cmcdController as any).getObjectType(
+            frag,
+            hls.levelController.levels[0],
+          ),
+        ).to.equal(undefined);
+
+        const { url } = applyFragmentData(frag);
+
+        // br: level.bitrate / 1000 = 1
+        expectField(url, `br%3D1`);
+        // tb: top bandwidth from hls.levels (sole level at 1000) = 1
+        expectField(url, `tb%3D1`);
+        // bl: 8.0s * 1000 = 8000ms
+        expectField(url, `bl%3D8000`);
+      });
     });
 
     describe('v2 configuration', function () {
