@@ -33,6 +33,7 @@ import type {
   MediaAttachedData,
   MediaEndedData,
 } from '../types/events';
+import type { Level } from '../types/level';
 import type {
   FragmentLoaderContext,
   Loader,
@@ -250,7 +251,7 @@ export default class CMCDController implements ComponentAPI {
     const eventData: Cmcd = {};
     const frag = data.details?.fragments[0];
     if (frag) {
-      eventData.ot = this.getObjectType(frag);
+      eventData.ot = this.getObjectType(frag, data);
     }
     this.reporter.recordEvent(CmcdEventType.BITRATE_CHANGE, eventData);
   }
@@ -351,7 +352,7 @@ export default class CMCDController implements ComponentAPI {
     try {
       const { frag, part } = context;
       const level = this.hls.levels[frag.level];
-      const ot = this.getObjectType(frag);
+      const ot = this.getObjectType(frag, level);
       const data: Cmcd = { d: (part || frag).duration * 1000, ot };
 
       if (
@@ -360,11 +361,11 @@ export default class CMCDController implements ComponentAPI {
         ot == CmcdObjectType.MUXED
       ) {
         data.br = [level.bitrate / 1000];
-        const tb = this.getTopBandwidth(ot) / 1000;
+        const tb = this.getTopBandwidth(frag) / 1000;
         if (Number.isFinite(tb)) {
           data.tb = [tb];
         }
-        const bl = this.getBufferLength(ot);
+        const bl = this.getBufferLength(frag);
         if (Number.isFinite(bl)) {
           data.bl = [bl];
         }
@@ -422,6 +423,7 @@ export default class CMCDController implements ComponentAPI {
    */
   private getObjectType(
     fragment: Fragment | MediaFragment,
+    variant?: Level | LevelSwitchingData,
   ): CmcdObjectType | undefined {
     const { type } = fragment;
 
@@ -438,25 +440,48 @@ export default class CMCDController implements ComponentAPI {
     }
 
     if (type === 'main') {
-      if (!this.hls.audioTracks.length) {
-        return CmcdObjectType.MUXED;
+      // Prefer variant codec info (set from STREAM-INF CODECS or parser).
+      if (variant) {
+        const { audioCodec, videoCodec } = variant;
+        if (audioCodec && videoCodec) {
+          return CmcdObjectType.MUXED;
+        }
+        if (videoCodec) {
+          return CmcdObjectType.VIDEO;
+        }
+        if (audioCodec) {
+          return CmcdObjectType.AUDIO;
+        }
       }
-
-      return CmcdObjectType.VIDEO;
+      // Fall back to parsed fragment's elementary streams.
+      if (fragment.hasStreams) {
+        const es = fragment.elementaryStreams;
+        if (es.audiovideo) {
+          return CmcdObjectType.MUXED;
+        }
+        if (es.video) {
+          return CmcdObjectType.VIDEO;
+        }
+        if (es.audio) {
+          return CmcdObjectType.AUDIO;
+        }
+      }
     }
 
     return undefined;
   }
 
   /**
-   * Get the highest bitrate.
+   * Get the highest bitrate available for the source backing this fragment.
+   * Audio renditions live in hls.audioTracks; everything else (including
+   * audio-only main playlists) draws from hls.levels.
    */
-  private getTopBandwidth(type: CmcdObjectType) {
+  private getTopBandwidth(fragment: Fragment | MediaFragment) {
     let bitrate: number = 0;
     let levels;
     const hls = this.hls;
 
-    if (type === CmcdObjectType.AUDIO) {
+    if (fragment.type === 'audio') {
       levels = hls.audioTracks;
     } else {
       const max = hls.maxAutoLevel;
@@ -474,15 +499,15 @@ export default class CMCDController implements ComponentAPI {
   }
 
   /**
-   * Get the buffer length for a media type in milliseconds
+   * Get the buffer length in milliseconds for the source backing this fragment.
    */
-  private getBufferLength(type: CmcdObjectType) {
+  private getBufferLength(fragment: Fragment | MediaFragment) {
     if (!this.media) {
       return NaN;
     }
 
     const info =
-      type === CmcdObjectType.AUDIO
+      fragment.type === 'audio'
         ? this.hls.audioForwardBufferInfo
         : this.hls.mainForwardBufferInfo;
     return info ? info.len * 1000 : NaN;

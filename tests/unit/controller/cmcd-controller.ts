@@ -56,6 +56,8 @@ const setupEach = (cmcd?: CMCDControllerConfig) => {
   const level = {
     bitrate: 1000,
     details,
+    audioCodec: 'mp4a.40.2',
+    videoCodec: 'avc1.640028',
   };
 
   const hls = new Hls({ cmcd }) as any;
@@ -414,6 +416,128 @@ describe('CMCDController', function () {
       });
     });
 
+    describe('getObjectType', function () {
+      it('returns MUXED for main fragments when variant has both audio and video codecs', function () {
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        const variant = { audioCodec: 'mp4a.40.2', videoCodec: 'avc1.640028' };
+        const result = (cmcdController as any).getObjectType(frag, variant);
+        expect(result).to.equal(CmcdObjectType.MUXED);
+      });
+
+      it('returns VIDEO for main fragments when variant has only a video codec', function () {
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        const variant = { videoCodec: 'avc1.640028' };
+        const result = (cmcdController as any).getObjectType(frag, variant);
+        expect(result).to.equal(CmcdObjectType.VIDEO);
+      });
+
+      it('returns AUDIO for main fragments when variant has only an audio codec (audio-only main playlist)', function () {
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        const variant = { audioCodec: 'mp4a.40.2' };
+        const result = (cmcdController as any).getObjectType(frag, variant);
+        expect(result).to.equal(CmcdObjectType.AUDIO);
+      });
+
+      it('falls back to fragment.elementaryStreams.audiovideo when variant codecs are absent', function () {
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        frag.elementaryStreams.audiovideo = {
+          startPTS: 0,
+          endPTS: 2,
+          startDTS: 0,
+          endDTS: 2,
+        };
+        const result = (cmcdController as any).getObjectType(frag);
+        expect(result).to.equal(CmcdObjectType.MUXED);
+      });
+
+      it('falls back to fragment.elementaryStreams.video when only video stream present', function () {
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        frag.elementaryStreams.video = {
+          startPTS: 0,
+          endPTS: 2,
+          startDTS: 0,
+          endDTS: 2,
+        };
+        const result = (cmcdController as any).getObjectType(frag);
+        expect(result).to.equal(CmcdObjectType.VIDEO);
+      });
+
+      it('falls back to fragment.elementaryStreams.audio when only audio stream present', function () {
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        frag.elementaryStreams.audio = {
+          startPTS: 0,
+          endPTS: 2,
+          startDTS: 0,
+          endDTS: 2,
+        };
+        const result = (cmcdController as any).getObjectType(frag);
+        expect(result).to.equal(CmcdObjectType.AUDIO);
+      });
+
+      it('returns undefined for main fragments when neither variant codecs nor elementary streams are known', function () {
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        // No variant, no elementary streams populated
+        const result = (cmcdController as any).getObjectType(frag);
+        expect(result).to.equal(undefined);
+      });
+
+      it('does not infer MUXED from hls.audioTracks.length === 0 alone', function () {
+        // Regression: previous logic returned MUXED whenever there were no alt audio renditions,
+        // misclassifying video-only variants.
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        // hls.audioTracks is empty by default, mimicking a video-only main variant.
+        const variant = { videoCodec: 'avc1.640028' };
+        const result = (cmcdController as any).getObjectType(frag, variant);
+        expect(result).to.equal(CmcdObjectType.VIDEO);
+      });
+
+      it('uses the fragment loader call site to derive ot from the active level', function () {
+        // Audio-only main playlist: level carries only an audioCodec.
+        // applyFragmentData should pass the level into getObjectType and produce ot=a (not ot=av).
+        const details = setupEach({});
+        const hls = cmcdController.hls;
+        hls.levelController.levels[0].audioCodec = 'mp4a.40.2';
+        hls.levelController.levels[0].videoCodec = undefined;
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        // ot=a but not ot=av (negative lookahead, since 'a' is a prefix of 'av').
+        expect(url).to.match(/ot%3Da(?!v)/);
+        expect(url).not.to.include('ot%3Dav');
+      });
+
+      it('derives ot from LevelSwitchingData in the BITRATE_CHANGE event payload', function () {
+        // Video-only variant: only videoCodec set. Must resolve to VIDEO, not MUXED.
+        const details = setupEach({
+          version: 2,
+          eventTargets: [{ url: 'https://x' }],
+        });
+        const reporter = (cmcdController as any).reporter;
+        const recordCalls: any[][] = [];
+        reporter.recordEvent = (...args: any[]) => {
+          recordCalls.push(args);
+        };
+
+        (cmcdController as any).hls.trigger(Events.LEVEL_SWITCHING, {
+          level: 0,
+          bitrate: 2000000,
+          details,
+          videoCodec: 'avc1.640028',
+        });
+
+        const bitrateCalls = recordCalls.filter((c) => c[0] === 'bc');
+        expect(bitrateCalls).to.have.lengthOf(1);
+        expect(bitrateCalls[0][1]?.ot).to.equal(CmcdObjectType.VIDEO);
+      });
+    });
+
     describe('getBufferLength', function () {
       const stubBufferInfo = (
         hls: any,
@@ -426,7 +550,9 @@ describe('CMCDController', function () {
         });
       };
 
-      it('uses hls.audioForwardBufferInfo for CmcdObjectType.AUDIO', function () {
+      const fragWithType = (type: PlaylistLevelType): any => ({ type });
+
+      it('uses hls.audioForwardBufferInfo for fragments with type=audio', function () {
         setupEach({});
         const hls = cmcdController.hls;
         (cmcdController as any).media = {} as unknown as HTMLMediaElement;
@@ -435,12 +561,12 @@ describe('CMCDController', function () {
         stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 999 });
 
         const result = (cmcdController as any).getBufferLength(
-          CmcdObjectType.AUDIO,
+          fragWithType(PlaylistLevelType.AUDIO),
         );
         expect(result).to.equal(12500);
       });
 
-      it('returns NaN for CmcdObjectType.AUDIO when audioForwardBufferInfo is null', function () {
+      it('returns NaN for type=audio when audioForwardBufferInfo is null', function () {
         setupEach({});
         const hls = cmcdController.hls;
         (cmcdController as any).media = {} as unknown as HTMLMediaElement;
@@ -448,12 +574,12 @@ describe('CMCDController', function () {
         stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 999 });
 
         const result = (cmcdController as any).getBufferLength(
-          CmcdObjectType.AUDIO,
+          fragWithType(PlaylistLevelType.AUDIO),
         );
         expect(Number.isNaN(result)).to.equal(true);
       });
 
-      it('uses hls.mainForwardBufferInfo for CmcdObjectType.VIDEO and MUXED', function () {
+      it('uses hls.mainForwardBufferInfo for fragments with type=main', function () {
         setupEach({});
         const hls = cmcdController.hls;
         (cmcdController as any).media = {} as unknown as HTMLMediaElement;
@@ -461,10 +587,26 @@ describe('CMCDController', function () {
         stubBufferInfo(hls, 'audioForwardBufferInfo', { len: 999 });
 
         expect(
-          (cmcdController as any).getBufferLength(CmcdObjectType.VIDEO),
+          (cmcdController as any).getBufferLength(
+            fragWithType(PlaylistLevelType.MAIN),
+          ),
         ).to.equal(8000);
+      });
+
+      it('uses hls.mainForwardBufferInfo for audio-only main playlists (type=main, ot=audio)', function () {
+        // Regression: previous logic switched on CmcdObjectType, which would have read
+        // audioForwardBufferInfo for an audio-only main playlist even though the buffer
+        // lives on the main source buffer.
+        setupEach({});
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {} as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 8.0 });
+        stubBufferInfo(hls, 'audioForwardBufferInfo', { len: 999 });
+
         expect(
-          (cmcdController as any).getBufferLength(CmcdObjectType.MUXED),
+          (cmcdController as any).getBufferLength(
+            fragWithType(PlaylistLevelType.MAIN),
+          ),
         ).to.equal(8000);
       });
 
@@ -477,14 +619,56 @@ describe('CMCDController', function () {
 
         expect(
           Number.isNaN(
-            (cmcdController as any).getBufferLength(CmcdObjectType.AUDIO),
+            (cmcdController as any).getBufferLength(
+              fragWithType(PlaylistLevelType.AUDIO),
+            ),
           ),
         ).to.equal(true);
         expect(
           Number.isNaN(
-            (cmcdController as any).getBufferLength(CmcdObjectType.VIDEO),
+            (cmcdController as any).getBufferLength(
+              fragWithType(PlaylistLevelType.MAIN),
+            ),
           ),
         ).to.equal(true);
+      });
+    });
+
+    describe('getTopBandwidth', function () {
+      const fragWithType = (type: PlaylistLevelType): any => ({ type });
+
+      const stubAudioTracks = (hls: any, tracks: any[]) => {
+        Object.defineProperty(hls, 'audioTracks', {
+          configurable: true,
+          get: () => tracks,
+        });
+      };
+
+      it('uses hls.audioTracks for fragments with type=audio', function () {
+        setupEach({});
+        const hls = cmcdController.hls;
+        stubAudioTracks(hls, [{ bitrate: 96000 }, { bitrate: 128000 }]);
+        // hls.levels has the test playlist's level at bitrate 1000; should NOT be used here.
+        const result = (cmcdController as any).getTopBandwidth(
+          fragWithType(PlaylistLevelType.AUDIO),
+        );
+        expect(result).to.equal(128000);
+      });
+
+      it('uses hls.levels for fragments with type=main (including audio-only main playlists)', function () {
+        // Regression: previous logic switched on CmcdObjectType, which would have read
+        // audioTracks for an audio-only main playlist even though the renditions live in hls.levels.
+        setupEach({});
+        const hls = cmcdController.hls;
+        hls.levelController.levels = [
+          { bitrate: 500000 },
+          { bitrate: 2000000 },
+        ];
+        stubAudioTracks(hls, [{ bitrate: 999999 }]);
+        const result = (cmcdController as any).getTopBandwidth(
+          fragWithType(PlaylistLevelType.MAIN),
+        );
+        expect(result).to.equal(2000000);
       });
     });
   });
