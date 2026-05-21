@@ -146,6 +146,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`interstitialLiveLookAhead`](#interstitiallivelookahead)
   - [`assetPlayerId`](#assetplayerid)
   - [`primarySessionId`](#primarysessionid)
+  - [`iframeCacheLimit`](#iframecachelimit)
   - [`useMediaCapabilities`](#usemediacapabilities)
 - [Video Binding/Unbinding API](#video-bindingunbinding-api)
   - [`hls.attachMedia(HTMLMediaElement | MediaAttachingData)`](#hlsattachmediahtmlmediaelement--mediaattachingdata)
@@ -195,6 +196,9 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.iframeVariants`](#hlsiframevariants)
   - [`hls.createIFramePlayer()`](#hlscreateiframeplayer)
     - [Example usage](#example-usage)
+  - [`hls.createImageIFramePlayer()`](#hlscreateimageiframeplayer)
+    - [Example usage](#example-usage-1)
+    - [Handling image data without an HTMLImageElement](#handling-image-data-without-an-htmlimageelement)
 - [Live stream API](#live-stream-api)
   - [`hls.liveSyncPosition`](#hlslivesyncposition)
   - [`hls.latency`](#hlslatency)
@@ -1934,6 +1938,14 @@ An optional identifier string used to identify the primary HLS session when work
 
 This is primarily used internally by HLS.js when creating interstitial asset players, but can be set manually if you need to coordinate multiple HLS instances.
 
+### `iframeCacheLimit`
+
+(default: `2097152` (2 MB))
+
+The maximum total byte size of cached image I-Frame data retained by the `ImageIFrameStreamController`. When the cache exceeds this limit, the oldest entries are evicted and their `Fragment.data` is cleared to free memory.
+
+This option only applies to image I-Frame player instances created via `hls.createImageIFramePlayer()`. Video I-Frame data (from `hls.createIFramePlayer()`) is managed by the MSE video SourceBuffer and is not affected by this setting.
+
 ### `useMediaCapabilities`
 
 (default value is `true` except in the light build or custom builds with setting the **USE_MEDIA_CAPABILITIES** flag to `false`.)
@@ -2242,6 +2254,77 @@ function preloadIFrame(time) {
   hlsIframesOnly?.loadMediaAt(time, { seekOnAppend: false });
 }
 ```
+
+| Method                               | Description                                                       |
+| ------------------------------------ | ----------------------------------------------------------------- |
+| `hls.createIFramePlayer(config?)`    | Creates an I-Frame player, or `null` if no I-Frame variants exist |
+| `player.attachMedia(video)`          | Attach an `HTMLVideoElement` for frame rendering                  |
+| `player.detachMedia()`               | Detach the video element                                          |
+| `player.loadMediaAt(time, options?)` | Load, append and then seek to the I-Frame at the given time       |
+| `player.stopLoad()`                  | Cancel active loading of segment data                             |
+| `player.destroy()`                   | Clean up resources                                                |
+
+### `hls.createImageIFramePlayer()`
+
+`createImageIFramePlayer` returns a new `HlsImageIFramesOnly` instance that uses the current instance's `iframeVariants` filtered to only those with an image codec (e.g. `CODECS="mjpg"`) as its `levels`. Returns `null` when no image I-Frame variants are available or before levels have loaded. This method accepts an optional config overrides argument.
+
+Image I-Frame instances load JPEG keyframes from fMP4 I-Frame segments without requiring MSE or a `<video>` element. This is useful for thumbnail previews or trick-play, especially on devices limited to a single video decoder.
+
+#### Example usage
+
+```ts
+const mainVideo = document.getElementById('video');
+const thumbnailImg = document.getElementById('thumbnail') as HTMLImageElement;
+const hls = new Hls();
+
+let imagePlayer: HlsImageIFramesOnly | null = null;
+
+hls.loadSource('http://example.com/primary.m3u8');
+hls.attachMedia(mainVideo);
+
+hls.once(Events.MANIFEST_PARSED, () => {
+  imagePlayer = hls.createImageIFramePlayer();
+  if (imagePlayer) {
+    imagePlayer.attachImage(thumbnailImg);
+    imagePlayer.on(Events.FRAG_BUFFERED, (name, { frag }) => {
+      /* JPEG frame rendered to image element */
+    });
+    imagePlayer.on(Events.ERROR, (name, { error }) => {
+      /* handle error */
+    });
+  }
+});
+
+function showThumbnailAtTime(time: number) {
+  imagePlayer?.loadMediaAt(time);
+}
+```
+
+| Method                                 | Description                                                          |
+| -------------------------------------- | -------------------------------------------------------------------- |
+| `hls.createImageIFramePlayer(config?)` | Creates an image I-Frame player, or `null` if no MJPG variants exist |
+| `player.attachImage(img)`              | Attach an `HTMLImageElement` for frame rendering                     |
+| `player.detachImage()`                 | Detach the image element                                             |
+| `player.loadMediaAt(time)`             | Load and display the I-Frame at the given time                       |
+| `player.stopLoad()`                    | Cancel active loading of segment data                                |
+| `player.destroy()`                     | Clean up resources                                                   |
+
+#### Handling image data without an HTMLImageElement
+
+Developers can process image data directly instead of attaching an `HTMLImageElement`. Omit the `attachImage()` call and listen for `FRAG_PARSED` — the `Fragment.data` property on the event's `frag` contains the raw JPEG bytes (a `Uint8Array` extracted from the fMP4 mdat box):
+
+```ts
+const imagePlayer = hls.createImageIFramePlayer();
+if (imagePlayer) {
+  imagePlayer.on(Hls.Events.FRAG_PARSED, (name, { frag }) => {
+    const jpegBytes: Uint8Array = frag.data;
+    // Process JPEG data (e.g. draw to canvas, cache and replace frag.data, etc.)
+  });
+  imagePlayer.loadMediaAt(30);
+}
+```
+
+Note: `FRAG_BUFFERED` only fires when an `HTMLImageElement` is attached (emitted after `image.onload`). Without an attached image, use `FRAG_PARSED` which fires once the segment is demuxed and `Fragment.data` is populated.
 
 ## Live stream API
 

@@ -464,7 +464,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
         okToFlushForwardBuffer: boolean;
     };
     // (undocumented)
-    protected checkFragmentChanged(): boolean;
+    protected checkFragPlaying(): boolean;
     // (undocumented)
     protected checkLiveUpdate(details: LevelDetails): void;
     // (undocumented)
@@ -568,7 +568,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected _loadInitSegment(fragment: Fragment, level: Level): void;
     // (undocumented)
-    mapToInitFragWhenRequired(frag: Fragment | null): typeof frag;
+    protected mapToInitFragWhenRequired<T extends Fragment | null>(frag: T): T | Fragment;
     // (undocumented)
     protected media: HTMLMediaElement | null;
     // (undocumented)
@@ -1036,6 +1036,8 @@ export interface CodecsParsed {
     // (undocumented)
     audioCodec?: string;
     // (undocumented)
+    imageCodec?: string;
+    // (undocumented)
     textCodec?: string;
     // (undocumented)
     unknownCodecs?: string[];
@@ -1349,6 +1351,13 @@ export class ErrorController extends Logger implements NetworkComponentAPI {
     // (undocumented)
     stopLoad(): void;
 }
+
+// Warning: (ae-missing-release-tag) "ErrorControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type ErrorControllerConfig = {
+    errorPenaltyExpireMs: number;
+};
 
 // Warning: (ae-missing-release-tag) "ErrorData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2204,6 +2213,7 @@ class Hls implements HlsEventEmitter {
     set capLevelToPlayerSize(shouldStartCapping: boolean);
     readonly config: HlsConfig;
     createIFramePlayer(configOverride?: Partial<HlsConfig>): HlsIFramesOnly | null;
+    createImageIFramePlayer(configOverride?: Partial<HlsConfig>): HlsImageIFramesOnly | null;
     get currentLevel(): number;
     // Warning: (ae-setter-with-docs) The doc comment for the property "currentLevel" must appear on the getter, not the setter.
     set currentLevel(newLevel: number);
@@ -2414,7 +2424,6 @@ export interface HlsChunkPerformanceTiming extends HlsPerformanceTiming {
     executeStart: number;
 }
 
-// Warning: (ae-forgotten-export) The symbol "ErrorControllerConfig" needs to be exported by the entry point hls.d.ts
 // Warning: (ae-missing-release-tag) "HlsConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2459,14 +2468,14 @@ export type HlsConfig = {
     useMediaCapabilities: boolean;
     streamController: typeof StreamController;
     abrController: typeof AbrController;
-    bufferController: typeof BufferController;
-    capLevelController: typeof CapLevelController;
+    bufferController?: typeof BufferController;
+    capLevelController?: typeof CapLevelController;
     errorController: typeof ErrorController;
     fpsController?: typeof FPSController;
     progressive: boolean;
     lowLatencyMode: boolean;
     primarySessionId?: string;
-} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & ErrorControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & PlaylistControllerConfig & FragmentLoaderConfig & PlaylistLoaderConfig;
+} & ABRControllerConfig & BufferControllerConfig & CapLevelControllerConfig & EMEControllerConfig & ErrorControllerConfig & FPSControllerConfig & GapControllerConfig & LevelControllerConfig & MP4RemuxerConfig & IFrameControllerConfig & StreamControllerConfig & SelectionPreferences & LatencyControllerConfig & MetadataControllerConfig & TimelineControllerConfig & TSDemuxerConfig & HlsLoadPolicies & PlaylistControllerConfig & FragmentLoaderConfig & PlaylistLoaderConfig;
 
 // Warning: (ae-missing-release-tag) "HlsEventEmitter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2491,11 +2500,21 @@ export interface HlsEventEmitter {
 // Warning: (ae-missing-release-tag) "HlsIFramesOnly" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export interface HlsIFramesOnly extends Hls {
-    // Warning: (ae-forgotten-export) The symbol "LoadMediaAtOptions" needs to be exported by the entry point hls.d.ts
-    //
+export interface HlsIFramesOnly extends Omit<Hls, 'createIFramePlayer' | 'createImageIFramePlayer' | 'iframeVariants' | 'swapAudioCodec' | 'setAudioOption' | 'allAudioTracks' | 'audioTracks' | 'audioTrack' | 'nextAudioTrack' | 'setSubtitleOption' | 'allSubtitleTracks' | 'subtitleTracks' | 'subtitleTrack' | 'subtitleDisplay'> {
     // (undocumented)
     loadMediaAt(time: number, options?: Partial<LoadMediaAtOptions>): void;
+}
+
+// Warning: (ae-missing-release-tag) "HlsImageIFramesOnly" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface HlsImageIFramesOnly extends Omit<HlsIFramesOnly, 'attachMedia' | 'detachMedia' | 'transferMedia' | 'recoverMediaError' | 'media'> {
+    // (undocumented)
+    attachImage(image: HTMLImageElement): void;
+    // (undocumented)
+    detachImage(): void;
+    // (undocumented)
+    loadMediaAt(time: number): void;
 }
 
 // Warning: (ae-missing-release-tag) "HlsListeners" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2739,7 +2758,16 @@ export class IFrameController extends Logger {
     constructor(hls: Hls, HlsPlayerClass: typeof Hls);
     // (undocumented)
     createIFramePlayer(configOverride?: Partial<HlsConfig> | undefined): HlsIFramesOnly | null;
+    // (undocumented)
+    createImageIFramePlayer(configOverride?: Partial<HlsConfig> | undefined): HlsImageIFramesOnly | null;
 }
+
+// Warning: (ae-missing-release-tag) "IFrameControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type IFrameControllerConfig = {
+    iframeCacheLimit: number;
+};
 
 // Warning: (ae-missing-release-tag) "ILogFunction" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -3363,6 +3391,8 @@ export class Level {
     readonly id: number;
     // (undocumented)
     readonly iframes?: boolean;
+    // (undocumented)
+    readonly imageCodec?: string;
     // (undocumented)
     loaded?: {
         bytes: number;
@@ -4005,6 +4035,13 @@ export interface LoaderStats {
     // (undocumented)
     total: number;
 }
+
+// Warning: (ae-missing-release-tag) "LoadMediaAtOptions" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type LoadMediaAtOptions = {
+    seekOnAppend: boolean;
+};
 
 // Warning: (ae-missing-release-tag) "LoadPolicy" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -4850,6 +4887,8 @@ export class StreamController extends BaseStreamController implements NetworkCom
     // Warning: (ae-setter-with-docs) The doc comment for the property "backtrackFragment" must appear on the getter, not the setter.
     protected set backtrackFragment(value: Fragment | undefined);
     // (undocumented)
+    protected _bufferInitSegment(currentLevel: Level, tracks: TrackSet, frag: Fragment, chunkMeta: ChunkMetadata): void;
+    // (undocumented)
     protected checkFragmentChanged(): boolean;
     protected get couldBacktrack(): boolean;
     // Warning: (ae-setter-with-docs) The doc comment for the property "couldBacktrack" must appear on the getter, not the setter.
@@ -4871,6 +4910,8 @@ export class StreamController extends BaseStreamController implements NetworkCom
     getMainFwdBufferInfo(): BufferInfo | null;
     // (undocumented)
     protected _handleFragmentLoadProgress(data: FragLoadedData): void;
+    // (undocumented)
+    protected _handleTransmuxComplete(transmuxResult: TransmuxerResult): void;
     // (undocumented)
     get hasEnoughToStart(): boolean;
     // (undocumented)

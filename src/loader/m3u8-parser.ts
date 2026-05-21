@@ -974,7 +974,7 @@ function setCodecs(
   level: CodecsParsed,
 ) {
   let codecs = (codecsAttributeValue || '').split(/[ ,]+/).filter((c) => c);
-  ['video', 'audio', 'text'].forEach((type: CodecType) => {
+  ['video', 'audio', 'text', 'image'].forEach((type: CodecType) => {
     const filtered = codecs.filter((codec) => isCodecType(codec, type));
     if (filtered.length) {
       // Comma separated list of all codecs for type
