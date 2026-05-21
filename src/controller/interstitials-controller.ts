@@ -236,7 +236,7 @@ export default class InterstitialsController
       this.manager =
         null;
     // @ts-ignore
-    this.hls = this.HlsPlayerClass = this.log = null;
+    this.hls = this.HlsPlayerClass = null;
     // @ts-ignore
     this.assetListLoader = null;
     // @ts-ignore

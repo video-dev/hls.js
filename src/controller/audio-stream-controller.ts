@@ -44,6 +44,7 @@ import type {
 import type { MediaPlaylist } from '../types/media-playlist';
 import type { TrackSet } from '../types/track';
 import type { TransmuxerResult } from '../types/transmuxer';
+import type { BufferInfo } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -344,16 +345,13 @@ class AudioStreamController
       return;
     }
 
-    const bufferable = this.mediaBuffer ? this.mediaBuffer : this.media;
+    const bufferable = this.getBufferOutput();
     if (this.bufferFlushed && bufferable) {
       this.bufferFlushed = false;
       this.afterBufferFlushed(bufferable, ElementaryStreamTypes.AUDIO);
     }
 
-    const bufferInfo = this.getFwdBufferInfo(
-      bufferable,
-      PlaylistLevelType.AUDIO,
-    );
+    const bufferInfo = this.getFwdBufferInfo();
     if (bufferInfo === null) {
       return;
     }
@@ -773,6 +771,11 @@ class AudioStreamController
     }
   }
 
+  public getFwdBufferInfo(): BufferInfo | null {
+    const bufferable = this.getBufferOutput();
+    return super.getFwdBufferInfo(bufferable, PlaylistLevelType.AUDIO);
+  }
+
   protected getBufferOutput(): Bufferable | null {
     return this.mediaBuffer ? this.mediaBuffer : this.media;
   }
@@ -869,7 +872,7 @@ class AudioStreamController
       if (this.state === State.ENDED) {
         this.state = State.IDLE;
       }
-      const mediaBuffer = this.mediaBuffer || this.media;
+      const mediaBuffer = this.getBufferOutput();
       if (mediaBuffer) {
         this.afterBufferFlushed(mediaBuffer, type);
         this.tick();
