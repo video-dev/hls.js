@@ -1,4 +1,4 @@
-import { CmcdHeaderField } from '@svta/cml-cmcd';
+import { CmcdHeaderField, CmcdObjectType } from '@svta/cml-cmcd';
 import { expect } from 'chai';
 import CMCDController from '../../../src/controller/cmcd-controller';
 import { Events } from '../../../src/events';
@@ -411,6 +411,80 @@ describe('CMCDController', function () {
         expect(recordCalls).to.have.lengthOf(1);
 
         cmcdController.destroy();
+      });
+    });
+
+    describe('getBufferLength', function () {
+      const stubBufferInfo = (
+        hls: any,
+        prop: 'mainForwardBufferInfo' | 'audioForwardBufferInfo',
+        info: { len: number } | null,
+      ) => {
+        Object.defineProperty(hls, prop, {
+          configurable: true,
+          get: () => info,
+        });
+      };
+
+      it('uses hls.audioForwardBufferInfo for CmcdObjectType.AUDIO', function () {
+        setupEach({});
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {} as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'audioForwardBufferInfo', { len: 12.5 });
+        // Set main to a sentinel that would fail the assertion if used by mistake.
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 999 });
+
+        const result = (cmcdController as any).getBufferLength(
+          CmcdObjectType.AUDIO,
+        );
+        expect(result).to.equal(12500);
+      });
+
+      it('returns NaN for CmcdObjectType.AUDIO when audioForwardBufferInfo is null', function () {
+        setupEach({});
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {} as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'audioForwardBufferInfo', null);
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 999 });
+
+        const result = (cmcdController as any).getBufferLength(
+          CmcdObjectType.AUDIO,
+        );
+        expect(Number.isNaN(result)).to.equal(true);
+      });
+
+      it('uses hls.mainForwardBufferInfo for CmcdObjectType.VIDEO and MUXED', function () {
+        setupEach({});
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {} as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 8.0 });
+        stubBufferInfo(hls, 'audioForwardBufferInfo', { len: 999 });
+
+        expect(
+          (cmcdController as any).getBufferLength(CmcdObjectType.VIDEO),
+        ).to.equal(8000);
+        expect(
+          (cmcdController as any).getBufferLength(CmcdObjectType.MUXED),
+        ).to.equal(8000);
+      });
+
+      it('returns NaN when no media is attached', function () {
+        setupEach({});
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = undefined;
+        stubBufferInfo(hls, 'audioForwardBufferInfo', { len: 12.5 });
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 8.0 });
+
+        expect(
+          Number.isNaN(
+            (cmcdController as any).getBufferLength(CmcdObjectType.AUDIO),
+          ),
+        ).to.equal(true);
+        expect(
+          Number.isNaN(
+            (cmcdController as any).getBufferLength(CmcdObjectType.VIDEO),
+          ),
+        ).to.equal(true);
       });
     });
   });
