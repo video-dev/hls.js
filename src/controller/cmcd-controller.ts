@@ -14,7 +14,6 @@ import {
   toCmcdValue,
 } from '@svta/cml-cmcd';
 import { Events } from '../events';
-import { BufferHelper } from '../utils/buffer-helper';
 import {
   addEventListener,
   removeEventListener,
@@ -26,10 +25,8 @@ import type {
 } from '../config';
 import type Hls from '../hls';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
-import type { ExtendedSourceBuffer } from '../types/buffer';
 import type { ComponentAPI } from '../types/component-api';
 import type {
-  BufferCreatedData,
   ErrorData,
   LevelSwitchingData,
   ManifestLoadingData,
@@ -58,7 +55,6 @@ export default class CMCDController implements ComponentAPI {
   private starved: boolean = false;
   private buffering: boolean = true;
   private playerState: CmcdPlayerState = CmcdPlayerState.STARTING;
-  private audioBuffer?: ExtendedSourceBuffer;
   private reporter?: CmcdReporter;
 
   constructor(hls: Hls) {
@@ -117,7 +113,6 @@ export default class CMCDController implements ComponentAPI {
     hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     hls.on(Events.MEDIA_ENDED, this.onMediaEnded, this);
-    hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
   }
@@ -128,7 +123,6 @@ export default class CMCDController implements ComponentAPI {
     hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
     hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     hls.off(Events.MEDIA_ENDED, this.onMediaEnded, this);
-    hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
   }
@@ -143,7 +137,7 @@ export default class CMCDController implements ComponentAPI {
     }
 
     // @ts-ignore
-    this.hls = this.config = this.audioBuffer = null;
+    this.hls = this.config = null;
     // @ts-ignore
     this.onWaiting = this.onPlaying = this.onPause = null;
     // @ts-ignore
@@ -177,13 +171,6 @@ export default class CMCDController implements ComponentAPI {
 
     // @ts-ignore
     this.media = null;
-  }
-
-  private onBufferCreated(
-    event: Events.BUFFER_CREATED,
-    data: BufferCreatedData,
-  ) {
-    this.audioBuffer = data.tracks.audio?.buffer;
   }
 
   private onWaiting = () => {
