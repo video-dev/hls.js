@@ -20,6 +20,7 @@ export interface CodecsParsed {
   audioCodec?: string;
   videoCodec?: string;
   textCodec?: string;
+  imageCodec?: string;
   unknownCodecs?: string[];
 }
 
@@ -120,6 +121,7 @@ export class Level {
   public readonly supplemental: CodecsParsed | undefined;
   public readonly videoCodec: string | undefined;
   public readonly width: number;
+  public readonly imageCodec?: string;
   public readonly iframes?: boolean;
   public details?: LevelDetails;
   public fragmentError: number = 0;
@@ -150,6 +152,9 @@ export class Level {
     this._avgBitrate = data.attrs.decimalInteger('AVERAGE-BANDWIDTH');
     this.audioCodec = data.audioCodec;
     this.videoCodec = data.videoCodec;
+    if ('imageCodec' in data) {
+      this.imageCodec = data.imageCodec;
+    }
     this.codecSet = [data.videoCodec, data.audioCodec]
       .filter((c) => !!c)
       .map((s: string) => s.substring(0, 4))

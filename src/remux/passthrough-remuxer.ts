@@ -553,6 +553,8 @@ function getParsedTrackCodec(
 
     logger.warn(`Unhandled audio codec "${parsedCodec}" in mp4 MAP`);
     return parsedCodec || 'mp4a';
+  } else if (parsedCodec === 'mjpg') {
+    return parsedCodec;
   }
   // Provide defaults based on codec type
   // This allows for some playback of some fmp4 playlists without CODECS defined in manifest
