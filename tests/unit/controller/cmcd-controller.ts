@@ -534,6 +534,49 @@ describe('CMCDController', function () {
         expect(result).to.equal(CmcdObjectType.VIDEO);
       });
 
+      it('returns VIDEO (not MUXED) when alt audio renditions exist and variant has both codecs', function () {
+        // STREAM-INF CODECS describes the variant plus its alternate renditions, so audioCodec
+        // here belongs to the alt audio track, not the main variant.
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        Object.defineProperty(cmcdController.hls, 'audioTracks', {
+          configurable: true,
+          get: () => [{ bitrate: 128000 }],
+        });
+        const variant = { audioCodec: 'mp4a.40.2', videoCodec: 'avc1.640028' };
+        const result = (cmcdController as any).getObjectType(frag, variant);
+        expect(result).to.equal(CmcdObjectType.VIDEO);
+      });
+
+      it('returns undefined when alt audio renditions exist and variant has only an audio codec', function () {
+        // Same reasoning: audioCodec alone is not enough to call the main variant audio-only
+        // when alternate audio renditions are present.
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        Object.defineProperty(cmcdController.hls, 'audioTracks', {
+          configurable: true,
+          get: () => [{ bitrate: 128000 }],
+        });
+        const variant = { audioCodec: 'mp4a.40.2' };
+        const result = (cmcdController as any).getObjectType(frag, variant);
+        expect(result).to.equal(undefined);
+      });
+
+      it('prefers parsed elementary streams over variant codecs', function () {
+        // Elementary streams reflect what was actually parsed; trust them over the variant hint.
+        const details = setupEach({});
+        const frag = details.fragments[0];
+        frag.elementaryStreams.video = {
+          startPTS: 0,
+          endPTS: 2,
+          startDTS: 0,
+          endDTS: 2,
+        };
+        const variant = { audioCodec: 'mp4a.40.2', videoCodec: 'avc1.640028' };
+        const result = (cmcdController as any).getObjectType(frag, variant);
+        expect(result).to.equal(CmcdObjectType.VIDEO);
+      });
+
       it('uses the fragment loader call site to derive ot from the active level', function () {
         // Audio-only main playlist: level carries only an audioCodec.
         // applyFragmentData should pass the level into getObjectType and produce ot=a (not ot=av).

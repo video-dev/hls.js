@@ -447,20 +447,7 @@ export default class CMCDController implements ComponentAPI {
     }
 
     if (type === 'main') {
-      // Prefer variant codec info (set from STREAM-INF CODECS or parser).
-      if (variant) {
-        const { audioCodec, videoCodec } = variant;
-        if (audioCodec && videoCodec) {
-          return CmcdObjectType.MUXED;
-        }
-        if (videoCodec) {
-          return CmcdObjectType.VIDEO;
-        }
-        if (audioCodec) {
-          return CmcdObjectType.AUDIO;
-        }
-      }
-      // Fall back to parsed fragment's elementary streams.
+      // Parsed elementary streams are ground truth when present.
       if (fragment.hasStreams) {
         const es = fragment.elementaryStreams;
         if (es.audiovideo) {
@@ -471,6 +458,23 @@ export default class CMCDController implements ComponentAPI {
         }
         if (es.audio) {
           return CmcdObjectType.AUDIO;
+        }
+      }
+      // Fall back to variant codec info. STREAM-INF CODECS describes the variant
+      // including any alternate renditions it pulls from, so audioCodec only
+      // implies the main variant carries audio when no audio media options exist.
+      if (variant) {
+        const { audioCodec, videoCodec } = variant;
+        if (!this.hls.audioTracks.length) {
+          if (audioCodec && videoCodec) {
+            return CmcdObjectType.MUXED;
+          }
+          if (audioCodec) {
+            return CmcdObjectType.AUDIO;
+          }
+        }
+        if (videoCodec) {
+          return CmcdObjectType.VIDEO;
         }
       }
     }
