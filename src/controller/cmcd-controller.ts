@@ -490,26 +490,14 @@ export default class CMCDController implements ComponentAPI {
    * Get the buffer length for a media type in milliseconds
    */
   private getBufferLength(type: CmcdObjectType) {
-    const media = this.media;
-    if (!media) {
+    if (!this.media) {
       return NaN;
     }
 
-    // TODO: Replace with hls.audioForwardBufferInfo once exposed. https://github.com/video-dev/hls.js/issues/7858
-    if (type === CmcdObjectType.AUDIO) {
-      const buffer = this.audioBuffer;
-      if (!buffer) {
-        return NaN;
-      }
-      const info = BufferHelper.bufferInfo(
-        buffer,
-        media.currentTime,
-        media.paused ? 0 : this.config.maxBufferHole,
-      );
-      return info.len * 1000;
-    }
-
-    const info = this.hls.mainForwardBufferInfo;
+    const info =
+      type === CmcdObjectType.AUDIO
+        ? this.hls.audioForwardBufferInfo
+        : this.hls.mainForwardBufferInfo;
     return info ? info.len * 1000 : NaN;
   }
 
