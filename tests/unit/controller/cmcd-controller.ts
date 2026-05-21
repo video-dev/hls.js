@@ -1,4 +1,4 @@
-import { CmcdHeaderField, CmcdObjectType } from '@svta/cml-cmcd';
+import { CmcdEventType, CmcdHeaderField, CmcdObjectType } from '@svta/cml-cmcd';
 import { expect } from 'chai';
 import CMCDController from '../../../src/controller/cmcd-controller';
 import { Events } from '../../../src/events';
@@ -590,7 +590,9 @@ describe('CMCDController', function () {
       it('uses hls.audioForwardBufferInfo for fragments with type=audio', function () {
         setupEach({});
         const hls = cmcdController.hls;
-        (cmcdController as any).media = {} as unknown as HTMLMediaElement;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
         stubBufferInfo(hls, 'audioForwardBufferInfo', { len: 12.5 });
         // Set main to a sentinel that would fail the assertion if used by mistake.
         stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 999 });
@@ -604,7 +606,9 @@ describe('CMCDController', function () {
       it('returns NaN for type=audio when audioForwardBufferInfo is null', function () {
         setupEach({});
         const hls = cmcdController.hls;
-        (cmcdController as any).media = {} as unknown as HTMLMediaElement;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
         stubBufferInfo(hls, 'audioForwardBufferInfo', null);
         stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 999 });
 
@@ -617,7 +621,9 @@ describe('CMCDController', function () {
       it('uses hls.mainForwardBufferInfo for fragments with type=main', function () {
         setupEach({});
         const hls = cmcdController.hls;
-        (cmcdController as any).media = {} as unknown as HTMLMediaElement;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
         stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 8.0 });
         stubBufferInfo(hls, 'audioForwardBufferInfo', { len: 999 });
 
@@ -634,7 +640,9 @@ describe('CMCDController', function () {
         // lives on the main source buffer.
         setupEach({});
         const hls = cmcdController.hls;
-        (cmcdController as any).media = {} as unknown as HTMLMediaElement;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
         stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 8.0 });
         stubBufferInfo(hls, 'audioForwardBufferInfo', { len: 999 });
 
@@ -666,6 +674,179 @@ describe('CMCDController', function () {
             ),
           ),
         ).to.equal(true);
+      });
+    });
+
+    describe('event bl propagation', function () {
+      const stubBufferInfo = (
+        hls: any,
+        prop: 'mainForwardBufferInfo' | 'audioForwardBufferInfo',
+        info: { len: number } | null,
+      ) => {
+        Object.defineProperty(hls, prop, {
+          configurable: true,
+          get: () => info,
+        });
+      };
+
+      it('updates persistent bl on BUFFER_APPENDED', function () {
+        setupEach({ version: 2 });
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 10 });
+        stubBufferInfo(hls, 'audioForwardBufferInfo', null);
+
+        const reporter = (cmcdController as any).reporter;
+        expect(reporter.data.bl).to.equal(undefined);
+
+        hls.trigger(Events.BUFFER_APPENDED, {
+          type: 'video',
+          frag: null,
+          part: null,
+          chunkMeta: {},
+          parent: 'main',
+          timeRanges: {},
+        });
+
+        expect(reporter.data.bl).to.deep.equal([10000]);
+
+        cmcdController.destroy();
+      });
+
+      it('updates persistent bl on BUFFER_FLUSHED (covers seek-to-empty)', function () {
+        setupEach({ version: 2 });
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 0 });
+        stubBufferInfo(hls, 'audioForwardBufferInfo', null);
+
+        const reporter = (cmcdController as any).reporter;
+        hls.trigger(Events.BUFFER_FLUSHED, {
+          type: 'video',
+          start: 0,
+          end: 0,
+        });
+
+        expect(reporter.data.bl).to.deep.equal([0]);
+
+        cmcdController.destroy();
+      });
+
+      it('uses min(main, audio) when both buffer sources are available', function () {
+        setupEach({ version: 2 });
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 10 });
+        stubBufferInfo(hls, 'audioForwardBufferInfo', { len: 7 });
+
+        const reporter = (cmcdController as any).reporter;
+        hls.trigger(Events.BUFFER_APPENDED, {
+          type: 'audio',
+          frag: null,
+          part: null,
+          chunkMeta: {},
+          parent: 'main',
+          timeRanges: {},
+        });
+
+        expect(reporter.data.bl).to.deep.equal([7000]);
+
+        cmcdController.destroy();
+      });
+
+      it('does not update bl when no media is attached', function () {
+        setupEach({ version: 2 });
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = undefined;
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 10 });
+        stubBufferInfo(hls, 'audioForwardBufferInfo', null);
+
+        const reporter = (cmcdController as any).reporter;
+        hls.trigger(Events.BUFFER_APPENDED, {
+          type: 'video',
+          frag: null,
+          part: null,
+          chunkMeta: {},
+          parent: 'main',
+          timeRanges: {},
+        });
+
+        expect(reporter.data.bl).to.equal(undefined);
+
+        cmcdController.destroy();
+      });
+
+      it('does not update bl when both buffer info sources are null', function () {
+        setupEach({ version: 2 });
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'mainForwardBufferInfo', null);
+        stubBufferInfo(hls, 'audioForwardBufferInfo', null);
+
+        const reporter = (cmcdController as any).reporter;
+        hls.trigger(Events.BUFFER_APPENDED, {
+          type: 'video',
+          frag: null,
+          part: null,
+          chunkMeta: {},
+          parent: 'main',
+          timeRanges: {},
+        });
+
+        expect(reporter.data.bl).to.equal(undefined);
+
+        cmcdController.destroy();
+      });
+
+      it('emits bl in queued event payloads after buffer info is known', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [
+            {
+              url: 'https://analytics.example.com/cmcd',
+              events: [CmcdEventType.PLAY_STATE],
+              batchSize: 100,
+            },
+          ],
+        });
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 10 });
+        stubBufferInfo(hls, 'audioForwardBufferInfo', null);
+
+        hls.trigger(Events.BUFFER_APPENDED, {
+          type: 'video',
+          frag: null,
+          part: null,
+          chunkMeta: {},
+          parent: 'main',
+          timeRanges: {},
+        });
+
+        (cmcdController as any).onPlaying();
+
+        const reporter = (cmcdController as any).reporter;
+        const targetStates = Array.from(
+          reporter.eventTargets.values(),
+        ) as any[];
+        const queue = targetStates[0].queue as any[];
+        const psEvents = queue.filter(
+          (e: any) => e.e === CmcdEventType.PLAY_STATE,
+        );
+        expect(psEvents.length).to.be.greaterThan(0);
+        expect(psEvents[0].bl).to.deep.equal([10000]);
+
+        cmcdController.destroy();
       });
     });
 

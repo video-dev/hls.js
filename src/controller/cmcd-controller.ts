@@ -27,6 +27,8 @@ import type Hls from '../hls';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { ComponentAPI } from '../types/component-api';
 import type {
+  BufferAppendedData,
+  BufferFlushedData,
   ErrorData,
   LevelSwitchingData,
   ManifestLoadingData,
@@ -116,6 +118,8 @@ export default class CMCDController implements ComponentAPI {
     hls.on(Events.MEDIA_ENDED, this.onMediaEnded, this);
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
+    hls.on(Events.BUFFER_APPENDED, this.onBufferInfoChange, this);
+    hls.on(Events.BUFFER_FLUSHED, this.onBufferInfoChange, this);
   }
 
   private unregisterListeners() {
@@ -126,6 +130,8 @@ export default class CMCDController implements ComponentAPI {
     hls.off(Events.MEDIA_ENDED, this.onMediaEnded, this);
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
+    hls.off(Events.BUFFER_APPENDED, this.onBufferInfoChange, this);
+    hls.off(Events.BUFFER_FLUSHED, this.onBufferInfoChange, this);
   }
 
   destroy() {
@@ -512,6 +518,39 @@ export default class CMCDController implements ComponentAPI {
         ? this.hls.audioForwardBufferInfo
         : this.hls.mainForwardBufferInfo;
     return info ? info.len * 1000 : NaN;
+  }
+
+  /**
+   * Get the buffer length in milliseconds without a specific fragment context.
+   * Used to keep `bl` fresh on event reports independent of segment requests.
+   * Returns the playback bottleneck: min of main and audio forward buffer
+   * lengths when both exist; otherwise whichever is available.
+   */
+  private getEventBufferLength(): number {
+    if (!this.media) {
+      return NaN;
+    }
+    const main = this.hls.mainForwardBufferInfo;
+    const audio = this.hls.audioForwardBufferInfo;
+    if (main && audio) {
+      return Math.min(main.len, audio.len) * 1000;
+    }
+    const info = main || audio;
+    return info ? info.len * 1000 : NaN;
+  }
+
+  private onBufferInfoChange(
+    event: Events.BUFFER_APPENDED | Events.BUFFER_FLUSHED,
+    data: BufferAppendedData | BufferFlushedData,
+  ) {
+    if (!this.reporter) {
+      return;
+    }
+    const bl = this.getEventBufferLength();
+    if (!Number.isFinite(bl)) {
+      return;
+    }
+    this.reporter.update({ bl: [bl] });
   }
 
   /**
