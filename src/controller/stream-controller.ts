@@ -270,10 +270,9 @@ export default class StreamController
 
     const lastDetails = this.getLevelDetails();
     if (lastDetails && this._streamEnded(bufferInfo, lastDetails)) {
-      const data: BufferEOSData = {};
-      if (this.altAudio === AlternateAudio.SWITCHED) {
-        data.type = 'video';
-      }
+      const data: BufferEOSData = {
+        type: this.targetBufferType(),
+      };
 
       this.hls.trigger(Events.BUFFER_EOS, data);
       this.state = State.ENDED;
@@ -489,11 +488,13 @@ export default class StreamController
   }
 
   protected flushMainBuffer(startOffset: number, endOffset: number) {
-    super.flushMainBuffer(
-      startOffset,
-      endOffset,
-      this.altAudio === AlternateAudio.SWITCHED ? 'video' : null,
-    );
+    super.flushMainBuffer(startOffset, endOffset, this.targetBufferType());
+  }
+
+  private targetBufferType(): 'video' | null {
+    return this.altAudio === AlternateAudio.SWITCHED && !this.audioOnly
+      ? 'video'
+      : null;
   }
 
   protected onMediaAttached(
