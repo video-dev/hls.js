@@ -1092,7 +1092,7 @@ describe('BufferController with attached media', function () {
   describe('onBufferEos', function () {
     it('marks the ExtendedSourceBuffer as ended', function () {
       // No type arg ends both SourceBuffers
-      hls.trigger(Events.BUFFER_EOS, {});
+      hls.trigger(Events.BUFFER_EOS, { type: null });
       queueNames.forEach((type) => {
         const track = getSourceBufferTrack(bufferController, type);
         const buffer = track?.buffer;
