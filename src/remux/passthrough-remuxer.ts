@@ -8,9 +8,9 @@ import { getCodecCompatibleName } from '../utils/codecs';
 import { type ILogger, Logger } from '../utils/logger';
 import { patchEncyptionData, writeUint32 } from '../utils/mp4-tools';
 import { getSampleData, parseInitSegment } from '../utils/mp4-tools';
+import type { HlsEventEmitter } from '../events';
 import type { TrackFragmentSample } from './mp4-generator';
 import type { HlsConfig } from '../config';
-import type { HlsEventEmitter } from '../events';
 import type { DecryptData } from '../loader/level-key';
 import type {
   DemuxedAudioTrack,
@@ -32,6 +32,7 @@ import type { InitData, InitDataTrack, TrackTimes } from '../utils/mp4-tools';
 import type { TimestampOffset } from '../utils/timescale-conversion';
 
 class PassThroughRemuxer extends Logger implements Remuxer {
+  private readonly observer: HlsEventEmitter;
   private emitInitSegment: boolean = false;
   private audioCodec?: string;
   private videoCodec?: string;
@@ -48,9 +49,16 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     logger: ILogger,
   ) {
     super('passthrough-remuxer', logger);
+    this.observer = observer;
   }
 
-  public destroy() {}
+  public destroy() {
+    if (this.observer) {
+      this.observer.removeAllListeners();
+    }
+    // @ts-ignore
+    this.observer = null;
+  }
 
   public resetTimeStamp(defaultInitPTS: TimestampOffset | null) {
     this.lastEndTime = null;
@@ -207,6 +215,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     }
     if (this.emitInitSegment) {
       initSegment.tracks = this.initTracks;
+      result.initSegment = initSegment;
       this.emitInitSegment = false;
     }
 
@@ -259,6 +268,15 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     const baseOffsetSamples = syncOnAudio
       ? audioSampleTimestamps
       : videoSampleTimestamps;
+
+    if (!baseOffsetSamples) {
+      this.log(
+        `No media samples found in ${playlistType} ${chunkMeta.level} ${
+          chunkMeta.part === -1 ? '' : `part: ${chunkMeta.part} of`
+        } sn: ${chunkMeta.sn} at playlist time: ${timeOffset}`,
+      );
+      return result;
+    }
 
     let data1 = data;
     let data2: Uint8Array<ArrayBuffer> | undefined;
@@ -328,46 +346,40 @@ class PassThroughRemuxer extends Logger implements Remuxer {
         : videoEndTime - videoStartTime;
     }
 
-    if (baseOffsetSamples) {
-      const timescale = baseOffsetSamples.timescale;
-      const baseTime = baseOffsetSamples.start - timeOffset * timescale;
-      const trackId = syncOnAudio ? initData.audio!.id : initData.video!.id;
+    const timescale = baseOffsetSamples.timescale;
+    const baseTime = baseOffsetSamples.start - timeOffset * timescale;
+    const trackId = syncOnAudio ? initData.audio!.id : initData.video!.id;
 
-      decodeTime = baseOffsetSamples.start / timescale;
+    decodeTime = baseOffsetSamples.start / timescale;
 
-      if (
-        (accurateTimeOffset || !initPTS) &&
-        (isInvalidInitPts(initPTS, decodeTime, timeOffset, duration) ||
-          timescale !== initPTS.timescale)
-      ) {
-        let detectedDrift = false;
-        const trackType = syncOnAudio ? 'audio' : 'video';
-        if (initPTS) {
-          const driftEstimate =
-            timeOffset !== 0 ? decodeTime / timeOffset : 1 + decodeTime / 1;
-          detectedDrift =
-            decodeTime >= 0 && Math.abs(1 - driftEstimate) < 0.001;
-          this.log(
-            `${trackType} timestamps in track ${trackId} at playlist time: ${accurateTimeOffset ? '' : '~'}${timeOffset} maps to ${decodeTime} with initPTS: ${initPTS.baseTime / initPTS.timescale} (${
-              baseTime / timescale - initPTS.baseTime / initPTS.timescale
-            }s diff) (${type}) drift estimate: ${driftEstimate} ${detectedDrift ? '(ignoring drift)' : 'remapping timestamps (initPTS)'}`,
-          );
-        }
-        if (!detectedDrift) {
-          this.log(
-            `Found initPTS in ${trackType} track ${trackId} at playlist time: ${timeOffset} offset: ${decodeTime - timeOffset} (${baseTime}/${timescale})`,
-          );
-          initPTS = null;
-          initSegment.initPTS = baseTime;
-          initSegment.timescale = timescale;
-          initSegment.trackId = trackId;
-        }
+    if (
+      (accurateTimeOffset || !initPTS) &&
+      (isInvalidInitPts(initPTS, decodeTime, timeOffset, duration) ||
+        timescale !== initPTS.timescale)
+    ) {
+      let detectedDrift = false;
+      const trackType = syncOnAudio ? 'audio' : 'video';
+      if (initPTS) {
+        const driftEstimate =
+          timeOffset !== 0 ? decodeTime / timeOffset : 1 + decodeTime / 1;
+        detectedDrift = decodeTime >= 0 && Math.abs(1 - driftEstimate) < 0.001;
+        this.log(
+          `${trackType} timestamps in track ${trackId} at playlist time: ${accurateTimeOffset ? '' : '~'}${timeOffset} maps to ${decodeTime} with initPTS: ${initPTS.baseTime / initPTS.timescale} (${
+            baseTime / timescale - initPTS.baseTime / initPTS.timescale
+          }s diff) (${type}) drift estimate: ${driftEstimate} ${detectedDrift ? '(ignoring drift)' : 'remapping timestamps (initPTS)'}`,
+        );
       }
-    } else {
-      this.warn(
-        `No audio or video samples found for initPTS at playlist time: ${timeOffset}`,
-      );
+      if (!detectedDrift) {
+        this.log(
+          `Found initPTS in ${trackType} track ${trackId} at playlist time: ${timeOffset} offset: ${decodeTime - timeOffset} (${baseTime}/${timescale})`,
+        );
+        initPTS = null;
+        initSegment.initPTS = baseTime;
+        initSegment.timescale = timescale;
+        initSegment.trackId = trackId;
+      }
     }
+
     if (!initPTS) {
       if (
         !initSegment.timescale ||
@@ -390,11 +402,30 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       initSegment.trackId = initPTS.trackId;
     }
 
-    const startTime = decodeTime - initPTS.baseTime / initPTS.timescale;
-    const endTime = startTime + duration;
+    const startDTS = decodeTime - initPTS.baseTime / initPTS.timescale;
+    const endDTS = startDTS + duration;
+    const startPTS =
+      hasVideo && baseOffsetSamples?.ptsMin !== undefined
+        ? baseOffsetSamples.ptsMin / baseOffsetSamples.timescale -
+          initPTS.baseTime / initPTS.timescale
+        : startDTS;
+    const endPTS =
+      hasVideo && baseOffsetSamples?.ptsMax
+        ? baseOffsetSamples.ptsMax / baseOffsetSamples.timescale -
+          initPTS.baseTime / initPTS.timescale
+        : endDTS;
+
+    // For troubleshooting duplicates of https://github.com/video-dev/hls.js/issues/6777
+    // if (videoSampleTimestamps) {
+    //   console.log(
+    //     `#6777 segment ${chunkMeta.sn}: dts: ${videoSampleTimestamps.start}-${videoSampleTimestamps.start + videoSampleTimestamps.duration} pts: ${videoSampleTimestamps.ptsMin}-${
+    //       videoSampleTimestamps.ptsMax
+    //     }`,
+    //   );
+    // }
 
     if (duration > 0) {
-      this.lastEndTime = endTime;
+      this.lastEndTime = endDTS;
     } else {
       this.warn('Duration parsed from mp4 should be greater than zero');
       this.resetNextTimestamp();
@@ -407,10 +438,10 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     const track: RemuxedTrack = {
       data1,
       data2,
-      startPTS: startTime,
-      startDTS: startTime,
-      endPTS: endTime,
-      endDTS: endTime,
+      startPTS,
+      startDTS,
+      endPTS,
+      endDTS,
       type,
       hasAudio,
       hasVideo,
@@ -421,13 +452,14 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     result.audio = hasAudio && !hasVideo ? track : undefined;
     result.video = hasVideo ? track : undefined;
+    const isVideoContiguous = this.isVideoContiguous;
     const videoSampleCount = videoSampleTimestamps?.sampleCount;
     if (videoSampleCount) {
       const firstKeyFrame = videoSampleTimestamps.keyFrameIndex;
       const independent = firstKeyFrame !== -1;
       track.nb = videoSampleCount;
       track.dropped =
-        firstKeyFrame === 0 || this.isVideoContiguous
+        firstKeyFrame === 0 || isVideoContiguous
           ? 0
           : independent
             ? firstKeyFrame
@@ -439,7 +471,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
           (videoSampleTimestamps.keyFrameStart - initPTS.baseTime) /
           initPTS.timescale;
       }
-      if (!this.isVideoContiguous) {
+      if (!isVideoContiguous) {
         result.independent = independent;
       }
       this.isVideoContiguous ||= independent;
@@ -521,6 +553,8 @@ function getParsedTrackCodec(
 
     logger.warn(`Unhandled audio codec "${parsedCodec}" in mp4 MAP`);
     return parsedCodec || 'mp4a';
+  } else if (parsedCodec === 'mjpg') {
+    return parsedCodec;
   }
   // Provide defaults based on codec type
   // This allows for some playback of some fmp4 playlists without CODECS defined in manifest

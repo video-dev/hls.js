@@ -152,10 +152,8 @@ export class SubtitleStreamController
     }
     if (!part || end >= frag.end) {
       this.fragmentTracker.fragBuffered(frag as MediaFragment);
-      if (!this.fragContextChanged(frag)) {
-        if (isMediaFragment(frag)) {
-          this.fragPrevious = frag;
-        }
+      if (isMediaFragment(frag) && !this.fragContextChanged(frag)) {
+        this.fragPrevious = frag;
       }
       this.fragBufferedComplete(frag, part);
       if (this.media) {

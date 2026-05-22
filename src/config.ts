@@ -175,6 +175,10 @@ export type MP4RemuxerConfig = {
   maxAudioFramesDrift: number;
 };
 
+export type IFrameControllerConfig = {
+  iframeCacheLimit: number;
+};
+
 export interface PlaylistLoaderConstructor {
   new (confg: HlsConfig): Loader<PlaylistLoaderContext>;
 }
@@ -322,7 +326,11 @@ export type HlsConfig = {
     context: LoaderContext,
     initParams: any,
   ) => Promise<Request> | Request;
-  xhrSetup?: (xhr: XMLHttpRequest, url: string) => Promise<void> | void;
+  xhrSetup?: (
+    xhr: XMLHttpRequest,
+    url: string,
+    context: LoaderContext,
+  ) => Promise<void> | void;
 
   // Alt Audio
   audioStreamController?: typeof AudioStreamController;
@@ -363,8 +371,8 @@ export type HlsConfig = {
 
   streamController: typeof StreamController;
   abrController: typeof AbrController;
-  bufferController: typeof BufferController;
-  capLevelController: typeof CapLevelController;
+  bufferController?: typeof BufferController;
+  capLevelController?: typeof CapLevelController;
   errorController: typeof ErrorController;
   fpsController?: typeof FPSController;
   progressive: boolean;
@@ -379,6 +387,7 @@ export type HlsConfig = {
   GapControllerConfig &
   LevelControllerConfig &
   MP4RemuxerConfig &
+  IFrameControllerConfig &
   StreamControllerConfig &
   SelectionPreferences &
   LatencyControllerConfig &
@@ -496,6 +505,7 @@ export const hlsDefaultConfig: HlsConfig = {
   enableInterstitialPlayback: __USE_INTERSTITIALS__,
   interstitialAppendInPlace: true,
   interstitialLiveLookAhead: 10,
+  iframeCacheLimit: 2 * 1024 * 1024,
   useMediaCapabilities: __USE_MEDIA_CAPABILITIES__,
   preserveManualLevelOnError: false,
   errorPenaltyExpireMs: 0, // used by error-controller and abr-controller

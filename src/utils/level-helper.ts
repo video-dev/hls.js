@@ -294,6 +294,8 @@ export function mergeDetails(
     (oldPart: Part, newPart: Part) => {
       newPart.elementaryStreams = oldPart.elementaryStreams;
       newPart.stats = oldPart.stats;
+      // Use locally set gap or GAP attribute introduced in playlist
+      newPart.gap = oldPart.gap || newPart.gap;
     },
   );
 
@@ -386,7 +388,7 @@ export function mapPartIntersection(
 ) {
   if (oldParts && newParts) {
     let delta = 0;
-    for (let i = 0, len = oldParts.length; i <= len; i++) {
+    for (let i = 0, len = oldParts.length; i < len; i++) {
       const oldPart = oldParts[i];
       const newPart = newParts[i + delta];
       if (

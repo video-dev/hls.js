@@ -481,7 +481,8 @@ export default class ErrorController
         this.sendAlternateToPenaltyBox(data);
         if (
           !data.errorAction.resolved &&
-          data.details !== ErrorDetails.FRAG_GAP
+          data.details !== ErrorDetails.FRAG_GAP &&
+          data.details !== ErrorDetails.PLAYLIST_UNCHANGED_ERROR
         ) {
           data.fatal = true;
         }

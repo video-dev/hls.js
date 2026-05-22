@@ -236,7 +236,7 @@ export default class InterstitialsController
       this.manager =
         null;
     // @ts-ignore
-    this.hls = this.HlsPlayerClass = this.log = null;
+    this.hls = this.HlsPlayerClass = null;
     // @ts-ignore
     this.assetListLoader = null;
     // @ts-ignore
@@ -1564,9 +1564,12 @@ export default class InterstitialsController
       main,
     };
     this.mediaSelection = currentSelection;
+
+    const startPosition = this.hls.startPosition;
     this.schedule.parseInterstitialDateRanges(
       currentSelection,
       this.hls.config.interstitialAppendInPlace,
+      startPosition === -1 ? 0 : startPosition,
     );
 
     if (!this.effectivePlayingItem && this.schedule.items) {
@@ -1888,7 +1891,13 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     if (!mediaSelection) {
       return;
     }
-    this.schedule?.updateSchedule(mediaSelection, [], forceUpdate);
+    const liveSyncPosition = this.hls?.liveSyncPosition || 0;
+    this.schedule?.updateSchedule(
+      mediaSelection,
+      [],
+      liveSyncPosition,
+      forceUpdate,
+    );
   }
 
   // Schedule buffer control
@@ -2127,8 +2136,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     const playOnce = interstitial.cue.once;
     if (neverLoaded) {
       const timelineStart = interstitial.timelineStart;
+      const playingItem = this.playingItem;
       if (interstitial.appendInPlace) {
-        const playingItem = this.playingItem;
         if (
           !this.isInterstitial(playingItem) &&
           playingItem?.nextEvent?.identifier === interstitial.identifier
@@ -2138,7 +2147,11 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       }
       let hlsStartOffset;
       let liveStartPosition = 0;
-      if (!this.playingItem && this.primaryLive) {
+      if (
+        (!playingItem ||
+          (this.isInterstitial(playingItem) && playingItem.event.cue.pre)) &&
+        this.primaryLive
+      ) {
         liveStartPosition = this.hls.startPosition;
         if (liveStartPosition === -1) {
           liveStartPosition = this.hls.liveSyncPosition || 0;

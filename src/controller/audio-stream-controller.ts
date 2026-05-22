@@ -44,6 +44,7 @@ import type {
 import type { MediaPlaylist } from '../types/media-playlist';
 import type { TrackSet } from '../types/track';
 import type { TransmuxerResult } from '../types/transmuxer';
+import type { BufferInfo } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 100; // how often to tick in ms
 
@@ -139,17 +140,8 @@ class AudioStreamController
   }
 
   // INIT_PTS_FOUND is triggered when the video track parsed in the stream-controller has a new PTS value
-  onInitPtsFound(
-    event: Events.INIT_PTS_FOUND,
-    {
-      frag,
-      id,
-      initPTS,
-      timescale,
-      trackId,
-      timestampOffsets,
-    }: InitPTSFoundData,
-  ) {
+  onInitPtsFound(event: Events.INIT_PTS_FOUND, data: InitPTSFoundData) {
+    const { frag, id, initPTS, timescale, trackId, timestampOffsets } = data;
     // Always update the new INIT PTS
     // Can change due level switch
     if (id === PlaylistLevelType.MAIN) {
@@ -353,16 +345,13 @@ class AudioStreamController
       return;
     }
 
-    const bufferable = this.mediaBuffer ? this.mediaBuffer : this.media;
+    const bufferable = this.getBufferOutput();
     if (this.bufferFlushed && bufferable) {
       this.bufferFlushed = false;
       this.afterBufferFlushed(bufferable, ElementaryStreamTypes.AUDIO);
     }
 
-    const bufferInfo = this.getFwdBufferInfo(
-      bufferable,
-      PlaylistLevelType.AUDIO,
-    );
+    const bufferInfo = this.getFwdBufferInfo();
     if (bufferInfo === null) {
       return;
     }
@@ -771,7 +760,6 @@ class AudioStreamController
       return;
     }
     if (isMediaFragment(frag)) {
-      this.fragPrevious = frag;
       const track = this.switchingTrack;
       if (track) {
         this.bufferedTrack = track;
@@ -783,13 +771,18 @@ class AudioStreamController
     }
   }
 
+  public getFwdBufferInfo(): BufferInfo | null {
+    const bufferable = this.getBufferOutput();
+    return super.getFwdBufferInfo(bufferable, PlaylistLevelType.AUDIO);
+  }
+
   protected getBufferOutput(): Bufferable | null {
     return this.mediaBuffer ? this.mediaBuffer : this.media;
   }
 
   protected checkFragmentChanged() {
     const previousFrag = this.fragPlaying;
-    const fragChanged = super.checkFragmentChanged();
+    const fragChanged = this.checkFragPlaying();
     if (!fragChanged) {
       return false;
     }
@@ -879,7 +872,7 @@ class AudioStreamController
       if (this.state === State.ENDED) {
         this.state = State.IDLE;
       }
-      const mediaBuffer = this.mediaBuffer || this.media;
+      const mediaBuffer = this.getBufferOutput();
       if (mediaBuffer) {
         this.afterBufferFlushed(mediaBuffer, type);
         this.tick();
@@ -905,6 +898,9 @@ class AudioStreamController
     // If we are, subsequently check if the currently loading fragment (fragCurrent) has changed.
     if (this.fragContextChanged(frag) || !details) {
       this.fragmentTracker.removeFragment(frag);
+      if (initSegment?.tracks) {
+        this.resetTransmuxer();
+      }
       return;
     }
 
