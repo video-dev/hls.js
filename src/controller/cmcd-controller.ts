@@ -69,7 +69,6 @@ export default class CMCDController implements ComponentAPI {
       config.pLoader = this.createPlaylistLoader();
       config.fLoader = this.createFragmentLoader();
 
-      this.createReporter();
       this.registerListeners();
     }
   }

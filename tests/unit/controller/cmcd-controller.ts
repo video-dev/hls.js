@@ -75,6 +75,7 @@ const setupEach = (cmcd?: CMCDControllerConfig) => {
   // hls.audioTracks = [];
 
   cmcdController = new CMCDController(hls);
+  hls.trigger(Events.MANIFEST_LOADING, { url });
 
   return details;
 };
@@ -334,6 +335,84 @@ describe('CMCDController', function () {
           eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
         });
         expect((cmcdController as any).reporter).to.not.equal(undefined);
+      });
+
+      it('emits a single TIME_INTERVAL event at session start (no duplicate sn=0)', function () {
+        const requests: any[] = [];
+        const captureLoader = (req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        };
+        setupEach({
+          version: 2,
+          loader: captureLoader as any,
+          eventTargets: [
+            {
+              url: 'https://analytics.example.com/cmcd',
+              events: [CmcdEventType.TIME_INTERVAL],
+              interval: 30,
+            },
+          ],
+        });
+
+        const tEvents = requests
+          .flatMap((r) =>
+            String(r.body || '')
+              .trim()
+              .split('\n'),
+          )
+          .filter((line) => /(^|,)e=t(,|$)/.test(line));
+        expect(tEvents).to.have.lengthOf(1);
+        expect(tEvents[0]).to.match(/(^|,)sn=0(,|$)/);
+      });
+
+      it('does not create the reporter in the constructor (deferred to MANIFEST_LOADING)', function () {
+        const hls = new Hls({ cmcd: { version: 2 } }) as any;
+        hls.networkControllers.forEach((c) => c.destroy());
+        hls.networkControllers.length = 0;
+        hls.coreComponents.forEach((c) => c.destroy());
+        hls.coreComponents.length = 0;
+
+        const controller = new CMCDController(hls);
+        expect((controller as any).reporter).to.equal(undefined);
+      });
+
+      it('creates a fresh reporter on each MANIFEST_LOADING (one per session)', function () {
+        const requests: any[] = [];
+        const captureLoader = (req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        };
+        setupEach({
+          version: 2,
+          loader: captureLoader as any,
+          eventTargets: [
+            {
+              url: 'https://analytics.example.com/cmcd',
+              events: [CmcdEventType.TIME_INTERVAL],
+              interval: 30,
+            },
+          ],
+        });
+
+        const reporter1 = (cmcdController as any).reporter;
+        expect(reporter1).to.not.equal(undefined);
+
+        // Simulate a second loadSource on the same Hls instance.
+        cmcdController.hls.trigger(Events.MANIFEST_LOADING, { url });
+
+        const reporter2 = (cmcdController as any).reporter;
+        expect(reporter2).to.not.equal(undefined);
+        expect(reporter2).to.not.equal(reporter1);
+
+        const tEvents = requests
+          .flatMap((r) =>
+            String(r.body || '')
+              .trim()
+              .split('\n'),
+          )
+          .filter((line) => /(^|,)e=t(,|$)/.test(line));
+        expect(tEvents).to.have.lengthOf(2);
       });
 
       it('stops reporter on destroy', function () {
