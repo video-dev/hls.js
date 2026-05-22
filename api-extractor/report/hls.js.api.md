@@ -201,7 +201,7 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     _handleFragmentLoadProgress(data: FragLoadedData): void;
     // (undocumented)
-    protected loadFragment(frag: Fragment, track: Level, targetBufferTime: number): void;
+    protected loadFragment(frag: MediaFragment, track: Level, targetBufferTime: number): void;
     get nextAudioTrack(): number;
     // (undocumented)
     protected onError(event: Events.ERROR, data: ErrorData): void;
@@ -529,9 +529,9 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected getMaxBufferLength(levelBitrate?: number): number;
     // (undocumented)
-    protected getNextFragment(pos: number, levelDetails: LevelDetails): Fragment | null;
+    protected getNextFragment(pos: number, levelDetails: LevelDetails): MediaFragment | null;
     // (undocumented)
-    protected getNextFragmentLoopLoading(frag: Fragment, levelDetails: LevelDetails, bufferInfo: BufferInfo, playlistType: PlaylistLevelType, maxBufLen: number): Fragment | null;
+    protected getNextFragmentLoopLoading(frag: MediaFragment, levelDetails: LevelDetails, bufferInfo: BufferInfo, playlistType: PlaylistLevelType, maxBufLen: number): MediaFragment | null;
     // (undocumented)
     getNextPart(partList: Part[], frag: Fragment, targetBufferTime: number): number;
     // (undocumented)
@@ -546,6 +546,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected get iframesOnly(): boolean | undefined;
     // (undocumented)
     get inFlightFrag(): InFlightData;
+    // (undocumented)
+    protected initFragmentLoader: FragmentLoader;
     // (undocumented)
     protected initPTS: TimestampOffset[];
     // (undocumented)
@@ -563,9 +565,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected loadingParts: boolean;
     // (undocumented)
-    protected _loadInitSegment(fragment: Fragment, level: Level): void;
-    // (undocumented)
-    protected mapToInitFragWhenRequired<T extends Fragment | null>(frag: T): T | Fragment;
+    protected _loadInitSegment(initFrag: Fragment, _level: Level): Promise<void>;
     // (undocumented)
     protected media: HTMLMediaElement | null;
     // (undocumented)
@@ -1988,7 +1988,7 @@ export class FragmentLoader {
     // (undocumented)
     destroy(): void;
     // (undocumented)
-    load(frag: Fragment, isIFrame?: boolean, onProgress?: FragmentLoadProgressCallback): Promise<FragLoadedData>;
+    load(frag: Fragment, isIFrame?: boolean, onProgress?: FragmentLoadProgressCallback, progressGate?: Promise<void>): Promise<FragLoadedData>;
     // (undocumented)
     loadPart(frag: Fragment, part: Part, onProgress: FragmentLoadProgressCallback): Promise<FragLoadedData>;
 }
@@ -4902,7 +4902,7 @@ export class StreamController extends BaseStreamController implements NetworkCom
     // (undocumented)
     immediateLevelSwitch(): void;
     // (undocumented)
-    protected loadFragment(frag: Fragment, level: Level, targetBufferTime: number): void;
+    protected loadFragment(frag: MediaFragment, level: Level, targetBufferTime: number): void;
     // (undocumented)
     get maxBufferLength(): number;
     // (undocumented)
@@ -4997,7 +4997,7 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     // (undocumented)
     _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
     // (undocumented)
-    protected loadFragment(frag: Fragment, level: Level, targetBufferTime: number): void;
+    protected loadFragment(frag: MediaFragment, level: Level, targetBufferTime: number): void;
     // (undocumented)
     get mediaBufferTimeRanges(): Bufferable;
     // (undocumented)
