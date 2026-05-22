@@ -811,7 +811,7 @@ export type BufferCreatedTrackSet = Partial<Record<SourceBufferName, BufferCreat
 // @public (undocumented)
 export interface BufferEOSData {
     // (undocumented)
-    type?: SourceBufferName;
+    type: SourceBufferName | null;
 }
 
 // Warning: (ae-missing-release-tag) "BufferFlushedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
