@@ -233,13 +233,14 @@ export default class Hls implements HlsEventEmitter {
     // CMCDController must be constructed before PlaylistLoader so its
     // MANIFEST_LOADING listener fires first — the reporter is created there
     // and must exist before the manifest request applies CMCD data.
-    const cmcdController = config.cmcdController
-      ? (this.cmcdController = new config.cmcdController(this))
+    const _CmcdController = config.cmcdController;
+    const cmcdController = _CmcdController
+      ? (this.cmcdController = new _CmcdController(this))
       : null;
     const playListLoader = new PlaylistLoader(this);
 
     const _ContentSteeringController = config.contentSteeringController;
-    // Instantiate ConentSteeringController before LevelController to receive Multivariant Playlist events first
+    // Instantiate ContentSteeringController before LevelController to receive Multivariant Playlist events first
     const contentSteering = _ContentSteeringController
       ? new _ContentSteeringController(this)
       : null;
