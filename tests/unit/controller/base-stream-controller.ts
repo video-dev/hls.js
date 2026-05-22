@@ -4,8 +4,10 @@ import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
 import { State } from '../../../src/controller/base-stream-controller';
 import BaseStreamControllerImpl from '../../../src/controller/stream-controller';
+import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
+import { LoadError } from '../../../src/loader/fragment-loader';
 import KeyLoader from '../../../src/loader/key-loader';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LevelKey } from '../../../src/loader/level-key';
@@ -14,7 +16,6 @@ import { BufferHelper } from '../../../src/utils/buffer-helper';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type BaseStreamController from '../../../src/controller/base-stream-controller';
 import type { MediaFragment, Part } from '../../../src/loader/fragment';
-import type { Level } from '../../../src/types/level';
 import type { BufferInfo } from '../../../src/utils/buffer-helper';
 
 use(sinonChai);
@@ -879,31 +880,19 @@ describe('BaseStreamController', function () {
   });
 
   describe('init segment loading', function () {
-    it('getNextFragment returns the media fragment when init segment is not loaded', function () {
-      const details = levelDetailsWithEndSequenceVodOrLive(3);
-      const mediaFrag = details.fragments[0] as MediaFragment;
+    function createMediaFragWithInitSegment(encrypted: boolean = false) {
       const initSegment = new Fragment(PlaylistLevelType.MAIN, 'init.mp4');
       initSegment.sn = 'initSegment';
       initSegment.relurl = 'init.mp4';
-      mediaFrag.initSegment = initSegment;
-
-      const result = (baseStreamController as any).getNextFragment(0, details);
-
-      expect(result).to.equal(mediaFrag);
-      expect(result).to.not.equal(initSegment);
-    });
-
-    it('loadInitSegmentIfNeeded loads the init fragment key before fetching init data', function () {
-      const initSegment = new Fragment(PlaylistLevelType.MAIN, 'init.mp4');
-      initSegment.sn = 'initSegment';
-      initSegment.relurl = 'init.mp4';
-      initSegment.levelkeys = {
-        identity: new LevelKey(
-          'AES-128',
-          'https://example.com/key.bin',
-          'identity',
-        ),
-      };
+      if (encrypted) {
+        initSegment.levelkeys = {
+          identity: new LevelKey(
+            'AES-128',
+            'https://example.com/key.bin',
+            'identity',
+          ),
+        };
+      }
 
       const mediaFrag = new Fragment(
         PlaylistLevelType.MAIN,
@@ -911,8 +900,11 @@ describe('BaseStreamController', function () {
       ) as MediaFragment;
       mediaFrag.sn = 0;
       mediaFrag.initSegment = initSegment;
+      return { mediaFrag, initSegment };
+    }
 
-      const level = { details: new LevelDetails('') } as unknown as Level;
+    it('loadInitSegmentIfNeeded loads the init fragment key before fetching init data', function () {
+      const { mediaFrag, initSegment } = createMediaFragWithInitSegment(true);
       const callOrder: string[] = [];
 
       const keyLoadStub = sinon
@@ -931,19 +923,79 @@ describe('BaseStreamController', function () {
 
       const result = (baseStreamController as any).loadInitSegmentIfNeeded(
         mediaFrag,
-        level,
       );
 
       expect(result).to.be.a('promise');
       return result!
         .then(() => {
           expect(keyLoadStub).to.have.been.calledOnceWith(initSegment);
-          expect(loadInitStub).to.have.been.calledOnceWith(initSegment, level);
+          expect(loadInitStub).to.have.been.calledOnceWith(initSegment);
           expect(callOrder).to.deep.equal(['keyLoad', 'loadInit']);
         })
         .finally(() => {
           keyLoadStub.restore();
           loadInitStub.restore();
+        });
+    });
+
+    it('loadInitSegmentIfNeeded handles init segment load errors', function () {
+      const { mediaFrag, initSegment } = createMediaFragWithInitSegment(false);
+      baseStreamController.state = State.FRAG_LOADING;
+      const loadError = new LoadError({
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.FRAG_LOAD_ERROR,
+        fatal: false,
+        error: new Error('init load failed'),
+        frag: initSegment,
+        networkDetails: null,
+      });
+
+      sinon
+        .stub(baseStreamController as any, '_loadInitSegment')
+        .rejects(loadError);
+      const abortStub = sinon.stub(
+        (baseStreamController as any).fragmentLoader,
+        'abort',
+      );
+      const handleFragLoadErrorStub = sinon.stub(
+        baseStreamController as any,
+        'handleFragLoadError',
+      );
+      const resetFragmentLoadingStub = sinon.stub(
+        baseStreamController as any,
+        'resetFragmentLoading',
+      );
+      const warnStub = sinon.stub(baseStreamController as any, 'warn');
+
+      const result = (baseStreamController as any).loadInitSegmentIfNeeded(
+        mediaFrag,
+      );
+
+      expect(result).to.be.a('promise');
+      return result!
+        .then(() => {
+          throw new Error('Expected init segment load to reject');
+        })
+        .catch((error) => {
+          expect(error).to.equal(loadError);
+          expect(loadError.data.frag).to.equal(mediaFrag);
+          expect(abortStub).to.have.been.calledOnce;
+          expect(handleFragLoadErrorStub).to.have.been.calledOnceWith(
+            loadError,
+          );
+          expect(handleFragLoadErrorStub.firstCall.args[0].data.frag).to.equal(
+            mediaFrag,
+          );
+          expect(resetFragmentLoadingStub).to.have.been.calledOnceWith(
+            mediaFrag,
+          );
+          expect(warnStub).to.have.been.calledOnceWith(loadError);
+        })
+        .finally(() => {
+          abortStub.restore();
+          handleFragLoadErrorStub.restore();
+          resetFragmentLoadingStub.restore();
+          warnStub.restore();
         });
     });
   });

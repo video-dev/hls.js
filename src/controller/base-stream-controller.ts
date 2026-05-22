@@ -785,19 +785,36 @@ export default class BaseStreamController
     stats.parsing.end = stats.buffering.end = self.performance.now();
   }
 
-  private loadInitSegmentIfNeeded(frag: Fragment): Promise<void> | undefined {
+  private loadInitSegmentIfNeeded(
+    mediaFrag: Fragment,
+  ): Promise<void> | undefined {
+    const { initSegment } = mediaFrag;
     if (
       !this.bitrateTest &&
-      isMediaFragment(frag) &&
-      frag.initSegment &&
-      !frag.initSegment.data
+      isMediaFragment(mediaFrag) &&
+      initSegment &&
+      !initSegment.data
     ) {
-      if (frag.initSegment.encrypted && !frag.initSegment.decryptdata?.key) {
-        return this.keyLoader
-          .load(frag.initSegment)
-          .then(({ frag: initSegment }) => this._loadInitSegment(initSegment));
-      }
-      return this._loadInitSegment(frag.initSegment);
+      const initPromise =
+        initSegment.encrypted && !initSegment.decryptdata?.key
+          ? this.keyLoader
+              .load(initSegment)
+              .then(() => this._loadInitSegment(initSegment))
+          : this._loadInitSegment(initSegment);
+
+      return initPromise.catch((reason: LoadError | Error) => {
+        if (this.state === State.STOPPED || this.state === State.ERROR) {
+          throw reason;
+        }
+        if ('data' in reason) {
+          reason.data.frag = mediaFrag;
+          this.fragmentLoader.abort();
+          this.handleFragLoadError(reason);
+        }
+        this.warn(reason);
+        this.resetFragmentLoading(mediaFrag);
+        throw reason;
+      });
     }
   }
 
@@ -1104,6 +1121,7 @@ export default class BaseStreamController
           dataOnProgress ? initDataPromise : undefined,
         ),
         keyLoadingPromise,
+        initDataPromise,
       ])
         .then(([fragLoadedData]) => {
           if (!dataOnProgress && progressCallback) {
