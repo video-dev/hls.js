@@ -998,12 +998,15 @@ export default class BaseStreamController
           this.nextLoadPosition = part.start + part.duration;
           this.state = State.FRAG_LOADING;
           let result: Promise<PartsLoadedData | FragLoadedData | null>;
-          if (keyLoadingPromise) {
-            result = keyLoadingPromise
-              .then((keyLoadedData) => {
+          const initDataPromise = this.loadInitSegmentIfNeeded(frag);
+          if (keyLoadingPromise || initDataPromise) {
+            const useKeyLoader = !!keyLoadingPromise;
+            result = Promise.all([keyLoadingPromise, initDataPromise])
+              .then(([keyLoadedData]) => {
                 if (
-                  !keyLoadedData ||
-                  this.fragContextChanged(keyLoadedData.frag)
+                  useKeyLoader &&
+                  (!keyLoadedData ||
+                    this.fragContextChanged(keyLoadedData.frag))
                 ) {
                   return null;
                 }
