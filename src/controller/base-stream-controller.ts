@@ -1094,6 +1094,7 @@ export default class BaseStreamController
           initDataPromise,
         ),
         keyLoadingPromise,
+        initDataPromise,
       ])
         .then(([fragLoadedData]) => {
           if (!dataOnProgress && progressCallback) {
