@@ -8,11 +8,13 @@ import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
 import KeyLoader from '../../../src/loader/key-loader';
 import { LevelDetails } from '../../../src/loader/level-details';
+import { LevelKey } from '../../../src/loader/level-key';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { BufferHelper } from '../../../src/utils/buffer-helper';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type BaseStreamController from '../../../src/controller/base-stream-controller';
 import type { MediaFragment, Part } from '../../../src/loader/fragment';
+import type { Level } from '../../../src/types/level';
 import type { BufferInfo } from '../../../src/utils/buffer-helper';
 
 use(sinonChai);
@@ -873,6 +875,76 @@ describe('BaseStreamController', function () {
           baseStreamController.isFragmentNearlyDownloaded(mockFrag);
         expect(result).to.be.false;
       });
+    });
+  });
+
+  describe('init segment loading', function () {
+    it('getNextFragment returns the media fragment when init segment is not loaded', function () {
+      const details = levelDetailsWithEndSequenceVodOrLive(3);
+      const mediaFrag = details.fragments[0] as MediaFragment;
+      const initSegment = new Fragment(PlaylistLevelType.MAIN, 'init.mp4');
+      initSegment.sn = 'initSegment';
+      initSegment.relurl = 'init.mp4';
+      mediaFrag.initSegment = initSegment;
+
+      const result = (baseStreamController as any).getNextFragment(0, details);
+
+      expect(result).to.equal(mediaFrag);
+      expect(result).to.not.equal(initSegment);
+    });
+
+    it('loadInitSegmentIfNeeded loads the init fragment key before fetching init data', function () {
+      const initSegment = new Fragment(PlaylistLevelType.MAIN, 'init.mp4');
+      initSegment.sn = 'initSegment';
+      initSegment.relurl = 'init.mp4';
+      initSegment.levelkeys = {
+        identity: new LevelKey(
+          'AES-128',
+          'https://example.com/key.bin',
+          'identity',
+        ),
+      };
+
+      const mediaFrag = new Fragment(
+        PlaylistLevelType.MAIN,
+        'segment.ts',
+      ) as MediaFragment;
+      mediaFrag.sn = 0;
+      mediaFrag.initSegment = initSegment;
+
+      const level = { details: new LevelDetails('') } as unknown as Level;
+      const callOrder: string[] = [];
+
+      const keyLoadStub = sinon
+        .stub((baseStreamController as any).keyLoader, 'load')
+        .callsFake((frag) => {
+          callOrder.push('keyLoad');
+          expect(frag).to.equal(initSegment);
+          return Promise.resolve({ frag, keyInfo: {} });
+        });
+      const loadInitStub = sinon
+        .stub(baseStreamController as any, '_loadInitSegment')
+        .callsFake(() => {
+          callOrder.push('loadInit');
+          return Promise.resolve();
+        });
+
+      const result = (baseStreamController as any).loadInitSegmentIfNeeded(
+        mediaFrag,
+        level,
+      );
+
+      expect(result).to.be.a('promise');
+      return result!
+        .then(() => {
+          expect(keyLoadStub).to.have.been.calledOnceWith(initSegment);
+          expect(loadInitStub).to.have.been.calledOnceWith(initSegment, level);
+          expect(callOrder).to.deep.equal(['keyLoad', 'loadInit']);
+        })
+        .finally(() => {
+          keyLoadStub.restore();
+          loadInitStub.restore();
+        });
     });
   });
 
