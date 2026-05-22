@@ -565,7 +565,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected loadingParts: boolean;
     // (undocumented)
-    protected _loadInitSegment(initFrag: Fragment, _level: Level): Promise<void>;
+    protected _loadInitSegment(initFrag: Fragment): Promise<void>;
     // (undocumented)
     protected media: HTMLMediaElement | null;
     // (undocumented)
