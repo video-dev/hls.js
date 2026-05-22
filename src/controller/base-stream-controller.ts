@@ -705,7 +705,7 @@ export default class BaseStreamController
     this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
   }
 
-  protected _loadInitSegment(initFrag: Fragment, _level: Level): Promise<void> {
+  protected _loadInitSegment(initFrag: Fragment): Promise<void> {
     const { hls } = this;
     this.initFragmentLoader.abort();
     hls.trigger(Events.FRAG_LOADING, { frag: initFrag, targetBufferTime: 0 });
@@ -785,24 +785,19 @@ export default class BaseStreamController
     stats.parsing.end = stats.buffering.end = self.performance.now();
   }
 
-  private loadInitSegmentIfNeeded(
-    frag: Fragment,
-    level: Level,
-  ): Promise<void> | undefined {
+  private loadInitSegmentIfNeeded(frag: Fragment): Promise<void> | undefined {
     if (
       !this.bitrateTest &&
       isMediaFragment(frag) &&
       frag.initSegment &&
       !frag.initSegment.data
     ) {
-      const loadInitSegment = () =>
-        this._loadInitSegment(frag.initSegment!, level);
       if (frag.initSegment.encrypted && !frag.initSegment.decryptdata?.key) {
         return this.keyLoader
           .load(frag.initSegment)
-          .then(() => loadInitSegment());
+          .then(({ frag: initSegment }) => this._loadInitSegment(initSegment));
       }
-      return loadInitSegment();
+      return this._loadInitSegment(frag.initSegment);
     }
   }
 
@@ -1078,7 +1073,7 @@ export default class BaseStreamController
     const dataOnProgress =
       this.config.progressive && frag.type !== PlaylistLevelType.SUBTITLE;
 
-    const initDataPromise = this.loadInitSegmentIfNeeded(frag, level);
+    const initDataPromise = this.loadInitSegmentIfNeeded(frag);
 
     let result: Promise<PartsLoadedData | FragLoadedData | null>;
     if (dataOnProgress && keyLoadingPromise) {
