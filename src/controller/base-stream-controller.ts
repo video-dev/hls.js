@@ -713,7 +713,11 @@ export default class BaseStreamController
       .load(initFrag)
       .then((data) => {
         const frag = data?.frag;
-        if (!frag || this.fragCurrent?.initSegment !== frag || !this.levels) {
+        if (
+          !frag ||
+          !fragmentsAreEqual(frag, this.fragCurrent?.initSegment) ||
+          !this.levels
+        ) {
           throw new Error('init load aborted');
         }
         return data;

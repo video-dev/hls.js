@@ -174,6 +174,12 @@ export default class FragmentLoader {
     });
   }
 
+  /*
+   When a progressGate is provided, buffer incoming chunks until the
+   gate promise resolves, then flush them in arrival order. This
+   ensuring the transmuxer receives init data before the first chunk.
+   Which is important when progressively loading media fragments.
+  */
   private gateProgress(
     onProgress: FragmentLoadProgressCallback,
     progressGate?: Promise<void>,
