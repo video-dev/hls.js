@@ -106,7 +106,7 @@ export interface BufferAppendedData {
 }
 
 export interface BufferEOSData {
-  type?: SourceBufferName;
+  type: SourceBufferName | null;
 }
 
 export interface BufferFlushingData {

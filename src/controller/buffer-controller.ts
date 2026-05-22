@@ -1179,7 +1179,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   // on BUFFER_EOS mark matching sourcebuffer(s) as "ending" and "ended" and queue endOfStream after remaining operations(s)
-  // an undefined data.type will mark all buffers as EOS.
+  // a nullish data.type will mark all buffers as EOS.
   private onBufferEos(event: Events.BUFFER_EOS, data: BufferEOSData) {
     this.sourceBuffers.forEach(([type]) => {
       if (type) {
