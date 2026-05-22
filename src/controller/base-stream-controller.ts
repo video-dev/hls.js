@@ -757,6 +757,7 @@ export default class BaseStreamController
                 reason: err.message,
                 frag,
               });
+              this.fragmentLoader.abort();
               throw err;
             })
             .then((decryptedData) => {
@@ -794,7 +795,14 @@ export default class BaseStreamController
       frag.initSegment &&
       !frag.initSegment.data
     ) {
-      return this._loadInitSegment(frag.initSegment, level);
+      const loadInitSegment = () =>
+        this._loadInitSegment(frag.initSegment!, level);
+      if (frag.initSegment.encrypted && !frag.initSegment.decryptdata?.key) {
+        return this.keyLoader
+          .load(frag.initSegment)
+          .then(() => loadInitSegment());
+      }
+      return loadInitSegment();
     }
   }
 
@@ -1095,10 +1103,9 @@ export default class BaseStreamController
           frag,
           this.iframesOnly,
           dataOnProgress ? progressCallback : undefined,
-          initDataPromise,
+          dataOnProgress ? initDataPromise : undefined,
         ),
         keyLoadingPromise,
-        initDataPromise,
       ])
         .then(([fragLoadedData]) => {
           if (!dataOnProgress && progressCallback) {
