@@ -230,10 +230,8 @@ export default class Hls implements HlsEventEmitter {
       ? (this.capLevelController = new _CapLevelController(this))
       : null;
     const fpsController = _FpsController ? new _FpsController(this) : null;
-    // CMCDController must be constructed before PlaylistLoader so its
-    // MANIFEST_LOADING listener fires first — the reporter is created there
-    // and must exist before the manifest request applies CMCD data.
     const _CMCDController = config.cmcdController;
+    // Instantiate CMCDController before PlaylistLoader to receive Manifest Loading events first
     const cmcdController = _CMCDController
       ? (this.cmcdController = new _CMCDController(this))
       : null;
