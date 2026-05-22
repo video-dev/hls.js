@@ -1036,7 +1036,7 @@ class AudioStreamController
   }
 
   protected loadFragment(
-    frag: Fragment,
+    frag: MediaFragment,
     track: Level,
     targetBufferTime: number,
   ) {
@@ -1049,9 +1049,7 @@ class AudioStreamController
       fragState === FragmentState.NOT_LOADED ||
       fragState === FragmentState.PARTIAL
     ) {
-      if (!isMediaFragment(frag)) {
-        this._loadInitSegment(frag, track);
-      } else if (track.details?.live && !this.initPTS[frag.cc]) {
+      if (track.details?.live && !this.initPTS[frag.cc]) {
         this.log(
           `Waiting for video PTS in continuity counter ${frag.cc} of live stream before loading audio fragment ${frag.sn} of level ${this.trackId}`,
         );
