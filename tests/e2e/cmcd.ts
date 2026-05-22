@@ -159,7 +159,9 @@ describe('CMCD v2 E2E Tests', function () {
       expect(decoded).to.have.property('sid', SESSION_ID);
       expect(decoded).to.have.property('cid', CONTENT_ID);
       expect(decoded).to.have.property('v', 2);
-      expect(decoded).to.have.property('sta');
+      // Video has autoplay=true and attachMedia runs before loadSource, so
+      // MEDIA_ATTACHING sets STARTING (s) before the manifest URL is built.
+      expect(decoded).to.have.property('sta', 's');
     });
 
     it('should send valid CMCD v2 on segment requests', async function () {
@@ -195,32 +197,41 @@ describe('CMCD v2 E2E Tests', function () {
     });
 
     it('should reflect player state transitions (sta)', async function () {
+      // Video has autoplay=true and attachMedia is called before loadSource,
+      // so the first manifest carries sta=s (STARTING). Once 'playing' fires
+      // the state transitions to PLAYING (p) for subsequent requests.
       const manifests = await collector.waitForRequests(
         'manifest',
         1,
         REQUEST_TIMEOUT,
       );
-      const firstDecoded = validateCollectedRequest(manifests[0]);
-      expect(firstDecoded).to.have.property('sta', 's');
+      expect(validateCollectedRequest(manifests[0])).to.have.property(
+        'sta',
+        's',
+      );
 
-      // Wait for playback to start, then wait for additional segments
-      // which should carry sta=p (playing state)
       await waitForPlayback(hls, video);
-
-      // After playback starts, wait for more segments to be requested
-      // with the updated player state
       await collector.waitForRequests('segment', 4, REQUEST_TIMEOUT);
 
       const segments = collector.getRequests('segment');
-      const hasPlaying = segments.some((req) => {
-        const result = validateCmcdRequest(req.request);
-        return result.data.sta === 'p';
-      });
+      const states = segments.map(
+        (r) => validateCmcdRequest(r.request).data.sta,
+      );
+
+      const hasPlaying = states.includes('p');
       expect(hasPlaying).to.equal(
         true,
-        `No segment had sta=p (playing state). States found: ${segments
-          .map((r) => validateCmcdRequest(r.request).data.sta)
-          .join(', ')}`,
+        `No segment had sta=p (playing state). States found: ${states.join(', ')}`,
+      );
+
+      // Per spec/design: with autoplay=true, the only non-PLAYING value
+      // segments should ever report is STARTING — never PRELOADING.
+      const unexpected = states.filter(
+        (s) => s !== undefined && s !== 's' && s !== 'p',
+      );
+      expect(unexpected).to.deep.equal(
+        [],
+        `Unexpected sta tokens on segments: ${unexpected.join(', ')}`,
       );
     });
 
@@ -293,9 +304,11 @@ describe('CMCD v2 E2E Tests', function () {
 
       const decoded = validateCollectedRequest(req);
 
-      // v2-specific fields
+      // v2-specific fields. Video has autoplay=true and attachMedia runs
+      // before loadSource, so sta=s (STARTING) is set before the manifest
+      // request is built.
       expect(decoded).to.have.property('v', 2);
-      expect(decoded).to.have.property('sta');
+      expect(decoded).to.have.property('sta', 's');
 
       // Standard fields
       expect(decoded).to.have.property('ot', 'm');
@@ -463,7 +476,110 @@ describe('CMCD v2 E2E Tests', function () {
       const decoded = validateCollectedRequest(manifests[0]);
 
       expect(decoded).to.have.property('v', 2);
+      // Video has autoplay=true and attachMedia runs before loadSource, so
+      // sta=s (STARTING) is set before the manifest URL is built.
       expect(decoded).to.have.property('sta', 's');
+    });
+  });
+
+  // Verifies the master-manifest sta value across all combinations of
+  // video.autoplay, hls.config.autoStartLoad, and the
+  // attachMedia/loadSource call order.
+  //
+  // Expected outcome derives entirely from the autoplay+order pair:
+  //   attach→load + autoplay=T → STARTING (s) — MEDIA_ATTACHING sets it
+  //     before the manifest URL is built.
+  //   any other combination → PRELOADING (d) — either set by
+  //     onMediaAttaching (autoplay=false) or by the no-media fallback in
+  //     onManifestLoading (load-before-attach).
+  // autoStartLoad does not affect the master manifest's sta; it only
+  // determines whether subsequent segments load automatically.
+  describe('Group 6: initial sta matrix', function () {
+    type Scenario = {
+      autoplay: boolean;
+      autoStartLoad: boolean;
+      order: 'attach-load' | 'load-attach';
+      expectedSta: 's' | 'd';
+    };
+
+    const scenarios: Record<string, Scenario> = {
+      '1A: autoplay=T, autoStartLoad=T, attach→load': {
+        autoplay: true,
+        autoStartLoad: true,
+        order: 'attach-load',
+        expectedSta: 's',
+      },
+      '1B: autoplay=T, autoStartLoad=T, load→attach': {
+        autoplay: true,
+        autoStartLoad: true,
+        order: 'load-attach',
+        expectedSta: 'd',
+      },
+      '2A: autoplay=F, autoStartLoad=T, attach→load': {
+        autoplay: false,
+        autoStartLoad: true,
+        order: 'attach-load',
+        expectedSta: 'd',
+      },
+      '2B: autoplay=F, autoStartLoad=T, load→attach': {
+        autoplay: false,
+        autoStartLoad: true,
+        order: 'load-attach',
+        expectedSta: 'd',
+      },
+      '3A: autoplay=F, autoStartLoad=F, attach→load': {
+        autoplay: false,
+        autoStartLoad: false,
+        order: 'attach-load',
+        expectedSta: 'd',
+      },
+      '3B: autoplay=F, autoStartLoad=F, load→attach': {
+        autoplay: false,
+        autoStartLoad: false,
+        order: 'load-attach',
+        expectedSta: 'd',
+      },
+    };
+
+    Object.entries(scenarios).forEach(([label, scenario]) => {
+      it(`${label} → sta=${scenario.expectedSta} on first manifest`, async function () {
+        // Override the default-created video element with one that matches
+        // this scenario's autoplay setting.
+        destroyVideoElement(video);
+        video = document.createElement('video');
+        video.muted = true;
+        video.playsInline = true;
+        video.autoplay = scenario.autoplay;
+        document.body.appendChild(video);
+
+        collector.attach();
+        hls = new Hls({
+          loader: FetchLoader,
+          autoStartLoad: scenario.autoStartLoad,
+          cmcd: {
+            version: 2,
+            sessionId: SESSION_ID,
+            contentId: CONTENT_ID,
+          },
+        });
+
+        if (scenario.order === 'attach-load') {
+          hls.attachMedia(video);
+          hls.loadSource(TEST_STREAM);
+        } else {
+          hls.loadSource(TEST_STREAM);
+          hls.attachMedia(video);
+        }
+
+        const manifests = await collector.waitForRequests(
+          'manifest',
+          1,
+          REQUEST_TIMEOUT,
+        );
+        const decoded = validateCollectedRequest(manifests[0]);
+
+        expect(decoded).to.have.property('sta', scenario.expectedSta);
+      });
     });
   });
 });

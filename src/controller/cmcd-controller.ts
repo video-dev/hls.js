@@ -57,7 +57,7 @@ export default class CMCDController implements ComponentAPI {
   private initialized: boolean = false;
   private starved: boolean = false;
   private buffering: boolean = true;
-  private playerState: CmcdPlayerState = CmcdPlayerState.STARTING;
+  private playerState?: CmcdPlayerState;
   private reporter?: CmcdReporter;
 
   constructor(hls: Hls) {
@@ -93,9 +93,7 @@ export default class CMCDController implements ComponentAPI {
         eventTargets: (cmcd.eventTargets ?? []).map(
           ({ includeKeys, ...rest }) => ({
             ...rest,
-            enabledKeys: includeKeys ?? [
-              ...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS),
-            ],
+            enabledKeys: includeKeys ?? CMCD_KEYS,
           }),
         ),
       },
@@ -112,7 +110,7 @@ export default class CMCDController implements ComponentAPI {
   private registerListeners() {
     const hls = this.hls;
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
-    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     hls.on(Events.MEDIA_ENDED, this.onMediaEnded, this);
     hls.on(Events.ERROR, this.onError, this);
@@ -124,7 +122,7 @@ export default class CMCDController implements ComponentAPI {
   private unregisterListeners() {
     const hls = this.hls;
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
-    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
     hls.off(Events.MEDIA_ENDED, this.onMediaEnded, this);
     hls.off(Events.ERROR, this.onError, this);
@@ -145,17 +143,24 @@ export default class CMCDController implements ComponentAPI {
     // @ts-ignore
     this.hls = this.config = null;
     // @ts-ignore
-    this.onWaiting = this.onPlaying = this.onPause = null;
+    this.onWaiting = this.onPlay = this.onPlaying = this.onPause = null;
     // @ts-ignore
     this.onSeeking = this.onSeeked = this.media = null;
   }
 
-  private onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
+  private onMediaAttaching(
+    event: Events.MEDIA_ATTACHING,
     data: MediaAttachedData,
   ) {
     const media = (this.media = data.media);
+    this.setPlayerState(
+      this.media.autoplay
+        ? CmcdPlayerState.STARTING
+        : CmcdPlayerState.PRELOADING,
+    );
+
     addEventListener(media, 'waiting', this.onWaiting);
+    addEventListener(media, 'play', this.onPlay);
     addEventListener(media, 'playing', this.onPlaying);
     addEventListener(media, 'pause', this.onPause);
     addEventListener(media, 'seeking', this.onSeeking);
@@ -170,6 +175,7 @@ export default class CMCDController implements ComponentAPI {
     }
 
     removeEventListener(media, 'waiting', this.onWaiting);
+    removeEventListener(media, 'play', this.onPlay);
     removeEventListener(media, 'playing', this.onPlaying);
     removeEventListener(media, 'pause', this.onPause);
     removeEventListener(media, 'seeking', this.onSeeking);
@@ -188,6 +194,12 @@ export default class CMCDController implements ComponentAPI {
     this.buffering = true;
   };
 
+  private onPlay = () => {
+    if (!this.initialized) {
+      this.setPlayerState(CmcdPlayerState.STARTING);
+    }
+  };
+
   private onPlaying = () => {
     if (!this.initialized) {
       this.initialized = true;
@@ -204,10 +216,15 @@ export default class CMCDController implements ComponentAPI {
   };
 
   private onSeeking = () => {
-    this.setPlayerState(CmcdPlayerState.SEEKING);
+    if (this.initialized) {
+      this.setPlayerState(CmcdPlayerState.SEEKING);
+    }
   };
 
   private onSeeked = () => {
+    if (!this.initialized) {
+      return;
+    }
     if (this.media?.paused) {
       this.setPlayerState(CmcdPlayerState.PAUSED);
     }
@@ -221,7 +238,6 @@ export default class CMCDController implements ComponentAPI {
     event: Events.MANIFEST_LOADING,
     data: ManifestLoadingData,
   ) {
-    this.playerState = CmcdPlayerState.STARTING;
     this.initialized = false;
     this.starved = false;
     this.buffering = true;
@@ -232,6 +248,10 @@ export default class CMCDController implements ComponentAPI {
     }
 
     this.createReporter();
+
+    if (!this.media) {
+      this.setPlayerState(CmcdPlayerState.PRELOADING);
+    }
   }
 
   private onError(event: Events.ERROR, data: ErrorData) {

@@ -43,7 +43,20 @@ https://dummy.url.com/10906.m4s`;
 const uuidRegex =
   /[a-f\d]{8}-[a-f\d]{4}-4[a-f\d]{3}-[89ab][a-f\d]{3}-[a-f\d]{12}/;
 
-const setupEach = (cmcd?: CMCDControllerConfig) => {
+const makeMockMedia = (autoplay: boolean): HTMLMediaElement =>
+  ({
+    autoplay,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }) as unknown as HTMLMediaElement;
+
+const setupEach = (
+  cmcd?: CMCDControllerConfig,
+  // Pass `attachBefore` to simulate `hls.attachMedia()` running *before*
+  // `hls.loadSource()` — i.e., MEDIA_ATTACHING fires before MANIFEST_LOADING.
+  // Omit it for the load-before-attach order (the default in tests).
+  attachBefore?: { autoplay: boolean },
+) => {
   const details = M3U8Parser.parseLevelPlaylist(
     playlist,
     url,
@@ -71,13 +84,32 @@ const setupEach = (cmcd?: CMCDControllerConfig) => {
   };
   hls.streamController = {
     getLevelDetails: () => details,
+    // Tests that fire MEDIA_ATTACHING will exercise getBufferLength, which
+    // calls hls.mainForwardBufferInfo → streamController.getMainFwdBufferInfo.
+    // Default to null (no buffer info known); individual tests override.
+    getMainFwdBufferInfo: () => null,
   };
   // hls.audioTracks = [];
 
   cmcdController = new CMCDController(hls);
+
+  if (attachBefore) {
+    hls.trigger(Events.MEDIA_ATTACHING, {
+      media: makeMockMedia(attachBefore.autoplay),
+    });
+  }
+
   hls.trigger(Events.MANIFEST_LOADING, { url });
 
   return details;
+};
+
+// Trigger MEDIA_ATTACHING after setupEach to simulate `hls.attachMedia()`
+// being called *after* `hls.loadSource()`.
+const attachMedia = (autoplay = false) => {
+  cmcdController.hls.trigger(Events.MEDIA_ATTACHING, {
+    media: makeMockMedia(autoplay),
+  });
 };
 
 const base = {
@@ -238,12 +270,65 @@ describe('CMCDController', function () {
         expectField(url, `v%3D2`);
       });
 
-      it('includes player state (sta) for v2', function () {
-        setupEach({ version: 2 });
+      // The first manifest request's `sta` depends on which of attachMedia
+      // and loadSource was called first. The 4 combinations below cover the
+      // matrix:
+      //   attach→load + autoplay=T → STARTING ("s")
+      //   attach→load + autoplay=F → PRELOADING ("d")
+      //   load→attach (or no attach) → PRELOADING ("d") via the no-media
+      //     branch in onManifestLoading; autoplay only affects subsequent
+      //     requests after attach completes.
+      describe('initial sta matrix (attach order × autoplay)', function () {
+        it('attach→load, autoplay=true → STARTING on first manifest', function () {
+          setupEach({ version: 2 }, { autoplay: true });
 
-        const { url } = applyPlaylistData();
-        // Initial state is STARTING ("s")
-        expectField(url, `sta%3Ds`);
+          expect((cmcdController as any).playerState).to.equal('s');
+          const { url } = applyPlaylistData();
+          expectField(url, `sta%3Ds`);
+        });
+
+        it('attach→load, autoplay=false → PRELOADING on first manifest', function () {
+          setupEach({ version: 2 }, { autoplay: false });
+
+          expect((cmcdController as any).playerState).to.equal('d');
+          const { url } = applyPlaylistData();
+          expectField(url, `sta%3Dd`);
+        });
+
+        it('load→attach (no media yet at load) → PRELOADING on first manifest', function () {
+          setupEach({ version: 2 });
+
+          // onManifestLoading sets PRELOADING because this.media is undefined
+          expect((cmcdController as any).playerState).to.equal('d');
+          const { url } = applyPlaylistData();
+          expectField(url, `sta%3Dd`);
+        });
+
+        it('load→attach, autoplay=true → first manifest is PRELOADING, then transitions to STARTING', function () {
+          setupEach({ version: 2 });
+
+          const { url: first } = applyPlaylistData();
+          expectField(first, `sta%3Dd`);
+
+          attachMedia(true);
+          expect((cmcdController as any).playerState).to.equal('s');
+
+          const { url: second } = applyPlaylistData();
+          expectField(second, `sta%3Ds`);
+        });
+
+        it('load→attach, autoplay=false → stays PRELOADING after attach', function () {
+          setupEach({ version: 2 });
+
+          const { url: first } = applyPlaylistData();
+          expectField(first, `sta%3Dd`);
+
+          attachMedia(false);
+          expect((cmcdController as any).playerState).to.equal('d');
+
+          const { url: second } = applyPlaylistData();
+          expectField(second, `sta%3Dd`);
+        });
       });
 
       it('includes stream type (st) for v2 when level details are available', function () {
@@ -289,13 +374,14 @@ describe('CMCDController', function () {
 
       it('includes v2 fields in fragment data', function () {
         const details = setupEach({ version: 2 });
+        attachMedia(false);
         details.live = false;
 
         const { url } = applyFragmentData(details.fragments[0]);
         // Should contain v2 version, stream type, and player state
         expectField(url, `v%3D2`);
         expectField(url, `st%3Dv`);
-        expectField(url, `sta%3Ds`);
+        expectField(url, `sta%3Dd`);
         // Standard fragment fields still present (inner list format in v2)
         expectField(url, `br%3D%281%29`);
         expectField(url, `ot%3Dav`);
@@ -303,6 +389,7 @@ describe('CMCDController', function () {
 
       it('includes v2 fields in headers mode', function () {
         const details = setupEach({ version: 2, useHeaders: true });
+        attachMedia(false);
         details.live = false;
 
         const { url, headers = {} } = applyPlaylistData();
@@ -311,7 +398,7 @@ describe('CMCDController', function () {
         const allHeaders = Object.values(headers).join(',');
         expect(allHeaders).to.include('v=2');
         expect(allHeaders).to.include('st=v');
-        expect(allHeaders).to.include('sta=s');
+        expect(allHeaders).to.include('sta=d');
       });
     });
 
@@ -481,6 +568,7 @@ describe('CMCDController', function () {
           paused: true,
           removeEventListener: () => {},
         } as unknown as HTMLMediaElement;
+        (cmcdController as any).initialized = true;
         (cmcdController as any).onSeeking();
         expect((cmcdController as any).playerState).to.equal('k');
 
@@ -497,11 +585,69 @@ describe('CMCDController', function () {
           paused: false,
           removeEventListener: () => {},
         } as unknown as HTMLMediaElement;
+        (cmcdController as any).initialized = true;
         (cmcdController as any).onSeeking();
         expect((cmcdController as any).playerState).to.equal('k');
 
         (cmcdController as any).onSeeked();
         expect((cmcdController as any).playerState).to.equal('k');
+
+        cmcdController.destroy();
+      });
+
+      it('stays in PRELOADING when onSeeking fires before play()', function () {
+        // Per CTA-5004-B: SEEKING is for playhead moves "after starting".
+        // Before play() the player is PRELOADING; seeks during preload
+        // should not transition out of it.
+        setupEach({ version: 2 });
+        attachMedia(false);
+
+        (cmcdController as any).media = {
+          paused: true,
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
+        expect((cmcdController as any).playerState).to.equal('d');
+
+        (cmcdController as any).onSeeking();
+        expect((cmcdController as any).playerState).to.equal('d');
+
+        (cmcdController as any).onSeeked();
+        expect((cmcdController as any).playerState).to.equal('d');
+
+        cmcdController.destroy();
+      });
+
+      it('transitions PRELOADING to STARTING on first play()', function () {
+        setupEach({ version: 2 });
+        attachMedia(false);
+        expect((cmcdController as any).playerState).to.equal('d');
+
+        (cmcdController as any).onPlay();
+        expect((cmcdController as any).playerState).to.equal('s');
+
+        cmcdController.destroy();
+      });
+
+      it('does not re-enter STARTING on subsequent play() after PLAYING', function () {
+        setupEach({ version: 2 });
+
+        (cmcdController as any).onPlay();
+        (cmcdController as any).onPlaying();
+        expect((cmcdController as any).playerState).to.equal('p');
+
+        // After pause/play cycle, 'play' fires again but we stay on
+        // the prior state until 'playing' resolves to PLAYING.
+        (cmcdController as any).media = {
+          paused: true,
+          ended: false,
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
+        (cmcdController as any).onPause();
+        expect((cmcdController as any).playerState).to.equal('a');
+
+        (cmcdController as any).onPlay();
+        // initialized is now true; onPlay must not transition back to STARTING.
+        expect((cmcdController as any).playerState).to.equal('a');
 
         cmcdController.destroy();
       });
@@ -962,11 +1108,14 @@ describe('CMCDController', function () {
           reporter.eventTargets.values(),
         ) as any[];
         const queue = targetStates[0].queue as any[];
-        const psEvents = queue.filter(
-          (e: any) => e.e === CmcdEventType.PLAY_STATE,
+        // The PLAY_STATE event for the PLAYING transition (sta=p) should
+        // carry the bl we populated above. Earlier PRELOADING transitions
+        // queued by onManifestLoading do not have bl.
+        const playingEvents = queue.filter(
+          (e: any) => e.e === CmcdEventType.PLAY_STATE && e.sta === 'p',
         );
-        expect(psEvents.length).to.be.greaterThan(0);
-        expect(psEvents[0].bl).to.deep.equal([10000]);
+        expect(playingEvents.length).to.be.greaterThan(0);
+        expect(playingEvents[0].bl).to.deep.equal([10000]);
 
         cmcdController.destroy();
       });
