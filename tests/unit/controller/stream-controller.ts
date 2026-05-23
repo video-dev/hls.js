@@ -7,7 +7,7 @@ import { State } from '../../../src/controller/base-stream-controller';
 import { FragmentState } from '../../../src/controller/fragment-tracker';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { Fragment } from '../../../src/loader/fragment';
+import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
@@ -16,6 +16,7 @@ import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import { mockFragments as mockFragmentArray } from '../../mocks/data';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
+import type BufferController from '../../../src/controller/buffer-controller';
 import type { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import type StreamController from '../../../src/controller/stream-controller';
 import type { MediaFragment } from '../../../src/loader/fragment';
@@ -771,6 +772,297 @@ describe('StreamController', function () {
       const result = streamController['checkFragmentChanged']();
 
       expect(result).to.be.false;
+    });
+  });
+
+  describe('flush lower quality back buffer when loopBackBufferFlush and media is looped', function () {
+    let triggerSpy: sinon.SinonSpy;
+    let bufferController: BufferController;
+
+    function createMediaMock(options: {
+      loop: boolean;
+      currentTime: number;
+    }): HTMLMediaElement {
+      return {
+        readyState: 4,
+        seeking: false,
+        currentTime: options.currentTime,
+        loop: options.loop,
+        buffered: new TimeRangesMock([0, options.currentTime + 10]),
+        addEventListener: sinon.stub(),
+        removeEventListener: sinon.stub(),
+      } as unknown as HTMLMediaElement;
+    }
+
+    function createFragment(
+      sn: number,
+      level: number,
+      start: number,
+      options?: { partial?: boolean },
+    ): MediaFragment {
+      const frag = new Fragment(PlaylistLevelType.MAIN, `frag-${sn}.ts`);
+      frag.sn = sn;
+      frag.level = level;
+      frag.setStart(start);
+      frag.duration = 10;
+      frag.setElementaryStreamInfo(
+        ElementaryStreamTypes.VIDEO,
+        start,
+        start + 10,
+        start,
+        start + 10,
+        options?.partial ?? false,
+      );
+      return frag as MediaFragment;
+    }
+
+    function getBufferFlushingCalls() {
+      return triggerSpy
+        .getCalls()
+        .filter((call) => call.args[0] === Events.BUFFER_FLUSHING);
+    }
+
+    beforeEach(function () {
+      triggerSpy = sinon.spy(hls, 'trigger');
+      bufferController = hls['bufferController'] as BufferController;
+    });
+
+    afterEach(function () {
+      triggerSpy.restore();
+    });
+
+    function setupLevelDetails(fragments: MediaFragment[]) {
+      const details = new LevelDetails('');
+      details.fragments = fragments;
+      details.startSN = fragments[0]?.sn as number;
+      details.endSN = fragments[fragments.length - 1]?.sn as number;
+      bufferController['details'] = details;
+    }
+
+    function attachMediaAndStubTracker(
+      media: HTMLMediaElement,
+      frag: MediaFragment,
+    ) {
+      hls.trigger(Events.MEDIA_ATTACHED, { media });
+      // Set media directly on buffer-controller to avoid MEDIA_ATTACHING
+      // side effects (MediaSource creation) that leak into other tests.
+      bufferController['media'] = media;
+      // Set up a mock source buffer so flushBackBuffer can iterate and flush
+      const mockSourceBuffer = {
+        buffered: media.buffered,
+        updating: false,
+        addEventListener: sinon.stub(),
+        removeEventListener: sinon.stub(),
+        remove: sinon.stub(),
+      };
+      bufferController['sourceBuffers'] = [
+        ['video', mockSourceBuffer as any],
+        [null, null],
+      ];
+      bufferController['tracks'] = {
+        video: { buffer: mockSourceBuffer },
+      } as any;
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(frag);
+    }
+
+    it('should flush up to the start of fragPlaying on level upgrade', function () {
+      hls.config.loopBackBufferFlush = true;
+      const media = createMediaMock({ loop: true, currentTime: 25 });
+      const frag0 = createFragment(0, 0, 0);
+      const frag1 = createFragment(1, 0, 10);
+      const newFrag = createFragment(2, 2, 20);
+
+      setupLevelDetails([frag0, frag1, newFrag]);
+      attachMediaAndStubTracker(media, frag0);
+      streamController.tick();
+
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(newFrag);
+      streamController.tick();
+
+      const flushCalls = getBufferFlushingCalls();
+      expect(flushCalls).to.have.length(1);
+      expect(flushCalls[0].args[1]).to.deep.include({
+        startOffset: 0,
+        endOffset: 19.75,
+      });
+    });
+
+    it('should trigger BUFFER_FLUSHING on level upgrade when loopBackBufferFlush is unset and media.loop is true', function () {
+      hls.config.loopBackBufferFlush = undefined;
+      const media = createMediaMock({ loop: true, currentTime: 25 });
+      const frag0 = createFragment(0, 0, 0);
+      const frag1 = createFragment(1, 0, 10);
+      const newFrag = createFragment(2, 2, 20);
+
+      setupLevelDetails([frag0, frag1, newFrag]);
+      attachMediaAndStubTracker(media, frag0);
+      streamController.tick();
+
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(newFrag);
+      streamController.tick();
+
+      const flushCalls = getBufferFlushingCalls();
+      expect(flushCalls).to.have.length(1);
+      expect(flushCalls[0].args[1]).to.deep.include({
+        startOffset: 0,
+        endOffset: 19.75,
+      });
+    });
+
+    it('should not trigger BUFFER_FLUSHING when loopBackBufferFlush is unset and media.loop is false', function () {
+      hls.config.loopBackBufferFlush = undefined;
+      const media = createMediaMock({ loop: false, currentTime: 25 });
+      const frag0 = createFragment(0, 0, 0);
+      const newFrag = createFragment(2, 2, 20);
+
+      setupLevelDetails([frag0, newFrag]);
+      attachMediaAndStubTracker(media, frag0);
+      streamController.tick();
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(newFrag);
+      streamController.tick();
+
+      expect(getBufferFlushingCalls()).to.have.length(0);
+    });
+
+    it('should not trigger BUFFER_FLUSHING when loopBackBufferFlush is disabled', function () {
+      hls.config.loopBackBufferFlush = false;
+      const media = createMediaMock({ loop: true, currentTime: 25 });
+      const frag0 = createFragment(0, 0, 0);
+      const newFrag = createFragment(2, 2, 20);
+
+      setupLevelDetails([frag0, newFrag]);
+      attachMediaAndStubTracker(media, frag0);
+      streamController.tick();
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(newFrag);
+      streamController.tick();
+
+      expect(getBufferFlushingCalls()).to.have.length(0);
+    });
+
+    it('should not trigger BUFFER_FLUSHING when media.loop is false', function () {
+      hls.config.loopBackBufferFlush = true;
+      const media = createMediaMock({ loop: false, currentTime: 25 });
+      const frag0 = createFragment(0, 0, 0);
+      const newFrag = createFragment(2, 2, 20);
+
+      setupLevelDetails([frag0, newFrag]);
+      attachMediaAndStubTracker(media, frag0);
+      streamController.tick();
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(newFrag);
+      streamController.tick();
+
+      expect(getBufferFlushingCalls()).to.have.length(0);
+    });
+
+    it('should not trigger BUFFER_FLUSHING when level has not changed', function () {
+      hls.config.loopBackBufferFlush = true;
+      const media = createMediaMock({ loop: true, currentTime: 15 });
+      const frag0 = createFragment(0, 0, 0);
+      const frag1 = createFragment(1, 0, 10);
+
+      setupLevelDetails([frag0, frag1]);
+      attachMediaAndStubTracker(media, frag0);
+      streamController.tick();
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(frag1);
+      streamController.tick();
+
+      expect(getBufferFlushingCalls()).to.have.length(0);
+    });
+
+    it('should not trigger BUFFER_FLUSHING when fragPlaying is the first fragment', function () {
+      hls.config.loopBackBufferFlush = true;
+      const media = createMediaMock({ loop: true, currentTime: 5 });
+      const frag0 = createFragment(0, 0, 0);
+      const newFrag0 = createFragment(0, 2, 0);
+
+      setupLevelDetails([frag0]);
+      attachMediaAndStubTracker(media, frag0);
+      streamController.tick();
+      // Replace level details with the new level's fragment at position 0
+      setupLevelDetails([newFrag0]);
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(newFrag0);
+      streamController.tick();
+
+      expect(getBufferFlushingCalls()).to.have.length(0);
+    });
+
+    it('should not trigger BUFFER_FLUSHING twice for the same level upgrade', function () {
+      hls.config.loopBackBufferFlush = true;
+      const media = createMediaMock({ loop: true, currentTime: 25 });
+      const frag0 = createFragment(0, 0, 0);
+      const frag1 = createFragment(1, 0, 10);
+      const frag2 = createFragment(2, 2, 20);
+      const frag3 = createFragment(3, 2, 30);
+
+      setupLevelDetails([frag0, frag1, frag2, frag3]);
+
+      // Level 0→2: should flush
+      attachMediaAndStubTracker(media, frag0);
+      streamController.tick();
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(frag2);
+      streamController.tick();
+      expect(getBufferFlushingCalls()).to.have.length(1);
+
+      // Still level 2, no level change: should not flush again
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(frag3);
+      streamController.tick();
+      expect(getBufferFlushingCalls()).to.have.length(1);
+    });
+
+    it('should trigger BUFFER_FLUSHING again after level downgrade then upgrade', function () {
+      hls.config.loopBackBufferFlush = true;
+      const media = createMediaMock({ loop: true, currentTime: 25 });
+      const frag0 = createFragment(0, 0, 0);
+      const frag1 = createFragment(1, 0, 10);
+      const frag2 = createFragment(2, 2, 20);
+      const frag3 = createFragment(3, 1, 30);
+      const frag4 = createFragment(4, 2, 40);
+
+      setupLevelDetails([frag0, frag1, frag2, frag3, frag4]);
+
+      // Level 0→2: first flush
+      attachMediaAndStubTracker(media, frag0);
+      streamController.tick();
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(frag2);
+      streamController.tick();
+      expect(getBufferFlushingCalls()).to.have.length(1);
+
+      // Level 2→1: downgrade, no flush
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(frag3);
+      streamController.tick();
+      expect(getBufferFlushingCalls()).to.have.length(1);
+
+      // Level 1→2: upgrade again, should flush
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(frag4);
+      streamController.tick();
+
+      const flushCalls = getBufferFlushingCalls();
+      expect(flushCalls).to.have.length(2);
+      expect(flushCalls[0].args[1]).to.deep.include({
+        startOffset: 0,
+        endOffset: 19.75,
+      });
+      // Second flush: frag4 is independent (start=40)
+      expect(flushCalls[1].args[1]).to.deep.include({
+        startOffset: 0,
+        endOffset: 39.75,
+      });
+    });
+
+    it('should not trigger BUFFER_FLUSHING when playing fragment is partial', function () {
+      hls.config.loopBackBufferFlush = true;
+      const media = createMediaMock({ loop: true, currentTime: 25 });
+      const frag0 = createFragment(0, 0, 0);
+      const frag1 = createFragment(1, 0, 10);
+      const newFrag = createFragment(2, 2, 20, { partial: true });
+
+      setupLevelDetails([frag0, frag1, newFrag]);
+      attachMediaAndStubTracker(media, frag0);
+      streamController.tick();
+      fragmentTracker.getAppendedFrag = sinon.stub().returns(newFrag);
+      streamController.tick();
+
+      expect(getBufferFlushingCalls()).to.have.length(0);
     });
   });
 
