@@ -2,7 +2,7 @@ import BufferOperationQueue from './buffer-operation-queue';
 import { createDoNothingErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
+import { ElementaryStreamTypes } from '../loader/fragment';
 import { DEFAULT_TARGET_DURATION } from '../loader/level-details';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -69,6 +69,8 @@ const VIDEO_CODEC_PROFILE_REPLACE =
   /(avc[1234]|hvc1|hev1|dvh[1e]|vp09|av01)(?:\.[^.,]+)+/;
 
 const TRACK_REMOVED_ERROR_NAME = 'HlsJsTrackRemovedError';
+
+const LOOP_FLUSH_SAFETY_MARGIN = 0.25;
 
 class HlsJsTrackRemovedError extends Error {
   constructor(message) {
@@ -1131,36 +1133,39 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return;
     }
     const { backBufferLength, frontBufferFlushThreshold } = config;
-    this.trimBuffers(frontBufferFlushThreshold, backBufferLength);
+    this.trimBuffers(
+      frontBufferFlushThreshold,
+      backBufferLength,
+      data.frag,
+      data.previousFrag,
+    );
 
     // Only clear append errors on successful encounter of buffered media. Init segments may complete without error for unsupported media.
-    if (isMediaFragment(data.frag)) {
-      const elementaryStreams = data.frag.elementaryStreams;
-      const { appendErrors } = this;
-      const appendErrorType = this.appendError?.sourceBufferName;
+    const elementaryStreams = data.frag.elementaryStreams;
+    const { appendErrors } = this;
+    const appendErrorType = this.appendError?.sourceBufferName;
 
-      Object.keys(elementaryStreams).forEach((type) => {
-        if (!elementaryStreams[type]) {
-          return;
-        }
-        appendErrors[type] = 0;
-        if (type === appendErrorType) {
+    Object.keys(elementaryStreams).forEach((type) => {
+      if (!elementaryStreams[type]) {
+        return;
+      }
+      appendErrors[type] = 0;
+      if (type === appendErrorType) {
+        this.appendError = undefined;
+      }
+      if (type === 'audio' || type === 'video') {
+        appendErrors.audiovideo = 0;
+        if (appendErrorType === 'audiovideo') {
           this.appendError = undefined;
         }
-        if (type === 'audio' || type === 'video') {
-          appendErrors.audiovideo = 0;
-          if (appendErrorType === 'audiovideo') {
-            this.appendError = undefined;
-          }
-        } else {
-          appendErrors.audio = 0;
-          appendErrors.video = 0;
-          if (appendErrorType !== 'audiovideo') {
-            this.appendError = undefined;
-          }
+      } else {
+        appendErrors.audio = 0;
+        appendErrors.video = 0;
+        if (appendErrorType !== 'audiovideo') {
+          this.appendError = undefined;
         }
-      });
-    }
+      }
+    });
   }
 
   public get bufferedToEnd(): boolean {
@@ -1303,6 +1308,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   private trimBuffers(
     frontBufferFlushThreshold: number,
     backBufferLength: number,
+    frag?: MediaFragment,
+    previousFrag?: MediaFragment | null,
   ) {
     const { hls, details, media } = this;
     if (!media || details === null) {
@@ -1323,12 +1330,30 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         ? config.liveBackBufferLength
         : backBufferLength;
 
+    let targetBackBufferPosition = -Infinity;
     if (Number.isFinite(backBufferLength) && backBufferLength >= 0) {
       const maxBackBufferLength = Math.max(backBufferLength, targetDuration);
-      const targetBackBufferPosition =
+      targetBackBufferPosition =
         Math.floor(currentTime / targetDuration) * targetDuration -
         maxBackBufferLength;
+    }
 
+    // For looped media with a quality upgrade, extend the flush position
+    // to remove lower-quality segments from the back buffer.
+    if (frag) {
+      const loopFlushEnd = this.getLoopBackBufferFlushEnd(
+        frag,
+        previousFrag ?? null,
+      );
+      if (loopFlushEnd > 0) {
+        targetBackBufferPosition = Math.max(
+          targetBackBufferPosition,
+          loopFlushEnd,
+        );
+      }
+    }
+
+    if (targetBackBufferPosition > 0) {
       this.flushBackBuffer(
         currentTime,
         targetDuration,
@@ -1358,6 +1383,57 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
   }
 
+  /**
+   * For looped media, determine the back buffer flush position to remove
+   * lower-quality segments on a quality upgrade. Returns 0 if no flush is needed.
+   */
+  private getLoopBackBufferFlushEnd(
+    frag: MediaFragment,
+    previousFrag: MediaFragment | null,
+  ): number {
+    const { media } = this;
+    if (
+      this.hls?.config.loopBackBufferFlush === false ||
+      !media?.loop ||
+      !previousFrag ||
+      frag.level <= previousFrag.level
+    ) {
+      return 0;
+    }
+
+    const { video, audiovideo } = frag.elementaryStreams;
+    if (video?.partial || audiovideo?.partial) {
+      return 0;
+    }
+
+    const flushEnd =
+      this.getEarliestElementaryStreamStart(frag) - LOOP_FLUSH_SAFETY_MARGIN;
+    if (flushEnd <= 0) {
+      return 0;
+    }
+
+    this.log(
+      `Flushing lower quality back buffer for loop: level ${frag.level}, range [0-${flushEnd.toFixed(3)}]`,
+    );
+    return flushEnd;
+  }
+
+  private getEarliestElementaryStreamStart(frag: MediaFragment): number {
+    const { audio, video, audiovideo } = frag.elementaryStreams;
+    let earliest = frag.start;
+    if (audiovideo) {
+      earliest = Math.min(earliest, audiovideo.startDTS);
+    } else {
+      if (audio) {
+        earliest = Math.min(earliest, audio.startDTS);
+      }
+      if (video) {
+        earliest = Math.min(earliest, video.startDTS);
+      }
+    }
+    return earliest;
+  }
+
   private flushBackBuffer(
     currentTime: number,
     targetDuration: number,
@@ -1381,7 +1457,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             this.hls.trigger(Events.LIVE_BACK_BUFFER_REACHED, {
               bufferEnd: targetBackBufferPosition,
             });
-          } else if (track?.ended) {
+          } else if (
+            track?.ended &&
+            !(
+              this.media?.loop && this.hls?.config.loopBackBufferFlush !== false
+            )
+          ) {
             this.log(
               `Cannot flush ${type} back buffer while SourceBuffer is in ended state`,
             );

@@ -30,6 +30,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`maxBufferLength`](#maxbufferlength)
   - [`backBufferLength`](#backbufferlength)
   - [`frontBufferFlushThreshold`](#frontbufferflushthreshold)
+  - [`loopBackBufferFlush`](#loopbackbufferflush)
   - [`startOnSegmentBoundary`](#startonsegmentboundary)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
@@ -647,6 +648,12 @@ The maximum duration of buffered media to keep once it has been played, in secon
 (default: `Infinity`)
 
 The maximum duration of buffered media, in seconds, from the play position to keep before evicting non-contiguous forward ranges. A value of `Infinity` means no active eviction will take place; This value will always be at least the `maxBufferLength`.
+
+### `loopBackBufferFlush`
+
+(default: `undefined`)
+
+Controls back-buffer flushing on quality upgrades when the underlying `HTMLMediaElement` has `loop` set to `true`. When the player switches up to a higher-quality level during looped playback, the back buffer holds lower-quality segments that will be played again on the next loop. By default (`undefined`), HLS.js flushes those segments so the loop replays at the new, higher quality. Set this to `false` to opt out and preserve the existing back buffer across loops. Has no effect when `media.loop` is `false`.
 
 ### `startOnSegmentBoundary`
 

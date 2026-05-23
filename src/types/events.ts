@@ -298,7 +298,8 @@ export interface SubtitleFragProcessed {
 }
 
 export interface FragChangedData {
-  frag: Fragment;
+  frag: MediaFragment;
+  previousFrag: MediaFragment | null;
 }
 
 export interface FPSDropData {
