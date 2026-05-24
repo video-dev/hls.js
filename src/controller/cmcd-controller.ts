@@ -145,7 +145,7 @@ export default class CMCDController implements ComponentAPI {
     // @ts-ignore
     this.onWaiting = this.onPlay = this.onPlaying = this.onPause = null;
     // @ts-ignore
-    this.onSeeking = this.onSeeked = this.media = null;
+    this.onSeeking = this.onSeeked = this.onRateChange = this.media = null;
   }
 
   private onMediaAttaching(
@@ -165,6 +165,7 @@ export default class CMCDController implements ComponentAPI {
     addEventListener(media, 'pause', this.onPause);
     addEventListener(media, 'seeking', this.onSeeking);
     addEventListener(media, 'seeked', this.onSeeked);
+    addEventListener(media, 'ratechange', this.onRateChange);
   }
 
   private onMediaDetached() {
@@ -180,6 +181,7 @@ export default class CMCDController implements ComponentAPI {
     removeEventListener(media, 'pause', this.onPause);
     removeEventListener(media, 'seeking', this.onSeeking);
     removeEventListener(media, 'seeked', this.onSeeked);
+    removeEventListener(media, 'ratechange', this.onRateChange);
 
     // @ts-ignore
     this.media = null;
@@ -230,6 +232,12 @@ export default class CMCDController implements ComponentAPI {
     }
   };
 
+  private onRateChange = () => {
+    if (this.reporter && this.media) {
+      this.reporter.update({ pr: this.media.playbackRate });
+    }
+  };
+
   private onMediaEnded(event: Events.MEDIA_ENDED, data: MediaEndedData) {
     this.setPlayerState(CmcdPlayerState.ENDED);
   }
@@ -271,9 +279,7 @@ export default class CMCDController implements ComponentAPI {
       return;
     }
 
-    this.reporter.update({ br: [data.bitrate / 1000] });
-
-    const eventData: Cmcd = {};
+    const eventData: Cmcd = { br: [data.bitrate / 1000] };
     const frag = data.details?.fragments[0];
     if (frag) {
       eventData.ot = this.getObjectType(frag, data);
@@ -282,14 +288,9 @@ export default class CMCDController implements ComponentAPI {
   }
 
   private setPlayerState(state: CmcdPlayerState) {
-    if (this.playerState === state) {
-      return;
-    }
-
     this.playerState = state;
     if (this.reporter) {
       this.reporter.update({ sta: state });
-      this.reporter.recordEvent(CmcdEventType.PLAY_STATE);
     }
   }
 

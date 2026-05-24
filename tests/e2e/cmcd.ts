@@ -1,5 +1,6 @@
 import {
   CmcdEventType,
+  CmcdReportRecorder,
   validateCmcdEvents,
   validateCmcdRequest,
 } from '@svta/cml-cmcd';
@@ -7,8 +8,7 @@ import { assert, expect } from 'chai';
 import { Events } from '../../src/events';
 import Hls from '../../src/hls';
 import FetchLoader from '../../src/utils/fetch-loader';
-import { CmcdRequestCollector } from '../mocks/cmcd-request-collector';
-import type { CollectedRequest } from '../mocks/cmcd-request-collector';
+import type { CmcdRecordedReport } from '@svta/cml-cmcd';
 
 const TEST_STREAM = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
 const SESSION_ID = 'e2e-test-session';
@@ -79,8 +79,8 @@ function waitForPlayback(
   });
 }
 
-function validateCollectedRequest(collected: CollectedRequest) {
-  const result = validateCmcdRequest(collected.request);
+function validateRecordedReport(report: CmcdRecordedReport) {
+  const result = validateCmcdRequest(report.request);
   expect(result.valid).to.equal(
     true,
     `CMCD validation failed: ${JSON.stringify(result.issues)}`,
@@ -91,13 +91,13 @@ function validateCollectedRequest(collected: CollectedRequest) {
 describe('CMCD v2 E2E Tests', function () {
   this.timeout(60000);
 
-  let collector: CmcdRequestCollector;
+  let recorder: CmcdReportRecorder;
   let video: HTMLVideoElement;
   let hls: Hls;
   let origOnerror: OnErrorEventHandler;
 
   beforeEach(function () {
-    collector = new CmcdRequestCollector();
+    recorder = new CmcdReportRecorder();
     video = createVideoElement();
 
     // Suppress uncaught errors from the transmuxer worker blob.
@@ -126,14 +126,14 @@ describe('CMCD v2 E2E Tests', function () {
       hls.destroy();
     }
     destroyVideoElement(video);
-    collector.detach();
-    collector.clear();
+    recorder.detach();
+    recorder.clear();
     self.onerror = origOnerror;
   });
 
   describe('Group 1: Query Mode (v2)', function () {
     beforeEach(function () {
-      collector.attach();
+      recorder.attach({ waitTimeout: REQUEST_TIMEOUT });
       hls = new Hls({
         loader: FetchLoader,
         cmcd: {
@@ -147,12 +147,8 @@ describe('CMCD v2 E2E Tests', function () {
     });
 
     it('should send valid CMCD v2 on manifest requests', async function () {
-      const manifests = await collector.waitForRequests(
-        'manifest',
-        1,
-        REQUEST_TIMEOUT,
-      );
-      const decoded = validateCollectedRequest(manifests[0]);
+      const manifests = await recorder.waitForManifest();
+      const decoded = validateRecordedReport(manifests[0]);
 
       expect(decoded).to.have.property('ot', 'm');
       expect(decoded).to.have.property('sf', 'h');
@@ -166,12 +162,8 @@ describe('CMCD v2 E2E Tests', function () {
 
     it('should send valid CMCD v2 on segment requests', async function () {
       // Wait for segments directly — segments are requested before playback starts
-      const segments = await collector.waitForRequests(
-        'segment',
-        2,
-        REQUEST_TIMEOUT,
-      );
-      const decoded = validateCollectedRequest(segments[0]);
+      const segments = await recorder.waitForSegments({ count: 2 });
+      const decoded = validateRecordedReport(segments[0]);
 
       expect(decoded).to.have.property('ot');
       expect(['av', 'v', 'a', 'i']).to.include(decoded.ot as string);
@@ -184,13 +176,9 @@ describe('CMCD v2 E2E Tests', function () {
     it('should include next object request (nor) on at least one segment', async function () {
       await waitForPlayback(hls, video);
 
-      const segments = await collector.waitForRequests(
-        'segment',
-        2,
-        REQUEST_TIMEOUT,
-      );
-      const hasNor = segments.some((req) => {
-        const result = validateCmcdRequest(req.request);
+      const segments = await recorder.waitForSegments({ count: 2 });
+      const hasNor = segments.some((report) => {
+        const result = validateCmcdRequest(report.request);
         return result.data.nor != null;
       });
       expect(hasNor).to.equal(true, 'No segment had a "nor" field');
@@ -200,20 +188,15 @@ describe('CMCD v2 E2E Tests', function () {
       // Video has autoplay=true and attachMedia is called before loadSource,
       // so the first manifest carries sta=s (STARTING). Once 'playing' fires
       // the state transitions to PLAYING (p) for subsequent requests.
-      const manifests = await collector.waitForRequests(
-        'manifest',
-        1,
-        REQUEST_TIMEOUT,
-      );
-      expect(validateCollectedRequest(manifests[0])).to.have.property(
-        'sta',
-        's',
-      );
+      const manifests = await recorder.waitForManifest();
+      expect(validateRecordedReport(manifests[0])).to.have.property('sta', 's');
 
       await waitForPlayback(hls, video);
-      await collector.waitForRequests('segment', 4, REQUEST_TIMEOUT);
+      await recorder.waitForSegments({ count: 4 });
 
-      const segments = collector.getRequests('segment');
+      const segments = recorder
+        .getReports()
+        .filter((r) => r.type === 'segment');
       const states = segments.map(
         (r) => validateCmcdRequest(r.request).data.sta,
       );
@@ -238,13 +221,9 @@ describe('CMCD v2 E2E Tests', function () {
     it('should include measured throughput (mtp) after playback', async function () {
       await waitForPlayback(hls, video);
 
-      const segments = await collector.waitForRequests(
-        'segment',
-        2,
-        REQUEST_TIMEOUT,
-      );
-      const hasMtp = segments.some((req) => {
-        const result = validateCmcdRequest(req.request);
+      const segments = await recorder.waitForSegments({ count: 2 });
+      const hasMtp = segments.some((report) => {
+        const result = validateCmcdRequest(report.request);
         return result.data.mtp != null;
       });
       expect(hasMtp).to.equal(
@@ -256,7 +235,7 @@ describe('CMCD v2 E2E Tests', function () {
 
   describe('Group 2: Header Mode (v2)', function () {
     beforeEach(function () {
-      collector.attach();
+      recorder.attach({ waitTimeout: REQUEST_TIMEOUT });
       hls = new Hls({
         loader: FetchLoader,
         cmcd: {
@@ -271,17 +250,13 @@ describe('CMCD v2 E2E Tests', function () {
     });
 
     it('should send CMCD headers (not query) on manifest requests', async function () {
-      const manifests = await collector.waitForRequests(
-        'manifest',
-        1,
-        REQUEST_TIMEOUT,
-      );
-      const req = manifests[0];
+      const manifests = await recorder.waitForManifest();
+      const report = manifests[0];
 
-      expect(req.reportingMode).to.equal('header');
-      expect(req.request.url).to.not.include('CMCD=');
+      expect(report.reportingMode).to.equal('header');
+      expect(report.request.url).to.not.include('CMCD=');
 
-      const decoded = validateCollectedRequest(req);
+      const decoded = validateRecordedReport(report);
       expect(decoded).to.have.property('ot', 'm');
       expect(decoded).to.have.property('sf', 'h');
       expect(decoded).to.have.property('sid', SESSION_ID);
@@ -293,16 +268,12 @@ describe('CMCD v2 E2E Tests', function () {
       // preflight on cross-origin requests. The test stream server may not
       // support these headers in CORS. We validate the headers on the initial
       // manifest request which is always captured by the interceptor.
-      const manifests = await collector.waitForRequests(
-        'manifest',
-        1,
-        REQUEST_TIMEOUT,
-      );
-      const req = manifests[0];
+      const manifests = await recorder.waitForManifest();
+      const report = manifests[0];
 
-      expect(req.reportingMode).to.equal('header');
+      expect(report.reportingMode).to.equal('header');
 
-      const decoded = validateCollectedRequest(req);
+      const decoded = validateRecordedReport(report);
 
       // v2-specific fields. Video has autoplay=true and attachMedia runs
       // before loadSource, so sta=s (STARTING) is set before the manifest
@@ -318,22 +289,18 @@ describe('CMCD v2 E2E Tests', function () {
     });
 
     it('should place CMCD fields in correct header shards', async function () {
-      const manifests = await collector.waitForRequests(
-        'manifest',
-        1,
-        REQUEST_TIMEOUT,
-      );
-      const { headers } = manifests[0].request;
+      const manifests = await recorder.waitForManifest();
+      const headers = manifests[0].request.headers;
 
       // CMCD-Session should contain sid, sf
-      const session = headers.get('CMCD-Session');
+      const session = headers?.['cmcd-session'];
       if (session) {
         expect(session).to.include('sid=');
         expect(session).to.include('sf=');
       }
 
       // CMCD-Object should contain ot
-      const object = headers.get('CMCD-Object');
+      const object = headers?.['cmcd-object'];
       if (object) {
         expect(object).to.include('ot=');
       }
@@ -342,7 +309,10 @@ describe('CMCD v2 E2E Tests', function () {
 
   describe('Group 3: Event Mode (v2)', function () {
     beforeEach(function () {
-      collector.attach({ eventTargetUrls: [EVENT_TARGET_URL] });
+      recorder.attach({
+        eventTargetUrls: [EVENT_TARGET_URL],
+        waitTimeout: REQUEST_TIMEOUT,
+      });
       hls = new Hls({
         loader: FetchLoader,
         cmcd: {
@@ -364,17 +334,13 @@ describe('CMCD v2 E2E Tests', function () {
     it('should send play state events via POST', async function () {
       await waitForPlayback(hls, video);
 
-      const events = await collector.waitForRequests(
-        'event',
-        1,
-        REQUEST_TIMEOUT,
-      );
+      const events = await recorder.waitForEvents();
       expect(events.length).to.be.greaterThan(0);
 
-      const req = events[0];
-      expect(req.request.method).to.equal('POST');
+      const report = events[0];
+      expect(report.request.method).to.equal('POST');
 
-      const body = await req.request.text();
+      const body = report.request.body as string;
       expect(body.length).to.be.greaterThan(0);
 
       const result = validateCmcdEvents(body);
@@ -396,7 +362,7 @@ describe('CMCD v2 E2E Tests', function () {
     const INCLUDED_KEYS = ['sid', 'cid', 'ot', 'v', 'sf'];
 
     beforeEach(function () {
-      collector.attach();
+      recorder.attach({ waitTimeout: REQUEST_TIMEOUT });
       hls = new Hls({
         loader: FetchLoader,
         cmcd: {
@@ -411,11 +377,7 @@ describe('CMCD v2 E2E Tests', function () {
     });
 
     it('should only include specified keys', async function () {
-      const manifests = await collector.waitForRequests(
-        'manifest',
-        1,
-        REQUEST_TIMEOUT,
-      );
+      const manifests = await recorder.waitForManifest();
       const result = validateCmcdRequest(manifests[0].request);
       const decoded = result.data as Record<string, unknown>;
 
@@ -432,7 +394,7 @@ describe('CMCD v2 E2E Tests', function () {
 
   describe('Group 5: Version Comparison', function () {
     it('v1 should omit v and sta fields', async function () {
-      collector.attach();
+      recorder.attach({ waitTimeout: REQUEST_TIMEOUT });
       hls = new Hls({
         loader: FetchLoader,
         cmcd: {
@@ -443,11 +405,7 @@ describe('CMCD v2 E2E Tests', function () {
       hls.attachMedia(video);
       hls.loadSource(TEST_STREAM);
 
-      const manifests = await collector.waitForRequests(
-        'manifest',
-        1,
-        REQUEST_TIMEOUT,
-      );
+      const manifests = await recorder.waitForManifest();
       const result = validateCmcdRequest(manifests[0].request);
       const decoded = result.data as Record<string, unknown>;
 
@@ -456,7 +414,7 @@ describe('CMCD v2 E2E Tests', function () {
     });
 
     it('v2 should include v=2 and sta', async function () {
-      collector.attach();
+      recorder.attach({ waitTimeout: REQUEST_TIMEOUT });
       hls = new Hls({
         loader: FetchLoader,
         cmcd: {
@@ -468,12 +426,8 @@ describe('CMCD v2 E2E Tests', function () {
       hls.attachMedia(video);
       hls.loadSource(TEST_STREAM);
 
-      const manifests = await collector.waitForRequests(
-        'manifest',
-        1,
-        REQUEST_TIMEOUT,
-      );
-      const decoded = validateCollectedRequest(manifests[0]);
+      const manifests = await recorder.waitForManifest();
+      const decoded = validateRecordedReport(manifests[0]);
 
       expect(decoded).to.have.property('v', 2);
       // Video has autoplay=true and attachMedia runs before loadSource, so
@@ -552,7 +506,7 @@ describe('CMCD v2 E2E Tests', function () {
         video.autoplay = scenario.autoplay;
         document.body.appendChild(video);
 
-        collector.attach();
+        recorder.attach({ waitTimeout: REQUEST_TIMEOUT });
         hls = new Hls({
           loader: FetchLoader,
           autoStartLoad: scenario.autoStartLoad,
@@ -571,12 +525,8 @@ describe('CMCD v2 E2E Tests', function () {
           hls.attachMedia(video);
         }
 
-        const manifests = await collector.waitForRequests(
-          'manifest',
-          1,
-          REQUEST_TIMEOUT,
-        );
-        const decoded = validateCollectedRequest(manifests[0]);
+        const manifests = await recorder.waitForManifest();
+        const decoded = validateRecordedReport(manifests[0]);
 
         expect(decoded).to.have.property('sta', scenario.expectedSta);
       });
