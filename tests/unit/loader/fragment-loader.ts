@@ -140,6 +140,106 @@ describe('FragmentLoader tests', function () {
     });
   });
 
+  it('buffers progress callbacks until progressGate resolves', function () {
+    response = { data: new Uint8Array(4) };
+    const onProgress = sinon.spy();
+    let resolveGate: () => void;
+    const progressGate = new Promise<void>((res) => {
+      resolveGate = res;
+    });
+    const fragmentLoaderPrivates = fragmentLoader as any;
+    const chunk1 = new ArrayBuffer(4);
+    const chunk2 = new ArrayBuffer(8);
+
+    const loadPromise = fragmentLoader.load(
+      frag,
+      false,
+      onProgress,
+      progressGate,
+    );
+
+    fragmentLoaderPrivates.loader.callbacks.onProgress(
+      stats,
+      context,
+      chunk1,
+      networkDetails,
+    );
+    fragmentLoaderPrivates.loader.callbacks.onProgress(
+      stats,
+      context,
+      chunk2,
+      networkDetails,
+    );
+    expect(onProgress).to.not.have.been.called;
+
+    resolveGate!();
+
+    return Promise.resolve()
+      .then(() => {
+        expect(onProgress).to.have.been.calledTwice;
+        expect(onProgress.firstCall).to.have.been.calledWith({
+          frag,
+          part: null,
+          payload: chunk1,
+          networkDetails,
+        });
+        expect(onProgress.secondCall).to.have.been.calledWith({
+          frag,
+          part: null,
+          payload: chunk2,
+          networkDetails,
+        });
+        fragmentLoaderPrivates.loader.callbacks.onSuccess(
+          response,
+          stats,
+          context,
+          networkDetails,
+        );
+      })
+      .then(() => loadPromise)
+      .then((data) => {
+        expect(data.payload).to.equal(response.data);
+      });
+  });
+
+  it('forwards progress callbacks immediately after progressGate resolves', function () {
+    response = { data: new Uint8Array(4) };
+    const onProgress = sinon.spy();
+    const progressGate = Promise.resolve();
+    const fragmentLoaderPrivates = fragmentLoader as any;
+    const chunk = new ArrayBuffer(4);
+
+    const loadPromise = fragmentLoader.load(
+      frag,
+      false,
+      onProgress,
+      progressGate,
+    );
+
+    return progressGate
+      .then(() => {
+        fragmentLoaderPrivates.loader.callbacks.onProgress(
+          stats,
+          context,
+          chunk,
+          networkDetails,
+        );
+        expect(onProgress).to.have.been.calledOnceWith({
+          frag,
+          part: null,
+          payload: chunk,
+          networkDetails,
+        });
+        fragmentLoaderPrivates.loader.callbacks.onSuccess(
+          response,
+          stats,
+          context,
+          networkDetails,
+        );
+      })
+      .then(() => loadPromise);
+  });
+
   it('handles fragment load timeouts', function () {
     const fragmentLoaderPrivates = fragmentLoader as any;
     return new Promise<LoadError>((resolve, reject) => {

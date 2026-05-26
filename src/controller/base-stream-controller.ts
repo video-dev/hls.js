@@ -119,6 +119,7 @@ export default class BaseStreamController
   protected retryDate: number = 0;
   protected levels: Array<Level> | null = null;
   protected fragmentLoader: FragmentLoader;
+  protected initFragmentLoader: FragmentLoader;
   protected keyLoader: KeyLoader;
   protected levelLastLoaded: Level | null = null;
   protected startFragRequested: boolean = false;
@@ -139,6 +140,7 @@ export default class BaseStreamController
     this.playlistType = playlistType;
     this.hls = hls;
     this.fragmentLoader = new FragmentLoader(hls.config);
+    this.initFragmentLoader = new FragmentLoader(hls.config);
     this.keyLoader = keyLoader;
     this.fragmentTracker = fragmentTracker;
     this.config = hls.config;
@@ -176,6 +178,7 @@ export default class BaseStreamController
       return;
     }
     this.fragmentLoader.abort();
+    this.initFragmentLoader.abort();
     this.keyLoader.abort(this.playlistType);
     const frag = this.fragCurrent;
     if (frag?.loader) {
@@ -511,6 +514,9 @@ export default class BaseStreamController
     if (this.fragmentLoader) {
       this.fragmentLoader.destroy();
     }
+    if (this.initFragmentLoader) {
+      this.initFragmentLoader.destroy();
+    }
     if (this.keyLoader) {
       this.keyLoader.destroy();
     }
@@ -521,7 +527,8 @@ export default class BaseStreamController
     //@ts-ignore
     this.hls = this.decrypter = this.keyLoader = null;
     //@ts-ignore
-    this.fragmentLoader = this.fragmentTracker = null;
+    this.fragmentLoader = this.initFragmentLoader = this.fragmentTracker = null;
+
     super.onHandlerDestroyed();
   }
 
@@ -698,18 +705,24 @@ export default class BaseStreamController
     this.hls.trigger(Events.BUFFER_FLUSHING, flushScope);
   }
 
-  protected _loadInitSegment(fragment: Fragment, level: Level) {
-    this._doFragLoad(fragment, level)
+  protected _loadInitSegment(initFrag: Fragment): Promise<void> {
+    const { hls } = this;
+    this.initFragmentLoader.abort();
+    hls.trigger(Events.FRAG_LOADING, { frag: initFrag, targetBufferTime: 0 });
+    return this.initFragmentLoader
+      .load(initFrag)
       .then((data) => {
         const frag = data?.frag;
-        if (!frag || this.fragContextChanged(frag) || !this.levels) {
+        if (
+          !frag ||
+          !fragmentsAreEqual(frag, this.fragCurrent?.initSegment) ||
+          !this.levels
+        ) {
           throw new Error('init load aborted');
         }
-
         return data;
       })
       .then((data: FragLoadedData) => {
-        const { hls } = this;
         const { frag, payload } = data;
         const decryptData = frag.decryptdata;
 
@@ -744,6 +757,7 @@ export default class BaseStreamController
                 reason: err.message,
                 frag,
               });
+              this.fragmentLoader.abort();
               throw err;
             })
             .then((decryptedData) => {
@@ -761,29 +775,47 @@ export default class BaseStreamController
             });
         }
         return this.completeInitSegmentLoad(data);
-      })
-      .catch((reason) => {
-        if (this.state === State.STOPPED || this.state === State.ERROR) {
-          return;
-        }
-        this.warn(reason);
-        this.resetFragmentLoading(fragment);
       });
   }
 
   private completeInitSegmentLoad(data: FragLoadedData) {
-    const { levels } = this;
-    if (!levels) {
-      throw new Error('init load aborted, missing levels');
-    }
     const stats = data.frag.stats;
-    if (this.state !== State.STOPPED) {
-      this.state = State.IDLE;
-    }
     data.frag.data = new Uint8Array(data.payload);
     stats.parsing.start = stats.buffering.start = self.performance.now();
     stats.parsing.end = stats.buffering.end = self.performance.now();
-    this.tick();
+  }
+
+  private loadInitSegmentIfNeeded(
+    mediaFrag: Fragment,
+  ): Promise<void> | undefined {
+    const { initSegment } = mediaFrag;
+    if (
+      !this.bitrateTest &&
+      isMediaFragment(mediaFrag) &&
+      initSegment &&
+      !initSegment.data
+    ) {
+      const initPromise =
+        initSegment.encrypted && !initSegment.decryptdata?.key
+          ? this.keyLoader
+              .load(initSegment)
+              .then(() => this._loadInitSegment(initSegment))
+          : this._loadInitSegment(initSegment);
+
+      return initPromise.catch((reason: LoadError | Error) => {
+        if (this.state === State.STOPPED || this.state === State.ERROR) {
+          throw reason;
+        }
+        if ('data' in reason) {
+          reason.data.frag = mediaFrag;
+          this.fragmentLoader.abort();
+          this.handleFragLoadError(reason);
+        }
+        this.warn(reason);
+        this.resetFragmentLoading(mediaFrag);
+        throw reason;
+      });
+    }
   }
 
   protected unhandledEncryptionError(
@@ -983,12 +1015,15 @@ export default class BaseStreamController
           this.nextLoadPosition = part.start + part.duration;
           this.state = State.FRAG_LOADING;
           let result: Promise<PartsLoadedData | FragLoadedData | null>;
-          if (keyLoadingPromise) {
-            result = keyLoadingPromise
-              .then((keyLoadedData) => {
+          const initDataPromise = this.loadInitSegmentIfNeeded(frag);
+          if (keyLoadingPromise || initDataPromise) {
+            const useKeyLoader = !!keyLoadingPromise;
+            result = Promise.all([keyLoadingPromise, initDataPromise])
+              .then(([keyLoadedData]) => {
                 if (
-                  !keyLoadedData ||
-                  this.fragContextChanged(keyLoadedData.frag)
+                  useKeyLoader &&
+                  (!keyLoadedData ||
+                    this.fragContextChanged(keyLoadedData.frag))
                 ) {
                   return null;
                 }
@@ -1057,6 +1092,9 @@ export default class BaseStreamController
     // Load key before streaming fragment data
     const dataOnProgress =
       this.config.progressive && frag.type !== PlaylistLevelType.SUBTITLE;
+
+    const initDataPromise = this.loadInitSegmentIfNeeded(frag);
+
     let result: Promise<PartsLoadedData | FragLoadedData | null>;
     if (dataOnProgress && keyLoadingPromise) {
       result = keyLoadingPromise
@@ -1068,6 +1106,7 @@ export default class BaseStreamController
             frag,
             this.iframesOnly,
             progressCallback,
+            initDataPromise,
           );
         })
         .catch((error) => this.handleFragLoadError(error));
@@ -1079,8 +1118,10 @@ export default class BaseStreamController
           frag,
           this.iframesOnly,
           dataOnProgress ? progressCallback : undefined,
+          dataOnProgress ? initDataPromise : undefined,
         ),
         keyLoadingPromise,
+        initDataPromise,
       ])
         .then(([fragLoadedData]) => {
           if (!dataOnProgress && progressCallback) {
@@ -1096,7 +1137,10 @@ export default class BaseStreamController
         new Error(`frag load aborted, context changed in FRAG_LOADING`),
       );
     }
-    return result;
+
+    return Promise.all([result, initDataPromise]).then(
+      ([fragData]) => fragData,
+    );
   }
 
   private doFragPartsLoad(
@@ -1431,7 +1475,7 @@ export default class BaseStreamController
   protected getNextFragment(
     pos: number,
     levelDetails: LevelDetails,
-  ): Fragment | null {
+  ): MediaFragment | null {
     const fragments = levelDetails.fragments;
     const fragLen = fragments.length;
 
@@ -1523,7 +1567,7 @@ export default class BaseStreamController
         levelDetails,
       );
     }
-    return this.mapToInitFragWhenRequired(programFrag);
+    return programFrag;
   }
 
   protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean {
@@ -1546,13 +1590,13 @@ export default class BaseStreamController
   }
 
   protected getNextFragmentLoopLoading(
-    frag: Fragment,
+    frag: MediaFragment,
     levelDetails: LevelDetails,
     bufferInfo: BufferInfo,
     playlistType: PlaylistLevelType,
     maxBufLen: number,
-  ): Fragment | null {
-    let nextFragment: Fragment | null = null;
+  ): MediaFragment | null {
+    let nextFragment: MediaFragment | null = null;
     if (frag.gap) {
       nextFragment = this.getNextFragment(this.nextLoadPosition, levelDetails);
       if (nextFragment && !nextFragment.gap && bufferInfo.nextStart) {
@@ -1653,17 +1697,6 @@ export default class BaseStreamController
         }
       }
     }
-    return frag;
-  }
-
-  protected mapToInitFragWhenRequired<T extends Fragment | null>(
-    frag: T,
-  ): T | Fragment {
-    // If an initSegment is present, it must be buffered first
-    if (frag?.initSegment && !frag.initSegment.data && !this.bitrateTest) {
-      return frag.initSegment;
-    }
-
     return frag;
   }
 

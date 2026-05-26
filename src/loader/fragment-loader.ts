@@ -45,6 +45,7 @@ export default class FragmentLoader {
     frag: Fragment,
     isIFrame?: boolean,
     onProgress?: FragmentLoadProgressCallback,
+    progressGate?: Promise<void>,
   ): Promise<FragLoadedData> {
     const url = frag.url;
     if (!url) {
@@ -159,8 +160,10 @@ export default class FragmentLoader {
         },
       };
       if (onProgress) {
+        const onProgressGated = this.gateProgress(onProgress, progressGate);
+
         callbacks.onProgress = (stats, context, data, networkDetails) =>
-          onProgress({
+          onProgressGated({
             frag,
             part: null,
             payload: data as ArrayBuffer,
@@ -169,6 +172,38 @@ export default class FragmentLoader {
       }
       loader.load(loaderContext, loaderConfig, callbacks);
     });
+  }
+
+  /*
+   When a progressGate is provided, buffer incoming chunks until the
+   gate promise resolves, then flush them in arrival order. This
+   ensuring the transmuxer receives init data before the first chunk.
+   Which is important when progressively loading media fragments.
+  */
+  private gateProgress(
+    onProgress: FragmentLoadProgressCallback,
+    progressGate?: Promise<void>,
+  ): FragmentLoadProgressCallback {
+    let handleChunk = onProgress;
+    if (progressGate) {
+      const pendingChunks: FragLoadedData[] = [];
+      let gateDone = false;
+      progressGate
+        .then(() => {
+          gateDone = true;
+          pendingChunks.forEach((chunk) => onProgress(chunk));
+          pendingChunks.length = 0;
+        })
+        .catch(() => {});
+      handleChunk = (data) => {
+        if (gateDone) {
+          onProgress(data);
+        } else {
+          pendingChunks.push(data as FragLoadedData);
+        }
+      };
+    }
+    return handleChunk;
   }
 
   public loadPart(

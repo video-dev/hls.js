@@ -374,13 +374,11 @@ export default class StreamController
       return;
     }
 
-    frag = this.mapToInitFragWhenRequired(frag);
-
     this.loadFragment(frag, levelInfo, targetBufferTime);
   }
 
   protected loadFragment(
-    frag: Fragment,
+    frag: MediaFragment,
     level: Level,
     targetBufferTime: number,
   ) {
@@ -390,9 +388,7 @@ export default class StreamController
       fragState === FragmentState.NOT_LOADED ||
       fragState === FragmentState.PARTIAL
     ) {
-      if (!isMediaFragment(frag)) {
-        this._loadInitSegment(frag, level);
-      } else if (this.bitrateTest) {
+      if (this.bitrateTest) {
         this.log(
           `Fragment ${frag.sn} of level ${frag.level} is being downloaded to test bitrate and will not be buffered`,
         );
