@@ -210,7 +210,7 @@ export default class BasePlaylistController
       );
       if (details.requestScheduled + reloadInterval < now) {
         details.requestScheduled = now;
-      } else {
+      } else if (details.requestScheduled <= now) {
         details.requestScheduled += reloadInterval;
       }
       this.log(
