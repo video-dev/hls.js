@@ -778,6 +778,7 @@ export type BufferControllerConfig = {
     appendTimeout: number;
     backBufferLength: number;
     frontBufferFlushThreshold: number;
+    loopBackBufferFlush?: boolean;
     liveDurationInfinity: boolean;
     liveBackBufferLength: number | null;
 };
@@ -1812,7 +1813,9 @@ export interface FragBufferedData {
 // @public (undocumented)
 export interface FragChangedData {
     // (undocumented)
-    frag: Fragment;
+    frag: MediaFragment;
+    // (undocumented)
+    previousFrag: MediaFragment | null;
 }
 
 // Warning: (ae-missing-release-tag) "FragDecryptedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
