@@ -2,11 +2,7 @@ import BaseStreamController, { State } from './base-stream-controller';
 import { FragmentState } from './fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import {
-  type Fragment,
-  isMediaFragment,
-  type MediaFragment,
-} from '../loader/fragment';
+import { isMediaFragment, type MediaFragment } from '../loader/fragment';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -448,7 +444,7 @@ export class SubtitleStreamController
   }
 
   protected loadFragment(
-    frag: Fragment,
+    frag: MediaFragment,
     level: Level,
     targetBufferTime: number,
   ) {
@@ -458,11 +454,7 @@ export class SubtitleStreamController
       fragState === FragmentState.NOT_LOADED ||
       fragState === FragmentState.PARTIAL
     ) {
-      if (!isMediaFragment(frag)) {
-        this._loadInitSegment(frag, level);
-      } else {
-        super.loadFragment(frag, level, targetBufferTime);
-      }
+      super.loadFragment(frag, level, targetBufferTime);
     }
   }
 
