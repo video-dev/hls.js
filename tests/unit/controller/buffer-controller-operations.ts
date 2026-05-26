@@ -6,7 +6,11 @@ import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
+import {
+  ElementaryStreamTypes,
+  Fragment,
+  type MediaFragment,
+} from '../../../src/loader/fragment';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
@@ -62,7 +66,11 @@ function setSourceBufferBufferedRange(
 
 function evokeTrimBuffers(hls: HlsTestable) {
   const frag = new Fragment(PlaylistLevelType.MAIN, '');
-  hls.trigger(Events.FRAG_CHANGED, { frag });
+  frag.sn = 0;
+  hls.trigger(Events.FRAG_CHANGED, {
+    frag: frag as MediaFragment,
+    previousFrag: null,
+  });
 }
 
 describe('BufferController with attached media', function () {
