@@ -468,11 +468,15 @@ export default class Transmuxer {
     }
     // probe for content type
     let mux: MuxConfig | undefined;
-    for (let i = 0, len = muxConfig.length; i < len; i++) {
-      if (muxConfig[i].demux?.probe(data, this.logger)) {
-        mux = muxConfig[i];
-        break;
+    try {
+      for (let i = 0, len = muxConfig.length; i < len; i++) {
+        if (muxConfig[i].demux?.probe(data, this.logger)) {
+          mux = muxConfig[i];
+          break;
+        }
       }
+    } catch (error) {
+      return error;
     }
     if (!mux) {
       return new Error('Failed to find demuxer by probing fragment data');
