@@ -1163,7 +1163,7 @@ export default class StreamController
     return audioCodec;
   }
 
-  private _loadBitrateTestFrag(fragment: Fragment, level: Level) {
+  private _loadBitrateTestFrag(fragment: MediaFragment, level: Level) {
     fragment.bitrateTest = true;
     this._doFragLoad(fragment, level)
       .then((data) => {

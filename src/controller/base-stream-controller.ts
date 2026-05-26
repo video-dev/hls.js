@@ -927,20 +927,10 @@ export default class BaseStreamController
     frag: PartsLoadedData | FragLoadedData,
   ) {}
 
-  protected _doFragLoad(
-    frag: Fragment,
-    level: Level,
-    targetBufferTime: number | null = null,
-    progressCallback?: FragmentLoadProgressCallback,
-  ): Promise<PartsLoadedData | FragLoadedData | null> {
-    this.fragCurrent = frag;
-    const details = level.details;
-    if (!this.levels || !details) {
-      throw new Error(
-        `frag load aborted, missing level${details ? '' : ' detail'}s`,
-      );
-    }
-
+  private loadKeyFor(
+    frag: MediaFragment,
+    details: LevelDetails,
+  ): Promise<KeyLoadedData | void> | null {
     let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
     if (frag.encrypted && !frag.decryptdata?.key) {
       this.log(
@@ -957,10 +947,6 @@ export default class BaseStreamController
         }
       });
       this.hls.trigger(Events.KEY_LOADING, { frag });
-      if ((this.fragCurrent as Fragment | null) === null) {
-        this.log(`context changed in KEY_LOADING`);
-        return Promise.resolve(null);
-      }
     } else if (!frag.encrypted) {
       keyLoadingPromise = this.keyLoader.loadClear(
         frag,
@@ -968,12 +954,30 @@ export default class BaseStreamController
         this.startFragRequested,
       );
       if (keyLoadingPromise) {
-        this.log(`[eme] blocking frag load until media-keys acquired`);
+        this.log(
+          `[eme] blocking frag sn: ${frag.sn} load until media-keys acquired`,
+        );
       }
+    }
+    return keyLoadingPromise;
+  }
+
+  protected _doFragLoad(
+    frag: MediaFragment,
+    level: Level,
+    targetBufferTime: number | null = null,
+    progressCallback?: FragmentLoadProgressCallback,
+  ): Promise<PartsLoadedData | FragLoadedData | null> {
+    this.fragCurrent = frag;
+    const details = level.details;
+    if (!this.levels || !details) {
+      throw new Error(
+        `frag load aborted, missing level${details ? '' : ' detail'}s`,
+      );
     }
 
     const fragPrevious = this.fragPrevious;
-    if (isMediaFragment(frag) && !mediaFragmentsAreEqual(frag, fragPrevious)) {
+    if (!mediaFragmentsAreEqual(frag, fragPrevious)) {
       const shouldLoadParts = this.shouldLoadParts(level.details, frag.end);
       if (shouldLoadParts !== this.loadingParts) {
         this.log(
@@ -985,7 +989,7 @@ export default class BaseStreamController
       }
     }
     targetBufferTime = Math.max(frag.start, targetBufferTime || 0);
-    if (this.loadingParts && isMediaFragment(frag)) {
+    if (this.loadingParts) {
       const partList = details.partList;
       if (partList && progressCallback) {
         if (targetBufferTime > details.fragmentEnd && details.fragmentHint) {
@@ -1003,6 +1007,10 @@ export default class BaseStreamController
               `LL-Part loading OFF @${this.playhead} next part: ${this.fragInfo(frag, false, part)}`,
             );
             this.loadingParts = false;
+            return Promise.resolve(null);
+          }
+          const keyLoadingPromise = this.loadKeyFor(frag, details);
+          if (this.fragContextChanged(frag)) {
             return Promise.resolve(null);
           }
           this.log(
@@ -1066,7 +1074,7 @@ export default class BaseStreamController
       }
     }
 
-    if (isMediaFragment(frag) && this.loadingParts) {
+    if (this.loadingParts) {
       this.log(
         `LL-Part loading OFF after next part miss @${targetBufferTime} Check buffer at sn: ${frag.sn} loaded parts: ${details.partList?.filter((p) => p.loaded).map((p) => `[${p.start}-${p.end}]`)}`,
       );
@@ -1076,6 +1084,13 @@ export default class BaseStreamController
       return Promise.resolve(null);
     }
 
+    const keyLoadingPromise = this.loadKeyFor(frag, details);
+    if (this.fragContextChanged(frag)) {
+      this.log(
+        `Context changed in KEY_LOADING sn: ${frag.sn} ${frag.relurl} > ${this.fragCurrent?.relurl}`,
+      );
+      return Promise.resolve(null);
+    }
     this.log(
       `Loading ${frag.type} sn: ${frag.sn} of ${this.fragInfo(frag, false)} cc: ${frag.cc} ${
         '[' + details.startSN + '-' + details.endSN + ']'
@@ -1094,7 +1109,6 @@ export default class BaseStreamController
       this.config.progressive && frag.type !== PlaylistLevelType.SUBTITLE;
 
     const initDataPromise = this.loadInitSegmentIfNeeded(frag);
-
     let result: Promise<PartsLoadedData | FragLoadedData | null>;
     if (dataOnProgress && keyLoadingPromise) {
       result = keyLoadingPromise
@@ -2073,7 +2087,7 @@ export default class BaseStreamController
     }
     if (this.fragContextChanged(frag)) {
       this.warn(
-        `Frag load error must match current frag to retry ${frag.url} > ${this.fragCurrent?.url}`,
+        `Frag load error must match current frag to retry ${frag.relurl} > ${this.fragCurrent?.relurl}`,
       );
       return;
     }
