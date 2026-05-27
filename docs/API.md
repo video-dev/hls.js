@@ -1895,7 +1895,15 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
 - `sessionId`: The CMCD session id. One will be automatically generated if none is provided.
 - `contentId`: The CMCD content id.
 - `useHeaders`: Send CMCD data in request headers instead of as query args. Defaults to `false`.
-- `includeKeys`: An optional array of CMCD keys. When present, only these CMCD fields will be included with each each request.
+- `includeKeys`: An optional array of CMCD keys. When present, only these CMCD fields will be included with each request. Defaults to the full set of keys for the configured `version`.
+- `version`: CMCD version to report. Accepts `1` (CMCD v1) or `2` (CMCD v2). Defaults to `1`. When set to `2`, additional v2 fields (player state `sta`, buffer starvation duration `bs`, etc.) and event-mode reporting become available.
+- `eventTargets`: An optional array of CMCD v2 event report targets. Each target configures an endpoint that receives batched event reports (player state changes, bitrate changes, errors, etc.). Requires `version: 2`. Each target has the following properties:
+  - `url`: The endpoint URL that receives CMCD event reports. Required.
+  - `events`: An optional array of [CMCD event types](https://github.com/streaming-video-technology-alliance/common-media-library/tree/main/libs/cmcd) to report to this target. If omitted, no events are sent. Values are the short codes such as `"ps"` (play state), `"bc"` (bitrate change), `"e"` (error), `"t"` (time interval).
+  - `interval`: For the time-interval event, the reporting cadence in seconds. Defaults to `30`.
+  - `batchSize`: The number of events to batch before sending a report. Defaults to `1` (send each event immediately).
+  - `includeKeys`: An optional array of CMCD keys that overrides the top-level `includeKeys` for this target.
+- `loader`: An optional async function `(request) => Promise<{ status }>` used to deliver CMCD v2 event reports. When omitted, event reports are delivered via `fetch` (honoring the Hls `xhrSetup`/`fetchSetup` hooks). Only used when `eventTargets` is configured.
 
 ### `enableInterstitialPlayback`
 

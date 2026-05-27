@@ -1,19 +1,41 @@
-import { CmcdObjectType } from '@svta/common-media-library/cmcd/CmcdObjectType';
-import { CmcdStreamingFormat } from '@svta/common-media-library/cmcd/CmcdStreamingFormat';
-import { appendCmcdHeaders } from '@svta/common-media-library/cmcd/appendCmcdHeaders';
-import { appendCmcdQuery } from '@svta/common-media-library/cmcd/appendCmcdQuery';
+import {
+  CMCD_HEADERS,
+  CMCD_KEYS,
+  CMCD_QUERY,
+  CMCD_V1,
+  CMCD_V1_KEYS,
+  CMCD_V2,
+  CmcdEventType,
+  CmcdObjectType,
+  CmcdPlayerState,
+  CmcdReporter,
+  CmcdStreamingFormat,
+  CmcdStreamType,
+  toCmcdValue,
+} from '@svta/cml-cmcd';
 import { Events } from '../events';
-import { BufferHelper } from '../utils/buffer-helper';
+import {
+  addEventListener,
+  removeEventListener,
+} from '../utils/event-listener-helper';
 import type {
   FragmentLoaderConstructor,
   HlsConfig,
   PlaylistLoaderConstructor,
 } from '../config';
 import type Hls from '../hls';
-import type { Fragment, Part } from '../loader/fragment';
-import type { ExtendedSourceBuffer } from '../types/buffer';
+import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { ComponentAPI } from '../types/component-api';
-import type { BufferCreatedData, MediaAttachedData } from '../types/events';
+import type {
+  BufferAppendedData,
+  BufferFlushedData,
+  ErrorData,
+  LevelSwitchingData,
+  ManifestLoadingData,
+  MediaAttachedData,
+  MediaEndedData,
+} from '../types/events';
+import type { Level } from '../types/level';
 import type {
   FragmentLoaderContext,
   Loader,
@@ -22,8 +44,7 @@ import type {
   LoaderContext,
   PlaylistLoaderContext,
 } from '../types/loader';
-import type { Cmcd } from '@svta/common-media-library/cmcd/Cmcd';
-import type { CmcdEncodeOptions } from '@svta/common-media-library/cmcd/CmcdEncodeOptions';
+import type { Cmcd } from '@svta/cml-cmcd';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -33,15 +54,11 @@ export default class CMCDController implements ComponentAPI {
   private hls: Hls;
   private config: HlsConfig;
   private media?: HTMLMediaElement;
-  private sid?: string;
-  private cid?: string;
-  private useHeaders: boolean = false;
-  private includeKeys?: string[];
   private initialized: boolean = false;
   private starved: boolean = false;
   private buffering: boolean = true;
-  private audioBuffer?: ExtendedSourceBuffer;
-  private videoBuffer?: ExtendedSourceBuffer;
+  private playerState?: CmcdPlayerState;
+  private reporter?: CmcdReporter;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -52,73 +69,137 @@ export default class CMCDController implements ComponentAPI {
       config.pLoader = this.createPlaylistLoader();
       config.fLoader = this.createFragmentLoader();
 
-      this.sid = cmcd.sessionId || hls.sessionId;
-      this.cid = cmcd.contentId;
-      this.useHeaders = cmcd.useHeaders === true;
-      this.includeKeys = cmcd.includeKeys;
       this.registerListeners();
     }
   }
 
+  private createReporter() {
+    const { cmcd } = this.config;
+    if (cmcd == null) {
+      return;
+    }
+
+    const version = cmcd.version || CMCD_V1;
+
+    this.reporter = new CmcdReporter(
+      {
+        sid: cmcd.sessionId || this.hls.sessionId,
+        cid: cmcd.contentId,
+        version,
+        transmissionMode: cmcd.useHeaders === true ? CMCD_HEADERS : CMCD_QUERY,
+        enabledKeys: cmcd.includeKeys ?? [
+          ...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS),
+        ],
+        eventTargets: (cmcd.eventTargets ?? []).map(
+          ({ includeKeys, ...rest }) => ({
+            ...rest,
+            enabledKeys: includeKeys ?? CMCD_KEYS,
+          }),
+        ),
+      },
+      cmcd.loader,
+    );
+
+    this.reporter.update({
+      sf: CmcdStreamingFormat.HLS,
+      sta: this.playerState,
+    });
+    this.reporter.start();
+  }
+
   private registerListeners() {
     const hls = this.hls;
-    hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.on(Events.MEDIA_DETACHED, this.onMediaDetached, this);
-    hls.on(Events.BUFFER_CREATED, this.onBufferCreated, this);
+    hls.on(Events.MEDIA_ENDED, this.onMediaEnded, this);
+    hls.on(Events.ERROR, this.onError, this);
+    hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
+    hls.on(Events.BUFFER_APPENDED, this.onBufferInfoChange, this);
+    hls.on(Events.BUFFER_FLUSHED, this.onBufferInfoChange, this);
   }
 
   private unregisterListeners() {
     const hls = this.hls;
-    hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
+    hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
+    hls.off(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.off(Events.MEDIA_DETACHED, this.onMediaDetached, this);
-    hls.off(Events.BUFFER_CREATED, this.onBufferCreated, this);
+    hls.off(Events.MEDIA_ENDED, this.onMediaEnded, this);
+    hls.off(Events.ERROR, this.onError, this);
+    hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
+    hls.off(Events.BUFFER_APPENDED, this.onBufferInfoChange, this);
+    hls.off(Events.BUFFER_FLUSHED, this.onBufferInfoChange, this);
   }
 
   destroy() {
     this.unregisterListeners();
     this.onMediaDetached();
 
+    if (this.reporter) {
+      this.reporter.stop(true);
+      this.reporter = undefined;
+    }
+
     // @ts-ignore
-    this.hls = this.config = this.audioBuffer = this.videoBuffer = null;
+    this.hls = this.config = null;
     // @ts-ignore
-    this.onWaiting = this.onPlaying = this.media = null;
+    this.onWaiting = this.onPlay = this.onPlaying = this.onPause = null;
+    // @ts-ignore
+    this.onSeeking = this.onSeeked = this.onRateChange = this.media = null;
   }
 
-  private onMediaAttached(
-    event: Events.MEDIA_ATTACHED,
+  private onMediaAttaching(
+    event: Events.MEDIA_ATTACHING,
     data: MediaAttachedData,
   ) {
-    this.media = data.media;
-    this.media.addEventListener('waiting', this.onWaiting);
-    this.media.addEventListener('playing', this.onPlaying);
+    const media = (this.media = data.media);
+    this.setPlayerState(
+      this.media.autoplay
+        ? CmcdPlayerState.STARTING
+        : CmcdPlayerState.PRELOADING,
+    );
+
+    addEventListener(media, 'waiting', this.onWaiting);
+    addEventListener(media, 'play', this.onPlay);
+    addEventListener(media, 'playing', this.onPlaying);
+    addEventListener(media, 'pause', this.onPause);
+    addEventListener(media, 'seeking', this.onSeeking);
+    addEventListener(media, 'seeked', this.onSeeked);
+    addEventListener(media, 'ratechange', this.onRateChange);
   }
 
   private onMediaDetached() {
-    if (!this.media) {
+    const media = this.media;
+
+    if (!media) {
       return;
     }
 
-    this.media.removeEventListener('waiting', this.onWaiting);
-    this.media.removeEventListener('playing', this.onPlaying);
+    removeEventListener(media, 'waiting', this.onWaiting);
+    removeEventListener(media, 'play', this.onPlay);
+    removeEventListener(media, 'playing', this.onPlaying);
+    removeEventListener(media, 'pause', this.onPause);
+    removeEventListener(media, 'seeking', this.onSeeking);
+    removeEventListener(media, 'seeked', this.onSeeked);
+    removeEventListener(media, 'ratechange', this.onRateChange);
 
     // @ts-ignore
     this.media = null;
   }
 
-  private onBufferCreated(
-    event: Events.BUFFER_CREATED,
-    data: BufferCreatedData,
-  ) {
-    this.audioBuffer = data.tracks.audio?.buffer;
-    this.videoBuffer = data.tracks.video?.buffer;
-  }
-
   private onWaiting = () => {
     if (this.initialized) {
       this.starved = true;
+      this.setPlayerState(CmcdPlayerState.REBUFFERING);
     }
 
     this.buffering = true;
+  };
+
+  private onPlay = () => {
+    if (!this.initialized) {
+      this.setPlayerState(CmcdPlayerState.STARTING);
+    }
   };
 
   private onPlaying = () => {
@@ -127,28 +208,128 @@ export default class CMCDController implements ComponentAPI {
     }
 
     this.buffering = false;
+    this.setPlayerState(CmcdPlayerState.PLAYING);
   };
 
-  /**
-   * Create baseline CMCD data
-   */
-  private createData(): Cmcd {
-    return {
-      v: 1,
-      sf: CmcdStreamingFormat.HLS,
-      sid: this.sid,
-      cid: this.cid,
-      pr: this.media?.playbackRate,
-      mtp: this.hls.bandwidthEstimate / 1000,
-    };
+  private onPause = () => {
+    if (this.media && !this.media.ended) {
+      this.setPlayerState(CmcdPlayerState.PAUSED);
+    }
+  };
+
+  private onSeeking = () => {
+    if (this.initialized) {
+      this.setPlayerState(CmcdPlayerState.SEEKING);
+    }
+  };
+
+  private onSeeked = () => {
+    if (!this.initialized) {
+      return;
+    }
+    if (this.media?.paused) {
+      this.setPlayerState(CmcdPlayerState.PAUSED);
+    }
+  };
+
+  private onRateChange = () => {
+    if (this.reporter && this.media) {
+      this.reporter.update({ pr: this.media.playbackRate });
+    }
+  };
+
+  private onMediaEnded(event: Events.MEDIA_ENDED, data: MediaEndedData) {
+    this.setPlayerState(CmcdPlayerState.ENDED);
+  }
+
+  private onManifestLoading(
+    event: Events.MANIFEST_LOADING,
+    data: ManifestLoadingData,
+  ) {
+    this.initialized = false;
+    this.starved = false;
+    this.buffering = true;
+
+    if (this.reporter) {
+      this.reporter.stop(true);
+      this.reporter = undefined;
+    }
+
+    this.createReporter();
+
+    if (!this.media) {
+      this.setPlayerState(CmcdPlayerState.PRELOADING);
+    }
+  }
+
+  private onError(event: Events.ERROR, data: ErrorData) {
+    if (data.fatal) {
+      this.setPlayerState(CmcdPlayerState.FATAL_ERROR);
+      if (this.reporter) {
+        this.reporter.recordEvent(CmcdEventType.ERROR);
+      }
+    }
+  }
+
+  private onLevelSwitching(
+    event: Events.LEVEL_SWITCHING,
+    data: LevelSwitchingData,
+  ) {
+    if (!this.reporter) {
+      return;
+    }
+
+    const eventData: Cmcd = { br: [data.bitrate / 1000] };
+    const frag = data.details?.fragments[0];
+    if (frag) {
+      eventData.ot = this.getObjectType(frag, data);
+    }
+    this.reporter.recordEvent(CmcdEventType.BITRATE_CHANGE, eventData);
+  }
+
+  private setPlayerState(state: CmcdPlayerState) {
+    this.playerState = state;
+    if (this.reporter) {
+      this.reporter.update({ sta: state });
+    }
   }
 
   /**
-   * Apply CMCD data to a request.
+   * Get the stream type based on level details.
+   */
+  private getStreamType(): CmcdStreamType | undefined {
+    const details = this.hls.latestLevelDetails;
+
+    if (!details) {
+      return undefined;
+    }
+
+    if (!details.live) {
+      return CmcdStreamType.VOD;
+    }
+
+    // TODO: Replace with an `isLowLatency` check in #7729
+    if (!!details.partList && details.canBlockReload) {
+      return CmcdStreamType.LOW_LATENCY;
+    }
+
+    return CmcdStreamType.LIVE;
+  }
+
+  /**
+   * Apply CMCD data to a request using the reporter.
    */
   private apply(context: LoaderContext, data: Cmcd = {}) {
-    // apply baseline data
-    Object.assign(data, this.createData());
+    if (!this.reporter) {
+      return;
+    }
+
+    // Update persistent data
+    this.reporter.update({
+      mtp: [this.hls.bandwidthEstimate / 1000],
+      pr: this.media?.playbackRate,
+      st: this.getStreamType(),
+    });
 
     const isVideo =
       data.ot === CmcdObjectType.INIT ||
@@ -165,27 +346,15 @@ export default class CMCDController implements ComponentAPI {
       data.su = this.buffering;
     }
 
-    // TODO: Implement rtp, nrr, dl
+    // TODO: Implement rtp, dl
 
-    const { includeKeys } = this;
-    if (includeKeys) {
-      data = Object.keys(data).reduce((acc, key) => {
-        includeKeys.includes(key) && (acc[key] = data[key]);
-        return acc;
-      }, {});
-    }
+    const report = this.reporter.createRequestReport(
+      { url: context.url, headers: context.headers },
+      data,
+    );
 
-    const options: CmcdEncodeOptions = { baseUrl: context.url };
-
-    if (this.useHeaders) {
-      if (!context.headers) {
-        context.headers = {};
-      }
-
-      appendCmcdHeaders(context.headers, data, options);
-    } else {
-      context.url = appendCmcdQuery(context.url, data, options);
-    }
+    context.url = report.url;
+    context.headers = report.headers;
   }
 
   /**
@@ -209,23 +378,38 @@ export default class CMCDController implements ComponentAPI {
     try {
       const { frag, part } = context;
       const level = this.hls.levels[frag.level];
-      const ot = this.getObjectType(frag);
+      const ot = this.getObjectType(frag, level);
       const data: Cmcd = { d: (part || frag).duration * 1000, ot };
 
       if (
         ot === CmcdObjectType.VIDEO ||
         ot === CmcdObjectType.AUDIO ||
-        ot == CmcdObjectType.MUXED
+        ot === CmcdObjectType.MUXED ||
+        (ot == null && (frag.type === 'main' || frag.type === 'audio'))
       ) {
-        data.br = level.bitrate / 1000;
-        data.tb = this.getTopBandwidth(ot) / 1000;
-        data.bl = this.getBufferLength(ot);
+        data.br = [level.bitrate / 1000];
+        const tb = this.getTopBandwidth(frag) / 1000;
+        if (Number.isFinite(tb)) {
+          data.tb = [tb];
+        }
+        const bl = this.getBufferLength(frag);
+        if (Number.isFinite(bl)) {
+          data.bl = [bl];
+        }
       }
 
       const next = part ? this.getNextPart(part) : this.getNextFrag(frag);
 
       if (next?.url && next.url !== frag.url) {
-        data.nor = next.url;
+        if (next.byteRange.length > 0) {
+          data.nor = [
+            toCmcdValue(next.url, {
+              r: `${next.byteRange[0]}-${next.byteRange[1]}`,
+            }),
+          ];
+        } else {
+          data.nor = [next.url];
+        }
       }
 
       this.apply(context, data);
@@ -264,7 +448,10 @@ export default class CMCDController implements ComponentAPI {
   /**
    * The CMCD object type.
    */
-  private getObjectType(fragment: Fragment): CmcdObjectType | undefined {
+  private getObjectType(
+    fragment: Fragment | MediaFragment,
+    variant?: Level | LevelSwitchingData,
+  ): CmcdObjectType | undefined {
     const { type } = fragment;
 
     if (type === 'subtitle') {
@@ -280,25 +467,52 @@ export default class CMCDController implements ComponentAPI {
     }
 
     if (type === 'main') {
-      if (!this.hls.audioTracks.length) {
-        return CmcdObjectType.MUXED;
+      // Parsed elementary streams are ground truth when present.
+      if (fragment.hasStreams) {
+        const es = fragment.elementaryStreams;
+        if (es.audiovideo) {
+          return CmcdObjectType.MUXED;
+        }
+        if (es.video) {
+          return CmcdObjectType.VIDEO;
+        }
+        if (es.audio) {
+          return CmcdObjectType.AUDIO;
+        }
       }
-
-      return CmcdObjectType.VIDEO;
+      // Fall back to variant codec info. STREAM-INF CODECS describes the variant
+      // including any alternate renditions it pulls from, so audioCodec only
+      // implies the main variant carries audio when no audio media options exist.
+      if (variant) {
+        const { audioCodec, videoCodec } = variant;
+        if (!this.hls.audioTracks.length) {
+          if (audioCodec && videoCodec) {
+            return CmcdObjectType.MUXED;
+          }
+          if (audioCodec) {
+            return CmcdObjectType.AUDIO;
+          }
+        }
+        if (videoCodec) {
+          return CmcdObjectType.VIDEO;
+        }
+      }
     }
 
     return undefined;
   }
 
   /**
-   * Get the highest bitrate.
+   * Get the highest bitrate available for the source backing this fragment.
+   * Audio renditions live in hls.audioTracks; everything else (including
+   * audio-only main playlists) draws from hls.levels.
    */
-  private getTopBandwidth(type: CmcdObjectType) {
+  private getTopBandwidth(fragment: Fragment | MediaFragment) {
     let bitrate: number = 0;
     let levels;
     const hls = this.hls;
 
-    if (type === CmcdObjectType.AUDIO) {
+    if (fragment.type === 'audio') {
       levels = hls.audioTracks;
     } else {
       const max = hls.maxAutoLevel;
@@ -316,24 +530,51 @@ export default class CMCDController implements ComponentAPI {
   }
 
   /**
-   * Get the buffer length for a media type in milliseconds
+   * Get the buffer length in milliseconds for the source backing this fragment.
    */
-  private getBufferLength(type: CmcdObjectType) {
-    const media = this.media;
-    const buffer =
-      type === CmcdObjectType.AUDIO ? this.audioBuffer : this.videoBuffer;
-
-    if (!buffer || !media) {
+  private getBufferLength(fragment: Fragment | MediaFragment) {
+    if (!this.media) {
       return NaN;
     }
 
-    const info = BufferHelper.bufferInfo(
-      buffer,
-      media.currentTime,
-      this.config.maxBufferHole,
-    );
+    const info =
+      fragment.type === 'audio'
+        ? this.hls.audioForwardBufferInfo
+        : this.hls.mainForwardBufferInfo;
+    return info ? info.len * 1000 : NaN;
+  }
 
-    return info.len * 1000;
+  /**
+   * Get the buffer length in milliseconds without a specific fragment context.
+   * Used to keep `bl` fresh on event reports independent of segment requests.
+   * Returns the playback bottleneck: min of main and audio forward buffer
+   * lengths when both exist; otherwise whichever is available.
+   */
+  private getEventBufferLength(): number {
+    if (!this.media) {
+      return NaN;
+    }
+    const main = this.hls.mainForwardBufferInfo;
+    const audio = this.hls.audioForwardBufferInfo;
+    if (main && audio) {
+      return Math.min(main.len, audio.len) * 1000;
+    }
+    const info = main || audio;
+    return info ? info.len * 1000 : NaN;
+  }
+
+  private onBufferInfoChange(
+    event: Events.BUFFER_APPENDED | Events.BUFFER_FLUSHED,
+    data: BufferAppendedData | BufferFlushedData,
+  ) {
+    if (!this.reporter) {
+      return;
+    }
+    const bl = this.getEventBufferLength();
+    if (!Number.isFinite(bl)) {
+      return;
+    }
+    this.reporter.update({ bl: [bl] });
   }
 
   /**
@@ -379,7 +620,7 @@ export default class CMCDController implements ComponentAPI {
   }
 
   /**
-   * Create a playlist loader
+   * Create a fragment loader
    */
   private createFragmentLoader(): FragmentLoaderConstructor | undefined {
     const { fLoader } = this.config;

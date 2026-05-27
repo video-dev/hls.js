@@ -1,4 +1,4 @@
-import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
+import { utf8ArrayToStr } from '@svta/cml-id3';
 import { findBox } from './mp4-tools';
 import { toTimescaleFromScale } from './timescale-conversion';
 import VTTCue from './vttcue';

@@ -1,4 +1,4 @@
-import { uuid } from '@svta/common-media-library/utils/uuid';
+import { uuid } from '@svta/cml-utils';
 import { EventEmitter } from 'eventemitter3';
 import { buildAbsoluteURL } from 'url-toolkit';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
@@ -230,10 +230,15 @@ export default class Hls implements HlsEventEmitter {
       ? (this.capLevelController = new _CapLevelController(this))
       : null;
     const fpsController = _FpsController ? new _FpsController(this) : null;
+    const _CMCDController = config.cmcdController;
+    // Instantiate CMCDController before PlaylistLoader to receive Manifest Loading events first
+    const cmcdController = _CMCDController
+      ? (this.cmcdController = new _CMCDController(this))
+      : null;
     const playListLoader = new PlaylistLoader(this);
 
     const _ContentSteeringController = config.contentSteeringController;
-    // Instantiate ConentSteeringController before LevelController to receive Multivariant Playlist events first
+    // Instantiate ContentSteeringController before LevelController to receive Multivariant Playlist events first
     const contentSteering = _ContentSteeringController
       ? new _ContentSteeringController(this)
       : null;
@@ -329,10 +334,9 @@ export default class Hls implements HlsEventEmitter {
       config.emeController,
       coreComponents,
     );
-    this.cmcdController = this.createController(
-      config.cmcdController,
-      coreComponents,
-    );
+    if (cmcdController) {
+      coreComponents.push(cmcdController);
+    }
     this.latencyController = this.createController(
       config.latencyController,
       coreComponents,
