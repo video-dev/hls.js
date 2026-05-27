@@ -1,4 +1,4 @@
-import { utf8ArrayToStr } from '@svta/common-media-library/utils/utf8ArrayToStr';
+import { utf8ArrayToStr } from '@svta/cml-id3';
 import { expect } from 'chai';
 
 describe('UTF8 tests', function () {
