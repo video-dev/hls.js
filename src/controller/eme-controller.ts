@@ -308,6 +308,7 @@ class EMEController extends Logger implements ComponentAPI {
         );
       });
       return keySystemAccess.then((mediaKeySystemAccess) => {
+        this.throwIfDestroyed();
         this.log(
           `Access for key-system "${mediaKeySystemAccess.keySystem}" obtained`,
         );
@@ -1778,6 +1779,9 @@ class EMEController extends Logger implements ComponentAPI {
         `Selecting key-system from session-keys ${keyFormats.join(', ')}`,
       );
       this.keyFormatPromise = this.getKeyFormatPromise(keyFormats);
+      // Until onMediaEncrypted is called this promise is unhandled, add a catch to prevent unhandled rejection
+      // when result is not used.
+      this.keyFormatPromise.catch(() => {});
     }
   }
 
