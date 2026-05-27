@@ -33,7 +33,12 @@ type EMEControllerTestable = Omit<EMEController, 'hls' | 'mediaKeySessions'> & {
     data: MediaAttachedData,
   ) => void;
   onMediaDetached: () => void;
+  onManifestLoaded: (
+    event: Events.MANIFEST_LOADED,
+    data: { sessionKeys: LevelKey[] },
+  ) => void;
   media: HTMLMediaElement | null;
+  keyFormatPromise: Promise<KeySystemFormats> | null;
   getKeyStatuses: (mediaKeySessionContext: MediaKeySessionContext) => {
     [keyId: string]: MediaKeyStatus;
   };
@@ -579,6 +584,112 @@ describe('EMEController', function () {
         expect(emeController.hls.trigger.args[0][1].details).to.equal(
           ErrorDetails.KEY_SYSTEM_SERVER_CERTIFICATE_REQUEST_FAILED,
         );
+      });
+  });
+
+  it('should reject pending session-key key-system selection with invalid state when destroyed', function () {
+    let resolveKeySystemAccess!: (value: MediaKeySystemAccess) => void;
+    const keySystemAccessPromise = new Promise<MediaKeySystemAccess>(
+      (resolve) => {
+        resolveKeySystemAccess = resolve;
+      },
+    );
+    const createMediaKeysSpy = sinon.spy(() =>
+      Promise.resolve(new MediaKeysMock()),
+    );
+    const reqMediaKsAccessSpy = sinon.spy(() => keySystemAccessPromise);
+
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      drmSystems: {
+        'com.apple.fps': {},
+      },
+    });
+
+    const levelKey = getParsedLevelKey();
+
+    emeController.onManifestLoaded(Events.MANIFEST_LOADED, {
+      sessionKeys: [levelKey],
+    });
+
+    const keyFormatPromise = emeController.keyFormatPromise;
+    if (!keyFormatPromise) {
+      throw new Error('Expected pending key-system selection');
+    }
+
+    emeController.destroy();
+    const mediaKeySystemAccess: MediaKeySystemAccess = {
+      keySystem: KeySystems.FAIRPLAY,
+      createMediaKeys: createMediaKeysSpy,
+      getConfiguration: () => ({}),
+    };
+    resolveKeySystemAccess(mediaKeySystemAccess);
+
+    return keyFormatPromise.then(
+      () => {
+        throw new Error('Expected key-system selection to reject');
+      },
+      (error) => {
+        expect(error).to.be.instanceOf(Error);
+        expect(error.message).to.equal('invalid state');
+        expect(createMediaKeysSpy).not.to.have.been.called;
+      },
+    );
+  });
+
+  it('should handle unused session-key key-system selection rejections', function () {
+    let rejectKeySystemAccess!: (error: Error) => void;
+    const keySystemAccessPromise = new Promise<MediaKeySystemAccess>(
+      (resolve, reject) => {
+        rejectKeySystemAccess = reject;
+      },
+    );
+    let unhandledRejection: PromiseRejectionEvent | null = null;
+    const onUnhandledRejection = (event: PromiseRejectionEvent) => {
+      unhandledRejection = event;
+      event.preventDefault();
+    };
+
+    self.addEventListener('unhandledrejection', onUnhandledRejection);
+
+    setupEach({
+      emeEnabled: true,
+      requestMediaKeySystemAccessFunc: () => keySystemAccessPromise,
+      drmSystems: {
+        'com.apple.fps': {},
+      },
+    });
+
+    emeController.onManifestLoaded(Events.MANIFEST_LOADED, {
+      sessionKeys: [getParsedLevelKey()],
+    });
+
+    const keyFormatPromise = emeController.keyFormatPromise;
+    if (!keyFormatPromise) {
+      throw new Error('Expected key-system selection promise');
+    }
+
+    rejectKeySystemAccess(new Error('key-system access failed'));
+
+    return new Promise<void>((resolve) => {
+      self.setTimeout(resolve, 0);
+    })
+      .then(() => {
+        expect(unhandledRejection).to.equal(null);
+        expect(emeController.hls.trigger).not.to.have.been.called;
+        return keyFormatPromise.then(
+          () => {
+            throw new Error('Expected key-system selection to reject');
+          },
+          (error) => {
+            expect(error).to.be.instanceOf(Error);
+            expect(error.message).to.equal('key-system access failed');
+          },
+        );
+      })
+      .finally(() => {
+        self.removeEventListener('unhandledrejection', onUnhandledRejection);
       });
   });
 
