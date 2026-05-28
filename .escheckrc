@@ -1,7 +1,38 @@
-{
-  "ecmaVersion": "es5",
-  "modules": "false",
-  "files": [
-    "./dist/**/*.js"
-  ]
-}
+[
+  {
+    "ecmaVersion": "es5",
+    "module": false,
+    "files": [
+      "./dist/hls.js",
+      "./dist/hls.min.js",
+      "./dist/hls.light.js",
+      "./dist/hls.light.min.js",
+      "./dist/hls.worker.js"
+    ]
+  },
+  {
+    "ecmaVersion": "es2016",
+    "module": false,
+    "checkFeatures": true,
+    "ignore": "globalThis,ErrorCause",
+    "files": [
+      "./dist/hls.light.js",
+      "./dist/hls.light.min.js",
+      "./dist/hls.worker.js"
+    ]
+  },
+  {
+    "ecmaVersion": "es2017",
+    "module": false,
+    "checkFeatures": true,
+    "ignore": "globalThis,ErrorCause",
+    "files": ["./dist/hls.js", "./dist/hls.min.js"]
+  },
+  {
+    "ecmaVersion": "es2017",
+    "module": true,
+    "checkFeatures": true,
+    "ignore": "globalThis,ErrorCause",
+    "files": ["./dist/hls.mjs", "./dist/hls.light.mjs"]
+  }
+]

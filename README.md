@@ -296,16 +296,27 @@ HLS.js is only compatible with browsers supporting MediaSource extensions (MSE) 
 
 HLS.js is supported on:
 
-- Chrome 39+ for Android
-- Chrome 39+ for Desktop
-- Firefox 41+ for Android
-- Firefox 42+ for Desktop
+- Chrome 47+ for Desktop
+- Firefox 51+ for Desktop
 - Edge for Windows 10+
-- Safari 9+ for macOS 10.11+
+- Safari 10+ for macOS 10.11+
 - Safari for iPadOS 13+
 - Safari for iOS 17.1+ since HLS version [1.5.0](https://github.com/video-dev/hls.js/releases/tag/v1.5.0) using Managed Media Source (MMS) [WebKit blog](https://webkit.org/blog/14735/webkit-features-in-safari-17-1/)
+- Chrome for Android 5+
+- Firefox for Android 5+
 
-A [Promise polyfill](https://github.com/taylorhakes/promise-polyfill) is required in browsers missing native promise support.
+These versions are the targets passed to [`@babel/preset-env`](https://babeljs.io/docs/babel-preset-env) when building the UMD bundles in `dist/`. They share an **ES2016 runtime baseline**: ES5-style syntax plus native ES2016 globals (`Map`, `Set`, `Promise`, `Array.from`, `Uint8Array.from`, `Array.prototype.includes`, etc.). To keep bundle size small, no `core-js` polyfills are bundled.
+
+Optional features such as CMCD pull in ES2017 APIs (e.g. `Object.entries`), so the full UMD bundle effectively requires an ES2017-capable runtime. The `light` bundle excludes those features and stays at the ES2016 baseline.
+
+The `dist/` folder ships two distribution variants:
+
+- **UMD** (`dist/hls.js`, `dist/hls.min.js`, `dist/hls.light.js`, `dist/hls.light.min.js`) — embeddable directly via a `<script>` tag (exposes a global `Hls`) or resolved by `require('hls.js')` via `package.json`'s `main` field. Targets the browser list above. The companion `dist/hls.worker.js` is the bundled transmuxer Web Worker.
+- **ESM** (`dist/hls.mjs`, `dist/hls.light.mjs`) — resolved by `import 'hls.js'` via the `module` field. Built with `@babel/preset-env`'s `esmodules: true` target (≈ Chrome 61+, Firefox 60+, Safari 10.1+, Edge 16+) and intended to be consumed by a modern bundler. Uses ES2015+ syntax but stays below ES2019 (no `Array.prototype.flatMap`, `Object.fromEntries`, etc.).
+
+If you import from `src/` directly or include any of our runtime dependencies untranspiled in your own build, you bypass this Babel pipeline and become responsible for transpilation; those source modules can reach for ES2019+ APIs that are tree-shaken out of the bundles we publish.
+
+To run on browsers below this baseline, supply your own polyfills for any missing globals before HLS.js loads.
 
 **Please note:**
 
