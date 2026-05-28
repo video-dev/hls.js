@@ -745,4 +745,180 @@ describe('EMEController', function () {
       expect(emeController.mediaKeySessions.length).to.equal(0);
     });
   });
+
+  describe('serialized key-session setup (#7796)', function () {
+    class DeferredMediaKeySessionMock extends MediaKeySessionMock {
+      generateRequest() {
+        this.emit('message', {
+          messageType: 'license-request',
+          message: new Uint8Array(0),
+        });
+        // Do not auto-publish key statuses — tests drive timing manually.
+        return Promise.resolve();
+      }
+
+      publishKeyStatus(keyId: Uint8Array<ArrayBuffer> = new Uint8Array(16)) {
+        this._keyStatuses.set(keyId, 'usable');
+        this.emit('keystatuseschange', {});
+      }
+    }
+
+    const drain = () =>
+      new Promise<void>((resolve) => self.setTimeout(() => resolve(), 0));
+
+    const buildKsAccessSpy = (sessions: DeferredMediaKeySessionMock[]) => {
+      const createSessionSpy = sinon.spy(() => {
+        const session = new DeferredMediaKeySessionMock();
+        sessions.push(session);
+        return session;
+      });
+      const reqMediaKsAccessSpy = sinon.spy(function () {
+        return Promise.resolve({
+          keySystem: 'com.apple.fps',
+          createMediaKeys: sinon.spy(() =>
+            Promise.resolve({
+              setServerCertificate: () => Promise.resolve(),
+              createSession: createSessionSpy,
+            }),
+          ),
+        });
+      });
+      return { reqMediaKsAccessSpy, createSessionSpy };
+    };
+
+    const respondToXhrEmpty = () => {
+      sinonFakeXMLHttpRequestStatic.onCreate = (
+        xhr: sinon.SinonFakeXMLHttpRequest,
+      ) => {
+        self.setTimeout(() => {
+          (xhr as any).response = new Uint8Array();
+          xhr.respond(200, {}, '');
+        }, 0);
+      };
+    };
+
+    it('blocks concurrent loadKey for the same URI on a single session', function () {
+      const sessions: DeferredMediaKeySessionMock[] = [];
+      const { reqMediaKsAccessSpy, createSessionSpy } =
+        buildKsAccessSpy(sessions);
+      setupEach({
+        emeEnabled: true,
+        drmSystems: { 'com.apple.fps': { licenseUrl: 'http://noop' } },
+        requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      });
+      respondToXhrEmpty();
+      emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+        media: media as any as HTMLMediaElement,
+      });
+
+      const levelKey = getParsedLevelKey();
+      const pA = emeController.loadKey(getEncryptedFrag(levelKey));
+      const pB = emeController.loadKey(getEncryptedFrag(levelKey));
+
+      return drain()
+        .then(() => {
+          expect(createSessionSpy).callCount(1);
+          sessions[0].publishKeyStatus();
+          return Promise.all([pA, pB]);
+        })
+        .then(() => {
+          expect(createSessionSpy).callCount(1);
+          expect(emeController.mediaKeySessions.length).to.equal(1);
+        });
+    });
+
+    it('creates distinct concurrent sessions for distinct URIs', function () {
+      const sessions: DeferredMediaKeySessionMock[] = [];
+      const { reqMediaKsAccessSpy, createSessionSpy } =
+        buildKsAccessSpy(sessions);
+      setupEach({
+        emeEnabled: true,
+        drmSystems: { 'com.apple.fps': { licenseUrl: 'http://noop' } },
+        requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      });
+      respondToXhrEmpty();
+      emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+        media: media as any as HTMLMediaElement,
+      });
+
+      // Distinct keyIds mirror real HLS where different key URIs map to
+      // different keys. Distinct URIs do not block each other — FPS in
+      // particular relies on parallel session setup.
+      const keyA = getParsedLevelKey('data://key-uri-A');
+      keyA.keyId = new Uint8Array(16).fill(0xa1);
+      const keyB = getParsedLevelKey('data://key-uri-B');
+      keyB.keyId = new Uint8Array(16).fill(0xb2);
+      const fragA = getEncryptedFrag(keyA);
+      const fragB = getEncryptedFrag(keyB);
+
+      const pA = emeController.loadKey(fragA);
+      const pB = emeController.loadKey(fragB);
+
+      return drain()
+        .then(() => {
+          // Distinct URIs run in parallel — each gets its own session.
+          expect(createSessionSpy).callCount(2);
+          sessions[0].publishKeyStatus(keyA.keyId!);
+          sessions[1].publishKeyStatus(keyB.keyId!);
+          return Promise.all([pA, pB]);
+        })
+        .then(() => {
+          expect(emeController.mediaKeySessions.length).to.equal(2);
+        });
+    });
+
+    it('does not orphan blocked callers when the first session setup fails', function () {
+      const sessions: DeferredMediaKeySessionMock[] = [];
+      const createSessionSpy = sinon.spy(() => {
+        const session = new DeferredMediaKeySessionMock();
+        if (sessions.length === 0) {
+          (session as any).generateRequest = () =>
+            Promise.reject(new Error('first session failed'));
+        }
+        sessions.push(session);
+        return session;
+      });
+      const reqMediaKsAccessSpy = sinon.spy(function () {
+        return Promise.resolve({
+          keySystem: 'com.apple.fps',
+          createMediaKeys: sinon.spy(() =>
+            Promise.resolve({
+              setServerCertificate: () => Promise.resolve(),
+              createSession: createSessionSpy,
+            }),
+          ),
+        });
+      });
+      setupEach({
+        emeEnabled: true,
+        drmSystems: { 'com.apple.fps': { licenseUrl: 'http://noop' } },
+        requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      });
+      respondToXhrEmpty();
+      emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+        media: media as any as HTMLMediaElement,
+      });
+
+      const levelKey = getParsedLevelKey();
+      const pA = emeController
+        .loadKey(getEncryptedFrag(levelKey))
+        .catch(() => undefined);
+      const pB = emeController.loadKey(getEncryptedFrag(levelKey));
+
+      return drain()
+        .then(() => drain())
+        .then(() => {
+          // After A's failure, B should drive a fresh session creation.
+          expect(createSessionSpy.callCount).to.be.at.least(1);
+          if (sessions.length >= 2) {
+            sessions[1].publishKeyStatus();
+          }
+          return Promise.all([pA, pB]);
+        })
+        .then(() => {
+          expect(createSessionSpy.callCount).to.be.at.least(2);
+          expect(emeController.mediaKeySessions.length).to.equal(1);
+        });
+    });
+  });
 });
