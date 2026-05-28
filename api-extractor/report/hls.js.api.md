@@ -1840,6 +1840,8 @@ export interface FragDecryptedData {
     // (undocumented)
     frag: Fragment;
     // (undocumented)
+    part: Part | null;
+    // (undocumented)
     payload: ArrayBuffer;
     // (undocumented)
     stats: {
@@ -5014,6 +5016,8 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     doTick(): void;
     // (undocumented)
     _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
+    // (undocumented)
+    protected _handleFragmentLoadProgress(data: FragLoadedData): void;
     // (undocumented)
     protected loadFragment(frag: MediaFragment, level: Level, targetBufferTime: number): void;
     // (undocumented)
