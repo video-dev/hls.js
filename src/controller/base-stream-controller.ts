@@ -930,6 +930,7 @@ export default class BaseStreamController
   private loadKeyFor(
     frag: MediaFragment,
     details: LevelDetails,
+    initDataPromise?: Promise<void>,
   ): Promise<KeyLoadedData | void> | null {
     let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
     if (frag.encrypted && !frag.decryptdata?.key) {
@@ -937,15 +938,17 @@ export default class BaseStreamController
         `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${this.playlistLabel()} ${frag.level}`,
       );
       this.state = State.KEY_LOADING;
-      keyLoadingPromise = this.keyLoader.load(frag).then((keyLoadedData) => {
-        if (!this.fragContextChanged(keyLoadedData.frag)) {
-          this.hls.trigger(Events.KEY_LOADED, keyLoadedData);
-          if (this.state === State.KEY_LOADING) {
-            this.state = State.IDLE;
+      keyLoadingPromise = this.keyLoader
+        .load(frag, initDataPromise)
+        .then((keyLoadedData) => {
+          if (!this.fragContextChanged(keyLoadedData.frag)) {
+            this.hls.trigger(Events.KEY_LOADED, keyLoadedData);
+            if (this.state === State.KEY_LOADING) {
+              this.state = State.IDLE;
+            }
+            return keyLoadedData;
           }
-          return keyLoadedData;
-        }
-      });
+        });
       this.hls.trigger(Events.KEY_LOADING, { frag });
     } else if (!frag.encrypted) {
       keyLoadingPromise = this.keyLoader.loadClear(
@@ -1084,7 +1087,11 @@ export default class BaseStreamController
       return Promise.resolve(null);
     }
 
-    const keyLoadingPromise = this.loadKeyFor(frag, details);
+    // Start the init segment load before the key load so that EME key
+    // patching from tenc (KeyLoader.loadKeyEME) has the data it needs
+    // before the license request is generated (#7796).
+    const initDataPromise = this.loadInitSegmentIfNeeded(frag);
+    const keyLoadingPromise = this.loadKeyFor(frag, details, initDataPromise);
     if (this.fragContextChanged(frag)) {
       this.log(
         `Context changed in KEY_LOADING sn: ${frag.sn} ${frag.relurl} > ${this.fragCurrent?.relurl}`,
@@ -1108,7 +1115,6 @@ export default class BaseStreamController
     const dataOnProgress =
       this.config.progressive && frag.type !== PlaylistLevelType.SUBTITLE;
 
-    const initDataPromise = this.loadInitSegmentIfNeeded(frag);
     let result: Promise<PartsLoadedData | FragLoadedData | null>;
     if (dataOnProgress && keyLoadingPromise) {
       result = keyLoadingPromise
