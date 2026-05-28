@@ -64,6 +64,8 @@ type ActiveKeys = {
 
 export type LicenseAndKeysRequest = EventEmitter & {
   status: 'initialized' | 'started' | 'generated' | MediaKeyMessageType;
+  resolved?: boolean;
+  errored?: Error;
   licenseXhr?: XMLHttpRequest;
   requestErrors: { status: number; message: string }[];
   onmessage?: (this: MediaKeySession, ev: MediaKeyMessageEvent) => any;
@@ -136,6 +138,9 @@ class EMEController extends Logger implements ComponentAPI {
     [keysystem: string]: KeySystemAccessPromises | undefined;
   } = {};
 
+  private sessionSetupByUri: {
+    [uri: string]: Promise<MediaKeySessionContext>;
+  } = {};
   // MediaKey session contexts created for each Key URI needed to make license requests that produce key status maps
   private mediaKeySessions: MediaKeySessionContext[] = [];
 
@@ -345,7 +350,7 @@ class EMEController extends Logger implements ComponentAPI {
     reason: LicenseRequestReason,
   ): MediaKeySessionContext {
     const { mediaKeySessions } = this;
-    const message = ` key-system session "${keySystem}" keyId: ${arrayToHex(
+    const message = ` key-session "${keySystem}" keyId: ${arrayToHex(
       levelKey.keyId || ([] as number[]),
     )} keyUri: ${levelKey.uri} for "${reason}"`;
     for (let i = 0; i < mediaKeySessions.length; i++) {
@@ -582,6 +587,57 @@ class EMEController extends Logger implements ComponentAPI {
     levelKey: LevelKey,
     reason: LicenseRequestReason,
   ): Promise<MediaKeySessionContext> {
+    const existing = this.findContextForKey(levelKey);
+    if (existing !== undefined) {
+      return Promise.resolve(existing);
+    }
+    // Block concurrent loadKey calls for the same Key URI on a single
+    // in-flight setup so we never create duplicate sessions for that URI
+    // (#7796). Distinct URIs proceed in parallel. Waiters re-enter
+    // `resolveSessionForKey` after the predecessor settles so they can
+    // share sessions containing their keyId's key-status, or generate
+    // their own license request and key session if the license server
+    // does not produce multiple key statuses.
+    const uri = levelKey.uri;
+    const previous = this.sessionSetupByUri[uri];
+    let setup: Promise<MediaKeySessionContext>;
+    if (previous === undefined) {
+      setup = this.resolveSessionForKey(levelKey, reason);
+    } else {
+      setup = previous
+        .catch(() => undefined)
+        .then(() => {
+          this.throwIfDestroyed();
+          return this.resolveSessionForKey(levelKey, reason);
+        });
+    }
+    this.sessionSetupByUri[uri] = setup;
+    const cleanup = () => {
+      if (this.sessionSetupByUri[uri] === setup) {
+        delete this.sessionSetupByUri[uri];
+      }
+    };
+    setup.then(cleanup, cleanup);
+    return setup;
+  }
+
+  private findContextForKey(
+    levelKey: LevelKey,
+  ): MediaKeySessionContext | undefined {
+    const { mediaKeySessions } = this;
+    for (let i = mediaKeySessions.length; i--; ) {
+      const context = mediaKeySessions[i];
+      if (getKeyStatus(levelKey, context)) {
+        return context;
+      }
+    }
+    return undefined;
+  }
+
+  private resolveSessionForKey(
+    levelKey: LevelKey,
+    reason: LicenseRequestReason,
+  ): Promise<MediaKeySessionContext> {
     return this.getKeySystemForKeyPromise(levelKey).then(
       ({ keySystem, mediaKeys }) => {
         this.throwIfDestroyed();
@@ -591,7 +647,7 @@ class EMEController extends Logger implements ComponentAPI {
           if (getKeyStatus(levelKey, context)) {
             return context;
           }
-          // If request is in progress wait for it to resolve
+          // If a request is in progress for this same URI, wait for it.
           const usablePromise = this.getUsableKeyPromise(
             context,
             levelKey,
@@ -958,7 +1014,9 @@ class EMEController extends Logger implements ComponentAPI {
     const onmessage = (event: MediaKeyMessageEvent) => {
       const keySession = context.mediaKeysSession;
       if (!keySession as any) {
-        requestEmitter.emit('error', new Error('invalid state'));
+        const invalidStateError = new Error('invalid state');
+        requestEmitter.errored = invalidStateError;
+        requestEmitter.emit('error', invalidStateError);
         return;
       }
       const { messageType, message } = event;
@@ -971,6 +1029,7 @@ class EMEController extends Logger implements ComponentAPI {
         messageType === 'license-renewal'
       ) {
         this.renewLicense(context, levelKey, message).catch((error) => {
+          requestEmitter.errored = error;
           if (requestEmitter.eventNames().length) {
             requestEmitter.emit('error', error);
           } else {
@@ -1036,6 +1095,7 @@ class EMEController extends Logger implements ComponentAPI {
     const handleKeyStatus = (keyStatus: MediaKeyStatus) => {
       let keyError: EMEKeyError | Error | undefined;
       if (keyStatus.startsWith('usable')) {
+        requestEmitter.resolved = true;
         requestEmitter.emit('resolved');
       } else if (
         keyStatus === 'internal-error' ||
@@ -1055,6 +1115,7 @@ class EMEController extends Logger implements ComponentAPI {
         );
       }
       if (keyError) {
+        requestEmitter.errored = keyError;
         if (requestEmitter.eventNames().length) {
           requestEmitter.emit('error', keyError);
         } else {
@@ -1066,7 +1127,9 @@ class EMEController extends Logger implements ComponentAPI {
     const onkeystatuseschange = (event: Event) => {
       const keySession = context.mediaKeysSession;
       if (!keySession as any) {
-        requestEmitter.emit('error', new Error('invalid state'));
+        const invalidStateError = new Error('invalid state');
+        requestEmitter.errored = invalidStateError;
+        requestEmitter.emit('error', invalidStateError);
         return;
       }
 
@@ -1166,6 +1229,19 @@ class EMEController extends Logger implements ComponentAPI {
       .then(() => keyUsablePromise)
       .catch((error) => {
         this.log(`mediaKeysSession.generateRequest failed: ${error}`);
+        const errorDetails = error.data?.details;
+        if (
+          (errorDetails === ErrorDetails.KEY_SYSTEM_STATUS_OUTPUT_RESTRICTED ||
+            errorDetails === ErrorDetails.KEY_SYSTEM_STATUS_INTERNAL_ERROR) &&
+          Object.keys(context.keyStatuses).some(
+            (keyId) => context.keyStatuses[keyId] === 'usable',
+          )
+        ) {
+          // Emit key status error without resetting session containing usable keys
+          // to allow variant switching to resolve playback.
+          this.handleError(error);
+          return context;
+        }
         requestEmitter.removeAllListeners();
         return this.removeSession(context).then(() => {
           throw error;
@@ -1620,6 +1696,7 @@ class EMEController extends Logger implements ComponentAPI {
     this.keyFormatPromise = null;
     this.keySystemAccessPromises = {};
     this.activeKeys = {};
+    this.sessionSetupByUri = {};
     const mediaResolved = this.mediaResolved;
     if (mediaResolved) {
       mediaResolved();
@@ -1874,6 +1951,12 @@ function getKeyStatusError(
 
 function getRequestToKeyUsablePromise(requestEmitter: LicenseAndKeysRequest) {
   return new Promise((resolve: (value?: void) => void, reject) => {
+    if (requestEmitter.resolved) {
+      return resolve();
+    }
+    if (requestEmitter.errored) {
+      return reject(requestEmitter.errored);
+    }
     requestEmitter.on('error', reject);
     requestEmitter.on('resolved', resolve);
   });

@@ -3229,7 +3229,7 @@ export class KeyLoader extends Logger implements ComponentAPI {
     // (undocumented)
     emeController: EMEController | null;
     // (undocumented)
-    load(frag: Fragment): Promise<KeyLoadedData>;
+    load(frag: Fragment, initDataPromise?: Promise<void>): Promise<KeyLoadedData>;
     // (undocumented)
     loadClear(loadingFrag: Fragment, encryptedFragments: Fragment[], startFragRequested: boolean): Promise<void> | null;
 }
@@ -3837,6 +3837,8 @@ export interface LevelUpdatedData {
 // @public (undocumented)
 export type LicenseAndKeysRequest = EventEmitter & {
     status: 'initialized' | 'started' | 'generated' | MediaKeyMessageType;
+    resolved?: boolean;
+    errored?: Error;
     licenseXhr?: XMLHttpRequest;
     requestErrors: {
         status: number;

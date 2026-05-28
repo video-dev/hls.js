@@ -57,6 +57,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
         loader.destroy();
       }
     }
+    this.emeController = null;
     this.keyLoaderInfo = {};
   }
 
@@ -75,7 +76,10 @@ export default class KeyLoader extends Logger implements ComponentAPI {
     return null;
   }
 
-  public load(frag: Fragment): Promise<KeyLoadedData> {
+  public load(
+    frag: Fragment,
+    initDataPromise?: Promise<void>,
+  ): Promise<KeyLoadedData> {
     if (
       !frag.decryptdata &&
       frag.encrypted &&
@@ -86,15 +90,16 @@ export default class KeyLoader extends Logger implements ComponentAPI {
       return this.emeController
         .selectKeySystemFormat(frag)
         .then((keySystemFormat) => {
-          return this.loadInternal(frag, keySystemFormat);
+          return this.loadInternal(frag, initDataPromise, keySystemFormat);
         });
     }
 
-    return this.loadInternal(frag);
+    return this.loadInternal(frag, initDataPromise);
   }
 
   private loadInternal(
     frag: Fragment,
+    initDataPromise: Promise<void> | undefined,
     keySystemFormat?: KeySystemFormats,
   ): Promise<KeyLoadedData> {
     if (__USE_EME_DRM__ && keySystemFormat) {
@@ -122,7 +127,9 @@ export default class KeyLoader extends Logger implements ComponentAPI {
           // loadKeyHTTP handles http(s) and data URLs
           return this.loadKeyHTTP(encryptedFrag);
         }
-        return this.loadKeyEME(encryptedFrag);
+        return initDataPromise
+          ? initDataPromise.then(() => this.loadKeyEME(encryptedFrag))
+          : this.loadKeyEME(encryptedFrag);
       case 'AES-128':
       case 'AES-256':
       case 'AES-256-CTR':
@@ -155,10 +162,11 @@ export default class KeyLoader extends Logger implements ComponentAPI {
             );
             LevelKey.setKeyIdForUri(keyUri, keyId);
           } else {
+            const keyIdPatch = LevelKey.addKeyIdForUri(keyUri);
             this.log(
-              `Patching empty keyId with ${arrayToHex(keyId)} keyUri: ${keyUri}`,
+              `Patching empty keyId with ${arrayToHex(keyIdPatch)} keyUri: ${keyUri}`,
             );
-            keyId = LevelKey.addKeyIdForUri(keyUri);
+            keyId = keyIdPatch;
           }
           frag.decryptdata.keyId = keyId;
         }
