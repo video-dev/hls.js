@@ -24,9 +24,3 @@ export function hexToArrayBuffer(str: string): ArrayBuffer {
       .split(' '),
   ).buffer;
 }
-
-const Hex = {
-  hexDump: arrayToHex,
-};
-
-export default Hex;

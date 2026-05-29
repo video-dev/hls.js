@@ -1,6 +1,7 @@
 import BaseVideoParser from './base-video-parser';
 import ExpGolomb from './exp-golomb';
 import { parseSEIMessageFromNALu } from '../../utils/mp4-tools';
+import { bin2str } from '../../utils/numeric-encoding-utils';
 import type {
   DemuxedUserdataTrack,
   DemuxedVideoTrack,
@@ -764,10 +765,7 @@ class HevcVideoParser extends BaseVideoParser {
 
   matchSPS(sps1: Uint8Array, sps2: Uint8Array): boolean {
     // compare without headers and VPS related params
-    return (
-      String.fromCharCode.apply(null, sps1).substr(3) ===
-      String.fromCharCode.apply(null, sps2).substr(3)
-    );
+    return bin2str(sps1).substring(3) === bin2str(sps2).substring(3);
   }
 }
 

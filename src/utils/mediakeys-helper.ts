@@ -1,6 +1,6 @@
 import { optionalSelf } from './global';
 import { changeEndianness } from './keysystem-util';
-import { base64Decode } from './numeric-encoding-utils';
+import { base64Decode, bin2str } from './numeric-encoding-utils';
 import type { DRMSystemOptions, EMEControllerConfig } from '../config';
 
 /**
@@ -184,7 +184,7 @@ export function parsePlayReadyWRM(keyBytes: Uint8Array<ArrayBuffer>) {
     keyBytes.byteOffset,
     keyBytes.byteLength / 2,
   );
-  const keyByteStr = String.fromCharCode.apply(null, Array.from(keyBytesUtf16));
+  const keyByteStr = bin2str(keyBytesUtf16);
 
   // Parse Playready WRMHeader XML
   const xmlKeyBytes = keyByteStr.substring(
