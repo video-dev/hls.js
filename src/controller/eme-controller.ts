@@ -35,8 +35,8 @@ import {
   requestMediaKeySystemAccess,
 } from '../utils/mediakeys-helper';
 import { KeySystemFormats } from '../utils/mediakeys-helper';
-import { bin2str, parseMultiPssh, parseSinf } from '../utils/mp4-tools';
-import { base64Decode } from '../utils/numeric-encoding-utils';
+import { parseMultiPssh, parseSinf } from '../utils/mp4-tools';
+import { base64Decode, bin2str } from '../utils/numeric-encoding-utils';
 import { stringify } from '../utils/safe-json-stringify';
 import { strToUtf8array } from '../utils/utf8-utils';
 import type { EMEControllerConfig, HlsConfig, LoadPolicy } from '../config';
@@ -1440,10 +1440,7 @@ class EMEController extends Logger implements ComponentAPI {
     // actual license request) and any HttpHeader elements (sent as request
     // headers).
     // For PlayReady CDMs, we need to dig the Challenge out of the XML.
-    const xmlString = String.fromCharCode.apply(
-      null,
-      new Uint16Array(licenseChallenge.buffer),
-    );
+    const xmlString = bin2str(new Uint16Array(licenseChallenge.buffer));
     // eslint-disable-next-line no-restricted-syntax
     if (!xmlString.includes('PlayReadyKeyMessage')) {
       // This does not appear to be a wrapped message as on Edge.  Some
