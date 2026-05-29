@@ -258,7 +258,7 @@ export class InterstitialsSchedule extends Logger {
     const ids = Object.keys(dateRanges);
     const removedInterstitials = previousInterstitialEvents
       ? previousInterstitialEvents.filter(
-          (event) => !ids.includes(event.identifier),
+          (event) => ids.indexOf(event.identifier) === -1,
         )
       : [];
     if (interstitialEvents.length) {

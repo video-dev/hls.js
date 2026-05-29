@@ -268,7 +268,7 @@ class SubtitleTrackController extends BasePlaylistController {
             ? this.hls.config.enableIMSC1
             : this.hls.config.enableWebVTT
         ) {
-          if (!subtitleGroups || subtitleGroups.includes(track.groupId)) {
+          if (!subtitleGroups || subtitleGroups.indexOf(track.groupId) > -1) {
             // track.id should match hls.subtitleTracks index
             track.id = subtitleTracks.length;
             subtitleTracks.push(track);
