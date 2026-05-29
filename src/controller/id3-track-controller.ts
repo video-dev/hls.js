@@ -360,7 +360,7 @@ export class ID3TrackController implements ComponentAPI {
     if (id3Track && removeOldCues) {
       if (id3Track.track.cues?.length) {
         const idsToRemove = Object.keys(dateRangeCuesAppended).filter(
-          (id) => !ids.includes(id),
+          (id) => ids.indexOf(id) === -1,
         );
         for (let i = idsToRemove.length; i--; ) {
           const id = idsToRemove[i];

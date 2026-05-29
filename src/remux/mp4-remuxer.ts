@@ -245,7 +245,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       }
 
       if (this.ISGenerated) {
-        if (enoughAudioSamples && enoughVideoSamples) {
+        if (enoughAudioSamples && enoughVideoSamples && timeOffset) {
           // timeOffset is expected to be the offset of the first timestamp of this fragment (first DTS)
           // if first audio DTS is not aligned with first video DTS then we need to take that into account
           // when providing timeOffset to remuxAudio / remuxVideo. if we don't do that, there might be a permanent / small
@@ -482,7 +482,8 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           (timeOffset === 0 && videoInitPTS < _initPTS.baseTime)
         ) {
           initDTS = Math.min(initDTS as number, videoInitDTS);
-          initPTS = Math.min(initPTS as number, videoInitPTS);
+          // Bind initPTS to the lowest DTS across tracks to prevent negative timestamps
+          initPTS = Math.min(initPTS as number, videoInitDTS);
         }
       }
       this.videoTrackConfig = {

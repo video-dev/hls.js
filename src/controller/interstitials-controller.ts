@@ -1789,7 +1789,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
 
       if (
         this.isInterstitial(playingItem) &&
-        removedIds.includes(playingItem.event.identifier)
+        removedIds.indexOf(playingItem.event.identifier) > -1
       ) {
         this.warn(
           `Interstitial "${playingItem.event.identifier}" removed while playing`,

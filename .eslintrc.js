@@ -2,12 +2,23 @@ const asyncKeywordConstraintMsg =
   'The async keyword adds a `regenerator` dependency in the hls.js ES5 output not allowed in v1 due to bundle size constraints.';
 const selfVsWindowGlobalMsg =
   'Use `self` instead of `window` to access the global context everywhere (including workers).';
-const arrayFindCompatibilityMsg =
-  'Usage of Array find method is restricted for compatibility.';
-const arrayFindIndexCompatibilityMsg =
-  'Usage of Array findIndex method is restricted for compatibility.';
-const arrayEveryCompatibilityMsg =
-  'Usage of Array every method is restricted for compatibility. Use a negative Array some check instead.';
+const arrayIncludesCompatibilityMsg =
+  'Usage of Array includes method is restricted for compatibility. Use Array indexOf instead. (For String includes, suppress this with an eslint-disable comment.)';
+
+const baseRestrictedSyntax = [
+  {
+    selector: 'FunctionDeclaration[async=true]',
+    message: asyncKeywordConstraintMsg,
+  },
+  {
+    selector: 'ArrowFunctionExpression[async=true]',
+    message: asyncKeywordConstraintMsg,
+  },
+  {
+    selector: 'MethodDefinition[value.async=true]',
+    message: asyncKeywordConstraintMsg,
+  },
+];
 
 module.exports = {
   env: { browser: true, commonjs: true, es6: true },
@@ -31,6 +42,7 @@ module.exports = {
   // see https://github.com/standard/eslint-config-standard
   // 'prettier' (https://github.com/prettier/eslint-config-prettier) must be last
   extends: ['eslint:recommended', 'prettier'],
+  ignorePatterns: ['dist/'],
   parser: '@typescript-eslint/parser',
   parserOptions: { sourceType: 'module', project: './tsconfig.json' },
   plugins: ['@typescript-eslint', 'import', 'no-for-of-loops'],
@@ -74,32 +86,11 @@ module.exports = {
         'no-use-before-define': 'off',
         'no-restricted-syntax': [
           'error',
-          {
-            selector: 'FunctionDeclaration[async=true]',
-            message: asyncKeywordConstraintMsg,
-          },
-          {
-            selector: 'ArrowFunctionExpression[async=true]',
-            message: asyncKeywordConstraintMsg,
-          },
-          {
-            selector: 'MethodDefinition[value.async=true]',
-            message: asyncKeywordConstraintMsg,
-          },
+          ...baseRestrictedSyntax,
           {
             selector:
-              'MemberExpression[property.name="find"][object.type="Identifier"]',
-            message: arrayFindCompatibilityMsg,
-          },
-          {
-            selector:
-              'MemberExpression[property.name="findIndex"][object.type="Identifier"]',
-            message: arrayFindIndexCompatibilityMsg,
-          },
-          {
-            selector:
-              'MemberExpression[property.name="every"][object.type="Identifier"]',
-            message: arrayEveryCompatibilityMsg,
+              'MemberExpression[property.name="includes"][object.type="Identifier"]',
+            message: arrayIncludesCompatibilityMsg,
           },
         ],
         'import/order': [
@@ -135,6 +126,15 @@ module.exports = {
         '@typescript-eslint/no-restricted-imports': 'error',
         '@typescript-eslint/no-floating-promises': 'error',
         '@typescript-eslint/no-misused-promises': 'error',
+      },
+    },
+    {
+      files: ['tests/**/*.ts'],
+      rules: {
+        // Tests run only in modern browsers and aren't bundled, so the
+        // Array.includes compatibility constraint that applies to src/ doesn't
+        // apply here.
+        'no-restricted-syntax': ['error', ...baseRestrictedSyntax],
       },
     },
   ],

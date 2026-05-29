@@ -1368,6 +1368,7 @@ class EMEController extends Logger implements ComponentAPI {
       null,
       new Uint16Array(licenseChallenge.buffer),
     );
+    // eslint-disable-next-line no-restricted-syntax
     if (!xmlString.includes('PlayReadyKeyMessage')) {
       // This does not appear to be a wrapped message as on Edge.  Some
       // clients do not need this unwrapping, so we will assume this is one of
