@@ -138,16 +138,6 @@ class ExpGolomb {
   readUByte(): number {
     return this.readBits(8);
   }
-
-  // ():int
-  readUShort(): number {
-    return this.readBits(16);
-  }
-
-  // ():int
-  readUInt(): number {
-    return this.readBits(32);
-  }
 }
 
 export default ExpGolomb;

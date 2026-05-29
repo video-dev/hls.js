@@ -1,5 +1,6 @@
 import { utf8ArrayToStr } from '@svta/cml-id3';
 import { arrayToHex } from './hex';
+import { bin2str } from './numeric-encoding-utils';
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { logger } from '../utils/logger';
 import type { ChunkMetadata } from '../hls';
@@ -72,28 +73,24 @@ export const RemuxerTrackIdConfig = {
   text: 4,
 };
 
-export function bin2str(data: Uint8Array): string {
-  return String.fromCharCode.apply(null, data);
-}
-
-export function readUint16(buffer: Uint8Array, offset: number): number {
+function readUint16(buffer: Uint8Array, offset: number): number {
   const val = (buffer[offset] << 8) | buffer[offset + 1];
   return val < 0 ? 65536 + val : val;
 }
 
-export function readUint32(buffer: Uint8Array, offset: number): number {
+function readUint32(buffer: Uint8Array, offset: number): number {
   const val = readSint32(buffer, offset);
   return val < 0 ? 4294967296 + val : val;
 }
 
-export function readUint64(buffer: Uint8Array, offset: number) {
+function readUint64(buffer: Uint8Array, offset: number) {
   let result = readUint32(buffer, offset);
   result *= Math.pow(2, 32);
   result += readUint32(buffer, offset + 4);
   return result;
 }
 
-export function readSint32(buffer: Uint8Array, offset: number): number {
+function readSint32(buffer: Uint8Array, offset: number): number {
   return (
     (buffer[offset] << 24) |
     (buffer[offset + 1] << 16) |

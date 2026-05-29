@@ -205,21 +205,6 @@ export function pdtWithinToleranceTest(
   return endProgramDateTime - candidateLookupTolerance > pdtBufferEnd;
 }
 
-export function findFragWithCC(
-  fragments: MediaFragment[],
-  cc: number,
-): MediaFragment | null {
-  return BinarySearch.search(fragments, (candidate) => {
-    if (candidate.cc < cc) {
-      return 1;
-    } else if (candidate.cc > cc) {
-      return -1;
-    } else {
-      return 0;
-    }
-  });
-}
-
 export function findNearestWithCC(
   details: LevelDetails | undefined,
   cc: number,

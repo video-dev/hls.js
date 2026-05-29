@@ -19,16 +19,6 @@ type FragmentIntersection = (
 ) => void;
 type PartIntersection = (oldPart: Part, newPart: Part) => void;
 
-export function updatePTS(
-  fragments: MediaFragment[],
-  fromIdx: number,
-  toIdx: number,
-): void {
-  const fragFrom = fragments[fromIdx];
-  const fragTo = fragments[toIdx];
-  updateFromToPTS(fragFrom, fragTo);
-}
-
 function updateFromToPTS(fragFrom: MediaFragment, fragTo: MediaFragment) {
   const fragToPTS = fragTo.startPTS as number;
   // if we know startPTS[toIdx]
