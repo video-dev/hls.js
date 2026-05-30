@@ -1393,6 +1393,7 @@ export type {
   SubtitleSelectionOption,
   VideoSelectionOption,
   MediaPlaylist,
+  CmcdValue,
   ErrorDetails,
   ErrorTypes,
   Events,
@@ -1442,6 +1443,7 @@ export type {
 };
 export type {
   ABRControllerConfig,
+  CmcdCustomDataInput,
   PlaylistControllerConfig,
   BufferControllerConfig,
   CapLevelControllerConfig,

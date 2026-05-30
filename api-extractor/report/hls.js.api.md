@@ -1009,12 +1009,8 @@ export class CMCDController implements ComponentAPI {
     destroy(): void;
     // (undocumented)
     getCustomData(): CmcdCustomDataInput | undefined;
-    // Warning: (ae-forgotten-export) The symbol "CmcdValue" needs to be exported by the entry point hls.d.ts
-    //
     // (undocumented)
     recordEvent(eventType: CmcdEventType | string, data?: Record<string, CmcdValue>): void;
-    // Warning: (ae-forgotten-export) The symbol "CmcdCustomDataInput" needs to be exported by the entry point hls.d.ts
-    //
     // (undocumented)
     setCustomData(data: CmcdCustomDataInput): void;
 }
@@ -1041,6 +1037,16 @@ export type CMCDControllerConfig = {
     }>;
     customData?: Record<string, CmcdValue> | (() => Record<string, CmcdValue>);
 };
+
+// Warning: (ae-missing-release-tag) "CmcdCustomDataInput" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type CmcdCustomDataInput = Record<string, CmcdValue> | (() => Record<string, CmcdValue>);
+
+// Warning: (ae-missing-release-tag) "CmcdValue" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type CmcdValue = string | number | boolean | null;
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //

@@ -53,6 +53,10 @@ import type {
 
 export type CmcdValue = string | number | boolean | null;
 
+export type CmcdCustomDataInput =
+  | Record<string, CmcdValue>
+  | (() => Record<string, CmcdValue>);
+
 export type ABRControllerConfig = {
   abrEwmaFastLive: number;
   abrEwmaSlowLive: number;

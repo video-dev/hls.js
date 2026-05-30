@@ -20,6 +20,7 @@ import {
   removeEventListener,
 } from '../utils/event-listener-helper';
 import type {
+  CmcdCustomDataInput,
   CmcdValue,
   FragmentLoaderConstructor,
   HlsConfig,
@@ -47,10 +48,6 @@ import type {
   PlaylistLoaderContext,
 } from '../types/loader';
 import type { Cmcd, CmcdKey } from '@svta/cml-cmcd';
-
-type CmcdCustomDataInput =
-  | Record<string, CmcdValue>
-  | (() => Record<string, CmcdValue>);
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
