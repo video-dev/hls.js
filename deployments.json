@@ -16966,6 +16966,11 @@
       "version": "1.7.0-alpha.1.0.canary.11828",
       "commit": "d0d7b1f08b1c4b005417db5e7e4ee3b5223a9235",
       "url": "https://d7018177.hls-js-dev.pages.dev/"
+    },
+    {
+      "version": "1.7.0-alpha.1.0.canary.11829",
+      "commit": "f633b56e0edff48bf2b6fc8dbb5a90ad6e1d78f8",
+      "url": "https://46981b9b.hls-js-dev.pages.dev/"
     }
   ]
 }
