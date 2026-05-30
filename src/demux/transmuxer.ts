@@ -363,6 +363,9 @@ export default class Transmuxer {
       this.remuxer.destroy();
       this.remuxer = undefined;
     }
+    if (this.observer) {
+      this.observer.removeAllListeners();
+    }
     this.decryptionPromise = null;
     this.decrypter = this.observer = undefined;
     //@ts-ignore
