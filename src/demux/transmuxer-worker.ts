@@ -30,8 +30,12 @@ function startWorker() {
     if (data.cmd === 'init') {
       const config = JSON.parse(data.config);
       const observer = new EventEmitter();
-      observer.on(Events.FRAG_DECRYPTED, forwardMessage);
-      observer.on(Events.ERROR, forwardMessage);
+      observer.on(Events.FRAG_DECRYPTED, (event, data) =>
+        forwardMessage(event, data, instanceNo),
+      );
+      observer.on(Events.ERROR, (event, data) =>
+        forwardMessage(event, data, instanceNo),
+      );
       const logger = enableLogs(config.debug, data.id);
       forwardWorkerLogs(logger, instanceNo);
       transmuxers[instanceNo] = new Transmuxer(
