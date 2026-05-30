@@ -5,6 +5,7 @@
 ```ts
 
 import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
+import { CmcdEventType } from '@svta/cml-cmcd';
 import type { CmcdKey } from '@svta/cml-cmcd';
 import type { CmcdVersion } from '@svta/cml-cmcd';
 import { EventEmitter } from 'eventemitter3';
@@ -1006,6 +1007,16 @@ export class CMCDController implements ComponentAPI {
     constructor(hls: Hls);
     // (undocumented)
     destroy(): void;
+    // (undocumented)
+    getCustomData(): CmcdCustomDataInput | undefined;
+    // Warning: (ae-forgotten-export) The symbol "CmcdValue" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    recordEvent(eventType: CmcdEventType | string, data?: Record<string, CmcdValue>): void;
+    // Warning: (ae-forgotten-export) The symbol "CmcdCustomDataInput" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    setCustomData(data: CmcdCustomDataInput): void;
 }
 
 // Warning: (ae-missing-release-tag) "CMCDControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1028,6 +1039,7 @@ export type CMCDControllerConfig = {
     }) => Promise<{
         status: number;
     }>;
+    customData?: Record<string, CmcdValue> | (() => Record<string, CmcdValue>);
 };
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2214,6 +2226,9 @@ class Hls implements HlsEventEmitter {
     get capLevelToPlayerSize(): boolean;
     // Warning: (ae-setter-with-docs) The doc comment for the property "capLevelToPlayerSize" must appear on the getter, not the setter.
     set capLevelToPlayerSize(shouldStartCapping: boolean);
+    get cmcdCustomData(): Record<string, CmcdValue> | (() => Record<string, CmcdValue>) | undefined;
+    set cmcdCustomData(data: Record<string, CmcdValue> | (() => Record<string, CmcdValue>));
+    cmcdRecordEvent(eventType: string, data?: Record<string, CmcdValue>): void;
     readonly config: HlsConfig;
     createIFramePlayer(configOverride?: Partial<HlsConfig>): HlsIFramesOnly | null;
     createImageIFramePlayer(configOverride?: Partial<HlsConfig>): HlsImageIFramesOnly | null;

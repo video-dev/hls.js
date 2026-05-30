@@ -17,7 +17,7 @@ import { getMediaDecodingInfoPromise } from './utils/mediacapabilities-helper';
 import { getMediaSource } from './utils/mediasource-helper';
 import { getAudioTracksByGroup } from './utils/rendition-helper';
 import { version } from './version';
-import type { HlsConfig } from './config';
+import type { CmcdValue, HlsConfig } from './config';
 import type AbrController from './controller/abr-controller';
 import type AudioStreamController from './controller/audio-stream-controller';
 import type AudioTrackController from './controller/audio-track-controller';
@@ -453,6 +453,37 @@ export default class Hls implements HlsEventEmitter {
 
   listenerCount<E extends keyof HlsListeners>(event: E): number {
     return this._emitter.listenerCount(event);
+  }
+
+  /**
+   * Get or set custom CMCD data to include in every request report.
+   * Accepts a static object or a callback function invoked on each request.
+   * Keys must follow the reverse-DNS convention (e.g. `com.example-myKey`).
+   */
+  get cmcdCustomData():
+    | Record<string, CmcdValue>
+    | (() => Record<string, CmcdValue>)
+    | undefined {
+    return this.cmcdController?.getCustomData();
+  }
+
+  set cmcdCustomData(
+    data: Record<string, CmcdValue> | (() => Record<string, CmcdValue>),
+  ) {
+    this.cmcdController?.setCustomData(data);
+  }
+
+  /**
+   * Fire a CMCD event report via the CmcdReporter.
+   * Requires `cmcd.eventTargets` to be configured with the target event type.
+   * Only meaningful when `cmcd.version` is 2.
+   */
+  cmcdRecordEvent(eventType: string, data?: Record<string, CmcdValue>): void {
+    if (!this.cmcdController) {
+      this.logger.warn('cmcdRecordEvent called but CMCD is not configured');
+      return;
+    }
+    this.cmcdController.recordEvent(eventType, data);
   }
 
   /**

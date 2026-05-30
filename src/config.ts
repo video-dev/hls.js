@@ -51,6 +51,8 @@ import type {
   CmcdVersion,
 } from '@svta/cml-cmcd';
 
+export type CmcdValue = string | number | boolean | null;
+
 export type ABRControllerConfig = {
   abrEwmaFastLive: number;
   abrEwmaSlowLive: number;
@@ -101,6 +103,7 @@ export type CMCDControllerConfig = {
     headers?: Record<string, string>;
     body?: BodyInit;
   }) => Promise<{ status: number }>;
+  customData?: Record<string, CmcdValue> | (() => Record<string, CmcdValue>);
 };
 
 export type DRMSystemOptions = {
