@@ -1188,6 +1188,23 @@ describe('CMCDController', function () {
       expectField(result, 'com.test-mykey');
     });
 
+    it('update applies custom key value computed by a function, reflecting state changes across requests', function () {
+      setupEach({ includeKeys: ['sid', 'sf', 'com.acme-label'] as any });
+
+      const labels = ['cold', 'warm'];
+      let idx = 0;
+      const computeLabel = () => labels[idx];
+
+      cmcdController.update({ 'com.acme-label': computeLabel() } as any);
+      const { url: first } = applyPlaylistData();
+      expectField(first, 'com.acme-label%3D%22cold%22');
+
+      idx = 1;
+      cmcdController.update({ 'com.acme-label': computeLabel() } as any);
+      const { url: second } = applyPlaylistData();
+      expectField(second, 'com.acme-label%3D%22warm%22');
+    });
+
     it('recordEvent delegates to reporter.recordEvent and emits a POST to the event target', function () {
       const requests: any[] = [];
       const captureLoader = (req: any) => {
