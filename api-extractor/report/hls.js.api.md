@@ -4,6 +4,7 @@
 
 ```ts
 
+import type { Cmcd } from '@svta/cml-cmcd';
 import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
 import { CmcdEventType } from '@svta/cml-cmcd';
 import type { CmcdKey } from '@svta/cml-cmcd';
@@ -1008,11 +1009,9 @@ export class CMCDController implements ComponentAPI {
     // (undocumented)
     destroy(): void;
     // (undocumented)
-    getCustomData(): CmcdCustomDataInput | undefined;
+    recordEvent(eventType: CmcdEventType | string, data?: Cmcd): void;
     // (undocumented)
-    recordEvent(eventType: CmcdEventType | string, data?: Record<string, CmcdValue>): void;
-    // (undocumented)
-    setCustomData(data: CmcdCustomDataInput): void;
+    update(data: Cmcd): void;
 }
 
 // Warning: (ae-missing-release-tag) "CMCDControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1035,18 +1034,7 @@ export type CMCDControllerConfig = {
     }) => Promise<{
         status: number;
     }>;
-    customData?: Record<string, CmcdValue> | (() => Record<string, CmcdValue>);
 };
-
-// Warning: (ae-missing-release-tag) "CmcdCustomDataInput" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
-//
-// @public (undocumented)
-export type CmcdCustomDataInput = Record<string, CmcdValue> | (() => Record<string, CmcdValue>);
-
-// Warning: (ae-missing-release-tag) "CmcdValue" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
-//
-// @public (undocumented)
-export type CmcdValue = string | number | boolean | null;
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -2232,9 +2220,8 @@ class Hls implements HlsEventEmitter {
     get capLevelToPlayerSize(): boolean;
     // Warning: (ae-setter-with-docs) The doc comment for the property "capLevelToPlayerSize" must appear on the getter, not the setter.
     set capLevelToPlayerSize(shouldStartCapping: boolean);
-    get cmcdCustomData(): Record<string, CmcdValue> | (() => Record<string, CmcdValue>) | undefined;
-    set cmcdCustomData(data: Record<string, CmcdValue> | (() => Record<string, CmcdValue>));
-    cmcdRecordEvent(eventType: string, data?: Record<string, CmcdValue>): void;
+    // (undocumented)
+    cmcdController?: CMCDController;
     readonly config: HlsConfig;
     createIFramePlayer(configOverride?: Partial<HlsConfig>): HlsIFramesOnly | null;
     createImageIFramePlayer(configOverride?: Partial<HlsConfig>): HlsImageIFramesOnly | null;

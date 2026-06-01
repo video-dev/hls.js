@@ -11,7 +11,6 @@ import {
   CmcdReporter,
   CmcdStreamingFormat,
   CmcdStreamType,
-  isCmcdCustomKey,
   toCmcdValue,
 } from '@svta/cml-cmcd';
 import { Events } from '../events';
@@ -20,8 +19,6 @@ import {
   removeEventListener,
 } from '../utils/event-listener-helper';
 import type {
-  CmcdCustomDataInput,
-  CmcdValue,
   FragmentLoaderConstructor,
   HlsConfig,
   PlaylistLoaderConstructor,
@@ -47,7 +44,7 @@ import type {
   LoaderContext,
   PlaylistLoaderContext,
 } from '../types/loader';
-import type { Cmcd, CmcdKey } from '@svta/cml-cmcd';
+import type { Cmcd } from '@svta/cml-cmcd';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -62,9 +59,6 @@ export default class CMCDController implements ComponentAPI {
   private buffering: boolean = true;
   private playerState?: CmcdPlayerState;
   private reporter?: CmcdReporter;
-  private reporterEnabledKeys: CmcdKey[] = [];
-  private customData: CmcdCustomDataInput | undefined;
-  private activeCustomKeys = new Set<string>();
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -87,20 +81,15 @@ export default class CMCDController implements ComponentAPI {
 
     const version = cmcd.version || CMCD_V1;
 
-    // Build enabledKeys as a mutable array we keep a reference to.
-    // We add custom keys into it later as they are discovered so that
-    // the CML's per-request filter passes them through.
-    this.reporterEnabledKeys = cmcd.includeKeys
-      ? [...cmcd.includeKeys]
-      : [...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS)];
-
     this.reporter = new CmcdReporter(
       {
         sid: cmcd.sessionId || this.hls.sessionId,
         cid: cmcd.contentId,
         version,
         transmissionMode: cmcd.useHeaders === true ? CMCD_HEADERS : CMCD_QUERY,
-        enabledKeys: this.reporterEnabledKeys,
+        enabledKeys: cmcd.includeKeys ?? [
+          ...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS),
+        ],
         eventTargets: (cmcd.eventTargets ?? []).map(
           ({ includeKeys, ...rest }) => ({
             ...rest,
@@ -116,99 +105,15 @@ export default class CMCDController implements ComponentAPI {
       sta: this.playerState,
     });
 
-    if (this.customData === undefined && cmcd.customData) {
-      this.customData = cmcd.customData;
-    }
-    if (this.customData && typeof this.customData !== 'function') {
-      this.pushCustomDataToReporter(this.customData);
-    }
-
     this.reporter.start();
   }
 
-  setCustomData(data: CmcdCustomDataInput): void {
-    this.customData = data;
-    if (this.reporter && typeof data !== 'function') {
-      this.pushCustomDataToReporter(data);
-    }
+  update(data: Cmcd): void {
+    this.reporter?.update(data);
   }
 
-  getCustomData(): CmcdCustomDataInput | undefined {
-    return this.customData;
-  }
-
-  recordEvent(
-    eventType: CmcdEventType | string,
-    data?: Record<string, CmcdValue>,
-  ): void {
-    if (!this.reporter) return;
-    if (this.config.cmcd?.version !== CMCD_V2) {
-      this.hls.logger.warn(
-        'cmcdRecordEvent: custom events are only meaningful in CMCD v2',
-      );
-    }
-    // The library's per-target filter only allows keys listed in enabledKeys.
-    // Custom keys (com.*) passed inline with an event are not known at init
-    // time, so we register them now so they survive the filter.
-    if (data) {
-      const reporterConfig = (this.reporter as any).config;
-      const customKeys = Object.keys(data).filter(isCmcdCustomKey);
-      if (customKeys.length > 0 && reporterConfig?.eventTargets) {
-        reporterConfig.eventTargets.forEach((target: any) => {
-          customKeys.forEach((key) => {
-            if (!target.enabledKeys.includes(key)) {
-              target.enabledKeys.push(key);
-            }
-          });
-        });
-      }
-    }
-    this.reporter.recordEvent(
-      eventType as CmcdEventType,
-      data as Cmcd | undefined,
-    );
-  }
-
-  private resolveCustomData(): Record<string, CmcdValue> {
-    if (!this.customData) return {};
-    if (typeof this.customData === 'function') {
-      return this.customData();
-    }
-    return this.customData;
-  }
-
-  // Updates the reporter with the new custom data, clearing any keys that
-  // are no longer present so they stop appearing in subsequent requests.
-  private pushCustomDataToReporter(data: Record<string, CmcdValue>): void {
-    if (!this.reporter) return;
-    const newKeys = new Set(Object.keys(data));
-
-    // Build a clear object for keys that were active but are no longer present
-    const clearObj: Record<string, undefined> = {};
-    // Use forEach (not for...of or [...set]) to avoid Babel loose-mode
-    // compiling spread to [].concat(set), which wraps the Set as one element.
-    this.activeCustomKeys.forEach((key) => {
-      if (!newKeys.has(key)) {
-        clearObj[key] = undefined;
-      }
-    });
-    if (Object.keys(clearObj).length) {
-      this.reporter.update(clearObj as Cmcd);
-    }
-
-    this.activeCustomKeys = newKeys;
-
-    // Add new custom keys to the shared enabledKeys array so the CML's
-    // per-request filter passes them through.
-    newKeys.forEach((key) => {
-      if (!this.reporterEnabledKeys.includes(key as CmcdKey)) {
-        this.reporterEnabledKeys.push(key as CmcdKey);
-      }
-    });
-
-    if (newKeys.size > 0) {
-      this.reporter.update(data as Cmcd);
-    }
+  recordEvent(eventType: CmcdEventType | string, data?: Cmcd): void {
+    this.reporter?.recordEvent(eventType as CmcdEventType, data);
   }
 
   private registerListeners() {
@@ -357,7 +262,6 @@ export default class CMCDController implements ComponentAPI {
     if (this.reporter) {
       this.reporter.stop(true);
       this.reporter = undefined;
-      this.activeCustomKeys = new Set();
     }
 
     this.createReporter();
@@ -435,15 +339,6 @@ export default class CMCDController implements ComponentAPI {
       pr: this.media?.playbackRate,
       st: this.getStreamType(),
     });
-
-    if (this.customData) {
-      try {
-        const custom = this.resolveCustomData();
-        this.pushCustomDataToReporter(custom);
-      } catch (error) {
-        this.hls.logger.warn('Could not resolve CMCD custom data.', error);
-      }
-    }
 
     const isVideo =
       data.ot === CmcdObjectType.INIT ||

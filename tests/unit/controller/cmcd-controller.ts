@@ -1180,108 +1180,12 @@ describe('CMCDController', function () {
     });
   });
 
-  describe('custom data and events', function () {
-    it('includes static customData from config in request URLs', function () {
-      setupEach({
-        customData: { 'com.test-mykey': 'hello' },
-      });
+  describe('update and recordEvent', function () {
+    it('update applies custom keys to subsequent request URLs when includeKeys is configured', function () {
+      setupEach({ includeKeys: ['sid', 'sf', 'com.test-mykey'] as any });
+      cmcdController.update({ 'com.test-mykey': 'hello' } as any);
       const { url: result } = applyPlaylistData();
       expectField(result, 'com.test-mykey');
-    });
-
-    it('does not include static customData keys in URL when not set', function () {
-      setupEach({});
-      const { url: result } = applyPlaylistData();
-      expect(result).to.not.include('com.test-mykey');
-    });
-
-    it('invokes customData function on each request, not at reporter init', function () {
-      let callCount = 0;
-      setupEach({
-        customData: () => {
-          callCount++;
-          return { 'com.test-count': callCount };
-        },
-      });
-      // Function should NOT have been called during reporter init
-      expect(callCount).to.equal(0);
-
-      applyPlaylistData();
-      expect(callCount).to.equal(1);
-
-      applyPlaylistData();
-      expect(callCount).to.equal(2);
-    });
-
-    it('includes customData function result in request URL', function () {
-      setupEach({
-        customData: () => ({ 'com.test-dyn': 'value' }),
-      });
-      const { url: result } = applyPlaylistData();
-      expectField(result, 'com.test-dyn');
-    });
-
-    it('setCustomData with static object updates reporter immediately and appears in next request', function () {
-      setupEach({});
-      cmcdController.setCustomData({ 'com.test-runtime': 'set' });
-      const { url: result } = applyPlaylistData();
-      expectField(result, 'com.test-runtime');
-    });
-
-    it('setCustomData with function does not update reporter immediately, but invokes on next request', function () {
-      setupEach({});
-      let callCount = 0;
-      cmcdController.setCustomData(() => {
-        callCount++;
-        return { 'com.test-fn': callCount };
-      });
-      // setCustomData should not have called the function
-      expect(callCount).to.equal(0);
-
-      applyPlaylistData();
-      expect(callCount).to.equal(1);
-      const { url: result } = applyPlaylistData();
-      expect(callCount).to.equal(2);
-      expectField(result, 'com.test-fn');
-    });
-
-    it('getCustomData returns the last value set via setCustomData', function () {
-      setupEach({});
-      const data = { 'com.test-get': 42 };
-      cmcdController.setCustomData(data);
-      expect(cmcdController.getCustomData()).to.equal(data);
-    });
-
-    it('customData persists through MANIFEST_LOADING (reporter recreated)', function () {
-      setupEach({ customData: { 'com.test-persist': 'yes' } });
-      // Trigger a second manifest load to recreate the reporter
-      cmcdController.hls.trigger(Events.MANIFEST_LOADING, { url });
-      const { url: result } = applyPlaylistData();
-      expectField(result, 'com.test-persist');
-    });
-
-    it('clearing customData with empty object removes previously-set keys from subsequent requests', function () {
-      setupEach({ customData: { 'com.test-mykey': 'hello' } });
-      // Key is present before clearing
-      expectField(applyPlaylistData().url, 'com.test-mykey');
-
-      // Clear via empty object (mirrors hls.cmcdCustomData = {} in the demo)
-      cmcdController.setCustomData({});
-      const { url: afterClear } = applyPlaylistData();
-      expect(afterClear).to.not.include('com.test-mykey');
-      // Standard CMCD keys are unaffected by clearing custom data
-      expectField(afterClear, 'sf%3Dh');
-      expectField(afterClear, 'sid%3D');
-    });
-
-    it('swallows errors thrown by customData function and continues the request', function () {
-      setupEach({
-        customData: () => {
-          throw new Error('bad callback');
-        },
-      });
-      // Should not throw; URL should still be modified (without custom data)
-      expect(() => applyPlaylistData()).to.not.throw();
     });
 
     it('recordEvent delegates to reporter.recordEvent and emits a POST to the event target', function () {
@@ -1303,7 +1207,7 @@ describe('CMCDController', function () {
 
       cmcdController.recordEvent(CmcdEventType.CUSTOM_EVENT, {
         cen: 'test-event',
-      });
+      } as any);
 
       const eventRequests = requests.filter(
         (r) => r.url === 'https://analytics.example.com/cmcd',
@@ -1311,7 +1215,7 @@ describe('CMCDController', function () {
       expect(eventRequests.length).to.be.greaterThan(0);
     });
 
-    it('recordEvent includes custom keys alongside cen in the event payload', function () {
+    it('recordEvent includes custom keys when the event target includeKeys lists them', function () {
       const requests: any[] = [];
       const captureLoader = (req: any) => {
         requests.push(req);
@@ -1324,6 +1228,7 @@ describe('CMCDController', function () {
           {
             url: 'https://analytics.example.com/cmcd',
             events: [CmcdEventType.CUSTOM_EVENT],
+            includeKeys: ['cen', 'com.myco-chapterid'] as any,
           },
         ],
       });
@@ -1331,7 +1236,7 @@ describe('CMCDController', function () {
       cmcdController.recordEvent(CmcdEventType.CUSTOM_EVENT, {
         cen: 'chapter-change',
         'com.myco-chapterid': '3',
-      });
+      } as any);
 
       const eventRequests = requests.filter(
         (r) => r.url === 'https://analytics.example.com/cmcd',
@@ -1340,17 +1245,6 @@ describe('CMCDController', function () {
       const body = String(eventRequests[0].body || '');
       expect(body).to.include('cen="chapter-change"');
       expect(body).to.include('com.myco-chapterid="3"');
-    });
-
-    it('recordEvent warns when CMCD version is not v2', function () {
-      const warnings: string[] = [];
-      setupEach({ version: 1 });
-      cmcdController.hls.logger = {
-        ...cmcdController.hls.logger,
-        warn: (msg: string) => warnings.push(msg),
-      };
-      cmcdController.recordEvent(CmcdEventType.CUSTOM_EVENT);
-      expect(warnings.some((w) => w.includes('CMCD v2'))).to.equal(true);
     });
 
     it('recordEvent does nothing when reporter is not initialized', function () {
@@ -1363,7 +1257,7 @@ describe('CMCDController', function () {
       const controller = new CMCDController(hls);
       // reporter is not yet created (no MANIFEST_LOADING fired)
       expect(() =>
-        (controller as any).recordEvent(CmcdEventType.CUSTOM_EVENT),
+        controller.recordEvent(CmcdEventType.CUSTOM_EVENT),
       ).to.not.throw();
       controller.destroy();
     });

@@ -142,8 +142,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`drmSystemOptions`](#drmsystemoptions)
   - [`requestMediaKeySystemAccessFunc`](#requestmediakeysystemaccessfunc)
   - [`cmcd`](#cmcd)
-    - [`cmcdCustomData` — runtime getter/setter](#cmcdcustomdata--runtime-gettersetter)
-    - [`cmcdRecordEvent(eventType, data?)` — fire a CMCD event report](#cmcdrecordeventeventtype-data--fire-a-cmcd-event-report)
+    - [`cmcdController.update / cmcdController.recordEvent` — runtime CMCD API](#cmcdcontrollerupdate--cmcdcontrollerrecordevent--runtime-cmcd-api)
   - [`enableInterstitialPlayback`](#enableinterstitialplayback)
   - [`interstitialAppendInPlace`](#interstitialappendinplace)
   - [`interstitialLiveLookAhead`](#interstitiallivelookahead)
@@ -1906,54 +1905,27 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
   - `batchSize`: The number of events to batch before sending a report. Defaults to `1` (send each event immediately).
   - `includeKeys`: An optional array of CMCD keys that overrides the top-level `includeKeys` for this target.
 - `loader`: An optional async function `(request) => Promise<{ status }>` used to deliver CMCD v2 event reports. When omitted, event reports are delivered via `fetch` (honoring the Hls `xhrSetup`/`fetchSetup` hooks). Only used when `eventTargets` is configured.
-- `customData`: An optional set of application-defined key-value pairs to include in every CMCD request report. Accepts either a static object or a callback function:
-  - **Static object** — `Record<string, string | number | boolean | null>`. The values are persisted and included unchanged in every request.
-  - **Callback function** — `() => Record<string, string | number | boolean | null>`. Invoked on every request, so values are resolved at the exact moment of each request. Useful for dynamic state. The function must be synchronous and lightweight — it runs in the hot path of every segment request.
-  - Keys must follow the CMCD custom-key convention: reverse-DNS notation with a hyphen separator, e.g. `com.example-myKey`. See the [SVTA custom keys registry](https://github.com/streaming-video-technology-alliance/common-media-client-data-custom-keys).
-  - Custom keys are valid in both CMCD v1 and v2.
-  - Can be updated at runtime via the `cmcdCustomData` setter on the `Hls` instance.
 
-#### `cmcdCustomData` — runtime getter/setter
+#### `cmcdController.update / cmcdController.recordEvent` — runtime CMCD API
+
+`hls.cmcdController` exposes the `CMCDController` instance when CMCD is configured. Use its `update()` and `recordEvent()` methods to inject custom data or fire event reports at runtime.
 
 ```js
-// Read the current value
-const data = hls.cmcdCustomData;
-
-// Set a static object (replaces previous value)
-hls.cmcdCustomData = {
-  'com.mycompany-playerVersion': '3.2.1',
-  'com.mycompany-experimentGroup': 'A',
-};
-
-// Set a callback for dynamic values resolved on every request
-hls.cmcdCustomData = () => ({
-  'com.mycompany-bufferHealth': hls.mainForwardBufferInfo?.len ?? 0,
+// Persist custom keys in every subsequent request report
+hls.cmcdController?.update({
   'com.mycompany-adBreakActive': adManager.isInAdBreak(),
 });
-```
 
-#### `cmcdRecordEvent(eventType, data?)` — fire a CMCD event report
-
-Fires a CMCD event report via the configured `CmcdReporter`. Requires `cmcd.eventTargets` to include a target whose `events` array contains the desired event type; otherwise the CML silently drops the event.
-
-```js
-const hls = new Hls({
-  cmcd: {
-    version: 2,
-    eventTargets: [
-      {
-        url: 'https://analytics.example.com/cmcd',
-        events: ['ce'], // 'ce' = CmcdEventType.CUSTOM_EVENT
-        includeKeys: ['sid', 'cid', 'cen'],
-      },
-    ],
-  },
+// Fire a CMCD event report (requires cmcd.eventTargets with matching events)
+hls.cmcdController?.recordEvent('ce', {
+  cen: 'chapter-change',
+  'com.myco-chapterid': '3',
 });
-
-hls.cmcdRecordEvent('ce', { cen: 'chapter-change', 'com.myco-chapterid': '3' });
 ```
 
-Custom events are only meaningful with `version: 2`. A warning is logged if called with `version: 1`.
+Custom keys must follow the reverse-DNS convention (e.g. `com.example-myKey`). See the [SVTA custom keys registry](https://github.com/streaming-video-technology-alliance/common-media-client-data-custom-keys). To include custom keys in event payloads, add them to the event target's `includeKeys`.
+
+`recordEvent` requires `cmcd.eventTargets` to be configured with a target whose `events` array contains the desired event type, and is only meaningful with `version: 2`.
 
 ### `enableInterstitialPlayback`
 
