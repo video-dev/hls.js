@@ -104,7 +104,6 @@ export default class CMCDController implements ComponentAPI {
       sf: CmcdStreamingFormat.HLS,
       sta: this.playerState,
     });
-
     this.reporter.start();
   }
 
