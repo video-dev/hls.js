@@ -1,6 +1,5 @@
 import BaseStreamController, { State } from './base-stream-controller';
 import { FragmentState } from './fragment-tracker';
-import Decrypter from '../crypt/decrypter';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import {
@@ -339,16 +338,9 @@ export class SubtitleStreamController
     this.tickImmediate();
   }
 
-  // Decrypts encrypted VTT parts as they arrive during LL-HLS playback. Without
-  // this override, encrypted parts are only decrypted at full-segment boundaries
-  // (`_handleFragmentLoadComplete`), which has two problems for LL-HLS:
-  //   1. FRAG_DECRYPTED never fires for parts of a partially-loaded segment, so
-  //      the controller stays in FRAG_LOADING when subsequent ticks load the
-  //      tail parts of a segment whose head parts were buffered earlier.
-  //   2. Subtitle latency degrades to a segment duration since cues cannot be
-  //      surfaced until the whole segment is assembled.
-  // Each part is decrypted as a standalone AES-CBC stream using the segment-level
-  // IV (per how full-segment encryption is signalled on LL-HLS parts).
+  // Decrypt encrypted VTT parts as they arrive. The base class leaves progress a
+  // no-op for subtitles, so without this override encrypted parts would only decrypt
+  // at full-segment boundaries, losing the low-latency path.
   protected _handleFragmentLoadProgress(data: FragLoadedData) {
     const { frag, part, payload } = data;
     if (!part || !payload?.byteLength || !this.shouldDecrypt(frag)) {
@@ -369,24 +361,13 @@ export class SubtitleStreamController
     this.decryptPayload(payload, frag, null);
   }
 
-  // Whether the fragment is encrypted with a full-segment AES method and has the
-  // key/iv material needed to decrypt right now.
   private shouldDecrypt(frag: Fragment): boolean {
     const d = frag.decryptdata;
-    return !!(
-      frag.encrypted &&
-      d?.key &&
-      d.iv &&
-      isFullSegmentEncryption(d.method)
-    );
+    return !!(d?.key && d.iv && isFullSegmentEncryption(d.method));
   }
 
-  // Decrypts a single buffer (full segment or LL-HLS part) and emits
-  // FRAG_DECRYPTED. On failure, emits ERROR; for the full-segment path
-  // (part === null) the state is also reset to IDLE so the next tick can pick
-  // up — for the part path the per-part FRAG_LOADED drives state transitions.
-  // A new Decrypter is constructed per call so concurrent part decryptions do
-  // not race on the software-decrypter's shared remainder state.
+  // Decrypt a full segment (part === null) or a single LL-HLS part and emit
+  // FRAG_DECRYPTED. On full-segment failure, reset to IDLE so the next tick retries.
   private decryptPayload(
     payload: ArrayBuffer,
     frag: Fragment,
@@ -394,8 +375,7 @@ export class SubtitleStreamController
   ): void {
     const decryptData = frag.decryptdata!;
     const tstart = performance.now();
-    const decrypter = new Decrypter(this.hls.config);
-    decrypter
+    this.decrypter
       .decrypt(
         new Uint8Array(payload),
         decryptData.key!.buffer,
@@ -427,9 +407,6 @@ export class SubtitleStreamController
           this.warn(`${err.name}: ${err.message}`);
           this.state = State.IDLE;
         }
-      })
-      .finally(() => {
-        decrypter.destroy();
       });
   }
 
