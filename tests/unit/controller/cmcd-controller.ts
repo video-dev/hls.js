@@ -1278,5 +1278,64 @@ describe('CMCDController', function () {
       ).to.not.throw();
       controller.destroy();
     });
+
+    it('update logs a warning and ignores only the invalid key, preserving valid keys', function () {
+      setupEach({
+        includeKeys: ['sid', 'sf', 'com.test-mykey', 'com.test-valid'] as any,
+      });
+
+      const warnings: string[] = [];
+      cmcdController.hls.logger.warn = (...args: any[]) =>
+        warnings.push(args.join(' '));
+
+      cmcdController.update({
+        invalid_key: 'bad',
+        'com.test-valid': 'good',
+      } as any);
+
+      expect(warnings.length).to.be.greaterThan(0);
+      const { url: result } = applyPlaylistData();
+      expect(result).to.not.include('invalid_key');
+      expect(result).to.include('com.test-valid');
+    });
+
+    it('recordEvent logs a warning and sends the report without the invalid key', function () {
+      const requests: any[] = [];
+      const captureLoader = (req: any) => {
+        requests.push(req);
+        return Promise.resolve({ status: 204 });
+      };
+      setupEach({
+        version: 2,
+        loader: captureLoader as any,
+        eventTargets: [
+          {
+            url: 'https://analytics.example.com/cmcd',
+            events: [CmcdEventType.CUSTOM_EVENT],
+            includeKeys: ['cen', 'com.myco-valid'] as any,
+          },
+        ],
+      });
+
+      const warnings: string[] = [];
+      cmcdController.hls.logger.warn = (...args: any[]) =>
+        warnings.push(args.join(' '));
+
+      cmcdController.recordEvent(CmcdEventType.CUSTOM_EVENT, {
+        cen: 'chapter-change',
+        'com.myco-valid': 'kept',
+        invalid_key: 'dropped',
+      } as any);
+
+      expect(warnings.length).to.be.greaterThan(0);
+      const eventRequests = requests.filter(
+        (r) => r.url === 'https://analytics.example.com/cmcd',
+      );
+      expect(eventRequests.length).to.be.greaterThan(0);
+      const body = String(eventRequests[0].body || '');
+      expect(body).to.include('cen="chapter-change"');
+      expect(body).to.include('com.myco-valid="kept"');
+      expect(body).to.not.include('invalid_key');
+    });
   });
 });

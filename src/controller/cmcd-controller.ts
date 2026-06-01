@@ -12,6 +12,7 @@ import {
   CmcdStreamingFormat,
   CmcdStreamType,
   toCmcdValue,
+  validateCmcdKeys,
 } from '@svta/cml-cmcd';
 import { Events } from '../events';
 import {
@@ -108,11 +109,25 @@ export default class CMCDController implements ComponentAPI {
   }
 
   update(data: Cmcd): void {
-    this.reporter?.update(data);
+    this.reporter?.update(this.sanitizeCmcdData(data));
   }
 
   recordEvent(eventType: CmcdEventType | string, data?: Cmcd): void {
-    this.reporter?.recordEvent(eventType as CmcdEventType, data);
+    this.reporter?.recordEvent(
+      eventType as CmcdEventType,
+      data ? this.sanitizeCmcdData(data) : undefined,
+    );
+  }
+
+  private sanitizeCmcdData(data: Cmcd): Cmcd {
+    const version = this.config.cmcd?.version || CMCD_V1;
+    const { valid, issues } = validateCmcdKeys(data, { version });
+    if (valid) return data;
+    const invalidKeys = new Set(issues.map(({ key }) => key));
+    issues.forEach(({ message }) => this.hls.logger.warn(message));
+    return Object.fromEntries(
+      Object.entries(data).filter(([key]) => !invalidKeys.has(key)),
+    ) as Cmcd;
   }
 
   private registerListeners() {
