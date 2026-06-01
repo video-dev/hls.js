@@ -125,9 +125,11 @@ export default class CMCDController implements ComponentAPI {
     if (valid) return data;
     const invalidKeys = new Set(issues.map(({ key }) => key));
     issues.forEach(({ message }) => this.hls.logger.warn(message));
-    return Object.fromEntries(
-      Object.entries(data).filter(([key]) => !invalidKeys.has(key)),
-    ) as Cmcd;
+    const filtered: Record<string, unknown> = {};
+    Object.entries(data).forEach(([key, value]) => {
+      if (!invalidKeys.has(key)) filtered[key] = value;
+    });
+    return filtered as Cmcd;
   }
 
   private registerListeners() {
