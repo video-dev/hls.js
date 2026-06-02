@@ -764,6 +764,7 @@ export default class BaseStreamController
               const endTime = self.performance.now();
               hls.trigger(Events.FRAG_DECRYPTED, {
                 frag,
+                part: null,
                 payload: decryptedData,
                 stats: {
                   tstart: startTime,
