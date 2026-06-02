@@ -39,15 +39,14 @@ describe('passthrough-remuxer', function () {
     remuxer.destroy();
   });
 
-  it('reports iframe remuxed track timing over the full EXTINF window', function () {
+  function remuxIFrameFragment(
+    fragmentData: Uint8Array<ArrayBuffer>,
+    extinfDuration: number,
+  ) {
     const initSegment = MP4.initSegment([videoInitTrack()]);
-    const nativeSampleDuration = 3003;
-    const extinfDuration = 4;
-    const fragmentData = mp4Fragment([sample(nativeSampleDuration, 4, 0)]);
-
     remuxer.resetInitSegment(initSegment, undefined, 'avc1.42001e', null);
 
-    const result = remuxer.remux(
+    return remuxer.remux(
       audioTrack(),
       passthroughTrack(fragmentData),
       metadataTrack(),
@@ -67,61 +66,60 @@ describe('passthrough-remuxer', function () {
         true,
       ),
     );
+  }
 
-    expect(result.video).to.exist;
-    expect(result.video!.endPTS - result.video!.startPTS).to.equal(
-      extinfDuration,
-    );
+  it('remuxes a single-keyframe iframe segment whose native sample duration is far short of EXTINF', function () {
+    // Dedicated i-frame segment: one keyframe carrying ~one-frame duration
+    // (3003/90000 ≈ 0.033s) while the playlist advertises a multi-second EXTINF.
+    // The duration ratio is well above the 1.5 heuristic, so the remuxer rewrites
+    // the moof, stretching the keyframe to the EXTINF window.
+    const extinfDuration = 4;
+    const fragmentData = mp4Fragment([sample(3003, 4, 0)]);
+
+    const result = remuxIFrameFragment(fragmentData, extinfDuration);
+
+    expect(result.video, 'video track').to.exist;
+    // data2 is only populated when the iframe moof is rewritten (remuxed)
+    expect(result.video!.data2, 'remuxed mdat').to.exist;
     expect(result.video!.endDTS - result.video!.startDTS).to.equal(
       extinfDuration,
     );
+    // track.nb stays an informative parse count, not forced to 1
     expect(result.video!.nb).to.equal(1);
   });
 
-  it('collapses a multi-sample in-range iframe fragment to one keyframe over EXTINF', function () {
-    const initSegment = MP4.initSegment([videoInitTrack()]);
-    const nativeSampleDuration = 3003;
+  it('does not remux a byte-range iframe segment whose sample duration already matches EXTINF', function () {
+    // Byte-range addressed iframe (single sample spanning the whole playback
+    // segment): sample duration == EXTINF, so the ratio is ~1 and the heuristic
+    // keeps the more-accurate sample-based timing instead of remuxing.
     const extinfDuration = 4;
+    const fragmentData = mp4Fragment([sample(extinfDuration * 90000, 4, 0)]);
+
+    const result = remuxIFrameFragment(fragmentData, extinfDuration);
+
+    expect(result.video, 'video track').to.exist;
+    // not remuxed: the original fragment is passed through and no mdat is split out
+    expect(result.video!.data2, 'remuxed mdat').to.not.exist;
+    expect(result.video!.data1).to.equal(fragmentData);
+  });
+
+  it('remuxes a multi-sample in-range iframe fragment, preserving every sample', function () {
     // Several samples fully present in the mdat (e.g. a byte-range that spans a
-    // multi-sample moof). The previous emit-all-samples path back-loaded the
-    // remainder onto the last sample's duration; the iframe path must instead
-    // emit exactly the first keyframe stretched to the EXTINF window.
+    // multi-sample moof). The sampleCount > 1 branch must still emit all samples,
+    // back-loading the EXTINF remainder onto the last sample's duration.
+    const extinfDuration = 4;
     const fragmentData = mp4Fragment([
-      sample(nativeSampleDuration, 4, 0),
-      sample(nativeSampleDuration, 4, 0),
-      sample(nativeSampleDuration, 4, 0),
+      sample(3003, 4, 0),
+      sample(3003, 4, 0),
+      sample(3003, 4, 0),
     ]);
 
-    remuxer.resetInitSegment(initSegment, undefined, 'avc1.42001e', null);
+    const result = remuxIFrameFragment(fragmentData, extinfDuration);
 
-    const result = remuxer.remux(
-      audioTrack(),
-      passthroughTrack(fragmentData),
-      metadataTrack(),
-      userdataTrack(),
-      0,
-      true,
-      true,
-      PlaylistLevelType.MAIN,
-      new ChunkMetadata(
-        0,
-        0,
-        0,
-        fragmentData.byteLength,
-        -1,
-        false,
-        extinfDuration,
-        true,
-      ),
-    );
-
-    expect(result.video).to.exist;
-    // multi-sample input collapses to exactly one emitted keyframe sample
-    expect(result.video!.nb).to.equal(1);
-    // stretched to the full EXTINF window, not the ~one-frame native span
-    expect(result.video!.endPTS - result.video!.startPTS).to.equal(
-      extinfDuration,
-    );
+    expect(result.video, 'video track').to.exist;
+    expect(result.video!.data2, 'remuxed mdat').to.exist;
+    // all three parsed samples are reported, not collapsed to one
+    expect(result.video!.nb).to.equal(3);
     expect(result.video!.endDTS - result.video!.startDTS).to.equal(
       extinfDuration,
     );

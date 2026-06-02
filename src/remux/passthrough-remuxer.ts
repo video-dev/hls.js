@@ -280,49 +280,67 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     let data1 = data;
     let data2: Uint8Array<ArrayBuffer> | undefined;
-    let remuxedIFrame = false;
     if (
       __USE_IFRAMES__ &&
       videoSampleTimestamps &&
-      videoSampleTimestamps.sampleCount >= 1 &&
+      (videoSampleTimestamps.sampleCount > 1 ||
+        (videoSampleTimestamps.sampleCount === 1 &&
+          !syncOnAudio &&
+          chunkMeta.duration / (videoEndTime - videoStartTime) > 1.5)) &&
       initData.video &&
       chunkMeta.iframe
     ) {
       duration = chunkMeta.duration;
-      const { trun, start } = videoSampleTimestamps;
-      const keyframeSample = trun.length === 1 ? trun[0].samples[0] : undefined;
-      if (keyframeSample) {
+      const { trun, start, duration: sampleDuration } = videoSampleTimestamps;
+      if (trun.length === 1 && trun[0].samples.length) {
         const sampleOffset = trun[0].sampleOffset;
-        const { cts, size, flags } = keyframeSample;
-        const { dependsOn, isNonSync } = Object.assign(
-          { dependsOn: 2, isNonSync: 0 },
-          flags,
-        );
-        const sample: TrackFragmentSample = {
-          cts: cts || 0,
-          duration: duration * initData.video.timescale,
-          size,
-          flags: {
-            isLeading: 0,
-            isDependedOn: 0,
-            hasRedundancy: 0,
-            degradPrio: 0,
-            dependsOn,
-            isNonSync,
-            paddingValue: 0,
-          },
-        };
-        data1 = MP4.moof(chunkMeta.sn, start, {
-          type: 'video',
-          id: videoTrack.id,
-          samples: [sample],
+        let totalSize = 0;
+        const samples = trun[0].samples.map((sample): TrackFragmentSample => {
+          const { cts, size, flags } = sample;
+          const { dependsOn, isNonSync } = Object.assign(
+            { dependsOn: 2, isNonSync: 0 },
+            flags,
+          );
+          totalSize += size;
+          return {
+            cts: cts || 0,
+            duration: sampleDuration,
+            size,
+            flags: {
+              isLeading: 0,
+              isDependedOn: 0,
+              hasRedundancy: 0,
+              degradPrio: 0,
+              dependsOn,
+              isNonSync,
+              paddingValue: 0,
+            },
+          };
         });
-        data2 = data.subarray(sampleOffset - 8, sampleOffset + size);
-        writeUint32(data2, 0, size + 8);
-        remuxedIFrame = true;
+        if (samples.length) {
+          const lastSample = samples[samples.length - 1];
+          let lastSampleDuration = duration * initData.video.timescale;
+          for (let i = samples.length - 1; i--; ) {
+            lastSampleDuration -= samples[i].duration;
+          }
+          lastSample.duration = lastSampleDuration;
+
+          // Remux Iframe segments reporting more than one sample (mp4 byte-range contains moof for playback segment)
+          data1 = MP4.moof(chunkMeta.sn, start, {
+            type: 'video',
+            id: videoTrack.id,
+            samples, //: [samples[0]],
+          });
+          data2 = data.subarray(sampleOffset - 8, sampleOffset + totalSize);
+          writeUint32(data2, 0, totalSize + 8);
+        } else {
+          this.warn(
+            `Could not remux IFrame track fragment (sampleOffset ${sampleOffset}: totalSize: ${totalSize} bytes: ${data})`,
+          );
+        }
       } else {
         this.warn(
-          `Could not remux IFrame track fragment (trun count ${trun.length}, samples in range ${trun[0]?.samples.length ?? 0})`,
+          `Could not remux IFrame track fragment (trun count ${trun.length})`,
         );
       }
     } else {
@@ -394,9 +412,8 @@ class PassThroughRemuxer extends Logger implements Remuxer {
         ? baseOffsetSamples.ptsMin / baseOffsetSamples.timescale -
           initPTS.baseTime / initPTS.timescale
         : startDTS;
-    const endPTS = remuxedIFrame
-      ? startPTS + duration
-      : hasVideo && baseOffsetSamples?.ptsMax
+    const endPTS =
+      hasVideo && baseOffsetSamples?.ptsMax
         ? baseOffsetSamples.ptsMax / baseOffsetSamples.timescale -
           initPTS.baseTime / initPTS.timescale
         : endDTS;
@@ -443,7 +460,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     if (videoSampleCount) {
       const firstKeyFrame = videoSampleTimestamps.keyFrameIndex;
       const independent = firstKeyFrame !== -1;
-      track.nb = remuxedIFrame ? 1 : videoSampleCount;
+      track.nb = videoSampleCount;
       track.dropped =
         firstKeyFrame === 0 || isVideoContiguous
           ? 0
