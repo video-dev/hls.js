@@ -114,7 +114,7 @@ export default class Hls implements HlsEventEmitter {
   private iframeController?: IFrameController;
   private gapController?: GapController;
   private emeController?: EMEController;
-  public cmcdController?: CMCDController;
+  private cmcdController?: CMCDController;
   private _media: HTMLMediaElement | null = null;
   private _sessionId?: string;
   private triggeringException?: boolean;

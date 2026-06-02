@@ -46,8 +46,10 @@ import type { CuesInterface } from './utils/cues';
 import type { ILogger } from './utils/logger';
 import type { KeySystems, MediaKeyFunc } from './utils/mediakeys-helper';
 import type {
+  Cmcd,
   CmcdEventReportConfig,
   CmcdKey,
+  CmcdReporter,
   CmcdVersion,
 } from '@svta/cml-cmcd';
 
@@ -94,6 +96,7 @@ export type CMCDControllerConfig = {
   version?: CmcdVersion;
   eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
     includeKeys?: CmcdKey[];
+    customKeys?: Partial<Cmcd>;
   })[];
   loader?: (request: {
     url: string;
@@ -101,6 +104,8 @@ export type CMCDControllerConfig = {
     headers?: Record<string, string>;
     body?: BodyInit;
   }) => Promise<{ status: number }>;
+  customKeys?: Partial<Cmcd>;
+  reporterCallback?: (reporter: CmcdReporter) => void;
 };
 
 export type DRMSystemOptions = {

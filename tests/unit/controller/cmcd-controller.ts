@@ -1180,49 +1180,124 @@ describe('CMCDController', function () {
     });
   });
 
-  describe('update and recordEvent', function () {
-    it('update applies custom keys to subsequent request URLs when includeKeys is configured', function () {
-      setupEach({ includeKeys: ['sid', 'sf', 'com.test-mykey'] as any });
-      cmcdController.update({ 'com.test-mykey': 'hello' } as any);
-      const { url: result } = applyPlaylistData();
-      expectField(result, 'com.test-mykey');
+  describe('customKeys and reporterCallback', function () {
+    it('cmcd.customKeys appear in request URLs when listed in includeKeys', function () {
+      setupEach({
+        includeKeys: ['sid', 'sf', 'com.test-mykey'] as any,
+        customKeys: { 'com.test-mykey': 'hello' } as any,
+      });
+      expectField(applyPlaylistData().url, 'com.test-mykey');
     });
 
-    it('update applies custom key value computed by a function, reflecting state changes across requests', function () {
-      setupEach({ includeKeys: ['sid', 'sf', 'com.acme-label'] as any });
+    it('cmcd.customKeys runtime mutation takes effect on subsequent requests', function () {
+      setupEach({
+        includeKeys: ['sid', 'sf', 'com.acme-label'] as any,
+        customKeys: { 'com.acme-label': 'cold' } as any,
+      });
+      expectField(applyPlaylistData().url, 'com.acme-label%3D%22cold%22');
 
-      const labels = ['cold', 'warm'];
-      let idx = 0;
-      const computeLabel = () => labels[idx];
-
-      cmcdController.update({ 'com.acme-label': computeLabel() } as any);
-      const { url: first } = applyPlaylistData();
-      expectField(first, 'com.acme-label%3D%22cold%22');
-
-      idx = 1;
-      cmcdController.update({ 'com.acme-label': computeLabel() } as any);
-      const { url: second } = applyPlaylistData();
-      expectField(second, 'com.acme-label%3D%22warm%22');
+      cmcdController.hls.config.cmcd.customKeys = {
+        'com.acme-label': 'warm',
+      } as any;
+      expectField(applyPlaylistData().url, 'com.acme-label%3D%22warm%22');
     });
 
-    it('recordEvent delegates to reporter.recordEvent and emits a POST to the event target', function () {
+    it('cmcd.customKeys do not appear in event target reports', function () {
       const requests: any[] = [];
-      const captureLoader = (req: any) => {
-        requests.push(req);
-        return Promise.resolve({ status: 204 });
-      };
+      let reporter: any;
       setupEach({
         version: 2,
-        loader: captureLoader as any,
+        loader: ((req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
+        includeKeys: ['sid', 'sf', 'com.req-only'] as any,
+        customKeys: { 'com.req-only': 'value' } as any,
         eventTargets: [
           {
             url: 'https://analytics.example.com/cmcd',
             events: [CmcdEventType.CUSTOM_EVENT],
           },
         ],
+        reporterCallback: (r) => {
+          reporter = r;
+        },
       });
 
-      cmcdController.recordEvent(CmcdEventType.CUSTOM_EVENT, {
+      reporter.recordEvent(CmcdEventType.CUSTOM_EVENT, { cen: 'test' } as any);
+
+      const body = String(
+        requests.filter(
+          (r) => r.url === 'https://analytics.example.com/cmcd',
+        )[0]?.body || '',
+      );
+      expect(body).to.not.include('com.req-only');
+    });
+
+    it('cmcd.customKeys sanitizes invalid keys: warns and preserves valid ones', function () {
+      setupEach({
+        includeKeys: ['sid', 'sf', 'com.test-valid'] as any,
+        customKeys: { invalid_key: 'bad', 'com.test-valid': 'good' } as any,
+      });
+      const warnings: string[] = [];
+      cmcdController.hls.logger.warn = (...args: any[]) =>
+        warnings.push(args.join(' '));
+
+      const { url: result } = applyPlaylistData();
+      expect(warnings.length).to.be.greaterThan(0);
+      expect(result).to.not.include('invalid_key');
+      expect(result).to.include('com.test-valid');
+    });
+
+    it('reporterCallback is called with the reporter on MANIFEST_LOADING', function () {
+      const reporters: any[] = [];
+      setupEach({ version: 2, reporterCallback: (r) => reporters.push(r) });
+      expect(reporters).to.have.lengthOf(1);
+      expect(reporters[0]).to.equal((cmcdController as any).reporter);
+    });
+
+    it('reporterCallback is called again on each MANIFEST_LOADING (new reporter per session)', function () {
+      const reporters: any[] = [];
+      setupEach({ version: 2, reporterCallback: (r) => reporters.push(r) });
+      cmcdController.hls.trigger(Events.MANIFEST_LOADING, { url });
+      expect(reporters).to.have.lengthOf(2);
+      expect(reporters[0]).to.not.equal(reporters[1]);
+    });
+
+    it('reporterCallback is not called before MANIFEST_LOADING', function () {
+      const reporters: any[] = [];
+      const hls = new Hls({
+        cmcd: { version: 2, reporterCallback: (r) => reporters.push(r) },
+      }) as any;
+      hls.networkControllers.forEach((c) => c.destroy());
+      hls.networkControllers.length = 0;
+      hls.coreComponents.forEach((c) => c.destroy());
+      hls.coreComponents.length = 0;
+      new CMCDController(hls);
+      expect(reporters).to.have.lengthOf(0);
+    });
+
+    it('reporter from reporterCallback can fire CUSTOM_EVENT to the event target', function () {
+      const requests: any[] = [];
+      let reporter: any;
+      setupEach({
+        version: 2,
+        loader: ((req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
+        eventTargets: [
+          {
+            url: 'https://analytics.example.com/cmcd',
+            events: [CmcdEventType.CUSTOM_EVENT],
+          },
+        ],
+        reporterCallback: (r) => {
+          reporter = r;
+        },
+      });
+
+      reporter.recordEvent(CmcdEventType.CUSTOM_EVENT, {
         cen: 'test-event',
       } as any);
 
@@ -1230,112 +1305,210 @@ describe('CMCDController', function () {
         (r) => r.url === 'https://analytics.example.com/cmcd',
       );
       expect(eventRequests.length).to.be.greaterThan(0);
+      expect(String(eventRequests[0].body || '')).to.include(
+        'cen="test-event"',
+      );
     });
 
-    it('recordEvent includes custom keys when the event target includeKeys lists them', function () {
+    it('eventTargets customKeys appear in event reports when listed in target includeKeys', function () {
       const requests: any[] = [];
-      const captureLoader = (req: any) => {
-        requests.push(req);
-        return Promise.resolve({ status: 204 });
-      };
+      let reporter: any;
       setupEach({
         version: 2,
-        loader: captureLoader as any,
+        loader: ((req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
         eventTargets: [
           {
             url: 'https://analytics.example.com/cmcd',
             events: [CmcdEventType.CUSTOM_EVENT],
-            includeKeys: ['cen', 'com.myco-chapterid'] as any,
+            includeKeys: ['cen', 'com.target-label'] as any,
+            customKeys: { 'com.target-label': 'chapter1' } as any,
           },
         ],
+        reporterCallback: (r) => {
+          reporter = r;
+        },
       });
 
-      cmcdController.recordEvent(CmcdEventType.CUSTOM_EVENT, {
-        cen: 'chapter-change',
-        'com.myco-chapterid': '3',
-      } as any);
+      reporter.recordEvent(CmcdEventType.CUSTOM_EVENT, { cen: 'test' } as any);
 
-      const eventRequests = requests.filter(
-        (r) => r.url === 'https://analytics.example.com/cmcd',
+      const body = String(
+        requests.filter(
+          (r) => r.url === 'https://analytics.example.com/cmcd',
+        )[0]?.body || '',
       );
-      expect(eventRequests.length).to.be.greaterThan(0);
-      const body = String(eventRequests[0].body || '');
-      expect(body).to.include('cen="chapter-change"');
-      expect(body).to.include('com.myco-chapterid="3"');
+      expect(body).to.include('com.target-label="chapter1"');
     });
 
-    it('recordEvent does nothing when reporter is not initialized', function () {
-      const hls = new Hls({ cmcd: { version: 2 } }) as any;
-      hls.networkControllers.forEach((c) => c.destroy());
-      hls.networkControllers.length = 0;
-      hls.coreComponents.forEach((c) => c.destroy());
-      hls.coreComponents.length = 0;
-
-      const controller = new CMCDController(hls);
-      // reporter is not yet created (no MANIFEST_LOADING fired)
-      expect(() =>
-        controller.recordEvent(CmcdEventType.CUSTOM_EVENT),
-      ).to.not.throw();
-      controller.destroy();
-    });
-
-    it('update logs a warning and ignores only the invalid key, preserving valid keys', function () {
-      setupEach({
-        includeKeys: ['sid', 'sf', 'com.test-mykey', 'com.test-valid'] as any,
-      });
-
-      const warnings: string[] = [];
-      cmcdController.hls.logger.warn = (...args: any[]) =>
-        warnings.push(args.join(' '));
-
-      cmcdController.update({
-        invalid_key: 'bad',
-        'com.test-valid': 'good',
-      } as any);
-
-      expect(warnings.length).to.be.greaterThan(0);
-      const { url: result } = applyPlaylistData();
-      expect(result).to.not.include('invalid_key');
-      expect(result).to.include('com.test-valid');
-    });
-
-    it('recordEvent logs a warning and sends the report without the invalid key', function () {
+    it('eventTargets customKeys can be updated at runtime via reporter.update()', function () {
       const requests: any[] = [];
-      const captureLoader = (req: any) => {
-        requests.push(req);
-        return Promise.resolve({ status: 204 });
-      };
+      let reporter: any;
       setupEach({
         version: 2,
-        loader: captureLoader as any,
+        loader: ((req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
         eventTargets: [
           {
             url: 'https://analytics.example.com/cmcd',
             events: [CmcdEventType.CUSTOM_EVENT],
-            includeKeys: ['cen', 'com.myco-valid'] as any,
+            includeKeys: ['cen', 'com.t-chapter'] as any,
+            customKeys: { 'com.t-chapter': 'intro' } as any,
+          },
+        ],
+        reporterCallback: (r) => {
+          reporter = r;
+        },
+      });
+
+      reporter.recordEvent(CmcdEventType.CUSTOM_EVENT, { cen: 'test' } as any);
+      const firstBody = String(
+        requests.filter(
+          (r) => r.url === 'https://analytics.example.com/cmcd',
+        )[0]?.body || '',
+      );
+      expect(firstBody).to.include('com.t-chapter="intro"');
+
+      // Update persistent event-target state directly — no reload required
+      reporter.update({ 'com.t-chapter': 'chapter-2' } as any);
+      requests.length = 0;
+
+      reporter.recordEvent(CmcdEventType.CUSTOM_EVENT, { cen: 'test' } as any);
+      const secondBody = String(
+        requests.filter(
+          (r) => r.url === 'https://analytics.example.com/cmcd',
+        )[0]?.body || '',
+      );
+      expect(secondBody).to.include('com.t-chapter="chapter-2"');
+    });
+
+    it('eventTargets customKeys do not appear in request reports', function () {
+      setupEach({
+        version: 2,
+        eventTargets: [
+          {
+            url: 'https://analytics.example.com/cmcd',
+            customKeys: { 'com.event-only': 'value' } as any,
           },
         ],
       });
+      expect(applyPlaylistData().url).to.not.include('com.event-only');
+    });
 
+    it('eventTargets customKeys are scoped: target A key absent from target B reports', function () {
+      const reqA: any[] = [];
+      const reqB: any[] = [];
+      let reporter: any;
+      setupEach({
+        version: 2,
+        loader: ((req: any) => {
+          if (req.url === 'https://a.example.com') reqA.push(req);
+          if (req.url === 'https://b.example.com') reqB.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
+        eventTargets: [
+          {
+            url: 'https://a.example.com',
+            events: [CmcdEventType.CUSTOM_EVENT],
+            includeKeys: ['cen', 'com.a-label'] as any,
+            customKeys: { 'com.a-label': 'a-only' } as any,
+          },
+          {
+            url: 'https://b.example.com',
+            events: [CmcdEventType.CUSTOM_EVENT],
+            includeKeys: ['cen'] as any,
+          },
+        ],
+        reporterCallback: (r) => {
+          reporter = r;
+        },
+      });
+
+      reporter.recordEvent(CmcdEventType.CUSTOM_EVENT, { cen: 'test' } as any);
+
+      expect(String(reqA[0]?.body || '')).to.include('com.a-label="a-only"');
+      expect(String(reqB[0]?.body || '')).to.not.include('com.a-label');
+    });
+
+    it('eventTargets customKeys sanitizes invalid keys at reporter creation, warns and preserves valid ones', function () {
+      const requests: any[] = [];
+      let reporter: any;
+      setupEach({
+        version: 2,
+        loader: ((req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
+        eventTargets: [
+          {
+            url: 'https://analytics.example.com/cmcd',
+            events: [CmcdEventType.CUSTOM_EVENT],
+            includeKeys: ['cen', 'com.valid-key'] as any,
+            customKeys: {
+              invalid_key: 'bad',
+              'com.valid-key': 'good',
+            } as any,
+          },
+        ],
+        reporterCallback: (r) => {
+          reporter = r;
+        },
+      });
+
+      // Trigger a fresh session to capture warnings with our override in place
       const warnings: string[] = [];
       cmcdController.hls.logger.warn = (...args: any[]) =>
         warnings.push(args.join(' '));
-
-      cmcdController.recordEvent(CmcdEventType.CUSTOM_EVENT, {
-        cen: 'chapter-change',
-        'com.myco-valid': 'kept',
-        invalid_key: 'dropped',
-      } as any);
+      cmcdController.hls.trigger(Events.MANIFEST_LOADING, { url });
+      // reporterCallback fires again with the new reporter
+      reporter.recordEvent(CmcdEventType.CUSTOM_EVENT, { cen: 'test' } as any);
 
       expect(warnings.length).to.be.greaterThan(0);
       const eventRequests = requests.filter(
         (r) => r.url === 'https://analytics.example.com/cmcd',
       );
-      expect(eventRequests.length).to.be.greaterThan(0);
-      const body = String(eventRequests[0].body || '');
-      expect(body).to.include('cen="chapter-change"');
-      expect(body).to.include('com.myco-valid="kept"');
+      const body = String(eventRequests[eventRequests.length - 1]?.body || '');
       expect(body).to.not.include('invalid_key');
+      expect(body).to.include('com.valid-key="good"');
+    });
+
+    it('recordEvent routes by events array: fires to matching target, not to non-matching target', function () {
+      const reqA: any[] = [];
+      const reqB: any[] = [];
+      let reporter: any;
+      setupEach({
+        version: 2,
+        loader: ((req: any) => {
+          if (req.url === 'https://custom-events.example.com') reqA.push(req);
+          if (req.url === 'https://bitrate-events.example.com') reqB.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
+        eventTargets: [
+          {
+            url: 'https://custom-events.example.com',
+            events: [CmcdEventType.CUSTOM_EVENT],
+            includeKeys: ['cen'] as any,
+          },
+          {
+            url: 'https://bitrate-events.example.com',
+            events: [CmcdEventType.BITRATE_CHANGE],
+          },
+        ],
+        reporterCallback: (r) => {
+          reporter = r;
+        },
+      });
+
+      reporter.recordEvent(CmcdEventType.CUSTOM_EVENT, {
+        cen: 'chapter-change',
+      } as any);
+
+      expect(reqA.length).to.be.greaterThan(0);
+      expect(String(reqA[0].body || '')).to.include('cen="chapter-change"');
+      expect(reqB.length).to.equal(0);
     });
   });
 });

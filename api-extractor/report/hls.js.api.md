@@ -6,8 +6,8 @@
 
 import type { Cmcd } from '@svta/cml-cmcd';
 import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
-import { CmcdEventType } from '@svta/cml-cmcd';
 import type { CmcdKey } from '@svta/cml-cmcd';
+import type { CmcdReporter } from '@svta/cml-cmcd';
 import type { CmcdVersion } from '@svta/cml-cmcd';
 import { EventEmitter } from 'eventemitter3';
 
@@ -1008,10 +1008,6 @@ export class CMCDController implements ComponentAPI {
     constructor(hls: Hls);
     // (undocumented)
     destroy(): void;
-    // (undocumented)
-    recordEvent(eventType: CmcdEventType | string, data?: Cmcd): void;
-    // (undocumented)
-    update(data: Cmcd): void;
 }
 
 // Warning: (ae-missing-release-tag) "CMCDControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -1025,6 +1021,7 @@ export type CMCDControllerConfig = {
     version?: CmcdVersion;
     eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
         includeKeys?: CmcdKey[];
+        customKeys?: Partial<Cmcd>;
     })[];
     loader?: (request: {
         url: string;
@@ -1034,6 +1031,8 @@ export type CMCDControllerConfig = {
     }) => Promise<{
         status: number;
     }>;
+    customKeys?: Partial<Cmcd>;
+    reporterCallback?: (reporter: CmcdReporter) => void;
 };
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -2220,8 +2219,6 @@ class Hls implements HlsEventEmitter {
     get capLevelToPlayerSize(): boolean;
     // Warning: (ae-setter-with-docs) The doc comment for the property "capLevelToPlayerSize" must appear on the getter, not the setter.
     set capLevelToPlayerSize(shouldStartCapping: boolean);
-    // (undocumented)
-    cmcdController?: CMCDController;
     readonly config: HlsConfig;
     createIFramePlayer(configOverride?: Partial<HlsConfig>): HlsIFramesOnly | null;
     createImageIFramePlayer(configOverride?: Partial<HlsConfig>): HlsImageIFramesOnly | null;

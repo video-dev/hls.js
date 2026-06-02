@@ -92,7 +92,7 @@ export default class CMCDController implements ComponentAPI {
           ...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS),
         ],
         eventTargets: (cmcd.eventTargets ?? []).map(
-          ({ includeKeys, ...rest }) => ({
+          ({ includeKeys, customKeys: targetCustomKeys, ...rest }) => ({
             ...rest,
             enabledKeys: includeKeys ?? CMCD_KEYS,
           }),
@@ -105,18 +105,20 @@ export default class CMCDController implements ComponentAPI {
       sf: CmcdStreamingFormat.HLS,
       sta: this.playerState,
     });
+
+    // Seed persistent state for event-target custom keys. Each target's enabledKeys
+    // controls which of these actually reach that target; they are excluded from
+    // request reports because they are not in the top-level enabledKeys.
+    const eventTargetCustomKeys: Cmcd = {};
+    (cmcd.eventTargets ?? []).forEach((t) => {
+      if (t.customKeys) Object.assign(eventTargetCustomKeys, t.customKeys);
+    });
+    if (Object.keys(eventTargetCustomKeys).length > 0) {
+      this.reporter.update(this.sanitizeCmcdData(eventTargetCustomKeys));
+    }
+
     this.reporter.start();
-  }
-
-  update(data: Cmcd): void {
-    this.reporter?.update(this.sanitizeCmcdData(data));
-  }
-
-  recordEvent(eventType: CmcdEventType | string, data?: Cmcd): void {
-    this.reporter?.recordEvent(
-      eventType as CmcdEventType,
-      data ? this.sanitizeCmcdData(data) : undefined,
-    );
+    cmcd.reporterCallback?.(this.reporter);
   }
 
   private sanitizeCmcdData(data: Cmcd): Cmcd {
@@ -369,6 +371,11 @@ export default class CMCDController implements ComponentAPI {
 
     if (data.su == null) {
       data.su = this.buffering;
+    }
+
+    const { customKeys } = this.config.cmcd ?? {};
+    if (customKeys) {
+      Object.assign(data, this.sanitizeCmcdData(customKeys as Cmcd));
     }
 
     // TODO: Implement rtp, dl
