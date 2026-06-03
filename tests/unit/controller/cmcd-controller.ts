@@ -1234,21 +1234,6 @@ describe('CMCDController', function () {
       expect(body).to.not.include('com.req-only');
     });
 
-    it('cmcd.customKeys sanitizes invalid keys: warns and preserves valid ones', function () {
-      setupEach({
-        includeKeys: ['sid', 'sf', 'com.test-valid'] as any,
-        customKeys: { invalid_key: 'bad', 'com.test-valid': 'good' } as any,
-      });
-      const warnings: string[] = [];
-      cmcdController.hls.logger.warn = (...args: any[]) =>
-        warnings.push(args.join(' '));
-
-      const { url: result } = applyPlaylistData();
-      expect(warnings.length).to.be.greaterThan(0);
-      expect(result).to.not.include('invalid_key');
-      expect(result).to.include('com.test-valid');
-    });
-
     it('reporterCallback is called with the reporter on MANIFEST_LOADING', function () {
       const reporters: any[] = [];
       setupEach({ version: 2, reporterCallback: (r) => reporters.push(r) });
@@ -1431,48 +1416,6 @@ describe('CMCDController', function () {
 
       expect(String(reqA[0]?.body || '')).to.include('com.a-label="a-only"');
       expect(String(reqB[0]?.body || '')).to.not.include('com.a-label');
-    });
-
-    it('eventTargets customKeys sanitizes invalid keys at reporter creation, warns and preserves valid ones', function () {
-      const requests: any[] = [];
-      let reporter: any;
-      setupEach({
-        version: 2,
-        loader: ((req: any) => {
-          requests.push(req);
-          return Promise.resolve({ status: 204 });
-        }) as any,
-        eventTargets: [
-          {
-            url: 'https://analytics.example.com/cmcd',
-            events: [CmcdEventType.CUSTOM_EVENT],
-            includeKeys: ['cen', 'com.valid-key'] as any,
-            customKeys: {
-              invalid_key: 'bad',
-              'com.valid-key': 'good',
-            } as any,
-          },
-        ],
-        reporterCallback: (r) => {
-          reporter = r;
-        },
-      });
-
-      // Trigger a fresh session to capture warnings with our override in place
-      const warnings: string[] = [];
-      cmcdController.hls.logger.warn = (...args: any[]) =>
-        warnings.push(args.join(' '));
-      cmcdController.hls.trigger(Events.MANIFEST_LOADING, { url });
-      // reporterCallback fires again with the new reporter
-      reporter.recordEvent(CmcdEventType.CUSTOM_EVENT, { cen: 'test' } as any);
-
-      expect(warnings.length).to.be.greaterThan(0);
-      const eventRequests = requests.filter(
-        (r) => r.url === 'https://analytics.example.com/cmcd',
-      );
-      const body = String(eventRequests[eventRequests.length - 1]?.body || '');
-      expect(body).to.not.include('invalid_key');
-      expect(body).to.include('com.valid-key="good"');
     });
 
     it('recordEvent routes by events array: fires to matching target, not to non-matching target', function () {

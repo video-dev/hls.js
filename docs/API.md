@@ -1904,12 +1904,12 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
   - `batchSize`: The number of events to batch before sending a report. Defaults to `1` (send each event immediately).
   - `includeKeys`: An optional array of CMCD keys that overrides the top-level `includeKeys` for this target.
 - `loader`: An optional async function `(request) => Promise<{ status }>` used to deliver CMCD v2 event reports. When omitted, event reports are delivered via `fetch` (honoring the Hls `xhrSetup`/`fetchSetup` hooks). Only used when `eventTargets` is configured.
-- `customKeys`: An optional `Partial<Cmcd>` object whose entries are merged into every **request** report (manifest and segment fetches). Mutate `hls.config.cmcd.customKeys` at any time to update or clear custom keys. Keys must follow the reverse-DNS convention (e.g. `com.example-myKey`) — see the [SVTA custom keys registry](https://github.com/streaming-video-technology-alliance/common-media-client-data-custom-keys). **Custom key names must still be declared in `includeKeys`** so they pass the reporter's key filter. `customKeys` at `cmcd` level only affects request reports; for event target reports use `customKeys` inside `eventTargets`.
+- `customKeys`: An optional object of custom CMCD key/value pairs (`{ [CmcdCustomKey]: CmcdCustomValue }`) merged into every **request** report (manifest and segment fetches). Mutate `hls.config.cmcd.customKeys` at any time to update or clear custom keys. Keys must follow the reverse-DNS convention (e.g. `com.example-myKey`) — see the [SVTA custom keys registry](https://github.com/streaming-video-technology-alliance/common-media-client-data-custom-keys). **Custom key names must still be declared in `includeKeys`** so they pass the reporter's key filter. `customKeys` at `cmcd` level only affects request reports; for event target reports use `customKeys` inside `eventTargets`.
 - `reporterCallback`: An optional `(reporter: CmcdReporter) => void` callback. Called after each new `CmcdReporter` is created (once per `MANIFEST_LOADING`). Store the reference to fire custom event reports. Always use the most recently received reporter, since a new source load yields a new reporter instance.
 
 And inside each `eventTargets` item:
 
-- `customKeys`: An optional `Partial<Cmcd>` object whose entries are seeded as persistent state for that target's event reports. Works in parallel to the target's `includeKeys`: **custom key names must still be listed in the target's `includeKeys`** so they pass the per-target key filter. These keys are scoped to this target and do not appear in request reports or in other targets' reports.
+- `customKeys`: An optional object of custom CMCD key/value pairs (`{ [CmcdCustomKey]: CmcdCustomValue }`) seeded as persistent state for that target's event reports. **Custom key names must still be listed in the target's `includeKeys`** so they pass the per-target key filter. These keys are scoped to this target and do not appear in request reports or in other targets' reports.
 
 ```js
 let cmcdReporter = null;
@@ -1964,6 +1964,21 @@ cmcdReporter?.recordEvent('ce', { cen: 'chapter-change' });
 `reporterCallback` is called on every `MANIFEST_LOADING` (new source = new reporter). Always store the latest reference.
 
 `recordEvent` requires `cmcd.eventTargets` to be configured with a target whose `events` array contains the desired event type, and is only meaningful with `version: 2`.
+
+**Validating custom keys:** hls.js passes `customKeys` directly to the reporter without runtime validation. If you want to verify your keys follow the CMCD custom key convention before use, you can use `validateCmcdKeys` from `@svta/cml-cmcd`:
+
+```js
+import { validateCmcdKeys } from '@svta/cml-cmcd';
+
+const myKeys = { 'com.myco-chapter': 'intro' };
+const { valid, issues } = validateCmcdKeys(myKeys);
+if (!valid) {
+  console.warn(
+    'Invalid CMCD keys:',
+    issues.map((i) => i.message),
+  );
+}
+```
 
 ### `enableInterstitialPlayback`
 

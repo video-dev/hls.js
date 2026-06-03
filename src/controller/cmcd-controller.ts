@@ -12,7 +12,6 @@ import {
   CmcdStreamingFormat,
   CmcdStreamType,
   toCmcdValue,
-  validateCmcdKeys,
 } from '@svta/cml-cmcd';
 import { Events } from '../events';
 import {
@@ -45,7 +44,7 @@ import type {
   LoaderContext,
   PlaylistLoaderContext,
 } from '../types/loader';
-import type { Cmcd, CmcdCustomKey, CmcdCustomValue } from '@svta/cml-cmcd';
+import type { Cmcd } from '@svta/cml-cmcd';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -106,36 +105,12 @@ export default class CMCDController implements ComponentAPI {
       sta: this.playerState,
     });
 
-    // Seed persistent state for event-target custom keys. Each target's enabledKeys
-    // controls which of these actually reach that target; they are excluded from
-    // request reports because they are not in the top-level enabledKeys.
-    const eventTargetCustomKeys: {
-      [index: CmcdCustomKey]: CmcdCustomValue | undefined;
-    } = {};
     (cmcd.eventTargets ?? []).forEach((t) => {
-      if (t.customKeys) Object.assign(eventTargetCustomKeys, t.customKeys);
+      if (t.customKeys) this.reporter!.update(t.customKeys);
     });
-    if (Object.keys(eventTargetCustomKeys).length > 0) {
-      this.reporter.update(this.sanitizeCmcdData(eventTargetCustomKeys));
-    }
 
     this.reporter.start();
     cmcd.reporterCallback?.(this.reporter);
-  }
-
-  private sanitizeCmcdData(data: {
-    [index: CmcdCustomKey]: CmcdCustomValue | undefined;
-  }): Cmcd {
-    const version = this.config.cmcd?.version || CMCD_V1;
-    const { valid, issues } = validateCmcdKeys(data, { version });
-    if (valid) return data;
-    const invalidKeys = new Set(issues.map(({ key }) => key));
-    issues.forEach(({ message }) => this.hls.logger.warn(message));
-    const filtered: Record<string, unknown> = {};
-    Object.entries(data).forEach(([key, value]) => {
-      if (!invalidKeys.has(key)) filtered[key] = value;
-    });
-    return filtered as Cmcd;
   }
 
   private registerListeners() {
@@ -379,7 +354,7 @@ export default class CMCDController implements ComponentAPI {
 
     const customKeys = this.config.cmcd?.customKeys;
     if (customKeys) {
-      Object.assign(data, this.sanitizeCmcdData(customKeys));
+      Object.assign(data, customKeys);
     }
 
     // TODO: Implement rtp, dl
