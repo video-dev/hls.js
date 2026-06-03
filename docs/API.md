@@ -1955,6 +1955,21 @@ cmcdReporter?.recordEvent('ce', { cen: 'chapter-change' });
 
 `recordEvent` requires `cmcd.eventTargets` to be configured with a target whose `events` array contains the desired event type, and is only meaningful with `version: 2`.
 
+**Validating custom keys:** If you want to verify your keys follow the CMCD custom key convention before use, you can use `validateCmcdKeys` from `@svta/cml-cmcd`:
+
+```js
+import { validateCmcdKeys } from '@svta/cml-cmcd';
+
+const myKeys = { 'com.myco-chapter': 'intro' };
+const { valid, issues } = validateCmcdKeys(myKeys);
+if (!valid) {
+  console.warn(
+    'Invalid CMCD keys:',
+    issues.map((i) => i.message),
+  );
+}
+```
+
 ### `enableInterstitialPlayback`
 
 (default: `true`)
