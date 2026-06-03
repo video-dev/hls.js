@@ -373,7 +373,7 @@ export default class CMCDController implements ComponentAPI {
       data.su = this.buffering;
     }
 
-    const { customKeys } = this.config.cmcd ?? {};
+    const customKeys = this.config.cmcd?.customKeys;
     if (customKeys) {
       Object.assign(data, this.sanitizeCmcdData(customKeys as Cmcd));
     }
