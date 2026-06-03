@@ -105,9 +105,11 @@ export default class CMCDController implements ComponentAPI {
       sta: this.playerState,
     });
 
-    (cmcd.eventTargets ?? []).forEach((t) => {
-      if (t.customKeys) this.reporter!.update(t.customKeys);
-    });
+    if (cmcd.eventTargets) {
+      cmcd.eventTargets.forEach((t) => {
+        if (t.customKeys) this.reporter!.update(t.customKeys);
+      });
+    }
 
     this.reporter.start();
     cmcd.reporterCallback?.(this.reporter);
