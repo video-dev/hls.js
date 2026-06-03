@@ -1306,7 +1306,7 @@ export class EMEController extends Logger implements ComponentAPI {
 export type EMEControllerConfig = {
     licenseXhrSetup?: (this: Hls, xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext & {
         decryptdata: LevelKey;
-    }, licenseChallenge: Uint8Array) => void | Uint8Array | Promise<Uint8Array | void>;
+    }, licenseChallenge: Uint8Array) => void | Uint8Array | string | Promise<Uint8Array | string | void>;
     licenseResponseCallback?: (this: Hls, xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext & {
         decryptdata: LevelKey;
     }) => ArrayBuffer;
@@ -1844,6 +1844,8 @@ export interface FragChangedData {
 export interface FragDecryptedData {
     // (undocumented)
     frag: Fragment;
+    // (undocumented)
+    part: Part | null;
     // (undocumented)
     payload: ArrayBuffer;
     // (undocumented)
@@ -5021,6 +5023,8 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     doTick(): void;
     // (undocumented)
     _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
+    // (undocumented)
+    protected _handleFragmentLoadProgress(data: FragLoadedData): void;
     // (undocumented)
     protected loadFragment(frag: MediaFragment, level: Level, targetBufferTime: number): void;
     // (undocumented)

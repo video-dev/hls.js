@@ -784,19 +784,29 @@ export function getSampleData(
       }
 
       const trackDefault = track.default;
-      const tfhdFlags = readUint32(tfhd, 0) | trackDefault?.flags!;
+      const tfhdFlags = readUint32(tfhd, 0) & 0xffffff;
+      // tfhd optional fields follow track_ID (at byte 8) in this fixed order,
+      // each present only when its flag is set. Walk them so default_sample_size
+      // is read at the correct offset regardless of which earlier fields exist.
       let defaultSampleDuration = trackDefault?.duration || 0;
-      const defaultSampleSize = trackDefault?.sampleSize || 0;
+      let defaultSampleSize = trackDefault?.sampleSize || 0;
+      let tfhdOptOffset = 8;
+      if (tfhdFlags & 0x000001) {
+        // base_data_offset (64-bit)
+        tfhdOptOffset += 8;
+      }
+      if (tfhdFlags & 0x000002) {
+        // sample_description_index
+        tfhdOptOffset += 4;
+      }
       if (tfhdFlags & 0x000008) {
-        // 0x000008 indicates the presence of the default_sample_duration field
-        if (tfhdFlags & 0x000002) {
-          // 0x000002 indicates the presence of the sample_description_index field, which precedes default_sample_duration
-          // If present, the default_sample_duration exists at byte offset 12
-          defaultSampleDuration = readUint32(tfhd, 12);
-        } else {
-          // Otherwise, the duration is at byte offset 8
-          defaultSampleDuration = readUint32(tfhd, 8);
-        }
+        // default_sample_duration
+        defaultSampleDuration = readUint32(tfhd, tfhdOptOffset);
+        tfhdOptOffset += 4;
+      }
+      if (tfhdFlags & 0x000010) {
+        // default_sample_size
+        defaultSampleSize = readUint32(tfhd, tfhdOptOffset);
       }
       let baseDataOffset = 0;
       const baseDataOffsetPresent = (tfhdFlags & 0x000001) !== 0;

@@ -283,7 +283,10 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     if (
       __USE_IFRAMES__ &&
       videoSampleTimestamps &&
-      videoSampleTimestamps.sampleCount > 1 &&
+      (videoSampleTimestamps.sampleCount > 1 ||
+        (videoSampleTimestamps.sampleCount === 1 &&
+          !syncOnAudio &&
+          chunkMeta.duration / (videoEndTime - videoStartTime) > 1.5)) &&
       initData.video &&
       chunkMeta.iframe
     ) {
