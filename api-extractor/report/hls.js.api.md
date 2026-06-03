@@ -4,8 +4,6 @@
 
 ```ts
 
-import type { CmcdCustomKey } from '@svta/cml-cmcd';
-import type { CmcdCustomValue } from '@svta/cml-cmcd';
 import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
 import type { CmcdKey } from '@svta/cml-cmcd';
 import type { CmcdReporter } from '@svta/cml-cmcd';
@@ -1022,9 +1020,6 @@ export type CMCDControllerConfig = {
     version?: CmcdVersion;
     eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
         includeKeys?: CmcdKey[];
-        customKeys?: {
-            [index: CmcdCustomKey]: CmcdCustomValue | undefined;
-        };
     })[];
     loader?: (request: {
         url: string;
@@ -1034,9 +1029,6 @@ export type CMCDControllerConfig = {
     }) => Promise<{
         status: number;
     }>;
-    customKeys?: {
-        [index: CmcdCustomKey]: CmcdCustomValue | undefined;
-    };
     reporterCallback?: (reporter: CmcdReporter) => void;
 };
 

@@ -91,7 +91,7 @@ export default class CMCDController implements ComponentAPI {
           ...(version >= CMCD_V2 ? CMCD_KEYS : CMCD_V1_KEYS),
         ],
         eventTargets: (cmcd.eventTargets ?? []).map(
-          ({ includeKeys, customKeys: targetCustomKeys, ...rest }) => ({
+          ({ includeKeys, ...rest }) => ({
             ...rest,
             enabledKeys: includeKeys ?? CMCD_KEYS,
           }),
@@ -104,12 +104,6 @@ export default class CMCDController implements ComponentAPI {
       sf: CmcdStreamingFormat.HLS,
       sta: this.playerState,
     });
-
-    if (cmcd.eventTargets) {
-      cmcd.eventTargets.forEach((t) => {
-        if (t.customKeys) this.reporter!.update(t.customKeys);
-      });
-    }
 
     this.reporter.start();
     cmcd.reporterCallback?.(this.reporter);
@@ -352,11 +346,6 @@ export default class CMCDController implements ComponentAPI {
 
     if (data.su == null) {
       data.su = this.buffering;
-    }
-
-    const customKeys = this.config.cmcd?.customKeys;
-    if (customKeys) {
-      Object.assign(data, customKeys);
     }
 
     // TODO: Implement rtp, dl
