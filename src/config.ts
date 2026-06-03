@@ -46,7 +46,8 @@ import type { CuesInterface } from './utils/cues';
 import type { ILogger } from './utils/logger';
 import type { KeySystems, MediaKeyFunc } from './utils/mediakeys-helper';
 import type {
-  Cmcd,
+  CmcdCustomKey,
+  CmcdCustomValue,
   CmcdEventReportConfig,
   CmcdKey,
   CmcdReporter,
@@ -96,7 +97,7 @@ export type CMCDControllerConfig = {
   version?: CmcdVersion;
   eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
     includeKeys?: CmcdKey[];
-    customKeys?: Partial<Cmcd>;
+    customKeys?: { [index: CmcdCustomKey]: CmcdCustomValue | undefined };
   })[];
   loader?: (request: {
     url: string;
@@ -104,7 +105,7 @@ export type CMCDControllerConfig = {
     headers?: Record<string, string>;
     body?: BodyInit;
   }) => Promise<{ status: number }>;
-  customKeys?: Partial<Cmcd>;
+  customKeys?: { [index: CmcdCustomKey]: CmcdCustomValue | undefined };
   reporterCallback?: (reporter: CmcdReporter) => void;
 };
 

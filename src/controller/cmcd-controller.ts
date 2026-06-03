@@ -45,7 +45,7 @@ import type {
   LoaderContext,
   PlaylistLoaderContext,
 } from '../types/loader';
-import type { Cmcd } from '@svta/cml-cmcd';
+import type { Cmcd, CmcdCustomKey, CmcdCustomValue } from '@svta/cml-cmcd';
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -109,7 +109,9 @@ export default class CMCDController implements ComponentAPI {
     // Seed persistent state for event-target custom keys. Each target's enabledKeys
     // controls which of these actually reach that target; they are excluded from
     // request reports because they are not in the top-level enabledKeys.
-    const eventTargetCustomKeys: Cmcd = {};
+    const eventTargetCustomKeys: {
+      [index: CmcdCustomKey]: CmcdCustomValue | undefined;
+    } = {};
     (cmcd.eventTargets ?? []).forEach((t) => {
       if (t.customKeys) Object.assign(eventTargetCustomKeys, t.customKeys);
     });
@@ -121,7 +123,9 @@ export default class CMCDController implements ComponentAPI {
     cmcd.reporterCallback?.(this.reporter);
   }
 
-  private sanitizeCmcdData(data: Cmcd): Cmcd {
+  private sanitizeCmcdData(data: {
+    [index: CmcdCustomKey]: CmcdCustomValue | undefined;
+  }): Cmcd {
     const version = this.config.cmcd?.version || CMCD_V1;
     const { valid, issues } = validateCmcdKeys(data, { version });
     if (valid) return data;
@@ -375,7 +379,7 @@ export default class CMCDController implements ComponentAPI {
 
     const customKeys = this.config.cmcd?.customKeys;
     if (customKeys) {
-      Object.assign(data, this.sanitizeCmcdData(customKeys as Cmcd));
+      Object.assign(data, this.sanitizeCmcdData(customKeys));
     }
 
     // TODO: Implement rtp, dl
