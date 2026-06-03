@@ -422,6 +422,7 @@ export interface PartsLoadedData {
 
 export interface FragDecryptedData {
   frag: Fragment;
+  part: Part | null;
   payload: ArrayBuffer;
   stats: {
     tstart: number;
