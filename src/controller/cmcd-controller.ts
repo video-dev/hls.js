@@ -423,6 +423,14 @@ export default class CMCDController implements ComponentAPI {
         if (this.playheadLevel) {
           data.pb = [this.playheadLevel.bitrate / 1000];
         }
+
+        const maxIdx = this.hls.maxAutoLevel;
+        if (maxIdx >= 0) {
+          const topLevel = this.hls.levels[maxIdx];
+          if (topLevel) {
+            data.tpb = [topLevel.bitrate / 1000];
+          }
+        }
       }
 
       const next = part ? this.getNextPart(part) : this.getNextFrag(frag);

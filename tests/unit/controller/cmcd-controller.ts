@@ -402,7 +402,7 @@ describe('CMCDController', function () {
       });
     });
 
-    describe('v2 fragment keys (rtp, dl, lb, pb)', function () {
+    describe('v2 fragment keys (rtp, dl, lb, pb, tpb)', function () {
       const stubBufferInfo = (
         hls: any,
         prop: 'mainForwardBufferInfo' | 'audioForwardBufferInfo',
@@ -494,7 +494,31 @@ describe('CMCDController', function () {
         const details = setupEach({ version: 2 });
 
         const { url } = applyFragmentData(details.fragments[0]);
-        expect(url).to.not.include('pb%3D');
+        // Match standalone pb= key (preceded by comma or start of CMCD string),
+        // not the substring that appears inside tpb=.
+        expect(url).to.not.match(/(?:^|%2C)pb%3D/);
+      });
+
+      it('includes tpb (top playable bitrate in kbps as a list) in v2 fragment data', function () {
+        const details = setupEach({ version: 2 });
+        // Single level at 1000 bps = 1 kbps → tpb=(1)
+        const { url } = applyFragmentData(details.fragments[0]);
+        expectField(url, `tpb%3D%281%29`);
+      });
+
+      it('reflects autoLevelCapping in tpb', function () {
+        const details = setupEach({ version: 2 });
+        const hls = cmcdController.hls as any;
+        // Add a second higher-bitrate level and cap auto-selection to level 0 (1 kbps)
+        hls.levelController.levels.push({
+          ...hls.levelController.levels[0],
+          bitrate: 3_000,
+        });
+        hls._autoLevelCapping = 0;
+        const { url } = applyFragmentData(details.fragments[0]);
+        // tpb must reflect the capped level (1 kbps), not the uncapped top (3 kbps)
+        expectField(url, `tpb%3D%281%29`);
+        expect(url).to.not.include('tpb%3D%283%29');
       });
     });
 
