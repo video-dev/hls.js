@@ -477,16 +477,20 @@ describe('CMCDController', function () {
         expect(url).to.not.include('dl%3D');
       });
 
-      it('includes pb (playhead bitrate in kbps as a list) after LEVEL_SWITCHED', function () {
+      it('includes pb (playhead bitrate in kbps as a list) after FRAG_CHANGED', function () {
         const details = setupEach({ version: 2 });
-        cmcdController.hls.trigger(Events.LEVEL_SWITCHED, { level: 0 });
+        const frag = details.fragments[0];
+        cmcdController.hls.trigger(Events.FRAG_CHANGED, {
+          frag,
+          previousFrag: null,
+        });
 
-        const { url } = applyFragmentData(details.fragments[0]);
+        const { url } = applyFragmentData(frag);
         // playheadLevel.bitrate = 1000 bps = 1 kbps → pb=(1)
         expectField(url, `pb%3D%281%29`);
       });
 
-      it('omits pb before any LEVEL_SWITCHED event', function () {
+      it('omits pb before any FRAG_CHANGED event', function () {
         const details = setupEach({ version: 2 });
 
         const { url } = applyFragmentData(details.fragments[0]);

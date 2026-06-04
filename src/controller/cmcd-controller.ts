@@ -30,7 +30,7 @@ import type {
   BufferAppendedData,
   BufferFlushedData,
   ErrorData,
-  LevelSwitchedData,
+  FragChangedData,
   LevelSwitchingData,
   ManifestLoadingData,
   MediaAttachedData,
@@ -119,7 +119,7 @@ export default class CMCDController implements ComponentAPI {
     hls.on(Events.MEDIA_ENDED, this.onMediaEnded, this);
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
-    hls.on(Events.LEVEL_SWITCHED, this.onLevelSwitched, this);
+    hls.on(Events.FRAG_CHANGED, this.onFragChanged, this);
     hls.on(Events.BUFFER_APPENDED, this.onBufferInfoChange, this);
     hls.on(Events.BUFFER_FLUSHED, this.onBufferInfoChange, this);
   }
@@ -132,7 +132,7 @@ export default class CMCDController implements ComponentAPI {
     hls.off(Events.MEDIA_ENDED, this.onMediaEnded, this);
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
-    hls.off(Events.LEVEL_SWITCHED, this.onLevelSwitched, this);
+    hls.off(Events.FRAG_CHANGED, this.onFragChanged, this);
     hls.off(Events.BUFFER_APPENDED, this.onBufferInfoChange, this);
     hls.off(Events.BUFFER_FLUSHED, this.onBufferInfoChange, this);
   }
@@ -293,11 +293,11 @@ export default class CMCDController implements ComponentAPI {
     this.reporter.recordEvent(CmcdEventType.BITRATE_CHANGE, eventData);
   }
 
-  private onLevelSwitched(
-    event: Events.LEVEL_SWITCHED,
-    data: LevelSwitchedData,
-  ) {
-    this.playheadLevel = this.hls.levels[data.level];
+  private onFragChanged(event: Events.FRAG_CHANGED, data: FragChangedData) {
+    const level = this.hls.levels[data.frag.level];
+    if (level) {
+      this.playheadLevel = level;
+    }
   }
 
   private setPlayerState(state: CmcdPlayerState) {
