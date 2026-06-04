@@ -436,13 +436,29 @@ describe('CMCDController', function () {
         const hls = cmcdController.hls;
         (cmcdController as any).media = {
           removeEventListener: () => {},
+          playbackRate: 1,
         } as unknown as HTMLMediaElement;
         stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 10.0 });
         stubBufferInfo(hls, 'audioForwardBufferInfo', null);
 
         const { url } = applyFragmentData(details.fragments[0]);
-        // 10s buffer = 10000ms; Math.round(10000/100)*100 = 10000
+        // 10s buffer @ pr=1 = 10000ms; Math.round(10000/100)*100 = 10000
         expectField(url, `dl%3D10000`);
+      });
+
+      it('adjusts dl by playbackRate when pr != 1', function () {
+        const details = setupEach({ version: 2 });
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+          playbackRate: 2,
+        } as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 10.0 });
+        stubBufferInfo(hls, 'audioForwardBufferInfo', null);
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        // 10s buffer @ pr=2 → 5000ms deadline; Math.round(5000/100)*100 = 5000
+        expectField(url, `dl%3D5000`);
       });
 
       it('omits dl when no media is attached', function () {

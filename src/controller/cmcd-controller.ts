@@ -415,7 +415,8 @@ export default class CMCDController implements ComponentAPI {
         const bl = this.getBufferLength(frag);
         if (Number.isFinite(bl)) {
           data.bl = [bl];
-          data.dl = Math.round(bl / 100) * 100;
+          const pr = this.media?.playbackRate || 1;
+          data.dl = Math.round(bl / pr / 100) * 100;
         }
 
         if (this.playheadLevel) {
