@@ -400,7 +400,8 @@ export default class CMCDController implements ComponentAPI {
       ) {
         const bitrateKbps = level.bitrate / 1000;
         data.br = [bitrateKbps];
-        data.rtp = Math.round(bitrateKbps / 100) * 100;
+        const rtpSafetyFactor = this.hls.config.cmcd?.rtpSafetyFactor ?? 2;
+        data.rtp = Math.round((bitrateKbps * rtpSafetyFactor) / 100) * 100;
 
         const tb = this.getTopBandwidth(frag) / 1000;
         if (Number.isFinite(tb)) {

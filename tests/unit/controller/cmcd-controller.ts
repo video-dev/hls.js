@@ -419,8 +419,17 @@ describe('CMCDController', function () {
         cmcdController.hls.levelController.levels[0].bitrate = 500_000;
 
         const { url } = applyFragmentData(details.fragments[0]);
-        // 500_000 bps = 500 kbps; Math.round(500/100)*100 = 500
-        expectField(url, `rtp%3D500`);
+        // 500 kbps * default rtpSafetyFactor(2) = 1000; Math.round(1000/100)*100 = 1000
+        expectField(url, `rtp%3D1000`);
+      });
+
+      it('respects a custom rtpSafetyFactor config value', function () {
+        const details = setupEach({ version: 2, rtpSafetyFactor: 3 });
+        cmcdController.hls.levelController.levels[0].bitrate = 500_000;
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        // 500 kbps * 3 = 1500; Math.round(1500/100)*100 = 1500
+        expectField(url, `rtp%3D1500`);
       });
 
       it('includes lb (lowest bitrate in kbps as a list) in v2 fragment data', function () {

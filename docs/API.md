@@ -1903,6 +1903,7 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
   - `interval`: For the time-interval event, the reporting cadence in seconds. Defaults to `30`.
   - `batchSize`: The number of events to batch before sending a report. Defaults to `1` (send each event immediately).
   - `includeKeys`: An optional array of CMCD keys that overrides the top-level `includeKeys` for this target.
+- `rtpSafetyFactor`: A multiplier applied to the segment bitrate to compute the `rtp` (requested throughput) field. The spec defines `rtp` as the maximum throughput the client considers sufficient, which should include headroom above the encoded bitrate to absorb network jitter and avoid rebuffering. Defaults to `2` (2× the segment bitrate). Only used when `version: 2`.
 - `loader`: An optional async function `(request) => Promise<{ status }>` used to deliver CMCD v2 event reports. When omitted, event reports are delivered via `fetch` (honoring the Hls `xhrSetup`/`fetchSetup` hooks). Only used when `eventTargets` is configured.
 
 ### `enableInterstitialPlayback`
