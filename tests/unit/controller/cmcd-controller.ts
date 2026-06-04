@@ -402,6 +402,129 @@ describe('CMCDController', function () {
       });
     });
 
+    describe('v2 fragment keys (rtp, dl, lb, pb)', function () {
+      const stubBufferInfo = (
+        hls: any,
+        prop: 'mainForwardBufferInfo' | 'audioForwardBufferInfo',
+        info: { len: number } | null,
+      ) => {
+        Object.defineProperty(hls, prop, {
+          configurable: true,
+          get: () => info,
+        });
+      };
+
+      it('includes rtp (rounded max throughput in kbps) in v2 fragment data', function () {
+        const details = setupEach({ version: 2 });
+        cmcdController.hls.levelController.levels[0].bitrate = 500_000;
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        // 500_000 bps = 500 kbps; Math.round(500/100)*100 = 500
+        expectField(url, `rtp%3D500`);
+      });
+
+      it('includes lb (lowest bitrate in kbps as a list) in v2 fragment data', function () {
+        const details = setupEach({ version: 2 });
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        // Single level at 1000 bps = 1 kbps → lb=(1)
+        expectField(url, `lb%3D%281%29`);
+      });
+
+      it('includes dl (deadline in ms, rounded to 100ms) when buffer info is known', function () {
+        const details = setupEach({ version: 2 });
+        const hls = cmcdController.hls;
+        (cmcdController as any).media = {
+          removeEventListener: () => {},
+        } as unknown as HTMLMediaElement;
+        stubBufferInfo(hls, 'mainForwardBufferInfo', { len: 10.0 });
+        stubBufferInfo(hls, 'audioForwardBufferInfo', null);
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        // 10s buffer = 10000ms; Math.round(10000/100)*100 = 10000
+        expectField(url, `dl%3D10000`);
+      });
+
+      it('omits dl when no media is attached', function () {
+        const details = setupEach({ version: 2 });
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        expect(url).to.not.include('dl%3D');
+      });
+
+      it('includes pb (playhead bitrate in kbps as a list) after LEVEL_SWITCHED', function () {
+        const details = setupEach({ version: 2 });
+        cmcdController.hls.trigger(Events.LEVEL_SWITCHED, { level: 0 });
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        // playheadLevel.bitrate = 1000 bps = 1 kbps → pb=(1)
+        expectField(url, `pb%3D%281%29`);
+      });
+
+      it('omits pb before any LEVEL_SWITCHED event', function () {
+        const details = setupEach({ version: 2 });
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        expect(url).to.not.include('pb%3D');
+      });
+    });
+
+    describe('recordFragmentResponse (ttfb/ttlb)', function () {
+      it('calls reporter.recordResponseReceived with correct resource timing', function () {
+        setupEach({ version: 2 });
+        const reporter = (cmcdController as any).reporter;
+        const calls: any[][] = [];
+        reporter.recordResponseReceived = (...args: any[]) => {
+          calls.push(args);
+        };
+
+        cmcdController.recordFragmentResponse(
+          'https://example.com/seg.m4s',
+          { code: 200 },
+          { loading: { start: 1000, first: 1050, end: 1200 }, total: 50000 },
+        );
+
+        expect(calls).to.have.lengthOf(1);
+        const { request, status, resourceTiming } = calls[0][0];
+        expect(request.url).to.equal('https://example.com/seg.m4s');
+        expect(status).to.equal(200);
+        expect(resourceTiming.startTime).to.equal(1000);
+        expect(resourceTiming.responseStart).to.equal(1050);
+        expect(resourceTiming.duration).to.equal(200);
+        expect(resourceTiming.encodedBodySize).to.equal(50000);
+      });
+
+      it('does nothing when stats.loading.first is 0', function () {
+        setupEach({ version: 2 });
+        const reporter = (cmcdController as any).reporter;
+        let called = false;
+        reporter.recordResponseReceived = () => {
+          called = true;
+        };
+
+        cmcdController.recordFragmentResponse(
+          'https://example.com/seg.m4s',
+          { code: 200 },
+          { loading: { start: 1000, first: 0, end: 1200 }, total: 50000 },
+        );
+
+        expect(called).to.equal(false);
+      });
+
+      it('does nothing when reporter is not initialized', function () {
+        setupEach({ version: 2 });
+        (cmcdController as any).reporter = undefined;
+
+        expect(() => {
+          cmcdController.recordFragmentResponse(
+            'https://example.com/seg.m4s',
+            { code: 200 },
+            { loading: { start: 1000, first: 1050, end: 1200 }, total: 50000 },
+          );
+        }).to.not.throw();
+      });
+    });
+
     describe('v2 event reporting', function () {
       it('creates reporter without eventTargets (no event reporting)', function () {
         setupEach({ version: 2 });
