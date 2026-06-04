@@ -10,7 +10,7 @@ const CHUNK_SIZE = 16; // 16 bytes, 128 bits
 
 export default class Decrypter {
   private logEnabled: boolean = true;
-  private plainTextLength: number = 0;
+  private decryptRange?: { start: number; end: number };
   private subtle: SubtleCrypto | null = null;
   private softwareDecrypter: AESDecryptor | null = null;
   private key: ArrayBuffer | null = null;
@@ -60,8 +60,8 @@ export default class Decrypter {
     }
     const data = new Uint8Array(currentResult);
     this.reset();
-    if (this.plainTextLength) {
-      return data.slice(0, this.plainTextLength);
+    if (this.decryptRange) {
+      return data.slice(this.decryptRange.start, this.decryptRange.end);
     }
     return removePadding(data);
   }
@@ -80,10 +80,10 @@ export default class Decrypter {
     key: ArrayBuffer,
     iv: ArrayBuffer,
     aesMode: DecrypterAesMode,
-    plainTextLength: number = 0,
+    decryptRange?: { start: number; end: number },
   ): Promise<ArrayBuffer> {
-    this.plainTextLength = plainTextLength;
-    if (this.useSoftware || plainTextLength) {
+    this.decryptRange = decryptRange;
+    if (this.useSoftware || decryptRange) {
       return new Promise((resolve, reject) => {
         const dataView = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
         this.softwareDecrypt(dataView, key, iv, aesMode);
