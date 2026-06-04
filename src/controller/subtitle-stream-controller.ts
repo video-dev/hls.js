@@ -156,7 +156,13 @@ export class SubtitleStreamController
       buffered.push(timeRange);
     }
     if (!part || end >= frag.end) {
-      this.fragmentTracker.fragBuffered(frag as MediaFragment);
+      const entity = this.fragmentTracker.fragBuffered(frag as MediaFragment);
+      if (part && entity) {
+        entity.range.subs = {
+          time: [{ startPTS: frag.start, endPTS: end }],
+          partial: true,
+        };
+      }
       if (isMediaFragment(frag) && !this.fragContextChanged(frag)) {
         this.fragPrevious = frag;
       }

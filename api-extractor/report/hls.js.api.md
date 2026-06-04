@@ -1998,6 +1998,26 @@ export class Fragment extends BaseSegment {
     urlId: number;
 }
 
+// Warning: (ae-missing-release-tag) "FragmentEntity" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface FragmentEntity {
+    // (undocumented)
+    appendedPTS: number | null;
+    // (undocumented)
+    body: MediaFragment;
+    // (undocumented)
+    buffered: boolean;
+    // (undocumented)
+    loaded: FragLoadedData | null;
+    // Warning: (ae-forgotten-export) The symbol "FragmentBufferedRange" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    range: {
+        [key in SourceBufferName | 'subs']: FragmentBufferedRange;
+    };
+}
+
 // Warning: (ae-missing-release-tag) "FragmentLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2076,7 +2096,7 @@ export class FragmentTracker implements ComponentAPI {
     detectEvictedFragments(elementaryStream: SourceBufferName, timeRange: TimeRanges, playlistType: PlaylistLevelType, appendedFrag?: MediaFragment | null, appendedPart?: Part | null, removeAppending?: boolean): void;
     detectPartialFragments(data: FragBufferedData): void;
     // (undocumented)
-    fragBuffered(frag: MediaFragment, force?: true): void;
+    fragBuffered(frag: MediaFragment, force?: true): FragmentEntity | undefined;
     getAppendedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | Part | null;
     getBackBufferEvictionEnd(beforePosition: number, levelType: PlaylistLevelType, bytesNeeded: number): number;
     getBufferedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | null;

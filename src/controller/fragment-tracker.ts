@@ -318,7 +318,10 @@ export class FragmentTracker implements ComponentAPI {
     );
   }
 
-  public fragBuffered(frag: MediaFragment, force?: true) {
+  public fragBuffered(
+    frag: MediaFragment,
+    force?: true,
+  ): FragmentEntity | undefined {
     const fragKey = getFragmentKey(frag);
     let fragmentEntity = this.fragments[fragKey];
     if (!fragmentEntity && force) {
@@ -337,6 +340,7 @@ export class FragmentTracker implements ComponentAPI {
       fragmentEntity.loaded = null;
       this.bufferedEnd(fragmentEntity, frag);
     }
+    return fragmentEntity;
   }
 
   private getBufferedTimes(
@@ -646,7 +650,8 @@ function isPartial(fragmentEntity: FragmentEntity): boolean {
       fragmentEntity.body.gap ||
       fragmentEntity.range.video?.partial ||
       fragmentEntity.range.audio?.partial ||
-      fragmentEntity.range.audiovideo?.partial
+      fragmentEntity.range.audiovideo?.partial ||
+      fragmentEntity.range.subs?.partial
     )
   );
 }
