@@ -501,6 +501,10 @@ describe('CMCDController', function () {
 
       it('includes tpb (top playable bitrate in kbps as a list) in v2 fragment data', function () {
         const details = setupEach({ version: 2 });
+        const hls = cmcdController.hls as any;
+        // Precondition: mock exposes a valid top level so the tpb if-guard is entered.
+        // _autoLevelCapping defaults to -1 and levels has 1 entry → maxAutoLevel = 0.
+        expect(hls.maxAutoLevel).to.equal(0);
         // Single level at 1000 bps = 1 kbps → tpb=(1)
         const { url } = applyFragmentData(details.fragments[0]);
         expectField(url, `tpb%3D%281%29`);
