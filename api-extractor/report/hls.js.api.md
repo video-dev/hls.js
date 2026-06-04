@@ -974,10 +974,18 @@ export class CaptionScreen {
 //
 // @public (undocumented)
 export class ChunkMetadata {
-    constructor(level: number, sn: number, id: number, size?: number, part?: number, partial?: boolean, duration?: number, iframe?: boolean);
+    constructor(level: number, sn: number, id: number, size?: number, part?: number, partial?: boolean, duration?: number, iframe?: boolean, decryptRange?: {
+        start: number;
+        end: number;
+    });
     // (undocumented)
     readonly buffering: {
         [key in SourceBufferName]: HlsChunkPerformanceTiming;
+    };
+    // (undocumented)
+    readonly decryptRange?: {
+        start: number;
+        end: number;
     };
     // (undocumented)
     readonly duration: number;
@@ -1191,7 +1199,10 @@ export interface DecryptData {
 export class Decrypter {
     constructor(config: HlsConfig, useSoftware?: boolean);
     // (undocumented)
-    decrypt(data: Uint8Array | ArrayBuffer, key: ArrayBuffer, iv: ArrayBuffer, aesMode: DecrypterAesMode, plainTextLength?: number): Promise<ArrayBuffer>;
+    decrypt(data: Uint8Array | ArrayBuffer, key: ArrayBuffer, iv: ArrayBuffer, aesMode: DecrypterAesMode, decryptRange?: {
+        start: number;
+        end: number;
+    }): Promise<ArrayBuffer>;
     // (undocumented)
     destroy(): void;
     // (undocumented)

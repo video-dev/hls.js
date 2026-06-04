@@ -7,6 +7,7 @@ import { ErrorDetails } from '../errors';
 import { Events } from '../events';
 import { changeTypeSupported } from '../is-supported';
 import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
+import { getAESAdjustments } from '../loader/fragment-loader';
 import { LoaderContextType, PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -808,16 +809,21 @@ export default class StreamController
       ));
     const partIndex = part ? part.index : -1;
     const partial = partIndex !== -1;
-    const byteRange = frag.byteRange;
+    const { decryptRange, byteRange } = getAESAdjustments(
+      frag,
+      part,
+      this.iframesOnly,
+    );
     const chunkMeta = new ChunkMetadata(
       frag.level,
       frag.sn,
       frag.stats.chunkCount,
-      byteRange.length ? byteRange[1] - byteRange[0] : payload.byteLength,
+      byteRange ? byteRange.end - byteRange.start : payload.byteLength,
       partIndex,
       partial,
       frag.duration,
       this.iframesOnly,
+      decryptRange,
     );
     const initPTS = this.initPTS[frag.cc];
 

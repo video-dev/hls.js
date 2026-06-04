@@ -124,12 +124,6 @@ export default class Transmuxer {
     if (keyData && isFullSegmentEncryption(keyData.method)) {
       const decrypter = this.getDecrypter();
       const aesMode = getAesModeFromFullSegmentMethod(keyData.method);
-
-      const plainTextLength =
-        chunkMeta.size !== data.byteLength && chunkMeta.iframe
-          ? chunkMeta.size
-          : 0;
-
       this.asyncResult = true;
       this.decryptionPromise = decrypter
         .decrypt(
@@ -137,7 +131,7 @@ export default class Transmuxer {
           keyData.key.buffer,
           keyData.iv.buffer,
           aesMode,
-          plainTextLength,
+          chunkMeta.decryptRange,
         )
         .then((decryptedData) => {
           // Calling push here is important; if flush() is called while this is still resolving, this ensures that

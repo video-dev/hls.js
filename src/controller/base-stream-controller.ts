@@ -16,7 +16,7 @@ import {
   mediaFragmentsAreEqual,
   type Part,
 } from '../loader/fragment';
-import FragmentLoader from '../loader/fragment-loader';
+import FragmentLoader, { getAESAdjustments } from '../loader/fragment-loader';
 import TaskLoop from '../task-loop';
 import { PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
@@ -736,17 +736,18 @@ export default class BaseStreamController
         ) {
           const startTime = self.performance.now();
           // decrypt init segment data
-          const byteRange = frag.byteRange;
-          const plainTextLength = byteRange.length
-            ? byteRange[1] - byteRange[0]
-            : 0;
+          const { decryptRange } = getAESAdjustments(
+            frag,
+            null,
+            this.iframesOnly,
+          );
           return this.decrypter
             .decrypt(
               new Uint8Array(payload),
               decryptData.key.buffer,
               decryptData.iv.buffer,
               getAesModeFromFullSegmentMethod(decryptData.method),
-              plainTextLength,
+              decryptRange,
             )
             .catch((err) => {
               hls.trigger(Events.ERROR, {
@@ -906,6 +907,7 @@ export default class BaseStreamController
       !partsLoaded ||
       partsLoaded.length === 0 ||
       partsLoaded.some((fragLoaded) => !fragLoaded);
+    const { decryptRange } = getAESAdjustments(frag, part);
     const chunkMeta = new ChunkMetadata(
       frag.level,
       frag.sn,
@@ -915,6 +917,7 @@ export default class BaseStreamController
       !complete,
       frag.duration,
       this.iframesOnly,
+      decryptRange,
     );
     this.log(
       `load complete ${frag.type} sn: ${frag.sn}${
