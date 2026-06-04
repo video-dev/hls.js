@@ -105,8 +105,8 @@ export default class CMCDController implements ComponentAPI {
       sta: this.playerState,
     });
 
-    this.reporter.start();
     cmcd.reporterCallback?.(this.reporter);
+    this.reporter.start();
   }
 
   private registerListeners() {
