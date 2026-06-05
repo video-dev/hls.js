@@ -542,9 +542,20 @@ describe('CMCDController', function () {
       });
 
       it('records error events on fatal errors', function () {
+        const requests: any[] = [];
+        const captureLoader = (req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        };
         setupEach({
           version: 2,
-          eventTargets: [{ url: 'https://analytics.example.com/cmcd' }],
+          loader: captureLoader as any,
+          eventTargets: [
+            {
+              url: 'https://analytics.example.com/cmcd',
+              events: [CmcdEventType.ERROR],
+            },
+          ],
         });
 
         // Trigger fatal error via hls event
@@ -557,6 +568,15 @@ describe('CMCDController', function () {
 
         // Player state should transition to FATAL_ERROR
         expect((cmcdController as any).playerState).to.equal('f');
+
+        const eventRequests = requests.filter(
+          (r) => r.url === 'https://analytics.example.com/cmcd',
+        );
+        const body = String(eventRequests[0].body || '');
+        expect(eventRequests.length).to.be.greaterThan(0);
+        expect(body).to.include('e=e');
+        expect(body).to.include('ec=("fragLoadError")');
+        expect(body).to.include('ts=');
 
         cmcdController.destroy();
       });
@@ -1157,6 +1177,205 @@ describe('CMCDController', function () {
         );
         expect(result).to.equal(2000000);
       });
+    });
+  });
+
+  describe('reporterCallback', function () {
+    it('reporterCallback is called with a CmcdCustomReporter facade on MANIFEST_LOADING', function () {
+      const reporters: any[] = [];
+      setupEach({ version: 2, reporterCallback: (r) => reporters.push(r) });
+      expect(reporters).to.have.lengthOf(1);
+      expect(reporters[0])
+        .to.have.property('updateCustomData')
+        .that.is.a('function');
+      expect(reporters[0])
+        .to.have.property('recordCustomEvent')
+        .that.is.a('function');
+    });
+
+    it('reporterCallback is called again on each MANIFEST_LOADING (new facade per session)', function () {
+      const reporters: any[] = [];
+      setupEach({ version: 2, reporterCallback: (r) => reporters.push(r) });
+      cmcdController.hls.trigger(Events.MANIFEST_LOADING, { url });
+      expect(reporters).to.have.lengthOf(2);
+      expect(reporters[0]).to.not.equal(reporters[1]);
+    });
+
+    it('reporterCallback is not called before MANIFEST_LOADING', function () {
+      const reporters: any[] = [];
+      const hls = new Hls({
+        cmcd: { version: 2, reporterCallback: (r) => reporters.push(r) },
+      }) as any;
+      hls.networkControllers.forEach((c) => c.destroy());
+      hls.networkControllers.length = 0;
+      hls.coreComponents.forEach((c) => c.destroy());
+      hls.coreComponents.length = 0;
+      new CMCDController(hls);
+      expect(reporters).to.have.lengthOf(0);
+    });
+
+    it('recordCustomEvent fires CUSTOM_EVENT to the event target', function () {
+      const requests: any[] = [];
+      let reporter: any;
+      setupEach({
+        version: 2,
+        loader: ((req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
+        eventTargets: [
+          {
+            url: 'https://analytics.example.com/cmcd',
+            events: [CmcdEventType.CUSTOM_EVENT],
+          },
+        ],
+        reporterCallback: (r) => {
+          reporter = r;
+        },
+      });
+
+      reporter.recordCustomEvent('test-event');
+
+      const eventRequests = requests.filter(
+        (r) => r.url === 'https://analytics.example.com/cmcd',
+      );
+      expect(eventRequests.length).to.be.greaterThan(0);
+      expect(String(eventRequests[0].body || '')).to.include(
+        'cen="test-event"',
+      );
+    });
+
+    it('updateCustomData() in reporterCallback seeds custom keys in request reports', function () {
+      setupEach({
+        includeKeys: ['sid', 'sf', 'com.acme-label'] as any,
+        reporterCallback: (r) => {
+          r.updateCustomData({ 'com.acme-label': 'hello' } as any);
+        },
+      });
+      expectField(applyPlaylistData().url, 'com.acme-label%3D%22hello%22');
+    });
+
+    it('updateCustomData() at runtime takes effect on subsequent request reports', function () {
+      let reporter: any;
+      setupEach({
+        includeKeys: ['sid', 'sf', 'com.acme-label'] as any,
+        reporterCallback: (r) => {
+          reporter = r;
+          r.updateCustomData({ 'com.acme-label': 'cold' } as any);
+        },
+      });
+      expectField(applyPlaylistData().url, 'com.acme-label%3D%22cold%22');
+
+      reporter.updateCustomData({ 'com.acme-label': 'warm' } as any);
+      expectField(applyPlaylistData().url, 'com.acme-label%3D%22warm%22');
+    });
+
+    it('updateCustomData() in reporterCallback seeds custom keys in event reports', function () {
+      const requests: any[] = [];
+      let reporter: any;
+      setupEach({
+        version: 2,
+        loader: ((req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
+        eventTargets: [
+          {
+            url: 'https://analytics.example.com/cmcd',
+            events: [CmcdEventType.CUSTOM_EVENT],
+            includeKeys: ['cen', 'com.myco-chapter'] as any,
+          },
+        ],
+        reporterCallback: (r) => {
+          reporter = r;
+          r.updateCustomData({ 'com.myco-chapter': 'intro' } as any);
+        },
+      });
+
+      reporter.recordCustomEvent('test');
+
+      const body = String(
+        requests.filter(
+          (r) => r.url === 'https://analytics.example.com/cmcd',
+        )[0]?.body || '',
+      );
+      expect(body).to.include('com.myco-chapter="intro"');
+    });
+
+    it('updateCustomData() at runtime takes effect on subsequent event reports', function () {
+      const requests: any[] = [];
+      let reporter: any;
+      setupEach({
+        version: 2,
+        loader: ((req: any) => {
+          requests.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
+        eventTargets: [
+          {
+            url: 'https://analytics.example.com/cmcd',
+            events: [CmcdEventType.CUSTOM_EVENT],
+            includeKeys: ['cen', 'com.myco-chapter'] as any,
+          },
+        ],
+        reporterCallback: (r) => {
+          reporter = r;
+          r.updateCustomData({ 'com.myco-chapter': 'intro' } as any);
+        },
+      });
+
+      reporter.recordCustomEvent('test');
+      const firstBody = String(
+        requests.filter(
+          (r) => r.url === 'https://analytics.example.com/cmcd',
+        )[0]?.body || '',
+      );
+      expect(firstBody).to.include('com.myco-chapter="intro"');
+
+      reporter.updateCustomData({ 'com.myco-chapter': 'chapter-2' } as any);
+      requests.length = 0;
+
+      reporter.recordCustomEvent('test');
+      const secondBody = String(
+        requests.filter(
+          (r) => r.url === 'https://analytics.example.com/cmcd',
+        )[0]?.body || '',
+      );
+      expect(secondBody).to.include('com.myco-chapter="chapter-2"');
+    });
+
+    it('recordCustomEvent routes by events array: fires to matching target, not to non-matching target', function () {
+      const reqA: any[] = [];
+      const reqB: any[] = [];
+      let reporter: any;
+      setupEach({
+        version: 2,
+        loader: ((req: any) => {
+          if (req.url === 'https://custom-events.example.com') reqA.push(req);
+          if (req.url === 'https://bitrate-events.example.com') reqB.push(req);
+          return Promise.resolve({ status: 204 });
+        }) as any,
+        eventTargets: [
+          {
+            url: 'https://custom-events.example.com',
+            events: [CmcdEventType.CUSTOM_EVENT],
+            includeKeys: ['cen'] as any,
+          },
+          {
+            url: 'https://bitrate-events.example.com',
+            events: [CmcdEventType.BITRATE_CHANGE],
+          },
+        ],
+        reporterCallback: (r) => {
+          reporter = r;
+        },
+      });
+
+      reporter.recordCustomEvent('chapter-change');
+
+      expect(reqA.length).to.be.greaterThan(0);
+      expect(String(reqA[0].body || '')).to.include('cen="chapter-change"');
+      expect(reqB.length).to.equal(0);
     });
   });
 });
