@@ -1904,7 +1904,11 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
   - `batchSize`: The number of events to batch before sending a report. Defaults to `1` (send each event immediately).
   - `includeKeys`: An optional array of CMCD keys that overrides the top-level `includeKeys` for this target.
 - `loader`: An optional async function `(request) => Promise<{ status }>` used to deliver CMCD v2 event reports. When omitted, event reports are delivered via `fetch` (honoring the Hls `xhrSetup`/`fetchSetup` hooks). Only used when `eventTargets` is configured.
-- `reporterCallback`: An optional `(reporter: CmcdReporter) => void` callback. Called after each new `CmcdReporter` is created (once per `MANIFEST_LOADING`). Use it to seed custom CMCD keys or store the reporter reference for firing custom events. Always use the most recently received reporter, since a new source load yields a new reporter instance.
+- `reporterCallback`: An optional `(reporter: CmcdCustomControllerAPI) => void` callback. Called once per `MANIFEST_LOADING`, before the reporter starts. Use it to seed custom CMCD keys or store the reference for firing custom events at runtime. Always use the most recently received reference, since a new source load yields a new instance.
+
+  The `CmcdCustomControllerAPI` facade exposes two methods:
+  - `updateCustomData(data)` — sets persistent custom key/value pairs included in every subsequent report. Keys must follow the CMCD custom key convention (`<reverse-dns>-<label>`, e.g. `com.myco-chapter`). Invalid keys are silently dropped.
+  - `recordCustomEvent(eventName, data?)` — fires a one-off CMCD custom event (`ce`) with the given name and optional custom data. Requires `cmcd.eventTargets` to be configured with a target whose `events` array includes `'ce'`.
 
 ```js
 let cmcdReporter = null;
@@ -1933,8 +1937,8 @@ const hls = new Hls({
     ],
     reporterCallback: (reporter) => {
       cmcdReporter = reporter;
-      // Seed persistent custom key state via the reporter directly
-      reporter.update({
+      // Seed persistent custom key state (included in all subsequent reports)
+      reporter.updateCustomData({
         'com.myco-adBreak': 'false',
         'com.myco-chapter': 'intro',
       });
@@ -1943,17 +1947,15 @@ const hls = new Hls({
 });
 
 // Update custom key state at runtime (takes effect on the next report)
-cmcdReporter?.update({
+cmcdReporter?.updateCustomData({
   'com.myco-adBreak': adManager.isInAdBreak() ? 'true' : 'false',
 });
 
-// Fire a one-off CMCD event report via the reporter
-cmcdReporter?.recordEvent('ce', { cen: 'chapter-change' });
+// Fire a one-off CMCD custom event
+cmcdReporter?.recordCustomEvent('chapter-change');
 ```
 
 `reporterCallback` is called on every `MANIFEST_LOADING` (new source = new reporter). Always store the latest reference.
-
-`recordEvent` requires `cmcd.eventTargets` to be configured with a target whose `events` array contains the desired event type, and is only meaningful with `version: 2`.
 
 **Validating custom keys:** If you want to verify your keys follow the CMCD custom key convention before use, you can use `validateCmcdKeys` from `@svta/cml-cmcd`:
 

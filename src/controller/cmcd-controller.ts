@@ -11,6 +11,7 @@ import {
   CmcdReporter,
   CmcdStreamingFormat,
   CmcdStreamType,
+  isCmcdCustomKey,
   toCmcdValue,
 } from '@svta/cml-cmcd';
 import { Events } from '../events';
@@ -19,6 +20,7 @@ import {
   removeEventListener,
 } from '../utils/event-listener-helper';
 import type {
+  CmcdCustomControllerAPI,
   FragmentLoaderConstructor,
   HlsConfig,
   PlaylistLoaderConstructor,
@@ -45,6 +47,10 @@ import type {
   PlaylistLoaderContext,
 } from '../types/loader';
 import type { Cmcd } from '@svta/cml-cmcd';
+
+function validateCmcdCustomData(data: Record<string, unknown>): boolean {
+  return Object.keys(data).every(isCmcdCustomKey);
+}
 
 /**
  * Controller to deal with Common Media Client Data (CMCD)
@@ -105,8 +111,27 @@ export default class CMCDController implements ComponentAPI {
       sta: this.playerState,
     });
 
+    if (cmcd.reporterCallback) {
+      const reporter = this.reporter;
+      const customKeyAndEventReport: CmcdCustomControllerAPI = {
+        updateCustomData: (data) => {
+          if (validateCmcdCustomData(data)) {
+            reporter.update(data);
+          }
+        },
+        recordCustomEvent: (eventName, data = {}) => {
+          if (validateCmcdCustomData(data)) {
+            reporter.recordEvent(CmcdEventType.CUSTOM_EVENT, {
+              cen: eventName,
+              ...data,
+            });
+          }
+        },
+      };
+      cmcd.reporterCallback(customKeyAndEventReport);
+    }
+
     this.reporter.start();
-    cmcd.reporterCallback?.(this.reporter);
   }
 
   private registerListeners() {

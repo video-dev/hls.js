@@ -46,9 +46,10 @@ import type { CuesInterface } from './utils/cues';
 import type { ILogger } from './utils/logger';
 import type { KeySystems, MediaKeyFunc } from './utils/mediakeys-helper';
 import type {
+  CmcdCustomKey,
+  CmcdCustomValue,
   CmcdEventReportConfig,
   CmcdKey,
-  CmcdReporter,
   CmcdVersion,
 } from '@svta/cml-cmcd';
 
@@ -87,6 +88,13 @@ export type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean;
 };
 
+type CmcdCustomData = { [index: CmcdCustomKey]: CmcdCustomValue | undefined };
+
+export interface CmcdCustomControllerAPI {
+  updateCustomData(data: CmcdCustomData): void;
+  recordCustomEvent(eventName: string, data?: CmcdCustomData): void;
+}
+
 export type CMCDControllerConfig = {
   sessionId?: string;
   contentId?: string;
@@ -102,7 +110,7 @@ export type CMCDControllerConfig = {
     headers?: Record<string, string>;
     body?: BodyInit;
   }) => Promise<{ status: number }>;
-  reporterCallback?: (reporter: CmcdReporter) => void;
+  reporterCallback?: (reporter: CmcdCustomControllerAPI) => void;
 };
 
 export type DRMSystemOptions = {
