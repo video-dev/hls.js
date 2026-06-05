@@ -90,7 +90,7 @@ export type CapLevelControllerConfig = {
 
 type CmcdCustomData = { [index: CmcdCustomKey]: CmcdCustomValue | undefined };
 
-export interface CmcdCustomControllerAPI {
+export interface CmcdCustomReporter {
   updateCustomData(data: CmcdCustomData): void;
   recordCustomEvent(eventName: string, data?: CmcdCustomData): void;
 }
@@ -110,7 +110,7 @@ export type CMCDControllerConfig = {
     headers?: Record<string, string>;
     body?: BodyInit;
   }) => Promise<{ status: number }>;
-  reporterCallback?: (reporter: CmcdCustomControllerAPI) => void;
+  reporterCallback?: (reporter: CmcdCustomReporter) => void;
 };
 
 export type DRMSystemOptions = {

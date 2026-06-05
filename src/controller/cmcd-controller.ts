@@ -20,7 +20,7 @@ import {
   removeEventListener,
 } from '../utils/event-listener-helper';
 import type {
-  CmcdCustomControllerAPI,
+  CmcdCustomReporter,
   FragmentLoaderConstructor,
   HlsConfig,
   PlaylistLoaderConstructor,
@@ -113,7 +113,7 @@ export default class CMCDController implements ComponentAPI {
 
     if (cmcd.reporterCallback) {
       const reporter = this.reporter;
-      const customKeyAndEventReport: CmcdCustomControllerAPI = {
+      const customKeyAndEventReport: CmcdCustomReporter = {
         updateCustomData: (data) => {
           if (validateCmcdCustomData(data)) {
             reporter.update(data);

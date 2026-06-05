@@ -1181,7 +1181,7 @@ describe('CMCDController', function () {
   });
 
   describe('reporterCallback', function () {
-    it('reporterCallback is called with a CmcdCustomControllerAPI facade on MANIFEST_LOADING', function () {
+    it('reporterCallback is called with a CmcdCustomReporter facade on MANIFEST_LOADING', function () {
       const reporters: any[] = [];
       setupEach({ version: 2, reporterCallback: (r) => reporters.push(r) });
       expect(reporters).to.have.lengthOf(1);

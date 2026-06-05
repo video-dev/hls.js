@@ -1010,20 +1010,6 @@ export class CMCDController implements ComponentAPI {
     destroy(): void;
 }
 
-// Warning: (ae-missing-release-tag) "CmcdCustomControllerAPI" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
-//
-// @public (undocumented)
-export interface CmcdCustomControllerAPI {
-    // (undocumented)
-    recordCustomEvent(eventName: string, data?: {
-        [index: CmcdCustomKey]: CmcdCustomValue | undefined;
-    }): void;
-    // (undocumented)
-    updateCustomData(data: {
-        [index: CmcdCustomKey]: CmcdCustomValue | undefined;
-    }): void;
-}
-
 // Warning: (ae-missing-release-tag) "CMCDControllerConfig" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1044,7 +1030,7 @@ export type CMCDControllerConfig = {
     }) => Promise<{
         status: number;
     }>;
-    reporterCallback?: (reporter: CmcdCustomControllerAPI) => void;
+    reporterCallback?: (reporter: CmcdCustomReporter) => void;
 };
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -5391,6 +5377,10 @@ export class XhrLoader extends BaseLoader {
     // (undocumented)
     protected resetInternalLoader(): void;
 }
+
+// Warnings were encountered during analysis:
+//
+// src/config.ts:113:3 - (ae-forgotten-export) The symbol "CmcdCustomReporter" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 
