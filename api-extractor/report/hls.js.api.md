@@ -4,6 +4,8 @@
 
 ```ts
 
+import type { CmcdCustomKey } from '@svta/cml-cmcd';
+import type { CmcdCustomValue } from '@svta/cml-cmcd';
 import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
 import type { CmcdKey } from '@svta/cml-cmcd';
 import type { CmcdVersion } from '@svta/cml-cmcd';
@@ -1036,7 +1038,25 @@ export type CMCDControllerConfig = {
     }) => Promise<{
         status: number;
     }>;
+    reporterCallback?: (reporter: CmcdCustomReporter) => void;
 };
+
+// Warning: (ae-missing-release-tag) "CmcdCustomData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type CmcdCustomData = {
+    [index: CmcdCustomKey]: CmcdCustomValue | undefined;
+};
+
+// Warning: (ae-missing-release-tag) "CmcdCustomReporter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface CmcdCustomReporter {
+    // (undocumented)
+    recordCustomEvent(eventName: string, data?: CmcdCustomData): void;
+    // (undocumented)
+    updateCustomData(data: CmcdCustomData): void;
+}
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
