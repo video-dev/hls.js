@@ -1906,7 +1906,7 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
 - `loader`: An optional async function `(request) => Promise<{ status }>` used to deliver CMCD v2 event reports. When omitted, event reports are delivered via `fetch` (honoring the Hls `xhrSetup`/`fetchSetup` hooks). Only used when `eventTargets` is configured.
 - `reporterCallback`: An optional `(reporter: CmcdCustomControllerAPI) => void` callback. Called once per `MANIFEST_LOADING`, before the reporter starts. Use it to seed custom CMCD keys or store the reference for firing custom events at runtime. Always use the most recently received reference, since a new source load yields a new instance.
 
-  The `CmcdCustomControllerAPI` facade exposes two methods:
+  The `CmcdCustomReporter` exposes two methods:
   - `updateCustomData(data)` — sets persistent custom key/value pairs included in every subsequent report. Keys must follow the CMCD custom key convention (`<reverse-dns>-<label>`, e.g. `com.myco-chapter`). Invalid keys are silently dropped.
   - `recordCustomEvent(eventName, data?)` — fires a one-off CMCD custom event (`ce`) with the given name and optional custom data. Requires `cmcd.eventTargets` to be configured with a target whose `events` array includes `'ce'`.
 
