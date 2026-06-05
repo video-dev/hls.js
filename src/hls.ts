@@ -1415,6 +1415,7 @@ export type {
   BufferControllerConfig,
   CapLevelControllerConfig,
   CMCDControllerConfig,
+  CmcdCustomReporter,
   EMEControllerConfig,
   DRMSystemConfiguration,
   DRMSystemsConfiguration,
