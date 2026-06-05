@@ -1455,6 +1455,7 @@ export type {
   FragmentState,
   FragmentTracker,
 } from './controller/fragment-tracker';
+export type { FragmentEntity } from './types/fragment-tracker';
 export type {
   PathwayClone,
   SteeringManifest,

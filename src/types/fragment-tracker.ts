@@ -9,7 +9,7 @@ export interface FragmentEntity {
   appendedPTS: number | null;
   loaded: FragLoadedData | null;
   buffered: boolean;
-  range: { [key in SourceBufferName]: FragmentBufferedRange };
+  range: { [key in SourceBufferName | 'subs']: FragmentBufferedRange };
 }
 
 export interface FragmentTimeRange {
