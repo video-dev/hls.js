@@ -68,45 +68,35 @@ describe('passthrough-remuxer', function () {
     );
   }
 
-  it('remuxes a single-keyframe iframe segment whose native sample duration is far short of EXTINF', function () {
-    // Dedicated i-frame segment: one keyframe carrying ~one-frame duration
-    // (3003/90000 ≈ 0.033s) while the playlist advertises a multi-second EXTINF.
-    // The duration ratio is well above the 1.5 heuristic, so the remuxer rewrites
-    // the moof, stretching the keyframe to the EXTINF window.
+  it('remuxes moof+mdat to stretch a single-keyframe iframe to the EXTINF duration', function () {
     const extinfDuration = 4;
     const fragmentData = mp4Fragment([sample(3003, 4, 0)]);
 
     const result = remuxIFrameFragment(fragmentData, extinfDuration);
 
     expect(result.video, 'video track').to.exist;
-    // data2 is only populated when the iframe moof is rewritten (remuxed)
-    expect(result.video!.data2, 'remuxed mdat').to.exist;
+    // regenerated: a fresh moof in data1 and a separate mdat in data2
+    expect(result.video!.data1, 'data1').to.not.equal(fragmentData);
+    expect(result.video!.data2, 'data2').to.exist;
     expect(result.video!.endDTS - result.video!.startDTS).to.equal(
       extinfDuration,
     );
-    // track.nb stays an informative parse count, not forced to 1
     expect(result.video!.nb).to.equal(1);
   });
 
   it('does not remux a byte-range iframe segment whose sample duration already matches EXTINF', function () {
-    // Byte-range addressed iframe (single sample spanning the whole playback
-    // segment): sample duration == EXTINF, so the ratio is ~1 and the heuristic
-    // keeps the more-accurate sample-based timing instead of remuxing.
+    // Byte-range addressed iframe (single sample spanning the whole playback segment)
     const extinfDuration = 4;
     const fragmentData = mp4Fragment([sample(extinfDuration * 90000, 4, 0)]);
 
     const result = remuxIFrameFragment(fragmentData, extinfDuration);
 
     expect(result.video, 'video track').to.exist;
-    // not remuxed: the original fragment is passed through and no mdat is split out
-    expect(result.video!.data2, 'remuxed mdat').to.not.exist;
+    expect(result.video!.data2, 'data2').to.not.exist;
     expect(result.video!.data1).to.equal(fragmentData);
   });
 
-  it('remuxes a multi-sample in-range iframe fragment, preserving every sample', function () {
-    // Several samples fully present in the mdat (e.g. a byte-range that spans a
-    // multi-sample moof). The sampleCount > 1 branch must still emit all samples,
-    // back-loading the EXTINF remainder onto the last sample's duration.
+  it('regenerates moof+mdat for a multi-sample iframe fragment, keeping every sample', function () {
     const extinfDuration = 4;
     const fragmentData = mp4Fragment([
       sample(3003, 4, 0),
@@ -117,7 +107,8 @@ describe('passthrough-remuxer', function () {
     const result = remuxIFrameFragment(fragmentData, extinfDuration);
 
     expect(result.video, 'video track').to.exist;
-    expect(result.video!.data2, 'remuxed mdat').to.exist;
+    expect(result.video!.data1, 'data1').to.not.equal(fragmentData);
+    expect(result.video!.data2, 'data2').to.exist;
     // all three parsed samples are reported, not collapsed to one
     expect(result.video!.nb).to.equal(3);
     expect(result.video!.endDTS - result.video!.startDTS).to.equal(
