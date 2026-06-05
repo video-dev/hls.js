@@ -419,8 +419,8 @@ describe('CMCDController', function () {
         cmcdController.hls.levelController.levels[0].bitrate = 500_000;
 
         const { url } = applyFragmentData(details.fragments[0]);
-        // 500 kbps * default rtpSafetyFactor(2) = 1000; Math.round(1000/100)*100 = 1000
-        expectField(url, `rtp%3D1000`);
+        // 500 kbps * default rtpSafetyFactor(5) = 2500; Math.round(2500/100)*100 = 2500
+        expectField(url, `rtp%3D2500`);
       });
 
       it('respects a custom rtpSafetyFactor config value', function () {
