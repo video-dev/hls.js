@@ -88,7 +88,9 @@ export type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean;
 };
 
-type CmcdCustomData = { [index: CmcdCustomKey]: CmcdCustomValue | undefined };
+export type CmcdCustomData = {
+  [index: CmcdCustomKey]: CmcdCustomValue | undefined;
+};
 
 export interface CmcdCustomReporter {
   updateCustomData(data: CmcdCustomData): void;

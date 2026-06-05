@@ -1033,14 +1033,19 @@ export type CMCDControllerConfig = {
     reporterCallback?: (reporter: CmcdCustomReporter) => void;
 };
 
+// Warning: (ae-missing-release-tag) "CmcdCustomData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type CmcdCustomData = {
+    [index: CmcdCustomKey]: CmcdCustomValue | undefined;
+};
+
 // Warning: (ae-missing-release-tag) "CmcdCustomReporter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
 export interface CmcdCustomReporter {
     // (undocumented)
     recordCustomEvent(eventName: string, data?: CmcdCustomData): void;
-    // Warning: (ae-forgotten-export) The symbol "CmcdCustomData" needs to be exported by the entry point hls.d.ts
-    //
     // (undocumented)
     updateCustomData(data: CmcdCustomData): void;
 }
