@@ -369,11 +369,31 @@ function createLoaderContext(
     rangeStart: 0,
     rangeEnd: 0,
   };
+  const aesAdjustments = getAESAdjustments(frag, part, isIFrame);
+  if (aesAdjustments.resetIV) {
+    loaderContext.resetIV = true;
+  }
+  if (aesAdjustments.byteRange) {
+    loaderContext.rangeStart = aesAdjustments.byteRange.start;
+    loaderContext.rangeEnd = aesAdjustments.byteRange.end;
+  }
+  return loaderContext;
+}
+
+export function getAESAdjustments(
+  frag: Fragment,
+  part: Part | null = null,
+  isIFrame?: boolean,
+) {
+  const result: {
+    resetIV?: boolean;
+    byteRange?: { start: number; end: number };
+    decryptRange?: { start: number; end: number };
+  } = {};
+  const segment: BaseSegment = part || frag;
   const start = segment.byteRangeStartOffset as number;
   const end = segment.byteRangeEndOffset as number;
   if (Number.isFinite(start) && Number.isFinite(end)) {
-    let byteRangeStart = start;
-    let byteRangeEnd = end;
     if (
       (frag.sn === 'initSegment' || isIFrame) &&
       isMethodFullSegmentAesCbc(frag.decryptdata?.method)
@@ -381,19 +401,28 @@ function createLoaderContext(
       // MAP segment encrypted with method 'AES-128' or 'AES-256' (cbc), when served with HTTP Range,
       // has the unencrypted size specified in the range.
       // Ref: https://tools.ietf.org/html/draft-pantos-hls-rfc8216bis-08#section-6.3.6
-      const fragmentLen = end - start;
-      if (fragmentLen % 16) {
-        byteRangeEnd = end + (16 - (fragmentLen % 16));
+      let byteRangeStart = Math.floor(start / 16) * 16; // round down to 16-byte boundary;
+      const byteRangeEnd = Math.ceil(end / 16) * 16; // round up to 16-byte boundary
+      result.decryptRange = {
+        start: start - byteRangeStart,
+        end: end - byteRangeStart,
+      };
+      if (byteRangeStart >= 16) {
+        result.resetIV = true;
+        byteRangeStart = byteRangeStart - 16;
       }
-      if (start !== 0) {
-        loaderContext.resetIV = true;
-        byteRangeStart = start - 16;
-      }
+      result.byteRange = {
+        start: byteRangeStart,
+        end: byteRangeEnd,
+      };
+    } else {
+      result.byteRange = {
+        start,
+        end,
+      };
     }
-    loaderContext.rangeStart = byteRangeStart;
-    loaderContext.rangeEnd = byteRangeEnd;
   }
-  return loaderContext;
+  return result;
 }
 
 function createGapLoadError(frag: Fragment, part?: Part): LoadError {

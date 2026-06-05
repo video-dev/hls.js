@@ -16,6 +16,7 @@ export class ChunkMetadata {
   public readonly partial: boolean;
   public readonly iframe: boolean;
   public readonly duration: number;
+  public readonly decryptRange?: { start: number; end: number };
   public readonly transmuxing: HlsChunkPerformanceTiming =
     getNewPerformanceTiming();
   public readonly buffering: {
@@ -35,6 +36,7 @@ export class ChunkMetadata {
     partial = false,
     duration?: number,
     iframe?: boolean,
+    decryptRange?: { start: number; end: number },
   ) {
     this.level = level;
     this.sn = sn;
@@ -43,6 +45,7 @@ export class ChunkMetadata {
     this.part = part;
     this.partial = partial;
     this.duration = duration || 0;
+    this.decryptRange = decryptRange;
     this.iframe = iframe || false;
   }
 }

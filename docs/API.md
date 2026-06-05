@@ -1905,6 +1905,73 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
   - `includeKeys`: An optional array of CMCD keys that overrides the top-level `includeKeys` for this target.
 - `rtpSafetyFactor`: A multiplier applied to the segment bitrate to compute the `rtp` (requested throughput) field. The spec defines `rtp` as the maximum throughput the client considers sufficient, which should include headroom above the encoded bitrate to absorb network jitter and avoid rebuffering. Defaults to `5` (5× the segment bitrate). Only used when `version: 2`.
 - `loader`: An optional async function `(request) => Promise<{ status }>` used to deliver CMCD v2 event reports. When omitted, event reports are delivered via `fetch` (honoring the Hls `xhrSetup`/`fetchSetup` hooks). Only used when `eventTargets` is configured.
+- `reporterCallback`: An optional `(reporter: CmcdCustomReporter) => void` callback. Called once per `MANIFEST_LOADING`, before the reporter starts. Use it to seed custom CMCD keys or store the reference for firing custom events at runtime. Always use the most recently received reference, since a new source load yields a new instance.
+
+  The `CmcdCustomReporter` exposes two methods:
+  - `updateCustomData(data)` — sets persistent custom key/value pairs included in every subsequent report. Keys must follow the CMCD custom key convention (`<reverse-dns>-<label>`, e.g. `com.myco-chapter`). Invalid keys are silently dropped.
+  - `recordCustomEvent(eventName, data?)` — fires a one-off CMCD custom event (`ce`) with the given name and optional custom data. Requires `cmcd.eventTargets` to be configured with a target whose `events` array includes `'ce'`.
+
+```js
+let cmcdReporter = null;
+
+const hls = new Hls({
+  cmcd: {
+    version: 2,
+    contentId: 'my-content',
+    includeKeys: [
+      'sid',
+      'cid',
+      'sf',
+      'st',
+      'su',
+      'bl',
+      'br',
+      'mtp',
+      'com.myco-adBreak',
+    ],
+    eventTargets: [
+      {
+        url: 'https://analytics.example.com/cmcd',
+        events: ['ce'],
+        includeKeys: ['sid', 'cid', 'cen', 'com.myco-chapter'],
+      },
+    ],
+    reporterCallback: (reporter) => {
+      cmcdReporter = reporter;
+      // Seed persistent custom key state (included in all subsequent reports)
+      reporter.updateCustomData({
+        'com.myco-adBreak': 'false',
+        'com.myco-chapter': 'intro',
+      });
+    },
+  },
+});
+
+// Update custom key state at runtime (takes effect on the next report)
+cmcdReporter?.updateCustomData({
+  'com.myco-adBreak': adManager.isInAdBreak() ? 'true' : 'false',
+});
+
+// Fire a one-off CMCD custom event
+cmcdReporter?.recordCustomEvent('chapter-change');
+```
+
+`reporterCallback` is called on every `MANIFEST_LOADING` (new source = new reporter). Always store the latest reference.
+
+**Validating custom keys:** If you want to verify your keys follow the CMCD custom key convention before use, you can use `validateCmcdKeys` from `@svta/cml-cmcd`:
+
+```js
+import { validateCmcdKeys } from '@svta/cml-cmcd';
+
+const myKeys = { 'com.myco-chapter': 'intro' };
+const { valid, issues } = validateCmcdKeys(myKeys);
+if (!valid) {
+  console.warn(
+    'Invalid CMCD keys:',
+    issues.map((i) => i.message),
+  );
+}
+```
 
 ### `enableInterstitialPlayback`
 

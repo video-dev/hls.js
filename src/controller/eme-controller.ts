@@ -308,6 +308,7 @@ class EMEController extends Logger implements ComponentAPI {
         );
       });
       return keySystemAccess.then((mediaKeySystemAccess) => {
+        this.throwIfDestroyed();
         this.log(
           `Access for key-system "${mediaKeySystemAccess.keySystem}" obtained`,
         );
@@ -427,20 +428,17 @@ class EMEController extends Logger implements ComponentAPI {
   private selectKeySystem(
     keySystemsToAttempt: KeySystems[],
   ): Promise<KeySystemFormats> {
-    return new Promise((resolve, reject) => {
-      this.getKeySystemSelectionPromise(keySystemsToAttempt)
-        .then(({ keySystem }) => {
-          const keySystemFormat = keySystemDomainToKeySystemFormat(keySystem);
-          if (keySystemFormat) {
-            resolve(keySystemFormat);
-          } else {
-            reject(
-              new Error(`Unable to find format for key-system "${keySystem}"`),
-            );
-          }
-        })
-        .catch(reject);
-    });
+    return this.getKeySystemSelectionPromise(keySystemsToAttempt).then(
+      ({ keySystem }) => {
+        const keySystemFormat = keySystemDomainToKeySystemFormat(keySystem);
+        if (!keySystemFormat) {
+          throw new Error(
+            `Unable to find format for key-system "${keySystem}"`,
+          );
+        }
+        return keySystemFormat;
+      },
+    );
   }
 
   public selectKeySystemFormat(frag: Fragment): Promise<KeySystemFormats> {
@@ -1778,6 +1776,9 @@ class EMEController extends Logger implements ComponentAPI {
         `Selecting key-system from session-keys ${keyFormats.join(', ')}`,
       );
       this.keyFormatPromise = this.getKeyFormatPromise(keyFormats);
+      // Until onMediaEncrypted is called this promise is unhandled, add a catch to prevent unhandled rejection
+      // when result is not used.
+      this.keyFormatPromise.catch(() => {});
     }
   }
 

@@ -46,6 +46,8 @@ import type { CuesInterface } from './utils/cues';
 import type { ILogger } from './utils/logger';
 import type { KeySystems, MediaKeyFunc } from './utils/mediakeys-helper';
 import type {
+  CmcdCustomKey,
+  CmcdCustomValue,
   CmcdEventReportConfig,
   CmcdKey,
   CmcdVersion,
@@ -86,6 +88,15 @@ export type CapLevelControllerConfig = {
   capLevelToPlayerSize: boolean;
 };
 
+export type CmcdCustomData = {
+  [index: CmcdCustomKey]: CmcdCustomValue | undefined;
+};
+
+export interface CmcdCustomReporter {
+  updateCustomData(data: CmcdCustomData): void;
+  recordCustomEvent(eventName: string, data?: CmcdCustomData): void;
+}
+
 export type CMCDControllerConfig = {
   sessionId?: string;
   contentId?: string;
@@ -102,6 +113,7 @@ export type CMCDControllerConfig = {
     headers?: Record<string, string>;
     body?: BodyInit;
   }) => Promise<{ status: number }>;
+  reporterCallback?: (reporter: CmcdCustomReporter) => void;
 };
 
 export type DRMSystemOptions = {
@@ -140,7 +152,7 @@ export type EMEControllerConfig = {
     url: string,
     keyContext: MediaKeySessionContext & { decryptdata: LevelKey },
     licenseChallenge: Uint8Array,
-  ) => void | Uint8Array | Promise<Uint8Array | void>;
+  ) => void | Uint8Array | string | Promise<Uint8Array | string | void>;
   licenseResponseCallback?: (
     this: Hls,
     xhr: XMLHttpRequest,

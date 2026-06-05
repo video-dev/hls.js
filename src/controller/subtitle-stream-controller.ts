@@ -2,7 +2,12 @@ import BaseStreamController, { State } from './base-stream-controller';
 import { FragmentState } from './fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { isMediaFragment, type MediaFragment } from '../loader/fragment';
+import {
+  type Fragment,
+  isMediaFragment,
+  type MediaFragment,
+  type Part,
+} from '../loader/fragment';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
@@ -151,7 +156,13 @@ export class SubtitleStreamController
       buffered.push(timeRange);
     }
     if (!part || end >= frag.end) {
-      this.fragmentTracker.fragBuffered(frag as MediaFragment);
+      const entity = this.fragmentTracker.fragBuffered(frag as MediaFragment);
+      if (part && entity) {
+        entity.range.subs = {
+          time: [{ startPTS: frag.start, endPTS: end }],
+          partial: true,
+        };
+      }
       if (isMediaFragment(frag) && !this.fragContextChanged(frag)) {
         this.fragPrevious = frag;
       }
@@ -333,58 +344,76 @@ export class SubtitleStreamController
     this.tickImmediate();
   }
 
-  _handleFragmentLoadComplete(fragLoadedData: FragLoadedData) {
-    const { frag, payload } = fragLoadedData;
-    const decryptData = frag.decryptdata;
-    const hls = this.hls;
-
-    if (this.fragContextChanged(frag)) {
+  // Decrypt encrypted VTT parts as they arrive. The base class leaves progress a
+  // no-op for subtitles, so without this override encrypted parts would only decrypt
+  // at full-segment boundaries, losing the low-latency path.
+  protected _handleFragmentLoadProgress(data: FragLoadedData) {
+    const { frag, part, payload } = data;
+    if (!part || !payload?.byteLength || !this.shouldDecrypt(frag)) {
       return;
     }
-    // check to see if the payload needs to be decrypted
+    this.decryptPayload(payload, frag, part);
+  }
+
+  _handleFragmentLoadComplete(fragLoadedData: FragLoadedData) {
+    const { frag, payload } = fragLoadedData;
     if (
-      payload &&
-      payload.byteLength > 0 &&
-      decryptData?.key &&
-      decryptData.iv &&
-      isFullSegmentEncryption(decryptData.method)
+      this.fragContextChanged(frag) ||
+      !payload?.byteLength ||
+      !this.shouldDecrypt(frag)
     ) {
-      const startTime = performance.now();
-      // decrypt the subtitles
-      this.decrypter
-        .decrypt(
-          new Uint8Array(payload),
-          decryptData.key.buffer,
-          decryptData.iv.buffer,
-          getAesModeFromFullSegmentMethod(decryptData.method),
-        )
-        .catch((err) => {
-          hls.trigger(Events.ERROR, {
-            type: ErrorTypes.MEDIA_ERROR,
-            details: ErrorDetails.FRAG_DECRYPT_ERROR,
-            fatal: false,
-            error: err,
-            reason: err.message,
-            frag,
-          });
-          throw err;
-        })
-        .then((decryptedData) => {
-          const endTime = performance.now();
-          hls.trigger(Events.FRAG_DECRYPTED, {
-            frag,
-            payload: decryptedData,
-            stats: {
-              tstart: startTime,
-              tdecrypt: endTime,
-            },
-          });
-        })
-        .catch((err) => {
+      return;
+    }
+    this.decryptPayload(payload, frag, null);
+  }
+
+  private shouldDecrypt(frag: Fragment): boolean {
+    const d = frag.decryptdata;
+    return !!(d?.key && d.iv && isFullSegmentEncryption(d.method));
+  }
+
+  // Decrypt a full segment (part === null) or a single LL-HLS part and emit
+  // FRAG_DECRYPTED. On full-segment failure, reset to IDLE so the next tick retries.
+  private decryptPayload(
+    payload: ArrayBuffer,
+    frag: Fragment,
+    part: Part | null,
+  ): void {
+    const decryptData = frag.decryptdata!;
+    const tstart = performance.now();
+    this.decrypter
+      .decrypt(
+        new Uint8Array(payload),
+        decryptData.key!.buffer,
+        decryptData.iv!.buffer,
+        getAesModeFromFullSegmentMethod(decryptData.method),
+      )
+      .then((plaintext) => {
+        if (this.fragContextChanged(frag)) {
+          return;
+        }
+        this.hls.trigger(Events.FRAG_DECRYPTED, {
+          frag,
+          part,
+          payload: plaintext,
+          stats: { tstart, tdecrypt: performance.now() },
+        });
+      })
+      .catch((err) => {
+        this.hls.trigger(Events.ERROR, {
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.FRAG_DECRYPT_ERROR,
+          fatal: false,
+          error: err,
+          reason: err.message,
+          frag,
+          part,
+        });
+        if (!part) {
           this.warn(`${err.name}: ${err.message}`);
           this.state = State.IDLE;
-        });
-    }
+        }
+      });
   }
 
   doTick() {

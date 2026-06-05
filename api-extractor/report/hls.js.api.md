@@ -4,6 +4,8 @@
 
 ```ts
 
+import type { CmcdCustomKey } from '@svta/cml-cmcd';
+import type { CmcdCustomValue } from '@svta/cml-cmcd';
 import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
 import type { CmcdKey } from '@svta/cml-cmcd';
 import type { CmcdVersion } from '@svta/cml-cmcd';
@@ -974,10 +976,18 @@ export class CaptionScreen {
 //
 // @public (undocumented)
 export class ChunkMetadata {
-    constructor(level: number, sn: number, id: number, size?: number, part?: number, partial?: boolean, duration?: number, iframe?: boolean);
+    constructor(level: number, sn: number, id: number, size?: number, part?: number, partial?: boolean, duration?: number, iframe?: boolean, decryptRange?: {
+        start: number;
+        end: number;
+    });
     // (undocumented)
     readonly buffering: {
         [key in SourceBufferName]: HlsChunkPerformanceTiming;
+    };
+    // (undocumented)
+    readonly decryptRange?: {
+        start: number;
+        end: number;
     };
     // (undocumented)
     readonly duration: number;
@@ -1029,7 +1039,25 @@ export type CMCDControllerConfig = {
     }) => Promise<{
         status: number;
     }>;
+    reporterCallback?: (reporter: CmcdCustomReporter) => void;
 };
+
+// Warning: (ae-missing-release-tag) "CmcdCustomData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export type CmcdCustomData = {
+    [index: CmcdCustomKey]: CmcdCustomValue | undefined;
+};
+
+// Warning: (ae-missing-release-tag) "CmcdCustomReporter" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface CmcdCustomReporter {
+    // (undocumented)
+    recordCustomEvent(eventName: string, data?: CmcdCustomData): void;
+    // (undocumented)
+    updateCustomData(data: CmcdCustomData): void;
+}
 
 // Warning: (ae-missing-release-tag) "CodecsParsed" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1192,7 +1220,10 @@ export interface DecryptData {
 export class Decrypter {
     constructor(config: HlsConfig, useSoftware?: boolean);
     // (undocumented)
-    decrypt(data: Uint8Array | ArrayBuffer, key: ArrayBuffer, iv: ArrayBuffer, aesMode: DecrypterAesMode, plainTextLength?: number): Promise<ArrayBuffer>;
+    decrypt(data: Uint8Array | ArrayBuffer, key: ArrayBuffer, iv: ArrayBuffer, aesMode: DecrypterAesMode, decryptRange?: {
+        start: number;
+        end: number;
+    }): Promise<ArrayBuffer>;
     // (undocumented)
     destroy(): void;
     // (undocumented)
@@ -1302,7 +1333,7 @@ export class EMEController extends Logger implements ComponentAPI {
 export type EMEControllerConfig = {
     licenseXhrSetup?: (this: Hls, xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext & {
         decryptdata: LevelKey;
-    }, licenseChallenge: Uint8Array) => void | Uint8Array | Promise<Uint8Array | void>;
+    }, licenseChallenge: Uint8Array) => void | Uint8Array | string | Promise<Uint8Array | string | void>;
     licenseResponseCallback?: (this: Hls, xhr: XMLHttpRequest, url: string, keyContext: MediaKeySessionContext & {
         decryptdata: LevelKey;
     }) => ArrayBuffer;
@@ -1841,6 +1872,8 @@ export interface FragDecryptedData {
     // (undocumented)
     frag: Fragment;
     // (undocumented)
+    part: Part | null;
+    // (undocumented)
     payload: ArrayBuffer;
     // (undocumented)
     stats: {
@@ -1997,6 +2030,26 @@ export class Fragment extends BaseSegment {
     urlId: number;
 }
 
+// Warning: (ae-missing-release-tag) "FragmentEntity" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface FragmentEntity {
+    // (undocumented)
+    appendedPTS: number | null;
+    // (undocumented)
+    body: MediaFragment;
+    // (undocumented)
+    buffered: boolean;
+    // (undocumented)
+    loaded: FragLoadedData | null;
+    // Warning: (ae-forgotten-export) The symbol "FragmentBufferedRange" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    range: {
+        [key in SourceBufferName | 'subs']: FragmentBufferedRange;
+    };
+}
+
 // Warning: (ae-missing-release-tag) "FragmentLoader" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -2075,7 +2128,7 @@ export class FragmentTracker implements ComponentAPI {
     detectEvictedFragments(elementaryStream: SourceBufferName, timeRange: TimeRanges, playlistType: PlaylistLevelType, appendedFrag?: MediaFragment | null, appendedPart?: Part | null, removeAppending?: boolean): void;
     detectPartialFragments(data: FragBufferedData): void;
     // (undocumented)
-    fragBuffered(frag: MediaFragment, force?: true): void;
+    fragBuffered(frag: MediaFragment, force?: true): FragmentEntity | undefined;
     getAppendedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | Part | null;
     getBackBufferEvictionEnd(beforePosition: number, levelType: PlaylistLevelType, bytesNeeded: number): number;
     getBufferedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | null;
@@ -5017,6 +5070,8 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
     doTick(): void;
     // (undocumented)
     _handleFragmentLoadComplete(fragLoadedData: FragLoadedData): void;
+    // (undocumented)
+    protected _handleFragmentLoadProgress(data: FragLoadedData): void;
     // (undocumented)
     protected loadFragment(frag: MediaFragment, level: Level, targetBufferTime: number): void;
     // (undocumented)
