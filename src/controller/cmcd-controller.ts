@@ -32,7 +32,7 @@ import type {
   BufferAppendedData,
   BufferFlushedData,
   ErrorData,
-  FragChangedData,
+  LevelSwitchedData,
   LevelSwitchingData,
   ManifestLoadingData,
   MediaAttachedData,
@@ -146,7 +146,7 @@ export default class CMCDController implements ComponentAPI {
     hls.on(Events.MEDIA_ENDED, this.onMediaEnded, this);
     hls.on(Events.ERROR, this.onError, this);
     hls.on(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
-    hls.on(Events.FRAG_CHANGED, this.onFragChanged, this);
+    hls.on(Events.LEVEL_SWITCHED, this.onLevelSwitched, this);
     hls.on(Events.BUFFER_APPENDED, this.onBufferInfoChange, this);
     hls.on(Events.BUFFER_FLUSHED, this.onBufferInfoChange, this);
   }
@@ -159,7 +159,7 @@ export default class CMCDController implements ComponentAPI {
     hls.off(Events.MEDIA_ENDED, this.onMediaEnded, this);
     hls.off(Events.ERROR, this.onError, this);
     hls.off(Events.LEVEL_SWITCHING, this.onLevelSwitching, this);
-    hls.off(Events.FRAG_CHANGED, this.onFragChanged, this);
+    hls.off(Events.LEVEL_SWITCHED, this.onLevelSwitched, this);
     hls.off(Events.BUFFER_APPENDED, this.onBufferInfoChange, this);
     hls.off(Events.BUFFER_FLUSHED, this.onBufferInfoChange, this);
   }
@@ -320,8 +320,11 @@ export default class CMCDController implements ComponentAPI {
     this.reporter.recordEvent(CmcdEventType.BITRATE_CHANGE, eventData);
   }
 
-  private onFragChanged(event: Events.FRAG_CHANGED, data: FragChangedData) {
-    const level = this.hls.levels[data.frag.level];
+  private onLevelSwitched(
+    _event: Events.LEVEL_SWITCHED,
+    data: LevelSwitchedData,
+  ) {
+    const level = this.hls.levels[data.level];
     if (level) {
       this.playheadLevel = level;
     }
@@ -427,17 +430,23 @@ export default class CMCDController implements ComponentAPI {
       ) {
         const bitrateKbps = level.bitrate / 1000;
         data.br = [bitrateKbps];
-        const rtpSafetyFactor = this.hls.config.cmcd?.rtpSafetyFactor ?? 5;
+        const { cmcd } = this.config;
+        const rtpSafetyFactor = cmcd?.rtpSafetyFactor ?? 5;
         data.rtp = Math.round((bitrateKbps * rtpSafetyFactor) / 100) * 100;
 
-        const tb = this.getTopBandwidth(frag) / 1000;
-        if (Number.isFinite(tb)) {
-          data.tb = [tb];
-        }
+        if (
+          ot === CmcdObjectType.MUXED ||
+          (ot == null && frag.type === 'main')
+        ) {
+          const tb = this.getTopBandwidth() / 1000;
+          if (Number.isFinite(tb)) {
+            data.tb = [tb];
+          }
 
-        const lb = this.getLowestBandwidth(frag) / 1000;
-        if (Number.isFinite(lb)) {
-          data.lb = [lb];
+          const lb = this.getLowestBandwidth() / 1000;
+          if (Number.isFinite(lb)) {
+            data.lb = [lb];
+          }
         }
 
         const bl = this.getBufferLength(frag);
@@ -569,18 +578,12 @@ export default class CMCDController implements ComponentAPI {
    * Audio renditions live in hls.audioTracks; everything else (including
    * audio-only main playlists) draws from hls.levels.
    */
-  private getTopBandwidth(fragment: Fragment | MediaFragment) {
+  private getTopBandwidth() {
     let bitrate: number = 0;
-    let levels;
     const hls = this.hls;
-
-    if (fragment.type === 'audio') {
-      levels = hls.audioTracks;
-    } else {
-      const max = hls.maxAutoLevel;
-      const len = max > -1 ? max + 1 : hls.levels.length;
-      levels = hls.levels.slice(0, len);
-    }
+    const max = hls.maxAutoLevel;
+    const len = max > -1 ? max + 1 : hls.levels.length;
+    const levels = hls.levels.slice(0, len);
 
     levels.forEach((level) => {
       if (level.bitrate > bitrate) {
@@ -591,18 +594,12 @@ export default class CMCDController implements ComponentAPI {
     return bitrate > 0 ? bitrate : NaN;
   }
 
-  private getLowestBandwidth(fragment: Fragment | MediaFragment) {
+  private getLowestBandwidth() {
     let bitrate: number = Infinity;
-    let levels;
     const hls = this.hls;
-
-    if (fragment.type === 'audio') {
-      levels = hls.audioTracks;
-    } else {
-      const max = hls.maxAutoLevel;
-      const len = max > -1 ? max + 1 : hls.levels.length;
-      levels = hls.levels.slice(0, len);
-    }
+    const max = hls.maxAutoLevel;
+    const len = max > -1 ? max + 1 : hls.levels.length;
+    const levels = hls.levels.slice(0, len);
 
     levels.forEach((level) => {
       if (level.bitrate < bitrate) {
@@ -666,7 +663,11 @@ export default class CMCDController implements ComponentAPI {
     response: LoaderResponse,
     stats: LoaderStats,
   ) => {
-    if (!this.reporter || !(stats.loading.first > 0)) {
+    const { cmcd } = this.config;
+    const hasResponseTarget = cmcd?.eventTargets?.some((t) =>
+      t.events?.includes(CmcdEventType.RESPONSE_RECEIVED),
+    );
+    if (!this.reporter || !(stats.loading.first > 0) || !hasResponseTarget) {
       return;
     }
     try {

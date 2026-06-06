@@ -432,12 +432,25 @@ describe('CMCDController', function () {
         expectField(url, `rtp%3D1500`);
       });
 
-      it('includes lb (lowest bitrate in kbps as a list) in v2 fragment data', function () {
+      it('includes lb (lowest bitrate in kbps as a list) in v2 fragment data for muxed variants', function () {
         const details = setupEach({ version: 2 });
 
         const { url } = applyFragmentData(details.fragments[0]);
         // Single level at 1000 bps = 1 kbps → lb=(1)
         expectField(url, `lb%3D%281%29`);
+      });
+
+      it('omits lb and tb when content has audio alternates (ot=VIDEO)', function () {
+        const details = setupEach({ version: 2 });
+        const hls = cmcdController.hls as any;
+        Object.defineProperty(hls, 'audioTracks', {
+          configurable: true,
+          get: () => [{ id: 0, bitrate: 0, url: '', name: 'English' }],
+        });
+
+        const { url } = applyFragmentData(details.fragments[0]);
+        expect(url).to.not.include('lb%3D');
+        expect(url).to.not.include('%2Ctb%3D');
       });
 
       it('includes dl (deadline in ms, rounded to 100ms) when buffer info is known', function () {
@@ -527,8 +540,13 @@ describe('CMCDController', function () {
     });
 
     describe('recordFragmentResponse (ttfb/ttlb)', function () {
+      const eventTarget = {
+        url: 'https://collector.example.com/cmcd',
+        events: [CmcdEventType.RESPONSE_RECEIVED],
+      };
+
       it('calls reporter.recordResponseReceived with correct resource timing', function () {
-        setupEach({ version: 2 });
+        setupEach({ version: 2, eventTargets: [eventTarget] });
         const reporter = (cmcdController as any).reporter;
         const calls: any[][] = [];
         reporter.recordResponseReceived = (...args: any[]) => {
@@ -551,8 +569,50 @@ describe('CMCDController', function () {
         expect(resourceTiming.encodedBodySize).to.equal(50000);
       });
 
-      it('does nothing when stats.loading.first is 0', function () {
+      it('does nothing when no eventTargets are configured', function () {
         setupEach({ version: 2 });
+        const reporter = (cmcdController as any).reporter;
+        let called = false;
+        reporter.recordResponseReceived = () => {
+          called = true;
+        };
+
+        cmcdController.recordFragmentResponse(
+          'https://example.com/seg.m4s',
+          { code: 200 },
+          { loading: { start: 1000, first: 1050, end: 1200 }, total: 50000 },
+        );
+
+        expect(called).to.equal(false);
+      });
+
+      it('does nothing when no eventTarget has rr in its events list', function () {
+        setupEach({
+          version: 2,
+          eventTargets: [
+            {
+              url: 'https://collector.example.com/cmcd',
+              events: [CmcdEventType.PLAY_STATE],
+            },
+          ],
+        });
+        const reporter = (cmcdController as any).reporter;
+        let called = false;
+        reporter.recordResponseReceived = () => {
+          called = true;
+        };
+
+        cmcdController.recordFragmentResponse(
+          'https://example.com/seg.m4s',
+          { code: 200 },
+          { loading: { start: 1000, first: 1050, end: 1200 }, total: 50000 },
+        );
+
+        expect(called).to.equal(false);
+      });
+
+      it('does nothing when stats.loading.first is 0', function () {
+        setupEach({ version: 2, eventTargets: [eventTarget] });
         const reporter = (cmcdController as any).reporter;
         let called = false;
         reporter.recordResponseReceived = () => {
@@ -569,7 +629,7 @@ describe('CMCDController', function () {
       });
 
       it('does nothing when reporter is not initialized', function () {
-        setupEach({ version: 2 });
+        setupEach({ version: 2, eventTargets: [eventTarget] });
         (cmcdController as any).reporter = undefined;
 
         expect(() => {
@@ -1331,11 +1391,12 @@ describe('CMCDController', function () {
         });
       };
 
-      it('uses hls.audioTracks for fragments with type=audio', function () {
+      it('uses hls.levels for fragments with type=audio (audioTracks not used)', function () {
         setupEach({});
         const hls = cmcdController.hls;
-        stubAudioTracks(hls, [{ bitrate: 96000 }, { bitrate: 128000 }]);
-        // hls.levels has the test playlist's level at bitrate 1000; should NOT be used here.
+        hls.levelController.levels = [{ bitrate: 96000 }, { bitrate: 128000 }];
+        stubAudioTracks(hls, [{ bitrate: 999999 }]);
+        // audioTracks should NOT be used; result comes from hls.levels.
         const result = (cmcdController as any).getTopBandwidth(
           fragWithType(PlaylistLevelType.AUDIO),
         );
