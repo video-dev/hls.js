@@ -610,7 +610,7 @@ export default class CMCDController implements ComponentAPI {
       }
     });
 
-    return bitrate < Infinity ? bitrate : NaN;
+    return Number.isFinite(bitrate) ? bitrate : NaN;
   }
 
   /**
