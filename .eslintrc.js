@@ -92,6 +92,11 @@ module.exports = {
               'MemberExpression[property.name="includes"][object.type="Identifier"]',
             message: arrayIncludesCompatibilityMsg,
           },
+          {
+            selector:
+              'Literal[value=/\u2014/], TemplateElement[value.cooked=/\u2014/] ',
+            message: 'Em-dash (—) is not allowed. Use a hyphen (-) instead.',
+          },
         ],
         'import/order': [
           'warn',

@@ -927,7 +927,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             if (evictEnd > 0) {
               this._quotaEvictionPending[type] = true;
               this.log(
-                `QuotaExceededError on "${type}" append sn: ${sn} — evicting back buffer to ${evictEnd.toFixed(3)}s and retrying`,
+                `QuotaExceededError on "${type}" append sn: ${sn} - evicting back buffer to ${evictEnd.toFixed(3)}s and retrying`,
               );
               const removeOp = this.getFlushOp(type, 0, evictEnd);
               const clearOp = this.getClearEvictionPendingOp(type);
@@ -936,7 +936,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
               return;
             }
             this.warn(
-              `QuotaExceededError on "${type}" sn: ${sn} — no back buffer available to evict`,
+              `QuotaExceededError on "${type}" sn: ${sn} - no back buffer available to evict`,
             );
           }
         }
