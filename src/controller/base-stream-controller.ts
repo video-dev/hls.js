@@ -2380,18 +2380,24 @@ export default class BaseStreamController
       false,
     );
     if (!parsed) {
+      // mediaNotFound: probed successfully but contained no elementary streams
+      // (e.g. an empty segment). couldNotDemux: the demuxer probe failed, so the
+      // bytes could not be demuxed at all (for example encrypted media served
+      // without an EXT-X-KEY tag). The two are mutually exclusive, and both are
+      // false when there is no transmuxer (so neither triggers a gap in that case).
       const mediaNotFound = this.transmuxer?.error === null;
+      const couldNotDemux = this.transmuxer?.error != null;
+      const hasAlternateLevels = (this.levels?.length ?? 0) > 1;
       if (
         level.fragmentError === 0 ||
         (mediaNotFound && (level.fragmentError < 2 || frag.endList)) ||
-        (this.transmuxer?.error != null && (this.levels?.length ?? 0) > 1)
+        (couldNotDemux && hasAlternateLevels)
       ) {
-        // Mark and track the empty or undecodable segment as a gap to avoid reloading.
-        // A non-null transmuxer error means the fragment could not be demuxed (for
-        // example encrypted media served without an EXT-X-KEY tag). When alternate
-        // levels are available, gap it so playback advances instead of repeatedly
-        // switching levels and reloading the same undecodable segment; with a single
-        // level the error is left to escalate (fatal after retries).
+        // Mark and track the empty or undecodable segment as a gap to avoid
+        // reloading. When the fragment could not be demuxed and alternate levels
+        // are available, gap it so playback advances instead of repeatedly switching
+        // levels and reloading the same undecodable segment; with a single level the
+        // error is left to escalate (fatal after retries).
         this.treatAsGap(frag, level);
       }
       if (mediaNotFound) {
