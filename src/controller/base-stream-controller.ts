@@ -2383,9 +2383,15 @@ export default class BaseStreamController
       const mediaNotFound = this.transmuxer?.error === null;
       if (
         level.fragmentError === 0 ||
-        (mediaNotFound && (level.fragmentError < 2 || frag.endList))
+        (mediaNotFound && (level.fragmentError < 2 || frag.endList)) ||
+        (this.transmuxer?.error != null && (this.levels?.length ?? 0) > 1)
       ) {
-        // Mark and track the odd (or last) empty segment as a gap to avoid reloading
+        // Mark and track the empty or undecodable segment as a gap to avoid reloading.
+        // A non-null transmuxer error means the fragment could not be demuxed (for
+        // example encrypted media served without an EXT-X-KEY tag). When alternate
+        // levels are available, gap it so playback advances instead of repeatedly
+        // switching levels and reloading the same undecodable segment; with a single
+        // level the error is left to escalate (fatal after retries).
         this.treatAsGap(frag, level);
       }
       if (mediaNotFound) {
