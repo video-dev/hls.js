@@ -810,15 +810,18 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const videoTrack = tracks.video;
     const videoSb = videoTrack?.buffer;
     if (videoSb && sn !== 'initSegment' && offset !== undefined) {
+      const audioSb = audioTrack?.buffer;
       const partOrFrag = part || (frag as MediaFragment);
       if (
         type === 'audio' &&
         parent !== 'main' &&
-        !(videoTrack.ending || videoTrack.ended)
+        !(videoTrack.ending || videoTrack.ended) &&
+        audioSb &&
+        BufferHelper.getBuffered(audioSb).length
       ) {
         const pStart = partOrFrag.start;
         const pTime = pStart + partOrFrag.duration * 0.05;
-        const vbuffered = videoSb.buffered;
+        const vbuffered = BufferHelper.getBuffered(videoSb);
         const vappending = this.currentOp('video');
         if (!vbuffered.length && !vappending) {
           // wait for video before appending audio

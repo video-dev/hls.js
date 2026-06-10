@@ -1031,7 +1031,8 @@ export default class InterstitialsController
   private checkStart() {
     const schedule = this.schedule;
     const interstitialEvents = schedule?.events;
-    if (!interstitialEvents || this.playbackDisabled || !this.media) {
+    const hls = this.hls;
+    if (!interstitialEvents || this.playbackDisabled || !this.media || !hls) {
       return;
     }
     // Check buffered to pre-roll
@@ -1042,7 +1043,11 @@ export default class InterstitialsController
     const timelinePos = this.timelinePos;
     const effectivePlayingItem = this.effectivePlayingItem;
     if (timelinePos === -1) {
-      const startPosition = this.hls.startPosition;
+      if (!hls.loadingEnabled) {
+        this.log(`waiting for startLoad( <startPosition> )`);
+        return;
+      }
+      const startPosition = hls.startPosition;
       this.timelinePos = startPosition;
       if (interstitialEvents.length === 0) {
         this.setSchedulePosition(0);
@@ -1056,7 +1061,7 @@ export default class InterstitialsController
           startPosition > 0 ? startPosition : 0);
         const index = schedule.findItemIndexAtTime(start);
         this.setSchedulePosition(index);
-      } else if (this.hls.liveSyncPosition === 0) {
+      } else if (hls.liveSyncPosition === 0) {
         this.setSchedulePosition(0);
       } else {
         this.log('[checkStart] waiting for live start');

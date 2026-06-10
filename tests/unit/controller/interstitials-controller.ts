@@ -167,6 +167,25 @@ describe('InterstitialsController', function () {
   }
 
   function setLoadedLevelDetails(playlist: string) {
+    const attrs = new AttrList({});
+    const level = new Level({
+      name: '',
+      url: '',
+      attrs,
+      bitrate: 0,
+    });
+
+    (hls.streamController as any).levels = [level];
+    (hls.levelController as any)._levels[0] = level;
+
+    // onManifestLoaded with autoStartLoaded kicks off loading
+    if (!hls.loadingEnabled) {
+      hls.startLoad(-1);
+    }
+
+    (hls.levelController as any).currentLevelIndex = 0;
+    (hls.levelController as any).currentLevel = level;
+
     const details = M3U8Parser.parseLevelPlaylist(
       playlist,
       'http://example.com/playlist.m3u8',
@@ -178,18 +197,9 @@ describe('InterstitialsController', function () {
     const timeSinceLoadedStub = sinon.stub(details, 'age');
     timeSinceLoadedStub.get(() => 0);
     expect(details.playlistParsingError).to.equal(null);
-    const attrs = new AttrList({});
-    const level = new Level({
-      name: '',
-      url: '',
-      attrs,
-      bitrate: 0,
-    });
+
     level.details = details;
-    (hls.streamController as any).levels = [level];
-    (hls.levelController as any)._levels[0] = level;
-    (hls.levelController as any).currentLevelIndex = 0;
-    (hls.levelController as any).currentLevel = level;
+
     hls.trigger(Events.LEVEL_LOADED, {
       details,
       levelInfo: level,
@@ -297,6 +307,7 @@ fileSequence4.ts
       const eventsTriggered = getTriggerCalls();
       expect(eventsTriggered).to.deep.equal(
         [
+          Events.LEVEL_SWITCHING,
           Events.LEVEL_LOADED,
           Events.LEVEL_UPDATED,
           Events.INTERSTITIALS_UPDATED,
@@ -1145,6 +1156,7 @@ fileSequence5.mp4`;
       const callsWithPrerollBeforeAttach = getTriggerCalls();
       expect(callsWithPrerollBeforeAttach).to.deep.equal(
         [
+          Events.LEVEL_SWITCHING,
           Events.LEVEL_LOADED,
           Events.LEVEL_UPDATED,
           Events.INTERSTITIALS_UPDATED,
@@ -1215,6 +1227,7 @@ fileSequence3.mp4
         [
           Events.MEDIA_ATTACHING,
           Events.MEDIA_ATTACHED,
+          Events.LEVEL_SWITCHING,
           Events.LEVEL_LOADED,
           Events.LEVEL_UPDATED,
           Events.INTERSTITIALS_UPDATED,
@@ -1283,6 +1296,7 @@ fileSequence3.mp4
         [
           Events.MEDIA_ATTACHING,
           Events.MEDIA_ATTACHED,
+          Events.LEVEL_SWITCHING,
           Events.LEVEL_LOADED,
           Events.LEVEL_UPDATED,
           Events.INTERSTITIALS_UPDATED,
@@ -1357,6 +1371,7 @@ fileSequence6.mp4`;
       const eventsBeforeAttach = getTriggerCalls();
       expect(eventsBeforeAttach).to.deep.equal(
         [
+          Events.LEVEL_SWITCHING,
           Events.LEVEL_LOADED,
           Events.LEVEL_UPDATED,
           Events.INTERSTITIALS_UPDATED,
@@ -1489,6 +1504,7 @@ fileSequence6.mp4`;
       const eventsAfterPlaylist = getTriggerCalls();
       expect(eventsAfterPlaylist).to.deep.equal(
         [
+          Events.LEVEL_SWITCHING,
           Events.LEVEL_LOADED,
           Events.LEVEL_UPDATED,
           Events.INTERSTITIALS_UPDATED,
@@ -1820,6 +1836,7 @@ fileSequence6.mp4
       const eventsBeforeAttach = getTriggerCalls();
       expect(eventsBeforeAttach).to.deep.equal(
         [
+          Events.LEVEL_SWITCHING,
           Events.LEVEL_LOADED,
           Events.LEVEL_UPDATED,
           Events.INTERSTITIALS_UPDATED,
@@ -2139,6 +2156,7 @@ fileSequence3.mp4`;
       const expectedEvents = [
         Events.MEDIA_ATTACHING,
         Events.MEDIA_ATTACHED,
+        Events.LEVEL_SWITCHING,
         Events.LEVEL_LOADED,
         Events.LEVEL_UPDATED,
         Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY,
@@ -2182,6 +2200,7 @@ media_w507366714_268.ts`;
       const expectedEvents = [
         Events.MEDIA_ATTACHING,
         Events.MEDIA_ATTACHED,
+        Events.LEVEL_SWITCHING,
         Events.LEVEL_LOADED,
         Events.LEVEL_UPDATED,
         Events.INTERSTITIALS_UPDATED,
