@@ -1,5 +1,6 @@
 import { State } from './base-stream-controller';
 import StreamController from './stream-controller';
+import { Events } from '../events';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
@@ -88,9 +89,8 @@ export class IFrameStreamController extends StreamController {
     if (currentOp?.[1].seekOnAppend) {
       this.seekTo(currentOp[0]);
       if (!nextOp && !this.gotNext) {
-        // repeat op to get next segment (Chrome may require two HEVC frame appends, or one with EoS, before rendering)
-        this.gotNext = true;
-        this.loadMediaAt.apply(this, currentOp);
+        // Mark end of stream to force rendering immediately
+        this.hls.trigger(Events.BUFFER_EOS, { type: 'video' });
       }
     }
     if (nextOp) {
