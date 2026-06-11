@@ -2118,13 +2118,16 @@ export default class BaseStreamController
       couldRetry &&
       !errorAction.resolved &&
       flags & ErrorActionFlags.MoveAllAlternatesMatchingHost;
-    const live = this.hls.latestLevelDetails?.live;
+    const levelDetails = this.hls.latestLevelDetails;
+    const live = levelDetails?.live;
+    // Errors on the last live fragment fall through to retry and escalate to
+    // fatal once retries are exhausted, as they do for VOD.
     if (
       !retry &&
       noAlternate &&
       isMediaFragment(frag) &&
-      !frag.endList &&
       live &&
+      frag.sn < levelDetails.endSN &&
       !isUnusableKeyError(data)
     ) {
       this.resetFragmentErrors(filterType);
@@ -2380,12 +2383,22 @@ export default class BaseStreamController
       false,
     );
     if (!parsed) {
+      // The transmuxer error is null when transmuxing completed without error
+      // but found no elementary streams (e.g. an empty segment), and non-null
+      // when an error occurred before any media samples were found.
       const mediaNotFound = this.transmuxer?.error === null;
+      const transmuxerError = this.transmuxer?.error != null;
+      const hasAlternateLevels = (this.levels?.length ?? 0) > 1;
       if (
         level.fragmentError === 0 ||
-        (mediaNotFound && (level.fragmentError < 2 || frag.endList))
+        (mediaNotFound && (level.fragmentError < 2 || frag.endList)) ||
+        (transmuxerError && hasAlternateLevels)
       ) {
-        // Mark and track the odd (or last) empty segment as a gap to avoid reloading
+        // Mark and track the empty or errored segment as a gap to avoid
+        // reloading. A fragment with a transmuxer error is only gapped when
+        // alternate levels exist, so playback advances instead of reloading
+        // the same segment after each level switch; with a single level the
+        // error is left to escalate through error-controller retries.
         this.treatAsGap(frag, level);
       }
       if (mediaNotFound) {
