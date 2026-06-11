@@ -601,7 +601,9 @@ export default class BaseStreamController
         if (this.state === State.STOPPED || this.state === State.ERROR) {
           return;
         }
-        this.warn(`Frag error: ${reason?.message || reason}`);
+        this.log(
+          `Frag error ${fragment.type} sn:${fragment.sn} cc:${fragment.cc}: ${reason?.message || reason}`,
+        );
         this.resetFragmentLoading(fragment);
       });
   }
@@ -813,7 +815,6 @@ export default class BaseStreamController
           this.fragmentLoader.abort();
           this.handleFragLoadError(reason);
         }
-        this.warn(reason);
         this.resetFragmentLoading(mediaFrag);
         throw reason;
       });
@@ -1100,6 +1101,8 @@ export default class BaseStreamController
       this.log(
         `Context changed in KEY_LOADING sn: ${frag.sn} ${frag.relurl} > ${this.fragCurrent?.relurl}`,
       );
+      initDataPromise?.catch(() => null);
+      keyLoadingPromise?.catch(() => null);
       return Promise.resolve(null);
     }
     this.log(
