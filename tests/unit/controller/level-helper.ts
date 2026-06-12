@@ -1149,6 +1149,169 @@ fileSequence18.ts`;
       });
     });
 
+    it('handles delta Playlist updates when EXT-X-SKIP is declared before EXT-X-MEDIA-SEQUENCE', function () {
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36
+#EXT-X-MEDIA-SEQUENCE:100
+#EXTINF:6,
+fileSequence100.ts
+#EXTINF:6,
+fileSequence101.ts
+#EXTINF:6,
+fileSequence102.ts
+#EXTINF:6,
+fileSequence103.ts
+#EXTINF:6,
+fileSequence104.ts
+#EXTINF:6,
+fileSequence105.ts
+#EXTINF:6,
+fileSequence106.ts
+#EXTINF:6,
+fileSequence107.ts
+#EXTINF:6,
+fileSequence108.ts
+#EXTINF:6,
+fileSequence109.ts`;
+      const deltaUpdate1 = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36
+#EXT-X-SKIP:SKIPPED-SEGMENTS=3
+#EXT-X-MEDIA-SEQUENCE:100
+#EXTINF:6,
+fileSequence103.ts
+#EXTINF:6,
+fileSequence104.ts
+#EXTINF:6,
+fileSequence105.ts
+#EXTINF:6,
+fileSequence106.ts
+#EXTINF:6,
+fileSequence107.ts
+#EXTINF:6,
+fileSequence108.ts
+#EXTINF:6,
+fileSequence109.ts
+#EXTINF:6,
+fileSequence110.ts`;
+      const deltaUpdate2 = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36
+#EXT-X-SKIP:SKIPPED-SEGMENTS=3
+#EXT-X-MEDIA-SEQUENCE:102
+#EXTINF:6,
+fileSequence105.ts
+#EXTINF:6,
+fileSequence106.ts
+#EXTINF:6,
+fileSequence107.ts
+#EXTINF:6,
+fileSequence108.ts
+#EXTINF:6,
+fileSequence109.ts
+#EXTINF:6,
+fileSequence110.ts
+#EXTINF:6,
+fileSequence111.ts
+#EXTINF:6,
+fileSequence112.ts`;
+      const details1 = parseLevelPlaylist(playlist);
+      const details2 = parseLevelPlaylist(deltaUpdate1);
+      const details3 = parseLevelPlaylist(deltaUpdate2);
+
+      expect(details2.playlistParsingError, 'details2 parsing error').to.be
+        .null;
+      expect(details2, 'details2 before merging').to.include({
+        live: true,
+        skippedSegments: 3,
+        startSN: 100,
+        endSN: 110,
+      });
+      expect(details2.fragments, 'details2 parsed fragments').to.have.lengthOf(
+        11,
+      );
+      expect(details2.fragments[0]).to.equal(null);
+      expect(details2.fragments[2]).to.equal(null);
+      expect(details2.fragments[3]?.sn).to.equal(103);
+
+      mergeDetails(details1, details2, logger);
+      expect(details2, 'details2 merged with details1').to.include({
+        deltaUpdateFailed: false,
+        startSN: 100,
+        endSN: 110,
+      });
+      expect(details2.playlistParsingError).to.be.null;
+      details2.fragments.forEach((frag, i) => {
+        expect(frag, `details2.fragments[${i}]`).to.not.equal(null);
+        expect(frag.sn, `details2.fragments[${i}].sn`).to.equal(100 + i);
+        expect(frag.relurl, `details2.fragments[${i}].relurl`).to.equal(
+          `fileSequence${100 + i}.ts`,
+        );
+      });
+
+      mergeDetails(details2, details3, logger);
+      expect(details3, 'details3 merged with details2').to.include({
+        deltaUpdateFailed: false,
+        startSN: 102,
+        endSN: 112,
+      });
+      expect(details3.playlistParsingError).to.be.null;
+      details3.fragments.forEach((frag, i) => {
+        expect(frag, `details3.fragments[${i}]`).to.not.equal(null);
+        expect(frag.sn, `details3.fragments[${i}].sn`).to.equal(102 + i);
+        expect(frag.relurl, `details3.fragments[${i}].relurl`).to.equal(
+          `fileSequence${102 + i}.ts`,
+        );
+      });
+    });
+
+    it('detects media sequence mismatch on delta updates when EXT-X-SKIP is declared before EXT-X-MEDIA-SEQUENCE', function () {
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36
+#EXT-X-MEDIA-SEQUENCE:100
+#EXTINF:6,
+fileSequence100.ts
+#EXTINF:6,
+fileSequence101.ts
+#EXTINF:6,
+fileSequence102.ts
+#EXTINF:6,
+fileSequence103.ts
+#EXTINF:6,
+fileSequence104.ts
+#EXTINF:6,
+fileSequence105.ts`;
+      // The sequence numbering of this delta update does not match the
+      // previous playlist (fileSequence104 was at 104, now at 105)
+      const deltaUpdate = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36
+#EXT-X-SKIP:SKIPPED-SEGMENTS=3
+#EXT-X-MEDIA-SEQUENCE:102
+#EXTINF:6,
+fileSequence104.ts
+#EXTINF:6,
+fileSequence105.ts
+#EXTINF:6,
+fileSequence106.ts`;
+      const details1 = parseLevelPlaylist(playlist);
+      const details2 = parseLevelPlaylist(deltaUpdate);
+
+      expect(details2.playlistParsingError, 'details2 parsing error').to.be
+        .null;
+      mergeDetails(details1, details2, logger);
+      expect(details2.playlistParsingError?.message).to.match(
+        /^media sequence mismatch 105:/,
+      );
+    });
+
     it('does not add more sliding when LevelDetails arguments are the same object', function () {
       const playlist = `#EXTM3U
 #EXT-X-TARGETDURATION:6

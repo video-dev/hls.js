@@ -3367,6 +3367,90 @@ a{$bar}.mp4
         '#EXT-X-MEDIA-SEQUENCE must appear before the first Media Segment (#EXT-X-MEDIA-SEQUENCE:2)',
       );
     });
+
+    it('does not error when EXT-X-MEDIA-SEQUENCE is declared after EXT-X-SKIP', function () {
+      const level = `#EXTM3U
+#EXT-X-VERSION:10
+#EXT-X-TARGETDURATION:3
+#EXT-X-SERVER-CONTROL:CAN-BLOCK-RELOAD=YES,PART-HOLD-BACK=3.008,CAN-SKIP-UNTIL=35.4
+#EXT-X-PART-INF:PART-TARGET=1.001
+#EXT-X-SKIP:SKIPPED-SEGMENTS=191
+#EXT-X-MEDIA-SEQUENCE:7126
+#EXT-X-MAP:URI="https://sample-host/init.m4s"
+#EXTINF:2.953,
+https://sample-host/1080p_7317.m4v`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.playlistParsingError).to.be.null;
+      expect(details.startSN).to.equal(7126);
+      expect(details.skippedSegments).to.equal(191);
+      // 191 skipped placeholders (sn 7126..7316), then the first real segment at sn 7317
+      expect(details.fragments.length).to.equal(192);
+      expect(details.fragments[0]).to.equal(null);
+      expect(details.fragments[190]).to.equal(null);
+      expect(details.fragments[191]?.sn).to.equal(7317);
+    });
+
+    it('errors when a Media Segment precedes EXT-X-SKIP and EXT-X-MEDIA-SEQUENCE', function () {
+      const level = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36
+#EXTINF:6,
+fileSequence102.ts
+#EXT-X-SKIP:SKIPPED-SEGMENTS=3
+#EXT-X-MEDIA-SEQUENCE:102
+#EXTINF:6,
+fileSequence106.ts`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-MEDIA-SEQUENCE must appear before the first Media Segment (#EXT-X-MEDIA-SEQUENCE:102)',
+      );
+    });
+
+    it('does not error when EXT-X-SKIP replaces segments after the first Media Segment', function () {
+      const level = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36
+#EXT-X-MEDIA-SEQUENCE:102
+#EXTINF:6,
+fileSequence102.ts
+#EXT-X-SKIP:SKIPPED-SEGMENTS=3
+#EXTINF:6,
+fileSequence106.ts`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.playlistParsingError).to.be.null;
+      expect(details.startSN).to.equal(102);
+      expect(details.skippedSegments).to.equal(3);
+      // sn 102, then 3 skipped placeholders (sn 103..105), then sn 106
+      expect(details.fragments.length).to.equal(5);
+      expect(details.fragments[0]?.sn).to.equal(102);
+      expect(details.fragments[1]).to.equal(null);
+      expect(details.fragments[3]).to.equal(null);
+      expect(details.fragments[4]?.sn).to.equal(106);
+    });
   });
 });
 
