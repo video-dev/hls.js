@@ -487,7 +487,7 @@ export default class M3U8Parser {
           case 'MEDIA-SEQUENCE':
             if (level.startSN !== 0) {
               assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
-            } else if (fragments.length > level.skippedSegments) {
+            } else if (prevFrag !== null) {
               // a real Media Segment (not an EXT-X-SKIP placeholder) precedes this tag
               assignMustAppearBeforeSegmentsError(level, tag, result);
             }

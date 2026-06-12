@@ -3396,6 +3396,61 @@ https://sample-host/1080p_7317.m4v`;
       expect(details.fragments[190]).to.equal(null);
       expect(details.fragments[191]?.sn).to.equal(7317);
     });
+
+    it('errors when a Media Segment precedes EXT-X-SKIP and EXT-X-MEDIA-SEQUENCE', function () {
+      const level = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36
+#EXTINF:6,
+fileSequence102.ts
+#EXT-X-SKIP:SKIPPED-SEGMENTS=3
+#EXT-X-MEDIA-SEQUENCE:102
+#EXTINF:6,
+fileSequence106.ts`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(
+        details,
+        '#EXT-X-MEDIA-SEQUENCE must appear before the first Media Segment (#EXT-X-MEDIA-SEQUENCE:102)',
+      );
+    });
+
+    it('does not error when EXT-X-SKIP replaces segments after the first Media Segment', function () {
+      const level = `#EXTM3U
+#EXT-X-TARGETDURATION:6
+#EXT-X-VERSION:9
+#EXT-X-SERVER-CONTROL:CAN-SKIP-UNTIL=36
+#EXT-X-MEDIA-SEQUENCE:102
+#EXTINF:6,
+fileSequence102.ts
+#EXT-X-SKIP:SKIPPED-SEGMENTS=3
+#EXTINF:6,
+fileSequence106.ts`;
+      const details = M3U8Parser.parseLevelPlaylist(
+        level,
+        'http://example.com/hls/index.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.playlistParsingError).to.be.null;
+      expect(details.startSN).to.equal(102);
+      expect(details.skippedSegments).to.equal(3);
+      // sn 102, then 3 skipped placeholders (sn 103..105), then sn 106
+      expect(details.fragments.length).to.equal(5);
+      expect(details.fragments[0]?.sn).to.equal(102);
+      expect(details.fragments[1]).to.equal(null);
+      expect(details.fragments[3]).to.equal(null);
+      expect(details.fragments[4]?.sn).to.equal(106);
+    });
   });
 });
 
