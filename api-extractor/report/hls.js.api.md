@@ -1163,6 +1163,8 @@ export class DateRange {
     // (undocumented)
     get id(): string;
     // (undocumented)
+    get invalidReason(): string | null;
+    // (undocumented)
     get isInterstitial(): boolean;
     // (undocumented)
     get isValid(): boolean;
