@@ -1,4 +1,5 @@
 import { createDoNothingErrorAction } from './error-controller';
+import { findFragmentByPTS } from './fragment-finders';
 import { HlsAssetPlayer } from './interstitial-player';
 import {
   type InterstitialScheduleEventItem,
@@ -16,6 +17,7 @@ import {
   eventAssetToString,
   generateAssetIdentifier,
   getNextAssetIndex,
+  getSnapToFragmentTime,
   type InterstitialAssetId,
   type InterstitialAssetItem,
   type InterstitialEvent,
@@ -1088,11 +1090,40 @@ export default class InterstitialsController
     if (!interstitial.isAssetPastPlayoutLimit(nextAssetIndex)) {
       this.bufferedToEvent(item, nextAssetIndex);
     } else if (this.schedule) {
-      const nextItem = this.schedule.items?.[this.findItemIndex(item) + 1];
+      const nextItemIndex = this.getNextItemIndex(item, true);
+      const nextItem = this.schedule.items?.[nextItemIndex];
       if (nextItem) {
         this.bufferedToItem(nextItem);
       }
     }
+  }
+
+  private livePrerollResumption(
+    interstitial: InterstitialEvent,
+  ): number | undefined {
+    if (
+      interstitial.cue.pre &&
+      this.primaryLive &&
+      !Number.isFinite(interstitial.resumeOffset) &&
+      this.hls
+    ) {
+      return this.hls.liveSyncPosition || this.hls.startPosition;
+    }
+  }
+
+  private getNextItemIndex(
+    item: InterstitialScheduleEventItem,
+    buffering?: boolean,
+  ): number {
+    if (this.schedule) {
+      const liveResumptionTime = buffering
+        ? item.end + item.event.duration
+        : this.livePrerollResumption(item.event);
+      if (liveResumptionTime !== undefined) {
+        return this.schedule.findItemIndexAtTime(liveResumptionTime);
+      }
+    }
+    return this.findItemIndex(item) + 1;
   }
 
   private advanceAfterAssetEnded(
@@ -1226,12 +1257,52 @@ export default class InterstitialsController
           scheduleIndex: index,
         });
         // Exiting an Interstitial
-        if (interstitial.cue.once) {
+        if (interstitial.cue.once && this.hls) {
           // Remove interstitial with CUE attribute value of ONCE after it has played
           this.updateSchedule();
           const updatedScheduleItems = this.schedule?.items;
           if (scheduledItem && updatedScheduleItems) {
             const updatedIndex = this.findItemIndex(scheduledItem);
+            const liveResumptionTime = this.livePrerollResumption(interstitial);
+            if (liveResumptionTime !== undefined) {
+              // Join live after preroll (PRE,ONCE) w/o resume-offset removed from schedule
+              let timelinePos = liveResumptionTime;
+              const resumptionIndex = this.getNextItemIndex(currentItem);
+              if (!this.isInterstitial(scheduleItems[resumptionIndex])) {
+                const fragments = this.primaryDetails?.fragments;
+                if (interstitial.snapOptions.in && fragments) {
+                  const resumeAnchor = findFragmentByPTS(
+                    null,
+                    fragments,
+                    liveResumptionTime,
+                  );
+                  if (resumeAnchor) {
+                    timelinePos = Math.min(
+                      Math.max(
+                        scheduleItems[resumptionIndex].start,
+                        getSnapToFragmentTime(timelinePos, resumeAnchor),
+                      ),
+                      scheduleItems[resumptionIndex].end,
+                    );
+                  }
+                }
+              }
+              this.log(timelineMessage('live join (preroll)', timelinePos));
+              this.timelinePos = timelinePos;
+              if (
+                resumptionIndex !== updatedIndex &&
+                (resumptionIndex || resumptionIndex === 0)
+              ) {
+                this.advanceSchedule(
+                  resumptionIndex,
+                  updatedScheduleItems,
+                  undefined,
+                  currentItem,
+                  playingLastItem,
+                );
+                return;
+              }
+            }
             this.advanceSchedule(
               updatedIndex,
               updatedScheduleItems,
@@ -1286,10 +1357,9 @@ export default class InterstitialsController
       const interstitial = scheduledItem.event;
       // find asset index
       if (assetListIndex === undefined) {
-        assetListIndex = schedule.findAssetIndex(
-          interstitial,
-          this.timelinePos,
-        );
+        assetListIndex = interstitial.cue.pre
+          ? 0
+          : schedule.findAssetIndex(interstitial, this.timelinePos);
         const assetIndexCandidate = getNextAssetIndex(
           interstitial,
           assetListIndex - 1,
@@ -2157,7 +2227,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
           (this.isInterstitial(playingItem) && playingItem.event.cue.pre)) &&
         this.primaryLive
       ) {
-        liveStartPosition = this.hls.startPosition;
+        liveStartPosition = playingItem
+          ? playingItem.end + playingItem.event.duration
+          : this.hls.startPosition;
         if (liveStartPosition === -1) {
           liveStartPosition = this.hls.liveSyncPosition || 0;
         }

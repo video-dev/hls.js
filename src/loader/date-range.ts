@@ -92,10 +92,10 @@ export class DateRange {
     } else {
       this._startDate = new Date(dateRangeAttr[DateRangeAttribute.START_DATE]);
     }
-    if (DateRangeAttribute.END_DATE in this.attr) {
+    if (DateRangeAttribute.END_DATE in dateRangeAttr) {
       const endDate =
         dateRangeWithSameId?.endDate ||
-        new Date(this.attr[DateRangeAttribute.END_DATE]);
+        new Date(dateRangeAttr[DateRangeAttribute.END_DATE]);
       if (Number.isFinite(endDate.getTime())) {
         this._endDate = endDate;
       }
@@ -203,5 +203,27 @@ export class DateRange {
         'X-ASSET-URI' in this.attr ||
         'X-ASSET-LIST' in this.attr)
     );
+  }
+
+  get invalidReason(): string | null {
+    if (!this.id) {
+      return 'Missing ID';
+    }
+    if (this._badValueForSameId) {
+      return `Date range ${this._badValueForSameId} mismatch`;
+    }
+    if (!Number.isFinite(this.startDate.getTime())) {
+      return 'Date range invalid start date';
+    }
+    if (
+      this.isInterstitial &&
+      !('X-ASSET-URI' in this.attr || 'X-ASSET-LIST' in this.attr)
+    ) {
+      return 'Interstitial Date range missing X-ASSET-(LIST|URI)';
+    }
+    if (!this.isValid) {
+      return 'Unknown (check DURATION(|END|NEXT), CLASS, and CUE)';
+    }
+    return null;
   }
 }
