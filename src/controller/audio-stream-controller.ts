@@ -377,11 +377,11 @@ class AudioStreamController
     if (this.switchingTrack && media) {
       const pos = loadPosition;
       // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
-      if (trackDetails.PTSKnown && pos < start) {
+      if (trackDetails.PTSKnown && pos < start && pos >= this.timelineOffset) {
         // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
         if (bufferInfo.end > start || bufferInfo.nextStart) {
           this.log(
-            'Alt audio track ahead of main track, seek to start of alt audio track',
+            `Alt audio track ahead of main track, seek to start of alt audio track ${pos} -> ${start} + 0.05`,
           );
           media.currentTime = start + 0.05;
         }

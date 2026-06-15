@@ -1526,6 +1526,7 @@ export default class InterstitialsController
   private getPrimaryResumption(
     scheduledItem: InterstitialSchedulePrimaryItem,
     index: number,
+    preloading?: boolean,
   ): number {
     const itemStart = scheduledItem.start;
     if (this.primaryLive) {
@@ -1534,9 +1535,23 @@ export default class InterstitialsController
         return this.hls.startPosition;
       } else if (
         details &&
-        (itemStart < details.fragmentStart || itemStart > details.edge)
+        (this.playingItem?.event?.cue.pre ||
+          itemStart < details.fragmentStart ||
+          itemStart > details.edge)
       ) {
-        return this.hls.liveSyncPosition || -1;
+        const liveSync = this.hls.liveSyncPosition;
+        if (liveSync !== null) {
+          if (preloading) {
+            const timeRemaining = this.getBufferingPlayer()?.remaining || 0;
+            return Math.min(
+              liveSync + timeRemaining,
+              details.edge,
+              scheduledItem.end,
+            );
+          }
+          return liveSync;
+        }
+        return -1;
       }
     }
     return itemStart;
@@ -2177,7 +2192,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
 
   private preloadPrimary(item: InterstitialSchedulePrimaryItem) {
     const index = this.findItemIndex(item);
-    const timelinePos = this.getPrimaryResumption(item, index);
+    const timelinePos = this.getPrimaryResumption(item, index, true);
     this.startLoadingPrimaryAt(timelinePos);
   }
 
@@ -2245,8 +2260,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       }
       this.log(
         `Load interstitial asset ${assetListIndex + 1}/${uri ? 1 : assetListLength} ${interstitial}${
-          hlsStartOffset
-            ? ` live-start: ${liveStartPosition} start-offset: ${hlsStartOffset}`
+          liveStartPosition
+            ? ` live-start: ${liveStartPosition} start-offset: ${hlsStartOffset} (timeline-start: ${timelineStart})`
             : ''
         }`,
       );
@@ -2384,7 +2399,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     const assetId = assetItem.identifier;
     const playerConfig: HlsAssetPlayerConfig = {
       ...userConfig,
-      maxMaxBufferLength: Math.min(180, primary.config.maxMaxBufferLength),
+      maxMaxBufferLength: Math.min(15, primary.config.maxMaxBufferLength),
       autoStartLoad: true,
       startFragPrefetch: true,
       primarySessionId: primary.sessionId,
@@ -2402,7 +2417,6 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         (selectedSubtitle as MediaPlaylist | undefined) ||
         userConfig.subtitlePreference,
     };
-    // TODO: limit maxMaxBufferLength in asset players to prevent QEE
     if (interstitial.appendInPlace) {
       interstitial.appendInPlaceStarted = true;
       if (assetItem.timelineStart) {
