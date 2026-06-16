@@ -860,8 +860,6 @@ export default class InterstitialsController
       attachMediaSourceData &&
       'mediaSource' in attachMediaSourceData &&
       attachMediaSourceData.mediaSource?.readyState !== 'closed';
-    const dataToAttach =
-      transferring && attachMediaSourceData ? attachMediaSourceData : { media };
     this.log(
       `${transferring ? 'transfering MediaSource' : 'attaching media'} to ${
         isAssetPlayer ? player : 'Primary'
@@ -871,6 +869,8 @@ export default class InterstitialsController
       player.attachMedia(media);
       return;
     }
+    const dataToAttach =
+      transferring && attachMediaSourceData ? attachMediaSourceData : { media };
     const schedule = this.schedule;
     if (schedule) {
       const isAssetAtEndOfSchedule =

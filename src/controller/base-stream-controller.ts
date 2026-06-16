@@ -1571,10 +1571,15 @@ export default class BaseStreamController
           this.startPosition != startPosition ||
           this.nextLoadPosition != startPosition
         ) {
+          const liveDetached =
+            levelDetails.live &&
+            !this.filterReplacedPrimary(frag, levelDetails);
+          const tmpStartPosition = liveDetached ? -1 : startPosition;
           this.log(
-            `Setting startPosition to ${startPosition} ${mainStart === -1 ? '' : `(from ${configValue}) `}based on ${reason}. live edge: ${liveSyncPosition} live frag start: ${fragStart} playlist start: ${playlistStart} buffer pos: ${pos}`,
+            `Setting startPosition to ${tmpStartPosition} next load ${startPosition} ${mainStart === -1 ? '' : `(from ${configValue}) `}based on ${reason}. live edge: ${liveSyncPosition} live frag start: ${fragStart} playlist start: ${playlistStart} buffer pos: ${pos}`,
           );
-          this.startPosition = this.nextLoadPosition = startPosition;
+          this.startPosition = tmpStartPosition;
+          this.nextLoadPosition = startPosition;
         }
       }
     } else if (pos <= playlistStart) {
