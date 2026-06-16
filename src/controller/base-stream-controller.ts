@@ -1017,6 +1017,9 @@ export default class BaseStreamController
             this.loadingParts = false;
             return Promise.resolve(null);
           }
+          if (!this.filterReplacedPrimary(part, level.details)) {
+            return Promise.resolve(null);
+          }
           const keyLoadingPromise = this.loadKeyFor(frag, details);
           if (this.fragContextChanged(frag)) {
             return Promise.resolve(null);
@@ -1665,16 +1668,17 @@ export default class BaseStreamController
     return false;
   }
 
-  protected filterReplacedPrimary(
-    frag: MediaFragment | null,
+  protected filterReplacedPrimary<T extends MediaFragment | Part>(
+    frag: T | null,
     details: LevelDetails | undefined,
-  ): MediaFragment | null {
+  ): T | null {
     if (!frag) {
       return frag;
     }
     if (
       interstitialsEnabled(this.config) &&
-      frag.type !== PlaylistLevelType.SUBTITLE
+      ('type' in frag ? frag : frag.fragment).type !==
+        PlaylistLevelType.SUBTITLE
     ) {
       // Do not load fragments outside the buffering schedule segment
       const interstitials = this.hls.interstitialsManager;

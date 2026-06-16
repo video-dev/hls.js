@@ -861,21 +861,28 @@ export default class InterstitialsController
       'mediaSource' in attachMediaSourceData &&
       attachMediaSourceData.mediaSource?.readyState !== 'closed';
     const dataToAttach =
-      transferring && attachMediaSourceData ? attachMediaSourceData : media;
+      transferring && attachMediaSourceData ? attachMediaSourceData : { media };
     this.log(
       `${transferring ? 'transfering MediaSource' : 'attaching media'} to ${
         isAssetPlayer ? player : 'Primary'
       } from ${logFromSource} (media.currentTime: ${media.currentTime})`,
     );
+    if (!transferring && !isAssetPlayer) {
+      player.attachMedia(media);
+      return;
+    }
     const schedule = this.schedule;
-    if (dataToAttach === attachMediaSourceData && schedule) {
+    if (schedule) {
       const isAssetAtEndOfSchedule =
         isAssetPlayer &&
         (player as HlsAssetPlayer).assetId === schedule.assetIdAtEnd;
       // Prevent asset players from marking EoS on transferred MediaSource
       dataToAttach.overrides = {
         duration: schedule.duration,
-        endOfStream: !isAssetPlayer || isAssetAtEndOfSchedule,
+        endOfStream:
+          !isAssetPlayer ||
+          isAssetAtEndOfSchedule ||
+          (player as HlsAssetPlayer).appendInPlace === false,
       };
     }
     player.attachMedia(dataToAttach);
@@ -1616,6 +1623,11 @@ export default class InterstitialsController
           timelinePos,
       ) > 0.5
     ) {
+      const details = this.primaryDetails;
+      if (details?.live && timelinePos > details.edge) {
+        this.log(`Resume primary loading when live reaches ${timelinePos}`);
+        return;
+      }
       hls.startLoad(timelinePos, skipSeekToStartPosition);
     } else if (!hls.bufferingEnabled) {
       hls.resumeBuffering();
