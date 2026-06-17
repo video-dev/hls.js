@@ -154,8 +154,10 @@ export default class GapController extends TaskLoop {
     if (!this.media?.readyState || !this.hasBuffered) {
       return;
     }
-
     const currentTime = this.getCurrentTime();
+    if (this.media.currentTime < currentTime) {
+      return;
+    }
     this.poll(currentTime, this.lastCurrentTime);
     this.lastCurrentTime = currentTime;
   }
