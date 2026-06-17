@@ -294,7 +294,7 @@ export class InterstitialEvent {
   }
 }
 
-function getSnapToFragmentTime(time: number, frag: MediaFragmentRef) {
+export function getSnapToFragmentTime(time: number, frag: MediaFragmentRef) {
   return time - frag.start < frag.duration / 2 &&
     !(
       Math.abs(time - (frag.start + frag.duration)) <

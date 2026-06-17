@@ -1,4 +1,8 @@
-import { State } from './base-stream-controller';
+import {
+  fragOverlapsQueuedInterstitial,
+  interstitialsEnabled,
+  State,
+} from './base-stream-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import TaskLoop from '../task-loop';
@@ -40,7 +44,7 @@ export default class GapController extends TaskLoop {
   private seeking: boolean = false;
   private buffered: Partial<Record<SourceBufferName, TimeRanges>> = {};
 
-  private lastCurrentTime: number = 0;
+  private lastCurrentTime: number;
   public ended: number = 0;
   public waiting: number = 0;
 
@@ -48,6 +52,7 @@ export default class GapController extends TaskLoop {
     super('gap-controller', hls.logger);
     this.hls = hls;
     this.fragmentTracker = fragmentTracker;
+    this.lastCurrentTime = this.getCurrentTime();
     this.registerListeners();
   }
 
@@ -137,12 +142,22 @@ export default class GapController extends TaskLoop {
     return Object.keys(this.buffered).length > 0;
   }
 
+  private getCurrentTime(): number {
+    const timelineOffset = this.hls?.config.timelineOffset || 0;
+    if (this.media) {
+      return Math.max(this.media.currentTime, timelineOffset);
+    }
+    return timelineOffset;
+  }
+
   public tick() {
     if (!this.media?.readyState || !this.hasBuffered) {
       return;
     }
-
-    const currentTime = this.media.currentTime;
+    const currentTime = this.getCurrentTime();
+    if (this.media.currentTime < currentTime) {
+      return;
+    }
     this.poll(currentTime, this.lastCurrentTime);
     this.lastCurrentTime = currentTime;
   }
@@ -222,8 +237,16 @@ export default class GapController extends TaskLoop {
 
     // Resolve stalls at buffer holes using the main buffer, whose ranges are the intersections of the A/V sourcebuffers
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
-    const nextStart = bufferInfo.nextStart || 0;
     const fragmentTracker = this.fragmentTracker;
+    if (fragmentTracker && this.hls) {
+      withInterstitialBoundary(
+        bufferInfo,
+        currentTime,
+        fragmentTracker,
+        this.hls,
+      );
+    }
+    const nextStart = bufferInfo.nextStart || 0;
 
     if (seeking && fragmentTracker && this.hls) {
       // Is there a fragment loading/parsing/appending before currentTime?
@@ -539,8 +562,8 @@ export default class GapController extends TaskLoop {
    * @private
    */
   private _trySkipBufferHole(appended: MediaFragment | Part | null): number {
-    const { fragmentTracker, media } = this;
-    const config = this.hls?.config;
+    const { fragmentTracker, media, hls } = this;
+    const config = hls?.config;
     if (!media || !fragmentTracker || !config) {
       return 0;
     }
@@ -548,9 +571,11 @@ export default class GapController extends TaskLoop {
     // Check if currentTime is between unbuffered regions of partial fragments
     const currentTime = media.currentTime;
     const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
+    withInterstitialBoundary(bufferInfo, currentTime, fragmentTracker, hls);
     const startTime =
       currentTime < bufferInfo.start ? bufferInfo.start : bufferInfo.nextStart;
-    if (startTime && this.hls) {
+
+    if (startTime) {
       const bufferStarved = bufferInfo.len <= config.maxBufferHole;
       const waiting =
         bufferInfo.len > 0 && bufferInfo.len < 1 && media.readyState < 3;
@@ -570,12 +595,12 @@ export default class GapController extends TaskLoop {
           }
           if (!startGap && appended) {
             // Do not seek when selected variant playlist is unloaded
-            if (!this.hls.loadLevelObj?.details) {
+            if (!hls.loadLevelObj?.details) {
               return 0;
             }
             // Do not seek when required fragments are inflight or appending
             const inFlightDependency = getInFlightDependency(
-              this.hls.inFlightFragments,
+              hls.inFlightFragments,
               startTime,
             );
             if (inFlightDependency) {
@@ -632,7 +657,7 @@ export default class GapController extends TaskLoop {
               errorData.frag = appended;
             }
           }
-          this.hls.trigger(Events.ERROR, errorData);
+          hls.trigger(Events.ERROR, errorData);
         }
         return targetTime;
       }
@@ -720,4 +745,34 @@ function appendedFragAtPosition(pos: number, fragmentTracker: FragmentTracker) {
     fragmentTracker.getAppendedFrag(pos, PlaylistLevelType.MAIN) ||
     fragmentTracker.getPartialFragment(pos)
   );
+}
+
+function withInterstitialBoundary(
+  bufferInfo: BufferInfo,
+  currentTime: number,
+  fragmentTracker: FragmentTracker,
+  hls: Hls,
+) {
+  const levelDetails = hls.latestLevelDetails;
+  const appended = appendedFragAtPosition(currentTime, fragmentTracker);
+  if (
+    interstitialsEnabled(hls.config) &&
+    !bufferInfo.nextStart &&
+    levelDetails &&
+    appended &&
+    hls.interstitialsManager
+  ) {
+    const frag = 'type' in appended ? appended : appended.fragment;
+    const nextFrag = levelDetails.fragments[1 + frag.sn - levelDetails.startSN];
+    if (
+      nextFrag?.level === frag.level &&
+      fragOverlapsQueuedInterstitial(
+        nextFrag,
+        hls.interstitialsManager.playerQueue,
+        currentTime,
+      )
+    ) {
+      bufferInfo.nextStart = nextFrag.start;
+    }
+  }
 }

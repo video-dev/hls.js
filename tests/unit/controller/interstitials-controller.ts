@@ -1,6 +1,7 @@
 import { config as chaiConfig, expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
+import { findFragmentByPTS } from '../../../src/controller/fragment-finders';
 import InterstitialsController from '../../../src/controller/interstitials-controller';
 import {
   type InterstitialScheduleItem,
@@ -2217,7 +2218,7 @@ media_w507366714_268.ts`;
     });
   });
 
-  describe('#7845 Live start folloing preroll', function () {
+  describe('#7845 Live start following preroll', function () {
     describe('resumes at live-edge', function () {
       const playlist = `#EXTM3U
 #EXT-X-TARGETDURATION:6
@@ -2540,6 +2541,419 @@ fileSequence-60.s
         expect(interstitials.playingIndex).to.equal(1, 'playingIndex b');
         expect(interstitials.primary.currentTime).to.equal(40, 'timelinePos b');
       });
+    });
+  });
+
+  describe('#7906 Live start following preroll (PRE,ONCE) w/o resume-offset', function () {
+    const playlist1 = `#EXTM3U
+#EXT-X-VERSION:8
+#EXT-X-TARGETDURATION:12
+#EXT-X-MEDIA-SEQUENCE:278327900
+#EXT-X-DISCONTINUITY-SEQUENCE:3
+#EXT-X-DATERANGE:ID="preroll",CLASS="com.apple.hls.interstitial",START-DATE="1970-01-01T00:00:00.000Z",CUE="PRE,ONCE",X-ASSET-LIST="preroll.json",X-PLAYOUT-LIMIT=30.0,X-SNAP="OUT,IN",X-CONTENT-MAY-VARY="YES",X-TIMELINE-STYLE="HIGHLIGHT",X-TIMELINE-OCCUPIES="RANGE"
+#EXT-X-PROGRAM-DATE-TIME:2026-06-12T21:09:18.000Z
+#EXT-X-MAP:URI="276476833_init.mp4"
+#EXTINF:6.5,
+278327900.mp4
+#EXTINF:6.5,
+278327901.mp4
+#EXTINF:6.5,
+278327902.mp4
+#EXTINF:0.5,
+278327903.mp4
+#EXT-X-DATERANGE:ID="1781298578033-101-270F",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:09:38.500Z",PLANNED-DURATION=15.0,X-ASSET-LIST="1781298578033-101-270F",X-SNAP="OUT,IN"
+#EXTINF:12.0,
+278327904.mp4
+#EXTINF:2.75,
+278327905.mp4
+#EXT-X-DATERANGE:ID="1781298578033-101-270F",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:09:38.500Z",END-DATE="2026-06-12T21:09:53.500Z",DURATION=15.0,X-PLAYOUT-LIMIT=16.0
+#EXTINF:10.25,
+278327906.mp4
+#EXTINF:6.5,
+278327907.mp4
+#EXTINF:6.5,
+278327908.mp4
+#EXTINF:6.5,
+278327909.mp4
+#EXTINF:6.5,
+278327910.mp4
+#EXTINF:6.5,
+278327911.mp4
+#EXTINF:2.75,
+278327912.mp4
+#EXT-X-DATERANGE:ID="1781298637933-101-270F",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:10:39.000Z",PLANNED-DURATION=15.0,X-ASSET-LIST="1781298637933-101-270F",X-SNAP="OUT,IN"
+#EXTINF:10.25,
+278327913.mp4
+#EXTINF:4.75,
+278327914.mp4
+#EXT-X-DATERANGE:ID="1781298637933-101-270F",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:10:39.000Z",END-DATE="2026-06-12T21:10:54.000Z",DURATION=15.0,X-PLAYOUT-LIMIT=16.0
+#EXTINF:7.75,
+278327915.mp4
+#EXTINF:6.5,
+278327916.mp4
+#EXTINF:6.5,
+278327917.mp4
+#EXTINF:6.5,
+278327918.mp4`;
+    const playlist2 = `#EXTM3U
+#EXT-X-VERSION:8
+#EXT-X-TARGETDURATION:12
+#EXT-X-MEDIA-SEQUENCE:278327902
+#EXT-X-DISCONTINUITY-SEQUENCE:3
+#EXT-X-DATERANGE:ID="preroll",CLASS="com.apple.hls.interstitial",START-DATE="1970-01-01T00:00:00.000Z",CUE="PRE,ONCE",X-ASSET-LIST="preroll.json",X-PLAYOUT-LIMIT=30.0,X-SNAP="OUT,IN",X-CONTENT-MAY-VARY="YES",X-TIMELINE-STYLE="HIGHLIGHT",X-TIMELINE-OCCUPIES="RANGE"
+#EXT-X-PROGRAM-DATE-TIME:2026-06-12T21:09:31.000Z
+#EXT-X-MAP:URI="276476833_init.mp4"
+#EXTINF:6.5,
+278327902.mp4
+#EXTINF:0.5,
+278327903.mp4
+#EXT-X-DATERANGE:ID="1781298578033-101-270F",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:09:38.500Z",PLANNED-DURATION=15.0,X-ASSET-LIST="1781298578033-101-270F",X-SNAP="OUT,IN"
+#EXTINF:12.0,
+278327904.mp4
+#EXTINF:2.75,
+278327905.mp4
+#EXT-X-DATERANGE:ID="1781298578033-101-270F",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:09:38.500Z",END-DATE="2026-06-12T21:09:53.500Z",DURATION=15.0,X-PLAYOUT-LIMIT=16.0
+#EXTINF:10.25,
+278327906.mp4
+#EXTINF:6.5,
+278327907.mp4
+#EXTINF:6.5,
+278327908.mp4
+#EXTINF:6.5,
+278327909.mp4
+#EXTINF:6.5,
+278327910.mp4
+#EXTINF:6.5,
+278327911.mp4
+#EXTINF:2.75,
+278327912.mp4
+#EXT-X-DATERANGE:ID="1781298637933-101-270F",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:10:39.000Z",PLANNED-DURATION=15.0,X-ASSET-LIST="1781298637933-101-270F",X-SNAP="OUT,IN"
+#EXTINF:10.25,
+278327913.mp4
+#EXTINF:4.75,
+278327914.mp4
+#EXT-X-DATERANGE:ID="1781298637933-101-270F",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:10:39.000Z",END-DATE="2026-06-12T21:10:54.000Z",DURATION=15.0,X-PLAYOUT-LIMIT=16.0
+#EXTINF:7.75,
+278327915.mp4
+#EXTINF:6.5,
+278327916.mp4
+#EXTINF:6.5,
+278327917.mp4
+#EXTINF:6.5,
+278327918.mp4
+#EXTINF:6.5,
+278327919.mp4
+#EXTINF:6.5,
+278327920.mp4`;
+    const prerollAssetListResponse = `{"ASSETS":[{ "DURATION": 15, "URI": "preroll-1.m3u8" },{ "DURATION": 15, "URI": "preroll-2.m3u8" }]}`;
+
+    it('starts preroll on first asset list index', function () {
+      attachMediaToHls();
+      setLoadedLevelDetails(playlist1);
+      const interstitials = interstitialsController.interstitialsManager;
+      if (!interstitials) {
+        expect(interstitials, 'interstitialsManager').to.be.an('object');
+        return;
+      }
+      expect(interstitials.events).is.an('array').which.has.lengthOf(3);
+      expectScheduleToInclude(
+        interstitials.schedule,
+        [
+          {
+            event: {
+              identifier: 'preroll',
+            },
+            start: 0,
+            end: 86.5,
+            playout: { start: 0, end: 0 },
+            integrated: { start: 0, end: 0 },
+          },
+          {
+            event: {
+              identifier: '1781298578033-101-270F',
+            },
+            start: 20,
+            end: 35,
+          },
+          {
+            start: 34.75,
+            end: 80.25,
+          },
+          {
+            event: {
+              identifier: '1781298637933-101-270F',
+            },
+            start: 80.25,
+            end: 95.25,
+          },
+          {
+            start: 95.25,
+            end: Infinity,
+          },
+        ],
+        'before-preroll',
+      );
+
+      expect(interstitials.bufferingIndex).to.equal(0, 'bufferingIndex');
+      expect(interstitials.playingIndex).to.equal(0, 'playingIndex');
+      // Load asset-list
+      const interstitial = interstitials.events[0];
+      interstitial.assetListResponse = JSON.parse(prerollAssetListResponse);
+      hls.trigger(Events.ASSET_LIST_LOADED, {
+        event: interstitial,
+        assetListResponse: interstitial.assetListResponse,
+        networkDetails: new Response('ok'),
+      });
+      // plays first index
+      expect(interstitials.interstitialPlayer?.playingIndex).to.equal(
+        0,
+        'interstitialPlayer.playingIndex',
+      );
+      expect(interstitials.interstitialPlayer?.currentTime).to.equal(
+        0,
+        'interstitialPlayer.currentTime',
+      );
+      expect(interstitials.interstitialPlayer?.duration).to.equal(
+        30,
+        'interstitialPlayer.duration',
+      );
+      expect(
+        interstitials.interstitialPlayer?.scheduleItem?.event,
+        `interstitialPlayer.scheduleItem`,
+      ).to.include({ identifier: 'preroll' });
+    });
+
+    it('resumes at segment boundary nearest to live-edge with X-SNAP', function () {
+      attachMediaToHls();
+      const details = setLoadedLevelDetails(playlist1);
+      const interstitials = interstitialsController.interstitialsManager;
+      if (!interstitials) {
+        expect(interstitials, 'interstitialsManager').to.be.an('object');
+        return;
+      }
+
+      // Load asset-list
+      const interstitial = interstitials.events[0];
+      interstitial.assetListResponse = JSON.parse(prerollAssetListResponse);
+      hls.trigger(Events.ASSET_LIST_LOADED, {
+        event: interstitial,
+        assetListResponse: interstitial.assetListResponse,
+        networkDetails: new Response('ok'),
+      });
+
+      if (!interstitials.interstitialPlayer) {
+        expect(interstitials.interstitialPlayer, `interstitialPlayer`).to.be.an(
+          'object',
+        );
+        return;
+      }
+      // plays preroll
+      expect(
+        interstitials.interstitialPlayer?.scheduleItem?.event,
+        `interstitialPlayer.scheduleItem`,
+      ).to.include({ identifier: 'preroll' });
+
+      const loadSpy = sandbox.spy(hls.config.loader.prototype, 'load');
+
+      // Advance playlists
+      const timeSinceLoadedStub = sinon.stub(details, 'age');
+      timeSinceLoadedStub.get(() => 12);
+
+      const details2 = setLoadedLevelDetails(playlist2);
+      const timeSinceLoadedStub2 = sinon.stub(details2, 'age');
+      timeSinceLoadedStub2.get(() => 4);
+
+      hls.trigger.resetHistory();
+      if (!interstitials.interstitialPlayer.assetPlayers) {
+        expect(interstitials.interstitialPlayer.assetPlayers).to.be.an('array');
+        return;
+      }
+
+      interstitials.interstitialPlayer.assetPlayers[1]?.hls?.trigger(
+        Events.BUFFERED_TO_END,
+        {} as any,
+      );
+      expect(loadSpy, 'next interstitial not requested').callCount(0);
+      const eventsAfterAssetListLoaded = getTriggerCalls();
+      expect(eventsAfterAssetListLoaded).to.deep.equal(
+        [Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY],
+        `Buffered to boundary without pre-loading adjacent interstitial (expected to resume in primary)`,
+      );
+
+      // skip preroll to advance schedule
+      interstitials.skip();
+
+      // Removing the CUE="ONCE" interstitial changes the `schedule` items, but does not remove it from `events`
+      expect(interstitials.events).is.an('array').which.has.lengthOf(3);
+      expectScheduleToInclude(
+        interstitials.schedule,
+        [
+          {
+            start: 0,
+            end: 20,
+          },
+          {
+            event: {
+              identifier: '1781298578033-101-270F',
+            },
+            start: 20,
+            end: 35,
+          },
+          {
+            start: 34.75,
+            end: 80.25,
+          },
+          {
+            event: {
+              identifier: '1781298637933-101-270F',
+            },
+            start: 80.25,
+            end: 95.25,
+          },
+          {
+            start: 95.25,
+            end: Infinity,
+          },
+        ],
+        'after-preroll',
+      );
+      // resumes at live-edge (snapped to segment boundary)
+      expect(hls.liveSyncPosition, 'liveSyncPosition').to.equal(103.5);
+      expect(interstitials.bufferingIndex).to.equal(4, 'bufferingIndex b');
+      expect(interstitials.playingIndex).to.equal(4, 'playingIndex b');
+      expect(interstitials.primary.currentTime).to.equal(103, 'timelinePos b');
+      const frag = findFragmentByPTS(
+        null,
+        details.fragments,
+        interstitials.primary.currentTime,
+      );
+      expect(frag).to.not.be.undefined;
+      expect(frag!.start, 'snapped to fragment boundary').to.eq(
+        interstitials.primary.currentTime,
+      );
+    });
+
+    it('requests upcoming midrolls with expected offset', function () {
+      attachMediaToHls();
+      const details = setLoadedLevelDetails(playlist1);
+      const interstitials = interstitialsController.interstitialsManager;
+      if (!interstitials) {
+        expect(interstitials, 'interstitialsManager').to.be.an('object');
+        return;
+      }
+
+      // Load asset-list
+      const interstitial = interstitials.events[0];
+      interstitial.assetListResponse = JSON.parse(prerollAssetListResponse);
+      hls.trigger(Events.ASSET_LIST_LOADED, {
+        event: interstitial,
+        assetListResponse: interstitial.assetListResponse,
+        networkDetails: new Response('ok'),
+      });
+
+      if (!interstitials.interstitialPlayer) {
+        expect(interstitials.interstitialPlayer, `interstitialPlayer`).to.be.an(
+          'object',
+        );
+        return;
+      }
+
+      const loadSpy = sandbox.spy(hls.config.loader.prototype, 'load');
+
+      // Advance playlists
+      const timeSinceLoadedStub = sinon.stub(details, 'age');
+      timeSinceLoadedStub.get(() => 12);
+
+      const details2 = setLoadedLevelDetails(
+        playlist2 +
+          `
+#EXT-X-DATERANGE:ID="new-midroll",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:11:09.000Z",PLANNED-DURATION=15.0,X-ASSET-LIST="new-midroll"`,
+      );
+
+      const timeSinceLoadedStub2 = sinon.stub(details2, 'age');
+      timeSinceLoadedStub2.get(() => 17);
+
+      hls.trigger.resetHistory();
+      if (!interstitials.interstitialPlayer.assetPlayers) {
+        expect(interstitials.interstitialPlayer.assetPlayers).to.be.an('array');
+        return;
+      }
+
+      interstitials.interstitialPlayer.assetPlayers[1]?.hls?.trigger(
+        Events.BUFFERED_TO_END,
+        {} as any,
+      );
+      expect(loadSpy).calledOnce;
+      const assetListUrl = loadSpy.getCalls()[0].args[0].url;
+      expect(
+        assetListUrl,
+        '_HLS_primary_id and _HLS_start_offset match',
+      ).to.equal(
+        `http://example.com/new-midroll?_HLS_primary_id=${hls.sessionId}&_HLS_start_offset=5.5`,
+      );
+
+      const eventsAfterAssetListLoaded = getTriggerCalls();
+      expect(eventsAfterAssetListLoaded).to.deep.equal(
+        [Events.INTERSTITIALS_BUFFERED_TO_BOUNDARY, Events.ASSET_LIST_LOADING],
+        `Buffered to boundary and preloaded interstitial expected at live edge`,
+      );
+
+      // skip preroll to advance schedule
+      interstitials.skip();
+
+      // Removing the CUE="ONCE" interstitial changes the `schedule` items, but does not remove it from `events`
+      expect(interstitials.events).is.an('array').which.has.lengthOf(4);
+      expectScheduleToInclude(
+        interstitials.schedule,
+        [
+          {
+            start: 0,
+            end: 20,
+          },
+          {
+            event: {
+              identifier: '1781298578033-101-270F',
+            },
+            start: 20,
+            end: 35,
+          },
+          {
+            start: 34.75,
+            end: 80.25,
+          },
+          {
+            event: {
+              identifier: '1781298637933-101-270F',
+            },
+            start: 80.25,
+            end: 95.25,
+          },
+          {
+            start: 95.25,
+            end: 111,
+          },
+          {
+            event: {
+              identifier: 'new-midroll',
+            },
+            start: 111,
+            end: 126,
+          },
+          {
+            start: 126,
+            end: Infinity,
+          },
+        ],
+        'after-preroll',
+      );
+      // resumes at live-edge (snapped to segment boundary)
+      expect(hls.liveSyncPosition, 'liveSyncPosition').to.equal(116.5);
+      expect(interstitials.bufferingIndex).to.equal(5, 'bufferingIndex b');
+      expect(interstitials.playingIndex).to.equal(5, 'playingIndex b');
+      expect(interstitials.primary.currentTime).to.equal(
+        116.5,
+        'timelinePos b',
+      );
     });
   });
 });

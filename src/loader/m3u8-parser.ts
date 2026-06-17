@@ -577,7 +577,9 @@ export default class M3U8Parser {
             if (dateRange.isValid || level.skippedSegments) {
               level.dateRanges[dateRange.id] = dateRange;
             } else {
-              logger.warn(`Ignoring invalid DATERANGE tag: "${value1}"`);
+              logger.log(
+                `Ignoring invalid DATERANGE tag: ${dateRange.invalidReason}: ${value1}`,
+              );
             }
             // Add to fragment tag list for backwards compatibility (< v1.2.0)
             frag.tagList.push(['EXT-X-DATERANGE', value1]);
