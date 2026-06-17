@@ -1953,6 +1953,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       ? mediaSource.duration
       : Infinity;
     const removeStart = Math.max(0, startOffset);
+    if (removeStart >= msDuration) {
+      this.currentOp(type)?.onComplete();
+      return;
+    }
     const removeEnd = Math.min(endOffset, mediaDuration, msDuration);
     if (removeEnd > removeStart && (!track.ending || track.ended)) {
       track.ended = false;
