@@ -644,7 +644,7 @@ export default class InterstitialsController
           return getMappedDuration('primary');
         },
         get seekableStart() {
-          return c.primaryDetails?.fragmentStart || 0;
+          return c.seekableStart;
         },
       },
       integrated: {
@@ -673,10 +673,7 @@ export default class InterstitialsController
           return getMappedDuration('integrated');
         },
         get seekableStart() {
-          return findMappedTime(
-            c.primaryDetails?.fragmentStart || 0,
-            'integrated',
-          );
+          return findMappedTime(c.seekableStart, 'integrated');
         },
       },
       skip: () => {
@@ -1505,7 +1502,8 @@ export default class InterstitialsController
       let timelinePos = this.timelinePos;
       if (
         timelinePos < scheduledItem.start ||
-        timelinePos >= scheduledItem.end
+        timelinePos >= scheduledItem.end ||
+        timelinePos < this.seekableStart
       ) {
         timelinePos = this.getPrimaryResumption(scheduledItem, index);
         this.log(timelineMessage('resumePrimary', timelinePos));
@@ -1528,6 +1526,10 @@ export default class InterstitialsController
       scheduleIndex: index,
     });
     this.checkBuffer();
+  }
+
+  private get seekableStart(): number {
+    return this.primaryLive ? this.primaryDetails?.fragmentStart || 0 : 0;
   }
 
   private getPrimaryResumption(
@@ -2884,6 +2886,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     // Fallback to Primary by on current or future events by updating schedule to skip errored interstitials/assets
     const flushStart = interstitial.timelineStart;
     const playingItem = this.effectivePlayingItem;
+    const seekableStart = this.seekableStart;
+    const startPosition = this.hls.startPosition;
     let timelinePos = this.timelinePos;
     // Update schedule now that interstitial/assets are flagged with `error` for fallback
     if (playingItem) {
@@ -2892,11 +2896,14 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
           flushStart
         } pos: ${timelinePos} playing: ${segmentToString(
           playingItem,
-        )} error: ${interstitial.error}`,
+        )} startPosition: ${startPosition} seekableStart: ${
+          seekableStart
+        } error: ${interstitial.error}`,
       );
       if (timelinePos === -1) {
-        timelinePos = this.hls.startPosition;
+        timelinePos = startPosition;
       }
+      timelinePos = Math.max(timelinePos, seekableStart);
       const newPlayingItem = this.updateItem(playingItem, timelinePos);
       if (this.itemsMatch(playingItem, newPlayingItem)) {
         this.clearInterstitial(interstitial, null);
