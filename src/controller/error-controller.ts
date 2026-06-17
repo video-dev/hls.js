@@ -378,13 +378,13 @@ export default class ErrorController
       const isAudioCodecError =
         (fragErrorType === PlaylistLevelType.AUDIO &&
           errorDetails === ErrorDetails.FRAG_PARSING_ERROR) ||
-        (data.sourceBufferName === 'audio' && isCodecRelated(errorDetails));
+        (data.sourceBufferName === 'audio' && isCodecRelated(data));
       const findAudioCodecAlternate =
         isAudioCodecError &&
         levels.some(({ audioCodec }) => level.audioCodec !== audioCodec);
       // Find alternate video codec if available on video codec error
       const isVideoCodecError =
-        data.sourceBufferName === 'video' && isCodecRelated(errorDetails);
+        data.sourceBufferName === 'video' && isCodecRelated(data);
       const findVideoCodecAlternate =
         isVideoCodecError &&
         levels.some(
@@ -482,7 +482,8 @@ export default class ErrorController
         if (
           !data.errorAction.resolved &&
           data.details !== ErrorDetails.FRAG_GAP &&
-          data.details !== ErrorDetails.PLAYLIST_UNCHANGED_ERROR
+          data.details !== ErrorDetails.PLAYLIST_UNCHANGED_ERROR &&
+          !isAppendStateRelated(data)
         ) {
           data.fatal = true;
         }
@@ -614,11 +615,28 @@ export default class ErrorController
   }
 }
 
-function isCodecRelated(errorDetails: ErrorDetails): boolean {
-  return (
+function isCodecRelated(data: ErrorData): boolean {
+  const errorDetails = data.details;
+  if (
     errorDetails === ErrorDetails.BUFFER_ADD_CODEC_ERROR ||
-    errorDetails === ErrorDetails.BUFFER_APPEND_ERROR ||
     errorDetails === ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET
+  ) {
+    return true;
+  }
+  if (errorDetails === ErrorDetails.BUFFER_APPEND_ERROR) {
+    if (!isAppendStateRelated(data)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isAppendStateRelated(data: ErrorData): boolean {
+  const errorDetails = data.details;
+  return (
+    errorDetails === ErrorDetails.BUFFER_APPEND_ERROR &&
+    (data.error.name === 'QuotaExceededError' ||
+      data.error.name === 'InvalidStateError')
   );
 }
 

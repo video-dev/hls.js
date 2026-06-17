@@ -1034,7 +1034,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.removeExecutor(type, start, end);
       },
       onStart: () => {
-        // logger.debug(`[buffer-controller]: Started flushing ${start} -> ${end} for ${type} Source Buffer`);
+        // this.log(
+        //   `Started flushing ${start} -> ${end} for ${type} Source Buffer`,
+        // );
       },
       onComplete: () => {
         const sb = this.tracks[type]?.buffer;
@@ -1879,6 +1881,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return;
     }
     operation.onComplete();
+
+    const updating = this.tracks[type]?.buffer?.updating;
+    if (updating) {
+      this.log(`${type} SourceBuffer updating on "updateend"`);
+      this.blockUntilOpen(() => {
+        this.shiftAndExecuteNext(type);
+      });
+      return;
+    }
     this.shiftAndExecuteNext(type);
   }
 
@@ -1942,6 +1953,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       ? mediaSource.duration
       : Infinity;
     const removeStart = Math.max(0, startOffset);
+    if (removeStart >= msDuration) {
+      this.currentOp(type)?.onComplete();
+      return;
+    }
     const removeEnd = Math.min(endOffset, mediaDuration, msDuration);
     if (removeEnd > removeStart && (!track.ending || track.ended)) {
       track.ended = false;
