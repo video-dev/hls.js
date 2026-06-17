@@ -2569,6 +2569,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         this.onTimeupdate();
         this.checkBuffer(true);
         return;
+      } else if (data.details === ErrorDetails.BUFFER_SEEK_OVER_HOLE) {
+        return;
       }
       this.handleAssetItemError(
         data,
