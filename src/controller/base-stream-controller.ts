@@ -44,8 +44,9 @@ import {
 import { estimatedAudioBitrate } from '../utils/mediacapabilities-helper';
 import { appendUint8Array } from '../utils/mp4-tools';
 import { timeRangesToString } from '../utils/time-ranges';
-import type { FragmentTracker } from './fragment-tracker';
 import type { HlsConfig } from '../config';
+import type { FragmentTracker } from './fragment-tracker';
+import type { HlsAssetPlayer } from './interstitial-player';
 import type TransmuxerInterface from '../demux/transmuxer-interface';
 import type Hls from '../hls';
 import type {
@@ -1095,6 +1096,9 @@ export default class BaseStreamController
       return Promise.resolve(null);
     }
 
+    if (!this.filterReplacedPrimary(frag, level.details)) {
+      return Promise.resolve(null);
+    }
     // Start the init segment load before the key load so that EME key
     // patching from tenc (KeyLoader.loadKeyEME) has the data it needs
     // before the license request is generated (#7796).
@@ -1596,11 +1600,7 @@ export default class BaseStreamController
     }
     let programFrag = this.filterReplacedPrimary(frag, levelDetails);
     if (!programFrag && frag) {
-      const curSNIdx = frag.sn - levelDetails.startSN;
-      programFrag = this.filterReplacedPrimary(
-        fragments[curSNIdx + 1] || null,
-        levelDetails,
-      );
+      programFrag = fragments[1 + frag.sn - levelDetails.startSN] || null;
     }
     return programFrag;
   }
@@ -1706,7 +1706,7 @@ export default class BaseStreamController
             // this.fragmentTracker.fragBuffered(frag, true);
             return null;
           }
-          if (frag.start > bufferingItem.end && bufferingItem.nextEvent) {
+          if (frag.start >= bufferingItem.end && bufferingItem.nextEvent) {
             // fragment is past schedule item end
             // allow some overflow when not appending in place to prevent stalls
             if (
@@ -1719,18 +1719,14 @@ export default class BaseStreamController
         }
       }
       // Skip loading of fragments that overlap completely with appendInPlace interstitials
-      const playerQueue = interstitials?.playerQueue;
-      if (playerQueue) {
-        for (let i = playerQueue.length; i--; ) {
-          const interstitial = playerQueue[i].interstitial;
-          if (
-            interstitial.appendInPlace &&
-            frag.start >= interstitial.startTime &&
-            frag.end <= interstitial.resumeTime
-          ) {
-            return null;
-          }
-        }
+      if (
+        fragOverlapsQueuedInterstitial(
+          frag,
+          interstitials?.playerQueue,
+          this.playhead,
+        )
+      ) {
+        return null;
       }
     }
     return frag;
@@ -2741,7 +2737,35 @@ export default class BaseStreamController
   }
 }
 
-function interstitialsEnabled(config: Readonly<HlsConfig>): boolean {
+export function fragOverlapsQueuedInterstitial(
+  frag: MediaFragment | Part,
+  playerQueue: HlsAssetPlayer[] | undefined,
+  playhead: number,
+): boolean {
+  if (__USE_INTERSTITIALS__ && playerQueue) {
+    for (let i = playerQueue.length; i--; ) {
+      const interstitial = playerQueue[i].interstitial;
+      if (interstitial.appendInPlace) {
+        if (
+          frag.start >= interstitial.startTime &&
+          frag.end <= interstitial.resumeTime
+        ) {
+          return true;
+        }
+        if (
+          playhead > frag.start &&
+          frag.end > interstitial.startTime &&
+          frag.start < interstitial.resumeTime
+        ) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+export function interstitialsEnabled(config: Readonly<HlsConfig>): boolean {
   return (
     __USE_INTERSTITIALS__ &&
     !!config.interstitialsController &&

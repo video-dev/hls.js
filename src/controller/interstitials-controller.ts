@@ -2325,6 +2325,10 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     if (!requiredTracks) {
       return;
     }
+    const details = this.primaryDetails;
+    if (details && startOffset >= details.edge) {
+      return;
+    }
     this.log(`Removing front buffer starting at ${startOffset}`);
     const sourceBufferNames = Object.keys(requiredTracks);
     sourceBufferNames.forEach((type: SourceBufferName) => {
