@@ -136,6 +136,7 @@ export default class InterstitialsController
   private playingAsset: InterstitialAssetItem | null = null;
   private endedAsset: InterstitialAssetItem | null = null;
   private bufferingAsset: InterstitialAssetItem | null = null;
+  private bufferPastEdge: boolean = false;
   private shouldPlay: boolean = false;
 
   constructor(hls: Hls, HlsPlayerClass: typeof Hls) {
@@ -811,16 +812,17 @@ export default class InterstitialsController
         this.detachedData = attachMediaSourceData;
       }
       logFromSource = `Primary`;
-    } else if (detachedMediaSource) {
+    } else {
       const bufferingPlayer = this.getBufferingPlayer();
       if (bufferingPlayer) {
         attachMediaSourceData = bufferingPlayer.transferMedia();
+        this.detachedData = attachMediaSourceData;
         logFromSource = `${bufferingPlayer}`;
-      } else {
+      } else if (detachedMediaSource) {
         logFromSource = `detached MediaSource`;
+      } else {
+        logFromSource = `detached media`;
       }
-    } else {
-      logFromSource = `detached media`;
     }
     if (!attachMediaSourceData) {
       if (detachedMediaSource) {
@@ -1152,7 +1154,8 @@ export default class InterstitialsController
       // check if we've reached the end of the program
       const scheduleItems = this.schedule.items;
       if (scheduleItems) {
-        const nextIndex = index + 1;
+        const item = scheduleItems[index];
+        const nextIndex = item.event ? this.getNextItemIndex(item) : index + 1;
         const scheduleLength = scheduleItems.length;
         if (nextIndex >= scheduleLength) {
           this.setSchedulePosition(-1);
@@ -1162,9 +1165,6 @@ export default class InterstitialsController
         if (this.timelinePos < resumptionTime) {
           this.log(timelineMessage('advanceAfterAssetEnded', resumptionTime));
           this.timelinePos = resumptionTime;
-          if (interstitial.appendInPlace) {
-            this.advanceInPlace(resumptionTime);
-          }
           this.checkBuffer(this.bufferedPos < resumptionTime);
         }
         this.setSchedulePosition(nextIndex);
@@ -1498,8 +1498,8 @@ export default class InterstitialsController
 
     this.log(`resuming ${segmentToString(scheduledItem)}`);
 
+    let timelinePos = this.timelinePos;
     if (!this.detachedData?.mediaSource) {
-      let timelinePos = this.timelinePos;
       if (
         timelinePos < scheduledItem.start ||
         timelinePos >= scheduledItem.end ||
@@ -1510,6 +1510,8 @@ export default class InterstitialsController
         this.timelinePos = timelinePos;
       }
       this.attachPrimary(timelinePos, scheduledItem);
+    } else if (this.primaryLive) {
+      this.startLoadingPrimaryAt(timelinePos);
     }
 
     if (!fromItem) {
@@ -1613,24 +1615,26 @@ export default class InterstitialsController
   }
 
   private startLoadingPrimaryAt(
-    timelinePos: number,
+    bufferPos: number,
     skipSeekToStartPosition?: boolean,
   ) {
     const hls = this.hls;
     if (
+      !skipSeekToStartPosition ||
       !hls.loadingEnabled ||
       !hls.media ||
       Math.abs(
-        (hls.mainForwardBufferInfo?.start || hls.media.currentTime) -
-          timelinePos,
+        (hls.mainForwardBufferInfo?.start || hls.media.currentTime) - bufferPos,
       ) > 0.5
     ) {
       const details = this.primaryDetails;
-      if (details?.live && timelinePos > details.edge) {
-        this.log(`Resume primary loading when live reaches ${timelinePos}`);
+      if (details?.live && bufferPos > details.edge) {
+        this.log(`Resume primary loading when live reaches ${bufferPos}`);
+        hls.pauseBuffering();
+        this.bufferPastEdge = true;
         return;
       }
-      hls.startLoad(timelinePos, skipSeekToStartPosition);
+      hls.startLoad(bufferPos, skipSeekToStartPosition);
     } else if (!hls.bufferingEnabled) {
       hls.resumeBuffering();
     }
@@ -1676,8 +1680,33 @@ export default class InterstitialsController
       startPosition === -1 ? 0 : startPosition,
     );
 
-    if (!this.effectivePlayingItem && this.schedule.items) {
+    const items = this.schedule.items;
+    if (!items) {
+      return;
+    }
+    if (!this.effectivePlayingItem) {
       this.checkStart();
+    } else if (this.bufferPastEdge) {
+      const details = this.primaryDetails;
+      const bufferedPos = this.bufferedPos;
+      if (details?.live && bufferedPos < details.edge) {
+        this.bufferPastEdge = false;
+        this.log(`Live edge ${details.edge} reached buffer: ${bufferedPos} `);
+        const primaryWaiting = this.bufferingItem?.end === Infinity;
+        if (primaryWaiting) {
+          this.startLoadingPrimaryAt(this.timelinePos);
+        } else {
+          const bufferingPlayer = this.getBufferingPlayer();
+          if (bufferingPlayer) {
+            const assetWaiting = bufferingPlayer.bufferedInPlaceToEnd(
+              this.primaryMedia,
+            );
+            if (assetWaiting && bufferingPlayer.hls) {
+              bufferingPlayer.hls.trigger(Events.BUFFERED_TO_END, undefined);
+            }
+          }
+        }
+      }
     }
   }
 
@@ -2407,7 +2436,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     let startPosition = 0;
     if (this.primaryLive || interstitial.appendInPlace) {
       const timePastStart = this.timelinePos - assetItem.timelineStart;
-      if (timePastStart > 1) {
+      if (timePastStart >= 0) {
         const duration = assetItem.duration;
         if (duration && timePastStart < duration) {
           startPosition = timePastStart;
@@ -2811,7 +2840,13 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
   private advanceInPlace(time: number) {
     const media = this.primaryMedia;
     if (media && media.currentTime < time) {
-      media.currentTime = time;
+      const msg = `advance currentTime to ${time}, duration: ${media.duration}`;
+      if (media.duration > time) {
+        this.log(msg);
+        media.currentTime = time;
+      } else {
+        this.log(`Cannot ${msg}`);
+      }
     }
   }
 

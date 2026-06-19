@@ -180,6 +180,12 @@ export default class StreamController
       this.nextLoadPosition = this.lastCurrentTime =
         startPosition + this.timelineOffset;
       this.startPosition = skipSeekToStartPosition ? -1 : startPosition;
+      if (
+        !skipSeekToStartPosition &&
+        !this.fragmentTracker.hasFragments(this.playlistType)
+      ) {
+        this._hasEnoughToStart = this.startFragRequested = false;
+      }
       this.tick();
     } else {
       this._forceStartLoad = true;

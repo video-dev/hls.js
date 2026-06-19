@@ -167,9 +167,12 @@ export class InterstitialsSchedule extends Logger {
         if (timelineType && timelineType !== 'primary') {
           timeRange = timeRange[timelineType];
         }
+        const start = timeRange.start;
+        const event = items[i].event;
+        const end = event?.cue.pre ? event.duration : timeRange.end;
         if (
-          timelinePos === timeRange.start ||
-          (timelinePos > timeRange.start && timelinePos < timeRange.end)
+          timelinePos === start ||
+          (timelinePos > start && timelinePos < end)
         ) {
           return i;
         }
