@@ -70,7 +70,7 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@babel/core": "7.29.0",
+    "@babel/core": "7.29.6",
     "@babel/helper-module-imports": "7.28.6",
     "@babel/plugin-transform-class-properties": "7.28.6",
     "@babel/plugin-transform-object-assign": "7.27.1",
