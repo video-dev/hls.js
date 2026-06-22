@@ -3,6 +3,7 @@ import {
   findFragmentByPDT,
   findFragmentByPTS,
   findNearestWithCC,
+  getNextFrag,
 } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 import Decrypter from '../crypt/decrypter';
@@ -1600,7 +1601,10 @@ export default class BaseStreamController
     }
     let programFrag = this.filterReplacedPrimary(frag, levelDetails);
     if (!programFrag && frag) {
-      programFrag = fragments[1 + frag.sn - levelDetails.startSN] || null;
+      programFrag = getNextFrag(levelDetails, frag.sn, this.loadingParts);
+      if (programFrag) {
+        this.nextLoadPosition = programFrag.start;
+      }
     }
     return programFrag;
   }
@@ -1710,7 +1714,8 @@ export default class BaseStreamController
             // fragment is past schedule item end
             // allow some overflow when not appending in place to prevent stalls
             if (
-              bufferingItem.nextEvent.appendInPlace ||
+              (bufferingItem.nextEvent.appendInPlace &&
+                !bufferingItem.nextEvent.hasPlayed) ||
               frag.start - bufferingItem.end > 1
             ) {
               return null;

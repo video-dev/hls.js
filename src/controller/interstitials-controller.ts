@@ -1123,7 +1123,9 @@ export default class InterstitialsController
   ): number {
     if (this.schedule) {
       const liveResumptionTime = buffering
-        ? item.end + item.event.duration
+        ? item.event.cue.pre
+          ? item.end + item.event.duration
+          : undefined
         : this.livePrerollResumption(item.event);
       if (liveResumptionTime !== undefined) {
         return this.schedule.findItemIndexAtTime(liveResumptionTime);
@@ -1388,6 +1390,7 @@ export default class InterstitialsController
         this.log(
           `INTERSTITIAL_STARTED ${segmentToString(scheduledItem)} ${interstitial.appendInPlace ? 'append in place' : ''}`,
         );
+        interstitial.hasPlayed = false;
         this.hls.trigger(Events.INTERSTITIAL_STARTED, {
           event: interstitial,
           schedule: scheduleItems.slice(0),
@@ -1628,7 +1631,7 @@ export default class InterstitialsController
       ) > 0.5
     ) {
       const details = this.primaryDetails;
-      if (details?.live && bufferPos > details.edge) {
+      if (details?.live && bufferPos >= details.edge) {
         this.log(`Resume primary loading when live reaches ${bufferPos}`);
         hls.pauseBuffering();
         this.bufferPastEdge = true;

@@ -3,6 +3,7 @@ import {
   interstitialsEnabled,
   State,
 } from './base-stream-controller';
+import { getNextFrag } from './fragment-finders';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import TaskLoop from '../task-loop';
@@ -763,7 +764,7 @@ function withInterstitialBoundary(
     hls.interstitialsManager
   ) {
     const frag = 'type' in appended ? appended : appended.fragment;
-    const nextFrag = levelDetails.fragments[1 + frag.sn - levelDetails.startSN];
+    const nextFrag = getNextFrag(levelDetails, frag.sn, true);
     if (
       nextFrag?.level === frag.level &&
       fragOverlapsQueuedInterstitial(
