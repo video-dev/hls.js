@@ -102,7 +102,7 @@
     "browserstack-local": "1.5.13",
     "chai": "6.2.2",
     "chart.js": "2.9.4",
-    "chromedriver": "149.0.1",
+    "chromedriver": "149.0.3",
     "doctoc": "2.4.1",
     "es-check": "9.6.4",
     "eslint": "8.57.1",
