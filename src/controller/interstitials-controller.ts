@@ -1167,8 +1167,8 @@ export default class InterstitialsController
         if (this.timelinePos < resumptionTime) {
           this.log(timelineMessage('advanceAfterAssetEnded', resumptionTime));
           this.timelinePos = resumptionTime;
-          if (interstitial.appendInPlace) {
-            this.advanceInPlace(resumptionTime + 0.01);
+          if (interstitial.appendInPlace && !scheduleItems[nextIndex].event) {
+            this.hls.startLoad(resumptionTime + 0.01);
           }
           this.checkBuffer(this.bufferedPos < resumptionTime);
         }
