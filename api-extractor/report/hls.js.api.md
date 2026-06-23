@@ -2419,7 +2419,7 @@ export class HlsAssetPlayer {
     // (undocumented)
     get bufferedEnd(): number;
     // (undocumented)
-    bufferedInPlaceToEnd(media?: HTMLMediaElement | null): boolean;
+    bufferedInPlaceToEnd(media?: HTMLMediaElement | null, fromTime?: number): boolean;
     // (undocumented)
     get currentTime(): number;
     // (undocumented)

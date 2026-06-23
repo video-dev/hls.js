@@ -1167,6 +1167,9 @@ export default class InterstitialsController
         if (this.timelinePos < resumptionTime) {
           this.log(timelineMessage('advanceAfterAssetEnded', resumptionTime));
           this.timelinePos = resumptionTime;
+          if (interstitial.appendInPlace) {
+            this.advanceInPlace(resumptionTime + 0.01);
+          }
           this.checkBuffer(this.bufferedPos < resumptionTime);
         }
         this.setSchedulePosition(nextIndex);
@@ -1703,6 +1706,7 @@ export default class InterstitialsController
           if (bufferingPlayer) {
             const assetWaiting = bufferingPlayer.bufferedInPlaceToEnd(
               this.primaryMedia,
+              bufferingPlayer.currentTime,
             );
             if (assetWaiting && bufferingPlayer.hls) {
               bufferingPlayer.hls.trigger(Events.BUFFERED_TO_END, undefined);
@@ -2824,7 +2828,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         if (
           assetCurrentTime &&
           (distanceFromEnd / media.playbackRate < 0.5 ||
-            player.bufferedInPlaceToEnd(media)) &&
+            player.bufferedInPlaceToEnd(media, player.currentTime)) &&
           player.hls
         ) {
           const scheduleIndex = schedule.findEventIndex(
@@ -3065,8 +3069,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
           this.handleInPlaceStall(stallingItem.event);
           return;
         }
+        const media = this.primaryMedia;
         this.log(
-          `Primary player stall @${this.timelinePos} bufferedPos: ${this.bufferedPos}`,
+          `Primary player stall @${this.timelinePos} currentTime: ${media?.currentTime} bufferedPos: ${this.bufferedPos}`,
         );
         this.onTimeupdate();
         this.checkBuffer(true);

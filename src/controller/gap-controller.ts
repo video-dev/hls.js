@@ -345,6 +345,15 @@ export default class GapController extends TaskLoop {
       if (!this.media || (!this.hls as any)) {
         return;
       }
+      if (media.currentTime !== currentTime) {
+        const currentTimeBeforeStallEvent = currentTime;
+        currentTime = media.currentTime;
+        this.moved = true;
+        this.log(
+          `currentTime changed ${currentTimeBeforeStallEvent} > ${currentTime}`,
+        );
+        return;
+      }
     }
 
     const bufferedWithHoles = BufferHelper.bufferInfo(

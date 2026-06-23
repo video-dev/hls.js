@@ -222,20 +222,28 @@ class AudioStreamController
     const lastCurrentTime = this.lastCurrentTime;
     this.stopLoad();
     this.setInterval(TICK_INTERVAL);
-    if (lastCurrentTime > 0 && startPosition === -1) {
+    if (
+      lastCurrentTime > 0 &&
+      startPosition === -1 &&
+      !skipSeekToStartPosition
+    ) {
       this.log(
         `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
           3,
         )}`,
       );
       startPosition = lastCurrentTime;
-      this.state = State.IDLE;
-    } else {
-      this.state = State.WAITING_TRACK;
     }
+    this.state = State.IDLE;
     this.nextLoadPosition = this.lastCurrentTime =
       startPosition + this.timelineOffset;
     this.startPosition = skipSeekToStartPosition ? -1 : startPosition;
+    if (
+      !skipSeekToStartPosition &&
+      !this.fragmentTracker.hasFragments(this.playlistType)
+    ) {
+      this.startFragRequested = false;
+    }
     this.tick();
   }
 
