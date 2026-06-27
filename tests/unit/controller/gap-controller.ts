@@ -7,14 +7,18 @@ import GapController from '../../../src/controller/gap-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
+import { Fragment } from '../../../src/loader/fragment';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import { ChunkMetadata } from '../../../src/types/transmuxer';
 import {
   BufferHelper,
   type BufferInfo,
 } from '../../../src/utils/buffer-helper';
 import { MockMediaElement, MockMediaSource } from '../../mocks/mock-media';
+import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type { HlsConfig } from '../../../src/config';
 import type StreamController from '../../../src/controller/stream-controller';
-import type { Fragment, MediaFragment } from '../../../src/loader/fragment';
+import type { MediaFragment } from '../../../src/loader/fragment';
 
 use(sinonChai);
 
@@ -119,6 +123,109 @@ describe('GapController', function () {
         buffer: bufferInfo.len,
         bufferInfo,
       });
+    });
+  });
+
+  describe('video pipeline nudge after buffer flush', function () {
+    let frag: MediaFragment;
+
+    function makeFragment(): MediaFragment {
+      const fragment = new Fragment(
+        PlaylistLevelType.MAIN,
+        'video.ts',
+      ) as MediaFragment;
+      fragment.sn = 1;
+      fragment.level = 0;
+      fragment.cc = 0;
+      fragment.duration = 10;
+      fragment.setStart(10);
+      return fragment;
+    }
+
+    function appendVideo(timeRanges: TimeRanges) {
+      hls.trigger(Events.BUFFER_APPENDED, {
+        type: 'video',
+        frag,
+        part: null,
+        chunkMeta: new ChunkMetadata(0, 1, 1),
+        parent: PlaylistLevelType.MAIN,
+        timeRanges: { video: timeRanges },
+      });
+    }
+
+    beforeEach(function () {
+      frag = makeFragment();
+      Object.assign(media, {
+        buffered: new TimeRangesMock([10, 20]),
+        ended: false,
+        paused: false,
+        playbackRate: 1,
+        readyState: 4,
+        seeking: false,
+      });
+      media.currentTime = 12;
+      triggerSpy.resetHistory();
+    });
+
+    it('nudges when main video is appended over the playhead after a video buffer flush', function () {
+      hls.trigger(Events.BUFFER_FLUSHED, {
+        type: 'video',
+        start: 0,
+        end: Infinity,
+      });
+
+      triggerSpy.resetHistory();
+      appendVideo(new TimeRangesMock([10, 20]) as unknown as TimeRanges);
+
+      expect(media.currentTime).to.be.closeTo(12.000001, 0.0000001);
+
+      const calls = triggerSpy.getCalls();
+      let errorCall;
+      for (let i = 0; i < calls.length; i++) {
+        if (calls[i].args[0] === Events.ERROR) {
+          errorCall = calls[i];
+          break;
+        }
+      }
+      expect(errorCall).to.exist;
+      const errorData = errorCall!.args[1];
+      expect(errorData).to.include({
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+        fatal: false,
+        frag,
+      });
+      expect(errorData.error.message).to.contain(
+        'render new video after buffer flush',
+      );
+    });
+
+    it('does not nudge until the appended video buffers the playhead', function () {
+      hls.trigger(Events.BUFFER_FLUSHED, {
+        type: 'video',
+        start: 0,
+        end: Infinity,
+      });
+
+      triggerSpy.resetHistory();
+      appendVideo(new TimeRangesMock([13, 20]) as unknown as TimeRanges);
+
+      expect(media.currentTime).to.equal(12);
+      expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
+    });
+
+    it('does not nudge when the flush does not remove the playhead', function () {
+      hls.trigger(Events.BUFFER_FLUSHED, {
+        type: 'video',
+        start: 13,
+        end: Infinity,
+      });
+
+      triggerSpy.resetHistory();
+      appendVideo(new TimeRangesMock([10, 20]) as unknown as TimeRanges);
+
+      expect(media.currentTime).to.equal(12);
+      expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
     });
   });
 

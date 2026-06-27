@@ -13,6 +13,7 @@ import {
   removeEventListener,
 } from '../utils/event-listener-helper';
 import { stringify } from '../utils/safe-json-stringify';
+import { userAgentChromeVersion } from '../utils/user-agent';
 import type { InFlightData } from './base-stream-controller';
 import type { InFlightFragments } from '../hls';
 import type Hls from '../hls';
@@ -21,6 +22,7 @@ import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { SourceBufferName } from '../types/buffer';
 import type {
   BufferAppendedData,
+  BufferFlushedData,
   MediaAttachedData,
   MediaDetachingData,
 } from '../types/events';
@@ -43,6 +45,7 @@ export default class GapController extends TaskLoop {
   private moved: boolean = false;
   private seeking: boolean = false;
   private buffered: Partial<Record<SourceBufferName, TimeRanges>> = {};
+  private needsPipelineFlush: boolean = false;
 
   private lastCurrentTime: number;
   public ended: number = 0;
@@ -62,6 +65,7 @@ export default class GapController extends TaskLoop {
       hls.on(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
       hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
       hls.on(Events.BUFFER_APPENDED, this.onBufferAppended, this);
+      hls.on(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     }
   }
 
@@ -71,6 +75,7 @@ export default class GapController extends TaskLoop {
       hls.off(Events.MEDIA_ATTACHED, this.onMediaAttached, this);
       hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
       hls.off(Events.BUFFER_APPENDED, this.onBufferAppended, this);
+      hls.off(Events.BUFFER_FLUSHED, this.onBufferFlushed, this);
     }
   }
 
@@ -106,6 +111,7 @@ export default class GapController extends TaskLoop {
       this.media = null;
     }
     this.mediaSource = undefined;
+    this.needsPipelineFlush = false;
   }
 
   private onBufferAppended(
@@ -113,6 +119,34 @@ export default class GapController extends TaskLoop {
     data: BufferAppendedData,
   ) {
     this.buffered = data.timeRanges;
+    this.nudgeAfterVideoBufferFlush(data);
+  }
+
+  private onBufferFlushed(
+    event: Events.BUFFER_FLUSHED,
+    data: BufferFlushedData,
+  ) {
+    const { hls, media } = this;
+    const { type, start, end } = data;
+    if (
+      !hls ||
+      !media ||
+      !hls.config.nudgeOnVideoHole ||
+      !userAgentChromeVersion() ||
+      !isVideoBuffer(type) ||
+      !isFiniteNumber(media.currentTime) ||
+      media.paused ||
+      media.ended ||
+      media.seeking ||
+      media.playbackRate === 0 ||
+      media.readyState === 0
+    ) {
+      return;
+    }
+
+    if (media.currentTime >= start && media.currentTime < end) {
+      this.needsPipelineFlush = true;
+    }
   }
 
   private onMediaPlaying = () => {
@@ -419,38 +453,88 @@ export default class GapController extends TaskLoop {
             holeEnd - holeStart < 1 && // `maxBufferHole` may be too small and setting it to 0 should not disable this feature
             currentTime - holeStart < 2
           ) {
-            const error = new Error(
-              `nudging playhead to flush pipeline after video hole. currentTime: ${currentTime} hole: ${holeStart} -> ${holeEnd} buffered index: ${bufferedIndex}`,
-            );
-            this.warn(error.message);
-            // Magic number to flush the pipeline without interuption to audio playback:
-            this.media.currentTime += 0.000001;
-            let frag: MediaFragment | Part | null | undefined =
-              appendedFragAtPosition(currentTime, this.fragmentTracker);
-            if (frag && 'fragment' in frag) {
-              frag = frag.fragment;
-            } else if (!frag) {
-              frag = undefined;
-            }
-            const bufferInfo = BufferHelper.bufferInfo(
-              this.media,
+            this.nudgeVideoPipeline(
               currentTime,
-              0,
+              `nudging playhead to flush pipeline after video hole. currentTime: ${currentTime} hole: ${holeStart} -> ${holeEnd} buffered index: ${bufferedIndex}`,
+              appendedFragAtPosition(currentTime, this.fragmentTracker),
             );
-            this.hls.trigger(Events.ERROR, {
-              type: ErrorTypes.MEDIA_ERROR,
-              details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
-              fatal: false,
-              error,
-              reason: error.message,
-              frag,
-              buffer: bufferInfo.len,
-              bufferInfo,
-            });
           }
         }
       }
     }
+  }
+
+  private nudgeAfterVideoBufferFlush(data: BufferAppendedData) {
+    const { hls, media } = this;
+    if (
+      !this.needsPipelineFlush ||
+      !hls ||
+      !media ||
+      !hls.config.nudgeOnVideoHole ||
+      !isVideoBuffer(data.type) ||
+      data.parent !== PlaylistLevelType.MAIN
+    ) {
+      return;
+    }
+
+    if (
+      !userAgentChromeVersion() ||
+      !isFiniteNumber(media.currentTime) ||
+      media.paused ||
+      media.ended ||
+      media.seeking ||
+      media.playbackRate === 0 ||
+      media.readyState === 0
+    ) {
+      this.needsPipelineFlush = false;
+      return;
+    }
+
+    const currentTime = media.currentTime;
+    const buffered = data.timeRanges[data.type];
+    if (!buffered) {
+      return;
+    }
+    if (!BufferHelper.isBuffered({ buffered }, currentTime)) {
+      return;
+    }
+
+    this.needsPipelineFlush = false;
+    this.nudgeVideoPipeline(
+      currentTime,
+      `nudging playhead to render new video after buffer flush. currentTime: ${currentTime}`,
+      data.part || (data.frag as MediaFragment),
+    );
+  }
+
+  private nudgeVideoPipeline(
+    currentTime: number,
+    reason: string,
+    appended: MediaFragment | Part | null,
+  ) {
+    const { hls, media } = this;
+    if (!hls || !media) {
+      return;
+    }
+    const error = new Error(reason);
+    this.warn(error.message);
+    // Magic number to flush the pipeline without interruption to audio playback:
+    media.currentTime += 0.000001;
+    let frag: MediaFragment | undefined;
+    if (appended) {
+      frag = 'fragment' in appended ? appended.fragment : appended;
+    }
+    const bufferInfo = BufferHelper.bufferInfo(media, currentTime, 0);
+    hls.trigger(Events.ERROR, {
+      type: ErrorTypes.MEDIA_ERROR,
+      details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+      fatal: false,
+      error,
+      reason: error.message,
+      frag,
+      buffer: bufferInfo.len,
+      bufferInfo,
+    });
   }
 
   /**
@@ -724,6 +808,14 @@ function getInFlightDependency(
     return audio;
   }
   return null;
+}
+
+function isVideoBuffer(type: SourceBufferName | null) {
+  return type === null || type === 'video' || type === 'audiovideo';
+}
+
+function isFiniteNumber(value: number) {
+  return Number.isFinite(value);
 }
 
 function inFlight(inFlightData: InFlightData | undefined): Fragment | null {
