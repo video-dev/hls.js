@@ -1221,13 +1221,16 @@ export default class BaseStreamController
       const data = error.data;
       if (data.frag && data.details === ErrorDetails.INTERNAL_ABORTED) {
         this.handleFragLoadAborted(data.frag, data.part);
-      } else if (data.frag && data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
+      } else if (
+        data.frag &&
+        data.type === ErrorTypes.KEY_SYSTEM_ERROR &&
+        !data.fatal
+      ) {
         data.frag.abortRequests();
         this.resetStartWhenNotLoaded();
         this.resetFragmentLoading(data.frag);
-      } else {
-        this.hls.trigger(Events.ERROR, data as ErrorData);
       }
+      this.hls.trigger(Events.ERROR, data as ErrorData);
     } else {
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.OTHER_ERROR,
