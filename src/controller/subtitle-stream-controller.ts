@@ -444,13 +444,15 @@ export class SubtitleStreamController
         config.maxBufferHole,
       );
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
-      const maxBufLen =
-        this.hls.maxBufferLength + trackDetails.levelTargetDuration;
+      const maxBufLen = Math.max(
+        this.hls.maxBufferLength + trackDetails.levelTargetDuration,
+        this.hls.mainForwardBufferInfo?.len || 0,
+      );
 
       if (bufferLen > maxBufLen || (bufferLen && !this.buffering)) {
         return;
       }
-      let frag = this.getNextFragment(currentTime, trackDetails);
+      let frag = this.getNextFragment(targetBufferTime, trackDetails);
       if (!frag) {
         return;
       }
