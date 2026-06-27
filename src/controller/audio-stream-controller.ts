@@ -225,7 +225,8 @@ class AudioStreamController
     if (
       lastCurrentTime > 0 &&
       startPosition === -1 &&
-      !skipSeekToStartPosition
+      !skipSeekToStartPosition &&
+      this.initPTS.length
     ) {
       this.log(
         `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(

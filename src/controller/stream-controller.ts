@@ -169,7 +169,8 @@ export default class StreamController
       if (
         lastCurrentTime > 0 &&
         startPosition === -1 &&
-        !skipSeekToStartPosition
+        !skipSeekToStartPosition &&
+        this.initPTS.length
       ) {
         this.log(
           `Override startPosition with lastCurrentTime @${lastCurrentTime}`,
