@@ -837,12 +837,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         const videoAppendEnd = partOrFrag.end;
         const diff = this.lastVideoAppendEnd - videoAppendEnd;
         this.lastVideoAppendEnd = videoAppendEnd;
-        if (this.isAudioBlocked()) {
-          if (diff < 0 || diff > partOrFrag.duration) {
-            this.unblockAudio();
-          } else {
-            this.executeNext('audio');
-          }
+        if (diff < 0 || diff > partOrFrag.duration) {
+          this.unblockAudio();
+        } else if (this.isAudioBlocked()) {
+          this.executeNext('audio');
         }
       }
     }

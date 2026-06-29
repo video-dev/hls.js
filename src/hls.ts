@@ -2,6 +2,7 @@ import { uuid } from '@svta/cml-utils';
 import { EventEmitter } from 'eventemitter3';
 import { buildAbsoluteURL } from 'url-toolkit';
 import { enableStreamingMode, hlsDefaultConfig, mergeConfig } from './config';
+import { State } from './controller/base-stream-controller';
 import { FragmentTracker } from './controller/fragment-tracker';
 import LevelController from './controller/level-controller';
 import { ErrorDetails, ErrorTypes } from './errors';
@@ -22,7 +23,7 @@ import type AbrController from './controller/abr-controller';
 import type AudioStreamController from './controller/audio-stream-controller';
 import type AudioTrackController from './controller/audio-track-controller';
 import type BasePlaylistController from './controller/base-playlist-controller';
-import type { InFlightData, State } from './controller/base-stream-controller';
+import type { InFlightData } from './controller/base-stream-controller';
 import type BaseStreamController from './controller/base-stream-controller';
 import type BufferController from './controller/buffer-controller';
 import type CapLevelController from './controller/cap-level-controller';
@@ -627,7 +628,7 @@ export default class Hls implements HlsEventEmitter {
    * Returns whether loading, toggled with `startLoad()` and `stopLoad()`, is active or not`.
    */
   get loadingEnabled(): boolean {
-    return this.started;
+    return this.started && this.streamController.state !== State.STOPPED;
   }
 
   /**

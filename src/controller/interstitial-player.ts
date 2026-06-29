@@ -92,7 +92,7 @@ export class HlsAssetPlayer {
     }
   }
 
-  bufferedInPlaceToEnd(media?: HTMLMediaElement | null) {
+  bufferedInPlaceToEnd(media?: HTMLMediaElement | null, fromTime?: number) {
     if (!this.appendInPlace) {
       return false;
     }
@@ -103,8 +103,8 @@ export class HlsAssetPlayer {
       return false;
     }
     const duration = Math.min(this._bufferedEosTime || Infinity, this.duration);
-    const start = this.timelineOffset;
-    const bufferInfo = BufferHelper.bufferInfo(media, start, 0);
+    const start = this.timelineOffset + (fromTime || 0);
+    const bufferInfo = BufferHelper.bufferInfo(media, start, 0.02);
     const bufferedEnd = this.getAssetTime(bufferInfo.end);
     return bufferedEnd >= duration - 0.02;
   }

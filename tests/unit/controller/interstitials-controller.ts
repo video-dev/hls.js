@@ -1331,8 +1331,11 @@ fileSequence3.mp4
         ],
         `Actual events after asset-list`,
       );
+      expect(interstitials.events).is.an('array').which.has.lengthOf(1);
+      expect(interstitials.schedule).is.an('array').which.has.lengthOf(2);
       expect(interstitials.bufferingIndex).to.equal(1, 'bufferingIndex b');
       expect(interstitials.playingIndex).to.equal(1, 'playingIndex b');
+      expect(interstitials.playingItem).to.not.have.property('event');
       expect(interstitials.primary.currentTime).to.equal(
         0,
         'playback should resume primary at 0 because no interstitial played',
@@ -2867,7 +2870,7 @@ fileSequence-60.s
       const details2 = setLoadedLevelDetails(
         playlist2 +
           `
-#EXT-X-DATERANGE:ID="new-midroll",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:11:09.000Z",PLANNED-DURATION=15.0,X-ASSET-LIST="new-midroll"`,
+#EXT-X-DATERANGE:ID="new-midroll",CLASS="com.apple.hls.interstitial",START-DATE="2026-06-12T21:11:22.000Z",PLANNED-DURATION=15.0,X-ASSET-LIST="new-midroll"`,
       );
 
       const timeSinceLoadedStub2 = sinon.stub(details2, 'age');
@@ -2930,17 +2933,17 @@ fileSequence-60.s
           },
           {
             start: 95.25,
-            end: 111,
+            end: 124,
           },
           {
             event: {
               identifier: 'new-midroll',
             },
-            start: 111,
-            end: 126,
+            start: 124,
+            end: 139,
           },
           {
-            start: 126,
+            start: 139,
             end: Infinity,
           },
         ],
@@ -2948,12 +2951,9 @@ fileSequence-60.s
       );
       // resumes at live-edge (snapped to segment boundary)
       expect(hls.liveSyncPosition, 'liveSyncPosition').to.equal(116.5);
-      expect(interstitials.bufferingIndex).to.equal(5, 'bufferingIndex b');
-      expect(interstitials.playingIndex).to.equal(5, 'playingIndex b');
-      expect(interstitials.primary.currentTime).to.equal(
-        116.5,
-        'timelinePos b',
-      );
+      expect(interstitials.bufferingIndex).to.equal(4, 'bufferingIndex b');
+      expect(interstitials.playingIndex).to.equal(4, 'playingIndex b');
+      expect(interstitials.primary.currentTime).to.equal(116, 'timelinePos b');
     });
   });
 });

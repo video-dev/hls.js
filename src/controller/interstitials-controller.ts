@@ -42,6 +42,7 @@ import type {
   InterstitialPlayer,
 } from './interstitial-player';
 import type Hls from '../hls';
+import type { InterstitialId } from '../loader/interstitial-event';
 import type { LevelDetails } from '../loader/level-details';
 import type { SourceBufferName } from '../types/buffer';
 import type { NetworkComponentAPI } from '../types/component-api';
@@ -136,6 +137,7 @@ export default class InterstitialsController
   private playingAsset: InterstitialAssetItem | null = null;
   private endedAsset: InterstitialAssetItem | null = null;
   private bufferingAsset: InterstitialAssetItem | null = null;
+  private bufferPastEdge: boolean = false;
   private shouldPlay: boolean = false;
 
   constructor(hls: Hls, HlsPlayerClass: typeof Hls) {
@@ -811,16 +813,17 @@ export default class InterstitialsController
         this.detachedData = attachMediaSourceData;
       }
       logFromSource = `Primary`;
-    } else if (detachedMediaSource) {
+    } else {
       const bufferingPlayer = this.getBufferingPlayer();
       if (bufferingPlayer) {
         attachMediaSourceData = bufferingPlayer.transferMedia();
+        this.detachedData = attachMediaSourceData;
         logFromSource = `${bufferingPlayer}`;
-      } else {
+      } else if (detachedMediaSource) {
         logFromSource = `detached MediaSource`;
+      } else {
+        logFromSource = `detached media`;
       }
-    } else {
-      logFromSource = `detached media`;
     }
     if (!attachMediaSourceData) {
       if (detachedMediaSource) {
@@ -881,6 +884,19 @@ export default class InterstitialsController
           isAssetAtEndOfSchedule ||
           (player as HlsAssetPlayer).appendInPlace === false,
       };
+    }
+    if (!transferring && appendInPlace) {
+      // Set a non-zero startPosition for assets that do not start at 0.
+      // Ensures seek to start on attach.
+      const assetPlayer = player as HlsAssetPlayer;
+      const timelineStart = assetPlayer.assetItem.timelineStart;
+      if (timelineStart) {
+        const timePastStart = Math.max(
+          this.timelinePos - timelineStart,
+          Number.EPSILON,
+        );
+        assetPlayer.hls!.config.startPosition = timePastStart;
+      }
     }
     player.attachMedia(dataToAttach);
   }
@@ -1121,9 +1137,12 @@ export default class InterstitialsController
   ): number {
     if (this.schedule) {
       const liveResumptionTime = buffering
-        ? item.end + item.event.duration
+        ? item.event.cue.pre
+          ? item.end + item.event.duration
+          : undefined
         : this.livePrerollResumption(item.event);
       if (liveResumptionTime !== undefined) {
+        this.log(`find next item index @${liveResumptionTime}`);
         return this.schedule.findItemIndexAtTime(liveResumptionTime);
       }
     }
@@ -1152,7 +1171,8 @@ export default class InterstitialsController
       // check if we've reached the end of the program
       const scheduleItems = this.schedule.items;
       if (scheduleItems) {
-        const nextIndex = index + 1;
+        const item = scheduleItems[index];
+        const nextIndex = item.event ? this.getNextItemIndex(item) : index + 1;
         const scheduleLength = scheduleItems.length;
         if (nextIndex >= scheduleLength) {
           this.setSchedulePosition(-1);
@@ -1162,8 +1182,8 @@ export default class InterstitialsController
         if (this.timelinePos < resumptionTime) {
           this.log(timelineMessage('advanceAfterAssetEnded', resumptionTime));
           this.timelinePos = resumptionTime;
-          if (interstitial.appendInPlace) {
-            this.advanceInPlace(resumptionTime);
+          if (interstitial.appendInPlace && !scheduleItems[nextIndex].event) {
+            this.hls.startLoad(resumptionTime + 0.01);
           }
           this.checkBuffer(this.bufferedPos < resumptionTime);
         }
@@ -1250,7 +1270,7 @@ export default class InterstitialsController
       }
       if (!this.eventItemsMatch(currentItem, scheduledItem)) {
         this.endedItem = currentItem;
-        this.playingItem = null;
+        this.playingItem = this.waitingItem = null;
         this.log(
           `INTERSTITIAL_ENDED ${interstitial} ${segmentToString(currentItem)}`,
         );
@@ -1388,6 +1408,7 @@ export default class InterstitialsController
         this.log(
           `INTERSTITIAL_STARTED ${segmentToString(scheduledItem)} ${interstitial.appendInPlace ? 'append in place' : ''}`,
         );
+        interstitial.hasPlayed = false;
         this.hls.trigger(Events.INTERSTITIAL_STARTED, {
           event: interstitial,
           schedule: scheduleItems.slice(0),
@@ -1492,14 +1513,15 @@ export default class InterstitialsController
   ) {
     this.playingItem = scheduledItem;
     this.playingAsset = this.endedAsset = null;
-    this.waitingItem = this.endedItem = null;
+    this.waitingItem = null;
 
     this.bufferedToItem(scheduledItem);
+    this.endedItem = null;
 
     this.log(`resuming ${segmentToString(scheduledItem)}`);
 
+    let timelinePos = this.timelinePos;
     if (!this.detachedData?.mediaSource) {
-      let timelinePos = this.timelinePos;
       if (
         timelinePos < scheduledItem.start ||
         timelinePos >= scheduledItem.end ||
@@ -1510,6 +1532,8 @@ export default class InterstitialsController
         this.timelinePos = timelinePos;
       }
       this.attachPrimary(timelinePos, scheduledItem);
+    } else if (this.primaryLive) {
+      this.startLoadingPrimaryAt(timelinePos);
     }
 
     if (!fromItem) {
@@ -1540,11 +1564,12 @@ export default class InterstitialsController
     const itemStart = scheduledItem.start;
     if (this.primaryLive) {
       const details = this.primaryDetails;
+      const resumingFromItem = this.endedItem || this.playingItem;
       if (index === 0) {
         return this.hls.startPosition;
       } else if (
         details &&
-        (this.playingItem?.event?.cue.pre ||
+        (resumingFromItem?.event?.cue.pre ||
           itemStart < details.fragmentStart ||
           itemStart > details.edge)
       ) {
@@ -1552,17 +1577,22 @@ export default class InterstitialsController
         if (liveSync !== null) {
           if (preloading) {
             const timeRemaining = this.getBufferingPlayer()?.remaining || 0;
+            this.log(
+              `primary resumption liveSync: ${liveSync} + timeRemaining ${timeRemaining}`,
+            );
             return Math.min(
               liveSync + timeRemaining,
               details.edge,
               scheduledItem.end,
             );
           }
+          this.log(`primary resumption liveSync: ${liveSync}`);
           return liveSync;
         }
         return -1;
       }
     }
+    this.log(`primary resumption itemStart: ${itemStart}`);
     return itemStart;
   }
 
@@ -1613,25 +1643,34 @@ export default class InterstitialsController
   }
 
   private startLoadingPrimaryAt(
-    timelinePos: number,
+    bufferPos: number,
     skipSeekToStartPosition?: boolean,
   ) {
     const hls = this.hls;
+    const { loadingEnabled, bufferingEnabled, startPosition } = hls;
+
+    const instructToSeek = !skipSeekToStartPosition && hls.hasEnoughToStart;
+
+    this.log(
+      `Start loading primary @${bufferPos} bufferedPos: ${this.bufferedPos} instructToSeek: ${instructToSeek} startPosition: ${startPosition} loadingEnabled: ${loadingEnabled} bufferingEnabled: ${bufferingEnabled}`,
+    );
     if (
-      !hls.loadingEnabled ||
-      !hls.media ||
-      Math.abs(
-        (hls.mainForwardBufferInfo?.start || hls.media.currentTime) -
-          timelinePos,
-      ) > 0.5
+      instructToSeek ||
+      !loadingEnabled ||
+      Math.abs(startPosition - bufferPos) > 0.1
     ) {
       const details = this.primaryDetails;
-      if (details?.live && timelinePos > details.edge) {
-        this.log(`Resume primary loading when live reaches ${timelinePos}`);
+      if (details?.live && bufferPos >= details.edge) {
+        const bufferingItem = this.bufferingItem;
+        this.log(
+          `Resume primary loading when live reaches ${bufferPos} buffering item: ${bufferingItem ? segmentToString(bufferingItem) : null}`,
+        );
+        hls.pauseBuffering();
+        this.bufferPastEdge = true;
         return;
       }
-      hls.startLoad(timelinePos, skipSeekToStartPosition);
-    } else if (!hls.bufferingEnabled) {
+      hls.startLoad(bufferPos, skipSeekToStartPosition);
+    } else if (!bufferingEnabled) {
       hls.resumeBuffering();
     }
   }
@@ -1676,8 +1715,39 @@ export default class InterstitialsController
       startPosition === -1 ? 0 : startPosition,
     );
 
-    if (!this.effectivePlayingItem && this.schedule.items) {
+    const items = this.schedule.items;
+    if (!items) {
+      return;
+    }
+    if (!this.effectivePlayingItem) {
       this.checkStart();
+    } else if (this.bufferPastEdge) {
+      const details = this.primaryDetails;
+      const bufferedPos = this.bufferedPos;
+      if (details?.live && bufferedPos < details.edge) {
+        this.bufferPastEdge = false;
+        const bufferingItem = this.bufferingItem;
+        this.log(
+          `Live edge ${details.edge} reached buffer: ${bufferedPos} buffering item: ${bufferingItem ? segmentToString(bufferingItem) : null}`,
+        );
+        const primaryWaiting = bufferingItem?.end === Infinity;
+        if (primaryWaiting) {
+          this.startLoadingPrimaryAt(
+            Math.max(bufferedPos, bufferingItem.start),
+          );
+        } else {
+          const bufferingPlayer = this.getBufferingPlayer();
+          if (bufferingPlayer) {
+            const assetWaiting = bufferingPlayer.bufferedInPlaceToEnd(
+              this.primaryMedia,
+              bufferingPlayer.currentTime,
+            );
+            if (assetWaiting && bufferingPlayer.hls) {
+              bufferingPlayer.hls.trigger(Events.BUFFERED_TO_END, undefined);
+            }
+          }
+        }
+      }
     }
   }
 
@@ -1773,14 +1843,8 @@ export default class InterstitialsController
       for (let i = 0; i < interstitialEvents.length; i++) {
         const interstitial = interstitialEvents[i];
         if (interstitial.cue.post) {
-          const scheduleIndex = this.schedule.findEventIndex(
-            interstitial.identifier,
-          );
-          const item = this.schedule.items?.[scheduleIndex];
-          if (
-            this.isInterstitial(item) &&
-            this.eventItemsMatch(item, this.bufferingItem)
-          ) {
+          const item = this.getEventItem(interstitial.identifier);
+          if (item && this.eventItemsMatch(item, this.bufferingItem)) {
             this.bufferedToItem(item, 0);
           }
           break;
@@ -1840,12 +1904,11 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       if (this.itemsMatch(playingItem, updatedPlayingItem)) {
         this.playingItem = updatedPlayingItem;
       } else {
-        this.waitingItem = this.endedItem = null;
+        this.waitingItem = null;
       }
     }
     // Clear waitingItem if it has been removed from the schedule
     this.waitingItem = this.updateItem(this.waitingItem);
-    this.endedItem = this.updateItem(this.endedItem);
     // Do not replace Interstitial bufferingItem without a match - used for transfering media element or source
     const bufferingItem = this.bufferingItem;
     if (bufferingItem) {
@@ -1981,6 +2044,21 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     b: InterstitialScheduleItem | null | undefined,
   ): boolean {
     return !!b && (a === b || a.event.identifier === b.event?.identifier);
+  }
+
+  private findEventIndex(identifier: InterstitialId): number {
+    return this.schedule ? this.schedule.findEventIndex(identifier) : -1;
+  }
+
+  private getEventItem(
+    identifier: InterstitialId,
+  ): InterstitialScheduleEventItem | undefined {
+    if (this.schedule) {
+      const item = this.schedule.items?.[this.findEventIndex(identifier)];
+      if (this.isInterstitial(item) && item.event.identifier === identifier) {
+        return item;
+      }
+    }
   }
 
   private findItemIndex(
@@ -2189,25 +2267,30 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     } else if (bufferingLast !== null) {
       // If primary player is detached, it is also stopped, restart loading at primary position
       this.bufferingAsset = null;
+      const primaryResumption = this.getPrimaryResumption(
+        item,
+        this.findItemIndex(item),
+        true,
+      );
+      const bufferedPos = (this.bufferedPos = Math.max(
+        primaryResumption,
+        Math.min(this.bufferedPos, item.end),
+        this.timelinePos,
+        item.start,
+      ));
       const detachedData = this.detachedData;
       if (detachedData) {
         if (detachedData.mediaSource) {
           const skipSeekToStartPosition = true;
-          this.attachPrimary(item.start, item, skipSeekToStartPosition);
+          this.attachPrimary(bufferedPos, item, skipSeekToStartPosition);
         } else {
-          this.preloadPrimary(item);
+          this.startLoadingPrimaryAt(bufferedPos);
         }
       } else {
         // If not detached seek to resumption point
-        this.preloadPrimary(item);
+        this.startLoadingPrimaryAt(bufferedPos);
       }
     }
-  }
-
-  private preloadPrimary(item: InterstitialSchedulePrimaryItem) {
-    const index = this.findItemIndex(item);
-    const timelinePos = this.getPrimaryResumption(item, index, true);
-    this.startLoadingPrimaryAt(timelinePos);
   }
 
   private bufferedToEvent(
@@ -2407,7 +2490,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     let startPosition = 0;
     if (this.primaryLive || interstitial.appendInPlace) {
       const timePastStart = this.timelinePos - assetItem.timelineStart;
-      if (timePastStart > 1) {
+      if (timePastStart >= 0) {
         const duration = assetItem.duration;
         if (duration && timePastStart < duration) {
           startPosition = timePastStart;
@@ -2473,8 +2556,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
           details: ErrorDetails.INTERSTITIAL_ASSET_ITEM_ERROR,
           error,
         };
-        const scheduleIndex =
-          this.schedule?.findEventIndex(interstitial.identifier) || -1;
+        const scheduleIndex = this.findEventIndex(interstitial.identifier);
         this.handleAssetItemError(
           errorData,
           interstitial,
@@ -2534,12 +2616,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         return;
       }
       // Preload at end of asset
-      const scheduleIndex = this.schedule.findEventIndex(
-        interstitial.identifier,
-      );
-      const item = this.schedule.items?.[scheduleIndex];
-      if (this.isInterstitial(item)) {
-        this.advanceAssetBuffering(item, assetItem);
+      const item = this.getEventItem(interstitial.identifier);
+      if (item) {
+        this.advanceAssetBuffering(item, inQueuPlayer.assetItem);
       }
     };
     player.on(Events.BUFFERED_TO_END, bufferedToEnd);
@@ -2550,9 +2629,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
           return;
         }
         this.shouldPlay = true;
-        const scheduleIndex = this.schedule.findEventIndex(
-          interstitial.identifier,
-        );
+        const scheduleIndex = this.findEventIndex(interstitial.identifier);
         this.advanceAfterAssetEnded(interstitial, scheduleIndex, assetIndex);
       };
     };
@@ -2577,7 +2654,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       this.handleAssetItemError(
         data,
         interstitial,
-        this.schedule.findEventIndex(interstitial.identifier),
+        this.findEventIndex(interstitial.identifier),
         assetListIndex,
         `Asset player error ${data.error} ${interstitial}`,
       );
@@ -2597,7 +2674,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       this.handleAssetItemError(
         errorData,
         interstitial,
-        this.schedule.findEventIndex(interstitial.identifier),
+        this.findEventIndex(interstitial.identifier),
         assetListIndex,
         error.message,
       );
@@ -2711,8 +2788,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       return;
     }
     const { interstitial, assetItem } = player;
-    const scheduleIndex = this.schedule.findEventIndex(interstitial.identifier);
-    const item = this.schedule.items?.[scheduleIndex];
+    const item = this.getEventItem(interstitial.identifier);
     if (!item) {
       return;
     }
@@ -2758,7 +2834,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         this.handleAssetItemError(
           errorData,
           interstitial,
-          scheduleIndex,
+          this.findEventIndex(interstitial.identifier),
           assetListIndex,
           error.message,
         );
@@ -2792,7 +2868,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         if (
           assetCurrentTime &&
           (distanceFromEnd / media.playbackRate < 0.5 ||
-            player.bufferedInPlaceToEnd(media)) &&
+            player.bufferedInPlaceToEnd(media, player.currentTime)) &&
           player.hls
         ) {
           const scheduleIndex = schedule.findEventIndex(
@@ -2811,7 +2887,13 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
   private advanceInPlace(time: number) {
     const media = this.primaryMedia;
     if (media && media.currentTime < time) {
-      media.currentTime = time;
+      const msg = `advance currentTime to ${time}, duration: ${media.duration}`;
+      if (media.duration > time) {
+        this.log(msg);
+        media.currentTime = time;
+      } else {
+        this.log(`Cannot ${msg}`);
+      }
     }
   }
 
@@ -2886,11 +2968,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     // Fallback to Primary by on current or future events by updating schedule to skip errored interstitials/assets
     const flushStart = interstitial.timelineStart;
     const playingItem = this.effectivePlayingItem;
+    const currentItem = this.playingItem;
     const seekableStart = this.seekableStart;
     const startPosition = this.hls.startPosition;
     let timelinePos = this.timelinePos;
     // Update schedule now that interstitial/assets are flagged with `error` for fallback
-    if (playingItem) {
+    if (this.isInterstitial(playingItem)) {
       this.log(
         `Fallback to primary from event "${interstitial.identifier}" start: ${
           flushStart
@@ -2917,6 +3000,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       return;
     }
     if (!this.schedule) {
+      return;
+    }
+    if (!this.isInterstitial(currentItem)) {
       return;
     }
     const scheduleIndex = this.schedule.findItemIndexAtTime(timelinePos);
@@ -2965,8 +3051,8 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     // If buffer reached Interstitial, start buffering first asset
     if (waitingForItem) {
       // Advance schedule when waiting for asset list data to play
-      const scheduleIndex = this.schedule.findEventIndex(interstitialId);
-      const item = this.schedule.items?.[scheduleIndex];
+      const scheduleIndex = this.findEventIndex(interstitialId);
+      const item = this.getEventItem(interstitialId);
       if (item) {
         if (!this.playingItem && this.timelinePos > item.end) {
           // Abandon if new duration is reduced enough to land playback in primary start
@@ -3027,8 +3113,9 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
           this.handleInPlaceStall(stallingItem.event);
           return;
         }
+        const media = this.primaryMedia;
         this.log(
-          `Primary player stall @${this.timelinePos} bufferedPos: ${this.bufferedPos}`,
+          `Primary player stall @${this.timelinePos} currentTime: ${media?.currentTime} bufferedPos: ${this.bufferedPos}`,
         );
         this.onTimeupdate();
         this.checkBuffer(true);
