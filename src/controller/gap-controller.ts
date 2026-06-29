@@ -134,12 +134,7 @@ export default class GapController extends TaskLoop {
       !hls.config.nudgeOnVideoHole ||
       !userAgentChromeVersion() ||
       !isVideoBuffer(type) ||
-      !isFiniteNumber(media.currentTime) ||
-      media.paused ||
-      media.ended ||
-      media.seeking ||
-      media.playbackRate === 0 ||
-      media.readyState === 0
+      !Number.isFinite(media.currentTime)
     ) {
       return;
     }
@@ -465,21 +460,13 @@ export default class GapController extends TaskLoop {
   }
 
   private nudgeAfterVideoBufferFlush(data: BufferAppendedData) {
-    const { hls, media } = this;
-    if (
-      !this.needsPipelineFlush ||
-      !hls ||
-      !media ||
-      !hls.config.nudgeOnVideoHole ||
-      !isVideoBuffer(data.type) ||
-      data.parent !== PlaylistLevelType.MAIN
-    ) {
+    const { media } = this;
+    if (!this.needsPipelineFlush || !media || !isVideoBuffer(data.type)) {
       return;
     }
 
     if (
-      !userAgentChromeVersion() ||
-      !isFiniteNumber(media.currentTime) ||
+      !Number.isFinite(media.currentTime) ||
       media.paused ||
       media.ended ||
       media.seeking ||
@@ -810,12 +797,8 @@ function getInFlightDependency(
   return null;
 }
 
-function isVideoBuffer(type: SourceBufferName | null) {
-  return type === null || type === 'video' || type === 'audiovideo';
-}
-
-function isFiniteNumber(value: number) {
-  return Number.isFinite(value);
+function isVideoBuffer(type: SourceBufferName) {
+  return type === 'video' || type === 'audiovideo';
 }
 
 function inFlight(inFlightData: InFlightData | undefined): Fragment | null {
