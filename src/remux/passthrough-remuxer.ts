@@ -6,7 +6,11 @@ import {
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { getCodecCompatibleName } from '../utils/codecs';
 import { type ILogger, Logger } from '../utils/logger';
-import { patchEncyptionData, writeUint32 } from '../utils/mp4-tools';
+import {
+  patchEncyptionData,
+  truncateIFrameMoofToSamples,
+  writeUint32,
+} from '../utils/mp4-tools';
 import { getSampleData, parseInitSegment } from '../utils/mp4-tools';
 import type { HlsEventEmitter } from '../events';
 import type { TrackFragmentSample } from './mp4-generator';
@@ -283,65 +287,124 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     if (
       __USE_IFRAMES__ &&
       videoSampleTimestamps &&
-      (videoSampleTimestamps.sampleCount > 1 ||
-        (videoSampleTimestamps.sampleCount === 1 &&
-          !syncOnAudio &&
-          chunkMeta.duration / (videoEndTime - videoStartTime) > 1.5)) &&
+      videoSampleTimestamps.sampleCount >= 1 &&
       initData.video &&
       chunkMeta.iframe
     ) {
-      duration = chunkMeta.duration;
-      const { trun, start, duration: sampleDuration } = videoSampleTimestamps;
+      const { trun, start } = videoSampleTimestamps;
       if (trun.length === 1 && trun[0].samples.length) {
-        const sampleOffset = trun[0].sampleOffset;
-        let totalSize = 0;
-        const samples = trun[0].samples.map((sample): TrackFragmentSample => {
-          const { cts, size, flags } = sample;
-          const { dependsOn, isNonSync } = Object.assign(
-            { dependsOn: 2, isNonSync: 0 },
-            flags,
-          );
-          totalSize += size;
-          return {
-            cts: cts || 0,
-            duration: sampleDuration,
-            size,
-            flags: {
-              isLeading: 0,
-              isDependedOn: 0,
-              hasRedundancy: 0,
-              degradPrio: 0,
-              dependsOn,
-              isNonSync,
-              paddingValue: 0,
-            },
-          };
-        });
-        if (samples.length) {
-          const lastSample = samples[samples.length - 1];
-          let lastSampleDuration = duration * initData.video.timescale;
-          for (let i = samples.length - 1; i--; ) {
-            lastSampleDuration -= samples[i].duration;
+        const fragRun = trun[0];
+        const samples = fragRun.samples;
+        const { lastSampleDurationOffset, defaultSampleDurationOffset } =
+          fragRun;
+        // Stretch samples to playlist time when the moof's
+        // sample timing is off by more than 1/20s.
+        const needsDurationAdjustment =
+          Math.abs(chunkMeta.duration - (videoEndTime - videoStartTime)) > 0.05;
+        const partialMdat = samples.length < videoSampleTimestamps.sampleCount;
+        const needsRemux = needsDurationAdjustment || partialMdat;
+        const canRewriteInPlace =
+          lastSampleDurationOffset !== undefined ||
+          defaultSampleDurationOffset !== undefined;
+        if (!needsRemux) {
+          // MP4 timing already spans EXTINF and every declared sample's
+          // data is in the slice — pass through unchanged.
+          duration = videoEndTime - videoStartTime;
+        } else if (initData.video.encrypted && canRewriteInPlace) {
+          // Encrypted I-Frame: mutate the moof in place so senc /
+          // saiz / saio (and any other moof/traf children) survive intact.
+          if (partialMdat) {
+            const totalSize = samples.reduce(
+              (sum, sample) => sum + sample.size,
+              0,
+            );
+            truncateIFrameMoofToSamples(data, samples.length, totalSize);
           }
-          lastSample.duration = lastSampleDuration;
-
-          // Remux Iframe segments reporting more than one sample (mp4 byte-range contains moof for playback segment)
-          data1 = MP4.moof(chunkMeta.sn, start, {
-            type: 'video',
-            id: videoTrack.id,
-            samples, //: [samples[0]],
+          // adjust duration
+          duration = needsDurationAdjustment
+            ? chunkMeta.duration
+            : videoEndTime - videoStartTime;
+          if (lastSampleDurationOffset !== undefined) {
+            let lastSampleDuration = duration * initData.video.timescale;
+            for (let i = 0; i < samples.length - 1; i++) {
+              lastSampleDuration -= samples[i].duration;
+            }
+            writeUint32(data, lastSampleDurationOffset, lastSampleDuration);
+          } else {
+            writeUint32(
+              data,
+              defaultSampleDurationOffset!,
+              Math.round(
+                (duration * initData.video.timescale) / samples.length,
+              ),
+            );
+          }
+        } else if (!initData.video.encrypted) {
+          // Unencrypted: regenerate the moof from the in-range samples.
+          // The in-place truncation path the encrypted branch uses doesn't
+          // preserve enough structure for some unencrypted codecs
+          duration = needsDurationAdjustment
+            ? chunkMeta.duration
+            : videoEndTime - videoStartTime;
+          const sampleOffset = fragRun.sampleOffset;
+          const sampleDuration = videoSampleTimestamps.duration;
+          let totalSize = 0;
+          const remuxedSamples = samples.map((sample): TrackFragmentSample => {
+            const { cts, size, flags } = sample;
+            const { dependsOn, isNonSync } = Object.assign(
+              { dependsOn: 2, isNonSync: 0 },
+              flags,
+            );
+            totalSize += size;
+            return {
+              cts: cts || 0,
+              duration: sampleDuration,
+              size,
+              flags: {
+                isLeading: 0,
+                isDependedOn: 0,
+                hasRedundancy: 0,
+                degradPrio: 0,
+                dependsOn,
+                isNonSync,
+                paddingValue: 0,
+              },
+            };
           });
-          data2 = data.subarray(sampleOffset - 8, sampleOffset + totalSize);
-          writeUint32(data2, 0, totalSize + 8);
+          if (remuxedSamples.length) {
+            const lastSample = remuxedSamples[remuxedSamples.length - 1];
+            let lastSampleDuration = duration * initData.video.timescale;
+            for (let i = remuxedSamples.length - 1; i--; ) {
+              lastSampleDuration -= remuxedSamples[i].duration;
+            }
+            lastSample.duration = lastSampleDuration;
+
+            data1 = MP4.moof(chunkMeta.sn, start, {
+              type: 'video',
+              id: videoTrack.id,
+              samples: remuxedSamples,
+            });
+            data2 = data.subarray(sampleOffset - 8, sampleOffset + totalSize);
+            writeUint32(data2, 0, totalSize + 8);
+          } else {
+            this.warn(
+              `Could not remux IFrame track fragment (sampleOffset ${sampleOffset}: totalSize: ${totalSize} bytes: ${data})`,
+            );
+            duration = videoEndTime - videoStartTime;
+          }
         } else {
+          // Encrypted, but neither trun nor tfhd carries a duration we
+          // can rewrite (encoder relies on moov trex defaults).
           this.warn(
-            `Could not remux IFrame track fragment (sampleOffset ${sampleOffset}: totalSize: ${totalSize} bytes: ${data})`,
+            `IFrame remux skipped for encrypted segment without trun or tfhd sample_duration (sn ${chunkMeta.sn}); using native sample duration`,
           );
+          duration = videoEndTime - videoStartTime;
         }
       } else {
         this.warn(
           `Could not remux IFrame track fragment (trun count ${trun.length})`,
         );
+        duration = videoEndTime - videoStartTime;
       }
     } else {
       duration = syncOnAudio
