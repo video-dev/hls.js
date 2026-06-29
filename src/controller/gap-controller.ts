@@ -3,6 +3,7 @@ import {
   interstitialsEnabled,
   State,
 } from './base-stream-controller';
+import { getNextFrag } from './fragment-finders';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import TaskLoop from '../task-loop';
@@ -342,6 +343,15 @@ export default class GapController extends TaskLoop {
       // Report stalling after trying to fix
       this._reportStall(bufferInfo);
       if (!this.media || (!this.hls as any)) {
+        return;
+      }
+      if (media.currentTime !== currentTime) {
+        const currentTimeBeforeStallEvent = currentTime;
+        currentTime = media.currentTime;
+        this.moved = true;
+        this.log(
+          `currentTime changed ${currentTimeBeforeStallEvent} > ${currentTime}`,
+        );
         return;
       }
     }
@@ -763,7 +773,7 @@ function withInterstitialBoundary(
     hls.interstitialsManager
   ) {
     const frag = 'type' in appended ? appended : appended.fragment;
-    const nextFrag = levelDetails.fragments[1 + frag.sn - levelDetails.startSN];
+    const nextFrag = getNextFrag(levelDetails, frag.sn, true);
     if (
       nextFrag?.level === frag.level &&
       fragOverlapsQueuedInterstitial(
