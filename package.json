@@ -102,7 +102,7 @@
     "browserstack-local": "1.5.13",
     "chai": "6.2.2",
     "chart.js": "2.9.4",
-    "chromedriver": "149.0.3",
+    "chromedriver": "149.0.4",
     "doctoc": "2.4.1",
     "es-check": "9.6.4",
     "eslint": "8.57.1",
@@ -141,6 +141,6 @@
     "sinon-chai": "4.0.1",
     "typescript": "5.9.3",
     "url-toolkit": "2.2.5",
-    "wrangler": "4.101.0"
+    "wrangler": "4.103.0"
   }
 }
