@@ -3,6 +3,7 @@ import {
   findFragmentByPDT,
   findFragmentByPTS,
   findNearestWithCC,
+  getNextFrag,
 } from './fragment-finders';
 import { FragmentState } from './fragment-tracker';
 import Decrypter from '../crypt/decrypter';
@@ -1221,13 +1222,16 @@ export default class BaseStreamController
       const data = error.data;
       if (data.frag && data.details === ErrorDetails.INTERNAL_ABORTED) {
         this.handleFragLoadAborted(data.frag, data.part);
-      } else if (data.frag && data.type === ErrorTypes.KEY_SYSTEM_ERROR) {
+      } else if (
+        data.frag &&
+        data.type === ErrorTypes.KEY_SYSTEM_ERROR &&
+        !data.fatal
+      ) {
         data.frag.abortRequests();
         this.resetStartWhenNotLoaded();
         this.resetFragmentLoading(data.frag);
-      } else {
-        this.hls.trigger(Events.ERROR, data as ErrorData);
       }
+      this.hls.trigger(Events.ERROR, data as ErrorData);
     } else {
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.OTHER_ERROR,
@@ -1600,7 +1604,10 @@ export default class BaseStreamController
     }
     let programFrag = this.filterReplacedPrimary(frag, levelDetails);
     if (!programFrag && frag) {
-      programFrag = fragments[1 + frag.sn - levelDetails.startSN] || null;
+      programFrag = getNextFrag(levelDetails, frag.sn, this.loadingParts);
+      if (programFrag) {
+        this.nextLoadPosition = programFrag.start;
+      }
     }
     return programFrag;
   }
@@ -1693,9 +1700,9 @@ export default class BaseStreamController
         if (bufferingInterstitial) {
           // Do not stream fragments while buffering Interstitial Events (except for overlap at the start)
           if (
-            bufferingInterstitial.appendInPlace ||
-            Math.abs(frag.start - bufferingItem.start) > 1 ||
-            bufferingItem.start === 0
+            !bufferingInterstitial.appendInPlace &&
+            (Math.abs(frag.start - bufferingItem.start) > 1 ||
+              bufferingItem.start === 0)
           ) {
             return null;
           }
@@ -1710,7 +1717,8 @@ export default class BaseStreamController
             // fragment is past schedule item end
             // allow some overflow when not appending in place to prevent stalls
             if (
-              bufferingItem.nextEvent.appendInPlace ||
+              (bufferingItem.nextEvent.appendInPlace &&
+                !bufferingItem.nextEvent.hasPlayed) ||
               frag.start - bufferingItem.end > 1
             ) {
               return null;

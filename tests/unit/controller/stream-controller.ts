@@ -592,8 +592,13 @@ describe('StreamController', function () {
         expect(streamController['lastCurrentTime']).to.equal(5);
       });
 
-      it('should set startPosition to lastCurrentTime if unset and lastCurrentTime > 0', function () {
+      it('should set startPosition to lastCurrentTime if unset and lastCurrentTime > 0 after parsing segments', function () {
         streamController['lastCurrentTime'] = 5;
+        streamController['initPTS'].push({
+          baseTime: 0,
+          timescale: 1,
+          trackId: 0,
+        });
         streamController.startLoad(-1);
         assertStreamControllerStarted(streamController);
         expect(streamController['nextLoadPosition']).to.equal(5);
