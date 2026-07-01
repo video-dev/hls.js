@@ -728,7 +728,7 @@ Maximum retry threshold used for both buffer hole skipping and playhead nudging:
 
 (default: `true`)
 
-Whether or not HLS.js should perform a seek nudge to flush the rendering pipeline upon traversing a gap or hole in video SourceBuffer buffered time ranges. This is only performed when audio is buffered at the point where the hole is detected. For more information see `nudgeOnVideoHole` in gap-controller and issues https://issues.chromium.org/issues/40280613#comment10 and https://github.com/video-dev/hls.js/issues/5631.
+Whether or not HLS.js should perform a seek nudge to flush the rendering pipeline upon traversing a gap or hole in video SourceBuffer buffered time ranges, or after video buffer replacement removes the current playhead and the replacement video is appended over it. The video-hole nudge is only performed when audio is buffered at the point where the hole is detected. For more information see `nudgeOnVideoHole` in gap-controller and issues https://issues.chromium.org/issues/40280613#comment10, https://github.com/video-dev/hls.js/issues/5631, and https://github.com/video-dev/hls.js/issues/6355.
 
 ### `skipBufferHolePadding`
 
