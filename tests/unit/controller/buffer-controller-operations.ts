@@ -1161,8 +1161,17 @@ describe('BufferController with attached media', function () {
 
     it('blocks audio append when video buffer is empty', function () {
       const audioQueue = getAudioQueue();
-      // Audio arrives with no video buffered - should be blocked
+      // Audio arrives with no video buffered - first append is not blocked
       triggerAudioAppend(0, 2);
+      // Queue should have block-audio op followed by the audio append
+      expect(audioQueue.length).to.equal(1);
+      expect(audioQueue[0].label).to.equal('append-audio');
+
+      audioQueue.length = 0;
+      setSourceBufferBufferedRange(bufferController, 'audio', 0, 2);
+
+      // Morem audio arrives with no video buffered - blocked
+      triggerAudioAppend(2, 4);
 
       // Queue should have block-audio op followed by the audio append
       expect(audioQueue.length).to.equal(2);
@@ -1185,6 +1194,7 @@ describe('BufferController with attached media', function () {
     it('blocks audio when audio is ahead of video', function () {
       // Video has buffered 0-5, but audio segment starts at 6 (ahead of video)
       setSourceBufferBufferedRange(bufferController, 'video', 0, 5);
+      setSourceBufferBufferedRange(bufferController, 'audio', 0, 6);
       (bufferController as any).lastVideoAppendEnd = 5;
 
       const audioQueue = getAudioQueue();
@@ -1197,8 +1207,9 @@ describe('BufferController with attached media', function () {
 
     it('unblocks audio when video append advances past blocked audio position', function () {
       const audioQueue = getAudioQueue();
-      // Audio arrives first, gets blocked (no video buffered)
-      triggerAudioAppend(0, 2);
+      // Audio arrives first, second append gets blocked (no video buffered)
+      setSourceBufferBufferedRange(bufferController, 'audio', 0, 1);
+      triggerAudioAppend(1, 1);
       expect(audioQueue[0].label).to.equal('block-audio');
 
       // Video append arrives — advances lastVideoAppendEnd past audio pTime
@@ -1234,11 +1245,11 @@ describe('BufferController with attached media', function () {
       )?.buffer;
       const audioQueue = getAudioQueue();
 
-      // First audio triggers block (no video buffered)
-      triggerAudioAppend(0, 2);
-      expect(audioQueue[0].label).to.equal('block-audio');
+      // First audio is appended
+      setSourceBufferBufferedRange(bufferController, 'audio', 0, 2);
 
-      // Second audio also triggers its own block (guard removed)
+      // Second audio also triggers block (guard removed)
+      triggerAudioAppend(2, 2);
       triggerAudioAppend(2, 2);
       expect(audioQueue.length).to.equal(4);
       expect(audioQueue[0].label).to.equal('block-audio');
@@ -1273,6 +1284,7 @@ describe('BufferController with attached media', function () {
       expect(audioQueue.length).to.equal(1);
       expect(audioQueue[0].label).to.equal('append-audio');
       expect(audioBuffer!.appendBuffer).to.have.been.calledOnce;
+      setSourceBufferBufferedRange(bufferController, 'audio', 0, 2);
 
       // While audio[0] is still in-flight (no updateend yet), second audio
       // arrives ahead of video — block-audio lands behind the in-flight append

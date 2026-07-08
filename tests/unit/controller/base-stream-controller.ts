@@ -965,7 +965,6 @@ describe('BaseStreamController', function () {
         baseStreamController as any,
         'resetFragmentLoading',
       );
-      const warnStub = sinon.stub(baseStreamController as any, 'warn');
 
       const result = (baseStreamController as any).loadInitSegmentIfNeeded(
         mediaFrag,
@@ -989,13 +988,11 @@ describe('BaseStreamController', function () {
           expect(resetFragmentLoadingStub).to.have.been.calledOnceWith(
             mediaFrag,
           );
-          expect(warnStub).to.have.been.calledOnceWith(loadError);
         })
         .finally(() => {
           abortStub.restore();
           handleFragLoadErrorStub.restore();
           resetFragmentLoadingStub.restore();
-          warnStub.restore();
         });
     });
   });

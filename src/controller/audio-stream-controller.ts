@@ -222,20 +222,29 @@ class AudioStreamController
     const lastCurrentTime = this.lastCurrentTime;
     this.stopLoad();
     this.setInterval(TICK_INTERVAL);
-    if (lastCurrentTime > 0 && startPosition === -1) {
+    if (
+      lastCurrentTime > 0 &&
+      startPosition === -1 &&
+      !skipSeekToStartPosition &&
+      this.initPTS.length
+    ) {
       this.log(
         `Override startPosition with lastCurrentTime @${lastCurrentTime.toFixed(
           3,
         )}`,
       );
       startPosition = lastCurrentTime;
-      this.state = State.IDLE;
-    } else {
-      this.state = State.WAITING_TRACK;
     }
+    this.state = State.IDLE;
     this.nextLoadPosition = this.lastCurrentTime =
       startPosition + this.timelineOffset;
     this.startPosition = skipSeekToStartPosition ? -1 : startPosition;
+    if (
+      !skipSeekToStartPosition &&
+      !this.fragmentTracker.hasFragments(this.playlistType)
+    ) {
+      this.startFragRequested = false;
+    }
     this.tick();
   }
 
@@ -377,11 +386,11 @@ class AudioStreamController
     if (this.switchingTrack && media) {
       const pos = loadPosition;
       // if currentTime (pos) is less than alt audio playlist start time, it means that alt audio is ahead of currentTime
-      if (trackDetails.PTSKnown && pos < start) {
+      if (trackDetails.PTSKnown && pos < start && pos >= this.timelineOffset) {
         // if everything is buffered from pos to start or if audio buffer upfront, let's seek to start
         if (bufferInfo.end > start || bufferInfo.nextStart) {
           this.log(
-            'Alt audio track ahead of main track, seek to start of alt audio track',
+            `Alt audio track ahead of main track, seek to start of alt audio track ${pos} -> ${start} + 0.05`,
           );
           media.currentTime = start + 0.05;
         }

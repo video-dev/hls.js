@@ -810,15 +810,18 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const videoTrack = tracks.video;
     const videoSb = videoTrack?.buffer;
     if (videoSb && sn !== 'initSegment' && offset !== undefined) {
+      const audioSb = audioTrack?.buffer;
       const partOrFrag = part || (frag as MediaFragment);
       if (
         type === 'audio' &&
         parent !== 'main' &&
-        !(videoTrack.ending || videoTrack.ended)
+        !(videoTrack.ending || videoTrack.ended) &&
+        audioSb &&
+        BufferHelper.getBuffered(audioSb).length
       ) {
         const pStart = partOrFrag.start;
         const pTime = pStart + partOrFrag.duration * 0.05;
-        const vbuffered = videoSb.buffered;
+        const vbuffered = BufferHelper.getBuffered(videoSb);
         const vappending = this.currentOp('video');
         if (!vbuffered.length && !vappending) {
           // wait for video before appending audio
@@ -834,12 +837,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         const videoAppendEnd = partOrFrag.end;
         const diff = this.lastVideoAppendEnd - videoAppendEnd;
         this.lastVideoAppendEnd = videoAppendEnd;
-        if (this.isAudioBlocked()) {
-          if (diff < 0 || diff > partOrFrag.duration) {
-            this.unblockAudio();
-          } else {
-            this.executeNext('audio');
-          }
+        if (diff < 0 || diff > partOrFrag.duration) {
+          this.unblockAudio();
+        } else if (this.isAudioBlocked()) {
+          this.executeNext('audio');
         }
       }
     }
@@ -927,7 +928,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             if (evictEnd > 0) {
               this._quotaEvictionPending[type] = true;
               this.log(
-                `QuotaExceededError on "${type}" append sn: ${sn} — evicting back buffer to ${evictEnd.toFixed(3)}s and retrying`,
+                `QuotaExceededError on "${type}" append sn: ${sn} - evicting back buffer to ${evictEnd.toFixed(3)}s and retrying`,
               );
               const removeOp = this.getFlushOp(type, 0, evictEnd);
               const clearOp = this.getClearEvictionPendingOp(type);
@@ -936,7 +937,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
               return;
             }
             this.warn(
-              `QuotaExceededError on "${type}" sn: ${sn} — no back buffer available to evict`,
+              `QuotaExceededError on "${type}" sn: ${sn} - no back buffer available to evict`,
             );
           }
         }
@@ -1031,7 +1032,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         this.removeExecutor(type, start, end);
       },
       onStart: () => {
-        // logger.debug(`[buffer-controller]: Started flushing ${start} -> ${end} for ${type} Source Buffer`);
+        // this.log(
+        //   `Started flushing ${start} -> ${end} for ${type} Source Buffer`,
+        // );
       },
       onComplete: () => {
         const sb = this.tracks[type]?.buffer;
@@ -1876,6 +1879,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return;
     }
     operation.onComplete();
+
+    const updating = this.tracks[type]?.buffer?.updating;
+    if (updating) {
+      this.log(`${type} SourceBuffer updating on "updateend"`);
+      this.blockUntilOpen(() => {
+        this.shiftAndExecuteNext(type);
+      });
+      return;
+    }
     this.shiftAndExecuteNext(type);
   }
 
@@ -1939,6 +1951,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       ? mediaSource.duration
       : Infinity;
     const removeStart = Math.max(0, startOffset);
+    if (removeStart >= msDuration) {
+      this.currentOp(type)?.onComplete();
+      return;
+    }
     const removeEnd = Math.min(endOffset, mediaDuration, msDuration);
     if (removeEnd > removeStart && (!track.ending || track.ended)) {
       track.ended = false;

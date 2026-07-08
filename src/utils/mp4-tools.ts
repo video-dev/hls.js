@@ -106,6 +106,52 @@ export function writeUint32(buffer: Uint8Array, offset: number, value: number) {
   buffer[offset + 3] = value & 0xff;
 }
 
+export function truncateIFrameMoofToSamples(
+  data: Uint8Array<ArrayBuffer>,
+  keepSampleCount: number,
+  keepTotalSize: number,
+): void {
+  const moofs = findBox(data, ['moof']);
+  if (moofs.length !== 1) {
+    return;
+  }
+  const moof = moofs[0];
+  const trafs = findBox(moof, ['traf']);
+  for (let i = 0; i < trafs.length; i++) {
+    const traf = trafs[i];
+    const trun = findBox(traf, ['trun'])[0];
+    if (trun) {
+      writeUint32(data, trun.byteOffset - data.byteOffset + 4, keepSampleCount);
+    }
+    const senc = findBox(traf, ['senc'])[0];
+    if (senc) {
+      writeUint32(data, senc.byteOffset - data.byteOffset + 4, keepSampleCount);
+    }
+    const saiz = findBox(traf, ['saiz'])[0];
+    if (saiz) {
+      const saizFlags = (saiz[1] << 16) | (saiz[2] << 8) | saiz[3];
+      let off = 4;
+      if (saizFlags & 0x01) {
+        off += 8;
+      }
+      off += 1;
+      writeUint32(
+        data,
+        saiz.byteOffset - data.byteOffset + off,
+        keepSampleCount,
+      );
+    }
+  }
+  const mdats = findBox(data, ['mdat']);
+  if (mdats.length === 1) {
+    writeUint32(
+      data,
+      mdats[0].byteOffset - data.byteOffset - 8,
+      8 + keepTotalSize,
+    );
+  }
+}
+
 export function hasBoxData(data: Uint8Array, type: BoxType): boolean {
   const end = data.byteLength;
   for (let i = 0; i < end; ) {
@@ -698,6 +744,7 @@ export function parseSinf(sinf: Uint8Array): BoxDataOrUndefined {
 
 type TrackFragmentRunSample = {
   cts?: number;
+  duration: number;
   size: number;
   flags?: {
     dependsOn: 1 | 2;
@@ -707,6 +754,8 @@ type TrackFragmentRunSample = {
 type TrackFragmentRun = {
   sampleOffset: number;
   samples: TrackFragmentRunSample[];
+  lastSampleDurationOffset?: number;
+  defaultSampleDurationOffset?: number;
 };
 export type TrackTimes = {
   duration: number;
@@ -789,6 +838,7 @@ export function getSampleData(
       // each present only when its flag is set. Walk them so default_sample_size
       // is read at the correct offset regardless of which earlier fields exist.
       let defaultSampleDuration = trackDefault?.duration || 0;
+      let defaultSampleDurationOffset: number | undefined;
       let defaultSampleSize = trackDefault?.sampleSize || 0;
       let tfhdOptOffset = 8;
       if (tfhdFlags & 0x000001) {
@@ -802,6 +852,8 @@ export function getSampleData(
       if (tfhdFlags & 0x000008) {
         // default_sample_duration
         defaultSampleDuration = readUint32(tfhd, tfhdOptOffset);
+        defaultSampleDurationOffset =
+          tfhd.byteOffset - data.byteOffset + tfhdOptOffset;
         tfhdOptOffset += 4;
       }
       if (tfhdFlags & 0x000010) {
@@ -854,16 +906,20 @@ export function getSampleData(
         }
         let sampleOffset = baseDataOffset + dataOffset;
         const samples: TrackFragmentRunSample[] = [];
+        const fragRun: TrackFragmentRun = {
+          sampleOffset,
+          samples,
+          defaultSampleDurationOffset,
+        };
         if (sampleOffset <= eof) {
-          const fragRun: TrackFragmentRun = {
-            sampleOffset,
-            samples,
-          };
           trackTimes.trun.push(fragRun);
         }
         let size;
         for (let ix = 0; ix < sampleCount; ix++) {
+          let thisSampleDurationOffset: number | undefined;
           if (sampleDurationPresent) {
+            thisSampleDurationOffset =
+              trun.byteOffset - data.byteOffset + offset;
             sampleDuration = readUint32(trun, offset);
             offset += 4;
           } else {
@@ -877,6 +933,11 @@ export function getSampleData(
           }
           sampleOffset += size;
           if (sampleOffset <= eof) {
+            // Capture only fitting samples so a partial-mdat truncation
+            // can still rewrite the right uint32 to balance EXTINF.
+            if (thisSampleDurationOffset !== undefined) {
+              fragRun.lastSampleDurationOffset = thisSampleDurationOffset;
+            }
             let flags;
             let cts = 0;
             if (sampleFlagsPresent) {
@@ -916,6 +977,7 @@ export function getSampleData(
             }
             samples[ix] = {
               cts,
+              duration: sampleDuration,
               flags,
               size,
             };

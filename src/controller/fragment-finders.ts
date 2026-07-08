@@ -239,3 +239,13 @@ export function findNearestWithCC(
   }
   return null;
 }
+
+export function getNextFrag(
+  details: LevelDetails,
+  sn: number,
+  fragmentHintForParts?: boolean,
+): MediaFragment | null {
+  return fragmentHintForParts && sn === details.endSN && details.fragmentHint
+    ? details.fragmentHint
+    : details.fragments[1 + sn - details.startSN] || null;
+}

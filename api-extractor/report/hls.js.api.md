@@ -488,7 +488,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected exceedsMaxBuffer(bufferInfo: BufferInfo, maxBufLen: number, selected: Fragment): boolean;
     // (undocumented)
-    protected filterReplacedPrimary(frag: MediaFragment | null, details: LevelDetails | undefined): MediaFragment | null;
+    protected filterReplacedPrimary<T extends MediaFragment | Part>(frag: T | null, details: LevelDetails | undefined): T | null;
     // (undocumented)
     protected flushBufferGap(frag: Fragment): void;
     // (undocumented)
@@ -1163,6 +1163,8 @@ export class DateRange {
     get endOnNext(): boolean;
     // (undocumented)
     get id(): string;
+    // (undocumented)
+    get invalidReason(): string | null;
     // (undocumented)
     get isInterstitial(): boolean;
     // (undocumented)
@@ -2418,7 +2420,7 @@ export class HlsAssetPlayer {
     // (undocumented)
     get bufferedEnd(): number;
     // (undocumented)
-    bufferedInPlaceToEnd(media?: HTMLMediaElement | null): boolean;
+    bufferedInPlaceToEnd(media?: HTMLMediaElement | null, fromTime?: number): boolean;
     // (undocumented)
     get currentTime(): number;
     // (undocumented)
