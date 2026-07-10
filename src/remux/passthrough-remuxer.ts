@@ -284,6 +284,10 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     let data1 = data;
     let data2: Uint8Array<ArrayBuffer> | undefined;
+    // Presentation end of rewritten I-Frame samples (video timescale units).
+    // Set whenever sample durations are stretched to the playlist duration so
+    // that the reported PTS range matches the appended media.
+    let videoPtsEnd: number | undefined;
     if (
       __USE_IFRAMES__ &&
       videoSampleTimestamps &&
@@ -325,20 +329,33 @@ class PassThroughRemuxer extends Logger implements Remuxer {
             ? chunkMeta.duration
             : videoEndTime - videoStartTime;
           if (lastSampleDurationOffset !== undefined) {
+            const lastSample = samples[samples.length - 1];
             let lastSampleDuration = duration * initData.video.timescale;
             for (let i = 0; i < samples.length - 1; i++) {
               lastSampleDuration -= samples[i].duration;
             }
+            if (lastSampleDuration <= 0) {
+              // Playlist duration is shorter than the preceding samples;
+              // keep the native duration rather than writing an unsigned
+              // wrap-around value.
+              lastSampleDuration = lastSample.duration;
+            }
             writeUint32(data, lastSampleDurationOffset, lastSampleDuration);
+            lastSample.duration = lastSampleDuration;
           } else {
+            const defaultSampleDuration = Math.round(
+              (duration * initData.video.timescale) / samples.length,
+            );
             writeUint32(
               data,
               defaultSampleDurationOffset!,
-              Math.round(
-                (duration * initData.video.timescale) / samples.length,
-              ),
+              defaultSampleDuration,
             );
+            samples.forEach((sample) => {
+              sample.duration = defaultSampleDuration;
+            });
           }
+          videoPtsEnd = samplesPresentationEnd(start, samples);
         } else if (!initData.video.encrypted) {
           // Unencrypted: regenerate the moof from the in-range samples.
           // The in-place truncation path the encrypted branch uses doesn't
@@ -347,10 +364,9 @@ class PassThroughRemuxer extends Logger implements Remuxer {
             ? chunkMeta.duration
             : videoEndTime - videoStartTime;
           const sampleOffset = fragRun.sampleOffset;
-          const sampleDuration = videoSampleTimestamps.duration;
           let totalSize = 0;
           const remuxedSamples = samples.map((sample): TrackFragmentSample => {
-            const { cts, size, flags } = sample;
+            const { cts, duration: sampleDuration, size, flags } = sample;
             const { dependsOn, isNonSync } = Object.assign(
               { dependsOn: 2, isNonSync: 0 },
               flags,
@@ -377,7 +393,14 @@ class PassThroughRemuxer extends Logger implements Remuxer {
             for (let i = remuxedSamples.length - 1; i--; ) {
               lastSampleDuration -= remuxedSamples[i].duration;
             }
+            if (lastSampleDuration <= 0) {
+              // Playlist duration is shorter than the preceding samples;
+              // keep the native duration rather than writing an unsigned
+              // wrap-around value.
+              lastSampleDuration = lastSample.duration;
+            }
             lastSample.duration = lastSampleDuration;
+            videoPtsEnd = samplesPresentationEnd(start, remuxedSamples);
 
             data1 = MP4.moof(chunkMeta.sn, start, {
               type: 'video',
@@ -475,11 +498,19 @@ class PassThroughRemuxer extends Logger implements Remuxer {
         ? baseOffsetSamples.ptsMin / baseOffsetSamples.timescale -
           initPTS.baseTime / initPTS.timescale
         : startDTS;
+    // Report the presentation end of rewritten I-Frame samples rather than
+    // the timing parsed from the input so that fragment start/end updates
+    // (updateFragPTSDTS) match the appended media. Otherwise a stretched
+    // single-sample fragment collapses frag.end to ~one frame, breaking
+    // buffered-fragment lookups and shifting playlist timing.
     const endPTS =
-      hasVideo && baseOffsetSamples?.ptsMax
-        ? baseOffsetSamples.ptsMax / baseOffsetSamples.timescale -
+      videoPtsEnd !== undefined && videoSampleTimestamps
+        ? videoPtsEnd / videoSampleTimestamps.timescale -
           initPTS.baseTime / initPTS.timescale
-        : endDTS;
+        : hasVideo && baseOffsetSamples?.ptsMax
+          ? baseOffsetSamples.ptsMax / baseOffsetSamples.timescale -
+            initPTS.baseTime / initPTS.timescale
+          : endDTS;
 
     // For troubleshooting duplicates of https://github.com/video-dev/hls.js/issues/6777
     // if (videoSampleTimestamps) {
@@ -577,6 +608,20 @@ function toStartEndOrDefault(
     ? (trackTimes.start + (end ? trackTimes.duration : 0)) /
         trackTimes.timescale
     : defaultValue;
+}
+
+function samplesPresentationEnd(
+  baseDecodeTime: number,
+  samples: Array<{ cts?: number; duration: number }>,
+): number {
+  let dts = baseDecodeTime;
+  let end = baseDecodeTime;
+  for (let i = 0; i < samples.length; i++) {
+    const { cts, duration } = samples[i];
+    end = Math.max(end, dts + (cts || 0) + duration);
+    dts += duration;
+  }
+  return end;
 }
 
 function isInvalidInitPts(
