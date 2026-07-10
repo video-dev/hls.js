@@ -204,6 +204,61 @@ describe('IFrameController', function () {
     expect(iframeStreamController.initPTS).to.deep.equal(timestamps);
   });
 
+  it('flushes buffer beyond the target and signals EOS before seeking on fragment buffered', function () {
+    const iframePlayer = loadedIFramePlayer(playlistWithIFrameVariants);
+    const streamController = (iframePlayer as any).streamController;
+    const frag = new Fragment(PlaylistLevelType.MAIN, '');
+    frag.sn = 30;
+    frag.level = 0;
+    frag.setStart(60);
+    frag.setDuration(2);
+    frag.elementaryStreams.video = {
+      startPTS: 60,
+      endPTS: 62,
+      startDTS: 60,
+      endDTS: 62,
+    };
+    // Media with a buffered range beyond the fragment (an earlier operation
+    // rendered a later frame)
+    streamController.media = {
+      seeking: false,
+      currentTime: 421.2,
+      buffered: {
+        length: 2,
+        start: (i: number) => [60, 420][i],
+        end: (i: number) => [62, 422][i],
+      },
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      pause: () => {},
+    };
+    streamController.currentOp = [61.2, { seekOnAppend: true }];
+    const calls: string[] = [];
+    sandbox
+      .stub(streamController, 'seekTo' as any)
+      .callsFake(() => calls.push('seek') > 0);
+    const trigger = iframePlayer.trigger.bind(iframePlayer);
+    sandbox
+      .stub(iframePlayer, 'trigger' as any)
+      .callsFake((event: any, data: any) => {
+        if (event === Events.BUFFER_FLUSHING || event === Events.BUFFER_EOS) {
+          calls.push(event);
+        }
+        return trigger(event, data);
+      });
+
+    streamController.fragBufferedComplete(frag, null);
+
+    // The buffered range after the target must be removed and end of stream
+    // signalled before seeking, so the decoder does not starve waiting for a
+    // frame after the seek target (it would never complete the seek).
+    expect(calls).to.deep.equal([
+      Events.BUFFER_FLUSHING,
+      Events.BUFFER_EOS,
+      'seek',
+    ]);
+  });
+
   it('queues loadMediaAt operations issued while a fragment is loading', function () {
     const iframePlayer = loadedIFramePlayer(playlistWithIFrameVariants);
     const streamController = (iframePlayer as any).streamController;

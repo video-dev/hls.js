@@ -42,6 +42,8 @@ export class IFrameStreamController extends StreamController {
       // operation) so it is picked up when the active fragment completes.
       this.nextOp = [adjustedTime, options];
     }
+    // This operation supersedes any seek scheduled for end of stream
+    this.hls.off(Events.BUFFERED_TO_END, this.onBufferedToEnd);
     const media = this.media;
     if (seekOnAppend && media) {
       const seeking = this.seekTo(adjustedTime);
@@ -90,20 +92,51 @@ export class IFrameStreamController extends StreamController {
     this.currentOp = this.nextOp = undefined;
     this.state = State.STOPPED;
     if (currentOp?.[1].seekOnAppend) {
+      if (!nextOp) {
+        // The decoder only renders a single appended keyframe once it can
+        // rule out more frames before the next composition deadline: the
+        // media element completes a seek into a buffered range when a frame
+        // follows the seek target, or end of stream marks the end of the
+        // range. Remove buffered media beyond the target fragment (loading
+        // an earlier fragment leaves a gap the decoder would otherwise wait
+        // on indefinitely) so that end of stream applies to it, then seek.
+        const media = this.media;
+        const bufferedFrag = this.getBufferedAt(currentOp[0]);
+        const flushFrom = (bufferedFrag || (frag as MediaFragment)).end;
+        if (media) {
+          const buffered = BufferHelper.getBuffered(media);
+          const bufferedEnd = buffered.length
+            ? buffered.end(buffered.length - 1)
+            : 0;
+          if (bufferedEnd - flushFrom > 0.01) {
+            this.flushMainBuffer(flushFrom, Infinity);
+          }
+        }
+        // Should end of stream complete after the seek below, re-run the
+        // seek (see onBufferedToEnd).
+        this.hls.once(Events.BUFFERED_TO_END, this.onBufferedToEnd);
+        this.hls.trigger(Events.BUFFER_EOS, { type: 'video' });
+      }
       if (!this.seekTo(currentOp[0])) {
         this.warn(
           `Could not seek to ${currentOp[0]} after fragment buffered (buffered: ${this.media ? timeRangesToString(BufferHelper.getBuffered(this.media)) : 'none'})`,
         );
-      }
-      if (!nextOp) {
-        // Mark end of stream to force rendering immediately
-        this.hls.trigger(Events.BUFFER_EOS, { type: 'video' });
       }
     }
     if (nextOp) {
       this.loadMediaAt.apply(this, nextOp);
     }
   }
+
+  private onBufferedToEnd = () => {
+    const media = this.media;
+    if (media?.seeking) {
+      // Re-run the pending seek now that the MediaSource has ended so the
+      // decoder treats the gap after the target range as end of stream.
+      // eslint-disable-next-line no-self-assign
+      media.currentTime = media.currentTime;
+    }
+  };
 
   get playhead(): number {
     return this.nextLoadPosition;
