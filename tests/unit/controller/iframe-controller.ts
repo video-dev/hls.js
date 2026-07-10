@@ -1,6 +1,7 @@
 import { config as chaiConfig, expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
+import { State } from '../../../src/controller/base-stream-controller';
 import { ImageIFrameStreamController } from '../../../src/controller/image-iframe-stream-controller';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
@@ -201,6 +202,21 @@ describe('IFrameController', function () {
     const iframeStreamController = (iframePlayer as any).streamController;
     expect(iframeStreamController.initPTS).to.not.equal(timestamps);
     expect(iframeStreamController.initPTS).to.deep.equal(timestamps);
+  });
+
+  it('queues loadMediaAt operations issued while a fragment is loading', function () {
+    const iframePlayer = loadedIFramePlayer(playlistWithIFrameVariants);
+    const streamController = (iframePlayer as any).streamController;
+    // Simulate an in-flight fragment load for a span that does not contain
+    // the newly requested time. The operation must be queued (not dropped)
+    // so it is issued when the active fragment completes.
+    streamController.state = State.FRAG_LOADING;
+    streamController.fragCurrent = { start: 0, end: 4 };
+    streamController.loadMediaAt(30, { seekOnAppend: true });
+    expect(streamController.nextOp).to.deep.equal([30, { seekOnAppend: true }]);
+    // A subsequent call replaces the pending operation
+    streamController.loadMediaAt(2, { seekOnAppend: true });
+    expect(streamController.nextOp).to.deep.equal([2, { seekOnAppend: true }]);
   });
 
   it('createImageIFramePlayer returns null when no image iframe variants exist', function () {

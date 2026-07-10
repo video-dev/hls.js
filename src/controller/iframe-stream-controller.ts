@@ -3,6 +3,7 @@ import StreamController from './stream-controller';
 import { Events } from '../events';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
+import { timeRangesToString } from '../utils/time-ranges';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type { TimestampOffset } from '../utils/timescale-conversion';
@@ -12,7 +13,6 @@ export type LoadMediaAtOptions = { seekOnAppend: boolean };
 export class IFrameStreamController extends StreamController {
   private currentOp?: [time: number, options: LoadMediaAtOptions];
   private nextOp?: [time: number, options: LoadMediaAtOptions];
-  private gotNext: boolean = false;
   initDetails?: LevelDetails | null;
 
   setInitPts(initPTS: TimestampOffset[]) {
@@ -38,13 +38,9 @@ export class IFrameStreamController extends StreamController {
       this.tick();
       this.currentOp = [adjustedTime, options];
     } else {
-      const fragCurrent = this.fragCurrent;
-      if (
-        !fragCurrent ||
-        (time >= fragCurrent.start && time < fragCurrent.end)
-      ) {
-        this.nextOp = [adjustedTime, options];
-      }
+      // A load operation is active: queue this one (replacing any pending
+      // operation) so it is picked up when the active fragment completes.
+      this.nextOp = [adjustedTime, options];
     }
     const media = this.media;
     if (seekOnAppend && media) {
@@ -59,8 +55,15 @@ export class IFrameStreamController extends StreamController {
   private seekTo(time: number): boolean {
     const media = this.media;
     if (media) {
-      if (time > media.duration) {
-        time = media.duration - 0.01;
+      // Clamp to the playlist end so the last frame can be rendered. Do not
+      // clamp to `media.duration`: endOfStream() after each rendered frame
+      // truncates duration to the buffered end, and clamping to it would
+      // divert forward operations to a stale frame while the requested
+      // fragment is still loading.
+      const edge = this.getLevelDetails()?.edge;
+      const end = edge !== undefined ? edge : media.duration;
+      if (time >= end) {
+        time = end - 0.01;
       }
       const bufferInfo = BufferHelper.bufferInfo(media, time, 0);
       const hasEnough = bufferInfo.len > 0 && this.getBufferedAt(time);
@@ -87,8 +90,12 @@ export class IFrameStreamController extends StreamController {
     this.currentOp = this.nextOp = undefined;
     this.state = State.STOPPED;
     if (currentOp?.[1].seekOnAppend) {
-      this.seekTo(currentOp[0]);
-      if (!nextOp && !this.gotNext) {
+      if (!this.seekTo(currentOp[0])) {
+        this.warn(
+          `Could not seek to ${currentOp[0]} after fragment buffered (buffered: ${this.media ? timeRangesToString(BufferHelper.getBuffered(this.media)) : 'none'})`,
+        );
+      }
+      if (!nextOp) {
         // Mark end of stream to force rendering immediately
         this.hls.trigger(Events.BUFFER_EOS, { type: 'video' });
       }
@@ -112,9 +119,8 @@ export class IFrameStreamController extends StreamController {
   // public getLevelDetails
   protected seekToStartPos() {}
   protected setStartPosition() {}
-  protected onMediaSeeking = () => {
-    this.gotNext = false;
-  };
+  // Seeking is always initiated by this controller; ignore media seek events.
+  protected onMediaSeeking = () => {};
 
   protected alignPlaylists(
     details: LevelDetails,
