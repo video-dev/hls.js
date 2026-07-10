@@ -2016,9 +2016,9 @@ This is primarily used internally by HLS.js when creating interstitial asset pla
 
 (default: `2097152` (2 MB))
 
-The maximum total byte size of cached image I-Frame data retained by the `ImageIFrameStreamController`. When the cache exceeds this limit, the oldest entries are evicted and their `Fragment.data` is cleared to free memory.
+The maximum total byte size of cached I-Frame data retained by I-Frame player instances. When the cache exceeds this limit, the oldest entries are evicted and their `Fragment.data` is cleared to free memory.
 
-This option only applies to image I-Frame player instances created via `hls.createImageIFramePlayer()`. Video I-Frame data (from `hls.createIFramePlayer()`) is managed by the MSE video SourceBuffer and is not affected by this setting.
+Video I-Frame players (`hls.createIFramePlayer()`) cache loaded fragment data so that frames removed from the video SourceBuffer (buffered media beyond a rendered frame is removed so that it renders reliably) can be re-buffered without additional requests. Image I-Frame players (`hls.createImageIFramePlayer()`) cache the image data extracted from loaded fragments.
 
 ### `useMediaCapabilities`
 

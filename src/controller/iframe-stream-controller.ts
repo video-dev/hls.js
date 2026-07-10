@@ -1,11 +1,16 @@
 import { State } from './base-stream-controller';
+import { FragmentState } from './fragment-tracker';
 import StreamController from './stream-controller';
 import { Events } from '../events';
+import { isMediaFragment } from '../loader/fragment';
+import { LoadStats } from '../loader/load-stats';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
 import { timeRangesToString } from '../utils/time-ranges';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
+import type { FragLoadedData } from '../types/events';
+import type { Level } from '../types/level';
 import type { TimestampOffset } from '../utils/timescale-conversion';
 
 export type LoadMediaAtOptions = { seekOnAppend: boolean };
@@ -13,6 +18,11 @@ export type LoadMediaAtOptions = { seekOnAppend: boolean };
 export class IFrameStreamController extends StreamController {
   private currentOp?: [time: number, options: LoadMediaAtOptions];
   private nextOp?: [time: number, options: LoadMediaAtOptions];
+  protected cached: MediaFragment[] = [];
+  protected cachedSize = 0;
+  // Cache loaded fragment payloads for replay. The image I-Frame controller
+  // disables this and caches decoded image data instead.
+  protected cacheFragmentData: boolean = true;
   initDetails?: LevelDetails | null;
 
   setInitPts(initPTS: TimestampOffset[]) {
@@ -84,7 +94,115 @@ export class IFrameStreamController extends StreamController {
     return this.fragmentTracker.getBufferedFrag(time, PlaylistLevelType.MAIN);
   }
 
+  // Retain fragment data up to `iframeCacheLimit` total bytes, evicting the
+  // oldest entries, so that removed frames can be re-buffered without
+  // additional requests
+  protected cacheSet(frag: MediaFragment, data: Uint8Array<ArrayBuffer>) {
+    if (!this.hls) {
+      return;
+    }
+    frag.data = data;
+    const cache = this.cached;
+    cache.push(frag);
+    this.cachedSize += data.buffer.byteLength;
+    const iframeCacheLimit = this.hls.config.iframeCacheLimit;
+    while (this.cachedSize > iframeCacheLimit && cache.length > 1) {
+      const evicted = cache.shift()!;
+      if (evicted.data) {
+        this.cachedSize -= evicted.data.byteLength;
+        evicted.data = undefined;
+      } else {
+        // Fragment was removed. Re-evaluate size.
+        this.cached = cache.filter((frag) => !!frag.data);
+        this.cachedSize = cache.reduce(
+          (acc, { data }) => (data ? data.buffer.byteLength : 0),
+          0,
+        );
+        break;
+      }
+    }
+  }
+
+  protected onHandlerDestroying() {
+    this.cached.length = 0;
+    this.cachedSize = 0;
+    super.onHandlerDestroying();
+  }
+
   // overrides
+  protected _handleFragmentLoadProgress(data: FragLoadedData) {
+    const frag = data.frag;
+    const { part, payload } = data;
+    if (
+      this.cacheFragmentData &&
+      !part &&
+      payload?.byteLength &&
+      !frag.data &&
+      isMediaFragment(frag)
+    ) {
+      // Cache a pristine copy of the payload for replay after the buffer is
+      // flushed (the remuxer rewrites I-Frame fragment data in place)
+      this.cacheSet(frag, new Uint8Array(payload.slice(0)));
+    }
+    super._handleFragmentLoadProgress(data);
+  }
+
+  protected loadFragment(
+    frag: MediaFragment,
+    level: Level,
+    targetBufferTime: number,
+  ) {
+    const fragState = this.fragmentTracker.getState(frag);
+    if (
+      (fragState === FragmentState.NOT_LOADED ||
+        fragState === FragmentState.PARTIAL) &&
+      this.canReplayCached(frag)
+    ) {
+      this.replayCachedFragment(frag);
+      return;
+    }
+    super.loadFragment(frag, level, targetBufferTime);
+  }
+
+  // Replay is possible when fragment data is cached and decryption does not
+  // depend on a key that has yet to be loaded (EME-managed key formats
+  // append encrypted samples as-is)
+  private canReplayCached(frag: MediaFragment): boolean {
+    if (!this.cacheFragmentData || !frag.data?.byteLength) {
+      return false;
+    }
+    const decryptdata = frag.decryptdata;
+    return decryptdata?.keyFormat !== 'identity' || !!decryptdata.key;
+  }
+
+  private replayCachedFragment(frag: MediaFragment) {
+    // The remuxer rewrites fragment data in place: transmux a copy
+    const payload = frag.data!.slice().buffer;
+    this.log(
+      `Buffering cached ${frag.type} sn: ${frag.sn} of level ${frag.level} (${payload.byteLength} bytes)`,
+    );
+    this.fragCurrent = frag;
+    this.startFragRequested = true;
+    const stats = (frag.stats = new LoadStats());
+    stats.loading.start =
+      stats.loading.first =
+      stats.loading.end =
+        self.performance.now();
+    stats.loaded = stats.total = payload.byteLength;
+    stats.chunkCount = 1;
+    this.state = State.FRAG_LOADING;
+    const data: FragLoadedData = {
+      frag,
+      part: null,
+      payload,
+      networkDetails: null,
+    };
+    this._handleFragmentLoadProgress(data);
+    // FRAG_LOADED registers the fragment with the fragment tracker
+    this.hls.trigger(Events.FRAG_LOADED, data);
+    this._handleFragmentLoadComplete(data);
+  }
+
   protected fragBufferedComplete(frag: Fragment, part: Part | null) {
     super.fragBufferedComplete(frag, part);
 

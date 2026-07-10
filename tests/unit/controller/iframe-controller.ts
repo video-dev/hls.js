@@ -259,6 +259,34 @@ describe('IFrameController', function () {
     ]);
   });
 
+  it('re-buffers cached fragment data instead of reloading it', function () {
+    const iframePlayer = loadedIFramePlayer(playlistWithIFrameVariants);
+    const streamController = (iframePlayer as any).streamController;
+    const frag = new Fragment(PlaylistLevelType.MAIN, '');
+    frag.sn = 30;
+    frag.level = 0;
+    frag.setStart(60);
+    frag.setDuration(2);
+    frag.data = new Uint8Array([1, 2, 3, 4]);
+    const calls: string[] = [];
+    sandbox
+      .stub(streamController, '_handleFragmentLoadProgress' as any)
+      .callsFake((data: any) =>
+        calls.push(`progress(${data.payload.byteLength})`),
+      );
+    sandbox
+      .stub(streamController, '_handleFragmentLoadComplete' as any)
+      .callsFake(() => calls.push('complete'));
+
+    streamController.loadFragment(frag, iframePlayer.levels[0], 60.5);
+
+    expect(calls).to.deep.equal(['progress(4)', 'complete']);
+    expect(streamController.fragCurrent).to.equal(frag);
+    expect(frag.stats.loaded).to.equal(4);
+    // The transmuxed payload is a copy; the cached bytes stay pristine
+    expect(frag.data).to.deep.equal(new Uint8Array([1, 2, 3, 4]));
+  });
+
   it('queues loadMediaAt operations issued while a fragment is loading', function () {
     const iframePlayer = loadedIFramePlayer(playlistWithIFrameVariants);
     const streamController = (iframePlayer as any).streamController;
