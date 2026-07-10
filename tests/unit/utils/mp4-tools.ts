@@ -8,6 +8,7 @@ import {
   getSampleData,
   types,
 } from '../../../src/utils/mp4-tools';
+import type { TrackFragmentSample } from '../../../src/remux/mp4-generator';
 import type { InitData } from '../../../src/utils/mp4-tools';
 
 describe('mp4-tools', function () {
@@ -45,7 +46,70 @@ describe('mp4-tools', function () {
     expect(sampleData[1].duration).to.equal(3003);
     expect(sampleData[1].trun[0].samples[0].size).to.equal(1234);
   });
+
+  it('parses trun entries beyond a truncated mdat without losing alignment', function () {
+    // A byte-range addressed I-Frame request loads a moof declaring the whole
+    // GOP with only the first sample's data present in the mdat slice.
+    const fragment = gopFragment();
+    const truncated = fragment.subarray(0, fragment.byteLength - 50);
+
+    const sampleData = getSampleData(
+      truncated,
+      initData(),
+      new ChunkMetadata(0, 0, 0),
+      logger,
+    );
+
+    const track = sampleData[1];
+    // All declared sample durations parse correctly (per-sample flags and
+    // composition offsets of out-of-range samples must be skipped)
+    expect(track.duration).to.equal(1001 + 2002 + 3003);
+    expect(track.sampleCount).to.equal(3);
+    // Only the sample whose data is within the loaded range is captured
+    expect(track.trun[0].samples).to.have.lengthOf(1);
+    expect(track.trun[0].samples[0]).to.deep.include({
+      duration: 1001,
+      size: 10,
+      cts: 500,
+    });
+    expect(track.ptsMax).to.equal(500 + 1001);
+  });
 });
+
+// moof + mdat with three samples (per-sample duration, size, flags and cts)
+// of sizes 10/20/30
+function gopFragment(): Uint8Array<ArrayBuffer> {
+  const samples: TrackFragmentSample[] = [
+    gopSample(1001, 10, 500),
+    gopSample(2002, 20, 0),
+    gopSample(3003, 30, 250),
+  ];
+  return appendUint8Array(
+    MP4.moof(0, 0, { type: 'video', id: 1, samples }),
+    MP4.mdat(new Uint8Array(60)),
+  );
+}
+
+function gopSample(
+  duration: number,
+  size: number,
+  cts: number,
+): TrackFragmentSample {
+  return {
+    cts,
+    duration,
+    size,
+    flags: {
+      degradPrio: 0,
+      dependsOn: 2,
+      hasRedundancy: 0,
+      isDependedOn: 0,
+      isLeading: 0,
+      isNonSync: 0,
+      paddingValue: 0,
+    },
+  };
+}
 
 function initData(): InitData {
   const data = [] as unknown as InitData;

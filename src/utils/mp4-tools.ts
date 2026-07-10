@@ -931,36 +931,40 @@ export function getSampleData(
           } else {
             size = defaultSampleSize;
           }
+          let flags;
+          if (sampleFlagsPresent) {
+            const isNonSyncSample = trun[offset + 1] & 0x01;
+            flags = {
+              isNonSync: isNonSyncSample ? 1 : 0,
+              dependsOn: (trun[offset] & 0x03) === 1 ? 1 : 2,
+            };
+            offset += 4;
+          }
+          let cts = 0;
+          if (sampleCompositionTimeOffsetPresent) {
+            const version = trun[0];
+            cts =
+              version === 0
+                ? readUint32(trun, offset)
+                : readSint32(trun, offset);
+            offset += 4;
+          }
           sampleOffset += size;
+          // Capture only fitting samples so a partial-mdat truncation
+          // can still rewrite the right uint32 to balance EXTINF. Field
+          // offsets must advance for every declared sample (including those
+          // beyond the loaded range) to keep trun parsing aligned.
           if (sampleOffset <= eof) {
-            // Capture only fitting samples so a partial-mdat truncation
-            // can still rewrite the right uint32 to balance EXTINF.
             if (thisSampleDurationOffset !== undefined) {
               fragRun.lastSampleDurationOffset = thisSampleDurationOffset;
             }
-            let flags;
-            let cts = 0;
-            if (sampleFlagsPresent) {
-              const isNonSyncSample = trun[offset + 1] & 0x01;
-              flags = {
-                isNonSync: isNonSyncSample ? 1 : 0,
-                dependsOn: (trun[offset] & 0x03) === 1 ? 1 : 2,
-              };
-              if (!isNonSyncSample) {
-                if (trackTimes.keyFrameIndex === undefined) {
-                  trackTimes.keyFrameIndex = ix;
-                  trackTimes.keyFrameStart = sampleDTS;
-                }
-              }
-              offset += 4;
-            }
-            if (sampleCompositionTimeOffsetPresent) {
-              const version = trun[0];
-              cts =
-                version === 0
-                  ? readUint32(trun, offset)
-                  : readSint32(trun, offset);
-              offset += 4;
+            if (
+              flags &&
+              !flags.isNonSync &&
+              trackTimes.keyFrameIndex === undefined
+            ) {
+              trackTimes.keyFrameIndex = ix;
+              trackTimes.keyFrameStart = sampleDTS;
             }
             const pts = sampleDTS + cts;
             if (
