@@ -1027,6 +1027,7 @@ export type CMCDControllerConfig = {
     useHeaders?: boolean;
     includeKeys?: CmcdKey[];
     version?: CmcdVersion;
+    rtpSafetyFactor?: number;
     eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
         includeKeys?: CmcdKey[];
     })[];
