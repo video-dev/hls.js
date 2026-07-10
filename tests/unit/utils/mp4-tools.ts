@@ -5,7 +5,9 @@ import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { logger } from '../../../src/utils/logger';
 import {
   appendUint8Array,
+  findBox,
   getSampleData,
+  truncateIFrameMoofToSamples,
   types,
 } from '../../../src/utils/mp4-tools';
 import type { TrackFragmentSample } from '../../../src/remux/mp4-generator';
@@ -74,6 +76,21 @@ describe('mp4-tools', function () {
     });
     expect(track.ptsMax).to.equal(500 + 1001);
   });
+
+  it('truncateIFrameMoofToSamples rewrites sample counts and returns the mdat end offset', function () {
+    const fragment = gopFragment();
+    const mdatPayloadOffset = fragment.byteLength - 60;
+
+    const mdatEnd = truncateIFrameMoofToSamples(fragment, 1, 10);
+
+    expect(mdatEnd).to.equal(mdatPayloadOffset + 10);
+    const trun = findBox(fragment, ['moof', 'traf', 'trun'])[0];
+    expect(readUint32(trun, 4), 'trun sample_count').to.equal(1);
+    expect(
+      readUint32(fragment, mdatPayloadOffset - 8),
+      'mdat box size',
+    ).to.equal(18);
+  });
 });
 
 // moof + mdat with three samples (per-sample duration, size, flags and cts)
@@ -109,6 +126,16 @@ function gopSample(
       paddingValue: 0,
     },
   };
+}
+
+function readUint32(buffer: Uint8Array, offset: number): number {
+  return (
+    ((buffer[offset] << 24) |
+      (buffer[offset + 1] << 16) |
+      (buffer[offset + 2] << 8) |
+      buffer[offset + 3]) >>>
+    0
+  );
 }
 
 function initData(): InitData {

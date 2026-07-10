@@ -110,7 +110,7 @@ export function truncateIFrameMoofToSamples(
   data: Uint8Array<ArrayBuffer>,
   keepSampleCount: number,
   keepTotalSize: number,
-): void {
+): number | undefined {
   const moofs = findBox(data, ['moof']);
   if (moofs.length !== 1) {
     return;
@@ -149,6 +149,9 @@ export function truncateIFrameMoofToSamples(
       mdats[0].byteOffset - data.byteOffset - 8,
       8 + keepTotalSize,
     );
+    // Return the end of the rewritten mdat so callers can exclude trailing
+    // bytes of partially loaded samples from the appended byte stream.
+    return mdats[0].byteOffset - data.byteOffset + keepTotalSize;
   }
 }
 

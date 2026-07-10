@@ -189,6 +189,33 @@ describe('passthrough-remuxer', function () {
       1 / 90000,
     );
   });
+
+  it('truncates encrypted partial-mdat iframe fragments on the mdat box boundary', function () {
+    const extinfDuration = 4;
+    const samples = [sample(3003, 10, 0), sample(3003, 20, 0)];
+    const fragmentData = mp4Fragment(samples);
+    // Slice mid-way through the second sample's data, as a byte-range
+    // addressed I-Frame request would.
+    const mdatPayloadOffset = fragmentData.byteLength - 30;
+    const partialFragment = fragmentData.subarray(0, mdatPayloadOffset + 13);
+
+    const result = remuxIFrameFragment(partialFragment, extinfDuration, true);
+
+    expect(result.video, 'video track').to.exist;
+    expect(result.video!.encrypted).to.equal(true);
+    // Appended data ends at the rewritten mdat boundary, dropping the
+    // partially loaded sample's bytes.
+    expect(result.video!.data1.byteLength).to.equal(mdatPayloadOffset + 10);
+    expect(readUint32(result.video!.data1, mdatPayloadOffset - 8)).to.equal(18);
+    const trun = findBox(result.video!.data1, ['moof', 'traf', 'trun'])[0];
+    expect(readUint32(trun, 4), 'trun sample_count').to.equal(1);
+    expect(trunSampleDurations(result.video!.data1)).to.deep.equal([
+      extinfDuration * 90000,
+    ]);
+    expect(result.video!.endPTS - result.video!.startPTS).to.equal(
+      extinfDuration,
+    );
+  });
 });
 
 function markVideoInitSegmentEncrypted(

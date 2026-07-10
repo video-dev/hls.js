@@ -322,7 +322,16 @@ class PassThroughRemuxer extends Logger implements Remuxer {
               (sum, sample) => sum + sample.size,
               0,
             );
-            truncateIFrameMoofToSamples(data, samples.length, totalSize);
+            const mdatEnd = truncateIFrameMoofToSamples(
+              data,
+              samples.length,
+              totalSize,
+            );
+            if (mdatEnd) {
+              // Drop the bytes of any partially loaded sample after the
+              // rewritten mdat so the appended stream ends on a box boundary.
+              data1 = data.subarray(0, mdatEnd);
+            }
           }
           // adjust duration
           duration = needsDurationAdjustment
