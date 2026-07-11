@@ -20,8 +20,7 @@ export class IFrameStreamController extends StreamController {
   private nextOp?: [time: number, options: LoadMediaAtOptions];
   protected cached: MediaFragment[] = [];
   protected cachedSize = 0;
-  // Cache loaded fragment payloads for replay. The image I-Frame controller
-  // disables this and caches decoded image data instead.
+  // Replay cache (image controller caches decoded image data instead)
   protected cacheFragmentData: boolean = true;
   initDetails?: LevelDetails | null;
 
@@ -48,8 +47,7 @@ export class IFrameStreamController extends StreamController {
       this.tick();
       this.currentOp = [adjustedTime, options];
     } else {
-      // A load operation is active: queue this one (replacing any pending
-      // operation) so it is picked up when the active fragment completes.
+      // Queue op (replacing any pending) to run once the active load completes
       this.nextOp = [adjustedTime, options];
     }
     // This operation supersedes any seek scheduled for end of stream
@@ -67,11 +65,7 @@ export class IFrameStreamController extends StreamController {
   private seekTo(time: number): boolean {
     const media = this.media;
     if (media) {
-      // Clamp to the playlist end so the last frame can be rendered. Do not
-      // clamp to `media.duration`: endOfStream() after each rendered frame
-      // truncates duration to the buffered end, and clamping to it would
-      // divert forward operations to a stale frame while the requested
-      // fragment is still loading.
+      // Clamp to playlist edge, not media.duration (truncated by endOfStream())
       const edge = this.getLevelDetails()?.edge;
       const end = edge !== undefined ? edge : media.duration;
       if (time >= end) {
@@ -94,9 +88,7 @@ export class IFrameStreamController extends StreamController {
     return this.fragmentTracker.getBufferedFrag(time, PlaylistLevelType.MAIN);
   }
 
-  // Retain fragment data up to `iframeCacheLimit` total bytes, evicting the
-  // oldest entries, so that removed frames can be re-buffered without
-  // additional requests
+  // Retain fragment data for re-buffering (up to iframeCacheLimit bytes, LRU)
   protected cacheSet(frag: MediaFragment, data: Uint8Array<ArrayBuffer>) {
     if (!this.hls) {
       return;
@@ -140,8 +132,7 @@ export class IFrameStreamController extends StreamController {
       !frag.data &&
       isMediaFragment(frag)
     ) {
-      // Cache a pristine copy of the payload for replay after the buffer is
-      // flushed (the remuxer rewrites I-Frame fragment data in place)
+      // Cache a pristine copy (the remuxer rewrites fragment data in place)
       this.cacheSet(frag, new Uint8Array(payload.slice(0)));
     }
     super._handleFragmentLoadProgress(data);
@@ -164,9 +155,7 @@ export class IFrameStreamController extends StreamController {
     super.loadFragment(frag, level, targetBufferTime);
   }
 
-  // Replay is possible when fragment data is cached and decryption does not
-  // depend on a key that has yet to be loaded (EME-managed key formats
-  // append encrypted samples as-is)
+  // Cached data can replay unless decryption needs a key that is not loaded
   private canReplayCached(frag: MediaFragment): boolean {
     if (!this.cacheFragmentData || !frag.data?.byteLength) {
       return false;
@@ -211,13 +200,8 @@ export class IFrameStreamController extends StreamController {
     this.state = State.STOPPED;
     if (currentOp?.[1].seekOnAppend) {
       if (!nextOp) {
-        // The decoder only renders a single appended keyframe once it can
-        // rule out more frames before the next composition deadline: the
-        // media element completes a seek into a buffered range when a frame
-        // follows the seek target, or end of stream marks the end of the
-        // range. Remove buffered media beyond the target fragment (loading
-        // an earlier fragment leaves a gap the decoder would otherwise wait
-        // on indefinitely) so that end of stream applies to it, then seek.
+        // Remove buffered media beyond the target and signal EOS before
+        // seeking: a lone keyframe followed by a gap does not render
         const media = this.media;
         const bufferedFrag = this.getBufferedAt(currentOp[0]);
         const flushFrom = (bufferedFrag || (frag as MediaFragment)).end;
@@ -230,8 +214,7 @@ export class IFrameStreamController extends StreamController {
             this.flushMainBuffer(flushFrom, Infinity);
           }
         }
-        // Should end of stream complete after the seek below, re-run the
-        // seek (see onBufferedToEnd).
+        // (onBufferedToEnd re-runs the seek if EOS completes after it)
         this.hls.once(Events.BUFFERED_TO_END, this.onBufferedToEnd);
         this.hls.trigger(Events.BUFFER_EOS, { type: 'video' });
       }
@@ -249,8 +232,7 @@ export class IFrameStreamController extends StreamController {
   private onBufferedToEnd = () => {
     const media = this.media;
     if (media?.seeking) {
-      // Re-run the pending seek now that the MediaSource has ended so the
-      // decoder treats the gap after the target range as end of stream.
+      // Re-run the pending seek now that the MediaSource has ended
       // eslint-disable-next-line no-self-assign
       media.currentTime = media.currentTime;
     }

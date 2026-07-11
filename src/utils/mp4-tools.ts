@@ -149,8 +149,7 @@ export function truncateIFrameMoofToSamples(
       mdats[0].byteOffset - data.byteOffset - 8,
       8 + keepTotalSize,
     );
-    // Return the end of the rewritten mdat so callers can exclude trailing
-    // bytes of partially loaded samples from the appended byte stream.
+    // Callers use the mdat end to exclude trailing partial-sample bytes
     return mdats[0].byteOffset - data.byteOffset + keepTotalSize;
   }
 }
@@ -955,8 +954,7 @@ export function getSampleData(
           sampleOffset += size;
           // Capture only fitting samples so a partial-mdat truncation
           // can still rewrite the right uint32 to balance EXTINF. Field
-          // offsets must advance for every declared sample (including those
-          // beyond the loaded range) to keep trun parsing aligned.
+          // offsets above advance for every declared sample to stay aligned.
           if (sampleOffset <= eof) {
             if (thisSampleDurationOffset !== undefined) {
               fragRun.lastSampleDurationOffset = thisSampleDurationOffset;

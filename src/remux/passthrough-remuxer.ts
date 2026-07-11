@@ -284,9 +284,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     let data1 = data;
     let data2: Uint8Array<ArrayBuffer> | undefined;
-    // Presentation end of rewritten I-Frame samples (video timescale units).
-    // Set whenever sample durations are stretched to the playlist duration so
-    // that the reported PTS range matches the appended media.
+    // Presentation end of stretched I-Frame samples (video timescale units)
     let videoPtsEnd: number | undefined;
     if (
       __USE_IFRAMES__ &&
@@ -328,8 +326,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
               totalSize,
             );
             if (mdatEnd) {
-              // Drop the bytes of any partially loaded sample after the
-              // rewritten mdat so the appended stream ends on a box boundary.
+              // End the appended stream on the rewritten mdat box boundary
               data1 = data.subarray(0, mdatEnd);
             }
           }
@@ -344,9 +341,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
               lastSampleDuration -= samples[i].duration;
             }
             if (lastSampleDuration <= 0) {
-              // Playlist duration is shorter than the preceding samples;
-              // keep the native duration rather than writing an unsigned
-              // wrap-around value.
+              // Keep the native duration rather than write a wrapped value
               lastSampleDuration = lastSample.duration;
             }
             writeUint32(data, lastSampleDurationOffset, lastSampleDuration);
@@ -403,9 +398,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
               lastSampleDuration -= remuxedSamples[i].duration;
             }
             if (lastSampleDuration <= 0) {
-              // Playlist duration is shorter than the preceding samples;
-              // keep the native duration rather than writing an unsigned
-              // wrap-around value.
+              // Keep the native duration rather than write a wrapped value
               lastSampleDuration = lastSample.duration;
             }
             lastSample.duration = lastSampleDuration;
@@ -507,11 +500,8 @@ class PassThroughRemuxer extends Logger implements Remuxer {
         ? baseOffsetSamples.ptsMin / baseOffsetSamples.timescale -
           initPTS.baseTime / initPTS.timescale
         : startDTS;
-    // Report the presentation end of rewritten I-Frame samples rather than
-    // the timing parsed from the input so that fragment start/end updates
-    // (updateFragPTSDTS) match the appended media. Otherwise a stretched
-    // single-sample fragment collapses frag.end to ~one frame, breaking
-    // buffered-fragment lookups and shifting playlist timing.
+    // Report the presentation end of stretched I-Frame samples so fragment
+    // start/end updates (updateFragPTSDTS) match the appended media
     const endPTS =
       videoPtsEnd !== undefined && videoSampleTimestamps
         ? videoPtsEnd / videoSampleTimestamps.timescale -
