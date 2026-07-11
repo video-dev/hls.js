@@ -200,18 +200,20 @@ export class IFrameStreamController extends StreamController {
     this.state = State.STOPPED;
     if (currentOp?.[1].seekOnAppend) {
       if (!nextOp) {
-        // Remove buffered media beyond the target and signal EOS before
+        // Remove buffered ranges beyond the target's and signal EOS before
         // seeking: a lone keyframe followed by a gap does not render
         const media = this.media;
-        const bufferedFrag = this.getBufferedAt(currentOp[0]);
-        const flushFrom = (bufferedFrag || (frag as MediaFragment)).end;
         if (media) {
-          const buffered = BufferHelper.getBuffered(media);
-          const bufferedEnd = buffered.length
-            ? buffered.end(buffered.length - 1)
-            : 0;
-          if (bufferedEnd - flushFrom > 0.01) {
-            this.flushMainBuffer(flushFrom, Infinity);
+          const bufferInfo = BufferHelper.bufferInfo(media, currentOp[0], 0);
+          const nextRangeStart = bufferInfo.len ? bufferInfo.nextStart : 0;
+          if (nextRangeStart) {
+            // Evict now so queued operations do not seek into removed ranges
+            this.fragmentTracker.removeFragmentsInRange(
+              nextRangeStart,
+              Infinity,
+              PlaylistLevelType.MAIN,
+            );
+            this.flushMainBuffer(nextRangeStart, Infinity);
           }
         }
         // (onBufferedToEnd re-runs the seek if EOS completes after it)
@@ -219,8 +221,8 @@ export class IFrameStreamController extends StreamController {
         this.hls.trigger(Events.BUFFER_EOS, { type: 'video' });
       }
       if (!this.seekTo(currentOp[0])) {
-        this.warn(
-          `Could not seek to ${currentOp[0]} after fragment buffered (buffered: ${this.media ? timeRangesToString(BufferHelper.getBuffered(this.media)) : 'none'})`,
+        this.log(
+          `Could not seek to ${currentOp[0]} after fragment buffered (superseded or flushed) buffer: ${this.media ? timeRangesToString(BufferHelper.getBuffered(this.media)) : 'none'}`,
         );
       }
     }

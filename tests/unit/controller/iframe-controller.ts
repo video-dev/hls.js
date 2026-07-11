@@ -241,7 +241,9 @@ describe('IFrameController', function () {
     sandbox
       .stub(iframePlayer, 'trigger' as any)
       .callsFake((event: any, data: any) => {
-        if (event === Events.BUFFER_FLUSHING || event === Events.BUFFER_EOS) {
+        if (event === Events.BUFFER_FLUSHING) {
+          calls.push(`${event}@${data.startOffset}`);
+        } else if (event === Events.BUFFER_EOS) {
           calls.push(event);
         }
         return trigger(event, data);
@@ -249,14 +251,26 @@ describe('IFrameController', function () {
 
     streamController.fragBufferedComplete(frag, null);
 
-    // The buffered range after the target must be removed and end of stream
-    // signalled before seeking, so the decoder does not starve waiting for a
-    // frame after the seek target (it would never complete the seek).
+    // The disjoint buffered range after the target's must be removed (from
+    // its own start) and end of stream signalled before seeking, so the
+    // decoder does not starve waiting for a frame after the seek target.
     expect(calls).to.deep.equal([
-      Events.BUFFER_FLUSHING,
+      `${Events.BUFFER_FLUSHING}@420`,
       Events.BUFFER_EOS,
       'seek',
     ]);
+
+    // Media contiguous beyond the target (prefetch): nothing is flushed
+    streamController.media.buffered = {
+      length: 1,
+      start: () => 60,
+      end: () => 64,
+    };
+    streamController.currentOp = [61.2, { seekOnAppend: true }];
+    streamController.state = State.PARSED;
+    calls.length = 0;
+    streamController.fragBufferedComplete(frag, null);
+    expect(calls).to.deep.equal([Events.BUFFER_EOS, 'seek']);
   });
 
   it('re-buffers cached fragment data instead of reloading it', function () {
