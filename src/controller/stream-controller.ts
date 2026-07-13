@@ -556,11 +556,11 @@ export default class StreamController
       PlaylistLevelType.MAIN,
       0,
     );
-    if (bufferInfo === null || bufferInfo.len === 0) {
-      this.warn(
-        `Main forward buffer length at ${currentTime} on "seeked" event ${
-          bufferInfo ? bufferInfo.len : 'empty'
-        })`,
+    if (!bufferInfo || bufferInfo.len === 0) {
+      this.log(
+        `Main buffer empty at ${currentTime} on "seeked" event: ${
+          bufferInfo ? bufferInfo.len : bufferInfo
+        }`,
       );
       return;
     }

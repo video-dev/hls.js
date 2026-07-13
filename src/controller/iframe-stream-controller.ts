@@ -218,8 +218,8 @@ export class IFrameStreamController extends StreamController {
         }
         // (onBufferedToEnd re-runs the seek if EOS completes after it)
         this.hls.once(Events.BUFFERED_TO_END, this.onBufferedToEnd);
-        this.hls.trigger(Events.BUFFER_EOS, { type: 'video' });
       }
+      this.hls.trigger(Events.BUFFER_EOS, { type: 'video' });
       if (!this.seekTo(currentOp[0])) {
         this.log(
           `Could not seek to ${currentOp[0]} after fragment buffered (superseded or flushed) buffer: ${this.media ? timeRangesToString(BufferHelper.getBuffered(this.media)) : 'none'}`,
