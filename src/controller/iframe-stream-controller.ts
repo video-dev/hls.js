@@ -58,6 +58,7 @@ export class IFrameStreamController extends StreamController {
       if (seeking) {
         this.currentOp = [adjustedTime, options];
         this.nextOp = undefined;
+        this.flushPipeline(adjustedTime, true);
       }
     }
   }
@@ -75,9 +76,6 @@ export class IFrameStreamController extends StreamController {
       const hasEnough = bufferInfo.len > 0 && this.getBufferedAt(time);
       if (hasEnough) {
         media.currentTime = time;
-        if (this.state === State.IDLE) {
-          this.tick();
-        }
         return true;
       }
     }
@@ -199,27 +197,7 @@ export class IFrameStreamController extends StreamController {
     this.currentOp = this.nextOp = undefined;
     this.state = State.STOPPED;
     if (currentOp?.[1].seekOnAppend) {
-      if (!nextOp) {
-        // Remove buffered ranges beyond the target's and signal EOS before
-        // seeking: a lone keyframe followed by a gap does not render
-        const media = this.media;
-        if (media) {
-          const bufferInfo = BufferHelper.bufferInfo(media, currentOp[0], 0);
-          const nextRangeStart = bufferInfo.len ? bufferInfo.nextStart : 0;
-          if (nextRangeStart) {
-            // Evict now so queued operations do not seek into removed ranges
-            this.fragmentTracker.removeFragmentsInRange(
-              nextRangeStart,
-              Infinity,
-              PlaylistLevelType.MAIN,
-            );
-            this.flushMainBuffer(nextRangeStart, Infinity);
-          }
-        }
-        // (onBufferedToEnd re-runs the seek if EOS completes after it)
-        this.hls.once(Events.BUFFERED_TO_END, this.onBufferedToEnd);
-      }
-      this.hls.trigger(Events.BUFFER_EOS, { type: 'video' });
+      this.flushPipeline(currentOp[0], !nextOp);
       if (!this.seekTo(currentOp[0])) {
         this.log(
           `Could not seek to ${currentOp[0]} after fragment buffered (superseded or flushed) buffer: ${this.media ? timeRangesToString(BufferHelper.getBuffered(this.media)) : 'none'}`,
@@ -229,6 +207,30 @@ export class IFrameStreamController extends StreamController {
     if (nextOp) {
       this.loadMediaAt.apply(this, nextOp);
     }
+  }
+
+  private flushPipeline(time: number, removeDisjointRanges: boolean) {
+    if (removeDisjointRanges) {
+      // Remove buffered ranges beyond the target's and signal EOS before
+      // seeking: a lone keyframe followed by a gap does not render
+      const media = this.media;
+      if (media) {
+        const bufferInfo = BufferHelper.bufferInfo(media, time, 0);
+        const nextRangeStart = bufferInfo.len ? bufferInfo.nextStart : 0;
+        if (nextRangeStart) {
+          // Evict now so queued operations do not seek into removed ranges
+          this.fragmentTracker.removeFragmentsInRange(
+            nextRangeStart,
+            Infinity,
+            PlaylistLevelType.MAIN,
+          );
+          this.flushMainBuffer(nextRangeStart, Infinity);
+        }
+      }
+      // (onBufferedToEnd re-runs the seek if EOS completes after it)
+      this.hls.once(Events.BUFFERED_TO_END, this.onBufferedToEnd);
+    }
+    this.hls.trigger(Events.BUFFER_EOS, { type: 'video' });
   }
 
   private onBufferedToEnd = () => {

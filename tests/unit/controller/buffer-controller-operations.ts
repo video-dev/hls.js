@@ -840,6 +840,86 @@ describe('BufferController with attached media', function () {
         'Cannot remove invalid range (9001 >= 9000) from the audio SourceBuffer',
       );
     });
+
+    it('advances the queue without removing when start is at/after mediaSource.duration', function () {
+      // endOfStream() clamps mediaSource.duration below the requested flush start
+      (bufferController as any).mediaSource.duration = 9;
+
+      hls.trigger(Events.BUFFER_FLUSHING, {
+        startOffset: 11,
+        endOffset: Infinity,
+        type: 'video',
+      });
+
+      const buffer = getSourceBufferTrack(bufferController, 'video')?.buffer;
+      expect(buffer).to.not.be.undefined;
+      if (!buffer) {
+        return;
+      }
+      // No SourceBuffer.remove(): no 'updateend' will fire for this operation
+      expect(
+        buffer.remove,
+        'remove should not be called when start is at/after duration',
+      ).to.not.have.been.called;
+      // Regression guard: the queue must still advance (previously locked here)
+      expect(
+        shiftAndExecuteNextSpy,
+        'the queue must advance even though remove was skipped',
+      ).to.have.been.calledOnce;
+      // onComplete still signals a (no-op) flush
+      expect(triggerSpy).to.have.been.calledWith(Events.BUFFER_FLUSHED, {
+        type: 'video',
+        start: 11,
+        end: Infinity,
+      });
+    });
+
+    it('does not block a following queued operation when start is at/after mediaSource.duration', function () {
+      (bufferController as any).mediaSource.duration = 9;
+      const videoQueue = (operationQueue as any).queues
+        .video as BufferOperation[];
+
+      // Occupy the head so subsequently-queued ops accumulate behind it
+      // (direct push does not auto-execute)
+      videoQueue.push({
+        label: 'head',
+        execute: () => {},
+        onStart: () => {},
+        onComplete: () => {},
+        onError: () => {},
+      });
+
+      // Queues the no-op remove behind the head (queue length > 1, no auto-exec)
+      hls.trigger(Events.BUFFER_FLUSHING, {
+        startOffset: 11,
+        endOffset: Infinity,
+        type: 'video',
+      });
+
+      // Queue a following operation behind the remove
+      const nextExecute = sandbox.spy();
+      videoQueue.push({
+        label: 'next',
+        execute: nextExecute,
+        onStart: () => {},
+        onComplete: () => {},
+        onError: () => {},
+      });
+
+      expect(videoQueue.map((op) => op.label)).to.deep.equal([
+        'head',
+        'remove',
+        'next',
+      ]);
+
+      // Complete the head op: cascades to the no-op remove, then to next
+      (operationQueue as any).shiftAndExecuteNext('video');
+
+      expect(
+        nextExecute,
+        'the operation queued behind the no-op remove must execute',
+      ).to.have.been.calledOnce;
+    });
   });
 
   describe('trimBuffers', function () {
