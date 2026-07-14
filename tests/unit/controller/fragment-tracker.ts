@@ -169,6 +169,81 @@ describe('FragmentTracker', function () {
     });
   });
 
+  describe('detectPartialFragments loop protection', function () {
+    const hls = new Hls({});
+    const fragmentTracker = new FragmentTracker(hls);
+
+    const appendPartial = function (fragment: Fragment, startPTS: number) {
+      triggerFragLoaded(hls, fragment);
+      hls.trigger(
+        Events.BUFFER_APPENDED,
+        createBufferAppendedData([{ startPTS, endPTS: 1 }]),
+      );
+      hls.trigger(Events.FRAG_BUFFERED, createFragBufferedData(fragment, true));
+    };
+
+    it('marks a fragment as a gap after repeated appends without buffered range growth', function () {
+      const fragment = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 0,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      appendPartial(fragment, 0.5);
+      expect(fragmentTracker.getState(fragment)).to.equal(
+        FragmentState.PARTIAL,
+      );
+      appendPartial(fragment, 0.5);
+      expect(fragment.gap).to.equal(undefined);
+      appendPartial(fragment, 0.5);
+      expect(fragment.gap).to.equal(true);
+    });
+
+    it('does not mark a fragment as a gap while appends grow the buffered range', function () {
+      const fragment = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 2,
+          level: 0,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      appendPartial(fragment, 0.6);
+      appendPartial(fragment, 0.55);
+      appendPartial(fragment, 0.5);
+      appendPartial(fragment, 0.45);
+      expect(fragment.gap).to.equal(undefined);
+      expect(fragmentTracker.getState(fragment)).to.equal(
+        FragmentState.PARTIAL,
+      );
+    });
+
+    it('resets the append counter when the fragment is removed', function () {
+      const fragment = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 3,
+          level: 0,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      appendPartial(fragment, 0.5);
+      appendPartial(fragment, 0.5);
+      fragmentTracker.removeFragment(fragment);
+      appendPartial(fragment, 0.5);
+      appendPartial(fragment, 0.5);
+      expect(fragment.gap).to.equal(undefined);
+    });
+  });
+
   describe('getBufferedFrag', function () {
     let hls;
     let fragmentTracker: FragmentTracker;

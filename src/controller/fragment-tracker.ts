@@ -28,6 +28,9 @@ export const enum FragmentState {
   OK = 'OK',
 }
 
+// Appends of the same fragment without buffered range growth allowed before marking it as a gap to prevent loop loading
+const MAX_APPENDS_WITHOUT_PROGRESS = 3;
+
 export class FragmentTracker implements ComponentAPI {
   private activePartLists: { [key in PlaylistLevelType]?: Part[] } =
     Object.create(null);
@@ -44,6 +47,9 @@ export class FragmentTracker implements ComponentAPI {
   private bufferPadding: number = 0.2;
   private hls: Hls | null;
   private hasGaps: boolean = false;
+  private partialAppends: Partial<
+    Record<string, { covered: number; count: number }>
+  > = Object.create(null);
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -269,6 +275,35 @@ export class FragmentTracker implements ComponentAPI {
       if (!isPartial(fragmentEntity)) {
         // Remove older fragment parts from lookup after frag is tracked as buffered
         this.removeParts(frag.sn - 1, frag.type);
+        delete this.partialAppends[fragKey];
+      } else if (
+        !part &&
+        !frag.gap &&
+        !this.hls?.latestLevelDetails?.iframesOnly
+      ) {
+        // Mark fragment as a gap after repeated appends without buffered range growth to prevent loop loading
+        const covered = trackNames.reduce(
+          (sum, elementaryStream) =>
+            sum +
+            (fragmentEntity.range[elementaryStream]?.time || []).reduce(
+              (streamSum, range) => streamSum + range.endPTS - range.startPTS,
+              0,
+            ),
+          0,
+        );
+        const attempts = (this.partialAppends[fragKey] ||= {
+          covered: 0,
+          count: 0,
+        });
+        if (covered - attempts.covered > 0.001) {
+          attempts.covered = covered;
+          attempts.count = 1;
+        } else if (++attempts.count >= MAX_APPENDS_WITHOUT_PROGRESS) {
+          this.hls?.logger.warn(
+            `Fragment ${frag.sn} of ${playlistType} playlist ${frag.level} appended ${attempts.count} times without buffered range growth. Marking as gap to prevent loop loading`,
+          );
+          this.addAsGap(frag);
+        }
       }
       // Detect nothing buffered for segment append (open-GOP issue #7774)
       if (!part) {
@@ -626,6 +661,7 @@ export class FragmentTracker implements ComponentAPI {
       );
     }
     delete this.fragments[fragKey];
+    delete this.partialAppends[fragKey];
     if (fragment.endList) {
       delete this.endListFragments[fragment.type];
     }
@@ -635,6 +671,7 @@ export class FragmentTracker implements ComponentAPI {
     this.fragments = Object.create(null);
     this.endListFragments = Object.create(null);
     this.activePartLists = Object.create(null);
+    this.partialAppends = Object.create(null);
     this.hasGaps = false;
     const partlist = this.hls?.latestLevelDetails?.partList;
     if (partlist) {
