@@ -1953,6 +1953,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const removeStart = Math.max(0, startOffset);
     if (removeStart >= msDuration) {
       this.currentOp(type)?.onComplete();
+      this.shiftAndExecuteNext(type);
       return;
     }
     const removeEnd = Math.min(endOffset, mediaDuration, msDuration);
