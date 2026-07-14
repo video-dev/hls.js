@@ -1894,6 +1894,14 @@ export default class BaseStreamController
       endSN = fragmentHint.sn;
     }
 
+    // Clear fragPrevious if removed from buffer / tracker so that is picked again
+    if (
+      fragPrevious &&
+      this.fragmentTracker.getState(fragPrevious) === FragmentState.NOT_LOADED
+    ) {
+      fragPrevious = null;
+    }
+
     let frag: MediaFragment | null;
     if (bufferEnd < end) {
       const backwardSeek = bufferEnd < this.lastCurrentTime;
