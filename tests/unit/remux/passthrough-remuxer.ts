@@ -6,7 +6,13 @@ import PassThroughRemuxer from '../../../src/remux/passthrough-remuxer';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { logger } from '../../../src/utils/logger';
-import { appendUint8Array, findBox } from '../../../src/utils/mp4-tools';
+import {
+  appendUint8Array,
+  findBox,
+  parseInitSegment,
+  types,
+  writeUint32,
+} from '../../../src/utils/mp4-tools';
 import type { HlsEventEmitter } from '../../../src/events';
 import type { TrackFragmentSample } from '../../../src/remux/mp4-generator';
 import type {
@@ -50,6 +56,32 @@ describe('passthrough-remuxer', function () {
     }
     remuxer.resetInitSegment(initSegment, undefined, 'avc1.42001e', null);
 
+    return remuxer.remux(
+      audioTrack(),
+      passthroughTrack(fragmentData),
+      metadataTrack(),
+      userdataTrack(),
+      0,
+      true,
+      true,
+      PlaylistLevelType.MAIN,
+      new ChunkMetadata(
+        0,
+        0,
+        0,
+        fragmentData.byteLength,
+        -1,
+        false,
+        extinfDuration,
+        true,
+      ),
+    );
+  }
+
+  function remuxIFrame(
+    fragmentData: Uint8Array<ArrayBuffer>,
+    extinfDuration: number,
+  ) {
     return remuxer.remux(
       audioTrack(),
       passthroughTrack(fragmentData),
@@ -190,6 +222,123 @@ describe('passthrough-remuxer', function () {
     );
   });
 
+  it('converts muxed input to video-only for iframe fragments', function () {
+    const extinfDuration = 4;
+    const initSegment = MP4.initSegment([
+      videoInitTrack(),
+      audioInitTrack(),
+    ] as any);
+    remuxer.resetInitSegment(initSegment, 'mp4a.40.2', 'avc1.42001e', null);
+    // Video sample duration matches EXTINF: the muxed moof must still be
+    // regenerated so the audio track fragment is not appended
+    const fragmentData = muxedMp4Fragment(
+      [sample(extinfDuration * 90000, 24, 0)],
+      [50, 60],
+    );
+
+    const result = remuxer.remux(
+      audioTrack(),
+      passthroughTrack(fragmentData),
+      metadataTrack(),
+      userdataTrack(),
+      0,
+      true,
+      true,
+      PlaylistLevelType.MAIN,
+      new ChunkMetadata(
+        0,
+        0,
+        0,
+        fragmentData.byteLength,
+        -1,
+        false,
+        extinfDuration,
+        true,
+      ),
+    );
+
+    // The emitted init segment is converted to video-only
+    const videoInitTrackInfo = result.initSegment?.tracks?.video;
+    expect(videoInitTrackInfo, 'video init track').to.exist;
+    expect(result.initSegment?.tracks?.audiovideo, 'audiovideo init track').to
+      .not.exist;
+    const parsedInit = parseInitSegment(videoInitTrackInfo!.initSegment!);
+    expect(parsedInit.video, 'filtered init video').to.exist;
+    expect(parsedInit.audio, 'filtered init audio').to.not.exist;
+
+    // Video-only output: regenerated moof and an mdat with only video bytes
+    expect(result.video, 'video track').to.exist;
+    expect(result.video!.type).to.equal('video');
+    expect(result.video!.hasAudio).to.equal(false);
+    expect(result.video!.data1, 'data1 regenerated').to.not.equal(fragmentData);
+    expect(result.video!.data2!.byteLength, 'video-only mdat').to.equal(24 + 8);
+    expect(result.video!.endPTS - result.video!.startPTS).to.equal(
+      extinfDuration,
+    );
+  });
+
+  it('remuxes muxed iframe fragments with the audio run first in the mdat', function () {
+    const extinfDuration = 4;
+    const initSegment = MP4.initSegment([
+      videoInitTrack(),
+      audioInitTrack(),
+    ] as any);
+    remuxer.resetInitSegment(initSegment, 'mp4a.40.2', 'avc1.42001e', null);
+    const fragmentData = muxedMp4Fragment(
+      [sample(3003, 24, 0)],
+      [50, 60],
+      true,
+    );
+
+    const result = remuxIFrame(fragmentData, extinfDuration);
+
+    expect(result.video, 'video track').to.exist;
+    expect(result.video!.type).to.equal('video');
+    expect(result.video!.data2!.byteLength, 'video-only mdat').to.equal(24 + 8);
+    expect(result.video!.endPTS - result.video!.startPTS).to.equal(
+      extinfDuration,
+    );
+  });
+
+  it('remuxes iframe fragments with multiple video track fragment runs', function () {
+    const extinfDuration = 4;
+    const initSegment = MP4.initSegment([
+      videoInitTrack(),
+      audioInitTrack(),
+    ] as any);
+    remuxer.resetInitSegment(initSegment, 'mp4a.40.2', 'avc1.42001e', null);
+    const fragmentData = withSecondVideoTraf(
+      muxedMp4Fragment([sample(3003, 24, 0)], [50]),
+    );
+
+    const result = remuxIFrame(fragmentData, extinfDuration);
+
+    expect(result.video, 'video track').to.exist;
+    expect(result.video!.data2!.byteLength, 'gathered mdat').to.equal(24 + 8);
+    expect(result.video!.endPTS - result.video!.startPTS).to.equal(
+      extinfDuration,
+    );
+  });
+
+  it('drops muxed iframe fragments with no video sample in range', function () {
+    const extinfDuration = 4;
+    const initSegment = MP4.initSegment([
+      videoInitTrack(),
+      audioInitTrack(),
+    ] as any);
+    remuxer.resetInitSegment(initSegment, 'mp4a.40.2', 'avc1.42001e', null);
+    // Audio-first layout sliced before the video sample: nothing can be
+    // appended to the video-only SourceBuffer
+    const fragmentData = muxedMp4Fragment([sample(3003, 24, 0)], [50], true);
+    const moofSize = findBox(fragmentData, ['moof'])[0].byteLength + 8;
+    const partialFragment = fragmentData.subarray(0, moofSize + 8 + 30);
+
+    const result = remuxIFrame(partialFragment, extinfDuration);
+
+    expect(result.initSegment?.tracks?.video, 'video init track').to.exist;
+    expect(result.video, 'video track').to.equal(undefined);
+  });
+
   it('truncates encrypted partial-mdat iframe fragments on the mdat box boundary', function () {
     const extinfDuration = 4;
     const samples = [sample(3003, 10, 0), sample(3003, 20, 0)];
@@ -277,6 +426,101 @@ function videoInitTrack(): any {
     width: 16,
     height: 16,
   };
+}
+
+function audioInitTrack(): any {
+  return {
+    codec: 'mp4a.40.2',
+    segmentCodec: 'aac',
+    channelCount: 2,
+    samplerate: 48000,
+    config: [0x11, 0x90],
+    duration: 4,
+    id: 2,
+    timescale: 48000,
+    type: 'audio',
+  };
+}
+
+// moof with a video traf (track 1) and an audio traf (track 2) sharing one
+// mdat: video run first, audio run after (ffmpeg muxed fMP4 layout)
+function muxedMp4Fragment(
+  videoSamples: TrackFragmentSample[],
+  audioSampleSizes: number[],
+  audioFirst = false,
+): Uint8Array<ArrayBuffer> {
+  const videoBytes = videoSamples.reduce((total, s) => total + s.size, 0);
+  const audioBytes = audioSampleSizes.reduce((total, s) => total + s, 0);
+  const videoMoof = MP4.moof(0, 0, {
+    type: 'video',
+    id: 1,
+    samples: videoSamples,
+  });
+
+  const tfhd = new Uint8Array(8);
+  tfhd.set([0x00, 0x02, 0x00, 0x00]); // version 0, default-base-is-moof
+  writeUint32(tfhd, 4, 2); // track_ID
+  const tfdt = new Uint8Array(8);
+  const audioTrun = new Uint8Array(12 + audioSampleSizes.length * 8);
+  audioTrun.set([0x00, 0x00, 0x03, 0x01]); // data-offset + duration + size
+  writeUint32(audioTrun, 4, audioSampleSizes.length);
+  audioSampleSizes.forEach((size, i) => {
+    writeUint32(audioTrun, 12 + i * 8, 1024);
+    writeUint32(audioTrun, 12 + i * 8 + 4, size);
+  });
+  const audioTraf = MP4.box(
+    types.traf,
+    MP4.box(types.tfhd, tfhd),
+    MP4.box(types.tfdt, tfdt),
+    MP4.box(types.trun, audioTrun),
+  );
+
+  // Splice the audio traf into the moof, then patch the moof size and both
+  // trun data offsets for the combined mdat layout
+  const moof = new Uint8Array(videoMoof.byteLength + audioTraf.byteLength);
+  moof.set(videoMoof, 0);
+  moof.set(audioTraf, videoMoof.byteLength);
+  writeUint32(moof, 0, moof.byteLength);
+  const truns = findBox(moof, ['moof', 'traf', 'trun']);
+  writeUint32(
+    moof,
+    truns[0].byteOffset - moof.byteOffset + 8,
+    moof.byteLength + 8 + (audioFirst ? audioBytes : 0),
+  );
+  writeUint32(
+    moof,
+    truns[1].byteOffset - moof.byteOffset + 8,
+    moof.byteLength + 8 + (audioFirst ? 0 : videoBytes),
+  );
+
+  return appendUint8Array(
+    moof,
+    MP4.mdat(new Uint8Array(videoBytes + audioBytes)),
+  ) as Uint8Array<ArrayBuffer>;
+}
+
+// Appends a second (empty) video track fragment to the moof so the video
+// track has more than one trun
+function withSecondVideoTraf(
+  fragment: Uint8Array<ArrayBuffer>,
+): Uint8Array<ArrayBuffer> {
+  const tfhd = new Uint8Array(8);
+  tfhd.set([0x00, 0x02, 0x00, 0x00]);
+  writeUint32(tfhd, 4, 1); // video track_ID
+  const trun = new Uint8Array(12);
+  trun[2] = 0x01; // data-offset present
+  const traf = MP4.box(
+    types.traf,
+    MP4.box(types.tfhd, tfhd),
+    MP4.box(types.trun, trun),
+  );
+  const moofSize = findBox(fragment, ['moof'])[0].byteLength + 8;
+  const result = new Uint8Array(fragment.byteLength + traf.byteLength);
+  result.set(fragment.subarray(0, moofSize), 0);
+  result.set(traf, moofSize);
+  result.set(fragment.subarray(moofSize), moofSize + traf.byteLength);
+  writeUint32(result, 0, moofSize + traf.byteLength);
+  return result;
 }
 
 function mp4Fragment(samples: TrackFragmentSample[]): Uint8Array<ArrayBuffer> {

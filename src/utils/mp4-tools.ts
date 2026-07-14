@@ -22,6 +22,7 @@ export const types = {
   dinf: 0x64696e66,
   dref: 0x64726566,
   esds: 0x65736473,
+  free: 0x66726565,
   ftyp: 0x66747970,
   hdlr: 0x68646c72,
   mdat: 0x6d646174,
@@ -106,10 +107,26 @@ export function writeUint32(buffer: Uint8Array, offset: number, value: number) {
   buffer[offset + 3] = value & 0xff;
 }
 
+// Shrink a box to newPayloadSize + header, turning the remainder into a
+// nested 'free' box (Safari rejects trun/saiz boxes larger than their
+// declared sample count requires)
+function shrinkBox(data: Uint8Array, box: Uint8Array, newPayloadSize: number) {
+  const start = box.byteOffset - data.byteOffset - 8;
+  const newSize = 8 + newPayloadSize;
+  const tail = box.byteLength + 8 - newSize;
+  if (tail < 8) {
+    // No change needed, or the remainder is too small to hold a box header
+    return;
+  }
+  writeUint32(data, start, newSize);
+  writeUint32(data, start + newSize, tail);
+  writeUint32(data, start + newSize + 4, types.free);
+}
+
 export function truncateIFrameMoofToSamples(
   data: Uint8Array<ArrayBuffer>,
   keepSampleCount: number,
-  keepTotalSize: number,
+  keepEndOffset: number,
 ): number | undefined {
   const moofs = findBox(data, ['moof']);
   if (moofs.length !== 1) {
@@ -119,12 +136,39 @@ export function truncateIFrameMoofToSamples(
   const trafs = findBox(moof, ['traf']);
   for (let i = 0; i < trafs.length; i++) {
     const traf = trafs[i];
-    const trun = findBox(traf, ['trun'])[0];
-    if (trun) {
-      writeUint32(data, trun.byteOffset - data.byteOffset + 4, keepSampleCount);
+    // Distribute the kept sample count across the track fragment runs;
+    // runs left with no samples become 'free' boxes (parsers reject
+    // zero-sample truns)
+    let remaining = keepSampleCount;
+    const truns = findBox(traf, ['trun']);
+    for (let j = 0; j < truns.length; j++) {
+      const trun = truns[j];
+      const count = Math.min(remaining, readUint32(trun, 4));
+      if (count) {
+        writeUint32(data, trun.byteOffset - data.byteOffset + 4, count);
+        const flags = readUint32(trun, 0) & 0xffffff;
+        const perSample =
+          (flags & 0x100 ? 4 : 0) +
+          (flags & 0x200 ? 4 : 0) +
+          (flags & 0x400 ? 4 : 0) +
+          (flags & 0x800 ? 4 : 0);
+        shrinkBox(
+          data,
+          trun,
+          8 +
+            (flags & 0x01 ? 4 : 0) +
+            (flags & 0x04 ? 4 : 0) +
+            count * perSample,
+        );
+      } else {
+        writeUint32(data, trun.byteOffset - data.byteOffset - 4, types.free);
+      }
+      remaining -= count;
     }
     const senc = findBox(traf, ['senc'])[0];
     if (senc) {
+      // The size of a senc box cannot be validated without the tenc IV size,
+      // so rewriting the sample count alone is accepted
       writeUint32(data, senc.byteOffset - data.byteOffset + 4, keepSampleCount);
     }
     const saiz = findBox(traf, ['saiz'])[0];
@@ -134,24 +178,205 @@ export function truncateIFrameMoofToSamples(
       if (saizFlags & 0x01) {
         off += 8;
       }
+      const defaultSampleInfoSize = saiz[off];
       off += 1;
       writeUint32(
         data,
         saiz.byteOffset - data.byteOffset + off,
         keepSampleCount,
       );
+      shrinkBox(
+        data,
+        saiz,
+        off + 4 + (defaultSampleInfoSize === 0 ? keepSampleCount : 0),
+      );
     }
   }
   const mdats = findBox(data, ['mdat']);
   if (mdats.length === 1) {
-    writeUint32(
-      data,
-      mdats[0].byteOffset - data.byteOffset - 8,
-      8 + keepTotalSize,
-    );
+    const mdatStart = mdats[0].byteOffset - data.byteOffset - 8;
+    writeUint32(data, mdatStart, keepEndOffset - mdatStart);
     // Callers use the mdat end to exclude trailing partial-sample bytes
-    return mdats[0].byteOffset - data.byteOffset + keepTotalSize;
+    return keepEndOffset;
   }
+}
+
+// Video-only copy of an init segment, or null when there is no video track or nothing to remove
+export function videoOnlyInitSegment(
+  initSegment: Uint8Array<ArrayBuffer>,
+): Uint8Array<ArrayBuffer> | null {
+  const moovs = findBox(initSegment, ['moov']);
+  if (moovs.length !== 1 || findBox(initSegment, ['moof']).length) {
+    return null;
+  }
+  const base = initSegment.byteOffset;
+  const boxRange = (box: Uint8Array): [number, number] => [
+    box.byteOffset - base - 8,
+    box.byteOffset - base + box.byteLength,
+  ];
+  const dropRanges: [number, number][] = [];
+  const dropTrackIds: number[] = [];
+  let hasVideo = false;
+  const traks = findBox(moovs[0], ['trak']);
+  for (let i = 0; i < traks.length; i++) {
+    const trak = traks[i];
+    const hdlr = findBox(trak, ['mdia', 'hdlr'])[0];
+    const handler = hdlr ? bin2str(hdlr.subarray(8, 12)) : '';
+    if (handler === 'vide') {
+      hasVideo = true;
+      continue;
+    }
+    const tkhd = findBox(trak, ['tkhd'])[0];
+    if (!tkhd) {
+      return null;
+    }
+    const version = tkhd[0];
+    dropTrackIds.push(readUint32(tkhd, version === 0 ? 12 : 20));
+    dropRanges.push(boxRange(trak));
+  }
+  if (!hasVideo || !dropRanges.length) {
+    return null;
+  }
+  const mvex = findBox(moovs[0], ['mvex'])[0];
+  let mvexDropped = 0;
+  if (mvex) {
+    const trexs = findBox(mvex, ['trex']);
+    for (let i = 0; i < trexs.length; i++) {
+      const trex = trexs[i];
+      if (dropTrackIds.indexOf(readUint32(trex, 4)) !== -1) {
+        dropRanges.push(boxRange(trex));
+        mvexDropped += trex.byteLength + 8;
+      }
+    }
+  }
+  // Splice out the dropped ranges, then patch sizes at their result offsets
+  dropRanges.sort((a, b) => a[0] - b[0]);
+  const dropped = dropRanges.reduce(
+    (sum, [start, end]) => sum + end - start,
+    0,
+  );
+  const droppedBefore = (offset: number) =>
+    dropRanges.reduce(
+      (sum, [start, end]) => (end <= offset ? sum + end - start : sum),
+      0,
+    );
+  const result = new Uint8Array(initSegment.byteLength - dropped);
+  let read = 0;
+  let write = 0;
+  for (let i = 0; i < dropRanges.length; i++) {
+    const [start, end] = dropRanges[i];
+    result.set(initSegment.subarray(read, start), write);
+    write += start - read;
+    read = end;
+  }
+  result.set(initSegment.subarray(read), write);
+  const moovStart = moovs[0].byteOffset - base - 8;
+  writeUint32(result, moovStart, moovs[0].byteLength + 8 - dropped);
+  if (mvex && mvexDropped) {
+    const mvexStart = mvex.byteOffset - base - 8;
+    writeUint32(
+      result,
+      mvexStart - droppedBefore(mvexStart),
+      mvex.byteLength + 8 - mvexDropped,
+    );
+  }
+  return result;
+}
+
+// Splice non-video track fragments out of a muxed I-Frame moof so encrypted
+// fragments keep their senc/saiz/saio boxes intact (regenerating the moof
+// would drop them). Returns null when the sample data offsets are not
+// moof-relative (default-base-is-moof, required of CMAF content).
+export function videoOnlyIFrameMoof(
+  data: Uint8Array<ArrayBuffer>,
+  videoTrackId: number,
+): Uint8Array<ArrayBuffer> | null {
+  const moofs = findBox(data, ['moof']);
+  if (moofs.length !== 1) {
+    return null;
+  }
+  const moof = moofs[0];
+  const base = data.byteOffset;
+  const dropRanges: [number, number][] = [];
+  let videoTraf: Uint8Array | null = null;
+  const trafs = findBox(moof, ['traf']);
+  for (let i = 0; i < trafs.length; i++) {
+    const traf = trafs[i];
+    const tfhd = findBox(traf, ['tfhd'])[0];
+    if (!tfhd) {
+      return null;
+    }
+    if (readUint32(tfhd, 4) === videoTrackId) {
+      if (!(readUint32(tfhd, 0) & 0x20000)) {
+        return null;
+      }
+      videoTraf = traf;
+    } else {
+      dropRanges.push([
+        traf.byteOffset - base - 8,
+        traf.byteOffset - base + traf.byteLength,
+      ]);
+    }
+  }
+  if (!videoTraf || !dropRanges.length) {
+    return null;
+  }
+  const dropped = dropRanges.reduce(
+    (sum, [start, end]) => sum + end - start,
+    0,
+  );
+  // The mdat moves up by everything dropped, the video traf and the senc
+  // payload its saio points to by what was dropped before the traf
+  const trafShift = dropRanges.reduce(
+    (sum, [start, end]) =>
+      end <= videoTraf!.byteOffset - base ? sum + end - start : sum,
+    0,
+  );
+  const result = new Uint8Array(data.byteLength - dropped);
+  let read = 0;
+  let write = 0;
+  for (let i = 0; i < dropRanges.length; i++) {
+    const [start, end] = dropRanges[i];
+    result.set(data.subarray(read, start), write);
+    write += start - read;
+    read = end;
+  }
+  result.set(data.subarray(read), write);
+  writeUint32(
+    result,
+    moof.byteOffset - base - 8,
+    moof.byteLength + 8 - dropped,
+  );
+  const truns = findBox(videoTraf, ['trun']);
+  for (let i = 0; i < truns.length; i++) {
+    const trun = truns[i];
+    if (readUint32(trun, 0) & 0x01) {
+      writeUint32(
+        result,
+        trun.byteOffset - base - trafShift + 8,
+        readUint32(trun, 8) - dropped,
+      );
+    }
+  }
+  if (trafShift) {
+    const saios = findBox(videoTraf, ['saio']);
+    for (let i = 0; i < saios.length; i++) {
+      const saio = saios[i];
+      const stride = saio[0] === 0 ? 4 : 8;
+      let offset = readUint32(saio, 0) & 0x01 ? 12 : 4;
+      let entries = readUint32(saio, offset);
+      for (offset += 4; entries--; offset += stride) {
+        // Patch the low word of each aux info offset
+        const at = offset + stride - 4;
+        writeUint32(
+          result,
+          saio.byteOffset - base - trafShift + at,
+          readUint32(saio, at) - trafShift,
+        );
+      }
+    }
+  }
+  return result;
 }
 
 export function hasBoxData(data: Uint8Array, type: BoxType): boolean {
@@ -659,7 +884,9 @@ export function patchEncyptionData(
     return;
   }
   const keyId = decryptdata.keyId;
-  if (keyId && decryptdata.isCommonEncryption) {
+  // FairPlay skd keys carry the key URI bytes as their keyId — only a 16 byte
+  // key id can be written into the tenc default_KID field
+  if (keyId?.byteLength === 16 && decryptdata.isCommonEncryption) {
     applyToTencBoxes(initSegment, (tenc, isAudio) => {
       // Look for default key id (keyID offset is always 8 within the tenc box):
       const tencKeyId = tenc.subarray(8, 24);
