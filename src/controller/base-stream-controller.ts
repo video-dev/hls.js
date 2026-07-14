@@ -1895,7 +1895,12 @@ export default class BaseStreamController
     }
 
     // Clear fragPrevious if removed from buffer / tracker so that is picked again
-    fragPrevious = this.filterBuffered(fragPrevious);
+    if (
+      fragPrevious &&
+      this.fragmentTracker.getState(fragPrevious) === FragmentState.NOT_LOADED
+    ) {
+      fragPrevious = null;
+    }
 
     let frag: MediaFragment | null;
     if (bufferEnd < end) {
@@ -1924,9 +1929,12 @@ export default class BaseStreamController
       const curSNIdx = frag.sn - levelDetails.startSN;
       // Move fragPrevious forward to support forcing the next fragment to load
       // when the buffer catches up to a previously buffered range.
-      const bufferedFrag = this.filterBuffered(frag);
-      if (bufferedFrag) {
-        fragPrevious = bufferedFrag;
+      const fragState = this.fragmentTracker.getState(frag);
+      if (
+        fragState === FragmentState.OK ||
+        (fragState === FragmentState.PARTIAL && frag.gap)
+      ) {
+        fragPrevious = frag;
       }
       if (
         mediaFragmentsAreEqual(frag, fragPrevious) &&
@@ -1946,19 +1954,6 @@ export default class BaseStreamController
       }
     }
     return frag;
-  }
-
-  private filterBuffered(frag: MediaFragment | null): MediaFragment | null {
-    if (frag) {
-      const fragState = this.fragmentTracker.getState(frag);
-      if (
-        fragState === FragmentState.OK ||
-        (fragState === FragmentState.PARTIAL && frag.gap)
-      ) {
-        return frag;
-      }
-    }
-    return null;
   }
 
   protected alignPlaylists(
