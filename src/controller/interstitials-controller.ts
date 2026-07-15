@@ -891,11 +891,18 @@ export default class InterstitialsController
       const assetPlayer = player as HlsAssetPlayer;
       const timelineStart = assetPlayer.assetItem.timelineStart;
       if (timelineStart) {
+        const assetHls = assetPlayer.hls!;
         const timePastStart = Math.max(
           this.timelinePos - timelineStart,
           Number.EPSILON,
         );
-        assetPlayer.hls!.config.startPosition = timePastStart;
+        if (assetHls.startPosition !== timePastStart) {
+          this.log(`Set ${assetPlayer} startPosition: ${timePastStart}`);
+          assetHls.config.startPosition = timePastStart;
+          if (assetHls.loadingEnabled) {
+            assetHls.startLoad(timePastStart);
+          }
+        }
       }
     }
     player.attachMedia(dataToAttach);
