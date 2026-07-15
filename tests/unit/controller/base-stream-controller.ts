@@ -995,6 +995,50 @@ describe('BaseStreamController', function () {
           resetFragmentLoadingStub.restore();
         });
     });
+
+    it('loadInitSegmentIfNeeded handles init segment context switch before abort load errors', function () {
+      const { mediaFrag, initSegment } = createMediaFragWithInitSegment(false);
+      baseStreamController.state = State.FRAG_LOADING;
+      (baseStreamController as any).levels = [{}];
+
+      // The in-flight init request resolves successfully
+      sinon
+        .stub((baseStreamController as any).initFragmentLoader, 'load')
+        .resolves({ frag: initSegment } as any);
+
+      // context changed before loadInitSegmentIfNeeded is resolved
+      baseStreamController.fragCurrent = null;
+
+      const errorSpy = sinon.spy();
+      hls.on(Hls.Events.ERROR, errorSpy);
+
+      // expect error to be routed through handleFragLoadError
+      const initDataPromise = (
+        baseStreamController as any
+      ).loadInitSegmentIfNeeded(mediaFrag);
+      expect(
+        initDataPromise,
+        'loadInitSegmentIfNeeded should return a promise',
+      ).to.be.a('promise');
+
+      return initDataPromise
+        .catch((error) =>
+          (baseStreamController as any).handleFragLoadError(error),
+        )
+        .then(() => {
+          const fatalInternalException = errorSpy
+            .getCalls()
+            .some(
+              (call) =>
+                call.args[1]?.details === ErrorDetails.INTERNAL_EXCEPTION &&
+                call.args[1]?.fatal === true,
+            );
+          expect(
+            fatalInternalException,
+            'init-segment load abort must not be reported as a fatal INTERNAL_EXCEPTION',
+          ).to.equal(false);
+        });
+    });
   });
 
   describe('backtrackFragment and couldBacktrack properties', function () {

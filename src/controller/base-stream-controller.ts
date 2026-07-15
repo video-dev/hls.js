@@ -18,6 +18,7 @@ import {
   type Part,
 } from '../loader/fragment';
 import FragmentLoader, { getAESAdjustments } from '../loader/fragment-loader';
+import { LoadError } from '../loader/fragment-loader';
 import TaskLoop from '../task-loop';
 import { PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
@@ -50,10 +51,7 @@ import type { FragmentTracker } from './fragment-tracker';
 import type { HlsAssetPlayer } from './interstitial-player';
 import type TransmuxerInterface from '../demux/transmuxer-interface';
 import type Hls from '../hls';
-import type {
-  FragmentLoadProgressCallback,
-  LoadError,
-} from '../loader/fragment-loader';
+import type { FragmentLoadProgressCallback } from '../loader/fragment-loader';
 import type KeyLoader from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
 import type { SourceBufferName } from '../types/buffer';
@@ -716,13 +714,19 @@ export default class BaseStreamController
     return this.initFragmentLoader
       .load(initFrag)
       .then((data) => {
-        const frag = data?.frag;
+        const frag = data.frag;
         if (
-          !frag ||
-          !fragmentsAreEqual(frag, this.fragCurrent?.initSegment) ||
-          !this.levels
+          !this.levels ||
+          !fragmentsAreEqual(frag, this.fragCurrent?.initSegment)
         ) {
-          throw new Error('init load aborted');
+          throw new LoadError({
+            type: ErrorTypes.NETWORK_ERROR,
+            details: ErrorDetails.INTERNAL_ABORTED,
+            error: new Error('init load aborted'),
+            fatal: false,
+            frag,
+            networkDetails: null,
+          });
         }
         return data;
       })
