@@ -48,7 +48,7 @@ describe('AbrController', function () {
   });
 
   describe('destroy', function () {
-    it('does not throw when a queued abandon-rules callback runs after destroy', function () {
+    it('does not throw when an abandon-rules callback runs after destroy', function () {
       const abandonRulesCheck = (abrController as any)._abandonRulesCheck;
 
       hls.destroy();
