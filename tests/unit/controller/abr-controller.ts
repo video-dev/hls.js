@@ -47,6 +47,16 @@ describe('AbrController', function () {
     hls.destroy();
   });
 
+  describe('destroy', function () {
+    it('does not throw when a queued abandon-rules callback runs after destroy', function () {
+      const abandonRulesCheck = (abrController as any)._abandonRulesCheck;
+
+      hls.destroy();
+
+      expect(() => abandonRulesCheck()).not.to.throw();
+    });
+  });
+
   describe('resetEstimator', function () {
     it('estimate can be reset with new value', function () {
       const { abrEwmaDefaultEstimate } = hls.config;
