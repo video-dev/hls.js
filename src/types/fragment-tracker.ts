@@ -10,6 +10,9 @@ export interface FragmentEntity {
   loaded: FragLoadedData | null;
   buffered: boolean;
   range: { [key in SourceBufferName | 'subs']: FragmentBufferedRange };
+  // Buffered coverage and append count of a partial fragment, used to mark
+  // fragments as gaps after repeated appends without buffered range growth
+  partialAppends: { covered: number; count: number } | null;
 }
 
 export interface FragmentTimeRange {

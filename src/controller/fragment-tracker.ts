@@ -47,9 +47,6 @@ export class FragmentTracker implements ComponentAPI {
   private bufferPadding: number = 0.2;
   private hls: Hls | null;
   private hasGaps: boolean = false;
-  private partialAppends: Partial<
-    Record<string, { covered: number; count: number }>
-  > = Object.create(null);
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -275,7 +272,7 @@ export class FragmentTracker implements ComponentAPI {
       if (!isPartial(fragmentEntity)) {
         // Remove older fragment parts from lookup after frag is tracked as buffered
         this.removeParts(frag.sn - 1, frag.type);
-        delete this.partialAppends[fragKey];
+        fragmentEntity.partialAppends = null;
       } else if (
         !part &&
         !frag.gap &&
@@ -291,7 +288,7 @@ export class FragmentTracker implements ComponentAPI {
             ),
           0,
         );
-        const attempts = (this.partialAppends[fragKey] ||= {
+        const attempts = (fragmentEntity.partialAppends ||= {
           covered: 0,
           count: 0,
         });
@@ -366,6 +363,7 @@ export class FragmentTracker implements ComponentAPI {
         loaded: null,
         buffered: false,
         range: Object.create(null),
+        partialAppends: null,
       };
       if (frag.gap) {
         this.hasGaps = true;
@@ -524,6 +522,9 @@ export class FragmentTracker implements ComponentAPI {
       loaded,
       buffered: false,
       range: Object.create(null),
+      // Carry over partial-append attempts: reloading a fragment replaces its
+      // entity, and reloading is how appends without progress repeat
+      partialAppends: this.fragments[fragKey]?.partialAppends || null,
     };
   }
 
@@ -661,7 +662,6 @@ export class FragmentTracker implements ComponentAPI {
       );
     }
     delete this.fragments[fragKey];
-    delete this.partialAppends[fragKey];
     if (fragment.endList) {
       delete this.endListFragments[fragment.type];
     }
@@ -671,7 +671,6 @@ export class FragmentTracker implements ComponentAPI {
     this.fragments = Object.create(null);
     this.endListFragments = Object.create(null);
     this.activePartLists = Object.create(null);
-    this.partialAppends = Object.create(null);
     this.hasGaps = false;
     const partlist = this.hls?.latestLevelDetails?.partList;
     if (partlist) {
