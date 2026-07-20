@@ -2044,6 +2044,11 @@ export interface FragmentEntity {
     buffered: boolean;
     // (undocumented)
     loaded: FragLoadedData | null;
+    // (undocumented)
+    partialAppends: {
+        covered: number;
+        count: number;
+    } | null;
     // Warning: (ae-forgotten-export) The symbol "FragmentBufferedRange" needs to be exported by the entry point hls.d.ts
     //
     // (undocumented)
