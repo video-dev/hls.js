@@ -111,9 +111,13 @@ describe('passthrough-remuxer', function () {
     const result = remuxIFrameFragment(fragmentData, extinfDuration);
 
     expect(result.video, 'video track').to.exist;
-    // regenerated: a fresh moof in data1 and a separate mdat in data2
-    expect(result.video!.data1, 'data1').to.not.equal(fragmentData);
-    expect(result.video!.data2, 'data2').to.exist;
+    // Rewritten in place: the moof+mdat stays in data1, no separate mdat
+    expect(result.video!.data1, 'data1').to.equal(fragmentData);
+    expect(result.video!.data2, 'data2').to.not.exist;
+    // The single sample is stretched to the EXTINF duration
+    expect(trunSampleDurations(result.video!.data1)).to.deep.equal([
+      extinfDuration * 90000,
+    ]);
     expect(result.video!.endDTS - result.video!.startDTS).to.equal(
       extinfDuration,
     );
@@ -137,7 +141,7 @@ describe('passthrough-remuxer', function () {
     expect(result.video!.data1).to.equal(fragmentData);
   });
 
-  it('regenerates moof+mdat for a multi-sample iframe fragment, keeping every sample', function () {
+  it('remuxes a multi-sample iframe fragment in place, keeping every sample', function () {
     const extinfDuration = 4;
     const fragmentData = mp4Fragment([
       sample(3003, 4, 0),
@@ -148,8 +152,8 @@ describe('passthrough-remuxer', function () {
     const result = remuxIFrameFragment(fragmentData, extinfDuration);
 
     expect(result.video, 'video track').to.exist;
-    expect(result.video!.data1, 'data1').to.not.equal(fragmentData);
-    expect(result.video!.data2, 'data2').to.exist;
+    expect(result.video!.data1, 'data1').to.equal(fragmentData);
+    expect(result.video!.data2, 'data2').to.not.exist;
     // all three parsed samples are reported, not collapsed to one
     expect(result.video!.nb).to.equal(3);
     expect(result.video!.endDTS - result.video!.startDTS).to.equal(
@@ -266,12 +270,17 @@ describe('passthrough-remuxer', function () {
     expect(parsedInit.video, 'filtered init video').to.exist;
     expect(parsedInit.audio, 'filtered init audio').to.not.exist;
 
-    // Video-only output: regenerated moof and an mdat with only video bytes
+    // Video-only output: the audio traf is spliced out (audio sample bytes are
+    // left in the mdat as unreferenced data)
     expect(result.video, 'video track').to.exist;
     expect(result.video!.type).to.equal('video');
     expect(result.video!.hasAudio).to.equal(false);
-    expect(result.video!.data1, 'data1 regenerated').to.not.equal(fragmentData);
-    expect(result.video!.data2!.byteLength, 'video-only mdat').to.equal(24 + 8);
+    expect(result.video!.data1, 'data1').to.not.equal(fragmentData);
+    expect(result.video!.data2, 'data2').to.not.exist;
+    const trafs = findBox(result.video!.data1, ['moof', 'traf']);
+    expect(trafs, 'trafs').to.have.lengthOf(1);
+    const tfhd = findBox(trafs[0], ['tfhd'])[0];
+    expect(readUint32(tfhd, 4), 'video track id').to.equal(1);
     expect(result.video!.endPTS - result.video!.startPTS).to.equal(
       extinfDuration,
     );
@@ -294,7 +303,12 @@ describe('passthrough-remuxer', function () {
 
     expect(result.video, 'video track').to.exist;
     expect(result.video!.type).to.equal('video');
-    expect(result.video!.data2!.byteLength, 'video-only mdat').to.equal(24 + 8);
+    expect(result.video!.data2, 'data2').to.not.exist;
+    const trafs = findBox(result.video!.data1, ['moof', 'traf']);
+    expect(trafs, 'trafs').to.have.lengthOf(1);
+    expect(readUint32(findBox(trafs[0], ['tfhd'])[0], 4), 'video id').to.equal(
+      1,
+    );
     expect(result.video!.endPTS - result.video!.startPTS).to.equal(
       extinfDuration,
     );
@@ -314,7 +328,13 @@ describe('passthrough-remuxer', function () {
     const result = remuxIFrame(fragmentData, extinfDuration);
 
     expect(result.video, 'video track').to.exist;
-    expect(result.video!.data2!.byteLength, 'gathered mdat').to.equal(24 + 8);
+    expect(result.video!.data2, 'data2').to.not.exist;
+    // The audio traf is spliced out; both video trafs are retained
+    const trafs = findBox(result.video!.data1, ['moof', 'traf']);
+    expect(trafs, 'video trafs').to.have.lengthOf(2);
+    trafs.forEach((traf) => {
+      expect(readUint32(findBox(traf, ['tfhd'])[0], 4), 'video id').to.equal(1);
+    });
     expect(result.video!.endPTS - result.video!.startPTS).to.equal(
       extinfDuration,
     );
@@ -358,6 +378,31 @@ describe('passthrough-remuxer', function () {
     expect(readUint32(result.video!.data1, mdatPayloadOffset - 8)).to.equal(18);
     const trun = findBox(result.video!.data1, ['moof', 'traf', 'trun'])[0];
     expect(readUint32(trun, 4), 'trun sample_count').to.equal(1);
+    expect(trunSampleDurations(result.video!.data1)).to.deep.equal([
+      extinfDuration * 90000,
+    ]);
+    expect(result.video!.endPTS - result.video!.startPTS).to.equal(
+      extinfDuration,
+    );
+  });
+
+  it('stretches a partial-mdat iframe whose declared duration already matches EXTINF', function () {
+    // The moof declares two samples that together already span EXTINF, so
+    // needsDurationAdjustment is false — but only the first sample's data is
+    // present in the byte-range slice (as with a muxed I-Frame byte range).
+    const extinfDuration = 4;
+    const fragmentData = mp4Fragment([
+      sample(extinfDuration * 90000 - 3003, 10, 0),
+      sample(3003, 20, 0),
+    ]);
+    const mdatPayloadOffset = fragmentData.byteLength - 30;
+    const partialFragment = fragmentData.subarray(0, mdatPayloadOffset + 13);
+
+    const result = remuxIFrameFragment(partialFragment, extinfDuration);
+
+    expect(result.video, 'video track').to.exist;
+    // The single kept keyframe is stretched to the full declared duration even
+    // though the moof timing did not disagree with EXTINF
     expect(trunSampleDurations(result.video!.data1)).to.deep.equal([
       extinfDuration * 90000,
     ]);
@@ -492,6 +537,10 @@ function muxedMp4Fragment(
     truns[1].byteOffset - moof.byteOffset + 8,
     moof.byteLength + 8 + (audioFirst ? 0 : videoBytes),
   );
+  // CMAF muxed content addresses samples from the moof; the video traf must
+  // set default-base-is-moof so the remuxer can splice out the audio traf
+  const videoTfhd = findBox(moof, ['moof', 'traf', 'tfhd'])[0];
+  videoTfhd[1] = 0x02;
 
   return appendUint8Array(
     moof,

@@ -8,9 +8,8 @@ import {
   findBox,
   getSampleData,
   parseInitSegment,
-  truncateIFrameMoofToSamples,
+  remuxVideoOnlyIFrameMoof,
   types,
-  videoOnlyIFrameMoof,
   videoOnlyInitSegment,
 } from '../../../src/utils/mp4-tools';
 import type { TrackFragmentSample } from '../../../src/remux/mp4-generator';
@@ -80,17 +79,21 @@ describe('mp4-tools', function () {
     expect(track.ptsMax).to.equal(500 + 1001);
   });
 
-  it('truncateIFrameMoofToSamples rewrites sample counts and returns the mdat end offset', function () {
+  it('remuxVideoOnlyIFrameMoof truncates a partial mdat to the kept samples', function () {
     const fragment = gopFragment();
     const mdatPayloadOffset = fragment.byteLength - 60;
 
-    const mdatEnd = truncateIFrameMoofToSamples(
+    const result = remuxVideoOnlyIFrameMoof(
       fragment,
       1,
+      1,
       mdatPayloadOffset + 10,
+      undefined,
     );
 
-    expect(mdatEnd).to.equal(mdatPayloadOffset + 10);
+    expect(result, 'result').to.not.equal(null);
+    // The kept stream ends on the rewritten mdat box boundary
+    expect(result!.byteLength, 'kept length').to.equal(mdatPayloadOffset + 10);
     const trun = findBox(fragment, ['moof', 'traf', 'trun'])[0];
     expect(readUint32(trun, 4), 'trun sample_count').to.equal(1);
     expect(
@@ -99,17 +102,19 @@ describe('mp4-tools', function () {
     ).to.equal(18);
   });
 
-  it('truncateIFrameMoofToSamples distributes the kept count across runs', function () {
+  it('remuxVideoOnlyIFrameMoof distributes the kept count across runs', function () {
     const fragment = multiRunIFrameMoof();
     const mdatPayloadOffset = fragment.byteLength - 60;
 
-    const mdatEnd = truncateIFrameMoofToSamples(
+    const result = remuxVideoOnlyIFrameMoof(
       fragment,
+      1,
       3,
       mdatPayloadOffset + 25,
+      undefined,
     );
 
-    expect(mdatEnd).to.equal(mdatPayloadOffset + 25);
+    expect(result!.byteLength, 'kept length').to.equal(mdatPayloadOffset + 25);
     const truns = findBox(fragment, ['moof', 'traf', 'trun']);
     expect(readUint32(truns[0], 4), 'first run count').to.equal(2);
     expect(readUint32(truns[1], 4), 'second run count').to.equal(1);
@@ -126,11 +131,11 @@ describe('mp4-tools', function () {
     ).to.equal(33);
   });
 
-  it('truncateIFrameMoofToSamples frees runs left without samples', function () {
+  it('remuxVideoOnlyIFrameMoof frees runs left without samples', function () {
     const fragment = multiRunIFrameMoof();
     const mdatPayloadOffset = fragment.byteLength - 60;
 
-    truncateIFrameMoofToSamples(fragment, 1, mdatPayloadOffset + 10);
+    remuxVideoOnlyIFrameMoof(fragment, 1, 1, mdatPayloadOffset + 10, undefined);
 
     // Parsers reject zero-sample truns, so the emptied run becomes 'free'
     const truns = findBox(fragment, ['moof', 'traf', 'trun']);
@@ -161,13 +166,19 @@ describe('mp4-tools', function () {
     expect(videoOnlyInitSegment(filtered!)).to.equal(null);
   });
 
-  it('videoOnlyIFrameMoof removes non-video track fragments and patches offsets', function () {
+  it('remuxVideoOnlyIFrameMoof removes non-video track fragments and patches offsets', function () {
     const fragment = muxedIFrameMoof(1, 2);
     const audioTrafSize = trafSize(fragment, 2);
     const sencOffset = indexOfFourcc(fragment, 'senc');
     const moofSize = readUint32(fragment, 0);
 
-    const result = videoOnlyIFrameMoof(fragment, 1);
+    const result = remuxVideoOnlyIFrameMoof(
+      fragment,
+      1,
+      2,
+      undefined,
+      undefined,
+    );
 
     expect(result, 'result').to.not.equal(null);
     expect(result!.byteLength).to.equal(fragment.byteLength - audioTrafSize);
@@ -186,11 +197,17 @@ describe('mp4-tools', function () {
     expect(indexOfFourcc(result!, 'mdat')).to.be.greaterThan(0);
   });
 
-  it('videoOnlyIFrameMoof shifts video traf offsets when it follows a dropped traf', function () {
+  it('remuxVideoOnlyIFrameMoof shifts video traf offsets when it follows a dropped traf', function () {
     const fragment = muxedIFrameMoof(2, 1);
     const audioTrafSize = trafSize(fragment, 2);
 
-    const result = videoOnlyIFrameMoof(fragment, 1);
+    const result = remuxVideoOnlyIFrameMoof(
+      fragment,
+      1,
+      2,
+      undefined,
+      undefined,
+    );
 
     expect(result, 'result').to.not.equal(null);
     expect(findBox(result!, ['moof', 'traf'])).to.have.lengthOf(1);
@@ -203,8 +220,59 @@ describe('mp4-tools', function () {
     expect(readUint32(saio, 8), 'saio offset').to.equal(0x99 - audioTrafSize);
   });
 
-  it('videoOnlyIFrameMoof returns null without moof-relative data offsets', function () {
-    expect(videoOnlyIFrameMoof(muxedIFrameMoof(1, 2, false), 1)).to.equal(null);
+  it('remuxVideoOnlyIFrameMoof drops non-video trafs and truncates in one pass', function () {
+    const fragment = muxedIFrameMoof(1, 2);
+    const audioTrafSize = trafSize(fragment, 2);
+    const mdatPayloadOffset = fragment.byteLength - 60;
+
+    // Keep 1 of the video traf's 2 samples while excising the audio traf
+    const result = remuxVideoOnlyIFrameMoof(
+      fragment,
+      1,
+      1,
+      mdatPayloadOffset + 10,
+      undefined,
+    );
+
+    expect(result, 'result').to.not.equal(null);
+    // Length reflects both the excised audio traf and the truncated mdat tail
+    expect(result!.byteLength).to.equal(mdatPayloadOffset + 10 - audioTrafSize);
+    expect(findBox(result!, ['moof', 'traf']), 'trafs').to.have.lengthOf(1);
+    const trun = findBox(result!, ['moof', 'traf', 'trun'])[0];
+    expect(readUint32(trun, 4), 'trun sample_count').to.equal(1);
+    const senc = findBox(result!, ['moof', 'traf', 'senc'])[0];
+    expect(readUint32(senc, 4), 'senc sample_count').to.equal(1);
+  });
+
+  it('remuxVideoOnlyIFrameMoof stretches the last sample duration', function () {
+    const fragment = gopFragment();
+    const trun = findBox(fragment, ['moof', 'traf', 'trun'])[0];
+    // Per-sample layout is data-offset + duration/size/flags/cts (4 words each);
+    // the third sample's duration sits after 2 samples of 16 bytes
+    const durationOffset =
+      trun.byteOffset - fragment.byteOffset + 4 + 4 + 4 + 2 * 16;
+
+    const result = remuxVideoOnlyIFrameMoof(fragment, 1, 3, undefined, {
+      durationOffset,
+      value: 5005,
+    });
+
+    expect(result, 'result').to.not.equal(null);
+    expect(readUint32(fragment, durationOffset), 'last duration').to.equal(
+      5005,
+    );
+  });
+
+  it('remuxVideoOnlyIFrameMoof returns null without moof-relative data offsets', function () {
+    expect(
+      remuxVideoOnlyIFrameMoof(
+        muxedIFrameMoof(1, 2, false),
+        1,
+        2,
+        undefined,
+        undefined,
+      ),
+    ).to.equal(null);
   });
 });
 
