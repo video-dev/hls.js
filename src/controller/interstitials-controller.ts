@@ -1572,35 +1572,49 @@ export default class InterstitialsController
     if (this.primaryLive) {
       const details = this.primaryDetails;
       const resumingFromItem = this.endedItem || this.playingItem;
+      const startPosition = this.hls.startPosition;
       if (index === 0) {
-        return this.hls.startPosition;
+        return startPosition;
       } else if (
         details &&
         (resumingFromItem?.event?.cue.pre ||
           itemStart < details.fragmentStart ||
           itemStart > details.edge)
       ) {
+        const liveStartPosition = this.getLiveStartPos();
         const liveSync = this.hls.liveSyncPosition;
-        if (liveSync !== null) {
-          if (preloading) {
-            const timeRemaining = this.getBufferingPlayer()?.remaining || 0;
-            this.log(
-              `primary resumption liveSync: ${liveSync} + timeRemaining ${timeRemaining}`,
-            );
-            return Math.min(
-              liveSync + timeRemaining,
-              details.edge,
-              scheduledItem.end,
-            );
-          }
-          this.log(`primary resumption liveSync: ${liveSync}`);
-          return liveSync;
+        const logPrefix = `primary resumption${preloading ? ' (preloading)' : ''}: `;
+        if (preloading) {
+          const bufferingPlayer = this.getBufferingPlayer();
+          const timeRemaining = bufferingPlayer?.interstitial.cue.pre
+            ? bufferingPlayer.remaining
+            : 0;
+          this.log(
+            `${logPrefix}${liveStartPosition + timeRemaining}(startPos: ${startPosition} liveSync: ${liveSync} + timeRemaining: ${timeRemaining})`,
+          );
+          return liveStartPosition + timeRemaining;
         }
-        return -1;
+        this.log(
+          `${logPrefix}${liveStartPosition}(startPos: ${startPosition} liveSync: ${liveSync})`,
+        );
+        return liveStartPosition;
       }
     }
     this.log(`primary resumption itemStart: ${itemStart}`);
     return itemStart;
+  }
+
+  private getLiveStartPos(): number {
+    const startPosition = this.hls.startPosition;
+    const liveSync = this.hls.liveSyncPosition || 0;
+    const behindLive = (this.primaryDetails?.targetduration || 10) * 3;
+    if (
+      liveSync &&
+      (startPosition === -1 || liveSync - startPosition > behindLive)
+    ) {
+      return liveSync || 0;
+    }
+    return startPosition;
   }
 
   private isAssetBuffered(asset: InterstitialAssetItem): boolean {
@@ -2331,6 +2345,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     if (neverLoaded) {
       const timelineStart = interstitial.timelineStart;
       const playingItem = this.playingItem;
+      const bufferingPlayer = this.getBufferingPlayer();
       if (interstitial.appendInPlace) {
         if (
           !this.isInterstitial(playingItem) &&
@@ -2342,15 +2357,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       let hlsStartOffset;
       let liveStartPosition = 0;
       if (
-        (!playingItem ||
-          (this.isInterstitial(playingItem) && playingItem.event.cue.pre)) &&
+        (!bufferingPlayer || bufferingPlayer.interstitial.cue.pre) &&
         this.primaryLive
       ) {
-        liveStartPosition = playingItem
-          ? playingItem.end + playingItem.event.duration
-          : this.hls.startPosition;
-        if (liveStartPosition === -1) {
-          liveStartPosition = this.hls.liveSyncPosition || 0;
+        liveStartPosition = this.getLiveStartPos();
+        if (bufferingPlayer) {
+          liveStartPosition += bufferingPlayer.remaining;
         }
       }
       if (
