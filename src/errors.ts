@@ -78,6 +78,8 @@ export enum ErrorDetails {
   BUFFER_APPEND_ERROR = 'bufferAppendError',
   // Identifier for a buffer appending error event - data: appending error description
   BUFFER_APPENDING_ERROR = 'bufferAppendingError',
+  // Triggered when a fragment append cycle completes without increasing the fragment's buffered coverage - data: { frag, chunkMeta, appendsWithoutProgress }
+  BUFFER_APPEND_NO_PROGRESS = 'bufferAppendNoProgress',
   // Identifier for a buffer stalled error event
   BUFFER_STALLED_ERROR = 'bufferStalledError',
   // Identifier for a buffer full event

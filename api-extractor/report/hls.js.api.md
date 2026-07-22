@@ -1399,6 +1399,8 @@ export type ErrorControllerConfig = {
 // @public (undocumented)
 export interface ErrorData {
     // (undocumented)
+    appendsWithoutProgress?: number;
+    // (undocumented)
     buffer?: number;
     // (undocumented)
     bufferInfo?: BufferInfo;
@@ -1480,6 +1482,8 @@ export enum ErrorDetails {
     BUFFER_ADD_CODEC_ERROR = "bufferAddCodecError",
     // (undocumented)
     BUFFER_APPEND_ERROR = "bufferAppendError",
+    // (undocumented)
+    BUFFER_APPEND_NO_PROGRESS = "bufferAppendNoProgress",
     // (undocumented)
     BUFFER_APPENDING_ERROR = "bufferAppendingError",
     // (undocumented)
@@ -1848,6 +1852,8 @@ export interface FPSDropLevelCappingData {
 // @public (undocumented)
 export interface FragBufferedData {
     // (undocumented)
+    chunkMeta?: ChunkMetadata;
+    // (undocumented)
     frag: Fragment;
     // (undocumented)
     id: PlaylistLevelType;
@@ -2044,11 +2050,6 @@ export interface FragmentEntity {
     buffered: boolean;
     // (undocumented)
     loaded: FragLoadedData | null;
-    // (undocumented)
-    partialAppends: {
-        covered: number;
-        count: number;
-    } | null;
     // Warning: (ae-forgotten-export) The symbol "FragmentBufferedRange" needs to be exported by the entry point hls.d.ts
     //
     // (undocumented)
@@ -2162,6 +2163,8 @@ export class FragmentTracker implements ComponentAPI {
 //
 // @public (undocumented)
 export interface FragParsedData {
+    // (undocumented)
+    chunkMeta: ChunkMetadata;
     // (undocumented)
     frag: Fragment;
     // (undocumented)

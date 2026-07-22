@@ -28,9 +28,6 @@ export const enum FragmentState {
   OK = 'OK',
 }
 
-// Appends of the same fragment without buffered range growth allowed before marking it as a gap to prevent loop loading
-const MAX_APPENDS_WITHOUT_PROGRESS = 3;
-
 export class FragmentTracker implements ComponentAPI {
   private activePartLists: { [key in PlaylistLevelType]?: Part[] } =
     Object.create(null);
@@ -272,35 +269,6 @@ export class FragmentTracker implements ComponentAPI {
       if (!isPartial(fragmentEntity)) {
         // Remove older fragment parts from lookup after frag is tracked as buffered
         this.removeParts(frag.sn - 1, frag.type);
-        fragmentEntity.partialAppends = null;
-      } else if (
-        !part &&
-        !frag.gap &&
-        !this.hls?.latestLevelDetails?.iframesOnly
-      ) {
-        // Mark fragment as a gap after repeated appends without buffered range growth to prevent loop loading
-        const covered = trackNames.reduce(
-          (sum, elementaryStream) =>
-            sum +
-            (fragmentEntity.range[elementaryStream]?.time || []).reduce(
-              (streamSum, range) => streamSum + range.endPTS - range.startPTS,
-              0,
-            ),
-          0,
-        );
-        const attempts = (fragmentEntity.partialAppends ||= {
-          covered: 0,
-          count: 0,
-        });
-        if (covered - attempts.covered > 0.001) {
-          attempts.covered = covered;
-          attempts.count = 1;
-        } else if (++attempts.count >= MAX_APPENDS_WITHOUT_PROGRESS) {
-          this.hls?.logger.warn(
-            `Fragment ${frag.sn} of ${playlistType} playlist ${frag.level} appended ${attempts.count} times without buffered range growth. Marking as gap to prevent loop loading`,
-          );
-          this.addAsGap(frag);
-        }
       }
       // Detect nothing buffered for segment append (open-GOP issue #7774)
       if (!part) {
@@ -363,7 +331,6 @@ export class FragmentTracker implements ComponentAPI {
         loaded: null,
         buffered: false,
         range: Object.create(null),
-        partialAppends: null,
       };
       if (frag.gap) {
         this.hasGaps = true;
@@ -522,9 +489,6 @@ export class FragmentTracker implements ComponentAPI {
       loaded,
       buffered: false,
       range: Object.create(null),
-      // Carry over partial-append attempts: reloading a fragment replaces its
-      // entity, and reloading is how appends without progress repeat
-      partialAppends: this.fragments[fragKey]?.partialAppends || null,
     };
   }
 

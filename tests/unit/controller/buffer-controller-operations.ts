@@ -11,6 +11,7 @@ import {
   Fragment,
   type MediaFragment,
 } from '../../../src/loader/fragment';
+import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
@@ -20,6 +21,7 @@ import {
   type MockSourceBuffer,
 } from '../../mocks/mock-media';
 import type BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
+import type { Part } from '../../../src/loader/fragment';
 import type {
   BufferOperation,
   BufferOperationQueues,
@@ -30,7 +32,7 @@ import type {
   ComponentAPI,
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
-import type { BufferAppendingData } from '../../../src/types/events';
+import type { BufferAppendingData, ErrorData } from '../../../src/types/events';
 
 use(sinonChai);
 const sandbox = sinon.createSandbox();
@@ -684,7 +686,11 @@ describe('BufferController with attached media', function () {
       frag.setElementaryStreamInfo(ElementaryStreamTypes.AUDIO, 0, 0, 0, 0);
       frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 0, 0, 0);
 
-      hls.trigger(Events.FRAG_PARSED, { frag, part: null });
+      hls.trigger(Events.FRAG_PARSED, {
+        frag,
+        part: null,
+        chunkMeta: new ChunkMetadata(0, 0, 0, 0),
+      });
       return new Promise<void>((resolve, reject) => {
         hls.on(Events.FRAG_BUFFERED, (event, data) => {
           try {
@@ -702,6 +708,402 @@ describe('BufferController with attached media', function () {
           resolve();
         });
       });
+    });
+  });
+
+  describe('append progress detection', function () {
+    const runAppendCycle = (
+      frag: Fragment,
+      grew: boolean,
+      chunkMeta: ChunkMetadata = new ChunkMetadata(0, frag.sn as number, 0, 0),
+      part: Part | null = null,
+    ) => {
+      const progress = (bufferController as any).getFragmentAppendProgress(
+        frag,
+      );
+      progress.progressed ||= grew;
+      (bufferController as any).checkAppendProgress(
+        frag,
+        part,
+        chunkMeta,
+        true,
+      );
+    };
+    const newFrag = (sn: number) => {
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.sn = sn;
+      frag.level = 0;
+      return frag;
+    };
+
+    it('emits BUFFER_APPEND_NO_PROGRESS with a growing count for append cycles without buffered range growth', function () {
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => {
+        errors.push(data);
+      });
+      const frag = newFrag(1);
+      runAppendCycle(frag, true);
+      expect(errors, 'growth emits no error').to.have.lengthOf(0);
+      runAppendCycle(frag, false);
+      runAppendCycle(frag, false);
+      expect(errors).to.have.lengthOf(2);
+      expect(errors[0].details).to.equal(
+        ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
+      );
+      expect(errors[0].fatal).to.equal(false);
+      expect(errors[0].appendsWithoutProgress).to.equal(1);
+      expect(errors[1].appendsWithoutProgress).to.equal(2);
+      expect(errors[1].frag?.sn).to.equal(1);
+    });
+
+    it('resets the count when an append cycle grows a buffered range', function () {
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => {
+        errors.push(data);
+      });
+      const frag = newFrag(1);
+      runAppendCycle(frag, false);
+      expect(errors[0].appendsWithoutProgress).to.equal(1);
+      runAppendCycle(frag, true);
+      runAppendCycle(frag, false);
+      expect(errors).to.have.lengthOf(2);
+      expect(
+        errors[1].appendsWithoutProgress,
+        'count restarts after growth',
+      ).to.equal(1);
+    });
+
+    it('accumulates growth across chunked appends so an empty final append does not count', function () {
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => {
+        errors.push(data);
+      });
+      const frag = newFrag(1);
+      // First chunk grows the buffer, final flush chunk appends nothing new
+      (bufferController as any).getFragmentAppendProgress(frag).progressed =
+        true;
+      (bufferController as any).getFragmentAppendProgress(frag);
+      (bufferController as any).checkAppendProgress(
+        frag,
+        null,
+        new ChunkMetadata(0, 1, 0, 0),
+        true,
+      );
+      expect(errors).to.have.lengthOf(0);
+    });
+
+    it('does not carry progress from a previous load of the same fragment', function () {
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => {
+        errors.push(data);
+      });
+      const frag = newFrag(1);
+      (bufferController as any).getFragmentAppendProgress(frag).progressed =
+        true;
+      // Reloading replaces the fragment's LoadStats instance
+      frag.stats = new LoadStats();
+      (bufferController as any).checkAppendProgress(
+        frag,
+        null,
+        new ChunkMetadata(0, 1, 0, 0),
+        true,
+      );
+      expect(
+        errors,
+        'stale progress does not count as growth',
+      ).to.have.lengthOf(1);
+      expect(errors[0].appendsWithoutProgress).to.equal(1);
+    });
+
+    it('does not count cycles with partial chunk data or append errors', function () {
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => {
+        errors.push(data);
+      });
+      // partial (aborted) load cycles are excluded
+      const partialMeta = new ChunkMetadata(0, 1, 0, 0, -1, true);
+      runAppendCycle(newFrag(1), false, partialMeta);
+      // cycles that hit a SourceBuffer exception are counted by the append-error path
+      const frag = newFrag(1);
+      (bufferController as any).getFragmentAppendProgress(frag).errored = true;
+      (bufferController as any).checkAppendProgress(
+        frag,
+        null,
+        new ChunkMetadata(0, 1, 0, 0),
+        true,
+      );
+      expect(errors).to.have.lengthOf(0);
+    });
+
+    it('emits BUFFER_APPEND_NO_PROGRESS through the append pipeline when the target buffer does not grow', function () {
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => {
+        errors.push(data);
+      });
+      const track = getSourceBufferTrack(bufferController, 'video');
+      const buffer = track!.buffer as any;
+      buffer.setBuffered(0, 10);
+      const frag = newFrag(7);
+      frag.start = 10;
+      frag.duration = 3;
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 10, 13, 10, 13);
+      const chunkMeta = new ChunkMetadata(0, 7, 0, 0);
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: new Uint8Array(),
+        frag,
+        part: null,
+        chunkMeta,
+      });
+      // The append completes without adding anything to the buffer
+      buffer.dispatchEvent(new Event('updateend'));
+      return new Promise<void>((resolve, reject) => {
+        hls.on(Events.FRAG_BUFFERED, () => {
+          try {
+            expect(errors).to.have.lengthOf(1);
+            expect(errors[0].details).to.equal(
+              ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
+            );
+            expect(errors[0].appendsWithoutProgress).to.equal(1);
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        });
+        hls.trigger(Events.FRAG_PARSED, { frag, part: null, chunkMeta });
+      });
+    });
+
+    it('does not emit an error through the append pipeline when fragment coverage grows', function () {
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => {
+        errors.push(data);
+      });
+      const track = getSourceBufferTrack(bufferController, 'video');
+      const buffer = track!.buffer as any;
+      buffer.setBuffered(0, 10);
+      const frag = newFrag(7);
+      frag.start = 10;
+      frag.duration = 3;
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 10, 13, 10, 13);
+      const chunkMeta = new ChunkMetadata(0, 7, 0, 0);
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: new Uint8Array(),
+        frag,
+        part: null,
+        chunkMeta,
+      });
+      // The append lands media inside the fragment window before completing
+      buffer.setBuffered(10, 13);
+      buffer.dispatchEvent(new Event('updateend'));
+      return new Promise<void>((resolve, reject) => {
+        hls.on(Events.FRAG_BUFFERED, () => {
+          try {
+            expect(errors).to.have.lengthOf(0);
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        });
+        hls.trigger(Events.FRAG_PARSED, { frag, part: null, chunkMeta });
+      });
+    });
+
+    it('keeps progressive-append progress when a live update replaces the Fragment object', function () {
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => {
+        errors.push(data);
+      });
+      const track = getSourceBufferTrack(bufferController, 'video');
+      const buffer = track!.buffer as any;
+      const frag = newFrag(7);
+      frag.start = 10;
+      frag.duration = 3;
+      const chunkMeta = new ChunkMetadata(0, 7, 0, 0);
+      const append = (f: Fragment) =>
+        hls.trigger(Events.BUFFER_APPENDING, {
+          parent: PlaylistLevelType.MAIN,
+          type: 'video',
+          data: new Uint8Array(),
+          frag: f,
+          part: null,
+          chunkMeta,
+        });
+      // First chunk grows coverage, the final flush chunk appends nothing
+      append(frag);
+      buffer.setBuffered(10, 13);
+      buffer.dispatchEvent(new Event('updateend'));
+      append(frag);
+      buffer.dispatchEvent(new Event('updateend'));
+      // A live playlist update replaces the Fragment but shares its LoadStats
+      const replacement = newFrag(7);
+      replacement.start = 10;
+      replacement.duration = 3;
+      replacement.stats = frag.stats;
+      replacement.setElementaryStreamInfo(
+        ElementaryStreamTypes.VIDEO,
+        10,
+        13,
+        10,
+        13,
+      );
+      return new Promise<void>((resolve, reject) => {
+        hls.on(Events.FRAG_BUFFERED, () => {
+          try {
+            expect(
+              errors,
+              'progress from the first chunk is kept',
+            ).to.have.lengthOf(0);
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        });
+        hls.trigger(Events.FRAG_PARSED, {
+          frag: replacement,
+          part: null,
+          chunkMeta,
+        });
+      });
+    });
+
+    it('does not mistake a fragment timing adjustment for buffered growth', function () {
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => {
+        errors.push(data);
+      });
+      const track = getSourceBufferTrack(bufferController, 'video');
+      const buffer = track!.buffer as any;
+      buffer.setBuffered(0, 10);
+      const frag = newFrag(7);
+      frag.start = 10;
+      frag.duration = 3;
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 10, 13, 10, 13);
+      const chunkMeta = new ChunkMetadata(0, 7, 0, 0);
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: new Uint8Array(),
+        frag,
+        part: null,
+        chunkMeta,
+      });
+      // updateFragPTSDTS moves the fragment window into the buffered region
+      // between append start and completion; the buffer itself is unchanged
+      frag.start = 7;
+      buffer.dispatchEvent(new Event('updateend'));
+      return new Promise<void>((resolve, reject) => {
+        hls.on(Events.FRAG_BUFFERED, () => {
+          try {
+            expect(
+              errors,
+              'a timing change alone is not append progress',
+            ).to.have.lengthOf(1);
+            expect(errors[0].details).to.equal(
+              ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
+            );
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        });
+        hls.trigger(Events.FRAG_PARSED, { frag, part: null, chunkMeta });
+      });
+    });
+
+    it('survives Hls being destroyed by a BUFFER_APPEND_NO_PROGRESS listener', function () {
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.sn = 5;
+      frag.level = 0;
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 2, 0, 2);
+      let fragBuffered = false;
+      hls.on(Events.FRAG_BUFFERED, () => {
+        fragBuffered = true;
+      });
+      return new Promise<void>((resolve, reject) => {
+        hls.on(Events.ERROR, (event, data) => {
+          try {
+            expect(data.details).to.equal(
+              ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
+            );
+          } catch (e) {
+            reject(e);
+            return;
+          }
+          bufferController.destroy();
+          // FRAG_BUFFERED would fire synchronously after this listener. Promise.resolve
+          // avoids queueMicrotask, which is controlled by the fake clock.
+          Promise.resolve().then(() => {
+            try {
+              expect(
+                fragBuffered,
+                'FRAG_BUFFERED is not emitted after destroy',
+              ).to.equal(false);
+              resolve();
+            } catch (e) {
+              reject(e);
+            }
+          }, reject);
+        });
+        hls.trigger(Events.FRAG_PARSED, {
+          frag,
+          part: null,
+          chunkMeta: new ChunkMetadata(0, 5, 0, 0),
+        });
+      });
+    });
+
+    it('counts cycles that append nothing despite parsed elementary streams, before FRAG_BUFFERED fires', function () {
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.sn = 5;
+      frag.level = 0;
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 2, 0, 2);
+      const order: string[] = [];
+      return new Promise<void>((resolve, reject) => {
+        hls.on(Events.ERROR, (event, data) => {
+          order.push('ERROR');
+          try {
+            expect(data.details).to.equal(
+              ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
+            );
+            expect(data.appendsWithoutProgress).to.equal(1);
+          } catch (e) {
+            reject(e);
+          }
+        });
+        hls.on(Events.FRAG_BUFFERED, () => {
+          order.push('FRAG_BUFFERED');
+          try {
+            expect(
+              order,
+              'the error is decided and emitted before FRAG_BUFFERED',
+            ).to.deep.equal(['ERROR', 'FRAG_BUFFERED']);
+            resolve();
+          } catch (e) {
+            reject(e);
+          }
+        });
+        hls.trigger(Events.FRAG_PARSED, {
+          frag,
+          part: null,
+          chunkMeta: new ChunkMetadata(0, 5, 0, 0),
+        });
+      });
+    });
+
+    it('does not count part or I-Frame append cycles', function () {
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => {
+        errors.push(data);
+      });
+      const iframeMeta = new ChunkMetadata(0, 1, 0, 0, -1, false, 1, true);
+      runAppendCycle(newFrag(1), false, iframeMeta);
+      const part = { index: 0 } as unknown as Part;
+      runAppendCycle(newFrag(1), false, new ChunkMetadata(0, 1, 0, 0), part);
+      expect(errors).to.have.lengthOf(0);
     });
   });
 
