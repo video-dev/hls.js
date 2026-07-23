@@ -1127,6 +1127,7 @@ export default class InterstitialsController
 
   private livePrerollResumption(
     interstitial: InterstitialEvent,
+    buffering?: boolean,
   ): number | undefined {
     if (
       interstitial.cue.pre &&
@@ -1134,7 +1135,15 @@ export default class InterstitialsController
       !Number.isFinite(interstitial.resumeOffset) &&
       this.hls
     ) {
-      return this.hls.liveSyncPosition || this.hls.startPosition;
+      const liveStartPosition = this.getLiveStartPos();
+      if (buffering) {
+        const bufferingPlayer = this.getBufferingPlayer();
+        const timeRemaining = bufferingPlayer?.interstitial.cue.pre
+          ? bufferingPlayer.remaining
+          : 0;
+        return liveStartPosition + timeRemaining;
+      }
+      return liveStartPosition;
     }
   }
 
@@ -1143,11 +1152,10 @@ export default class InterstitialsController
     buffering?: boolean,
   ): number {
     if (this.schedule) {
-      const liveResumptionTime = buffering
-        ? item.event.cue.pre
-          ? item.end + item.event.duration
-          : undefined
-        : this.livePrerollResumption(item.event);
+      const liveResumptionTime = this.livePrerollResumption(
+        item.event,
+        buffering,
+      );
       if (liveResumptionTime !== undefined) {
         this.log(`find next item index @${liveResumptionTime}`);
         return this.schedule.findItemIndexAtTime(liveResumptionTime);
@@ -1570,37 +1578,47 @@ export default class InterstitialsController
   ): number {
     const itemStart = scheduledItem.start;
     if (this.primaryLive) {
-      const details = this.primaryDetails;
-      const resumingFromItem = this.endedItem || this.playingItem;
+      // primary start
       if (index === 0) {
         return this.hls.startPosition;
-      } else if (
-        details &&
-        (resumingFromItem?.event?.cue.pre ||
-          itemStart < details.fragmentStart ||
-          itemStart > details.edge)
-      ) {
-        const liveSync = this.hls.liveSyncPosition;
-        if (liveSync !== null) {
-          if (preloading) {
-            const timeRemaining = this.getBufferingPlayer()?.remaining || 0;
-            this.log(
-              `primary resumption liveSync: ${liveSync} + timeRemaining ${timeRemaining}`,
-            );
-            return Math.min(
-              liveSync + timeRemaining,
-              details.edge,
-              scheduledItem.end,
-            );
-          }
-          this.log(`primary resumption liveSync: ${liveSync}`);
-          return liveSync;
+      }
+      // preroll resumption
+      const resumingFromItem = this.endedItem || this.playingItem;
+      const livePrerollResumption = resumingFromItem?.event
+        ? this.livePrerollResumption(resumingFromItem.event, preloading)
+        : undefined;
+      if (livePrerollResumption !== undefined) {
+        return livePrerollResumption;
+      }
+      // start at live edge when item start is outside live playlist window
+      const details = this.primaryDetails;
+      if (details) {
+        const { fragmentStart, edge } = details;
+        if (itemStart < fragmentStart || (itemStart > edge && !preloading)) {
+          const liveSync = this.hls.liveSyncPosition;
+          this.log(
+            `primary resumption out of bounds (${itemStart} [${fragmentStart}-${edge}]) snapping to liveSync ${liveSync}`,
+          );
+          return liveSync || fragmentStart;
         }
-        return -1;
       }
     }
+    // resume at schedule item start
     this.log(`primary resumption itemStart: ${itemStart}`);
     return itemStart;
+  }
+
+  private getLiveStartPos(): number {
+    const startPosition = this.hls.startPosition;
+    const liveSync = this.hls.liveSyncPosition || 0;
+    const behindLive = (this.primaryDetails?.targetduration || 10) * 3;
+    if (
+      startPosition === -1 ||
+      (liveSync && liveSync - startPosition < behindLive)
+    ) {
+      return liveSync || 0;
+    }
+    return startPosition;
   }
 
   private isAssetBuffered(asset: InterstitialAssetItem): boolean {
@@ -2331,6 +2349,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     if (neverLoaded) {
       const timelineStart = interstitial.timelineStart;
       const playingItem = this.playingItem;
+      const bufferingPlayer = this.getBufferingPlayer();
       if (interstitial.appendInPlace) {
         if (
           !this.isInterstitial(playingItem) &&
@@ -2342,15 +2361,12 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       let hlsStartOffset;
       let liveStartPosition = 0;
       if (
-        (!playingItem ||
-          (this.isInterstitial(playingItem) && playingItem.event.cue.pre)) &&
+        (!bufferingPlayer || bufferingPlayer.interstitial.cue.pre) &&
         this.primaryLive
       ) {
-        liveStartPosition = playingItem
-          ? playingItem.end + playingItem.event.duration
-          : this.hls.startPosition;
-        if (liveStartPosition === -1) {
-          liveStartPosition = this.hls.liveSyncPosition || 0;
+        liveStartPosition = this.getLiveStartPos();
+        if (bufferingPlayer) {
+          liveStartPosition += bufferingPlayer.remaining;
         }
       }
       if (
@@ -2802,6 +2818,10 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     player.loadSource();
     this.setBufferingItem(item);
     this.bufferingAsset = assetItem;
+    if (player.bufferedInPlaceToEnd(this.primaryMedia, player.currentTime)) {
+      this.advanceAssetBuffering(item, assetItem);
+      return;
+    }
     const bufferingPlayer = this.getBufferingPlayer();
     if (bufferingPlayer === player) {
       return;

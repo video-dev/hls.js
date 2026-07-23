@@ -2882,6 +2882,15 @@ fileSequence-60.s
         return;
       }
 
+      const bufferingPlayer = (
+        interstitialsController as any
+      ).getBufferingPlayer();
+      expect(
+        (interstitialsController as any).getLiveStartPos(),
+        'live start position',
+      ).to.equal(116.5);
+      expect(bufferingPlayer.remaining, 'preroll remaining').to.equal(15);
+
       interstitials.interstitialPlayer.assetPlayers[1]?.hls?.trigger(
         Events.BUFFERED_TO_END,
         {} as any,
@@ -2892,7 +2901,7 @@ fileSequence-60.s
         assetListUrl,
         '_HLS_primary_id and _HLS_start_offset match',
       ).to.equal(
-        `http://example.com/new-midroll?_HLS_primary_id=${hls.sessionId}&_HLS_start_offset=5.5`,
+        `http://example.com/new-midroll?_HLS_primary_id=${hls.sessionId}&_HLS_start_offset=7.5`,
       );
 
       const eventsAfterAssetListLoaded = getTriggerCalls();
@@ -2954,6 +2963,58 @@ fileSequence-60.s
       expect(interstitials.bufferingIndex).to.equal(4, 'bufferingIndex b');
       expect(interstitials.playingIndex).to.equal(4, 'playingIndex b');
       expect(interstitials.primary.currentTime).to.equal(116, 'timelinePos b');
+    });
+
+    it('resumes primary preload at live-sync plus buffering preroll remaining time', function () {
+      attachMediaToHls();
+      const details = setLoadedLevelDetails(playlist1);
+      const interstitials = interstitialsController.interstitialsManager;
+      if (!interstitials) {
+        expect(interstitials, 'interstitialsManager').to.be.an('object');
+        return;
+      }
+
+      const interstitial = interstitials.events[0];
+      interstitial.assetListResponse = JSON.parse(prerollAssetListResponse);
+      hls.trigger(Events.ASSET_LIST_LOADED, {
+        event: interstitial,
+        assetListResponse: interstitial.assetListResponse,
+        networkDetails: new Response('ok'),
+      });
+
+      if (!interstitials.interstitialPlayer?.assetPlayers) {
+        expect(interstitials.interstitialPlayer?.assetPlayers).to.be.an(
+          'array',
+        );
+        return;
+      }
+
+      const timeSinceLoadedStub = sinon.stub(details, 'age');
+      timeSinceLoadedStub.get(() => 12);
+      const details2 = setLoadedLevelDetails(playlist2);
+      const timeSinceLoadedStub2 = sinon.stub(details2, 'age');
+      timeSinceLoadedStub2.get(() => 17);
+
+      const bufferingPlayer = (
+        interstitialsController as any
+      ).getBufferingPlayer();
+      expect(
+        (interstitialsController as any).getLiveStartPos(),
+        'live start position',
+      ).to.equal(116.5);
+      expect(bufferingPlayer.remaining, 'preroll remaining').to.equal(15);
+      const primaryLoadSpy = sandbox.spy(
+        interstitialsController as any,
+        'startLoadingPrimaryAt',
+      );
+
+      interstitials.interstitialPlayer.assetPlayers[1]?.hls?.trigger(
+        Events.BUFFERED_TO_END,
+        {} as any,
+      );
+
+      expect(primaryLoadSpy, 'primary load requested').called;
+      expect(primaryLoadSpy.getCalls()[0].args[0]).to.equal(131.5);
     });
   });
 });

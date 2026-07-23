@@ -493,6 +493,14 @@ export class InterstitialsSchedule extends Logger {
         const resumeTime = livePrerollResumption || interstitial.resumeTime;
         if (postroll || resumeTime > primaryDuration) {
           primaryPosition = primaryDuration;
+        } else if (
+          !preroll &&
+          end &&
+          interstitial.appendInPlaceStarted &&
+          resumeTime - end > ABUTTING_THRESHOLD_SECONDS
+        ) {
+          // snap last primary segment to end of midroll when resumeTime produces a gap
+          primaryPosition = end;
         } else {
           primaryPosition = resumeTime;
         }
