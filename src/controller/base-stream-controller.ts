@@ -1539,6 +1539,10 @@ export default class BaseStreamController
         );
         return null;
       }
+      if (!this.startFragRequested && canLoadParts && !this.loadingParts) {
+        this.log(`LL-Part loading ON for initial live fragment`);
+        this.loadingParts = true;
+      }
       // The real fragment start times for a live stream are only known after the PTS range for that level is known.
       // In order to discover the range, we load the best matching fragment for that level and demux it.
       // Do not load using live logic if the starting frag is requested - we want to use getFragmentAtPosition() so that
@@ -1549,10 +1553,6 @@ export default class BaseStreamController
           this.startPosition === -1) ||
         pos < playlistStart
       ) {
-        if (canLoadParts && !this.loadingParts) {
-          this.log(`LL-Part loading ON for initial live fragment`);
-          this.loadingParts = true;
-        }
         frag = this.getInitialLiveFragment(levelDetails);
         const configValue = this.config.startPosition;
         const mainStart = this.hls.startPosition;
@@ -2765,18 +2765,16 @@ export function fragOverlapsQueuedInterstitial(
   if (__USE_INTERSTITIALS__ && playerQueue) {
     for (let i = playerQueue.length; i--; ) {
       const interstitial = playerQueue[i].interstitial;
+      const start = interstitial.startTime;
+      const end = Math.min(
+        start + interstitial.duration,
+        interstitial.resumeTime,
+      );
       if (interstitial.appendInPlace) {
-        if (
-          frag.start >= interstitial.startTime &&
-          frag.end <= interstitial.resumeTime
-        ) {
+        if (frag.start >= start && frag.end <= end) {
           return true;
         }
-        if (
-          playhead > frag.start &&
-          frag.end > interstitial.startTime &&
-          frag.start < interstitial.resumeTime
-        ) {
+        if (playhead > frag.start && frag.end > start && frag.start < end) {
           return true;
         }
       }
