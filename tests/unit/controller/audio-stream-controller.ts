@@ -7,6 +7,7 @@ import BaseStreamController, {
   State,
 } from '../../../src/controller/base-stream-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
+import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
@@ -511,6 +512,34 @@ describe('AudioStreamController', function () {
 
       expect(result).to.be.true;
       expect(audioStreamController.hls.trigger).to.not.have.been.called;
+    });
+  });
+
+  describe('onError BUFFER_APPEND_NO_PROGRESS', function () {
+    it('marks the audio fragment as a gap at appendErrorMaxRetry', function () {
+      const frag = new Fragment(PlaylistLevelType.AUDIO, '');
+      frag.sn = 4;
+      frag.level = 0;
+      (audioStreamController as any).onError(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
+        fatal: false,
+        error: new Error('append did not change buffered ranges'),
+        parent: PlaylistLevelType.AUDIO,
+        frag,
+        appendsWithoutProgress: 2,
+      });
+      expect(frag.gap, 'below appendErrorMaxRetry').to.not.equal(true);
+      (audioStreamController as any).onError(Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
+        fatal: false,
+        error: new Error('append did not change buffered ranges'),
+        parent: PlaylistLevelType.AUDIO,
+        frag,
+        appendsWithoutProgress: hls.config.appendErrorMaxRetry,
+      });
+      expect(frag.gap, 'at appendErrorMaxRetry').to.equal(true);
     });
   });
 

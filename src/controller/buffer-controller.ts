@@ -2,10 +2,10 @@ import BufferOperationQueue from './buffer-operation-queue';
 import { createDoNothingErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
-import { ElementaryStreamTypes } from '../loader/fragment';
+import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { DEFAULT_TARGET_DURATION } from '../loader/level-details';
 import { PlaylistLevelType } from '../types/loader';
-import { BufferHelper } from '../utils/buffer-helper';
+import { BufferHelper, type BufferTimeRange } from '../utils/buffer-helper';
 import {
   areCodecsMediaSourceSupported,
   getCodecCompatibleName,
@@ -27,8 +27,9 @@ import { timeRangesToString } from '../utils/time-ranges';
 import type { FragmentTracker } from './fragment-tracker';
 import type { HlsConfig } from '../config';
 import type Hls from '../hls';
-import type { MediaFragment, Part } from '../loader/fragment';
+import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
+import type { LoadStats } from '../loader/load-stats';
 import type {
   AttachMediaSourceData,
   BaseTrack,
@@ -72,6 +73,15 @@ const TRACK_REMOVED_ERROR_NAME = 'HlsJsTrackRemovedError';
 
 const LOOP_FLUSH_SAFETY_MARGIN = 0.25;
 
+const MIN_BUFFERED_PROGRESS = 0.001;
+
+type FragmentAppendProgress = {
+  stats: LoadStats;
+  progressed: boolean;
+  errored: boolean;
+  fullyBuffered: Partial<Record<SourceBufferName, boolean>>;
+};
+
 class HlsJsTrackRemovedError extends Error {
   constructor(message) {
     super(message);
@@ -82,6 +92,12 @@ class HlsJsTrackRemovedError extends Error {
 export default class BufferController extends Logger implements ComponentAPI {
   private hls: Hls;
   private fragmentTracker: FragmentTracker;
+  // Track per-load SourceBuffer growth and consecutive no-progress cycles.
+  private fragmentAppendProgress: Partial<
+    Record<string, FragmentAppendProgress>
+  > = Object.create(null);
+  private appendsWithoutProgress: Partial<Record<string, number>> =
+    Object.create(null);
   // The level details used to determine duration, target-duration and live
   private details: LevelDetails | null = null;
   // cache the self generated object url to detect hijack of video tag
@@ -241,6 +257,7 @@ export default class BufferController extends Logger implements ComponentAPI {
 
   private initTracks() {
     const tracks = {};
+    this.resetAppendProgress();
     this.sourceBuffers = [
       [null, null],
       [null, null],
@@ -255,6 +272,7 @@ export default class BufferController extends Logger implements ComponentAPI {
     this.bufferCodecEventsTotal = 0;
     this.details = null;
     this.resetAppendErrors();
+    this.resetAppendProgress();
   }
 
   private onManifestParsed(
@@ -779,6 +797,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const { tracks } = this;
     const { data, type, parent, frag, part, chunkMeta, offset } = eventData;
     const chunkStats = chunkMeta.buffering[type];
+    const trackProgress =
+      isMediaFragment(frag) &&
+      !part &&
+      !frag.gap &&
+      !chunkMeta.partial &&
+      !chunkMeta.iframe;
+    let bufferedBefore: BufferTimeRange[] | null = null;
+    let fullyBufferedBefore = false;
     const { sn, cc } = frag;
     const bufferAppendingStart = self.performance.now();
     chunkStats.start = bufferAppendingStart;
@@ -857,6 +883,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         // );
         const sb = this.tracks[type]?.buffer;
         if (sb) {
+          if (trackProgress) {
+            bufferedBefore = BufferHelper.timeRangesToArray(
+              BufferHelper.getBuffered(sb),
+            );
+            fullyBufferedBefore = isFragmentFullyBuffered(
+              fragmentBufferedCoverage(bufferedBefore, frag),
+              frag,
+            );
+          }
           if (checkTimestampOffset) {
             this.updateTimestampOffset(sb, fragStart, 0.1, type, sn, cc);
           } else if (offset !== undefined && Number.isFinite(offset)) {
@@ -888,12 +923,36 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           partBuffering.first = end;
         }
 
-        const timeRanges = {};
+        const timeRanges: Partial<Record<SourceBufferName, TimeRanges>> = {};
         this.sourceBuffers.forEach(([type, sb]) => {
           if (type) {
             timeRanges[type] = BufferHelper.getBuffered(sb);
           }
         });
+
+        if (trackProgress) {
+          const progress = this.getFragmentAppendProgress(
+            frag as MediaFragment,
+          );
+          const buffered = timeRanges[type];
+          if (buffered && bufferedBefore) {
+            // Compare copied pre/post ranges against the final fragment interval so
+            // PTS adjustments alone do not count as buffered growth.
+            const bufferedAfter = BufferHelper.timeRangesToArray(buffered);
+            const coverageAfter = fragmentBufferedCoverage(bufferedAfter, frag);
+            progress.progressed ||=
+              coverageAfter - fragmentBufferedCoverage(bufferedBefore, frag) >
+              MIN_BUFFERED_PROGRESS;
+            const fullyBuffered =
+              fullyBufferedBefore &&
+              isFragmentFullyBuffered(coverageAfter, frag);
+            progress.fullyBuffered[type] =
+              progress.fullyBuffered[type] === undefined
+                ? fullyBuffered
+                : progress.fullyBuffered[type] && fullyBuffered;
+          }
+        }
+
         this.hls.trigger(Events.BUFFER_APPENDED, {
           type,
           frag,
@@ -942,6 +1001,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           }
         }
 
+        // Append exceptions use the existing append-error path.
+        if (trackProgress) {
+          this.getFragmentAppendProgress(frag as MediaFragment).errored = true;
+        }
         // in case any error occured while appending, put back segment in segments table
         const event: ErrorData = {
           type: ErrorTypes.MEDIA_ERROR,
@@ -1080,7 +1143,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private onFragParsed(event: Events.FRAG_PARSED, data: FragParsedData) {
-    const { frag, part } = data;
+    const { frag, part, chunkMeta } = data;
     const buffersAppendedTo: SourceBufferName[] = [];
     const elementaryStreams = part
       ? part.elementaryStreams
@@ -1103,11 +1166,18 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         part.stats.buffering.end = now;
       }
       const stats = part ? part.stats : frag.stats;
+      // Decide no-progress before FRAG_BUFFERED can schedule the next load.
+      this.checkAppendProgress(frag, part, chunkMeta, buffersAppendedTo);
+      if (!this.hls) {
+        // Destroyed by a synchronous BUFFER_APPEND_NO_PROGRESS listener
+        return;
+      }
       this.hls.trigger(Events.FRAG_BUFFERED, {
         frag,
         part,
         stats,
         id: frag.type,
+        chunkMeta,
       });
       if (!part && frag.gap && stats.retry) {
         this.log(
@@ -1297,6 +1367,90 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       playlistType,
       segmentBytes,
     );
+  }
+
+  // LoadStats identifies one load across live Fragment replacements.
+  private getFragmentAppendProgress(frag: MediaFragment) {
+    const key = appendProgressKey(frag);
+    let progress = this.fragmentAppendProgress[key];
+    if (progress?.stats !== frag.stats) {
+      progress = {
+        stats: frag.stats,
+        progressed: false,
+        errored: false,
+        fullyBuffered: Object.create(null),
+      };
+      this.fragmentAppendProgress[key] = progress;
+    }
+    return progress;
+  }
+
+  // Full-fragment cycles without growth consume the append retry budget.
+  // Parts, I-Frames, gaps, and partial loads are excluded below.
+  private checkAppendProgress(
+    frag: Fragment,
+    part: Part | null,
+    chunkMeta: ChunkMetadata,
+    buffersAppendedTo: SourceBufferName[],
+  ) {
+    if (
+      part ||
+      !isMediaFragment(frag) ||
+      frag.gap ||
+      chunkMeta.iframe ||
+      chunkMeta.partial
+    ) {
+      return;
+    }
+    const key = appendProgressKey(frag);
+    const progress = this.fragmentAppendProgress[key];
+    delete this.fragmentAppendProgress[key];
+    const cycle = progress?.stats === frag.stats ? progress : undefined;
+    if (cycle?.errored) {
+      // Counted by the append-error path
+      return;
+    }
+    const fullyBuffered =
+      buffersAppendedTo.length > 0 &&
+      buffersAppendedTo.every((type) => cycle?.fullyBuffered[type] === true);
+    if (cycle?.progressed || fullyBuffered) {
+      delete this.appendsWithoutProgress[key];
+      return;
+    }
+    if (!cycle && buffersAppendedTo.length === 0) {
+      // Nothing was supposed to be appended (no supported elementary streams)
+      return;
+    }
+    // Also count parsed fragments that produced no append operations.
+    const count = (this.appendsWithoutProgress[key] || 0) + 1;
+    // Capture values before a synchronous ERROR listener can destroy Hls.
+    const hls = this.hls;
+    const exhausted = count >= hls.config.appendErrorMaxRetry;
+    if (exhausted) {
+      delete this.appendsWithoutProgress[key];
+    } else {
+      this.appendsWithoutProgress[key] = count;
+    }
+    this.warn(
+      `Fragment ${frag.sn} of ${frag.type} playlist ${frag.level} appended ${count} time${count > 1 ? 's' : ''} without buffered range growth`,
+    );
+    hls.trigger(Events.ERROR, {
+      type: ErrorTypes.MEDIA_ERROR,
+      details: ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
+      fatal: false,
+      frag,
+      chunkMeta,
+      parent: frag.type,
+      appendsWithoutProgress: count,
+      error: new Error(
+        `Fragment append did not increase buffered coverage (${count})`,
+      ),
+    });
+  }
+
+  private resetAppendProgress() {
+    this.fragmentAppendProgress = Object.create(null);
+    this.appendsWithoutProgress = Object.create(null);
   }
 
   private resetAppendErrors() {
@@ -2255,4 +2409,36 @@ function mediaErrorRecoveryMessage(
   mediaError: MediaError | null | undefined,
 ) {
   return `${fatal ? '' : ' - triggering recovery'}${mediaError ? ' with HTMLMediaElement Error: ' + mediaError.message : ''}`;
+}
+
+function appendProgressKey(fragment: MediaFragment): string {
+  return `${fragment.type}_${fragment.sn}_${fragment.level}`;
+}
+
+// Buffered time within the fragment's interval
+function fragmentBufferedCoverage(
+  timeRanges: BufferTimeRange[],
+  fragment: Fragment,
+): number {
+  const { start, end } = fragment;
+  let coverage = 0;
+  for (let i = 0; i < timeRanges.length; i++) {
+    const timeRange = timeRanges[i];
+    if (timeRange.start >= end) {
+      break;
+    }
+    const rangeStart = Math.max(start, timeRange.start);
+    const rangeEnd = Math.min(end, timeRange.end);
+    if (rangeEnd > rangeStart) {
+      coverage += rangeEnd - rangeStart;
+    }
+  }
+  return coverage;
+}
+
+function isFragmentFullyBuffered(
+  coverage: number,
+  fragment: Fragment,
+): boolean {
+  return fragment.duration - coverage <= MIN_BUFFERED_PROGRESS;
 }
