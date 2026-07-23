@@ -75,6 +75,13 @@ const LOOP_FLUSH_SAFETY_MARGIN = 0.25;
 
 const MIN_BUFFERED_PROGRESS = 0.001;
 
+type FragmentAppendProgress = {
+  stats: LoadStats;
+  progressed: boolean;
+  errored: boolean;
+  fullyBuffered: Partial<Record<SourceBufferName, boolean>>;
+};
+
 class HlsJsTrackRemovedError extends Error {
   constructor(message) {
     super(message);
@@ -86,11 +93,11 @@ export default class BufferController extends Logger implements ComponentAPI {
   private hls: Hls;
   private fragmentTracker: FragmentTracker;
   // Track per-load SourceBuffer growth and consecutive no-progress cycles.
-  private fragmentAppendProgress = new Map<
-    string,
-    { stats: LoadStats; progressed: boolean; errored: boolean }
-  >();
-  private appendsWithoutProgress = new Map<string, number>();
+  private fragmentAppendProgress: Partial<
+    Record<string, FragmentAppendProgress>
+  > = Object.create(null);
+  private appendsWithoutProgress: Partial<Record<string, number>> =
+    Object.create(null);
   // The level details used to determine duration, target-duration and live
   private details: LevelDetails | null = null;
   // cache the self generated object url to detect hijack of video tag
@@ -797,6 +804,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       !chunkMeta.partial &&
       !chunkMeta.iframe;
     let bufferedBefore: BufferTimeRange[] | null = null;
+    let fullyBufferedBefore = false;
     const { sn, cc } = frag;
     const bufferAppendingStart = self.performance.now();
     chunkStats.start = bufferAppendingStart;
@@ -879,6 +887,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             bufferedBefore = BufferHelper.timeRangesToArray(
               BufferHelper.getBuffered(sb),
             );
+            fullyBufferedBefore = isFragmentFullyBuffered(
+              fragmentBufferedCoverage(bufferedBefore, frag),
+              frag,
+            );
           }
           if (checkTimestampOffset) {
             this.updateTimestampOffset(sb, fragStart, 0.1, type, sn, cc);
@@ -911,30 +923,36 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           partBuffering.first = end;
         }
 
-        if (trackProgress) {
-          const sb = this.tracks[type]?.buffer;
-          const progress = this.getFragmentAppendProgress(
-            frag as MediaFragment,
-          );
-          if (sb && bufferedBefore) {
-            // Compare copied pre/post ranges against the final fragment interval so
-            // PTS adjustments alone do not count as buffered growth.
-            const bufferedAfter = BufferHelper.timeRangesToArray(
-              BufferHelper.getBuffered(sb),
-            );
-            progress.progressed ||=
-              fragmentBufferedCoverage(bufferedAfter, frag) -
-                fragmentBufferedCoverage(bufferedBefore, frag) >
-              MIN_BUFFERED_PROGRESS;
-          }
-        }
-
-        const timeRanges = {};
+        const timeRanges: Partial<Record<SourceBufferName, TimeRanges>> = {};
         this.sourceBuffers.forEach(([type, sb]) => {
           if (type) {
             timeRanges[type] = BufferHelper.getBuffered(sb);
           }
         });
+
+        if (trackProgress) {
+          const progress = this.getFragmentAppendProgress(
+            frag as MediaFragment,
+          );
+          const buffered = timeRanges[type];
+          if (buffered && bufferedBefore) {
+            // Compare copied pre/post ranges against the final fragment interval so
+            // PTS adjustments alone do not count as buffered growth.
+            const bufferedAfter = BufferHelper.timeRangesToArray(buffered);
+            const coverageAfter = fragmentBufferedCoverage(bufferedAfter, frag);
+            progress.progressed ||=
+              coverageAfter - fragmentBufferedCoverage(bufferedBefore, frag) >
+              MIN_BUFFERED_PROGRESS;
+            const fullyBuffered =
+              fullyBufferedBefore &&
+              isFragmentFullyBuffered(coverageAfter, frag);
+            progress.fullyBuffered[type] =
+              progress.fullyBuffered[type] === undefined
+                ? fullyBuffered
+                : progress.fullyBuffered[type] && fullyBuffered;
+          }
+        }
+
         this.hls.trigger(Events.BUFFER_APPENDED, {
           type,
           frag,
@@ -1149,12 +1167,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       }
       const stats = part ? part.stats : frag.stats;
       // Decide no-progress before FRAG_BUFFERED can schedule the next load.
-      this.checkAppendProgress(
-        frag,
-        part,
-        chunkMeta,
-        buffersAppendedTo.length > 0,
-      );
+      this.checkAppendProgress(frag, part, chunkMeta, buffersAppendedTo);
       if (!this.hls) {
         // Destroyed by a synchronous BUFFER_APPEND_NO_PROGRESS listener
         return;
@@ -1359,10 +1372,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   // LoadStats identifies one load across live Fragment replacements.
   private getFragmentAppendProgress(frag: MediaFragment) {
     const key = appendProgressKey(frag);
-    let progress = this.fragmentAppendProgress.get(key);
+    let progress = this.fragmentAppendProgress[key];
     if (progress?.stats !== frag.stats) {
-      progress = { stats: frag.stats, progressed: false, errored: false };
-      this.fragmentAppendProgress.set(key, progress);
+      progress = {
+        stats: frag.stats,
+        progressed: false,
+        errored: false,
+        fullyBuffered: Object.create(null),
+      };
+      this.fragmentAppendProgress[key] = progress;
     }
     return progress;
   }
@@ -1373,7 +1391,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     frag: Fragment,
     part: Part | null,
     chunkMeta: ChunkMetadata,
-    streamsExpected: boolean,
+    buffersAppendedTo: SourceBufferName[],
   ) {
     if (
       part ||
@@ -1385,27 +1403,34 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return;
     }
     const key = appendProgressKey(frag);
-    const progress = this.fragmentAppendProgress.get(key);
-    this.fragmentAppendProgress.delete(key);
+    const progress = this.fragmentAppendProgress[key];
+    delete this.fragmentAppendProgress[key];
     const cycle = progress?.stats === frag.stats ? progress : undefined;
     if (cycle?.errored) {
       // Counted by the append-error path
       return;
     }
-    if (cycle?.progressed) {
-      this.appendsWithoutProgress.delete(key);
+    const fullyBuffered =
+      buffersAppendedTo.length > 0 &&
+      buffersAppendedTo.every((type) => cycle?.fullyBuffered[type] === true);
+    if (cycle?.progressed || fullyBuffered) {
+      delete this.appendsWithoutProgress[key];
       return;
     }
-    if (!cycle && !streamsExpected) {
+    if (!cycle && buffersAppendedTo.length === 0) {
       // Nothing was supposed to be appended (no supported elementary streams)
       return;
     }
     // Also count parsed fragments that produced no append operations.
-    const count = (this.appendsWithoutProgress.get(key) || 0) + 1;
-    this.appendsWithoutProgress.set(key, count);
+    const count = (this.appendsWithoutProgress[key] || 0) + 1;
     // Capture values before a synchronous ERROR listener can destroy Hls.
     const hls = this.hls;
     const exhausted = count >= hls.config.appendErrorMaxRetry;
+    if (exhausted) {
+      delete this.appendsWithoutProgress[key];
+    } else {
+      this.appendsWithoutProgress[key] = count;
+    }
     this.warn(
       `Fragment ${frag.sn} of ${frag.type} playlist ${frag.level} appended ${count} time${count > 1 ? 's' : ''} without buffered range growth`,
     );
@@ -1421,15 +1446,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         `Fragment append did not increase buffered coverage (${count})`,
       ),
     });
-    if (exhausted) {
-      // The synchronous handler has gap-marked the exhausted fragment.
-      this.appendsWithoutProgress.delete(key);
-    }
   }
 
   private resetAppendProgress() {
-    this.fragmentAppendProgress.clear();
-    this.appendsWithoutProgress.clear();
+    this.fragmentAppendProgress = Object.create(null);
+    this.appendsWithoutProgress = Object.create(null);
   }
 
   private resetAppendErrors() {
@@ -2402,11 +2423,22 @@ function fragmentBufferedCoverage(
   const { start, end } = fragment;
   let coverage = 0;
   for (let i = 0; i < timeRanges.length; i++) {
-    const rangeStart = Math.max(start, timeRanges[i].start);
-    const rangeEnd = Math.min(end, timeRanges[i].end);
+    const timeRange = timeRanges[i];
+    if (timeRange.start >= end) {
+      break;
+    }
+    const rangeStart = Math.max(start, timeRange.start);
+    const rangeEnd = Math.min(end, timeRange.end);
     if (rangeEnd > rangeStart) {
       coverage += rangeEnd - rangeStart;
     }
   }
   return coverage;
+}
+
+function isFragmentFullyBuffered(
+  coverage: number,
+  fragment: Fragment,
+): boolean {
+  return fragment.duration - coverage <= MIN_BUFFERED_PROGRESS;
 }
