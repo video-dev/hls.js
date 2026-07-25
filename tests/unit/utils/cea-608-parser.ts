@@ -5,7 +5,7 @@ import { Row } from '../../../src/utils/cea-608-parser';
 describe('CEA-608 Parser - Row', function () {
   let mockLogger: any;
   let row: Row;
-  const NR_COLS = 100;
+  const NR_COLS = 32;
 
   beforeEach(function () {
     mockLogger = {
@@ -14,6 +14,10 @@ describe('CEA-608 Parser - Row', function () {
       verboseLevel: 0,
     };
     row = new Row(mockLogger);
+  });
+
+  it('allocates the 32 columns defined by CEA-608', function () {
+    expect(row.chars).to.have.length(NR_COLS);
   });
 
   describe('setCursor', function () {
@@ -48,8 +52,8 @@ describe('CEA-608 Parser - Row', function () {
       row.setCursor(0);
       expect(row.pos).to.equal(0);
 
-      row.setCursor(50);
-      expect(row.pos).to.equal(50);
+      row.setCursor(15);
+      expect(row.pos).to.equal(15);
 
       row.setCursor(NR_COLS - 1);
       expect(row.pos).to.equal(NR_COLS - 1);
@@ -57,7 +61,7 @@ describe('CEA-608 Parser - Row', function () {
 
     it('should not log when cursor position is valid', function () {
       mockLogger.log.resetHistory();
-      row.setCursor(50);
+      row.setCursor(15);
       expect(mockLogger.log).to.not.have.been.called;
     });
   });
@@ -81,13 +85,13 @@ describe('CEA-608 Parser - Row', function () {
     });
 
     it('should allow movement within bounds', function () {
-      row.setCursor(50);
+      row.setCursor(10);
       row.moveCursor(10);
-      expect(row.pos).to.equal(60);
+      expect(row.pos).to.equal(20);
     });
 
     it('should allow movement to exactly NR_COLS - 1', function () {
-      row.setCursor(95);
+      row.setCursor(NR_COLS - 5);
       row.moveCursor(4);
       expect(row.pos).to.equal(NR_COLS - 1);
     });
@@ -120,9 +124,9 @@ describe('CEA-608 Parser - Row', function () {
     });
 
     it('should handle backward movement correctly', function () {
-      row.setCursor(50);
+      row.setCursor(20);
       row.moveCursor(-10);
-      expect(row.pos).to.equal(40);
+      expect(row.pos).to.equal(10);
     });
 
     it('should handle backward movement that would go negative', function () {
@@ -168,10 +172,10 @@ describe('CEA-608 Parser - Row', function () {
     });
 
     it('should allow insertion at valid positions', function () {
-      row.setCursor(50);
+      row.setCursor(15);
       row.insertChar(0x41); // 'A'
-      expect(row.chars[50].uchar).to.equal('A');
-      expect(row.pos).to.equal(51);
+      expect(row.chars[15].uchar).to.equal('A');
+      expect(row.pos).to.equal(16);
     });
 
     it('should not access out of bounds when inserting at boundary', function () {
