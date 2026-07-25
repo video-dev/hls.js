@@ -1,6 +1,9 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
-import Cea608Parser, { Row } from '../../../src/utils/cea-608-parser';
+import Cea608Parser, {
+  CaptionScreen,
+  Row,
+} from '../../../src/utils/cea-608-parser';
 
 describe('CEA-608 Parser - Row', function () {
   let mockLogger: any;
@@ -219,5 +222,40 @@ describe('CEA-608 Parser - channel allocation', function () {
     parser.addData(0, [0x1c, 0x20]);
     expect(parser.getHandler(2)).to.equal(replacement);
     expect(parser.channels[2]!.getHandler()).to.equal(replacement);
+  });
+});
+
+describe('CEA-608 Parser - screen snapshots', function () {
+  const logger = {
+    log() {},
+    time: 0,
+    verboseLevel: 0,
+  };
+
+  it('deep copies every styled character', function () {
+    const screen = new CaptionScreen(logger as any);
+    const snapshot = new CaptionScreen(logger as any);
+    screen.setPen({
+      foreground: 'red',
+      underline: true,
+      italics: true,
+      background: 'blue',
+      flash: true,
+    });
+    screen.insertChar(0x41);
+
+    snapshot.copy(screen);
+
+    expect(snapshot.equals(screen)).to.equal(true);
+    const snapshotPenState = snapshot.rows[14].chars[0].penState;
+    expect(snapshotPenState.foreground).to.equal('red');
+    expect(snapshotPenState.underline).to.equal(true);
+    expect(snapshotPenState.italics).to.equal(true);
+    expect(snapshotPenState.background).to.equal('blue');
+    expect(snapshotPenState.flash).to.equal(true);
+    screen.rows[14].chars[0].uchar = 'B';
+    screen.rows[14].chars[0].penState.foreground = 'green';
+    expect(snapshot.rows[14].chars[0].uchar).to.equal('A');
+    expect(snapshotPenState.foreground).to.equal('red');
   });
 });
