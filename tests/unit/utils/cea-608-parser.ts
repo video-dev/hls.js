@@ -1,6 +1,6 @@
 import { expect } from 'chai';
 import sinon from 'sinon';
-import { Row } from '../../../src/utils/cea-608-parser';
+import Cea608Parser, { Row } from '../../../src/utils/cea-608-parser';
 
 describe('CEA-608 Parser - Row', function () {
   let mockLogger: any;
@@ -186,5 +186,38 @@ describe('CEA-608 Parser - Row', function () {
       }).to.not.throw();
       expect(row.chars[NR_COLS - 1].uchar).to.equal('B');
     });
+  });
+});
+
+describe('CEA-608 Parser - channel allocation', function () {
+  const outputFilter = {
+    dispatchCue() {},
+    newCue() {},
+    reset() {},
+  };
+
+  it('creates caption channels only when their data is parsed', function () {
+    const parser = new Cea608Parser(
+      1,
+      outputFilter as any,
+      outputFilter as any,
+    );
+    expect(parser.channels).to.deep.equal([null, null, null]);
+    parser.addData(0, [0x14, 0x20]);
+    expect(parser.channels[1]).to.not.equal(null);
+    expect(parser.channels[2]).to.equal(null);
+  });
+
+  it('uses a replacement handler when a channel is created', function () {
+    const replacement = { ...outputFilter };
+    const parser = new Cea608Parser(
+      1,
+      outputFilter as any,
+      outputFilter as any,
+    );
+    parser.setHandler(2, replacement as any);
+    parser.addData(0, [0x1c, 0x20]);
+    expect(parser.getHandler(2)).to.equal(replacement);
+    expect(parser.channels[2]!.getHandler()).to.equal(replacement);
   });
 });
