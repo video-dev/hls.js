@@ -2749,9 +2749,9 @@ Full list of Events is available below:
   - data: { id: demuxer id, frag : fragment object, samples : [ type field aligns with values from `Hls.MetadataSchema` enum. pes - pts and dts timestamp are relative, values are in seconds], details: [LevelDetails](#leveldetails) }
 - `Hls.Events.FRAG_PARSING_DATA` - [deprecated]
 - `Hls.Events.FRAG_PARSED` - fired when fragment parsing is completed
-  - data: { frag : fragment object, partIndex }
+  - data: { frag : fragment object, part, chunkMeta : transmuxer chunk context }
 - `Hls.Events.FRAG_BUFFERED` - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
-  - data: { id: demuxer id, frag : fragment object, stats : [LoadStats] }
+  - data: { id: demuxer id, frag : fragment object, stats : [LoadStats], chunkMeta : transmuxer chunk context (unset for fragments that bypass the transmuxer, e.g. bitrate tests) }
 - `Hls.Events.FRAG_CHANGED` - fired when fragment matching with current video position is changing
   - data: { id : demuxer id, frag : fragment object }
 - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
@@ -2880,6 +2880,8 @@ Full list of errors is described below:
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPEND_ERROR`, fatal : `true` or `false`, parent : parent stream controller }
 - `Hls.ErrorDetails.BUFFER_APPENDING_ERROR` - raised when exception is raised during buffer appending
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPENDING_ERROR`, fatal : `false` }
+- `Hls.ErrorDetails.BUFFER_APPEND_NO_PROGRESS` - raised when a full-fragment append cycle completes without increasing the fragment's buffered coverage; after `appendErrorMaxRetry` consecutive cycles the fragment is marked as a gap to prevent loop loading
+  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPEND_NO_PROGRESS`, fatal : `false`, frag : fragment object, appendsWithoutProgress : consecutive count }
 - `Hls.ErrorDetails.BUFFER_STALLED_ERROR` - raised when playback is stuck because buffer is running out of data
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_STALLED_ERROR`, fatal : `true` or `false`, buffer : buffer length (optional) }
 - `Hls.ErrorDetails.BUFFER_FULL_ERROR` - raised when no data can be appended anymore in media buffer because it is full. this error is recovered by reducing the max buffer length.

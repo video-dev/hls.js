@@ -258,6 +258,7 @@ export default class ErrorController
         return;
       case ErrorDetails.INTERNAL_EXCEPTION:
       case ErrorDetails.BUFFER_APPENDING_ERROR:
+      case ErrorDetails.BUFFER_APPEND_NO_PROGRESS:
       case ErrorDetails.BUFFER_FULL_ERROR:
       case ErrorDetails.LEVEL_SWITCH_ERROR:
       case ErrorDetails.BUFFER_STALLED_ERROR:

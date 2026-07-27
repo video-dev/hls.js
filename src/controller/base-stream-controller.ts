@@ -1279,7 +1279,7 @@ export default class BaseStreamController
       );
       this.loadingParts = shouldLoadParts;
     }
-    this.updateLevelTiming(frag, part, level, chunkMeta.partial);
+    this.updateLevelTiming(frag, part, level, chunkMeta);
   }
 
   private shouldLoadParts(
@@ -2357,7 +2357,7 @@ export default class BaseStreamController
     frag: MediaFragment,
     part: Part | null,
     level: Level,
-    partial: boolean,
+    chunkMeta: ChunkMetadata,
   ) {
     const details = level.details;
     if (!details) {
@@ -2383,7 +2383,7 @@ export default class BaseStreamController
             );
             return result || false;
           }
-          const drift = partial
+          const drift = chunkMeta.partial
             ? 0
             : updateFragPTSDTS(
                 details,
@@ -2457,7 +2457,7 @@ export default class BaseStreamController
         part ? ' part: ' + part.index : ''
       } of ${this.fragInfo(frag, false, part)}`,
     );
-    this.hls.trigger(Events.FRAG_PARSED, { frag, part });
+    this.hls.trigger(Events.FRAG_PARSED, { frag, part, chunkMeta });
   }
 
   private playlistLabel() {

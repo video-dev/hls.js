@@ -1034,6 +1034,20 @@ export default class StreamController
           this.state = State.IDLE;
         }
         break;
+      case ErrorDetails.BUFFER_APPEND_NO_PROGRESS:
+        if (data.parent !== 'main') {
+          return;
+        }
+        if (
+          data.frag &&
+          (data.appendsWithoutProgress || 0) >= this.config.appendErrorMaxRetry
+        ) {
+          this.warn(
+            `Marking fragment ${data.frag.sn} of level ${data.frag.level} as a gap after ${data.appendsWithoutProgress} appends without buffered range growth, to prevent loop loading`,
+          );
+          this.fragmentTracker.addAsGap(data.frag as MediaFragment);
+        }
+        break;
       case ErrorDetails.BUFFER_ADD_CODEC_ERROR:
       case ErrorDetails.BUFFER_APPEND_ERROR:
         if (data.parent !== 'main') {
