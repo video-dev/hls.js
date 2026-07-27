@@ -150,7 +150,7 @@ const getCharForByte = (byte: number) =>
   String.fromCharCode(specialCea608CharsCodes[byte] || byte);
 
 const NR_ROWS = 15;
-const NR_COLS = 32;
+const NR_COLS = 42;
 // Tables to look up row from PAC data
 const rowsLowCh1 = {
   0x11: 1,
