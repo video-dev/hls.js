@@ -97,6 +97,7 @@ export class ImageIFrameStreamController extends IFrameStreamController {
           part,
           stats,
           id: frag.type,
+          chunkMeta,
         });
       };
       image.onerror = () => {

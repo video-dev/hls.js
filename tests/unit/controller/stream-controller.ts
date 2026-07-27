@@ -5,6 +5,7 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
 import { FragmentState } from '../../../src/controller/fragment-tracker';
+import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
@@ -21,6 +22,7 @@ import type { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import type StreamController from '../../../src/controller/stream-controller';
 import type { MediaFragment } from '../../../src/loader/fragment';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
+import type { ErrorData } from '../../../src/types/events';
 import type { LevelAttributes } from '../../../src/types/level';
 
 use(sinonChai);
@@ -377,6 +379,45 @@ describe('StreamController', function () {
           expect(foundFragment).to.equal(null);
         });
       });
+    });
+  });
+
+  describe('onError BUFFER_APPEND_NO_PROGRESS', function () {
+    it('marks the fragment as a gap when appends without progress reach appendErrorMaxRetry', function () {
+      const frag = mockFragments[1];
+      expect(frag.gap).to.not.equal(true);
+      const errorData = (appendsWithoutProgress: number): ErrorData => ({
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
+        fatal: false,
+        error: new Error('append did not change buffered ranges'),
+        parent: PlaylistLevelType.MAIN,
+        frag,
+        appendsWithoutProgress,
+      });
+      streamController['onError'](Events.ERROR, errorData(2));
+      expect(frag.gap, 'below appendErrorMaxRetry').to.not.equal(true);
+      expect(fragmentTracker.getState(frag)).to.equal(FragmentState.NOT_LOADED);
+      streamController['onError'](
+        Events.ERROR,
+        errorData(hls.config.appendErrorMaxRetry),
+      );
+      expect(frag.gap, 'at appendErrorMaxRetry').to.equal(true);
+      expect(fragmentTracker.getState(frag)).to.equal(FragmentState.PARTIAL);
+    });
+
+    it('ignores no-progress errors from other playlist types', function () {
+      const frag = mockFragments[2];
+      streamController['onError'](Events.ERROR, {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
+        fatal: false,
+        error: new Error('append did not change buffered ranges'),
+        parent: PlaylistLevelType.AUDIO,
+        frag,
+        appendsWithoutProgress: 99,
+      });
+      expect(frag.gap).to.not.equal(true);
     });
   });
 
