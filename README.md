@@ -34,25 +34,30 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
 
 - VOD & Live playlists
   - DVR support on Live playlists
+  - Low-Latency HLS (Partial Segments, Blocking Playlist Reload, Playlist Delta Updates, and Rendition Reports)
 - Fragmented MP4 container
+  - HEVC, AV1, VP9, and Dolby Vision video, subject to runtime support
+  - AC-3, EC-3, FLAC, Opus, and ALAC audio, subject to runtime support
+  - `SUPPLEMENTAL-CODECS` attribute for codec selection
 - MPEG-2 TS container
   - ITU-T Rec. H.264 and ISO/IEC 14496-10 Elementary Stream
-  - ITU-T Rec. H.265 and ISO/IEC 23008-2 Elementary Stream
+  - ITU-T Rec. H.265 and ISO/IEC 23008-2 Elementary Stream (full build only)
   - ISO/IEC 13818-7 ADTS AAC Elementary Stream
   - ISO/IEC 11172-3 / ISO/IEC 13818-3 (MPEG-1/2 Audio Layer III) Elementary Stream
-  - ATSC A/52 / AC-3 / Dolby Digital Elementary Stream
+  - ATSC A/52 / AC-3 / Dolby Digital Elementary Stream (full build only)
   - Packetized metadata (ID3v2.3.0) Elementary Stream
 - AAC container (audio only streams)
 - MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
 - Timed Metadata for HTTP Live Streaming (ID3 format carried in MPEG-2 TS, Emsg in CMAF/Fragmented MP4, and DATERANGE playlist tags)
-- AES-128 decryption
+  - MISB KLV metadata in MPEG-2 TS (opt-in via `enableEmsgKLVMetadata`)
+- AES-128, AES-256, and AES-256-CTR decryption
 - "identity" format SAMPLE-AES decryption of MPEG-2 TS segments only
 - Encrypted media extensions (EME) support for DRM (digital rights management)
-  - FairPlay, PlayReady, Widevine CDMs with fmp4 segments
+  - FairPlay, PlayReady, and Widevine CDMs with fmp4 segments
 - Level capping based on HTMLMediaElement resolution, dropped-frames, and HDCP-Level
 - CEA-608/708 captions
 - WebVTT subtitles
-- Alternate Audio Track Rendition (Master Playlist with Alternative Audio) for VoD and Live playlists
+- IMSC1 (TTML) subtitles, limited to the text profile and a subset of TTML styling
 - Adaptive streaming
   - Manual & Auto Quality Switching
     - 3 Quality Switching modes are available (controllable through API means)
@@ -60,11 +65,16 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
       - Smooth switching (quality switch for next loaded fragment)
       - Bandwidth conservative switching (quality switch change for next loaded fragment, without flushing the buffer)
     - In Auto-Quality mode, emergency switch down in case bandwidth is suddenly dropping to minimize buffering.
+- Alternate Audio Track Rendition (Multivariant Playlist with Alternative Audio) for VoD and Live playlists
+- HLS Interstitials (ad insertion and content replacement scheduled with DATERANGE tags)
+- I-frame trick-play, including image I-frame (`mjpg`) renditions
 - Accurate Seeking on VoD & Live (not limited to fragment or keyframe boundary)
 - Ability to seek in buffer and back buffer without redownloading segments
 - Built-in Analytics
   - All internal events can be monitored (Network Events, Video Events)
   - Playback session metrics are also exposed
+  - Common Media Client Data (CMCD)
+- Content Steering
 - Resilience to errors
   - Retry mechanism embedded in the library
   - Recovery actions can be triggered fix fatal media or network errors
@@ -89,21 +99,22 @@ For details on the HLS format and these tags' meanings, see https://datatracker.
 
 #### Media Playlist tags
 
-- `#EXTM3U` (ignored)
-- `#EXT-X-VERSION=<n>` (value is ignored)
+- `#EXTM3U` (required format identifier)
+- `#EXT-X-VERSION:<n>` (value is ignored)
 - `#EXT-X-INDEPENDENT-SEGMENTS` (ignored)
 - `#EXT-X-I-FRAMES-ONLY`
 - `#EXTINF:<duration>,[<title>]`
 - `#EXT-X-ENDLIST`
-- `#EXT-X-MEDIA-SEQUENCE=<n>`
-- `#EXT-X-TARGETDURATION=<n>`
+- `#EXT-X-PLAYLIST-TYPE:<type-enum>` (see "Not Supported" below)
+- `#EXT-X-MEDIA-SEQUENCE:<n>`
+- `#EXT-X-TARGETDURATION:<n>`
 - `#EXT-X-DISCONTINUITY`
-- `#EXT-X-DISCONTINUITY-SEQUENCE=<n>`
-- `#EXT-X-BITRATE`
-- `#EXT-X-BYTERANGE=<n>[@<o>]`
+- `#EXT-X-DISCONTINUITY-SEQUENCE:<n>`
+- `#EXT-X-BITRATE:<rate>`
+- `#EXT-X-BYTERANGE:<n>[@<o>]`
 - `#EXT-X-MAP:<attribute-list>`
-- `#EXT-X-KEY:<attribute-list>` (`KEYFORMAT="identity",METHOD=SAMPLE-AES` is only supports with MPEG-2 TS segments)
-- `#EXT-X-PROGRAM-DATE-TIME:<attribute-list>`
+- `#EXT-X-KEY:<attribute-list>` (`KEYFORMAT="identity",METHOD=SAMPLE-AES` is only supported with MPEG-2 TS segments)
+- `#EXT-X-PROGRAM-DATE-TIME:<date-time-msec>`
 - `#EXT-X-START:TIME-OFFSET=<n>`
 - `#EXT-X-SERVER-CONTROL:<attribute-list>`
 - `#EXT-X-PART-INF:PART-TARGET=<n>`
@@ -117,8 +128,7 @@ For details on the HLS format and these tags' meanings, see https://datatracker.
 
 Parsed but missing feature support:
 
-- `#EXT-X-PRELOAD-HINT:<attribute-list>` (See [#5074](https://github.com/video-dev/hls.js/issues/3988))
-  - #5074
+- `#EXT-X-PRELOAD-HINT:<attribute-list>` (See [#5074](https://github.com/video-dev/hls.js/issues/5074))
 
 ### Not Supported
 
@@ -129,7 +139,9 @@ For a complete list of issues, see ["Top priorities" in the Release Planning and
 - "identity" format `SAMPLE-AES` method keys with fmp4, aac, mp3, vtt... segments (MPEG-2 TS only)
 - MPEG-2 TS segments with FairPlay Streaming, PlayReady, or Widevine encryption
 - FairPlay Streaming legacy keys (For com.apple.fps.1_0 use native Safari playback)
-- MP3 elementary stream audio in IE and Edge (<=18) on Windows 10 (See [#1641](https://github.com/video-dev/hls.js/issues/1641) and [Microsoft answers forum](https://answers.microsoft.com/en-us/ie/forum/all/ie11-on-windows-10-cannot-play-hls-with-mp3/2da994b5-8dec-4ae9-9201-7d138ede49d9))
+- ClearKey (`org.w3.clearkey`) is incomplete: the key system is recognized, but there is no way to supply key ID/key value pairs to the EME controller, so no license or session path exists (See [#2934](https://github.com/video-dev/hls.js/pull/2934))
+- EC-3 (Dolby Digital Plus) in MPEG-2 TS and in containerless (audio only) elementary streams. EC-3 is supported in Fragmented MP4 segments
+- HEVC and AC-3 in MPEG-2 TS are excluded from the `light` build (see `__USE_M2TS_ADVANCED_CODECS__`)
 
 ### Server-side-rendering (SSR) and `require` from a Node.js runtime
 
@@ -186,7 +198,7 @@ npm run build -- --env dist # replace "dist" by other configuration name, see ab
 
 Note: The "demo" config is always built.
 
-**NOTE:** `hls.light.*.js` dist files do not include alternate-audio, subtitles, CMCD, EME (DRM), or Variable Substitution support. In addition, the following types are not available in the light build:
+**NOTE:** `hls.light.*.js` dist files do not include alternate-audio, subtitles, CMCD, EME (DRM), Variable Substitution, Interstitials, I-frame trick-play, Media Capabilities, or MPEG-2 TS advanced codec (HEVC and AC-3) support. Content Steering is included. In addition, the following types are not available in the light build:
 
 - `AudioStreamController`
 - `AudioTrackController`
@@ -195,7 +207,12 @@ Note: The "demo" config is always built.
 - `SubtitleStreamController`
 - `SubtitleTrackController`
 - `TimelineController`
-- `CmcdController`
+- `CMCDController`
+- `InterstitialsController`
+- `InterstitialsManager`
+- `IFrameController`
+- `HlsIFramesOnly`
+- `HlsImageIFramesOnly`
 
 ### Linter (ESlint)
 
