@@ -4,6 +4,7 @@ import sinonChai from 'sinon-chai';
 import LevelController from '../../../src/controller/level-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
+import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { Level } from '../../../src/types/level';
@@ -13,7 +14,6 @@ import { getMediaSource } from '../../../src/utils/mediasource-helper';
 import HlsMock from '../../mocks/hls.mock';
 import { parsedLevel } from '../../mocks/mock-level';
 import type { Fragment } from '../../../src/loader/fragment';
-import type { LevelDetails } from '../../../src/loader/level-details';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
 import type {
   ManifestLoadedData,
@@ -1100,6 +1100,69 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(levels[29].audioGroups).to.deep.equal(['EC3-baz']);
       expect(levels[29].subtitleGroups).to.deep.equal(['subs-baz']);
       expect(levels[29].uri).to.equal('http://www.baz.com/tier18.m3u8');
+    });
+  });
+
+  describe('clearing expired inactive playlist details', function () {
+    function liveDetails(
+      ageSeconds: number,
+      overrides: Partial<LevelDetails> = {},
+    ): LevelDetails {
+      const details = new LevelDetails('http://example.com/live.m3u8');
+      details.advancedDateTime = Date.now() - ageSeconds * 1000;
+      return Object.assign(details, overrides);
+    }
+
+    function setupLevels(): Level[] {
+      const data: ManifestLoadedData = {
+        audioTracks: [],
+        levels: [
+          parsedLevel({ bitrate: 105000, name: '144' }),
+          parsedLevel({ bitrate: 246440, name: '240' }),
+          parsedLevel({ bitrate: 460560, name: '380' }),
+          parsedLevel({ bitrate: 836280, name: '480' }),
+          parsedLevel({ bitrate: 2149280, name: '720' }),
+        ],
+        iframeVariants: [],
+        networkDetails: new Response('ok'),
+        sessionData: null,
+        sessionKeys: null,
+        contentSteering: null,
+        startTimeOffset: null,
+        variableList: null,
+        stats: new LoadStats(),
+        subtitles: [],
+        url: 'https://example.com/main.m3u8',
+      };
+      levelController.onManifestLoaded(Events.MANIFEST_LOADED, data);
+      levelController.level = 0;
+      return hls.levels;
+    }
+
+    it('deletes only expired inactive levels, keeping active and non-expired ones', function () {
+      const levels = setupLevels();
+      // active level (currentLevel) -> retained (never swept)
+      const activeDetails = liveDetails(0);
+      levels[0].details = activeDetails;
+      // inactive expired -> deleted
+      levels[1].details = liveDetails(120);
+      // inactive not expired (not aged out of live window) -> retained
+      levels[2].details = liveDetails(0);
+
+      levelController.startLoad();
+      hls.trigger(Events.LEVEL_LOADED, {
+        level: 0,
+        levelInfo: levels[0],
+        details: activeDetails,
+        id: 0,
+        networkDetails: null,
+        stats: new LoadStats(),
+        deliveryDirectives: null,
+      });
+
+      expect(levels[0].details, 'active level details').to.exist;
+      expect(levels[1].details, 'inactive expired details').to.not.exist;
+      expect(levels[2].details, 'inactive non-expired details').to.exist;
     });
   });
 });

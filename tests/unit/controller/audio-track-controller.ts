@@ -5,6 +5,7 @@ import AudioTrackController from '../../../src/controller/audio-track-controller
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 import { LevelDetails } from '../../../src/loader/level-details';
+import { LoadStats } from '../../../src/loader/load-stats';
 import { LoaderContextType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
 import type {
@@ -582,6 +583,45 @@ describe('AudioTrackController', function () {
           flushImmediate: true,
         }),
       );
+    });
+  });
+
+  describe('clearing expired inactive playlist details', function () {
+    function liveDetails(
+      ageSeconds: number,
+      overrides: Partial<LevelDetails> = {},
+    ): LevelDetails {
+      const details = new LevelDetails('http://example.com/live-audio.m3u8');
+      details.advancedDateTime = Date.now() - ageSeconds * 1000;
+      return Object.assign(details, overrides);
+    }
+
+    function loadActiveTrack(): void {
+      audioTrackController.startLoad();
+      audioTrackController.onManifestParsed(Events.MANIFEST_PARSED, {
+        audioTracks: tracks,
+      });
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, { level: 0 });
+      hls.trigger(Events.AUDIO_TRACK_LOADED, {
+        id: 0,
+        groupId: '2',
+        details: liveDetails(0),
+        networkDetails: null,
+        stats: new LoadStats(),
+        deliveryDirectives: null,
+        track: tracks[3],
+      });
+    }
+
+    it('deletes only expired inactive tracks, keeping active and non-expired ones', function () {
+      tracks[4].details = liveDetails(120); // inactive expired -> deleted
+      tracks[5].details = liveDetails(0); // inactive not expired -> retained
+
+      loadActiveTrack();
+
+      expect(tracks[3].details, 'active track details').to.exist;
+      expect(tracks[4].details, 'inactive expired details').to.not.exist;
+      expect(tracks[5].details, 'inactive non-expired details').to.exist;
     });
   });
 });

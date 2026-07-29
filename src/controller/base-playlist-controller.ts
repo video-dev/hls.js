@@ -21,6 +21,11 @@ import type {
 } from '../types/events';
 import type { MediaPlaylist } from '../types/media-playlist';
 
+export type PlaylistWithDetails = {
+  id: number;
+  details?: LevelDetails;
+};
+
 export default class BasePlaylistController
   extends Logger
   implements NetworkComponentAPI
@@ -126,6 +131,29 @@ export default class BasePlaylistController
       !!playlist.url &&
       (!playlist.details || playlist.details.live)
     );
+  }
+
+  protected get activePlaylist(): PlaylistWithDetails | null {
+    return null;
+  }
+
+  protected get playlists(): PlaylistWithDetails[] {
+    return [];
+  }
+
+  private clearExpiredInactiveDetails() {
+    const { playlists, activePlaylist } = this;
+
+    playlists.forEach((playlist) => {
+      if (playlist === activePlaylist || !playlist.details?.expired) {
+        return;
+      }
+
+      this.log(
+        `Deleting expired inactive playlist details for ${playlist.id} (age ${playlist.details.age.toFixed(1)}s)`,
+      );
+      playlist.details = undefined;
+    });
   }
 
   protected getUrlWithDirectives(
@@ -256,6 +284,9 @@ export default class BasePlaylistController
       if (!this.canLoad || !details.live) {
         return;
       }
+
+      this.clearExpiredInactiveDetails();
+
       let deliveryDirectives: HlsUrlParameters | undefined;
       let msn: number | undefined = undefined;
       let part: number | undefined = undefined;

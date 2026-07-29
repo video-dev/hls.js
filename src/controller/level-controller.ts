@@ -644,6 +644,14 @@ export default class LevelController extends BasePlaylistController {
     }
   }
 
+  protected get playlists(): Level[] {
+    return this._levels;
+  }
+
+  protected get activePlaylist(): Level | null {
+    return this.currentLevel;
+  }
+
   protected loadingPlaylist(
     currentLevel: Level,
     hlsUrlParameters: HlsUrlParameters | undefined,
