@@ -1062,21 +1062,26 @@ type SeiSampleContext = {
 };
 
 type TrafBoxes = {
+  moofOffset: number;
   tfdt: Uint8Array | undefined;
   tfhd: Uint8Array;
   truns: Uint8Array[];
 };
 
-type MoofTrafs = {
-  moofOffset: number;
-  trafs: Uint8Array[];
-};
-
 const sampleDataCache = new WeakMap<Uint8Array, CachedSampleData>();
+let utf8TextDecoder: TextDecoder | undefined;
 
-function findMoofTrafs(data: Uint8Array): MoofTrafs[] {
+function decodeUtf8UserData(data: Uint8Array): string {
+  if (typeof TextDecoder === 'undefined') {
+    return utf8ArrayToStr(data);
+  }
+  const result = (utf8TextDecoder ||= new TextDecoder('utf-8')).decode(data);
+  return result.replace(/\0/g, '');
+}
+
+function findMoofTrafs(data: Uint8Array): TrafBoxes[] {
   const end = data.byteLength;
-  const moofs: MoofTrafs[] = [];
+  const trafs: TrafBoxes[] = [];
 
   for (let i = 0; i < end; ) {
     const hasHeader = i + 8 <= end;
@@ -1094,7 +1099,6 @@ function findMoofTrafs(data: Uint8Array): MoofTrafs[] {
       data[i + 7] === 0x66
     ) {
       const moofEnd = Math.min(endbox, end);
-      const trafs: Uint8Array[] = [];
       for (let j = i + 8; j < moofEnd; ) {
         const childHasHeader = j + 8 <= moofEnd;
         const childSize =
@@ -1110,62 +1114,58 @@ function findMoofTrafs(data: Uint8Array): MoofTrafs[] {
           data[j + 6] === 0x61 &&
           data[j + 7] === 0x66
         ) {
-          trafs.push(data.subarray(j + 8, Math.min(childEndbox, moofEnd)));
+          const trafEnd = Math.min(childEndbox, moofEnd);
+          let tfdt: Uint8Array | undefined;
+          let tfhd: Uint8Array | undefined;
+          const truns: Uint8Array[] = [];
+
+          for (let k = j + 8; k < trafEnd; ) {
+            const boxHasHeader = k + 8 <= trafEnd;
+            const boxSize =
+              k + 4 <= trafEnd
+                ? data[k] * 0x1000000 +
+                  ((data[k + 1] << 16) | (data[k + 2] << 8) | data[k + 3])
+                : readUint32(data, k);
+            const boxEnd = boxSize > 1 ? k + boxSize : trafEnd;
+
+            if (boxHasHeader && data[k + 4] === 0x74) {
+              const payloadEnd = Math.min(boxEnd, trafEnd);
+              if (
+                data[k + 5] === 0x66 &&
+                data[k + 6] === 0x68 &&
+                data[k + 7] === 0x64
+              ) {
+                tfhd ||= data.subarray(k + 8, payloadEnd);
+              } else if (
+                data[k + 5] === 0x66 &&
+                data[k + 6] === 0x64 &&
+                data[k + 7] === 0x74
+              ) {
+                tfdt ||= data.subarray(k + 8, payloadEnd);
+              } else if (
+                data[k + 5] === 0x72 &&
+                data[k + 6] === 0x75 &&
+                data[k + 7] === 0x6e
+              ) {
+                truns.push(data.subarray(k + 8, payloadEnd));
+              }
+            }
+            k = boxEnd;
+          }
+          trafs.push({
+            moofOffset: data.byteOffset + i,
+            tfdt,
+            tfhd: tfhd!,
+            truns,
+          });
         }
         j = childEndbox;
       }
-      moofs.push({
-        moofOffset: data.byteOffset + i,
-        trafs,
-      });
     }
     i = endbox;
   }
 
-  return moofs;
-}
-
-function findTrafBoxes(data: Uint8Array): TrafBoxes {
-  const end = data.byteLength;
-  let tfdt: Uint8Array | undefined;
-  let tfhd: Uint8Array | undefined;
-  const truns: Uint8Array[] = [];
-
-  for (let i = 0; i < end; ) {
-    const hasHeader = i + 8 <= end;
-    const size =
-      i + 4 <= end
-        ? data[i] * 0x1000000 +
-          ((data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3])
-        : readUint32(data, i);
-    const endbox = size > 1 ? i + size : end;
-
-    if (hasHeader && data[i + 4] === 0x74) {
-      const boxEnd = Math.min(endbox, end);
-      if (
-        data[i + 5] === 0x66 &&
-        data[i + 6] === 0x68 &&
-        data[i + 7] === 0x64
-      ) {
-        tfhd ||= data.subarray(i + 8, boxEnd);
-      } else if (
-        data[i + 5] === 0x66 &&
-        data[i + 6] === 0x64 &&
-        data[i + 7] === 0x74
-      ) {
-        tfdt ||= data.subarray(i + 8, boxEnd);
-      } else if (
-        data[i + 5] === 0x72 &&
-        data[i + 6] === 0x75 &&
-        data[i + 7] === 0x6e
-      ) {
-        truns.push(data.subarray(i + 8, boxEnd));
-      }
-    }
-    i = endbox;
-  }
-
-  return { tfdt, tfhd: tfhd!, truns };
+  return trafs;
 }
 
 export function getSampleData(
@@ -1216,164 +1216,169 @@ function parseSampleData(
   seiContext?: SeiSampleContext,
 ): Record<number, TrackTimes> {
   const tracks: Record<number, TrackTimes> = {};
-  const moofs = findMoofTrafs(data);
+  let hasTrackDuration = false;
+  const trafs = findMoofTrafs(data);
   const eof = data.byteLength;
-  for (let mi = 0; mi < moofs.length; mi++) {
-    const { moofOffset, trafs } = moofs[mi];
-    for (let i = 0; i < trafs.length; i++) {
-      const traf = trafs[i];
-      const { tfdt, tfhd, truns } = findTrafBoxes(traf);
-      // There is only one tfhd & trun per traf
-      // This is true for CMAF style content, and we should perhaps check the ftyp
-      // and only look for a single trun then, but for ISOBMFF we should check
-      // for multiple track runs.
-      // get the track id from the tfhd
-      const id = readUint32(tfhd, 4);
-      const track = initData[id];
-      if (!track) {
-        continue;
-      }
-      const trackTimes = (tracks[id] ||= {
-        start: NaN,
-        duration: 0,
-        sampleCount: 0,
-        trun: [],
-        timescale: track.timescale,
-        type: track.type,
-      });
-      // get start DTS
-      let baseTime: number | undefined;
+  for (let i = 0; i < trafs.length; i++) {
+    const { moofOffset, tfdt, tfhd, truns } = trafs[i];
+    // There is only one tfhd & trun per traf
+    // This is true for CMAF style content, and we should perhaps check the ftyp
+    // and only look for a single trun then, but for ISOBMFF we should check
+    // for multiple track runs.
+    // get the track id from the tfhd
+    const id = readUint32(tfhd, 4);
+    const track = initData[id];
+    if (!track) {
+      continue;
+    }
+    const trackTimes = (tracks[id] ||= {
+      start: NaN,
+      duration: 0,
+      sampleCount: 0,
+      trun: [],
+      timescale: track.timescale,
+      type: track.type,
+    });
+    // get start DTS
+    let baseTime: number | undefined;
 
-      if (tfdt) {
-        const version = tfdt[0];
-        baseTime = readUint32(tfdt, 4);
-        if (version === 1) {
-          // If value is too large, assume signed 64-bit. Negative track fragment decode times are invalid, but they exist in the wild.
-          // This prevents large values from being used for initPTS, which can cause playlist sync issues.
-          // https://github.com/video-dev/hls.js/issues/5303
-          if (baseTime === UINT32_MAX) {
-            logger.warn(
-              `[mp4-demuxer]: Ignoring assumed invalid signed 64-bit track fragment decode time`,
-            );
-          } else {
-            baseTime *= UINT32_MAX + 1;
-            baseTime += readUint32(tfdt, 8);
-          }
-        }
-        if (
-          Number.isFinite(baseTime) &&
-          (!Number.isFinite(trackTimes.start) || baseTime < trackTimes.start)
-        ) {
-          trackTimes.start = baseTime;
-        }
-        if (seiContext && Number.isFinite(baseTime)) {
-          seiContext.timeOffset = baseTime! / seiContext.timescale;
+    if (tfdt) {
+      const version = tfdt[0];
+      baseTime = readUint32(tfdt, 4);
+      if (version === 1) {
+        // If value is too large, assume signed 64-bit. Negative track fragment decode times are invalid, but they exist in the wild.
+        // This prevents large values from being used for initPTS, which can cause playlist sync issues.
+        // https://github.com/video-dev/hls.js/issues/5303
+        if (baseTime === UINT32_MAX) {
+          logger.warn(
+            `[mp4-demuxer]: Ignoring assumed invalid signed 64-bit track fragment decode time`,
+          );
+        } else {
+          baseTime *= UINT32_MAX + 1;
+          baseTime += readUint32(tfdt, 8);
         }
       }
+      if (
+        Number.isFinite(baseTime) &&
+        (!Number.isFinite(trackTimes.start) || baseTime < trackTimes.start)
+      ) {
+        trackTimes.start = baseTime;
+      }
+      if (seiContext && Number.isFinite(baseTime)) {
+        seiContext.timeOffset = baseTime! / seiContext.timescale;
+      }
+    }
 
-      const scanSei =
-        seiContext?.trackId === id &&
-        track.type === ElementaryStreamTypes.VIDEO;
-      const trackDefault = track.default;
-      const tfhdFlags = readUint32(tfhd, 0) & 0xffffff;
-      // tfhd optional fields follow track_ID (at byte 8) in this fixed order,
-      // each present only when its flag is set. Walk them so default_sample_size
-      // is read at the correct offset regardless of which earlier fields exist.
-      let defaultSampleDuration = trackDefault?.duration || 0;
-      let defaultSampleDurationOffset: number | undefined;
-      let defaultSampleSize = trackDefault?.sampleSize || 0;
-      let tfhdOptOffset = 8;
-      if (tfhdFlags & 0x000001) {
-        // base_data_offset (64-bit)
-        tfhdOptOffset += 8;
-      }
-      if (tfhdFlags & 0x000002) {
-        // sample_description_index
-        tfhdOptOffset += 4;
-      }
-      if (tfhdFlags & 0x000008) {
-        // default_sample_duration
-        defaultSampleDuration = readUint32(tfhd, tfhdOptOffset);
-        defaultSampleDurationOffset =
-          tfhd.byteOffset - data.byteOffset + tfhdOptOffset;
-        tfhdOptOffset += 4;
-      }
-      if (tfhdFlags & 0x000010) {
-        // default_sample_size
-        defaultSampleSize = readUint32(tfhd, tfhdOptOffset);
-      }
-      let baseDataOffset = 0;
-      const baseDataOffsetPresent = (tfhdFlags & 0x000001) !== 0;
-      const defaultBaseIsMoof =
-        !baseDataOffsetPresent && (tfhdFlags & 0x020000) !== 0;
-      if (baseDataOffsetPresent) {
-        // Should be 64 bit as per 14496-12 standard.
-        // check for possible overflow, and log for now.
-        baseDataOffset = readUint32(tfhd, 8);
-        baseDataOffset *= Math.pow(2, 32);
-        baseDataOffset += readUint32(tfhd, 12);
-      } else if (defaultBaseIsMoof) {
-        baseDataOffset = moofOffset;
-      }
+    const scanSei =
+      seiContext?.trackId === id && track.type === ElementaryStreamTypes.VIDEO;
+    const trackDefault = track.default;
+    const tfhdFlags = readUint32(tfhd, 0) & 0xffffff;
+    // tfhd optional fields follow track_ID (at byte 8) in this fixed order,
+    // each present only when its flag is set. Walk them so default_sample_size
+    // is read at the correct offset regardless of which earlier fields exist.
+    let defaultSampleDuration = trackDefault?.duration || 0;
+    let defaultSampleDurationOffset: number | undefined;
+    let defaultSampleSize = trackDefault?.sampleSize || 0;
+    let tfhdOptOffset = 8;
+    if (tfhdFlags & 0x000001) {
+      // base_data_offset (64-bit)
+      tfhdOptOffset += 8;
+    }
+    if (tfhdFlags & 0x000002) {
+      // sample_description_index
+      tfhdOptOffset += 4;
+    }
+    if (tfhdFlags & 0x000008) {
+      // default_sample_duration
+      defaultSampleDuration = readUint32(tfhd, tfhdOptOffset);
+      defaultSampleDurationOffset =
+        tfhd.byteOffset - data.byteOffset + tfhdOptOffset;
+      tfhdOptOffset += 4;
+    }
+    if (tfhdFlags & 0x000010) {
+      // default_sample_size
+      defaultSampleSize = readUint32(tfhd, tfhdOptOffset);
+    }
+    let baseDataOffset = 0;
+    const baseDataOffsetPresent = (tfhdFlags & 0x000001) !== 0;
+    const defaultBaseIsMoof =
+      !baseDataOffsetPresent && (tfhdFlags & 0x020000) !== 0;
+    if (baseDataOffsetPresent) {
+      // Should be 64 bit as per 14496-12 standard.
+      // check for possible overflow, and log for now.
+      baseDataOffset = readUint32(tfhd, 8);
+      baseDataOffset *= Math.pow(2, 32);
+      baseDataOffset += readUint32(tfhd, 12);
+    } else if (defaultBaseIsMoof) {
+      baseDataOffset = moofOffset;
+    }
 
-      let sampleDTS = baseTime || 0;
-      let rawDuration = 0;
-      let sampleDuration = defaultSampleDuration;
-      for (let j = 0; j < truns.length; j++) {
-        const trun = truns[j];
-        // const version = trun[0];
-        const sampleCount = readUint32(trun, 4);
-        const sampleIndex = trackTimes.sampleCount;
-        trackTimes.sampleCount += sampleCount;
-        // Get duration from samples
-        const dataOffsetPresent = trun[3] & 0x01;
-        let dataOffset = 0;
-        const firstSampleFlagsPresent = trun[3] & 0x04;
-        const sampleDurationPresent = trun[2] & 0x01;
-        const sampleSizePresent = trun[2] & 0x02;
-        const sampleFlagsPresent = trun[2] & 0x04;
-        const sampleCompositionTimeOffsetPresent = trun[2] & 0x08;
-        let offset = 8;
-        if (dataOffsetPresent) {
-          dataOffset = readSint32(trun, offset);
-          offset += 4;
+    let sampleDTS = baseTime || 0;
+    let rawDuration = 0;
+    let sampleDuration = defaultSampleDuration;
+    for (let j = 0; j < truns.length; j++) {
+      const trun = truns[j];
+      // const version = trun[0];
+      const sampleCount = readUint32(trun, 4);
+      const sampleIndex = trackTimes.sampleCount;
+      trackTimes.sampleCount += sampleCount;
+      // Get duration from samples
+      const dataOffsetPresent = trun[3] & 0x01;
+      let dataOffset = 0;
+      const firstSampleFlagsPresent = trun[3] & 0x04;
+      const sampleDurationPresent = trun[2] & 0x01;
+      const sampleSizePresent = trun[2] & 0x02;
+      const sampleFlagsPresent = trun[2] & 0x04;
+      const sampleCompositionTimeOffsetPresent = trun[2] & 0x08;
+      let offset = 8;
+      if (dataOffsetPresent) {
+        dataOffset = readSint32(trun, offset);
+        offset += 4;
+      }
+      if (firstSampleFlagsPresent) {
+        const isNonSyncSample = trun[offset + 1] & 0x01;
+        if (!isNonSyncSample && trackTimes.keyFrameIndex === undefined) {
+          trackTimes.keyFrameIndex = sampleIndex;
         }
-        if (firstSampleFlagsPresent) {
-          const isNonSyncSample = trun[offset + 1] & 0x01;
-          if (!isNonSyncSample && trackTimes.keyFrameIndex === undefined) {
-            trackTimes.keyFrameIndex = sampleIndex;
-          }
-          offset += 4;
-        }
-        let sampleOffset = baseDataOffset + dataOffset;
-        if (
-          !includeSampleDetails &&
-          trun[1] === 0 &&
-          trun[2] === 0x06 &&
-          trun[3] === 0x01
-        ) {
-          const runStartDTS = sampleDTS;
-          let firstSyncSample = -1;
-          let firstSyncSampleEnd = 0;
-          let fittingSampleCount = 0;
-          let seiTimeOffset = seiContext?.timeOffset ?? 0;
-          const seiSampleDuration =
-            defaultSampleDuration / (seiContext?.timescale ?? 1);
+        offset += 4;
+      }
+      let sampleOffset = baseDataOffset + dataOffset;
+      if (
+        !includeSampleDetails &&
+        trun[1] === 0 &&
+        trun[2] === 0x06 &&
+        trun[3] === 0x01
+      ) {
+        const runStartDTS = sampleDTS;
+        const runStartOffset = sampleOffset;
+        const trunSamplesOffset = offset;
+        let firstSyncSample = -1;
+        let firstSyncSampleEnd = 0;
+        let fittingSampleCount = 0;
+        let seiTimeOffset = seiContext?.timeOffset ?? 0;
+        const seiSampleDuration =
+          defaultSampleDuration / (seiContext?.timescale ?? 1);
+        const hevcSei = seiContext?.isHEVCFlavor === true;
+        const seiHeaderSize = hevcSei ? 2 : 1;
 
-          for (let ix = 0; ix < sampleCount; ix++) {
-            const size =
-              trun[offset] === 0
-                ? (trun[offset + 1] << 16) |
-                  (trun[offset + 2] << 8) |
-                  trun[offset + 3]
-                : readUint32(trun, offset);
-            const isNonSyncSample = trun[offset + 5] & 0x01;
-            offset += 8;
+        for (let ix = 0; ix < sampleCount; ix++) {
+          const size =
+            trun[offset] === 0
+              ? (trun[offset + 1] << 16) |
+                (trun[offset + 2] << 8) |
+                trun[offset + 3]
+              : readUint32(trun, offset);
+          const isFirstSyncSample =
+            firstSyncSample === -1 &&
+            trackTimes.keyFrameIndex === undefined &&
+            (trun[offset + 5] & 0x01) === 0;
+          offset += 8;
+          const sampleEnd = sampleOffset + size;
 
-            if (scanSei) {
+          if (scanSei) {
+            if (size > 0) {
               let naluOffset = sampleOffset;
-              let naluTotalSize = 0;
-              while (naluTotalSize < size) {
+              do {
                 const naluSize =
                   data[naluOffset] === 0
                     ? (data[naluOffset + 1] << 16) |
@@ -1381,187 +1386,201 @@ function parseSampleData(
                       data[naluOffset + 3]
                     : readUint32(data, naluOffset);
                 naluOffset += 4;
-                if (isSEIMessage(seiContext.isHEVCFlavor, data[naluOffset])) {
+                const naluHeader = data[naluOffset];
+                const naluType = hevcSei
+                  ? (naluHeader >> 1) & 0x3f
+                  : naluHeader & 0x1f;
+                const isSei = hevcSei
+                  ? naluType === 39 || naluType === 40
+                  : naluType === 6;
+                if (isSei) {
                   parseSEIMessageFromNALu(
                     data.subarray(naluOffset, naluOffset + naluSize),
-                    seiContext.isHEVCFlavor ? 2 : 1,
+                    seiHeaderSize,
                     seiTimeOffset,
                     seiContext.samples,
                   );
                 }
                 naluOffset += naluSize;
-                naluTotalSize += naluSize + 4;
-              }
-              seiTimeOffset += seiSampleDuration;
+              } while (naluOffset < sampleEnd);
             }
-
-            sampleOffset += size;
-            if (sampleOffset <= eof) {
-              fittingSampleCount = ix + 1;
-            }
-            if (
-              !isNonSyncSample &&
-              firstSyncSample === -1 &&
-              trackTimes.keyFrameIndex === undefined
-            ) {
-              firstSyncSample = ix;
-              firstSyncSampleEnd = sampleOffset;
-            }
+            seiTimeOffset += seiSampleDuration;
           }
 
-          if (scanSei) {
-            seiContext.timeOffset = seiTimeOffset;
+          sampleOffset = sampleEnd;
+          if (isFirstSyncSample) {
+            firstSyncSample = ix;
+            firstSyncSampleEnd = sampleOffset;
           }
+        }
+
+        if (sampleOffset <= eof) {
+          fittingSampleCount = sampleCount;
+        } else {
+          let fittingOffset = runStartOffset;
+          let fittingTrunOffset = trunSamplesOffset;
+          for (let ix = 0; ix < sampleCount; ix++) {
+            const size =
+              trun[fittingTrunOffset] === 0
+                ? (trun[fittingTrunOffset + 1] << 16) |
+                  (trun[fittingTrunOffset + 2] << 8) |
+                  trun[fittingTrunOffset + 3]
+                : readUint32(trun, fittingTrunOffset);
+            fittingOffset += size;
+            if (fittingOffset > eof) {
+              break;
+            }
+            fittingSampleCount = ix + 1;
+            fittingTrunOffset += 8;
+          }
+        }
+        if (scanSei) {
+          seiContext.timeOffset = seiTimeOffset;
+        }
+        if (
+          firstSyncSample !== -1 &&
+          firstSyncSampleEnd <= eof &&
+          trackTimes.keyFrameIndex === undefined
+        ) {
+          trackTimes.keyFrameIndex = firstSyncSample;
+          trackTimes.keyFrameStart =
+            runStartDTS + firstSyncSample * defaultSampleDuration;
+        }
+        if (fittingSampleCount) {
           if (
-            firstSyncSample !== -1 &&
-            firstSyncSampleEnd <= eof &&
-            trackTimes.keyFrameIndex === undefined
+            !Number.isFinite(trackTimes.ptsMin) ||
+            runStartDTS < trackTimes.ptsMin!
           ) {
-            trackTimes.keyFrameIndex = firstSyncSample;
-            trackTimes.keyFrameStart =
-              runStartDTS + firstSyncSample * defaultSampleDuration;
+            trackTimes.ptsMin = runStartDTS;
           }
-          if (fittingSampleCount) {
-            if (
-              !Number.isFinite(trackTimes.ptsMin) ||
-              runStartDTS < trackTimes.ptsMin!
-            ) {
-              trackTimes.ptsMin = runStartDTS;
-            }
-            const lastSampleEnd =
-              runStartDTS + fittingSampleCount * defaultSampleDuration;
-            if (
-              !Number.isFinite(trackTimes.ptsMax) ||
-              lastSampleEnd > trackTimes.ptsMax!
-            ) {
-              trackTimes.ptsMax = lastSampleEnd;
-            }
-          }
-          const runDuration = defaultSampleDuration * sampleCount;
-          sampleDTS = runStartDTS + runDuration;
-          rawDuration += runDuration;
-          continue;
-        }
-        let samples: TrackFragmentRunSample[] | undefined;
-        let fragRun: TrackFragmentRun | undefined;
-        if (includeSampleDetails) {
-          samples = [];
-          fragRun = {
-            sampleOffset,
-            samples,
-            defaultSampleDurationOffset,
-          };
-          if (sampleOffset <= eof) {
-            trackTimes.trun.push(fragRun);
+          const lastSampleEnd =
+            runStartDTS + fittingSampleCount * defaultSampleDuration;
+          if (
+            !Number.isFinite(trackTimes.ptsMax) ||
+            lastSampleEnd > trackTimes.ptsMax!
+          ) {
+            trackTimes.ptsMax = lastSampleEnd;
           }
         }
-        let size;
-        for (let ix = 0; ix < sampleCount; ix++) {
-          let thisSampleDurationOffset: number | undefined;
-          if (sampleDurationPresent) {
-            if (includeSampleDetails) {
-              thisSampleDurationOffset =
-                trun.byteOffset - data.byteOffset + offset;
-            }
-            sampleDuration = readUint32(trun, offset);
-            offset += 4;
-          } else {
-            sampleDuration = defaultSampleDuration;
-          }
-          if (sampleSizePresent) {
-            size = readUint32(trun, offset);
-            offset += 4;
-          } else {
-            size = defaultSampleSize;
-          }
-          let flags: TrackFragmentRunSample['flags'];
-          let isNonSyncSample: 0 | 1 | undefined;
-          if (sampleFlagsPresent) {
-            isNonSyncSample = trun[offset + 1] & 0x01 ? 1 : 0;
-            if (includeSampleDetails) {
-              flags = {
-                isNonSync: isNonSyncSample,
-                dependsOn: (trun[offset] & 0x03) === 1 ? 1 : 2,
-              };
-            }
-            offset += 4;
-          }
-          let cts = 0;
-          if (sampleCompositionTimeOffsetPresent) {
-            const version = trun[0];
-            cts =
-              version === 0
-                ? readUint32(trun, offset)
-                : readSint32(trun, offset);
-            offset += 4;
-          }
-          if (scanSei) {
-            let naluOffset = sampleOffset;
-            let naluTotalSize = 0;
-            while (naluTotalSize < size) {
-              const naluSize = readUint32(data, naluOffset);
-              naluOffset += 4;
-              if (isSEIMessage(seiContext.isHEVCFlavor, data[naluOffset])) {
-                parseSEIMessageFromNALu(
-                  data.subarray(naluOffset, naluOffset + naluSize),
-                  seiContext.isHEVCFlavor ? 2 : 1,
-                  seiContext.timeOffset + cts / seiContext.timescale,
-                  seiContext.samples,
-                );
-              }
-              naluOffset += naluSize;
-              naluTotalSize += naluSize + 4;
-            }
-            seiContext.timeOffset += sampleDuration / seiContext.timescale;
-          }
-          sampleOffset += size;
-          // Capture only fitting samples so a partial-mdat truncation
-          // can still rewrite the right uint32 to balance EXTINF. Field
-          // offsets above advance for every declared sample to stay aligned.
-          if (sampleOffset <= eof) {
-            if (fragRun && thisSampleDurationOffset !== undefined) {
-              fragRun.lastSampleDurationOffset = thisSampleDurationOffset;
-            }
-            if (
-              isNonSyncSample === 0 &&
-              trackTimes.keyFrameIndex === undefined
-            ) {
-              trackTimes.keyFrameIndex = ix;
-              trackTimes.keyFrameStart = sampleDTS;
-            }
-            const pts = sampleDTS + cts;
-            if (
-              !Number.isFinite(trackTimes.ptsMin) ||
-              pts < trackTimes.ptsMin!
-            ) {
-              trackTimes.ptsMin = pts;
-            }
-            if (
-              !Number.isFinite(trackTimes.ptsMax) ||
-              pts + sampleDuration > trackTimes.ptsMax!
-            ) {
-              trackTimes.ptsMax = pts + sampleDuration;
-            }
-            if (samples) {
-              samples[ix] = {
-                cts,
-                duration: sampleDuration,
-                flags,
-                size,
-              };
-            }
-          }
-          sampleDTS += sampleDuration;
-          rawDuration += sampleDuration;
-        }
-        if (!rawDuration && defaultSampleDuration) {
-          rawDuration += defaultSampleDuration * sampleCount;
+        const runDuration = defaultSampleDuration * sampleCount;
+        sampleDTS = runStartDTS + runDuration;
+        rawDuration += runDuration;
+        continue;
+      }
+      let samples: TrackFragmentRunSample[] | undefined;
+      let fragRun: TrackFragmentRun | undefined;
+      if (includeSampleDetails) {
+        samples = [];
+        fragRun = {
+          sampleOffset,
+          samples,
+          defaultSampleDurationOffset,
+        };
+        if (sampleOffset <= eof) {
+          trackTimes.trun.push(fragRun);
         }
       }
-      trackTimes.duration += rawDuration;
+      let size;
+      for (let ix = 0; ix < sampleCount; ix++) {
+        let thisSampleDurationOffset: number | undefined;
+        if (sampleDurationPresent) {
+          if (includeSampleDetails) {
+            thisSampleDurationOffset =
+              trun.byteOffset - data.byteOffset + offset;
+          }
+          sampleDuration = readUint32(trun, offset);
+          offset += 4;
+        } else {
+          sampleDuration = defaultSampleDuration;
+        }
+        if (sampleSizePresent) {
+          size = readUint32(trun, offset);
+          offset += 4;
+        } else {
+          size = defaultSampleSize;
+        }
+        let flags: TrackFragmentRunSample['flags'];
+        let isNonSyncSample: 0 | 1 | undefined;
+        if (sampleFlagsPresent) {
+          isNonSyncSample = trun[offset + 1] & 0x01 ? 1 : 0;
+          if (includeSampleDetails) {
+            flags = {
+              isNonSync: isNonSyncSample,
+              dependsOn: (trun[offset] & 0x03) === 1 ? 1 : 2,
+            };
+          }
+          offset += 4;
+        }
+        let cts = 0;
+        if (sampleCompositionTimeOffsetPresent) {
+          const version = trun[0];
+          cts =
+            version === 0 ? readUint32(trun, offset) : readSint32(trun, offset);
+          offset += 4;
+        }
+        if (scanSei) {
+          let naluOffset = sampleOffset;
+          let naluTotalSize = 0;
+          while (naluTotalSize < size) {
+            const naluSize = readUint32(data, naluOffset);
+            naluOffset += 4;
+            if (isSEIMessage(seiContext.isHEVCFlavor, data[naluOffset])) {
+              parseSEIMessageFromNALu(
+                data.subarray(naluOffset, naluOffset + naluSize),
+                seiContext.isHEVCFlavor ? 2 : 1,
+                seiContext.timeOffset + cts / seiContext.timescale,
+                seiContext.samples,
+              );
+            }
+            naluOffset += naluSize;
+            naluTotalSize += naluSize + 4;
+          }
+          seiContext.timeOffset += sampleDuration / seiContext.timescale;
+        }
+        sampleOffset += size;
+        // Capture only fitting samples so a partial-mdat truncation
+        // can still rewrite the right uint32 to balance EXTINF. Field
+        // offsets above advance for every declared sample to stay aligned.
+        if (sampleOffset <= eof) {
+          if (fragRun && thisSampleDurationOffset !== undefined) {
+            fragRun.lastSampleDurationOffset = thisSampleDurationOffset;
+          }
+          if (isNonSyncSample === 0 && trackTimes.keyFrameIndex === undefined) {
+            trackTimes.keyFrameIndex = ix;
+            trackTimes.keyFrameStart = sampleDTS;
+          }
+          const pts = sampleDTS + cts;
+          if (!Number.isFinite(trackTimes.ptsMin) || pts < trackTimes.ptsMin!) {
+            trackTimes.ptsMin = pts;
+          }
+          if (
+            !Number.isFinite(trackTimes.ptsMax) ||
+            pts + sampleDuration > trackTimes.ptsMax!
+          ) {
+            trackTimes.ptsMax = pts + sampleDuration;
+          }
+          if (samples) {
+            samples[ix] = {
+              cts,
+              duration: sampleDuration,
+              flags,
+              size,
+            };
+          }
+        }
+        sampleDTS += sampleDuration;
+        rawDuration += sampleDuration;
+      }
+      if (!rawDuration && defaultSampleDuration) {
+        rawDuration += defaultSampleDuration * sampleCount;
+      }
+    }
+    trackTimes.duration += rawDuration;
+    if (trackTimes.duration) {
+      hasTrackDuration = true;
     }
   }
-  if (!Object.keys(tracks).some((trackId) => tracks[trackId].duration)) {
+  if (!hasTrackDuration) {
     // If duration samples are not available in the traf use sidx subsegment_duration
     let sidxMinStart = Infinity;
     let sidxMaxEnd = 0;
@@ -1924,7 +1943,7 @@ export function parseSEIMessageFromNALu(
           payloadType,
           pts,
           uuid: uuidStrArray.join(''),
-          userData: utf8ArrayToStr(userDataBytes),
+          userData: decodeUtf8UserData(userDataBytes),
           userDataBytes,
         });
       }
