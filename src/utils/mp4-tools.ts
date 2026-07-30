@@ -434,17 +434,27 @@ function findBoxPath(
   if (pathType?.length !== 4) {
     return;
   }
-  const type =
-    (pathType.charCodeAt(0) << 24) |
-    (pathType.charCodeAt(1) << 16) |
-    (pathType.charCodeAt(2) << 8) |
-    pathType.charCodeAt(3);
+  const type0 = pathType.charCodeAt(0);
+  const type1 = pathType.charCodeAt(1);
+  const type2 = pathType.charCodeAt(2);
+  const type3 = pathType.charCodeAt(3);
   const lastPathIndex = path.length - 1;
 
   for (let i = start; i < end; ) {
-    const size = readUint32(data, i);
+    const hasHeader = i + 8 <= end;
+    const size =
+      i + 4 <= end
+        ? data[i] * 0x1000000 +
+          ((data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3])
+        : readUint32(data, i);
     const endbox = size > 1 ? i + size : end;
-    if (i + 8 <= end && readSint32(data, i + 4) === type) {
+    if (
+      hasHeader &&
+      data[i + 4] === type0 &&
+      data[i + 5] === type1 &&
+      data[i + 6] === type2 &&
+      data[i + 7] === type3
+    ) {
       const boxEnd = Math.min(endbox, end);
       if (pathIndex === lastPathIndex) {
         // this is the end of the path and we've found the box we were
