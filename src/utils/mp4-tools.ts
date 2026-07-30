@@ -418,30 +418,45 @@ export function findBox(data: Uint8Array, path: string[]): Uint8Array[] {
     // short-circuit the search for empty paths
     return results;
   }
-  const end = data.byteLength;
+  findBoxPath(data, path, 0, 0, data.byteLength, results);
+  return results;
+}
 
-  for (let i = 0; i < end; ) {
+function findBoxPath(
+  data: Uint8Array,
+  path: string[],
+  pathIndex: number,
+  start: number,
+  end: number,
+  results: Uint8Array[],
+): void {
+  const pathType = path[pathIndex];
+  if (pathType?.length !== 4) {
+    return;
+  }
+  const type =
+    (pathType.charCodeAt(0) << 24) |
+    (pathType.charCodeAt(1) << 16) |
+    (pathType.charCodeAt(2) << 8) |
+    pathType.charCodeAt(3);
+  const lastPathIndex = path.length - 1;
+
+  for (let i = start; i < end; ) {
     const size = readUint32(data, i);
-    const type = bin2str(data.subarray(i + 4, i + 8));
     const endbox = size > 1 ? i + size : end;
-    if (type === path[0]) {
-      if (path.length === 1) {
+    if (i + 8 <= end && readSint32(data, i + 4) === type) {
+      const boxEnd = Math.min(endbox, end);
+      if (pathIndex === lastPathIndex) {
         // this is the end of the path and we've found the box we were
         // looking for
-        results.push(data.subarray(i + 8, endbox));
+        results.push(data.subarray(i + 8, boxEnd));
       } else {
         // recursively search for the next box along the path
-        const subresults = findBox(data.subarray(i + 8, endbox), path.slice(1));
-        if (subresults.length) {
-          results.push.apply(results, subresults);
-        }
+        findBoxPath(data, path, pathIndex + 1, i + 8, boxEnd, results);
       }
     }
     i = endbox;
   }
-
-  // we've finished searching all of data
-  return results;
 }
 
 type SidxInfo = {
