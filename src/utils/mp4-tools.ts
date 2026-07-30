@@ -1061,7 +1061,112 @@ type SeiSampleContext = {
   trackId: number;
 };
 
+type TrafBoxes = {
+  tfdt: Uint8Array | undefined;
+  tfhd: Uint8Array;
+  truns: Uint8Array[];
+};
+
+type MoofTrafs = {
+  moofOffset: number;
+  trafs: Uint8Array[];
+};
+
 const sampleDataCache = new WeakMap<Uint8Array, CachedSampleData>();
+
+function findMoofTrafs(data: Uint8Array): MoofTrafs[] {
+  const end = data.byteLength;
+  const moofs: MoofTrafs[] = [];
+
+  for (let i = 0; i < end; ) {
+    const hasHeader = i + 8 <= end;
+    const size =
+      i + 4 <= end
+        ? data[i] * 0x1000000 +
+          ((data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3])
+        : readUint32(data, i);
+    const endbox = size > 1 ? i + size : end;
+    if (
+      hasHeader &&
+      data[i + 4] === 0x6d &&
+      data[i + 5] === 0x6f &&
+      data[i + 6] === 0x6f &&
+      data[i + 7] === 0x66
+    ) {
+      const moofEnd = Math.min(endbox, end);
+      const trafs: Uint8Array[] = [];
+      for (let j = i + 8; j < moofEnd; ) {
+        const childHasHeader = j + 8 <= moofEnd;
+        const childSize =
+          j + 4 <= moofEnd
+            ? data[j] * 0x1000000 +
+              ((data[j + 1] << 16) | (data[j + 2] << 8) | data[j + 3])
+            : readUint32(data, j);
+        const childEndbox = childSize > 1 ? j + childSize : moofEnd;
+        if (
+          childHasHeader &&
+          data[j + 4] === 0x74 &&
+          data[j + 5] === 0x72 &&
+          data[j + 6] === 0x61 &&
+          data[j + 7] === 0x66
+        ) {
+          trafs.push(data.subarray(j + 8, Math.min(childEndbox, moofEnd)));
+        }
+        j = childEndbox;
+      }
+      moofs.push({
+        moofOffset: data.byteOffset + i,
+        trafs,
+      });
+    }
+    i = endbox;
+  }
+
+  return moofs;
+}
+
+function findTrafBoxes(data: Uint8Array): TrafBoxes {
+  const end = data.byteLength;
+  let tfdt: Uint8Array | undefined;
+  let tfhd: Uint8Array | undefined;
+  const truns: Uint8Array[] = [];
+
+  for (let i = 0; i < end; ) {
+    const hasHeader = i + 8 <= end;
+    const size =
+      i + 4 <= end
+        ? data[i] * 0x1000000 +
+          ((data[i + 1] << 16) | (data[i + 2] << 8) | data[i + 3])
+        : readUint32(data, i);
+    const endbox = size > 1 ? i + size : end;
+
+    if (hasHeader && data[i + 4] === 0x74) {
+      const boxEnd = Math.min(endbox, end);
+      if (
+        data[i + 5] === 0x66 &&
+        data[i + 6] === 0x68 &&
+        data[i + 7] === 0x64
+      ) {
+        tfhd ||= data.subarray(i + 8, boxEnd);
+      } else if (
+        data[i + 5] === 0x66 &&
+        data[i + 6] === 0x64 &&
+        data[i + 7] === 0x74
+      ) {
+        tfdt ||= data.subarray(i + 8, boxEnd);
+      } else if (
+        data[i + 5] === 0x72 &&
+        data[i + 6] === 0x75 &&
+        data[i + 7] === 0x6e
+      ) {
+        truns.push(data.subarray(i + 8, boxEnd));
+      }
+    }
+    i = endbox;
+  }
+
+  return { tfdt, tfhd: tfhd!, truns };
+}
 
 export function getSampleData(
   data: Uint8Array,
@@ -1111,19 +1216,17 @@ function parseSampleData(
   seiContext?: SeiSampleContext,
 ): Record<number, TrackTimes> {
   const tracks: Record<number, TrackTimes> = {};
-  const moofs = findBox(data, ['moof']);
+  const moofs = findMoofTrafs(data);
   const eof = data.byteLength;
   for (let mi = 0; mi < moofs.length; mi++) {
-    const moof = moofs[mi];
-    const moofOffset = moof.byteOffset - 8;
-    const trafs = findBox(moof, ['traf']);
+    const { moofOffset, trafs } = moofs[mi];
     for (let i = 0; i < trafs.length; i++) {
       const traf = trafs[i];
+      const { tfdt, tfhd, truns } = findTrafBoxes(traf);
       // There is only one tfhd & trun per traf
       // This is true for CMAF style content, and we should perhaps check the ftyp
       // and only look for a single trun then, but for ISOBMFF we should check
       // for multiple track runs.
-      const tfhd = findBox(traf, ['tfhd'])[0];
       // get the track id from the tfhd
       const id = readUint32(tfhd, 4);
       const track = initData[id];
@@ -1140,9 +1243,8 @@ function parseSampleData(
       });
       // get start DTS
       let baseTime: number | undefined;
-      const tfdt = findBox(traf, ['tfdt'])[0];
 
-      if (tfdt as any) {
+      if (tfdt) {
         const version = tfdt[0];
         baseTime = readUint32(tfdt, 4);
         if (version === 1) {
@@ -1214,7 +1316,6 @@ function parseSampleData(
         baseDataOffset = moofOffset;
       }
 
-      const truns = findBox(traf, ['trun']);
       let sampleDTS = baseTime || 0;
       let rawDuration = 0;
       let sampleDuration = defaultSampleDuration;
@@ -1245,6 +1346,102 @@ function parseSampleData(
           offset += 4;
         }
         let sampleOffset = baseDataOffset + dataOffset;
+        if (
+          !includeSampleDetails &&
+          trun[1] === 0 &&
+          trun[2] === 0x06 &&
+          trun[3] === 0x01
+        ) {
+          const runStartDTS = sampleDTS;
+          let firstSyncSample = -1;
+          let firstSyncSampleEnd = 0;
+          let fittingSampleCount = 0;
+          let seiTimeOffset = seiContext?.timeOffset ?? 0;
+          const seiSampleDuration =
+            defaultSampleDuration / (seiContext?.timescale ?? 1);
+
+          for (let ix = 0; ix < sampleCount; ix++) {
+            const size =
+              trun[offset] === 0
+                ? (trun[offset + 1] << 16) |
+                  (trun[offset + 2] << 8) |
+                  trun[offset + 3]
+                : readUint32(trun, offset);
+            const isNonSyncSample = trun[offset + 5] & 0x01;
+            offset += 8;
+
+            if (scanSei) {
+              let naluOffset = sampleOffset;
+              let naluTotalSize = 0;
+              while (naluTotalSize < size) {
+                const naluSize =
+                  data[naluOffset] === 0
+                    ? (data[naluOffset + 1] << 16) |
+                      (data[naluOffset + 2] << 8) |
+                      data[naluOffset + 3]
+                    : readUint32(data, naluOffset);
+                naluOffset += 4;
+                if (isSEIMessage(seiContext.isHEVCFlavor, data[naluOffset])) {
+                  parseSEIMessageFromNALu(
+                    data.subarray(naluOffset, naluOffset + naluSize),
+                    seiContext.isHEVCFlavor ? 2 : 1,
+                    seiTimeOffset,
+                    seiContext.samples,
+                  );
+                }
+                naluOffset += naluSize;
+                naluTotalSize += naluSize + 4;
+              }
+              seiTimeOffset += seiSampleDuration;
+            }
+
+            sampleOffset += size;
+            if (sampleOffset <= eof) {
+              fittingSampleCount = ix + 1;
+            }
+            if (
+              !isNonSyncSample &&
+              firstSyncSample === -1 &&
+              trackTimes.keyFrameIndex === undefined
+            ) {
+              firstSyncSample = ix;
+              firstSyncSampleEnd = sampleOffset;
+            }
+          }
+
+          if (scanSei) {
+            seiContext.timeOffset = seiTimeOffset;
+          }
+          if (
+            firstSyncSample !== -1 &&
+            firstSyncSampleEnd <= eof &&
+            trackTimes.keyFrameIndex === undefined
+          ) {
+            trackTimes.keyFrameIndex = firstSyncSample;
+            trackTimes.keyFrameStart =
+              runStartDTS + firstSyncSample * defaultSampleDuration;
+          }
+          if (fittingSampleCount) {
+            if (
+              !Number.isFinite(trackTimes.ptsMin) ||
+              runStartDTS < trackTimes.ptsMin!
+            ) {
+              trackTimes.ptsMin = runStartDTS;
+            }
+            const lastSampleEnd =
+              runStartDTS + fittingSampleCount * defaultSampleDuration;
+            if (
+              !Number.isFinite(trackTimes.ptsMax) ||
+              lastSampleEnd > trackTimes.ptsMax!
+            ) {
+              trackTimes.ptsMax = lastSampleEnd;
+            }
+          }
+          const runDuration = defaultSampleDuration * sampleCount;
+          sampleDTS = runStartDTS + runDuration;
+          rawDuration += runDuration;
+          continue;
+        }
         let samples: TrackFragmentRunSample[] | undefined;
         let fragRun: TrackFragmentRun | undefined;
         if (includeSampleDetails) {
@@ -1740,36 +1937,34 @@ export function parseSEIMessageFromNALu(
  */
 export function discardEPB(data: Uint8Array): Uint8Array {
   const length = data.byteLength;
-  const EPBPositions = [] as Array<number>;
-  let i = 1;
+  let epbPositions: number[] | undefined;
+  let position = data.indexOf(0x03, 3);
 
   // Find all `Emulation Prevention Bytes`
-  while (i < length - 2) {
-    if (data[i] === 0 && data[i + 1] === 0 && data[i + 2] === 0x03) {
-      EPBPositions.push(i + 2);
-      i += 2;
-    } else {
-      i++;
+  while (position !== -1) {
+    if (data[position - 1] === 0 && data[position - 2] === 0) {
+      (epbPositions ||= []).push(position);
     }
+    position = data.indexOf(0x03, position + 1);
   }
 
   // If no Emulation Prevention Bytes were found just return the original
   // array
-  if (EPBPositions.length === 0) {
+  if (!epbPositions) {
     return data;
   }
 
   // Create a new array to hold the NAL unit data
-  const newLength = length - EPBPositions.length;
+  const newLength = length - epbPositions.length;
   const newData = new Uint8Array(newLength);
+  let epbIndex = 0;
   let sourceIndex = 0;
 
-  for (i = 0; i < newLength; sourceIndex++, i++) {
-    if (sourceIndex === EPBPositions[0]) {
+  for (let i = 0; i < newLength; sourceIndex++, i++) {
+    if (sourceIndex === epbPositions[epbIndex]) {
       // Skip this byte
       sourceIndex++;
-      // Remove this position index
-      EPBPositions.shift();
+      epbIndex++;
     }
     newData[i] = data[sourceIndex];
   }

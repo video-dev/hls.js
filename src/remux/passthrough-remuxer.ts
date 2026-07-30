@@ -5,12 +5,13 @@ import {
 import { ElementaryStreamTypes } from '../loader/fragment';
 import { getCodecCompatibleName } from '../utils/codecs';
 import { type ILogger, Logger } from '../utils/logger';
+import { consumeInitData } from '../utils/mp4-init-data';
 import {
+  getSampleData,
   patchEncyptionData,
   remuxVideoOnlyIFrameMoof,
   videoOnlyInitSegment,
 } from '../utils/mp4-tools';
-import { getSampleData, parseInitSegment } from '../utils/mp4-tools';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { DecryptData } from '../loader/level-key';
@@ -112,7 +113,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       this.initData = undefined;
       return;
     }
-    const { audio, video } = (this.initData = parseInitSegment(initSegment));
+    const { audio, video } = (this.initData = consumeInitData(initSegment));
 
     if (decryptdata) {
       patchEncyptionData(initSegment, decryptdata);

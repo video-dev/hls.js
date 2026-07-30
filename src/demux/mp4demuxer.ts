@@ -13,12 +13,12 @@ import {
   type PassthroughTrack,
 } from '../types/demuxer';
 import { logger as defaultLogger } from '../utils/logger';
+import { parseAndCacheInitData } from '../utils/mp4-init-data';
 import {
   appendUint8Array,
   findBox,
   hasBoxData,
   parseEmsg,
-  parseInitSegment,
   parseSamples,
   parseSamplesAndCache,
   RemuxerTrackIdConfig,
@@ -81,7 +81,7 @@ class MP4Demuxer implements Demuxer {
     if (!initSegment?.byteLength) {
       return;
     }
-    const initData = (this.initData = parseInitSegment(initSegment));
+    const initData = (this.initData = parseAndCacheInitData(initSegment));
 
     if (initData.video) {
       const { id, timescale, codec, supplemental } = initData.video;
