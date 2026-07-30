@@ -80,7 +80,11 @@ function readUint16(buffer: Uint8Array, offset: number): number {
 }
 
 function readUint32(buffer: Uint8Array, offset: number): number {
-  const val = readSint32(buffer, offset);
+  const val =
+    (buffer[offset] << 24) |
+    (buffer[offset + 1] << 16) |
+    (buffer[offset + 2] << 8) |
+    buffer[offset + 3];
   return val < 0 ? 4294967296 + val : val;
 }
 
