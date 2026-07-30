@@ -12,6 +12,7 @@ import {
   MetadataSchema,
   type PassthroughTrack,
 } from '../types/demuxer';
+import { logger as defaultLogger } from '../utils/logger';
 import {
   appendUint8Array,
   findBox,
@@ -19,12 +20,15 @@ import {
   parseEmsg,
   parseInitSegment,
   parseSamples,
+  parseSamplesAndCache,
   RemuxerTrackIdConfig,
   segmentValidRange,
 } from '../utils/mp4-tools';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
-import type { IEmsgParsingData } from '../utils/mp4-tools';
+import type { ChunkMetadata } from '../types/transmuxer';
+import type { ILogger } from '../utils/logger';
+import type { IEmsgParsingData, InitData } from '../utils/mp4-tools';
 
 const emsgSchemePattern = /\/emsg[-/]ID3/i;
 
@@ -36,9 +40,17 @@ class MP4Demuxer implements Demuxer {
   private audioTrack?: DemuxedAudioTrack;
   private id3Track?: DemuxedMetadataTrack;
   private txtTrack?: DemuxedUserdataTrack;
+  private initData?: InitData;
+  private logger: ILogger;
 
-  constructor(observer: HlsEventEmitter, config: HlsConfig) {
+  constructor(
+    observer: HlsEventEmitter,
+    config: HlsConfig,
+    typeSupported?: unknown,
+    logger: ILogger = defaultLogger,
+  ) {
     this.config = config;
+    this.logger = logger;
   }
 
   public resetTimeStamp() {}
@@ -63,12 +75,13 @@ class MP4Demuxer implements Demuxer {
     ) as DemuxedUserdataTrack);
 
     this.id3Track = dummyTrack('id3', 1) as DemuxedMetadataTrack;
+    this.initData = undefined;
     this.timeOffset = 0;
 
     if (!initSegment?.byteLength) {
       return;
     }
-    const initData = parseInitSegment(initSegment);
+    const initData = (this.initData = parseInitSegment(initSegment));
 
     if (initData.video) {
       const { id, timescale, codec, supplemental } = initData.video;
@@ -101,6 +114,7 @@ class MP4Demuxer implements Demuxer {
   public demux(
     data: Uint8Array<ArrayBuffer>,
     timeOffset: number,
+    chunkMeta?: ChunkMetadata,
   ): DemuxerResult {
     this.timeOffset = timeOffset;
     // Load all data into the avc track. The CMAF remuxer will look for the data in the samples object; the rest of the fields do not matter
@@ -121,7 +135,16 @@ class MP4Demuxer implements Demuxer {
       videoTrack.samples = videoSamples;
     }
     const id3Track = this.extractID3Track(videoTrack, timeOffset);
-    textTrack.samples = parseSamples(timeOffset, videoTrack);
+    textTrack.samples =
+      this.initData && chunkMeta
+        ? parseSamplesAndCache(
+            timeOffset,
+            videoTrack,
+            this.initData,
+            this.logger,
+            __USE_IFRAMES__ && chunkMeta.iframe,
+          )
+        : parseSamples(timeOffset, videoTrack);
 
     return {
       videoTrack,
@@ -131,7 +154,7 @@ class MP4Demuxer implements Demuxer {
     };
   }
 
-  public flush() {
+  public flush(_timeOffset: number, chunkMeta?: ChunkMetadata) {
     const timeOffset = this.timeOffset;
     const videoTrack = this.videoTrack as PassthroughTrack;
     const textTrack = this.txtTrack as DemuxedUserdataTrack;
@@ -139,7 +162,16 @@ class MP4Demuxer implements Demuxer {
     this.remainderData = null;
 
     const id3Track = this.extractID3Track(videoTrack, this.timeOffset);
-    textTrack.samples = parseSamples(timeOffset, videoTrack);
+    textTrack.samples =
+      this.initData && chunkMeta
+        ? parseSamplesAndCache(
+            timeOffset,
+            videoTrack,
+            this.initData,
+            this.logger,
+            __USE_IFRAMES__ && chunkMeta.iframe,
+          )
+        : parseSamples(timeOffset, videoTrack);
 
     return {
       videoTrack,
@@ -218,6 +250,7 @@ class MP4Demuxer implements Demuxer {
       this.id3Track =
       this.txtTrack =
         undefined;
+    this.initData = undefined;
   }
 }
 

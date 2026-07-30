@@ -1044,12 +1044,67 @@ export type TrackTimes = {
   type: HdlrType;
 };
 
+type CachedSampleData = {
+  includeSampleDetails: boolean;
+  tracks: Record<number, TrackTimes>;
+};
+
+type SeiSampleContext = {
+  isHEVCFlavor: boolean;
+  samples: UserdataSample[];
+  timeOffset: number;
+  timescale: number;
+  trackId: number;
+};
+
+const sampleDataCache = new WeakMap<Uint8Array, CachedSampleData>();
+
 export function getSampleData(
   data: Uint8Array,
   initData: InitData,
   chunkMeta: ChunkMetadata,
   logger: ILogger,
   includeSampleDetails = true,
+): Record<number, TrackTimes> {
+  const cached = sampleDataCache.get(data);
+  if (cached) {
+    sampleDataCache.delete(data);
+    if (!includeSampleDetails || cached.includeSampleDetails) {
+      return cached.tracks;
+    }
+  }
+  return parseSampleData(data, initData, logger, includeSampleDetails);
+}
+
+export function parseSamplesAndCache(
+  timeOffset: number,
+  track: PassthroughTrack,
+  initData: InitData,
+  logger: ILogger,
+  includeSampleDetails = false,
+): UserdataSample[] {
+  const samples: UserdataSample[] = [];
+  const data = track.samples;
+  const tracks = parseSampleData(data, initData, logger, includeSampleDetails, {
+    isHEVCFlavor: isHEVC(track.codec),
+    samples,
+    timeOffset,
+    timescale: track.timescale,
+    trackId: track.id,
+  });
+  sampleDataCache.set(data, {
+    includeSampleDetails,
+    tracks,
+  });
+  return samples;
+}
+
+function parseSampleData(
+  data: Uint8Array,
+  initData: InitData,
+  logger: ILogger,
+  includeSampleDetails: boolean,
+  seiContext?: SeiSampleContext,
 ): Record<number, TrackTimes> {
   const tracks: Record<number, TrackTimes> = {};
   const moofs = findBox(data, ['moof']);
@@ -1105,8 +1160,14 @@ export function getSampleData(
         ) {
           trackTimes.start = baseTime;
         }
+        if (seiContext && Number.isFinite(baseTime)) {
+          seiContext.timeOffset = baseTime! / seiContext.timescale;
+        }
       }
 
+      const scanSei =
+        seiContext?.trackId === id &&
+        track.type === ElementaryStreamTypes.VIDEO;
       const trackDefault = track.default;
       const tfhdFlags = readUint32(tfhd, 0) & 0xffffff;
       // tfhd optional fields follow track_ID (at byte 8) in this fixed order,
@@ -1232,6 +1293,25 @@ export function getSampleData(
                 ? readUint32(trun, offset)
                 : readSint32(trun, offset);
             offset += 4;
+          }
+          if (scanSei) {
+            let naluOffset = sampleOffset;
+            let naluTotalSize = 0;
+            while (naluTotalSize < size) {
+              const naluSize = readUint32(data, naluOffset);
+              naluOffset += 4;
+              if (isSEIMessage(seiContext.isHEVCFlavor, data[naluOffset])) {
+                parseSEIMessageFromNALu(
+                  data.subarray(naluOffset, naluOffset + naluSize),
+                  seiContext.isHEVCFlavor ? 2 : 1,
+                  seiContext.timeOffset + cts / seiContext.timescale,
+                  seiContext.samples,
+                );
+              }
+              naluOffset += naluSize;
+              naluTotalSize += naluSize + 4;
+            }
+            seiContext.timeOffset += sampleDuration / seiContext.timescale;
           }
           sampleOffset += size;
           // Capture only fitting samples so a partial-mdat truncation
