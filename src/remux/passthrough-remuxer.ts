@@ -251,7 +251,13 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       this.emitInitSegment = false;
     }
 
-    const trackSampleData = getSampleData(data, initData, chunkMeta, this);
+    const trackSampleData = getSampleData(
+      data,
+      initData,
+      chunkMeta,
+      this,
+      __USE_IFRAMES__ && chunkMeta.iframe,
+    );
     const audioSampleTimestamps = initData.audio
       ? trackSampleData[initData.audio.id]
       : null;

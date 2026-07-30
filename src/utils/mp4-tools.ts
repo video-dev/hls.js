@@ -1039,6 +1039,7 @@ export function getSampleData(
   initData: InitData,
   chunkMeta: ChunkMetadata,
   logger: ILogger,
+  includeSampleDetails = true,
 ): Record<number, TrackTimes> {
   const tracks: Record<number, TrackTimes> = {};
   const moofs = findBox(data, ['moof']);
@@ -1169,21 +1170,27 @@ export function getSampleData(
           offset += 4;
         }
         let sampleOffset = baseDataOffset + dataOffset;
-        const samples: TrackFragmentRunSample[] = [];
-        const fragRun: TrackFragmentRun = {
-          sampleOffset,
-          samples,
-          defaultSampleDurationOffset,
-        };
-        if (sampleOffset <= eof) {
-          trackTimes.trun.push(fragRun);
+        let samples: TrackFragmentRunSample[] | undefined;
+        let fragRun: TrackFragmentRun | undefined;
+        if (includeSampleDetails) {
+          samples = [];
+          fragRun = {
+            sampleOffset,
+            samples,
+            defaultSampleDurationOffset,
+          };
+          if (sampleOffset <= eof) {
+            trackTimes.trun.push(fragRun);
+          }
         }
         let size;
         for (let ix = 0; ix < sampleCount; ix++) {
           let thisSampleDurationOffset: number | undefined;
           if (sampleDurationPresent) {
-            thisSampleDurationOffset =
-              trun.byteOffset - data.byteOffset + offset;
+            if (includeSampleDetails) {
+              thisSampleDurationOffset =
+                trun.byteOffset - data.byteOffset + offset;
+            }
             sampleDuration = readUint32(trun, offset);
             offset += 4;
           } else {
@@ -1195,13 +1202,16 @@ export function getSampleData(
           } else {
             size = defaultSampleSize;
           }
-          let flags;
+          let flags: TrackFragmentRunSample['flags'];
+          let isNonSyncSample: 0 | 1 | undefined;
           if (sampleFlagsPresent) {
-            const isNonSyncSample = trun[offset + 1] & 0x01;
-            flags = {
-              isNonSync: isNonSyncSample ? 1 : 0,
-              dependsOn: (trun[offset] & 0x03) === 1 ? 1 : 2,
-            };
+            isNonSyncSample = trun[offset + 1] & 0x01 ? 1 : 0;
+            if (includeSampleDetails) {
+              flags = {
+                isNonSync: isNonSyncSample,
+                dependsOn: (trun[offset] & 0x03) === 1 ? 1 : 2,
+              };
+            }
             offset += 4;
           }
           let cts = 0;
@@ -1218,12 +1228,11 @@ export function getSampleData(
           // can still rewrite the right uint32 to balance EXTINF. Field
           // offsets above advance for every declared sample to stay aligned.
           if (sampleOffset <= eof) {
-            if (thisSampleDurationOffset !== undefined) {
+            if (fragRun && thisSampleDurationOffset !== undefined) {
               fragRun.lastSampleDurationOffset = thisSampleDurationOffset;
             }
             if (
-              flags &&
-              !flags.isNonSync &&
+              isNonSyncSample === 0 &&
               trackTimes.keyFrameIndex === undefined
             ) {
               trackTimes.keyFrameIndex = ix;
@@ -1242,12 +1251,14 @@ export function getSampleData(
             ) {
               trackTimes.ptsMax = pts + sampleDuration;
             }
-            samples[ix] = {
-              cts,
-              duration: sampleDuration,
-              flags,
-              size,
-            };
+            if (samples) {
+              samples[ix] = {
+                cts,
+                duration: sampleDuration,
+                flags,
+                size,
+              };
+            }
           }
           sampleDTS += sampleDuration;
           rawDuration += sampleDuration;
