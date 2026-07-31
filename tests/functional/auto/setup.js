@@ -704,16 +704,16 @@ describe(`Testing hls.js playback in ${browserConfig.name} ${browserConfig.versi
       if (process.env.SAUCE_TUNNEL_ID) {
         capabilities['sauce:options'] = {
           build: 'HLSJS-' + process.env.SAUCE_TUNNEL_ID,
-          ['tunnel-identifier']: process.env.SAUCE_TUNNEL_ID,
+          tunnelName: process.env.SAUCE_TUNNEL_ID,
         };
       } else {
         capabilities['sauce:options'] = {
-          ['tunnel-identifier']: `local-${Date.now()}`,
+          tunnelName: `local-${Date.now()}`,
         };
       }
       if (!process.env.SAUCE_TUNNEL_ID) {
         sauceConnectProcess = await sauceConnect(
-          capabilities['tunnel-identifier']
+          capabilities['sauce:options'].tunnelName
         );
       }
       capabilities['sauce:options'].public = 'public restricted';
