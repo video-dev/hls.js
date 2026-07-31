@@ -13,14 +13,14 @@ import {
   type PassthroughTrack,
 } from '../types/demuxer';
 import { logger as defaultLogger } from '../utils/logger';
-import { parseAndCacheInitData } from '../utils/mp4-init-data';
 import {
   appendUint8Array,
   findBox,
   hasBoxData,
   parseEmsg,
+  parseInitSegment,
   parseSamples,
-  parseSamplesAndCache,
+  parseSamplesAndTiming,
   RemuxerTrackIdConfig,
   segmentValidRange,
 } from '../utils/mp4-tools';
@@ -28,7 +28,11 @@ import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { ChunkMetadata } from '../types/transmuxer';
 import type { ILogger } from '../utils/logger';
-import type { IEmsgParsingData, InitData } from '../utils/mp4-tools';
+import type {
+  IEmsgParsingData,
+  InitData,
+  ParsedSampleData,
+} from '../utils/mp4-tools';
 
 const emsgSchemePattern = /\/emsg[-/]ID3/i;
 
@@ -81,7 +85,7 @@ class MP4Demuxer implements Demuxer {
     if (!initSegment?.byteLength) {
       return;
     }
-    const initData = (this.initData = parseAndCacheInitData(initSegment));
+    const initData = (this.initData = parseInitSegment(initSegment));
 
     if (initData.video) {
       const { id, timescale, codec, supplemental } = initData.video;
@@ -135,22 +139,20 @@ class MP4Demuxer implements Demuxer {
       videoTrack.samples = videoSamples;
     }
     const id3Track = this.extractID3Track(videoTrack, timeOffset);
-    textTrack.samples =
-      this.initData && chunkMeta
-        ? parseSamplesAndCache(
-            timeOffset,
-            videoTrack,
-            this.initData,
-            this.logger,
-            __USE_IFRAMES__ && chunkMeta.iframe,
-          )
-        : parseSamples(timeOffset, videoTrack);
+    const sampleData = this.parseFragment(
+      videoTrack,
+      textTrack,
+      timeOffset,
+      chunkMeta,
+    );
 
     return {
       videoTrack,
       audioTrack: this.audioTrack as DemuxedAudioTrack,
       id3Track,
       textTrack: this.txtTrack as DemuxedUserdataTrack,
+      initData: this.initData,
+      sampleData,
     };
   }
 
@@ -162,23 +164,42 @@ class MP4Demuxer implements Demuxer {
     this.remainderData = null;
 
     const id3Track = this.extractID3Track(videoTrack, this.timeOffset);
-    textTrack.samples =
-      this.initData && chunkMeta
-        ? parseSamplesAndCache(
-            timeOffset,
-            videoTrack,
-            this.initData,
-            this.logger,
-            __USE_IFRAMES__ && chunkMeta.iframe,
-          )
-        : parseSamples(timeOffset, videoTrack);
+    const sampleData = this.parseFragment(
+      videoTrack,
+      textTrack,
+      timeOffset,
+      chunkMeta,
+    );
 
     return {
       videoTrack,
       audioTrack: dummyTrack() as DemuxedAudioTrack,
       id3Track,
       textTrack: dummyTrack() as DemuxedUserdataTrack,
+      initData: this.initData,
+      sampleData,
     };
+  }
+
+  private parseFragment(
+    videoTrack: PassthroughTrack,
+    textTrack: DemuxedUserdataTrack,
+    timeOffset: number,
+    chunkMeta?: ChunkMetadata,
+  ): ParsedSampleData | undefined {
+    const initData = this.initData;
+    if (initData && chunkMeta) {
+      const { samples, sampleData } = parseSamplesAndTiming(
+        timeOffset,
+        videoTrack,
+        initData,
+        this.logger,
+        __USE_IFRAMES__ && chunkMeta.iframe,
+      );
+      textTrack.samples = samples;
+      return sampleData;
+    }
+    textTrack.samples = parseSamples(timeOffset, videoTrack);
   }
 
   private extractID3Track(

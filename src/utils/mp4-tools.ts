@@ -1048,7 +1048,7 @@ export type TrackTimes = {
   type: HdlrType;
 };
 
-type CachedSampleData = {
+export type ParsedSampleData = {
   includeSampleDetails: boolean;
   tracks: Record<number, TrackTimes>;
 };
@@ -1068,7 +1068,6 @@ type TrafBoxes = {
   truns: Uint8Array[];
 };
 
-const sampleDataCache = new WeakMap<Uint8Array, CachedSampleData>();
 let utf8TextDecoder: TextDecoder | undefined;
 
 function decodeUtf8UserData(data: Uint8Array): string {
@@ -1175,23 +1174,19 @@ export function getSampleData(
   logger: ILogger,
   includeSampleDetails = true,
 ): Record<number, TrackTimes> {
-  const cached = sampleDataCache.get(data);
-  if (cached) {
-    sampleDataCache.delete(data);
-    if (!includeSampleDetails || cached.includeSampleDetails) {
-      return cached.tracks;
-    }
-  }
   return parseSampleData(data, initData, logger, includeSampleDetails);
 }
 
-export function parseSamplesAndCache(
+export function parseSamplesAndTiming(
   timeOffset: number,
   track: PassthroughTrack,
   initData: InitData,
   logger: ILogger,
   includeSampleDetails = false,
-): UserdataSample[] {
+): {
+  samples: UserdataSample[];
+  sampleData: ParsedSampleData;
+} {
   const samples: UserdataSample[] = [];
   const data = track.samples;
   const tracks = parseSampleData(data, initData, logger, includeSampleDetails, {
@@ -1201,11 +1196,13 @@ export function parseSamplesAndCache(
     timescale: track.timescale,
     trackId: track.id,
   });
-  sampleDataCache.set(data, {
-    includeSampleDetails,
-    tracks,
-  });
-  return samples;
+  return {
+    samples,
+    sampleData: {
+      includeSampleDetails,
+      tracks,
+    },
+  };
 }
 
 function parseSampleData(
