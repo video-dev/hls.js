@@ -390,12 +390,14 @@ jobs:
           name: build
 
       - name: start SauceConnect tunnel
-        uses: saucelabs/sauce-connect-action@0ca0e6ce3a5513d6bec2a54044a536c3da3a53fb # v2
+        uses: saucelabs/sauce-connect-action@cb88b508c6f9ff4d84490093733315dbd55de022 # v3
         with:
           username: ${{ secrets.SAUCE_USERNAME }}
           accessKey: ${{ secrets.SAUCE_ACCESS_KEY }}
-          tunnelIdentifier: ${{ github.run_id }}-${{ matrix.config }}
-          retryTimeout: 300
+          region: us-west-1
+          tunnelName: ${{ github.run_id }}-${{ matrix.config }}
+          retryTimeout: 5
+          proxyLocalhost: direct # sc4 was false
 
       - name: install
         run: |
