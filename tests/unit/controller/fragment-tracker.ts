@@ -471,6 +471,54 @@ describe('FragmentTracker', function () {
     removeFragment: (fragment: Fragment) => void;
   };
 
+  describe('getBackBufferEvictionEnd', function () {
+    it('converts bitrate estimates from bits to bytes', function () {
+      const hls = new Hls({});
+      const fragmentTracker = new FragmentTracker(hls);
+      const firstFragment = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 2,
+          sn: 1,
+          level: 0,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.VIDEO],
+      );
+      const secondFragment = createMockFragment(
+        {
+          startPTS: 2,
+          endPTS: 4,
+          sn: 2,
+          level: 0,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.VIDEO],
+      );
+      firstFragment.bitrate = 8_000_000;
+      secondFragment.bitrate = 8_000_000;
+
+      triggerFragLoaded(hls, firstFragment);
+      triggerFragLoaded(hls, secondFragment);
+      hls.trigger(
+        Events.BUFFER_APPENDED,
+        createBufferAppendedData([{ startPTS: 0, endPTS: 4 }]),
+      );
+      hls.trigger(Events.FRAG_BUFFERED, createFragBufferedData(firstFragment));
+      hls.trigger(Events.FRAG_BUFFERED, createFragBufferedData(secondFragment));
+
+      expect(
+        fragmentTracker.getBackBufferEvictionEnd(
+          10,
+          PlaylistLevelType.MAIN,
+          3_000_000,
+        ),
+      ).to.equal(4);
+      fragmentTracker.destroy();
+      hls.destroy();
+    });
+  });
+
   describe('removeFragment', function () {
     let hls: Hls;
     let fragmentTracker: FragmentTrackerTestable;

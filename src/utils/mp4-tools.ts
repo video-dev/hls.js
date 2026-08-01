@@ -13,6 +13,10 @@ type BoxDataOrUndefined = Uint8Array<ArrayBuffer> | undefined;
 
 export const UINT32_MAX = Math.pow(2, 32) - 1;
 
+const MP4_BOX_HEADER_SIZE = 8;
+const MP4_EXTENDED_BOX_HEADER_SIZE = 16;
+const UINT32_SIZE_MULTIPLIER = 4294967296;
+
 export const types = {
   avc1: 0x61766331,
   avcC: 0x61766343,
@@ -91,21 +95,39 @@ function readUint32(buffer: Uint8Array, offset: number): number {
  */
 export function readMp4BoxSize(
   data: Uint8Array,
-  pos: number,
-  end: number,
+  offset: number,
+  endOffset: number,
 ): number {
-  if (pos + 8 > end) {
+  if (
+    !Number.isSafeInteger(offset) ||
+    !Number.isSafeInteger(endOffset) ||
+    offset < 0 ||
+    endOffset > data.byteLength ||
+    offset + MP4_BOX_HEADER_SIZE > endOffset
+  ) {
     return 0;
   }
-  const size = readUint32(data, pos);
+  const size = readUint32(data, offset);
   if (size === 0) {
-    return end - pos;
+    return endOffset - offset;
   }
-  if (size === 1 && pos + 16 <= end) {
-    const hi = readUint32(data, pos + 8);
-    return hi > 0 ? end - pos : readUint32(data, pos + 12);
+  if (size === 1) {
+    if (offset + MP4_EXTENDED_BOX_HEADER_SIZE > endOffset) {
+      return 0;
+    }
+    const highBits = readUint32(data, offset + MP4_BOX_HEADER_SIZE);
+    const lowBits = readUint32(data, offset + 12);
+    const extendedSize = highBits * UINT32_SIZE_MULTIPLIER + lowBits;
+    if (
+      !Number.isSafeInteger(extendedSize) ||
+      extendedSize < MP4_EXTENDED_BOX_HEADER_SIZE ||
+      offset + extendedSize > endOffset
+    ) {
+      return 0;
+    }
+    return extendedSize;
   }
-  if (size < 8 || pos + size > end) {
+  if (size < MP4_BOX_HEADER_SIZE || offset + size > endOffset) {
     return 0;
   }
   return size;
@@ -118,46 +140,51 @@ export function readMp4BoxSize(
  */
 export function splitAtBoxBoundaries(
   data: Uint8Array<ArrayBuffer>,
-  maxBytes: number,
+  maximumBytes: number,
 ): Uint8Array<ArrayBuffer>[] | null {
-  if (data.byteLength < 8) {
+  if (
+    data.byteLength < 8 ||
+    !Number.isSafeInteger(maximumBytes) ||
+    maximumBytes <= 0
+  ) {
     return null;
   }
   const chunks: Uint8Array<ArrayBuffer>[] = [];
-  const end = data.byteLength;
+  const endOffset = data.byteLength;
   let chunkStart = 0;
-  let pos = 0;
+  let offset = 0;
 
-  while (pos < end) {
-    const boxSize = readMp4BoxSize(data, pos, end);
+  while (offset < endOffset) {
+    const boxSize = readMp4BoxSize(data, offset, endOffset);
     if (boxSize === 0) {
-      break;
+      return null;
     }
-    if (pos > chunkStart && pos - chunkStart + boxSize > maxBytes) {
+    if (offset > chunkStart && offset - chunkStart + boxSize > maximumBytes) {
       chunks.push(
         new Uint8Array(
           data.buffer,
           data.byteOffset + chunkStart,
-          pos - chunkStart,
+          offset - chunkStart,
         ),
       );
-      chunkStart = pos;
+      chunkStart = offset;
     }
-    pos += boxSize;
+    offset += boxSize;
   }
 
-  if (chunkStart < end) {
+  if (chunkStart < endOffset) {
     chunks.push(
       new Uint8Array(
         data.buffer,
         data.byteOffset + chunkStart,
-        end - chunkStart,
+        endOffset - chunkStart,
       ),
     );
   }
 
   const allFit =
-    chunks.length > 1 && !chunks.some((c) => c.byteLength > maxBytes);
+    chunks.length > 1 &&
+    !chunks.some((chunk) => chunk.byteLength > maximumBytes);
   return allFit ? chunks : null;
 }
 
@@ -165,18 +192,22 @@ export function splitAtBoxBoundaries(
  * Split a large buffer into chunks of at most maxBytes.
  * Tries to split at fMP4 top-level box boundaries first. If the data
  * contains a single box larger than maxBytes (e.g. a giant mdat), falls
- * back to naive byte splitting — MSE SourceBuffer handles reassembly of
+ * back to naive byte splitting; MSE SourceBuffer handles reassembly of
  * partial boxes internally.
  */
 export function splitAppendData(
   data: Uint8Array<ArrayBuffer>,
-  maxBytes: number,
+  maximumBytes: number,
 ): Uint8Array<ArrayBuffer>[] {
-  if (data.byteLength <= maxBytes) {
+  if (
+    !Number.isSafeInteger(maximumBytes) ||
+    maximumBytes <= 0 ||
+    data.byteLength <= maximumBytes
+  ) {
     return [data];
   }
 
-  const boxChunks = splitAtBoxBoundaries(data, maxBytes);
+  const boxChunks = splitAtBoxBoundaries(data, maximumBytes);
   if (boxChunks) {
     return boxChunks;
   }
@@ -184,20 +215,20 @@ export function splitAppendData(
   // Fallback: naive byte splitting. MSE SourceBuffer handles partial box
   // reassembly across sequential appendBuffer() calls.
   const chunks: Uint8Array<ArrayBuffer>[] = [];
-  const end = data.byteLength;
-  for (let offset = 0; offset < end; offset += maxBytes) {
+  const endOffset = data.byteLength;
+  for (let offset = 0; offset < endOffset; offset += maximumBytes) {
     chunks.push(
       new Uint8Array(
         data.buffer,
         data.byteOffset + offset,
-        Math.min(maxBytes, end - offset),
+        Math.min(maximumBytes, endOffset - offset),
       ),
     );
   }
   return chunks;
 }
 
-function readUint64(buffer: Uint8Array, offset: number) {
+function readUint64(buffer: Uint8Array, offset: number): number {
   let result = readUint32(buffer, offset);
   result *= Math.pow(2, 32);
   result += readUint32(buffer, offset + 4);
