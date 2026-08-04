@@ -82,6 +82,11 @@ export type BufferControllerConfig = {
    * @deprecated use backBufferLength
    */
   liveBackBufferLength: number | null;
+  /**
+   * Maximum number of bytes passed to one SourceBuffer.appendBuffer call.
+   * Set to Infinity to disable append splitting.
+   */
+  maxAppendSize: number;
 };
 
 export type CapLevelControllerConfig = {
@@ -456,6 +461,7 @@ export const hlsDefaultConfig: HlsConfig = {
   backBufferLength: Infinity, // used by buffer-controller
   frontBufferFlushThreshold: Infinity,
   loopBackBufferFlush: undefined, // used by buffer-controller
+  maxAppendSize: Infinity, // used by buffer-controller
   startOnSegmentBoundary: false, // used by stream-controller
   nextAudioTrackBufferFlushForwardOffset: 0.25, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
@@ -719,6 +725,17 @@ export function mergeConfig(
   userConfig: Partial<HlsConfig>,
   logger: ILogger,
 ): HlsConfig {
+  if (
+    userConfig.maxAppendSize !== undefined &&
+    userConfig.maxAppendSize !== Infinity &&
+    (!Number.isSafeInteger(userConfig.maxAppendSize) ||
+      userConfig.maxAppendSize <= 0)
+  ) {
+    throw new Error(
+      'Illegal hls.js config: "maxAppendSize" must be a positive safe integer or Infinity',
+    );
+  }
+
   if (
     (userConfig.liveSyncDurationCount ||
       userConfig.liveMaxLatencyDurationCount) &&

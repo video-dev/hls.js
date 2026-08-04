@@ -32,7 +32,11 @@ import type {
   ComponentAPI,
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
-import type { BufferAppendingData, ErrorData } from '../../../src/types/events';
+import type {
+  BufferAppendedData,
+  BufferAppendingData,
+  ErrorData,
+} from '../../../src/types/events';
 
 use(sinonChai);
 const sandbox = sinon.createSandbox();
@@ -225,6 +229,17 @@ describe('BufferController with attached media', function () {
     });
   });
 
+  it('clears quota recovery state when resetting the operation queue', function () {
+    (bufferController as any)._quotaEvictionPending.video = true;
+
+    (bufferController as any).resetQueue();
+
+    expect((bufferController as any)._quotaEvictionPending).to.deep.equal({});
+    expect((bufferController as any).operationQueue).to.not.equal(
+      operationQueue,
+    );
+  });
+
   describe('onBufferAppending', function () {
     it('should enqueue and execute an append operation', function () {
       const queueAppendSpy = sandbox.spy(operationQueue, 'append');
@@ -283,6 +298,418 @@ describe('BufferController with attached media', function () {
           'The queue should have been cycled',
         ).to.have.callCount(i + 1);
       });
+    });
+
+    it('splits appends in order with distinct metadata and one timestamp offset update', function () {
+      hls.config.maxAppendSize = 4;
+      const track = getSourceBufferTrack(bufferController, 'video');
+      const buffer = track?.buffer as unknown as MockSourceBuffer;
+      const updateTimestampOffsetSpy = sandbox.spy(
+        bufferController as any,
+        'updateTimestampOffset',
+      );
+      const appendedEvents: BufferAppendedData[] = [];
+      hls.on(Events.BUFFER_APPENDED, (_event, data) => {
+        appendedEvents.push(data);
+      });
+
+      const segmentData = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.level = 3;
+      frag.sn = 7;
+      const decryptRange = { start: 16, end: 32 };
+      const sourceMetadata = new ChunkMetadata(
+        3,
+        7,
+        42,
+        segmentData.byteLength,
+        5,
+        true,
+        6,
+        true,
+        decryptRange,
+      );
+      Object.assign(sourceMetadata.transmuxing, {
+        start: 1,
+        executeStart: 2,
+        executeEnd: 3,
+        end: 4,
+      });
+      const data: BufferAppendingData = {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: segmentData,
+        frag,
+        part: null,
+        chunkMeta: sourceMetadata,
+        offset: 12,
+      };
+
+      hls.trigger(Events.BUFFER_APPENDING, data);
+      expect(buffer.appendBuffer).to.have.callCount(1);
+      expect(buffer.appendBuffer.firstCall.args[0]).to.deep.equal(
+        segmentData.subarray(0, 4),
+      );
+      expect(updateTimestampOffsetSpy).to.have.callCount(1);
+
+      buffer.dispatchEvent(new Event('updateend'));
+      expect(buffer.appendBuffer).to.have.callCount(2);
+      expect(buffer.appendBuffer.secondCall.args[0]).to.deep.equal(
+        segmentData.subarray(4, 8),
+      );
+      expect(updateTimestampOffsetSpy).to.have.callCount(1);
+
+      buffer.dispatchEvent(new Event('updateend'));
+      expect(buffer.appendBuffer).to.have.callCount(3);
+      expect(buffer.appendBuffer.thirdCall.args[0]).to.deep.equal(
+        segmentData.subarray(8),
+      );
+      expect(updateTimestampOffsetSpy).to.have.callCount(1);
+
+      buffer.dispatchEvent(new Event('updateend'));
+      expect(appendedEvents).to.have.lengthOf(3);
+      expect(
+        appendedEvents.map((eventData) => eventData.chunkMeta.id),
+      ).to.deep.equal([0, 1, 2]);
+      expect(
+        appendedEvents.map((eventData) => eventData.chunkMeta.size),
+      ).to.deep.equal([4, 4, 2]);
+      appendedEvents.forEach((eventData) => {
+        expect(eventData.chunkMeta).to.not.equal(sourceMetadata);
+        expect(eventData.chunkMeta).to.include({
+          level: 3,
+          sn: 7,
+          part: 5,
+          partial: true,
+          duration: 6,
+          iframe: true,
+        });
+        expect(eventData.chunkMeta.decryptRange).to.equal(decryptRange);
+        expect(eventData.chunkMeta.transmuxing).to.deep.equal(
+          sourceMetadata.transmuxing,
+        );
+        expect(eventData.chunkMeta.transmuxing).to.not.equal(
+          sourceMetadata.transmuxing,
+        );
+      });
+    });
+
+    it('does not repeat MPEG audio timestamp setup for split continuations', function () {
+      hls.config.maxAppendSize = 4;
+      const track = getSourceBufferTrack(bufferController, 'audio');
+      if (!track) {
+        throw new Error('Expected an audio SourceBuffer track');
+      }
+      track.container = 'audio/mpeg';
+      const buffer = track.buffer as unknown as MockSourceBuffer;
+      const updateTimestampOffsetSpy = sandbox.spy(
+        bufferController as any,
+        'updateTimestampOffset',
+      );
+      const segmentData = new Uint8Array(10);
+      const frag = new Fragment(PlaylistLevelType.AUDIO, '');
+      frag.level = 0;
+      frag.sn = 4;
+      const chunkMeta = new ChunkMetadata(0, 4, 1, segmentData.byteLength);
+
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.AUDIO,
+        type: 'audio',
+        data: segmentData,
+        frag,
+        part: null,
+        chunkMeta,
+      });
+      buffer.dispatchEvent(new Event('updateend'));
+      buffer.dispatchEvent(new Event('updateend'));
+      buffer.dispatchEvent(new Event('updateend'));
+
+      expect(buffer.appendBuffer).to.have.callCount(3);
+      expect(updateTimestampOffsetSpy).to.have.been.calledOnce;
+    });
+
+    it('keeps the fragment blocker behind every split append', async function () {
+      hls.config.maxAppendSize = 4;
+      const buffer = getSourceBufferTrack(bufferController, 'video')
+        ?.buffer as unknown as MockSourceBuffer;
+      const segmentData = new Uint8Array(10);
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.level = 0;
+      frag.sn = 1;
+      frag.setElementaryStreamInfo(ElementaryStreamTypes.VIDEO, 0, 1, 0, 1);
+      const chunkMeta = new ChunkMetadata(0, 1, 0, segmentData.byteLength);
+      let fragmentBufferedCount = 0;
+      hls.on(Events.FRAG_BUFFERED, () => {
+        fragmentBufferedCount++;
+      });
+
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: segmentData,
+        frag,
+        part: null,
+        chunkMeta,
+      });
+      hls.trigger(Events.FRAG_PARSED, { frag, part: null, chunkMeta });
+
+      buffer.dispatchEvent(new Event('updateend'));
+      expect(fragmentBufferedCount).to.equal(0);
+      buffer.dispatchEvent(new Event('updateend'));
+      expect(fragmentBufferedCount).to.equal(0);
+      buffer.dispatchEvent(new Event('updateend'));
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(fragmentBufferedCount).to.equal(1);
+      expect(buffer.appendBuffer).to.have.callCount(3);
+    });
+
+    it('keeps later logical appends behind every split continuation', function () {
+      hls.config.maxAppendSize = 4;
+      const buffer = getSourceBufferTrack(bufferController, 'video')
+        ?.buffer as unknown as MockSourceBuffer;
+      const firstSegmentData = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+      const secondSegmentData = new Uint8Array([10, 11, 12]);
+      const firstFragment = new Fragment(PlaylistLevelType.MAIN, '');
+      firstFragment.level = 0;
+      firstFragment.sn = 1;
+      const secondFragment = new Fragment(PlaylistLevelType.MAIN, '');
+      secondFragment.level = 0;
+      secondFragment.sn = 2;
+
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: firstSegmentData,
+        frag: firstFragment,
+        part: null,
+        chunkMeta: new ChunkMetadata(0, 1, 0, firstSegmentData.byteLength),
+      });
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: secondSegmentData,
+        frag: secondFragment,
+        part: null,
+        chunkMeta: new ChunkMetadata(0, 2, 0, secondSegmentData.byteLength),
+      });
+
+      buffer.dispatchEvent(new Event('updateend'));
+      buffer.dispatchEvent(new Event('updateend'));
+      buffer.dispatchEvent(new Event('updateend'));
+
+      expect(
+        buffer.appendBuffer.getCalls().map((call) => Array.from(call.args[0])),
+      ).to.deep.equal([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9],
+        [10, 11, 12],
+      ]);
+      buffer.dispatchEvent(new Event('updateend'));
+    });
+
+    it('retries a failed first split chunk before appending its suffix', function () {
+      hls.config.maxAppendSize = 4;
+      const buffer = getSourceBufferTrack(bufferController, 'video')
+        ?.buffer as unknown as MockSourceBuffer;
+      sandbox
+        .stub(bufferController as any, 'getBackBufferEvictionTarget')
+        .returns(5);
+      buffer.appendBuffer
+        .onFirstCall()
+        .throws(
+          new DOMException('Synthetic append limit', 'QuotaExceededError'),
+        );
+      const segmentData = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.level = 0;
+      frag.sn = 2;
+
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: segmentData,
+        frag,
+        part: null,
+        chunkMeta: new ChunkMetadata(0, 2, 0, segmentData.byteLength),
+      });
+      buffer.dispatchEvent(new Event('updateend'));
+      buffer.dispatchEvent(new Event('updateend'));
+      buffer.dispatchEvent(new Event('updateend'));
+      buffer.dispatchEvent(new Event('updateend'));
+
+      expect(
+        buffer.appendBuffer.getCalls().map((call) => Array.from(call.args[0])),
+      ).to.deep.equal([
+        [0, 1, 2, 3],
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [8, 9],
+      ]);
+      expect(buffer.abort).to.not.have.been.called;
+      const errorEvents = triggerSpy
+        .getCalls()
+        .filter((call) => call.args[0] === Events.ERROR);
+      expect(errorEvents).to.have.lengthOf(0);
+    });
+
+    it('retries a failed split chunk before appending its suffix', function () {
+      hls.config.maxAppendSize = 4;
+      const buffer = getSourceBufferTrack(bufferController, 'video')
+        ?.buffer as unknown as MockSourceBuffer;
+      const getEvictionTargetStub = sandbox
+        .stub(bufferController as any, 'getBackBufferEvictionTarget')
+        .returns(5);
+      const quotaError = new DOMException(
+        'Synthetic append limit',
+        'QuotaExceededError',
+      );
+      buffer.appendBuffer.onSecondCall().throws(quotaError);
+      const segmentData = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.level = 0;
+      frag.sn = 2;
+      const chunkMeta = new ChunkMetadata(0, 2, 0, segmentData.byteLength);
+      const appendedEvents: BufferAppendedData[] = [];
+      hls.on(Events.BUFFER_APPENDED, (_event, data) => {
+        appendedEvents.push(data);
+      });
+      timers.tick(1);
+
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: segmentData,
+        frag,
+        part: null,
+        chunkMeta,
+      });
+      buffer.dispatchEvent(new Event('updateend'));
+      expect(buffer.remove).to.have.been.calledOnce;
+
+      buffer.dispatchEvent(new Event('updateend'));
+      expect(buffer.appendBuffer).to.have.callCount(3);
+      buffer.dispatchEvent(new Event('updateend'));
+      expect(buffer.appendBuffer).to.have.callCount(4);
+      buffer.dispatchEvent(new Event('updateend'));
+
+      expect(getEvictionTargetStub).to.have.been.calledWith(
+        'video',
+        6,
+        PlaylistLevelType.MAIN,
+      );
+      expect(
+        buffer.appendBuffer.getCalls().map((call) => Array.from(call.args[0])),
+      ).to.deep.equal([
+        [0, 1, 2, 3],
+        [4, 5, 6, 7],
+        [4, 5, 6, 7],
+        [8, 9],
+      ]);
+      const errorEvents = triggerSpy
+        .getCalls()
+        .filter((call) => call.args[0] === Events.ERROR);
+      expect(errorEvents).to.have.lengthOf(0);
+      expect(
+        appendedEvents.map((eventData) => eventData.chunkMeta.id),
+      ).to.deep.equal([0, 1, 2]);
+      expect(
+        appendedEvents.map((eventData) => eventData.chunkMeta.size),
+      ).to.deep.equal([4, 4, 2]);
+      expect(chunkMeta.buffering.video).to.include({
+        start: 1,
+        executeStart: 1,
+        executeEnd: 1,
+        end: 1,
+      });
+    });
+
+    it('stops a split group and resets the parser after a terminal error', function () {
+      hls.config.maxAppendSize = 4;
+      const buffer = getSourceBufferTrack(bufferController, 'video')
+        ?.buffer as unknown as MockSourceBuffer;
+      buffer.appendBuffer.onSecondCall().throws(new Error('append failed'));
+      const segmentData = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.level = 0;
+      frag.sn = 3;
+      const chunkMeta = new ChunkMetadata(0, 3, 0, segmentData.byteLength);
+      timers.tick(1);
+
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: segmentData,
+        frag,
+        part: null,
+        chunkMeta,
+      });
+      buffer.dispatchEvent(new Event('updateend'));
+
+      expect(buffer.appendBuffer).to.have.callCount(2);
+      expect(buffer.abort).to.have.been.calledOnce;
+      const errorEvents = triggerSpy
+        .getCalls()
+        .filter((call) => call.args[0] === Events.ERROR);
+      expect(errorEvents).to.have.lengthOf(1);
+      expect(errorEvents[0].args[1]).to.include({
+        details: ErrorDetails.BUFFER_APPEND_ERROR,
+        sourceBufferName: 'video',
+      });
+      expect(errorEvents[0].args[1].chunkMeta.id).to.equal(1);
+      expect(chunkMeta.buffering.video).to.include({
+        start: 1,
+        executeStart: 1,
+        executeEnd: 0,
+        end: 0,
+      });
+    });
+
+    it('stops after a split chunk exhausts quota recovery', function () {
+      hls.config.maxAppendSize = 4;
+      const buffer = getSourceBufferTrack(bufferController, 'video')
+        ?.buffer as unknown as MockSourceBuffer;
+      sandbox
+        .stub(bufferController as any, 'getBackBufferEvictionTarget')
+        .returns(5);
+      const quotaError = new DOMException(
+        'Synthetic append limit',
+        'QuotaExceededError',
+      );
+      buffer.appendBuffer.onSecondCall().throws(quotaError);
+      buffer.appendBuffer.onThirdCall().throws(quotaError);
+      const segmentData = new Uint8Array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.level = 0;
+      frag.sn = 5;
+      const chunkMeta = new ChunkMetadata(0, 5, 0, segmentData.byteLength);
+
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'video',
+        data: segmentData,
+        frag,
+        part: null,
+        chunkMeta,
+      });
+      buffer.dispatchEvent(new Event('updateend'));
+      buffer.dispatchEvent(new Event('updateend'));
+
+      expect(buffer.appendBuffer).to.have.callCount(3);
+      expect(buffer.abort).to.have.been.calledOnce;
+      const errorEvents = triggerSpy
+        .getCalls()
+        .filter((call) => call.args[0] === Events.ERROR);
+      expect(errorEvents).to.have.lengthOf(1);
+      expect(errorEvents[0].args[1]).to.include({
+        details: ErrorDetails.BUFFER_FULL_ERROR,
+        sourceBufferName: 'video',
+      });
+      expect((bufferController as any)._quotaEvictionPending.video).to.equal(
+        false,
+      );
     });
 
     it('should not set timeout during buffer append operation when appendTimeout is Infinity', function () {

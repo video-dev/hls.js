@@ -8,7 +8,10 @@ import {
   findBox,
   getSampleData,
   parseInitSegment,
+  readMp4BoxSize,
   remuxVideoOnlyIFrameMoof,
+  splitAppendData,
+  splitAtBoxBoundaries,
   types,
   videoOnlyInitSegment,
 } from '../../../src/utils/mp4-tools';
@@ -16,6 +19,122 @@ import type { TrackFragmentSample } from '../../../src/remux/mp4-generator';
 import type { InitData } from '../../../src/utils/mp4-tools';
 
 describe('mp4-tools', function () {
+  describe('splitAppendData', function () {
+    it('returns the original view when the limit is disabled or invalid', function () {
+      const data = new Uint8Array([1, 2, 3, 4]);
+      const invalidLimits = [Infinity, NaN, 0, -1, 0.5];
+
+      invalidLimits.forEach((maximumBytes) => {
+        const chunks = splitAppendData(data, maximumBytes);
+        expect(chunks).to.have.lengthOf(1);
+        expect(chunks[0]).to.equal(data);
+      });
+    });
+
+    it('splits arbitrary data without including bytes outside the input view', function () {
+      const backingData = new Uint8Array([
+        255, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 255,
+      ]);
+      const data = backingData.subarray(1, 11) as Uint8Array<ArrayBuffer>;
+      const chunks = splitAppendData(data, 4);
+
+      expect(chunks.map((chunk) => chunk.byteLength)).to.deep.equal([4, 4, 2]);
+      expect(appendBytes(...chunks)).to.deep.equal(data);
+    });
+
+    it('groups complete top-level boxes without exceeding the limit', function () {
+      const firstBox = MP4.box(types.free, new Uint8Array(4));
+      const secondBox = MP4.box(types.free, new Uint8Array(4));
+      const thirdBox = MP4.box(types.free, new Uint8Array(4));
+      const data = appendBytes(firstBox, secondBox, thirdBox);
+      const chunks = splitAppendData(data, firstBox.byteLength * 2);
+
+      expect(chunks.map((chunk) => chunk.byteLength)).to.deep.equal([
+        firstBox.byteLength * 2,
+        thirdBox.byteLength,
+      ]);
+      expect(appendBytes(...chunks)).to.deep.equal(data);
+    });
+
+    it('falls back to fixed-size views when one box exceeds the limit', function () {
+      const data = MP4.mdat(new Uint8Array(25));
+      const chunks = splitAppendData(data, 10);
+
+      expect(chunks.map((chunk) => chunk.byteLength)).to.deep.equal([
+        10, 10, 10, 3,
+      ]);
+      expect(appendBytes(...chunks)).to.deep.equal(data);
+    });
+
+    it('falls back when the complete top-level box sequence is invalid', function () {
+      const validBox = MP4.box(types.free, new Uint8Array(4));
+      const invalidTail = new Uint8Array([0, 0, 0, 16, 0, 0, 0, 0]);
+      const data = appendBytes(validBox, invalidTail);
+
+      expect(splitAtBoxBoundaries(data, validBox.byteLength)).to.equal(null);
+      expect(
+        appendBytes(...splitAppendData(data, validBox.byteLength)),
+      ).to.deep.equal(data);
+    });
+  });
+
+  describe('readMp4BoxSize', function () {
+    it('reads standard, zero, and extended box sizes', function () {
+      const standardBox = MP4.box(types.free, new Uint8Array(4));
+      const zeroSizedBox = appendBytes(
+        uint32(0),
+        uint32(types.free),
+        new Uint8Array(4),
+      );
+      const extendedBox = appendBytes(
+        uint32(1),
+        uint32(types.free),
+        uint64(20),
+        new Uint8Array(4),
+      );
+
+      expect(readMp4BoxSize(standardBox, 0, standardBox.byteLength)).to.equal(
+        standardBox.byteLength,
+      );
+      expect(readMp4BoxSize(zeroSizedBox, 0, zeroSizedBox.byteLength)).to.equal(
+        zeroSizedBox.byteLength,
+      );
+      expect(readMp4BoxSize(extendedBox, 0, extendedBox.byteLength)).to.equal(
+        extendedBox.byteLength,
+      );
+    });
+
+    it('rejects truncated and out-of-range box sizes', function () {
+      const shortHeader = new Uint8Array(7);
+      const undersizedBox = appendBytes(uint32(4), uint32(types.free));
+      const oversizedBox = appendBytes(uint32(32), uint32(types.free));
+      const hugeExtendedBox = appendBytes(
+        uint32(1),
+        uint32(types.free),
+        uint64(2 ** 32 + 16),
+      );
+
+      expect(readMp4BoxSize(shortHeader, 0, shortHeader.byteLength)).to.equal(
+        0,
+      );
+      expect(
+        readMp4BoxSize(undersizedBox, 0, undersizedBox.byteLength),
+      ).to.equal(0);
+      expect(readMp4BoxSize(oversizedBox, 0, oversizedBox.byteLength)).to.equal(
+        0,
+      );
+      expect(
+        readMp4BoxSize(hugeExtendedBox, 0, hugeExtendedBox.byteLength),
+      ).to.equal(0);
+      expect(
+        readMp4BoxSize(oversizedBox, -1, oversizedBox.byteLength),
+      ).to.equal(0);
+      expect(
+        readMp4BoxSize(oversizedBox, 0, oversizedBox.byteLength + 1),
+      ).to.equal(0);
+    });
+  });
+
   it('reads tfhd default sample duration and size in declaration order', function () {
     const sampleData = getSampleData(
       fragmentWithTfhdDefaults(

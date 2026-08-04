@@ -32,6 +32,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`frontBufferFlushThreshold`](#frontbufferflushthreshold)
   - [`loopBackBufferFlush`](#loopbackbufferflush)
   - [`startOnSegmentBoundary`](#startonsegmentboundary)
+  - [`maxAppendSize`](#maxappendsize)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
@@ -462,6 +463,7 @@ var config = {
   maxMaxBufferLength: 600,
   backBufferLength: Infinity,
   frontBufferFlushThreshold: Infinity,
+  maxAppendSize: Infinity,
   maxBufferSize: 60 * 1000 * 1000,
   maxBufferHole: 0.1,
   highBufferWatchdogPeriod: 2,
@@ -661,6 +663,14 @@ Controls back-buffer flushing on quality upgrades when the underlying `HTMLMedia
 
 When set to `true`, the player will align the live start position with the closest video segment boundary when preparing playback. This ensures playback starts at a clean segment boundary rather than potentially in the middle of a segment, which can prevent some segment skipping. This is helpful for when liveSyncDurationCount or liveSyncDuration, do not calculate start position to be the start position of a segment.
 Setting this to `true` may increase initial live playback latency slightly, but can provide more stable playback start. When set to `false`, playback will start at the exact position determined by the player's live sync calculations, which could be in the middle of a segment.
+
+### `maxAppendSize`
+
+(default: `Infinity`)
+
+The maximum number of bytes passed to one `SourceBuffer.appendBuffer()` call. A finite value must be a positive safe integer. `Infinity` disables splitting.
+
+When enabled, larger append payloads are submitted as ordered zero-copy views, and each view waits for the preceding append to finish. This limits the input size used by each browser append and quota preflight. It does not reduce the total bytes appended, release the original JavaScript `ArrayBuffer`, increase the browser's total coded-frame capacity, or replace `maxBufferSize` and `backBufferLength`.
 
 ### `maxBufferSize`
 

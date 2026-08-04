@@ -571,7 +571,7 @@ export class FragmentTracker implements ComponentAPI {
       const bytes =
         (frag.hasStats && frag.stats.loaded) ||
         frag.byteLength ||
-        (frag.bitrate && frag.bitrate * 8 * frag.duration);
+        (frag.bitrate && (frag.bitrate * frag.duration) / 8);
       if (frag.end <= beforePosition && bytes) {
         bytesFreed += bytes;
         evictEnd = Math.max(evictEnd, frag.end);

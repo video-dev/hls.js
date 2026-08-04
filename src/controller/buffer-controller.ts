@@ -5,6 +5,7 @@ import { Events } from '../events';
 import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
 import { DEFAULT_TARGET_DURATION } from '../loader/level-details';
 import { PlaylistLevelType } from '../types/loader';
+import { ChunkMetadata } from '../types/transmuxer';
 import { BufferHelper, type BufferTimeRange } from '../utils/buffer-helper';
 import {
   areCodecsMediaSourceSupported,
@@ -22,6 +23,7 @@ import {
   isCompatibleTrackChange,
   isManagedMediaSource,
 } from '../utils/mediasource-helper';
+import { splitAppendData } from '../utils/mp4-tools';
 import { stringify } from '../utils/safe-json-stringify';
 import { timeRangesToString } from '../utils/time-ranges';
 import type { FragmentTracker } from './fragment-tracker';
@@ -59,7 +61,6 @@ import type {
   MediaAttachingData,
   MediaDetachingData,
 } from '../types/events';
-import type { ChunkMetadata } from '../types/transmuxer';
 
 interface BufferedChangeEvent extends Event {
   readonly addedRanges?: TimeRanges;
@@ -80,6 +81,16 @@ type FragmentAppendProgress = {
   progressed: boolean;
   errored: boolean;
   fullyBuffered: Partial<Record<SourceBufferName, boolean>>;
+};
+
+type ChunkedAppendGroup = {
+  chunks: Uint8Array<ArrayBuffer>[];
+  sourceData: BufferAppendingData;
+  nextChunkIndex: number;
+  completedChunkCount: number;
+  failed: boolean;
+  quotaRetryChunkIndex: number | null;
+  quotaRetrySucceeded: boolean;
 };
 
 class HlsJsTrackRemovedError extends Error {
@@ -614,6 +625,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (this.operationQueue) {
       this.operationQueue.destroy();
     }
+    this._quotaEvictionPending = {};
     this.operationQueue = new BufferOperationQueue(this.tracks);
   }
 
@@ -791,12 +803,122 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   }
 
   private onBufferAppending(
-    event: Events.BUFFER_APPENDING,
+    _event: Events.BUFFER_APPENDING,
     eventData: BufferAppendingData,
-  ) {
+  ): void {
+    const { data, type } = eventData;
+    const { maxAppendSize } = this.hls.config;
+
+    if (
+      Number.isSafeInteger(maxAppendSize) &&
+      maxAppendSize > 0 &&
+      data.byteLength > maxAppendSize
+    ) {
+      const chunks = splitAppendData(data, maxAppendSize);
+      if (chunks.length > 1) {
+        this.log(
+          `Splitting large ${type} append (sn:${eventData.frag.sn}, ` +
+            `${(data.byteLength / 1e6).toFixed(1)}MB) into ${chunks.length} chunks`,
+        );
+        const appendGroup: ChunkedAppendGroup = {
+          chunks,
+          sourceData: eventData,
+          nextChunkIndex: 1,
+          completedChunkCount: 0,
+          failed: false,
+          quotaRetryChunkIndex: null,
+          quotaRetrySucceeded: false,
+        };
+        this.queueBufferAppend(
+          this.createChunkedAppendData(appendGroup, 0),
+          appendGroup,
+          0,
+        );
+        return;
+      }
+    }
+
+    this.queueBufferAppend(eventData, null, 0);
+  }
+
+  private createChunkedAppendData(
+    appendGroup: ChunkedAppendGroup,
+    chunkIndex: number,
+  ): BufferAppendingData {
+    const { sourceData, chunks } = appendGroup;
+    const sourceMetadata = sourceData.chunkMeta;
+    const chunk = chunks[chunkIndex];
+    const chunkMetadata = new ChunkMetadata(
+      sourceMetadata.level,
+      sourceMetadata.sn,
+      chunkIndex,
+      chunk.byteLength,
+      sourceMetadata.part,
+      sourceMetadata.partial,
+      sourceMetadata.duration,
+      sourceMetadata.iframe,
+      sourceMetadata.decryptRange,
+    );
+    Object.assign(chunkMetadata.transmuxing, sourceMetadata.transmuxing);
+    return {
+      ...sourceData,
+      data: chunk,
+      chunkMeta: chunkMetadata,
+      offset: chunkIndex === 0 ? sourceData.offset : undefined,
+    };
+  }
+
+  private insertNextChunkedAppend(
+    appendGroup: ChunkedAppendGroup,
+    type: SourceBufferName,
+  ): void {
+    if (
+      appendGroup.failed ||
+      appendGroup.nextChunkIndex >= appendGroup.chunks.length
+    ) {
+      return;
+    }
+    const chunkIndex = appendGroup.nextChunkIndex++;
+    this.queueBufferAppend(
+      this.createChunkedAppendData(appendGroup, chunkIndex),
+      appendGroup,
+      chunkIndex,
+      true,
+    );
+  }
+
+  private getAppendRecoverySize(
+    appendGroup: ChunkedAppendGroup | null,
+    chunkIndex: number,
+    currentChunkSize: number,
+  ): number {
+    if (!appendGroup) {
+      return currentChunkSize;
+    }
+    // Reserve the unqueued suffix to avoid one eviction cycle per continuation
+    let remainingSize = 0;
+    for (
+      let remainingIndex = chunkIndex;
+      remainingIndex < appendGroup.chunks.length;
+      remainingIndex++
+    ) {
+      remainingSize += appendGroup.chunks[remainingIndex].byteLength;
+    }
+    return remainingSize;
+  }
+
+  private queueBufferAppend(
+    eventData: BufferAppendingData,
+    appendGroup: ChunkedAppendGroup | null,
+    chunkIndex: number,
+    insertAfterCurrent: boolean = false,
+  ): void {
     const { tracks } = this;
     const { data, type, parent, frag, part, chunkMeta, offset } = eventData;
+    const isFirstChunk = appendGroup === null || chunkIndex === 0;
+    const logicalChunkMeta = appendGroup?.sourceData.chunkMeta ?? chunkMeta;
     const chunkStats = chunkMeta.buffering[type];
+    const logicalChunkStats = logicalChunkMeta.buffering[type];
     const trackProgress =
       isMediaFragment(frag) &&
       !part &&
@@ -808,6 +930,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const { sn, cc } = frag;
     const bufferAppendingStart = self.performance.now();
     chunkStats.start = bufferAppendingStart;
+    if (logicalChunkStats.start === 0) {
+      logicalChunkStats.start = bufferAppendingStart;
+    }
     const fragBuffering = frag.stats.buffering;
     const partBuffering = part ? part.stats.buffering : null;
     if (fragBuffering.start === 0) {
@@ -824,18 +949,27 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     // More info here: https://github.com/video-dev/hls.js/issues/332#issuecomment-257986486
     const audioTrack = tracks.audio;
     let checkTimestampOffset = false;
-    if (type === 'audio' && audioTrack?.container === 'audio/mpeg') {
+    if (
+      isFirstChunk &&
+      type === 'audio' &&
+      audioTrack?.container === 'audio/mpeg'
+    ) {
       checkTimestampOffset =
         !this.lastMpegAudioChunk ||
-        chunkMeta.id === 1 ||
-        this.lastMpegAudioChunk.sn !== chunkMeta.sn;
-      this.lastMpegAudioChunk = chunkMeta;
+        logicalChunkMeta.id === 1 ||
+        this.lastMpegAudioChunk.sn !== logicalChunkMeta.sn;
+      this.lastMpegAudioChunk = logicalChunkMeta;
     }
 
     // Block audio append until overlapping video append
     const videoTrack = tracks.video;
     const videoSb = videoTrack?.buffer;
-    if (videoSb && sn !== 'initSegment' && offset !== undefined) {
+    if (
+      isFirstChunk &&
+      videoSb &&
+      sn !== 'initSegment' &&
+      offset !== undefined
+    ) {
       const audioSb = audioTrack?.buffer;
       const partOrFrag = part || (frag as MediaFragment);
       if (
@@ -875,7 +1009,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const operation: BufferOperation = {
       label: `append-${type}`,
       execute: () => {
-        chunkStats.executeStart = self.performance.now();
+        const executeStart = self.performance.now();
+        chunkStats.executeStart = executeStart;
+        if (logicalChunkStats.executeStart === 0) {
+          logicalChunkStats.executeStart = executeStart;
+        }
         // this.log(
         //   `appending "${type}" sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
         //     parent === PlaylistLevelType.MAIN ? 'level' : 'track'
@@ -909,6 +1047,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       },
       onComplete: () => {
         this.clearBufferAppendTimeoutId(this.tracks[type]);
+        if (appendGroup?.failed) {
+          return;
+        }
         // this.log(
         //   `appended "${type}" sn: ${sn}${part ? ' p: ' + part.index : ''} of ${
         //     parent === PlaylistLevelType.MAIN ? 'level' : 'track'
@@ -916,6 +1057,13 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         // );
         const end = self.performance.now();
         chunkStats.executeEnd = chunkStats.end = end;
+        // Complete aggregate timing only after every byte was appended
+        if (!appendGroup || chunkIndex === appendGroup.chunks.length - 1) {
+          logicalChunkStats.executeEnd = logicalChunkStats.end = end;
+        }
+        if (appendGroup) {
+          appendGroup.completedChunkCount++;
+        }
         if (fragBuffering.first === 0) {
           fragBuffering.first = end;
         }
@@ -953,6 +1101,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           }
         }
 
+        if (appendGroup) {
+          if (appendGroup.quotaRetryChunkIndex === chunkIndex) {
+            appendGroup.quotaRetrySucceeded = true;
+          } else {
+            this.insertNextChunkedAppend(appendGroup, type);
+          }
+        }
+
         this.hls.trigger(Events.BUFFER_APPENDED, {
           type,
           frag,
@@ -981,16 +1137,35 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           if (!this._quotaEvictionPending[type]) {
             const evictEnd = this.getBackBufferEvictionTarget(
               type,
-              data.byteLength,
+              this.getAppendRecoverySize(
+                appendGroup,
+                chunkIndex,
+                data.byteLength,
+              ),
               frag.type,
             );
             if (evictEnd > 0) {
               this._quotaEvictionPending[type] = true;
+              if (appendGroup) {
+                appendGroup.quotaRetryChunkIndex = chunkIndex;
+                appendGroup.quotaRetrySucceeded = false;
+              }
               this.log(
                 `QuotaExceededError on "${type}" append sn: ${sn} - evicting back buffer to ${evictEnd.toFixed(3)}s and retrying`,
               );
               const removeOp = this.getFlushOp(type, 0, evictEnd);
-              const clearOp = this.getClearEvictionPendingOp(type);
+              const clearOp = this.getClearEvictionPendingOp(type, () => {
+                if (appendGroup?.quotaRetryChunkIndex !== chunkIndex) {
+                  return;
+                }
+                const shouldContinue =
+                  !appendGroup.failed && appendGroup.quotaRetrySucceeded;
+                appendGroup.quotaRetryChunkIndex = null;
+                appendGroup.quotaRetrySucceeded = false;
+                if (shouldContinue) {
+                  this.insertNextChunkedAppend(appendGroup, type);
+                }
+              });
 
               this.insertNext([removeOp, operation, clearOp], type);
               return;
@@ -999,6 +1174,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
               `QuotaExceededError on "${type}" sn: ${sn} - no back buffer available to evict`,
             );
           }
+        }
+
+        if (appendGroup) {
+          this.failChunkedAppend(appendGroup, type);
         }
 
         // Append exceptions use the existing append-error path.
@@ -1028,7 +1207,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         } else {
           if (isQuotaError) {
             // QuotaExceededError: http://www.w3.org/TR/html5/infrastructure.html#quotaexceedederror
-            // Eviction was already attempted or not possible — report BUFFER_FULL_ERROR
+            // Eviction was already attempted or not possible; report BUFFER_FULL_ERROR
             event.details = ErrorDetails.BUFFER_FULL_ERROR;
           }
           const appendErrorCount = ++this.appendErrors[type];
@@ -1067,14 +1246,48 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         parent
       } playlist ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
     );
+    if (insertAfterCurrent) {
+      this.insertNext([operation], type);
+      return;
+    }
     this.append(operation, type, this.isPending(this.tracks[type]));
   }
 
-  private getClearEvictionPendingOp(type: SourceBufferName): BufferOperation {
+  private failChunkedAppend(
+    appendGroup: ChunkedAppendGroup,
+    type: SourceBufferName,
+  ): void {
+    appendGroup.failed = true;
+    if (appendGroup.completedChunkCount === 0) {
+      return;
+    }
+    const sourceBuffer = this.tracks[type]?.buffer;
+    if (
+      !sourceBuffer ||
+      sourceBuffer.updating ||
+      this.mediaSource?.readyState !== 'open'
+    ) {
+      return;
+    }
+    try {
+      sourceBuffer.abort();
+    } catch (error) {
+      this.warn(
+        `Failed to reset the ${type} SourceBuffer after a chunked append error`,
+        error,
+      );
+    }
+  }
+
+  private getClearEvictionPendingOp(
+    type: SourceBufferName,
+    onClear?: () => void,
+  ): BufferOperation {
     return {
       label: 'clear',
       execute: () => {
         this._quotaEvictionPending[type] = false;
+        onClear?.();
         this.shiftAndExecuteNext(type);
       },
       onStart: () => {},
