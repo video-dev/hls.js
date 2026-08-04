@@ -416,7 +416,7 @@ export function mapFragmentIntersection(
   const newFrags = newDetails.fragmentHint
     ? newDetails.fragments.concat(newDetails.fragmentHint)
     : newDetails.fragments;
-  const oldFrags = oldDetails.fragmentHint
+  const oldFrags = oldDetails.fragmentHint?.duration
     ? oldDetails.fragments.concat(oldDetails.fragmentHint)
     : oldDetails.fragments;
 
