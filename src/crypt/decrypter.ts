@@ -60,8 +60,12 @@ export default class Decrypter {
     }
     const data = new Uint8Array(currentResult);
     this.reset();
-    if (this.decryptRange) {
-      return data.slice(this.decryptRange.start, this.decryptRange.end);
+    const decryptRange = this.decryptRange;
+    if (decryptRange) {
+      if (decryptRange.start === 0 && decryptRange.end >= data.length) {
+        return data;
+      }
+      return data.slice(decryptRange.start, decryptRange.end);
     }
     return removePadding(data);
   }
