@@ -7,7 +7,11 @@ import {
   HlsUrlParameters,
   type Level,
 } from '../types/level';
-import { getRetryDelay, isTimeoutError } from '../utils/error-helper';
+import {
+  getRetryDelay,
+  isTimeoutError,
+  offlineHttpStatus,
+} from '../utils/error-helper';
 import { computeReloadInterval, mergeDetails } from '../utils/level-helper';
 import { Logger } from '../utils/logger';
 import type Hls from '../hls';
@@ -426,20 +430,37 @@ export default class BasePlaylistController
         );
         this.loadPlaylist();
       } else {
-        const delay = getRetryDelay(retryConfig, retryCount);
+        const offlineStatus = offlineHttpStatus(errorEvent.response?.code);
         // Schedule level/track reload
         this.clearTimer();
-        this.timer = self.setTimeout(() => this.loadPlaylist(), delay);
-        this.warn(
-          `Retrying playlist loading ${retryCount + 1}/${
-            retryConfig.maxNumRetry
-          } after "${errorDetails}" in ${delay}ms`,
-        );
+        if (offlineStatus) {
+          this.log(`Waiting for connection (offline)`);
+          errorEvent.reason = 'offline';
+          this.timer = self.setTimeout(() => this.checkOfflineStatus(), 1000);
+        } else {
+          const delay = getRetryDelay(retryConfig, retryCount);
+          this.warn(
+            `Retrying playlist loading ${retryCount + 1}/${
+              retryConfig.maxNumRetry
+            } after "${errorDetails}" in ${delay}ms`,
+          );
+          this.timer = self.setTimeout(() => this.loadPlaylist(), delay);
+        }
       }
       // `levelRetry = true` used to inform other controllers that a retry is happening
       errorEvent.levelRetry = true;
       errorAction.resolved = true;
     }
     return retry;
+  }
+
+  private checkOfflineStatus() {
+    this.clearTimer();
+    if (offlineHttpStatus(0)) {
+      this.timer = self.setTimeout(() => this.checkOfflineStatus(), 1000);
+    } else {
+      this.log(`Connection restored (online)`);
+      this.loadPlaylist();
+    }
   }
 }
