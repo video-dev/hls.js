@@ -5,17 +5,58 @@ import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { logger } from '../../../src/utils/logger';
 import {
   appendUint8Array,
+  discardEPB,
   findBox,
   getSampleData,
   parseInitSegment,
+  parseSEIMessageFromNALu,
   remuxVideoOnlyIFrameMoof,
   types,
   videoOnlyInitSegment,
 } from '../../../src/utils/mp4-tools';
 import type { TrackFragmentSample } from '../../../src/remux/mp4-generator';
+import type { UserdataSample } from '../../../src/types/demuxer';
 import type { InitData } from '../../../src/utils/mp4-tools';
 
 describe('mp4-tools', function () {
+  it('preserves SEI user-data event fields and raw bytes', function () {
+    const uuid = new Uint8Array(16);
+    for (let i = 0; i < uuid.length; i++) {
+      uuid[i] = i;
+    }
+    const userDataBytes = new Uint8Array([0x68, 0xc3, 0xa9, 0x00, 0x21]);
+    const nalu = appendBytes(
+      new Uint8Array([0x06, 0x05, uuid.length + userDataBytes.length]),
+      uuid,
+      userDataBytes,
+      new Uint8Array([0x80]),
+    );
+    const samples: UserdataSample[] = [];
+
+    parseSEIMessageFromNALu(nalu, 1, 12.5, samples);
+
+    expect(samples).to.have.lengthOf(1);
+    expect(samples[0]).to.deep.equal({
+      payloadType: 5,
+      pts: 12.5,
+      uuid: '00010203-0405-0607-0809-0a0b0c0d0e0f',
+      userData: 'hé!',
+      userDataBytes,
+    });
+  });
+
+  it('removes emulation-prevention bytes without copying clear NAL units', function () {
+    const clear = new Uint8Array([0x06, 0x01, 0x02, 0x03]);
+    expect(discardEPB(clear)).to.equal(clear);
+
+    const escaped = new Uint8Array([
+      0x06, 0x00, 0x00, 0x03, 0x01, 0x00, 0x00, 0x03, 0x02,
+    ]);
+    expect(discardEPB(escaped)).to.deep.equal(
+      new Uint8Array([0x06, 0x00, 0x00, 0x01, 0x00, 0x00, 0x02]),
+    );
+  });
+
   it('reads tfhd default sample duration and size in declaration order', function () {
     const sampleData = getSampleData(
       fragmentWithTfhdDefaults(

@@ -12,6 +12,7 @@ import type { PlaylistLevelType } from './loader';
 import type { TrackSet } from './track';
 import type { ChunkMetadata } from './transmuxer';
 import type { DecryptData } from '../loader/level-key';
+import type { InitData, ParsedSampleData } from '../utils/mp4-tools';
 import type { TimestampOffset } from '../utils/timescale-conversion';
 
 export interface Remuxer {
@@ -25,6 +26,8 @@ export interface Remuxer {
     flush: boolean,
     playlistType: PlaylistLevelType,
     chunkMeta: ChunkMetadata,
+    initData?: InitData,
+    sampleData?: ParsedSampleData,
   ): RemuxerResult;
   resetInitSegment(
     initSegment: Uint8Array | undefined,
