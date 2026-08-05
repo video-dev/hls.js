@@ -1,5 +1,6 @@
 import type { ChunkMetadata } from './transmuxer';
 import type { DecryptData } from '../loader/level-key';
+import type { InitData, ParsedSampleData } from '../utils/mp4-tools';
 import type { RationalTimestamp } from '../utils/timescale-conversion';
 
 export interface Demuxer {
@@ -38,6 +39,8 @@ export interface DemuxerResult {
   videoTrack: DemuxedVideoTrackBase;
   id3Track: DemuxedMetadataTrack;
   textTrack: DemuxedUserdataTrack;
+  initData?: InitData;
+  sampleData?: ParsedSampleData;
 }
 
 export interface DemuxedTrack {
