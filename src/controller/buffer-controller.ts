@@ -1037,9 +1037,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         const mediaError = this.media?.error;
         if (
           error.name === TRACK_REMOVED_ERROR_NAME &&
-          this.sourceBufferCount === 0
+          this.sourceBufferCount === 0 &&
+          (!this.media || this.pendingTrackCount === 0)
         ) {
-          // Do nothing if sourceBuffers were removed (media is detached and append was not aborted)
+          // Do nothing if sourceBuffers were removed (media is detached or tracks resolved, and append was not aborted)
           event.errorAction = createDoNothingErrorAction(true);
         } else {
           if (isQuotaError) {

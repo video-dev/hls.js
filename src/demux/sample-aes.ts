@@ -30,6 +30,8 @@ class SampleAesDecrypter {
       this.keyData.key.buffer,
       this.keyData.iv.buffer,
       DecrypterAesMode.cbc,
+      // SAMPLE-AES blocks are not PKCS7 padded. Pass range to prevent padding removal.
+      { start: 0, end: encryptedData.byteLength },
     );
   }
 

@@ -525,8 +525,10 @@ class EMEController extends Logger implements ComponentAPI {
     const levelKey = frag.decryptdata;
     const status = this.getKeyStatus(levelKey);
     if (status === 'internal-error') {
+      // Reject for the key-load caller to report error
       const error = getKeyStatusError(status, levelKey);
-      this.handleError(error, frag);
+      error.data.frag = frag;
+      this.error(`${error.message} (${arrayToHex(levelKey.keyId || [])})`);
       return Promise.reject(error);
     }
 

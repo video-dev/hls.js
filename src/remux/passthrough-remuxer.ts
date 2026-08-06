@@ -6,11 +6,12 @@ import { ElementaryStreamTypes } from '../loader/fragment';
 import { getCodecCompatibleName } from '../utils/codecs';
 import { type ILogger, Logger } from '../utils/logger';
 import {
+  getSampleData,
+  parseInitSegment,
   patchEncyptionData,
   remuxVideoOnlyIFrameMoof,
   videoOnlyInitSegment,
 } from '../utils/mp4-tools';
-import { getSampleData, parseInitSegment } from '../utils/mp4-tools';
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { DecryptData } from '../loader/level-key';
@@ -34,6 +35,7 @@ import type {
   IFrameDurationRewrite,
   InitData,
   InitDataTrack,
+  ParsedSampleData,
   TrackTimes,
 } from '../utils/mp4-tools';
 import type { TimestampOffset } from '../utils/timescale-conversion';
@@ -50,6 +52,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
   private isVideoContiguous: boolean = false;
   private videoOnlyRemux: boolean = false;
   private decryptdata: DecryptData | null = null;
+  private pendingInitSegment?: Uint8Array<ArrayBuffer>;
 
   constructor(
     observer: HlsEventEmitter,
@@ -97,13 +100,17 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     this.audioCodec = audioCodec;
     this.videoCodec = videoCodec;
     this.decryptdata = decryptdata;
-    this.generateInitSegment(initSegment, decryptdata);
+    this.pendingInitSegment = initSegment;
+    this.videoOnlyRemux = false;
+    this.initTracks = undefined;
+    this.initData = undefined;
     this.emitInitSegment = true;
   }
 
   private generateInitSegment(
     initSegment: Uint8Array<ArrayBuffer> | undefined,
     decryptdata?: DecryptData | null,
+    parsedInitData?: InitData,
   ) {
     this.videoOnlyRemux = false;
     let { audioCodec, videoCodec } = this;
@@ -112,7 +119,8 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       this.initData = undefined;
       return;
     }
-    const { audio, video } = (this.initData = parseInitSegment(initSegment));
+    const { audio, video } = (this.initData =
+      parsedInitData || parseInitSegment(initSegment));
 
     if (decryptdata) {
       patchEncyptionData(initSegment, decryptdata);
@@ -185,6 +193,8 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     flush: boolean,
     playlistType: PlaylistLevelType,
     chunkMeta: ChunkMetadata,
+    parsedInitData?: InitData,
+    parsedSampleData?: ParsedSampleData,
   ): RemuxerResult {
     let { initPTS, lastEndTime } = this;
     const result: RemuxerResult = {
@@ -207,6 +217,16 @@ class PassThroughRemuxer extends Logger implements Remuxer {
     const data = videoTrack.samples;
     if (!data.length) {
       return result;
+    }
+
+    const pendingInitSegment = this.pendingInitSegment;
+    if (pendingInitSegment) {
+      this.pendingInitSegment = undefined;
+      this.generateInitSegment(
+        pendingInitSegment,
+        this.decryptdata,
+        parsedInitData,
+      );
     }
 
     const initSegment: InitSegmentData = {
@@ -251,7 +271,12 @@ class PassThroughRemuxer extends Logger implements Remuxer {
       this.emitInitSegment = false;
     }
 
-    const trackSampleData = getSampleData(data, initData, chunkMeta, this);
+    const includeSampleDetails = __USE_IFRAMES__ && chunkMeta.iframe;
+    const trackSampleData =
+      parsedSampleData &&
+      (!includeSampleDetails || parsedSampleData.includeSampleDetails)
+        ? parsedSampleData.tracks
+        : getSampleData(data, initData, chunkMeta, this, includeSampleDetails);
     const audioSampleTimestamps = initData.audio
       ? trackSampleData[initData.audio.id]
       : null;
