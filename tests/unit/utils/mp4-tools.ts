@@ -390,7 +390,7 @@ describe('mp4-tools', function () {
         new Uint8Array([0x75, 0x72, 0x6e, 0x3a, 0x61]),
       ),
     );
-    expect(emsg.schemeIdUri).to.equal('urn:a');
+    expect(emsg.schemeIdUri).to.equal('');
     expect(emsg.value).to.equal('');
   });
 
@@ -407,8 +407,9 @@ describe('mp4-tools', function () {
         new Uint8Array([0x31]),
       ),
     );
+    // The fields the box did carry are kept, the unterminated value is not
     expect(emsg.schemeIdUri).to.equal('https://aomedia.org/emsg/ID3\0');
-    expect(emsg.value).to.equal('1');
+    expect(emsg.value).to.equal('');
     expect(emsg.timeScale).to.equal(90000);
     expect(emsg.presentationTime).to.equal(900000);
     expect(emsg.eventDuration).to.equal(180000);
@@ -426,8 +427,9 @@ describe('mp4-tools', function () {
         new Uint8Array([0x31]),
       ),
     );
-    expect(emsg.schemeIdUri).to.equal('https://aomedia.org/emsg/ID3\0');
-    expect(emsg.value).to.equal('1');
+    // Nothing in a version 0 box precedes its strings, so nothing is usable
+    expect(emsg.schemeIdUri).to.equal('');
+    expect(emsg.value).to.equal('');
     expect(emsg.timeScale).to.equal(0);
     expect(emsg.presentationTimeDelta).to.equal(0);
     expect(emsg.eventDuration).to.equal(0);

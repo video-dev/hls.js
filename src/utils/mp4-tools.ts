@@ -95,17 +95,18 @@ function readUint64(buffer: Uint8Array, offset: number) {
   return result;
 }
 
-// Returns a null-terminated string including its terminator, or the remaining
-// bytes when the buffer ends before the terminator.
-function readCString(buffer: Uint8Array, offset: number): string {
+// Returns a null-terminated string including its terminator, or null when the
+// buffer ends before the terminator. Callers advance by the returned length;
+// an unterminated string consumes the rest of the buffer.
+function readCString(buffer: Uint8Array, offset: number): string | null {
   let result = '';
   for (let i = offset; i < buffer.length; i++) {
     result += String.fromCharCode(buffer[i]);
     if (buffer[i] === 0) {
-      break;
+      return result;
     }
   }
-  return result;
+  return null;
 }
 
 function readSint32(buffer: Uint8Array, offset: number): number {
@@ -2013,20 +2014,27 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
   let offset: number = 4;
 
   if (version === 0) {
-    schemeIdUri = readCString(data, offset);
-    offset += schemeIdUri.length;
+    const scheme = readCString(data, offset);
+    const schemeValue =
+      scheme !== null ? readCString(data, offset + scheme.length) : null;
 
-    value = readCString(data, offset);
-    offset += value.length;
+    if (scheme !== null && schemeValue !== null) {
+      schemeIdUri = scheme;
+      value = schemeValue;
+      offset += scheme.length + schemeValue.length;
 
-    timeScale = readUint32(data, offset);
-    offset += 4;
-    presentationTimeDelta = readUint32(data, offset);
-    offset += 4;
-    eventDuration = readUint32(data, offset);
-    offset += 4;
-    id = readUint32(data, offset);
-    offset += 4;
+      timeScale = readUint32(data, offset);
+      offset += 4;
+      presentationTimeDelta = readUint32(data, offset);
+      offset += 4;
+      eventDuration = readUint32(data, offset);
+      offset += 4;
+      id = readUint32(data, offset);
+      offset += 4;
+    } else {
+      // The box ends inside a string, so every field of the box follows it
+      offset = data.length;
+    }
   } else if (version === 1) {
     timeScale = readUint32(data, offset);
     offset += 4;
@@ -2047,11 +2055,21 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
     id = readUint32(data, offset);
     offset += 4;
 
-    schemeIdUri = readCString(data, offset);
-    offset += schemeIdUri.length;
+    const scheme = readCString(data, offset);
+    const schemeValue =
+      scheme !== null ? readCString(data, offset + scheme.length) : null;
 
-    value = readCString(data, offset);
-    offset += value.length;
+    if (scheme !== null) {
+      schemeIdUri = scheme;
+      offset += scheme.length;
+    }
+    if (schemeValue !== null) {
+      value = schemeValue;
+      offset += schemeValue.length;
+    } else {
+      // The box ends inside a string, so it carries no payload
+      offset = data.length;
+    }
   }
   const payload = data.subarray(offset, data.byteLength);
 
