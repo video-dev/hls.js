@@ -283,6 +283,8 @@ function setupGlobals() {
   self.toggleTab = toggleTab;
   self.toggleTabClick = toggleTabClick;
   self.applyConfigEditorValue = applyConfigEditorValue;
+  self.applyBufferSkipRanges = applyBufferSkipRanges;
+  self.clearBufferSkipRanges = clearBufferSkipRanges;
 }
 
 function trimArray(target, limit) {
@@ -402,6 +404,16 @@ function loadSelectedStream() {
   });
   hls.on(Hls.Events.BUFFER_RESET, function () {
     clearInterval(hls.bufferTimer);
+  });
+
+  hls.on(Hls.Events.BUFFER_SKIP_RANGES_UPDATED, function (eventName, data) {
+    updateBufferSkipRangeInfo(data.skipRanges);
+  });
+
+  hls.on(Hls.Events.BUFFER_SKIP_RANGE_SKIPPED, function (eventName, data) {
+    logStatus(
+      `Skipped buffer skip range [${data.skipRange.start.toFixed(3)}-${data.skipRange.end.toFixed(3)}]: currentTime ${data.currentTime.toFixed(3)} -> ${data.targetTime.toFixed(3)}`
+    );
   });
 
   hls.on(Hls.Events.FRAG_PARSING_INIT_SEGMENT, function (eventName, data) {
@@ -1117,6 +1129,14 @@ function checkBuffer() {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     const pos = video.currentTime;
     let bufferLen = 0;
+    // Shade the ranges hls.js was told not to buffer in red, so the deliberate holes are legible
+    const skipRanges = (hls && hls.bufferSkipRanges) || [];
+    ctx.fillStyle = 'darkred';
+    for (let i = 0; i < skipRanges.length; i++) {
+      const start = (skipRanges[i].start / seekableEnd) * canvas.width;
+      const end = (skipRanges[i].end / seekableEnd) * canvas.width;
+      ctx.fillRect(start, 0, Math.max(2, end - start), canvas.height);
+    }
     ctx.fillStyle = 'gray';
     for (let i = 0; i < r.length; i++) {
       const start = (r.start(i) / seekableEnd) * canvas.width;
@@ -1125,6 +1145,22 @@ function checkBuffer() {
       if (pos >= r.start(i) && pos < r.end(i)) {
         // play position is inside this buffer TimeRange, retrieve end of buffer position and buffer length
         bufferLen = r.end(i) - pos;
+      }
+    }
+    // Media can only be dropped a whole segment at a time, so a segment that only partially
+    // overlaps a skip range stays buffered. Mark where buffered media lies inside a declared
+    // range - the kept portion of those straddling segments, which playback will jump over.
+    ctx.fillStyle = 'orange';
+    for (let i = 0; i < r.length; i++) {
+      for (let j = 0; j < skipRanges.length; j++) {
+        const overlapStart = Math.max(r.start(i), skipRanges[j].start);
+        const overlapEnd = Math.min(r.end(i), skipRanges[j].end);
+        if (overlapEnd <= overlapStart) {
+          continue;
+        }
+        const start = (overlapStart / seekableEnd) * canvas.width;
+        const end = (overlapEnd / seekableEnd) * canvas.width;
+        ctx.fillRect(start, 2, Math.max(2, end - start), 11);
       }
     }
     // check if we are in buffering / or playback ended state
@@ -1760,6 +1796,57 @@ function applyConfigEditorValue() {
   hlsjsConfig = getEditorValue({ parse: true });
   updatePermalink(false);
   loadSelectedStream();
+}
+
+// Parse "3560-3600, 4200-4260" into [{start, end}, ...]
+function parseBufferSkipRanges(value) {
+  return value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const bounds = part.split('-').map((n) => parseFloat(n.trim()));
+      if (bounds.length !== 2 || bounds.some((n) => !isFinite(n))) {
+        throw new Error(`"${part}" is not a "start-end" range`);
+      }
+      return { start: bounds[0], end: bounds[1] };
+    });
+}
+
+function applyBufferSkipRanges() {
+  if (!hls) {
+    return;
+  }
+  const value = $('#buffer_skip_ranges').val() || '';
+  let ranges;
+  try {
+    ranges = parseBufferSkipRanges(value);
+  } catch (error) {
+    logStatus(`Buffer skip ranges: ${error.message}`);
+    return;
+  }
+  hls.bufferSkipRanges = ranges;
+  updateBufferSkipRangeInfo(hls.bufferSkipRanges);
+}
+
+function clearBufferSkipRanges() {
+  if (!hls) {
+    return;
+  }
+  $('#buffer_skip_ranges').val('');
+  hls.bufferSkipRanges = [];
+  updateBufferSkipRangeInfo([]);
+}
+
+function formatBufferRanges(ranges) {
+  return ranges.length
+    ? ranges.map((r) => `[${r.start.toFixed(3)}-${r.end.toFixed(3)}]`).join(' ')
+    : 'none';
+}
+
+function updateBufferSkipRangeInfo(skipRanges) {
+  logStatus(`Buffer skip ranges: ${formatBufferRanges(skipRanges)}`);
+  $('#buffer_skip_ranges_applied').text(formatBufferRanges(skipRanges));
 }
 
 function createfMP4(type) {

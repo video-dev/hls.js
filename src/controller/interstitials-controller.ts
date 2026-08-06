@@ -25,6 +25,7 @@ import {
   TimelineOccupancy,
 } from '../loader/interstitial-event';
 import { BufferHelper } from '../utils/buffer-helper';
+import { joinedBufferInfo } from '../utils/buffer-skip-ranges';
 import {
   addEventListener,
   removeEventListener,
@@ -2114,10 +2115,13 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
       return;
     }
     // Find when combined forward buffer change reaches next schedule segment
-    const bufferInfo = BufferHelper.bufferInfo(
+    const { hls } = this;
+    const bufferInfo = joinedBufferInfo(
       this.primaryMedia,
       this.timelinePos,
       0,
+      hls.bufferSkipRanges,
+      hls.config,
     );
     if (starved) {
       this.bufferedPos = this.timelinePos;

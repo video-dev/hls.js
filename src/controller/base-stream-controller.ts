@@ -23,6 +23,14 @@ import TaskLoop from '../task-loop';
 import { PlaylistLevelType } from '../types/loader';
 import { ChunkMetadata } from '../types/transmuxer';
 import { BufferHelper } from '../utils/buffer-helper';
+import {
+  calculateSkippedDuration,
+  fragmentIsSkipped,
+  skipAwareBufferInfo,
+  skippedFragmentRanges,
+  skipRangesToString,
+  skipRangeTolerance,
+} from '../utils/buffer-skip-ranges';
 import { alignStream } from '../utils/discontinuities';
 import {
   getAesModeFromFullSegmentMethod,
@@ -59,6 +67,7 @@ import type { NetworkComponentAPI } from '../types/component-api';
 import type {
   BufferAppendingData,
   BufferFlushingData,
+  BufferSkipRangesUpdatedData,
   ErrorData,
   FragLoadedData,
   KeyLoadedData,
@@ -69,7 +78,11 @@ import type {
 } from '../types/events';
 import type { Level } from '../types/level';
 import type { InitSegmentData, RemuxedTrack } from '../types/remuxer';
-import type { Bufferable, BufferInfo } from '../utils/buffer-helper';
+import type {
+  Bufferable,
+  BufferInfo,
+  BufferTimeRange,
+} from '../utils/buffer-helper';
 import type { TimestampOffset } from '../utils/timescale-conversion';
 
 type ResolveFragLoaded = (FragLoadedEndData) => void;
@@ -153,6 +166,7 @@ export default class BaseStreamController
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.on(Events.BUFFER_SKIP_RANGES_UPDATED, this.onSkipRangesUpdated, this);
     hls.on(Events.ERROR, this.onError, this);
   }
 
@@ -162,8 +176,53 @@ export default class BaseStreamController
     hls.off(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.MANIFEST_LOADED, this.onManifestLoaded, this);
+    hls.off(Events.BUFFER_SKIP_RANGES_UPDATED, this.onSkipRangesUpdated, this);
     hls.off(Events.ERROR, this.onError, this);
   }
+
+  /**
+   * Stop loading media inside skipped ranges, remove skipped fragments in the
+   * fragment tracker, and flush buffered ranges that are skipped.
+   */
+  protected onSkipRangesUpdated(
+    event: Events.BUFFER_SKIP_RANGES_UPDATED,
+    data: BufferSkipRangesUpdatedData,
+  ) {
+    const details = this.getLevelDetails();
+    const skippedRanges = details
+      ? skippedFragmentRanges(
+          data.skipRanges,
+          details.fragments,
+          skipRangeTolerance(this.config),
+        )
+      : [];
+    if (!skippedRanges.length) {
+      return;
+    }
+    const { fragCurrent } = this;
+    if (fragCurrent && this.isSkippedFragment(fragCurrent)) {
+      this.log(
+        `Aborting ${fragCurrent.type} sn: ${fragCurrent.sn} load within new buffer skip range`,
+      );
+      this.abortCurrentFrag();
+      this.resetLoadingState();
+    }
+    skippedRanges.forEach(({ start, end }) => {
+      this.fragmentTracker.removeFragmentsInRange(
+        start,
+        end,
+        this.playlistType,
+        false,
+        true,
+      );
+      this.flushSkipRange(start, end);
+    });
+    this.log(
+      `Buffer skip ranges ${skipRangesToString(data.skipRanges)} in effect as ${skipRangesToString(skippedRanges)}`,
+    );
+  }
+
+  protected flushSkipRange(startOffset: number, endOffset: number): void {}
 
   protected doTick() {
     this.onTickEnd();
@@ -1424,13 +1483,24 @@ export default class BaseStreamController
     return this.getFwdBufferInfoAtPos(bufferable, pos, type, maxBufferHole);
   }
 
+  protected get skipRanges(): BufferTimeRange[] {
+    return this.hls?.bufferSkipRanges ?? [];
+  }
+
   protected getFwdBufferInfoAtPos(
     bufferable: Bufferable | null,
     pos: number,
     type: PlaylistLevelType,
     maxBufferHole: number,
   ): BufferInfo | null {
-    const bufferInfo = BufferHelper.bufferInfo(bufferable, pos, maxBufferHole);
+    const skipRanges = this.skipRanges;
+    const bufferInfo = skipAwareBufferInfo(
+      bufferable,
+      pos,
+      maxBufferHole,
+      skipRanges,
+      this.config,
+    );
     // Workaround flaw in getting forward buffer when maxBufferHole is smaller than gap at current pos
     if (bufferInfo.len === 0 && bufferInfo.nextStart !== undefined) {
       const bufferedFragAtPos = this.fragmentTracker.getBufferedFrag(pos, type);
@@ -1442,7 +1512,13 @@ export default class BaseStreamController
           Math.min(bufferInfo.nextStart, bufferedFragAtPos.end) - pos,
           maxBufferHole,
         );
-        return BufferHelper.bufferInfo(bufferable, pos, gapDuration);
+        return skipAwareBufferInfo(
+          bufferable,
+          pos,
+          gapDuration,
+          skipRanges,
+          this.config,
+        );
       }
     }
     return bufferInfo;
@@ -1471,11 +1547,14 @@ export default class BaseStreamController
     if (nextStart && selected.start > nextStart) {
       const bufferedRanges = bufferInfo.buffered;
       if (bufferedRanges) {
+        const skipRanges = this.skipRanges;
         let fullBufferLength = bufferInfo.len;
         const bufferedIndex = bufferInfo.bufferedIndex;
         for (let i = bufferedRanges.length - 1; i > bufferedIndex; i--) {
-          if (bufferedRanges[i].start < selected.start) {
-            fullBufferLength += bufferedRanges[i].end - bufferedRanges[i].start;
+          const { start, end } = bufferedRanges[i];
+          if (start < selected.start) {
+            fullBufferLength +=
+              end - start - calculateSkippedDuration(skipRanges, start, end);
           }
         }
         return fullBufferLength >= maxBufLen;
@@ -1606,6 +1685,9 @@ export default class BaseStreamController
         : levelDetails.fragmentEnd;
       frag = this.getFragmentAtPosition(pos, end, levelDetails);
     }
+    while (frag && this.isSkippedFragment(frag)) {
+      frag = getNextFrag(levelDetails, frag.sn, this.loadingParts);
+    }
     let programFrag = this.filterReplacedPrimary(frag, levelDetails);
     if (!programFrag && frag) {
       programFrag = getNextFrag(levelDetails, frag.sn, this.loadingParts);
@@ -1614,6 +1696,20 @@ export default class BaseStreamController
       }
     }
     return programFrag;
+  }
+
+  protected isSkippedFragment(frag: Fragment): boolean {
+    const skipRanges = this.skipRanges;
+    return (
+      skipRanges.length > 0 &&
+      isMediaFragment(frag) &&
+      fragmentIsSkipped(
+        skipRanges,
+        frag.start,
+        frag.end,
+        skipRangeTolerance(this.config),
+      )
+    );
   }
 
   protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean {

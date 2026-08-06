@@ -33,6 +33,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`loopBackBufferFlush`](#loopbackbufferflush)
   - [`startOnSegmentBoundary`](#startonsegmentboundary)
   - [`maxBufferSize`](#maxbuffersize)
+  - [`bufferSkipRangeTolerance`](#bufferskiprangetolerance)
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
   - [`maxLoadingDelay`](#maxloadingdelay)
@@ -179,6 +180,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.resumeBuffering()`](#hlsresumebuffering)
   - [`hls.bufferingEnabled`](#hlsbufferingenabled)
   - [`hls.bufferedToEnd`](#hlsbufferedtoend)
+  - [`hls.bufferSkipRanges`](#hlsbufferskipranges)
   - [`hls.inFlightFragments`](#hlsinflightfragments)
   - [`hls.url`](#hlsurl)
 - [Audio Tracks Control API](#audio-tracks-control-api)
@@ -464,6 +466,7 @@ var config = {
   frontBufferFlushThreshold: Infinity,
   maxBufferSize: 60 * 1000 * 1000,
   maxBufferHole: 0.1,
+  bufferSkipRangeTolerance: 0.1,
   highBufferWatchdogPeriod: 2,
   nudgeOffset: 0.1,
   nudgeMaxRetry: 3,
@@ -667,6 +670,16 @@ Setting this to `true` may increase initial live playback latency slightly, but 
 (default: 60 MB)
 
 'Minimum' maximum buffer size in bytes. If buffer size upfront is bigger than this value, no fragment will be loaded.
+
+### `bufferSkipRangeTolerance`
+
+(default: `0.1` seconds)
+
+How far, in seconds, a segment may extend outside a range in [`hls.bufferSkipRanges`](#hlsbufferskipranges) and still be excluded from buffering. Media can only be dropped a whole segment at a time, and a segment the range only partially covers is buffered in full — this tolerance decides where "partially covers" ends.
+
+At the default, only segments lying wholly inside a range are dropped (the 0.1s absorbs segment-timestamp jitter), so the segments straddling a range's edges stay loaded: nothing the application still wants is lost, and the position playback resumes at is always buffered. A range narrower than the segments it lands in covers no whole segment, so nothing is dropped — the playhead is still moved over it.
+
+Raising the tolerance drops boundary segments that mostly lie inside a range — with 6-second segments, `4` drops a boundary segment carrying up to 4 seconds of wanted media. That saves bandwidth at the cost of losing up to `bufferSkipRangeTolerance` seconds of wanted media at each edge; the playhead jump widens to match the resulting hole. A segment carrying no skipped media is never dropped, however large the tolerance.
 
 ### `maxBufferHole`
 
@@ -2186,6 +2199,52 @@ get : Returns a boolean indicating whether fragment loading has been toggled wit
 
 get : Returns a boolean indicating if EOS has been appended (media is buffered from currentTime to end of stream).
 
+### `hls.bufferSkipRanges`
+
+get / set : Time ranges, in media timeline seconds, that HLS.js should not buffer.
+
+Use this when the application knows about breaks in the media it is going to seek over — an ad-break it will play and then jump past, for example. Without it, HLS.js fills its forward buffer contiguously and spends that buffer on media that will never be played, so the eventual seek rebuffers. Useful for skipping already watched adbreaks, skipping intro/credits scenes, etc without needing manual seeking into unbuffered time ranges or loading media in ranges that you're intending to seek past.
+
+```js
+// Play the break at 3500-3560, then resume at 3600 with no rebuffer
+hls.bufferSkipRanges = [{ start: 3560, end: 3600 }];
+```
+
+With the range declared, HLS.js:
+
+- buffers up to the start of each range, resumes at its end, and keeps filling to `maxBufferLength` across the gap;
+- flushes media already buffered inside a range, and aborts an in-flight fragment that falls inside one;
+- moves the playhead over each range when playback reaches it — and re-targets a seek that lands inside one to the range end, since the media there will never be loaded — firing [`BUFFER_SKIP_RANGE_SKIPPED`](#runtime-events) rather than a stall or seek-over-hole error. While the video element is paused the playhead is never moved: a paused scrub into a range stays where it landed, and is re-targeted when playback resumes.
+
+Ranges are normalized on assignment: invalid, zero-width and non-finite ranges are dropped, and overlapping ones are merged. Assign `[]` (the default) to restore normal contiguous buffering.
+
+Two things to watch:
+
+- **`loadSource()` resets this to `[]`.** Assign _after_ calling it, not before — ranges set for a source that is about to be replaced are discarded silently.
+
+  ```js
+  hls.bufferSkipRanges = [{ start: 60, end: 120 }]; // discarded
+  hls.loadSource(url);
+
+  hls.loadSource(url);
+  hls.bufferSkipRanges = [{ start: 60, end: 120 }]; // applied
+  ```
+
+- **The getter returns the live array, not a copy** — it is read every tick by each stream controller. Treat it as read-only: `hls.bufferSkipRanges.push(...)` bypasses normalization and leaves HLS.js unaware of the change. Assign a new array instead.
+
+Ranges are honored at segment granularity: a segment a range only partially covers is buffered in full, so the media either side of a range — including the resume position — stays playable. [`bufferSkipRangeTolerance`](#bufferskiprangetolerance) tunes how much of a segment may lie outside a range before it must be kept.
+
+The buffer-length settings keep their meaning: [`maxBufferLength`](#maxbufferlength), [`maxMaxBufferLength`](#maxmaxbufferlength), [`backBufferLength`](#backbufferlength) and [`frontBufferFlushThreshold`](#frontbufferflushthreshold) are all measured in media that will actually be played, so a declared range contributes nothing towards them. With `maxBufferLength: 30` and a 60-second range ahead, HLS.js still buffers 30 seconds of playable media — 10 seconds before the range and 20 after it, for example. Likewise `backBufferLength: 15` retains 15 seconds of played media, stepping back over a range rather than letting it consume the whole back buffer. The buffered media immediately following a declared range — the resume buffer playback lands in when the range is jumped — is never front-flushed, however far back the playhead moves. Assigning `bufferSkipRanges` re-evaluates these retention targets immediately — clearing a range releases the extra media that was retained on its far side.
+
+Boundaries can be derived from the segment list, which is what makes them line up with what can actually be dropped:
+
+```js
+const fragments = hls.levels[hls.loadLevel].details.fragments;
+// ...pick fragment start/end times around the break
+```
+
+Note that moving the playhead is a seek, not a gapless transition: the network rebuffer is eliminated, but the decode pipeline is still flushed at the jump.
+
 ### `hls.inFlightFragments`
 
 get: Returns an object with each streaming controller's state and in-flight fragment (or null).
@@ -2686,6 +2745,10 @@ Full list of Events is available below:
   - data: { startOffset, endOffset, type: SourceBufferName }
 - `Hls.Events.BUFFER_FLUSHED` - fired when the media buffer has been flushed
   - data: { type: SourceBufferName }
+- `Hls.Events.BUFFER_SKIP_RANGES_UPDATED` - fired when [`hls.bufferSkipRanges`](#hlsbufferskipranges) is assigned
+  - data: { skipRanges: BufferTimeRange[] }
+- `Hls.Events.BUFFER_SKIP_RANGE_SKIPPED` - fired when the playhead is moved over a declared buffer skip range
+  - data: { skipRange: BufferTimeRange, currentTime: number, targetTime: number }
 - `Hls.Events.BACK_BUFFER_REACHED` - fired when the back buffer is reached as defined by the [backBufferLength](#backbufferlength) config option
   - data: { bufferEnd: number }
 - `Hls.Events.MANIFEST_LOADING` - fired to signal that a manifest loading starts

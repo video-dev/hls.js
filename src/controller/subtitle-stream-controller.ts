@@ -10,7 +10,7 @@ import {
 } from '../loader/fragment';
 import { Level } from '../types/level';
 import { PlaylistLevelType } from '../types/loader';
-import { BufferHelper } from '../utils/buffer-helper';
+import { skipAwareBufferInfo } from '../utils/buffer-skip-ranges';
 import { alignStream } from '../utils/discontinuities';
 import {
   getAesModeFromFullSegmentMethod,
@@ -186,9 +186,12 @@ export class SubtitleStreamController
       data.endOffsetSubtitles = Math.max(0, endOffsetSubtitles);
       this.tracksBuffered.forEach((buffered) => {
         if (!buffered) return;
+        // Appends after a backward seek leave this out of order, and the loop below stops at the
+        // first range past the flush point. Measurement used to sort it in place; it now copies.
+        buffered.sort((a, b) => a.start - b.start || b.end - a.end);
         for (let i = 0; i < buffered.length; ) {
           if (buffered[i].end <= endOffsetSubtitles) {
-            buffered.shift();
+            buffered.splice(i, 1);
             continue;
           } else if (buffered[i].start < endOffsetSubtitles) {
             buffered[i].start = endOffsetSubtitles;
@@ -438,10 +441,12 @@ export class SubtitleStreamController
       }
       const { config } = this;
       const currentTime = this.playhead;
-      const bufferedInfo = BufferHelper.bufferedInfo(
-        this.tracksBuffered[this.currentTrackId] || [],
+      const bufferedInfo = skipAwareBufferInfo(
+        this.mediaBufferTimeRanges,
         currentTime,
         config.maxBufferHole,
+        this.skipRanges,
+        config,
       );
       const { end: targetBufferTime, len: bufferLen } = bufferedInfo;
       const maxBufLen = Math.max(

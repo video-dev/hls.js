@@ -7,6 +7,12 @@ import { DEFAULT_TARGET_DURATION } from '../loader/level-details';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper, type BufferTimeRange } from '../utils/buffer-helper';
 import {
+  calculateSkippedDuration,
+  calculateTargetBackBufferPosition,
+  skipRangeAt,
+  skipRangeTolerance,
+} from '../utils/buffer-skip-ranges';
+import {
   areCodecsMediaSourceSupported,
   getCodecCompatibleName,
   pickMostCompleteCodecName,
@@ -192,6 +198,11 @@ export default class BufferController extends Logger implements ComponentAPI {
     hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.on(Events.FRAG_PARSED, this.onFragParsed, this);
     hls.on(Events.FRAG_CHANGED, this.onFragChanged, this);
+    hls.on(
+      Events.BUFFER_SKIP_RANGES_UPDATED,
+      this.onBufferSkipRangesUpdated,
+      this,
+    );
     hls.on(Events.ERROR, this.onError, this);
   }
 
@@ -209,6 +220,11 @@ export default class BufferController extends Logger implements ComponentAPI {
     hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.off(Events.FRAG_PARSED, this.onFragParsed, this);
     hls.off(Events.FRAG_CHANGED, this.onFragChanged, this);
+    hls.off(
+      Events.BUFFER_SKIP_RANGES_UPDATED,
+      this.onBufferSkipRangesUpdated,
+      this,
+    );
     hls.off(Events.ERROR, this.onError, this);
   }
 
@@ -1200,6 +1216,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     });
   }
 
+  private onBufferSkipRangesUpdated() {
+    const { frontBufferFlushThreshold, backBufferLength } = this.hls.config;
+    this.trimBuffers(frontBufferFlushThreshold, backBufferLength);
+  }
+
   private onFragChanged(event: Events.FRAG_CHANGED, data: FragChangedData) {
     const config: Readonly<HlsConfig> = this.hls?.config;
     if (!config) {
@@ -1487,13 +1508,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         ? config.liveBackBufferLength
         : backBufferLength;
 
-    let targetBackBufferPosition = -Infinity;
-    if (Number.isFinite(backBufferLength) && backBufferLength >= 0) {
-      const maxBackBufferLength = Math.max(backBufferLength, targetDuration);
-      targetBackBufferPosition =
-        Math.floor(currentTime / targetDuration) * targetDuration -
-        maxBackBufferLength;
-    }
+    let targetBackBufferPosition = calculateTargetBackBufferPosition(
+      currentTime,
+      targetDuration,
+      backBufferLength,
+      hls.bufferSkipRanges,
+    );
 
     // For looped media with a quality upgrade, extend the flush position
     // to remove lower-quality segments from the back buffer.
@@ -1641,6 +1661,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     targetDuration: number,
     targetFrontBufferPosition: number,
   ) {
+    const { config, bufferSkipRanges } = this.hls;
+    const skipTolerance = skipRangeTolerance(config);
     this.sourceBuffers.forEach(([type, sb]) => {
       if (sb) {
         const buffered = BufferHelper.getBuffered(sb);
@@ -1651,9 +1673,15 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         }
         const bufferStart = buffered.start(numBufferedRanges - 1);
         const bufferEnd = buffered.end(numBufferedRanges - 1);
+        if (skipRangeAt(bufferSkipRanges, bufferStart, skipTolerance)) {
+          return;
+        }
         // No flush if we can tolerate the current buffer length or the current buffer range we would flush is contiguous with current position
+        const adjustedTargetFrontBufferPosition =
+          targetFrontBufferPosition +
+          calculateSkippedDuration(bufferSkipRanges, currentTime, bufferStart);
         if (
-          targetFrontBufferPosition > bufferStart ||
+          adjustedTargetFrontBufferPosition > bufferStart ||
           (currentTime >= bufferStart && currentTime <= bufferEnd)
         ) {
           return;

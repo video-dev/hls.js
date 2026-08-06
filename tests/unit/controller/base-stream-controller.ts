@@ -60,6 +60,13 @@ type BaseStreamControllerTestable = Omit<
   fragPrevious: MediaFragment | null;
   tickImmediate: () => void;
   hls: Hls;
+  getNextFragment: (
+    pos: number,
+    levelDetails: LevelDetails,
+  ) => MediaFragment | null;
+  isSkippedFragment: (frag: MediaFragment) => boolean;
+  levels: any;
+  levelLastLoaded: any;
 };
 
 describe('BaseStreamController', function () {
@@ -589,6 +596,179 @@ describe('BaseStreamController', function () {
         // Both results should be valid (object or null)
         expect(result1 === null || typeof result1 === 'object').to.be.true;
         expect(result2 === null || typeof result2 === 'object').to.be.true;
+      });
+    });
+
+    describe('buffer skip ranges', function () {
+      // 5s segments from 0: [0,5] [5,10] ... [45,50]
+      function withPlaylist(endSN = 10) {
+        const details = levelDetailsWithEndSequenceVodOrLive(endSN);
+        const level = { details } as any;
+        baseStreamController.levels = [level];
+        baseStreamController.levelLastLoaded = level;
+        return details;
+      }
+
+      describe('getNextFragment', function () {
+        it('steps over the segments inside a skip range', function () {
+          const details = withPlaylist();
+          hls.bufferSkipRanges = [{ start: 10, end: 30 }];
+          const frag = baseStreamController.getNextFragment(10, details);
+          expect(frag, 'fragment selected at the range start')
+            .to.have.property('start')
+            .which.equals(30);
+        });
+
+        it('selects the straddling fragment when a range covers no whole segment', function () {
+          const details = withPlaylist();
+          hls.bufferSkipRanges = [{ start: 11, end: 14 }];
+          const frag = baseStreamController.getNextFragment(11, details);
+          expect(frag).to.have.property('start').which.equals(10);
+        });
+
+        it('steps wider with a larger bufferSkipRangeTolerance', function () {
+          const details = withPlaylist();
+          baseStreamController.config.bufferSkipRangeTolerance = 4;
+          hls.bufferSkipRanges = [{ start: 12, end: 28 }];
+          // [10,15] and [25,30] poke 2s outside the range, within the 4s tolerance
+          const frag = baseStreamController.getNextFragment(12, details);
+          expect(frag).to.have.property('start').which.equals(30);
+        });
+
+        it('does not move nextLoadPosition, which would look like loop loading', function () {
+          const details = withPlaylist();
+          hls.bufferSkipRanges = [{ start: 10, end: 30 }];
+          baseStreamController.nextLoadPosition = 10;
+          baseStreamController.getNextFragment(10, details);
+          expect(baseStreamController.nextLoadPosition).to.equal(10);
+        });
+
+        it('selects normally when no ranges are declared', function () {
+          const details = withPlaylist();
+          const frag = baseStreamController.getNextFragment(10, details);
+          expect(frag).to.have.property('start').which.equals(10);
+        });
+      });
+
+      describe('isSkippedFragment', function () {
+        it('is true only for fragments inside a range', function () {
+          const details = withPlaylist();
+          hls.bufferSkipRanges = [{ start: 10, end: 30 }];
+          const inside = details.fragments[3]; // [15,20]
+          const straddling = details.fragments[1]; // [5,10]
+          expect(baseStreamController.isSkippedFragment(inside)).to.be.true;
+          expect(baseStreamController.isSkippedFragment(straddling)).to.be
+            .false;
+        });
+
+        it('does not need a playlist', function () {
+          const details = levelDetailsWithEndSequenceVodOrLive(10);
+          hls.bufferSkipRanges = [{ start: 10, end: 30 }];
+          expect(baseStreamController.isSkippedFragment(details.fragments[3]))
+            .to.be.true;
+        });
+
+        it('admits boundary fragments within bufferSkipRangeTolerance', function () {
+          const details = withPlaylist();
+          baseStreamController.config.bufferSkipRangeTolerance = 4;
+          hls.bufferSkipRanges = [{ start: 12, end: 28 }];
+          // [10,15] and [25,30] poke 2s outside the range, within the 4s tolerance...
+          expect(baseStreamController.isSkippedFragment(details.fragments[2]))
+            .to.be.true;
+          expect(baseStreamController.isSkippedFragment(details.fragments[5]))
+            .to.be.true;
+          // ...but [5,10] carries no skipped media at all
+          expect(baseStreamController.isSkippedFragment(details.fragments[1]))
+            .to.be.false;
+        });
+
+        it('tracks changes to fragment timings rather than caching them', function () {
+          const details = withPlaylist();
+          hls.bufferSkipRanges = [{ start: 10, end: 30 }];
+          const frag = details.fragments[5]; // [25,30]
+          expect(baseStreamController.isSkippedFragment(frag)).to.be.true;
+          // hls.js rewrites fragment timings in place once media is demuxed; at [27,32] the
+          // fragment straddles the range end and must be kept
+          frag.setStart(frag.start + 2);
+          expect(baseStreamController.isSkippedFragment(frag)).to.be.false;
+        });
+
+        it('is false when no ranges are declared', function () {
+          const details = withPlaylist();
+          expect(baseStreamController.isSkippedFragment(details.fragments[3]))
+            .to.be.false;
+        });
+      });
+
+      describe('getFwdBufferInfoAtPos', function () {
+        // Buffered either side of a declared hole: 25s of media, then 20 more past the range
+        function bufferedAcrossHole() {
+          return {
+            buffered: new TimeRangesMock([0, 25], [45, 65]),
+          } as unknown as HTMLMediaElement;
+        }
+
+        it('measures across the hole and reports only playable seconds', function () {
+          withPlaylist(20);
+          hls.bufferSkipRanges = [{ start: 25, end: 45 }];
+          const info = baseStreamController.getFwdBufferInfoAtPos(
+            bufferedAcrossHole(),
+            10,
+            PlaylistLevelType.MAIN,
+            0.1,
+          ) as BufferInfo;
+          // end walks past the hole...
+          expect(info.end, 'end').to.equal(65);
+          expect(info.nextStart, 'nextStart').to.equal(undefined);
+          // ...but len counts 10->25 and 45->65, not 65-10
+          expect(info.len, 'len').to.equal(35);
+        });
+
+        it('leaves a genuine hole alone', function () {
+          withPlaylist(20);
+          hls.bufferSkipRanges = [{ start: 25, end: 40 }];
+          const info = baseStreamController.getFwdBufferInfoAtPos(
+            bufferedAcrossHole(),
+            10,
+            PlaylistLevelType.MAIN,
+            0.1,
+          ) as BufferInfo;
+          expect(info.end, 'end').to.equal(25);
+          expect(info.nextStart, 'nextStart').to.equal(45);
+          expect(info.len, 'len').to.equal(15);
+        });
+
+        it('behaves exactly as before when no ranges are declared', function () {
+          const info = baseStreamController.getFwdBufferInfoAtPos(
+            bufferedAcrossHole(),
+            10,
+            PlaylistLevelType.MAIN,
+            0.1,
+          ) as BufferInfo;
+          expect(info.end).to.equal(25);
+          expect(info.len).to.equal(15);
+          expect(info.nextStart).to.equal(45);
+        });
+      });
+
+      describe('_streamEnded', function () {
+        it('still reports the end of the stream across a declared hole', function () {
+          const levelDetails = levelDetailsWithEndSequenceVodOrLive(10);
+          hls.bufferSkipRanges = [{ start: 20, end: 30 }];
+          baseStreamController.media = {
+            duration: 50,
+            currentTime: 45,
+            buffered: new TimeRangesMock([0, 20], [30, 50]),
+          } as unknown as HTMLMediaElement;
+          const info = baseStreamController.getFwdBufferInfoAtPos(
+            baseStreamController.media,
+            45,
+            PlaylistLevelType.MAIN,
+            0.1,
+          ) as BufferInfo;
+          expect(baseStreamController._streamEnded(info, levelDetails)).to.be
+            .true;
+        });
       });
     });
 

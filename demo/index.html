@@ -346,6 +346,39 @@
             <span>
               <button
                 type="button"
+                class="btn btn-sm btn-info"
+                title="hls.bufferSkipRanges = [...] - time ranges hls.js must not buffer"
+                onclick="applyBufferSkipRanges()"
+              >
+                Buffer skip ranges
+              </button>
+              <input
+                type="text"
+                id="buffer_skip_ranges"
+                placeholder="3560-3600, 4200-4260"
+                style="width: 16em"
+                onkeydown="if(window.event.keyCode=='13'){applyBufferSkipRanges();}"
+              />
+              <button
+                type="button"
+                class="btn btn-sm btn-info"
+                title="hls.bufferSkipRanges = []"
+                onclick="clearBufferSkipRanges()"
+              >
+                Clear
+              </button>
+            </span>
+          </p>
+          <p>
+            <label class="innerControls">
+              Applied:&nbsp;
+              <span id="buffer_skip_ranges_applied">none</span>
+            </label>
+          </p>
+          <p>
+            <span>
+              <button
+                type="button"
                 class="btn btn-xs btn-warning"
                 title="hls.recoverMediaError()"
                 onclick="hls.recoverMediaError()"

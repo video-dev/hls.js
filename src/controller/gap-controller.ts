@@ -10,6 +10,11 @@ import TaskLoop from '../task-loop';
 import { PlaylistLevelType } from '../types/loader';
 import { BufferHelper } from '../utils/buffer-helper';
 import {
+  skipRangeAt,
+  skipRangeResumeTime,
+  skipRangeTolerance,
+} from '../utils/buffer-skip-ranges';
+import {
   addEventListener,
   removeEventListener,
 } from '../utils/event-listener-helper';
@@ -26,7 +31,7 @@ import type {
   MediaDetachingData,
 } from '../types/events';
 import type { ErrorData } from '../types/events';
-import type { BufferInfo } from '../utils/buffer-helper';
+import type { BufferInfo, BufferTimeRange } from '../utils/buffer-helper';
 
 export const MAX_START_GAP_JUMP = 2.0;
 const TICK_INTERVAL = 100;
@@ -185,6 +190,15 @@ export default class GapController extends TaskLoop {
       (media.paused && !seeking) || media.ended || media.playbackRate === 0;
 
     this.seeking = seeking;
+
+    if (
+      !media.paused &&
+      !media.ended &&
+      media.playbackRate !== 0 &&
+      this.seekOverSkipRangeIfNeeded(currentTime, seeking)
+    ) {
+      return;
+    }
 
     // The playhead is moving, no-op
     if (currentTime !== lastCurrentTime) {
@@ -381,6 +395,124 @@ export default class GapController extends TaskLoop {
         this.hls.trigger(Events.STALL_RESOLVED, {});
       }
     }
+  }
+
+  private seekOverSkipRangeIfNeeded(
+    currentTime: number,
+    seeking: boolean,
+  ): boolean {
+    const { hls, media } = this;
+    if (!hls || !media) {
+      return false;
+    }
+    const skipRange = this.skipRangeAtPlayhead(currentTime);
+    if (
+      !skipRange ||
+      (currentTime < skipRange.start &&
+        !this.outOfPlayableMedia(currentTime, seeking))
+    ) {
+      return false;
+    }
+    // `targetTime <= currentTime` is also what stops the same seek being re-issued: setting
+    // `media.currentTime` updates the property synchronously, so the next poll reads a position
+    // at the resume point and no longer matches the range it just left.
+    const targetTime =
+      skipRangeResumeTime(skipRange, media, skipRangeTolerance(hls.config)) +
+      hls.config.skipBufferHolePadding;
+    if (targetTime <= currentTime) {
+      return false;
+    }
+    this.jumpSkipRange(skipRange, currentTime, targetTime);
+    return true;
+  }
+
+  /**
+   * The declared range that covers `currentTime`, or that the playhead has come to rest against.
+   *
+   * Two independent things separate the sampled playhead from the declared range start, so the
+   * reach is their sum rather than the larger of the two:
+   *
+   * - `skipRangeTolerance` is the usual slack between a declared boundary and real media edges,
+   *   since segment alignment can carve the real hole slightly outside the declared bounds.
+   * - Playback can run dry just after a poll and sit there until the next one, so the playhead
+   *   is read up to `TICK_INTERVAL` late, plus the last frame it managed to render.
+   *
+   * Measured across three streams (including after `endOfStream()`), the worst observed
+   * shortfall was 0.11s, which the default 0.2s reach covers with room to spare.
+   */
+  private skipRangeAtPlayhead(currentTime: number): BufferTimeRange | null {
+    const hls = this.hls;
+    if (!hls?.bufferSkipRanges.length) {
+      return null;
+    }
+    return skipRangeAt(
+      hls.bufferSkipRanges,
+      currentTime,
+      skipRangeTolerance(hls.config) + TICK_INTERVAL / 1000,
+    );
+  }
+
+  /**
+   * Whether the playhead has run out of media to play and can only proceed by being moved.
+   * Measured only once a range has already been matched, so the buffer is left untouched on
+   * every tick spent nowhere near one.
+   */
+  private outOfPlayableMedia(currentTime: number, seeking: boolean): boolean {
+    const { hls, media } = this;
+    if (!hls || !media) {
+      return false;
+    }
+    const maxBufferHole = hls.config.maxBufferHole;
+    const bufferInfo = BufferHelper.bufferInfo(
+      media,
+      currentTime,
+      maxBufferHole,
+    );
+    return (
+      bufferInfo.len <= maxBufferHole ||
+      (!seeking && bufferInfo.len < 1 && media.readyState < 3)
+    );
+  }
+
+  private jumpSkipRange(
+    skipRange: BufferTimeRange,
+    currentTime: number,
+    targetTime: number,
+  ) {
+    const { hls, media } = this;
+    if (!hls || !media) {
+      return;
+    }
+    this.warn(
+      `skipping buffer skip range, adjusting currentTime from ${currentTime} to ${targetTime}`,
+    );
+    this.moved = true;
+    this.stalled = null;
+    this.skipRetry = this.nudgeRetry = 0;
+    media.currentTime = targetTime;
+    hls.trigger(Events.BUFFER_SKIP_RANGE_SKIPPED, {
+      skipRange,
+      currentTime,
+      targetTime,
+    });
+  }
+
+  /**
+   * The declared range that explains the hole ahead of `currentTime` ending at `holeEnd`, if any.
+   *
+   * A range explains the hole only when the far side of the hole is media the range itself is
+   * responsible for. A hole that continues past the range end is wanted media the loader has yet
+   * to deliver - buffering, not a declared skip - even when it happens to start at the range end.
+   */
+  private skipRangeOverHole(
+    currentTime: number,
+    holeEnd: number,
+  ): BufferTimeRange | null {
+    const hls = this.hls;
+    const range = this.skipRangeAtPlayhead(currentTime);
+    return hls && range && holeEnd <= range.end + skipRangeTolerance(hls.config)
+      ? range
+      : null;
   }
 
   private nudgeOnVideoHole(currentTime: number, lastCurrentTime: number) {
@@ -590,9 +722,12 @@ export default class GapController extends TaskLoop {
       const waiting =
         bufferInfo.len > 0 && bufferInfo.len < 1 && media.readyState < 3;
       const gapLength = startTime - currentTime;
+      // Check if a hole in the buffered media was requested by the application. If there is
+      // a skip range that covers the hole, we can jump over it without reporting an error.
+      const skipRangeOverHole = this.skipRangeOverHole(currentTime, startTime);
       if (gapLength > 0 && (bufferStarved || waiting)) {
         // Only allow large gaps to be skipped if it is a start gap, or all fragments in skip range are partial
-        if (gapLength > config.maxBufferHole) {
+        if (gapLength > config.maxBufferHole && !skipRangeOverHole) {
           let startGap = false;
           if (currentTime === 0) {
             const startFrag = fragmentTracker.getAppendedFrag(
@@ -635,9 +770,13 @@ export default class GapController extends TaskLoop {
           }
         }
         const { nudgeMaxRetry, skipBufferHolePadding } = config;
-        const fatal = ++this.skipRetry > nudgeMaxRetry;
         const targetTime =
           Math.max(startTime, currentTime) + skipBufferHolePadding;
+        if (skipRangeOverHole) {
+          this.jumpSkipRange(skipRangeOverHole, currentTime, targetTime);
+          return targetTime;
+        }
+        const fatal = ++this.skipRetry > nudgeMaxRetry;
         if (!fatal) {
           this.warn(
             `skipping hole, adjusting currentTime from ${currentTime} to ${targetTime}`,

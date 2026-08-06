@@ -196,6 +196,8 @@ export class AudioStreamController extends BaseStreamController implements Netwo
     // (undocumented)
     doTick(): void;
     // (undocumented)
+    protected flushSkipRange(startOffset: number, endOffset: number): void;
+    // (undocumented)
     protected getBufferOutput(): Bufferable | null;
     // (undocumented)
     getFwdBufferInfo(): BufferInfo | null;
@@ -493,6 +495,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected flushBufferGap(frag: Fragment): void;
     // (undocumented)
     protected flushMainBuffer(startOffset: number, endOffset: number, type?: SourceBufferName | null): void;
+    // (undocumented)
+    protected flushSkipRange(startOffset: number, endOffset: number): void;
     protected followingBufferedFrag(frag: Fragment | null): Fragment | null;
     // (undocumented)
     protected fragBufferedComplete(frag: Fragment, part: Part | null): void;
@@ -558,6 +562,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean;
     // (undocumented)
+    protected isSkippedFragment(frag: Fragment): boolean;
+    // (undocumented)
     protected keyLoader: KeyLoader;
     // (undocumented)
     protected lastCurrentTime: number;
@@ -598,6 +604,7 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected onMediaEnded: () => void;
     // (undocumented)
     protected onMediaSeeking: () => void;
+    protected onSkipRangesUpdated(event: Events.BUFFER_SKIP_RANGES_UPDATED, data: BufferSkipRangesUpdatedData): void;
     // (undocumented)
     protected onTickEnd(): void;
     // (undocumented)
@@ -635,6 +642,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected scheduleTrackSwitch(bufferInfo: BufferInfo, fetchdelay: number, okToFlushForwardBuffer: boolean): void;
     // (undocumented)
     protected setStartPosition(details: LevelDetails, sliding: number): void;
+    // (undocumented)
+    protected get skipRanges(): BufferTimeRange[];
     // (undocumented)
     protected startFragRequested: boolean;
     // (undocumented)
@@ -856,6 +865,26 @@ export type BufferInfo = {
     buffered?: BufferTimeRange[];
     bufferedIndex: number;
 };
+
+// Warning: (ae-missing-release-tag) "BufferSkipRangeSkippedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface BufferSkipRangeSkippedData {
+    // (undocumented)
+    currentTime: number;
+    // (undocumented)
+    skipRange: BufferTimeRange;
+    // (undocumented)
+    targetTime: number;
+}
+
+// Warning: (ae-missing-release-tag) "BufferSkipRangesUpdatedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface BufferSkipRangesUpdatedData {
+    // (undocumented)
+    skipRanges: BufferTimeRange[];
+}
 
 // Warning: (ae-missing-release-tag) "BufferTimeRange" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
@@ -1629,6 +1658,10 @@ export enum Events {
     // (undocumented)
     BUFFER_RESET = "hlsBufferReset",
     // (undocumented)
+    BUFFER_SKIP_RANGE_SKIPPED = "hlsBufferSkipRangeSkipped",
+    // (undocumented)
+    BUFFER_SKIP_RANGES_UPDATED = "hlsBufferSkipRangesUpdated",
+    // (undocumented)
     BUFFERED_TO_END = "hlsBufferedToEnd",
     // (undocumented)
     CUES_PARSED = "hlsCuesParsed",
@@ -2275,6 +2308,9 @@ class Hls implements HlsEventEmitter {
     set bandwidthEstimate(abrEwmaDefaultEstimate: number);
     get bufferedToEnd(): boolean;
     get bufferingEnabled(): boolean;
+    // (undocumented)
+    get bufferSkipRanges(): BufferTimeRange[];
+    set bufferSkipRanges(ranges: BufferTimeRange[] | null);
     get capLevelToPlayerSize(): boolean;
     // Warning: (ae-setter-with-docs) The doc comment for the property "capLevelToPlayerSize" must appear on the getter, not the setter.
     set capLevelToPlayerSize(shouldStartCapping: boolean);
@@ -2624,6 +2660,10 @@ export interface HlsListeners {
     [Events.BUFFER_FLUSHING]: (event: Events.BUFFER_FLUSHING, data: BufferFlushingData) => void;
     // (undocumented)
     [Events.BUFFER_RESET]: (event: Events.BUFFER_RESET) => void;
+    // (undocumented)
+    [Events.BUFFER_SKIP_RANGE_SKIPPED]: (event: Events.BUFFER_SKIP_RANGE_SKIPPED, data: BufferSkipRangeSkippedData) => void;
+    // (undocumented)
+    [Events.BUFFER_SKIP_RANGES_UPDATED]: (event: Events.BUFFER_SKIP_RANGES_UPDATED, data: BufferSkipRangesUpdatedData) => void;
     // (undocumented)
     [Events.CUES_PARSED]: (event: Events.CUES_PARSED, data: CuesParsedData) => void;
     // (undocumented)
@@ -4973,6 +5013,8 @@ export class StreamController extends BaseStreamController implements NetworkCom
     // (undocumented)
     protected flushMainBuffer(startOffset: number, endOffset: number): void;
     // (undocumented)
+    protected flushSkipRange(startOffset: number, endOffset: number): void;
+    // (undocumented)
     get forceStartLoad(): boolean;
     protected getBufferOutput(): Bufferable | null;
     // (undocumented)
@@ -5036,6 +5078,7 @@ export type StreamControllerConfig = {
     liveSyncMode?: 'edge' | 'buffered';
     startOnSegmentBoundary: boolean;
     nextAudioTrackBufferFlushForwardOffset: number;
+    bufferSkipRangeTolerance: number;
 };
 
 // Warning: (ae-missing-release-tag) "SubtitleFragProcessedData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

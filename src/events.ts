@@ -14,6 +14,8 @@ import type {
   BufferEOSData,
   BufferFlushedData,
   BufferFlushingData,
+  BufferSkipRangeSkippedData,
+  BufferSkipRangesUpdatedData,
   CuesParsedData,
   ErrorData,
   FPSDropData,
@@ -98,6 +100,10 @@ export enum Events {
   BUFFER_FLUSHING = 'hlsBufferFlushing',
   // fired when the media buffer has been flushed - data: { }
   BUFFER_FLUSHED = 'hlsBufferFlushed',
+  // fired when `hls.bufferSkipRanges` is assigned - data: { skipRanges }
+  BUFFER_SKIP_RANGES_UPDATED = 'hlsBufferSkipRangesUpdated',
+  // fired when the playhead is moved over a range declared in `hls.bufferSkipRanges` - data: { skipRange, currentTime, targetTime }
+  BUFFER_SKIP_RANGE_SKIPPED = 'hlsBufferSkipRangeSkipped',
   // fired to signal that a manifest loading starts - data: { url : manifestURL}
   MANIFEST_LOADING = 'hlsManifestLoading',
   // fired after manifest has been loaded - data: { levels : [available quality levels], audioTracks : [ available audio tracks ], url : manifestURL, stats : LoaderStats }
@@ -273,6 +279,14 @@ export interface HlsListeners {
   [Events.BUFFER_FLUSHED]: (
     event: Events.BUFFER_FLUSHED,
     data: BufferFlushedData,
+  ) => void;
+  [Events.BUFFER_SKIP_RANGES_UPDATED]: (
+    event: Events.BUFFER_SKIP_RANGES_UPDATED,
+    data: BufferSkipRangesUpdatedData,
+  ) => void;
+  [Events.BUFFER_SKIP_RANGE_SKIPPED]: (
+    event: Events.BUFFER_SKIP_RANGE_SKIPPED,
+    data: BufferSkipRangeSkippedData,
   ) => void;
   [Events.MANIFEST_LOADING]: (
     event: Events.MANIFEST_LOADING,

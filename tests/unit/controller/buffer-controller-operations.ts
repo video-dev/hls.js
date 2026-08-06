@@ -1529,6 +1529,86 @@ describe('BufferController with attached media', function () {
         evokeTrimBuffers(hls);
         expect(triggerSpy).to.not.have.been.calledWith(Events.BUFFER_FLUSHING);
       });
+
+      describe('with buffer skip ranges', function () {
+        it('steps over a skip range so retention is measured in playable media', function () {
+          // Playhead just past a 10-20 hole. Without stepping over it the target would be
+          // 20 - 10 = 10, discarding the media at 0-10 that was played moments ago.
+          hls.config.backBufferLength = 10;
+          mockMedia.currentTime = 25;
+          queueNames.forEach((name) => {
+            setSourceBufferBufferedRange(bufferController, name, 0, 30);
+          });
+          hls.bufferSkipRanges = [{ start: 10, end: 20 }];
+          evokeTrimBuffers(hls);
+          // 10s of playable media before 20 reaches back to 0, so there is nothing to remove
+          expect(triggerSpy).to.not.have.been.calledWith(
+            Events.BUFFER_FLUSHING,
+          );
+        });
+
+        it('still removes what falls outside the playable back buffer', function () {
+          hls.config.backBufferLength = 10;
+          mockMedia.currentTime = 35;
+          queueNames.forEach((name) => {
+            setSourceBufferBufferedRange(bufferController, name, 0, 40);
+          });
+          hls.bufferSkipRanges = [{ start: 20, end: 30 }];
+          evokeTrimBuffers(hls);
+          // 10s of playable media before 30 reaches back to 20 across the range, then to 10
+          queueNames.forEach((name) => {
+            expect(
+              triggerSpy,
+              `BUFFER_FLUSHING should have been triggered for the ${name} SourceBuffer`,
+            ).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
+              startOffset: 0,
+              endOffset: 10,
+              type: name,
+            });
+          });
+        });
+
+        it('is unchanged when no ranges are declared', function () {
+          hls.bufferSkipRanges = [];
+          hls.config.backBufferLength = 10;
+          mockMedia.currentTime = 30;
+          queueNames.forEach((name) => {
+            setSourceBufferBufferedRange(bufferController, name, 0, 30);
+          });
+          evokeTrimBuffers(hls);
+          queueNames.forEach((name) => {
+            expect(triggerSpy).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
+              startOffset: 0,
+              endOffset: 20,
+              type: name,
+            });
+          });
+        });
+
+        it('re-trims when the ranges change, without waiting for a fragment change', function () {
+          hls.config.backBufferLength = 10;
+          mockMedia.currentTime = 25;
+          queueNames.forEach((name) => {
+            setSourceBufferBufferedRange(bufferController, name, 0, 30);
+          });
+          hls.bufferSkipRanges = [{ start: 10, end: 20 }];
+          evokeTrimBuffers(hls);
+          // Stepping over the range keeps everything back to 0...
+          expect(triggerSpy).to.not.have.been.calledWith(
+            Events.BUFFER_FLUSHING,
+          );
+          // ...until the range is cleared: the assignment itself re-evaluates retention, and
+          // the media the range was shielding is released.
+          hls.bufferSkipRanges = [];
+          queueNames.forEach((name) => {
+            expect(triggerSpy).to.have.been.calledWith(Events.BUFFER_FLUSHING, {
+              startOffset: 0,
+              endOffset: 10,
+              type: name,
+            });
+          });
+        });
+      });
     });
 
     describe('flushFrontBuffer', function () {
@@ -1576,6 +1656,18 @@ describe('BufferController with attached media', function () {
       });
 
       it('should do nothing if the buffer is contiguous', function () {
+        evokeTrimBuffers(hls);
+        expect(triggerSpy).to.not.have.been.calledWith(Events.BUFFER_FLUSHING);
+      });
+
+      it('keeps the resume buffer after a declared skip range wherever the playhead is', function () {
+        // Scrubbed far back: the media after the range is still where playback resumes when
+        // the range is jumped, so it is never "too far ahead".
+        queueNames.forEach((name) => {
+          setSourceBufferBufferedRange(bufferController, name, 120, 130);
+        });
+        hls.bufferSkipRanges = [{ start: 90, end: 120 }];
+        mockMedia.currentTime = 0;
         evokeTrimBuffers(hls);
         expect(triggerSpy).to.not.have.been.calledWith(Events.BUFFER_FLUSHING);
       });

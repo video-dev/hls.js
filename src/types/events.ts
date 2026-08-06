@@ -48,7 +48,7 @@ import type { LevelDetails } from '../loader/level-details';
 import type { LevelKey } from '../loader/level-key';
 import type { LoadStats } from '../loader/load-stats';
 import type { AttrList } from '../utils/attr-list';
-import type { BufferInfo } from '../utils/buffer-helper';
+import type { BufferInfo, BufferTimeRange } from '../utils/buffer-helper';
 import type { TimestampOffset } from '../utils/timescale-conversion';
 
 export interface MediaAttachingData {
@@ -121,6 +121,16 @@ export interface BufferFlushedData {
   start: number;
   end: number;
   error?: Error;
+}
+
+export interface BufferSkipRangesUpdatedData {
+  skipRanges: BufferTimeRange[];
+}
+
+export interface BufferSkipRangeSkippedData {
+  skipRange: BufferTimeRange;
+  currentTime: number;
+  targetTime: number;
 }
 
 export interface ManifestLoadingData {

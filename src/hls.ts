@@ -13,6 +13,11 @@ import PlaylistLoader from './loader/playlist-loader';
 import { MetadataSchema } from './types/demuxer';
 import { type HdcpLevel, isHdcpLevel, type Level } from './types/level';
 import { PlaylistLevelType } from './types/loader';
+import {
+  normalizeSkipRanges,
+  skipRangesAreEqual,
+  skipRangesToString,
+} from './utils/buffer-skip-ranges';
 import { enableLogs, type ILogger } from './utils/logger';
 import { getMediaDecodingInfoPromise } from './utils/mediacapabilities-helper';
 import { getMediaSource } from './utils/mediasource-helper';
@@ -117,6 +122,7 @@ export default class Hls implements HlsEventEmitter {
   private emeController?: EMEController;
   private cmcdController?: CMCDController;
   private _media: HTMLMediaElement | null = null;
+  private _bufferSkipRanges: BufferTimeRange[] = [];
   private _sessionId?: string;
   private triggeringException?: boolean;
   private started: boolean = false;
@@ -547,6 +553,7 @@ export default class Hls implements HlsEventEmitter {
     ));
     this._autoLevelCapping = -1;
     this._maxHdcpLevel = null;
+    this._bufferSkipRanges = [];
     this.logger.log(`loadSource:${loadingSource}`);
     if (
       media &&
@@ -1060,6 +1067,20 @@ export default class Hls implements HlsEventEmitter {
     return this.streamController.maxBufferLength;
   }
 
+  public get bufferSkipRanges(): BufferTimeRange[] {
+    return this._bufferSkipRanges;
+  }
+
+  public set bufferSkipRanges(ranges: BufferTimeRange[] | null) {
+    const skipRanges = normalizeSkipRanges(ranges);
+    if (skipRangesAreEqual(skipRanges, this._bufferSkipRanges)) {
+      return;
+    }
+    this.logger.log(`bufferSkipRanges: ${skipRangesToString(skipRanges)}`);
+    this._bufferSkipRanges = skipRanges;
+    this.trigger(Events.BUFFER_SKIP_RANGES_UPDATED, { skipRanges });
+  }
+
   /**
    * Find and select the best matching audio track, making a level switch when a Group change is necessary.
    * Updates `hls.config.audioPreference`. Returns the selected track, or null when no matching track is found.
@@ -1558,6 +1579,8 @@ export type {
   BufferEOSData,
   BufferFlushedData,
   BufferFlushingData,
+  BufferSkipRangeSkippedData,
+  BufferSkipRangesUpdatedData,
   CuesParsedData,
   ErrorData,
   FPSDropData,

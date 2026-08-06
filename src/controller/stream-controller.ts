@@ -199,6 +199,13 @@ export default class StreamController
     super.stopLoad();
   }
 
+  protected override flushSkipRange(
+    startOffset: number,
+    endOffset: number,
+  ): void {
+    this.flushMainBuffer(startOffset, endOffset);
+  }
+
   protected doTick() {
     switch (this.state) {
       case State.WAITING_LEVEL: {

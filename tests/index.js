@@ -46,6 +46,7 @@ import './unit/remux/passthrough-remuxer';
 import './unit/utils/attr-list';
 import './unit/utils/binary-search';
 import './unit/utils/buffer-helper';
+import './unit/utils/buffer-skip-ranges';
 import './unit/utils/cea-608-parser';
 import './unit/utils/codecs';
 import './unit/utils/error-helper';

@@ -248,6 +248,16 @@ class AudioStreamController
     this.tick();
   }
 
+  protected override flushSkipRange(
+    startOffset: number,
+    endOffset: number,
+  ): void {
+    if (!this.mediaBuffer) {
+      return;
+    }
+    this.flushMainBuffer(startOffset, endOffset, 'audio');
+  }
+
   doTick() {
     switch (this.state) {
       case State.IDLE:
