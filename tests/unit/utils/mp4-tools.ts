@@ -394,6 +394,47 @@ describe('mp4-tools', function () {
     expect(emsg.value).to.equal('');
   });
 
+  it('parseEmsg returns on a version 1 box whose value is unterminated', function () {
+    const emsg = parseEmsg(
+      appendBytes(
+        emsgHeader(1),
+        uint32(90000),
+        uint64(900000),
+        uint32(180000),
+        uint32(7),
+        cString('https://aomedia.org/emsg/ID3'),
+        // The value runs to the last byte of the box without a terminator
+        new Uint8Array([0x31]),
+      ),
+    );
+    expect(emsg.schemeIdUri).to.equal('https://aomedia.org/emsg/ID3\0');
+    expect(emsg.value).to.equal('1');
+    expect(emsg.timeScale).to.equal(90000);
+    expect(emsg.presentationTime).to.equal(900000);
+    expect(emsg.eventDuration).to.equal(180000);
+    expect(emsg.id).to.equal(7);
+    expect(emsg.payload).to.have.lengthOf(0);
+  });
+
+  it('parseEmsg returns on a version 0 box whose value is unterminated', function () {
+    const emsg = parseEmsg(
+      appendBytes(
+        emsgHeader(0),
+        cString('https://aomedia.org/emsg/ID3'),
+        // The value runs to the last byte of the box without a terminator, so
+        // none of the fields that follow it are present either
+        new Uint8Array([0x31]),
+      ),
+    );
+    expect(emsg.schemeIdUri).to.equal('https://aomedia.org/emsg/ID3\0');
+    expect(emsg.value).to.equal('1');
+    expect(emsg.timeScale).to.equal(0);
+    expect(emsg.presentationTimeDelta).to.equal(0);
+    expect(emsg.eventDuration).to.equal(0);
+    expect(emsg.id).to.equal(0);
+    expect(emsg.payload).to.have.lengthOf(0);
+  });
+
   it('parseEmsg returns on an emsg box that findBox truncated to the bytes received', function () {
     const body = appendBytes(
       emsgHeader(1),
