@@ -95,6 +95,19 @@ function readUint64(buffer: Uint8Array, offset: number) {
   return result;
 }
 
+// Returns a null-terminated string including its terminator, or the remaining
+// bytes when the buffer ends before the terminator.
+function readCString(buffer: Uint8Array, offset: number): string {
+  let result = '';
+  for (let i = offset; i < buffer.length; i++) {
+    result += String.fromCharCode(buffer[i]);
+    if (buffer[i] === 0) {
+      break;
+    }
+  }
+  return result;
+}
+
 function readSint32(buffer: Uint8Array, offset: number): number {
   return (
     (buffer[offset] << 24) |
@@ -1993,35 +2006,28 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
   let value: string = '';
   let timeScale: number = 0;
   let presentationTimeDelta: number = 0;
-  let presentationTime: number = 0;
+  let presentationTime: number | undefined;
   let eventDuration: number = 0;
   let id: number = 0;
-  let offset: number = 0;
+  // Skip the FullBox version and flags
+  let offset: number = 4;
 
   if (version === 0) {
-    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
-      schemeIdUri += bin2str(data.subarray(offset, offset + 1));
-      offset += 1;
-    }
+    schemeIdUri = readCString(data, offset);
+    offset += schemeIdUri.length;
 
-    schemeIdUri += bin2str(data.subarray(offset, offset + 1));
-    offset += 1;
+    value = readCString(data, offset);
+    offset += value.length;
 
-    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
-      value += bin2str(data.subarray(offset, offset + 1));
-      offset += 1;
-    }
-
-    value += bin2str(data.subarray(offset, offset + 1));
-    offset += 1;
-
-    timeScale = readUint32(data, 12);
-    presentationTimeDelta = readUint32(data, 16);
-    eventDuration = readUint32(data, 20);
-    id = readUint32(data, 24);
-    offset = 28;
-  } else if (version === 1) {
+    timeScale = readUint32(data, offset);
     offset += 4;
+    presentationTimeDelta = readUint32(data, offset);
+    offset += 4;
+    eventDuration = readUint32(data, offset);
+    offset += 4;
+    id = readUint32(data, offset);
+    offset += 4;
+  } else if (version === 1) {
     timeScale = readUint32(data, offset);
     offset += 4;
     const leftPresentationTime = readUint32(data, offset);
@@ -2041,21 +2047,11 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
     id = readUint32(data, offset);
     offset += 4;
 
-    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
-      schemeIdUri += bin2str(data.subarray(offset, offset + 1));
-      offset += 1;
-    }
+    schemeIdUri = readCString(data, offset);
+    offset += schemeIdUri.length;
 
-    schemeIdUri += bin2str(data.subarray(offset, offset + 1));
-    offset += 1;
-
-    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
-      value += bin2str(data.subarray(offset, offset + 1));
-      offset += 1;
-    }
-
-    value += bin2str(data.subarray(offset, offset + 1));
-    offset += 1;
+    value = readCString(data, offset);
+    offset += value.length;
   }
   const payload = data.subarray(offset, data.byteLength);
 
