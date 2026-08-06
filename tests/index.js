@@ -43,6 +43,7 @@ import './unit/loader/m3u8-parser';
 import './unit/loader/playlist-loader';
 import './unit/remux/mp4-remuxer';
 import './unit/remux/passthrough-remuxer';
+import './unit/types/level';
 import './unit/utils/attr-list';
 import './unit/utils/binary-search';
 import './unit/utils/buffer-helper';
