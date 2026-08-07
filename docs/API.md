@@ -762,7 +762,7 @@ Known to be helpful for platforms such as Xbox, Legacy Edge, and Tizen. Based on
 
 How far ahead of the current load position the alternate audio buffer is flushed when switching audio tracks smoothly (a switch where `AUDIO_TRACK_SWITCHING` data does not include `flushImmediate`).
 
-Raising this value keeps more of the outgoing track buffered, so the new track is heard later. Lowering it towards `0` flushes from the load position, so the new track is heard sooner at the cost of a greater chance of an audible gap.
+Raising this value keeps more of the outgoing track buffered, so the new track is heard later. Lowering it toward `0` flushes from the load position, so the new track is heard sooner at the cost of a greater chance of an audible gap.
 
 This has no effect on immediate audio track switches, which always flush the entire audio buffer.
 
@@ -1484,7 +1484,7 @@ A class in charge of handling errors and error recovery logic. The error control
 
 Customized gap controller.
 
-A class in charge of detecting stalls, skipping over buffer holes, and nudging the playhead. Behaviour of the default gap controller is tuned with [`detectStallWithCurrentTimeMs`](#detectstallwithcurrenttimems), [`highBufferWatchdogPeriod`](#highbufferwatchdogperiod), [`nudgeOffset`](#nudgeoffset), [`nudgeMaxRetry`](#nudgemaxretry), [`nudgeOnVideoHole`](#nudgeonvideohole), and [`skipBufferHolePadding`](#skipbufferholepadding).
+A class in charge of detecting stalls, skipping over buffer holes, and nudging the playhead. Behavior of the default gap controller is tuned with [`detectStallWithCurrentTimeMs`](#detectstallwithcurrenttimems), [`highBufferWatchdogPeriod`](#highbufferwatchdogperiod), [`nudgeOffset`](#nudgeoffset), [`nudgeMaxRetry`](#nudgemaxretry), [`nudgeOnVideoHole`](#nudgeonvideohole), and [`skipBufferHolePadding`](#skipbufferholepadding).
 
 ### `latencyController`
 
@@ -1492,7 +1492,7 @@ A class in charge of detecting stalls, skipping over buffer holes, and nudging t
 
 Customized latency controller.
 
-A class in charge of tracking live latency and adjusting playback rate to hold the target latency. Behaviour of the default latency controller is tuned with [`liveSyncDurationCount`](#livesyncdurationcount), [`liveSyncDuration`](#livesyncduration), [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount), [`liveSyncOnStallIncrease`](#livesynconstallincrease), and [`maxLiveSyncPlaybackRate`](#maxlivesyncplaybackrate).
+A class in charge of tracking live latency and adjusting playback rate to hold the target latency. Behavior of the default latency controller is tuned with [`liveSyncDurationCount`](#livesyncdurationcount), [`liveSyncDuration`](#livesyncduration), [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount), [`liveSyncOnStallIncrease`](#livesynconstallincrease), and [`maxLiveSyncPlaybackRate`](#maxlivesyncplaybackrate).
 
 ### `id3TrackController`
 
