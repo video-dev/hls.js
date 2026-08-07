@@ -1,6 +1,6 @@
 # Migrating from hls.js 1.6 to 1.7
 
-No public exports were removed and no runtime behaviour changes are required to upgrade. The changes below affect TypeScript consumers, who may see new compile errors where previously loose types have been narrowed.
+No public exports were removed and no runtime behavior changes are required to upgrade. The changes below affect TypeScript consumers, who may see new compile errors where previously loose types have been narrowed.
 
 ## TypeScript type changes
 
