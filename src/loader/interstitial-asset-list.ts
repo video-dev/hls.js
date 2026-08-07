@@ -6,6 +6,7 @@ import {
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { LoaderContextType } from '../types/loader';
+import { setQueryParam } from '../utils/url-tools';
 import type { InterstitialEvent } from './interstitial-event';
 import type Hls from '../hls';
 import type { ErrorData } from '../types/events';
@@ -54,7 +55,7 @@ export class AssetListLoader {
       return;
     }
     if (hlsStartOffset && url.protocol !== 'data:') {
-      url.searchParams.set('_HLS_start_offset', '' + hlsStartOffset);
+      setQueryParam(url, '_HLS_start_offset', '' + hlsStartOffset);
     }
     const config = this.hls.config;
     const Loader = config.loader;

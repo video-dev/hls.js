@@ -1,3 +1,4 @@
+import { setQueryParam } from '../utils/url-tools';
 import type { MediaPlaylist } from './media-playlist';
 import type { LevelDetails } from '../loader/level-details';
 import type { AttrList } from '../utils/attr-list';
@@ -96,13 +97,13 @@ export class HlsUrlParameters {
   addDirectives(uri: string): string | never {
     const url: URL = new self.URL(uri);
     if (this.msn !== undefined) {
-      url.searchParams.set('_HLS_msn', this.msn.toString());
+      setQueryParam(url, '_HLS_msn', this.msn.toString());
     }
     if (this.part !== undefined) {
-      url.searchParams.set('_HLS_part', this.part.toString());
+      setQueryParam(url, '_HLS_part', this.part.toString());
     }
     if (this.skip) {
-      url.searchParams.set('_HLS_skip', this.skip);
+      setQueryParam(url, '_HLS_skip', this.skip);
     }
     return url.href;
   }

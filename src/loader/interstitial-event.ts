@@ -1,4 +1,5 @@
 import { hash } from '../utils/hash';
+import { setQueryParam } from '../utils/url-tools';
 import type { DateRange, DateRangeCue } from './date-range';
 import type { MediaFragmentRef } from './fragment';
 import type { Loader, LoaderContext } from '../types/loader';
@@ -311,7 +312,7 @@ export function getInterstitialUrl(
 ): URL | never {
   const url = new self.URL(uri, baseUrl);
   if (url.protocol !== 'data:') {
-    url.searchParams.set('_HLS_primary_id', sessionId);
+    setQueryParam(url, '_HLS_primary_id', sessionId);
   }
   return url;
 }
