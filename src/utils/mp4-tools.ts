@@ -2032,6 +2032,9 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
       id = readUint32(data, offset);
       offset += 4;
     } else {
+      logger.warn(
+        `Unterminated ${scheme === null ? 'scheme_id_uri' : 'value'} in parsing emsg box: version 0 box ends inside a string, dropping all of its fields`,
+      );
       // The box ends inside a string, so every field of the box follows it
       offset = data.length;
     }
@@ -2067,6 +2070,9 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
       value = schemeValue;
       offset += schemeValue.length;
     } else {
+      logger.warn(
+        `Unterminated ${scheme === null ? 'scheme_id_uri' : 'value'} in parsing emsg box: version 1 box ends inside a string, dropping its ${scheme === null ? 'strings and payload' : 'value and payload'}`,
+      );
       // The box ends inside a string, so it carries no payload
       offset = data.length;
     }

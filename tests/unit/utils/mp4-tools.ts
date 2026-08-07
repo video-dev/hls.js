@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import sinon from 'sinon';
 import { ElementaryStreamTypes } from '../../../src/loader/fragment';
 import MP4 from '../../../src/remux/mp4-generator';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
@@ -17,7 +18,7 @@ import {
 } from '../../../src/utils/mp4-tools';
 import type { TrackFragmentSample } from '../../../src/remux/mp4-generator';
 import type { UserdataSample } from '../../../src/types/demuxer';
-import type { InitData } from '../../../src/utils/mp4-tools';
+import type { IEmsgParsingData, InitData } from '../../../src/utils/mp4-tools';
 
 describe('mp4-tools', function () {
   it('preserves SEI user-data event fields and raw bytes', function () {
@@ -395,18 +396,24 @@ describe('mp4-tools', function () {
   });
 
   it('parseEmsg returns on a version 1 box whose value is unterminated', function () {
-    const emsg = parseEmsg(
-      appendBytes(
-        emsgHeader(1),
-        uint32(90000),
-        uint64(900000),
-        uint32(180000),
-        uint32(7),
-        cString('https://aomedia.org/emsg/ID3'),
-        // The value runs to the last byte of the box without a terminator
-        new Uint8Array([0x31]),
-      ),
-    );
+    const warn = sinon.stub(logger, 'warn');
+    let emsg: IEmsgParsingData;
+    try {
+      emsg = parseEmsg(
+        appendBytes(
+          emsgHeader(1),
+          uint32(90000),
+          uint64(900000),
+          uint32(180000),
+          uint32(7),
+          cString('https://aomedia.org/emsg/ID3'),
+          // The value runs to the last byte of the box without a terminator
+          new Uint8Array([0x31]),
+        ),
+      );
+    } finally {
+      warn.restore();
+    }
     // The fields the box did carry are kept, the unterminated value is not
     expect(emsg.schemeIdUri).to.equal('https://aomedia.org/emsg/ID3\0');
     expect(emsg.value).to.equal('');
@@ -415,18 +422,27 @@ describe('mp4-tools', function () {
     expect(emsg.eventDuration).to.equal(180000);
     expect(emsg.id).to.equal(7);
     expect(emsg.payload).to.have.lengthOf(0);
+    // The stream is broken, so say so rather than dropping the value silently
+    expect(warn.callCount, 'logger.warn call count').to.equal(1);
+    expect(warn.firstCall.args[0]).to.contain('Unterminated value');
   });
 
   it('parseEmsg returns on a version 0 box whose value is unterminated', function () {
-    const emsg = parseEmsg(
-      appendBytes(
-        emsgHeader(0),
-        cString('https://aomedia.org/emsg/ID3'),
-        // The value runs to the last byte of the box without a terminator, so
-        // none of the fields that follow it are present either
-        new Uint8Array([0x31]),
-      ),
-    );
+    const warn = sinon.stub(logger, 'warn');
+    let emsg: IEmsgParsingData;
+    try {
+      emsg = parseEmsg(
+        appendBytes(
+          emsgHeader(0),
+          cString('https://aomedia.org/emsg/ID3'),
+          // The value runs to the last byte of the box without a terminator, so
+          // none of the fields that follow it are present either
+          new Uint8Array([0x31]),
+        ),
+      );
+    } finally {
+      warn.restore();
+    }
     // Nothing in a version 0 box precedes its strings, so nothing is usable
     expect(emsg.schemeIdUri).to.equal('');
     expect(emsg.value).to.equal('');
@@ -435,6 +451,8 @@ describe('mp4-tools', function () {
     expect(emsg.eventDuration).to.equal(0);
     expect(emsg.id).to.equal(0);
     expect(emsg.payload).to.have.lengthOf(0);
+    expect(warn.callCount, 'logger.warn call count').to.equal(1);
+    expect(warn.firstCall.args[0]).to.contain('Unterminated value');
   });
 
   it('parseEmsg returns on an emsg box that findBox truncated to the bytes received', function () {
