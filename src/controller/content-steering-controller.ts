@@ -16,6 +16,7 @@ import { AttrList } from '../utils/attr-list';
 import { reassignFragmentLevelIndexes } from '../utils/level-helper';
 import { Logger } from '../utils/logger';
 import { stringify } from '../utils/safe-json-stringify';
+import { setQueryParam } from '../utils/url-tools';
 import type { RetryConfig } from '../config';
 import type Hls from '../hls';
 import type { NetworkComponentAPI } from '../types/component-api';
@@ -434,8 +435,8 @@ export default class ContentSteeringController
     if (url.protocol !== 'data:') {
       const throughput =
         (this.hls.bandwidthEstimate || config.abrEwmaDefaultEstimate) | 0;
-      url.searchParams.set('_HLS_pathway', this.pathwayId);
-      url.searchParams.set('_HLS_throughput', '' + throughput);
+      setQueryParam(url, '_HLS_pathway', this.pathwayId);
+      setQueryParam(url, '_HLS_throughput', '' + throughput);
     }
     const context: LoaderContext = {
       type: LoaderContextType.STEERING_MANIFEST,
@@ -614,7 +615,7 @@ function performUriReplacement(
       .sort()
       .forEach((key) => {
         if (key) {
-          url.searchParams.set(key, params[key]);
+          setQueryParam(url, key, params[key]);
         }
       });
   }
