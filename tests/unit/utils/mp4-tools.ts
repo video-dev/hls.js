@@ -1,4 +1,5 @@
 import { expect } from 'chai';
+import sinon from 'sinon';
 import { ElementaryStreamTypes } from '../../../src/loader/fragment';
 import MP4 from '../../../src/remux/mp4-generator';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
@@ -8,6 +9,7 @@ import {
   discardEPB,
   findBox,
   getSampleData,
+  parseEmsg,
   parseInitSegment,
   parseSEIMessageFromNALu,
   remuxVideoOnlyIFrameMoof,
@@ -16,7 +18,7 @@ import {
 } from '../../../src/utils/mp4-tools';
 import type { TrackFragmentSample } from '../../../src/remux/mp4-generator';
 import type { UserdataSample } from '../../../src/types/demuxer';
-import type { InitData } from '../../../src/utils/mp4-tools';
+import type { IEmsgParsingData, InitData } from '../../../src/utils/mp4-tools';
 
 describe('mp4-tools', function () {
   it('preserves SEI user-data event fields and raw bytes', function () {
@@ -315,6 +317,163 @@ describe('mp4-tools', function () {
       ),
     ).to.equal(null);
   });
+
+  it('parseEmsg reads a version 1 box', function () {
+    const emsg = parseEmsg(
+      appendBytes(
+        emsgHeader(1),
+        uint32(90000),
+        uint64(900000),
+        uint32(180000),
+        uint32(7),
+        cString('https://aomedia.org/emsg/ID3'),
+        cString(''),
+        new Uint8Array([0x49, 0x44, 0x33]),
+      ),
+    );
+    expect(emsg.schemeIdUri).to.equal('https://aomedia.org/emsg/ID3\0');
+    expect(emsg.value).to.equal('\0');
+    expect(emsg.timeScale).to.equal(90000);
+    expect(emsg.presentationTime).to.equal(900000);
+    expect(emsg.eventDuration).to.equal(180000);
+    expect(emsg.id).to.equal(7);
+    expect(emsg.payload).to.deep.equal(new Uint8Array([0x49, 0x44, 0x33]));
+  });
+
+  it('parseEmsg reads a version 0 box after the version and flags', function () {
+    const emsg = parseEmsg(
+      appendBytes(
+        emsgHeader(0),
+        cString('https://aomedia.org/emsg/ID3'),
+        cString('1'),
+        uint32(90000),
+        uint32(4500),
+        uint32(180000),
+        uint32(7),
+        new Uint8Array([0x49, 0x44, 0x33]),
+      ),
+    );
+    expect(emsg.schemeIdUri).to.equal('https://aomedia.org/emsg/ID3\0');
+    expect(emsg.value).to.equal('1\0');
+    expect(emsg.timeScale).to.equal(90000);
+    // Version 0 carries a delta rather than an absolute presentation time
+    expect(emsg.presentationTime).to.equal(undefined);
+    expect(emsg.presentationTimeDelta).to.equal(4500);
+    expect(emsg.eventDuration).to.equal(180000);
+    expect(emsg.id).to.equal(7);
+    expect(emsg.payload).to.deep.equal(new Uint8Array([0x49, 0x44, 0x33]));
+  });
+
+  it('parseEmsg returns on a box truncated before its scheme id uri', function () {
+    const emsg = parseEmsg(
+      appendBytes(
+        emsgHeader(1),
+        uint32(90000),
+        uint64(900000),
+        uint32(180000),
+        uint32(7),
+      ),
+    );
+    expect(emsg.schemeIdUri).to.equal('');
+    expect(emsg.value).to.equal('');
+    expect(emsg.timeScale).to.equal(90000);
+    expect(emsg.payload).to.have.lengthOf(0);
+  });
+
+  it('parseEmsg returns on an unterminated scheme id uri', function () {
+    const emsg = parseEmsg(
+      appendBytes(
+        emsgHeader(1),
+        uint32(90000),
+        uint64(900000),
+        uint32(180000),
+        uint32(7),
+        new Uint8Array([0x75, 0x72, 0x6e, 0x3a, 0x61]),
+      ),
+    );
+    expect(emsg.schemeIdUri).to.equal('');
+    expect(emsg.value).to.equal('');
+  });
+
+  it('parseEmsg returns on a version 1 box whose value is unterminated', function () {
+    const warn = sinon.stub(logger, 'warn');
+    let emsg: IEmsgParsingData;
+    try {
+      emsg = parseEmsg(
+        appendBytes(
+          emsgHeader(1),
+          uint32(90000),
+          uint64(900000),
+          uint32(180000),
+          uint32(7),
+          cString('https://aomedia.org/emsg/ID3'),
+          // The value runs to the last byte of the box without a terminator
+          new Uint8Array([0x31]),
+        ),
+      );
+    } finally {
+      warn.restore();
+    }
+    // The fields the box did carry are kept, the unterminated value is not
+    expect(emsg.schemeIdUri).to.equal('https://aomedia.org/emsg/ID3\0');
+    expect(emsg.value).to.equal('');
+    expect(emsg.timeScale).to.equal(90000);
+    expect(emsg.presentationTime).to.equal(900000);
+    expect(emsg.eventDuration).to.equal(180000);
+    expect(emsg.id).to.equal(7);
+    expect(emsg.payload).to.have.lengthOf(0);
+    // The stream is broken, so say so rather than dropping the value silently
+    expect(warn.callCount, 'logger.warn call count').to.equal(1);
+    expect(warn.firstCall.args[0]).to.contain('Unterminated value');
+  });
+
+  it('parseEmsg returns on a version 0 box whose value is unterminated', function () {
+    const warn = sinon.stub(logger, 'warn');
+    let emsg: IEmsgParsingData;
+    try {
+      emsg = parseEmsg(
+        appendBytes(
+          emsgHeader(0),
+          cString('https://aomedia.org/emsg/ID3'),
+          // The value runs to the last byte of the box without a terminator, so
+          // none of the fields that follow it are present either
+          new Uint8Array([0x31]),
+        ),
+      );
+    } finally {
+      warn.restore();
+    }
+    // Nothing in a version 0 box precedes its strings, so nothing is usable
+    expect(emsg.schemeIdUri).to.equal('');
+    expect(emsg.value).to.equal('');
+    expect(emsg.timeScale).to.equal(0);
+    expect(emsg.presentationTimeDelta).to.equal(0);
+    expect(emsg.eventDuration).to.equal(0);
+    expect(emsg.id).to.equal(0);
+    expect(emsg.payload).to.have.lengthOf(0);
+    expect(warn.callCount, 'logger.warn call count').to.equal(1);
+    expect(warn.firstCall.args[0]).to.contain('Unterminated value');
+  });
+
+  it('parseEmsg returns on an emsg box that findBox truncated to the bytes received', function () {
+    const body = appendBytes(
+      emsgHeader(1),
+      uint32(90000),
+      uint64(900000),
+      uint32(180000),
+      uint32(7),
+      cString('urn:a'),
+    );
+    const box = appendBytes(
+      uint32(8 + body.length),
+      new Uint8Array([0x65, 0x6d, 0x73, 0x67]),
+      body,
+    );
+    // Segment delivery stopped before the scheme id uri arrived, so findBox
+    // clamps the box to the bytes that are actually present.
+    const [truncated] = findBox(box.subarray(0, box.length - 6), ['emsg']);
+    expect(parseEmsg(truncated).schemeIdUri).to.equal('');
+  });
 });
 
 // Track fragment with per-sample sizes and senc/saio (one aux info offset)
@@ -564,6 +723,19 @@ function uint32(value: number): Uint8Array {
     (value >>> 8) & 0xff,
     value & 0xff,
   ]);
+}
+
+// emsg box body header: the FullBox version followed by three flag bytes
+function emsgHeader(version: number): Uint8Array {
+  return new Uint8Array([version, 0, 0, 0]);
+}
+
+function cString(value: string): Uint8Array {
+  const bytes = new Uint8Array(value.length + 1);
+  for (let i = 0; i < value.length; i++) {
+    bytes[i] = value.charCodeAt(i);
+  }
+  return bytes;
 }
 
 function uint64(value: number): Uint8Array {

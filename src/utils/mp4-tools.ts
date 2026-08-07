@@ -95,6 +95,20 @@ function readUint64(buffer: Uint8Array, offset: number) {
   return result;
 }
 
+// Returns a null-terminated string including its terminator, or null when the
+// buffer ends before the terminator. Callers advance by the returned length;
+// an unterminated string consumes the rest of the buffer.
+function readCString(buffer: Uint8Array, offset: number): string | null {
+  let result = '';
+  for (let i = offset; i < buffer.length; i++) {
+    result += String.fromCharCode(buffer[i]);
+    if (buffer[i] === 0) {
+      return result;
+    }
+  }
+  return null;
+}
+
 function readSint32(buffer: Uint8Array, offset: number): number {
   return (
     (buffer[offset] << 24) |
@@ -1993,35 +2007,38 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
   let value: string = '';
   let timeScale: number = 0;
   let presentationTimeDelta: number = 0;
-  let presentationTime: number = 0;
+  let presentationTime: number | undefined;
   let eventDuration: number = 0;
   let id: number = 0;
-  let offset: number = 0;
+  // Skip the FullBox version and flags
+  let offset: number = 4;
 
   if (version === 0) {
-    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
-      schemeIdUri += bin2str(data.subarray(offset, offset + 1));
-      offset += 1;
+    const scheme = readCString(data, offset);
+    const schemeValue =
+      scheme !== null ? readCString(data, offset + scheme.length) : null;
+
+    if (scheme !== null && schemeValue !== null) {
+      schemeIdUri = scheme;
+      value = schemeValue;
+      offset += scheme.length + schemeValue.length;
+
+      timeScale = readUint32(data, offset);
+      offset += 4;
+      presentationTimeDelta = readUint32(data, offset);
+      offset += 4;
+      eventDuration = readUint32(data, offset);
+      offset += 4;
+      id = readUint32(data, offset);
+      offset += 4;
+    } else {
+      logger.warn(
+        `Unterminated ${scheme === null ? 'scheme_id_uri' : 'value'} in parsing emsg box: version 0 box ends inside a string, dropping all of its fields`,
+      );
+      // The box ends inside a string, so every field of the box follows it
+      offset = data.length;
     }
-
-    schemeIdUri += bin2str(data.subarray(offset, offset + 1));
-    offset += 1;
-
-    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
-      value += bin2str(data.subarray(offset, offset + 1));
-      offset += 1;
-    }
-
-    value += bin2str(data.subarray(offset, offset + 1));
-    offset += 1;
-
-    timeScale = readUint32(data, 12);
-    presentationTimeDelta = readUint32(data, 16);
-    eventDuration = readUint32(data, 20);
-    id = readUint32(data, 24);
-    offset = 28;
   } else if (version === 1) {
-    offset += 4;
     timeScale = readUint32(data, offset);
     offset += 4;
     const leftPresentationTime = readUint32(data, offset);
@@ -2041,21 +2058,24 @@ export function parseEmsg(data: Uint8Array): IEmsgParsingData {
     id = readUint32(data, offset);
     offset += 4;
 
-    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
-      schemeIdUri += bin2str(data.subarray(offset, offset + 1));
-      offset += 1;
+    const scheme = readCString(data, offset);
+    const schemeValue =
+      scheme !== null ? readCString(data, offset + scheme.length) : null;
+
+    if (scheme !== null) {
+      schemeIdUri = scheme;
+      offset += scheme.length;
     }
-
-    schemeIdUri += bin2str(data.subarray(offset, offset + 1));
-    offset += 1;
-
-    while (bin2str(data.subarray(offset, offset + 1)) !== '\0') {
-      value += bin2str(data.subarray(offset, offset + 1));
-      offset += 1;
+    if (schemeValue !== null) {
+      value = schemeValue;
+      offset += schemeValue.length;
+    } else {
+      logger.warn(
+        `Unterminated ${scheme === null ? 'scheme_id_uri' : 'value'} in parsing emsg box: version 1 box ends inside a string, dropping its ${scheme === null ? 'strings and payload' : 'value and payload'}`,
+      );
+      // The box ends inside a string, so it carries no payload
+      offset = data.length;
     }
-
-    value += bin2str(data.subarray(offset, offset + 1));
-    offset += 1;
   }
   const payload = data.subarray(offset, data.byteLength);
 
