@@ -1,3 +1,4 @@
+import { setQueryParam } from '../utils/url-tools';
 import type { MediaPlaylist } from './media-playlist';
 import type { LevelDetails } from '../loader/level-details';
 import type { AttrList } from '../utils/attr-list';
@@ -95,30 +96,15 @@ export class HlsUrlParameters {
 
   addDirectives(uri: string): string | never {
     const url: URL = new self.URL(uri);
-    const directives: string[] = [];
     if (this.msn !== undefined) {
-      directives.push(`_HLS_msn=${this.msn}`);
+      setQueryParam(url, '_HLS_msn', this.msn.toString());
     }
     if (this.part !== undefined) {
-      directives.push(`_HLS_part=${this.part}`);
+      setQueryParam(url, '_HLS_part', this.part.toString());
     }
     if (this.skip) {
-      directives.push(`_HLS_skip=${this.skip}`);
+      setQueryParam(url, '_HLS_skip', this.skip);
     }
-    if (!directives.length) {
-      return url.href;
-    }
-    // Append the directives as text rather than going through
-    // `url.searchParams`. Mutating searchParams and then reading `url.href`
-    // re-serializes the *entire* query using application/x-www-form-urlencoded
-    // rules, which percent-encodes `~`, `=` and `/` — characters that CDN
-    // tokens carry verbatim and sign byte-for-byte, yielding 403s. See #3786.
-    const replacedKeys = directives.map((d) => d.slice(0, d.indexOf('=') + 1));
-    const params = url.search
-      .substring(1)
-      .split('&')
-      .filter((p) => p && !replacedKeys.some((key) => p.startsWith(key)));
-    url.search = params.concat(directives).join('&');
     return url.href;
   }
 }

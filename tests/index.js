@@ -58,6 +58,7 @@ import './unit/utils/mp4-tools';
 import './unit/utils/output-filter';
 import './unit/utils/safe-json-stringify';
 import './unit/utils/texttrack-utils';
+import './unit/utils/url-tools';
 import './unit/utils/vttparser';
 import './unit/utils/utf8';
 import './unit/demuxer/transmuxer';
