@@ -33,6 +33,11 @@
     "module": true,
     "checkFeatures": true,
     "ignore": "globalThis,ErrorCause",
-    "files": ["./dist/hls.mjs", "./dist/hls.light.mjs"]
+    "files": [
+      "./dist/hls.mjs",
+      "./dist/hls.min.mjs",
+      "./dist/hls.light.mjs",
+      "./dist/hls.light.min.mjs"
+    ]
   }
 ]

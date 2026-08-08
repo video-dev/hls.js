@@ -126,6 +126,12 @@ jobs:
         env:
           CI: true
 
+      - name: check bundle size
+        run: |
+          npm run size:check
+        env:
+          CI: true
+
       - name: upload build
         uses: actions/upload-artifact@v4
         with:

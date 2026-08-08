@@ -1,0 +1,19 @@
+{
+  "$comment": [
+    "Brotli byte budgets for dist/, enforced by `npm run size:check`.",
+    "Raise a number here in the PR that grows the bundle. `npm run size` prints",
+    "current sizes. `tolerance` allows a 2% margin over each budget."
+  ],
+  "tolerance": 0.02,
+  "files": {
+    "hls.js": 283783,
+    "hls.min.js": 153423,
+    "hls.mjs": 267422,
+    "hls.min.mjs": 147479,
+    "hls.light.js": 187388,
+    "hls.light.min.js": 99919,
+    "hls.light.mjs": 177621,
+    "hls.light.min.mjs": 97137,
+    "hls.worker.js": 35918
+  }
+}
