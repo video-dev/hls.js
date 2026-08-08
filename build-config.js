@@ -404,6 +404,12 @@ const configs = Object.entries({
     format: FORMAT.esm,
     minified: false,
   }),
+  fullEsmMin: buildRollupConfig({
+    input: './src/exports-named.ts',
+    type: BUILD_TYPE.full,
+    format: FORMAT.esm,
+    minified: true,
+  }),
   light: buildRollupConfig({
     type: BUILD_TYPE.light,
     format: FORMAT.umd,
@@ -419,6 +425,12 @@ const configs = Object.entries({
     type: BUILD_TYPE.light,
     format: FORMAT.esm,
     minified: false,
+  }),
+  lightEsmMin: buildRollupConfig({
+    input: './src/exports-named.ts',
+    type: BUILD_TYPE.light,
+    format: FORMAT.esm,
+    minified: true,
   }),
   worker: {
     input: './src/demux/transmuxer-worker.ts',

@@ -190,13 +190,19 @@ Build and watch (customized dev setups where you'll want to host through another
 npm run build:watch
 ```
 
-Only specific flavor (known configs are: debug, dist, light, light-dist, demo):
+Only specific flavors (known configs are: `full`, `fullMin`, `fullEsm`, `fullEsmMin`, `light`, `lightMin`, `lightEsm`, `lightEsmMin`, `worker`, `demo`):
 
 ```
-npm run build -- --env dist # replace "dist" by other configuration name, see above ^
+npm run build -- --configType fullMin # repeat --configType to build more than one
 ```
 
-Note: The "demo" config is always built.
+Report the size of the built `dist/` files, and check them against the budgets in
+`dist-size-budget.json` (the same check CI runs):
+
+```
+npm run size
+npm run size:check
+```
 
 **NOTE:** `hls.light.*.js` dist files do not include alternate-audio, subtitles, CMCD, EME (DRM), Variable Substitution, Interstitials, I-frame trick-play, Media Capabilities, or MPEG-2 TS advanced codec (HEVC and AC-3) support. Content Steering is included. In addition, the following types are not available in the light build:
 
@@ -329,7 +335,15 @@ Optional features such as CMCD pull in ES2017 APIs (e.g. `Object.entries`), so t
 The `dist/` folder ships two distribution variants:
 
 - **UMD** (`dist/hls.js`, `dist/hls.min.js`, `dist/hls.light.js`, `dist/hls.light.min.js`) — embeddable directly via a `<script>` tag (exposes a global `Hls`) or resolved by `require('hls.js')` via `package.json`'s `main` field. Targets the browser list above. The companion `dist/hls.worker.js` is the bundled transmuxer Web Worker.
-- **ESM** (`dist/hls.mjs`, `dist/hls.light.mjs`) — resolved by `import 'hls.js'` via the `module` field. Built with `@babel/preset-env`'s `esmodules: true` target (≈ Chrome 61+, Firefox 60+, Safari 10.1+, Edge 16+) and intended to be consumed by a modern bundler. Uses ES2015+ syntax but stays below ES2019 (no `Array.prototype.flatMap`, `Object.fromEntries`, etc.).
+- **ESM** (`dist/hls.mjs`, `dist/hls.light.mjs`, plus the minified `dist/hls.min.mjs` and `dist/hls.light.min.mjs`) — `import 'hls.js'` resolves to the unminified `dist/hls.mjs` via the `module` field, which is what you want when a bundler will minify it for you. The `.min.mjs` files exist for loading straight from a CDN with `<script type="module">`. Built with `@babel/preset-env`'s `esmodules: true` target (≈ Chrome 61+, Firefox 60+, Safari 10.1+, Edge 16+) and intended to be consumed by a modern bundler. Uses ES2015+ syntax but stays below ES2019 (no `Array.prototype.flatMap`, `Object.fromEntries`, etc.).
+
+> **The ESM builds do not bundle the transmuxer Web Worker.** The UMD builds inline it, but `dist/hls.mjs` and `dist/hls.min.mjs` do not, so transmuxing runs on the main thread unless you point `workerPath` at the separately published worker:
+>
+> ```js
+> const hls = new Hls({
+>   workerPath: 'https://cdn.jsdelivr.net/npm/hls.js@1/dist/hls.worker.js',
+> });
+> ```
 
 If you import from `src/` directly or include any of our runtime dependencies untranspiled in your own build, you bypass this Babel pipeline and become responsible for transpilation; those source modules can reach for ES2019+ APIs that are tree-shaken out of the bundles we publish.
 
