@@ -820,6 +820,39 @@ export default class BaseStreamController
     frag: PartsLoadedData | FragLoadedData,
   ) {}
 
+  private loadKeyFor(
+    frag: Fragment,
+    details: LevelDetails,
+  ): Promise<KeyLoadedData | void> | null {
+    let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
+    if (frag.encrypted && !frag.decryptdata?.key) {
+      this.log(
+        `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${this.playlistLabel()} ${frag.level}`,
+      );
+      this.state = State.KEY_LOADING;
+      keyLoadingPromise = this.keyLoader.load(frag).then((keyLoadedData) => {
+        if (!this.fragContextChanged(keyLoadedData.frag)) {
+          this.hls.trigger(Events.KEY_LOADED, keyLoadedData);
+          if (this.state === State.KEY_LOADING) {
+            this.state = State.IDLE;
+          }
+          return keyLoadedData;
+        }
+      });
+      this.hls.trigger(Events.KEY_LOADING, { frag });
+    } else if (!frag.encrypted) {
+      keyLoadingPromise = this.keyLoader.loadClear(
+        frag,
+        details.encryptedFragments,
+        this.startFragRequested,
+      );
+      if (keyLoadingPromise) {
+        this.log(`[eme] blocking frag load until media-keys acquired`);
+      }
+    }
+    return keyLoadingPromise;
+  }
+
   protected _doFragLoad(
     frag: Fragment,
     level: Level,
@@ -832,38 +865,6 @@ export default class BaseStreamController
       throw new Error(
         `frag load aborted, missing level${details ? '' : ' detail'}s`,
       );
-    }
-
-    let keyLoadingPromise: Promise<KeyLoadedData | void> | null = null;
-    if (frag.encrypted && !frag.decryptdata?.key) {
-      this.log(
-        `Loading key for ${frag.sn} of [${details.startSN}-${details.endSN}], ${this.playlistLabel()} ${frag.level}`,
-      );
-      this.state = State.KEY_LOADING;
-      this.fragCurrent = frag;
-      keyLoadingPromise = this.keyLoader.load(frag).then((keyLoadedData) => {
-        if (!this.fragContextChanged(keyLoadedData.frag)) {
-          this.hls.trigger(Events.KEY_LOADED, keyLoadedData);
-          if (this.state === State.KEY_LOADING) {
-            this.state = State.IDLE;
-          }
-          return keyLoadedData;
-        }
-      });
-      this.hls.trigger(Events.KEY_LOADING, { frag });
-      if ((this.fragCurrent as Fragment | null) === null) {
-        this.log(`context changed in KEY_LOADING`);
-        return Promise.resolve(null);
-      }
-    } else if (!frag.encrypted) {
-      keyLoadingPromise = this.keyLoader.loadClear(
-        frag,
-        details.encryptedFragments,
-        this.startFragRequested,
-      );
-      if (keyLoadingPromise) {
-        this.log(`[eme] blocking frag load until media-keys acquired`);
-      }
     }
 
     const fragPrevious = this.fragPrevious;
@@ -892,6 +893,10 @@ export default class BaseStreamController
         if (partIndex > -1) {
           const part = partList[partIndex];
           frag = this.fragCurrent = part.fragment;
+          const keyLoadingPromise = this.loadKeyFor(frag, details);
+          if (this.fragContextChanged(frag)) {
+            return Promise.resolve(null);
+          }
           this.log(
             `Loading ${frag.type} sn: ${frag.sn} part: ${part.index} (${partIndex}/${partList.length - 1}) of ${this.fragInfo(frag, false, part)}) cc: ${
               frag.cc
@@ -962,6 +967,14 @@ export default class BaseStreamController
       return Promise.resolve(null);
     }
 
+    const keyLoadingPromise = this.loadKeyFor(frag, details);
+    if (this.fragContextChanged(frag)) {
+      this.log(
+        `Context changed in KEY_LOADING sn: ${frag.sn} ${frag.relurl} > ${this.fragCurrent?.relurl}`,
+      );
+      keyLoadingPromise?.catch(() => null);
+      return Promise.resolve(null);
+    }
     this.log(
       `Loading ${frag.type} sn: ${frag.sn} of ${this.fragInfo(frag, false)}) cc: ${frag.cc} ${
         '[' + details.startSN + '-' + details.endSN + ']'
