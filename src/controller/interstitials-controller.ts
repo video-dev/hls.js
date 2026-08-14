@@ -870,17 +870,17 @@ export default class InterstitialsController
       return;
     }
     const dataToAttach =
-      transferring && attachMediaSourceData ? attachMediaSourceData : { media };
+      transferring && attachMediaSourceData
+        ? { ...attachMediaSourceData }
+        : { media };
     const schedule = this.schedule;
-    if (schedule) {
+    if (schedule && isAssetPlayer) {
       const isAssetAtEndOfSchedule =
-        isAssetPlayer &&
         (player as HlsAssetPlayer).assetId === schedule.assetIdAtEnd;
       // Prevent asset players from marking EoS on transferred MediaSource
       dataToAttach.overrides = {
         duration: schedule.duration,
         endOfStream:
-          !isAssetPlayer ||
           isAssetAtEndOfSchedule ||
           (player as HlsAssetPlayer).appendInPlace === false,
       };
