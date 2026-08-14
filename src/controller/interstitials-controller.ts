@@ -1673,22 +1673,21 @@ export default class InterstitialsController
   ) {
     const hls = this.hls;
     const { loadingEnabled, bufferingEnabled, startPosition } = hls;
-
-    const instructToSeek = !skipSeekToStartPosition && hls.hasEnoughToStart;
+    const hasEnoughToStart = hls.hasEnoughToStart;
 
     this.log(
-      `Start loading primary @${bufferPos} bufferedPos: ${this.bufferedPos} instructToSeek: ${instructToSeek} startPosition: ${startPosition} loadingEnabled: ${loadingEnabled} bufferingEnabled: ${bufferingEnabled}`,
+      `Start loading primary @${bufferPos} bufferedPos: ${this.bufferedPos} startPosition: ${startPosition} skip seek: ${skipSeekToStartPosition} has enough ${hasEnoughToStart} loadingEnabled: ${loadingEnabled} bufferingEnabled: ${bufferingEnabled}`,
     );
     if (
-      instructToSeek ||
+      (!skipSeekToStartPosition && hasEnoughToStart) ||
       !loadingEnabled ||
       Math.abs(startPosition - bufferPos) > 0.1
     ) {
       const details = this.primaryDetails;
-      if (details?.live && bufferPos >= details.edge) {
+      if (details?.live && bufferPos + 0.5 >= details.edge) {
         const bufferingItem = this.bufferingItem;
         this.log(
-          `Resume primary loading when live reaches ${bufferPos} buffering item: ${bufferingItem ? segmentToString(bufferingItem) : null}`,
+          `Resume primary loading when live passes ${bufferPos} buffering item: ${bufferingItem ? segmentToString(bufferingItem) : null}`,
         );
         hls.pauseBuffering();
         this.bufferPastEdge = true;
@@ -1749,16 +1748,20 @@ export default class InterstitialsController
     } else if (this.bufferPastEdge) {
       const details = this.primaryDetails;
       const bufferedPos = this.bufferedPos;
-      if (details?.live && bufferedPos < details.edge) {
+      if (details?.live && bufferedPos + 0.5 < details.edge) {
         this.bufferPastEdge = false;
         const bufferingItem = this.bufferingItem;
         this.log(
-          `Live edge ${details.edge} reached buffer: ${bufferedPos} buffering item: ${bufferingItem ? segmentToString(bufferingItem) : null}`,
+          `Live edge ${details.edge} passed buffer: ${bufferedPos} buffering item: ${bufferingItem ? segmentToString(bufferingItem) : null}`,
         );
         const primaryWaiting = bufferingItem?.end === Infinity;
         if (primaryWaiting) {
-          this.startLoadingPrimaryAt(
+          const playingItem = this.playingItem;
+          const skipSeekToStartPosition =
+            this.isInterstitial(playingItem) && playingItem.event.appendInPlace;
+          this.hls.startLoad(
             Math.max(bufferedPos, bufferingItem.start),
+            skipSeekToStartPosition,
           );
         } else {
           const bufferingPlayer = this.getBufferingPlayer();
@@ -2312,8 +2315,11 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
           this.startLoadingPrimaryAt(bufferedPos);
         }
       } else {
-        // If not detached seek to resumption point
-        this.startLoadingPrimaryAt(bufferedPos);
+        // If not detached check playing item for seek to resumption point
+        const playingItem = this.playingItem;
+        const skipSeekToStartPosition =
+          this.isInterstitial(playingItem) && playingItem.event.appendInPlace;
+        this.startLoadingPrimaryAt(bufferedPos, skipSeekToStartPosition);
       }
     }
   }
