@@ -406,7 +406,8 @@ export class TimelineController implements ComponentAPI {
       frag.type === PlaylistLevelType.SUBTITLE
     ) {
       // If fragment is subtitle type, parse as WebVTT.
-      if (payload.byteLength) {
+      // An empty payload is valid when an init segment supplies the WebVTT header.
+      if (payload.byteLength || frag.initSegment?.data?.byteLength) {
         const decryptData = frag.decryptdata;
         // fragment after decryption has a stats object
         const decrypted = 'stats' in data;
