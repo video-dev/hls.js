@@ -476,7 +476,11 @@ export class Part extends BaseSegment {
       elementaryStreams.audio ||
       elementaryStreams.video ||
       elementaryStreams.audiovideo ||
-      (this.fragment.type === PlaylistLevelType.SUBTITLE && this.stats.loaded)
+      // Subtitle parts have no elementary streams. A completed request is the
+      // loaded marker because a mapped WebVTT part carrying no cues may
+      // legitimately transfer zero media bytes.
+      (this.fragment.type === PlaylistLevelType.SUBTITLE &&
+        this.stats.loading.end > 0)
     );
   }
 }
