@@ -111,6 +111,8 @@ export interface DemuxedVideoTrackBase extends DemuxedTrack {
 export interface VideoConfig {
   sps?: Uint8Array[];
   pps?: Uint8Array[];
+  vps?: Uint8Array[];
+  params?: object;
   width?: number;
   height?: number;
   pixelRatio?: [number, number];

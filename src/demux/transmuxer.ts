@@ -543,9 +543,13 @@ export default class Transmuxer {
     const samples = videoTrack.samples;
     const pending = samples.slice(configSwitch.sampleIndex);
     videoTrack.samples = samples.slice(0, configSwitch.sampleIndex);
+    // References are enough for the round trip: only the remuxer runs between
+    // this snapshot and the restore below, and it does not mutate track.params
     const currentConfig: VideoConfig = {
       sps: videoTrack.sps,
       pps: videoTrack.pps,
+      vps: videoTrack.vps,
+      params: videoTrack.params,
       width: videoTrack.width,
       height: videoTrack.height,
       pixelRatio: videoTrack.pixelRatio,
@@ -657,6 +661,8 @@ function applyVideoConfig(
 ) {
   videoTrack.sps = config.sps;
   videoTrack.pps = config.pps;
+  videoTrack.vps = config.vps;
+  videoTrack.params = config.params;
   videoTrack.width = config.width;
   videoTrack.height = config.height;
   videoTrack.pixelRatio = config.pixelRatio;

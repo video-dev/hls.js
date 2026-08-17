@@ -5,6 +5,7 @@ import Transmuxer, {
   TransmuxState,
 } from '../../../src/demux/transmuxer';
 import AvcVideoParser from '../../../src/demux/video/avc-video-parser';
+import HevcVideoParser from '../../../src/demux/video/hevc-video-parser';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
 import type { PES } from '../../../src/demux/tsdemuxer';
 import type {
@@ -31,6 +32,33 @@ const SPS_1280x720 = [
 const PPS = [0x68, 0xce, 0x3c, 0x80];
 const AUD = [0x09, 0xf0];
 const IDR = [0x65, 0x88, 0x80, 0x40];
+
+// Parameter sets from two x265 streams (testsrc2, 320x180 and 640x360). 180 is
+// not a multiple of the minimum coding block size, so the 320x180 SPS carries a
+// conformance window crop.
+const HEVC_VPS_320x180 = [
+  0x40, 0x01, 0x0c, 0x01, 0xff, 0xff, 0x01, 0x60, 0x00, 0x00, 0x03, 0x00, 0x90,
+  0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x3c, 0x95, 0x98, 0x09,
+];
+const HEVC_SPS_320x180 = [
+  0x42, 0x01, 0x01, 0x01, 0x60, 0x00, 0x00, 0x03, 0x00, 0x90, 0x00, 0x00, 0x03,
+  0x00, 0x00, 0x03, 0x00, 0x3c, 0xa0, 0x0a, 0x08, 0x0b, 0x9f, 0x79, 0x65, 0x66,
+  0x92, 0x4c, 0xaf, 0x01, 0x68, 0x08, 0x00, 0x00, 0x03, 0x00, 0x08, 0x00, 0x00,
+  0x03, 0x00, 0xf0, 0x40,
+];
+const HEVC_VPS_640x360 = [
+  0x40, 0x01, 0x0c, 0x01, 0xff, 0xff, 0x01, 0x60, 0x00, 0x00, 0x03, 0x00, 0x90,
+  0x00, 0x00, 0x03, 0x00, 0x00, 0x03, 0x00, 0x3f, 0x95, 0x98, 0x09,
+];
+const HEVC_SPS_640x360 = [
+  0x42, 0x01, 0x01, 0x01, 0x60, 0x00, 0x00, 0x03, 0x00, 0x90, 0x00, 0x00, 0x03,
+  0x00, 0x00, 0x03, 0x00, 0x3f, 0xa0, 0x05, 0x02, 0x01, 0x69, 0x65, 0x95, 0x9a,
+  0x49, 0x32, 0xbc, 0x05, 0xa0, 0x20, 0x00, 0x00, 0x03, 0x00, 0x20, 0x00, 0x00,
+  0x03, 0x03, 0xc1,
+];
+const HEVC_PPS = [0x44, 0x01, 0xc1, 0x72, 0xb4, 0x62, 0x40];
+const HEVC_AUD = [0x46, 0x01, 0x50];
+const HEVC_IDR = [0x26, 0x01, 0xaf, 0x08];
 
 const startCode = [0, 0, 0, 1];
 
@@ -143,6 +171,112 @@ describe('AvcVideoParser in-band config switch', function () {
   });
 });
 
+describe('HevcVideoParser in-band config switch', function () {
+  function hevcParser() {
+    const parser = new HevcVideoParser();
+    const track = videoTrack();
+    track.segmentCodec = 'hevc';
+    const textTrack = { samples: [] } as unknown as DemuxedUserdataTrack;
+    let pts = 0;
+    const feed = (nalus: number[][], endOfSegment: boolean = false) => {
+      const data = annexB(nalus);
+      parser.parsePES(
+        track,
+        textTrack,
+        { data, pts, dts: pts, len: data.length },
+        endOfSegment,
+      );
+      pts += 3000;
+    };
+    return { track, feed };
+  }
+
+  it('records a config switch boundary when the SPS changes mid-stream', function () {
+    const { track, feed } = hevcParser();
+
+    feed([HEVC_AUD, HEVC_VPS_320x180, HEVC_SPS_320x180, HEVC_PPS, HEVC_IDR]);
+    feed([HEVC_AUD, HEVC_IDR]);
+    feed([HEVC_AUD, HEVC_IDR]);
+    const spsBeforeSwitch = track.sps;
+    const ppsBeforeSwitch = track.pps;
+    const vpsBeforeSwitch = track.vps;
+    const paramsBeforeSwitch = { ...track.params };
+    feed([HEVC_AUD, HEVC_VPS_640x360, HEVC_SPS_640x360, HEVC_PPS, HEVC_IDR]);
+    feed([HEVC_AUD, HEVC_IDR], true);
+
+    expect(track.samples).to.have.lengthOf(5);
+    expect(track.width).to.equal(640);
+    expect(track.height).to.equal(360);
+    expect(track.configSwitches).to.have.lengthOf(1);
+    const configSwitch = track.configSwitches![0];
+    expect(configSwitch.sampleIndex).to.equal(3);
+    expect(configSwitch.prev.width).to.equal(320);
+    expect(configSwitch.prev.height).to.equal(180);
+    expect(configSwitch.prev.sps).to.equal(spsBeforeSwitch);
+    expect(configSwitch.prev.pps).to.equal(ppsBeforeSwitch);
+    // The VPS of the outgoing config is overwritten before the SPS arrives
+    expect(configSwitch.prev.vps).to.equal(vpsBeforeSwitch);
+    expect(track.vps).to.not.equal(vpsBeforeSwitch);
+    expect(configSwitch.prev.vps).to.not.equal(track.vps);
+    expect(configSwitch.prev.params).to.deep.equal(paramsBeforeSwitch);
+    expect(configSwitch.prev.params).to.not.equal(track.params);
+    (track.params as any).probe = true;
+    expect(configSwitch.prev.params).to.not.have.property('probe');
+  });
+
+  it('keeps the outgoing VPS when the switch access unit repeats its VPS', function () {
+    const { track, feed } = hevcParser();
+
+    feed([HEVC_AUD, HEVC_VPS_320x180, HEVC_SPS_320x180, HEVC_PPS, HEVC_IDR]);
+    feed([HEVC_AUD, HEVC_IDR]);
+    const vpsBeforeSwitch = track.vps;
+    feed([
+      HEVC_AUD,
+      HEVC_VPS_640x360,
+      HEVC_VPS_640x360,
+      HEVC_SPS_640x360,
+      HEVC_PPS,
+      HEVC_IDR,
+    ]);
+    feed([HEVC_AUD, HEVC_IDR], true);
+
+    expect(track.configSwitches).to.have.lengthOf(1);
+    const configSwitch = track.configSwitches![0];
+    expect(configSwitch.sampleIndex).to.equal(2);
+    expect(configSwitch.prev.vps).to.equal(vpsBeforeSwitch);
+    expect(configSwitch.prev.vps).to.not.equal(track.vps);
+  });
+
+  it('records a boundary for an SPS change without a new VPS', function () {
+    const { track, feed } = hevcParser();
+
+    feed([HEVC_AUD, HEVC_VPS_320x180, HEVC_SPS_320x180, HEVC_PPS, HEVC_IDR]);
+    feed([HEVC_AUD, HEVC_IDR]);
+    feed([HEVC_AUD, HEVC_SPS_640x360, HEVC_PPS, HEVC_IDR]);
+    feed([HEVC_AUD, HEVC_IDR], true);
+
+    expect(track.width).to.equal(640);
+    expect(track.configSwitches).to.have.lengthOf(1);
+    const configSwitch = track.configSwitches![0];
+    expect(configSwitch.sampleIndex).to.equal(2);
+    expect(configSwitch.prev.width).to.equal(320);
+    expect(configSwitch.prev.vps).to.equal(track.vps);
+  });
+
+  it('does not record a boundary for the initial parameter sets', function () {
+    const { track, feed } = hevcParser();
+
+    feed(
+      [HEVC_AUD, HEVC_VPS_320x180, HEVC_SPS_320x180, HEVC_PPS, HEVC_IDR],
+      true,
+    );
+
+    expect(track.width).to.equal(320);
+    expect(track.height).to.equal(180);
+    expect(track.configSwitches).to.equal(undefined);
+  });
+});
+
 describe('Transmuxer video config switch splitting', function () {
   const config320: VideoConfig = {
     sps: [new Uint8Array(SPS_320x180)],
@@ -218,6 +352,8 @@ describe('Transmuxer video config switch splitting', function () {
       firstPts: number | undefined;
       width: number | undefined;
       sps: Uint8Array[] | undefined;
+      vps: Uint8Array[] | undefined;
+      params: object | undefined;
       flush: boolean;
     }> = [];
     const remux = sinon.spy(
@@ -235,6 +371,8 @@ describe('Transmuxer video config switch splitting', function () {
           firstPts: video.samples[0]?.pts,
           width: video.width,
           sps: video.sps,
+          vps: video.vps,
+          params: video.params,
           flush,
         });
         if (consumeSamples) {
@@ -373,6 +511,64 @@ describe('Transmuxer video config switch splitting', function () {
     expect(remuxCalls[2].width).to.equal(1280);
     expect(track.samples).to.have.lengthOf(0);
     expect(track.configSwitches).to.have.lengthOf(0);
+  });
+
+  it('remuxes hevc samples preceding the switch under the previous vps and params', function () {
+    const hevcConfig320: VideoConfig = {
+      sps: [new Uint8Array(HEVC_SPS_320x180)],
+      pps: [new Uint8Array(HEVC_PPS)],
+      vps: [new Uint8Array(HEVC_VPS_320x180)],
+      params: { general_level_idc: 60 },
+      width: 320,
+      height: 180,
+      pixelRatio: [1, 1],
+      codec: 'hvc1.1.6.L60.90',
+    };
+    const track = videoTrack();
+    Object.assign(track, {
+      segmentCodec: 'hevc',
+      width: 640,
+      height: 360,
+      sps: [new Uint8Array(HEVC_SPS_640x360)],
+      pps: [new Uint8Array(HEVC_PPS)],
+      vps: [new Uint8Array(HEVC_VPS_640x360)],
+      params: { general_level_idc: 63 },
+      codec: 'hvc1.1.6.L63.90',
+    });
+    const currentVps = track.vps;
+    const currentParams = track.params;
+    track.samples = fakeSamples(5, 0);
+    track.configSwitches = [{ sampleIndex: 3, prev: hevcConfig320 }];
+    const demuxResult = demuxResultWith(track);
+    const { transmuxer, remuxCalls } = setupTransmuxer(demuxResult, true);
+
+    const chunkMeta = new ChunkMetadata(0, 1, 0);
+    const result = transmuxer.push(
+      new ArrayBuffer(8),
+      null,
+      chunkMeta,
+      pushState(),
+    ) as TransmuxerResult;
+    expect(result.chunkMeta).to.equal(chunkMeta);
+
+    expect(remuxCalls).to.have.lengthOf(1);
+    expect(remuxCalls[0].sampleCount).to.equal(3);
+    expect(remuxCalls[0].width).to.equal(320);
+    expect(remuxCalls[0].sps).to.equal(hevcConfig320.sps);
+    expect(remuxCalls[0].vps).to.equal(hevcConfig320.vps);
+    expect(remuxCalls[0].params).to.equal(hevcConfig320.params);
+    // Samples after the switch are held back with the new config restored
+    expect(track.samples).to.have.lengthOf(2);
+    expect(track.vps).to.equal(currentVps);
+    expect(track.params).to.equal(currentParams);
+
+    const flushResults = transmuxer.flush(chunkMeta) as TransmuxerResult[];
+    expect(flushResults).to.have.lengthOf(1);
+    expect(remuxCalls).to.have.lengthOf(2);
+    expect(remuxCalls[1].sampleCount).to.equal(2);
+    expect(remuxCalls[1].width).to.equal(640);
+    expect(remuxCalls[1].vps).to.equal(currentVps);
+    expect(remuxCalls[1].params).to.equal(currentParams);
   });
 
   it('ignores a boundary at sample index 0', function () {
