@@ -1755,7 +1755,12 @@ export default class BaseStreamController
     for (let i = 0, len = partList.length; i < len; i++) {
       const part = partList[i];
       independentAttrOmitted = independentAttrOmitted && !part.independent;
-      if (nextPart > -1 && targetBufferTime < part.start) {
+      // When a fragment's final part is shorter than maxFragLookUpTolerance,
+      // fragment selection can prefer the next fragment while that part is
+      // still unloaded, clamping the target to the next fragment's start.
+      // Stop at a part starting at the target so the unloaded tail preceding
+      // it is not skipped.
+      if (nextPart > -1 && targetBufferTime <= part.start) {
         break;
       }
       const loaded = part.loaded || part.gap;
