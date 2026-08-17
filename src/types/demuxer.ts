@@ -105,6 +105,21 @@ export interface DemuxedVideoTrackBase extends DemuxedTrack {
   manifestCodec?: string;
   samples: VideoSample[] | Uint8Array;
   params?: object;
+  configSwitches?: VideoConfigSwitch[];
+}
+
+export interface VideoConfig {
+  sps?: Uint8Array[];
+  pps?: Uint8Array[];
+  width?: number;
+  height?: number;
+  pixelRatio?: [number, number];
+  codec?: string;
+}
+
+export interface VideoConfigSwitch {
+  sampleIndex: number;
+  prev: VideoConfig;
 }
 
 export interface DemuxedVideoTrack extends DemuxedVideoTrackBase {
