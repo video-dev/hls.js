@@ -176,6 +176,8 @@ export default class BufferController extends Logger implements ComponentAPI {
     this._onMediaSourceEnded = null;
     // @ts-ignore
     this._onStartStreaming = this._onEndStreaming = null;
+    // @ts-ignore
+    this._onMediaEmptied = this._onMediaError = null;
   }
 
   private registerListeners() {
@@ -339,6 +341,10 @@ export default class BufferController extends Logger implements ComponentAPI {
       }
       addEventListener(media, 'emptied', this._onMediaEmptied);
       addEventListener(media, 'error', this._onMediaError);
+      if (this.appendSource) {
+        // Resume streaming on seeking (https://bugs.webkit.org/show_bug.cgi?id=321919)
+        addEventListener(media, 'seeking', this._onStartStreaming);
+      }
     }
   }
 
@@ -473,6 +479,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (this.mediaSource?.readyState !== 'open') {
       return;
     }
+    if (!this.media || this.media.seeking) {
+      // Ignore ManagedMediaSource while seeking (https://bugs.webkit.org/show_bug.cgi?id=321919)
+      return;
+    }
     this.hls.pauseBuffering();
   };
 
@@ -553,6 +563,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (media) {
       removeEventListener(media, 'emptied', this._onMediaEmptied);
       removeEventListener(media, 'error', this._onMediaError);
+      removeEventListener(media, 'seeking', this._onStartStreaming);
       if (!transferringMedia) {
         if (_objectUrl) {
           self.URL.revokeObjectURL(_objectUrl);
