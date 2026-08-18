@@ -370,7 +370,7 @@ export const hlsDefaultConfig: HlsConfig = {
   capLevelToPlayerSize: false, // used by cap-level-controller
   ignoreDevicePixelRatio: false, // used by cap-level-controller
   maxDevicePixelRatio: Number.POSITIVE_INFINITY, // used by cap-level-controller
-  preferManagedMediaSource: true,
+  preferManagedMediaSource: false,
   initialLiveManifestSize: 1, // used by stream-controller
   maxBufferLength: 30, // used by stream-controller
   backBufferLength: Infinity, // used by buffer-controller

@@ -11,6 +11,10 @@ import {
   pickMostCompleteCodecName,
   replaceVideoCodec,
 } from '../utils/codecs';
+import {
+  addEventListener,
+  removeEventListener,
+} from '../utils/event-listener-helper';
 import { Logger } from '../utils/logger';
 import {
   getMediaSource,
@@ -153,6 +157,8 @@ export default class BufferController extends Logger implements ComponentAPI {
     this._onMediaSourceEnded = null;
     // @ts-ignore
     this._onStartStreaming = this._onEndStreaming = null;
+    // @ts-ignore
+    this._onMediaEmptied = null;
   }
 
   private registerListeners() {
@@ -312,7 +318,11 @@ export default class BufferController extends Logger implements ComponentAPI {
           media.src = objectUrl;
         }
       }
-      media.addEventListener('emptied', this._onMediaEmptied);
+      addEventListener(media, 'emptied', this._onMediaEmptied);
+      if (this.appendSource) {
+        // Resume streaming on seeking (https://bugs.webkit.org/show_bug.cgi?id=321919)
+        addEventListener(media, 'seeking', this._onStartStreaming);
+      }
     }
   }
 
@@ -321,12 +331,12 @@ export default class BufferController extends Logger implements ComponentAPI {
       `${this.transferData?.mediaSource === ms ? 'transferred' : 'created'} media source: ${(ms.constructor as any)?.name}`,
     );
     // MediaSource listeners are arrow functions with a lexical scope, and do not need to be bound
-    ms.addEventListener('sourceopen', this._onMediaSourceOpen);
-    ms.addEventListener('sourceended', this._onMediaSourceEnded);
-    ms.addEventListener('sourceclose', this._onMediaSourceClose);
+    addEventListener(ms, 'sourceopen', this._onMediaSourceOpen);
+    addEventListener(ms, 'sourceended', this._onMediaSourceEnded);
+    addEventListener(ms, 'sourceclose', this._onMediaSourceClose);
     if (this.appendSource) {
-      ms.addEventListener('startstreaming', this._onStartStreaming);
-      ms.addEventListener('endstreaming', this._onEndStreaming);
+      addEventListener(ms, 'startstreaming', this._onStartStreaming);
+      addEventListener(ms, 'endstreaming', this._onEndStreaming);
     }
   }
 
@@ -445,6 +455,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (this.mediaSource?.readyState !== 'open') {
       return;
     }
+    if (!this.media || this.media.seeking) {
+      // Ignore ManagedMediaSource while seeking (https://bugs.webkit.org/show_bug.cgi?id=321919)
+      return;
+    }
     this.hls.pauseBuffering();
   };
 
@@ -504,15 +518,16 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           this.onBufferReset();
         }
       }
-      mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);
-      mediaSource.removeEventListener('sourceended', this._onMediaSourceEnded);
-      mediaSource.removeEventListener('sourceclose', this._onMediaSourceClose);
+      removeEventListener(mediaSource, 'sourceopen', this._onMediaSourceOpen);
+      removeEventListener(mediaSource, 'sourceended', this._onMediaSourceEnded);
+      removeEventListener(mediaSource, 'sourceclose', this._onMediaSourceClose);
       if (this.appendSource) {
-        mediaSource.removeEventListener(
+        removeEventListener(
+          mediaSource,
           'startstreaming',
           this._onStartStreaming,
         );
-        mediaSource.removeEventListener('endstreaming', this._onEndStreaming);
+        removeEventListener(mediaSource, 'endstreaming', this._onEndStreaming);
       }
 
       this.mediaSource = null;
@@ -522,7 +537,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     // Detach properly the MediaSource from the HTMLMediaElement as
     // suggested in https://github.com/w3c/media-source/issues/53.
     if (media) {
-      media.removeEventListener('emptied', this._onMediaEmptied);
+      removeEventListener(media, 'emptied', this._onMediaEmptied);
+      removeEventListener(media, 'seeking', this._onStartStreaming);
       if (!transferringMedia) {
         if (_objectUrl) {
           self.URL.revokeObjectURL(_objectUrl);
@@ -1549,8 +1565,8 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return;
     }
     // once received, don't listen anymore to sourceopen event
-    mediaSource.removeEventListener('sourceopen', this._onMediaSourceOpen);
-    media.removeEventListener('emptied', this._onMediaEmptied);
+    removeEventListener(mediaSource, 'sourceopen', this._onMediaSourceOpen);
+    removeEventListener(media, 'emptied', this._onMediaEmptied);
     this.updateDuration();
     this.hls.trigger(Events.MEDIA_ATTACHED, {
       media,
@@ -1842,7 +1858,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     }
     const listener = fn.bind(this, type);
     track.listeners.push({ event, listener });
-    buffer.addEventListener(event, listener);
+    addEventListener(buffer, event, listener);
   }
 
   private removeBufferListeners(type: SourceBufferName) {
@@ -1855,7 +1871,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return;
     }
     track.listeners.forEach((l) => {
-      buffer.removeEventListener(l.event, l.listener);
+      removeEventListener(buffer, l.event, l.listener);
     });
     track.listeners.length = 0;
   }
