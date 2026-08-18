@@ -1406,11 +1406,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const key = appendProgressKey(frag);
     const progress = this.fragmentAppendProgress[key];
     delete this.fragmentAppendProgress[key];
-    if (!progress) {
-      // Tracking miss
+    const fragBuffering = frag.stats.buffering;
+    if (fragBuffering.start && !fragBuffering.first) {
+      // Queued appends never completed (displaced by end-of-stream or transfer)
       return;
     }
-    const cycle = progress.stats === frag.stats ? progress : undefined;
+    const cycle = progress?.stats === frag.stats ? progress : undefined;
     if (cycle?.errored) {
       // Counted by the append-error path
       return;

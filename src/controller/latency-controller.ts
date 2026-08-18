@@ -143,8 +143,6 @@ export default class LatencyController implements ComponentAPI {
     this.unregisterListeners();
     this.onMediaDetaching();
     this.hls = null;
-    // @ts-ignore
-    this.config = null;
   }
 
   private registerListeners() {
