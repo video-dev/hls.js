@@ -1608,7 +1608,7 @@ export default class BaseStreamController
     }
     let programFrag = this.filterReplacedPrimary(frag, levelDetails);
     if (!programFrag && frag) {
-      programFrag = getNextFrag(levelDetails, frag.sn, this.loadingParts);
+      programFrag = getNextFrag(levelDetails, frag.sn);
       if (programFrag) {
         this.nextLoadPosition = programFrag.start;
       }

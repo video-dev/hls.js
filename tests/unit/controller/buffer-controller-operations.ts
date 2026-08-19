@@ -1144,6 +1144,8 @@ describe('BufferController with attached media', function () {
             }
           }, reject);
         });
+        (bufferController as any).getFragmentAppendProgress(frag).progressed =
+          false;
         hls.trigger(Events.FRAG_PARSED, {
           frag,
           part: null,
@@ -1182,6 +1184,8 @@ describe('BufferController with attached media', function () {
             reject(e);
           }
         });
+        (bufferController as any).getFragmentAppendProgress(frag).progressed =
+          false;
         hls.trigger(Events.FRAG_PARSED, {
           frag,
           part: null,

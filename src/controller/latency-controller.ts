@@ -1,18 +1,18 @@
+import { interstitialsEnabled } from './base-stream-controller';
 import { ErrorDetails } from '../errors';
 import { Events } from '../events';
-import type { HlsConfig } from '../config';
 import type Hls from '../hls';
 import type { LevelDetails } from '../loader/level-details';
 import type { ComponentAPI } from '../types/component-api';
 import type {
   ErrorData,
+  InterstitialAssetStartedData,
   LevelUpdatedData,
   MediaAttachingData,
 } from '../types/events';
 
 export default class LatencyController implements ComponentAPI {
   private hls: Hls | null;
-  private readonly config: HlsConfig;
   private media: HTMLMediaElement | null = null;
   private currentTime: number = 0;
   private stallCount: number = 0;
@@ -21,7 +21,6 @@ export default class LatencyController implements ComponentAPI {
 
   constructor(hls: Hls) {
     this.hls = hls;
-    this.config = hls.config;
     this.registerListeners();
   }
 
@@ -34,7 +33,10 @@ export default class LatencyController implements ComponentAPI {
   }
 
   get maxLatency(): number {
-    const { config } = this;
+    const config = this.hls?.config;
+    if (!config) {
+      return 0;
+    }
     if (config.liveMaxLatencyDuration !== undefined) {
       return config.liveMaxLatencyDuration;
     }
@@ -46,12 +48,12 @@ export default class LatencyController implements ComponentAPI {
 
   get targetLatency(): number | null {
     const levelDetails = this.levelDetails;
-    if (levelDetails === null || this.hls === null) {
+    if (levelDetails === null || !this.hls) {
       return null;
     }
+    const config = this.hls.config;
     const { holdBack, partHoldBack, targetduration } = levelDetails;
-    const { liveSyncDuration, liveSyncDurationCount, lowLatencyMode } =
-      this.config;
+    const { liveSyncDuration, liveSyncDurationCount, lowLatencyMode } = config;
     const userConfig = this.hls.userConfig;
     let targetLatency = lowLatencyMode ? partHoldBack || holdBack : holdBack;
     if (
@@ -69,22 +71,25 @@ export default class LatencyController implements ComponentAPI {
     return (
       targetLatency +
       Math.min(
-        this.stallCount * this.config.liveSyncOnStallIncrease,
+        this.stallCount * config.liveSyncOnStallIncrease,
         maxLiveSyncOnStallIncrease,
       )
     );
   }
 
   set targetLatency(latency: number) {
+    if (!this.hls) {
+      return;
+    }
     this.stallCount = 0;
-    this.config.liveSyncDuration = latency;
+    this.hls.config.liveSyncDuration = latency;
     this._targetLatencyUpdated = true;
   }
 
   get liveSyncPosition(): number | null {
     const liveEdge = this.estimateLiveEdge();
     const targetLatency = this.targetLatency;
-    if (liveEdge === null || targetLatency === null) {
+    if (liveEdge === null || targetLatency === null || !this.hls) {
       return null;
     }
     const levelDetails = this.levelDetails;
@@ -96,7 +101,7 @@ export default class LatencyController implements ComponentAPI {
     const min = edge - levelDetails.totalduration;
     const max =
       edge -
-      ((this.config.lowLatencyMode && levelDetails.partTarget) ||
+      ((this.hls.config.lowLatencyMode && levelDetails.partTarget) ||
         levelDetails.targetduration);
     return Math.min(Math.max(min, syncPosition), max);
   }
@@ -111,11 +116,11 @@ export default class LatencyController implements ComponentAPI {
 
   get edgeStalled(): number {
     const levelDetails = this.levelDetails;
-    if (levelDetails === null) {
+    if (levelDetails === null || !this.hls) {
       return 0;
     }
     const maxLevelUpdateAge =
-      ((this.config.lowLatencyMode && levelDetails.partTarget) ||
+      ((this.hls.config.lowLatencyMode && levelDetails.partTarget) ||
         levelDetails.targetduration) * 3;
     return Math.max(levelDetails.age - maxLevelUpdateAge, 0);
   }
@@ -150,6 +155,7 @@ export default class LatencyController implements ComponentAPI {
     hls.on(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.on(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.on(Events.ERROR, this.onError, this);
+    hls.on(Events.INTERSTITIAL_ASSET_STARTED, this.onAssetStarted, this);
   }
 
   private unregisterListeners() {
@@ -162,6 +168,7 @@ export default class LatencyController implements ComponentAPI {
     hls.off(Events.MANIFEST_LOADING, this.onManifestLoading, this);
     hls.off(Events.LEVEL_UPDATED, this.onLevelUpdated, this);
     hls.off(Events.ERROR, this.onError, this);
+    hls.off(Events.INTERSTITIAL_ASSET_STARTED, this.onAssetStarted, this);
   }
 
   private onMediaAttached(
@@ -196,6 +203,28 @@ export default class LatencyController implements ComponentAPI {
     }
   }
 
+  private onAssetStarted(
+    event: Events.INTERSTITIAL_ASSET_STARTED,
+    data: InterstitialAssetStartedData,
+  ) {
+    const hls = this.hls;
+    const media =
+      this.media ||
+      (data.event.appendInPlace &&
+        hls?.interstitialsManager?.playerQueue.reduce(
+          (found, player) => found || player.media,
+          null,
+        ));
+    if (
+      hls &&
+      media &&
+      media.playbackRate > 1 &&
+      media.playbackRate <= hls.config.maxLiveSyncPlaybackRate
+    ) {
+      this.changeMediaPlaybackRate(media, 1);
+    }
+  }
+
   private onError(event: Events.ERROR, data: ErrorData) {
     if (data.details !== ErrorDetails.BUFFER_STALLED_ERROR) {
       return;
@@ -211,11 +240,12 @@ export default class LatencyController implements ComponentAPI {
   private onTimeupdate = () => {
     const { media } = this;
     const levelDetails = this.levelDetails;
-    if (!media || !levelDetails) {
+    if (!media || !levelDetails || !this.hls) {
       return;
     }
     this.currentTime = media.currentTime;
 
+    const config = this.hls.config;
     const latency = this.computeLatency();
     if (latency === null) {
       return;
@@ -223,7 +253,7 @@ export default class LatencyController implements ComponentAPI {
     this._latency = latency;
 
     // Adapt playbackRate to meet target latency in low-latency mode
-    const { lowLatencyMode, maxLiveSyncPlaybackRate } = this.config;
+    const { lowLatencyMode, maxLiveSyncPlaybackRate } = config;
     if (
       !lowLatencyMode ||
       maxLiveSyncPlaybackRate === 1 ||
@@ -245,10 +275,15 @@ export default class LatencyController implements ComponentAPI {
     );
     const inLiveRange = distanceFromTarget < liveMinLatencyDuration;
 
+    const playingInterstitial =
+      interstitialsEnabled(config) &&
+      !!this.hls.interstitialsManager?.playingItem?.event;
+
     if (
       inLiveRange &&
       distanceFromTarget > 0.05 &&
-      this.forwardBufferLength > 1
+      this.forwardBufferLength > 1 &&
+      !playingInterstitial
     ) {
       const max = Math.min(2, Math.max(1.0, maxLiveSyncPlaybackRate));
       const rate =

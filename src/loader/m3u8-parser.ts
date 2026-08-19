@@ -872,15 +872,15 @@ export function mapDateRanges(
       if (programDateTimes[j]?.sn < details.startSN) {
         break;
       }
-      const fragIndex = findFragmentWithStartDate(
+      const fragment = findFragmentWithStartDate(
         details,
         startDateTime,
         programDateTimes,
         j,
         playlistEnd,
       );
-      if (fragIndex !== -1) {
-        dateRange.tagAnchor = details.fragments[fragIndex].ref;
+      if (fragment) {
+        dateRange.tagAnchor = fragment.ref;
         break;
       }
     }
@@ -893,7 +893,7 @@ function findFragmentWithStartDate(
   programDateTimes: MediaFragment[],
   index: number,
   endTime: number,
-): number {
+): MediaFragment | null {
   const pdtFragment = programDateTimes[index] as MediaFragment | undefined;
   if (pdtFragment) {
     // find matching range between PDT tags
@@ -903,30 +903,32 @@ function findFragmentWithStartDate(
         (programDateTimes[index + 1]?.start || endTime) - pdtFragment.start;
       if (startDateTime <= pdtStart + durationBetweenPdt * 1000) {
         // map to fragment with date-time range
-        const startIndex = programDateTimes[index].sn - details.startSN;
-        if (startIndex < 0) {
-          return -1;
-        }
+        const startIndex = pdtFragment.sn - details.startSN;
         const fragments = details.fragments;
-        if (fragments.length > programDateTimes.length) {
-          const endSegment =
-            programDateTimes[index + 1] || fragments[fragments.length - 1];
-          const endIndex = endSegment.sn - details.startSN;
-          for (let i = endIndex; i > startIndex; i--) {
-            const fragStartDateTime = fragments[i].programDateTime as number;
-            if (
-              startDateTime >= fragStartDateTime &&
-              startDateTime < fragStartDateTime + fragments[i].duration * 1000
-            ) {
-              return i;
+        if (startIndex >= 0 && startIndex < fragments.length) {
+          if (fragments.length > programDateTimes.length) {
+            const endSegment =
+              programDateTimes[index + 1] || fragments[fragments.length - 1];
+            const endIndex = Math.min(
+              endSegment.sn - details.startSN,
+              fragments.length - 1,
+            );
+            for (let i = endIndex; i > startIndex; i--) {
+              const fragStartDateTime = fragments[i].programDateTime as number;
+              if (
+                startDateTime >= fragStartDateTime &&
+                startDateTime < fragStartDateTime + fragments[i].duration * 1000
+              ) {
+                return fragments[i];
+              }
             }
           }
+          return fragments[startIndex];
         }
-        return startIndex;
       }
     }
   }
-  return -1;
+  return null;
 }
 
 function parseKey(
