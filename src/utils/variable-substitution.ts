@@ -6,6 +6,9 @@ import type { VariableMap } from '../types/level';
 const VARIABLE_REPLACEMENT_REGEX = /\{\$([a-zA-Z0-9-_]+)\}/g;
 
 export function hasVariableReferences(str: string): boolean {
+  // `test` advances `lastIndex` on a global regex and the next call would
+  // resume from there, so start each search at the beginning.
+  VARIABLE_REPLACEMENT_REGEX.lastIndex = 0;
   return VARIABLE_REPLACEMENT_REGEX.test(str);
 }
 
