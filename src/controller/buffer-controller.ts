@@ -1406,6 +1406,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const key = appendProgressKey(frag);
     const progress = this.fragmentAppendProgress[key];
     delete this.fragmentAppendProgress[key];
+    const fragBuffering = frag.stats.buffering;
+    if (fragBuffering.start && !fragBuffering.first) {
+      // Queued appends never completed (displaced by end-of-stream or transfer)
+      return;
+    }
     const cycle = progress?.stats === frag.stats ? progress : undefined;
     if (cycle?.errored) {
       // Counted by the append-error path
@@ -2441,5 +2446,6 @@ function isFragmentFullyBuffered(
   coverage: number,
   fragment: Fragment,
 ): boolean {
-  return fragment.duration - coverage <= MIN_BUFFERED_PROGRESS;
+  // .05 BUFFER_APPEND_NO_PROGRESS coverage tolerance accounts for large composition times
+  return fragment.duration - coverage <= 0.05;
 }
