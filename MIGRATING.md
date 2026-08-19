@@ -1,6 +1,16 @@
 # Migrating from hls.js 1.6 to 1.7
 
-No public exports were removed and no runtime behavior changes are required to upgrade. The changes below affect TypeScript consumers, who may see new compile errors where previously loose types have been narrowed.
+No public exports were removed, and no code changes are required to upgrade. There is one observable playback change, described in [Media timeline offsets are based on decode time](#media-timeline-offsets-are-based-on-decode-time). The remaining changes affect TypeScript consumers, who may see new compile errors where previously loose types have been narrowed; see [TypeScript type changes](#typescript-type-changes).
+
+## Media timeline offsets are based on decode time
+
+hls.js now derives the `timestampOffset` it applies to each SourceBuffer from the lowest decode timestamp (DTS) across the audio and video tracks, rather than from the first presentation timestamp (PTS) of the track it synchronizes to. This keeps appended timestamps from going negative at the start of a stream, which produced stalls, unexpected buffered ranges, and repeated segment loads when playback started midstream and then seeked back toward zero. See [#7700](https://github.com/video-dev/hls.js/pull/7700), [#7880](https://github.com/video-dev/hls.js/pull/7880), and [#7932](https://github.com/video-dev/hls.js/issues/7932).
+
+This change was backported to v1.6.18, so it is not unique to 1.7. Apps staying on 1.6 see it as soon as they take the latest patch release.
+
+The change applies to MPEG-TS content that hls.js transmuxes. Fragmented MP4 content is unaffected, because its timestamp offsets already come from base media decode times. Where the first frame of a transmuxed segment has a non-zero composition offset (PTS − DTS), presentation times now land that later on the media timeline than they did in v1.6.17 and earlier. The size of the shift depends on the starting segment's initial composition time and how the browser maps media timestamps to `currentTime` on append.
+
+Reported in [#7977](https://github.com/video-dev/hls.js/issues/7977).
 
 ## TypeScript type changes
 
@@ -30,7 +40,7 @@ Existing implementations continue to work — the argument types were widened, n
 
 ## Additive changes worth knowing
 
-New public API and configuration in 1.7, all optional:
+New public API and configuration in 1.7, all optional (a few of these were soft launched in v1.6.x patch releases):
 
 - I-Frame trick-play: [`hls.iframeVariants`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlsiframevariants), [`hls.createIFramePlayer()`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlscreateiframeplayer), [`hls.createImageIFramePlayer()`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlscreateimageiframeplayer), and [`iframeCacheLimit`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#iframecachelimit).
 - Stall and append recovery: [`appendTimeout`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#appendtimeout) with `BUFFER_APPEND_NO_PROGRESS`, `MEDIA_SOURCE_REQUIRES_RESET`, and [`skipBufferHolePadding`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#skipbufferholepadding).
@@ -40,6 +50,7 @@ New public API and configuration in 1.7, all optional:
 - Parsing: [`handleMpegTsVideoIntegrityErrors`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#handlempegtsvideointegrityerrors) and [`emsgKLVSchemaUri`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#emsgklvschemauri).
 - EME: [`requireKeySystemAccessOnStart`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#requirekeysystemaccessonstart).
 - Buffer introspection: [`hls.mainForwardBufferInfo`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlsmainforwardbufferinfo) and [`hls.audioForwardBufferInfo`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlsaudioforwardbufferinfo).
+- Audio track switching: [`hls.nextAudioTrack`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlsnextaudiotrack), the optional `flushImmediate` argument to [`hls.setAudioOption()`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlssetaudiooptionaudiooption), and [`nextAudioTrackBufferFlushForwardOffset`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#nextaudiotrackbufferflushforwardoffset).
 - Additional controllers can now be replaced or disabled via config: [`streamController`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#streamcontroller), [`gapController`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#gapcontroller), [`latencyController`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#latencycontroller), [`id3TrackController`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#id3trackcontroller), and `iframeController`.
 
 # Migrating from hls.js 1.x to 1.4+
