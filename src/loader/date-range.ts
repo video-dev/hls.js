@@ -1,4 +1,5 @@
 import { AttrList } from '../utils/attr-list';
+import { parseISO8601 } from '../utils/datetime';
 import { logger } from '../utils/logger';
 import type { MediaFragmentRef } from './fragment';
 
@@ -90,12 +91,14 @@ export class DateRange {
       this._endDate = dateRangeWithSameId._endDate;
       this._dateAtEnd = dateRangeWithSameId._dateAtEnd;
     } else {
-      this._startDate = new Date(dateRangeAttr[DateRangeAttribute.START_DATE]);
+      this._startDate = new Date(
+        parseISO8601(dateRangeAttr[DateRangeAttribute.START_DATE]),
+      );
     }
     if (DateRangeAttribute.END_DATE in dateRangeAttr) {
       const endDate =
         dateRangeWithSameId?.endDate ||
-        new Date(dateRangeAttr[DateRangeAttribute.END_DATE]);
+        new Date(parseISO8601(dateRangeAttr[DateRangeAttribute.END_DATE]));
       if (Number.isFinite(endDate.getTime())) {
         this._endDate = endDate;
       }
