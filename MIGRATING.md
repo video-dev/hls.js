@@ -40,7 +40,7 @@ Existing implementations continue to work — the argument types were widened, n
 
 ## Additive changes worth knowing
 
-New public API and configuration in 1.7, all optional:
+New public API and configuration in 1.7, all optional (a few of these were soft launched in v1.6.x patch releases):
 
 - I-Frame trick-play: [`hls.iframeVariants`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlsiframevariants), [`hls.createIFramePlayer()`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlscreateiframeplayer), [`hls.createImageIFramePlayer()`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlscreateimageiframeplayer), and [`iframeCacheLimit`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#iframecachelimit).
 - Stall and append recovery: [`appendTimeout`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#appendtimeout) with `BUFFER_APPEND_NO_PROGRESS`, `MEDIA_SOURCE_REQUIRES_RESET`, and [`skipBufferHolePadding`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#skipbufferholepadding).
@@ -50,6 +50,7 @@ New public API and configuration in 1.7, all optional:
 - Parsing: [`handleMpegTsVideoIntegrityErrors`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#handlempegtsvideointegrityerrors) and [`emsgKLVSchemaUri`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#emsgklvschemauri).
 - EME: [`requireKeySystemAccessOnStart`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#requirekeysystemaccessonstart).
 - Buffer introspection: [`hls.mainForwardBufferInfo`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlsmainforwardbufferinfo) and [`hls.audioForwardBufferInfo`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlsaudioforwardbufferinfo).
+- Audio track switching: [`hls.nextAudioTrack`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlsnextaudiotrack), the optional `flushImmediate` argument to [`hls.setAudioOption()`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#hlssetaudiooptionaudiooption), and [`nextAudioTrackBufferFlushForwardOffset`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#nextaudiotrackbufferflushforwardoffset).
 - Additional controllers can now be replaced or disabled via config: [`streamController`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#streamcontroller), [`gapController`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#gapcontroller), [`latencyController`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#latencycontroller), [`id3TrackController`](https://github.com/video-dev/hls.js/blob/master/docs/API.md#id3trackcontroller), and `iframeController`.
 
 # Migrating from hls.js 1.x to 1.4+
