@@ -62,3 +62,4 @@ import './unit/utils/url-tools';
 import './unit/utils/vttparser';
 import './unit/utils/utf8';
 import './unit/demuxer/transmuxer';
+import './unit/demuxer/transmuxer-config-switch';

@@ -15,7 +15,13 @@ import {
 import type { HlsConfig } from '../config';
 import type { HlsEventEmitter } from '../events';
 import type { DecryptData } from '../loader/level-key';
-import type { Demuxer, DemuxerResult, KeyData } from '../types/demuxer';
+import type {
+  Demuxer,
+  DemuxerResult,
+  KeyData,
+  VideoConfig,
+  VideoSample,
+} from '../types/demuxer';
 import type { PlaylistLevelType } from '../types/loader';
 import type { Remuxer } from '../types/remuxer';
 import type { ChunkMetadata, TransmuxerResult } from '../types/transmuxer';
@@ -283,6 +289,22 @@ export default class Transmuxer {
         chunkMeta.part > -1 ? ' part: ' + chunkMeta.part : ''
       } of ${this.id} playlist ${chunkMeta.level}`,
     );
+    // Remux samples preceding each in-band video config change as their own
+    // result so that each portion gets an init segment matching its config
+    let guard = videoTrack.configSwitches?.length ?? 0;
+    while (guard-- > 0) {
+      const configSwitchResult = this.remuxNextConfigSwitch(
+        demuxResult,
+        timeOffset,
+        accurateTimeOffset,
+        true,
+        chunkMeta,
+      );
+      if (!configSwitchResult) {
+        break;
+      }
+      transmuxResults.push(configSwitchResult);
+    }
     const remuxResult = this.remuxer.remux(
       audioTrack,
       videoTrack,
@@ -412,6 +434,18 @@ export default class Transmuxer {
       false,
       !this.config.progressive,
     );
+    const configSwitchResult = this.remuxNextConfigSwitch(
+      demuxResult,
+      timeOffset,
+      accurateTimeOffset,
+      false,
+      chunkMeta,
+    );
+    if (configSwitchResult) {
+      // Samples following the config change stay in the demuxed tracks and are
+      // remuxed with a new init segment on the next push or flush
+      return configSwitchResult;
+    }
     const { audioTrack, videoTrack, id3Track, textTrack } = demuxResult;
     const remuxResult = remuxer.remux(
       audioTrack,
@@ -445,6 +479,16 @@ export default class Transmuxer {
     return this.demuxer
       .demuxSampleAes(data, decryptData, timeOffset, chunkMeta)
       .then((demuxResult) => {
+        const configSwitchResult = this.remuxNextConfigSwitch(
+          demuxResult,
+          timeOffset,
+          accurateTimeOffset,
+          false,
+          chunkMeta,
+        );
+        if (configSwitchResult) {
+          return configSwitchResult;
+        }
         const remuxResult = this.remuxer!.remux(
           demuxResult.audioTrack,
           demuxResult.videoTrack,
@@ -463,6 +507,85 @@ export default class Transmuxer {
           chunkMeta,
         };
       });
+  }
+
+  // Remuxes the video samples that precede an in-band config change (SPS with
+  // new dimensions mid-segment) under the config they were encoded with, so
+  // that the samples following the change are remuxed separately behind a new
+  // init segment. Some MSE implementations (Safari) stop decoding when a config
+  // change is signalled only by in-band parameter sets within an avc1 track.
+  private remuxNextConfigSwitch(
+    demuxResult: DemuxerResult,
+    timeOffset: number,
+    accurateTimeOffset: boolean,
+    flush: boolean,
+    chunkMeta: ChunkMetadata,
+  ): TransmuxerResult | null {
+    const { remuxer } = this;
+    const videoTrack = demuxResult.videoTrack;
+    const configSwitches = videoTrack.configSwitches;
+    if (
+      !remuxer ||
+      !configSwitches?.length ||
+      !Array.isArray(videoTrack.samples)
+    ) {
+      return null;
+    }
+    // A boundary at index 0 needs no partitioning: all pending samples use the
+    // new config and the remuxer resets the init segment on its own
+    while (configSwitches.length && configSwitches[0].sampleIndex <= 0) {
+      configSwitches.shift();
+    }
+    const configSwitch = configSwitches[0];
+    if (!configSwitch) {
+      return null;
+    }
+    const samples = videoTrack.samples;
+    const pending = samples.slice(configSwitch.sampleIndex);
+    videoTrack.samples = samples.slice(0, configSwitch.sampleIndex);
+    // References are enough for the round trip: only the remuxer runs between
+    // this snapshot and the restore below, and it does not mutate track.params
+    const currentConfig: VideoConfig = {
+      sps: videoTrack.sps,
+      pps: videoTrack.pps,
+      vps: videoTrack.vps,
+      params: videoTrack.params,
+      width: videoTrack.width,
+      height: videoTrack.height,
+      pixelRatio: videoTrack.pixelRatio,
+      codec: videoTrack.codec,
+    };
+    applyVideoConfig(videoTrack, configSwitch.prev);
+    const remuxResult = remuxer.remux(
+      demuxResult.audioTrack,
+      videoTrack,
+      demuxResult.id3Track,
+      demuxResult.textTrack,
+      timeOffset,
+      accurateTimeOffset,
+      flush,
+      this.id,
+      chunkMeta,
+      demuxResult.initData,
+      demuxResult.sampleData,
+    );
+    // The remuxer defers a track with too few samples; carry any leftover ahead
+    // of the samples held back for the next result
+    const leftover = videoTrack.samples as VideoSample[];
+    applyVideoConfig(videoTrack, currentConfig);
+    videoTrack.samples = leftover.concat(pending);
+    if (leftover.length) {
+      configSwitch.sampleIndex = leftover.length;
+    } else {
+      configSwitches.shift();
+      configSwitches.forEach((s) => {
+        s.sampleIndex -= configSwitch.sampleIndex;
+      });
+    }
+    return {
+      remuxResult,
+      chunkMeta,
+    };
   }
 
   private configureTransmuxer(data: Uint8Array): undefined | Error {
@@ -530,6 +653,20 @@ function getEncryptionType(
     encryptionType = decryptData as KeyData;
   }
   return encryptionType;
+}
+
+function applyVideoConfig(
+  videoTrack: DemuxerResult['videoTrack'],
+  config: VideoConfig,
+) {
+  videoTrack.sps = config.sps;
+  videoTrack.pps = config.pps;
+  videoTrack.vps = config.vps;
+  videoTrack.params = config.params;
+  videoTrack.width = config.width;
+  videoTrack.height = config.height;
+  videoTrack.pixelRatio = config.pixelRatio;
+  videoTrack.codec = config.codec;
 }
 
 const emptyResult = (chunkMeta): TransmuxerResult => ({
