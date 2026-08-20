@@ -108,6 +108,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     const initPTS = this._initPTS;
     if (
       !initPTS ||
+      // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
       !defaultTimeStamp ||
       defaultTimeStamp.trackId !== initPTS.trackId ||
       defaultTimeStamp.baseTime !== initPTS.baseTime ||
@@ -434,6 +435,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           'audio',
         );
         if (
+          // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
           !_initPTS ||
           timescale !== _initPTS.timescale ||
           (timeOffset === 0 && initBaseTimestamp < _initPTS.baseTime)
@@ -476,6 +478,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           'video',
         );
         if (
+          // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
           !_initPTS ||
           timescale !== _initPTS.timescale ||
           Number.isFinite(initPTS) ||
