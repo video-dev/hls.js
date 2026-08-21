@@ -468,6 +468,14 @@ class SubtitleTrackController extends BasePlaylistController {
     }
   }
 
+  protected get playlists(): MediaPlaylist[] {
+    return this.tracksInGroup;
+  }
+
+  protected get activePlaylist(): MediaPlaylist | null {
+    return this.currentTrack;
+  }
+
   protected loadingPlaylist(
     currentTrack: MediaPlaylist,
     hlsUrlParameters: HlsUrlParameters | undefined,

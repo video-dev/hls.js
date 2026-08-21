@@ -737,4 +737,43 @@ describe('SubtitleTrackController', function () {
       expect(loadCurrentTrackSpy).to.have.been.calledOnce;
     });
   });
+
+  describe('clearing expired inactive playlist details', function () {
+    function liveDetails(
+      ageSeconds: number,
+      overrides: Partial<LevelDetails> = {},
+    ): LevelDetails {
+      const details = new LevelDetails('http://example.com/live-subs.m3u8');
+      details.advancedDateTime = Date.now() - ageSeconds * 1000;
+      return Object.assign(details, overrides);
+    }
+
+    function loadActiveTrack(): void {
+      subtitleTrackController.startLoad();
+      switchLevel();
+      subtitleTrackController.subtitleTrack = 0;
+      hls.trigger(Events.SUBTITLE_TRACK_LOADED, {
+        id: 0,
+        groupId: subtitleTracks[0].groupId,
+        details: liveDetails(0),
+        networkDetails: null,
+        stats: new LoadStats(),
+        deliveryDirectives: null,
+        track: subtitleTracks[0],
+      });
+    }
+
+    it('deletes only expired inactive tracks, keeping active and non-expired ones', function () {
+      subtitleTracks[1].details = liveDetails(120); // inactive expired -> deleted
+      subtitleTracks[2].details = liveDetails(0); // inactive not expired -> retained
+
+      loadActiveTrack();
+
+      expect(subtitleTracks[0].details, 'active track details').to.exist;
+      expect(subtitleTracks[1].details, 'inactive expired details').to.not
+        .exist;
+      expect(subtitleTracks[2].details, 'inactive non-expired details').to
+        .exist;
+    });
+  });
 });
