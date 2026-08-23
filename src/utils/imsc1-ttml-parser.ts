@@ -251,7 +251,7 @@ function parseTimeUnits(timeAttributeValue, rateInfo): number {
     case 'm':
       return value * 60;
     case 'ms':
-      return value * 1000;
+      return value / 1000;
     case 'f':
       return value / rateInfo.frameRate;
     case 't':
