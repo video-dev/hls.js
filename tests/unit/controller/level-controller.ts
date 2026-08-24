@@ -16,6 +16,7 @@ import type { Fragment } from '../../../src/loader/fragment';
 import type { LevelDetails } from '../../../src/loader/level-details';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
 import type {
+  LevelLoadedData,
   ManifestLoadedData,
   ManifestParsedData,
 } from '../../../src/types/events';
@@ -47,6 +48,11 @@ type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
     current: LevelDetails | undefined,
   ) => void;
   redundantFailover: (levelIndex: number) => void;
+  playlistLoaded: (
+    index: number,
+    data: LevelLoadedData,
+    previousDetails?: LevelDetails,
+  ) => void;
 };
 
 function mediaPlaylist(options: Partial<MediaPlaylist>): MediaPlaylist {
@@ -674,6 +680,60 @@ vfrag3.m4v
       );
       expect(hlsUrlParameters).to.not.be.undefined;
       expect(hlsUrlParameters).to.have.property('msn').which.equals(6);
+    });
+  });
+
+  describe('Low-Latency HLS Delivery Directives', function () {
+    it('starts blocking reload after the first segment when MEDIA-SEQUENCE is zero', function () {
+      const url = 'https://example.com/video.m3u8';
+      const details = M3U8Parser.parseLevelPlaylist(
+        `#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-SERVER-CONTROL:PART-HOLD-BACK=3,CAN-BLOCK-RELOAD=YES
+#EXT-X-PART-INF:PART-TARGET=1
+#EXT-X-MEDIA-SEQUENCE:0
+#EXT-X-PART:DURATION=1,URI="part-0.m4s",INDEPENDENT=YES
+#EXTINF:6,
+segment-0.m4s
+#EXT-X-PART:DURATION=1,URI="part-1.m4s",INDEPENDENT=YES
+#EXT-X-PRELOAD-HINT:TYPE=PART,URI="part-2.m4s"`,
+        url,
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        {},
+      );
+      const levelInfo = new Level(
+        parsedLevel({
+          bitrate: 1_000_000,
+          url,
+        }),
+      );
+
+      expect(details.playlistParsingError).to.be.null;
+      expect(details.endSN).to.equal(0);
+      expect(details.lastPartSn).to.equal(1);
+      expect(details.lastPartIndex).to.equal(0);
+
+      levelController.startLoad();
+      levelController.playlistLoaded(0, {
+        details,
+        id: 0,
+        level: 0,
+        levelInfo,
+        networkDetails: new Response('ok'),
+        stats: new LoadStats(),
+        deliveryDirectives: null,
+      });
+
+      expect(hls.trigger).to.have.been.calledOnce;
+      const { name, payload } = hls.getEventData(0);
+      expect(name).to.equal(Events.LEVEL_LOADING);
+      expect(payload.url).to.equal(
+        'https://example.com/video.m3u8?_HLS_msn=1&_HLS_part=1',
+      );
+      expect(payload.deliveryDirectives).to.include({ msn: 1, part: 1 });
     });
   });
 
