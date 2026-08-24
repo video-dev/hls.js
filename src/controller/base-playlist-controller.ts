@@ -263,7 +263,7 @@ export default class BasePlaylistController
       let deliveryDirectives: HlsUrlParameters | undefined;
       let msn: number | undefined = undefined;
       let part: number | undefined = undefined;
-      if (details.canBlockReload && details.endSN && details.advanced) {
+      if (details.canBlockReload && details.advanced) {
         // Load level with LL-HLS delivery directives
         const lowLatencyMode = this.hls.config.lowLatencyMode;
         const lastPartSn = details.lastPartSn;
