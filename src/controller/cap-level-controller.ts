@@ -9,7 +9,6 @@ import type { ComponentAPI } from '../types/component-api';
 import type {
   BufferCodecsData,
   FPSDropLevelCappingData,
-  LevelsUpdatedData,
   ManifestParsedData,
   MediaAttachingData,
 } from '../types/events';
@@ -125,19 +124,21 @@ class CapLevelController implements ComponentAPI {
       // Start capping immediately if the manifest has signaled video codecs
       this.startCapping();
     }
+    this.onLevelsUpdated();
   }
 
-  private onLevelsUpdated(
-    event: Events.LEVELS_UPDATED,
-    { levels }: LevelsUpdatedData,
-  ) {
+  private onLevelsUpdated() {
+    if (!this.hls) {
+      return;
+    }
     if (
       (this.timer || this.observer) &&
-      Number.isFinite(this.autoLevelCapping)
+      (Number.isFinite(this.autoLevelCapping) || this.clientRect)
     ) {
       // Update capped level index when levels change (or stop observing if length is 1)
       this.detectPlayerSize();
     } else if (this.observer === undefined && this.timer === undefined) {
+      const levels = this.hls.levels;
       // Restart observing if length increases
       if (levels.length > 1 && levels.some((level) => !!level.videoCodec)) {
         this.startCapping();

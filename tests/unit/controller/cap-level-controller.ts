@@ -33,6 +33,25 @@ const parsedLevels = [
 ];
 const levels = parsedLevels.map((parsedLevel) => new Level(parsedLevel));
 
+class MockResizeObserver {
+  private callback?: (entries) => void;
+  constructor(callback) {
+    this.callback = callback;
+  }
+  observe(element) {
+    Promise.resolve()
+      .then(() => {
+        const contentRect = element.getBoundingClientRect();
+        this.callback?.([{ contentRect }]);
+      })
+      .catch(() => {});
+  }
+  unobserve() {}
+  disconnect() {
+    this.callback = undefined;
+  }
+}
+
 describe('CapLevelController', function () {
   describe('getMaxLevelByMediaSize', function () {
     it('Should choose the level whose dimensions are >= the media dimensions', function () {
@@ -174,6 +193,83 @@ describe('CapLevelController', function () {
       expect(bounds.height).to.equal(720);
       expect(capLevelController.mediaWidth).to.equal(1280 * pixelRatio);
       expect(capLevelController.mediaHeight).to.equal(720 * pixelRatio);
+    });
+  });
+
+  describe('capping with a stable player size', function () {
+    let hls;
+    let media;
+    let capLevelController;
+    let mediaLevels: Level[];
+
+    beforeEach(function () {
+      const fixture = document.createElement('div');
+      fixture.id = 'test-fixture';
+      document.body.appendChild(fixture);
+
+      media = document.createElement('video');
+      media.style.width = '500px';
+      media.style.height = '500px';
+      fixture.appendChild(media);
+
+      hls = new Hls({
+        capLevelToPlayerSize: true,
+        ignoreDevicePixelRatio: true,
+      });
+      capLevelController = hls.capLevelController;
+      // Levels are unknown until the manifest is parsed
+      mediaLevels = [];
+      Object.defineProperty(hls, 'levels', {
+        configurable: true,
+        get: () => mediaLevels,
+      });
+      // Mock ResizeObserver to avoid race between observer callback and async test assertions
+      sinon.stub(self, 'ResizeObserver').value(MockResizeObserver);
+    });
+
+    afterEach(function () {
+      const fixture = document.querySelector('#test-fixture');
+      if (fixture) {
+        document.body.removeChild(fixture);
+      }
+      hls.destroy();
+      sinon.restore();
+    });
+
+    it('caps to the observed player size on MANIFEST_PARSED', function () {
+      capLevelController.onMediaAttaching(Events.MEDIA_ATTACHING, {
+        media,
+      });
+      return Promise.resolve().then(() => {
+        expect(
+          hls.autoLevelCapping,
+          'autoLevelCapping before MANIFEST_PARSED',
+        ).to.equal(-1);
+
+        mediaLevels = levels;
+        capLevelController.onManifestParsed(Events.MANIFEST_PARSED, {
+          levels,
+          video: {},
+        });
+
+        expect(
+          hls.autoLevelCapping,
+          'autoLevelCapping after MANIFEST_PARSED',
+        ).to.equal(2);
+      });
+    });
+
+    it('caps to the observed player size on LEVELS_UPDATED', function () {
+      capLevelController.onMediaAttaching(Events.MEDIA_ATTACHING, {
+        media,
+      });
+      return Promise.resolve().then(() => {
+        mediaLevels = levels;
+        capLevelController.onLevelsUpdated(Events.LEVELS_UPDATED, {
+          levels,
+        });
+        expect(hls.autoLevelCapping).to.equal(2);
+      });
     });
   });
 
