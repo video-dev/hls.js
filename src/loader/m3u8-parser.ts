@@ -407,9 +407,11 @@ export default class M3U8Parser {
         !level.skippedSegments &&
         !level.iframesOnly &&
         (createNextFrag ||
+          // before the first segment, with nothing of it parsed yet
           (fragments.length === 0 &&
             frag.duration === 0 &&
-            frag.tagList.length === 0))
+            frag.tagList.length === 0 &&
+            frag.byteRange.length === 0))
       ) {
         const index = currentSN - previous!.startSN;
         const lane = index * LANES;
@@ -958,9 +960,14 @@ export default class M3U8Parser {
         !level.live ||
         !continuous(previous!, level)
       ) {
-        // A reload the merge would reject, or one that did not parse, must
-        // leave the previous playlist alone. Nothing has been written to it
-        // yet, so dropping this attempt for a plain parse is the whole undo.
+        // Reasons this parse cannot land where a plain one would: it did not
+        // parse; it is a delta update, whose skipped segments the merge fills
+        // in from the previous playlist, which is at the previous URL; the
+        // playlist ended, and an ended one measures its date ranges against
+        // its duration rather than the timeline; or the merge would reject it,
+        // and a rejected reload has to leave the previous playlist alone.
+        // Nothing has been written to it yet, so dropping this attempt for a
+        // plain parse is the whole undo.
         return M3U8Parser.parseLevelPlaylist(
           string,
           baseurl,
