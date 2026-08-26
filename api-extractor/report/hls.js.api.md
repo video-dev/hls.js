@@ -4183,7 +4183,7 @@ export class M3U8Parser {
     // (undocumented)
     static isMediaPlaylist(str: string): boolean;
     // (undocumented)
-    static parseLevelPlaylist(string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number, multivariantVariableList: VariableMap | null): LevelDetails;
+    static parseLevelPlaylist(string: string, baseurl: string, id: number, type: PlaylistLevelType, levelUrlId: number, multivariantVariableList: VariableMap | null, previous?: LevelDetails | null): LevelDetails;
     // (undocumented)
     static parseMasterPlaylist(string: string, baseurl: string): ParsedMultivariantPlaylist;
     // (undocumented)
