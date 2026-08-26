@@ -529,6 +529,23 @@ class PlaylistLoader implements NetworkComponentAPI {
     });
   }
 
+  // The playlist this one is a reload of, as far as the loader knows. Offered
+  // to the parser, which decides for itself whether it is one and what of it
+  // is still good; a stale or unrelated one costs nothing.
+  private lastDetails(
+    type: PlaylistLevelType,
+    id: number,
+  ): LevelDetails | undefined {
+    const hls = this.hls;
+    if (type === PlaylistLevelType.AUDIO) {
+      return hls.audioTracks[id]?.details;
+    }
+    if (type === PlaylistLevelType.SUBTITLE) {
+      return hls.subtitleTracks[id]?.details;
+    }
+    return hls.levels[id]?.details;
+  }
+
   private handleTrackOrLevelPlaylist(
     response: LoaderResponse,
     stats: LoaderStats,
@@ -553,6 +570,7 @@ class PlaylistLoader implements NetworkComponentAPI {
       levelType,
       0,
       this.variableList,
+      this.lastDetails(levelType, levelId),
     );
 
     // We have done our first request (Manifest-type) and receive

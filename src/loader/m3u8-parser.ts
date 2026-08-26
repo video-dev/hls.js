@@ -372,7 +372,7 @@ export default class M3U8Parser {
     // it, and null otherwise; `base` is then shared with it, so that one write
     // at commit moves every fragment to the new playlist URL. Until commit
     // nothing here writes to the previous parse.
-    const source = reuseSource(previous, baseurl);
+    const source = reuseSource(previous, baseurl, level);
     const base: Base = source ? previous!.fragments[0].base : { url: baseurl };
     const lanes: number[] = [];
     let reused = 0;
@@ -403,14 +403,13 @@ export default class M3U8Parser {
       // take it, and step over its region rather than rebuilding it.
       if (
         source !== null &&
-        (createNextFrag ||
-          (fragments.length === 0 &&
-            frag.duration === 0 &&
-            frag.tagList.length === 0)) &&
         nextByteRange === null &&
         !level.skippedSegments &&
         !level.iframesOnly &&
-        !level.hasVariableRefs
+        (createNextFrag ||
+          (fragments.length === 0 &&
+            frag.duration === 0 &&
+            frag.tagList.length === 0))
       ) {
         const index = currentSN - previous!.startSN;
         const lane = index * LANES;
@@ -1049,11 +1048,13 @@ export default class M3U8Parser {
 function reuseSource(
   previous: LevelDetails | null | undefined,
   baseurl: string,
+  level: LevelDetails,
 ): Generation | null {
   if (
     previous?.playlistParsingError !== null ||
     !previous.live ||
     !previous.fragments[0] ||
+    level.hasVariableRefs ||
     !sameUpToQuery(previous.url, baseurl)
   ) {
     return null;
