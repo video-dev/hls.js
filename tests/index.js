@@ -23,6 +23,7 @@ import './unit/controller/iframe-controller';
 import './unit/controller/interstitials-controller';
 import './unit/controller/latency-controller';
 import './unit/controller/level-controller';
+import './unit/controller/level-controller-reuse';
 import './unit/controller/level-helper';
 import './unit/controller/stream-controller';
 import './unit/controller/subtitle-stream-controller';
