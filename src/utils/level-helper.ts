@@ -168,8 +168,17 @@ export function mergeDetails(
     oldDetails,
     newDetails,
     (oldFrag, newFrag, newFragIndex, newFragments) => {
+      if (oldFrag === newFrag && !newDetails.skippedSegments) {
+        // The parser kept this fragment of the old playlist, so it enters
+        // the merge as the player left it, where a fresh parse would enter
+        // with only what the playlist declares. Restore that declared state
+        // here rather than at parse time: a reload the controller drops
+        // after the parse never arrives here, and must leave the installed
+        // window's runtime state alone.
+        restoreDeclaredFragmentState(newFrag);
+      }
       if (
-        (!newDetails.startCC || newDetails.skippedSegments) &&
+        canRenumberDiscontinuitySequence(newDetails) &&
         newFrag.cc !== oldFrag.cc
       ) {
         const ccOffset = oldFrag.cc - newFrag.cc;
@@ -334,6 +343,49 @@ export function mergeDetails(
   }
 }
 
+// Whether mergeDetails may renumber a playlist's discontinuity sequence to
+// the previous playlist's counters: it may unless the playlist declares its
+// own EXT-X-DISCONTINUITY-SEQUENCE, except that a delta update is renumbered
+// regardless. The parser shares this rule when it keeps the previous parse's
+// fragments, whose counters already carry the merge's numbering.
+export function canRenumberDiscontinuitySequence(
+  details: LevelDetails,
+): boolean {
+  return !details.startCC || !!details.skippedSegments;
+}
+
+// A fresh parse of the same text would have built this fragment with the gap
+// its region declares (in its tagList), the EXTINF duration (ditto), and no
+// deltaPTS. A loaded fragment's duration is left alone; the caller re-derives
+// it from PTS identically for kept and fresh fragments.
+function restoreDeclaredFragmentState(frag: MediaFragment) {
+  const tagList = frag.tagList;
+  let gap: true | undefined;
+  let duration: number = NaN;
+  for (let i = 0; i < tagList.length; i++) {
+    const tag = tagList[i];
+    if (tag[0] === 'GAP') {
+      gap = true;
+    } else if (tag[0] === 'INF') {
+      duration = parseFloat(tag[1]);
+    }
+  }
+  frag.deltaPTS = undefined;
+  if (frag.gap !== gap) {
+    frag.gap = gap;
+  }
+  if (
+    frag.duration !== duration &&
+    Number.isFinite(duration) &&
+    !(
+      Number.isFinite(frag.startPTS as number) &&
+      Number.isFinite(frag.endPTS as number)
+    )
+  ) {
+    frag.setDuration(duration);
+  }
+}
+
 function mergeDateRanges(
   oldDateRanges: Record<string, DateRange | undefined>,
   newDetails: LevelDetails,
@@ -370,9 +422,25 @@ function mergeDateRanges(
   return dateRanges;
 }
 
+// Where mapDateRanges reads a fragment's timing from. The default reads the
+// fragments themselves; a parse that kept the previous parse's fragments
+// passes an accessor for the starts and durations its playlist declares,
+// because a kept fragment carries measured values and must not be written to
+// by a parse the controller may still drop.
+export type FragmentTimingSource = {
+  start: (frag: MediaFragment) => number;
+  duration: (frag: MediaFragment) => number;
+};
+
+const measuredTiming: FragmentTimingSource = {
+  start: (frag) => frag.start,
+  duration: (frag) => frag.duration,
+};
+
 export function mapDateRanges(
   programDateTimes: MediaFragment[],
   details: LevelDetails,
+  timing: FragmentTimingSource = measuredTiming,
 ) {
   // Make sure DateRanges are mapped to a ProgramDateTime tag that applies a date to a segment that overlaps with its start date
   let programDateTimeCount = programDateTimes.length;
@@ -403,6 +471,7 @@ export function mapDateRanges(
         programDateTimes,
         j,
         playlistEnd,
+        timing,
       );
       if (fragment) {
         dateRange.tagAnchor = fragment.ref;
@@ -418,14 +487,17 @@ function findFragmentWithStartDate(
   programDateTimes: MediaFragment[],
   index: number,
   endTime: number,
+  timing: FragmentTimingSource,
 ): MediaFragment | null {
   const pdtFragment = programDateTimes[index] as MediaFragment | undefined;
   if (pdtFragment) {
     // find matching range between PDT tags
     const pdtStart = pdtFragment.programDateTime as number;
     if (startDateTime >= pdtStart || index === 0) {
+      const nextPdtFragment = programDateTimes[index + 1];
       const durationBetweenPdt =
-        (programDateTimes[index + 1]?.start || endTime) - pdtFragment.start;
+        ((nextPdtFragment && timing.start(nextPdtFragment)) || endTime) -
+        timing.start(pdtFragment);
       if (startDateTime <= pdtStart + durationBetweenPdt * 1000) {
         // map to fragment with date-time range
         const startIndex = pdtFragment.sn - details.startSN;
@@ -442,7 +514,8 @@ function findFragmentWithStartDate(
               const fragStartDateTime = fragments[i].programDateTime as number;
               if (
                 startDateTime >= fragStartDateTime &&
-                startDateTime < fragStartDateTime + fragments[i].duration * 1000
+                startDateTime <
+                  fragStartDateTime + timing.duration(fragments[i]) * 1000
               ) {
                 return fragments[i];
               }

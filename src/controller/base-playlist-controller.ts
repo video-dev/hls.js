@@ -170,14 +170,12 @@ export default class BasePlaylistController
       const offset = Math.max(timelineOffset || 0, 0);
       // A parse that kept fragments of the previous playlist is already on
       // its timeline, with the offset that playlist had applied in it; the
-      // merge adds this one the way it does for a fresh parse.
+      // merge adds this one the way it does for a fresh parse. The fragment
+      // hint is left alone on both paths, as master leaves it.
       if (!alignedWithPrevious(details)) {
         fragments.forEach((frag) => {
           frag?.setStart(frag.playlistOffset + offset);
         });
-        details.fragmentHint?.setStart(
-          details.fragmentHint.playlistOffset + offset,
-        );
       }
       details.appliedTimelineOffset = offset;
     }
