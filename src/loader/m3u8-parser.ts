@@ -85,11 +85,11 @@ const LANE_GAP = 6; // 1 when the region declares EXT-X-GAP
 const LANES = 7;
 
 type Generation = {
-  details: LevelDetails;
   text: string;
   startSN: number;
   // As parsed; the merge may since have put loaded instances from older
-  // parses into `details.fragments`, which the regions say nothing about.
+  // parses into the details' `fragments`, which the regions say nothing
+  // about.
   fragments: M3U8ParserFragments;
   lanes: number[];
 };
@@ -467,6 +467,13 @@ export default class M3U8Parser {
     // re-derived from PTS). Mirrors `assignProgramDateTime` exactly.
     let pdtBase: number | null = null;
     let frag: Fragment = new Fragment(type, base);
+    // Nothing of the next segment has been parsed yet, so its region can
+    // begin, or be entered, at the scan position.
+    const pristine = () =>
+      createNextFrag ||
+      (frag.duration === 0 &&
+        frag.tagList.length === 0 &&
+        frag.byteRange.length === 0);
 
     for (;;) {
       // With nothing of the next segment parsed yet: if the text ahead is
@@ -479,10 +486,7 @@ export default class M3U8Parser {
         initProgramDateTime === null &&
         !level.skippedSegments &&
         !level.iframesOnly &&
-        (createNextFrag ||
-          (frag.duration === 0 &&
-            frag.tagList.length === 0 &&
-            frag.byteRange.length === 0))
+        pristine()
       ) {
         const index = currentSN - source.startSN;
         const lane = index * LANES;
@@ -528,7 +532,7 @@ export default class M3U8Parser {
           if (levelkeys) {
             setFragLevelKeys(candidate, levelkeys, level);
           }
-          const previousParts = source.details.partList;
+          const previousParts = (previous as LevelDetails).partList;
           if (previousParts !== null) {
             while (
               prevPartIndex < previousParts.length &&
@@ -998,24 +1002,24 @@ export default class M3U8Parser {
         }
 
         // A region can be stepped over on a reload only when every tag in it
-        // describes the segment. These five do. Any other moves level state
-        // (EXT-X-MAP among them: the merge repoints init segments, so a
-        // fragment cannot say which one its own map declared), and a region
-        // has to be entered after it: the segment's region begins there while
-        // nothing of the segment has been parsed yet, and is otherwise closed.
-        if (
+        // describes the segment. These five do. EXT-X-DATERANGE and
+        // EXT-X-BITRATE build level state from their text while also writing
+        // to the fragment, so their region is opaque no matter where they
+        // stand. Any other tag moves level state (EXT-X-MAP among them: the
+        // merge repoints init segments, so a fragment cannot say which one
+        // its own map declared), and a region has to be entered after it:
+        // the segment's region begins there while nothing of the segment has
+        // been parsed yet, and is otherwise closed.
+        if (tag === 'DATERANGE' || tag === 'BITRATE') {
+          regionOpaque = true;
+        } else if (
           tag !== 'PROGRAM-DATE-TIME' &&
           tag !== 'DISCONTINUITY' &&
           tag !== 'GAP' &&
           tag !== 'PART' &&
           tag !== '#'
         ) {
-          if (
-            createNextFrag ||
-            (frag.duration === 0 &&
-              frag.tagList.length === 0 &&
-              frag.byteRange.length === 0)
-          ) {
+          if (pristine()) {
             regionStart = LEVEL_PLAYLIST_REGEX_FAST.lastIndex;
             regionCC = discontinuityCounter;
             regionBitrate = currentBitrate;
@@ -1066,7 +1070,7 @@ export default class M3U8Parser {
       reused &&
       !commit(
         level,
-        source,
+        previous as LevelDetails,
         lanes,
         base,
         baseurl,
@@ -1109,7 +1113,6 @@ export default class M3U8Parser {
     }
 
     generations.set(level, {
-      details: level,
       text: string,
       startSN: level.startSN,
       fragments: fragments.slice(),
@@ -1139,7 +1142,7 @@ function reuseSource(
 
 function noop() {}
 
-// Commits a parse that took fragments from `source`. A kept fragment keeps
+// Commits a parse that took fragments from `old`. A kept fragment keeps
 // its measured timing: what commit writes on it is where this playlist says
 // it sits (`playlistOffset`, and the declared duration while no PTS has
 // re-derived it), the runtime state a rebuilt fragment would not have (`gap`
@@ -1158,13 +1161,12 @@ function noop() {}
 // and a rejected reload has to leave the previous playlist alone.
 function commit(
   level: LevelDetails,
-  source: Generation,
+  old: LevelDetails,
   lanes: number[],
   base: Base,
   baseurl: string,
   mapsDateRanges: boolean,
 ): boolean {
-  const old = source.details;
   const anchor = old.fragments[level.startSN - old.startSN] as
     | MediaFragment
     | undefined;
