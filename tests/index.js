@@ -40,6 +40,7 @@ import './unit/loader/fragment';
 import './unit/loader/key-loader';
 import './unit/loader/level';
 import './unit/loader/m3u8-parser';
+import './unit/loader/m3u8-parser-reuse-property';
 import './unit/loader/playlist-loader';
 import './unit/remux/mp4-remuxer';
 import './unit/remux/passthrough-remuxer';
