@@ -5,6 +5,12 @@ import { LevelDetails } from './level-details';
 import { LevelKey } from './level-key';
 import { AttrList } from '../utils/attr-list';
 import { isCodecType } from '../utils/codecs';
+import {
+  assignProgramDateTime,
+  mapDateRanges,
+  mapFragmentIntersection,
+  notEqualAfterStrippingQueries,
+} from '../utils/level-helper';
 import { logger } from '../utils/logger';
 import {
   addVariableDefinition,
@@ -67,18 +73,27 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
 // playlist text from the end of the previous segment's URI line to the end of
 // its own (its region) and of the parser state entering that region, so a
 // region that comes back byte for byte, entered in the same state, is the
-// fragment that is already in hand.
+// fragment already in hand.
 //
-// Six lanes per fragment, indexed the same way as LevelDetails.fragments:
+// Six lanes per fragment, indexed the same way as `fragments`:
 const LANE_END = 0; // offset in `text` just past the region's URI line
 const LANE_LENGTH = 1; // region length; 0 marks a region that must be parsed
 const LANE_CC = 2; // discontinuity counter entering the region
-const LANE_CC_OUT = 3; // and leaving it, as the tags in it counted
+const LANE_CC_OUT = 3; // and leaving it
 const LANE_BITRATE = 4; // EXT-X-BITRATE value entering the region
 const LANE_DURATION = 5; // EXTINF duration as this playlist declares it
 const LANES = 6;
 
-type Generation = { text: string; startSN: number; lanes: number[] };
+type Generation = {
+  details: LevelDetails;
+  text: string;
+  startSN: number;
+  base: Base;
+  // As parsed; the merge may since have put loaded instances from older
+  // parses into `details.fragments`, which the regions say nothing about.
+  fragments: M3U8ParserFragments;
+  lanes: number[];
+};
 
 // Held weakly and off to the side: the shape of LevelDetails is public API and
 // no other module has any business knowing that reuse happens at all.
@@ -345,6 +360,44 @@ export default class M3U8Parser {
     multivariantVariableList: VariableMap | null,
     previous?: LevelDetails | null,
   ): LevelDetails {
+    // `previous` is the last parse of this playlist, offered so that the
+    // segments it already built can be kept. A reload that cannot keep them
+    // safely is parsed again without it, once.
+    return (
+      (previous
+        ? M3U8Parser.parseMediaPlaylist(
+            string,
+            baseurl,
+            id,
+            type,
+            levelUrlId,
+            multivariantVariableList,
+            previous,
+          )
+        : null) ||
+      (M3U8Parser.parseMediaPlaylist(
+        string,
+        baseurl,
+        id,
+        type,
+        levelUrlId,
+        multivariantVariableList,
+        null,
+      ) as LevelDetails)
+    );
+  }
+
+  // Null when fragments taken from `previous` turned out not to be keepable;
+  // nothing of `previous` has been written to then.
+  private static parseMediaPlaylist(
+    string: string,
+    baseurl: string,
+    id: number,
+    type: PlaylistLevelType,
+    levelUrlId: number,
+    multivariantVariableList: VariableMap | null,
+    previous: LevelDetails | null,
+  ): LevelDetails | null {
     const level = new LevelDetails(baseurl);
     const fragments: M3U8ParserFragments = level.fragments;
     const programDateTimes: MediaFragment[] = [];
@@ -362,27 +415,9 @@ export default class M3U8Parser {
     let firstPdtIndex = -1;
     let createNextFrag = false;
     let nextByteRange: string | null = null;
+    // A date-time tag that preceded an EXT-X-MAP, for the segment after it
+    let initProgramDateTime: string | null = null;
     let serverControlAttrs: AttrList | undefined;
-    // Where the last segment's date-time range ends. Kept here rather than read
-    // back from the fragment, whose `duration` is the value the merge derived
-    // from PTS once it has been through a reload.
-    let prevEndPdt: number | null = null;
-
-    // `source` is the previous parse when this reload may keep fragments from
-    // it, and null otherwise; `base` is then shared with it, so that one write
-    // at commit moves every fragment to the new playlist URL. Until commit
-    // nothing here writes to the previous parse.
-    const source = reuseSource(previous, baseurl, level);
-    const base: Base = source ? previous!.fragments[0].base : { url: baseurl };
-    const lanes: number[] = [];
-    let reused = 0;
-    let regionStart = 0;
-    let regionCC = 0;
-    let regionBitrate = 0;
-    let regionOpaque = false;
-    let sharedKeys = false;
-    let prevPartIndex = 0;
-    let frag: Fragment = new Fragment(type, base);
 
     LEVEL_PLAYLIST_REGEX_FAST.lastIndex = 0;
     level.m3u8 = string;
@@ -395,49 +430,61 @@ export default class M3U8Parser {
       );
       return level;
     }
-    regionStart = LEVEL_PLAYLIST_REGEX_FAST.lastIndex;
+
+    // The previous parse, when fragments may be kept from it. Its `base` is
+    // then shared, so that one write at commit moves every fragment to this
+    // playlist's URL. Nothing else of it is written to before commit.
+    const source = previous && reuseSource(previous, level);
+    const base: Base = source ? source.base : { url: baseurl };
+    const lanes: number[] = [];
+    let reused = 0;
+    let regionStart = LEVEL_PLAYLIST_REGEX_FAST.lastIndex;
+    let regionCC = 0;
+    let regionBitrate = 0;
+    let regionOpaque = false;
+    let sharedKeys = false;
+    let prevPartIndex = 0;
+    let frag: Fragment = new Fragment(type, base);
+
     for (;;) {
-      // A segment boundary with nothing parsed into `frag` yet. If the text
-      // ahead is the text that produced a fragment last time and the state
-      // entering it is the state that parse had, that fragment is this segment:
-      // take it, and step over its region rather than rebuilding it.
+      // At a segment boundary with nothing of the next segment parsed yet: if
+      // the text ahead is the region that produced a fragment last time, and
+      // the state entering it is the state that parse entered it in, that
+      // fragment is this segment. Take it and step over the region.
       if (
         source !== null &&
         nextByteRange === null &&
+        initProgramDateTime === null &&
         !level.skippedSegments &&
         !level.iframesOnly &&
         (createNextFrag ||
-          // before the first segment, with nothing of it parsed yet
           (fragments.length === 0 &&
             frag.duration === 0 &&
             frag.tagList.length === 0 &&
             frag.byteRange.length === 0))
       ) {
-        const index = currentSN - previous!.startSN;
+        const index = currentSN - source.startSN;
         const lane = index * LANES;
-        const length = index >= 0 ? source.lanes[lane + LANE_LENGTH] : 0;
-        const candidate: Fragment | undefined = length
-          ? previous!.fragments[index]
-          : undefined;
+        const length = index < 0 ? 0 : source.lanes[lane + LANE_LENGTH];
+        const candidate = length ? source.fragments[index] : null;
         const at = LEVEL_PLAYLIST_REGEX_FAST.lastIndex;
+        const end = at + length;
         if (
-          candidate?.sn === currentSN &&
-          candidate.level === id &&
-          candidate.base === base &&
+          candidate?.level === id &&
           candidate.levelkeys === levelkeys &&
           candidate.initSegment === currentInitSegment &&
           source.lanes[lane + LANE_CC] === discontinuityCounter &&
           candidate.cc === source.lanes[lane + LANE_CC_OUT] &&
           source.lanes[lane + LANE_BITRATE] === currentBitrate &&
-          (candidate.rawProgramDateTime !== null ||
-            candidate.programDateTime === prevEndPdt) &&
-          sameText(
-            string,
-            at,
-            source.text,
-            source.lanes[lane + LANE_END],
-            length,
-          )
+          // the URI line has to end where the region does
+          (end === string.length ||
+            string.charCodeAt(end) === 10 ||
+            string.charCodeAt(end) === 13) &&
+          string.substring(at, end) ===
+            source.text.substring(
+              source.lanes[lane + LANE_END] - length,
+              source.lanes[lane + LANE_END],
+            )
         ) {
           const duration = source.lanes[lane + LANE_DURATION];
           if (candidate.rawProgramDateTime) {
@@ -446,17 +493,10 @@ export default class M3U8Parser {
             }
             programDateTimes.push(candidate as MediaFragment);
           }
-          const pdt = candidate.programDateTime;
-          prevEndPdt = pdt
-            ? pdt + (Number.isFinite(duration) ? duration : 0) * 1000
-            : null;
           if (levelkeys) {
             setFragLevelKeys(candidate, levelkeys, level);
           }
-          // The only level state a region may carry. Taken from the lanes and
-          // not from the fragment, whose `cc` the merge is free to renumber.
-          discontinuityCounter = source.lanes[lane + LANE_CC_OUT];
-          const previousParts = previous!.partList;
+          const previousParts = source.details.partList;
           if (previousParts !== null) {
             while (
               prevPartIndex < previousParts.length &&
@@ -475,23 +515,24 @@ export default class M3U8Parser {
           }
           fragments.push(candidate);
           lanes.push(
-            at + length,
+            end,
             length,
-            source.lanes[lane + LANE_CC],
             discontinuityCounter,
+            candidate.cc,
             currentBitrate,
             duration,
           );
+          discontinuityCounter = candidate.cc;
           prevFrag = candidate;
           totalduration += duration;
           currentSN++;
           currentPart = 0;
           reused++;
-          regionStart = at + length;
+          regionStart = end;
           regionCC = discontinuityCounter;
           regionBitrate = currentBitrate;
           regionOpaque = false;
-          LEVEL_PLAYLIST_REGEX_FAST.lastIndex = regionStart;
+          LEVEL_PLAYLIST_REGEX_FAST.lastIndex = end;
           createNextFrag = true;
           continue;
         }
@@ -510,9 +551,9 @@ export default class M3U8Parser {
         frag.level = id;
         if (currentInitSegment) {
           frag.initSegment = currentInitSegment;
-          if (currentInitSegment.rawProgramDateTime) {
-            frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
-            currentInitSegment.rawProgramDateTime = null;
+          if (initProgramDateTime) {
+            frag.rawProgramDateTime = initProgramDateTime;
+            initProgramDateTime = null;
           }
           if (nextByteRange) {
             frag.setByteRange(nextByteRange);
@@ -550,15 +591,11 @@ export default class M3U8Parser {
           frag.relurl = __USE_VARIABLE_SUBSTITUTION__
             ? substituteVariables(level, uri)
             : uri;
-          if (frag.rawProgramDateTime) {
-            programDateTimes.push(frag as MediaFragment);
-          } else if (prevEndPdt !== null) {
-            frag.programDateTime = prevEndPdt;
-          }
-          const pdt = frag.programDateTime;
-          prevEndPdt = pdt
-            ? pdt + (Number.isFinite(frag.duration) ? frag.duration : 0) * 1000
-            : null;
+          assignProgramDateTime(
+            frag as MediaFragment,
+            prevFrag as MediaFragment,
+            programDateTimes,
+          );
           prevFrag = frag;
           totalduration += frag.duration;
           currentSN++;
@@ -628,9 +665,10 @@ export default class M3U8Parser {
         // A region can only be stepped over on a reload when every tag in it
         // describes the segment. These five do; the rest move level state that
         // stepping over the region would lose, so they close it for reuse.
-        // EXT-X-MAP is among them: the merge repoints a fragment's init
-        // segment at the previous playlist's, so the fragment can no longer
-        // say which one its own EXT-X-MAP declared.
+        // EXT-X-MAP is among them because the merge repoints a fragment's init
+        // segment at the previous playlist's, so a fragment cannot say which
+        // one its own map declared; a map ahead of the segment's duration
+        // instead ends the region there (see MAP below).
         regionOpaque ||=
           tag !== 'PROGRAM-DATE-TIME' &&
           tag !== 'DISCONTINUITY' &&
@@ -783,6 +821,10 @@ export default class M3U8Parser {
               assignMultipleMediaPlaylistTagOccuranceError(level, tag, result);
             }
             level.startCC = discontinuityCounter = parseInt(value1);
+            if (reused) {
+              // renumbers segments taken from the previous parse
+              return null;
+            }
             fragments.forEach(
               (frag) => frag && (frag.cc = discontinuityCounter),
             );
@@ -807,7 +849,7 @@ export default class M3U8Parser {
                 levelkeys[levelKey.keyFormat] = levelKey;
               }
               if (source !== null) {
-                const previousKeys = reuseKeys(levelkeys, previous!, currentSN);
+                const previousKeys = reuseKeys(levelkeys, source, currentSN);
                 if (previousKeys !== levelkeys) {
                   levelkeys = previousKeys;
                   sharedKeys = true;
@@ -833,17 +875,11 @@ export default class M3U8Parser {
               setInitSegment(init, mapAttrs, id, levelkeys);
               currentInitSegment = reuseInitSegment(
                 init,
-                source && previous!,
+                source,
                 currentSN,
                 discontinuityCounter,
               );
               frag.initSegment = currentInitSegment;
-              if (
-                currentInitSegment.rawProgramDateTime &&
-                !frag.rawProgramDateTime
-              ) {
-                frag.rawProgramDateTime = currentInitSegment.rawProgramDateTime;
-              }
             } else {
               // Initial segment tag is before segment duration tag
               // Handle case where EXT-X-MAP is declared after EXT-X-BYTERANGE
@@ -855,13 +891,22 @@ export default class M3U8Parser {
                 nextByteRange = null;
               }
               setInitSegment(frag, mapAttrs, id, levelkeys);
+              initProgramDateTime = frag.rawProgramDateTime;
+              frag.rawProgramDateTime = null;
               currentInitSegment = reuseInitSegment(
                 frag,
-                source && previous!,
+                source,
                 currentSN,
                 discontinuityCounter,
               );
               createNextFrag = true;
+              // The segment after the map begins a region of its own: what
+              // the map did is in the init segment that region is entered
+              // with.
+              regionStart = LEVEL_PLAYLIST_REGEX_FAST.lastIndex;
+              regionCC = discontinuityCounter;
+              regionBitrate = currentBitrate;
+              regionOpaque = false;
             }
             currentInitSegment.cc = discontinuityCounter;
             break;
@@ -939,11 +984,11 @@ export default class M3U8Parser {
         level.fragmentHint = prevFrag as MediaFragment;
       }
     } else if (level.partList) {
-      if (frag.rawProgramDateTime) {
-        programDateTimes.push(frag as MediaFragment);
-      } else if (prevEndPdt !== null) {
-        frag.programDateTime = prevEndPdt;
-      }
+      assignProgramDateTime(
+        frag as MediaFragment,
+        prevFrag as MediaFragment,
+        programDateTimes,
+      );
       frag.cc = discontinuityCounter;
       level.fragmentHint = frag as MediaFragment;
       if (levelkeys) {
@@ -953,62 +998,26 @@ export default class M3U8Parser {
     if (!level.targetduration) {
       level.playlistParsingError = new Error(`Missing Target Duration`);
     }
-    if (source !== null && (reused > 0 || base.url !== baseurl)) {
-      if (
-        level.playlistParsingError !== null ||
-        level.skippedSegments > 0 ||
-        !level.live ||
-        !continuous(previous!, level)
-      ) {
-        // Reasons this parse cannot land where a plain one would: it did not
-        // parse; it is a delta update, whose skipped segments the merge fills
-        // in from the previous playlist, which is at the previous URL; the
-        // playlist ended, and an ended one measures its date ranges against
-        // its duration rather than the timeline; or the merge would reject it,
-        // and a rejected reload has to leave the previous playlist alone.
-        // Nothing has been written to it yet, so dropping this attempt for a
-        // plain parse is the whole undo.
-        return M3U8Parser.parseLevelPlaylist(
-          string,
-          baseurl,
-          id,
-          type,
-          levelUrlId,
-          multivariantVariableList,
-        );
-      }
-      // Commit. Where the segment sits in this playlist, and which URL the
-      // playlist is at, are the only things that differ for a segment that did
-      // not change; the duration goes back to the declared one so that the
-      // merge derives PTS from the same starting point either way.
-      //
-      // A fragment carried over is already on the timeline, so this playlist
-      // is placed on it too, at the start the previous parse gave the segment
-      // this one begins with. That is the offset `adjustSliding` arrives at,
-      // and it assigns the same starts again over the top of these.
-      if (reused > 0) {
-        const anchor = previous!.fragments[level.startSN - previous!.startSN];
-        const sliding = anchor ? anchor.start : 0;
-        let offset = 0;
-        for (let j = 0; j < fragments.length; j++) {
-          const fragment = fragments[j] as Fragment;
-          const duration = lanes[j * LANES + LANE_DURATION];
-          fragment.setDuration(duration);
-          fragment.playlistOffset = offset;
-          fragment.setStart(offset + sliding);
-          offset += duration;
-        }
-      }
-      base.url = baseurl;
-    }
     const fragmentLength = fragments.length;
     const firstFragment = fragments[0];
     const lastFragment = fragments[fragmentLength - 1];
     totalduration += level.skippedSegments * level.targetduration;
-    if (totalduration > 0 && fragmentLength && lastFragment) {
+    const hasSegments = totalduration > 0 && fragmentLength > 0;
+    if (hasSegments && lastFragment) {
       level.averagetargetduration = totalduration / fragmentLength;
       const lastSn = lastFragment.sn;
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
+    }
+    // Fragments taken from the previous parse are written to only now, once
+    // nothing can send this reload back for a plain parse. With none taken,
+    // the fresh fragments still share its base URL, which cannot move alone.
+    if (
+      source !== null &&
+      (reused ? !commit(level, source, lanes, baseurl) : base.url !== baseurl)
+    ) {
+      return null;
+    }
+    if (hasSegments && lastFragment) {
       if (!level.live) {
         lastFragment.endList = true;
       }
@@ -1042,121 +1051,105 @@ export default class M3U8Parser {
 
     level.endCC = discontinuityCounter;
 
-    generations.set(level, { text: string, startSN: level.startSN, lanes });
+    generations.set(level, {
+      details: level,
+      text: string,
+      startSN: level.startSN,
+      base,
+      fragments: fragments.slice(),
+      lanes,
+    });
 
     return level;
   }
 }
 
-// The previous parse of this playlist when its fragments may be kept, or null.
-// A reload that cannot rebuild the same graph is turned away here, once, rather
-// than being caught segment by segment: a delta update, a playlist that moved,
-// one whose details were rewritten by the merge, or one that failed to parse.
+// The previous parse of this playlist when fragments may be kept from it. A
+// details object rewritten by a failed delta merge no longer indexes its
+// lanes, and variable references can resolve differently between reloads.
 function reuseSource(
-  previous: LevelDetails | null | undefined,
-  baseurl: string,
+  previous: LevelDetails,
   level: LevelDetails,
 ): Generation | null {
-  if (
-    previous?.playlistParsingError !== null ||
-    !previous.live ||
-    !previous.fragments[0] ||
-    level.hasVariableRefs ||
-    !sameUpToQuery(previous.url, baseurl)
-  ) {
-    return null;
-  }
   const generation = generations.get(previous);
-  if (
-    generation?.text !== previous.m3u8 ||
-    generation.startSN !== previous.startSN
-  ) {
-    return null;
-  }
-  return generation;
+  return generation?.startSN === previous.startSN &&
+    previous.live &&
+    !previous.hasVariableRefs &&
+    !level.hasVariableRefs &&
+    !notEqualAfterStrippingQueries(previous.url, level.url)
+    ? generation
+    : null;
 }
 
-// `length` characters of `text` from `at`, against the same number ending at
-// `end` of `previous`. Compared in place: slicing them would allocate, and a
-// sliced string kept on a fragment is a leak (#939).
-function sameText(
-  text: string,
-  at: number,
-  previous: string,
-  end: number,
-  length: number,
+function noop() {}
+
+// Commits a parse that took fragments from `source`, writing what differs for
+// a segment that did not change: where it sits in this playlist and on the
+// timeline (at the start the previous parse gave the segment this one begins
+// with, which is where `adjustSliding` would put it), the declared duration
+// the merge derives PTS from, the date-time chain, and the playlist URL.
+// False, with nothing written, when the reload cannot land where a plain
+// parse would: it did not parse; it is a delta update, whose skipped segments
+// the merge fills in from the previous playlist, at the previous URL; it
+// ended; it starts before the previous window; or the merge would reject it,
+// and a rejected reload has to leave the previous playlist alone.
+function commit(
+  level: LevelDetails,
+  source: Generation,
+  lanes: number[],
+  baseurl: string,
 ): boolean {
-  if (at + length > text.length) {
+  const old = source.details;
+  const anchor = old.fragments[level.startSN - old.startSN] as
+    | MediaFragment
+    | undefined;
+  if (
+    level.playlistParsingError !== null ||
+    level.skippedSegments > 0 ||
+    !level.live ||
+    !anchor
+  ) {
     return false;
   }
-  const offset = end - length;
-  for (let i = length; i--; ) {
-    if (text.charCodeAt(at + i) !== previous.charCodeAt(offset + i)) {
-      return false;
-    }
+  mapFragmentIntersection(old, level, noop);
+  if (level.playlistParsingError !== null) {
+    return false;
   }
+  level.appliedTimelineOffset = old.appliedTimelineOffset;
+  const fragments = level.fragments;
+  const sliding = anchor.start;
+  let offset = 0;
+  let prev: Fragment | null = null;
+  for (let i = 0; i < fragments.length; i++) {
+    const fragment = fragments[i];
+    const duration = lanes[i * LANES + LANE_DURATION];
+    place(fragment, duration, offset, sliding, prev);
+    offset += duration;
+    prev = fragment;
+  }
+  const hint = level.fragmentHint;
+  if (hint) {
+    place(hint, hint.duration, offset, sliding, prev);
+  }
+  source.base.url = baseurl;
   return true;
 }
 
-// True when the two playlists agree about every segment they have in common.
-// `mergeDetails` rejects the reload when they do not, and a rejected reload has
-// to leave the previous playlist untouched, so this is what decides whether
-// fragments may be shared with it at all.
-function continuous(previous: LevelDetails, level: LevelDetails): boolean {
-  const newFragments = level.fragments;
-  if (!newFragments.length) {
-    return true;
+function place(
+  fragment: Fragment,
+  duration: number,
+  offset: number,
+  sliding: number,
+  prev: Fragment | null,
+) {
+  fragment.setDuration(duration);
+  fragment.playlistOffset = offset;
+  fragment.setStart(offset + sliding);
+  if (!fragment.rawProgramDateTime) {
+    fragment.programDateTime = prev?.programDateTime
+      ? prev.endProgramDateTime
+      : null;
   }
-  const oldFragments = previous.fragments;
-  const oldHint = previous.fragmentHint;
-  const newHint = level.fragmentHint;
-  const last = Math.min(
-    oldHint ? oldHint.sn : previous.endSN,
-    newHint ? newHint.sn : level.startSN + newFragments.length - 1,
-  );
-  for (let sn = Math.max(previous.startSN, level.startSN); sn <= last; sn++) {
-    const oldFrag =
-      oldFragments[sn - previous.startSN] ||
-      (oldHint?.sn === sn ? oldHint : null);
-    const newFrag =
-      newFragments[sn - level.startSN] || (newHint?.sn === sn ? newHint : null);
-    if (oldFrag && newFrag && oldFrag !== newFrag) {
-      if (
-        oldFrag.cc !== newFrag.cc ||
-        (oldFrag.relurl !== undefined &&
-          !sameUpToQuery(oldFrag.relurl, newFrag.relurl))
-      ) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-// Equality of two URLs ignoring the query, matching what the merge compares
-// segment URIs with, without the two strings it would allocate to do it.
-function sameUpToQuery(uri: string, other: string | undefined): boolean {
-  if (uri === other) {
-    return true;
-  }
-  if (other === undefined) {
-    return false;
-  }
-  const end = queryStart(uri);
-  if (end !== queryStart(other)) {
-    return false;
-  }
-  for (let i = end; i--; ) {
-    if (uri.charCodeAt(i) !== other.charCodeAt(i)) {
-      return false;
-    }
-  }
-  return true;
-}
-
-function queryStart(uri: string): number {
-  const index = uri.lastIndexOf('?');
-  return index === -1 ? uri.length : index;
 }
 
 // Init segments and key sets are the two things a fragment points at that the
@@ -1166,11 +1159,11 @@ function queryStart(uri: string): number {
 // fewer object per reload.
 function reuseInitSegment(
   init: Fragment,
-  previous: LevelDetails | null,
+  source: Generation | null,
   sn: number,
   cc: number,
 ): Fragment {
-  const candidate = previous?.fragments[sn - previous.startSN]?.initSegment;
+  const candidate = source?.fragments[sn - source.startSN]?.initSegment;
   if (
     candidate?.base === init.base &&
     candidate.relurl === init.relurl &&
@@ -1184,12 +1177,8 @@ function reuseInitSegment(
   return init;
 }
 
-function reuseKeys(
-  keys: LevelKeys,
-  previous: LevelDetails,
-  sn: number,
-): LevelKeys {
-  const candidate = previous.fragments[sn - previous.startSN]?.levelkeys;
+function reuseKeys(keys: LevelKeys, source: Generation, sn: number): LevelKeys {
+  const candidate = source.fragments[sn - source.startSN]?.levelkeys;
   if (candidate && candidate !== keys) {
     const formats = Object.keys(keys);
     if (
@@ -1243,92 +1232,6 @@ function createVariant(
     level.iframes = true;
   }
   return level;
-}
-
-export function mapDateRanges(
-  programDateTimes: MediaFragment[],
-  details: LevelDetails,
-) {
-  // Make sure DateRanges are mapped to a ProgramDateTime tag that applies a date to a segment that overlaps with its start date
-  let programDateTimeCount = programDateTimes.length;
-  if (!programDateTimeCount) {
-    if (details.hasProgramDateTime) {
-      const lastFragment = details.fragments[details.fragments.length - 1];
-      programDateTimes.push(lastFragment);
-      programDateTimeCount++;
-    } else {
-      // no segments with EXT-X-PROGRAM-DATE-TIME references in playlist history
-      return;
-    }
-  }
-  const lastProgramDateTime = programDateTimes[programDateTimeCount - 1];
-  const playlistEnd = details.live ? Infinity : details.totalduration;
-  const dateRangeIds = Object.keys(details.dateRanges);
-  for (let i = dateRangeIds.length; i--; ) {
-    const dateRange = details.dateRanges[dateRangeIds[i]]!;
-    const startDateTime = dateRange.startDate.getTime();
-    dateRange.tagAnchor = lastProgramDateTime.ref;
-    for (let j = programDateTimeCount; j--; ) {
-      if (programDateTimes[j]?.sn < details.startSN) {
-        break;
-      }
-      const fragment = findFragmentWithStartDate(
-        details,
-        startDateTime,
-        programDateTimes,
-        j,
-        playlistEnd,
-      );
-      if (fragment) {
-        dateRange.tagAnchor = fragment.ref;
-        break;
-      }
-    }
-  }
-}
-
-function findFragmentWithStartDate(
-  details: LevelDetails,
-  startDateTime: number,
-  programDateTimes: MediaFragment[],
-  index: number,
-  endTime: number,
-): MediaFragment | null {
-  const pdtFragment = programDateTimes[index] as MediaFragment | undefined;
-  if (pdtFragment) {
-    // find matching range between PDT tags
-    const pdtStart = pdtFragment.programDateTime as number;
-    if (startDateTime >= pdtStart || index === 0) {
-      const durationBetweenPdt =
-        (programDateTimes[index + 1]?.start || endTime) - pdtFragment.start;
-      if (startDateTime <= pdtStart + durationBetweenPdt * 1000) {
-        // map to fragment with date-time range
-        const startIndex = pdtFragment.sn - details.startSN;
-        const fragments = details.fragments;
-        if (startIndex >= 0 && startIndex < fragments.length) {
-          if (fragments.length > programDateTimes.length) {
-            const endSegment =
-              programDateTimes[index + 1] || fragments[fragments.length - 1];
-            const endIndex = Math.min(
-              endSegment.sn - details.startSN,
-              fragments.length - 1,
-            );
-            for (let i = endIndex; i > startIndex; i--) {
-              const fragStartDateTime = fragments[i].programDateTime as number;
-              if (
-                startDateTime >= fragStartDateTime &&
-                startDateTime < fragStartDateTime + fragments[i].duration * 1000
-              ) {
-                return fragments[i];
-              }
-            }
-          }
-          return fragments[startIndex];
-        }
-      }
-    }
-  }
-  return null;
 }
 
 function parseKey(
@@ -1423,18 +1326,6 @@ function backfillProgramDateTimes(
     frag.programDateTime =
       (fragPrev.programDateTime as number) - frag.duration * 1000;
     fragPrev = frag;
-  }
-}
-
-export function assignProgramDateTime(
-  frag: MediaFragment,
-  prevFrag: MediaFragment | null,
-  programDateTimes: MediaFragment[],
-) {
-  if (frag.rawProgramDateTime) {
-    programDateTimes.push(frag);
-  } else if (prevFrag?.programDateTime) {
-    frag.programDateTime = prevFrag.endProgramDateTime;
   }
 }
 

@@ -4,7 +4,6 @@
 
 import { stringify } from './safe-json-stringify';
 import { DateRange } from '../loader/date-range';
-import { assignProgramDateTime, mapDateRanges } from '../loader/m3u8-parser';
 import { PlaylistLevelType } from '../types/loader';
 import type { ILogger } from './logger';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
@@ -371,6 +370,104 @@ function mergeDateRanges(
   return dateRanges;
 }
 
+export function mapDateRanges(
+  programDateTimes: MediaFragment[],
+  details: LevelDetails,
+) {
+  // Make sure DateRanges are mapped to a ProgramDateTime tag that applies a date to a segment that overlaps with its start date
+  let programDateTimeCount = programDateTimes.length;
+  if (!programDateTimeCount) {
+    if (details.hasProgramDateTime) {
+      const lastFragment = details.fragments[details.fragments.length - 1];
+      programDateTimes.push(lastFragment);
+      programDateTimeCount++;
+    } else {
+      // no segments with EXT-X-PROGRAM-DATE-TIME references in playlist history
+      return;
+    }
+  }
+  const lastProgramDateTime = programDateTimes[programDateTimeCount - 1];
+  const playlistEnd = details.live ? Infinity : details.totalduration;
+  const dateRangeIds = Object.keys(details.dateRanges);
+  for (let i = dateRangeIds.length; i--; ) {
+    const dateRange = details.dateRanges[dateRangeIds[i]]!;
+    const startDateTime = dateRange.startDate.getTime();
+    dateRange.tagAnchor = lastProgramDateTime.ref;
+    for (let j = programDateTimeCount; j--; ) {
+      if (programDateTimes[j]?.sn < details.startSN) {
+        break;
+      }
+      const fragment = findFragmentWithStartDate(
+        details,
+        startDateTime,
+        programDateTimes,
+        j,
+        playlistEnd,
+      );
+      if (fragment) {
+        dateRange.tagAnchor = fragment.ref;
+        break;
+      }
+    }
+  }
+}
+
+function findFragmentWithStartDate(
+  details: LevelDetails,
+  startDateTime: number,
+  programDateTimes: MediaFragment[],
+  index: number,
+  endTime: number,
+): MediaFragment | null {
+  const pdtFragment = programDateTimes[index] as MediaFragment | undefined;
+  if (pdtFragment) {
+    // find matching range between PDT tags
+    const pdtStart = pdtFragment.programDateTime as number;
+    if (startDateTime >= pdtStart || index === 0) {
+      const durationBetweenPdt =
+        (programDateTimes[index + 1]?.start || endTime) - pdtFragment.start;
+      if (startDateTime <= pdtStart + durationBetweenPdt * 1000) {
+        // map to fragment with date-time range
+        const startIndex = pdtFragment.sn - details.startSN;
+        const fragments = details.fragments;
+        if (startIndex >= 0 && startIndex < fragments.length) {
+          if (fragments.length > programDateTimes.length) {
+            const endSegment =
+              programDateTimes[index + 1] || fragments[fragments.length - 1];
+            const endIndex = Math.min(
+              endSegment.sn - details.startSN,
+              fragments.length - 1,
+            );
+            for (let i = endIndex; i > startIndex; i--) {
+              const fragStartDateTime = fragments[i].programDateTime as number;
+              if (
+                startDateTime >= fragStartDateTime &&
+                startDateTime < fragStartDateTime + fragments[i].duration * 1000
+              ) {
+                return fragments[i];
+              }
+            }
+          }
+          return fragments[startIndex];
+        }
+      }
+    }
+  }
+  return null;
+}
+
+export function assignProgramDateTime(
+  frag: MediaFragment,
+  prevFrag: MediaFragment | null,
+  programDateTimes: MediaFragment[],
+) {
+  if (frag.rawProgramDateTime) {
+    programDateTimes.push(frag);
+  } else if (prevFrag?.programDateTime) {
+    frag.programDateTime = prevFrag.endProgramDateTime;
+  }
+}
+
 export function mapPartIntersection(
   oldParts: Part[] | null,
   newParts: Part[] | null,
@@ -502,14 +599,19 @@ export function adjustSliding(
     // new details already has a sliding offset or has skipped segments
     return sliding; // 0
   }
-  // `sliding` is where the new playlist begins on the timeline. What has to be
-  // added is the difference from where it begins now, which is only zero while
-  // its fragments start at their offset in it: a playlist that kept fragments
-  // from `oldDetails` arrives already positioned.
+  // `sliding` is where the new playlist's first segment belongs. What is added
+  // is the difference from where it is now: a fresh parse sits at its playlist
+  // offset plus the applied timeline offset, and a parse that kept fragments
+  // from `oldDetails` also carries the position they already had.
   const first = newDetails.fragments[newDetails.skippedSegments];
   addSliding(
     newDetails,
-    sliding - (first ? first.start - first.playlistOffset : 0),
+    first
+      ? sliding -
+          first.start +
+          first.playlistOffset +
+          (newDetails.appliedTimelineOffset || 0)
+      : sliding,
   );
   return sliding;
 }
@@ -619,7 +721,7 @@ export function reassignFragmentLevelIndexes(levels: Level[]) {
   });
 }
 
-function notEqualAfterStrippingQueries(
+export function notEqualAfterStrippingQueries(
   uriBefore: string,
   uriAfter: string | undefined,
 ): boolean {

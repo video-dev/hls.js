@@ -167,10 +167,15 @@ export default class BasePlaylistController
     const timelineOffset = this.hls.config.timelineOffset;
     if (timelineOffset !== details.appliedTimelineOffset) {
       const offset = Math.max(timelineOffset || 0, 0);
+      // A reload that kept fragments from the previous playlist is already on
+      // its timeline, with the offset that playlist had applied in it; the
+      // merge adds this one the way it does for a fresh parse.
+      if (details.appliedTimelineOffset === undefined) {
+        fragments.forEach((frag) => {
+          frag?.setStart(frag.playlistOffset + offset);
+        });
+      }
       details.appliedTimelineOffset = offset;
-      fragments.forEach((frag) => {
-        frag?.setStart(frag.playlistOffset + offset);
-      });
     }
 
     // if current playlist is a live playlist, arm a timer to reload it
