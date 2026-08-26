@@ -502,7 +502,15 @@ export function adjustSliding(
     // new details already has a sliding offset or has skipped segments
     return sliding; // 0
   }
-  addSliding(newDetails, sliding);
+  // `sliding` is where the new playlist begins on the timeline. What has to be
+  // added is the difference from where it begins now, which is only zero while
+  // its fragments start at their offset in it: a playlist that kept fragments
+  // from `oldDetails` arrives already positioned.
+  const first = newDetails.fragments[newDetails.skippedSegments];
+  addSliding(
+    newDetails,
+    sliding - (first ? first.start - first.playlistOffset : 0),
+  );
   return sliding;
 }
 
