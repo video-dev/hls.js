@@ -53,8 +53,12 @@ describe('live reload fragment reuse ownership', function () {
   // buffered, which is what the previous details holds when a reload arrives.
   function loadedWindow() {
     const details = parse(playlist(10), null);
+    // Spaced by the measured duration, not the declared one: updateFromToPTS
+    // takes each fragment's duration from the next one's start, so a window
+    // spaced 6.0 apart would drift-correct back to the declared 6.0 and there
+    // would be nothing for a reload to lose.
     details.fragments.forEach((frag, i) => {
-      const start = i * 6;
+      const start = i * 6.04;
       const end = start + 6.04;
       updateFragPTSDTS(details, frag, start, end, start, end, false, logger);
     });
