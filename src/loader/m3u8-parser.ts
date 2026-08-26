@@ -455,6 +455,13 @@ export default class M3U8Parser {
     let regionOpaque = false;
     let sharedKeys = false;
     let prevPartIndex = 0;
+    // How far the merge has renumbered the previous window's discontinuity
+    // counters past what its playlist declared (a window that slid past a
+    // discontinuity without EXT-X-DISCONTINUITY-SEQUENCE). Locked by the
+    // first kept segment that shows it; commit re-checks every overlapping
+    // segment the way the merge would.
+    let ccShift = 0;
+    let ccLocked = false;
     // What the next fragment's programDateTime extrapolates from, maintained
     // with declared durations (a kept fragment's own may since have been
     // re-derived from PTS). Mirrors `assignProgramDateTime` exactly.
@@ -483,12 +490,19 @@ export default class M3U8Parser {
         const candidate = length ? source.fragments[index] : null;
         const at = LEVEL_PLAYLIST_REGEX_FAST.lastIndex;
         const end = at + length;
+        // What a fresh parse would number this segment: the counter entering
+        // it plus the region's own DISCONTINUITY tags. The candidate carries
+        // the merge's numbering, `ccShift` past the declared one.
+        const ccFresh =
+          discontinuityCounter +
+          source.lanes[lane + LANE_CC_OUT] -
+          source.lanes[lane + LANE_CC];
+        const shift = candidate === null ? 0 : candidate.cc - ccFresh;
         if (
           candidate?.level === id &&
           candidate.levelkeys === levelkeys &&
           candidate.initSegment === currentInitSegment &&
-          source.lanes[lane + LANE_CC] === discontinuityCounter &&
-          candidate.cc === source.lanes[lane + LANE_CC_OUT] &&
+          (shift === ccShift || (!ccLocked && shift !== 0 && !level.startCC)) &&
           source.lanes[lane + LANE_BITRATE] === currentBitrate &&
           // the URI line has to end where the region does
           (end === string.length ||
@@ -501,6 +515,10 @@ export default class M3U8Parser {
             )
         ) {
           const duration = source.lanes[lane + LANE_DURATION];
+          if (shift !== ccShift) {
+            ccShift = shift;
+            ccLocked = true;
+          }
           if (candidate.rawProgramDateTime) {
             if (firstPdtIndex === -1) {
               firstPdtIndex = fragments.length;
@@ -532,12 +550,12 @@ export default class M3U8Parser {
             end,
             length,
             discontinuityCounter,
-            candidate.cc,
+            ccFresh,
             currentBitrate,
             duration,
             source.lanes[lane + LANE_GAP],
           );
-          discontinuityCounter = candidate.cc;
+          discontinuityCounter = ccFresh;
           pdtBase = candidate.programDateTime
             ? candidate.programDateTime + duration * 1000
             : null;
@@ -1158,6 +1176,9 @@ function commit(
   ) {
     return false;
   }
+  if (!renumberLikeTheMerge(level, old, lanes, base)) {
+    return false;
+  }
   mapFragmentIntersection(old, level, noop);
   if (level.playlistParsingError !== null) {
     return false;
@@ -1218,6 +1239,69 @@ function commit(
     }
   }
   aligned.add(level);
+  return true;
+}
+
+// The merge renumbers a window that slid past a discontinuity on a playlist
+// without EXT-X-DISCONTINUITY-SEQUENCE: from the first overlapping segment
+// whose counter differs from the previous window's, everything is shifted by
+// that difference. Kept fragments already carry the merge's numbering, so
+// this applies the same rule to this parse's own fragments (the declared
+// counters are in the lanes), leaving every pair the merge compares equal.
+// False when the merge would not renumber but reject: the parse restarts and
+// the merge rejects the fresh result the way it always has.
+function renumberLikeTheMerge(
+  level: LevelDetails,
+  old: LevelDetails,
+  lanes: number[],
+  base: Base,
+): boolean {
+  const oldFrags = old.fragments;
+  const oldHint = old.fragmentHint?.duration ? old.fragmentHint : null;
+  const newFrags = level.fragments;
+  const hint = level.fragmentHint ?? null;
+  const delta = level.startSN - old.startSN;
+  const start = Math.max(old.startSN, level.startSN) - level.startSN;
+  const end =
+    (old.fragmentHint ? 1 : 0) +
+    Math.min(old.endSN, level.endSN) -
+    level.startSN;
+  let shift = 0;
+  let from = -1;
+  for (let i = start; i <= end; i++) {
+    const j = delta + i;
+    const oldFrag = j === oldFrags.length ? oldHint : oldFrags[j];
+    const newFrag = i === newFrags.length ? hint : newFrags[i];
+    if (!oldFrag || !newFrag) {
+      continue;
+    }
+    const declared =
+      i < newFrags.length ? lanes[i * LANES + LANE_CC_OUT] : newFrag.cc;
+    const d = oldFrag.cc - declared;
+    if (from === -1) {
+      if (d !== 0) {
+        if (level.startCC) {
+          return false;
+        }
+        shift = d;
+        from = i;
+      }
+    } else if (d !== shift) {
+      return false;
+    }
+  }
+  if (from !== -1) {
+    for (let i = from; i < newFrags.length; i++) {
+      const fragment = newFrags[i];
+      if (fragment.base === base) {
+        fragment.cc += shift;
+      }
+    }
+    if (hint) {
+      hint.cc += shift;
+    }
+    level.endCC = (hint ?? newFrags[newFrags.length - 1]).cc;
+  }
   return true;
 }
 
