@@ -1,6 +1,7 @@
 import { NetworkErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
+import { alignedWithPrevious } from '../loader/m3u8-parser';
 import {
   getSkipValue,
   HlsSkip,
@@ -167,13 +168,16 @@ export default class BasePlaylistController
     const timelineOffset = this.hls.config.timelineOffset;
     if (timelineOffset !== details.appliedTimelineOffset) {
       const offset = Math.max(timelineOffset || 0, 0);
-      // A reload that kept fragments from the previous playlist is already on
+      // A parse that kept fragments of the previous playlist is already on
       // its timeline, with the offset that playlist had applied in it; the
       // merge adds this one the way it does for a fresh parse.
-      if (details.appliedTimelineOffset === undefined) {
+      if (!alignedWithPrevious(details)) {
         fragments.forEach((frag) => {
           frag?.setStart(frag.playlistOffset + offset);
         });
+        details.fragmentHint?.setStart(
+          details.fragmentHint.playlistOffset + offset,
+        );
       }
       details.appliedTimelineOffset = offset;
     }

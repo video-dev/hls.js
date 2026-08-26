@@ -6,7 +6,6 @@ import { LevelKey } from './level-key';
 import { AttrList } from '../utils/attr-list';
 import { isCodecType } from '../utils/codecs';
 import {
-  assignProgramDateTime,
   mapDateRanges,
   mapFragmentIntersection,
   notEqualAfterStrippingQueries,
@@ -75,14 +74,15 @@ const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
 // region that comes back byte for byte, entered in the same state, is the
 // fragment already in hand.
 //
-// Six lanes per fragment, indexed the same way as `fragments`:
+// Seven lanes per fragment, indexed the same way as `fragments`:
 const LANE_END = 0; // offset in `text` just past the region's URI line
 const LANE_LENGTH = 1; // region length; 0 marks a region that must be parsed
 const LANE_CC = 2; // discontinuity counter entering the region
 const LANE_CC_OUT = 3; // and leaving it
 const LANE_BITRATE = 4; // EXT-X-BITRATE value entering the region
 const LANE_DURATION = 5; // EXTINF duration as this playlist declares it
-const LANES = 6;
+const LANE_GAP = 6; // 1 when the region declares EXT-X-GAP
+const LANES = 7;
 
 type Generation = {
   details: LevelDetails;
@@ -97,6 +97,17 @@ type Generation = {
 // Held weakly and off to the side: the shape of LevelDetails is public API and
 // no other module has any business knowing that reuse happens at all.
 const generations: WeakMap<LevelDetails, Generation> = new WeakMap();
+
+// Details whose fragments were carried over from the previous parse, already
+// placed on that playlist's timeline at commit.
+const aligned: WeakSet<LevelDetails> = new WeakSet();
+
+// Whether the parser kept fragments of the previous playlist in `details`, so
+// their starts already carry the timeline the previous playlist was on. A
+// parse without carried fragments still sits at its playlist offsets.
+export function alignedWithPrevious(details: LevelDetails): boolean {
+  return aligned.has(details);
+}
 
 const LEVEL_PLAYLIST_REGEX_SLOW = new RegExp(
   [
@@ -444,6 +455,10 @@ export default class M3U8Parser {
     let regionOpaque = false;
     let sharedKeys = false;
     let prevPartIndex = 0;
+    // What the next fragment's programDateTime extrapolates from, maintained
+    // with declared durations (a kept fragment's own may since have been
+    // re-derived from PTS). Mirrors `assignProgramDateTime` exactly.
+    let pdtBase: number | null = null;
     let frag: Fragment = new Fragment(type, base);
 
     for (;;) {
@@ -520,8 +535,12 @@ export default class M3U8Parser {
             candidate.cc,
             currentBitrate,
             duration,
+            source.lanes[lane + LANE_GAP],
           );
           discontinuityCounter = candidate.cc;
+          pdtBase = candidate.programDateTime
+            ? candidate.programDateTime + duration * 1000
+            : null;
           prevFrag = candidate;
           totalduration += duration;
           currentSN++;
@@ -590,11 +609,17 @@ export default class M3U8Parser {
           frag.relurl = __USE_VARIABLE_SUBSTITUTION__
             ? substituteVariables(level, uri)
             : uri;
-          assignProgramDateTime(
-            frag as MediaFragment,
-            prevFrag as MediaFragment,
-            programDateTimes,
-          );
+          // `assignProgramDateTime`, extrapolating from `pdtBase` rather than
+          // the previous fragment so a kept predecessor's re-derived duration
+          // cannot skew the chain
+          if (frag.rawProgramDateTime) {
+            programDateTimes.push(frag as MediaFragment);
+          } else if (pdtBase !== null) {
+            frag.programDateTime = pdtBase;
+          }
+          pdtBase = frag.programDateTime
+            ? frag.programDateTime + frag.duration * 1000
+            : null;
           prevFrag = frag;
           totalduration += frag.duration;
           currentSN++;
@@ -636,6 +661,7 @@ export default class M3U8Parser {
             discontinuityCounter,
             regionBitrate,
             frag.duration,
+            frag.gap ? 1 : 0,
           );
           regionStart = regionEnd;
           regionCC = discontinuityCounter;
@@ -707,7 +733,7 @@ export default class M3U8Parser {
               // This will result in fragments[] containing undefined values, which we will fill in with `mergeDetails`
               for (let i = skippedSegments; i--; ) {
                 fragments.push(null);
-                lanes.push(0, 0, 0, 0, 0, 0);
+                lanes.push(0, 0, 0, 0, 0, 0, 0);
               }
               currentSN += skippedSegments;
             }
@@ -990,11 +1016,11 @@ export default class M3U8Parser {
         level.fragmentHint = prevFrag as MediaFragment;
       }
     } else if (level.partList) {
-      assignProgramDateTime(
-        frag as MediaFragment,
-        prevFrag as MediaFragment,
-        programDateTimes,
-      );
+      if (frag.rawProgramDateTime) {
+        programDateTimes.push(frag as MediaFragment);
+      } else if (pdtBase !== null) {
+        frag.programDateTime = pdtBase;
+      }
       frag.cc = discontinuityCounter;
       level.fragmentHint = frag as MediaFragment;
       if (levelkeys) {
@@ -1014,12 +1040,20 @@ export default class M3U8Parser {
       const lastSn = lastFragment.sn;
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
     }
+    level.endCC = discontinuityCounter;
     // Fragments taken from the previous parse are written to only now, once
     // nothing can send this reload back for a plain parse.
     if (
       source !== null &&
       reused &&
-      !commit(level, source, lanes, base, baseurl)
+      !commit(
+        level,
+        source,
+        lanes,
+        base,
+        baseurl,
+        programDateTimes.length > 0 && level.dateRangeTagCount > 0,
+      )
     ) {
       return null;
     }
@@ -1041,6 +1075,7 @@ export default class M3U8Parser {
           fragments,
           firstPdtIndex,
           firstPdtIndex > fragmentLength - 1 ? frag : null,
+          lanes,
         );
         if (firstFragment) {
           programDateTimes.unshift(firstFragment as MediaFragment);
@@ -1054,8 +1089,6 @@ export default class M3U8Parser {
     if (programDateTimes.length && level.dateRangeTagCount && firstFragment) {
       mapDateRanges(programDateTimes, level);
     }
-
-    level.endCC = discontinuityCounter;
 
     generations.set(level, {
       details: level,
@@ -1088,14 +1121,21 @@ function reuseSource(
 
 function noop() {}
 
-// Commits a parse that took fragments from `source`, writing what differs for
-// a segment that did not change: where it sits in this playlist and on the
-// timeline (at the start the previous parse gave the segment this one begins
-// with, which is where `adjustSliding` would put it), the declared duration
-// the merge derives PTS from, the date-time chain, and the playlist URL.
-// False, with nothing written, when the reload cannot land where a plain
-// parse would: it did not parse; it is a delta update, whose skipped segments
-// the merge fills in from the previous playlist, at the previous URL; it
+// Commits a parse that took fragments from `source`. A kept fragment keeps
+// its measured timing: what commit writes on it is where this playlist says
+// it sits (`playlistOffset`, and the declared duration while no PTS has
+// re-derived it), the runtime state a rebuilt fragment would not have (`gap`
+// beyond what the playlist declares, `deltaPTS`), its extrapolated date-time
+// (the chain's anchor may have moved), and its playlist URL. When this parse
+// is going to map date ranges, kept fragments are put back on declared
+// timing first, because the mapping reads starts and durations and a fresh
+// parse has only declared ones; the merge re-derives the measured values.
+// This parse's own fragments are placed on the previous timeline, at the
+// start the previous parse gave the segment this playlist begins with, which
+// is where `adjustSliding` would put them.
+// False, with nothing of the previous parse written, when the reload cannot
+// land where a plain parse would: it did not parse; it is a delta update,
+// whose skipped segments the merge fills in from the previous playlist; it
 // ended; it starts before the previous window; or the merge would reject it,
 // and a rejected reload has to leave the previous playlist alone.
 function commit(
@@ -1104,6 +1144,7 @@ function commit(
   lanes: number[],
   base: Base,
   baseurl: string,
+  mapsDateRanges: boolean,
 ): boolean {
   const old = source.details;
   const anchor = old.fragments[level.startSN - old.startSN] as
@@ -1125,40 +1166,59 @@ function commit(
   const fragments = level.fragments;
   const sliding = anchor.start;
   let offset = 0;
-  let prev: Fragment | null = null;
+  let chainBase: number | null = null;
   for (let i = 0; i < fragments.length; i++) {
     const fragment = fragments[i];
     const duration = lanes[i * LANES + LANE_DURATION];
-    place(fragment, duration, offset, sliding, prev);
-    if (fragment.base !== base && fragment.base.url !== baseurl) {
-      // a kept fragment: move its playlist URL to this reload's
-      fragment.base.url = baseurl;
+    if (fragment.base === base) {
+      // this parse's own fragment; its date-time may have been extrapolated
+      // from a kept fragment whose chain the anchor's move left behind
+      fragment.setStart(sliding + offset);
+    } else {
+      fragment.playlistOffset = offset;
+      if (
+        fragment.duration !== duration &&
+        (mapsDateRanges ||
+          !(
+            Number.isFinite(fragment.startPTS) &&
+            Number.isFinite(fragment.endPTS)
+          ))
+      ) {
+        // unloaded fragments the merge will not re-derive from PTS the way
+        // it does loaded ones
+        fragment.setDuration(duration);
+      }
+      if (mapsDateRanges) {
+        fragment.setStart(sliding + offset);
+      }
+      if (fragment.deltaPTS !== undefined) {
+        fragment.deltaPTS = undefined;
+      }
+      const gap = lanes[i * LANES + LANE_GAP] ? true : undefined;
+      if (fragment.gap !== gap) {
+        fragment.gap = gap;
+      }
+      if (fragment.base.url !== baseurl) {
+        fragment.base.url = baseurl;
+      }
     }
+    if (fragment.rawProgramDateTime === null) {
+      fragment.programDateTime = chainBase;
+    }
+    chainBase = fragment.programDateTime
+      ? fragment.programDateTime + duration * 1000
+      : null;
     offset += duration;
-    prev = fragment;
   }
   const hint = level.fragmentHint;
   if (hint) {
-    place(hint, hint.duration, offset, sliding, prev);
+    hint.setStart(sliding + hint.playlistOffset);
+    if (hint.rawProgramDateTime === null) {
+      hint.programDateTime = chainBase;
+    }
   }
+  aligned.add(level);
   return true;
-}
-
-function place(
-  fragment: Fragment,
-  duration: number,
-  offset: number,
-  sliding: number,
-  prev: Fragment | null,
-) {
-  fragment.setDuration(duration);
-  fragment.playlistOffset = offset;
-  fragment.setStart(offset + sliding);
-  if (!fragment.rawProgramDateTime) {
-    fragment.programDateTime = prev?.programDateTime
-      ? prev.endProgramDateTime
-      : null;
-  }
 }
 
 // Init segments and key sets are the two things a fragment points at that the
@@ -1324,6 +1384,7 @@ function backfillProgramDateTimes(
   fragments: M3U8ParserFragments,
   firstPdtIndex: number,
   fragPrev: Fragment | null,
+  lanes: number[],
 ) {
   fragPrev ||= fragments[firstPdtIndex];
   if (!fragPrev) {
@@ -1335,8 +1396,10 @@ function backfillProgramDateTimes(
     if (!frag) {
       return;
     }
+    // the declared duration: a kept fragment's own may be PTS-derived
     frag.programDateTime =
-      (fragPrev.programDateTime as number) - frag.duration * 1000;
+      (fragPrev.programDateTime as number) -
+      lanes[i * LANES + LANE_DURATION] * 1000;
     fragPrev = frag;
   }
 }
