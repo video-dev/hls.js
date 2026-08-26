@@ -442,12 +442,9 @@ export default class M3U8Parser {
       return level;
     }
 
-    // The previous parse, when fragments may be kept from it. Fragments built
-    // by this parse get their own `base`; a kept fragment stays on the base it
-    // was built with, whose URL commit moves to this playlist's. The scan
-    // writes nothing to the previous parse: it reads candidates and pushes
-    // them; every write a kept fragment sees happens at commit, or in
-    // `mergeDetails` once the reload is installed.
+    // The previous parse, when fragments may be kept from it. The scan
+    // writes nothing to the previous parse; every write a kept fragment sees
+    // happens at commit, or in `mergeDetails` once the reload is installed.
     const source = previous && reuseSource(previous, level);
     const base: Base = { url: baseurl };
     const lanes: number[] = [];
@@ -502,11 +499,9 @@ export default class M3U8Parser {
             )
         ) {
           const duration = source.lanes[lane + LANE_DURATION];
-          // What a fresh parse would number this segment: the counter
-          // entering it plus the region's own DISCONTINUITY tags. The
-          // candidate may carry the merge's numbering instead; commit
-          // replays the merge's renumbering rule over every overlapping
-          // segment and restarts the parse when the merge would reject it.
+          // What a fresh parse would number this segment. The candidate may
+          // carry the merge's numbering instead; commit replays the merge's
+          // rule over every overlapping segment and restarts otherwise.
           const ccFresh =
             discontinuityCounter +
             source.lanes[lane + LANE_CC_OUT] -
@@ -518,8 +513,8 @@ export default class M3U8Parser {
             programDateTimes.push(candidate as MediaFragment);
           }
           if (levelkeys) {
-            // `candidate.levelkeys === levelkeys` above: nothing is written
-            // to the candidate, only the new details' rotation record.
+            // its `levelkeys` already are these; only the new details'
+            // rotation record is written
             trackEncryptedFragment(candidate, levelkeys, level);
           }
           const previousParts = (previous as LevelDetails).partList;
@@ -882,7 +877,13 @@ export default class M3U8Parser {
               //   #EXTINF: 6.0
               //   #EXT-X-MAP:URI="init.mp4
               const init = new Fragment(type, base);
-              setInitSegment(init, mapAttrs, id, discontinuityCounter, levelkeys);
+              setInitSegment(
+                init,
+                mapAttrs,
+                id,
+                discontinuityCounter,
+                levelkeys,
+              );
               currentInitSegment = reuseInitSegment(init, source, currentSN);
               frag.initSegment = currentInitSegment;
             } else {
@@ -895,7 +896,13 @@ export default class M3U8Parser {
               } else {
                 nextByteRange = null;
               }
-              setInitSegment(frag, mapAttrs, id, discontinuityCounter, levelkeys);
+              setInitSegment(
+                frag,
+                mapAttrs,
+                id,
+                discontinuityCounter,
+                levelkeys,
+              );
               initProgramDateTime = frag.rawProgramDateTime;
               frag.rawProgramDateTime = null;
               currentInitSegment = reuseInitSegment(frag, source, currentSN);
@@ -1036,11 +1043,6 @@ export default class M3U8Parser {
     ) {
       return null;
     }
-    // Date every fragment that has no EXT-X-PROGRAM-DATE-TIME of its own from
-    // the nearest dated one before it. This runs after the parse instead of
-    // during it so that fresh and kept fragments share one copy of the chain;
-    // the lanes keep the declared durations it extrapolates on (a kept
-    // fragment's own duration may since have been re-derived from PTS).
     extrapolateProgramDateTimes(fragments, level.fragmentHint ?? null, lanes);
     if (hasSegments && lastFragment) {
       if (!level.live) {
@@ -1075,10 +1077,9 @@ export default class M3U8Parser {
       mapDateRanges(
         programDateTimes,
         level,
-        // A parse that kept fragments maps its date ranges on the timing the
-        // playlist declares, held locally, because kept fragments carry
-        // measured timing that a reload the controller may still drop must
-        // not overwrite.
+        // A parse that kept fragments maps date ranges on declared timing
+        // held locally; kept fragments carry measured timing that a reload
+        // the controller may still drop must not overwrite.
         aligned.has(level) ? declaredTiming(level.startSN, lanes) : undefined,
       );
     }
@@ -1114,19 +1115,16 @@ function reuseSource(
 function noop() {}
 
 // Commits a parse that took fragments from `old`. A kept fragment keeps its
-// measured timing and its runtime state; commit writes on it only what is
-// this playlist's fact and not the previous one's: its offset in this window
-// and the URL the window was reloaded from (the old query may no longer be
-// valid). Everything else a fresh parse would have reset (`gap`, `deltaPTS`,
-// an unloaded fragment's declared duration) is restored by `mergeDetails`,
-// which a reload the controller drops never reaches. This parse's own
-// fragments are placed on the previous timeline, at the start the previous
-// parse gave the segment this playlist begins with, which is where
-// `adjustSliding` would put them. The fragment hint is placed below that by
-// the applied timeline offset, which the merge's sliding re-adds: master
-// applies the offset to fragments but never to the hint (see the fresh path
-// in base-playlist-controller), and the hint has to land where a fresh
-// reload's hint lands.
+// measured timing and runtime state; commit writes only this playlist's own
+// facts on it (its offset in this window, and the window's URL, whose old
+// query may no longer be valid), while everything a fresh parse would have
+// reset (`gap`, `deltaPTS`, an unloaded duration) is restored by
+// `mergeDetails`, which a reload the controller drops never reaches. This
+// parse's own fragments are placed on the previous timeline, at the start
+// the previous parse gave the segment this playlist begins with, which is
+// where `adjustSliding` would put them; the hint sits below that by the
+// applied timeline offset, which the merge's sliding re-adds, because master
+// offsets fragments but never the hint (see base-playlist-controller).
 // False, with nothing of the previous parse written, when the reload cannot
 // land where a plain parse would: it did not parse; it is a delta update,
 // whose skipped segments the merge fills in from the previous playlist; it
@@ -1408,11 +1406,9 @@ function assignCodec(
 
 // The forward half of RFC 8216's date extrapolation, one copy for every kind
 // of parse: a fragment without its own EXT-X-PROGRAM-DATE-TIME is dated from
-// the nearest dated fragment before it, on the durations the playlist
-// declares (in the lanes; `frag.duration` may be PTS-derived on a kept
-// fragment). Skipped-segment placeholders carry the chain across, as the
-// in-scan extrapolation always has. Fragments before the first dated one are
-// left to `backfillProgramDateTimes` below.
+// the nearest dated one before it, on the declared durations in the lanes
+// (`frag.duration` may be PTS-derived on a kept fragment). Fragments before
+// the first dated one are left to `backfillProgramDateTimes` below.
 function extrapolateProgramDateTimes(
   fragments: M3U8ParserFragments,
   hint: MediaFragment | null,
@@ -1421,15 +1417,14 @@ function extrapolateProgramDateTimes(
   let chain: number | null = null;
   for (let i = 0; i < fragments.length; i++) {
     const frag = fragments[i];
-    if (!frag) {
-      continue;
+    if (frag) {
+      if (!frag.rawProgramDateTime) {
+        frag.programDateTime = chain;
+      }
+      chain = frag.programDateTime
+        ? frag.programDateTime + lanes[i * LANES + LANE_DURATION] * 1000
+        : null;
     }
-    if (!frag.rawProgramDateTime) {
-      frag.programDateTime = chain;
-    }
-    chain = frag.programDateTime
-      ? frag.programDateTime + lanes[i * LANES + LANE_DURATION] * 1000
-      : null;
   }
   if (hint && !hint.rawProgramDateTime) {
     hint.programDateTime = chain;
@@ -1438,8 +1433,12 @@ function extrapolateProgramDateTimes(
 
 // The timing `mapDateRanges` sees from a parse that kept fragments: declared
 // starts and durations, read from the lanes rather than written onto the
-// fragments.
-function declaredTiming(startSN: number, lanes: number[]): FragmentTimingSource {
+// fragments. The one fragment past the lanes is the hint, this parse's own
+// object on declared values, starting where the lanes end.
+function declaredTiming(
+  startSN: number,
+  lanes: number[],
+): FragmentTimingSource {
   const count = lanes.length / LANES;
   const starts: number[] = new Array(count);
   let offset = 0;
@@ -1448,8 +1447,9 @@ function declaredTiming(startSN: number, lanes: number[]): FragmentTimingSource 
     offset += lanes[i * LANES + LANE_DURATION];
   }
   return {
-    start: (frag) => starts[frag.sn - startSN],
-    duration: (frag) => lanes[(frag.sn - startSN) * LANES + LANE_DURATION],
+    start: (frag) => starts[frag.sn - startSN] ?? offset,
+    duration: (frag) =>
+      lanes[(frag.sn - startSN) * LANES + LANE_DURATION] ?? frag.duration,
   };
 }
 
@@ -1507,8 +1507,7 @@ function setFragLevelKeys(
 }
 
 // Records the fragment on the details' key-rotation list without writing to
-// the fragment, so a kept fragment (whose `levelkeys` already are these) can
-// be recorded exactly as a fresh one would have been.
+// the fragment, so a kept fragment can be recorded like a fresh one.
 function trackEncryptedFragment(
   frag: Fragment,
   levelkeys: LevelKeys,
