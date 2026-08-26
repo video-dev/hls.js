@@ -447,10 +447,10 @@ export default class M3U8Parser {
     let frag: Fragment = new Fragment(type, base);
 
     for (;;) {
-      // At a segment boundary with nothing of the next segment parsed yet: if
-      // the text ahead is the region that produced a fragment last time, and
-      // the state entering it is the state that parse entered it in, that
-      // fragment is this segment. Take it and step over the region.
+      // With nothing of the next segment parsed yet: if the text ahead is
+      // the region that produced a fragment last time, and the state entering
+      // it is the state that parse entered it in, that fragment is this
+      // segment. Take it and step over the region.
       if (
         source !== null &&
         nextByteRange === null &&
@@ -458,8 +458,7 @@ export default class M3U8Parser {
         !level.skippedSegments &&
         !level.iframesOnly &&
         (createNextFrag ||
-          (fragments.length === 0 &&
-            frag.duration === 0 &&
+          (frag.duration === 0 &&
             frag.tagList.length === 0 &&
             frag.byteRange.length === 0))
       ) {
@@ -661,20 +660,6 @@ export default class M3U8Parser {
         const tag = (' ' + result[i]).slice(1);
         const value1 = (' ' + result[i + 1]).slice(1);
         const value2 = result[i + 2] ? (' ' + result[i + 2]).slice(1) : null;
-
-        // A region can only be stepped over on a reload when every tag in it
-        // describes the segment. These five do; the rest move level state that
-        // stepping over the region would lose, so they close it for reuse.
-        // EXT-X-MAP is among them because the merge repoints a fragment's init
-        // segment at the previous playlist's, so a fragment cannot say which
-        // one its own map declared; a map ahead of the segment's duration
-        // instead ends the region there (see MAP below).
-        regionOpaque ||=
-          tag !== 'PROGRAM-DATE-TIME' &&
-          tag !== 'DISCONTINUITY' &&
-          tag !== 'GAP' &&
-          tag !== 'PART' &&
-          tag !== '#';
 
         switch (tag) {
           case 'BYTERANGE':
@@ -900,13 +885,6 @@ export default class M3U8Parser {
                 discontinuityCounter,
               );
               createNextFrag = true;
-              // The segment after the map begins a region of its own: what
-              // the map did is in the init segment that region is entered
-              // with.
-              regionStart = LEVEL_PLAYLIST_REGEX_FAST.lastIndex;
-              regionCC = discontinuityCounter;
-              regionBitrate = currentBitrate;
-              regionOpaque = false;
             }
             currentInitSegment.cc = discontinuityCounter;
             break;
@@ -973,6 +951,34 @@ export default class M3U8Parser {
           default:
             logger.warn(`line parsed but not handled: ${result}`);
             break;
+        }
+
+        // A region can be stepped over on a reload only when every tag in it
+        // describes the segment. These five do. Any other moves level state
+        // (EXT-X-MAP among them: the merge repoints init segments, so a
+        // fragment cannot say which one its own map declared), and a region
+        // has to be entered after it: the segment's region begins there while
+        // nothing of the segment has been parsed yet, and is otherwise closed.
+        if (
+          tag !== 'PROGRAM-DATE-TIME' &&
+          tag !== 'DISCONTINUITY' &&
+          tag !== 'GAP' &&
+          tag !== 'PART' &&
+          tag !== '#'
+        ) {
+          if (
+            createNextFrag ||
+            (frag.duration === 0 &&
+              frag.tagList.length === 0 &&
+              frag.byteRange.length === 0)
+          ) {
+            regionStart = LEVEL_PLAYLIST_REGEX_FAST.lastIndex;
+            regionCC = discontinuityCounter;
+            regionBitrate = currentBitrate;
+            regionOpaque = false;
+          } else {
+            regionOpaque = true;
+          }
         }
       }
     }
