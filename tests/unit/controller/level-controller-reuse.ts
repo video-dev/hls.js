@@ -45,6 +45,22 @@ describe('LevelController with reused playlist fragments', function () {
     }
     return out;
   };
+
+  const lowLatency = (startSN: number) => {
+    let out = `#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:4
+#EXT-X-PART-INF:PART-TARGET=1.0
+#EXT-X-MEDIA-SEQUENCE:${startSN}
+`;
+    for (let i = 0; i < 4; i++) {
+      out += `#EXTINF:4.000,\nsegment-${startSN + i}.mp4\n`;
+    }
+    out +=
+      '#EXT-X-PART:DURATION=1.00000,URI="part-a.mp4",INDEPENDENT=YES\n' +
+      '#EXT-X-PRELOAD-HINT:TYPE=PART,URI="part-b.mp4"\n';
+    return out;
+  };
   const parse = (text: string, previous: LevelDetails | null) =>
     (M3U8Parser.parseLevelPlaylist as unknown as ParseWithPrevious)(
       text,
@@ -121,5 +137,37 @@ describe('LevelController with reused playlist fragments', function () {
     hls.config.timelineOffset = 10;
     const fresh = parse(playlist(11), null);
     expect(loaded(fresh, previous)).to.deep.equal([116, 122, 128, 134, 140]);
+  });
+
+  [0, 10].forEach((offset) => {
+    it(`places the fragment hint where a fresh reload places it (timelineOffset ${offset})`, function () {
+      hls.config.timelineOffset = offset;
+      const freshPrevious = M3U8Parser.parseLevelPlaylist(
+        lowLatency(10),
+        url,
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      loaded(freshPrevious);
+      const fresh = M3U8Parser.parseLevelPlaylist(
+        lowLatency(11),
+        url,
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      loaded(fresh, freshPrevious);
+      const reusedPrevious = parse(lowLatency(10), null);
+      loaded(reusedPrevious);
+      const reused = parse(lowLatency(11), reusedPrevious);
+      loaded(reused, reusedPrevious);
+      // The reload kept fragments (its first segment is the previous one).
+      expect(reused.fragments[0]).to.equal(reusedPrevious.fragments[1]);
+      expect(reused.fragmentHint?.start).to.equal(fresh.fragmentHint?.start);
+      expect(reused.edge).to.equal(fresh.edge);
+    });
   });
 });
