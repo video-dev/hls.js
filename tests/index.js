@@ -44,6 +44,7 @@ import './unit/loader/level';
 import './unit/loader/m3u8-parser';
 import './unit/loader/m3u8-parser-reuse';
 import './unit/loader/m3u8-parser-reuse-property';
+import './unit/loader/m3u8-parser-reuse-ownership';
 import './unit/loader/playlist-loader';
 import './unit/remux/mp4-remuxer';
 import './unit/remux/passthrough-remuxer';
