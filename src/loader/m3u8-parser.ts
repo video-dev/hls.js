@@ -88,7 +88,6 @@ type Generation = {
   details: LevelDetails;
   text: string;
   startSN: number;
-  base: Base;
   // As parsed; the merge may since have put loaded instances from older
   // parses into `details.fragments`, which the regions say nothing about.
   fragments: M3U8ParserFragments;
@@ -431,11 +430,12 @@ export default class M3U8Parser {
       return level;
     }
 
-    // The previous parse, when fragments may be kept from it. Its `base` is
-    // then shared, so that one write at commit moves every fragment to this
-    // playlist's URL. Nothing else of it is written to before commit.
+    // The previous parse, when fragments may be kept from it. Fragments built
+    // by this parse get their own `base`; a kept fragment stays on the base it
+    // was built with, whose URL commit moves to this playlist's. Nothing of
+    // the previous parse is written to before commit.
     const source = previous && reuseSource(previous, level);
-    const base: Base = source ? source.base : { url: baseurl };
+    const base: Base = { url: baseurl };
     const lanes: number[] = [];
     let reused = 0;
     let regionStart = LEVEL_PLAYLIST_REGEX_FAST.lastIndex;
@@ -1015,11 +1015,11 @@ export default class M3U8Parser {
       level.endSN = lastSn !== 'initSegment' ? lastSn : 0;
     }
     // Fragments taken from the previous parse are written to only now, once
-    // nothing can send this reload back for a plain parse. With none taken,
-    // the fresh fragments still share its base URL, which cannot move alone.
+    // nothing can send this reload back for a plain parse.
     if (
       source !== null &&
-      (reused ? !commit(level, source, lanes, baseurl) : base.url !== baseurl)
+      reused &&
+      !commit(level, source, lanes, base, baseurl)
     ) {
       return null;
     }
@@ -1061,7 +1061,6 @@ export default class M3U8Parser {
       details: level,
       text: string,
       startSN: level.startSN,
-      base,
       fragments: fragments.slice(),
       lanes,
     });
@@ -1103,6 +1102,7 @@ function commit(
   level: LevelDetails,
   source: Generation,
   lanes: number[],
+  base: Base,
   baseurl: string,
 ): boolean {
   const old = source.details;
@@ -1130,6 +1130,10 @@ function commit(
     const fragment = fragments[i];
     const duration = lanes[i * LANES + LANE_DURATION];
     place(fragment, duration, offset, sliding, prev);
+    if (fragment.base !== base && fragment.base.url !== baseurl) {
+      // a kept fragment: move its playlist URL to this reload's
+      fragment.base.url = baseurl;
+    }
     offset += duration;
     prev = fragment;
   }
@@ -1137,7 +1141,6 @@ function commit(
   if (hint) {
     place(hint, hint.duration, offset, sliding, prev);
   }
-  source.base.url = baseurl;
   return true;
 }
 
@@ -1169,9 +1172,12 @@ function reuseInitSegment(
   sn: number,
   cc: number,
 ): Fragment {
+  // `relurl` equality implies url equality: `reuseSource` only offers a
+  // previous parse whose playlist URL differs at most in its query, which
+  // resolution drops.
   const candidate = source?.fragments[sn - source.startSN]?.initSegment;
   if (
-    candidate?.base === init.base &&
+    candidate &&
     candidate.relurl === init.relurl &&
     candidate.cc === cc &&
     candidate.levelkeys === init.levelkeys &&
