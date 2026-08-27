@@ -62,8 +62,9 @@ describe('live reload fragment reuse discontinuity renumbering', function () {
     let fresh = parse(playlist(11, 12), null);
     let reused = parse(playlist(11, 12), null);
     let kept = 0;
-    for (const startSN of [12, 13, 14]) {
-      const reload = playlist(startSN, 12);
+    const startSNs = [12, 13, 14];
+    for (let i = 0; i < startSNs.length; i++) {
+      const reload = playlist(startSNs[i], 12);
       const nextFresh = parse(reload, null);
       const nextReused = parse(reload, reused);
       kept = nextReused.fragments.filter(
@@ -112,9 +113,8 @@ describe('live reload fragment reuse discontinuity renumbering', function () {
     const fresh = parse(reloadText, null);
     const reused = parse(reloadText, previous);
     expect(
-      reused.fragments.filter(
-        (frag) => previous.fragments.indexOf(frag) !== -1,
-      ).length,
+      reused.fragments.filter((frag) => previous.fragments.indexOf(frag) !== -1)
+        .length,
       'nothing kept across a sequence jump',
     ).to.equal(0);
     expect(reused.fragments.map((frag) => frag.cc)).to.deep.equal(
