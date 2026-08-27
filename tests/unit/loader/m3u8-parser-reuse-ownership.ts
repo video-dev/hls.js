@@ -8,10 +8,13 @@ import {
 import { logger } from '../../../src/utils/logger';
 import type { LevelDetails } from '../../../src/loader/level-details';
 
-// State a reload carries, and state it must not. A reused fragment is the same
-// object as last time, so anything the player set on it at runtime outlives the
-// reload unless the parse or the merge clears it. Master rebuilds the fragment
-// and therefore clears it; these pin that the reuse path agrees.
+// State a reload carries, and state it must not. A reused fragment is the
+// same object as last time, so anything the player set on it at runtime
+// outlives the reload: a gap mark and a measured deltaPTS stay put, the way
+// part gaps persist through mapPartIntersection on master, while a fragment
+// whose text changed is rebuilt and inherits nothing. And whatever survives,
+// a reload that is parsed and then dropped must leave the installed window
+// exactly as it was.
 
 type ParseWithPrevious = (
   playlist: string,
@@ -75,26 +78,41 @@ describe('live reload fragment reuse ownership', function () {
     return details;
   }
 
-  it('does not carry a runtime gap or deltaPTS across a reload', function () {
-    const fresh = loadedWindow();
-    const reused = loadedWindow();
+  it('keeps a runtime gap and deltaPTS on a carried fragment, and rebuilds without them when the text changes', function () {
     // The player marked a buffered segment as a gap and measured its drift.
-    [fresh, reused].forEach((details) => {
-      details.fragments[2].gap = true;
-      details.fragments[2].deltaPTS = 0.25;
-    });
-    const freshReload = parse(playlist(11), null);
-    freshReload.reloaded(fresh);
-    mergeDetails(fresh, freshReload, logger);
-    const reusedReload = parse(playlist(11), reused);
-    reusedReload.reloaded(reused);
-    mergeDetails(reused, reusedReload, logger);
-    expect(reusedReload.fragments[1].gap).to.equal(
-      freshReload.fragments[1].gap,
+    // The reload does not change that segment, so the carried instance keeps
+    // both marks: it is the same fragment.
+    const previous = loadedWindow();
+    previous.fragments[2].gap = true;
+    previous.fragments[2].deltaPTS = 0.25;
+    const reload = parse(playlist(11), previous);
+    reload.reloaded(previous);
+    mergeDetails(previous, reload, logger);
+    expect(reload.playlistParsingError).to.equal(null);
+    expect(reload.fragments[1], 'sn 12 carried over').to.equal(
+      previous.fragments[2],
     );
-    expect(reusedReload.fragments[1].deltaPTS).to.equal(
-      freshReload.fragments[1].deltaPTS,
+    expect(reload.fragments[1].gap).to.equal(true);
+    expect(reload.fragments[1].deltaPTS).to.equal(0.25);
+
+    // The same reload with sn 12's text changed: the fragment is rebuilt,
+    // and runtime state does not follow it onto the new object.
+    const changed = loadedWindow();
+    changed.fragments[2].gap = true;
+    changed.fragments[2].deltaPTS = 0.25;
+    const changedText = playlist(11).replace(
+      '#EXTINF:6.000,\nsegment-12.mp4',
+      '#EXTINF:6.000,changed\nsegment-12.mp4',
     );
+    const changedReload = parse(changedText, changed);
+    changedReload.reloaded(changed);
+    mergeDetails(changed, changedReload, logger);
+    expect(changedReload.playlistParsingError).to.equal(null);
+    expect(changedReload.fragments[1], 'sn 12 rebuilt').to.not.equal(
+      changed.fragments[2],
+    );
+    expect(changedReload.fragments[1].gap).to.equal(undefined);
+    expect(changedReload.fragments[1].deltaPTS).to.equal(undefined);
   });
 
   it('leaves the previous window on its measured timing when a reload is dropped', function () {

@@ -169,13 +169,15 @@ export function mergeDetails(
     newDetails,
     (oldFrag, newFrag, newFragIndex, newFragments) => {
       if (oldFrag === newFrag && !newDetails.skippedSegments) {
-        // The parser kept this fragment of the old playlist, so it enters
-        // the merge as the player left it, where a fresh parse would enter
-        // with only what the playlist declares. Restore that declared state
-        // here rather than at parse time: a reload the controller drops
-        // after the parse never arrives here, and must leave the installed
-        // window's runtime state alone.
-        restoreDeclaredFragmentState(newFrag);
+        // The parser kept this fragment of the old playlist. Runtime state
+        // the player put on it (a gap mark, a measured deltaPTS) stays: it
+        // is the same fragment, and master only loses that state as a side
+        // effect of rebuilding the object, the way part gaps already
+        // persist below. Only an unloaded fragment's duration goes back to
+        // what the playlist declares, and it goes back here rather than at
+        // parse time: a reload the controller drops after the parse never
+        // arrives here, and must leave the installed window alone.
+        restoreDeclaredDuration(newFrag);
       }
       if (
         canRenumberDiscontinuitySequence(newDetails) &&
@@ -354,25 +356,18 @@ export function canRenumberDiscontinuitySequence(
   return !details.startCC || !!details.skippedSegments;
 }
 
-// A fresh parse of the same text would have built this fragment with the gap
-// its region declares (in its tagList), the EXTINF duration (ditto), and no
-// deltaPTS. A loaded fragment's duration is left alone; the caller re-derives
-// it from PTS identically for kept and fresh fragments.
-function restoreDeclaredFragmentState(frag: MediaFragment) {
+// A fresh parse of the same text would have built this fragment with the
+// EXTINF duration its region declares (in its tagList). A loaded fragment's
+// duration is left alone; the caller re-derives it from PTS identically for
+// kept and fresh fragments.
+function restoreDeclaredDuration(frag: MediaFragment) {
   const tagList = frag.tagList;
-  let gap: true | undefined;
   let duration: number = NaN;
   for (let i = 0; i < tagList.length; i++) {
     const tag = tagList[i];
-    if (tag[0] === 'GAP') {
-      gap = true;
-    } else if (tag[0] === 'INF') {
+    if (tag[0] === 'INF') {
       duration = parseFloat(tag[1]);
     }
-  }
-  frag.deltaPTS = undefined;
-  if (frag.gap !== gap) {
-    frag.gap = gap;
   }
   if (
     frag.duration !== duration &&

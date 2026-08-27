@@ -1117,9 +1117,11 @@ function noop() {}
 // Commits a parse that took fragments from `old`. A kept fragment keeps its
 // measured timing and runtime state; commit writes only this playlist's own
 // facts on it (its offset in this window, and the window's URL, whose old
-// query may no longer be valid), while everything a fresh parse would have
-// reset (`gap`, `deltaPTS`, an unloaded duration) is restored by
-// `mergeDetails`, which a reload the controller drops never reaches. This
+// query may no longer be valid). The one thing a fresh parse would have
+// reset and this does not, an unloaded fragment's declared duration, is
+// restored by `mergeDetails`, which a reload the controller drops never
+// reaches; a gap mark and a measured deltaPTS the player put on the
+// fragment stay on it, because it is the same fragment. This
 // parse's own fragments are placed on the previous timeline, at the start
 // the previous parse gave the segment this playlist begins with, which is
 // where `adjustSliding` would put them; the hint sits below that by the
