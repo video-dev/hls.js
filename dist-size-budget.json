@@ -6,13 +6,13 @@
   ],
   "tolerance": 0.02,
   "files": {
-    "hls.js": 283783,
+    "hls.js": 289466,
     "hls.min.js": 153423,
-    "hls.mjs": 267422,
+    "hls.mjs": 273206,
     "hls.min.mjs": 147479,
-    "hls.light.js": 187388,
+    "hls.light.js": 192937,
     "hls.light.min.js": 99919,
-    "hls.light.mjs": 177621,
+    "hls.light.mjs": 183077,
     "hls.light.min.mjs": 97137,
     "hls.worker.js": 35918
   }
