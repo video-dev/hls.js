@@ -62,7 +62,7 @@ type ActiveKeys = {
   previous?: EncryptedFragment[];
 };
 
-export type LicenseAndKeysRequest = EventEmitter & {
+export type LicenseAndKeysRequest = {
   status: 'initialized' | 'started' | 'generated' | MediaKeyMessageType;
   resolved?: boolean;
   errored?: Error;
@@ -71,6 +71,67 @@ export type LicenseAndKeysRequest = EventEmitter & {
   onmessage?: (this: MediaKeySession, ev: MediaKeyMessageEvent) => any;
   onkeystatuseschange?: (this: MediaKeySession, ev: Event) => any;
 };
+
+class LicenseAndKeysRequestEmitter {
+  status: 'initialized' | 'started' | 'generated' | MediaKeyMessageType =
+    'initialized';
+  requestErrors: { status: number; message: string }[] = [];
+  licenseXhr?: XMLHttpRequest;
+  onmessage?: (this: MediaKeySession, ev: MediaKeyMessageEvent) => any;
+  onkeystatuseschange?: (this: MediaKeySession, ev: Event) => any;
+
+  private emitter: EventEmitter = new EventEmitter();
+  private error?: Error;
+  private ok?: boolean;
+
+  get errored(): Error | undefined {
+    return this.error;
+  }
+  set errored(err: Error) {
+    this.error = err;
+    if (this.emitter.eventNames().length) {
+      this.emitter.emit('error', err);
+    }
+  }
+
+  get hasListeners(): boolean {
+    return this.emitter.eventNames().length > 0;
+  }
+
+  get resolved(): boolean | undefined {
+    return this.ok;
+  }
+
+  resolve() {
+    this.ok = true;
+    this.emitter.emit('resolved');
+  }
+
+  get useable() {
+    if (this.ok) {
+      return Promise.resolve();
+    }
+    if (this.error) {
+      return Promise.reject(this.error);
+    }
+    return new Promise((resolve: (value?: void) => void, reject) => {
+      this.emitter.on('error', reject);
+      this.emitter.on('resolved', resolve);
+    });
+  }
+
+  reset() {
+    this.emitter.removeAllListeners();
+    const licenseXhr = this.licenseXhr;
+    if (licenseXhr) {
+      if (licenseXhr.readyState !== XMLHttpRequest.DONE) {
+        licenseXhr.abort();
+      }
+      this.licenseXhr = undefined;
+    }
+    this.onmessage = this.onkeystatuseschange = undefined;
+  }
+}
 
 export type LicenseRequestReason =
   | 'playlist-key'
@@ -690,12 +751,14 @@ class EMEController extends Logger implements ComponentAPI {
     levelKey: LevelKey,
     reason: LicenseRequestReason,
   ): Promise<MediaKeySessionContext> | undefined {
-    const requestEmitter = context.keyRequests[levelKey.uri];
+    const requestEmitter = context.keyRequests[
+      levelKey.uri
+    ] as LicenseAndKeysRequestEmitter;
     if (requestEmitter) {
       this.log(
         `Waiting for usable key (${reason} keyId: ${getKeyIdString(levelKey)} format: "${levelKey.keyFormat}" URI: ${levelKey.uri})`,
       );
-      return getRequestToKeyUsablePromise(requestEmitter).then(() => context);
+      return requestEmitter.useable.then(() => context);
     }
   }
 
@@ -1006,9 +1069,7 @@ class EMEController extends Logger implements ComponentAPI {
 
     const keyUri = levelKey.uri;
 
-    const requestEmitter = new EventEmitter() as LicenseAndKeysRequest;
-    requestEmitter.status = 'initialized';
-    requestEmitter.requestErrors = [];
+    const requestEmitter = new LicenseAndKeysRequestEmitter();
     context.keyRequests[keyUri] = requestEmitter;
 
     const onmessage = (event: MediaKeyMessageEvent) => {
@@ -1016,7 +1077,6 @@ class EMEController extends Logger implements ComponentAPI {
       if (!keySession as any) {
         const invalidStateError = new Error('invalid state');
         requestEmitter.errored = invalidStateError;
-        requestEmitter.emit('error', invalidStateError);
         return;
       }
       const { messageType, message } = event;
@@ -1030,9 +1090,7 @@ class EMEController extends Logger implements ComponentAPI {
       ) {
         this.renewLicense(context, levelKey, message).catch((error) => {
           requestEmitter.errored = error;
-          if (requestEmitter.eventNames().length) {
-            requestEmitter.emit('error', error);
-          } else {
+          if (!requestEmitter.hasListeners) {
             this.handleError(error);
           }
           // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -1089,14 +1147,15 @@ class EMEController extends Logger implements ComponentAPI {
     }
 
     const keyUri = levelKey.uri;
-    const requestEmitter = context.keyRequests[keyUri] as LicenseAndKeysRequest;
+    const requestEmitter = context.keyRequests[
+      keyUri
+    ] as LicenseAndKeysRequestEmitter;
     const keyId = arrayToHex(levelKey.keyId || []);
 
     const handleKeyStatus = (keyStatus: MediaKeyStatus) => {
       let keyError: EMEKeyError | Error | undefined;
       if (keyStatus.startsWith('usable')) {
-        requestEmitter.resolved = true;
-        requestEmitter.emit('resolved');
+        requestEmitter.resolve();
       } else if (
         keyStatus === 'internal-error' ||
         keyStatus === 'output-restricted' ||
@@ -1116,9 +1175,7 @@ class EMEController extends Logger implements ComponentAPI {
       }
       if (keyError) {
         requestEmitter.errored = keyError;
-        if (requestEmitter.eventNames().length) {
-          requestEmitter.emit('error', keyError);
-        } else {
+        if (!requestEmitter.hasListeners) {
           this.handleError(keyError);
         }
       }
@@ -1129,7 +1186,6 @@ class EMEController extends Logger implements ComponentAPI {
       if (!keySession as any) {
         const invalidStateError = new Error('invalid state');
         requestEmitter.errored = invalidStateError;
-        requestEmitter.emit('error', invalidStateError);
         return;
       }
 
@@ -1195,7 +1251,7 @@ class EMEController extends Logger implements ComponentAPI {
       onkeystatuseschange,
     );
 
-    const keyUsablePromise = getRequestToKeyUsablePromise(requestEmitter);
+    const keyUsablePromise = requestEmitter.useable;
 
     this.log(
       `Generating key-session request for "${reason}" keyId: ${keyId} URI: ${keyUri} (init data type: ${initDataType} length: ${
@@ -1242,7 +1298,6 @@ class EMEController extends Logger implements ComponentAPI {
           this.handleError(error);
           return context;
         }
-        requestEmitter.removeAllListeners();
         return this.removeSession(context).then(() => {
           throw error;
         });
@@ -1793,28 +1848,22 @@ class EMEController extends Logger implements ComponentAPI {
         `Remove licenses and keys and close session "${mediaKeysSession.sessionId}"`,
       );
       Object.keys(context.keyRequests).forEach((uri) => {
-        const requestEmitter = context.keyRequests[uri]!;
+        const requestEmitter = context.keyRequests[
+          uri
+        ] as LicenseAndKeysRequestEmitter;
         if (requestEmitter.onmessage) {
           mediaKeysSession.removeEventListener(
             'message',
             requestEmitter.onmessage,
           );
-          requestEmitter.onmessage = undefined;
         }
         if (requestEmitter.onkeystatuseschange) {
           mediaKeysSession.removeEventListener(
             'keystatuseschange',
             requestEmitter.onkeystatuseschange,
           );
-          requestEmitter.onkeystatuseschange = undefined;
         }
-        const licenseXhr = requestEmitter.licenseXhr;
-        if (licenseXhr) {
-          if (licenseXhr.readyState !== XMLHttpRequest.DONE) {
-            licenseXhr.abort();
-          }
-          requestEmitter.licenseXhr = undefined;
-        }
+        requestEmitter.reset();
         context.keyRequests[uri] = undefined;
       });
 
@@ -1947,19 +1996,6 @@ function getKeyStatusError(
       ? 'HDCP level output restricted'
       : `key status changed to "${keyStatus}"`,
   );
-}
-
-function getRequestToKeyUsablePromise(requestEmitter: LicenseAndKeysRequest) {
-  return new Promise((resolve: (value?: void) => void, reject) => {
-    if (requestEmitter.resolved) {
-      return resolve();
-    }
-    if (requestEmitter.errored) {
-      return reject(requestEmitter.errored);
-    }
-    requestEmitter.on('error', reject);
-    requestEmitter.on('resolved', resolve);
-  });
 }
 
 export default EMEController;
