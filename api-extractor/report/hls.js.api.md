@@ -5242,6 +5242,7 @@ export type TimelineControllerConfig = {
     captionsTextTrack4Label: string;
     captionsTextTrack4LanguageCode: string;
     renderTextTracksNatively: boolean;
+    filterUndeclaredClosedCaptions: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "TimelineOccupancy" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)

@@ -30,4 +30,82 @@ describe('TimelineController', function () {
       expect(videoElement.textTracks.length).to.equal(0);
     });
   });
+
+  describe('INSTREAM-ID filtering of 608 channels', function () {
+    const captionsMedia = (instreamId, name, lang) =>
+      ({
+        instreamId,
+        name,
+        lang,
+        type: 'CLOSED-CAPTIONS',
+        groupId: 'cc',
+        default: true,
+        autoselect: true,
+        forced: false,
+        url: '',
+        bitrate: 0,
+        id: 0,
+      }) as any;
+
+    it('ignores 608 channels the Multivariant Playlist does not declare', function () {
+      timelineController.onManifestLoading();
+      timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
+        captions: [captionsMedia('CC1', 'English', 'en')],
+      });
+      timelineController.createCaptionsTrack('textTrack1');
+      timelineController.createCaptionsTrack('textTrack2');
+      expect(videoElement.textTracks.length).to.equal(1);
+      expect(videoElement.textTracks[0].label).to.equal('English');
+    });
+
+    it('surfaces every declared 608 channel', function () {
+      timelineController.onManifestLoading();
+      timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
+        captions: [
+          captionsMedia('CC1', 'English', 'en'),
+          captionsMedia('CC3', 'French', 'fr'),
+        ],
+      });
+      timelineController.createCaptionsTrack('textTrack1');
+      timelineController.createCaptionsTrack('textTrack2');
+      timelineController.createCaptionsTrack('textTrack3');
+      expect(videoElement.textTracks.length).to.equal(2);
+      expect(videoElement.textTracks[0].label).to.equal('English');
+      expect(videoElement.textTracks[1].label).to.equal('French');
+    });
+
+    it('surfaces any channel when no CLOSED-CAPTIONS are declared', function () {
+      timelineController.onManifestLoading();
+      timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
+        captions: undefined,
+      });
+      timelineController.createCaptionsTrack('textTrack1');
+      timelineController.createCaptionsTrack('textTrack2');
+      expect(videoElement.textTracks.length).to.equal(2);
+    });
+
+    it('can be turned off with filterUndeclaredClosedCaptions: false', function () {
+      timelineController.config.filterUndeclaredClosedCaptions = false;
+      timelineController.onManifestLoading();
+      timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
+        captions: [captionsMedia('CC1', 'English', 'en')],
+      });
+      timelineController.createCaptionsTrack('textTrack1');
+      timelineController.createCaptionsTrack('textTrack2');
+      expect(videoElement.textTracks.length).to.equal(2);
+    });
+
+    it('forgets declarations from a previous Multivariant Playlist', function () {
+      timelineController.onManifestLoading();
+      timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
+        captions: [captionsMedia('CC1', 'English', 'en')],
+      });
+      timelineController.onManifestLoading();
+      timelineController.onManifestLoaded(Events.MANIFEST_LOADED, {
+        captions: undefined,
+      });
+      timelineController.createCaptionsTrack('textTrack2');
+      expect(videoElement.textTracks.length).to.equal(1);
+    });
+  });
 });

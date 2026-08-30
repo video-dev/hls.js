@@ -59,6 +59,7 @@ export class TimelineController implements ComponentAPI {
   private lastSn: number = -1; // Last video (CEA-608) fragment MSN
   private lastPartIndex: number = -1; // Last video (CEA-608) fragment Part Index
   private prevCC: number = -1; // Last subtitle fragment CC
+  private captionsDeclared: boolean = false; // Multivariant Playlist declares CLOSED-CAPTIONS renditions
   private vttCCs: VTTCCs = newVTTCCs();
   private captionsProperties: {
     textTrack1: TrackProperties;
@@ -143,6 +144,10 @@ export class TimelineController implements ComponentAPI {
     screen: CaptionScreen,
     cueRanges: Array<[number, number]>,
   ) {
+    // ignore cues on 608 channels the Multivariant Playlist did not declare
+    if (!this.isCaptionsTrackDeclared(trackName)) {
+      return;
+    }
     // skip cues which overlap more than 50% with previously parsed time ranges
     let merged = false;
     for (let i = cueRanges.length; i--; ) {
@@ -220,7 +225,25 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
+  /**
+   * When the Multivariant Playlist declares CLOSED-CAPTIONS renditions, only the
+   * 608 channels named by those INSTREAM-ID attributes should be presented.
+   * Undeclared channels found in the media are ignored.
+   * Playlists that declare no CLOSED-CAPTIONS renditions (and single Media
+   * Playlists, which cannot declare any) keep the previous behavior: every
+   * channel carrying data is surfaced.
+   */
+  private isCaptionsTrackDeclared(trackName: string): boolean {
+    if (!this.config.filterUndeclaredClosedCaptions || !this.captionsDeclared) {
+      return true;
+    }
+    return !!this.captionsProperties[trackName]?.media;
+  }
+
   public createCaptionsTrack(trackName: string) {
+    if (!this.isCaptionsTrackDeclared(trackName)) {
+      return;
+    }
     if (this.config.renderTextTracksNatively) {
       this.createNativeTrack(trackName);
     } else {
@@ -307,6 +330,12 @@ export class TimelineController implements ComponentAPI {
     this.tracks = [];
     this.captionsTracks = {};
     this.nonNativeCaptionsTracks = {};
+    // Forget CLOSED-CAPTIONS renditions declared by the previous Multivariant Playlist
+    this.captionsDeclared = false;
+    const captionsProperties = this.captionsProperties;
+    for (const trackName in captionsProperties) {
+      captionsProperties[trackName].media = undefined;
+    }
     this.unparsedVttFrags = [];
     this.initPTS = [];
     if (this.cea608Parser1 && this.cea608Parser2) {
@@ -365,6 +394,7 @@ export class TimelineController implements ComponentAPI {
           trackProperties.languageCode = captionsTrack.lang;
         }
         trackProperties.media = captionsTrack;
+        this.captionsDeclared = true;
       });
     }
   }
