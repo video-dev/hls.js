@@ -75,4 +75,34 @@ describe('IMSC1 TTML parser', function () {
     expect(cues[0].startTime).to.equal(1.5);
     expect(cues[0].endTime).to.equal(3);
   });
+
+  it('reads a cue timed in ticks', function () {
+    const cues = cuesFor(ttmlWith('50t', '150t', ' ttp:tickRate="100"'));
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.equal(0.5);
+    expect(cues[0].endTime).to.equal(1.5);
+  });
+
+  it('counts a tick as a second when neither tick rate nor frame rate is given', function () {
+    const cues = cuesFor(ttmlWith('1t', '3t'));
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.equal(1);
+    expect(cues[0].endTime).to.equal(3);
+  });
+
+  it('counts a tick as a sub-frame when only a frame rate is given', function () {
+    const cues = cuesFor(ttmlWith('12t', '36t', ' ttp:frameRate="24"'));
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.equal(0.5);
+    expect(cues[0].endTime).to.equal(1.5);
+  });
+
+  it('multiplies the frame rate by the sub-frame rate for the tick default', function () {
+    const cues = cuesFor(
+      ttmlWith('24t', '72t', ' ttp:frameRate="24" ttp:subFrameRate="2"'),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.equal(0.5);
+    expect(cues[0].endTime).to.equal(1.5);
+  });
 });
