@@ -255,6 +255,7 @@ export class IFrameController extends Logger {
 
       // Only load and unload as needed
       backBufferLength: Infinity,
+      maxMaxBufferLength: 1,
       // Adapt to attached HTMLVideoElement dimension
       capLevelToPlayerSize: true,
 

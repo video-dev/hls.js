@@ -1,4 +1,5 @@
 import { hash } from '../utils/hash';
+import { setQueryParam } from '../utils/url-tools';
 import type { DateRange, DateRangeCue } from './date-range';
 import type { MediaFragmentRef } from './fragment';
 import type { Loader, LoaderContext } from '../types/loader';
@@ -151,6 +152,10 @@ export class InterstitialEvent {
     if (this.snapOptions.out) {
       const frag = this.dateRange.tagAnchor;
       if (frag) {
+        if (!fragmentRefCoversTime(frag, startTime)) {
+          // Do not snap to segment boundary when segment does not cover datetime
+          return startTime;
+        }
         return getSnapToFragmentTime(startTime, frag);
       }
     }
@@ -186,6 +191,10 @@ export class InterstitialEvent {
     if (this.snapOptions.in) {
       const frag = this.resumeAnchor;
       if (frag) {
+        if (!fragmentRefCoversTime(frag, resumeTime)) {
+          // Do not snap to segment boundary when segment does not cover datetime
+          return resumeTime;
+        }
         return getSnapToFragmentTime(resumeTime, frag);
       }
     }
@@ -304,6 +313,13 @@ export function getSnapToFragmentTime(time: number, frag: MediaFragmentRef) {
     : frag.start + frag.duration;
 }
 
+function fragmentRefCoversTime(frag: MediaFragmentRef, time: number): boolean {
+  return (
+    time > frag.start - ALIGNED_END_THRESHOLD_SECONDS &&
+    time < frag.start + frag.duration + ALIGNED_END_THRESHOLD_SECONDS
+  );
+}
+
 export function getInterstitialUrl(
   uri: string,
   sessionId: string,
@@ -311,7 +327,7 @@ export function getInterstitialUrl(
 ): URL | never {
   const url = new self.URL(uri, baseUrl);
   if (url.protocol !== 'data:') {
-    url.searchParams.set('_HLS_primary_id', sessionId);
+    setQueryParam(url, '_HLS_primary_id', sessionId);
   }
   return url;
 }

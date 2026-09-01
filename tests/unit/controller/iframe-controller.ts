@@ -1,6 +1,7 @@
 import { config as chaiConfig, expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
+import { State } from '../../../src/controller/base-stream-controller';
 import { ImageIFrameStreamController } from '../../../src/controller/image-iframe-stream-controller';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
@@ -201,6 +202,118 @@ describe('IFrameController', function () {
     const iframeStreamController = (iframePlayer as any).streamController;
     expect(iframeStreamController.initPTS).to.not.equal(timestamps);
     expect(iframeStreamController.initPTS).to.deep.equal(timestamps);
+  });
+
+  it('flushes buffer beyond the target and signals EOS before seeking on fragment buffered', function () {
+    const iframePlayer = loadedIFramePlayer(playlistWithIFrameVariants);
+    const streamController = (iframePlayer as any).streamController;
+    const frag = new Fragment(PlaylistLevelType.MAIN, '');
+    frag.sn = 30;
+    frag.level = 0;
+    frag.setStart(60);
+    frag.setDuration(2);
+    frag.elementaryStreams.video = {
+      startPTS: 60,
+      endPTS: 62,
+      startDTS: 60,
+      endDTS: 62,
+    };
+    // Media with a buffered range beyond the fragment (an earlier operation
+    // rendered a later frame)
+    streamController.media = {
+      seeking: false,
+      currentTime: 421.2,
+      buffered: {
+        length: 2,
+        start: (i: number) => [60, 420][i],
+        end: (i: number) => [62, 422][i],
+      },
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      pause: () => {},
+    };
+    streamController.currentOp = [61.2, { seekOnAppend: true }];
+    const calls: string[] = [];
+    sandbox
+      .stub(streamController, 'seekTo' as any)
+      .callsFake(() => calls.push('seek') > 0);
+    const trigger = iframePlayer.trigger.bind(iframePlayer);
+    sandbox
+      .stub(iframePlayer, 'trigger' as any)
+      .callsFake((event: any, data: any) => {
+        if (event === Events.BUFFER_FLUSHING) {
+          calls.push(`${event}@${data.startOffset}`);
+        } else if (event === Events.BUFFER_EOS) {
+          calls.push(event);
+        }
+        return trigger(event, data);
+      });
+
+    streamController.fragBufferedComplete(frag, null);
+
+    // The disjoint buffered range after the target's must be removed (from
+    // its own start) and end of stream signalled before seeking, so the
+    // decoder does not starve waiting for a frame after the seek target.
+    expect(calls).to.deep.equal([
+      `${Events.BUFFER_FLUSHING}@420`,
+      Events.BUFFER_EOS,
+      'seek',
+    ]);
+
+    // Media contiguous beyond the target (prefetch): nothing is flushed
+    streamController.media.buffered = {
+      length: 1,
+      start: () => 60,
+      end: () => 64,
+    };
+    streamController.currentOp = [61.2, { seekOnAppend: true }];
+    streamController.state = State.PARSED;
+    calls.length = 0;
+    streamController.fragBufferedComplete(frag, null);
+    expect(calls).to.deep.equal([Events.BUFFER_EOS, 'seek']);
+  });
+
+  it('re-buffers cached fragment data instead of reloading it', function () {
+    const iframePlayer = loadedIFramePlayer(playlistWithIFrameVariants);
+    const streamController = (iframePlayer as any).streamController;
+    const frag = new Fragment(PlaylistLevelType.MAIN, '');
+    frag.sn = 30;
+    frag.level = 0;
+    frag.setStart(60);
+    frag.setDuration(2);
+    frag.data = new Uint8Array([1, 2, 3, 4]);
+    const calls: string[] = [];
+    sandbox
+      .stub(streamController, '_handleFragmentLoadProgress' as any)
+      .callsFake((data: any) =>
+        calls.push(`progress(${data.payload.byteLength})`),
+      );
+    sandbox
+      .stub(streamController, '_handleFragmentLoadComplete' as any)
+      .callsFake(() => calls.push('complete'));
+
+    streamController.loadFragment(frag, iframePlayer.levels[0], 60.5);
+
+    expect(calls).to.deep.equal(['progress(4)', 'complete']);
+    expect(streamController.fragCurrent).to.equal(frag);
+    expect(frag.stats.loaded).to.equal(4);
+    // The transmuxed payload is a copy; the cached bytes stay pristine
+    expect(frag.data).to.deep.equal(new Uint8Array([1, 2, 3, 4]));
+  });
+
+  it('queues loadMediaAt operations issued while a fragment is loading', function () {
+    const iframePlayer = loadedIFramePlayer(playlistWithIFrameVariants);
+    const streamController = (iframePlayer as any).streamController;
+    // Simulate an in-flight fragment load for a span that does not contain
+    // the newly requested time. The operation must be queued (not dropped)
+    // so it is issued when the active fragment completes.
+    streamController.state = State.FRAG_LOADING;
+    streamController.fragCurrent = { start: 0, end: 4 };
+    streamController.loadMediaAt(30, { seekOnAppend: true });
+    expect(streamController.nextOp).to.deep.equal([30, { seekOnAppend: true }]);
+    // A subsequent call replaces the pending operation
+    streamController.loadMediaAt(2, { seekOnAppend: true });
+    expect(streamController.nextOp).to.deep.equal([2, { seekOnAppend: true }]);
   });
 
   it('createImageIFramePlayer returns null when no image iframe variants exist', function () {

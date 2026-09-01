@@ -1,4 +1,5 @@
 /api-docs
+/api-extractor/api-documenter
 /api-extractor/report
 /api-extractor/report-*
 /coverage

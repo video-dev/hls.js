@@ -293,6 +293,8 @@ export default class Transmuxer {
       true,
       this.id,
       chunkMeta,
+      demuxResult.initData,
+      demuxResult.sampleData,
     );
     transmuxResults.push({
       remuxResult,
@@ -403,13 +405,14 @@ export default class Transmuxer {
     if (!demuxer || !remuxer) {
       return emptyResult(chunkMeta);
     }
-    const { audioTrack, videoTrack, id3Track, textTrack } = demuxer.demux(
+    const demuxResult = demuxer.demux(
       data,
       timeOffset,
       chunkMeta,
       false,
       !this.config.progressive,
     );
+    const { audioTrack, videoTrack, id3Track, textTrack } = demuxResult;
     const remuxResult = remuxer.remux(
       audioTrack,
       videoTrack,
@@ -420,6 +423,8 @@ export default class Transmuxer {
       false,
       this.id,
       chunkMeta,
+      demuxResult.initData,
+      demuxResult.sampleData,
     );
     return {
       remuxResult,
@@ -450,6 +455,8 @@ export default class Transmuxer {
           false,
           this.id,
           chunkMeta,
+          demuxResult.initData,
+          demuxResult.sampleData,
         );
         return {
           remuxResult,

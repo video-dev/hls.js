@@ -4,6 +4,8 @@ const selfVsWindowGlobalMsg =
   'Use `self` instead of `window` to access the global context everywhere (including workers).';
 const arrayIncludesCompatibilityMsg =
   'Usage of Array includes method is restricted for compatibility. Use Array indexOf instead. (For String includes, suppress this with an eslint-disable comment.)';
+const searchParamsSetMsg =
+  'URLSearchParams.set re-encodes the whole query string, percent-encoding characters like `~`, `=` and `/` in parameters the playlist author wrote (breaking signed CDN tokens). Use `setQueryParam` from utils/url-tools instead. See https://github.com/video-dev/hls.js/pull/7969';
 
 const baseRestrictedSyntax = [
   {
@@ -17,6 +19,11 @@ const baseRestrictedSyntax = [
   {
     selector: 'MethodDefinition[value.async=true]',
     message: asyncKeywordConstraintMsg,
+  },
+  {
+    selector:
+      'MemberExpression[property.name="set"][object.property.name="searchParams"], MemberExpression[property.name="set"][object.name="searchParams"]',
+    message: searchParamsSetMsg,
   },
 ];
 
@@ -42,7 +49,7 @@ module.exports = {
   // see https://github.com/standard/eslint-config-standard
   // 'prettier' (https://github.com/prettier/eslint-config-prettier) must be last
   extends: ['eslint:recommended', 'prettier'],
-  ignorePatterns: ['dist/'],
+  ignorePatterns: ['dist/', 'tests/integration/dist-types/'],
   parser: '@typescript-eslint/parser',
   parserOptions: { sourceType: 'module', project: './tsconfig.json' },
   plugins: ['@typescript-eslint', 'import', 'no-for-of-loops'],

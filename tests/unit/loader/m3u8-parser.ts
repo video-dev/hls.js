@@ -2742,6 +2742,48 @@ http://proxy-62.x.com/sec(3ae40f708f79ca9471f52b86da76a3a8)/video/107/282/158282
       );
     });
 
+    it('finds Variable References in a playlist parsed after one that was rejected', function () {
+      // A playlist that fails the #EXTM3U check returns before any substitution
+      // runs, so the shared Variable Reference regex is left holding the offset
+      // of its last match. The next playlist has to be searched from the start.
+      const filler = `#EXTINF:4,
+segment-without-a-variable.mp4
+`.repeat(30);
+      const truncated = `#EXT-X-VERSION:3
+#EXT-X-TARGETDURATION:4
+${filler}#EXT-X-DEFINE:NAME="host",VALUE="example.com"
+#EXTINF:4,
+https://{$host}/last.mp4`;
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:4
+#EXTINF:4,
+https://{$host}/1.mp4`;
+
+      const rejected = M3U8Parser.parseLevelPlaylist(
+        truncated,
+        'http://example.com/a.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expectPlaylistParsingError(rejected, 'Missing format identifier #EXTM3U');
+
+      const details = M3U8Parser.parseLevelPlaylist(
+        playlist,
+        'http://example.com/b.m3u8',
+        0,
+        PlaylistLevelType.MAIN,
+        0,
+        null,
+      );
+      expect(details.hasVariableRefs, 'hasVariableRefs').to.be.true;
+      expectPlaylistParsingError(
+        details,
+        'Missing preceding EXT-X-DEFINE tag for Variable Reference: "host"',
+      );
+    });
+
     it('substitutes variable references in quoted strings, URI lines, and hexidecimal attributes, following EXT-X-DEFINE tags in Multivariant Playlists', function () {
       const manifest = `#EXTM3U
 #EXT-X-DEFINE:NAME="host",VALUE="example.com"

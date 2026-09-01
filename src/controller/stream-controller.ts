@@ -556,11 +556,11 @@ export default class StreamController
       PlaylistLevelType.MAIN,
       0,
     );
-    if (bufferInfo === null || bufferInfo.len === 0) {
-      this.warn(
-        `Main forward buffer length at ${currentTime} on "seeked" event ${
-          bufferInfo ? bufferInfo.len : 'empty'
-        })`,
+    if (!bufferInfo || bufferInfo.len === 0) {
+      this.log(
+        `Main buffer empty at ${currentTime} on "seeked" event: ${
+          bufferInfo ? bufferInfo.len : bufferInfo
+        }`,
       );
       return;
     }
@@ -1032,6 +1032,20 @@ export default class StreamController
           data.context?.type === LoaderContextType.LEVEL
         ) {
           this.state = State.IDLE;
+        }
+        break;
+      case ErrorDetails.BUFFER_APPEND_NO_PROGRESS:
+        if (data.parent !== 'main') {
+          return;
+        }
+        if (
+          data.frag &&
+          (data.appendsWithoutProgress || 0) >= this.config.appendErrorMaxRetry
+        ) {
+          this.warn(
+            `Marking fragment ${data.frag.sn} of level ${data.frag.level} as a gap after ${data.appendsWithoutProgress} appends without buffered range growth, to prevent loop loading`,
+          );
+          this.fragmentTracker.addAsGap(data.frag as MediaFragment);
         }
         break;
       case ErrorDetails.BUFFER_ADD_CODEC_ERROR:

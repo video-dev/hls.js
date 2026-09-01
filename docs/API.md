@@ -43,6 +43,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`nudgeMaxRetry`](#nudgemaxretry)
   - [`nudgeOnVideoHole`](#nudgeonvideohole)
   - [`skipBufferHolePadding`](#skipbufferholepadding)
+  - [`nextAudioTrackBufferFlushForwardOffset`](#nextaudiotrackbufferflushforwardoffset)
   - [`maxFragLookUpTolerance`](#maxfraglookuptolerance)
   - [`maxMaxBufferLength`](#maxmaxbufferlength)
   - [`liveSyncMode`](#livesyncmode)
@@ -94,11 +95,15 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`videoPreference`](#videopreference)
   - [`audioPreference`](#audiopreference)
   - [`subtitlePreference`](#subtitlepreference)
+  - [`streamController`](#streamcontroller)
   - [`abrController`](#abrcontroller)
   - [`bufferController`](#buffercontroller)
   - [`capLevelController`](#caplevelcontroller)
   - [`fpsController`](#fpscontroller)
   - [`errorController`](#errorcontroller)
+  - [`gapController`](#gapcontroller)
+  - [`latencyController`](#latencycontroller)
+  - [`id3TrackController`](#id3trackcontroller)
   - [`timelineController`](#timelinecontroller)
   - [`enableDateRangeMetadataCues`](#enabledaterangemetadatacues)
   - [`enableEmsgMetadataCues`](#enableemsgmetadatacues)
@@ -133,6 +138,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`abrSwitchInterval`](#abrswitchinterval)
   - [`minAutoBitrate`](#minautobitrate)
   - [`preserveManualLevelOnError`](#preservemanuallevelonerror)
+  - [`errorPenaltyExpireMs`](#errorpenaltyexpirems)
   - [`emeEnabled`](#emeenabled)
   - [`widevineLicenseUrl` (deprecated)](#widevinelicenseurl-deprecated)
   - [`licenseXhrSetup`](#licensexhrsetup)
@@ -141,6 +147,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`drmSystems[KEY-SYSTEM].generateRequest](#drmsystemskey-systemgeneraterequest)
   - [`drmSystemOptions`](#drmsystemoptions)
   - [`requestMediaKeySystemAccessFunc`](#requestmediakeysystemaccessfunc)
+  - [`requireKeySystemAccessOnStart`](#requirekeysystemaccessonstart)
   - [`cmcd`](#cmcd)
   - [`enableInterstitialPlayback`](#enableinterstitialplayback)
   - [`interstitialAppendInPlace`](#interstitialappendinplace)
@@ -194,6 +201,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.subtitleTrack`](#hlssubtitletrack)
   - [`hls.subtitleDisplay`](#hlssubtitledisplay)
 - [I-Frame Variants API](#i-frame-variants-api)
+  - [I-Frame configuration options](#i-frame-configuration-options)
   - [`hls.iframeVariants`](#hlsiframevariants)
   - [`hls.createIFramePlayer()`](#hlscreateiframeplayer)
     - [Example usage](#example-usage)
@@ -215,7 +223,9 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [Interstitial Objects and Classes](#interstitial-objects-and-classes)
 - [Additional data](#additional-data)
   - [`hls.latestLevelDetails`](#hlslatestleveldetails)
-  - [`hjs.loadLevelObj`](#hjsloadlevelobj)
+  - [`hls.loadLevelObj`](#hlsloadlevelobj)
+  - [`hls.mainForwardBufferInfo`](#hlsmainforwardbufferinfo)
+  - [`hls.audioForwardBufferInfo`](#hlsaudioforwardbufferinfo)
   - [`hls.sessionId`](#hlssessionid)
 - [Runtime Events](#runtime-events)
 - [Creating a Custom Loader](#creating-a-custom-loader)
@@ -511,10 +521,14 @@ var config = {
   pLoader: customPlaylistLoader,
   xhrSetup: XMLHttpRequestSetupCallback,
   fetchSetup: FetchSetupCallback,
+  streamController: StreamController,
   abrController: AbrController,
   bufferController: BufferController,
   capLevelController: CapLevelController,
   fpsController: FPSController,
+  gapController: GapController,
+  latencyController: LatencyController,
+  id3TrackController: ID3TrackController,
   timelineController: TimelineController,
   enableDateRangeMetadataCues: true,
   enableMetadataCues: true,
@@ -741,6 +755,16 @@ Setting this to a higher value adds additional time to the skip buffer hole targ
 Known to be helpful for platforms such as Xbox, Legacy Edge, and Tizen. Based on research on Tizen, the `skipBufferHolePadding` value should be greater than your GOP (Group of Pictures) length.
 
 `media.currentTime = Math.max(nextBufferedRangeStartTime, media.currentTime) + skipBufferHolePadding`
+
+### `nextAudioTrackBufferFlushForwardOffset`
+
+(default: `0.25` seconds)
+
+How far ahead of the current load position the alternate audio buffer is flushed when switching audio tracks smoothly (a switch where `AUDIO_TRACK_SWITCHING` data does not include `flushImmediate`).
+
+Raising this value keeps more of the outgoing track buffered, so the new track is heard later. Lowering it toward `0` flushes from the load position, so the new track is heard sooner at the cost of a greater chance of an audible gap.
+
+This has no effect on immediate audio track switches, which always flush the entire audio buffer.
 
 ### `maxFragLookUpTolerance`
 
@@ -1399,6 +1423,14 @@ Set a preference used to find and select the best matching audio track on start.
 
 Set a preference used to find and select the best matching subtitle track on start. `subtitlePreference` accepts a value of a subtitle track object (MediaPlaylist), SubtitleSelectionOption (track fields to match), or undefined. If not set or set to a value of `undefined`, HLS.js will not enable subtitles unless there is a default or forced option.
 
+### `streamController`
+
+(default: internal stream controller)
+
+Customized main stream controller.
+
+A class in charge of the main (video/muxed) fragment loading state machine: selecting the next fragment to load based on buffer state, driving demuxing and remuxing, and requesting appends.
+
 ### `abrController`
 
 (default: internal ABR controller)
@@ -1445,6 +1477,30 @@ Enable the default fps controller by setting `capLevelOnFPSDrop` to `true`.
 Customized error controller.
 
 A class in charge of handling errors and error recovery logic. The error controller processes error events and implements recovery strategies such as level switching and fragment retry logic.
+
+### `gapController`
+
+(default: internal gap controller)
+
+Customized gap controller.
+
+A class in charge of detecting stalls, skipping over buffer holes, and nudging the playhead. Behavior of the default gap controller is tuned with [`detectStallWithCurrentTimeMs`](#detectstallwithcurrenttimems), [`highBufferWatchdogPeriod`](#highbufferwatchdogperiod), [`nudgeOffset`](#nudgeoffset), [`nudgeMaxRetry`](#nudgemaxretry), [`nudgeOnVideoHole`](#nudgeonvideohole), and [`skipBufferHolePadding`](#skipbufferholepadding).
+
+### `latencyController`
+
+(default: internal latency controller)
+
+Customized latency controller.
+
+A class in charge of tracking live latency and adjusting playback rate to hold the target latency. Behavior of the default latency controller is tuned with [`liveSyncDurationCount`](#livesyncdurationcount), [`liveSyncDuration`](#livesyncduration), [`liveMaxLatencyDurationCount`](#livemaxlatencydurationcount), [`liveSyncOnStallIncrease`](#livesynconstallincrease), and [`maxLiveSyncPlaybackRate`](#maxlivesyncplaybackrate).
+
+### `id3TrackController`
+
+(default: internal ID3 track controller)
+
+Customized metadata track controller.
+
+A class in charge of creating the metadata TextTrack and adding cues to it for ID3, `emsg`, and `EXT-X-DATERANGE` timed metadata. Set to `null` to disable metadata cue insertion entirely, or use the `enable*MetadataCues` options to disable individual sources.
 
 ### `timelineController`
 
@@ -1742,6 +1798,16 @@ When set to `false`, if auto-level selection is disabled and a fragment error oc
 
 When set to `true`, the manual level selection will be preserved even when fragment errors occur, preventing automatic fallback to ABR.
 
+### `errorPenaltyExpireMs`
+
+(default: `0`, disabled)
+
+Duration in milliseconds after which a penalized level becomes eligible for re-election.
+
+A level that has recorded a load error is penalized, and is excluded from both ABR up-switch and error recovery candidate selection. Its error counters are only cleared once it buffers successfully, which it cannot do while it remains excluded. On streams where the error was transient, that can leave playback pinned to a lower quality until `hls.stopLoad()`.
+
+When set to a value greater than `0`, a penalized level is considered again once this many milliseconds have elapsed since its last load error. Leave at `0` to keep the level penalized for the remainder of the session.
+
 ### `emeEnabled`
 
 (default: `false`)
@@ -1887,6 +1953,14 @@ var hls new Hls({
 });
 ```
 
+### `requireKeySystemAccessOnStart`
+
+(default: `false`)
+
+When set to `true`, key-system access is requested for the key systems configured in [`drmSystems`](#drmsystems) before loading starts, rather than lazily once an `EXT-X-KEY` or `EXT-X-SESSION-KEY` tag is encountered.
+
+Use this with streams that begin with clear content and transition to encrypted content, where setting up MediaKeys after the first segments have been appended can break decoding. See [#7216](https://github.com/video-dev/hls.js/issues/7216) for the Chrome `PIPELINE_DECODE_ERROR` case this addresses.
+
 ### `cmcd`
 
 When the `cmcd` object is defined, [Common Media Client Data (CMCD)](https://cdn.cta.tech/cta/media/media/resources/standards/pdfs/cta-5004-final.pdf)
@@ -1903,6 +1977,7 @@ data will be passed on all media requests (manifests, playlists, a/v segments, t
   - `interval`: For the time-interval event, the reporting cadence in seconds. Defaults to `30`.
   - `batchSize`: The number of events to batch before sending a report. Defaults to `1` (send each event immediately).
   - `includeKeys`: An optional array of CMCD keys that overrides the top-level `includeKeys` for this target.
+- `rtpSafetyFactor`: A multiplier applied to the segment bitrate to compute the `rtp` (requested throughput) field. The spec defines `rtp` as the maximum throughput the client considers sufficient, which should include headroom above the encoded bitrate to absorb network jitter and avoid rebuffering. Defaults to `5` (5× the segment bitrate). Only used when `version: 2`.
 - `loader`: An optional async function `(request) => Promise<{ status }>` used to deliver CMCD v2 event reports. When omitted, event reports are delivered via `fetch` (honoring the Hls `xhrSetup`/`fetchSetup` hooks). Only used when `eventTargets` is configured.
 - `reporterCallback`: An optional `(reporter: CmcdCustomReporter) => void` callback. Called once per `MANIFEST_LOADING`, before the reporter starts. Use it to seed custom CMCD keys or store the reference for firing custom events at runtime. Always use the most recently received reference, since a new source load yields a new instance.
 
@@ -2016,9 +2091,9 @@ This is primarily used internally by HLS.js when creating interstitial asset pla
 
 (default: `2097152` (2 MB))
 
-The maximum total byte size of cached image I-Frame data retained by the `ImageIFrameStreamController`. When the cache exceeds this limit, the oldest entries are evicted and their `Fragment.data` is cleared to free memory.
+The maximum total byte size of cached I-Frame data retained by I-Frame player instances. When the cache exceeds this limit, the oldest entries are evicted and their `Fragment.data` is cleared to free memory.
 
-This option only applies to image I-Frame player instances created via `hls.createImageIFramePlayer()`. Video I-Frame data (from `hls.createIFramePlayer()`) is managed by the MSE video SourceBuffer and is not affected by this setting.
+Video I-Frame players (`hls.createIFramePlayer()`) cache loaded fragment data so that frames removed from the video SourceBuffer (buffered media beyond a rendered frame is removed so that it renders reliably) can be re-buffered without additional requests. Image I-Frame players (`hls.createImageIFramePlayer()`) cache the image data extracted from loaded fragments.
 
 ### `useMediaCapabilities`
 
@@ -2259,6 +2334,11 @@ get/set : index of selected subtitle track in `hls.subtitleTracks`. Returns -1 i
 get/set : if set to true the active subtitle track mode will be set to `showing` and the browser will display the active subtitles. If set to false, the mode will be set to `hidden`.
 
 ## I-Frame Variants API
+
+### I-Frame configuration options
+
+- `iframeController` Set to `null` to disable the `createIFramePlayer()` and `createImageIFramePlayer()` methods, which then always return `null`. I-Frame variants are still parsed and reported in `hls.iframeVariants` and in `MANIFEST_LOADED` / `MANIFEST_PARSED` data.
+- [`iframeCacheLimit`](#iframecachelimit) Adjust the byte limit of the image I-Frame cache.
 
 ### `hls.iframeVariants`
 
@@ -2634,9 +2714,17 @@ type InterstitialAssetErrorData = {
 
 - get: Returns the `LevelDetails` of last loaded level (variant) or `null` prior to loading a media playlist.
 
-### `hjs.loadLevelObj`
+### `hls.loadLevelObj`
 
 - get: Returns the `Level` object of the selected level (variant) or `null` prior to selecting a level or once the level is removed.
+
+### `hls.mainForwardBufferInfo`
+
+- get: Returns `BufferInfo` describing the main (video or muxed) buffer ahead of the current position, or `null` when the main buffer has not been established.
+
+### `hls.audioForwardBufferInfo`
+
+- get: Returns `BufferInfo` describing the alternate audio buffer ahead of the current position, or `null` when the stream has no alternate audio rendition being buffered.
 
 ### `hls.sessionId`
 
@@ -2684,15 +2772,15 @@ Full list of Events is available below:
 - `Hls.Events.BUFFER_FLUSHING` - fired when the media buffer should be flushed
   - data: { startOffset, endOffset, type: SourceBufferName }
 - `Hls.Events.BUFFER_FLUSHED` - fired when the media buffer has been flushed
-  - data: { type: SourceBufferName }
+  - data: { type: SourceBufferName, start : start of the removed range, end : end of the removed range, error? : Error when removal failed (`start` and `end` are then `0`) }
 - `Hls.Events.BACK_BUFFER_REACHED` - fired when the back buffer is reached as defined by the [backBufferLength](#backbufferlength) config option
   - data: { bufferEnd: number }
 - `Hls.Events.MANIFEST_LOADING` - fired to signal that a manifest loading starts
   - data: { url : manifestURL }
 - `Hls.Events.MANIFEST_LOADED` - fired after manifest has been loaded
-  - data: { levels : [available quality levels], audioTracks : [available audio tracks], captions? [available closed-captions media], subtitles?: [available subtitle tracks], url : manifestURL, stats : [LoaderStats], sessionData: [parsed #EXT-X-SESSION-DATA], networkDetails: [Loader specific object for debugging (XMLHttpRequest or fetch Response)]}
+  - data: { levels : [available quality levels], iframeVariants : [available I-Frame variants], audioTracks : [available audio tracks], captions? [available closed-captions media], subtitles?: [available subtitle tracks], url : manifestURL, stats : [LoaderStats], sessionData: [parsed #EXT-X-SESSION-DATA], networkDetails: [Loader specific object for debugging (XMLHttpRequest or fetch Response)]}
 - `Hls.Events.MANIFEST_PARSED` - fired after manifest has been parsed
-  - data: { levels : [ available quality levels ], firstLevel : index of first quality level appearing in Manifest, audioTracks, subtitleTracks, stats, audio: boolean, video: boolean, altAudio: boolean }
+  - data: { levels : [ available quality levels ], iframeVariants : [ available I-Frame variants ], firstLevel : index of first quality level appearing in Manifest, audioTracks, subtitleTracks, stats, audio: boolean, video: boolean, altAudio: boolean }
 - `Hls.Events.STEERING_MANIFEST_LOADED` - fired when the Content Steering Manifest is loaded
   - data: { `url`: steering manifest URL, `steeringManifest`: SteeringManifest object } }
 - `Hls.Events.LEVEL_SWITCHING` - fired when a level switch is requested
@@ -2728,9 +2816,9 @@ Full list of Events is available below:
 - `Hls.Events.SUBTITLE_TRACK_LOADED` - fired when a subtitle track loading finishes
   - data: { details : [LevelDetails](#leveldetails), id : subtitle track id, stats : [LoadStats] }
 - `Hls.Events.SUBTITLE_FRAG_PROCESSED` - fired when a subtitle fragment has been processed
-  - data: { success : boolean, frag : [the processed fragment object], error?: [error parsing subtitles if any] }
+  - data: { success : boolean, frag : [the processed fragment object], part : part object or `null`, error?: [error parsing subtitles if any] }
 - `Hls.Events.INIT_PTS_FOUND` - fired when the first timestamp is found
-  - data: { d : demuxer id, initPTS: initPTS, timescale: timescale, frag : fragment object }
+  - data: { id : demuxer id, initPTS: initPTS, timescale: timescale, timestampOffsets : [per-track timestamp offsets found in the init segment], frag : fragment object, trackId : track id }
 - `Hls.Events.FRAG_LOADING` - fired when a fragment loading starts
   - data: { frag : fragment object, targetBufferTime: number | null [The unbuffered time that we expect to buffer with this fragment] }
 - `Hls.Events.FRAG_LOAD_PROGRESS` - [deprecated]
@@ -2739,7 +2827,7 @@ Full list of Events is available below:
 - `Hls.Events.FRAG_LOADED` - fired when a fragment loading is completed
   - data: { frag : fragment object, payload : fragment payload, stats : [LoadStats]}
 - `Hls.Events.FRAG_DECRYPTED` - fired when a fragment decryption is completed
-  - data: { id : demuxer id, frag : fragment object, payload : fragment payload, stats : { tstart, tdecrypt}}
+  - data: { frag : fragment object, part : part object or `null`, payload : fragment payload, stats : { tstart, tdecrypt}}
 - `Hls.Events.FRAG_PARSING_INIT_SEGMENT` - fired when Init Segment has been extracted from fragment
   - data: { id: demuxer id, frag : fragment object, moov : moov MP4 box, codecs : codecs found while parsing fragment }
 - `Hls.Events.FRAG_PARSING_USERDATA` - fired when parsing sei text is completed
@@ -2748,11 +2836,11 @@ Full list of Events is available below:
   - data: { id: demuxer id, frag : fragment object, samples : [ type field aligns with values from `Hls.MetadataSchema` enum. pes - pts and dts timestamp are relative, values are in seconds], details: [LevelDetails](#leveldetails) }
 - `Hls.Events.FRAG_PARSING_DATA` - [deprecated]
 - `Hls.Events.FRAG_PARSED` - fired when fragment parsing is completed
-  - data: { frag : fragment object, partIndex }
+  - data: { frag : fragment object, part, chunkMeta : transmuxer chunk context }
 - `Hls.Events.FRAG_BUFFERED` - fired when fragment remuxed MP4 boxes have all been appended into SourceBuffer
-  - data: { id: demuxer id, frag : fragment object, stats : [LoadStats] }
+  - data: { id: demuxer id, frag : fragment object, stats : [LoadStats], chunkMeta : transmuxer chunk context (unset for fragments that bypass the transmuxer, e.g. bitrate tests) }
 - `Hls.Events.FRAG_CHANGED` - fired when fragment matching with current video position is changing
-  - data: { id : demuxer id, frag : fragment object }
+  - data: { frag : [MediaFragment](#fragment) now playing, previousFrag : the previously playing MediaFragment or `null` }
 - `Hls.Events.FPS_DROP` - triggered when FPS drop in last monitoring period is higher than given threshold
   - data: { curentDropped : nb of dropped frames in last monitoring period, currentDecoded : nb of decoded frames in last monitoring period, totalDroppedFrames : total dropped frames on this video element }
 - `Hls.Events.FPS_DROP_LEVEL_CAPPING` - triggered when FPS drop triggers auto level capping
@@ -2769,7 +2857,7 @@ Full list of Events is available below:
 - `Hls.Events.NON_NATIVE_TEXT_TRACKS_FOUND` - When `renderTextTracksNatively` is `false`, this event will fire when a new captions or subtitle track is found, in the place of adding a TextTrack to the video element.
   - data: { tracks: Array<{ label, kind, default, subtitleTrack }> }
 - `Hls.Events.CUES_PARSED` - When `renderTextTracksNatively` is `false`, this event will fire when new captions or subtitle cues are parsed.
-  - data: { type, cues, track } }
+  - data: { type : `'captions'` or `'subtitles'`, cues, track : track name, closedCaptions? : the closed-captions MediaPlaylist the cues belong to (`type: 'captions'`), subtitleTrack? : the subtitle MediaPlaylist the cues belong to (`type: 'subtitles'`) }
 
 ## Creating a Custom Loader
 
@@ -2879,6 +2967,10 @@ Full list of errors is described below:
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPEND_ERROR`, fatal : `true` or `false`, parent : parent stream controller }
 - `Hls.ErrorDetails.BUFFER_APPENDING_ERROR` - raised when exception is raised during buffer appending
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPENDING_ERROR`, fatal : `false` }
+- `Hls.ErrorDetails.BUFFER_APPEND_NO_PROGRESS` - raised when a full-fragment append cycle completes without increasing the fragment's buffered coverage; after `appendErrorMaxRetry` consecutive cycles the fragment is marked as a gap to prevent loop loading
+  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_APPEND_NO_PROGRESS`, fatal : `false`, frag : fragment object, appendsWithoutProgress : consecutive count }
+- `Hls.ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET` - raised when MediaSource `readyState` is "ended" or "closed", or the media element has an error, such that the MediaSource must be recreated before appending can continue. `errorAction.flags` include `ResetMediaSource`, so this is recovered by tearing down and re-attaching the MediaSource.
+  - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET`, fatal : `true` or `false`, error : Error }
 - `Hls.ErrorDetails.BUFFER_STALLED_ERROR` - raised when playback is stuck because buffer is running out of data
   - data: { type : `MEDIA_ERROR`, details : `Hls.ErrorDetails.BUFFER_STALLED_ERROR`, fatal : `true` or `false`, buffer : buffer length (optional) }
 - `Hls.ErrorDetails.BUFFER_FULL_ERROR` - raised when no data can be appended anymore in media buffer because it is full. this error is recovered by reducing the max buffer length.

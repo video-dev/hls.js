@@ -9,6 +9,10 @@ import type { ChunkMetadata } from '../../types/transmuxer';
 import type { ParsedVideoSample } from '../tsdemuxer';
 import type { PES } from '../tsdemuxer';
 
+const ANNEX_B_START_CODE_MARKER = 0x01;
+const MIN_START_CODE_ZERO_RUN = 2;
+const NAL_UNIT_TYPE_PENDING = -1;
+
 abstract class BaseVideoParser {
   protected VideoSample: ParsedVideoSample | null = null;
 
@@ -79,120 +83,118 @@ abstract class BaseVideoParser {
   protected parseNALu(
     track: DemuxedVideoTrack,
     array: Uint8Array,
-    endOfSegment: boolean,
-  ): Array<{
-    data: Uint8Array;
-    type: number;
-    state?: number;
-  }> {
+    _endOfSegment: boolean,
+  ): VideoSampleUnit[] {
     const len = array.byteLength;
-    let state = track.naluState || 0;
-    const lastState = state;
+    if (len === 0) {
+      return [];
+    }
+
+    const previousState = track.naluState || 0;
+    const previousZeroRun =
+      previousState === NAL_UNIT_TYPE_PENDING ? 0 : previousState;
+
     const units: VideoSampleUnit[] = [];
-    let i = 0;
-    let value: number;
-    let overflow: number;
-    let unitType: number;
-    let lastUnitStart = -1;
-    let lastUnitType: number = 0;
-    // logger.log('PES:' + Hex.hexDump(array));
+    let nextState = 0;
+    let searchFrom = 0;
+    let unitStart = -1;
+    let unitType = 0;
 
-    if (state === -1) {
-      // special use case where we found 3 or 4-byte start codes exactly at the end of previous PES packet
-      lastUnitStart = 0;
-      // NALu type is value read from offset 0
-      lastUnitType = this.getNALuType(array, 0);
-      state = 0;
-      i = 1;
+    if (previousState === NAL_UNIT_TYPE_PENDING) {
+      // A delimiter ended at the preceding chunk boundary.
+      unitStart = 0;
+      unitType = this.getNALuType(array, 0);
+      searchFrom = 1;
     }
 
-    while (i < len) {
-      value = array[i++];
-      // optimization. state 0 and 1 are the predominant case. let's handle them outside of the switch/case
-      if (!state) {
-        state = value ? 0 : 1;
-        continue;
-      }
-      if (state === 1) {
-        state = value ? 0 : 2;
-        continue;
-      }
-      // here we have state either equal to 2 or 3
-      if (!value) {
-        state = 3;
-      } else if (value === 1) {
-        overflow = i - state - 1;
-        if (lastUnitStart >= 0) {
-          const unit: VideoSampleUnit = {
-            data: array.subarray(lastUnitStart, overflow),
-            type: lastUnitType,
-          };
-          // logger.log('pushing NALU, type/size:' + unit.type + '/' + unit.data.byteLength);
-          units.push(unit);
-        } else {
-          // lastUnitStart is undefined => this is the first start code found in this PES packet
-          // first check if start code delimiter is overlapping between 2 PES packets,
-          // ie it started in last packet (lastState not zero)
-          // and ended at the beginning of this PES packet (i <= 4 - lastState)
-          const lastUnit = this.getLastNalUnit(track.samples);
-          if (lastUnit) {
-            if (lastState && i <= 4 - lastState) {
-              // start delimiter overlapping between PES packets
-              // strip start delimiter bytes from the end of last NAL unit
-              // check if lastUnit had a state different from zero
-              if (lastUnit.state) {
-                // strip last bytes
-                lastUnit.data = lastUnit.data.subarray(
-                  0,
-                  lastUnit.data.byteLength - lastState,
-                );
-              }
-            }
-            // If NAL units are not starting right at the beginning of the PES packet, push preceding data into previous NAL unit.
+    while (searchFrom < len) {
+      // Native marker search avoids a JavaScript branch for every payload byte.
+      const markerIndex = array.indexOf(ANNEX_B_START_CODE_MARKER, searchFrom);
 
-            if (overflow > 0) {
-              // logger.log('first NALU found with overflow:' + overflow);
-              lastUnit.data = appendUint8Array(
-                lastUnit.data,
-                array.subarray(0, overflow),
-              );
-              lastUnit.state = 0;
-            }
-          }
-        }
-        // check if we can read unit type
-        if (i < len) {
-          unitType = this.getNALuType(array, i);
-          // logger.log('find NALU @ offset:' + i + ',type:' + unitType);
-          lastUnitStart = i;
-          lastUnitType = unitType;
-          state = 0;
-        } else {
-          // not enough byte to read unit type. let's read it on next PES parsing
-          state = -1;
-        }
+      if (markerIndex === -1) {
+        break;
+      }
+
+      searchFrom = markerIndex + 1;
+
+      let nalEnd = markerIndex;
+      while (nalEnd > 0 && array[nalEnd - 1] === 0) {
+        nalEnd--;
+      }
+
+      // The delimiter's zero run may begin in the preceding chunk.
+      const zeroRun =
+        markerIndex - nalEnd + (nalEnd === 0 ? previousZeroRun : 0);
+
+      if (zeroRun < MIN_START_CODE_ZERO_RUN) {
+        continue;
+      }
+
+      if (unitStart >= 0) {
+        units.push({
+          data: array.subarray(unitStart, nalEnd),
+          type: unitType,
+        });
       } else {
-        state = 0;
+        const previousUnit = this.getLastNalUnit(track.samples);
+
+        if (previousUnit) {
+          if (nalEnd > 0) {
+            // Bytes before the first delimiter continue the preceding NAL.
+            previousUnit.data = appendUint8Array(
+              previousUnit.data,
+              array.subarray(0, nalEnd),
+            );
+          } else if (previousZeroRun > 0) {
+            previousUnit.data = previousUnit.data.subarray(
+              0,
+              previousUnit.data.byteLength - previousZeroRun,
+            );
+          }
+
+          previousUnit.state = 0;
+        }
+      }
+
+      if (searchFrom < len) {
+        unitStart = searchFrom;
+        unitType = this.getNALuType(array, searchFrom);
+      } else {
+        nextState = NAL_UNIT_TYPE_PENDING;
+        unitStart = -1;
+        break;
       }
     }
-    if (lastUnitStart >= 0 && state >= 0) {
-      const unit: VideoSampleUnit = {
-        data: array.subarray(lastUnitStart, len),
-        type: lastUnitType,
-        state: state,
-      };
-      units.push(unit);
-      // logger.log('pushing NALU, type/size/state:' + unit.type + '/' + unit.data.byteLength + '/' + state);
+
+    if (nextState !== NAL_UNIT_TYPE_PENDING) {
+      let trailingZeroStart = len;
+
+      while (trailingZeroStart > 0 && array[trailingZeroStart - 1] === 0) {
+        trailingZeroStart--;
+      }
+
+      nextState =
+        len -
+        trailingZeroStart +
+        (trailingZeroStart === 0 ? previousZeroRun : 0);
     }
-    // no NALu found
-    if (units.length === 0) {
-      // append pes.data to previous NAL unit
-      const lastUnit = this.getLastNalUnit(track.samples);
-      if (lastUnit) {
-        lastUnit.data = appendUint8Array(lastUnit.data, array);
+
+    if (unitStart >= 0) {
+      units.push({
+        data: array.subarray(unitStart),
+        type: unitType,
+        state: nextState,
+      });
+    } else if (units.length === 0 && nextState !== NAL_UNIT_TYPE_PENDING) {
+      const previousUnit = this.getLastNalUnit(track.samples);
+
+      if (previousUnit) {
+        previousUnit.data = appendUint8Array(previousUnit.data, array);
+        previousUnit.state = nextState;
       }
     }
-    track.naluState = state;
+
+    track.naluState = nextState;
     return units;
   }
 }

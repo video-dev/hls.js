@@ -326,6 +326,7 @@ export interface ErrorData {
   details: ErrorDetails;
   error: Error;
   fatal: boolean;
+  appendsWithoutProgress?: number;
   errorAction?: IErrorAction;
   buffer?: number;
   bufferInfo?: BufferInfo;
@@ -449,6 +450,7 @@ export interface FragParsingMetadataData {
 export interface FragParsedData {
   frag: Fragment;
   part: Part | null;
+  chunkMeta: ChunkMetadata;
 }
 
 export interface FragBufferedData {
@@ -456,6 +458,7 @@ export interface FragBufferedData {
   frag: Fragment;
   part: Part | null;
   id: PlaylistLevelType;
+  chunkMeta?: ChunkMetadata;
 }
 
 export interface LevelsUpdatedData {

@@ -391,6 +391,31 @@ describe('BufferController', function () {
         originalAudioTrack.codec,
       );
     });
+
+    it('ignores unmuxed tracks once a muxed "audiovideo" SourceBuffer is created', function () {
+      const buffer = {} as unknown as ExtendedSourceBuffer;
+      bufferController.tracks = {
+        audiovideo: {
+          id: 'main',
+          container: 'video/mp4',
+          buffer,
+          listeners: [],
+        },
+      };
+      bufferController.sourceBuffers = [
+        ['audiovideo', buffer],
+        [null, null],
+      ];
+      hls.trigger(Events.BUFFER_CODECS, {
+        audio: {
+          id: 'audio',
+          container: 'audio/mp4',
+          codec: 'mp4a.40.2',
+        },
+      });
+      expect(bufferController.tracks).to.not.have.property('audio');
+      expect(bufferController.tracks).to.have.property('audiovideo');
+    });
   });
 
   describe('bufferedToEnd', function () {

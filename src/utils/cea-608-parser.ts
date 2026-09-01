@@ -150,7 +150,7 @@ const getCharForByte = (byte: number) =>
   String.fromCharCode(specialCea608CharsCodes[byte] || byte);
 
 const NR_ROWS = 15;
-const NR_COLS = 100;
+const NR_COLS = 42;
 // Tables to look up row from PAC data
 const rowsLowCh1 = {
   0x11: 1,
@@ -241,63 +241,116 @@ type PenStyles = {
   flash: boolean;
 };
 
+const DEFAULT_PEN_STYLES: Readonly<PenStyles> = Object.freeze({
+  foreground: 'white',
+  underline: false,
+  italics: false,
+  background: 'black',
+  flash: false,
+});
+
 class PenState {
-  public foreground: string = 'white';
-  public underline: boolean = false;
-  public italics: boolean = false;
-  public background: string = 'black';
-  public flash: boolean = false;
+  styles: Readonly<PenStyles> = DEFAULT_PEN_STYLES;
+
+  get foreground(): string | null {
+    return this.styles.foreground;
+  }
+
+  set foreground(foreground: string | null) {
+    const styles = this.styles;
+    this.styles = {
+      foreground,
+      underline: styles.underline,
+      italics: styles.italics,
+      background: styles.background,
+      flash: styles.flash,
+    };
+  }
+
+  get underline(): boolean {
+    return this.styles.underline;
+  }
+
+  set underline(underline: boolean) {
+    const styles = this.styles;
+    this.styles = {
+      foreground: styles.foreground,
+      underline,
+      italics: styles.italics,
+      background: styles.background,
+      flash: styles.flash,
+    };
+  }
+
+  get italics(): boolean {
+    return this.styles.italics;
+  }
+
+  set italics(italics: boolean) {
+    const styles = this.styles;
+    this.styles = {
+      foreground: styles.foreground,
+      underline: styles.underline,
+      italics,
+      background: styles.background,
+      flash: styles.flash,
+    };
+  }
+
+  get background(): string {
+    return this.styles.background;
+  }
+
+  set background(background: string) {
+    const styles = this.styles;
+    this.styles = {
+      foreground: styles.foreground,
+      underline: styles.underline,
+      italics: styles.italics,
+      background,
+      flash: styles.flash,
+    };
+  }
+
+  get flash(): boolean {
+    return this.styles.flash;
+  }
+
+  set flash(flash: boolean) {
+    const styles = this.styles;
+    this.styles = {
+      foreground: styles.foreground,
+      underline: styles.underline,
+      italics: styles.italics,
+      background: styles.background,
+      flash,
+    };
+  }
 
   reset() {
-    this.foreground = 'white';
-    this.underline = false;
-    this.italics = false;
-    this.background = 'black';
-    this.flash = false;
+    this.styles = DEFAULT_PEN_STYLES;
   }
 
   setStyles(styles: Partial<PenStyles>) {
-    const attribs = [
-      'foreground',
-      'underline',
-      'italics',
-      'background',
-      'flash',
-    ];
-    for (let i = 0; i < attribs.length; i++) {
-      const style = attribs[i];
-      if (styles.hasOwnProperty(style)) {
-        this[style] = styles[style];
-      }
-    }
-  }
-
-  isDefault() {
-    return (
-      this.foreground === 'white' &&
-      !this.underline &&
-      !this.italics &&
-      this.background === 'black' &&
-      !this.flash
-    );
-  }
-
-  equals(other: PenState) {
-    return (
-      this.foreground === other.foreground &&
-      this.underline === other.underline &&
-      this.italics === other.italics &&
-      this.background === other.background &&
-      this.flash === other.flash
-    );
-  }
-
-  copy(newPenState: PenState) {
-    this.foreground = newPenState.foreground;
-    this.underline = newPenState.underline;
-    this.italics = newPenState.italics;
-    this.background = newPenState.background;
-    this.flash = newPenState.flash;
+    const currentStyles = this.styles;
+    const hasOwnProperty = Object.prototype.hasOwnProperty;
+    this.styles = {
+      foreground: hasOwnProperty.call(styles, 'foreground')
+        ? styles.foreground!
+        : currentStyles.foreground,
+      underline: hasOwnProperty.call(styles, 'underline')
+        ? styles.underline!
+        : currentStyles.underline,
+      italics: hasOwnProperty.call(styles, 'italics')
+        ? styles.italics!
+        : currentStyles.italics,
+      background: hasOwnProperty.call(styles, 'background')
+        ? styles.background!
+        : currentStyles.background,
+      flash: hasOwnProperty.call(styles, 'flash')
+        ? styles.flash!
+        : currentStyles.flash,
+    };
   }
 
   toString(): string {
@@ -331,24 +384,16 @@ class StyledUnicodeChar {
 
   setChar(uchar: string, newPenState: PenState) {
     this.uchar = uchar;
-    this.penState.copy(newPenState);
+    this.penState.styles = newPenState.styles;
   }
 
   setPenState(newPenState: PenState) {
-    this.penState.copy(newPenState);
-  }
-
-  equals(other: StyledUnicodeChar) {
-    return this.uchar === other.uchar && this.penState.equals(other.penState);
+    this.penState.styles = newPenState.styles;
   }
 
   copy(newChar: StyledUnicodeChar) {
     this.uchar = newChar.uchar;
-    this.penState.copy(newChar.penState);
-  }
-
-  isEmpty(): boolean {
-    return this.uchar === ' ' && this.penState.isDefault();
+    this.penState.styles = newChar.penState.styles;
   }
 }
 
@@ -371,8 +416,24 @@ export class Row {
   }
 
   equals(other: Row) {
+    const chars = this.chars;
+    const otherChars = other.chars;
     for (let i = 0; i < NR_COLS; i++) {
-      if (!this.chars[i].equals(other.chars[i])) {
+      const char = chars[i];
+      const otherChar = otherChars[i];
+      if (char.uchar !== otherChar.uchar) {
+        return false;
+      }
+      const styles = char.penState.styles;
+      const otherStyles = otherChar.penState.styles;
+      if (
+        styles !== otherStyles &&
+        (styles.foreground !== otherStyles.foreground ||
+          styles.underline !== otherStyles.underline ||
+          styles.italics !== otherStyles.italics ||
+          styles.background !== otherStyles.background ||
+          styles.flash !== otherStyles.flash)
+      ) {
         return false;
       }
     }
@@ -386,14 +447,25 @@ export class Row {
   }
 
   isEmpty(): boolean {
-    let empty = true;
+    const chars = this.chars;
     for (let i = 0; i < NR_COLS; i++) {
-      if (!this.chars[i].isEmpty()) {
-        empty = false;
-        break;
+      const char = chars[i];
+      if (char.uchar !== ' ') {
+        return false;
+      }
+      const styles = char.penState.styles;
+      if (
+        styles !== DEFAULT_PEN_STYLES &&
+        (styles.foreground !== 'white' ||
+          styles.underline ||
+          styles.italics ||
+          styles.background !== 'black' ||
+          styles.flash)
+      ) {
+        return false;
       }
     }
-    return empty;
+    return true;
   }
 
   /**
@@ -544,7 +616,14 @@ export class CaptionScreen {
 
   copy(other: CaptionScreen) {
     for (let i = 0; i < NR_ROWS; i++) {
-      this.rows[i].copy(other.rows[i]);
+      const chars = this.rows[i].chars;
+      const otherChars = other.rows[i].chars;
+      for (let j = 0; j < NR_COLS; j++) {
+        const char = chars[j];
+        const otherChar = otherChars[j];
+        char.uchar = otherChar.uchar;
+        char.penState.styles = otherChar.penState.styles;
+      }
     }
   }
 
@@ -1001,7 +1080,8 @@ interface PACData {
 
 type SupportedField = 1 | 3;
 
-type Channels = 0 | 1 | 2; // Will be 1 or 2 when parsing captions
+type Channel = 1 | 2;
+type Channels = 0 | Channel; // Will be 1 or 2 when parsing captions
 
 type CmdHistory = {
   a: number | null;
@@ -1009,26 +1089,38 @@ type CmdHistory = {
 };
 
 class Cea608Parser {
-  channels: Array<Cea608Channel | null>;
+  channels: Array<Cea608Channel | null> = [null, null, null];
   currentChannel: Channels = 0;
   cmdHistory: CmdHistory = createCmdHistory();
   logger: CaptionsLogger;
+  private field: SupportedField;
+  private outputFilters: [null, OutputFilter, OutputFilter];
 
   constructor(field: SupportedField, out1: OutputFilter, out2: OutputFilter) {
-    const logger = (this.logger = new CaptionsLogger());
-    this.channels = [
-      null,
-      new Cea608Channel(field, out1, logger),
-      new Cea608Channel(field + 1, out2, logger),
-    ];
+    this.logger = new CaptionsLogger();
+    this.field = field;
+    this.outputFilters = [null, out1, out2];
   }
 
   getHandler(channel: number) {
-    return (this.channels[channel] as Cea608Channel).getHandler();
+    return this.outputFilters[channel];
   }
 
   setHandler(channel: number, newHandler: OutputFilter) {
-    (this.channels[channel] as Cea608Channel).setHandler(newHandler);
+    this.outputFilters[channel] = newHandler;
+    this.channels[channel]?.setHandler(newHandler);
+  }
+
+  private getChannel(channelNumber: Channel): Cea608Channel {
+    let channel = this.channels[channelNumber];
+    if (!channel) {
+      channel = this.channels[channelNumber] = new Cea608Channel(
+        this.field + channelNumber - 1,
+        this.outputFilters[channelNumber],
+        this.logger,
+      );
+    }
+    return channel;
   }
 
   /**
@@ -1094,7 +1186,7 @@ class Cea608Parser {
         if (charsFound) {
           const currChNr = this.currentChannel;
           if (currChNr && currChNr > 0) {
-            const channel = this.channels[currChNr] as Cea608Channel;
+            const channel = this.getChannel(currChNr);
             channel.insertChars(charsFound);
           } else {
             this.logger.log(
@@ -1131,8 +1223,8 @@ class Cea608Parser {
       return false;
     }
 
-    const chNr = a === 0x14 || a === 0x15 || a === 0x17 ? 1 : 2;
-    const channel = this.channels[chNr] as Cea608Channel;
+    const chNr: Channel = a === 0x14 || a === 0x15 || a === 0x17 ? 1 : 2;
+    const channel = this.getChannel(chNr);
 
     if (a === 0x14 || a === 0x15 || a === 0x1c || a === 0x1d) {
       if (b === 0x20) {
@@ -1226,7 +1318,7 @@ class Cea608Parser {
       return false;
     }
 
-    const chNr: Channels = a <= 0x17 ? 1 : 2;
+    const chNr: Channel = a <= 0x17 ? 1 : 2;
 
     if (b >= 0x40 && b <= 0x5f) {
       row = chNr === 1 ? rowsLowCh1[a] : rowsLowCh2[a];
@@ -1234,10 +1326,7 @@ class Cea608Parser {
       // 0x60 <= b <= 0x7F
       row = chNr === 1 ? rowsHighCh1[a] : rowsHighCh2[a];
     }
-    const channel = this.channels[chNr];
-    if (!channel) {
-      return false;
-    }
+    const channel = this.getChannel(chNr);
     channel.setPAC(this.interpretPAC(row, b));
     this.currentChannel = chNr;
     return true;
@@ -1358,8 +1447,8 @@ class Cea608Parser {
         bkgData.underline = true;
       }
     }
-    const chNr: Channels = a <= 0x17 ? 1 : 2;
-    const channel: Cea608Channel = this.channels[chNr] as Cea608Channel;
+    const chNr: Channel = a <= 0x17 ? 1 : 2;
+    const channel = this.getChannel(chNr);
     channel.setBkgData(bkgData);
     return true;
   }

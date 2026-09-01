@@ -848,7 +848,7 @@ function withInterstitialBoundary(
     hls.interstitialsManager
   ) {
     const frag = 'type' in appended ? appended : appended.fragment;
-    const nextFrag = getNextFrag(levelDetails, frag.sn, true);
+    const nextFrag = getNextFrag(levelDetails, frag.sn);
     if (
       nextFrag?.level === frag.level &&
       fragOverlapsQueuedInterstitial(

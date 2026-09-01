@@ -4,13 +4,6 @@
 
 ```ts
 
-import type { CmcdCustomKey } from '@svta/cml-cmcd';
-import type { CmcdCustomValue } from '@svta/cml-cmcd';
-import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
-import type { CmcdKey } from '@svta/cml-cmcd';
-import type { CmcdVersion } from '@svta/cml-cmcd';
-import { EventEmitter } from 'eventemitter3';
-
 // Warning: (ae-missing-release-tag) "AbrComponentAPI" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1027,6 +1020,7 @@ export type CMCDControllerConfig = {
     useHeaders?: boolean;
     includeKeys?: CmcdKey[];
     version?: CmcdVersion;
+    rtpSafetyFactor?: number;
     eventTargets?: (Omit<CmcdEventReportConfig, 'enabledKeys'> & {
         includeKeys?: CmcdKey[];
     })[];
@@ -1398,6 +1392,8 @@ export type ErrorControllerConfig = {
 // @public (undocumented)
 export interface ErrorData {
     // (undocumented)
+    appendsWithoutProgress?: number;
+    // (undocumented)
     buffer?: number;
     // (undocumented)
     bufferInfo?: BufferInfo;
@@ -1479,6 +1475,8 @@ export enum ErrorDetails {
     BUFFER_ADD_CODEC_ERROR = "bufferAddCodecError",
     // (undocumented)
     BUFFER_APPEND_ERROR = "bufferAppendError",
+    // (undocumented)
+    BUFFER_APPEND_NO_PROGRESS = "bufferAppendNoProgress",
     // (undocumented)
     BUFFER_APPENDING_ERROR = "bufferAppendingError",
     // (undocumented)
@@ -1847,6 +1845,8 @@ export interface FPSDropLevelCappingData {
 // @public (undocumented)
 export interface FragBufferedData {
     // (undocumented)
+    chunkMeta?: ChunkMetadata;
+    // (undocumented)
     frag: Fragment;
     // (undocumented)
     id: PlaylistLevelType;
@@ -2156,6 +2156,8 @@ export class FragmentTracker implements ComponentAPI {
 //
 // @public (undocumented)
 export interface FragParsedData {
+    // (undocumented)
+    chunkMeta: ChunkMetadata;
     // (undocumented)
     frag: Fragment;
     // (undocumented)
@@ -3890,7 +3892,7 @@ export interface LevelUpdatedData {
 // Warning: (ae-missing-release-tag) "LicenseAndKeysRequest" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export type LicenseAndKeysRequest = EventEmitter & {
+export type LicenseAndKeysRequest = {
     status: 'initialized' | 'started' | 'generated' | MediaKeyMessageType;
     resolved?: boolean;
     errored?: Error;
@@ -5427,6 +5429,14 @@ export class XhrLoader extends BaseLoader {
     // (undocumented)
     protected resetInternalLoader(): void;
 }
+
+// Warnings were encountered during analysis:
+//
+// src/config.ts:92:3 - (ae-forgotten-export) The symbol "CmcdCustomKey" needs to be exported by the entry point hls.d.ts
+// src/config.ts:92:3 - (ae-forgotten-export) The symbol "CmcdCustomValue" needs to be exported by the entry point hls.d.ts
+// src/config.ts:104:3 - (ae-forgotten-export) The symbol "CmcdKey" needs to be exported by the entry point hls.d.ts
+// src/config.ts:105:3 - (ae-forgotten-export) The symbol "CmcdVersion" needs to be exported by the entry point hls.d.ts
+// src/config.ts:107:3 - (ae-forgotten-export) The symbol "CmcdEventReportConfig" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 

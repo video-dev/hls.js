@@ -15,8 +15,8 @@ import type { ChunkMetadata } from '../types/transmuxer';
 export class ImageIFrameStreamController extends IFrameStreamController {
   private _img?: HTMLImageElement;
   private queued?: [time: number];
-  private cached: MediaFragment[] = [];
-  private cachedSize = 0;
+  // Image data extracted from fragments is cached instead (bufferFragmentData)
+  protected cacheFragmentData: boolean = false;
 
   get image(): HTMLImageElement | undefined {
     return this._img;
@@ -66,35 +66,6 @@ export class ImageIFrameStreamController extends IFrameStreamController {
     }
   }
 
-  private cacheSet(
-    frag: MediaFragment,
-    imageBytesView: Uint8Array<ArrayBuffer>,
-  ) {
-    if (!this.hls) {
-      return;
-    }
-    frag.data = imageBytesView;
-    const cache = this.cached;
-    cache.push(frag);
-    this.cachedSize += imageBytesView.buffer.byteLength;
-    const iframeCacheLimit = this.hls.config.iframeCacheLimit;
-    while (this.cachedSize > iframeCacheLimit && cache.length > 1) {
-      const evicted = cache.shift()!;
-      if (evicted.data) {
-        this.cachedSize -= evicted.data.byteLength;
-        evicted.data = undefined;
-      } else {
-        // Fragment was removed. Re-evaluate size.
-        this.cached = cache.filter((frag) => !!frag.data);
-        this.cachedSize = cache.reduce(
-          (acc, { data }) => (data ? data.buffer.byteLength : 0),
-          0,
-        );
-        break;
-      }
-    }
-  }
-
   private updateImage(
     frag: MediaFragment,
     part: Part | null,
@@ -126,6 +97,7 @@ export class ImageIFrameStreamController extends IFrameStreamController {
           part,
           stats,
           id: frag.type,
+          chunkMeta,
         });
       };
       image.onerror = () => {
@@ -176,12 +148,6 @@ export class ImageIFrameStreamController extends IFrameStreamController {
   }
 
   // overrides
-  protected onHandlerDestroying() {
-    this.cached.length = 0;
-    this.cachedSize = 0;
-    super.onHandlerDestroying();
-  }
-
   protected _bufferInitSegment() {}
 
   protected bufferFragmentData(
