@@ -1,8 +1,9 @@
 import { expect, use } from 'chai';
 import sinonChai from 'sinon-chai';
-import { Fragment } from '../../../src/loader/fragment';
+import { Fragment, Part } from '../../../src/loader/fragment';
 import { LevelKey } from '../../../src/loader/level-key';
 import { PlaylistLevelType } from '../../../src/types/loader';
+import { AttrList } from '../../../src/utils/attr-list';
 
 use(sinonChai);
 
@@ -119,6 +120,43 @@ describe('Fragment class tests', function () {
       frag.programDateTime = 1000;
       frag.duration = NaN;
       expect(frag.endProgramDateTime).to.equal(1000);
+    });
+  });
+});
+
+describe('Part class tests', function () {
+  describe('loaded getter', function () {
+    function subtitlePart(): Part {
+      const frag = new Fragment(PlaylistLevelType.SUBTITLE, '');
+      frag.sn = 1;
+      return new Part(
+        new AttrList({ DURATION: '0.5', URI: 'part/1.vtt' }),
+        frag as any,
+        '',
+        0,
+      );
+    }
+
+    it('counts a zero-byte subtitle part as loaded once the request ends', function () {
+      const part = subtitlePart();
+      // A WebVTT part that no cue intersects transfers no bytes, but its
+      // request completes. Byte count cannot mark such a part as loaded.
+      part.stats.loaded = 0;
+      part.stats.total = 0;
+      part.stats.loading.start = 1;
+      part.stats.loading.first = 2;
+      part.stats.loading.end = 3;
+
+      expect(part.loaded).to.equal(true);
+    });
+
+    it('does not count a subtitle part in flight as loaded', function () {
+      const part = subtitlePart();
+      part.stats.loading.start = 1;
+      part.stats.loading.first = 2;
+      part.stats.loading.end = 0;
+
+      expect(part.loaded).to.equal(false);
     });
   });
 });
