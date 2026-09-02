@@ -14,7 +14,6 @@ import {
   removeEventListener,
 } from '../utils/event-listener-helper';
 import { stringify } from '../utils/safe-json-stringify';
-import { userAgentChromeVersion } from '../utils/user-agent';
 import type { InFlightData } from './base-stream-controller';
 import type { InFlightFragments } from '../hls';
 import type Hls from '../hls';
@@ -46,7 +45,7 @@ export default class GapController extends TaskLoop {
   private moved: boolean = false;
   private seeking: boolean = false;
   private buffered: Partial<Record<SourceBufferName, TimeRanges>> = {};
-  private needsPipelineFlush: boolean = false;
+  private needsPipelineFlush = new Set<SourceBufferName>();
 
   private lastCurrentTime: number;
   public ended: number = 0;
@@ -112,7 +111,7 @@ export default class GapController extends TaskLoop {
       this.media = null;
     }
     this.mediaSource = undefined;
-    this.needsPipelineFlush = false;
+    this.needsPipelineFlush.clear();
   }
 
   private onBufferAppended(
@@ -120,7 +119,7 @@ export default class GapController extends TaskLoop {
     data: BufferAppendedData,
   ) {
     this.buffered = data.timeRanges;
-    this.nudgeAfterVideoBufferFlush(data);
+    this.nudgeAfterBufferFlush(data);
   }
 
   private onBufferFlushed(
@@ -132,16 +131,14 @@ export default class GapController extends TaskLoop {
     if (
       !hls ||
       !media ||
-      !hls.config.nudgeOnVideoHole ||
-      !userAgentChromeVersion() ||
-      !isVideoBuffer(type) ||
+      !hls.config.nudgeOnBufferFlush ||
       !Number.isFinite(media.currentTime)
     ) {
       return;
     }
 
     if (media.currentTime >= start && media.currentTime < end) {
-      this.needsPipelineFlush = true;
+      this.needsPipelineFlush.add(type);
     }
   }
 
@@ -458,7 +455,7 @@ export default class GapController extends TaskLoop {
             holeEnd - holeStart < 1 && // `maxBufferHole` may be too small and setting it to 0 should not disable this feature
             currentTime - holeStart < 2
           ) {
-            this.nudgeVideoPipeline(
+            this.nudgeMediaPipeline(
               currentTime,
               `nudging playhead to flush pipeline after video hole. currentTime: ${currentTime} hole: ${holeStart} -> ${holeEnd} buffered index: ${bufferedIndex}`,
               appendedFragAtPosition(currentTime, this.fragmentTracker),
@@ -469,9 +466,9 @@ export default class GapController extends TaskLoop {
     }
   }
 
-  private nudgeAfterVideoBufferFlush(data: BufferAppendedData) {
+  private nudgeAfterBufferFlush(data: BufferAppendedData) {
     const { media } = this;
-    if (!this.needsPipelineFlush || !media || !isVideoBuffer(data.type)) {
+    if (!this.needsPipelineFlush.has(data.type) || !media) {
       return;
     }
 
@@ -483,7 +480,7 @@ export default class GapController extends TaskLoop {
       media.playbackRate === 0 ||
       media.readyState === 0
     ) {
-      this.needsPipelineFlush = false;
+      this.needsPipelineFlush.delete(data.type);
       return;
     }
 
@@ -496,15 +493,15 @@ export default class GapController extends TaskLoop {
       return;
     }
 
-    this.needsPipelineFlush = false;
-    this.nudgeVideoPipeline(
+    this.needsPipelineFlush.delete(data.type);
+    this.nudgeMediaPipeline(
       currentTime,
-      `nudging playhead to render new video after buffer flush. currentTime: ${currentTime}`,
+      `nudging playhead to flush pipeline after ${data.type} buffer flush. currentTime: ${currentTime}`,
       data.part || (data.frag as MediaFragment),
     );
   }
 
-  private nudgeVideoPipeline(
+  private nudgeMediaPipeline(
     currentTime: number,
     reason: string,
     appended: MediaFragment | Part | null,
@@ -805,10 +802,6 @@ function getInFlightDependency(
     return audio;
   }
   return null;
-}
-
-function isVideoBuffer(type: SourceBufferName) {
-  return type === 'video' || type === 'audiovideo';
 }
 
 function inFlight(inFlightData: InFlightData | undefined): Fragment | null {
