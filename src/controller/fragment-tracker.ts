@@ -302,7 +302,7 @@ export class FragmentTracker implements ComponentAPI {
     fragmentEntity.buffered = true;
     const endList = (fragmentEntity.body.endList =
       frag.endList || fragmentEntity.body.endList);
-    if (endList) {
+    if (endList && !frag.gap) {
       this.endListFragments[fragmentEntity.body.type] = fragmentEntity;
     }
   }
