@@ -16,5 +16,11 @@
     "build-config.js",
     "lint-staged.config.js",
     "scripts/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist/**/*",
+    "demo/libs/**/*",
+    "tests/integration/dist-types/**/*"
   ]
 }

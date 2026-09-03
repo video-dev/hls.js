@@ -53,6 +53,7 @@ import './unit/utils/error-helper';
 import './unit/utils/fetch-loader';
 import './unit/utils/discontinuities';
 import './unit/utils/exp-golomb';
+import './unit/utils/imsc1-ttml-parser';
 import './unit/utils/mediacapabilities-helper';
 import './unit/utils/mp4-tools';
 import './unit/utils/output-filter';

@@ -4,13 +4,6 @@
 
 ```ts
 
-import type { CmcdCustomKey } from '@svta/cml-cmcd';
-import type { CmcdCustomValue } from '@svta/cml-cmcd';
-import type { CmcdEventReportConfig } from '@svta/cml-cmcd';
-import type { CmcdKey } from '@svta/cml-cmcd';
-import type { CmcdVersion } from '@svta/cml-cmcd';
-import { EventEmitter } from 'eventemitter3';
-
 // Warning: (ae-missing-release-tag) "AbrComponentAPI" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -3899,7 +3892,7 @@ export interface LevelUpdatedData {
 // Warning: (ae-missing-release-tag) "LicenseAndKeysRequest" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export type LicenseAndKeysRequest = EventEmitter & {
+export type LicenseAndKeysRequest = {
     status: 'initialized' | 'started' | 'generated' | MediaKeyMessageType;
     resolved?: boolean;
     errored?: Error;
@@ -5437,6 +5430,14 @@ export class XhrLoader extends BaseLoader {
     // (undocumented)
     protected resetInternalLoader(): void;
 }
+
+// Warnings were encountered during analysis:
+//
+// src/config.ts:92:3 - (ae-forgotten-export) The symbol "CmcdCustomKey" needs to be exported by the entry point hls.d.ts
+// src/config.ts:92:3 - (ae-forgotten-export) The symbol "CmcdCustomValue" needs to be exported by the entry point hls.d.ts
+// src/config.ts:104:3 - (ae-forgotten-export) The symbol "CmcdKey" needs to be exported by the entry point hls.d.ts
+// src/config.ts:105:3 - (ae-forgotten-export) The symbol "CmcdVersion" needs to be exported by the entry point hls.d.ts
+// src/config.ts:107:3 - (ae-forgotten-export) The symbol "CmcdEventReportConfig" needs to be exported by the entry point hls.d.ts
 
 // (No @packageDocumentation comment for this package)
 
