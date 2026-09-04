@@ -1,4 +1,5 @@
 const { buildRollupConfig, BUILD_TYPE, FORMAT } = require('./build-config');
+const rollupPreprocessorPlugin = require('./scripts/karma-rollup-preprocessor');
 
 // Do not add coverage for JavaScript debugging when running `test:unit:debug`
 // eslint-disable-next-line no-undef
@@ -54,6 +55,10 @@ module.exports = function (config) {
     preprocessors,
     coverageReporter,
     reporters,
+
+    // 'karma-*' keeps Karma's auto-loading of published plugins; the rollup
+    // preprocessor lives in this repo and has to be named explicitly.
+    plugins: ['karma-*', rollupPreprocessorPlugin],
 
     rollupPreprocessor,
 
