@@ -57,6 +57,7 @@ import './unit/utils/imsc1-ttml-parser';
 import './unit/utils/mediacapabilities-helper';
 import './unit/utils/mp4-tools';
 import './unit/utils/output-filter';
+import './unit/utils/rendition-helper';
 import './unit/utils/safe-json-stringify';
 import './unit/utils/texttrack-utils';
 import './unit/utils/url-tools';

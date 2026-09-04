@@ -8,7 +8,7 @@ import type {
 } from '../../../src/types/media-playlist';
 
 function makeTrack(overrides: Partial<MediaPlaylist>): MediaPlaylist {
-  return {
+  const track: MediaPlaylist = {
     attrs: new AttrList({}) as MediaAttributes,
     bitrate: 0,
     autoselect: false,
@@ -19,8 +19,9 @@ function makeTrack(overrides: Partial<MediaPlaylist>): MediaPlaylist {
     name: 'n',
     type: 'AUDIO',
     url: '',
-    ...overrides,
-  } as MediaPlaylist;
+  };
+
+  return { ...track, ...overrides };
 }
 
 describe('matchesOption', function () {
