@@ -41,6 +41,13 @@ type TrackProperties = {
   media?: MediaPlaylist;
 };
 
+type CaptionsProperties = {
+  textTrack1: TrackProperties;
+  textTrack2: TrackProperties;
+  textTrack3: TrackProperties;
+  textTrack4: TrackProperties;
+};
+
 export class TimelineController implements ComponentAPI {
   private hls: Hls;
   private media: HTMLMediaElement | null = null;
@@ -60,12 +67,7 @@ export class TimelineController implements ComponentAPI {
   private lastPartIndex: number = -1; // Last video (CEA-608) fragment Part Index
   private prevCC: number = -1; // Last subtitle fragment CC
   private vttCCs: VTTCCs = newVTTCCs();
-  private captionsProperties: {
-    textTrack1: TrackProperties;
-    textTrack2: TrackProperties;
-    textTrack3: TrackProperties;
-    textTrack4: TrackProperties;
-  };
+  private captionsProperties: CaptionsProperties;
 
   constructor(hls: Hls) {
     this.hls = hls;
@@ -73,24 +75,7 @@ export class TimelineController implements ComponentAPI {
     this.Cues = hls.config.cueHandler;
     this.cueCache = {};
 
-    this.captionsProperties = {
-      textTrack1: {
-        label: this.config.captionsTextTrack1Label,
-        languageCode: this.config.captionsTextTrack1LanguageCode,
-      },
-      textTrack2: {
-        label: this.config.captionsTextTrack2Label,
-        languageCode: this.config.captionsTextTrack2LanguageCode,
-      },
-      textTrack3: {
-        label: this.config.captionsTextTrack3Label,
-        languageCode: this.config.captionsTextTrack3LanguageCode,
-      },
-      textTrack4: {
-        label: this.config.captionsTextTrack4Label,
-        languageCode: this.config.captionsTextTrack4LanguageCode,
-      },
-    };
+    this.captionsProperties = getDefaultCaptionsProperties(this.config);
 
     hls.on(Events.MEDIA_ATTACHING, this.onMediaAttaching, this);
     hls.on(Events.MEDIA_DETACHING, this.onMediaDetaching, this);
@@ -143,6 +128,10 @@ export class TimelineController implements ComponentAPI {
     screen: CaptionScreen,
     cueRanges: Array<[number, number]>,
   ) {
+    // ignore cues on 608 channels the Multivariant Playlist did not declare
+    if (this.filterCaptionsTrack(trackName)) {
+      return;
+    }
     // skip cues which overlap more than 50% with previously parsed time ranges
     let merged = false;
     for (let i = cueRanges.length; i--; ) {
@@ -220,7 +209,33 @@ export class TimelineController implements ComponentAPI {
     }
   }
 
+  /**
+   * When the Multivariant Playlist declares CLOSED-CAPTIONS renditions, only the
+   * 608 channels named by those INSTREAM-ID attributes should be presented.
+   * Undeclared channels found in the media are filtered out.
+   * Playlists that declare no CLOSED-CAPTIONS renditions (and single Media
+   * Playlists, which cannot declare any) keep the previous behavior: every
+   * channel carrying data is surfaced.
+   */
+  private filterCaptionsTrack(trackName: string): boolean {
+    if (this.config.filterUndeclaredClosedCaptions) {
+      return (
+        !this.captionsProperties[trackName]?.media && this.captionsDeclared
+      );
+    }
+    return false;
+  }
+
+  private get captionsDeclared(): boolean {
+    return Object.keys(this.captionsProperties).some(
+      (trackName) => !!this.captionsProperties[trackName].media,
+    );
+  }
+
   public createCaptionsTrack(trackName: string) {
+    if (this.filterCaptionsTrack(trackName)) {
+      return;
+    }
     if (this.config.renderTextTracksNatively) {
       this.createNativeTrack(trackName);
     } else {
@@ -307,6 +322,7 @@ export class TimelineController implements ComponentAPI {
     this.tracks = [];
     this.captionsTracks = {};
     this.nonNativeCaptionsTracks = {};
+    this.captionsProperties = getDefaultCaptionsProperties(this.config);
     this.unparsedVttFrags = [];
     this.initPTS = [];
     if (this.cea608Parser1 && this.cea608Parser2) {
@@ -719,6 +735,27 @@ function newVTTCCs(): VTTCCs {
       start: 0,
       prevCC: -1,
       new: true,
+    },
+  };
+}
+
+function getDefaultCaptionsProperties(config: HlsConfig): CaptionsProperties {
+  return {
+    textTrack1: {
+      label: config.captionsTextTrack1Label,
+      languageCode: config.captionsTextTrack1LanguageCode,
+    },
+    textTrack2: {
+      label: config.captionsTextTrack2Label,
+      languageCode: config.captionsTextTrack2LanguageCode,
+    },
+    textTrack3: {
+      label: config.captionsTextTrack3Label,
+      languageCode: config.captionsTextTrack3LanguageCode,
+    },
+    textTrack4: {
+      label: config.captionsTextTrack4Label,
+      languageCode: config.captionsTextTrack4LanguageCode,
     },
   };
 }

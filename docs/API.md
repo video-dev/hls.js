@@ -122,6 +122,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`captionsTextTrack4Label`](#captionstexttrack4label)
   - [`captionsTextTrack4LanguageCode`](#captionstexttrack4languagecode)
   - [`renderTextTracksNatively`](#rendertexttracksnatively)
+  - [`filterUndeclaredClosedCaptions`](#filterundeclaredclosedcaptions)
   - [`stretchShortVideoTrack`](#stretchshortvideotrack)
   - [`maxAudioFramesDrift`](#maxaudioframesdrift)
   - [`forceKeyFrameOnDiscontinuity`](#forcekeyframeondiscontinuity)
@@ -1653,6 +1654,19 @@ parameter should be a string
 
 Whether or not render captions natively using the HTMLMediaElement's TextTracks. Disable native captions rendering
 when you want to handle rending of track and track cues using `Hls.Events.NON_NATIVE_TEXT_TRACKS_FOUND` and `Hls.Events.CUES_PARSED` events.
+
+parameter should be a boolean
+
+### `filterUndeclaredClosedCaptions`
+
+(default: `true`)
+
+When the Multivariant Playlist declares closed captions with `EXT-X-MEDIA:TYPE=CLOSED-CAPTIONS`, only the
+CEA-608 channels named by those `INSTREAM-ID` attributes are presented. Channels found in the media but not
+declared in the playlist are ignored. Playlists that declare no closed captions, and Media Playlists loaded
+directly (which cannot declare any), are unaffected: every channel carrying caption data is surfaced.
+
+Set to `false` to present all CEA-608 channels that carry data, regardless of what the playlist declares.
 
 parameter should be a boolean
 
