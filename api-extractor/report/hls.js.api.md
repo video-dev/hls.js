@@ -229,6 +229,8 @@ export class AudioStreamController extends BaseStreamController implements Netwo
 export class AudioTrackController extends BasePlaylistController {
     constructor(hls: Hls);
     // (undocumented)
+    protected get activePlaylist(): MediaPlaylist | null;
+    // (undocumented)
     get allAudioTracks(): MediaPlaylist[];
     // (undocumented)
     get audioTrack(): number;
@@ -256,6 +258,8 @@ export class AudioTrackController extends BasePlaylistController {
     protected onManifestLoading(): void;
     // (undocumented)
     protected onManifestParsed(event: Events.MANIFEST_PARSED, data: ManifestParsedData): void;
+    // (undocumented)
+    protected get playlists(): MediaPlaylist[];
     // (undocumented)
     setAudioOption(audioOption: MediaPlaylist | AudioSelectionOption | undefined): MediaPlaylist | null;
 }
@@ -369,6 +373,10 @@ export abstract class BaseLoader implements Loader<LoaderContext> {
 // @public (undocumented)
 export class BasePlaylistController extends Logger implements NetworkComponentAPI {
     constructor(hls: Hls, logPrefix: string);
+    // Warning: (ae-forgotten-export) The symbol "PlaylistWithDetails" needs to be exported by the entry point hls.d.ts
+    //
+    // (undocumented)
+    protected get activePlaylist(): PlaylistWithDetails | null;
     // (undocumented)
     protected canLoad: boolean;
     // (undocumented)
@@ -385,6 +393,8 @@ export class BasePlaylistController extends Logger implements NetworkComponentAP
     protected loadPlaylist(hlsUrlParameters?: HlsUrlParameters): void;
     // (undocumented)
     protected playlistLoaded(index: number, data: LevelLoadedData | AudioTrackLoadedData | TrackLoadedData, previousDetails?: LevelDetails): void;
+    // (undocumented)
+    protected get playlists(): PlaylistWithDetails[];
     // (undocumented)
     protected scheduleLoading(levelOrTrack: Level | MediaPlaylist, deliveryDirectives?: HlsUrlParameters, updatedDetails?: LevelDetails): void;
     // (undocumented)
@@ -5101,6 +5111,8 @@ export class SubtitleStreamController extends BaseStreamController implements Ne
 export class SubtitleTrackController extends BasePlaylistController {
     constructor(hls: Hls);
     // (undocumented)
+    protected get activePlaylist(): MediaPlaylist | null;
+    // (undocumented)
     get allSubtitleTracks(): MediaPlaylist[];
     // (undocumented)
     destroy(): void;
@@ -5124,6 +5136,8 @@ export class SubtitleTrackController extends BasePlaylistController {
     protected onMediaDetaching(event: Events.MEDIA_DETACHING, data: MediaDetachingData): void;
     // (undocumented)
     protected onSubtitleTrackLoaded(event: Events.SUBTITLE_TRACK_LOADED, data: TrackLoadedData): void;
+    // (undocumented)
+    protected get playlists(): MediaPlaylist[];
     // (undocumented)
     setSubtitleOption(subtitleOption: MediaPlaylist | SubtitleSelectionOption | undefined): MediaPlaylist | null;
     // (undocumented)
