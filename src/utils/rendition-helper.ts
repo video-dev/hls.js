@@ -373,7 +373,7 @@ export function matchesOption(
     (groupId === undefined || track.groupId === groupId) &&
     (name === undefined || track.name === name) &&
     (lang === undefined || languagesMatch(lang, track.lang)) &&
-    (lang === undefined || track.assocLang === assocLang) &&
+    (assocLang === undefined || track.assocLang === assocLang) &&
     (isDefault === undefined || track.default === isDefault) &&
     (forced === undefined || track.forced === forced) &&
     (!('characteristics' in option) ||
