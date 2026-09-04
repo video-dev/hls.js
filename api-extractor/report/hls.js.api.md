@@ -4002,7 +4002,7 @@ export interface LoaderContext {
 // Warning: (ae-missing-release-tag) "LoaderContextType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export const enum LoaderContextType {
+export enum LoaderContextType {
     // (undocumented)
     AUDIO_TRACK = "audioTrack",
     // (undocumented)
@@ -4700,7 +4700,7 @@ export type PlaylistControllerConfig = {
 // Warning: (ae-missing-release-tag) "PlaylistLevelType" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
-export const enum PlaylistLevelType {
+export enum PlaylistLevelType {
     // (undocumented)
     AUDIO = "audio",
     // (undocumented)
