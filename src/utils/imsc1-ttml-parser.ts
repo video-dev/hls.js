@@ -56,15 +56,23 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
     frameRate: 30,
     subFrameRate: 1,
     frameRateMultiplier: 0,
-    tickRate: 0,
+    tickRate: 1,
   };
-  const rateInfo: Object = Object.keys(defaultRateInfo).reduce(
-    (result, key) => {
-      result[key] = tt.getAttribute(`ttp:${key}`) || defaultRateInfo[key];
-      return result;
-    },
-    {},
-  );
+  const rateInfo: Record<string, string | number> = Object.keys(
+    defaultRateInfo,
+  ).reduce((result, key) => {
+    result[key] = tt.getAttribute(`ttp:${key}`) || defaultRateInfo[key];
+    return result;
+  }, {});
+  // TTML1 6.2.10: with no ttp:tickRate, a document that declares a frame rate
+  // counts ticks as sub-frames, and one without counts a tick as a second.
+  // Only the second case can fall back to the default above, so the first is
+  // derived here, and it needs to know whether ttp:frameRate was really
+  // present rather than filled in from defaultRateInfo.
+  if (!tt.getAttribute('ttp:tickRate') && tt.getAttribute('ttp:frameRate')) {
+    rateInfo.tickRate =
+      Number(rateInfo.frameRate) * Number(rateInfo.subFrameRate);
+  }
 
   const trim = tt.getAttribute('xml:space') !== 'preserve';
 
@@ -251,7 +259,7 @@ function parseTimeUnits(timeAttributeValue, rateInfo): number {
     case 'm':
       return value * 60;
     case 'ms':
-      return value * 1000;
+      return value / 1000;
     case 'f':
       return value / rateInfo.frameRate;
     case 't':

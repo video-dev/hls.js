@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "lib": ["dom", "esnext"],
+    "types": [],
+    "strict": true,
+    "skipLibCheck": false,
+    "noEmit": true,
+    "paths": {
+      "hls.js": ["../../../dist/hls.d.ts"],
+      "*": ["./no-external-modules.ts"]
+    }
+  },
+  "files": ["index.ts"]
+}

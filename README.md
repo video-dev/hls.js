@@ -3,6 +3,7 @@
 [![](https://data.jsdelivr.com/v1/package/npm/hls.js/badge?style=rounded)](https://www.jsdelivr.com/package/npm/hls.js)
 [![Sauce Test Status](https://saucelabs.com/buildstatus/robwalch)](https://app.saucelabs.com/u/robwalch)
 [![jsDeliver](https://data.jsdelivr.com/v1/package/npm/hls.js/badge)](https://www.jsdelivr.com/package/npm/hls.js)
+[![inspect.software](https://raw.githubusercontent.com/inspect-software/badges/main/v1/v/video-dev/hls.js.svg)](https://inspect.software/software/video-dev/hls.js)
 
 [comment]: <> ([![Sauce Test Status]&#40;https://saucelabs.com/browser-matrix/robwalch.svg&#41;]&#40;https://saucelabs.com/u/robwalch&#41;)
 

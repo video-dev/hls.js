@@ -176,6 +176,8 @@ export default class BufferController extends Logger implements ComponentAPI {
     this._onMediaSourceEnded = null;
     // @ts-ignore
     this._onStartStreaming = this._onEndStreaming = null;
+    // @ts-ignore
+    this._onMediaEmptied = this._onMediaError = null;
   }
 
   private registerListeners() {
@@ -339,6 +341,10 @@ export default class BufferController extends Logger implements ComponentAPI {
       }
       addEventListener(media, 'emptied', this._onMediaEmptied);
       addEventListener(media, 'error', this._onMediaError);
+      if (this.appendSource) {
+        // Resume streaming on seeking (https://bugs.webkit.org/show_bug.cgi?id=321919)
+        addEventListener(media, 'seeking', this._onStartStreaming);
+      }
     }
   }
 
@@ -473,6 +479,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (this.mediaSource?.readyState !== 'open') {
       return;
     }
+    if (!this.media || this.media.seeking) {
+      // Ignore ManagedMediaSource while seeking (https://bugs.webkit.org/show_bug.cgi?id=321919)
+      return;
+    }
     this.hls.pauseBuffering();
   };
 
@@ -553,6 +563,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     if (media) {
       removeEventListener(media, 'emptied', this._onMediaEmptied);
       removeEventListener(media, 'error', this._onMediaError);
+      removeEventListener(media, 'seeking', this._onStartStreaming);
       if (!transferringMedia) {
         if (_objectUrl) {
           self.URL.revokeObjectURL(_objectUrl);
@@ -1406,6 +1417,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const key = appendProgressKey(frag);
     const progress = this.fragmentAppendProgress[key];
     delete this.fragmentAppendProgress[key];
+    const fragBuffering = frag.stats.buffering;
+    if (fragBuffering.start && !fragBuffering.first) {
+      // Queued appends never completed (displaced by end-of-stream or transfer)
+      return;
+    }
     const cycle = progress?.stats === frag.stats ? progress : undefined;
     if (cycle?.errored) {
       // Counted by the append-error path
@@ -2441,5 +2457,6 @@ function isFragmentFullyBuffered(
   coverage: number,
   fragment: Fragment,
 ): boolean {
-  return fragment.duration - coverage <= MIN_BUFFERED_PROGRESS;
+  // .05 BUFFER_APPEND_NO_PROGRESS coverage tolerance accounts for large composition times
+  return fragment.duration - coverage <= 0.05;
 }
