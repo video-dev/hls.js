@@ -581,6 +581,19 @@ export default class Transmuxer {
       configSwitches.forEach((s) => {
         s.sampleIndex -= configSwitch.sampleIndex;
       });
+      // The config the samples after this boundary were encoded with is the
+      // outgoing config of the next boundary, or the track's current config
+      const { prev } = configSwitch;
+      const next = configSwitches[0]?.prev || currentConfig;
+      this.logger.log(
+        `[transmuxer.ts]: In-band video config switch in ${this.id} sn: ${
+          chunkMeta.sn
+        }${chunkMeta.part > -1 ? ' part: ' + chunkMeta.part : ''} of ${
+          this.id
+        } playlist ${chunkMeta.level}: ${prev.codec} ${prev.width}x${
+          prev.height
+        } to ${next.codec} ${next.width}x${next.height}`,
+      );
     }
     return {
       remuxResult,

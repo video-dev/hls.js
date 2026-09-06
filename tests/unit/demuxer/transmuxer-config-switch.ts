@@ -329,7 +329,7 @@ describe('Transmuxer video config switch splitting', function () {
       removeAllListeners: () => {},
     };
     const logger = {
-      log: () => {},
+      log: sinon.spy(),
       warn: () => {},
       error: () => {},
       debug: () => {},
@@ -396,7 +396,13 @@ describe('Transmuxer video config switch splitting', function () {
       resetInitSegment: () => {},
       destroy: () => {},
     };
-    return { transmuxer, remuxCalls };
+    return { transmuxer, remuxCalls, log: logger.log };
+  }
+
+  function configSwitchLogs(log: sinon.SinonSpy): string[] {
+    return log.args
+      .map((args) => args[0] as string)
+      .filter((message) => message.includes('In-band video config switch'));
   }
 
   function pushState(): TransmuxState {
@@ -415,7 +421,7 @@ describe('Transmuxer video config switch splitting', function () {
     track.samples = fakeSamples(5, 0);
     track.configSwitches = [{ sampleIndex: 3, prev: config320 }];
     const demuxResult = demuxResultWith(track);
-    const { transmuxer, remuxCalls } = setupTransmuxer(demuxResult, true);
+    const { transmuxer, remuxCalls, log } = setupTransmuxer(demuxResult, true);
 
     const chunkMeta = new ChunkMetadata(0, 1, 0);
     const result = transmuxer.push(
@@ -428,6 +434,10 @@ describe('Transmuxer video config switch splitting', function () {
     expect(result.chunkMeta).to.equal(chunkMeta);
     expect(remuxCalls).to.have.lengthOf(1);
     expect(remuxCalls[0].sampleCount).to.equal(3);
+    const logs = configSwitchLogs(log);
+    expect(logs).to.have.lengthOf(1);
+    expect(logs[0]).to.include('sn: 1');
+    expect(logs[0]).to.include('320x180 to avc1.42c01f 1280x720');
     expect(remuxCalls[0].firstPts).to.equal(0);
     expect(remuxCalls[0].width).to.equal(320);
     expect(remuxCalls[0].sps).to.equal(config320.sps);
@@ -458,7 +468,7 @@ describe('Transmuxer video config switch splitting', function () {
     track.samples = fakeSamples(5, 0);
     track.configSwitches = [{ sampleIndex: 3, prev: config320 }];
     const demuxResult = demuxResultWith(track);
-    const { transmuxer, remuxCalls } = setupTransmuxer(demuxResult, false);
+    const { transmuxer, remuxCalls, log } = setupTransmuxer(demuxResult, false);
 
     const chunkMeta = new ChunkMetadata(0, 1, 0);
     const result = transmuxer.push(
@@ -470,6 +480,7 @@ describe('Transmuxer video config switch splitting', function () {
     expect(result.chunkMeta).to.equal(chunkMeta);
 
     expect(remuxCalls).to.have.lengthOf(1);
+    expect(configSwitchLogs(log)).to.have.lengthOf(0);
     expect(track.samples).to.have.lengthOf(5);
     expect(track.samples[0].pts).to.equal(0);
     expect(track.width).to.equal(1280);
@@ -492,7 +503,7 @@ describe('Transmuxer video config switch splitting', function () {
       { sampleIndex: 5, prev: config640 },
     ];
     const demuxResult = demuxResultWith(track);
-    const { transmuxer, remuxCalls } = setupTransmuxer(demuxResult, true);
+    const { transmuxer, remuxCalls, log } = setupTransmuxer(demuxResult, true);
     (transmuxer as any).currentTransmuxState = pushState();
 
     const chunkMeta = new ChunkMetadata(0, 1, 0);
@@ -500,6 +511,10 @@ describe('Transmuxer video config switch splitting', function () {
 
     expect(flushResults).to.have.lengthOf(3);
     expect(remuxCalls).to.have.lengthOf(3);
+    const logs = configSwitchLogs(log);
+    expect(logs).to.have.lengthOf(2);
+    expect(logs[0]).to.include('320x180 to avc1.42c01f 640x360');
+    expect(logs[1]).to.include('640x360 to avc1.42c01f 1280x720');
     expect(remuxCalls[0].sampleCount).to.equal(3);
     expect(remuxCalls[0].firstPts).to.equal(0);
     expect(remuxCalls[0].width).to.equal(320);
@@ -583,7 +598,7 @@ describe('Transmuxer video config switch splitting', function () {
     track.samples = fakeSamples(5, 0);
     track.configSwitches = [{ sampleIndex: 0, prev: config320 }];
     const demuxResult = demuxResultWith(track);
-    const { transmuxer, remuxCalls } = setupTransmuxer(demuxResult, true);
+    const { transmuxer, remuxCalls, log } = setupTransmuxer(demuxResult, true);
 
     const chunkMeta = new ChunkMetadata(0, 1, 0);
     const result = transmuxer.push(
@@ -598,5 +613,6 @@ describe('Transmuxer video config switch splitting', function () {
     expect(remuxCalls[0].sampleCount).to.equal(5);
     expect(remuxCalls[0].width).to.equal(1280);
     expect(track.configSwitches).to.have.lengthOf(0);
+    expect(configSwitchLogs(log)).to.have.lengthOf(0);
   });
 });
