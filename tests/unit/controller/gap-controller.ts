@@ -7,14 +7,19 @@ import GapController from '../../../src/controller/gap-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
+import { Fragment } from '../../../src/loader/fragment';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import { ChunkMetadata } from '../../../src/types/transmuxer';
 import {
   BufferHelper,
   type BufferInfo,
 } from '../../../src/utils/buffer-helper';
 import { MockMediaElement, MockMediaSource } from '../../mocks/mock-media';
+import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type { HlsConfig } from '../../../src/config';
 import type StreamController from '../../../src/controller/stream-controller';
-import type { Fragment, MediaFragment } from '../../../src/loader/fragment';
+import type { MediaFragment } from '../../../src/loader/fragment';
+import type { SourceBufferName } from '../../../src/types/buffer';
 
 use(sinonChai);
 
@@ -118,6 +123,193 @@ describe('GapController', function () {
         error: triggerSpy.getCall(0).lastArg.error,
         buffer: bufferInfo.len,
         bufferInfo,
+      });
+    });
+  });
+
+  describe('pipeline nudge after buffer flush', function () {
+    let frag: MediaFragment;
+
+    function makeFragment(): MediaFragment {
+      const fragment = new Fragment(
+        PlaylistLevelType.MAIN,
+        'video.ts',
+      ) as MediaFragment;
+      fragment.sn = 1;
+      fragment.level = 0;
+      fragment.cc = 0;
+      fragment.duration = 10;
+      fragment.setStart(10);
+      return fragment;
+    }
+
+    function appendBuffer(type: SourceBufferName, buffered: TimeRanges) {
+      hls.trigger(Events.BUFFER_APPENDED, {
+        type,
+        frag,
+        part: null,
+        chunkMeta: new ChunkMetadata(0, 1, 1),
+        parent:
+          type === 'audio' ? PlaylistLevelType.AUDIO : PlaylistLevelType.MAIN,
+        timeRanges: { [type]: buffered },
+      });
+    }
+
+    beforeEach(function () {
+      frag = makeFragment();
+      Object.assign(media, {
+        buffered: new TimeRangesMock([10, 20]),
+        ended: false,
+        paused: false,
+        playbackRate: 1,
+        readyState: 4,
+        seeking: false,
+      });
+      media.currentTime = 12;
+      config.nudgeOnBufferFlush = true;
+      hls.off(
+        Events.BUFFER_FLUSHED,
+        (streamController as any).onBufferFlushed,
+        streamController,
+      );
+      triggerSpy.resetHistory();
+    });
+
+    (['audio', 'video', 'audiovideo'] as SourceBufferName[]).forEach((type) => {
+      it(`nudges when ${type} is appended over the playhead after a buffer flush`, function () {
+        hls.trigger(Events.BUFFER_FLUSHED, {
+          type,
+          start: 0,
+          end: Infinity,
+        });
+
+        triggerSpy.resetHistory();
+        appendBuffer(
+          type,
+          new TimeRangesMock([10, 20]) as unknown as TimeRanges,
+        );
+
+        expect(media.currentTime).to.be.closeTo(12.000001, 0.0000001);
+
+        const errorCall = triggerSpy
+          .getCalls()
+          .filter((call) => call.args[0] === Events.ERROR)[0];
+        expect(errorCall).to.exist;
+        const errorData = errorCall!.args[1];
+        expect(errorData).to.include({
+          type: ErrorTypes.MEDIA_ERROR,
+          details: ErrorDetails.BUFFER_SEEK_OVER_HOLE,
+          fatal: false,
+          frag,
+        });
+        expect(errorData.error.message).to.contain(
+          `after ${type} buffer flush`,
+        );
+      });
+    });
+
+    it('does not nudge when nudgeOnBufferFlush is disabled', function () {
+      config.nudgeOnBufferFlush = false;
+      hls.trigger(Events.BUFFER_FLUSHED, {
+        type: 'video',
+        start: 0,
+        end: Infinity,
+      });
+
+      triggerSpy.resetHistory();
+      appendBuffer(
+        'video',
+        new TimeRangesMock([10, 20]) as unknown as TimeRanges,
+      );
+
+      expect(media.currentTime).to.equal(12);
+      expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
+    });
+
+    it('waits for an append to the flushed source buffer', function () {
+      hls.trigger(Events.BUFFER_FLUSHED, {
+        type: 'audio',
+        start: 0,
+        end: Infinity,
+      });
+
+      triggerSpy.resetHistory();
+      appendBuffer(
+        'video',
+        new TimeRangesMock([10, 20]) as unknown as TimeRanges,
+      );
+      expect(media.currentTime).to.equal(12);
+
+      appendBuffer(
+        'audio',
+        new TimeRangesMock([10, 20]) as unknown as TimeRanges,
+      );
+      expect(media.currentTime).to.be.closeTo(12.000001, 0.0000001);
+    });
+
+    it('waits until the appended media buffers the playhead', function () {
+      hls.trigger(Events.BUFFER_FLUSHED, {
+        type: 'video',
+        start: 0,
+        end: Infinity,
+      });
+
+      triggerSpy.resetHistory();
+      appendBuffer(
+        'video',
+        new TimeRangesMock([13, 20]) as unknown as TimeRanges,
+      );
+
+      expect(media.currentTime).to.equal(12);
+      expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
+
+      appendBuffer(
+        'video',
+        new TimeRangesMock([10, 20]) as unknown as TimeRanges,
+      );
+      expect(media.currentTime).to.be.closeTo(12.000001, 0.0000001);
+    });
+
+    it('does not nudge when the flush does not remove the playhead', function () {
+      hls.trigger(Events.BUFFER_FLUSHED, {
+        type: 'video',
+        start: 13,
+        end: Infinity,
+      });
+
+      triggerSpy.resetHistory();
+      appendBuffer(
+        'video',
+        new TimeRangesMock([10, 20]) as unknown as TimeRanges,
+      );
+
+      expect(media.currentTime).to.equal(12);
+      expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
+    });
+
+    [
+      ['paused media', { paused: true }],
+      ['ended media', { ended: true }],
+      ['seeking media', { seeking: true }],
+      ['zero playback rate', { playbackRate: 0 }],
+      ['unready media', { readyState: 0 }],
+    ].forEach(([state, mediaState]) => {
+      it(`does not nudge ${state}`, function () {
+        hls.trigger(Events.BUFFER_FLUSHED, {
+          type: 'video',
+          start: 0,
+          end: Infinity,
+        });
+        Object.assign(media, mediaState);
+
+        triggerSpy.resetHistory();
+        appendBuffer(
+          'video',
+          new TimeRangesMock([10, 20]) as unknown as TimeRanges,
+        );
+
+        expect(media.currentTime).to.equal(12);
+        expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
       });
     });
   });

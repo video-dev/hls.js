@@ -41,6 +41,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`highBufferWatchdogPeriod`](#highbufferwatchdogperiod)
   - [`nudgeOffset`](#nudgeoffset)
   - [`nudgeMaxRetry`](#nudgemaxretry)
+  - [`nudgeOnBufferFlush`](#nudgeonbufferflush)
   - [`nudgeOnVideoHole`](#nudgeonvideohole)
   - [`skipBufferHolePadding`](#skipbufferholepadding)
   - [`nextAudioTrackBufferFlushForwardOffset`](#nextaudiotrackbufferflushforwardoffset)
@@ -737,6 +738,12 @@ Maximum retry threshold used for both buffer hole skipping and playhead nudging:
 
 - **Skip retries**: When jumping over buffer holes, if `skipRetry > nudgeMaxRetry`, a fatal `BUFFER_SEEK_OVER_HOLE` error is raised
 - **Nudge retries**: When nudging the playhead in buffered areas, if `nudgeRetry >= nudgeMaxRetry`, a fatal `BUFFER_STALLED_ERROR` is raised
+
+### `nudgeOnBufferFlush`
+
+(default: `false`)
+
+Whether HLS.js should perform a seek nudge to flush the rendering pipeline after an audio, video, or muxed SourceBuffer flush removes the current playhead and replacement media is appended over it. This opt-in workaround addresses rendering issues in Chromium after immediate level switches and in Firefox after immediate audio track switches. Smooth switches selected with `hls.nextAudioTrack` normally flush in the future and do not trigger this nudge. See issues https://github.com/video-dev/hls.js/issues/6355 and https://github.com/video-dev/hls.js/issues/5881.
 
 ### `nudgeOnVideoHole`
 
@@ -1484,7 +1491,7 @@ A class in charge of handling errors and error recovery logic. The error control
 
 Customized gap controller.
 
-A class in charge of detecting stalls, skipping over buffer holes, and nudging the playhead. Behavior of the default gap controller is tuned with [`detectStallWithCurrentTimeMs`](#detectstallwithcurrenttimems), [`highBufferWatchdogPeriod`](#highbufferwatchdogperiod), [`nudgeOffset`](#nudgeoffset), [`nudgeMaxRetry`](#nudgemaxretry), [`nudgeOnVideoHole`](#nudgeonvideohole), and [`skipBufferHolePadding`](#skipbufferholepadding).
+A class in charge of detecting stalls, skipping over buffer holes, and nudging the playhead. Behavior of the default gap controller is tuned with [`detectStallWithCurrentTimeMs`](#detectstallwithcurrenttimems), [`highBufferWatchdogPeriod`](#highbufferwatchdogperiod), [`nudgeOffset`](#nudgeoffset), [`nudgeMaxRetry`](#nudgemaxretry), [`nudgeOnBufferFlush`](#nudgeonbufferflush), [`nudgeOnVideoHole`](#nudgeonvideohole), and [`skipBufferHolePadding`](#skipbufferholepadding).
 
 ### `latencyController`
 
