@@ -229,6 +229,16 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`hls.sessionId`](#hlssessionid)
 - [Runtime Events](#runtime-events)
 - [Creating a Custom Loader](#creating-a-custom-loader)
+  - [Choosing which requests to handle](#choosing-which-requests-to-handle)
+  - [Loader context types](#loader-context-types)
+  - [The loader interface](#the-loader-interface)
+  - [Providing loader stats](#providing-loader-stats)
+  - [Delivering results asynchronously](#delivering-results-asynchronously)
+  - [Reporting results](#reporting-results)
+  - [Response filtering](#response-filtering)
+  - [Byte-range requests and encrypted segments](#byte-range-requests-and-encrypted-segments)
+  - [Loading keys and pre-decrypted media](#loading-keys-and-pre-decrypted-media)
+  - [Reusing the built-in loaders](#reusing-the-built-in-loaders)
 - [Errors](#errors)
   - [Network Errors](#network-errors)
   - [Media Errors](#media-errors)
@@ -1219,135 +1229,29 @@ When set to `true`, playlist parsing errors will be ignored and playback will co
 
 (default: standard `XMLHttpRequest`-based URL loader)
 
-Override standard URL loader by a custom one. Use composition and wrap internal implementation which could be exported by `Hls.DefaultConfig.loader`.
-Could be useful for P2P or stubbing (testing).
+Override the standard URL loader with a custom one. Useful for P2P, caching, offline playback, or stubbing in tests. The default implementation is available as `Hls.DefaultConfig.loader` and as the `XhrLoader` named export.
 
-Use this, if you want to overwrite both the fragment and the playlist loader.
+Use this if you want to handle both fragment and playlist requests, along with keys, Content Steering, EME server certificates, and Interstitial asset lists. `fLoader` and `pLoader` replace it for their own request types only.
 
-Note: If `fLoader` or `pLoader` are used, they overwrite `loader`!
+Note: setting this to anything other than `XhrLoader` or `FetchLoader` disables `progressive` mode.
 
-```js
-var customLoader = function () {
-  /**
-     * Calling load() will start retrieving content located at given URL (HTTP GET).
-     *
-     * @param {object} context - loader context
-     * @param {string} context.url - target URL
-     * @param {string} context.responseType - loader response type (arraybuffer or default response type for playlist)
-     * @param {number} [context.rangeStart] - start byte range offset
-     * @param {number} [context.rangeEnd] - end byte range offset
-     * @param {Boolean} [context.progressData] - true if onProgress should report partial chunk of loaded content
-     * @param {object} config - loader config params
-     * @param {number} config.maxRetry - Max number of load retries
-     * @param {number} config.timeout - Timeout after which `onTimeOut` callback will be triggered (if loading is still not finished after that delay)
-     * @param {number} config.retryDelay - Delay between an I/O error and following connection retry (ms). This to avoid spamming the server
-     * @param {number} config.maxRetryDelay - max connection retry delay (ms)
-     * @param {object} callbacks - loader callbacks
-     * @param {onSuccessCallback} callbacks.onSuccess - Callback triggered upon successful loading of URL.
-     * @param {onProgressCallback} callbacks.onProgress - Callback triggered while loading is in progress.
-     * @param {onErrorCallback} callbacks.onError - Callback triggered if any I/O error is met while loading fragment.
-     * @param {onTimeoutCallback} callbacks.onTimeout - Callback triggered if loading is still not finished after a certain duration.
-
-      @callback onSuccessCallback
-      @param response {object} - response data
-      @param response.url {string} - response URL (which might have been redirected)
-      @param response.data {string/arraybuffer/sharedarraybuffer} - response data (reponse type should be as per context.responseType)
-      @param stats {LoadStats} - loading stats
-      @param stats.aborted {boolean} - must be set to true once the request has been aborted
-      @param stats.loaded {number} - nb of loaded bytes
-      @param stats.total {number} - total nb of bytes
-      @param stats.retry {number} - number of retries performed
-      @param stats.chunkCount {number} - number of chunk progress events
-      @param stats.bwEstimate {number} - download bandwidth in bits/s
-      @param stats.loading { start: 0, first: 0, end: 0 }
-      @param stats.parsing { start: 0, end: 0 }
-      @param stats.buffering { start: 0, first: 0, end: 0 }
-      @param context {object} - loader context
-      @param networkDetails {object} - loader network details (the xhr for default loaders)
-
-      @callback onProgressCallback
-      @param stats {LoadStats} - loading stats
-      @param context {object} - loader context
-      @param data {string/arraybuffer/sharedarraybuffer} - onProgress data (should be defined only if context.progressData === true)
-      @param networkDetails {object} - loader network details (the xhr for default loaders)
-
-      @callback onErrorCallback
-      @param error {object} - error data
-      @param error.code {number} - error status code
-      @param error.text {string} - error description
-      @param context {object} - loader context
-      @param networkDetails {object} - loader network details (the xhr for default loaders)
-
-      @callback onTimeoutCallback
-      @param stats {LoadStats} - loading stats
-      @param context {object} - loader context
-
-   */
-  this.load = function (context, config, callbacks) {};
-
-  /** Abort any loading in progress. */
-  this.abort = function () {};
-
-  /** Destroy loading context. */
-  this.destroy = function () {};
-};
-```
+See [Creating a Custom Loader](#creating-a-custom-loader) for the loader interface, the list of request types, and worked examples.
 
 ### `fLoader`
 
 (default: `undefined`)
 
-This enables the manipulation of the fragment loader.
-Note: This will overwrite the default `loader`, as well as your own loader function (see above).
+Handles fragment requests — segments, initialization segments, and Partial Segments — in place of `loader`.
 
-```js
-var customFragmentLoader = function () {
-  // See `loader` for details.
-};
-```
+See [Creating a Custom Loader](#creating-a-custom-loader).
 
 ### `pLoader`
 
 (default: `undefined`)
 
-This enables the manipulation of the playlist loader.
-Note: This will overwrite the default `loader`, as well as your own loader function (see above).
+Handles playlist requests — the Multivariant Playlist and Media Playlists — in place of `loader`.
 
-```js
-var customPlaylistLoader = function () {
-  // See `loader` for details.
-};
-```
-
-if you want to just make slight adjustments to existing loader implementation, you can also eventually override it, see an example below :
-
-```js
-// special playlist post processing function
-function process(playlist) {
-  return playlist;
-}
-
-class pLoader extends Hls.DefaultConfig.loader {
-  constructor(config) {
-    super(config);
-    var load = this.load.bind(this);
-    this.load = function (context, config, callbacks) {
-      if (context.type == 'manifest') {
-        var onSuccess = callbacks.onSuccess;
-        callbacks.onSuccess = function (response, stats, context) {
-          response.data = process(response.data);
-          onSuccess(response, stats, context);
-        };
-      }
-      load(context, config, callbacks);
-    };
-  }
-}
-
-var hls = new Hls({
-  pLoader: pLoader,
-});
-```
+See [Creating a Custom Loader](#creating-a-custom-loader).
 
 ### `xhrSetup`
 
@@ -2861,7 +2765,23 @@ Full list of Events is available below:
 
 ## Creating a Custom Loader
 
-You can use the internal loader definition for your own implementation via the static getter `Hls.DefaultConfig.loader`.
+You can use the internal loader definition for your own implementation via the static getter `Hls.DefaultConfig.loader`. The loaders it is chosen from, and the classes they are built on, are also named exports of `hls.js` (see [Reusing the built-in loaders](#reusing-the-built-in-loaders)).
+
+### Choosing which requests to handle
+
+There are three configuration options that define which loader class(es) HLS.js will use. Set one or more of these to a custom loader to enable custom network handling:
+
+- `pLoader` when defined, handles HLS playlists (Multivariant Playlist and Media Playlists).
+- `fLoader` when defined, handles fragments (segments, initialization segments, and Partial Segments).
+- `loader` handles everything by default because `pLoader` and `fLoader` are undefined. Whether or not those are defined, `loader` always handles clear AES key loading, Content Steering, EME server certificates, and HLS Interstitial asset lists.
+
+`pLoader` and `fLoader` only replace `loader` for their own request types, so a custom `loader` still receives every request they do not claim.
+
+DRM license requests do not pass through any of these options. Use `drmSystems`, `licenseXhrSetup`, and `licenseResponseCallback` to modify those.
+
+Enabling `cmcd` does not bypass a custom loader. `CMCDController` wraps whichever loader is configured, applies CMCD data to the request, and then calls your `load()` method.
+
+Setting `loader` to anything other than `XhrLoader` or `FetchLoader` disables `progressive` mode, since progressive streaming depends on the built-in `FetchLoader`.
 
 Example:
 
@@ -2911,6 +2831,299 @@ let myHls = new Hls({
   },
 });
 ```
+
+### Loader context types
+
+`context.type` identifies what is being requested. Its values are those of `LoaderContextType`, which is exported from `hls.js`:
+
+| `context.type`              | Handled by            | `context.responseType` | Context interface       |
+| --------------------------- | --------------------- | ---------------------- | ----------------------- |
+| `'manifest'`                | `pLoader` or `loader` | `'text'`               | `PlaylistLoaderContext` |
+| `'level'`                   | `pLoader` or `loader` | `'text'`               | `PlaylistLoaderContext` |
+| `'audioTrack'`              | `pLoader` or `loader` | `'text'`               | `PlaylistLoaderContext` |
+| `'subtitleTrack'`           | `pLoader` or `loader` | `'text'`               | `PlaylistLoaderContext` |
+| `'media-fragment'`          | `fLoader` or `loader` | `'arraybuffer'`        | `FragmentLoaderContext` |
+| `'key'`                     | `loader`              | `'arraybuffer'`        | `KeyLoaderContext`      |
+| `'steering-manifest'`       | `loader`              | `'json'`               | `LoaderContext`         |
+| `'server-certificate'`      | `loader`              | `'arraybuffer'`        | `LoaderContext`         |
+| `'interstitial-asset-list'` | `loader`              | `'json'`               | `LoaderContext`         |
+
+Every context carries `url`, `type`, `responseType`, and optionally `headers`, `rangeStart`, `rangeEnd`, and `progressData`. The specialized contexts add:
+
+- `PlaylistLoaderContext`: `level`, `id`, `groupId`, `pathwayId`, `deliveryDirectives`, `levelOrTrack`, and `levelDetails`
+- `FragmentLoaderContext`: `frag`, `part`, and `resetIV`
+- `KeyLoaderContext`: `frag` and `keyInfo`
+
+### The loader interface
+
+HLS.js constructs one loader per request and calls `load()` on it once. Instances are not reusable: `BaseLoader` throws `Loader can only be used once.` when `load()` is called a second time.
+
+A loader must provide:
+
+- `load(context, config, callbacks)` — start the request
+- `abort()` — cancel the request in progress, set `stats.aborted`, and call `callbacks.onAbort` if it was provided
+- `destroy()` — release everything held by the loader
+- `context` — the context passed to `load()`, or `null`
+- `stats` — see [Providing loader stats](#providing-loader-stats)
+
+Two methods are optional, and used when present:
+
+- `getCacheAge(): number | null` — the `Age` response header in seconds, used to age Media Playlists on Live streams
+- `getResponseHeader(name): string | null` — used to read `Retry-After` on Content Steering responses
+
+The `config` argument to `load()` is a `LoaderConfiguration`, not the `Hls` config. It carries `loadPolicy` — the [`LoaderConfig`](#loaderconfig) for this request type, holding the timeout and retry settings — and `highWaterMark`, the minimum chunk size before `onProgress` should be called. Its `maxRetry`, `timeout`, `retryDelay`, and `maxRetryDelay` properties are deprecated in favor of `loadPolicy`.
+
+`stats` and `context` must be readable properties of the loader instance, not just values handed to the callbacks. HLS.js reads them off the instance directly — `FragmentLoader` assigns `frag.stats = loader.stats` before calling `load()` — so a loader that allocates a new stats object inside `load()` leaves `frag.stats` pointing at a stale object, and ABR estimates go wrong. A loader that wraps another one must forward both, as the composition example above does with `Object.defineProperties`.
+
+### Providing loader stats
+
+`stats` is a `LoaderStats` object. Import `LoadStats` from `hls.js` for an implementation with every field initialized, and assign it once, in the constructor:
+
+```js
+import Hls, { LoadStats } from 'hls.js';
+
+class CustomLoader {
+  constructor(config) {
+    this.stats = new LoadStats();
+    this.context = null;
+  }
+  // ...
+}
+```
+
+Fill in the fields as loading progresses:
+
+| Field           | Meaning                                                                |
+| --------------- | ---------------------------------------------------------------------- |
+| `loading.start` | when `load()` was called                                               |
+| `loading.first` | when the first byte arrived (response headers received)                |
+| `loading.end`   | when the last byte arrived                                             |
+| `loaded`        | bytes received so far                                                  |
+| `total`         | total bytes expected (equal to `loaded` once loading completes)        |
+| `bwEstimate`    | throughput in bits/s: `(total * 8000) / (loading.end - loading.first)` |
+| `chunkCount`    | number of progress events emitted                                      |
+| `retry`         | number of retries performed                                            |
+| `aborted`       | set to `true` once `abort()` has been called                           |
+
+`parsing` and `buffering` are filled in by HLS.js. Leave them at zero.
+
+All timestamps must come from `self.performance.now()`. `Date.now()` values are billions of milliseconds larger, and HLS.js compares them against `performance.now()`:
+
+- `stats.loading.first` and `stats.loading.start` schedule the next Media Playlist reload. Epoch timestamps push that reload far into the future, so a Live playlist is loaded once and never refreshed, and playback stalls at the Live edge.
+- `stats.loading.start`, `stats.loading.first`, and `stats.loaded` feed the ABR bandwidth and time-to-first-byte estimates.
+
+When a loader answers from memory instead of the network, set all three `loading` timings to the same value:
+
+```js
+const now = self.performance.now();
+const stats = this.stats;
+stats.loading.start = stats.loading.first = stats.loading.end = now;
+stats.loaded = stats.total = data.byteLength;
+stats.chunkCount = 1;
+```
+
+### Delivering results asynchronously
+
+`load()` must not call `callbacks.onSuccess` synchronously. HLS.js expects the result of a request to arrive after the event that triggered it has finished dispatching. `hls.loadSource()` emits `MANIFEST_LOADING`, and a synchronous response is delivered while other controllers are still handling that event. The symptom is a Multivariant Playlist that appears to load — media duration and levels are populated — while no Media Playlist or segment request ever follows, and nothing is logged as an error.
+
+Defer the callback with a resolved Promise (or `setTimeout`) whenever the data is already in hand. Anything deferred can be aborted or destroyed before it resolves, so track that and drop the response — note that `destroy()` releases `stats`, which is why the example holds a local reference to it:
+
+```js
+const playlistCache = {};
+
+class CachingPlaylistLoader extends Hls.DefaultConfig.loader {
+  constructor(config) {
+    super(config);
+    this.cancelled = false;
+  }
+
+  abort() {
+    this.cancelled = true;
+    super.abort();
+  }
+
+  destroy() {
+    this.cancelled = true;
+    super.destroy();
+  }
+
+  load(context, config, callbacks) {
+    const cached = playlistCache[context.url];
+    if (cached === undefined) {
+      const complete = callbacks.onSuccess;
+      callbacks.onSuccess = (
+        response,
+        stats,
+        successContext,
+        networkDetails,
+      ) => {
+        playlistCache[successContext.url] = response.data;
+        complete(response, stats, successContext, networkDetails);
+      };
+      super.load(context, config, callbacks);
+      return;
+    }
+    const stats = this.stats;
+    this.context = context;
+    stats.loading.start = self.performance.now();
+    Promise.resolve().then(() => {
+      if (this.cancelled) {
+        return;
+      }
+      stats.loading.first = stats.loading.end = self.performance.now();
+      stats.loaded = stats.total = cached.length;
+      stats.chunkCount = 1;
+      const response = { url: context.url, data: cached, code: 200 };
+      callbacks.onSuccess(response, stats, context, null);
+    });
+  }
+}
+
+const hls = new Hls({ pLoader: CachingPlaylistLoader });
+```
+
+### Reporting results
+
+`callbacks.onSuccess(response, stats, context, networkDetails)` takes a `LoaderResponse`:
+
+- `url` — the URL the response came from. Return the final URL after any redirects, because HLS.js resolves relative Playlist URIs against it. When `undefined`, `context.url` is used instead.
+- `data` — must match `context.responseType`: a string for `'text'`, an `ArrayBuffer` for `'arraybuffer'`, and a parsed object for `'json'`.
+- `code` — the HTTP status code, `200` on success.
+
+`networkDetails` is passed on to error handlers and events — it is the `XMLHttpRequest` or `Response` for the built-in loaders, and may be `null`.
+
+Report failures through the callbacks rather than by throwing:
+
+- `callbacks.onError({ code, text }, context, networkDetails, stats)`
+- `callbacks.onTimeout(stats, context, networkDetails)`
+- `callbacks.onAbort(stats, context, networkDetails)` when it is defined
+- `callbacks.onProgress(stats, context, data, networkDetails)` when it is defined, for chunked delivery
+
+Retries are the loader's responsibility. `config.loadPolicy` carries the `errorRetry` and `timeoutRetry` settings that apply to the request, and `BaseLoader` implements them in `retry()` and `loadtimeout()`. Fragment requests are the exception: they are given a policy with retries removed, and are retried by the stream controllers instead.
+
+### Response filtering
+
+This example leaves the request and loading stats to HLS.js, and replaces the response data for a particular type:
+
+```js
+class ResponseFilterLoader extends Hls.DefaultConfig.loader {
+  load(context, config, callbacks) {
+    const { type, url } = context;
+    // if this type of request requires response filtering then do it in `onSuccess`:
+    if (type === typeToFilter) {
+      const complete = callbacks.onSuccess; // capture original callback
+      callbacks.onSuccess = (
+        loaderResponse,
+        stats,
+        successContext,
+        networkDetails,
+      ) => {
+        // Do something with loaderResponse.data:
+        loaderResponse.data = doFilter(loaderResponse.data);
+        // Pass the new result to the original onSuccess callback:
+        complete(loaderResponse, stats, successContext, networkDetails);
+      };
+    }
+    super.load(context, config, callbacks);
+  }
+}
+```
+
+### Byte-range requests and encrypted segments
+
+When `context.rangeEnd` is set, the loader must request only `bytes=${context.rangeStart}-${context.rangeEnd - 1}` and return exactly that range. Any entries in `context.headers` must be sent with the request.
+
+HLS.js adjusts the range it asks for when a byte-range request targets media encrypted with full-segment AES-CBC (`METHOD=AES-128` or `METHOD=AES-256`). The range is rounded out to 16-byte boundaries, and when it does not start at the beginning of the resource it is extended 16 bytes backwards so that the preceding cipher block can be used as the IV. `context.resetIV` is set to `true` in that case.
+
+Return the range as requested. `FragmentLoader` removes the leading 16 bytes itself once the response arrives. A loader that strips them, or that ignores `rangeStart` and returns the whole resource, produces corrupt media.
+
+Decryption happens after loading, so a custom loader does not need to decrypt anything unless it is replacing HLS.js decryption entirely.
+
+### Loading keys and pre-decrypted media
+
+Key requests arrive as `context.type === 'key'` on `loader` — never on `pLoader` or `fLoader`. Setting a custom `fLoader` while leaving `loader` at its default means keys are still loaded by `XhrLoader`. These are the requests for keys HLS.js decrypts itself: `METHOD=AES-128`, `AES-256`, and `AES-256-CTR`, plus the `SAMPLE-AES` methods when `KEYFORMAT="identity"`. Everything else is handled by EME.
+
+To supply key bytes from somewhere other than the key URI, answer the `'key'` request with the raw key as an `ArrayBuffer`, and do not call the underlying loader when there is nothing to fetch:
+
+```js
+class CustomKeyLoader extends Hls.DefaultConfig.loader {
+  constructor(config) {
+    super(config);
+    this.cancelled = false;
+  }
+
+  abort() {
+    this.cancelled = true;
+    super.abort();
+  }
+
+  destroy() {
+    this.cancelled = true;
+    super.destroy();
+  }
+
+  load(context, config, callbacks) {
+    if (context.type !== 'key') {
+      super.load(context, config, callbacks);
+      return;
+    }
+    const stats = this.stats;
+    this.context = context;
+    stats.loading.start = self.performance.now();
+    // getKeyBytes() resolves with a 16 or 32 byte ArrayBuffer
+    getKeyBytes(context.keyInfo.decryptdata).then(
+      (keyData) => {
+        if (this.cancelled) {
+          return;
+        }
+        stats.loading.first = stats.loading.end = self.performance.now();
+        stats.loaded = stats.total = keyData.byteLength;
+        stats.chunkCount = 1;
+        const response = { url: context.url, data: keyData, code: 200 };
+        callbacks.onSuccess(response, stats, context, null);
+      },
+      (error) => {
+        if (this.cancelled) {
+          return;
+        }
+        callbacks.onError(
+          { code: 0, text: error.message },
+          context,
+          null,
+          stats,
+        );
+      },
+    );
+  }
+}
+```
+
+Key URIs using the `data:` scheme are resolved by the default loader without a server request, so rewriting `#EXT-X-KEY` URIs in a `pLoader` is an alternative to intercepting the key request.
+
+To take decryption over completely, decrypt in `fLoader` **and** remove the `#EXT-X-KEY` tags from the playlist in `pLoader`. If the tags are left in place, HLS.js requests the key and decrypts the already-decrypted payload a second time. Note that removing the tags also removes HLS.js's ability to follow key rotation, so the loader becomes responsible for tracking which key applies to each segment (`context.frag.sn`, `context.frag.level`).
+
+### Reusing the built-in loaders
+
+The loaders are named exports of `hls.js`, so a custom loader does not have to be written from scratch:
+
+```js
+import Hls, {
+  BaseLoader,
+  FetchLoader,
+  LoadStats,
+  XhrLoader,
+  fetchSupported,
+} from 'hls.js';
+```
+
+- `XhrLoader` — the default, and the value of `Hls.DefaultConfig.loader`
+- `FetchLoader` — `fetch()`-based, and the loader `progressive` mode requires. Check `fetchSupported()` before selecting it
+- `BaseLoader` — the abstract class both extend. It implements `load()`, `abort()`, `destroy()`, the retry and timeout policy, and owns `stats` and `context`
+- `LoadStats` — the `LoaderStats` implementation
+
+Extending `Hls.DefaultConfig.loader` or `XhrLoader` is the shortest path when the transport stays the same and only the request or response needs adjusting, as in the examples above.
+
+Extending `BaseLoader` keeps the retry, timeout, and stats handling while replacing the transport entirely. Subclasses implement `loadInternal()`, `abortInternal()`, `resetInternalLoader()`, `getNetworkDetails()`, `getCacheAge()`, and `getResponseHeader(name)`, reading `this.context`, `this.config`, and `this.callbacks`, which `BaseLoader.load()` has already assigned. `XhrLoader` and `FetchLoader` are the two reference implementations.
 
 ## Errors
 
