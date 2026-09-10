@@ -107,6 +107,32 @@ describe('SubtitleStreamController', function () {
       });
       expect(subtitleStreamController.clearInterval).to.have.been.calledOnce;
     });
+
+    it('should cancel frag loading when disabling tracks', function () {
+      subtitleStreamController.state = State.FRAG_LOADING;
+      subtitleStreamController.fragCurrent = new Fragment(
+        PlaylistLevelType.SUBTITLE,
+        '',
+      );
+      hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
+        id: -1,
+      });
+      expect(subtitleStreamController.state).to.eq(State.IDLE);
+      expect(subtitleStreamController.fragCurrent).to.eq(null);
+    });
+
+    it('should cancel frag loading when changing tracks', function () {
+      subtitleStreamController.state = State.FRAG_LOADING;
+      subtitleStreamController.fragCurrent = new Fragment(
+        PlaylistLevelType.SUBTITLE,
+        '',
+      );
+      hls.trigger(Events.SUBTITLE_TRACK_SWITCH, {
+        id: 0,
+      });
+      expect(subtitleStreamController.state).to.eq(State.IDLE);
+      expect(subtitleStreamController.fragCurrent).to.eq(null);
+    });
   });
 
   describe('onSubtitleTrackLoaded', function () {
