@@ -20,6 +20,7 @@ import type {
   ManifestLoadedData,
   ManifestParsedData,
 } from '../../../src/types/events';
+import type { HlsUrlParameters } from '../../../src/types/level';
 import type { PlaylistLoaderContext } from '../../../src/types/loader';
 import type {
   MediaAttributes,
@@ -48,6 +49,10 @@ type LevelControllerTestable = Omit<LevelController, 'onManifestLoaded'> & {
     current: LevelDetails | undefined,
   ) => void;
   redundantFailover: (levelIndex: number) => void;
+  loadingPlaylist: (
+    playlist: Level | MediaPlaylist,
+    hlsUrlParameters?: HlsUrlParameters,
+  ) => void;
   playlistLoaded: (
     index: number,
     data: LevelLoadedData,
@@ -1160,6 +1165,117 @@ http://bar.example.com/md/prog_index.m3u8`;
       expect(levels[29].audioGroups).to.deep.equal(['EC3-baz']);
       expect(levels[29].subtitleGroups).to.deep.equal(['subs-baz']);
       expect(levels[29].uri).to.equal('http://www.baz.com/tier18.m3u8');
+    });
+  });
+
+  describe('Live reload scheduling', function () {
+    it('Reload is scheduled for last request time plus target duraton when last segment duration is <= 0', function () {
+      const url = 'https://example.com/video.m3u8';
+      const loadingPlaylist = sandbox.spy(levelController, 'loadingPlaylist');
+      levelController.startLoad();
+
+      const getParsedDetailsResponse = () => {
+        const stats = new LoadStats();
+        stats.loading.first = 0;
+        stats.loaded = 0;
+        stats.aborted = false;
+        stats.loading.start =
+          stats.loading.first =
+          stats.loading.end =
+          stats.parsing.start =
+            performance.now();
+
+        const details = M3U8Parser.parseLevelPlaylist(
+          `#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:0
+#EXTINF:6,
+segment-0.seg
+#EXTINF:6,
+segment-1.seg
+#EXTINF:0,
+segment-2.seg`,
+          url,
+          0,
+          PlaylistLevelType.MAIN,
+          0,
+          {},
+        );
+        return { details, stats };
+      };
+
+      const levelInfo = new Level(
+        parsedLevel({
+          bitrate: 1_000_000,
+          url,
+        }),
+      );
+
+      const { details, stats } = getParsedDetailsResponse();
+
+      stats.parsing.end = performance.now();
+
+      expect(details).to.include({
+        playlistParsingError: null,
+        endSN: 2,
+        live: true,
+        advanced: true,
+        updated: true,
+        misses: 0,
+        advancedDateTime: undefined,
+        requestScheduled: -1,
+      });
+
+      levelController.playlistLoaded(0, {
+        details,
+        id: 0,
+        level: 0,
+        levelInfo,
+        networkDetails: new Response('ok'),
+        stats,
+        deliveryDirectives: null,
+      });
+
+      expect(details.advancedDateTime).to.be.gt(0);
+      expect(details.requestScheduled).to.be.eq(stats.loading.start + 6000);
+      expect(loadingPlaylist).to.not.be.called;
+
+      levelController.loadingPlaylist(levelInfo);
+
+      expect(loadingPlaylist).to.have.been.calledOnce;
+      expect(hls.trigger).to.have.been.calledOnce;
+      const { name, payload } = hls.getEventData(0);
+      expect(name).to.equal(Events.LEVEL_LOADING);
+      expect(payload.url).to.equal('https://example.com/video.m3u8');
+
+      const { details: details2, stats: stats2 } = getParsedDetailsResponse();
+
+      levelController.playlistLoaded(
+        0,
+        {
+          details: details2,
+          id: 0,
+          level: 0,
+          levelInfo,
+          networkDetails: new Response('ok'),
+          stats: stats2,
+          deliveryDirectives: null,
+        },
+        details,
+      );
+
+      expect(details2).to.include({
+        playlistParsingError: null,
+        endSN: 2,
+        live: true,
+        advanced: false,
+        updated: false,
+        misses: 1,
+      });
+
+      expect(details2.requestScheduled).to.be.eq(stats.loading.start + 6000);
+      expect(loadingPlaylist).to.have.been.calledOnce;
     });
   });
 });
