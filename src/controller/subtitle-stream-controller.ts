@@ -255,6 +255,7 @@ export class SubtitleStreamController
   ) {
     this.currentTrackId = data.id;
 
+    this.abortCurrentFrag();
     if (!this.levels?.length || this.currentTrackId === -1) {
       this.clearInterval();
       return;

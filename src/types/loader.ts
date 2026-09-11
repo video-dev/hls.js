@@ -7,7 +7,7 @@ import type { Part } from '../loader/fragment';
 import type { KeyLoaderInfo } from '../loader/key-loader';
 import type { LevelDetails } from '../loader/level-details';
 
-export const enum LoaderContextType {
+export enum LoaderContextType {
   MANIFEST = 'manifest',
   LEVEL = 'level',
   AUDIO_TRACK = 'audioTrack',
@@ -188,7 +188,7 @@ export type PlaylistContextType =
   | LoaderContextType.AUDIO_TRACK
   | LoaderContextType.SUBTITLE_TRACK;
 
-export const enum PlaylistLevelType {
+export enum PlaylistLevelType {
   MAIN = 'main',
   AUDIO = 'audio',
   SUBTITLE = 'subtitle',
