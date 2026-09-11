@@ -131,6 +131,23 @@ class AvcVideoParser extends BaseVideoParser {
             track.pixelRatio?.[0] !== config.pixelRatio[0] ||
             track.pixelRatio?.[1] !== config.pixelRatio[1]
           ) {
+            if (track.sps && track.samples.length) {
+              // In-band config change with samples pending: record the boundary
+              // so that the transmuxer can remux the preceding samples under the
+              // config they were encoded with (track.pps still holds the old PPS
+              // here since the new one is parsed after this SPS)
+              (track.configSwitches ||= []).push({
+                sampleIndex: track.samples.length,
+                prev: {
+                  sps: track.sps,
+                  pps: track.pps,
+                  width: track.width,
+                  height: track.height,
+                  pixelRatio: track.pixelRatio,
+                  codec: track.codec,
+                },
+              });
+            }
             track.width = config.width;
             track.height = config.height;
             track.pixelRatio = config.pixelRatio;
