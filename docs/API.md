@@ -492,7 +492,7 @@ var config = {
   liveSyncOnStallIncrease: 1,
   liveMaxLatencyDurationCount: Infinity,
   liveDurationInfinity: false,
-  preferManagedMediaSource: false,
+  preferManagedMediaSource: true,
   enableWorker: true,
   enableSoftwareAES: true,
   fragLoadPolicy: {
@@ -916,9 +916,9 @@ If you want to have a native Live UI in environments like iOS Safari, Safari, An
 
 ### `preferManagedMediaSource`
 
-(default `true`)
+(default `false`)
 
-HLS.js uses the Managed Media Source API (`ManagedMediaSource` global) instead of the `MediaSource` global by default when present. Setting this to `false` will only use `ManagedMediaSource` when `MediaSource` is undefined.
+Set to `true` to use the Managed Media Source API (`ManagedMediaSource` global) instead of the `MediaSource` global when present. By default, `ManagedMediaSource` will only be used as a fallback when `MediaSource` is undefined.
 
 ### `enableWorker`
 
