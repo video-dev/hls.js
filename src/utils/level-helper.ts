@@ -534,7 +534,7 @@ export function computeReloadInterval(
     ) {
       const lastSegmentDuration =
         fragments[fragments.length - 1].duration * 1000;
-      if (lastSegmentDuration < reloadInterval) {
+      if (lastSegmentDuration > 0 && lastSegmentDuration < reloadInterval) {
         reloadInterval = lastSegmentDuration;
       }
     }
