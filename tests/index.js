@@ -34,6 +34,7 @@ import './unit/crypt/decrypter';
 import './unit/demuxer/adts';
 import './unit/demuxer/base-audio-demuxer';
 import './unit/demuxer/base-video-parser';
+import './unit/demuxer/hevc-video-parser';
 import './unit/loader/date-range';
 import './unit/loader/fragment-loader';
 import './unit/loader/fragment';
