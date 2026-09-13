@@ -108,6 +108,7 @@ describe('passthrough-remuxer', function () {
     fragmentData: Uint8Array<ArrayBuffer>,
     timeOffset: number,
     flush: boolean,
+    chunkId: number,
   ) {
     return remuxer.remux(
       audioTrack(),
@@ -118,7 +119,16 @@ describe('passthrough-remuxer', function () {
       true,
       flush,
       PlaylistLevelType.MAIN,
-      new ChunkMetadata(0, 0, 0, fragmentData.byteLength, -1, true, 4, false),
+      new ChunkMetadata(
+        0,
+        0,
+        chunkId,
+        fragmentData.byteLength,
+        -1,
+        true,
+        4,
+        false,
+      ),
     );
   }
 
@@ -441,8 +451,8 @@ describe('passthrough-remuxer', function () {
     const firstChunk = mp4FragmentAt(0, [sample(180000, 4, 0)]);
     const secondChunk = mp4FragmentAt(180000, [sample(180000, 4, 0)]);
 
-    const first = remuxProgressiveChunk(firstChunk, 0, false);
-    const second = remuxProgressiveChunk(secondChunk, 0, true);
+    const first = remuxProgressiveChunk(firstChunk, 0, false, 1);
+    const second = remuxProgressiveChunk(secondChunk, 0, true, 2);
 
     expect(first.video, 'first chunk video track').to.exist;
     expect(first.video!.startDTS, 'first chunk startDTS').to.equal(0);

@@ -49,7 +49,6 @@ class PassThroughRemuxer extends Logger implements Remuxer {
   private initPTS: TimestampOffset | null = null;
   private initTracks?: TrackSet;
   private lastEndTime: number | null = null;
-  private lastChunkKey: string | null = null;
   private isVideoContiguous: boolean = false;
   private videoOnlyRemux: boolean = false;
   private decryptdata: DecryptData | null = null;
@@ -75,7 +74,6 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
   public resetTimeStamp(defaultInitPTS: TimestampOffset | null) {
     this.lastEndTime = null;
-    this.lastChunkKey = null;
     const initPTS = this.initPTS;
     if (initPTS && defaultInitPTS) {
       if (
@@ -91,7 +89,6 @@ class PassThroughRemuxer extends Logger implements Remuxer {
   public resetNextTimestamp() {
     this.isVideoContiguous = false;
     this.lastEndTime = null;
-    this.lastChunkKey = null;
   }
 
   public resetInitSegment(
@@ -446,9 +443,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     // Every chunk of a progressive segment is remuxed with the segment's
     // timeOffset, so only the first chunk's decode time lines up with it
-    const chunkKey = `${chunkMeta.level}_${chunkMeta.sn}_${chunkMeta.part}`;
-    const segmentStart = chunkKey !== this.lastChunkKey;
-    this.lastChunkKey = chunkKey;
+    const segmentStart = chunkMeta.id === 1;
 
     if (
       ((accurateTimeOffset && segmentStart) || !initPTS) &&
