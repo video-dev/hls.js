@@ -368,7 +368,9 @@ export default class BaseStreamController
       return;
     }
     this.loadingParts = false;
-    this.fragmentTracker.removeAllFragments();
+    // Keep gaps. recoverMediaError() detaches and re-attaches media, and dropping them here
+    // makes the player fetch a fragment it already gave up on.
+    this.fragmentTracker.removeAllFragments(true);
     this.stopLoad();
   }
 
@@ -2132,6 +2134,13 @@ export default class BaseStreamController
     const gapTagEncountered = data.details === ErrorDetails.FRAG_GAP;
     if (gapTagEncountered) {
       this.fragmentTracker.addAsGap(frag as MediaFragment);
+      // Parts of a gapped fragment are gaps too. getNextPart only skips a part when it is
+      // loaded or a gap, so marking the fragment alone leaves it selecting the same part.
+      this.getLevelDetails()?.partList?.forEach((partOfFrag) => {
+        if (partOfFrag.fragment.sn === frag.sn) {
+          partOfFrag.gap = true;
+        }
+      });
     }
     // keep retrying until the limit will be reached
     const errorAction = data.errorAction;

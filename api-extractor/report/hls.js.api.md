@@ -2145,7 +2145,7 @@ export class FragmentTracker implements ComponentAPI {
     // (undocumented)
     isEndListAppended(type: PlaylistLevelType): boolean;
     // (undocumented)
-    removeAllFragments(): void;
+    removeAllFragments(keepGaps?: boolean): void;
     // (undocumented)
     removeFragment(fragment: Fragment): void;
     // (undocumented)

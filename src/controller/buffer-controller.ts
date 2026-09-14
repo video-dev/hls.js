@@ -1,5 +1,9 @@
 import BufferOperationQueue from './buffer-operation-queue';
-import { createDoNothingErrorAction } from './error-controller';
+import {
+  createDoNothingErrorAction,
+  ErrorActionFlags,
+  NetworkErrorAction,
+} from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
@@ -131,6 +135,9 @@ export default class BufferController extends Logger implements ComponentAPI {
     video: 0,
     audiovideo: 0,
   };
+  // MediaSource that first rejected a fragment. appendErrors is per SourceBuffer and resets
+  // whenever a neighbouring fragment appends, so it cannot tell that one fragment is stuck.
+  private fragmentAppendErrors: Record<string, MediaSource | null> = {};
   private appendError?: ErrorData;
   // Tracks whether a QuotaExceededError back-buffer eviction is in progress for a given SourceBuffer type.
   private _quotaEvictionPending: Partial<Record<SourceBufferName, boolean>> =
@@ -273,6 +280,7 @@ export default class BufferController extends Logger implements ComponentAPI {
   private onManifestLoading() {
     this.bufferCodecEventsTotal = 0;
     this.details = null;
+    this.fragmentAppendErrors = {};
     this.resetAppendErrors();
     this.resetAppendProgress();
   }
@@ -982,6 +990,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         //   } ${frag.level} cc: ${cc} offset: ${offset} bytes: ${data.byteLength}`,
         // );
 
+        let gapFrag: MediaFragment | null = null;
         const isQuotaError =
           (error as DOMException).code === DOMException.QUOTA_EXCEEDED_ERR ||
           error.name == 'QuotaExceededError' ||
@@ -1048,6 +1057,20 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
             browser is able to evict some data from sourcebuffer. Retrying can help recover.
           */
           const appendErrorMaxRetry = this.hls.config.appendErrorMaxRetry;
+          if (!isQuotaError && isMediaFragment(frag)) {
+            const fragKey = appendProgressKey(frag);
+            const rejectedBy = this.fragmentAppendErrors[fragKey];
+            // Counting rejections would measure nothing here: the first one leaves
+            // HTMLMediaElement.error set, after which every part and chunk of the same
+            // fragment is rejected whatever its bytes are. A rejection under a different
+            // MediaSource means the media was rebuilt and the bytes still do not decode.
+            if (rejectedBy === undefined) {
+              this.fragmentAppendErrors[fragKey] = this.mediaSource;
+            } else if (rejectedBy !== this.mediaSource) {
+              delete this.fragmentAppendErrors[fragKey];
+              gapFrag = frag;
+            }
+          }
           this.warn(
             `Failed ${appendErrorCount}/${appendErrorMaxRetry + 1} times to append segment in "${type}" sourceBuffer with error: ${error.message}`,
           );
@@ -1065,6 +1088,26 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
               `MediaSource readyState "${readyState}" during SourceBuffer${mediaErrorRecoveryMessage(event.fatal, mediaError)}`,
             );
             event.details = ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET;
+          }
+          if (gapFrag) {
+            this.warn(
+              `Fragment ${gapFrag.sn} of ${gapFrag.type} playlist ${gapFrag.level} rejected by "${type}" SourceBuffer again after media source reset. Treating as gap`,
+            );
+            // fragment-loader clears a locally set frag.gap unless the fragment carries a
+            // GAP tag, so mark it the way a server declared gap is marked. Otherwise the
+            // loader fetches the same bytes again.
+            if (!gapFrag.tagList.some((tags) => tags[0] === 'GAP')) {
+              gapFrag.tagList.push(['GAP']);
+            }
+            this.fragmentTracker.addAsGap(gapFrag);
+            // This is a skip, not a retry, so it must not become fatal and stop loading.
+            // The MediaSource reset is still needed once to clear the element error.
+            event.fatal = false;
+            event.errorAction = {
+              action: NetworkErrorAction.DoNothing,
+              flags: ErrorActionFlags.ResetMediaSource,
+              resolved: true,
+            };
           }
         }
         this.appendError = event;
@@ -1225,6 +1268,10 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       data.previousFrag,
     );
 
+    // Playback reached this fragment, so its bytes did make it into the buffer.
+    if (isMediaFragment(data.frag)) {
+      delete this.fragmentAppendErrors[appendProgressKey(data.frag)];
+    }
     // Only clear append errors on successful encounter of buffered media. Init segments may complete without error for unsupported media.
     const elementaryStreams = data.frag.elementaryStreams;
     const { appendErrors } = this;

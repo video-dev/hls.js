@@ -10,6 +10,7 @@ import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
 import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
+import type { MediaFragment } from '../../../src/loader/fragment';
 import type {
   BufferAppendedData,
   FragBufferedData,
@@ -583,6 +584,37 @@ describe('FragmentTracker', function () {
           'has not fragments after removing',
         ).to.be.false;
       });
+    });
+
+    it('keeps fragments marked as gaps when keepGaps is set', function () {
+      const buffered = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 1,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      const gapped = createMockFragment(
+        {
+          startPTS: 1,
+          endPTS: 2,
+          sn: 2,
+          level: 1,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      triggerFragLoadedAndFragBuffered(hls, buffered);
+      fragmentTracker.addAsGap(gapped as MediaFragment);
+
+      fragmentTracker.removeAllFragments(true);
+
+      expect(fragmentTracker.hasFragment(gapped), 'gap is kept').to.be.true;
+      expect(fragmentTracker.hasFragment(buffered), 'buffered entry is removed')
+        .to.be.false;
     });
   });
 });

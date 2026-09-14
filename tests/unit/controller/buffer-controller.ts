@@ -2,11 +2,19 @@ import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import BufferController from '../../../src/controller/buffer-controller';
+import { ErrorActionFlags } from '../../../src/controller/error-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { MockMediaElement, MockMediaSource } from '../../mocks/mock-media';
+import { Fragment } from '../../../src/loader/fragment';
+import { PlaylistLevelType } from '../../../src/types/loader';
+import { ChunkMetadata } from '../../../src/types/transmuxer';
+import {
+  MockMediaElement,
+  MockMediaSource,
+  MockSourceBuffer,
+} from '../../mocks/mock-media';
 import type BufferOperationQueue from '../../../src/controller/buffer-operation-queue';
 import type {
   ExtendedSourceBuffer,
@@ -18,6 +26,7 @@ import type {
   ComponentAPI,
   NetworkComponentAPI,
 } from '../../../src/types/component-api';
+import type { ErrorData } from '../../../src/types/events';
 
 use(sinonChai);
 
@@ -581,6 +590,103 @@ describe('BufferController', function () {
       expect(bufferController.pendingTrackCount).to.equal(0);
       expect(bufferController.sourceBufferCount).to.equal(1);
       expect(bufferController.bufferedToEnd).to.be.true;
+    });
+  });
+
+  describe('append rejection', function () {
+    function attachAudioVideoBuffer(): MockSourceBuffer {
+      const buffer = new MockSourceBuffer();
+      bufferController.media =
+        new MockMediaElement() as unknown as HTMLMediaElement;
+      bufferController.mediaSource =
+        new MockMediaSource() as unknown as MediaSource;
+      const tracks = {
+        audiovideo: {
+          id: 'main',
+          container: '',
+          buffer: buffer as unknown as ExtendedSourceBuffer,
+          listeners: [],
+        },
+      } as unknown as SourceBufferTrackSet;
+      bufferController.tracks = tracks;
+      bufferController.operationQueue.tracks = tracks;
+      bufferController.sourceBuffers = [
+        ['audiovideo', buffer as unknown as ExtendedSourceBuffer],
+        [null, null],
+      ] as unknown as SourceBuffersTuple;
+      return buffer;
+    }
+
+    function appendFragment(frag: Fragment) {
+      hls.trigger(Events.BUFFER_APPENDING, {
+        type: 'audiovideo',
+        frag,
+        part: null,
+        chunkMeta: new ChunkMetadata(frag.level, frag.sn as number, 0, 1),
+        parent: PlaylistLevelType.MAIN,
+        data: new Uint8Array(1),
+      });
+    }
+
+    function createFragment(): Fragment {
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.sn = 5;
+      frag.level = 0;
+      frag.relurl = 'fragment.mp4';
+      return frag;
+    }
+
+    it('retries the fragment once the media has been rebuilt', function () {
+      const buffer = attachAudioVideoBuffer();
+      buffer.appendBuffer.throws(new Error('append failed'));
+      const frag = createFragment();
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => errors.push(data));
+
+      appendFragment(frag);
+
+      expect(errors.length, 'one error for the first rejection').to.equal(1);
+      expect(frag.gap, 'fragment is not a gap yet').to.not.equal(true);
+      expect(errors[0].errorAction, 'no local resolution yet').to.equal(
+        undefined,
+      );
+    });
+
+    it('treats a fragment rejected under a second MediaSource as a gap', function () {
+      const buffer = attachAudioVideoBuffer();
+      buffer.appendBuffer.throws(new Error('append failed'));
+      const frag = createFragment();
+      const errors: ErrorData[] = [];
+      hls.on(Events.ERROR, (event, data) => errors.push(data));
+
+      appendFragment(frag);
+      // recoverMediaError() replaces the MediaSource before the fragment is retried
+      bufferController.mediaSource =
+        new MockMediaSource() as unknown as MediaSource;
+      appendFragment(frag);
+
+      const last = errors[errors.length - 1];
+      expect(frag.gap, 'fragment is marked as a gap').to.equal(true);
+      expect(
+        frag.tagList.some((tags) => tags[0] === 'GAP'),
+        'fragment carries a GAP tag so the loader skips it',
+      ).to.equal(true);
+      expect(last.fatal, 'skipping is not fatal').to.equal(false);
+      expect(
+        (last.errorAction?.flags || 0) & ErrorActionFlags.ResetMediaSource,
+        'one media source reset is requested',
+      ).to.not.equal(0);
+    });
+
+    it('does not gap a fragment rejected twice under the same MediaSource', function () {
+      const buffer = attachAudioVideoBuffer();
+      buffer.appendBuffer.throws(new Error('append failed'));
+      const frag = createFragment();
+
+      appendFragment(frag);
+      appendFragment(frag);
+
+      expect(frag.gap, 'the media was never rebuilt').to.not.equal(true);
     });
   });
 

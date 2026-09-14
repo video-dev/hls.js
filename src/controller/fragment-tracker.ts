@@ -614,6 +614,15 @@ export class FragmentTracker implements ComponentAPI {
     });
   }
 
+  private gapFragments(): MediaFragment[] {
+    if (!this.hasGaps) {
+      return [];
+    }
+    return Object.keys(this.fragments)
+      .map((key) => this.fragments[key]?.body)
+      .filter((frag): frag is MediaFragment => !!frag?.gap);
+  }
+
   public removeFragment(fragment: Fragment) {
     const fragKey = getFragmentKey(fragment);
     fragment.clearElementaryStreamInfo();
@@ -631,11 +640,19 @@ export class FragmentTracker implements ComponentAPI {
     }
   }
 
-  public removeAllFragments() {
+  /**
+   * @param keepGaps re-add fragments marked as gaps. A gap is a judgement about content
+   * rather than buffer state, so it should outlive a media detach.
+   */
+  public removeAllFragments(keepGaps?: boolean) {
+    const gaps = keepGaps ? this.gapFragments() : null;
     this.fragments = Object.create(null);
     this.endListFragments = Object.create(null);
     this.activePartLists = Object.create(null);
     this.hasGaps = false;
+    if (gaps) {
+      gaps.forEach((frag) => this.addAsGap(frag));
+    }
     const partlist = this.hls?.latestLevelDetails?.partList;
     if (partlist) {
       partlist.forEach((part) => part.clearElementaryStreamInfo());
