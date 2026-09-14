@@ -210,6 +210,16 @@ export function mergeDetails(
         newFrag.stats = oldFrag.stats;
       }
 
+      // Use locally set gap or GAP tag, as mapPartIntersection already does for parts.
+      // Without this a live playlist update drops the flag with the replaced Fragment.
+      newFrag.gap = oldFrag.gap || newFrag.gap;
+      if (
+        oldFrag.tagList.some((tags) => tags[0] === 'GAP') &&
+        !newFrag.tagList.some((tags) => tags[0] === 'GAP')
+      ) {
+        newFrag.tagList.push(['GAP']);
+      }
+
       if (oldFrag.initSegment) {
         newFrag.initSegment = oldFrag.initSegment;
         currentInitSegment = oldFrag.initSegment;

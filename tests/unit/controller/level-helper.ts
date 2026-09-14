@@ -216,6 +216,25 @@ describe('LevelHelper Tests', function () {
       expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
+    it('carries a locally set gap and its GAP tag to the replacement fragment', function () {
+      const oldPlaylist = generatePlaylist([1, 2, 3]);
+      const newPlaylist = generatePlaylist([1, 2, 3]);
+      const gapped = oldPlaylist.fragments[1];
+      gapped.gap = true;
+      gapped.tagList.push(['GAP']);
+      mergeDetails(oldPlaylist, newPlaylist, logger);
+      const merged = newPlaylist.fragments[1];
+      expect(merged.gap, 'gap is carried over').to.equal(true);
+      expect(
+        merged.tagList.some((tags) => tags[0] === 'GAP'),
+        'GAP tag is carried over',
+      ).to.equal(true);
+      expect(
+        newPlaylist.fragments[0].gap,
+        'other fragments are untouched',
+      ).to.not.equal(true);
+    });
+
     it('applies expected sliding when there is no segment overlap', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
