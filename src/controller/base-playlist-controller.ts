@@ -32,6 +32,7 @@ export default class BasePlaylistController
   protected hls: Hls;
   protected canLoad: boolean = false;
   private timer: number = -1;
+  private loadingSync: boolean = false;
 
   constructor(hls: Hls, logPrefix: string) {
     super(logPrefix, hls.logger);
@@ -372,12 +373,14 @@ export default class BasePlaylistController
     }
     const now = self.performance.now();
     const requestScheduled = details.requestScheduled;
-    if (now >= requestScheduled) {
+    if (now >= requestScheduled && !this.loadingSync) {
+      this.loadingSync = true;
       this.loadingPlaylist(levelOrTrack, deliveryDirectives);
+      this.loadingSync = false;
       return;
     }
 
-    const estimatedTimeUntilUpdate = requestScheduled - now;
+    const estimatedTimeUntilUpdate = Math.max(requestScheduled - now, 0);
     this.log(
       `reload live playlist ${levelOrTrack.name || levelOrTrack.bitrate + 'bps'} in ${Math.round(
         estimatedTimeUntilUpdate,
