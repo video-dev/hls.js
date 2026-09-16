@@ -48,16 +48,41 @@ describe('BaseVideoParser', function () {
     expect(track.naluState).to.equal(0);
   });
 
-  it('discards padding zeros preceding a start code', function () {
+  it('keeps trailing zeros that the start code does not consume', function () {
     const units = parser.parse(
       track,
       [0, 0, 1, 0x65, 0xaa, 0, 0, 0, 0, 1, 0x06],
     );
 
+    // Only the 00 00 00 01 delimiter belongs to the start code. The zero
+    // before it is part of the NAL unit that precedes it - in a CABAC slice
+    // that is a cabac_zero_word byte, and dropping it truncates the slice.
     expectUnits(units, [
-      { data: [0x65, 0xaa], type: 5 },
+      { data: [0x65, 0xaa, 0], type: 5 },
       { data: [0x06], type: 6, state: 0 },
     ]);
+  });
+
+  it('keeps a long trailing zero run, stripping only the delimiter', function () {
+    const units = parser.parse(
+      track,
+      [0, 0, 1, 0x67, 0x6a, 0, 0, 0, 0, 0, 0, 1, 0x68],
+    );
+
+    expectUnits(units, [
+      { data: [0x67, 0x6a, 0, 0, 0], type: 7 },
+      { data: [0x68], type: 8, state: 0 },
+    ]);
+  });
+
+  it('keeps trailing zeros when the start code spans PES packets', function () {
+    const previousUnit = addLastUnit(track, [0x65, 0xaa, 0, 0, 0], 3);
+
+    const units = parser.parse(track, [0, 1, 0x06, 0xbb]);
+
+    // Four zeros span the boundary; the delimiter takes three, one stays.
+    expect(Array.from(previousUnit.data)).to.deep.equal([0x65, 0xaa, 0]);
+    expectUnits(units, [{ data: [0x06, 0xbb], type: 6, state: 0 }]);
   });
 
   it('requires the Annex-B marker byte to equal 0x01', function () {
@@ -128,7 +153,8 @@ describe('BaseVideoParser', function () {
       state: 0,
       units: [
         { data: [0x65, 0x12, 0x34, 0x56], type: 5 },
-        { data: [0x06, 0x78, 0x9a], type: 6 },
+        // Four zeros follow this unit: three form the delimiter, one is kept.
+        { data: [0x06, 0x78, 0x9a, 0], type: 6 },
         { data: [0x61, 0xbc, 0xde], type: 1 },
       ],
     };
