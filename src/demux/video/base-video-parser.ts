@@ -11,6 +11,7 @@ import type { PES } from '../tsdemuxer';
 
 const ANNEX_B_START_CODE_MARKER = 0x01;
 const MIN_START_CODE_ZERO_RUN = 2;
+const MAX_START_CODE_ZERO_RUN = 3;
 const NAL_UNIT_TYPE_PENDING = -1;
 
 abstract class BaseVideoParser {
@@ -130,6 +131,15 @@ abstract class BaseVideoParser {
         continue;
       }
 
+      const startCodeZeros = Math.min(zeroRun, MAX_START_CODE_ZERO_RUN);
+      const chunkStartCodeZeros = Math.min(
+        markerIndex - nalEnd,
+        startCodeZeros,
+      );
+      // Zeros the delimiter takes from the end of the preceding chunk.
+      const previousUnitTrim = startCodeZeros - chunkStartCodeZeros;
+      nalEnd = markerIndex - chunkStartCodeZeros;
+
       if (unitStart >= 0) {
         units.push({
           data: array.subarray(unitStart, nalEnd),
@@ -145,10 +155,10 @@ abstract class BaseVideoParser {
               previousUnit.data,
               array.subarray(0, nalEnd),
             );
-          } else if (previousZeroRun > 0) {
+          } else if (previousUnitTrim > 0) {
             previousUnit.data = previousUnit.data.subarray(
               0,
-              previousUnit.data.byteLength - previousZeroRun,
+              previousUnit.data.byteLength - previousUnitTrim,
             );
           }
 
