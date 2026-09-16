@@ -104,6 +104,34 @@ describe('passthrough-remuxer', function () {
     );
   }
 
+  function remuxProgressiveChunk(
+    fragmentData: Uint8Array<ArrayBuffer>,
+    timeOffset: number,
+    flush: boolean,
+    chunkId: number,
+  ) {
+    return remuxer.remux(
+      audioTrack(),
+      passthroughTrack(fragmentData),
+      metadataTrack(),
+      userdataTrack(),
+      timeOffset,
+      true,
+      flush,
+      PlaylistLevelType.MAIN,
+      new ChunkMetadata(
+        0,
+        0,
+        chunkId,
+        fragmentData.byteLength,
+        -1,
+        true,
+        4,
+        false,
+      ),
+    );
+  }
+
   it('remuxes moof+mdat to stretch a single-keyframe iframe to the EXTINF duration', function () {
     const extinfDuration = 4;
     const fragmentData = mp4Fragment([sample(3003, 4, 0)]);
@@ -410,6 +438,35 @@ describe('passthrough-remuxer', function () {
       extinfDuration,
     );
   });
+
+  it('keeps initPTS across the chunks of a progressively loaded multi-moof segment', function () {
+    remuxer.resetInitSegment(
+      MP4.initSegment([videoInitTrack()]),
+      undefined,
+      'avc1.42001e',
+      null,
+    );
+
+    // One 4s segment delivered as two 2s moof+mdat chunks
+    const firstChunk = mp4FragmentAt(0, [sample(180000, 4, 0)]);
+    const secondChunk = mp4FragmentAt(180000, [sample(180000, 4, 0)]);
+
+    const first = remuxProgressiveChunk(firstChunk, 0, false, 1);
+    const second = remuxProgressiveChunk(secondChunk, 0, true, 2);
+
+    expect(first.video, 'first chunk video track').to.exist;
+    expect(first.video!.startDTS, 'first chunk startDTS').to.equal(0);
+    expect(first.video!.endDTS, 'first chunk endDTS').to.equal(2);
+
+    // The second moof starts 2s into the segment. Its decode time must not be
+    // mistaken for a new initPTS, or the chunk is appended over the first one.
+    expect(second.video, 'second chunk video track').to.exist;
+    expect(second.video!.startDTS, 'second chunk startDTS').to.equal(2);
+    expect(second.video!.endDTS, 'second chunk endDTS').to.equal(4);
+    expect(second.initSegment?.initPTS, 'second chunk initPTS').to.not.equal(
+      180000,
+    );
+  });
 });
 
 function markVideoInitSegmentEncrypted(
@@ -573,11 +630,18 @@ function withSecondVideoTraf(
 }
 
 function mp4Fragment(samples: TrackFragmentSample[]): Uint8Array<ArrayBuffer> {
+  return mp4FragmentAt(0, samples);
+}
+
+function mp4FragmentAt(
+  baseMediaDecodeTime: number,
+  samples: TrackFragmentSample[],
+): Uint8Array<ArrayBuffer> {
   const mdatPayload = new Uint8Array(
     samples.reduce((total, sample) => total + sample.size, 0),
   );
   return appendUint8Array(
-    MP4.moof(0, 0, { type: 'video', id: 1, samples }),
+    MP4.moof(0, baseMediaDecodeTime, { type: 'video', id: 1, samples }),
     MP4.mdat(mdatPayload),
   );
 }
