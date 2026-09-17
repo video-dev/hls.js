@@ -216,6 +216,112 @@ describe('LevelHelper Tests', function () {
       expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
+    it('keeps a discontinuity declared ahead of a published segment (EXT-X-DISCONTINUITY-SEQUENCE:0)', function () {
+      // Re-alignment carries discontinuity counts forward for Playlists that
+      // under-count them. Here the update declares a *new* discontinuity ahead
+      // of a segment it already published, so its cc is higher than the last
+      // update's. Rewriting it back would drop the boundary from the merge and
+      // defer the inconsistency to the following update.
+      const withTag = (discontinuity: boolean) => `#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-DISCONTINUITY-SEQUENCE:0
+#EXTINF:6,
+1.mp4
+#EXTINF:6,
+2.mp4
+${discontinuity ? '#EXT-X-DISCONTINUITY\n' : ''}#EXTINF:6,
+3.mp4
+`;
+      const oldPlaylist = parseLevelPlaylist(withTag(false));
+      const newPlaylist = parseLevelPlaylist(withTag(true));
+      expect(getFragmentSequenceNumbers(newPlaylist), 'parsed').to.equal(
+        '1-0,2-0,3-1',
+      );
+
+      mergeDetails(oldPlaylist, newPlaylist, logger);
+
+      expect(getFragmentSequenceNumbers(newPlaylist), 'merged').to.equal(
+        '1-0,2-0,3-1',
+      );
+      expect(newPlaylist).to.include({ startCC: 0, endCC: 1 });
+      expectPlaylistParsingError(
+        newPlaylist,
+        'discontinuity sequence mismatch (0!=1)',
+      );
+    });
+
+    it('keeps a discontinuity declared ahead of a published segment (no EXT-X-DISCONTINUITY-SEQUENCE)', function () {
+      // Same Playlist as above without the tag. A missing
+      // EXT-X-DISCONTINUITY-SEQUENCE has a starting value of 0, so this update
+      // must be treated the same way.
+      const noTag = (discontinuity: boolean) => `#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:1
+#EXTINF:6,
+1.mp4
+#EXTINF:6,
+2.mp4
+${discontinuity ? '#EXT-X-DISCONTINUITY\n' : ''}#EXTINF:6,
+3.mp4
+`;
+      const oldPlaylist = parseLevelPlaylist(noTag(false));
+      const newPlaylist = parseLevelPlaylist(noTag(true));
+      expect(getFragmentSequenceNumbers(newPlaylist), 'parsed').to.equal(
+        '1-0,2-0,3-1',
+      );
+
+      mergeDetails(oldPlaylist, newPlaylist, logger);
+
+      expect(getFragmentSequenceNumbers(newPlaylist), 'merged').to.equal(
+        '1-0,2-0,3-1',
+      );
+      expect(newPlaylist).to.include({ startCC: 0, endCC: 1 });
+      expectPlaylistParsingError(
+        newPlaylist,
+        'discontinuity sequence mismatch (0!=1)',
+      );
+    });
+
+    it('still aligns cc forward when a discontinuity rolls out of the window', function () {
+      // Regression guard for #7163: a Playlist without
+      // EXT-X-DISCONTINUITY-SEQUENCE restarts its count at 0 on every update,
+      // so shared segments are under-counted and must be aligned up.
+      const oldPlaylist = parseLevelPlaylist(`#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:1
+#EXTINF:6,
+1.mp4
+#EXTINF:6,
+2.mp4
+#EXT-X-DISCONTINUITY
+#EXTINF:6,
+3.mp4
+`);
+      const newPlaylist = parseLevelPlaylist(`#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:3
+#EXTINF:6,
+3.mp4
+#EXTINF:6,
+4.mp4
+`);
+      expect(getFragmentSequenceNumbers(newPlaylist), 'parsed').to.equal(
+        '3-0,4-0',
+      );
+
+      mergeDetails(oldPlaylist, newPlaylist, logger);
+
+      expect(getFragmentSequenceNumbers(newPlaylist), 'merged').to.equal(
+        '3-1,4-1',
+      );
+      expect(newPlaylist.playlistParsingError).to.be.null;
+    });
+
     it('applies expected sliding when there is no segment overlap', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);
