@@ -1149,6 +1149,113 @@ describe('BaseStreamController', function () {
     });
   });
 
+  describe('onMediaDetaching', function () {
+    const detachableMedia = () =>
+      ({
+        duration: 0,
+        ended: false,
+        buffered: new TimeRangesMock(),
+        removeEventListener: () => undefined,
+      }) as unknown as HTMLMediaElement;
+
+    it('re-adds gaps after clearing the fragment tracker', function () {
+      const gapped = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      gapped.sn = 7;
+      gapped.gap = true;
+      const calls: string[] = [];
+      fragmentTracker.gapFragments = () => {
+        calls.push('gapFragments');
+        return [gapped];
+      };
+      fragmentTracker.removeAllFragments = () =>
+        calls.push('removeAllFragments');
+      fragmentTracker.addAsGap = (frag: MediaFragment) => {
+        calls.push(`addAsGap:${frag.sn}`);
+      };
+      baseStreamController.media = detachableMedia();
+
+      (baseStreamController as any).onMediaDetaching(null, {});
+
+      // recoverMediaError() detaches, so the judgement has to outlive the clear
+      expect(calls).to.deep.equal([
+        'gapFragments',
+        'removeAllFragments',
+        'addAsGap:7',
+      ]);
+    });
+
+    it('keeps the fragment tracker intact when the media is transferred', function () {
+      let cleared = false;
+      fragmentTracker.gapFragments = () => [];
+      fragmentTracker.removeAllFragments = () => {
+        cleared = true;
+      };
+      baseStreamController.media = detachableMedia();
+
+      (baseStreamController as any).onMediaDetaching(null, {
+        transferMedia: {},
+      });
+
+      expect(cleared, 'a transfer does not clear buffer state').to.equal(false);
+    });
+  });
+
+  describe('getNextPart', function () {
+    const partList = (
+      frag: MediaFragment,
+      count: number,
+      independent = true,
+    ): Part[] =>
+      Array.from({ length: count }, (_, index) => ({
+        index,
+        start: index,
+        duration: 1,
+        independent,
+        loaded: false,
+        gap: false,
+        fragment: frag,
+      })) as unknown as Part[];
+
+    it('selects a part of the fragment', function () {
+      const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      frag.sn = 1;
+
+      expect(
+        (baseStreamController as any).getNextPart(partList(frag, 3), frag, 10),
+      ).to.not.equal(-1);
+    });
+
+    it('does not select a part of a fragment marked as a gap', function () {
+      const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      frag.sn = 1;
+      // fragment-loader rejects these with FRAG_GAP, so selecting one loads nothing
+      frag.gap = true;
+      const parts = partList(frag, 3);
+
+      expect(
+        (baseStreamController as any).getNextPart(parts, frag, 10),
+      ).to.equal(-1);
+      expect(
+        parts.every((part) => !part.gap),
+        'selection leaves the parts unmarked',
+      ).to.equal(true);
+    });
+
+    it('does not carry continuity across a gapped fragment', function () {
+      const gapped = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      gapped.sn = 1;
+      gapped.gap = true;
+      const next = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      next.sn = 2;
+      // A part that cannot be decoded on its own needs a buffered part before it
+      const parts = [...partList(gapped, 1), ...partList(next, 1, false)];
+
+      expect(
+        (baseStreamController as any).getNextPart(parts, next, 10),
+      ).to.equal(-1);
+    });
+  });
+
   describe('getBufferedFrag', function () {
     it('should call fragmentTracker.getBufferedFrag with correct parameters', function () {
       const mockFrag = new Fragment(PlaylistLevelType.MAIN, 'test.ts');

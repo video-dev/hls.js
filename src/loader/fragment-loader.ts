@@ -73,11 +73,15 @@ export default class FragmentLoader {
         this.loader.destroy();
       }
       if (frag.gap) {
-        if (frag.tagList.some((tags) => tags[0] === 'GAP')) {
+        if (
+          frag.tagList.some((tags) => tags[0] === 'GAP') ||
+          frag.stats.retry > 0
+        ) {
           reject(createGapLoadError(frag));
           return;
         } else {
-          // Reset temporary treatment as GAP tag
+          // Reset temporary treatment as GAP tag, unless a retry is recorded against the
+          // fragment: stream-controller records a locally gapped fragment in the same field.
           frag.gap = false;
         }
       }

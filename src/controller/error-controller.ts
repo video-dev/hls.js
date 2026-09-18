@@ -632,12 +632,15 @@ function isCodecRelated(data: ErrorData): boolean {
   return false;
 }
 
+export function isAppendStateErrorName(name: string): boolean {
+  return name === 'QuotaExceededError' || name === 'InvalidStateError';
+}
+
 function isAppendStateRelated(data: ErrorData): boolean {
   const errorDetails = data.details;
   return (
     errorDetails === ErrorDetails.BUFFER_APPEND_ERROR &&
-    (data.error.name === 'QuotaExceededError' ||
-      data.error.name === 'InvalidStateError')
+    isAppendStateErrorName(data.error.name)
   );
 }
 

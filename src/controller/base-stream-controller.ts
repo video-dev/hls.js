@@ -368,7 +368,12 @@ export default class BaseStreamController
       return;
     }
     this.loadingParts = false;
-    this.fragmentTracker.removeAllFragments();
+    // recoverMediaError() detaches media, and dropping gaps here reloads a fragment
+    // already given up on.
+    const { fragmentTracker } = this;
+    const gaps = fragmentTracker.gapFragments();
+    fragmentTracker.removeAllFragments();
+    gaps.forEach((frag) => fragmentTracker.addAsGap(frag));
     this.stopLoad();
   }
 
@@ -1758,7 +1763,9 @@ export default class BaseStreamController
       if (nextPart > -1 && targetBufferTime < part.start) {
         break;
       }
-      const loaded = part.loaded || part.gap;
+      // fragment-loader refuses a part whose fragment is a gap, so selecting one loads nothing.
+      const gap = part.gap || !!part.fragment.gap;
+      const loaded = part.loaded || gap;
       if (loaded) {
         nextPart = -1;
       } else if (
@@ -1767,7 +1774,7 @@ export default class BaseStreamController
       ) {
         nextPart = i;
       }
-      contiguous = loaded && !part.gap;
+      contiguous = loaded && !gap;
     }
     const part = partList[nextPart];
     if (part && part.fragment !== frag) {

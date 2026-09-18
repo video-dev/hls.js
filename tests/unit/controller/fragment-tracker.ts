@@ -10,6 +10,7 @@ import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
 import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
+import type { MediaFragment } from '../../../src/loader/fragment';
 import type {
   BufferAppendedData,
   FragBufferedData,
@@ -583,6 +584,169 @@ describe('FragmentTracker', function () {
           'has not fragments after removing',
         ).to.be.false;
       });
+    });
+
+    it('marks the fragment the playlist holds, not only the one appended', function () {
+      const appended = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 0,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      // A live playlist refresh replaces the object while the appended copy is still in flight
+      const inPlaylist = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 0,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      const details = { startSN: 1, fragments: [inPlaylist] };
+      Object.defineProperty(hls, 'latestLevelDetails', {
+        configurable: true,
+        get: () => details,
+      });
+
+      fragmentTracker.addAsGap(appended as MediaFragment);
+
+      expect(inPlaylist.gap, 'the selectable fragment is a gap too').to.equal(
+        true,
+      );
+    });
+
+    it('does not mark a fragment of another level that shares the sn', function () {
+      const appended = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 4,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      // latestLevelDetails is whichever level loaded last, which is not always this one
+      const otherLevel = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 3,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      const details = { startSN: 1, fragments: [otherLevel] };
+      Object.defineProperty(hls, 'latestLevelDetails', {
+        configurable: true,
+        get: () => details,
+      });
+
+      fragmentTracker.addAsGap(appended as MediaFragment);
+
+      expect(
+        otherLevel.gap,
+        'another level holds different bytes at the same sn',
+      ).to.not.equal(true);
+    });
+
+    it('does not mark the main fragment when another track has a gap', function () {
+      const mainFrag = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 0,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.VIDEO],
+      );
+      const audioFrag = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 0,
+          type: PlaylistLevelType.AUDIO,
+        },
+        [ElementaryStreamTypes.AUDIO],
+      );
+      // latestLevelDetails is the main playlist, so another track's sn must not reach it
+      const details = { startSN: 1, fragments: [mainFrag] };
+      Object.defineProperty(hls, 'latestLevelDetails', {
+        configurable: true,
+        get: () => details,
+      });
+
+      fragmentTracker.addAsGap(audioFrag as MediaFragment);
+
+      expect(mainFrag.gap, 'the main fragment is untouched').to.not.equal(true);
+    });
+
+    it('lists fragments marked as gaps so they can be re-added', function () {
+      const buffered = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 1,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      const gapped = createMockFragment(
+        {
+          startPTS: 1,
+          endPTS: 2,
+          sn: 2,
+          level: 1,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      expect(fragmentTracker.gapFragments(), 'no gaps tracked').to.deep.equal(
+        [],
+      );
+      fragmentTracker.fragBuffered(buffered as MediaFragment, true);
+      fragmentTracker.addAsGap(gapped as MediaFragment);
+      expect(fragmentTracker.hasFragment(buffered), 'both are tracked').to.be
+        .true;
+
+      const gaps = fragmentTracker.gapFragments();
+      expect(gaps).to.have.lengthOf(1);
+      expect(gaps[0].sn, 'only the gap is listed').to.equal(2);
+
+      fragmentTracker.removeAllFragments();
+      gaps.forEach((frag) => fragmentTracker.addAsGap(frag));
+
+      expect(fragmentTracker.hasFragment(gapped), 'gap is re-added').to.be.true;
+      expect(fragmentTracker.hasFragment(buffered), 'buffered entry is gone').to
+        .be.false;
+    });
+
+    it('lists no gaps once the tracker is destroyed', function () {
+      const gapped = createMockFragment(
+        {
+          startPTS: 0,
+          endPTS: 1,
+          sn: 1,
+          level: 0,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.AUDIO, ElementaryStreamTypes.VIDEO],
+      );
+      fragmentTracker.addAsGap(gapped as MediaFragment);
+      fragmentTracker.destroy();
+
+      // onMediaDetaching reaches a destroyed tracker, which has no fragments left to read
+      expect(fragmentTracker.gapFragments()).to.deep.equal([]);
     });
   });
 });

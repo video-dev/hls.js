@@ -101,6 +101,31 @@ describe('FragmentLoader tests', function () {
     });
   });
 
+  it('rejects a fragment given up on locally, without a GAP tag', function () {
+    return new Promise<void>((resolve, reject) => {
+      // The append budget marks the fragment and records the attempt it spent
+      frag.gap = true;
+      frag.stats.retry = 1;
+      fragmentLoader
+        .load(frag)
+        .then(() => {
+          reject(new Error('Fragment loader should not have resolved'));
+        })
+        .catch((error: LoadError) => {
+          expect(error.data.details).to.equal(ErrorDetails.FRAG_GAP);
+          expect(frag.gap, 'the fragment is still a gap').to.equal(true);
+          resolve();
+        });
+    });
+  });
+
+  it('retries a fragment marked as a gap that has not been given up on', function () {
+    frag.gap = true;
+    fragmentLoader.load(frag).catch(() => undefined);
+    expect(frag.gap, 'temporary treatment as a gap is reset').to.equal(false);
+    fragmentLoader.abort();
+  });
+
   it('handles fragment load errors', function () {
     const fragmentLoaderPrivates = fragmentLoader as any;
     return new Promise<LoadError>((resolve, reject) => {
