@@ -73,15 +73,19 @@ export default class FragmentLoader {
         this.loader.destroy();
       }
       if (frag.gap) {
+        const { retry, buffering } = frag.stats;
         if (
           frag.tagList.some((tags) => tags[0] === 'GAP') ||
-          frag.stats.retry > 0
+          // A retry recorded on a fragment whose bytes reached the SourceBuffer is the
+          // append budget giving up on it. The same field also counts network retries, so
+          // require the append attempt: a fragment gapped before any append is still the
+          // temporary treatment this branch exists to undo.
+          (retry > 0 && buffering.start > 0)
         ) {
           reject(createGapLoadError(frag));
           return;
         } else {
-          // Reset temporary treatment as GAP tag, unless a retry is recorded against the
-          // fragment: stream-controller records a locally gapped fragment in the same field.
+          // Reset temporary treatment as GAP tag
           frag.gap = false;
         }
       }

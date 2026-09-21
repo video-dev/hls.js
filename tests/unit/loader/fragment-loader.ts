@@ -106,6 +106,7 @@ describe('FragmentLoader tests', function () {
       // The append budget marks the fragment and records the attempt it spent
       frag.gap = true;
       frag.stats.retry = 1;
+      frag.stats.buffering.start = 1;
       fragmentLoader
         .load(frag)
         .then(() => {
@@ -121,6 +122,24 @@ describe('FragmentLoader tests', function () {
 
   it('retries a fragment marked as a gap that has not been given up on', function () {
     frag.gap = true;
+    fragmentLoader.load(frag).catch(() => undefined);
+    expect(frag.gap, 'temporary treatment as a gap is reset').to.equal(false);
+    fragmentLoader.abort();
+  });
+
+  it('retries a fragment gapped with no retry recorded, after an append attempt', function () {
+    // treatAsGap on a fragment that appended before, with nothing spent against it
+    frag.gap = true;
+    frag.stats.buffering.start = 1;
+    fragmentLoader.load(frag).catch(() => undefined);
+    expect(frag.gap, 'temporary treatment as a gap is reset').to.equal(false);
+    fragmentLoader.abort();
+  });
+
+  it('retries a fragment gapped after a network retry, with no append attempted', function () {
+    // A transient network failure records a retry on the same field the append budget uses
+    frag.gap = true;
+    frag.stats.retry = 1;
     fragmentLoader.load(frag).catch(() => undefined);
     expect(frag.gap, 'temporary treatment as a gap is reset').to.equal(false);
     fragmentLoader.abort();
