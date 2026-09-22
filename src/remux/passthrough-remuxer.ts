@@ -441,8 +441,12 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     decodeTime = baseOffsetSamples.start / timescale;
 
+    // Every chunk of a progressive segment is remuxed with the segment's
+    // timeOffset, so only the first chunk's decode time lines up with it
+    const segmentStart = chunkMeta.id === 1;
+
     if (
-      (accurateTimeOffset || !initPTS) &&
+      ((accurateTimeOffset && segmentStart) || !initPTS) &&
       (isInvalidInitPts(initPTS, decodeTime, timeOffset, duration) ||
         timescale !== initPTS.timescale)
     ) {
