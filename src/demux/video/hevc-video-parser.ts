@@ -227,18 +227,18 @@ class HevcVideoParser extends BaseVideoParser {
       return false;
     }
 
-    // if new NAL units found and last sample still there, let's push ...
-    // this helps parsing streams with missing AUD (only do this if AUD never found)
-    if (!track.audFound && nalIndex === 0) {
-      return true;
-    }
-
     // A sample can be opened by AU prefix NALs such as AUD/VPS/SPS/PPS/SEI
     // before any VCL slice is appended. Keep those prefix NALs in the same
     // pending sample; only split once the current sample already contains a
     // picture and the next NAL indicates another access unit.
     if (!VideoSample.frame) {
       return false;
+    }
+
+    // if new NAL units found and last sample still there, let's push ...
+    // this helps parsing streams with missing AUD (only do this if AUD never found)
+    if (!track.audFound && nalIndex === 0) {
+      return true;
     }
 
     const { type, data } = unit;
