@@ -708,21 +708,20 @@ class TSDemuxer implements Demuxer {
     }
     // if ADTS header does not start straight from the beginning of the PES payload, raise an error
     if (offset !== startOffset) {
-      let reason: string;
       const recoverable = offset < len - 1;
       if (recoverable) {
-        reason = `AAC PES did not start with ADTS header,offset:${offset}`;
+        emitParsingError(
+          this.observer,
+          new Error(`AAC PES did not start with ADTS header,offset:${offset}`),
+          chunkMeta,
+          true,
+          this.logger,
+        );
       } else {
-        reason = 'No ADTS header found in AAC PES';
-      }
-      emitParsingError(
-        this.observer,
-        new Error(reason),
-        chunkMeta,
-        recoverable,
-        this.logger,
-      );
-      if (!recoverable) {
+        // No ADTS header in AAC PES — stream may have no audio input. Skip silently to avoid fragParsingError.
+        this.logger.warn(
+          `No ADTS header found in AAC PES (${len} bytes), audio may be absent`,
+        );
         return;
       }
     }
