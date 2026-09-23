@@ -1,7 +1,9 @@
 import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
-import BufferController from '../../../src/controller/buffer-controller';
+import BufferController, {
+  SOURCE_BUFFER_ERROR_NAME,
+} from '../../../src/controller/buffer-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
@@ -210,6 +212,7 @@ describe('BufferController with attached media', function () {
       expect(sbErrorObject.message).equals(
         'audio SourceBuffer error. MediaSource readyState: open',
       );
+      expect(sbErrorObject.name).equals(SOURCE_BUFFER_ERROR_NAME);
       expect(
         triggerSpy,
         'ERROR should have been triggered in response to the SourceBuffer error',
@@ -446,7 +449,6 @@ describe('BufferController with attached media', function () {
         const [, errorEvent] = triggerSpy.lastCall.args;
 
         expect(errorEvent.error.message).to.equal(`${name}-append-timeout`);
-        expect(errorEvent.error.name).to.equal('HlsJsAppendTimeoutError');
       });
     });
 
@@ -871,277 +873,6 @@ describe('BufferController with attached media', function () {
         ['video'],
       );
       expect(errors).to.have.lengthOf(0);
-    });
-
-    const appendAndFail = (
-      frag: Fragment,
-      error: Error,
-      part: Part | null = null,
-      chunkMeta: ChunkMetadata | null = null,
-    ) => {
-      const buffer = getSourceBufferTrack(bufferController, 'video')
-        ?.buffer as any;
-      buffer.appendBuffer.throws(error);
-      hls.trigger(Events.BUFFER_APPENDING, {
-        parent: PlaylistLevelType.MAIN,
-        type: 'video',
-        data: new Uint8Array(),
-        frag,
-        part,
-        chunkMeta:
-          chunkMeta ||
-          new ChunkMetadata(
-            0,
-            frag.sn as number,
-            0,
-            0,
-            part ? part.index : -1,
-            !!part,
-          ),
-      });
-    };
-    const noProgressErrors = (errors: ErrorData[]) =>
-      errors.filter(
-        (e) => e.details === ErrorDetails.BUFFER_APPEND_NO_PROGRESS,
-      );
-
-    it('counts an append the SourceBuffer rejected', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-      const frag = newFrag(1);
-
-      appendAndFail(frag, new Error('append failed'));
-      // A media source reset reloads the fragment, replacing its LoadStats
-      frag.stats = new LoadStats();
-      appendAndFail(frag, new Error('append failed'));
-
-      const counted = noProgressErrors(errors);
-      expect(counted).to.have.lengthOf(2);
-      expect(counted[0].appendsWithoutProgress).to.equal(1);
-      expect(counted[1].appendsWithoutProgress).to.equal(2);
-      expect(counted[1].frag?.sn).to.equal(1);
-    });
-
-    it('counts a refused part against the fragment', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-      const frag = newFrag(1);
-      const part = {
-        index: 1,
-        fragment: frag,
-        stats: new LoadStats(),
-      } as unknown as Part;
-
-      // A low latency playlist delivers the fragment as parts first
-      appendAndFail(frag, new Error('append failed'), part);
-      frag.stats = new LoadStats();
-      appendAndFail(frag, new Error('append failed'), part);
-
-      const counted = noProgressErrors(errors);
-      expect(counted).to.have.lengthOf(2);
-      expect(counted[1].appendsWithoutProgress).to.equal(2);
-    });
-
-    it('counts one rejection per load, not per rejected chunk', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-      const frag = newFrag(1);
-
-      // Every chunk of the same load is refused once the element error is set
-      appendAndFail(frag, new Error('append failed'));
-      appendAndFail(frag, new Error('append failed'));
-      appendAndFail(frag, new Error('append failed'));
-
-      expect(noProgressErrors(errors)).to.have.lengthOf(1);
-    });
-
-    it('keeps the per-fragment count across the buffer reset each cycle makes', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-      const frag = newFrag(1);
-
-      appendAndFail(frag, new Error('append failed'));
-      expect(noProgressErrors(errors)).to.have.lengthOf(1);
-
-      // Every rejection cycle rebuilds the SourceBuffers, which is what the budget counts
-      (bufferController as any).initTracks();
-
-      expect(
-        (bufferController as any).appendsWithoutProgress.main_1_0,
-        'the budget would never bind if the rebuild cleared it',
-      ).to.equal(1);
-    });
-
-    it('gives up on the fragment once its append budget is spent', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-      const frag = newFrag(1);
-      const budget = hls.config.appendErrorMaxRetry;
-
-      for (let i = 0; i < budget; i++) {
-        // Each media source reset reloads the fragment, replacing its LoadStats
-        frag.stats = new LoadStats();
-        appendAndFail(frag, new Error('append failed'));
-      }
-
-      const counted = noProgressErrors(errors);
-      expect(counted).to.have.lengthOf(budget);
-      expect(counted[counted.length - 1].appendsWithoutProgress).to.equal(
-        budget,
-      );
-      expect(
-        frag.stats.retry,
-        'the fragment is recorded as having had its retries',
-      ).to.equal(1);
-      const appendErrors = errors.filter(
-        (e) =>
-          e.details === ErrorDetails.BUFFER_APPEND_ERROR ||
-          e.details === ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
-      );
-      const last = appendErrors[appendErrors.length - 1];
-      expect(last.fatal, 'skipping a fragment does not stop loading').to.equal(
-        false,
-      );
-    });
-
-    it('survives a listener that destroys Hls while the rejection is reported', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => {
-        errors.push(data);
-        if (data.details === ErrorDetails.BUFFER_APPEND_NO_PROGRESS) {
-          bufferController.destroy();
-        }
-      });
-
-      appendAndFail(newFrag(1), new Error('append failed'));
-
-      expect(
-        errors.filter((e) => e.details === ErrorDetails.INTERNAL_EXCEPTION),
-      ).to.have.lengthOf(0);
-    });
-
-    it('records the retry before announcing that the budget is spent', function () {
-      const frag = newFrag(1);
-      const budget = hls.config.appendErrorMaxRetry;
-      let retryWhenSpent: number | null = null;
-      hls.on(Events.ERROR, (event, data) => {
-        if (
-          data.details === ErrorDetails.BUFFER_APPEND_NO_PROGRESS &&
-          data.appendsWithoutProgress === budget
-        ) {
-          // stream-controller marks the fragment a gap from this event, and fragment-loader
-          // only keeps that gap when a retry is already on the fragment
-          retryWhenSpent = (data.frag as Fragment).stats.retry;
-        }
-      });
-
-      for (let i = 0; i < budget; i++) {
-        frag.stats = new LoadStats();
-        appendAndFail(frag, new Error('append failed'));
-      }
-
-      expect(
-        retryWhenSpent,
-        'the gap is durable when it is announced',
-      ).to.equal(1);
-    });
-
-    it('does not count a quota, invalid state, track removal or append timeout error', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-
-      const quota = new Error('quota');
-      (quota as any).code = DOMException.QUOTA_EXCEEDED_ERR;
-      appendAndFail(newFrag(1), quota);
-
-      const invalidState = new Error('the SourceBuffer has been removed');
-      invalidState.name = 'InvalidStateError';
-      appendAndFail(newFrag(4), invalidState);
-
-      const removed = new Error('track removed');
-      removed.name = 'HlsJsTrackRemovedError';
-      appendAndFail(newFrag(2), removed);
-
-      const timeout = new Error('video-append-timeout');
-      timeout.name = 'HlsJsAppendTimeoutError';
-      appendAndFail(newFrag(3), timeout);
-
-      expect(noProgressErrors(errors)).to.have.lengthOf(0);
-    });
-
-    it('does not record a retry before the budget is spent', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-      const frag = newFrag(1);
-
-      appendAndFail(frag, new Error('append failed'));
-
-      expect(noProgressErrors(errors)).to.have.lengthOf(1);
-      expect(
-        frag.stats.retry,
-        'a fragment with budget left is still fetched',
-      ).to.equal(0);
-    });
-
-    it('does not spend the budget on an init segment', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-      const frag = newFrag(1);
-      frag.sn = 'initSegment';
-
-      appendAndFail(frag, new Error('append failed'));
-
-      expect(
-        noProgressErrors(errors),
-        'an init segment keeps the existing append-error path',
-      ).to.have.lengthOf(0);
-    });
-
-    it('does not spend the budget on a fragment already given up on', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-      const frag = newFrag(1);
-      frag.gap = true;
-
-      appendAndFail(frag, new Error('append failed'));
-
-      expect(
-        noProgressErrors(errors),
-        'a gap is not counted twice',
-      ).to.have.lengthOf(0);
-    });
-
-    it('does not spend the budget on an I-frame chunk', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-      const frag = newFrag(1);
-      const iframeMeta = new ChunkMetadata(0, 1, 0, 0, -1, false, 0, true);
-
-      appendAndFail(frag, new Error('append failed'), null, iframeMeta);
-
-      expect(
-        noProgressErrors(errors),
-        'I-frames are excluded here as they are in checkAppendProgress',
-      ).to.have.lengthOf(0);
-    });
-
-    it('does not let a refused part hide the fragment cycle when the buffer was at fault', function () {
-      const errors: ErrorData[] = [];
-      hls.on(Events.ERROR, (event, data) => errors.push(data));
-      const frag = newFrag(1);
-      const part = {
-        index: 0,
-        fragment: frag,
-        stats: new LoadStats(),
-      } as unknown as Part;
-      const quota = new Error('quota');
-      (quota as any).code = DOMException.QUOTA_EXCEEDED_ERR;
-
-      appendAndFail(frag, quota, part);
-      // The part said nothing about the fragment's bytes, so the cycle is still unjudged
-      runAppendCycle(frag, false);
-
-      expect(noProgressErrors(errors)).to.have.lengthOf(1);
     });
 
     it('emits BUFFER_APPEND_NO_PROGRESS through the append pipeline when the target buffer does not grow', function () {

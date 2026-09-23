@@ -4,11 +4,16 @@ import { fakeXhr } from 'nise';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
+import { SOURCE_BUFFER_ERROR_NAME } from '../../../src/controller/buffer-controller';
 import { FragmentState } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
+import {
+  ElementaryStreamTypes,
+  Fragment,
+  Part,
+} from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
@@ -418,6 +423,224 @@ describe('StreamController', function () {
         appendsWithoutProgress: 99,
       });
       expect(frag.gap).to.not.equal(true);
+    });
+  });
+
+  describe('onError MEDIA_SOURCE_REQUIRES_RESET', function () {
+    const resetError = (
+      name: string,
+      frag: MediaFragment,
+      part: Part | null = null,
+    ): ErrorData => {
+      const error = new Error(
+        'video SourceBuffer error. MediaSource readyState: ended',
+      );
+      error.name = name;
+      return {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+        fatal: false,
+        error,
+        parent: PlaylistLevelType.MAIN,
+        frag,
+        part,
+      };
+    };
+    // Live playlist with two parts per segment, on level 0
+    const setLevelDetails = (count: number, live = true) => {
+      const details = new LevelDetails('');
+      details.live = live;
+      details.startSN = 0;
+      details.endSN = count - 1;
+      details.partList = [];
+      for (let sn = 0; sn < count; sn++) {
+        const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+        frag.sn = sn;
+        frag.level = 0;
+        frag.relurl = `${sn}.mp4`;
+        frag.setStart(sn * 2);
+        frag.duration = 2;
+        details.fragments.push(frag);
+        let previous: Part | undefined;
+        for (let index = 0; index < 2; index++) {
+          previous = new Part(
+            new AttrList({
+              DURATION: '1',
+              INDEPENDENT: 'YES',
+              URI: `${sn}.${index}.mp4`,
+            }),
+            frag,
+            '',
+            index,
+            previous,
+          );
+          details.partList.push(previous);
+        }
+      }
+      if (!live) {
+        details.fragments[count - 1].endList = true;
+      }
+      const level = new Level({ name: '', url: '', attrs, bitrate: 500000 });
+      level.details = details;
+      streamController['levels'] = [level];
+      return details;
+    };
+    const appendParts = (details: LevelDetails, sn: number) => {
+      fragmentTracker.fragBuffered(details.fragments[sn], true);
+      details.partList!.forEach((part) => {
+        if (part.fragment.sn === sn) {
+          part.elementaryStreams.video = {
+            startPTS: part.start,
+            endPTS: part.end,
+            startDTS: part.start,
+            endDTS: part.end,
+          };
+        }
+      });
+    };
+    const refuse = (frag: MediaFragment, part: Part | null = null) =>
+      streamController['onError'](
+        Events.ERROR,
+        resetError(SOURCE_BUFFER_ERROR_NAME, frag, part),
+      );
+    const newFrag = () => {
+      const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      frag.sn = 3;
+      frag.level = 0;
+      return frag;
+    };
+
+    it('marks the fragment as a gap after a SourceBuffer error', function () {
+      const frag = newFrag();
+      streamController['onError'](
+        Events.ERROR,
+        resetError(SOURCE_BUFFER_ERROR_NAME, frag),
+      );
+      expect(frag.gap).to.equal(true);
+      expect(fragmentTracker.getState(frag)).to.equal(FragmentState.PARTIAL);
+    });
+
+    it('ignores a reset that another append error caused', function () {
+      const frag = newFrag();
+      streamController['onError'](
+        Events.ERROR,
+        resetError('InvalidStateError', frag),
+      );
+      expect(frag.gap).to.not.equal(true);
+      expect(fragmentTracker.getState(frag)).to.equal(FragmentState.NOT_LOADED);
+    });
+
+    it('also marks the previous fragment when the first part of a fragment is refused', function () {
+      const details = setLevelDetails(4);
+      appendParts(details, 1);
+      refuse(details.fragments[2], details.partList![4]);
+      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(true);
+      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+    });
+
+    it('does not mark the previous fragment when it was not appended', function () {
+      const details = setLevelDetails(4);
+      refuse(details.fragments[2], details.partList![4]);
+      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(false);
+      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+    });
+
+    it('does not mark the previous fragment when a later part is refused', function () {
+      const details = setLevelDetails(4);
+      appendParts(details, 1);
+      refuse(details.fragments[2], details.partList![5]);
+      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(false);
+      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+    });
+
+    it('leaves a previous fragment gapped by another error to be retried', function () {
+      const details = setLevelDetails(4);
+      // gapped after a load error, then replaced by a playlist refresh
+      const loadFailed = new Fragment(
+        PlaylistLevelType.MAIN,
+        '',
+      ) as MediaFragment;
+      loadFailed.sn = 1;
+      loadFailed.level = 0;
+      fragmentTracker.addAsGap(loadFailed);
+      refuse(details.fragments[2], details.partList![4]);
+      expect(
+        streamController['getNextFragment'](details.fragments[1].start, details)
+          ?.sn,
+      ).to.equal(1);
+    });
+
+    it('does not mark the last fragment of an ended playlist', function () {
+      const details = setLevelDetails(3, false);
+      refuse(details.fragments[2]);
+      expect(fragmentTracker.getState(details.fragments[2])).to.equal(
+        FragmentState.NOT_LOADED,
+      );
+    });
+
+    it('does not select parts of a refused fragment after a playlist refresh', function () {
+      const details = setLevelDetails(4);
+      appendParts(details, 1);
+      // the refresh replaced the object that was refused
+      const refused = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      refused.sn = 2;
+      refused.level = 0;
+      refuse(refused, null);
+      const partList = details.partList!;
+      const next = streamController.getNextPart(
+        partList,
+        details.fragments[1],
+        partList[3].start + 0.1,
+      );
+      expect(partList[next].fragment.sn).to.equal(3);
+    });
+
+    it('keeps the gap across a media detach', function () {
+      const details = setLevelDetails(4);
+      streamController['media'] = {
+        currentTime: 1,
+        addEventListener() {},
+        removeEventListener() {},
+      } as unknown as HTMLMediaElement;
+      refuse(details.fragments[2]);
+      streamController['onMediaDetaching'](Events.MEDIA_DETACHING, {});
+      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+    });
+
+    it('does not skip a gap of a new source that reuses the key of a refused fragment', function () {
+      refuse(setLevelDetails(4).fragments[2]);
+      hls.trigger(Events.MANIFEST_LOADING, { url: '' });
+      const details = setLevelDetails(4);
+      // gapped after a load error, then replaced by a playlist refresh
+      const loadFailed = new Fragment(
+        PlaylistLevelType.MAIN,
+        '',
+      ) as MediaFragment;
+      loadFailed.sn = 2;
+      loadFailed.level = 0;
+      fragmentTracker.addAsGap(loadFailed);
+      expect(
+        streamController['getNextFragment'](details.fragments[2].start, details)
+          ?.sn,
+      ).to.equal(2);
+    });
+
+    it('purges gaps on the first seek after a new manifest', function () {
+      const details = setLevelDetails(4);
+      const media = {
+        currentTime: 1,
+        buffered: new TimeRangesMock(),
+        addEventListener() {},
+        removeEventListener() {},
+      } as unknown as HTMLMediaElement;
+      streamController['media'] = media;
+      refuse(details.fragments[2]);
+      streamController['onMediaDetaching'](Events.MEDIA_DETACHING, {});
+      hls.trigger(Events.MANIFEST_LOADING, { url: '' });
+      streamController['media'] = media;
+      fragmentTracker.addAsGap(details.fragments[3]);
+      streamController['onMediaSeeking']();
+      expect(fragmentTracker.isGap(details.fragments[3])).to.equal(false);
     });
   });
 

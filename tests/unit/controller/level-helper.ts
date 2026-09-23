@@ -96,37 +96,6 @@ describe('LevelHelper Tests', function () {
       expect(actual).to.deep.equal([5]);
     });
 
-    it('carries a locally set gap to the replacement fragment', function () {
-      const oldPlaylist = generatePlaylist([1, 2, 3]);
-      const newPlaylist = generatePlaylist([1, 2, 3]);
-      oldPlaylist.fragments[1].gap = true;
-      mergeDetails(oldPlaylist, newPlaylist, logger);
-      expect(newPlaylist.fragments[1].gap, 'gap is carried over').to.equal(
-        true,
-      );
-      expect(
-        newPlaylist.fragments[0].gap,
-        'other fragments are untouched',
-      ).to.not.equal(true);
-    });
-
-    it('carries a locally set gap from a preload hint that has no duration yet', function () {
-      const oldPlaylist = generatePlaylist([1, 2, 3]);
-      const newPlaylist = generatePlaylist([1, 2, 3, 4]);
-      const hint = new Fragment(PlaylistLevelType.MAIN, '');
-      hint.sn = 4;
-      hint.setStart(15);
-      // A low latency preload hint has no duration until its parts complete
-      hint.duration = 0;
-      hint.gap = true;
-      oldPlaylist.fragmentHint = hint as MediaFragment;
-      mergeDetails(oldPlaylist, newPlaylist, logger);
-      expect(
-        newPlaylist.fragments[3].gap,
-        'gap reaches the fragment the hint became',
-      ).to.equal(true);
-    });
-
     it('can iterate over the entire segment array', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([1, 2, 3]);

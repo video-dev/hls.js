@@ -1048,6 +1048,9 @@ export default class StreamController
           this.fragmentTracker.addAsGap(data.frag as MediaFragment);
         }
         break;
+      case ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET:
+        this.onSourceBufferError(PlaylistLevelType.MAIN, data);
+        break;
       case ErrorDetails.BUFFER_ADD_CODEC_ERROR:
       case ErrorDetails.BUFFER_APPEND_ERROR:
         if (data.parent !== 'main') {

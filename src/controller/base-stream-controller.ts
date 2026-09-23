@@ -1,3 +1,4 @@
+import { SOURCE_BUFFER_ERROR_NAME } from './buffer-controller';
 import { ErrorActionFlags, NetworkErrorAction } from './error-controller';
 import {
   findFragmentByPDT,
@@ -128,6 +129,8 @@ export default class BaseStreamController
   protected buffering: boolean = true;
   protected loadingParts: boolean = false;
   private loopSn?: string | number;
+  private keepGapsOnSeek: boolean = false;
+  private sourceBufferErrorGaps: Set<string> = new Set();
 
   constructor(
     hls: Hls,
@@ -368,12 +371,16 @@ export default class BaseStreamController
       return;
     }
     this.loadingParts = false;
-    // recoverMediaError() detaches media, and dropping gaps here reloads a fragment
-    // already given up on.
+    // Keep tracked gaps to skip segments given up on after re-attach (`recoverMediaError()`)
     const { fragmentTracker } = this;
     const gaps = fragmentTracker.gapFragments();
     fragmentTracker.removeAllFragments();
     gaps.forEach((frag) => fragmentTracker.addAsGap(frag));
+    this.keepGapsOnSeek = gaps.some(
+      (frag) =>
+        frag.type === this.playlistType &&
+        this.sourceBufferErrorGaps.has(gapKey(frag)),
+    );
     this.stopLoad();
   }
 
@@ -387,6 +394,8 @@ export default class BaseStreamController
     this.lastCurrentTime = 0;
     this.startPosition = -1;
     this.startFragRequested = false;
+    this.keepGapsOnSeek = false;
+    this.sourceBufferErrorGaps.clear();
   }
 
   protected onError(event: Events.ERROR, data: ErrorData) {}
@@ -443,13 +452,18 @@ export default class BaseStreamController
     }
 
     if (media) {
-      // Remove gap fragments
-      this.fragmentTracker.removeFragmentsInRange(
-        currentTime,
-        Infinity,
-        this.playlistType,
-        true,
-      );
+      if (this.keepGapsOnSeek) {
+        // Keep SourceBuffer error gaps on the seek that follows re-attach
+        this.keepGapsOnSeek = false;
+      } else {
+        // Remove gap fragments
+        this.fragmentTracker.removeFragmentsInRange(
+          currentTime,
+          Infinity,
+          this.playlistType,
+          true,
+        );
+      }
 
       // Don't set lastCurrentTime with backward seeks (allows for frag selection with strict tolerances)
       const lastCurrentTime = this.lastCurrentTime;
@@ -1618,6 +1632,17 @@ export default class BaseStreamController
         this.nextLoadPosition = programFrag.start;
       }
     }
+    while (programFrag && this.isSourceBufferErrorGap(programFrag)) {
+      const afterGap = this.filterReplacedPrimary(
+        getNextFrag(levelDetails, programFrag.sn),
+        levelDetails,
+      );
+      if (!afterGap) {
+        return null;
+      }
+      this.nextLoadPosition = afterGap.start;
+      programFrag = afterGap;
+    }
     return programFrag;
   }
 
@@ -1763,9 +1788,8 @@ export default class BaseStreamController
       if (nextPart > -1 && targetBufferTime < part.start) {
         break;
       }
-      // fragment-loader refuses a part whose fragment is a gap, so selecting one loads nothing.
-      const gap = part.gap || !!part.fragment.gap;
-      const loaded = part.loaded || gap;
+      const loaded =
+        part.loaded || part.gap || this.isSourceBufferErrorGap(part.fragment);
       if (loaded) {
         nextPart = -1;
       } else if (
@@ -1774,7 +1798,7 @@ export default class BaseStreamController
       ) {
         nextPart = i;
       }
-      contiguous = loaded && !gap;
+      contiguous = loaded && !part.gap;
     }
     const part = partList[nextPart];
     if (part && part.fragment !== frag) {
@@ -2215,6 +2239,50 @@ export default class BaseStreamController
     }
     // Perform next async tick sooner to speed up error action resolution
     this.tickImmediate();
+  }
+
+  protected onSourceBufferError(
+    filterType: PlaylistLevelType,
+    data: ErrorData,
+  ) {
+    const { frag, part } = data;
+    if (
+      data.error.name !== SOURCE_BUFFER_ERROR_NAME ||
+      frag?.type !== filterType ||
+      !isMediaFragment(frag) ||
+      frag.endList
+    ) {
+      return;
+    }
+    // The SourceBuffer can fail on an append after the damaged one, so mark the fragment,
+    // and the previous one when the first part of a fragment is refused.
+    this.markSourceBufferErrorGap(frag);
+    const previous =
+      part?.index === 0
+        ? getFragmentWithSN(this.levels?.[frag.level]?.details, frag.sn - 1)
+        : null;
+    if (
+      previous &&
+      this.fragmentTracker.getState(previous) !== FragmentState.NOT_LOADED &&
+      !this.fragmentTracker.isGap(previous)
+    ) {
+      this.markSourceBufferErrorGap(previous);
+    }
+  }
+
+  private markSourceBufferErrorGap(frag: MediaFragment) {
+    this.warn(
+      `Marking fragment ${frag.sn} of ${this.playlistLabel()} ${frag.level} as a gap after a SourceBuffer error`,
+    );
+    this.sourceBufferErrorGaps.add(gapKey(frag));
+    this.fragmentTracker.addAsGap(frag);
+  }
+
+  private isSourceBufferErrorGap(frag: Fragment): boolean {
+    return (
+      this.sourceBufferErrorGaps.has(gapKey(frag)) &&
+      this.fragmentTracker.isGap(frag)
+    );
   }
 
   protected checkRetryDate() {
@@ -2796,4 +2864,8 @@ export function interstitialsEnabled(config: Readonly<HlsConfig>): boolean {
     !!config.interstitialsController &&
     config.enableInterstitialPlayback !== false
   );
+}
+
+function gapKey(frag: Fragment): string {
+  return `${frag.level}_${frag.sn}`;
 }

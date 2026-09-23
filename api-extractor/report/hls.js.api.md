@@ -592,6 +592,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected onMediaSeeking: () => void;
     // (undocumented)
+    protected onSourceBufferError(filterType: PlaylistLevelType, data: ErrorData): void;
+    // (undocumented)
     protected onTickEnd(): void;
     // (undocumented)
     pauseBuffering(): void;
@@ -2145,6 +2147,7 @@ export class FragmentTracker implements ComponentAPI {
     hasParts(type: PlaylistLevelType): boolean;
     // (undocumented)
     isEndListAppended(type: PlaylistLevelType): boolean;
+    isGap(frag: Fragment): boolean;
     // (undocumented)
     removeAllFragments(): void;
     // (undocumented)

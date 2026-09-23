@@ -1,8 +1,5 @@
 import BufferOperationQueue from './buffer-operation-queue';
-import {
-  createDoNothingErrorAction,
-  isAppendStateErrorName,
-} from './error-controller';
+import { createDoNothingErrorAction } from './error-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { ElementaryStreamTypes, isMediaFragment } from '../loader/fragment';
@@ -73,7 +70,7 @@ const VIDEO_CODEC_PROFILE_REPLACE =
   /(avc[1234]|hvc1|hev1|dvh[1e]|vp09|av01)(?:\.[^.,]+)+/;
 
 const TRACK_REMOVED_ERROR_NAME = 'HlsJsTrackRemovedError';
-const APPEND_TIMEOUT_ERROR_NAME = 'HlsJsAppendTimeoutError';
+export const SOURCE_BUFFER_ERROR_NAME = 'HlsJsSourceBufferError';
 
 const LOOP_FLUSH_SAFETY_MARGIN = 0.25;
 
@@ -263,9 +260,7 @@ export default class BufferController extends Logger implements ComponentAPI {
 
   private initTracks() {
     const tracks = {};
-    // Only per-load cycle state belongs here. An append rejection cycle rebuilds the
-    // SourceBuffers, so clearing the per-fragment count here would restart the budget.
-    this.fragmentAppendProgress = Object.create(null);
+    this.resetAppendProgress();
     this.sourceBuffers = [
       [null, null],
       [null, null],
@@ -1018,41 +1013,9 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           }
         }
 
-        // A track removal, an append timeout and the error names error-controller already
-        // reads as buffer state are not about the fragment's bytes, and keep their own paths.
-        const rejectedBytes =
-          !isQuotaError &&
-          !isAppendStateErrorName(error.name) &&
-          error.name !== TRACK_REMOVED_ERROR_NAME &&
-          error.name !== APPEND_TIMEOUT_ERROR_NAME;
-        // A refused append adds no buffered coverage, so it spends the same per-fragment
-        // budget a no-progress cycle does. Parts and partial loads count here, unlike there.
-        const ownedByFragmentBudget =
-          rejectedBytes &&
-          isMediaFragment(frag) &&
-          !frag.gap &&
-          !chunkMeta.iframe;
-        if (ownedByFragmentBudget) {
-          const progress = this.getFragmentAppendProgress(frag);
-          if (!progress.errored) {
-            const spent =
-              (this.appendsWithoutProgress[appendProgressKey(frag)] || 0) + 1 >=
-              this.hls.config.appendErrorMaxRetry;
-            if (spent) {
-              // Recorded before the event below, which is what marks the fragment a gap:
-              // fragment-loader only keeps that gap when a retry is already on the fragment.
-              frag.stats.retry++;
-            }
-            this.countAppendWithoutProgress(frag, chunkMeta);
-          }
-          progress.errored = true;
-        } else if (trackProgress) {
-          // Append exceptions use the existing append-error path.
+        // Append exceptions use the existing append-error path.
+        if (trackProgress) {
           this.getFragmentAppendProgress(frag as MediaFragment).errored = true;
-        }
-        if (!this.hls) {
-          // Destroyed by a synchronous BUFFER_APPEND_NO_PROGRESS listener
-          return;
         }
         // in case any error occured while appending, put back segment in segments table
         const event: ErrorData = {
@@ -1089,10 +1052,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           this.warn(
             `Failed ${appendErrorCount}/${appendErrorMaxRetry + 1} times to append segment in "${type}" sourceBuffer with error: ${error.message}`,
           );
-          if (
-            appendErrorCount >= appendErrorMaxRetry &&
-            !ownedByFragmentBudget
-          ) {
+          if (appendErrorCount >= appendErrorMaxRetry) {
             event.fatal = !isQuotaError;
           }
           const readyState = this.mediaSource?.readyState;
@@ -1438,8 +1398,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     return progress;
   }
 
-  // Full-fragment cycles without growth consume the append retry budget. Rejected appends
-  // consume it too, counted at the append-error path above.
+  // Full-fragment cycles without growth consume the append retry budget.
   // Parts, I-Frames, gaps, and partial loads are excluded below.
   private checkAppendProgress(
     frag: Fragment,
@@ -1481,14 +1440,6 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       return;
     }
     // Also count parsed fragments that produced no append operations.
-    this.countAppendWithoutProgress(frag, chunkMeta);
-  }
-
-  private countAppendWithoutProgress(
-    frag: MediaFragment,
-    chunkMeta: ChunkMetadata,
-  ) {
-    const key = appendProgressKey(frag);
     const count = (this.appendsWithoutProgress[key] || 0) + 1;
     // Capture values before a synchronous ERROR listener can destroy Hls.
     const hls = this.hls;
@@ -2117,6 +2068,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const error = new Error(
       `${type} SourceBuffer error. MediaSource readyState: ${readyState}`,
     );
+    error.name = SOURCE_BUFFER_ERROR_NAME;
     this.error(`${error.message}`, event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // SourceBuffer errors are not necessarily fatal; if so, the HTMLMediaElement will fire an error event
@@ -2237,9 +2189,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
 
     const operation = this.currentOp(type);
     if (operation) {
-      const timeoutError = new Error(`${type}-append-timeout`);
-      timeoutError.name = APPEND_TIMEOUT_ERROR_NAME;
-      operation.onError(timeoutError);
+      operation.onError(new Error(`${type}-append-timeout`));
     }
   }
 
