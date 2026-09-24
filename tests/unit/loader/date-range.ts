@@ -110,6 +110,20 @@ describe('DateRange class', function () {
     expect(dateRangeEndDate.duration).to.equal(60.001);
   });
 
+  it('parses zone-less START-DATE and END-DATE as UTC', function () {
+    const zonelessDates = new AttrList(
+      'ID="ad5",START-DATE="2020-01-02T21:55:44.000",END-DATE="2020-01-02T21:56:44.001"',
+    );
+    const dateRange = new DateRange(zonelessDates);
+    expect(dateRange.isValid).to.be.true;
+    expect(dateRange.startDate.toISOString()).to.equal(
+      '2020-01-02T21:55:44.000Z',
+    );
+    expect((dateRange.endDate as Date).toISOString()).to.equal(
+      '2020-01-02T21:56:44.001Z',
+    );
+  });
+
   it('merges tags with matching ID attributes', function () {
     const scteOut = new DateRange(sctePlanned);
     const scteIn = new DateRange(scteDurationUpdate, scteOut);
