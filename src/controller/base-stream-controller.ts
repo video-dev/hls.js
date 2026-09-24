@@ -2254,17 +2254,29 @@ export default class BaseStreamController
     ) {
       return;
     }
-    // The SourceBuffer can fail on an append after the damaged one, so mark the fragment,
-    // and the previous one when the first part of a fragment is refused.
+    // The SourceBuffer can fail on an append after the damaged one, so mark the fragment, and the
+    // previous one when the buffer ends short of a refused first part (its tail was not buffered).
     this.markSourceBufferErrorGap(frag);
-    const previous =
-      part?.index === 0
-        ? getFragmentWithSN(this.levels?.[frag.level]?.details, frag.sn - 1)
-        : null;
+    const { sourceBufferName } = data;
+    const start =
+      part?.index === 0 && sourceBufferName
+        ? part.elementaryStreams[sourceBufferName]?.startPTS
+        : undefined;
+    if (start === undefined) {
+      return;
+    }
+    const previous = getFragmentWithSN(
+      this.levels?.[frag.level]?.details,
+      frag.sn - 1,
+    );
     if (
       previous &&
       this.fragmentTracker.getState(previous) !== FragmentState.NOT_LOADED &&
-      !this.fragmentTracker.isGap(previous)
+      !this.fragmentTracker.isGap(previous) &&
+      !BufferHelper.isBuffered(
+        this.mediaBuffer || this.media,
+        start - this.config.maxBufferHole,
+      )
     ) {
       this.markSourceBufferErrorGap(previous);
     }

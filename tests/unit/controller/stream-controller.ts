@@ -442,6 +442,7 @@ describe('StreamController', function () {
         fatal: false,
         error,
         parent: PlaylistLevelType.MAIN,
+        sourceBufferName: 'audiovideo',
         frag,
         part,
       };
@@ -498,11 +499,25 @@ describe('StreamController', function () {
         }
       });
     };
-    const refuse = (frag: MediaFragment, part: Part | null = null) =>
+    // `offset` shifts the parsed media times of the part from its playlist times
+    const refuse = (
+      frag: MediaFragment,
+      part: Part | null = null,
+      offset = 0,
+    ) => {
+      if (part) {
+        part.elementaryStreams.audiovideo = {
+          startPTS: part.start + offset,
+          endPTS: part.end + offset,
+          startDTS: part.start + offset,
+          endDTS: part.end + offset,
+        };
+      }
       streamController['onError'](
         Events.ERROR,
         resetError(SOURCE_BUFFER_ERROR_NAME, frag, part),
       );
+    };
     const newFrag = () => {
       const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
       frag.sn = 3;
@@ -530,12 +545,39 @@ describe('StreamController', function () {
       expect(fragmentTracker.getState(frag)).to.equal(FragmentState.NOT_LOADED);
     });
 
-    it('also marks the previous fragment when the first part of a fragment is refused', function () {
+    it('also marks the previous fragment when the buffer ends short of a refused first part', function () {
       const details = setLevelDetails(4);
       appendParts(details, 1);
+      // the tail of fragment 1 never reached the buffer: a 0.5s hole before fragment 2 at 4s
+      streamController['media'] = {
+        buffered: new TimeRangesMock([0, 3.5]),
+      } as unknown as HTMLMediaElement;
       refuse(details.fragments[2], details.partList![4]);
       expect(fragmentTracker.isGap(details.fragments[1])).to.equal(true);
       expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+    });
+
+    it('does not mark the previous fragment when the buffer reaches a refused first part', function () {
+      const details = setLevelDetails(4);
+      appendParts(details, 1);
+      // a hole smaller than maxBufferHole is contiguous
+      streamController['media'] = {
+        buffered: new TimeRangesMock([0, 3.98]),
+      } as unknown as HTMLMediaElement;
+      refuse(details.fragments[2], details.partList![4]);
+      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(false);
+      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+    });
+
+    it('measures the hole from the parsed start of the refused part', function () {
+      const details = setLevelDetails(4);
+      appendParts(details, 1);
+      // media runs 0.15s ahead of playlist times and fragment 1 is fully buffered
+      streamController['media'] = {
+        buffered: new TimeRangesMock([0, 3.85]),
+      } as unknown as HTMLMediaElement;
+      refuse(details.fragments[2], details.partList![4], -0.15);
+      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(false);
     });
 
     it('does not mark the previous fragment when it was not appended', function () {
