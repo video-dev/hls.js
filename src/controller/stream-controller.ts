@@ -262,12 +262,10 @@ export default class StreamController
       return;
     }
 
-    const level = this.buffering ? hls.nextLoadLevel : hls.loadLevel;
+    let level = this.buffering ? hls.nextLoadLevel : hls.loadLevel;
     if (!levels?.[level]) {
       return;
     }
-
-    const levelInfo = levels[level];
 
     // if buffer length is less than maxBufLen try to load a new fragment
 
@@ -289,6 +287,10 @@ export default class StreamController
     if (!this.buffering) {
       return;
     }
+
+    // in case of live streams, make it possible to keep the level if there is not enough buffer
+    level = this.getLevelForLiveUpSwitch(level, bufferInfo);
+    const levelInfo = levels[level];
 
     // set next load level : this will trigger a playlist load if needed
     if (hls.loadLevel !== level && hls.manualLevel === -1) {
@@ -383,6 +385,106 @@ export default class StreamController
     }
 
     this.loadFragment(frag, levelInfo, targetBufferTime);
+  }
+
+  // Determine if we should switch up to a higher level for live streams, based on buffer length and playlist details.
+  private getLevelForLiveUpSwitch(
+    candidateLevel: number,
+    bufferInfo: BufferInfo,
+  ): number {
+    const { fragPrevious, levels } = this;
+    const currentLevel = fragPrevious?.level ?? -1;
+
+    // cases where we don't want to switch up (manual, or candidate is lower)
+    if (
+      this.hls.manualLevel !== -1 ||
+      !levels ||
+      currentLevel < 0 ||
+      candidateLevel <= currentLevel
+    ) {
+      return candidateLevel;
+    }
+
+    const currentDetails = levels[currentLevel]?.details;
+    const candidateDetails = levels[candidateLevel]?.details;
+
+    // do not switch up if either playlist is not live or has parts (low-latency)
+    if (
+      !currentDetails?.live ||
+      currentDetails.partList?.length ||
+      candidateDetails?.partList?.length
+    ) {
+      return candidateLevel;
+    }
+
+    const distanceToLiveEdge = currentDetails.fragmentEnd - bufferInfo.end;
+    // if we are away from the playlist edge, normal ABR selection has enough margin
+    if (
+      distanceToLiveEdge + this.config.maxFragLookUpTolerance >=
+      currentDetails.levelTargetDuration * 2
+    ) {
+      return candidateLevel;
+    }
+
+    // switch immediately when the candidate can extend the forward buffer.
+    if (
+      candidateDetails &&
+      this.hasFragmentAtBufferEnd(candidateDetails, bufferInfo.end)
+    ) {
+      return candidateLevel;
+    }
+
+    const currentReloadAt = currentDetails.requestScheduled;
+    const candidateReloadAt = candidateDetails?.requestScheduled ?? -1;
+    // Time until the candidate playlist's next scheduled refresh, in seconds.
+    const candidateReloadDelay = Math.max(
+      0,
+      (candidateReloadAt - self.performance.now()) / 1000,
+    );
+    // Retain half a target duration to request and append the candidate fragment.
+    const minBufferAfterCandidateReload =
+      currentDetails.levelTargetDuration / 2;
+    const canWaitForCandidate =
+      !!candidateDetails &&
+      bufferInfo.len -
+        candidateReloadDelay +
+        this.config.maxFragLookUpTolerance >=
+        minBufferAfterCandidateReload;
+
+    const currentHasFragment = this.hasFragmentAtBufferEnd(
+      currentDetails,
+      bufferInfo.end,
+    );
+
+    if (currentHasFragment) {
+      // Continue at the current level unless the buffer covers the candidate refresh.
+      return canWaitForCandidate ? candidateLevel : currentLevel;
+    }
+
+    // The current playlist cannot extend playback. Use the candidate if it can load first or safely wait.
+    const shouldUseCandidate =
+      !candidateDetails ||
+      candidateReloadAt <= currentReloadAt ||
+      canWaitForCandidate;
+    if (shouldUseCandidate) {
+      return candidateLevel;
+    }
+
+    this.log(
+      `Deferring live upswitch from level ${currentLevel} to ${candidateLevel}: candidate playlist does not extend past buffer end ${bufferInfo.end.toFixed(3)}`,
+    );
+    return currentLevel;
+  }
+
+  // helper to check if there is a fragment in the playlist that extends past the end of the buffer, within tolerance.
+  private hasFragmentAtBufferEnd(
+    details: LevelDetails,
+    bufferEnd: number,
+  ): boolean {
+    const fragment = this.getNextFragment(bufferEnd, details);
+    return !!(
+      fragment && fragment.end > bufferEnd + this.config.maxFragLookUpTolerance
+    );
   }
 
   protected loadFragment(
