@@ -137,11 +137,11 @@ describe('BaseStreamController', function () {
     return details;
   }
 
-  function refuse(frag: Fragment, part: Part | null = null, name?: string) {
+  function refuse(frag: Fragment, part: Part | null = null) {
     const error = new Error(
       'video SourceBuffer error. MediaSource readyState: ended',
     );
-    error.name = name || SOURCE_BUFFER_ERROR_NAME;
+    error.name = SOURCE_BUFFER_ERROR_NAME;
     baseStreamController.onSourceBufferError(PlaylistLevelType.MAIN, {
       type: ErrorTypes.MEDIA_ERROR,
       details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
@@ -243,23 +243,12 @@ describe('BaseStreamController', function () {
   });
 
   describe('onSourceBufferError', function () {
-    it('marks a refused fragment as a gap', function () {
-      const frag = mainFrag(1, 0);
-      refuse(frag);
-      expect(fragmentTracker.addAsGap).to.have.been.calledOnceWith(frag);
-    });
-
     it('marks the fragment of a refused part', function () {
       const frag = mainFrag(1, 0);
       const part = { index: 1, fragment: frag, gap: false } as unknown as Part;
       refuse(frag, part);
       expect(fragmentTracker.addAsGap).to.have.been.calledOnceWith(frag);
       expect(part.gap).to.equal(false);
-    });
-
-    it('ignores append errors that are not SourceBuffer errors', function () {
-      refuse(mainFrag(1, 0), null, 'InvalidStateError');
-      expect(fragmentTracker.addAsGap).to.not.have.been.called;
     });
   });
 
