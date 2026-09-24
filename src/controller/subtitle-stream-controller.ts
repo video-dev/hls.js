@@ -36,6 +36,13 @@ import type {
 import type { Bufferable } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 500; // how often to tick in ms
+// `part.start` (fragment.start + accumulated fragOffset) and `frag.end`
+// (fragment.start + accumulated fragment.duration) sum the same part
+// durations in different orders, so for the final known part they can
+// differ by a single float ULP even though they represent the same
+// logical end time. Without this tolerance, a known-last part can fail
+// `end >= frag.end` and leave the controller stuck in FRAG_LOADING.
+const PART_END_TOLERANCE = 1e-6; // seconds
 
 interface TimeRange {
   start: number;
@@ -155,7 +162,7 @@ export class SubtitleStreamController
       timeRange = { start, end };
       buffered.push(timeRange);
     }
-    if (!part || end >= frag.end) {
+    if (!part || end >= frag.end - PART_END_TOLERANCE) {
       const entity = this.fragmentTracker.fragBuffered(frag as MediaFragment);
       if (part && entity) {
         entity.range.subs = {
