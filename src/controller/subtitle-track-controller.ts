@@ -2,6 +2,7 @@ import BasePlaylistController from './base-playlist-controller';
 import { Events } from '../events';
 import { LoaderContextType } from '../types/loader';
 import { IMSC1_CODEC } from '../utils/imsc1-ttml-parser';
+import { clearExpiredPlaylistDetails } from '../utils/level-helper';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import {
   findMatchingOption,
@@ -230,6 +231,8 @@ class SubtitleTrackController extends BasePlaylistController {
 
     if (id === this.trackId) {
       this.playlistLoaded(id, data, curDetails);
+
+      clearExpiredPlaylistDetails(this.tracks, this.currentTrack, this);
     }
   }
 
