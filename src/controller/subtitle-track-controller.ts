@@ -210,6 +210,12 @@ class SubtitleTrackController extends BasePlaylistController {
     data: TrackLoadedData,
   ): void {
     const { id, groupId, details } = data;
+    // Only the selected track has its delta placeholders merged below.
+    // Keep complete inactive-track responses cacheable, but never cache an
+    // unmerged delta that could break a later switch back to this track.
+    if (id !== this.trackId && details.skippedSegments) {
+      return;
+    }
     const trackInActiveGroup = this.tracksInGroup[id];
 
     if (
