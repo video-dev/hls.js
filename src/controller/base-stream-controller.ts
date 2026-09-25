@@ -453,7 +453,7 @@ export default class BaseStreamController
 
     if (media) {
       if (this.keepGapsOnSeek) {
-        // Keep SourceBuffer error gaps on the seek that follows re-attach
+        // Keep gap fragments on the first seek after re-attach
         this.keepGapsOnSeek = false;
       } else {
         // Remove gap fragments

@@ -620,6 +620,15 @@ describe('FragmentTracker', function () {
       expect(fragmentTracker.isGap(gapFrag(1, 2))).to.equal(false);
     });
 
+    it('lists only the tracked fragments that are gaps', function () {
+      const fragmentTracker = new FragmentTracker(new Hls({}));
+      fragmentTracker.fragBuffered(gapFrag(1, 1), true);
+      fragmentTracker.addAsGap(gapFrag(2, 1));
+      expect(fragmentTracker.gapFragments().map((f) => f.sn)).to.deep.equal([
+        2,
+      ]);
+    });
+
     it('stops reporting a gap once the fragment is removed', function () {
       const fragmentTracker = new FragmentTracker(new Hls({}));
       const frag = gapFrag(1, 1);
