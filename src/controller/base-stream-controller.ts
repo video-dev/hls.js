@@ -2255,15 +2255,16 @@ export default class BaseStreamController
     ) {
       return;
     }
+    const refused = part ? (part.index === 0 ? part : null) : frag;
     const start =
-      part?.index === 0 && sourceBufferName
-        ? part.elementaryStreams[sourceBufferName]?.startPTS
+      refused && sourceBufferName
+        ? refused.elementaryStreams[sourceBufferName]?.startPTS
         : undefined;
     this.markSourceBufferErrorGap(frag);
     if (start === undefined) {
       return;
     }
-    // Also mark the previous fragment when its tail is missing before a refused first part
+    // Also mark the previous fragment when the buffer ends more than maxBufferHole before the refused fragment or first part
     const previous = getFragmentWithSN(details, frag.sn - 1);
     if (
       previous &&

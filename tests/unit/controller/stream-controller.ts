@@ -610,6 +610,25 @@ describe('StreamController', function () {
       expect(fragmentTracker.isGap(details.fragments[1])).to.equal(true);
     });
 
+    it('also marks the previous fragment when the buffer ends short of a refused whole fragment', function () {
+      const details = setLevelDetails(4);
+      appendParts(details, 1);
+      // loaded without parts: the tail of fragment 1 never reached the buffer
+      streamController['media'] = {
+        buffered: new TimeRangesMock([0, 3.5]),
+      } as unknown as HTMLMediaElement;
+      const frag = details.fragments[2];
+      frag.elementaryStreams.audiovideo = {
+        startPTS: frag.start,
+        endPTS: frag.end,
+        startDTS: frag.start,
+        endDTS: frag.end,
+      };
+      refuse(frag);
+      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(true);
+      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+    });
+
     it('does not mark the previous fragment when it was not appended', function () {
       const details = setLevelDetails(4);
       refuse(details.fragments[2], details.partList![4]);
