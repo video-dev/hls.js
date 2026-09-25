@@ -70,6 +70,7 @@ const VIDEO_CODEC_PROFILE_REPLACE =
   /(avc[1234]|hvc1|hev1|dvh[1e]|vp09|av01)(?:\.[^.,]+)+/;
 
 const TRACK_REMOVED_ERROR_NAME = 'HlsJsTrackRemovedError';
+export const SOURCE_BUFFER_ERROR_NAME = 'HlsJsSourceBufferError';
 
 const LOOP_FLUSH_SAFETY_MARGIN = 0.25;
 
@@ -2067,6 +2068,7 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     const error = new Error(
       `${type} SourceBuffer error. MediaSource readyState: ${readyState}`,
     );
+    error.name = SOURCE_BUFFER_ERROR_NAME;
     this.error(`${error.message}`, event);
     // according to http://www.w3.org/TR/media-source/#sourcebuffer-append-error
     // SourceBuffer errors are not necessarily fatal; if so, the HTMLMediaElement will fire an error event
