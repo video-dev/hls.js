@@ -3,7 +3,10 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
-import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
+import {
+  PART_END_TOLERANCE,
+  SubtitleStreamController,
+} from '../../../src/controller/subtitle-stream-controller';
 import Decrypter from '../../../src/crypt/decrypter';
 import { ErrorDetails } from '../../../src/errors';
 import { Events } from '../../../src/events';
@@ -233,9 +236,13 @@ describe('SubtitleStreamController', function () {
       );
       frag.duration += part1.duration;
 
-      // Confirms this reproduces the exact one-ULP mismatch from the issue
-      // rather than asserting the fix's own expression.
+      // Confirms this reproduces the exact float mismatch from the issue
+      // (within PART_END_TOLERANCE) rather than asserting the fix's own
+      // expression.
       expect(part1.start + part1.duration).to.be.lessThan(frag.end);
+      expect(frag.end - (part1.start + part1.duration)).to.be.lessThan(
+        PART_END_TOLERANCE,
+      );
 
       hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
         success: true,
