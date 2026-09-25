@@ -2245,30 +2245,26 @@ export default class BaseStreamController
     filterType: PlaylistLevelType,
     data: ErrorData,
   ) {
-    const { frag, part } = data;
+    const { frag, part, sourceBufferName } = data;
+    const details = frag && this.levels?.[frag.level]?.details;
     if (
       data.error.name !== SOURCE_BUFFER_ERROR_NAME ||
       frag?.type !== filterType ||
       !isMediaFragment(frag) ||
-      frag.endList
+      !details?.live
     ) {
       return;
     }
-    // The SourceBuffer can fail on an append after the damaged one, so mark the fragment, and the
-    // previous one when the buffer ends short of a refused first part (its tail was not buffered).
-    this.markSourceBufferErrorGap(frag);
-    const { sourceBufferName } = data;
     const start =
       part?.index === 0 && sourceBufferName
         ? part.elementaryStreams[sourceBufferName]?.startPTS
         : undefined;
+    this.markSourceBufferErrorGap(frag);
     if (start === undefined) {
       return;
     }
-    const previous = getFragmentWithSN(
-      this.levels?.[frag.level]?.details,
-      frag.sn - 1,
-    );
+    // Also mark the previous fragment when its tail is missing before a refused first part
+    const previous = getFragmentWithSN(details, frag.sn - 1);
     if (
       previous &&
       this.fragmentTracker.getState(previous) !== FragmentState.NOT_LOADED &&

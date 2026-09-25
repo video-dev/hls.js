@@ -138,6 +138,10 @@ describe('BaseStreamController', function () {
   }
 
   function refuse(frag: Fragment, part: Part | null = null) {
+    // only fragments of a live playlist are marked
+    const levels: unknown[] = [];
+    levels[frag.level] = { details: { live: true } };
+    (baseStreamController as any).levels = levels;
     const error = new Error(
       'video SourceBuffer error. MediaSource readyState: ended',
     );

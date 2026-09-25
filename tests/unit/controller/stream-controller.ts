@@ -27,7 +27,7 @@ import type { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import type StreamController from '../../../src/controller/stream-controller';
 import type { MediaFragment } from '../../../src/loader/fragment';
 import type { ParsedMultivariantPlaylist } from '../../../src/loader/m3u8-parser';
-import type { ErrorData } from '../../../src/types/events';
+import type { BufferAppendedData, ErrorData } from '../../../src/types/events';
 import type { LevelAttributes } from '../../../src/types/level';
 
 use(sinonChai);
@@ -526,6 +526,7 @@ describe('StreamController', function () {
     };
 
     it('marks the fragment as a gap after a SourceBuffer error', function () {
+      setLevelDetails(4);
       const frag = newFrag();
       streamController['onError'](
         Events.ERROR,
@@ -536,6 +537,7 @@ describe('StreamController', function () {
     });
 
     it('ignores a reset that another append error caused', function () {
+      setLevelDetails(4);
       const frag = newFrag();
       streamController['onError'](
         Events.ERROR,
@@ -580,6 +582,34 @@ describe('StreamController', function () {
       expect(fragmentTracker.isGap(details.fragments[1])).to.equal(false);
     });
 
+    it('reads the refused part before marking when the other SourceBuffer appended it', function () {
+      const details = setLevelDetails(4);
+      appendParts(details, 1);
+      streamController['media'] = {
+        buffered: new TimeRangesMock([0, 3.5]),
+      } as unknown as HTMLMediaElement;
+      const part = details.partList![4];
+      part.elementaryStreams.video = {
+        startPTS: part.start,
+        endPTS: part.end,
+        startDTS: part.start,
+        endDTS: part.end,
+      };
+      // the audio append of the same part went through before the video one was refused
+      fragmentTracker['onBufferAppended'](Events.BUFFER_APPENDED, {
+        type: 'audio',
+        frag: details.fragments[2],
+        part,
+        parent: PlaylistLevelType.MAIN,
+        timeRanges: {},
+      } as unknown as BufferAppendedData);
+      streamController['onError'](Events.ERROR, {
+        ...resetError(SOURCE_BUFFER_ERROR_NAME, details.fragments[2], part),
+        sourceBufferName: 'video',
+      });
+      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(true);
+    });
+
     it('does not mark the previous fragment when it was not appended', function () {
       const details = setLevelDetails(4);
       refuse(details.fragments[2], details.partList![4]);
@@ -612,9 +642,13 @@ describe('StreamController', function () {
       ).to.equal(1);
     });
 
-    it('does not mark the last fragment of an ended playlist', function () {
+    it('does not mark fragments of an ended playlist', function () {
       const details = setLevelDetails(3, false);
+      refuse(details.fragments[1]);
       refuse(details.fragments[2]);
+      expect(fragmentTracker.getState(details.fragments[1])).to.equal(
+        FragmentState.NOT_LOADED,
+      );
       expect(fragmentTracker.getState(details.fragments[2])).to.equal(
         FragmentState.NOT_LOADED,
       );
