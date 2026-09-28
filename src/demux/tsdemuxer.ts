@@ -72,6 +72,7 @@ class TSDemuxer implements Demuxer {
   private _id3Track?: DemuxedMetadataTrack;
   private _txtTrack?: DemuxedUserdataTrack;
   private _klvPid: number = -1;
+  private klvPesData: ElementaryStreamData | null = null;
   private aacOverFlow: AudioFrame | null = null;
   private remainderData: Uint8Array | null = null;
   private videoParser: BaseVideoParser | null;
@@ -201,6 +202,7 @@ class TSDemuxer implements Demuxer {
     this._audioTrack.segmentCodec = 'aac';
 
     // flush any partial content
+    this.klvPesData = null;
     this.videoParser = null;
     this.aacOverFlow = null;
     this.remainderData = null;
@@ -230,6 +232,7 @@ class TSDemuxer implements Demuxer {
     if (_id3Track) {
       _id3Track.pesData = null;
     }
+    this.klvPesData = null;
     this.aacOverFlow = null;
     this.remainderData = null;
   }
@@ -261,7 +264,7 @@ class TSDemuxer implements Demuxer {
     let klvPid = this._klvPid;
     let audioData = audioTrack.pesData;
     let id3Data = id3Track.pesData;
-    let klvData: ElementaryStreamData | null = null;
+    let klvData = this.klvPesData;
     let unknownPID: number | null = null;
     let pmtParsed = this.pmtParsed;
     let pmtId = this._pmtId;
@@ -488,6 +491,7 @@ class TSDemuxer implements Demuxer {
     videoTrack.pesData = videoData;
     audioTrack.pesData = audioData;
     id3Track.pesData = id3Data;
+    this.klvPesData = klvData;
 
     const demuxResult: DemuxerResult = {
       audioTrack,
@@ -591,6 +595,12 @@ class TSDemuxer implements Demuxer {
     } else {
       // either id3Data null or PES truncated, keep it for next frag parsing
       id3Track.pesData = id3Data;
+    }
+
+    const klvData = this.klvPesData;
+    if (klvData && (pes = parsePES(klvData, this.logger))) {
+      this.parseKlvPES(id3Track, pes);
+      this.klvPesData = null;
     }
   }
 
