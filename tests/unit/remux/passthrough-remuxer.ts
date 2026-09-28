@@ -423,7 +423,11 @@ describe('passthrough-remuxer', function () {
         MP4.mdat(new Uint8Array(8)),
       );
 
-    const remuxChunk = (data: Uint8Array<ArrayBuffer>, sn: number) =>
+    const remuxChunk = (
+      data: Uint8Array<ArrayBuffer>,
+      sn: number,
+      id: number,
+    ) =>
       remuxer.remux(
         audioTrack(),
         passthroughTrack(data),
@@ -433,7 +437,7 @@ describe('passthrough-remuxer', function () {
         true,
         false,
         PlaylistLevelType.MAIN,
-        new ChunkMetadata(0, sn, 0, data.byteLength, -1, false, 6),
+        new ChunkMetadata(0, sn, id, data.byteLength, -1, false, 6),
       );
 
     beforeEach(function () {
@@ -446,9 +450,9 @@ describe('passthrough-remuxer', function () {
     });
 
     it('keeps the timing of later chunks instead of moving them to the segment start', function () {
-      const first = remuxChunk(twoSecondChunk(0), 0);
-      const second = remuxChunk(twoSecondChunk(2), 0);
-      const third = remuxChunk(twoSecondChunk(4), 0);
+      const first = remuxChunk(twoSecondChunk(0), 0, 1);
+      const second = remuxChunk(twoSecondChunk(2), 0, 2);
+      const third = remuxChunk(twoSecondChunk(4), 0, 3);
 
       expect(first.video!.startPTS).to.equal(0);
       expect(second.video!.startPTS).to.equal(2);
@@ -457,9 +461,9 @@ describe('passthrough-remuxer', function () {
     });
 
     it('still checks the timing of the first chunk of the next segment', function () {
-      remuxChunk(twoSecondChunk(0), 0);
+      remuxChunk(twoSecondChunk(0), 0, 1);
       // Next segment's media claims to start 100 s in, far from its playlist time of 6 s
-      const next = remuxChunk(twoSecondChunk(100), 1);
+      const next = remuxChunk(twoSecondChunk(100), 1, 1);
 
       expect(next.video!.startPTS).to.equal(6);
     });

@@ -50,9 +50,6 @@ class PassThroughRemuxer extends Logger implements Remuxer {
   private initTracks?: TrackSet;
   private lastEndTime: number | null = null;
   private isVideoContiguous: boolean = false;
-  // Segment of the last remuxed chunk; progressive loading remuxes one segment in several chunks
-  private lastChunkSegment: { level: number; sn: number; part: number } | null =
-    null;
   private videoOnlyRemux: boolean = false;
   private decryptdata: DecryptData | null = null;
   private pendingInitSegment?: Uint8Array<ArrayBuffer>;
@@ -77,7 +74,6 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
   public resetTimeStamp(defaultInitPTS: TimestampOffset | null) {
     this.lastEndTime = null;
-    this.lastChunkSegment = null;
     const initPTS = this.initPTS;
     if (initPTS && defaultInitPTS) {
       if (
@@ -93,7 +89,6 @@ class PassThroughRemuxer extends Logger implements Remuxer {
   public resetNextTimestamp() {
     this.isVideoContiguous = false;
     this.lastEndTime = null;
-    this.lastChunkSegment = null;
   }
 
   public resetInitSegment(
@@ -448,13 +443,7 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     // A later chunk of the same segment (progressive loading) keeps the initPTS checked on the segment's first
     // chunk. Checking it again against the segment start (timeOffset) would remap every chunk to that start.
-    const lastChunkSegment = this.lastChunkSegment;
-    const continuesSegment =
-      !!initPTS &&
-      !!lastChunkSegment &&
-      lastChunkSegment.level === chunkMeta.level &&
-      lastChunkSegment.sn === chunkMeta.sn &&
-      lastChunkSegment.part === chunkMeta.part;
+    const continuesSegment = !!initPTS && chunkMeta.id > 1;
 
     if (
       !continuesSegment &&
@@ -536,11 +525,6 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     if (duration > 0) {
       this.lastEndTime = endDTS;
-      this.lastChunkSegment = {
-        level: chunkMeta.level,
-        sn: chunkMeta.sn,
-        part: chunkMeta.part,
-      };
     } else {
       this.warn('Duration parsed from mp4 should be greater than zero');
       this.resetNextTimestamp();
