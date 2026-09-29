@@ -186,6 +186,7 @@ class TSDemuxer implements Demuxer {
   ) {
     this.pmtParsed = false;
     this._pmtId = -1;
+    this._klvPid = -1;
 
     this._videoTrack = TSDemuxer.createTrack('video') as DemuxedVideoTrack;
     this._videoTrack.duration = trackDuration;
@@ -673,6 +674,7 @@ class TSDemuxer implements Demuxer {
       this.videoParser =
       this.remainderData =
       this.sampleAes =
+      this.klvPesData =
         null;
     this._videoTrack =
       this._audioTrack =
