@@ -155,16 +155,29 @@ function collectionToDictionary(elementsWithId: Array<HTMLElement>): {
 }
 
 function getTextContent(element, trim): string {
+  const text = collectText(element, trim);
+  if (!trim) {
+    return text;
+  }
+  // TTML1 7.2.3, xml:space="default": a run of white space across elements is
+  // a single space, and none is kept at the start or end of a line.
+  return text
+    .split('\n')
+    .map((line) => line.replace(/ {2,}/g, ' ').trim())
+    .join('\n');
+}
+
+function collectText(element, trim): string {
   return [].slice.call(element.childNodes).reduce((str, node, i) => {
     if (node.nodeName === 'br' && i) {
       return str + '\n';
     }
     if (node.childNodes?.length) {
-      return getTextContent(node, trim);
-    } else if (trim) {
-      return str + node.textContent.trim().replace(/\s+/g, ' ');
+      return str + collectText(node, trim);
     }
-    return str + node.textContent;
+    return (
+      str + (trim ? node.textContent.replace(/\s+/g, ' ') : node.textContent)
+    );
   }, '');
 }
 
