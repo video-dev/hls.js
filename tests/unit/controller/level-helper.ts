@@ -216,6 +216,103 @@ describe('LevelHelper Tests', function () {
       expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
+    it('keeps a discontinuity declared ahead of a published segment (EXT-X-DISCONTINUITY-SEQUENCE:0)', function () {
+      // A higher cc in the update must not be re-aligned back
+      const withTag = (discontinuity: boolean) => `#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-DISCONTINUITY-SEQUENCE:0
+#EXTINF:6,
+1.mp4
+#EXTINF:6,
+2.mp4
+${discontinuity ? '#EXT-X-DISCONTINUITY\n' : ''}#EXTINF:6,
+3.mp4
+`;
+      const oldPlaylist = parseLevelPlaylist(withTag(false));
+      const newPlaylist = parseLevelPlaylist(withTag(true));
+      expect(getFragmentSequenceNumbers(newPlaylist), 'parsed').to.equal(
+        '1-0,2-0,3-1',
+      );
+
+      mergeDetails(oldPlaylist, newPlaylist, logger);
+
+      expect(getFragmentSequenceNumbers(newPlaylist), 'merged').to.equal(
+        '1-0,2-0,3-1',
+      );
+      expect(newPlaylist).to.include({ startCC: 0, endCC: 1 });
+      expectPlaylistParsingError(
+        newPlaylist,
+        'discontinuity sequence mismatch (0!=1)',
+      );
+    });
+
+    it('keeps a discontinuity declared ahead of a published segment (no EXT-X-DISCONTINUITY-SEQUENCE)', function () {
+      const noTag = (discontinuity: boolean) => `#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:1
+#EXTINF:6,
+1.mp4
+#EXTINF:6,
+2.mp4
+${discontinuity ? '#EXT-X-DISCONTINUITY\n' : ''}#EXTINF:6,
+3.mp4
+`;
+      const oldPlaylist = parseLevelPlaylist(noTag(false));
+      const newPlaylist = parseLevelPlaylist(noTag(true));
+      expect(getFragmentSequenceNumbers(newPlaylist), 'parsed').to.equal(
+        '1-0,2-0,3-1',
+      );
+
+      mergeDetails(oldPlaylist, newPlaylist, logger);
+
+      expect(getFragmentSequenceNumbers(newPlaylist), 'merged').to.equal(
+        '1-0,2-0,3-1',
+      );
+      expect(newPlaylist).to.include({ startCC: 0, endCC: 1 });
+      expectPlaylistParsingError(
+        newPlaylist,
+        'discontinuity sequence mismatch (0!=1)',
+      );
+    });
+
+    it('still aligns cc forward when a discontinuity rolls out of the window', function () {
+      // Regression guard for #7163
+      const oldPlaylist = parseLevelPlaylist(`#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:1
+#EXTINF:6,
+1.mp4
+#EXTINF:6,
+2.mp4
+#EXT-X-DISCONTINUITY
+#EXTINF:6,
+3.mp4
+`);
+      const newPlaylist = parseLevelPlaylist(`#EXTM3U
+#EXT-X-VERSION:9
+#EXT-X-TARGETDURATION:6
+#EXT-X-MEDIA-SEQUENCE:3
+#EXTINF:6,
+3.mp4
+#EXTINF:6,
+4.mp4
+`);
+      expect(getFragmentSequenceNumbers(newPlaylist), 'parsed').to.equal(
+        '3-0,4-0',
+      );
+
+      mergeDetails(oldPlaylist, newPlaylist, logger);
+
+      expect(getFragmentSequenceNumbers(newPlaylist), 'merged').to.equal(
+        '3-1,4-1',
+      );
+      expect(newPlaylist.playlistParsingError).to.be.null;
+    });
+
     it('applies expected sliding when there is no segment overlap', function () {
       const oldPlaylist = generatePlaylist([1, 2, 3]);
       const newPlaylist = generatePlaylist([5, 6, 7]);

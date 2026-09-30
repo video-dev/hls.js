@@ -170,8 +170,8 @@ export function mergeDetails(
     newDetails,
     (oldFrag, newFrag, newFragIndex, newFragments) => {
       if (
-        (!newDetails.startCC || newDetails.skippedSegments) &&
-        newFrag.cc !== oldFrag.cc
+        newFrag.cc !== oldFrag.cc &&
+        (oldFrag.cc > newFrag.cc || newDetails.skippedSegments)
       ) {
         const ccOffset = oldFrag.cc - newFrag.cc;
         for (let i = newFragIndex; i < newFragments.length; i++) {
