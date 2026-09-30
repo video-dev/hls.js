@@ -254,4 +254,58 @@ Hello after ad
       expect(cues[0].endTime).to.be.closeTo(fragStart + 3 - mediaTimestamp, 1);
     });
   });
+
+  describe('cue text whitespace (#5337)', function () {
+    const initPTS = { baseTime: 0, timescale: 90000, trackId: 0 };
+    const vttCCs: VTTCCs = {
+      ccOffset: 0,
+      presentationOffset: 0,
+      0: { start: 0, prevCC: -1, new: false },
+    };
+
+    function parseCues(vtt: string): VTTCue[] {
+      const parsedCallback = sinon.spy();
+      const errorCallback = sinon.spy();
+      parseWebVTT(
+        toArrayBuffer(vtt),
+        initPTS,
+        vttCCs,
+        0,
+        0,
+        parsedCallback,
+        errorCallback,
+      );
+      expect(errorCallback, 'parsed without error').to.not.have.been.called;
+      return parsedCallback.getCall(0).firstArg;
+    }
+
+    it('keeps no-break space lines used to position a cue', function () {
+      const text = '\u00a0\n\u00a0\nHello';
+      const cues = parseCues(
+        `WEBVTT\nX-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:00.000\n\n00:00:01.000 --> 00:00:03.000\n${text}\n`,
+      );
+
+      expect(cues).to.have.lengthOf(1);
+      expect(cues[0].text).to.equal(text);
+    });
+
+    it('still trims ordinary whitespace around the cue text', function () {
+      const cues = parseCues(
+        'WEBVTT\nX-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:00.000\n\n00:00:01.000 --> 00:00:03.000\nHello\n   \n\n00:00:03.000 --> 00:00:05.000\nNext\n',
+      );
+
+      expect(cues[0].text).to.equal('Hello');
+    });
+
+    it('gives the same id to the same cue with different surrounding whitespace', function () {
+      const [a] = parseCues(
+        'WEBVTT\nX-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:00.000\n\n00:00:01.000 --> 00:00:03.000\nHello \n',
+      );
+      const [b] = parseCues(
+        'WEBVTT\nX-TIMESTAMP-MAP=MPEGTS:0,LOCAL:00:00:00.000\n\n00:00:01.000 --> 00:00:03.000\nHello\n',
+      );
+
+      expect(a.id).to.equal(b.id);
+    });
+  });
 });
