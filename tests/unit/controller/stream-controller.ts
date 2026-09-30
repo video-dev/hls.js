@@ -8,7 +8,11 @@ import { FragmentState } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
+import {
+  ElementaryStreamTypes,
+  Fragment,
+  Part,
+} from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
@@ -379,6 +383,208 @@ describe('StreamController', function () {
           expect(foundFragment).to.equal(null);
         });
       });
+    });
+  });
+
+  describe('live upswitch availability', function () {
+    const segmentDuration = 2;
+
+    function createFragment(
+      level: number,
+      sn: number,
+      start: number,
+    ): MediaFragment {
+      const fragment = new Fragment(
+        PlaylistLevelType.MAIN,
+        `level-${level}-${sn}.ts`,
+      ) as MediaFragment;
+      fragment.level = level;
+      fragment.sn = sn;
+      fragment.cc = 0;
+      fragment.setStart(start);
+      fragment.duration = segmentDuration;
+      return fragment;
+    }
+
+    function createLiveLevel(level: number, count: number): Level {
+      const details = new LevelDetails('');
+      details.live = true;
+      details.targetduration = segmentDuration;
+      details.fragments = Array.from({ length: count }, (_, index) =>
+        createFragment(level, 100 + index, index * segmentDuration),
+      );
+      details.startSN = 100;
+      details.endSN = 99 + count;
+      details.totalduration = count * segmentDuration;
+      details.requestScheduled = Number.POSITIVE_INFINITY;
+      const levelInfo = new Level({
+        name: `${level}`,
+        url: `level-${level}.m3u8`,
+        attrs,
+        bitrate: 500000 * (level + 1),
+      });
+      levelInfo.details = details;
+      return levelInfo;
+    }
+
+    function bufferInfo(len: number, end: number) {
+      return {
+        len,
+        start: end - len,
+        end,
+        bufferedIndex: 0,
+      };
+    }
+
+    function setLevels(currentCount: number, candidateCount?: number) {
+      const current = createLiveLevel(0, currentCount);
+      const candidate = createLiveLevel(1, candidateCount ?? 0);
+      if (candidateCount === undefined) {
+        candidate.details = undefined;
+      }
+      streamController['levels'] = [current, candidate];
+      return { current, candidate };
+    }
+
+    it('keeps loading the current rendition when a live upswitch playlist is unavailable near the edge', function () {
+      const { current } = setLevels(2);
+      streamController['fragPrevious'] = current.details!
+        .fragments[0] as MediaFragment;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(2, 2)),
+      ).to.equal(0);
+    });
+
+    it('loads an unavailable candidate playlist when the current rendition has no fragment', function () {
+      const { current } = setLevels(2);
+      streamController['fragPrevious'] = current.details!
+        .fragments[1] as MediaFragment;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(4, 4)),
+      ).to.equal(1);
+    });
+
+    it('loads an upswitch fragment when the candidate playlist extends past the buffer end', function () {
+      const { current } = setLevels(2, 2);
+      streamController['fragPrevious'] = current.details!
+        .fragments[0] as MediaFragment;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(2, 2)),
+      ).to.equal(1);
+    });
+
+    it('returns to the current rendition when its playlist refresh is scheduled before the unavailable candidate', function () {
+      const { current, candidate } = setLevels(2, 2);
+      streamController['fragPrevious'] = current.details!
+        .fragments[1] as MediaFragment;
+      const now = self.performance.now();
+      current.details!.requestScheduled = now + 100;
+      candidate.details!.requestScheduled = now + 2000;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(0.5, 4)),
+      ).to.equal(0);
+    });
+
+    it('waits on the candidate when its playlist refresh is scheduled first', function () {
+      const { current, candidate } = setLevels(2, 2);
+      streamController['fragPrevious'] = current.details!
+        .fragments[1] as MediaFragment;
+      const now = self.performance.now();
+      current.details!.requestScheduled = now + 200;
+      candidate.details!.requestScheduled = now + 100;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(0.5, 4)),
+      ).to.equal(1);
+    });
+
+    it('waits for a later candidate refresh while the forward buffer has a safety margin', function () {
+      const { current, candidate } = setLevels(2, 2);
+      streamController['fragPrevious'] = current.details!
+        .fragments[1] as MediaFragment;
+      const now = self.performance.now();
+      current.details!.requestScheduled = now + 100;
+      candidate.details!.requestScheduled = now + 2000;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(4, 4)),
+      ).to.equal(1);
+    });
+
+    it('waits briefly for a candidate refresh when one segment remains buffered', function () {
+      const { current, candidate } = setLevels(3, 2);
+      streamController['fragPrevious'] = current.details!
+        .fragments[1] as MediaFragment;
+      const now = self.performance.now();
+      current.details!.requestScheduled = now + 200;
+      candidate.details!.requestScheduled = now + 100;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(2, 4)),
+      ).to.equal(1);
+    });
+
+    it('keeps loading the current rendition when the candidate refresh would consume the safety margin', function () {
+      const { current, candidate } = setLevels(3, 2);
+      streamController['fragPrevious'] = current.details!
+        .fragments[1] as MediaFragment;
+      const now = self.performance.now();
+      current.details!.requestScheduled = now + 2000;
+      candidate.details!.requestScheduled = now + 2000;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(2, 4)),
+      ).to.equal(0);
+    });
+
+    it('does not defer an upswitch with two segments still published ahead', function () {
+      const { current } = setLevels(3);
+      streamController['fragPrevious'] = current.details!
+        .fragments[0] as MediaFragment;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(2, 2)),
+      ).to.equal(1);
+    });
+
+    it('does not affect VOD upswitches', function () {
+      const { current } = setLevels(2);
+      current.details!.live = false;
+      streamController['fragPrevious'] = current.details!
+        .fragments[0] as MediaFragment;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(2, 2)),
+      ).to.equal(1);
+    });
+
+    it('does not affect low-latency part playlists', function () {
+      const { current } = setLevels(2);
+      const fragment = current.details!.fragments[0] as MediaFragment;
+      current.details!.partList = [
+        new Part(new AttrList('DURATION=1,URI="part.ts"'), fragment, '', 0),
+      ];
+      streamController['fragPrevious'] = current.details!
+        .fragments[0] as MediaFragment;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(2, 2)),
+      ).to.equal(1);
+    });
+
+    it('does not affect manual level selection', function () {
+      const { current } = setLevels(2);
+      streamController['fragPrevious'] = current.details!
+        .fragments[0] as MediaFragment;
+      hls['levelController']['manualLevelIndex'] = 1;
+
+      expect(
+        streamController['getLevelForLiveUpSwitch'](1, bufferInfo(2, 2)),
+      ).to.equal(1);
     });
   });
 
