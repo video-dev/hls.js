@@ -169,12 +169,6 @@ export function mergeDetails(
     oldDetails,
     newDetails,
     (oldFrag, newFrag, newFragIndex, newFragments) => {
-      // Re-alignment may only carry discontinuity counts forward. A Playlist
-      // that omits EXT-X-DISCONTINUITY-SEQUENCE (or declares 0) restarts its
-      // count at 0 on every update, so shared segments can only be under-
-      // counted. A higher cc in the update is a discontinuity the Playlist has
-      // newly declared ahead of a segment it already published, and rewriting
-      // that away would drop the boundary from the merged details.
       if (
         newFrag.cc !== oldFrag.cc &&
         (oldFrag.cc > newFrag.cc || newDetails.skippedSegments)

@@ -217,11 +217,7 @@ describe('LevelHelper Tests', function () {
     });
 
     it('keeps a discontinuity declared ahead of a published segment (EXT-X-DISCONTINUITY-SEQUENCE:0)', function () {
-      // Re-alignment carries discontinuity counts forward for Playlists that
-      // under-count them. Here the update declares a *new* discontinuity ahead
-      // of a segment it already published, so its cc is higher than the last
-      // update's. Rewriting it back would drop the boundary from the merge and
-      // defer the inconsistency to the following update.
+      // A higher cc in the update must not be re-aligned back
       const withTag = (discontinuity: boolean) => `#EXTM3U
 #EXT-X-VERSION:9
 #EXT-X-TARGETDURATION:6
@@ -253,9 +249,6 @@ ${discontinuity ? '#EXT-X-DISCONTINUITY\n' : ''}#EXTINF:6,
     });
 
     it('keeps a discontinuity declared ahead of a published segment (no EXT-X-DISCONTINUITY-SEQUENCE)', function () {
-      // Same Playlist as above without the tag. A missing
-      // EXT-X-DISCONTINUITY-SEQUENCE has a starting value of 0, so this update
-      // must be treated the same way.
       const noTag = (discontinuity: boolean) => `#EXTM3U
 #EXT-X-VERSION:9
 #EXT-X-TARGETDURATION:6
@@ -286,9 +279,7 @@ ${discontinuity ? '#EXT-X-DISCONTINUITY\n' : ''}#EXTINF:6,
     });
 
     it('still aligns cc forward when a discontinuity rolls out of the window', function () {
-      // Regression guard for #7163: a Playlist without
-      // EXT-X-DISCONTINUITY-SEQUENCE restarts its count at 0 on every update,
-      // so shared segments are under-counted and must be aligned up.
+      // Regression guard for #7163
       const oldPlaylist = parseLevelPlaylist(`#EXTM3U
 #EXT-X-VERSION:9
 #EXT-X-TARGETDURATION:6
