@@ -280,6 +280,11 @@ export class SubtitleStreamController
   ) {
     const { currentTrackId, levels } = this;
     const { details: newDetails, id: trackId } = data;
+    // A late response for an inactive track still contains unmerged delta
+    // placeholders. Ignore it before alignment or replacing playback details.
+    if (trackId !== currentTrackId) {
+      return;
+    }
     if (!levels) {
       this.warn(`Subtitle tracks were reset while loading level ${trackId}`);
       return;
@@ -329,10 +334,6 @@ export class SubtitleStreamController
     // compute start position if we are aligned with the main playlist
     if (mainDetails && !this.startFragRequested) {
       this.setStartPosition(mainDetails, sliding);
-    }
-
-    if (trackId !== currentTrackId) {
-      return;
     }
 
     this.hls.trigger(Events.SUBTITLE_TRACK_UPDATED, {
