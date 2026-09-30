@@ -1494,4 +1494,107 @@ describe('BaseStreamController', function () {
         .called;
     });
   });
+
+  describe('getNextPart', function () {
+    // A 93-frame AAC segment divides as 23 + 23 + 23 + 23 + 1, leaving a
+    // 21.333ms tail. Any tail shorter than maxFragLookUpTolerance (0.25s by
+    // default) lets fragment lookup prefer the next fragment before the tail
+    // loads, clamping the target to that fragment's part 0.
+    const AAC_FRAME = 1024 / 48000;
+    const REGULAR_PART = AAC_FRAME * 23;
+    const SEGMENT_DURATION = AAC_FRAME * 93;
+
+    function partGrid(): {
+      partList: Part[];
+      parentA: MediaFragment;
+      parentB: MediaFragment;
+    } {
+      const makeFragment = (sn: number, start: number) => {
+        const frag = new Fragment(
+          PlaylistLevelType.AUDIO,
+          '',
+        ) as any as MediaFragment;
+        frag.sn = sn;
+        frag.duration = SEGMENT_DURATION;
+        frag.setStart(start);
+        return frag;
+      };
+      const parentA = makeFragment(1, 0);
+      const parentB = makeFragment(2, SEGMENT_DURATION);
+
+      // Plain objects make the derived `loaded` state assignable in this test.
+      const makePart = (
+        fragment: MediaFragment,
+        index: number,
+        start: number,
+        duration: number,
+        loaded: boolean,
+      ) =>
+        ({
+          fragment,
+          index,
+          start,
+          duration,
+          loaded,
+          gap: false,
+          independent: true,
+        }) as unknown as Part;
+
+      const partList = [
+        makePart(parentA, 0, 0, REGULAR_PART, true),
+        makePart(parentA, 1, REGULAR_PART, REGULAR_PART, true),
+        makePart(parentA, 2, REGULAR_PART * 2, REGULAR_PART, true),
+        makePart(parentA, 3, REGULAR_PART * 3, REGULAR_PART, true),
+        // One AAC frame remains unloaded.
+        makePart(parentA, 4, REGULAR_PART * 4, AAC_FRAME, false),
+        makePart(parentB, 0, SEGMENT_DURATION, REGULAR_PART, false),
+        makePart(
+          parentB,
+          1,
+          SEGMENT_DURATION + REGULAR_PART,
+          REGULAR_PART,
+          false,
+        ),
+      ];
+      return { partList, parentA, parentB };
+    }
+
+    it('selects a short final part over the next fragment starting at the same time', function () {
+      const { partList, parentB } = partGrid();
+      // Selection has advanced and clamped the target to parent B's start.
+      const targetBufferTime = parentB.start;
+      expect(partList[5].start).to.equal(
+        targetBufferTime,
+        'the next fragment part 0 must begin exactly at the target buffer time',
+      );
+
+      const index = (baseStreamController as any).getNextPart(
+        partList,
+        parentB,
+        targetBufferTime,
+      );
+
+      expect(
+        index,
+        'the unloaded 21.333ms tail of the previous segment must be selected, ' +
+          'otherwise it is skipped and its audio is lost silently',
+      ).to.equal(4);
+    });
+
+    it('advances to the next fragment once the short final part is loaded', function () {
+      const { partList, parentB } = partGrid();
+      (partList[4] as any).loaded = true;
+
+      const index = (baseStreamController as any).getNextPart(
+        partList,
+        parentB,
+        parentB.start,
+      );
+
+      expect(
+        index,
+        'once the tail is loaded selection must move on rather than stall',
+      ).to.equal(5);
+    });
+  });
 });

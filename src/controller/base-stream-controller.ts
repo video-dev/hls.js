@@ -1755,7 +1755,8 @@ export default class BaseStreamController
     for (let i = 0, len = partList.length; i < len; i++) {
       const part = partList[i];
       independentAttrOmitted = independentAttrOmitted && !part.independent;
-      if (nextPart > -1 && targetBufferTime < part.start) {
+      // Preserve an unloaded tail when the target equals the next part's start.
+      if (nextPart > -1 && targetBufferTime <= part.start) {
         break;
       }
       const loaded = part.loaded || part.gap;
