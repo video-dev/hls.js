@@ -10,6 +10,7 @@ import type { ILogger } from './logger';
 import type { Fragment, MediaFragment, Part } from '../loader/fragment';
 import type { LevelDetails } from '../loader/level-details';
 import type { Level } from '../types/level';
+import type { MediaPlaylist } from '../types/media-playlist';
 
 type FragmentIntersection = (
   oldFrag: MediaFragment,
@@ -609,6 +610,31 @@ export function reassignFragmentLevelIndexes(levels: Level[]) {
       }
     });
   });
+}
+
+export function clearExpiredPlaylistDetails(
+  playlists: (Level | MediaPlaylist)[],
+  activePlaylist: Level | MediaPlaylist | null | undefined,
+  logger: ILogger,
+): void {
+  playlists.forEach((playlist) => {
+    if (playlist === activePlaylist || !playlist.details?.expired) {
+      return;
+    }
+    logger.log(
+      `Deleting expired inactive playlist details for ${describePlaylist(playlist)} (age ${playlist.details.age.toFixed(1)}s)`,
+    );
+    playlist.details = undefined;
+  });
+}
+
+function describePlaylist(playlist: Level | MediaPlaylist): string {
+  const { id } = playlist;
+  const groupId = (playlist as MediaPlaylist).groupId;
+  if (groupId === undefined) {
+    return `level ${id}`;
+  }
+  return `track ${id} "${(playlist as MediaPlaylist).name}" group:${groupId}`;
 }
 
 function notEqualAfterStrippingQueries(
