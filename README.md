@@ -499,6 +499,7 @@ The following players integrate HLS.js for HLS playback:
 - [M3U IPTV](http://m3u-ip.tv/browser/)
 - [ArtPlayer](https://artplayer.org/?libs=https://cdnjs.cloudflare.com/ajax/libs/hls.js/1.5.17/hls.min.js&example=hls)
 - [IPTV Player](https://iptvplayer.stream), A free web-based HLS player that lets you play HLS,DASH and MP4 streams
+- [M3U Player](https://m3uplayer.app), A web based HLS player
 
 ### They use HLS.js in production!
 
