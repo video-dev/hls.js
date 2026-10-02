@@ -3,6 +3,7 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
 import { State } from '../../../src/controller/base-stream-controller';
+import { SOURCE_BUFFER_ERROR_NAME } from '../../../src/controller/buffer-controller';
 import BaseStreamControllerImpl from '../../../src/controller/stream-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import Hls from '../../../src/hls';
@@ -16,6 +17,7 @@ import { BufferHelper } from '../../../src/utils/buffer-helper';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type BaseStreamController from '../../../src/controller/base-stream-controller';
 import type { MediaFragment, Part } from '../../../src/loader/fragment';
+import type { ErrorData } from '../../../src/types/events';
 import type { BufferInfo } from '../../../src/utils/buffer-helper';
 
 use(sinonChai);
@@ -38,6 +40,9 @@ type BaseStreamControllerTestable = Omit<
   | 'fragPrevious'
   | 'tickImmediate'
   | 'hls'
+  | 'getNextFragment'
+  | 'onMediaDetaching'
+  | 'onSourceBufferError'
 > & {
   media: HTMLMediaElement | null;
   _streamEnded: (bufferInfo: BufferInfo, levelDetails: LevelDetails) => boolean;
@@ -60,6 +65,12 @@ type BaseStreamControllerTestable = Omit<
   fragPrevious: MediaFragment | null;
   tickImmediate: () => void;
   hls: Hls;
+  getNextFragment: (
+    pos: number,
+    levelDetails: LevelDetails,
+  ) => MediaFragment | null;
+  onMediaDetaching: (event: any, data: any) => void;
+  onSourceBufferError: (filterType: PlaylistLevelType, data: ErrorData) => void;
 };
 
 describe('BaseStreamController', function () {
@@ -78,6 +89,16 @@ describe('BaseStreamController', function () {
       isEndListAppended() {
         return true;
       },
+      gapSn: null,
+      isGap(frag) {
+        return this.gapSn !== null && frag.sn === this.gapSn;
+      },
+      gapFragments() {
+        return this.gaps || [];
+      },
+      gaps: [],
+      addAsGap: sinon.spy(),
+      removeAllFragments: sinon.spy(),
       removeFragmentsInRange: sinon.spy(),
     };
     baseStreamController = new BaseStreamControllerImpl(
@@ -114,6 +135,32 @@ describe('BaseStreamController', function () {
     }
     details.live = live;
     return details;
+  }
+
+  function refuse(frag: Fragment, part: Part | null = null) {
+    // only fragments of a live playlist are marked
+    const levels: unknown[] = [];
+    levels[frag.level] = { details: { live: true } };
+    (baseStreamController as any).levels = levels;
+    const error = new Error(
+      'video SourceBuffer error. MediaSource readyState: ended',
+    );
+    error.name = SOURCE_BUFFER_ERROR_NAME;
+    baseStreamController.onSourceBufferError(PlaylistLevelType.MAIN, {
+      type: ErrorTypes.MEDIA_ERROR,
+      details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+      fatal: false,
+      error,
+      frag,
+      part,
+    });
+  }
+
+  function mainFrag(sn: number, level: number): MediaFragment {
+    const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+    frag.sn = sn;
+    frag.level = level;
+    return frag;
   }
 
   describe('_streamEnded', function () {
@@ -158,6 +205,54 @@ describe('BaseStreamController', function () {
       fragmentTracker.isEndListAppended = () => false;
       expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
         .false;
+    });
+  });
+
+  describe('getNextFragment after a SourceBuffer error', function () {
+    it('returns the fragment after the refused one', function () {
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(4);
+      // a live playlist refresh builds a new object for the same sn and level
+      refuse(mainFrag(1, levelDetails.fragments[1].level));
+      fragmentTracker.gapSn = 1;
+      const frag = baseStreamController.getNextFragment(5, levelDetails);
+      expect(frag?.sn, 'skips to the next fragment').to.equal(2);
+      expect(baseStreamController.nextLoadPosition).to.equal(10);
+    });
+
+    it('does not skip a tracked gap that no SourceBuffer error marked', function () {
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(4);
+      fragmentTracker.gapSn = 1;
+      expect(
+        baseStreamController.getNextFragment(5, levelDetails)?.sn,
+      ).to.equal(1);
+    });
+
+    it('does not skip a refused fragment the tracker no longer holds as a gap', function () {
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(4);
+      refuse(levelDetails.fragments[1]);
+      fragmentTracker.gapSn = null;
+      expect(
+        baseStreamController.getNextFragment(5, levelDetails)?.sn,
+      ).to.equal(1);
+    });
+
+    it('returns null when the refused fragment is the last one', function () {
+      const levelDetails = levelDetailsWithEndSequenceVodOrLive(2);
+      refuse(levelDetails.fragments[1]);
+      fragmentTracker.gapSn = 1;
+      expect(baseStreamController.getNextFragment(5, levelDetails)).to.equal(
+        null,
+      );
+    });
+  });
+
+  describe('onSourceBufferError', function () {
+    it('marks the fragment of a refused part', function () {
+      const frag = mainFrag(1, 0);
+      const part = { index: 1, fragment: frag, gap: false } as unknown as Part;
+      refuse(frag, part);
+      expect(fragmentTracker.addAsGap).to.have.been.calledOnceWith(frag);
+      expect(part.gap).to.equal(false);
     });
   });
 
@@ -212,6 +307,54 @@ describe('BaseStreamController', function () {
 
         expect(resetSpy).to.have.been.calledOnce;
         resetSpy.restore();
+      });
+
+      it('keeps gaps on the seek that follows a detach which carried a refused fragment', function () {
+        media.removeEventListener = sinon.spy();
+        const frag = mainFrag(1, 0);
+        refuse(frag);
+        fragmentTracker.gaps = [frag];
+        baseStreamController.onMediaDetaching(null, {});
+        baseStreamController.media = media;
+        media.currentTime = 10.0;
+
+        baseStreamController.onMediaSeeking();
+        expect(
+          fragmentTracker.removeFragmentsInRange,
+          'the re-attach seek keeps them',
+        ).to.have.not.been.called;
+
+        baseStreamController.onMediaSeeking();
+        expect(
+          fragmentTracker.removeFragmentsInRange,
+          'a later seek removes them',
+        ).to.have.been.calledOnce;
+      });
+
+      it('does not keep carried gaps that no SourceBuffer error marked', function () {
+        media.removeEventListener = sinon.spy();
+        fragmentTracker.gaps = [mainFrag(1, 0)];
+        baseStreamController.onMediaDetaching(null, {});
+        baseStreamController.media = media;
+        media.currentTime = 10.0;
+
+        baseStreamController.onMediaSeeking();
+        expect(fragmentTracker.removeFragmentsInRange).to.have.been.calledOnce;
+      });
+
+      it('does not keep gaps carried for another playlist type', function () {
+        media.removeEventListener = sinon.spy();
+        refuse(mainFrag(1, 0));
+        const audioFrag = new Fragment(PlaylistLevelType.AUDIO, '');
+        audioFrag.sn = 1;
+        audioFrag.level = 0;
+        fragmentTracker.gaps = [audioFrag];
+        baseStreamController.onMediaDetaching(null, {});
+        baseStreamController.media = media;
+        media.currentTime = 10.0;
+
+        baseStreamController.onMediaSeeking();
+        expect(fragmentTracker.removeFragmentsInRange).to.have.been.calledOnce;
       });
 
       it('should call fragmentTracker.removeFragmentsInRange when media exists', function () {
