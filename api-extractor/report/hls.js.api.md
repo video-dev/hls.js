@@ -1219,6 +1219,7 @@ export class Decrypter {
         start: number;
         end: number;
     }): Promise<ArrayBuffer>;
+    decryptProgressive(data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer): ArrayBuffer | null;
     // (undocumented)
     destroy(): void;
     // (undocumented)
