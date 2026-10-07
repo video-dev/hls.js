@@ -216,70 +216,7 @@ describe('LevelHelper Tests', function () {
       expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
-    it('keeps a discontinuity declared ahead of a published segment (EXT-X-DISCONTINUITY-SEQUENCE:0)', function () {
-      // A higher cc in the update must not be re-aligned back
-      const withTag = (discontinuity: boolean) => `#EXTM3U
-#EXT-X-VERSION:9
-#EXT-X-TARGETDURATION:6
-#EXT-X-MEDIA-SEQUENCE:1
-#EXT-X-DISCONTINUITY-SEQUENCE:0
-#EXTINF:6,
-1.mp4
-#EXTINF:6,
-2.mp4
-${discontinuity ? '#EXT-X-DISCONTINUITY\n' : ''}#EXTINF:6,
-3.mp4
-`;
-      const oldPlaylist = parseLevelPlaylist(withTag(false));
-      const newPlaylist = parseLevelPlaylist(withTag(true));
-      expect(getFragmentSequenceNumbers(newPlaylist), 'parsed').to.equal(
-        '1-0,2-0,3-1',
-      );
-
-      mergeDetails(oldPlaylist, newPlaylist, logger);
-
-      expect(getFragmentSequenceNumbers(newPlaylist), 'merged').to.equal(
-        '1-0,2-0,3-1',
-      );
-      expect(newPlaylist).to.include({ startCC: 0, endCC: 1 });
-      expectPlaylistParsingError(
-        newPlaylist,
-        'discontinuity sequence mismatch (0!=1)',
-      );
-    });
-
-    it('keeps a discontinuity declared ahead of a published segment (no EXT-X-DISCONTINUITY-SEQUENCE)', function () {
-      const noTag = (discontinuity: boolean) => `#EXTM3U
-#EXT-X-VERSION:9
-#EXT-X-TARGETDURATION:6
-#EXT-X-MEDIA-SEQUENCE:1
-#EXTINF:6,
-1.mp4
-#EXTINF:6,
-2.mp4
-${discontinuity ? '#EXT-X-DISCONTINUITY\n' : ''}#EXTINF:6,
-3.mp4
-`;
-      const oldPlaylist = parseLevelPlaylist(noTag(false));
-      const newPlaylist = parseLevelPlaylist(noTag(true));
-      expect(getFragmentSequenceNumbers(newPlaylist), 'parsed').to.equal(
-        '1-0,2-0,3-1',
-      );
-
-      mergeDetails(oldPlaylist, newPlaylist, logger);
-
-      expect(getFragmentSequenceNumbers(newPlaylist), 'merged').to.equal(
-        '1-0,2-0,3-1',
-      );
-      expect(newPlaylist).to.include({ startCC: 0, endCC: 1 });
-      expectPlaylistParsingError(
-        newPlaylist,
-        'discontinuity sequence mismatch (0!=1)',
-      );
-    });
-
-    it('still aligns cc forward when a discontinuity rolls out of the window', function () {
-      // Regression guard for #7163
+    it('aligns cc to the previous playlist when a discontinuity rolls out with no overlap', function () {
       const oldPlaylist = parseLevelPlaylist(`#EXTM3U
 #EXT-X-VERSION:9
 #EXT-X-TARGETDURATION:6
@@ -291,26 +228,44 @@ ${discontinuity ? '#EXT-X-DISCONTINUITY\n' : ''}#EXTINF:6,
 #EXT-X-DISCONTINUITY
 #EXTINF:6,
 3.mp4
+#EXTINF:6,
+4.mp4
+#EXT-X-DISCONTINUITY
+#EXTINF:6,
+5.mp4
+#EXTINF:6,
+6.mp4
 `);
       const newPlaylist = parseLevelPlaylist(`#EXTM3U
 #EXT-X-VERSION:9
 #EXT-X-TARGETDURATION:6
-#EXT-X-MEDIA-SEQUENCE:3
+#EXT-X-MEDIA-SEQUENCE:9
 #EXTINF:6,
-3.mp4
+9.mp4
 #EXTINF:6,
-4.mp4
+10.mp4
+#EXTINF:6,
+11.mp4
+#EXTINF:6,
+12.mp4
+#EXTINF:6,
+13.mp4
+#EXTINF:6,
+14.mp4
 `);
-      expect(getFragmentSequenceNumbers(newPlaylist), 'parsed').to.equal(
-        '3-0,4-0',
+      expect(getFragmentSequenceNumbers(oldPlaylist), 'old parsed').to.equal(
+        '1-0,2-0,3-1,4-1,5-2,6-2',
+      );
+      expect(getFragmentSequenceNumbers(newPlaylist), 'new parsed').to.equal(
+        '9-0,10-0,11-0,12-0,13-0,14-0',
       );
 
       mergeDetails(oldPlaylist, newPlaylist, logger);
 
       expect(getFragmentSequenceNumbers(newPlaylist), 'merged').to.equal(
-        '3-1,4-1',
+        '9-2,10-2,11-2,12-2,13-2,14-2',
       );
-      expect(newPlaylist.playlistParsingError).to.be.null;
+      expect(newPlaylist).to.include({ startCC: 2, endCC: 2 });
     });
 
     it('applies expected sliding when there is no segment overlap', function () {
@@ -1916,6 +1871,43 @@ video_5432.m4s`;
       expectPlaylistParsingError(
         details2,
         'discontinuity sequence mismatch (31!=32)',
+      );
+    });
+
+    it('changes the discontinuity sequence of segment between updates without EXT-X-DISCONTINUITY-SEQUENCE', function () {
+      const playlist1 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5428
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5428.m4s
+#EXTINF:2.000,
+video_5429.m4s
+#EXTINF:2.000,
+video_5430.m4s
+#EXTINF:2.000,
+video_5431.m4s`;
+      const playlist2 = `#EXTM3U
+#EXT-X-VERSION:6
+#EXT-X-TARGETDURATION:3
+#EXT-X-MEDIA-SEQUENCE:5429
+#EXT-X-MAP:URI="video_init.mp4"
+#EXTINF:2.000,
+video_5429.m4s
+#EXTINF:2.000,
+video_5430.m4s
+#EXT-X-DISCONTINUITY
+#EXTINF:2.000,
+video_5431.m4s
+#EXTINF:2.000,
+video_5432.m4s`;
+      const details1 = parseLevelPlaylist(playlist1);
+      const details2 = parseLevelPlaylist(playlist2);
+      mergeDetails(details1, details2, logger);
+      expectPlaylistParsingError(
+        details2,
+        'discontinuity sequence mismatch (0!=1)',
       );
     });
 
