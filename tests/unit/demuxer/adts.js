@@ -87,6 +87,52 @@ describe('getAudioConfig', function () {
     });
   });
 
+  it('should trust a mono frame payload over a stereo ADTS header', function () {
+    const observer = new EventEmitter();
+    const data = new Uint8Array(new ArrayBuffer(8));
+    data[0] = 0xff;
+    data[1] = 0xf1; // ID = 0 (MPEG-4), layer = 00, protection_absent = 1
+    data[2] = 0x60; // profile = 1 (AAC LC), sampling_frequency_index = 8 (16000Hz)
+    data[3] = 0x80; // channel_configuration = 2 (stereo)
+    data[7] = 0x00; // first payload syntax element = SCE (mono)
+
+    const result = getAudioConfig(observer, data, 0, undefined);
+    expect(result, JSON.stringify(result)).to.deep.equal({
+      config: [20, 8],
+      samplerate: 16000,
+      channelCount: 1,
+      codec: 'mp4a.40.2',
+      parsedCodec: 'mp4a.40.2',
+      manifestCodec: undefined,
+    });
+  });
+
+  it('should skip fill elements when checking the frame channel layout', function () {
+    const observer = new EventEmitter();
+    const data = new Uint8Array(new ArrayBuffer(10));
+    data[0] = 0xff;
+    data[1] = 0xf1; // ID = 0 (MPEG-4), layer = 00, protection_absent = 1
+    data[2] = 0x60; // profile = 1 (AAC LC), sampling_frequency_index = 8 (16000Hz)
+    data[3] = 0x80; // channel_configuration = 2 (stereo)
+    data[4] = 0x01; // frame_length = 10
+    data[5] = 0x40;
+    // payload: FIL element (id 6, count 1, one fill byte), then SCE (mono),
+    // which is no longer byte aligned
+    data[7] = 0xc2;
+    data[8] = 0x00;
+    data[9] = 0x00;
+
+    const result = getAudioConfig(observer, data, 0, undefined);
+    expect(result, JSON.stringify(result)).to.deep.equal({
+      config: [20, 8],
+      samplerate: 16000,
+      channelCount: 1,
+      codec: 'mp4a.40.2',
+      parsedCodec: 'mp4a.40.2',
+      manifestCodec: undefined,
+    });
+  });
+
   it('should return audio config if there is no audio codec', function () {
     const observer = new EventEmitter();
     const data = new Uint8Array(new ArrayBuffer(4));

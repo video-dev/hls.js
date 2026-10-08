@@ -11,6 +11,7 @@ import type { PES } from '../tsdemuxer';
 
 class HevcVideoParser extends BaseVideoParser {
   protected initVPS: Uint8Array | null = null;
+  private prevVPS: Uint8Array[] | null = null;
 
   public parsePES(
     track: DemuxedVideoTrack,
@@ -125,6 +126,13 @@ class HevcVideoParser extends BaseVideoParser {
             track.params = Object.assign(track.params, this.readVPS(unit.data));
             this.initVPS = unit.data;
           }
+          if (track.vps && !this.prevVPS) {
+            // The SPS that follows may reset the config; hold the outgoing VPS
+            // aside so that the boundary snapshot can keep it. Only the first
+            // VPS of the access unit takes this path so that repeated VPS NALs
+            // do not replace the outgoing config's VPS with an incoming one
+            this.prevVPS = track.vps;
+          }
           track.vps = [unit.data];
           break;
 
@@ -138,6 +146,28 @@ class HevcVideoParser extends BaseVideoParser {
             track.sps !== undefined &&
             !this.matchSPS(track.sps[0], unit.data)
           ) {
+            if (track.samples.length) {
+              // In-band config change with samples pending: record the boundary
+              // so that the transmuxer can remux the preceding samples under the
+              // config they were encoded with (track.params is mutated in place
+              // by readSPS/readPPS, so the snapshot needs a copy). If a VPS
+              // arrived earlier in this access unit, prevVPS holds the outgoing
+              // config's VPS; otherwise track.vps still is the outgoing VPS
+              (track.configSwitches ||= []).push({
+                sampleIndex: track.samples.length,
+                prev: {
+                  sps: track.sps,
+                  pps: track.pps,
+                  vps: this.prevVPS || track.vps,
+                  width: track.width,
+                  height: track.height,
+                  pixelRatio: track.pixelRatio,
+                  codec: track.codec,
+                  params: track.params ? { ...track.params } : undefined,
+                },
+              });
+            }
+            this.prevVPS = null;
             this.initVPS = track.vps[0];
             track.sps = track.pps = undefined;
           }
@@ -291,6 +321,7 @@ class HevcVideoParser extends BaseVideoParser {
     videoTrack: DemuxedVideoTrack,
   ) {
     super.pushAccessUnit(VideoSample, videoTrack);
+    this.prevVPS = null;
     if (this.initVPS) {
       this.initVPS = null; // null initVPS to prevent possible track's sps/pps growth until next VPS
     }

@@ -51,7 +51,64 @@ export function getAudioConfig(
   }
   // MPEG-4 Audio Object Type (profile_ObjectType+1)
   const adtsObjectType = ((byte2 >> 6) & 0x3) + 1;
-  const channelCount = ((data[offset + 3] >> 6) & 0x3) | ((byte2 & 1) << 2);
+  let channelCount = ((data[offset + 3] >> 6) & 0x3) | ((byte2 & 1) << 2);
+  // The channel_configuration in ADTS headers is not always accurate: some
+  // encoders write stereo headers around mono frames (or the reverse). TS
+  // decoders probe the frames and cope, but once the header value is copied
+  // into the esds, strict MSE decoders configure the wrong channel layout and
+  // render silence (Safari, #3179). Trust the frame's first channel element
+  // (SCE 0b000 mono, CPE 0b001 stereo) over the header when they disagree,
+  // skipping any fill elements that precede it.
+  const payloadStart = offset + getHeaderLength(data, offset);
+  const frameLength = getFullFrameLength(data, offset);
+  const frameEnd =
+    frameLength > payloadStart - offset
+      ? Math.min(data.length, offset + frameLength)
+      : data.length;
+  if (payloadStart < frameEnd) {
+    const endBit = frameEnd * 8;
+    const readBits = (position: number, count: number): number => {
+      let value = 0;
+      for (let i = 0; i < count; i++, position++) {
+        value =
+          (value << 1) | ((data[position >> 3] >> (7 - (position & 7))) & 1);
+      }
+      return value;
+    };
+    let bitPos = payloadStart * 8;
+    let elementId = readBits(bitPos, 3);
+    bitPos += 3;
+    // A fill element is a 3 bit id and 4 bit count (an escaped count adds 8
+    // bits), followed by count bytes of payload; elements after it are not
+    // byte aligned
+    let guard = 8;
+    while (elementId === 6 && guard-- > 0 && bitPos + 4 <= endBit) {
+      let count = readBits(bitPos, 4);
+      bitPos += 4;
+      if (count === 15) {
+        count += readBits(bitPos, 8) - 1;
+        bitPos += 8;
+      }
+      bitPos += count * 8;
+      if (bitPos + 3 > endBit) {
+        elementId = -1;
+        break;
+      }
+      elementId = readBits(bitPos, 3);
+      bitPos += 3;
+    }
+    if (channelCount === 2 && elementId === 0) {
+      channelCount = 1;
+      logger.warn(
+        'ADTS header declares stereo but frames begin with a single channel element; treating as mono',
+      );
+    } else if (channelCount === 1 && elementId === 1) {
+      channelCount = 2;
+      logger.warn(
+        'ADTS header declares mono but frames begin with a channel pair element; treating as stereo',
+      );
+    }
+  }
   /* refer to http://wiki.multimedia.cx/index.php?title=MPEG-4_Audio#Audio_Specific_Config
       ISO/IEC 14496-3 - Table 1.13 — Syntax of AudioSpecificConfig()
     Audio Profile / Audio Object Type
