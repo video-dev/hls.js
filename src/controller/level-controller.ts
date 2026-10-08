@@ -10,7 +10,10 @@ import {
   getCodecCompatibleName,
   videoCodecPreferenceValue,
 } from '../utils/codecs';
-import { reassignFragmentLevelIndexes } from '../utils/level-helper';
+import {
+  clearExpiredPlaylistDetails,
+  reassignFragmentLevelIndexes,
+} from '../utils/level-helper';
 import { getUnsupportedResult } from '../utils/mediacapabilities-helper';
 import { stringify } from '../utils/safe-json-stringify';
 import type ContentSteeringController from './content-steering-controller';
@@ -631,6 +634,7 @@ export default class LevelController extends BasePlaylistController {
       }
 
       this.playlistLoaded(level, data, previousDetails);
+      clearExpiredPlaylistDetails(this._levels, this.currentLevel, this);
     } else if (data.deliveryDirectives?.skip) {
       // received a delta playlist update that cannot be merged
       details.deltaUpdateFailed = true;

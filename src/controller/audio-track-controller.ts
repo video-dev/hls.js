@@ -2,6 +2,7 @@ import BasePlaylistController from './base-playlist-controller';
 import { ErrorDetails, ErrorTypes } from '../errors';
 import { Events } from '../events';
 import { LoaderContextType } from '../types/loader';
+import { clearExpiredPlaylistDetails } from '../utils/level-helper';
 import { mediaAttributesIdentical } from '../utils/media-option-attributes';
 import {
   audioMatchPredicate,
@@ -108,6 +109,8 @@ class AudioTrackController extends BasePlaylistController {
 
     if (id === this.trackId) {
       this.playlistLoaded(id, data, curDetails);
+
+      clearExpiredPlaylistDetails(this.tracks, this.currentTrack, this);
     }
   }
 
