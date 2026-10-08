@@ -1349,6 +1349,28 @@ Rollover38803/20160525T064049-01-69844069.ts
     expect(result.fragments[2].programDateTime).to.equal(1464366904000);
   });
 
+  it('parses #EXT-X-PROGRAM-DATE-TIME without a time zone as UTC', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:2
+#EXT-X-TARGETDURATION:10
+#EXT-X-MEDIA-SEQUENCE:69844067
+#EXTINF:10, no desc
+#EXT-X-PROGRAM-DATE-TIME:2016-05-27T16:34:44.000
+Rollover38803/20160525T064049-01-69844067.ts
+    `;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://video.example.com/disc.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+    expect(result.playlistParsingError).to.be.null;
+    expect(result.hasProgramDateTime).to.be.true;
+    expect(result.fragments[0].programDateTime).to.equal(1464366884000);
+  });
+
   it('parses delta playlists with one #EXT-X-PROGRAM-DATE-TIME after segments', function () {
     const level = `#EXTM3U
 #EXT-X-TARGETDURATION:6
