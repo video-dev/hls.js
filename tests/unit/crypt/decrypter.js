@@ -73,6 +73,56 @@ describe('Decrypter', function () {
     );
     expect(new Uint8Array(decrypted)).to.deep.equal(data.expected);
   });
+
+  it('decrypts an aes-128-cbc segment loaded in uneven chunks (progressive)', async function () {
+    const plain = new Uint8Array(1000);
+    for (let i = 0; i < plain.length; i++) {
+      plain[i] = (i * 7 + 3) & 0xff;
+    }
+    const key = new Uint8Array(16).map((_, i) => i + 1);
+    const iv = new Uint8Array(16).map((_, i) => 0xa0 + i);
+    const cryptoKey = await self.crypto.subtle.importKey(
+      'raw',
+      key,
+      { name: 'AES-CBC' },
+      false,
+      ['encrypt'],
+    );
+    const encrypted = new Uint8Array(
+      await self.crypto.subtle.encrypt(
+        { name: 'AES-CBC', iv },
+        cryptoKey,
+        plain,
+      ),
+    );
+
+    const decrypter = new Decrypter({ enableSoftwareAES: true });
+    const out = [];
+    // Uneven chunk sizes, as a network delivers them, repeated until all
+    // of the encrypted segment has been fed in.
+    const sizes = [100, 333, 17, 250];
+    let start = 0;
+    for (let i = 0; start < encrypted.length; i++) {
+      const size = sizes[i % sizes.length];
+      const chunk = encrypted.slice(start, start + size);
+      start += size;
+      const result = decrypter.decryptProgressive(chunk, key.buffer, iv.buffer);
+      if (result) {
+        out.push(new Uint8Array(result));
+      }
+    }
+    out.push(decrypter.flush());
+
+    const decrypted = new Uint8Array(
+      out.reduce((total, part) => total + part.length, 0),
+    );
+    let offset = 0;
+    out.forEach((part) => {
+      decrypted.set(part, offset);
+      offset += part.length;
+    });
+    expect(decrypted).to.deep.equal(plain);
+  });
 });
 
 function get128cbcData() {
