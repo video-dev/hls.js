@@ -33,6 +33,10 @@ type EMEControllerTestable = Omit<EMEController, 'hls' | 'mediaKeySessions'> & {
     data: MediaAttachedData,
   ) => void;
   onMediaDetached: () => void;
+  attemptSetMediaKeys: (
+    keySystem: KeySystems,
+    mediaKeys: MediaKeys,
+  ) => Promise<void>;
   onManifestLoaded: (
     event: Events.MANIFEST_LOADED,
     data: { sessionKeys: LevelKey[] },
@@ -177,6 +181,9 @@ const getEncryptedFrag = (levelKey: LevelKey) => {
   encryptedFrag.setKeyFormat(levelKey.keyFormat as KeySystemFormats);
   return encryptedFrag as EncryptedFragment;
 };
+
+const drain = () =>
+  new Promise<void>((resolve) => self.setTimeout(() => resolve(), 0));
 
 describe('EMEController', function () {
   beforeEach(function () {
@@ -874,9 +881,6 @@ describe('EMEController', function () {
       }
     }
 
-    const drain = () =>
-      new Promise<void>((resolve) => self.setTimeout(() => resolve(), 0));
-
     const buildKsAccessSpy = (sessions: DeferredMediaKeySessionMock[]) => {
       const createSessionSpy = sinon.spy(() => {
         const session = new DeferredMediaKeySessionMock();
@@ -1030,6 +1034,59 @@ describe('EMEController', function () {
           expect(createSessionSpy.callCount).to.be.at.least(2);
           expect(emeController.mediaKeySessions.length).to.equal(1);
         });
+    });
+  });
+
+  describe('setting MediaKeys while media is detached', function () {
+    it('sets MediaKeys on attach when the same MediaKeys are requested again while waiting', function () {
+      setupEach({ emeEnabled: true });
+      const mediaKeys = new MediaKeysMock();
+      const first = emeController.attemptSetMediaKeys(
+        KeySystems.FAIRPLAY,
+        mediaKeys,
+      );
+
+      return drain().then(() => {
+        // e.g. a second key load while an interstitial has the media element
+        const second = emeController.attemptSetMediaKeys(
+          KeySystems.FAIRPLAY,
+          mediaKeys,
+        );
+        expect(media.setMediaKeys).callCount(0);
+        emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+          media: media as any as HTMLMediaElement,
+        });
+        expect(media.setMediaKeys).callCount(1);
+        expect(media.setMediaKeys).calledWith(mediaKeys);
+        return Promise.all([first, second]);
+      });
+    });
+
+    it('sets queued MediaKeys in order on attach when different MediaKeys are requested while waiting', function () {
+      setupEach({ emeEnabled: true });
+      const mediaKeysA = new MediaKeysMock();
+      const mediaKeysB = new MediaKeysMock();
+      const first = emeController.attemptSetMediaKeys(
+        KeySystems.FAIRPLAY,
+        mediaKeysA,
+      );
+
+      return drain().then(() => {
+        const second = emeController.attemptSetMediaKeys(
+          KeySystems.FAIRPLAY,
+          mediaKeysB,
+        );
+        expect(media.setMediaKeys).callCount(0);
+        emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+          media: media as any as HTMLMediaElement,
+        });
+        expect(media.setMediaKeys).callCount(1);
+        expect(media.setMediaKeys).calledWith(mediaKeysA);
+        return Promise.all([first, second]).then(() => {
+          expect(media.setMediaKeys).callCount(2);
+          expect(media.setMediaKeys.secondCall).calledWith(mediaKeysB);
+        });
+      });
     });
   });
 });
