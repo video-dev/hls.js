@@ -850,6 +850,9 @@ class AudioStreamController
           this.fragmentTracker.addAsGap(data.frag as MediaFragment);
         }
         break;
+      case ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET:
+        this.onSourceBufferError(PlaylistLevelType.AUDIO, data);
+        break;
       case ErrorDetails.BUFFER_ADD_CODEC_ERROR:
       case ErrorDetails.BUFFER_APPEND_ERROR:
         if (data.parent !== 'audio') {
