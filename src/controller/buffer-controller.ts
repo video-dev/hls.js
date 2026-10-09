@@ -1056,9 +1056,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           }
           const readyState = this.mediaSource?.readyState;
           if (
-            readyState === 'ended' ||
-            readyState === 'closed' ||
-            !!mediaError
+            (readyState === 'ended' ||
+              readyState === 'closed' ||
+              !!mediaError) &&
+            // Do not reset over a source that a third party set on the media element (see `_onMediaSourceClose`)
+            !this.mediaSrcChangedByThirdParty
           ) {
             // "ended" readyState on cold start https://bugs.webkit.org/show_bug.cgi?id=305712
             this.warn(
@@ -1978,6 +1980,14 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     // When the user navigates back, the MediaSource is in a 'closed' state and cannot be used.
     // If sourceclose fires while media is still attached, trigger recovery to reattach media.
     if (this.media) {
+      if (this.mediaSrcChangedByThirdParty) {
+        // The `MediaSource` closed because the media element's source was replaced (e.g. an `Ad` SDK
+        // playing in the content element). Re-attaching would overwrite the third party's source.
+        this.warn(
+          `MediaSource closed after media|source.src was changed by a third party (${this._objectUrl} > ${this.mediaSrc}) - skipping reset`,
+        );
+        return;
+      }
       const mediaError = this.media.error;
       const { appendError, appendErrors } = this;
       let fatal = false;
@@ -2028,8 +2038,23 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   };
 
   private get mediaSrc(): string | undefined {
-    const media = (this.media?.querySelector as any)?.('source') || this.media;
-    return media?.src;
+    const media = this.media;
+    if (!media) {
+      return undefined;
+    }
+    // A `src` attribute takes precedence over <source> children (`HTML` resource selection), so a
+    // third party setting `media.src` wins over the <source> appended for `ManagedMediaSource`.
+    const source = media.src
+      ? media
+      : (media.querySelector as any)?.('source') || media;
+    return source.src;
+  }
+
+  // The media element's source was replaced while attached (e.g. by an `Ad` SDK playing in the content
+  // element). Some external libraries hijack the video tag without destroying the `Hls` instance first.
+  private get mediaSrcChangedByThirdParty(): boolean {
+    const { _objectUrl, mediaSrc } = this;
+    return !!_objectUrl && !!mediaSrc && mediaSrc !== _objectUrl;
   }
 
   private onSBUpdateStart(type: SourceBufferName) {

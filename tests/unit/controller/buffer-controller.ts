@@ -58,6 +58,7 @@ type BufferControllerTestable = Omit<
   tracks: SourceBufferTrackSet;
   tracksReady: boolean;
   _onMediaSourceClose: () => void;
+  _objectUrl: string | null;
 };
 
 describe('BufferController', function () {
@@ -609,6 +610,57 @@ describe('BufferController', function () {
       bufferController.mediaSource = mediaSource;
       bufferController._onMediaSourceClose();
       expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
+    });
+
+    it('emits error when `sourceclose` fires with media src still set to the `MediaSource` object URL', function () {
+      const media = new MockMediaElement() as unknown as HTMLMediaElement;
+      const mediaSource = new MockMediaSource() as unknown as MediaSource;
+      const triggerSpy = sandbox.spy(hls, 'trigger');
+      bufferController.media = media;
+      bufferController.mediaSource = mediaSource;
+      bufferController._objectUrl = 'blob:https://example.com/hls';
+      media.src = 'blob:https://example.com/hls';
+      bufferController._onMediaSourceClose();
+      expect(triggerSpy).to.have.been.calledWith(
+        Events.ERROR,
+        sinon.match({ details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET }),
+      );
+    });
+
+    it('does not emit error when `sourceclose` follows a third party replacing media `src` (e.g. `Ad` SDK)', function () {
+      const media = new MockMediaElement() as unknown as HTMLMediaElement;
+      const mediaSource = new MockMediaSource() as unknown as MediaSource;
+      const triggerSpy = sandbox.spy(hls, 'trigger');
+      bufferController.media = media;
+      bufferController.mediaSource = mediaSource;
+      bufferController._objectUrl = 'blob:https://example.com/hls';
+      // Setting src on an element attached to a MediaSource detaches it and fires "sourceclose"
+      media.src = 'https://example.com/ad.mp4';
+      bufferController._onMediaSourceClose();
+      expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
+    });
+
+    it('prefers the src attribute over a <source> child when checking for a third party src change', function () {
+      // ManagedMediaSource is attached through a <source> child. A third party setting `src` on the
+      // element takes precedence over <source> children in HTML resource selection.
+      const media = new MockMediaElement() as unknown as HTMLMediaElement;
+      const mediaSource = new MockMediaSource() as unknown as MediaSource;
+      const triggerSpy = sandbox.spy(hls, 'trigger');
+      (media as any).querySelector = (selector: string) =>
+        selector === 'source' ? { src: 'blob:https://example.com/hls' } : null;
+      bufferController.media = media;
+      bufferController.mediaSource = mediaSource;
+      bufferController._objectUrl = 'blob:https://example.com/hls';
+      // Without a src attribute the <source> child is the active source: reset as usual
+      bufferController._onMediaSourceClose();
+      expect(triggerSpy).to.have.been.calledOnceWith(
+        Events.ERROR,
+        sinon.match({ details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET }),
+      );
+      // With a third party src attribute the <source> child is ignored: do not reset
+      media.src = 'https://example.com/ad.mp4';
+      bufferController._onMediaSourceClose();
+      expect(triggerSpy).to.have.been.calledOnce;
     });
   });
 });
