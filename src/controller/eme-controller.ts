@@ -952,7 +952,6 @@ class EMEController extends Logger implements ComponentAPI {
     keySystem: KeySystems,
     mediaKeys: MediaKeys,
   ): Promise<void> {
-    this.mediaResolved = undefined;
     if (this.mediaKeys === mediaKeys) {
       return Promise.resolve();
     }
