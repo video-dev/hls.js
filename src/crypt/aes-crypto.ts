@@ -29,6 +29,16 @@ export default class AESCrypto {
           key,
           data,
         );
+      case DecrypterAesMode.gcm:
+        return this.subtle.decrypt(
+          {
+            name: 'AES-GCM',
+            iv: this.aesIV,
+            tagLength: 128,
+          },
+          key,
+          data,
+        );
       default:
         throw new Error(`[AESCrypto] invalid aes mode ${this.aesMode}`);
     }
