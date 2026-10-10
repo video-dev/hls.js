@@ -49,7 +49,7 @@ export class TimelineController implements ComponentAPI {
   private Cues: CuesInterface;
   private tracks: Array<MediaPlaylist> = [];
   private initPTS: TimestampOffset[] = [];
-  private unparsedVttFrags: Array<FragLoadedData | FragDecryptedData> = [];
+  private unparsedFrags: Array<FragLoadedData | FragDecryptedData> = [];
   private captionsTracks: Record<string, HTMLTrackElement> = {};
   private cueCache: Record<string, VTTCue[]> = {};
   private nonNativeCaptionsTracks: Record<string, NonNativeTextTrack> = {};
@@ -194,16 +194,16 @@ export class TimelineController implements ComponentAPI {
     event: Events.INIT_PTS_FOUND,
     { id, timestampOffsets }: InitPTSFoundData,
   ) {
-    const { unparsedVttFrags } = this;
+    const { unparsedFrags } = this;
     if (id === PlaylistLevelType.MAIN) {
       this.initPTS = timestampOffsets;
     }
 
     // Due to asynchronous processing, initial PTS may arrive later than the first VTT fragments are loaded.
     // Parse any unparsed fragments upon receiving the initial PTS.
-    if (unparsedVttFrags.length) {
-      this.unparsedVttFrags = [];
-      unparsedVttFrags.forEach((data) => {
+    if (unparsedFrags.length) {
+      this.unparsedFrags = [];
+      unparsedFrags.forEach((data) => {
         if (this.initPTS[data.frag.cc]) {
           this.onFragLoaded(Events.FRAG_LOADED, data as FragLoadedData);
         } else {
@@ -307,7 +307,7 @@ export class TimelineController implements ComponentAPI {
     this.tracks = [];
     this.captionsTracks = {};
     this.nonNativeCaptionsTracks = {};
-    this.unparsedVttFrags = [];
+    this.unparsedFrags = [];
     this.initPTS = [];
     if (this.cea608Parser1 && this.cea608Parser2) {
       this.cea608Parser1.reset();
@@ -447,6 +447,10 @@ export class TimelineController implements ComponentAPI {
   private _parseIMSC1(data: FragDecryptedData | FragLoadedData) {
     const { frag, payload } = data;
     const part = 'part' in data ? data.part : null;
+    if (!this.initPTS[frag.cc]) {
+      this.unparsedFrags.push(data);
+      return;
+    }
     const hls = this.hls;
     parseIMSC1(
       payload,
@@ -477,10 +481,10 @@ export class TimelineController implements ComponentAPI {
     const { frag, payload } = data;
     const part = 'part' in data ? data.part : null;
     // We need an initial synchronisation PTS. Store fragments as long as none has arrived
-    const { initPTS, unparsedVttFrags } = this;
+    const { initPTS, unparsedFrags } = this;
     const maxAvCC = initPTS.length - 1;
     if (!initPTS[frag.cc] && maxAvCC === -1) {
-      unparsedVttFrags.push(data);
+      unparsedFrags.push(data);
       return;
     }
 
@@ -510,7 +514,7 @@ export class TimelineController implements ComponentAPI {
           `${missingInitPTS ? 'Deferred parsing of' : 'Cannot parse'} VTT cue (sn: ${frag.sn} @${frag.start}): ${error}`,
         );
         if (missingInitPTS) {
-          unparsedVttFrags.push(data);
+          unparsedFrags.push(data);
           return;
         } else if (this.config.enableIMSC1) {
           this._fallbackToIMSC1(data);
