@@ -78,6 +78,20 @@ describe('SubtitleStreamController', function () {
     });
   });
 
+  describe('onMediaDetaching', function () {
+    beforeEach(function () {
+      hls.trigger(Events.SUBTITLE_TRACKS_UPDATED, {
+        subtitleTracks: tracksMock,
+      });
+      subtitleStreamController.tracksBuffered[0].push({ start: 0, end: 10 });
+    });
+
+    it('should reset buffered ranges for each track', function () {
+      subtitleStreamController.onMediaDetaching(Events.MEDIA_DETACHING, {});
+      expect(subtitleStreamController.tracksBuffered).to.deep.equal([[], []]);
+    });
+  });
+
   describe('onSubtitleTrackSwitch', function () {
     beforeEach(function () {
       subtitleStreamController.levels = tracksMock;
