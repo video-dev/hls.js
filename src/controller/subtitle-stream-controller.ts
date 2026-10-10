@@ -117,6 +117,9 @@ export class SubtitleStreamController
     data: MediaDetachingData,
   ) {
     this.tracksBuffered = [];
+    this.levels?.forEach((level) => {
+      this.tracksBuffered[level.id] = [];
+    });
     super.onMediaDetaching(event, data);
   }
 
