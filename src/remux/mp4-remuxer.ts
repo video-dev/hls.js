@@ -485,8 +485,14 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           (timeOffset === 0 && videoInitPTS < _initPTS.baseTime)
         ) {
           initDTS = Math.min(initDTS as number, videoInitDTS);
-          // Bind initPTS to the lowest DTS across tracks to prevent negative timestamps
-          initPTS = Math.min(initPTS as number, videoInitDTS);
+          // Bind initPTS to the lowest DTS across tracks to prevent negative timestamps (#7932).
+          // When continuing contiguous content (a discontinuity), timeOffset is the previous
+          // fragment's presentation end, so bind to the first PTS instead: anchoring the first
+          // DTS there presents the new sequence one composition offset late, and that shift
+          // repeats at every discontinuity (#8064).
+          const videoInit =
+            !_initPTS && this.isVideoContiguous ? videoInitPTS : videoInitDTS;
+          initPTS = Math.min(initPTS as number, videoInit);
         }
       }
       this.videoTrackConfig = {
