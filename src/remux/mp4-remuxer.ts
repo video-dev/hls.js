@@ -77,6 +77,9 @@ export default class MP4Remuxer extends Logger implements Remuxer {
   private _initDTS: TimestampOffset | null = null;
   private nextVideoTs: number | null = null;
   private nextAudioTs: number | null = null;
+  // the fragment being remuxed directly follows the last one (on any level), so a new
+  // timestamp offset computed for it starts where the previous fragment's presentation ended
+  private isConsecutive: boolean = false;
   private videoSampleDuration: number | null = null;
   private isAudioContiguous: boolean = false;
   private isVideoContiguous: boolean = false;
@@ -104,7 +107,10 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     this.config = this.videoTrackConfig = this._initPTS = this._initDTS = null;
   }
 
-  resetTimeStamp(defaultTimeStamp: TimestampOffset | null) {
+  resetTimeStamp(
+    defaultTimeStamp: TimestampOffset | null,
+    consecutive: boolean = false,
+  ) {
     const initPTS = this._initPTS;
     if (
       !initPTS ||
@@ -115,10 +121,11 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       defaultTimeStamp.timescale !== initPTS.timescale
     ) {
       this.log(
-        `Reset initPTS: ${initPTS ? timestampToString(initPTS) : initPTS} > ${defaultTimeStamp ? timestampToString(defaultTimeStamp) : defaultTimeStamp}`,
+        `Reset initPTS: ${initPTS ? timestampToString(initPTS) : initPTS} > ${defaultTimeStamp ? timestampToString(defaultTimeStamp) : defaultTimeStamp} consecutive: ${consecutive}`,
       );
     }
 
+    this.isConsecutive = consecutive;
     this._initPTS = this._initDTS = defaultTimeStamp;
   }
 
@@ -486,12 +493,13 @@ export default class MP4Remuxer extends Logger implements Remuxer {
         ) {
           initDTS = Math.min(initDTS as number, videoInitDTS);
           // Bind initPTS to the lowest DTS across tracks to prevent negative timestamps (#7932).
-          // When continuing contiguous content (a discontinuity), timeOffset is the previous
-          // fragment's presentation end, so bind to the first PTS instead: anchoring the first
-          // DTS there presents the new sequence one composition offset late, and that shift
-          // repeats at every discontinuity (#8064).
+          // When the fragment directly follows the last one (a discontinuity reached in
+          // sequence, with or without a level switch), timeOffset is the previous fragment's
+          // presentation end, so bind to the first PTS instead: anchoring the first DTS there
+          // presents the new sequence one composition offset late, and that shift repeats at
+          // every discontinuity (#8064).
           const videoInit =
-            !_initPTS && this.isVideoContiguous ? videoInitPTS : videoInitDTS;
+            !_initPTS && this.isConsecutive ? videoInitPTS : videoInitDTS;
           initPTS = Math.min(initPTS as number, videoInit);
         }
       }

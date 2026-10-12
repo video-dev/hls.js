@@ -106,6 +106,7 @@ export default class Transmuxer {
 
     const {
       contiguous,
+      consecutive,
       discontinuity,
       trackSwitch,
       accurateTimeOffset,
@@ -181,7 +182,7 @@ export default class Transmuxer {
     }
 
     if (discontinuity || initSegmentChange || resetMuxers) {
-      this.resetInitialTimestamp(defaultInitPts);
+      this.resetInitialTimestamp(defaultInitPts, consecutive);
     }
 
     if (!contiguous) {
@@ -200,6 +201,7 @@ export default class Transmuxer {
     const currentState = this.currentTransmuxState;
 
     currentState.contiguous = true;
+    currentState.consecutive = true;
     currentState.discontinuity = false;
     currentState.trackSwitch = false;
 
@@ -304,13 +306,16 @@ export default class Transmuxer {
     chunkMeta.transmuxing.executeEnd = now();
   }
 
-  resetInitialTimestamp(defaultInitPts: TimestampOffset | null) {
+  resetInitialTimestamp(
+    defaultInitPts: TimestampOffset | null,
+    consecutive: boolean = false,
+  ) {
     const { demuxer, remuxer } = this;
     if (!demuxer || !remuxer) {
       return;
     }
     demuxer.resetTimeStamp(defaultInitPts);
-    remuxer.resetTimeStamp(defaultInitPts);
+    remuxer.resetTimeStamp(defaultInitPts, consecutive);
   }
 
   resetContiguity() {
@@ -570,6 +575,9 @@ export class TransmuxState {
   public trackSwitch: boolean;
   public timeOffset: number;
   public initSegmentChange: boolean;
+  // the fragment or part directly follows the last one pushed, on any level
+  // (contiguous implies consecutive; a level switch is consecutive but not contiguous)
+  public consecutive: boolean;
 
   constructor(
     discontinuity: boolean,
@@ -578,6 +586,7 @@ export class TransmuxState {
     trackSwitch: boolean,
     timeOffset: number,
     initSegmentChange: boolean,
+    consecutive: boolean = contiguous,
   ) {
     this.discontinuity = discontinuity;
     this.contiguous = contiguous;
@@ -585,5 +594,6 @@ export class TransmuxState {
     this.trackSwitch = trackSwitch;
     this.timeOffset = timeOffset;
     this.initSegmentChange = initSegmentChange;
+    this.consecutive = consecutive;
   }
 }

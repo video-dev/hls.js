@@ -174,9 +174,9 @@ describe('mp4-remuxer', function () {
         { dts: 118800, cts: 7200, audioOffset: 7200 },
       ];
       sequences.forEach(({ dts, cts, audioOffset }, i) => {
-        // discontinuity with consecutive sn: the transmuxer resets the init segment and the timestamp offset, but not contiguity
+        // discontinuity with consecutive sn on the same level: the transmuxer resets the init segment and the timestamp offset (consecutive), but not contiguity
         mp4Remuxer.resetInitSegment();
-        mp4Remuxer.resetTimeStamp(null);
+        mp4Remuxer.resetTimeStamp(null, true);
         result = remuxFragment(
           mp4Remuxer,
           i + 1,
@@ -191,6 +191,40 @@ describe('mp4-remuxer', function () {
         );
         timeOffset = Math.max(result.video!.endPTS, result.audio!.endPTS);
       });
+    });
+
+    it('does not shift the timeline at a discontinuity reached with a level switch (consecutive but not contiguous)', function () {
+      let result = remuxFragment(
+        mp4Remuxer,
+        0,
+        makeVideoTrack(900000, 3600, frames),
+        makeAudioTrack(900000 + 8951, 185),
+        0,
+      );
+      const timeOffset = Math.max(result.video!.endPTS, result.audio!.endPTS);
+      // level switch at the discontinuity: the transmuxer resets the init segment, the timestamp
+      // offset (still consecutive) and contiguity
+      mp4Remuxer.resetInitSegment();
+      mp4Remuxer.resetTimeStamp(null, true);
+      mp4Remuxer.resetNextTimestamp();
+      // timestamps above the playlist time, so computeInitPts needs no 33-bit rollover adjustment
+      const dts = 9000000;
+      const cts = 7200;
+      result = remuxFragment(
+        mp4Remuxer,
+        1,
+        makeVideoTrack(dts, cts, frames),
+        makeAudioTrack(dts + 9119, 185),
+        timeOffset,
+      );
+      // anchored on the first PTS: the sequence starts at timeOffset and ends one fragment later
+      expect(result.initSegment?.initPTS).to.equal(
+        dts + cts - Math.round(timeOffset * 90000),
+      );
+      expect(result.video!.endPTS).to.be.closeTo(
+        timeOffset + fragmentDuration,
+        0.001,
+      );
     });
   });
 });

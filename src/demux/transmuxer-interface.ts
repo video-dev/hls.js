@@ -210,10 +210,12 @@ export default class TransmuxerInterface {
       snDiff === 0 &&
       chunkMeta.id > 1 &&
       chunkMeta.id === lastFrag?.stats.chunkCount;
-    const contiguous =
-      !trackSwitch &&
-      (snDiff === 1 ||
-        (snDiff === 0 && (partDiff === 1 || (progressive && partDiff <= 0))));
+    // consecutive: this fragment or part directly follows the last one pushed, on any level
+    // contiguous: consecutive and from the same level, so samples can be stitched together
+    const consecutive =
+      snDiff === 1 ||
+      (snDiff === 0 && (partDiff === 1 || (progressive && partDiff <= 0)));
+    const contiguous = !trackSwitch && consecutive;
     const now = self.performance.now();
 
     if (trackSwitch || snDiff || frag.stats.parsing.start === 0) {
@@ -232,6 +234,7 @@ export default class TransmuxerInterface {
       trackSwitch,
       timeOffset,
       initSegmentChange,
+      consecutive,
     );
     if (!contiguous || discontinuity || initSegmentChange) {
       this.hls.logger
@@ -241,6 +244,7 @@ export default class TransmuxerInterface {
         discontinuity: ${discontinuity}
         trackSwitch: ${trackSwitch}
         contiguous: ${contiguous}
+        consecutive: ${consecutive}
         accurateTimeOffset: ${accurateTimeOffset}
         timeOffset: ${timeOffset}
         initSegmentChange: ${initSegmentChange}`);
