@@ -4,9 +4,10 @@ import sinonChai from 'sinon-chai';
 import { TransmuxConfig, TransmuxState } from '../../../src/demux/transmuxer';
 import TransmuxerInterface from '../../../src/demux/transmuxer-interface';
 import Hls from '../../../src/hls';
-import { Fragment } from '../../../src/loader/fragment';
+import { Fragment, Part } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
+import { AttrList } from '../../../src/utils/attr-list';
 import type Transmuxer from '../../../src/demux/transmuxer';
 import type { MediaFragment } from '../../../src/loader/fragment';
 import type { TransmuxerResult } from '../../../src/types/transmuxer';
@@ -429,6 +430,127 @@ describe('TransmuxerInterface tests', function () {
       chunkMeta,
       state,
     );
+  });
+
+  it('flags a level switch at a discontinuity as consecutive when the first part of the new fragment starts at the previous part end', function () {
+    const config = { enableWorker: false };
+    hls = new Hls(config);
+    sinon.stub(hls, 'trigger');
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      PlaylistLevelType.MAIN,
+      onTransmuxComplete,
+      onFlush,
+    );
+    const transmuxerInterfacePrivates = transmuxerInterface as any;
+
+    // last part of the last fragment of the previous discontinuity sequence
+    const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    currentFrag.cc = 100;
+    currentFrag.sn = 5;
+    currentFrag.level = 0;
+    currentFrag.start = 990;
+    currentFrag.duration = 10;
+    const partAttrs = new AttrList('DURATION=2');
+    let currentPart = new Part(partAttrs, currentFrag as MediaFragment, '', 0);
+    for (let index = 1; index < 5; index++) {
+      currentPart = new Part(
+        partAttrs,
+        currentFrag as MediaFragment,
+        '',
+        index,
+        currentPart,
+      );
+    }
+    expect(currentPart.end).to.equal(1000);
+    transmuxerInterfacePrivates.frag = currentFrag;
+    transmuxerInterfacePrivates.part = currentPart;
+
+    // first part of the first fragment of the next sequence, on a level with its own sequence-number base
+    const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    newFrag.cc = 101;
+    newFrag.sn = 106;
+    newFrag.level = 1;
+    newFrag.start = 1000;
+    const newPart = new Part(partAttrs, newFrag as MediaFragment, '', 0);
+    const chunkMeta = new ChunkMetadata(
+      newFrag.level,
+      newFrag.sn,
+      0,
+      0,
+      newPart.index,
+    );
+
+    sinon.stub(transmuxerInterfacePrivates.transmuxer, 'configure');
+    const pushStub = sinon.stub(transmuxerInterfacePrivates.transmuxer, 'push');
+    pushStub.returns(Promise.reject(new Error('Stubbed transmux result')));
+    transmuxerInterface.push(
+      new ArrayBuffer(8),
+      new Uint8Array(0),
+      '',
+      '',
+      newFrag as MediaFragment,
+      newPart,
+      0,
+      true,
+      chunkMeta,
+    );
+
+    expect(pushStub).to.have.been.calledOnce;
+    const state = pushStub.firstCall.args[3] as TransmuxState;
+    expect(state).to.include({
+      discontinuity: true,
+      trackSwitch: true,
+      contiguous: false,
+      consecutive: true,
+      timeOffset: 1000,
+    });
+  });
+
+  it('does not flag the first fragment of a session as consecutive', function () {
+    const config = { enableWorker: false };
+    hls = new Hls(config);
+    sinon.stub(hls, 'trigger');
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      PlaylistLevelType.MAIN,
+      onTransmuxComplete,
+      onFlush,
+    );
+    const transmuxerInterfacePrivates = transmuxerInterface as any;
+
+    // nothing was pushed before: a start position in the middle of the playlist
+    const frag = new Fragment(PlaylistLevelType.MAIN, '');
+    frag.cc = 0;
+    frag.sn = 10;
+    frag.level = 2;
+    frag.start = 100;
+    const chunkMeta = new ChunkMetadata(frag.level, frag.sn, 0);
+
+    sinon.stub(transmuxerInterfacePrivates.transmuxer, 'configure');
+    const pushStub = sinon.stub(transmuxerInterfacePrivates.transmuxer, 'push');
+    pushStub.returns(Promise.reject(new Error('Stubbed transmux result')));
+    transmuxerInterface.push(
+      new ArrayBuffer(8),
+      new Uint8Array(0),
+      '',
+      '',
+      frag as MediaFragment,
+      null,
+      0,
+      true,
+      chunkMeta,
+    );
+
+    expect(pushStub).to.have.been.calledOnce;
+    const state = pushStub.firstCall.args[3] as TransmuxState;
+    expect(state).to.include({
+      discontinuity: true,
+      trackSwitch: true,
+      contiguous: false,
+      consecutive: false,
+      timeOffset: 100,
+    });
   });
 
   it('sends worker generic message', function () {
