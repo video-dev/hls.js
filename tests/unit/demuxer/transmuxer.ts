@@ -7,8 +7,10 @@ import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
+import type Transmuxer from '../../../src/demux/transmuxer';
 import type { MediaFragment } from '../../../src/loader/fragment';
 import type { TransmuxerResult } from '../../../src/types/transmuxer';
+import type { TimestampOffset } from '../../../src/utils/timescale-conversion';
 
 use(sinonChai);
 
@@ -510,5 +512,122 @@ describe('TransmuxerInterface tests', function () {
     const spy = sinon.spy(hls.logger, 'log');
     transmuxerInterfacePrivates.onWorkerMessage(evt);
     expect(spy).to.have.been.calledWith(evt.data.data.message);
+  });
+});
+
+describe('Transmuxer', function () {
+  let hls: Hls;
+
+  afterEach(function () {
+    sinon.restore();
+    if (hls) {
+      hls.destroy();
+    }
+  });
+
+  // A Transmuxer whose demuxer and remuxer are stubs, so push() can be driven through the
+  // discontinuity and track-switch branches without media data
+  function createTransmuxer(defaultInitPts?: TimestampOffset) {
+    hls = new Hls({ enableWorker: false });
+    sinon.stub(hls, 'trigger');
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      PlaylistLevelType.MAIN,
+      () => {},
+      () => {},
+    ) as any;
+    const transmuxer = transmuxerInterface.transmuxer as Transmuxer;
+    const demuxer = {
+      resetTimeStamp: sinon.stub(),
+      resetContiguity: sinon.stub(),
+      resetInitSegment: sinon.stub(),
+      destroy: sinon.stub(),
+    };
+    const remuxer = {
+      resetTimeStamp: sinon.stub(),
+      resetNextTimestamp: sinon.stub(),
+      resetInitSegment: sinon.stub(),
+      destroy: sinon.stub(),
+    };
+    const transmuxerPrivates = transmuxer as any;
+    transmuxerPrivates.demuxer = demuxer;
+    transmuxerPrivates.remuxer = remuxer;
+    sinon.stub(transmuxerPrivates, 'configureTransmuxer').returns(undefined);
+    sinon
+      .stub(transmuxerPrivates, 'transmux')
+      .callsFake(
+        (data, keyData, timeOffset, accurateTimeOffset, chunkMeta) => ({
+          remuxResult: {},
+          chunkMeta,
+        }),
+      );
+    transmuxer.configure(
+      new TransmuxConfig('', '', new Uint8Array(0), 0, defaultInitPts),
+    );
+    return { transmuxer, demuxer, remuxer };
+  }
+
+  function pushWithState(transmuxer: Transmuxer, state: TransmuxState) {
+    const chunkMeta = new ChunkMetadata(1, 6, 0);
+    const result = transmuxer.push(new ArrayBuffer(8), null, chunkMeta, state);
+    // the stubbed transmux result comes back synchronously
+    expect(result).to.have.property('chunkMeta', chunkMeta);
+  }
+
+  it('resets the remuxer timestamp as consecutive for a discontinuity reached in sequence on the same level', function () {
+    const { transmuxer, remuxer } = createTransmuxer();
+    // consecutive defaults to contiguous
+    pushWithState(
+      transmuxer,
+      new TransmuxState(true, true, true, false, 1000, false),
+    );
+    expect(remuxer.resetTimeStamp).to.have.been.calledOnce;
+    expect(remuxer.resetTimeStamp).to.have.been.calledWithExactly(null, true);
+    expect(remuxer.resetNextTimestamp).to.not.have.been.called;
+  });
+
+  it('resets the remuxer timestamp as consecutive for a discontinuity reached with a level switch', function () {
+    const { transmuxer, remuxer } = createTransmuxer();
+    pushWithState(
+      transmuxer,
+      new TransmuxState(true, false, true, true, 1000, false, true),
+    );
+    expect(remuxer.resetTimeStamp).to.have.been.calledOnce;
+    expect(remuxer.resetTimeStamp).to.have.been.calledWithExactly(null, true);
+    // samples from another level are not stitched to the previous fragment
+    expect(remuxer.resetNextTimestamp).to.have.been.calledOnce;
+  });
+
+  it('resets the remuxer timestamp as not consecutive for a discontinuity reached by a seek', function () {
+    const { transmuxer, remuxer } = createTransmuxer();
+    pushWithState(
+      transmuxer,
+      new TransmuxState(true, false, true, false, 1000, false, false),
+    );
+    expect(remuxer.resetTimeStamp).to.have.been.calledOnce;
+    expect(remuxer.resetTimeStamp).to.have.been.calledWithExactly(null, false);
+  });
+
+  it('forwards the cached offset of a discontinuity sequence with the consecutive flag', function () {
+    const defaultInitPts = { baseTime: 900000, timescale: 90000, trackId: 1 };
+    const { transmuxer, remuxer } = createTransmuxer(defaultInitPts);
+    pushWithState(
+      transmuxer,
+      new TransmuxState(true, false, true, false, 1000, false, false),
+    );
+    expect(remuxer.resetTimeStamp).to.have.been.calledOnce;
+    expect(remuxer.resetTimeStamp).to.have.been.calledWithExactly(
+      defaultInitPts,
+      false,
+    );
+  });
+
+  it('does not reset the remuxer timestamp for a contiguous push within a discontinuity sequence', function () {
+    const { transmuxer, remuxer } = createTransmuxer();
+    pushWithState(
+      transmuxer,
+      new TransmuxState(false, true, true, false, 1000, false),
+    );
+    expect(remuxer.resetTimeStamp).to.not.have.been.called;
   });
 });

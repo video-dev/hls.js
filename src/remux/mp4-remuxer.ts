@@ -78,7 +78,9 @@ export default class MP4Remuxer extends Logger implements Remuxer {
   private nextVideoTs: number | null = null;
   private nextAudioTs: number | null = null;
   // the fragment being remuxed directly follows the last one (on any level), so a new
-  // timestamp offset computed for it starts where the previous fragment's presentation ended
+  // timestamp offset computed for it starts where the previous fragment's presentation ended.
+  // Set from TransmuxState.consecutive (fragment sequencing); not the sample-timing heuristic
+  // remuxAudio uses to treat near-adjacent audio fragments as contiguous
   private isConsecutive: boolean = false;
   private videoSampleDuration: number | null = null;
   private isAudioContiguous: boolean = false;
