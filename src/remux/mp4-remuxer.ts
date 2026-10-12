@@ -77,10 +77,6 @@ export default class MP4Remuxer extends Logger implements Remuxer {
   private _initDTS: TimestampOffset | null = null;
   private nextVideoTs: number | null = null;
   private nextAudioTs: number | null = null;
-  // the fragment being remuxed directly follows the last one (on any level), so a new
-  // timestamp offset computed for it starts where the previous fragment's presentation ended.
-  // Set from TransmuxState.consecutive (fragment sequencing); not the sample-timing heuristic
-  // remuxAudio uses to treat near-adjacent audio fragments as contiguous
   private isConsecutive: boolean = false;
   private videoSampleDuration: number | null = null;
   private isAudioContiguous: boolean = false;
@@ -494,12 +490,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           (timeOffset === 0 && videoInitPTS < _initPTS.baseTime)
         ) {
           initDTS = Math.min(initDTS as number, videoInitDTS);
-          // Bind initPTS to the lowest DTS across tracks to prevent negative timestamps (#7932).
-          // When the fragment directly follows the last one (a discontinuity reached in
-          // sequence, with or without a level switch), timeOffset is the previous fragment's
-          // presentation end, so bind to the first PTS instead: anchoring the first DTS there
-          // presents the new sequence one composition offset late, and that shift repeats at
-          // every discontinuity (#8064).
+          // Bind initPTS to the lowest DTS across tracks to prevent negative timestamps
           const videoInit =
             !_initPTS && this.isConsecutive ? videoInitPTS : videoInitDTS;
           initPTS = Math.min(initPTS as number, videoInit);

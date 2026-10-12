@@ -213,11 +213,7 @@ export default class TransmuxerInterface {
     const nextInSequence =
       snDiff === 1 ||
       (snDiff === 0 && (partDiff === 1 || (progressive && partDiff <= 0)));
-    // contiguous: next in sequence on the same level, so samples can be stitched together
     const contiguous = !trackSwitch && nextInSequence;
-    // consecutive: this fragment or part directly follows the last one pushed. Variant Streams may
-    // number Media Segments independently (RFC 8216 6.3.2), so across a level switch the fragment
-    // follows the last one when it starts where that fragment's playlist time ends
     const consecutive =
       nextInSequence ||
       (trackSwitch &&
