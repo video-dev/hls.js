@@ -230,6 +230,7 @@ class TSDemuxer implements Demuxer {
     if (_id3Track) {
       _id3Track.pesData = null;
     }
+    this.videoParser = null;
     this.aacOverFlow = null;
     this.remainderData = null;
   }
