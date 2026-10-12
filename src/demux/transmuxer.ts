@@ -575,8 +575,9 @@ export class TransmuxState {
   public trackSwitch: boolean;
   public timeOffset: number;
   public initSegmentChange: boolean;
-  // the fragment or part directly follows the last one pushed, on any level
-  // (contiguous implies consecutive; a level switch is consecutive but not contiguous)
+  // the fragment or part directly follows the last one pushed: next in sequence on any level, or,
+  // across a level switch, starting where the last fragment ended (Variant Streams may number
+  // Media Segments independently). Contiguous implies consecutive.
   public consecutive: boolean;
 
   constructor(

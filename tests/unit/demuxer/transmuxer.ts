@@ -311,6 +311,124 @@ describe('TransmuxerInterface tests', function () {
     );
   });
 
+  it('flags a discontinuity switch to a level with a different sequence-number base as consecutive when it starts at the previous fragment end', function () {
+    const config = { enableWorker: false };
+    hls = new Hls(config);
+    sinon.stub(hls, 'trigger');
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      PlaylistLevelType.MAIN,
+      onTransmuxComplete,
+      onFlush,
+    );
+    const transmuxerInterfacePrivates = transmuxerInterface as any;
+
+    const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    currentFrag.cc = 100;
+    currentFrag.sn = 5;
+    currentFrag.level = 0;
+    currentFrag.start = 990;
+    currentFrag.duration = 10;
+    transmuxerInterfacePrivates.frag = currentFrag;
+
+    // Variant Streams may number Media Segments independently (RFC 8216 6.3.2)
+    const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    newFrag.cc = 101;
+    newFrag.sn = 106;
+    newFrag.level = 1;
+    newFrag.start = currentFrag.end;
+    const data = new ArrayBuffer(8);
+    const initSegmentData = new Uint8Array(0);
+    const chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
+
+    sinon.stub(transmuxerInterfacePrivates.transmuxer, 'configure');
+    const pushStub = sinon.stub(transmuxerInterfacePrivates.transmuxer, 'push');
+    pushStub.returns(Promise.reject(new Error('Stubbed transmux result')));
+    transmuxerInterface.push(
+      data,
+      initSegmentData,
+      '',
+      '',
+      newFrag as MediaFragment,
+      null,
+      0,
+      true,
+      chunkMeta,
+    );
+
+    const state = new TransmuxState(true, false, true, true, 1000, false, true);
+    expect(pushStub).to.have.been.calledOnce;
+    expect(pushStub).to.have.been.calledWith(
+      data,
+      newFrag.decryptdata,
+      chunkMeta,
+      state,
+    );
+  });
+
+  it('does not flag a level switch as consecutive when the fragment does not start at the previous fragment end', function () {
+    const config = { enableWorker: false };
+    hls = new Hls(config);
+    sinon.stub(hls, 'trigger');
+    const transmuxerInterface = new TransmuxerInterface(
+      hls,
+      PlaylistLevelType.MAIN,
+      onTransmuxComplete,
+      onFlush,
+    );
+    const transmuxerInterfacePrivates = transmuxerInterface as any;
+
+    const currentFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    currentFrag.cc = 100;
+    currentFrag.sn = 5;
+    currentFrag.level = 0;
+    currentFrag.start = 990;
+    currentFrag.duration = 10;
+    transmuxerInterfacePrivates.frag = currentFrag;
+
+    // seek: one fragment ahead of the previous fragment end, on another level with a different base
+    const newFrag = new Fragment(PlaylistLevelType.MAIN, '');
+    newFrag.cc = 101;
+    newFrag.sn = 107;
+    newFrag.level = 1;
+    newFrag.start = currentFrag.end + 10;
+    const data = new ArrayBuffer(8);
+    const initSegmentData = new Uint8Array(0);
+    const chunkMeta = new ChunkMetadata(newFrag.level, newFrag.sn, 0);
+
+    sinon.stub(transmuxerInterfacePrivates.transmuxer, 'configure');
+    const pushStub = sinon.stub(transmuxerInterfacePrivates.transmuxer, 'push');
+    pushStub.returns(Promise.reject(new Error('Stubbed transmux result')));
+    transmuxerInterface.push(
+      data,
+      initSegmentData,
+      '',
+      '',
+      newFrag as MediaFragment,
+      null,
+      0,
+      true,
+      chunkMeta,
+    );
+
+    const state = new TransmuxState(
+      true,
+      false,
+      true,
+      true,
+      1010,
+      false,
+      false,
+    );
+    expect(pushStub).to.have.been.calledOnce;
+    expect(pushStub).to.have.been.calledWith(
+      data,
+      newFrag.decryptdata,
+      chunkMeta,
+      state,
+    );
+  });
+
   it('sends worker generic message', function () {
     const config = { enableWorker: true }; // Option debug : true crashes mocha
     hls = new Hls(config);
