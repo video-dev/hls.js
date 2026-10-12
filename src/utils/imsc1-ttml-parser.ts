@@ -160,7 +160,7 @@ function getTextContent(element, trim): string {
       return str + '\n';
     }
     if (node.childNodes?.length) {
-      return getTextContent(node, trim);
+      return str + getTextContent(node, trim);
     } else if (trim) {
       return str + node.textContent.trim().replace(/\s+/g, ' ');
     }

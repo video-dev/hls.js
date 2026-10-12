@@ -105,4 +105,31 @@ describe('IMSC1 TTML parser', function () {
     expect(cues[0].startTime).to.equal(0.5);
     expect(cues[0].endTime).to.equal(1.5);
   });
+
+  it('keeps every line of a cue split by br', function () {
+    const cues = cuesFor(
+      ttmlWithBody(
+        '<p begin="1s" end="2s"><span>Herr Bürgermeister!</span><br/><span>Schickel!</span></p>',
+      ),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].text).to.equal('Herr Bürgermeister!\nSchickel!');
+  });
+
+  it('keeps the text of every span in a cue', function () {
+    const cues = cuesFor(
+      ttmlWithBody(
+        '<p begin="1s" end="2s"><span>Alles unter Kontrolle.</span><span>*Gelächter*</span></p>',
+      ),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].text).to.equal('Alles unter Kontrolle.*Gelächter*');
+  });
 });
+
+function ttmlWithBody(body: string): string {
+  return (
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<tt xmlns="http://www.w3.org/ns/ttml"><body><div>${body}</div></body></tt>`
+  );
+}
