@@ -4802,6 +4802,8 @@ export interface RemuxedTrack {
     // (undocumented)
     startPTS: number;
     // (undocumented)
+    timestampOffsetAdjustment?: number;
+    // (undocumented)
     transferredData1?: ArrayBuffer;
     // (undocumented)
     transferredData2?: ArrayBuffer;

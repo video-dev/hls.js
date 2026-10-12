@@ -7,6 +7,7 @@ import MP4Remuxer from '../../../src/remux/mp4-remuxer';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { logger } from '../../../src/utils/logger';
+import { findBox } from '../../../src/utils/mp4-tools';
 import type { HlsEventEmitter } from '../../../src/events';
 import type {
   AudioSample,
@@ -227,7 +228,83 @@ describe('mp4-remuxer', function () {
       );
     });
   });
+
+  describe('remuxAudio', function () {
+    beforeEach(function () {
+      (mp4Remuxer as any)._initPTS = {
+        baseTime: 0,
+        timescale: 90000,
+        trackId: 1,
+      };
+    });
+
+    it('rounds the tfdt up when the first PTS is off the audio sample grid, and reports the residual', function () {
+      // 132006 / (90000 / 44100) = 64682.94 audio ticks
+      const firstPts = 132006;
+      const audio = mp4Remuxer.remuxAudio(
+        aacTrack(firstPts, 44100),
+        0,
+        false,
+        false,
+        undefined,
+        new ChunkMetadata(0, 0, 0),
+      );
+      const raw = firstPts / (90000 / 44100);
+      expect(raw % 1).to.not.eq(0);
+      expect(readTfdt(audio!.data1)).to.eq(Math.ceil(raw));
+      expect(audio!.timestampOffsetAdjustment).to.be.closeTo(
+        (Math.ceil(raw) - raw) / 44100,
+        1e-12,
+      );
+      expect(audio!.timestampOffsetAdjustment).to.be.gt(0);
+    });
+
+    it('reports no residual when the first PTS is on the audio sample grid', function () {
+      // 90000 / (90000 / 48000) = 48000 audio ticks
+      const firstPts = 90000;
+      const audio = mp4Remuxer.remuxAudio(
+        aacTrack(firstPts, 48000),
+        0,
+        false,
+        false,
+        undefined,
+        new ChunkMetadata(0, 0, 0),
+      );
+      expect(readTfdt(audio!.data1)).to.eq(48000);
+      expect(audio!.timestampOffsetAdjustment).to.eq(0);
+    });
+  });
 });
+
+function aacTrack(firstPts: number, samplerate: number): DemuxedAudioTrack {
+  const inputSampleDuration = (1024 * 90000) / samplerate;
+  return {
+    type: 'audio',
+    id: 2,
+    pid: 257,
+    inputTimeScale: 90000,
+    sequenceNumber: 0,
+    samples: [0, 1, 2].map((i) => ({
+      unit: new Uint8Array(8),
+      pts: firstPts + i * inputSampleDuration,
+    })),
+    dropped: 0,
+    segmentCodec: 'aac',
+    samplerate,
+    channelCount: 2,
+    config: [0x12, 0x10],
+    codec: 'mp4a.40.2',
+    manifestCodec: 'mp4a.40.2',
+  };
+}
+
+function readTfdt(moof: Uint8Array): number {
+  const tfdt = findBox(moof, ['moof', 'traf', 'tfdt'])[0];
+  const view = new DataView(tfdt.buffer, tfdt.byteOffset, tfdt.byteLength);
+  return tfdt[0] === 1
+    ? view.getUint32(4) * 2 ** 32 + view.getUint32(8)
+    : view.getUint32(4);
+}
 
 function ptsDts(pts: number, dts: number): VideoSample {
   return {

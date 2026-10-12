@@ -285,6 +285,27 @@ describe('BufferController with attached media', function () {
       });
     });
 
+    it('applies a sub-sample timestampOffset change to the SourceBuffer before appending', function () {
+      const buffer = getSourceBufferTrack(bufferController, 'audio')
+        ?.buffer as unknown as MockSourceBuffer & { timestampOffset: number };
+      buffer.timestampOffset = -1;
+      // Residual left by rounding a 44.1 kHz tfdt up from 64682.94 to 64683
+      const residual = 0.06 / 44100;
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.sn = 0;
+      hls.trigger(Events.BUFFER_APPENDING, {
+        parent: PlaylistLevelType.MAIN,
+        type: 'audio',
+        data: new Uint8Array(),
+        frag,
+        part: null,
+        chunkMeta: new ChunkMetadata(0, 0, 0, 0),
+        offset: -1 - residual,
+      });
+      expect(buffer.appendBuffer).to.have.been.calledOnce;
+      expect(buffer.timestampOffset).to.eq(-1 - residual);
+    });
+
     it('should not set timeout during buffer append operation when appendTimeout is Infinity', function () {
       queueNames.forEach((name, i) => {
         const track = getSourceBufferTrack(bufferController, name);

@@ -1182,14 +1182,21 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     nextAudioTs = (lastPTS as number) - initTime;
     this.nextAudioTs = nextAudioTs + scaleFactor * lastSample.duration;
 
+    // Round the base media decode time up so that the first sample never starts before the fragment.
+    // WebKit drops a sample whose start precedes the append window, even by a fraction of a tick.
+    const baseMediaDecodeTime = firstPTS! / scaleFactor;
+    const roundedBaseMediaDecodeTime = Math.ceil(baseMediaDecodeTime);
     // Set the track samples from inputSamples to outputSamples before remuxing
     const moof = rawMPEG
       ? new Uint8Array(0)
       : MP4.moof(
           track.sequenceNumber++,
-          firstPTS! / scaleFactor,
+          roundedBaseMediaDecodeTime,
           Object.assign({}, track, { samples: outputSamples }),
         );
+    const timestampOffsetAdjustment = rawMPEG
+      ? 0
+      : (roundedBaseMediaDecodeTime - baseMediaDecodeTime) / mp4timeScale;
 
     // Clear the track samples. This also clears the samples array in the demuxer, since the reference is shared
     track.samples = [];
@@ -1203,6 +1210,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       endPTS: end,
       startDTS: start,
       endDTS: end,
+      timestampOffsetAdjustment,
       type,
       hasAudio: true,
       hasVideo: false,
