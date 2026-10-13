@@ -210,16 +210,10 @@ export default class TransmuxerInterface {
       snDiff === 0 &&
       chunkMeta.id > 1 &&
       chunkMeta.id === lastFrag?.stats.chunkCount;
-    const nextInSequence =
-      snDiff === 1 ||
-      (snDiff === 0 && (partDiff === 1 || (progressive && partDiff <= 0)));
-    const contiguous = !trackSwitch && nextInSequence;
-    const consecutive =
-      nextInSequence ||
-      (trackSwitch &&
-        lastFrag !== null &&
-        Math.abs(timeOffset - (this.part ? this.part.end : lastFrag.end)) <=
-          this.hls.config.maxFragLookUpTolerance);
+    const contiguous =
+      !trackSwitch &&
+      (snDiff === 1 ||
+        (snDiff === 0 && (partDiff === 1 || (progressive && partDiff <= 0))));
     const now = self.performance.now();
 
     if (trackSwitch || snDiff || frag.stats.parsing.start === 0) {
@@ -238,7 +232,6 @@ export default class TransmuxerInterface {
       trackSwitch,
       timeOffset,
       initSegmentChange,
-      consecutive,
     );
     if (!contiguous || discontinuity || initSegmentChange) {
       this.hls.logger
@@ -248,7 +241,6 @@ export default class TransmuxerInterface {
         discontinuity: ${discontinuity}
         trackSwitch: ${trackSwitch}
         contiguous: ${contiguous}
-        consecutive: ${consecutive}
         accurateTimeOffset: ${accurateTimeOffset}
         timeOffset: ${timeOffset}
         initSegmentChange: ${initSegmentChange}`);

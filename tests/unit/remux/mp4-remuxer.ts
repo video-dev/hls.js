@@ -174,9 +174,9 @@ describe('mp4-remuxer', function () {
         { dts: 118800, cts: 7200, audioOffset: 7200 },
       ];
       sequences.forEach(({ dts, cts, audioOffset }, i) => {
-        // discontinuity with consecutive sn on the same level: the transmuxer resets the init segment and the timestamp offset (consecutive), but not contiguity
+        // contiguous discontinuity: the transmuxer resets the init segment and the timestamp offset, but not contiguity
         mp4Remuxer.resetInitSegment();
-        mp4Remuxer.resetTimeStamp(null, true);
+        mp4Remuxer.resetTimeStamp(null);
         result = remuxFragment(
           mp4Remuxer,
           i + 1,
@@ -193,7 +193,7 @@ describe('mp4-remuxer', function () {
       });
     });
 
-    it('does not shift the timeline at a discontinuity reached with a level switch (consecutive but not contiguous)', function () {
+    it('anchors on video DTS at a discontinuity reached with a level switch (not contiguous)', function () {
       let result = remuxFragment(
         mp4Remuxer,
         0,
@@ -203,9 +203,9 @@ describe('mp4-remuxer', function () {
       );
       const timeOffset = Math.max(result.video!.endPTS, result.audio!.endPTS);
       // level switch at the discontinuity: the transmuxer resets the init segment, the timestamp
-      // offset (still consecutive) and contiguity
+      // offset and contiguity
       mp4Remuxer.resetInitSegment();
-      mp4Remuxer.resetTimeStamp(null, true);
+      mp4Remuxer.resetTimeStamp(null);
       mp4Remuxer.resetNextTimestamp();
       // timestamps above the playlist time, so computeInitPts needs no 33-bit rollover adjustment
       const dts = 9000000;
@@ -217,12 +217,12 @@ describe('mp4-remuxer', function () {
         makeAudioTrack(dts + 9119, 185),
         timeOffset,
       );
-      // anchored on the first PTS: the sequence starts at timeOffset and ends one fragment later
+      // the DTS anchor keeps its headroom across the switch, at the cost of one composition offset
       expect(result.initSegment?.initPTS).to.equal(
-        dts + cts - Math.round(timeOffset * 90000),
+        dts - Math.round(timeOffset * 90000),
       );
       expect(result.video!.endPTS).to.be.closeTo(
-        timeOffset + fragmentDuration,
+        timeOffset + fragmentDuration + cts / 90000,
         0.001,
       );
     });

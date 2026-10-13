@@ -35,10 +35,7 @@ export interface Remuxer {
     videoCodec: string | undefined,
     decryptdata: DecryptData | null,
   ): void;
-  resetTimeStamp(
-    defaultInitPTS: TimestampOffset | null,
-    consecutive?: boolean,
-  ): void;
+  resetTimeStamp(defaultInitPTS: TimestampOffset | null): void;
   resetNextTimestamp(): void;
   destroy(): void;
 }

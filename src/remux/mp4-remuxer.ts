@@ -77,7 +77,6 @@ export default class MP4Remuxer extends Logger implements Remuxer {
   private _initDTS: TimestampOffset | null = null;
   private nextVideoTs: number | null = null;
   private nextAudioTs: number | null = null;
-  private isConsecutive: boolean = false;
   private videoSampleDuration: number | null = null;
   private isAudioContiguous: boolean = false;
   private isVideoContiguous: boolean = false;
@@ -105,10 +104,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
     this.config = this.videoTrackConfig = this._initPTS = this._initDTS = null;
   }
 
-  resetTimeStamp(
-    defaultTimeStamp: TimestampOffset | null,
-    consecutive: boolean = false,
-  ) {
+  resetTimeStamp(defaultTimeStamp: TimestampOffset | null) {
     const initPTS = this._initPTS;
     if (
       !initPTS ||
@@ -119,11 +115,10 @@ export default class MP4Remuxer extends Logger implements Remuxer {
       defaultTimeStamp.timescale !== initPTS.timescale
     ) {
       this.log(
-        `Reset initPTS: ${initPTS ? timestampToString(initPTS) : initPTS} > ${defaultTimeStamp ? timestampToString(defaultTimeStamp) : defaultTimeStamp} consecutive: ${consecutive}`,
+        `Reset initPTS: ${initPTS ? timestampToString(initPTS) : initPTS} > ${defaultTimeStamp ? timestampToString(defaultTimeStamp) : defaultTimeStamp}`,
       );
     }
 
-    this.isConsecutive = consecutive;
     this._initPTS = this._initDTS = defaultTimeStamp;
   }
 
@@ -492,7 +487,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           initDTS = Math.min(initDTS as number, videoInitDTS);
           // Bind initPTS to the lowest DTS across tracks to prevent negative timestamps
           const videoInit =
-            !_initPTS && this.isConsecutive ? videoInitPTS : videoInitDTS;
+            !_initPTS && this.isVideoContiguous ? videoInitPTS : videoInitDTS;
           initPTS = Math.min(initPTS as number, videoInit);
         }
       }
