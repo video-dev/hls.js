@@ -3,12 +3,19 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { State } from '../../../src/controller/base-stream-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
-import { SubtitleStreamController } from '../../../src/controller/subtitle-stream-controller';
+import {
+  PART_END_TOLERANCE,
+  SubtitleStreamController,
+} from '../../../src/controller/subtitle-stream-controller';
 import Decrypter from '../../../src/crypt/decrypter';
 import { ErrorDetails } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { Fragment } from '../../../src/loader/fragment';
+import {
+  Fragment,
+  type MediaFragment,
+  Part,
+} from '../../../src/loader/fragment';
 import KeyLoader from '../../../src/loader/key-loader';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
@@ -190,6 +197,60 @@ describe('SubtitleStreamController', function () {
       );
       subtitleStreamController.onMediaSeeking();
       expect(subtitleStreamController.fragPrevious).to.not.exist;
+    });
+  });
+
+  describe('onSubtitleFragProcessed', function () {
+    beforeEach(function () {
+      subtitleStreamController.currentTrackId = 0;
+      subtitleStreamController.tracksBuffered = [[]];
+      subtitleStreamController.state = State.FRAG_LOADING;
+    });
+
+    it('returns to IDLE for the final known LL-HLS part even when float accumulation makes its end one ULP short of frag.end (#8051)', function () {
+      // frag.end is computed as frag.start + accumulated part durations
+      // (fragment.duration += part.duration for each known part), while a
+      // part's own end is (fragment.start + part.fragOffset) + part.duration.
+      // For a PART-TARGET of 0.8s these two paths round to adjacent floats
+      // (34.6 vs 34.599999999999994), so `end >= frag.end` was false for the
+      // final known part and the controller never left FRAG_LOADING.
+      const frag = new Fragment(PlaylistLevelType.SUBTITLE, '');
+      frag.start = 33;
+      frag.sn = 838;
+
+      const mediaFrag = frag as MediaFragment;
+      const part0 = new Part(
+        new AttrList({ DURATION: '0.800000', URI: 'part_4_838_0.vtt' }),
+        mediaFrag,
+        '',
+        0,
+      );
+      frag.duration += part0.duration;
+
+      const part1 = new Part(
+        new AttrList({ DURATION: '0.800000', URI: 'part_4_838_1.vtt' }),
+        mediaFrag,
+        '',
+        1,
+        part0,
+      );
+      frag.duration += part1.duration;
+
+      // Confirms this reproduces the exact float mismatch from the issue
+      // (within PART_END_TOLERANCE) rather than asserting the fix's own
+      // expression.
+      expect(part1.start + part1.duration).to.be.lessThan(frag.end);
+      expect(frag.end - (part1.start + part1.duration)).to.be.lessThan(
+        PART_END_TOLERANCE,
+      );
+
+      hls.trigger(Events.SUBTITLE_FRAG_PROCESSED, {
+        success: true,
+        frag,
+        part: part1,
+      });
+
+      expect(subtitleStreamController.state).to.equal(State.IDLE);
     });
   });
 
