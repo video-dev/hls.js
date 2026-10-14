@@ -102,6 +102,7 @@ export class MockSourceBuffer extends EventTarget {
 }
 export class MockMediaElement extends EventTarget {
   private __src: string = '';
+  public currentSrc: string = '';
   private __currentTime: number = 0;
   public duration: number = Infinity;
   public textTracks: any[] = [];
