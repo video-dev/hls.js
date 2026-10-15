@@ -1,7 +1,9 @@
 import { expect, use } from 'chai';
 import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
-import BufferController from '../../../src/controller/buffer-controller';
+import BufferController, {
+  SOURCE_BUFFER_ERROR_NAME,
+} from '../../../src/controller/buffer-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
@@ -210,6 +212,7 @@ describe('BufferController with attached media', function () {
       expect(sbErrorObject.message).equals(
         'audio SourceBuffer error. MediaSource readyState: open',
       );
+      expect(sbErrorObject.name).equals(SOURCE_BUFFER_ERROR_NAME);
       expect(
         triggerSpy,
         'ERROR should have been triggered in response to the SourceBuffer error',

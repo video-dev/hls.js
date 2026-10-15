@@ -6,6 +6,7 @@ import AudioStreamController from '../../../src/controller/audio-stream-controll
 import BaseStreamController, {
   State,
 } from '../../../src/controller/base-stream-controller';
+import { SOURCE_BUFFER_ERROR_NAME } from '../../../src/controller/buffer-controller';
 import { FragmentTracker } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
@@ -540,6 +541,45 @@ describe('AudioStreamController', function () {
         appendsWithoutProgress: hls.config.appendErrorMaxRetry,
       });
       expect(frag.gap, 'at appendErrorMaxRetry').to.equal(true);
+    });
+  });
+
+  describe('onError MEDIA_SOURCE_REQUIRES_RESET', function () {
+    const resetError = (frag: Fragment) => {
+      const error = new Error(
+        'audio SourceBuffer error. MediaSource readyState: ended',
+      );
+      error.name = SOURCE_BUFFER_ERROR_NAME;
+      return {
+        type: ErrorTypes.MEDIA_ERROR,
+        details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+        fatal: false,
+        error,
+        parent: frag.type,
+        frag,
+        part: null,
+      };
+    };
+
+    beforeEach(function () {
+      // only fragments of a live playlist are marked
+      (audioStreamController as any).levels = [{ details: { live: true } }];
+    });
+
+    it('marks the audio fragment as a gap after a SourceBuffer error', function () {
+      const frag = new Fragment(PlaylistLevelType.AUDIO, '');
+      frag.sn = 4;
+      frag.level = 0;
+      (audioStreamController as any).onError(Events.ERROR, resetError(frag));
+      expect(frag.gap).to.equal(true);
+    });
+
+    it('ignores a main fragment', function () {
+      const frag = new Fragment(PlaylistLevelType.MAIN, '');
+      frag.sn = 4;
+      frag.level = 0;
+      (audioStreamController as any).onError(Events.ERROR, resetError(frag));
+      expect(frag.gap).to.not.equal(true);
     });
   });
 
