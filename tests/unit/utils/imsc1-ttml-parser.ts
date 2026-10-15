@@ -76,6 +76,54 @@ describe('IMSC1 TTML parser', function () {
     expect(cues[0].endTime).to.equal(3);
   });
 
+  it('reads a clock time with frames', function () {
+    const cues = cuesFor(
+      ttmlWith('00:00:01:12', '00:00:02:06', ' ttp:frameRate="24"'),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.equal(1.5);
+    expect(cues[0].endTime).to.equal(2.25);
+  });
+
+  it('reads a clock time with frames and sub-frames', function () {
+    const cues = cuesFor(
+      ttmlWith(
+        '00:00:01:12.1',
+        '00:00:02:00',
+        ' ttp:frameRate="25" ttp:subFrameRate="2"',
+      ),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.equal(1.5);
+    expect(cues[0].endTime).to.equal(2);
+  });
+
+  it('counts frames at the frame rate times the frame rate multiplier', function () {
+    const cues = cuesFor(
+      ttmlWith(
+        '30f',
+        '00:00:02:15',
+        ' ttp:frameRate="30" ttp:frameRateMultiplier="1000 1001"',
+      ),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.be.closeTo(1.001, 1e-9);
+    expect(cues[0].endTime).to.be.closeTo(2.5005, 1e-9);
+  });
+
+  it('applies the frame rate multiplier to the tick default', function () {
+    const cues = cuesFor(
+      ttmlWith(
+        '30t',
+        '60t',
+        ' ttp:frameRate="30" ttp:frameRateMultiplier="1000 1001"',
+      ),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.be.closeTo(1.001, 1e-9);
+    expect(cues[0].endTime).to.be.closeTo(2.002, 1e-9);
+  });
+
   it('reads a cue timed in ticks', function () {
     const cues = cuesFor(ttmlWith('50t', '150t', ' ttp:tickRate="100"'));
     expect(cues).to.have.lengthOf(1);
