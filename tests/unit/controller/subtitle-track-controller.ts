@@ -561,6 +561,22 @@ describe('SubtitleTrackController', function () {
       );
     });
 
+    it('should trigger SUBTITLE_TRACK_LOADING when a live track with a stale reload schedule is selected', function () {
+      const triggerSpy = sandbox.spy(hls, 'trigger');
+      subtitleTracks[2].details = {
+        live: true,
+        requestScheduled: self.performance.now() + 10000,
+        targetduration: 2,
+      } as any;
+      subtitleTrackController.startLoad();
+      subtitleTrackController.subtitleTrack = 2;
+
+      expect(triggerSpy).to.have.been.calledWithMatch(
+        'hlsSubtitleTrackLoading',
+        { id: 2 },
+      );
+    });
+
     it('should do nothing if called with out of bound indices', function () {
       const triggerSpy = sandbox.spy(hls, 'trigger');
       subtitleTrackController.subtitleTrack = 5;
