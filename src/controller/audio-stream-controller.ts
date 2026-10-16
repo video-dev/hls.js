@@ -796,15 +796,18 @@ class AudioStreamController
       return false;
     }
 
-    const fragPlaying = this.fragPlaying;
-    const fragPreviousLevel = previousFrag?.level;
-    if (!fragPlaying || fragPlaying.level !== fragPreviousLevel) {
-      if (previousFrag) {
-        this.cleanupBackBuffer();
-      }
-      if (this.switchingTrack) {
-        this.completeAudioSwitch(this.switchingTrack);
-      }
+    const { fragPlaying, switchingTrack } = this;
+    const levelChanged =
+      !fragPlaying || fragPlaying.level !== previousFrag?.level;
+    if (levelChanged && previousFrag) {
+      this.cleanupBackBuffer();
+    }
+    // A switch back to the playing track (before any other track was appended) has no level change to detect
+    if (
+      switchingTrack &&
+      (levelChanged || fragPlaying?.level === switchingTrack.id)
+    ) {
+      this.completeAudioSwitch(switchingTrack);
     }
     return true;
   }
