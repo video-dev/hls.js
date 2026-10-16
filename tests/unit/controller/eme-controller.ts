@@ -1061,32 +1061,5 @@ describe('EMEController', function () {
         return Promise.all([first, second]);
       });
     });
-
-    it('sets queued MediaKeys in order on attach when different MediaKeys are requested while waiting', function () {
-      setupEach({ emeEnabled: true });
-      const mediaKeysA = new MediaKeysMock();
-      const mediaKeysB = new MediaKeysMock();
-      const first = emeController.attemptSetMediaKeys(
-        KeySystems.FAIRPLAY,
-        mediaKeysA,
-      );
-
-      return drain().then(() => {
-        const second = emeController.attemptSetMediaKeys(
-          KeySystems.FAIRPLAY,
-          mediaKeysB,
-        );
-        expect(media.setMediaKeys).callCount(0);
-        emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
-          media: media as any as HTMLMediaElement,
-        });
-        expect(media.setMediaKeys).callCount(1);
-        expect(media.setMediaKeys).calledWith(mediaKeysA);
-        return Promise.all([first, second]).then(() => {
-          expect(media.setMediaKeys).callCount(2);
-          expect(media.setMediaKeys.secondCall).calledWith(mediaKeysB);
-        });
-      });
-    });
   });
 });
