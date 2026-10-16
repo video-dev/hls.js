@@ -574,6 +574,10 @@ class SubtitleTrackController extends BasePlaylistController {
       type,
       url,
     });
+    if (track !== lastTrack && track.details) {
+      // The reload schedule belongs to the track's previous selection
+      track.details.requestScheduled = -1;
+    }
     const hlsUrlParameters = this.switchParams(
       track.url,
       lastTrack?.details,

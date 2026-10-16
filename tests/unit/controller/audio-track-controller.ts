@@ -458,6 +458,28 @@ describe('AudioTrackController', function () {
       expect(shouldLoadPlaylist.secondCall.returnValue).to.be.false;
       expect(audioTrackLoadingCallback).to.not.have.been.called;
     });
+
+    it('should load a live track with a stale reload schedule as soon as it is selected', function () {
+      const audioTrackLoadingCallback = sinon.spy();
+      hls.on(Hls.Events.AUDIO_TRACK_LOADING, audioTrackLoadingCallback);
+      hls.levelController = { levels: [{ audioGroups: ['1'] }] };
+      tracks[0].url = './trackA.m3u8';
+      tracks[1].url = './trackB.m3u8';
+      tracks[1].details = {
+        live: true,
+        requestScheduled: self.performance.now() + 10000,
+        targetduration: 2,
+      } as any;
+      audioTrackController.tracks = tracks;
+      audioTrackController.onLevelLoading(Events.LEVEL_LOADING, { level: 0 });
+      audioTrackController.startLoad();
+      audioTrackController.audioTrack = 1;
+
+      expect(audioTrackLoadingCallback).to.have.been.calledWithMatch(
+        Events.AUDIO_TRACK_LOADING,
+        { id: 1 },
+      );
+    });
   });
 
   describe('onError', function () {
