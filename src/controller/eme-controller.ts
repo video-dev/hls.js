@@ -952,7 +952,6 @@ class EMEController extends Logger implements ComponentAPI {
     keySystem: KeySystems,
     mediaKeys: MediaKeys,
   ): Promise<void> {
-    this.mediaResolved = undefined;
     if (this.mediaKeys === mediaKeys) {
       return Promise.resolve();
     }
@@ -961,6 +960,7 @@ class EMEController extends Logger implements ComponentAPI {
     this.log(`Setting media-keys for "${keySystem}"`);
     // Only one setMediaKeys() can run at one time, and multiple setMediaKeys() operations
     // can be queued for execution for multiple key sessions.
+    this.mediaResolved = undefined;
     const setMediaKeysPromise = Promise.all(queue).then(() => {
       if (!this.media) {
         return new Promise((resolve: (value?: void) => void, reject) => {
