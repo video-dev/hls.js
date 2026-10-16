@@ -2,7 +2,10 @@ import { DecrypterAesMode } from '../crypt/decrypter-aes-mode';
 
 export function isFullSegmentEncryption(method: string): boolean {
   return (
-    method === 'AES-128' || method === 'AES-256' || method === 'AES-256-CTR'
+    method === 'AES-128' ||
+    method === 'AES-256' ||
+    method === 'AES-256-CTR' ||
+    method === 'AES-256-GCM'
   );
 }
 
@@ -15,6 +18,8 @@ export function getAesModeFromFullSegmentMethod(
       return DecrypterAesMode.cbc;
     case 'AES-256-CTR':
       return DecrypterAesMode.ctr;
+    case 'AES-256-GCM':
+      return DecrypterAesMode.gcm;
     default:
       throw new Error(`invalid full segment method ${method}`);
   }

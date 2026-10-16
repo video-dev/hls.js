@@ -104,7 +104,10 @@ export default class FragmentLoader {
         onSuccess: (response, stats, context, networkDetails) => {
           this.resetLoader(frag, loader);
           let payload = response.data as ArrayBuffer;
-          if (context.resetIV && frag.decryptdata) {
+          if (
+            frag.decryptdata &&
+            (frag.decryptdata.method === 'AES-256-GCM' || context.resetIV)
+          ) {
             frag.decryptdata.iv = new Uint8Array(payload.slice(0, 16));
             payload = payload.slice(16);
           }

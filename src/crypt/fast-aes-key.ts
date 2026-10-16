@@ -22,7 +22,7 @@ export default class FastAESKey {
       this.key,
       { name: subtleAlgoName },
       false,
-      ['encrypt', 'decrypt'],
+      ['decrypt'],
     );
   }
 }
@@ -33,6 +33,8 @@ function getSubtleAlgoName(aesMode: DecrypterAesMode) {
       return 'AES-CBC';
     case DecrypterAesMode.ctr:
       return 'AES-CTR';
+    case DecrypterAesMode.gcm:
+      return 'AES-GCM';
     default:
       throw new Error(`[FastAESKey] invalid aes mode ${aesMode}`);
   }
