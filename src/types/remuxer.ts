@@ -58,6 +58,9 @@ export interface RemuxedTrack {
   transferredData2?: ArrayBuffer;
   dropped?: number;
   encrypted?: boolean;
+  // Seconds by which the fragment's tfdt was rounded up past its exact start.
+  // Subtracted from the SourceBuffer timestampOffset so the media still starts on time.
+  timestampOffsetAdjustment?: number;
 }
 
 export interface RemuxedMetadata {

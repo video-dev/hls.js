@@ -5,6 +5,7 @@ import { hlsDefaultConfig } from '../../../src/config';
 import { State } from '../../../src/controller/base-stream-controller';
 import BaseStreamControllerImpl from '../../../src/controller/stream-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
+import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
 import { LoadError } from '../../../src/loader/fragment-loader';
@@ -12,10 +13,13 @@ import KeyLoader from '../../../src/loader/key-loader';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LevelKey } from '../../../src/loader/level-key';
 import { PlaylistLevelType } from '../../../src/types/loader';
+import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { BufferHelper } from '../../../src/utils/buffer-helper';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type BaseStreamController from '../../../src/controller/base-stream-controller';
 import type { MediaFragment, Part } from '../../../src/loader/fragment';
+import type { BufferAppendingData } from '../../../src/types/events';
+import type { RemuxedTrack } from '../../../src/types/remuxer';
 import type { BufferInfo } from '../../../src/utils/buffer-helper';
 
 use(sinonChai);
@@ -1492,6 +1496,70 @@ describe('BaseStreamController', function () {
 
       expect((baseStreamController as any).scheduleTrackSwitch).to.not.have.been
         .called;
+    });
+  });
+
+  describe('bufferFragmentData', function () {
+    const residual = 0.06 / 44100;
+    let triggerSpy: sinon.SinonSpy;
+    let frag: MediaFragment;
+
+    beforeEach(function () {
+      triggerSpy = sinon.spy(hls, 'trigger');
+      baseStreamController.state = State.PARSING;
+      (baseStreamController as any).initPTS[0] = {
+        baseTime: 90000,
+        timescale: 90000,
+        trackId: 1,
+      };
+      frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      frag.sn = 0;
+      frag.cc = 0;
+    });
+
+    afterEach(function () {
+      triggerSpy.restore();
+    });
+
+    function remuxedTrack(type: 'audio' | 'video'): RemuxedTrack {
+      return {
+        data1: new Uint8Array(8),
+        startPTS: 0,
+        endPTS: 1,
+        startDTS: 0,
+        endDTS: 1,
+        type,
+        hasAudio: type === 'audio',
+        hasVideo: type === 'video',
+        nb: 1,
+        timestampOffsetAdjustment: residual,
+      };
+    }
+
+    function appendedOffset(): number | undefined {
+      expect(triggerSpy).to.have.been.calledWith(Events.BUFFER_APPENDING);
+      const call = triggerSpy.withArgs(Events.BUFFER_APPENDING).firstCall;
+      return (call.args[1] as BufferAppendingData).offset;
+    }
+
+    it('subtracts the audio timestampOffsetAdjustment from the append offset', function () {
+      (baseStreamController as any).bufferFragmentData(
+        remuxedTrack('audio'),
+        frag,
+        null,
+        new ChunkMetadata(0, 0, 0),
+      );
+      expect(appendedOffset()).to.eq(-1 - residual);
+    });
+
+    it('does not apply timestampOffsetAdjustment to video', function () {
+      (baseStreamController as any).bufferFragmentData(
+        remuxedTrack('video'),
+        frag,
+        null,
+        new ChunkMetadata(0, 0, 0),
+      );
+      expect(appendedOffset()).to.eq(-1);
     });
   });
 });
