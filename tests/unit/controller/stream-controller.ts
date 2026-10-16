@@ -739,6 +739,57 @@ describe('StreamController', function () {
     });
   });
 
+  describe('BUFFER_EOS while switching alternate audio', function () {
+    let triggerSpy;
+
+    beforeEach(function () {
+      const level = new Level({
+        attrs: new AttrList({}),
+        bitrate: 1,
+        name: '',
+        url: '',
+      });
+      level.details = new LevelDetails('');
+      streamController['levels'] = [level];
+      streamController['levelLastLoaded'] = level;
+      streamController['media'] = { readyState: 0 } as any;
+      streamController['loadedmetadata'] = true;
+      sinon.stub(hls, 'loadLevel').get(() => 0);
+      sinon
+        .stub(hls, 'nextLoadLevel')
+        .get(() => 0)
+        .set(() => {});
+      sinon.stub(streamController as any, 'getMainFwdBufferInfo').returns({
+        len: 0,
+        start: 0,
+        end: 0,
+        nextStart: undefined,
+      });
+      sinon
+        .stub(streamController as any, 'getLevelDetails')
+        .returns(level.details);
+      sinon.stub(streamController as any, '_streamEnded').returns(true);
+      triggerSpy = sinon.spy(hls, 'trigger');
+      streamController.state = State.IDLE;
+    });
+
+    it('does not trigger BUFFER_EOS while the audio track switch is in progress', function () {
+      streamController['altAudio'] = 1; // AlternateAudio.SWITCHING
+      streamController['doTickIdle']();
+      expect(triggerSpy).to.not.have.been.calledWith(Events.BUFFER_EOS);
+      expect(streamController.state).to.not.equal(State.ENDED);
+    });
+
+    it('triggers a video-only BUFFER_EOS once the audio track switch completed', function () {
+      streamController['altAudio'] = 2; // AlternateAudio.SWITCHED
+      streamController['doTickIdle']();
+      expect(triggerSpy).to.have.been.calledWith(Events.BUFFER_EOS, {
+        type: 'video',
+      });
+      expect(streamController.state).to.equal(State.ENDED);
+    });
+  });
+
   describe('checkFragmentChanged override', function () {
     let media: any;
     let mockFrag: Fragment;

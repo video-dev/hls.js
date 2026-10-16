@@ -277,7 +277,11 @@ export default class StreamController
     }
 
     const lastDetails = this.getLevelDetails();
-    if (lastDetails && this._streamEnded(bufferInfo, lastDetails)) {
+    if (
+      lastDetails &&
+      this._streamEnded(bufferInfo, lastDetails) &&
+      this.altAudio !== AlternateAudio.SWITCHING
+    ) {
       const data: BufferEOSData = {
         type: this.targetBufferType(),
       };
