@@ -791,6 +791,7 @@ class EMEController extends Logger implements ComponentAPI {
         details: ErrorDetails.KEY_SYSTEM_NO_KEYS,
         error,
         fatal: true,
+        reason: `${error.name}: ${error.message}`,
       });
     }
   }
@@ -982,13 +983,26 @@ class EMEController extends Logger implements ComponentAPI {
     });
     this.mediaKeys = mediaKeys;
     this.setMediaKeysQueue.push(setMediaKeysPromise);
-    return setMediaKeysPromise.then(() => {
-      this.log(`Media-keys set for "${keySystem}"`);
-      queue.push(setMediaKeysPromise!);
+    const dequeue = () => {
+      queue.push(setMediaKeysPromise);
       this.setMediaKeysQueue = this.setMediaKeysQueue.filter(
         (p) => queue.indexOf(p) === -1,
       );
-    });
+    };
+    return setMediaKeysPromise.then(
+      () => {
+        this.log(`Media-keys set for "${keySystem}"`);
+        dequeue();
+      },
+      (error) => {
+        // A rejected entry left in the queue would fail every later setMediaKeys
+        dequeue();
+        if (this.mediaKeys === mediaKeys) {
+          this.mediaKeys = null;
+        }
+        throw error;
+      },
+    );
   }
 
   private filterInitData(
@@ -1744,9 +1758,11 @@ class EMEController extends Logger implements ComponentAPI {
     }
   }
 
-  private _clear() {
+  private _clear(keepMediaKeys: boolean = false) {
     this.keyFormatPromise = null;
-    this.keySystemAccessPromises = {};
+    if (!keepMediaKeys) {
+      this.keySystemAccessPromises = {};
+    }
     this.activeKeys = {};
     this.sessionSetupByUri = {};
     const mediaResolved = this.mediaResolved;
@@ -1759,20 +1775,20 @@ class EMEController extends Logger implements ComponentAPI {
     const media = this.media;
     const mediaKeysList = this.mediaKeySessions.slice();
     this.mediaKeySessions = [];
-    this.mediaKeys = null;
+    if (!keepMediaKeys) {
+      this.mediaKeys = null;
+    }
 
     LevelKey.clearKeyUriToKeyIdMap();
 
     // Close all sessions and remove media keys from the video element.
     const keySessionCount = mediaKeysList.length;
-    EMEController.CDMCleanupPromise = Promise.all(
-      mediaKeysList
-        .map((mediaKeySessionContext) =>
-          this.removeSession(mediaKeySessionContext),
-        )
-        .concat(
-          (media?.setMediaKeys(null) as Promise<void> | null)?.catch(
-            (error) => {
+    const clearMediaKeys =
+      media && !keepMediaKeys
+        ? Promise.all(this.setMediaKeysQueue)
+            .catch(() => {})
+            .then(() => media.setMediaKeys(null))
+            .catch((error) => {
               this.log(`Could not clear media keys: ${error}`);
               if (!this.hls) return;
               this.hls.trigger(Events.ERROR, {
@@ -1781,9 +1797,14 @@ class EMEController extends Logger implements ComponentAPI {
                 fatal: false,
                 error: new Error(`Could not clear media keys: ${error}`),
               });
-            },
-          ) || Promise.resolve(),
-        ),
+            })
+        : Promise.resolve();
+    EMEController.CDMCleanupPromise = Promise.all(
+      mediaKeysList
+        .map((mediaKeySessionContext) =>
+          this.removeSession(mediaKeySessionContext),
+        )
+        .concat(clearMediaKeys),
     )
       .catch((error) => {
         this.log(`Could not close sessions and clear media keys: ${error}`);
@@ -1806,7 +1827,9 @@ class EMEController extends Logger implements ComponentAPI {
   }
 
   private onManifestLoading() {
-    this._clear();
+    // Chrome cannot remove or replace a CDM that is in use, so keep the attached MediaKeys for the next source
+    const { media, mediaKeys } = this;
+    this._clear(!!mediaKeys && media?.mediaKeys === mediaKeys);
     this.keyFormatPromise = null;
   }
 
