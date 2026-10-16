@@ -3035,7 +3035,7 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
     if (!this.schedule) {
       return;
     }
-    if (!this.isInterstitial(currentItem)) {
+    if (currentItem && !this.isInterstitial(currentItem)) {
       return;
     }
     const scheduleIndex = this.schedule.findItemIndexAtTime(timelinePos);
