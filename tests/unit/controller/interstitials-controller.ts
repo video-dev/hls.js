@@ -2179,6 +2179,10 @@ fileSequence6.mp4`;
         .to.be.an('object')
         .which.include({ start: 20, end: 55 });
 
+      // Empty asset-list interstitial started and ended unresolved
+      expect(getTriggerCalls()).to.include(Events.INTERSTITIAL_STARTED);
+      expect(getTriggerCalls()).to.include(Events.INTERSTITIAL_ENDED);
+
       // Playback reaches the next interstitial
       hls.trigger.resetHistory();
       media.__timeUpdate(55);
