@@ -1935,8 +1935,22 @@ Schedule: ${scheduleItems.map((seg) => segmentToString(seg))} pos: ${this.timeli
         this.waitingItem = null;
       }
     }
-    // Clear waitingItem if it has been removed from the schedule
-    this.waitingItem = this.updateItem(this.waitingItem);
+    // Clear waitingItem if it has been removed from the schedule and trigger INTERSTITIAL_ENDED
+    const unresolvedInterstitial = this.waitingItem;
+    if (unresolvedInterstitial) {
+      this.waitingItem = this.updateItem(unresolvedInterstitial);
+      if (!this.waitingItem && !playingItem) {
+        this.log(
+          `INTERSTITIAL_ENDED unresolved ${segmentToString(unresolvedInterstitial)}`,
+        );
+        this.hls.trigger(Events.INTERSTITIAL_ENDED, {
+          event: unresolvedInterstitial.event,
+          schedule: scheduleItems.slice(0),
+          scheduleIndex: -1,
+        });
+      }
+    }
+
     // Do not replace Interstitial bufferingItem without a match - used for transfering media element or source
     const bufferingItem = this.bufferingItem;
     if (bufferingItem) {

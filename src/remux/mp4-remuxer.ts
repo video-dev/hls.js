@@ -486,7 +486,9 @@ export default class MP4Remuxer extends Logger implements Remuxer {
         ) {
           initDTS = Math.min(initDTS as number, videoInitDTS);
           // Bind initPTS to the lowest DTS across tracks to prevent negative timestamps
-          initPTS = Math.min(initPTS as number, videoInitDTS);
+          const videoInit =
+            !_initPTS && this.isVideoContiguous ? videoInitPTS : videoInitDTS;
+          initPTS = Math.min(initPTS as number, videoInit);
         }
       }
       this.videoTrackConfig = {
