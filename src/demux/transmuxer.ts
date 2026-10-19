@@ -287,7 +287,7 @@ export default class Transmuxer {
     this.logger.log(
       `[transmuxer.ts]: Flushed ${this.id} sn: ${chunkMeta.sn}${
         chunkMeta.part > -1 ? ' part: ' + chunkMeta.part : ''
-      } of ${this.id} playlist ${chunkMeta.level}`,
+      } playlist ${chunkMeta.level}`,
     );
     // Remux samples preceding each in-band video config change as their own
     // result so that each portion gets an init segment matching its config
