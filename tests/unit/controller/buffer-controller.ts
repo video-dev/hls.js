@@ -648,6 +648,8 @@ describe('BufferController', function () {
       });
 
       it('detaches instead of resetting when a third party set src on the element', function () {
+        // currentSrc is stale at sourceclose time: resource selection has not run yet
+        media.currentSrc = OBJECT_URL;
         // What an Ad SDK does to play in the content element
         media.src = 'https://example.com/ad.mp4';
         bufferController._onMediaSourceClose();
