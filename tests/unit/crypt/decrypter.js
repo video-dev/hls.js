@@ -98,18 +98,21 @@ describe('Decrypter', function () {
 
     const decrypter = new Decrypter({ enableSoftwareAES: true });
     const out = [];
-    // Uneven chunk sizes, as a network delivers them, repeated until all
-    // of the encrypted segment has been fed in.
     const sizes = [100, 333, 17, 250];
     let start = 0;
     for (let i = 0; start < encrypted.length; i++) {
       const size = sizes[i % sizes.length];
       const chunk = encrypted.slice(start, start + size);
       start += size;
-      const result = decrypter.decryptProgressive(chunk, key.buffer, iv.buffer);
-      if (result) {
-        out.push(new Uint8Array(result));
-      }
+      const result = await decrypter.decrypt(
+        chunk,
+        key.buffer,
+        iv.buffer,
+        0,
+        undefined,
+        true,
+      );
+      out.push(new Uint8Array(result));
     }
     out.push(decrypter.flush());
 

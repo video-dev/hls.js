@@ -666,9 +666,7 @@ class AudioStreamController
       waitingData?.frag === frag &&
       waitingData.part === part
     ) {
-      // Video PTS arrived while earlier chunks of this fragment were cached. Send
-      // them ahead of this chunk so the fragment is transmuxed in order (required
-      // for AES-128, where each chunk is decrypted from the one before it).
+      // Send the chunks cached while waiting for initPTS first, so the fragment stays in order
       this.waitingData = null;
       if (this.state === State.WAITING_INIT_PTS) {
         this.state = State.FRAG_LOADING;

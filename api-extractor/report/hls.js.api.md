@@ -1218,8 +1218,7 @@ export class Decrypter {
     decrypt(data: Uint8Array | ArrayBuffer, key: ArrayBuffer, iv: ArrayBuffer, aesMode: DecrypterAesMode, decryptRange?: {
         start: number;
         end: number;
-    }): Promise<ArrayBuffer>;
-    decryptProgressive(data: Uint8Array, key: ArrayBuffer, iv: ArrayBuffer): ArrayBuffer | null;
+    }, progressive?: boolean): Promise<ArrayBuffer>;
     // (undocumented)
     destroy(): void;
     // (undocumented)

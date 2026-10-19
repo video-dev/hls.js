@@ -2,7 +2,6 @@ import AACDemuxer from './audio/aacdemuxer';
 import { AC3Demuxer } from './audio/ac3-demuxer';
 import MP3Demuxer from './audio/mp3demuxer';
 import Decrypter from '../crypt/decrypter';
-import { DecrypterAesMode } from '../crypt/decrypter-aes-mode';
 import MP4Demuxer from '../demux/mp4demuxer';
 import TSDemuxer from '../demux/tsdemuxer';
 import { ErrorDetails, ErrorTypes } from '../errors';
@@ -123,35 +122,8 @@ export default class Transmuxer {
 
     const keyData = getEncryptionType(uintData, decryptdata);
     if (keyData && isFullSegmentEncryption(keyData.method)) {
-      const decrypter = this.getDecrypter();
+      const decrypter = this.getDecrypter(chunkMeta.id === 1);
       const aesMode = getAesModeFromFullSegmentMethod(keyData.method);
-      // In progressive mode a segment arrives in chunks. AES-128-CBC has to be
-      // decrypted in order across them, carrying the IV and any partial block
-      // over, with the padding only at the end of the segment. Decrypting each
-      // chunk as a whole segment corrupts every chunk after the first, so use
-      // the progressive software decrypter and let flush() finish the segment.
-      if (
-        this.config.progressive &&
-        this.config.enableSoftwareAES &&
-        aesMode === DecrypterAesMode.cbc &&
-        keyData.key.byteLength === 16 &&
-        !chunkMeta.decryptRange
-      ) {
-        if (chunkMeta.id === 1) {
-          // A new segment: drop any state left by a segment that was not finished.
-          decrypter.reset();
-        }
-        const decryptedData = decrypter.decryptProgressive(
-          uintData,
-          keyData.key.buffer,
-          keyData.iv.buffer,
-        );
-        if (!decryptedData) {
-          stats.executeEnd = now();
-          return emptyResult(chunkMeta);
-        }
-        return this.push(decryptedData, null, chunkMeta);
-      }
       this.asyncResult = true;
       this.decryptionPromise = decrypter
         .decrypt(
@@ -160,11 +132,14 @@ export default class Transmuxer {
           keyData.iv.buffer,
           aesMode,
           chunkMeta.decryptRange,
+          this.config.progressive,
         )
         .then((decryptedData) => {
           // Calling push here is important; if flush() is called while this is still resolving, this ensures that
           // the decrypted data has been transmuxed
-          const result = this.push(decryptedData, null, chunkMeta);
+          const result = decryptedData.byteLength
+            ? this.push(decryptedData, null, chunkMeta)
+            : emptyResult(chunkMeta);
           this.decryptionPromise = null;
           return result;
         });
@@ -535,10 +510,12 @@ export default class Transmuxer {
     return !this.demuxer || !this.remuxer || discontinuity || trackSwitch;
   }
 
-  private getDecrypter(): Decrypter {
+  private getDecrypter(forceReset: boolean): Decrypter {
     let decrypter = this.decrypter;
     if (!decrypter) {
       decrypter = this.decrypter = new Decrypter(this.config);
+    } else if (forceReset) {
+      decrypter.reset();
     }
     return decrypter;
   }

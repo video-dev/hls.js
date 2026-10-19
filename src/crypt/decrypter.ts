@@ -85,12 +85,23 @@ export default class Decrypter {
     iv: ArrayBuffer,
     aesMode: DecrypterAesMode,
     decryptRange?: { start: number; end: number },
+    progressive?: boolean,
   ): Promise<ArrayBuffer> {
     this.decryptRange = decryptRange;
-    if (this.useSoftware || decryptRange) {
+    // Software decryption carries the IV and padding over to the next chunk, the segment ends on flush()
+    const progressiveSoftware =
+      progressive &&
+      !decryptRange &&
+      aesMode === DecrypterAesMode.cbc &&
+      key.byteLength === 16;
+    if (this.useSoftware || decryptRange || progressiveSoftware) {
       return new Promise((resolve, reject) => {
         const dataView = ArrayBuffer.isView(data) ? data : new Uint8Array(data);
-        this.softwareDecrypt(dataView, key, iv, aesMode);
+        const result = this.softwareDecrypt(dataView, key, iv, aesMode);
+        if (progressiveSoftware) {
+          resolve(result || new ArrayBuffer(0));
+          return;
+        }
         const decryptResult = this.flush();
         if (decryptResult) {
           resolve(decryptResult.buffer);
@@ -100,20 +111,6 @@ export default class Decrypter {
       });
     }
     return this.webCryptoDecrypt(new Uint8Array(data), key, iv, aesMode);
-  }
-
-  /**
-   * Decrypt one chunk of an AES-128-CBC segment that is loaded in parts (progressive mode).
-   * The IV and any partial block are carried over to the next call, and the output is one
-   * call behind, so the padding at the end of the segment is only removed by flush().
-   */
-  public decryptProgressive(
-    data: Uint8Array,
-    key: ArrayBuffer,
-    iv: ArrayBuffer,
-  ): ArrayBuffer | null {
-    this.decryptRange = undefined;
-    return this.softwareDecrypt(data, key, iv, DecrypterAesMode.cbc);
   }
 
   // Software decryption is progressive. Progressive decryption may not return a result on each call. Any cached
