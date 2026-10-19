@@ -126,6 +126,14 @@ class HevcVideoParser extends BaseVideoParser {
             this.initVPS = unit.data;
           }
           track.vps = [unit.data];
+          if (!VideoSample) {
+            // The VPS can be the first NAL of an access unit. Open the
+            // pending sample here so the AU inherits this PES's PTS/DTS when
+            // parameter sets arrive in their own PES; the VPS itself is
+            // stored on the track, not appended to the sample.
+            VideoSample = createVideoSample(false);
+            push = false;
+          }
           break;
 
         // SPS
@@ -235,13 +243,18 @@ class HevcVideoParser extends BaseVideoParser {
       return false;
     }
 
+    const { type, data } = unit;
+
     // if new NAL units found and last sample still there, let's push ...
     // this helps parsing streams with missing AUD (only do this if AUD never found)
-    if (!track.audFound && nalIndex === 0) {
+    // Suffix NALs (36 EOS, 37 EOB, 38 filler data, 40 suffix SEI) belong to
+    // the current access unit and never start one (spec 7.4.2.4.4), so a PES
+    // boundary there must not split the sample.
+    const isAuSuffix = (type >= 36 && type <= 38) || type === 40;
+    if (!track.audFound && nalIndex === 0 && !isAuSuffix) {
       return true;
     }
 
-    const { type, data } = unit;
     // Per H.265 spec 7.4.2.4.4 the following NAL types must appear before
     // the first VCL of an access unit; seeing one after a complete picture
     // means a new AU is starting:
