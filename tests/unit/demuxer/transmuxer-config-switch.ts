@@ -436,7 +436,8 @@ describe('Transmuxer video config switch splitting', function () {
     expect(remuxCalls[0].sampleCount).to.equal(3);
     const logs = configSwitchLogs(log);
     expect(logs).to.have.lengthOf(1);
-    expect(logs[0]).to.include('sn: 1');
+    expect(logs[0]).to.include('in main sn: 1 playlist 0:');
+    expect(logs[0].split('main')).to.have.lengthOf(2);
     expect(logs[0]).to.include('320x180 to avc1.42c01f 1280x720');
     expect(remuxCalls[0].firstPts).to.equal(0);
     expect(remuxCalls[0].width).to.equal(320);
