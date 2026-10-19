@@ -14,8 +14,9 @@ import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
+import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { AttrList } from '../../../src/utils/attr-list';
-import { mockFragments as mockFragmentArray } from '../../mocks/data';
+import { fragment, mockFragments as mockFragmentArray } from '../../mocks/data';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type BufferController from '../../../src/controller/buffer-controller';
 import type { FragmentTracker } from '../../../src/controller/fragment-tracker';
@@ -205,6 +206,222 @@ describe('StreamController', function () {
       expect(streamController['startPosition']).to.equal(18);
       expect(streamController['nextLoadPosition']).to.equal(18);
       expect(streamController['lastCurrentTime']).to.equal(18);
+    });
+  });
+
+  describe('buffered level switches', function () {
+    let previous: MediaFragment;
+    let details: LevelDetails;
+
+    function setupSwitch(segmentNumber = 49) {
+      const start = segmentNumber * 6.006;
+      const endPTS = (segmentNumber + 1) * 6.006;
+      // Video ends before audio, so the combined buffered range ends at minEndPTS.
+      const minEndPTS = endPTS - 0.3;
+      previous = fragment({
+        programDateTime: 0,
+        start,
+        duration: 6.006,
+        sn: segmentNumber,
+        cc: 0,
+        level: 0,
+        endPTS,
+        endDTS: endPTS,
+        minEndPTS,
+        relurl: '49.m4s',
+        tagList: [['INF', '6.006']],
+      });
+      previous.setElementaryStreamInfo(
+        ElementaryStreamTypes.VIDEO,
+        previous.start,
+        minEndPTS,
+        previous.start,
+        minEndPTS,
+      );
+      previous.setElementaryStreamInfo(
+        ElementaryStreamTypes.AUDIO,
+        previous.start,
+        endPTS,
+        previous.start,
+        endPTS,
+      );
+      details = new LevelDetails('');
+      details.live = false;
+      details.startSN = segmentNumber;
+      details.endSN = segmentNumber + 1;
+      details.fragments = [segmentNumber, segmentNumber + 1].map((sn) =>
+        fragment({
+          programDateTime: 0,
+          start: sn * 6.006,
+          duration: 6.006,
+          sn,
+          cc: 0,
+          level: 1,
+        }),
+      );
+      details.targetduration = 6.006;
+      details.totalduration = 12.012;
+      streamController['fragPrevious'] = previous;
+    }
+
+    beforeEach(function () {
+      setupSwitch();
+    });
+
+    function trackPrevious(
+      state: FragmentState,
+      videoEnd = 300,
+      partial = state === FragmentState.PARTIAL,
+    ) {
+      if (state !== FragmentState.NOT_LOADED) {
+        hls.trigger(Events.FRAG_LOADED, {
+          frag: previous,
+          part: null,
+          payload: new ArrayBuffer(0),
+          networkDetails: null,
+        });
+        if (state !== FragmentState.APPENDING) {
+          previous.elementaryStreams.video!.partial = partial;
+          hls.trigger(Events.BUFFER_APPENDED, {
+            frag: previous,
+            part: null,
+            type: 'video',
+            parent: PlaylistLevelType.MAIN,
+            chunkMeta: new ChunkMetadata(0, previous.sn, 0, 0),
+            timeRanges: {
+              video: new TimeRangesMock([previous.start, videoEnd]),
+              audio: new TimeRangesMock([previous.start, previous.endPTS]),
+            },
+          });
+          hls.trigger(Events.FRAG_BUFFERED, {
+            frag: previous,
+            part: null,
+            id: PlaylistLevelType.MAIN,
+            stats: previous.stats,
+          });
+        }
+      }
+      expect(fragmentTracker.getState(previous)).to.equal(state);
+    }
+
+    [0.25, 0].forEach((tolerance) => {
+      [
+        FragmentState.OK,
+        FragmentState.PARTIAL,
+        FragmentState.APPENDING,
+        FragmentState.NOT_LOADED,
+      ].forEach((state) => {
+        it(`selects the next request when ${state}, buffer end 0.3s early, and tolerance ${tolerance}`, function () {
+          trackPrevious(state);
+          hls.config.maxFragLookUpTolerance = tolerance;
+          expect(streamController['getNextFragment'](300, details)).to.equal(
+            details.fragments[state === FragmentState.OK ? 1 : 0],
+          );
+        });
+      });
+    });
+
+    [6.006, 5.706].forEach((duration) => {
+      it(`preserves the earlier regression with duration ${duration} and media ending at the buffer end`, function () {
+        previous.duration = duration;
+        previous.endPTS = previous.endDTS = 300;
+        previous.elementaryStreams.audio!.endPTS = 300;
+        trackPrevious(FragmentState.OK);
+        expect(streamController['getNextFragment'](300, details)).to.equal(
+          details.fragments[1],
+        );
+      });
+    });
+
+    it('does not skip a completed append whose required media tail is missing', function () {
+      previous.minEndPTS = previous.endPTS;
+      trackPrevious(FragmentState.PARTIAL, 300, false);
+      expect(streamController['getNextFragment'](300, details)).to.equal(
+        details.fragments[0],
+      );
+    });
+
+    it('advances on the same level after the buffered segment', function () {
+      details.fragments.forEach((frag) => {
+        frag.level = previous.level;
+      });
+      trackPrevious(FragmentState.OK);
+      expect(streamController['getNextFragment'](300, details)).to.equal(
+        details.fragments[1],
+      );
+    });
+
+    it('advances after the initial segment at zero', function () {
+      setupSwitch(0);
+      trackPrevious(FragmentState.OK, previous.minEndPTS);
+      expect(
+        streamController['getNextFragment'](previous.minEndPTS!, details),
+      ).to.equal(details.fragments[1]);
+    });
+
+    it('keeps the containing segment during a backward seek', function () {
+      trackPrevious(FragmentState.OK);
+      streamController['lastCurrentTime'] = 301;
+      expect(streamController['getNextFragment'](300, details)).to.equal(
+        details.fragments[0],
+      );
+    });
+
+    it('keeps the containing segment when the requested range does not reach its media end', function () {
+      trackPrevious(FragmentState.OK);
+      expect(streamController['getNextFragment'](299.9, details)).to.equal(
+        details.fragments[0],
+      );
+    });
+
+    it('finds the seek segment without a previously appended fragment', function () {
+      streamController['fragPrevious'] = null;
+      expect(streamController['getNextFragment'](299, details)).to.equal(
+        details.fragments[0],
+      );
+    });
+
+    [
+      {
+        name: 'missing next segment',
+        change: () => {
+          details.fragments.pop();
+          details.endSN = 49;
+        },
+      },
+      {
+        name: 'next discontinuity',
+        change: () => {
+          details.fragments[1].cc = 1;
+        },
+      },
+      {
+        name: 'different continuity sequence',
+        change: () => {
+          details.fragments[0].cc = 1;
+        },
+      },
+      {
+        name: 'misaligned current segment',
+        change: () => {
+          details.fragments[0].start += 1;
+          details.fragments[0].duration -= 1;
+        },
+      },
+      {
+        name: 'gap before the next segment',
+        change: () => {
+          details.fragments[1].start += 0.3;
+        },
+      },
+    ].forEach(({ name, change }) => {
+      it(`keeps segment 49 with a ${name}`, function () {
+        trackPrevious(FragmentState.OK);
+        change();
+        expect(streamController['getNextFragment'](300, details)).to.equal(
+          details.fragments[0],
+        );
+      });
     });
   });
 

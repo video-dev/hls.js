@@ -117,6 +117,26 @@ describe('Fragment finders', function () {
       );
     });
 
+    it('keeps the containing segment on a level switch without completion information', function () {
+      const previous = makeMockFragment({
+        start: 294.294,
+        duration: 6.006,
+        sn: 49,
+        level: 0,
+        endPTS: 300.3,
+        endDTS: 300.3,
+      });
+      const fragments = [
+        makeMockFragment({ start: 294.294, duration: 6.006, sn: 49, level: 1 }),
+        makeMockFragment({ start: 300.3, duration: 6.006, sn: 50, level: 1 }),
+      ];
+      [0.25, 0].forEach((lookupTolerance) => {
+        expect(
+          findFragmentByPTS(previous, fragments, 300, lookupTolerance),
+        ).to.equal(fragments[0]);
+      });
+    });
+
     it('uses BinarySearch to find a fragment if the subsequent one is not within tolerance', function () {
       const fragments = [
         mockFragments[0],

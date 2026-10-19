@@ -1899,16 +1899,16 @@ export default class BaseStreamController
     }
 
     // Clear fragPrevious if removed from buffer / tracker so that is picked again
-    if (
-      fragPrevious &&
-      this.fragmentTracker.getState(fragPrevious) === FragmentState.NOT_LOADED
-    ) {
+    const previousState = fragPrevious
+      ? this.fragmentTracker.getState(fragPrevious)
+      : FragmentState.NOT_LOADED;
+    if (previousState === FragmentState.NOT_LOADED) {
       fragPrevious = null;
     }
 
+    const backwardSeek = bufferEnd < this.lastCurrentTime;
     let frag: MediaFragment | null;
     if (bufferEnd < end) {
-      const backwardSeek = bufferEnd < this.lastCurrentTime;
       const lookupTolerance =
         backwardSeek ||
         bufferEnd > end - maxFragLookUpTolerance ||
@@ -1918,8 +1918,14 @@ export default class BaseStreamController
           : maxFragLookUpTolerance;
       // Remove the tolerance if it would put the bufferEnd past the actual end of stream
       // Uses buffer and sequence number to calculate switch segment (required if using EXT-X-DISCONTINUITY-SEQUENCE)
+      const previousForLookup =
+        fragPrevious &&
+        fragments[0]?.level !== fragPrevious.level &&
+        (previousState !== FragmentState.OK || backwardSeek)
+          ? null
+          : fragPrevious;
       frag = findFragmentByPTS(
-        fragPrevious,
+        previousForLookup,
         fragments,
         bufferEnd,
         lookupTolerance,
@@ -1940,13 +1946,32 @@ export default class BaseStreamController
       ) {
         fragPrevious = frag;
       }
+      const nextFrag = fragments[curSNIdx + 1];
+      const alignmentTolerance = Math.max(
+        maxFragLookUpTolerance,
+        Number.EPSILON * Math.max(1, Math.abs(frag.start), Math.abs(frag.end)),
+      );
+      // Completion comes from the tracker: audio and video can end at different PTS.
+      const bufferedLevelSwitch =
+        fragPrevious &&
+        previousState === FragmentState.OK &&
+        !backwardSeek &&
+        !loadingParts &&
+        frag.level !== fragPrevious.level &&
+        frag.sn === fragPrevious.sn &&
+        frag.cc === fragPrevious.cc &&
+        bufferEnd >=
+          (fragPrevious.minEndPTS ?? fragPrevious.endPTS ?? fragPrevious.end) &&
+        Math.abs(frag.start - fragPrevious.start) <= alignmentTolerance &&
+        nextFrag?.sn === frag.sn + 1 &&
+        nextFrag.cc === frag.cc &&
+        Math.abs(nextFrag.start - frag.end) <= alignmentTolerance;
       if (
-        mediaFragmentsAreEqual(frag, fragPrevious) &&
+        (mediaFragmentsAreEqual(frag, fragPrevious) || bufferedLevelSwitch) &&
         (!loadingParts ||
           partList[0].fragment.sn > frag.sn ||
           !levelDetails.live)
       ) {
-        const nextFrag = fragments[curSNIdx + 1];
         if (
           frag.sn < endSN &&
           this.fragmentTracker.getState(nextFrag) !== FragmentState.OK
