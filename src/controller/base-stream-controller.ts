@@ -1913,6 +1913,7 @@ export default class BaseStreamController
         backwardSeek ||
         bufferEnd > end - maxFragLookUpTolerance ||
         this.media?.paused ||
+        this.loadingParts ||
         !this.startFragRequested
           ? 0
           : maxFragLookUpTolerance;

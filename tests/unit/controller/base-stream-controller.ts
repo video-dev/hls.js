@@ -3,6 +3,7 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
 import { State } from '../../../src/controller/base-stream-controller';
+import { FragmentState } from '../../../src/controller/fragment-tracker';
 import BaseStreamControllerImpl from '../../../src/controller/stream-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import Hls from '../../../src/hls';
@@ -1480,6 +1481,39 @@ describe('BaseStreamController', function () {
 
       expect((baseStreamController as any).scheduleTrackSwitch).to.not.have.been
         .called;
+    });
+  });
+
+  describe('getFragmentAtPosition', function () {
+    it('does not skip the unloaded tail of a segment when loading parts', function () {
+      const makeFrag = (sn: number, start: number, duration: number) => {
+        const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+        frag.sn = sn;
+        frag.duration = duration;
+        frag.setStart(start);
+        return frag;
+      };
+      // Segment 1 was refreshed by a playlist reload and has a 0.1s unloaded
+      // tail, which is less than maxFragLookUpTolerance (0.25s).
+      const previous = makeFrag(1, 0, 3.9);
+      const current = makeFrag(1, 0, 4);
+      const hint = makeFrag(2, 4, 2);
+      const details = new LevelDetails('');
+      details.live = true;
+      details.startSN = details.endSN = 1;
+      details.fragments = [current];
+      details.fragmentHint = hint;
+      details.partList = [{ fragment: current }, { fragment: hint }] as Part[];
+      fragmentTracker.state = FragmentState.PARTIAL;
+      media.paused = false;
+      const controller = baseStreamController as any;
+      controller.fragPrevious = previous;
+      controller.loadingParts = true;
+      controller.startFragRequested = true;
+
+      expect(controller.getFragmentAtPosition(3.9, 6, details)).to.equal(
+        current,
+      );
     });
   });
 });
