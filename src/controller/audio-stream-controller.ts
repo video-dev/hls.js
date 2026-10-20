@@ -931,7 +931,12 @@ class AudioStreamController
     }
 
     this.state = State.PARSING;
-    if (audio && this.switchingTrack && !this.switchingTrack.flushImmediate) {
+    if (
+      audio &&
+      this.switchingTrack &&
+      !this.switchingTrack.flushImmediate &&
+      !this.loadingParts
+    ) {
       const { config } = this;
       const bufferFlushDelay = config.nextAudioTrackBufferFlushForwardOffset;
       const startOffset = Math.max(
