@@ -36,6 +36,7 @@ import type {
 import type { Bufferable } from '../utils/buffer-helper';
 
 const TICK_INTERVAL = 500; // how often to tick in ms
+export const PART_END_TOLERANCE = 1e-6; // seconds
 
 interface TimeRange {
   start: number;
@@ -155,7 +156,7 @@ export class SubtitleStreamController
       timeRange = { start, end };
       buffered.push(timeRange);
     }
-    if (!part || end >= frag.end) {
+    if (!part || end >= frag.end - PART_END_TOLERANCE) {
       const entity = this.fragmentTracker.fragBuffered(frag as MediaFragment);
       if (part && entity) {
         entity.range.subs = {
