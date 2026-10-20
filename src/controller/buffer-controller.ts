@@ -570,8 +570,12 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
         }
 
         // clean up video tag src only if it's our own url. some external libraries might
-        // hijack the video tag and change its 'src' without destroying the Hls instance first
-        if (this.mediaSrc === _objectUrl) {
+        // hijack the video tag and change its 'src' without destroying the Hls instance first,
+        // and the browser may have selected an alternate <source> (AirPlay with ManagedMediaSource)
+        if (
+          this.mediaSrc === _objectUrl &&
+          !this.isMediaSourceReplaced(_objectUrl)
+        ) {
           media.removeAttribute('src');
           if (this.appendSource) {
             removeSourceChildren(media);
@@ -1056,9 +1060,11 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
           }
           const readyState = this.mediaSource?.readyState;
           if (
-            readyState === 'ended' ||
-            readyState === 'closed' ||
-            !!mediaError
+            (readyState === 'ended' ||
+              readyState === 'closed' ||
+              !!mediaError) &&
+            // Do not reset over a source the media element switched to (see `_onMediaSourceClose`)
+            !this.isMediaSourceReplaced()
           ) {
             // "ended" readyState on cold start https://bugs.webkit.org/show_bug.cgi?id=305712
             this.warn(
@@ -1978,6 +1984,24 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     // When the user navigates back, the MediaSource is in a 'closed' state and cannot be used.
     // If sourceclose fires while media is still attached, trigger recovery to reattach media.
     if (this.media) {
+      if (this.isMediaSourceReplaced()) {
+        // The MediaSource closed because the media element moved on to another resource: a third
+        // party set `src` while attached (e.g. an Ad SDK playing in the content element), or the
+        // browser selected an alternate <source> (Safari AirPlay with ManagedMediaSource loads the
+        // m3u8 source alternative on the remote device). Resetting would reload the element over
+        // that source, so detach and leave the element alone instead. Call `attachMedia()` and
+        // `startLoad()` to resume MSE playback.
+        const { currentSrc } = this.media;
+        const newSrc =
+          currentSrc && currentSrc !== this._objectUrl
+            ? currentSrc
+            : this.mediaSrc;
+        this.warn(
+          `MediaSource closed after media element switched to another source (${this._objectUrl} > ${newSrc}) - detaching media`,
+        );
+        this.hls.detachMedia();
+        return;
+      }
       const mediaError = this.media.error;
       const { appendError, appendErrors } = this;
       let fatal = false;
@@ -2028,8 +2052,37 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
   };
 
   private get mediaSrc(): string | undefined {
-    const media = (this.media?.querySelector as any)?.('source') || this.media;
-    return media?.src;
+    const media = this.media;
+    if (!media) {
+      return undefined;
+    }
+    // A `src` attribute takes precedence over <source> children (HTML resource selection), so a
+    // third party setting `media.src` wins over the <source> appended for ManagedMediaSource
+    const source = media.src
+      ? media
+      : (media.querySelector as any)?.('source') || media;
+    return source.src;
+  }
+
+  // The media element moved on to a resource other than our MediaSource object URL while attached.
+  // Two cases, and each one changes a different signal, so both are checked independently:
+  // - the browser selected an alternate <source> child (Safari AirPlay with ManagedMediaSource):
+  //   `currentSrc` changes, the `src` attribute and <source> children do not.
+  // - a third party set `src` (e.g. an Ad SDK playing in the content element): the attribute
+  //   changes, but `currentSrc` is stale at `sourceclose` time because resource selection runs
+  //   in a later task (it still reports the object URL).
+  // Once either has happened the MediaSource and its object URL are not reusable, and resetting
+  // them would reload the element over the new source.
+  private isMediaSourceReplaced(objectUrl = this._objectUrl): boolean {
+    if (!objectUrl) {
+      return false;
+    }
+    const currentSrc = this.media?.currentSrc;
+    const mediaSrc = this.mediaSrc;
+    return (
+      (!!currentSrc && currentSrc !== objectUrl) ||
+      (!!mediaSrc && mediaSrc !== objectUrl)
+    );
   }
 
   private onSBUpdateStart(type: SourceBufferName) {

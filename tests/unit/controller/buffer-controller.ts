@@ -58,6 +58,7 @@ type BufferControllerTestable = Omit<
   tracks: SourceBufferTrackSet;
   tracksReady: boolean;
   _onMediaSourceClose: () => void;
+  _objectUrl: string | null;
 };
 
 describe('BufferController', function () {
@@ -609,6 +610,83 @@ describe('BufferController', function () {
       bufferController.mediaSource = mediaSource;
       bufferController._onMediaSourceClose();
       expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
+    });
+
+    describe('media element switched to another source', function () {
+      const OBJECT_URL = 'blob:https://example.com/media-source';
+      let media: MockMediaElement;
+      let triggerSpy: sinon.SinonSpy;
+      let detachSpy: sinon.SinonSpy;
+      const resetErrorCount = () =>
+        triggerSpy
+          .getCalls()
+          .filter(
+            (call) =>
+              call.args[0] === Events.ERROR &&
+              call.args[1].details === ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+          ).length;
+
+      beforeEach(function () {
+        media = new MockMediaElement();
+        triggerSpy = sandbox.spy(hls, 'trigger');
+        detachSpy = sandbox.spy(hls, 'detachMedia');
+        bufferController.media = media as unknown as HTMLMediaElement;
+        bufferController.mediaSource =
+          new MockMediaSource() as unknown as MediaSource;
+        bufferController._objectUrl = OBJECT_URL;
+      });
+
+      it('emits error when the element is still on the MediaSource object URL (bfcache restore)', function () {
+        media.src = OBJECT_URL;
+        media.currentSrc = OBJECT_URL;
+        bufferController._onMediaSourceClose();
+        expect(triggerSpy).to.have.been.calledWith(
+          Events.ERROR,
+          sinon.match({ details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET }),
+        );
+        expect(detachSpy).to.not.have.been.called;
+      });
+
+      it('detaches instead of resetting when a third party set src on the element', function () {
+        // currentSrc is stale at sourceclose time: resource selection has not run yet
+        media.currentSrc = OBJECT_URL;
+        // What an Ad SDK does to play in the content element
+        media.src = 'https://example.com/ad.mp4';
+        bufferController._onMediaSourceClose();
+        expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
+        expect(detachSpy).to.have.been.calledOnce;
+        expect(bufferController.media).to.be.null;
+      });
+
+      it('detaches without touching the element when the browser selected an alternate <source> (AirPlay)', function () {
+        // ManagedMediaSource attaches through a <source> child which stays in place while Safari
+        // loads the m3u8 source alternative on the AirPlay device
+        (media as any).querySelector = (selector: string) =>
+          selector === 'source' ? { src: OBJECT_URL } : null;
+        media.currentSrc = 'https://example.com/main.m3u8';
+        const loadSpy = sandbox.spy(media, 'load');
+        const removeAttributeSpy = sandbox.spy(media, 'removeAttribute');
+        bufferController._onMediaSourceClose();
+        expect(triggerSpy).to.not.have.been.calledWith(Events.ERROR);
+        expect(detachSpy).to.have.been.calledOnce;
+        expect(loadSpy).to.not.have.been.called;
+        expect(removeAttributeSpy).to.not.have.been.called;
+        expect(bufferController.media).to.be.null;
+      });
+
+      it('prefers the src attribute over a <source> child when checking the active source', function () {
+        (media as any).querySelector = (selector: string) =>
+          selector === 'source' ? { src: OBJECT_URL } : null;
+        // Without a src attribute the <source> child is the active source: reset as usual
+        bufferController._onMediaSourceClose();
+        expect(resetErrorCount()).to.equal(1);
+        expect(detachSpy).to.not.have.been.called;
+        // A src attribute set over the <source> child takes precedence: detach, do not reset
+        media.src = 'https://example.com/ad.mp4';
+        bufferController._onMediaSourceClose();
+        expect(resetErrorCount()).to.equal(1);
+        expect(detachSpy).to.have.been.calledOnce;
+      });
     });
   });
 });
