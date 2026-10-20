@@ -38,6 +38,7 @@ import {
   removeEventListener,
 } from '../utils/event-listener-helper';
 import {
+  alignSliding,
   findPart,
   getFragmentWithSN,
   getPartWith,
@@ -2384,24 +2385,36 @@ export default class BaseStreamController
             );
             return result || false;
           }
-          const drift = chunkMeta.partial
-            ? 0
-            : updateFragPTSDTS(
-                details,
-                frag,
-                info.startPTS,
-                info.endPTS,
-                info.startDTS,
-                info.endDTS,
-                this.iframesOnly,
-                this,
-              );
+          let drift = 0;
+          if (chunkMeta.partial) {
+            if (part && chunkMeta.part === 0) {
+              drift = part.start - info.startPTS;
+              frag.startPTS = frag.maxStartPTS = info.startPTS;
+              frag.startDTS = info.startDTS;
+              if (frag.start !== 0) {
+                frag.setStart(info.startPTS);
+              }
+              alignSliding(details, frag, drift);
+            }
+          } else {
+            drift = updateFragPTSDTS(
+              details,
+              frag,
+              info.startPTS,
+              info.endPTS,
+              info.startDTS,
+              info.endDTS,
+              this.iframesOnly,
+              this,
+            );
+          }
           this.hls.trigger(Events.LEVEL_PTS_UPDATED, {
             details,
             level,
             drift,
             type,
             frag,
+            part,
             start: info.startPTS,
             end: info.endPTS,
           });
