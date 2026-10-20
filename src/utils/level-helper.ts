@@ -108,9 +108,21 @@ export function updateFragPTSDTS(
   frag.minEndPTS = minEndPTS;
   frag.endDTS = endDTS;
 
+  return alignSliding(details, frag, drift);
+}
+
+export function alignSliding(
+  details: LevelDetails | undefined,
+  frag: MediaFragment,
+  drift: number,
+): number {
   const sn = frag.sn;
   // exit if sn out of range
-  if (!details || sn < details.startSN || sn > details.endSN) {
+  if (
+    !details ||
+    sn < details.startSN ||
+    sn > (details.fragmentHint?.sn || details.endSN)
+  ) {
     return 0;
   }
   let i: number;
