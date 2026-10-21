@@ -936,7 +936,7 @@ class AudioStreamController
       const bufferFlushDelay = config.nextAudioTrackBufferFlushForwardOffset;
       const startOffset = Math.max(
         this.getLoadPosition() + bufferFlushDelay,
-        frag.start,
+        (part || frag).start,
       );
       super.flushMainBuffer(
         startOffset,
