@@ -329,6 +329,7 @@ export type TimelineControllerConfig = {
   captionsTextTrack4Label: string;
   captionsTextTrack4LanguageCode: string;
   renderTextTracksNatively: boolean;
+  filterUndeclaredClosedCaptions: boolean;
 };
 
 export type TSDemuxerConfig = {
@@ -708,6 +709,7 @@ function timelineConfig(): TimelineControllerConfig {
     captionsTextTrack4Label: 'Unknown CC', // used by timeline-controller
     captionsTextTrack4LanguageCode: '', // used by timeline-controller
     renderTextTracksNatively: true,
+    filterUndeclaredClosedCaptions: true, // used by timeline-controller
   };
 }
 
