@@ -191,13 +191,25 @@ export class LevelDetails {
   }
 
   get expired(): boolean {
-    if (this.live && this.age && this.misses < 3) {
+    if (this.live && this.advancedDateTime !== undefined && this.misses < 3) {
       const playlistWindowDuration = this.partEnd - this.fragmentStart;
       return (
         this.age >
         Math.max(playlistWindowDuration, this.totalduration) +
           this.levelTargetDuration
       );
+    }
+    return false;
+  }
+
+  get partsExpired(): boolean {
+    if (
+      this.live &&
+      this.partTarget &&
+      this.advancedDateTime !== undefined &&
+      this.misses < 3
+    ) {
+      return this.age > (this.partHoldBack || this.partTarget * 3) * 1.5;
     }
     return false;
   }

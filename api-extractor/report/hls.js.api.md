@@ -3634,6 +3634,8 @@ export class LevelDetails {
     // (undocumented)
     partList: Part[] | null;
     // (undocumented)
+    get partsExpired(): boolean;
+    // (undocumented)
     partTarget: number;
     // (undocumented)
     playlistParsingError: Error | null;
