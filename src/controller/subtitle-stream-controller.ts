@@ -117,9 +117,6 @@ export class SubtitleStreamController
     data: MediaDetachingData,
   ) {
     this.tracksBuffered = [];
-    this.levels?.forEach((level) => {
-      this.tracksBuffered[level.id] = [];
-    });
     super.onMediaDetaching(event, data);
   }
 
@@ -136,7 +133,7 @@ export class SubtitleStreamController
       return;
     }
 
-    const buffered = this.tracksBuffered[this.currentTrackId];
+    const buffered = (this.tracksBuffered[frag.level] ||= []);
     if (!buffered) {
       return;
     }
@@ -239,11 +236,9 @@ export class SubtitleStreamController
       return;
     }
     this.tracksBuffered = [];
-    this.levels = subtitleTracks.map((mediaPlaylist) => {
-      const level = new Level(mediaPlaylist);
-      this.tracksBuffered[level.id] = [];
-      return level;
-    });
+    this.levels = subtitleTracks.map(
+      (mediaPlaylist) => new Level(mediaPlaylist),
+    );
     this.fragmentTracker.removeFragmentsInRange(
       0,
       Number.POSITIVE_INFINITY,
@@ -444,7 +439,7 @@ export class SubtitleStreamController
       const { config } = this;
       const currentTime = this.playhead;
       const bufferedInfo = BufferHelper.bufferedInfo(
-        this.tracksBuffered[this.currentTrackId] || [],
+        this.tracksBuffered[currentTrackId] || [],
         currentTime,
         config.maxBufferHole,
       );
@@ -463,6 +458,9 @@ export class SubtitleStreamController
       }
       // Load earlier fragment in same discontinuity to make up for misaligned playlists and cues that extend beyond end of segment
       if (isMediaFragment(frag)) {
+        if (frag.end === bufferedInfo.end) {
+          return;
+        }
         const curSNIdx = frag.sn - trackDetails.startSN;
         const prevFrag = trackDetails.fragments[curSNIdx - 1] as
           | MediaFragment
