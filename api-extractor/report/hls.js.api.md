@@ -3801,6 +3801,8 @@ export interface LevelPTSUpdatedData {
     // (undocumented)
     level: Level;
     // (undocumented)
+    part: Part | null;
+    // (undocumented)
     start: number;
     // (undocumented)
     type: string;

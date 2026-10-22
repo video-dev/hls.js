@@ -242,7 +242,7 @@ describe('mp4-remuxer', function () {
       // 132006 / (90000 / 44100) = 64682.94 audio ticks
       const firstPts = 132006;
       const audio = mp4Remuxer.remuxAudio(
-        aacTrack(firstPts, 44100),
+        aacTrack(firstPts, 44100, 3),
         0,
         false,
         false,
@@ -263,7 +263,7 @@ describe('mp4-remuxer', function () {
       // 90000 / (90000 / 48000) = 48000 audio ticks
       const firstPts = 90000;
       const audio = mp4Remuxer.remuxAudio(
-        aacTrack(firstPts, 48000),
+        aacTrack(firstPts, 48000, 3),
         0,
         false,
         false,
@@ -370,28 +370,56 @@ describe('mp4-remuxer', function () {
         expect(seen.size).to.be.gt(1);
       });
     });
+
+    it('does not inject silent frames before the start of the timeline', function () {
+      // 29.97 fps iPhone encode with B-frames: initPTS anchors on the first video DTS,
+      // and the first audio sample starts 6006 ticks (66.7 ms) later at 44.1 kHz
+      const initTime = 126000;
+      const samplerate = 44100;
+      const inputSampleDuration = (1024 * 90000) / samplerate;
+      const firstAudioPts = 132006;
+      const frames = 10;
+      mp4Remuxer.resetTimeStamp({
+        baseTime: initTime,
+        timescale: 90000,
+        trackId: 1,
+      });
+      const audio = mp4Remuxer.remuxAudio(
+        aacTrack(firstAudioPts, samplerate, frames),
+        0,
+        false,
+        true,
+        0,
+        new ChunkMetadata(0, 0, 1, 0),
+      )!;
+      // round(6006 / 2089.8) = 3 frames would start 263 ticks before initPTS; only two fit after it
+      const expectedFirstPts = firstAudioPts - 2 * inputSampleDuration;
+      expect(audio.nb).to.equal(frames + 2);
+      expect(audio.startPTS).to.be.at.least(0);
+      expect(audio.startPTS).to.be.closeTo(
+        (expectedFirstPts - initTime) / 90000,
+        0.0001,
+      );
+      expect(readTfdt(audio.data1)).to.equal(
+        Math.ceil(expectedFirstPts / (90000 / samplerate)),
+      );
+    });
   });
 });
 
-function aacTrack(firstPts: number, samplerate: number): DemuxedAudioTrack {
-  const inputSampleDuration = (1024 * 90000) / samplerate;
+function aacTrack(
+  firstPts: number,
+  samplerate: number,
+  frames: number,
+): DemuxedAudioTrack {
+  const frameDuration = (1024 * 90000) / samplerate;
   return {
-    type: 'audio',
-    id: 2,
-    pid: 257,
-    inputTimeScale: 90000,
-    sequenceNumber: 0,
-    samples: [0, 1, 2].map((i) => ({
-      unit: new Uint8Array(8),
-      pts: firstPts + i * inputSampleDuration,
-    })),
-    dropped: 0,
-    segmentCodec: 'aac',
+    ...makeAudioTrack(0, 0),
     samplerate,
-    channelCount: 2,
-    config: [0x12, 0x10],
-    codec: 'mp4a.40.2',
-    manifestCodec: 'mp4a.40.2',
+    samples: Array.from({ length: frames }, (_, i) => ({
+      pts: firstPts + i * frameDuration,
+      unit: new Uint8Array(16),
+    })),
   };
 }
 
@@ -400,13 +428,11 @@ function aacFragment(
   samplerate: number,
   frames: number,
 ): DemuxedAudioTrack {
-  const track = aacTrack(firstPts, samplerate);
-  const inputSampleDuration = (1024 * 90000) / samplerate;
+  const track = aacTrack(firstPts, samplerate, frames);
   // the TS demuxer hands over integer 90 kHz timestamps
-  track.samples = Array.from({ length: frames }, (_, i) => ({
-    unit: new Uint8Array(8),
-    pts: Math.round(firstPts + i * inputSampleDuration),
-  }));
+  track.samples.forEach((sample) => {
+    sample.pts = Math.round(sample.pts);
+  });
   return track;
 }
 

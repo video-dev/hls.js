@@ -1070,7 +1070,7 @@ export default class MP4Remuxer extends Logger implements Remuxer {
           // Adjust nextPts so that silent samples are aligned with media pts. This will prevent media samples from
           // later being shifted if nextPts is based on timeOffset and delta is not a multiple of inputSampleDuration.
           nextPts = pts - missing * inputSampleDuration;
-          while (nextPts < 0 && missing && inputSampleDuration) {
+          while (nextPts < initTime && missing && inputSampleDuration) {
             missing--;
             nextPts += inputSampleDuration;
           }
