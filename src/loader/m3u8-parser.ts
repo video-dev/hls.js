@@ -55,7 +55,7 @@ const IS_MEDIA_PLAYLIST = /^#EXT(?:INF|-X-TARGETDURATION):/m; // Handle empty Me
 
 const LEVEL_PLAYLIST_REGEX_FAST = new RegExp(
   [
-    /#EXTINF:\s*(\d*(?:\.\d+)?)(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
+    /#EXTINF:\s*(\d+(?:\.\d*)?|\.\d+)?(?:,(.*)\s+)?/.source, // duration (#EXTINF:<duration>,<title>), group 1 => duration, group 2 => title
     /(?!#) *(\S[^\r\n]*)/.source, // segment URI, group 3 => the URI (note newline is not eaten)
     /#.*/.source, // All other non-segment oriented tags will match with all groups empty
   ].join('|'),

@@ -1418,6 +1418,35 @@ fileSequence24.m4s
     expect(result.fragments[0].duration).to.equal(0.36);
   });
 
+  it('parses #EXTINF without digits after the decimal point', function () {
+    const level = `#EXTM3U
+#EXT-X-VERSION:3
+#EXT-X-PLAYLIST-TYPE:VOD
+#EXT-X-TARGETDURATION:10
+#EXTINF:10.,
+segment-1.ts
+#EXTINF:4.,title
+segment-2.ts
+#EXT-X-ENDLIST`;
+    const result = M3U8Parser.parseLevelPlaylist(
+      level,
+      'http://example.com/media.m3u8',
+      0,
+      PlaylistLevelType.MAIN,
+      0,
+      null,
+    );
+    expect(result.playlistParsingError).to.be.null;
+    expect(result.fragments).to.have.lengthOf(2);
+    expect(result.totalduration).to.equal(14);
+    expect(result.fragments[0].duration).to.equal(10);
+    expect(result.fragments[0].url).to.equal('http://example.com/segment-1.ts');
+    expect(result.fragments[1].start).to.equal(10);
+    expect(result.fragments[1].duration).to.equal(4);
+    expect(result.fragments[1].title).to.equal('title');
+    expect(result.fragments[1].url).to.equal('http://example.com/segment-2.ts');
+  });
+
   it('parses #EXT-X-MAP URI', function () {
     const level = `#EXTM3U
 #EXT-X-TARGETDURATION:6
