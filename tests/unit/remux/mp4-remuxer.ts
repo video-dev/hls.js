@@ -7,6 +7,7 @@ import MP4Remuxer from '../../../src/remux/mp4-remuxer';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
 import { logger } from '../../../src/utils/logger';
+import { findBox } from '../../../src/utils/mp4-tools';
 import type { HlsEventEmitter } from '../../../src/events';
 import type {
   AudioSample,
@@ -227,7 +228,66 @@ describe('mp4-remuxer', function () {
       );
     });
   });
+
+  describe('remuxAudio', function () {
+    it('does not inject silent frames before the start of the timeline', function () {
+      // 29.97 fps iPhone encode with B-frames: initPTS anchors on the first video DTS,
+      // and the first audio sample starts 6006 ticks (66.7 ms) later at 44.1 kHz
+      const initTime = 126000;
+      const samplerate = 44100;
+      const inputSampleDuration = (1024 * 90000) / samplerate;
+      const firstAudioPts = 132006;
+      const frames = 10;
+      mp4Remuxer.resetTimeStamp({
+        baseTime: initTime,
+        timescale: 90000,
+        trackId: 1,
+      });
+      const audio = mp4Remuxer.remuxAudio(
+        aacTrack(firstAudioPts, samplerate, frames),
+        0,
+        false,
+        true,
+        0,
+        new ChunkMetadata(0, 0, 1, 0),
+      )!;
+      // round(6006 / 2089.8) = 3 frames would start 263 ticks before initPTS; only two fit after it
+      const expectedFirstPts = firstAudioPts - 2 * inputSampleDuration;
+      expect(audio.nb).to.equal(frames + 2);
+      expect(audio.startPTS).to.be.at.least(0);
+      expect(audio.startPTS).to.be.closeTo(
+        (expectedFirstPts - initTime) / 90000,
+        0.0001,
+      );
+      expect(readTfdt(audio.data1)).to.equal(
+        Math.floor(expectedFirstPts / (90000 / samplerate)),
+      );
+    });
+  });
 });
+
+function aacTrack(
+  firstPts: number,
+  samplerate: number,
+  frames: number,
+): DemuxedAudioTrack {
+  const frameDuration = (1024 * 90000) / samplerate;
+  return {
+    ...makeAudioTrack(0, 0),
+    samplerate,
+    samples: Array.from({ length: frames }, (_, i) => ({
+      pts: firstPts + i * frameDuration,
+      unit: new Uint8Array(16),
+    })),
+  };
+}
+
+function readTfdt(moof: Uint8Array): number {
+  const tfdt = findBox(moof, ['moof', 'traf', 'tfdt'])[0];
+  const view = new DataView(tfdt.buffer, tfdt.byteOffset, tfdt.byteLength);
+  // version 1: 64-bit baseMediaDecodeTime after the version and flags word
+  return view.getUint32(4) * 2 ** 32 + view.getUint32(8);
+}
 
 function ptsDts(pts: number, dts: number): VideoSample {
   return {
