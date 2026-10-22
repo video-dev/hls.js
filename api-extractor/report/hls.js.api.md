@@ -1236,7 +1236,9 @@ export const enum DecrypterAesMode {
     // (undocumented)
     cbc = 0,
     // (undocumented)
-    ctr = 1
+    ctr = 1,
+    // (undocumented)
+    gcm = 2
 }
 
 // Warning: (ae-missing-release-tag) "DRMSystemConfiguration" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
