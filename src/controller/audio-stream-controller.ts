@@ -622,7 +622,8 @@ class AudioStreamController
 
   _handleFragmentLoadProgress(data: FragLoadedData) {
     const frag = data.frag as MediaFragment;
-    const { part, payload } = data;
+    const { part } = data;
+    let { payload } = data;
     const { config, trackId, levels } = this;
     if (!levels) {
       this.warn(
@@ -659,6 +660,20 @@ class AudioStreamController
     // If not we need to wait for it
     const initPTS = this.initPTS[frag.cc];
     const initSegmentData = frag.initSegment?.data;
+    const waitingData = this.waitingData;
+    if (
+      initPTS !== undefined &&
+      waitingData?.frag === frag &&
+      waitingData.part === part
+    ) {
+      // Send the chunks cached while waiting for initPTS first, so the fragment stays in order
+      this.waitingData = null;
+      if (this.state === State.WAITING_INIT_PTS) {
+        this.state = State.FRAG_LOADING;
+      }
+      waitingData.cache.push(new Uint8Array(payload));
+      payload = waitingData.cache.flush().buffer;
+    }
     if (initPTS !== undefined) {
       // this.log(`Transmuxing ${sn} of [${details.startSN} ,${details.endSN}],track ${trackId}`);
       // time Offset is accurate if level PTS is known, or if playlist is not sliding (not live)
