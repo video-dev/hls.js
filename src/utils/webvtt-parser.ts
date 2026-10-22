@@ -112,15 +112,19 @@ export function parseWebVTT(
     cue.startTime = Math.max(startTime, 0);
     cue.endTime = Math.max(startTime + duration, 0);
 
-    //trim trailing webvtt block whitespaces
-    const text = cue.text.trim();
+    // Trim trailing webvtt block whitespace, but keep no-break spaces: lines
+    // holding only U+00A0 are used to position a cue, and trim() would remove
+    // them (#5337).
+    const text = cue.text.replace(/^[ \t\r\n\f]+|[ \t\r\n\f]+$/g, '');
 
     // Fix encoding of special characters
     cue.text = decodeURIComponent(encodeURIComponent(text));
 
     // If the cue was not assigned an id from the VTT file (line above the content), create one.
+    // Trim for the id only, so the same cue repeated across segments with
+    // different trailing whitespace is still recognised as a duplicate.
     if (!cue.id) {
-      cue.id = generateCueId(cue.startTime, cue.endTime, text);
+      cue.id = generateCueId(cue.startTime, cue.endTime, text.trim());
     } else if (cc) {
       // Prevent same id in cues accross different discontinuities
       cue.id = `hlsjscc${cc}_${cue.id}`;

@@ -1944,6 +1944,7 @@ export default class BaseStreamController
         backwardSeek ||
         bufferEnd > end - maxFragLookUpTolerance ||
         this.media?.paused ||
+        this.loadingParts ||
         !this.startFragRequested
           ? 0
           : maxFragLookUpTolerance;
@@ -2575,8 +2576,12 @@ export default class BaseStreamController
       return false;
     }
 
+    // Without a known length (no Content-Length) the remaining size is unknown
+    if (stats.total <= 0) {
+      return false;
+    }
     const hasFirstByte = stats.loading.first > 0;
-    const bitsRemaining = stats.total - stats.loaded;
+    const bitsRemaining = (stats.total - stats.loaded) * 8;
     const timeToCompleteFragDownload =
       bitsRemaining /
       (this.hls.bandwidthEstimate || this.hls.config.abrEwmaDefaultEstimate);

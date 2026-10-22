@@ -170,8 +170,8 @@ export function mergeDetails(
     newDetails,
     (oldFrag, newFrag, newFragIndex, newFragments) => {
       if (
-        (!newDetails.startCC || newDetails.skippedSegments) &&
-        newFrag.cc !== oldFrag.cc
+        newFrag.cc !== oldFrag.cc &&
+        (oldFrag.cc > newFrag.cc || newDetails.skippedSegments)
       ) {
         const ccOffset = oldFrag.cc - newFrag.cc;
         for (let i = newFragIndex; i < newFragments.length; i++) {
@@ -268,6 +268,15 @@ export function mergeDetails(
       mapDateRanges(programDateTimes, newDetails);
     }
     newDetails.endCC = newFragments[newFragments.length - 1].cc;
+  } else if (
+    newDetails.startSN > oldDetails.endSN &&
+    newFragments[0].cc < oldDetails.endCC
+  ) {
+    const ccOffset = oldDetails.endCC - newFragments[0].cc;
+    fragmentsToCheck.forEach((frag) => {
+      frag.cc += ccOffset;
+    });
+    newDetails.endCC += ccOffset;
   }
   if (!newDetails.startCC) {
     const fragPriorToNewStart = getFragmentWithSN(

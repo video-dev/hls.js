@@ -55,7 +55,6 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
   const defaultRateInfo = {
     frameRate: 30,
     subFrameRate: 1,
-    frameRateMultiplier: 0,
     tickRate: 1,
   };
   const rateInfo: Record<string, string | number> = Object.keys(
@@ -64,6 +63,16 @@ function parseTTML(ttml: string, syncTime: number): Array<VTTCue> {
     result[key] = tt.getAttribute(`ttp:${key}`) || defaultRateInfo[key];
     return result;
   }, {});
+  // TTML1 6.2.5: frames are counted at the effective frame rate, which is
+  // ttp:frameRate times the ttp:frameRateMultiplier ratio (1:1 if absent).
+  const multiplier = (tt.getAttribute('ttp:frameRateMultiplier') || '')
+    .trim()
+    .split(/\s+/)
+    .map(Number);
+  if (multiplier.length === 2 && multiplier[0] > 0 && multiplier[1] > 0) {
+    rateInfo.frameRate =
+      (Number(rateInfo.frameRate) * multiplier[0]) / multiplier[1];
+  }
   // TTML1 6.2.10: with no ttp:tickRate, a document that declares a frame rate
   // counts ticks as sub-frames, and one without counts a tick as a second.
   // Only the second case can fall back to the default above, so the first is
@@ -155,16 +164,29 @@ function collectionToDictionary(elementsWithId: Array<HTMLElement>): {
 }
 
 function getTextContent(element, trim): string {
+  const text = collectText(element, trim);
+  if (!trim) {
+    return text;
+  }
+  // TTML1 7.2.3, xml:space="default": a run of white space across elements is
+  // a single space, and none is kept at the start or end of a line.
+  return text
+    .split('\n')
+    .map((line) => line.replace(/ {2,}/g, ' ').trim())
+    .join('\n');
+}
+
+function collectText(element, trim): string {
   return [].slice.call(element.childNodes).reduce((str, node, i) => {
     if (node.nodeName === 'br' && i) {
       return str + '\n';
     }
     if (node.childNodes?.length) {
-      return getTextContent(node, trim);
-    } else if (trim) {
-      return str + node.textContent.trim().replace(/\s+/g, ' ');
+      return str + collectText(node, trim);
     }
-    return str + node.textContent;
+    return (
+      str + (trim ? node.textContent.replace(/\s+/g, ' ') : node.textContent)
+    );
   }, '');
 }
 
@@ -227,13 +249,14 @@ function parseTtmlTime(timeAttributeValue, rateInfo): number | null {
   if (!timeAttributeValue) {
     return null;
   }
+  // Check for frames first: parseTimeStamp reads the leading hh:mm:ss of
+  // hh:mm:ss:ff and drops the frames.
+  if (HMSF_REGEX.test(timeAttributeValue)) {
+    return parseHoursMinutesSecondsFrames(timeAttributeValue, rateInfo);
+  }
   let seconds: number | null = parseTimeStamp(timeAttributeValue);
-  if (seconds === null) {
-    if (HMSF_REGEX.test(timeAttributeValue)) {
-      seconds = parseHoursMinutesSecondsFrames(timeAttributeValue, rateInfo);
-    } else if (TIME_UNIT_REGEX.test(timeAttributeValue)) {
-      seconds = parseTimeUnits(timeAttributeValue, rateInfo);
-    }
+  if (seconds === null && TIME_UNIT_REGEX.test(timeAttributeValue)) {
+    seconds = parseTimeUnits(timeAttributeValue, rateInfo);
   }
   return seconds;
 }

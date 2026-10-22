@@ -492,10 +492,10 @@ describe('AudioStreamController', function () {
       );
     });
 
-    it('should not complete audio switch when level has not changed', function () {
+    it('should not complete audio switch while the previous track is still playing', function () {
       const mockFrag = { level: 0, sn: 1 } as any;
       const previousFrag = { level: 0, sn: 0 } as any;
-      const mockSwitchingTrack = { id: 0, name: 'Test' } as any;
+      const mockSwitchingTrack = { id: 1, name: 'Test' } as any;
 
       (audioStreamController as any).fragPlaying = previousFrag;
       (audioStreamController as any).switchingTrack = mockSwitchingTrack;

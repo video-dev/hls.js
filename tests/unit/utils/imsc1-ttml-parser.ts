@@ -23,6 +23,15 @@ function ttmlWith(begin: string, end: string, attrs: string = ''): string {
   );
 }
 
+function ttmlWithText(content: string, attrs: string = ''): string {
+  return (
+    `<?xml version="1.0" encoding="UTF-8"?>` +
+    `<tt xmlns="http://www.w3.org/ns/ttml"${attrs}>` +
+    `<body><div><p begin="0s" end="1s">${content}</p></div></body>` +
+    `</tt>`
+  );
+}
+
 function cuesFor(ttml: string): VTTCue[] {
   let cues: VTTCue[] = [];
   let error: Error | null = null;
@@ -76,6 +85,54 @@ describe('IMSC1 TTML parser', function () {
     expect(cues[0].endTime).to.equal(3);
   });
 
+  it('reads a clock time with frames', function () {
+    const cues = cuesFor(
+      ttmlWith('00:00:01:12', '00:00:02:06', ' ttp:frameRate="24"'),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.equal(1.5);
+    expect(cues[0].endTime).to.equal(2.25);
+  });
+
+  it('reads a clock time with frames and sub-frames', function () {
+    const cues = cuesFor(
+      ttmlWith(
+        '00:00:01:12.1',
+        '00:00:02:00',
+        ' ttp:frameRate="25" ttp:subFrameRate="2"',
+      ),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.equal(1.5);
+    expect(cues[0].endTime).to.equal(2);
+  });
+
+  it('counts frames at the frame rate times the frame rate multiplier', function () {
+    const cues = cuesFor(
+      ttmlWith(
+        '30f',
+        '00:00:02:15',
+        ' ttp:frameRate="30" ttp:frameRateMultiplier="1000 1001"',
+      ),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.be.closeTo(1.001, 1e-9);
+    expect(cues[0].endTime).to.be.closeTo(2.5005, 1e-9);
+  });
+
+  it('applies the frame rate multiplier to the tick default', function () {
+    const cues = cuesFor(
+      ttmlWith(
+        '30t',
+        '60t',
+        ' ttp:frameRate="30" ttp:frameRateMultiplier="1000 1001"',
+      ),
+    );
+    expect(cues).to.have.lengthOf(1);
+    expect(cues[0].startTime).to.be.closeTo(1.001, 1e-9);
+    expect(cues[0].endTime).to.be.closeTo(2.002, 1e-9);
+  });
+
   it('reads a cue timed in ticks', function () {
     const cues = cuesFor(ttmlWith('50t', '150t', ' ttp:tickRate="100"'));
     expect(cues).to.have.lengthOf(1);
@@ -104,5 +161,75 @@ describe('IMSC1 TTML parser', function () {
     expect(cues).to.have.lengthOf(1);
     expect(cues[0].startTime).to.equal(0.5);
     expect(cues[0].endTime).to.equal(1.5);
+  });
+
+  describe('cue text', function () {
+    function textOf(content: string, attrs: string = ''): string {
+      const cues = cuesFor(ttmlWithText(content, attrs));
+      expect(cues).to.have.lengthOf(1);
+      return cues[0].text;
+    }
+
+    it('keeps the text that comes before a span', function () {
+      expect(textOf('Hello <span>world</span>')).to.equal('Hello world');
+    });
+
+    it('keeps the text of every span when they are separated by a line break', function () {
+      expect(textOf('<span>l1</span><br/><span>l2</span>')).to.equal('l1\nl2');
+    });
+
+    it('keeps the text around nested spans', function () {
+      expect(textOf('x <span>a <span>b</span> c</span> d')).to.equal(
+        'x a b c d',
+      );
+    });
+
+    it('reads every span of an indented paragraph', function () {
+      const content = [
+        '',
+        '    <span>one</span>',
+        '    <span>two</span>',
+        '    <span>three</span>',
+        '  ',
+      ].join('\n');
+      expect(textOf(content)).to.equal('one two three');
+    });
+
+    it('reads the lines of an indented paragraph split by line breaks', function () {
+      const content = [
+        '',
+        '    <span>one</span><br/>',
+        '    <span>two</span>',
+        '  ',
+      ].join('\n');
+      expect(textOf(content)).to.equal('one\ntwo');
+    });
+
+    it('collapses white space that spans elements into a single space', function () {
+      expect(textOf('a <span> b </span> c')).to.equal('a b c');
+    });
+
+    it('drops white space at the start and end of each line', function () {
+      expect(textOf('<span>a </span><br/><span> b</span>')).to.equal('a\nb');
+    });
+
+    it('leaves white space alone when xml:space is preserve', function () {
+      expect(
+        textOf('  a <span> b </span>\n c', ' xml:space="preserve"'),
+      ).to.equal('  a  b \n c');
+    });
+
+    it('leaves white space alone in plain text when xml:space is preserve', function () {
+      expect(textOf('  a\n b ', ' xml:space="preserve"')).to.equal('  a\n b ');
+    });
+
+    it('keeps the text of every span when xml:space is preserve', function () {
+      expect(
+        textOf(
+          '<span>l1 </span><br/><span> l2</span>',
+          ' xml:space="preserve"',
+        ),
+      ).to.equal('l1 \n l2');
+    });
   });
 });

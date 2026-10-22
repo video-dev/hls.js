@@ -2131,6 +2131,68 @@ fileSequence6.mp4`;
       );
     });
 
+    it('falls back to primary after joining inside an interstitial with an empty asset-list', function () {
+      const playlist = `#EXTM3U
+#EXT-X-TARGETDURATION:10
+#EXT-X-VERSION:7
+#EXT-X-MEDIA-SEQUENCE:1
+#EXT-X-PROGRAM-DATE-TIME:2024-02-23T15:00:00.000Z
+#EXT-X-MAP:URI="fileSequence0.mp4"
+#EXTINF:10,	
+fileSequence1.mp4
+#EXT-X-DATERANGE:ID="past",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:10.000Z",DURATION=10,X-ASSET-LIST="https://example.com/past.json"
+#EXTINF:10,	
+fileSequence2.mp4
+#EXT-X-DATERANGE:ID="mid-live",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:20.000Z",DURATION=30,X-ASSET-LIST="https://example.com/mid.json"
+#EXTINF:10,	
+fileSequence3.mp4
+#EXTINF:10,	
+fileSequence4.mp4
+#EXTINF:10,	
+fileSequence5.mp4
+#EXT-X-DATERANGE:ID="next",CLASS="com.apple.hls.interstitial",START-DATE="2024-02-23T15:00:55.000Z",DURATION=10,X-ASSET-LIST="https://example.com/next.json"
+#EXTINF:10,	
+fileSequence6.mp4`;
+
+      setLoadedLevelDetails(playlist);
+      const interstitials = interstitialsController.interstitialsManager;
+      if (!interstitials) {
+        expect(interstitials, 'interstitialsManager').to.be.an('object');
+        return;
+      }
+      const loadSpy = sandbox.spy(hls.config.loader.prototype, 'load');
+      const media = attachMediaToHls();
+      expect(interstitials.playingIndex).to.equal(2, 'playingIndex a');
+      expect(interstitials.primary.currentTime).to.equal(30, 'timelinePos a');
+
+      // Load empty asset-list for the interstitial that playback started in
+      const interstitial = interstitials.events[1];
+      interstitial.assetListResponse = { ASSETS: [] };
+      hls.trigger(Events.ASSET_LIST_LOADED, {
+        event: interstitial,
+        assetListResponse: interstitial.assetListResponse,
+        networkDetails: new Response('ok'),
+      });
+      expect(interstitials.playingIndex).to.equal(2, 'playingIndex b');
+      expect(interstitials.bufferingIndex).to.equal(2, 'bufferingIndex b');
+      expect(interstitials.playingItem, 'playingItem b')
+        .to.be.an('object')
+        .which.include({ start: 20, end: 55 });
+
+      // Empty asset-list interstitial started and ended unresolved
+      expect(getTriggerCalls()).to.include(Events.INTERSTITIAL_STARTED);
+      expect(getTriggerCalls()).to.include(Events.INTERSTITIAL_ENDED);
+
+      // Playback reaches the next interstitial
+      hls.trigger.resetHistory();
+      media.__timeUpdate(55);
+      expect(getTriggerCalls()).to.include(Events.INTERSTITIAL_STARTED);
+      expect(interstitials.playingIndex).to.equal(3, 'playingIndex c');
+      const requestedUrls = loadSpy.getCalls().map((call) => call.args[0].url);
+      expect(requestedUrls, 'asset-list requests').to.have.lengthOf(2);
+      expect(requestedUrls[1]).to.include('https://example.com/next.json');
+    });
+
     it('establishing program start without interstitials', function () {
       const playlist = `#EXTM3U
 #EXT-X-TARGETDURATION:3

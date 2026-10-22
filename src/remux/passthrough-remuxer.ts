@@ -441,7 +441,12 @@ class PassThroughRemuxer extends Logger implements Remuxer {
 
     decodeTime = baseOffsetSamples.start / timescale;
 
+    // A later chunk of the same segment (progressive loading) keeps the initPTS checked on the segment's first
+    // chunk. Checking it again against the segment start (timeOffset) would remap every chunk to that start.
+    const continuesSegment = !!initPTS && chunkMeta.id > 1;
+
     if (
+      !continuesSegment &&
       (accurateTimeOffset || !initPTS) &&
       (isInvalidInitPts(initPTS, decodeTime, timeOffset, duration) ||
         timescale !== initPTS.timescale)

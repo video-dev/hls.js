@@ -4,6 +4,7 @@ import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
 import { State } from '../../../src/controller/base-stream-controller';
 import { SOURCE_BUFFER_ERROR_NAME } from '../../../src/controller/buffer-controller';
+import { FragmentState } from '../../../src/controller/fragment-tracker';
 import BaseStreamControllerImpl from '../../../src/controller/stream-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import Hls from '../../../src/hls';
@@ -565,7 +566,7 @@ describe('BaseStreamController', function () {
           stats: {
             loading: { first: 100 },
             total: 1000000,
-            loaded: 900000, // Nearly complete (100k bits remaining = 0.1s < 0.15s)
+            loaded: 990000, // Nearly complete (10k bytes remaining = 0.08s < 0.15s)
           },
         } as any;
         baseStreamController.config.abrEwmaDefaultEstimate = 1000000;
@@ -853,9 +854,7 @@ describe('BaseStreamController', function () {
           PlaylistLevelType.MAIN,
           'http://example.com/segment.ts',
         ) as MediaFragment;
-        // The code treats bandwidth as bytes/sec for this calculation (despite being labeled as bps in config)
-        // For 1Mbps = 1,000,000 bits/s = 125,000 bytes/s
-        // To complete in 0.15s: need 0.15 * 125,000 = 18,750 bytes
+        // At 1Mbps, 0.15s = 150,000 bits = 18,750 bytes
         // So: total = 1,000,000 bytes, loaded = 981,250 bytes, remaining = 18,750 bytes
         mockFrag.loader = {
           stats: {
@@ -865,10 +864,9 @@ describe('BaseStreamController', function () {
           },
         } as any;
 
-        // Set bandwidth to bytes/sec: 1Mbps = 125,000 bytes/s
-        baseStreamController.config.abrEwmaDefaultEstimate = 125000; // 1Mbps in bytes/sec
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000; // 1Mbps
         baseStreamController.hls.bandwidthEstimate = NaN; // Use default
-        // Time = 18,750 / 125,000 = 0.15s
+        // Time = 18,750 * 8 / 1,000,000 = 0.15s
 
         const result =
           baseStreamController.isFragmentNearlyDownloaded(mockFrag);
@@ -880,9 +878,7 @@ describe('BaseStreamController', function () {
           PlaylistLevelType.MAIN,
           'http://example.com/segment.ts',
         ) as MediaFragment;
-        // The code treats bandwidth as bytes/sec for this calculation (despite being labeled as bps in config)
-        // For 1Mbps = 1,000,000 bits/s = 125,000 bytes/s
-        // To exceed 0.15s: need > 0.15 * 125,000 = > 18,750 bytes
+        // At 1Mbps, more than 18,750 bytes takes > 0.15s
         // So: total = 1,000,000 bytes, loaded = 981,249 bytes, remaining = 18,751 bytes
         mockFrag.loader = {
           stats: {
@@ -892,10 +888,9 @@ describe('BaseStreamController', function () {
           },
         } as any;
 
-        // Set bandwidth to bytes/sec: 1Mbps = 125,000 bytes/s
-        baseStreamController.config.abrEwmaDefaultEstimate = 125000; // 1Mbps in bytes/sec
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000; // 1Mbps
         baseStreamController.hls.bandwidthEstimate = NaN; // Use default
-        // Time = 18,751 / 125,000 = 0.150008s (> 0.15)
+        // Time = 18,751 * 8 / 1,000,000 = 0.150008s (> 0.15)
 
         const result =
           baseStreamController.isFragmentNearlyDownloaded(mockFrag);
@@ -907,23 +902,21 @@ describe('BaseStreamController', function () {
           PlaylistLevelType.MAIN,
           'http://example.com/segment.ts',
         ) as MediaFragment;
-        // Set up to complete in 0.10 seconds with bandwidthEstimate
-        // The code treats bandwidth as bytes/sec: 2Mbps = 250,000 bytes/s
-        // To complete in 0.10s: need 0.10 * 250,000 = 25,000 bytes
+        // At 2Mbps, 0.10s = 25,000 bytes
         mockFrag.loader = {
           stats: {
             loading: { first: 100 },
             total: 1000000, // 1MB in bytes
-            loaded: 975000, // 25,000 bytes remaining = 0.10s at 2Mbps (250k bytes/s)
+            loaded: 975000, // 25,000 bytes remaining = 0.10s at 2Mbps
           },
         } as any;
 
-        baseStreamController.hls.bandwidthEstimate = 250000; // 2Mbps in bytes/sec
-        baseStreamController.config.abrEwmaDefaultEstimate = 125000; // 1Mbps in bytes/sec (should not be used)
+        baseStreamController.hls.bandwidthEstimate = 2000000; // 2Mbps
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000; // 1Mbps (0.2s, should not be used)
 
         const result =
           baseStreamController.isFragmentNearlyDownloaded(mockFrag);
-        // With 2Mbps: 25,000 / 250,000 = 0.10s (< 0.15) -> true
+        // With 2Mbps: 25,000 * 8 / 2,000,000 = 0.10s (< 0.15) -> true
         expect(result).to.be.true;
       });
 
@@ -932,23 +925,21 @@ describe('BaseStreamController', function () {
           PlaylistLevelType.MAIN,
           'http://example.com/segment.ts',
         ) as MediaFragment;
-        // Set up to complete in 0.10 seconds with default estimate
-        // The code treats bandwidth as bytes/sec: 1Mbps = 125,000 bytes/s
-        // To complete in 0.10s: need 0.10 * 125,000 = 12,500 bytes
+        // At 1Mbps, 0.10s = 12,500 bytes
         mockFrag.loader = {
           stats: {
             loading: { first: 100 },
             total: 1000000, // 1MB in bytes
-            loaded: 987500, // 12,500 bytes remaining = 0.10s at 1Mbps (125k bytes/s)
+            loaded: 987500, // 12,500 bytes remaining = 0.10s at 1Mbps
           },
         } as any;
 
         baseStreamController.hls.bandwidthEstimate = Infinity; // Not finite
-        baseStreamController.config.abrEwmaDefaultEstimate = 125000; // 1Mbps in bytes/sec (should be used)
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000; // 1Mbps (should be used)
 
         const result =
           baseStreamController.isFragmentNearlyDownloaded(mockFrag);
-        // With 1Mbps default: 12,500 / 125,000 = 0.10s (< 0.15) -> true
+        // With 1Mbps default: 12,500 * 8 / 1,000,000 = 0.10s (< 0.15) -> true
         expect(result).to.be.true;
       });
 
@@ -978,23 +969,21 @@ describe('BaseStreamController', function () {
           PlaylistLevelType.MAIN,
           'http://example.com/segment.ts',
         ) as MediaFragment;
-        // Set up to complete in 0.10 seconds with default estimate
-        // The code treats bandwidth as bytes/sec: 1Mbps = 125,000 bytes/s
-        // To complete in 0.10s: need 0.10 * 125,000 = 12,500 bytes
+        // At 1Mbps, 0.10s = 12,500 bytes
         mockFrag.loader = {
           stats: {
             loading: { first: 100 },
             total: 1000000, // 1MB in bytes
-            loaded: 987500, // 12,500 bytes remaining = 0.10s at 1Mbps (125k bytes/s)
+            loaded: 987500, // 12,500 bytes remaining = 0.10s at 1Mbps
           },
         } as any;
 
+        baseStreamController.config.abrEwmaDefaultEstimate = 1000000; // 1Mbps (should be used)
         baseStreamController.hls.bandwidthEstimate = NaN; // Not finite
-        baseStreamController.config.abrEwmaDefaultEstimate = 125000; // 1Mbps in bytes/sec (should be used)
 
         const result =
           baseStreamController.isFragmentNearlyDownloaded(mockFrag);
-        // With 1Mbps default: 12,500 / 125,000 = 0.10s (< 0.15) -> true
+        // With 1Mbps default: 12,500 * 8 / 1,000,000 = 0.10s (< 0.15) -> true
         expect(result).to.be.true;
       });
 
@@ -1008,12 +997,12 @@ describe('BaseStreamController', function () {
           stats: {
             loading: { first: 100 },
             total: 1000000,
-            loaded: 10000, // 990000 bits remaining
+            loaded: 10000, // 990,000 bytes remaining
           },
         } as any;
 
         baseStreamController.config.abrEwmaDefaultEstimate = 100000; // 100Kbps (low)
-        // Time = 990000 / 100000 = 9.9 seconds (> 0.15)
+        // Time = 990,000 * 8 / 100,000 = 79.2 seconds (> 0.15)
 
         const result =
           baseStreamController.isFragmentNearlyDownloaded(mockFrag);
@@ -1635,6 +1624,39 @@ describe('BaseStreamController', function () {
 
       expect((baseStreamController as any).scheduleTrackSwitch).to.not.have.been
         .called;
+    });
+  });
+
+  describe('getFragmentAtPosition', function () {
+    it('does not skip the unloaded tail of a segment when loading parts', function () {
+      const makeFrag = (sn: number, start: number, duration: number) => {
+        const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+        frag.sn = sn;
+        frag.duration = duration;
+        frag.setStart(start);
+        return frag;
+      };
+      // Segment 1 was refreshed by a playlist reload and has a 0.1s unloaded
+      // tail, which is less than maxFragLookUpTolerance (0.25s).
+      const previous = makeFrag(1, 0, 3.9);
+      const current = makeFrag(1, 0, 4);
+      const hint = makeFrag(2, 4, 2);
+      const details = new LevelDetails('');
+      details.live = true;
+      details.startSN = details.endSN = 1;
+      details.fragments = [current];
+      details.fragmentHint = hint;
+      details.partList = [{ fragment: current }, { fragment: hint }] as Part[];
+      fragmentTracker.state = FragmentState.PARTIAL;
+      media.paused = false;
+      const controller = baseStreamController as any;
+      controller.fragPrevious = previous;
+      controller.loadingParts = true;
+      controller.startFragRequested = true;
+
+      expect(controller.getFragmentAtPosition(3.9, 6, details)).to.equal(
+        current,
+      );
     });
   });
 });
