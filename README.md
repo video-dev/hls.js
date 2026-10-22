@@ -10,25 +10,37 @@
 # ![HLS.js](https://raw.githubusercontent.com/video-dev/hls.js/master/docs/logo.svg)
 
 HLS.js is a JavaScript library that implements an [HTTP Live Streaming] client.
-It relies on [HTML5 video][] and [MediaSource Extensions][] for playback.
+It relies on [HTML5 video][] and [MediaSource Extensions][] for playback, and on [Managed Media Source][] where MSE is not available (Safari on iOS 17.1+).
 
-It works by transmuxing MPEG-2 Transport Stream and AAC/MP3 streams into ISO BMFF (MP4) fragments.
+It streams VOD, Live, and Low-Latency HLS assets made up of fragmented MP4 (fMP4), MPEG-2 Transport Stream, or Packed Audio segments.
+fMP4 segments (ISO BMFF, including CMAF) are passed through to MSE without remuxing, while MPEG-2 TS and Packed Audio (AAC, MP3, and AC-3) segments are transmuxed into fMP4.
 Transmuxing is performed asynchronously using a [Web Worker] when available in the browser.
-HLS.js also supports HLS + fmp4, as announced during [WWDC2016](https://developer.apple.com/videos/play/wwdc2016/504/).
 
-HLS.js works directly on top of a standard HTML`<video>` element.
+HLS.js streams media into a standard HTML `<video>` element, which handles decoding, rendering, playback, and seeking.
+Control playback through the [`HTMLMediaElement`] API, and use HLS.js to load assets, choose quality levels and tracks, and listen for streaming events.
+For assets with Interstitials, use [`hls.interstitialsManager`](docs/API.md#hlsinterstitialsmanager) to seek and track position on the integrated timeline of primary content and interstitial breaks.
 
-HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly typed superset of ES6), and transpiled in ECMAScript5 using [Babel](https://babeljs.io/) and the [TypeScript compiler].
+HLS.js is written in [TypeScript] and transpiled using [Babel] to ECMAScript 5 syntax for the UMD bundles, and to native ES module syntax for the ESM bundles.
+The [TypeScript compiler] and [API Extractor] are used for type checking and to generate the `hls.d.ts` type declarations.
 
-[Rollup] is used to build the distro bundle and serve the local development environment.
+[Rollup] is used to build the distro bundles and, in watch mode, the local development environment. Each release includes:
 
-[html5 video]: https://www.html5rocks.com/en/tutorials/video/basics/
+- `full` and `light` builds. The light build leaves out optional features such as alternate audio, subtitles, EME (DRM), CMCD, and Interstitials to reduce size (see [Build tasks](#build-tasks)).
+- UMD bundles (`hls.js`, `hls.light.js`) for `<script>` tags and `require`. They target browsers as old as Chrome 47, Firefox 51, and Safari 10, and inline the transmuxer worker.
+- ESM bundles (`hls.mjs`, `hls.light.mjs`) for `import` and modern bundlers. They do not inline the worker; set `workerPath` to the published `hls.worker.js` to transmux off the main thread.
+
+See [Compatibility](#compatibility) for supported browsers and runtime requirements.
+
+[html5 video]: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/video
+[`htmlmediaelement`]: https://developer.mozilla.org/en-US/docs/Web/API/HTMLMediaElement
 [mediasource extensions]: https://w3c.github.io/media-source/
-[http live streaming]: https://en.wikipedia.org/wiki/HTTP_Live_Streaming
+[managed media source]: https://developer.mozilla.org/en-US/docs/Web/API/ManagedMediaSource
+[http live streaming]: https://datatracker.ietf.org/doc/html/draft-pantos-hls-rfc8216bis
 [web worker]: https://caniuse.com/#search=worker
-[ecmascript6]: https://github.com/ericdouglas/ES6-Learning#articles--tutorials
 [typescript]: https://www.typescriptlang.org/
+[babel]: https://babeljs.io/
 [typescript compiler]: https://www.typescriptlang.org/docs/handbook/compiler-options.html
+[api extractor]: https://api-extractor.com/
 [rollup]: https://rollupjs.org/
 
 ## Features
@@ -47,8 +59,8 @@ HLS.js is written in [ECMAScript6] (`*.js`) and [TypeScript] (`*.ts`) (strongly 
   - ISO/IEC 11172-3 / ISO/IEC 13818-3 (MPEG-1/2 Audio Layer III) Elementary Stream
   - ATSC A/52 / AC-3 / Dolby Digital Elementary Stream (full build only)
   - Packetized metadata (ID3v2.3.0) Elementary Stream
-- AAC container (audio only streams)
-- MPEG Audio container (MPEG-1/2 Audio Layer III audio only streams)
+- AAC container (audio-only segments)
+- MPEG Audio container (MPEG-1/2 Audio Layer III audio-only segments)
 - Timed Metadata for HTTP Live Streaming (ID3 format carried in MPEG-2 TS, Emsg in CMAF/Fragmented MP4, and DATERANGE playlist tags)
   - MISB KLV metadata in MPEG-2 TS (opt-in via `enableEmsgKLVMetadata`)
 - AES-128, AES-256, and AES-256-CTR decryption
@@ -356,7 +368,7 @@ Safari browsers (iOS, iPadOS, and macOS) have built-in HLS support through the p
 
 When a platform has neither MediaSource nor native HLS support, the browser cannot play HLS.
 
-_Keep in mind that if the intention is to support HLS on multiple platforms, beyond those compatible with HLS.js, the HLS streams need to strictly follow the specifications of RFC8216, especially if apps, smart TVs, and set-top boxes are to be supported._
+_Keep in mind that if the intention is to support HLS on multiple platforms, beyond those compatible with HLS.js, HLS assets need to strictly follow the specifications of RFC8216, especially if apps, smart TVs, and set-top boxes are to be supported._
 
 Find a support matrix of the MediaSource API here: https://developer.mozilla.org/en-US/docs/Web/API/MediaSource
 
@@ -379,7 +391,7 @@ npm install hls.js@canary
 
 ### Embedding HLS.js
 
-Directly include dist/hls.js or dist/hls.min.js in a script tag on the page. This setup prioritizes HLS.js MSE playback over
+Directly include dist/hls.js or dist/hls.min.js in a script tag on the page. This setup prioritizes streaming with HLS.js and MSE over
 native browser support for HLS playback in HTMLMediaElements:
 
 ```html
@@ -412,7 +424,7 @@ native browser support for HLS playback in HTMLMediaElements:
 
 To check for native browser support first and then fallback to HLS.js, swap these conditionals.
 
-> **Note:** `video.canPlayType('application/vnd.apple.mpegurl')` returns a non-empty string ("maybe") in Safari, Chrome, and potentially other browsers. However, not all browsers support HLS content equally — for example, Chrome 147 reports support but may fail to play certain streams natively. Using `Hls.isSupported()` first (the default setup above) is recommended unless you specifically need native playback.
+> **Note:** `video.canPlayType('application/vnd.apple.mpegurl')` returns a non-empty string ("maybe") in Safari, Chrome, and potentially other browsers. However, not all browsers support HLS content equally — for example, Chrome 147 reports support but may fail to play certain assets natively. Using `Hls.isSupported()` first (the default setup above) is recommended unless you specifically need native playback.
 
 ```html
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
@@ -425,7 +437,7 @@ To check for native browser support first and then fallback to HLS.js, swap thes
   //
   // Only use native HLS in browsers with ManagedMediaSource (e.g. modern Safari)
   // where native playback is well-supported. Other browsers may report HLS support
-  // via canPlayType but fail to play certain streams reliably.
+  // via canPlayType but fail to play certain assets reliably.
   //
   if (
     video.canPlayType('application/vnd.apple.mpegurl') &&
@@ -445,7 +457,7 @@ To check for native browser support first and then fallback to HLS.js, swap thes
 
 #### Ensure correct time in video
 
-HLS transcoding of an original video file often pushes the time of the first frame a bit. If you depend on having an exact match of frame times between original video and HLS stream, you need to account for this:
+HLS transcoding of an original video file often pushes the time of the first frame a bit. If you depend on having an exact match of frame times between original video and HLS asset, you need to account for this:
 
 ```javascript
 let tOffset = 0;
