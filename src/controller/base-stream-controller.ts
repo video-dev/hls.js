@@ -2704,22 +2704,11 @@ export default class BaseStreamController
         this.state = State.IDLE;
         break;
     }
-    let loadPosition = this.playhead;
-    if (
-      fragCurrent &&
-      !this.hls?.hasEnoughToStart &&
-      loadPosition > fragCurrent.start &&
-      loadPosition <= fragCurrent.end
-    ) {
-      // Loading the aborted fragment moved the load position past its start before anything
-      // was buffered. Move it back so that the start position is not skipped.
-      const startPosition = this.startPosition + this.timelineOffset;
-      loadPosition =
-        startPosition >= fragCurrent.start && startPosition < fragCurrent.end
-          ? startPosition
-          : fragCurrent.start;
-    }
-    this.nextLoadPosition = loadPosition;
+    // Before start, the playhead is the load position, which loading the aborted fragment
+    // moved to its end. Go back to the start position instead.
+    this.nextLoadPosition = this.hls?.hasEnoughToStart
+      ? this.playhead
+      : this.lastCurrentTime;
   }
 
   protected checkFragPlaying(): boolean {

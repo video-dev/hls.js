@@ -1181,7 +1181,7 @@ describe('StreamController', function () {
       expect(streamController['state']).to.equal(State.IDLE);
     });
 
-    it('should load the start position when a level switch aborts the first fragment', function () {
+    describe('before anything is buffered', function () {
       const loadLevel = (level: number, durations: number[]) => {
         const details = M3U8Parser.parseLevelPlaylist(
           `#EXTM3U
@@ -1204,55 +1204,49 @@ ${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
           levelInfo: hls.levels[level],
         });
       };
-      loadManifest(`#EXTM3U
+
+      beforeEach(function () {
+        loadManifest(`#EXTM3U
 #EXT-X-STREAM-INF:BANDWIDTH=400000
 0.m3u8
 #EXT-X-STREAM-INF:BANDWIDTH=800000
 1.m3u8`);
-      sinon
-        .stub(streamController['fragmentLoader'], 'load')
-        .callsFake((frag) => {
-          frag.loader = { abort() {}, destroy() {} } as any;
-          return new Promise(() => {});
+        sinon
+          .stub(streamController['fragmentLoader'], 'load')
+          .callsFake((frag) => {
+            frag.loader = { abort() {}, destroy() {} } as any;
+            return new Promise(() => {});
+          });
+        streamController['media'] = streamController['mediaBuffer'] = {
+          buffered: new TimeRangesMock(),
+          currentTime: 0,
+          readyState: 0,
+          seeking: false,
+        } as any as HTMLMediaElement;
+        hls.startLevel = 1;
+        streamController.startLoad(8.09);
+        loadLevel(1, [4, 4, 4, 4, 4]);
+        expect(streamController['fragCurrent']).to.include({
+          level: 1,
+          start: 8,
         });
-      streamController['media'] = streamController['mediaBuffer'] = {
-        buffered: new TimeRangesMock(),
-        currentTime: 0,
-        readyState: 0,
-        seeking: false,
-      } as any as HTMLMediaElement;
-      hls.startLevel = 1;
-      streamController.startLoad(8.09);
-
-      loadLevel(1, [4, 4, 4, 4, 4]);
-      expect(streamController['fragCurrent']).to.include({
-        level: 1,
-        start: 8,
       });
 
-      // Switch levels while the fragment containing the start position is loading
-      hls.loadLevel = 0;
-      loadLevel(0, [3, 3, 3, 3, 3, 3]);
-      expect(streamController['fragCurrent']).to.include({
-        level: 0,
-        start: 6,
+      it('should keep the playhead at the start position when the first fragment is aborted', function () {
+        streamController['abortCurrentFrag']();
+
+        expect(streamController['playhead']).to.equal(8.09);
       });
-    });
 
-    it('should move the load position back to the start of a fragment aborted before anything is buffered', function () {
-      const frag = new Fragment(PlaylistLevelType.MAIN, 'test.ts');
-      frag.abortRequests = sinon.stub();
-      frag.setStart(4);
-      frag.duration = 8;
-      streamController['fragCurrent'] = frag;
-      streamController['state'] = State.FRAG_LOADING;
-      // Requesting the fragment moved the load position to its end
-      streamController['nextLoadPosition'] = frag.end;
-      streamController['startPosition'] = -1;
-
-      streamController['abortCurrentFrag']();
-
-      expect(streamController['nextLoadPosition']).to.equal(4);
+      it('should load the start position when a level switch aborts the first fragment', function () {
+        // Switch levels while the fragment containing the start position is loading
+        hls.loadLevel = 0;
+        loadLevel(0, [3, 3, 3, 3, 3, 3]);
+        expect(streamController['fragCurrent']).to.include({
+          level: 0,
+          start: 6,
+        });
+      });
     });
   });
 });
