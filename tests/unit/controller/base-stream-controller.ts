@@ -164,13 +164,21 @@ describe('BaseStreamController', function () {
 
   describe('Seeking Logic', function () {
     describe('onMediaSeeking', function () {
-      it('should handle backward seek behavior correctly', function () {
+      it('should handle backward seek after media buffered behavior correctly', function () {
+        // Mock hasEnoughToStart to return false:
+        // lastCurrentTime is updated with startPosition and nextLoadPosition before start
+        const hasEnoughToStartStub = sinon
+          .stub(baseStreamController.hls, 'hasEnoughToStart')
+          .get(() => true);
+
         // Setup initial state for backward seek
         baseStreamController.lastCurrentTime = 10.5;
         media.currentTime = 5.2;
 
         // Call onMediaSeeking - should execute without error
         expect(() => baseStreamController.onMediaSeeking()).to.not.throw();
+
+        hasEnoughToStartStub.restore();
 
         // Verify lastCurrentTime is not updated on backward seek
         expect(baseStreamController.lastCurrentTime).to.equal(10.5);

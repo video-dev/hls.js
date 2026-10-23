@@ -166,11 +166,14 @@ export default class BaseStreamController
     hls.off(Events.ERROR, this.onError, this);
   }
 
-  protected doTick() {
-    this.onTickEnd();
-  }
+  protected doTick() {}
 
-  protected onTickEnd() {}
+  protected onTickEnd() {
+    const { media } = this;
+    if (media?.readyState && media.seeking === false) {
+      this.lastCurrentTime = media.currentTime;
+    }
+  }
 
   public startLoad(startPosition: number): void {}
 
@@ -380,7 +383,7 @@ export default class BaseStreamController
       this.levelLastLoaded =
       this.fragCurrent =
         null;
-    this.lastCurrentTime = 0;
+    this.lastCurrentTime = this.nextLoadPosition = 0;
     this.startPosition = -1;
     this.startFragRequested = false;
   }
@@ -477,6 +480,8 @@ export default class BaseStreamController
       this.nextLoadPosition = currentTime;
       if (bufferEmpty) {
         this.startPosition = currentTime;
+      } else {
+        this.lastCurrentTime = currentTime;
       }
     }
 
@@ -489,7 +494,7 @@ export default class BaseStreamController
   protected onMediaEnded = () => {
     // reset startPosition and lastCurrentTime to restart playback @ stream beginning
     this.log(`setting startPosition to 0 because media ended`);
-    this.startPosition = this.lastCurrentTime = 0;
+    this.startPosition = this.nextLoadPosition = this.lastCurrentTime = 0;
   };
 
   protected onManifestLoaded(

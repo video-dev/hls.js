@@ -311,13 +311,7 @@ class AudioStreamController
   }
 
   protected onTickEnd() {
-    const { media } = this;
-    if (!media?.readyState) {
-      // Exit early if we don't have media or if the media hasn't buffered anything yet (readyState 0)
-      return;
-    }
-
-    this.lastCurrentTime = media.currentTime;
+    super.onTickEnd();
     this.checkFragmentChanged();
   }
 
