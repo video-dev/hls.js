@@ -864,6 +864,69 @@ describe('EMEController', function () {
     });
   });
 
+  it('should reuse attached MediaKeys after MANIFEST_LOADING', async function () {
+    const mediaKeys = new MediaKeysMock();
+    const reqMediaKsAccessSpy = sinon.spy(() =>
+      Promise.resolve({
+        keySystem: 'com.apple.fps',
+        createMediaKeys: () => Promise.resolve(mediaKeys),
+      }),
+    );
+    setupEach({
+      emeEnabled: true,
+      drmSystems: { 'com.apple.fps': { licenseUrl: 'http://noop' } },
+      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+    });
+    sinonFakeXMLHttpRequestStatic.onCreate = (xhr) => {
+      self.setTimeout(() => {
+        // Sessions closed on MANIFEST_LOADING abort their license requests
+        if ((xhr as any).aborted) {
+          return;
+        }
+        (xhr as any).response = new Uint8Array();
+        xhr.respond(200, {}, '');
+      }, 0);
+    };
+    media.setMediaKeys = sinon.spy((keys: MediaKeys | null) => {
+      (media as any).mediaKeys = keys;
+      return Promise.resolve();
+    });
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+      media: media as any as HTMLMediaElement,
+    });
+
+    await emeController.loadKey(getEncryptedFrag(getParsedLevelKey()));
+    (emeController as any).onManifestLoading();
+    await emeController.loadKey(
+      getEncryptedFrag(getParsedLevelKey('data://key-uri-2')),
+    );
+
+    expect(reqMediaKsAccessSpy).callCount(1);
+    expect(media.setMediaKeys).callCount(1);
+    expect(media.setMediaKeys).not.calledWith(null);
+  });
+
+  it('should set MediaKeys after a previous setMediaKeys call was rejected', async function () {
+    setupEach({ emeEnabled: true });
+    const setMediaKeys = sinon.stub<[MediaKeys | null], Promise<void>>();
+    setMediaKeys.onFirstCall().rejects(new Error('InvalidStateError'));
+    setMediaKeys.resolves();
+    media.setMediaKeys = setMediaKeys;
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+      media: media as any as HTMLMediaElement,
+    });
+    const attempt = (mediaKeys: MediaKeys) =>
+      (emeController as any).attemptSetMediaKeys(
+        KeySystems.WIDEVINE,
+        mediaKeys,
+      );
+
+    await attempt(new MediaKeysMock()).catch(() => {});
+    await attempt(new MediaKeysMock());
+
+    expect(setMediaKeys).callCount(2);
+  });
+
   describe('serialized key-session setup (#7796)', function () {
     class DeferredMediaKeySessionMock extends MediaKeySessionMock {
       generateRequest() {
