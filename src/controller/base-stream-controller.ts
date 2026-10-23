@@ -695,7 +695,12 @@ export default class BaseStreamController
     return (
       details?.live &&
       details.type !== 'EVENT' &&
-      (this.levelLastLoaded !== levelInfo || details.expired)
+      details.advancedDateTime !== undefined &&
+      (details.expired ||
+        (this.loadingParts && details.partsExpired) ||
+        // unless the responses are not advancing the playlist (3 strikes)
+        // wait until the end of the playlist advances past the load position
+        (details.misses < 3 && details.partEnd <= this.getLoadPosition()))
     );
   }
 
