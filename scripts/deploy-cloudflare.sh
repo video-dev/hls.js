@@ -15,7 +15,7 @@ commitShort="$(echo "$currentCommit" | cut -c 1-8)"
 deploy () {
   projectName=$1
   echo "Deploying on CloudFlare to '$projectName'."
-  CLOUDFLARE_ACCOUNT_ID="$accountId" ./node_modules/.bin/wrangler pages publish --project-name "$projectName" --commit-dirty=true --branch=master --commit-hash="$currentCommit" $root
+  CLOUDFLARE_ACCOUNT_ID="$accountId" ./node_modules/.bin/wrangler pages deploy --project-name "$projectName" --commit-dirty=true --branch=master --commit-hash="$currentCommit" $root
   echo "Deployed on CloudFlare to '$projectName'."
 }
 
