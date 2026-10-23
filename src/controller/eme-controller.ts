@@ -1754,7 +1754,6 @@ class EMEController extends Logger implements ComponentAPI {
       removeEventListener(media, 'encrypted', this.onMediaEncrypted);
       removeEventListener(media, 'waitingforkey', this.onWaitingForKey);
       this.media = null;
-      this.mediaKeys = null;
     }
   }
 
@@ -1799,6 +1798,7 @@ class EMEController extends Logger implements ComponentAPI {
               });
             })
         : Promise.resolve();
+    this.setMediaKeysQueue.push(clearMediaKeys);
     EMEController.CDMCleanupPromise = Promise.all(
       mediaKeysList
         .map((mediaKeySessionContext) =>
@@ -1828,7 +1828,8 @@ class EMEController extends Logger implements ComponentAPI {
 
   private onManifestLoading() {
     // Chrome cannot remove or replace a CDM that is in use, so keep the attached MediaKeys for the next source
-    const { media, mediaKeys } = this;
+    const { mediaKeys } = this;
+    const media = this.media || this.hls?.media;
     this._clear(!!mediaKeys && media?.mediaKeys === mediaKeys);
     this.keyFormatPromise = null;
   }
