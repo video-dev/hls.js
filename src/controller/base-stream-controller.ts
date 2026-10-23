@@ -1364,9 +1364,12 @@ export default class BaseStreamController
     const offsetTimestamp = this.initPTS[frag.cc] as
       | TimestampOffset
       | undefined;
-    const offset = offsetTimestamp
+    let offset = offsetTimestamp
       ? -offsetTimestamp.baseTime / offsetTimestamp.timescale
       : undefined;
+    if (offset !== undefined && data.type === 'audio') {
+      offset -= data.timestampOffsetAdjustment || 0;
+    }
     const segment: BufferAppendingData = {
       type: data.type,
       frag,

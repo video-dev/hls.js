@@ -230,6 +230,147 @@ describe('mp4-remuxer', function () {
   });
 
   describe('remuxAudio', function () {
+    beforeEach(function () {
+      (mp4Remuxer as any)._initPTS = {
+        baseTime: 0,
+        timescale: 90000,
+        trackId: 1,
+      };
+    });
+
+    it('rounds the tfdt up when the first PTS is off the audio sample grid, and reports the residual', function () {
+      // 132006 / (90000 / 44100) = 64682.94 audio ticks
+      const firstPts = 132006;
+      const audio = mp4Remuxer.remuxAudio(
+        aacTrack(firstPts, 44100, 3),
+        0,
+        false,
+        false,
+        undefined,
+        new ChunkMetadata(0, 0, 0),
+      );
+      const raw = firstPts / (90000 / 44100);
+      expect(raw % 1).to.not.eq(0);
+      expect(readTfdt(audio!.data1)).to.eq(Math.ceil(raw));
+      expect(audio!.timestampOffsetAdjustment).to.be.closeTo(
+        (Math.ceil(raw) - raw) / 44100,
+        1e-12,
+      );
+      expect(audio!.timestampOffsetAdjustment).to.be.gt(0);
+    });
+
+    it('reports no residual when the first PTS is on the audio sample grid', function () {
+      // 90000 / (90000 / 48000) = 48000 audio ticks
+      const firstPts = 90000;
+      const audio = mp4Remuxer.remuxAudio(
+        aacTrack(firstPts, 48000, 3),
+        0,
+        false,
+        false,
+        undefined,
+        new ChunkMetadata(0, 0, 0),
+      );
+      expect(readTfdt(audio!.data1)).to.eq(48000);
+      expect(audio!.timestampOffsetAdjustment).to.eq(0);
+    });
+
+    describe('over many fragments', function () {
+      // 29.97 fps iPhone source: first PTS 132006 at 90 kHz, 44.1 kHz AAC,
+      // 258 frames per 6 s fragment (258 * 1024 / 44100 = 5.9907 s).
+      const initBaseTime = 132006;
+      const samplerate = 44100;
+      const framesPerFragment = 258;
+      const scaleFactor = 90000 / samplerate;
+      const inputSampleDuration = (1024 * 90000) / samplerate;
+
+      function placedStart(audio: ReturnType<MP4Remuxer['remuxAudio']>) {
+        return (
+          readTfdt(audio!.data1) / samplerate -
+          audio!.timestampOffsetAdjustment!
+        );
+      }
+
+      function checkFragment(
+        audio: ReturnType<MP4Remuxer['remuxAudio']>,
+        expectedFirstPts: number,
+      ) {
+        const raw = expectedFirstPts / scaleFactor;
+        const tfdt = readTfdt(audio!.data1);
+        const residual = audio!.timestampOffsetAdjustment!;
+        expect(tfdt).to.eq(Math.ceil(raw));
+        expect(residual).to.be.at.least(0);
+        expect(residual).to.be.lt(1 / samplerate);
+        // tfdt minus residual lands on the input time to within float noise,
+        // three orders of magnitude under one 44.1 kHz tick (22.7 µs)
+        expect(placedStart(audio)).to.be.closeTo(
+          expectedFirstPts / 90000,
+          1e-8,
+        );
+        return { raw, tfdt, residual };
+      }
+
+      beforeEach(function () {
+        (mp4Remuxer as any)._initPTS = {
+          baseTime: initBaseTime,
+          timescale: 90000,
+          trackId: 1,
+        };
+      });
+
+      it('keeps every fragment of a contiguous hour on its exact input time', function () {
+        const fragments = 600; // 600 * 5.99 s ≈ 1 hour
+        let pts = initBaseTime;
+        let firstTfdt = 0;
+        for (let sn = 0; sn < fragments; sn++) {
+          const timeOffset = (pts - initBaseTime) / 90000;
+          const audio = mp4Remuxer.remuxAudio(
+            aacFragment(pts, samplerate, framesPerFragment),
+            timeOffset,
+            sn > 0,
+            true,
+            undefined,
+            new ChunkMetadata(0, sn, 0),
+          );
+          const expectedFirstPts =
+            initBaseTime + sn * framesPerFragment * inputSampleDuration;
+          const { tfdt } = checkFragment(audio, expectedFirstPts);
+          if (sn === 0) {
+            firstTfdt = tfdt;
+          }
+          // the tfdt advances by exactly the samples remuxed, never by an extra tick
+          expect(tfdt - firstTfdt).to.eq(sn * framesPerFragment * 1024);
+          pts += framesPerFragment * inputSampleDuration;
+        }
+      });
+
+      it('bounds the residual to under one tick on every fragment after a seek', function () {
+        // playlist with 6.006 s fragments (29.97 fps GOP boundaries): starts are
+        // off the 44.1 kHz grid by a different amount each time. Each seek jumps
+        // seven fragments, well past the 100 ms within which the remuxer still
+        // treats a fragment as consecutive and keeps the previous chain.
+        const fragmentDuration = 6.006;
+        const seen = new Set<string>();
+        for (let seek = 0; seek < 50; seek++) {
+          const sn = seek * 7;
+          mp4Remuxer.resetNextTimestamp();
+          const timeOffset = sn * fragmentDuration;
+          const pts = initBaseTime + timeOffset * 90000;
+          const audio = mp4Remuxer.remuxAudio(
+            aacFragment(pts, samplerate, framesPerFragment),
+            timeOffset,
+            false,
+            true,
+            undefined,
+            new ChunkMetadata(0, sn, 0),
+          );
+          const { residual } = checkFragment(audio, pts);
+          seen.add((residual * samplerate).toFixed(2));
+        }
+        // the residual really varies per fragment; it is not one constant offset
+        expect(seen.size).to.be.gt(1);
+      });
+    });
+
     it('does not inject silent frames before the start of the timeline', function () {
       // 29.97 fps iPhone encode with B-frames: initPTS anchors on the first video DTS,
       // and the first audio sample starts 6006 ticks (66.7 ms) later at 44.1 kHz
@@ -260,7 +401,7 @@ describe('mp4-remuxer', function () {
         0.0001,
       );
       expect(readTfdt(audio.data1)).to.equal(
-        Math.floor(expectedFirstPts / (90000 / samplerate)),
+        Math.ceil(expectedFirstPts / (90000 / samplerate)),
       );
     });
   });
@@ -282,11 +423,25 @@ function aacTrack(
   };
 }
 
+function aacFragment(
+  firstPts: number,
+  samplerate: number,
+  frames: number,
+): DemuxedAudioTrack {
+  const track = aacTrack(firstPts, samplerate, frames);
+  // the TS demuxer hands over integer 90 kHz timestamps
+  track.samples.forEach((sample) => {
+    sample.pts = Math.round(sample.pts);
+  });
+  return track;
+}
+
 function readTfdt(moof: Uint8Array): number {
   const tfdt = findBox(moof, ['moof', 'traf', 'tfdt'])[0];
   const view = new DataView(tfdt.buffer, tfdt.byteOffset, tfdt.byteLength);
-  // version 1: 64-bit baseMediaDecodeTime after the version and flags word
-  return view.getUint32(4) * 2 ** 32 + view.getUint32(8);
+  return tfdt[0] === 1
+    ? view.getUint32(4) * 2 ** 32 + view.getUint32(8)
+    : view.getUint32(4);
 }
 
 function ptsDts(pts: number, dts: number): VideoSample {
