@@ -1180,5 +1180,73 @@ describe('StreamController', function () {
       expect(streamController['fragCurrent']).to.be.null;
       expect(streamController['state']).to.equal(State.IDLE);
     });
+
+    describe('before anything is buffered', function () {
+      const loadLevel = (level: number, durations: number[]) => {
+        const details = M3U8Parser.parseLevelPlaylist(
+          `#EXTM3U
+#EXT-X-TARGETDURATION:5
+${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
+#EXT-X-ENDLIST`,
+          `http://www.example.com/${level}.m3u8`,
+          level,
+          PlaylistLevelType.MAIN,
+          0,
+          null,
+        );
+        hls.trigger(Events.LEVEL_LOADED, {
+          details,
+          id: 0,
+          level,
+          networkDetails: new Response('ok'),
+          stats: new LoadStats(),
+          deliveryDirectives: null,
+          levelInfo: hls.levels[level],
+        });
+      };
+
+      beforeEach(function () {
+        loadManifest(`#EXTM3U
+#EXT-X-STREAM-INF:BANDWIDTH=400000
+0.m3u8
+#EXT-X-STREAM-INF:BANDWIDTH=800000
+1.m3u8`);
+        sinon
+          .stub(streamController['fragmentLoader'], 'load')
+          .callsFake((frag) => {
+            frag.loader = { abort() {}, destroy() {} } as any;
+            return new Promise(() => {});
+          });
+        streamController['media'] = streamController['mediaBuffer'] = {
+          buffered: new TimeRangesMock(),
+          currentTime: 0,
+          readyState: 0,
+          seeking: false,
+        } as any as HTMLMediaElement;
+        hls.startLevel = 1;
+        streamController.startLoad(8.09);
+        loadLevel(1, [4, 4, 4, 4, 4]);
+        expect(streamController['fragCurrent']).to.include({
+          level: 1,
+          start: 8,
+        });
+      });
+
+      it('should keep the playhead at the start position when the first fragment is aborted', function () {
+        streamController['abortCurrentFrag']();
+
+        expect(streamController['playhead']).to.equal(8.09);
+      });
+
+      it('should load the start position when a level switch aborts the first fragment', function () {
+        // Switch levels while the fragment containing the start position is loading
+        hls.loadLevel = 0;
+        loadLevel(0, [3, 3, 3, 3, 3, 3]);
+        expect(streamController['fragCurrent']).to.include({
+          level: 0,
+          start: 6,
+        });
+      });
+    });
   });
 });

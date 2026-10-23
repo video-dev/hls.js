@@ -1227,6 +1227,7 @@ describe('BaseStreamController', function () {
     it('should update nextLoadPosition to current load position', function () {
       baseStreamController.fragCurrent = mockFrag;
       media.currentTime = 15;
+      baseStreamController.lastCurrentTime = 10;
       baseStreamController.nextLoadPosition = 10;
 
       (baseStreamController as any).abortCurrentFrag();

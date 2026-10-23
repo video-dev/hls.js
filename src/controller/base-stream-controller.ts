@@ -2704,7 +2704,11 @@ export default class BaseStreamController
         this.state = State.IDLE;
         break;
     }
-    this.nextLoadPosition = this.playhead;
+    // Before start, the playhead is the load position, which loading the aborted fragment
+    // moved to its end. Go back to the start position instead.
+    this.nextLoadPosition = this.hls?.hasEnoughToStart
+      ? this.playhead
+      : this.lastCurrentTime;
   }
 
   protected checkFragPlaying(): boolean {
