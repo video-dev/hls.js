@@ -236,9 +236,6 @@ export default class StreamController
 
   protected onTickEnd() {
     super.onTickEnd();
-    if (this.media?.readyState && this.media.seeking === false) {
-      this.lastCurrentTime = this.media.currentTime;
-    }
     this.checkFragmentChanged();
   }
 
