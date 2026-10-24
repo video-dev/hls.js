@@ -554,6 +554,9 @@ export default class Hls implements HlsEventEmitter {
       (loadedSource !== loadingSource ||
         this.bufferController?.hasSourceTypes())
     ) {
+      if (media.mediaKeys) {
+        this.emeController?.clear();
+      }
       // Remove and re-create MediaSource
       this.detachMedia();
       this.attachMedia(media);

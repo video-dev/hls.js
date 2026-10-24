@@ -1311,6 +1311,8 @@ export class EMEController extends Logger implements ComponentAPI {
     // (undocumented)
     static CDMCleanupPromise: Promise<void> | void;
     // (undocumented)
+    clear(): void;
+    // (undocumented)
     destroy(): void;
     // (undocumented)
     loadClear(loadingFrag: Fragment, encryptedFragments: Fragment[], startFragRequested: boolean): Promise<void> | null;

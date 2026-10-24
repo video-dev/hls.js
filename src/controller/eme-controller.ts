@@ -1721,7 +1721,7 @@ class EMEController extends Logger implements ComponentAPI {
 
   private onDestroying() {
     this.unregisterListeners();
-    this._clear();
+    this.clear();
   }
 
   private onMediaAttached(
@@ -1758,11 +1758,9 @@ class EMEController extends Logger implements ComponentAPI {
     }
   }
 
-  private _clear(keepMediaKeys: boolean = false) {
+  public clear() {
     this.keyFormatPromise = null;
-    if (!keepMediaKeys) {
-      this.keySystemAccessPromises = {};
-    }
+    this.keySystemAccessPromises = {};
     this.activeKeys = {};
     this.sessionSetupByUri = {};
     const mediaResolved = this.mediaResolved;
@@ -1775,30 +1773,27 @@ class EMEController extends Logger implements ComponentAPI {
     const media = this.media;
     const mediaKeysList = this.mediaKeySessions.slice();
     this.mediaKeySessions = [];
-    if (!keepMediaKeys) {
-      this.mediaKeys = null;
-    }
+    this.mediaKeys = null;
 
     LevelKey.clearKeyUriToKeyIdMap();
 
     // Close all sessions and remove media keys from the video element.
     const keySessionCount = mediaKeysList.length;
-    const clearMediaKeys =
-      media && !keepMediaKeys
-        ? Promise.all(this.setMediaKeysQueue)
-            .catch(() => {})
-            .then(() => media.setMediaKeys(null))
-            .catch((error) => {
-              this.log(`Could not clear media keys: ${error}`);
-              if (!this.hls) return;
-              this.hls.trigger(Events.ERROR, {
-                type: ErrorTypes.OTHER_ERROR,
-                details: ErrorDetails.KEY_SYSTEM_DESTROY_MEDIA_KEYS_ERROR,
-                fatal: false,
-                error: new Error(`Could not clear media keys: ${error}`),
-              });
-            })
-        : Promise.resolve();
+    const clearMediaKeys = media
+      ? Promise.all(this.setMediaKeysQueue)
+          .catch(() => {})
+          .then(() => media.setMediaKeys(null))
+          .catch((error) => {
+            this.log(`Could not clear media keys: ${error}`);
+            if (!this.hls) return;
+            this.hls.trigger(Events.ERROR, {
+              type: ErrorTypes.OTHER_ERROR,
+              details: ErrorDetails.KEY_SYSTEM_DESTROY_MEDIA_KEYS_ERROR,
+              fatal: false,
+              error: new Error(`Could not clear media keys: ${error}`),
+            });
+          })
+      : Promise.resolve();
     EMEController.CDMCleanupPromise = Promise.all(
       mediaKeysList
         .map((mediaKeySessionContext) =>
@@ -1827,9 +1822,7 @@ class EMEController extends Logger implements ComponentAPI {
   }
 
   private onManifestLoading() {
-    // Chrome cannot remove or replace a CDM that is in use, so keep the attached MediaKeys for the next source
-    const { media, mediaKeys } = this;
-    this._clear(!!mediaKeys && media?.mediaKeys === mediaKeys);
+    this.clear();
     this.keyFormatPromise = null;
   }
 
