@@ -999,8 +999,8 @@ export default class StreamController
       return;
     }
     if (!this._hasEnoughToStart && BufferHelper.getBuffered(media).length) {
-      this._hasEnoughToStart = true;
       this.seekToStartPos();
+      this._hasEnoughToStart = true;
     }
     if (bufferedMainFragment) {
       this.tick();

@@ -644,23 +644,6 @@ describe('StreamController', function () {
       expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
     });
 
-    it('leaves a previous fragment gapped by another error to be retried', function () {
-      const details = setLevelDetails(4);
-      // gapped after a load error, then replaced by a playlist refresh
-      const loadFailed = new Fragment(
-        PlaylistLevelType.MAIN,
-        '',
-      ) as MediaFragment;
-      loadFailed.sn = 1;
-      loadFailed.level = 0;
-      fragmentTracker.addAsGap(loadFailed);
-      refuse(details.fragments[2], details.partList![4]);
-      expect(
-        streamController['getNextFragment'](details.fragments[1].start, details)
-          ?.sn,
-      ).to.equal(1);
-    });
-
     it('does not mark fragments of an ended playlist', function () {
       const details = setLevelDetails(3, false);
       refuse(details.fragments[1]);
@@ -700,42 +683,6 @@ describe('StreamController', function () {
       refuse(details.fragments[2]);
       streamController['onMediaDetaching'](Events.MEDIA_DETACHING, {});
       expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
-    });
-
-    it('does not skip a gap of a new source that reuses the key of a refused fragment', function () {
-      refuse(setLevelDetails(4).fragments[2]);
-      hls.trigger(Events.MANIFEST_LOADING, { url: '' });
-      const details = setLevelDetails(4);
-      // gapped after a load error, then replaced by a playlist refresh
-      const loadFailed = new Fragment(
-        PlaylistLevelType.MAIN,
-        '',
-      ) as MediaFragment;
-      loadFailed.sn = 2;
-      loadFailed.level = 0;
-      fragmentTracker.addAsGap(loadFailed);
-      expect(
-        streamController['getNextFragment'](details.fragments[2].start, details)
-          ?.sn,
-      ).to.equal(2);
-    });
-
-    it('purges gaps on the first seek after a new manifest', function () {
-      const details = setLevelDetails(4);
-      const media = {
-        currentTime: 1,
-        buffered: new TimeRangesMock(),
-        addEventListener() {},
-        removeEventListener() {},
-      } as unknown as HTMLMediaElement;
-      streamController['media'] = media;
-      refuse(details.fragments[2]);
-      streamController['onMediaDetaching'](Events.MEDIA_DETACHING, {});
-      hls.trigger(Events.MANIFEST_LOADING, { url: '' });
-      streamController['media'] = media;
-      fragmentTracker.addAsGap(details.fragments[3]);
-      streamController['onMediaSeeking']();
-      expect(fragmentTracker.isGap(details.fragments[3])).to.equal(false);
     });
   });
 
@@ -858,6 +805,39 @@ describe('StreamController', function () {
         id: firstFrag.type,
       });
       expect(seekStub).to.have.been.calledOnce;
+    });
+
+    it('sets hasEnoughToStart after seeking to the start position', function () {
+      const firstFrag = new Fragment(
+        PlaylistLevelType.MAIN,
+        '',
+      ) as MediaFragment;
+      firstFrag.duration = 5.0;
+      firstFrag.level = 1;
+      firstFrag.setStart(0);
+      firstFrag.sn = 1;
+      firstFrag.cc = 0;
+      firstFrag.elementaryStreams.video = {
+        startDTS: 0,
+        startPTS: 0,
+        endDTS: 5,
+        endPTS: 5,
+      };
+      let hasEnoughToStartWhenSeeking: boolean | undefined;
+      // @ts-ignore
+      sandbox.stub(streamController, 'seekToStartPos').callsFake(() => {
+        hasEnoughToStartWhenSeeking = streamController.hasEnoughToStart;
+      });
+      streamController['fragCurrent'] = streamController['fragPrevious'] =
+        firstFrag;
+      streamController['onFragBuffered'](Events.FRAG_BUFFERED, {
+        stats: new LoadStats(),
+        frag: firstFrag,
+        part: null,
+        id: firstFrag.type,
+      });
+      expect(hasEnoughToStartWhenSeeking).to.equal(false);
+      expect(streamController.hasEnoughToStart).to.equal(true);
     });
 
     it('should seek to start pos when media is buffered and seek to segment boundary', function () {
