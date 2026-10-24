@@ -1766,13 +1766,16 @@ class EMEController extends Logger implements ComponentAPI {
       return;
     }
     const media = this.media;
-    const mediaKeysList = this.mediaKeySessions.slice();
-    this.mediaKeySessions = [];
+    const keepKeySessions =
+      keepMediaKeys && this.config.unstable_reuseKeySessions;
+    const mediaKeysList = keepKeySessions ? [] : this.mediaKeySessions.slice();
+    if (!keepKeySessions) {
+      this.mediaKeySessions = [];
+      LevelKey.clearKeyUriToKeyIdMap();
+    }
     if (!keepMediaKeys) {
       this.mediaKeys = null;
     }
-
-    LevelKey.clearKeyUriToKeyIdMap();
 
     // Close all sessions and remove media keys from the video element.
     const keySessionCount = mediaKeysList.length;

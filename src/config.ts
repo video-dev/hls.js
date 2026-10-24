@@ -165,6 +165,7 @@ export type EMEControllerConfig = {
   drmSystemOptions: DRMSystemOptions | undefined;
   requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
   requireKeySystemAccessOnStart: boolean;
+  unstable_reuseKeySessions: boolean;
 };
 
 export interface FragmentLoaderConstructor {
@@ -523,6 +524,7 @@ export const hlsDefaultConfig: HlsConfig = {
     ? requestMediaKeySystemAccess
     : null, // used by eme-controller
   requireKeySystemAccessOnStart: false, // used by eme-controller
+  unstable_reuseKeySessions: false, // used by eme-controller
   testBandwidth: true,
   progressive: false,
   lowLatencyMode: true,
