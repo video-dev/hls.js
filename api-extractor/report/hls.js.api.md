@@ -1338,6 +1338,7 @@ export type EMEControllerConfig = {
     drmSystemOptions: DRMSystemOptions | undefined;
     requestMediaKeySystemAccessFunc: MediaKeyFunc | null;
     requireKeySystemAccessOnStart: boolean;
+    reuseKeySessions: boolean;
 };
 
 // Warning: (ae-missing-release-tag) "EncryptedFragment" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
