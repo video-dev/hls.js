@@ -148,7 +148,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`drmSystemOptions`](#drmsystemoptions)
   - [`requestMediaKeySystemAccessFunc`](#requestmediakeysystemaccessfunc)
   - [`requireKeySystemAccessOnStart`](#requirekeysystemaccessonstart)
-  - [`unstable_reuseKeySessions`](#unstable_reusekeysessions)
+  - [`reuseKeySessions`](#reusekeysessions)
   - [`cmcd`](#cmcd)
   - [`enableInterstitialPlayback`](#enableinterstitialplayback)
   - [`interstitialAppendInPlace`](#interstitialappendinplace)
@@ -1880,11 +1880,9 @@ When set to `true`, key-system access is requested for the key systems configure
 
 Use this with streams that begin with clear content and transition to encrypted content, where setting up MediaKeys after the first segments have been appended can break decoding. See [#7216](https://github.com/video-dev/hls.js/issues/7216) for the Chrome `PIPELINE_DECODE_ERROR` case this addresses.
 
-### `unstable_reuseKeySessions`
+### `reuseKeySessions`
 
 (default: `false`)
-
-**Experimental:** this option may change or be removed in a future release.
 
 When set to `true`, key sessions are kept open when `loadSource()` is called again on the same media element, as long as the attached MediaKeys are kept. Keys of the new source that match a key ID in a kept session are loaded from that session, so no new license request is made. Keys that do not match get a new session and license request as usual.
 

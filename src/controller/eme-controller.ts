@@ -1766,8 +1766,7 @@ class EMEController extends Logger implements ComponentAPI {
       return;
     }
     const media = this.media;
-    const keepKeySessions =
-      keepMediaKeys && this.config.unstable_reuseKeySessions;
+    const keepKeySessions = keepMediaKeys && this.config.reuseKeySessions;
     const mediaKeysList = keepKeySessions ? [] : this.mediaKeySessions.slice();
     if (!keepKeySessions) {
       this.mediaKeySessions = [];
