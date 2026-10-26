@@ -265,6 +265,7 @@ export default class KeyLoader extends Logger implements ComponentAPI {
         ) => {
           const { frag, keyInfo, url } = context;
           if (!frag.decryptdata || keyInfo !== this.keyLoaderInfo[url]) {
+            this.resetLoader(context);
             return reject(
               createKeyLoadError(
                 frag,
