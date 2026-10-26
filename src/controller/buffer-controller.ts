@@ -323,9 +323,10 @@ export default class BufferController extends Logger implements ComponentAPI {
         const objectUrl = (this._objectUrl = self.URL.createObjectURL(ms));
         // link video and media Source
         const config = this.hls.config;
-        const cleanupPromise = config.emeEnabled
-          ? config.emeController?.CDMCleanupPromise
-          : null;
+        const cleanupPromise =
+          config.emeEnabled && media.mediaKeys
+            ? config.emeController?.CDMCleanupPromise
+            : null;
         if (cleanupPromise) {
           cleanupPromise
             .then(() => {
