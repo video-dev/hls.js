@@ -17,6 +17,7 @@ import { BufferHelper } from '../../../src/utils/buffer-helper';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type BaseStreamController from '../../../src/controller/base-stream-controller';
 import type { MediaFragment, Part } from '../../../src/loader/fragment';
+import type { ErrorData } from '../../../src/types/events';
 import type { BufferInfo } from '../../../src/utils/buffer-helper';
 
 use(sinonChai);
@@ -954,7 +955,7 @@ describe('BaseStreamController', function () {
         (baseStreamController as any).fragmentLoader,
         'abort',
       );
-      const handleFragLoadErrorStub = sinon.stub(
+      const handleFragLoadErrorSpy = sinon.spy(
         baseStreamController as any,
         'handleFragLoadError',
       );
@@ -962,6 +963,7 @@ describe('BaseStreamController', function () {
         baseStreamController as any,
         'resetFragmentLoading',
       );
+      const triggerSpy = sinon.spy(baseStreamController.hls, 'trigger');
 
       const result = (baseStreamController as any).loadInitSegmentIfNeeded(
         mediaFrag,
@@ -974,12 +976,14 @@ describe('BaseStreamController', function () {
         })
         .catch((error) => {
           expect(error).to.equal(loadError);
-          expect(loadError.data.frag).to.equal(mediaFrag);
+          expect(loadError.data.frag).to.equal(initSegment);
           expect(abortStub).to.have.been.calledOnce;
-          expect(handleFragLoadErrorStub).to.have.been.calledOnceWith(
+          expect(handleFragLoadErrorSpy).to.have.been.calledOnceWith(
             loadError,
+            mediaFrag,
           );
-          expect(handleFragLoadErrorStub.firstCall.args[0].data.frag).to.equal(
+          expect(triggerSpy).to.have.been.calledOnceWith('hlsError');
+          expect((triggerSpy.firstCall?.args[1] as ErrorData)?.frag).to.equal(
             mediaFrag,
           );
           expect(resetFragmentLoadingStub).to.have.been.calledOnceWith(
@@ -988,8 +992,9 @@ describe('BaseStreamController', function () {
         })
         .finally(() => {
           abortStub.restore();
-          handleFragLoadErrorStub.restore();
+          handleFragLoadErrorSpy.restore();
           resetFragmentLoadingStub.restore();
+          triggerSpy.restore();
         });
     });
 
@@ -1020,7 +1025,7 @@ describe('BaseStreamController', function () {
 
       return initDataPromise
         .catch((error) =>
-          (baseStreamController as any).handleFragLoadError(error),
+          (baseStreamController as any).handleFragLoadError(error, initSegment),
         )
         .then(() => {
           const fatalInternalException = errorSpy
@@ -1068,7 +1073,10 @@ describe('BaseStreamController', function () {
       baseStreamController.state = State.FRAG_LOADING;
 
       baseStreamController.stopLoad();
-      (baseStreamController as any).handleFragLoadError(abortedLoadError(frag));
+      (baseStreamController as any).handleFragLoadError(
+        abortedLoadError(frag),
+        frag,
+      );
 
       expect(baseStreamController.state).to.equal(State.STOPPED);
     });
@@ -1082,7 +1090,10 @@ describe('BaseStreamController', function () {
       baseStreamController.fragCurrent = frag;
       baseStreamController.state = State.FRAG_LOADING;
 
-      (baseStreamController as any).handleFragLoadError(abortedLoadError(frag));
+      (baseStreamController as any).handleFragLoadError(
+        abortedLoadError(frag),
+        frag,
+      );
 
       expect(baseStreamController.state).to.equal(State.IDLE);
     });

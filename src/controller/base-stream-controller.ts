@@ -828,9 +828,8 @@ export default class BaseStreamController
           throw reason;
         }
         if ('data' in reason) {
-          reason.data.frag = mediaFrag;
           this.fragmentLoader.abort();
-          this.handleFragLoadError(reason);
+          this.handleFragLoadError(reason, mediaFrag);
         }
         this.resetFragmentLoading(mediaFrag);
         throw reason;
@@ -1070,14 +1069,16 @@ export default class BaseStreamController
                   progressCallback,
                 );
               })
-              .catch((error) => this.handleFragLoadError(error));
+              .catch((error) => this.handleFragLoadError(error, frag));
           } else {
             result = this.doFragPartsLoad(
               frag,
               part,
               level,
               progressCallback,
-            ).catch((error: LoadError) => this.handleFragLoadError(error));
+            ).catch((error: LoadError) =>
+              this.handleFragLoadError(error, frag),
+            );
           }
           this.hls.trigger(Events.FRAG_LOADING, {
             frag,
@@ -1159,7 +1160,7 @@ export default class BaseStreamController
             initDataPromise,
           );
         })
-        .catch((error) => this.handleFragLoadError(error));
+        .catch((error) => this.handleFragLoadError(error, frag));
     } else {
       // load unencrypted fragment data with progress event,
       // or handle fragment result after key and fragment are finished loading
@@ -1179,7 +1180,7 @@ export default class BaseStreamController
           }
           return fragLoadedData;
         })
-        .catch((error) => this.handleFragLoadError(error));
+        .catch((error) => this.handleFragLoadError(error, frag));
     }
     this.hls.trigger(Events.FRAG_LOADING, { frag, targetBufferTime });
     if (this.fragCurrent === null) {
@@ -1232,21 +1233,27 @@ export default class BaseStreamController
 
   private handleFragLoadError(
     error: LoadError | Error | (Error & { data: ErrorData }),
+    frag: MediaFragment,
   ) {
     if ('data' in error) {
       const data = error.data;
-      if (data.frag && data.details === ErrorDetails.INTERNAL_ABORTED) {
-        this.handleFragLoadAborted(data.frag, data.part);
-      } else if (
-        data.frag &&
-        data.type === ErrorTypes.KEY_SYSTEM_ERROR &&
-        !data.fatal
-      ) {
-        data.frag.abortRequests();
+      if (data.details === ErrorDetails.INTERNAL_ABORTED) {
+        this.handleFragLoadAborted(frag, data.part);
+      } else if (data.type === ErrorTypes.KEY_SYSTEM_ERROR && !data.fatal) {
+        frag.abortRequests();
         this.resetStartWhenNotLoaded();
-        this.resetFragmentLoading(data.frag);
+        this.resetFragmentLoading(frag);
       }
-      this.hls.trigger(Events.ERROR, data as ErrorData);
+      if (data.frag !== frag) {
+        if (data.frag) {
+          this.warn(
+            `${data.details} error cascading from ${this.fragInfo(data.frag, false, data.part)} to ${this.fragInfo(frag, false)}`,
+          );
+        }
+        this.hls.trigger(Events.ERROR, { ...data, frag });
+      } else {
+        this.hls.trigger(Events.ERROR, data);
+      }
     } else {
       this.hls.trigger(Events.ERROR, {
         type: ErrorTypes.OTHER_ERROR,
@@ -2497,7 +2504,7 @@ export default class BaseStreamController
     pts: boolean = true,
     part?: Part | null,
   ): string {
-    return `${this.playlistLabel()} ${frag.level} (${part ? 'part' : 'frag'}:[${(pts && !part ? frag.startPTS : (part || frag).start) ?? NaN}-${
+    return `${frag.type} playlist ${frag.level} (${part ? 'part' : 'frag'}:[${(pts && !part ? frag.startPTS : (part || frag).start) ?? NaN}-${
       (pts && !part ? frag.endPTS : (part || frag).end) ?? NaN
     }]${part && frag.type === 'main' ? 'INDEPENDENT=' + (part.independent ? 'YES' : 'NO') : ''})`;
   }
