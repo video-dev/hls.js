@@ -1291,16 +1291,16 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
     });
 
     const allowEndOfStream = this.overrides?.endOfStream !== false;
-    const allTracksEnding =
-      this.sourceBufferCount > 0 &&
-      !this.sourceBuffers.some(([type]) => type && !this.tracks[type]?.ended);
-
-    if (allTracksEnding) {
+    if (this.allTracksEnding) {
       this.unblockAudio();
       if (allowEndOfStream) {
         this.log(`Queueing EOS`);
         this.blockUntilOpen(() => {
           this.tracksEnded();
+          if (!this.allTracksEnding) {
+            this.log(`EOS cancelled`);
+            return;
+          }
           const { mediaSource } = this;
           if (mediaSource?.readyState !== 'open') {
             if (mediaSource) {
@@ -1324,6 +1324,13 @@ transfer tracks: ${stringify(transferredTracks, (key, value) => (key === 'initSe
       // Make sure pending audio appends are unblocked when video reaches end
       this.unblockAudio();
     }
+  }
+
+  private get allTracksEnding(): boolean {
+    return (
+      this.sourceBufferCount > 0 &&
+      !this.sourceBuffers.some(([type]) => type && !this.tracks[type]?.ended)
+    );
   }
 
   private tracksEnded() {
