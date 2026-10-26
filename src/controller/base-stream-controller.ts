@@ -2111,6 +2111,10 @@ export default class BaseStreamController
   }
 
   protected resetFragmentLoading(frag: Fragment) {
+    if (this.state === State.STOPPED) {
+      // stopLoad() aborted this load; stay stopped until startLoad()
+      return;
+    }
     if (
       !this.fragCurrent ||
       (!this.fragContextChanged(frag) &&

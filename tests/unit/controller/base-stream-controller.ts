@@ -1038,6 +1038,56 @@ describe('BaseStreamController', function () {
     });
   });
 
+  describe('fragment load aborted by stopLoad', function () {
+    function abortedLoadError(frag: MediaFragment) {
+      frag.stats.aborted = true;
+      return new LoadError({
+        type: ErrorTypes.NETWORK_ERROR,
+        details: ErrorDetails.INTERNAL_ABORTED,
+        fatal: false,
+        error: new Error('Fragment load aborted'),
+        frag,
+        networkDetails: null,
+      });
+    }
+
+    beforeEach(function () {
+      (baseStreamController as any).transmuxer = {
+        reset: sinon.spy(),
+        destroy: sinon.spy(),
+      };
+    });
+
+    it('stays STOPPED when the aborted load is handled after stopLoad()', function () {
+      const frag = new Fragment(
+        PlaylistLevelType.MAIN,
+        'segment.ts',
+      ) as MediaFragment;
+      frag.sn = 1;
+      baseStreamController.fragCurrent = frag;
+      baseStreamController.state = State.FRAG_LOADING;
+
+      baseStreamController.stopLoad();
+      (baseStreamController as any).handleFragLoadError(abortedLoadError(frag));
+
+      expect(baseStreamController.state).to.equal(State.STOPPED);
+    });
+
+    it('still returns to IDLE when an aborted load is handled while loading', function () {
+      const frag = new Fragment(
+        PlaylistLevelType.MAIN,
+        'segment.ts',
+      ) as MediaFragment;
+      frag.sn = 1;
+      baseStreamController.fragCurrent = frag;
+      baseStreamController.state = State.FRAG_LOADING;
+
+      (baseStreamController as any).handleFragLoadError(abortedLoadError(frag));
+
+      expect(baseStreamController.state).to.equal(State.IDLE);
+    });
+  });
+
   describe('backtrackFragment and couldBacktrack properties', function () {
     it('should return undefined for backtrackFragment by default', function () {
       expect((baseStreamController as any).backtrackFragment).to.be.undefined;
