@@ -865,19 +865,19 @@ describe('EMEController', function () {
     });
   });
 
-  describe('reusing MediaKeys across loadSource (#8092)', function () {
+  describe('reusing MediaKeys across loadSource (#8092 - Not for FPS)', function () {
     let reqMediaKsAccessSpy: sinon.SinonSpy;
 
     beforeEach(function () {
       reqMediaKsAccessSpy = sinon.spy(() =>
         Promise.resolve({
-          keySystem: 'com.apple.fps',
+          keySystem: 'com.widevine.alpha',
           createMediaKeys: () => Promise.resolve(new MediaKeysMock()),
         }),
       );
       setupEach({
         emeEnabled: true,
-        drmSystems: { 'com.apple.fps': { licenseUrl: 'http://noop' } },
+        drmSystems: { 'com.widevine.alpha': { licenseUrl: 'http://noop' } },
         requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
       });
       sinonFakeXMLHttpRequestStatic.onCreate = (xhr) => {
@@ -893,7 +893,7 @@ describe('EMEController', function () {
       // Chrome cannot remove or replace MediaKeys that are in use
       media.setMediaKeys = sinon.spy((keys: MediaKeys | null) => {
         const attachedKeys = (media as any).mediaKeys;
-        if (attachedKeys && attachedKeys !== keys) {
+        if (attachedKeys && keys && attachedKeys !== keys) {
           return Promise.reject(new Error('InvalidStateError'));
         }
         (media as any).mediaKeys = keys;
@@ -905,20 +905,39 @@ describe('EMEController', function () {
       });
     });
 
-    it('reuses MediaKeys when MANIFEST_LOADING fires with media attached', async function () {
-      await emeController.loadKey(getEncryptedFrag(getParsedLevelKey()));
+    it('reuses MediaKeys when MANIFEST_LOADING fires with media attached (Widevine)', async function () {
+      await emeController.loadKey(
+        getEncryptedFrag(
+          getParsedLevelKey(
+            'data://key-uri',
+            'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+          ),
+        ),
+      );
       // loadSource with the same url and nothing buffered keeps media attached
       emeController.onManifestLoading();
       await emeController.loadKey(
-        getEncryptedFrag(getParsedLevelKey('data://key-uri-2')),
+        getEncryptedFrag(
+          getParsedLevelKey(
+            'data://key-uri-2',
+            'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+          ),
+        ),
       );
 
       expect(reqMediaKsAccessSpy).callCount(1);
       expect(media.setMediaKeys).callCount(1);
     });
 
-    it('reuses MediaKeys when media is re-attached before MANIFEST_LOADING', async function () {
-      await emeController.loadKey(getEncryptedFrag(getParsedLevelKey()));
+    it('reuses MediaKeys when media is re-attached before MANIFEST_LOADING (Widevine)', async function () {
+      await emeController.loadKey(
+        getEncryptedFrag(
+          getParsedLevelKey(
+            'data://key-uri',
+            'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+          ),
+        ),
+      );
       // loadSource with a source loaded detaches and re-attaches media before MANIFEST_LOADING
       emeController.onMediaDetached();
       emeController.onManifestLoading();
@@ -926,11 +945,31 @@ describe('EMEController', function () {
         media: media as any as HTMLMediaElement,
       });
       await emeController.loadKey(
-        getEncryptedFrag(getParsedLevelKey('data://key-uri-2')),
+        getEncryptedFrag(
+          getParsedLevelKey(
+            'data://key-uri-2',
+            'urn:uuid:edef8ba9-79d6-4ace-a3c8-27dcd51d21ed',
+          ),
+        ),
       );
 
       expect(reqMediaKsAccessSpy).callCount(1);
       expect(media.setMediaKeys).callCount(1);
+    });
+
+    it('Does not resuse MediaKeys when MANIFEST_LOADING fires with media attached with FairPlay Streaming', async function () {
+      await emeController.loadKey(
+        getEncryptedFrag(getParsedLevelKey('data://key-uri')),
+      );
+      // loadSource with the same url and nothing buffered keeps media attached
+      emeController.onManifestLoading();
+      await emeController.loadKey(
+        getEncryptedFrag(getParsedLevelKey('data://key-uri-2')),
+      );
+
+      expect(reqMediaKsAccessSpy).callCount(2);
+      expect(media.setMediaKeys).to.have.been.calledWith(null);
+      expect(media.setMediaKeys).callCount(3);
     });
   });
 

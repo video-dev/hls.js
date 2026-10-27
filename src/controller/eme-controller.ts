@@ -1827,8 +1827,9 @@ class EMEController extends Logger implements ComponentAPI {
       !!attachedMediaKeys &&
       Object.keys(this.keySystemAccessPromises).some(
         (keySystem) =>
+          keySystem !== KeySystems.FAIRPLAY &&
           this.keySystemAccessPromises[keySystem]?.createdMediaKeys ===
-          attachedMediaKeys,
+            attachedMediaKeys,
       );
     this._clear(keepMediaKeys);
     this.keyFormatPromise = null;
