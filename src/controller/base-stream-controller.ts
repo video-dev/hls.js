@@ -1634,6 +1634,48 @@ export default class BaseStreamController
     return programFrag;
   }
 
+  protected holdAtInitRegion(
+    frag: MediaFragment,
+    bufferInfo: BufferInfo,
+  ): boolean {
+    if (!this.config.isolateInitRegions) {
+      return false;
+    }
+    const buffered = this.fragPrevious ?? this.fragPlaying;
+    const cc = frag.initSegment?.cc;
+    if (!buffered || buffered.initSegment?.cc === cc) {
+      return false;
+    }
+    if (this.playlistType !== PlaylistLevelType.MAIN) {
+      return true;
+    }
+    const { config, hls, media } = this;
+    if (!media || media.paused || bufferInfo.len >= config.maxBufferHole) {
+      return true;
+    }
+    const position = Math.max(
+      media.currentTime,
+      frag.start + config.maxBufferHole,
+    );
+    if (!media.seeking) {
+      if (frag.start >= buffered.start) {
+        media.currentTime = position;
+      }
+      return true;
+    }
+    this.log(
+      `Init region change (cc: ${buffered.initSegment?.cc} -> ${cc}), resetting MediaSource at ${position}`,
+    );
+    const encrypted = !!this.getLevelDetails()?.fragments.some(
+      (fragment) => fragment.encrypted && fragment.initSegment?.cc === cc,
+    );
+    hls.trigger(Events.INIT_REGION_CHANGING, { frag, position, encrypted });
+    hls.detachMedia();
+    hls.attachMedia(media);
+    hls.startLoad(position);
+    return true;
+  }
+
   protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean {
     if (this.nextLoadPosition <= targetBufferTime) {
       return false;

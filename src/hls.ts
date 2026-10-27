@@ -1573,6 +1573,7 @@ export type {
   FragParsingMetadataData,
   FragParsingUserdataData,
   InitPTSFoundData,
+  InitRegionChangingData,
   KeyLoadedData,
   KeyLoadingData,
   LevelLoadedData,

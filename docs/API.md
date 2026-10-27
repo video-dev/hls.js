@@ -32,6 +32,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`frontBufferFlushThreshold`](#frontbufferflushthreshold)
   - [`loopBackBufferFlush`](#loopbackbufferflush)
   - [`startOnSegmentBoundary`](#startonsegmentboundary)
+  - [`isolateInitRegions`](#isolateinitregions)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
@@ -686,6 +687,14 @@ Controls back-buffer flushing on quality upgrades when the underlying `HTMLMedia
 
 When set to `true`, the player will align the live start position with the closest video segment boundary when preparing playback. This ensures playback starts at a clean segment boundary rather than potentially in the middle of a segment, which can prevent some segment skipping. This is helpful for when liveSyncDurationCount or liveSyncDuration, do not calculate start position to be the start position of a segment.
 Setting this to `true` may increase initial live playback latency slightly, but can provide more stable playback start. When set to `false`, playback will start at the exact position determined by the player's live sync calculations, which could be in the middle of a segment.
+
+### `isolateInitRegions`
+
+(default: `false`)
+
+When set to `true`, each init region plays in its own MediaSource. An init region is a run of segments that share the same init segment (`EXT-X-MAP`). Buffering stops at the end of the current init region, and once playback reaches it, or a seek lands in another init region, the MediaSource is reset and loading continues in the new one. This keeps, for example, clear SSAI ads and encrypted content in separate MediaSources. `INIT_REGION_CHANGING` is dispatched before each reset.
+
+While the media element is paused the MediaSource is not reset, so a seek into another init region while paused completes once playback resumes.
 
 ### `maxBufferSize`
 
@@ -2683,6 +2692,8 @@ Full list of Events is available below:
   - data: { }
 - `Hls.Events.BUFFER_RESET` - fired when we buffer is going to be reset
   - data: { }
+- `Hls.Events.INIT_REGION_CHANGING` - fired with `isolateInitRegions` enabled, before the MediaSource is reset to play the next init region
+  - data: { frag : first fragment to load in the next init region, position : playback position the new MediaSource starts loading at, encrypted : `true` when any fragment in the next init region is encrypted }
 - `Hls.Events.BUFFER_CODECS` - fired when we know about the codecs that we need buffers for to push into
   - data: { audio? : `[Track]`, video? : `[Track]` }
 - `Hls.Events.BUFFER_CREATED` - fired when sourcebuffers have been created

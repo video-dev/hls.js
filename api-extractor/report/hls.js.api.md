@@ -541,6 +541,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected hls: Hls;
     // (undocumented)
+    protected holdAtInitRegion(frag: MediaFragment, bufferInfo: BufferInfo): boolean;
+    // (undocumented)
     protected get iframesOnly(): boolean | undefined;
     // (undocumented)
     get inFlightFrag(): InFlightData;
@@ -1659,6 +1661,8 @@ export enum Events {
     // (undocumented)
     INIT_PTS_FOUND = "hlsInitPtsFound",
     // (undocumented)
+    INIT_REGION_CHANGING = "hlsInitRegionChanging",
+    // (undocumented)
     INTERSTITIAL_ASSET_ENDED = "hlsInterstitialAssetEnded",
     // (undocumented)
     INTERSTITIAL_ASSET_ERROR = "hlsInterstitialAssetError",
@@ -2653,6 +2657,8 @@ export interface HlsListeners {
     // (undocumented)
     [Events.INIT_PTS_FOUND]: (event: Events.INIT_PTS_FOUND, data: InitPTSFoundData) => void;
     // (undocumented)
+    [Events.INIT_REGION_CHANGING]: (event: Events.INIT_REGION_CHANGING, data: InitRegionChangingData) => void;
+    // (undocumented)
     [Events.INTERSTITIAL_ASSET_ENDED]: (event: Events.INTERSTITIAL_ASSET_ENDED, data: InterstitialAssetEndedData) => void;
     // (undocumented)
     [Events.INTERSTITIAL_ASSET_ERROR]: (event: Events.INTERSTITIAL_ASSET_ERROR, data: InterstitialAssetErrorData) => void;
@@ -2889,6 +2895,18 @@ export interface InitPTSFoundData {
     timestampOffsets: TimestampOffset[];
     // (undocumented)
     trackId: number;
+}
+
+// Warning: (ae-missing-release-tag) "InitRegionChangingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface InitRegionChangingData {
+    // (undocumented)
+    encrypted: boolean;
+    // (undocumented)
+    frag: MediaFragment;
+    // (undocumented)
+    position: number;
 }
 
 // Warning: (ae-missing-release-tag) "InitSegmentData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -5033,6 +5051,7 @@ export type StreamControllerConfig = {
     testBandwidth: boolean;
     liveSyncMode?: 'edge' | 'buffered';
     startOnSegmentBoundary: boolean;
+    isolateInitRegions: boolean;
     nextAudioTrackBufferFlushForwardOffset: number;
 };
 

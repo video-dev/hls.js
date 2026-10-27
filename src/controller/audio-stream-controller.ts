@@ -416,7 +416,10 @@ class AudioStreamController
       return;
     }
 
-    if (this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag)) {
+    if (
+      this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag) ||
+      this.holdAtInitRegion(frag, bufferInfo)
+    ) {
       return;
     }
 

@@ -277,6 +277,7 @@ export type StreamControllerConfig = {
   testBandwidth: boolean;
   liveSyncMode?: 'edge' | 'buffered';
   startOnSegmentBoundary: boolean;
+  isolateInitRegions: boolean;
   nextAudioTrackBufferFlushForwardOffset: number;
 };
 
@@ -458,6 +459,7 @@ export const hlsDefaultConfig: HlsConfig = {
   frontBufferFlushThreshold: Infinity,
   loopBackBufferFlush: undefined, // used by buffer-controller
   startOnSegmentBoundary: false, // used by stream-controller
+  isolateInitRegions: false, // used by stream-controller and audio-stream-controller
   nextAudioTrackBufferFlushForwardOffset: 0.25, // used by stream-controller
   maxBufferSize: 60 * 1000 * 1000, // used by stream-controller
   maxFragLookUpTolerance: 0.25, // used by stream-controller
