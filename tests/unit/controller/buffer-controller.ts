@@ -689,4 +689,51 @@ describe('BufferController', function () {
       });
     });
   });
+
+  describe('onMediaAttaching', function () {
+    it('sets the source immediately when no CDM cleanup is pending', function () {
+      const media = new MockMediaElement() as unknown as HTMLMediaElement;
+      hls.trigger(Events.MEDIA_ATTACHING, { media });
+      expect(media.src).to.equal(bufferController._objectUrl);
+    });
+
+    it('sets the source immediately when the media element mediaKeys are null', async function () {
+      let resolveCleanup!: () => void;
+      const cleanupPromise = new Promise<void>((resolve) => {
+        resolveCleanup = resolve;
+      });
+      hls.config.emeEnabled = true;
+      hls.config.emeController = { CDMCleanupPromise: cleanupPromise } as any;
+      const media = new MockMediaElement() as unknown as HTMLMediaElement;
+
+      expect(media.mediaKeys).to.equal(null);
+      expect(media.src).to.equal('');
+      hls.trigger(Events.MEDIA_ATTACHING, { media });
+      expect(media.src).to.equal(bufferController._objectUrl);
+
+      resolveCleanup();
+      await cleanupPromise;
+      expect(media.src).to.equal(bufferController._objectUrl);
+    });
+
+    it('defers setting the source until CDM cleanup has completed', async function () {
+      let resolveCleanup!: () => void;
+      const cleanupPromise = new Promise<void>((resolve) => {
+        resolveCleanup = resolve;
+      });
+      hls.config.emeEnabled = true;
+      hls.config.emeController = { CDMCleanupPromise: cleanupPromise } as any;
+      const media = new MockMediaElement() as unknown as HTMLMediaElement;
+      (media as any).__mediaKeys = {};
+
+      expect(media.mediaKeys).to.not.equal(null);
+      expect(media.src).to.equal('');
+      hls.trigger(Events.MEDIA_ATTACHING, { media });
+      expect(media.src).to.equal('');
+
+      resolveCleanup();
+      await cleanupPromise;
+      expect(media.src).to.equal(bufferController._objectUrl);
+    });
+  });
 });

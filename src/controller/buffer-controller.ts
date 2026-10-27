@@ -321,22 +321,24 @@ export default class BufferController extends Logger implements ComponentAPI {
       } else {
         // cache the locally generated object url
         const objectUrl = (this._objectUrl = self.URL.createObjectURL(ms));
-        // link video and media Source
-        if (this.appendSource) {
-          try {
-            media.removeAttribute('src');
-            // ManagedMediaSource will not open without disableRemotePlayback set to false or source alternatives
-            const MMS = (self as any).ManagedMediaSource;
-            media.disableRemotePlayback =
-              media.disableRemotePlayback || (MMS && ms instanceof MMS);
-            removeSourceChildren(media);
-            addSource(media, objectUrl);
-            media.load();
-          } catch (error) {
-            media.src = objectUrl;
-          }
+        const config = this.hls.config;
+        const cleanupPromise =
+          config.emeEnabled && media.mediaKeys
+            ? config.emeController?.CDMCleanupPromise
+            : null;
+        if (cleanupPromise) {
+          cleanupPromise
+            .then(() => {
+              if (!this.hls) {
+                return;
+              }
+              this.setSource(media, ms, objectUrl);
+            })
+            .catch(() => {
+              /* no-op */
+            });
         } else {
-          media.src = objectUrl;
+          this.setSource(media, ms, objectUrl);
         }
       }
       addEventListener(media, 'emptied', this._onMediaEmptied);
@@ -345,6 +347,29 @@ export default class BufferController extends Logger implements ComponentAPI {
         // Resume streaming on seeking (https://bugs.webkit.org/show_bug.cgi?id=321919)
         addEventListener(media, 'seeking', this._onStartStreaming);
       }
+    }
+  }
+
+  private setSource(
+    media: HTMLMediaElement,
+    ms: MediaSource,
+    objectUrl: string,
+  ) {
+    if (this.appendSource) {
+      try {
+        media.removeAttribute('src');
+        // ManagedMediaSource will not open without disableRemotePlayback set to false or source alternatives
+        const MMS = (self as any).ManagedMediaSource;
+        media.disableRemotePlayback =
+          media.disableRemotePlayback || (MMS && ms instanceof MMS);
+        removeSourceChildren(media);
+        addSource(media, objectUrl);
+        media.load();
+      } catch (error) {
+        media.src = objectUrl;
+      }
+    } else {
+      media.src = objectUrl;
     }
   }
 

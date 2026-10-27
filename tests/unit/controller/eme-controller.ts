@@ -33,6 +33,7 @@ type EMEControllerTestable = Omit<EMEController, 'hls' | 'mediaKeySessions'> & {
     data: MediaAttachedData,
   ) => void;
   onMediaDetached: () => void;
+  onManifestLoading: () => void;
   attemptSetMediaKeys: (
     keySystem: KeySystems,
     mediaKeys: MediaKeys,
@@ -864,46 +865,111 @@ describe('EMEController', function () {
     });
   });
 
-  it('should reuse attached MediaKeys after MANIFEST_LOADING', async function () {
-    const mediaKeys = new MediaKeysMock();
-    const reqMediaKsAccessSpy = sinon.spy(() =>
-      Promise.resolve({
-        keySystem: 'com.apple.fps',
-        createMediaKeys: () => Promise.resolve(mediaKeys),
-      }),
-    );
-    setupEach({
-      emeEnabled: true,
-      drmSystems: { 'com.apple.fps': { licenseUrl: 'http://noop' } },
-      requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
-    });
-    sinonFakeXMLHttpRequestStatic.onCreate = (xhr) => {
-      self.setTimeout(() => {
-        // Sessions closed on MANIFEST_LOADING abort their license requests
-        if ((xhr as any).aborted) {
-          return;
+  describe('reusing MediaKeys across loadSource (#8092)', function () {
+    let reqMediaKsAccessSpy: sinon.SinonSpy;
+
+    beforeEach(function () {
+      reqMediaKsAccessSpy = sinon.spy(() =>
+        Promise.resolve({
+          keySystem: 'com.apple.fps',
+          createMediaKeys: () => Promise.resolve(new MediaKeysMock()),
+        }),
+      );
+      setupEach({
+        emeEnabled: true,
+        drmSystems: { 'com.apple.fps': { licenseUrl: 'http://noop' } },
+        requestMediaKeySystemAccessFunc: reqMediaKsAccessSpy,
+      });
+      sinonFakeXMLHttpRequestStatic.onCreate = (xhr) => {
+        self.setTimeout(() => {
+          // Sessions closed on MANIFEST_LOADING abort their license requests
+          if ((xhr as any).aborted) {
+            return;
+          }
+          (xhr as any).response = new Uint8Array();
+          xhr.respond(200, {}, '');
+        }, 0);
+      };
+      // Chrome cannot remove or replace MediaKeys that are in use
+      media.setMediaKeys = sinon.spy((keys: MediaKeys | null) => {
+        const attachedKeys = (media as any).mediaKeys;
+        if (attachedKeys && attachedKeys !== keys) {
+          return Promise.reject(new Error('InvalidStateError'));
         }
-        (xhr as any).response = new Uint8Array();
-        xhr.respond(200, {}, '');
-      }, 0);
-    };
-    media.setMediaKeys = sinon.spy((keys: MediaKeys | null) => {
-      (media as any).mediaKeys = keys;
-      return Promise.resolve();
+        (media as any).mediaKeys = keys;
+        return Promise.resolve();
+      });
+      emeController.hls.media = media;
+      emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+        media: media as any as HTMLMediaElement,
+      });
     });
+
+    it('reuses MediaKeys when MANIFEST_LOADING fires with media attached', async function () {
+      await emeController.loadKey(getEncryptedFrag(getParsedLevelKey()));
+      // loadSource with the same url and nothing buffered keeps media attached
+      emeController.onManifestLoading();
+      await emeController.loadKey(
+        getEncryptedFrag(getParsedLevelKey('data://key-uri-2')),
+      );
+
+      expect(reqMediaKsAccessSpy).callCount(1);
+      expect(media.setMediaKeys).callCount(1);
+    });
+
+    it('reuses MediaKeys when media is re-attached before MANIFEST_LOADING', async function () {
+      await emeController.loadKey(getEncryptedFrag(getParsedLevelKey()));
+      // loadSource with a source loaded detaches and re-attaches media before MANIFEST_LOADING
+      emeController.onMediaDetached();
+      emeController.onManifestLoading();
+      emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+        media: media as any as HTMLMediaElement,
+      });
+      await emeController.loadKey(
+        getEncryptedFrag(getParsedLevelKey('data://key-uri-2')),
+      );
+
+      expect(reqMediaKsAccessSpy).callCount(1);
+      expect(media.setMediaKeys).callCount(1);
+    });
+  });
+
+  it('should wait for media keys to be cleared before setting new MediaKeys', async function () {
+    setupEach({ emeEnabled: true });
+    let resolveClear!: () => void;
+    const setMediaKeys = sinon.spy((keys: MediaKeys | null) =>
+      keys
+        ? Promise.resolve()
+        : new Promise<void>((resolve) => {
+            resolveClear = resolve;
+          }),
+    );
+    media.setMediaKeys = setMediaKeys;
     emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
       media: media as any as HTMLMediaElement,
     });
 
-    await emeController.loadKey(getEncryptedFrag(getParsedLevelKey()));
-    (emeController as any).onManifestLoading();
-    await emeController.loadKey(
-      getEncryptedFrag(getParsedLevelKey('data://key-uri-2')),
+    await emeController.attemptSetMediaKeys(
+      KeySystems.WIDEVINE,
+      new MediaKeysMock(),
     );
+    // Load a source that does not reuse the attached MediaKeys
+    emeController.onManifestLoading();
+    const newMediaKeys = new MediaKeysMock();
+    const attached = emeController.attemptSetMediaKeys(
+      KeySystems.WIDEVINE,
+      newMediaKeys,
+    );
+    await drain();
+    const callCountBeforeCleared = setMediaKeys.callCount;
+    // Resolve before asserting so CDMCleanupPromise does not block other tests
+    resolveClear();
+    await attached;
 
-    expect(reqMediaKsAccessSpy).callCount(1);
-    expect(media.setMediaKeys).callCount(1);
-    expect(media.setMediaKeys).not.calledWith(null);
+    expect(callCountBeforeCleared).to.equal(2);
+    expect(setMediaKeys).callCount(3);
+    expect(setMediaKeys.args[1][0]).to.equal(null);
+    expect(setMediaKeys.args[2][0]).to.equal(newMediaKeys);
   });
 
   it('should set MediaKeys after a previous setMediaKeys call was rejected', async function () {
@@ -923,6 +989,37 @@ describe('EMEController', function () {
 
     await attempt(new MediaKeysMock()).catch(() => {});
     await attempt(new MediaKeysMock());
+
+    expect(setMediaKeys).callCount(2);
+  });
+
+  it('should set MediaKeys queued behind a setMediaKeys call that is rejected', async function () {
+    setupEach({ emeEnabled: true });
+    let rejectFirst!: (error: Error) => void;
+    const setMediaKeys = sinon.stub<[MediaKeys | null], Promise<void>>();
+    setMediaKeys.onFirstCall().returns(
+      new Promise<void>((resolve, reject) => {
+        rejectFirst = reject;
+      }),
+    );
+    setMediaKeys.resolves();
+    media.setMediaKeys = setMediaKeys;
+    emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+      media: media as any as HTMLMediaElement,
+    });
+
+    const first = emeController.attemptSetMediaKeys(
+      KeySystems.WIDEVINE,
+      new MediaKeysMock(),
+    );
+    const second = emeController.attemptSetMediaKeys(
+      KeySystems.WIDEVINE,
+      new MediaKeysMock(),
+    );
+    await drain();
+    rejectFirst(new Error('InvalidStateError'));
+    await first.catch(() => {});
+    await second;
 
     expect(setMediaKeys).callCount(2);
   });
@@ -1123,6 +1220,74 @@ describe('EMEController', function () {
         expect(media.setMediaKeys).calledWith(mediaKeys);
         return Promise.all([first, second]);
       });
+    });
+
+    it('sets MediaKeys on attach when different MediaKeys are requested while waiting', async function () {
+      setupEach({ emeEnabled: true });
+      const first = emeController.attemptSetMediaKeys(
+        KeySystems.FAIRPLAY,
+        new MediaKeysMock(),
+      );
+      await drain();
+      const secondMediaKeys = new MediaKeysMock();
+      const second = emeController.attemptSetMediaKeys(
+        KeySystems.FAIRPLAY,
+        secondMediaKeys,
+      );
+      await drain();
+      emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+        media: media as any as HTMLMediaElement,
+      });
+      await Promise.all([first, second]);
+
+      expect(media.setMediaKeys).callCount(2);
+      expect(media.setMediaKeys.args[1][0]).to.equal(secondMediaKeys);
+    });
+
+    it('sets MediaKeys on attach when they were removed from the media while detached', async function () {
+      setupEach({ emeEnabled: true });
+      const mediaKeys = new MediaKeysMock();
+      media.setMediaKeys = sinon.spy((keys: MediaKeys | null) => {
+        (media as any).mediaKeys = keys;
+        return Promise.resolve();
+      });
+      emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+        media: media as any as HTMLMediaElement,
+      });
+      await emeController.attemptSetMediaKeys(KeySystems.FAIRPLAY, mediaKeys);
+
+      emeController.onMediaDetached();
+      // e.g. cleared by an interstitial asset player
+      (media as any).mediaKeys = null;
+      const attached = emeController.attemptSetMediaKeys(
+        KeySystems.FAIRPLAY,
+        mediaKeys,
+      );
+      await drain();
+      emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+        media: media as any as HTMLMediaElement,
+      });
+      await attached;
+
+      expect(media.setMediaKeys).callCount(2);
+      expect((media as any).mediaKeys).to.equal(mediaKeys);
+    });
+
+    it('does not clear key IDs on destroy after media with MediaKeys of another player is detached', function () {
+      setupEach({ emeEnabled: true });
+      // e.g. an interstitial asset player attached to media with the primary player's MediaKeys
+      (media as any).mediaKeys = new MediaKeysMock();
+      const clearKeyIdsSpy = sinon.spy(LevelKey, 'clearKeyUriToKeyIdMap');
+      emeController.onMediaAttached(Events.MEDIA_ATTACHED, {
+        media: media as any as HTMLMediaElement,
+      });
+
+      emeController.onMediaDetached();
+      emeController.destroy();
+      const keyIdsCleared = clearKeyIdsSpy.called;
+      clearKeyIdsSpy.restore();
+
+      expect(keyIdsCleared).to.be.false;
     });
   });
 });
