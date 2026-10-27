@@ -673,6 +673,62 @@ describe('StreamController', function () {
       expect(partList[next].fragment.sn).to.equal(3);
     });
 
+    it('selects the fragment after a refused fragment that a playlist refresh replaced', function () {
+      const details = setLevelDetails(4);
+      // the refresh replaced the object that was refused
+      const refused = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      refused.sn = 2;
+      refused.level = 0;
+      refuse(refused, null);
+      const frag = streamController['getNextFragment'](
+        details.fragments[2].start,
+        details,
+      );
+      expect(frag?.sn).to.equal(3);
+    });
+
+    it('selects the fragment after two consecutive refused fragments', function () {
+      const details = setLevelDetails(5);
+      refuse(details.fragments[2]);
+      refuse(details.fragments[3]);
+      const frag = streamController['getNextFragment'](
+        details.fragments[2].start,
+        details,
+      );
+      expect(frag?.sn).to.equal(4);
+    });
+
+    it('does not return a refused fragment inside the part window when nothing after it is loadable yet', function () {
+      const details = setLevelDetails(4);
+      // live edge: parts are loading and the playlist ends with a hint that has no parts yet
+      const hint = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      hint.sn = 4;
+      hint.level = 0;
+      hint.setStart(8);
+      hint.duration = 2;
+      details.fragmentHint = hint;
+      streamController['loadingParts'] = true;
+      refuse(details.fragments[2]);
+      refuse(details.fragments[3]);
+      const frag = streamController['getNextFragment'](
+        details.fragments[2].start,
+        details,
+      );
+      expect(frag).to.equal(null);
+    });
+
+    it('treats a refused fragment that a playlist refresh replaced as loop loading', function () {
+      const details = setLevelDetails(4);
+      const refused = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      refused.sn = 2;
+      refused.level = 0;
+      refuse(refused, null);
+      streamController['nextLoadPosition'] = details.fragments[3].start;
+      expect(
+        streamController['isLoopLoading'](details.fragments[2], 1),
+      ).to.equal(true);
+    });
+
     it('keeps the gap across a media detach', function () {
       const details = setLevelDetails(4);
       streamController['media'] = {

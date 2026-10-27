@@ -90,9 +90,8 @@ describe('BaseStreamController', function () {
       isEndListAppended() {
         return true;
       },
-      gapSn: null,
-      isGap(frag) {
-        return this.gapSn !== null && frag.sn === this.gapSn;
+      isGap() {
+        return false;
       },
       gapFragments() {
         return this.gaps || [];
@@ -209,24 +208,6 @@ describe('BaseStreamController', function () {
     });
   });
 
-  describe('getNextFragment skips tracked gaps', function () {
-    it('returns the fragment after the gap', function () {
-      const levelDetails = levelDetailsWithEndSequenceVodOrLive(4);
-      fragmentTracker.gapSn = 1;
-      const frag = baseStreamController.getNextFragment(5, levelDetails);
-      expect(frag?.sn, 'skips to the next fragment').to.equal(2);
-      expect(baseStreamController.nextLoadPosition).to.equal(10);
-    });
-
-    it('returns null when the gap is the last fragment', function () {
-      const levelDetails = levelDetailsWithEndSequenceVodOrLive(2);
-      fragmentTracker.gapSn = 1;
-      expect(baseStreamController.getNextFragment(5, levelDetails)).to.equal(
-        null,
-      );
-    });
-  });
-
   describe('onSourceBufferError', function () {
     it('marks the fragment of a refused part', function () {
       const frag = mainFrag(1, 0);
@@ -302,10 +283,28 @@ describe('BaseStreamController', function () {
         ).to.have.not.been.called;
 
         hasEnoughToStart.get(() => true);
+        media.currentTime = 12.0;
         baseStreamController.onMediaSeeking();
         expect(
           fragmentTracker.removeFragmentsInRange,
           'a later seek out of the buffer removes them',
+        ).to.have.been.calledOnce;
+      });
+
+      it('keeps gaps on the seek to the start position that lands outside the buffer', function () {
+        sinon.stub(hls, 'hasEnoughToStart').get(() => true);
+        baseStreamController.startPosition = 10.0;
+        media.buffered = new TimeRangesMock([14, 20]);
+        media.currentTime = 10.0;
+
+        baseStreamController.onMediaSeeking();
+        expect(fragmentTracker.removeFragmentsInRange).to.have.not.been.called;
+
+        media.currentTime = 11.0;
+        baseStreamController.onMediaSeeking();
+        expect(
+          fragmentTracker.removeFragmentsInRange,
+          'a seek elsewhere out of the buffer removes them',
         ).to.have.been.calledOnce;
       });
 
