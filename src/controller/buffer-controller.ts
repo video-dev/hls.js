@@ -322,9 +322,10 @@ export default class BufferController extends Logger implements ComponentAPI {
         // cache the locally generated object url
         const objectUrl = (this._objectUrl = self.URL.createObjectURL(ms));
         const config = this.hls.config;
-        const cleanupPromise = config.emeEnabled
-          ? config.emeController?.CDMCleanupPromise
-          : null;
+        const cleanupPromise =
+          config.emeEnabled && media.mediaKeys
+            ? config.emeController?.CDMCleanupPromise
+            : null;
         if (cleanupPromise) {
           cleanupPromise
             .then(() => {
