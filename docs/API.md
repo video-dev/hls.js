@@ -223,6 +223,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
     - [`hls.interstitialsManager`](#hlsinterstitialsmanager)
   - [Interstitial Events](#interstitial-events)
   - [Interstitial Objects and Classes](#interstitial-objects-and-classes)
+- [Init Region Isolation](#init-region-isolation)
 - [Additional data](#additional-data)
   - [`hls.latestLevelDetails`](#hlslatestleveldetails)
   - [`hls.loadLevelObj`](#hlsloadlevelobj)
@@ -692,9 +693,7 @@ Setting this to `true` may increase initial live playback latency slightly, but 
 
 (default: `false`)
 
-When set to `true`, each init region plays in its own MediaSource. An init region is a run of segments that share the same init segment (`EXT-X-MAP`). Buffering stops at the end of the current init region, and once playback reaches it, or a seek lands in another init region, the MediaSource is reset and loading continues in the new one. This keeps, for example, clear SSAI ads and encrypted content in separate MediaSources. `INIT_REGION_CHANGING` is dispatched before each reset.
-
-While the media element is paused the MediaSource is not reset, so a seek into another init region while paused completes once playback resumes.
+When set to `true`, each init region plays in its own MediaSource. See [Init Region Isolation](#init-region-isolation).
 
 ### `maxBufferSize`
 
@@ -2641,6 +2640,22 @@ type InterstitialAssetErrorData = {
 - `InterstitialAssetItem` A parsed and scheduled asset in an `InterstitialEvent`'s `assetList`.
 
 - `HlsAssetPlayer` A class for wrapping an instance of `Hls` used to stream Interstitial assets.
+
+## Init Region Isolation
+
+An init region is a run of segments that share the same `EXT-X-MAP`. With [`isolateInitRegions`](#isolateinitregions) enabled, each init region plays in its own MediaSource, for example to keep clear SSAI ads and encrypted content apart. `Hls.Events.INIT_REGION_CHANGING` is dispatched before each MediaSource reset.
+
+To only isolate a clear preroll from the encrypted content that follows:
+
+```js
+const hls = new Hls({ isolateInitRegions: true });
+
+hls.on(Hls.Events.INIT_REGION_CHANGING, (event, data) => {
+  if (data.encrypted) {
+    hls.config.isolateInitRegions = false;
+  }
+});
+```
 
 ## Additional data
 
