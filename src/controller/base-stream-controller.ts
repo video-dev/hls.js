@@ -1666,7 +1666,8 @@ export default class BaseStreamController
     this.log(
       `Init region change (cc: ${buffered.initSegment?.cc} -> ${cc}), resetting MediaSource at ${position}`,
     );
-    const encrypted = !!this.getLevelDetails()?.fragments.some(
+    const levelDetails = this.getLevelDetails();
+    const encrypted = !!levelDetails?.fragments.some(
       (fragment) => fragment.encrypted && fragment.initSegment?.cc === cc,
     );
     hls.trigger(Events.INIT_REGION_CHANGING, { frag, position, encrypted });
