@@ -8,7 +8,11 @@ import { FragmentState } from '../../../src/controller/fragment-tracker';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
 import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
-import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
+import {
+  ElementaryStreamTypes,
+  Fragment,
+  Part,
+} from '../../../src/loader/fragment';
 import { LevelDetails } from '../../../src/loader/level-details';
 import { LoadStats } from '../../../src/loader/load-stats';
 import M3U8Parser from '../../../src/loader/m3u8-parser';
@@ -418,6 +422,134 @@ describe('StreamController', function () {
         appendsWithoutProgress: 99,
       });
       expect(frag.gap).to.not.equal(true);
+    });
+  });
+
+  describe('LL-HLS automatic upswitch', function () {
+    afterEach(function () {
+      sinon.restore();
+    });
+
+    function tickWithPartialFragment(
+      bufferEnd = 12.96,
+      parts = true,
+      configure?: (levels: Level[]) => void,
+    ) {
+      const levels = [500000, 1500000].map((bitrate, index) => {
+        const level = new Level({ name: '', url: '', attrs, bitrate });
+        const frag = new Fragment(PlaylistLevelType.MAIN, '');
+        frag.level = index;
+        frag.sn = 6;
+        frag.setStart(12);
+        frag.duration = 2;
+        level.details = new LevelDetails('');
+        level.details.live = true;
+        level.details.fragments.push(frag as MediaFragment);
+        return level;
+      });
+      streamController['levels'] = levels;
+      streamController['media'] = document.createElement('video');
+      streamController['levelLastLoaded'] = levels[0];
+      streamController['level'] = 0;
+      streamController['fragPrevious'] = levels[0].details!.fragments[0];
+      streamController['loadingParts'] = parts;
+      streamController['buffering'] = true;
+      sinon
+        .stub(hls, 'nextLoadLevel')
+        .get(() => 1)
+        .set(() => {});
+      sinon.stub(streamController, 'getMainFwdBufferInfo').returns({
+        len: bufferEnd - 12,
+        start: 12,
+        end: bufferEnd,
+        buffered: [{ start: 12, end: bufferEnd }],
+        bufferedIndex: 0,
+      });
+      sinon
+        .stub(streamController, 'getLevelDetails')
+        .returns(levels[0].details);
+      sinon.stub(streamController as any, '_streamEnded').returns(false);
+      sinon.stub(streamController as any, 'waitForLive').returns(false);
+      sinon
+        .stub(streamController as any, 'getNextFragment')
+        .callsFake((_target, details: LevelDetails) => details.fragments[0]);
+      sinon.stub(streamController as any, 'isLoopLoading').returns(false);
+      sinon.stub(streamController as any, 'exceedsMaxBuffer').returns(false);
+      const load = sinon.stub(streamController as any, 'loadFragment');
+      configure?.(levels);
+      streamController['doTickIdle']();
+      return { levels, load };
+    }
+
+    it('finishes the current partial fragment before loading a higher level', function () {
+      const { levels, load } = tickWithPartialFragment();
+      expect(load).to.have.been.calledOnce;
+      expect(load.firstCall.args[1]).to.equal(levels[0]);
+    });
+
+    it('loads the requested level once the current fragment is complete', function () {
+      const { levels, load } = tickWithPartialFragment(14);
+      expect(load).to.have.been.calledOnce;
+      expect(load.firstCall.args[1]).to.equal(levels[1]);
+    });
+
+    it('does not defer a level switch when loading complete segments', function () {
+      const { levels, load } = tickWithPartialFragment(12.96, false);
+      expect(load).to.have.been.calledOnce;
+      expect(load.firstCall.args[1]).to.equal(levels[1]);
+    });
+
+    it('waits for an open fragment even when all published parts are buffered', function () {
+      const { levels, load } = tickWithPartialFragment(
+        12.96,
+        true,
+        (levels) => {
+          const details = levels[0].details!;
+          const frag = details.fragments[0];
+          frag.duration = 0.96;
+          details.fragmentHint = frag;
+        },
+      );
+      expect(load.firstCall.args[1]).to.equal(levels[0]);
+    });
+
+    it('does not defer an automatic downswitch', function () {
+      const { levels, load } = tickWithPartialFragment(
+        12.96,
+        true,
+        (levels) => {
+          Object.defineProperty(levels[0], 'bitrate', { value: 2000000 });
+        },
+      );
+      expect(load.firstCall.args[1]).to.equal(levels[1]);
+    });
+
+    it('loads the remaining part after an open fragment has been closed', function () {
+      const { levels, load } = tickWithPartialFragment(
+        13.92,
+        true,
+        (levels) => {
+          const details = levels[0].details!;
+          const frag = details.fragments[0];
+          frag.duration = 1.92;
+          details.partList = [
+            new Part(
+              new AttrList({ DURATION: '0.08', URI: 'last.mp4' }),
+              frag,
+              '',
+              8,
+            ),
+          ];
+        },
+      );
+      expect(load.firstCall.args[1]).to.equal(levels[0]);
+    });
+
+    it('does not override a manual selection', function () {
+      const { levels, load } = tickWithPartialFragment(12.96, true, () => {
+        sinon.stub(hls, 'manualLevel').get(() => 1);
+      });
+      expect(load.firstCall.args[1]).to.equal(levels[1]);
     });
   });
 

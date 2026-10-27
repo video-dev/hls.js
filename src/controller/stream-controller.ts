@@ -259,12 +259,10 @@ export default class StreamController
       return;
     }
 
-    const level = this.buffering ? hls.nextLoadLevel : hls.loadLevel;
+    let level = this.buffering ? hls.nextLoadLevel : hls.loadLevel;
     if (!levels?.[level]) {
       return;
     }
-
-    const levelInfo = levels[level];
 
     // if buffer length is less than maxBufLen try to load a new fragment
 
@@ -272,6 +270,30 @@ export default class StreamController
     if (bufferInfo === null) {
       return;
     }
+
+    const previous = this.fragPrevious;
+    const previousDetails = previous
+      ? levels[previous.level]?.details
+      : undefined;
+    if (
+      hls.manualLevel === -1 &&
+      this.loadingParts &&
+      previous &&
+      previous.level !== level &&
+      levels[previous.level]?.bitrate < levels[level].bitrate &&
+      bufferInfo.end > previous.start &&
+      (previousDetails?.fragmentHint?.sn === previous.sn ||
+        previousDetails?.partList?.some(
+          (part) => part.fragment.sn === previous.sn && !part.loaded,
+        ) ||
+        bufferInfo.end < previous.end - 0.01)
+    ) {
+      // Replacing an already appended partial GOP with another resolution can
+      // leave Chrome rendering the old frame until the following keyframe.
+      // Finish this fragment before automatically selecting a higher level.
+      level = previous.level;
+    }
+    const levelInfo = levels[level];
 
     const lastDetails = this.getLevelDetails();
     if (
