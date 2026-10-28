@@ -2643,7 +2643,7 @@ type InterstitialAssetErrorData = {
 
 ## MediaSource Reset per Init Region
 
-An init region is a run of segments that share the same `EXT-X-MAP`. With [`resetMediaSourcePerInitRegion`](#resetmediasourceperinitregion) enabled, each init region plays in its own MediaSource, for example to keep clear SSAI ads and encrypted content apart. `Hls.Events.INIT_REGION_CHANGING` is dispatched before each MediaSource reset.
+An init region is a run of segments that share the same `EXT-X-MAP`. With [`resetMediaSourcePerInitRegion`](#resetmediasourceperinitregion) enabled, each init region plays in its own MediaSource, for example to keep clear SSAI ads and encrypted content apart. `Hls.Events.INIT_REGION_CHANGING` is dispatched before each MediaSource reset. Init region boundaries must line up across main and alternate audio playlists.
 
 To only reset between a clear preroll and the encrypted content that follows:
 
