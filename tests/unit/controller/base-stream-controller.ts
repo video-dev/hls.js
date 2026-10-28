@@ -3,6 +3,7 @@ import sinon from 'sinon';
 import sinonChai from 'sinon-chai';
 import { hlsDefaultConfig } from '../../../src/config';
 import { State } from '../../../src/controller/base-stream-controller';
+import { SOURCE_BUFFER_ERROR_NAME } from '../../../src/controller/buffer-controller';
 import { FragmentState } from '../../../src/controller/fragment-tracker';
 import BaseStreamControllerImpl from '../../../src/controller/stream-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
@@ -40,6 +41,7 @@ type BaseStreamControllerTestable = Omit<
   | 'fragPrevious'
   | 'tickImmediate'
   | 'hls'
+  | 'onSourceBufferError'
 > & {
   media: HTMLMediaElement | null;
   _streamEnded: (bufferInfo: BufferInfo, levelDetails: LevelDetails) => boolean;
@@ -62,6 +64,7 @@ type BaseStreamControllerTestable = Omit<
   fragPrevious: MediaFragment | null;
   tickImmediate: () => void;
   hls: Hls;
+  onSourceBufferError: (filterType: PlaylistLevelType, data: ErrorData) => void;
 };
 
 describe('BaseStreamController', function () {
@@ -80,6 +83,7 @@ describe('BaseStreamController', function () {
       isEndListAppended() {
         return true;
       },
+      addAsGap: sinon.spy(),
       removeFragmentsInRange: sinon.spy(),
     };
     baseStreamController = new BaseStreamControllerImpl(
@@ -116,6 +120,32 @@ describe('BaseStreamController', function () {
     }
     details.live = live;
     return details;
+  }
+
+  function refuse(frag: Fragment, part: Part | null = null) {
+    // only fragments of a live playlist are marked
+    const levels: unknown[] = [];
+    levels[frag.level] = { details: { live: true, fragments: [] } };
+    (baseStreamController as any).levels = levels;
+    const error = new Error(
+      'video SourceBuffer error. MediaSource readyState: ended',
+    );
+    error.name = SOURCE_BUFFER_ERROR_NAME;
+    baseStreamController.onSourceBufferError(PlaylistLevelType.MAIN, {
+      type: ErrorTypes.MEDIA_ERROR,
+      details: ErrorDetails.MEDIA_SOURCE_REQUIRES_RESET,
+      fatal: false,
+      error,
+      frag,
+      part,
+    });
+  }
+
+  function mainFrag(sn: number, level: number): MediaFragment {
+    const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+    frag.sn = sn;
+    frag.level = level;
+    return frag;
   }
 
   describe('_streamEnded', function () {
@@ -160,6 +190,16 @@ describe('BaseStreamController', function () {
       fragmentTracker.isEndListAppended = () => false;
       expect(baseStreamController._streamEnded(bufferInfo, levelDetails)).to.be
         .false;
+    });
+  });
+
+  describe('onSourceBufferError', function () {
+    it('marks the fragment of a refused part', function () {
+      const frag = mainFrag(1, 0);
+      const part = { index: 1, fragment: frag, gap: false } as unknown as Part;
+      refuse(frag, part);
+      expect(fragmentTracker.addAsGap).to.have.been.calledOnceWith(frag);
+      expect(part.gap).to.equal(false);
     });
   });
 
@@ -224,7 +264,54 @@ describe('BaseStreamController', function () {
         resetSpy.restore();
       });
 
+      it('keeps gaps on a seek before hasEnoughToStart and removes them once it is set', function () {
+        const hasEnoughToStart = sinon.stub(hls, 'hasEnoughToStart');
+        media.currentTime = 10.0;
+
+        hasEnoughToStart.get(() => false);
+        baseStreamController.onMediaSeeking();
+        expect(
+          fragmentTracker.removeFragmentsInRange,
+          'the seek to the start position keeps them',
+        ).to.have.not.been.called;
+
+        hasEnoughToStart.get(() => true);
+        media.currentTime = 12.0;
+        baseStreamController.onMediaSeeking();
+        expect(
+          fragmentTracker.removeFragmentsInRange,
+          'a later seek out of the buffer removes them',
+        ).to.have.been.calledOnce;
+      });
+
+      it('keeps gaps on the seek to the start position that lands outside the buffer', function () {
+        sinon.stub(hls, 'hasEnoughToStart').get(() => true);
+        baseStreamController.startPosition = 10.0;
+        media.buffered = new TimeRangesMock([14, 20]);
+        media.currentTime = 10.0;
+
+        baseStreamController.onMediaSeeking();
+        expect(fragmentTracker.removeFragmentsInRange).to.have.not.been.called;
+
+        media.currentTime = 11.0;
+        baseStreamController.onMediaSeeking();
+        expect(
+          fragmentTracker.removeFragmentsInRange,
+          'a seek elsewhere out of the buffer removes them',
+        ).to.have.been.calledOnce;
+      });
+
+      it('keeps gaps on a seek into the buffer', function () {
+        sinon.stub(hls, 'hasEnoughToStart').get(() => true);
+        media.buffered = new TimeRangesMock([5, 20]);
+        media.currentTime = 10.0;
+
+        baseStreamController.onMediaSeeking();
+        expect(fragmentTracker.removeFragmentsInRange).to.have.not.been.called;
+      });
+
       it('should call fragmentTracker.removeFragmentsInRange when media exists', function () {
+        sinon.stub(hls, 'hasEnoughToStart').get(() => true);
         baseStreamController.lastCurrentTime = 5.0;
         media.currentTime = 10.0;
 

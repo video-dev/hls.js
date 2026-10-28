@@ -10,6 +10,7 @@ import { ElementaryStreamTypes, Fragment } from '../../../src/loader/fragment';
 import { LoadStats } from '../../../src/loader/load-stats';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { ChunkMetadata } from '../../../src/types/transmuxer';
+import type { MediaFragment } from '../../../src/loader/fragment';
 import type {
   BufferAppendedData,
   FragBufferedData,
@@ -583,6 +584,41 @@ describe('FragmentTracker', function () {
           'has not fragments after removing',
         ).to.be.false;
       });
+    });
+  });
+
+  describe('gap tracking', function () {
+    const gapFrag = (sn: number, level: number) =>
+      createMockFragment(
+        {
+          startPTS: sn,
+          endPTS: sn + 1,
+          sn,
+          level,
+          type: PlaylistLevelType.MAIN,
+        },
+        [ElementaryStreamTypes.VIDEO],
+      ) as MediaFragment;
+
+    it('lists only the tracked fragments that are gaps', function () {
+      const fragmentTracker = new FragmentTracker(new Hls({}));
+      fragmentTracker.fragBuffered(gapFrag(1, 1), true);
+      fragmentTracker.addAsGap(gapFrag(2, 1));
+      expect(fragmentTracker.gapFragments().map((f) => f.sn)).to.deep.equal([
+        2,
+      ]);
+    });
+
+    it('stops listing a gap once the fragment is removed', function () {
+      const fragmentTracker = new FragmentTracker(new Hls({}));
+      const frag = gapFrag(1, 1);
+      fragmentTracker.addAsGap(frag);
+      expect(fragmentTracker.gapFragments().map((f) => f.sn)).to.deep.equal([
+        1,
+      ]);
+
+      fragmentTracker.removeFragment(frag);
+      expect(fragmentTracker.gapFragments()).to.have.lengthOf(0);
     });
   });
 });

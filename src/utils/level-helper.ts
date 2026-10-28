@@ -217,6 +217,7 @@ export function mergeDetails(
       }
 
       newFrag.loader = oldFrag.loader;
+      newFrag.gap = oldFrag.gap || newFrag.gap;
 
       if (oldFrag.hasStats) {
         newFrag.stats = oldFrag.stats;

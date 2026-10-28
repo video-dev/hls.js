@@ -216,6 +216,19 @@ describe('LevelHelper Tests', function () {
       expect(newPlaylist.playlistParsingError).to.be.null;
     });
 
+    it('carries a gap set on a fragment to the refreshed playlist', function () {
+      const oldPlaylist = generatePlaylist([1, 2, 3, 4]);
+      oldPlaylist.fragments[1].gap = true;
+      const newPlaylist = generatePlaylist([2, 3, 4, 5]);
+      mergeDetails(oldPlaylist, newPlaylist, logger);
+      expect(newPlaylist.fragments.map((f) => !!f.gap)).to.deep.equal([
+        true,
+        false,
+        false,
+        false,
+      ]);
+    });
+
     it('aligns cc to the previous playlist when a discontinuity rolls out with no overlap', function () {
       const oldPlaylist = parseLevelPlaylist(`#EXTM3U
 #EXT-X-VERSION:9

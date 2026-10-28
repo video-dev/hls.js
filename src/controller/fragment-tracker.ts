@@ -631,6 +631,16 @@ export class FragmentTracker implements ComponentAPI {
     }
   }
 
+  /** Tracked fragments marked as gaps */
+  public gapFragments(): MediaFragment[] {
+    if (!this.hasGaps) {
+      return [];
+    }
+    return Object.keys(this.fragments)
+      .map((key) => this.fragments[key]?.body)
+      .filter((frag): frag is MediaFragment => !!frag?.gap);
+  }
+
   public removeAllFragments() {
     this.fragments = Object.create(null);
     this.endListFragments = Object.create(null);

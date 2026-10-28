@@ -592,6 +592,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected onMediaSeeking: () => void;
     // (undocumented)
+    protected onSourceBufferError(filterType: PlaylistLevelType, data: ErrorData): void;
+    // (undocumented)
     protected onTickEnd(): void;
     // (undocumented)
     pauseBuffering(): void;
@@ -2131,6 +2133,7 @@ export class FragmentTracker implements ComponentAPI {
     detectPartialFragments(data: FragBufferedData): void;
     // (undocumented)
     fragBuffered(frag: MediaFragment, force?: true): FragmentEntity | undefined;
+    gapFragments(): MediaFragment[];
     getAppendedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | Part | null;
     getBackBufferEvictionEnd(beforePosition: number, levelType: PlaylistLevelType, bytesNeeded: number): number;
     getBufferedFrag(position: number, levelType: PlaylistLevelType): MediaFragment | null;
