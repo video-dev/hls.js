@@ -1642,14 +1642,15 @@ describe('BaseStreamController', function () {
   });
 
   describe('getFragmentAtPosition', function () {
+    const makeFrag = (sn: number, start: number, duration: number) => {
+      const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      frag.sn = sn;
+      frag.duration = duration;
+      frag.setStart(start);
+      return frag;
+    };
+
     it('does not skip the unloaded tail of a segment when loading parts', function () {
-      const makeFrag = (sn: number, start: number, duration: number) => {
-        const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
-        frag.sn = sn;
-        frag.duration = duration;
-        frag.setStart(start);
-        return frag;
-      };
       // Segment 1 was refreshed by a playlist reload and has a 0.1s unloaded
       // tail, which is less than maxFragLookUpTolerance (0.25s).
       const previous = makeFrag(1, 0, 3.9);
@@ -1670,6 +1671,33 @@ describe('BaseStreamController', function () {
 
       expect(controller.getFragmentAtPosition(3.9, 6, details)).to.equal(
         current,
+      );
+    });
+
+    it('advances to the fragment hint when buffered just short of a refreshed segment with all parts loaded', function () {
+      const previous = makeFrag(1, 20, 2);
+      const current = makeFrag(1, 20, 2);
+      const hint = makeFrag(2, 22, 1);
+      const details = new LevelDetails('');
+      details.live = true;
+      details.startSN = details.endSN = 1;
+      details.fragments = [current];
+      details.fragmentHint = hint;
+      details.partList = [
+        { fragment: current, loaded: true },
+        { fragment: current, loaded: true },
+        { fragment: hint, loaded: false },
+      ] as Part[];
+      fragmentTracker.getState = (frag: MediaFragment) =>
+        frag.sn === 1 ? FragmentState.OK : FragmentState.NOT_LOADED;
+      media.paused = false;
+      const controller = baseStreamController as any;
+      controller.fragPrevious = previous;
+      controller.loadingParts = true;
+      controller.startFragRequested = true;
+
+      expect(controller.getFragmentAtPosition(21.999999, 23, details)).to.equal(
+        hint,
       );
     });
   });
