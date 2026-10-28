@@ -81,7 +81,7 @@ export enum Events {
   MEDIA_ENDED = 'hlsMediaEnded',
   // Fired after playback stall is resolved with playing, seeked, or ended event following BUFFER_STALLED_ERROR
   STALL_RESOLVED = 'hlsStallResolved',
-  // Fired with `isolateInitRegions` before the MediaSource is reset to play the next init region - data: { frag, position, encrypted }
+  // Fired with `resetMediaSourcePerInitRegion` before the MediaSource is reset to play the next init region - data: { frag, position, encrypted }
   INIT_REGION_CHANGING = 'hlsInitRegionChanging',
   // Fired when the buffer is going to be reset
   BUFFER_RESET = 'hlsBufferReset',

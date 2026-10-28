@@ -5051,7 +5051,7 @@ export type StreamControllerConfig = {
     testBandwidth: boolean;
     liveSyncMode?: 'edge' | 'buffered';
     startOnSegmentBoundary: boolean;
-    isolateInitRegions: boolean;
+    resetMediaSourcePerInitRegion: boolean;
     nextAudioTrackBufferFlushForwardOffset: number;
 };
 

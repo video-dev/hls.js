@@ -1638,7 +1638,7 @@ export default class BaseStreamController
     frag: MediaFragment,
     bufferInfo: BufferInfo,
   ): boolean {
-    if (!this.config.isolateInitRegions) {
+    if (!this.config.resetMediaSourcePerInitRegion) {
       return false;
     }
     const buffered = this.fragPrevious ?? this.fragPlaying;
