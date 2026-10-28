@@ -1652,7 +1652,7 @@ describe('BaseStreamController', function () {
       sinon.stub(hls, 'startLoad');
     });
 
-    it('does not hold when the option is off, even when seeking into a new init region', function () {
+    it('does not hold when the option is off', function () {
       baseStreamController.config.resetMediaSourcePerInitRegion = false;
       seekTo(25);
 
@@ -1660,18 +1660,18 @@ describe('BaseStreamController', function () {
       expect(hls.detachMedia).to.not.have.been.called;
     });
 
-    it('does not hold before any segment is buffered, so the first segment loads normally', function () {
+    it('does not hold before any segment is buffered', function () {
       expect(holdAt(next)).to.be.false;
     });
 
-    it('does not hold within the same init region, so segments keep appending to the current MediaSource', function () {
+    it('does not hold within the same init region', function () {
       playAt(15);
 
       expect(holdAt(makeFrag(2, 20, 0))).to.be.false;
     });
 
     describe('at a new init region', function () {
-      it('holds without seeking while there is buffer left, so playback is not interrupted', function () {
+      it('holds while there is buffer left', function () {
         playAt(15);
 
         expect(holdAt(next, bufferInfo)).to.be.true;
@@ -1679,7 +1679,7 @@ describe('BaseStreamController', function () {
         expect(hls.detachMedia).to.not.have.been.called;
       });
 
-      it('seeks into the new init region when the buffer runs out during playback, so the seek triggers the reset', function () {
+      it('seeks forward when the buffer runs out during playback', function () {
         playAt(19.95, true);
 
         expect(holdAt(next)).to.be.true;
@@ -1694,7 +1694,7 @@ describe('BaseStreamController', function () {
         expect(hls.detachMedia).to.not.have.been.called;
       });
 
-      it('does not seek when the new init region starts before the buffered segment', function () {
+      it('does not seek when it starts before the buffered segment', function () {
         // Playback sits before the buffered segment, e.g. after seeking back
         playAt(3);
 
@@ -1703,7 +1703,7 @@ describe('BaseStreamController', function () {
         expect(hls.detachMedia).to.not.have.been.called;
       });
 
-      it('resets the MediaSource when seeking into it, flagging the new init region as encrypted so listeners can prepare DRM', function () {
+      it('resets the MediaSource when seeking into it', function () {
         // Only a later segment of the new init region carries a key
         const details = new LevelDetails('');
         details.fragments = [playing, next, makeFrag(3, 30, 1, true)];
@@ -1720,7 +1720,7 @@ describe('BaseStreamController', function () {
         expect(hls.startLoad).to.have.been.calledWith(25);
       });
 
-      it('holds audio without resetting, since main resets the MediaSource', function () {
+      it('holds audio without resetting', function () {
         baseStreamController.playlistType = PlaylistLevelType.AUDIO;
         seekTo(25);
 
