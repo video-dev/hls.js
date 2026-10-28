@@ -90,9 +90,6 @@ describe('BaseStreamController', function () {
       isEndListAppended() {
         return true;
       },
-      isGap() {
-        return false;
-      },
       gapFragments() {
         return this.gaps || [];
       },
@@ -140,7 +137,7 @@ describe('BaseStreamController', function () {
   function refuse(frag: Fragment, part: Part | null = null) {
     // only fragments of a live playlist are marked
     const levels: unknown[] = [];
-    levels[frag.level] = { details: { live: true } };
+    levels[frag.level] = { details: { live: true, fragments: [] } };
     (baseStreamController as any).levels = levels;
     const error = new Error(
       'video SourceBuffer error. MediaSource readyState: ended',

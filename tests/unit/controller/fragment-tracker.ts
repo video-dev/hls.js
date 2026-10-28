@@ -600,26 +600,6 @@ describe('FragmentTracker', function () {
         [ElementaryStreamTypes.VIDEO],
       ) as MediaFragment;
 
-    it('reports a gap for a replacement object with the same key', function () {
-      const fragmentTracker = new FragmentTracker(new Hls({}));
-      const frag = gapFrag(1, 1);
-      expect(fragmentTracker.isGap(frag)).to.equal(false);
-
-      fragmentTracker.addAsGap(frag);
-      expect(fragmentTracker.isGap(frag)).to.equal(true);
-
-      // a live playlist refresh builds a new object for the same sn and level
-      const replacement = gapFrag(1, 1);
-      expect(replacement.gap).to.not.equal(true);
-      expect(fragmentTracker.isGap(replacement)).to.equal(true);
-    });
-
-    it('does not report a gap for the same sn of another level', function () {
-      const fragmentTracker = new FragmentTracker(new Hls({}));
-      fragmentTracker.addAsGap(gapFrag(1, 1));
-      expect(fragmentTracker.isGap(gapFrag(1, 2))).to.equal(false);
-    });
-
     it('lists only the tracked fragments that are gaps', function () {
       const fragmentTracker = new FragmentTracker(new Hls({}));
       fragmentTracker.fragBuffered(gapFrag(1, 1), true);
@@ -629,7 +609,7 @@ describe('FragmentTracker', function () {
       ]);
     });
 
-    it('stops reporting a gap once the fragment is removed', function () {
+    it('stops listing a gap once the fragment is removed', function () {
       const fragmentTracker = new FragmentTracker(new Hls({}));
       const frag = gapFrag(1, 1);
       fragmentTracker.addAsGap(frag);
@@ -638,7 +618,6 @@ describe('FragmentTracker', function () {
       ]);
 
       fragmentTracker.removeFragment(frag);
-      expect(fragmentTracker.isGap(gapFrag(1, 1))).to.equal(false);
       expect(fragmentTracker.gapFragments()).to.have.lengthOf(0);
     });
   });

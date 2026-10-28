@@ -1636,7 +1636,7 @@ export default class BaseStreamController
       return true;
     }
     if (trackerState === FragmentState.PARTIAL) {
-      if (frag.gap || this.fragmentTracker.isGap(frag)) {
+      if (frag.gap) {
         return true;
       }
       if (frag.stats.retry > 1) {
@@ -1769,8 +1769,7 @@ export default class BaseStreamController
       if (nextPart > -1 && targetBufferTime < part.start) {
         break;
       }
-      const loaded =
-        part.loaded || part.gap || this.fragmentTracker.isGap(part.fragment);
+      const loaded = part.loaded || part.gap;
       if (loaded) {
         nextPart = -1;
       } else if (
@@ -1890,7 +1889,7 @@ export default class BaseStreamController
   ): MediaFragment | null {
     const { config } = this;
     let { fragPrevious } = this;
-    let { fragments } = levelDetails;
+    let { fragments, endSN } = levelDetails;
     const { fragmentHint } = levelDetails;
     const { maxFragLookUpTolerance } = config;
     const partList = levelDetails.partList;
@@ -1907,6 +1906,7 @@ export default class BaseStreamController
     ) {
       // Include incomplete fragment with parts at end
       fragments = fragments.concat(fragmentHint);
+      endSN = fragmentHint.sn;
     }
 
     // Clear fragPrevious if removed from buffer / tracker so that is picked again
@@ -1948,8 +1948,7 @@ export default class BaseStreamController
       const fragState = this.fragmentTracker.getState(frag);
       if (
         fragState === FragmentState.OK ||
-        (fragState === FragmentState.PARTIAL &&
-          (frag.gap || this.fragmentTracker.isGap(frag)))
+        (fragState === FragmentState.PARTIAL && frag.gap)
       ) {
         fragPrevious = frag;
       }
@@ -1957,15 +1956,11 @@ export default class BaseStreamController
         mediaFragmentsAreEqual(frag, fragPrevious) &&
         (!loadingParts ||
           partList[0].fragment.sn > frag.sn ||
-          !levelDetails.live ||
-          this.fragmentTracker.isGap(frag))
+          !levelDetails.live)
       ) {
-        let nextFrag = fragments[curSNIdx + 1];
-        while (nextFrag && this.fragmentTracker.isGap(nextFrag)) {
-          nextFrag = fragments[nextFrag.sn - levelDetails.startSN + 1];
-        }
+        const nextFrag = fragments[curSNIdx + 1];
         if (
-          nextFrag &&
+          frag.sn < endSN &&
           this.fragmentTracker.getState(nextFrag) !== FragmentState.OK
         ) {
           frag = nextFrag;
@@ -2246,7 +2241,7 @@ export default class BaseStreamController
       refused && sourceBufferName
         ? refused.elementaryStreams[sourceBufferName]?.startPTS
         : undefined;
-    this.markSourceBufferErrorGap(frag);
+    this.markSourceBufferErrorGap(getFragmentWithSN(details, frag.sn) || frag);
     if (start === undefined) {
       return;
     }

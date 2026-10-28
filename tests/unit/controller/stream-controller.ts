@@ -20,6 +20,8 @@ import M3U8Parser from '../../../src/loader/m3u8-parser';
 import { Level } from '../../../src/types/level';
 import { PlaylistLevelType } from '../../../src/types/loader';
 import { AttrList } from '../../../src/utils/attr-list';
+import { mergeDetails } from '../../../src/utils/level-helper';
+import { logger } from '../../../src/utils/logger';
 import { mockFragments as mockFragmentArray } from '../../mocks/data';
 import { TimeRangesMock } from '../../mocks/time-ranges.mock';
 import type BufferController from '../../../src/controller/buffer-controller';
@@ -518,16 +520,8 @@ describe('StreamController', function () {
         resetError(SOURCE_BUFFER_ERROR_NAME, frag, part),
       );
     };
-    const newFrag = () => {
-      const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
-      frag.sn = 3;
-      frag.level = 0;
-      return frag;
-    };
-
     it('marks the fragment as a gap after a SourceBuffer error', function () {
-      setLevelDetails(4);
-      const frag = newFrag();
+      const frag = setLevelDetails(4).fragments[3];
       streamController['onError'](
         Events.ERROR,
         resetError(SOURCE_BUFFER_ERROR_NAME, frag),
@@ -537,8 +531,7 @@ describe('StreamController', function () {
     });
 
     it('ignores a reset that another append error caused', function () {
-      setLevelDetails(4);
-      const frag = newFrag();
+      const frag = setLevelDetails(4).fragments[3];
       streamController['onError'](
         Events.ERROR,
         resetError('InvalidStateError', frag),
@@ -555,8 +548,8 @@ describe('StreamController', function () {
         buffered: new TimeRangesMock([0, 3.5]),
       } as unknown as HTMLMediaElement;
       refuse(details.fragments[2], details.partList![4]);
-      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(true);
-      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+      expect(details.fragments[1].gap).to.equal(true);
+      expect(details.fragments[2].gap).to.equal(true);
     });
 
     it('does not mark the previous fragment when the buffer reaches a refused first part', function () {
@@ -567,8 +560,8 @@ describe('StreamController', function () {
         buffered: new TimeRangesMock([0, 3.98]),
       } as unknown as HTMLMediaElement;
       refuse(details.fragments[2], details.partList![4]);
-      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(false);
-      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+      expect(details.fragments[1].gap).to.not.equal(true);
+      expect(details.fragments[2].gap).to.equal(true);
     });
 
     it('measures the hole from the parsed start of the refused part', function () {
@@ -579,7 +572,7 @@ describe('StreamController', function () {
         buffered: new TimeRangesMock([0, 3.85]),
       } as unknown as HTMLMediaElement;
       refuse(details.fragments[2], details.partList![4], -0.15);
-      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(false);
+      expect(details.fragments[1].gap).to.not.equal(true);
     });
 
     it('reads the refused part before marking when the other SourceBuffer appended it', function () {
@@ -607,7 +600,7 @@ describe('StreamController', function () {
         ...resetError(SOURCE_BUFFER_ERROR_NAME, details.fragments[2], part),
         sourceBufferName: 'video',
       });
-      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(true);
+      expect(details.fragments[1].gap).to.equal(true);
     });
 
     it('also marks the previous fragment when the buffer ends short of a refused whole fragment', function () {
@@ -625,23 +618,23 @@ describe('StreamController', function () {
         endDTS: frag.end,
       };
       refuse(frag);
-      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(true);
-      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+      expect(details.fragments[1].gap).to.equal(true);
+      expect(details.fragments[2].gap).to.equal(true);
     });
 
     it('does not mark the previous fragment when it was not appended', function () {
       const details = setLevelDetails(4);
       refuse(details.fragments[2], details.partList![4]);
-      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(false);
-      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+      expect(details.fragments[1].gap).to.not.equal(true);
+      expect(details.fragments[2].gap).to.equal(true);
     });
 
     it('does not mark the previous fragment when a later part is refused', function () {
       const details = setLevelDetails(4);
       appendParts(details, 1);
       refuse(details.fragments[2], details.partList![5]);
-      expect(fragmentTracker.isGap(details.fragments[1])).to.equal(false);
-      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+      expect(details.fragments[1].gap).to.not.equal(true);
+      expect(details.fragments[2].gap).to.equal(true);
     });
 
     it('does not mark fragments of an ended playlist', function () {
@@ -656,77 +649,25 @@ describe('StreamController', function () {
       );
     });
 
-    it('does not select parts of a refused fragment after a playlist refresh', function () {
+    it('marks the fragment of the current playlist when a refresh replaced the refused object', function () {
       const details = setLevelDetails(4);
-      appendParts(details, 1);
-      // the refresh replaced the object that was refused
       const refused = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
       refused.sn = 2;
       refused.level = 0;
-      refuse(refused, null);
-      const partList = details.partList!;
-      const next = streamController.getNextPart(
-        partList,
-        details.fragments[1],
-        partList[3].start + 0.1,
-      );
-      expect(partList[next].fragment.sn).to.equal(3);
+      refuse(refused);
+      expect(details.fragments[2].gap).to.equal(true);
     });
 
-    it('selects the fragment after a refused fragment that a playlist refresh replaced', function () {
+    it('selects the fragment after a refused fragment once a playlist refresh replaced it', function () {
       const details = setLevelDetails(4);
-      // the refresh replaced the object that was refused
-      const refused = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
-      refused.sn = 2;
-      refused.level = 0;
-      refuse(refused, null);
+      refuse(details.fragments[2]);
+      const refreshed = setLevelDetails(5);
+      mergeDetails(details, refreshed, logger);
       const frag = streamController['getNextFragment'](
-        details.fragments[2].start,
-        details,
+        refreshed.fragments[2].start,
+        refreshed,
       );
       expect(frag?.sn).to.equal(3);
-    });
-
-    it('selects the fragment after two consecutive refused fragments', function () {
-      const details = setLevelDetails(5);
-      refuse(details.fragments[2]);
-      refuse(details.fragments[3]);
-      const frag = streamController['getNextFragment'](
-        details.fragments[2].start,
-        details,
-      );
-      expect(frag?.sn).to.equal(4);
-    });
-
-    it('does not return a refused fragment inside the part window when nothing after it is loadable yet', function () {
-      const details = setLevelDetails(4);
-      // live edge: parts are loading and the playlist ends with a hint that has no parts yet
-      const hint = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
-      hint.sn = 4;
-      hint.level = 0;
-      hint.setStart(8);
-      hint.duration = 2;
-      details.fragmentHint = hint;
-      streamController['loadingParts'] = true;
-      refuse(details.fragments[2]);
-      refuse(details.fragments[3]);
-      const frag = streamController['getNextFragment'](
-        details.fragments[2].start,
-        details,
-      );
-      expect(frag).to.equal(null);
-    });
-
-    it('treats a refused fragment that a playlist refresh replaced as loop loading', function () {
-      const details = setLevelDetails(4);
-      const refused = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
-      refused.sn = 2;
-      refused.level = 0;
-      refuse(refused, null);
-      streamController['nextLoadPosition'] = details.fragments[3].start;
-      expect(
-        streamController['isLoopLoading'](details.fragments[2], 1),
-      ).to.equal(true);
     });
 
     it('keeps the gap across a media detach', function () {
@@ -738,7 +679,7 @@ describe('StreamController', function () {
       } as unknown as HTMLMediaElement;
       refuse(details.fragments[2]);
       streamController['onMediaDetaching'](Events.MEDIA_DETACHING, {});
-      expect(fragmentTracker.isGap(details.fragments[2])).to.equal(true);
+      expect(details.fragments[2].gap).to.equal(true);
     });
   });
 

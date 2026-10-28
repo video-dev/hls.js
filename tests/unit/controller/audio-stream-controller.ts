@@ -563,7 +563,9 @@ describe('AudioStreamController', function () {
 
     beforeEach(function () {
       // only fragments of a live playlist are marked
-      (audioStreamController as any).levels = [{ details: { live: true } }];
+      (audioStreamController as any).levels = [
+        { details: { live: true, fragments: [] } },
+      ];
     });
 
     it('marks the audio fragment as a gap after a SourceBuffer error', function () {
