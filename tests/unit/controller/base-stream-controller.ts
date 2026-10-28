@@ -41,8 +41,6 @@ type BaseStreamControllerTestable = Omit<
   | 'fragPrevious'
   | 'tickImmediate'
   | 'hls'
-  | 'getNextFragment'
-  | 'onMediaDetaching'
   | 'onSourceBufferError'
 > & {
   media: HTMLMediaElement | null;
@@ -66,11 +64,6 @@ type BaseStreamControllerTestable = Omit<
   fragPrevious: MediaFragment | null;
   tickImmediate: () => void;
   hls: Hls;
-  getNextFragment: (
-    pos: number,
-    levelDetails: LevelDetails,
-  ) => MediaFragment | null;
-  onMediaDetaching: (event: any, data: any) => void;
   onSourceBufferError: (filterType: PlaylistLevelType, data: ErrorData) => void;
 };
 
@@ -90,12 +83,7 @@ describe('BaseStreamController', function () {
       isEndListAppended() {
         return true;
       },
-      gapFragments() {
-        return this.gaps || [];
-      },
-      gaps: [],
       addAsGap: sinon.spy(),
-      removeAllFragments: sinon.spy(),
       removeFragmentsInRange: sinon.spy(),
     };
     baseStreamController = new BaseStreamControllerImpl(
