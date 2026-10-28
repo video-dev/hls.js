@@ -202,7 +202,10 @@ class AudioStreamController
     const pos = this.getLoadPosition();
     const syncFrag = findNearestWithCC(trackDetails, targetDiscontinuity, pos);
     // Only stop waiting for audioFrag.cc if an audio segment of the same discontinuity domain (cc) is found
-    if (syncFrag) {
+    if (
+      syncFrag &&
+      this.fragmentTracker.getState(syncFrag) !== FragmentState.OK
+    ) {
       this.log(`Syncing with main frag at ${syncFrag.start} cc ${syncFrag.cc}`);
       this.startFragRequested = false;
       this.nextLoadPosition = syncFrag.start;
