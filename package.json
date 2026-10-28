@@ -107,7 +107,7 @@
     "chai": "6.2.2",
     "chart.js": "2.9.4",
     "chokidar": "3.6.0",
-    "chromedriver": "151.0.5",
+    "chromedriver": "155.0.2",
     "debounce": "1.2.1",
     "doctoc": "2.5.0",
     "es-check": "9.6.4",
