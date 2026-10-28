@@ -1960,7 +1960,8 @@ export default class BaseStreamController
     }
 
     if (frag) {
-      const curSNIdx = frag.sn - levelDetails.startSN;
+      const fragSn = frag.sn;
+      const curSNIdx = fragSn - levelDetails.startSN;
       // Move fragPrevious forward to support forcing the next fragment to load
       // when the buffer catches up to a previously buffered range.
       const fragState = this.fragmentTracker.getState(frag);
@@ -1973,8 +1974,11 @@ export default class BaseStreamController
       if (
         mediaFragmentsAreEqual(frag, fragPrevious) &&
         (!loadingParts ||
-          partList[0].fragment.sn > frag.sn ||
-          !levelDetails.live)
+          partList[0].fragment.sn > fragSn ||
+          !levelDetails.live ||
+          !partList.some(
+            (part) => part.fragment.sn === fragSn && !part.loaded && !part.gap,
+          ))
       ) {
         const nextFrag = fragments[curSNIdx + 1];
         if (
