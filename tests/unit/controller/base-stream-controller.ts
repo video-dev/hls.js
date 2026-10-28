@@ -6,6 +6,7 @@ import { State } from '../../../src/controller/base-stream-controller';
 import { FragmentState } from '../../../src/controller/fragment-tracker';
 import BaseStreamControllerImpl from '../../../src/controller/stream-controller';
 import { ErrorDetails, ErrorTypes } from '../../../src/errors';
+import { Events } from '../../../src/events';
 import Hls from '../../../src/hls';
 import { Fragment } from '../../../src/loader/fragment';
 import { LoadError } from '../../../src/loader/fragment-loader';
@@ -38,6 +39,9 @@ type BaseStreamControllerTestable = Omit<
   | 'nextLoadPosition'
   | 'startPosition'
   | 'fragPrevious'
+  | 'fragPlaying'
+  | 'playlistType'
+  | 'holdAtInitRegion'
   | 'tickImmediate'
   | 'hls'
 > & {
@@ -60,6 +64,9 @@ type BaseStreamControllerTestable = Omit<
   nextLoadPosition: number;
   startPosition: number;
   fragPrevious: MediaFragment | null;
+  fragPlaying: MediaFragment | null;
+  playlistType: PlaylistLevelType;
+  holdAtInitRegion: (frag: MediaFragment, bufferInfo: BufferInfo) => boolean;
   tickImmediate: () => void;
   hls: Hls;
 };
@@ -1584,6 +1591,143 @@ describe('BaseStreamController', function () {
       expect(controller.getFragmentAtPosition(3.9, 6, details)).to.equal(
         current,
       );
+    });
+  });
+
+  describe('holdAtInitRegion', function () {
+    let playing: MediaFragment;
+    let next: MediaFragment;
+    let drained: BufferInfo;
+
+    function makeFrag(
+      sn: number,
+      start: number,
+      cc: number,
+      encrypted: boolean = false,
+    ) {
+      const initSegment = new Fragment(PlaylistLevelType.MAIN, 'init.mp4');
+      initSegment.cc = cc;
+      const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
+      frag.sn = sn;
+      frag.cc = cc;
+      frag.duration = 10;
+      frag.setStart(start);
+      frag.initSegment = initSegment;
+      if (encrypted) {
+        frag.levelkeys = {
+          identity: new LevelKey(
+            'AES-128',
+            'https://example.com/key.bin',
+            'identity',
+          ),
+        };
+      }
+      return frag;
+    }
+
+    function playAt(currentTime: number, paused: boolean = false) {
+      baseStreamController.fragPrevious = playing;
+      Object.assign(media, { currentTime, paused, seeking: false });
+    }
+
+    function seekTo(currentTime: number) {
+      // A seek clears fragPrevious, so only fragPlaying tells us what is buffered
+      baseStreamController.fragPrevious = null;
+      baseStreamController.fragPlaying = playing;
+      Object.assign(media, { currentTime, paused: false, seeking: true });
+    }
+
+    function holdAt(frag: MediaFragment, bufferInfo: BufferInfo = drained) {
+      return baseStreamController.holdAtInitRegion(frag, bufferInfo);
+    }
+
+    beforeEach(function () {
+      baseStreamController.config.resetMediaSourcePerInitRegion = true;
+      playing = makeFrag(1, 10, 0);
+      next = makeFrag(2, 20, 1);
+      drained = { ...bufferInfo, len: 0 };
+      sinon.spy(hls, 'trigger');
+      sinon.stub(hls, 'detachMedia');
+      sinon.stub(hls, 'attachMedia');
+      sinon.stub(hls, 'startLoad');
+    });
+
+    it('does not hold when the option is off, even when seeking into a new init region', function () {
+      baseStreamController.config.resetMediaSourcePerInitRegion = false;
+      seekTo(25);
+
+      expect(holdAt(next)).to.be.false;
+      expect(hls.detachMedia).to.not.have.been.called;
+    });
+
+    it('does not hold before any segment is buffered, so the first segment loads normally', function () {
+      expect(holdAt(next)).to.be.false;
+    });
+
+    it('does not hold within the same init region, so segments keep appending to the current MediaSource', function () {
+      playAt(15);
+
+      expect(holdAt(makeFrag(2, 20, 0))).to.be.false;
+    });
+
+    describe('at a new init region', function () {
+      it('holds without seeking while there is buffer left, so playback is not interrupted', function () {
+        playAt(15);
+
+        expect(holdAt(next, bufferInfo)).to.be.true;
+        expect(media.currentTime).to.equal(15);
+        expect(hls.detachMedia).to.not.have.been.called;
+      });
+
+      it('seeks into the new init region when the buffer runs out during playback, so the seek triggers the reset', function () {
+        playAt(19.95, true);
+
+        expect(holdAt(next)).to.be.true;
+        expect(media.currentTime).to.equal(19.95);
+
+        media.paused = false;
+
+        expect(holdAt(next)).to.be.true;
+        expect(media.currentTime).to.equal(
+          next.start + baseStreamController.config.maxBufferHole,
+        );
+        expect(hls.detachMedia).to.not.have.been.called;
+      });
+
+      it('does not seek when the new init region starts before the buffered segment', function () {
+        // Playback sits before the buffered segment, e.g. after seeking back
+        playAt(3);
+
+        expect(holdAt(makeFrag(0, 5, 1))).to.be.true;
+        expect(media.currentTime).to.equal(3);
+        expect(hls.detachMedia).to.not.have.been.called;
+      });
+
+      it('resets the MediaSource when seeking into it, flagging the new init region as encrypted so listeners can prepare DRM', function () {
+        // Only a later segment of the new init region carries a key
+        const details = new LevelDetails('');
+        details.fragments = [playing, next, makeFrag(3, 30, 1, true)];
+        sinon.stub(baseStreamController, 'getLevelDetails').returns(details);
+        seekTo(25);
+
+        expect(holdAt(next)).to.be.true;
+        expect(hls.trigger).to.have.been.calledOnceWith(
+          Events.INIT_REGION_CHANGING,
+          { frag: next, position: 25, encrypted: true },
+        );
+        expect(hls.detachMedia).to.have.been.calledOnce;
+        expect(hls.attachMedia).to.have.been.calledWith(media);
+        expect(hls.startLoad).to.have.been.calledWith(25);
+      });
+
+      it('holds audio without resetting, since main resets the MediaSource', function () {
+        baseStreamController.playlistType = PlaylistLevelType.AUDIO;
+        seekTo(25);
+
+        expect(holdAt(next)).to.be.true;
+        expect(hls.trigger).to.not.have.been.called;
+        expect(hls.detachMedia).to.not.have.been.called;
+      });
     });
   });
 });
