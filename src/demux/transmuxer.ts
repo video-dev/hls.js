@@ -122,7 +122,7 @@ export default class Transmuxer {
 
     const keyData = getEncryptionType(uintData, decryptdata);
     if (keyData && isFullSegmentEncryption(keyData.method)) {
-      const decrypter = this.getDecrypter();
+      const decrypter = this.getDecrypter(chunkMeta.id === 1);
       const aesMode = getAesModeFromFullSegmentMethod(keyData.method);
       this.asyncResult = true;
       this.decryptionPromise = decrypter
@@ -132,11 +132,14 @@ export default class Transmuxer {
           keyData.iv.buffer,
           aesMode,
           chunkMeta.decryptRange,
+          this.config.progressive,
         )
         .then((decryptedData) => {
           // Calling push here is important; if flush() is called while this is still resolving, this ensures that
           // the decrypted data has been transmuxed
-          const result = this.push(decryptedData, null, chunkMeta);
+          const result = decryptedData.byteLength
+            ? this.push(decryptedData, null, chunkMeta)
+            : emptyResult(chunkMeta);
           this.decryptionPromise = null;
           return result;
         });
@@ -507,10 +510,12 @@ export default class Transmuxer {
     return !this.demuxer || !this.remuxer || discontinuity || trackSwitch;
   }
 
-  private getDecrypter(): Decrypter {
+  private getDecrypter(forceReset: boolean): Decrypter {
     let decrypter = this.decrypter;
     if (!decrypter) {
       decrypter = this.decrypter = new Decrypter(this.config);
+    } else if (forceReset) {
+      decrypter.reset();
     }
     return decrypter;
   }
