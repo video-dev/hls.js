@@ -1599,12 +1599,7 @@ describe('BaseStreamController', function () {
     let next: MediaFragment;
     let drained: BufferInfo;
 
-    function makeFrag(
-      sn: number,
-      start: number,
-      cc: number,
-      encrypted: boolean = false,
-    ) {
+    function makeFrag(sn: number, start: number, cc: number) {
       const initSegment = new Fragment(PlaylistLevelType.MAIN, 'init.mp4');
       initSegment.cc = cc;
       const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
@@ -1613,15 +1608,6 @@ describe('BaseStreamController', function () {
       frag.duration = 10;
       frag.setStart(start);
       frag.initSegment = initSegment;
-      if (encrypted) {
-        frag.levelkeys = {
-          identity: new LevelKey(
-            'AES-128',
-            'https://example.com/key.bin',
-            'identity',
-          ),
-        };
-      }
       return frag;
     }
 
@@ -1706,7 +1692,8 @@ describe('BaseStreamController', function () {
       it('resets the MediaSource when seeking into it', function () {
         // Only a later segment of the new init region carries a key
         const details = new LevelDetails('');
-        details.fragments = [playing, next, makeFrag(3, 30, 1, true)];
+        details.fragments = [playing, next, makeFrag(3, 30, 1)];
+        details.encryptedFragments = [details.fragments[2]];
         sinon.stub(baseStreamController, 'getLevelDetails').returns(details);
         seekTo(25);
 
