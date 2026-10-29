@@ -1642,8 +1642,8 @@ export default class BaseStreamController
       return false;
     }
     const buffered = this.fragPrevious ?? this.fragPlaying;
-    const cc = frag.initSegment?.cc;
-    if (!buffered || buffered.initSegment?.cc === cc) {
+    const cc = frag.cc;
+    if (!buffered || buffered.cc === cc) {
       return false;
     }
     if (this.playlistType !== PlaylistLevelType.MAIN) {
@@ -1664,11 +1664,11 @@ export default class BaseStreamController
       return true;
     }
     this.log(
-      `Init region change (cc: ${buffered.initSegment?.cc} -> ${cc}), resetting MediaSource at ${position}`,
+      `Init region change (cc: ${buffered.cc} -> ${cc}), resetting MediaSource at ${position}`,
     );
     const levelDetails = this.getLevelDetails();
     const encrypted = !!levelDetails?.fragments.some(
-      (fragment) => fragment.encrypted && fragment.initSegment?.cc === cc,
+      (fragment) => fragment.cc === cc && fragment.encrypted,
     );
     hls.trigger(Events.INIT_REGION_CHANGING, { frag, position, encrypted });
     hls.detachMedia();
