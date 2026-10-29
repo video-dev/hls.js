@@ -38,8 +38,6 @@ type BaseStreamControllerTestable = Omit<
   | 'nextLoadPosition'
   | 'startPosition'
   | 'fragPrevious'
-  | 'fragPlaying'
-  | 'isNewInitRegion'
   | 'tickImmediate'
   | 'hls'
 > & {
@@ -62,8 +60,6 @@ type BaseStreamControllerTestable = Omit<
   nextLoadPosition: number;
   startPosition: number;
   fragPrevious: MediaFragment | null;
-  fragPlaying: MediaFragment | null;
-  isNewInitRegion: (frag: MediaFragment) => boolean;
   tickImmediate: () => void;
   hls: Hls;
 };
@@ -1588,47 +1584,6 @@ describe('BaseStreamController', function () {
       expect(controller.getFragmentAtPosition(3.9, 6, details)).to.equal(
         current,
       );
-    });
-  });
-
-  describe('isNewInitRegion', function () {
-    function makeFrag(cc: number) {
-      const frag = new Fragment(PlaylistLevelType.MAIN, '') as MediaFragment;
-      frag.cc = cc;
-      return frag;
-    }
-
-    beforeEach(function () {
-      baseStreamController.config.resetMediaSourcePerInitRegion = true;
-    });
-
-    it('is false when the option is off', function () {
-      baseStreamController.config.resetMediaSourcePerInitRegion = false;
-      baseStreamController.fragPrevious = makeFrag(0);
-
-      expect(baseStreamController.isNewInitRegion(makeFrag(1))).to.be.false;
-    });
-
-    it('is false before any segment is buffered', function () {
-      expect(baseStreamController.isNewInitRegion(makeFrag(1))).to.be.false;
-    });
-
-    it('is false within the same init region', function () {
-      baseStreamController.fragPrevious = makeFrag(0);
-
-      expect(baseStreamController.isNewInitRegion(makeFrag(0))).to.be.false;
-    });
-
-    it('is true at a new init region', function () {
-      baseStreamController.fragPrevious = makeFrag(0);
-
-      expect(baseStreamController.isNewInitRegion(makeFrag(1))).to.be.true;
-    });
-
-    it('compares with fragPlaying after a seek clears fragPrevious', function () {
-      baseStreamController.fragPlaying = makeFrag(0);
-
-      expect(baseStreamController.isNewInitRegion(makeFrag(1))).to.be.true;
     });
   });
 });

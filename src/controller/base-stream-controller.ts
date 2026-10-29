@@ -1634,14 +1634,6 @@ export default class BaseStreamController
     return programFrag;
   }
 
-  protected isNewInitRegion(frag: MediaFragment): boolean {
-    if (!this.config.resetMediaSourcePerInitRegion) {
-      return false;
-    }
-    const buffered = this.fragPrevious ?? this.fragPlaying;
-    return !!buffered && buffered.cc !== frag.cc;
-  }
-
   protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean {
     if (this.nextLoadPosition <= targetBufferTime) {
       return false;

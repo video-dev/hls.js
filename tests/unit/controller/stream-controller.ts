@@ -1307,6 +1307,18 @@ ${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
       sinon.stub(hls, 'startLoad');
     });
 
+    it('does not hold when the option is off', function () {
+      hls.config.resetMediaSourcePerInitRegion = false;
+      seekTo(25);
+
+      expect(holdAt(next)).to.be.false;
+      expect(hls.detachMedia).to.not.have.been.called;
+    });
+
+    it('does not hold before any segment is buffered', function () {
+      expect(holdAt(next)).to.be.false;
+    });
+
     it('does not hold within the same init region', function () {
       playAt(15);
 

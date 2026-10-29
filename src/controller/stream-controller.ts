@@ -393,11 +393,15 @@ export default class StreamController
     frag: MediaFragment,
     bufferInfo: BufferInfo,
   ): boolean {
+    const { config, hls, media } = this;
     const buffered = this.fragPrevious ?? this.fragPlaying;
-    if (!buffered || !this.isNewInitRegion(frag)) {
+    if (
+      !config.resetMediaSourcePerInitRegion ||
+      !buffered ||
+      buffered.cc === frag.cc
+    ) {
       return false;
     }
-    const { config, hls, media } = this;
     if (!media || media.paused || bufferInfo.len >= config.maxBufferHole) {
       return true;
     }

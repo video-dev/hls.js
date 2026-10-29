@@ -551,8 +551,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean;
     // (undocumented)
-    protected isNewInitRegion(frag: MediaFragment): boolean;
-    // (undocumented)
     protected keyLoader: KeyLoader;
     // (undocumented)
     protected lastCurrentTime: number;
