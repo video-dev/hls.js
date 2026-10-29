@@ -541,8 +541,6 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     // (undocumented)
     protected hls: Hls;
     // (undocumented)
-    protected holdAtInitRegion(frag: MediaFragment, bufferInfo: BufferInfo): boolean;
-    // (undocumented)
     protected get iframesOnly(): boolean | undefined;
     // (undocumented)
     get inFlightFrag(): InFlightData;
@@ -552,6 +550,8 @@ export class BaseStreamController extends TaskLoop implements NetworkComponentAP
     protected initPTS: TimestampOffset[];
     // (undocumented)
     protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean;
+    // (undocumented)
+    protected isNewInitRegion(frag: MediaFragment): boolean;
     // (undocumented)
     protected keyLoader: KeyLoader;
     // (undocumented)

@@ -1634,47 +1634,12 @@ export default class BaseStreamController
     return programFrag;
   }
 
-  protected holdAtInitRegion(
-    frag: MediaFragment,
-    bufferInfo: BufferInfo,
-  ): boolean {
+  protected isNewInitRegion(frag: MediaFragment): boolean {
     if (!this.config.resetMediaSourcePerInitRegion) {
       return false;
     }
     const buffered = this.fragPrevious ?? this.fragPlaying;
-    const cc = frag.cc;
-    if (!buffered || buffered.cc === cc) {
-      return false;
-    }
-    if (this.playlistType !== PlaylistLevelType.MAIN) {
-      return true;
-    }
-    const { config, hls, media } = this;
-    if (!media || media.paused || bufferInfo.len >= config.maxBufferHole) {
-      return true;
-    }
-    const position = Math.max(
-      media.currentTime,
-      frag.start + config.maxBufferHole,
-    );
-    if (!media.seeking) {
-      if (frag.start >= buffered.start) {
-        media.currentTime = position;
-      }
-      return true;
-    }
-    this.log(
-      `Init region change (cc: ${buffered.cc} -> ${cc}), resetting MediaSource at ${position}`,
-    );
-    const levelDetails = this.getLevelDetails();
-    const encrypted = !!levelDetails?.encryptedFragments.some(
-      (fragment) => fragment.cc === cc,
-    );
-    hls.trigger(Events.INIT_REGION_CHANGING, { frag, position, encrypted });
-    hls.detachMedia();
-    hls.attachMedia(media);
-    hls.startLoad(position);
-    return true;
+    return !!buffered && buffered.cc !== frag.cc;
   }
 
   protected isLoopLoading(frag: Fragment, targetBufferTime: number): boolean {
