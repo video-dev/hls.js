@@ -416,7 +416,11 @@ class AudioStreamController
       return;
     }
 
-    // Wait for main to enter a new discontinuity first, as stream-controller may hold before it (to reset the MediaSource)
+    // Wait for main to enter a new discontinuity first, as stream-controller may hold before it
+    // TODO(matvp): I need to double check this, what if audio lags behind? With the reset option
+    // off, nothing stops video at init region boundaries, it can load ahead across
+    // discontinuities. Video at region 1, audio is still finishing reigon 0, with !==
+    // would make audio wait.
     const mainFrag = this.mainFragLoading?.frag || this.mainAnchor;
     if (
       this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag) ||
