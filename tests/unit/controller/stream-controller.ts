@@ -1251,7 +1251,7 @@ ${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
     });
   });
 
-  describe('holdAtInitRegion', function () {
+  describe('resetAtDiscontinuity', function () {
     let media: HTMLMediaElement;
     let playing: MediaFragment;
     let next: MediaFragment;
@@ -1283,7 +1283,7 @@ ${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
     }
 
     function holdAt(frag: MediaFragment, info: BufferInfo = drained) {
-      return streamController['holdAtInitRegion'](frag, info);
+      return streamController['resetAtDiscontinuity'](frag, info);
     }
 
     beforeEach(function () {

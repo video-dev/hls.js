@@ -381,7 +381,7 @@ export default class StreamController
 
     if (
       this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag) ||
-      this.holdAtInitRegion(frag, bufferInfo)
+      this.resetAtDiscontinuity(frag, bufferInfo)
     ) {
       return;
     }
@@ -389,19 +389,18 @@ export default class StreamController
     this.loadFragment(frag, levelInfo, targetBufferTime);
   }
 
-  private holdAtInitRegion(
+  private resetAtDiscontinuity(
     frag: MediaFragment,
     bufferInfo: BufferInfo,
   ): boolean {
-    const { config, hls, media } = this;
-    const buffered = this.fragPrevious ?? this.fragPlaying;
-    if (
-      !config.resetMediaSourcePerInitRegion ||
-      !buffered ||
-      buffered.cc === frag.cc
-    ) {
+    if (!this.config.resetMediaSourcePerInitRegion) {
       return false;
     }
+    const buffered = this.fragPrevious ?? this.fragPlaying;
+    if (!buffered || buffered.cc === frag.cc) {
+      return false;
+    }
+    const { config, hls, media } = this;
     if (!media || media.paused || bufferInfo.len >= config.maxBufferHole) {
       return true;
     }
@@ -417,7 +416,7 @@ export default class StreamController
     }
     const cc = frag.cc;
     this.log(
-      `Init region change (cc: ${buffered.cc} -> ${cc}), resetting MediaSource at ${position}`,
+      `Discontinuity change (cc: ${buffered.cc} -> ${cc}), resetting MediaSource at ${position}`,
     );
     const levelDetails = this.getLevelDetails();
     const encrypted = !!levelDetails?.encryptedFragments.some(
