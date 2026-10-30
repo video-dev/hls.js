@@ -1239,6 +1239,18 @@ export const enum DecrypterAesMode {
     ctr = 1
 }
 
+// Warning: (ae-missing-release-tag) "DiscontinuityChangingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
+//
+// @public (undocumented)
+export interface DiscontinuityChangingData {
+    // (undocumented)
+    encrypted: boolean;
+    // (undocumented)
+    frag: MediaFragment;
+    // (undocumented)
+    position: number;
+}
+
 // Warning: (ae-missing-release-tag) "DRMSystemConfiguration" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
 //
 // @public (undocumented)
@@ -1629,6 +1641,8 @@ export enum Events {
     // (undocumented)
     DESTROYING = "hlsDestroying",
     // (undocumented)
+    DISCONTINUITY_CHANGING = "hlsDiscontinuityChanging",
+    // (undocumented)
     ERROR = "hlsError",
     // (undocumented)
     EVENT_CUE_ENTER = "hlsEventCueEnter",
@@ -1658,8 +1672,6 @@ export enum Events {
     FRAG_PARSING_USERDATA = "hlsFragParsingUserdata",
     // (undocumented)
     INIT_PTS_FOUND = "hlsInitPtsFound",
-    // (undocumented)
-    INIT_REGION_CHANGING = "hlsInitRegionChanging",
     // (undocumented)
     INTERSTITIAL_ASSET_ENDED = "hlsInterstitialAssetEnded",
     // (undocumented)
@@ -2625,6 +2637,8 @@ export interface HlsListeners {
     // (undocumented)
     [Events.DESTROYING]: (event: Events.DESTROYING) => void;
     // (undocumented)
+    [Events.DISCONTINUITY_CHANGING]: (event: Events.DISCONTINUITY_CHANGING, data: DiscontinuityChangingData) => void;
+    // (undocumented)
     [Events.ERROR]: (event: Events.ERROR, data: ErrorData) => void;
     // (undocumented)
     [Events.EVENT_CUE_ENTER]: (event: Events.EVENT_CUE_ENTER, data: {}) => void;
@@ -2654,8 +2668,6 @@ export interface HlsListeners {
     [Events.FRAG_PARSING_USERDATA]: (event: Events.FRAG_PARSING_USERDATA, data: FragParsingUserdataData) => void;
     // (undocumented)
     [Events.INIT_PTS_FOUND]: (event: Events.INIT_PTS_FOUND, data: InitPTSFoundData) => void;
-    // (undocumented)
-    [Events.INIT_REGION_CHANGING]: (event: Events.INIT_REGION_CHANGING, data: InitRegionChangingData) => void;
     // (undocumented)
     [Events.INTERSTITIAL_ASSET_ENDED]: (event: Events.INTERSTITIAL_ASSET_ENDED, data: InterstitialAssetEndedData) => void;
     // (undocumented)
@@ -2893,18 +2905,6 @@ export interface InitPTSFoundData {
     timestampOffsets: TimestampOffset[];
     // (undocumented)
     trackId: number;
-}
-
-// Warning: (ae-missing-release-tag) "InitRegionChangingData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
-//
-// @public (undocumented)
-export interface InitRegionChangingData {
-    // (undocumented)
-    encrypted: boolean;
-    // (undocumented)
-    frag: MediaFragment;
-    // (undocumented)
-    position: number;
 }
 
 // Warning: (ae-missing-release-tag) "InitSegmentData" is part of the package's API, but it is missing a release tag (@alpha, @beta, @public, or @internal)
@@ -5049,7 +5049,7 @@ export type StreamControllerConfig = {
     testBandwidth: boolean;
     liveSyncMode?: 'edge' | 'buffered';
     startOnSegmentBoundary: boolean;
-    resetMediaSourcePerInitRegion: boolean;
+    resetMediaSourcePerDiscontinuity: boolean;
     nextAudioTrackBufferFlushForwardOffset: number;
 };
 

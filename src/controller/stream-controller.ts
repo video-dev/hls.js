@@ -393,7 +393,7 @@ export default class StreamController
     frag: MediaFragment,
     bufferInfo: BufferInfo,
   ): boolean {
-    if (!this.config.resetMediaSourcePerInitRegion) {
+    if (!this.config.resetMediaSourcePerDiscontinuity) {
       return false;
     }
     const buffered = this.fragPrevious ?? this.fragPlaying;
@@ -422,7 +422,7 @@ export default class StreamController
     const encrypted = !!levelDetails?.encryptedFragments.some(
       (fragment) => fragment.cc === cc,
     );
-    hls.trigger(Events.INIT_REGION_CHANGING, { frag, position, encrypted });
+    hls.trigger(Events.DISCONTINUITY_CHANGING, { frag, position, encrypted });
     hls.detachMedia();
     hls.attachMedia(media);
     hls.startLoad(position);

@@ -15,6 +15,7 @@ import type {
   BufferFlushedData,
   BufferFlushingData,
   CuesParsedData,
+  DiscontinuityChangingData,
   ErrorData,
   FPSDropData,
   FPSDropLevelCappingData,
@@ -29,7 +30,6 @@ import type {
   FragParsingMetadataData,
   FragParsingUserdataData,
   InitPTSFoundData,
-  InitRegionChangingData,
   InterstitialAssetEndedData,
   InterstitialAssetErrorData,
   InterstitialAssetPlayerCreatedData,
@@ -81,8 +81,8 @@ export enum Events {
   MEDIA_ENDED = 'hlsMediaEnded',
   // Fired after playback stall is resolved with playing, seeked, or ended event following BUFFER_STALLED_ERROR
   STALL_RESOLVED = 'hlsStallResolved',
-  // Fired with `resetMediaSourcePerInitRegion` before the MediaSource is reset to play the next init region - data: { frag, position, encrypted }
-  INIT_REGION_CHANGING = 'hlsInitRegionChanging',
+  // Fired with `resetMediaSourcePerDiscontinuity` before the MediaSource is reset to play the next discontinuity - data: { frag, position, encrypted }
+  DISCONTINUITY_CHANGING = 'hlsDiscontinuityChanging',
   // Fired when the buffer is going to be reset
   BUFFER_RESET = 'hlsBufferReset',
   // Fired when we know about the codecs that we need buffers for to push into - data: {tracks : { container, codec, levelCodec, initSegment, metadata }}
@@ -250,9 +250,9 @@ export interface HlsListeners {
     data: MediaEndedData,
   ) => void;
   [Events.STALL_RESOLVED]: (event: Events.STALL_RESOLVED, data: {}) => void;
-  [Events.INIT_REGION_CHANGING]: (
-    event: Events.INIT_REGION_CHANGING,
-    data: InitRegionChangingData,
+  [Events.DISCONTINUITY_CHANGING]: (
+    event: Events.DISCONTINUITY_CHANGING,
+    data: DiscontinuityChangingData,
   ) => void;
   [Events.BUFFER_RESET]: (event: Events.BUFFER_RESET) => void;
   [Events.BUFFER_CODECS]: (

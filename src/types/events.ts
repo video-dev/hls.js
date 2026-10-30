@@ -75,7 +75,7 @@ export interface MediaEndedData {
   stalled: boolean;
 }
 
-export interface InitRegionChangingData {
+export interface DiscontinuityChangingData {
   frag: MediaFragment;
   position: number;
   encrypted: boolean;

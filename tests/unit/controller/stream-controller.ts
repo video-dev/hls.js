@@ -1287,7 +1287,7 @@ ${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
     }
 
     beforeEach(function () {
-      hls.config.resetMediaSourcePerInitRegion = true;
+      hls.config.resetMediaSourcePerDiscontinuity = true;
       media = {} as unknown as HTMLMediaElement;
       streamController['media'] = media;
       playing = makeFrag(1, 10, 0);
@@ -1308,7 +1308,7 @@ ${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
     });
 
     it('does not hold when the option is off', function () {
-      hls.config.resetMediaSourcePerInitRegion = false;
+      hls.config.resetMediaSourcePerDiscontinuity = false;
       seekTo(25);
 
       expect(holdAt(next)).to.be.false;
@@ -1319,7 +1319,7 @@ ${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
       expect(holdAt(next)).to.be.false;
     });
 
-    it('does not hold within the same init region', function () {
+    it('does not hold within the same discontinuity', function () {
       playAt(15);
 
       expect(holdAt(makeFrag(2, 20, 0))).to.be.false;
@@ -1356,7 +1356,7 @@ ${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
     });
 
     it('resets the MediaSource when seeking into it', function () {
-      // Only a later segment of the new init region carries a key
+      // Only a later segment of the new discontinuity carries a key
       const details = new LevelDetails('');
       details.fragments = [playing, next, makeFrag(3, 30, 1)];
       details.encryptedFragments = [details.fragments[2]];
@@ -1365,7 +1365,7 @@ ${durations.map((duration, i) => `#EXTINF:${duration},\n${i}.ts`).join('\n')}
 
       expect(holdAt(next)).to.be.true;
       expect(hls.trigger).to.have.been.calledOnceWith(
-        Events.INIT_REGION_CHANGING,
+        Events.DISCONTINUITY_CHANGING,
         {
           frag: next,
           position: 25,

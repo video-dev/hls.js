@@ -32,7 +32,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
   - [`frontBufferFlushThreshold`](#frontbufferflushthreshold)
   - [`loopBackBufferFlush`](#loopbackbufferflush)
   - [`startOnSegmentBoundary`](#startonsegmentboundary)
-  - [`resetMediaSourcePerInitRegion`](#resetmediasourceperinitregion)
+  - [`resetMediaSourcePerDiscontinuity`](#resetmediasourceperdiscontinuity)
   - [`maxBufferSize`](#maxbuffersize)
   - [`maxBufferHole`](#maxbufferhole)
   - [`maxStarvationDelay`](#maxstarvationdelay)
@@ -223,7 +223,7 @@ See [API Reference](https://hlsjs-dev.video-dev.org/api-docs/) for a complete li
     - [`hls.interstitialsManager`](#hlsinterstitialsmanager)
   - [Interstitial Events](#interstitial-events)
   - [Interstitial Objects and Classes](#interstitial-objects-and-classes)
-- [MediaSource Reset per Init Region](#mediasource-reset-per-init-region)
+- [MediaSource Reset per Discontinuity](#mediasource-reset-per-discontinuity)
 - [Additional data](#additional-data)
   - [`hls.latestLevelDetails`](#hlslatestleveldetails)
   - [`hls.loadLevelObj`](#hlsloadlevelobj)
@@ -689,11 +689,11 @@ Controls back-buffer flushing on quality upgrades when the underlying `HTMLMedia
 When set to `true`, the player will align the live start position with the closest video segment boundary when preparing playback. This ensures playback starts at a clean segment boundary rather than potentially in the middle of a segment, which can prevent some segment skipping. This is helpful for when liveSyncDurationCount or liveSyncDuration, do not calculate start position to be the start position of a segment.
 Setting this to `true` may increase initial live playback latency slightly, but can provide more stable playback start. When set to `false`, playback will start at the exact position determined by the player's live sync calculations, which could be in the middle of a segment.
 
-### `resetMediaSourcePerInitRegion`
+### `resetMediaSourcePerDiscontinuity`
 
 (default: `false`)
 
-When set to `true`, each init region plays in its own MediaSource. See [MediaSource Reset per Init Region](#mediasource-reset-per-init-region).
+When set to `true`, each discontinuity plays in its own MediaSource. See [MediaSource Reset per Discontinuity](#mediasource-reset-per-discontinuity).
 
 ### `maxBufferSize`
 
@@ -2641,18 +2641,18 @@ type InterstitialAssetErrorData = {
 
 - `HlsAssetPlayer` A class for wrapping an instance of `Hls` used to stream Interstitial assets.
 
-## MediaSource Reset per Init Region
+## MediaSource Reset per Discontinuity
 
-An init region is a run of segments that share the same `EXT-X-MAP`. With [`resetMediaSourcePerInitRegion`](#resetmediasourceperinitregion) enabled, each init region plays in its own MediaSource, for example to keep clear SSAI ads and encrypted content apart. `Hls.Events.INIT_REGION_CHANGING` is dispatched before each MediaSource reset. Init region boundaries must line up across main and alternate audio playlists.
+A discontinuity is a run of segments that share the same discontinuity sequence, delimited by `EXT-X-DISCONTINUITY` tags. With [`resetMediaSourcePerDiscontinuity`](#resetmediasourceperdiscontinuity) enabled, each discontinuity plays in its own MediaSource, for example to keep clear SSAI ads and encrypted content apart. `Hls.Events.DISCONTINUITY_CHANGING` is dispatched before each MediaSource reset. Discontinuities must line up across main and alternate audio playlists.
 
 To only reset between a clear preroll and the encrypted content that follows:
 
 ```js
-const hls = new Hls({ resetMediaSourcePerInitRegion: true });
+const hls = new Hls({ resetMediaSourcePerDiscontinuity: true });
 
-hls.on(Hls.Events.INIT_REGION_CHANGING, (event, data) => {
+hls.on(Hls.Events.DISCONTINUITY_CHANGING, (event, data) => {
   if (data.encrypted) {
-    hls.config.resetMediaSourcePerInitRegion = false;
+    hls.config.resetMediaSourcePerDiscontinuity = false;
   }
 });
 ```
@@ -2707,8 +2707,8 @@ Full list of Events is available below:
   - data: { }
 - `Hls.Events.BUFFER_RESET` - fired when we buffer is going to be reset
   - data: { }
-- `Hls.Events.INIT_REGION_CHANGING` - fired with `resetMediaSourcePerInitRegion` enabled, before the MediaSource is reset to play the next init region
-  - data: { frag : first fragment to load in the next init region, position : playback position the new MediaSource starts loading at, encrypted : `true` when any fragment in the next init region is encrypted }
+- `Hls.Events.DISCONTINUITY_CHANGING` - fired with `resetMediaSourcePerDiscontinuity` enabled, before the MediaSource is reset to play the next discontinuity
+  - data: { frag : first fragment to load in the next discontinuity, position : playback position the new MediaSource starts loading at, encrypted : `true` when any fragment in the next discontinuity is encrypted }
 - `Hls.Events.BUFFER_CODECS` - fired when we know about the codecs that we need buffers for to push into
   - data: { audio? : `[Track]`, video? : `[Track]` }
 - `Hls.Events.BUFFER_CREATED` - fired when sourcebuffers have been created
