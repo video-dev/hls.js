@@ -379,11 +379,54 @@ export default class StreamController
       return;
     }
 
-    if (this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag)) {
+    if (
+      this.exceedsMaxBuffer(bufferInfo, maxBufLen, frag) ||
+      this.resetAtDiscontinuity(frag, bufferInfo)
+    ) {
       return;
     }
 
     this.loadFragment(frag, levelInfo, targetBufferTime);
+  }
+
+  private resetAtDiscontinuity(
+    frag: MediaFragment,
+    bufferInfo: BufferInfo,
+  ): boolean {
+    if (!this.config.resetMediaSourcePerDiscontinuity) {
+      return false;
+    }
+    const buffered = this.fragPrevious ?? this.fragPlaying;
+    if (!buffered || buffered.cc === frag.cc) {
+      return false;
+    }
+    const { config, hls, media } = this;
+    if (!media || media.paused || bufferInfo.len >= config.maxBufferHole) {
+      return true;
+    }
+    const position = Math.max(
+      media.currentTime,
+      frag.start + config.maxBufferHole,
+    );
+    if (!media.seeking) {
+      if (frag.start >= buffered.start) {
+        media.currentTime = position;
+      }
+      return true;
+    }
+    const cc = frag.cc;
+    this.log(
+      `Discontinuity change (cc: ${buffered.cc} -> ${cc}), resetting MediaSource at ${position}`,
+    );
+    const levelDetails = this.getLevelDetails();
+    const encrypted = !!levelDetails?.encryptedFragments.some(
+      (fragment) => fragment.cc === cc,
+    );
+    hls.trigger(Events.DISCONTINUITY_CHANGING, { frag, position, encrypted });
+    hls.detachMedia();
+    hls.attachMedia(media);
+    hls.startLoad(position);
+    return true;
   }
 
   protected loadFragment(

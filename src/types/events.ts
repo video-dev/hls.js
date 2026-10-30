@@ -75,6 +75,12 @@ export interface MediaEndedData {
   stalled: boolean;
 }
 
+export interface DiscontinuityChangingData {
+  frag: MediaFragment;
+  position: number;
+  encrypted: boolean;
+}
+
 export interface BufferCodecsData {
   video?: ParsedTrack;
   audio?: ParsedTrack;
