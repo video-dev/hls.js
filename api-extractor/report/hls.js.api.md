@@ -2228,6 +2228,7 @@ export type GapControllerConfig = {
     highBufferWatchdogPeriod: number;
     nudgeOffset: number;
     nudgeMaxRetry: number;
+    nudgeOnBufferFlush: boolean;
     nudgeOnVideoHole: boolean;
     skipBufferHolePadding: number;
 };
